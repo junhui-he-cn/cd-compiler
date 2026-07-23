@@ -798,6 +798,22 @@ IRRegister IRCompiler::emitCall(const CallExpr& expression)
         return emitNativeStdlibCall(expression);
     }
 
+    typedExpressionType(expression, "call");
+    const auto directCallee = [](const Expr* callee) -> const VariableExpr* {
+        while (const auto* grouping = dynamic_cast<const GroupingExpr*>(callee)) {
+            callee = grouping->expression.get();
+        }
+        return dynamic_cast<const VariableExpr*>(callee);
+    };
+    if (const VariableExpr* callee = directCallee(expression.callee.get())) {
+        if (declarationIndex_->variableReference(*callee).has_value()) {
+            const CallTargetRecord* target = declarationIndex_->callTarget(expression);
+            if (!target || target->kind != CallTargetKind::Direct) {
+                throw IRCompileError("missing direct call target metadata");
+            }
+        }
+    }
+
     IRRegister callee = compileExpression(*expression.callee);
     std::vector<IRRegister> arguments;
     for (const auto& argument : expression.arguments) {

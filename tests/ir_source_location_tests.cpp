@@ -587,6 +587,53 @@ void test_typed_index_expression_metadata()
     compiler.compile(program, resolved, index);
 }
 
+void test_call_lowering_metadata()
+{
+    std::istringstream input(
+        "fun add(value: number): number { return value + 1; }\n"
+        "let alias = add;\n"
+        "print add(1);\n"
+        "print alias(2);\n"
+        "fun floor(value) { return value; }\n"
+        "print floor(3);\n");
+    FrontendSession frontend;
+    Program program = frontend.loadStdin(input);
+
+    const auto* directPrint = dynamic_cast<const PrintStmt*>(program.statements[2].get());
+    const auto* aliasPrint = dynamic_cast<const PrintStmt*>(program.statements[3].get());
+    const auto* shadowedPrint = dynamic_cast<const PrintStmt*>(program.statements[5].get());
+    const auto* directCall = directPrint
+        ? dynamic_cast<const CallExpr*>(directPrint->expression.get())
+        : nullptr;
+    const auto* aliasCall = aliasPrint
+        ? dynamic_cast<const CallExpr*>(aliasPrint->expression.get())
+        : nullptr;
+    const auto* shadowedCall = shadowedPrint
+        ? dynamic_cast<const CallExpr*>(shadowedPrint->expression.get())
+        : nullptr;
+    assert(directCall != nullptr && aliasCall != nullptr && shadowedCall != nullptr);
+
+    TypeChecker checker;
+    const ResolvedNames& resolved = checker.check(program);
+    const DeclarationIndex& index = checker.declarationIndex();
+    assert(checker.declarationIndexMismatchCount() == 0);
+
+    const auto assertDirectTarget = [&index](const CallExpr& expression) {
+        const TypedExpressionRecord* typed = index.typedExpression(expression);
+        assert(typed != nullptr);
+        const CallTargetRecord* target = index.callTarget(expression);
+        assert(target != nullptr);
+        assert(target->kind == CallTargetKind::Direct);
+    };
+    assertDirectTarget(*directCall);
+    assertDirectTarget(*aliasCall);
+    assertDirectTarget(*shadowedCall);
+    assert(index.nativeCall(*shadowedCall) == nullptr);
+
+    IRCompiler compiler;
+    compiler.compile(program, resolved, index);
+}
+
 void test_typed_field_assignment_metadata()
 {
     std::istringstream input(
@@ -793,6 +840,7 @@ int main()
     test_typed_expression_metadata();
     test_variable_lowering_metadata();
     test_typed_index_expression_metadata();
+    test_call_lowering_metadata();
     test_typed_field_assignment_metadata();
     test_native_call_metadata();
     test_collection_expression_metadata();
