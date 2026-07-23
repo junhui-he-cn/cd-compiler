@@ -54,6 +54,20 @@ void IRCompiler::setCurrentSpan(std::optional<SourceSpan> span)
     ir_.setCurrentSpan(currentSpan_);
 }
 
+const TypeInfo& IRCompiler::typedExpressionType(
+    const Expr& expression,
+    StaticType expectedKind,
+    const char* context) const
+{
+    const TypedExpressionRecord* record = declarationIndex_
+        ? declarationIndex_->typedExpression(expression)
+        : nullptr;
+    if (!record || record->type.kind != expectedKind) {
+        throw IRCompileError(std::string("missing typed metadata for ") + context);
+    }
+    return record->type;
+}
+
 IRProgram IRCompiler::compile(
     const Program& program,
     const ResolvedNames& resolvedNames,
@@ -781,6 +795,7 @@ IRRegister IRCompiler::emitCall(const CallExpr& expression)
 
 IRRegister IRCompiler::emitArray(const ArrayExpr& expression)
 {
+    typedExpressionType(expression, StaticType::Array, "array literal");
     std::vector<IRRegister> elements;
     for (const auto& element : expression.elements) {
         elements.push_back(compileExpression(*element));
@@ -790,6 +805,7 @@ IRRegister IRCompiler::emitArray(const ArrayExpr& expression)
 
 IRRegister IRCompiler::emitMap(const MapExpr& expression)
 {
+    typedExpressionType(expression, StaticType::Map, "map literal");
     std::vector<IRRegister> keyValueRegisters;
     keyValueRegisters.reserve(expression.entries.size() * 2);
     for (const MapEntry& entry : expression.entries) {
@@ -820,11 +836,12 @@ IRRegister IRCompiler::emitStructFields(const std::vector<StructField>& fields, 
 
 IRRegister IRCompiler::emitStructConstructor(const StructConstructExpr& expression)
 {
-    std::string typeName = expression.name.lexeme;
-    if (expression.qualifier) {
-        typeName = expression.qualifier->lexeme + "." + typeName;
+    const TypeInfo& type = typedExpressionType(
+        expression, StaticType::Struct, "struct constructor");
+    if (!type.structName) {
+        throw IRCompileError("typed struct constructor is missing a type name");
     }
-    return emitStructFields(expression.fields, std::move(typeName));
+    return emitStructFields(expression.fields, *type.structName);
 }
 
 IRRegister IRCompiler::emitIndex(const IndexExpr& expression)

@@ -41,7 +41,8 @@ This is a small C++17 Compiler Design front-end/interpreter project. It currentl
   declaration, signature/shape, typed-expression, scope, import/export, and
   lexical-reference metadata plus for-in/pattern bindings and local direct-call
   or struct-method targets collected beside the legacy TypeChecker path; native
-  call lowering consumes the migrated native-call records.
+  call and collection/aggregate lowering consume the migrated expression
+  records.
 - `include/Parser.hpp`, `src/Parser.cpp`: grammar and recursive-descent parsing.
 - `include/Ast.hpp`, `src/Ast.cpp`: AST node types and AST printer output.
 - `include/IR.hpp`, `src/IR.cpp`: IR opcodes, instructions, constants, names, registers, and IR printer output.

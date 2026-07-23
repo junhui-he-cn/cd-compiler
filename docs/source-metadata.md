@@ -65,8 +65,9 @@ this registry. All records are keyed by the AST expression address within the
 current snapshot, are not persistent identities, and do not claim canonical type
 ownership. The checker requires these records during shadow comparison for the
 migrated expression families. IR lowering consumes native-call records for
-direct and member calls; `len`, collection literals/helpers, and other
-unmigrated families remain on the legacy AST/`ResolvedNames` path.
+direct and member calls plus array/map/struct type records; `len`, collection
+helpers, and other unmigrated families remain on the legacy AST/`ResolvedNames`
+path.
 
 ## Lossless source view
 
