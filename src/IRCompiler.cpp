@@ -590,10 +590,12 @@ IRRegister IRCompiler::compileExpression(const Expr& expression)
     }
 
     if (const auto* variable = dynamic_cast<const VariableExpr*>(&expression)) {
+        typedExpressionType(*variable, "variable read");
         return ir_.emitLoadVar(resolvedNames_->variableName(*variable));
     }
 
     if (const auto* assign = dynamic_cast<const AssignExpr*>(&expression)) {
+        typedExpressionType(*assign, "assignment");
         const IRRegister value = compileExpression(*assign->value);
         ir_.emitAssignVar(resolvedNames_->assignmentName(*assign), value);
         return value;
@@ -881,6 +883,7 @@ IROp IRCompiler::compoundAssignmentOp(TokenType op) const
 
 IRRegister IRCompiler::emitCompoundAssign(const CompoundAssignExpr& expression)
 {
+    typedExpressionType(expression, StaticType::Number, "compound assignment");
     const std::string& name = resolvedNames_->compoundAssignmentName(expression);
     const IRRegister oldValue = ir_.emitLoadVar(name);
     const IRRegister result = emitCompoundAssignmentResult(

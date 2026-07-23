@@ -422,6 +422,85 @@ void test_typed_expression_metadata()
     assertType(*field, "number");
 }
 
+void test_variable_lowering_metadata()
+{
+    std::istringstream input(
+        "fun id(value) { return value; }\n"
+        "let outer = 1;\n"
+        "{\n"
+        "  let outer = id(2);\n"
+        "  print outer;\n"
+        "  outer = 3;\n"
+        "  outer += 1;\n"
+        "  print outer;\n"
+        "}\n"
+        "print outer;\n"
+        "let dynamic = id(4);\n"
+        "dynamic = 5;\n"
+        "dynamic += 1;\n"
+        "print dynamic;\n");
+    FrontendSession frontend;
+    Program program = frontend.loadStdin(input);
+
+    const auto* outerLet = dynamic_cast<const LetStmt*>(program.statements[1].get());
+    const auto* block = dynamic_cast<const BlockStmt*>(program.statements[2].get());
+    const auto* outerPrint = dynamic_cast<const PrintStmt*>(program.statements[3].get());
+    const auto* dynamicLet = dynamic_cast<const LetStmt*>(program.statements[4].get());
+    const auto* dynamicAssignStatement = dynamic_cast<const ExpressionStmt*>(program.statements[5].get());
+    const auto* dynamicCompoundStatement = dynamic_cast<const ExpressionStmt*>(program.statements[6].get());
+    assert(outerLet != nullptr && block != nullptr && outerPrint != nullptr);
+    assert(dynamicLet != nullptr && dynamicAssignStatement != nullptr && dynamicCompoundStatement != nullptr);
+    assert(block->statements.size() == 5);
+
+    const auto* innerLet = dynamic_cast<const LetStmt*>(block->statements[0].get());
+    const auto* innerPrint = dynamic_cast<const PrintStmt*>(block->statements[1].get());
+    const auto* innerAssignStatement = dynamic_cast<const ExpressionStmt*>(block->statements[2].get());
+    const auto* innerCompoundStatement = dynamic_cast<const ExpressionStmt*>(block->statements[3].get());
+    assert(innerLet != nullptr && innerPrint != nullptr);
+    assert(innerAssignStatement != nullptr && innerCompoundStatement != nullptr);
+
+    const auto* innerRead = dynamic_cast<const VariableExpr*>(innerPrint->expression.get());
+    const auto* innerAssign = dynamic_cast<const AssignExpr*>(innerAssignStatement->expression.get());
+    const auto* innerCompound = dynamic_cast<const CompoundAssignExpr*>(innerCompoundStatement->expression.get());
+    const auto* afterBlockRead = dynamic_cast<const VariableExpr*>(outerPrint->expression.get());
+    const auto* dynamicAssign = dynamic_cast<const AssignExpr*>(dynamicAssignStatement->expression.get());
+    const auto* dynamicCompound = dynamic_cast<const CompoundAssignExpr*>(dynamicCompoundStatement->expression.get());
+    assert(innerRead != nullptr && innerAssign != nullptr && innerCompound != nullptr);
+    assert(afterBlockRead != nullptr && dynamicAssign != nullptr && dynamicCompound != nullptr);
+
+    TypeChecker checker;
+    const ResolvedNames& resolved = checker.check(program);
+    const DeclarationIndex& index = checker.declarationIndex();
+    assert(checker.declarationIndexMismatchCount() == 0);
+
+    const DeclarationRecord* outerRecord = index.declaration(*outerLet);
+    const DeclarationRecord* innerRecord = index.declaration(*innerLet);
+    const DeclarationRecord* dynamicRecord = index.declaration(*dynamicLet);
+    assert(outerRecord != nullptr && innerRecord != nullptr && dynamicRecord != nullptr);
+    assert(outerRecord->declarationId != innerRecord->declarationId);
+    assert(index.variableReference(*innerRead)->declarationId == innerRecord->declarationId);
+    assert(index.assignmentReference(*innerAssign)->declarationId == innerRecord->declarationId);
+    assert(index.compoundAssignmentReference(*innerCompound)->declarationId == innerRecord->declarationId);
+    assert(index.variableReference(*afterBlockRead)->declarationId == outerRecord->declarationId);
+    assert(index.assignmentReference(*dynamicAssign)->declarationId == dynamicRecord->declarationId);
+    assert(index.compoundAssignmentReference(*dynamicCompound)->declarationId == dynamicRecord->declarationId);
+
+    const auto assertType = [&index](const Expr& expression, const std::string& expected) {
+        const TypedExpressionRecord* record = index.typedExpression(expression);
+        assert(record != nullptr);
+        assert(typeInfoName(record->type) == expected);
+    };
+    assertType(*innerRead, "unknown");
+    assertType(*innerAssign, "number");
+    assertType(*innerCompound, "number");
+    assertType(*afterBlockRead, "number");
+    assertType(*dynamicAssign, "number");
+    assertType(*dynamicCompound, "number");
+
+    IRCompiler compiler;
+    compiler.compile(program, resolved, index);
+}
+
 void test_typed_index_expression_metadata()
 {
     std::istringstream input(
@@ -700,6 +779,7 @@ int main()
     test_declaration_index_for_in_binding();
     test_declaration_index_signature_shapes();
     test_typed_expression_metadata();
+    test_variable_lowering_metadata();
     test_typed_index_expression_metadata();
     test_typed_field_assignment_metadata();
     test_native_call_metadata();
