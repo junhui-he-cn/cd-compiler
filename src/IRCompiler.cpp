@@ -857,6 +857,7 @@ IRRegister IRCompiler::emitStructConstructor(const StructConstructExpr& expressi
 
 IRRegister IRCompiler::emitIndex(const IndexExpr& expression)
 {
+    typedExpressionType(expression, "index expression");
     IRRegister collection = compileExpression(*expression.collection);
     IRRegister index = compileExpression(*expression.index);
     return ir_.emitIndex(collection, index);
@@ -903,6 +904,7 @@ IRRegister IRCompiler::emitCompoundAssignmentResult(
 
 IRRegister IRCompiler::emitIndexAssign(const IndexAssignExpr& expression)
 {
+    typedExpressionType(expression, "index assignment");
     IRRegister collection = compileExpression(*expression.collection);
     IRRegister index = compileExpression(*expression.index);
     IRRegister value = compileExpression(*expression.value);
@@ -911,6 +913,7 @@ IRRegister IRCompiler::emitIndexAssign(const IndexAssignExpr& expression)
 
 IRRegister IRCompiler::emitIndexCompoundAssign(const IndexCompoundAssignExpr& expression)
 {
+    typedExpressionType(expression, StaticType::Number, "index compound assignment");
     IRRegister collection = compileExpression(*expression.collection);
     IRRegister index = compileExpression(*expression.index);
     IRRegister oldValue = ir_.emitIndex(collection, index);

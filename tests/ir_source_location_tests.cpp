@@ -482,7 +482,7 @@ void test_typed_index_expression_metadata()
     assert(dynamicRead != nullptr && dynamicAssign != nullptr && dynamicCompound != nullptr);
 
     TypeChecker checker;
-    checker.check(program);
+    const ResolvedNames& resolved = checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
 
@@ -500,6 +500,9 @@ void test_typed_index_expression_metadata()
     assertType(*dynamicRead, "unknown");
     assertType(*dynamicAssign, "number");
     assertType(*dynamicCompound, "number");
+
+    IRCompiler compiler;
+    compiler.compile(program, resolved, index);
 }
 
 void test_typed_field_assignment_metadata()
