@@ -883,9 +883,26 @@ const NativeCallRecord* DeclarationIndex::nativeCall(const Expr& expression) con
     return found == nativeCalls_.end() ? nullptr : &found->second;
 }
 
+const VariantConstructorRecord* DeclarationIndex::variantConstructor(
+    const MemberCallExpr& expression) const
+{
+    const auto found = variantConstructors_.find(&expression);
+    return found == variantConstructors_.end() ? nullptr : &found->second;
+}
+
 void DeclarationIndex::recordNativeCall(const Expr& expression, std::string name)
 {
     nativeCalls_.insert_or_assign(&expression, NativeCallRecord{std::move(name)});
+}
+
+void DeclarationIndex::recordVariantConstructor(
+    const MemberCallExpr& expression,
+    std::string enumName,
+    std::string variantName)
+{
+    variantConstructors_.insert_or_assign(
+        &expression,
+        VariantConstructorRecord{std::move(enumName), std::move(variantName)});
 }
 
 std::optional<DeclarationId> DeclarationIndex::lookup(ScopeId scopeId, const std::string& name) const
@@ -1074,6 +1091,17 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
 
     for (const auto& entry : memberCallCandidates_) {
         const MemberCallExpr& expression = *entry.first;
+        if (resolved.hasVariantConstructor(expression)) {
+            const auto variant = variantConstructors_.find(entry.first);
+            if (variant == variantConstructors_.end()
+                || variant->second.enumName != resolved.variantEnumName(expression)
+                || variant->second.variantName != resolved.variantName(expression)) {
+                ++mismatches;
+            } else {
+                requireTypedExpression(expression);
+            }
+            continue;
+        }
         if (!resolved.hasMemberCallCallee(expression)
             || !resolved.memberCallPassesReceiver(expression)) {
             continue;

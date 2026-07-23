@@ -784,14 +784,21 @@ IRRegister IRCompiler::emitMemberCall(const MemberCallExpr& expression)
 
 IRRegister IRCompiler::emitVariantConstructor(const MemberCallExpr& expression)
 {
+    typedExpressionType(expression, "variant constructor");
+    const VariantConstructorRecord* variant = declarationIndex_
+        ? declarationIndex_->variantConstructor(expression)
+        : nullptr;
+    if (!variant) {
+        throw IRCompileError("missing variant constructor metadata");
+    }
     std::vector<IRRegister> payload;
     payload.reserve(expression.arguments.size());
     for (const auto& argument : expression.arguments) {
         payload.push_back(compileExpression(*argument));
     }
     return ir_.emitVariant(
-        resolvedNames_->variantEnumName(expression),
-        resolvedNames_->variantName(expression),
+        variant->enumName,
+        variant->variantName,
         std::move(payload));
 }
 

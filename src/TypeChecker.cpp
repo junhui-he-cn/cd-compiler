@@ -4176,6 +4176,12 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
 
     if (const auto* memberCall = dynamic_cast<const MemberCallExpr*>(&expression)) {
         CheckedExpression result = checkMemberCall(*memberCall, expectedType);
+        if (resolvedNames_.hasVariantConstructor(*memberCall)) {
+            declarationIndex_.recordVariantConstructor(
+                *memberCall,
+                resolvedNames_.variantEnumName(*memberCall),
+                resolvedNames_.variantName(*memberCall));
+        }
         if (isNativeStdlibName(memberCall->name.lexeme)
             && !resolvedNames_.hasMemberCallCallee(*memberCall)
             && !resolvedNames_.hasVariantConstructor(*memberCall)) {

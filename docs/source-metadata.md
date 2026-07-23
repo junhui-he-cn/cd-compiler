@@ -66,11 +66,11 @@ by the AST expression address within the current snapshot, are not persistent
 identities, and do not claim canonical type ownership. The checker requires these
 records during shadow comparison for the migrated expression families. IR
 lowering consumes native-call records for direct and member calls, typed call
-result records and local direct/member-call targets, variable, assignment, and
-compound-assignment result records, array/map/struct type records, field-access
-and field-assignment result records, and index result records; `len`, collection
-helpers, and other unmigrated families remain on the legacy AST/`ResolvedNames`
-path.
+result records, local direct/member-call targets, and variant-constructor
+records, variable, assignment, and compound-assignment result records,
+array/map/struct type records, field-access and field-assignment result records,
+and index result records; `len`, collection helpers, and other unmigrated
+families remain on the legacy AST/`ResolvedNames` path.
 
 ## Lossless source view
 

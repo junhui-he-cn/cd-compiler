@@ -667,6 +667,47 @@ void test_method_call_lowering_metadata()
     compiler.compile(program, resolved, index);
 }
 
+void test_variant_constructor_lowering_metadata()
+{
+    std::istringstream input(
+        "enum Result { Ok(number), Empty }\n"
+        "enum Option<T> { Some(T), None }\n"
+        "let ok = Result.Ok(1);\n"
+        "let none: Option<number> = Option.None<number>();\n"
+        "print ok;\n"
+        "print none;\n");
+    FrontendSession frontend;
+    Program program = frontend.loadStdin(input);
+
+    const auto* ok = dynamic_cast<const LetStmt*>(program.statements[2].get());
+    const auto* none = dynamic_cast<const LetStmt*>(program.statements[3].get());
+    assert(ok != nullptr && none != nullptr);
+    const auto* okConstructor = dynamic_cast<const MemberCallExpr*>(ok->initializer.get());
+    const auto* noneConstructor = dynamic_cast<const MemberCallExpr*>(none->initializer.get());
+    assert(okConstructor != nullptr && noneConstructor != nullptr);
+
+    TypeChecker checker;
+    const ResolvedNames& resolved = checker.check(program);
+    const DeclarationIndex& index = checker.declarationIndex();
+    assert(checker.declarationIndexMismatchCount() == 0);
+
+    const auto assertVariant = [&index](
+        const MemberCallExpr& expression,
+        const std::string& enumName,
+        const std::string& variantName) {
+        assert(index.typedExpression(expression) != nullptr);
+        const VariantConstructorRecord* variant = index.variantConstructor(expression);
+        assert(variant != nullptr);
+        assert(variant->enumName == enumName);
+        assert(variant->variantName == variantName);
+    };
+    assertVariant(*okConstructor, "Result", "Ok");
+    assertVariant(*noneConstructor, "Option", "None");
+
+    IRCompiler compiler;
+    compiler.compile(program, resolved, index);
+}
+
 void test_typed_field_assignment_metadata()
 {
     std::istringstream input(
@@ -875,6 +916,7 @@ int main()
     test_typed_index_expression_metadata();
     test_call_lowering_metadata();
     test_method_call_lowering_metadata();
+    test_variant_constructor_lowering_metadata();
     test_typed_field_assignment_metadata();
     test_native_call_metadata();
     test_collection_expression_metadata();

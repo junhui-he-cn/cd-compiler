@@ -51,6 +51,11 @@ struct NativeCallRecord {
     std::string name;
 };
 
+struct VariantConstructorRecord {
+    std::string enumName;
+    std::string variantName;
+};
+
 struct DeclarationSignature {
     std::vector<TypeParameter> typeParameters;
     std::vector<Parameter> parameters;
@@ -128,6 +133,7 @@ public:
     const CallTargetRecord* callTarget(const MemberCallExpr& expression) const;
     const TypedExpressionRecord* typedExpression(const Expr& expression) const;
     const NativeCallRecord* nativeCall(const Expr& expression) const;
+    const VariantConstructorRecord* variantConstructor(const MemberCallExpr& expression) const;
 
     std::optional<DeclarationId> lookup(ScopeId scopeId, const std::string& name) const;
     std::optional<ResolvedSymbol> variableReference(const VariableExpr& expression) const;
@@ -145,6 +151,10 @@ private:
 
     void recordTypedExpression(const Expr& expression, TypeInfo type);
     void recordNativeCall(const Expr& expression, std::string name);
+    void recordVariantConstructor(
+        const MemberCallExpr& expression,
+        std::string enumName,
+        std::string variantName);
 
     std::vector<DeclarationRecord> declarations_;
     std::vector<ScopeRecord> scopes_;
@@ -174,4 +184,5 @@ private:
     std::unordered_map<const Expr*, std::string> nativeCallCandidates_;
     std::unordered_map<const Expr*, TypedExpressionRecord> typedExpressions_;
     std::unordered_map<const Expr*, NativeCallRecord> nativeCalls_;
+    std::unordered_map<const MemberCallExpr*, VariantConstructorRecord> variantConstructors_;
 };
