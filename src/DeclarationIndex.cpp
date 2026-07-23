@@ -3,6 +3,7 @@
 #include "NativeStdlib.hpp"
 #include "TypeChecker.hpp"
 
+#include <algorithm>
 #include <stdexcept>
 #include <utility>
 
@@ -119,6 +120,43 @@ private:
             throw std::logic_error("declaration collector scope stack is empty");
         }
         scopeStack_.pop_back();
+    }
+
+    struct FunctionContext {
+        ScopeId scopeId;
+        const FunctionStmt* statement = nullptr;
+        const FunctionExpr* expression = nullptr;
+        const MethodDecl* method = nullptr;
+        CaptureRecord captures;
+    };
+
+    void beginFunctionContext(
+        ScopeId scopeId,
+        const FunctionStmt* statement = nullptr,
+        const FunctionExpr* expression = nullptr,
+        const MethodDecl* method = nullptr)
+    {
+        functionStack_.push_back(FunctionContext{scopeId, statement, expression, method, {}});
+    }
+
+    void endFunctionContext()
+    {
+        if (functionStack_.empty()) {
+            throw std::logic_error("declaration collector function stack is empty");
+        }
+        FunctionContext context = std::move(functionStack_.back());
+        functionStack_.pop_back();
+        if (context.statement) {
+            index_.functionCaptures_.emplace(context.statement, std::move(context.captures));
+        } else if (context.expression) {
+            index_.functionExpressionCaptures_.emplace(
+                context.expression,
+                std::move(context.captures));
+        } else if (context.method) {
+            index_.methodCaptures_.emplace(context.method, std::move(context.captures));
+        } else {
+            throw std::logic_error("declaration collector function context has no owner");
+        }
     }
 
     DeclarationRecord& addDeclaration(
@@ -272,6 +310,7 @@ private:
                     function->returnTypeName);
             }
             beginScope(function);
+            beginFunctionContext(scopeStack_.back(), function);
             for (const Parameter& parameter : function->parameters) {
                 addDeclaration(
                     DeclarationKind::Parameter,
@@ -287,6 +326,7 @@ private:
                     parameter.typeName);
             }
             collectStatementList(function->body);
+            endFunctionContext();
             endScope();
             return;
         }
@@ -438,7 +478,8 @@ private:
             {},
             {},
             {},
-            false);
+            true);
+        beginFunctionContext(scopeStack_.back(), nullptr, nullptr, &method);
         for (const Parameter& parameter : method.parameters) {
             addDeclaration(
                 DeclarationKind::Parameter,
@@ -454,6 +495,7 @@ private:
                 parameter.typeName);
         }
         collectStatementList(method.body);
+        endFunctionContext();
         endScope();
     }
 
@@ -633,6 +675,7 @@ private:
         if (const auto* function = dynamic_cast<const FunctionExpr*>(expression)) {
             index_.functionExpressions_.insert(function);
             beginScope(nullptr);
+            beginFunctionContext(scopeStack_.back(), nullptr, function);
             for (const Parameter& parameter : function->parameters) {
                 addDeclaration(
                     DeclarationKind::Parameter,
@@ -648,6 +691,7 @@ private:
                     parameter.typeName);
             }
             collectStatementList(function->body);
+            endFunctionContext();
             endScope();
             return;
         }
@@ -696,12 +740,67 @@ private:
             || kind == DeclarationKind::ForInVariable;
     }
 
+    bool scopeContains(ScopeId ancestor, ScopeId descendant) const
+    {
+        std::optional<ScopeId> current = descendant;
+        while (current) {
+            if (*current == ancestor) {
+                return true;
+            }
+            const ScopeRecord* record = index_.scope(*current);
+            if (!record) {
+                return false;
+            }
+            current = record->parent;
+        }
+        return false;
+    }
+
+    void recordCapture(const ResolvedSymbol& resolved)
+    {
+        if (functionStack_.empty()) {
+            return;
+        }
+        const DeclarationRecord* target = index_.declaration(resolved.declarationId);
+        if (!target || !isValueDeclaration(target->kind)) {
+            return;
+        }
+
+        FunctionContext& current = functionStack_.back();
+        if (scopeContains(current.scopeId, target->scopeId)) {
+            return;
+        }
+
+        bool isEnclosingLocal = false;
+        for (std::size_t index = functionStack_.size() - 1; index > 0; --index) {
+            const FunctionContext& enclosing = functionStack_[index - 1];
+            if (scopeContains(enclosing.scopeId, target->scopeId)) {
+                isEnclosingLocal = true;
+                break;
+            }
+        }
+        if (!isEnclosingLocal) {
+            return;
+        }
+
+        const auto duplicate = std::find_if(
+            current.captures.symbols.begin(),
+            current.captures.symbols.end(),
+            [&resolved](const ResolvedSymbol& symbol) {
+                return symbol.declarationId == resolved.declarationId;
+            });
+        if (duplicate == current.captures.symbols.end()) {
+            current.captures.symbols.push_back(resolved);
+        }
+    }
+
     void recordVariableReference(const VariableExpr& expression)
     {
         if (const std::optional<ResolvedSymbol> resolved = lookupReference(expression.name.lexeme)) {
             const DeclarationRecord* target = index_.declaration(resolved->declarationId);
             if (target && isValueDeclaration(target->kind)) {
                 index_.variableReferences_.emplace(&expression, *resolved);
+                recordCapture(*resolved);
             }
         }
     }
@@ -712,6 +811,7 @@ private:
             const DeclarationRecord* target = index_.declaration(resolved->declarationId);
             if (target && isValueDeclaration(target->kind)) {
                 index_.assignmentReferences_.emplace(&expression, *resolved);
+                recordCapture(*resolved);
             }
         }
     }
@@ -722,12 +822,14 @@ private:
             const DeclarationRecord* target = index_.declaration(resolved->declarationId);
             if (target && isValueDeclaration(target->kind)) {
                 index_.compoundAssignmentReferences_.emplace(&expression, *resolved);
+                recordCapture(*resolved);
             }
         }
     }
 
     DeclarationIndex& index_;
     std::vector<ScopeId> scopeStack_;
+    std::vector<FunctionContext> functionStack_;
 };
 
 DeclarationIndex DeclarationIndex::collect(const Program& program)
@@ -896,6 +998,24 @@ const ReturnRecord* DeclarationIndex::returnMetadata(const ReturnStmt& statement
 {
     const auto found = returnMetadata_.find(&statement);
     return found == returnMetadata_.end() ? nullptr : &found->second;
+}
+
+const CaptureRecord* DeclarationIndex::captureMetadata(const FunctionStmt& statement) const
+{
+    const auto found = functionCaptures_.find(&statement);
+    return found == functionCaptures_.end() ? nullptr : &found->second;
+}
+
+const CaptureRecord* DeclarationIndex::captureMetadata(const FunctionExpr& expression) const
+{
+    const auto found = functionExpressionCaptures_.find(&expression);
+    return found == functionExpressionCaptures_.end() ? nullptr : &found->second;
+}
+
+const CaptureRecord* DeclarationIndex::captureMetadata(const MethodDecl& method) const
+{
+    const auto found = methodCaptures_.find(&method);
+    return found == methodCaptures_.end() ? nullptr : &found->second;
 }
 
 void DeclarationIndex::recordNativeCall(const Expr& expression, std::string name)
@@ -1145,6 +1265,23 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
     }
     for (const ReturnStmt* statement : returnStatements_) {
         if (!returnMetadata(*statement)) {
+            ++mismatches;
+        }
+    }
+    for (const DeclarationRecord& record : declarations_) {
+        if (record.kind == DeclarationKind::Function && record.statement) {
+            const auto* function = dynamic_cast<const FunctionStmt*>(record.statement);
+            if (!function || !captureMetadata(*function)) {
+                ++mismatches;
+            }
+        } else if (record.kind == DeclarationKind::Method && record.method) {
+            if (!captureMetadata(*record.method)) {
+                ++mismatches;
+            }
+        }
+    }
+    for (const FunctionExpr* expression : functionExpressions_) {
+        if (!captureMetadata(*expression)) {
             ++mismatches;
         }
     }

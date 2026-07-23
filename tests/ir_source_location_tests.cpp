@@ -775,6 +775,87 @@ void test_function_return_lowering_metadata()
     compiler.compile(program, resolved, index);
 }
 
+void test_function_capture_metadata()
+{
+    std::istringstream input(
+        "let global = 9;\n"
+        "fun readGlobal() { return global; }\n"
+        "fun makeCounter() {\n"
+        "  let count = 0;\n"
+        "  fun increment(delta: number): number {\n"
+        "    count += delta;\n"
+        "    return count;\n"
+        "  }\n"
+        "  return fun () { return increment(1); };\n"
+        "}\n"
+        "struct Box { value: number }\n"
+        "impl Box {\n"
+        "  fun read(): number { return this.value; }\n"
+        "  fun makeReader() { return fun () { return this.value; }; }\n"
+        "}\n");
+    FrontendSession frontend;
+    Program program = frontend.loadStdin(input);
+
+    const auto* readGlobal = dynamic_cast<const FunctionStmt*>(program.statements[1].get());
+    const auto* makeCounter = dynamic_cast<const FunctionStmt*>(program.statements[2].get());
+    const auto* increment = makeCounter && makeCounter->body.size() > 1
+        ? dynamic_cast<const FunctionStmt*>(makeCounter->body[1].get())
+        : nullptr;
+    const auto* closureReturn = makeCounter && !makeCounter->body.empty()
+        ? dynamic_cast<const ReturnStmt*>(makeCounter->body.back().get())
+        : nullptr;
+    const auto* closure = closureReturn
+        ? dynamic_cast<const FunctionExpr*>(closureReturn->value.get())
+        : nullptr;
+    const auto* impl = dynamic_cast<const ImplStmt*>(program.statements[4].get());
+    assert(readGlobal != nullptr && makeCounter != nullptr && increment != nullptr);
+    assert(closureReturn != nullptr && closure != nullptr && impl != nullptr);
+    assert(impl->methods.size() == 2);
+
+    TypeChecker checker;
+    const ResolvedNames& resolved = checker.check(program);
+    const DeclarationIndex& index = checker.declarationIndex();
+    assert(checker.declarationIndexMismatchCount() == 0);
+
+    const DeclarationRecord* count = nullptr;
+    for (const DeclarationRecord& declaration : index.declarations()) {
+        if (declaration.name == "count") {
+            count = &declaration;
+            break;
+        }
+    }
+    const DeclarationRecord* incrementRecord = index.declaration(*increment);
+    assert(count != nullptr && incrementRecord != nullptr);
+
+    const CaptureRecord* readGlobalCapture = index.captureMetadata(*readGlobal);
+    const CaptureRecord* makeCounterCapture = index.captureMetadata(*makeCounter);
+    const CaptureRecord* incrementCapture = index.captureMetadata(*increment);
+    const CaptureRecord* closureCapture = index.captureMetadata(*closure);
+    const CaptureRecord* methodCapture = index.captureMetadata(impl->methods.front());
+    const auto* methodClosureReturn = dynamic_cast<const ReturnStmt*>(impl->methods.back().body.front().get());
+    const auto* methodClosure = methodClosureReturn
+        ? dynamic_cast<const FunctionExpr*>(methodClosureReturn->value.get())
+        : nullptr;
+    assert(methodClosure != nullptr);
+    const CaptureRecord* methodClosureCapture = index.captureMetadata(*methodClosure);
+    assert(readGlobalCapture != nullptr && readGlobalCapture->symbols.empty());
+    assert(makeCounterCapture != nullptr && makeCounterCapture->symbols.empty());
+    assert(incrementCapture != nullptr && incrementCapture->symbols.size() == 1);
+    assert(incrementCapture->symbols.front().declarationId == count->declarationId);
+    assert(closureCapture != nullptr && closureCapture->symbols.size() == 1);
+    assert(closureCapture->symbols.front().declarationId == incrementRecord->declarationId);
+    assert(methodCapture != nullptr && methodCapture->symbols.empty());
+    assert(methodClosureCapture != nullptr && methodClosureCapture->symbols.size() == 1);
+    const DeclarationRecord* thisRecord = index.declaration(
+        methodClosureCapture->symbols.front().declarationId);
+    assert(thisRecord != nullptr);
+    assert(thisRecord->kind == DeclarationKind::Parameter);
+    assert(thisRecord->name == "this");
+
+    IRCompiler compiler;
+    compiler.compile(program, resolved, index);
+}
+
 void test_typed_field_assignment_metadata()
 {
     std::istringstream input(
@@ -985,6 +1066,7 @@ int main()
     test_method_call_lowering_metadata();
     test_variant_constructor_lowering_metadata();
     test_function_return_lowering_metadata();
+    test_function_capture_metadata();
     test_typed_field_assignment_metadata();
     test_native_call_metadata();
     test_collection_expression_metadata();

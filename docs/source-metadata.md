@@ -78,8 +78,18 @@ families remain on the legacy AST/`ResolvedNames` path.
 and methods, records typed function-expression results, and records the checked
 type of every return statement. The initial M1D lowering slice requires these
 records for named functions, methods, anonymous functions, and returns while
-preserving the existing runtime names and closure-cell representation. Capture
-sets and loop-target metadata remain later M1D slices.
+preserving the existing runtime names and closure-cell representation.
+
+The M1D capture-set slice adds one `CaptureRecord` for every named function,
+method, and function expression. Its `ResolvedSymbol` entries are deduplicated
+by declaration ID in source traversal order and cover variable reads,
+assignments, and compound assignments that cross a nested function boundary
+to an enclosing function-owned local cell. Top-level/module bindings remain
+outside the capture set because the current runtime resolves them through its
+global environment. IR lowering requires the record's presence but continues
+to emit the existing variable operations and function values, so capture
+metadata is not serialized into `.cdbc` artifacts. Loop-target metadata remains
+the later M1D slice.
 
 ## Lossless source view
 

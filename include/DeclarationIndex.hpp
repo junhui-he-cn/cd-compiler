@@ -60,6 +60,10 @@ struct ReturnRecord {
     TypeInfo type;
 };
 
+struct CaptureRecord {
+    std::vector<ResolvedSymbol> symbols;
+};
+
 struct DeclarationSignature {
     std::vector<TypeParameter> typeParameters;
     std::vector<Parameter> parameters;
@@ -139,6 +143,9 @@ public:
     const NativeCallRecord* nativeCall(const Expr& expression) const;
     const VariantConstructorRecord* variantConstructor(const MemberCallExpr& expression) const;
     const ReturnRecord* returnMetadata(const ReturnStmt& statement) const;
+    const CaptureRecord* captureMetadata(const FunctionStmt& statement) const;
+    const CaptureRecord* captureMetadata(const FunctionExpr& expression) const;
+    const CaptureRecord* captureMetadata(const MethodDecl& method) const;
 
     std::optional<DeclarationId> lookup(ScopeId scopeId, const std::string& name) const;
     std::optional<ResolvedSymbol> variableReference(const VariableExpr& expression) const;
@@ -194,4 +201,7 @@ private:
     std::unordered_set<const FunctionExpr*> functionExpressions_;
     std::unordered_set<const ReturnStmt*> returnStatements_;
     std::unordered_map<const ReturnStmt*, ReturnRecord> returnMetadata_;
+    std::unordered_map<const FunctionStmt*, CaptureRecord> functionCaptures_;
+    std::unordered_map<const FunctionExpr*, CaptureRecord> functionExpressionCaptures_;
+    std::unordered_map<const MethodDecl*, CaptureRecord> methodCaptures_;
 };

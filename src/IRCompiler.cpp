@@ -331,7 +331,8 @@ void IRCompiler::requireFunctionMetadata(const FunctionStmt& function) const
         : nullptr;
     if (!declaration
         || declaration->kind != DeclarationKind::Function
-        || !declarationIndex_->signature(declaration->declarationId)) {
+        || !declarationIndex_->signature(declaration->declarationId)
+        || !declarationIndex_->captureMetadata(function)) {
         throw IRCompileError("missing function metadata");
     }
 }
@@ -343,7 +344,8 @@ void IRCompiler::requireMethodMetadata(const MethodDecl& method) const
         : nullptr;
     if (!declaration
         || declaration->kind != DeclarationKind::Method
-        || !declarationIndex_->signature(declaration->declarationId)) {
+        || !declarationIndex_->signature(declaration->declarationId)
+        || !declarationIndex_->captureMetadata(method)) {
         throw IRCompileError("missing method metadata");
     }
 }
@@ -711,6 +713,9 @@ IRRegister IRCompiler::compileExpression(const Expr& expression)
 IRRegister IRCompiler::emitFunctionExpr(const FunctionExpr& expression)
 {
     typedExpressionType(expression, StaticType::Function, "function expression");
+    if (!declarationIndex_ || !declarationIndex_->captureMetadata(expression)) {
+        throw IRCompileError("missing function expression metadata");
+    }
     std::vector<std::string> parameters = resolvedNames_->parameterNames(expression);
     ir_.beginFunction(resolvedNames_->functionName(expression), std::move(parameters));
 
