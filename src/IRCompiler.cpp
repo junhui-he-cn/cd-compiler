@@ -56,16 +56,27 @@ void IRCompiler::setCurrentSpan(std::optional<SourceSpan> span)
 
 const TypeInfo& IRCompiler::typedExpressionType(
     const Expr& expression,
-    StaticType expectedKind,
     const char* context) const
 {
     const TypedExpressionRecord* record = declarationIndex_
         ? declarationIndex_->typedExpression(expression)
         : nullptr;
-    if (!record || record->type.kind != expectedKind) {
+    if (!record) {
         throw IRCompileError(std::string("missing typed metadata for ") + context);
     }
     return record->type;
+}
+
+const TypeInfo& IRCompiler::typedExpressionType(
+    const Expr& expression,
+    StaticType expectedKind,
+    const char* context) const
+{
+    const TypeInfo& type = typedExpressionType(expression, context);
+    if (type.kind != expectedKind) {
+        throw IRCompileError(std::string("missing typed metadata for ") + context);
+    }
+    return type;
 }
 
 IRProgram IRCompiler::compile(
@@ -920,6 +931,7 @@ IRRegister IRCompiler::emitFieldAccess(const FieldAccessExpr& expression)
 
 IRRegister IRCompiler::emitFieldAssign(const FieldAssignExpr& expression)
 {
+    typedExpressionType(expression, "field assignment");
     IRRegister object = compileExpression(*expression.object);
     IRRegister value = compileExpression(*expression.value);
     return ir_.emitAssignField(object, expression.name.lexeme, value);
@@ -927,6 +939,7 @@ IRRegister IRCompiler::emitFieldAssign(const FieldAssignExpr& expression)
 
 IRRegister IRCompiler::emitFieldCompoundAssign(const FieldCompoundAssignExpr& expression)
 {
+    typedExpressionType(expression, StaticType::Number, "field compound assignment");
     IRRegister object = compileExpression(*expression.object);
     IRRegister oldValue = ir_.emitField(object, expression.name.lexeme);
     IRRegister result = emitCompoundAssignmentResult(

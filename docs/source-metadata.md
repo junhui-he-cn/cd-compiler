@@ -56,16 +56,17 @@ value symbols are deferred to M3A. The index IDs are not serialized into
 
 `DeclarationIndex::typedExpression()` exposes the `TypeInfo` produced by the
 existing checker for resolved variable reads, ordinary assignments, numeric
-compound assignments, direct calls, field access, and index reads/assignments/
-compound assignments, native function/member calls, array/map literals, and
-named struct constructors. The records include both statically known and
-dynamically validated index paths plus dynamic collection inference. Native call
-records retain the resolved native name; legacy `len` lowering remains outside
-this registry. All records are keyed by the AST expression address within the
-current snapshot, are not persistent identities, and do not claim canonical type
-ownership. The checker requires these records during shadow comparison for the
-migrated expression families. IR lowering consumes native-call records for
-direct and member calls plus array/map/struct type records; `len`, collection
+compound assignments, direct calls, field access, field assignments and field
+compound assignments, and index reads/assignments/compound assignments, native
+function/member calls, array/map literals, and named struct constructors. The
+records include both statically known and dynamically validated index paths plus
+dynamic collection inference. Native call records retain the resolved native
+name; legacy `len` lowering remains outside this registry. All records are keyed
+by the AST expression address within the current snapshot, are not persistent
+identities, and do not claim canonical type ownership. The checker requires these
+records during shadow comparison for the migrated expression families. IR
+lowering consumes native-call records for direct and member calls, array/map/
+struct type records, and field-assignment result records; `len`, collection
 helpers, and other unmigrated families remain on the legacy AST/`ResolvedNames`
 path.
 

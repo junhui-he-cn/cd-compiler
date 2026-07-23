@@ -38,6 +38,9 @@ private:
     void setCurrentSpan(std::optional<SourceSpan> span);
     const TypeInfo& typedExpressionType(
         const Expr& expression,
+        const char* context) const;
+    const TypeInfo& typedExpressionType(
+        const Expr& expression,
         StaticType expectedKind,
         const char* context) const;
 

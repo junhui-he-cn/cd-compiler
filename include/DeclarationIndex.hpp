@@ -163,6 +163,8 @@ private:
     std::unordered_map<const AssignExpr*, ResolvedSymbol> assignmentReferences_;
     std::unordered_map<const CompoundAssignExpr*, ResolvedSymbol> compoundAssignmentReferences_;
     std::unordered_set<const FieldAccessExpr*> fieldAccesses_;
+    std::unordered_set<const FieldAssignExpr*> fieldAssignments_;
+    std::unordered_set<const FieldCompoundAssignExpr*> fieldCompoundAssignments_;
     std::unordered_set<const IndexExpr*> indexExpressions_;
     std::unordered_set<const IndexAssignExpr*> indexAssignments_;
     std::unordered_set<const IndexCompoundAssignExpr*> indexCompoundAssignments_;

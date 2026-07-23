@@ -502,6 +502,54 @@ void test_typed_index_expression_metadata()
     assertType(*dynamicCompound, "number");
 }
 
+void test_typed_field_assignment_metadata()
+{
+    std::istringstream input(
+        "fun id(value) { return value; }\n"
+        "struct Box { value: number }\n"
+        "let box = Box { value: 1 };\n"
+        "box.value = 2;\n"
+        "box.value += 3;\n"
+        "id(box).value = 4;\n"
+        "id(box).value += 5;\n");
+    FrontendSession frontend;
+    Program program = frontend.loadStdin(input);
+
+    const auto* staticAssignStatement = dynamic_cast<const ExpressionStmt*>(program.statements[3].get());
+    const auto* staticCompoundStatement = dynamic_cast<const ExpressionStmt*>(program.statements[4].get());
+    const auto* dynamicAssignStatement = dynamic_cast<const ExpressionStmt*>(program.statements[5].get());
+    const auto* dynamicCompoundStatement = dynamic_cast<const ExpressionStmt*>(program.statements[6].get());
+    const auto* staticAssign = staticAssignStatement
+        ? dynamic_cast<const FieldAssignExpr*>(staticAssignStatement->expression.get())
+        : nullptr;
+    const auto* staticCompound = staticCompoundStatement
+        ? dynamic_cast<const FieldCompoundAssignExpr*>(staticCompoundStatement->expression.get())
+        : nullptr;
+    const auto* dynamicAssign = dynamicAssignStatement
+        ? dynamic_cast<const FieldAssignExpr*>(dynamicAssignStatement->expression.get())
+        : nullptr;
+    const auto* dynamicCompound = dynamicCompoundStatement
+        ? dynamic_cast<const FieldCompoundAssignExpr*>(dynamicCompoundStatement->expression.get())
+        : nullptr;
+    assert(staticAssign != nullptr && staticCompound != nullptr);
+    assert(dynamicAssign != nullptr && dynamicCompound != nullptr);
+
+    TypeChecker checker;
+    checker.check(program);
+    const DeclarationIndex& index = checker.declarationIndex();
+    assert(checker.declarationIndexMismatchCount() == 0);
+
+    const auto assertType = [&index](const Expr& expression, const std::string& expected) {
+        const TypedExpressionRecord* record = index.typedExpression(expression);
+        assert(record != nullptr);
+        assert(typeInfoName(record->type) == expected);
+    };
+    assertType(*staticAssign, "number");
+    assertType(*staticCompound, "number");
+    assertType(*dynamicAssign, "number");
+    assertType(*dynamicCompound, "number");
+}
+
 void test_native_call_metadata()
 {
     std::istringstream input(
@@ -650,6 +698,7 @@ int main()
     test_declaration_index_signature_shapes();
     test_typed_expression_metadata();
     test_typed_index_expression_metadata();
+    test_typed_field_assignment_metadata();
     test_native_call_metadata();
     test_collection_expression_metadata();
     return 0;

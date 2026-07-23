@@ -620,11 +620,13 @@ private:
         if (const auto* fieldAssign = dynamic_cast<const FieldAssignExpr*>(expression)) {
             collectExpression(fieldAssign->object.get());
             collectExpression(fieldAssign->value.get());
+            index_.fieldAssignments_.insert(fieldAssign);
             return;
         }
         if (const auto* fieldCompound = dynamic_cast<const FieldCompoundAssignExpr*>(expression)) {
             collectExpression(fieldCompound->object.get());
             collectExpression(fieldCompound->value.get());
+            index_.fieldCompoundAssignments_.insert(fieldCompound);
             return;
         }
         if (const auto* function = dynamic_cast<const FunctionExpr*>(expression)) {
@@ -1097,6 +1099,12 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
     }
 
     for (const FieldAccessExpr* expression : fieldAccesses_) {
+        requireTypedExpression(*expression);
+    }
+    for (const FieldAssignExpr* expression : fieldAssignments_) {
+        requireTypedExpression(*expression);
+    }
+    for (const FieldCompoundAssignExpr* expression : fieldCompoundAssignments_) {
         requireTypedExpression(*expression);
     }
     for (const IndexExpr* expression : indexExpressions_) {

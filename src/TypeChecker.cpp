@@ -4239,11 +4239,15 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
     }
 
     if (const auto* fieldAssign = dynamic_cast<const FieldAssignExpr*>(&expression)) {
-        return checkFieldAssignment(*fieldAssign);
+        CheckedExpression result = checkFieldAssignment(*fieldAssign);
+        declarationIndex_.recordTypedExpression(*fieldAssign, result.type);
+        return result;
     }
 
     if (const auto* fieldCompound = dynamic_cast<const FieldCompoundAssignExpr*>(&expression)) {
-        return checkFieldCompoundAssignment(*fieldCompound);
+        CheckedExpression result = checkFieldCompoundAssignment(*fieldCompound);
+        declarationIndex_.recordTypedExpression(*fieldCompound, result.type);
+        return result;
     }
 
     if (const auto* index = dynamic_cast<const IndexExpr*>(&expression)) {
