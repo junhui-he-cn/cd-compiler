@@ -928,6 +928,7 @@ IRRegister IRCompiler::emitIndexCompoundAssign(const IndexCompoundAssignExpr& ex
 
 IRRegister IRCompiler::emitFieldAccess(const FieldAccessExpr& expression)
 {
+    typedExpressionType(expression, "field access");
     if (resolvedNames_->hasFieldAccess(expression)) {
         return ir_.emitLoadVar(resolvedNames_->fieldAccessName(expression));
     }

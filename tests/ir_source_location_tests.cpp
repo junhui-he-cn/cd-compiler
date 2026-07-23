@@ -406,7 +406,7 @@ void test_typed_expression_metadata()
     assert(directCall != nullptr && field != nullptr);
 
     TypeChecker checker;
-    checker.check(program);
+    const ResolvedNames& resolved = checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
 
@@ -420,6 +420,9 @@ void test_typed_expression_metadata()
     assertType(*compound, "number");
     assertType(*directCall, "number");
     assertType(*field, "number");
+
+    IRCompiler compiler;
+    compiler.compile(program, resolved, index);
 }
 
 void test_variable_lowering_metadata()
@@ -593,7 +596,8 @@ void test_typed_field_assignment_metadata()
         "box.value = 2;\n"
         "box.value += 3;\n"
         "id(box).value = 4;\n"
-        "id(box).value += 5;\n");
+        "id(box).value += 5;\n"
+        "print id(box).value;\n");
     FrontendSession frontend;
     Program program = frontend.loadStdin(input);
 
@@ -601,6 +605,7 @@ void test_typed_field_assignment_metadata()
     const auto* staticCompoundStatement = dynamic_cast<const ExpressionStmt*>(program.statements[4].get());
     const auto* dynamicAssignStatement = dynamic_cast<const ExpressionStmt*>(program.statements[5].get());
     const auto* dynamicCompoundStatement = dynamic_cast<const ExpressionStmt*>(program.statements[6].get());
+    const auto* dynamicReadStatement = dynamic_cast<const PrintStmt*>(program.statements[7].get());
     const auto* staticAssign = staticAssignStatement
         ? dynamic_cast<const FieldAssignExpr*>(staticAssignStatement->expression.get())
         : nullptr;
@@ -613,11 +618,14 @@ void test_typed_field_assignment_metadata()
     const auto* dynamicCompound = dynamicCompoundStatement
         ? dynamic_cast<const FieldCompoundAssignExpr*>(dynamicCompoundStatement->expression.get())
         : nullptr;
+    const auto* dynamicRead = dynamicReadStatement
+        ? dynamic_cast<const FieldAccessExpr*>(dynamicReadStatement->expression.get())
+        : nullptr;
     assert(staticAssign != nullptr && staticCompound != nullptr);
-    assert(dynamicAssign != nullptr && dynamicCompound != nullptr);
+    assert(dynamicAssign != nullptr && dynamicCompound != nullptr && dynamicRead != nullptr);
 
     TypeChecker checker;
-    checker.check(program);
+    const ResolvedNames& resolved = checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
 
@@ -630,6 +638,10 @@ void test_typed_field_assignment_metadata()
     assertType(*staticCompound, "number");
     assertType(*dynamicAssign, "number");
     assertType(*dynamicCompound, "number");
+    assertType(*dynamicRead, "unknown");
+
+    IRCompiler compiler;
+    compiler.compile(program, resolved, index);
 }
 
 void test_native_call_metadata()

@@ -67,9 +67,9 @@ identities, and do not claim canonical type ownership. The checker requires thes
 records during shadow comparison for the migrated expression families. IR
 lowering consumes native-call records for direct and member calls, variable,
 assignment, and compound-assignment result records, array/map/struct type
-records, field-assignment result records, and index result records; `len`,
-collection helpers, and other unmigrated families remain on the legacy
-AST/`ResolvedNames` path.
+records, field-access and field-assignment result records, and index result
+records; `len`, collection helpers, and other unmigrated families remain on the
+legacy AST/`ResolvedNames` path.
 
 ## Lossless source view
 
