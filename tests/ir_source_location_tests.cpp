@@ -634,6 +634,39 @@ void test_call_lowering_metadata()
     compiler.compile(program, resolved, index);
 }
 
+void test_method_call_lowering_metadata()
+{
+    std::istringstream input(
+        "struct Box { value: number }\n"
+        "impl Box {\n"
+        "  fun add(delta: number): number { return this.value + delta; }\n"
+        "}\n"
+        "let box = Box { value: 1 };\n"
+        "print box.add(2);\n");
+    FrontendSession frontend;
+    Program program = frontend.loadStdin(input);
+
+    const auto* print = dynamic_cast<const PrintStmt*>(program.statements[3].get());
+    const auto* methodCall = print
+        ? dynamic_cast<const MemberCallExpr*>(print->expression.get())
+        : nullptr;
+    assert(methodCall != nullptr);
+
+    TypeChecker checker;
+    const ResolvedNames& resolved = checker.check(program);
+    const DeclarationIndex& index = checker.declarationIndex();
+    assert(checker.declarationIndexMismatchCount() == 0);
+
+    const TypedExpressionRecord* typed = index.typedExpression(*methodCall);
+    assert(typed != nullptr);
+    const CallTargetRecord* target = index.callTarget(*methodCall);
+    assert(target != nullptr);
+    assert(target->kind == CallTargetKind::StructMethod);
+
+    IRCompiler compiler;
+    compiler.compile(program, resolved, index);
+}
+
 void test_typed_field_assignment_metadata()
 {
     std::istringstream input(
@@ -841,6 +874,7 @@ int main()
     test_variable_lowering_metadata();
     test_typed_index_expression_metadata();
     test_call_lowering_metadata();
+    test_method_call_lowering_metadata();
     test_typed_field_assignment_metadata();
     test_native_call_metadata();
     test_collection_expression_metadata();

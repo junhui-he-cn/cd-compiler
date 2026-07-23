@@ -740,6 +740,13 @@ IRRegister IRCompiler::emitMemberCall(const MemberCallExpr& expression)
     }
 
     if (resolvedNames_->hasMemberCallCallee(expression)) {
+        typedExpressionType(expression, "member call");
+        if (resolvedNames_->memberCallMethodTarget(expression)) {
+            const CallTargetRecord* target = declarationIndex_->callTarget(expression);
+            if (!target || target->kind != CallTargetKind::StructMethod) {
+                throw IRCompileError("missing struct method call target metadata");
+            }
+        }
         const IRRegister callee = ir_.emitLoadVar(resolvedNames_->memberCallCalleeName(expression));
         std::vector<IRRegister> arguments;
         if (resolvedNames_->memberCallPassesReceiver(expression)) {

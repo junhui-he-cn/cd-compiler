@@ -1096,6 +1096,7 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
             CallTargetRecord{
                 CallTargetKind::StructMethod,
                 ResolvedSymbol{target->declarationId, target->symbolId}});
+        requireTypedExpression(expression);
     }
 
     for (const FieldAccessExpr* expression : fieldAccesses_) {

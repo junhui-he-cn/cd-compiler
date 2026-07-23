@@ -4180,8 +4180,8 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
             && !resolvedNames_.hasMemberCallCallee(*memberCall)
             && !resolvedNames_.hasVariantConstructor(*memberCall)) {
             declarationIndex_.recordNativeCall(*memberCall, memberCall->name.lexeme);
-            declarationIndex_.recordTypedExpression(*memberCall, result.type);
         }
+        declarationIndex_.recordTypedExpression(*memberCall, result.type);
         return result;
     }
 

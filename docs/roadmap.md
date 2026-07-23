@@ -474,11 +474,11 @@ materializes the existing `TypeInfo` result beside its legacy path, including
 statically known and dynamically validated indexing paths plus array/map/struct
 expression inference, and shadow comparison requires metadata completeness for
 the migrated expression families. IR lowering now consumes native-call records,
-typed call result records and local direct-call targets, variable, assignment,
-and compound-assignment result records, array/map/struct type records,
-field-access and field-assignment result records, and index result records while
-`len` keeps its legacy dedicated path; collection helpers, control flow, and
-other semantic ownership remain later M1C/M1D/M1E slices.
+typed call result records and local direct/member-call targets, variable,
+assignment, and compound-assignment result records, array/map/struct type
+records, field-access and field-assignment result records, and index result
+records while `len` keeps its legacy dedicated path; collection helpers, control
+flow, and other semantic ownership remain later M1C/M1D/M1E slices.
 
 **Deliverable:** introduce typed semantic nodes for literals, variables, calls,
 indexing, field access, assignments, compound assignments, and native calls. The
