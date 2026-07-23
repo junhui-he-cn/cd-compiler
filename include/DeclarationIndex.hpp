@@ -56,6 +56,10 @@ struct VariantConstructorRecord {
     std::string variantName;
 };
 
+struct ReturnRecord {
+    TypeInfo type;
+};
+
 struct DeclarationSignature {
     std::vector<TypeParameter> typeParameters;
     std::vector<Parameter> parameters;
@@ -134,6 +138,7 @@ public:
     const TypedExpressionRecord* typedExpression(const Expr& expression) const;
     const NativeCallRecord* nativeCall(const Expr& expression) const;
     const VariantConstructorRecord* variantConstructor(const MemberCallExpr& expression) const;
+    const ReturnRecord* returnMetadata(const ReturnStmt& statement) const;
 
     std::optional<DeclarationId> lookup(ScopeId scopeId, const std::string& name) const;
     std::optional<ResolvedSymbol> variableReference(const VariableExpr& expression) const;
@@ -155,6 +160,7 @@ private:
         const MemberCallExpr& expression,
         std::string enumName,
         std::string variantName);
+    void recordReturn(const ReturnStmt& statement, TypeInfo type);
 
     std::vector<DeclarationRecord> declarations_;
     std::vector<ScopeRecord> scopes_;
@@ -185,4 +191,7 @@ private:
     std::unordered_map<const Expr*, TypedExpressionRecord> typedExpressions_;
     std::unordered_map<const Expr*, NativeCallRecord> nativeCalls_;
     std::unordered_map<const MemberCallExpr*, VariantConstructorRecord> variantConstructors_;
+    std::unordered_set<const FunctionExpr*> functionExpressions_;
+    std::unordered_set<const ReturnStmt*> returnStatements_;
+    std::unordered_map<const ReturnStmt*, ReturnRecord> returnMetadata_;
 };

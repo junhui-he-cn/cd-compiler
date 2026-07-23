@@ -501,6 +501,13 @@ re-inference helpers have zero production callers.
 
 ### M1D: Control flow, functions, and closures
 
+Initial implementation slice: `DeclarationIndex` retains named
+function/method signatures, typed function-expression results, and checked
+return records. IR lowering requires those records for named functions,
+methods, anonymous functions, and returns while preserving the existing runtime
+names and closure-cell representation; capture sets and loop-target metadata
+remain later M1D slices.
+
 **Deliverable:** represent control-flow edges, returns, loop targets, function
 signatures, closure captures, and shared-cell accesses in the semantic layer.
 The proof slice covers `if`, loops, `break`/`continue`, functions, recursion,

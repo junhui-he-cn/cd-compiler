@@ -401,6 +401,7 @@ private:
         }
         if (const auto* returnStmt = dynamic_cast<const ReturnStmt*>(&statement)) {
             collectExpression(returnStmt->value.get());
+            index_.returnStatements_.insert(returnStmt);
             return;
         }
         if (dynamic_cast<const BreakStmt*>(&statement)
@@ -630,6 +631,7 @@ private:
             return;
         }
         if (const auto* function = dynamic_cast<const FunctionExpr*>(expression)) {
+            index_.functionExpressions_.insert(function);
             beginScope(nullptr);
             for (const Parameter& parameter : function->parameters) {
                 addDeclaration(
@@ -890,6 +892,12 @@ const VariantConstructorRecord* DeclarationIndex::variantConstructor(
     return found == variantConstructors_.end() ? nullptr : &found->second;
 }
 
+const ReturnRecord* DeclarationIndex::returnMetadata(const ReturnStmt& statement) const
+{
+    const auto found = returnMetadata_.find(&statement);
+    return found == returnMetadata_.end() ? nullptr : &found->second;
+}
+
 void DeclarationIndex::recordNativeCall(const Expr& expression, std::string name)
 {
     nativeCalls_.insert_or_assign(&expression, NativeCallRecord{std::move(name)});
@@ -903,6 +911,11 @@ void DeclarationIndex::recordVariantConstructor(
     variantConstructors_.insert_or_assign(
         &expression,
         VariantConstructorRecord{std::move(enumName), std::move(variantName)});
+}
+
+void DeclarationIndex::recordReturn(const ReturnStmt& statement, TypeInfo type)
+{
+    returnMetadata_.insert_or_assign(&statement, ReturnRecord{std::move(type)});
 }
 
 std::optional<DeclarationId> DeclarationIndex::lookup(ScopeId scopeId, const std::string& name) const
@@ -1125,6 +1138,15 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
                 CallTargetKind::StructMethod,
                 ResolvedSymbol{target->declarationId, target->symbolId}});
         requireTypedExpression(expression);
+    }
+
+    for (const FunctionExpr* expression : functionExpressions_) {
+        requireTypedExpression(*expression);
+    }
+    for (const ReturnStmt* statement : returnStatements_) {
+        if (!returnMetadata(*statement)) {
+            ++mismatches;
+        }
     }
 
     for (const FieldAccessExpr* expression : fieldAccesses_) {

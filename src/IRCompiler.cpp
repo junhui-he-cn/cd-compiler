@@ -262,6 +262,7 @@ void IRCompiler::compileModule(const ModuleStmt& module)
 
 void IRCompiler::compileFunctionStatement(const FunctionStmt& function)
 {
+    requireFunctionMetadata(function);
     const std::string functionName = resolvedNames_->functionName(function);
     IRRegister placeholder = ir_.emitConstant(Value::nil());
     ir_.emitStoreVar(functionName, placeholder);
@@ -292,6 +293,7 @@ void IRCompiler::compileImpl(const ImplStmt& statement)
 
 void IRCompiler::compileMethod(const MethodDecl& method)
 {
+    requireMethodMetadata(method);
     const std::string methodName = resolvedNames_->methodName(method);
     IRRegister placeholder = ir_.emitConstant(Value::nil());
     ir_.emitStoreVar(methodName, placeholder);
@@ -315,8 +317,35 @@ void IRCompiler::compileMethod(const MethodDecl& method)
 
 void IRCompiler::compileReturn(const ReturnStmt& statement)
 {
+    if (!declarationIndex_ || !declarationIndex_->returnMetadata(statement)) {
+        throw IRCompileError("missing return metadata");
+    }
     IRRegister value = statement.value ? compileExpression(*statement.value) : ir_.emitConstant(Value::nil());
     ir_.emitReturn(value);
+}
+
+void IRCompiler::requireFunctionMetadata(const FunctionStmt& function) const
+{
+    const DeclarationRecord* declaration = declarationIndex_
+        ? declarationIndex_->declaration(function)
+        : nullptr;
+    if (!declaration
+        || declaration->kind != DeclarationKind::Function
+        || !declarationIndex_->signature(declaration->declarationId)) {
+        throw IRCompileError("missing function metadata");
+    }
+}
+
+void IRCompiler::requireMethodMetadata(const MethodDecl& method) const
+{
+    const DeclarationRecord* declaration = declarationIndex_
+        ? declarationIndex_->declaration(method)
+        : nullptr;
+    if (!declaration
+        || declaration->kind != DeclarationKind::Method
+        || !declarationIndex_->signature(declaration->declarationId)) {
+        throw IRCompileError("missing method metadata");
+    }
 }
 
 void IRCompiler::compileBreak(const BreakStmt&)
@@ -681,6 +710,7 @@ IRRegister IRCompiler::compileExpression(const Expr& expression)
 
 IRRegister IRCompiler::emitFunctionExpr(const FunctionExpr& expression)
 {
+    typedExpressionType(expression, StaticType::Function, "function expression");
     std::vector<std::string> parameters = resolvedNames_->parameterNames(expression);
     ir_.beginFunction(resolvedNames_->functionName(expression), std::move(parameters));
 

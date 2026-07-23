@@ -1087,6 +1087,7 @@ void TypeChecker::checkStatement(const Stmt& statement)
             ? checkExpressionInfo(*returnStmt->value, expectedReturn).type
             : simpleType(StaticType::Nil);
         recordReturn(returnStmt->keyword, returned);
+        declarationIndex_.recordReturn(*returnStmt, returned);
         return;
     }
 
@@ -4049,7 +4050,9 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
     }
 
     if (const auto* function = dynamic_cast<const FunctionExpr*>(&expression)) {
-        return checkFunctionExpression(*function, expectedType);
+        CheckedExpression result = checkFunctionExpression(*function, expectedType);
+        declarationIndex_.recordTypedExpression(*function, result.type);
+        return result;
     }
 
     if (const auto* variable = dynamic_cast<const VariableExpr*>(&expression)) {

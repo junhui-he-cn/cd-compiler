@@ -50,6 +50,8 @@ private:
     void compileImpl(const ImplStmt& statement);
     void compileMethod(const MethodDecl& method);
     void compileReturn(const ReturnStmt& statement);
+    void requireFunctionMetadata(const FunctionStmt& function) const;
+    void requireMethodMetadata(const MethodDecl& method) const;
     IRRegister compileExpression(const Expr& expression);
     IRRegister emitCall(const CallExpr& expression);
     IRRegister emitMemberCall(const MemberCallExpr& expression);

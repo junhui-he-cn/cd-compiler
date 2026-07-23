@@ -708,6 +708,73 @@ void test_variant_constructor_lowering_metadata()
     compiler.compile(program, resolved, index);
 }
 
+void test_function_return_lowering_metadata()
+{
+    std::istringstream input(
+        "fun factorial(n: number): number {\n"
+        "  if (n <= 1) { return 1; }\n"
+        "  return n * factorial(n - 1);\n"
+        "}\n"
+        "fun makeReader() {\n"
+        "  let captured = 7;\n"
+        "  return fun () { return captured; };\n"
+        "}\n"
+        "let reader = makeReader();\n"
+        "print reader();\n");
+    FrontendSession frontend;
+    Program program = frontend.loadStdin(input);
+
+    const auto* factorial = dynamic_cast<const FunctionStmt*>(program.statements[0].get());
+    const auto* makeReader = dynamic_cast<const FunctionStmt*>(program.statements[1].get());
+    const auto* readerPrint = dynamic_cast<const PrintStmt*>(program.statements[3].get());
+    assert(factorial != nullptr && makeReader != nullptr && readerPrint != nullptr);
+    assert(factorial->body.size() == 2 && makeReader->body.size() == 2);
+
+    const auto* branch = dynamic_cast<const IfStmt*>(factorial->body[0].get());
+    const auto* branchBody = branch
+        ? dynamic_cast<const BlockStmt*>(branch->thenBranch.get())
+        : nullptr;
+    const auto* branchReturn = branchBody && !branchBody->statements.empty()
+        ? dynamic_cast<const ReturnStmt*>(branchBody->statements.front().get())
+        : nullptr;
+    const auto* recursiveReturn = dynamic_cast<const ReturnStmt*>(factorial->body[1].get());
+    const auto* closureReturn = dynamic_cast<const ReturnStmt*>(makeReader->body[1].get());
+    const auto* closure = closureReturn
+        ? dynamic_cast<const FunctionExpr*>(closureReturn->value.get())
+        : nullptr;
+    const auto* closureBodyReturn = closure && !closure->body.empty()
+        ? dynamic_cast<const ReturnStmt*>(closure->body.front().get())
+        : nullptr;
+    const auto* readerCall = dynamic_cast<const CallExpr*>(readerPrint->expression.get());
+    assert(branchReturn != nullptr && recursiveReturn != nullptr);
+    assert(closureReturn != nullptr && closure != nullptr && closureBodyReturn != nullptr);
+    assert(readerCall != nullptr);
+
+    TypeChecker checker;
+    const ResolvedNames& resolved = checker.check(program);
+    const DeclarationIndex& index = checker.declarationIndex();
+    assert(checker.declarationIndexMismatchCount() == 0);
+
+    const DeclarationRecord* factorialRecord = index.declaration(*factorial);
+    const DeclarationRecord* readerRecord = index.declaration(*makeReader);
+    assert(factorialRecord != nullptr && readerRecord != nullptr);
+    assert(index.signature(factorialRecord->declarationId).has_value());
+    assert(index.signature(readerRecord->declarationId).has_value());
+    assert(index.returnMetadata(*branchReturn) != nullptr);
+    assert(index.returnMetadata(*recursiveReturn) != nullptr);
+    assert(index.returnMetadata(*closureReturn) != nullptr);
+    assert(index.returnMetadata(*closureBodyReturn) != nullptr);
+    assert(typeInfoName(index.returnMetadata(*branchReturn)->type) == "number");
+    assert(typeInfoName(index.returnMetadata(*recursiveReturn)->type) == "number");
+    assert(index.returnMetadata(*closureReturn)->type.kind == StaticType::Function);
+    assert(typeInfoName(index.returnMetadata(*closureBodyReturn)->type) == "number");
+    assert(index.typedExpression(*closure) != nullptr);
+    assert(index.typedExpression(*readerCall) != nullptr);
+
+    IRCompiler compiler;
+    compiler.compile(program, resolved, index);
+}
+
 void test_typed_field_assignment_metadata()
 {
     std::istringstream input(
@@ -917,6 +984,7 @@ int main()
     test_call_lowering_metadata();
     test_method_call_lowering_metadata();
     test_variant_constructor_lowering_metadata();
+    test_function_return_lowering_metadata();
     test_typed_field_assignment_metadata();
     test_native_call_metadata();
     test_collection_expression_metadata();

@@ -72,6 +72,15 @@ array/map/struct type records, field-access and field-assignment result records,
 and index result records; `len`, collection helpers, and other unmigrated
 families remain on the legacy AST/`ResolvedNames` path.
 
+## Function and return metadata (M1D initial slice)
+
+`DeclarationIndex` retains declaration/signature records for named functions
+and methods, records typed function-expression results, and records the checked
+type of every return statement. The initial M1D lowering slice requires these
+records for named functions, methods, anonymous functions, and returns while
+preserving the existing runtime names and closure-cell representation. Capture
+sets and loop-target metadata remain later M1D slices.
+
 ## Lossless source view
 
 `FrontendSession::losslessSourceView()` groups `LosslessPiece` values by
