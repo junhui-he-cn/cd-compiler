@@ -318,6 +318,94 @@ bool compatible(const TypeInfo& expected, const TypeInfo& actual)
     return SemanticTypes::compatible(*expected.returnType, *actual.returnType);
 }
 
+std::optional<TypeInferenceConflict> inferTypeArguments(
+    const TypeInfo& expected,
+    const TypeInfo& actual,
+    TypeSubstitutions& substitutions)
+{
+    if (expected.kind == StaticType::TypeParameter && expected.typeParameterName) {
+        if (!SemanticTypes::isKnown(actual)) {
+            return std::nullopt;
+        }
+        const auto [it, inserted] = substitutions.emplace(*expected.typeParameterName, actual);
+        if (!inserted
+            && (!SemanticTypes::compatible(it->second, actual)
+                || !SemanticTypes::compatible(actual, it->second))) {
+            return TypeInferenceConflict{*expected.typeParameterName, it->second, actual};
+        }
+        return std::nullopt;
+    }
+
+    if (expected.kind == StaticType::Array && actual.kind == StaticType::Array
+        && expected.elementType && actual.elementType) {
+        return SemanticTypes::inferTypeArguments(
+            *expected.elementType, *actual.elementType, substitutions);
+    }
+
+    if (expected.kind == StaticType::Map && actual.kind == StaticType::Map
+        && expected.keyType && actual.keyType && expected.valueType && actual.valueType) {
+        if (std::optional<TypeInferenceConflict> conflict = SemanticTypes::inferTypeArguments(
+                *expected.keyType, *actual.keyType, substitutions)) {
+            return conflict;
+        }
+        return SemanticTypes::inferTypeArguments(
+            *expected.valueType, *actual.valueType, substitutions);
+    }
+
+    if (expected.kind == StaticType::Struct && actual.kind == StaticType::Struct
+        && expected.structName && actual.structName
+        && expected.structName == actual.structName
+        && expected.typeArguments.size() == actual.typeArguments.size()) {
+        for (std::size_t i = 0; i < expected.typeArguments.size(); ++i) {
+            if (std::optional<TypeInferenceConflict> conflict = SemanticTypes::inferTypeArguments(
+                    expected.typeArguments[i], actual.typeArguments[i], substitutions)) {
+                return conflict;
+            }
+        }
+        return std::nullopt;
+    }
+
+    if (expected.kind == StaticType::Nullable && expected.nullableOf) {
+        if (actual.kind == StaticType::Nil) {
+            return std::nullopt;
+        }
+        if (actual.kind == StaticType::Nullable && actual.nullableOf) {
+            return SemanticTypes::inferTypeArguments(
+                *expected.nullableOf, *actual.nullableOf, substitutions);
+        }
+        return SemanticTypes::inferTypeArguments(*expected.nullableOf, actual, substitutions);
+    }
+
+    if (expected.kind == StaticType::Enum && actual.kind == StaticType::Enum
+        && expected.enumName && actual.enumName
+        && expected.enumName == actual.enumName
+        && expected.typeArguments.size() == actual.typeArguments.size()) {
+        for (std::size_t i = 0; i < expected.typeArguments.size(); ++i) {
+            if (std::optional<TypeInferenceConflict> conflict = SemanticTypes::inferTypeArguments(
+                    expected.typeArguments[i], actual.typeArguments[i], substitutions)) {
+                return conflict;
+            }
+        }
+        return std::nullopt;
+    }
+
+    if (expected.kind == StaticType::Function && actual.kind == StaticType::Function
+        && SemanticTypes::hasFunctionSignature(expected)
+        && SemanticTypes::hasFunctionSignature(actual)
+        && expected.parameterTypes.size() == actual.parameterTypes.size()) {
+        for (std::size_t i = 0; i < expected.parameterTypes.size(); ++i) {
+            if (std::optional<TypeInferenceConflict> conflict = SemanticTypes::inferTypeArguments(
+                    expected.parameterTypes[i], actual.parameterTypes[i], substitutions)) {
+                return conflict;
+            }
+        }
+        return SemanticTypes::inferTypeArguments(
+            *expected.returnType, *actual.returnType, substitutions);
+    }
+
+    return std::nullopt;
+}
+
 std::optional<TypeInfo> mergeArrayElementTypes(const TypeInfo& left, const TypeInfo& right)
 {
     if (!SemanticTypes::isKnown(left) || !SemanticTypes::isKnown(right)) {

@@ -65,12 +65,22 @@ TypeInfo substituteTypeParameters(const TypeInfo& type, const TypeSubstitutions&
 
 namespace SemanticTypes {
 
+struct TypeInferenceConflict {
+    std::string parameterName;
+    TypeInfo first;
+    TypeInfo second;
+};
+
 bool isKnown(const TypeInfo& type);
 bool hasFunctionSignature(const TypeInfo& type);
 bool isNullable(const TypeInfo& type);
 bool compatible(const TypeInfo& expected, const TypeInfo& actual);
 std::optional<TypeInfo> mergeArrayElementTypes(const TypeInfo& left, const TypeInfo& right);
 TypeInfo substituteTypeParameters(const TypeInfo& type, const TypeSubstitutions& substitutions);
+std::optional<TypeInferenceConflict> inferTypeArguments(
+    const TypeInfo& expected,
+    const TypeInfo& actual,
+    TypeSubstitutions& substitutions);
 
 } // namespace SemanticTypes
 

@@ -545,8 +545,8 @@ publish canonical `TypeInfo` signatures, including resolved parameter and
 return types, generic parameters, constraints, and implicit method receivers;
 IR lowering consumes these records. The shared `SemanticTypes` interface now
 also owns type-identity predicates, compatibility, aggregate element-type
-merging, and recursive generic substitution, while the existing algorithms
-remain the behavior oracle.
+merging, recursive generic substitution, and structural generic inference,
+while the existing algorithms remain the behavior oracle.
 
 **Deliverable:** move type identity, assignability, nullable compatibility,
 function compatibility, type-parameter bounds, inference, and generic
@@ -555,9 +555,10 @@ substitution behind the shared semantic type interface.
 **Migration:** route one type utility or generic instantiation family at a time
 through the shared model while shadow-comparing current results and diagnostics.
 The current slices centralize type-identity predicates, compatibility,
-collection element merging, and type-parameter substitution in `TypeUtils`;
-`TypeChecker` uses the namespaced operations and the old free functions only
-forward to them.
+collection element merging, type-parameter substitution, and structural
+generic inference in `TypeUtils`; `TypeChecker` uses the namespaced operations
+and keeps only the diagnostic/constraint adapter around them. The old free
+functions only forward to the shared implementations.
 
 **Quantitative gate:** every type-core/generic capability named by the M0A
 inventory is classified by the shared model; every generic instantiation used

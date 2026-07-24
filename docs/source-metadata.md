@@ -121,6 +121,11 @@ assignment/function compatibility; nullable and nested aggregate compatibility;
 array/map element-type merging; and recursive substitution
 through arrays, maps, nullable types, function signatures, nominal aggregate
 arguments, constraints, and generic constraints.
+`SemanticTypes::inferTypeArguments()` recursively matches the same aggregate,
+nullable, and function shapes and returns a snapshot-local
+`TypeInferenceConflict` instead of formatting diagnostics. `TypeChecker`
+retains the diagnostic adapter and constraint-context handling, so inference
+errors keep their existing source token and message shape.
 
 `TypeChecker` routes its compatibility checks, collection inference, generic
 instantiation, callback specialization, struct/enum payload checking, and

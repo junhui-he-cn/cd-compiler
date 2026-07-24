@@ -50,6 +50,27 @@ int main()
     assert(compatible(range, simpleType(StaticType::Range)));
     assert(!compatible(range, simpleType(StaticType::Array)));
 
+    TypeSubstitutions inferred;
+    const TypeInfo genericSignature = functionType(
+        {arrayType(typeParameterType("T"))},
+        nullableType(typeParameterType("U")));
+    const TypeInfo concreteSignature = functionType(
+        {arrayType(number)},
+        nullableType(simpleType(StaticType::String)));
+    assert(!SemanticTypes::inferTypeArguments(genericSignature, concreteSignature, inferred));
+    assert(typeInfoName(inferred.at("T")) == "number");
+    assert(typeInfoName(inferred.at("U")) == "string");
+
+    TypeSubstitutions conflicting;
+    const auto conflict = SemanticTypes::inferTypeArguments(
+        mapType(typeParameterType("T"), typeParameterType("T")),
+        mapType(number, simpleType(StaticType::String)),
+        conflicting);
+    assert(conflict);
+    assert(conflict->parameterName == "T");
+    assert(typeInfoName(conflict->first) == "number");
+    assert(typeInfoName(conflict->second) == "string");
+
     TypeSubstitutions substitutions;
     substitutions.emplace("T", number);
     substitutions.emplace("U", simpleType(StaticType::String));
