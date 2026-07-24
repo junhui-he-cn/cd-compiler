@@ -50,8 +50,8 @@ This is a small C++17 Compiler Design front-end/interpreter project. It currentl
 - `include/Ast.hpp`, `src/Ast.cpp`: AST node types and AST printer output.
 - `include/TypeUtils.hpp`, `src/TypeUtils.cpp`: canonical `TypeInfo` helpers,
   shared type-identity predicates, semantic compatibility, aggregate
-  element-type merging, generic type-parameter substitution, and generic
-  inference matching.
+  element-type merging, generic type-parameter substitution, generic
+  inference matching, and type-parameter constraint validation.
   `SemanticTypes` owns the migrated semantic operations; the unqualified
   functions remain compatibility forwarding APIs while callers are moved
   incrementally.

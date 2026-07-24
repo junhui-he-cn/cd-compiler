@@ -71,6 +71,23 @@ int main()
     assert(typeInfoName(conflict->first) == "number");
     assert(typeInfoName(conflict->second) == "string");
 
+    const std::vector<std::string> constrainedParameters{"T"};
+    const std::vector<std::shared_ptr<TypeInfo>> constraints{
+        std::make_shared<TypeInfo>(number)};
+    TypeSubstitutions validConstraint;
+    validConstraint.emplace("T", number);
+    assert(!SemanticTypes::validateTypeParameterConstraints(
+        constrainedParameters, constraints, validConstraint));
+
+    TypeSubstitutions invalidConstraint;
+    invalidConstraint.emplace("T", simpleType(StaticType::String));
+    const auto violation = SemanticTypes::validateTypeParameterConstraints(
+        constrainedParameters, constraints, invalidConstraint);
+    assert(violation);
+    assert(violation->parameterName == "T");
+    assert(typeInfoName(violation->constraint) == "number");
+    assert(typeInfoName(violation->actual) == "string");
+
     TypeSubstitutions substitutions;
     substitutions.emplace("T", number);
     substitutions.emplace("U", simpleType(StaticType::String));

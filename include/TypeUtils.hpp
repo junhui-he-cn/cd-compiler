@@ -71,6 +71,12 @@ struct TypeInferenceConflict {
     TypeInfo second;
 };
 
+struct TypeConstraintViolation {
+    std::string parameterName;
+    TypeInfo constraint;
+    TypeInfo actual;
+};
+
 bool isKnown(const TypeInfo& type);
 bool hasFunctionSignature(const TypeInfo& type);
 bool isNullable(const TypeInfo& type);
@@ -81,6 +87,10 @@ std::optional<TypeInferenceConflict> inferTypeArguments(
     const TypeInfo& expected,
     const TypeInfo& actual,
     TypeSubstitutions& substitutions);
+std::optional<TypeConstraintViolation> validateTypeParameterConstraints(
+    const std::vector<std::string>& parameters,
+    const std::vector<std::shared_ptr<TypeInfo>>& constraints,
+    const TypeSubstitutions& substitutions);
 
 } // namespace SemanticTypes
 

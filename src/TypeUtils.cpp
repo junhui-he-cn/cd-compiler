@@ -406,6 +406,26 @@ std::optional<TypeInferenceConflict> inferTypeArguments(
     return std::nullopt;
 }
 
+std::optional<TypeConstraintViolation> validateTypeParameterConstraints(
+    const std::vector<std::string>& parameters,
+    const std::vector<std::shared_ptr<TypeInfo>>& constraints,
+    const TypeSubstitutions& substitutions)
+{
+    for (std::size_t i = 0; i < parameters.size(); ++i) {
+        if (i >= constraints.size() || !constraints[i]) {
+            continue;
+        }
+        const auto found = substitutions.find(parameters[i]);
+        if (found == substitutions.end()) {
+            continue;
+        }
+        if (!SemanticTypes::compatible(*constraints[i], found->second)) {
+            return TypeConstraintViolation{parameters[i], *constraints[i], found->second};
+        }
+    }
+    return std::nullopt;
+}
+
 std::optional<TypeInfo> mergeArrayElementTypes(const TypeInfo& left, const TypeInfo& right)
 {
     if (!SemanticTypes::isKnown(left) || !SemanticTypes::isKnown(right)) {

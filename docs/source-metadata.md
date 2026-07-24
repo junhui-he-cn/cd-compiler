@@ -126,6 +126,10 @@ nullable, and function shapes and returns a snapshot-local
 `TypeInferenceConflict` instead of formatting diagnostics. `TypeChecker`
 retains the diagnostic adapter and constraint-context handling, so inference
 errors keep their existing source token and message shape.
+`SemanticTypes::validateTypeParameterConstraints()` likewise returns a
+`TypeConstraintViolation` for the first mismatched resolved argument without
+owning context or diagnostic formatting; the checker remains responsible for
+the existing `context: type parameter ... must satisfy ...` message.
 
 `TypeChecker` routes its compatibility checks, collection inference, generic
 instantiation, callback specialization, struct/enum payload checking, and

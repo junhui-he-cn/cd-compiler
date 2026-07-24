@@ -2679,20 +2679,13 @@ void TypeChecker::validateGenericTypeArguments(
     const Token& callToken,
     const std::string& context) const
 {
-    for (std::size_t i = 0; i < parameters.size(); ++i) {
-        if (i >= constraints.size() || !constraints[i]) {
-            continue;
-        }
-        const auto found = substitutions.find(parameters[i]);
-        if (found == substitutions.end()) {
-            continue;
-        }
-        if (!SemanticTypes::compatible(*constraints[i], found->second)) {
-            const std::string prefix = context.empty() ? "" : context + ": ";
-            throw TypeError(callToken,
-                prefix + "type parameter " + parameters[i] + " must satisfy "
-                    + typeInfoName(*constraints[i]) + ", got " + typeInfoName(found->second));
-        }
+    if (const auto violation = SemanticTypes::validateTypeParameterConstraints(
+            parameters, constraints, substitutions)) {
+        const std::string prefix = context.empty() ? "" : context + ": ";
+        throw TypeError(callToken,
+            prefix + "type parameter " + violation->parameterName + " must satisfy "
+                + typeInfoName(violation->constraint) + ", got "
+                + typeInfoName(violation->actual));
     }
 }
 
