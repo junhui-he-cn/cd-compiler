@@ -54,6 +54,19 @@ struct LoopTargetRecord {
     LoopTargetKind kind = LoopTargetKind::While;
 };
 
+enum class IndexOperationKind {
+    Read,
+    Assign,
+    CompoundAssign,
+};
+
+struct IndexOperationRecord {
+    IndexOperationKind kind = IndexOperationKind::Read;
+    TypeInfo collectionType;
+    TypeInfo indexType;
+    TypeInfo resultType;
+};
+
 struct TypedExpressionRecord {
     TypeInfo type;
 };
@@ -158,6 +171,7 @@ public:
     const TypedExpressionRecord* typedExpression(const Expr& expression) const;
     const NativeCallRecord* nativeCall(const Expr& expression) const;
     const VariantConstructorRecord* variantConstructor(const MemberCallExpr& expression) const;
+    const IndexOperationRecord* indexOperation(const Expr& expression) const;
     const ReturnRecord* returnMetadata(const ReturnStmt& statement) const;
     const CaptureRecord* captureMetadata(const FunctionStmt& statement) const;
     const CaptureRecord* captureMetadata(const FunctionExpr& expression) const;
@@ -185,6 +199,7 @@ private:
         const MemberCallExpr& expression,
         std::string enumName,
         std::string variantName);
+    void recordIndexOperation(const Expr& expression, IndexOperationRecord record);
     void recordReturn(const ReturnStmt& statement, TypeInfo type);
     void recordResolvedSignature(DeclarationId id, TypeInfo type);
 
@@ -217,6 +232,7 @@ private:
     std::unordered_map<const Expr*, TypedExpressionRecord> typedExpressions_;
     std::unordered_map<const Expr*, NativeCallRecord> nativeCalls_;
     std::unordered_map<const MemberCallExpr*, VariantConstructorRecord> variantConstructors_;
+    std::unordered_map<const Expr*, IndexOperationRecord> indexOperations_;
     std::unordered_set<const FunctionExpr*> functionExpressions_;
     std::unordered_set<const ReturnStmt*> returnStatements_;
     std::unordered_map<const ReturnStmt*, ReturnRecord> returnMetadata_;

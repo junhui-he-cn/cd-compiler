@@ -138,6 +138,18 @@ remain forwarding APIs for source compatibility during the migration; they do
 not hold a second implementation. This slice preserves diagnostics, IR,
 `.cdbc` artifacts, runtime behavior, and snapshot-local type records.
 
+## Collection index operations (M1E2 initial slice)
+
+`DeclarationIndex::indexOperation()` exposes one `IndexOperationRecord` for
+each checked array/map/range or dynamic index read, index assignment, and
+numeric index compound assignment. The record carries the operation kind plus
+the resolved collection, index, and expression-result `TypeInfo`; unknown
+types remain explicit for dynamic runtime-validation paths. `IRCompiler`
+requires the matching record kind before emitting the existing `Index`,
+`AssignIndex`, or compound-assignment sequence, so it no longer uses a generic
+typed-expression record as the operation decision. The record is
+snapshot-local, and no IR opcode or `.cdbc` format changes are involved.
+
 ## Lossless source view
 
 `FrontendSession::losslessSourceView()` groups `LosslessPiece` values by

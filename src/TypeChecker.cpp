@@ -5366,16 +5366,22 @@ TypeInfo TypeChecker::checkIndex(const IndexExpr& expression)
     const IndexTargetTypes target = checkIndexTarget(
         *expression.collection, *expression.index, expression.bracket, "can only index arrays, maps, or ranges");
 
+    TypeInfo result = unknownType();
     if (target.collection.kind == StaticType::Array && target.collection.elementType) {
-        return *target.collection.elementType;
+        result = *target.collection.elementType;
+    } else if (target.collection.kind == StaticType::Map && target.collection.valueType) {
+        result = *target.collection.valueType;
+    } else if (target.collection.kind == StaticType::Range) {
+        result = simpleType(StaticType::Number);
     }
-    if (target.collection.kind == StaticType::Map && target.collection.valueType) {
-        return *target.collection.valueType;
-    }
-    if (target.collection.kind == StaticType::Range) {
-        return simpleType(StaticType::Number);
-    }
-    return unknownType();
+    declarationIndex_.recordIndexOperation(
+        expression,
+        IndexOperationRecord{
+            IndexOperationKind::Read,
+            target.collection,
+            target.index,
+            result});
+    return result;
 }
 
 TypeChecker::CheckedExpression TypeChecker::checkIndexAssignment(const IndexAssignExpr& expression)
@@ -5395,6 +5401,13 @@ TypeChecker::CheckedExpression TypeChecker::checkIndexAssignment(const IndexAssi
         if (target.collection.valueType && !SemanticTypes::compatible(*target.collection.valueType, value.type)) {
             throw TypeError(expression.bracket, "map value is incompatible with map value type");
         }
+        declarationIndex_.recordIndexOperation(
+            expression,
+            IndexOperationRecord{
+                IndexOperationKind::Assign,
+                target.collection,
+                target.index,
+                value.type});
         return value;
     }
 
@@ -5409,9 +5422,23 @@ TypeChecker::CheckedExpression TypeChecker::checkIndexAssignment(const IndexAssi
 
     if (binding && binding->type.kind == StaticType::Array) {
         refineArrayBindingFromMutation(*binding, value.type);
+        declarationIndex_.recordIndexOperation(
+            expression,
+            IndexOperationRecord{
+                IndexOperationKind::Assign,
+                target.collection,
+                target.index,
+                value.type});
         return CheckedExpression{value.type};
     }
 
+    declarationIndex_.recordIndexOperation(
+        expression,
+        IndexOperationRecord{
+            IndexOperationKind::Assign,
+            target.collection,
+            target.index,
+            value.type});
     return value;
 }
 
@@ -5435,7 +5462,15 @@ TypeChecker::CheckedExpression TypeChecker::checkIndexCompoundAssignment(const I
     const CheckedExpression value = checkExpressionInfo(*expression.value);
     checkKnownNumber(expression.op, value.type, "compound assignment value must be number, got ");
 
-    return CheckedExpression{simpleType(StaticType::Number)};
+    const TypeInfo result = simpleType(StaticType::Number);
+    declarationIndex_.recordIndexOperation(
+        expression,
+        IndexOperationRecord{
+            IndexOperationKind::CompoundAssign,
+            target.collection,
+            target.index,
+            result});
+    return CheckedExpression{result};
 }
 
 std::optional<TypeInfo> TypeChecker::checkStructFieldTarget(

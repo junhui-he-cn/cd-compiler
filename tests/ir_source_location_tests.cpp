@@ -623,6 +623,29 @@ void test_typed_index_expression_metadata()
     assertType(*dynamicAssign, "number");
     assertType(*dynamicCompound, "number");
 
+    const auto assertIndex = [&index](
+        const Expr& expression,
+        IndexOperationKind kind,
+        const std::string& collectionType,
+        const std::string& indexType,
+        const std::string& resultType) {
+        const IndexOperationRecord* operation = index.indexOperation(expression);
+        assert(operation != nullptr);
+        assert(operation->kind == kind);
+        assert(typeInfoName(operation->collectionType) == collectionType);
+        assert(typeInfoName(operation->indexType) == indexType);
+        assert(typeInfoName(operation->resultType) == resultType);
+    };
+    assertIndex(*arrayRead, IndexOperationKind::Read, "[number]", "number", "number");
+    assertIndex(*arrayAssign, IndexOperationKind::Assign, "[number]", "number", "number");
+    assertIndex(*arrayCompound, IndexOperationKind::CompoundAssign, "[number]", "number", "number");
+    assertIndex(*mapRead, IndexOperationKind::Read, "map<string, number>", "string", "number");
+    assertIndex(*mapAssign, IndexOperationKind::Assign, "map<string, number>", "string", "number");
+    assertIndex(*rangeRead, IndexOperationKind::Read, "range", "number", "number");
+    assertIndex(*dynamicRead, IndexOperationKind::Read, "unknown", "number", "unknown");
+    assertIndex(*dynamicAssign, IndexOperationKind::Assign, "unknown", "number", "number");
+    assertIndex(*dynamicCompound, IndexOperationKind::CompoundAssign, "unknown", "number", "number");
+
     IRCompiler compiler;
     compiler.compile(program, resolved, index);
 }

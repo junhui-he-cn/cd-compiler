@@ -79,6 +79,20 @@ const TypeInfo& IRCompiler::typedExpressionType(
     return type;
 }
 
+const IndexOperationRecord& IRCompiler::indexOperation(
+    const Expr& expression,
+    IndexOperationKind kind,
+    const char* context) const
+{
+    const IndexOperationRecord* record = declarationIndex_
+        ? declarationIndex_->indexOperation(expression)
+        : nullptr;
+    if (!record || record->kind != kind) {
+        throw IRCompileError(std::string("missing aggregate index metadata for ") + context);
+    }
+    return *record;
+}
+
 IRProgram IRCompiler::compile(
     const Program& program,
     const ResolvedNames& resolvedNames,
@@ -936,7 +950,7 @@ IRRegister IRCompiler::emitStructConstructor(const StructConstructExpr& expressi
 
 IRRegister IRCompiler::emitIndex(const IndexExpr& expression)
 {
-    typedExpressionType(expression, "index expression");
+    indexOperation(expression, IndexOperationKind::Read, "index expression");
     IRRegister collection = compileExpression(*expression.collection);
     IRRegister index = compileExpression(*expression.index);
     return ir_.emitIndex(collection, index);
@@ -984,7 +998,7 @@ IRRegister IRCompiler::emitCompoundAssignmentResult(
 
 IRRegister IRCompiler::emitIndexAssign(const IndexAssignExpr& expression)
 {
-    typedExpressionType(expression, "index assignment");
+    indexOperation(expression, IndexOperationKind::Assign, "index assignment");
     IRRegister collection = compileExpression(*expression.collection);
     IRRegister index = compileExpression(*expression.index);
     IRRegister value = compileExpression(*expression.value);
@@ -993,7 +1007,11 @@ IRRegister IRCompiler::emitIndexAssign(const IndexAssignExpr& expression)
 
 IRRegister IRCompiler::emitIndexCompoundAssign(const IndexCompoundAssignExpr& expression)
 {
-    typedExpressionType(expression, StaticType::Number, "index compound assignment");
+    const IndexOperationRecord& operation = indexOperation(
+        expression, IndexOperationKind::CompoundAssign, "index compound assignment");
+    if (operation.resultType.kind != StaticType::Number) {
+        throw IRCompileError("missing aggregate index metadata for index compound assignment");
+    }
     IRRegister collection = compileExpression(*expression.collection);
     IRRegister index = compileExpression(*expression.index);
     IRRegister oldValue = ir_.emitIndex(collection, index);

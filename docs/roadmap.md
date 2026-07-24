@@ -571,6 +571,11 @@ zero production callers outside the shared type model.
 
 #### M1E2: Collections and nominal aggregates
 
+Initial implementation slice: `DeclarationIndex` records resolved collection
+index operations for array, map, range, and dynamic paths, including read,
+assignment, and numeric compound-assignment kinds; IR lowering consumes these
+records while preserving the existing erased runtime values and opcodes.
+
 **Deliverable:** represent arrays, maps, ranges, structs, enums, fields,
 variants, and resolved aggregate operations in HIR.
 

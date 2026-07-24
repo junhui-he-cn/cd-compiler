@@ -41,7 +41,7 @@ This is a small C++17 Compiler Design front-end/interpreter project. It currentl
   declaration, signature/shape, typed-expression, scope, import/export, and
   lexical-reference metadata plus for-in/pattern bindings and local direct-call
   or struct-method targets collected beside the legacy TypeChecker path; native
-  call/target, variable/assignment, collection/aggregate,
+  call/target, variable/assignment, collection-index aggregate operations,
   field-access/assignment, and index lowering consume the migrated expression
   records; function/return/capture/loop-control lowering consumes the M1D
   metadata slices; function and method lowering consumes resolved signature

@@ -43,6 +43,10 @@ private:
         const Expr& expression,
         StaticType expectedKind,
         const char* context) const;
+    const IndexOperationRecord& indexOperation(
+        const Expr& expression,
+        IndexOperationKind kind,
+        const char* context) const;
 
     void compileStatement(const Stmt& statement);
     void compileModule(const ModuleStmt& module);

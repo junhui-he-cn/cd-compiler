@@ -1039,6 +1039,12 @@ const VariantConstructorRecord* DeclarationIndex::variantConstructor(
     return found == variantConstructors_.end() ? nullptr : &found->second;
 }
 
+const IndexOperationRecord* DeclarationIndex::indexOperation(const Expr& expression) const
+{
+    const auto found = indexOperations_.find(&expression);
+    return found == indexOperations_.end() ? nullptr : &found->second;
+}
+
 const ReturnRecord* DeclarationIndex::returnMetadata(const ReturnStmt& statement) const
 {
     const auto found = returnMetadata_.find(&statement);
@@ -1088,6 +1094,11 @@ void DeclarationIndex::recordVariantConstructor(
     variantConstructors_.insert_or_assign(
         &expression,
         VariantConstructorRecord{std::move(enumName), std::move(variantName)});
+}
+
+void DeclarationIndex::recordIndexOperation(const Expr& expression, IndexOperationRecord record)
+{
+    indexOperations_.insert_or_assign(&expression, std::move(record));
 }
 
 void DeclarationIndex::recordReturn(const ReturnStmt& statement, TypeInfo type)
@@ -1382,6 +1393,24 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
     }
     for (const IndexCompoundAssignExpr* expression : indexCompoundAssignments_) {
         requireTypedExpression(*expression);
+    }
+    for (const IndexExpr* expression : indexExpressions_) {
+        if (!indexOperation(*expression)
+            || indexOperation(*expression)->kind != IndexOperationKind::Read) {
+            ++mismatches;
+        }
+    }
+    for (const IndexAssignExpr* expression : indexAssignments_) {
+        if (!indexOperation(*expression)
+            || indexOperation(*expression)->kind != IndexOperationKind::Assign) {
+            ++mismatches;
+        }
+    }
+    for (const IndexCompoundAssignExpr* expression : indexCompoundAssignments_) {
+        if (!indexOperation(*expression)
+            || indexOperation(*expression)->kind != IndexOperationKind::CompoundAssign) {
+            ++mismatches;
+        }
     }
     for (const ArrayExpr* expression : arrayExpressions_) {
         requireTypedExpression(*expression);
