@@ -163,8 +163,6 @@ private:
     using StructTypeDecl = ::StructTypeDecl;
     using EnumVariantType = ::EnumVariantType;
     using EnumTypeDecl = ::EnumTypeDecl;
-    using TypeSubstitutions = std::unordered_map<std::string, TypeInfo>;
-
     struct FunctionReturnContext {
         bool sawReturn = false;
         TypeInfo returnType;
@@ -301,9 +299,6 @@ private:
         const TypeInfo& actual,
         TypeSubstitutions& substitutions,
         const Token& callToken) const;
-    TypeInfo substituteTypeParameters(
-        const TypeInfo& type,
-        const TypeSubstitutions& substitutions) const;
     void validateGenericTypeArguments(
         const std::vector<std::string>& parameters,
         const std::vector<std::shared_ptr<TypeInfo>>& constraints,

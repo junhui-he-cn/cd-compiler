@@ -46,5 +46,17 @@ int main()
     assert(typeInfoName(range) == "range");
     assert(compatible(range, simpleType(StaticType::Range)));
     assert(!compatible(range, simpleType(StaticType::Array)));
+
+    TypeSubstitutions substitutions;
+    substitutions.emplace("T", number);
+    substitutions.emplace("U", simpleType(StaticType::String));
+    const TypeInfo generic = functionType(
+        {arrayType(t), mapType(t, typeParameterType("U"))},
+        nullableType(t),
+        {"T", "U"});
+    const TypeInfo specialized = SemanticTypes::substituteTypeParameters(generic, substitutions);
+    assert(typeInfoName(specialized) == "fun<T, U>([number], map<number, string>): number?");
+    assert(typeInfoName(substituteTypeParameters(t, substitutions)) == "number");
+    assert(SemanticTypes::compatible(number, typeParameterType("T", number)));
     return 0;
 }

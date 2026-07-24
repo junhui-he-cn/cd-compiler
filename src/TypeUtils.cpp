@@ -221,6 +221,8 @@ std::string typeInfoName(const TypeInfo& type)
     return result;
 }
 
+namespace SemanticTypes {
+
 bool compatible(const TypeInfo& expected, const TypeInfo& actual)
 {
     if (!isKnown(expected) || !isKnown(actual)) {
@@ -231,9 +233,9 @@ bool compatible(const TypeInfo& expected, const TypeInfo& actual)
             return true;
         }
         if (isNullable(actual)) {
-            return compatible(*expected.nullableOf, *actual.nullableOf);
+            return SemanticTypes::compatible(*expected.nullableOf, *actual.nullableOf);
         }
-        return compatible(*expected.nullableOf, actual);
+        return SemanticTypes::compatible(*expected.nullableOf, actual);
     }
     if (isNullable(actual)) {
         return false;
@@ -243,7 +245,7 @@ bool compatible(const TypeInfo& expected, const TypeInfo& actual)
             return expected.typeParameterName == actual.typeParameterName;
         }
         if (actual.kind == StaticType::TypeParameter && actual.typeParameterConstraint) {
-            return compatible(expected, *actual.typeParameterConstraint);
+            return SemanticTypes::compatible(expected, *actual.typeParameterConstraint);
         }
         return false;
     }
@@ -257,8 +259,8 @@ bool compatible(const TypeInfo& expected, const TypeInfo& actual)
                 return false;
             }
             for (std::size_t i = 0; i < expected.typeArguments.size(); ++i) {
-                if (!compatible(expected.typeArguments[i], actual.typeArguments[i])
-                    || !compatible(actual.typeArguments[i], expected.typeArguments[i])) {
+                if (!SemanticTypes::compatible(expected.typeArguments[i], actual.typeArguments[i])
+                    || !SemanticTypes::compatible(actual.typeArguments[i], expected.typeArguments[i])) {
                     return false;
                 }
             }
@@ -273,8 +275,8 @@ bool compatible(const TypeInfo& expected, const TypeInfo& actual)
                 return false;
             }
             for (std::size_t i = 0; i < expected.typeArguments.size(); ++i) {
-                if (!compatible(expected.typeArguments[i], actual.typeArguments[i])
-                    || !compatible(actual.typeArguments[i], expected.typeArguments[i])) {
+                if (!SemanticTypes::compatible(expected.typeArguments[i], actual.typeArguments[i])
+                    || !SemanticTypes::compatible(actual.typeArguments[i], expected.typeArguments[i])) {
                     return false;
                 }
             }
@@ -286,14 +288,14 @@ bool compatible(const TypeInfo& expected, const TypeInfo& actual)
         if (!expected.elementType || !actual.elementType) {
             return true;
         }
-        return compatible(*expected.elementType, *actual.elementType);
+        return SemanticTypes::compatible(*expected.elementType, *actual.elementType);
     }
     if (expected.kind == StaticType::Map) {
         if (!expected.keyType || !actual.keyType || !expected.valueType || !actual.valueType) {
             return true;
         }
-        return compatible(*expected.keyType, *actual.keyType)
-            && compatible(*expected.valueType, *actual.valueType);
+        return SemanticTypes::compatible(*expected.keyType, *actual.keyType)
+            && SemanticTypes::compatible(*expected.valueType, *actual.valueType);
     }
     if (expected.kind != StaticType::Function) {
         return true;
@@ -305,11 +307,11 @@ bool compatible(const TypeInfo& expected, const TypeInfo& actual)
         return false;
     }
     for (std::size_t i = 0; i < expected.parameterTypes.size(); ++i) {
-        if (!compatible(expected.parameterTypes[i], actual.parameterTypes[i])) {
+        if (!SemanticTypes::compatible(expected.parameterTypes[i], actual.parameterTypes[i])) {
             return false;
         }
     }
-    return compatible(*expected.returnType, *actual.returnType);
+    return SemanticTypes::compatible(*expected.returnType, *actual.returnType);
 }
 
 std::optional<TypeInfo> mergeArrayElementTypes(const TypeInfo& left, const TypeInfo& right)
@@ -327,13 +329,13 @@ std::optional<TypeInfo> mergeArrayElementTypes(const TypeInfo& left, const TypeI
             return left;
         }
         if (isNullable(right)) {
-            std::optional<TypeInfo> inner = mergeArrayElementTypes(*left.nullableOf, *right.nullableOf);
+            std::optional<TypeInfo> inner = SemanticTypes::mergeArrayElementTypes(*left.nullableOf, *right.nullableOf);
             if (!inner) {
                 return std::nullopt;
             }
             return nullableType(std::move(*inner));
         }
-        std::optional<TypeInfo> inner = mergeArrayElementTypes(*left.nullableOf, right);
+        std::optional<TypeInfo> inner = SemanticTypes::mergeArrayElementTypes(*left.nullableOf, right);
         if (!inner) {
             return std::nullopt;
         }
@@ -344,7 +346,7 @@ std::optional<TypeInfo> mergeArrayElementTypes(const TypeInfo& left, const TypeI
         if (left.kind == StaticType::Nil) {
             return right;
         }
-        std::optional<TypeInfo> inner = mergeArrayElementTypes(left, *right.nullableOf);
+        std::optional<TypeInfo> inner = SemanticTypes::mergeArrayElementTypes(left, *right.nullableOf);
         if (!inner) {
             return std::nullopt;
         }
@@ -362,16 +364,84 @@ std::optional<TypeInfo> mergeArrayElementTypes(const TypeInfo& left, const TypeI
         if (!left.elementType || !right.elementType) {
             return simpleType(StaticType::Array);
         }
-        std::optional<TypeInfo> element = mergeArrayElementTypes(*left.elementType, *right.elementType);
+        std::optional<TypeInfo> element = SemanticTypes::mergeArrayElementTypes(*left.elementType, *right.elementType);
         if (!element) {
             return std::nullopt;
         }
         return arrayType(std::move(*element));
     }
 
-    if (compatible(left, right) && compatible(right, left)) {
+    if (SemanticTypes::compatible(left, right) && SemanticTypes::compatible(right, left)) {
         return left;
     }
 
     return std::nullopt;
+}
+
+TypeInfo substituteTypeParameters(
+    const TypeInfo& type,
+    const TypeSubstitutions& substitutions)
+{
+    if (type.kind == StaticType::TypeParameter && type.typeParameterName) {
+        const auto found = substitutions.find(*type.typeParameterName);
+        if (found != substitutions.end()) {
+            return found->second;
+        }
+    }
+
+    TypeInfo result = type;
+    if (type.elementType) {
+        result.elementType = std::make_shared<TypeInfo>(
+            SemanticTypes::substituteTypeParameters(*type.elementType, substitutions));
+    }
+    if (type.keyType) {
+        result.keyType = std::make_shared<TypeInfo>(
+            SemanticTypes::substituteTypeParameters(*type.keyType, substitutions));
+    }
+    if (type.valueType) {
+        result.valueType = std::make_shared<TypeInfo>(
+            SemanticTypes::substituteTypeParameters(*type.valueType, substitutions));
+    }
+    if (type.nullableOf) {
+        result.nullableOf = std::make_shared<TypeInfo>(
+            SemanticTypes::substituteTypeParameters(*type.nullableOf, substitutions));
+    }
+    if (type.returnType) {
+        result.returnType = std::make_shared<TypeInfo>(
+            SemanticTypes::substituteTypeParameters(*type.returnType, substitutions));
+    }
+    for (TypeInfo& parameter : result.parameterTypes) {
+        parameter = SemanticTypes::substituteTypeParameters(parameter, substitutions);
+    }
+    for (TypeInfo& argument : result.typeArguments) {
+        argument = SemanticTypes::substituteTypeParameters(argument, substitutions);
+    }
+    if (type.typeParameterConstraint) {
+        result.typeParameterConstraint = std::make_shared<TypeInfo>(
+            SemanticTypes::substituteTypeParameters(*type.typeParameterConstraint, substitutions));
+    }
+    for (std::shared_ptr<TypeInfo>& constraint : result.genericParameterConstraints) {
+        if (constraint) {
+            constraint = std::make_shared<TypeInfo>(
+                SemanticTypes::substituteTypeParameters(*constraint, substitutions));
+        }
+    }
+    return result;
+}
+
+} // namespace SemanticTypes
+
+bool compatible(const TypeInfo& expected, const TypeInfo& actual)
+{
+    return SemanticTypes::compatible(expected, actual);
+}
+
+std::optional<TypeInfo> mergeArrayElementTypes(const TypeInfo& left, const TypeInfo& right)
+{
+    return SemanticTypes::mergeArrayElementTypes(left, right);
+}
+
+TypeInfo substituteTypeParameters(const TypeInfo& type, const TypeSubstitutions& substitutions)
+{
+    return SemanticTypes::substituteTypeParameters(type, substitutions);
 }

@@ -3,6 +3,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 enum class StaticType {
@@ -38,6 +39,8 @@ struct TypeInfo {
     std::vector<std::shared_ptr<TypeInfo>> genericParameterConstraints;
 };
 
+using TypeSubstitutions = std::unordered_map<std::string, TypeInfo>;
+
 TypeInfo unknownType();
 TypeInfo simpleType(StaticType kind);
 TypeInfo namedStructType(std::string name, std::vector<TypeInfo> typeArguments = {});
@@ -58,6 +61,15 @@ bool hasFunctionSignature(const TypeInfo& type);
 bool isNullable(const TypeInfo& type);
 bool compatible(const TypeInfo& expected, const TypeInfo& actual);
 std::optional<TypeInfo> mergeArrayElementTypes(const TypeInfo& left, const TypeInfo& right);
+TypeInfo substituteTypeParameters(const TypeInfo& type, const TypeSubstitutions& substitutions);
+
+namespace SemanticTypes {
+
+bool compatible(const TypeInfo& expected, const TypeInfo& actual);
+std::optional<TypeInfo> mergeArrayElementTypes(const TypeInfo& left, const TypeInfo& right);
+TypeInfo substituteTypeParameters(const TypeInfo& type, const TypeSubstitutions& substitutions);
+
+} // namespace SemanticTypes
 
 std::string staticTypeName(StaticType type);
 std::string typeInfoName(const TypeInfo& type);

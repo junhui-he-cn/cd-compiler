@@ -111,6 +111,23 @@ for declaration-collection compatibility, while IR lowering now requires the
 resolved signature rather than using the raw annotation record. These type
 records are snapshot-local and are not serialized into `.cdbc` artifacts.
 
+## Shared semantic type utilities (M1E1 migration slice)
+
+`TypeUtils` now exposes the shared `SemanticTypes` interface for the type
+operations used by the checker. `TypeSubstitutions` is the common mapping from
+generic parameter names to resolved `TypeInfo` values. The interface currently
+owns assignment/function compatibility, nullable and nested aggregate
+compatibility, array/map element-type merging, and recursive substitution
+through arrays, maps, nullable types, function signatures, nominal aggregate
+arguments, constraints, and generic constraints.
+
+`TypeChecker` routes its compatibility checks, collection inference, generic
+instantiation, callback specialization, struct/enum payload checking, and
+pattern binding checks through `SemanticTypes`. The old unqualified helpers
+remain forwarding APIs for source compatibility during the migration; they do
+not hold a second implementation. This slice preserves diagnostics, IR,
+`.cdbc` artifacts, runtime behavior, and snapshot-local type records.
+
 ## Lossless source view
 
 `FrontendSession::losslessSourceView()` groups `LosslessPiece` values by

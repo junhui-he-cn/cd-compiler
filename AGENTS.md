@@ -48,6 +48,11 @@ This is a small C++17 Compiler Design front-end/interpreter project. It currentl
   types from the M1E1 slice.
 - `include/Parser.hpp`, `src/Parser.cpp`: grammar and recursive-descent parsing.
 - `include/Ast.hpp`, `src/Ast.cpp`: AST node types and AST printer output.
+- `include/TypeUtils.hpp`, `src/TypeUtils.cpp`: canonical `TypeInfo` helpers,
+  shared semantic compatibility, aggregate element-type merging, and generic
+  type-parameter substitution. `SemanticTypes` owns the migrated semantic
+  operations; the unqualified functions remain compatibility forwarding APIs
+  while callers are moved incrementally.
 - `include/IR.hpp`, `src/IR.cpp`: IR opcodes, instructions, constants, names, registers, and IR printer output.
 - `include/IRCompiler.hpp`, `src/IRCompiler.cpp`: AST-to-IR lowering.
 - `include/Bytecode.hpp`, `src/Bytecode.cpp`: bytecode opcodes, program/function containers, and bytecode printer output.
