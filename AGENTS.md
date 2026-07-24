@@ -44,7 +44,8 @@ This is a small C++17 Compiler Design front-end/interpreter project. It currentl
   call/target, variable/assignment, collection/aggregate,
   field-access/assignment, and index lowering consume the migrated expression
   records; function/return/capture/loop-control lowering consumes the M1D
-  metadata slices.
+  metadata slices; function and method lowering consumes resolved signature
+  types from the M1E1 slice.
 - `include/Parser.hpp`, `src/Parser.cpp`: grammar and recursive-descent parsing.
 - `include/Ast.hpp`, `src/Ast.cpp`: AST node types and AST printer output.
 - `include/IR.hpp`, `src/IR.cpp`: IR opcodes, instructions, constants, names, registers, and IR printer output.

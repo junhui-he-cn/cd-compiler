@@ -540,6 +540,12 @@ operations and uses the M0B reference corpus as its compatibility oracle.
 
 #### M1E1: Type core and generics
 
+Initial implementation slice: checked named function and method declarations
+now publish canonical `TypeInfo` signatures, including resolved parameter and
+return types, generic parameters, constraints, and implicit method receivers;
+IR lowering consumes these records while the existing compatibility and
+inference algorithms remain the behavior oracle.
+
 **Deliverable:** move type identity, assignability, nullable compatibility,
 function compatibility, type-parameter bounds, inference, and generic
 substitution behind the shared semantic type interface.

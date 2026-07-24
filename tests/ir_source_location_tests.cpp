@@ -369,6 +369,46 @@ void test_declaration_index_signature_shapes()
     assert(functionSignature->returnType->token.lexeme == "T");
 }
 
+void test_resolved_declaration_signature_metadata()
+{
+    std::istringstream input(
+        "fun identity<T: number>(value: T): T { return value; }\n"
+        "struct Box<T> { value: T }\n"
+        "impl Box<T> {\n"
+        "  fun get(): T { return this.value; }\n"
+        "}\n");
+    FrontendSession frontend;
+    Program program = frontend.loadStdin(input);
+
+    const auto* function = dynamic_cast<const FunctionStmt*>(program.statements[0].get());
+    const auto* impl = dynamic_cast<const ImplStmt*>(program.statements[2].get());
+    assert(function != nullptr && impl != nullptr && impl->methods.size() == 1);
+
+    TypeChecker checker;
+    const ResolvedNames& resolved = checker.check(program);
+    const DeclarationIndex& index = checker.declarationIndex();
+    assert(checker.declarationIndexMismatchCount() == 0);
+
+    const DeclarationRecord* functionRecord = index.declaration(*function);
+    const DeclarationRecord* methodRecord = index.declaration(impl->methods.front());
+    assert(functionRecord != nullptr && methodRecord != nullptr);
+
+    const ResolvedSignatureRecord* functionSignature
+        = index.resolvedSignature(functionRecord->declarationId);
+    const ResolvedSignatureRecord* methodSignature
+        = index.resolvedSignature(methodRecord->declarationId);
+    assert(functionSignature != nullptr && methodSignature != nullptr);
+    assert(typeInfoName(functionSignature->type) == "fun<T: number>(T): T");
+    assert(methodSignature->type.kind == StaticType::Function);
+    assert(methodSignature->type.parameterTypes.size() == 1);
+    assert(typeInfoName(methodSignature->type.parameterTypes.front()) == "Box<T>");
+    assert(methodSignature->type.returnType != nullptr);
+    assert(typeInfoName(*methodSignature->type.returnType) == "T");
+
+    IRCompiler compiler;
+    compiler.compile(program, resolved, index);
+}
+
 void test_typed_expression_metadata()
 {
     std::istringstream input(
@@ -1148,6 +1188,7 @@ int main()
     test_declaration_index_module_metadata();
     test_declaration_index_for_in_binding();
     test_declaration_index_signature_shapes();
+    test_resolved_declaration_signature_metadata();
     test_typed_expression_metadata();
     test_variable_lowering_metadata();
     test_typed_index_expression_metadata();

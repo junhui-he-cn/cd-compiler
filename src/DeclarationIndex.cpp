@@ -947,6 +947,12 @@ std::optional<DeclarationSignature> DeclarationIndex::signature(DeclarationId id
         record->returnType};
 }
 
+const ResolvedSignatureRecord* DeclarationIndex::resolvedSignature(DeclarationId id) const
+{
+    const auto found = resolvedSignatures_.find(id);
+    return found == resolvedSignatures_.end() ? nullptr : &found->second;
+}
+
 std::optional<DeclarationShape> DeclarationIndex::shape(DeclarationId id) const
 {
     const DeclarationRecord* record = declaration(id);
@@ -1087,6 +1093,11 @@ void DeclarationIndex::recordVariantConstructor(
 void DeclarationIndex::recordReturn(const ReturnStmt& statement, TypeInfo type)
 {
     returnMetadata_.insert_or_assign(&statement, ReturnRecord{std::move(type)});
+}
+
+void DeclarationIndex::recordResolvedSignature(DeclarationId id, TypeInfo type)
+{
+    resolvedSignatures_.insert_or_assign(id, ResolvedSignatureRecord{std::move(type)});
 }
 
 std::optional<DeclarationId> DeclarationIndex::lookup(ScopeId scopeId, const std::string& name) const
@@ -1322,11 +1333,18 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
     for (const DeclarationRecord& record : declarations_) {
         if (record.kind == DeclarationKind::Function && record.statement) {
             const auto* function = dynamic_cast<const FunctionStmt*>(record.statement);
-            if (!function || !captureMetadata(*function)) {
+            const ResolvedSignatureRecord* signature = resolvedSignature(record.declarationId);
+            if (!function
+                || !signature
+                || signature->type.kind != StaticType::Function
+                || !captureMetadata(*function)) {
                 ++mismatches;
             }
         } else if (record.kind == DeclarationKind::Method && record.method) {
-            if (!captureMetadata(*record.method)) {
+            const ResolvedSignatureRecord* signature = resolvedSignature(record.declarationId);
+            if (!signature
+                || signature->type.kind != StaticType::Function
+                || !captureMetadata(*record.method)) {
                 ++mismatches;
             }
         }

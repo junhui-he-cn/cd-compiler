@@ -331,7 +331,7 @@ void IRCompiler::requireFunctionMetadata(const FunctionStmt& function) const
         : nullptr;
     if (!declaration
         || declaration->kind != DeclarationKind::Function
-        || !declarationIndex_->signature(declaration->declarationId)
+        || !declarationIndex_->resolvedSignature(declaration->declarationId)
         || !declarationIndex_->captureMetadata(function)) {
         throw IRCompileError("missing function metadata");
     }
@@ -344,7 +344,7 @@ void IRCompiler::requireMethodMetadata(const MethodDecl& method) const
         : nullptr;
     if (!declaration
         || declaration->kind != DeclarationKind::Method
-        || !declarationIndex_->signature(declaration->declarationId)
+        || !declarationIndex_->resolvedSignature(declaration->declarationId)
         || !declarationIndex_->captureMetadata(method)) {
         throw IRCompileError("missing method metadata");
     }

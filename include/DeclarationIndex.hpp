@@ -81,6 +81,10 @@ struct DeclarationSignature {
     std::optional<TypeAnnotation> returnType;
 };
 
+struct ResolvedSignatureRecord {
+    TypeInfo type;
+};
+
 struct DeclarationShape {
     std::vector<StructFieldDecl> structFields;
     std::vector<EnumVariantDecl> enumVariants;
@@ -143,6 +147,7 @@ public:
     const DeclarationRecord* declaration(const Parameter& parameter) const;
     const DeclarationRecord* declaration(const VariablePattern& pattern) const;
     std::optional<DeclarationSignature> signature(DeclarationId id) const;
+    const ResolvedSignatureRecord* resolvedSignature(DeclarationId id) const;
     std::optional<DeclarationShape> shape(DeclarationId id) const;
     const ScopeRecord* scope(ScopeId id) const;
     std::optional<ScopeId> scopeFor(const Stmt& statement) const;
@@ -181,6 +186,7 @@ private:
         std::string enumName,
         std::string variantName);
     void recordReturn(const ReturnStmt& statement, TypeInfo type);
+    void recordResolvedSignature(DeclarationId id, TypeInfo type);
 
     std::vector<DeclarationRecord> declarations_;
     std::vector<ScopeRecord> scopes_;
@@ -221,4 +227,8 @@ private:
     std::unordered_set<const ContinueStmt*> continueStatements_;
     std::unordered_map<const BreakStmt*, LoopTargetRecord> breakTargets_;
     std::unordered_map<const ContinueStmt*, LoopTargetRecord> continueTargets_;
+    std::unordered_map<
+        DeclarationId,
+        ResolvedSignatureRecord,
+        SnapshotIdHash<DeclarationIdTag>> resolvedSignatures_;
 };

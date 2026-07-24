@@ -98,6 +98,19 @@ an enclosing loop. IR lowering checks the semantic target against its active
 loop context before emitting the existing jump or patched-break instructions;
 the records remain snapshot-local and are not serialized into `.cdbc`.
 
+## Resolved declaration signatures (M1E1 initial slice)
+
+`DeclarationIndex::resolvedSignature()` exposes a canonical `TypeInfo` function
+type for every checked named function and method. Named function signatures
+include resolved parameter and return types, generic parameter names, and
+concrete type-parameter constraints. Method signatures include the implicit
+receiver as their first parameter and preserve method generic constraints;
+receiver generic parameters remain represented inside the resolved receiver
+type. The existing `signature()` query remains the AST-backed annotation view
+for declaration-collection compatibility, while IR lowering now requires the
+resolved signature rather than using the raw annotation record. These type
+records are snapshot-local and are not serialized into `.cdbc` artifacts.
+
 ## Lossless source view
 
 `FrontendSession::losslessSourceView()` groups `LosslessPiece` values by

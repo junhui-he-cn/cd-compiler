@@ -2470,6 +2470,22 @@ void TypeChecker::checkMethodBody(const std::string& structName, const MethodInf
 
     auto& stored = methods_[structName][declaration.name.lexeme];
     stored.returnType = returnType;
+    std::vector<TypeInfo> signatureParameters;
+    signatureParameters.reserve(1 + stored.parameterTypes.size());
+    signatureParameters.push_back(stored.receiverType);
+    signatureParameters.insert(
+        signatureParameters.end(),
+        stored.parameterTypes.begin(),
+        stored.parameterTypes.end());
+    if (const DeclarationRecord* record = declarationIndex_.declaration(declaration)) {
+        declarationIndex_.recordResolvedSignature(
+            record->declarationId,
+            functionType(
+                std::move(signatureParameters),
+                stored.returnType,
+                stored.genericParameters,
+                stored.genericParameterConstraints));
+    }
     endTypeParameterScope();
 }
 
@@ -2637,6 +2653,9 @@ void TypeChecker::checkFunction(const FunctionStmt& statement)
         returnType,
         typeParameterNames(statement.typeParameters),
         std::move(genericParameterConstraints));
+    if (const DeclarationRecord* record = declarationIndex_.declaration(statement)) {
+        declarationIndex_.recordResolvedSignature(record->declarationId, storedFunction->type);
+    }
     endTypeParameterScope();
 }
 
