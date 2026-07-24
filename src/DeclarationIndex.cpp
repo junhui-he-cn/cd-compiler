@@ -1045,6 +1045,19 @@ const IndexOperationRecord* DeclarationIndex::indexOperation(const Expr& express
     return found == indexOperations_.end() ? nullptr : &found->second;
 }
 
+const FieldOperationRecord* DeclarationIndex::fieldOperation(const Expr& expression) const
+{
+    const auto found = fieldOperations_.find(&expression);
+    return found == fieldOperations_.end() ? nullptr : &found->second;
+}
+
+const StructConstructorRecord* DeclarationIndex::structConstructor(
+    const StructConstructExpr& expression) const
+{
+    const auto found = structConstructorsMetadata_.find(&expression);
+    return found == structConstructorsMetadata_.end() ? nullptr : &found->second;
+}
+
 const ReturnRecord* DeclarationIndex::returnMetadata(const ReturnStmt& statement) const
 {
     const auto found = returnMetadata_.find(&statement);
@@ -1099,6 +1112,18 @@ void DeclarationIndex::recordVariantConstructor(
 void DeclarationIndex::recordIndexOperation(const Expr& expression, IndexOperationRecord record)
 {
     indexOperations_.insert_or_assign(&expression, std::move(record));
+}
+
+void DeclarationIndex::recordFieldOperation(const Expr& expression, FieldOperationRecord record)
+{
+    fieldOperations_.insert_or_assign(&expression, std::move(record));
+}
+
+void DeclarationIndex::recordStructConstructor(
+    const StructConstructExpr& expression,
+    StructConstructorRecord record)
+{
+    structConstructorsMetadata_.insert_or_assign(&expression, std::move(record));
 }
 
 void DeclarationIndex::recordReturn(const ReturnStmt& statement, TypeInfo type)
@@ -1412,6 +1437,24 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
             ++mismatches;
         }
     }
+    for (const FieldAccessExpr* expression : fieldAccesses_) {
+        if (!fieldOperation(*expression)
+            || fieldOperation(*expression)->kind != FieldOperationKind::Read) {
+            ++mismatches;
+        }
+    }
+    for (const FieldAssignExpr* expression : fieldAssignments_) {
+        if (!fieldOperation(*expression)
+            || fieldOperation(*expression)->kind != FieldOperationKind::Assign) {
+            ++mismatches;
+        }
+    }
+    for (const FieldCompoundAssignExpr* expression : fieldCompoundAssignments_) {
+        if (!fieldOperation(*expression)
+            || fieldOperation(*expression)->kind != FieldOperationKind::CompoundAssign) {
+            ++mismatches;
+        }
+    }
     for (const ArrayExpr* expression : arrayExpressions_) {
         requireTypedExpression(*expression);
     }
@@ -1420,6 +1463,9 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
     }
     for (const StructConstructExpr* expression : structConstructors_) {
         requireTypedExpression(*expression);
+        if (!structConstructor(*expression)) {
+            ++mismatches;
+        }
     }
 
     for (const auto& entry : nativeCallCandidates_) {

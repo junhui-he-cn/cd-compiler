@@ -93,6 +93,20 @@ const IndexOperationRecord& IRCompiler::indexOperation(
     return *record;
 }
 
+const FieldOperationRecord& IRCompiler::fieldOperation(
+    const Expr& expression,
+    FieldOperationKind kind,
+    const char* context) const
+{
+    const FieldOperationRecord* record = declarationIndex_
+        ? declarationIndex_->fieldOperation(expression)
+        : nullptr;
+    if (!record || record->kind != kind) {
+        throw IRCompileError(std::string("missing aggregate field metadata for ") + context);
+    }
+    return *record;
+}
+
 IRProgram IRCompiler::compile(
     const Program& program,
     const ResolvedNames& resolvedNames,
@@ -919,8 +933,14 @@ IRRegister IRCompiler::emitMap(const MapExpr& expression)
     return ir_.emitMap(std::move(keyValueRegisters));
 }
 
-IRRegister IRCompiler::emitStructFields(const std::vector<StructField>& fields, std::optional<std::string> typeName)
+IRRegister IRCompiler::emitStructFields(
+    const std::vector<StructField>& fields,
+    const std::vector<std::string>& fieldNames,
+    std::optional<std::string> typeName)
 {
+    if (fields.size() != fieldNames.size()) {
+        throw IRCompileError("struct constructor metadata field count mismatch");
+    }
     std::vector<std::size_t> names;
     std::vector<IRRegister> values;
     names.reserve(fields.size());
@@ -931,8 +951,9 @@ IRRegister IRCompiler::emitStructFields(const std::vector<StructField>& fields, 
         typeNameOperand = ir_.addName(std::move(*typeName));
     }
 
-    for (const StructField& field : fields) {
-        names.push_back(ir_.addName(field.name.lexeme));
+    for (std::size_t i = 0; i < fields.size(); ++i) {
+        names.push_back(ir_.addName(fieldNames[i]));
+        const StructField& field = fields[i];
         values.push_back(compileExpression(*field.value));
     }
     return ir_.emitStruct(std::move(names), std::move(values), typeNameOperand);
@@ -940,12 +961,16 @@ IRRegister IRCompiler::emitStructFields(const std::vector<StructField>& fields, 
 
 IRRegister IRCompiler::emitStructConstructor(const StructConstructExpr& expression)
 {
-    const TypeInfo& type = typedExpressionType(
-        expression, StaticType::Struct, "struct constructor");
-    if (!type.structName) {
+    const StructConstructorRecord* constructor = declarationIndex_
+        ? declarationIndex_->structConstructor(expression)
+        : nullptr;
+    if (!constructor || constructor->type.kind != StaticType::Struct || !constructor->type.structName) {
         throw IRCompileError("typed struct constructor is missing a type name");
     }
-    return emitStructFields(expression.fields, *type.structName);
+    return emitStructFields(
+        expression.fields,
+        constructor->fieldNames,
+        *constructor->type.structName);
 }
 
 IRRegister IRCompiler::emitIndex(const IndexExpr& expression)
@@ -1023,30 +1048,36 @@ IRRegister IRCompiler::emitIndexCompoundAssign(const IndexCompoundAssignExpr& ex
 
 IRRegister IRCompiler::emitFieldAccess(const FieldAccessExpr& expression)
 {
-    typedExpressionType(expression, "field access");
+    const FieldOperationRecord& operation = fieldOperation(
+        expression, FieldOperationKind::Read, "field access");
     if (resolvedNames_->hasFieldAccess(expression)) {
         return ir_.emitLoadVar(resolvedNames_->fieldAccessName(expression));
     }
     IRRegister object = compileExpression(*expression.object);
-    return ir_.emitField(object, expression.name.lexeme);
+    return ir_.emitField(object, operation.fieldName);
 }
 
 IRRegister IRCompiler::emitFieldAssign(const FieldAssignExpr& expression)
 {
-    typedExpressionType(expression, "field assignment");
+    const FieldOperationRecord& operation = fieldOperation(
+        expression, FieldOperationKind::Assign, "field assignment");
     IRRegister object = compileExpression(*expression.object);
     IRRegister value = compileExpression(*expression.value);
-    return ir_.emitAssignField(object, expression.name.lexeme, value);
+    return ir_.emitAssignField(object, operation.fieldName, value);
 }
 
 IRRegister IRCompiler::emitFieldCompoundAssign(const FieldCompoundAssignExpr& expression)
 {
-    typedExpressionType(expression, StaticType::Number, "field compound assignment");
+    const FieldOperationRecord& operation = fieldOperation(
+        expression, FieldOperationKind::CompoundAssign, "field compound assignment");
+    if (operation.resultType.kind != StaticType::Number) {
+        throw IRCompileError("missing aggregate field metadata for field compound assignment");
+    }
     IRRegister object = compileExpression(*expression.object);
-    IRRegister oldValue = ir_.emitField(object, expression.name.lexeme);
+    IRRegister oldValue = ir_.emitField(object, operation.fieldName);
     IRRegister result = emitCompoundAssignmentResult(
         expression.op, oldValue, *expression.value, "`" + expression.op.lexeme + "` expects number target");
-    ir_.emitAssignField(object, expression.name.lexeme, result);
+    ir_.emitAssignField(object, operation.fieldName, result);
     return result;
 }
 

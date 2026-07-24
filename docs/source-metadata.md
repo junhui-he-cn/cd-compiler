@@ -150,6 +150,14 @@ requires the matching record kind before emitting the existing `Index`,
 typed-expression record as the operation decision. The record is
 snapshot-local, and no IR opcode or `.cdbc` format changes are involved.
 
+`DeclarationIndex::fieldOperation()` records struct and dynamic field reads,
+assignments, and numeric compound assignments with the resolved field name,
+field type, and result type. `DeclarationIndex::structConstructor()` records
+the resolved struct type and source field order for named constructors.
+`IRCompiler` consumes these records for field operations and constructor field
+names; namespace value accesses still use their existing resolved-name target
+after the operation record is validated.
+
 ## Lossless source view
 
 `FrontendSession::losslessSourceView()` groups `LosslessPiece` values by

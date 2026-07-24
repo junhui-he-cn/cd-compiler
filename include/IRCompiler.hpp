@@ -47,6 +47,10 @@ private:
         const Expr& expression,
         IndexOperationKind kind,
         const char* context) const;
+    const FieldOperationRecord& fieldOperation(
+        const Expr& expression,
+        FieldOperationKind kind,
+        const char* context) const;
 
     void compileStatement(const Stmt& statement);
     void compileModule(const ModuleStmt& module);
@@ -73,7 +77,10 @@ private:
     IRRegister emitFunctionExpr(const FunctionExpr& expression);
     IRRegister emitArray(const ArrayExpr& expression);
     IRRegister emitMap(const MapExpr& expression);
-    IRRegister emitStructFields(const std::vector<StructField>& fields, std::optional<std::string> typeName = std::nullopt);
+    IRRegister emitStructFields(
+        const std::vector<StructField>& fields,
+        const std::vector<std::string>& fieldNames,
+        std::optional<std::string> typeName = std::nullopt);
     IRRegister emitStructConstructor(const StructConstructExpr& expression);
     IRRegister emitVariantConstructor(const MemberCallExpr& expression);
     void compilePattern(

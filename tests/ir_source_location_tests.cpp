@@ -1061,6 +1061,24 @@ void test_typed_field_assignment_metadata()
     assertType(*dynamicCompound, "number");
     assertType(*dynamicRead, "unknown");
 
+    const auto assertField = [&index](
+        const Expr& expression,
+        FieldOperationKind kind,
+        const std::string& fieldType,
+        const std::string& resultType) {
+        const FieldOperationRecord* operation = index.fieldOperation(expression);
+        assert(operation != nullptr);
+        assert(operation->kind == kind);
+        assert(operation->fieldName == "value");
+        assert(typeInfoName(operation->fieldType) == fieldType);
+        assert(typeInfoName(operation->resultType) == resultType);
+    };
+    assertField(*staticAssign, FieldOperationKind::Assign, "number", "number");
+    assertField(*staticCompound, FieldOperationKind::CompoundAssign, "number", "number");
+    assertField(*dynamicAssign, FieldOperationKind::Assign, "unknown", "number");
+    assertField(*dynamicCompound, FieldOperationKind::CompoundAssign, "unknown", "number");
+    assertField(*dynamicRead, FieldOperationKind::Read, "unknown", "unknown");
+
     IRCompiler compiler;
     compiler.compile(program, resolved, index);
 }
@@ -1184,6 +1202,11 @@ void test_collection_expression_metadata()
     assertType(*boxConstructor, "Box");
     assertType(*dynamicArrayLiteral, "array");
     assertType(*dynamicMapLiteral, "map");
+
+    const StructConstructorRecord* constructor = index.structConstructor(*boxConstructor);
+    assert(constructor != nullptr);
+    assert(typeInfoName(constructor->type) == "Box");
+    assert(constructor->fieldNames == std::vector<std::string>{"value"});
 }
 
 } // namespace

@@ -574,7 +574,10 @@ zero production callers outside the shared type model.
 Initial implementation slice: `DeclarationIndex` records resolved collection
 index operations for array, map, range, and dynamic paths, including read,
 assignment, and numeric compound-assignment kinds; IR lowering consumes these
-records while preserving the existing erased runtime values and opcodes.
+records while preserving the existing erased runtime values and opcodes. The
+same slice records struct/dynamic field operations and named struct constructor
+type/field order; namespace value accesses retain their existing resolved-name
+adapter.
 
 **Deliverable:** represent arrays, maps, ranges, structs, enums, fields,
 variants, and resolved aggregate operations in HIR.

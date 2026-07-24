@@ -67,6 +67,24 @@ struct IndexOperationRecord {
     TypeInfo resultType;
 };
 
+enum class FieldOperationKind {
+    Read,
+    Assign,
+    CompoundAssign,
+};
+
+struct FieldOperationRecord {
+    FieldOperationKind kind = FieldOperationKind::Read;
+    std::string fieldName;
+    TypeInfo fieldType;
+    TypeInfo resultType;
+};
+
+struct StructConstructorRecord {
+    TypeInfo type;
+    std::vector<std::string> fieldNames;
+};
+
 struct TypedExpressionRecord {
     TypeInfo type;
 };
@@ -172,6 +190,8 @@ public:
     const NativeCallRecord* nativeCall(const Expr& expression) const;
     const VariantConstructorRecord* variantConstructor(const MemberCallExpr& expression) const;
     const IndexOperationRecord* indexOperation(const Expr& expression) const;
+    const FieldOperationRecord* fieldOperation(const Expr& expression) const;
+    const StructConstructorRecord* structConstructor(const StructConstructExpr& expression) const;
     const ReturnRecord* returnMetadata(const ReturnStmt& statement) const;
     const CaptureRecord* captureMetadata(const FunctionStmt& statement) const;
     const CaptureRecord* captureMetadata(const FunctionExpr& expression) const;
@@ -200,6 +220,8 @@ private:
         std::string enumName,
         std::string variantName);
     void recordIndexOperation(const Expr& expression, IndexOperationRecord record);
+    void recordFieldOperation(const Expr& expression, FieldOperationRecord record);
+    void recordStructConstructor(const StructConstructExpr& expression, StructConstructorRecord record);
     void recordReturn(const ReturnStmt& statement, TypeInfo type);
     void recordResolvedSignature(DeclarationId id, TypeInfo type);
 
@@ -233,6 +255,8 @@ private:
     std::unordered_map<const Expr*, NativeCallRecord> nativeCalls_;
     std::unordered_map<const MemberCallExpr*, VariantConstructorRecord> variantConstructors_;
     std::unordered_map<const Expr*, IndexOperationRecord> indexOperations_;
+    std::unordered_map<const Expr*, FieldOperationRecord> fieldOperations_;
+    std::unordered_map<const StructConstructExpr*, StructConstructorRecord> structConstructorsMetadata_;
     std::unordered_set<const FunctionExpr*> functionExpressions_;
     std::unordered_set<const ReturnStmt*> returnStatements_;
     std::unordered_map<const ReturnStmt*, ReturnRecord> returnMetadata_;

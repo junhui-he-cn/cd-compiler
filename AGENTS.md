@@ -42,8 +42,9 @@ This is a small C++17 Compiler Design front-end/interpreter project. It currentl
   lexical-reference metadata plus for-in/pattern bindings and local direct-call
   or struct-method targets collected beside the legacy TypeChecker path; native
   call/target, variable/assignment, collection-index aggregate operations,
-  field-access/assignment, and index lowering consume the migrated expression
-  records; function/return/capture/loop-control lowering consumes the M1D
+  field-access/assignment and struct-constructor lowering consume the migrated
+  aggregate records; index lowering consumes index records;
+  function/return/capture/loop-control lowering consumes the M1D
   metadata slices; function and method lowering consumes resolved signature
   types from the M1E1 slice.
 - `include/Parser.hpp`, `src/Parser.cpp`: grammar and recursive-descent parsing.

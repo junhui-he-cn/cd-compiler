@@ -4108,6 +4108,14 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
     if (const auto* construct = dynamic_cast<const StructConstructExpr*>(&expression)) {
         CheckedExpression result = checkStructConstructor(*construct, expectedType);
         declarationIndex_.recordTypedExpression(*construct, result.type);
+        std::vector<std::string> fieldNames;
+        fieldNames.reserve(construct->fields.size());
+        for (const StructField& field : construct->fields) {
+            fieldNames.push_back(field.name.lexeme);
+        }
+        declarationIndex_.recordStructConstructor(
+            *construct,
+            StructConstructorRecord{result.type, std::move(fieldNames)});
         return result;
     }
 
@@ -4122,6 +4130,13 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
                 resolvedNames_.recordFieldAccess(*field, found->second.resolvedName);
                 CheckedExpression result{found->second.type};
                 declarationIndex_.recordTypedExpression(*field, result.type);
+                declarationIndex_.recordFieldOperation(
+                    *field,
+                    FieldOperationRecord{
+                        FieldOperationKind::Read,
+                        field->name.lexeme,
+                        result.type,
+                        result.type});
                 return result;
             }
         }
@@ -4139,10 +4154,24 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
             CheckedExpression result{
                 structFieldTypeForValue(object, *structType, *structField)};
             declarationIndex_.recordTypedExpression(*field, result.type);
+            declarationIndex_.recordFieldOperation(
+                *field,
+                FieldOperationRecord{
+                    FieldOperationKind::Read,
+                    field->name.lexeme,
+                    result.type,
+                    result.type});
             return result;
         }
         CheckedExpression result{unknownType()};
         declarationIndex_.recordTypedExpression(*field, result.type);
+        declarationIndex_.recordFieldOperation(
+            *field,
+            FieldOperationRecord{
+                FieldOperationKind::Read,
+                field->name.lexeme,
+                unknownType(),
+                result.type});
         return result;
     }
 
@@ -5510,9 +5539,23 @@ TypeChecker::CheckedExpression TypeChecker::checkFieldAssignment(const FieldAssi
                 "field `" + expression.name.lexeme + "` expects " + typeInfoName(*structField)
                     + ", got " + typeInfoName(value.type));
         }
+        declarationIndex_.recordFieldOperation(
+            expression,
+            FieldOperationRecord{
+                FieldOperationKind::Assign,
+                expression.name.lexeme,
+                *structField,
+                *structField});
         return CheckedExpression{*structField};
     }
 
+    declarationIndex_.recordFieldOperation(
+        expression,
+        FieldOperationRecord{
+            FieldOperationKind::Assign,
+            expression.name.lexeme,
+            unknownType(),
+            value.type});
     return value;
 }
 
@@ -5527,7 +5570,15 @@ TypeChecker::CheckedExpression TypeChecker::checkFieldCompoundAssignment(const F
     const CheckedExpression value = checkExpressionInfo(*expression.value);
     checkKnownNumber(expression.op, value.type, "compound assignment value must be number, got ");
 
-    return CheckedExpression{simpleType(StaticType::Number)};
+    const TypeInfo result = simpleType(StaticType::Number);
+    declarationIndex_.recordFieldOperation(
+        expression,
+        FieldOperationRecord{
+            FieldOperationKind::CompoundAssign,
+            expression.name.lexeme,
+            structField ? *structField : unknownType(),
+            result});
+    return CheckedExpression{result};
 }
 
 void TypeChecker::checkKnownNumber(const Token& token, const TypeInfo& type, const std::string& messagePrefix) const
