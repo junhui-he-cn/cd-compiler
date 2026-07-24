@@ -95,6 +95,7 @@ private:
     IRRegister emitLogical(const LogicalExpr& expression);
 
     struct LoopContext {
+        const Stmt* statement = nullptr;
         std::size_t continueTarget = 0;
         std::vector<std::size_t> breakJumps;
     };

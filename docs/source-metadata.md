@@ -88,8 +88,15 @@ to an enclosing function-owned local cell. Top-level/module bindings remain
 outside the capture set because the current runtime resolves them through its
 global environment. IR lowering requires the record's presence but continues
 to emit the existing variable operations and function values, so capture
-metadata is not serialized into `.cdbc` artifacts. Loop-target metadata remains
-the later M1D slice.
+metadata is not serialized into `.cdbc` artifacts.
+
+The loop-control slice adds `LoopTargetRecord` entries for every valid
+`break` and `continue`. Each record identifies the nearest `while`, C-style
+`for`, or `for-in` statement and its loop kind. The collector clears the active
+loop stack at function and method boundaries, so nested functions cannot target
+an enclosing loop. IR lowering checks the semantic target against its active
+loop context before emitting the existing jump or patched-break instructions;
+the records remain snapshot-local and are not serialized into `.cdbc`.
 
 ## Lossless source view
 

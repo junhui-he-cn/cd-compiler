@@ -38,9 +38,20 @@ enum class CallTargetKind {
     StructMethod,
 };
 
+enum class LoopTargetKind {
+    While,
+    For,
+    ForIn,
+};
+
 struct CallTargetRecord {
     CallTargetKind kind = CallTargetKind::Direct;
     ResolvedSymbol target;
+};
+
+struct LoopTargetRecord {
+    const Stmt* loop = nullptr;
+    LoopTargetKind kind = LoopTargetKind::While;
 };
 
 struct TypedExpressionRecord {
@@ -146,6 +157,8 @@ public:
     const CaptureRecord* captureMetadata(const FunctionStmt& statement) const;
     const CaptureRecord* captureMetadata(const FunctionExpr& expression) const;
     const CaptureRecord* captureMetadata(const MethodDecl& method) const;
+    const LoopTargetRecord* breakTarget(const BreakStmt& statement) const;
+    const LoopTargetRecord* continueTarget(const ContinueStmt& statement) const;
 
     std::optional<DeclarationId> lookup(ScopeId scopeId, const std::string& name) const;
     std::optional<ResolvedSymbol> variableReference(const VariableExpr& expression) const;
@@ -204,4 +217,8 @@ private:
     std::unordered_map<const FunctionStmt*, CaptureRecord> functionCaptures_;
     std::unordered_map<const FunctionExpr*, CaptureRecord> functionExpressionCaptures_;
     std::unordered_map<const MethodDecl*, CaptureRecord> methodCaptures_;
+    std::unordered_set<const BreakStmt*> breakStatements_;
+    std::unordered_set<const ContinueStmt*> continueStatements_;
+    std::unordered_map<const BreakStmt*, LoopTargetRecord> breakTargets_;
+    std::unordered_map<const ContinueStmt*, LoopTargetRecord> continueTargets_;
 };

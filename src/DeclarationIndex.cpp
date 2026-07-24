@@ -122,12 +122,18 @@ private:
         scopeStack_.pop_back();
     }
 
+    struct LoopContext {
+        const Stmt* statement = nullptr;
+        LoopTargetKind kind = LoopTargetKind::While;
+    };
+
     struct FunctionContext {
         ScopeId scopeId;
         const FunctionStmt* statement = nullptr;
         const FunctionExpr* expression = nullptr;
         const MethodDecl* method = nullptr;
         CaptureRecord captures;
+        std::vector<LoopContext> enclosingLoops;
     };
 
     void beginFunctionContext(
@@ -136,7 +142,14 @@ private:
         const FunctionExpr* expression = nullptr,
         const MethodDecl* method = nullptr)
     {
-        functionStack_.push_back(FunctionContext{scopeId, statement, expression, method, {}});
+        FunctionContext context;
+        context.scopeId = scopeId;
+        context.statement = statement;
+        context.expression = expression;
+        context.method = method;
+        context.enclosingLoops = std::move(loopStack_);
+        loopStack_.clear();
+        functionStack_.push_back(std::move(context));
     }
 
     void endFunctionContext()
@@ -157,6 +170,7 @@ private:
         } else {
             throw std::logic_error("declaration collector function context has no owner");
         }
+        loopStack_ = std::move(context.enclosingLoops);
     }
 
     DeclarationRecord& addDeclaration(
@@ -397,7 +411,9 @@ private:
         }
         if (const auto* whileStmt = dynamic_cast<const WhileStmt*>(&statement)) {
             collectExpression(whileStmt->condition.get());
+            loopStack_.push_back(LoopContext{whileStmt, LoopTargetKind::While});
             collectStatement(whileStmt->body.get());
+            loopStack_.pop_back();
             return;
         }
         if (const auto* forStmt = dynamic_cast<const ForStmt*>(&statement)) {
@@ -405,7 +421,9 @@ private:
             collectStatement(forStmt->initializer.get());
             collectExpression(forStmt->condition.get());
             collectExpression(forStmt->increment.get());
+            loopStack_.push_back(LoopContext{forStmt, LoopTargetKind::For});
             collectStatement(forStmt->body.get());
+            loopStack_.pop_back();
             endScope();
             return;
         }
@@ -420,9 +438,13 @@ private:
                 forIn);
             if (const auto* body = dynamic_cast<const BlockStmt*>(forIn->body.get())) {
                 index_.statementScopes_.emplace(body, currentScope().id);
+                loopStack_.push_back(LoopContext{forIn, LoopTargetKind::ForIn});
                 collectStatementList(body->statements);
+                loopStack_.pop_back();
             } else {
+                loopStack_.push_back(LoopContext{forIn, LoopTargetKind::ForIn});
                 collectStatement(forIn->body.get());
+                loopStack_.pop_back();
             }
             endScope();
             return;
@@ -444,8 +466,24 @@ private:
             index_.returnStatements_.insert(returnStmt);
             return;
         }
-        if (dynamic_cast<const BreakStmt*>(&statement)
-            || dynamic_cast<const ContinueStmt*>(&statement)) {
+        if (const auto* breakStmt = dynamic_cast<const BreakStmt*>(&statement)) {
+            index_.breakStatements_.insert(breakStmt);
+            if (!loopStack_.empty()) {
+                const LoopContext& loop = loopStack_.back();
+                index_.breakTargets_.emplace(
+                    breakStmt,
+                    LoopTargetRecord{loop.statement, loop.kind});
+            }
+            return;
+        }
+        if (const auto* continueStmt = dynamic_cast<const ContinueStmt*>(&statement)) {
+            index_.continueStatements_.insert(continueStmt);
+            if (!loopStack_.empty()) {
+                const LoopContext& loop = loopStack_.back();
+                index_.continueTargets_.emplace(
+                    continueStmt,
+                    LoopTargetRecord{loop.statement, loop.kind});
+            }
             return;
         }
     }
@@ -829,6 +867,7 @@ private:
 
     DeclarationIndex& index_;
     std::vector<ScopeId> scopeStack_;
+    std::vector<LoopContext> loopStack_;
     std::vector<FunctionContext> functionStack_;
 };
 
@@ -1016,6 +1055,18 @@ const CaptureRecord* DeclarationIndex::captureMetadata(const MethodDecl& method)
 {
     const auto found = methodCaptures_.find(&method);
     return found == methodCaptures_.end() ? nullptr : &found->second;
+}
+
+const LoopTargetRecord* DeclarationIndex::breakTarget(const BreakStmt& statement) const
+{
+    const auto found = breakTargets_.find(&statement);
+    return found == breakTargets_.end() ? nullptr : &found->second;
+}
+
+const LoopTargetRecord* DeclarationIndex::continueTarget(const ContinueStmt& statement) const
+{
+    const auto found = continueTargets_.find(&statement);
+    return found == continueTargets_.end() ? nullptr : &found->second;
 }
 
 void DeclarationIndex::recordNativeCall(const Expr& expression, std::string name)
@@ -1282,6 +1333,16 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
     }
     for (const FunctionExpr* expression : functionExpressions_) {
         if (!captureMetadata(*expression)) {
+            ++mismatches;
+        }
+    }
+    for (const BreakStmt* statement : breakStatements_) {
+        if (!breakTarget(*statement)) {
+            ++mismatches;
+        }
+    }
+    for (const ContinueStmt* statement : continueStatements_) {
+        if (!continueTarget(*statement)) {
             ++mismatches;
         }
     }

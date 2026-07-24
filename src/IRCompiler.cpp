@@ -206,7 +206,7 @@ void IRCompiler::compileStatement(const Stmt& statement)
         const IRRegister condition = compileExpression(*whileStmt->condition);
         const std::size_t exitJump = ir_.emitJumpIfFalse(condition);
 
-        loopContexts_.push_back(LoopContext{loopStart, {}});
+        loopContexts_.push_back(LoopContext{whileStmt, loopStart, {}});
         compileStatement(*whileStmt->body);
         LoopContext loop = std::move(loopContexts_.back());
         loopContexts_.pop_back();
@@ -350,18 +350,30 @@ void IRCompiler::requireMethodMetadata(const MethodDecl& method) const
     }
 }
 
-void IRCompiler::compileBreak(const BreakStmt&)
+void IRCompiler::compileBreak(const BreakStmt& statement)
 {
-    if (loopContexts_.empty()) {
-        throw IRCompileError("`break` can only be used inside a loop");
+    const LoopTargetRecord* target = declarationIndex_
+        ? declarationIndex_->breakTarget(statement)
+        : nullptr;
+    if (!target) {
+        throw IRCompileError("missing break target metadata");
+    }
+    if (loopContexts_.empty() || loopContexts_.back().statement != target->loop) {
+        throw IRCompileError("break target metadata does not match active loop");
     }
     loopContexts_.back().breakJumps.push_back(ir_.emitJump());
 }
 
-void IRCompiler::compileContinue(const ContinueStmt&)
+void IRCompiler::compileContinue(const ContinueStmt& statement)
 {
-    if (loopContexts_.empty()) {
-        throw IRCompileError("`continue` can only be used inside a loop");
+    const LoopTargetRecord* target = declarationIndex_
+        ? declarationIndex_->continueTarget(statement)
+        : nullptr;
+    if (!target) {
+        throw IRCompileError("missing continue target metadata");
+    }
+    if (loopContexts_.empty() || loopContexts_.back().statement != target->loop) {
+        throw IRCompileError("continue target metadata does not match active loop");
     }
     ir_.emitJumpTo(loopContexts_.back().continueTarget);
 }
@@ -388,7 +400,7 @@ void IRCompiler::compileFor(const ForStmt& statement)
 
     ir_.patchJump(jumpOverIncrement);
 
-    loopContexts_.push_back(LoopContext{incrementStart, {}});
+    loopContexts_.push_back(LoopContext{&statement, incrementStart, {}});
     compileStatement(*statement.body);
     LoopContext loop = std::move(loopContexts_.back());
     loopContexts_.pop_back();
@@ -449,7 +461,7 @@ void IRCompiler::compileForIn(const ForInStmt& statement)
 
     ir_.patchJump(jumpOverIncrement);
 
-    loopContexts_.push_back(LoopContext{incrementStart, {}});
+    loopContexts_.push_back(LoopContext{&statement, incrementStart, {}});
     compileStatement(*statement.body);
     LoopContext loop = std::move(loopContexts_.back());
     loopContexts_.pop_back();

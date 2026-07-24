@@ -856,6 +856,95 @@ void test_function_capture_metadata()
     compiler.compile(program, resolved, index);
 }
 
+void test_loop_target_metadata()
+{
+    std::istringstream input(
+        "while (true) { break; continue; }\n"
+        "for let i = 0; i < 1; i += 1 { break; continue; }\n"
+        "for item in [1] { break; continue; }\n"
+        "while (true) {\n"
+        "  fun nested() { while (true) { break; } }\n"
+        "  break;\n"
+        "}\n");
+    FrontendSession frontend;
+    Program program = frontend.loadStdin(input);
+
+    const auto* whileStmt = dynamic_cast<const WhileStmt*>(program.statements[0].get());
+    const auto* forStmt = dynamic_cast<const ForStmt*>(program.statements[1].get());
+    const auto* forInStmt = dynamic_cast<const ForInStmt*>(program.statements[2].get());
+    const auto* nestedOuter = dynamic_cast<const WhileStmt*>(program.statements[3].get());
+    assert(whileStmt != nullptr && forStmt != nullptr && forInStmt != nullptr);
+    assert(nestedOuter != nullptr);
+
+    const auto* whileBody = dynamic_cast<const BlockStmt*>(whileStmt->body.get());
+    const auto* forBody = dynamic_cast<const BlockStmt*>(forStmt->body.get());
+    const auto* forInBody = dynamic_cast<const BlockStmt*>(forInStmt->body.get());
+    const auto* nestedOuterBody = dynamic_cast<const BlockStmt*>(nestedOuter->body.get());
+    assert(whileBody != nullptr && forBody != nullptr && forInBody != nullptr);
+    assert(nestedOuterBody != nullptr && nestedOuterBody->statements.size() == 2);
+
+    const auto* nestedFunction
+        = dynamic_cast<const FunctionStmt*>(nestedOuterBody->statements[0].get());
+    const auto* nestedOuterBreak
+        = dynamic_cast<const BreakStmt*>(nestedOuterBody->statements[1].get());
+    const auto* nestedBody = nestedFunction && !nestedFunction->body.empty()
+        ? dynamic_cast<const WhileStmt*>(nestedFunction->body.front().get())
+        : nullptr;
+    const auto* nestedBodyBlock = nestedBody
+        ? dynamic_cast<const BlockStmt*>(nestedBody->body.get())
+        : nullptr;
+    const auto* nestedBreak = nestedBodyBlock && !nestedBodyBlock->statements.empty()
+        ? dynamic_cast<const BreakStmt*>(nestedBodyBlock->statements.front().get())
+        : nullptr;
+    assert(nestedFunction != nullptr && nestedOuterBreak != nullptr);
+    assert(nestedBody != nullptr && nestedBreak != nullptr);
+
+    const auto* whileBreak = dynamic_cast<const BreakStmt*>(whileBody->statements[0].get());
+    const auto* whileContinue = dynamic_cast<const ContinueStmt*>(whileBody->statements[1].get());
+    const auto* forBreak = dynamic_cast<const BreakStmt*>(forBody->statements[0].get());
+    const auto* forContinue = dynamic_cast<const ContinueStmt*>(forBody->statements[1].get());
+    const auto* forInBreak = dynamic_cast<const BreakStmt*>(forInBody->statements[0].get());
+    const auto* forInContinue = dynamic_cast<const ContinueStmt*>(forInBody->statements[1].get());
+    assert(whileBreak != nullptr && whileContinue != nullptr);
+    assert(forBreak != nullptr && forContinue != nullptr);
+    assert(forInBreak != nullptr && forInContinue != nullptr);
+
+    TypeChecker checker;
+    const ResolvedNames& resolved = checker.check(program);
+    const DeclarationIndex& index = checker.declarationIndex();
+    assert(checker.declarationIndexMismatchCount() == 0);
+
+    const auto assertBreakTarget = [&index](
+        const BreakStmt& statement,
+        const Stmt& loop,
+        LoopTargetKind kind) {
+        const LoopTargetRecord* target = index.breakTarget(statement);
+        assert(target != nullptr);
+        assert(target->loop == &loop);
+        assert(target->kind == kind);
+    };
+    const auto assertContinueTarget = [&index](
+        const ContinueStmt& statement,
+        const Stmt& loop,
+        LoopTargetKind kind) {
+        const LoopTargetRecord* target = index.continueTarget(statement);
+        assert(target != nullptr);
+        assert(target->loop == &loop);
+        assert(target->kind == kind);
+    };
+    assertBreakTarget(*whileBreak, *whileStmt, LoopTargetKind::While);
+    assertContinueTarget(*whileContinue, *whileStmt, LoopTargetKind::While);
+    assertBreakTarget(*forBreak, *forStmt, LoopTargetKind::For);
+    assertContinueTarget(*forContinue, *forStmt, LoopTargetKind::For);
+    assertBreakTarget(*forInBreak, *forInStmt, LoopTargetKind::ForIn);
+    assertContinueTarget(*forInContinue, *forInStmt, LoopTargetKind::ForIn);
+    assertBreakTarget(*nestedOuterBreak, *nestedOuter, LoopTargetKind::While);
+    assertBreakTarget(*nestedBreak, *nestedBody, LoopTargetKind::While);
+
+    IRCompiler compiler;
+    compiler.compile(program, resolved, index);
+}
+
 void test_typed_field_assignment_metadata()
 {
     std::istringstream input(
@@ -1067,6 +1156,7 @@ int main()
     test_variant_constructor_lowering_metadata();
     test_function_return_lowering_metadata();
     test_function_capture_metadata();
+    test_loop_target_metadata();
     test_typed_field_assignment_metadata();
     test_native_call_metadata();
     test_collection_expression_metadata();

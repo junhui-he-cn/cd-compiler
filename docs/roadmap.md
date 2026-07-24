@@ -507,7 +507,9 @@ records, and capture records. IR lowering requires those records for named
 functions, methods, anonymous functions, and returns while preserving the
 existing runtime names and closure-cell representation. Capture records now
 cover enclosing function-owned local cells reached by reads, assignments, and
-compound assignments; loop-target metadata remains the later M1D slice.
+compound assignments. Loop-target records now resolve `break` and `continue`
+to the nearest loop across `while`, C-style `for`, and `for-in` forms while
+respecting function boundaries.
 
 **Deliverable:** represent control-flow edges, returns, loop targets, function
 signatures, closure captures, and shared-cell accesses in the semantic layer.
