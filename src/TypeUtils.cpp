@@ -92,6 +92,8 @@ TypeInfo functionWithoutSignature()
     return result;
 }
 
+namespace SemanticTypes {
+
 bool isKnown(const TypeInfo& type)
 {
     return type.kind != StaticType::Unknown;
@@ -106,6 +108,8 @@ bool isNullable(const TypeInfo& type)
 {
     return type.kind == StaticType::Nullable && type.nullableOf != nullptr;
 }
+
+} // namespace SemanticTypes
 
 std::string staticTypeName(StaticType type)
 {
@@ -143,7 +147,7 @@ std::string staticTypeName(StaticType type)
 
 std::string typeInfoName(const TypeInfo& type)
 {
-    if (isNullable(type)) {
+    if (SemanticTypes::isNullable(type)) {
         return typeInfoName(*type.nullableOf) + "?";
     }
 
@@ -225,19 +229,19 @@ namespace SemanticTypes {
 
 bool compatible(const TypeInfo& expected, const TypeInfo& actual)
 {
-    if (!isKnown(expected) || !isKnown(actual)) {
+    if (!SemanticTypes::isKnown(expected) || !SemanticTypes::isKnown(actual)) {
         return true;
     }
-    if (isNullable(expected)) {
+    if (SemanticTypes::isNullable(expected)) {
         if (actual.kind == StaticType::Nil) {
             return true;
         }
-        if (isNullable(actual)) {
+        if (SemanticTypes::isNullable(actual)) {
             return SemanticTypes::compatible(*expected.nullableOf, *actual.nullableOf);
         }
         return SemanticTypes::compatible(*expected.nullableOf, actual);
     }
-    if (isNullable(actual)) {
+    if (SemanticTypes::isNullable(actual)) {
         return false;
     }
     if (expected.kind == StaticType::TypeParameter || actual.kind == StaticType::TypeParameter) {
@@ -300,7 +304,7 @@ bool compatible(const TypeInfo& expected, const TypeInfo& actual)
     if (expected.kind != StaticType::Function) {
         return true;
     }
-    if (!hasFunctionSignature(expected) || !hasFunctionSignature(actual)) {
+    if (!SemanticTypes::hasFunctionSignature(expected) || !SemanticTypes::hasFunctionSignature(actual)) {
         return true;
     }
     if (expected.parameterTypes.size() != actual.parameterTypes.size()) {
@@ -316,7 +320,7 @@ bool compatible(const TypeInfo& expected, const TypeInfo& actual)
 
 std::optional<TypeInfo> mergeArrayElementTypes(const TypeInfo& left, const TypeInfo& right)
 {
-    if (!isKnown(left) || !isKnown(right)) {
+    if (!SemanticTypes::isKnown(left) || !SemanticTypes::isKnown(right)) {
         return std::nullopt;
     }
 
@@ -324,11 +328,11 @@ std::optional<TypeInfo> mergeArrayElementTypes(const TypeInfo& left, const TypeI
         return simpleType(StaticType::Nil);
     }
 
-    if (isNullable(left)) {
+    if (SemanticTypes::isNullable(left)) {
         if (right.kind == StaticType::Nil) {
             return left;
         }
-        if (isNullable(right)) {
+        if (SemanticTypes::isNullable(right)) {
             std::optional<TypeInfo> inner = SemanticTypes::mergeArrayElementTypes(*left.nullableOf, *right.nullableOf);
             if (!inner) {
                 return std::nullopt;
@@ -342,7 +346,7 @@ std::optional<TypeInfo> mergeArrayElementTypes(const TypeInfo& left, const TypeI
         return nullableType(std::move(*inner));
     }
 
-    if (isNullable(right)) {
+    if (SemanticTypes::isNullable(right)) {
         if (left.kind == StaticType::Nil) {
             return right;
         }
@@ -430,6 +434,21 @@ TypeInfo substituteTypeParameters(
 }
 
 } // namespace SemanticTypes
+
+bool isKnown(const TypeInfo& type)
+{
+    return SemanticTypes::isKnown(type);
+}
+
+bool hasFunctionSignature(const TypeInfo& type)
+{
+    return SemanticTypes::hasFunctionSignature(type);
+}
+
+bool isNullable(const TypeInfo& type)
+{
+    return SemanticTypes::isNullable(type);
+}
 
 bool compatible(const TypeInfo& expected, const TypeInfo& actual)
 {

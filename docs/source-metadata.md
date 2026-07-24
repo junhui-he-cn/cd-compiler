@@ -116,8 +116,9 @@ records are snapshot-local and are not serialized into `.cdbc` artifacts.
 `TypeUtils` now exposes the shared `SemanticTypes` interface for the type
 operations used by the checker. `TypeSubstitutions` is the common mapping from
 generic parameter names to resolved `TypeInfo` values. The interface currently
-owns assignment/function compatibility, nullable and nested aggregate
-compatibility, array/map element-type merging, and recursive substitution
+owns known-type, nullable, and function-signature identity predicates;
+assignment/function compatibility; nullable and nested aggregate compatibility;
+array/map element-type merging; and recursive substitution
 through arrays, maps, nullable types, function signatures, nominal aggregate
 arguments, constraints, and generic constraints.
 

@@ -7,6 +7,8 @@ int main()
 {
     const TypeInfo t = typeParameterType("T");
     assert(typeInfoName(t) == "T");
+    assert(SemanticTypes::isKnown(t));
+    assert(!SemanticTypes::isKnown(unknownType()));
     assert(compatible(t, typeParameterType("T")));
     assert(!compatible(t, typeParameterType("U")));
 
@@ -17,6 +19,7 @@ int main()
 
     const TypeInfo identity = functionType(
         {t}, t, {"T"}, {std::make_shared<TypeInfo>(number)});
+    assert(SemanticTypes::hasFunctionSignature(identity));
     assert(typeInfoName(identity) == "fun<T: number>(T): T");
 
     const TypeInfo boxedNumber = namedStructType("Box", {number});
@@ -56,6 +59,7 @@ int main()
         {"T", "U"});
     const TypeInfo specialized = SemanticTypes::substituteTypeParameters(generic, substitutions);
     assert(typeInfoName(specialized) == "fun<T, U>([number], map<number, string>): number?");
+    assert(SemanticTypes::isNullable(*specialized.returnType));
     assert(typeInfoName(substituteTypeParameters(t, substitutions)) == "number");
     assert(SemanticTypes::compatible(number, typeParameterType("T", number)));
     return 0;

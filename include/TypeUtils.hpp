@@ -65,6 +65,9 @@ TypeInfo substituteTypeParameters(const TypeInfo& type, const TypeSubstitutions&
 
 namespace SemanticTypes {
 
+bool isKnown(const TypeInfo& type);
+bool hasFunctionSignature(const TypeInfo& type);
+bool isNullable(const TypeInfo& type);
 bool compatible(const TypeInfo& expected, const TypeInfo& actual);
 std::optional<TypeInfo> mergeArrayElementTypes(const TypeInfo& left, const TypeInfo& right);
 TypeInfo substituteTypeParameters(const TypeInfo& type, const TypeSubstitutions& substitutions);

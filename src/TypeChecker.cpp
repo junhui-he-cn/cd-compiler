@@ -9,7 +9,7 @@ namespace {
 
 TypeInfo logicalResultType(const TypeInfo& left, const TypeInfo& right)
 {
-    if (!isKnown(left) || !isKnown(right)) {
+    if (!SemanticTypes::isKnown(left) || !SemanticTypes::isKnown(right)) {
         return unknownType();
     }
     if (left.kind == right.kind) {
@@ -25,7 +25,7 @@ TypeInfo mergeReturnTypes(const TypeInfo& current, const TypeInfo& next)
             return current;
         }
     }
-    if (!isKnown(current) || !isKnown(next)) {
+    if (!SemanticTypes::isKnown(current) || !SemanticTypes::isKnown(next)) {
         return unknownType();
     }
     return unknownType();
@@ -68,10 +68,10 @@ TypeInfo mergedMapType(const TypeInfo& left, const TypeInfo& right)
 
 bool mapKeyTypeAllowed(const TypeInfo& type)
 {
-    if (!isKnown(type)) {
+    if (!SemanticTypes::isKnown(type)) {
         return true;
     }
-    if (isNullable(type)) {
+    if (SemanticTypes::isNullable(type)) {
         return type.nullableOf && mapKeyTypeAllowed(*type.nullableOf);
     }
     switch (type.kind) {
@@ -96,7 +96,7 @@ bool isPrimitiveMatchKind(StaticType kind)
 
 const TypeInfo* primitiveMatchBaseType(const TypeInfo& type)
 {
-    const TypeInfo* base = isNullable(type) ? type.nullableOf.get() : &type;
+    const TypeInfo* base = SemanticTypes::isNullable(type) ? type.nullableOf.get() : &type;
     if (!base || !isPrimitiveMatchKind(base->kind)) {
         return nullptr;
     }
@@ -2290,7 +2290,7 @@ TypeInfo TypeChecker::qualifyNamespaceType(
         }
         return result;
     }
-    if (isNullable(result) && result.nullableOf) {
+    if (SemanticTypes::isNullable(result) && result.nullableOf) {
         result.nullableOf = std::make_shared<TypeInfo>(
             qualifyNamespaceType(*result.nullableOf, alias, structs, enums));
         return result;
@@ -2666,7 +2666,7 @@ void TypeChecker::inferTypeArguments(
     const Token& callToken) const
 {
     if (expected.kind == StaticType::TypeParameter && expected.typeParameterName) {
-        if (!isKnown(actual)) {
+        if (!SemanticTypes::isKnown(actual)) {
             return;
         }
         const auto [it, inserted] = substitutions.emplace(*expected.typeParameterName, actual);
@@ -2725,7 +2725,7 @@ void TypeChecker::inferTypeArguments(
     }
 
     if (expected.kind == StaticType::Function && actual.kind == StaticType::Function
-        && hasFunctionSignature(expected) && hasFunctionSignature(actual)
+        && SemanticTypes::hasFunctionSignature(expected) && SemanticTypes::hasFunctionSignature(actual)
         && expected.parameterTypes.size() == actual.parameterTypes.size()) {
         for (std::size_t i = 0; i < expected.parameterTypes.size(); ++i) {
             inferTypeArguments(expected.parameterTypes[i], actual.parameterTypes[i], substitutions, callToken);
@@ -2802,7 +2802,7 @@ TypeChecker::CheckedExpression TypeChecker::checkFunctionCall(
     if (calleeType.kind != StaticType::Unknown && calleeType.kind != StaticType::Function) {
         throw TypeError(callToken, "can only call functions");
     }
-    if (calleeType.kind != StaticType::Function || !hasFunctionSignature(calleeType)) {
+    if (calleeType.kind != StaticType::Function || !SemanticTypes::hasFunctionSignature(calleeType)) {
         if (explicitTypes) {
             throw TypeError(callToken, "explicit type arguments require a known function signature");
         }
@@ -2884,7 +2884,7 @@ TypeChecker::CheckedExpression TypeChecker::checkFunctionCall(
 
 const TypeInfo* TypeChecker::contextualFunctionType(const TypeInfo* expectedType) const
 {
-    if (!expectedType || expectedType->kind != StaticType::Function || !hasFunctionSignature(*expectedType)) {
+    if (!expectedType || expectedType->kind != StaticType::Function || !SemanticTypes::hasFunctionSignature(*expectedType)) {
         return nullptr;
     }
     return expectedType;
@@ -3118,7 +3118,7 @@ TypeChecker::CheckedExpression TypeChecker::checkStructConstructor(
     }
 
     const TypeInfo* expectedStructType = expectedType;
-    if (expectedStructType && isNullable(*expectedStructType)) {
+    if (expectedStructType && SemanticTypes::isNullable(*expectedStructType)) {
         expectedStructType = expectedStructType->nullableOf.get();
     }
     const bool expectedMatches = expectedStructType
@@ -3258,7 +3258,7 @@ TypeChecker::CheckedExpression TypeChecker::checkVariantConstructor(
     }
 
     const TypeInfo* expectedEnumType = expectedType;
-    if (expectedEnumType && isNullable(*expectedEnumType)) {
+    if (expectedEnumType && SemanticTypes::isNullable(*expectedEnumType)) {
         expectedEnumType = expectedEnumType->nullableOf.get();
     }
     const bool expectedMatches = generic
@@ -3376,7 +3376,7 @@ bool TypeChecker::checkPattern(
     }
 
     if (const auto* recordPattern = dynamic_cast<const RecordPattern*>(&pattern)) {
-        const TypeInfo* structExpectedType = isNullable(expectedType)
+        const TypeInfo* structExpectedType = SemanticTypes::isNullable(expectedType)
             ? expectedType.nullableOf.get()
             : &expectedType;
         if (!structExpectedType
@@ -3430,7 +3430,7 @@ bool TypeChecker::checkPattern(
         }
 
         coversStruct = universal;
-        return isNullable(expectedType) ? false : universal;
+        return SemanticTypes::isNullable(expectedType) ? false : universal;
     }
 
     if (const auto* orPattern = dynamic_cast<const OrPattern*>(&pattern)) {
@@ -3521,7 +3521,7 @@ bool TypeChecker::checkPattern(
 
         coversNil = coversNil || mergedCoversNil;
         coversStruct = coversStruct || mergedCoversStruct;
-        if (isNullable(expectedType)
+        if (SemanticTypes::isNullable(expectedType)
             && expectedType.nullableOf
             && expectedType.nullableOf->kind == StaticType::Struct
             && mergedCoversNil && mergedCoversStruct) {
@@ -3536,7 +3536,7 @@ bool TypeChecker::checkPattern(
             if (expectedType.kind == StaticType::Nil) {
                 return true;
             }
-            if (isNullable(expectedType)) {
+            if (SemanticTypes::isNullable(expectedType)) {
                 coversNil = true;
                 return false;
             }
@@ -3545,7 +3545,7 @@ bool TypeChecker::checkPattern(
             }
         }
 
-        const TypeInfo* valueType = isNullable(expectedType)
+        const TypeInfo* valueType = SemanticTypes::isNullable(expectedType)
             ? expectedType.nullableOf.get()
             : &expectedType;
         if (!valueType || !SemanticTypes::compatible(*valueType, literalType)) {
@@ -3565,7 +3565,7 @@ bool TypeChecker::checkPattern(
         throw TypeError("unsupported pattern node");
     }
     const TypeInfo* enumExpectedType = &expectedType;
-    if (isNullable(expectedType)) {
+    if (SemanticTypes::isNullable(expectedType)) {
         enumExpectedType = expectedType.nullableOf.get();
     }
     if (!enumExpectedType
@@ -3699,10 +3699,10 @@ bool TypeChecker::checkPattern(
 void TypeChecker::checkMatch(const MatchStmt& statement)
 {
     const TypeInfo scrutineeType = checkExpression(*statement.value);
-    const bool nullableEnum = isNullable(scrutineeType)
+    const bool nullableEnum = SemanticTypes::isNullable(scrutineeType)
         && scrutineeType.nullableOf->kind == StaticType::Enum
         && scrutineeType.nullableOf->enumName;
-    const bool nullableStruct = isNullable(scrutineeType)
+    const bool nullableStruct = SemanticTypes::isNullable(scrutineeType)
         && scrutineeType.nullableOf->kind == StaticType::Struct
         && scrutineeType.nullableOf->structName;
     const bool structValue = scrutineeType.kind == StaticType::Struct
@@ -3773,7 +3773,7 @@ void TypeChecker::checkMatch(const MatchStmt& statement)
     }
 
     if (!coversAll) {
-        if (isNullable(scrutineeType) && !coveredNil) {
+        if (SemanticTypes::isNullable(scrutineeType) && !coveredNil) {
             throw TypeError(
                 Token{TokenType::Match, "match", statement.value->span ? statement.value->span->line : 0,
                     statement.value->span ? statement.value->span->column : 0},
@@ -3844,7 +3844,7 @@ TypeInfo TypeChecker::variableType(const Binding& binding) const
 std::optional<FlowNarrowing> TypeChecker::nonNilNarrowingForVariable(const VariableExpr& variable) const
 {
     const Binding* binding = findVariable(variable.name.lexeme);
-    if (!binding || !isNullable(binding->type)) {
+    if (!binding || !SemanticTypes::isNullable(binding->type)) {
         return std::nullopt;
     }
     return FlowNarrowing{binding->resolvedName, *binding->type.nullableOf};
@@ -3855,7 +3855,7 @@ TypeInfo TypeChecker::inferArrayElementType(const ArrayExpr& expression)
     std::optional<TypeInfo> current;
     for (const auto& element : expression.elements) {
         TypeInfo elementType = checkExpression(*element);
-        if (!isKnown(elementType)) {
+        if (!SemanticTypes::isKnown(elementType)) {
             return unknownType();
         }
         if (!current) {
@@ -3877,12 +3877,12 @@ void TypeChecker::refineArrayBindingFromMutation(Binding& target, const TypeInfo
         return;
     }
 
-    if (!isKnown(valueType)) {
+    if (!SemanticTypes::isKnown(valueType)) {
         target.type = simpleType(StaticType::Array);
         return;
     }
 
-    if (!isKnown(target.type) || (target.type.kind == StaticType::Array && !target.type.elementType)) {
+    if (!SemanticTypes::isKnown(target.type) || (target.type.kind == StaticType::Array && !target.type.elementType)) {
         target.type = arrayType(valueType);
         return;
     }
@@ -3920,7 +3920,7 @@ TypeChecker::CheckedExpression TypeChecker::checkArrayLiteral(const ArrayExpr& e
     }
 
     const TypeInfo element = inferArrayElementType(expression);
-    if (isKnown(element)) {
+    if (SemanticTypes::isKnown(element)) {
         return CheckedExpression{arrayType(element)};
     }
     return CheckedExpression{simpleType(StaticType::Array)};
@@ -3934,12 +3934,12 @@ TypeInfo TypeChecker::inferMapType(const MapExpr& expression)
 
     for (const MapEntry& entry : expression.entries) {
         const TypeInfo currentKey = checkExpression(*entry.key);
-        if (isKnown(currentKey) && !mapKeyTypeAllowed(currentKey)) {
+        if (SemanticTypes::isKnown(currentKey) && !mapKeyTypeAllowed(currentKey)) {
             throw TypeError(entry.colon, "map key must be nil, number, bool, or string");
         }
         const TypeInfo currentValue = checkExpression(*entry.value);
 
-        if (!isKnown(currentKey) || !isKnown(currentValue)) {
+        if (!SemanticTypes::isKnown(currentKey) || !SemanticTypes::isKnown(currentValue)) {
             hasUnknownComponent = true;
             continue;
         }
@@ -3984,7 +3984,7 @@ TypeChecker::CheckedExpression TypeChecker::checkMapLiteral(
         }
         for (const MapEntry& entry : expression.entries) {
             const CheckedExpression key = checkExpressionInfo(*entry.key, expectedType->keyType.get());
-            if (isKnown(key.type) && !mapKeyTypeAllowed(key.type)) {
+            if (SemanticTypes::isKnown(key.type) && !mapKeyTypeAllowed(key.type)) {
                 throw TypeError(entry.colon, "map key must be nil, number, bool, or string");
             }
             if (!SemanticTypes::compatible(*expectedType->keyType, key.type)) {
@@ -4055,7 +4055,7 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
                 throw TypeError(assign->name,
                     "cannot assign generic function to monomorphic function type");
             }
-            if (hasFunctionSignature(target->type) && hasFunctionSignature(value.type)
+            if (SemanticTypes::hasFunctionSignature(target->type) && SemanticTypes::hasFunctionSignature(value.type)
                 && target->type.parameterTypes.size() != value.type.parameterTypes.size()) {
                 throw TypeError(assign->name,
                     "cannot assign function with " + std::to_string(value.type.parameterTypes.size())
@@ -4077,7 +4077,7 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
                 : typeInfoName(target->type);
             throw TypeError(assign->name, "cannot assign " + typeInfoName(value.type) + " to `" + assign->name.lexeme
                 + "` of type " + targetTypeName);
-        } else if (!isKnown(target->type)) {
+        } else if (!SemanticTypes::isKnown(target->type)) {
             target->type = value.type;
         }
 
@@ -4101,7 +4101,7 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
         checkKnownNumber(compound->op, target->type, "`" + compound->op.lexeme + "` expects number variable, got ");
         checkKnownNumber(compound->op, value.type, "`" + compound->op.lexeme + "` expects number value, got ");
 
-        if (!isKnown(target->type)) {
+        if (!SemanticTypes::isKnown(target->type)) {
             target->type = simpleType(StaticType::Number);
         }
         resolvedNames_.recordBinding(*target);
@@ -4253,10 +4253,10 @@ TypeChecker::CheckedExpression TypeChecker::checkMatchExpression(
     const TypeInfo* expectedType)
 {
     const TypeInfo scrutineeType = checkExpression(*expression.value);
-    const bool nullableEnum = isNullable(scrutineeType)
+    const bool nullableEnum = SemanticTypes::isNullable(scrutineeType)
         && scrutineeType.nullableOf->kind == StaticType::Enum
         && scrutineeType.nullableOf->enumName;
-    const bool nullableStruct = isNullable(scrutineeType)
+    const bool nullableStruct = SemanticTypes::isNullable(scrutineeType)
         && scrutineeType.nullableOf->kind == StaticType::Struct
         && scrutineeType.nullableOf->structName;
     const bool structValue = scrutineeType.kind == StaticType::Struct
@@ -4330,7 +4330,7 @@ TypeChecker::CheckedExpression TypeChecker::checkMatchExpression(
         }
         if (!resultType) {
             resultType = result.type;
-        } else if (isKnown(*resultType) && isKnown(result.type)
+        } else if (SemanticTypes::isKnown(*resultType) && SemanticTypes::isKnown(result.type)
             && (!SemanticTypes::compatible(*resultType, result.type) || !SemanticTypes::compatible(result.type, *resultType))) {
             throw TypeError(arm.arrow,
                 "match arm result expects " + typeInfoName(*resultType)
@@ -4342,7 +4342,7 @@ TypeChecker::CheckedExpression TypeChecker::checkMatchExpression(
     }
 
     if (!coversAll) {
-        if (isNullable(scrutineeType) && !coveredNil) {
+        if (SemanticTypes::isNullable(scrutineeType) && !coveredNil) {
             throw TypeError(expression.keyword, "non-exhaustive match: missing nil");
         }
         if (enumType) {
@@ -4398,7 +4398,7 @@ TypeChecker::CheckedExpression TypeChecker::checkBuiltinLenCall(const CallExpr& 
     }
 
     const CheckedExpression argument = checkExpressionInfo(*expression.arguments.front());
-    if (isKnown(argument.type)
+    if (SemanticTypes::isKnown(argument.type)
         && argument.type.kind != StaticType::Array
         && argument.type.kind != StaticType::String
         && argument.type.kind != StaticType::Map
@@ -4434,7 +4434,7 @@ TypeChecker::CheckedExpression TypeChecker::checkArrayMap(
         throw TypeError(callToken,
             "map expects function as second argument, got " + typeInfoName(callback.type));
     }
-    if (callback.type.kind != StaticType::Function || !hasFunctionSignature(callback.type)) {
+    if (callback.type.kind != StaticType::Function || !SemanticTypes::hasFunctionSignature(callback.type)) {
         return CheckedExpression{simpleType(StaticType::Array)};
     }
     if (callback.type.parameterTypes.size() != 1) {
@@ -4448,7 +4448,7 @@ TypeChecker::CheckedExpression TypeChecker::checkArrayMap(
             "map callback expects " + typeInfoName(elementType)
                 + ", got " + typeInfoName(callbackType.parameterTypes.front()));
     }
-    if (callbackType.returnType && isKnown(*callbackType.returnType)) {
+    if (callbackType.returnType && SemanticTypes::isKnown(*callbackType.returnType)) {
         return CheckedExpression{arrayType(*callbackType.returnType)};
     }
     return CheckedExpression{simpleType(StaticType::Array)};
@@ -4473,7 +4473,7 @@ TypeChecker::CheckedExpression TypeChecker::checkArrayFilter(
         throw TypeError(callToken,
             "filter expects function as second argument, got " + typeInfoName(predicate.type));
     }
-    if (predicate.type.kind == StaticType::Function && hasFunctionSignature(predicate.type)) {
+    if (predicate.type.kind == StaticType::Function && SemanticTypes::hasFunctionSignature(predicate.type)) {
         if (predicate.type.parameterTypes.size() != 1) {
             throw TypeError(callToken, "filter expects callback with 1 argument");
         }
@@ -4486,7 +4486,7 @@ TypeChecker::CheckedExpression TypeChecker::checkArrayFilter(
                     + ", got " + typeInfoName(predicateType.parameterTypes.front()));
         }
         if (predicateType.returnType
-            && isKnown(*predicateType.returnType)
+            && SemanticTypes::isKnown(*predicateType.returnType)
             && !SemanticTypes::compatible(simpleType(StaticType::Bool), *predicateType.returnType)) {
             throw TypeError(callToken,
                 "filter expects callback to return bool, got " + typeInfoName(*predicateType.returnType));
@@ -4518,7 +4518,7 @@ TypeChecker::CheckedExpression TypeChecker::checkArrayFlatMap(
         throw TypeError(callToken,
             "flatMap expects function as second argument, got " + typeInfoName(callback.type));
     }
-    if (callback.type.kind != StaticType::Function || !hasFunctionSignature(callback.type)) {
+    if (callback.type.kind != StaticType::Function || !SemanticTypes::hasFunctionSignature(callback.type)) {
         return CheckedExpression{simpleType(StaticType::Array)};
     }
     if (callback.type.parameterTypes.size() != 1) {
@@ -4532,7 +4532,7 @@ TypeChecker::CheckedExpression TypeChecker::checkArrayFlatMap(
             "flatMap callback expects " + typeInfoName(elementType)
                 + ", got " + typeInfoName(callbackType.parameterTypes.front()));
     }
-    if (callbackType.returnType && isKnown(*callbackType.returnType)) {
+    if (callbackType.returnType && SemanticTypes::isKnown(*callbackType.returnType)) {
         if (callbackType.returnType->kind != StaticType::Array) {
             throw TypeError(callToken,
                 "flatMap expects callback to return array, got "
@@ -4566,7 +4566,7 @@ void TypeChecker::checkArrayPredicate(
         throw TypeError(callToken,
             functionName + " expects function as second argument, got " + typeInfoName(predicate.type));
     }
-    if (predicate.type.kind == StaticType::Function && hasFunctionSignature(predicate.type)) {
+    if (predicate.type.kind == StaticType::Function && SemanticTypes::hasFunctionSignature(predicate.type)) {
         if (predicate.type.parameterTypes.size() != 1) {
             throw TypeError(callToken, functionName + " expects callback with 1 argument");
         }
@@ -4579,7 +4579,7 @@ void TypeChecker::checkArrayPredicate(
                     + ", got " + typeInfoName(predicateType.parameterTypes.front()));
         }
         if (predicateType.returnType
-            && isKnown(*predicateType.returnType)
+            && SemanticTypes::isKnown(*predicateType.returnType)
             && !SemanticTypes::compatible(simpleType(StaticType::Bool), *predicateType.returnType)) {
             throw TypeError(callToken,
                 functionName + " expects callback to return bool, got "
@@ -4615,7 +4615,7 @@ TypeChecker::CheckedExpression TypeChecker::checkArrayFind(
 {
     checkArrayPredicate(callToken, arrayTypeInfo, predicateExpression, "find");
     if (arrayTypeInfo.kind == StaticType::Array && arrayTypeInfo.elementType) {
-        if (isNullable(*arrayTypeInfo.elementType)) {
+        if (SemanticTypes::isNullable(*arrayTypeInfo.elementType)) {
             return CheckedExpression{*arrayTypeInfo.elementType};
         }
         return CheckedExpression{nullableType(*arrayTypeInfo.elementType)};
@@ -4654,7 +4654,7 @@ TypeChecker::CheckedExpression TypeChecker::checkArrayReduce(
         throw TypeError(callToken,
             "reduce expects function as third argument, got " + typeInfoName(callback.type));
     }
-    if (callback.type.kind == StaticType::Function && hasFunctionSignature(callback.type)) {
+    if (callback.type.kind == StaticType::Function && SemanticTypes::hasFunctionSignature(callback.type)) {
         if (callback.type.parameterTypes.size() != 2) {
             throw TypeError(callToken, "reduce expects callback with 2 arguments");
         }
@@ -4673,7 +4673,7 @@ TypeChecker::CheckedExpression TypeChecker::checkArrayReduce(
                     + ", got " + typeInfoName(callbackType.parameterTypes[1]));
         }
         if (callbackType.returnType
-            && isKnown(*callbackType.returnType)
+            && SemanticTypes::isKnown(*callbackType.returnType)
             && !SemanticTypes::compatible(initial.type, *callbackType.returnType)) {
             throw TypeError(callToken,
                 "reduce expects callback to return " + typeInfoName(initial.type)
@@ -4770,7 +4770,7 @@ TypeChecker::CheckedExpression TypeChecker::checkNativeStdlibCall(const CallExpr
             : nullptr;
         const CheckedExpression keyArgument = checkExpressionInfo(*expression.arguments[1], expectedKey);
         if (mapArgument.type.kind == StaticType::Map
-            && isKnown(keyArgument.type)
+            && SemanticTypes::isKnown(keyArgument.type)
             && !mapKeyTypeAllowed(keyArgument.type)) {
             throw TypeError(expression.paren, "map key must be nil, number, bool, or string");
         }
@@ -4876,7 +4876,7 @@ TypeChecker::CheckedExpression TypeChecker::checkNativeStdlibCall(const CallExpr
         }
         const CheckedExpression keyArgument = checkExpressionInfo(*expression.arguments[1], expectedKey);
         if (collectionArgument.type.kind == StaticType::Map
-            && isKnown(keyArgument.type)
+            && SemanticTypes::isKnown(keyArgument.type)
             && !mapKeyTypeAllowed(keyArgument.type)) {
             throw TypeError(expression.paren, "map key must be nil, number, bool, or string");
         }
@@ -5149,7 +5149,7 @@ TypeChecker::CheckedExpression TypeChecker::checkMemberCall(
         }
         const CheckedExpression value = checkExpressionInfo(*expression.arguments[0], expectedKey);
         if (receiver.type.kind == StaticType::Map
-            && isKnown(value.type)
+            && SemanticTypes::isKnown(value.type)
             && !mapKeyTypeAllowed(value.type)) {
             throw TypeError(expression.paren, "map key must be nil, number, bool, or string");
         }
@@ -5181,7 +5181,7 @@ TypeChecker::CheckedExpression TypeChecker::checkMemberCall(
             : nullptr;
         const CheckedExpression key = checkExpressionInfo(*expression.arguments[0], expectedKey);
         if (receiver.type.kind == StaticType::Map
-            && isKnown(key.type)
+            && SemanticTypes::isKnown(key.type)
             && !mapKeyTypeAllowed(key.type)) {
             throw TypeError(expression.paren, "map key must be nil, number, bool, or string");
         }
@@ -5321,7 +5321,7 @@ TypeChecker::CheckedExpression TypeChecker::checkMemberCall(
     if (name == "len") {
         expectArity(0);
         const CheckedExpression receiver = checkReceiver();
-        if (isKnown(receiver.type)
+        if (SemanticTypes::isKnown(receiver.type)
             && receiver.type.kind != StaticType::Array
             && receiver.type.kind != StaticType::String
             && receiver.type.kind != StaticType::Map
@@ -5411,7 +5411,7 @@ TypeChecker::IndexTargetTypes TypeChecker::checkIndexTarget(
     }
 
     if (result.collection.kind == StaticType::Map) {
-        if (isKnown(result.index) && !mapKeyTypeAllowed(result.index)) {
+        if (SemanticTypes::isKnown(result.index) && !mapKeyTypeAllowed(result.index)) {
             throw TypeError(bracket, "map key must be nil, number, bool, or string");
         }
         if (result.collection.keyType && !SemanticTypes::compatible(*result.collection.keyType, result.index)) {
@@ -5675,7 +5675,7 @@ TypeInfo TypeChecker::checkUnary(const UnaryExpr& expression)
     const TypeInfo right = checkExpression(*expression.right);
     switch (expression.op.type) {
     case TokenType::Minus:
-        if (isKnown(right) && right.kind != StaticType::Number) {
+        if (SemanticTypes::isKnown(right) && right.kind != StaticType::Number) {
             throw TypeError(expression.op, "unary `-` expects number, got " + typeInfoName(right));
         }
         return simpleType(StaticType::Number);
@@ -5693,7 +5693,7 @@ TypeInfo TypeChecker::checkBinary(const BinaryExpr& expression)
 
     switch (expression.op.type) {
     case TokenType::Plus:
-        if (!isKnown(left) || !isKnown(right)) {
+        if (!SemanticTypes::isKnown(left) || !SemanticTypes::isKnown(right)) {
             return unknownType();
         }
         if (left.kind == StaticType::Number && right.kind == StaticType::Number) {
@@ -5707,7 +5707,7 @@ TypeInfo TypeChecker::checkBinary(const BinaryExpr& expression)
     case TokenType::Minus:
     case TokenType::Star:
     case TokenType::Slash:
-        if (!isKnown(left) || !isKnown(right)) {
+        if (!SemanticTypes::isKnown(left) || !SemanticTypes::isKnown(right)) {
             return simpleType(StaticType::Number);
         }
         if (left.kind != StaticType::Number || right.kind != StaticType::Number) {
@@ -5718,7 +5718,7 @@ TypeInfo TypeChecker::checkBinary(const BinaryExpr& expression)
     case TokenType::GreaterEqual:
     case TokenType::Less:
     case TokenType::LessEqual:
-        if (!isKnown(left) || !isKnown(right)) {
+        if (!SemanticTypes::isKnown(left) || !SemanticTypes::isKnown(right)) {
             return simpleType(StaticType::Bool);
         }
         if (left.kind != StaticType::Number || right.kind != StaticType::Number) {
