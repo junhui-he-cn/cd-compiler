@@ -3312,6 +3312,13 @@ bool TypeChecker::checkPattern(
         }
         const Binding binding = declareVariable(variable->name, expectedType, false);
         resolvedNames_.recordPatternVariable(*variable, binding);
+        declarationIndex_.recordPatternBinding(
+            *variable,
+            PatternBindingRecord{
+                binding.resolvedName,
+                binding.type,
+                binding.bindingId,
+                ResolvedSymbol{binding.declarationId, binding.symbolId}});
         coversStruct = true;
         return true;
     }
@@ -3468,6 +3475,13 @@ bool TypeChecker::checkPattern(
                     false);
                 for (const VariablePattern* occurrence : entry.second.occurrences) {
                     resolvedNames_.recordPatternVariable(*occurrence, binding);
+                    declarationIndex_.recordPatternBinding(
+                        *occurrence,
+                        PatternBindingRecord{
+                            binding.resolvedName,
+                            binding.type,
+                            binding.bindingId,
+                            ResolvedSymbol{binding.declarationId, binding.symbolId}});
                 }
             }
         }

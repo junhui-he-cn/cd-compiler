@@ -230,6 +230,14 @@ void test_declaration_index()
         == index.declaration(*secondBinding)->declarationId);
     assert(index.patternBinding(*firstBinding)->declarationId
         == index.patternBinding(*secondBinding)->declarationId);
+    const PatternBindingRecord* firstBindingMetadata
+        = index.patternBindingMetadata(*firstBinding);
+    const PatternBindingRecord* secondBindingMetadata
+        = index.patternBindingMetadata(*secondBinding);
+    assert(firstBindingMetadata != nullptr && secondBindingMetadata != nullptr);
+    assert(firstBindingMetadata->bindingId == secondBindingMetadata->bindingId);
+    assert(firstBindingMetadata->resolvedName == secondBindingMetadata->resolvedName);
+    assert(typeInfoName(firstBindingMetadata->type) == "number");
 }
 
 void test_declaration_index_module_metadata()
@@ -855,6 +863,9 @@ void test_record_pattern_metadata()
     assert(match != nullptr && match->arms.size() == 2);
     const auto* pattern = dynamic_cast<const RecordPattern*>(match->arms[1].pattern.get());
     assert(pattern != nullptr);
+    const auto* labelPattern = dynamic_cast<const VariablePattern*>(pattern->fields[0].pattern.get());
+    const auto* numberPattern = dynamic_cast<const VariablePattern*>(pattern->fields[1].pattern.get());
+    assert(labelPattern != nullptr && numberPattern != nullptr);
 
     TypeChecker checker;
     const ResolvedNames& resolved = checker.check(program);
@@ -868,6 +879,12 @@ void test_record_pattern_metadata()
     assert(record->fieldTypes.size() == 2);
     assert(typeInfoName(record->fieldTypes[0]) == "string");
     assert(typeInfoName(record->fieldTypes[1]) == "number");
+    const PatternBindingRecord* labelBinding = index.patternBindingMetadata(*labelPattern);
+    const PatternBindingRecord* numberBinding = index.patternBindingMetadata(*numberPattern);
+    assert(labelBinding != nullptr && numberBinding != nullptr);
+    assert(labelBinding->resolvedName != numberBinding->resolvedName);
+    assert(typeInfoName(labelBinding->type) == "string");
+    assert(typeInfoName(numberBinding->type) == "number");
 
     IRCompiler compiler;
     compiler.compile(program, resolved, index);

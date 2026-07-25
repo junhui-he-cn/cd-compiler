@@ -601,7 +601,7 @@ pattern inputs for `nil`, booleans, numbers, and strings, then checked enum
 variant inputs with resolved runtime identity, payload positions, and
 substituted payload types, then checked named-struct record inputs with
 resolved field order and substituted field types; IR lowering consumes all
-three records while
+three records, plus explicit pattern binding records, while
 `TypeChecker` remains the coverage and diagnostic oracle.
 
 **Deliverable:** move literal, nullable, enum, record, OR-pattern, guard,

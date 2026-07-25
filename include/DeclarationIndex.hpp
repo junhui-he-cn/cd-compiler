@@ -119,6 +119,13 @@ struct RecordPatternRecord {
     std::vector<TypeInfo> fieldTypes;
 };
 
+struct PatternBindingRecord {
+    std::string resolvedName;
+    TypeInfo type;
+    BindingId bindingId;
+    ResolvedSymbol symbol;
+};
+
 struct ReturnRecord {
     TypeInfo type;
 };
@@ -213,6 +220,7 @@ public:
     const LiteralPatternRecord* literalPattern(const LiteralPattern& pattern) const;
     const VariantPatternRecord* variantPattern(const VariantPattern& pattern) const;
     const RecordPatternRecord* recordPattern(const RecordPattern& pattern) const;
+    const PatternBindingRecord* patternBindingMetadata(const VariablePattern& pattern) const;
     const IndexOperationRecord* indexOperation(const Expr& expression) const;
     const FieldOperationRecord* fieldOperation(const Expr& expression) const;
     const StructConstructorRecord* structConstructor(const StructConstructExpr& expression) const;
@@ -248,6 +256,7 @@ private:
     void recordLiteralPattern(const LiteralPattern& pattern, LiteralPatternRecord record);
     void recordVariantPattern(const VariantPattern& pattern, VariantPatternRecord record);
     void recordRecordPattern(const RecordPattern& pattern, RecordPatternRecord record);
+    void recordPatternBinding(const VariablePattern& pattern, PatternBindingRecord record);
     void recordIndexOperation(const Expr& expression, IndexOperationRecord record);
     void recordFieldOperation(const Expr& expression, FieldOperationRecord record);
     void recordStructConstructor(const StructConstructExpr& expression, StructConstructorRecord record);
@@ -286,6 +295,7 @@ private:
     std::unordered_map<const LiteralPattern*, LiteralPatternRecord> literalPatterns_;
     std::unordered_map<const VariantPattern*, VariantPatternRecord> variantPatterns_;
     std::unordered_map<const RecordPattern*, RecordPatternRecord> recordPatterns_;
+    std::unordered_map<const VariablePattern*, PatternBindingRecord> patternBindingMetadata_;
     std::unordered_map<const Expr*, IndexOperationRecord> indexOperations_;
     std::unordered_map<const Expr*, FieldOperationRecord> fieldOperations_;
     std::unordered_map<const StructConstructExpr*, StructConstructorRecord> structConstructorsMetadata_;

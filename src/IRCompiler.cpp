@@ -571,7 +571,13 @@ void IRCompiler::compilePattern(
     }
 
     if (const auto* variable = dynamic_cast<const VariablePattern*>(&pattern)) {
-        bindings.emplace_back(resolvedNames_->patternVariableName(*variable), value);
+        const PatternBindingRecord* record = declarationIndex_
+            ? declarationIndex_->patternBindingMetadata(*variable)
+            : nullptr;
+        if (!record || record->resolvedName.empty()) {
+            throw IRCompileError("missing pattern binding metadata");
+        }
+        bindings.emplace_back(record->resolvedName, value);
         return;
     }
 

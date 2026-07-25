@@ -1063,6 +1063,13 @@ const RecordPatternRecord* DeclarationIndex::recordPattern(const RecordPattern& 
     return found == recordPatterns_.end() ? nullptr : &found->second;
 }
 
+const PatternBindingRecord* DeclarationIndex::patternBindingMetadata(
+    const VariablePattern& pattern) const
+{
+    const auto found = patternBindingMetadata_.find(&pattern);
+    return found == patternBindingMetadata_.end() ? nullptr : &found->second;
+}
+
 const IndexOperationRecord* DeclarationIndex::indexOperation(const Expr& expression) const
 {
     const auto found = indexOperations_.find(&expression);
@@ -1152,6 +1159,13 @@ void DeclarationIndex::recordVariantPattern(const VariantPattern& pattern, Varia
 void DeclarationIndex::recordRecordPattern(const RecordPattern& pattern, RecordPatternRecord record)
 {
     recordPatterns_.insert_or_assign(&pattern, std::move(record));
+}
+
+void DeclarationIndex::recordPatternBinding(
+    const VariablePattern& pattern,
+    PatternBindingRecord record)
+{
+    patternBindingMetadata_.insert_or_assign(&pattern, std::move(record));
 }
 
 void DeclarationIndex::recordIndexOperation(const Expr& expression, IndexOperationRecord record)
@@ -1334,7 +1348,15 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
         const DeclarationRecord* target = declaration(entry.second);
         try {
             const BindingId bindingId = resolved.patternVariableBindingId(*entry.first);
-            if (!target || !bindingMatches(resolved.binding(bindingId), *target)) {
+            const PatternBindingRecord* metadata = patternBindingMetadata(*entry.first);
+            const TypeBinding& binding = resolved.binding(bindingId);
+            if (!target
+                || !metadata
+                || !bindingMatches(binding, *target)
+                || metadata->bindingId != bindingId
+                || metadata->resolvedName != binding.resolvedName
+                || metadata->symbol.declarationId != target->declarationId
+                || metadata->symbol.symbolId != target->symbolId) {
                 ++mismatches;
             }
         } catch (const std::logic_error&) {

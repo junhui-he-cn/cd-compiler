@@ -186,6 +186,14 @@ struct record pattern. `IRCompiler` consumes the record for existing field
 loads; nested patterns, coverage, and diagnostic decisions remain owned by
 `TypeChecker`.
 
+## Pattern binding inputs (M1E3 next slice)
+
+`DeclarationIndex::patternBindingMetadata()` exposes the resolved runtime
+name, checked type, binding ID, and declaration/symbol target for every
+`VariablePattern`, including occurrences merged across an OR pattern.
+`IRCompiler` consumes the resolved name for arm-local stores while
+`TypeChecker` remains responsible for binding compatibility and scope rules.
+
 ## Lossless source view
 
 `FrontendSession::losslessSourceView()` groups `LosslessPiece` values by
