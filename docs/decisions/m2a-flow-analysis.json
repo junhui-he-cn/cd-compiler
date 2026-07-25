@@ -654,6 +654,42 @@
           "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
         ]
       }
+    },
+    {
+      "decision_id": "M2A-FLOW-019",
+      "introduced_revision": "m2a-2026-07-25-r19",
+      "domain": "flow-analysis",
+      "question": "When may a nil check narrow a nested named-struct field path?",
+      "decision": "For a statically known named-struct field reached through a direct variable path, a nil comparison establishes a path-specific nullable narrowing. The path may contain multiple known field segments, such as user.profile.score. The fact is active in the guarded branch and existing loop/body scopes. Field writes retain conservative all-fact invalidation; dynamic receivers, dynamic indexes, and alias-specific precision remain outside this slice.",
+      "status": "resolved",
+      "owner": "TypeChecker nested field fact-path resolution and existing field mutation effects",
+      "m1_behavior": "Before this revision, fieldFlowFactName accepted only a direct variable receiver, so the final nullable field in a known nested struct path stayed nullable even after a precise nil check.",
+      "rationale": "A statically known chain of named-struct fields has a stable snapshot-local dotted path and already has typed expression metadata. Composing that path reuses direct-field type substitution and prefix invalidation without adding runtime representation or alias assumptions.",
+      "affected_consumers": [
+        "TypeChecker nested named-struct field fact resolution",
+        "FlowFacts dotted-path lookup and prefix invalidation",
+        "nullable nested-field and mutation compatibility fixtures"
+      ],
+      "compatibility_consequences": "After `user.profile.score != nil`, the nested score may be used as a number in the active branch. Nested field writes invalidate the proof conservatively, while dynamic receivers, dynamic indexes, and alias-specific paths retain the existing behavior.",
+      "migration": "Extend fieldFlowFactName to compose direct-variable and typed nested FieldAccessExpr paths, and reuse the existing field type lookup and all-fact field assignment invalidation. Do not add index-path or alias-path resolution in this slice.",
+      "quantitative_gate": "The m0d-2026-07-22-r1 inventory validates 1731 cases, the FlowFacts CTest passes, the named nested-field positive and mutation-negative fixtures pass, and the full canonical verification command remains the release gate.",
+      "old_path_deletion_condition": "Delete no additional production path in this slice. The old unsupported nested-field narrowing behavior is replaced only after composed path resolution, nested mutation invalidation, and positive/negative fixtures pass; dynamic index and alias-specific precision require later decisions.",
+      "positive_fixtures": [
+        "tests/golden/nullable_narrowing_nested_field_recheck"
+      ],
+      "negative_fixtures": [
+        "tests/golden/type_errors/nullable_narrowing_nested_field_mutation_invalidated.cd"
+      ],
+      "verification": {
+        "inventory_revision": "m0d-2026-07-22-r1",
+        "commands": [
+          "cmake --build build --target compiler_design",
+          "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_nested_field",
+          "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_nested_field_recheck",
+          "python3 tests/verification_inventory.py --write",
+          "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+        ]
+      }
     }
   ]
 }

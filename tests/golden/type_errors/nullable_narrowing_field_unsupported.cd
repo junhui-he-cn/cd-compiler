@@ -1,7 +1,8 @@
 struct Inner { value: number? }
 struct Box { inner: Inner }
 fun takesNumber(value: number): number { return value; }
+fun get(box: Box): Box { return box; }
 let box: Box = Box { inner: Inner { value: 1 } };
-if (box.inner.value != nil) {
-  print takesNumber(box.inner.value);
+if (get(box).inner.value != nil) {
+  print takesNumber(get(box).inner.value);
 }

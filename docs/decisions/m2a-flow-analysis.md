@@ -509,3 +509,36 @@ same iteration. The M0D inventory now validates 1724 cases, including:
 The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification
 command are the gates for this revision.
+
+## M2A-FLOW-019: nested direct named-struct field narrowing
+
+For a statically known named-struct field reached through a direct variable
+path, a nil comparison establishes a path-specific nullable narrowing. The
+path may contain multiple known field segments, such as `user.profile.score`.
+The fact is active in the guarded branch and existing loop/body scopes. Field
+writes retain the conservative all-fact invalidation rule; dynamic receivers,
+dynamic indexes, and alias-specific precision remain outside this slice.
+
+The decision revision is `m2a-2026-07-25-r19`. Before this revision,
+`fieldFlowFactName` accepted only a direct variable receiver, so the final
+nullable field in a known nested struct path stayed nullable even after a
+precise nil check. The resolver now composes dotted snapshot-local paths from
+typed nested field expressions while reusing the existing substituted field
+type and invalidation logic.
+
+The positive fixture narrows `user.profile.score` and exercises both a number
+and nil runtime value. The negative fixture writes the nested field after the
+guard and confirms that the stale proof is rejected. The M0D inventory now
+validates 1731 cases, including:
+
+- `golden.success.nullable_narrowing_nested_field_recheck.ast`
+- `golden.success.nullable_narrowing_nested_field_recheck.ir`
+- `golden.success.nullable_narrowing_nested_field_recheck.bytecode`
+- `golden.success.nullable_narrowing_nested_field_recheck.module_interface`
+- `golden.type_errors.nullable_narrowing_nested_field_mutation_invalidated`
+- `rust_vm.golden.nullable_narrowing_nested_field_recheck.emit`
+- `rust_vm.golden.nullable_narrowing_nested_field_recheck.run`
+
+The FlowFacts CTest, focused golden and Rust VM subsets,
+`python3 tests/verification_inventory.py`, and the full canonical verification
+command are the gates for this revision.

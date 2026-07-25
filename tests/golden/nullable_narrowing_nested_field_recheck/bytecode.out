@@ -1,0 +1,35 @@
+main registers=12
+0000  b0 = constant #0 nil
+0001  store_var @0 read#0, b0
+0002  b1 = make_function $0 read/1
+0003  assign_var @7 read#0, b1
+0004  b2 = load_var @8 read#0
+0005  b3 = constant #5 4
+0006  b4 = struct @11 Profile { @12 score: b3}
+0007  b5 = struct @9 User { @10 profile: b4}
+0008  b6 = call b2(b5)
+0009  print b6
+0010  b7 = load_var @13 read#0
+0011  b8 = constant #6 nil
+0012  b9 = struct @16 Profile { @17 score: b8}
+0013  b10 = struct @14 User { @15 profile: b9}
+0014  b11 = call b7(b10)
+0015  print b11
+
+function $0 read/1 registers=12
+0000  b0 = load_var @1 user#1
+0001  b1 = field b0,  @2 profile
+0002  b2 = field b1,  @3 score
+0003  b3 = constant #1 nil
+0004  b4 = equal b2, b3
+0005  jump_if_false b4, 0008
+0006  b5 = constant #2 0
+0007  return b5
+0008  b6 = load_var @4 user#1
+0009  b7 = field b6,  @5 profile
+0010  b8 = field b7,  @6 score
+0011  b9 = constant #3 1
+0012  b10 = add b8, b9
+0013  return b10
+0014  b11 = constant #4 nil
+0015  return b11

@@ -1,0 +1,12 @@
+struct Profile { score: number? }
+struct User { profile: Profile }
+
+fun invalid(user: User): number {
+  if (user.profile.score == nil) {
+    return 0;
+  }
+  user.profile.score = nil;
+  return user.profile.score + 1;
+}
+
+print invalid(User { profile: Profile { score: 4 } });

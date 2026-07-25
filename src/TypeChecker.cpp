@@ -3544,17 +3544,33 @@ std::optional<FlowNarrowing> TypeChecker::nonNilNarrowingForVariable(const Varia
 
 std::optional<std::string> TypeChecker::fieldFlowFactName(const Expr& object, const Token& name) const
 {
+    std::optional<std::string> parentFactName;
+    TypeInfo objectType = unknownType();
+
     const auto* variable = dynamic_cast<const VariableExpr*>(&object);
-    if (!variable) {
-        return std::nullopt;
+    if (variable) {
+        const Binding* binding = findVariable(variable->name.lexeme);
+        if (!binding) {
+            return std::nullopt;
+        }
+        parentFactName = binding->resolvedName;
+        objectType = variableType(*binding);
+    } else {
+        const auto* field = dynamic_cast<const FieldAccessExpr*>(&object);
+        if (!field) {
+            return std::nullopt;
+        }
+        parentFactName = fieldFlowFactName(*field->object, field->name);
+        if (!parentFactName) {
+            return std::nullopt;
+        }
+        const TypedExpressionRecord* typedObject = declarationIndex_.typedExpression(object);
+        if (!typedObject) {
+            return std::nullopt;
+        }
+        objectType = typedObject->type;
     }
 
-    const Binding* binding = findVariable(variable->name.lexeme);
-    if (!binding) {
-        return std::nullopt;
-    }
-
-    const TypeInfo objectType = variableType(*binding);
     if (objectType.kind != StaticType::Struct || !objectType.structName) {
         return std::nullopt;
     }
@@ -3564,7 +3580,7 @@ std::optional<std::string> TypeChecker::fieldFlowFactName(const Expr& object, co
         return std::nullopt;
     }
 
-    return binding->resolvedName + "." + name.lexeme;
+    return *parentFactName + "." + name.lexeme;
 }
 
 std::optional<FlowNarrowing> TypeChecker::nonNilNarrowingForField(const FieldAccessExpr& field) const
@@ -3574,13 +3590,19 @@ std::optional<FlowNarrowing> TypeChecker::nonNilNarrowingForField(const FieldAcc
         return std::nullopt;
     }
 
-    const auto* variable = dynamic_cast<const VariableExpr*>(field.object.get());
-    const Binding* binding = variable ? findVariable(variable->name.lexeme) : nullptr;
-    if (!binding) {
+    TypeInfo objectType = unknownType();
+    if (const auto* variable = dynamic_cast<const VariableExpr*>(field.object.get())) {
+        const Binding* binding = findVariable(variable->name.lexeme);
+        if (!binding) {
+            return std::nullopt;
+        }
+        objectType = variableType(*binding);
+    } else if (const TypedExpressionRecord* typedObject = declarationIndex_.typedExpression(*field.object)) {
+        objectType = typedObject->type;
+    } else {
         return std::nullopt;
     }
 
-    const TypeInfo objectType = variableType(*binding);
     const StructTypeDecl* structType = objectType.structName
         ? findStructType(*objectType.structName)
         : nullptr;

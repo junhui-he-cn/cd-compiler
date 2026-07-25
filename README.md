@@ -129,9 +129,10 @@ after the enclosing loop.
 
 Direct fields of known named structs support the same nullable narrowing in
 conditions and active branch/body scopes, for example `box.value != nil`.
-Field assignments conservatively invalidate all active nullable facts, while
-nested fields, dynamic receivers, and alias-specific field precision remain
-unsupported.
+Known nested fields through a direct named-struct path, such as
+`user.profile.score != nil`, use the same narrowing. Field assignments
+conservatively invalidate all active nullable facts, while dynamic receivers,
+dynamic indexes, and alias-specific field precision remain unsupported.
 
 Direct array variables support the same narrowing for compile-time integer
 literal indexes, for example `items[0] != nil`. Index assignments and compound
