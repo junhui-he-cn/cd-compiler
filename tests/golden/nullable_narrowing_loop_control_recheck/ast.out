@@ -1,0 +1,24 @@
+Program
+  Fun sumNullable(values: [number?]): number
+    Let total = 0
+    ForIn item in values
+      Block
+        If (group (== item nil))
+          Then
+            Block
+              Continue
+        Expr (= total (+ total item))
+    Return total
+  Fun readAfterBreak(value: number?): number
+    While (group true)
+      Body
+        Block
+          If (group (== value nil))
+            Then
+              Block
+                Break
+          Return value
+    Return 0
+  Print (call sumNullable (array nil 2 3))
+  Print (call readAfterBreak 4)
+  Print (call readAfterBreak nil)

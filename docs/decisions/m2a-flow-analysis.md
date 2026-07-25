@@ -441,3 +441,36 @@ inventory now validates 1710 cases, including:
 The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification
 command are the gates for this revision.
+
+## M2A-FLOW-017: loop-control branch facts
+
+Inside a loop body, a branch whose last statement is `break` or `continue` is
+non-fallthrough for the current loop body. For a no-`else` nil guard, the
+condition's opposite narrowing is therefore available to following statements
+on the path that continues through the body. A nested loop statement remains
+fallthrough at the enclosing loop boundary, and no branch-local fact is carried
+past the enclosing loop itself.
+
+The decision revision is `m2a-2026-07-25-r17`. Before this revision,
+`statementMayFallThrough` recognized only returns and returning compound
+statements, so `if (item == nil) { continue; }` and
+`if (value == nil) { break; }` left the nullable value unchanged in the
+following body statements. The shared fall-through predicate now includes loop
+control statements while preserving nested-loop boundaries.
+
+The positive fixture sums nullable array items after a `continue` guard and
+returns a nullable value after a `break` guard. The negative fixture confirms
+that a `break` belonging to a nested loop does not narrow the value in the
+enclosing body. The M0D inventory now validates 1717 cases, including:
+
+- `golden.success.nullable_narrowing_loop_control_recheck.ast`
+- `golden.success.nullable_narrowing_loop_control_recheck.ir`
+- `golden.success.nullable_narrowing_loop_control_recheck.bytecode`
+- `golden.success.nullable_narrowing_loop_control_recheck.module_interface`
+- `golden.type_errors.nullable_narrowing_nested_loop_control_unsupported`
+- `rust_vm.golden.nullable_narrowing_loop_control_recheck.emit`
+- `rust_vm.golden.nullable_narrowing_loop_control_recheck.run`
+
+The FlowFacts CTest, focused golden and Rust VM subsets,
+`python3 tests/verification_inventory.py`, and the full canonical verification
+command are the gates for this revision.

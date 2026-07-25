@@ -118,6 +118,13 @@ conservatively invalidates all facts active at loop entry because the iterable
 may be empty or execute multiple iterations. `for-in` post-loop exit narrowing
 remains conservative.
 
+Inside any loop, an `if` branch ending in `break` or `continue` is treated as
+not reaching the following statements in that loop body. The opposite
+nil-check fact may therefore be used after guards such as
+`if (item == nil) { continue; }` or `if (value == nil) { break; }`. Nested loop
+control remains scoped to the nested loop, and this rule does not narrow values
+after the enclosing loop.
+
 Direct fields of known named structs support the same nullable narrowing in
 conditions and active branch/body scopes, for example `box.value != nil`.
 Field assignments conservatively invalidate all active nullable facts, while

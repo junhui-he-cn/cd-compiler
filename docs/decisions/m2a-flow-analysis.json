@@ -582,6 +582,42 @@
           "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
         ]
       }
+    },
+    {
+      "decision_id": "M2A-FLOW-017",
+      "introduced_revision": "m2a-2026-07-25-r17",
+      "domain": "flow-analysis",
+      "question": "Can loop-control statements make a nil-check branch non-fallthrough within the current loop body?",
+      "decision": "Inside a loop body, a branch whose last statement is break or continue is non-fallthrough for the current loop body. For a no-else nil guard, the condition's opposite narrowing is available to following statements on the path that continues through the body. Nested loop statements remain fallthrough at the enclosing loop boundary, and no branch-local fact is carried past the enclosing loop.",
+      "status": "resolved",
+      "owner": "TypeChecker statement fall-through analysis and loop-control boundaries",
+      "m1_behavior": "Before this revision, statement fall-through analysis recognized returns and returning compound statements but not break or continue, so nullable values guarded by loop control remained nullable in following body statements.",
+      "rationale": "A break or continue cannot reach the following statement in the same loop body, so retaining the opposite guard fact on the surviving path is sound. Treating nested loop statements as ordinary fallthrough statements prevents a nested break from being mistaken for control flow out of the enclosing body.",
+      "affected_consumers": [
+        "TypeChecker statementMayFallThrough",
+        "nullable loop-control branch checking",
+        "nested-loop control compatibility fixtures"
+      ],
+      "compatibility_consequences": "After `if (item == nil) { continue; }` or `if (value == nil) { break; }`, the non-null value may be used later in the current loop body. Nested loop control does not provide the same proof to an enclosing body, and loop completion remains conservative.",
+      "migration": "Extend the shared statement fall-through predicate to classify BreakStmt and ContinueStmt as terminating the current body path. Keep WhileStmt, ForStmt, and ForInStmt as compound statements that may fall through so their nested control statements cannot cross loop boundaries.",
+      "quantitative_gate": "The m0d-2026-07-22-r1 inventory validates 1717 cases, the FlowFacts CTest passes, the named loop-control positive and nested-loop negative fixtures pass, and the full canonical verification command remains the release gate.",
+      "old_path_deletion_condition": "Delete no additional production path in this slice. The old rejection of safe post-control-guard uses is replaced only after shared fall-through classification, nested-loop boundary coverage, and positive/negative fixtures pass; broader loop joins remain subject to later decisions.",
+      "positive_fixtures": [
+        "tests/golden/nullable_narrowing_loop_control_recheck"
+      ],
+      "negative_fixtures": [
+        "tests/golden/type_errors/nullable_narrowing_nested_loop_control_unsupported.cd"
+      ],
+      "verification": {
+        "inventory_revision": "m0d-2026-07-22-r1",
+        "commands": [
+          "cmake --build build --target compiler_design",
+          "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_loop_control",
+          "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_loop_control_recheck",
+          "python3 tests/verification_inventory.py --write",
+          "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+        ]
+      }
     }
   ]
 }

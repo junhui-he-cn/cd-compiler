@@ -1,0 +1,13 @@
+fun nested(value: number?): number {
+  while (true) {
+    if (value == nil) {
+      while (true) {
+        break;
+      }
+    }
+    return value;
+  }
+  return 0;
+}
+
+print nested(nil);

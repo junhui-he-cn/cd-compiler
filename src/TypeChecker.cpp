@@ -1350,7 +1350,9 @@ bool TypeChecker::bodyMayFallThrough(const std::vector<StmtPtr>& body) const
 bool TypeChecker::statementMayFallThrough(const Stmt& statement) const
 {
     const Stmt& last = statement;
-    if (dynamic_cast<const ReturnStmt*>(&last)) {
+    if (dynamic_cast<const ReturnStmt*>(&last)
+        || dynamic_cast<const BreakStmt*>(&last)
+        || dynamic_cast<const ContinueStmt*>(&last)) {
         return false;
     }
     if (const auto* block = dynamic_cast<const BlockStmt*>(&last)) {

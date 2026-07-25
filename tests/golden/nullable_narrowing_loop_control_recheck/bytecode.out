@@ -1,0 +1,82 @@
+main registers=16
+0000  b0 = constant #0 nil
+0001  store_var @0 sumNullable#0, b0
+0002  b1 = make_function $0 sumNullable/1
+0003  assign_var @20 sumNullable#0, b1
+0004  b2 = constant #7 nil
+0005  store_var @21 readAfterBreak#4, b2
+0006  b3 = make_function $1 readAfterBreak/1
+0007  assign_var @24 readAfterBreak#4, b3
+0008  b4 = load_var @25 sumNullable#0
+0009  b5 = constant #12 nil
+0010  b6 = constant #13 2
+0011  b7 = constant #14 3
+0012  b8 = array [b5, b6, b7]
+0013  b9 = call b4(b8)
+0014  print b9
+0015  b10 = load_var @26 readAfterBreak#4
+0016  b11 = constant #15 4
+0017  b12 = call b10(b11)
+0018  print b12
+0019  b13 = load_var @27 readAfterBreak#4
+0020  b14 = constant #16 nil
+0021  b15 = call b13(b14)
+0022  print b15
+
+function $0 sumNullable/1 registers=24
+0000  b0 = constant #1 0
+0001  store_var @1 total#2, b0
+0002  b1 = load_var @2 values#1
+0003  b2 = assert_array b1
+0004  store_var @3 __for_in_iter#0, b2
+0005  b3 = constant #2 0
+0006  store_var @4 __for_in_index#1, b3
+0007  b4 = constant #3 nil
+0008  store_var @5 item#3, b4
+0009  b5 = load_var @6 __for_in_iter#0
+0010  b6 = len b5
+0011  store_var @7 __for_in_len#2, b6
+0012  b7 = load_var @8 __for_in_index#1
+0013  b8 = load_var @9 __for_in_len#2
+0014  b9 = less b7, b8
+0015  jump_if_false b9, 0036
+0016  b10 = load_var @10 __for_in_iter#0
+0017  b11 = load_var @11 __for_in_index#1
+0018  b12 = index b10, b11
+0019  assign_var @12 item#3, b12
+0020  jump 0026
+0021  b13 = load_var @13 __for_in_index#1
+0022  b14 = constant #4 1
+0023  b15 = add b13, b14
+0024  assign_var @14 __for_in_index#1, b15
+0025  jump 0012
+0026  b16 = load_var @15 item#3
+0027  b17 = constant #5 nil
+0028  b18 = equal b16, b17
+0029  jump_if_false b18, 0031
+0030  jump 0021
+0031  b19 = load_var @16 total#2
+0032  b20 = load_var @17 item#3
+0033  b21 = add b19, b20
+0034  assign_var @18 total#2, b21
+0035  jump 0021
+0036  b22 = load_var @19 total#2
+0037  return b22
+0038  b23 = constant #6 nil
+0039  return b23
+
+function $1 readAfterBreak/1 registers=7
+0000  b0 = constant #8 true
+0001  jump_if_false b0, 0010
+0002  b1 = load_var @22 value#5
+0003  b2 = constant #9 nil
+0004  b3 = equal b1, b2
+0005  jump_if_false b3, 0007
+0006  jump 0010
+0007  b4 = load_var @23 value#5
+0008  return b4
+0009  jump 0000
+0010  b5 = constant #10 0
+0011  return b5
+0012  b6 = constant #11 nil
+0013  return b6

@@ -1,0 +1,24 @@
+fun sumNullable(values: [number?]): number {
+  let total = 0;
+  for item in values {
+    if (item == nil) {
+      continue;
+    }
+    total = total + item;
+  }
+  return total;
+}
+
+fun readAfterBreak(value: number?): number {
+  while (true) {
+    if (value == nil) {
+      break;
+    }
+    return value;
+  }
+  return 0;
+}
+
+print sumNullable([nil, 2, 3]);
+print readAfterBreak(4);
+print readAfterBreak(nil);

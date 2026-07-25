@@ -1,0 +1,3 @@
+Type error at 8:5: cannot return number? from function returning number
+      return value;
+      ^
