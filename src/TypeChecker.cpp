@@ -242,29 +242,6 @@ std::size_t ResolvedNames::bindingShadowMismatchCount() const
     return bindingShadowMismatches_;
 }
 
-bool ResolvedNames::hasVariantConstructor(const MemberCallExpr& expression) const
-{
-    return variantConstructors_.find(&expression) != variantConstructors_.end();
-}
-
-const std::string& ResolvedNames::variantEnumName(const MemberCallExpr& expression) const
-{
-    const auto found = variantConstructors_.find(&expression);
-    if (found == variantConstructors_.end()) {
-        throw std::logic_error("missing resolved variant enum name");
-    }
-    return found->second.first;
-}
-
-const std::string& ResolvedNames::variantName(const MemberCallExpr& expression) const
-{
-    const auto found = variantConstructors_.find(&expression);
-    if (found == variantConstructors_.end()) {
-        throw std::logic_error("missing resolved variant name");
-    }
-    return found->second.second;
-}
-
 DeclarationId ResolvedNames::declarationId(const Stmt& statement) const
 {
     const auto found = declarationIds_.find(&statement);
@@ -315,7 +292,6 @@ void ResolvedNames::clear()
     scopeIds_.clear();
     bindings_.clear();
     bindingShadowMismatches_ = 0;
-    variantConstructors_.clear();
 }
 
 void ResolvedNames::recordBinding(const TypeBinding& binding)
@@ -390,16 +366,6 @@ void ResolvedNames::recordForInVariable(const ForInStmt& statement, const TypeBi
 void ResolvedNames::recordScope(const Stmt& statement, ScopeId id)
 {
     scopeIds_.emplace(&statement, id);
-}
-
-void ResolvedNames::recordVariantConstructor(
-    const MemberCallExpr& expression,
-    std::string enumName,
-    std::string variantName)
-{
-    variantConstructors_.emplace(
-        &expression,
-        std::make_pair(std::move(enumName), std::move(variantName)));
 }
 
 const ResolvedNames& TypeChecker::check(const Program& program)
@@ -3022,7 +2988,6 @@ TypeChecker::CheckedExpression TypeChecker::checkVariantConstructor(
             }
         }
     }
-    resolvedNames_.recordVariantConstructor(expression, runtimeEnumName, expression.name.lexeme);
     TypeInfo resultType = namedEnumType(enumName, std::move(typeArguments));
     declarationIndex_.recordVariantConstructor(
         expression,

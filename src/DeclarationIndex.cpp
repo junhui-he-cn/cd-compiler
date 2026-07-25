@@ -1643,11 +1643,11 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
 
     for (const auto& entry : memberCallCandidates_) {
         const MemberCallExpr& expression = *entry.first;
-        if (resolved.hasVariantConstructor(expression)) {
-            const auto variant = variantConstructors_.find(entry.first);
-            if (variant == variantConstructors_.end()
-                || variant->second.enumName != resolved.variantEnumName(expression)
-                || variant->second.variantName != resolved.variantName(expression)) {
+        if (const VariantConstructorRecord* variant = variantConstructor(expression)) {
+            if (variant->enumName.empty()
+                || variant->variantName.empty()
+                || variant->resultType.kind != StaticType::Enum
+                || variant->payloadTypes.size() != expression.arguments.size()) {
                 ++mismatches;
             } else {
                 requireTypedExpression(expression);

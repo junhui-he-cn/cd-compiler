@@ -638,8 +638,8 @@ callees, variant constructors, and namespace value field accesses;
 register-IR lowering consumes those records for runtime names, parameter lists,
 receiver passing, constructor dispatch, and imported value loads. The legacy
 `ResolvedNames` table remains the comparison oracle for binding IDs,
-variant identity, and families not yet cut over; function, member-call, and
-field metadata are validated directly by the shared records.
+bindings and families not yet cut over; function, member-call, field, and
+variant metadata are validated directly by the shared records.
 The `IRCompiler` backend boundary now accepts only `Program` plus
 `DeclarationIndex`; `TypeChecker` still builds `ResolvedNames` for migration
 comparison, but the legacy table is no longer passed into lowering.

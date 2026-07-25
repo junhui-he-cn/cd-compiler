@@ -38,9 +38,6 @@ public:
     const TypeBinding& binding(BindingId id) const;
     std::size_t bindingCount() const;
     std::size_t bindingShadowMismatchCount() const;
-    bool hasVariantConstructor(const MemberCallExpr& expression) const;
-    const std::string& variantEnumName(const MemberCallExpr& expression) const;
-    const std::string& variantName(const MemberCallExpr& expression) const;
     DeclarationId declarationId(const Stmt& statement) const;
     SymbolId symbolId(const Stmt& statement) const;
     DeclarationId methodDeclarationId(const MethodDecl& method) const;
@@ -60,10 +57,6 @@ private:
     void recordCompoundAssignment(const CompoundAssignExpr& expression, const TypeBinding& binding);
     void recordForInVariable(const ForInStmt& statement, const TypeBinding& binding);
     void recordScope(const Stmt& statement, ScopeId id);
-    void recordVariantConstructor(
-        const MemberCallExpr& expression,
-        std::string enumName,
-        std::string variantName);
 
     std::unordered_map<const VariableExpr*, BindingId> variableBindingIds_;
     std::unordered_map<const AssignExpr*, BindingId> assignmentBindingIds_;
@@ -77,7 +70,6 @@ private:
     std::unordered_map<const Stmt*, ScopeId> scopeIds_;
     std::unordered_map<BindingId, TypeBinding, SnapshotIdHash<BindingIdTag>> bindings_;
     std::size_t bindingShadowMismatches_ = 0;
-    std::unordered_map<const MemberCallExpr*, std::pair<std::string, std::string>> variantConstructors_;
 };
 
 class TypeChecker {

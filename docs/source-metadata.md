@@ -164,8 +164,9 @@ record.
 `VariantConstructorRecord` additionally carries the resolved enum result type
 and substituted payload types, so variant lowering validates constructor shape
 without reconstructing generic payload types from the AST. M1F constructor
-dispatch now selects this record directly; the legacy variant-name accessors
-remain only for shadow comparison.
+dispatch now selects this record directly; the old `ResolvedNames` variant
+identity adapter is removed and shadow comparison validates the record's
+runtime identity and payload shape directly.
 
 ## Literal pattern inputs (M1E3 initial slice)
 
