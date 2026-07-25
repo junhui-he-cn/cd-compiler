@@ -159,10 +159,12 @@ void FlowFacts::invalidate(const std::string& resolvedName)
 {
     const std::string fieldPrefix = resolvedName + ".";
     const std::string indexPrefix = resolvedName + "[";
+    const std::string dynamicIndexSegment = "[" + resolvedName + "]";
     for (ActiveFlowFact& fact : activeNarrowings_) {
         if (fact.resolvedName == resolvedName
             || fact.resolvedName.rfind(fieldPrefix, 0) == 0
-            || fact.resolvedName.rfind(indexPrefix, 0) == 0) {
+            || fact.resolvedName.rfind(indexPrefix, 0) == 0
+            || fact.resolvedName.find(dynamicIndexSegment) != std::string::npos) {
             fact.narrowedType.reset();
         }
     }

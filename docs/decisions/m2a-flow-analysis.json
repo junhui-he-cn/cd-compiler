@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "decision_revision": "m2a-2026-07-25-r15",
+  "decision_revision": "m2a-2026-07-25-r21",
   "baseline_commit": "28aab82",
   "supersedes": ["SEM-TYPE-002"],
   "purpose": "Record intentional M2A flow-semantics revisions after the behavior-preserving M1 migration.",
@@ -722,6 +722,43 @@
           "cmake --build build --target compiler_design",
           "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_nested_index",
           "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_nested_index_recheck",
+          "python3 tests/verification_inventory.py --write",
+          "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+        ]
+      }
+    },
+    {
+      "decision_id": "M2A-FLOW-021",
+      "introduced_revision": "m2a-2026-07-25-r21",
+      "domain": "flow-analysis",
+      "question": "When may a nil check narrow an array element addressed by a numeric binding index?",
+      "decision": "For a statically known array reached through a direct variable, a known struct field, or another supported index path, a nil comparison establishes a path-specific nullable narrowing when the index expression is a direct binding with known number type. The fact key uses the binding's snapshot-local resolved name, so repeated reads through the same binding share the proof. Index writes retain the conservative all-fact invalidation rule; assigning or compound-assigning the index binding invalidates every fact that contains its bracket segment. Function-call and unknown index expressions, map/range elements, and alias-specific precision remain outside this slice.",
+      "status": "resolved",
+      "owner": "TypeChecker dynamic index fact-path resolution and FlowFacts binding-segment invalidation",
+      "m1_behavior": "Before this revision, indexFlowFactName accepted only normalized integer literals, so a known nullable array element addressed by a number binding remained nullable after a precise nil check.",
+      "rationale": "A direct number binding provides a stable snapshot-local path component for the current flow region. The binding can change independently of the array, so matching its exact bracket segment during invalidation prevents a proof about the old index value from surviving an assignment while preserving unrelated index facts.",
+      "affected_consumers": [
+        "TypeChecker direct and nested dynamic-index fact resolution",
+        "FlowFacts bracket-segment invalidation for index bindings",
+        "nullable dynamic-index positive, unresolved-index negative, and mutation-negative fixtures"
+      ],
+      "compatibility_consequences": "After `values[index] != nil` or a returning `values[index] == nil` guard, the same known-number index binding may be used as a non-null array element. Calls or unknown expressions used as indexes remain conservative, and assigning the index binding requires a fresh nil check.",
+      "migration": "Extend indexFlowFactName to accept a direct number binding after literal normalization, compose the binding resolved name into the existing bracketed path, and teach FlowFacts::invalidate to clear exact dynamic-index segments. Keep call/unknown index expressions unsupported and reuse existing array type checks and index-write invalidation.",
+      "quantitative_gate": "The m0d-2026-07-22-r1 inventory validates 1745 cases, the FlowFacts CTest passes, the named dynamic-index positive and mutation-negative fixtures pass, the call-based dynamic-index negative fixture remains rejected, and the full canonical verification command remains the release gate.",
+      "old_path_deletion_condition": "Delete no additional production path in this slice. The old unsupported known-number-binding behavior is replaced only after binding-key resolution, index-binding mutation invalidation, and positive/negative fixtures pass; call-based indexes and alias-specific precision require later decisions.",
+      "positive_fixtures": [
+        "tests/golden/nullable_narrowing_dynamic_index_recheck"
+      ],
+      "negative_fixtures": [
+        "tests/golden/type_errors/nullable_narrowing_index_dynamic_unsupported.cd",
+        "tests/golden/type_errors/nullable_narrowing_dynamic_index_mutation_invalidated.cd"
+      ],
+      "verification": {
+        "inventory_revision": "m0d-2026-07-22-r1",
+        "commands": [
+          "cmake --build build --target flow_facts_tests compiler_design",
+          "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_dynamic_index",
+          "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_dynamic_index_recheck",
           "python3 tests/verification_inventory.py --write",
           "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
         ]

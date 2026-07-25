@@ -575,3 +575,48 @@ cases, including:
 The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification
 command are the gates for this revision.
+
+## M2A-FLOW-021: known number-binding dynamic-index narrowing
+
+For a statically known array reached through a direct variable, a known struct
+field, or another supported index path, a nil comparison establishes a
+path-specific nullable narrowing when the index expression is a direct binding
+with known `number` type. The fact key uses that binding's snapshot-local
+resolved name, so repeated reads through the same binding share the proof. For
+example, `values[index] != nil` narrows the matching element in the active
+branch or a returning-guard continuation. Function-call and unknown index
+expressions, map/range elements, and alias-specific precision remain outside
+this slice.
+
+Assigning or compound-assigning the index binding invalidates every active fact
+whose bracket segment names that binding. Index writes retain the existing
+conservative all-fact invalidation rule, and root array assignments continue to
+invalidate related index facts. This prevents a proof about the old numeric
+index from surviving a binding mutation without weakening unrelated index
+facts.
+
+The decision revision is `m2a-2026-07-25-r21`. Before this revision,
+`indexFlowFactName` accepted only normalized integer literals, so a known
+nullable array element addressed by a number binding stayed nullable after a
+precise nil check. The resolver now accepts direct number bindings and composes
+their resolved names into the existing bracketed path; `FlowFacts::invalidate`
+also recognizes those exact bracket segments.
+
+The positive fixture exercises both a non-null and nil runtime value through the
+same dynamic index binding. The call-based negative fixture keeps an unresolved
+index expression unsupported, while the mutation-negative fixture assigns the
+index binding after the guard and confirms that the stale proof is rejected.
+The M0D inventory now validates 1745 cases, including:
+
+- `golden.success.nullable_narrowing_dynamic_index_recheck.ast`
+- `golden.success.nullable_narrowing_dynamic_index_recheck.ir`
+- `golden.success.nullable_narrowing_dynamic_index_recheck.bytecode`
+- `golden.success.nullable_narrowing_dynamic_index_recheck.module_interface`
+- `golden.type_errors.nullable_narrowing_index_dynamic_unsupported`
+- `golden.type_errors.nullable_narrowing_dynamic_index_mutation_invalidated`
+- `rust_vm.golden.nullable_narrowing_dynamic_index_recheck.emit`
+- `rust_vm.golden.nullable_narrowing_dynamic_index_recheck.run`
+
+The FlowFacts CTest, focused golden and Rust VM subsets,
+`python3 tests/verification_inventory.py`, and the full canonical verification
+command are the gates for this revision.

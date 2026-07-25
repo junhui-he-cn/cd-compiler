@@ -1,10 +1,11 @@
 fun takesNumber(value: number): number { return value; }
+fun getIndex(): number { return 0; }
 
-fun read(values: [number?], index: number): number {
-  if (values[index] != nil) {
-    return takesNumber(values[index]);
+fun read(values: [number?]): number {
+  if (values[getIndex()] != nil) {
+    return takesNumber(values[getIndex()]);
   }
   return 0;
 }
 
-print read([41], 0);
+print read([41]);

@@ -331,6 +331,22 @@ void test_root_invalidation_clears_index_facts()
     });
 }
 
+void test_index_binding_invalidation_clears_dynamic_index_facts()
+{
+    FlowFacts facts;
+    const std::vector<FlowNarrowing> indexFacts{
+        {"values#0[index#1]", simpleType(StaticType::Number)},
+        {"matrix#2[row#3][column#4]", simpleType(StaticType::String)},
+        {"values#0[other#5]", simpleType(StaticType::Bool)}};
+
+    facts.withNarrowings(indexFacts, [&]() {
+        facts.invalidate("index#1");
+        assert(!facts.narrowedTypeFor("values#0[index#1]").has_value());
+        assert(facts.narrowedTypeFor("matrix#2[row#3][column#4]").has_value());
+        assert(facts.narrowedTypeFor("values#0[other#5]").has_value());
+    });
+}
+
 void test_without_narrowings_restores_state_after_success_and_throw()
 {
     FlowFacts facts;
@@ -442,6 +458,7 @@ int main()
     test_invalidate_all_clears_nested_facts();
     test_root_invalidation_clears_field_facts();
     test_root_invalidation_clears_index_facts();
+    test_index_binding_invalidation_clears_dynamic_index_facts();
     test_without_narrowings_restores_state_after_success_and_throw();
     test_with_loop_body_preserves_outer_facts_during_body_only();
     test_with_loop_body_restores_state_after_throw();

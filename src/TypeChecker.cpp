@@ -3624,8 +3624,21 @@ std::optional<std::string> TypeChecker::indexFlowFactName(
     const Expr& collection,
     const Expr& index) const
 {
-    const std::optional<std::string> normalizedIndex = normalizedIntegerLiteral(index);
-    if (!normalizedIndex) {
+    std::optional<std::string> indexFactName = normalizedIntegerLiteral(index);
+    if (!indexFactName) {
+        const auto* variable = dynamic_cast<const VariableExpr*>(&index);
+        if (!variable) {
+            return std::nullopt;
+        }
+
+        const Binding* binding = findVariable(variable->name.lexeme);
+        if (!binding || variableType(*binding).kind != StaticType::Number) {
+            return std::nullopt;
+        }
+        indexFactName = binding->resolvedName;
+    }
+
+    if (indexFactName->empty()) {
         return std::nullopt;
     }
 
@@ -3660,7 +3673,7 @@ std::optional<std::string> TypeChecker::indexFlowFactName(
         return std::nullopt;
     }
 
-    return *parentFactName + "[" + *normalizedIndex + "]";
+    return *parentFactName + "[" + *indexFactName + "]";
 }
 
 std::optional<FlowNarrowing> TypeChecker::nonNilNarrowingForIndex(const IndexExpr& index) const
