@@ -26,6 +26,8 @@ public:
     BranchFlowFacts factsForIfCondition(
         const Expr& condition,
         const VariableNarrowingResolver& resolveVariableNarrowing) const;
+    std::vector<FlowNarrowing> activeNarrowings() const;
+    void appendNarrowings(const std::vector<FlowNarrowing>& narrowings);
     std::optional<TypeInfo> narrowedTypeFor(const std::string& resolvedName) const;
     void invalidate(const std::string& resolvedName);
     void invalidateAll();

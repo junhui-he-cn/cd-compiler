@@ -128,6 +128,27 @@ void test_non_narrowable_variable_produces_no_facts()
     assert(branchFacts.elseNarrowings.empty());
 }
 
+void test_active_narrowings_can_be_appended_after_branch_analysis()
+{
+    FlowFacts facts;
+    const std::vector<FlowNarrowing> outer{{"value#0", simpleType(StaticType::Number)}};
+    const std::vector<FlowNarrowing> appended{{"other#1", simpleType(StaticType::String)}};
+
+    facts.withNarrowings(outer, [&]() {
+        const std::vector<FlowNarrowing> active = facts.activeNarrowings();
+        assert(active.size() == 1);
+        assert(active.front().resolvedName == "value#0");
+
+        facts.appendNarrowings(appended);
+        const std::optional<TypeInfo> outerNarrowing = facts.narrowedTypeFor("value#0");
+        assert(outerNarrowing.has_value());
+        assert(outerNarrowing->kind == StaticType::Number);
+        const std::optional<TypeInfo> narrowed = facts.narrowedTypeFor("other#1");
+        assert(narrowed.has_value());
+        assert(narrowed->kind == StaticType::String);
+    });
+}
+
 void test_with_narrowings_restores_stack_after_success_and_throw()
 {
     FlowFacts facts;
@@ -255,6 +276,7 @@ int main()
     test_logical_and_combines_then_facts();
     test_logical_or_combines_else_facts();
     test_non_narrowable_variable_produces_no_facts();
+    test_active_narrowings_can_be_appended_after_branch_analysis();
     test_with_narrowings_restores_stack_after_success_and_throw();
     test_invalidation_propagates_and_nested_facts_restore();
     test_invalidate_all_clears_nested_facts();

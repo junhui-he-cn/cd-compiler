@@ -210,6 +210,7 @@ private:
         const std::string& functionLabel);
     void recordReturn(const Token& keyword, TypeInfo type);
     bool bodyMayFallThrough(const std::vector<StmtPtr>& body) const;
+    bool statementMayFallThrough(const Stmt& statement) const;
     void checkImplicitNilReturn(const Token& functionToken, const std::string& functionLabel, const TypeInfo& expectedReturnType) const;
     TypeInfo checkExpression(const Expr& expression);
     CheckedExpression checkExpressionInfo(const Expr& expression);

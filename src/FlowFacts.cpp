@@ -113,6 +113,25 @@ BranchFlowFacts FlowFacts::factsForIfCondition(
     return result;
 }
 
+std::vector<FlowNarrowing> FlowFacts::activeNarrowings() const
+{
+    std::vector<FlowNarrowing> result;
+    result.reserve(activeNarrowings_.size());
+    for (const ActiveFlowFact& fact : activeNarrowings_) {
+        if (fact.narrowedType) {
+            result.push_back(FlowNarrowing{fact.resolvedName, *fact.narrowedType});
+        }
+    }
+    return result;
+}
+
+void FlowFacts::appendNarrowings(const std::vector<FlowNarrowing>& narrowings)
+{
+    for (const FlowNarrowing& narrowing : narrowings) {
+        activeNarrowings_.push_back(ActiveFlowFact{narrowing.resolvedName, narrowing.type});
+    }
+}
+
 std::optional<TypeInfo> FlowFacts::narrowedTypeFor(const std::string& resolvedName) const
 {
     for (auto it = activeNarrowings_.rbegin(); it != activeNarrowings_.rend(); ++it) {

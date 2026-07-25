@@ -628,6 +628,22 @@ void TypeChecker::checkStatement(const Stmt& statement)
             [this](const VariableExpr& variable) {
                 return nonNilNarrowingForVariable(variable);
             });
+        if (!ifStmt->elseBranch && !statementMayFallThrough(*ifStmt->thenBranch)) {
+            const std::vector<FlowNarrowing> baseFacts = flowFacts_.activeNarrowings();
+            std::vector<FlowNarrowing> terminatingBranchFacts = baseFacts;
+            terminatingBranchFacts.insert(
+                terminatingBranchFacts.end(),
+                branchFacts.thenNarrowings.begin(),
+                branchFacts.thenNarrowings.end());
+            flowFacts_.withoutNarrowings([&]() {
+                flowFacts_.withNarrowings(terminatingBranchFacts, [&]() {
+                    checkStatement(*ifStmt->thenBranch);
+                });
+            });
+
+            flowFacts_.appendNarrowings(branchFacts.elseNarrowings);
+            return;
+        }
         flowFacts_.withNarrowings(branchFacts.thenNarrowings, [&]() {
             checkStatement(*ifStmt->thenBranch);
         });
@@ -1225,7 +1241,12 @@ bool TypeChecker::bodyMayFallThrough(const std::vector<StmtPtr>& body) const
     if (body.empty()) {
         return true;
     }
-    const Stmt& last = *body.back();
+    return statementMayFallThrough(*body.back());
+}
+
+bool TypeChecker::statementMayFallThrough(const Stmt& statement) const
+{
+    const Stmt& last = statement;
     if (dynamic_cast<const ReturnStmt*>(&last)) {
         return false;
     }

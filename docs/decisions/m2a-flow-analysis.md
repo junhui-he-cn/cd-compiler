@@ -23,7 +23,7 @@ deliberately returns to the binding's declared/inferred type.
 
 This is a type-checking behavior change only. Parser, AST, register IR,
 bytecode, artifact text, and Rust VM contracts are unchanged for accepted
-programs. Field/index mutation, loop and post-branch flow, aliasing, calls, and
+programs. Field/index mutation, loop and broader post-branch flow, aliasing, calls, and
 closure boundaries remain the existing conservative contract and are admitted
 as later M2A slices.
 
@@ -178,6 +178,32 @@ call and is rejected. The M0D inventory now validates 1677 cases, including:
 - `golden.type_errors.nullable_narrowing_struct_method_invalidated`
 - `rust_vm.golden.nullable_narrowing_struct_method_recheck.emit`
 - `rust_vm.golden.nullable_narrowing_struct_method_recheck.run`
+
+The FlowFacts CTest, focused golden and Rust VM subsets,
+`python3 tests/verification_inventory.py`, and the full canonical verification
+command are the gates for this revision.
+
+## M2A-FLOW-007: returning-guard post-branch narrowing
+
+For an `if` without an `else` whose `then` statement is guaranteed not to fall
+through through a return, returning block, or returning exhaustive match, the
+condition's `else` narrowings become active after the `if`. The checker snapshots
+the active facts before the terminating branch, checks that branch with its
+normal facts, restores the snapshot, and then installs only the false-branch
+facts for the live continuation. Mutations on the dead path therefore do not
+contaminate the path after the guard.
+
+Explicit-`else` branches, loops, fields, and indexes remain conservative. The
+decision revision is `m2a-2026-07-25-r7`, based on commit `d412116`.
+
+The positive fixture accepts `if (value == nil) { return; }` followed by a
+non-null use and also covers a mutation in a returning nested branch. The
+negative fixture keeps a non-terminating nil branch and rejects the stale
+nullable use. The M0D inventory now validates 1680 cases, including:
+
+- `golden.type_errors.nullable_narrowing_post_branch_unsupported`
+- `rust_vm.golden.nullable_narrowing_post_branch_recheck.emit`
+- `rust_vm.golden.nullable_narrowing_post_branch_recheck.run`
 
 The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification
