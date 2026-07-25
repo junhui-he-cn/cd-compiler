@@ -117,7 +117,7 @@ int main(int argc, char** argv)
         }
 
         TypeChecker typeChecker;
-        const ResolvedNames& resolvedNames = typeChecker.check(program);
+        typeChecker.check(program);
 
         if (!emitBytecodePath && !showIr && !showBytecode && !showModuleInterface) {
             program.print(std::cout);
@@ -129,7 +129,7 @@ int main(int argc, char** argv)
 
         if (emitBytecodePath || showIr || showBytecode) {
             IRCompiler compiler;
-            IRProgram ir = compiler.compile(program, resolvedNames, typeChecker.declarationIndex());
+            IRProgram ir = compiler.compile(program, typeChecker.declarationIndex());
 
             std::optional<BytecodeProgram> bytecode;
             if (emitBytecodePath || showBytecode) {

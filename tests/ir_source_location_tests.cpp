@@ -398,7 +398,7 @@ void test_resolved_declaration_signature_metadata()
     assert(function != nullptr && impl != nullptr && impl->methods.size() == 1);
 
     TypeChecker checker;
-    const ResolvedNames& resolved = checker.check(program);
+    checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
 
@@ -419,7 +419,7 @@ void test_resolved_declaration_signature_metadata()
     assert(typeInfoName(*methodSignature->type.returnType) == "T");
 
     IRCompiler compiler;
-    compiler.compile(program, resolved, index);
+    compiler.compile(program, index);
 }
 
 void test_typed_expression_metadata()
@@ -459,7 +459,7 @@ void test_typed_expression_metadata()
     assert(directCall != nullptr && field != nullptr);
 
     TypeChecker checker;
-    const ResolvedNames& resolved = checker.check(program);
+    checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
 
@@ -475,7 +475,7 @@ void test_typed_expression_metadata()
     assertType(*field, "number");
 
     IRCompiler compiler;
-    compiler.compile(program, resolved, index);
+    compiler.compile(program, index);
 }
 
 void test_variable_lowering_metadata()
@@ -584,7 +584,7 @@ void test_variable_lowering_metadata()
     assertType(*dynamicCompound, "number");
 
     IRCompiler compiler;
-    compiler.compile(program, resolved, index);
+    compiler.compile(program, index);
 }
 
 void test_typed_index_expression_metadata()
@@ -647,7 +647,7 @@ void test_typed_index_expression_metadata()
     assert(dynamicRead != nullptr && dynamicAssign != nullptr && dynamicCompound != nullptr);
 
     TypeChecker checker;
-    const ResolvedNames& resolved = checker.check(program);
+    checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
 
@@ -690,7 +690,7 @@ void test_typed_index_expression_metadata()
     assertIndex(*dynamicCompound, IndexOperationKind::CompoundAssign, "unknown", "number", "number");
 
     IRCompiler compiler;
-    compiler.compile(program, resolved, index);
+    compiler.compile(program, index);
 }
 
 void test_call_lowering_metadata()
@@ -720,7 +720,7 @@ void test_call_lowering_metadata()
     assert(directCall != nullptr && aliasCall != nullptr && shadowedCall != nullptr);
 
     TypeChecker checker;
-    const ResolvedNames& resolved = checker.check(program);
+    checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
 
@@ -737,7 +737,7 @@ void test_call_lowering_metadata()
     assert(index.nativeCall(*shadowedCall) == nullptr);
 
     IRCompiler compiler;
-    compiler.compile(program, resolved, index);
+    compiler.compile(program, index);
 }
 
 void test_method_call_lowering_metadata()
@@ -783,7 +783,7 @@ void test_method_call_lowering_metadata()
         == resolved.methodParameterNames(impl->methods.front()));
 
     IRCompiler compiler;
-    compiler.compile(program, resolved, index);
+    compiler.compile(program, index);
 }
 
 void test_literal_pattern_metadata()
@@ -813,7 +813,7 @@ void test_literal_pattern_metadata()
     assert(nilPattern != nullptr && truePattern != nullptr && falsePattern != nullptr);
 
     TypeChecker checker;
-    const ResolvedNames& resolved = checker.check(program);
+    checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
 
@@ -831,7 +831,7 @@ void test_literal_pattern_metadata()
     assertLiteral(*falsePattern, "false", "bool");
 
     IRCompiler compiler;
-    compiler.compile(program, resolved, index);
+    compiler.compile(program, index);
 }
 
 void test_variant_pattern_metadata()
@@ -864,7 +864,7 @@ void test_variant_pattern_metadata()
     assert(okPattern != nullptr && emptyPattern != nullptr);
 
     TypeChecker checker;
-    const ResolvedNames& resolved = checker.check(program);
+    checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
     const MatchCoverageRecord* coverage = index.matchCoverage(*match);
@@ -894,7 +894,7 @@ void test_variant_pattern_metadata()
     assert(emptyRecord->payloadTypes.empty());
 
     IRCompiler compiler;
-    compiler.compile(program, resolved, index);
+    compiler.compile(program, index);
 }
 
 void test_record_pattern_metadata()
@@ -925,7 +925,7 @@ void test_record_pattern_metadata()
     assert(labelPattern != nullptr && numberPattern != nullptr);
 
     TypeChecker checker;
-    const ResolvedNames& resolved = checker.check(program);
+    checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
 
@@ -950,7 +950,7 @@ void test_record_pattern_metadata()
     assert(typeInfoName(numberBinding->type) == "number");
 
     IRCompiler compiler;
-    compiler.compile(program, resolved, index);
+    compiler.compile(program, index);
 }
 
 void test_literal_or_pattern_metadata()
@@ -978,7 +978,7 @@ void test_literal_or_pattern_metadata()
     assert(pattern != nullptr);
 
     TypeChecker checker;
-    const ResolvedNames& resolved = checker.check(program);
+    checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
     const OrPatternRecord* record = index.orPattern(*pattern);
@@ -994,7 +994,7 @@ void test_literal_or_pattern_metadata()
     assert(coverage->coveredLiterals[1] == "true");
 
     IRCompiler compiler;
-    compiler.compile(program, resolved, index);
+    compiler.compile(program, index);
 }
 
 void test_pattern_guard_metadata()
@@ -1028,7 +1028,7 @@ void test_pattern_guard_metadata()
     assert(expressionMatch->arms.front().guard != nullptr);
 
     TypeChecker checker;
-    const ResolvedNames& resolved = checker.check(program);
+    checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
     const PatternGuardRecord* statementGuard
@@ -1047,7 +1047,7 @@ void test_pattern_guard_metadata()
     assert(statementCoverage->exhaustive && expressionCoverage->exhaustive);
 
     IRCompiler compiler;
-    compiler.compile(program, resolved, index);
+    compiler.compile(program, index);
 }
 
 void test_variant_constructor_lowering_metadata()
@@ -1070,7 +1070,7 @@ void test_variant_constructor_lowering_metadata()
     assert(okConstructor != nullptr && noneConstructor != nullptr);
 
     TypeChecker checker;
-    const ResolvedNames& resolved = checker.check(program);
+    checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
 
@@ -1096,7 +1096,7 @@ void test_variant_constructor_lowering_metadata()
     assert(noneMetadata->payloadTypes.empty());
 
     IRCompiler compiler;
-    compiler.compile(program, resolved, index);
+    compiler.compile(program, index);
 }
 
 void test_function_return_lowering_metadata()
@@ -1176,7 +1176,7 @@ void test_function_return_lowering_metadata()
     assert(index.typedExpression(*readerCall) != nullptr);
 
     IRCompiler compiler;
-    compiler.compile(program, resolved, index);
+    compiler.compile(program, index);
 }
 
 void test_function_capture_metadata()
@@ -1217,7 +1217,7 @@ void test_function_capture_metadata()
     assert(impl->methods.size() == 2);
 
     TypeChecker checker;
-    const ResolvedNames& resolved = checker.check(program);
+    checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
 
@@ -1257,7 +1257,7 @@ void test_function_capture_metadata()
     assert(thisRecord->name == "this");
 
     IRCompiler compiler;
-    compiler.compile(program, resolved, index);
+    compiler.compile(program, index);
 }
 
 void test_loop_target_metadata()
@@ -1350,7 +1350,7 @@ void test_loop_target_metadata()
         == resolved.binding(resolved.forInBindingId(*forInStmt)).resolvedName);
 
     IRCompiler compiler;
-    compiler.compile(program, resolved, index);
+    compiler.compile(program, index);
 }
 
 void test_typed_field_assignment_metadata()
@@ -1391,7 +1391,7 @@ void test_typed_field_assignment_metadata()
     assert(dynamicAssign != nullptr && dynamicCompound != nullptr && dynamicRead != nullptr);
 
     TypeChecker checker;
-    const ResolvedNames& resolved = checker.check(program);
+    checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
 
@@ -1426,7 +1426,7 @@ void test_typed_field_assignment_metadata()
     assertField(*dynamicRead, FieldOperationKind::Read, "unknown", "unknown");
 
     IRCompiler compiler;
-    compiler.compile(program, resolved, index);
+    compiler.compile(program, index);
 }
 
 void test_native_call_metadata()
@@ -1563,9 +1563,9 @@ int main()
     FrontendSession frontend;
     Program program = frontend.loadStdin(input);
     TypeChecker checker;
-    const ResolvedNames& resolved = checker.check(program);
+    checker.check(program);
     IRCompiler compiler;
-    IRProgram ir = compiler.compile(program, resolved, checker.declarationIndex());
+    IRProgram ir = compiler.compile(program, checker.declarationIndex());
 
     assert(ir.sources().size() == 1);
     const auto& divide = ir.instructions().at(2);

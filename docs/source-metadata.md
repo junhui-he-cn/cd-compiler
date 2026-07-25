@@ -70,7 +70,9 @@ result records, local direct/member-call targets, and variant-constructor
 records, variable, assignment, and compound-assignment result records,
 array/map/struct type records, field-access and field-assignment result records,
 and index result records; `len`, collection helpers, and other unmigrated
-families remain on the legacy AST/`ResolvedNames` path.
+families retain their documented AST/native special-case lowering. The
+`IRCompiler` entry point itself consumes only `DeclarationIndex` metadata; the
+legacy `ResolvedNames` object remains confined to checker-side comparison.
 
 ## Function and return metadata (M1D initial slice)
 

@@ -640,6 +640,9 @@ receiver passing, constructor dispatch, and imported value loads. The legacy
 `ResolvedNames` table remains the comparison oracle for binding IDs, function
 metadata, member-call metadata, variant identity, field targets, and families
 not yet cut over.
+The `IRCompiler` backend boundary now accepts only `Program` plus
+`DeclarationIndex`; `TypeChecker` still builds `ResolvedNames` for migration
+comparison, but the legacy table is no longer passed into lowering.
 
 **Migration:** compare the final result with the canonical M0B reference corpus,
 switch every type-checking and lowering CLI/test entry point to HIR, and retain

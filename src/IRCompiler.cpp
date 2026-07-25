@@ -109,14 +109,12 @@ const FieldOperationRecord& IRCompiler::fieldOperation(
 
 IRProgram IRCompiler::compile(
     const Program& program,
-    const ResolvedNames& resolvedNames,
     const DeclarationIndex& declarationIndex)
 {
     ir_ = IRProgram();
     ir_.setSources(program.sources);
     currentSpan_ = std::nullopt;
     ir_.setCurrentSpan(std::nullopt);
-    resolvedNames_ = &resolvedNames;
     declarationIndex_ = &declarationIndex;
     modules_.clear();
     compiledModules_.clear();
@@ -129,7 +127,6 @@ IRProgram IRCompiler::compile(
     for (const auto& statement : program.statements) {
         compileStatement(*statement);
     }
-    resolvedNames_ = nullptr;
     modules_.clear();
     compiledModules_.clear();
     loopContexts_.clear();

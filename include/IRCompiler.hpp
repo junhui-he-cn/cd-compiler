@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Ast.hpp"
+#include "DeclarationIndex.hpp"
 #include "Diagnostic.hpp"
 #include "IR.hpp"
-#include "TypeChecker.hpp"
 
 #include <cstddef>
 #include <optional>
@@ -21,7 +21,6 @@ class IRCompiler {
 public:
     IRProgram compile(
         const Program& program,
-        const ResolvedNames& resolvedNames,
         const DeclarationIndex& declarationIndex);
 
 private:
@@ -117,7 +116,6 @@ private:
     };
 
     IRProgram ir_;
-    const ResolvedNames* resolvedNames_ = nullptr;
     const DeclarationIndex* declarationIndex_ = nullptr;
     std::unordered_map<std::size_t, const ModuleStmt*> modules_;
     std::unordered_set<std::size_t> compiledModules_;
