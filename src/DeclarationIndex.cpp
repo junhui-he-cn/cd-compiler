@@ -1570,39 +1570,36 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
         }
     }
 
+    const auto hasResolvedParameters = [](const std::vector<std::string>& parameters) {
+        return std::all_of(
+            parameters.begin(),
+            parameters.end(),
+            [](const std::string& parameter) { return !parameter.empty(); });
+    };
     for (const auto& entry : functionMetadata_) {
         const FunctionMetadataRecord& metadata = entry.second;
-        try {
-            if (metadata.resolvedName != resolved.functionName(*entry.first)
-                || metadata.parameterNames != resolved.parameterNames(*entry.first)
-                || metadata.functionLabel != entry.first->name.lexeme) {
-                ++mismatches;
-            }
-        } catch (const std::logic_error&) {
+        if (metadata.resolvedName.empty()
+            || metadata.functionLabel != entry.first->name.lexeme
+            || metadata.parameterNames.size() != entry.first->parameters.size()
+            || !hasResolvedParameters(metadata.parameterNames)) {
             ++mismatches;
         }
     }
     for (const auto& entry : functionExpressionMetadata_) {
         const FunctionMetadataRecord& metadata = entry.second;
-        try {
-            if (metadata.resolvedName != resolved.functionName(*entry.first)
-                || metadata.parameterNames != resolved.parameterNames(*entry.first)
-                || metadata.functionLabel != "<lambda>") {
-                ++mismatches;
-            }
-        } catch (const std::logic_error&) {
+        if (metadata.resolvedName.empty()
+            || metadata.functionLabel != "<lambda>"
+            || metadata.parameterNames.size() != entry.first->parameters.size()
+            || !hasResolvedParameters(metadata.parameterNames)) {
             ++mismatches;
         }
     }
     for (const auto& entry : methodMetadata_) {
         const FunctionMetadataRecord& metadata = entry.second;
-        try {
-            if (metadata.resolvedName != resolved.methodName(*entry.first)
-                || metadata.parameterNames != resolved.methodParameterNames(*entry.first)
-                || metadata.functionLabel != entry.first->name.lexeme) {
-                ++mismatches;
-            }
-        } catch (const std::logic_error&) {
+        if (metadata.resolvedName.empty()
+            || metadata.functionLabel != entry.first->name.lexeme
+            || metadata.parameterNames.size() != entry.first->parameters.size() + 1
+            || !hasResolvedParameters(metadata.parameterNames)) {
             ++mismatches;
         }
     }

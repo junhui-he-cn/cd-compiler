@@ -637,9 +637,9 @@ Initial cutover slices: `DeclarationIndex` owns resolved binding metadata for
 callees, variant constructors, and namespace value field accesses;
 register-IR lowering consumes those records for runtime names, parameter lists,
 receiver passing, constructor dispatch, and imported value loads. The legacy
-`ResolvedNames` table remains the comparison oracle for binding IDs, function
-metadata, member-call metadata, variant identity, field targets, and families
-not yet cut over.
+`ResolvedNames` table remains the comparison oracle for binding IDs,
+member-call metadata, variant identity, field targets, and families not yet cut
+over; function metadata is validated directly by the shared record.
 The `IRCompiler` backend boundary now accepts only `Program` plus
 `DeclarationIndex`; `TypeChecker` still builds `ResolvedNames` for migration
 comparison, but the legacy table is no longer passed into lowering.

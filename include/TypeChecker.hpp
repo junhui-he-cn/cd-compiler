@@ -27,12 +27,6 @@ public:
 
 class ResolvedNames {
 public:
-    const std::string& functionName(const FunctionStmt& statement) const;
-    const std::vector<std::string>& parameterNames(const FunctionStmt& statement) const;
-    const std::string& functionName(const FunctionExpr& expression) const;
-    const std::vector<std::string>& parameterNames(const FunctionExpr& expression) const;
-    const std::string& methodName(const MethodDecl& method) const;
-    const std::vector<std::string>& methodParameterNames(const MethodDecl& method) const;
     bool hasVariable(const VariableExpr& expression) const;
     BindingId variableBindingId(const VariableExpr& expression) const;
     BindingId assignmentBindingId(const AssignExpr& expression) const;
@@ -67,12 +61,6 @@ private:
     void recordLet(const LetStmt& statement, const TypeBinding& binding);
     void recordDeclaration(const Stmt& statement, DeclarationId declaration, SymbolId symbol);
     void recordMethodDeclaration(const MethodDecl& method, DeclarationId declaration, SymbolId symbol);
-    void recordFunction(const FunctionStmt& statement, std::string name);
-    void recordParameters(const FunctionStmt& statement, std::vector<std::string> names);
-    void recordFunction(const FunctionExpr& expression, std::string name);
-    void recordParameters(const FunctionExpr& expression, std::vector<std::string> names);
-    void recordMethod(const MethodDecl& method, std::string name);
-    void recordMethodParameters(const MethodDecl& method, std::vector<std::string> names);
     void recordVariable(const VariableExpr& expression, const TypeBinding& binding);
     void recordAssignment(const AssignExpr& expression, const TypeBinding& binding);
     void recordCompoundAssignment(const CompoundAssignExpr& expression, const TypeBinding& binding);
@@ -89,12 +77,6 @@ private:
         std::string enumName,
         std::string variantName);
 
-    std::unordered_map<const FunctionStmt*, std::string> functionNames_;
-    std::unordered_map<const FunctionStmt*, std::vector<std::string>> parameterNames_;
-    std::unordered_map<const FunctionExpr*, std::string> functionExpressionNames_;
-    std::unordered_map<const FunctionExpr*, std::vector<std::string>> functionExpressionParameterNames_;
-    std::unordered_map<const MethodDecl*, std::string> methodNames_;
-    std::unordered_map<const MethodDecl*, std::vector<std::string>> methodParameterNames_;
     std::unordered_map<const VariableExpr*, BindingId> variableBindingIds_;
     std::unordered_map<const AssignExpr*, BindingId> assignmentBindingIds_;
     std::unordered_map<const CompoundAssignExpr*, BindingId> compoundAssignmentBindingIds_;

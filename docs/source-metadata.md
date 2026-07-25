@@ -220,9 +220,9 @@ accessors for these operation families are removed.
 for every named function, named-struct method, and anonymous function. The
 record carries the checker-assigned runtime name, stable IR function label, and
 resolved parameter-name list. Register-IR lowering consumes the record for
-function storage, function-table construction, and parameter setup. The
-legacy `ResolvedNames` function and parameter accessors remain only as the
-comparison oracle until the next cleanup slice.
+function storage, function-table construction, and parameter setup. The old
+`ResolvedNames` function and parameter adapters are removed; declaration-index
+comparison validates the record's label, runtime name, and parameter shape.
 
 ## Member-call inputs (M1F next slice)
 

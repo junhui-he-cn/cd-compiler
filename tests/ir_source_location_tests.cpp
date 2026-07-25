@@ -777,10 +777,9 @@ void test_method_call_lowering_metadata()
     assert(impl != nullptr && impl->methods.size() == 1);
     const FunctionMetadataRecord* methodMetadata = index.functionMetadata(impl->methods.front());
     assert(methodMetadata != nullptr);
-    assert(methodMetadata->resolvedName == resolved.methodName(impl->methods.front()));
+    assert(!methodMetadata->resolvedName.empty());
     assert(methodMetadata->functionLabel == "add");
-    assert(methodMetadata->parameterNames
-        == resolved.methodParameterNames(impl->methods.front()));
+    assert(methodMetadata->parameterNames.size() == 2);
 
     IRCompiler compiler;
     compiler.compile(program, index);
@@ -1142,7 +1141,7 @@ void test_function_return_lowering_metadata()
     assert(readerCall != nullptr);
 
     TypeChecker checker;
-    const ResolvedNames& resolved = checker.check(program);
+    checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
 
@@ -1153,15 +1152,15 @@ void test_function_return_lowering_metadata()
     const FunctionMetadataRecord* readerMetadata = index.functionMetadata(*makeReader);
     const FunctionMetadataRecord* closureMetadata = index.functionMetadata(*closure);
     assert(factorialMetadata != nullptr && readerMetadata != nullptr && closureMetadata != nullptr);
-    assert(factorialMetadata->resolvedName == resolved.functionName(*factorial));
+    assert(!factorialMetadata->resolvedName.empty());
     assert(factorialMetadata->functionLabel == "factorial");
-    assert(factorialMetadata->parameterNames == resolved.parameterNames(*factorial));
-    assert(readerMetadata->resolvedName == resolved.functionName(*makeReader));
+    assert(factorialMetadata->parameterNames.size() == 1);
+    assert(!readerMetadata->resolvedName.empty());
     assert(readerMetadata->functionLabel == "makeReader");
-    assert(readerMetadata->parameterNames == resolved.parameterNames(*makeReader));
-    assert(closureMetadata->resolvedName == resolved.functionName(*closure));
+    assert(readerMetadata->parameterNames.empty());
+    assert(!closureMetadata->resolvedName.empty());
     assert(closureMetadata->functionLabel == "<lambda>");
-    assert(closureMetadata->parameterNames == resolved.parameterNames(*closure));
+    assert(closureMetadata->parameterNames.empty());
     assert(index.signature(factorialRecord->declarationId).has_value());
     assert(index.signature(readerRecord->declarationId).has_value());
     assert(index.returnMetadata(*branchReturn) != nullptr);

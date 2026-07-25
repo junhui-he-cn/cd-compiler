@@ -159,60 +159,6 @@ TypeError::TypeError(const Token& token, std::string message)
 {
 }
 
-const std::string& ResolvedNames::functionName(const FunctionStmt& statement) const
-{
-    const auto found = functionNames_.find(&statement);
-    if (found == functionNames_.end()) {
-        throw std::logic_error("missing resolved function name");
-    }
-    return found->second;
-}
-
-const std::vector<std::string>& ResolvedNames::parameterNames(const FunctionStmt& statement) const
-{
-    const auto found = parameterNames_.find(&statement);
-    if (found == parameterNames_.end()) {
-        throw std::logic_error("missing resolved parameter names");
-    }
-    return found->second;
-}
-
-const std::string& ResolvedNames::functionName(const FunctionExpr& expression) const
-{
-    const auto found = functionExpressionNames_.find(&expression);
-    if (found == functionExpressionNames_.end()) {
-        throw std::logic_error("missing resolved function expression name");
-    }
-    return found->second;
-}
-
-const std::vector<std::string>& ResolvedNames::parameterNames(const FunctionExpr& expression) const
-{
-    const auto found = functionExpressionParameterNames_.find(&expression);
-    if (found == functionExpressionParameterNames_.end()) {
-        throw std::logic_error("missing resolved function expression parameter names");
-    }
-    return found->second;
-}
-
-const std::string& ResolvedNames::methodName(const MethodDecl& method) const
-{
-    const auto found = methodNames_.find(&method);
-    if (found == methodNames_.end()) {
-        throw std::logic_error("missing resolved method name");
-    }
-    return found->second;
-}
-
-const std::vector<std::string>& ResolvedNames::methodParameterNames(const MethodDecl& method) const
-{
-    const auto found = methodParameterNames_.find(&method);
-    if (found == methodParameterNames_.end()) {
-        throw std::logic_error("missing resolved method parameter names");
-    }
-    return found->second;
-}
-
 bool ResolvedNames::hasVariable(const VariableExpr& expression) const
 {
     return variableBindingIds_.find(&expression) != variableBindingIds_.end();
@@ -400,12 +346,6 @@ SymbolId ResolvedNames::methodSymbolId(const MethodDecl& method) const
 
 void ResolvedNames::clear()
 {
-    functionNames_.clear();
-    parameterNames_.clear();
-    functionExpressionNames_.clear();
-    functionExpressionParameterNames_.clear();
-    methodNames_.clear();
-    methodParameterNames_.clear();
     variableBindingIds_.clear();
     assignmentBindingIds_.clear();
     compoundAssignmentBindingIds_.clear();
@@ -467,36 +407,6 @@ void ResolvedNames::recordMethodDeclaration(const MethodDecl& method, Declaratio
     if (symbol.valid()) {
         methodSymbolIds_.emplace(&method, symbol);
     }
-}
-
-void ResolvedNames::recordFunction(const FunctionStmt& statement, std::string name)
-{
-    functionNames_.emplace(&statement, std::move(name));
-}
-
-void ResolvedNames::recordParameters(const FunctionStmt& statement, std::vector<std::string> names)
-{
-    parameterNames_.emplace(&statement, std::move(names));
-}
-
-void ResolvedNames::recordFunction(const FunctionExpr& expression, std::string name)
-{
-    functionExpressionNames_.emplace(&expression, std::move(name));
-}
-
-void ResolvedNames::recordParameters(const FunctionExpr& expression, std::vector<std::string> names)
-{
-    functionExpressionParameterNames_.emplace(&expression, std::move(names));
-}
-
-void ResolvedNames::recordMethod(const MethodDecl& method, std::string name)
-{
-    methodNames_.emplace(&method, std::move(name));
-}
-
-void ResolvedNames::recordMethodParameters(const MethodDecl& method, std::vector<std::string> names)
-{
-    methodParameterNames_.emplace(&method, std::move(names));
 }
 
 void ResolvedNames::recordVariable(const VariableExpr& expression, const TypeBinding& binding)
@@ -2323,7 +2233,6 @@ void TypeChecker::registerMethodSignature(const StructTypeDecl& structType, cons
         method,
         DeclarationId{nextDeclarationId_++},
         SymbolId{nextSymbolId_++});
-    resolvedNames_.recordMethod(method, info.resolvedName);
     structMethods.emplace(method.name.lexeme, std::move(info));
 }
 
@@ -2353,7 +2262,6 @@ void TypeChecker::checkMethodBody(const std::string& structName, const MethodInf
             method.resolvedName,
             declaration.name.lexeme,
             parameterNames});
-    resolvedNames_.recordMethodParameters(declaration, std::move(parameterNames));
 
     std::optional<TypeInfo> expectedReturnType;
     if (declaration.returnTypeName) {
@@ -2499,7 +2407,6 @@ void TypeChecker::checkFunction(const FunctionStmt& statement)
             genericParameterConstraints),
         statement.returnTypeName.has_value());
     resolvedNames_.recordDeclaration(statement, functionBinding.declarationId, functionBinding.symbolId);
-    resolvedNames_.recordFunction(statement, functionBinding.resolvedName);
 
     beginScope();
     ++functionDepth_;
@@ -2518,7 +2425,6 @@ void TypeChecker::checkFunction(const FunctionStmt& statement)
             functionBinding.resolvedName,
             statement.name.lexeme,
             parameterNames});
-    resolvedNames_.recordParameters(statement, std::move(parameterNames));
 
     const TypeInfo returnType = checkFunctionBody(
         statement.body,
@@ -2742,8 +2648,6 @@ TypeChecker::CheckedExpression TypeChecker::checkFunctionExpression(const Functi
                 + " parameters but got " + std::to_string(expression.parameters.size()));
     }
 
-    resolvedNames_.recordFunction(expression, "<lambda>");
-
     std::vector<TypeInfo> declaredParameterTypes;
     declaredParameterTypes.reserve(expression.parameters.size());
     for (std::size_t i = 0; i < expression.parameters.size(); ++i) {
@@ -2794,7 +2698,6 @@ TypeChecker::CheckedExpression TypeChecker::checkFunctionExpression(const Functi
     declarationIndex_.recordFunctionMetadata(
         expression,
         FunctionMetadataRecord{"<lambda>", "<lambda>", parameterNames});
-    resolvedNames_.recordParameters(expression, std::move(parameterNames));
 
     const TypeInfo returnType = checkFunctionBody(
         expression.body,
