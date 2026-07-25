@@ -1,0 +1,3 @@
+Type error at 9:15: binary `+` expects two numbers or two strings, got number? and number
+    print value + 1;
+                ^

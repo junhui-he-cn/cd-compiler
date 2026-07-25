@@ -4984,8 +4984,26 @@ TypeChecker::CheckedExpression TypeChecker::checkCall(const CallExpr& expression
         callee.type,
         expression.typeArguments,
         expression.arguments);
-    invalidateCapturedBindings(expression);
+    invalidateCallEffects(expression);
     return result;
+}
+
+void TypeChecker::invalidateCallEffects(const CallExpr& expression)
+{
+    const CallTargetRecord* callTarget = declarationIndex_.callTarget(expression);
+    if (!callTarget || callTarget->kind != CallTargetKind::Direct) {
+        flowFacts_.invalidateAll();
+        return;
+    }
+
+    const DeclarationRecord* declaration = declarationIndex_.declaration(callTarget->target.declarationId);
+    if (!declaration || !declaration->statement
+        || !dynamic_cast<const FunctionStmt*>(declaration->statement)) {
+        flowFacts_.invalidateAll();
+        return;
+    }
+
+    invalidateCapturedBindings(expression);
 }
 
 void TypeChecker::invalidateCapturedBindings(const CallExpr& expression)

@@ -224,6 +224,7 @@ private:
     const TypeInfo* contextualFunctionType(const TypeInfo* expectedType) const;
     CheckedExpression checkFunctionExpression(const FunctionExpr& expression, const TypeInfo* expectedType);
     CheckedExpression checkCall(const CallExpr& expression);
+    void invalidateCallEffects(const CallExpr& expression);
     void invalidateCapturedBindings(const CallExpr& expression);
     CheckedExpression checkMemberCall(
         const MemberCallExpr& expression,

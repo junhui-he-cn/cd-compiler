@@ -186,6 +186,28 @@ void test_invalidation_propagates_and_nested_facts_restore()
     assert(!facts.narrowedTypeFor("value#0").has_value());
 }
 
+void test_invalidate_all_clears_nested_facts()
+{
+    FlowFacts facts;
+    const std::vector<FlowNarrowing> outer{
+        {"numberValue#0", simpleType(StaticType::Number)},
+        {"stringValue#1", simpleType(StaticType::String)}};
+    const std::vector<FlowNarrowing> inner{
+        {"otherValue#2", simpleType(StaticType::Bool)}};
+
+    facts.withNarrowings(outer, [&]() {
+        facts.withNarrowings(inner, [&]() {
+            facts.invalidateAll();
+            assert(!facts.narrowedTypeFor("numberValue#0").has_value());
+            assert(!facts.narrowedTypeFor("stringValue#1").has_value());
+            assert(!facts.narrowedTypeFor("otherValue#2").has_value());
+        });
+
+        assert(!facts.narrowedTypeFor("numberValue#0").has_value());
+        assert(!facts.narrowedTypeFor("stringValue#1").has_value());
+    });
+}
+
 void test_without_narrowings_restores_state_after_success_and_throw()
 {
     FlowFacts facts;
@@ -235,5 +257,6 @@ int main()
     test_non_narrowable_variable_produces_no_facts();
     test_with_narrowings_restores_stack_after_success_and_throw();
     test_invalidation_propagates_and_nested_facts_restore();
+    test_invalidate_all_clears_nested_facts();
     test_without_narrowings_restores_state_after_success_and_throw();
 }

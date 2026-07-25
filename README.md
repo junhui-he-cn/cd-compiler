@@ -56,18 +56,21 @@ Type annotations support `number`, `bool`, `string`, `nil`, named struct types, 
 An assignment to a direct variable invalidates its active nullable narrowing; after
 mutation, code must perform a supported nil check again before using the binding
 as non-null. The invalidation remains effective in enclosing flow regions that
-may observe the mutation. Field/index, loop, post-branch, alias, call, and
+may observe the mutation. Field/index, loop, post-branch, and
 closure-boundary narrowing remain conservative and are not yet extended.
 
 Function and closure bodies are checked without inheriting nullable narrowing
 from the branch where they are defined. A body must establish its own nil
-check before using a captured nullable binding as non-null; call-site effects
-from functions that may mutate captured bindings are not yet propagated.
+check before using a captured nullable binding as non-null. Direct captured-call
+and indirect/dynamic-call effects are handled after successful call checking;
+native callbacks and struct-method effects are not yet modeled.
 
 Resolved direct calls to local closures invalidate active nullable narrowing for
 their captured bindings, because the call may update a shared cell. Ordinary
-non-capturing calls retain unrelated active narrowing; indirect calls, native
-callbacks, global aliases, and struct-method effects are not yet modeled.
+non-capturing calls retain unrelated active narrowing. Indirect or dynamic calls,
+including function aliases and function-valued bindings, conservatively
+invalidate all active nullable narrowing. Native callbacks and struct-method
+effects are not yet modeled.
 
 The built-in `map<K, V>` type and nominal generic structs such as `Box<T>` are
 implemented generic collection/container forms. Map literals use `{ key: value }`

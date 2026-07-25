@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "decision_revision": "m2a-2026-07-25-r3",
-  "baseline_commit": "c5087ec",
+  "decision_revision": "m2a-2026-07-25-r4",
+  "baseline_commit": "28649c3",
   "supersedes": ["SEM-TYPE-002"],
   "purpose": "Record intentional M2A flow-semantics revisions after the behavior-preserving M1 migration.",
   "entries": [
@@ -108,6 +108,42 @@
           "cmake --build build --target flow_facts_tests compiler_design",
           "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_captured_call",
           "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_captured_call_recheck",
+          "python3 tests/verification_inventory.py --write",
+          "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+        ]
+      }
+    },
+    {
+      "decision_id": "M2A-FLOW-004",
+      "introduced_revision": "m2a-2026-07-25-r4",
+      "domain": "flow-analysis",
+      "question": "How does an indirect or dynamic function call affect active nullable narrowing?",
+      "decision": "After successful argument and call-shape checking, a call that is not resolved to a direct FunctionStmt target invalidates every active nullable narrowing. This includes aliases, anonymous function values, and unresolved or dynamic callees. Resolved direct FunctionStmt calls retain the precise captured-binding rule from M2A-FLOW-003; native stdlib fast paths and struct-method calls are outside this slice.",
+      "status": "resolved",
+      "owner": "FlowFacts and TypeChecker call-effect analysis",
+      "m1_behavior": "Before this revision, an indirect function call retained all caller-side nullable proofs, even when the function value could be a closure that mutates shared state.",
+      "rationale": "The current semantic model does not retain a complete function-value-to-capture effect summary for aliases or dynamic callees. Clearing every active fact is sound for this boundary and makes the uncertainty explicit without weakening precise direct-call handling.",
+      "affected_consumers": [
+        "FlowFacts all-fact invalidation",
+        "TypeChecker indirect and dynamic call checking",
+        "nullable indirect-call compatibility fixtures"
+      ],
+      "compatibility_consequences": "Code that uses a nullable binding as non-null after an indirect or dynamic call must perform a fresh supported nil check. Direct non-capturing calls retain unrelated facts, while native callbacks and struct-method effects remain deferred.",
+      "migration": "Use the existing direct-call metadata to distinguish resolved FunctionStmt targets from aliases and dynamic values. Invoke the shared all-fact invalidation primitive only after normal call validation succeeds; do not add a second call or lowering path.",
+      "quantitative_gate": "The m0d-2026-07-22-r1 inventory validates 1671 cases, the FlowFacts CTest passes, the named indirect-call positive and negative fixtures pass, and the full canonical verification command remains the release gate.",
+      "old_path_deletion_condition": "Delete no additional production path in this slice. The old retained-proof behavior is replaced only after indirect-call all-fact invalidation and its positive/negative fixtures pass; a future effect-summary slice may replace the conservative rule.",
+      "positive_fixtures": [
+        "tests/golden/nullable_narrowing_indirect_call_recheck"
+      ],
+      "negative_fixtures": [
+        "tests/golden/type_errors/nullable_narrowing_indirect_call_invalidated.cd"
+      ],
+      "verification": {
+        "inventory_revision": "m0d-2026-07-22-r1",
+        "commands": [
+          "cmake --build build --target flow_facts_tests compiler_design",
+          "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_indirect_call",
+          "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_indirect_call_recheck",
           "python3 tests/verification_inventory.py --write",
           "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
         ]

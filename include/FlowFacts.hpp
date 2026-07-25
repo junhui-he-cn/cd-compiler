@@ -28,6 +28,7 @@ public:
         const VariableNarrowingResolver& resolveVariableNarrowing) const;
     std::optional<TypeInfo> narrowedTypeFor(const std::string& resolvedName) const;
     void invalidate(const std::string& resolvedName);
+    void invalidateAll();
     void withoutNarrowings(const std::function<void()>& body);
     void withNarrowings(
         const std::vector<FlowNarrowing>& narrowings,

@@ -132,6 +132,13 @@ void FlowFacts::invalidate(const std::string& resolvedName)
     }
 }
 
+void FlowFacts::invalidateAll()
+{
+    for (ActiveFlowFact& fact : activeNarrowings_) {
+        fact.narrowedType.reset();
+    }
+}
+
 void FlowFacts::withoutNarrowings(const std::function<void()>& body)
 {
     std::vector<ActiveFlowFact> savedNarrowings = std::move(activeNarrowings_);

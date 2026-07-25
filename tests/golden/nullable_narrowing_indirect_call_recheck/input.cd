@@ -1,0 +1,20 @@
+fun noop() {
+  return nil;
+}
+
+let value: number? = 42;
+if (value != nil) {
+  let alias = noop;
+  alias();
+  if (value != nil) {
+    print value + 1;
+  }
+
+  let closure = fun () {
+    return nil;
+  };
+  closure();
+  if (value != nil) {
+    print value + 2;
+  }
+}
