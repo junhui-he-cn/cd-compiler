@@ -210,11 +210,12 @@ removed; declaration-index shadow comparison validates the record directly.
 `DeclarationIndex` exposes `BindingMetadataRecord` values for `let`
 declarations, variable reads, ordinary assignments, numeric compound
 assignments, and `for-in` bindings. Each record carries the checker-assigned
-runtime name, binding ID, and declaration/symbol target. Register-IR lowering
-consumes these records for variable storage and access, so shadowed bindings
-cannot fall back to source-name reconstruction. `ResolvedNames` still retains
-binding IDs for the migration comparison oracle, while its runtime-name
-accessors for these operation families are removed.
+runtime name, snapshot-local binding ID, declaration/symbol target, and source
+range when the binding has one. Register-IR lowering consumes these records for
+variable storage and access, so shadowed bindings cannot fall back to
+source-name reconstruction. Shadow comparison validates the record's source
+identity and field completeness directly; the corresponding `ResolvedNames`
+binding operation adapters are removed.
 
 ## Function metadata inputs (M1F next slice)
 

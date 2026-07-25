@@ -45,20 +45,34 @@ void test_snapshot_identity_metadata()
     assert(read != nullptr && assignment != nullptr);
 
     TypeChecker checker;
-    const ResolvedNames& resolved = checker.check(program);
-    const BindingId outerBinding = resolved.letBindingId(*outer);
-    const BindingId innerBinding = resolved.letBindingId(*inner);
-    assert(outerBinding != innerBinding);
-    assert(resolved.declarationId(*outer) == resolved.binding(outerBinding).declarationId);
-    assert(resolved.symbolId(*outer) == resolved.binding(outerBinding).symbolId);
-    assert(resolved.declarationId(*inner) == resolved.binding(innerBinding).declarationId);
-    assert(resolved.symbolId(*inner) == resolved.binding(innerBinding).symbolId);
-    assert(resolved.variableBindingId(*read) == innerBinding);
-    assert(resolved.assignmentBindingId(*assignment) == innerBinding);
-    assert(resolved.hasScope(*block));
-    assert(resolved.binding(outerBinding).scopeId != resolved.binding(innerBinding).scopeId);
-    assert(resolved.bindingCount() >= 2);
-    assert(resolved.bindingShadowMismatchCount() == 0);
+    checker.check(program);
+    const DeclarationIndex& index = checker.declarationIndex();
+    assert(checker.declarationIndexMismatchCount() == 0);
+
+    const DeclarationRecord* outerRecord = index.declaration(*outer);
+    const DeclarationRecord* innerRecord = index.declaration(*inner);
+    const BindingMetadataRecord* outerBinding = index.letBindingMetadata(*outer);
+    const BindingMetadataRecord* innerBinding = index.letBindingMetadata(*inner);
+    const BindingMetadataRecord* readBinding = index.variableBindingMetadata(*read);
+    const BindingMetadataRecord* assignmentBinding = index.assignmentBindingMetadata(*assignment);
+    assert(outerRecord != nullptr && innerRecord != nullptr);
+    assert(outerBinding != nullptr && innerBinding != nullptr);
+    assert(readBinding != nullptr && assignmentBinding != nullptr);
+    assert(outerBinding->bindingId.valid() && innerBinding->bindingId.valid());
+    assert(outerBinding->bindingId != innerBinding->bindingId);
+    assert(outerBinding->resolvedName != innerBinding->resolvedName);
+    assert(outerBinding->range.has_value() && outerRecord->range.has_value());
+    assert(innerBinding->range.has_value() && innerRecord->range.has_value());
+    assert(outerBinding->range->source == outerRecord->range->source);
+    assert(outerBinding->range->start == outerRecord->range->start);
+    assert(outerBinding->range->end == outerRecord->range->end);
+    assert(innerBinding->range->source == innerRecord->range->source);
+    assert(innerBinding->range->start == innerRecord->range->start);
+    assert(innerBinding->range->end == innerRecord->range->end);
+    assert(readBinding->bindingId == innerBinding->bindingId);
+    assert(assignmentBinding->bindingId == innerBinding->bindingId);
+    assert(index.scopeFor(*block).has_value());
+    assert(outerRecord->scopeId != innerRecord->scopeId);
 }
 
 void test_declaration_index()
@@ -525,7 +539,7 @@ void test_variable_lowering_metadata()
     assert(afterBlockRead != nullptr && dynamicAssign != nullptr && dynamicCompound != nullptr);
 
     TypeChecker checker;
-    const ResolvedNames& resolved = checker.check(program);
+    checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
 
@@ -538,9 +552,8 @@ void test_variable_lowering_metadata()
     const BindingMetadataRecord* innerBinding = index.letBindingMetadata(*innerLet);
     const BindingMetadataRecord* dynamicBinding = index.letBindingMetadata(*dynamicLet);
     assert(outerBinding != nullptr && innerBinding != nullptr && dynamicBinding != nullptr);
-    assert(outerBinding->resolvedName == resolved.binding(resolved.letBindingId(*outerLet)).resolvedName);
-    assert(innerBinding->resolvedName == resolved.binding(resolved.letBindingId(*innerLet)).resolvedName);
-    assert(dynamicBinding->resolvedName == resolved.binding(resolved.letBindingId(*dynamicLet)).resolvedName);
+    assert(outerBinding->bindingId.valid() && innerBinding->bindingId.valid());
+    assert(dynamicBinding->bindingId.valid());
     const BindingMetadataRecord* innerReadBinding = index.variableBindingMetadata(*innerRead);
     const BindingMetadataRecord* innerAssignBinding = index.assignmentBindingMetadata(*innerAssign);
     const BindingMetadataRecord* innerCompoundBinding
@@ -554,16 +567,12 @@ void test_variable_lowering_metadata()
     assert(innerReadBinding != nullptr && innerAssignBinding != nullptr);
     assert(innerCompoundBinding != nullptr && afterBlockReadBinding != nullptr);
     assert(dynamicAssignBinding != nullptr && dynamicCompoundBinding != nullptr);
-    assert(innerReadBinding->resolvedName == resolved.binding(resolved.variableBindingId(*innerRead)).resolvedName);
-    assert(innerAssignBinding->resolvedName == resolved.binding(resolved.assignmentBindingId(*innerAssign)).resolvedName);
-    assert(innerCompoundBinding->resolvedName
-        == resolved.binding(resolved.compoundAssignmentBindingId(*innerCompound)).resolvedName);
-    assert(afterBlockReadBinding->resolvedName
-        == resolved.binding(resolved.variableBindingId(*afterBlockRead)).resolvedName);
-    assert(dynamicAssignBinding->resolvedName
-        == resolved.binding(resolved.assignmentBindingId(*dynamicAssign)).resolvedName);
-    assert(dynamicCompoundBinding->resolvedName
-        == resolved.binding(resolved.compoundAssignmentBindingId(*dynamicCompound)).resolvedName);
+    assert(innerReadBinding->bindingId == innerBinding->bindingId);
+    assert(innerAssignBinding->bindingId == innerBinding->bindingId);
+    assert(innerCompoundBinding->bindingId == innerBinding->bindingId);
+    assert(afterBlockReadBinding->bindingId == outerBinding->bindingId);
+    assert(dynamicAssignBinding->bindingId == dynamicBinding->bindingId);
+    assert(dynamicCompoundBinding->bindingId == dynamicBinding->bindingId);
     assert(index.variableReference(*innerRead)->declarationId == innerRecord->declarationId);
     assert(index.assignmentReference(*innerAssign)->declarationId == innerRecord->declarationId);
     assert(index.compoundAssignmentReference(*innerCompound)->declarationId == innerRecord->declarationId);
@@ -1313,7 +1322,7 @@ void test_loop_target_metadata()
     assert(forInBreak != nullptr && forInContinue != nullptr);
 
     TypeChecker checker;
-    const ResolvedNames& resolved = checker.check(program);
+    checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
 
@@ -1345,8 +1354,8 @@ void test_loop_target_metadata()
     assertBreakTarget(*nestedBreak, *nestedBody, LoopTargetKind::While);
     const BindingMetadataRecord* forInBinding = index.forInBindingMetadata(*forInStmt);
     assert(forInBinding != nullptr);
-    assert(forInBinding->resolvedName
-        == resolved.binding(resolved.forInBindingId(*forInStmt)).resolvedName);
+    assert(forInBinding->bindingId.valid());
+    assert(forInBinding->range.has_value());
 
     IRCompiler compiler;
     compiler.compile(program, index);

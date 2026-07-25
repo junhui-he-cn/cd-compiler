@@ -37,6 +37,7 @@ struct BindingMetadataRecord {
     std::string resolvedName;
     BindingId bindingId;
     ResolvedSymbol symbol;
+    std::optional<SourceRange> range;
 };
 
 struct FunctionMetadataRecord {

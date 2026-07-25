@@ -1427,9 +1427,13 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
             ++mismatches;
         }
     };
-    const auto bindingMatches = [](const TypeBinding& binding, const DeclarationRecord& target) {
-        return binding.resolvedName.substr(0, binding.resolvedName.find('#')) == target.name
-            && sameRange(binding.range, target.range);
+    const auto bindingMetadataMatches = [](const BindingMetadataRecord& binding, const DeclarationRecord& target) {
+        return binding.bindingId.valid()
+            && !binding.resolvedName.empty()
+            && binding.resolvedName.substr(0, binding.resolvedName.find('#')) == target.name
+            && sameRange(binding.range, target.range)
+            && binding.symbol.declarationId.valid()
+            && binding.symbol.symbolId.valid();
     };
     const auto patternBindingMatches = [](const PatternBindingRecord& binding, const DeclarationRecord& target) {
         return binding.bindingId.valid()
@@ -1438,99 +1442,61 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
             && binding.symbol.declarationId == target.declarationId
             && binding.symbol.symbolId == target.symbolId;
     };
-    const auto compareReference = [&](const auto& references, const auto& resolve) {
+    const auto validateBindingMetadata = [&](const BindingMetadataRecord& metadata) {
+        return metadata.bindingId.valid()
+            && !metadata.resolvedName.empty()
+            && metadata.symbol.declarationId.valid()
+            && metadata.symbol.symbolId.valid();
+    };
+    const auto compareReference = [&](const auto& references, const auto& metadataFor) {
         for (const auto& entry : references) {
             const DeclarationRecord* target = declaration(entry.second.declarationId);
-            if (!target) {
+            const BindingMetadataRecord* metadata = metadataFor(*entry.first);
+            if (!target || !metadata || !bindingMetadataMatches(*metadata, *target)) {
                 ++mismatches;
                 continue;
             }
-            try {
-                const BindingId bindingId = resolve(*entry.first);
-                const TypeBinding& binding = resolved.binding(bindingId);
-                if (!bindingMatches(binding, *target)) {
-                    ++mismatches;
-                } else {
-                    requireTypedExpression(*entry.first);
-                }
-            } catch (const std::logic_error&) {
-                ++mismatches;
-            }
+            requireTypedExpression(*entry.first);
         }
     };
 
     compareReference(
         variableReferences_,
-        [&resolved](const VariableExpr& expression) {
-            return resolved.variableBindingId(expression);
+        [this](const VariableExpr& expression) {
+            return variableBindingMetadata(expression);
         });
     compareReference(
         assignmentReferences_,
-        [&resolved](const AssignExpr& expression) {
-            return resolved.assignmentBindingId(expression);
+        [this](const AssignExpr& expression) {
+            return assignmentBindingMetadata(expression);
         });
     compareReference(
         compoundAssignmentReferences_,
-        [&resolved](const CompoundAssignExpr& expression) {
-            return resolved.compoundAssignmentBindingId(expression);
+        [this](const CompoundAssignExpr& expression) {
+            return compoundAssignmentBindingMetadata(expression);
         });
 
-    const auto compareBindingMetadata = [&](const auto& records, const auto& resolve) {
+    const auto validateBindingMetadataMap = [&](const auto& records) {
         for (const auto& entry : records) {
-            try {
-                const BindingId bindingId = resolve(*entry.first);
-                const TypeBinding& binding = resolved.binding(bindingId);
-                const BindingMetadataRecord& metadata = entry.second;
-                if (metadata.bindingId != bindingId
-                    || metadata.resolvedName != binding.resolvedName
-                    || metadata.symbol.declarationId != binding.declarationId
-                    || metadata.symbol.symbolId != binding.symbolId) {
-                    ++mismatches;
-                }
-            } catch (const std::logic_error&) {
+            if (!validateBindingMetadata(entry.second)) {
                 ++mismatches;
             }
         }
     };
 
-    compareBindingMetadata(
-        letBindingMetadata_,
-        [&resolved](const LetStmt& statement) {
-            return resolved.letBindingId(statement);
-        });
-    compareBindingMetadata(
-        variableBindingMetadata_,
-        [&resolved](const VariableExpr& expression) {
-            return resolved.variableBindingId(expression);
-        });
-    compareBindingMetadata(
-        assignmentBindingMetadata_,
-        [&resolved](const AssignExpr& expression) {
-            return resolved.assignmentBindingId(expression);
-        });
-    compareBindingMetadata(
-        compoundAssignmentBindingMetadata_,
-        [&resolved](const CompoundAssignExpr& expression) {
-            return resolved.compoundAssignmentBindingId(expression);
-        });
-    compareBindingMetadata(
-        forInBindingMetadata_,
-        [&resolved](const ForInStmt& statement) {
-            return resolved.forInBindingId(statement);
-        });
+    validateBindingMetadataMap(letBindingMetadata_);
+    validateBindingMetadataMap(variableBindingMetadata_);
+    validateBindingMetadataMap(assignmentBindingMetadata_);
+    validateBindingMetadataMap(compoundAssignmentBindingMetadata_);
+    validateBindingMetadataMap(forInBindingMetadata_);
 
     for (const DeclarationRecord& record : declarations_) {
         if (record.kind == DeclarationKind::Variable
             && record.statement
             && dynamic_cast<const LetStmt*>(record.statement)) {
-            try {
-                const BindingId bindingId = resolved.letBindingId(
-                    *static_cast<const LetStmt*>(record.statement));
-                const TypeBinding& binding = resolved.binding(bindingId);
-                if (!bindingMatches(binding, record)) {
-                    ++mismatches;
-                }
-            } catch (const std::logic_error&) {
+            const auto* let = static_cast<const LetStmt*>(record.statement);
+            const BindingMetadataRecord* metadata = letBindingMetadata(*let);
+            if (!metadata || !bindingMetadataMatches(*metadata, record)) {
                 ++mismatches;
             }
         } else if (record.kind == DeclarationKind::Function && record.statement) {
@@ -1552,17 +1518,11 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
                 ++mismatches;
             }
         } else if (record.kind == DeclarationKind::ForInVariable && record.statement) {
-            try {
-                const auto* forIn = dynamic_cast<const ForInStmt*>(record.statement);
-                const BindingId bindingId = forIn
-                    ? resolved.forInBindingId(*forIn)
-                    : BindingId{};
-                if (!forIn
-                    || !resolved.declarationId(*forIn).valid()
-                    || !bindingMatches(resolved.binding(bindingId), record)) {
-                    ++mismatches;
-                }
-            } catch (const std::logic_error&) {
+            const auto* forIn = dynamic_cast<const ForInStmt*>(record.statement);
+            const BindingMetadataRecord* metadata = forIn
+                ? forInBindingMetadata(*forIn)
+                : nullptr;
+            if (!forIn || !metadata || !bindingMetadataMatches(*metadata, record)) {
                 ++mismatches;
             }
         } else if (record.kind == DeclarationKind::Method && record.method) {
@@ -1620,7 +1580,8 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
 
     for (const auto& entry : directCallCallees_) {
         const VariableExpr& callee = *entry.second;
-        if (!resolved.hasVariable(callee)) {
+        const BindingMetadataRecord* calleeMetadata = variableBindingMetadata(callee);
+        if (!calleeMetadata) {
             continue;
         }
         const auto targetFound = callTargets_.find(entry.first);
@@ -1629,15 +1590,10 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
             continue;
         }
         const DeclarationRecord* target = declaration(targetFound->second.target.declarationId);
-        try {
-            const TypeBinding& binding = resolved.binding(resolved.variableBindingId(callee));
-            if (!target || !bindingMatches(binding, *target)) {
-                ++mismatches;
-            } else {
-                requireTypedExpression(*entry.first);
-            }
-        } catch (const std::logic_error&) {
+        if (!target || !bindingMetadataMatches(*calleeMetadata, *target)) {
             ++mismatches;
+        } else {
+            requireTypedExpression(*entry.first);
         }
     }
 
@@ -1828,7 +1784,7 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
         if (const auto* call = dynamic_cast<const CallExpr*>(&expression)) {
             const auto callee = directCallCallees_.find(call);
             if (callee != directCallCallees_.end()
-                && resolved.hasVariable(*callee->second)) {
+                && variableBindingMetadata(*callee->second)) {
                 continue;
             }
         } else if (const auto* memberCall = dynamic_cast<const MemberCallExpr*>(&expression)) {

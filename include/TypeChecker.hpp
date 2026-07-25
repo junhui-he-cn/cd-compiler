@@ -27,17 +27,8 @@ public:
 
 class ResolvedNames {
 public:
-    bool hasVariable(const VariableExpr& expression) const;
-    BindingId variableBindingId(const VariableExpr& expression) const;
-    BindingId assignmentBindingId(const AssignExpr& expression) const;
-    BindingId compoundAssignmentBindingId(const CompoundAssignExpr& expression) const;
-    BindingId letBindingId(const LetStmt& statement) const;
-    BindingId forInBindingId(const ForInStmt& statement) const;
     bool hasScope(const Stmt& statement) const;
     ScopeId scopeId(const Stmt& statement) const;
-    const TypeBinding& binding(BindingId id) const;
-    std::size_t bindingCount() const;
-    std::size_t bindingShadowMismatchCount() const;
     DeclarationId declarationId(const Stmt& statement) const;
     SymbolId symbolId(const Stmt& statement) const;
     DeclarationId methodDeclarationId(const MethodDecl& method) const;
@@ -47,29 +38,15 @@ private:
     friend class TypeChecker;
 
     void clear();
-    void recordBinding(const TypeBinding& binding);
-    void compareBindingName(const TypeBinding& binding);
-    void recordLet(const LetStmt& statement, const TypeBinding& binding);
     void recordDeclaration(const Stmt& statement, DeclarationId declaration, SymbolId symbol);
     void recordMethodDeclaration(const MethodDecl& method, DeclarationId declaration, SymbolId symbol);
-    void recordVariable(const VariableExpr& expression, const TypeBinding& binding);
-    void recordAssignment(const AssignExpr& expression, const TypeBinding& binding);
-    void recordCompoundAssignment(const CompoundAssignExpr& expression, const TypeBinding& binding);
-    void recordForInVariable(const ForInStmt& statement, const TypeBinding& binding);
     void recordScope(const Stmt& statement, ScopeId id);
 
-    std::unordered_map<const VariableExpr*, BindingId> variableBindingIds_;
-    std::unordered_map<const AssignExpr*, BindingId> assignmentBindingIds_;
-    std::unordered_map<const CompoundAssignExpr*, BindingId> compoundAssignmentBindingIds_;
-    std::unordered_map<const LetStmt*, BindingId> letBindingIds_;
     std::unordered_map<const Stmt*, DeclarationId> declarationIds_;
     std::unordered_map<const Stmt*, SymbolId> symbolIds_;
     std::unordered_map<const MethodDecl*, DeclarationId> methodDeclarationIds_;
     std::unordered_map<const MethodDecl*, SymbolId> methodSymbolIds_;
-    std::unordered_map<const ForInStmt*, BindingId> forInBindingIds_;
     std::unordered_map<const Stmt*, ScopeId> scopeIds_;
-    std::unordered_map<BindingId, TypeBinding, SnapshotIdHash<BindingIdTag>> bindings_;
-    std::size_t bindingShadowMismatches_ = 0;
 };
 
 class TypeChecker {

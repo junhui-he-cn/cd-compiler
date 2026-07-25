@@ -159,56 +159,6 @@ TypeError::TypeError(const Token& token, std::string message)
 {
 }
 
-bool ResolvedNames::hasVariable(const VariableExpr& expression) const
-{
-    return variableBindingIds_.find(&expression) != variableBindingIds_.end();
-}
-
-BindingId ResolvedNames::variableBindingId(const VariableExpr& expression) const
-{
-    const auto found = variableBindingIds_.find(&expression);
-    if (found == variableBindingIds_.end()) {
-        throw std::logic_error("missing resolved variable binding ID");
-    }
-    return found->second;
-}
-
-BindingId ResolvedNames::assignmentBindingId(const AssignExpr& expression) const
-{
-    const auto found = assignmentBindingIds_.find(&expression);
-    if (found == assignmentBindingIds_.end()) {
-        throw std::logic_error("missing resolved assignment binding ID");
-    }
-    return found->second;
-}
-
-BindingId ResolvedNames::compoundAssignmentBindingId(const CompoundAssignExpr& expression) const
-{
-    const auto found = compoundAssignmentBindingIds_.find(&expression);
-    if (found == compoundAssignmentBindingIds_.end()) {
-        throw std::logic_error("missing resolved compound assignment binding ID");
-    }
-    return found->second;
-}
-
-BindingId ResolvedNames::letBindingId(const LetStmt& statement) const
-{
-    const auto found = letBindingIds_.find(&statement);
-    if (found == letBindingIds_.end()) {
-        throw std::logic_error("missing resolved let binding ID");
-    }
-    return found->second;
-}
-
-BindingId ResolvedNames::forInBindingId(const ForInStmt& statement) const
-{
-    const auto found = forInBindingIds_.find(&statement);
-    if (found == forInBindingIds_.end()) {
-        throw std::logic_error("missing resolved for-in binding ID");
-    }
-    return found->second;
-}
-
 bool ResolvedNames::hasScope(const Stmt& statement) const
 {
     return scopeIds_.find(&statement) != scopeIds_.end();
@@ -221,25 +171,6 @@ ScopeId ResolvedNames::scopeId(const Stmt& statement) const
         throw std::logic_error("missing resolved scope ID");
     }
     return found->second;
-}
-
-const TypeBinding& ResolvedNames::binding(BindingId id) const
-{
-    const auto found = bindings_.find(id);
-    if (found == bindings_.end()) {
-        throw std::logic_error("missing binding ID");
-    }
-    return found->second;
-}
-
-std::size_t ResolvedNames::bindingCount() const
-{
-    return bindings_.size();
-}
-
-std::size_t ResolvedNames::bindingShadowMismatchCount() const
-{
-    return bindingShadowMismatches_;
 }
 
 DeclarationId ResolvedNames::declarationId(const Stmt& statement) const
@@ -280,42 +211,11 @@ SymbolId ResolvedNames::methodSymbolId(const MethodDecl& method) const
 
 void ResolvedNames::clear()
 {
-    variableBindingIds_.clear();
-    assignmentBindingIds_.clear();
-    compoundAssignmentBindingIds_.clear();
-    letBindingIds_.clear();
     declarationIds_.clear();
     symbolIds_.clear();
     methodDeclarationIds_.clear();
     methodSymbolIds_.clear();
-    forInBindingIds_.clear();
     scopeIds_.clear();
-    bindings_.clear();
-    bindingShadowMismatches_ = 0;
-}
-
-void ResolvedNames::recordBinding(const TypeBinding& binding)
-{
-    if (binding.bindingId.valid()) {
-        bindings_.emplace(binding.bindingId, binding);
-    }
-}
-
-void ResolvedNames::compareBindingName(const TypeBinding& binding)
-{
-    if (binding.bindingId.valid()) {
-        const auto found = bindings_.find(binding.bindingId);
-        if (found == bindings_.end() || found->second.resolvedName != binding.resolvedName) {
-            ++bindingShadowMismatches_;
-        }
-    }
-}
-
-void ResolvedNames::recordLet(const LetStmt& statement, const TypeBinding& binding)
-{
-    letBindingIds_.emplace(&statement, binding.bindingId);
-    recordDeclaration(statement, binding.declarationId, binding.symbolId);
-    recordBinding(binding);
 }
 
 void ResolvedNames::recordDeclaration(const Stmt& statement, DeclarationId declaration, SymbolId symbol)
@@ -336,31 +236,6 @@ void ResolvedNames::recordMethodDeclaration(const MethodDecl& method, Declaratio
     if (symbol.valid()) {
         methodSymbolIds_.emplace(&method, symbol);
     }
-}
-
-void ResolvedNames::recordVariable(const VariableExpr& expression, const TypeBinding& binding)
-{
-    variableBindingIds_.emplace(&expression, binding.bindingId);
-    compareBindingName(binding);
-}
-
-void ResolvedNames::recordAssignment(const AssignExpr& expression, const TypeBinding& binding)
-{
-    assignmentBindingIds_.emplace(&expression, binding.bindingId);
-    compareBindingName(binding);
-}
-
-void ResolvedNames::recordCompoundAssignment(const CompoundAssignExpr& expression, const TypeBinding& binding)
-{
-    compoundAssignmentBindingIds_.emplace(&expression, binding.bindingId);
-    compareBindingName(binding);
-}
-
-void ResolvedNames::recordForInVariable(const ForInStmt& statement, const TypeBinding& binding)
-{
-    forInBindingIds_.emplace(&statement, binding.bindingId);
-    recordDeclaration(statement, binding.declarationId, binding.symbolId);
-    compareBindingName(binding);
 }
 
 void ResolvedNames::recordScope(const Stmt& statement, ScopeId id)
@@ -593,7 +468,6 @@ TypeChecker::Binding TypeChecker::declareVariable(
     binding.scopeId = currentScopeId();
     binding.range = name.range;
     scope.emplace(name.lexeme, binding);
-    resolvedNames_.recordBinding(binding);
     return binding;
 }
 
@@ -603,13 +477,14 @@ TypeChecker::Binding TypeChecker::declareVariable(
     bool explicitType)
 {
     Binding binding = declareVariable(statement.name, std::move(type), explicitType);
-    resolvedNames_.recordLet(statement, binding);
+    resolvedNames_.recordDeclaration(statement, binding.declarationId, binding.symbolId);
     declarationIndex_.recordLetBinding(
         statement,
         BindingMetadataRecord{
             binding.resolvedName,
             binding.bindingId,
-            ResolvedSymbol{binding.declarationId, binding.symbolId}});
+            ResolvedSymbol{binding.declarationId, binding.symbolId},
+            binding.range});
     return binding;
 }
 
@@ -624,7 +499,6 @@ TypeChecker::Binding TypeChecker::declareImportedVariable(const Token& name, con
     binding.imported = true;
     binding.scopeDepth = scopes_.size() - 1;
     scope.emplace(name.lexeme, binding);
-    resolvedNames_.recordBinding(binding);
     return binding;
 }
 
@@ -886,13 +760,17 @@ void TypeChecker::checkStatement(const Stmt& statement)
         beginScope();
         resolvedNames_.recordScope(*forInStmt, currentScopeId());
         const Binding itemBinding = declareVariable(forInStmt->variable, elementType, false);
-        resolvedNames_.recordForInVariable(*forInStmt, itemBinding);
+        resolvedNames_.recordDeclaration(
+            *forInStmt,
+            itemBinding.declarationId,
+            itemBinding.symbolId);
         declarationIndex_.recordForInBinding(
             *forInStmt,
             BindingMetadataRecord{
                 itemBinding.resolvedName,
                 itemBinding.bindingId,
-                ResolvedSymbol{itemBinding.declarationId, itemBinding.symbolId}});
+                ResolvedSymbol{itemBinding.declarationId, itemBinding.symbolId},
+                itemBinding.range});
         ++loopDepth_;
         if (const auto* body = dynamic_cast<const BlockStmt*>(forInStmt->body.get())) {
             resolvedNames_.recordScope(*body, currentScopeId());
@@ -3757,13 +3635,13 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
             }
             throw TypeError(variable->name, "undefined variable `" + variable->name.lexeme + "`");
         }
-        resolvedNames_.recordVariable(*variable, *binding);
         declarationIndex_.recordVariableBinding(
             *variable,
             BindingMetadataRecord{
                 binding->resolvedName,
                 binding->bindingId,
-                ResolvedSymbol{binding->declarationId, binding->symbolId}});
+                ResolvedSymbol{binding->declarationId, binding->symbolId},
+                binding->range});
         CheckedExpression result{variableType(*binding)};
         declarationIndex_.recordTypedExpression(*variable, result.type);
         return result;
@@ -3813,14 +3691,13 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
             target->type = value.type;
         }
 
-        resolvedNames_.recordBinding(*target);
-        resolvedNames_.recordAssignment(*assign, *target);
         declarationIndex_.recordAssignmentBinding(
             *assign,
             BindingMetadataRecord{
                 target->resolvedName,
                 target->bindingId,
-                ResolvedSymbol{target->declarationId, target->symbolId}});
+                ResolvedSymbol{target->declarationId, target->symbolId},
+                target->range});
         CheckedExpression result{target->type};
         declarationIndex_.recordTypedExpression(*assign, result.type);
         return result;
@@ -3842,14 +3719,13 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
         if (!SemanticTypes::isKnown(target->type)) {
             target->type = simpleType(StaticType::Number);
         }
-        resolvedNames_.recordBinding(*target);
-        resolvedNames_.recordCompoundAssignment(*compound, *target);
         declarationIndex_.recordCompoundAssignmentBinding(
             *compound,
             BindingMetadataRecord{
                 target->resolvedName,
                 target->bindingId,
-                ResolvedSymbol{target->declarationId, target->symbolId}});
+                ResolvedSymbol{target->declarationId, target->symbolId},
+                target->range});
         CheckedExpression result{simpleType(StaticType::Number)};
         declarationIndex_.recordTypedExpression(*compound, result.type);
         return result;
