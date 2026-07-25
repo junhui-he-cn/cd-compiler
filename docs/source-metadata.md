@@ -169,6 +169,15 @@ nested patterns in match arms. `IRCompiler` consumes the record to create the
 existing comparison constant; coverage and diagnostic decisions remain in
 `TypeChecker`, and no pattern-specific opcode or artifact format changes.
 
+## Variant pattern inputs (M1E3 next slice)
+
+`DeclarationIndex::variantPattern()` exposes the checked runtime enum and
+variant identity, the matched non-nullable enum type, source-order payload
+types after generic substitution, and the declared payload indices selected by
+positional or named patterns. `IRCompiler` consumes those fields for existing
+variant-tag and variant-field lowering; nested patterns, coverage, and
+diagnostic decisions remain owned by `TypeChecker`.
+
 ## Lossless source view
 
 `FrontendSession::losslessSourceView()` groups `LosslessPiece` values by

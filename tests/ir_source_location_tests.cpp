@@ -778,6 +778,60 @@ void test_literal_pattern_metadata()
     compiler.compile(program, resolved, index);
 }
 
+void test_variant_pattern_metadata()
+{
+    std::istringstream input(
+        "enum Result<T> {\n"
+        "  Ok(value: T, tag: string),\n"
+        "  Empty,\n"
+        "}\n"
+        "fun choose(value: Result<number>?): number {\n"
+        "  return match value {\n"
+        "    nil => 0,\n"
+        "    Result.Ok(tag: label, value: numberValue) => numberValue,\n"
+        "    Result.Empty => 0,\n"
+        "  };\n"
+        "}\n"
+        "print choose(nil);\n");
+    FrontendSession frontend;
+    Program program = frontend.loadStdin(input);
+
+    const auto* function = dynamic_cast<const FunctionStmt*>(program.statements[1].get());
+    assert(function != nullptr && !function->body.empty());
+    const auto* returnStatement = dynamic_cast<const ReturnStmt*>(function->body.front().get());
+    const auto* match = returnStatement
+        ? dynamic_cast<const MatchExpr*>(returnStatement->value.get())
+        : nullptr;
+    assert(match != nullptr && match->arms.size() == 3);
+    const auto* okPattern = dynamic_cast<const VariantPattern*>(match->arms[1].pattern.get());
+    const auto* emptyPattern = dynamic_cast<const VariantPattern*>(match->arms[2].pattern.get());
+    assert(okPattern != nullptr && emptyPattern != nullptr);
+
+    TypeChecker checker;
+    const ResolvedNames& resolved = checker.check(program);
+    const DeclarationIndex& index = checker.declarationIndex();
+    assert(checker.declarationIndexMismatchCount() == 0);
+
+    const VariantPatternRecord* okRecord = index.variantPattern(*okPattern);
+    const VariantPatternRecord* emptyRecord = index.variantPattern(*emptyPattern);
+    assert(okRecord != nullptr && emptyRecord != nullptr);
+    assert(okRecord->enumName == "Result");
+    assert(okRecord->variantName == "Ok");
+    assert(typeInfoName(okRecord->enumType) == "Result<number>");
+    assert((okRecord->payloadIndices == std::vector<std::size_t>{1, 0}));
+    assert(okRecord->payloadTypes.size() == 2);
+    assert(typeInfoName(okRecord->payloadTypes[0]) == "string");
+    assert(typeInfoName(okRecord->payloadTypes[1]) == "number");
+    assert(emptyRecord->enumName == "Result");
+    assert(emptyRecord->variantName == "Empty");
+    assert(typeInfoName(emptyRecord->enumType) == "Result<number>");
+    assert(emptyRecord->payloadIndices.empty());
+    assert(emptyRecord->payloadTypes.empty());
+
+    IRCompiler compiler;
+    compiler.compile(program, resolved, index);
+}
+
 void test_variant_constructor_lowering_metadata()
 {
     std::istringstream input(
@@ -1297,6 +1351,7 @@ int main()
     test_call_lowering_metadata();
     test_method_call_lowering_metadata();
     test_literal_pattern_metadata();
+    test_variant_pattern_metadata();
     test_variant_constructor_lowering_metadata();
     test_function_return_lowering_metadata();
     test_function_capture_metadata();

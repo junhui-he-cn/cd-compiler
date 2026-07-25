@@ -579,6 +579,7 @@ private:
             return;
         }
         if (const auto* variant = dynamic_cast<const VariantPattern*>(pattern)) {
+            index_.variantPatternNodes_.insert(variant);
             for (const PatternPtr& argument : variant->arguments) {
                 collectPattern(argument.get(), bindings);
             }
@@ -1049,6 +1050,12 @@ const LiteralPatternRecord* DeclarationIndex::literalPattern(const LiteralPatter
     return found == literalPatterns_.end() ? nullptr : &found->second;
 }
 
+const VariantPatternRecord* DeclarationIndex::variantPattern(const VariantPattern& pattern) const
+{
+    const auto found = variantPatterns_.find(&pattern);
+    return found == variantPatterns_.end() ? nullptr : &found->second;
+}
+
 const IndexOperationRecord* DeclarationIndex::indexOperation(const Expr& expression) const
 {
     const auto found = indexOperations_.find(&expression);
@@ -1128,6 +1135,11 @@ void DeclarationIndex::recordVariantConstructor(
 void DeclarationIndex::recordLiteralPattern(const LiteralPattern& pattern, LiteralPatternRecord record)
 {
     literalPatterns_.insert_or_assign(&pattern, std::move(record));
+}
+
+void DeclarationIndex::recordVariantPattern(const VariantPattern& pattern, VariantPatternRecord record)
+{
+    variantPatterns_.insert_or_assign(&pattern, std::move(record));
 }
 
 void DeclarationIndex::recordIndexOperation(const Expr& expression, IndexOperationRecord record)
@@ -1423,6 +1435,11 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
     }
     for (const LiteralPattern* pattern : literalPatternNodes_) {
         if (!literalPattern(*pattern)) {
+            ++mismatches;
+        }
+    }
+    for (const VariantPattern* pattern : variantPatternNodes_) {
+        if (!variantPattern(*pattern)) {
             ++mismatches;
         }
     }

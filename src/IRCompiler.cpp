@@ -645,16 +645,23 @@ void IRCompiler::compilePattern(
     }
 
     const auto* variant = dynamic_cast<const VariantPattern*>(&pattern);
-    if (!variant || !variant->qualifier) {
+    if (!variant) {
         throw IRCompileError("unsupported pattern node");
+    }
+    const VariantPatternRecord* record = declarationIndex_
+        ? declarationIndex_->variantPattern(*variant)
+        : nullptr;
+    if (!record || record->enumType.kind != StaticType::Enum
+        || record->payloadIndices.size() != variant->arguments.size()
+        || record->payloadTypes.size() != variant->arguments.size()) {
+        throw IRCompileError("missing variant pattern metadata");
     }
 
     const IRRegister tag = ir_.emitVariantTag(
-        value, resolvedNames_->patternEnumName(*variant), variant->name.lexeme);
+        value, record->enumName, record->variantName);
     failJumps.push_back(ir_.emitJumpIfFalse(tag));
-    const std::vector<std::size_t>& payloadIndices = resolvedNames_->patternPayloadIndices(*variant);
     for (std::size_t i = 0; i < variant->arguments.size(); ++i) {
-        const IRRegister field = ir_.emitVariantField(value, payloadIndices[i]);
+        const IRRegister field = ir_.emitVariantField(value, record->payloadIndices[i]);
         compilePattern(*variant->arguments[i], field, failJumps, bindings);
     }
 }

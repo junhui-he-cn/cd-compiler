@@ -596,10 +596,11 @@ zero production callers and IR lowering consumes resolved HIR operations.
 
 #### M1E3: Patterns and coverage inputs
 
-Initial implementation slice: `DeclarationIndex` records checked literal
-pattern inputs for `nil`, booleans, numbers, and strings; IR lowering consumes
-the literal records while `TypeChecker` remains the coverage and diagnostic
-oracle.
+Initial implementation slices: `DeclarationIndex` records checked literal
+pattern inputs for `nil`, booleans, numbers, and strings, then checked enum
+variant inputs with resolved runtime identity, payload positions, and
+substituted payload types; IR lowering consumes both records while
+`TypeChecker` remains the coverage and diagnostic oracle.
 
 **Deliverable:** move literal, nullable, enum, record, OR-pattern, guard,
 binding, and exhaustiveness inputs behind the shared semantic pattern interface.

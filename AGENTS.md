@@ -45,7 +45,8 @@ This is a small C++17 Compiler Design front-end/interpreter project. It currentl
   field-access/assignment, struct-constructor, and variant-constructor
   lowering consume the migrated aggregate records; index lowering consumes
   index records;
-  literal pattern lowering consumes literal-pattern records;
+  literal and variant pattern lowering consume literal-pattern and
+  variant-pattern records;
   function/return/capture/loop-control lowering consumes the M1D
   metadata slices; function and method lowering consumes resolved signature
   types from the M1E1 slice.

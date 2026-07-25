@@ -105,6 +105,14 @@ struct LiteralPatternRecord {
     TypeInfo type;
 };
 
+struct VariantPatternRecord {
+    std::string enumName;
+    std::string variantName;
+    TypeInfo enumType;
+    std::vector<std::size_t> payloadIndices;
+    std::vector<TypeInfo> payloadTypes;
+};
+
 struct ReturnRecord {
     TypeInfo type;
 };
@@ -197,6 +205,7 @@ public:
     const NativeCallRecord* nativeCall(const Expr& expression) const;
     const VariantConstructorRecord* variantConstructor(const MemberCallExpr& expression) const;
     const LiteralPatternRecord* literalPattern(const LiteralPattern& pattern) const;
+    const VariantPatternRecord* variantPattern(const VariantPattern& pattern) const;
     const IndexOperationRecord* indexOperation(const Expr& expression) const;
     const FieldOperationRecord* fieldOperation(const Expr& expression) const;
     const StructConstructorRecord* structConstructor(const StructConstructExpr& expression) const;
@@ -230,6 +239,7 @@ private:
         TypeInfo resultType,
         std::vector<TypeInfo> payloadTypes);
     void recordLiteralPattern(const LiteralPattern& pattern, LiteralPatternRecord record);
+    void recordVariantPattern(const VariantPattern& pattern, VariantPatternRecord record);
     void recordIndexOperation(const Expr& expression, IndexOperationRecord record);
     void recordFieldOperation(const Expr& expression, FieldOperationRecord record);
     void recordStructConstructor(const StructConstructExpr& expression, StructConstructorRecord record);
@@ -266,6 +276,7 @@ private:
     std::unordered_map<const Expr*, NativeCallRecord> nativeCalls_;
     std::unordered_map<const MemberCallExpr*, VariantConstructorRecord> variantConstructors_;
     std::unordered_map<const LiteralPattern*, LiteralPatternRecord> literalPatterns_;
+    std::unordered_map<const VariantPattern*, VariantPatternRecord> variantPatterns_;
     std::unordered_map<const Expr*, IndexOperationRecord> indexOperations_;
     std::unordered_map<const Expr*, FieldOperationRecord> fieldOperations_;
     std::unordered_map<const StructConstructExpr*, StructConstructorRecord> structConstructorsMetadata_;
@@ -278,6 +289,7 @@ private:
     std::unordered_set<const BreakStmt*> breakStatements_;
     std::unordered_set<const ContinueStmt*> continueStatements_;
     std::unordered_set<const LiteralPattern*> literalPatternNodes_;
+    std::unordered_set<const VariantPattern*> variantPatternNodes_;
     std::unordered_map<const BreakStmt*, LoopTargetRecord> breakTargets_;
     std::unordered_map<const ContinueStmt*, LoopTargetRecord> continueTargets_;
     std::unordered_map<

@@ -3627,6 +3627,8 @@ bool TypeChecker::checkPattern(
     }
     resolvedNames_.recordPatternVariant(*variantPattern, runtimeEnumName, payloadIndices);
 
+    std::vector<TypeInfo> resolvedPayloadTypes;
+    resolvedPayloadTypes.reserve(variantPattern->arguments.size());
     for (std::size_t i = 0; i < variantPattern->arguments.size(); ++i) {
         std::unordered_set<std::string> nestedCoverage;
         std::unordered_set<std::string> nestedLiterals;
@@ -3634,6 +3636,7 @@ bool TypeChecker::checkPattern(
         bool nestedCoversStruct = false;
         const TypeInfo payloadType = SemanticTypes::substituteTypeParameters(
             variant->payloadTypes[payloadIndices[i]], substitutions);
+        resolvedPayloadTypes.push_back(payloadType);
         checkPattern(
             *variantPattern->arguments[i],
             payloadType,
@@ -3643,6 +3646,14 @@ bool TypeChecker::checkPattern(
             nestedCoversStruct,
             deferredBindings);
     }
+    declarationIndex_.recordVariantPattern(
+        *variantPattern,
+        VariantPatternRecord{
+            std::move(runtimeEnumName),
+            variantPattern->name.lexeme,
+            *enumExpectedType,
+            std::move(payloadIndices),
+            std::move(resolvedPayloadTypes)});
     return false;
 }
 
