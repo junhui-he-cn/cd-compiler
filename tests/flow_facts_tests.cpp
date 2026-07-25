@@ -186,6 +186,44 @@ void test_invalidation_propagates_and_nested_facts_restore()
     assert(!facts.narrowedTypeFor("value#0").has_value());
 }
 
+void test_without_narrowings_restores_state_after_success_and_throw()
+{
+    FlowFacts facts;
+    const std::vector<FlowNarrowing> outer{{"value#0", simpleType(StaticType::Number)}};
+    const std::vector<FlowNarrowing> inner{{"value#0", simpleType(StaticType::String)}};
+
+    facts.withNarrowings(outer, [&]() {
+        facts.withoutNarrowings([&]() {
+            assert(!facts.narrowedTypeFor("value#0").has_value());
+            facts.withNarrowings(inner, [&]() {
+                const std::optional<TypeInfo> narrowed = facts.narrowedTypeFor("value#0");
+                assert(narrowed.has_value());
+                assert(narrowed->kind == StaticType::String);
+            });
+            assert(!facts.narrowedTypeFor("value#0").has_value());
+        });
+
+        const std::optional<TypeInfo> restored = facts.narrowedTypeFor("value#0");
+        assert(restored.has_value());
+        assert(restored->kind == StaticType::Number);
+
+        bool threw = false;
+        try {
+            facts.withoutNarrowings([&]() {
+                assert(!facts.narrowedTypeFor("value#0").has_value());
+                throw 11;
+            });
+        } catch (int value) {
+            threw = value == 11;
+        }
+        assert(threw);
+
+        const std::optional<TypeInfo> restoredAfterThrow = facts.narrowedTypeFor("value#0");
+        assert(restoredAfterThrow.has_value());
+        assert(restoredAfterThrow->kind == StaticType::Number);
+    });
+}
+
 } // namespace
 
 int main()
@@ -197,4 +235,5 @@ int main()
     test_non_narrowable_variable_produces_no_facts();
     test_with_narrowings_restores_stack_after_success_and_throw();
     test_invalidation_propagates_and_nested_facts_restore();
+    test_without_narrowings_restores_state_after_success_and_throw();
 }

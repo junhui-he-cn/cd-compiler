@@ -132,6 +132,19 @@ void FlowFacts::invalidate(const std::string& resolvedName)
     }
 }
 
+void FlowFacts::withoutNarrowings(const std::function<void()>& body)
+{
+    std::vector<ActiveFlowFact> savedNarrowings = std::move(activeNarrowings_);
+    activeNarrowings_.clear();
+    try {
+        body();
+    } catch (...) {
+        activeNarrowings_ = std::move(savedNarrowings);
+        throw;
+    }
+    activeNarrowings_ = std::move(savedNarrowings);
+}
+
 void FlowFacts::withNarrowings(
     const std::vector<FlowNarrowing>& narrowings,
     const std::function<void()>& body)

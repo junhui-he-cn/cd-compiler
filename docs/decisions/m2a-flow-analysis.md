@@ -1,6 +1,6 @@
-# M2A flow-analysis decision: assignment invalidation
+# M2A flow-analysis decisions
 
-The first M2A semantic slice revises `SEM-TYPE-002` from the M0.5A baseline.
+The M2A flow slices revise `SEM-TYPE-002` from the M0.5A baseline.
 The M1 migration preserved the old behavior in which an active direct-variable
 nullable narrowing survived an assignment to that same binding. M2A now treats
 the assignment as a mutation of the binding cell and invalidates the proof.
@@ -52,3 +52,29 @@ There is no compatibility implementation to delete in this slice. The old
 behavior is replaced only after the shared FlowFacts invalidation record and
 the positive/negative mutation fixtures pass; later M2A slices may remove
 remaining TypeChecker special cases only under the roadmap deletion condition.
+
+## M2A-FLOW-002: function-boundary isolation
+
+Every function body is checked with an empty active flow-fact environment.
+Named functions, struct methods, and anonymous functions all use the shared
+`checkFunctionBody` entry point, so a function declared inside `if (x != nil)`
+cannot use that definition-site proof. Parameters, local variables, and new
+nil checks inside the function continue to work normally.
+
+This is intentionally separate from call-effect analysis. The checker does not
+yet invalidate a caller's facts merely because a called function or closure may
+mutate a captured binding; that alias/call rule requires a later M2A decision.
+The positive fixture accepts a nullable-compatible closure body, while the
+negative fixture rejects a body that relies on the enclosing branch.
+
+The decision revision is `m2a-2026-07-25-r2`, based on commit `95227a6`.
+The focused inventory cases are:
+
+- `golden.type_errors.nullable_narrowing_function_boundary`
+- `rust_vm.golden.nullable_narrowing_function_boundary.emit`
+- `rust_vm.golden.nullable_narrowing_function_boundary.run`
+
+Together with the previous assignment-invalidation cases, the M0D inventory
+validates 1665 cases. The FlowFacts CTest, focused golden and Rust VM subsets,
+`python3 tests/verification_inventory.py`, and the full canonical verification
+command are the gates for this revision.

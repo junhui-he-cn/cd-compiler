@@ -59,6 +59,11 @@ as non-null. The invalidation remains effective in enclosing flow regions that
 may observe the mutation. Field/index, loop, post-branch, alias, call, and
 closure-boundary narrowing remain conservative and are not yet extended.
 
+Function and closure bodies are checked without inheriting nullable narrowing
+from the branch where they are defined. A body must establish its own nil
+check before using a captured nullable binding as non-null; call-site effects
+from functions that may mutate captured bindings are not yet propagated.
+
 The built-in `map<K, V>` type and nominal generic structs such as `Box<T>` are
 implemented generic collection/container forms. Map literals use `{ key: value }`
 in expression position, infer key and value

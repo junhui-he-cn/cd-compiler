@@ -1243,23 +1243,28 @@ TypeInfo TypeChecker::checkFunctionBody(
     const Token& functionToken,
     const std::string& functionLabel)
 {
-    returnContexts_.push_back(FunctionReturnContext{false, simpleType(StaticType::Nil), expectedReturnType});
+    std::optional<TypeInfo> result;
+    flowFacts_.withoutNarrowings([&]() {
+        returnContexts_.push_back(FunctionReturnContext{false, simpleType(StaticType::Nil), expectedReturnType});
 
-    for (const auto& child : body) {
-        checkStatement(*child);
-    }
-
-    const FunctionReturnContext context = returnContexts_.back();
-    returnContexts_.pop_back();
-
-    if (expectedReturnType) {
-        if (bodyMayFallThrough(body)) {
-            checkImplicitNilReturn(functionToken, functionLabel, *expectedReturnType);
+        for (const auto& child : body) {
+            checkStatement(*child);
         }
-        return *expectedReturnType;
-    }
 
-    return context.sawReturn ? context.returnType : simpleType(StaticType::Nil);
+        const FunctionReturnContext context = returnContexts_.back();
+        returnContexts_.pop_back();
+
+        if (expectedReturnType) {
+            if (bodyMayFallThrough(body)) {
+                checkImplicitNilReturn(functionToken, functionLabel, *expectedReturnType);
+            }
+            result = *expectedReturnType;
+            return;
+        }
+
+        result = context.sawReturn ? context.returnType : simpleType(StaticType::Nil);
+    });
+    return *result;
 }
 
 const TypeChecker::StructTypeDecl* TypeChecker::findStructType(const std::string& name) const

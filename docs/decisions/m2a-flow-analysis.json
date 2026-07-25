@@ -1,12 +1,13 @@
 {
   "schema_version": 1,
-  "decision_revision": "m2a-2026-07-25-r1",
-  "baseline_commit": "0c834c9",
+  "decision_revision": "m2a-2026-07-25-r2",
+  "baseline_commit": "95227a6",
   "supersedes": ["SEM-TYPE-002"],
-  "purpose": "Record the first intentional M2A flow-semantics revision after the behavior-preserving M1 migration.",
+  "purpose": "Record intentional M2A flow-semantics revisions after the behavior-preserving M1 migration.",
   "entries": [
     {
       "decision_id": "M2A-FLOW-001",
+      "introduced_revision": "m2a-2026-07-25-r1",
       "domain": "flow-analysis",
       "question": "What happens to a direct nullable-variable narrowing after that variable is assigned?",
       "decision": "A successful assignment or numeric compound assignment to a direct variable invalidates every active non-null narrowing for that resolved binding. The binding returns to its declared or inferred type until a later supported nil check establishes a new narrowing. The invalidation remains effective in enclosing active flow regions that may observe the mutation, while facts introduced only in a nested region are discarded when that region ends.",
@@ -34,6 +35,42 @@
         "commands": [
           "cmake --build build --target flow_facts_tests compiler_design",
           "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_assignment",
+          "python3 tests/verification_inventory.py --write",
+          "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+        ]
+      }
+    },
+    {
+      "decision_id": "M2A-FLOW-002",
+      "introduced_revision": "m2a-2026-07-25-r2",
+      "domain": "flow-analysis",
+      "question": "Can a function or closure body inherit nullable narrowing from its definition-site control flow?",
+      "decision": "No. Every function body is checked with an empty active flow-fact environment. Function parameters and facts established inside the body are still checked normally, while a captured binding is observed through its declared or inferred type until the body establishes its own supported narrowing.",
+      "status": "resolved",
+      "owner": "FlowFacts and TypeChecker",
+      "m1_behavior": "Before this revision, checkFunctionBody inherited active facts from an enclosing if branch when a nested function was declared there.",
+      "rationale": "A function may execute after its definition-site branch has ended, and closures observe shared mutable cells. A definition-site proof cannot be treated as a proof at every later call site.",
+      "affected_consumers": [
+        "TypeChecker function, method, and lambda body analysis",
+        "FlowFacts function-boundary state isolation",
+        "nullable closure-boundary type-error and runtime fixtures"
+      ],
+      "compatibility_consequences": "Function bodies that relied on an outer nullable proof must add a local nil check or accept the nullable type. This slice does not infer call-site effects or invalidate caller facts when a closure may mutate a captured binding.",
+      "migration": "Wrap the shared checkFunctionBody entry point in a flow-fact isolation scope so named functions, methods, and anonymous functions use the same rule. Restore the caller state on success and exceptions.",
+      "quantitative_gate": "The m0d-2026-07-22-r1 inventory validates 1665 cases, the FlowFacts CTest passes, the named function-boundary positive and negative fixtures pass, and the full canonical verification command remains the release gate.",
+      "old_path_deletion_condition": "Delete no additional production path in this slice. The inherited-fact behavior is removed only after the shared function-body isolation and both compatibility fixtures pass.",
+      "positive_fixtures": [
+        "tests/golden/nullable_narrowing_function_boundary"
+      ],
+      "negative_fixtures": [
+        "tests/golden/type_errors/nullable_narrowing_function_boundary.cd"
+      ],
+      "verification": {
+        "inventory_revision": "m0d-2026-07-22-r1",
+        "commands": [
+          "cmake --build build --target flow_facts_tests compiler_design",
+          "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_function_boundary",
+          "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_function_boundary",
           "python3 tests/verification_inventory.py --write",
           "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
         ]
