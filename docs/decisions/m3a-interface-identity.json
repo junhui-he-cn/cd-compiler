@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m3a-2026-07-25-r3",
+  "baseline_commit": "98af1f2",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M3A-INTERFACE-001",
+  "domain": "module-interface",
+  "status": "resolved",
+  "purpose": "Carry graph-backed source and canonical module identity into in-memory ModuleInterface objects without changing interface text or import semantics.",
+  "question": "How does a module interface identify the graph node and original source that own its exported API?",
+  "decision": "Each ModuleInterface records snapshot-local moduleId, SourceFileId sourceId, existing display path, canonicalPath, and entry status. TypeChecker copies sourceId and canonicalPath from the matching Program::moduleGraph node when available, while retaining the ModuleStmt sourceId fallback for compatibility. The text emitter does not print the new identity fields in this slice.",
+  "identity_fields": {
+    "module_id": "Snapshot-local ModuleStmt and ModuleGraphNode identity.",
+    "source_id": "Program-local SourceFileId for source metadata and diagnostics.",
+    "display_path": "Existing ModuleInterface path retained for current text output and diagnostics-oriented inspection.",
+    "canonical_path": "Resolved canonical path used by the import graph for duplicate-module identity.",
+    "entry": "Existing entry marker remains unchanged."
+  },
+  "production_path": {
+    "producer": "TypeChecker::buildModuleInterfaces",
+    "source": "Program::moduleGraph matched by moduleId, with ModuleStmt::sourceId fallback.",
+    "text_consumer": "ModuleInterfaceEmitter preserves the existing output and ignores internal identity fields.",
+    "semantic_consumers": "Current ModuleSymbols and dependency-body checking remain authoritative until later interface-consumer slices."
+  },
+  "compatibility_boundary": {
+    "cli": "--module-interface output is byte-for-byte unchanged.",
+    "imports": "Direct imports, namespace imports, re-exports, search paths, and cycle behavior are unchanged.",
+    "artifacts": "IR, bytecode, cdbc text, Rust VM execution, and runtime diagnostics are unchanged.",
+    "persistence": "Identity fields are in-memory snapshot metadata and are not serialized or used as cache keys."
+  },
+  "migration": "Populate interface identity from the graph carried by Program, prove graph/interface correspondence on an import fixture, and keep the existing text emitter as the compatibility reference. Later M3A slices migrate exported symbol/type consumers; M3B owns separate compilation and cache behavior.",
+  "quantitative_gate": "The ir_source_location CTest validates every emitted interface identity against its graph node, the module_interface_emitter CTest preserves existing text output, the m0d-2026-07-22-r1 inventory validates 1,745 cases, and canonical plus legacy parity commands report zero unexplained differences.",
+  "old_path_deletion_condition": "Delete no production path in this slice. Remove the ModuleStmt-only identity fallback only after all module interfaces use graph identity and later interface consumers no longer depend on body-only module metadata. Keep the current text emitter until a separate serialized-interface decision.",
+  "affected_consumers": [
+    "TypeChecker module-interface construction",
+    "ModuleInterface in-memory API consumers",
+    "module interface identity/source metadata tests",
+    "future interface-driven importer analysis"
+  ],
+  "out_of_scope": [
+    "importer symbol/type analysis from interfaces",
+    "interface serialization and version negotiation",
+    "package resolution and cache keys",
+    "separate compilation and per-module cdbc artifacts",
+    "changes to interface text, diagnostics, IR, bytecode, or Rust VM behavior"
+  ],
+  "verification": {
+    "inventory_revision": "m0d-2026-07-22-r1",
+    "focused_commands": [
+      "cmake --build build --target ir_source_location_tests module_interface_emitter_tests",
+      "ctest --test-dir build --output-on-failure -R '^(ir_source_location|module_interface_emitter)$'",
+      "python3 tests/verification_inventory.py"
+    ],
+    "release_commands": [
+      "cmake -S . -B build",
+      "cmake --build build",
+      "ctest --test-dir build --output-on-failure",
+      "python3 tests/run_golden_tests.py ./build/compiler_design",
+      "python3 tests/bytecode_artifact_tests.py ./build/compiler_design vm-rs",
+      "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens",
+      "cargo test --manifest-path vm-rs/Cargo.toml",
+      "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+    ]
+  }
+}

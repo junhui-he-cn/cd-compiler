@@ -874,8 +874,19 @@ void TypeChecker::buildModuleInterfaces(const Program& program)
 
         ModuleInterface interfaceInfo;
         interfaceInfo.moduleId = module->moduleId;
+        interfaceInfo.sourceId = module->sourceId;
         interfaceInfo.path = module->path;
         interfaceInfo.isEntry = module->isEntry;
+        if (program.moduleGraph) {
+            const auto graphNode = std::find_if(
+                program.moduleGraph->nodes.begin(),
+                program.moduleGraph->nodes.end(),
+                [module](const ModuleGraphNode& node) { return node.moduleId == module->moduleId; });
+            if (graphNode != program.moduleGraph->nodes.end()) {
+                interfaceInfo.sourceId = graphNode->sourceId;
+                interfaceInfo.canonicalPath = graphNode->canonicalPath;
+            }
+        }
 
         if (const ModuleValueExports* exports = moduleSymbols_.valueExports(module->moduleId)) {
             for (const auto& entry : *exports) {

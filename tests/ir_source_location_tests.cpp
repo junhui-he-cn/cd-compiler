@@ -2,10 +2,23 @@
 #include "IRCompiler.hpp"
 #include "TypeChecker.hpp"
 
+#include <algorithm>
 #include <cassert>
+#include <filesystem>
+#include <fstream>
 #include <sstream>
+#include <string>
+
+namespace fs = std::filesystem;
 
 namespace {
+
+void writeModuleSource(const fs::path& path, const std::string& source)
+{
+    fs::create_directories(path.parent_path());
+    std::ofstream output(path);
+    output << source;
+}
 
 void test_snapshot_identity_metadata()
 {
@@ -74,6 +87,37 @@ void test_snapshot_identity_metadata()
     assert(assignmentBinding->bindingId == innerBinding->bindingId);
     assert(index.scopeFor(*block).has_value());
     assert(outerRecord->scopeId != innerRecord->scopeId);
+}
+
+void test_module_interface_graph_identity(const fs::path& root)
+{
+    fs::remove_all(root);
+    const fs::path library = root / "lib.cd";
+    const fs::path entry = root / "input.cd";
+    writeModuleSource(library, "let value = 1;\nexport value;\n");
+    writeModuleSource(entry, "import \"./lib.cd\";\nprint value;\n");
+
+    FrontendSession frontend;
+    Program program = frontend.loadFiles({entry.string()});
+    assert(program.moduleGraph.has_value());
+
+    TypeChecker checker;
+    checker.check(program);
+    const std::vector<ModuleInterface>& interfaces = checker.moduleInterfaces();
+    assert(interfaces.size() == program.moduleGraph->nodes.size());
+    for (const ModuleInterface& interfaceInfo : interfaces) {
+        const auto node = std::find_if(
+            program.moduleGraph->nodes.begin(),
+            program.moduleGraph->nodes.end(),
+            [&interfaceInfo](const ModuleGraphNode& candidate) {
+                return candidate.moduleId == interfaceInfo.moduleId;
+            });
+        assert(node != program.moduleGraph->nodes.end());
+        assert(interfaceInfo.sourceId == node->sourceId);
+        assert(interfaceInfo.canonicalPath == node->canonicalPath);
+    }
+
+    fs::remove_all(root);
 }
 
 void test_declaration_index()
@@ -1585,6 +1629,8 @@ int main()
     assert(divide.span->column == 7);
 
     test_snapshot_identity_metadata();
+    test_module_interface_graph_identity(
+        fs::temp_directory_path() / "compiler_module_interface_graph_identity");
     test_declaration_index();
     test_declaration_index_module_metadata();
     test_declaration_index_for_in_binding();

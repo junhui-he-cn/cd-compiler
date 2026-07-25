@@ -44,6 +44,10 @@ This is a small C++17 Compiler Design front-end/interpreter project. It currentl
   import-aware `Program` snapshots carry a value copy for later semantic
   consumers; stdin and ordered direct multi-file inputs retain their existing
   combined-entry path.
+- `include/ModuleInterface.hpp`, `src/ModuleInterfaceEmitter.cpp`: in-memory
+  public API metadata for loaded modules and stable debug text emission;
+  interfaces carry graph-backed source/canonical identity while the current
+  text format remains unchanged.
 - `include/DeclarationIndex.hpp`, `src/DeclarationIndex.cpp`: snapshot-local
   declaration, signature/shape, typed-expression, scope, import/export, and
   lexical-reference metadata plus for-in/pattern bindings and local direct-call

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "SourceIdentity.hpp"
 #include "TypeUtils.hpp"
 
 #include <cstddef>
@@ -48,7 +49,9 @@ struct ModuleInterfaceEnum {
 
 struct ModuleInterface {
     std::size_t moduleId = 0;
+    SourceFileId sourceId;
     std::string path;
+    std::string canonicalPath;
     bool isEntry = false;
     std::vector<ModuleInterfaceValue> values;
     std::vector<ModuleInterfaceStruct> structs;
