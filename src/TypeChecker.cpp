@@ -955,6 +955,41 @@ void TypeChecker::buildModuleInterfaces(const Program& program)
 
         moduleInterfaces_.push_back(std::move(interfaceInfo));
     }
+
+    std::sort(
+        moduleInterfaces_.begin(),
+        moduleInterfaces_.end(),
+        [](const ModuleInterface& left, const ModuleInterface& right) {
+            return left.moduleId < right.moduleId;
+        });
+    for (ModuleInterface& interfaceInfo : moduleInterfaces_) {
+        std::sort(
+            interfaceInfo.values.begin(),
+            interfaceInfo.values.end(),
+            [](const ModuleInterfaceValue& left, const ModuleInterfaceValue& right) {
+                return left.name < right.name;
+            });
+        std::sort(
+            interfaceInfo.structs.begin(),
+            interfaceInfo.structs.end(),
+            [](const ModuleInterfaceStruct& left, const ModuleInterfaceStruct& right) {
+                return left.name < right.name;
+            });
+        for (ModuleInterfaceStruct& structInfo : interfaceInfo.structs) {
+            std::sort(
+                structInfo.methods.begin(),
+                structInfo.methods.end(),
+                [](const ModuleInterfaceMethod& left, const ModuleInterfaceMethod& right) {
+                    return left.name < right.name;
+                });
+        }
+        std::sort(
+            interfaceInfo.enums.begin(),
+            interfaceInfo.enums.end(),
+            [](const ModuleInterfaceEnum& left, const ModuleInterfaceEnum& right) {
+                return left.name < right.name;
+            });
+    }
 }
 
 void TypeChecker::checkModule(const ModuleStmt& module)

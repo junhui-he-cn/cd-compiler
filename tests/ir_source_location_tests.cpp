@@ -95,9 +95,13 @@ void test_module_interface_graph_identity(const fs::path& root)
     const fs::path library = root / "lib.cd";
     const fs::path reExport = root / "api.cd";
     const fs::path entry = root / "input.cd";
-    writeModuleSource(library, "let value = 1;\nexport value;\n");
-    writeModuleSource(reExport, "export value from \"./lib.cd\";\n");
-    writeModuleSource(entry, "import \"./api.cd\";\nprint value;\n");
+    writeModuleSource(
+        library,
+        "let zeta = 2;\n"
+        "let alpha = 1;\n"
+        "export zeta, alpha;\n");
+    writeModuleSource(reExport, "export alpha from \"./lib.cd\";\n");
+    writeModuleSource(entry, "import \"./api.cd\";\nprint alpha;\n");
 
     FrontendSession frontend;
     Program program = frontend.loadFiles({entry.string()});
@@ -107,6 +111,9 @@ void test_module_interface_graph_identity(const fs::path& root)
     checker.check(program);
     const std::vector<ModuleInterface>& interfaces = checker.moduleInterfaces();
     assert(interfaces.size() == program.moduleGraph->nodes.size());
+    for (std::size_t index = 1; index < interfaces.size(); ++index) {
+        assert(interfaces[index - 1].moduleId < interfaces[index].moduleId);
+    }
     for (const ModuleInterface& interfaceInfo : interfaces) {
         const auto node = std::find_if(
             program.moduleGraph->nodes.begin(),
@@ -159,6 +166,12 @@ void test_module_interface_graph_identity(const fs::path& root)
     assert(reExportInterface->dependencies.front().importedModuleId == reExportEdge->importedModuleId);
     assert(reExportInterface->dependencies.front().kind == ModuleGraphEdgeKind::ReExport);
     assert(reExportInterface->dependencies.front().requestedPath == "./lib.cd");
+
+    const ModuleInterface* libraryInterface = findInterface(reExportEdge->importedModuleId);
+    assert(libraryInterface != nullptr);
+    assert(libraryInterface->values.size() == 2);
+    assert(libraryInterface->values[0].name == "alpha");
+    assert(libraryInterface->values[1].name == "zeta");
 
     fs::remove_all(root);
 }
