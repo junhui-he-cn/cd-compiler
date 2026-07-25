@@ -208,3 +208,31 @@ nullable use. The M0D inventory now validates 1680 cases, including:
 The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification
 command are the gates for this revision.
+
+## M2A-FLOW-008: explicit-else returning-arm narrowing
+
+For an `if` with an explicit `else`, if exactly one arm is guaranteed not to
+fall through through a return, returning block, or returning exhaustive match,
+the other arm's final nullable flow facts become active after the `if`. Both
+arms are checked from the same pre-branch snapshot plus their condition facts
+in isolated flow states. The final state of the live arm is installed as the
+continuation state, so invalidations in either checked arm are not accidentally
+carried across the branch boundary and the live arm's invalidations remain
+visible.
+
+When both explicit arms may fall through, the existing conservative behavior is
+unchanged. Loops, fields, indexes, and broader branch joins remain outside this
+slice. The decision revision is `m2a-2026-07-25-r8`, based on commit `05962f6`.
+
+The positive fixture covers a returning `then` arm whose mutation must not
+invalidate the live `else` arm's narrowing. The negative fixture keeps both
+arms non-terminating and confirms that a general explicit-`else` join is not
+implicitly admitted. The M0D inventory now validates 1683 cases, including:
+
+- `golden.type_errors.nullable_narrowing_explicit_else_unsupported`
+- `rust_vm.golden.nullable_narrowing_explicit_else_recheck.emit`
+- `rust_vm.golden.nullable_narrowing_explicit_else_recheck.run`
+
+The FlowFacts CTest, focused golden and Rust VM subsets,
+`python3 tests/verification_inventory.py`, and the full canonical verification
+command are the gates for this revision.

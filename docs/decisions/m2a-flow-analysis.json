@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "decision_revision": "m2a-2026-07-25-r7",
-  "baseline_commit": "d412116",
+  "decision_revision": "m2a-2026-07-25-r8",
+  "baseline_commit": "05962f6",
   "supersedes": ["SEM-TYPE-002"],
   "purpose": "Record intentional M2A flow-semantics revisions after the behavior-preserving M1 migration.",
   "entries": [
@@ -253,6 +253,42 @@
           "cmake --build build --target flow_facts_tests compiler_design",
           "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_post_branch",
           "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_post_branch_recheck",
+          "python3 tests/verification_inventory.py --write",
+          "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+        ]
+      }
+    },
+    {
+      "decision_id": "M2A-FLOW-008",
+      "introduced_revision": "m2a-2026-07-25-r8",
+      "domain": "flow-analysis",
+      "question": "When may an explicit-else nil-check narrowing survive into its continuation?",
+      "decision": "For an if statement with an explicit else whose exactly one arm is guaranteed not to fall through through a return, returning block, or returning exhaustive match, the other arm's final nullable flow facts become active after the if. Both arms are checked from the same pre-branch snapshot plus their condition facts in isolated states. If both arms may fall through, the existing conservative behavior remains unchanged; loops, fields, indexes, and broader branch joins are outside this slice.",
+      "status": "resolved",
+      "owner": "TypeChecker explicit-else arm isolation and FlowFacts continuation state",
+      "m1_behavior": "Before this revision, an explicit-else statement discarded the live arm's non-null proof even when the other arm returned, so the continuation still saw the nullable declared type.",
+      "rationale": "Only the non-terminating arm reaches the continuation. Checking both arms from the same isolated snapshot prevents a mutation or call on the terminating arm from contaminating the live arm, while installing the live arm's complete final state preserves its invalidations and facts.",
+      "affected_consumers": [
+        "FlowFacts active narrowing snapshots, clearing, and continuation append",
+        "TypeChecker explicit-else fall-through analysis",
+        "nullable explicit-else compatibility fixtures"
+      ],
+      "compatibility_consequences": "After `if (value == nil) { return 0; } else { ... }`, the continuation may use `value` as non-null. Explicit-else statements whose both arms fall through retain the existing conservative behavior, and a mutation or effect in the live arm prevents stale proofs from being retained.",
+      "migration": "Reuse the shared statement fall-through predicate. Check both explicit arms inside isolated FlowFacts states seeded with the pre-branch facts and condition facts, then clear and install only the final state of the arm that can reach the continuation.",
+      "quantitative_gate": "The m0d-2026-07-22-r1 inventory validates 1683 cases, the FlowFacts CTest passes, the named explicit-else positive and negative fixtures pass, and the full canonical verification command remains the release gate.",
+      "old_path_deletion_condition": "Delete no additional production path in this slice. The old discarded-live-arm behavior is replaced only after isolated arm checking and its positive/negative fixtures pass; both-fall-through joins and loop joins require later slices.",
+      "positive_fixtures": [
+        "tests/golden/nullable_narrowing_explicit_else_recheck"
+      ],
+      "negative_fixtures": [
+        "tests/golden/type_errors/nullable_narrowing_explicit_else_unsupported.cd"
+      ],
+      "verification": {
+        "inventory_revision": "m0d-2026-07-22-r1",
+        "commands": [
+          "cmake --build build --target flow_facts_tests compiler_design",
+          "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_explicit_else",
+          "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_explicit_else_recheck",
           "python3 tests/verification_inventory.py --write",
           "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
         ]

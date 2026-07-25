@@ -56,7 +56,7 @@ Type annotations support `number`, `bool`, `string`, `nil`, named struct types, 
 An assignment to a direct variable invalidates its active nullable narrowing; after
 mutation, code must perform a supported nil check again before using the binding
 as non-null. The invalidation remains effective in enclosing flow regions that
-may observe the mutation. Field/index, explicit-else, loop, and
+may observe the mutation. Field/index, both-fall-through explicit-else, loop, and
 closure-boundary narrowing remain conservative and are not yet extended.
 
 Function and closure bodies are checked without inheriting nullable narrowing
@@ -80,7 +80,14 @@ A no-`else` `if` whose `then` branch always returns carries the false-branch
 nullable narrowing into the code after the `if`, for example after
 `if (value == nil) { return; }`. Facts are restored from before the terminating
 branch, so mutations on that dead path do not affect the continuation. Explicit
-`else` branches, loops, fields, and indexes remain conservative.
+`else` branches with both arms falling through, loops, fields, and indexes remain
+conservative.
+
+An explicit-`else` `if` whose one arm always returns carries the other arm's
+final nullable facts into the code after the `if`. Both arms are checked in
+isolated flow states, so assignments or calls on the terminating arm cannot
+invalidate facts from the live arm. Explicit-`else` joins where both arms fall
+through remain conservative.
 
 The built-in `map<K, V>` type and nominal generic structs such as `Box<T>` are
 implemented generic collection/container forms. Map literals use `{ key: value }`

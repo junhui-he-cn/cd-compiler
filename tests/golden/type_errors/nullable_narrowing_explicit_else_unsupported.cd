@@ -1,0 +1,8 @@
+fun increment(value: number?): number {
+  if (value == nil) {
+    print "nil";
+  } else {
+    print "non-nil";
+  }
+  return value + 1;
+}

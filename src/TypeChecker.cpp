@@ -644,6 +644,51 @@ void TypeChecker::checkStatement(const Stmt& statement)
             flowFacts_.appendNarrowings(branchFacts.elseNarrowings);
             return;
         }
+        if (ifStmt->elseBranch) {
+            const bool thenMayFallThrough = statementMayFallThrough(*ifStmt->thenBranch);
+            const bool elseMayFallThrough = statementMayFallThrough(*ifStmt->elseBranch);
+            if (!thenMayFallThrough || !elseMayFallThrough) {
+                const std::vector<FlowNarrowing> baseFacts = flowFacts_.activeNarrowings();
+                const auto checkBranchInIsolation = [&](const Stmt& branch,
+                                                        const std::vector<FlowNarrowing>& branchNarrowings) {
+                    std::vector<FlowNarrowing> result;
+                    std::vector<FlowNarrowing> branchFactsWithBase = baseFacts;
+                    branchFactsWithBase.insert(
+                        branchFactsWithBase.end(),
+                        branchNarrowings.begin(),
+                        branchNarrowings.end());
+                    flowFacts_.withoutNarrowings([&]() {
+                        flowFacts_.withNarrowings(branchFactsWithBase, [&]() {
+                            checkStatement(branch);
+                            result = flowFacts_.activeNarrowings();
+                        });
+                    });
+                    return result;
+                };
+
+                std::vector<FlowNarrowing> thenResult;
+                std::vector<FlowNarrowing> elseResult;
+                const std::vector<FlowNarrowing> checkedThen
+                    = checkBranchInIsolation(*ifStmt->thenBranch, branchFacts.thenNarrowings);
+                const std::vector<FlowNarrowing> checkedElse
+                    = checkBranchInIsolation(*ifStmt->elseBranch, branchFacts.elseNarrowings);
+                if (thenMayFallThrough) {
+                    thenResult = checkedThen;
+                }
+                if (elseMayFallThrough) {
+                    elseResult = checkedElse;
+                }
+
+                if (thenMayFallThrough) {
+                    flowFacts_.clear();
+                    flowFacts_.appendNarrowings(thenResult);
+                } else if (elseMayFallThrough) {
+                    flowFacts_.clear();
+                    flowFacts_.appendNarrowings(elseResult);
+                }
+                return;
+            }
+        }
         flowFacts_.withNarrowings(branchFacts.thenNarrowings, [&]() {
             checkStatement(*ifStmt->thenBranch);
         });

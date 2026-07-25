@@ -1,0 +1,25 @@
+fun increment(value: number?): number {
+  if (value == nil) {
+    value = nil;
+    return 0;
+  } else {
+    let stable: number = value;
+  }
+  return value + 1;
+}
+
+print increment(nil);
+print increment(41);
+
+fun incrementElse(value: number?): number {
+  if (value != nil) {
+    let stable: number = value;
+  } else {
+    value = nil;
+    return 0;
+  }
+  return value + 1;
+}
+
+print incrementElse(nil);
+print incrementElse(41);
