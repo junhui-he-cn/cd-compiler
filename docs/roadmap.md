@@ -599,7 +599,9 @@ zero production callers and IR lowering consumes resolved HIR operations.
 Initial implementation slices: `DeclarationIndex` records checked literal
 pattern inputs for `nil`, booleans, numbers, and strings, then checked enum
 variant inputs with resolved runtime identity, payload positions, and
-substituted payload types; IR lowering consumes both records while
+substituted payload types, then checked named-struct record inputs with
+resolved field order and substituted field types; IR lowering consumes all
+three records while
 `TypeChecker` remains the coverage and diagnostic oracle.
 
 **Deliverable:** move literal, nullable, enum, record, OR-pattern, guard,

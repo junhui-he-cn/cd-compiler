@@ -576,9 +576,17 @@ void IRCompiler::compilePattern(
     }
 
     if (const auto* recordPattern = dynamic_cast<const RecordPattern*>(&pattern)) {
-        for (const RecordPatternField& field : recordPattern->fields) {
-            const IRRegister fieldValue = ir_.emitField(value, field.name.lexeme);
-            compilePattern(*field.pattern, fieldValue, failJumps, bindings);
+        const RecordPatternRecord* record = declarationIndex_
+            ? declarationIndex_->recordPattern(*recordPattern)
+            : nullptr;
+        if (!record || record->structType.kind != StaticType::Struct
+            || record->fieldNames.size() != recordPattern->fields.size()
+            || record->fieldTypes.size() != recordPattern->fields.size()) {
+            throw IRCompileError("missing record pattern metadata");
+        }
+        for (std::size_t i = 0; i < recordPattern->fields.size(); ++i) {
+            const IRRegister fieldValue = ir_.emitField(value, record->fieldNames[i]);
+            compilePattern(*recordPattern->fields[i].pattern, fieldValue, failJumps, bindings);
         }
         return;
     }

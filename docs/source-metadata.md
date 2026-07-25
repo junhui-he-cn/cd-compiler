@@ -178,6 +178,14 @@ positional or named patterns. `IRCompiler` consumes those fields for existing
 variant-tag and variant-field lowering; nested patterns, coverage, and
 diagnostic decisions remain owned by `TypeChecker`.
 
+## Record pattern inputs (M1E3 next slice)
+
+`DeclarationIndex::recordPattern()` exposes the checked non-nullable struct
+type, source-order field names, and substituted field types for each named
+struct record pattern. `IRCompiler` consumes the record for existing field
+loads; nested patterns, coverage, and diagnostic decisions remain owned by
+`TypeChecker`.
+
 ## Lossless source view
 
 `FrontendSession::losslessSourceView()` groups `LosslessPiece` values by

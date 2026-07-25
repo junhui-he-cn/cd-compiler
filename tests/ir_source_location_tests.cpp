@@ -832,6 +832,47 @@ void test_variant_pattern_metadata()
     compiler.compile(program, resolved, index);
 }
 
+void test_record_pattern_metadata()
+{
+    std::istringstream input(
+        "struct Box<T> { value: T, label: string }\n"
+        "fun choose(value: Box<number>?): string {\n"
+        "  return match value {\n"
+        "    nil => \"nil\",\n"
+        "    Box { label: label, value: numberValue } => label + str(numberValue),\n"
+        "  };\n"
+        "}\n"
+        "print choose(nil);\n");
+    FrontendSession frontend;
+    Program program = frontend.loadStdin(input);
+
+    const auto* function = dynamic_cast<const FunctionStmt*>(program.statements[1].get());
+    assert(function != nullptr && !function->body.empty());
+    const auto* returnStatement = dynamic_cast<const ReturnStmt*>(function->body.front().get());
+    const auto* match = returnStatement
+        ? dynamic_cast<const MatchExpr*>(returnStatement->value.get())
+        : nullptr;
+    assert(match != nullptr && match->arms.size() == 2);
+    const auto* pattern = dynamic_cast<const RecordPattern*>(match->arms[1].pattern.get());
+    assert(pattern != nullptr);
+
+    TypeChecker checker;
+    const ResolvedNames& resolved = checker.check(program);
+    const DeclarationIndex& index = checker.declarationIndex();
+    assert(checker.declarationIndexMismatchCount() == 0);
+
+    const RecordPatternRecord* record = index.recordPattern(*pattern);
+    assert(record != nullptr);
+    assert(typeInfoName(record->structType) == "Box<number>");
+    assert((record->fieldNames == std::vector<std::string>{"label", "value"}));
+    assert(record->fieldTypes.size() == 2);
+    assert(typeInfoName(record->fieldTypes[0]) == "string");
+    assert(typeInfoName(record->fieldTypes[1]) == "number");
+
+    IRCompiler compiler;
+    compiler.compile(program, resolved, index);
+}
+
 void test_variant_constructor_lowering_metadata()
 {
     std::istringstream input(
@@ -1352,6 +1393,7 @@ int main()
     test_method_call_lowering_metadata();
     test_literal_pattern_metadata();
     test_variant_pattern_metadata();
+    test_record_pattern_metadata();
     test_variant_constructor_lowering_metadata();
     test_function_return_lowering_metadata();
     test_function_capture_metadata();

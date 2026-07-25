@@ -3340,6 +3340,10 @@ bool TypeChecker::checkPattern(
 
         std::unordered_set<std::string> usedFields;
         bool universal = true;
+        std::vector<std::string> resolvedFieldNames;
+        std::vector<TypeInfo> resolvedFieldTypes;
+        resolvedFieldNames.reserve(recordPattern->fields.size());
+        resolvedFieldTypes.reserve(recordPattern->fields.size());
         for (const RecordPatternField& field : recordPattern->fields) {
             if (!usedFields.insert(field.name.lexeme).second) {
                 throw TypeError(field.name,
@@ -3359,6 +3363,8 @@ bool TypeChecker::checkPattern(
             bool nestedCoversStruct = false;
             const TypeInfo fieldType = structFieldTypeForValue(
                 *structExpectedType, *structType, *structField);
+            resolvedFieldNames.push_back(field.name.lexeme);
+            resolvedFieldTypes.push_back(fieldType);
             const bool fieldUniversal = checkPattern(
                 *field.pattern,
                 fieldType,
@@ -3370,6 +3376,12 @@ bool TypeChecker::checkPattern(
             universal = universal && fieldUniversal;
         }
 
+        declarationIndex_.recordRecordPattern(
+            *recordPattern,
+            RecordPatternRecord{
+                *structExpectedType,
+                std::move(resolvedFieldNames),
+                std::move(resolvedFieldTypes)});
         coversStruct = universal;
         return SemanticTypes::isNullable(expectedType) ? false : universal;
     }
