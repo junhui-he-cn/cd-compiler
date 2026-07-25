@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "decision_revision": "m2a-2026-07-25-r10",
-  "baseline_commit": "c02a028",
+  "decision_revision": "m2a-2026-07-25-r11",
+  "baseline_commit": "d5fa3ce",
   "supersedes": ["SEM-TYPE-002"],
   "purpose": "Record intentional M2A flow-semantics revisions after the behavior-preserving M1 migration.",
   "entries": [
@@ -361,6 +361,42 @@
           "cmake --build build --target flow_facts_tests compiler_design",
           "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_for",
           "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_for_body_recheck",
+          "python3 tests/verification_inventory.py --write",
+          "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+        ]
+      }
+    },
+    {
+      "decision_id": "M2A-FLOW-011",
+      "introduced_revision": "m2a-2026-07-25-r11",
+      "domain": "flow-analysis",
+      "question": "Which nullable facts survive an explicit-else statement when both arms may fall through?",
+      "decision": "When both explicit arms may fall through, only final nullable flow facts with the same resolved binding and mutually compatible narrowed types in both isolated arm states become active after the if. Facts present in one arm only or invalidated in either arm are discarded. Returning-arm joins continue to install only the live arm's final state; loops, fields, and indexes remain outside this slice.",
+      "status": "resolved",
+      "owner": "TypeChecker explicit-else branch isolation/intersection and FlowFacts continuation state",
+      "m1_behavior": "Before this revision, an explicit-else statement discarded all branch-local final facts, even when both arms independently established the same nullable narrowing before falling through.",
+      "rationale": "A fact is sound after a branch only when every reachable arm preserves a compatible proof. Isolated checking prevents cross-arm mutation leakage, and intersecting final states avoids retaining a proof established on only one path.",
+      "affected_consumers": [
+        "TypeChecker explicit-else branch joins",
+        "FlowFacts active-state replacement through clear and append",
+        "nullable explicit-else intersection compatibility fixtures"
+      ],
+      "compatibility_consequences": "After both explicit arms independently narrow the same nullable binding, the continuation may use it as non-null. A one-sided proof, incompatible arm fact, or arm mutation leaves the binding conservative.",
+      "migration": "Reuse the isolated explicit-arm checking path from the returning-arm slice, intersect final states by resolved name and compatible type, then clear and install only the intersection for the continuation.",
+      "quantitative_gate": "The m0d-2026-07-22-r1 inventory validates 1692 cases, the FlowFacts CTest passes, the named explicit-else intersection positive and negative fixtures pass, and the full canonical verification command remains the release gate.",
+      "old_path_deletion_condition": "Delete no additional production path in this slice. The old discarded-join behavior is replaced only after isolated branch intersection and its positive/negative fixtures pass; loop joins and field/index joins require later slices.",
+      "positive_fixtures": [
+        "tests/golden/nullable_narrowing_if_join_recheck"
+      ],
+      "negative_fixtures": [
+        "tests/golden/type_errors/nullable_narrowing_if_join_unsupported.cd"
+      ],
+      "verification": {
+        "inventory_revision": "m0d-2026-07-22-r1",
+        "commands": [
+          "cmake --build build --target flow_facts_tests compiler_design",
+          "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_if_join_unsupported",
+          "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_if_join_recheck",
           "python3 tests/verification_inventory.py --write",
           "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
         ]

@@ -56,9 +56,8 @@ Type annotations support `number`, `bool`, `string`, `nil`, named struct types, 
 An assignment to a direct variable invalidates its active nullable narrowing; after
 mutation, code must perform a supported nil check again before using the binding
 as non-null. The invalidation remains effective in enclosing flow regions that
-may observe the mutation. Field/index, both-fall-through explicit-else, loop
-exit, and closure-boundary narrowing remain conservative and are not yet
-extended.
+may observe the mutation. Field/index, loop exit, and closure-boundary
+narrowing remain conservative and are not yet extended.
 
 Function and closure bodies are checked without inheriting nullable narrowing
 from the branch where they are defined. A body must establish its own nil
@@ -82,13 +81,17 @@ nullable narrowing into the code after the `if`, for example after
 `if (value == nil) { return; }`. Facts are restored from before the terminating
 branch, so mutations on that dead path do not affect the continuation. Explicit
 `else` branches with both arms falling through, loops, fields, and indexes remain
-conservative.
+conservative when no compatible fact is proven on both sides.
 
 An explicit-`else` `if` whose one arm always returns carries the other arm's
 final nullable facts into the code after the `if`. Both arms are checked in
 isolated flow states, so assignments or calls on the terminating arm cannot
 invalidate facts from the live arm. Explicit-`else` joins where both arms fall
 through remain conservative.
+
+When both explicit arms fall through, only the intersection of their final
+nullable facts survives. A proof established in just one arm, or invalidated in
+either arm, is not retained after the `if`.
 
 Inside a `while`, the condition's true-branch nullable facts are active while
 checking the loop body. They are discarded at the loop boundary, so a nullable

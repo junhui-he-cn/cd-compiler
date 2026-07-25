@@ -284,3 +284,27 @@ that may exit. The M0D inventory now validates 1689 cases, including:
 The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification
 command are the gates for this revision.
+
+## M2A-FLOW-011: explicit-else branch intersection
+
+When both explicit `else` arms may fall through, only final nullable flow facts
+with the same resolved binding and mutually compatible narrowed types in both
+isolated arm states become active after the `if`. A fact present in one arm
+only, or invalidated in either arm, is discarded. Returning-arm joins continue
+to install only the live arm's final state.
+
+Loops, fields, indexes, and broader loop joins remain outside this slice. The
+decision revision is `m2a-2026-07-25-r11`, based on commit `d5fa3ce`.
+
+The positive fixture independently establishes the same nullable narrowing in
+both arms before falling through. The negative fixture establishes it in only
+one arm and confirms that a one-sided proof is not retained. The M0D inventory
+now validates 1692 cases, including:
+
+- `golden.type_errors.nullable_narrowing_if_join_unsupported`
+- `rust_vm.golden.nullable_narrowing_if_join_recheck.emit`
+- `rust_vm.golden.nullable_narrowing_if_join_recheck.run`
+
+The FlowFacts CTest, focused golden and Rust VM subsets,
+`python3 tests/verification_inventory.py`, and the full canonical verification
+command are the gates for this revision.

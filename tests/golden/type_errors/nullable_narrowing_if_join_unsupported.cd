@@ -1,0 +1,10 @@
+fun unsupported(value: number?, flag: bool): number {
+  if (flag) {
+    if (value == nil) {
+      return 0;
+    }
+  } else {
+    print "unchecked";
+  }
+  return value + 1;
+}

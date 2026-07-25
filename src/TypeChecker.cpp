@@ -647,56 +647,70 @@ void TypeChecker::checkStatement(const Stmt& statement)
         if (ifStmt->elseBranch) {
             const bool thenMayFallThrough = statementMayFallThrough(*ifStmt->thenBranch);
             const bool elseMayFallThrough = statementMayFallThrough(*ifStmt->elseBranch);
-            if (!thenMayFallThrough || !elseMayFallThrough) {
-                const std::vector<FlowNarrowing> baseFacts = flowFacts_.activeNarrowings();
-                const auto checkBranchInIsolation = [&](const Stmt& branch,
-                                                        const std::vector<FlowNarrowing>& branchNarrowings) {
-                    std::vector<FlowNarrowing> result;
-                    std::vector<FlowNarrowing> branchFactsWithBase = baseFacts;
-                    branchFactsWithBase.insert(
-                        branchFactsWithBase.end(),
-                        branchNarrowings.begin(),
-                        branchNarrowings.end());
-                    flowFacts_.withoutNarrowings([&]() {
-                        flowFacts_.withNarrowings(branchFactsWithBase, [&]() {
-                            checkStatement(branch);
-                            result = flowFacts_.activeNarrowings();
-                        });
+            const std::vector<FlowNarrowing> baseFacts = flowFacts_.activeNarrowings();
+            const auto checkBranchInIsolation = [&](const Stmt& branch,
+                                                    const std::vector<FlowNarrowing>& branchNarrowings) {
+                std::vector<FlowNarrowing> result;
+                std::vector<FlowNarrowing> branchFactsWithBase = baseFacts;
+                branchFactsWithBase.insert(
+                    branchFactsWithBase.end(),
+                    branchNarrowings.begin(),
+                    branchNarrowings.end());
+                flowFacts_.withoutNarrowings([&]() {
+                    flowFacts_.withNarrowings(branchFactsWithBase, [&]() {
+                        checkStatement(branch);
+                        result = flowFacts_.activeNarrowings();
                     });
-                    return result;
-                };
+                });
+                return result;
+            };
 
-                std::vector<FlowNarrowing> thenResult;
-                std::vector<FlowNarrowing> elseResult;
-                const std::vector<FlowNarrowing> checkedThen
-                    = checkBranchInIsolation(*ifStmt->thenBranch, branchFacts.thenNarrowings);
-                const std::vector<FlowNarrowing> checkedElse
-                    = checkBranchInIsolation(*ifStmt->elseBranch, branchFacts.elseNarrowings);
-                if (thenMayFallThrough) {
-                    thenResult = checkedThen;
-                }
+            const std::vector<FlowNarrowing> thenResult
+                = checkBranchInIsolation(*ifStmt->thenBranch, branchFacts.thenNarrowings);
+            const std::vector<FlowNarrowing> elseResult
+                = checkBranchInIsolation(*ifStmt->elseBranch, branchFacts.elseNarrowings);
+
+            if (thenMayFallThrough) {
                 if (elseMayFallThrough) {
-                    elseResult = checkedElse;
-                }
-
-                if (thenMayFallThrough) {
+                    std::vector<FlowNarrowing> joinedFacts;
+                    for (const FlowNarrowing& candidate : thenResult) {
+                        const auto matching = std::find_if(
+                            elseResult.begin(),
+                            elseResult.end(),
+                            [&candidate](const FlowNarrowing& other) {
+                                return candidate.resolvedName == other.resolvedName
+                                    && candidate.type.kind == other.type.kind
+                                    && SemanticTypes::compatible(candidate.type, other.type)
+                                    && SemanticTypes::compatible(other.type, candidate.type);
+                            });
+                        if (matching == elseResult.end()) {
+                            continue;
+                        }
+                        const auto alreadyJoined = std::find_if(
+                            joinedFacts.begin(),
+                            joinedFacts.end(),
+                            [&candidate](const FlowNarrowing& other) {
+                                return candidate.resolvedName == other.resolvedName;
+                            });
+                        if (alreadyJoined == joinedFacts.end()) {
+                            joinedFacts.push_back(candidate);
+                        }
+                    }
+                    flowFacts_.clear();
+                    flowFacts_.appendNarrowings(joinedFacts);
+                } else {
                     flowFacts_.clear();
                     flowFacts_.appendNarrowings(thenResult);
-                } else if (elseMayFallThrough) {
-                    flowFacts_.clear();
-                    flowFacts_.appendNarrowings(elseResult);
                 }
-                return;
+            } else if (elseMayFallThrough) {
+                flowFacts_.clear();
+                flowFacts_.appendNarrowings(elseResult);
             }
+            return;
         }
         flowFacts_.withNarrowings(branchFacts.thenNarrowings, [&]() {
             checkStatement(*ifStmt->thenBranch);
         });
-        if (ifStmt->elseBranch) {
-            flowFacts_.withNarrowings(branchFacts.elseNarrowings, [&]() {
-                checkStatement(*ifStmt->elseBranch);
-            });
-        }
         return;
     }
 
