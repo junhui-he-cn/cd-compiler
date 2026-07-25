@@ -175,6 +175,84 @@ void rethrowWithModuleContext(const DiagnosticError& error, const ModuleStmt& mo
     throw error;
 }
 
+Token interfaceToken(const Token& anchor, const std::string& lexeme)
+{
+    Token token = anchor;
+    token.type = TokenType::Identifier;
+    token.lexeme = lexeme;
+    return token;
+}
+
+ModuleValueExports valueExportsFromInterface(const ModuleInterface& interfaceInfo)
+{
+    ModuleValueExports exports;
+    for (const ModuleInterfaceValue& value : interfaceInfo.values) {
+        TypeBinding binding;
+        binding.type = value.type;
+        binding.resolvedName = value.resolvedName;
+        exports.emplace(value.name, std::move(binding));
+    }
+    return exports;
+}
+
+ModuleStructExports structExportsFromInterface(const ModuleInterface& interfaceInfo, const Token& anchor)
+{
+    ModuleStructExports exports;
+    for (const ModuleInterfaceStruct& source : interfaceInfo.structs) {
+        StructTypeDecl declaration;
+        declaration.name = interfaceToken(anchor, source.name);
+        declaration.genericParameters = source.genericParameters;
+        declaration.genericParameterConstraints = source.genericParameterConstraints;
+        for (const ModuleInterfaceField& field : source.fields) {
+            declaration.fields.push_back(StructFieldType{interfaceToken(anchor, field.name), field.type});
+        }
+        exports.emplace(source.name, std::move(declaration));
+    }
+    return exports;
+}
+
+ModuleEnumExports enumExportsFromInterface(const ModuleInterface& interfaceInfo, const Token& anchor)
+{
+    ModuleEnumExports exports;
+    for (const ModuleInterfaceEnum& source : interfaceInfo.enums) {
+        EnumTypeDecl declaration;
+        declaration.name = interfaceToken(anchor, source.name);
+        declaration.genericParameters = source.genericParameters;
+        declaration.genericParameterConstraints = source.genericParameterConstraints;
+        for (const ModuleInterfaceVariant& variant : source.variants) {
+            EnumVariantType converted;
+            converted.name = interfaceToken(anchor, variant.name);
+            converted.payloadTypes = variant.payloadTypes;
+            for (const std::optional<std::string>& payloadName : variant.payloadNames) {
+                converted.payloadNames.push_back(
+                    payloadName ? std::optional<Token>(interfaceToken(anchor, *payloadName)) : std::nullopt);
+            }
+            declaration.variants.push_back(std::move(converted));
+        }
+        exports.emplace(source.name, std::move(declaration));
+    }
+    return exports;
+}
+
+ModuleMethodExports methodExportsFromInterface(const ModuleInterface& interfaceInfo)
+{
+    ModuleMethodExports exports;
+    for (const ModuleInterfaceStruct& structInfo : interfaceInfo.structs) {
+        for (const ModuleInterfaceMethod& method : structInfo.methods) {
+            exports[structInfo.name].emplace(
+                method.name,
+                MethodSignature{
+                    method.receiverType,
+                    method.parameterTypes,
+                    method.returnType,
+                    method.resolvedName,
+                    method.genericParameters,
+                    method.genericParameterConstraints});
+        }
+    }
+    return exports;
+}
+
 } // namespace
 
 TypeError::TypeError(std::string message)
@@ -861,6 +939,17 @@ const ModuleStmt* TypeChecker::findModule(const Program& program, std::size_t mo
     return nullptr;
 }
 
+const ModuleInterface* TypeChecker::findModuleInterface(std::size_t moduleId) const
+{
+    const auto found = std::find_if(
+        moduleInterfaces_.begin(),
+        moduleInterfaces_.end(),
+        [moduleId](const ModuleInterface& interfaceInfo) {
+            return interfaceInfo.moduleId == moduleId;
+        });
+    return found == moduleInterfaces_.end() ? nullptr : &*found;
+}
+
 
 void TypeChecker::buildModuleInterfaces(const Program& program)
 {
@@ -898,7 +987,10 @@ void TypeChecker::buildModuleInterfaces(const Program& program)
 
         if (const ModuleValueExports* exports = moduleSymbols_.valueExports(module->moduleId)) {
             for (const auto& entry : *exports) {
-                interfaceInfo.values.push_back(ModuleInterfaceValue{entry.first, entry.second.type});
+                interfaceInfo.values.push_back(ModuleInterfaceValue{
+                    entry.first,
+                    entry.second.type,
+                    entry.second.resolvedName});
             }
         }
 
@@ -921,7 +1013,9 @@ void TypeChecker::buildModuleInterfaces(const Program& program)
                                 methodEntry.second.parameterTypes,
                                 methodEntry.second.returnType,
                                 methodEntry.second.genericParameters,
-                                methodEntry.second.genericParameterConstraints});
+                                methodEntry.second.genericParameterConstraints,
+                                methodEntry.second.receiverType,
+                                methodEntry.second.resolvedName});
                         }
                     }
                 }
@@ -1175,56 +1269,49 @@ void TypeChecker::checkImport(const ImportStmt& statement)
         throw TypeError(statement.keyword, "internal error: unresolved import module");
     }
     checkModule(*imported);
+    buildModuleInterfaces(*currentProgram_);
+    const ModuleInterface* importedInterface = findModuleInterface(imported->moduleId);
+    if (!importedInterface) {
+        throw TypeError(statement.keyword, "internal error: unresolved imported module interface");
+    }
 
     if (statement.alias) {
         NamespaceImport namespaceImport;
-        if (const ModuleValueExports* exports = moduleSymbols_.valueExports(imported->moduleId)) {
-            namespaceImport.values = *exports;
-        }
-        if (const ModuleStructExports* structExports = moduleSymbols_.structExports(imported->moduleId)) {
-            namespaceImport.structs = *structExports;
-        }
-        if (const ModuleEnumExports* enumExports = moduleSymbols_.enumExports(imported->moduleId)) {
-            namespaceImport.enums = *enumExports;
-        }
-        if (const ModuleMethodExports* methodExports = moduleSymbols_.methodExports(imported->moduleId)) {
-            namespaceImport.methods = *methodExports;
-        }
+        namespaceImport.values = valueExportsFromInterface(*importedInterface);
+        namespaceImport.structs = structExportsFromInterface(*importedInterface, statement.keyword);
+        namespaceImport.enums = enumExportsFromInterface(*importedInterface, statement.keyword);
+        namespaceImport.methods = methodExportsFromInterface(*importedInterface);
         declareNamespaceAlias(statement, std::move(namespaceImport));
         return;
     }
 
-    if (const ModuleValueExports* exports = moduleSymbols_.valueExports(imported->moduleId)) {
-        for (const auto& entry : *exports) {
+    const ModuleValueExports values = valueExportsFromInterface(*importedInterface);
+    for (const auto& entry : values) {
+        Token name{TokenType::Identifier, entry.first, statement.keyword.line, statement.keyword.column};
+        declareImportedVariable(name, entry.second);
+    }
+
+    const ModuleStructExports structs = structExportsFromInterface(*importedInterface, statement.keyword);
+    for (const auto& entry : structs) {
+        if (structTypes_.find(entry.first) != structTypes_.end()) {
             Token name{TokenType::Identifier, entry.first, statement.keyword.line, statement.keyword.column};
-            declareImportedVariable(name, entry.second);
+            throw TypeError(name, "duplicate struct `" + entry.first + "`");
         }
+        structTypes_.emplace(entry.first, entry.second);
     }
 
-    if (const ModuleStructExports* structExports = moduleSymbols_.structExports(imported->moduleId)) {
-        for (const auto& entry : *structExports) {
-            if (structTypes_.find(entry.first) != structTypes_.end()) {
-                Token name{TokenType::Identifier, entry.first, statement.keyword.line, statement.keyword.column};
-                throw TypeError(name, "duplicate struct `" + entry.first + "`");
-            }
-            structTypes_.emplace(entry.first, entry.second);
+    const ModuleEnumExports enums = enumExportsFromInterface(*importedInterface, statement.keyword);
+    for (const auto& entry : enums) {
+        if (enumTypes_.find(entry.first) != enumTypes_.end()
+            || structTypes_.find(entry.first) != structTypes_.end()) {
+            Token name{TokenType::Identifier, entry.first, statement.keyword.line, statement.keyword.column};
+            throw TypeError(name, "duplicate type " + entry.first);
         }
+        enumTypes_.emplace(entry.first, entry.second);
     }
 
-    if (const ModuleEnumExports* enumExports = moduleSymbols_.enumExports(imported->moduleId)) {
-        for (const auto& entry : *enumExports) {
-            if (enumTypes_.find(entry.first) != enumTypes_.end()
-                || structTypes_.find(entry.first) != structTypes_.end()) {
-                Token name{TokenType::Identifier, entry.first, statement.keyword.line, statement.keyword.column};
-                throw TypeError(name, "duplicate type " + entry.first);
-            }
-            enumTypes_.emplace(entry.first, entry.second);
-        }
-    }
-
-    if (const ModuleMethodExports* methodExports = moduleSymbols_.methodExports(imported->moduleId)) {
-        importMethodExports(statement.keyword, *methodExports);
-    }
+    const ModuleMethodExports methods = methodExportsFromInterface(*importedInterface);
+    importMethodExports(statement.keyword, methods);
 }
 
 std::string TypeChecker::sourcePathLabel(const Token& path) const
@@ -1243,16 +1330,12 @@ void TypeChecker::ensureExportNameAvailable(std::size_t moduleId, const Token& n
 }
 
 void TypeChecker::forwardStructMethodExports(
-    std::size_t targetModuleId,
+    const ModuleMethodExports& targetExports,
     std::size_t currentModuleId,
     const std::string& structName)
 {
-    const ModuleMethodExports* methodExports = moduleSymbols_.methodExports(targetModuleId);
-    if (!methodExports) {
-        return;
-    }
-    const auto found = methodExports->find(structName);
-    if (found == methodExports->end()) {
+    const auto found = targetExports.find(structName);
+    if (found == targetExports.end()) {
         return;
     }
     moduleSymbols_.recordMethodExports(currentModuleId, structName, found->second);
@@ -1276,38 +1359,38 @@ void TypeChecker::checkReExport(const ExportStmt& statement)
         throw TypeError(statement.keyword, "internal error: unresolved re-export module");
     }
     checkModule(*target);
+    buildModuleInterfaces(*currentProgram_);
+    const ModuleInterface* targetInterface = findModuleInterface(target->moduleId);
+    if (!targetInterface) {
+        throw TypeError(statement.keyword, "internal error: unresolved re-export module interface");
+    }
 
-    const ModuleValueExports* valueExports = moduleSymbols_.valueExports(target->moduleId);
-    const ModuleStructExports* structExports = moduleSymbols_.structExports(target->moduleId);
-    const ModuleEnumExports* enumExports = moduleSymbols_.enumExports(target->moduleId);
+    const ModuleValueExports valueExports = valueExportsFromInterface(*targetInterface);
+    const ModuleStructExports structExports = structExportsFromInterface(*targetInterface, statement.keyword);
+    const ModuleEnumExports enumExports = enumExportsFromInterface(*targetInterface, statement.keyword);
+    const ModuleMethodExports methodExports = methodExportsFromInterface(*targetInterface);
 
     for (const Token& name : statement.names) {
         ensureExportNameAvailable(currentModuleId, name);
 
         bool exported = false;
-        if (valueExports) {
-            const auto found = valueExports->find(name.lexeme);
-            if (found != valueExports->end()) {
-                moduleSymbols_.recordValueExport(currentModuleId, name.lexeme, found->second);
-                exported = true;
-            }
+        const auto value = valueExports.find(name.lexeme);
+        if (value != valueExports.end()) {
+            moduleSymbols_.recordValueExport(currentModuleId, name.lexeme, value->second);
+            exported = true;
         }
 
-        if (structExports) {
-            const auto found = structExports->find(name.lexeme);
-            if (found != structExports->end()) {
-                moduleSymbols_.recordStructExport(currentModuleId, name.lexeme, found->second);
-                forwardStructMethodExports(target->moduleId, currentModuleId, name.lexeme);
-                exported = true;
-            }
+        const auto structure = structExports.find(name.lexeme);
+        if (structure != structExports.end()) {
+            moduleSymbols_.recordStructExport(currentModuleId, name.lexeme, structure->second);
+            forwardStructMethodExports(methodExports, currentModuleId, name.lexeme);
+            exported = true;
         }
 
-        if (enumExports) {
-            const auto found = enumExports->find(name.lexeme);
-            if (found != enumExports->end()) {
-                moduleSymbols_.recordEnumExport(currentModuleId, name.lexeme, found->second);
-                exported = true;
-            }
+        const auto enumeration = enumExports.find(name.lexeme);
+        if (enumeration != enumExports.end()) {
+            moduleSymbols_.recordEnumExport(currentModuleId, name.lexeme, enumeration->second);
+            exported = true;
         }
 
         if (!exported) {

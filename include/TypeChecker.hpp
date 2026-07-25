@@ -135,9 +135,13 @@ private:
     void checkExport(const ExportStmt& statement);
     std::string sourcePathLabel(const Token& path) const;
     void ensureExportNameAvailable(std::size_t moduleId, const Token& name) const;
-    void forwardStructMethodExports(std::size_t targetModuleId, std::size_t currentModuleId, const std::string& structName);
+    void forwardStructMethodExports(
+        const ModuleMethodExports& targetExports,
+        std::size_t currentModuleId,
+        const std::string& structName);
     void checkReExport(const ExportStmt& statement);
     const ModuleStmt* findModule(const Program& program, std::size_t moduleId) const;
+    const ModuleInterface* findModuleInterface(std::size_t moduleId) const;
     void buildModuleInterfaces(const Program& program);
     void checkStructDeclaration(const StructDeclStmt& statement);
     void checkEnumDeclaration(const EnumDeclStmt& statement);

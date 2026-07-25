@@ -12,6 +12,7 @@
 struct ModuleInterfaceValue {
     std::string name;
     TypeInfo type;
+    std::string resolvedName;
 };
 
 struct ModuleInterfaceField {
@@ -25,6 +26,8 @@ struct ModuleInterfaceMethod {
     TypeInfo returnType;
     std::vector<std::string> genericParameters;
     std::vector<std::shared_ptr<TypeInfo>> genericParameterConstraints;
+    TypeInfo receiverType;
+    std::string resolvedName;
 };
 
 struct ModuleInterfaceStruct {

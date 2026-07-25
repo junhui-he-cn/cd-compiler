@@ -59,16 +59,18 @@ void testValuesStructsFieldsMethodsAndTypes()
     module.path = "main.cd";
     module.isEntry = true;
 
-    module.values.push_back(ModuleInterfaceValue{"zeta", nullableType(namedStructType("Point"))});
+    module.values.push_back(ModuleInterfaceValue{"zeta", nullableType(namedStructType("Point")), ""});
     module.values.push_back(ModuleInterfaceValue{
         "make",
         functionType(
             std::vector<TypeInfo>{simpleType(StaticType::Number), arrayType(nullableType(simpleType(StaticType::String)))},
-            namedStructType("Point"))});
+            namedStructType("Point")),
+            ""});
     module.values.push_back(ModuleInterfaceValue{
         "identity",
-        functionType({typeParameterType("T")}, typeParameterType("T"), {"T"})});
-    module.values.push_back(ModuleInterfaceValue{"dynamic", unknownType()});
+        functionType({typeParameterType("T")}, typeParameterType("T"), {"T"}),
+        ""});
+    module.values.push_back(ModuleInterfaceValue{"dynamic", unknownType(), ""});
 
     ModuleInterfaceStruct point;
     point.name = "Point";
@@ -79,15 +81,19 @@ void testValuesStructsFieldsMethodsAndTypes()
         {simpleType(StaticType::Number), simpleType(StaticType::Number)},
         namedStructType("Point"),
         {},
-        {}});
+        {},
+        unknownType(),
+        ""});
     point.methods.push_back(ModuleInterfaceMethod{
         "echo",
         {typeParameterType("T")},
         typeParameterType("T"),
         {"T"},
-        {std::make_shared<TypeInfo>(simpleType(StaticType::Number))}});
+        {std::make_shared<TypeInfo>(simpleType(StaticType::Number))},
+        unknownType(),
+        ""});
     point.methods.push_back(ModuleInterfaceMethod{
-        "length", {}, simpleType(StaticType::Number), {}, {}});
+        "length", {}, simpleType(StaticType::Number), {}, {}, unknownType(), ""});
 
     ModuleInterfaceStruct box;
     box.name = "Box";
