@@ -105,6 +105,33 @@ The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification
 command are the gates for this revision.
 
+## M2A-FLOW-004: indirect and dynamic-call invalidation
+
+After successful argument and call-shape checking, an indirect or dynamic
+function call invalidates every active nullable narrowing. This includes a
+function alias, a function-valued binding initialized from an anonymous closure,
+and a callee whose target cannot be resolved by `DeclarationIndex`. A resolved
+direct `FunctionStmt` call keeps the precise captured-binding behavior from
+M2A-FLOW-003, so direct non-capturing calls do not disturb unrelated facts.
+
+The conservative all-fact rule makes the current absence of function-value
+capture summaries explicit. Native stdlib fast paths, native callbacks, and
+struct-method effects remain outside this slice. The decision revision is
+`m2a-2026-07-25-r4`, based on commit `28649c3`.
+
+The positive fixture re-checks the nullable binding after both a named-function
+alias call and an anonymous function-valued call. The negative fixture uses the
+stale proof after an alias call and is rejected. The M0D inventory now validates
+1671 cases, including:
+
+- `golden.type_errors.nullable_narrowing_indirect_call_invalidated`
+- `rust_vm.golden.nullable_narrowing_indirect_call_recheck.emit`
+- `rust_vm.golden.nullable_narrowing_indirect_call_recheck.run`
+
+The FlowFacts CTest, focused golden and Rust VM subsets,
+`python3 tests/verification_inventory.py`, and the full canonical verification
+command are the gates for this revision.
+
 ## M2A-FLOW-005: native callback-call invalidation
 
 After successful callback checking, an unshadowed native `map`, `filter`,
@@ -131,28 +158,26 @@ The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification
 command are the gates for this revision.
 
-## M2A-FLOW-004: indirect and dynamic-call invalidation
+## M2A-FLOW-006: struct-method call invalidation
 
-After successful argument and call-shape checking, an indirect or dynamic
-function call invalidates every active nullable narrowing. This includes a
-function alias, a function-valued binding initialized from an anonymous closure,
-and a callee whose target cannot be resolved by `DeclarationIndex`. A resolved
-direct `FunctionStmt` call keeps the precise captured-binding behavior from
-M2A-FLOW-003, so direct non-capturing calls do not disturb unrelated facts.
+After successful argument and call-shape checking, every resolved struct-method
+call invalidates all active nullable narrowing. This is deliberately
+conservative: methods have an implicit receiver, may mutate receiver fields,
+and may observe or mutate top-level state that is not represented as a captured
+local binding. The rule does not add field/index narrowing.
 
-The conservative all-fact rule makes the current absence of function-value
-capture summaries explicit. Native stdlib fast paths, native callbacks, and
-struct-method effects remain outside this slice. The decision revision is
-`m2a-2026-07-25-r4`, based on commit `28649c3`.
+The implementation reuses `DeclarationIndex`'s `StructMethod` call target and
+applies the shared all-fact invalidation only after method checking succeeds.
+Unresolved member calls and future dynamic dispatch remain outside this slice.
+The decision revision is `m2a-2026-07-25-r6`, based on commit `63148d0`.
 
-The positive fixture re-checks the nullable binding after both a named-function
-alias call and an anonymous function-valued call. The negative fixture uses the
-stale proof after an alias call and is rejected. The M0D inventory now validates
-1671 cases, including:
+The positive fixture calls a method that reads a top-level nullable binding and
+then rechecks it. The negative fixture uses the stale proof after the method
+call and is rejected. The M0D inventory now validates 1677 cases, including:
 
-- `golden.type_errors.nullable_narrowing_indirect_call_invalidated`
-- `rust_vm.golden.nullable_narrowing_indirect_call_recheck.emit`
-- `rust_vm.golden.nullable_narrowing_indirect_call_recheck.run`
+- `golden.type_errors.nullable_narrowing_struct_method_invalidated`
+- `rust_vm.golden.nullable_narrowing_struct_method_recheck.emit`
+- `rust_vm.golden.nullable_narrowing_struct_method_recheck.run`
 
 The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification

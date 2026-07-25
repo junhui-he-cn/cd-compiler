@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "decision_revision": "m2a-2026-07-25-r5",
-  "baseline_commit": "120c4a2",
+  "decision_revision": "m2a-2026-07-25-r6",
+  "baseline_commit": "63148d0",
   "supersedes": ["SEM-TYPE-002"],
   "purpose": "Record intentional M2A flow-semantics revisions after the behavior-preserving M1 migration.",
   "entries": [
@@ -180,6 +180,43 @@
           "cmake --build build --target flow_facts_tests compiler_design",
           "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_native_callback",
           "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_native_callback_recheck",
+          "python3 tests/verification_inventory.py --write",
+          "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+        ]
+      }
+    },
+    {
+      "decision_id": "M2A-FLOW-006",
+      "introduced_revision": "m2a-2026-07-25-r6",
+      "domain": "flow-analysis",
+      "question": "How does a resolved struct-method call affect active nullable narrowing?",
+      "decision": "After successful argument and call-shape checking, every resolved struct-method call invalidates all active nullable narrowing. The rule is intentionally conservative because a method may mutate receiver fields or top-level state, while field/index narrowing itself remains unsupported. Unresolved member calls and future dynamic dispatch are outside this slice.",
+      "status": "resolved",
+      "owner": "DeclarationIndex struct-method targets, TypeChecker, and FlowFacts",
+      "m1_behavior": "Before this revision, a resolved struct-method call retained caller-side nullable proofs even though method bodies could mutate shared receiver or top-level state.",
+      "rationale": "Struct methods have an implicit receiver and can perform field mutations that are not represented by the simple-variable capture metadata. Top-level bindings are also not method captures. Invalidating all facts avoids retaining proofs across either effect boundary without pretending to implement field/index narrowing.",
+      "affected_consumers": [
+        "DeclarationIndex struct-method target metadata",
+        "TypeChecker member-call checking",
+        "FlowFacts all-fact invalidation",
+        "nullable struct-method compatibility fixtures"
+      ],
+      "compatibility_consequences": "Code that uses a nullable binding as non-null after a resolved struct-method call must perform a fresh supported nil check. Struct-method calls with no apparent mutation are conservatively covered by the same rule.",
+      "migration": "Reuse the existing StructMethod call target metadata and invoke the shared all-fact invalidation primitive only after normal method argument checking succeeds. Keep receiver field/index analysis unchanged.",
+      "quantitative_gate": "The m0d-2026-07-22-r1 inventory validates 1677 cases, the FlowFacts CTest passes, the named struct-method positive and negative fixtures pass, and the full canonical verification command remains the release gate.",
+      "old_path_deletion_condition": "Delete no additional production path in this slice. The old retained-proof behavior is replaced only after resolved struct-method all-fact invalidation and its positive/negative fixtures pass; a future effect-summary and field/index slice may replace the conservative rule.",
+      "positive_fixtures": [
+        "tests/golden/nullable_narrowing_struct_method_recheck"
+      ],
+      "negative_fixtures": [
+        "tests/golden/type_errors/nullable_narrowing_struct_method_invalidated.cd"
+      ],
+      "verification": {
+        "inventory_revision": "m0d-2026-07-22-r1",
+        "commands": [
+          "cmake --build build --target flow_facts_tests compiler_design",
+          "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_struct_method",
+          "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_struct_method_recheck",
           "python3 tests/verification_inventory.py --write",
           "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
         ]

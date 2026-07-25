@@ -226,6 +226,8 @@ private:
     CheckedExpression checkCall(const CallExpr& expression);
     void invalidateCallEffects(const CallExpr& expression);
     void invalidateCapturedBindings(const CallExpr& expression);
+    void invalidateStructMethodEffects(const MemberCallExpr& expression);
+    void invalidateCapturedSymbols(const CaptureRecord& captures);
     CheckedExpression checkMemberCall(
         const MemberCallExpr& expression,
         const TypeInfo* expectedType = nullptr);

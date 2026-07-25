@@ -70,9 +70,11 @@ Resolved direct calls to local closures invalidate active nullable narrowing for
 their captured bindings, because the call may update a shared cell. Ordinary
 non-capturing calls retain unrelated active narrowing. Indirect or dynamic calls,
 including function aliases and function-valued bindings, conservatively
-invalidate all active nullable narrowing. Native callbacks and struct-method
-calls use the same all-fact invalidation when they can invoke a callback;
-struct-method effects are not yet modeled.
+invalidate all active nullable narrowing. Native callback-capable calls use the
+same all-fact invalidation after callback checking. Resolved struct-method calls
+also conservatively invalidate all active nullable narrowing because they may
+mutate receiver fields or top-level state. This does not add field/index
+narrowing.
 
 The built-in `map<K, V>` type and nominal generic structs such as `Box<T>` are
 implemented generic collection/container forms. Map literals use `{ key: value }`

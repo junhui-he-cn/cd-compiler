@@ -3698,6 +3698,7 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
 
     if (const auto* memberCall = dynamic_cast<const MemberCallExpr*>(&expression)) {
         CheckedExpression result = checkMemberCall(*memberCall, expectedType);
+        invalidateStructMethodEffects(*memberCall);
         if (isNativeCallbackName(memberCall->name.lexeme)
             && !declarationIndex_.memberCallMetadata(*memberCall)
             && !declarationIndex_.variantConstructor(*memberCall)) {
@@ -5051,7 +5052,22 @@ void TypeChecker::invalidateCapturedBindings(const CallExpr& expression)
         return;
     }
 
-    for (const ResolvedSymbol& symbol : captures->symbols) {
+    invalidateCapturedSymbols(*captures);
+}
+
+void TypeChecker::invalidateStructMethodEffects(const MemberCallExpr& expression)
+{
+    const CallTargetRecord* callTarget = declarationIndex_.callTarget(expression);
+    if (!callTarget || callTarget->kind != CallTargetKind::StructMethod) {
+        return;
+    }
+
+    flowFacts_.invalidateAll();
+}
+
+void TypeChecker::invalidateCapturedSymbols(const CaptureRecord& captures)
+{
+    for (const ResolvedSymbol& symbol : captures.symbols) {
         if (const Binding* binding = findBinding(symbol.declarationId)) {
             flowFacts_.invalidate(binding->resolvedName);
         }

@@ -1,0 +1,14 @@
+struct Box { value: number }
+let maybe: number? = 42;
+
+impl Box {
+  fun show() {
+    print maybe;
+  }
+}
+
+let box = Box { value: 1 };
+if (maybe != nil) {
+  box.show();
+  print maybe + 1;
+}
