@@ -41513,6 +41513,68 @@
       "fixture": "tests/golden/nullable_narrowing_while_body_recheck"
     },
     {
+      "case_id": "rust_vm.golden.nullable_narrowing_while_exit_recheck.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "nullable_narrowing_while_exit_recheck emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:nullable_narrowing_while_exit_recheck"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/nullable_narrowing_while_exit_recheck/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_narrowing_while_exit_recheck/run.out"
+      ],
+      "fixture": "tests/golden/nullable_narrowing_while_exit_recheck"
+    },
+    {
+      "case_id": "rust_vm.golden.nullable_narrowing_while_exit_recheck.run",
+      "runner": "rust_vm_golden",
+      "result_name": "nullable_narrowing_while_exit_recheck rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:nullable_narrowing_while_exit_recheck"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/nullable_narrowing_while_exit_recheck/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_narrowing_while_exit_recheck/run.out"
+      ],
+      "fixture": "tests/golden/nullable_narrowing_while_exit_recheck"
+    },
+    {
       "case_id": "rust_vm.golden.or_patterns.emit",
       "runner": "rust_vm_golden",
       "result_name": "or_patterns emit",

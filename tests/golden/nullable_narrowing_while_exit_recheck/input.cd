@@ -1,0 +1,13 @@
+fun after(value: number?): number {
+  while (value == nil) {
+    while (true) {
+      break;
+    }
+    value = 1;
+    continue;
+  }
+  return value + 1;
+}
+
+print after(nil);
+print after(41);

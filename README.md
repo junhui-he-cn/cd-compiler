@@ -94,9 +94,11 @@ nullable facts survives. A proof established in just one arm, or invalidated in
 either arm, is not retained after the `if`.
 
 Inside a `while`, the condition's true-branch nullable facts are active while
-checking the loop body. They are discarded at the loop boundary, so a nullable
-binding must be checked again after the loop; C-style `for` and `for-in` loop
-narrowing remain conservative.
+checking the loop body. When the condition is a supported nil check and the
+body contains no `break` targeting that loop, its false-branch fact survives a
+normal condition-failure exit; otherwise loop exits remain conservative.
+`continue`, returns, and breaks belonging to nested loops do not block this
+rule. C-style `for` and `for-in` loop-exit narrowing remain conservative.
 
 Inside a C-style `for`, the condition's true-branch nullable facts are active
 while checking the loop body. They do not survive the loop, and initializer or

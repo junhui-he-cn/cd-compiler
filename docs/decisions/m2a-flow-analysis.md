@@ -361,3 +361,26 @@ The M0D inventory now validates 1699 cases, including:
 The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification
 command are the gates for this revision.
+
+## M2A-FLOW-014: no-break while condition-failure exit narrowing
+
+For a while loop whose condition produces an else narrowing, the else fact
+survives a normal condition-failure exit only when the body contains no `break`
+targeting the current loop. `continue`, returns, and breaks belonging to nested
+loops do not block the rule. C-style `for`, `for-in`, and exits with a
+current-loop break remain conservative.
+
+The decision revision is `m2a-2026-07-25-r14`, based on commit `7dcfef7`.
+The positive fixture uses `while (value == nil)` with an assignment that makes
+the next condition check fail, then uses `value` as a number after the loop.
+The existing negative fixture retains a current-loop `break` and confirms that
+the post-loop nullable use remains rejected. The M0D inventory now validates
+1701 cases, including:
+
+- `golden.type_errors.nullable_narrowing_while_post_loop_unsupported`
+- `rust_vm.golden.nullable_narrowing_while_exit_recheck.emit`
+- `rust_vm.golden.nullable_narrowing_while_exit_recheck.run`
+
+The FlowFacts CTest, focused golden and Rust VM subsets,
+`python3 tests/verification_inventory.py`, and the full canonical verification
+command are the gates for this revision.

@@ -745,11 +745,15 @@ void TypeChecker::checkStatement(const Stmt& statement)
             [this](const Expr& target) {
                 return nonNilNarrowingForTarget(target);
             });
+        const bool containsCurrentLoopBreak = statementContainsBreakForCurrentLoop(*whileStmt->body);
         ++loopDepth_;
         flowFacts_.withNarrowings(branchFacts.thenNarrowings, [&]() {
             checkStatement(*whileStmt->body);
         });
         --loopDepth_;
+        if (!containsCurrentLoopBreak) {
+            flowFacts_.appendNarrowings(branchFacts.elseNarrowings);
+        }
         return;
     }
 
@@ -1363,6 +1367,40 @@ bool TypeChecker::statementMayFallThrough(const Stmt& statement) const
         return false;
     }
     return true;
+}
+
+bool TypeChecker::statementContainsBreakForCurrentLoop(const Stmt& statement) const
+{
+    if (dynamic_cast<const BreakStmt*>(&statement)) {
+        return true;
+    }
+    if (dynamic_cast<const WhileStmt*>(&statement)
+        || dynamic_cast<const ForStmt*>(&statement)
+        || dynamic_cast<const ForInStmt*>(&statement)
+        || dynamic_cast<const FunctionStmt*>(&statement)
+        || dynamic_cast<const ImplStmt*>(&statement)) {
+        return false;
+    }
+    if (const auto* block = dynamic_cast<const BlockStmt*>(&statement)) {
+        for (const auto& child : block->statements) {
+            if (statementContainsBreakForCurrentLoop(*child)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    if (const auto* ifStmt = dynamic_cast<const IfStmt*>(&statement)) {
+        return statementContainsBreakForCurrentLoop(*ifStmt->thenBranch)
+            || (ifStmt->elseBranch && statementContainsBreakForCurrentLoop(*ifStmt->elseBranch));
+    }
+    if (const auto* match = dynamic_cast<const MatchStmt*>(&statement)) {
+        for (const MatchArm& arm : match->arms) {
+            if (statementContainsBreakForCurrentLoop(*arm.body)) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 void TypeChecker::checkImplicitNilReturn(

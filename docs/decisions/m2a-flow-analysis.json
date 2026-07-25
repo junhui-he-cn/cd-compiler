@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "decision_revision": "m2a-2026-07-25-r13",
-  "baseline_commit": "22c784c",
+  "decision_revision": "m2a-2026-07-25-r14",
+  "baseline_commit": "7dcfef7",
   "supersedes": ["SEM-TYPE-002"],
   "purpose": "Record intentional M2A flow-semantics revisions after the behavior-preserving M1 migration.",
   "entries": [
@@ -470,6 +470,42 @@
           "cmake --build build --target flow_facts_tests compiler_design",
           "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_index",
           "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_index_recheck",
+          "python3 tests/verification_inventory.py --write",
+          "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+        ]
+      }
+    },
+    {
+      "decision_id": "M2A-FLOW-014",
+      "introduced_revision": "m2a-2026-07-25-r14",
+      "domain": "flow-analysis",
+      "question": "When may a supported while condition's false-branch fact survive a loop exit?",
+      "decision": "For a while loop whose condition produces an else narrowing, the else fact survives a normal condition-failure exit only when the body contains no break targeting the current loop. Continue, returns, and breaks belonging to nested loops do not block the rule. C-style for, for-in, and loop exits with a current-loop break remain conservative.",
+      "status": "resolved",
+      "owner": "TypeChecker while-loop exit state and current-loop break detection",
+      "m1_behavior": "Before this revision, while-loop checking discarded all condition facts at the loop boundary, so a nullable value proven non-null by a condition-failure exit remained nullable after a no-break loop.",
+      "rationale": "A normal while exit is reached only after the condition evaluates false. Rejecting bodies with a current-loop break avoids treating an early exit as if the condition had been rechecked, while nested-loop breaks and continue statements preserve the outer loop's condition-failure boundary.",
+      "affected_consumers": [
+        "TypeChecker while-loop exit state",
+        "current-loop break-path detection",
+        "nullable while-exit compatibility fixtures"
+      ],
+      "compatibility_consequences": "After a no-break `while (value == nil)` loop, the continuation may use `value` as non-null. A current-loop break, unsupported condition shape, C-style for, or for-in loop retains conservative nullable behavior.",
+      "migration": "Reuse existing FlowFacts condition analysis and scoped body facts. Detect break statements that target the current while loop, then append only the condition's else facts after a body check when no such break exists; nested loop and function boundaries stop the break scan.",
+      "quantitative_gate": "The m0d-2026-07-22-r1 inventory validates 1701 cases, the FlowFacts CTest passes, the no-break while-exit positive fixture and current-loop-break negative fixture pass, and the full canonical verification command remains the release gate.",
+      "old_path_deletion_condition": "Delete no additional production path in this slice. The old unconditional loop-boundary discard is replaced only after current-loop break detection, scoped body checking, and its positive/negative fixtures pass; C-style for, for-in, and broader loop joins require later slices.",
+      "positive_fixtures": [
+        "tests/golden/nullable_narrowing_while_exit_recheck"
+      ],
+      "negative_fixtures": [
+        "tests/golden/type_errors/nullable_narrowing_while_post_loop_unsupported.cd"
+      ],
+      "verification": {
+        "inventory_revision": "m0d-2026-07-22-r1",
+        "commands": [
+          "cmake --build build --target flow_facts_tests compiler_design",
+          "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_while",
+          "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_while_exit_recheck",
           "python3 tests/verification_inventory.py --write",
           "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
         ]
