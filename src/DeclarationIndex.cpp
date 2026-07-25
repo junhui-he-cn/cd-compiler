@@ -1419,7 +1419,7 @@ std::optional<ResolvedSymbol> DeclarationIndex::compoundAssignmentReference(
         : std::optional<ResolvedSymbol>(found->second);
 }
 
-std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved)
+std::size_t DeclarationIndex::validateMetadata() const
 {
     std::size_t mismatches = 0;
     const auto requireTypedExpression = [&](const Expr& expression) {
@@ -1491,6 +1491,9 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
     validateBindingMetadataMap(forInBindingMetadata_);
 
     for (const DeclarationRecord& record : declarations_) {
+        if (!record.declarationId.valid() || !record.symbolId.valid()) {
+            ++mismatches;
+        }
         if (record.kind == DeclarationKind::Variable
             && record.statement
             && dynamic_cast<const LetStmt*>(record.statement)) {
@@ -1499,38 +1502,12 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
             if (!metadata || !bindingMetadataMatches(*metadata, record)) {
                 ++mismatches;
             }
-        } else if (record.kind == DeclarationKind::Function && record.statement) {
-            try {
-                if (!resolved.declarationId(*record.statement).valid()) {
-                    ++mismatches;
-                }
-            } catch (const std::logic_error&) {
-                ++mismatches;
-            }
-        } else if ((record.kind == DeclarationKind::Struct
-                || record.kind == DeclarationKind::Enum)
-            && record.statement) {
-            try {
-                if (!resolved.declarationId(*record.statement).valid()) {
-                    ++mismatches;
-                }
-            } catch (const std::logic_error&) {
-                ++mismatches;
-            }
         } else if (record.kind == DeclarationKind::ForInVariable && record.statement) {
             const auto* forIn = dynamic_cast<const ForInStmt*>(record.statement);
             const BindingMetadataRecord* metadata = forIn
                 ? forInBindingMetadata(*forIn)
                 : nullptr;
             if (!forIn || !metadata || !bindingMetadataMatches(*metadata, record)) {
-                ++mismatches;
-            }
-        } else if (record.kind == DeclarationKind::Method && record.method) {
-            try {
-                if (!resolved.methodDeclarationId(*record.method).valid()) {
-                    ++mismatches;
-                }
-            } catch (const std::logic_error&) {
                 ++mismatches;
             }
         }

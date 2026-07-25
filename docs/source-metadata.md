@@ -32,7 +32,7 @@ lexical lookup tables; function/method signatures; import/export metadata; and
 the targets of variable reads, ordinary assignments, and compound assignments.
 Direct calls through lexical value bindings receive `CallTargetRecord` values,
 and locally declared struct method calls receive exact method declaration and
-symbol targets after the shadow comparison. For-in variables and match pattern
+symbol targets after metadata validation. For-in variables and match pattern
 variables expose the same declaration/symbol target shape, including one shared
 target for all occurrences of an OR-pattern binding.
 Struct and enum declarations retain their AST records for field and variant
@@ -42,15 +42,14 @@ optional return annotations.
 DeclarationId-based queries for these records without resolving annotations to
 canonical semantic types; that ownership remains with the later type model.
 
-The checker exposes the index and a shadow-comparison count. During this
+The checker exposes the index and a metadata-validation count. During this
 migration slice, type and namespace qualifiers are not treated as value reads,
 and OR-pattern occurrences share one declaration record. Native calls, enum
 constructors, namespace-qualified calls, and imported methods remain external
 targets in this slice; only locally available function bindings and method
-declarations are materialized. The old `ResolvedNames` implementation remains
-the behavior oracle; module graph resolution and materialization of imported
-value symbols are deferred to M3A. The index IDs are not serialized into
-`.cdbc` artifacts or used as cache keys.
+declarations are materialized. The index IDs are not serialized into `.cdbc`
+artifacts or used as cache keys; module graph resolution and materialization of
+imported value symbols remain deferred to M3A.
 
 ## Typed expression metadata (M1C slices)
 
@@ -64,15 +63,15 @@ dynamic collection inference. Native call records retain the resolved native
 name; legacy `len` lowering remains outside this registry. All records are keyed
 by the AST expression address within the current snapshot, are not persistent
 identities, and do not claim canonical type ownership. The checker requires these
-records during shadow comparison for the migrated expression families. IR
+records during metadata validation for the migrated expression families. IR
 lowering consumes native-call records for direct and member calls, typed call
 result records, local direct/member-call targets, and variant-constructor
 records, variable, assignment, and compound-assignment result records,
 array/map/struct type records, field-access and field-assignment result records,
 and index result records; `len`, collection helpers, and other unmigrated
 families retain their documented AST/native special-case lowering. The
-`IRCompiler` entry point itself consumes only `DeclarationIndex` metadata; the
-legacy `ResolvedNames` object remains confined to checker-side comparison.
+`IRCompiler` entry point itself consumes only `DeclarationIndex` metadata; no
+legacy semantic table remains on the checker or lowering boundary.
 
 ## Function and return metadata (M1D initial slice)
 
@@ -138,7 +137,8 @@ instantiation, callback specialization, struct/enum payload checking, and
 pattern binding checks through `SemanticTypes`. The old unqualified helpers
 remain forwarding APIs for source compatibility during the migration; they do
 not hold a second implementation. This slice preserves diagnostics, IR,
-`.cdbc` artifacts, runtime behavior, and snapshot-local type records.
+`.cdbc` artifacts, runtime behavior, and snapshot-local type records. No
+legacy `ResolvedNames` object remains on the checker or lowering boundary.
 
 ## Collection index operations (M1E2 initial slice)
 
@@ -164,8 +164,8 @@ record.
 `VariantConstructorRecord` additionally carries the resolved enum result type
 and substituted payload types, so variant lowering validates constructor shape
 without reconstructing generic payload types from the AST. M1F constructor
-dispatch now selects this record directly; the old `ResolvedNames` variant
-identity adapter is removed and shadow comparison validates the record's
+dispatch now selects this record directly; the former variant identity adapter
+is removed and metadata validation checks the record's
 runtime identity and payload shape directly.
 
 ## Literal pattern inputs (M1E3 initial slice)
@@ -203,7 +203,7 @@ name, checked type, binding ID, and declaration/symbol target for every
 `IRCompiler` consumes the resolved name for arm-local stores while
 `TypeChecker` remains responsible for binding compatibility and scope rules.
 The old `ResolvedNames` runtime-name and binding-ID accessors have been
-removed; declaration-index shadow comparison validates the record directly.
+removed; declaration-index metadata validation validates the record directly.
 
 ## Binding operation inputs (M1F initial slice)
 
@@ -213,9 +213,9 @@ assignments, and `for-in` bindings. Each record carries the checker-assigned
 runtime name, snapshot-local binding ID, declaration/symbol target, and source
 range when the binding has one. Register-IR lowering consumes these records for
 variable storage and access, so shadowed bindings cannot fall back to
-source-name reconstruction. Shadow comparison validates the record's source
-identity and field completeness directly; the corresponding `ResolvedNames`
-binding operation adapters are removed.
+source-name reconstruction. Metadata validation checks the record's source
+identity and field completeness directly; the former binding operation
+adapters are removed.
 
 ## Function metadata inputs (M1F next slice)
 
@@ -223,9 +223,10 @@ binding operation adapters are removed.
 for every named function, named-struct method, and anonymous function. The
 record carries the checker-assigned runtime name, stable IR function label, and
 resolved parameter-name list. Register-IR lowering consumes the record for
-function storage, function-table construction, and parameter setup. The old
-`ResolvedNames` function and parameter adapters are removed; declaration-index
-comparison validates the record's label, runtime name, and parameter shape.
+function storage, function-table construction, and parameter setup. The former
+function and parameter adapters are removed;
+declaration-index metadata validation checks the record's label, runtime name,
+and parameter shape.
 
 ## Member-call inputs (M1F next slice)
 
@@ -236,7 +237,7 @@ validation, while imported method targets remain external as before. IR
 lowering consumes the member-call record for callee loading and argument
 ordering. Local method targets are recorded directly in the same
 `DeclarationIndex` snapshot, and the old `ResolvedNames` member-call accessors
-are removed; shadow comparison validates the member-call record and its local
+are removed; metadata validation validates the member-call record and its local
 target shape directly.
 
 ## OR-pattern inputs (M1E3 next slice)

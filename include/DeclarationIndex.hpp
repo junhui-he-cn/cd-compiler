@@ -10,7 +10,6 @@
 #include <unordered_set>
 #include <vector>
 
-class ResolvedNames;
 class TypeChecker;
 class DeclarationIndexCollector;
 
@@ -292,10 +291,11 @@ public:
     std::optional<ResolvedSymbol> assignmentReference(const AssignExpr& expression) const;
     std::optional<ResolvedSymbol> compoundAssignmentReference(const CompoundAssignExpr& expression) const;
 
-    // Compares the collected declaration/reference shape with the legacy
-    // ResolvedNames table. IDs are owned by different migration snapshots, so
-    // comparison uses declaration kind/name/range rather than raw integers.
-    std::size_t compareResolvedNames(const ResolvedNames& resolved);
+    // Validates that the collected and checker-produced semantic records are
+    // complete and source-consistent. IDs are owned by different migration
+    // snapshots, so validation uses declaration kind/name/range rather than
+    // raw integer equality across the two collectors.
+    std::size_t validateMetadata() const;
 
 private:
     friend class DeclarationIndexCollector;

@@ -373,8 +373,8 @@ formatter-oriented trivia work in M1A2.
 #### M1A1: Snapshot identities and source ranges
 
 Current implementation slice: `include/SourceIdentity.hpp`, token/AST range
-metadata, `ResolvedNames` binding/scope IDs, and direct multi-file diagnostic
-range coverage are documented in `docs/source-metadata.md`. The existing
+metadata, `DeclarationIndex` binding/scope IDs, and direct multi-file
+diagnostic range coverage are documented in `docs/source-metadata.md`. The existing
 point-span, string lookup, CLI diagnostic, and artifact paths remain in place
 until their later migration gates are satisfied.
 
@@ -388,15 +388,15 @@ belong to M4A/M4B. The first proof covers lexical bindings, variable reads,
 assignments, block scope, and file-aware diagnostics.
 
 **Migration:** retain current string/pointer lookups and point locations while
-recording snapshot IDs and ranges beside them. Shadow-compare binding resolution
-and existing diagnostic output. Do not serialize or cache snapshot-local IDs as
-persistent keys.
+recording snapshot IDs and ranges beside them. Validate binding resolution and
+existing diagnostic output against the shared records. Do not serialize or
+cache snapshot-local IDs as persistent keys.
 
 **Quantitative gate:** every variable, assignment, scope, and direct-multi-file
 case ID selected from the bound M0A inventory uses snapshot IDs; within a
 snapshot each migrated entity has one ID and no persistent cache or artifact
-serializes it; semantic resolution and old lookup disagree zero times; every
-migrated token/node range is valid and ordered; and diagnostics retain their
+serializes it; shared semantic validation reports zero failures; every migrated
+token/node range is valid and ordered; and diagnostics retain their
 line/column/path output.
 
 **Delete the old path when:** no migrated binding or diagnostic reaches the
@@ -435,10 +435,10 @@ records and scopes from the existing AST, including function signatures,
 struct/enum declarations, method metadata, import/export records, namespace
 aliases, variable/assignment references, and local direct-call or struct-method
 targets, for-in bindings, and match pattern bindings. `TypeChecker` builds this
-index in shadow mode and compares value-reference names, source ranges, binding
-targets, and locally available call targets with its legacy `ResolvedNames`
-result. Declaration signatures and struct/enum shapes are exposed as AST-backed
-queries without claiming canonical type ownership. The proof slice is focused in
+index and validates value-reference names, source ranges, binding targets, and
+locally available call targets against the shared records. Declaration
+signatures and struct/enum shapes are exposed as AST-backed queries without
+claiming canonical type ownership. The proof slice is focused in
 `tests/ir_source_location_tests.cpp`; native calls, enum constructors,
 namespace-qualified calls, and imported method targets remain external cases,
 while module graph construction and imported symbol materialization remain
@@ -449,15 +449,16 @@ imported/exported symbols, function signatures, struct/enum declarations, and
 method metadata from expression checking. The proof slice covers declarations,
 calls, methods, and namespace-qualified names without changing source syntax.
 
-**Migration:** build the new symbol table from the existing AST, compare
-resolved symbol IDs and signatures with the current `TypeChecker` results, and
-switch one declaration family at a time. Keep module graph construction in M3A;
-this slice only establishes the semantic interface it will consume.
+**Migration:** build the new symbol table from the existing AST, validate
+resolved symbol shapes and signatures against source ranges and declaration
+records, and switch one declaration family at a time. Keep module graph
+construction in M3A; this slice only establishes the semantic interface it will
+consume.
 
 **Quantitative gate:** every function, method, struct, enum, import, export, and
 namespace case ID tagged in the M0A inventory passes through the new
-declaration/resolution path; zero unresolved-symbol mismatches remain in shadow
-mode; every resolved call has a snapshot-stable target ID before lowering.
+declaration/resolution path; zero unresolved-symbol validation failures remain;
+every resolved call has a snapshot-stable target ID before lowering.
 
 **Delete the old path when:** each migrated declaration family has no fallback
 name-resolution call site and its old symbol-table representation is no longer
@@ -472,7 +473,7 @@ compound assignments, index reads/assignments/compound assignments, and native
 function/member calls. `TypeChecker`
 materializes the existing `TypeInfo` result beside its legacy path, including
 statically known and dynamically validated indexing paths plus array/map/struct
-expression inference, and shadow comparison requires metadata completeness for
+expression inference, and metadata validation requires completeness for
 the migrated expression families. IR lowering now consumes native-call records,
 typed call result records, local direct/member-call targets, and
 variant-constructor records, variable, assignment, and compound-assignment
@@ -605,7 +606,7 @@ three records, explicit OR-pattern, guard, coverage, and pattern binding
 records, while
 `TypeChecker` remains the coverage and diagnostic oracle.
 The migrated variant-pattern enum/name and payload-index adapter has no
-production callers and is removed from `ResolvedNames`.
+production callers and the former legacy adapter is removed.
 Pattern binding runtime-name lookup is likewise owned by
 `DeclarationIndex::PatternBindingRecord`; the declaration-index shadow
 comparison now validates that record directly.
@@ -637,12 +638,11 @@ Initial cutover slices: `DeclarationIndex` owns resolved binding metadata for
 callees, variant constructors, and namespace value field accesses;
 register-IR lowering consumes those records for runtime names, parameter lists,
 receiver passing, constructor dispatch, and imported value loads. The legacy
-`ResolvedNames` table remains the comparison oracle for declaration/scope IDs
-and families not yet cut over; binding, function, member-call, field, and
-variant metadata are validated directly by the shared records.
+declaration/scope table has been removed; binding, function, member-call,
+field, and variant metadata are validated directly by the shared records.
 The `IRCompiler` backend boundary now accepts only `Program` plus
-`DeclarationIndex`; `TypeChecker` still builds `ResolvedNames` for migration
-comparison, but the legacy table is no longer passed into lowering.
+`DeclarationIndex`; `TypeChecker` exposes the validation count for migration
+coverage, and no legacy semantic table is built or passed into lowering.
 
 **Migration:** compare the final result with the canonical M0B reference corpus,
 switch every type-checking and lowering CLI/test entry point to HIR, and retain

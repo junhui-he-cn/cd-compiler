@@ -25,33 +25,9 @@ public:
     TypeError(const Token& token, std::string message);
 };
 
-class ResolvedNames {
-public:
-    bool hasScope(const Stmt& statement) const;
-    ScopeId scopeId(const Stmt& statement) const;
-    DeclarationId declarationId(const Stmt& statement) const;
-    SymbolId symbolId(const Stmt& statement) const;
-    DeclarationId methodDeclarationId(const MethodDecl& method) const;
-    SymbolId methodSymbolId(const MethodDecl& method) const;
-
-private:
-    friend class TypeChecker;
-
-    void clear();
-    void recordDeclaration(const Stmt& statement, DeclarationId declaration, SymbolId symbol);
-    void recordMethodDeclaration(const MethodDecl& method, DeclarationId declaration, SymbolId symbol);
-    void recordScope(const Stmt& statement, ScopeId id);
-
-    std::unordered_map<const Stmt*, DeclarationId> declarationIds_;
-    std::unordered_map<const Stmt*, SymbolId> symbolIds_;
-    std::unordered_map<const MethodDecl*, DeclarationId> methodDeclarationIds_;
-    std::unordered_map<const MethodDecl*, SymbolId> methodSymbolIds_;
-    std::unordered_map<const Stmt*, ScopeId> scopeIds_;
-};
-
 class TypeChecker {
 public:
-    const ResolvedNames& check(const Program& program);
+    void check(const Program& program);
     const std::vector<ModuleInterface>& moduleInterfaces() const;
     const DeclarationIndex& declarationIndex() const;
     std::size_t declarationIndexMismatchCount() const;
@@ -359,7 +335,6 @@ private:
     std::vector<ModuleInterface> moduleInterfaces_;
     std::unordered_set<std::size_t> checkedModules_;
     std::vector<std::size_t> moduleStack_;
-    ResolvedNames resolvedNames_;
     DeclarationIndex declarationIndex_;
     std::size_t declarationIndexMismatchCount_ = 0;
     const Program* currentProgram_ = nullptr;

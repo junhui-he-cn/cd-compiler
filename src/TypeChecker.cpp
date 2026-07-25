@@ -159,91 +159,7 @@ TypeError::TypeError(const Token& token, std::string message)
 {
 }
 
-bool ResolvedNames::hasScope(const Stmt& statement) const
-{
-    return scopeIds_.find(&statement) != scopeIds_.end();
-}
-
-ScopeId ResolvedNames::scopeId(const Stmt& statement) const
-{
-    const auto found = scopeIds_.find(&statement);
-    if (found == scopeIds_.end()) {
-        throw std::logic_error("missing resolved scope ID");
-    }
-    return found->second;
-}
-
-DeclarationId ResolvedNames::declarationId(const Stmt& statement) const
-{
-    const auto found = declarationIds_.find(&statement);
-    if (found == declarationIds_.end()) {
-        throw std::logic_error("missing declaration ID");
-    }
-    return found->second;
-}
-
-SymbolId ResolvedNames::symbolId(const Stmt& statement) const
-{
-    const auto found = symbolIds_.find(&statement);
-    if (found == symbolIds_.end()) {
-        throw std::logic_error("missing symbol ID");
-    }
-    return found->second;
-}
-
-DeclarationId ResolvedNames::methodDeclarationId(const MethodDecl& method) const
-{
-    const auto found = methodDeclarationIds_.find(&method);
-    if (found == methodDeclarationIds_.end()) {
-        throw std::logic_error("missing method declaration ID");
-    }
-    return found->second;
-}
-
-SymbolId ResolvedNames::methodSymbolId(const MethodDecl& method) const
-{
-    const auto found = methodSymbolIds_.find(&method);
-    if (found == methodSymbolIds_.end()) {
-        throw std::logic_error("missing method symbol ID");
-    }
-    return found->second;
-}
-
-void ResolvedNames::clear()
-{
-    declarationIds_.clear();
-    symbolIds_.clear();
-    methodDeclarationIds_.clear();
-    methodSymbolIds_.clear();
-    scopeIds_.clear();
-}
-
-void ResolvedNames::recordDeclaration(const Stmt& statement, DeclarationId declaration, SymbolId symbol)
-{
-    if (declaration.valid()) {
-        declarationIds_.emplace(&statement, declaration);
-    }
-    if (symbol.valid()) {
-        symbolIds_.emplace(&statement, symbol);
-    }
-}
-
-void ResolvedNames::recordMethodDeclaration(const MethodDecl& method, DeclarationId declaration, SymbolId symbol)
-{
-    if (declaration.valid()) {
-        methodDeclarationIds_.emplace(&method, declaration);
-    }
-    if (symbol.valid()) {
-        methodSymbolIds_.emplace(&method, symbol);
-    }
-}
-
-void ResolvedNames::recordScope(const Stmt& statement, ScopeId id)
-{
-    scopeIds_.emplace(&statement, id);
-}
-
-const ResolvedNames& TypeChecker::check(const Program& program)
+void TypeChecker::check(const Program& program)
 {
     declarationIndex_ = DeclarationIndex::collect(program);
     declarationIndexMismatchCount_ = 0;
@@ -261,7 +177,6 @@ const ResolvedNames& TypeChecker::check(const Program& program)
     moduleInterfaces_.clear();
     checkedModules_.clear();
     moduleStack_.clear();
-    resolvedNames_.clear();
     currentProgram_ = &program;
     nextResolvedName_ = 0;
     nextBindingId_ = 0;
@@ -296,9 +211,8 @@ const ResolvedNames& TypeChecker::check(const Program& program)
     }
 
     buildModuleInterfaces(program);
-    declarationIndexMismatchCount_ = declarationIndex_.compareResolvedNames(resolvedNames_);
+    declarationIndexMismatchCount_ = declarationIndex_.validateMetadata();
     currentProgram_ = nullptr;
-    return resolvedNames_;
 }
 
 const std::vector<ModuleInterface>& TypeChecker::moduleInterfaces() const
@@ -477,7 +391,6 @@ TypeChecker::Binding TypeChecker::declareVariable(
     bool explicitType)
 {
     Binding binding = declareVariable(statement.name, std::move(type), explicitType);
-    resolvedNames_.recordDeclaration(statement, binding.declarationId, binding.symbolId);
     declarationIndex_.recordLetBinding(
         statement,
         BindingMetadataRecord{
@@ -521,10 +434,8 @@ void TypeChecker::predeclareStructDeclaration(const StructDeclStmt& statement)
     structTypes_.emplace(statement.name.lexeme, std::move(declaration));
     structDeclarations_.emplace(statement.name.lexeme, &statement);
     structCheckStates_.emplace(statement.name.lexeme, StructCheckState::Declared);
-    resolvedNames_.recordDeclaration(
-        statement,
-        DeclarationId{nextDeclarationId_++},
-        SymbolId{nextSymbolId_++});
+    static_cast<void>(nextDeclarationId_++);
+    static_cast<void>(nextSymbolId_++);
 
     if (!moduleStack_.empty()) {
         moduleSymbols_.markLocalStruct(moduleStack_.back(), statement.name.lexeme);
@@ -574,10 +485,8 @@ void TypeChecker::predeclareEnumDeclarations(const std::vector<StmtPtr>& stateme
                     {}});
             enumDeclarations_.emplace(enumDecl->name.lexeme, enumDecl);
             enumCheckStates_.emplace(enumDecl->name.lexeme, EnumCheckState::Declared);
-            resolvedNames_.recordDeclaration(
-                *enumDecl,
-                DeclarationId{nextDeclarationId_++},
-                SymbolId{nextSymbolId_++});
+            static_cast<void>(nextDeclarationId_++);
+            static_cast<void>(nextSymbolId_++);
             if (!moduleStack_.empty()) {
                 moduleSymbols_.markLocalEnum(moduleStack_.back(), enumDecl->name.lexeme);
             }
@@ -682,7 +591,6 @@ void TypeChecker::checkStatement(const Stmt& statement)
 
     if (const auto* block = dynamic_cast<const BlockStmt*>(&statement)) {
         beginScope();
-        resolvedNames_.recordScope(*block, currentScopeId());
         checkStatementList(block->statements);
         endScope();
         return;
@@ -721,7 +629,6 @@ void TypeChecker::checkStatement(const Stmt& statement)
 
     if (const auto* forStmt = dynamic_cast<const ForStmt*>(&statement)) {
         beginScope();
-        resolvedNames_.recordScope(*forStmt, currentScopeId());
         if (forStmt->initializer) {
             checkStatement(*forStmt->initializer);
         }
@@ -758,12 +665,7 @@ void TypeChecker::checkStatement(const Stmt& statement)
         }
 
         beginScope();
-        resolvedNames_.recordScope(*forInStmt, currentScopeId());
         const Binding itemBinding = declareVariable(forInStmt->variable, elementType, false);
-        resolvedNames_.recordDeclaration(
-            *forInStmt,
-            itemBinding.declarationId,
-            itemBinding.symbolId);
         declarationIndex_.recordForInBinding(
             *forInStmt,
             BindingMetadataRecord{
@@ -773,7 +675,6 @@ void TypeChecker::checkStatement(const Stmt& statement)
                 itemBinding.range});
         ++loopDepth_;
         if (const auto* body = dynamic_cast<const BlockStmt*>(forInStmt->body.get())) {
-            resolvedNames_.recordScope(*body, currentScopeId());
             for (const auto& bodyStatement : body->statements) {
                 checkStatement(*bodyStatement);
             }
@@ -2008,10 +1909,8 @@ void TypeChecker::registerMethodSignature(const StructTypeDecl& structType, cons
     info.resolvedName = makeResolvedName("__method_" + statement.typeName.lexeme + "_" + method.name.lexeme);
     info.genericParameters = typeParameterNames(method.typeParameters);
     info.genericParameterConstraints = std::move(genericParameterConstraints);
-    resolvedNames_.recordMethodDeclaration(
-        method,
-        DeclarationId{nextDeclarationId_++},
-        SymbolId{nextSymbolId_++});
+    static_cast<void>(nextDeclarationId_++);
+    static_cast<void>(nextSymbolId_++);
     structMethods.emplace(method.name.lexeme, std::move(info));
 }
 
@@ -2183,9 +2082,8 @@ void TypeChecker::checkFunction(const FunctionStmt& statement)
             declaredParameterTypes,
             expectedReturnType ? *expectedReturnType : unknownType(),
             typeParameterNames(statement.typeParameters),
-            genericParameterConstraints),
+        genericParameterConstraints),
         statement.returnTypeName.has_value());
-    resolvedNames_.recordDeclaration(statement, functionBinding.declarationId, functionBinding.symbolId);
 
     beginScope();
     ++functionDepth_;
