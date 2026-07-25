@@ -774,11 +774,15 @@ void TypeChecker::checkStatement(const Stmt& statement)
         if (forStmt->increment) {
             checkExpression(*forStmt->increment);
         }
+        const bool containsCurrentLoopBreak = statementContainsBreakForCurrentLoop(*forStmt->body);
         ++loopDepth_;
         flowFacts_.withNarrowings(branchFacts.thenNarrowings, [&]() {
             checkStatement(*forStmt->body);
         });
         --loopDepth_;
+        if (!containsCurrentLoopBreak) {
+            flowFacts_.appendNarrowings(branchFacts.elseNarrowings);
+        }
         endScope();
         return;
     }

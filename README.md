@@ -101,8 +101,11 @@ normal condition-failure exit; otherwise loop exits remain conservative.
 rule. C-style `for` and `for-in` loop-exit narrowing remain conservative.
 
 Inside a C-style `for`, the condition's true-branch nullable facts are active
-while checking the loop body. They do not survive the loop, and initializer or
-increment flow remains conservative; `for-in` narrowing is not implemented.
+while checking the loop body. When the body contains no `break` targeting that
+loop, its false-branch fact survives a normal condition-failure exit;
+initializer and increment flow remains conservative. `continue`, returns, and
+breaks belonging to nested loops do not block this rule. `for-in` loop-exit
+narrowing remains conservative.
 
 Direct fields of known named structs support the same nullable narrowing in
 conditions and active branch/body scopes, for example `box.value != nil`.
