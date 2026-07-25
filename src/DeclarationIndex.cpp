@@ -1360,6 +1360,13 @@ void DeclarationIndex::recordMemberCallMetadata(
     memberCallMetadata_.insert_or_assign(&expression, std::move(record));
 }
 
+void DeclarationIndex::recordMemberCallTarget(
+    const MemberCallExpr& expression,
+    CallTargetRecord record)
+{
+    memberCallTargets_.insert_or_assign(&expression, std::move(record));
+}
+
 void DeclarationIndex::recordReturn(const ReturnStmt& statement, TypeInfo type)
 {
     returnMetadata_.insert_or_assign(&statement, ReturnRecord{std::move(type)});
@@ -1415,7 +1422,6 @@ std::optional<ResolvedSymbol> DeclarationIndex::compoundAssignmentReference(
 std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved)
 {
     std::size_t mismatches = 0;
-    memberCallTargets_.clear();
     const auto requireTypedExpression = [&](const Expr& expression) {
         if (!typedExpression(expression)) {
             ++mismatches;
@@ -1648,49 +1654,24 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
             }
             continue;
         }
-        if (!resolved.hasMemberCallCallee(expression)) {
-            if (memberCallMetadata(expression)) {
-                ++mismatches;
-            }
+        const MemberCallMetadataRecord* metadata = memberCallMetadata(expression);
+        if (!metadata) {
             continue;
         }
 
-        const MemberCallMetadataRecord* metadata = memberCallMetadata(expression);
-        try {
-            if (!metadata
-                || metadata->calleeName != resolved.memberCallCalleeName(expression)
-                || metadata->passesReceiver != resolved.memberCallPassesReceiver(expression)
-                || metadata->hasTarget != (resolved.memberCallMethodTarget(expression) != nullptr)) {
-                ++mismatches;
-                continue;
-            }
-        } catch (const std::logic_error&) {
+        const auto targetFound = memberCallTargets_.find(entry.first);
+        if (metadata->calleeName.empty()
+            || metadata->hasTarget != (targetFound != memberCallTargets_.end())
+            || (!metadata->passesReceiver && metadata->hasTarget)) {
             ++mismatches;
             continue;
         }
 
         requireTypedExpression(expression);
-        if (!metadata->passesReceiver) {
-            continue;
-        }
-
-        // Imported method signatures have no AST MethodDecl in the legacy
-        // checker. They remain external targets until module symbol
-        // materialization is migrated; local methods have an exact pointer.
-        const MethodDecl* method = resolved.memberCallMethodTarget(expression);
-        if (!method) {
-            continue;
-        }
-        const DeclarationRecord* target = declaration(*method);
-        if (!target || target->kind != DeclarationKind::Method) {
+        if (targetFound != memberCallTargets_.end()
+            && targetFound->second.kind != CallTargetKind::StructMethod) {
             ++mismatches;
-            continue;
         }
-        memberCallTargets_.emplace(
-            entry.first,
-            CallTargetRecord{
-                CallTargetKind::StructMethod,
-                ResolvedSymbol{target->declarationId, target->symbolId}});
     }
 
     for (const FunctionExpr* expression : functionExpressions_) {
@@ -1851,8 +1832,7 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
                 continue;
             }
         } else if (const auto* memberCall = dynamic_cast<const MemberCallExpr*>(&expression)) {
-            if (resolved.hasMemberCallCallee(*memberCall)
-                || resolved.hasVariantConstructor(*memberCall)) {
+            if (memberCallMetadata(*memberCall) || variantConstructor(*memberCall)) {
                 continue;
             }
         }

@@ -332,6 +332,9 @@ private:
     void recordMemberCallMetadata(
         const MemberCallExpr& expression,
         MemberCallMetadataRecord record);
+    void recordMemberCallTarget(
+        const MemberCallExpr& expression,
+        CallTargetRecord record);
     void recordReturn(const ReturnStmt& statement, TypeInfo type);
     void recordResolvedSignature(DeclarationId id, TypeInfo type);
 

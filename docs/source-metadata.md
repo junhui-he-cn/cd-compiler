@@ -232,8 +232,10 @@ receiver-passing mode for named-struct methods and namespace-imported value
 calls. Local method calls retain a `CallTargetRecord` for declaration/symbol
 validation, while imported method targets remain external as before. IR
 lowering consumes the member-call record for callee loading and argument
-ordering; the legacy `ResolvedNames` member-call accessors remain only for
-shadow comparison.
+ordering. Local method targets are recorded directly in the same
+`DeclarationIndex` snapshot, and the old `ResolvedNames` member-call accessors
+are removed; shadow comparison validates the member-call record and its local
+target shape directly.
 
 ## OR-pattern inputs (M1E3 next slice)
 

@@ -38,10 +38,6 @@ public:
     const TypeBinding& binding(BindingId id) const;
     std::size_t bindingCount() const;
     std::size_t bindingShadowMismatchCount() const;
-    bool hasMemberCallCallee(const MemberCallExpr& expression) const;
-    const std::string& memberCallCalleeName(const MemberCallExpr& expression) const;
-    bool memberCallPassesReceiver(const MemberCallExpr& expression) const;
-    const MethodDecl* memberCallMethodTarget(const MemberCallExpr& expression) const;
     bool hasVariantConstructor(const MemberCallExpr& expression) const;
     const std::string& variantEnumName(const MemberCallExpr& expression) const;
     const std::string& variantName(const MemberCallExpr& expression) const;
@@ -64,11 +60,6 @@ private:
     void recordCompoundAssignment(const CompoundAssignExpr& expression, const TypeBinding& binding);
     void recordForInVariable(const ForInStmt& statement, const TypeBinding& binding);
     void recordScope(const Stmt& statement, ScopeId id);
-    void recordMemberCallCallee(
-        const MemberCallExpr& expression,
-        std::string name,
-        bool passesReceiver,
-        const MethodDecl* method = nullptr);
     void recordVariantConstructor(
         const MemberCallExpr& expression,
         std::string enumName,
@@ -86,9 +77,6 @@ private:
     std::unordered_map<const Stmt*, ScopeId> scopeIds_;
     std::unordered_map<BindingId, TypeBinding, SnapshotIdHash<BindingIdTag>> bindings_;
     std::size_t bindingShadowMismatches_ = 0;
-    std::unordered_map<const MemberCallExpr*, std::string> memberCallCalleeNames_;
-    std::unordered_map<const MemberCallExpr*, bool> memberCallPassesReceiver_;
-    std::unordered_map<const MemberCallExpr*, const MethodDecl*> memberCallMethodTargets_;
     std::unordered_map<const MemberCallExpr*, std::pair<std::string, std::string>> variantConstructors_;
 };
 

@@ -242,35 +242,6 @@ std::size_t ResolvedNames::bindingShadowMismatchCount() const
     return bindingShadowMismatches_;
 }
 
-bool ResolvedNames::hasMemberCallCallee(const MemberCallExpr& expression) const
-{
-    return memberCallCalleeNames_.find(&expression) != memberCallCalleeNames_.end();
-}
-
-const std::string& ResolvedNames::memberCallCalleeName(const MemberCallExpr& expression) const
-{
-    const auto found = memberCallCalleeNames_.find(&expression);
-    if (found == memberCallCalleeNames_.end()) {
-        throw std::logic_error("missing resolved member call callee name");
-    }
-    return found->second;
-}
-
-bool ResolvedNames::memberCallPassesReceiver(const MemberCallExpr& expression) const
-{
-    const auto found = memberCallPassesReceiver_.find(&expression);
-    if (found == memberCallPassesReceiver_.end()) {
-        throw std::logic_error("missing member call receiver mode");
-    }
-    return found->second;
-}
-
-const MethodDecl* ResolvedNames::memberCallMethodTarget(const MemberCallExpr& expression) const
-{
-    const auto found = memberCallMethodTargets_.find(&expression);
-    return found == memberCallMethodTargets_.end() ? nullptr : found->second;
-}
-
 bool ResolvedNames::hasVariantConstructor(const MemberCallExpr& expression) const
 {
     return variantConstructors_.find(&expression) != variantConstructors_.end();
@@ -344,9 +315,6 @@ void ResolvedNames::clear()
     scopeIds_.clear();
     bindings_.clear();
     bindingShadowMismatches_ = 0;
-    memberCallCalleeNames_.clear();
-    memberCallPassesReceiver_.clear();
-    memberCallMethodTargets_.clear();
     variantConstructors_.clear();
 }
 
@@ -422,19 +390,6 @@ void ResolvedNames::recordForInVariable(const ForInStmt& statement, const TypeBi
 void ResolvedNames::recordScope(const Stmt& statement, ScopeId id)
 {
     scopeIds_.emplace(&statement, id);
-}
-
-void ResolvedNames::recordMemberCallCallee(
-    const MemberCallExpr& expression,
-    std::string name,
-    bool passesReceiver,
-    const MethodDecl* method)
-{
-    memberCallCalleeNames_.emplace(&expression, std::move(name));
-    memberCallPassesReceiver_.emplace(&expression, passesReceiver);
-    if (method) {
-        memberCallMethodTargets_.emplace(&expression, method);
-    }
 }
 
 void ResolvedNames::recordVariantConstructor(
@@ -3972,8 +3927,8 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
     if (const auto* memberCall = dynamic_cast<const MemberCallExpr*>(&expression)) {
         CheckedExpression result = checkMemberCall(*memberCall, expectedType);
         if (isNativeStdlibName(memberCall->name.lexeme)
-            && !resolvedNames_.hasMemberCallCallee(*memberCall)
-            && !resolvedNames_.hasVariantConstructor(*memberCall)) {
+            && !declarationIndex_.memberCallMetadata(*memberCall)
+            && !declarationIndex_.variantConstructor(*memberCall)) {
             declarationIndex_.recordNativeCall(*memberCall, memberCall->name.lexeme);
         }
         declarationIndex_.recordTypedExpression(*memberCall, result.type);
@@ -4917,14 +4872,21 @@ TypeChecker::CheckedExpression TypeChecker::checkStructMethodCall(const MemberCa
         signature,
         expression.typeArguments,
         expression.arguments);
-    resolvedNames_.recordMemberCallCallee(
-        expression, method->resolvedName, true, method->declaration);
     declarationIndex_.recordMemberCallMetadata(
         expression,
         MemberCallMetadataRecord{
             method->resolvedName,
             true,
             method->declaration != nullptr});
+    if (method->declaration) {
+        if (const DeclarationRecord* target = declarationIndex_.declaration(*method->declaration)) {
+            declarationIndex_.recordMemberCallTarget(
+                expression,
+                CallTargetRecord{
+                    CallTargetKind::StructMethod,
+                    ResolvedSymbol{target->declarationId, target->symbolId}});
+        }
+    }
     return result;
 }
 
@@ -4946,7 +4908,6 @@ TypeChecker::CheckedExpression TypeChecker::checkMemberCall(
                 throw TypeError(expression.name,
                     "module namespace `" + variable->name.lexeme + "` has no exported member `" + name + "`");
             }
-            resolvedNames_.recordMemberCallCallee(expression, found->second.resolvedName, false);
             declarationIndex_.recordMemberCallMetadata(
                 expression,
                 MemberCallMetadataRecord{found->second.resolvedName, false});

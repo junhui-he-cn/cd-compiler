@@ -759,7 +759,7 @@ void test_method_call_lowering_metadata()
     assert(methodCall != nullptr);
 
     TypeChecker checker;
-    const ResolvedNames& resolved = checker.check(program);
+    checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
 
@@ -770,7 +770,7 @@ void test_method_call_lowering_metadata()
     assert(target->kind == CallTargetKind::StructMethod);
     const MemberCallMetadataRecord* memberMetadata = index.memberCallMetadata(*methodCall);
     assert(memberMetadata != nullptr);
-    assert(memberMetadata->calleeName == resolved.memberCallCalleeName(*methodCall));
+    assert(!memberMetadata->calleeName.empty());
     assert(memberMetadata->passesReceiver);
     assert(memberMetadata->hasTarget);
     const auto* impl = dynamic_cast<const ImplStmt*>(program.statements[1].get());
