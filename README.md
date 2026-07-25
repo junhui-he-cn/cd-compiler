@@ -95,6 +95,10 @@ checking the loop body. They are discarded at the loop boundary, so a nullable
 binding must be checked again after the loop; C-style `for` and `for-in` loop
 narrowing remain conservative.
 
+Inside a C-style `for`, the condition's true-branch nullable facts are active
+while checking the loop body. They do not survive the loop, and initializer or
+increment flow remains conservative; `for-in` narrowing is not implemented.
+
 The built-in `map<K, V>` type and nominal generic structs such as `Box<T>` are
 implemented generic collection/container forms. Map literals use `{ key: value }`
 in expression position, infer key and value

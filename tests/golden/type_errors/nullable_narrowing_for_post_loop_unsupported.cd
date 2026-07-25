@@ -1,0 +1,6 @@
+fun after(value: number?): number {
+  for ; value != nil; value = nil {
+    break;
+  }
+  return value + 1;
+}

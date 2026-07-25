@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "decision_revision": "m2a-2026-07-25-r9",
-  "baseline_commit": "a8a9943",
+  "decision_revision": "m2a-2026-07-25-r10",
+  "baseline_commit": "c02a028",
   "supersedes": ["SEM-TYPE-002"],
   "purpose": "Record intentional M2A flow-semantics revisions after the behavior-preserving M1 migration.",
   "entries": [
@@ -325,6 +325,42 @@
           "cmake --build build --target flow_facts_tests compiler_design",
           "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_while",
           "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_while_body_recheck",
+          "python3 tests/verification_inventory.py --write",
+          "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+        ]
+      }
+    },
+    {
+      "decision_id": "M2A-FLOW-010",
+      "introduced_revision": "m2a-2026-07-25-r10",
+      "domain": "flow-analysis",
+      "question": "When may a C-style for condition narrowing be used in its loop body and after the loop?",
+      "decision": "For a C-style for statement with a condition, the condition's true-branch nullable flow facts are active while checking the loop body and are discarded at the loop boundary. Existing initializer and increment checking remains unchanged, and for-in, loop exits, and broader loop joins remain outside this slice.",
+      "status": "resolved",
+      "owner": "TypeChecker C-style for condition/body flow scope and FlowFacts branch facts",
+      "m1_behavior": "Before this revision, a nullable value guarded by a C-style for condition remained nullable inside the loop body, even though the body is reached only after the condition's true result.",
+      "rationale": "The condition's true branch is the only path entering each C-style for iteration. Scoping that fact to the body preserves the proof without claiming that a loop exit or a later increment establishes a post-loop non-null state.",
+      "affected_consumers": [
+        "TypeChecker C-style for condition/body checking",
+        "FlowFacts scoped branch facts",
+        "nullable C-style for-body compatibility fixtures"
+      ],
+      "compatibility_consequences": "A nullable binding may be used as non-null inside `for ; value != nil; increment { ... }`, but remains nullable after the loop unless an independent fact is active. Initializer/increment effects and for-in loops retain their existing behavior.",
+      "migration": "Reuse the existing if/while condition branch-fact resolver and scope only the condition's then facts around C-style for-body checking with `FlowFacts::withNarrowings`; do not install those facts after the loop.",
+      "quantitative_gate": "The m0d-2026-07-22-r1 inventory validates 1689 cases, the FlowFacts CTest passes, the named C-style for-body positive and post-loop negative fixtures pass, and the full canonical verification command remains the release gate.",
+      "old_path_deletion_condition": "Delete no additional production path in this slice. The old nullable body rejection is replaced only after scoped C-style for-body facts and its positive/negative fixtures pass; for-in and loop-join rules require later slices.",
+      "positive_fixtures": [
+        "tests/golden/nullable_narrowing_for_body_recheck"
+      ],
+      "negative_fixtures": [
+        "tests/golden/type_errors/nullable_narrowing_for_post_loop_unsupported.cd"
+      ],
+      "verification": {
+        "inventory_revision": "m0d-2026-07-22-r1",
+        "commands": [
+          "cmake --build build --target flow_facts_tests compiler_design",
+          "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_for",
+          "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_for_body_recheck",
           "python3 tests/verification_inventory.py --write",
           "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
         ]

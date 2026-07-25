@@ -722,17 +722,25 @@ void TypeChecker::checkStatement(const Stmt& statement)
 
     if (const auto* forStmt = dynamic_cast<const ForStmt*>(&statement)) {
         beginScope();
+        BranchFlowFacts branchFacts;
         if (forStmt->initializer) {
             checkStatement(*forStmt->initializer);
         }
         if (forStmt->condition) {
             checkExpression(*forStmt->condition);
+            branchFacts = flowFacts_.factsForIfCondition(
+                *forStmt->condition,
+                [this](const VariableExpr& variable) {
+                    return nonNilNarrowingForVariable(variable);
+                });
         }
         if (forStmt->increment) {
             checkExpression(*forStmt->increment);
         }
         ++loopDepth_;
-        checkStatement(*forStmt->body);
+        flowFacts_.withNarrowings(branchFacts.thenNarrowings, [&]() {
+            checkStatement(*forStmt->body);
+        });
         --loopDepth_;
         endScope();
         return;

@@ -260,3 +260,27 @@ now validates 1686 cases, including:
 The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification
 command are the gates for this revision.
+
+## M2A-FLOW-010: C-style for-body narrowing
+
+For a C-style `for` statement with a condition, the condition's true-branch
+nullable facts are active while checking the loop body. The facts are scoped to
+that body and discarded at the loop boundary, so the condition does not create
+a post-loop non-null proof. Existing initializer and increment checking remains
+unchanged.
+
+`for-in`, loop exits, and broader loop joins remain outside this slice. The
+decision revision is `m2a-2026-07-25-r10`, based on commit `c02a028`.
+
+The positive fixture uses a nullable value in a C-style `for` condition and
+body, with an increment that clears the value before the next condition check.
+The negative fixture confirms that the body proof is not retained after a loop
+that may exit. The M0D inventory now validates 1689 cases, including:
+
+- `golden.type_errors.nullable_narrowing_for_post_loop_unsupported`
+- `rust_vm.golden.nullable_narrowing_for_body_recheck.emit`
+- `rust_vm.golden.nullable_narrowing_for_body_recheck.run`
+
+The FlowFacts CTest, focused golden and Rust VM subsets,
+`python3 tests/verification_inventory.py`, and the full canonical verification
+command are the gates for this revision.
