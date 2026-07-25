@@ -824,6 +824,15 @@ void test_variant_pattern_metadata()
     const ResolvedNames& resolved = checker.check(program);
     const DeclarationIndex& index = checker.declarationIndex();
     assert(checker.declarationIndexMismatchCount() == 0);
+    const MatchCoverageRecord* coverage = index.matchCoverage(*match);
+    assert(coverage != nullptr);
+    assert(coverage->nullable);
+    assert(coverage->coversNil);
+    assert(!coverage->coversAll);
+    assert(coverage->exhaustive);
+    assert(coverage->coveredVariants.size() == 2);
+    assert(coverage->coveredVariants[0] == "Empty");
+    assert(coverage->coveredVariants[1] == "Ok");
 
     const VariantPatternRecord* okRecord = index.variantPattern(*okPattern);
     const VariantPatternRecord* emptyRecord = index.variantPattern(*emptyPattern);
@@ -884,6 +893,12 @@ void test_record_pattern_metadata()
     assert(record->fieldTypes.size() == 2);
     assert(typeInfoName(record->fieldTypes[0]) == "string");
     assert(typeInfoName(record->fieldTypes[1]) == "number");
+    const MatchCoverageRecord* coverage = index.matchCoverage(*match);
+    assert(coverage != nullptr);
+    assert(coverage->nullable);
+    assert(coverage->coversNil);
+    assert(coverage->coversStruct);
+    assert(coverage->exhaustive);
     const PatternBindingRecord* labelBinding = index.patternBindingMetadata(*labelPattern);
     const PatternBindingRecord* numberBinding = index.patternBindingMetadata(*numberPattern);
     assert(labelBinding != nullptr && numberBinding != nullptr);
@@ -898,13 +913,13 @@ void test_record_pattern_metadata()
 void test_literal_or_pattern_metadata()
 {
     std::istringstream input(
-        "fun choose(value: number): string {\n"
+        "fun choose(value: bool): string {\n"
         "  return match value {\n"
-        "    0 | 1 => \"small\",\n"
+        "    false | true => \"small\",\n"
         "    _ => \"other\",\n"
         "  };\n"
         "}\n"
-        "print choose(0);\n");
+        "print choose(false);\n");
     FrontendSession frontend;
     Program program = frontend.loadStdin(input);
 
@@ -927,6 +942,13 @@ void test_literal_or_pattern_metadata()
     assert(record != nullptr);
     assert(record->bindingNames.empty());
     assert(record->bindingTypes.empty());
+    const MatchCoverageRecord* coverage = index.matchCoverage(*match);
+    assert(coverage != nullptr);
+    assert(coverage->coversAll);
+    assert(coverage->exhaustive);
+    assert(coverage->coveredLiterals.size() == 2);
+    assert(coverage->coveredLiterals[0] == "false");
+    assert(coverage->coveredLiterals[1] == "true");
 
     IRCompiler compiler;
     compiler.compile(program, resolved, index);
@@ -973,6 +995,13 @@ void test_pattern_guard_metadata()
     assert(statementGuard != nullptr && expressionGuard != nullptr);
     assert(typeInfoName(statementGuard->type) == "bool");
     assert(typeInfoName(expressionGuard->type) == "bool");
+    const MatchCoverageRecord* statementCoverage
+        = index.matchCoverage(*statementMatch);
+    const MatchCoverageRecord* expressionCoverage
+        = index.matchCoverage(*expressionMatch);
+    assert(statementCoverage != nullptr && expressionCoverage != nullptr);
+    assert(statementCoverage->coversAll && expressionCoverage->coversAll);
+    assert(statementCoverage->exhaustive && expressionCoverage->exhaustive);
 
     IRCompiler compiler;
     compiler.compile(program, resolved, index);

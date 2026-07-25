@@ -209,6 +209,14 @@ statement- and expression-match guard. `IRCompiler` requires the record before
 emitting the existing truthiness branch; guard truthiness and exhaustiveness
 coverage remain owned by `TypeChecker`.
 
+## Match coverage inputs (M1E3 next slice)
+
+`DeclarationIndex::matchCoverage()` exposes the checked scrutinee type,
+nullable/nil/struct/all coverage facts, sorted covered enum/literal domains,
+and an exhaustive proof for both statement and expression matches.
+`IRCompiler` requires that proof before lowering existing match branches; the
+checker remains the diagnostic oracle for missing coverage.
+
 ## Lossless source view
 
 `FrontendSession::losslessSourceView()` groups `LosslessPiece` values by

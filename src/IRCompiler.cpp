@@ -503,6 +503,12 @@ void IRCompiler::compileForIn(const ForInStmt& statement)
 
 void IRCompiler::compileMatch(const MatchStmt& statement)
 {
+    const MatchCoverageRecord* coverage = declarationIndex_
+        ? declarationIndex_->matchCoverage(statement)
+        : nullptr;
+    if (!coverage || !coverage->exhaustive) {
+        throw IRCompileError("missing match coverage metadata");
+    }
     const IRRegister value = compileExpression(*statement.value);
     std::vector<std::size_t> endJumps;
 
@@ -537,6 +543,12 @@ void IRCompiler::compileMatch(const MatchStmt& statement)
 
 IRRegister IRCompiler::compileMatchExpression(const MatchExpr& expression)
 {
+    const MatchCoverageRecord* coverage = declarationIndex_
+        ? declarationIndex_->matchCoverage(expression)
+        : nullptr;
+    if (!coverage || !coverage->exhaustive) {
+        throw IRCompileError("missing match coverage metadata");
+    }
     const IRRegister value = compileExpression(*expression.value);
     const IRRegister result = ir_.makeRegister();
     std::vector<std::size_t> endJumps;

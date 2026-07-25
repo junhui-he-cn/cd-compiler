@@ -136,6 +136,17 @@ struct PatternGuardRecord {
     TypeInfo type;
 };
 
+struct MatchCoverageRecord {
+    TypeInfo scrutineeType;
+    std::vector<std::string> coveredVariants;
+    std::vector<std::string> coveredLiterals;
+    bool nullable = false;
+    bool coversNil = false;
+    bool coversStruct = false;
+    bool coversAll = false;
+    bool exhaustive = false;
+};
+
 struct ReturnRecord {
     TypeInfo type;
 };
@@ -233,6 +244,8 @@ public:
     const PatternBindingRecord* patternBindingMetadata(const VariablePattern& pattern) const;
     const OrPatternRecord* orPattern(const OrPattern& pattern) const;
     const PatternGuardRecord* patternGuard(const Expr& guard) const;
+    const MatchCoverageRecord* matchCoverage(const MatchStmt& match) const;
+    const MatchCoverageRecord* matchCoverage(const MatchExpr& match) const;
     const IndexOperationRecord* indexOperation(const Expr& expression) const;
     const FieldOperationRecord* fieldOperation(const Expr& expression) const;
     const StructConstructorRecord* structConstructor(const StructConstructExpr& expression) const;
@@ -271,6 +284,8 @@ private:
     void recordPatternBinding(const VariablePattern& pattern, PatternBindingRecord record);
     void recordOrPattern(const OrPattern& pattern, OrPatternRecord record);
     void recordPatternGuard(const Expr& guard, PatternGuardRecord record);
+    void recordMatchCoverage(const MatchStmt& match, MatchCoverageRecord record);
+    void recordMatchCoverage(const MatchExpr& match, MatchCoverageRecord record);
     void recordIndexOperation(const Expr& expression, IndexOperationRecord record);
     void recordFieldOperation(const Expr& expression, FieldOperationRecord record);
     void recordStructConstructor(const StructConstructExpr& expression, StructConstructorRecord record);
@@ -312,6 +327,8 @@ private:
     std::unordered_map<const VariablePattern*, PatternBindingRecord> patternBindingMetadata_;
     std::unordered_map<const OrPattern*, OrPatternRecord> orPatterns_;
     std::unordered_map<const Expr*, PatternGuardRecord> patternGuards_;
+    std::unordered_map<const MatchStmt*, MatchCoverageRecord> matchStatementCoverage_;
+    std::unordered_map<const MatchExpr*, MatchCoverageRecord> matchExpressionCoverage_;
     std::unordered_map<const Expr*, IndexOperationRecord> indexOperations_;
     std::unordered_map<const Expr*, FieldOperationRecord> fieldOperations_;
     std::unordered_map<const StructConstructExpr*, StructConstructorRecord> structConstructorsMetadata_;
@@ -328,6 +345,8 @@ private:
     std::unordered_set<const RecordPattern*> recordPatternNodes_;
     std::unordered_set<const OrPattern*> orPatternNodes_;
     std::unordered_set<const Expr*> patternGuardNodes_;
+    std::unordered_set<const MatchStmt*> matchStatementNodes_;
+    std::unordered_set<const MatchExpr*> matchExpressionNodes_;
     std::unordered_map<const BreakStmt*, LoopTargetRecord> breakTargets_;
     std::unordered_map<const ContinueStmt*, LoopTargetRecord> continueTargets_;
     std::unordered_map<

@@ -2,6 +2,7 @@
 
 #include "NativeStdlib.hpp"
 
+#include <algorithm>
 #include <stdexcept>
 #include <utility>
 
@@ -3822,6 +3823,19 @@ void TypeChecker::checkMatch(const MatchStmt& statement)
                 "non-exhaustive match: missing wildcard, binding, or complete record pattern");
         }
     }
+
+    MatchCoverageRecord coverage;
+    coverage.scrutineeType = scrutineeType;
+    coverage.nullable = SemanticTypes::isNullable(scrutineeType);
+    coverage.coversNil = coveredNil;
+    coverage.coversStruct = coveredStruct;
+    coverage.coversAll = coversAll;
+    coverage.exhaustive = true;
+    coverage.coveredVariants.assign(coveredVariants.begin(), coveredVariants.end());
+    coverage.coveredLiterals.assign(coveredLiterals.begin(), coveredLiterals.end());
+    std::sort(coverage.coveredVariants.begin(), coverage.coveredVariants.end());
+    std::sort(coverage.coveredLiterals.begin(), coverage.coveredLiterals.end());
+    declarationIndex_.recordMatchCoverage(statement, std::move(coverage));
 }
 
 TypeInfo TypeChecker::checkExpression(const Expr& expression)
@@ -4403,6 +4417,19 @@ TypeChecker::CheckedExpression TypeChecker::checkMatchExpression(
                 "non-exhaustive match: missing wildcard, binding, or complete record pattern");
         }
     }
+
+    MatchCoverageRecord coverage;
+    coverage.scrutineeType = scrutineeType;
+    coverage.nullable = SemanticTypes::isNullable(scrutineeType);
+    coverage.coversNil = coveredNil;
+    coverage.coversStruct = coveredStruct;
+    coverage.coversAll = coversAll;
+    coverage.exhaustive = true;
+    coverage.coveredVariants.assign(coveredVariants.begin(), coveredVariants.end());
+    coverage.coveredLiterals.assign(coveredLiterals.begin(), coveredLiterals.end());
+    std::sort(coverage.coveredVariants.begin(), coverage.coveredVariants.end());
+    std::sort(coverage.coveredLiterals.begin(), coverage.coveredLiterals.end());
+    declarationIndex_.recordMatchCoverage(expression, std::move(coverage));
 
     return CheckedExpression{expectedType
         ? *expectedType

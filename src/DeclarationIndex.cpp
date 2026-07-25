@@ -450,6 +450,7 @@ private:
             return;
         }
         if (const auto* match = dynamic_cast<const MatchStmt*>(&statement)) {
+            index_.matchStatementNodes_.insert(match);
             collectExpression(match->value.get());
             for (const MatchArm& arm : match->arms) {
                 beginScope(nullptr);
@@ -744,6 +745,7 @@ private:
             return;
         }
         if (const auto* match = dynamic_cast<const MatchExpr*>(expression)) {
+            index_.matchExpressionNodes_.insert(match);
             collectExpression(match->value.get());
             for (const MatchExprArm& arm : match->arms) {
                 beginScope(nullptr);
@@ -1089,6 +1091,18 @@ const PatternGuardRecord* DeclarationIndex::patternGuard(const Expr& guard) cons
     return found == patternGuards_.end() ? nullptr : &found->second;
 }
 
+const MatchCoverageRecord* DeclarationIndex::matchCoverage(const MatchStmt& match) const
+{
+    const auto found = matchStatementCoverage_.find(&match);
+    return found == matchStatementCoverage_.end() ? nullptr : &found->second;
+}
+
+const MatchCoverageRecord* DeclarationIndex::matchCoverage(const MatchExpr& match) const
+{
+    const auto found = matchExpressionCoverage_.find(&match);
+    return found == matchExpressionCoverage_.end() ? nullptr : &found->second;
+}
+
 const IndexOperationRecord* DeclarationIndex::indexOperation(const Expr& expression) const
 {
     const auto found = indexOperations_.find(&expression);
@@ -1195,6 +1209,16 @@ void DeclarationIndex::recordOrPattern(const OrPattern& pattern, OrPatternRecord
 void DeclarationIndex::recordPatternGuard(const Expr& guard, PatternGuardRecord record)
 {
     patternGuards_.insert_or_assign(&guard, std::move(record));
+}
+
+void DeclarationIndex::recordMatchCoverage(const MatchStmt& match, MatchCoverageRecord record)
+{
+    matchStatementCoverage_.insert_or_assign(&match, std::move(record));
+}
+
+void DeclarationIndex::recordMatchCoverage(const MatchExpr& match, MatchCoverageRecord record)
+{
+    matchExpressionCoverage_.insert_or_assign(&match, std::move(record));
 }
 
 void DeclarationIndex::recordIndexOperation(const Expr& expression, IndexOperationRecord record)
@@ -1518,6 +1542,16 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
     }
     for (const Expr* guard : patternGuardNodes_) {
         if (!patternGuard(*guard)) {
+            ++mismatches;
+        }
+    }
+    for (const MatchStmt* match : matchStatementNodes_) {
+        if (!matchCoverage(*match)) {
+            ++mismatches;
+        }
+    }
+    for (const MatchExpr* match : matchExpressionNodes_) {
+        if (!matchCoverage(*match)) {
             ++mismatches;
         }
     }
