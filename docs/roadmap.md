@@ -604,6 +604,8 @@ resolved field order and substituted field types; IR lowering consumes all
 three records, explicit OR-pattern, guard, coverage, and pattern binding
 records, while
 `TypeChecker` remains the coverage and diagnostic oracle.
+The migrated variant-pattern enum/name and payload-index adapter has no
+production callers and is removed from `ResolvedNames`.
 
 **Deliverable:** move literal, nullable, enum, record, OR-pattern, guard,
 binding, and exhaustiveness inputs behind the shared semantic pattern interface.

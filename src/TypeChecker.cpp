@@ -467,24 +467,6 @@ SymbolId ResolvedNames::methodSymbolId(const MethodDecl& method) const
     return found->second;
 }
 
-const std::string& ResolvedNames::patternEnumName(const VariantPattern& pattern) const
-{
-    const auto found = patternEnumNames_.find(&pattern);
-    if (found == patternEnumNames_.end()) {
-        throw std::logic_error("missing resolved pattern enum name");
-    }
-    return found->second;
-}
-
-const std::vector<std::size_t>& ResolvedNames::patternPayloadIndices(const VariantPattern& pattern) const
-{
-    const auto found = patternPayloadIndices_.find(&pattern);
-    if (found == patternPayloadIndices_.end()) {
-        throw std::logic_error("missing resolved pattern payload indices");
-    }
-    return found->second;
-}
-
 void ResolvedNames::clear()
 {
     letNames_.clear();
@@ -517,8 +499,6 @@ void ResolvedNames::clear()
     memberCallMethodTargets_.clear();
     variantConstructors_.clear();
     patternVariableNames_.clear();
-    patternEnumNames_.clear();
-    patternPayloadIndices_.clear();
 }
 
 void ResolvedNames::recordBinding(const TypeBinding& binding)
@@ -663,15 +643,6 @@ void ResolvedNames::recordPatternVariable(const VariablePattern& pattern, const 
     patternVariableNames_.emplace(&pattern, binding.resolvedName);
     patternVariableBindingIds_.emplace(&pattern, binding.bindingId);
     compareBindingName(binding);
-}
-
-void ResolvedNames::recordPatternVariant(
-    const VariantPattern& pattern,
-    std::string enumName,
-    std::vector<std::size_t> payloadIndices)
-{
-    patternEnumNames_.emplace(&pattern, std::move(enumName));
-    patternPayloadIndices_.emplace(&pattern, std::move(payloadIndices));
 }
 
 const ResolvedNames& TypeChecker::check(const Program& program)
@@ -3663,8 +3634,6 @@ bool TypeChecker::checkPattern(
             }
         }
     }
-    resolvedNames_.recordPatternVariant(*variantPattern, runtimeEnumName, payloadIndices);
-
     std::vector<TypeInfo> resolvedPayloadTypes;
     resolvedPayloadTypes.reserve(variantPattern->arguments.size());
     for (std::size_t i = 0; i < variantPattern->arguments.size(); ++i) {

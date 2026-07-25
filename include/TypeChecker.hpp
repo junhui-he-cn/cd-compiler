@@ -65,8 +65,6 @@ public:
     SymbolId symbolId(const Stmt& statement) const;
     DeclarationId methodDeclarationId(const MethodDecl& method) const;
     SymbolId methodSymbolId(const MethodDecl& method) const;
-    const std::string& patternEnumName(const VariantPattern& pattern) const;
-    const std::vector<std::size_t>& patternPayloadIndices(const VariantPattern& pattern) const;
 
 private:
     friend class TypeChecker;
@@ -99,10 +97,6 @@ private:
         std::string enumName,
         std::string variantName);
     void recordPatternVariable(const VariablePattern& pattern, const TypeBinding& binding);
-    void recordPatternVariant(
-        const VariantPattern& pattern,
-        std::string enumName,
-        std::vector<std::size_t> payloadIndices);
 
     std::unordered_map<const LetStmt*, std::string> letNames_;
     std::unordered_map<const FunctionStmt*, std::string> functionNames_;
@@ -134,8 +128,6 @@ private:
     std::unordered_map<const MemberCallExpr*, const MethodDecl*> memberCallMethodTargets_;
     std::unordered_map<const MemberCallExpr*, std::pair<std::string, std::string>> variantConstructors_;
     std::unordered_map<const VariablePattern*, std::string> patternVariableNames_;
-    std::unordered_map<const VariantPattern*, std::string> patternEnumNames_;
-    std::unordered_map<const VariantPattern*, std::vector<std::size_t>> patternPayloadIndices_;
 };
 
 class TypeChecker {

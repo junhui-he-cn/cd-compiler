@@ -176,7 +176,9 @@ variant identity, the matched non-nullable enum type, source-order payload
 types after generic substitution, and the declared payload indices selected by
 positional or named patterns. `IRCompiler` consumes those fields for existing
 variant-tag and variant-field lowering; nested patterns, coverage, and
-diagnostic decisions remain owned by `TypeChecker`.
+diagnostic decisions remain owned by `TypeChecker`. The former
+`ResolvedNames` variant enum/name and payload-index adapter is no longer part
+of the lowering path.
 
 ## Record pattern inputs (M1E3 next slice)
 
