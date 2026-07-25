@@ -5034,6 +5034,12 @@ TypeChecker::CheckedExpression TypeChecker::checkStructMethodCall(const MemberCa
         expression.arguments);
     resolvedNames_.recordMemberCallCallee(
         expression, method->resolvedName, true, method->declaration);
+    declarationIndex_.recordMemberCallMetadata(
+        expression,
+        MemberCallMetadataRecord{
+            method->resolvedName,
+            true,
+            method->declaration != nullptr});
     return result;
 }
 
@@ -5056,6 +5062,9 @@ TypeChecker::CheckedExpression TypeChecker::checkMemberCall(
                     "module namespace `" + variable->name.lexeme + "` has no exported member `" + name + "`");
             }
             resolvedNames_.recordMemberCallCallee(expression, found->second.resolvedName, false);
+            declarationIndex_.recordMemberCallMetadata(
+                expression,
+                MemberCallMetadataRecord{found->second.resolvedName, false});
             return checkFunctionCall(
                 expression.paren,
                 found->second.type,

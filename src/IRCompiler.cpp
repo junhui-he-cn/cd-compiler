@@ -932,17 +932,20 @@ IRRegister IRCompiler::emitMemberCall(const MemberCallExpr& expression)
         return emitVariantConstructor(expression);
     }
 
-    if (resolvedNames_->hasMemberCallCallee(expression)) {
+    const MemberCallMetadataRecord* memberCall = declarationIndex_
+        ? declarationIndex_->memberCallMetadata(expression)
+        : nullptr;
+    if (memberCall) {
         typedExpressionType(expression, "member call");
-        if (resolvedNames_->memberCallMethodTarget(expression)) {
+        if (memberCall->hasTarget) {
             const CallTargetRecord* target = declarationIndex_->callTarget(expression);
             if (!target || target->kind != CallTargetKind::StructMethod) {
                 throw IRCompileError("missing struct method call target metadata");
             }
         }
-        const IRRegister callee = ir_.emitLoadVar(resolvedNames_->memberCallCalleeName(expression));
+        const IRRegister callee = ir_.emitLoadVar(memberCall->calleeName);
         std::vector<IRRegister> arguments;
-        if (resolvedNames_->memberCallPassesReceiver(expression)) {
+        if (memberCall->passesReceiver) {
             arguments.push_back(compileExpression(*expression.receiver));
         }
         for (const auto& argument : expression.arguments) {

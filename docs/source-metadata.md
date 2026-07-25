@@ -219,6 +219,16 @@ function storage, function-table construction, and parameter setup. The
 legacy `ResolvedNames` function and parameter accessors remain only as the
 comparison oracle until the next cleanup slice.
 
+## Member-call inputs (M1F next slice)
+
+`DeclarationIndex::memberCallMetadata()` exposes the resolved callee name and
+receiver-passing mode for named-struct methods and namespace-imported value
+calls. Local method calls retain a `CallTargetRecord` for declaration/symbol
+validation, while imported method targets remain external as before. IR
+lowering consumes the member-call record for callee loading and argument
+ordering; the legacy `ResolvedNames` member-call accessors remain only for
+shadow comparison.
+
 ## OR-pattern inputs (M1E3 next slice)
 
 `DeclarationIndex::orPattern()` exposes the checker-validated shared binding

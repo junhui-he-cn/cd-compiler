@@ -768,6 +768,11 @@ void test_method_call_lowering_metadata()
     const CallTargetRecord* target = index.callTarget(*methodCall);
     assert(target != nullptr);
     assert(target->kind == CallTargetKind::StructMethod);
+    const MemberCallMetadataRecord* memberMetadata = index.memberCallMetadata(*methodCall);
+    assert(memberMetadata != nullptr);
+    assert(memberMetadata->calleeName == resolved.memberCallCalleeName(*methodCall));
+    assert(memberMetadata->passesReceiver);
+    assert(memberMetadata->hasTarget);
     const auto* impl = dynamic_cast<const ImplStmt*>(program.statements[1].get());
     assert(impl != nullptr && impl->methods.size() == 1);
     const FunctionMetadataRecord* methodMetadata = index.functionMetadata(impl->methods.front());

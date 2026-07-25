@@ -1000,6 +1000,13 @@ const FunctionMetadataRecord* DeclarationIndex::functionMetadata(const MethodDec
     return found == methodMetadata_.end() ? nullptr : &found->second;
 }
 
+const MemberCallMetadataRecord* DeclarationIndex::memberCallMetadata(
+    const MemberCallExpr& expression) const
+{
+    const auto found = memberCallMetadata_.find(&expression);
+    return found == memberCallMetadata_.end() ? nullptr : &found->second;
+}
+
 std::optional<DeclarationSignature> DeclarationIndex::signature(DeclarationId id) const
 {
     const DeclarationRecord* record = declaration(id);
@@ -1346,6 +1353,13 @@ void DeclarationIndex::recordFunctionMetadata(
     methodMetadata_.insert_or_assign(&method, std::move(record));
 }
 
+void DeclarationIndex::recordMemberCallMetadata(
+    const MemberCallExpr& expression,
+    MemberCallMetadataRecord record)
+{
+    memberCallMetadata_.insert_or_assign(&expression, std::move(record));
+}
+
 void DeclarationIndex::recordReturn(const ReturnStmt& statement, TypeInfo type)
 {
     returnMetadata_.insert_or_assign(&statement, ReturnRecord{std::move(type)});
@@ -1637,8 +1651,29 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
             }
             continue;
         }
-        if (!resolved.hasMemberCallCallee(expression)
-            || !resolved.memberCallPassesReceiver(expression)) {
+        if (!resolved.hasMemberCallCallee(expression)) {
+            if (memberCallMetadata(expression)) {
+                ++mismatches;
+            }
+            continue;
+        }
+
+        const MemberCallMetadataRecord* metadata = memberCallMetadata(expression);
+        try {
+            if (!metadata
+                || metadata->calleeName != resolved.memberCallCalleeName(expression)
+                || metadata->passesReceiver != resolved.memberCallPassesReceiver(expression)
+                || metadata->hasTarget != (resolved.memberCallMethodTarget(expression) != nullptr)) {
+                ++mismatches;
+                continue;
+            }
+        } catch (const std::logic_error&) {
+            ++mismatches;
+            continue;
+        }
+
+        requireTypedExpression(expression);
+        if (!metadata->passesReceiver) {
             continue;
         }
 
@@ -1659,7 +1694,6 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
             CallTargetRecord{
                 CallTargetKind::StructMethod,
                 ResolvedSymbol{target->declarationId, target->symbolId}});
-        requireTypedExpression(expression);
     }
 
     for (const FunctionExpr* expression : functionExpressions_) {

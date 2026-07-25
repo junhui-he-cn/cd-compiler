@@ -45,6 +45,12 @@ struct FunctionMetadataRecord {
     std::vector<std::string> parameterNames;
 };
 
+struct MemberCallMetadataRecord {
+    std::string calleeName;
+    bool passesReceiver = false;
+    bool hasTarget = false;
+};
+
 enum class CallTargetKind {
     Direct,
     StructMethod,
@@ -248,6 +254,7 @@ public:
     const FunctionMetadataRecord* functionMetadata(const FunctionStmt& statement) const;
     const FunctionMetadataRecord* functionMetadata(const FunctionExpr& expression) const;
     const FunctionMetadataRecord* functionMetadata(const MethodDecl& method) const;
+    const MemberCallMetadataRecord* memberCallMetadata(const MemberCallExpr& expression) const;
     std::optional<DeclarationSignature> signature(DeclarationId id) const;
     const ResolvedSignatureRecord* resolvedSignature(DeclarationId id) const;
     std::optional<DeclarationShape> shape(DeclarationId id) const;
@@ -321,6 +328,9 @@ private:
     void recordFunctionMetadata(const FunctionStmt& statement, FunctionMetadataRecord record);
     void recordFunctionMetadata(const FunctionExpr& expression, FunctionMetadataRecord record);
     void recordFunctionMetadata(const MethodDecl& method, FunctionMetadataRecord record);
+    void recordMemberCallMetadata(
+        const MemberCallExpr& expression,
+        MemberCallMetadataRecord record);
     void recordReturn(const ReturnStmt& statement, TypeInfo type);
     void recordResolvedSignature(DeclarationId id, TypeInfo type);
 
@@ -349,6 +359,7 @@ private:
     std::unordered_map<const FunctionStmt*, FunctionMetadataRecord> functionMetadata_;
     std::unordered_map<const FunctionExpr*, FunctionMetadataRecord> functionExpressionMetadata_;
     std::unordered_map<const MethodDecl*, FunctionMetadataRecord> methodMetadata_;
+    std::unordered_map<const MemberCallExpr*, MemberCallMetadataRecord> memberCallMetadata_;
     std::unordered_set<const FieldAccessExpr*> fieldAccesses_;
     std::unordered_set<const FieldAssignExpr*> fieldAssignments_;
     std::unordered_set<const FieldCompoundAssignExpr*> fieldCompoundAssignments_;
