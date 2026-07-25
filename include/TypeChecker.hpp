@@ -58,7 +58,6 @@ public:
     bool hasVariantConstructor(const MemberCallExpr& expression) const;
     const std::string& variantEnumName(const MemberCallExpr& expression) const;
     const std::string& variantName(const MemberCallExpr& expression) const;
-    BindingId patternVariableBindingId(const VariablePattern& pattern) const;
     DeclarationId declarationId(const Stmt& statement) const;
     SymbolId symbolId(const Stmt& statement) const;
     DeclarationId methodDeclarationId(const MethodDecl& method) const;
@@ -94,7 +93,6 @@ private:
         const MemberCallExpr& expression,
         std::string enumName,
         std::string variantName);
-    void recordPatternVariable(const VariablePattern& pattern, const TypeBinding& binding);
 
     std::unordered_map<const LetStmt*, std::string> letNames_;
     std::unordered_map<const FunctionStmt*, std::string> functionNames_;
@@ -117,7 +115,6 @@ private:
     std::unordered_map<const ForInStmt*, std::string> forInVariableNames_;
     std::unordered_map<const ForInStmt*, BindingId> forInBindingIds_;
     std::unordered_map<const Stmt*, ScopeId> scopeIds_;
-    std::unordered_map<const VariablePattern*, BindingId> patternVariableBindingIds_;
     std::unordered_map<BindingId, TypeBinding, SnapshotIdHash<BindingIdTag>> bindings_;
     std::size_t bindingShadowMismatches_ = 0;
     std::unordered_map<const FieldAccessExpr*, std::string> fieldAccessNames_;

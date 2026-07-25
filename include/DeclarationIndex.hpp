@@ -123,6 +123,7 @@ struct PatternBindingRecord {
     std::string sourceName;
     std::string resolvedName;
     TypeInfo type;
+    std::optional<SourceRange> range;
     BindingId bindingId;
     ResolvedSymbol symbol;
 };

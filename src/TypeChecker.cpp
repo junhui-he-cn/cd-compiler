@@ -408,15 +408,6 @@ const std::string& ResolvedNames::variantName(const MemberCallExpr& expression) 
     return found->second.second;
 }
 
-BindingId ResolvedNames::patternVariableBindingId(const VariablePattern& pattern) const
-{
-    const auto found = patternVariableBindingIds_.find(&pattern);
-    if (found == patternVariableBindingIds_.end()) {
-        throw std::logic_error("missing resolved pattern variable binding ID");
-    }
-    return found->second;
-}
-
 DeclarationId ResolvedNames::declarationId(const Stmt& statement) const
 {
     const auto found = declarationIds_.find(&statement);
@@ -476,7 +467,6 @@ void ResolvedNames::clear()
     forInVariableNames_.clear();
     forInBindingIds_.clear();
     scopeIds_.clear();
-    patternVariableBindingIds_.clear();
     bindings_.clear();
     bindingShadowMismatches_ = 0;
     fieldAccessNames_.clear();
@@ -621,12 +611,6 @@ void ResolvedNames::recordVariantConstructor(
     variantConstructors_.emplace(
         &expression,
         std::make_pair(std::move(enumName), std::move(variantName)));
-}
-
-void ResolvedNames::recordPatternVariable(const VariablePattern& pattern, const TypeBinding& binding)
-{
-    patternVariableBindingIds_.emplace(&pattern, binding.bindingId);
-    compareBindingName(binding);
 }
 
 const ResolvedNames& TypeChecker::check(const Program& program)
@@ -3267,13 +3251,13 @@ bool TypeChecker::checkPattern(
             return true;
         }
         const Binding binding = declareVariable(variable->name, expectedType, false);
-        resolvedNames_.recordPatternVariable(*variable, binding);
         declarationIndex_.recordPatternBinding(
             *variable,
             PatternBindingRecord{
                 variable->name.lexeme,
                 binding.resolvedName,
                 binding.type,
+                binding.range,
                 binding.bindingId,
                 ResolvedSymbol{binding.declarationId, binding.symbolId}});
         coversStruct = true;
@@ -3440,13 +3424,13 @@ bool TypeChecker::checkPattern(
                     entry.second.type,
                     false);
                 for (const VariablePattern* occurrence : entry.second.occurrences) {
-                    resolvedNames_.recordPatternVariable(*occurrence, binding);
                     declarationIndex_.recordPatternBinding(
                         *occurrence,
                         PatternBindingRecord{
                             occurrence->name.lexeme,
                             binding.resolvedName,
                             binding.type,
+                            binding.range,
                             binding.bindingId,
                             ResolvedSymbol{binding.declarationId, binding.symbolId}});
                 }

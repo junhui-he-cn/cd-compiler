@@ -195,8 +195,8 @@ name, checked type, binding ID, and declaration/symbol target for every
 `VariablePattern`, including occurrences merged across an OR pattern.
 `IRCompiler` consumes the resolved name for arm-local stores while
 `TypeChecker` remains responsible for binding compatibility and scope rules.
-The old `ResolvedNames` runtime-name accessor has been removed; its binding ID
-entry remains solely for declaration-index shadow comparison.
+The old `ResolvedNames` runtime-name and binding-ID accessors have been
+removed; declaration-index shadow comparison validates the record directly.
 
 ## OR-pattern inputs (M1E3 next slice)
 

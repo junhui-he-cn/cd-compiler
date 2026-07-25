@@ -1303,6 +1303,13 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
         return binding.resolvedName.substr(0, binding.resolvedName.find('#')) == target.name
             && sameRange(binding.range, target.range);
     };
+    const auto patternBindingMatches = [](const PatternBindingRecord& binding, const DeclarationRecord& target) {
+        return binding.bindingId.valid()
+            && binding.resolvedName.substr(0, binding.resolvedName.find('#')) == target.name
+            && sameRange(binding.range, target.range)
+            && binding.symbol.declarationId == target.declarationId
+            && binding.symbol.symbolId == target.symbolId;
+    };
     const auto compareReference = [&](const auto& references, const auto& resolve) {
         for (const auto& entry : references) {
             const DeclarationRecord* target = declaration(entry.second.declarationId);
@@ -1399,20 +1406,8 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
 
     for (const auto& entry : patternDeclarations_) {
         const DeclarationRecord* target = declaration(entry.second);
-        try {
-            const BindingId bindingId = resolved.patternVariableBindingId(*entry.first);
-            const PatternBindingRecord* metadata = patternBindingMetadata(*entry.first);
-            const TypeBinding& binding = resolved.binding(bindingId);
-            if (!target
-                || !metadata
-                || !bindingMatches(binding, *target)
-                || metadata->bindingId != bindingId
-                || metadata->resolvedName != binding.resolvedName
-                || metadata->symbol.declarationId != target->declarationId
-                || metadata->symbol.symbolId != target->symbolId) {
-                ++mismatches;
-            }
-        } catch (const std::logic_error&) {
+        const PatternBindingRecord* metadata = patternBindingMetadata(*entry.first);
+        if (!target || !metadata || !patternBindingMatches(*metadata, *target)) {
             ++mismatches;
         }
     }
