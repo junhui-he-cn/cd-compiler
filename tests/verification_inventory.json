@@ -22109,6 +22109,34 @@
       "fixture": "tests/golden/type_errors"
     },
     {
+      "case_id": "golden.type_errors.nullable_narrowing_field_mutation_invalidated",
+      "runner": "golden",
+      "result_name": "type_errors/nullable_narrowing_field_mutation_invalidated default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:nullable_narrowing_field_mutation_invalidated"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/nullable_narrowing_field_mutation_invalidated.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/nullable_narrowing_field_mutation_invalidated.cd",
+        "tests/golden/type_errors/nullable_narrowing_field_mutation_invalidated.err",
+        "tests/golden/type_errors/nullable_narrowing_field_mutation_invalidated.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
       "case_id": "golden.type_errors.nullable_narrowing_field_unsupported",
       "runner": "golden",
       "result_name": "type_errors/nullable_narrowing_field_unsupported default(ast)",
@@ -40807,6 +40835,68 @@
         "tests/golden/nullable_narrowing_explicit_else_recheck/run.out"
       ],
       "fixture": "tests/golden/nullable_narrowing_explicit_else_recheck"
+    },
+    {
+      "case_id": "rust_vm.golden.nullable_narrowing_field_recheck.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "nullable_narrowing_field_recheck emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:nullable_narrowing_field_recheck"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/nullable_narrowing_field_recheck/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_narrowing_field_recheck/run.out"
+      ],
+      "fixture": "tests/golden/nullable_narrowing_field_recheck"
+    },
+    {
+      "case_id": "rust_vm.golden.nullable_narrowing_field_recheck.run",
+      "runner": "rust_vm_golden",
+      "result_name": "nullable_narrowing_field_recheck rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:nullable_narrowing_field_recheck"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/nullable_narrowing_field_recheck/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_narrowing_field_recheck/run.out"
+      ],
+      "fixture": "tests/golden/nullable_narrowing_field_recheck"
     },
     {
       "case_id": "rust_vm.golden.nullable_narrowing_for_body_recheck.emit",

@@ -623,10 +623,10 @@ void TypeChecker::checkStatement(const Stmt& statement)
 
     if (const auto* ifStmt = dynamic_cast<const IfStmt*>(&statement)) {
         checkExpression(*ifStmt->condition);
-        const BranchFlowFacts branchFacts = flowFacts_.factsForIfCondition(
+        const BranchFlowFacts branchFacts = flowFacts_.factsForIfConditionTargets(
             *ifStmt->condition,
-            [this](const VariableExpr& variable) {
-                return nonNilNarrowingForVariable(variable);
+            [this](const Expr& target) {
+                return nonNilNarrowingForTarget(target);
             });
         if (!ifStmt->elseBranch && !statementMayFallThrough(*ifStmt->thenBranch)) {
             const std::vector<FlowNarrowing> baseFacts = flowFacts_.activeNarrowings();
@@ -721,10 +721,10 @@ void TypeChecker::checkStatement(const Stmt& statement)
 
     if (const auto* whileStmt = dynamic_cast<const WhileStmt*>(&statement)) {
         checkExpression(*whileStmt->condition);
-        const BranchFlowFacts branchFacts = flowFacts_.factsForIfCondition(
+        const BranchFlowFacts branchFacts = flowFacts_.factsForIfConditionTargets(
             *whileStmt->condition,
-            [this](const VariableExpr& variable) {
-                return nonNilNarrowingForVariable(variable);
+            [this](const Expr& target) {
+                return nonNilNarrowingForTarget(target);
             });
         ++loopDepth_;
         flowFacts_.withNarrowings(branchFacts.thenNarrowings, [&]() {
@@ -742,10 +742,10 @@ void TypeChecker::checkStatement(const Stmt& statement)
         }
         if (forStmt->condition) {
             checkExpression(*forStmt->condition);
-            branchFacts = flowFacts_.factsForIfCondition(
+            branchFacts = flowFacts_.factsForIfConditionTargets(
                 *forStmt->condition,
-                [this](const VariableExpr& variable) {
-                    return nonNilNarrowingForVariable(variable);
+                [this](const Expr& target) {
+                    return nonNilNarrowingForTarget(target);
                 });
         }
         if (forStmt->increment) {
@@ -3477,6 +3477,73 @@ std::optional<FlowNarrowing> TypeChecker::nonNilNarrowingForVariable(const Varia
     return FlowNarrowing{binding->resolvedName, *binding->type.nullableOf};
 }
 
+std::optional<std::string> TypeChecker::fieldFlowFactName(const Expr& object, const Token& name) const
+{
+    const auto* variable = dynamic_cast<const VariableExpr*>(&object);
+    if (!variable) {
+        return std::nullopt;
+    }
+
+    const Binding* binding = findVariable(variable->name.lexeme);
+    if (!binding) {
+        return std::nullopt;
+    }
+
+    const TypeInfo objectType = variableType(*binding);
+    if (objectType.kind != StaticType::Struct || !objectType.structName) {
+        return std::nullopt;
+    }
+
+    const StructTypeDecl* structType = findStructType(*objectType.structName);
+    if (!structType || !findStructField(*structType, name.lexeme)) {
+        return std::nullopt;
+    }
+
+    return binding->resolvedName + "." + name.lexeme;
+}
+
+std::optional<FlowNarrowing> TypeChecker::nonNilNarrowingForField(const FieldAccessExpr& field) const
+{
+    const std::optional<std::string> factName = fieldFlowFactName(*field.object, field.name);
+    if (!factName) {
+        return std::nullopt;
+    }
+
+    const auto* variable = dynamic_cast<const VariableExpr*>(field.object.get());
+    const Binding* binding = variable ? findVariable(variable->name.lexeme) : nullptr;
+    if (!binding) {
+        return std::nullopt;
+    }
+
+    const TypeInfo objectType = variableType(*binding);
+    const StructTypeDecl* structType = objectType.structName
+        ? findStructType(*objectType.structName)
+        : nullptr;
+    const StructFieldType* structField = structType
+        ? findStructField(*structType, field.name.lexeme)
+        : nullptr;
+    if (!structType || !structField) {
+        return std::nullopt;
+    }
+
+    const TypeInfo fieldType = structFieldTypeForValue(objectType, *structType, *structField);
+    if (!SemanticTypes::isNullable(fieldType)) {
+        return std::nullopt;
+    }
+    return FlowNarrowing{*factName, *fieldType.nullableOf};
+}
+
+std::optional<FlowNarrowing> TypeChecker::nonNilNarrowingForTarget(const Expr& target) const
+{
+    if (const auto* variable = dynamic_cast<const VariableExpr*>(&target)) {
+        return nonNilNarrowingForVariable(*variable);
+    }
+    if (const auto* field = dynamic_cast<const FieldAccessExpr*>(&target)) {
+        return nonNilNarrowingForField(*field);
+    }
+    return std::nullopt;
+}
+
 TypeInfo TypeChecker::inferArrayElementType(const ArrayExpr& expression)
 {
     std::optional<TypeInfo> current;
@@ -3866,15 +3933,21 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
                 throw TypeError(field->name,
                     "struct `" + *object.structName + "` has no field `" + field->name.lexeme + "`");
             }
-            CheckedExpression result{
-                structFieldTypeForValue(object, *structType, *structField)};
+            const TypeInfo declaredFieldType = structFieldTypeForValue(object, *structType, *structField);
+            TypeInfo resultType = declaredFieldType;
+            if (const std::optional<std::string> factName = fieldFlowFactName(*field->object, field->name)) {
+                if (const std::optional<TypeInfo> narrowed = flowFacts_.narrowedTypeFor(*factName)) {
+                    resultType = *narrowed;
+                }
+            }
+            CheckedExpression result{resultType};
             declarationIndex_.recordTypedExpression(*field, result.type);
             declarationIndex_.recordFieldOperation(
                 *field,
                 FieldOperationRecord{
                     FieldOperationKind::Read,
                     field->name.lexeme,
-                    result.type,
+                    declaredFieldType,
                     result.type,
                     std::nullopt});
             return result;
@@ -5356,6 +5429,7 @@ TypeChecker::CheckedExpression TypeChecker::checkFieldAssignment(const FieldAssi
                 "field `" + expression.name.lexeme + "` expects " + typeInfoName(*structField)
                     + ", got " + typeInfoName(value.type));
         }
+        flowFacts_.invalidateAll();
         declarationIndex_.recordFieldOperation(
             expression,
             FieldOperationRecord{
@@ -5367,6 +5441,7 @@ TypeChecker::CheckedExpression TypeChecker::checkFieldAssignment(const FieldAssi
         return CheckedExpression{*structField};
     }
 
+    flowFacts_.invalidateAll();
     declarationIndex_.recordFieldOperation(
         expression,
         FieldOperationRecord{
@@ -5390,6 +5465,7 @@ TypeChecker::CheckedExpression TypeChecker::checkFieldCompoundAssignment(const F
     checkKnownNumber(expression.op, value.type, "compound assignment value must be number, got ");
 
     const TypeInfo result = simpleType(StaticType::Number);
+    flowFacts_.invalidateAll();
     declarationIndex_.recordFieldOperation(
         expression,
         FieldOperationRecord{

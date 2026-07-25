@@ -1,0 +1,11 @@
+struct Box { value: number? }
+
+fun read(box: Box): number {
+  if (box.value == nil) {
+    return 0;
+  }
+  return box.value + 1;
+}
+
+print read(Box { value: nil });
+print read(Box { value: 41 });

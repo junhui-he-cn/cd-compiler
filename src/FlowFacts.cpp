@@ -16,18 +16,18 @@ const Expr& ungrouped(const Expr& expression)
     return *current;
 }
 
-const VariableExpr* nilCheckedVariable(const Expr& left, const Expr& right)
+const Expr* nilCheckedTarget(const Expr& left, const Expr& right)
 {
-    const auto* leftVariable = dynamic_cast<const VariableExpr*>(&left);
+    const Expr* leftTarget = &left;
     const auto* rightLiteral = dynamic_cast<const LiteralExpr*>(&right);
-    if (leftVariable && rightLiteral && rightLiteral->value == "nil") {
-        return leftVariable;
+    if (rightLiteral && rightLiteral->value == "nil") {
+        return leftTarget;
     }
 
-    const auto* rightVariable = dynamic_cast<const VariableExpr*>(&right);
+    const Expr* rightTarget = &right;
     const auto* leftLiteral = dynamic_cast<const LiteralExpr*>(&left);
-    if (rightVariable && leftLiteral && leftLiteral->value == "nil") {
-        return rightVariable;
+    if (leftLiteral && leftLiteral->value == "nil") {
+        return rightTarget;
     }
 
     return nullptr;
@@ -66,11 +66,24 @@ BranchFlowFacts FlowFacts::factsForIfCondition(
     const Expr& condition,
     const VariableNarrowingResolver& resolveVariableNarrowing) const
 {
+    return factsForIfConditionTargets(condition, [&](const Expr& target) {
+        const auto* variable = dynamic_cast<const VariableExpr*>(&target);
+        if (!variable) {
+            return std::optional<FlowNarrowing>{};
+        }
+        return resolveVariableNarrowing(*variable);
+    });
+}
+
+BranchFlowFacts FlowFacts::factsForIfConditionTargets(
+    const Expr& condition,
+    const TargetNarrowingResolver& resolveTargetNarrowing) const
+{
     const Expr& narrowedCondition = ungrouped(condition);
 
     if (const auto* logical = dynamic_cast<const LogicalExpr*>(&narrowedCondition)) {
-        const BranchFlowFacts left = factsForIfCondition(*logical->left, resolveVariableNarrowing);
-        const BranchFlowFacts right = factsForIfCondition(*logical->right, resolveVariableNarrowing);
+        const BranchFlowFacts left = factsForIfConditionTargets(*logical->left, resolveTargetNarrowing);
+        const BranchFlowFacts right = factsForIfConditionTargets(*logical->right, resolveTargetNarrowing);
 
         BranchFlowFacts result;
         if (logical->op.type == TokenType::AmpersandAmpersand) {
@@ -94,12 +107,12 @@ BranchFlowFacts FlowFacts::factsForIfCondition(
         return BranchFlowFacts{};
     }
 
-    const VariableExpr* variable = nilCheckedVariable(*binary->left, *binary->right);
-    if (!variable) {
+    const Expr* target = nilCheckedTarget(*binary->left, *binary->right);
+    if (!target) {
         return BranchFlowFacts{};
     }
 
-    std::optional<FlowNarrowing> narrowing = resolveVariableNarrowing(*variable);
+    std::optional<FlowNarrowing> narrowing = resolveTargetNarrowing(*target);
     if (!narrowing) {
         return BranchFlowFacts{};
     }
@@ -144,8 +157,10 @@ std::optional<TypeInfo> FlowFacts::narrowedTypeFor(const std::string& resolvedNa
 
 void FlowFacts::invalidate(const std::string& resolvedName)
 {
+    const std::string fieldPrefix = resolvedName + ".";
     for (ActiveFlowFact& fact : activeNarrowings_) {
-        if (fact.resolvedName == resolvedName) {
+        if (fact.resolvedName == resolvedName
+            || fact.resolvedName.rfind(fieldPrefix, 0) == 0) {
             fact.narrowedType.reset();
         }
     }

@@ -1,6 +1,7 @@
-struct Box { value: number? }
+struct Inner { value: number? }
+struct Box { inner: Inner }
 fun takesNumber(value: number): number { return value; }
-let box: Box = Box { value: 1 };
-if (box.value != nil) {
-  print takesNumber(box.value);
+let box: Box = Box { inner: Inner { value: 1 } };
+if (box.inner.value != nil) {
+  print takesNumber(box.inner.value);
 }

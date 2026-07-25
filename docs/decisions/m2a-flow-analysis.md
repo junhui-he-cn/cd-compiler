@@ -308,3 +308,27 @@ now validates 1692 cases, including:
 The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification
 command are the gates for this revision.
+
+## M2A-FLOW-012: direct named-struct field narrowing
+
+For a known named-struct field reached through a direct variable receiver, a
+nil comparison establishes a field-specific nullable narrowing in the active
+branch, loop body, or explicit-else continuation state. Field assignments
+conservatively invalidate all active nullable facts, while root variable
+assignments invalidate related field facts.
+
+Nested fields, indexes, dynamic receivers, and alias-specific field precision
+remain outside this slice. The decision revision is `m2a-2026-07-25-r12`, based
+on commit `97ea8fc`.
+
+The positive fixture reads `box.value` after a direct nil guard. The negative
+fixture assigns the field and confirms that the stale field proof is rejected.
+The M0D inventory now validates 1695 cases, including:
+
+- `golden.type_errors.nullable_narrowing_field_mutation_invalidated`
+- `rust_vm.golden.nullable_narrowing_field_recheck.emit`
+- `rust_vm.golden.nullable_narrowing_field_recheck.run`
+
+The FlowFacts CTest, focused golden and Rust VM subsets,
+`python3 tests/verification_inventory.py`, and the full canonical verification
+command are the gates for this revision.

@@ -56,7 +56,7 @@ Type annotations support `number`, `bool`, `string`, `nil`, named struct types, 
 An assignment to a direct variable invalidates its active nullable narrowing; after
 mutation, code must perform a supported nil check again before using the binding
 as non-null. The invalidation remains effective in enclosing flow regions that
-may observe the mutation. Field/index, loop exit, and closure-boundary
+may observe the mutation. Index, loop exit, and closure-boundary
 narrowing remain conservative and are not yet extended.
 
 Function and closure bodies are checked without inheriting nullable narrowing
@@ -101,6 +101,12 @@ narrowing remain conservative.
 Inside a C-style `for`, the condition's true-branch nullable facts are active
 while checking the loop body. They do not survive the loop, and initializer or
 increment flow remains conservative; `for-in` narrowing is not implemented.
+
+Direct fields of known named structs support the same nullable narrowing in
+conditions and active branch/body scopes, for example `box.value != nil`.
+Field assignments conservatively invalidate all active nullable facts, while
+nested fields, indexes, dynamic receivers, and alias-specific field precision
+remain unsupported.
 
 The built-in `map<K, V>` type and nominal generic structs such as `Box<T>` are
 implemented generic collection/container forms. Map literals use `{ key: value }`

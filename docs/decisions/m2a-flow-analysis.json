@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "decision_revision": "m2a-2026-07-25-r11",
-  "baseline_commit": "d5fa3ce",
+  "decision_revision": "m2a-2026-07-25-r12",
+  "baseline_commit": "97ea8fc",
   "supersedes": ["SEM-TYPE-002"],
   "purpose": "Record intentional M2A flow-semantics revisions after the behavior-preserving M1 migration.",
   "entries": [
@@ -397,6 +397,42 @@
           "cmake --build build --target flow_facts_tests compiler_design",
           "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_if_join_unsupported",
           "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_if_join_recheck",
+          "python3 tests/verification_inventory.py --write",
+          "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+        ]
+      }
+    },
+    {
+      "decision_id": "M2A-FLOW-012",
+      "introduced_revision": "m2a-2026-07-25-r12",
+      "domain": "flow-analysis",
+      "question": "When may a direct named-struct field nil check narrow the field value?",
+      "decision": "For a known named-struct field reached through a direct variable receiver, a nil comparison establishes a field-specific nullable narrowing in the active branch, loop body, or explicit-else continuation state. Field assignments conservatively invalidate all active nullable facts, root variable assignments invalidate related field facts, and nested fields, indexes, dynamic receivers, and alias-specific field precision remain outside this slice.",
+      "status": "resolved",
+      "owner": "TypeChecker field target resolution, FlowFacts expression targets, and field mutation effects",
+      "m1_behavior": "Before this revision, `box.value != nil` did not narrow the known nullable field, so a non-null use of `box.value` remained a type error inside the guarded branch.",
+      "rationale": "A direct variable plus a statically known named-struct field provides a stable snapshot-local target key. Field writes may be observed through aliases, so the conservative all-fact invalidation rule avoids retaining any stale field or variable proof after mutation.",
+      "affected_consumers": [
+        "FlowFacts expression-target branch facts and root-prefix invalidation",
+        "TypeChecker named-struct field reads and assignments",
+        "nullable direct-field compatibility fixtures"
+      ],
+      "compatibility_consequences": "A known direct field may be used as non-null after a supported nil check. Field writes invalidate active facts, while nested fields, array indexes, dynamic receivers, and alias-specific precision retain the existing conservative behavior.",
+      "migration": "Keep variable resolver compatibility while adding an expression-target resolver for direct fields. Use the field fact for known field reads, invalidate all facts after field writes, and invalidate field-prefixed facts when their root variable is assigned.",
+      "quantitative_gate": "The m0d-2026-07-22-r1 inventory validates 1695 cases, the FlowFacts CTest passes, the named direct-field positive and mutation-negative fixtures pass, and the full canonical verification command remains the release gate.",
+      "old_path_deletion_condition": "Delete no additional production path in this slice. The old unsupported direct-field narrowing behavior is replaced only after target-key resolution, mutation invalidation, and its positive/negative fixtures pass; nested fields and index targets require later slices.",
+      "positive_fixtures": [
+        "tests/golden/nullable_narrowing_field_recheck"
+      ],
+      "negative_fixtures": [
+        "tests/golden/type_errors/nullable_narrowing_field_mutation_invalidated.cd"
+      ],
+      "verification": {
+        "inventory_revision": "m0d-2026-07-22-r1",
+        "commands": [
+          "cmake --build build --target flow_facts_tests compiler_design",
+          "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_field_mutation_invalidated",
+          "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_field_recheck",
           "python3 tests/verification_inventory.py --write",
           "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
         ]

@@ -33,6 +33,21 @@ ExprPtr nilCheck(std::string name, TokenType op)
         nilLiteral());
 }
 
+ExprPtr field(ExprPtr object, std::string name)
+{
+    return std::make_unique<FieldAccessExpr>(
+        std::move(object),
+        token(TokenType::Identifier, std::move(name)));
+}
+
+ExprPtr fieldNilCheck(std::string object, std::string name, TokenType op)
+{
+    return std::make_unique<BinaryExpr>(
+        field(variable(std::move(object)), std::move(name)),
+        token(op, op == TokenType::BangEqual ? "!=" : "=="),
+        nilLiteral());
+}
+
 ExprPtr grouped(ExprPtr expression)
 {
     return std::make_unique<GroupingExpr>(std::move(expression));
@@ -54,6 +69,23 @@ FlowFacts::VariableNarrowingResolver resolver()
         }
         if (expression.name.lexeme == "stringValue") {
             return FlowNarrowing{"stringValue#1", simpleType(StaticType::String)};
+        }
+        return std::nullopt;
+    };
+}
+
+FlowFacts::TargetNarrowingResolver targetResolver()
+{
+    return [](const Expr& expression) -> std::optional<FlowNarrowing> {
+        if (const auto* variable = dynamic_cast<const VariableExpr*>(&expression)) {
+            if (variable->name.lexeme == "numberValue") {
+                return FlowNarrowing{"numberValue#0", simpleType(StaticType::Number)};
+            }
+        }
+        if (const auto* fieldAccess = dynamic_cast<const FieldAccessExpr*>(&expression)) {
+            if (fieldAccess->name.lexeme == "value") {
+                return FlowNarrowing{"box#2.value", simpleType(StaticType::Number)};
+            }
         }
         return std::nullopt;
     };
@@ -125,6 +157,19 @@ void test_non_narrowable_variable_produces_no_facts()
     const BranchFlowFacts branchFacts = facts.factsForIfCondition(*condition, resolver());
 
     assert(branchFacts.thenNarrowings.empty());
+    assert(branchFacts.elseNarrowings.empty());
+}
+
+void test_target_resolver_narrows_direct_field_targets()
+{
+    FlowFacts facts;
+    const ExprPtr condition = fieldNilCheck("box", "value", TokenType::BangEqual);
+
+    const BranchFlowFacts branchFacts = facts.factsForIfConditionTargets(*condition, targetResolver());
+
+    assert(branchFacts.thenNarrowings.size() == 1);
+    assert(branchFacts.thenNarrowings.front().resolvedName == "box#2.value");
+    assert(branchFacts.thenNarrowings.front().type.kind == StaticType::Number);
     assert(branchFacts.elseNarrowings.empty());
 }
 
@@ -229,6 +274,17 @@ void test_invalidate_all_clears_nested_facts()
     });
 }
 
+void test_root_invalidation_clears_field_facts()
+{
+    FlowFacts facts;
+    const std::vector<FlowNarrowing> fieldFacts{{"box#0.value", simpleType(StaticType::Number)}};
+
+    facts.withNarrowings(fieldFacts, [&]() {
+        facts.invalidate("box#0");
+        assert(!facts.narrowedTypeFor("box#0.value").has_value());
+    });
+}
+
 void test_without_narrowings_restores_state_after_success_and_throw()
 {
     FlowFacts facts;
@@ -276,9 +332,11 @@ int main()
     test_logical_and_combines_then_facts();
     test_logical_or_combines_else_facts();
     test_non_narrowable_variable_produces_no_facts();
+    test_target_resolver_narrows_direct_field_targets();
     test_active_narrowings_can_be_appended_after_branch_analysis();
     test_with_narrowings_restores_stack_after_success_and_throw();
     test_invalidation_propagates_and_nested_facts_restore();
     test_invalidate_all_clears_nested_facts();
+    test_root_invalidation_clears_field_facts();
     test_without_narrowings_restores_state_after_success_and_throw();
 }

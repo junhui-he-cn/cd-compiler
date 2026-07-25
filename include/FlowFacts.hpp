@@ -21,11 +21,15 @@ struct BranchFlowFacts {
 class FlowFacts {
 public:
     using VariableNarrowingResolver = std::function<std::optional<FlowNarrowing>(const VariableExpr&)>;
+    using TargetNarrowingResolver = std::function<std::optional<FlowNarrowing>(const Expr&)>;
 
     void clear();
     BranchFlowFacts factsForIfCondition(
         const Expr& condition,
         const VariableNarrowingResolver& resolveVariableNarrowing) const;
+    BranchFlowFacts factsForIfConditionTargets(
+        const Expr& condition,
+        const TargetNarrowingResolver& resolveTargetNarrowing) const;
     std::vector<FlowNarrowing> activeNarrowings() const;
     void appendNarrowings(const std::vector<FlowNarrowing>& narrowings);
     std::optional<TypeInfo> narrowedTypeFor(const std::string& resolvedName) const;

@@ -1,0 +1,9 @@
+struct Box { value: number? }
+
+fun stale(box: Box): number {
+  if (box.value != nil) {
+    box.value = nil;
+    return box.value + 1;
+  }
+  return 0;
+}

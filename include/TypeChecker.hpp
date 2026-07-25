@@ -217,6 +217,9 @@ private:
     CheckedExpression checkExpressionInfo(const Expr& expression, const TypeInfo* expectedType);
     TypeInfo variableType(const Binding& binding) const;
     std::optional<FlowNarrowing> nonNilNarrowingForVariable(const VariableExpr& variable) const;
+    std::optional<FlowNarrowing> nonNilNarrowingForTarget(const Expr& target) const;
+    std::optional<FlowNarrowing> nonNilNarrowingForField(const FieldAccessExpr& field) const;
+    std::optional<std::string> fieldFlowFactName(const Expr& object, const Token& name) const;
     CheckedExpression checkArrayLiteral(const ArrayExpr& expression, const TypeInfo* expectedType);
     TypeInfo inferArrayElementType(const ArrayExpr& expression);
     CheckedExpression checkMapLiteral(const MapExpr& expression, const TypeInfo* expectedType);
