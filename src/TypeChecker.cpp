@@ -886,6 +886,14 @@ void TypeChecker::buildModuleInterfaces(const Program& program)
                 interfaceInfo.sourceId = graphNode->sourceId;
                 interfaceInfo.canonicalPath = graphNode->canonicalPath;
             }
+            for (const ModuleGraphEdge& edge : program.moduleGraph->edges) {
+                if (edge.importingModuleId == module->moduleId) {
+                    interfaceInfo.dependencies.push_back(ModuleInterfaceDependency{
+                        edge.importedModuleId,
+                        edge.kind,
+                        edge.requestedPath});
+                }
+            }
         }
 
         if (const ModuleValueExports* exports = moduleSymbols_.valueExports(module->moduleId)) {

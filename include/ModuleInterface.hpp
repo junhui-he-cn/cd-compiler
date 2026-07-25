@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ModuleGraph.hpp"
 #include "SourceIdentity.hpp"
 #include "TypeUtils.hpp"
 
@@ -47,12 +48,19 @@ struct ModuleInterfaceEnum {
     std::vector<ModuleInterfaceVariant> variants;
 };
 
+struct ModuleInterfaceDependency {
+    std::size_t importedModuleId = 0;
+    ModuleGraphEdgeKind kind = ModuleGraphEdgeKind::Import;
+    std::string requestedPath;
+};
+
 struct ModuleInterface {
     std::size_t moduleId = 0;
     SourceFileId sourceId;
     std::string path;
     std::string canonicalPath;
     bool isEntry = false;
+    std::vector<ModuleInterfaceDependency> dependencies;
     std::vector<ModuleInterfaceValue> values;
     std::vector<ModuleInterfaceStruct> structs;
     std::vector<ModuleInterfaceEnum> enums;

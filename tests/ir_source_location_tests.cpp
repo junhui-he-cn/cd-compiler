@@ -93,9 +93,11 @@ void test_module_interface_graph_identity(const fs::path& root)
 {
     fs::remove_all(root);
     const fs::path library = root / "lib.cd";
+    const fs::path reExport = root / "api.cd";
     const fs::path entry = root / "input.cd";
     writeModuleSource(library, "let value = 1;\nexport value;\n");
-    writeModuleSource(entry, "import \"./lib.cd\";\nprint value;\n");
+    writeModuleSource(reExport, "export value from \"./lib.cd\";\n");
+    writeModuleSource(entry, "import \"./api.cd\";\nprint value;\n");
 
     FrontendSession frontend;
     Program program = frontend.loadFiles({entry.string()});
@@ -116,6 +118,47 @@ void test_module_interface_graph_identity(const fs::path& root)
         assert(interfaceInfo.sourceId == node->sourceId);
         assert(interfaceInfo.canonicalPath == node->canonicalPath);
     }
+
+    const auto findInterface = [&interfaces](std::size_t moduleId) -> const ModuleInterface* {
+        const auto found = std::find_if(
+            interfaces.begin(),
+            interfaces.end(),
+            [moduleId](const ModuleInterface& interfaceInfo) {
+                return interfaceInfo.moduleId == moduleId;
+            });
+        return found == interfaces.end() ? nullptr : &*found;
+    };
+    const auto entryNode = std::find_if(
+        program.moduleGraph->nodes.begin(),
+        program.moduleGraph->nodes.end(),
+        [](const ModuleGraphNode& node) { return node.isEntry; });
+    assert(entryNode != program.moduleGraph->nodes.end());
+    const auto entryImport = std::find_if(
+        program.moduleGraph->edges.begin(),
+        program.moduleGraph->edges.end(),
+        [entryNode](const ModuleGraphEdge& edge) {
+            return edge.importingModuleId == entryNode->moduleId
+                && edge.kind == ModuleGraphEdgeKind::Import;
+        });
+    assert(entryImport != program.moduleGraph->edges.end());
+    const ModuleInterface* entryInterface = findInterface(entryNode->moduleId);
+    assert(entryInterface != nullptr);
+    assert(entryInterface->dependencies.size() == 1);
+    assert(entryInterface->dependencies.front().importedModuleId == entryImport->importedModuleId);
+    assert(entryInterface->dependencies.front().kind == ModuleGraphEdgeKind::Import);
+    assert(entryInterface->dependencies.front().requestedPath == "./api.cd");
+
+    const auto reExportEdge = std::find_if(
+        program.moduleGraph->edges.begin(),
+        program.moduleGraph->edges.end(),
+        [](const ModuleGraphEdge& edge) { return edge.kind == ModuleGraphEdgeKind::ReExport; });
+    assert(reExportEdge != program.moduleGraph->edges.end());
+    const ModuleInterface* reExportInterface = findInterface(reExportEdge->importingModuleId);
+    assert(reExportInterface != nullptr);
+    assert(reExportInterface->dependencies.size() == 1);
+    assert(reExportInterface->dependencies.front().importedModuleId == reExportEdge->importedModuleId);
+    assert(reExportInterface->dependencies.front().kind == ModuleGraphEdgeKind::ReExport);
+    assert(reExportInterface->dependencies.front().requestedPath == "./lib.cd");
 
     fs::remove_all(root);
 }
