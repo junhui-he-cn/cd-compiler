@@ -707,8 +707,15 @@ void TypeChecker::checkStatement(const Stmt& statement)
 
     if (const auto* whileStmt = dynamic_cast<const WhileStmt*>(&statement)) {
         checkExpression(*whileStmt->condition);
+        const BranchFlowFacts branchFacts = flowFacts_.factsForIfCondition(
+            *whileStmt->condition,
+            [this](const VariableExpr& variable) {
+                return nonNilNarrowingForVariable(variable);
+            });
         ++loopDepth_;
-        checkStatement(*whileStmt->body);
+        flowFacts_.withNarrowings(branchFacts.thenNarrowings, [&]() {
+            checkStatement(*whileStmt->body);
+        });
         --loopDepth_;
         return;
     }

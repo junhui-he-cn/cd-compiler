@@ -1,0 +1,6 @@
+fun after(value: number?): number {
+  while (value != nil) {
+    break;
+  }
+  return value + 1;
+}

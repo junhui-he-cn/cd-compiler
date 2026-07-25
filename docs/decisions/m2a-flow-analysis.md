@@ -236,3 +236,27 @@ implicitly admitted. The M0D inventory now validates 1683 cases, including:
 The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification
 command are the gates for this revision.
+
+## M2A-FLOW-009: while-body narrowing
+
+For a `while` statement, the condition's true-branch nullable facts are active
+while checking the loop body. The facts are scoped to that body and are
+discarded at the loop boundary, so the condition does not create a post-loop
+non-null proof. Body assignments and calls still use the existing invalidation
+rules while the body facts are active.
+
+C-style `for`, `for-in`, loop exits, and broader loop joins remain outside this
+slice. The decision revision is `m2a-2026-07-25-r9`, based on commit `a8a9943`.
+
+The positive fixture uses a nullable value in a `while (value != nil)` body and
+mutates it before the next condition check. The negative fixture confirms that
+the body proof is not retained after a loop that may exit. The M0D inventory
+now validates 1686 cases, including:
+
+- `golden.type_errors.nullable_narrowing_while_post_loop_unsupported`
+- `rust_vm.golden.nullable_narrowing_while_body_recheck.emit`
+- `rust_vm.golden.nullable_narrowing_while_body_recheck.run`
+
+The FlowFacts CTest, focused golden and Rust VM subsets,
+`python3 tests/verification_inventory.py`, and the full canonical verification
+command are the gates for this revision.

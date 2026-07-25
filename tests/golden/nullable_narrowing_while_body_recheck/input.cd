@@ -1,0 +1,11 @@
+fun sumOnce(value: number?): number {
+  let result = 0;
+  while (value != nil) {
+    result = result + value;
+    value = nil;
+  }
+  return result;
+}
+
+print sumOnce(nil);
+print sumOnce(7);

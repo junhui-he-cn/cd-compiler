@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "decision_revision": "m2a-2026-07-25-r8",
-  "baseline_commit": "05962f6",
+  "decision_revision": "m2a-2026-07-25-r9",
+  "baseline_commit": "a8a9943",
   "supersedes": ["SEM-TYPE-002"],
   "purpose": "Record intentional M2A flow-semantics revisions after the behavior-preserving M1 migration.",
   "entries": [
@@ -289,6 +289,42 @@
           "cmake --build build --target flow_facts_tests compiler_design",
           "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_explicit_else",
           "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_explicit_else_recheck",
+          "python3 tests/verification_inventory.py --write",
+          "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+        ]
+      }
+    },
+    {
+      "decision_id": "M2A-FLOW-009",
+      "introduced_revision": "m2a-2026-07-25-r9",
+      "domain": "flow-analysis",
+      "question": "When may a while-loop condition narrowing be used in the loop body and after the loop?",
+      "decision": "For a while statement, the condition's true-branch nullable flow facts are active while checking the loop body and are discarded at the loop boundary. Body assignments and calls use the existing invalidation rules while those facts are active. C-style for, for-in, loop exits, and broader loop joins remain outside this slice.",
+      "status": "resolved",
+      "owner": "TypeChecker while-body flow scope and FlowFacts branch facts",
+      "m1_behavior": "Before this revision, a nullable value guarded by a while condition remained nullable inside the loop body, even though the body is reached only after the condition's true result.",
+      "rationale": "The true branch is the only path entering each while iteration, so its direct-variable narrowing is sound for body checking. A loop may execute zero times or exit through break after a mutation, so the condition fact is not promoted beyond the loop boundary.",
+      "affected_consumers": [
+        "TypeChecker while condition/body checking",
+        "FlowFacts scoped branch facts and mutation invalidation",
+        "nullable while-body compatibility fixtures"
+      ],
+      "compatibility_consequences": "A nullable binding may be used as non-null inside `while (value != nil) { ... }`, but remains nullable after the loop unless an independent fact is active. C-style for and for-in loops retain their existing behavior.",
+      "migration": "Reuse the existing if-condition branch-fact resolver and scope only its then facts around while-body checking with `FlowFacts::withNarrowings`; do not install those facts after the loop.",
+      "quantitative_gate": "The m0d-2026-07-22-r1 inventory validates 1686 cases, the FlowFacts CTest passes, the named while-body positive and post-loop negative fixtures pass, and the full canonical verification command remains the release gate.",
+      "old_path_deletion_condition": "Delete no additional production path in this slice. The old nullable body rejection is replaced only after scoped while-body facts and its positive/negative fixtures pass; other loop forms and loop joins require later slices.",
+      "positive_fixtures": [
+        "tests/golden/nullable_narrowing_while_body_recheck"
+      ],
+      "negative_fixtures": [
+        "tests/golden/type_errors/nullable_narrowing_while_post_loop_unsupported.cd"
+      ],
+      "verification": {
+        "inventory_revision": "m0d-2026-07-22-r1",
+        "commands": [
+          "cmake --build build --target flow_facts_tests compiler_design",
+          "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_while",
+          "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_while_body_recheck",
           "python3 tests/verification_inventory.py --write",
           "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
         ]
