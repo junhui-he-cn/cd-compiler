@@ -94,6 +94,7 @@ private:
     Scope& currentScope();
     const Scope& currentScope() const;
     Binding* findVariable(const std::string& name);
+    const Binding* findBinding(DeclarationId declarationId) const;
     Binding* findSimpleVariableBinding(const Expr& expression);
     const Binding* findSimpleVariableBinding(const Expr& expression) const;
     const Binding* findVariable(const std::string& name) const;
@@ -223,6 +224,7 @@ private:
     const TypeInfo* contextualFunctionType(const TypeInfo* expectedType) const;
     CheckedExpression checkFunctionExpression(const FunctionExpr& expression, const TypeInfo* expectedType);
     CheckedExpression checkCall(const CallExpr& expression);
+    void invalidateCapturedBindings(const CallExpr& expression);
     CheckedExpression checkMemberCall(
         const MemberCallExpr& expression,
         const TypeInfo* expectedType = nullptr);

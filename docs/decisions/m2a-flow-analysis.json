@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "decision_revision": "m2a-2026-07-25-r2",
-  "baseline_commit": "95227a6",
+  "decision_revision": "m2a-2026-07-25-r3",
+  "baseline_commit": "c5087ec",
   "supersedes": ["SEM-TYPE-002"],
   "purpose": "Record intentional M2A flow-semantics revisions after the behavior-preserving M1 migration.",
   "entries": [
@@ -71,6 +71,43 @@
           "cmake --build build --target flow_facts_tests compiler_design",
           "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_function_boundary",
           "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_function_boundary",
+          "python3 tests/verification_inventory.py --write",
+          "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+        ]
+      }
+    },
+    {
+      "decision_id": "M2A-FLOW-003",
+      "introduced_revision": "m2a-2026-07-25-r3",
+      "domain": "flow-analysis",
+      "question": "How does a resolved direct call affect nullable narrowing for captured local bindings?",
+      "decision": "When a resolved direct call targets a local function whose capture metadata names an enclosing binding, every active narrowing for each currently visible captured binding is invalidated after successful argument and call-shape checking. The rule is conservative because capture metadata records reads and writes together. Native, unresolved, indirect, callback, global-alias, and struct-method effects are outside this slice.",
+      "status": "resolved",
+      "owner": "DeclarationIndex capture metadata, TypeChecker, and FlowFacts",
+      "m1_behavior": "Before this revision, a direct call to a closure that could assign a captured nullable binding left the caller's prior non-null proof active.",
+      "rationale": "A closure call can update a shared captured cell. Retaining a caller-side proof after that call is unsound; invalidating only captured local bindings avoids changing ordinary calls that cannot observe those cells.",
+      "affected_consumers": [
+        "DeclarationIndex direct-call and capture metadata",
+        "TypeChecker direct call checking",
+        "FlowFacts mutation invalidation",
+        "nullable captured-call compatibility fixtures"
+      ],
+      "compatibility_consequences": "Code that uses a captured nullable binding after a direct closure call must perform a fresh supported nil check. Calls to ordinary non-capturing functions retain existing narrowing behavior. Indirect/callback and global mutation effects remain deferred.",
+      "migration": "Reuse the already-collected direct call target and capture records; map captured declaration IDs back to visible TypeChecker bindings and invalidate their active facts after the call succeeds.",
+      "quantitative_gate": "The m0d-2026-07-22-r1 inventory validates 1668 cases, the FlowFacts CTest passes, the named captured-call positive and negative fixtures pass, and the full canonical verification command remains the release gate.",
+      "old_path_deletion_condition": "Delete no additional production path in this slice. The old retained-proof behavior is replaced only after direct captured-call invalidation and its positive/negative fixtures pass.",
+      "positive_fixtures": [
+        "tests/golden/nullable_narrowing_captured_call_recheck"
+      ],
+      "negative_fixtures": [
+        "tests/golden/type_errors/nullable_narrowing_captured_call_invalidated.cd"
+      ],
+      "verification": {
+        "inventory_revision": "m0d-2026-07-22-r1",
+        "commands": [
+          "cmake --build build --target flow_facts_tests compiler_design",
+          "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_captured_call",
+          "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_captured_call_recheck",
           "python3 tests/verification_inventory.py --write",
           "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
         ]

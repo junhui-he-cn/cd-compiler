@@ -1,0 +1,16 @@
+fun takesNumber(value: number): number {
+  return value;
+}
+
+fun outer() {
+  let maybe: number? = 1;
+  fun clear() {
+    maybe = nil;
+  }
+  if (maybe != nil) {
+    clear();
+    print takesNumber(maybe);
+  }
+}
+
+outer();

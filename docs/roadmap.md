@@ -684,9 +684,9 @@ HIR.
 ### M2A: Semantic consistency and dataflow
 
 Status: the admitted flow slices are implemented in
-`docs/decisions/m2a-flow-analysis.json` as `M2A-FLOW-001` and
-`M2A-FLOW-002`. Direct-variable assignment invalidation now makes nullable flow
-facts mutation-safe within the active region and enclosing regions that may
+`docs/decisions/m2a-flow-analysis.json` as `M2A-FLOW-001` through
+`M2A-FLOW-003`. Direct-variable assignment invalidation now makes nullable
+flow facts mutation-safe within the active region and enclosing regions that may
 observe the mutation; function bodies no longer inherit definition-site facts.
 Loop, post-branch, field/index, alias, call, and closure-boundary effect
 analysis remain subsequent M2A slices.
@@ -1063,8 +1063,8 @@ the smallest proof of a broader milestone.
 ## Near-term execution order
 
 The verification foundation, M0.5 decisions, and M1F semantic cutover are
-implemented. The active near-term slice is M2A-FLOW-002: function-boundary
-isolation for nullable flow facts. Subsequent M2A slices must retain the same
+implemented. The active near-term slice is M2A-FLOW-003: direct captured-call
+invalidation for nullable flow facts. Subsequent M2A slices must retain the same
 decision-update, positive/negative fixture, and mutation-invalidation evidence
 pattern.
 
@@ -1092,7 +1092,7 @@ mutations; the canonical inventory now reports 1,658 cases. The harness,
 minimizer selftest, and observed baseline are recorded in
 `docs/verification/m0c-malformed-design.md` and
 `docs/verification/m0c-baseline.json`. M0D, M0.5A, M0.5B, and M1F are now
-implemented; M2A-FLOW-001 and M2A-FLOW-002 are the active semantic slices.
+implemented; M2A-FLOW-001 through M2A-FLOW-003 are the active semantic slices.
 
 The hard dependency gates are:
 

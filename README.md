@@ -64,6 +64,11 @@ from the branch where they are defined. A body must establish its own nil
 check before using a captured nullable binding as non-null; call-site effects
 from functions that may mutate captured bindings are not yet propagated.
 
+Resolved direct calls to local closures invalidate active nullable narrowing for
+their captured bindings, because the call may update a shared cell. Ordinary
+non-capturing calls retain unrelated active narrowing; indirect calls, native
+callbacks, global aliases, and struct-method effects are not yet modeled.
+
 The built-in `map<K, V>` type and nominal generic structs such as `Box<T>` are
 implemented generic collection/container forms. Map literals use `{ key: value }`
 in expression position, infer key and value

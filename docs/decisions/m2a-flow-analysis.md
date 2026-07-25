@@ -78,3 +78,29 @@ Together with the previous assignment-invalidation cases, the M0D inventory
 validates 1665 cases. The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification
 command are the gates for this revision.
+
+## M2A-FLOW-003: direct captured-call invalidation
+
+When a resolved direct call targets a local function whose capture metadata
+names an enclosing binding, the active narrowing for each visible captured
+binding is invalidated after the call has passed argument and call-shape
+checking. Existing capture metadata intentionally records reads and writes
+together, so this rule is conservative: an ordinary non-capturing call keeps
+other active narrowings, while a captured call requires a fresh nil check.
+
+This slice does not model indirect function values, native callbacks, global
+aliases, or struct-method side effects. Those call-effect boundaries remain
+open for a later M2A decision. The decision revision is
+`m2a-2026-07-25-r3`, based on commit `c5087ec`.
+
+The positive fixture calls a captured reader and then rechecks the nullable
+binding; the negative fixture calls a captured mutator and then uses the stale
+proof. The M0D inventory now validates 1668 cases, including:
+
+- `golden.type_errors.nullable_narrowing_captured_call_invalidated`
+- `rust_vm.golden.nullable_narrowing_captured_call_recheck.emit`
+- `rust_vm.golden.nullable_narrowing_captured_call_recheck.run`
+
+The FlowFacts CTest, focused golden and Rust VM subsets,
+`python3 tests/verification_inventory.py`, and the full canonical verification
+command are the gates for this revision.

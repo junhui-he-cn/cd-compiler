@@ -1,0 +1,18 @@
+fun takesNumber(value: number): number {
+  return value;
+}
+
+fun outer() {
+  let maybe: number? = 1;
+  fun read() {
+    print maybe;
+  }
+  if (maybe != nil) {
+    read();
+    if (maybe != nil) {
+      print takesNumber(maybe);
+    }
+  }
+}
+
+outer();

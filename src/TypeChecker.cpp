@@ -341,6 +341,18 @@ const TypeChecker::Binding* TypeChecker::findVariable(const std::string& name) c
     return nullptr;
 }
 
+const TypeChecker::Binding* TypeChecker::findBinding(DeclarationId declarationId) const
+{
+    for (auto scope = scopes_.rbegin(); scope != scopes_.rend(); ++scope) {
+        for (const auto& entry : *scope) {
+            if (entry.second.declarationId == declarationId) {
+                return &entry.second;
+            }
+        }
+    }
+    return nullptr;
+}
+
 TypeChecker::Binding* TypeChecker::findSimpleVariableBinding(const Expr& expression)
 {
     const auto* variable = dynamic_cast<const VariableExpr*>(&expression);
@@ -4967,11 +4979,42 @@ TypeChecker::CheckedExpression TypeChecker::checkCall(const CallExpr& expression
     }
 
     const CheckedExpression callee = checkExpressionInfo(*expression.callee);
-    return checkFunctionCall(
+    CheckedExpression result = checkFunctionCall(
         expression.paren,
         callee.type,
         expression.typeArguments,
         expression.arguments);
+    invalidateCapturedBindings(expression);
+    return result;
+}
+
+void TypeChecker::invalidateCapturedBindings(const CallExpr& expression)
+{
+    const CallTargetRecord* callTarget = declarationIndex_.callTarget(expression);
+    if (!callTarget || callTarget->kind != CallTargetKind::Direct) {
+        return;
+    }
+
+    const DeclarationRecord* declaration = declarationIndex_.declaration(callTarget->target.declarationId);
+    if (!declaration || !declaration->statement) {
+        return;
+    }
+
+    const auto* function = dynamic_cast<const FunctionStmt*>(declaration->statement);
+    if (!function) {
+        return;
+    }
+
+    const CaptureRecord* captures = declarationIndex_.captureMetadata(*function);
+    if (!captures) {
+        return;
+    }
+
+    for (const ResolvedSymbol& symbol : captures->symbols) {
+        if (const Binding* binding = findBinding(symbol.declarationId)) {
+            flowFacts_.invalidate(binding->resolvedName);
+        }
+    }
 }
 
 TypeChecker::IndexTargetTypes TypeChecker::checkIndexTarget(
