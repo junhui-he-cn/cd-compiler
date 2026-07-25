@@ -202,6 +202,13 @@ binding-free literal OR patterns. `IRCompiler` consumes the record to verify
 that every alternative supplies the same arm-local bindings while preserving
 the existing branch and register lowering.
 
+## Pattern guard inputs (M1E3 next slice)
+
+`DeclarationIndex::patternGuard()` exposes the checked `TypeInfo` for every
+statement- and expression-match guard. `IRCompiler` requires the record before
+emitting the existing truthiness branch; guard truthiness and exhaustiveness
+coverage remain owned by `TypeChecker`.
+
 ## Lossless source view
 
 `FrontendSession::losslessSourceView()` groups `LosslessPiece` values by

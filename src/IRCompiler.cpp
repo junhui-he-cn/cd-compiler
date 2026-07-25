@@ -514,6 +514,12 @@ void IRCompiler::compileMatch(const MatchStmt& statement)
             ir_.emitStoreVar(binding.resolvedName, binding.value);
         }
         if (arm.guard) {
+            const PatternGuardRecord* guardRecord = declarationIndex_
+                ? declarationIndex_->patternGuard(*arm.guard)
+                : nullptr;
+            if (!guardRecord) {
+                throw IRCompileError("missing pattern guard metadata");
+            }
             const IRRegister guard = compileExpression(*arm.guard);
             failJumps.push_back(ir_.emitJumpIfFalse(guard));
         }
@@ -543,6 +549,12 @@ IRRegister IRCompiler::compileMatchExpression(const MatchExpr& expression)
             ir_.emitStoreVar(binding.resolvedName, binding.value);
         }
         if (arm.guard) {
+            const PatternGuardRecord* guardRecord = declarationIndex_
+                ? declarationIndex_->patternGuard(*arm.guard)
+                : nullptr;
+            if (!guardRecord) {
+                throw IRCompileError("missing pattern guard metadata");
+            }
             const IRRegister guard = compileExpression(*arm.guard);
             failJumps.push_back(ir_.emitJumpIfFalse(guard));
         }

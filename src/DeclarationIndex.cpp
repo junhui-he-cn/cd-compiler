@@ -455,6 +455,9 @@ private:
                 beginScope(nullptr);
                 std::unordered_map<std::string, DeclarationId> bindings;
                 collectPattern(arm.pattern.get(), bindings);
+                if (arm.guard) {
+                    index_.patternGuardNodes_.insert(arm.guard.get());
+                }
                 collectExpression(arm.guard.get());
                 collectStatement(arm.body.get());
                 endScope();
@@ -746,6 +749,9 @@ private:
                 beginScope(nullptr);
                 std::unordered_map<std::string, DeclarationId> bindings;
                 collectPattern(arm.pattern.get(), bindings);
+                if (arm.guard) {
+                    index_.patternGuardNodes_.insert(arm.guard.get());
+                }
                 collectExpression(arm.guard.get());
                 collectExpression(arm.value.get());
                 endScope();
@@ -1077,6 +1083,12 @@ const OrPatternRecord* DeclarationIndex::orPattern(const OrPattern& pattern) con
     return found == orPatterns_.end() ? nullptr : &found->second;
 }
 
+const PatternGuardRecord* DeclarationIndex::patternGuard(const Expr& guard) const
+{
+    const auto found = patternGuards_.find(&guard);
+    return found == patternGuards_.end() ? nullptr : &found->second;
+}
+
 const IndexOperationRecord* DeclarationIndex::indexOperation(const Expr& expression) const
 {
     const auto found = indexOperations_.find(&expression);
@@ -1178,6 +1190,11 @@ void DeclarationIndex::recordPatternBinding(
 void DeclarationIndex::recordOrPattern(const OrPattern& pattern, OrPatternRecord record)
 {
     orPatterns_.insert_or_assign(&pattern, std::move(record));
+}
+
+void DeclarationIndex::recordPatternGuard(const Expr& guard, PatternGuardRecord record)
+{
+    patternGuards_.insert_or_assign(&guard, std::move(record));
 }
 
 void DeclarationIndex::recordIndexOperation(const Expr& expression, IndexOperationRecord record)
@@ -1496,6 +1513,11 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
     }
     for (const OrPattern* pattern : orPatternNodes_) {
         if (!orPattern(*pattern)) {
+            ++mismatches;
+        }
+    }
+    for (const Expr* guard : patternGuardNodes_) {
+        if (!patternGuard(*guard)) {
             ++mismatches;
         }
     }

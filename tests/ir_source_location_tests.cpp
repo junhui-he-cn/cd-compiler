@@ -932,6 +932,52 @@ void test_literal_or_pattern_metadata()
     compiler.compile(program, resolved, index);
 }
 
+void test_pattern_guard_metadata()
+{
+    std::istringstream input(
+        "fun describe(value: number): string {\n"
+        "  match value {\n"
+        "    numberValue if numberValue > 0 => { return \"positive\"; }\n"
+        "    _ => { return \"other\"; }\n"
+        "  }\n"
+        "}\n"
+        "print describe(1);\n"
+        "print match 1 {\n"
+        "  numberValue if numberValue > 0 => \"positive\",\n"
+        "  _ => \"other\",\n"
+        "};\n");
+    FrontendSession frontend;
+    Program program = frontend.loadStdin(input);
+
+    const auto* function = dynamic_cast<const FunctionStmt*>(program.statements[0].get());
+    const auto* statementMatch = function && !function->body.empty()
+        ? dynamic_cast<const MatchStmt*>(function->body.front().get())
+        : nullptr;
+    const auto* print = dynamic_cast<const PrintStmt*>(program.statements[2].get());
+    const auto* expressionMatch = print
+        ? dynamic_cast<const MatchExpr*>(print->expression.get())
+        : nullptr;
+    assert(function != nullptr && statementMatch != nullptr);
+    assert(expressionMatch != nullptr);
+    assert(statementMatch->arms.front().guard != nullptr);
+    assert(expressionMatch->arms.front().guard != nullptr);
+
+    TypeChecker checker;
+    const ResolvedNames& resolved = checker.check(program);
+    const DeclarationIndex& index = checker.declarationIndex();
+    assert(checker.declarationIndexMismatchCount() == 0);
+    const PatternGuardRecord* statementGuard
+        = index.patternGuard(*statementMatch->arms.front().guard);
+    const PatternGuardRecord* expressionGuard
+        = index.patternGuard(*expressionMatch->arms.front().guard);
+    assert(statementGuard != nullptr && expressionGuard != nullptr);
+    assert(typeInfoName(statementGuard->type) == "bool");
+    assert(typeInfoName(expressionGuard->type) == "bool");
+
+    IRCompiler compiler;
+    compiler.compile(program, resolved, index);
+}
+
 void test_variant_constructor_lowering_metadata()
 {
     std::istringstream input(
@@ -1454,6 +1500,7 @@ int main()
     test_variant_pattern_metadata();
     test_record_pattern_metadata();
     test_literal_or_pattern_metadata();
+    test_pattern_guard_metadata();
     test_variant_constructor_lowering_metadata();
     test_function_return_lowering_metadata();
     test_function_capture_metadata();

@@ -3764,7 +3764,10 @@ void TypeChecker::checkMatch(const MatchStmt& statement)
             coversAll = coversAll || armCoversAll;
         }
         if (arm.guard) {
-            checkExpression(*arm.guard);
+            const TypeInfo guardType = checkExpression(*arm.guard);
+            declarationIndex_.recordPatternGuard(
+                *arm.guard,
+                PatternGuardRecord{guardType});
         }
         checkStatement(*arm.body);
         endScope();
@@ -4340,7 +4343,10 @@ TypeChecker::CheckedExpression TypeChecker::checkMatchExpression(
             coversAll = coversAll || armCoversAll;
         }
         if (arm.guard) {
-            checkExpression(*arm.guard);
+            const TypeInfo guardType = checkExpression(*arm.guard);
+            declarationIndex_.recordPatternGuard(
+                *arm.guard,
+                PatternGuardRecord{guardType});
         }
 
         const CheckedExpression result = checkExpressionInfo(*arm.value, expectedType);
