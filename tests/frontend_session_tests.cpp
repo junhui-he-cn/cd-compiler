@@ -3,6 +3,7 @@
 #include "FrontendSession.hpp"
 #include "LosslessSource.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <filesystem>
 #include <fstream>
@@ -106,6 +107,74 @@ void test_search_path_resolves_extensionless_import_and_reexport(const fs::path&
     assert(apiImport != nullptr && libImport != nullptr);
     assert(apiImport->resolvedModuleId == api->moduleId);
     assert(libImport->resolvedModuleId == lib->moduleId);
+
+    const ModuleGraph& graph = session.moduleGraph();
+    assert(graph.nodes.size() == 3);
+    assert(graph.edges.size() == 3);
+    assert(std::count_if(
+        graph.nodes.begin(),
+        graph.nodes.end(),
+        [](const ModuleGraphNode& node) { return node.isEntry; }) == 1);
+    assert(std::all_of(
+        graph.nodes.begin(),
+        graph.nodes.end(),
+        [](const ModuleGraphNode& node) {
+            return node.sourceId.valid() && !node.path.empty() && !node.canonicalPath.empty();
+        }));
+    assert(std::count_if(
+        graph.edges.begin(),
+        graph.edges.end(),
+        [](const ModuleGraphEdge& edge) {
+            return edge.kind == ModuleGraphEdgeKind::Import && edge.requestedPath == "api";
+        }) == 1);
+    assert(std::count_if(
+        graph.edges.begin(),
+        graph.edges.end(),
+        [](const ModuleGraphEdge& edge) {
+            return edge.kind == ModuleGraphEdgeKind::Import && edge.requestedPath == "lib";
+        }) == 1);
+    assert(std::count_if(
+        graph.edges.begin(),
+        graph.edges.end(),
+        [](const ModuleGraphEdge& edge) {
+            return edge.kind == ModuleGraphEdgeKind::ReExport && edge.requestedPath == "lib";
+        }) == 1);
+    assert(std::all_of(
+        graph.edges.begin(),
+        graph.edges.end(),
+        [&graph](const ModuleGraphEdge& edge) {
+            const auto hasNode = [&graph](std::size_t id) {
+                return std::any_of(
+                    graph.nodes.begin(),
+                    graph.nodes.end(),
+                    [id](const ModuleGraphNode& node) { return node.moduleId == id; });
+            };
+            return hasNode(edge.importingModuleId) && hasNode(edge.importedModuleId);
+        }));
+
+    FrontendSession equivalentSession;
+    equivalentSession.setImportSearchPaths({search.string()});
+    (void)equivalentSession.loadFiles({(app / "input.cd").string()});
+    const ModuleGraph& equivalentGraph = equivalentSession.moduleGraph();
+    assert(equivalentGraph.nodes.size() == graph.nodes.size());
+    assert(equivalentGraph.edges.size() == graph.edges.size());
+    for (std::size_t index = 0; index < graph.nodes.size(); ++index) {
+        const ModuleGraphNode& expected = graph.nodes[index];
+        const ModuleGraphNode& actual = equivalentGraph.nodes[index];
+        assert(actual.moduleId == expected.moduleId);
+        assert(actual.sourceId == expected.sourceId);
+        assert(actual.path == expected.path);
+        assert(actual.canonicalPath == expected.canonicalPath);
+        assert(actual.isEntry == expected.isEntry);
+    }
+    for (std::size_t index = 0; index < graph.edges.size(); ++index) {
+        const ModuleGraphEdge& expected = graph.edges[index];
+        const ModuleGraphEdge& actual = equivalentGraph.edges[index];
+        assert(actual.importingModuleId == expected.importingModuleId);
+        assert(actual.importedModuleId == expected.importedModuleId);
+        assert(actual.kind == expected.kind);
+        assert(actual.requestedPath == expected.requestedPath);
+    }
 }
 
 void test_importing_file_directory_precedes_search_path(const fs::path& root)

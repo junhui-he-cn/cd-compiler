@@ -37,6 +37,11 @@ This is a small C++17 Compiler Design front-end/interpreter project. It currentl
 - `include/LosslessSource.hpp`, `src/LosslessSource.cpp`:
   lossless token/trivia pieces reconstructed from production token ranges and
   original source bytes.
+- `include/FrontendSession.hpp`, `src/FrontendSession.cpp`: import-aware source
+  loading, canonical module de-duplication, file-aware diagnostic remapping,
+  and the snapshot-local `ModuleGraph` of loaded modules plus import/re-export
+  dependency edges; stdin and ordered direct multi-file inputs retain their
+  existing combined-entry path.
 - `include/DeclarationIndex.hpp`, `src/DeclarationIndex.cpp`: snapshot-local
   declaration, signature/shape, typed-expression, scope, import/export, and
   lexical-reference metadata plus for-in/pattern bindings and local direct-call

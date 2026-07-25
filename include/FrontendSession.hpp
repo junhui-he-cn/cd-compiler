@@ -14,6 +14,31 @@
 #include <unordered_map>
 #include <vector>
 
+enum class ModuleGraphEdgeKind {
+    Import,
+    ReExport,
+};
+
+struct ModuleGraphNode {
+    std::size_t moduleId = 0;
+    SourceFileId sourceId;
+    std::string path;
+    std::string canonicalPath;
+    bool isEntry = false;
+};
+
+struct ModuleGraphEdge {
+    std::size_t importingModuleId = 0;
+    std::size_t importedModuleId = 0;
+    ModuleGraphEdgeKind kind = ModuleGraphEdgeKind::Import;
+    std::string requestedPath;
+};
+
+struct ModuleGraph {
+    std::vector<ModuleGraphNode> nodes;
+    std::vector<ModuleGraphEdge> edges;
+};
+
 class FrontendSession {
 public:
     void setImportSearchPaths(std::vector<std::string> paths);
@@ -27,6 +52,7 @@ public:
     std::optional<FileDiagnosticError> remapDirectDiagnostic(const DiagnosticError& error) const;
     std::optional<FileDiagnosticErrorList> remapDirectDiagnostics(const ParseErrorList& errors) const;
     std::size_t moduleCount() const;
+    const ModuleGraph& moduleGraph() const;
 
 private:
     struct ParsedUnit {
@@ -57,6 +83,7 @@ private:
     std::size_t loadFile(const std::string& path, bool isImport, bool isEntry, bool fileDiagnostics);
     ImportResolution resolveImportPath(const std::filesystem::path& importingPath, const Token& pathToken) const;
     Program assembleProgram();
+    void rebuildModuleGraph();
     void rebuildCombinedSource();
     void annotateSourceTokens(std::vector<Token>& tokens, std::size_t sourceId) const;
     void annotateDirectTokens(std::vector<Token>& tokens) const;
@@ -71,5 +98,6 @@ private:
     std::vector<Token> directDisplayTokens_;
     std::vector<std::filesystem::path> importSearchPaths_;
     std::string combinedSource_;
+    ModuleGraph moduleGraph_;
     bool hasImports_ = false;
 };

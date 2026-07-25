@@ -287,6 +287,7 @@ void FrontendSession::reset()
     directSourceLineStarts_.clear();
     directDisplayTokens_.clear();
     combinedSource_.clear();
+    moduleGraph_ = ModuleGraph{};
     hasImports_ = false;
 }
 
@@ -506,6 +507,7 @@ Program FrontendSession::loadFiles(const std::vector<std::string>& paths)
             entryUnitIds_.push_back(id);
         }
     }
+    rebuildModuleGraph();
     rebuildCombinedSource();
     return assembleProgram();
 }
@@ -656,6 +658,45 @@ Program FrontendSession::assembleProgram()
     }
     finalizeSyntaxMetadata(program);
     return program;
+}
+
+void FrontendSession::rebuildModuleGraph()
+{
+    moduleGraph_ = ModuleGraph{};
+    moduleGraph_.nodes.reserve(units_.size());
+    for (const ParsedUnit& unit : units_) {
+        moduleGraph_.nodes.push_back(ModuleGraphNode{
+            unit.id,
+            SourceFileId{unit.sourceId},
+            unit.path,
+            unit.canonicalPath,
+            unit.isEntry,
+        });
+
+        for (const StmtPtr& statement : unit.statements) {
+            if (const auto* import = dynamic_cast<const ImportStmt*>(statement.get())) {
+                moduleGraph_.edges.push_back(ModuleGraphEdge{
+                    unit.id,
+                    import->resolvedModuleId,
+                    ModuleGraphEdgeKind::Import,
+                    importPath(import->path),
+                });
+                continue;
+            }
+
+            if (const auto* exportStmt = dynamic_cast<const ExportStmt*>(statement.get())) {
+                if (!exportStmt->sourcePath) {
+                    continue;
+                }
+                moduleGraph_.edges.push_back(ModuleGraphEdge{
+                    unit.id,
+                    exportStmt->resolvedModuleId,
+                    ModuleGraphEdgeKind::ReExport,
+                    importPath(*exportStmt->sourcePath),
+                });
+            }
+        }
+    }
 }
 
 void FrontendSession::rebuildCombinedSource()
@@ -823,4 +864,9 @@ std::optional<FileDiagnosticErrorList> FrontendSession::remapDirectDiagnostics(c
 std::size_t FrontendSession::moduleCount() const
 {
     return units_.size();
+}
+
+const ModuleGraph& FrontendSession::moduleGraph() const
+{
+    return moduleGraph_;
 }

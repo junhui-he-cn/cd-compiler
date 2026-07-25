@@ -790,6 +790,14 @@ contract requires a separate language/CLI decision.
 
 ### M3A: Explicit graph and interface-driven semantics
 
+Current implementation slice: `M3A-GRAPH-001` publishes an explicit
+import-aware `FrontendSession` graph with snapshot-local module IDs, canonical
+source origins, entry markers, and import/re-export edges. It runs beside the
+existing `ParsedUnit`/`ModuleStmt` path; interface-driven visibility and
+dependency-body removal remain later M3A/M3B slices. The decision record is
+`docs/decisions/m3a-module-graph.md` and its machine-readable contract is
+`docs/decisions/m3a-module-graph.json`.
+
 **Deliverable:** evolve `FrontendSession` into an explicit graph with module
 identities deterministic across equivalent builds, dependency edges, source
 origins, visibility, and current-policy cycle detection/rejection. Make exported
@@ -1082,10 +1090,10 @@ the smallest proof of a broader milestone.
 ## Near-term execution order
 
 The verification foundation, M0.5 decisions, and M1F semantic cutover are
-implemented. The active near-term slice is M2A-FLOW-021: known number-binding
-dynamic-index narrowing. Subsequent M2A slices must retain the same
-decision-update, positive/negative fixture, and mutation-invalidation evidence
-pattern.
+implemented, and M2A-FLOW-001 through M2A-FLOW-021 are implemented. The active
+near-term slice is M3A-GRAPH-001: explicit import-aware module graph. It keeps
+the same decision-update, focused fixture, quantitative gate, and old-path
+deletion evidence used by the preceding slices.
 
 M0A is implemented at inventory revision `m0a-2026-07-22-r1` against baseline
 commit `0481624`. The checked-in inventory contains 1,563 stable case IDs;
@@ -1110,8 +1118,9 @@ including lexer/parser seeds, the existing parse-error family, and `.cdbc`
 mutations; the canonical inventory now reports 1,658 cases. The harness,
 minimizer selftest, and observed baseline are recorded in
 `docs/verification/m0c-malformed-design.md` and
-`docs/verification/m0c-baseline.json`. M0D, M0.5A, M0.5B, and M1F are now
-implemented; M2A-FLOW-001 through M2A-FLOW-015 are the active semantic slices.
+`docs/verification/m0c-baseline.json`. M0D, M0.5A, M0.5B, M1F, and
+M2A-FLOW-001 through M2A-FLOW-021 are now implemented; M3A-GRAPH-001 is the
+active module-boundary slice.
 
 The hard dependency gates are:
 
