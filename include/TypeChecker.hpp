@@ -58,8 +58,6 @@ public:
     bool hasVariantConstructor(const MemberCallExpr& expression) const;
     const std::string& variantEnumName(const MemberCallExpr& expression) const;
     const std::string& variantName(const MemberCallExpr& expression) const;
-    bool hasPatternVariable(const VariablePattern& pattern) const;
-    const std::string& patternVariableName(const VariablePattern& pattern) const;
     BindingId patternVariableBindingId(const VariablePattern& pattern) const;
     DeclarationId declarationId(const Stmt& statement) const;
     SymbolId symbolId(const Stmt& statement) const;
@@ -127,7 +125,6 @@ private:
     std::unordered_map<const MemberCallExpr*, bool> memberCallPassesReceiver_;
     std::unordered_map<const MemberCallExpr*, const MethodDecl*> memberCallMethodTargets_;
     std::unordered_map<const MemberCallExpr*, std::pair<std::string, std::string>> variantConstructors_;
-    std::unordered_map<const VariablePattern*, std::string> patternVariableNames_;
 };
 
 class TypeChecker {

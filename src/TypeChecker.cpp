@@ -408,20 +408,6 @@ const std::string& ResolvedNames::variantName(const MemberCallExpr& expression) 
     return found->second.second;
 }
 
-bool ResolvedNames::hasPatternVariable(const VariablePattern& pattern) const
-{
-    return patternVariableNames_.find(&pattern) != patternVariableNames_.end();
-}
-
-const std::string& ResolvedNames::patternVariableName(const VariablePattern& pattern) const
-{
-    const auto found = patternVariableNames_.find(&pattern);
-    if (found == patternVariableNames_.end()) {
-        throw std::logic_error("missing resolved pattern variable name");
-    }
-    return found->second;
-}
-
 BindingId ResolvedNames::patternVariableBindingId(const VariablePattern& pattern) const
 {
     const auto found = patternVariableBindingIds_.find(&pattern);
@@ -498,7 +484,6 @@ void ResolvedNames::clear()
     memberCallPassesReceiver_.clear();
     memberCallMethodTargets_.clear();
     variantConstructors_.clear();
-    patternVariableNames_.clear();
 }
 
 void ResolvedNames::recordBinding(const TypeBinding& binding)
@@ -640,7 +625,6 @@ void ResolvedNames::recordVariantConstructor(
 
 void ResolvedNames::recordPatternVariable(const VariablePattern& pattern, const TypeBinding& binding)
 {
-    patternVariableNames_.emplace(&pattern, binding.resolvedName);
     patternVariableBindingIds_.emplace(&pattern, binding.bindingId);
     compareBindingName(binding);
 }

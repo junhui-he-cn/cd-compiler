@@ -606,6 +606,9 @@ records, while
 `TypeChecker` remains the coverage and diagnostic oracle.
 The migrated variant-pattern enum/name and payload-index adapter has no
 production callers and is removed from `ResolvedNames`.
+Pattern binding runtime-name lookup is likewise owned by
+`DeclarationIndex::PatternBindingRecord`; `ResolvedNames` retains only the
+binding ID needed by the shadow comparison.
 
 **Deliverable:** move literal, nullable, enum, record, OR-pattern, guard,
 binding, and exhaustiveness inputs behind the shared semantic pattern interface.
