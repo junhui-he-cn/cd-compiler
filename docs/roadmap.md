@@ -633,11 +633,12 @@ migration-only adapters.
 
 Initial cutover slices: `DeclarationIndex` owns resolved binding metadata for
 `let`, variable reads, ordinary assignments, numeric compound assignments,
-`for-in` bindings, named functions, methods, and anonymous functions;
-member-call callee metadata; register-IR lowering consumes those records for
-runtime names, parameter lists, and receiver passing. The legacy
-`ResolvedNames` table remains the comparison oracle for binding IDs, function
-metadata, member-call metadata, and families not yet cut over.
+`for-in` bindings, named functions, methods, anonymous functions, member-call
+callees, and variant constructors; register-IR lowering consumes those records
+for runtime names, parameter lists, receiver passing, and constructor
+dispatch. The legacy `ResolvedNames` table remains the comparison oracle for
+binding IDs, function metadata, member-call metadata, variant identity, and
+families not yet cut over.
 
 **Migration:** compare the final result with the canonical M0B reference corpus,
 switch every type-checking and lowering CLI/test entry point to HIR, and retain

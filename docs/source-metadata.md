@@ -159,7 +159,9 @@ names; namespace value accesses still use their existing resolved-name target
 after the operation record is validated.
 `VariantConstructorRecord` additionally carries the resolved enum result type
 and substituted payload types, so variant lowering validates constructor shape
-without reconstructing generic payload types from the AST.
+without reconstructing generic payload types from the AST. M1F constructor
+dispatch now selects this record directly; the legacy variant-name accessors
+remain only for shadow comparison.
 
 ## Literal pattern inputs (M1E3 initial slice)
 

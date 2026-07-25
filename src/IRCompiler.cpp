@@ -928,7 +928,7 @@ IRRegister IRCompiler::emitNativeStdlibCall(const CallExpr& expression)
 
 IRRegister IRCompiler::emitMemberCall(const MemberCallExpr& expression)
 {
-    if (resolvedNames_->hasVariantConstructor(expression)) {
+    if (declarationIndex_ && declarationIndex_->variantConstructor(expression)) {
         return emitVariantConstructor(expression);
     }
 
