@@ -685,7 +685,7 @@ HIR.
 
 Status: the admitted flow slices are implemented in
 `docs/decisions/m2a-flow-analysis.json` as `M2A-FLOW-001` through
-`M2A-FLOW-012`. Direct-variable assignment invalidation now makes nullable
+`M2A-FLOW-013`. Direct-variable assignment invalidation now makes nullable
 flow facts mutation-safe within the active region and enclosing regions that may
 observe the mutation; function bodies no longer inherit definition-site facts.
 Resolved captured direct calls now invalidate their visible captured bindings,
@@ -694,9 +694,9 @@ callback-capable native calls use the same all-fact rule.
 Resolved struct-method calls now conservatively invalidate all active facts.
 No-`else` returning guards now carry their false-branch narrowing into the
 continuation, and explicit-`else` joins retain the intersection of both final
-arm states. Loop exits and index analysis remain subsequent slices. Direct
-named-struct field checks now use the same target flow facts with conservative
-field mutation invalidation.
+arm states. Loop exits and nested/dynamic index analysis remain subsequent
+slices. Direct named-struct field and compile-time integer array-index checks
+now use the same target flow facts with conservative mutation invalidation.
 `while` body checks now use
 the condition's true-branch facts, while loop exits and other loop forms remain
 conservative. C-style `for` body checks now use the same condition facts;
@@ -718,7 +718,7 @@ conservative. C-style `for` body checks now use the same condition facts;
   checks into one normative language-semantics document;
 - decide recursive type support, richer narrowing, and remaining known
   limitations as deliberate language policy rather than incremental TODOs.
-  Richer `for-in`/loop-exit, C-style increment flow, index narrowing, and
+  Richer `for-in`/loop-exit, C-style increment flow, nested/dynamic index narrowing, and
   alias-specific field precision
   is intentionally reopened for
   decision here; existing behavior remains the contract until such a decision
@@ -1050,7 +1050,7 @@ the superseded wording.
 | Formatter, LSP, REPL, and debugger | Independent M5A-M5D schedules. |
 | Further isolated builtins, generic container conveniences, or legacy `len` lowering cleanup | Not an active queue; admissible only as the smallest proof of a foundation milestone. |
 | Comments/doc comments and formatter prerequisites | Comment/trivia preservation and full ranges are promoted to M0.5A, M1A1/M1A2, and M5A; doc-comment syntax still requires a separate language decision. |
-| Broader `for-in`/loop-exit, C-style increment flow, index, and alias-specific field nullable narrowing | Intentionally reopened for an M2 decision; returning-arm guards, explicit-else intersections, direct field facts, and `while`/C-style `for` body facts are the currently admitted loop/branch slices. |
+| Broader `for-in`/loop-exit, C-style increment flow, nested/dynamic index, and alias-specific field nullable narrowing | Intentionally reopened for an M2 decision; returning-arm guards, explicit-else intersections, direct field/index facts, and `while`/C-style `for` body facts are the currently admitted loop/branch slices. |
 | Direct CLI multi-file compilation | Preserved as one ordered entry program in M3A; changing it is outside the import-path migration. |
 | Recursive structs, richer object systems, iterators, GC, scheduling, and JIT work | Deferred to the conditional research track and not silently dropped. |
 | Already implemented language/API items | Removed from the active queue; their contract lives in `README.md`, the grammar, tests, and artifact documentation. |
@@ -1076,8 +1076,8 @@ the smallest proof of a broader milestone.
 ## Near-term execution order
 
 The verification foundation, M0.5 decisions, and M1F semantic cutover are
-implemented. The active near-term slice is M2A-FLOW-012: direct named-struct
-field narrowing. Subsequent M2A slices must retain the same
+implemented. The active near-term slice is M2A-FLOW-013: direct compile-time
+array-index narrowing. Subsequent M2A slices must retain the same
 decision-update, positive/negative fixture, and mutation-invalidation evidence
 pattern.
 
@@ -1105,7 +1105,7 @@ mutations; the canonical inventory now reports 1,658 cases. The harness,
 minimizer selftest, and observed baseline are recorded in
 `docs/verification/m0c-malformed-design.md` and
 `docs/verification/m0c-baseline.json`. M0D, M0.5A, M0.5B, and M1F are now
-implemented; M2A-FLOW-001 through M2A-FLOW-012 are the active semantic slices.
+implemented; M2A-FLOW-001 through M2A-FLOW-013 are the active semantic slices.
 
 The hard dependency gates are:
 

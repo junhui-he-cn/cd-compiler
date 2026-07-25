@@ -332,3 +332,32 @@ The M0D inventory now validates 1695 cases, including:
 The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification
 command are the gates for this revision.
+
+## M2A-FLOW-013: direct compile-time array-index narrowing
+
+For a known direct array variable and a compile-time non-negative integer
+literal index, a nil comparison establishes an index-specific nullable
+narrowing in the active branch, loop body, or explicit-else continuation state.
+Index assignments and compound assignments conservatively invalidate all
+active nullable facts, while root array assignments invalidate related index
+facts.
+
+Dynamic indexes, map and range elements, nested targets, and alias-specific
+index precision remain outside this slice. The decision revision is
+`m2a-2026-07-25-r13`, based on commit `22c784c`.
+
+The positive fixture reads `values[0]` after a direct nil guard. One negative
+fixture assigns the indexed element and confirms that the stale proof is
+rejected; the other preserves the dynamic-index boundary and confirms that
+`values[index]` remains nullable.
+
+The M0D inventory now validates 1699 cases, including:
+
+- `golden.type_errors.nullable_narrowing_index_dynamic_unsupported`
+- `golden.type_errors.nullable_narrowing_index_mutation_invalidated`
+- `rust_vm.golden.nullable_narrowing_index_recheck.emit`
+- `rust_vm.golden.nullable_narrowing_index_recheck.run`
+
+The FlowFacts CTest, focused golden and Rust VM subsets,
+`python3 tests/verification_inventory.py`, and the full canonical verification
+command are the gates for this revision.

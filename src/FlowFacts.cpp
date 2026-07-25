@@ -158,9 +158,11 @@ std::optional<TypeInfo> FlowFacts::narrowedTypeFor(const std::string& resolvedNa
 void FlowFacts::invalidate(const std::string& resolvedName)
 {
     const std::string fieldPrefix = resolvedName + ".";
+    const std::string indexPrefix = resolvedName + "[";
     for (ActiveFlowFact& fact : activeNarrowings_) {
         if (fact.resolvedName == resolvedName
-            || fact.resolvedName.rfind(fieldPrefix, 0) == 0) {
+            || fact.resolvedName.rfind(fieldPrefix, 0) == 0
+            || fact.resolvedName.rfind(indexPrefix, 0) == 0) {
             fact.narrowedType.reset();
         }
     }

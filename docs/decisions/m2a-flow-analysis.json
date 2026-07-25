@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "decision_revision": "m2a-2026-07-25-r12",
-  "baseline_commit": "97ea8fc",
+  "decision_revision": "m2a-2026-07-25-r13",
+  "baseline_commit": "22c784c",
   "supersedes": ["SEM-TYPE-002"],
   "purpose": "Record intentional M2A flow-semantics revisions after the behavior-preserving M1 migration.",
   "entries": [
@@ -433,6 +433,43 @@
           "cmake --build build --target flow_facts_tests compiler_design",
           "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_field_mutation_invalidated",
           "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_field_recheck",
+          "python3 tests/verification_inventory.py --write",
+          "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+        ]
+      }
+    },
+    {
+      "decision_id": "M2A-FLOW-013",
+      "introduced_revision": "m2a-2026-07-25-r13",
+      "domain": "flow-analysis",
+      "question": "When may a direct array element nil check narrow the indexed value?",
+      "decision": "For a known direct array variable and a compile-time non-negative integer literal index, a nil comparison establishes an index-specific nullable narrowing in the active branch, loop body, or explicit-else continuation state. Index assignments and compound assignments conservatively invalidate all active nullable facts, root array assignments invalidate related index facts, and dynamic indexes, map/range elements, nested targets, and alias-specific index precision remain outside this slice.",
+      "status": "resolved",
+      "owner": "TypeChecker index target resolution, FlowFacts index facts, and aggregate mutation effects",
+      "m1_behavior": "Before this revision, `values[0]` did not narrow the known nullable array element, so a non-null use of the indexed value remained a type error inside the guarded branch.",
+      "rationale": "A direct array binding plus a normalized integer literal provides a stable snapshot-local target key. Index writes may be observed through aliases and dynamic access, so all-fact invalidation avoids retaining stale element or unrelated variable proofs after mutation.",
+      "affected_consumers": [
+        "FlowFacts expression-target branch facts and root-prefix invalidation",
+        "TypeChecker direct array index reads and assignment effects",
+        "nullable direct-index compatibility fixtures"
+      ],
+      "compatibility_consequences": "A known direct array element may be used as non-null after a supported nil check. Index writes invalidate active facts, while dynamic indexes, map/range elements, nested targets, and alias-specific precision retain the existing conservative behavior.",
+      "migration": "Reuse the expression-target resolver introduced for direct fields and add normalized integer index keys. Apply an active index fact to direct array reads, invalidate all facts after index writes, and invalidate index-prefixed facts when their root array binding is assigned.",
+      "quantitative_gate": "The m0d-2026-07-22-r1 inventory validates 1699 cases, the FlowFacts CTest passes, the direct-index positive and mutation/dynamic negative fixtures pass, and the full canonical verification command remains the release gate.",
+      "old_path_deletion_condition": "Delete no additional production path in this slice. The old unsupported direct-index narrowing behavior is replaced only after target-key resolution, mutation invalidation, and its positive/negative fixtures pass; dynamic indexes and other aggregate targets require later slices.",
+      "positive_fixtures": [
+        "tests/golden/nullable_narrowing_index_recheck"
+      ],
+      "negative_fixtures": [
+        "tests/golden/type_errors/nullable_narrowing_index_mutation_invalidated.cd",
+        "tests/golden/type_errors/nullable_narrowing_index_dynamic_unsupported.cd"
+      ],
+      "verification": {
+        "inventory_revision": "m0d-2026-07-22-r1",
+        "commands": [
+          "cmake --build build --target flow_facts_tests compiler_design",
+          "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_index",
+          "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_index_recheck",
           "python3 tests/verification_inventory.py --write",
           "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
         ]

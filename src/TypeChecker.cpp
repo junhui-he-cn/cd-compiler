@@ -3,6 +3,7 @@
 #include "NativeStdlib.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <stdexcept>
 #include <utility>
 
@@ -51,6 +52,24 @@ TypeInfo concatenatedArrayType(const TypeInfo& left, const TypeInfo& right)
         return simpleType(StaticType::Array);
     }
     return arrayType(std::move(*merged));
+}
+
+std::optional<std::string> normalizedIntegerLiteral(const Expr& expression)
+{
+    const auto* literal = dynamic_cast<const LiteralExpr*>(&expression);
+    if (!literal || literal->value.empty()
+        || !std::all_of(
+            literal->value.begin(),
+            literal->value.end(),
+            [](char value) { return std::isdigit(static_cast<unsigned char>(value)); })) {
+        return std::nullopt;
+    }
+
+    const std::size_t firstNonZero = literal->value.find_first_not_of('0');
+    if (firstNonZero == std::string::npos) {
+        return std::string("0");
+    }
+    return literal->value.substr(firstNonZero);
 }
 
 TypeInfo mergedMapType(const TypeInfo& left, const TypeInfo& right)
@@ -3533,6 +3552,57 @@ std::optional<FlowNarrowing> TypeChecker::nonNilNarrowingForField(const FieldAcc
     return FlowNarrowing{*factName, *fieldType.nullableOf};
 }
 
+std::optional<std::string> TypeChecker::indexFlowFactName(
+    const Expr& collection,
+    const Expr& index) const
+{
+    const auto* variable = dynamic_cast<const VariableExpr*>(&collection);
+    if (!variable) {
+        return std::nullopt;
+    }
+
+    const Binding* binding = findVariable(variable->name.lexeme);
+    if (!binding) {
+        return std::nullopt;
+    }
+
+    const std::optional<std::string> normalizedIndex = normalizedIntegerLiteral(index);
+    if (!normalizedIndex) {
+        return std::nullopt;
+    }
+
+    const TypeInfo collectionType = variableType(*binding);
+    if (collectionType.kind != StaticType::Array || !collectionType.elementType) {
+        return std::nullopt;
+    }
+
+    return binding->resolvedName + "[" + *normalizedIndex + "]";
+}
+
+std::optional<FlowNarrowing> TypeChecker::nonNilNarrowingForIndex(const IndexExpr& index) const
+{
+    const std::optional<std::string> factName = indexFlowFactName(
+        *index.collection,
+        *index.index);
+    if (!factName) {
+        return std::nullopt;
+    }
+
+    const auto* variable = dynamic_cast<const VariableExpr*>(index.collection.get());
+    const Binding* binding = variable ? findVariable(variable->name.lexeme) : nullptr;
+    if (!binding) {
+        return std::nullopt;
+    }
+
+    const TypeInfo collectionType = variableType(*binding);
+    if (collectionType.kind != StaticType::Array || !collectionType.elementType
+        || !SemanticTypes::isNullable(*collectionType.elementType)) {
+        return std::nullopt;
+    }
+
+    return FlowNarrowing{*factName, *collectionType.elementType->nullableOf};
+}
+
 std::optional<FlowNarrowing> TypeChecker::nonNilNarrowingForTarget(const Expr& target) const
 {
     if (const auto* variable = dynamic_cast<const VariableExpr*>(&target)) {
@@ -3540,6 +3610,9 @@ std::optional<FlowNarrowing> TypeChecker::nonNilNarrowingForTarget(const Expr& t
     }
     if (const auto* field = dynamic_cast<const FieldAccessExpr*>(&target)) {
         return nonNilNarrowingForField(*field);
+    }
+    if (const auto* index = dynamic_cast<const IndexExpr*>(&target)) {
+        return nonNilNarrowingForIndex(*index);
     }
     return std::nullopt;
 }
@@ -5293,6 +5366,13 @@ TypeInfo TypeChecker::checkIndex(const IndexExpr& expression)
     } else if (target.collection.kind == StaticType::Range) {
         result = simpleType(StaticType::Number);
     }
+    if (const std::optional<std::string> factName = indexFlowFactName(
+            *expression.collection,
+            *expression.index)) {
+        if (const std::optional<TypeInfo> narrowed = flowFacts_.narrowedTypeFor(*factName)) {
+            result = *narrowed;
+        }
+    }
     declarationIndex_.recordIndexOperation(
         expression,
         IndexOperationRecord{
@@ -5320,6 +5400,7 @@ TypeChecker::CheckedExpression TypeChecker::checkIndexAssignment(const IndexAssi
         if (target.collection.valueType && !SemanticTypes::compatible(*target.collection.valueType, value.type)) {
             throw TypeError(expression.bracket, "map value is incompatible with map value type");
         }
+        flowFacts_.invalidateAll();
         declarationIndex_.recordIndexOperation(
             expression,
             IndexOperationRecord{
@@ -5341,6 +5422,7 @@ TypeChecker::CheckedExpression TypeChecker::checkIndexAssignment(const IndexAssi
 
     if (binding && binding->type.kind == StaticType::Array) {
         refineArrayBindingFromMutation(*binding, value.type);
+        flowFacts_.invalidateAll();
         declarationIndex_.recordIndexOperation(
             expression,
             IndexOperationRecord{
@@ -5351,6 +5433,7 @@ TypeChecker::CheckedExpression TypeChecker::checkIndexAssignment(const IndexAssi
         return CheckedExpression{value.type};
     }
 
+    flowFacts_.invalidateAll();
     declarationIndex_.recordIndexOperation(
         expression,
         IndexOperationRecord{
@@ -5382,6 +5465,7 @@ TypeChecker::CheckedExpression TypeChecker::checkIndexCompoundAssignment(const I
     checkKnownNumber(expression.op, value.type, "compound assignment value must be number, got ");
 
     const TypeInfo result = simpleType(StaticType::Number);
+    flowFacts_.invalidateAll();
     declarationIndex_.recordIndexOperation(
         expression,
         IndexOperationRecord{

@@ -1,0 +1,10 @@
+fun takesNumber(value: number): number { return value; }
+
+fun read(values: [number?], index: number): number {
+  if (values[index] != nil) {
+    return takesNumber(values[index]);
+  }
+  return 0;
+}
+
+print read([41], 0);

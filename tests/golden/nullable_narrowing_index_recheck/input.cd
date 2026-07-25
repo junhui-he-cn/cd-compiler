@@ -1,0 +1,9 @@
+fun read(values: [number?]): number {
+  if (values[0] == nil) {
+    return 0;
+  }
+  return values[0] + 1;
+}
+
+print read([nil]);
+print read([41]);
