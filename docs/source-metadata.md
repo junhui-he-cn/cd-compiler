@@ -159,7 +159,8 @@ the resolved struct type and source field order for named constructors.
 `IRCompiler` consumes these records for field operations and constructor field
 names. Namespace value reads carry an optional resolved runtime name in the
 same field-operation record, which `IRCompiler` consumes after validating the
-operation kind; the legacy field-access accessor remains only for comparison.
+operation kind; field target metadata is now validated directly by the shared
+record.
 `VariantConstructorRecord` additionally carries the resolved enum result type
 and substituted payload types, so variant lowering validates constructor shape
 without reconstructing generic payload types from the AST. M1F constructor

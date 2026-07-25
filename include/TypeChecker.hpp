@@ -38,8 +38,6 @@ public:
     const TypeBinding& binding(BindingId id) const;
     std::size_t bindingCount() const;
     std::size_t bindingShadowMismatchCount() const;
-    bool hasFieldAccess(const FieldAccessExpr& expression) const;
-    const std::string& fieldAccessName(const FieldAccessExpr& expression) const;
     bool hasMemberCallCallee(const MemberCallExpr& expression) const;
     const std::string& memberCallCalleeName(const MemberCallExpr& expression) const;
     bool memberCallPassesReceiver(const MemberCallExpr& expression) const;
@@ -66,7 +64,6 @@ private:
     void recordCompoundAssignment(const CompoundAssignExpr& expression, const TypeBinding& binding);
     void recordForInVariable(const ForInStmt& statement, const TypeBinding& binding);
     void recordScope(const Stmt& statement, ScopeId id);
-    void recordFieldAccess(const FieldAccessExpr& expression, std::string name);
     void recordMemberCallCallee(
         const MemberCallExpr& expression,
         std::string name,
@@ -89,7 +86,6 @@ private:
     std::unordered_map<const Stmt*, ScopeId> scopeIds_;
     std::unordered_map<BindingId, TypeBinding, SnapshotIdHash<BindingIdTag>> bindings_;
     std::size_t bindingShadowMismatches_ = 0;
-    std::unordered_map<const FieldAccessExpr*, std::string> fieldAccessNames_;
     std::unordered_map<const MemberCallExpr*, std::string> memberCallCalleeNames_;
     std::unordered_map<const MemberCallExpr*, bool> memberCallPassesReceiver_;
     std::unordered_map<const MemberCallExpr*, const MethodDecl*> memberCallMethodTargets_;

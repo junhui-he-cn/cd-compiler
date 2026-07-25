@@ -242,20 +242,6 @@ std::size_t ResolvedNames::bindingShadowMismatchCount() const
     return bindingShadowMismatches_;
 }
 
-bool ResolvedNames::hasFieldAccess(const FieldAccessExpr& expression) const
-{
-    return fieldAccessNames_.find(&expression) != fieldAccessNames_.end();
-}
-
-const std::string& ResolvedNames::fieldAccessName(const FieldAccessExpr& expression) const
-{
-    const auto found = fieldAccessNames_.find(&expression);
-    if (found == fieldAccessNames_.end()) {
-        throw std::logic_error("missing resolved field access name");
-    }
-    return found->second;
-}
-
 bool ResolvedNames::hasMemberCallCallee(const MemberCallExpr& expression) const
 {
     return memberCallCalleeNames_.find(&expression) != memberCallCalleeNames_.end();
@@ -358,7 +344,6 @@ void ResolvedNames::clear()
     scopeIds_.clear();
     bindings_.clear();
     bindingShadowMismatches_ = 0;
-    fieldAccessNames_.clear();
     memberCallCalleeNames_.clear();
     memberCallPassesReceiver_.clear();
     memberCallMethodTargets_.clear();
@@ -437,11 +422,6 @@ void ResolvedNames::recordForInVariable(const ForInStmt& statement, const TypeBi
 void ResolvedNames::recordScope(const Stmt& statement, ScopeId id)
 {
     scopeIds_.emplace(&statement, id);
-}
-
-void ResolvedNames::recordFieldAccess(const FieldAccessExpr& expression, std::string name)
-{
-    fieldAccessNames_.emplace(&expression, std::move(name));
 }
 
 void ResolvedNames::recordMemberCallCallee(
@@ -4034,7 +4014,6 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
                     throw TypeError(field->name,
                         "module namespace `" + variable->name.lexeme + "` has no exported member `" + field->name.lexeme + "`");
                 }
-                resolvedNames_.recordFieldAccess(*field, found->second.resolvedName);
                 CheckedExpression result{found->second.type};
                 declarationIndex_.recordTypedExpression(*field, result.type);
                 declarationIndex_.recordFieldOperation(

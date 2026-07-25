@@ -1813,13 +1813,7 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
             ++mismatches;
             continue;
         }
-        try {
-            if (operation->resolvedName.has_value() != resolved.hasFieldAccess(*expression)
-                || (operation->resolvedName
-                    && *operation->resolvedName != resolved.fieldAccessName(*expression))) {
-                ++mismatches;
-            }
-        } catch (const std::logic_error&) {
+        if (operation->resolvedName && operation->resolvedName->empty()) {
             ++mismatches;
         }
     }
