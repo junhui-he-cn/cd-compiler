@@ -165,6 +165,27 @@ void test_with_narrowings_restores_stack_after_success_and_throw()
     assert(!facts.narrowedTypeFor("value#0").has_value());
 }
 
+void test_invalidation_propagates_and_nested_facts_restore()
+{
+    FlowFacts facts;
+    const std::vector<FlowNarrowing> outer{{"value#0", simpleType(StaticType::Number)}};
+    const std::vector<FlowNarrowing> inner{{"other#1", simpleType(StaticType::String)}};
+
+    facts.withNarrowings(outer, [&]() {
+        facts.withNarrowings(inner, [&]() {
+            facts.invalidate("value#0");
+            assert(!facts.narrowedTypeFor("value#0").has_value());
+        });
+
+        assert(!facts.narrowedTypeFor("value#0").has_value());
+
+        const std::optional<TypeInfo> restoredOuter = facts.narrowedTypeFor("other#1");
+        assert(!restoredOuter.has_value());
+    });
+
+    assert(!facts.narrowedTypeFor("value#0").has_value());
+}
+
 } // namespace
 
 int main()
@@ -175,4 +196,5 @@ int main()
     test_logical_or_combines_else_facts();
     test_non_narrowable_variable_produces_no_facts();
     test_with_narrowings_restores_stack_after_success_and_throw();
+    test_invalidation_propagates_and_nested_facts_restore();
 }

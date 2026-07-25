@@ -683,6 +683,13 @@ HIR.
 
 ### M2A: Semantic consistency and dataflow
 
+Status: the first admitted slice is implemented in
+`docs/decisions/m2a-flow-analysis.json` as `M2A-FLOW-001`. Direct-variable
+assignment invalidation now makes nullable flow facts mutation-safe within the
+active region and enclosing regions that may observe the mutation; loop,
+post-branch, field/index, alias, call, and closure-boundary analysis remain
+subsequent M2A slices.
+
 **Deliverable:**
 
 - use M1's shared type model to identify and close cross-context inconsistencies
@@ -1054,9 +1061,11 @@ the smallest proof of a broader milestone.
 
 ## Near-term execution order
 
-The only immediate slice is M0A: inventory the existing checks and expose one
-canonical verification command. After M0A, M0B, M0C, M0D, M0.5A, and M0.5B are
-independently deliverable and may proceed in parallel when ownership permits.
+The verification foundation, M0.5 decisions, and M1F semantic cutover are
+implemented. The active near-term slice is M2A-FLOW-001: direct-variable
+assignment invalidation for nullable flow facts. Subsequent M2A slices must
+retain the same decision-update, positive/negative fixture, and mutation-
+invalidation evidence pattern.
 
 M0A is implemented at inventory revision `m0a-2026-07-22-r1` against baseline
 commit `0481624`. The checked-in inventory contains 1,563 stable case IDs;
@@ -1064,8 +1073,8 @@ commit `0481624`. The checked-in inventory contains 1,563 stable case IDs;
 readable report, while the legacy CI commands remain active during the
 two-run migration gate. The design and observed baseline are recorded in
 `docs/verification/m0a-inventory-design.md` and
-`docs/verification/m0a-baseline.json`. M0B is the next foundation slice after
-this migration evidence is accepted.
+`docs/verification/m0a-baseline.json`. The later M0B boundary slice is recorded
+below.
 
 M0B is implemented at inventory revision `m0b-2026-07-22-r1` against the M0A
 reference commit `6feb009`. The canonical report now records boundary
@@ -1073,8 +1082,7 @@ sequences and first-failure attribution across 13 supported boundaries, and
 the five-case token corpus plus mismatch selftests are checked in under
 `tests/` and `docs/verification/`. The observed M0B baseline is recorded in
 `docs/verification/m0b-boundary-design.md` and
-`docs/verification/m0b-baseline.json`; M0C, M0D, M0.5A, and M0.5B are the next
-independently deliverable foundation slices.
+`docs/verification/m0b-baseline.json`.
 
 M0C is implemented at corpus revision `m0c-2026-07-22-r1` against the M0B
 reference commit `30ae329`. The bounded deterministic corpus has 88 cases,
@@ -1082,8 +1090,8 @@ including lexer/parser seeds, the existing parse-error family, and `.cdbc`
 mutations; the canonical inventory now reports 1,658 cases. The harness,
 minimizer selftest, and observed baseline are recorded in
 `docs/verification/m0c-malformed-design.md` and
-`docs/verification/m0c-baseline.json`. M0D and M0.5A/M0.5B are the remaining
-independently deliverable foundation slices.
+`docs/verification/m0c-baseline.json`. M0D, M0.5A, M0.5B, and M1F are now
+implemented; M2A-FLOW-001 is the active semantic slice.
 
 The hard dependency gates are:
 

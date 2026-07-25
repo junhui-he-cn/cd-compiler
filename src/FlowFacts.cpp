@@ -33,9 +33,10 @@ const VariableExpr* nilCheckedVariable(const Expr& left, const Expr& right)
     return nullptr;
 }
 
+template <typename Fact>
 class NarrowingStackGuard {
 public:
-    NarrowingStackGuard(std::vector<FlowNarrowing>& activeNarrowings, std::size_t savedSize)
+    NarrowingStackGuard(std::vector<Fact>& activeNarrowings, std::size_t savedSize)
         : activeNarrowings_(activeNarrowings)
         , savedSize_(savedSize)
     {
@@ -50,7 +51,7 @@ public:
     NarrowingStackGuard& operator=(const NarrowingStackGuard&) = delete;
 
 private:
-    std::vector<FlowNarrowing>& activeNarrowings_;
+    std::vector<Fact>& activeNarrowings_;
     std::size_t savedSize_;
 };
 
@@ -116,10 +117,19 @@ std::optional<TypeInfo> FlowFacts::narrowedTypeFor(const std::string& resolvedNa
 {
     for (auto it = activeNarrowings_.rbegin(); it != activeNarrowings_.rend(); ++it) {
         if (it->resolvedName == resolvedName) {
-            return it->type;
+            return it->narrowedType;
         }
     }
     return std::nullopt;
+}
+
+void FlowFacts::invalidate(const std::string& resolvedName)
+{
+    for (ActiveFlowFact& fact : activeNarrowings_) {
+        if (fact.resolvedName == resolvedName) {
+            fact.narrowedType.reset();
+        }
+    }
 }
 
 void FlowFacts::withNarrowings(
@@ -132,7 +142,9 @@ void FlowFacts::withNarrowings(
     }
 
     const std::size_t savedSize = activeNarrowings_.size();
-    activeNarrowings_.insert(activeNarrowings_.end(), narrowings.begin(), narrowings.end());
-    NarrowingStackGuard guard(activeNarrowings_, savedSize);
+    for (const FlowNarrowing& narrowing : narrowings) {
+        activeNarrowings_.push_back(ActiveFlowFact{narrowing.resolvedName, narrowing.type});
+    }
+    NarrowingStackGuard<ActiveFlowFact> guard(activeNarrowings_, savedSize);
     body();
 }

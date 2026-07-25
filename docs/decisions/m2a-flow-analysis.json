@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m2a-2026-07-25-r1",
+  "baseline_commit": "0c834c9",
+  "supersedes": ["SEM-TYPE-002"],
+  "purpose": "Record the first intentional M2A flow-semantics revision after the behavior-preserving M1 migration.",
+  "entries": [
+    {
+      "decision_id": "M2A-FLOW-001",
+      "domain": "flow-analysis",
+      "question": "What happens to a direct nullable-variable narrowing after that variable is assigned?",
+      "decision": "A successful assignment or numeric compound assignment to a direct variable invalidates every active non-null narrowing for that resolved binding. The binding returns to its declared or inferred type until a later supported nil check establishes a new narrowing. The invalidation remains effective in enclosing active flow regions that may observe the mutation, while facts introduced only in a nested region are discarded when that region ends.",
+      "status": "resolved",
+      "owner": "FlowFacts and TypeChecker",
+      "m1_behavior": "Before this revision, active branch narrowing survived an assignment to the same binding.",
+      "rationale": "The assignment mutates the shared binding cell, so a prior proof about its value is no longer valid. Clearing the fact is conservative and preserves the existing rule that only direct simple-variable nil checks establish narrowing.",
+      "affected_consumers": [
+        "TypeChecker variable and assignment analysis",
+        "FlowFacts scoped fact storage",
+        "nullable type-error and positive recheck fixtures"
+      ],
+      "compatibility_consequences": "Programs that use a nullable binding as non-null after assigning it must re-check the binding. No parser, IR, bytecode, VM, field/index, loop, post-branch, alias, or call behavior changes in this slice.",
+      "migration": "Keep the existing branch-fact producer and add scoped invalidation records beside it. TypeChecker records the invalidation only after normal assignment validation succeeds; no duplicate semantic or lowering path is introduced.",
+      "quantitative_gate": "The m0d-2026-07-22-r1 inventory validates 1662 cases, the focused FlowFacts CTest passes, the named positive and negative fixtures pass, and the full canonical verification command remains the release gate.",
+      "old_path_deletion_condition": "There is no compatibility implementation to delete in this slice. The old behavior is replaced only after the shared invalidation record and positive/negative mutation fixtures pass.",
+      "positive_fixtures": [
+        "tests/golden/nullable_narrowing_assignment_recheck"
+      ],
+      "negative_fixtures": [
+        "tests/golden/type_errors/nullable_narrowing_assignment_invalidated.cd"
+      ],
+      "verification": {
+        "inventory_revision": "m0d-2026-07-22-r1",
+        "commands": [
+          "cmake --build build --target flow_facts_tests compiler_design",
+          "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_assignment",
+          "python3 tests/verification_inventory.py --write",
+          "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+        ]
+      }
+    }
+  ]
+}

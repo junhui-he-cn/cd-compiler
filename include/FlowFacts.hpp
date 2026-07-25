@@ -27,10 +27,16 @@ public:
         const Expr& condition,
         const VariableNarrowingResolver& resolveVariableNarrowing) const;
     std::optional<TypeInfo> narrowedTypeFor(const std::string& resolvedName) const;
+    void invalidate(const std::string& resolvedName);
     void withNarrowings(
         const std::vector<FlowNarrowing>& narrowings,
         const std::function<void()>& body);
 
 private:
-    std::vector<FlowNarrowing> activeNarrowings_;
+    struct ActiveFlowFact {
+        std::string resolvedName;
+        std::optional<TypeInfo> narrowedType;
+    };
+
+    std::vector<ActiveFlowFact> activeNarrowings_;
 };

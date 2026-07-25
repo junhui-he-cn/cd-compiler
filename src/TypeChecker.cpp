@@ -3589,6 +3589,8 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
             target->type = value.type;
         }
 
+        flowFacts_.invalidate(target->resolvedName);
+
         declarationIndex_.recordAssignmentBinding(
             *assign,
             BindingMetadataRecord{
@@ -3617,6 +3619,7 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
         if (!SemanticTypes::isKnown(target->type)) {
             target->type = simpleType(StaticType::Number);
         }
+        flowFacts_.invalidate(target->resolvedName);
         declarationIndex_.recordCompoundAssignmentBinding(
             *compound,
             BindingMetadataRecord{
