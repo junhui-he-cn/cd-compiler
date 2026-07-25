@@ -1,0 +1,18 @@
+let values: [number] = [1, 2];
+let maybe: number? = 40;
+
+if (maybe != nil) {
+  print map(values, fun (item: number): number {
+    return item + 1;
+  });
+  if (maybe != nil) {
+    print maybe + 1;
+  }
+
+  print values.filter(fun (item: number): bool {
+    return item > 1;
+  });
+  if (maybe != nil) {
+    print maybe + 2;
+  }
+}

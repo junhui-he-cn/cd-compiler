@@ -63,14 +63,16 @@ Function and closure bodies are checked without inheriting nullable narrowing
 from the branch where they are defined. A body must establish its own nil
 check before using a captured nullable binding as non-null. Direct captured-call
 and indirect/dynamic-call effects are handled after successful call checking;
-native callbacks and struct-method effects are not yet modeled.
+callback-capable native calls use the same conservative invalidation rule, while
+struct-method effects are not yet modeled.
 
 Resolved direct calls to local closures invalidate active nullable narrowing for
 their captured bindings, because the call may update a shared cell. Ordinary
 non-capturing calls retain unrelated active narrowing. Indirect or dynamic calls,
 including function aliases and function-valued bindings, conservatively
 invalidate all active nullable narrowing. Native callbacks and struct-method
-effects are not yet modeled.
+calls use the same all-fact invalidation when they can invoke a callback;
+struct-method effects are not yet modeled.
 
 The built-in `map<K, V>` type and nominal generic structs such as `Box<T>` are
 implemented generic collection/container forms. Map literals use `{ key: value }`

@@ -105,6 +105,32 @@ The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification
 command are the gates for this revision.
 
+## M2A-FLOW-005: native callback-call invalidation
+
+After successful callback checking, an unshadowed native `map`, `filter`,
+`flatMap`, `any`, `all`, `count`, `find`, `findIndex`, or `reduce` call
+invalidates every active nullable narrowing. The rule applies to both
+function-style helpers and their reserved member-call sugar. Native helpers
+without callbacks keep their existing flow behavior.
+
+Namespace calls, enum variant constructors, and struct methods are excluded by
+their declaration metadata, so a member spelling alone does not turn an
+ordinary function or method into a native callback effect. The decision
+revision is `m2a-2026-07-25-r5`, based on commit `120c4a2`.
+
+The positive fixture exercises function-style `map` and member-style `filter`,
+rechecking the nullable binding after each call. The negative fixture uses the
+stale proof after member-style `map` and is rejected. The M0D inventory now
+validates 1674 cases, including:
+
+- `golden.type_errors.nullable_narrowing_native_callback_invalidated`
+- `rust_vm.golden.nullable_narrowing_native_callback_recheck.emit`
+- `rust_vm.golden.nullable_narrowing_native_callback_recheck.run`
+
+The FlowFacts CTest, focused golden and Rust VM subsets,
+`python3 tests/verification_inventory.py`, and the full canonical verification
+command are the gates for this revision.
+
 ## M2A-FLOW-004: indirect and dynamic-call invalidation
 
 After successful argument and call-shape checking, an indirect or dynamic

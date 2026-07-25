@@ -87,6 +87,19 @@ bool mapKeyTypeAllowed(const TypeInfo& type)
     }
 }
 
+bool isNativeCallbackName(const std::string& name)
+{
+    return name == "map"
+        || name == "filter"
+        || name == "flatMap"
+        || name == "any"
+        || name == "all"
+        || name == "count"
+        || name == "find"
+        || name == "findIndex"
+        || name == "reduce";
+}
+
 bool isPrimitiveMatchKind(StaticType kind)
 {
     return kind == StaticType::Nil
@@ -3685,6 +3698,11 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
 
     if (const auto* memberCall = dynamic_cast<const MemberCallExpr*>(&expression)) {
         CheckedExpression result = checkMemberCall(*memberCall, expectedType);
+        if (isNativeCallbackName(memberCall->name.lexeme)
+            && !declarationIndex_.memberCallMetadata(*memberCall)
+            && !declarationIndex_.variantConstructor(*memberCall)) {
+            flowFacts_.invalidateAll();
+        }
         if (isNativeStdlibName(memberCall->name.lexeme)
             && !declarationIndex_.memberCallMetadata(*memberCall)
             && !declarationIndex_.variantConstructor(*memberCall)) {
@@ -4975,7 +4993,12 @@ TypeChecker::CheckedExpression TypeChecker::checkCall(const CallExpr& expression
     }
 
     if (isNativeStdlibCall(expression)) {
-        return checkNativeStdlibCall(expression);
+        const CheckedExpression result = checkNativeStdlibCall(expression);
+        const auto* variable = dynamic_cast<const VariableExpr*>(expression.callee.get());
+        if (variable && isNativeCallbackName(variable->name.lexeme)) {
+            flowFacts_.invalidateAll();
+        }
+        return result;
     }
 
     const CheckedExpression callee = checkExpressionInfo(*expression.callee);

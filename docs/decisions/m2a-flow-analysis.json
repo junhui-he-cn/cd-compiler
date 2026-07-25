@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "decision_revision": "m2a-2026-07-25-r4",
-  "baseline_commit": "28649c3",
+  "decision_revision": "m2a-2026-07-25-r5",
+  "baseline_commit": "120c4a2",
   "supersedes": ["SEM-TYPE-002"],
   "purpose": "Record intentional M2A flow-semantics revisions after the behavior-preserving M1 migration.",
   "entries": [
@@ -144,6 +144,42 @@
           "cmake --build build --target flow_facts_tests compiler_design",
           "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_indirect_call",
           "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_indirect_call_recheck",
+          "python3 tests/verification_inventory.py --write",
+          "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+        ]
+      }
+    },
+    {
+      "decision_id": "M2A-FLOW-005",
+      "introduced_revision": "m2a-2026-07-25-r5",
+      "domain": "flow-analysis",
+      "question": "How does a callback-capable native collection helper affect active nullable narrowing?",
+      "decision": "After successful callback checking, an unshadowed native map, filter, flatMap, any, all, count, find, findIndex, or reduce call, including its built-in member-call sugar, invalidates every active nullable narrowing. Native calls without callbacks, namespace calls, enum variant constructors, and struct methods are outside this slice.",
+      "status": "resolved",
+      "owner": "TypeChecker native callback paths and FlowFacts",
+      "m1_behavior": "Before this revision, native helpers that invoke callbacks retained caller-side nullable proofs even when a callback could mutate a shared captured cell.",
+      "rationale": "Callbacks may execute zero or more times and can be closures with shared mutable captures. The current model has no callback effect summary, so all-fact invalidation is sound and consistent across function-style and member-call native entry points.",
+      "affected_consumers": [
+        "TypeChecker native collection helper checking",
+        "FlowFacts all-fact invalidation",
+        "nullable native-callback compatibility fixtures"
+      ],
+      "compatibility_consequences": "Code that uses a nullable binding as non-null after a callback-capable native call must perform a fresh supported nil check. Non-callback native calls retain their existing flow behavior; struct-method effects remain deferred.",
+      "migration": "Classify callback-capable native names in the shared TypeChecker call paths, invalidate all active facts only after the helper and callback have passed normal validation, and exclude namespace/variant/struct metadata paths.",
+      "quantitative_gate": "The m0d-2026-07-22-r1 inventory validates 1674 cases, the FlowFacts CTest passes, the named native-callback positive and negative fixtures pass, and the full canonical verification command remains the release gate.",
+      "old_path_deletion_condition": "Delete no additional production path in this slice. The old retained-proof behavior is replaced only after callback-capable native all-fact invalidation and its positive/negative fixtures pass; a future callback-effect summary may replace the conservative rule.",
+      "positive_fixtures": [
+        "tests/golden/nullable_narrowing_native_callback_recheck"
+      ],
+      "negative_fixtures": [
+        "tests/golden/type_errors/nullable_narrowing_native_callback_invalidated.cd"
+      ],
+      "verification": {
+        "inventory_revision": "m0d-2026-07-22-r1",
+        "commands": [
+          "cmake --build build --target flow_facts_tests compiler_design",
+          "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_native_callback",
+          "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_native_callback_recheck",
           "python3 tests/verification_inventory.py --write",
           "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
         ]

@@ -22165,6 +22165,34 @@
       "fixture": "tests/golden/type_errors"
     },
     {
+      "case_id": "golden.type_errors.nullable_narrowing_native_callback_invalidated",
+      "runner": "golden",
+      "result_name": "type_errors/nullable_narrowing_native_callback_invalidated default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:nullable_narrowing_native_callback_invalidated"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/nullable_narrowing_native_callback_invalidated.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/nullable_narrowing_native_callback_invalidated.cd",
+        "tests/golden/type_errors/nullable_narrowing_native_callback_invalidated.err",
+        "tests/golden/type_errors/nullable_narrowing_native_callback_invalidated.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
       "case_id": "golden.type_errors.nullable_narrowing_outside_branch",
       "runner": "golden",
       "result_name": "type_errors/nullable_narrowing_outside_branch default(ast)",
@@ -40673,6 +40701,68 @@
         "tests/golden/nullable_narrowing_indirect_call_recheck/run.out"
       ],
       "fixture": "tests/golden/nullable_narrowing_indirect_call_recheck"
+    },
+    {
+      "case_id": "rust_vm.golden.nullable_narrowing_native_callback_recheck.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "nullable_narrowing_native_callback_recheck emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:nullable_narrowing_native_callback_recheck"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/nullable_narrowing_native_callback_recheck/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_narrowing_native_callback_recheck/run.out"
+      ],
+      "fixture": "tests/golden/nullable_narrowing_native_callback_recheck"
+    },
+    {
+      "case_id": "rust_vm.golden.nullable_narrowing_native_callback_recheck.run",
+      "runner": "rust_vm_golden",
+      "result_name": "nullable_narrowing_native_callback_recheck rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:nullable_narrowing_native_callback_recheck"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/nullable_narrowing_native_callback_recheck/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_narrowing_native_callback_recheck/run.out"
+      ],
+      "fixture": "tests/golden/nullable_narrowing_native_callback_recheck"
     },
     {
       "case_id": "rust_vm.golden.or_patterns.emit",

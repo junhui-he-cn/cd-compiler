@@ -1,0 +1,9 @@
+let values: [number] = [1, 2];
+let maybe: number? = 40;
+
+if (maybe != nil) {
+  values.map(fun (item: number): number {
+    return item;
+  });
+  print maybe + 1;
+}
