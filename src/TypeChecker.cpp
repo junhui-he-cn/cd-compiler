@@ -816,13 +816,15 @@ void TypeChecker::checkStatement(const Stmt& statement)
                 ResolvedSymbol{itemBinding.declarationId, itemBinding.symbolId},
                 itemBinding.range});
         ++loopDepth_;
-        if (const auto* body = dynamic_cast<const BlockStmt*>(forInStmt->body.get())) {
-            for (const auto& bodyStatement : body->statements) {
-                checkStatement(*bodyStatement);
+        flowFacts_.withLoopBody([&]() {
+            if (const auto* body = dynamic_cast<const BlockStmt*>(forInStmt->body.get())) {
+                for (const auto& bodyStatement : body->statements) {
+                    checkStatement(*bodyStatement);
+                }
+            } else {
+                checkStatement(*forInStmt->body);
             }
-        } else {
-            checkStatement(*forInStmt->body);
-        }
+        });
         --loopDepth_;
         endScope();
         return;

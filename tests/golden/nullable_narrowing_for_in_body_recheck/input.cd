@@ -1,0 +1,23 @@
+fun read(values: [number], value: number?): number {
+  if (value == nil) {
+    return 0;
+  }
+  let total = 0;
+  for item in values {
+    total = total + value + item;
+  }
+  return total;
+}
+
+fun sumNullable(values: [number?]): number {
+  let total = 0;
+  for item in values {
+    if (item != nil) {
+      total = total + item;
+    }
+  }
+  return total;
+}
+
+print read([1, 2], 40);
+print sumNullable([nil, 2, 3]);

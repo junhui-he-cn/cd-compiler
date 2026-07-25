@@ -39,6 +39,7 @@ public:
     void withNarrowings(
         const std::vector<FlowNarrowing>& narrowings,
         const std::function<void()>& body);
+    void withLoopBody(const std::function<void()>& body);
 
 private:
     struct ActiveFlowFact {

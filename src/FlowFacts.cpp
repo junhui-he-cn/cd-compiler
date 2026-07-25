@@ -204,3 +204,17 @@ void FlowFacts::withNarrowings(
     NarrowingStackGuard<ActiveFlowFact> guard(activeNarrowings_, savedSize);
     body();
 }
+
+void FlowFacts::withLoopBody(const std::function<void()>& body)
+{
+    std::vector<ActiveFlowFact> savedNarrowings = activeNarrowings_;
+    try {
+        body();
+    } catch (...) {
+        activeNarrowings_ = std::move(savedNarrowings);
+        throw;
+    }
+
+    activeNarrowings_ = std::move(savedNarrowings);
+    invalidateAll();
+}

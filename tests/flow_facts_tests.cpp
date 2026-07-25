@@ -369,6 +369,62 @@ void test_without_narrowings_restores_state_after_success_and_throw()
     });
 }
 
+void test_with_loop_body_preserves_outer_facts_during_body_only()
+{
+    FlowFacts facts;
+    const std::vector<FlowNarrowing> outer{
+        {"value#0", simpleType(StaticType::Number)},
+        {"other#1", simpleType(StaticType::String)}};
+    const std::vector<FlowNarrowing> body{{"body#2", simpleType(StaticType::Bool)}};
+
+    facts.withNarrowings(outer, [&]() {
+        facts.withLoopBody([&]() {
+            const std::optional<TypeInfo> value = facts.narrowedTypeFor("value#0");
+            const std::optional<TypeInfo> other = facts.narrowedTypeFor("other#1");
+            assert(value.has_value());
+            assert(value->kind == StaticType::Number);
+            assert(other.has_value());
+            assert(other->kind == StaticType::String);
+
+            facts.appendNarrowings(body);
+            const std::optional<TypeInfo> bodyFact = facts.narrowedTypeFor("body#2");
+            assert(bodyFact.has_value());
+            assert(bodyFact->kind == StaticType::Bool);
+        });
+
+        assert(!facts.narrowedTypeFor("value#0").has_value());
+        assert(!facts.narrowedTypeFor("other#1").has_value());
+        assert(!facts.narrowedTypeFor("body#2").has_value());
+    });
+}
+
+void test_with_loop_body_restores_state_after_throw()
+{
+    FlowFacts facts;
+    const std::vector<FlowNarrowing> outer{{"value#0", simpleType(StaticType::Number)}};
+    const std::vector<FlowNarrowing> body{{"body#1", simpleType(StaticType::Bool)}};
+
+    bool threw = false;
+    facts.withNarrowings(outer, [&]() {
+        try {
+            facts.withLoopBody([&]() {
+                facts.invalidate("value#0");
+                facts.appendNarrowings(body);
+                throw 13;
+            });
+        } catch (int value) {
+            threw = value == 13;
+        }
+
+        const std::optional<TypeInfo> restored = facts.narrowedTypeFor("value#0");
+        assert(restored.has_value());
+        assert(restored->kind == StaticType::Number);
+        assert(!facts.narrowedTypeFor("body#1").has_value());
+    });
+
+    assert(threw);
+}
+
 } // namespace
 
 int main()
@@ -387,4 +443,6 @@ int main()
     test_root_invalidation_clears_field_facts();
     test_root_invalidation_clears_index_facts();
     test_without_narrowings_restores_state_after_success_and_throw();
+    test_with_loop_body_preserves_outer_facts_during_body_only();
+    test_with_loop_body_restores_state_after_throw();
 }

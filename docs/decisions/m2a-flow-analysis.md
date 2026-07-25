@@ -407,3 +407,37 @@ cases, including:
 The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification
 command are the gates for this revision.
+
+## M2A-FLOW-016: for-in body fact scoping
+
+A `for-in` body may use the nullable facts active when the loop is entered, but
+facts established only in the body and body mutations do not survive the loop
+boundary. After normal completion, every fact active before the loop is
+invalidated conservatively because the iterable may be empty or execute an
+arbitrary number of iterations. Post-loop `for-in` exit narrowing remains
+unsupported. If body checking raises a diagnostic, the pre-loop fact state is
+restored before the diagnostic is propagated.
+
+The decision revision is `m2a-2026-07-25-r16`. Before this revision, `for-in`
+checking ran directly in the surrounding flow state, so body-local changes
+could leak into the continuation and an incoming nullable proof could remain
+stale after a mutating iteration. `FlowFacts::withLoopBody` now snapshots the
+entry state, exposes it during body checking, restores it on success or error,
+and invalidates the restored entry facts on normal completion.
+
+The positive fixture uses an outer nullable proof inside a `for-in` body and a
+separate nullable item guard. The negative fixture uses an empty array path to
+confirm that a nullable value is still rejected after the loop. The M0D
+inventory now validates 1710 cases, including:
+
+- `golden.success.nullable_narrowing_for_in_body_recheck.ast`
+- `golden.success.nullable_narrowing_for_in_body_recheck.ir`
+- `golden.success.nullable_narrowing_for_in_body_recheck.bytecode`
+- `golden.success.nullable_narrowing_for_in_body_recheck.module_interface`
+- `golden.type_errors.nullable_narrowing_for_in_post_loop_unsupported`
+- `rust_vm.golden.nullable_narrowing_for_in_body_recheck.emit`
+- `rust_vm.golden.nullable_narrowing_for_in_body_recheck.run`
+
+The FlowFacts CTest, focused golden and Rust VM subsets,
+`python3 tests/verification_inventory.py`, and the full canonical verification
+command are the gates for this revision.

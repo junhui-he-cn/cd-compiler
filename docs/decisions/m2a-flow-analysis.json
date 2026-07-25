@@ -546,6 +546,42 @@
           "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
         ]
       }
+    },
+    {
+      "decision_id": "M2A-FLOW-016",
+      "introduced_revision": "m2a-2026-07-25-r16",
+      "domain": "flow-analysis",
+      "question": "How should nullable flow facts behave across a for-in body and loop boundary?",
+      "decision": "A for-in body may use the nullable facts active at loop entry, but body-local facts and body mutations do not survive the loop boundary. Normal completion invalidates every fact active before the loop because the iterable may be empty or execute an arbitrary number of iterations; post-loop for-in exit narrowing remains unsupported. Checker failures restore the pre-loop fact state while propagating the diagnostic.",
+      "status": "resolved",
+      "owner": "TypeChecker for-in body scope and FlowFacts loop-boundary state",
+      "m1_behavior": "Before this revision, for-in body checking ran directly in the surrounding flow state, so body-local changes could leak into the continuation and incoming nullable proofs could remain stale after a mutating iteration.",
+      "rationale": "An iterable may execute zero, one, or many iterations, and each iteration may mutate bindings or invoke code with conservative effects. Exposing the entry facts only during body checking preserves sound body proofs while invalidating every entry fact at normal completion instead of claiming a path-sensitive loop join.",
+      "affected_consumers": [
+        "FlowFacts loop-body snapshot, restoration, and invalidation",
+        "TypeChecker for-in body checking",
+        "nullable for-in body and post-loop compatibility fixtures"
+      ],
+      "compatibility_consequences": "A nullable proof established before a for-in loop remains usable inside its body, but body-only proofs and entry proofs are unavailable after normal loop completion. Empty iterables therefore cannot accidentally make a nullable post-loop use type-check.",
+      "migration": "Wrap for-in body checking in FlowFacts::withLoopBody. Snapshot the entry state, keep it visible while checking the body, restore it after successful or exceptional checking, and invalidate the restored entry facts only on normal completion; leave broader for-in exit joins conservative.",
+      "quantitative_gate": "The m0d-2026-07-22-r1 inventory validates 1710 cases, the FlowFacts CTest passes, the named for-in positive and post-loop negative fixtures pass, and the full canonical verification command remains the release gate.",
+      "old_path_deletion_condition": "Delete no additional production path in this slice. The old direct surrounding-state for-in check is replaced only after loop-body snapshot/restore, normal-completion invalidation, diagnostic restoration tests, and positive/negative fixtures pass; path-sensitive for-in loop-exit joins require a later decision.",
+      "positive_fixtures": [
+        "tests/golden/nullable_narrowing_for_in_body_recheck"
+      ],
+      "negative_fixtures": [
+        "tests/golden/type_errors/nullable_narrowing_for_in_post_loop_unsupported.cd"
+      ],
+      "verification": {
+        "inventory_revision": "m0d-2026-07-22-r1",
+        "commands": [
+          "cmake --build build --target flow_facts_tests compiler_design",
+          "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_for_in",
+          "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_for_in_body_recheck",
+          "python3 tests/verification_inventory.py --write",
+          "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+        ]
+      }
     }
   ]
 }

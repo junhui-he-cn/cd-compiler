@@ -1,0 +1,10 @@
+fun after(values: [number], value: number?): number {
+  for item in values {
+    if (value == nil) {
+      return 0;
+    }
+  }
+  return value + 1;
+}
+
+print after([], nil);
