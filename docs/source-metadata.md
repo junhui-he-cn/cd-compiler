@@ -157,6 +157,9 @@ the resolved struct type and source field order for named constructors.
 `IRCompiler` consumes these records for field operations and constructor field
 names; namespace value accesses still use their existing resolved-name target
 after the operation record is validated.
+`VariantConstructorRecord` additionally carries the resolved enum result type
+and substituted payload types, so variant lowering validates constructor shape
+without reconstructing generic payload types from the AST.
 
 ## Lossless source view
 

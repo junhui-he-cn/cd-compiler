@@ -577,7 +577,8 @@ assignment, and numeric compound-assignment kinds; IR lowering consumes these
 records while preserving the existing erased runtime values and opcodes. The
 same slice records struct/dynamic field operations and named struct constructor
 type/field order; namespace value accesses retain their existing resolved-name
-adapter.
+adapter. Enum variant constructors now carry resolved result and substituted
+payload types alongside their runtime enum/variant names.
 
 **Deliverable:** represent arrays, maps, ranges, structs, enums, fields,
 variants, and resolved aggregate operations in HIR.

@@ -96,6 +96,8 @@ struct NativeCallRecord {
 struct VariantConstructorRecord {
     std::string enumName;
     std::string variantName;
+    TypeInfo resultType;
+    std::vector<TypeInfo> payloadTypes;
 };
 
 struct ReturnRecord {
@@ -218,7 +220,9 @@ private:
     void recordVariantConstructor(
         const MemberCallExpr& expression,
         std::string enumName,
-        std::string variantName);
+        std::string variantName,
+        TypeInfo resultType,
+        std::vector<TypeInfo> payloadTypes);
     void recordIndexOperation(const Expr& expression, IndexOperationRecord record);
     void recordFieldOperation(const Expr& expression, FieldOperationRecord record);
     void recordStructConstructor(const StructConstructExpr& expression, StructConstructorRecord record);

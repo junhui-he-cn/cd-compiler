@@ -766,6 +766,14 @@ void test_variant_constructor_lowering_metadata()
     };
     assertVariant(*okConstructor, "Result", "Ok");
     assertVariant(*noneConstructor, "Option", "None");
+    const VariantConstructorRecord* okMetadata = index.variantConstructor(*okConstructor);
+    const VariantConstructorRecord* noneMetadata = index.variantConstructor(*noneConstructor);
+    assert(okMetadata != nullptr && noneMetadata != nullptr);
+    assert(typeInfoName(okMetadata->resultType) == "Result");
+    assert(okMetadata->payloadTypes.size() == 1);
+    assert(typeInfoName(okMetadata->payloadTypes.front()) == "number");
+    assert(typeInfoName(noneMetadata->resultType) == "Option<number>");
+    assert(noneMetadata->payloadTypes.empty());
 
     IRCompiler compiler;
     compiler.compile(program, resolved, index);

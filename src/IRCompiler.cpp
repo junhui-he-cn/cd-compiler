@@ -859,11 +859,11 @@ IRRegister IRCompiler::emitMemberCall(const MemberCallExpr& expression)
 
 IRRegister IRCompiler::emitVariantConstructor(const MemberCallExpr& expression)
 {
-    typedExpressionType(expression, "variant constructor");
     const VariantConstructorRecord* variant = declarationIndex_
         ? declarationIndex_->variantConstructor(expression)
         : nullptr;
-    if (!variant) {
+    if (!variant || variant->resultType.kind != StaticType::Enum
+        || variant->payloadTypes.size() != expression.arguments.size()) {
         throw IRCompileError("missing variant constructor metadata");
     }
     std::vector<IRRegister> payload;

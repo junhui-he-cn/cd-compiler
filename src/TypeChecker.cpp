@@ -3247,9 +3247,12 @@ TypeChecker::CheckedExpression TypeChecker::checkVariantConstructor(
         typeArguments.push_back(substitutions.at(parameter));
     }
 
+    std::vector<TypeInfo> resolvedPayloadTypes;
+    resolvedPayloadTypes.reserve(arguments.size());
     for (std::size_t i = 0; i < arguments.size(); ++i) {
         const TypeInfo payloadType = SemanticTypes::substituteTypeParameters(
             variant->payloadTypes[i], substitutions);
+        resolvedPayloadTypes.push_back(payloadType);
         if (!SemanticTypes::compatible(payloadType, arguments[i].type)) {
             throw TypeError(expression.paren,
                 "variant argument " + std::to_string(i + 1) + " expects "
@@ -3271,7 +3274,14 @@ TypeChecker::CheckedExpression TypeChecker::checkVariantConstructor(
         }
     }
     resolvedNames_.recordVariantConstructor(expression, runtimeEnumName, expression.name.lexeme);
-    return CheckedExpression{namedEnumType(enumName, std::move(typeArguments))};
+    TypeInfo resultType = namedEnumType(enumName, std::move(typeArguments));
+    declarationIndex_.recordVariantConstructor(
+        expression,
+        runtimeEnumName,
+        expression.name.lexeme,
+        resultType,
+        std::move(resolvedPayloadTypes));
+    return CheckedExpression{std::move(resultType)};
 }
 
 bool TypeChecker::checkPattern(
@@ -4078,12 +4088,6 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
 
     if (const auto* memberCall = dynamic_cast<const MemberCallExpr*>(&expression)) {
         CheckedExpression result = checkMemberCall(*memberCall, expectedType);
-        if (resolvedNames_.hasVariantConstructor(*memberCall)) {
-            declarationIndex_.recordVariantConstructor(
-                *memberCall,
-                resolvedNames_.variantEnumName(*memberCall),
-                resolvedNames_.variantName(*memberCall));
-        }
         if (isNativeStdlibName(memberCall->name.lexeme)
             && !resolvedNames_.hasMemberCallCallee(*memberCall)
             && !resolvedNames_.hasVariantConstructor(*memberCall)) {

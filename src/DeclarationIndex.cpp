@@ -1102,11 +1102,17 @@ void DeclarationIndex::recordNativeCall(const Expr& expression, std::string name
 void DeclarationIndex::recordVariantConstructor(
     const MemberCallExpr& expression,
     std::string enumName,
-    std::string variantName)
+    std::string variantName,
+    TypeInfo resultType,
+    std::vector<TypeInfo> payloadTypes)
 {
     variantConstructors_.insert_or_assign(
         &expression,
-        VariantConstructorRecord{std::move(enumName), std::move(variantName)});
+        VariantConstructorRecord{
+            std::move(enumName),
+            std::move(variantName),
+            std::move(resultType),
+            std::move(payloadTypes)});
 }
 
 void DeclarationIndex::recordIndexOperation(const Expr& expression, IndexOperationRecord record)
