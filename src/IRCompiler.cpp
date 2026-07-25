@@ -508,10 +508,10 @@ void IRCompiler::compileMatch(const MatchStmt& statement)
 
     for (const MatchArm& arm : statement.arms) {
         std::vector<std::size_t> failJumps;
-        std::vector<std::pair<std::string, IRRegister>> bindings;
+        std::vector<CompiledPatternBinding> bindings;
         compilePattern(*arm.pattern, value, failJumps, bindings);
         for (const auto& binding : bindings) {
-            ir_.emitStoreVar(binding.first, binding.second);
+            ir_.emitStoreVar(binding.resolvedName, binding.value);
         }
         if (arm.guard) {
             const IRRegister guard = compileExpression(*arm.guard);
@@ -537,10 +537,10 @@ IRRegister IRCompiler::compileMatchExpression(const MatchExpr& expression)
 
     for (const MatchExprArm& arm : expression.arms) {
         std::vector<std::size_t> failJumps;
-        std::vector<std::pair<std::string, IRRegister>> bindings;
+        std::vector<CompiledPatternBinding> bindings;
         compilePattern(*arm.pattern, value, failJumps, bindings);
         for (const auto& binding : bindings) {
-            ir_.emitStoreVar(binding.first, binding.second);
+            ir_.emitStoreVar(binding.resolvedName, binding.value);
         }
         if (arm.guard) {
             const IRRegister guard = compileExpression(*arm.guard);
@@ -564,7 +564,7 @@ void IRCompiler::compilePattern(
     const Pattern& pattern,
     IRRegister value,
     std::vector<std::size_t>& failJumps,
-    std::vector<std::pair<std::string, IRRegister>>& bindings)
+    std::vector<CompiledPatternBinding>& bindings)
 {
     if (dynamic_cast<const WildcardPattern*>(&pattern)) {
         return;
@@ -577,7 +577,8 @@ void IRCompiler::compilePattern(
         if (!record || record->resolvedName.empty()) {
             throw IRCompileError("missing pattern binding metadata");
         }
-        bindings.emplace_back(record->resolvedName, value);
+        bindings.push_back(
+            CompiledPatternBinding{record->sourceName, record->resolvedName, value});
         return;
     }
 
@@ -598,10 +599,20 @@ void IRCompiler::compilePattern(
     }
 
     if (const auto* orPattern = dynamic_cast<const OrPattern*>(&pattern)) {
+        const OrPatternRecord* record = declarationIndex_
+            ? declarationIndex_->orPattern(*orPattern)
+            : nullptr;
+        if (!record || record->bindingNames.size() != record->bindingTypes.size()) {
+            throw IRCompileError("missing OR pattern metadata");
+        }
+        const std::unordered_set<std::string> expectedBindingNames(
+            record->bindingNames.begin(),
+            record->bindingNames.end());
         std::vector<std::size_t> successJumps;
         std::vector<std::size_t> pendingFailJumps;
         std::unordered_map<std::string, IRRegister> sharedBindings;
-        std::vector<std::pair<std::string, IRRegister>> mergedBindings;
+        std::unordered_map<std::string, std::string> resolvedNamesByBinding;
+        std::vector<CompiledPatternBinding> mergedBindings;
 
         for (std::size_t i = 0; i < orPattern->alternatives.size(); ++i) {
             for (const std::size_t jump : pendingFailJumps) {
@@ -610,21 +621,40 @@ void IRCompiler::compilePattern(
             pendingFailJumps.clear();
 
             std::vector<std::size_t> alternativeFailJumps;
-            std::vector<std::pair<std::string, IRRegister>> alternativeBindings;
+            std::vector<CompiledPatternBinding> alternativeBindings;
             compilePattern(
                 *orPattern->alternatives[i],
                 value,
                 alternativeFailJumps,
                 alternativeBindings);
 
+            std::unordered_set<std::string> alternativeBindingNames;
             for (const auto& binding : alternativeBindings) {
-                auto shared = sharedBindings.find(binding.first);
+                if (expectedBindingNames.find(binding.sourceName) == expectedBindingNames.end()
+                    || !alternativeBindingNames.insert(binding.sourceName).second) {
+                    throw IRCompileError("OR pattern binding metadata mismatch");
+                }
+                const auto resolvedName = resolvedNamesByBinding.find(binding.sourceName);
+                if (resolvedName != resolvedNamesByBinding.end()
+                    && resolvedName->second != binding.resolvedName) {
+                    throw IRCompileError("OR pattern binding metadata mismatch");
+                }
+                resolvedNamesByBinding.insert_or_assign(
+                    binding.sourceName,
+                    binding.resolvedName);
+                auto shared = sharedBindings.find(binding.resolvedName);
                 if (shared == sharedBindings.end()) {
                     const IRRegister registerForBinding = ir_.makeRegister();
-                    shared = sharedBindings.emplace(binding.first, registerForBinding).first;
-                    mergedBindings.emplace_back(binding.first, registerForBinding);
+                    shared = sharedBindings.emplace(binding.resolvedName, registerForBinding).first;
+                    mergedBindings.push_back(CompiledPatternBinding{
+                        binding.sourceName,
+                        binding.resolvedName,
+                        registerForBinding});
                 }
-                ir_.emitCopyTo(shared->second, binding.second);
+                ir_.emitCopyTo(shared->second, binding.value);
+            }
+            if (alternativeBindingNames.size() != expectedBindingNames.size()) {
+                throw IRCompileError("OR pattern binding metadata mismatch");
             }
 
             if (i + 1 < orPattern->alternatives.size()) {
@@ -640,6 +670,9 @@ void IRCompiler::compilePattern(
 
         for (const std::size_t jump : successJumps) {
             ir_.patchJump(jump);
+        }
+        if (sharedBindings.size() != expectedBindingNames.size()) {
+            throw IRCompileError("OR pattern binding metadata mismatch");
         }
         bindings.insert(bindings.end(), mergedBindings.begin(), mergedBindings.end());
         return;

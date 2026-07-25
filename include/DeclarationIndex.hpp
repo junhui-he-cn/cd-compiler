@@ -120,10 +120,16 @@ struct RecordPatternRecord {
 };
 
 struct PatternBindingRecord {
+    std::string sourceName;
     std::string resolvedName;
     TypeInfo type;
     BindingId bindingId;
     ResolvedSymbol symbol;
+};
+
+struct OrPatternRecord {
+    std::vector<std::string> bindingNames;
+    std::vector<TypeInfo> bindingTypes;
 };
 
 struct ReturnRecord {
@@ -221,6 +227,7 @@ public:
     const VariantPatternRecord* variantPattern(const VariantPattern& pattern) const;
     const RecordPatternRecord* recordPattern(const RecordPattern& pattern) const;
     const PatternBindingRecord* patternBindingMetadata(const VariablePattern& pattern) const;
+    const OrPatternRecord* orPattern(const OrPattern& pattern) const;
     const IndexOperationRecord* indexOperation(const Expr& expression) const;
     const FieldOperationRecord* fieldOperation(const Expr& expression) const;
     const StructConstructorRecord* structConstructor(const StructConstructExpr& expression) const;
@@ -257,6 +264,7 @@ private:
     void recordVariantPattern(const VariantPattern& pattern, VariantPatternRecord record);
     void recordRecordPattern(const RecordPattern& pattern, RecordPatternRecord record);
     void recordPatternBinding(const VariablePattern& pattern, PatternBindingRecord record);
+    void recordOrPattern(const OrPattern& pattern, OrPatternRecord record);
     void recordIndexOperation(const Expr& expression, IndexOperationRecord record);
     void recordFieldOperation(const Expr& expression, FieldOperationRecord record);
     void recordStructConstructor(const StructConstructExpr& expression, StructConstructorRecord record);
@@ -296,6 +304,7 @@ private:
     std::unordered_map<const VariantPattern*, VariantPatternRecord> variantPatterns_;
     std::unordered_map<const RecordPattern*, RecordPatternRecord> recordPatterns_;
     std::unordered_map<const VariablePattern*, PatternBindingRecord> patternBindingMetadata_;
+    std::unordered_map<const OrPattern*, OrPatternRecord> orPatterns_;
     std::unordered_map<const Expr*, IndexOperationRecord> indexOperations_;
     std::unordered_map<const Expr*, FieldOperationRecord> fieldOperations_;
     std::unordered_map<const StructConstructExpr*, StructConstructorRecord> structConstructorsMetadata_;
@@ -310,6 +319,7 @@ private:
     std::unordered_set<const LiteralPattern*> literalPatternNodes_;
     std::unordered_set<const VariantPattern*> variantPatternNodes_;
     std::unordered_set<const RecordPattern*> recordPatternNodes_;
+    std::unordered_set<const OrPattern*> orPatternNodes_;
     std::unordered_map<const BreakStmt*, LoopTargetRecord> breakTargets_;
     std::unordered_map<const ContinueStmt*, LoopTargetRecord> continueTargets_;
     std::unordered_map<

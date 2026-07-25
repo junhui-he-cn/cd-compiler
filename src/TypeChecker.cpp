@@ -3315,6 +3315,7 @@ bool TypeChecker::checkPattern(
         declarationIndex_.recordPatternBinding(
             *variable,
             PatternBindingRecord{
+                variable->name.lexeme,
                 binding.resolvedName,
                 binding.type,
                 binding.bindingId,
@@ -3459,6 +3460,15 @@ bool TypeChecker::checkPattern(
             }
         }
 
+        OrPatternRecord patternRecord;
+        patternRecord.bindingNames.reserve(mergedBindings.size());
+        patternRecord.bindingTypes.reserve(mergedBindings.size());
+        for (const auto& entry : mergedBindings) {
+            patternRecord.bindingNames.push_back(entry.first);
+            patternRecord.bindingTypes.push_back(entry.second.type);
+        }
+        declarationIndex_.recordOrPattern(*orPattern, std::move(patternRecord));
+
         if (deferredBindings) {
             for (auto& entry : mergedBindings) {
                 if (deferredBindings->find(entry.first) != deferredBindings->end()) {
@@ -3478,6 +3488,7 @@ bool TypeChecker::checkPattern(
                     declarationIndex_.recordPatternBinding(
                         *occurrence,
                         PatternBindingRecord{
+                            occurrence->name.lexeme,
                             binding.resolvedName,
                             binding.type,
                             binding.bindingId,

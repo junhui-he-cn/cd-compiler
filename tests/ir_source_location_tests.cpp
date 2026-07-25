@@ -238,6 +238,11 @@ void test_declaration_index()
     assert(firstBindingMetadata->bindingId == secondBindingMetadata->bindingId);
     assert(firstBindingMetadata->resolvedName == secondBindingMetadata->resolvedName);
     assert(typeInfoName(firstBindingMetadata->type) == "number");
+    const OrPatternRecord* orMetadata = index.orPattern(*orPattern);
+    assert(orMetadata != nullptr);
+    assert(orMetadata->bindingNames == std::vector<std::string>{"number"});
+    assert(orMetadata->bindingTypes.size() == 1);
+    assert(typeInfoName(orMetadata->bindingTypes.front()) == "number");
 }
 
 void test_declaration_index_module_metadata()
@@ -890,6 +895,43 @@ void test_record_pattern_metadata()
     compiler.compile(program, resolved, index);
 }
 
+void test_literal_or_pattern_metadata()
+{
+    std::istringstream input(
+        "fun choose(value: number): string {\n"
+        "  return match value {\n"
+        "    0 | 1 => \"small\",\n"
+        "    _ => \"other\",\n"
+        "  };\n"
+        "}\n"
+        "print choose(0);\n");
+    FrontendSession frontend;
+    Program program = frontend.loadStdin(input);
+
+    const auto* function = dynamic_cast<const FunctionStmt*>(program.statements[0].get());
+    assert(function != nullptr && !function->body.empty());
+    const auto* returnStatement = dynamic_cast<const ReturnStmt*>(function->body.front().get());
+    const auto* match = returnStatement
+        ? dynamic_cast<const MatchExpr*>(returnStatement->value.get())
+        : nullptr;
+    const auto* pattern = match && !match->arms.empty()
+        ? dynamic_cast<const OrPattern*>(match->arms.front().pattern.get())
+        : nullptr;
+    assert(pattern != nullptr);
+
+    TypeChecker checker;
+    const ResolvedNames& resolved = checker.check(program);
+    const DeclarationIndex& index = checker.declarationIndex();
+    assert(checker.declarationIndexMismatchCount() == 0);
+    const OrPatternRecord* record = index.orPattern(*pattern);
+    assert(record != nullptr);
+    assert(record->bindingNames.empty());
+    assert(record->bindingTypes.empty());
+
+    IRCompiler compiler;
+    compiler.compile(program, resolved, index);
+}
+
 void test_variant_constructor_lowering_metadata()
 {
     std::istringstream input(
@@ -1411,6 +1453,7 @@ int main()
     test_literal_pattern_metadata();
     test_variant_pattern_metadata();
     test_record_pattern_metadata();
+    test_literal_or_pattern_metadata();
     test_variant_constructor_lowering_metadata();
     test_function_return_lowering_metadata();
     test_function_capture_metadata();

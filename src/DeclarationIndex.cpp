@@ -567,6 +567,7 @@ private:
             return;
         }
         if (const auto* orPattern = dynamic_cast<const OrPattern*>(pattern)) {
+            index_.orPatternNodes_.insert(orPattern);
             for (const PatternPtr& alternative : orPattern->alternatives) {
                 collectPattern(alternative.get(), bindings);
             }
@@ -1070,6 +1071,12 @@ const PatternBindingRecord* DeclarationIndex::patternBindingMetadata(
     return found == patternBindingMetadata_.end() ? nullptr : &found->second;
 }
 
+const OrPatternRecord* DeclarationIndex::orPattern(const OrPattern& pattern) const
+{
+    const auto found = orPatterns_.find(&pattern);
+    return found == orPatterns_.end() ? nullptr : &found->second;
+}
+
 const IndexOperationRecord* DeclarationIndex::indexOperation(const Expr& expression) const
 {
     const auto found = indexOperations_.find(&expression);
@@ -1166,6 +1173,11 @@ void DeclarationIndex::recordPatternBinding(
     PatternBindingRecord record)
 {
     patternBindingMetadata_.insert_or_assign(&pattern, std::move(record));
+}
+
+void DeclarationIndex::recordOrPattern(const OrPattern& pattern, OrPatternRecord record)
+{
+    orPatterns_.insert_or_assign(&pattern, std::move(record));
 }
 
 void DeclarationIndex::recordIndexOperation(const Expr& expression, IndexOperationRecord record)
@@ -1479,6 +1491,11 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
     }
     for (const RecordPattern* pattern : recordPatternNodes_) {
         if (!recordPattern(*pattern)) {
+            ++mismatches;
+        }
+    }
+    for (const OrPattern* pattern : orPatternNodes_) {
+        if (!orPattern(*pattern)) {
             ++mismatches;
         }
     }

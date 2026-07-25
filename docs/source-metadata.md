@@ -194,6 +194,14 @@ name, checked type, binding ID, and declaration/symbol target for every
 `IRCompiler` consumes the resolved name for arm-local stores while
 `TypeChecker` remains responsible for binding compatibility and scope rules.
 
+## OR-pattern inputs (M1E3 next slice)
+
+`DeclarationIndex::orPattern()` exposes the checker-validated shared binding
+names and types for each OR pattern, including nested alternatives and
+binding-free literal OR patterns. `IRCompiler` consumes the record to verify
+that every alternative supplies the same arm-local bindings while preserving
+the existing branch and register lowering.
+
 ## Lossless source view
 
 `FrontendSession::losslessSourceView()` groups `LosslessPiece` values by

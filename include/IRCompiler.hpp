@@ -83,11 +83,16 @@ private:
         std::optional<std::string> typeName = std::nullopt);
     IRRegister emitStructConstructor(const StructConstructExpr& expression);
     IRRegister emitVariantConstructor(const MemberCallExpr& expression);
+    struct CompiledPatternBinding {
+        std::string sourceName;
+        std::string resolvedName;
+        IRRegister value;
+    };
     void compilePattern(
         const Pattern& pattern,
         IRRegister value,
         std::vector<std::size_t>& failJumps,
-        std::vector<std::pair<std::string, IRRegister>>& bindings);
+        std::vector<CompiledPatternBinding>& bindings);
     IRRegister emitIndex(const IndexExpr& expression);
     IRRegister emitCompoundAssign(const CompoundAssignExpr& expression);
     IRRegister emitCompoundAssignmentResult(
