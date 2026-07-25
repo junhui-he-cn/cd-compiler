@@ -632,7 +632,13 @@ void IRCompiler::compilePattern(
     }
 
     if (const auto* literal = dynamic_cast<const LiteralPattern*>(&pattern)) {
-        const IRRegister expected = ir_.emitConstant(literalValue(literal->value.lexeme));
+        const LiteralPatternRecord* record = declarationIndex_
+            ? declarationIndex_->literalPattern(*literal)
+            : nullptr;
+        if (!record) {
+            throw IRCompileError("missing literal pattern metadata");
+        }
+        const IRRegister expected = ir_.emitConstant(literalValue(record->literal));
         const IRRegister equal = ir_.emitBinary(IROp::Equal, value, expected);
         failJumps.push_back(ir_.emitJumpIfFalse(equal));
         return;

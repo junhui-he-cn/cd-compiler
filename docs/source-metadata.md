@@ -161,6 +161,14 @@ after the operation record is validated.
 and substituted payload types, so variant lowering validates constructor shape
 without reconstructing generic payload types from the AST.
 
+## Literal pattern inputs (M1E3 initial slice)
+
+`DeclarationIndex::literalPattern()` exposes the checked literal text and
+`TypeInfo` for every `nil`, boolean, number, or string pattern, including
+nested patterns in match arms. `IRCompiler` consumes the record to create the
+existing comparison constant; coverage and diagnostic decisions remain in
+`TypeChecker`, and no pattern-specific opcode or artifact format changes.
+
 ## Lossless source view
 
 `FrontendSession::losslessSourceView()` groups `LosslessPiece` values by

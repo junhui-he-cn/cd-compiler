@@ -100,6 +100,11 @@ struct VariantConstructorRecord {
     std::vector<TypeInfo> payloadTypes;
 };
 
+struct LiteralPatternRecord {
+    std::string literal;
+    TypeInfo type;
+};
+
 struct ReturnRecord {
     TypeInfo type;
 };
@@ -191,6 +196,7 @@ public:
     const TypedExpressionRecord* typedExpression(const Expr& expression) const;
     const NativeCallRecord* nativeCall(const Expr& expression) const;
     const VariantConstructorRecord* variantConstructor(const MemberCallExpr& expression) const;
+    const LiteralPatternRecord* literalPattern(const LiteralPattern& pattern) const;
     const IndexOperationRecord* indexOperation(const Expr& expression) const;
     const FieldOperationRecord* fieldOperation(const Expr& expression) const;
     const StructConstructorRecord* structConstructor(const StructConstructExpr& expression) const;
@@ -223,6 +229,7 @@ private:
         std::string variantName,
         TypeInfo resultType,
         std::vector<TypeInfo> payloadTypes);
+    void recordLiteralPattern(const LiteralPattern& pattern, LiteralPatternRecord record);
     void recordIndexOperation(const Expr& expression, IndexOperationRecord record);
     void recordFieldOperation(const Expr& expression, FieldOperationRecord record);
     void recordStructConstructor(const StructConstructExpr& expression, StructConstructorRecord record);
@@ -258,6 +265,7 @@ private:
     std::unordered_map<const Expr*, TypedExpressionRecord> typedExpressions_;
     std::unordered_map<const Expr*, NativeCallRecord> nativeCalls_;
     std::unordered_map<const MemberCallExpr*, VariantConstructorRecord> variantConstructors_;
+    std::unordered_map<const LiteralPattern*, LiteralPatternRecord> literalPatterns_;
     std::unordered_map<const Expr*, IndexOperationRecord> indexOperations_;
     std::unordered_map<const Expr*, FieldOperationRecord> fieldOperations_;
     std::unordered_map<const StructConstructExpr*, StructConstructorRecord> structConstructorsMetadata_;
@@ -269,6 +277,7 @@ private:
     std::unordered_map<const MethodDecl*, CaptureRecord> methodCaptures_;
     std::unordered_set<const BreakStmt*> breakStatements_;
     std::unordered_set<const ContinueStmt*> continueStatements_;
+    std::unordered_set<const LiteralPattern*> literalPatternNodes_;
     std::unordered_map<const BreakStmt*, LoopTargetRecord> breakTargets_;
     std::unordered_map<const ContinueStmt*, LoopTargetRecord> continueTargets_;
     std::unordered_map<

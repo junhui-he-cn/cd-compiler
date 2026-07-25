@@ -3475,10 +3475,16 @@ bool TypeChecker::checkPattern(
         const TypeInfo literalType = literalPatternType(literal->value);
         if (literal->value.type == TokenType::Nil) {
             if (expectedType.kind == StaticType::Nil) {
+                declarationIndex_.recordLiteralPattern(
+                    *literal,
+                    LiteralPatternRecord{literal->value.lexeme, literalType});
                 return true;
             }
             if (SemanticTypes::isNullable(expectedType)) {
                 coversNil = true;
+                declarationIndex_.recordLiteralPattern(
+                    *literal,
+                    LiteralPatternRecord{literal->value.lexeme, literalType});
                 return false;
             }
             if (expectedType.kind == StaticType::Enum) {
@@ -3494,6 +3500,9 @@ bool TypeChecker::checkPattern(
                 "literal pattern expects " + typeInfoName(expectedType)
                     + ", got " + typeInfoName(literalType));
         }
+        declarationIndex_.recordLiteralPattern(
+            *literal,
+            LiteralPatternRecord{literal->value.lexeme, literalType});
         if (literal->value.type == TokenType::True
             || literal->value.type == TokenType::False) {
             coveredLiterals.insert(literal->value.lexeme);

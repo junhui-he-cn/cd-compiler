@@ -730,6 +730,54 @@ void test_method_call_lowering_metadata()
     compiler.compile(program, resolved, index);
 }
 
+void test_literal_pattern_metadata()
+{
+    std::istringstream input(
+        "fun choose(value: bool?): number {\n"
+        "  return match value {\n"
+        "    nil => 0,\n"
+        "    true => 1,\n"
+        "    false => 2,\n"
+        "  };\n"
+        "}\n"
+        "print choose(nil);\n");
+    FrontendSession frontend;
+    Program program = frontend.loadStdin(input);
+
+    const auto* function = dynamic_cast<const FunctionStmt*>(program.statements[0].get());
+    assert(function != nullptr && !function->body.empty());
+    const auto* returnStatement = dynamic_cast<const ReturnStmt*>(function->body.front().get());
+    const auto* match = returnStatement
+        ? dynamic_cast<const MatchExpr*>(returnStatement->value.get())
+        : nullptr;
+    assert(match != nullptr && match->arms.size() == 3);
+    const auto* nilPattern = dynamic_cast<const LiteralPattern*>(match->arms[0].pattern.get());
+    const auto* truePattern = dynamic_cast<const LiteralPattern*>(match->arms[1].pattern.get());
+    const auto* falsePattern = dynamic_cast<const LiteralPattern*>(match->arms[2].pattern.get());
+    assert(nilPattern != nullptr && truePattern != nullptr && falsePattern != nullptr);
+
+    TypeChecker checker;
+    const ResolvedNames& resolved = checker.check(program);
+    const DeclarationIndex& index = checker.declarationIndex();
+    assert(checker.declarationIndexMismatchCount() == 0);
+
+    const auto assertLiteral = [&index](
+        const LiteralPattern& pattern,
+        const std::string& literal,
+        const std::string& type) {
+        const LiteralPatternRecord* record = index.literalPattern(pattern);
+        assert(record != nullptr);
+        assert(record->literal == literal);
+        assert(typeInfoName(record->type) == type);
+    };
+    assertLiteral(*nilPattern, "nil", "nil");
+    assertLiteral(*truePattern, "true", "bool");
+    assertLiteral(*falsePattern, "false", "bool");
+
+    IRCompiler compiler;
+    compiler.compile(program, resolved, index);
+}
+
 void test_variant_constructor_lowering_metadata()
 {
     std::istringstream input(
@@ -1248,6 +1296,7 @@ int main()
     test_typed_index_expression_metadata();
     test_call_lowering_metadata();
     test_method_call_lowering_metadata();
+    test_literal_pattern_metadata();
     test_variant_constructor_lowering_metadata();
     test_function_return_lowering_metadata();
     test_function_capture_metadata();
