@@ -40,8 +40,10 @@ This is a small C++17 Compiler Design front-end/interpreter project. It currentl
 - `include/FrontendSession.hpp`, `src/FrontendSession.cpp`: import-aware source
   loading, canonical module de-duplication, file-aware diagnostic remapping,
   and the snapshot-local `ModuleGraph` of loaded modules plus import/re-export
-  dependency edges; stdin and ordered direct multi-file inputs retain their
-  existing combined-entry path.
+  dependency edges. `include/ModuleGraph.hpp` owns the graph value types, and
+  import-aware `Program` snapshots carry a value copy for later semantic
+  consumers; stdin and ordered direct multi-file inputs retain their existing
+  combined-entry path.
 - `include/DeclarationIndex.hpp`, `src/DeclarationIndex.cpp`: snapshot-local
   declaration, signature/shape, typed-expression, scope, import/export, and
   lexical-reference metadata plus for-in/pattern bindings and local direct-call

@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <fstream>
 #include <functional>
+#include <sstream>
 #include <string>
 
 namespace fs = std::filesystem;
@@ -109,6 +110,19 @@ void test_search_path_resolves_extensionless_import_and_reexport(const fs::path&
     assert(libImport->resolvedModuleId == lib->moduleId);
 
     const ModuleGraph& graph = session.moduleGraph();
+    assert(program.moduleGraph.has_value());
+    assert(program.moduleGraph->nodes.size() == graph.nodes.size());
+    assert(program.moduleGraph->edges.size() == graph.edges.size());
+    for (std::size_t index = 0; index < graph.nodes.size(); ++index) {
+        assert(program.moduleGraph->nodes[index].moduleId == graph.nodes[index].moduleId);
+        assert(program.moduleGraph->nodes[index].canonicalPath == graph.nodes[index].canonicalPath);
+    }
+    for (std::size_t index = 0; index < graph.edges.size(); ++index) {
+        assert(program.moduleGraph->edges[index].importingModuleId == graph.edges[index].importingModuleId);
+        assert(program.moduleGraph->edges[index].importedModuleId == graph.edges[index].importedModuleId);
+        assert(program.moduleGraph->edges[index].kind == graph.edges[index].kind);
+        assert(program.moduleGraph->edges[index].requestedPath == graph.edges[index].requestedPath);
+    }
     assert(graph.nodes.size() == 3);
     assert(graph.edges.size() == 3);
     assert(std::count_if(
@@ -175,6 +189,14 @@ void test_search_path_resolves_extensionless_import_and_reexport(const fs::path&
         assert(actual.kind == expected.kind);
         assert(actual.requestedPath == expected.requestedPath);
     }
+
+    std::istringstream stdinSource("print 0;\n");
+    session.loadStdin(stdinSource);
+    assert(session.moduleGraph().nodes.empty());
+    assert(session.moduleGraph().edges.empty());
+    assert(program.moduleGraph.has_value());
+    assert(program.moduleGraph->nodes.size() == 3);
+    assert(program.moduleGraph->edges.size() == 3);
 }
 
 void test_importing_file_directory_precedes_search_path(const fs::path& root)
@@ -226,6 +248,7 @@ void test_direct_inputs_preserve_source_spans(const fs::path& root)
     FrontendSession session;
     Program program = session.loadFiles({first.string(), second.string()});
 
+    assert(!program.moduleGraph.has_value());
     assert(program.sources.size() == 2);
     assert(program.sources[0].path.find("first.cd") != std::string::npos);
     assert(program.sources[1].path.find("second.cd") != std::string::npos);

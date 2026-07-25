@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ModuleGraph.hpp"
 #include "SourceMap.hpp"
 #include "Token.hpp"
 
@@ -580,6 +581,7 @@ struct ReturnStmt final : Stmt {
 struct Program {
     std::vector<StmtPtr> statements;
     std::vector<SourceFile> sources;
+    std::optional<ModuleGraph> moduleGraph;
 
     // Emit a readable tree view of the parsed program.
     void print(std::ostream& out) const;

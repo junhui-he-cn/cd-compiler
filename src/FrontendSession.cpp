@@ -637,6 +637,7 @@ Program FrontendSession::assembleProgram()
     Program program;
     program.sources = sourceFiles_;
     if (hasImports_) {
+        program.moduleGraph = moduleGraph_;
         for (ParsedUnit& unit : units_) {
             program.statements.push_back(std::make_unique<ModuleStmt>(
                 unit.id,

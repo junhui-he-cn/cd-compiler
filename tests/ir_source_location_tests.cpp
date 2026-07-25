@@ -17,6 +17,7 @@ void test_snapshot_identity_metadata()
     FrontendSession frontend;
     Program program = frontend.loadStdin(input);
 
+    assert(!program.moduleGraph.has_value());
     assert(program.sources.size() == 1);
     assert(program.sources[0].id == SourceFileId{0});
     for (const Token& token : frontend.displayTokens()) {

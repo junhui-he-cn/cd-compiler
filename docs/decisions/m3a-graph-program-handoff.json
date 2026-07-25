@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m3a-2026-07-25-r2",
+  "baseline_commit": "8be3e8e",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M3A-GRAPH-002",
+  "domain": "module-graph",
+  "status": "resolved",
+  "purpose": "Make the import-aware module graph part of the parsed Program snapshot so semantic and interface consumers can receive graph state without depending on FrontendSession filesystem loading.",
+  "question": "Where should the explicit import graph live when the frontend hands a parsed snapshot to TypeChecker and later module-interface consumers?",
+  "decision": "Program carries an optional value snapshot of ModuleGraph. FrontendSession populates it only for successful import-aware file assembly, and the value matches the graph exposed by FrontendSession::moduleGraph() at that boundary. Stdin and ordered direct multi-file combined-entry programs leave the optional graph empty.",
+  "representation": {
+    "types_header": "include/ModuleGraph.hpp owns ModuleGraph, ModuleGraphNode, ModuleGraphEdge, and ModuleGraphEdgeKind independently of FrontendSession.",
+    "program_field": "Program::moduleGraph is std::optional<ModuleGraph> and is copied as part of the Program snapshot.",
+    "import_aware": "assembleProgram attaches the graph after all import-aware units and edges have loaded successfully.",
+    "direct_modes": "loadStdin and the no-import direct multi-file fast path retain an empty optional graph.",
+    "lifetime": "The graph value is independent of later FrontendSession reset or reload operations."
+  },
+  "compatibility_boundary": {
+    "semantic_consumers": "TypeChecker, DeclarationIndex, IR, bytecode, module-interface text, and the Rust VM do not consume the graph in this slice.",
+    "loader_accessor": "FrontendSession::moduleGraph remains available during migration for loader clients and focused tests.",
+    "behavior": "No source visibility, diagnostic, IR, bytecode, artifact, or runtime behavior changes."
+  },
+  "migration": "Move graph types to a standalone header, attach a value copy to import-aware Program assembly, and assert equality between the session graph and program snapshot. Later M3A slices migrate one semantic/interface consumer at a time; M3B owns dependency-body removal and incremental compilation.",
+  "quantitative_gate": "The frontend_session and ir_source_location CTest cases prove import-aware graph handoff plus empty stdin/direct-entry compatibility paths. The m0d-2026-07-22-r1 inventory validates 1,745 cases, and the canonical verification and legacy parity commands report zero unexplained differences.",
+  "old_path_deletion_condition": "Delete no production path in this slice. Retire the session-only accessor only after all graph consumers read Program::moduleGraph and no consumer depends on filesystem-loader state; direct-entry compatibility paths remain documented.",
+  "affected_consumers": [
+    "Program snapshot ownership",
+    "FrontendSession import-aware assembly",
+    "future TypeChecker and module-interface graph consumers",
+    "source metadata and module identity tests"
+  ],
+  "out_of_scope": [
+    "interface-driven imported symbol materialization",
+    "graph serialization, cache keys, and per-module artifacts",
+    "package resolution and cycle-policy changes",
+    "module visibility changes",
+    "changes to direct multi-file, stdin, diagnostics, IR, bytecode, or Rust VM behavior"
+  ],
+  "verification": {
+    "inventory_revision": "m0d-2026-07-22-r1",
+    "focused_commands": [
+      "cmake --build build --target frontend_session_tests ir_source_location_tests",
+      "ctest --test-dir build --output-on-failure -R '^(frontend_session|ir_source_location)$'",
+      "python3 tests/verification_inventory.py"
+    ],
+    "release_commands": [
+      "cmake -S . -B build",
+      "cmake --build build",
+      "ctest --test-dir build --output-on-failure",
+      "python3 tests/run_golden_tests.py ./build/compiler_design",
+      "python3 tests/bytecode_artifact_tests.py ./build/compiler_design vm-rs",
+      "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens",
+      "cargo test --manifest-path vm-rs/Cargo.toml",
+      "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+    ]
+  }
+}
