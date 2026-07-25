@@ -107,9 +107,11 @@ rule. C-style `for` and `for-in` loop-exit narrowing remain conservative.
 Inside a C-style `for`, the condition's true-branch nullable facts are active
 while checking the loop body. When the body contains no `break` targeting that
 loop, its false-branch fact survives a normal condition-failure exit;
-initializer and increment flow remains conservative. `continue`, returns, and
-breaks belonging to nested loops do not block this rule. `for-in` loop-exit
-narrowing remains conservative.
+the initializer is checked before the condition, and the increment is
+flow-checked after the body in runtime order. The increment cannot establish a
+fact for the body that ran before it, and its mutations affect later loop flow.
+`continue`, returns, and breaks belonging to nested loops do not block this
+rule. `for-in` loop-exit narrowing remains conservative.
 
 Inside a `for-in`, nullable facts active before the loop are available while
 checking the body. Facts established only in the body, and body mutations to

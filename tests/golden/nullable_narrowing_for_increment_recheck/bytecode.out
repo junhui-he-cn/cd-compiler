@@ -1,0 +1,36 @@
+main registers=8
+0000  b0 = constant #0 nil
+0001  store_var @0 read#0, b0
+0002  b1 = make_function $0 read/1
+0003  assign_var @4 read#0, b1
+0004  b2 = load_var @5 read#0
+0005  b3 = constant #8 nil
+0006  b4 = call b2(b3)
+0007  print b4
+0008  b5 = load_var @6 read#0
+0009  b6 = constant #9 4
+0010  b7 = call b5(b6)
+0011  print b7
+
+function $0 read/1 registers=11
+0000  b0 = load_var @1 value#1
+0001  b1 = constant #1 nil
+0002  b2 = equal b0, b1
+0003  jump_if_false b2, 0006
+0004  b3 = constant #2 0
+0005  return b3
+0006  b4 = constant #3 true
+0007  jump_if_false b4, 0017
+0008  jump 0012
+0009  b5 = constant #4 nil
+0010  assign_var @2 value#1, b5
+0011  jump 0006
+0012  b6 = load_var @3 value#1
+0013  b7 = constant #5 1
+0014  b8 = add b6, b7
+0015  return b8
+0016  jump 0009
+0017  b9 = constant #6 0
+0018  return b9
+0019  b10 = constant #7 nil
+0020  return b10

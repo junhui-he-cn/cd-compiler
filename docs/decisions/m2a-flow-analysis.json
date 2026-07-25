@@ -618,6 +618,42 @@
           "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
         ]
       }
+    },
+    {
+      "decision_id": "M2A-FLOW-018",
+      "introduced_revision": "m2a-2026-07-25-r18",
+      "domain": "flow-analysis",
+      "question": "When should a C-style for increment participate in nullable flow checking?",
+      "decision": "A C-style for increment is flow-checked after the body, matching runtime order. Facts active before the increment remain visible while checking it; increment assignments and calls then apply their normal invalidation effects before the next condition and conservative loop continuation. The increment does not establish a fact for the body that executed before it. Initializer checking remains before the condition, and the existing no-current-break rule governs condition-failure facts after the loop.",
+      "status": "resolved",
+      "owner": "TypeChecker C-style for body/increment flow order and existing loop exit state",
+      "m1_behavior": "Before this revision, TypeChecker checked the C-style for increment before the body, so an increment such as value = nil could invalidate a valid nullable proof before the first body execution, while an increment could appear to affect the wrong flow point.",
+      "rationale": "IR lowering already executes the body before the increment and then rechecks the condition. Aligning semantic flow checking with that order prevents a future iteration's mutation from contaminating the current body while still applying increment effects before later loop flow.",
+      "affected_consumers": [
+        "TypeChecker C-style for body and increment checking",
+        "FlowFacts active body/increment state",
+        "nullable C-style for increment compatibility fixtures"
+      ],
+      "compatibility_consequences": "A nullable proof established before a C-style for remains usable in the current body even when the increment assigns nil. An increment such as value = 1 does not make value non-null in that body's first iteration; increment mutations are applied only after body checking.",
+      "migration": "Move increment expression checking into the existing condition-true FlowFacts scope after body checking and before that scope is restored. Keep initializer and condition checking in their existing order, and retain the current-break guard around post-loop condition-failure facts.",
+      "quantitative_gate": "The m0d-2026-07-22-r1 inventory validates 1724 cases, the FlowFacts CTest passes, the named C-style increment positive and body-negative fixtures pass, and the full canonical verification command remains the release gate.",
+      "old_path_deletion_condition": "Delete no additional production path in this slice. The old pre-body increment-check path is replaced only after runtime-order flow checking, first-iteration positive/negative fixtures, and the full parity gate pass; richer increment fixpoint analysis remains a later decision.",
+      "positive_fixtures": [
+        "tests/golden/nullable_narrowing_for_increment_recheck"
+      ],
+      "negative_fixtures": [
+        "tests/golden/type_errors/nullable_narrowing_for_increment_body_unsupported.cd"
+      ],
+      "verification": {
+        "inventory_revision": "m0d-2026-07-22-r1",
+        "commands": [
+          "cmake --build build --target compiler_design",
+          "python3 tests/run_golden_tests.py ./build/compiler_design --case nullable_narrowing_for_increment",
+          "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens --case nullable_narrowing_for_increment_recheck",
+          "python3 tests/verification_inventory.py --write",
+          "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json"
+        ]
+      }
     }
   ]
 }

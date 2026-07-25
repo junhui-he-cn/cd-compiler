@@ -14385,6 +14385,117 @@
       "fixture": "tests/golden/nullable_narrowing_for_in_body_recheck"
     },
     {
+      "case_id": "golden.success.nullable_narrowing_for_increment_recheck.ast",
+      "runner": "golden",
+      "result_name": "nullable_narrowing_for_increment_recheck default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:nullable_narrowing_for_increment_recheck"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/nullable_narrowing_for_increment_recheck/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_narrowing_for_increment_recheck/ast.out"
+      ],
+      "fixture": "tests/golden/nullable_narrowing_for_increment_recheck"
+    },
+    {
+      "case_id": "golden.success.nullable_narrowing_for_increment_recheck.bytecode",
+      "runner": "golden",
+      "result_name": "nullable_narrowing_for_increment_recheck --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:nullable_narrowing_for_increment_recheck"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/nullable_narrowing_for_increment_recheck/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_narrowing_for_increment_recheck/bytecode.out"
+      ],
+      "fixture": "tests/golden/nullable_narrowing_for_increment_recheck"
+    },
+    {
+      "case_id": "golden.success.nullable_narrowing_for_increment_recheck.ir",
+      "runner": "golden",
+      "result_name": "nullable_narrowing_for_increment_recheck --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:nullable_narrowing_for_increment_recheck"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/nullable_narrowing_for_increment_recheck/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_narrowing_for_increment_recheck/ir.out"
+      ],
+      "fixture": "tests/golden/nullable_narrowing_for_increment_recheck"
+    },
+    {
+      "case_id": "golden.success.nullable_narrowing_for_increment_recheck.module_interface",
+      "runner": "golden",
+      "result_name": "nullable_narrowing_for_increment_recheck --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:nullable_narrowing_for_increment_recheck"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/nullable_narrowing_for_increment_recheck/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_narrowing_for_increment_recheck/module-interface.out"
+      ],
+      "fixture": "tests/golden/nullable_narrowing_for_increment_recheck"
+    },
+    {
       "case_id": "golden.success.nullable_narrowing_loop_control_recheck.ast",
       "runner": "golden",
       "result_name": "nullable_narrowing_loop_control_recheck default(ast)",
@@ -22411,6 +22522,34 @@
         "tests/golden/type_errors/nullable_narrowing_for_in_post_loop_unsupported.cd",
         "tests/golden/type_errors/nullable_narrowing_for_in_post_loop_unsupported.err",
         "tests/golden/type_errors/nullable_narrowing_for_in_post_loop_unsupported.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.nullable_narrowing_for_increment_body_unsupported",
+      "runner": "golden",
+      "result_name": "type_errors/nullable_narrowing_for_increment_body_unsupported default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:nullable_narrowing_for_increment_body_unsupported"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/nullable_narrowing_for_increment_body_unsupported.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/nullable_narrowing_for_increment_body_unsupported.cd",
+        "tests/golden/type_errors/nullable_narrowing_for_increment_body_unsupported.err",
+        "tests/golden/type_errors/nullable_narrowing_for_increment_body_unsupported.exit"
       ],
       "fixture": "tests/golden/type_errors"
     },
@@ -41417,6 +41556,68 @@
         "tests/golden/nullable_narrowing_for_in_body_recheck/run.out"
       ],
       "fixture": "tests/golden/nullable_narrowing_for_in_body_recheck"
+    },
+    {
+      "case_id": "rust_vm.golden.nullable_narrowing_for_increment_recheck.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "nullable_narrowing_for_increment_recheck emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:nullable_narrowing_for_increment_recheck"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/nullable_narrowing_for_increment_recheck/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_narrowing_for_increment_recheck/run.out"
+      ],
+      "fixture": "tests/golden/nullable_narrowing_for_increment_recheck"
+    },
+    {
+      "case_id": "rust_vm.golden.nullable_narrowing_for_increment_recheck.run",
+      "runner": "rust_vm_golden",
+      "result_name": "nullable_narrowing_for_increment_recheck rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:nullable_narrowing_for_increment_recheck"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/nullable_narrowing_for_increment_recheck/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_narrowing_for_increment_recheck/run.out"
+      ],
+      "fixture": "tests/golden/nullable_narrowing_for_increment_recheck"
     },
     {
       "case_id": "rust_vm.golden.nullable_narrowing_function_boundary.emit",

@@ -1,0 +1,12 @@
+fun read(value: number?): number {
+  if (value == nil) {
+    return 0;
+  }
+  for ; true; value = nil {
+    return value + 1;
+  }
+  return 0;
+}
+
+print read(nil);
+print read(4);

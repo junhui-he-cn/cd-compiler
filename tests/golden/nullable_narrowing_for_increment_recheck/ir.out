@@ -1,0 +1,36 @@
+IR
+0000  v0 = constant #0 nil
+0001  store_var @0 read#0, v0
+0002  v1 = make_function $0 read/1
+0003  assign_var @4 read#0, v1
+0004  v2 = load_var @5 read#0
+0005  v3 = constant #8 nil
+0006  v4 = call v2(v3)
+0007  print v4
+0008  v5 = load_var @6 read#0
+0009  v6 = constant #9 4
+0010  v7 = call v5(v6)
+0011  print v7
+
+function $0 read(value#1)
+0000  v0 = load_var @1 value#1
+0001  v1 = constant #1 nil
+0002  v2 = equal v0, v1
+0003  jump_if_false v2, 0006
+0004  v3 = constant #2 0
+0005  return v3
+0006  v4 = constant #3 true
+0007  jump_if_false v4, 0017
+0008  jump 0012
+0009  v5 = constant #4 nil
+0010  assign_var @2 value#1, v5
+0011  jump 0006
+0012  v6 = load_var @3 value#1
+0013  v7 = constant #5 1
+0014  v8 = add v6, v7
+0015  return v8
+0016  jump 0009
+0017  v9 = constant #6 0
+0018  return v9
+0019  v10 = constant #7 nil
+0020  return v10

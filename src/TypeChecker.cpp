@@ -771,13 +771,13 @@ void TypeChecker::checkStatement(const Stmt& statement)
                     return nonNilNarrowingForTarget(target);
                 });
         }
-        if (forStmt->increment) {
-            checkExpression(*forStmt->increment);
-        }
         const bool containsCurrentLoopBreak = statementContainsBreakForCurrentLoop(*forStmt->body);
         ++loopDepth_;
         flowFacts_.withNarrowings(branchFacts.thenNarrowings, [&]() {
             checkStatement(*forStmt->body);
+            if (forStmt->increment) {
+                checkExpression(*forStmt->increment);
+            }
         });
         --loopDepth_;
         if (!containsCurrentLoopBreak) {

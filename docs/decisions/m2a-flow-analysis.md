@@ -474,3 +474,38 @@ enclosing body. The M0D inventory now validates 1717 cases, including:
 The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification
 command are the gates for this revision.
+
+## M2A-FLOW-018: runtime-ordered C-style for increment flow
+
+A C-style `for` increment is flow-checked after the body, matching runtime
+order. Facts active before the increment, including facts established or
+preserved while checking the body, remain visible while checking the increment;
+increment assignments and calls then apply their normal invalidation effects
+before the next condition and any conservative loop continuation. The increment
+does not establish a fact for the body that executed before it. Initializer
+checking remains before the condition, and the existing no-current-break rule
+continues to govern condition-failure facts after the loop.
+
+The decision revision is `m2a-2026-07-25-r18`. Before this revision,
+`TypeChecker` checked the increment before the body, so an increment such as
+`value = nil` could invalidate a valid nullable proof before the first body
+execution. The checker now performs increment analysis inside the body flow
+scope after body checking, while IR lowering already retains the runtime order
+of body, increment, and condition.
+
+The positive fixture proves a value before the loop and uses it in a body that
+returns before the increment runs. The negative fixture confirms that an
+increment such as `value = 1` does not make `value` non-null in the body of the
+same iteration. The M0D inventory now validates 1724 cases, including:
+
+- `golden.success.nullable_narrowing_for_increment_recheck.ast`
+- `golden.success.nullable_narrowing_for_increment_recheck.ir`
+- `golden.success.nullable_narrowing_for_increment_recheck.bytecode`
+- `golden.success.nullable_narrowing_for_increment_recheck.module_interface`
+- `golden.type_errors.nullable_narrowing_for_increment_body_unsupported`
+- `rust_vm.golden.nullable_narrowing_for_increment_recheck.emit`
+- `rust_vm.golden.nullable_narrowing_for_increment_recheck.run`
+
+The FlowFacts CTest, focused golden and Rust VM subsets,
+`python3 tests/verification_inventory.py`, and the full canonical verification
+command are the gates for this revision.

@@ -1,0 +1,17 @@
+Program
+  Fun read(value: number?): number
+    If (group (== value nil))
+      Then
+        Block
+          Return 0
+    For
+      Initializer
+        nil
+      Condition true
+      Increment (= value nil)
+      Body
+        Block
+          Return (+ value 1)
+    Return 0
+  Print (call read nil)
+  Print (call read 4)
