@@ -4140,7 +4140,8 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
                         FieldOperationKind::Read,
                         field->name.lexeme,
                         result.type,
-                        result.type});
+                        result.type,
+                        found->second.resolvedName});
                 return result;
             }
         }
@@ -4164,7 +4165,8 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
                     FieldOperationKind::Read,
                     field->name.lexeme,
                     result.type,
-                    result.type});
+                    result.type,
+                    std::nullopt});
             return result;
         }
         CheckedExpression result{unknownType()};
@@ -4175,7 +4177,8 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
                 FieldOperationKind::Read,
                 field->name.lexeme,
                 unknownType(),
-                result.type});
+                result.type,
+                std::nullopt});
         return result;
     }
 
@@ -5574,7 +5577,8 @@ TypeChecker::CheckedExpression TypeChecker::checkFieldAssignment(const FieldAssi
                 FieldOperationKind::Assign,
                 expression.name.lexeme,
                 *structField,
-                *structField});
+                *structField,
+                std::nullopt});
         return CheckedExpression{*structField};
     }
 
@@ -5584,7 +5588,8 @@ TypeChecker::CheckedExpression TypeChecker::checkFieldAssignment(const FieldAssi
             FieldOperationKind::Assign,
             expression.name.lexeme,
             unknownType(),
-            value.type});
+            value.type,
+            std::nullopt});
     return value;
 }
 
@@ -5606,7 +5611,8 @@ TypeChecker::CheckedExpression TypeChecker::checkFieldCompoundAssignment(const F
             FieldOperationKind::CompoundAssign,
             expression.name.lexeme,
             structField ? *structField : unknownType(),
-            result});
+            result,
+            std::nullopt});
     return CheckedExpression{result};
 }
 

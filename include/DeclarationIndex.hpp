@@ -96,6 +96,7 @@ struct FieldOperationRecord {
     std::string fieldName;
     TypeInfo fieldType;
     TypeInfo resultType;
+    std::optional<std::string> resolvedName;
 };
 
 struct StructConstructorRecord {

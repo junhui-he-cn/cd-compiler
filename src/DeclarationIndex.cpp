@@ -1811,8 +1811,18 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
         }
     }
     for (const FieldAccessExpr* expression : fieldAccesses_) {
-        if (!fieldOperation(*expression)
-            || fieldOperation(*expression)->kind != FieldOperationKind::Read) {
+        const FieldOperationRecord* operation = fieldOperation(*expression);
+        if (!operation || operation->kind != FieldOperationKind::Read) {
+            ++mismatches;
+            continue;
+        }
+        try {
+            if (operation->resolvedName.has_value() != resolved.hasFieldAccess(*expression)
+                || (operation->resolvedName
+                    && *operation->resolvedName != resolved.fieldAccessName(*expression))) {
+                ++mismatches;
+            }
+        } catch (const std::logic_error&) {
             ++mismatches;
         }
     }

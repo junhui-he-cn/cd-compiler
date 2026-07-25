@@ -1417,6 +1417,7 @@ void test_typed_field_assignment_metadata()
         assert(operation->fieldName == "value");
         assert(typeInfoName(operation->fieldType) == fieldType);
         assert(typeInfoName(operation->resultType) == resultType);
+        assert(!operation->resolvedName.has_value());
     };
     assertField(*staticAssign, FieldOperationKind::Assign, "number", "number");
     assertField(*staticCompound, FieldOperationKind::CompoundAssign, "number", "number");

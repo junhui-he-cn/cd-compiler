@@ -1177,8 +1177,8 @@ IRRegister IRCompiler::emitFieldAccess(const FieldAccessExpr& expression)
 {
     const FieldOperationRecord& operation = fieldOperation(
         expression, FieldOperationKind::Read, "field access");
-    if (resolvedNames_->hasFieldAccess(expression)) {
-        return ir_.emitLoadVar(resolvedNames_->fieldAccessName(expression));
+    if (operation.resolvedName) {
+        return ir_.emitLoadVar(*operation.resolvedName);
     }
     IRRegister object = compileExpression(*expression.object);
     return ir_.emitField(object, operation.fieldName);
