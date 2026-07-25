@@ -259,7 +259,13 @@ void IRCompiler::compileStatement(const Stmt& statement)
 
     if (const auto* let = dynamic_cast<const LetStmt*>(&statement)) {
         const IRRegister value = compileExpression(*let->initializer);
-        ir_.emitStoreVar(resolvedNames_->letName(*let), value);
+        const BindingMetadataRecord* binding = declarationIndex_
+            ? declarationIndex_->letBindingMetadata(*let)
+            : nullptr;
+        if (!binding) {
+            throw IRCompileError("missing binding metadata for let declaration");
+        }
+        ir_.emitStoreVar(binding->resolvedName, value);
         return;
     }
 
@@ -452,7 +458,13 @@ void IRCompiler::compileForIn(const ForInStmt& statement)
     const std::string iterableName = makeSyntheticName("for_in_iter");
     const std::string indexName = makeSyntheticName("for_in_index");
     const std::string lengthName = makeSyntheticName("for_in_len");
-    const std::string itemName = resolvedNames_->forInVariableName(statement);
+    const BindingMetadataRecord* itemBinding = declarationIndex_
+        ? declarationIndex_->forInBindingMetadata(statement)
+        : nullptr;
+    if (!itemBinding) {
+        throw IRCompileError("missing binding metadata for for-in variable");
+    }
+    const std::string& itemName = itemBinding->resolvedName;
 
     const IRRegister iterableValue = compileExpression(*statement.iterable);
     const IRRegister arrayValue = ir_.emitAssertArray(iterableValue);
@@ -746,13 +758,25 @@ IRRegister IRCompiler::compileExpression(const Expr& expression)
 
     if (const auto* variable = dynamic_cast<const VariableExpr*>(&expression)) {
         typedExpressionType(*variable, "variable read");
-        return ir_.emitLoadVar(resolvedNames_->variableName(*variable));
+        const BindingMetadataRecord* binding = declarationIndex_
+            ? declarationIndex_->variableBindingMetadata(*variable)
+            : nullptr;
+        if (!binding) {
+            throw IRCompileError("missing binding metadata for variable read");
+        }
+        return ir_.emitLoadVar(binding->resolvedName);
     }
 
     if (const auto* assign = dynamic_cast<const AssignExpr*>(&expression)) {
         typedExpressionType(*assign, "assignment");
         const IRRegister value = compileExpression(*assign->value);
-        ir_.emitAssignVar(resolvedNames_->assignmentName(*assign), value);
+        const BindingMetadataRecord* binding = declarationIndex_
+            ? declarationIndex_->assignmentBindingMetadata(*assign)
+            : nullptr;
+        if (!binding) {
+            throw IRCompileError("missing binding metadata for assignment");
+        }
+        ir_.emitAssignVar(binding->resolvedName, value);
         return value;
     }
 
@@ -859,7 +883,9 @@ IRRegister IRCompiler::emitFunctionExpr(const FunctionExpr& expression)
 bool IRCompiler::isBuiltinLenCall(const CallExpr& expression) const
 {
     const auto* variable = dynamic_cast<const VariableExpr*>(expression.callee.get());
-    return variable && variable->name.lexeme == "len" && !resolvedNames_->hasVariable(*variable);
+    return variable
+        && variable->name.lexeme == "len"
+        && (!declarationIndex_ || !declarationIndex_->variableBindingMetadata(*variable));
 }
 
 bool IRCompiler::hasNativeCallMetadata(const CallExpr& expression) const
@@ -1084,7 +1110,13 @@ IROp IRCompiler::compoundAssignmentOp(TokenType op) const
 IRRegister IRCompiler::emitCompoundAssign(const CompoundAssignExpr& expression)
 {
     typedExpressionType(expression, StaticType::Number, "compound assignment");
-    const std::string& name = resolvedNames_->compoundAssignmentName(expression);
+    const BindingMetadataRecord* binding = declarationIndex_
+        ? declarationIndex_->compoundAssignmentBindingMetadata(expression)
+        : nullptr;
+    if (!binding) {
+        throw IRCompileError("missing binding metadata for compound assignment");
+    }
+    const std::string& name = binding->resolvedName;
     const IRRegister oldValue = ir_.emitLoadVar(name);
     const IRRegister result = emitCompoundAssignmentResult(
         expression.op, oldValue, *expression.value, "`" + expression.op.lexeme + "` expects number variable");

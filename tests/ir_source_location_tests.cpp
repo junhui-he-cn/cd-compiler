@@ -534,6 +534,36 @@ void test_variable_lowering_metadata()
     const DeclarationRecord* dynamicRecord = index.declaration(*dynamicLet);
     assert(outerRecord != nullptr && innerRecord != nullptr && dynamicRecord != nullptr);
     assert(outerRecord->declarationId != innerRecord->declarationId);
+    const BindingMetadataRecord* outerBinding = index.letBindingMetadata(*outerLet);
+    const BindingMetadataRecord* innerBinding = index.letBindingMetadata(*innerLet);
+    const BindingMetadataRecord* dynamicBinding = index.letBindingMetadata(*dynamicLet);
+    assert(outerBinding != nullptr && innerBinding != nullptr && dynamicBinding != nullptr);
+    assert(outerBinding->resolvedName == resolved.binding(resolved.letBindingId(*outerLet)).resolvedName);
+    assert(innerBinding->resolvedName == resolved.binding(resolved.letBindingId(*innerLet)).resolvedName);
+    assert(dynamicBinding->resolvedName == resolved.binding(resolved.letBindingId(*dynamicLet)).resolvedName);
+    const BindingMetadataRecord* innerReadBinding = index.variableBindingMetadata(*innerRead);
+    const BindingMetadataRecord* innerAssignBinding = index.assignmentBindingMetadata(*innerAssign);
+    const BindingMetadataRecord* innerCompoundBinding
+        = index.compoundAssignmentBindingMetadata(*innerCompound);
+    const BindingMetadataRecord* afterBlockReadBinding
+        = index.variableBindingMetadata(*afterBlockRead);
+    const BindingMetadataRecord* dynamicAssignBinding
+        = index.assignmentBindingMetadata(*dynamicAssign);
+    const BindingMetadataRecord* dynamicCompoundBinding
+        = index.compoundAssignmentBindingMetadata(*dynamicCompound);
+    assert(innerReadBinding != nullptr && innerAssignBinding != nullptr);
+    assert(innerCompoundBinding != nullptr && afterBlockReadBinding != nullptr);
+    assert(dynamicAssignBinding != nullptr && dynamicCompoundBinding != nullptr);
+    assert(innerReadBinding->resolvedName == resolved.binding(resolved.variableBindingId(*innerRead)).resolvedName);
+    assert(innerAssignBinding->resolvedName == resolved.binding(resolved.assignmentBindingId(*innerAssign)).resolvedName);
+    assert(innerCompoundBinding->resolvedName
+        == resolved.binding(resolved.compoundAssignmentBindingId(*innerCompound)).resolvedName);
+    assert(afterBlockReadBinding->resolvedName
+        == resolved.binding(resolved.variableBindingId(*afterBlockRead)).resolvedName);
+    assert(dynamicAssignBinding->resolvedName
+        == resolved.binding(resolved.assignmentBindingId(*dynamicAssign)).resolvedName);
+    assert(dynamicCompoundBinding->resolvedName
+        == resolved.binding(resolved.compoundAssignmentBindingId(*dynamicCompound)).resolvedName);
     assert(index.variableReference(*innerRead)->declarationId == innerRecord->declarationId);
     assert(index.assignmentReference(*innerAssign)->declarationId == innerRecord->declarationId);
     assert(index.compoundAssignmentReference(*innerCompound)->declarationId == innerRecord->declarationId);
@@ -1288,6 +1318,10 @@ void test_loop_target_metadata()
     assertContinueTarget(*forInContinue, *forInStmt, LoopTargetKind::ForIn);
     assertBreakTarget(*nestedOuterBreak, *nestedOuter, LoopTargetKind::While);
     assertBreakTarget(*nestedBreak, *nestedBody, LoopTargetKind::While);
+    const BindingMetadataRecord* forInBinding = index.forInBindingMetadata(*forInStmt);
+    assert(forInBinding != nullptr);
+    assert(forInBinding->resolvedName
+        == resolved.binding(resolved.forInBindingId(*forInStmt)).resolvedName);
 
     IRCompiler compiler;
     compiler.compile(program, resolved, index);

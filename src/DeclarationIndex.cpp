@@ -946,6 +946,40 @@ const DeclarationRecord* DeclarationIndex::declaration(const VariablePattern& pa
     return found == patternDeclarations_.end() ? nullptr : declaration(found->second);
 }
 
+const BindingMetadataRecord* DeclarationIndex::letBindingMetadata(const LetStmt& statement) const
+{
+    const auto found = letBindingMetadata_.find(&statement);
+    return found == letBindingMetadata_.end() ? nullptr : &found->second;
+}
+
+const BindingMetadataRecord* DeclarationIndex::variableBindingMetadata(
+    const VariableExpr& expression) const
+{
+    const auto found = variableBindingMetadata_.find(&expression);
+    return found == variableBindingMetadata_.end() ? nullptr : &found->second;
+}
+
+const BindingMetadataRecord* DeclarationIndex::assignmentBindingMetadata(
+    const AssignExpr& expression) const
+{
+    const auto found = assignmentBindingMetadata_.find(&expression);
+    return found == assignmentBindingMetadata_.end() ? nullptr : &found->second;
+}
+
+const BindingMetadataRecord* DeclarationIndex::compoundAssignmentBindingMetadata(
+    const CompoundAssignExpr& expression) const
+{
+    const auto found = compoundAssignmentBindingMetadata_.find(&expression);
+    return found == compoundAssignmentBindingMetadata_.end() ? nullptr : &found->second;
+}
+
+const BindingMetadataRecord* DeclarationIndex::forInBindingMetadata(
+    const ForInStmt& statement) const
+{
+    const auto found = forInBindingMetadata_.find(&statement);
+    return found == forInBindingMetadata_.end() ? nullptr : &found->second;
+}
+
 std::optional<DeclarationSignature> DeclarationIndex::signature(DeclarationId id) const
 {
     const DeclarationRecord* record = declaration(id);
@@ -1238,6 +1272,39 @@ void DeclarationIndex::recordStructConstructor(
     structConstructorsMetadata_.insert_or_assign(&expression, std::move(record));
 }
 
+void DeclarationIndex::recordLetBinding(const LetStmt& statement, BindingMetadataRecord record)
+{
+    letBindingMetadata_.insert_or_assign(&statement, std::move(record));
+}
+
+void DeclarationIndex::recordVariableBinding(
+    const VariableExpr& expression,
+    BindingMetadataRecord record)
+{
+    variableBindingMetadata_.insert_or_assign(&expression, std::move(record));
+}
+
+void DeclarationIndex::recordAssignmentBinding(
+    const AssignExpr& expression,
+    BindingMetadataRecord record)
+{
+    assignmentBindingMetadata_.insert_or_assign(&expression, std::move(record));
+}
+
+void DeclarationIndex::recordCompoundAssignmentBinding(
+    const CompoundAssignExpr& expression,
+    BindingMetadataRecord record)
+{
+    compoundAssignmentBindingMetadata_.insert_or_assign(&expression, std::move(record));
+}
+
+void DeclarationIndex::recordForInBinding(
+    const ForInStmt& statement,
+    BindingMetadataRecord record)
+{
+    forInBindingMetadata_.insert_or_assign(&statement, std::move(record));
+}
+
 void DeclarationIndex::recordReturn(const ReturnStmt& statement, TypeInfo type)
 {
     returnMetadata_.insert_or_assign(&statement, ReturnRecord{std::move(type)});
@@ -1345,6 +1412,50 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
         compoundAssignmentReferences_,
         [&resolved](const CompoundAssignExpr& expression) {
             return resolved.compoundAssignmentBindingId(expression);
+        });
+
+    const auto compareBindingMetadata = [&](const auto& records, const auto& resolve) {
+        for (const auto& entry : records) {
+            try {
+                const BindingId bindingId = resolve(*entry.first);
+                const TypeBinding& binding = resolved.binding(bindingId);
+                const BindingMetadataRecord& metadata = entry.second;
+                if (metadata.bindingId != bindingId
+                    || metadata.resolvedName != binding.resolvedName
+                    || metadata.symbol.declarationId != binding.declarationId
+                    || metadata.symbol.symbolId != binding.symbolId) {
+                    ++mismatches;
+                }
+            } catch (const std::logic_error&) {
+                ++mismatches;
+            }
+        }
+    };
+
+    compareBindingMetadata(
+        letBindingMetadata_,
+        [&resolved](const LetStmt& statement) {
+            return resolved.letBindingId(statement);
+        });
+    compareBindingMetadata(
+        variableBindingMetadata_,
+        [&resolved](const VariableExpr& expression) {
+            return resolved.variableBindingId(expression);
+        });
+    compareBindingMetadata(
+        assignmentBindingMetadata_,
+        [&resolved](const AssignExpr& expression) {
+            return resolved.assignmentBindingId(expression);
+        });
+    compareBindingMetadata(
+        compoundAssignmentBindingMetadata_,
+        [&resolved](const CompoundAssignExpr& expression) {
+            return resolved.compoundAssignmentBindingId(expression);
+        });
+    compareBindingMetadata(
+        forInBindingMetadata_,
+        [&resolved](const ForInStmt& statement) {
+            return resolved.forInBindingId(statement);
         });
 
     for (const DeclarationRecord& record : declarations_) {

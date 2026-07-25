@@ -198,6 +198,17 @@ name, checked type, binding ID, and declaration/symbol target for every
 The old `ResolvedNames` runtime-name and binding-ID accessors have been
 removed; declaration-index shadow comparison validates the record directly.
 
+## Binding operation inputs (M1F initial slice)
+
+`DeclarationIndex` exposes `BindingMetadataRecord` values for `let`
+declarations, variable reads, ordinary assignments, numeric compound
+assignments, and `for-in` bindings. Each record carries the checker-assigned
+runtime name, binding ID, and declaration/symbol target. Register-IR lowering
+consumes these records for variable storage and access, so shadowed bindings
+cannot fall back to source-name reconstruction. `ResolvedNames` still retains
+binding IDs for the migration comparison oracle, while its runtime-name
+accessors for these operation families are removed.
+
 ## OR-pattern inputs (M1E3 next slice)
 
 `DeclarationIndex::orPattern()` exposes the checker-validated shared binding

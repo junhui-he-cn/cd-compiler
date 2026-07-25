@@ -33,6 +33,12 @@ struct ResolvedSymbol {
     SymbolId symbolId;
 };
 
+struct BindingMetadataRecord {
+    std::string resolvedName;
+    BindingId bindingId;
+    ResolvedSymbol symbol;
+};
+
 enum class CallTargetKind {
     Direct,
     StructMethod,
@@ -227,6 +233,12 @@ public:
     const DeclarationRecord* declaration(const MethodDecl& method) const;
     const DeclarationRecord* declaration(const Parameter& parameter) const;
     const DeclarationRecord* declaration(const VariablePattern& pattern) const;
+    const BindingMetadataRecord* letBindingMetadata(const LetStmt& statement) const;
+    const BindingMetadataRecord* variableBindingMetadata(const VariableExpr& expression) const;
+    const BindingMetadataRecord* assignmentBindingMetadata(const AssignExpr& expression) const;
+    const BindingMetadataRecord* compoundAssignmentBindingMetadata(
+        const CompoundAssignExpr& expression) const;
+    const BindingMetadataRecord* forInBindingMetadata(const ForInStmt& statement) const;
     std::optional<DeclarationSignature> signature(DeclarationId id) const;
     const ResolvedSignatureRecord* resolvedSignature(DeclarationId id) const;
     std::optional<DeclarationShape> shape(DeclarationId id) const;
@@ -290,6 +302,13 @@ private:
     void recordIndexOperation(const Expr& expression, IndexOperationRecord record);
     void recordFieldOperation(const Expr& expression, FieldOperationRecord record);
     void recordStructConstructor(const StructConstructExpr& expression, StructConstructorRecord record);
+    void recordLetBinding(const LetStmt& statement, BindingMetadataRecord record);
+    void recordVariableBinding(const VariableExpr& expression, BindingMetadataRecord record);
+    void recordAssignmentBinding(const AssignExpr& expression, BindingMetadataRecord record);
+    void recordCompoundAssignmentBinding(
+        const CompoundAssignExpr& expression,
+        BindingMetadataRecord record);
+    void recordForInBinding(const ForInStmt& statement, BindingMetadataRecord record);
     void recordReturn(const ReturnStmt& statement, TypeInfo type);
     void recordResolvedSignature(DeclarationId id, TypeInfo type);
 
@@ -309,6 +328,12 @@ private:
     std::unordered_map<const VariableExpr*, ResolvedSymbol> variableReferences_;
     std::unordered_map<const AssignExpr*, ResolvedSymbol> assignmentReferences_;
     std::unordered_map<const CompoundAssignExpr*, ResolvedSymbol> compoundAssignmentReferences_;
+    std::unordered_map<const LetStmt*, BindingMetadataRecord> letBindingMetadata_;
+    std::unordered_map<const VariableExpr*, BindingMetadataRecord> variableBindingMetadata_;
+    std::unordered_map<const AssignExpr*, BindingMetadataRecord> assignmentBindingMetadata_;
+    std::unordered_map<const CompoundAssignExpr*, BindingMetadataRecord>
+        compoundAssignmentBindingMetadata_;
+    std::unordered_map<const ForInStmt*, BindingMetadataRecord> forInBindingMetadata_;
     std::unordered_set<const FieldAccessExpr*> fieldAccesses_;
     std::unordered_set<const FieldAssignExpr*> fieldAssignments_;
     std::unordered_set<const FieldCompoundAssignExpr*> fieldCompoundAssignments_;

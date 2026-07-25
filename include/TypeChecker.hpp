@@ -27,7 +27,6 @@ public:
 
 class ResolvedNames {
 public:
-    const std::string& letName(const LetStmt& statement) const;
     const std::string& functionName(const FunctionStmt& statement) const;
     const std::vector<std::string>& parameterNames(const FunctionStmt& statement) const;
     const std::string& functionName(const FunctionExpr& expression) const;
@@ -35,14 +34,10 @@ public:
     const std::string& methodName(const MethodDecl& method) const;
     const std::vector<std::string>& methodParameterNames(const MethodDecl& method) const;
     bool hasVariable(const VariableExpr& expression) const;
-    const std::string& variableName(const VariableExpr& expression) const;
     BindingId variableBindingId(const VariableExpr& expression) const;
-    const std::string& assignmentName(const AssignExpr& expression) const;
     BindingId assignmentBindingId(const AssignExpr& expression) const;
-    const std::string& compoundAssignmentName(const CompoundAssignExpr& expression) const;
     BindingId compoundAssignmentBindingId(const CompoundAssignExpr& expression) const;
     BindingId letBindingId(const LetStmt& statement) const;
-    const std::string& forInVariableName(const ForInStmt& statement) const;
     BindingId forInBindingId(const ForInStmt& statement) const;
     bool hasScope(const Stmt& statement) const;
     ScopeId scopeId(const Stmt& statement) const;
@@ -94,25 +89,20 @@ private:
         std::string enumName,
         std::string variantName);
 
-    std::unordered_map<const LetStmt*, std::string> letNames_;
     std::unordered_map<const FunctionStmt*, std::string> functionNames_;
     std::unordered_map<const FunctionStmt*, std::vector<std::string>> parameterNames_;
     std::unordered_map<const FunctionExpr*, std::string> functionExpressionNames_;
     std::unordered_map<const FunctionExpr*, std::vector<std::string>> functionExpressionParameterNames_;
     std::unordered_map<const MethodDecl*, std::string> methodNames_;
     std::unordered_map<const MethodDecl*, std::vector<std::string>> methodParameterNames_;
-    std::unordered_map<const VariableExpr*, std::string> variableNames_;
     std::unordered_map<const VariableExpr*, BindingId> variableBindingIds_;
-    std::unordered_map<const AssignExpr*, std::string> assignmentNames_;
     std::unordered_map<const AssignExpr*, BindingId> assignmentBindingIds_;
-    std::unordered_map<const CompoundAssignExpr*, std::string> compoundAssignmentNames_;
     std::unordered_map<const CompoundAssignExpr*, BindingId> compoundAssignmentBindingIds_;
     std::unordered_map<const LetStmt*, BindingId> letBindingIds_;
     std::unordered_map<const Stmt*, DeclarationId> declarationIds_;
     std::unordered_map<const Stmt*, SymbolId> symbolIds_;
     std::unordered_map<const MethodDecl*, DeclarationId> methodDeclarationIds_;
     std::unordered_map<const MethodDecl*, SymbolId> methodSymbolIds_;
-    std::unordered_map<const ForInStmt*, std::string> forInVariableNames_;
     std::unordered_map<const ForInStmt*, BindingId> forInBindingIds_;
     std::unordered_map<const Stmt*, ScopeId> scopeIds_;
     std::unordered_map<BindingId, TypeBinding, SnapshotIdHash<BindingIdTag>> bindings_;
