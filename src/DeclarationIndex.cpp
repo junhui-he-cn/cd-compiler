@@ -980,6 +980,26 @@ const BindingMetadataRecord* DeclarationIndex::forInBindingMetadata(
     return found == forInBindingMetadata_.end() ? nullptr : &found->second;
 }
 
+const FunctionMetadataRecord* DeclarationIndex::functionMetadata(
+    const FunctionStmt& statement) const
+{
+    const auto found = functionMetadata_.find(&statement);
+    return found == functionMetadata_.end() ? nullptr : &found->second;
+}
+
+const FunctionMetadataRecord* DeclarationIndex::functionMetadata(
+    const FunctionExpr& expression) const
+{
+    const auto found = functionExpressionMetadata_.find(&expression);
+    return found == functionExpressionMetadata_.end() ? nullptr : &found->second;
+}
+
+const FunctionMetadataRecord* DeclarationIndex::functionMetadata(const MethodDecl& method) const
+{
+    const auto found = methodMetadata_.find(&method);
+    return found == methodMetadata_.end() ? nullptr : &found->second;
+}
+
 std::optional<DeclarationSignature> DeclarationIndex::signature(DeclarationId id) const
 {
     const DeclarationRecord* record = declaration(id);
@@ -1305,6 +1325,27 @@ void DeclarationIndex::recordForInBinding(
     forInBindingMetadata_.insert_or_assign(&statement, std::move(record));
 }
 
+void DeclarationIndex::recordFunctionMetadata(
+    const FunctionStmt& statement,
+    FunctionMetadataRecord record)
+{
+    functionMetadata_.insert_or_assign(&statement, std::move(record));
+}
+
+void DeclarationIndex::recordFunctionMetadata(
+    const FunctionExpr& expression,
+    FunctionMetadataRecord record)
+{
+    functionExpressionMetadata_.insert_or_assign(&expression, std::move(record));
+}
+
+void DeclarationIndex::recordFunctionMetadata(
+    const MethodDecl& method,
+    FunctionMetadataRecord record)
+{
+    methodMetadata_.insert_or_assign(&method, std::move(record));
+}
+
 void DeclarationIndex::recordReturn(const ReturnStmt& statement, TypeInfo type)
 {
     returnMetadata_.insert_or_assign(&statement, ReturnRecord{std::move(type)});
@@ -1512,6 +1553,43 @@ std::size_t DeclarationIndex::compareResolvedNames(const ResolvedNames& resolved
             } catch (const std::logic_error&) {
                 ++mismatches;
             }
+        }
+    }
+
+    for (const auto& entry : functionMetadata_) {
+        const FunctionMetadataRecord& metadata = entry.second;
+        try {
+            if (metadata.resolvedName != resolved.functionName(*entry.first)
+                || metadata.parameterNames != resolved.parameterNames(*entry.first)
+                || metadata.functionLabel != entry.first->name.lexeme) {
+                ++mismatches;
+            }
+        } catch (const std::logic_error&) {
+            ++mismatches;
+        }
+    }
+    for (const auto& entry : functionExpressionMetadata_) {
+        const FunctionMetadataRecord& metadata = entry.second;
+        try {
+            if (metadata.resolvedName != resolved.functionName(*entry.first)
+                || metadata.parameterNames != resolved.parameterNames(*entry.first)
+                || metadata.functionLabel != "<lambda>") {
+                ++mismatches;
+            }
+        } catch (const std::logic_error&) {
+            ++mismatches;
+        }
+    }
+    for (const auto& entry : methodMetadata_) {
+        const FunctionMetadataRecord& metadata = entry.second;
+        try {
+            if (metadata.resolvedName != resolved.methodName(*entry.first)
+                || metadata.parameterNames != resolved.methodParameterNames(*entry.first)
+                || metadata.functionLabel != entry.first->name.lexeme) {
+                ++mismatches;
+            }
+        } catch (const std::logic_error&) {
+            ++mismatches;
         }
     }
 

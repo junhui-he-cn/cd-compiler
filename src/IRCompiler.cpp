@@ -297,12 +297,13 @@ void IRCompiler::compileModule(const ModuleStmt& module)
 void IRCompiler::compileFunctionStatement(const FunctionStmt& function)
 {
     requireFunctionMetadata(function);
-    const std::string functionName = resolvedNames_->functionName(function);
+    const FunctionMetadataRecord& metadata = *declarationIndex_->functionMetadata(function);
+    const std::string& functionName = metadata.resolvedName;
     IRRegister placeholder = ir_.emitConstant(Value::nil());
     ir_.emitStoreVar(functionName, placeholder);
 
-    std::vector<std::string> parameters = resolvedNames_->parameterNames(function);
-    ir_.beginFunction(function.name.lexeme, std::move(parameters));
+    std::vector<std::string> parameters = metadata.parameterNames;
+    ir_.beginFunction(metadata.functionLabel, std::move(parameters));
 
     std::vector<LoopContext> enclosingLoopContexts = std::move(loopContexts_);
     loopContexts_.clear();
@@ -328,12 +329,13 @@ void IRCompiler::compileImpl(const ImplStmt& statement)
 void IRCompiler::compileMethod(const MethodDecl& method)
 {
     requireMethodMetadata(method);
-    const std::string methodName = resolvedNames_->methodName(method);
+    const FunctionMetadataRecord& metadata = *declarationIndex_->functionMetadata(method);
+    const std::string& methodName = metadata.resolvedName;
     IRRegister placeholder = ir_.emitConstant(Value::nil());
     ir_.emitStoreVar(methodName, placeholder);
 
-    std::vector<std::string> parameters = resolvedNames_->methodParameterNames(method);
-    ir_.beginFunction(method.name.lexeme, std::move(parameters));
+    std::vector<std::string> parameters = metadata.parameterNames;
+    ir_.beginFunction(metadata.functionLabel, std::move(parameters));
 
     std::vector<LoopContext> enclosingLoopContexts = std::move(loopContexts_);
     loopContexts_.clear();
@@ -366,6 +368,7 @@ void IRCompiler::requireFunctionMetadata(const FunctionStmt& function) const
     if (!declaration
         || declaration->kind != DeclarationKind::Function
         || !declarationIndex_->resolvedSignature(declaration->declarationId)
+        || !declarationIndex_->functionMetadata(function)
         || !declarationIndex_->captureMetadata(function)) {
         throw IRCompileError("missing function metadata");
     }
@@ -379,6 +382,7 @@ void IRCompiler::requireMethodMetadata(const MethodDecl& method) const
     if (!declaration
         || declaration->kind != DeclarationKind::Method
         || !declarationIndex_->resolvedSignature(declaration->declarationId)
+        || !declarationIndex_->functionMetadata(method)
         || !declarationIndex_->captureMetadata(method)) {
         throw IRCompileError("missing method metadata");
     }
@@ -864,8 +868,12 @@ IRRegister IRCompiler::emitFunctionExpr(const FunctionExpr& expression)
     if (!declarationIndex_ || !declarationIndex_->captureMetadata(expression)) {
         throw IRCompileError("missing function expression metadata");
     }
-    std::vector<std::string> parameters = resolvedNames_->parameterNames(expression);
-    ir_.beginFunction(resolvedNames_->functionName(expression), std::move(parameters));
+    const FunctionMetadataRecord* metadata = declarationIndex_->functionMetadata(expression);
+    if (!metadata) {
+        throw IRCompileError("missing function expression metadata");
+    }
+    std::vector<std::string> parameters = metadata->parameterNames;
+    ir_.beginFunction(metadata->functionLabel, std::move(parameters));
 
     std::vector<LoopContext> enclosingLoopContexts = std::move(loopContexts_);
     loopContexts_.clear();

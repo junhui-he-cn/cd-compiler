@@ -39,6 +39,12 @@ struct BindingMetadataRecord {
     ResolvedSymbol symbol;
 };
 
+struct FunctionMetadataRecord {
+    std::string resolvedName;
+    std::string functionLabel;
+    std::vector<std::string> parameterNames;
+};
+
 enum class CallTargetKind {
     Direct,
     StructMethod,
@@ -239,6 +245,9 @@ public:
     const BindingMetadataRecord* compoundAssignmentBindingMetadata(
         const CompoundAssignExpr& expression) const;
     const BindingMetadataRecord* forInBindingMetadata(const ForInStmt& statement) const;
+    const FunctionMetadataRecord* functionMetadata(const FunctionStmt& statement) const;
+    const FunctionMetadataRecord* functionMetadata(const FunctionExpr& expression) const;
+    const FunctionMetadataRecord* functionMetadata(const MethodDecl& method) const;
     std::optional<DeclarationSignature> signature(DeclarationId id) const;
     const ResolvedSignatureRecord* resolvedSignature(DeclarationId id) const;
     std::optional<DeclarationShape> shape(DeclarationId id) const;
@@ -309,6 +318,9 @@ private:
         const CompoundAssignExpr& expression,
         BindingMetadataRecord record);
     void recordForInBinding(const ForInStmt& statement, BindingMetadataRecord record);
+    void recordFunctionMetadata(const FunctionStmt& statement, FunctionMetadataRecord record);
+    void recordFunctionMetadata(const FunctionExpr& expression, FunctionMetadataRecord record);
+    void recordFunctionMetadata(const MethodDecl& method, FunctionMetadataRecord record);
     void recordReturn(const ReturnStmt& statement, TypeInfo type);
     void recordResolvedSignature(DeclarationId id, TypeInfo type);
 
@@ -334,6 +346,9 @@ private:
     std::unordered_map<const CompoundAssignExpr*, BindingMetadataRecord>
         compoundAssignmentBindingMetadata_;
     std::unordered_map<const ForInStmt*, BindingMetadataRecord> forInBindingMetadata_;
+    std::unordered_map<const FunctionStmt*, FunctionMetadataRecord> functionMetadata_;
+    std::unordered_map<const FunctionExpr*, FunctionMetadataRecord> functionExpressionMetadata_;
+    std::unordered_map<const MethodDecl*, FunctionMetadataRecord> methodMetadata_;
     std::unordered_set<const FieldAccessExpr*> fieldAccesses_;
     std::unordered_set<const FieldAssignExpr*> fieldAssignments_;
     std::unordered_set<const FieldCompoundAssignExpr*> fieldCompoundAssignments_;

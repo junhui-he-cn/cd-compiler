@@ -631,12 +631,13 @@ than reconstructing them from AST shape.
 lowering, retain the AST printer only for syntax inspection, and remove
 migration-only adapters.
 
-Initial cutover slice: `DeclarationIndex` owns resolved binding metadata for
-`let`, variable reads, ordinary assignments, numeric compound assignments, and
-`for-in` bindings; register-IR lowering consumes those records for runtime
-names. The legacy `ResolvedNames` table remains the comparison oracle for
-binding IDs and for families not yet cut over, including function/parameter
-names and member-call targets.
+Initial cutover slices: `DeclarationIndex` owns resolved binding metadata for
+`let`, variable reads, ordinary assignments, numeric compound assignments,
+`for-in` bindings, named functions, methods, and anonymous functions;
+register-IR lowering consumes those records for runtime names and parameter
+lists. The legacy `ResolvedNames` table remains the comparison oracle for
+binding IDs, function metadata, and families not yet cut over, including
+member-call targets.
 
 **Migration:** compare the final result with the canonical M0B reference corpus,
 switch every type-checking and lowering CLI/test entry point to HIR, and retain

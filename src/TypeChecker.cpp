@@ -2347,6 +2347,12 @@ void TypeChecker::checkMethodBody(const std::string& structName, const MethodInf
         Binding parameterBinding = declareVariable(parameter.name, method.parameterTypes[i], parameter.typeName.has_value());
         parameterNames.push_back(parameterBinding.resolvedName);
     }
+    declarationIndex_.recordFunctionMetadata(
+        declaration,
+        FunctionMetadataRecord{
+            method.resolvedName,
+            declaration.name.lexeme,
+            parameterNames});
     resolvedNames_.recordMethodParameters(declaration, std::move(parameterNames));
 
     std::optional<TypeInfo> expectedReturnType;
@@ -2506,6 +2512,12 @@ void TypeChecker::checkFunction(const FunctionStmt& statement)
         Binding parameterBinding = declareVariable(parameter.name, declaredParameterTypes[i], parameter.typeName.has_value());
         parameterNames.push_back(parameterBinding.resolvedName);
     }
+    declarationIndex_.recordFunctionMetadata(
+        statement,
+        FunctionMetadataRecord{
+            functionBinding.resolvedName,
+            statement.name.lexeme,
+            parameterNames});
     resolvedNames_.recordParameters(statement, std::move(parameterNames));
 
     const TypeInfo returnType = checkFunctionBody(
@@ -2779,6 +2791,9 @@ TypeChecker::CheckedExpression TypeChecker::checkFunctionExpression(const Functi
             parameter.typeName.has_value() || contextualSignature != nullptr);
         parameterNames.push_back(parameterBinding.resolvedName);
     }
+    declarationIndex_.recordFunctionMetadata(
+        expression,
+        FunctionMetadataRecord{"<lambda>", "<lambda>", parameterNames});
     resolvedNames_.recordParameters(expression, std::move(parameterNames));
 
     const TypeInfo returnType = checkFunctionBody(

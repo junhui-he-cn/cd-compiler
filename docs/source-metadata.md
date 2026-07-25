@@ -209,6 +209,16 @@ cannot fall back to source-name reconstruction. `ResolvedNames` still retains
 binding IDs for the migration comparison oracle, while its runtime-name
 accessors for these operation families are removed.
 
+## Function metadata inputs (M1F next slice)
+
+`DeclarationIndex::functionMetadata()` exposes one `FunctionMetadataRecord`
+for every named function, named-struct method, and anonymous function. The
+record carries the checker-assigned runtime name, stable IR function label, and
+resolved parameter-name list. Register-IR lowering consumes the record for
+function storage, function-table construction, and parameter setup. The
+legacy `ResolvedNames` function and parameter accessors remain only as the
+comparison oracle until the next cleanup slice.
+
 ## OR-pattern inputs (M1E3 next slice)
 
 `DeclarationIndex::orPattern()` exposes the checker-validated shared binding
