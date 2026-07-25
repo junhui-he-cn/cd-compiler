@@ -14718,6 +14718,117 @@
       "fixture": "tests/golden/nullable_narrowing_nested_field_recheck"
     },
     {
+      "case_id": "golden.success.nullable_narrowing_nested_index_recheck.ast",
+      "runner": "golden",
+      "result_name": "nullable_narrowing_nested_index_recheck default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:nullable_narrowing_nested_index_recheck"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/nullable_narrowing_nested_index_recheck/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_narrowing_nested_index_recheck/ast.out"
+      ],
+      "fixture": "tests/golden/nullable_narrowing_nested_index_recheck"
+    },
+    {
+      "case_id": "golden.success.nullable_narrowing_nested_index_recheck.bytecode",
+      "runner": "golden",
+      "result_name": "nullable_narrowing_nested_index_recheck --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:nullable_narrowing_nested_index_recheck"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/nullable_narrowing_nested_index_recheck/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_narrowing_nested_index_recheck/bytecode.out"
+      ],
+      "fixture": "tests/golden/nullable_narrowing_nested_index_recheck"
+    },
+    {
+      "case_id": "golden.success.nullable_narrowing_nested_index_recheck.ir",
+      "runner": "golden",
+      "result_name": "nullable_narrowing_nested_index_recheck --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:nullable_narrowing_nested_index_recheck"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/nullable_narrowing_nested_index_recheck/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_narrowing_nested_index_recheck/ir.out"
+      ],
+      "fixture": "tests/golden/nullable_narrowing_nested_index_recheck"
+    },
+    {
+      "case_id": "golden.success.nullable_narrowing_nested_index_recheck.module_interface",
+      "runner": "golden",
+      "result_name": "nullable_narrowing_nested_index_recheck --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:nullable_narrowing_nested_index_recheck"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/nullable_narrowing_nested_index_recheck/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_narrowing_nested_index_recheck/module-interface.out"
+      ],
+      "fixture": "tests/golden/nullable_narrowing_nested_index_recheck"
+    },
+    {
       "case_id": "golden.success.or_patterns.ast",
       "runner": "golden",
       "result_name": "or_patterns default(ast)",
@@ -22885,6 +22996,34 @@
         "tests/golden/type_errors/nullable_narrowing_nested_field_mutation_invalidated.cd",
         "tests/golden/type_errors/nullable_narrowing_nested_field_mutation_invalidated.err",
         "tests/golden/type_errors/nullable_narrowing_nested_field_mutation_invalidated.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.nullable_narrowing_nested_index_mutation_invalidated",
+      "runner": "golden",
+      "result_name": "type_errors/nullable_narrowing_nested_index_mutation_invalidated default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:nullable_narrowing_nested_index_mutation_invalidated"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/nullable_narrowing_nested_index_mutation_invalidated.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/nullable_narrowing_nested_index_mutation_invalidated.cd",
+        "tests/golden/type_errors/nullable_narrowing_nested_index_mutation_invalidated.err",
+        "tests/golden/type_errors/nullable_narrowing_nested_index_mutation_invalidated.exit"
       ],
       "fixture": "tests/golden/type_errors"
     },
@@ -42191,6 +42330,68 @@
         "tests/golden/nullable_narrowing_nested_field_recheck/run.out"
       ],
       "fixture": "tests/golden/nullable_narrowing_nested_field_recheck"
+    },
+    {
+      "case_id": "rust_vm.golden.nullable_narrowing_nested_index_recheck.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "nullable_narrowing_nested_index_recheck emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:nullable_narrowing_nested_index_recheck"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/nullable_narrowing_nested_index_recheck/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_narrowing_nested_index_recheck/run.out"
+      ],
+      "fixture": "tests/golden/nullable_narrowing_nested_index_recheck"
+    },
+    {
+      "case_id": "rust_vm.golden.nullable_narrowing_nested_index_recheck.run",
+      "runner": "rust_vm_golden",
+      "result_name": "nullable_narrowing_nested_index_recheck rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:nullable_narrowing_nested_index_recheck"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/nullable_narrowing_nested_index_recheck/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_narrowing_nested_index_recheck/run.out"
+      ],
+      "fixture": "tests/golden/nullable_narrowing_nested_index_recheck"
     },
     {
       "case_id": "rust_vm.golden.nullable_narrowing_post_branch_recheck.emit",

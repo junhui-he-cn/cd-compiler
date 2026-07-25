@@ -3624,27 +3624,43 @@ std::optional<std::string> TypeChecker::indexFlowFactName(
     const Expr& collection,
     const Expr& index) const
 {
-    const auto* variable = dynamic_cast<const VariableExpr*>(&collection);
-    if (!variable) {
-        return std::nullopt;
-    }
-
-    const Binding* binding = findVariable(variable->name.lexeme);
-    if (!binding) {
-        return std::nullopt;
-    }
-
     const std::optional<std::string> normalizedIndex = normalizedIntegerLiteral(index);
     if (!normalizedIndex) {
         return std::nullopt;
     }
 
-    const TypeInfo collectionType = variableType(*binding);
+    std::optional<std::string> parentFactName;
+    TypeInfo collectionType = unknownType();
+    if (const auto* variable = dynamic_cast<const VariableExpr*>(&collection)) {
+        const Binding* binding = findVariable(variable->name.lexeme);
+        if (!binding) {
+            return std::nullopt;
+        }
+        parentFactName = binding->resolvedName;
+        collectionType = variableType(*binding);
+    } else if (const auto* field = dynamic_cast<const FieldAccessExpr*>(&collection)) {
+        parentFactName = fieldFlowFactName(*field->object, field->name);
+        const TypedExpressionRecord* typedCollection = declarationIndex_.typedExpression(collection);
+        if (!parentFactName || !typedCollection) {
+            return std::nullopt;
+        }
+        collectionType = typedCollection->type;
+    } else if (const auto* nestedIndex = dynamic_cast<const IndexExpr*>(&collection)) {
+        parentFactName = indexFlowFactName(*nestedIndex->collection, *nestedIndex->index);
+        const TypedExpressionRecord* typedCollection = declarationIndex_.typedExpression(collection);
+        if (!parentFactName || !typedCollection) {
+            return std::nullopt;
+        }
+        collectionType = typedCollection->type;
+    } else {
+        return std::nullopt;
+    }
+
     if (collectionType.kind != StaticType::Array || !collectionType.elementType) {
         return std::nullopt;
     }
 
-    return binding->resolvedName + "[" + *normalizedIndex + "]";
+    return *parentFactName + "[" + *normalizedIndex + "]";
 }
 
 std::optional<FlowNarrowing> TypeChecker::nonNilNarrowingForIndex(const IndexExpr& index) const
@@ -3656,13 +3672,19 @@ std::optional<FlowNarrowing> TypeChecker::nonNilNarrowingForIndex(const IndexExp
         return std::nullopt;
     }
 
-    const auto* variable = dynamic_cast<const VariableExpr*>(index.collection.get());
-    const Binding* binding = variable ? findVariable(variable->name.lexeme) : nullptr;
-    if (!binding) {
+    TypeInfo collectionType = unknownType();
+    if (const auto* variable = dynamic_cast<const VariableExpr*>(index.collection.get())) {
+        const Binding* binding = findVariable(variable->name.lexeme);
+        if (!binding) {
+            return std::nullopt;
+        }
+        collectionType = variableType(*binding);
+    } else if (const TypedExpressionRecord* typedCollection = declarationIndex_.typedExpression(*index.collection)) {
+        collectionType = typedCollection->type;
+    } else {
         return std::nullopt;
     }
 
-    const TypeInfo collectionType = variableType(*binding);
     if (collectionType.kind != StaticType::Array || !collectionType.elementType
         || !SemanticTypes::isNullable(*collectionType.elementType)) {
         return std::nullopt;

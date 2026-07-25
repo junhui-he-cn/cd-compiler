@@ -134,11 +134,12 @@ Known nested fields through a direct named-struct path, such as
 conservatively invalidate all active nullable facts, while dynamic receivers,
 dynamic indexes, and alias-specific field precision remain unsupported.
 
-Direct array variables support the same narrowing for compile-time integer
-literal indexes, for example `items[0] != nil`. Index assignments and compound
-assignments conservatively invalidate all active nullable facts, while dynamic
-indexes, map/range elements, nested targets, and alias-specific index precision
-remain unsupported.
+Direct arrays and statically known nested array paths support the same narrowing
+for compile-time integer literal indexes, for example `items[0] != nil`,
+`matrix[0][1] != nil`, and `box.values[0] != nil`. Index assignments and
+compound assignments conservatively invalidate all active nullable facts, while
+dynamic indexes, map/range elements, and alias-specific index precision remain
+unsupported.
 
 The built-in `map<K, V>` type and nominal generic structs such as `Box<T>` are
 implemented generic collection/container forms. Map literals use `{ key: value }`

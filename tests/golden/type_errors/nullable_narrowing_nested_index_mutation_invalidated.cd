@@ -1,0 +1,9 @@
+fun invalid(values: [[number?]]): number {
+  if (values[0][1] == nil) {
+    return 0;
+  }
+  values[0][1] = nil;
+  return values[0][1] + 1;
+}
+
+print invalid([[nil, 4]]);

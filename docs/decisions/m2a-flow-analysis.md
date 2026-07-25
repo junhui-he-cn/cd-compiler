@@ -542,3 +542,36 @@ validates 1731 cases, including:
 The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification
 command are the gates for this revision.
+
+## M2A-FLOW-020: nested compile-time array-index narrowing
+
+For a statically known array reached through a direct variable, a known struct
+field, or another known compile-time index path, a nil comparison establishes a
+path-specific nullable narrowing for a non-negative integer literal index. The
+path may contain multiple index segments or a struct-field segment, such as
+`matrix[0][1]` or `box.values[0]`. Index writes retain the conservative
+all-fact invalidation rule; dynamic indexes, map/range elements, and
+alias-specific precision remain outside this slice.
+
+The decision revision is `m2a-2026-07-25-r20`. Before this revision,
+`indexFlowFactName` accepted only a direct variable collection, so a known
+nested array element stayed nullable after a precise nil check. The resolver
+now composes dotted and bracketed snapshot-local paths from typed field/index
+expressions while reusing the existing index type and mutation logic.
+
+The positive fixture narrows both a nested array element and an array-valued
+struct field. The negative fixture writes a nested element after the guard and
+confirms that the stale proof is rejected. The M0D inventory now validates 1738
+cases, including:
+
+- `golden.success.nullable_narrowing_nested_index_recheck.ast`
+- `golden.success.nullable_narrowing_nested_index_recheck.ir`
+- `golden.success.nullable_narrowing_nested_index_recheck.bytecode`
+- `golden.success.nullable_narrowing_nested_index_recheck.module_interface`
+- `golden.type_errors.nullable_narrowing_nested_index_mutation_invalidated`
+- `rust_vm.golden.nullable_narrowing_nested_index_recheck.emit`
+- `rust_vm.golden.nullable_narrowing_nested_index_recheck.run`
+
+The FlowFacts CTest, focused golden and Rust VM subsets,
+`python3 tests/verification_inventory.py`, and the full canonical verification
+command are the gates for this revision.

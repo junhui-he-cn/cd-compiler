@@ -1,0 +1,59 @@
+IR
+0000  v0 = constant #0 nil
+0001  store_var @0 read#0, v0
+0002  v1 = make_function $0 read/2
+0003  assign_var @7 read#0, v1
+0004  v2 = load_var @8 read#0
+0005  v3 = constant #12 nil
+0006  v4 = constant #13 4
+0007  v5 = array [v3, v4]
+0008  v6 = array [v5]
+0009  v7 = constant #14 6
+0010  v8 = array [v7]
+0011  v9 = struct Box {values: v8}
+0012  v10 = call v2(v6, v9)
+0013  print v10
+0014  v11 = load_var @11 read#0
+0015  v12 = constant #15 nil
+0016  v13 = constant #16 nil
+0017  v14 = array [v12, v13]
+0018  v15 = array [v14]
+0019  v16 = constant #17 6
+0020  v17 = array [v16]
+0021  v18 = struct Box {values: v17}
+0022  v19 = call v11(v15, v18)
+0023  print v19
+
+function $0 read(values#1, box#2)
+0000  v0 = load_var @1 values#1
+0001  v1 = constant #1 0
+0002  v2 = index v0, v1
+0003  v3 = constant #2 1
+0004  v4 = index v2, v3
+0005  v5 = constant #3 nil
+0006  v6 = equal v4, v5
+0007  jump_if_false v6, 0010
+0008  v7 = constant #4 0
+0009  return v7
+0010  v8 = load_var @2 box#2
+0011  v9 = field v8.values
+0012  v10 = constant #5 0
+0013  v11 = index v9, v10
+0014  v12 = constant #6 nil
+0015  v13 = equal v11, v12
+0016  jump_if_false v13, 0019
+0017  v14 = constant #7 0
+0018  return v14
+0019  v15 = load_var @4 values#1
+0020  v16 = constant #8 0
+0021  v17 = index v15, v16
+0022  v18 = constant #9 1
+0023  v19 = index v17, v18
+0024  v20 = load_var @5 box#2
+0025  v21 = field v20.values
+0026  v22 = constant #10 0
+0027  v23 = index v21, v22
+0028  v24 = add v19, v23
+0029  return v24
+0030  v25 = constant #11 nil
+0031  return v25
