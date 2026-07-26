@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -12,6 +13,13 @@ class CheckResult:
     name: str
     passed: bool
     message: str = ""
+
+
+IMPORT_GRAPH_DIRECTIVE = re.compile(
+    r"(?m)^\s*(?:import\b|export\b[^\n;]*\bfrom\b)"
+)
+EXPECTED_IMPORT_GRAPH_ENTRIES = 42
+EXPECTED_IMPORT_DIAGNOSTIC_ENTRIES = 26
 
 
 def run(command: list[str]) -> subprocess.CompletedProcess[str]:
@@ -56,6 +64,173 @@ def emit(compiler: Path, entry: Path, output: Path, cache: Path, report_path: Pa
             "module cache emission failed\n"
             f"exit={result.returncode}\nstdout={result.stdout}\nstderr={result.stderr}"
         )
+
+
+def emit_without_cache(compiler: Path, entry: Path, output: Path) -> None:
+    result = run(
+        [
+            str(compiler),
+            "--emit-module-bytecode",
+            str(output),
+            str(entry),
+        ]
+    )
+    if result.returncode != 0 or result.stdout or result.stderr:
+        raise AssertionError(
+            "module artifact baseline emission failed\n"
+            f"exit={result.returncode}\nstdout={result.stdout}\nstderr={result.stderr}"
+        )
+
+
+def module_products(output: Path) -> dict[str, bytes]:
+    return {
+        path.name: path.read_bytes()
+        for path in sorted(output.glob("module-*.cdbc"))
+    }
+
+
+def has_import_graph_directive(source: Path) -> bool:
+    return bool(IMPORT_GRAPH_DIRECTIVE.search(source.read_text(encoding="utf-8")))
+
+
+def discover_import_graph_entries() -> tuple[list[Path], list[Path]]:
+    golden = Path(__file__).resolve().parent / "golden"
+    successful = [
+        path
+        for path in sorted(golden.glob("*/input.cd"))
+        if has_import_graph_directive(path)
+    ]
+    successful.extend(
+        path
+        for path in sorted((golden / "runtime_errors").glob("*.cd"))
+        if has_import_graph_directive(path)
+    )
+
+    diagnostic = []
+    for category in ("parse_errors", "type_errors", "import_errors"):
+        diagnostic.extend(
+            path
+            for path in sorted((golden / category).glob("*.cd"))
+            if has_import_graph_directive(path)
+        )
+    return successful, sorted(diagnostic)
+
+
+def process_signature(result: subprocess.CompletedProcess[str]) -> tuple[int, str, str]:
+    return result.returncode, result.stdout, result.stderr
+
+
+def assert_process_parity(
+    baseline: subprocess.CompletedProcess[str],
+    candidate: subprocess.CompletedProcess[str],
+    label: str,
+) -> None:
+    if process_signature(baseline) != process_signature(candidate):
+        raise AssertionError(
+            f"{label} changed compiler output\n"
+            f"baseline exit={baseline.returncode}\nstdout={baseline.stdout}\nstderr={baseline.stderr}\n"
+            f"candidate exit={candidate.returncode}\nstdout={candidate.stdout}\nstderr={candidate.stderr}"
+        )
+
+
+def run_successful_import_inventory_case(compiler: Path, entry: Path, root: Path) -> None:
+    baseline = frontend_output(compiler, entry)
+    if baseline.returncode != 0 or baseline.stderr:
+        raise AssertionError(
+            f"successful import fixture did not type-check: {entry}\n"
+            f"exit={baseline.returncode}\nstdout={baseline.stdout}\nstderr={baseline.stderr}"
+        )
+
+    fixture_root = root / entry.parent.name
+    baseline_output = fixture_root / "baseline-products"
+    cached_output = fixture_root / "cached-products"
+    cache = fixture_root / "cache"
+    first_report_path = fixture_root / "first-report.json"
+    second_report_path = fixture_root / "second-report.json"
+    emit_without_cache(compiler, entry, baseline_output)
+    emit(compiler, entry, cached_output, cache, first_report_path)
+
+    baseline_products = module_products(baseline_output)
+    first_products = module_products(cached_output)
+    if not baseline_products or baseline_products != first_products:
+        raise AssertionError(
+            f"cold cache changed module products for {entry}\n"
+            f"baseline={sorted(baseline_products)}\nfirst={sorted(first_products)}"
+        )
+
+    emit(compiler, entry, cached_output, cache, second_report_path)
+    second = report(second_report_path)
+    module_count = len(first_products)
+    if second.get("cache_status") != "loaded" or second.get("summary") != {
+        "module_count": module_count,
+        "reused": module_count,
+        "rebuilt": 0,
+    }:
+        raise AssertionError(f"valid sidecar reuse was incomplete for {entry}: {second}")
+    if module_products(cached_output) != first_products:
+        raise AssertionError(f"valid sidecar reuse changed products for {entry}")
+
+    sidecars = sorted((cache / "interfaces").glob("*.cdi"))
+    if not sidecars:
+        raise AssertionError(f"cache produced no interfaces for imported fixture {entry}")
+    for sidecar in sidecars:
+        sidecar.write_text("cdi 9.9\n", encoding="utf-8")
+
+    missing_cache = fixture_root / "missing-cache"
+    missing_cache.mkdir(parents=True)
+    missing = frontend_output(compiler, entry, cache=missing_cache)
+    assert_process_parity(baseline, missing, f"missing-sidecar fallback for {entry}")
+
+    malformed = frontend_output(compiler, entry, cache=cache)
+    assert_process_parity(baseline, malformed, f"malformed-sidecar fallback for {entry}")
+    repeated = frontend_output(compiler, entry, cache=cache)
+    assert_process_parity(malformed, repeated, f"repeated malformed-sidecar fallback for {entry}")
+
+    strict = frontend_output(compiler, entry, cache=cache, strict=True)
+    if (
+        strict.returncode != 1
+        or strict.stdout
+        or "Import error:" not in strict.stderr
+        or "malformed sidecar" not in strict.stderr
+    ):
+        raise AssertionError(
+            f"strict malformed-sidecar rejection was unstable for {entry}\n"
+            f"exit={strict.returncode}\nstdout={strict.stdout}\nstderr={strict.stderr}"
+        )
+
+
+def run_diagnostic_import_inventory_case(compiler: Path, entry: Path, root: Path) -> None:
+    baseline = frontend_output(compiler, entry)
+    if baseline.returncode == 0 or not baseline.stderr:
+        raise AssertionError(
+            f"diagnostic import fixture unexpectedly succeeded: {entry}\n"
+            f"exit={baseline.returncode}\nstdout={baseline.stdout}\nstderr={baseline.stderr}"
+        )
+    missing_cache = root / entry.parent.name / entry.stem
+    missing_cache.mkdir(parents=True)
+    fallback = frontend_output(compiler, entry, cache=missing_cache)
+    assert_process_parity(baseline, fallback, f"diagnostic fallback for {entry}")
+
+
+def run_complete_import_inventory(compiler: Path) -> None:
+    successful, diagnostic = discover_import_graph_entries()
+    if len(successful) != EXPECTED_IMPORT_GRAPH_ENTRIES:
+        raise AssertionError(
+            "import graph inventory count changed: "
+            f"expected {EXPECTED_IMPORT_GRAPH_ENTRIES}, found {len(successful)}"
+        )
+    if len(diagnostic) != EXPECTED_IMPORT_DIAGNOSTIC_ENTRIES:
+        raise AssertionError(
+            "import diagnostic inventory count changed: "
+            f"expected {EXPECTED_IMPORT_DIAGNOSTIC_ENTRIES}, found {len(diagnostic)}"
+        )
+
+    with tempfile.TemporaryDirectory() as temporary:
+        root = Path(temporary)
+        for entry in successful:
+            run_successful_import_inventory_case(compiler, entry, root / "successful")
+        for entry in diagnostic:
+            run_diagnostic_import_inventory_case(compiler, entry, root / "diagnostic")
 
 
 def link_and_run(vm: Path, modules: Path, output: Path, expected: str) -> None:
@@ -653,6 +828,10 @@ def run_all(compiler: Path, vm: Path) -> list[CheckResult]:
         run_case(
             "module cache strict rejection matrix",
             lambda: run_strict_cache_matrix(compiler),
+        ),
+        run_case(
+            "module cache complete import inventory",
+            lambda: run_complete_import_inventory(compiler),
         ),
     ]
 

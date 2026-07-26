@@ -150,6 +150,7 @@ ModuleInterfaceArtifact buildModuleInterfaceArtifact(
     artifact.canonicalPath = node.canonicalPath;
     artifact.sourceHash = sourceHash;
     artifact.isEntry = node.isEntry;
+    artifact.resolvedNameNext = interfaceInfo.resolvedNameNext;
     artifact.interfaceInfo = interfaceInfo;
     artifact.interfaceInfo.moduleId = node.moduleId;
     artifact.interfaceInfo.sourceId = node.sourceId;

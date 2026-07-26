@@ -28096,6 +28096,37 @@
       "fixture": "tests/malformed_cases.json"
     },
     {
+      "case_id": "module_cache.complete_inventory",
+      "runner": "module_cache",
+      "result_name": "module cache complete import inventory",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "interface-fallback",
+        "strict-cache",
+        "complete-inventory",
+        "import-visibility",
+        "import-diagnostics",
+        "repeated-build"
+      ],
+      "backend": "mixed",
+      "expected_result_kind": "complete-inventory-parity",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface",
+        "import_diagnostic",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py",
+        "tests/verification_inventory.py"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "module_cache.fallback.diagnostics",
       "runner": "module_cache",
       "result_name": "module cache fallback/diagnostics",

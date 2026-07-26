@@ -27,6 +27,7 @@ struct ModuleInterfaceArtifact {
     std::string interfaceHash;
     bool isEntry = false;
     std::optional<std::size_t> entryOrder;
+    std::size_t resolvedNameNext = 0;
     std::vector<ModuleInterfaceArtifactDependency> dependencies;
     ModuleInterface interfaceInfo;
 };

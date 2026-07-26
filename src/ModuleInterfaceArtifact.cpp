@@ -651,7 +651,8 @@ void validateArtifact(const ModuleInterfaceArtifact& artifact)
     }
     if (artifact.interfaceInfo.path != artifact.path
         || artifact.interfaceInfo.canonicalPath != artifact.canonicalPath
-        || artifact.interfaceInfo.isEntry != artifact.isEntry) {
+        || artifact.interfaceInfo.isEntry != artifact.isEntry
+        || artifact.interfaceInfo.resolvedNameNext != artifact.resolvedNameNext) {
         throw std::runtime_error("module interface sidecar metadata disagrees with its interface");
     }
     if (artifact.isEntry != artifact.entryOrder.has_value()) {
@@ -880,6 +881,10 @@ ModuleInterface parseInterfaceBody(LineReader& lines)
 void writeArtifactBody(std::ostream& out, const ModuleInterfaceArtifact& source)
 {
     ModuleInterfaceArtifact artifact = source;
+    if (artifact.resolvedNameNext == 0) {
+        artifact.resolvedNameNext = artifact.interfaceInfo.resolvedNameNext;
+    }
+    artifact.interfaceInfo.resolvedNameNext = artifact.resolvedNameNext;
     artifact.interfaceInfo = canonicalInterface(std::move(artifact.interfaceInfo));
     artifact.interfaceHash = moduleInterfaceArtifactHash(artifact.interfaceInfo);
     artifact.interfaceInfo.path = artifact.path;
@@ -901,6 +906,7 @@ void writeArtifactBody(std::ostream& out, const ModuleInterfaceArtifact& source)
         << "interface = " << quotedString(artifact.interfaceHash) << '\n'
         << "entry = " << (artifact.isEntry ? "true" : "false") << '\n'
         << "entry_order = " << (artifact.entryOrder ? std::to_string(*artifact.entryOrder) : "none") << '\n'
+        << "resolved_name_next = " << artifact.resolvedNameNext << '\n'
         << "dependencies = " << artifact.dependencies.size() << '\n';
     for (std::size_t index = 0; index < artifact.dependencies.size(); ++index) {
         const ModuleInterfaceArtifactDependency& dependency = artifact.dependencies[index];
@@ -934,7 +940,12 @@ ModuleInterfaceArtifact parseArtifactBody(const std::string& source)
         artifact.entryOrder = parseNumber(entryOrder, "entry_order = ");
     }
 
-    const std::size_t dependencyCount = parseNumber(lines.next(), "dependencies = ");
+    std::string dependencyLine = lines.next();
+    if (dependencyLine.rfind("resolved_name_next = ", 0) == 0) {
+        artifact.resolvedNameNext = parseNumber(dependencyLine, "resolved_name_next = ");
+        dependencyLine = lines.next();
+    }
+    const std::size_t dependencyCount = parseNumber(dependencyLine, "dependencies = ");
     if (dependencyCount > kMaxCollectionSize) {
         throw std::runtime_error("sidecar dependencies are too large");
     }
@@ -966,6 +977,7 @@ ModuleInterfaceArtifact parseArtifactBody(const std::string& source)
     artifact.interfaceInfo.path = artifact.path;
     artifact.interfaceInfo.canonicalPath = artifact.canonicalPath;
     artifact.interfaceInfo.isEntry = artifact.isEntry;
+    artifact.interfaceInfo.resolvedNameNext = artifact.resolvedNameNext;
     artifact.interfaceInfo.dependencies.clear();
     for (const ModuleInterfaceArtifactDependency& dependency : artifact.dependencies) {
         artifact.interfaceInfo.dependencies.push_back(ModuleInterfaceDependency{
@@ -1003,6 +1015,10 @@ void writeModuleInterfaceArtifactText(
     const ModuleInterfaceArtifact& artifact)
 {
     ModuleInterfaceArtifact normalized = artifact;
+    if (normalized.resolvedNameNext == 0) {
+        normalized.resolvedNameNext = normalized.interfaceInfo.resolvedNameNext;
+    }
+    normalized.interfaceInfo.resolvedNameNext = normalized.resolvedNameNext;
     normalized.interfaceInfo = canonicalInterface(std::move(normalized.interfaceInfo));
     normalized.interfaceInfo.path = normalized.path;
     normalized.interfaceInfo.canonicalPath = normalized.canonicalPath;

@@ -63,6 +63,10 @@ struct ModuleInterface {
     std::string path;
     std::string canonicalPath;
     bool isEntry = false;
+    // High-water mark for the snapshot-local linkage-name allocator.  It is
+    // metadata for cache reconstruction, not part of the public interface
+    // hash.
+    std::size_t resolvedNameNext = 0;
     std::vector<ModuleInterfaceDependency> dependencies;
     std::vector<ModuleInterfaceValue> values;
     std::vector<ModuleInterfaceStruct> structs;

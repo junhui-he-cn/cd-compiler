@@ -795,7 +795,7 @@ Current implementation slices `M3A-GRAPH-001`, `M3A-GRAPH-002`,
 `M3A-INTERFACE-004`, `M3A-INTERFACE-005`, `M3A-INTERFACE-006`,
 `M3A-INTERFACE-007`, `M3A-INTERFACE-008`, `M3A-INTERFACE-009`,
 `M3A-INTERFACE-010`, `M3A-INTERFACE-011`, `M3A-INTERFACE-012`, and
-`M3A-INTERFACE-013` establish an
+`M3A-INTERFACE-013`, and `M3A-INTERFACE-014` establish an
 explicit import-aware `FrontendSession` graph,
 carry a value snapshot of it on `Program`, and attach graph-backed source and
 canonical identity plus dependency edges to in-memory `ModuleInterface`
@@ -807,13 +807,19 @@ lookup, validate serialized public interfaces that can replace cached
 dependency bodies, and exercise deterministic source fallback and diagnostic
 parity for invalid sidecars across direct, namespace, re-export, search-path,
 and repeated-build cases, while exposing an opt-in strict cache policy with
-stable `Import` rejection reasons, and register that graph matrix as six
+stable `Import` rejection reasons, and register that graph matrix as nine
 independently reported M0A inventory cases reachable from the canonical
 runner. These
 slices run beside the existing `ParsedUnit`/`ModuleStmt` path;
 fallback parsing for missing or invalid sidecars and final dependency-body
 removal remain later M3A/M3B slices. The current matrix also proves
 file-aware parse/type diagnostics and partial reuse of lower valid sidecars.
+`M3A-INTERFACE-014` extends the evidence gate across 42 successful import
+graphs and 26 top-level import-related diagnostic entries, including cold
+product parity, complete no-change reuse, malformed-sidecar fallback, strict
+rejection, and missing-sidecar diagnostic parity. The linkage-name allocator
+high-water mark is sidecar reconstruction metadata excluded from the public
+interface hash, and legacy sidecars without it remain readable.
 The decision records are
 `docs/decisions/m3a-module-graph.md`,
 `docs/decisions/m3a-module-graph.json`,
@@ -844,7 +850,9 @@ The decision records are
 `docs/decisions/m3a-interface-012.md` and
 `docs/decisions/m3a-interface-012.json`, plus
 `docs/decisions/m3a-interface-013.md` and
-`docs/decisions/m3a-interface-013.json`.
+`docs/decisions/m3a-interface-013.json`, plus
+`docs/decisions/m3a-interface-014.md` and
+`docs/decisions/m3a-interface-014.json`.
 
 **Deliverable:** evolve `FrontendSession` into an explicit graph with module
 identities deterministic across equivalent builds, dependency edges, source
@@ -891,6 +899,9 @@ gate; M3A-INTERFACE-011 defines an opt-in strict policy but does not remove that
 default safety path. M3A-INTERFACE-012 makes the six-case fallback, rebuild,
 and strict matrix independently visible in the M0A inventory. M3A-INTERFACE-013
 adds independent parse/type diagnostic and partial-dependency-reuse cases.
+M3A-INTERFACE-014 satisfies the complete imported inventory evidence gate;
+default fallback and dependency-body checking remain until the next reviewed
+cache-policy boundary.
 M3B exclusively owns removal of dependency-body lowering. Preserve the
 documented direct-input entry-program adapter; it is not a legacy import path.
 
@@ -1207,7 +1218,7 @@ the smallest proof of a broader milestone.
 
 The verification foundation, M0.5 decisions, and M1F semantic cutover are
 implemented, and M2A-FLOW-001 through M2A-FLOW-021 are implemented. M3A-
-INTERFACE-006 through M3A-INTERFACE-013 are complete, and the user-selected M3B
+INTERFACE-006 through M3A-INTERFACE-014 are complete, and the user-selected M3B
 artifact decision is resolved as independently validated per-module `.cdbc`
 products. `M3B-ARTIFACT-001` is complete: independent module lowering, module
 identity/dependency envelopes, strict Rust validation, and the
@@ -1222,7 +1233,11 @@ conditions, `M3A-INTERFACE-010` covers the focused graph matrix, and
 material boundary is removing the default fallback only after the same
 conditions are extended across the complete inventory. M3A-INTERFACE-012 and
 M3A-INTERFACE-013 now record eight module-cache checks as separate canonical
-case IDs.
+case IDs, and M3A-INTERFACE-014 records the aggregate complete-import gate.
+M3A-INTERFACE-014 now satisfies the complete imported inventory gate;
+the next material boundary is a reviewed policy for removing default fallback
+and unchanged dependency-body semantic checking while preserving cold product
+build/repair behavior.
 `M4A-VALIDATION-001` is also complete: the existing `cdbc 0.1` family has an
 explicit linked/module compatibility matrix, centralized Rust pre-execution
 reference validation, fixed native capability rejection, and malformed/module

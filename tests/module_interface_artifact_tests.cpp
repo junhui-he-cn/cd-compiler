@@ -18,6 +18,7 @@ ModuleInterface makeInterface()
     interfaceInfo.path = "/tmp/lib.cd";
     interfaceInfo.canonicalPath = "/tmp/lib.cd";
     interfaceInfo.isEntry = false;
+    interfaceInfo.resolvedNameNext = 6;
     interfaceInfo.values.push_back(ModuleInterfaceValue{
         "identity",
         functionType(
@@ -94,6 +95,8 @@ int main()
     assert(loaded.error.empty());
     assert(loaded.artifact);
     assert(loaded.artifact->identity == artifact.identity);
+    assert(loaded.artifact->resolvedNameNext == 6);
+    assert(loaded.artifact->interfaceInfo.resolvedNameNext == 6);
     assert(loaded.artifact->interfaceHash == moduleInterfaceArtifactHash(artifact.interfaceInfo));
     assert(loaded.artifact->interfaceInfo.moduleId == 0);
     assert(!loaded.artifact->interfaceInfo.sourceId.valid());
@@ -104,6 +107,16 @@ int main()
     assert(loaded.artifact->interfaceInfo.values.front().resolvedName == "identity#4");
     assert(typeInfoName(loaded.artifact->interfaceInfo.structs.front().methods.front().receiverType)
         == "Box<T>");
+
+    std::string legacy = text;
+    const std::string allocatorLine = "resolved_name_next = 6\n";
+    const std::size_t allocatorOffset = legacy.find(allocatorLine);
+    assert(allocatorOffset != std::string::npos);
+    legacy.erase(allocatorOffset, allocatorLine.size());
+    const ModuleInterfaceArtifactLoadResult legacyLoaded = readModuleInterfaceArtifactText(legacy);
+    assert(legacyLoaded.found);
+    assert(legacyLoaded.artifact);
+    assert(legacyLoaded.artifact->resolvedNameNext == 0);
 
     std::string malformed = text;
     malformed.replace(0, 7, "cdi 9.9");

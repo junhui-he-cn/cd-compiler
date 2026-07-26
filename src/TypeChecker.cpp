@@ -329,6 +329,7 @@ void TypeChecker::check(const Program& program)
                 observeResolvedName(method.resolvedName);
             }
         }
+        nextResolvedName_ = std::max(nextResolvedName_, interfaceInfo.resolvedNameNext);
     }
     nextBindingId_ = 0;
     nextDeclarationId_ = 0;
@@ -1014,6 +1015,7 @@ void TypeChecker::buildModuleInterface(const Program& program, const ModuleStmt&
     interfaceInfo.sourceId = module.sourceId;
     interfaceInfo.path = module.path;
     interfaceInfo.isEntry = module.isEntry;
+    interfaceInfo.resolvedNameNext = nextResolvedName_;
     if (program.moduleGraph) {
         const auto graphNode = std::find_if(
             program.moduleGraph->nodes.begin(),

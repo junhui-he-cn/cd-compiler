@@ -103,7 +103,10 @@ The module cache also stores one `cdi 0.1` sidecar under `interfaces/` for each
 module. A sidecar contains the canonical module identity, exact source hash,
 complete public type shape (including generic constraints, struct fields and
 methods, enum variants, and linkage names), dependency identities and public
-interface hashes, and entry metadata. Snapshot-local IDs are not serialized.
+interface hashes, entry metadata, and the linkage-name allocator high-water
+mark used to reconstruct unchanged snapshots. The high-water mark is cache
+reconstruction metadata and is not part of the public interface hash.
+Snapshot-local IDs are not serialized.
 
 `--module-interface-cache <directory>` reads these sidecars. A dependency is
 preloaded only when its sidecar identity, canonical path, source hash, recursive
