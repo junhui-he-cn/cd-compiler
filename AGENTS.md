@@ -51,7 +51,9 @@ This is a small C++17 Compiler Design front-end/interpreter project. It currentl
   current text format remains unchanged; TypeChecker produces one interface
   when each module body finishes checking, and same-process import/re-export
   public-shape consumption reads those records after the existing
-  dependency-body producer check.
+  dependency-body producer check; `moduleInterfaceMismatchCount()` validates
+  graph identity, dependency order, canonical vectors, and public-name
+  coverage after the snapshot is complete.
 - `include/DeclarationIndex.hpp`, `src/DeclarationIndex.cpp`: snapshot-local
   declaration, signature/shape, typed-expression, scope, import/export, and
   lexical-reference metadata plus for-in/pattern bindings and local direct-call

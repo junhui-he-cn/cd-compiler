@@ -792,12 +792,13 @@ contract requires a separate language/CLI decision.
 
 Current implementation slices `M3A-GRAPH-001`, `M3A-GRAPH-002`,
 `M3A-INTERFACE-001`, `M3A-INTERFACE-002`, `M3A-INTERFACE-003`,
-`M3A-INTERFACE-004`, and `M3A-INTERFACE-005` establish an
+`M3A-INTERFACE-004`, `M3A-INTERFACE-005`, and `M3A-INTERFACE-006` establish an
 explicit import-aware `FrontendSession` graph,
 carry a value snapshot of it on `Program`, and attach graph-backed source and
 canonical identity plus dependency edges to in-memory `ModuleInterface`
 objects, produce each completed module interface once at its checked-module
-boundary, and use those records for same-process importer consumption. These
+boundary, validate producer/graph consistency after the snapshot is complete,
+and use those records for same-process importer consumption. These
 slices run beside the existing `ParsedUnit`/`ModuleStmt` path;
 independent interface loading and dependency-body removal remain later M3A/M3B
 slices. The decision records are
@@ -814,7 +815,9 @@ slices. The decision records are
 `docs/decisions/m3a-interface-consumption.md` and
 `docs/decisions/m3a-interface-consumption.json`, plus
 `docs/decisions/m3a-interface-production.md` and
-`docs/decisions/m3a-interface-production.json`.
+`docs/decisions/m3a-interface-production.json`, plus
+`docs/decisions/m3a-interface-validation.md` and
+`docs/decisions/m3a-interface-validation.json`.
 
 **Deliverable:** evolve `FrontendSession` into an explicit graph with module
 identities deterministic across equivalent builds, dependency edges, source
@@ -1109,7 +1112,7 @@ the smallest proof of a broader milestone.
 
 The verification foundation, M0.5 decisions, and M1F semantic cutover are
 implemented, and M2A-FLOW-001 through M2A-FLOW-021 are implemented. The active
-near-term slice is M3A-INTERFACE-005: per-module in-memory interface production.
+near-term slice is M3A-INTERFACE-006: in-memory interface consistency validation.
 It keeps
 the same decision-update, focused fixture, quantitative gate, and old-path
 deletion evidence used by the preceding slices.
@@ -1138,7 +1141,7 @@ mutations; the canonical inventory now reports 1,658 cases. The harness,
 minimizer selftest, and observed baseline are recorded in
 `docs/verification/m0c-malformed-design.md` and
 `docs/verification/m0c-baseline.json`. M0D, M0.5A, M0.5B, M1F, and
-M2A-FLOW-001 through M2A-FLOW-021 are now implemented; M3A-INTERFACE-005 is the
+M2A-FLOW-001 through M2A-FLOW-021 are now implemented; M3A-INTERFACE-006 is the
 active module-boundary slice.
 
 The hard dependency gates are:

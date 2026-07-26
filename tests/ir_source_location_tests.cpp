@@ -109,6 +109,7 @@ void test_module_interface_graph_identity(const fs::path& root)
 
     TypeChecker checker;
     checker.check(program);
+    assert(checker.moduleInterfaceMismatchCount() == 0);
     const std::vector<ModuleInterface>& interfaces = checker.moduleInterfaces();
     assert(interfaces.size() == program.moduleGraph->nodes.size());
     for (std::size_t index = 1; index < interfaces.size(); ++index) {

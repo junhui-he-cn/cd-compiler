@@ -31,6 +31,7 @@ public:
     const std::vector<ModuleInterface>& moduleInterfaces() const;
     const DeclarationIndex& declarationIndex() const;
     std::size_t declarationIndexMismatchCount() const;
+    std::size_t moduleInterfaceMismatchCount() const;
 
 private:
     struct CheckedExpression {
@@ -144,6 +145,7 @@ private:
     const ModuleInterface* findModuleInterface(std::size_t moduleId) const;
     void buildModuleInterface(const Program& program, const ModuleStmt& module);
     void buildModuleInterfaces(const Program& program);
+    std::size_t validateModuleInterfaces(const Program& program) const;
     void checkStructDeclaration(const StructDeclStmt& statement);
     void checkEnumDeclaration(const EnumDeclStmt& statement);
     void checkImpl(const ImplStmt& statement);
@@ -356,6 +358,7 @@ private:
     std::vector<std::size_t> moduleStack_;
     DeclarationIndex declarationIndex_;
     std::size_t declarationIndexMismatchCount_ = 0;
+    std::size_t moduleInterfaceMismatchCount_ = 0;
     const Program* currentProgram_ = nullptr;
     std::size_t nextResolvedName_ = 0;
     std::size_t nextBindingId_ = 0;

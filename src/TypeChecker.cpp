@@ -273,6 +273,7 @@ void TypeChecker::check(const Program& program)
 {
     declarationIndex_ = DeclarationIndex::collect(program);
     declarationIndexMismatchCount_ = 0;
+    moduleInterfaceMismatchCount_ = 0;
     scopes_.clear();
     scopeIds_.clear();
     typeParameterScopes_.clear();
@@ -321,6 +322,7 @@ void TypeChecker::check(const Program& program)
     }
 
     buildModuleInterfaces(program);
+    moduleInterfaceMismatchCount_ = validateModuleInterfaces(program);
     declarationIndexMismatchCount_ = declarationIndex_.validateMetadata();
     currentProgram_ = nullptr;
 }
@@ -338,6 +340,11 @@ const DeclarationIndex& TypeChecker::declarationIndex() const
 std::size_t TypeChecker::declarationIndexMismatchCount() const
 {
     return declarationIndexMismatchCount_;
+}
+
+std::size_t TypeChecker::moduleInterfaceMismatchCount() const
+{
+    return moduleInterfaceMismatchCount_;
 }
 
 void TypeChecker::beginScope()
@@ -1094,6 +1101,231 @@ void TypeChecker::buildModuleInterfaces(const Program& program)
         [](const ModuleInterface& left, const ModuleInterface& right) {
             return left.moduleId < right.moduleId;
         });
+}
+
+std::size_t TypeChecker::validateModuleInterfaces(const Program& program) const
+{
+    std::size_t mismatches = 0;
+    const auto mismatch = [&mismatches]() { ++mismatches; };
+
+    std::unordered_set<std::size_t> expectedModuleIds;
+    for (const auto& statement : program.statements) {
+        if (const auto* module = dynamic_cast<const ModuleStmt*>(statement.get())) {
+            if (!expectedModuleIds.insert(module->moduleId).second) {
+                mismatch();
+            }
+        }
+    }
+
+    if (moduleInterfaces_.size() != expectedModuleIds.size()) {
+        mismatch();
+    }
+    for (std::size_t index = 1; index < moduleInterfaces_.size(); ++index) {
+        if (moduleInterfaces_[index - 1].moduleId >= moduleInterfaces_[index].moduleId) {
+            mismatch();
+        }
+    }
+
+    if (program.moduleGraph) {
+        if (program.moduleGraph->nodes.size() != expectedModuleIds.size()) {
+            mismatch();
+        }
+        std::unordered_set<std::size_t> graphModuleIds;
+        for (const ModuleGraphNode& node : program.moduleGraph->nodes) {
+            if (!graphModuleIds.insert(node.moduleId).second
+                || !expectedModuleIds.count(node.moduleId)) {
+                mismatch();
+            }
+        }
+    }
+
+    const auto checkCanonicalNames = [&mismatch](const auto& records, const auto& nameOf) {
+        for (std::size_t index = 1; index < records.size(); ++index) {
+            if (nameOf(records[index - 1]) >= nameOf(records[index])) {
+                mismatch();
+            }
+        }
+    };
+
+    const auto checkValueNames = [&mismatch](
+        const std::vector<ModuleInterfaceValue>& actual,
+        const ModuleValueExports* expected) {
+        if (!expected) {
+            if (!actual.empty()) {
+                mismatch();
+            }
+            return;
+        }
+        if (actual.size() != expected->size()) {
+            mismatch();
+        }
+        for (const ModuleInterfaceValue& value : actual) {
+            if (expected->find(value.name) == expected->end()) {
+                mismatch();
+            }
+        }
+    };
+
+    const auto checkStructNames = [&mismatch](
+        const std::vector<ModuleInterfaceStruct>& actual,
+        const ModuleStructExports* expected) {
+        if (!expected) {
+            if (!actual.empty()) {
+                mismatch();
+            }
+            return;
+        }
+        if (actual.size() != expected->size()) {
+            mismatch();
+        }
+        for (const ModuleInterfaceStruct& structure : actual) {
+            if (expected->find(structure.name) == expected->end()) {
+                mismatch();
+            }
+        }
+    };
+
+    const auto checkEnumNames = [&mismatch](
+        const std::vector<ModuleInterfaceEnum>& actual,
+        const ModuleEnumExports* expected) {
+        if (!expected) {
+            if (!actual.empty()) {
+                mismatch();
+            }
+            return;
+        }
+        if (actual.size() != expected->size()) {
+            mismatch();
+        }
+        for (const ModuleInterfaceEnum& enumeration : actual) {
+            if (expected->find(enumeration.name) == expected->end()) {
+                mismatch();
+            }
+        }
+    };
+
+    const auto checkMethodNames = [&mismatch](
+        const std::vector<ModuleInterfaceStruct>& actual,
+        const ModuleMethodExports* expected) {
+        for (const ModuleInterfaceStruct& structure : actual) {
+            const StructMethodTable* expectedMethods = nullptr;
+            if (expected) {
+                const auto found = expected->find(structure.name);
+                if (found != expected->end()) {
+                    expectedMethods = &found->second;
+                }
+            }
+            if (!expectedMethods) {
+                if (!structure.methods.empty()) {
+                    mismatch();
+                }
+                continue;
+            }
+            if (structure.methods.size() != expectedMethods->size()) {
+                mismatch();
+            }
+            for (const ModuleInterfaceMethod& method : structure.methods) {
+                if (expectedMethods->find(method.name) == expectedMethods->end()) {
+                    mismatch();
+                }
+            }
+        }
+        if (!expected) {
+            return;
+        }
+        for (const auto& entry : *expected) {
+            const auto structure = std::find_if(
+                actual.begin(),
+                actual.end(),
+                [&entry](const ModuleInterfaceStruct& candidate) {
+                    return candidate.name == entry.first;
+                });
+            if (structure == actual.end()) {
+                mismatch();
+            }
+        }
+    };
+
+    for (const ModuleInterface& interfaceInfo : moduleInterfaces_) {
+        if (!expectedModuleIds.count(interfaceInfo.moduleId)) {
+            mismatch();
+            continue;
+        }
+
+        const ModuleStmt* module = findModule(program, interfaceInfo.moduleId);
+        if (!module) {
+            mismatch();
+            continue;
+        }
+        if (interfaceInfo.sourceId != module->sourceId
+            || interfaceInfo.path != module->path
+            || interfaceInfo.isEntry != module->isEntry) {
+            mismatch();
+        }
+
+        if (program.moduleGraph) {
+            const auto graphNode = std::find_if(
+                program.moduleGraph->nodes.begin(),
+                program.moduleGraph->nodes.end(),
+                [&interfaceInfo](const ModuleGraphNode& node) {
+                    return node.moduleId == interfaceInfo.moduleId;
+                });
+            if (graphNode == program.moduleGraph->nodes.end()) {
+                mismatch();
+            } else if (interfaceInfo.sourceId != graphNode->sourceId
+                || interfaceInfo.path != graphNode->path
+                || interfaceInfo.canonicalPath != graphNode->canonicalPath
+                || interfaceInfo.isEntry != graphNode->isEntry) {
+                mismatch();
+            }
+
+            std::vector<const ModuleGraphEdge*> expectedEdges;
+            for (const ModuleGraphEdge& edge : program.moduleGraph->edges) {
+                if (edge.importingModuleId == interfaceInfo.moduleId) {
+                    expectedEdges.push_back(&edge);
+                }
+            }
+            if (interfaceInfo.dependencies.size() != expectedEdges.size()) {
+                mismatch();
+            }
+            const std::size_t edgeCount = std::min(
+                interfaceInfo.dependencies.size(),
+                expectedEdges.size());
+            for (std::size_t index = 0; index < edgeCount; ++index) {
+                const ModuleInterfaceDependency& actual = interfaceInfo.dependencies[index];
+                const ModuleGraphEdge& expected = *expectedEdges[index];
+                if (actual.importedModuleId != expected.importedModuleId
+                    || actual.kind != expected.kind
+                    || actual.requestedPath != expected.requestedPath) {
+                    mismatch();
+                }
+            }
+        } else if (!interfaceInfo.canonicalPath.empty() || !interfaceInfo.dependencies.empty()) {
+            mismatch();
+        }
+
+        checkCanonicalNames(
+            interfaceInfo.values,
+            [](const ModuleInterfaceValue& value) { return value.name; });
+        checkCanonicalNames(
+            interfaceInfo.structs,
+            [](const ModuleInterfaceStruct& structure) { return structure.name; });
+        checkCanonicalNames(
+            interfaceInfo.enums,
+            [](const ModuleInterfaceEnum& enumeration) { return enumeration.name; });
+        for (const ModuleInterfaceStruct& structure : interfaceInfo.structs) {
+            checkCanonicalNames(
+                structure.methods,
+                [](const ModuleInterfaceMethod& method) { return method.name; });
+        }
+
+        checkValueNames(interfaceInfo.values, moduleSymbols_.valueExports(interfaceInfo.moduleId));
+        checkStructNames(interfaceInfo.structs, moduleSymbols_.structExports(interfaceInfo.moduleId));
+        checkEnumNames(interfaceInfo.enums, moduleSymbols_.enumExports(interfaceInfo.moduleId));
+        checkMethodNames(interfaceInfo.structs, moduleSymbols_.methodExports(interfaceInfo.moduleId));
+    }
+
+    return mismatches;
 }
 
 void TypeChecker::checkModule(const ModuleStmt& module)
