@@ -4,13 +4,16 @@ This file is project memory for Codex/AI agents working in this repository. Read
 
 ## Agent Workflow Defaults
 
-- Before starting any non-trivial execution or making workspace changes, first
-  do a concise brainstorming pass and share the proposed scope, likely files or
-  components, main risks, and verification approach with the user. Wait for the
-  user's confirmation of the broad direction before implementing. After that
-  confirmation, continue with the agent's own detailed execution, editing, and
-  verification workflow without requiring approval for every individual
-  command.
+- Before each development task, first output a concise development goal with
+  the likely scope/files or components, main risks, and verification approach.
+  Continue with the agent's own detailed execution, editing, and verification
+  workflow immediately; do not wait for user confirmation of the broad
+  direction or approval for individual commands.
+- The user may request either `继续开发` or `持续开发`. Treat `继续开发` as
+  completing only the next narrow roadmap slice, then stop and report the
+  result. Treat `持续开发` as continuing through subsequent roadmap slices
+  without pausing, and stop only when a material decision or other explicit
+  determination is required from the user.
 - Do not invoke or assume `superpowers` skills by default.
 - Use the normal repository workflow unless the user explicitly requests a
   particular skill or workflow.
