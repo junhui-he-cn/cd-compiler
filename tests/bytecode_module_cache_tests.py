@@ -178,12 +178,12 @@ def run_successful_import_inventory_case(compiler: Path, entry: Path, root: Path
 
     missing_cache = fixture_root / "missing-cache"
     missing_cache.mkdir(parents=True)
-    missing = frontend_output(compiler, entry, cache=missing_cache)
+    missing = frontend_output(compiler, entry, cache=missing_cache, fallback=True)
     assert_process_parity(baseline, missing, f"missing-sidecar fallback for {entry}")
 
-    malformed = frontend_output(compiler, entry, cache=cache)
+    malformed = frontend_output(compiler, entry, cache=cache, fallback=True)
     assert_process_parity(baseline, malformed, f"malformed-sidecar fallback for {entry}")
-    repeated = frontend_output(compiler, entry, cache=cache)
+    repeated = frontend_output(compiler, entry, cache=cache, fallback=True)
     assert_process_parity(malformed, repeated, f"repeated malformed-sidecar fallback for {entry}")
 
     strict = frontend_output(compiler, entry, cache=cache, strict=True)
@@ -208,7 +208,7 @@ def run_diagnostic_import_inventory_case(compiler: Path, entry: Path, root: Path
         )
     missing_cache = root / entry.parent.name / entry.stem
     missing_cache.mkdir(parents=True)
-    fallback = frontend_output(compiler, entry, cache=missing_cache)
+    fallback = frontend_output(compiler, entry, cache=missing_cache, fallback=True)
     assert_process_parity(baseline, fallback, f"diagnostic fallback for {entry}")
 
 
@@ -278,12 +278,15 @@ def frontend_output(
     cache: Path | None = None,
     import_paths: list[Path] | None = None,
     strict: bool = False,
+    fallback: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     command = [str(compiler)]
     if cache is not None:
         command.extend(["--module-interface-cache", str(cache)])
     if strict:
         command.append("--module-cache-strict")
+    if fallback:
+        command.append("--module-cache-fallback")
     for import_path in import_paths or []:
         command.extend(["--import-path", str(import_path)])
     command.append(str(entry))
@@ -295,9 +298,16 @@ def assert_frontend_parity(
     entry: Path,
     cache: Path,
     import_paths: list[Path] | None = None,
+    fallback: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     baseline = frontend_output(compiler, entry, import_paths=import_paths)
-    cached = frontend_output(compiler, entry, cache=cache, import_paths=import_paths)
+    cached = frontend_output(
+        compiler,
+        entry,
+        cache=cache,
+        import_paths=import_paths,
+        fallback=fallback,
+    )
     if (baseline.returncode, baseline.stdout, baseline.stderr) != (
         cached.returncode,
         cached.stdout,
@@ -317,7 +327,7 @@ def assert_interface_parity(
     cache: Path,
     import_paths: list[Path] | None = None,
 ) -> None:
-    baseline = assert_frontend_parity(compiler, entry, cache, import_paths)
+    baseline = assert_frontend_parity(compiler, entry, cache, import_paths, fallback=True)
     if baseline.returncode != 0:
         raise AssertionError(
             "fallback parity fixture did not type-check\n"
@@ -375,8 +385,20 @@ def assert_invalid_sidecar_parity(
         sidecar.write_text("cdi 9.9\n", encoding="utf-8")
 
     assert_interface_parity(compiler, entry, populated_cache, import_paths)
-    first = frontend_output(compiler, entry, cache=populated_cache, import_paths=import_paths)
-    second = frontend_output(compiler, entry, cache=populated_cache, import_paths=import_paths)
+    first = frontend_output(
+        compiler,
+        entry,
+        cache=populated_cache,
+        import_paths=import_paths,
+        fallback=True,
+    )
+    second = frontend_output(
+        compiler,
+        entry,
+        cache=populated_cache,
+        import_paths=import_paths,
+        fallback=True,
+    )
     if (first.returncode, first.stdout, first.stderr) != (
         second.returncode,
         second.stdout,
@@ -390,8 +412,9 @@ def assert_strict_rejection(
     entry: Path,
     cache: Path,
     reason: str,
+    strict: bool = True,
 ) -> None:
-    result = frontend_output(compiler, entry, cache=cache, strict=True)
+    result = frontend_output(compiler, entry, cache=cache, strict=strict)
     if result.returncode != 1 or result.stdout or "Import error:" not in result.stderr:
         raise AssertionError(
             "strict cache rejection did not produce an Import diagnostic\n"
@@ -575,6 +598,131 @@ def run_strict_cache_matrix(compiler: Path) -> None:
         )
 
 
+def run_cache_policy_matrix(compiler: Path) -> None:
+    fallback_usage = run([str(compiler), "--module-cache-fallback"])
+    if (
+        fallback_usage.returncode != 64
+        or fallback_usage.stdout
+        or "requires --module-interface-cache" not in fallback_usage.stderr
+    ):
+        raise AssertionError(
+            "fallback cache option without an interface-cache path was accepted\n"
+            f"exit={fallback_usage.returncode}\nstdout={fallback_usage.stdout}\n"
+            f"stderr={fallback_usage.stderr}"
+        )
+
+    with tempfile.TemporaryDirectory() as temporary:
+        root = Path(temporary)
+        valid = root / "valid"
+        library, entry, cache = populate_strict_case(compiler, valid)
+
+        default_hit = frontend_output(compiler, entry, cache=cache)
+        if default_hit.returncode != 0 or default_hit.stderr:
+            raise AssertionError(
+                "default interface-only cache policy rejected a valid sidecar\n"
+                f"exit={default_hit.returncode}\nstdout={default_hit.stdout}\n"
+                f"stderr={default_hit.stderr}"
+            )
+
+        baseline = frontend_output(compiler, entry)
+        missing_cache = root / "missing-cache"
+        missing_cache.mkdir()
+        assert_strict_rejection(
+            compiler,
+            entry,
+            missing_cache,
+            "missing sidecar",
+            strict=False,
+        )
+        fallback_hit = frontend_output(compiler, entry, cache=missing_cache, fallback=True)
+        if (baseline.returncode, baseline.stdout, baseline.stderr) != (
+            fallback_hit.returncode,
+            fallback_hit.stdout,
+            fallback_hit.stderr,
+        ):
+            raise AssertionError(
+                "explicit interface-cache fallback changed source-backed output\n"
+                f"baseline exit={baseline.returncode}\nstdout={baseline.stdout}\nstderr={baseline.stderr}\n"
+                f"fallback exit={fallback_hit.returncode}\nstdout={fallback_hit.stdout}\n"
+                f"stderr={fallback_hit.stderr}"
+            )
+
+        sidecar_for_identity(cache, library).write_text("cdi 9.9\n", encoding="utf-8")
+        assert_strict_rejection(
+            compiler,
+            entry,
+            cache,
+            "malformed sidecar",
+            strict=False,
+        )
+        malformed_fallback = frontend_output(compiler, entry, cache=cache, fallback=True)
+        if (baseline.returncode, baseline.stdout, baseline.stderr) != (
+            malformed_fallback.returncode,
+            malformed_fallback.stdout,
+            malformed_fallback.stderr,
+        ):
+            raise AssertionError("explicit malformed-sidecar fallback changed source output")
+
+        conflict = run(
+            [
+                str(compiler),
+                "--module-interface-cache",
+                str(cache),
+                "--module-cache-strict",
+                "--module-cache-fallback",
+                str(entry),
+            ]
+        )
+        if (
+            conflict.returncode != 64
+            or conflict.stdout
+            or "mutually exclusive" not in conflict.stderr
+        ):
+            raise AssertionError(
+                "strict and fallback cache options were accepted together\n"
+                f"exit={conflict.returncode}\nstdout={conflict.stdout}\nstderr={conflict.stderr}"
+            )
+
+        scope = run(
+            [
+                str(compiler),
+                "--emit-module-bytecode",
+                str(root / "scope-products"),
+                "--module-interface-cache",
+                str(cache),
+                "--module-cache-fallback",
+                str(entry),
+            ]
+        )
+        if (
+            scope.returncode != 64
+            or scope.stdout
+            or "only valid for interface-only cache consumers" not in scope.stderr
+        ):
+            raise AssertionError(
+                "fallback cache option escaped the interface-only scope\n"
+                f"exit={scope.returncode}\nstdout={scope.stdout}\nstderr={scope.stderr}"
+            )
+
+        repair_root = root / "module-product-repair"
+        repair_library, repair_entry, repair_cache = populate_strict_case(compiler, repair_root)
+        repair_library.write_text("let value = 8;\nexport value;\n", encoding="utf-8")
+        repair_report = repair_root / "repair-report.json"
+        emit(
+            compiler,
+            repair_entry,
+            repair_root / "repaired-products",
+            repair_cache,
+            repair_report,
+        )
+        repair_statuses = module_statuses(report(repair_report))
+        if repair_statuses["lib.cd"][:2] != ("rebuilt", "source_changed"):
+            raise AssertionError(
+                "module-product repair did not retain source fallback by default: "
+                f"{repair_statuses}"
+            )
+
+
 def run_rebuild_matrix(compiler: Path, vm: Path) -> None:
     with tempfile.TemporaryDirectory() as temporary:
         root = Path(temporary)
@@ -739,7 +887,7 @@ def run_fallback_diagnostic_case(compiler: Path) -> None:
             ("let value: number = \"bad\";\nexport value;\n", "Type error"),
         ):
             library.write_text(invalid_source, encoding="utf-8")
-            baseline = assert_frontend_parity(compiler, entry, cache)
+            baseline = assert_frontend_parity(compiler, entry, cache, fallback=True)
             if baseline.returncode != 1 or baseline.stdout:
                 raise AssertionError(
                     "invalid-sidecar diagnostic fallback had unexpected process result\n"
@@ -768,7 +916,7 @@ def run_partial_dependency_fallback_case(compiler: Path) -> None:
         cache = root / "cache"
         populate_interface_cache(compiler, entry, root / "module-products", cache)
         sidecar_for_identity(cache, middle).write_text("cdi 9.9\n", encoding="utf-8")
-        cached = frontend_output(compiler, entry, cache=cache)
+        cached = frontend_output(compiler, entry, cache=cache, fallback=True)
         if cached.returncode != 0 or cached.stderr:
             raise AssertionError(
                 "partial dependency fallback failed to load the importer\n"
@@ -778,7 +926,7 @@ def run_partial_dependency_fallback_case(compiler: Path) -> None:
             raise AssertionError("valid lower dependency sidecar was not reused")
         if "Import \"./base.cd\"" not in cached.stdout or "Let value = 7" not in cached.stdout:
             raise AssertionError("invalid middle sidecar did not fall back to its source body")
-        repeated = frontend_output(compiler, entry, cache=cache)
+        repeated = frontend_output(compiler, entry, cache=cache, fallback=True)
         if (cached.returncode, cached.stdout, cached.stderr) != (
             repeated.returncode,
             repeated.stdout,
@@ -828,6 +976,10 @@ def run_all(compiler: Path, vm: Path) -> list[CheckResult]:
         run_case(
             "module cache strict rejection matrix",
             lambda: run_strict_cache_matrix(compiler),
+        ),
+        run_case(
+            "module cache default strict/fallback policy",
+            lambda: run_cache_policy_matrix(compiler),
         ),
         run_case(
             "module cache complete import inventory",

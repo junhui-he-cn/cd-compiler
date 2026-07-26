@@ -795,7 +795,7 @@ Current implementation slices `M3A-GRAPH-001`, `M3A-GRAPH-002`,
 `M3A-INTERFACE-004`, `M3A-INTERFACE-005`, `M3A-INTERFACE-006`,
 `M3A-INTERFACE-007`, `M3A-INTERFACE-008`, `M3A-INTERFACE-009`,
 `M3A-INTERFACE-010`, `M3A-INTERFACE-011`, `M3A-INTERFACE-012`, and
-`M3A-INTERFACE-013`, and `M3A-INTERFACE-014` establish an
+`M3A-INTERFACE-013`, `M3A-INTERFACE-014`, and `M3A-INTERFACE-015` establish an
 explicit import-aware `FrontendSession` graph,
 carry a value snapshot of it on `Program`, and attach graph-backed source and
 canonical identity plus dependency edges to in-memory `ModuleInterface`
@@ -806,13 +806,15 @@ same-process importer consumption without importer-side dependency-body
 lookup, validate serialized public interfaces that can replace cached
 dependency bodies, and exercise deterministic source fallback and diagnostic
 parity for invalid sidecars across direct, namespace, re-export, search-path,
-and repeated-build cases, while exposing an opt-in strict cache policy with
-stable `Import` rejection reasons, and register that graph matrix as nine
-independently reported M0A inventory cases reachable from the canonical
+and repeated-build cases, while exposing a scoped strict/fallback cache
+policy with stable `Import` rejection reasons, and register that graph matrix
+as ten independently reported M0A inventory cases reachable from the canonical
 runner. These
 slices run beside the existing `ParsedUnit`/`ModuleStmt` path;
-fallback parsing for missing or invalid sidecars and final dependency-body
-removal remain later M3A/M3B slices. The current matrix also proves
+module-product emission retains source fallback for cold builds and repairs,
+while interface-only cache consumers are strict by default and can opt into
+fallback explicitly; final dependency-body removal remains a later M3A/M3B
+slice. The current matrix also proves
 file-aware parse/type diagnostics and partial reuse of lower valid sidecars.
 `M3A-INTERFACE-014` extends the evidence gate across 42 successful import
 graphs and 26 top-level import-related diagnostic entries, including cold
@@ -820,6 +822,9 @@ product parity, complete no-change reuse, malformed-sidecar fallback, strict
 rejection, and missing-sidecar diagnostic parity. The linkage-name allocator
 high-water mark is sidecar reconstruction metadata excluded from the public
 interface hash, and legacy sidecars without it remain readable.
+`M3A-INTERFACE-015` makes interface-only cache consumers strict by default,
+adds the explicit `--module-cache-fallback` compatibility switch, and keeps
+module-product cold-build and repair fallback unchanged.
 The decision records are
 `docs/decisions/m3a-module-graph.md`,
 `docs/decisions/m3a-module-graph.json`,
@@ -852,7 +857,9 @@ The decision records are
 `docs/decisions/m3a-interface-013.md` and
 `docs/decisions/m3a-interface-013.json`, plus
 `docs/decisions/m3a-interface-014.md` and
-`docs/decisions/m3a-interface-014.json`.
+`docs/decisions/m3a-interface-014.json`, plus
+`docs/decisions/m3a-interface-015.md` and
+`docs/decisions/m3a-interface-015.json`.
 
 **Deliverable:** evolve `FrontendSession` into an explicit graph with module
 identities deterministic across equivalent builds, dependency edges, source
@@ -869,20 +876,22 @@ imports, re-exports, search paths, and cycles, compare graph-derived visibility,
 types, diagnostics, and final artifacts with the current result. Preserve direct
 single-file and ordered direct-multi-file entry-program modes, including
 file-local diagnostic remapping. A valid `.cdi` sidecar may replace an imported
-dependency's parsed body after source/dependency/product validation; invalid or
-missing sidecars retain the source fallback by default, including when fallback
-parsing must report a file-aware syntax diagnostic. `--module-cache-strict`
-makes those same sidecar rejection classes stable `Import` diagnostics for
-callers that require complete cache coverage, while entry modules remain
-source-backed.
+dependency's parsed body after source/dependency/product validation. For
+interface-only consumers, invalid or missing sidecars are stable `Import`
+diagnostics by default; `--module-cache-fallback` explicitly restores source
+fallback, including when fallback parsing must report a file-aware syntax
+diagnostic. Module-product emission retains source fallback for cold builds and
+repairs, while `--module-cache-strict` remains available for callers that
+require complete cache coverage. Entry modules remain source-backed.
 
 **Quantitative gate:** every import/export/namespace/re-export/search-path/cycle
 capability named by the M0A inventory uses graph-derived module identities;
 after a dependency interface is produced, importer name/type analysis reads no
 dependency source or AST body; sidecar cache hits restore the same public shape,
 graph edges, linkage names, and snapshot-local IDs while omitting dependency
-statements; invalid sidecars fall back per module while preserving lower valid
-dependencies and file-aware diagnostics; the direct/namespace/re-export/search-
+statements; invalid sidecars follow the selected strict or explicit-fallback
+policy per module while preserving lower valid dependencies and file-aware
+diagnostics; the direct/namespace/re-export/search-
 path fallback matrix is output-stable across repeated malformed-cache builds;
 interface order and file-aware diagnostics are byte-for-byte stable across
 repeated equivalent builds; current
@@ -893,15 +902,15 @@ retain their baseline output.
 
 **Delete the old path when:** all imported-file and diagnostic-remapping checks
 use graph/interface semantics and name/type/visibility consumers have zero
-fallback reads of a dependency body for valid sidecars. The default source
-fallback for missing or invalid sidecars remains until the complete inventory
-gate; M3A-INTERFACE-011 defines an opt-in strict policy but does not remove that
-default safety path. M3A-INTERFACE-012 makes the six-case fallback, rebuild,
-and strict matrix independently visible in the M0A inventory. M3A-INTERFACE-013
-adds independent parse/type diagnostic and partial-dependency-reuse cases.
-M3A-INTERFACE-014 satisfies the complete imported inventory evidence gate;
-default fallback and dependency-body checking remain until the next reviewed
-cache-policy boundary.
+fallback reads of a dependency body for valid sidecars. M3A-INTERFACE-011
+defines the explicit strict policy, M3A-INTERFACE-012 makes the six-case
+fallback, rebuild, and strict matrix independently visible in the M0A inventory,
+and M3A-INTERFACE-013 adds independent parse/type diagnostic and
+partial-dependency-reuse cases. M3A-INTERFACE-014 satisfies the complete
+imported inventory evidence gate. M3A-INTERFACE-015 makes interface-only
+consumers strict by default while preserving an explicit fallback switch and
+module-product cold-build/repair fallback; dependency-body checking and final
+lowering removal remain separate M3A/M3B work.
 M3B exclusively owns removal of dependency-body lowering. Preserve the
 documented direct-input entry-program adapter; it is not a legacy import path.
 
@@ -1218,7 +1227,7 @@ the smallest proof of a broader milestone.
 
 The verification foundation, M0.5 decisions, and M1F semantic cutover are
 implemented, and M2A-FLOW-001 through M2A-FLOW-021 are implemented. M3A-
-INTERFACE-006 through M3A-INTERFACE-014 are complete, and the user-selected M3B
+INTERFACE-006 through M3A-INTERFACE-015 are complete, and the user-selected M3B
 artifact decision is resolved as independently validated per-module `.cdbc`
 products. `M3B-ARTIFACT-001` is complete: independent module lowering, module
 identity/dependency envelopes, strict Rust validation, and the
@@ -1226,18 +1235,18 @@ identity/dependency envelopes, strict Rust validation, and the
 link/load with reference rebasing and execution parity. `M3B-CACHE-001` now
 adds the opt-in module product cache, `.cdi` sidecars, public-interface
 invalidation, and rebuild measurement. Valid sidecars preload unchanged
-dependency interfaces; source fallback remains the default safety path for
-missing or invalid cache data. `M3A-INTERFACE-009` names the fallback
-conditions, `M3A-INTERFACE-010` covers the focused graph matrix, and
-`M3A-INTERFACE-011` resolves the opt-in strict rejection policy; the next
-material boundary is removing the default fallback only after the same
-conditions are extended across the complete inventory. M3A-INTERFACE-012 and
-M3A-INTERFACE-013 now record eight module-cache checks as separate canonical
+dependency interfaces; module-product emission retains source fallback for
+missing or invalid cache data, while interface-only consumers are strict by
+default with an explicit compatibility fallback. `M3A-INTERFACE-009` names the
+fallback conditions, `M3A-INTERFACE-010` covers the focused graph matrix, and
+`M3A-INTERFACE-011` resolves the strict rejection policy. M3A-INTERFACE-012 and
+`M3A-INTERFACE-013` now record eight module-cache checks as separate canonical
 case IDs, and M3A-INTERFACE-014 records the aggregate complete-import gate.
-M3A-INTERFACE-014 now satisfies the complete imported inventory gate;
-the next material boundary is a reviewed policy for removing default fallback
-and unchanged dependency-body semantic checking while preserving cold product
-build/repair behavior.
+M3A-INTERFACE-014 satisfies the complete imported inventory gate, and
+M3A-INTERFACE-015 records the default-strict interface-only policy and the
+module-product fallback boundary. The next material boundary is removing
+unchanged dependency-body semantic checking after a separate reviewed
+M3A/M3B decision, while preserving cold product build/repair behavior.
 `M4A-VALIDATION-001` is also complete: the existing `cdbc 0.1` family has an
 explicit linked/module compatibility matrix, centralized Rust pre-execution
 reference validation, fixed native capability rejection, and malformed/module
@@ -1272,15 +1281,16 @@ cases, including lexer/parser seeds, the existing parse-error family, and
 `.cdbc` mutations; the original canonical inventory reported 1,658 cases. The
 M4A-VALIDATION-001 extension uses manifest revision `m0c-2026-07-26-r2`, adds
 seven pre-execution bytecode-reference cases, and currently validates 95
-malformed cases in the 1,766-case inventory. The harness, minimizer selftest,
+malformed cases in the 1,768-case inventory. The harness, minimizer selftest,
 and observed baseline are recorded in
 `docs/verification/m0c-malformed-design.md` and
 `docs/verification/m0c-baseline.json`. M0D, M0.5A, M0.5B, M1F, and
 M2A-FLOW-001 through M2A-FLOW-021 are now implemented; M3A-INTERFACE-006
-through M3A-INTERFACE-013, M3B-ARTIFACT-001, and M3B-CACHE-001 are the completed
+through M3A-INTERFACE-015, M3B-ARTIFACT-001, and M3B-CACHE-001 are the completed
 module-boundary, module-product, and artifact-cache slices. The next gate is
-the reviewed condition for removing source fallback and unchanged
-dependency-body semantic checking.
+the reviewed condition for removing unchanged dependency-body semantic
+checking; module-product source fallback remains required for cold builds and
+repairs.
 
 The hard dependency gates are:
 

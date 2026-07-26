@@ -666,6 +666,7 @@ python3 tests/run_golden_tests.py ./build/compiler_design --update --update-miss
 ./build/compiler_design --emit-module-bytecode module-products examples/hello.cd
 ./build/compiler_design --module-interface-cache module-cache examples/hello.cd
 ./build/compiler_design --module-interface-cache module-cache --module-cache-strict examples/hello.cd
+./build/compiler_design --module-interface-cache module-cache --module-cache-fallback examples/hello.cd
 ```
 
 Multiple input files may be provided. They are read in command-line order and compiled as one combined program:
@@ -699,7 +700,7 @@ keys, paired `.cdi` public-interface sidecars, and reports every reuse or
 rebuild reason. A later invocation can preload valid dependency sidecars with
 `--module-interface-cache`; `--module-cache` enables that directory
 automatically. Source-hash, dependency-sidecar, interface-hash, and product
-checks must all succeed, otherwise the dependency is parsed from source:
+checks must all succeed before a dependency sidecar is trusted:
 
 ```sh
 ./build/compiler_design --emit-module-bytecode module-products \
@@ -707,9 +708,15 @@ checks must all succeed, otherwise the dependency is parsed from source:
   --module-rebuild-report rebuild.json main.cd
 ```
 
-The default cache policy falls back to source for a missing or invalid imported
-sidecar. Add `--module-cache-strict` with either cache option to reject those
-inputs with a stable `Import` diagnostic instead. Strict mode still parses
-entry modules from source and requires an explicit cache directory.
+Module-product emission keeps source fallback for a missing or invalid imported
+sidecar so a cold build or repair can recreate products. Add
+`--module-cache-strict` to that mode when complete cache coverage is required.
+An interface-only `--module-interface-cache` consumer is strict by default and
+rejects those inputs with a stable `Import` diagnostic. Add
+`--module-cache-fallback` to explicitly restore source fallback for that
+consumer. The strict and fallback options are mutually exclusive;
+`--module-cache-fallback` is only valid for interface-only cache consumers.
+Strict mode still parses entry modules from source and requires an explicit
+cache directory.
 
 If no file is provided, source is read from stdin. Imported-file and direct multi-file front-end diagnostics report original file paths with file-local line and column; stdin diagnostics remain pathless.

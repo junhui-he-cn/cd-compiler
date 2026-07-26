@@ -113,9 +113,12 @@ preloaded only when its sidecar identity, canonical path, source hash, recursive
 dependency sidecars/interface hashes, and paired cached `.cdbc` product all
 match. The resulting module node keeps source bytes for diagnostics but has no
 parsed dependency body; its preloaded interface supplies semantic import
-visibility. A missing, malformed, stale, or unpaired sidecar falls back to the
-normal source parser. `--module-cache` uses the same directory and enables this
-preload path while emitting module products.
+visibility. An interface-only consumer rejects a missing, malformed, stale, or
+unpaired sidecar by default with an `Import` diagnostic. Pass
+`--module-cache-fallback` to opt back into the normal source parser for those
+cases. `--module-cache` uses the same directory while emitting module products;
+that product-building path retains source fallback by default and can opt into
+rejection with `--module-cache-strict`.
 
 The cache manifest is separate from VM artifacts and uses `cdbc-cache 0.2`; its
 records include the relative `.cdi` sidecar path. The `.cdi` sidecar is not a

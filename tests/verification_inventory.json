@@ -28127,6 +28127,34 @@
       "expected_files": []
     },
     {
+      "case_id": "module_cache.default_strict_policy",
+      "runner": "module_cache",
+      "result_name": "module cache default strict/fallback policy",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "strict-cache",
+        "interface-fallback",
+        "cli-policy",
+        "module-product-fallback"
+      ],
+      "backend": "mixed",
+      "expected_result_kind": "cache-policy-and-repair",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface",
+        "import_diagnostic",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "module_cache.fallback.diagnostics",
       "runner": "module_cache",
       "result_name": "module cache fallback/diagnostics",

@@ -27,7 +27,7 @@ void printUsage(const char* executable)
     std::cerr << "Usage: " << executable << " [--tokens] [--ir] [--bytecode] [--module-interface] [-I dir] [--import-path dir] [file ...]\n"
               << "       " << executable << " [--emit-bytecode output.cdbc] [-I dir] [--import-path dir] file [...]\n"
               << "       " << executable << " [--emit-module-bytecode output-directory] [--module-cache cache-directory] [--module-cache-strict] [--module-rebuild-report report.json] [-I dir] [--import-path dir] file [...]\n"
-              << "       " << executable << " [--module-interface-cache cache-directory] [--module-cache-strict] [-I dir] [--import-path dir] file [...]\n"
+              << "       " << executable << " [--module-interface-cache cache-directory] [--module-cache-strict | --module-cache-fallback] [-I dir] [--import-path dir] file [...]\n"
               << "If no file is provided, source is read from stdin except for bytecode emission modes, which require at least one file.\n"
               << "Import search paths are used for non-explicit string imports after the importing file's directory.\n";
 }
@@ -407,6 +407,7 @@ int main(int argc, char** argv)
     std::optional<std::string> moduleInterfaceCachePath;
     std::optional<std::string> moduleRebuildReportPath;
     bool moduleCacheStrict = false;
+    bool moduleCacheFallback = false;
     std::vector<std::string> inputPaths;
     std::vector<std::string> importSearchPaths;
 
@@ -455,6 +456,8 @@ int main(int argc, char** argv)
             moduleInterfaceCachePath = argv[++i];
         } else if (arg == "--module-cache-strict") {
             moduleCacheStrict = true;
+        } else if (arg == "--module-cache-fallback") {
+            moduleCacheFallback = true;
         } else if (arg == "--module-rebuild-report") {
             if (i + 1 >= argc) {
                 printUsage(argv[0]);
@@ -469,13 +472,28 @@ int main(int argc, char** argv)
         }
     }
 
+    if (moduleCacheStrict && moduleCacheFallback) {
+        std::cerr << "--module-cache-strict and --module-cache-fallback are mutually exclusive\n";
+        return 64;
+    }
+
+    if (moduleCacheFallback && !moduleInterfaceCachePath) {
+        std::cerr << "--module-cache-fallback requires --module-interface-cache\n";
+        return 64;
+    }
+
+    if (moduleCacheFallback && (moduleCachePath || emitModuleBytecodePath)) {
+        std::cerr << "--module-cache-fallback is only valid for interface-only cache consumers\n";
+        return 64;
+    }
+
     if (moduleCacheStrict && !moduleCachePath && !moduleInterfaceCachePath) {
         std::cerr << "--module-cache-strict requires --module-cache or --module-interface-cache\n";
         return 64;
     }
 
     if (emitBytecodePath || emitModuleBytecodePath || moduleCachePath || moduleInterfaceCachePath
-        || moduleRebuildReportPath || moduleCacheStrict) {
+        || moduleRebuildReportPath || moduleCacheStrict || moduleCacheFallback) {
         if (inputPaths.empty()
             || showTokens
             || showIr
@@ -494,6 +512,13 @@ int main(int argc, char** argv)
             != std::filesystem::path(*moduleInterfaceCachePath).lexically_normal()) {
         std::cerr << "--module-cache and --module-interface-cache must use the same directory\n";
         return 64;
+    }
+
+    const bool interfaceOnlyCacheConsumer = moduleInterfaceCachePath
+        && !emitModuleBytecodePath
+        && !moduleCachePath;
+    if (interfaceOnlyCacheConsumer && !moduleCacheFallback) {
+        moduleCacheStrict = true;
     }
 
     FrontendSession frontend;

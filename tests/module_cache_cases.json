@@ -3,6 +3,33 @@
   "inventory_revision": "m0d-2026-07-22-r1",
   "cases": [
     {
+      "case_id": "module_cache.default_strict_policy",
+      "result_name": "module cache default strict/fallback policy",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "strict-cache",
+        "interface-fallback",
+        "cli-policy",
+        "module-product-fallback"
+      ],
+      "backend": "mixed",
+      "expected_result_kind": "cache-policy-and-repair",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface",
+        "import_diagnostic",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "module_cache.fallback.direct",
       "result_name": "module cache fallback/direct import",
       "stage": "module-cache",
