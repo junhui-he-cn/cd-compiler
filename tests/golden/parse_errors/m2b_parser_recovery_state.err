@@ -1,0 +1,3 @@
+Parse error at 2:9: expected expression
+  if (1 + ) {
+          ^

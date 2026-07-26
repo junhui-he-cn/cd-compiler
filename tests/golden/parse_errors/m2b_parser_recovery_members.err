@@ -1,0 +1,6 @@
+Parse error at 3:3: expected struct field name, found Colon `:`
+    : number,
+    ^
+Parse error at 8:3: expected enum variant name, found Comma `,`
+    ,
+    ^

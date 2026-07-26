@@ -70,8 +70,8 @@ mod tests {
                     },
                 ],
                 locations: vec![
-                    Some(DebugLocation { source: 0, line: 2, column: 1 }),
-                    Some(DebugLocation { source: 0, line: 2, column: 1 }),
+                    Some(DebugLocation { source: 0, line: 2, column: 1, range: None }),
+                    Some(DebugLocation { source: 0, line: 2, column: 1, range: None }),
                 ],
             },
             functions: vec![Function {
@@ -87,10 +87,10 @@ mod tests {
                     Instruction::Return { value: 2 },
                 ],
                 locations: vec![
-                    Some(DebugLocation { source: 0, line: 1, column: 21 }),
-                    Some(DebugLocation { source: 0, line: 1, column: 25 }),
-                    Some(DebugLocation { source: 0, line: 1, column: 21 }),
-                    Some(DebugLocation { source: 0, line: 1, column: 14 }),
+                    Some(DebugLocation { source: 0, line: 1, column: 21, range: None }),
+                    Some(DebugLocation { source: 0, line: 1, column: 25, range: None }),
+                    Some(DebugLocation { source: 0, line: 1, column: 21, range: None }),
+                    Some(DebugLocation { source: 0, line: 1, column: 14, range: None }),
                 ],
             }],
             debug_sources: vec![source],
@@ -1213,8 +1213,8 @@ mod tests {
                     },
                 ],
                 locations: vec![
-                    Some(DebugLocation { source: 0, line: 1, column: 7 }),
-                    Some(DebugLocation { source: 0, line: 1, column: 1 }),
+                    Some(DebugLocation { source: 0, line: 1, column: 7, range: None }),
+                    Some(DebugLocation { source: 0, line: 1, column: 1, range: None }),
                 ],
             },
             functions: Vec::new(),
@@ -1238,7 +1238,7 @@ mod tests {
     #[test]
     fn invalid_debug_source_lookup_does_not_panic() {
         let mut program = debug_failure_program();
-        program.functions[0].locations[2] = Some(DebugLocation { source: 99, line: 1, column: 1 });
+        program.functions[0].locations[2] = Some(DebugLocation { source: 99, line: 1, column: 1, range: None });
         let error = VM::new(&program).run().unwrap_err();
         assert!(error.to_string().starts_with("Runtime error: "));
     }

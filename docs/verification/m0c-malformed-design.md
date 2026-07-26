@@ -53,23 +53,33 @@ generated automatically during a normal verification run.
 
 The original M0C baseline is bound to inventory revision `m0c-2026-07-22-r1` and
 reference commit `30ae329`. The current M4A extension is bound to malformed
-manifest revision `m0c-2026-07-26-r2` and the current inventory revision
+manifest revision `m0c-2026-07-26-r2`; M2B-PARSE-001 extends it with manifest
+revision `m0c-2026-07-26-r3`, and M2B-LEX-001 extends it with manifest revision
+`m0c-2026-07-26-r4`; M2B-PARSE-002 extends it with manifest revision
+`m0c-2026-07-26-r5`; M2B-PARSE-003 extends it with manifest revision
+`m0c-2026-07-26-r6`. All use inventory revision
 `m0d-2026-07-22-r1`:
 
 1. the original corpus expands to 88 unique case IDs; the M4A extension expands
-   the current corpus to exactly 95 unique case IDs in sorted order;
+   the corpus to 95 cases, M2B-PARSE-001 expands it to 97 cases,
+   M2B-LEX-001 expands it to 98 cases, M2B-PARSE-002 expands it to 100
+   cases, and M2B-PARSE-003 expands the current corpus to exactly 102 unique
+   case IDs in sorted order;
 2. all 88 cases remain within the declared input and process budgets;
 3. repeated observations are identical for all cases;
 4. malformed compiler inputs are rejected without stdout, and all malformed
    `.cdbc` inputs are rejected by Rust `dump` before execution;
-5. the original malformed report records `88 passed`; the current M4A report
-   records `95 passed`, `0 failed`, `0 timeouts`,
+5. the original malformed report records `88 passed`; the M4A report records
+   `95 passed`, the M2B-PARSE-001 report records `97 passed`, the M2B-LEX-001
+   report records `98 passed`, the M2B-PARSE-002 report records `100 passed`,
+   and the current M2B-PARSE-003 report records `102 passed`,
+   `0 failed`, `0 timeouts`,
    `0 crashes`, and `0 non_deterministic` cases;
 6. the original M0C CTest baseline reported 18/18; the current tree reports
-   25/25, including the corpus, minimizer selftest, and module debug metadata
-   conformance test; and
+   26/26, including the corpus, minimizer selftest, module debug metadata
+   conformance, and lexer recovery tests; and
 7. the original canonical inventory reported `1,658 passed`; the current
-   inventory reports `1,766 passed`, `0 failed`, and zero untracked results.
+   inventory reports `1,781 passed`, `0 failed`, and zero untracked results.
 
 The observed values and legacy command projection are recorded in
 `docs/verification/m0c-baseline.json`.

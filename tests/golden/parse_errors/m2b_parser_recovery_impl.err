@@ -1,0 +1,3 @@
+Parse error at 3:12: expected parameter name, found LeftBrace `{`
+    fun bad( { if true { print 1; } }
+             ^

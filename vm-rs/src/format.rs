@@ -1,5 +1,5 @@
 use crate::bytecode::{
-    Constant, DebugLocation, DebugSource, Function, FunctionBody, Instruction, Program,
+    Constant, DebugLocation, DebugRange, DebugSource, Function, FunctionBody, Instruction, Program,
 };
 use std::fmt;
 
@@ -283,7 +283,7 @@ impl<'a> Parser<'a> {
     fn parse_functions(&mut self) -> Result<Vec<Function>, ParseError> {
         let mut functions = Vec::new();
         while let Some((_, line)) = self.peek() {
-            if line == "debug_sources:" || line == "debug_locations:" {
+            if line == "debug_sources:" || line == "debug_locations:" || line == "debug_ranges:" {
                 break;
             }
             let (line_number, line) = self.advance().expect("checked end");
@@ -342,6 +342,7 @@ impl<'a> Parser<'a> {
             if line.starts_with("function ")
                 || line == "debug_sources:"
                 || line == "debug_locations:"
+                || line == "debug_ranges:"
             {
                 break;
             }
@@ -361,7 +362,7 @@ impl<'a> Parser<'a> {
         self.advance();
         let mut sources = Vec::new();
         while let Some((line_number, line)) = self.peek() {
-            if line == "debug_locations:" {
+            if line == "debug_locations:" || line == "debug_ranges:" {
                 break;
             }
             self.advance();
@@ -395,10 +396,13 @@ impl<'a> Parser<'a> {
             let text = parse_string_full(line_number, rest)?;
             sources.push(DebugSource { module, path, text });
         }
-        if self.peek().is_some() && self.peek().unwrap().1 != "debug_locations:" {
+        if self.peek().is_some()
+            && self.peek().unwrap().1 != "debug_locations:"
+            && self.peek().unwrap().1 != "debug_ranges:"
+        {
             return Err(ParseError {
                 line: line_number,
-                message: "expected debug_locations section".to_string(),
+                message: "expected debug_locations or debug_ranges section".to_string(),
             });
         }
         Ok(sources)
@@ -416,6 +420,9 @@ impl<'a> Parser<'a> {
         }
         self.advance();
         while let Some((line_number, line)) = self.peek() {
+            if line == "debug_ranges:" {
+                break;
+            }
             self.advance();
             let (left, location_text) = split_once(line_number, line, " = ")?;
             let (section, instruction_text) = split_location_target(line_number, left)?;
@@ -453,6 +460,68 @@ impl<'a> Parser<'a> {
                 });
             }
             *slot = Some(location);
+        }
+        Ok(())
+    }
+
+    fn parse_debug_ranges(&mut self, program: &mut Program) -> Result<(), ParseError> {
+        let Some((_, line)) = self.peek() else {
+            return Ok(());
+        };
+        if line != "debug_ranges:" {
+            return Ok(());
+        }
+        self.advance();
+        while let Some((line_number, line)) = self.peek() {
+            self.advance();
+            let (left, range_text) = split_once(line_number, line, " = ")?;
+            let (section, instruction_text) = split_location_target(line_number, left)?;
+            let instruction = parse_usize(line_number, instruction_text, "instruction index")?;
+            let range = parse_debug_range(line_number, range_text)?;
+            if range.source >= program.debug_sources.len() {
+                return Err(ParseError {
+                    line: line_number,
+                    message: "debug range source index out of range".to_string(),
+                });
+            }
+
+            let locations = match section {
+                DebugSection::Main => &mut program.main.locations,
+                DebugSection::Function(index) => {
+                    let Some(function) = program.functions.get_mut(index) else {
+                        return Err(ParseError {
+                            line: line_number,
+                            message: "debug range function index out of range".to_string(),
+                        });
+                    };
+                    &mut function.locations
+                }
+            };
+            let Some(slot) = locations.get_mut(instruction) else {
+                return Err(ParseError {
+                    line: line_number,
+                    message: "debug range instruction index out of range".to_string(),
+                });
+            };
+            let Some(location) = slot.as_mut() else {
+                return Err(ParseError {
+                    line: line_number,
+                    message: "debug range requires a matching debug location".to_string(),
+                });
+            };
+            if location.range.is_some() {
+                return Err(ParseError {
+                    line: line_number,
+                    message: "duplicate debug range".to_string(),
+                });
+            }
+            if location.source != range.source {
+                return Err(ParseError {
+                    line: line_number,
+                    message: "debug range source does not match debug location".to_string(),
+                });
+            }
+            location.range = Some(range);
         }
         Ok(())
     }
@@ -499,7 +568,28 @@ fn parse_debug_location(line: usize, text: &str) -> Result<DebugLocation, ParseE
         source,
         line: location_line,
         column,
+        range: None,
     })
+}
+
+fn parse_debug_range(line: usize, text: &str) -> Result<DebugRange, ParseError> {
+    let parts = text.split(':').collect::<Vec<_>>();
+    if parts.len() != 3 {
+        return Err(ParseError {
+            line,
+            message: "expected source:start:end range".to_string(),
+        });
+    }
+    let source = parse_prefixed(line, parts[0], 's', "source reference")?;
+    let start = parse_usize(line, parts[1], "range start")?;
+    let end = parse_usize(line, parts[2], "range end")?;
+    if start > end {
+        return Err(ParseError {
+            line,
+            message: "debug range start must not exceed end".to_string(),
+        });
+    }
+    Ok(DebugRange { source, start, end })
 }
 
 fn parse_program_body(parser: &mut Parser<'_>) -> Result<Program, ParseError> {
@@ -516,6 +606,7 @@ fn parse_program_body(parser: &mut Parser<'_>) -> Result<Program, ParseError> {
         debug_sources,
     };
     parser.parse_debug_locations(&mut program)?;
+    parser.parse_debug_ranges(&mut program)?;
     Ok(program)
 }
 
@@ -719,6 +810,50 @@ fn validate_body(
                 instructions.len()
             ),
         ));
+    }
+    for (instruction_index, location) in locations.iter().enumerate() {
+        let Some(location) = location else {
+            continue;
+        };
+        let Some(range) = &location.range else {
+            continue;
+        };
+        let Some(source) = program.debug_sources.get(range.source) else {
+            return Err(validation_error(
+                line,
+                format!(
+                    "{} instruction {} debug range source index out of range",
+                    context, instruction_index
+                ),
+            ));
+        };
+        if range.start > range.end {
+            return Err(validation_error(
+                line,
+                format!(
+                    "{} instruction {} debug range start exceeds end",
+                    context, instruction_index
+                ),
+            ));
+        }
+        if range.end > source.text.len() {
+            return Err(validation_error(
+                line,
+                format!(
+                    "{} instruction {} debug range exceeds source length",
+                    context, instruction_index
+                ),
+            ));
+        }
+        if range.source != location.source {
+            return Err(validation_error(
+                line,
+                format!(
+                    "{} instruction {} debug range source does not match location",
+                    context, instruction_index
+                ),
+            ));
+        }
     }
     for (instruction_index, instruction) in instructions.iter().enumerate() {
         validate_instruction(
@@ -1156,12 +1291,52 @@ fn format_program_sections(out: &mut String, program: &Program) {
             }
         }
     }
+
+    let has_debug_ranges = program.main.locations.iter().any(|location| {
+        location
+            .as_ref()
+            .and_then(|location| location.range.as_ref())
+            .is_some()
+    }) || program.functions.iter().any(|function| {
+        function.locations.iter().any(|location| {
+            location
+                .as_ref()
+                .and_then(|location| location.range.as_ref())
+                .is_some()
+        })
+    });
+    if has_debug_ranges {
+        out.push_str("\ndebug_ranges:\n");
+        for (index, location) in program.main.locations.iter().enumerate() {
+            if let Some(range) = location.as_ref().and_then(|location| location.range.as_ref()) {
+                out.push_str(&format_debug_range("main", index, range));
+            }
+        }
+        for (function_index, function) in program.functions.iter().enumerate() {
+            for (instruction, location) in function.locations.iter().enumerate() {
+                if let Some(range) = location.as_ref().and_then(|location| location.range.as_ref()) {
+                    out.push_str(&format_debug_range(
+                        &format!("function f{}", function_index),
+                        instruction,
+                        range,
+                    ));
+                }
+            }
+        }
+    }
 }
 
 fn format_debug_location(section: &str, instruction: usize, location: &DebugLocation) -> String {
     format!(
         "  {} {} = s{}:{}:{}\n",
         section, instruction, location.source, location.line, location.column
+    )
+}
+
+fn format_debug_range(section: &str, instruction: usize, range: &DebugRange) -> String {
+    format!(
+        "  {} {} = s{}:{}:{}\n",
+        section, instruction, range.source, range.start, range.end
     )
 }
 
@@ -2003,6 +2178,9 @@ debug_sources:
 
 debug_locations:
   main 2 = s0:1:7
+
+debug_ranges:
+  main 2 = s0:6:11
 "#;
         let program = parse_program(source).expect("valid debug artifact");
         assert_eq!(program.debug_sources[0].module, None);
@@ -2010,6 +2188,41 @@ debug_locations:
         assert_eq!(program.debug_sources[0].text, "print 1 / 0;\n");
         assert_eq!(program.main.locations[2].as_ref().unwrap().line, 1);
         assert_eq!(program.main.locations[2].as_ref().unwrap().column, 7);
+        assert_eq!(
+            program.main.locations[2]
+                .as_ref()
+                .and_then(|location| location.range.as_ref()),
+            Some(&DebugRange {
+                source: 0,
+                start: 6,
+                end: 11,
+            })
+        );
+        assert_eq!(format_program(&program), source);
+    }
+
+    #[test]
+    fn rejects_debug_range_outside_source() {
+        let source = r#"cdbc 0.1
+
+constants:
+
+names:
+
+main registers=1:
+  print r0
+
+debug_sources:
+  s0 path="demo.cd" text="print 1;\n"
+
+debug_locations:
+  main 0 = s0:1:1
+
+debug_ranges:
+  main 0 = s0:0:999
+"#;
+        let error = parse_program(source).expect_err("out-of-bounds debug range should fail");
+        assert!(error.message.contains("debug range exceeds source length"));
     }
 
     #[test]

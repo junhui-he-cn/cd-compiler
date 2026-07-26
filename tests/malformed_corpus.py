@@ -94,8 +94,10 @@ def mutate_cdbc(source: str, mutation: str) -> str:
         lines = source.splitlines(keepends=True)
         return "cdbc 9.9\n" + "".join(lines[1:])
     if mutation == "truncate":
-        cut = max(1, len(source) // 4)
-        return source[:cut]
+        main_header = re.search(r"(?m)^main registers=", source)
+        if main_header is not None:
+            return source[: main_header.end()]
+        return source[: max(1, len(source) // 4)]
     if mutation == "unknown_opcode":
         match = re.search(r"(?m)^(\s*(?:r\d+ = )?)print\b", source)
         if match is None:
@@ -128,14 +130,14 @@ def mutate_cdbc(source: str, mutation: str) -> str:
         return source[: match.start()] + "make_function f999" + source[match.end() :]
     if mutation == "invalid_name":
         insertion = "  store_var n999, r0\n"
-        for marker in ("\nfunction ", "\ndebug_sources:", "\ndebug_locations:"):
+        for marker in ("\nfunction ", "\ndebug_sources:", "\ndebug_locations:", "\ndebug_ranges:"):
             position = source.find(marker)
             if position != -1:
                 return source[:position] + "\n" + insertion + source[position:]
         return source.rstrip("\n") + "\n" + insertion
     if mutation == "invalid_jump":
         insertion = "  jump 999\n"
-        for marker in ("\nfunction ", "\ndebug_sources:", "\ndebug_locations:"):
+        for marker in ("\nfunction ", "\ndebug_sources:", "\ndebug_locations:", "\ndebug_ranges:"):
             position = source.find(marker)
             if position != -1:
                 return source[:position] + "\n" + insertion + source[position:]

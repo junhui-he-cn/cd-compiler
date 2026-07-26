@@ -155,15 +155,20 @@ debug_sources:
 debug_locations:
   main 0 = s0:1:7
   main 1 = s0:1:1
+
+debug_ranges:
+  main 0 = s0:0:7
+  main 1 = s0:0:8
 ```
 
 The section names and reference prefixes are part of the canonical text format. Function `param` lines, when present, appear before instructions in a function section.
 
 ## Debug metadata
 
-`debug_sources` and `debug_locations` are optional additive sections. The C++
-compiler emits them for source-backed instructions, and the Rust VM uses them
-to report runtime source locations, source lines, carets, and call stacks. Each
+`debug_sources`, `debug_locations`, and `debug_ranges` are optional additive
+sections. The C++ compiler emits them for source-backed instructions, and the
+Rust VM uses them to report runtime source locations, source lines, carets, and
+call stacks. Each
 `debug_sources` entry is ordered by zero-based `sN` index and embeds the
 display path plus original source text. Import-aware source entries may add a
 stable canonical module identity before `path`:
@@ -189,7 +194,12 @@ through module linking.
 section. Locations are sparse, but every referenced source, function, and
 instruction must exist. Source, function, and instruction references are
 zero-based; line and column values are one-based and must be positive. Duplicate
-mappings and out-of-range references are Rust parser errors. A metadata-free
+`debug_locations` mappings and out-of-range references are Rust parser errors.
+`debug_ranges` uses the same target syntax and maps an instruction to one
+source-local half-open byte interval `[start, end)`, encoded as `sN:start:end`.
+Each range must have a matching debug location, use the same source index, and
+fit within the UTF-8 source text. Duplicate mappings, reversed ranges, and
+out-of-range references are Rust parser/validation errors. A metadata-free
 `cdbc 0.1` artifact remains valid and executes with
 legacy one-line runtime errors.
 

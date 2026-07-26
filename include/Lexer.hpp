@@ -1,9 +1,22 @@
 #pragma once
 
+#include "Diagnostic.hpp"
 #include "Token.hpp"
 
+#include <exception>
 #include <string>
 #include <vector>
+
+class LexErrorList final : public std::exception {
+public:
+    explicit LexErrorList(std::vector<DiagnosticError> errors);
+
+    const std::vector<DiagnosticError>& errors() const;
+    const char* what() const noexcept override;
+
+private:
+    std::vector<DiagnosticError> errors_;
+};
 
 class Lexer {
 public:
@@ -25,12 +38,15 @@ private:
 
     void scanToken();
     void addToken(TokenType type);
+    void recordError(DiagnosticError error);
+    void throwIfErrors();
     void stringLiteral();
     void numberLiteral();
     void identifier();
 
     std::string source_;
     std::vector<Token> tokens_;
+    std::vector<DiagnosticError> errors_;
     // start_ marks the beginning of the lexeme currently being scanned;
     // current_ points to the next character to consume.
     std::size_t start_ = 0;

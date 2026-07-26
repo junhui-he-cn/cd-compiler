@@ -4000,6 +4000,26 @@
       "expected_files": []
     },
     {
+      "case_id": "ctest.lexer_recovery",
+      "runner": "ctest",
+      "result_name": "lexer_recovery",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "lexer_recovery"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "ctest.malformed_harness_selftest",
       "runner": "ctest",
       "result_name": "malformed_harness_selftest",
@@ -5625,6 +5645,90 @@
         "tests/golden/parse_errors/logical_or_missing_rhs.cd",
         "tests/golden/parse_errors/logical_or_missing_rhs.err",
         "tests/golden/parse_errors/logical_or_missing_rhs.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
+      "case_id": "golden.parse_errors.m2b_parser_recovery_impl",
+      "runner": "golden",
+      "result_name": "parse_errors/m2b_parser_recovery_impl default(ast)",
+      "stage": "parse-error",
+      "capability_tags": [
+        "golden",
+        "parse_errors",
+        "fixture:m2b_parser_recovery_impl"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/m2b_parser_recovery_impl.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/m2b_parser_recovery_impl.cd",
+        "tests/golden/parse_errors/m2b_parser_recovery_impl.err",
+        "tests/golden/parse_errors/m2b_parser_recovery_impl.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
+      "case_id": "golden.parse_errors.m2b_parser_recovery_members",
+      "runner": "golden",
+      "result_name": "parse_errors/m2b_parser_recovery_members default(ast)",
+      "stage": "parse-error",
+      "capability_tags": [
+        "golden",
+        "parse_errors",
+        "fixture:m2b_parser_recovery_members"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/m2b_parser_recovery_members.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/m2b_parser_recovery_members.cd",
+        "tests/golden/parse_errors/m2b_parser_recovery_members.err",
+        "tests/golden/parse_errors/m2b_parser_recovery_members.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
+      "case_id": "golden.parse_errors.m2b_parser_recovery_state",
+      "runner": "golden",
+      "result_name": "parse_errors/m2b_parser_recovery_state default(ast)",
+      "stage": "parse-error",
+      "capability_tags": [
+        "golden",
+        "parse_errors",
+        "fixture:m2b_parser_recovery_state"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/m2b_parser_recovery_state.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/m2b_parser_recovery_state.cd",
+        "tests/golden/parse_errors/m2b_parser_recovery_state.err",
+        "tests/golden/parse_errors/m2b_parser_recovery_state.exit"
       ],
       "fixture": "tests/golden/parse_errors"
     },
@@ -26070,6 +26174,29 @@
       "fixture": "tests/bytecode_artifacts/runtime_diagnostics"
     },
     {
+      "case_id": "malformed.lexer.multiple_errors",
+      "runner": "malformed",
+      "result_name": "malformed.lexer.multiple_errors",
+      "stage": "lexical",
+      "capability_tags": [
+        "malformed",
+        "lexer",
+        "diagnostic-recovery",
+        "multiple-errors"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "tokens"
+      ],
+      "terminal_boundary": "tokens",
+      "sources": [
+        "tests/malformed_cases.json"
+      ],
+      "expected_files": [],
+      "fixture": "tests/malformed_cases.json"
+    },
+    {
       "case_id": "malformed.lexer.unexpected_character",
       "runner": "malformed",
       "result_name": "malformed.lexer.unexpected_character",
@@ -27390,6 +27517,93 @@
       "fixture": "tests/golden/parse_errors"
     },
     {
+      "case_id": "malformed.parse_error.m2b_parser_recovery_impl",
+      "runner": "malformed",
+      "result_name": "malformed.parse_error.m2b_parser_recovery_impl",
+      "stage": "diagnostic-recovery",
+      "capability_tags": [
+        "malformed",
+        "parser",
+        "diagnostic-recovery",
+        "golden-corpus"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/m2b_parser_recovery_impl.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/m2b_parser_recovery_impl.cd",
+        "tests/golden/parse_errors/m2b_parser_recovery_impl.err",
+        "tests/golden/parse_errors/m2b_parser_recovery_impl.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
+      "case_id": "malformed.parse_error.m2b_parser_recovery_members",
+      "runner": "malformed",
+      "result_name": "malformed.parse_error.m2b_parser_recovery_members",
+      "stage": "diagnostic-recovery",
+      "capability_tags": [
+        "malformed",
+        "parser",
+        "diagnostic-recovery",
+        "golden-corpus"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/m2b_parser_recovery_members.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/m2b_parser_recovery_members.cd",
+        "tests/golden/parse_errors/m2b_parser_recovery_members.err",
+        "tests/golden/parse_errors/m2b_parser_recovery_members.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
+      "case_id": "malformed.parse_error.m2b_parser_recovery_state",
+      "runner": "malformed",
+      "result_name": "malformed.parse_error.m2b_parser_recovery_state",
+      "stage": "diagnostic-recovery",
+      "capability_tags": [
+        "malformed",
+        "parser",
+        "diagnostic-recovery",
+        "golden-corpus"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/m2b_parser_recovery_state.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/m2b_parser_recovery_state.cd",
+        "tests/golden/parse_errors/m2b_parser_recovery_state.err",
+        "tests/golden/parse_errors/m2b_parser_recovery_state.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
       "case_id": "malformed.parse_error.map_missing_colon",
       "runner": "malformed",
       "result_name": "malformed.parse_error.map_missing_colon",
@@ -28028,6 +28242,31 @@
       "fixture": "tests/golden/parse_errors"
     },
     {
+      "case_id": "malformed.parser.declaration_member_recovery",
+      "runner": "malformed",
+      "result_name": "malformed.parser.declaration_member_recovery",
+      "stage": "diagnostic-recovery",
+      "capability_tags": [
+        "malformed",
+        "parser",
+        "diagnostic-recovery",
+        "declaration-member-recovery"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/malformed_cases.json"
+      ],
+      "expected_files": [],
+      "fixture": "tests/malformed_cases.json"
+    },
+    {
       "case_id": "malformed.parser.empty_initializer",
       "runner": "malformed",
       "result_name": "malformed.parser.empty_initializer",
@@ -28036,6 +28275,32 @@
         "malformed",
         "parser",
         "initializer-recovery"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/malformed_cases.json"
+      ],
+      "expected_files": [],
+      "fixture": "tests/malformed_cases.json"
+    },
+    {
+      "case_id": "malformed.parser.impl_method_recovery",
+      "runner": "malformed",
+      "result_name": "malformed.parser.impl_method_recovery",
+      "stage": "diagnostic-recovery",
+      "capability_tags": [
+        "malformed",
+        "parser",
+        "diagnostic-recovery",
+        "impl-method-recovery",
+        "state-restoration"
       ],
       "backend": "cpp",
       "expected_result_kind": "reject",
@@ -28108,6 +28373,31 @@
         "malformed",
         "parser",
         "diagnostic-recovery"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/malformed_cases.json"
+      ],
+      "expected_files": [],
+      "fixture": "tests/malformed_cases.json"
+    },
+    {
+      "case_id": "malformed.parser.recovery_state",
+      "runner": "malformed",
+      "result_name": "malformed.parser.recovery_state",
+      "stage": "diagnostic-recovery",
+      "capability_tags": [
+        "malformed",
+        "parser",
+        "diagnostic-recovery",
+        "state-restoration"
       ],
       "backend": "cpp",
       "expected_result_kind": "reject",

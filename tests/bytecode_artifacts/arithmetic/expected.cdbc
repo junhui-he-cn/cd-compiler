@@ -35,3 +35,15 @@ debug_locations:
   main 7 = s0:2:12
   main 8 = s0:2:7
   main 9 = s0:2:1
+
+debug_ranges:
+  main 0 = s0:6:7
+  main 1 = s0:10:11
+  main 2 = s0:14:15
+  main 3 = s0:10:15
+  main 4 = s0:6:15
+  main 5 = s0:6:15
+  main 6 = s0:23:24
+  main 7 = s0:28:29
+  main 8 = s0:23:29
+  main 9 = s0:23:29

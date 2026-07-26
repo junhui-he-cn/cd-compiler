@@ -62,6 +62,24 @@ void IRCompiler::setCurrentSpan(std::optional<SourceSpan> span)
     ir_.setCurrentSpan(currentSpan_);
 }
 
+std::optional<SourceSpan> IRCompiler::debugSpan(
+    const std::optional<SourceRange>& range,
+    const std::optional<SourceSpan>& fallback) const
+{
+    if (range && isValidSourceRange(*range, ir_.sources())) {
+        const SourcePosition start = sourcePositionAt(ir_.sources(), *range);
+        SourceSpan result = fallback.value_or(SourceSpan{
+            range->source.value,
+            start.line,
+            start.column,
+        });
+        result.source = range->source.value;
+        result.range = SourceSpanRange{range->start, range->end};
+        return result;
+    }
+    return fallback;
+}
+
 const TypeInfo& IRCompiler::typedExpressionType(
     const Expr& expression,
     const char* context) const
@@ -170,7 +188,7 @@ IRProgram IRCompiler::compileInternal(
 
 void IRCompiler::compileStatement(const Stmt& statement)
 {
-    SpanScope scope(*this, statement.span);
+    SpanScope scope(*this, debugSpan(statement.range, statement.span));
     if (const auto* module = dynamic_cast<const ModuleStmt*>(&statement)) {
         if (module->isEntry) {
             compileModule(*module);
@@ -806,7 +824,7 @@ void IRCompiler::compilePattern(
 
 IRRegister IRCompiler::compileExpression(const Expr& expression)
 {
-    SpanScope scope(*this, expression.span);
+    SpanScope scope(*this, debugSpan(expression.range, expression.span));
     if (const auto* literal = dynamic_cast<const LiteralExpr*>(&expression)) {
         return ir_.emitConstant(literalValue(literal->value));
     }

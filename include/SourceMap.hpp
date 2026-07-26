@@ -17,10 +17,19 @@ struct SourceFile {
     std::optional<std::string> moduleIdentity = std::nullopt;
 };
 
+struct SourceSpanRange {
+    // Source-local half-open byte interval [start, end).  This is the
+    // artifact/debug counterpart of SourceRange; it deliberately carries no
+    // snapshot-local SourceFileId across the bytecode boundary.
+    std::size_t start = 0;
+    std::size_t end = 0;
+};
+
 struct SourceSpan {
     std::size_t source = 0;
     int line = 0;
     int column = 0;
+    std::optional<SourceSpanRange> range = std::nullopt;
 };
 
 std::string sourceLine(const SourceFile& file, SourceLocation location);

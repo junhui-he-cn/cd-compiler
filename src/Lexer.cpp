@@ -25,6 +25,21 @@ Lexer::Lexer(std::string source)
 {
 }
 
+LexErrorList::LexErrorList(std::vector<DiagnosticError> errors)
+    : errors_(std::move(errors))
+{
+}
+
+const std::vector<DiagnosticError>& LexErrorList::errors() const
+{
+    return errors_;
+}
+
+const char* LexErrorList::what() const noexcept
+{
+    return "lex errors";
+}
+
 std::vector<Token> Lexer::scanTokens()
 {
     while (!isAtEnd()) {
@@ -37,6 +52,7 @@ std::vector<Token> Lexer::scanTokens()
     eof.startOffset = current_;
     eof.endOffset = current_;
     tokens_.push_back(std::move(eof));
+    throwIfErrors();
     return tokens_;
 }
 
@@ -48,6 +64,7 @@ std::vector<Token> Lexer::scanTokensUntil(TokenType stopType)
         const std::size_t tokenCount = tokens_.size();
         scanToken();
         if (tokens_.size() > tokenCount && tokens_.back().type == stopType) {
+            throwIfErrors();
             return tokens_;
         }
     }
@@ -56,6 +73,7 @@ std::vector<Token> Lexer::scanTokensUntil(TokenType stopType)
     eof.startOffset = current_;
     eof.endOffset = current_;
     tokens_.push_back(std::move(eof));
+    throwIfErrors();
     return tokens_;
 }
 
@@ -180,8 +198,10 @@ void Lexer::scanToken()
         if (match('&')) {
             addToken(TokenType::AmpersandAmpersand);
         } else {
-            throw DiagnosticError(DiagnosticKind::Lex, SourceLocation{line_, tokenColumn_},
-                "unexpected character `&`");
+            recordError(DiagnosticError(
+                DiagnosticKind::Lex,
+                SourceLocation{line_, tokenColumn_},
+                "unexpected character `&`"));
         }
         break;
     case '|':
@@ -205,8 +225,10 @@ void Lexer::scanToken()
         } else if (isAlpha(c)) {
             identifier();
         } else {
-            throw DiagnosticError(DiagnosticKind::Lex, SourceLocation{line_, tokenColumn_},
-                "unexpected character `" + std::string(1, c) + "`");
+            recordError(DiagnosticError(
+                DiagnosticKind::Lex,
+                SourceLocation{line_, tokenColumn_},
+                "unexpected character `" + std::string(1, c) + "`"));
         }
         break;
     }
@@ -225,6 +247,18 @@ void Lexer::addToken(TokenType type)
     tokens_.push_back(std::move(token));
 }
 
+void Lexer::recordError(DiagnosticError error)
+{
+    errors_.push_back(std::move(error));
+}
+
+void Lexer::throwIfErrors()
+{
+    if (!errors_.empty()) {
+        throw LexErrorList(std::move(errors_));
+    }
+}
+
 void Lexer::stringLiteral()
 {
     while (peek() != '"' && !isAtEnd()) {
@@ -232,8 +266,11 @@ void Lexer::stringLiteral()
     }
 
     if (isAtEnd()) {
-        throw DiagnosticError(DiagnosticKind::Lex, SourceLocation{line_, tokenColumn_},
-            "unterminated string");
+        recordError(DiagnosticError(
+            DiagnosticKind::Lex,
+            SourceLocation{line_, tokenColumn_},
+            "unterminated string"));
+        return;
     }
 
     advance();

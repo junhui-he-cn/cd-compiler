@@ -150,12 +150,13 @@
       "optional_sections": [
         "artifact: module and module metadata for independent products",
         "debug_sources",
-        "debug_locations"
+        "debug_locations",
+        "debug_ranges"
       ],
-      "section_order": "optional artifact: module and module metadata, constants, names, main, zero or more function sections, optional debug_sources, optional debug_locations",
-      "parser_policy": "Rust parsing is strict: artifact kind, module fields, dependency markers, required sections, sequential references, instruction shapes, debug references, and trailing/unknown sections are rejected.",
+      "section_order": "optional artifact: module and module metadata, constants, names, main, zero or more function sections, optional debug_sources, optional debug_locations, optional debug_ranges",
+      "parser_policy": "Rust parsing is strict: artifact kind, module fields, dependency markers, required sections, sequential references, instruction shapes, debug references and ranges, and trailing/unknown sections are rejected.",
       "formatter_policy": "Rust dump canonicalizes either linked cdbc 0.1 programs or module products to the same text representation emitted by C++.",
-      "debug_policy": "Debug metadata is additive and optional; source/function/instruction indexes are artifact-local, while line and column values are one-based."
+      "debug_policy": "Debug metadata is additive and optional; source/function/instruction indexes are artifact-local, debug_ranges use source-local half-open byte intervals, and line and column values are one-based."
     },
     "observed_header_versions": [
       "cdbc 0.1"
@@ -165,13 +166,14 @@
       "with_native_call": 31,
       "with_debug_sources": 58,
       "with_debug_locations": 58,
+      "with_debug_ranges": 58,
       "with_debug_source_modules": 4
     },
     "artifacts": [
       {
         "path": "tests/bytecode_artifacts/adt_pattern_matching/expected.cdbc",
-        "bytes": 1117,
-        "sha256": "c4eecf35b2cedf8897c5a9027a24e442a0ab50b8e59ea584584e057f65fab74f",
+        "bytes": 1474,
+        "sha256": "ba9425e7194c0bfa9a3daecb3e8db4446bddecd3d153fc1cb0ae0838b30d9803",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -180,25 +182,28 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/arithmetic/expected.cdbc",
-        "bytes": 622,
-        "sha256": "43c582a615475a00beb17cf16a3c41a5ef8bfa5214a104c1c265beeb26cab7ee",
+        "bytes": 833,
+        "sha256": "1d981481241b1d3181485db7e976f2274af3e4b08b6d23a91f44baace14fde50",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -207,25 +212,28 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/array_any_all/expected.cdbc",
-        "bytes": 1716,
-        "sha256": "99e4750c407713e0c68f30d67c282e4bc1de53688a8bd05a5c655f068922c1f1",
+        "bytes": 2339,
+        "sha256": "0b0b1950a146355863966c71e61e0701254a9101ee6e6a7e66fef6bd2ec51818",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -236,12 +244,14 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 2,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -250,13 +260,14 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/array_count/expected.cdbc",
-        "bytes": 1722,
-        "sha256": "6aca385ef759574fad56b75763b406c361285fcfd3b5546b39f379b4799e8b16",
+        "bytes": 2345,
+        "sha256": "0da1ff6a226ff7fe0092d82e2a89e8c68d796f04e73cd497fa8a4c38eb67a8c0",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -267,12 +278,14 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 2,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -281,13 +294,14 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/array_filter/expected.cdbc",
-        "bytes": 3847,
-        "sha256": "ce998610d8b9546302b262c1dde63159aa3b8c9c60cbfcb4529c40d65366930f",
+        "bytes": 5295,
+        "sha256": "34be0a8a74eef0acd485e36601bb830ac2bf72ca262b8f574158d41a920c8e13",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -299,12 +313,14 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 3,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -313,13 +329,14 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/array_filter_shadowing/expected.cdbc",
-        "bytes": 1746,
-        "sha256": "ba5ec4528776d7848dac2029b15d15b47b7cd0fcf7dd6bfb28d02d1269a454c4",
+        "bytes": 2373,
+        "sha256": "8aaa14decb48b3f6e28038a6370dba3c5d53b853d673abe016de94b30122c561",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -331,12 +348,14 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 3,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -345,13 +364,14 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/array_find/expected.cdbc",
-        "bytes": 1717,
-        "sha256": "9189e208dec9a7ddf9a6f27cc5ced2c2238068bdc7ff34a5f22287ab4dd7ebca",
+        "bytes": 2340,
+        "sha256": "db80147e3079fa5d1cf45c13c70ff0d3c555e5d99b7cb57633695731cc46c23b",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -362,12 +382,14 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 2,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -376,13 +398,14 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/array_find_index/expected.cdbc",
-        "bytes": 1743,
-        "sha256": "034d58490ec503b3fa0261f93aa026c8f7ac77e2620d54700d9143229988d5e9",
+        "bytes": 2373,
+        "sha256": "9cd753f0b30adb2d9ee44fc5de26e194de55738b4624e6f63ea5df3895f4100b",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -393,12 +416,14 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 2,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -407,13 +432,14 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/array_flat_map/expected.cdbc",
-        "bytes": 1843,
-        "sha256": "18f51447e95bf2b08b2793e264a39b4c31c373e076dc8723f434853f93112d08",
+        "bytes": 2539,
+        "sha256": "373ec571110f7480f1f97c0689d647e6e9af536c5357c5adc7ec1bafb574b397",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -424,12 +450,14 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 2,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -438,13 +466,14 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/array_map/expected.cdbc",
-        "bytes": 3038,
-        "sha256": "e4824195888b5189fe5ebca922dd344277ce98152f93c055246aff8ba090568b",
+        "bytes": 4130,
+        "sha256": "04b8f1ce80c1e2590567ee4c32780d617f1542c63c8ac38f464fd08991532a3a",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -456,12 +485,14 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 3,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -470,13 +501,14 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/array_reduce/expected.cdbc",
-        "bytes": 5938,
-        "sha256": "ebb2e9fae4d47052900dfd23222f163682a4a95dc856f4e9c54f072aa9358e0e",
+        "bytes": 8055,
+        "sha256": "b0d505f1102f5f96bfe107f1ccd7da4d0db042f9c6c512a640f7b75c66459022",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -490,12 +522,14 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 5,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -504,13 +538,14 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/array_reduce_shadowing/expected.cdbc",
-        "bytes": 2063,
-        "sha256": "e2ca2c4f4f6d8f0c2832ad0b02259c53581f6d0f32f456b87f2a9e6f5cbd0630",
+        "bytes": 2793,
+        "sha256": "94cd8689a4a582d0a52ed436842db2849467f29a22f1a978d4493fac38f591ec",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -522,12 +557,14 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 3,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -536,13 +573,14 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/collection_helpers/expected.cdbc",
-        "bytes": 1322,
-        "sha256": "4cfe6ec7242b8739fa365fee5bfa015171e816a621723d46db3bcbd54612f51c",
+        "bytes": 1768,
+        "sha256": "c99d5154f1a0e9481815fbbb595b2060e23eb367a58f537b256ad5f791b43466",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -551,12 +589,14 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -564,13 +604,14 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/compound_assignment/expected.cdbc",
-        "bytes": 724,
-        "sha256": "fb8e80a6aa1599a4869a3dca86d093257a171c1096d765e85d9fc92d277670dd",
+        "bytes": 935,
+        "sha256": "82f82bbfc392a45f31598df075bafa8b20b8f96b2cb920f0b849046674bec549",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -579,25 +620,28 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/control_flow/expected.cdbc",
-        "bytes": 1170,
-        "sha256": "e1d5f5a0a8f61549b4715645c4c4356a392564ac9df52e876b256b412404846a",
+        "bytes": 1596,
+        "sha256": "4bb1c6612ca61b5daaa23b55b580f6eb1c598352a937cdbff7303803a091c1d4",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -606,25 +650,28 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/field_compound_assignment/expected.cdbc",
-        "bytes": 1006,
-        "sha256": "6c47690f6c5d3f0f6149cea2895cab4027d1b7a812106742b8178f0a79d52a93",
+        "bytes": 1284,
+        "sha256": "c91fbd80c53ab1d540436f1bf023467b3ea4fee2a9fa5360de621e899802dbca",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -633,25 +680,28 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/for_in_loops/expected.cdbc",
-        "bytes": 1705,
-        "sha256": "78b120ca691bd3d07f14973b3f0f195a8de610f58990a9636fa4b374bed50d7f",
+        "bytes": 2315,
+        "sha256": "9d869293aa55e053d0a900a9683203e5ae15a480dec429cb9afc133b673ae0c7",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -660,25 +710,28 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/for_loops/expected.cdbc",
-        "bytes": 1205,
-        "sha256": "d9e2b257263b8b0d5445e44b6e40e2f4196448664c4dea58e4ae8bb2a2d2caa6",
+        "bytes": 1650,
+        "sha256": "4663051a6fa4641a013f938f61a649790097bcb48815e382193ff7510b89693f",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -687,25 +740,28 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/functions_arrays/expected.cdbc",
-        "bytes": 2740,
-        "sha256": "513b9660292e8ff3e1c1d99dbd662a72164b375c477fcc503afa1f2cc4c5f0fe",
+        "bytes": 3810,
+        "sha256": "85a2967b2a799927043cf2c5312a328a0fca61eaac577efcb4225283f71d360e",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -716,12 +772,14 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 2,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -729,13 +787,14 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/generic_enums/expected.cdbc",
-        "bytes": 7161,
-        "sha256": "f72ebe52781ab9267f5a3d2c2d874938e1202e0f23f25db985342043bd18edea",
+        "bytes": 9940,
+        "sha256": "5f606b9c5a8ed719b7bff48a503b1e70db2556b300ddf2212fd525e893a4a30c",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -746,12 +805,14 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 2,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -760,13 +821,14 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/generic_explicit_type_arguments/expected.cdbc",
-        "bytes": 4495,
-        "sha256": "6bd0aaf07a2009776b29760a0df822d962f523e58c3bdd87ffb43700fcfc627e",
+        "bytes": 6105,
+        "sha256": "35929f35abef34a3cdb4f9aa72bc13ec115b33f5468ab85a039afbd09496dfac",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -779,12 +841,14 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 4,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": true,
         "envelope_capabilities": [
           "header_family_version",
@@ -793,13 +857,14 @@
           "function_sections",
           "debug_sources",
           "debug_locations",
+          "debug_ranges",
           "debug_source_module"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/generic_functions/expected.cdbc",
-        "bytes": 3298,
-        "sha256": "d02e2ca2065aa3834b8066c150257dc0c6ce2a43e9e425ed8e6c2b392bca59cc",
+        "bytes": 4541,
+        "sha256": "f6fc09a23d3adde013104095ce8f5a4d5cd72abc8cfdb436cdca8fcbcff63cae",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -811,12 +876,14 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 3,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -824,13 +891,14 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/generic_lambdas/expected.cdbc",
-        "bytes": 2744,
-        "sha256": "a07c1bf81d7f28524c319e367ddd672df87e5d5c36c7e3ac814a46bf0b799921",
+        "bytes": 3798,
+        "sha256": "485580aa577ce0d93611a7d709b25e6367621dac36ba9ce4aedfa4501e27d8f0",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -843,12 +911,14 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 4,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -856,13 +926,14 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/generic_methods/expected.cdbc",
-        "bytes": 3562,
-        "sha256": "3af801850fbc5238f83f2c20ec715de26c3d730aabcfa4e100fc4253a0e6c9b8",
+        "bytes": 4836,
+        "sha256": "dbb84852332ccf92267f9648137084aad05cfcd73633d0e782b7589bd82b1465",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -874,12 +945,14 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 3,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -887,13 +960,14 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/import_basic/expected.cdbc",
-        "bytes": 1249,
-        "sha256": "a1ad576727938a96787fe3783e33f3188c5bb3bd053fcd49f64590849e0486b2",
+        "bytes": 1600,
+        "sha256": "2c313619a57912ad4c8cd412342ccf4c727527fed2147cc561a83c84637e61e0",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -903,12 +977,14 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 1,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": true,
         "envelope_capabilities": [
           "header_family_version",
@@ -917,13 +993,14 @@
           "function_sections",
           "debug_sources",
           "debug_locations",
+          "debug_ranges",
           "debug_source_module"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/index_compound_assignment/expected.cdbc",
-        "bytes": 984,
-        "sha256": "53ab1f2b6f223e5eaddcd269721521660b7739583edb5b261419f1cd382429eb",
+        "bytes": 1303,
+        "sha256": "c73d71915db605b7b017d0e5c51fae423111a8687fd1fecce7acbe040dd59526",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -932,25 +1009,28 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/literal_patterns/expected.cdbc",
-        "bytes": 11476,
-        "sha256": "314e5fccb656fe52fce121a1afaf1fb035a5791fcb30386d924c6570950c1c98",
+        "bytes": 16545,
+        "sha256": "7376570a6aaed372209f8edd64de7fd16da7b46c6573eb1f9bb26d382f100425",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -962,12 +1042,14 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 3,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -976,13 +1058,14 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/map_clear/expected.cdbc",
-        "bytes": 1426,
-        "sha256": "35c3ad976fbbfb576a5afbb3040423ba28bf2191d3f93ed4b835dc5c0898da3c",
+        "bytes": 1904,
+        "sha256": "2496d35ee83443f9e39fe832d72fb9d85ffc4817b704871e5352db2d70d86ffd",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -991,12 +1074,14 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1004,13 +1089,14 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/map_for_in/expected.cdbc",
-        "bytes": 2379,
-        "sha256": "6d65566c8acd0abe98f5148bb4b06c608f7a945045550c1b49ad4ce77cbf8841",
+        "bytes": 3227,
+        "sha256": "a990cf7fb9d2a728c4386bcc29d3ded42a119597396ce2130407649116d03766",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1019,12 +1105,14 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1032,13 +1120,14 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/map_keys_values/expected.cdbc",
-        "bytes": 860,
-        "sha256": "460d11f911b8f06abfadeb5124cbbbed2f9733f2a21a3d02e6e89aaa228847e5",
+        "bytes": 1116,
+        "sha256": "6929702385b44384b903bfac9add59e2522fcda74253e4a6d0f8b37ad5a7c2dc",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1047,12 +1136,14 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1060,13 +1151,14 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/map_merge/expected.cdbc",
-        "bytes": 1379,
-        "sha256": "33b945fd3f63eb567121134269a37692a9f76802147289651d8fe40d0c8d89d1",
+        "bytes": 1819,
+        "sha256": "6e26276412f5b14247bae541d147b3132c89b8911c967f55691ac0c755c06277",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1075,12 +1167,14 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1088,13 +1182,14 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/map_remove/expected.cdbc",
-        "bytes": 1360,
-        "sha256": "ca13c4840b55970b6e3d29039b51e49c27a358ad72f5c100d7f35354347293d4",
+        "bytes": 1816,
+        "sha256": "9ed49670cc4d3db97aefdba6b3d493c84053c2923ef05f9e4d6a008716859fa7",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1103,12 +1198,14 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1116,13 +1213,14 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/maps/expected.cdbc",
-        "bytes": 1743,
-        "sha256": "7743903337431d4f28c88cc5f07fafeb0fd2fb745387436a76b613414d49a2c8",
+        "bytes": 2344,
+        "sha256": "3a0d5fd8f9be23956f1bdf4e533d9abeeb82011a35a1d381784adf26bb164ad8",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1131,12 +1229,14 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1144,13 +1244,14 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/match_expression/expected.cdbc",
-        "bytes": 1237,
-        "sha256": "2326547a48ffc5a3bec7f229d73cf1f6aa57cee3cb6432309c59963eeec2968a",
+        "bytes": 1660,
+        "sha256": "33dde91b9e5f4dc553bfe48c631a6f6ef29aebcc7196b6e4333bb0abfc3093b7",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1159,25 +1260,28 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/match_guards/expected.cdbc",
-        "bytes": 1665,
-        "sha256": "d3025ec8e482ff2af6b4b2c21e06955da370100f784aed54258a70ef548ac501",
+        "bytes": 2266,
+        "sha256": "6492ff2d5c12e1debaae8784491197aefc76beb538384316e183d97738563cc8",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1186,25 +1290,28 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/member_calls_arrays/expected.cdbc",
-        "bytes": 789,
-        "sha256": "a59984b36d2ad99eae318d9a115518153b67e13a0d7d2ef9cccba37504de63e2",
+        "bytes": 1045,
+        "sha256": "463da083037a7a22e4bd57d02ee0874169dd1590c36a0358277370fcab4310a6",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1213,12 +1320,14 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1226,13 +1335,14 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/member_calls_strings/expected.cdbc",
-        "bytes": 940,
-        "sha256": "5ab352ee891c3aee0417318b38ff305302feb9ceaa956920a42eaed2411d9e98",
+        "bytes": 1238,
+        "sha256": "0f011e3397f77ae2213d123175b041d3a16a3a54a29a6d65b3fd1ed381587b12",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1241,12 +1351,14 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1254,13 +1366,14 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/module_exports/expected.cdbc",
-        "bytes": 1845,
-        "sha256": "b4f0b532f62e0a439b812e748318f30cd952e5c077c406be67fb337dfe86613a",
+        "bytes": 2446,
+        "sha256": "577ab40bdc63835e346cc2648a81af99739de1f3772b5f9f01217d4845fa0b33",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1271,12 +1384,14 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 2,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": true,
         "envelope_capabilities": [
           "header_family_version",
@@ -1285,13 +1400,14 @@
           "function_sections",
           "debug_sources",
           "debug_locations",
+          "debug_ranges",
           "debug_source_module"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/multi_file_functions/expected.cdbc",
-        "bytes": 1077,
-        "sha256": "d8fc98243eccf8caed603e45f7d64fe9e165a2071aff0cbb0b5fe61264364e88",
+        "bytes": 1424,
+        "sha256": "9b46e37211c037d4cb131a9d696aa2e1a7810ee2df3ddc23d676bfbe2b7497b2",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1301,12 +1417,14 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 1,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1314,13 +1432,14 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/named_payload_fields/expected.cdbc",
-        "bytes": 1592,
-        "sha256": "cf24429b6f45e1cb9d4fe6280cc209e7845c4c175bfc00d76abfafb5c1b8f918",
+        "bytes": 2127,
+        "sha256": "e70523c14f6f6f0200ac6e1652def67060a191999a5afb3c6d969022c1640aef",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1329,25 +1448,28 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/named_struct_runtime_type_name/expected.cdbc",
-        "bytes": 447,
-        "sha256": "4f6a4a49187d941419925e1a85991536b4b9224b4959ef467a7f9fac0085a3db",
+        "bytes": 542,
+        "sha256": "c2225834e5517c461c170e8103cc0a89f182c1269f383bc8ea0109f0c31eda9b",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1356,12 +1478,14 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1369,13 +1493,14 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/named_struct_types/expected.cdbc",
-        "bytes": 984,
-        "sha256": "d12a19602659f15f2cb544ed3bd84e9bc45c5a0d8a261e67cc84f40e5f675416",
+        "bytes": 1277,
+        "sha256": "766f4ce390ca129473f1ee73410e718dd69d8aa30b68ec9fd5be085b7a78831c",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1384,25 +1509,28 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/namespace_imports/expected.cdbc",
-        "bytes": 1276,
-        "sha256": "2c3b1b7148547cce91def08342d5061d3c571221668792f134e73ec072349e6a",
+        "bytes": 1632,
+        "sha256": "e515c2e9483516b0ffcf56e1845b26c2e387e8b99036cbf44dd6de6603c2a769",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1412,12 +1540,14 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 1,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": true,
         "envelope_capabilities": [
           "header_family_version",
@@ -1426,13 +1556,14 @@
           "function_sections",
           "debug_sources",
           "debug_locations",
+          "debug_ranges",
           "debug_source_module"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/native_stdlib_math/expected.cdbc",
-        "bytes": 641,
-        "sha256": "809bafc70c131cbfc661ec4627796efeef23641ef1fed1b64d5578f3842a8f3c",
+        "bytes": 834,
+        "sha256": "57afab832d67eaeb9024cf61f44e5a38ea2bd3a0ca48abdb36501db77f056a6b",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1441,12 +1572,14 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1454,13 +1587,14 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/native_stdlib_push_pop/expected.cdbc",
-        "bytes": 807,
-        "sha256": "955bdd06d91323b0ab64adbe80b41a6f80035e66fd55c052dc1743b7ae2e7cd5",
+        "bytes": 1062,
+        "sha256": "79dc4bb60932ea02675788f7bdb6d2ca02ea3aa0094398e1084f03eb75600f8f",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1469,12 +1603,14 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1482,13 +1618,14 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/native_stdlib_strings/expected.cdbc",
-        "bytes": 962,
-        "sha256": "c3377c939fa756368c7210bb33ea4ada7e39fafd6ac7ed616d41763935304c9b",
+        "bytes": 1259,
+        "sha256": "d8cfd204cfbeb59b02cb8b508111ef386172c77acd13c4039d0be3604b0416b4",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1497,12 +1634,14 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1510,13 +1649,14 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/native_stdlib_typeof/expected.cdbc",
-        "bytes": 964,
-        "sha256": "79b4ede95dc063fa4d8f3ed9fb16fe0dafc299f28b61d1ac170b84225051ebec",
+        "bytes": 1266,
+        "sha256": "c6861a1953b90dac67f73d789a06aa61cc6cda4ad2077569df3f572339a1c9f9",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1525,12 +1665,14 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1538,13 +1680,14 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/nullable_enum_patterns/expected.cdbc",
-        "bytes": 5811,
-        "sha256": "66d7be8f4977dfd0108fe1e2a83f1e1998f15311096441899d046eeb5faf34bb",
+        "bytes": 8211,
+        "sha256": "cba9c9c9b6940915798f50425d8a59891423eae3bd6235d157e1835ac37c4ec1",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1554,12 +1697,14 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 1,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1568,13 +1713,14 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/or_patterns/expected.cdbc",
-        "bytes": 7319,
-        "sha256": "211974823ebb7d8ee9adef521c45da98d0867b93af6d2de0156c561565abe864",
+        "bytes": 10487,
+        "sha256": "f61dca71bbb7e1bb5ca354d5480a67e5666b858430561fe1fcdca82e017ebf1f",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1585,12 +1731,14 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 2,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1599,13 +1747,14 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/ranges/expected.cdbc",
-        "bytes": 4939,
-        "sha256": "a75c0d1a5e1b59c131ea3e247b7cd0469448b37c235d0df11a6e2154a6724fe4",
+        "bytes": 6892,
+        "sha256": "5749c682f0781912a8b5115c80f69819f48b3d93e0eee373e917c677fa9269a7",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1614,12 +1763,14 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1627,13 +1778,14 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/record_patterns/expected.cdbc",
-        "bytes": 6095,
-        "sha256": "6e325ce7cb17ae2779997c58746145aa2e7a29b4cb1ef91ada1ff5b719993647",
+        "bytes": 8447,
+        "sha256": "457b86877480a5b502699a797224ff526943c894c794c015273763da0bd0cb7f",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1643,12 +1795,14 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 1,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1657,13 +1811,14 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/runtime_diagnostics/expected.cdbc",
-        "bytes": 826,
-        "sha256": "caa539eb814d19981b9c94a593dfbe6f999177d605f3503c1d12a5296cea1e68",
+        "bytes": 1117,
+        "sha256": "df73d1eae490b0e20041538282c6790f35df9a83bb528a09b3e08d9de4aa0a54",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1673,12 +1828,14 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 1,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1686,13 +1843,14 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/struct_field_assignment/expected.cdbc",
-        "bytes": 862,
-        "sha256": "7396f3191173b22e497cf1a8addd5a0fb416c18397882189fe368560acaf3259",
+        "bytes": 1086,
+        "sha256": "38112a2cb40cdcbe422d1ee8f476172be71dcd2ce05126a44a39169a24bc148f",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1701,25 +1859,28 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/struct_method_compound_assignment/expected.cdbc",
-        "bytes": 1842,
-        "sha256": "b3c1005103589e22ffa7cc525952cc148df9f3c28b75c2f1e66bd83b616cb2b8",
+        "bytes": 2459,
+        "sha256": "151639edad43b038b9aace1e44e4b4110f8fd12eaf876141590b16fb3f0b85f5",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1729,12 +1890,14 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 1,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1742,13 +1905,14 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/struct_methods_basic/expected.cdbc",
-        "bytes": 1345,
-        "sha256": "32d20302885d0d18e88f01fa54769f95a3a7b2be5ea1b64bc347028bb4e73049",
+        "bytes": 1783,
+        "sha256": "e53323a5ebb1c94af6897a2b480e6c59f02894030364733e01f96008cb23e4e1",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1758,12 +1922,14 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 1,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1771,13 +1937,14 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/struct_methods_mutation/expected.cdbc",
-        "bytes": 1653,
-        "sha256": "4d3fc717a96f11b8cacde1aaed311664093f679783ff6f4d334b3866ef5b2594",
+        "bytes": 2219,
+        "sha256": "7de7c29caac1f458983525e0d7091bee1db3e50ffeacb3e04c0d7969b785b8a4",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1787,12 +1954,14 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 1,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1800,13 +1969,14 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/structs/expected.cdbc",
-        "bytes": 1360,
-        "sha256": "fab8bf0734772294c79351c1582ee7fdb23b299cf481bf69fc44918216dcbc61",
+        "bytes": 1733,
+        "sha256": "44626440c7dc6fed8b49e67025ebac084999362f6cfe62464dc988286e91720c",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1815,25 +1985,28 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
         "path": "tests/bytecode_artifacts/unicode_strings/expected.cdbc",
-        "bytes": 2228,
-        "sha256": "46a32f92d78f924e7b1d1b3212d09854b16af6a72da46b72add130de239ca99f",
+        "bytes": 3030,
+        "sha256": "abb63c47d982b7a699c7f639f9ff0381253a065f5b16d824daa4b081f5d599c0",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1842,12 +2015,14 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "functions": 0,
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_ranges": true,
         "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
@@ -1855,7 +2030,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       }
     ],
@@ -1872,14 +2048,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -1894,14 +2072,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -1916,14 +2096,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -1938,14 +2120,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -1962,7 +2146,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -1971,7 +2156,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -1988,7 +2174,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -1997,7 +2184,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2014,7 +2202,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2023,7 +2212,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2040,7 +2230,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2049,7 +2240,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2067,7 +2259,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2076,7 +2269,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2094,7 +2288,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2103,7 +2298,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2121,7 +2317,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2130,7 +2327,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2148,7 +2346,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2157,7 +2356,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2174,7 +2374,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2183,7 +2384,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2200,7 +2402,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2209,7 +2412,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2226,7 +2430,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2235,7 +2440,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2252,7 +2458,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2261,7 +2468,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2278,7 +2486,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2287,7 +2496,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2304,7 +2514,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2313,7 +2524,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2331,7 +2543,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2340,7 +2553,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2358,7 +2572,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2367,7 +2582,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2387,7 +2603,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2396,7 +2613,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2416,7 +2634,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2425,7 +2644,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2443,7 +2663,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2452,7 +2673,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2470,7 +2692,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2479,7 +2702,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2494,7 +2718,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2502,7 +2727,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2517,7 +2743,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2525,7 +2752,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2540,14 +2768,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2562,14 +2792,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2584,14 +2816,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2606,14 +2840,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2628,14 +2864,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2650,14 +2888,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2672,14 +2912,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2694,14 +2936,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2716,14 +2960,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2738,14 +2984,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2762,7 +3010,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2770,7 +3019,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2787,7 +3037,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2795,7 +3046,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2812,7 +3064,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2821,7 +3074,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2838,7 +3092,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2847,7 +3102,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2866,7 +3122,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2875,6 +3132,7 @@
           "function_sections",
           "debug_sources",
           "debug_locations",
+          "debug_ranges",
           "debug_source_module"
         ]
       },
@@ -2894,7 +3152,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2903,6 +3162,7 @@
           "function_sections",
           "debug_sources",
           "debug_locations",
+          "debug_ranges",
           "debug_source_module"
         ]
       },
@@ -2921,7 +3181,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2929,7 +3190,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2947,7 +3209,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2955,7 +3218,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -2974,7 +3238,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -2982,7 +3247,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3001,7 +3267,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3009,7 +3276,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3027,7 +3295,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3035,7 +3304,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3053,7 +3323,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3061,7 +3332,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3077,7 +3349,8 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3086,6 +3359,7 @@
           "function_sections",
           "debug_sources",
           "debug_locations",
+          "debug_ranges",
           "debug_source_module"
         ]
       },
@@ -3102,7 +3376,8 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3111,6 +3386,7 @@
           "function_sections",
           "debug_sources",
           "debug_locations",
+          "debug_ranges",
           "debug_source_module"
         ]
       },
@@ -3126,14 +3402,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3148,14 +3426,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3173,7 +3453,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3182,7 +3463,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3200,7 +3482,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3209,7 +3492,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3224,7 +3508,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3232,7 +3517,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3247,7 +3533,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3255,7 +3542,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3270,7 +3558,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3278,7 +3567,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3293,7 +3583,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3301,7 +3592,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3316,7 +3608,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3324,7 +3617,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3339,7 +3633,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3347,7 +3642,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3362,7 +3658,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3370,7 +3667,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3385,7 +3683,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3393,7 +3692,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3408,7 +3708,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3416,7 +3717,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3431,7 +3733,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3439,7 +3742,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3454,7 +3758,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3462,7 +3767,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3477,7 +3783,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3485,7 +3792,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3500,14 +3808,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3522,14 +3832,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3544,14 +3856,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3566,14 +3880,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3588,7 +3904,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3596,7 +3913,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3611,7 +3929,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3619,7 +3938,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3634,7 +3954,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3642,7 +3963,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3657,7 +3979,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3665,7 +3988,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3682,7 +4006,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3691,6 +4016,7 @@
           "function_sections",
           "debug_sources",
           "debug_locations",
+          "debug_ranges",
           "debug_source_module"
         ]
       },
@@ -3708,7 +4034,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3717,6 +4044,7 @@
           "function_sections",
           "debug_sources",
           "debug_locations",
+          "debug_ranges",
           "debug_source_module"
         ]
       },
@@ -3733,7 +4061,8 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3741,7 +4070,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3757,7 +4087,8 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3765,7 +4096,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3780,14 +4112,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3802,14 +4136,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3824,7 +4160,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3832,7 +4169,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3847,7 +4185,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3855,7 +4194,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3870,14 +4210,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3892,14 +4234,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3915,7 +4259,8 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3924,6 +4269,7 @@
           "function_sections",
           "debug_sources",
           "debug_locations",
+          "debug_ranges",
           "debug_source_module"
         ]
       },
@@ -3940,7 +4286,8 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3949,6 +4296,7 @@
           "function_sections",
           "debug_sources",
           "debug_locations",
+          "debug_ranges",
           "debug_source_module"
         ]
       },
@@ -3964,7 +4312,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3972,7 +4321,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -3987,7 +4337,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -3995,7 +4346,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4010,7 +4362,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4018,7 +4371,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4033,7 +4387,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4041,7 +4396,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4056,7 +4412,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4064,7 +4421,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4079,7 +4437,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4087,7 +4446,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4102,7 +4462,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4110,7 +4471,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4125,7 +4487,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4133,7 +4496,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4149,7 +4513,8 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4158,7 +4523,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4174,7 +4540,8 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4183,7 +4550,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4200,7 +4568,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4209,7 +4578,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4226,7 +4596,8 @@
           "function",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4235,7 +4606,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4250,7 +4622,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4258,7 +4631,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4273,7 +4647,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4281,7 +4656,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4297,7 +4673,8 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4306,7 +4683,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4322,7 +4700,8 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4331,7 +4710,8 @@
           "function_sections",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4347,7 +4727,8 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4355,7 +4736,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4371,7 +4753,8 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4379,7 +4762,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4394,14 +4778,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4416,14 +4802,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4439,7 +4827,8 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4447,7 +4836,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4463,7 +4853,8 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4471,7 +4862,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4487,7 +4879,8 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4495,7 +4888,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4511,7 +4905,8 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4519,7 +4914,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4535,7 +4931,8 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4543,7 +4940,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4559,7 +4957,8 @@
           "main",
           "function",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4567,7 +4966,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4582,14 +4982,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4604,14 +5006,16 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4626,7 +5030,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4634,7 +5039,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       },
       {
@@ -4649,7 +5055,8 @@
           "names",
           "main",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ],
         "envelope_capabilities": [
           "header_family_version",
@@ -4657,7 +5064,8 @@
           "strict_reference_indices",
           "native_call",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_ranges"
         ]
       }
     ]
@@ -4682,15 +5090,16 @@
     },
     {
       "field_id": "debug-metadata",
-      "field": "debug sources and locations",
+      "field": "debug sources, locations, and ranges",
       "classification": "already present",
-      "current_state": "Optional debug_sources and debug_locations sections are emitted, strictly parsed, and used by the Rust VM for source-aware runtime diagnostics.",
+      "current_state": "Optional debug_sources, debug_locations, and debug_ranges sections are emitted, strictly parsed, and used by the Rust VM and module linker for source-aware runtime metadata; each emitted range is paired with a location and uses source-local half-open byte offsets; M4B-DEBUG-002 adds an optional canonical source-to-module identity field.",
       "named_consumer": "Rust VM runtime diagnostics and debugger-oriented M4B work",
       "planned_fixtures": [
         "tests/bytecode_artifacts/runtime_diagnostics/expected.cdbc",
+        "tests/module_debug_metadata_tests.py",
         "vm-rs/src/format.rs"
       ],
-      "rationale": "The existing additive metadata already covers the current source-mapped runtime consumer without changing core execution sections.",
+      "rationale": "The additive metadata covers current source-mapped runtime diagnostics and preserves complete source ranges for future debugger consumers without changing core execution sections.",
       "revisit": {
         "milestone": "M4B",
         "condition": "Extend metadata only when a named debugger/runtime consumer requires a field not expressible by the current sparse mappings."
@@ -4745,8 +5154,8 @@
       "field_id": "module-identity",
       "field": "module identity",
       "classification": "resolved",
-      "current_state": "Independent module products serialize the ModuleGraph canonical path as identity, retain display/canonical paths, entry ordering, and dependency target identities, while linked program artifacts remain identity-free.",
-      "named_consumer": "M3B module product emitter/linker and Rust module artifact validator",
+      "current_state": "Independent module products serialize the ModuleGraph canonical path as identity, retain display/canonical paths, entry ordering, and dependency target identities; import-aware debug source tables also retain canonical source-to-module identity.",
+      "named_consumer": "M3B module product emitter/linker, M4B debug metadata, and Rust artifact validator",
       "planned_fixtures": [
         "tests/bytecode_module_artifact_tests.py",
         "docs/decisions/m3b-module-artifacts.json"
@@ -4883,7 +5292,7 @@
       "rationale": "The current compiler/Rust VM pair needs stronger validation but no new opcode, value layout, target, transport, or negotiation capability. A successor version would add migration surface without a named consumer.",
       "revisit": "Select a successor only when a breaking runtime/artifact change cannot remain a compatible 0.1 extension."
     },
-    "migration": "The existing cdbc 0.1 emitter and canonical text remain unchanged. The Rust parser now performs centralized validation before returning an artifact; existing linked and module-product paths retain their current commands and rejection policy.",
+    "migration": "The existing cdbc 0.1 core emitter, canonical section structure, and runtime behavior remain unchanged. M4B-DEBUG-002 later adds an optional source-to-module field to import-aware debug source entries without changing the version. The Rust parser performs centralized validation before returning an artifact; existing linked and module-product paths retain their commands and rejection policy.",
     "verification": {
       "focused_commands": [
         "cargo test --manifest-path vm-rs/Cargo.toml",

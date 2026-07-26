@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import re
 import subprocess
 import sys
 import tempfile
@@ -93,6 +94,23 @@ def main() -> int:
             )
         if "debug_sources:\n" not in linked_text or "debug_locations:\n" not in linked_text:
             return fail("linked module artifact omitted debug metadata sections")
+        if "debug_ranges:\n" not in linked_text:
+            return fail("linked module artifact omitted full source-range metadata")
+        def metadata_lines(header: str) -> list[str]:
+            section = linked_text.split(f"{header}\n", 1)[1].split("\n\n", 1)[0]
+            return [line for line in section.splitlines() if line.startswith("  ")]
+
+        location_lines = metadata_lines("debug_locations:")
+        range_lines = metadata_lines("debug_ranges:")
+        if not location_lines or len(range_lines) != len(location_lines):
+            return fail(
+                "linked module artifact did not preserve one full range per location\n"
+                f"locations={len(location_lines)} ranges={len(range_lines)}"
+            )
+        for line in range_lines:
+            match = re.match(r"^  (?:main|function f\d+) \d+ = s(\d+):(\d+):(\d+)$", line)
+            if match is None or int(match.group(2)) > int(match.group(3)):
+                return fail(f"linked module artifact contained an invalid source range: {line}")
         if 'path="' not in linked_text or 'lib.cd"' not in linked_text or 'entry.cd"' not in linked_text:
             return fail("linked module artifact lost one module source path")
         for module_path in (entry.resolve(), library.resolve()):

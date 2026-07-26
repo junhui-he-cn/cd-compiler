@@ -160,6 +160,12 @@ add_test(
 )
 
 add_test(
+    NAME lexer_recovery
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
+            ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/lexer_recovery_tests.py $<TARGET_FILE:compiler_design>
+)
+
+add_test(
     NAME golden
     COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
             ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/run_golden_tests.py $<TARGET_FILE:compiler_design>

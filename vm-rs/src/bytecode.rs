@@ -15,10 +15,18 @@ pub struct DebugSource {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DebugRange {
+    pub source: usize,
+    pub start: usize,
+    pub end: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DebugLocation {
     pub source: usize,
     pub line: usize,
     pub column: usize,
+    pub range: Option<DebugRange>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

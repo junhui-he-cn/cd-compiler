@@ -39,6 +39,9 @@ private:
     };
 
     void setCurrentSpan(std::optional<SourceSpan> span);
+    std::optional<SourceSpan> debugSpan(
+        const std::optional<SourceRange>& range,
+        const std::optional<SourceSpan>& fallback) const;
     IRProgram compileInternal(
         const Program& program,
         const DeclarationIndex& declarationIndex,

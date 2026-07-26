@@ -171,6 +171,8 @@ def classify_section(line: str) -> str | None:
         return "debug_sources"
     if line == "debug_locations:":
         return "debug_locations"
+    if line == "debug_ranges:":
+        return "debug_ranges"
     return None
 
 
@@ -200,12 +202,16 @@ def inspect_artifact(path: Path, repo_root: Path = REPO_ROOT) -> tuple[dict[str,
         errors.append(f"{path}: core sections must start constants, names, main: {sections}")
     debug_seen = False
     for section in sections:
-        if section in {"debug_sources", "debug_locations"}:
+        if section in {"debug_sources", "debug_locations", "debug_ranges"}:
             debug_seen = True
         elif debug_seen:
             errors.append(f"{path}: core section appears after debug metadata: {section}")
     if "debug_locations" in sections and "debug_sources" not in sections:
         errors.append(f"{path}: debug_locations requires debug_sources in the reference envelope")
+    if "debug_ranges" in sections and "debug_sources" not in sections:
+        errors.append(f"{path}: debug_ranges requires debug_sources in the reference envelope")
+    if "debug_ranges" in sections and "debug_locations" not in sections:
+        errors.append(f"{path}: debug_ranges requires debug_locations in the reference envelope")
     if sections.count("constants") != 1 or sections.count("names") != 1 or sections.count("main") != 1:
         errors.append(f"{path}: core sections must occur exactly once: {sections}")
 
@@ -256,6 +262,7 @@ def inspect_artifact(path: Path, repo_root: Path = REPO_ROOT) -> tuple[dict[str,
         "has_native_call": "native_call " in text,
         "has_debug_sources": "debug_sources" in sections,
         "has_debug_locations": "debug_locations" in sections,
+        "has_debug_ranges": "debug_ranges" in sections,
         "has_debug_source_modules": has_debug_source_modules,
         "envelope_capabilities": [
             "header_family_version",
@@ -265,6 +272,7 @@ def inspect_artifact(path: Path, repo_root: Path = REPO_ROOT) -> tuple[dict[str,
             *(["native_call"] if "native_call " in text else []),
             *(["debug_sources"] if "debug_sources" in sections else []),
             *(["debug_locations"] if "debug_locations" in sections else []),
+            *(["debug_ranges"] if "debug_ranges" in sections else []),
             *(["debug_source_module"] if has_debug_source_modules else []),
         ],
     }
@@ -349,6 +357,7 @@ def build_static_report(
         "with_native_call": sum(artifact["has_native_call"] for artifact in artifacts),
         "with_debug_sources": sum(artifact["has_debug_sources"] for artifact in artifacts),
         "with_debug_locations": sum(artifact["has_debug_locations"] for artifact in artifacts),
+        "with_debug_ranges": sum(artifact["has_debug_ranges"] for artifact in artifacts),
         "with_debug_source_modules": sum(
             artifact["has_debug_source_modules"] for artifact in artifacts
         ),

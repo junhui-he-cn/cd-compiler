@@ -18,6 +18,8 @@
 #include <unordered_map>
 #include <vector>
 
+class LexErrorList;
+
 class FrontendSession {
 public:
     void setImportSearchPaths(std::vector<std::string> paths);
@@ -42,6 +44,7 @@ public:
     LosslessSourceView losslessSourceView() const;
     const std::string& sourceForDiagnostics() const;
     std::optional<FileDiagnosticError> remapDirectDiagnostic(const DiagnosticError& error) const;
+    std::optional<FileDiagnosticErrorList> remapDirectLexDiagnostics(const LexErrorList& errors) const;
     std::optional<FileDiagnosticErrorList> remapDirectDiagnostics(const ParseErrorList& errors) const;
     std::size_t moduleCount() const;
     const ModuleGraph& moduleGraph() const;

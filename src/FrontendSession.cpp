@@ -194,6 +194,19 @@ FileDiagnosticErrorList fileDiagnosticListFromParseErrors(
     return FileDiagnosticErrorList(std::move(mapped));
 }
 
+FileDiagnosticErrorList fileDiagnosticListFromLexErrors(
+    const LexErrorList& errors,
+    const std::string& path,
+    const std::string& source,
+    bool pathlessDiagnostics)
+{
+    std::vector<FileDiagnosticError> mapped;
+    for (const DiagnosticError& error : errors.errors()) {
+        mapped.push_back(fileDiagnosticFromError(error, path, source, pathlessDiagnostics));
+    }
+    return FileDiagnosticErrorList(std::move(mapped));
+}
+
 ParsedSource parseSource(
     const std::string& path,
     const std::string& source,
@@ -216,6 +229,8 @@ ParsedSource parseSource(
         return ParsedSource{std::move(tokens), std::move(program.statements)};
     } catch (const ParseErrorList& errors) {
         throw fileDiagnosticListFromParseErrors(errors, path, source, pathlessDiagnostics);
+    } catch (const LexErrorList& errors) {
+        throw fileDiagnosticListFromLexErrors(errors, path, source, pathlessDiagnostics);
     } catch (const FileDiagnosticError&) {
         throw;
     } catch (const DiagnosticError& error) {
@@ -622,6 +637,11 @@ Program FrontendSession::loadFiles(const std::vector<std::string>& paths)
             throw *remapped;
         }
         throw;
+    } catch (const LexErrorList& errors) {
+        if (const std::optional<FileDiagnosticErrorList> remapped = remapDirectLexDiagnostics(errors)) {
+            throw *remapped;
+        }
+        throw;
     } catch (const DiagnosticError& error) {
         if (const std::optional<FileDiagnosticError> remapped = remapDirectDiagnostic(error)) {
             throw *remapped;
@@ -754,6 +774,12 @@ std::size_t FrontendSession::loadFile(
             Lexer lexer(source);
             tokens = lexer.scanTokens();
             annotateSourceTokens(tokens, sourceId);
+        } catch (const LexErrorList& errors) {
+            throw fileDiagnosticListFromLexErrors(
+                errors,
+                displayPath,
+                source,
+                !fileDiagnostics && !isImport);
         } catch (const DiagnosticError& error) {
             if (error.location()) {
                 throw FileDiagnosticError(
@@ -1078,6 +1104,53 @@ std::optional<FileDiagnosticErrorList> FrontendSession::remapDirectDiagnostics(c
 
     std::vector<FileDiagnosticError> mapped;
     for (const ParseError& error : errors.errors()) {
+        if (!error.location()) {
+            return std::nullopt;
+        }
+
+        std::size_t startLine = 1;
+        bool foundInput = false;
+        for (const DirectInput& input : directInputs_) {
+            const std::size_t span = sourceLineSpan(input.source);
+            if (span == 0) {
+                continue;
+            }
+
+            const std::size_t diagnosticLine = static_cast<std::size_t>(error.location()->line);
+            if (diagnosticLine >= startLine && diagnosticLine < startLine + span) {
+                DiagnosticError remapped(
+                    error.kind(),
+                    SourceLocation{
+                        static_cast<int>(diagnosticLine - startLine + 1),
+                        error.location()->column,
+                    },
+                    error.range(),
+                    error.message());
+                mapped.push_back(FileDiagnosticError(
+                    remapped,
+                    DiagnosticSourceContext{input.path, input.source, false}));
+                foundInput = true;
+                break;
+            }
+            startLine += span;
+        }
+
+        if (!foundInput) {
+            return std::nullopt;
+        }
+    }
+
+    return FileDiagnosticErrorList(std::move(mapped));
+}
+
+std::optional<FileDiagnosticErrorList> FrontendSession::remapDirectLexDiagnostics(const LexErrorList& errors) const
+{
+    if (directInputs_.size() < 2) {
+        return std::nullopt;
+    }
+
+    std::vector<FileDiagnosticError> mapped;
+    for (const DiagnosticError& error : errors.errors()) {
         if (!error.location()) {
             return std::nullopt;
         }

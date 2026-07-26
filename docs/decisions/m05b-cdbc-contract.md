@@ -12,17 +12,18 @@ cdbc 0.1
 ```
 
 The core envelope is ordered as `constants`, `names`, `main`, and zero or more
-`function` sections. `debug_sources` and `debug_locations` are optional
-additive sections. The Rust parser is strict about section order, sequential
-references, instruction shapes, debug mappings, unknown sections, and trailing
-input; its `dump` formatter is the canonical text representation.
+`function` sections. `debug_sources`, `debug_locations`, and `debug_ranges` are
+optional additive sections. The Rust parser is strict about section order,
+sequential references, instruction shapes, debug mappings and ranges, unknown
+sections, and trailing input; its `dump` formatter is the canonical text
+representation.
 
 The audit covers every `artifact` runner case in the current verification
 inventory: 116 case IDs over 58 checked-in `expected.cdbc` fixtures. Every case
 records the observed header/version and envelope capabilities in the audit
-report. All 58 fixtures contain optional debug sources and locations; four
-import-aware fixtures now also contain canonical source-to-module identities;
-28 contain functions and 31 contain `native_call` instructions.
+report. All 58 fixtures contain debug sources, locations, and source-local
+ranges; four import-aware fixtures also contain canonical source-to-module
+identities; 28 contain functions and 31 contain `native_call` instructions.
 
 ## Audit results
 
@@ -52,7 +53,7 @@ python3 tests/cdbc_contract_audit.py \
 ```
 
 The reference corpus digest is
-`00aa8ea18d26b303dd76e0542b509b19add9af5ca112668807c8897a8f277c64`, computed
+`f4b23e35573ad3ce2e14b8f4b778b263842f7d8bd5792dbe958d00d85b353596`, computed
 from sorted artifact paths and their complete-text SHA-256 values.
 
 ## Evolution classification
@@ -60,7 +61,7 @@ from sorted artifact paths and their complete-text SHA-256 values.
 | Candidate | Classification | Current decision |
 | --- | --- | --- |
 | artifact kind | resolved after audit | linked programs omit an artifact declaration; M3B module products use strict `artifact: module` metadata in the same `cdbc 0.1` family |
-| debug sources/locations | already present | optional source-mapped runtime metadata is consumed by the Rust VM; M4B adds an optional source-to-module identity field |
+| debug sources/locations/ranges | already present | optional source-mapped runtime metadata is consumed by the Rust VM; M4B adds source-to-module identity and source-local half-open ranges |
 | unknown-section policy | already present | strict rejection protects older readers |
 | runtime/target identity | deferred | wait for a second runtime, target, or transport consumer |
 | capability flags | deferred | wait for a named negotiation requirement |
@@ -78,7 +79,8 @@ M4A consumer and planned compatibility fixtures, but it is not selected now.
 
 M0.5B selected no successor version. The current 0.1 envelope already covers
 the present C++ compiler/Rust VM pair, including core instructions, native calls,
-optional debug metadata, strict parse/dump, and runtime diagnostics. Adding
+optional debug metadata and source ranges, strict parse/dump, and runtime
+diagnostics. Adding
 fields without a concrete consumer or transport would create speculative ABI
 surface.
 

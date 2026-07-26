@@ -2,6 +2,7 @@
 #include "BytecodeTextEmitter.hpp"
 #include "FrontendSession.hpp"
 #include "IRCompiler.hpp"
+#include "Lexer.hpp"
 #include "ModuleCache.hpp"
 #include "ModuleInterfaceArtifact.hpp"
 #include "ModuleInterfaceEmitter.hpp"
@@ -380,6 +381,19 @@ void printParseErrorList(const ParseErrorList& errors, const std::string& source
     std::cerr << '\n';
 }
 
+void printLexErrorList(const LexErrorList& errors, const std::string& source)
+{
+    bool first = true;
+    for (const DiagnosticError& error : errors.errors()) {
+        if (!first) {
+            std::cerr << '\n';
+        }
+        first = false;
+        std::cerr << formatDiagnosticWithSource(error, source);
+    }
+    std::cerr << '\n';
+}
+
 void printFileDiagnosticErrors(const std::vector<FileDiagnosticError>& errors)
 {
     bool first = true;
@@ -632,6 +646,9 @@ int main(int argc, char** argv)
         return 1;
     } catch (const ParseErrorList& errors) {
         printParseErrorList(errors, frontend.sourceForDiagnostics());
+        return 1;
+    } catch (const LexErrorList& errors) {
+        printLexErrorList(errors, frontend.sourceForDiagnostics());
         return 1;
     } catch (const FileDiagnosticError& error) {
         std::cerr << formatDiagnosticWithSourceContext(error) << '\n';

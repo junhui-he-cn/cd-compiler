@@ -89,3 +89,35 @@ debug_locations:
   main 27 = s0:2:9
   main 28 = s0:2:3
   main 29 = s0:1:1
+
+debug_ranges:
+  main 0 = s0:10:11
+  main 1 = s0:13:14
+  main 2 = s0:16:17
+  main 3 = s0:9:17
+  main 4 = s0:0:30
+  main 5 = s0:0:30
+  main 6 = s0:0:30
+  main 7 = s0:0:30
+  main 8 = s0:0:30
+  main 9 = s0:0:30
+  main 10 = s0:0:30
+  main 11 = s0:0:30
+  main 12 = s0:0:30
+  main 13 = s0:0:30
+  main 14 = s0:0:30
+  main 15 = s0:0:30
+  main 16 = s0:0:30
+  main 17 = s0:0:30
+  main 18 = s0:0:30
+  main 19 = s0:0:30
+  main 20 = s0:0:30
+  main 21 = s0:0:30
+  main 22 = s0:0:30
+  main 23 = s0:0:30
+  main 24 = s0:0:30
+  main 25 = s0:0:30
+  main 26 = s0:0:30
+  main 27 = s0:29:30
+  main 28 = s0:29:30
+  main 29 = s0:0:30

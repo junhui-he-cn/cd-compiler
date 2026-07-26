@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m2b-2026-07-26-r4",
+  "baseline_commit": "130242a",
+  "inventory_revision": "m0c-2026-07-26-r5",
+  "decision_id": "M2B-PARSE-002",
+  "domain": "parser-diagnostic-recovery",
+  "status": "resolved",
+  "question": "How should parser recovery resume after a malformed method inside an impl declaration?",
+  "decision": "Treat each impl method as an independent recovery boundary, record at most one Parse diagnostic for a failed method, and synchronize with brace awareness at the next top-level fun method or the impl closing brace while restoring parser-local state.",
+  "recovery_limit": {
+    "boundary": "impl method declaration",
+    "within_method": "stop after the first Parse diagnostic",
+    "nested_braces": "skip nested brace content before recognizing the next method",
+    "later_stages": "do not enter semantic or backend stages after any parse diagnostic"
+  },
+  "compatibility_boundary": {
+    "diagnostic_order": "source order",
+    "valid_following_methods": "preserve parser progress and avoid cascading outer-brace diagnostics",
+    "direct_inputs": "existing combined-entry parsing remains unchanged",
+    "exit_and_stdout": "parse diagnostics still exit 1 and produce no stdout"
+  },
+  "rationale": "The impl method loop previously propagated a malformed method header to the outer declaration boundary. Synchronization then treated the malformed method body and impl closing brace as unrelated top-level statements, producing cascading diagnostics. A brace-aware method boundary keeps the recovery local and state-safe.",
+  "fixtures": [
+    "tests/golden/parse_errors/m2b_parser_recovery_impl.cd",
+    "tests/golden/parse_errors/m2b_parser_recovery_impl.err",
+    "tests/golden/parse_errors/m2b_parser_recovery_impl.exit",
+    "tests/malformed_cases.json"
+  ],
+  "quantitative_gate": {
+    "golden_case": "golden.parse_errors.m2b_parser_recovery_impl",
+    "malformed_case": "malformed.parser.impl_method_recovery",
+    "expected_diagnostics": 1,
+    "current_malformed_cases": 100,
+    "current_inventory_cases": 1778,
+    "nested_brace_resynchronization": true,
+    "stdout": "empty",
+    "exit_status": 1,
+    "inventory": "tests/verification_inventory.json"
+  },
+  "old_path_deletion_condition": "Keep recovery for other declaration-specific lists and direct/per-module semantic expansion under separate M2B decisions with their own compatibility corpora.",
+  "verification": {
+    "focused_commands": [
+      "cmake --build build --target compiler_design",
+      "python3 tests/run_golden_tests.py ./build/compiler_design --case m2b_parser_recovery_impl",
+      "python3 tests/run_malformed_tests.py ./build/compiler_design vm-rs",
+      "python3 tests/verification_inventory.py --write",
+      "git diff --check"
+    ]
+  }
+}

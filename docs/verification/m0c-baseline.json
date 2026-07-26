@@ -107,6 +107,45 @@
     "focused_report": "build/malformed-m4a-report.json",
     "invalid_artifact_execution": "all malformed cdbc cases use Rust dump only"
   },
+  "m2b_parser_extension": {
+    "decision_id": "M2B-PARSE-001",
+    "corpus_revision": "m0c-2026-07-26-r3",
+    "added_golden_cases": 1,
+    "added_source_cases": 1,
+    "current_malformed_cases": 97,
+    "current_inventory_cases": 1773,
+    "state_recovery_cases": [
+      "malformed.parse_error.m2b_parser_recovery_state",
+      "malformed.parser.recovery_state"
+    ]
+  },
+  "m2b_lexer_extension": {
+    "decision_id": "M2B-LEX-001",
+    "corpus_revision": "m0c-2026-07-26-r4",
+    "added_malformed_cases": 1,
+    "added_ctest_cases": 1,
+    "current_malformed_cases": 98,
+    "current_inventory_cases": 1775,
+    "focused_ctest": "lexer_recovery"
+  },
+  "m2b_parser_method_extension": {
+    "decision_id": "M2B-PARSE-002",
+    "corpus_revision": "m0c-2026-07-26-r5",
+    "added_golden_cases": 1,
+    "added_source_cases": 1,
+    "current_malformed_cases": 100,
+    "current_inventory_cases": 1778,
+    "nested_brace_recovery_case": "malformed.parser.impl_method_recovery"
+  },
+  "m2b_parser_member_extension": {
+    "decision_id": "M2B-PARSE-003",
+    "corpus_revision": "m0c-2026-07-26-r6",
+    "added_golden_cases": 1,
+    "added_source_cases": 1,
+    "current_malformed_cases": 102,
+    "current_inventory_cases": 1781,
+    "declaration_member_recovery_case": "malformed.parser.declaration_member_recovery"
+  },
   "comparison": {
     "case_discovery_differences": [],
     "pass_fail_skip_differences": [],

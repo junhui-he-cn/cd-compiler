@@ -318,9 +318,35 @@ bool hasDebugLocations(const BytecodeProgram& program)
     return false;
 }
 
+bool hasDebugRanges(const BytecodeProgram& program)
+{
+    for (const BytecodeInstruction& instruction : program.instructions()) {
+        if (instruction.span && instruction.span->range) {
+            return true;
+        }
+    }
+    for (const BytecodeFunction& function : program.functions()) {
+        for (const BytecodeInstruction& instruction : function.instructions) {
+            if (instruction.span && instruction.span->range) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 void writeDebugLocation(std::ostream& out, const std::string& section, std::size_t index, const SourceSpan& span)
 {
     out << "  " << section << ' ' << index << " = s" << span.source << ':' << span.line << ':' << span.column << '\n';
+}
+
+void writeDebugRange(std::ostream& out, const std::string& section, std::size_t index, const SourceSpan& span)
+{
+    if (!span.range) {
+        return;
+    }
+    out << "  " << section << ' ' << index << " = s" << span.source << ':'
+        << span.range->start << ':' << span.range->end << '\n';
 }
 
 const char* moduleDependencyKindName(ModuleGraphEdgeKind kind)
@@ -383,6 +409,25 @@ void writeBytecodeSections(std::ostream& out, const BytecodeProgram& program)
                 const auto& instruction = function.instructions[instructionIndex];
                 if (instruction.span) {
                     writeDebugLocation(out, "function f" + std::to_string(functionIndex), instructionIndex, *instruction.span);
+                }
+            }
+        }
+    }
+
+    if (hasDebugRanges(program)) {
+        out << "\ndebug_ranges:\n";
+        for (std::size_t index = 0; index < program.instructions().size(); ++index) {
+            const auto& instruction = program.instructions()[index];
+            if (instruction.span) {
+                writeDebugRange(out, "main", index, *instruction.span);
+            }
+        }
+        for (std::size_t functionIndex = 0; functionIndex < program.functions().size(); ++functionIndex) {
+            const BytecodeFunction& function = program.functions()[functionIndex];
+            for (std::size_t instructionIndex = 0; instructionIndex < function.instructions.size(); ++instructionIndex) {
+                const auto& instruction = function.instructions[instructionIndex];
+                if (instruction.span) {
+                    writeDebugRange(out, "function f" + std::to_string(functionIndex), instructionIndex, *instruction.span);
                 }
             }
         }

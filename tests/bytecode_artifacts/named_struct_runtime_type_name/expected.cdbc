@@ -22,3 +22,9 @@ debug_locations:
   main 1 = s0:2:14
   main 2 = s0:2:7
   main 3 = s0:2:1
+
+debug_ranges:
+  main 0 = s0:55:56
+  main 1 = s0:42:56
+  main 2 = s0:35:59
+  main 3 = s0:35:59

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "corpus_revision": "m0c-2026-07-26-r2",
+  "corpus_revision": "m0c-2026-07-26-r5",
   "seed": 20260722,
   "limits": {
     "max_input_bytes": 8192,
@@ -19,6 +19,12 @@
       "source": "print 1 @ 2;\n",
       "stage": "lexical",
       "capability_tags": ["malformed", "lexer", "unexpected-character"]
+    },
+    {
+      "case_id": "malformed.lexer.multiple_errors",
+      "source": "print 1 @ 2 & 3;\n",
+      "stage": "lexical",
+      "capability_tags": ["malformed", "lexer", "diagnostic-recovery", "multiple-errors"]
     },
     {
       "case_id": "malformed.parser.missing_delimiter",
@@ -43,6 +49,24 @@
       "source": "print (1;\nprint [;\n",
       "stage": "diagnostic-recovery",
       "capability_tags": ["malformed", "parser", "diagnostic-recovery"]
+    },
+    {
+      "case_id": "malformed.parser.recovery_state",
+      "source": "struct Box { value: number }\nif (1 + ) {\n  print 1;\n}\nlet x = Box { value: 1 };\nprint x.value;\n",
+      "stage": "diagnostic-recovery",
+      "capability_tags": ["malformed", "parser", "diagnostic-recovery", "state-restoration"]
+    },
+    {
+      "case_id": "malformed.parser.impl_method_recovery",
+      "source": "struct Box { value: number }\nimpl Box {\n  fun bad( { if true { print 1; } }\n  fun good() { print 2; }\n}\nprint 3;\n",
+      "stage": "diagnostic-recovery",
+      "capability_tags": ["malformed", "parser", "diagnostic-recovery", "impl-method-recovery", "state-restoration"]
+    },
+    {
+      "case_id": "malformed.parser.declaration_member_recovery",
+      "source": "struct Box {\n  first: number,\n  : number,\n  last: string\n}\nenum Result {\n  Ok(number),\n  ,\n  Done,\n}\nprint 1;\n",
+      "stage": "diagnostic-recovery",
+      "capability_tags": ["malformed", "parser", "diagnostic-recovery", "declaration-member-recovery"]
     }
   ],
   "parse_error_family": {

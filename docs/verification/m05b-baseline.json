@@ -19,7 +19,7 @@
     "observed_header_versions": [
       "cdbc 0.1"
     ],
-    "reference_corpus_sha256": "8a618dfa7df1cbd76eb723336bbf727103322043252ffd68fa6259b783505903"
+    "reference_corpus_sha256": "f4b23e35573ad3ce2e14b8f4b778b263842f7d8bd5792dbe958d00d85b353596"
   },
   "envelope": {
     "core_sections": [
@@ -30,16 +30,18 @@
     ],
     "optional_sections": [
       "debug_sources",
-      "debug_locations"
+      "debug_locations",
+      "debug_ranges"
     ],
     "observed_capability_counts": {
       "with_functions": 28,
       "with_native_call": 31,
       "with_debug_sources": 58,
       "with_debug_locations": 58,
+      "with_debug_ranges": 58,
       "with_debug_source_modules": 4
     },
-    "parser_policy": "strict required sections, references, instruction shapes, debug mappings, and trailing/unknown sections"
+    "parser_policy": "strict required sections, references, instruction shapes, debug mappings and ranges, and trailing/unknown sections"
   },
   "verification_commands": [
     [
@@ -86,6 +88,23 @@
       "mode": "dump-only",
       "dump_invocations": 2,
       "run_invocations": 0
+    },
+    "invalid_artifact_probes": {
+      "total": 7,
+      "passed": 7,
+      "failed": 0,
+      "probes": [
+        "invalid-register",
+        "invalid-constant",
+        "invalid-jump",
+        "invalid-name",
+        "invalid-number",
+        "invalid-function",
+        "invalid-native"
+      ],
+      "mode": "dump-only",
+      "dump_invocations": 7,
+      "run_invocations": 0
     }
   },
   "evolution_classifications": {
@@ -105,14 +124,15 @@
       "python3",
       "tests/cdbc_contract_audit_selftest.py"
     ],
-    "tests": 8,
-    "passed": 8,
+    "tests": 10,
+    "passed": 10,
     "failed": 0
   },
   "comparison": {
     "artifact_case_capabilities_recorded": true,
     "current_0_1_parse_dump_deterministic": true,
     "invalid_family_version_rejected_before_vm": true,
+    "invalid_artifact_references_rejected_before_vm": true,
     "selected_candidates_have_consumers_and_planned_fixtures": true,
     "deferred_and_not_required_fields_have_revisit_conditions": true,
     "disposition": "zero unexplained differences"

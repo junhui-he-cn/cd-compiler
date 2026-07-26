@@ -45,6 +45,9 @@ private:
     StmtPtr structDeclaration();
     StmtPtr implDeclaration();
     MethodDecl methodDeclaration();
+    std::optional<MethodDecl> parseMethodDeclarationRecovering();
+    void synchronizeImplMethod();
+    void synchronizeDelimitedMember();
     std::vector<StructFieldDecl> structFields();
     StructFieldDecl structField();
     StmtPtr functionDeclaration();

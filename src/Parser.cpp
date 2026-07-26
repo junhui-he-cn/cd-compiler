@@ -22,11 +22,15 @@ std::optional<SourceSpan> spanForToken(const Token& token)
     if (!token.source) {
         return std::nullopt;
     }
-    return SourceSpan{
+    SourceSpan span{
         *token.source,
         token.sourceLine.value_or(token.line),
         token.column,
     };
+    if (token.range) {
+        span.range = SourceSpanRange{token.range->start, token.range->end};
+    }
+    return span;
 }
 
 template <typename Node>
@@ -70,6 +74,37 @@ ExprPtr buildAssignmentTarget(
 
     return nullptr;
 }
+
+class ParserStateGuard final {
+public:
+    ParserStateGuard(int& blockDepth, bool& allowStructConstructors)
+        : blockDepth_(blockDepth)
+        , allowStructConstructors_(allowStructConstructors)
+        , initialBlockDepth_(blockDepth)
+        , initialAllowStructConstructors_(allowStructConstructors)
+    {
+    }
+
+    ParserStateGuard(const ParserStateGuard&) = delete;
+    ParserStateGuard& operator=(const ParserStateGuard&) = delete;
+
+    ~ParserStateGuard()
+    {
+        restore();
+    }
+
+    void restore() noexcept
+    {
+        blockDepth_ = initialBlockDepth_;
+        allowStructConstructors_ = initialAllowStructConstructors_;
+    }
+
+private:
+    int& blockDepth_;
+    bool& allowStructConstructors_;
+    int initialBlockDepth_;
+    bool initialAllowStructConstructors_;
+};
 
 } // namespace
 
@@ -128,12 +163,96 @@ void Parser::recordParseError(ParseError error)
 
 std::optional<StmtPtr> Parser::parseDeclarationRecovering(bool stopAtRightBrace)
 {
+    ParserStateGuard stateGuard(blockDepth_, allowStructConstructors_);
     try {
         return declaration();
     } catch (const ParseError& error) {
+        stateGuard.restore();
         recordParseError(error);
         synchronize(stopAtRightBrace);
         return std::nullopt;
+    }
+}
+
+std::optional<MethodDecl> Parser::parseMethodDeclarationRecovering()
+{
+    ParserStateGuard stateGuard(blockDepth_, allowStructConstructors_);
+    try {
+        return methodDeclaration();
+    } catch (const ParseError& error) {
+        stateGuard.restore();
+        recordParseError(error);
+        synchronizeImplMethod();
+        return std::nullopt;
+    }
+}
+
+void Parser::synchronizeImplMethod()
+{
+    int braceDepth = 0;
+    while (!isAtEnd()) {
+        if (check(TokenType::LeftBrace)) {
+            ++braceDepth;
+            advance();
+            continue;
+        }
+
+        if (check(TokenType::RightBrace)) {
+            if (braceDepth == 0) {
+                return;
+            }
+            --braceDepth;
+            advance();
+            continue;
+        }
+
+        if (braceDepth == 0 && check(TokenType::Fun)) {
+            return;
+        }
+        advance();
+    }
+}
+
+void Parser::synchronizeDelimitedMember()
+{
+    int parenthesisDepth = 0;
+    int bracketDepth = 0;
+    int angleDepth = 0;
+    while (!isAtEnd()) {
+        if (parenthesisDepth == 0 && bracketDepth == 0 && angleDepth == 0
+            && (check(TokenType::Comma) || check(TokenType::RightBrace))) {
+            return;
+        }
+
+        switch (peek().type) {
+        case TokenType::LeftParen:
+            ++parenthesisDepth;
+            break;
+        case TokenType::RightParen:
+            if (parenthesisDepth > 0) {
+                --parenthesisDepth;
+            }
+            break;
+        case TokenType::LeftBracket:
+            ++bracketDepth;
+            break;
+        case TokenType::RightBracket:
+            if (bracketDepth > 0) {
+                --bracketDepth;
+            }
+            break;
+        case TokenType::Less:
+            ++angleDepth;
+            break;
+        case TokenType::Greater:
+            if (angleDepth > 0) {
+                --angleDepth;
+            }
+            break;
+        default:
+            break;
+        }
+        advance();
     }
 }
 
@@ -277,7 +396,12 @@ std::vector<EnumVariantDecl> Parser::enumVariants()
     std::vector<EnumVariantDecl> variants;
     if (!check(TokenType::RightBrace)) {
         while (true) {
-            variants.push_back(enumVariant());
+            try {
+                variants.push_back(enumVariant());
+            } catch (const ParseError& error) {
+                recordParseError(error);
+                synchronizeDelimitedMember();
+            }
             if (!match(TokenType::Comma) || check(TokenType::RightBrace)) {
                 break;
             }
@@ -313,7 +437,12 @@ std::vector<StructFieldDecl> Parser::structFields()
     std::vector<StructFieldDecl> fields;
     if (!check(TokenType::RightBrace)) {
         do {
-            fields.push_back(structField());
+            try {
+                fields.push_back(structField());
+            } catch (const ParseError& error) {
+                recordParseError(error);
+                synchronizeDelimitedMember();
+            }
         } while (match(TokenType::Comma));
     }
     return fields;
@@ -335,7 +464,9 @@ StmtPtr Parser::implDeclaration()
     consume(TokenType::LeftBrace, "expected `{` after impl type name");
     std::vector<MethodDecl> methods;
     while (!check(TokenType::RightBrace) && !isAtEnd()) {
-        methods.push_back(methodDeclaration());
+        if (std::optional<MethodDecl> method = parseMethodDeclarationRecovering()) {
+            methods.push_back(std::move(*method));
+        }
     }
     consume(TokenType::RightBrace, "expected `}` after impl methods");
     const std::optional<SourceSpan> span = spanForToken(keyword);
@@ -777,9 +908,14 @@ ExprPtr Parser::conditionExpression()
 {
     const bool previousAllowStructConstructors = allowStructConstructors_;
     allowStructConstructors_ = false;
-    ExprPtr result = expression();
-    allowStructConstructors_ = previousAllowStructConstructors;
-    return result;
+    try {
+        ExprPtr result = expression();
+        allowStructConstructors_ = previousAllowStructConstructors;
+        return result;
+    } catch (...) {
+        allowStructConstructors_ = previousAllowStructConstructors;
+        throw;
+    }
 }
 
 ExprPtr Parser::assignment()

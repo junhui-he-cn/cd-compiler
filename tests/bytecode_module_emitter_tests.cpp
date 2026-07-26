@@ -82,6 +82,43 @@ void testDebugSourceModuleIdentity()
         "  s0 module=\"/workspace/lib.cd\" path=\"lib.cd\" text=\"print 1;\\n\"\n");
 }
 
+void testDebugSourceRange()
+{
+    BytecodeProgram program;
+    SourceFile source;
+    source.path = "lib.cd";
+    source.text = "print 1;\n";
+    source.id = SourceFileId{0};
+    program.setSources({source});
+    program.setRegisterCount(1);
+
+    BytecodeInstruction instruction;
+    instruction.op = BytecodeOp::Print;
+    instruction.left = BytecodeRegister{0};
+    instruction.span = SourceSpan{0, 1, 1, SourceSpanRange{0, 7}};
+    program.setInstructions({instruction});
+
+    std::ostringstream output;
+    writeBytecodeText(output, program);
+    assert(output.str() ==
+        "cdbc 0.1\n\n"
+        "constants:\n"
+        "\n"
+        "names:\n"
+        "\n"
+        "main registers=1:\n"
+        "  print r0\n"
+        "\n"
+        "debug_sources:\n"
+        "  s0 path=\"lib.cd\" text=\"print 1;\\n\"\n"
+        "\n"
+        "debug_locations:\n"
+        "  main 0 = s0:1:1\n"
+        "\n"
+        "debug_ranges:\n"
+        "  main 0 = s0:0:7\n");
+}
+
 } // namespace
 
 int main()
@@ -89,5 +126,6 @@ int main()
     testLinkedArtifactRemainsUnchanged();
     testModuleEnvelopeAndDependencyMarker();
     testDebugSourceModuleIdentity();
+    testDebugSourceRange();
     return 0;
 }

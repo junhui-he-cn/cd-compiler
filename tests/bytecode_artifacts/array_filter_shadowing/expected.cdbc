@@ -81,3 +81,30 @@ debug_locations:
   function f2 1 = s0:6:32
   function f2 2 = s0:6:18
   function f2 3 = s0:6:18
+
+debug_ranges:
+  main 0 = s0:13:57
+  main 1 = s0:4:57
+  main 2 = s0:69:75
+  main 3 = s0:77:78
+  main 4 = s0:76:78
+  main 5 = s0:81:106
+  main 6 = s0:69:110
+  main 7 = s0:69:110
+  main 8 = s0:119:120
+  main 9 = s0:118:120
+  main 10 = s0:129:154
+  main 11 = s0:118:158
+  main 12 = s0:118:158
+  function f0 0 = s0:47:57
+  function f0 1 = s0:40:57
+  function f0 2 = s0:13:57
+  function f0 3 = s0:13:57
+  function f1 0 = s0:102:106
+  function f1 1 = s0:95:106
+  function f1 2 = s0:81:106
+  function f1 3 = s0:81:106
+  function f2 0 = s0:150:154
+  function f2 1 = s0:143:154
+  function f2 2 = s0:129:154
+  function f2 3 = s0:129:154

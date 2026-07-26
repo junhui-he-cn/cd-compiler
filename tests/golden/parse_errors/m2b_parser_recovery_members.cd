@@ -1,0 +1,11 @@
+struct Box {
+  first: number,
+  : number,
+  last: string
+}
+enum Result {
+  Ok(number),
+  ,
+  Done,
+}
+print 1;

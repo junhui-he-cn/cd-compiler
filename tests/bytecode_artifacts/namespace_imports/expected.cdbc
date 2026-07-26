@@ -52,3 +52,20 @@ debug_locations:
   function f0 3 = s1:2:16
   function f0 4 = s1:2:1
   function f0 5 = s1:2:1
+
+debug_ranges:
+  main 0 = s1:11:13
+  main 1 = s1:4:13
+  main 2 = s1:19:45
+  main 3 = s1:19:45
+  main 4 = s1:19:45
+  main 5 = s1:19:45
+  main 6 = s0:32:44
+  main 7 = s0:32:44
+  main 8 = s0:32:44
+  function f0 0 = s1:37:41
+  function f0 1 = s1:44:45
+  function f0 2 = s1:37:45
+  function f0 3 = s1:30:45
+  function f0 4 = s1:19:45
+  function f0 5 = s1:19:45

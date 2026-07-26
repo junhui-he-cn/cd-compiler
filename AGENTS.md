@@ -174,7 +174,7 @@ Use `StoreVar`-style operations for declarations/initialization and assignment-s
 
 When IR behavior changes, update bytecode lowering and the Rust VM path unless the change is intentionally IR-only. Bytecode lowering should preserve current IR semantics, and Rust VM execution should match `run.out` fixtures covered by `tests/run_rust_vm_tests.py`.
 
-When changing bytecode opcodes or artifact formatting, update `docs/bytecode-text-format.md`, the C++ `BytecodeTextEmitter`, Rust parser/formatter in `vm-rs/src/format.rs`, and `tests/bytecode_artifacts/` together.
+When changing bytecode opcodes or artifact formatting, update `docs/bytecode-text-format.md`, the C++ `BytecodeTextEmitter`, Rust parser/formatter in `vm-rs/src/format.rs`, and `tests/bytecode_artifacts/` together. Source-backed compiler artifacts may carry optional `debug_ranges` entries paired with `debug_locations`; ranges are source-local half-open byte intervals and must not serialize snapshot-local IDs.
 
 When changing Rust VM execution semantics, update `vm-rs/src/vm.rs`, focused Rust unit tests, and `tests/run_rust_vm_tests.py` coverage together.
 
@@ -240,7 +240,7 @@ Language diagnostics use this stable shape:
 <Kind> error: <message>
 ```
 
-For file-backed lexer, parser, and type diagnostics in imported files and direct multi-file inputs, the first line may include a file path: `<Kind> error at <path>:<line>:<column>: <message>`. For stdin and single-file pathless diagnostics, the first line remains `<Kind> error at <line>:<column>: <message>`. The CLI appends the relevant source line and caret for located diagnostics. Compile, import loading, and runtime diagnostics are currently locationless unless explicitly changed by a future slice. Direct input programs and each module body remain stop-first for type checking; the import-aware module scheduler may aggregate one diagnostic per independent failed module in stable dependency order and suppress importers of failed modules. After intentional diagnostic format changes, refresh and review parse/type/runtime/import error goldens. Lexer errors do not yet have a dedicated golden fixture category.
+For file-backed lexer, parser, and type diagnostics in imported files and direct multi-file inputs, the first line may include a file path: `<Kind> error at <path>:<line>:<column>: <message>`. For stdin and single-file pathless diagnostics, the first line remains `<Kind> error at <line>:<column>: <message>`. The CLI appends the relevant source line and caret for located diagnostics. Parser statement-boundary and `impl` method-list recovery may report multiple parse diagnostics, restoring parser-local recovery state before resynchronizing; recoverable single-character lexer errors are likewise aggregated before parsing, while unterminated strings remain stop-at-EOF. Compile, import loading, and runtime diagnostics are currently locationless unless explicitly changed by a future slice. Direct input programs and each module body remain stop-first for type checking; the import-aware module scheduler may aggregate one diagnostic per independent failed module in stable dependency order and suppress importers of failed modules. After intentional diagnostic format changes, refresh and review parse/type/runtime/import error goldens. Lexer errors do not yet have a dedicated golden fixture category.
 
 ## Documentation Update Rules
 

@@ -766,6 +766,36 @@ and compatibility evidence live in
 `docs/decisions/m2b-type-recovery-001.md` and
 `docs/decisions/m2b-type-recovery-001.json`.
 
+Current implementation slice `M2B-PARSE-001` makes the existing parser
+statement-boundary recovery state-safe. A failed declaration or block restores
+parser-local block depth and contextual struct-constructor eligibility before
+synchronization, so later valid statements do not receive cascading syntax
+errors. Lexer stop-first behavior, per-statement recovery limits, and direct
+input semantic stop-first behavior remain unchanged.
+
+Current implementation slice `M2B-PARSE-002` adds a brace-aware recovery
+boundary for method declarations inside `impl` blocks. A malformed method is
+reported once, nested method-body braces are skipped, and recovery resumes at
+the next top-level method or the enclosing `impl` brace without turning the
+outer declaration into a cascade of top-level errors. The decision and
+compatibility evidence live in
+`docs/decisions/m2b-parser-recovery-002.md` and
+`docs/decisions/m2b-parser-recovery-002.json`.
+
+Current implementation slice `M2B-PARSE-003` applies the same bounded recovery
+to struct-field and enum-variant lists. Delimiter-aware synchronization keeps
+nested type punctuation local, preserves the existing struct/enum trailing
+comma policy, and reports independent malformed members in source order. The
+decision and compatibility evidence live in
+`docs/decisions/m2b-parser-recovery-003.md` and
+`docs/decisions/m2b-parser-recovery-003.json`.
+
+Current implementation slice `M2B-LEX-001` aggregates recoverable
+single-character lexer diagnostics before parsing, preserves their source order
+and direct multi-file path mapping, and keeps unterminated strings at the
+existing stop-at-EOF boundary. Parser, semantic, import, and backend stages do
+not run after a non-empty lexer diagnostic list.
+
 **Deliverable:** report independent lexer/parser/type diagnostics without
 corrupting later analysis while retaining distinct lexer, parser, type,
 import-loading, compile, and runtime error categories. Parser recovery remains a
@@ -1087,6 +1117,15 @@ the field while old module-free entries remain compatible. The decision
 records are `docs/decisions/m4b-debug-002.md` and
 `docs/decisions/m4b-debug-002.json`.
 
+Current implementation slice `M4B-DEBUG-003` adds an optional canonical
+`debug_ranges` section. Source-backed IR/bytecode instructions retain the
+M1A1 source-local half-open byte range, Rust validates the range against the
+embedded source text, and module linking rebases its artifact-local source
+index together with the existing point location. The line/column metadata and
+metadata-free artifact fallback remain compatible. The decision records are
+`docs/decisions/m4b-debug-003.md` and
+`docs/decisions/m4b-debug-003.json`.
+
 **Deliverable:** standardize metadata so runtime errors, stack traces, and future
 debug events map to stable module/source identities, functions, calls, and full
 source ranges. M4B consumes M1A1 ranges/identities, M3A module identities, and
@@ -1095,7 +1134,7 @@ It maps snapshot-local M1A1 source IDs to artifact-local serialized IDs; it does
 not persist compiler snapshot IDs directly.
 
 **Migration:** emit shared metadata beside current `debug_sources`,
-`debug_locations`, and optional source-to-module identity, compare runtime
+`debug_locations`, optional `debug_ranges`, and optional source-to-module identity, compare runtime
 diagnostics and frame order, then switch the
 VM and tools one metadata consumer at a time. Metadata-free artifacts retain
 their explicitly documented fallback behavior while their supported versions
@@ -1310,7 +1349,10 @@ debug source paths, source positions, and deterministic imported call-stack
 frames without changing the artifact format. `M4B-DEBUG-002` is complete:
 import-aware compiler artifacts carry canonical source-to-module identity,
 old debug entries remain readable, and Rust linking preserves the field while
-rebasing source references.
+rebasing source references. `M4B-DEBUG-003` is complete: compiler-emitted
+instructions carry full source-local byte ranges, Rust validates and
+canonicalizes `debug_ranges`, and module linking rebases range source indexes
+without changing `cdbc 0.1` compatibility.
 
 M0A is implemented at inventory revision `m0a-2026-07-22-r1` against baseline
 commit `0481624`. The checked-in inventory contains 1,563 stable case IDs;
@@ -1334,18 +1376,31 @@ reference commit `30ae329`. Its original bounded deterministic corpus has 88
 cases, including lexer/parser seeds, the existing parse-error family, and
 `.cdbc` mutations; the original canonical inventory reported 1,658 cases. The
 M4A-VALIDATION-001 extension uses manifest revision `m0c-2026-07-26-r2`, adds
-seven pre-execution bytecode-reference cases, and currently validates 95
-malformed cases in the 1,770-case inventory. The harness, minimizer selftest,
+seven pre-execution bytecode-reference cases, and validates 95 malformed
+cases before the M2B parser extension. M2B-PARSE-001 uses manifest revision
+`m0c-2026-07-26-r3`, adds two parser state-recovery cases, and validates 97
+malformed cases before the lexer extension. M2B-LEX-001 uses manifest revision
+`m0c-2026-07-26-r4`, adds one lexer aggregation case and one focused CTest, and
+validates 98 malformed cases before M2B-PARSE-002. M2B-PARSE-002 uses manifest
+revision `m0c-2026-07-26-r5`, adds one nested-brace method-recovery case, and
+currently validates 100 malformed cases before M2B-PARSE-003. M2B-PARSE-003
+uses manifest revision `m0c-2026-07-26-r6`, adds one declaration-member
+recovery case, and currently validates 102 malformed cases in the 1,781-case
+inventory. The harness, minimizer selftest,
 and observed baseline are recorded in
 `docs/verification/m0c-malformed-design.md` and
 `docs/verification/m0c-baseline.json`. M0D, M0.5A, M0.5B, M1F, and
-M2A-FLOW-001 through M2A-FLOW-021 are now implemented; M3A-INTERFACE-006
+M2A-FLOW-001 through M2A-FLOW-021, M2B-PARSE-001, M2B-PARSE-002,
+M2B-PARSE-003, and
+M2B-LEX-001 are now implemented;
+M3A-INTERFACE-006
 through M3A-INTERFACE-016, M3B-ARTIFACT-001, M3B-CACHE-001, and
 M3B-BOUNDARY-001 are the completed module-boundary, module-product, and
 artifact-cache slices. Module-product source fallback remains required for
 cold builds and repairs. The next independent tool slice is M5A formatter;
-M2B type-recovery expansion remains separately admitted only with a new
-diagnostic decision and corpus.
+Broader parser resynchronization and direct/per-module type-recovery expansion
+remain separately admitted only with new diagnostic decisions and compatibility
+corpora.
 
 The hard dependency gates are:
 

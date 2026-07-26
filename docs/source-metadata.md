@@ -23,6 +23,14 @@ reads, assignments, and direct multi-file diagnostics. Bytecode emission does
 not serialize these snapshot-local identities; artifact-local debug identity
 remains owned by M4A/M4B.
 
+M4B source-range metadata keeps the same distinction at the artifact boundary.
+Compiler-emitted instruction metadata retains each source range's local byte
+offsets and converts the range start to the existing one-based line/column
+location. The `.cdbc` `debug_ranges` section serializes only the artifact-local
+source index and the half-open `[start, end)` byte interval; it never serializes
+`SourceFileId` or another snapshot-local ID. Older artifacts without the
+section remain valid.
+
 ## Declaration index (M1B initial slice)
 
 `DeclarationIndex` is a snapshot-local AST index built beside the existing

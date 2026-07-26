@@ -1,5 +1,5 @@
 use crate::bytecode::{
-    Constant, DebugLocation, DebugSource, Function, FunctionBody, Instruction, Program,
+    Constant, DebugLocation, DebugRange, DebugSource, Function, FunctionBody, Instruction, Program,
 };
 use crate::format::ModuleArtifact;
 use std::collections::{HashMap, HashSet};
@@ -534,6 +534,11 @@ fn remap_location(location: &Option<DebugLocation>, source_base: usize) -> Optio
         source: location.source + source_base,
         line: location.line,
         column: location.column,
+        range: location.range.as_ref().map(|range| DebugRange {
+            source: range.source + source_base,
+            start: range.start,
+            end: range.end,
+        }),
     })
 }
 

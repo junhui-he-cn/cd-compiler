@@ -32,12 +32,13 @@
     "optional_sections": [
       "artifact: module and module metadata for independent products",
       "debug_sources",
-      "debug_locations"
+      "debug_locations",
+      "debug_ranges"
     ],
-    "section_order": "optional artifact: module and module metadata, constants, names, main, zero or more function sections, optional debug_sources, optional debug_locations",
-    "parser_policy": "Rust parsing is strict: artifact kind, module fields, dependency markers, required sections, sequential references, instruction shapes, debug references, and trailing/unknown sections are rejected.",
+    "section_order": "optional artifact: module and module metadata, constants, names, main, zero or more function sections, optional debug_sources, optional debug_locations, optional debug_ranges",
+    "parser_policy": "Rust parsing is strict: artifact kind, module fields, dependency markers, required sections, sequential references, instruction shapes, debug references and ranges, and trailing/unknown sections are rejected.",
     "formatter_policy": "Rust dump canonicalizes either linked cdbc 0.1 programs or module products to the same text representation emitted by C++.",
-    "debug_policy": "Debug metadata is additive and optional; source/function/instruction indexes are artifact-local, while line and column values are one-based."
+    "debug_policy": "Debug metadata is additive and optional; source/function/instruction indexes are artifact-local, debug_ranges use source-local half-open byte intervals, and line and column values are one-based."
   },
   "evolution_decisions": [
     {
@@ -59,15 +60,16 @@
     },
     {
       "field_id": "debug-metadata",
-      "field": "debug sources and locations",
+      "field": "debug sources, locations, and ranges",
       "classification": "already present",
-      "current_state": "Optional debug_sources and debug_locations sections are emitted, strictly parsed, and used by the Rust VM for source-aware runtime diagnostics; M4B-DEBUG-002 adds an optional canonical source-to-module identity field.",
+      "current_state": "Optional debug_sources, debug_locations, and debug_ranges sections are emitted, strictly parsed, and used by the Rust VM and module linker for source-aware runtime metadata; each emitted range is paired with a location and uses source-local half-open byte offsets; M4B-DEBUG-002 adds an optional canonical source-to-module identity field.",
       "named_consumer": "Rust VM runtime diagnostics and debugger-oriented M4B work",
       "planned_fixtures": [
         "tests/bytecode_artifacts/runtime_diagnostics/expected.cdbc",
+        "tests/module_debug_metadata_tests.py",
         "vm-rs/src/format.rs"
       ],
-      "rationale": "The existing additive metadata already covers the current source-mapped runtime consumer without changing core execution sections.",
+      "rationale": "The additive metadata covers current source-mapped runtime diagnostics and preserves complete source ranges for future debugger consumers without changing core execution sections.",
       "revisit": {
         "milestone": "M4B",
         "condition": "Extend metadata only when a named debugger/runtime consumer requires a field not expressible by the current sparse mappings."

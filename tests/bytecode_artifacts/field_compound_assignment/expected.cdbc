@@ -48,3 +48,18 @@ debug_locations:
   main 10 = s0:4:7
   main 11 = s0:4:7
   main 12 = s0:4:1
+
+debug_ranges:
+  main 0 = s0:67:68
+  main 1 = s0:50:68
+  main 2 = s0:37:68
+  main 3 = s0:72:73
+  main 4 = s0:72:84
+  main 5 = s0:72:84
+  main 6 = s0:83:84
+  main 7 = s0:72:84
+  main 8 = s0:72:84
+  main 9 = s0:72:84
+  main 10 = s0:92:93
+  main 11 = s0:92:99
+  main 12 = s0:92:99
