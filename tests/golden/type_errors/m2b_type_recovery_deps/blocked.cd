@@ -1,0 +1,2 @@
+import "./a.cd";
+print missing_blocked;

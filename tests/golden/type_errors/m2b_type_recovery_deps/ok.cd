@@ -1,0 +1,2 @@
+let good = 1;
+export good;

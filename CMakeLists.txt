@@ -198,13 +198,18 @@ add_test(
 add_executable(frontend_session_tests
     tests/frontend_session_tests.cpp
     src/Ast.cpp
+    src/DeclarationIndex.cpp
     src/Diagnostic.cpp
+    src/FlowFacts.cpp
     src/FrontendSession.cpp
     src/Lexer.cpp
     src/LosslessSource.cpp
     src/ModuleCache.cpp
     src/ModuleInterfaceArtifact.cpp
+    src/ModuleSymbols.cpp
+    src/NativeStdlib.cpp
     src/Parser.cpp
+    src/TypeChecker.cpp
     src/TypeUtils.cpp
 )
 target_include_directories(frontend_session_tests PRIVATE include)

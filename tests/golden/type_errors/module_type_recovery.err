@@ -1,0 +1,6 @@
+Type error at <repo>/tests/golden/type_errors/m2b_type_recovery_deps/a.cd:1:7: undefined variable `missing_a_first`
+  print missing_a_first;
+        ^
+Type error at <repo>/tests/golden/type_errors/m2b_type_recovery_deps/b.cd:1:7: undefined variable `missing_b`
+  print missing_b;
+        ^

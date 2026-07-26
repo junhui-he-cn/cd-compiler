@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m3a-2026-07-26-r9",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M3A-INTERFACE-016",
+  "domain": "module-interface-consumption",
+  "status": "resolved",
+  "question": "When may an imported module body be omitted from semantic checking?",
+  "decision": "A validated imported cdi sidecar with its paired module product is the dependency semantic input; dependency-order scheduling completes that preloaded node without entering the source-body checker, while source-backed entries and cache fallback or repair paths retain body checking.",
+  "compatibility_boundary": {
+    "language": "unchanged",
+    "cdi": "cdi 0.1 unchanged",
+    "cdbc": "cdbc 0.1 unchanged",
+    "direct_inputs": "single-file and ordered direct-multi-file programs retain their combined entry path",
+    "module_products": "cold builds and repairs retain source fallback"
+  },
+  "migration": {
+    "preloaded_hit": "scheduler marks the interface node complete without TypeChecker::checkModule",
+    "source_fallback": "parsed modules remain body-checked and diagnostic-authoritative",
+    "observability": "checkedModuleBodyIds records only source bodies that completed semantic checking"
+  },
+  "quantitative_gate": {
+    "complete_hit": "frontend_session_tests records only the entry module body",
+    "partial_reuse": "frontend_session_tests records source-backed importer and entry bodies but not the valid lower dependency",
+    "fallback": "frontend_session_tests records both source-backed module bodies",
+    "mismatch_count": 0,
+    "inventory": "tests/verification_inventory.json"
+  },
+  "old_path_deletion_condition": "Do not remove module-product source fallback, entry source loading, or graph transport adapters until independently validated product/content and diagnostic evidence covers cold, repair, stale, malformed, and partial-reuse builds.",
+  "out_of_scope": [
+    "language semantic changes",
+    "cdi or cdbc format changes",
+    "entry-module cache loading",
+    "empty ModuleStmt transport removal",
+    "remote cache support"
+  ],
+  "verification": {
+    "focused_commands": [
+      "cmake --build build --target frontend_session_tests",
+      "ctest --test-dir build --output-on-failure -R '^frontend_session$'",
+      "python3 tests/verification_inventory.py",
+      "git diff --check"
+    ],
+    "test_source": "tests/frontend_session_tests.cpp"
+  }
+}

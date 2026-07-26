@@ -550,7 +550,7 @@ Type error at 1:7: undefined variable `missing`
         ^
 ```
 
-Located lexer, parser, and type diagnostics include a source line and caret. For imported files and direct multi-file inputs, diagnostics report the original file path plus file-local line and column. For stdin and single-file inputs without imports, front-end diagnostics remain pathless. Runtime failures from compiler-emitted `.cdbc` artifacts include the embedded source path, source line, caret, and an innermost-to-outermost `Call stack`; import-aware artifacts also retain each source's canonical module identity for linkers and future debug consumers. Metadata-free hand-written or legacy artifacts retain the one-line runtime form. When the parser can recover at statement boundaries, a single run may report multiple `Parse` diagnostics before later compiler phases are skipped. Lexer, import, type, and compile diagnostics still stop at the first reported error.
+Located lexer, parser, and type diagnostics include a source line and caret. For imported files and direct multi-file inputs, diagnostics report the original file path plus file-local line and column. For stdin and single-file inputs without imports, front-end diagnostics remain pathless. Runtime failures from compiler-emitted `.cdbc` artifacts include the embedded source path, source line, caret, and an innermost-to-outermost `Call stack`; import-aware artifacts also retain each source's canonical module identity for linkers and future debug consumers. Metadata-free hand-written or legacy artifacts retain the one-line runtime form. When the parser can recover at statement boundaries, a single run may report multiple `Parse` diagnostics before later compiler phases are skipped. Lexer and import diagnostics still stop at the first reported error. Type checking remains stop-first for direct input programs and within each module body; the import-aware module scheduler reports one diagnostic for each independent failed module in stable dependency order, skips importers whose dependency failed, and skips later compiler phases when any type diagnostic is reported.
 
 ## Build
 
@@ -708,6 +708,9 @@ checks must all succeed before a dependency sidecar is trusted:
   --module-rebuild-report rebuild.json main.cd
 ```
 
+On a valid complete sidecar hit, dependency public interfaces are consumed
+directly and the semantic checker checks only source-backed modules (normally
+the entry module); the unchanged dependency bodies are not checked or lowered.
 Module-product emission keeps source fallback for a missing or invalid imported
 sidecar so a cold build or repair can recreate products. Add
 `--module-cache-strict` to that mode when complete cache coverage is required.

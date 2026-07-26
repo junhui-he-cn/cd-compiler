@@ -169,14 +169,6 @@ std::string binaryTypesMessage(const BinaryExpr& expression, const TypeInfo& lef
         + typeInfoName(left) + " and " + typeInfoName(right);
 }
 
-void rethrowWithModuleContext(const DiagnosticError& error, const ModuleStmt& module)
-{
-    if (error.location()) {
-        throw FileDiagnosticError(error, DiagnosticSourceContext{module.path, module.source, false});
-    }
-    throw error;
-}
-
 Token interfaceToken(const Token& anchor, const std::string& lexeme)
 {
     Token token = anchor;
@@ -271,6 +263,21 @@ TypeError::TypeError(const Token& token, std::string message)
 {
 }
 
+TypeErrorList::TypeErrorList(std::vector<FileDiagnosticError> errors)
+    : errors_(std::move(errors))
+{
+}
+
+const std::vector<FileDiagnosticError>& TypeErrorList::errors() const
+{
+    return errors_;
+}
+
+const char* TypeErrorList::what() const noexcept
+{
+    return "type errors";
+}
+
 void TypeChecker::setPreloadedModuleInterfaces(std::vector<ModuleInterface> interfaces)
 {
     preloadedModuleInterfaces_ = std::move(interfaces);
@@ -298,6 +305,7 @@ void TypeChecker::check(const Program& program)
         preloadedModuleIds_.insert(interfaceInfo.moduleId);
     }
     checkedModules_.clear();
+    checkedModuleBodyIds_.clear();
     moduleStack_.clear();
     currentProgram_ = &program;
     nextResolvedName_ = 0;
@@ -380,6 +388,11 @@ void TypeChecker::check(const Program& program)
 const std::vector<ModuleInterface>& TypeChecker::moduleInterfaces() const
 {
     return moduleInterfaces_;
+}
+
+const std::vector<std::size_t>& TypeChecker::checkedModuleBodyIds() const
+{
+    return checkedModuleBodyIds_;
 }
 
 const DeclarationIndex& TypeChecker::declarationIndex() const
@@ -1389,8 +1402,7 @@ void TypeChecker::checkModule(const ModuleStmt& module)
         return;
     }
     if (preloadedModuleIds_.find(module.moduleId) != preloadedModuleIds_.end()) {
-        checkedModules_.insert(module.moduleId);
-        return;
+        throw TypeError("internal error: preloaded module entered body-check path");
     }
 
     std::vector<Scope> savedScopes = std::move(scopes_);
@@ -1406,6 +1418,31 @@ void TypeChecker::checkModule(const ModuleStmt& module)
     const std::size_t savedFunctionDepth = functionDepth_;
     const std::size_t savedLoopDepth = loopDepth_;
     std::vector<FunctionReturnContext> savedReturnContexts = std::move(returnContexts_);
+    ModuleSymbols savedModuleSymbols = moduleSymbols_;
+    const FlowFacts savedFlowFacts = flowFacts_;
+    const std::vector<std::size_t> savedModuleStack = moduleStack_;
+
+    const auto restoreTransientState = [&]() {
+        scopes_ = std::move(savedScopes);
+        scopeIds_ = std::move(savedScopeIds);
+        structTypes_ = std::move(savedStructTypes);
+        structDeclarations_ = std::move(savedStructDeclarations);
+        structCheckStates_ = std::move(savedStructCheckStates);
+        enumTypes_ = std::move(savedEnumTypes);
+        enumDeclarations_ = std::move(savedEnumDeclarations);
+        enumCheckStates_ = std::move(savedEnumCheckStates);
+        methods_ = std::move(savedMethods);
+        typeParameterScopes_ = std::move(savedTypeParameterScopes);
+        functionDepth_ = savedFunctionDepth;
+        loopDepth_ = savedLoopDepth;
+        returnContexts_ = std::move(savedReturnContexts);
+        flowFacts_ = savedFlowFacts;
+        moduleStack_ = savedModuleStack;
+    };
+    const auto restoreFailedState = [&]() {
+        restoreTransientState();
+        moduleSymbols_ = std::move(savedModuleSymbols);
+    };
 
     scopes_.clear();
     scopeIds_.clear();
@@ -1420,35 +1457,35 @@ void TypeChecker::checkModule(const ModuleStmt& module)
     functionDepth_ = 0;
     loopDepth_ = 0;
     returnContexts_.clear();
+    flowFacts_.clear();
 
     moduleStack_.push_back(module.moduleId);
     beginScope();
     try {
         checkStatementList(module.statements);
+        endScope();
+        moduleStack_.pop_back();
+        buildModuleInterface(*currentProgram_, module);
+        checkedModules_.insert(module.moduleId);
+        checkedModuleBodyIds_.push_back(module.moduleId);
+        restoreTransientState();
     } catch (const FileDiagnosticError&) {
+        restoreFailedState();
         throw;
     } catch (const DiagnosticError& error) {
-        rethrowWithModuleContext(error, module);
+        if (error.location()) {
+            FileDiagnosticError contextual(
+                error,
+                DiagnosticSourceContext{module.path, module.source, false});
+            restoreFailedState();
+            throw contextual;
+        }
+        restoreFailedState();
+        throw;
+    } catch (...) {
+        restoreFailedState();
+        throw;
     }
-    endScope();
-    moduleStack_.pop_back();
-
-    checkedModules_.insert(module.moduleId);
-    buildModuleInterface(*currentProgram_, module);
-
-    scopes_ = std::move(savedScopes);
-    scopeIds_ = std::move(savedScopeIds);
-    structTypes_ = std::move(savedStructTypes);
-    structDeclarations_ = std::move(savedStructDeclarations);
-    structCheckStates_ = std::move(savedStructCheckStates);
-    enumTypes_ = std::move(savedEnumTypes);
-    enumDeclarations_ = std::move(savedEnumDeclarations);
-    enumCheckStates_ = std::move(savedEnumCheckStates);
-    methods_ = std::move(savedMethods);
-    typeParameterScopes_ = std::move(savedTypeParameterScopes);
-    functionDepth_ = savedFunctionDepth;
-    loopDepth_ = savedLoopDepth;
-    returnContexts_ = std::move(savedReturnContexts);
 }
 
 void TypeChecker::checkModulesInDependencyOrder(const Program& program)
@@ -1460,30 +1497,73 @@ void TypeChecker::checkModulesInDependencyOrder(const Program& program)
     enum class VisitState {
         Visiting,
         Checked,
+        Failed,
+        Skipped,
     };
     std::unordered_map<std::size_t, VisitState> states;
-    const std::function<void(std::size_t)> visit = [&](std::size_t moduleId) {
+    std::vector<FileDiagnosticError> errors;
+    const std::function<VisitState(std::size_t)> visit = [&](std::size_t moduleId) -> VisitState {
         const auto existing = states.find(moduleId);
         if (existing != states.end()) {
             if (existing->second == VisitState::Visiting) {
                 throw TypeError("internal error: module dependency graph contains a cycle");
             }
-            return;
+            return existing->second;
         }
 
         states.emplace(moduleId, VisitState::Visiting);
+        bool dependencyFailed = false;
         for (const ModuleGraphEdge& edge : program.moduleGraph->edges) {
             if (edge.importingModuleId == moduleId) {
-                visit(edge.importedModuleId);
+                const VisitState dependencyState = visit(edge.importedModuleId);
+                dependencyFailed = dependencyFailed
+                    || dependencyState == VisitState::Failed
+                    || dependencyState == VisitState::Skipped;
             }
+        }
+
+        if (dependencyFailed) {
+            states[moduleId] = VisitState::Skipped;
+            return VisitState::Skipped;
+        }
+
+        if (preloadedModuleIds_.find(moduleId) != preloadedModuleIds_.end()) {
+            if (!findModuleInterface(moduleId)) {
+                throw TypeError("internal error: preloaded module interface is unavailable");
+            }
+            // A validated sidecar is the semantic boundary for this module:
+            // its public interface is already available, so do not enter the
+            // source-body checker or create an empty replacement interface.
+            states[moduleId] = VisitState::Checked;
+            return VisitState::Checked;
         }
 
         const ModuleStmt* module = findModule(program, moduleId);
         if (!module) {
             throw TypeError("internal error: unresolved module graph node");
         }
-        checkModule(*module);
+
+        try {
+            checkModule(*module);
+        } catch (const FileDiagnosticError& error) {
+            if (error.kind() != DiagnosticKind::Type || !error.location()) {
+                throw;
+            }
+            errors.push_back(error);
+            states[moduleId] = VisitState::Failed;
+            return VisitState::Failed;
+        } catch (const DiagnosticError& error) {
+            if (error.kind() != DiagnosticKind::Type || !error.location()) {
+                throw;
+            }
+            errors.emplace_back(
+                error,
+                DiagnosticSourceContext{module->path, module->source, false});
+            states[moduleId] = VisitState::Failed;
+            return VisitState::Failed;
+        }
         states[moduleId] = VisitState::Checked;
+        return VisitState::Checked;
     };
 
     for (const ModuleGraphNode& node : program.moduleGraph->nodes) {
@@ -1499,8 +1579,12 @@ void TypeChecker::checkModulesInDependencyOrder(const Program& program)
             continue;
         }
         if (states.find(module->moduleId) == states.end()) {
-            visit(module->moduleId);
+            static_cast<void>(visit(module->moduleId));
         }
+    }
+
+    if (!errors.empty()) {
+        throw TypeErrorList(std::move(errors));
     }
 }
 

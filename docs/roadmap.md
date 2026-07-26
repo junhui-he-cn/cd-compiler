@@ -752,6 +752,18 @@ conservative rule merely to make a new feature type-check.
 
 ### M2B: Front-end diagnostic recovery
 
+Current implementation slice `M2B-TYPE-001` adds the first type-recovery
+boundary at the import-aware module scheduler. Each module body remains
+stop-first so a failed semantic state is never reused inside that module;
+independent modules continue in stable dependency-first order and contribute
+one file-aware diagnostic each. A module whose dependency failed, including a
+transitive importer, is skipped so its missing-interface or local follow-on
+errors do not become cascade noise. Direct stdin, single-file, and ordered
+direct-multi-file inputs retain their existing stop-first path. The decision
+and compatibility evidence live in
+`docs/decisions/m2b-type-recovery-001.md` and
+`docs/decisions/m2b-type-recovery-001.json`.
+
 **Deliverable:** report independent lexer/parser/type diagnostics without
 corrupting later analysis while retaining distinct lexer, parser, type,
 import-loading, compile, and runtime error categories. Parser recovery remains a
@@ -763,6 +775,13 @@ multi-error, ordering, and resynchronization cases. Keep stop-first behavior as
 the reference for categories not yet migrated, and never continue into a later
 compiler stage after an earlier stage is invalid.
 
+For `M2B-TYPE-001`, the recovery limit is one located `Type` diagnostic per
+source-backed module. Scheduling remains the graph's dependency-first DFS;
+successful unrelated modules are checked, while failed-dependency importers
+are marked skipped. No module interface is produced for a failed or skipped
+module, and no IR, bytecode, or runtime stage is entered after the aggregate is
+raised.
+
 **Quantitative gate:** every documented diagnostic category has named accepted
 and rejected case IDs where both outcomes apply; repeated runs produce identical
 diagnostic order, ranges, stdout, and exit status; injected independent errors
@@ -773,6 +792,10 @@ depend on corrupted parser or semantic state.
 or local-resynchronization fallback outside the shared recovery service and its
 bound M0A/M0C cases pass the canonical command. Parser recovery does not wait for
 M1F; type/semantic recovery does.
+
+This slice intentionally retains the direct-input stop-first path and the
+per-module stop-first body boundary. Removing either requires a separate
+diagnostic decision and compatibility corpus.
 
 ## Milestone 3: Module graph and project model
 
@@ -795,7 +818,8 @@ Current implementation slices `M3A-GRAPH-001`, `M3A-GRAPH-002`,
 `M3A-INTERFACE-004`, `M3A-INTERFACE-005`, `M3A-INTERFACE-006`,
 `M3A-INTERFACE-007`, `M3A-INTERFACE-008`, `M3A-INTERFACE-009`,
 `M3A-INTERFACE-010`, `M3A-INTERFACE-011`, `M3A-INTERFACE-012`, and
-`M3A-INTERFACE-013`, `M3A-INTERFACE-014`, and `M3A-INTERFACE-015` establish an
+`M3A-INTERFACE-013`, `M3A-INTERFACE-014`, `M3A-INTERFACE-015`, and
+`M3A-INTERFACE-016` establish an
 explicit import-aware `FrontendSession` graph,
 carry a value snapshot of it on `Program`, and attach graph-backed source and
 canonical identity plus dependency edges to in-memory `ModuleInterface`
@@ -813,8 +837,10 @@ runner. These
 slices run beside the existing `ParsedUnit`/`ModuleStmt` path;
 module-product emission retains source fallback for cold builds and repairs,
 while interface-only cache consumers are strict by default and can opt into
-fallback explicitly; final dependency-body removal remains a later M3A/M3B
-slice. The current matrix also proves
+fallback explicitly. A valid complete sidecar hit now completes imported
+interface nodes without dependency-body semantic checking; final product
+source fallback and dependency-body lowering removal remain separately scoped.
+The current matrix also proves
 file-aware parse/type diagnostics and partial reuse of lower valid sidecars.
 `M3A-INTERFACE-014` extends the evidence gate across 42 successful import
 graphs and 26 top-level import-related diagnostic entries, including cold
@@ -825,6 +851,12 @@ interface hash, and legacy sidecars without it remain readable.
 `M3A-INTERFACE-015` makes interface-only cache consumers strict by default,
 adds the explicit `--module-cache-fallback` compatibility switch, and keeps
 module-product cold-build and repair fallback unchanged.
+`M3A-INTERFACE-016` makes a validated preloaded interface the dependency
+semantic boundary: dependency-order scheduling completes preloaded nodes
+without entering source-body checking, while source-backed entries and cold or
+repair fallback modules retain normal semantic checking. Its migration trace
+records the snapshot-local body IDs checked in complete-hit, partial-reuse, and
+source-fallback paths.
 The decision records are
 `docs/decisions/m3a-module-graph.md`,
 `docs/decisions/m3a-module-graph.json`,
@@ -859,7 +891,9 @@ The decision records are
 `docs/decisions/m3a-interface-014.md` and
 `docs/decisions/m3a-interface-014.json`, plus
 `docs/decisions/m3a-interface-015.md` and
-`docs/decisions/m3a-interface-015.json`.
+`docs/decisions/m3a-interface-015.json`, plus
+`docs/decisions/m3a-interface-016.md` and
+`docs/decisions/m3a-interface-016.json`.
 
 **Deliverable:** evolve `FrontendSession` into an explicit graph with module
 identities deterministic across equivalent builds, dependency edges, source
@@ -899,6 +933,9 @@ import cycles remain deterministically rejected; strict cache failures identify
 missing, malformed, identity, source-hash, product, and dependency-hash
 reasons without stdout; and direct-multi-file scope, order, and diagnostics
 retain their baseline output.
+The focused cache-hit, partial-reuse, and source-fallback checks also prove
+that the TypeChecker body-check trace contains no valid preloaded dependency
+IDs.
 
 **Delete the old path when:** all imported-file and diagnostic-remapping checks
 use graph/interface semantics and name/type/visibility consumers have zero
@@ -909,8 +946,10 @@ and M3A-INTERFACE-013 adds independent parse/type diagnostic and
 partial-dependency-reuse cases. M3A-INTERFACE-014 satisfies the complete
 imported inventory evidence gate. M3A-INTERFACE-015 makes interface-only
 consumers strict by default while preserving an explicit fallback switch and
-module-product cold-build/repair fallback; dependency-body checking and final
-lowering removal remain separate M3A/M3B work.
+module-product cold-build/repair fallback. M3A-INTERFACE-016 removes the
+scheduler-level body-check compatibility branch for valid preloaded interfaces;
+product source fallback, entry loading, and final dependency-body lowering
+removal remain separate M3A/M3B work.
 M3B exclusively owns removal of dependency-body lowering. Preserve the
 documented direct-input entry-program adapter; it is not a legacy import path.
 
@@ -1227,7 +1266,7 @@ the smallest proof of a broader milestone.
 
 The verification foundation, M0.5 decisions, and M1F semantic cutover are
 implemented, and M2A-FLOW-001 through M2A-FLOW-021 are implemented. M3A-
-INTERFACE-006 through M3A-INTERFACE-015 are complete, and the user-selected M3B
+INTERFACE-006 through M3A-INTERFACE-016 are complete, and the user-selected M3B
 artifact decision is resolved as independently validated per-module `.cdbc`
 products. `M3B-ARTIFACT-001` is complete: independent module lowering, module
 identity/dependency envelopes, strict Rust validation, and the
@@ -1244,9 +1283,9 @@ fallback conditions, `M3A-INTERFACE-010` covers the focused graph matrix, and
 case IDs, and M3A-INTERFACE-014 records the aggregate complete-import gate.
 M3A-INTERFACE-014 satisfies the complete imported inventory gate, and
 M3A-INTERFACE-015 records the default-strict interface-only policy and the
-module-product fallback boundary. The next material boundary is removing
-unchanged dependency-body semantic checking after a separate reviewed
-M3A/M3B decision, while preserving cold product build/repair behavior.
+module-product fallback boundary. M3A-INTERFACE-016 records the reviewed
+semantic cutover: valid preloaded dependencies are not entered into the body
+checker, while cold and repair source fallback remains authoritative.
 `M4A-VALIDATION-001` is also complete: the existing `cdbc 0.1` family has an
 explicit linked/module compatibility matrix, centralized Rust pre-execution
 reference validation, fixed native capability rejection, and malformed/module
@@ -1286,10 +1325,10 @@ and observed baseline are recorded in
 `docs/verification/m0c-malformed-design.md` and
 `docs/verification/m0c-baseline.json`. M0D, M0.5A, M0.5B, M1F, and
 M2A-FLOW-001 through M2A-FLOW-021 are now implemented; M3A-INTERFACE-006
-through M3A-INTERFACE-015, M3B-ARTIFACT-001, and M3B-CACHE-001 are the completed
+through M3A-INTERFACE-016, M3B-ARTIFACT-001, and M3B-CACHE-001 are the completed
 module-boundary, module-product, and artifact-cache slices. The next gate is
-the reviewed condition for removing unchanged dependency-body semantic
-checking; module-product source fallback remains required for cold builds and
+the next independent roadmap slice after the reviewed dependency semantic
+cutover; module-product source fallback remains required for cold builds and
 repairs.
 
 The hard dependency gates are:

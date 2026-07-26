@@ -21944,6 +21944,34 @@
       "fixture": "tests/golden/type_errors"
     },
     {
+      "case_id": "golden.type_errors.module_type_recovery",
+      "runner": "golden",
+      "result_name": "type_errors/module_type_recovery default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:module_type_recovery"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/module_type_recovery.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/module_type_recovery.cd",
+        "tests/golden/type_errors/module_type_recovery.err",
+        "tests/golden/type_errors/module_type_recovery.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
       "case_id": "golden.type_errors.named_payload_duplicate_field",
       "runner": "golden",
       "result_name": "type_errors/named_payload_duplicate_field default(ast)",

@@ -25,11 +25,30 @@ public:
     TypeError(const Token& token, std::string message);
 };
 
+// Import-aware semantic checking can report one independent diagnostic per
+// failed module.  The individual module boundary remains stop-first, and the
+// file context is retained so the CLI can print the aggregate without
+// reconstructing source ownership.
+class TypeErrorList final : public std::exception {
+public:
+    explicit TypeErrorList(std::vector<FileDiagnosticError> errors);
+
+    const std::vector<FileDiagnosticError>& errors() const;
+    const char* what() const noexcept override;
+
+private:
+    std::vector<FileDiagnosticError> errors_;
+};
+
 class TypeChecker {
 public:
     void setPreloadedModuleInterfaces(std::vector<ModuleInterface> interfaces);
     void check(const Program& program);
     const std::vector<ModuleInterface>& moduleInterfaces() const;
+    // Snapshot-local module IDs whose source bodies completed semantic
+    // checking. Preloaded interface modules are intentionally absent; this is
+    // migration observability rather than a persistent identity.
+    const std::vector<std::size_t>& checkedModuleBodyIds() const;
     const DeclarationIndex& declarationIndex() const;
     std::size_t declarationIndexMismatchCount() const;
     std::size_t moduleInterfaceMismatchCount() const;
@@ -359,6 +378,7 @@ private:
     std::vector<ModuleInterface> preloadedModuleInterfaces_;
     std::unordered_set<std::size_t> preloadedModuleIds_;
     std::unordered_set<std::size_t> checkedModules_;
+    std::vector<std::size_t> checkedModuleBodyIds_;
     std::vector<std::size_t> moduleStack_;
     DeclarationIndex declarationIndex_;
     std::size_t declarationIndexMismatchCount_ = 0;

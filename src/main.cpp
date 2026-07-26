@@ -380,10 +380,10 @@ void printParseErrorList(const ParseErrorList& errors, const std::string& source
     std::cerr << '\n';
 }
 
-void printFileDiagnosticErrorList(const FileDiagnosticErrorList& errors)
+void printFileDiagnosticErrors(const std::vector<FileDiagnosticError>& errors)
 {
     bool first = true;
-    for (const FileDiagnosticError& error : errors.errors()) {
+    for (const FileDiagnosticError& error : errors) {
         if (!first) {
             std::cerr << '\n';
         }
@@ -391,6 +391,16 @@ void printFileDiagnosticErrorList(const FileDiagnosticErrorList& errors)
         std::cerr << formatDiagnosticWithSourceContext(error);
     }
     std::cerr << '\n';
+}
+
+void printFileDiagnosticErrorList(const FileDiagnosticErrorList& errors)
+{
+    printFileDiagnosticErrors(errors.errors());
+}
+
+void printTypeErrorList(const TypeErrorList& errors)
+{
+    printFileDiagnosticErrors(errors.errors());
 }
 
 } // namespace
@@ -607,6 +617,9 @@ int main(int argc, char** argv)
             }
 
         }
+    } catch (const TypeErrorList& errors) {
+        printTypeErrorList(errors);
+        return 1;
     } catch (const FileDiagnosticErrorList& errors) {
         printFileDiagnosticErrorList(errors);
         return 1;

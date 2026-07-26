@@ -4,6 +4,7 @@
 #include "LosslessSource.hpp"
 #include "ModuleCache.hpp"
 #include "ModuleInterfaceArtifact.hpp"
+#include "TypeChecker.hpp"
 #include "TypeUtils.hpp"
 
 #include <algorithm>
@@ -399,6 +400,12 @@ void test_module_interface_cache_hit_reuses_dependency_interfaces(const fs::path
     assert(preloaded[1].dependencies[0].importedModuleId == cachedBase->moduleId);
     assert(preloaded[1].values.size() == 1);
     assert(preloaded[1].values[0].resolvedName == "value#8");
+
+    TypeChecker checker;
+    checker.setPreloadedModuleInterfaces(session.preloadedModuleInterfaces());
+    checker.check(program);
+    assert(checker.moduleInterfaceMismatchCount() == 0);
+    assert(checker.checkedModuleBodyIds() == std::vector<std::size_t>{entryModule->moduleId});
 }
 
 void assertSourceFallback(
@@ -418,6 +425,11 @@ void assertSourceFallback(
         [&canonicalPath](const ModuleInterface& interfaceInfo) {
             return interfaceInfo.canonicalPath == canonicalPath;
         }));
+
+    TypeChecker checker;
+    checker.check(program);
+    assert(checker.moduleInterfaceMismatchCount() == 0);
+    assert(checker.checkedModuleBodyIds().size() == 2);
 }
 
 void writeSingleModuleCacheCase(
@@ -556,6 +568,17 @@ void test_module_interface_cache_dependency_hash_fallback(const fs::path& root)
     assert(session.moduleGraph().edges.size() == 2);
     assert(session.moduleGraph().edges[0].importingModuleId == parsedLibrary->moduleId);
     assert(session.moduleGraph().edges[0].importedModuleId == cachedBase->moduleId);
+
+    TypeChecker checker;
+    checker.setPreloadedModuleInterfaces(session.preloadedModuleInterfaces());
+    checker.check(program);
+    assert(checker.moduleInterfaceMismatchCount() == 0);
+    assert(checker.checkedModuleBodyIds().size() == 2);
+    assert(std::find(
+               checker.checkedModuleBodyIds().begin(),
+               checker.checkedModuleBodyIds().end(),
+               cachedBase->moduleId)
+        == checker.checkedModuleBodyIds().end());
 }
 
 void test_module_interface_cache_strict(const fs::path& root)
@@ -769,6 +792,58 @@ void test_direct_diagnostics_keep_source_ranges(const fs::path& root)
     assert(false && "expected direct multi-file parse diagnostic");
 }
 
+void test_module_type_error_recovery(const fs::path& root)
+{
+    fs::remove_all(root);
+    const fs::path firstFailure = root / "a.cd";
+    const fs::path secondFailure = root / "b.cd";
+    const fs::path blocked = root / "blocked.cd";
+    const fs::path independent = root / "ok.cd";
+    const fs::path entry = root / "entry.cd";
+    writeFile(
+        firstFailure,
+        "print missing_a_first;\n"
+        "print missing_a_second;\n");
+    writeFile(secondFailure, "print missing_b;\n");
+    writeFile(
+        blocked,
+        "import \"./a.cd\";\n"
+        "print missing_blocked;\n");
+    writeFile(
+        independent,
+        "let good = 1;\n"
+        "export good;\n");
+    writeFile(
+        entry,
+        "import \"./a.cd\";\n"
+        "import \"./b.cd\";\n"
+        "import \"./blocked.cd\";\n"
+        "import \"./ok.cd\";\n"
+        "print missing_entry;\n");
+
+    FrontendSession frontend;
+    Program program = frontend.loadFiles({entry.string()});
+    const ModuleStmt* independentModule = moduleByPath(program, independent);
+
+    TypeChecker checker;
+    try {
+        checker.check(program);
+    } catch (const TypeErrorList& errors) {
+        assert(errors.errors().size() == 2);
+        assert(errors.errors()[0].sourceContext().path == pathString(firstFailure));
+        assert(errors.errors()[0].message() == "undefined variable `missing_a_first`");
+        assert(errors.errors()[1].sourceContext().path == pathString(secondFailure));
+        assert(errors.errors()[1].message() == "undefined variable `missing_b`");
+        assert(checker.checkedModuleBodyIds() == std::vector<std::size_t>{independentModule->moduleId});
+        assert(checker.moduleInterfaces().size() == 1);
+        assert(checker.moduleInterfaces().front().moduleId == independentModule->moduleId);
+        fs::remove_all(root);
+        return;
+    }
+
+    assert(false && "expected independent module type diagnostics");
+}
+
 void assertLosslessFile(
     const LosslessSourceFileView& view,
     const SourceFile& source,
@@ -844,6 +919,7 @@ int main()
         root / "module_interface_cache_diagnostics");
     test_direct_inputs_preserve_source_spans(root / "direct_sources");
     test_direct_diagnostics_keep_source_ranges(root / "direct_diagnostics");
+    test_module_type_error_recovery(root / "module_type_error_recovery");
     test_lossless_source_view_round_trips_comments(root / "lossless_sources");
 
     fs::remove_all(root);
