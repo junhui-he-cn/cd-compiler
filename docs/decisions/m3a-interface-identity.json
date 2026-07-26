@@ -17,7 +17,7 @@
     "entry": "Existing entry marker remains unchanged."
   },
   "production_path": {
-    "producer": "TypeChecker::buildModuleInterfaces",
+    "producer": "TypeChecker::buildModuleInterface at completed-module checking; TypeChecker::buildModuleInterfaces only fills a missing interface at finalization",
     "source": "Program::moduleGraph matched by moduleId, with ModuleStmt::sourceId fallback.",
     "text_consumer": "ModuleInterfaceEmitter preserves the existing output and ignores internal identity fields.",
     "semantic_consumers": "Current ModuleSymbols and dependency-body checking remain authoritative until later interface-consumer slices."

@@ -12,9 +12,11 @@ Status: implemented against reference commit `40de24d`.
 
 Field order, enum variant order, generic parameter order, and dependency-edge
 order remain their source/graph declaration order because those sequences carry
-semantic or diagnostic meaning. The ordering pass is applied after interface
-construction and does not alter `ModuleSymbols`, type checking, lowering, or
-the stable text emitter (which already sorts its presentation copies).
+semantic or diagnostic meaning. The ordering pass is applied while each
+interface is constructed and does not alter `ModuleSymbols`, type checking,
+lowering, or the stable text emitter (which already sorts its presentation
+copies). Finalization only orders the module vector and does not rebuild
+completed module interfaces.
 
 ## Rationale and migration boundary
 

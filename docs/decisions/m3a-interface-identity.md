@@ -12,10 +12,12 @@ source identity needed to relate public API data to the module graph:
 - `path` remains the display path used by the existing interface text; and
 - `canonicalPath` records the resolved canonical import identity.
 
-`TypeChecker::buildModuleInterfaces` reads `Program::moduleGraph` by module ID
+`TypeChecker::buildModuleInterface` reads `Program::moduleGraph` by module ID
 when it is available and copies the node's source and canonical identity into
 the interface object. It keeps the module AST's source ID as a compatibility
-fallback for manually constructed module programs. The existing
+fallback for manually constructed module programs. The final
+`buildModuleInterfaces` pass only materializes a missing module as a defensive
+compatibility path. The existing
 `--module-interface` text emitter deliberately ignores these new internal
 identity fields, so its output and all current CLI contracts remain unchanged.
 

@@ -18,7 +18,7 @@
     "semantic_sequences": "fields, variants, generic parameters, and dependencies retain source/graph order"
   },
   "compatibility_boundary": {
-    "producer": "TypeChecker::buildModuleInterfaces canonicalizes vectors after collecting ModuleSymbols exports and Program graph edges.",
+    "producer": "TypeChecker::buildModuleInterface canonicalizes each module after collecting ModuleSymbols exports and Program graph edges; final buildModuleInterfaces orders the completed module vector and fills only missing records.",
     "emitter": "ModuleInterfaceEmitter keeps its existing presentation sorting and output.",
     "semantics": "Import visibility, diagnostics, IR, bytecode, artifacts, and Rust VM behavior are unchanged.",
     "persistence": "No interface hash, serialized ordering contract, cache key, or artifact field is introduced."

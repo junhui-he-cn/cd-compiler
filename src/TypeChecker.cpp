@@ -951,103 +951,141 @@ const ModuleInterface* TypeChecker::findModuleInterface(std::size_t moduleId) co
 }
 
 
+void TypeChecker::buildModuleInterface(const Program& program, const ModuleStmt& module)
+{
+    ModuleInterface interfaceInfo;
+    interfaceInfo.moduleId = module.moduleId;
+    interfaceInfo.sourceId = module.sourceId;
+    interfaceInfo.path = module.path;
+    interfaceInfo.isEntry = module.isEntry;
+    if (program.moduleGraph) {
+        const auto graphNode = std::find_if(
+            program.moduleGraph->nodes.begin(),
+            program.moduleGraph->nodes.end(),
+            [&module](const ModuleGraphNode& node) { return node.moduleId == module.moduleId; });
+        if (graphNode != program.moduleGraph->nodes.end()) {
+            interfaceInfo.sourceId = graphNode->sourceId;
+            interfaceInfo.canonicalPath = graphNode->canonicalPath;
+        }
+        for (const ModuleGraphEdge& edge : program.moduleGraph->edges) {
+            if (edge.importingModuleId == module.moduleId) {
+                interfaceInfo.dependencies.push_back(ModuleInterfaceDependency{
+                    edge.importedModuleId,
+                    edge.kind,
+                    edge.requestedPath});
+            }
+        }
+    }
+
+    if (const ModuleValueExports* exports = moduleSymbols_.valueExports(module.moduleId)) {
+        for (const auto& entry : *exports) {
+            interfaceInfo.values.push_back(ModuleInterfaceValue{
+                entry.first,
+                entry.second.type,
+                entry.second.resolvedName});
+        }
+    }
+
+    if (const ModuleStructExports* structExports = moduleSymbols_.structExports(module.moduleId)) {
+        for (const auto& entry : *structExports) {
+            ModuleInterfaceStruct structInfo;
+            structInfo.name = entry.first;
+            structInfo.genericParameters = entry.second.genericParameters;
+            structInfo.genericParameterConstraints = entry.second.genericParameterConstraints;
+            for (const StructFieldType& field : entry.second.fields) {
+                structInfo.fields.push_back(ModuleInterfaceField{field.name.lexeme, field.type});
+            }
+
+            if (const ModuleMethodExports* methodExports = moduleSymbols_.methodExports(module.moduleId)) {
+                const auto methodsForStruct = methodExports->find(entry.first);
+                if (methodsForStruct != methodExports->end()) {
+                    for (const auto& methodEntry : methodsForStruct->second) {
+                        structInfo.methods.push_back(ModuleInterfaceMethod{
+                            methodEntry.first,
+                            methodEntry.second.parameterTypes,
+                            methodEntry.second.returnType,
+                            methodEntry.second.genericParameters,
+                            methodEntry.second.genericParameterConstraints,
+                            methodEntry.second.receiverType,
+                            methodEntry.second.resolvedName});
+                    }
+                }
+            }
+
+            interfaceInfo.structs.push_back(std::move(structInfo));
+        }
+    }
+
+    if (const ModuleEnumExports* enumExports = moduleSymbols_.enumExports(module.moduleId)) {
+        for (const auto& entry : *enumExports) {
+            ModuleInterfaceEnum enumInfo;
+            enumInfo.name = entry.first;
+            enumInfo.genericParameters = entry.second.genericParameters;
+            for (const EnumVariantType& variant : entry.second.variants) {
+                std::vector<std::optional<std::string>> payloadNames;
+                payloadNames.reserve(variant.payloadNames.size());
+                for (const std::optional<Token>& payloadName : variant.payloadNames) {
+                    payloadNames.push_back(payloadName
+                        ? std::optional<std::string>(payloadName->lexeme)
+                        : std::nullopt);
+                }
+                enumInfo.variants.push_back(ModuleInterfaceVariant{
+                    variant.name.lexeme,
+                    variant.payloadTypes,
+                    std::move(payloadNames)});
+            }
+            enumInfo.genericParameterConstraints = entry.second.genericParameterConstraints;
+            interfaceInfo.enums.push_back(std::move(enumInfo));
+        }
+    }
+
+    std::sort(
+        interfaceInfo.values.begin(),
+        interfaceInfo.values.end(),
+        [](const ModuleInterfaceValue& left, const ModuleInterfaceValue& right) {
+            return left.name < right.name;
+        });
+    std::sort(
+        interfaceInfo.structs.begin(),
+        interfaceInfo.structs.end(),
+        [](const ModuleInterfaceStruct& left, const ModuleInterfaceStruct& right) {
+            return left.name < right.name;
+        });
+    for (ModuleInterfaceStruct& structInfo : interfaceInfo.structs) {
+        std::sort(
+            structInfo.methods.begin(),
+            structInfo.methods.end(),
+            [](const ModuleInterfaceMethod& left, const ModuleInterfaceMethod& right) {
+                return left.name < right.name;
+            });
+    }
+    std::sort(
+        interfaceInfo.enums.begin(),
+        interfaceInfo.enums.end(),
+        [](const ModuleInterfaceEnum& left, const ModuleInterfaceEnum& right) {
+            return left.name < right.name;
+        });
+
+    const auto existing = std::find_if(
+        moduleInterfaces_.begin(),
+        moduleInterfaces_.end(),
+        [&module](const ModuleInterface& current) {
+            return current.moduleId == module.moduleId;
+        });
+    if (existing == moduleInterfaces_.end()) {
+        moduleInterfaces_.push_back(std::move(interfaceInfo));
+    } else {
+        *existing = std::move(interfaceInfo);
+    }
+}
+
 void TypeChecker::buildModuleInterfaces(const Program& program)
 {
-    moduleInterfaces_.clear();
-
     for (const auto& statement : program.statements) {
         const auto* module = dynamic_cast<const ModuleStmt*>(statement.get());
-        if (!module) {
-            continue;
+        if (module && !findModuleInterface(module->moduleId)) {
+            buildModuleInterface(program, *module);
         }
-
-        ModuleInterface interfaceInfo;
-        interfaceInfo.moduleId = module->moduleId;
-        interfaceInfo.sourceId = module->sourceId;
-        interfaceInfo.path = module->path;
-        interfaceInfo.isEntry = module->isEntry;
-        if (program.moduleGraph) {
-            const auto graphNode = std::find_if(
-                program.moduleGraph->nodes.begin(),
-                program.moduleGraph->nodes.end(),
-                [module](const ModuleGraphNode& node) { return node.moduleId == module->moduleId; });
-            if (graphNode != program.moduleGraph->nodes.end()) {
-                interfaceInfo.sourceId = graphNode->sourceId;
-                interfaceInfo.canonicalPath = graphNode->canonicalPath;
-            }
-            for (const ModuleGraphEdge& edge : program.moduleGraph->edges) {
-                if (edge.importingModuleId == module->moduleId) {
-                    interfaceInfo.dependencies.push_back(ModuleInterfaceDependency{
-                        edge.importedModuleId,
-                        edge.kind,
-                        edge.requestedPath});
-                }
-            }
-        }
-
-        if (const ModuleValueExports* exports = moduleSymbols_.valueExports(module->moduleId)) {
-            for (const auto& entry : *exports) {
-                interfaceInfo.values.push_back(ModuleInterfaceValue{
-                    entry.first,
-                    entry.second.type,
-                    entry.second.resolvedName});
-            }
-        }
-
-        if (const ModuleStructExports* structExports = moduleSymbols_.structExports(module->moduleId)) {
-            for (const auto& entry : *structExports) {
-                ModuleInterfaceStruct structInfo;
-                structInfo.name = entry.first;
-                structInfo.genericParameters = entry.second.genericParameters;
-                structInfo.genericParameterConstraints = entry.second.genericParameterConstraints;
-                for (const StructFieldType& field : entry.second.fields) {
-                    structInfo.fields.push_back(ModuleInterfaceField{field.name.lexeme, field.type});
-                }
-
-                if (const ModuleMethodExports* methodExports = moduleSymbols_.methodExports(module->moduleId)) {
-                    const auto methodsForStruct = methodExports->find(entry.first);
-                    if (methodsForStruct != methodExports->end()) {
-                        for (const auto& methodEntry : methodsForStruct->second) {
-                            structInfo.methods.push_back(ModuleInterfaceMethod{
-                                methodEntry.first,
-                                methodEntry.second.parameterTypes,
-                                methodEntry.second.returnType,
-                                methodEntry.second.genericParameters,
-                                methodEntry.second.genericParameterConstraints,
-                                methodEntry.second.receiverType,
-                                methodEntry.second.resolvedName});
-                        }
-                    }
-                }
-
-                interfaceInfo.structs.push_back(std::move(structInfo));
-            }
-        }
-
-        if (const ModuleEnumExports* enumExports = moduleSymbols_.enumExports(module->moduleId)) {
-            for (const auto& entry : *enumExports) {
-                ModuleInterfaceEnum enumInfo;
-                enumInfo.name = entry.first;
-                enumInfo.genericParameters = entry.second.genericParameters;
-                for (const EnumVariantType& variant : entry.second.variants) {
-                    std::vector<std::optional<std::string>> payloadNames;
-                    payloadNames.reserve(variant.payloadNames.size());
-                    for (const std::optional<Token>& payloadName : variant.payloadNames) {
-                        payloadNames.push_back(payloadName
-                            ? std::optional<std::string>(payloadName->lexeme)
-                            : std::nullopt);
-                    }
-                    enumInfo.variants.push_back(ModuleInterfaceVariant{
-                        variant.name.lexeme,
-                        variant.payloadTypes,
-                        std::move(payloadNames)});
-                }
-                enumInfo.genericParameterConstraints = entry.second.genericParameterConstraints;
-                interfaceInfo.enums.push_back(std::move(enumInfo));
-            }
-        }
-
-        moduleInterfaces_.push_back(std::move(interfaceInfo));
     }
 
     std::sort(
@@ -1056,34 +1094,6 @@ void TypeChecker::buildModuleInterfaces(const Program& program)
         [](const ModuleInterface& left, const ModuleInterface& right) {
             return left.moduleId < right.moduleId;
         });
-    for (ModuleInterface& interfaceInfo : moduleInterfaces_) {
-        std::sort(
-            interfaceInfo.values.begin(),
-            interfaceInfo.values.end(),
-            [](const ModuleInterfaceValue& left, const ModuleInterfaceValue& right) {
-                return left.name < right.name;
-            });
-        std::sort(
-            interfaceInfo.structs.begin(),
-            interfaceInfo.structs.end(),
-            [](const ModuleInterfaceStruct& left, const ModuleInterfaceStruct& right) {
-                return left.name < right.name;
-            });
-        for (ModuleInterfaceStruct& structInfo : interfaceInfo.structs) {
-            std::sort(
-                structInfo.methods.begin(),
-                structInfo.methods.end(),
-                [](const ModuleInterfaceMethod& left, const ModuleInterfaceMethod& right) {
-                    return left.name < right.name;
-                });
-        }
-        std::sort(
-            interfaceInfo.enums.begin(),
-            interfaceInfo.enums.end(),
-            [](const ModuleInterfaceEnum& left, const ModuleInterfaceEnum& right) {
-                return left.name < right.name;
-            });
-    }
 }
 
 void TypeChecker::checkModule(const ModuleStmt& module)
@@ -1133,6 +1143,7 @@ void TypeChecker::checkModule(const ModuleStmt& module)
     moduleStack_.pop_back();
 
     checkedModules_.insert(module.moduleId);
+    buildModuleInterface(*currentProgram_, module);
 
     scopes_ = std::move(savedScopes);
     scopeIds_ = std::move(savedScopeIds);
@@ -1269,7 +1280,6 @@ void TypeChecker::checkImport(const ImportStmt& statement)
         throw TypeError(statement.keyword, "internal error: unresolved import module");
     }
     checkModule(*imported);
-    buildModuleInterfaces(*currentProgram_);
     const ModuleInterface* importedInterface = findModuleInterface(imported->moduleId);
     if (!importedInterface) {
         throw TypeError(statement.keyword, "internal error: unresolved imported module interface");
@@ -1359,7 +1369,6 @@ void TypeChecker::checkReExport(const ExportStmt& statement)
         throw TypeError(statement.keyword, "internal error: unresolved re-export module");
     }
     checkModule(*target);
-    buildModuleInterfaces(*currentProgram_);
     const ModuleInterface* targetInterface = findModuleInterface(target->moduleId);
     if (!targetInterface) {
         throw TypeError(statement.keyword, "internal error: unresolved re-export module interface");

@@ -48,9 +48,10 @@ This is a small C++17 Compiler Design front-end/interpreter project. It currentl
   public API metadata for loaded modules and stable debug text emission;
   interfaces carry graph-backed source/canonical identity and import/re-export
   dependency metadata, and canonical in-memory export ordering while the
-  current text format remains unchanged; same-process TypeChecker import and
-  re-export public-shape consumption reads these interface records after the
-  existing dependency-body producer check.
+  current text format remains unchanged; TypeChecker produces one interface
+  when each module body finishes checking, and same-process import/re-export
+  public-shape consumption reads those records after the existing
+  dependency-body producer check.
 - `include/DeclarationIndex.hpp`, `src/DeclarationIndex.cpp`: snapshot-local
   declaration, signature/shape, typed-expression, scope, import/export, and
   lexical-reference metadata plus for-in/pattern bindings and local direct-call

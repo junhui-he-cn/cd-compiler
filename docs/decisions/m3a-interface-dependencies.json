@@ -17,7 +17,7 @@
     "cycles": "Existing loader cycle rejection remains authoritative and unchanged."
   },
   "production_path": {
-    "producer": "TypeChecker::buildModuleInterfaces",
+    "producer": "TypeChecker::buildModuleInterface at completed-module checking; final buildModuleInterfaces only fills missing records",
     "source": "Program::moduleGraph edges filtered by importing module ID.",
     "text_consumer": "ModuleInterfaceEmitter ignores dependency metadata and preserves current output.",
     "semantic_consumers": "ModuleSymbols and dependency-body checking remain authoritative until later interface-consumer slices."

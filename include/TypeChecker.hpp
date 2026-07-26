@@ -142,6 +142,7 @@ private:
     void checkReExport(const ExportStmt& statement);
     const ModuleStmt* findModule(const Program& program, std::size_t moduleId) const;
     const ModuleInterface* findModuleInterface(std::size_t moduleId) const;
+    void buildModuleInterface(const Program& program, const ModuleStmt& module);
     void buildModuleInterfaces(const Program& program);
     void checkStructDeclaration(const StructDeclStmt& statement);
     void checkEnumDeclaration(const EnumDeclStmt& statement);

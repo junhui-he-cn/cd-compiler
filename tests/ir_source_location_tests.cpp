@@ -173,6 +173,11 @@ void test_module_interface_graph_identity(const fs::path& root)
     assert(libraryInterface->values[0].name == "alpha");
     assert(libraryInterface->values[1].name == "zeta");
 
+    const ModuleInterface* reExportedInterface = findInterface(reExportEdge->importingModuleId);
+    assert(reExportedInterface != nullptr);
+    assert(reExportedInterface->values.size() == 1);
+    assert(reExportedInterface->values[0].name == "alpha");
+
     fs::remove_all(root);
 }
 

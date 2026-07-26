@@ -17,9 +17,11 @@ rejection remains the loader policy and is not changed here.
 
 ## Migration boundary
 
-`TypeChecker::buildModuleInterfaces` copies dependency edges from the
-`Program::moduleGraph` snapshot after matching the interface's module ID. The
-existing `ModuleInterfaceEmitter` ignores dependency metadata, so
+`TypeChecker::buildModuleInterface` copies dependency edges from the
+`Program::moduleGraph` snapshot while producing the completed module's
+interface. The final `buildModuleInterfaces` pass only fills a missing module
+as a defensive fallback. The existing `ModuleInterfaceEmitter` ignores
+dependency metadata, so
 `--module-interface` text, import visibility, diagnostics, IR, bytecode, and VM
 behavior remain byte-for-byte compatible.
 
