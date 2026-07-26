@@ -792,16 +792,20 @@ contract requires a separate language/CLI decision.
 
 Current implementation slices `M3A-GRAPH-001`, `M3A-GRAPH-002`,
 `M3A-INTERFACE-001`, `M3A-INTERFACE-002`, `M3A-INTERFACE-003`,
-`M3A-INTERFACE-004`, `M3A-INTERFACE-005`, and `M3A-INTERFACE-006` establish an
+`M3A-INTERFACE-004`, `M3A-INTERFACE-005`, `M3A-INTERFACE-006`,
+`M3A-INTERFACE-007`, and `M3A-INTERFACE-008` establish an
 explicit import-aware `FrontendSession` graph,
 carry a value snapshot of it on `Program`, and attach graph-backed source and
 canonical identity plus dependency edges to in-memory `ModuleInterface`
 objects, produce each completed module interface once at its checked-module
 boundary, validate producer/graph consistency after the snapshot is complete,
-and use those records for same-process importer consumption. These
+schedule graph dependencies before their importers, use those records for
+same-process importer consumption without importer-side dependency-body
+lookup, and validate serialized public interfaces that can replace cached
+dependency bodies. These
 slices run beside the existing `ParsedUnit`/`ModuleStmt` path;
-independent interface loading and dependency-body removal remain later M3A/M3B
-slices. The decision records are
+fallback parsing for missing or invalid sidecars and final dependency-body
+removal remain later M3A/M3B slices. The decision records are
 `docs/decisions/m3a-module-graph.md`,
 `docs/decisions/m3a-module-graph.json`,
 `docs/decisions/m3a-graph-program-handoff.md`, and
@@ -817,7 +821,11 @@ slices. The decision records are
 `docs/decisions/m3a-interface-production.md` and
 `docs/decisions/m3a-interface-production.json`, plus
 `docs/decisions/m3a-interface-validation.md` and
-`docs/decisions/m3a-interface-validation.json`.
+`docs/decisions/m3a-interface-validation.json`, plus
+`docs/decisions/m3a-interface-preflight.md` and
+`docs/decisions/m3a-interface-preflight.json`, plus
+`docs/decisions/m3a-interface-008.md` and
+`docs/decisions/m3a-interface-008.json`.
 
 **Deliverable:** evolve `FrontendSession` into an explicit graph with module
 identities deterministic across equivalent builds, dependency edges, source
@@ -833,35 +841,54 @@ scope.
 imports, re-exports, search paths, and cycles, compare graph-derived visibility,
 types, diagnostics, and final artifacts with the current result. Preserve direct
 single-file and ordered direct-multi-file entry-program modes, including
-file-local diagnostic remapping.
+file-local diagnostic remapping. A valid `.cdi` sidecar may replace an imported
+dependency's parsed body after source/dependency/product validation; invalid or
+missing sidecars retain the source fallback.
 
 **Quantitative gate:** every import/export/namespace/re-export/search-path/cycle
 capability named by the M0A inventory uses graph-derived module identities;
 after a dependency interface is produced, importer name/type analysis reads no
-dependency source or AST body; interface order and file-aware diagnostics are
-byte-for-byte stable across repeated equivalent builds; current import cycles
-remain deterministically rejected; and direct-multi-file scope, order, and
-diagnostics retain their baseline output.
+dependency source or AST body; sidecar cache hits restore the same public shape,
+graph edges, linkage names, and snapshot-local IDs while omitting dependency
+statements; interface order and file-aware diagnostics are byte-for-byte stable
+across repeated equivalent builds; current import cycles remain deterministically
+rejected; and direct-multi-file scope, order, and diagnostics retain their
+baseline output.
 
 **Delete the old path when:** all imported-file and diagnostic-remapping checks
 use graph/interface semantics and name/type/visibility consumers have zero
-fallback reads of a dependency body. M3B exclusively owns removal of dependency-
-body lowering. Preserve the documented direct-input entry-program adapter; it
-is not a legacy import path.
+fallback reads of a dependency body for valid sidecars. The source fallback for
+missing or invalid sidecars remains until the M3A-INTERFACE-008 gate is met.
+M3B exclusively owns removal of dependency-body lowering. Preserve the
+documented direct-input entry-program adapter; it is not a legacy import path.
 
 ### M3B: Separate compilation and incremental rebuilds
 
-**Deliverable:** compile module bodies independently, define dependency-aware
-cache keys and invalidation, and retain a clear single-file/program mode. Before
-implementation, decide whether cached/linked module products are internal
-objects combined into one final `.cdbc` program or versioned per-module `.cdbc`
-artifacts. The latter choice depends on M4A's artifact kind, link/load, and
-runtime compatibility contract.
+**Decision:** choose independently validated per-module `.cdbc` products. The
+first implementation slice is `M3B-ARTIFACT-001`, recorded in
+`docs/decisions/m3b-module-artifacts.md` and
+`docs/decisions/m3b-module-artifacts.json`. It adds a strict `artifact: module`
+envelope to the existing `cdbc 0.1` family, serializes canonical-path module
+identity and source-ordered dependency insertion markers, and retains the
+existing linked-program emitter as the default.
 
-**Migration:** produce independent module results and cache decisions in shadow
-mode while the current whole-program lowering remains authoritative. Compare
-interfaces, linked program artifacts, diagnostics, and execution before enabling
-cache reuse by default.
+**Deliverable:** compile module bodies independently, define dependency-aware
+cache keys and invalidation, and retain a clear single-file/program mode. The
+module-product path now emits one validated product per graph node and Rust
+links those products into a final program. `M3B-CACHE-001`, recorded in
+`docs/decisions/m3b-module-cache.md` and
+`docs/decisions/m3b-module-cache.json`, adds an opt-in local product cache and
+per-module rebuild measurement. The cache manifest is `cdbc-cache 0.2` and
+records the paired `.cdi` sidecar path; valid sidecars can preload unchanged
+dependency interfaces during cache-backed builds.
+
+**Migration:** produce independent module results in parallel with the current
+whole-program semantic check, preserving import/re-export order as dependency
+marker offsets. Compare interfaces, linked program artifacts, diagnostics, and
+execution before allowing cache reuse; cache hits currently skip module
+lowering and, for valid imported sidecars, dependency-body parsing/type
+checking. Entry modules and invalid or missing sidecars still use the current
+source path.
 
 **Quantitative gate:** on the named incremental-build graphs in the M0A
 inventory, a no-change rebuild reuses every unchanged dependency interface and
@@ -869,13 +896,23 @@ eligible compiled result; an implementation-only leaf change with an unchanged
 public interface recompiles that leaf but zero dependents; a public-interface
 change recompiles the leaf and its transitive dependents but zero unrelated
 modules; repeated builds emit canonical-equivalent final artifacts; and the
-measurement report names every rebuilt/reused module and reason.
+measurement report names every rebuilt/reused module and reason. The current
+cache slice records stable source/public-interface/dependency inputs and
+propagates public-impact invalidation through the graph. For the per-module
+artifact path, every graph node emits one strict product, every
+dependency marker names an existing product identity and valid local insertion
+offset, Rust dump is byte-for-byte canonical, and unlinked products are rejected
+before VM execution.
 
 **Delete the old path when:** all module-graph fixtures compile through
-independent results, cache invalidation passes the declared change matrix, and
-no import build performs whole-program dependency-body type checking or lowering
-as a fallback. Keep deliberately documented single-entry adapters that consume
-the same graph and interfaces.
+independent results, the module-set linker and cache invalidation pass the
+declared change matrix, independently loadable serialized interfaces preserve
+diagnostics and visibility, and no import build performs whole-program
+dependency-body type checking or lowering for a valid sidecar as a fallback.
+The current implementation still permits source fallback for missing or
+invalid sidecars; removing that safety path requires the M3A-INTERFACE-008
+diagnostic/visibility gate. Keep deliberately documented single-entry adapters
+that consume the same graph and interfaces.
 
 Package management and a large standard library are later product decisions.
 They should consume this module boundary rather than define it.
@@ -895,10 +932,10 @@ of unsupported artifacts. Centralize bytecode validation before execution with
 matching C++ emitter and Rust parser/formatter tests. Define migration or
 rejection policy for `0.1` and successor artifacts, and document/test the runtime
 ABI for shared cells, closures, references, mutable collections, native calls,
-and failure propagation, after the relevant M0.5A decisions are resolved. If M3B
-selects per-module `.cdbc` products, M4A also defines artifact kinds, module
-identities, link/load rules, and validation for the module-product set before
-that M3B path begins.
+and failure propagation, after the relevant M0.5A decisions are resolved. M3B's
+per-module `.cdbc` decision is now recorded; M4A owns the compatibility matrix
+and validation policy for the module-product set while M3B owns linking,
+loading, and incremental reuse.
 
 **Migration:** use the M0.5B audit result as the reader/writer baseline. If no
 successor is needed, harden `0.1` without inventing an adapter. If a successor is
@@ -1111,11 +1148,19 @@ the smallest proof of a broader milestone.
 ## Near-term execution order
 
 The verification foundation, M0.5 decisions, and M1F semantic cutover are
-implemented, and M2A-FLOW-001 through M2A-FLOW-021 are implemented. The active
-near-term slice is M3A-INTERFACE-006: in-memory interface consistency validation.
-It keeps
-the same decision-update, focused fixture, quantitative gate, and old-path
-deletion evidence used by the preceding slices.
+implemented, and M2A-FLOW-001 through M2A-FLOW-021 are implemented. M3A-
+INTERFACE-006 through M3A-INTERFACE-008 are complete, and the user-selected M3B
+artifact decision is resolved as independently validated per-module `.cdbc`
+products. `M3B-ARTIFACT-001` is complete: independent module lowering, module
+identity/dependency envelopes, strict Rust validation, and the
+`--emit-module-bytecode` product-set entry point, plus deterministic Rust
+link/load with reference rebasing and execution parity. `M3B-CACHE-001` now
+adds the opt-in module product cache, `.cdi` sidecars, public-interface
+invalidation, and rebuild measurement. Valid sidecars preload unchanged
+dependency interfaces; source fallback remains the safety path for missing or
+invalid cache data. The next material boundary is removing that fallback only
+after the independent interface and diagnostic/visibility gates are extended
+across the complete inventory.
 
 M0A is implemented at inventory revision `m0a-2026-07-22-r1` against baseline
 commit `0481624`. The checked-in inventory contains 1,563 stable case IDs;
@@ -1141,8 +1186,11 @@ mutations; the canonical inventory now reports 1,658 cases. The harness,
 minimizer selftest, and observed baseline are recorded in
 `docs/verification/m0c-malformed-design.md` and
 `docs/verification/m0c-baseline.json`. M0D, M0.5A, M0.5B, M1F, and
-M2A-FLOW-001 through M2A-FLOW-021 are now implemented; M3A-INTERFACE-006 is the
-active module-boundary slice.
+M2A-FLOW-001 through M2A-FLOW-021 are now implemented; M3A-INTERFACE-006
+through M3A-INTERFACE-008, M3B-ARTIFACT-001, and M3B-CACHE-001 are the completed
+module-boundary, module-product, and artifact-cache slices. The next gate is
+the reviewed condition for removing source fallback and unchanged
+dependency-body semantic checking.
 
 The hard dependency gates are:
 
@@ -1166,8 +1214,7 @@ M0B boundary comparison + M0C malformed corpus
   + resolved M0.5A runtime-ABI decisions + M0.5B cdbc 0.1 audit
   -> M4A artifact validation/compatibility
 
-M3A + internal-module-object decision -> M3B
-M3A + M4A + per-module-.cdbc decision -> M3B
+M3A + resolved per-module-.cdbc decision -> M3B artifact/link/cache slices
 M1A1 source identities + M3A module identities + M4A -> M4B debug/runtime metadata
 M0D verification matrix -> M1F final cutover
 M0D measurement baseline -> any performance gate or optimization claim

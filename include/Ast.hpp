@@ -473,6 +473,9 @@ struct ModuleStmt final : Stmt {
     SourceFileId sourceId;
     std::string path;
     std::string source;
+    // Stable source digest used by independently loaded module sidecars.  It
+    // is a build product field, not a snapshot-local identity.
+    std::string sourceHash;
     std::vector<StmtPtr> statements;
     bool isEntry = false;
 };

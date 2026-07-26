@@ -323,12 +323,13 @@ void writeDebugLocation(std::ostream& out, const std::string& section, std::size
     out << "  " << section << ' ' << index << " = s" << span.source << ':' << span.line << ':' << span.column << '\n';
 }
 
-} // namespace
-
-void writeBytecodeText(std::ostream& out, const BytecodeProgram& program)
+const char* moduleDependencyKindName(ModuleGraphEdgeKind kind)
 {
-    out << "cdbc 0.1\n\n";
+    return kind == ModuleGraphEdgeKind::Import ? "import" : "re_export";
+}
 
+void writeBytecodeSections(std::ostream& out, const BytecodeProgram& program)
+{
     out << "constants:\n";
     for (std::size_t i = 0; i < program.constants().size(); ++i) {
         out << "  " << constantRef(static_cast<std::uint32_t>(i)) << " = " << constantText(program.constants()[i]) << '\n';
@@ -383,4 +384,38 @@ void writeBytecodeText(std::ostream& out, const BytecodeProgram& program)
             }
         }
     }
+}
+
+} // namespace
+
+void writeBytecodeText(std::ostream& out, const BytecodeProgram& program)
+{
+    out << "cdbc 0.1\n\n";
+    writeBytecodeSections(out, program);
+}
+
+void writeBytecodeModuleText(std::ostream& out, const BytecodeModuleArtifact& artifact)
+{
+    out << "cdbc 0.1\n\n"
+        << "artifact: module\n\n"
+        << "module:\n"
+        << "  identity = " << escapedString(artifact.identity) << '\n'
+        << "  path = " << escapedString(artifact.path) << '\n'
+        << "  canonical_path = " << escapedString(artifact.canonicalPath) << '\n'
+        << "  entry = " << (artifact.isEntry ? "true" : "false") << '\n';
+    if (artifact.entryOrder) {
+        out << "  entry_order = " << *artifact.entryOrder << '\n';
+    }
+    out << "  dependencies:\n";
+    for (std::size_t index = 0; index < artifact.dependencies.size(); ++index) {
+        const BytecodeModuleDependency& dependency = artifact.dependencies[index];
+        out << "    d" << index
+            << " target=" << escapedString(dependency.moduleIdentity)
+            << " kind=" << moduleDependencyKindName(dependency.kind)
+            << " at=" << dependency.instructionOffset
+            << " requested=" << escapedString(dependency.requestedPath)
+            << '\n';
+    }
+    out << '\n';
+    writeBytecodeSections(out, artifact.program);
 }

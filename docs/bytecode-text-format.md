@@ -8,11 +8,15 @@ This format is not the same as the current `--bytecode` debug print. The debug p
 
 ## Phase Status
 
-This format is the text artifact contract at the compiler/VM boundary. The C++ compiler can emit `.cdbc` files with `--emit-bytecode`, and the Rust VM can parse, canonicalize, and execute them with `dump` and `run`.
+This format is the text artifact contract at the compiler/VM boundary. The C++ compiler can emit `.cdbc` files with `--emit-bytecode` or independent module products with `--emit-module-bytecode`; the Rust VM can parse, canonicalize, link, and execute them with `dump`, `link`, and `run`.
 
 ```sh
 compiler_design --emit-bytecode output.cdbc input.cd
+compiler_design --emit-module-bytecode module-products input.cd
+compiler_design --emit-module-bytecode module-products --module-cache module-cache --module-rebuild-report rebuild.json input.cd
 compiler-design-vm dump output.cdbc
+compiler-design-vm link module-products output.cdbc
+compiler-design-vm run output.cdbc
 ```
 
 ## Header
@@ -24,6 +28,84 @@ cdbc 0.1
 ```
 
 Future format changes must either remain backward-compatible with `0.1` or use a new version number.
+
+## Artifact kinds
+
+The `cdbc 0.1` envelope has two strict artifact kinds:
+
+- A linked program has no `artifact` declaration and is the existing output of
+  `--emit-bytecode`. It may be passed to the VM `run` command.
+- An independently compiled module starts with `artifact: module` and a
+  `module:` metadata section. It is emitted by
+  `--emit-module-bytecode <directory>` as one `module-<graph-id>.cdbc` file per
+  graph node. Module products are valid inputs to `dump`, but are not final
+  executable programs; the VM rejects them until `link` produces a linked
+  program artifact.
+
+A module artifact has this envelope before the ordinary bytecode sections:
+
+```text
+artifact: module
+
+module:
+  identity = "/workspace/lib.cd"
+  path = "lib.cd"
+  canonical_path = "/workspace/lib.cd"
+  entry = false
+  dependencies:
+    d0 target="/workspace/shared.cd" kind=import at=2 requested="./shared.cd"
+```
+
+`identity` is the graph canonical path and is the product-set key. `path` is
+the source display path. Entry modules additionally carry a zero-based
+`entry_order`; non-entry modules omit it. Dependency records are ordered by
+source occurrence. `kind` is `import` or `re_export`, and `at` is the local
+`main` instruction offset before which a linker expands that dependency. The
+offset may equal the local instruction count. The module `main` and function
+sections contain only the module's own statements; import and re-export bodies
+are represented by these markers rather than recursively lowered into the
+product.
+
+The link/load rule is deterministic: `compiler-design-vm link <directory>
+<output.cdbc>` selects entry products by `entry_order`, walks dependency
+markers in their recorded order, expands each module identity at most once,
+and preserves each marker's local insertion offset while rebasing register,
+constant, name, function, jump, and debug references into the final linked
+program. Missing identities, duplicate identities, non-contiguous entry order,
+cycles, and invalid offsets are rejected before writing the linked artifact.
+The linker does not introduce a new artifact version. The optional module
+product cache is separate from VM artifacts: `--module-cache <directory>`
+stores a `cdbc-cache 0.2` manifest and content-addressed product files, while
+`--module-rebuild-report <report.json>` records per-module reuse/rebuild
+reasons. Keys include the canonical module identity, exact source bytes,
+canonical public interface shape, entry metadata, and source-ordered dependency
+interface inputs; snapshot-local IDs are never cache keys. A private source
+change rebuilds only that module, while a public-interface change propagates
+through transitive dependents. Valid paired interface sidecars can preload
+dependency public shape before the current importer check; invalid or missing
+sidecars/products fall back to source parsing. The default linked-program
+emitter and its `cdbc 0.1` text remain unchanged.
+
+## Module interface sidecars
+
+The module cache also stores one `cdi 0.1` sidecar under `interfaces/` for each
+module. A sidecar contains the canonical module identity, exact source hash,
+complete public type shape (including generic constraints, struct fields and
+methods, enum variants, and linkage names), dependency identities and public
+interface hashes, and entry metadata. Snapshot-local IDs are not serialized.
+
+`--module-interface-cache <directory>` reads these sidecars. A dependency is
+preloaded only when its sidecar identity, canonical path, source hash, recursive
+dependency sidecars/interface hashes, and paired cached `.cdbc` product all
+match. The resulting module node keeps source bytes for diagnostics but has no
+parsed dependency body; its preloaded interface supplies semantic import
+visibility. A missing, malformed, stale, or unpaired sidecar falls back to the
+normal source parser. `--module-cache` uses the same directory and enables this
+preload path while emitting module products.
+
+The cache manifest is separate from VM artifacts and uses `cdbc-cache 0.2`; its
+records include the relative `.cdi` sidecar path. The `.cdi` sidecar is not a
+Rust VM input and has no effect on the linked `cdbc 0.1` wire format.
 
 ## Sections
 

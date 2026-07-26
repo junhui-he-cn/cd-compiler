@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m3b-2026-07-26-r1",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M3B-ARTIFACT-001",
+  "domain": "module-artifact",
+  "status": "resolved",
+  "question": "Should independent module results be internal objects linked into one artifact or independently validated cdbc products?",
+  "decision": "Emit one cdbc 0.1 module artifact per graph module with canonical-path identity, dependency metadata, and source-order insertion markers; retain the existing linked-program artifact as the default output.",
+  "artifact_contract": {
+    "header": "cdbc 0.1",
+    "kind": "artifact: module",
+    "identity": "ModuleGraphNode canonicalPath",
+    "filename": "module-<snapshot-module-id>.cdbc",
+    "entry_order": "Present only for entry modules and ordered by graph entry discovery.",
+    "dependency_marker": "target identity, import or re_export kind, requested path, and local main instruction offset",
+    "core_sections": "The module's own constants, names, main, functions, and optional debug sections use the linked cdbc 0.1 grammar."
+  },
+  "link_contract": {
+    "entry_selection": "Sort entry products by entry_order.",
+    "dependency_walk": "Expand dependency markers in source order and load each identity at most once.",
+    "rebasing": "A linker must rebase local registers, constants, names, functions, jumps, and debug references while preserving marker insertion offsets.",
+    "current_status": "Rust link loads the product directory, selects contiguous entry_order values, expands source-ordered dependency markers once, rebases local bytecode and debug references, and writes a linked cdbc 0.1 program; cache reuse is later M3B work."
+  },
+  "compatibility_boundary": {
+    "linked_artifact": "Existing cdbc 0.1 output is byte-for-byte unchanged and remains executable.",
+    "module_artifact": "Rust dump parses and canonicalizes it; Rust run rejects it before VM execution until linked.",
+    "identity": "Canonical paths are serialized as product identities; snapshot-local numeric module IDs are filename/session transport names only.",
+    "interfaces": "Module interfaces remain in-memory TypeChecker records in this slice.",
+    "cache": "No persistent cache key or invalidation policy is introduced."
+  },
+  "verification": {
+    "focused_commands": [
+      "cmake -S . -B build",
+      "cmake --build build --target compiler_design bytecode_module_emitter_tests",
+      "ctest --test-dir build --output-on-failure -R '^(bytecode_module_emitter)$'",
+      "python3 tests/bytecode_module_artifact_tests.py ./build/compiler_design vm-rs",
+      "cargo test --manifest-path vm-rs/Cargo.toml"
+    ],
+    "fixtures": [
+      "tests/golden/module_import_order/input.cd",
+      "tests/golden/module_import_order/lib.cd"
+    ]
+  },
+  "out_of_scope": [
+    "serialized module interfaces",
+    "incremental cache keys and invalidation",
+    "running an unlinked module artifact",
+    "replacement of the default linked-program emitter"
+  ]
+}

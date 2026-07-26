@@ -663,6 +663,8 @@ python3 tests/run_golden_tests.py ./build/compiler_design --update --update-miss
 ./build/compiler_design --bytecode examples/hello.cd
 ./build/compiler_design --module-interface examples/hello.cd
 ./build/compiler_design --emit-bytecode program.cdbc examples/hello.cd
+./build/compiler_design --emit-module-bytecode module-products examples/hello.cd
+./build/compiler_design --module-interface-cache module-cache examples/hello.cd
 ```
 
 Multiple input files may be provided. They are read in command-line order and compiled as one combined program:
@@ -679,6 +681,29 @@ The interface output also reports exported enum variants and their payload types
 ./build/compiler_design --emit-bytecode program.cdbc examples/hello.cd
 cargo run --manifest-path vm-rs/Cargo.toml -- dump program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- run program.cdbc
+```
+
+For an import-aware graph, `--emit-module-bytecode` emits one independently
+validated `artifact: module` product per graph node. Rust links the product set
+before execution:
+
+```sh
+./build/compiler_design --emit-module-bytecode module-products main.cd
+cargo run --manifest-path vm-rs/Cargo.toml -- link module-products program.cdbc
+cargo run --manifest-path vm-rs/Cargo.toml -- run program.cdbc
+```
+
+Module product reuse is opt-in. The cache stores stable source/public-interface
+keys, paired `.cdi` public-interface sidecars, and reports every reuse or
+rebuild reason. A later invocation can preload valid dependency sidecars with
+`--module-interface-cache`; `--module-cache` enables that directory
+automatically. Source-hash, dependency-sidecar, interface-hash, and product
+checks must all succeed, otherwise the dependency is parsed from source:
+
+```sh
+./build/compiler_design --emit-module-bytecode module-products \
+  --module-cache module-cache \
+  --module-rebuild-report rebuild.json main.cd
 ```
 
 If no file is provided, source is read from stdin. Imported-file and direct multi-file front-end diagnostics report original file paths with file-local line and column; stdin diagnostics remain pathless.

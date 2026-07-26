@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <ostream>
+#include <sstream>
 #include <vector>
 
 namespace {
@@ -149,5 +150,16 @@ void writeModuleInterfaceText(std::ostream& out, const std::vector<ModuleInterfa
                 out << "\n";
             }
         }
+    }
+}
+
+void writeModuleInterfaceShapeText(std::ostream& out, const ModuleInterface& interfaceInfo)
+{
+    std::ostringstream full;
+    writeModuleInterfaceText(full, std::vector<ModuleInterface>{interfaceInfo});
+    const std::string text = full.str();
+    const std::size_t headerEnd = text.find('\n');
+    if (headerEnd != std::string::npos) {
+        out << text.substr(headerEnd + 1);
     }
 }

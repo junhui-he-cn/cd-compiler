@@ -22,6 +22,10 @@ public:
     IRProgram compile(
         const Program& program,
         const DeclarationIndex& declarationIndex);
+    IRProgram compileModule(
+        const Program& program,
+        std::size_t moduleId,
+        const DeclarationIndex& declarationIndex);
 
 private:
     class SpanScope {
@@ -35,6 +39,10 @@ private:
     };
 
     void setCurrentSpan(std::optional<SourceSpan> span);
+    IRProgram compileInternal(
+        const Program& program,
+        const DeclarationIndex& declarationIndex,
+        std::optional<std::size_t> moduleId);
     const TypeInfo& typedExpressionType(
         const Expr& expression,
         const char* context) const;
@@ -119,6 +127,7 @@ private:
     const DeclarationIndex* declarationIndex_ = nullptr;
     std::unordered_map<std::size_t, const ModuleStmt*> modules_;
     std::unordered_set<std::size_t> compiledModules_;
+    std::optional<std::size_t> independentModuleId_;
     std::vector<LoopContext> loopContexts_;
     std::size_t nextSyntheticName_ = 0;
     std::optional<SourceSpan> currentSpan_;

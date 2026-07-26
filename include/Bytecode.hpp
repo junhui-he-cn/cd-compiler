@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ModuleGraph.hpp"
 #include "SourceMap.hpp"
 #include "Value.hpp"
 
@@ -74,6 +75,13 @@ struct BytecodeFunction {
     std::uint32_t registerCount = 0;
 };
 
+struct BytecodeModuleDependency {
+    std::string moduleIdentity;
+    ModuleGraphEdgeKind kind = ModuleGraphEdgeKind::Import;
+    std::string requestedPath;
+    std::uint32_t instructionOffset = 0;
+};
+
 class BytecodeProgram {
 public:
     void setSources(std::vector<SourceFile> sources);
@@ -100,6 +108,20 @@ private:
     std::uint32_t registerCount_ = 0;
     std::vector<BytecodeFunction> functions_;
     std::vector<SourceFile> sources_;
+};
+
+// A module artifact carries one module's linked-program-compatible bytecode
+// plus the metadata a future linker needs to expand its dependencies.  The
+// existing BytecodeProgram remains the representation of a final linked
+// program artifact.
+struct BytecodeModuleArtifact {
+    std::string identity;
+    std::string path;
+    std::string canonicalPath;
+    bool isEntry = false;
+    std::optional<std::uint32_t> entryOrder = std::nullopt;
+    std::vector<BytecodeModuleDependency> dependencies;
+    BytecodeProgram program;
 };
 
 std::string bytecodeOpName(BytecodeOp op);

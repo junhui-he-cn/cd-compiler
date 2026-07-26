@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m3b-2026-07-26-r2",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M3B-CACHE-001",
+  "domain": "module-cache",
+  "status": "resolved",
+  "question": "What persistent key and invalidation boundary should govern independently emitted module products?",
+  "decision": "Use a local cdbc-cache 0.2 manifest with canonical-path module identities, stable fnv1a64 keys, exact source/public-interface digests, ordered dependency interface inputs, paired cdi 0.1 sidecar paths, and explicit rebuild measurement; reuse products only after valid sidecars and current entry-graph checks.",
+  "key_inputs": [
+    "cache schema version",
+    "cdbc 0.1 artifact contract",
+    "canonical module identity",
+    "exact module source bytes",
+    "canonical public interface shape",
+    "entry status and entry order",
+    "source-ordered dependency identity, edge kind, requested path, and interface digest"
+  ],
+  "identity_policy": "Snapshot-local module/source/syntax/declaration/binding IDs are excluded from persistent keys.",
+  "invalidation": {
+    "cold_or_missing_product": "rebuild the module",
+    "source_changed_public_shape_unchanged": "rebuild only the changed module",
+    "public_interface_changed": "rebuild the changed module and all transitive dependents",
+    "dependency_edge_changed": "rebuild the importing module",
+    "unchanged_key_and_product": "reuse the validated module product"
+  },
+  "measurement": {
+    "cli": "--module-rebuild-report <report.json>",
+    "records": "cache status, per-module key/digests, reuse or rebuild status, reason, product artifact, interface sidecar, and public impact",
+    "format": "JSON"
+  },
+  "migration": "Use valid cdi 0.1 sidecars to preload unchanged imported interfaces and skip their body parse/check while keeping entry checking and source fallback authoritative for invalid or missing cache data.",
+  "compatibility_boundary": {
+    "linked_output": "The default linked cdbc 0.1 emitter is unchanged.",
+    "module_output": "Independent artifact envelope and Rust linker contract are unchanged.",
+    "cache_format": "cdbc-cache 0.2 is compiler-internal and is not executable by the VM.",
+    "invalid_manifest": "Treat as a cold cache, rebuild all current modules, and replace it after successful emission."
+  },
+  "quantitative_gate": "The focused C++ planner and three-module integration test prove cold build, no-change full reuse, private leaf-only rebuild, public leaf direct/transitive rebuild, canonical module products, linking, and VM execution.",
+  "old_path_deletion_condition": "Remove source fallback and the current whole-graph semantic authority only after serialized interfaces are independently loadable, valid/missing/malformed/stale cases preserve diagnostics and visibility, and the declared cache matrix passes without checking unchanged dependency bodies.",
+  "out_of_scope": [
+    "remote or distributed caches",
+    "cache eviction",
+    "package resolution",
+    "cross-build linker symbol identities",
+    "default cache reuse for non-module program mode"
+  ],
+  "verification": {
+    "focused_commands": [
+      "cmake --build build --target compiler_design module_cache_tests",
+      "ctest --test-dir build --output-on-failure -R '^(frontend_session|module_cache|module_interface_artifact|bytecode_module_cache)$'",
+      "python3 tests/bytecode_module_cache_tests.py ./build/compiler_design vm-rs",
+      "git diff --check"
+    ]
+  }
+}

@@ -29,6 +29,14 @@ Value literalValue(const std::string& text)
     return Value::number(number);
 }
 
+std::string importPathForIR(const Token& token)
+{
+    if (token.lexeme.size() >= 2 && token.lexeme.front() == '"' && token.lexeme.back() == '"') {
+        return token.lexeme.substr(1, token.lexeme.size() - 2);
+    }
+    return token.lexeme;
+}
+
 } // namespace
 
 IRCompileError::IRCompileError(std::string message)
@@ -111,11 +119,28 @@ IRProgram IRCompiler::compile(
     const Program& program,
     const DeclarationIndex& declarationIndex)
 {
+    return compileInternal(program, declarationIndex, std::nullopt);
+}
+
+IRProgram IRCompiler::compileModule(
+    const Program& program,
+    std::size_t moduleId,
+    const DeclarationIndex& declarationIndex)
+{
+    return compileInternal(program, declarationIndex, moduleId);
+}
+
+IRProgram IRCompiler::compileInternal(
+    const Program& program,
+    const DeclarationIndex& declarationIndex,
+    std::optional<std::size_t> moduleId)
+{
     ir_ = IRProgram();
     ir_.setSources(program.sources);
     currentSpan_ = std::nullopt;
     ir_.setCurrentSpan(std::nullopt);
     declarationIndex_ = &declarationIndex;
+    independentModuleId_ = moduleId;
     modules_.clear();
     compiledModules_.clear();
     loopContexts_.clear();
@@ -124,12 +149,21 @@ IRProgram IRCompiler::compile(
             modules_.emplace(module->moduleId, module);
         }
     }
-    for (const auto& statement : program.statements) {
-        compileStatement(*statement);
+    if (independentModuleId_) {
+        const auto found = modules_.find(*independentModuleId_);
+        if (found == modules_.end()) {
+            throw IRCompileError("internal error: unresolved module for independent lowering");
+        }
+        compileModule(*found->second);
+    } else {
+        for (const auto& statement : program.statements) {
+            compileStatement(*statement);
+        }
     }
     modules_.clear();
     compiledModules_.clear();
     loopContexts_.clear();
+    independentModuleId_.reset();
     declarationIndex_ = nullptr;
     return std::move(ir_);
 }
@@ -145,6 +179,14 @@ void IRCompiler::compileStatement(const Stmt& statement)
     }
 
     if (const auto* import = dynamic_cast<const ImportStmt*>(&statement)) {
+        if (independentModuleId_) {
+            ir_.addModuleDependency(IRModuleDependency{
+                import->resolvedModuleId,
+                ModuleGraphEdgeKind::Import,
+                importPathForIR(import->path),
+                ir_.instructionCount()});
+            return;
+        }
         const auto found = modules_.find(import->resolvedModuleId);
         if (found == modules_.end()) {
             throw IRCompileError("internal error: unresolved import module");
@@ -155,6 +197,14 @@ void IRCompiler::compileStatement(const Stmt& statement)
 
     if (const auto* exportStmt = dynamic_cast<const ExportStmt*>(&statement)) {
         if (exportStmt->sourcePath) {
+            if (independentModuleId_) {
+                ir_.addModuleDependency(IRModuleDependency{
+                    exportStmt->resolvedModuleId,
+                    ModuleGraphEdgeKind::ReExport,
+                    importPathForIR(*exportStmt->sourcePath),
+                    ir_.instructionCount()});
+                return;
+            }
             const auto found = modules_.find(exportStmt->resolvedModuleId);
             if (found == modules_.end()) {
                 throw IRCompileError("internal error: unresolved re-export module");

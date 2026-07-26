@@ -52,6 +52,8 @@ add_executable(compiler_design
     src/IRCompiler.cpp
     src/Lexer.cpp
     src/LosslessSource.cpp
+    src/ModuleCache.cpp
+    src/ModuleInterfaceArtifact.cpp
     src/ModuleSymbols.cpp
     src/ModuleInterfaceEmitter.cpp
     src/NativeStdlib.cpp
@@ -86,6 +88,8 @@ add_executable(ir_source_location_tests
     src/IRCompiler.cpp
     src/Lexer.cpp
     src/LosslessSource.cpp
+    src/ModuleCache.cpp
+    src/ModuleInterfaceArtifact.cpp
     src/ModuleSymbols.cpp
     src/NativeStdlib.cpp
     src/Parser.cpp
@@ -168,6 +172,18 @@ add_test(
 )
 
 add_test(
+    NAME bytecode_module_artifacts
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
+            ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/bytecode_module_artifact_tests.py $<TARGET_FILE:compiler_design> ${CMAKE_SOURCE_DIR}/vm-rs
+)
+
+add_test(
+    NAME bytecode_module_cache
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
+            ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/bytecode_module_cache_tests.py $<TARGET_FILE:compiler_design> ${CMAKE_SOURCE_DIR}/vm-rs
+)
+
+add_test(
     NAME rust_vm
     COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
             ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/run_rust_vm_tests.py $<TARGET_FILE:compiler_design> ${CMAKE_SOURCE_DIR}/vm-rs --goldens
@@ -180,7 +196,10 @@ add_executable(frontend_session_tests
     src/FrontendSession.cpp
     src/Lexer.cpp
     src/LosslessSource.cpp
+    src/ModuleCache.cpp
+    src/ModuleInterfaceArtifact.cpp
     src/Parser.cpp
+    src/TypeUtils.cpp
 )
 target_include_directories(frontend_session_tests PRIVATE include)
 compiler_design_apply_warnings(frontend_session_tests)
@@ -227,10 +246,44 @@ compiler_design_apply_warnings(module_interface_emitter_tests)
 compiler_design_apply_sanitizers(module_interface_emitter_tests)
 add_test(NAME module_interface_emitter COMMAND module_interface_emitter_tests)
 
+add_executable(bytecode_module_emitter_tests
+    tests/bytecode_module_emitter_tests.cpp
+    src/Bytecode.cpp
+    src/BytecodeTextEmitter.cpp
+    src/Value.cpp
+)
+target_include_directories(bytecode_module_emitter_tests PRIVATE include)
+compiler_design_apply_warnings(bytecode_module_emitter_tests)
+compiler_design_apply_sanitizers(bytecode_module_emitter_tests)
+add_test(NAME bytecode_module_emitter COMMAND bytecode_module_emitter_tests)
+
+add_executable(module_cache_tests
+    tests/module_cache_tests.cpp
+    src/ModuleCache.cpp
+    src/ModuleInterfaceArtifact.cpp
+)
+target_include_directories(module_cache_tests PRIVATE include)
+compiler_design_apply_warnings(module_cache_tests)
+compiler_design_apply_sanitizers(module_cache_tests)
+add_test(NAME module_cache COMMAND module_cache_tests)
+
+add_executable(module_interface_artifact_tests
+    tests/module_interface_artifact_tests.cpp
+    src/ModuleInterfaceArtifact.cpp
+    src/ModuleCache.cpp
+    src/TypeUtils.cpp
+)
+target_include_directories(module_interface_artifact_tests PRIVATE include)
+compiler_design_apply_warnings(module_interface_artifact_tests)
+compiler_design_apply_sanitizers(module_interface_artifact_tests)
+add_test(NAME module_interface_artifact COMMAND module_interface_artifact_tests)
+
 set_tests_properties(
     cli_multi_source
     golden
     bytecode_artifacts
+    bytecode_module_artifacts
+    bytecode_module_cache
     rust_vm
     PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )

@@ -4,6 +4,8 @@
 
 #include <algorithm>
 #include <cctype>
+#include <functional>
+#include <limits>
 #include <stdexcept>
 #include <utility>
 
@@ -269,6 +271,11 @@ TypeError::TypeError(const Token& token, std::string message)
 {
 }
 
+void TypeChecker::setPreloadedModuleInterfaces(std::vector<ModuleInterface> interfaces)
+{
+    preloadedModuleInterfaces_ = std::move(interfaces);
+}
+
 void TypeChecker::check(const Program& program)
 {
     declarationIndex_ = DeclarationIndex::collect(program);
@@ -285,11 +292,44 @@ void TypeChecker::check(const Program& program)
     enumCheckStates_.clear();
     methods_.clear();
     moduleSymbols_.clear();
-    moduleInterfaces_.clear();
+    moduleInterfaces_ = preloadedModuleInterfaces_;
+    preloadedModuleIds_.clear();
+    for (const ModuleInterface& interfaceInfo : moduleInterfaces_) {
+        preloadedModuleIds_.insert(interfaceInfo.moduleId);
+    }
     checkedModules_.clear();
     moduleStack_.clear();
     currentProgram_ = &program;
     nextResolvedName_ = 0;
+    const auto observeResolvedName = [this](const std::string& resolvedName) {
+        const std::size_t marker = resolvedName.rfind('#');
+        if (marker == std::string::npos || marker + 1 == resolvedName.size()) {
+            return;
+        }
+        const std::string suffix = resolvedName.substr(marker + 1);
+        if (suffix.find_first_not_of("0123456789") != std::string::npos) {
+            return;
+        }
+        try {
+            const unsigned long long value = std::stoull(suffix);
+            if (value < std::numeric_limits<std::size_t>::max()) {
+                nextResolvedName_ = std::max(nextResolvedName_, static_cast<std::size_t>(value + 1));
+            }
+        } catch (const std::exception&) {
+            // A sidecar with a non-numeric linkage suffix remains usable; it
+            // simply does not contribute to the local numeric allocator.
+        }
+    };
+    for (const ModuleInterface& interfaceInfo : moduleInterfaces_) {
+        for (const ModuleInterfaceValue& value : interfaceInfo.values) {
+            observeResolvedName(value.resolvedName);
+        }
+        for (const ModuleInterfaceStruct& structure : interfaceInfo.structs) {
+            for (const ModuleInterfaceMethod& method : structure.methods) {
+                observeResolvedName(method.resolvedName);
+            }
+        }
+    }
     nextBindingId_ = 0;
     nextDeclarationId_ = 0;
     nextSymbolId_ = 0;
@@ -308,11 +348,20 @@ void TypeChecker::check(const Program& program)
     }
 
     if (hasModules) {
-        for (const auto& statement : program.statements) {
-            if (const auto* module = dynamic_cast<const ModuleStmt*>(statement.get())) {
-                checkModule(*module);
-            } else {
-                checkStatement(*statement);
+        if (program.moduleGraph) {
+            checkModulesInDependencyOrder(program);
+            for (const auto& statement : program.statements) {
+                if (!dynamic_cast<const ModuleStmt*>(statement.get())) {
+                    checkStatement(*statement);
+                }
+            }
+        } else {
+            for (const auto& statement : program.statements) {
+                if (const auto* module = dynamic_cast<const ModuleStmt*>(statement.get())) {
+                    checkModule(*module);
+                } else {
+                    checkStatement(*statement);
+                }
             }
         }
     } else {
@@ -1319,6 +1368,10 @@ std::size_t TypeChecker::validateModuleInterfaces(const Program& program) const
                 [](const ModuleInterfaceMethod& method) { return method.name; });
         }
 
+        if (preloadedModuleIds_.find(interfaceInfo.moduleId) != preloadedModuleIds_.end()) {
+            continue;
+        }
+
         checkValueNames(interfaceInfo.values, moduleSymbols_.valueExports(interfaceInfo.moduleId));
         checkStructNames(interfaceInfo.structs, moduleSymbols_.structExports(interfaceInfo.moduleId));
         checkEnumNames(interfaceInfo.enums, moduleSymbols_.enumExports(interfaceInfo.moduleId));
@@ -1331,6 +1384,10 @@ std::size_t TypeChecker::validateModuleInterfaces(const Program& program) const
 void TypeChecker::checkModule(const ModuleStmt& module)
 {
     if (checkedModules_.find(module.moduleId) != checkedModules_.end()) {
+        return;
+    }
+    if (preloadedModuleIds_.find(module.moduleId) != preloadedModuleIds_.end()) {
+        checkedModules_.insert(module.moduleId);
         return;
     }
 
@@ -1390,6 +1447,59 @@ void TypeChecker::checkModule(const ModuleStmt& module)
     functionDepth_ = savedFunctionDepth;
     loopDepth_ = savedLoopDepth;
     returnContexts_ = std::move(savedReturnContexts);
+}
+
+void TypeChecker::checkModulesInDependencyOrder(const Program& program)
+{
+    if (!program.moduleGraph) {
+        throw TypeError("internal error: module dependency graph is unavailable");
+    }
+
+    enum class VisitState {
+        Visiting,
+        Checked,
+    };
+    std::unordered_map<std::size_t, VisitState> states;
+    const std::function<void(std::size_t)> visit = [&](std::size_t moduleId) {
+        const auto existing = states.find(moduleId);
+        if (existing != states.end()) {
+            if (existing->second == VisitState::Visiting) {
+                throw TypeError("internal error: module dependency graph contains a cycle");
+            }
+            return;
+        }
+
+        states.emplace(moduleId, VisitState::Visiting);
+        for (const ModuleGraphEdge& edge : program.moduleGraph->edges) {
+            if (edge.importingModuleId == moduleId) {
+                visit(edge.importedModuleId);
+            }
+        }
+
+        const ModuleStmt* module = findModule(program, moduleId);
+        if (!module) {
+            throw TypeError("internal error: unresolved module graph node");
+        }
+        checkModule(*module);
+        states[moduleId] = VisitState::Checked;
+    };
+
+    for (const ModuleGraphNode& node : program.moduleGraph->nodes) {
+        visit(node.moduleId);
+    }
+
+    // Keep the module graph as the scheduling authority while retaining a
+    // defensive path for a snapshot whose statement set contains a module
+    // that is not yet represented by a graph node.
+    for (const auto& statement : program.statements) {
+        const auto* module = dynamic_cast<const ModuleStmt*>(statement.get());
+        if (!module) {
+            continue;
+        }
+        if (states.find(module->moduleId) == states.end()) {
+            visit(module->moduleId);
+        }
+    }
 }
 
 const NamespaceImport* TypeChecker::findNamespace(const std::string& alias) const
@@ -1498,21 +1608,13 @@ void TypeChecker::checkImport(const ImportStmt& statement)
     if (moduleStack_.empty()) {
         throw TypeError(statement.keyword, "import declarations must be loaded before parsing");
     }
-    if (!currentProgram_) {
-        throw TypeError(statement.keyword, "internal error: import without program");
-    }
 
     const std::size_t currentModuleId = moduleStack_.back();
     if (!statement.alias && !moduleSymbols_.markDirectImport(currentModuleId, statement.resolvedModuleId)) {
         return;
     }
 
-    const ModuleStmt* imported = findModule(*currentProgram_, statement.resolvedModuleId);
-    if (!imported) {
-        throw TypeError(statement.keyword, "internal error: unresolved import module");
-    }
-    checkModule(*imported);
-    const ModuleInterface* importedInterface = findModuleInterface(imported->moduleId);
+    const ModuleInterface* importedInterface = findModuleInterface(statement.resolvedModuleId);
     if (!importedInterface) {
         throw TypeError(statement.keyword, "internal error: unresolved imported module interface");
     }
@@ -1596,12 +1698,7 @@ void TypeChecker::checkReExport(const ExportStmt& statement)
     }
 
     const std::size_t currentModuleId = moduleStack_.back();
-    const ModuleStmt* target = findModule(*currentProgram_, statement.resolvedModuleId);
-    if (!target) {
-        throw TypeError(statement.keyword, "internal error: unresolved re-export module");
-    }
-    checkModule(*target);
-    const ModuleInterface* targetInterface = findModuleInterface(target->moduleId);
+    const ModuleInterface* targetInterface = findModuleInterface(statement.resolvedModuleId);
     if (!targetInterface) {
         throw TypeError(statement.keyword, "internal error: unresolved re-export module interface");
     }

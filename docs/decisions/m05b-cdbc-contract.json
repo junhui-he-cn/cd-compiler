@@ -19,6 +19,10 @@
   },
   "current_envelope": {
     "header": "cdbc 0.1",
+    "artifact_kinds": [
+      "linked program (no artifact declaration)",
+      "independent module (artifact: module)"
+    ],
     "core_sections": [
       "constants",
       "names",
@@ -26,28 +30,31 @@
       "function*"
     ],
     "optional_sections": [
+      "artifact: module and module metadata for independent products",
       "debug_sources",
       "debug_locations"
     ],
-    "section_order": "constants, names, main, zero or more function sections, optional debug_sources, optional debug_locations",
-    "parser_policy": "Rust parsing is strict: required sections, sequential references, instruction shapes, debug references, and trailing/unknown sections are rejected.",
-    "formatter_policy": "Rust dump canonicalizes a parsed program to the same cdbc 0.1 text representation used by the checked-in reference corpus.",
+    "section_order": "optional artifact: module and module metadata, constants, names, main, zero or more function sections, optional debug_sources, optional debug_locations",
+    "parser_policy": "Rust parsing is strict: artifact kind, module fields, dependency markers, required sections, sequential references, instruction shapes, debug references, and trailing/unknown sections are rejected.",
+    "formatter_policy": "Rust dump canonicalizes either linked cdbc 0.1 programs or module products to the same text representation emitted by C++.",
     "debug_policy": "Debug metadata is additive and optional; source/function/instruction indexes are artifact-local, while line and column values are one-based."
   },
   "evolution_decisions": [
     {
       "field_id": "artifact-kind",
       "field": "artifact kind",
-      "classification": "already present",
-      "current_state": "The cdbc family header, .cdbc extension, compiler emit mode, and Rust dump/run commands identify the current artifact kind.",
-      "named_consumer": "C++ BytecodeTextEmitter and Rust format parser/CLI",
+      "classification": "resolved",
+      "current_state": "The cdbc 0.1 envelope distinguishes linked programs by the absence of an artifact declaration and independent products with artifact: module; the module CLI emits one product per graph node and Rust dump/run enforce the distinction.",
+      "named_consumer": "C++ BytecodeTextEmitter, C++ module emitter, and Rust format parser/CLI",
       "planned_fixtures": [
-        "tests/bytecode_artifacts/arithmetic/expected.cdbc"
+        "tests/bytecode_artifacts/arithmetic/expected.cdbc",
+        "tests/golden/module_import_order/input.cd",
+        "tests/bytecode_module_artifact_tests.py"
       ],
-      "rationale": "No second artifact family is currently transported or consumed.",
+      "rationale": "Independent products need a strict non-executable envelope, but their bytecode sections remain compatible with the existing cdbc 0.1 family and parser.",
       "revisit": {
         "milestone": "M4A",
-        "condition": "Introduce a distinct artifact family only if a concrete consumer cannot use the cdbc 0.1 envelope."
+        "condition": "Change only if linking, runtime compatibility, or a concrete transport requires a successor version or separate family."
       }
     },
     {
@@ -114,16 +121,17 @@
     {
       "field_id": "module-identity",
       "field": "module identity",
-      "classification": "deferred",
-      "current_state": "Current .cdbc output is one linked program artifact; module-interface text is inspection metadata and not a separate-compilation input.",
-      "named_consumer": "M3A/M3B module graph and separate/incremental compilation",
+      "classification": "resolved",
+      "current_state": "Independent module products serialize the ModuleGraph canonical path as identity, retain display/canonical paths, entry ordering, and dependency target identities, while linked program artifacts remain identity-free.",
+      "named_consumer": "M3B module product emitter/linker and Rust module artifact validator",
       "planned_fixtures": [
-        "tests/bytecode_artifacts/compatibility/module-identity.cdbc (M3B/M4A planned fixture)"
+        "tests/bytecode_module_artifact_tests.py",
+        "docs/decisions/m3b-module-artifacts.json"
       ],
-      "rationale": "Module identity belongs to the module graph and separate-compilation decision; it is not needed in the current whole-program artifact.",
+      "rationale": "Per-module products must be linkable across independent files without treating snapshot-local numeric module IDs as persistent identities.",
       "revisit": {
-        "milestone": "M3A/M3B, then M4A if serialized module products use cdbc",
-        "condition": "Choose whether modules link into one final artifact or carry independently validated artifact/interface identities."
+        "milestone": "M3B/M4A",
+        "condition": "Revise if a linker or cross-build cache requires a stronger identity/hash contract."
       }
     },
     {
@@ -174,12 +182,12 @@
   "successor_decision": {
     "selected": false,
     "decision": "No cdbc successor is required or selected at M0.5B.",
-    "rationale": "The current 0.1 envelope already provides the emitted core sections, strict Rust parse/dump, optional debug metadata, and the only current compiler/VM consumer pair. All proposed additions without a concrete consumer or transport are deferred or not currently required. M4A remains authorized to select a successor if a later compatibility requirement proves that a 0.1-compatible extension is insufficient.",
+    "rationale": "M0.5B selected no successor because the current 0.1 envelope covered the linked compiler/VM pair. M3B later introduced independent module products as a compatible artifact-kind extension, without selecting a successor version. M4A remains authorized to select a successor if a later compatibility requirement proves that a 0.1-compatible extension is insufficient.",
     "m4_owner": "M4A",
     "triggers": [
       "breaking opcode or value-layout change",
       "a second runtime/target requiring negotiation",
-      "separate compiled module artifacts requiring a new envelope",
+      "module linking requiring fields that cannot remain a compatible cdbc 0.1 extension",
       "a named transport/security requirement that cannot fit a compatible extension"
     ]
   },

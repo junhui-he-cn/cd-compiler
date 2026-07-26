@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m3a-2026-07-26-r1",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M3A-INTERFACE-008",
+  "domain": "module-interface",
+  "status": "resolved",
+  "question": "How should independently emitted module products provide public interfaces to a later compiler process without serializing snapshot-local IDs?",
+  "decision": "Persist a strict cdi 0.1 sidecar for each module, validate source/dependency/product inputs recursively, and preload its public shape into the current FrontendSession and TypeChecker snapshot; retain source parsing as the fallback.",
+  "sidecar_contract": {
+    "header": "cdi 0.1",
+    "path": "interfaces/interface-<identity-hash>.cdi",
+    "identity": "canonical module path",
+    "source": "exact source bytes hashed with moduleCacheHash",
+    "public_shape": "values, generic signatures and constraints, structs, fields, methods, enums, variants, receiver types, and resolved linkage names",
+    "dependencies": "source-ordered canonical identities, edge kinds, requested paths, and public interface hashes",
+    "snapshot_ids": "never serialized; remapped to current module/source IDs after load"
+  },
+  "preload_conditions": [
+    "sidecar identity and canonical path equal the currently loaded canonical path",
+    "sidecar source hash equals the current source bytes",
+    "every recorded dependency sidecar is recursively valid and has the recorded public interface hash",
+    "the stable cached module product for the full source-ordered dependency key exists"
+  ],
+  "preloaded_snapshot": {
+    "source_bytes": "retained for diagnostics",
+    "tokens": "empty",
+    "statements": "empty for preloaded dependency modules",
+    "graph": "reconstructed from sidecar dependency records",
+    "type_checker": "uses the remapped public interface and skips the dependency body"
+  },
+  "fallback": "Missing, malformed, stale, or unpaired sidecars use ordinary source lexing, parsing, and dependency resolution; entry/direct input modules are not preloaded.",
+  "cache_manifest": {
+    "header": "cdbc-cache 0.2",
+    "record": "stable module metadata, product path, and relative interface artifact path",
+    "runtime": "compiler/frontend input only; not a VM artifact"
+  },
+  "compatibility_boundary": {
+    "linked_artifact": "cdbc 0.1 linked output is unchanged",
+    "module_product": "existing artifact: module cdbc 0.1 products are unchanged",
+    "rust_vm": "does not parse cdi sidecars",
+    "diagnostics": "source fallback remains available for cold and invalid caches"
+  },
+  "migration": "Add sidecar preload beside the ParsedUnit/ModuleStmt path, compare valid-hit graph/interface handoff with source behavior, and retain fallback until the complete inventory proves equivalence.",
+  "old_path_deletion_condition": "Remove source fallback only after valid, missing, malformed, stale, source-changed, public-interface-changed, and graph-changed sidecar cases preserve visibility and diagnostics across repeated builds.",
+  "out_of_scope": [
+    "package resolution",
+    "remote caches and cache eviction",
+    "cross-build linker symbol allocation",
+    "VM-side cdi parsing",
+    "new cdbc artifact versions"
+  ],
+  "verification": {
+    "focused_commands": [
+      "cmake --build build --target compiler_design frontend_session_tests module_cache_tests module_interface_artifact_tests",
+      "ctest --test-dir build --output-on-failure -R '^(frontend_session|module_cache|module_interface_artifact)$'",
+      "python3 tests/bytecode_module_cache_tests.py ./build/compiler_design vm-rs",
+      "python3 tests/verification_inventory.py",
+      "git diff --check"
+    ],
+    "focused_sources": [
+      "tests/frontend_session_tests.cpp",
+      "tests/module_interface_artifact_tests.cpp",
+      "tests/bytecode_module_cache_tests.py"
+    ]
+  }
+}

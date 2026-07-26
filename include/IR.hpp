@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ModuleGraph.hpp"
 #include "SourceMap.hpp"
 #include "Value.hpp"
 
@@ -74,6 +75,16 @@ struct IRFunction {
     std::size_t registerCount = 0;
 };
 
+// A dependency marker emitted while lowering one module independently.  The
+// marker is not an instruction: it records the local main-instruction offset
+// at which a linker must expand the referenced module product.
+struct IRModuleDependency {
+    std::size_t importedModuleId = 0;
+    ModuleGraphEdgeKind kind = ModuleGraphEdgeKind::Import;
+    std::string requestedPath;
+    std::size_t instructionOffset = 0;
+};
+
 class IRProgram {
 public:
     void setSources(std::vector<SourceFile> sources);
@@ -85,6 +96,8 @@ public:
     IRRegister makeRegister();
     void beginFunction(std::string name, std::vector<std::string> parameters);
     std::size_t endFunction();
+
+    void addModuleDependency(IRModuleDependency dependency);
 
     IRRegister emitConstant(Value value);
     IRRegister emitMakeFunction(std::size_t functionIndex);
@@ -129,6 +142,7 @@ public:
     const std::vector<std::string>& names() const;
     const std::vector<IRInstruction>& instructions() const;
     const std::vector<IRFunction>& functions() const;
+    const std::vector<IRModuleDependency>& moduleDependencies() const;
     std::size_t registerCount() const;
 
     // Print a compact, assembly-like view of the generated register IR.
@@ -143,6 +157,7 @@ private:
     std::size_t registerCount_ = 0;
     std::vector<IRFunction> functionStack_;
     std::vector<IRFunction> functions_;
+    std::vector<IRModuleDependency> moduleDependencies_;
     std::vector<SourceFile> sources_;
     std::optional<SourceSpan> currentSpan_;
 };

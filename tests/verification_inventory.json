@@ -3771,6 +3771,66 @@
       "expected_files": []
     },
     {
+      "case_id": "ctest.bytecode_module_artifacts",
+      "runner": "ctest",
+      "result_name": "bytecode_module_artifacts",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "bytecode_module_artifacts"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "ctest.bytecode_module_cache",
+      "runner": "ctest",
+      "result_name": "bytecode_module_cache",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "bytecode_module_cache"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "ctest.bytecode_module_emitter",
+      "runner": "ctest",
+      "result_name": "bytecode_module_emitter",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "bytecode_module_emitter"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "ctest.ci_workflow",
       "runner": "ctest",
       "result_name": "ci_workflow",
@@ -3959,6 +4019,46 @@
         "tests/malformed_tests_selftest.py",
         "tests/malformed_corpus.py",
         "tests/run_malformed_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "ctest.module_cache",
+      "runner": "ctest",
+      "result_name": "module_cache",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "module_cache"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "ctest.module_interface_artifact",
+      "runner": "ctest",
+      "result_name": "module_interface_artifact",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "module_interface_artifact"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
       ],
       "expected_files": []
     },

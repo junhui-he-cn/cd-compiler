@@ -17,11 +17,12 @@ uses that interface's public data for the importer operation:
   resolved-name metadata.
 
 The existing `ModuleSymbols` tables remain the producer-side export state and
-the current module's local recording state. `findModule` and `checkModule`
-still locate/check dependency bodies before an interface is produced; this is
-the deliberate M3A migration boundary. Once the interface exists, importer
-public shape and method metadata do not reread the dependency's declaration
-body for that import operation.
+the current module's local recording state. The original M3A-INTERFACE-004
+boundary located and checked dependency bodies before consuming an interface;
+M3A-INTERFACE-007 moves that body scheduling into a graph-aware dependency
+preflight. Once the interface exists, importer public shape and method
+metadata do not reread the dependency's declaration body for that import
+operation.
 
 ## Compatibility and migration
 

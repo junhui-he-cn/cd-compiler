@@ -106,6 +106,7 @@ void test_module_interface_graph_identity(const fs::path& root)
     FrontendSession frontend;
     Program program = frontend.loadFiles({entry.string()});
     assert(program.moduleGraph.has_value());
+    std::reverse(program.statements.begin(), program.statements.end());
 
     TypeChecker checker;
     checker.check(program);

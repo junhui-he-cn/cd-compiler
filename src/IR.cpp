@@ -383,6 +383,11 @@ std::size_t IRProgram::endFunction()
     return functions_.size() - 1;
 }
 
+void IRProgram::addModuleDependency(IRModuleDependency dependency)
+{
+    moduleDependencies_.push_back(std::move(dependency));
+}
+
 IRRegister IRProgram::emitConstant(Value value)
 {
     IRRegister dest = makeRegister();
@@ -635,6 +640,11 @@ const std::vector<IRInstruction>& IRProgram::instructions() const
 const std::vector<IRFunction>& IRProgram::functions() const
 {
     return functions_;
+}
+
+const std::vector<IRModuleDependency>& IRProgram::moduleDependencies() const
+{
+    return moduleDependencies_;
 }
 
 std::size_t IRProgram::registerCount() const

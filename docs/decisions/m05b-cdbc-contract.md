@@ -55,12 +55,12 @@ from sorted artifact paths and their complete-text SHA-256 values.
 
 | Candidate | Classification | Current decision |
 | --- | --- | --- |
-| artifact kind | already present | `cdbc` header, extension, and CLI identify the current kind |
+| artifact kind | resolved after audit | linked programs omit an artifact declaration; M3B module products use strict `artifact: module` metadata in the same `cdbc 0.1` family |
 | debug sources/locations | already present | optional source-mapped runtime metadata is consumed by the Rust VM |
 | unknown-section policy | already present | strict rejection protects older readers |
 | runtime/target identity | deferred | wait for a second runtime, target, or transport consumer |
 | capability flags | deferred | wait for a named negotiation requirement |
-| module identity | deferred | depends on M3 separate-compilation ownership |
+| module identity | resolved by M3B | module products serialize graph canonical-path identity and dependency target identities; linked programs remain identity-free |
 | explicit framing | not currently required | no streaming, binary, or embedded transport exists |
 | integrity metadata | deferred | requires a trust boundary or shared artifact cache |
 | successor version/negotiation | successor-version candidate | conditional M4A path only if a breaking change is selected |
@@ -72,16 +72,22 @@ M4A consumer and planned compatibility fixtures, but it is not selected now.
 
 ## Successor decision
 
-M0.5B selects no successor version. The current 0.1 envelope already covers
+M0.5B selected no successor version. The current 0.1 envelope already covers
 the present C++ compiler/Rust VM pair, including core instructions, native calls,
 optional debug metadata, strict parse/dump, and runtime diagnostics. Adding
 fields without a concrete consumer or transport would create speculative ABI
 surface.
 
+M3B-ARTIFACT-001 subsequently used that compatible envelope for independently
+validated module products. It did not select a successor version: module
+identity, dependency insertion markers, and the non-executable module kind are
+recognized additions within `cdbc 0.1`. The module-product decision is recorded
+in `docs/decisions/m3b-module-artifacts.md`.
+
 M4A owns any later choice of supported version ranges, negotiation, migration,
 rejection behavior, deprecation period, and older-version lifecycle. A
 successor becomes justified only when a breaking opcode/value-layout change,
-second runtime/target, separate artifact product, or named transport/security
+second runtime/target, module linking requirement, or named transport/security
 requirement cannot be expressed as a compatible 0.1 extension.
 
 ## Migration and deletion rules

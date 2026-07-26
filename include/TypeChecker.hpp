@@ -27,6 +27,7 @@ public:
 
 class TypeChecker {
 public:
+    void setPreloadedModuleInterfaces(std::vector<ModuleInterface> interfaces);
     void check(const Program& program);
     const std::vector<ModuleInterface>& moduleInterfaces() const;
     const DeclarationIndex& declarationIndex() const;
@@ -134,6 +135,7 @@ private:
     void checkModule(const ModuleStmt& module);
     void checkImport(const ImportStmt& statement);
     void checkExport(const ExportStmt& statement);
+    void checkModulesInDependencyOrder(const Program& program);
     std::string sourcePathLabel(const Token& path) const;
     void ensureExportNameAvailable(std::size_t moduleId, const Token& name) const;
     void forwardStructMethodExports(
@@ -354,6 +356,8 @@ private:
     MethodTable methods_;
     ModuleSymbols moduleSymbols_;
     std::vector<ModuleInterface> moduleInterfaces_;
+    std::vector<ModuleInterface> preloadedModuleInterfaces_;
+    std::unordered_set<std::size_t> preloadedModuleIds_;
     std::unordered_set<std::size_t> checkedModules_;
     std::vector<std::size_t> moduleStack_;
     DeclarationIndex declarationIndex_;

@@ -2,6 +2,9 @@
 #include "Diagnostic.hpp"
 #include "FrontendSession.hpp"
 #include "LosslessSource.hpp"
+#include "ModuleCache.hpp"
+#include "ModuleInterfaceArtifact.hpp"
+#include "TypeUtils.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -50,6 +53,44 @@ void expectImportError(const std::function<void()>& action, const std::string& e
         return;
     }
     assert(false && "expected import error");
+}
+
+std::string writeCachedModule(
+    const fs::path& cacheDirectory,
+    const fs::path& path,
+    const std::string& source,
+    ModuleInterface interfaceInfo,
+    const std::vector<ModuleInterfaceArtifactDependency>& dependencies)
+{
+    const std::string identity = pathString(fs::weakly_canonical(path));
+    interfaceInfo.path = pathString(path);
+    interfaceInfo.canonicalPath = identity;
+    interfaceInfo.isEntry = false;
+
+    ModuleInterfaceArtifact artifact;
+    artifact.identity = identity;
+    artifact.path = interfaceInfo.path;
+    artifact.canonicalPath = identity;
+    artifact.sourceHash = moduleCacheHash(source);
+    artifact.isEntry = false;
+    artifact.dependencies = dependencies;
+    artifact.interfaceInfo = interfaceInfo;
+    writeModuleInterfaceArtifact(moduleInterfaceArtifactPath(cacheDirectory, identity), artifact);
+
+    ModuleCacheModule cacheModule;
+    cacheModule.identity = identity;
+    cacheModule.sourceHash = artifact.sourceHash;
+    cacheModule.interfaceHash = moduleInterfaceArtifactHash(interfaceInfo);
+    for (const ModuleInterfaceArtifactDependency& dependency : dependencies) {
+        cacheModule.dependencies.push_back(ModuleCacheDependency{
+            dependency.identity,
+            dependency.kind,
+            dependency.requestedPath,
+            dependency.interfaceHash,
+        });
+    }
+    writeFile(cacheDirectory / moduleCacheArtifactPath(cacheModule), "cached module\n");
+    return cacheModule.interfaceHash;
 }
 
 void test_canonical_duplicate_import_spellings_are_deduplicated(const fs::path& root)
@@ -237,6 +278,108 @@ void test_explicit_relative_import_does_not_use_search_path(const fs::path& root
         "failed to open import: " + pathString(app / "missing"));
 }
 
+void test_module_interface_cache_hit_reuses_dependency_interfaces(const fs::path& root)
+{
+    fs::remove_all(root);
+    const fs::path base = root / "base.cd";
+    const fs::path library = root / "lib.cd";
+    const fs::path entry = root / "entry.cd";
+    const fs::path cache = root / "cache";
+    const std::string baseSource =
+        "let baseValue = 3;\n"
+        "export baseValue;\n";
+    const std::string librarySource =
+        "import \"./base.cd\";\n"
+        "let value = 7;\n"
+        "export value;\n";
+    writeFile(base, baseSource);
+    writeFile(library, librarySource);
+    writeFile(entry, "import \"./lib.cd\";\nprint value;\n");
+
+    ModuleInterface baseInterface;
+    baseInterface.values.push_back(ModuleInterfaceValue{
+        "baseValue",
+        simpleType(StaticType::Number),
+        "baseValue#7",
+    });
+    const std::string baseHash = writeCachedModule(
+        cache,
+        base,
+        baseSource,
+        baseInterface,
+        {});
+
+    ModuleInterface libraryInterface;
+    libraryInterface.values.push_back(ModuleInterfaceValue{
+        "value",
+        simpleType(StaticType::Number),
+        "value#8",
+    });
+    const std::string libraryIdentity = pathString(fs::weakly_canonical(library));
+    const std::string baseIdentity = pathString(fs::weakly_canonical(base));
+    writeCachedModule(
+        cache,
+        library,
+        librarySource,
+        libraryInterface,
+        {ModuleInterfaceArtifactDependency{
+            baseIdentity,
+            ModuleGraphEdgeKind::Import,
+            "./base.cd",
+            baseHash,
+        }});
+
+    FrontendSession session;
+    session.setModuleInterfaceCacheDirectory(cache);
+    Program program = session.loadFiles({entry.string()});
+
+    assert(session.moduleCount() == 3);
+    const ModuleStmt* cachedBase = moduleByPath(program, base);
+    const ModuleStmt* cachedLibrary = moduleByPath(program, library);
+    const ModuleStmt* entryModule = moduleByPath(program, entry);
+    assert(cachedBase->statements.empty());
+    assert(cachedLibrary->statements.empty());
+    assert(entryModule->statements.size() == 2);
+    const auto* entryImport = dynamic_cast<const ImportStmt*>(entryModule->statements[0].get());
+    assert(entryImport != nullptr);
+    assert(entryImport->resolvedModuleId == cachedLibrary->moduleId);
+
+    const ModuleGraph& graph = session.moduleGraph();
+    assert(graph.nodes.size() == 3);
+    assert(graph.edges.size() == 2);
+    assert(graph.edges[0].importingModuleId == cachedLibrary->moduleId);
+    assert(graph.edges[0].importedModuleId == cachedBase->moduleId);
+    assert(graph.edges[0].kind == ModuleGraphEdgeKind::Import);
+    assert(graph.edges[0].requestedPath == "./base.cd");
+    assert(graph.edges[1].importingModuleId == entryModule->moduleId);
+    assert(graph.edges[1].importedModuleId == cachedLibrary->moduleId);
+    assert(graph.edges[1].kind == ModuleGraphEdgeKind::Import);
+    assert(graph.edges[1].requestedPath == "./lib.cd");
+    assert(program.moduleGraph.has_value());
+    assert(program.moduleGraph->edges.size() == graph.edges.size());
+    for (std::size_t index = 0; index < graph.edges.size(); ++index) {
+        assert(program.moduleGraph->edges[index].importingModuleId == graph.edges[index].importingModuleId);
+        assert(program.moduleGraph->edges[index].importedModuleId == graph.edges[index].importedModuleId);
+        assert(program.moduleGraph->edges[index].kind == graph.edges[index].kind);
+        assert(program.moduleGraph->edges[index].requestedPath == graph.edges[index].requestedPath);
+    }
+
+    const std::vector<ModuleInterface>& preloaded = session.preloadedModuleInterfaces();
+    assert(preloaded.size() == 2);
+    assert(preloaded[0].moduleId == cachedBase->moduleId);
+    assert(preloaded[0].sourceId == cachedBase->sourceId);
+    assert(preloaded[0].canonicalPath == baseIdentity);
+    assert(preloaded[0].values.size() == 1);
+    assert(preloaded[0].values[0].name == "baseValue");
+    assert(preloaded[1].moduleId == cachedLibrary->moduleId);
+    assert(preloaded[1].sourceId == cachedLibrary->sourceId);
+    assert(preloaded[1].canonicalPath == libraryIdentity);
+    assert(preloaded[1].dependencies.size() == 1);
+    assert(preloaded[1].dependencies[0].importedModuleId == cachedBase->moduleId);
+    assert(preloaded[1].values.size() == 1);
+    assert(preloaded[1].values[0].resolvedName == "value#8");
+}
+
 void test_direct_inputs_preserve_source_spans(const fs::path& root)
 {
     fs::remove_all(root);
@@ -350,6 +493,7 @@ int main()
     test_search_path_resolves_extensionless_import_and_reexport(root / "search_reexport");
     test_importing_file_directory_precedes_search_path(root / "precedence");
     test_explicit_relative_import_does_not_use_search_path(root / "explicit_no_fallback");
+    test_module_interface_cache_hit_reuses_dependency_interfaces(root / "module_interface_cache");
     test_direct_inputs_preserve_source_spans(root / "direct_sources");
     test_direct_diagnostics_keep_source_ranges(root / "direct_diagnostics");
     test_lossless_source_view_round_trips_comments(root / "lossless_sources");

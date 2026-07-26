@@ -10,7 +10,7 @@
   "question": "When should a same-process module interface be produced and how should finalization handle the interface collection?",
   "decision": "After checkModule completes a module body, TypeChecker builds and stores that module's interface from the graph snapshot and ModuleSymbols public records. Import and re-export consumers read the target record. Final buildModuleInterfaces only fills an absent record defensively and orders the module vector by moduleId.",
   "production_contract": {
-    "boundary": "A module interface is produced after the module body and all recursively required dependency checks complete.",
+    "boundary": "A module interface is produced after graph dependency preflight has checked the module body with all imported interfaces available.",
     "identity": "Graph-backed sourceId, canonicalPath, moduleId, entry status, and dependency edges are copied for the completed module.",
     "public_shape": "Values, structs, enums, methods, generic metadata, resolved names, and receiver metadata are copied from ModuleSymbols.",
     "canonicalization": "Values, structs, enums, and methods are sorted within the module at production time; finalization sorts modules by moduleId.",

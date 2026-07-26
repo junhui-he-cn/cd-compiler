@@ -3,6 +3,7 @@
 #include "Diagnostic.hpp"
 #include "Lexer.hpp"
 #include "LosslessSource.hpp"
+#include "ModuleCache.hpp"
 #include "Parser.hpp"
 
 #include <algorithm>
@@ -286,8 +287,10 @@ void FrontendSession::reset()
     sourceFiles_.clear();
     directSourceLineStarts_.clear();
     directDisplayTokens_.clear();
+    directEntryCanonicalPaths_.clear();
     combinedSource_.clear();
     moduleGraph_ = ModuleGraph{};
+    preloadedModuleInterfaces_.clear();
     hasImports_ = false;
 }
 
@@ -297,6 +300,57 @@ void FrontendSession::setImportSearchPaths(std::vector<std::string> paths)
     for (const std::string& path : paths) {
         importSearchPaths_.push_back(std::filesystem::path(path).lexically_normal());
     }
+}
+
+void FrontendSession::setModuleInterfaceCacheDirectory(std::filesystem::path path)
+{
+    moduleInterfaceCacheDirectory_ = path.lexically_normal();
+}
+
+const std::vector<ModuleInterface>& FrontendSession::preloadedModuleInterfaces() const
+{
+    return preloadedModuleInterfaces_;
+}
+
+std::optional<ModuleInterfaceArtifact> FrontendSession::loadCachedInterface(
+    const std::string& canonicalPath,
+    const std::string& source) const
+{
+    if (!moduleInterfaceCacheDirectory_) {
+        return std::nullopt;
+    }
+
+    const ModuleInterfaceArtifactLoadResult loaded = readModuleInterfaceArtifact(
+        moduleInterfaceArtifactPath(*moduleInterfaceCacheDirectory_, canonicalPath));
+    if (!loaded.artifact) {
+        return std::nullopt;
+    }
+    const ModuleInterfaceArtifact& artifact = *loaded.artifact;
+    if (artifact.identity != canonicalPath
+        || artifact.canonicalPath != canonicalPath
+        || artifact.sourceHash != moduleCacheHash(source)) {
+        return std::nullopt;
+    }
+
+    ModuleCacheModule module;
+    module.identity = artifact.identity;
+    module.sourceHash = artifact.sourceHash;
+    module.interfaceHash = artifact.interfaceHash;
+    module.isEntry = artifact.isEntry;
+    module.entryOrder = artifact.entryOrder;
+    for (const ModuleInterfaceArtifactDependency& dependency : artifact.dependencies) {
+        module.dependencies.push_back(ModuleCacheDependency{
+            dependency.identity,
+            dependency.kind,
+            dependency.requestedPath,
+            dependency.interfaceHash});
+    }
+    const std::filesystem::path product = *moduleInterfaceCacheDirectory_
+        / moduleCacheArtifactPath(module);
+    if (!std::filesystem::exists(product)) {
+        return std::nullopt;
+    }
+    return artifact;
 }
 
 void FrontendSession::annotateSourceTokens(std::vector<Token>& tokens, std::size_t sourceId) const
@@ -408,6 +462,7 @@ Program FrontendSession::loadStdin(std::istream& input)
         std::move(parsed.tokens),
         std::move(parsedProgram.statements),
         true,
+        std::nullopt,
     });
     entryUnitIds_.push_back(0);
     rebuildCombinedSource();
@@ -422,6 +477,9 @@ Program FrontendSession::loadFiles(const std::vector<std::string>& paths)
 
     std::unordered_map<std::string, std::size_t> directInputIds;
     bool hasImports = false;
+    for (const std::string& path : paths) {
+        directEntryCanonicalPaths_.insert(pathString(normalizedExistingPath(path)));
+    }
     for (const std::string& path : paths) {
         const std::filesystem::path requestedPath(path);
         const std::filesystem::path normalizedPath = normalizedExistingPath(requestedPath);
@@ -548,6 +606,51 @@ std::size_t FrontendSession::loadFile(
     loadingStack_.push_back(canonicalPath);
     try {
         std::string source = readAll(input);
+        if (isImport && directEntryCanonicalPaths_.find(canonicalPath) == directEntryCanonicalPaths_.end()) {
+            if (std::optional<ModuleInterfaceArtifact> cached
+                = loadCachedInterface(canonicalPath, source)) {
+                hasImports_ = true;
+                bool dependenciesCached = true;
+                for (const ModuleInterfaceArtifactDependency& dependency : cached->dependencies) {
+                    const std::size_t dependencyId = loadFile(dependency.identity, true, false, true);
+                    const ParsedUnit& dependencyUnit = units_.at(dependencyId);
+                    if (!dependencyUnit.interfaceArtifact
+                        || dependencyUnit.interfaceArtifact->interfaceHash != dependency.interfaceHash) {
+                        dependenciesCached = false;
+                    }
+                }
+                if (!dependenciesCached) {
+                    // A sidecar with a source-parsed or stale dependency cannot
+                    // safely stand in for the dependency graph.  Continue into
+                    // the ordinary parser below; the already loaded dependency
+                    // units remain valid and are de-duplicated as before.
+                } else {
+                    const std::size_t sourceId = sourceFiles_.size();
+                    sourceFiles_.push_back(SourceFile{
+                        cached->path,
+                        source,
+                        SourceFileId{sourceId}});
+
+                    ParsedUnit unit{
+                        0,
+                        sourceId,
+                        cached->path,
+                        canonicalPath,
+                        std::move(source),
+                        {},
+                        {},
+                        false,
+                        std::move(cached),
+                    };
+                    unit.id = units_.size();
+                    units_.push_back(std::move(unit));
+                    canonicalToUnitId_.emplace(canonicalPath, units_.back().id);
+                    loadingStack_.pop_back();
+                    return units_.back().id;
+                }
+            }
+        }
+
         const std::size_t sourceId = sourceFiles_.size();
         sourceFiles_.push_back(SourceFile{
             sourceMetadataPath(displayPath),
@@ -602,6 +705,7 @@ std::size_t FrontendSession::loadFile(
             std::move(parsed.tokens),
             std::move(parsed.statements),
             isEntry,
+            std::nullopt,
         };
 
         for (StmtPtr& statement : unit.statements) {
@@ -638,14 +742,17 @@ Program FrontendSession::assembleProgram()
     program.sources = sourceFiles_;
     if (hasImports_) {
         program.moduleGraph = moduleGraph_;
+        rebuildPreloadedModuleInterfaces();
         for (ParsedUnit& unit : units_) {
-            program.statements.push_back(std::make_unique<ModuleStmt>(
+            auto module = std::make_unique<ModuleStmt>(
                 unit.id,
                 unit.path,
                 unit.source,
                 std::move(unit.statements),
                 unit.isEntry,
-                SourceFileId{unit.sourceId}));
+                SourceFileId{unit.sourceId});
+            module->sourceHash = moduleCacheHash(module->source);
+            program.statements.push_back(std::move(module));
         }
         finalizeSyntaxMetadata(program);
         return program;
@@ -674,6 +781,22 @@ void FrontendSession::rebuildModuleGraph()
             unit.isEntry,
         });
 
+        if (unit.interfaceArtifact && unit.statements.empty()) {
+            for (const ModuleInterfaceArtifactDependency& dependency : unit.interfaceArtifact->dependencies) {
+                const auto imported = canonicalToUnitId_.find(dependency.identity);
+                if (imported == canonicalToUnitId_.end()) {
+                    throw std::runtime_error("cached module interface references an unloaded dependency");
+                }
+                moduleGraph_.edges.push_back(ModuleGraphEdge{
+                    unit.id,
+                    imported->second,
+                    dependency.kind,
+                    dependency.requestedPath,
+                });
+            }
+            continue;
+        }
+
         for (const StmtPtr& statement : unit.statements) {
             if (const auto* import = dynamic_cast<const ImportStmt*>(statement.get())) {
                 moduleGraph_.edges.push_back(ModuleGraphEdge{
@@ -697,6 +820,36 @@ void FrontendSession::rebuildModuleGraph()
                 });
             }
         }
+    }
+}
+
+void FrontendSession::rebuildPreloadedModuleInterfaces()
+{
+    preloadedModuleInterfaces_.clear();
+    for (const ParsedUnit& unit : units_) {
+        if (!unit.interfaceArtifact) {
+            continue;
+        }
+
+        ModuleInterface interfaceInfo = unit.interfaceArtifact->interfaceInfo;
+        interfaceInfo.moduleId = unit.id;
+        interfaceInfo.sourceId = SourceFileId{unit.sourceId};
+        interfaceInfo.path = unit.path;
+        interfaceInfo.canonicalPath = unit.canonicalPath;
+        interfaceInfo.isEntry = unit.isEntry;
+        interfaceInfo.dependencies.clear();
+        for (const ModuleInterfaceArtifactDependency& dependency : unit.interfaceArtifact->dependencies) {
+            const auto imported = canonicalToUnitId_.find(dependency.identity);
+            if (imported == canonicalToUnitId_.end()) {
+                throw std::runtime_error("cached module interface references an unloaded dependency");
+            }
+            interfaceInfo.dependencies.push_back(ModuleInterfaceDependency{
+                imported->second,
+                dependency.kind,
+                dependency.requestedPath,
+            });
+        }
+        preloadedModuleInterfaces_.push_back(std::move(interfaceInfo));
     }
 }
 

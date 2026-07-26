@@ -15,6 +15,46 @@ impl fmt::Display for ParseError {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ModuleDependency {
+    pub identity: String,
+    pub kind: ModuleDependencyKind,
+    pub instruction_offset: usize,
+    pub requested_path: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ModuleDependencyKind {
+    Import,
+    ReExport,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ModuleArtifact {
+    pub identity: String,
+    pub path: String,
+    pub canonical_path: String,
+    pub is_entry: bool,
+    pub entry_order: Option<usize>,
+    pub dependencies: Vec<ModuleDependency>,
+    pub program: Program,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Artifact {
+    Program(Program),
+    Module(ModuleArtifact),
+}
+
+struct ParsedModuleHeader {
+    identity: String,
+    path: String,
+    canonical_path: String,
+    is_entry: bool,
+    entry_order: Option<usize>,
+    dependencies: Vec<ModuleDependency>,
+}
+
 struct Parser<'a> {
     lines: Vec<(usize, &'a str)>,
     current: usize,
@@ -64,6 +104,122 @@ impl<'a> Parser<'a> {
 
     fn last_line(&self) -> usize {
         self.lines.last().map(|(line, _)| *line).unwrap_or(1)
+    }
+
+    fn parse_module_header(&mut self) -> Result<ParsedModuleHeader, ParseError> {
+        self.require_line("artifact: module")?;
+        self.require_line("module:")?;
+        let identity = self.parse_module_string_field("identity")?;
+        let path = self.parse_module_string_field("path")?;
+        let canonical_path = self.parse_module_string_field("canonical_path")?;
+        let is_entry = self.parse_module_bool_field("entry")?;
+        let entry_order = if self
+            .peek()
+            .map(|(_, line)| line.starts_with("entry_order = "))
+            .unwrap_or(false)
+        {
+            Some(self.parse_module_usize_field("entry_order")?)
+        } else {
+            None
+        };
+        self.require_line("dependencies:")?;
+
+        let mut dependencies = Vec::new();
+        while let Some((line_number, line)) = self.peek() {
+            if line == "constants:" {
+                break;
+            }
+            self.advance();
+            let (dependency_ref, rest) = split_once(line_number, line, " target=")?;
+            let index = parse_prefixed(line_number, dependency_ref, 'd', "dependency reference")?;
+            if index != dependencies.len() {
+                return Err(ParseError {
+                    line: line_number,
+                    message: format!("expected dependency d{}", dependencies.len()),
+                });
+            }
+            let (identity, rest) = parse_string_prefix(line_number, rest)?;
+            let rest = rest.strip_prefix(" kind=").ok_or_else(|| ParseError {
+                line: line_number,
+                message: "expected dependency kind".to_string(),
+            })?;
+            let (kind_text, rest) = split_once(line_number, rest, " at=")?;
+            let kind = match kind_text {
+                "import" => ModuleDependencyKind::Import,
+                "re_export" => ModuleDependencyKind::ReExport,
+                _ => {
+                    return Err(ParseError {
+                        line: line_number,
+                        message: "expected dependency kind import or re_export".to_string(),
+                    })
+                }
+            };
+            let (offset_text, rest) = split_once(line_number, rest, " requested=")?;
+            let instruction_offset =
+                parse_usize(line_number, offset_text, "dependency instruction offset")?;
+            let requested_path = parse_string_full(line_number, rest)?;
+            dependencies.push(ModuleDependency {
+                identity,
+                kind,
+                instruction_offset,
+                requested_path,
+            });
+        }
+
+        Ok(ParsedModuleHeader {
+            identity,
+            path,
+            canonical_path,
+            is_entry,
+            entry_order,
+            dependencies,
+        })
+    }
+
+    fn parse_module_string_field(&mut self, field: &str) -> Result<String, ParseError> {
+        let (line_number, line) = self.advance().ok_or_else(|| ParseError {
+            line: self.last_line(),
+            message: format!("expected module field `{}`", field),
+        })?;
+        let prefix = format!("{} = ", field);
+        let value = line.strip_prefix(&prefix).ok_or_else(|| ParseError {
+            line: line_number,
+            message: format!("expected module field `{}`", field),
+        })?;
+        parse_string_full(line_number, value)
+    }
+
+    fn parse_module_bool_field(&mut self, field: &str) -> Result<bool, ParseError> {
+        let (line_number, line) = self.advance().ok_or_else(|| ParseError {
+            line: self.last_line(),
+            message: format!("expected module field `{}`", field),
+        })?;
+        let prefix = format!("{} = ", field);
+        let value = line.strip_prefix(&prefix).ok_or_else(|| ParseError {
+            line: line_number,
+            message: format!("expected module field `{}`", field),
+        })?;
+        match value {
+            "true" => Ok(true),
+            "false" => Ok(false),
+            _ => Err(ParseError {
+                line: line_number,
+                message: format!("expected boolean module field `{}`", field),
+            }),
+        }
+    }
+
+    fn parse_module_usize_field(&mut self, field: &str) -> Result<usize, ParseError> {
+        let (line_number, line) = self.advance().ok_or_else(|| ParseError {
+            line: self.last_line(),
+            message: format!("expected module field `{}`", field),
+        })?;
+        let prefix = format!("{} = ", field);
+        let value = line.strip_prefix(&prefix).ok_or_else(|| ParseError {
+            line: line_number,
+            message: format!("expected module field `{}`", field),
+        })?;
+        parse_usize(line_number, value, "module field value")
     }
 
     fn parse_constants(&mut self) -> Result<Vec<Constant>, ParseError> {
@@ -329,9 +485,7 @@ fn parse_debug_location(line: usize, text: &str) -> Result<DebugLocation, ParseE
     })
 }
 
-pub fn parse_program(source: &str) -> Result<Program, ParseError> {
-    let mut parser = Parser::new(source);
-    parser.require_line("cdbc 0.1")?;
+fn parse_program_body(parser: &mut Parser<'_>) -> Result<Program, ParseError> {
     let constants = parser.parse_constants()?;
     let names = parser.parse_names()?;
     let main = parser.parse_main()?;
@@ -348,9 +502,147 @@ pub fn parse_program(source: &str) -> Result<Program, ParseError> {
     Ok(program)
 }
 
+pub fn parse_artifact(source: &str) -> Result<Artifact, ParseError> {
+    let mut parser = Parser::new(source);
+    parser.require_line("cdbc 0.1")?;
+    let module = if parser
+        .peek()
+        .map(|(_, line)| line == "artifact: module")
+        .unwrap_or(false)
+    {
+        Some(parser.parse_module_header()?)
+    } else {
+        None
+    };
+    let program = parse_program_body(&mut parser)?;
+    match module {
+        Some(module) => {
+            let artifact = ModuleArtifact {
+                identity: module.identity,
+                path: module.path,
+                canonical_path: module.canonical_path,
+                is_entry: module.is_entry,
+                entry_order: module.entry_order,
+                dependencies: module.dependencies,
+                program,
+            };
+            validate_module_artifact(&artifact, parser.last_line())?;
+            Ok(Artifact::Module(artifact))
+        }
+        None => Ok(Artifact::Program(program)),
+    }
+}
+
+fn validate_module_artifact(artifact: &ModuleArtifact, line: usize) -> Result<(), ParseError> {
+    if artifact.identity.is_empty()
+        || artifact.path.is_empty()
+        || artifact.canonical_path.is_empty()
+    {
+        return Err(ParseError {
+            line,
+            message: "module identity and paths must be non-empty".to_string(),
+        });
+    }
+    if artifact.is_entry != artifact.entry_order.is_some() {
+        return Err(ParseError {
+            line,
+            message: "module entry_order must be present exactly for entry modules".to_string(),
+        });
+    }
+
+    let mut previous_offset = 0;
+    for (index, dependency) in artifact.dependencies.iter().enumerate() {
+        if dependency.identity.is_empty() || dependency.requested_path.is_empty() {
+            return Err(ParseError {
+                line,
+                message: format!("module dependency d{} has an empty identity or path", index),
+            });
+        }
+        if dependency.instruction_offset > artifact.program.main.instructions.len() {
+            return Err(ParseError {
+                line,
+                message: format!(
+                    "module dependency d{} instruction offset out of range",
+                    index
+                ),
+            });
+        }
+        if index != 0 && dependency.instruction_offset < previous_offset {
+            return Err(ParseError {
+                line,
+                message: "module dependency offsets must be nondecreasing".to_string(),
+            });
+        }
+        previous_offset = dependency.instruction_offset;
+    }
+    Ok(())
+}
+
+#[allow(dead_code)]
+pub fn parse_program(source: &str) -> Result<Program, ParseError> {
+    match parse_artifact(source)? {
+        Artifact::Program(program) => Ok(program),
+        Artifact::Module(_) => Err(ParseError {
+            line: 3,
+            message: "module artifact requires a module-aware loader".to_string(),
+        }),
+    }
+}
+
 pub fn format_program(program: &Program) -> String {
     let mut out = String::new();
     out.push_str("cdbc 0.1\n\n");
+    format_program_sections(&mut out, program);
+    out
+}
+
+pub fn format_artifact(artifact: &Artifact) -> String {
+    match artifact {
+        Artifact::Program(program) => format_program(program),
+        Artifact::Module(module) => {
+            let mut out = String::new();
+            out.push_str("cdbc 0.1\n\n");
+            out.push_str("artifact: module\n\n");
+            out.push_str("module:\n");
+            out.push_str(&format!(
+                "  identity = {}\n",
+                quote_string(&module.identity)
+            ));
+            out.push_str(&format!("  path = {}\n", quote_string(&module.path)));
+            out.push_str(&format!(
+                "  canonical_path = {}\n",
+                quote_string(&module.canonical_path)
+            ));
+            out.push_str(&format!(
+                "  entry = {}\n",
+                if module.is_entry { "true" } else { "false" }
+            ));
+            if let Some(entry_order) = module.entry_order {
+                out.push_str(&format!("  entry_order = {}\n", entry_order));
+            }
+            out.push_str("  dependencies:\n");
+            for (index, dependency) in module.dependencies.iter().enumerate() {
+                let kind = match dependency.kind {
+                    ModuleDependencyKind::Import => "import",
+                    ModuleDependencyKind::ReExport => "re_export",
+                };
+                out.push_str(&format!(
+                    "    d{} target={} kind={} at={} requested={}\n",
+                    index,
+                    quote_string(&dependency.identity),
+                    kind,
+                    dependency.instruction_offset,
+                    quote_string(&dependency.requested_path)
+                ));
+            }
+            out.push('\n');
+            format_program_sections(&mut out, &module.program);
+            out
+        }
+    }
+}
+
+fn format_program_sections(out: &mut String, program: &Program) {
     out.push_str("constants:\n");
     for (index, constant) in program.constants.iter().enumerate() {
         out.push_str(&format!("  c{} = {}\n", index, format_constant(constant)));
@@ -419,7 +711,6 @@ pub fn format_program(program: &Program) -> String {
             }
         }
     }
-    out
 }
 
 fn format_debug_location(section: &str, instruction: usize, location: &DebugLocation) -> String {
@@ -1241,5 +1532,100 @@ debug_locations:
 "#;
         let error = parse_program(source).expect_err("invalid instruction mapping should fail");
         assert!(error.message.contains("instruction"));
+    }
+
+    #[test]
+    fn round_trips_module_artifact_envelope() {
+        let source = r#"cdbc 0.1
+
+artifact: module
+
+module:
+  identity = "/tmp/lib.cd"
+  path = "/tmp/lib.cd"
+  canonical_path = "/tmp/lib.cd"
+  entry = false
+  dependencies:
+
+constants:
+  c0 = number 1
+
+names:
+
+main registers=1:
+  r0 = constant c0
+  print r0
+"#;
+        let artifact = parse_artifact(source).expect("valid module artifact");
+        let Artifact::Module(module) = &artifact else {
+            panic!("expected module artifact");
+        };
+        assert_eq!(module.identity, "/tmp/lib.cd");
+        assert!(!module.is_entry);
+        assert!(module.dependencies.is_empty());
+        assert_eq!(format_artifact(&artifact), source);
+    }
+
+    #[test]
+    fn parses_module_dependency_markers() {
+        let source = r#"cdbc 0.1
+
+artifact: module
+
+module:
+  identity = "entry"
+  path = "entry.cd"
+  canonical_path = "entry"
+  entry = true
+  entry_order = 0
+  dependencies:
+    d0 target="lib" kind=import at=2 requested="./lib.cd"
+    d1 target="api" kind=re_export at=4 requested="./api.cd"
+
+constants:
+
+names:
+
+main registers=0:
+  print r0
+  print r0
+  print r0
+  print r0
+"#;
+        let artifact = parse_artifact(source).expect("valid dependency markers");
+        let Artifact::Module(module) = artifact else {
+            panic!("expected module artifact");
+        };
+        assert_eq!(module.entry_order, Some(0));
+        assert_eq!(module.dependencies.len(), 2);
+        assert_eq!(module.dependencies[0].kind, ModuleDependencyKind::Import);
+        assert_eq!(module.dependencies[0].instruction_offset, 2);
+        assert_eq!(module.dependencies[1].kind, ModuleDependencyKind::ReExport);
+        assert_eq!(module.dependencies[1].requested_path, "./api.cd");
+    }
+
+    #[test]
+    fn rejects_module_dependency_offset_out_of_range() {
+        let source = r#"cdbc 0.1
+
+artifact: module
+
+module:
+  identity = "entry"
+  path = "entry.cd"
+  canonical_path = "entry"
+  entry = true
+  entry_order = 0
+  dependencies:
+    d0 target="lib" kind=import at=1 requested="./lib.cd"
+
+constants:
+
+names:
+
+main registers=0:
+"#;
+        let error = parse_artifact(source).expect_err("offset should be rejected");
+        assert!(error.message.contains("offset out of range"));
     }
 }

@@ -5,7 +5,8 @@ Status: implemented against reference commit `e02b41e`.
 ## Decision
 
 `TypeChecker` produces a module's in-memory `ModuleInterface` immediately after
-`checkModule` finishes checking that module body and its imports:
+the graph-aware module check finishes checking that module body with its
+dependency interfaces available:
 
 - `buildModuleInterface` snapshots the completed module's graph identity,
   dependency edges, and public `ModuleSymbols` records;
@@ -18,8 +19,8 @@ Status: implemented against reference commit `e02b41e`.
 
 This removes the previous full-program interface rebuild from every import and
 re-export operation. It does not change the producer source: dependency bodies
-are still checked in the current process and `ModuleSymbols` remains the
-authoritative public-export table for that check.
+are still checked in the current process by the graph preflight and
+`ModuleSymbols` remains the authoritative public-export table for that check.
 
 ## Compatibility and migration
 

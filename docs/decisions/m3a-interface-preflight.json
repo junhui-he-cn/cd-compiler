@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m3a-2026-07-26-r9",
+  "baseline_commit": "03e6083",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M3A-INTERFACE-007",
+  "domain": "module-interface",
+  "status": "resolved",
+  "purpose": "Make graph dependency order the explicit precondition for same-process interface consumption and remove dependency-body lookup from importer operations.",
+  "question": "How must same-process module checking establish interface availability before an import or re-export consumes it?",
+  "decision": "For import-aware Programs, TypeChecker traverses Program::moduleGraph edges depth-first, checks each dependency before its importer, produces the dependency ModuleInterface at completed-body checking, and makes checkImport/checkReExport consume only the interface identified by the resolved module ID.",
+  "scheduling_contract": {
+    "authority": "Program::moduleGraph nodes and Import/ReExport edges",
+    "order": "Every dependency edge is visited before the importing module body.",
+    "producer": "checkModule remains the module-body and ModuleSymbols producer and emits one interface at completion.",
+    "consumer": "checkImport and checkReExport perform no dependency ModuleStmt lookup or checkModule call on the graph path.",
+    "cycles": "FrontendSession rejects source import cycles; TypeChecker rejects a malformed graph cycle as an internal error."
+  },
+  "compatibility_boundary": {
+    "semantics": "Import visibility, re-export behavior, type checking, generic substitution, and diagnostics are unchanged.",
+    "outputs": "AST, module-interface text, IR, bytecode, cdbc artifacts, runtime output, and Rust VM behavior are unchanged.",
+    "entry_modes": "Single-file, stdin, and ordered direct multi-file paths retain their existing behavior.",
+    "persistence": "No interface serialization, cache key, cross-build identity, or artifact field is introduced.",
+    "lowering": "Dependency-body lowering remains until the M3A/M3B independent-module decision and proof."
+  },
+  "migration": "Use graph-aware dependency-first preflight, retain completed-module interface production, remove importer-side dependency body lookup, and reverse the Program statement container in a focused test to prove graph scheduling.",
+  "quantitative_gate": "The focused ir_source_location, module_interface_emitter, and golden checks pass; verification_inventory validates 1,745 cases; and full legacy, canonical, boundary, malformed, artifact, and Rust VM commands report zero unexplained differences.",
+  "old_path_deletion_condition": "Delete dependency-body producer and lowering fallback only after an independently defined module result proves interface visibility, diagnostics, linked artifacts, and VM execution without whole-program dependency checking.",
+  "affected_consumers": [
+    "TypeChecker module scheduling",
+    "TypeChecker import and re-export interface consumers",
+    "ModuleGraph dependency edges",
+    "module-interface consistency tests",
+    "future independent module results"
+  ],
+  "out_of_scope": [
+    "serialized interface loading",
+    "interface hashes and invalidation",
+    "cross-build symbol identities",
+    "persistent caches",
+    "dependency-body lowering removal",
+    "internal-module-object versus per-module-cdbc artifact choice"
+  ],
+  "verification": {
+    "inventory_revision": "m0d-2026-07-22-r1",
+    "focused_commands": [
+      "cmake --build build --target compiler_design ir_source_location_tests module_interface_emitter_tests",
+      "ctest --test-dir build --output-on-failure -R '^(ir_source_location|module_interface_emitter|golden)$'",
+      "python3 tests/run_golden_tests.py ./build/compiler_design --case module_interface --case generic_imports --case generic_method_imports --case generic_struct_method_imports --case import_basic --case re_export_namespace",
+      "python3 tests/verification_inventory.py",
+      "git diff --check"
+    ],
+    "release_commands": [
+      "cmake -S . -B build",
+      "cmake --build build",
+      "ctest --test-dir build --output-on-failure",
+      "python3 tests/run_golden_tests.py ./build/compiler_design",
+      "python3 tests/run_golden_tests_selftest.py",
+      "python3 tests/bytecode_artifact_tests.py ./build/compiler_design vm-rs",
+      "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens",
+      "cargo test --manifest-path vm-rs/Cargo.toml",
+      "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json",
+      "python3 tests/run_boundary_tests.py ./build/compiler_design",
+      "python3 tests/run_malformed_tests.py ./build/compiler_design vm-rs --report build/malformed-report.json"
+    ]
+  }
+}
