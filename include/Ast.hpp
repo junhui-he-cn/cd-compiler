@@ -477,6 +477,11 @@ struct ModuleStmt final : Stmt {
     // is a build product field, not a snapshot-local identity.
     std::string sourceHash;
     std::vector<StmtPtr> statements;
+    // False when the body was intentionally omitted because a validated
+    // serialized interface is serving as the dependency semantic boundary.
+    // Such a module remains a graph transport node and is not directly
+    // lowerable by the source AST path.
+    bool bodySourceBacked = true;
     bool isEntry = false;
 };
 

@@ -3,6 +3,7 @@
 #include "Ast.hpp"
 #include "Diagnostic.hpp"
 #include "LosslessSource.hpp"
+#include "ModuleCache.hpp"
 #include "ModuleGraph.hpp"
 #include "ModuleInterfaceArtifact.hpp"
 #include "Parser.hpp"
@@ -28,6 +29,11 @@ public:
     // Import diagnostic instead of a source fallback. Entry modules always
     // use their source path.
     void setModuleInterfaceCacheStrict(bool strict);
+    // Module-product emission requires a valid cdbc-cache manifest record in
+    // addition to the sidecar and paired product before it can preload an
+    // imported body. Interface-only consumers intentionally do not use this
+    // stronger manifest boundary.
+    void setModuleProductCacheMode(bool enabled);
 
     Program loadStdin(std::istream& input);
     Program loadFiles(const std::vector<std::string>& paths);
@@ -77,6 +83,9 @@ private:
     CachedInterfaceLoad loadCachedInterface(
         const std::string& canonicalPath,
         const std::string& source) const;
+    std::string moduleProductCacheRejection(
+        const std::string& canonicalPath,
+        const ModuleInterfaceArtifact& artifact) const;
     ImportResolution resolveImportPath(const std::filesystem::path& importingPath, const Token& pathToken) const;
     Program assembleProgram();
     void rebuildModuleGraph();
@@ -96,6 +105,8 @@ private:
     std::vector<std::filesystem::path> importSearchPaths_;
     std::optional<std::filesystem::path> moduleInterfaceCacheDirectory_;
     bool moduleInterfaceCacheStrict_ = false;
+    bool moduleProductCacheMode_ = false;
+    mutable std::optional<ModuleCacheLoadResult> moduleProductCacheLoad_;
     std::unordered_set<std::string> directEntryCanonicalPaths_;
     std::string combinedSource_;
     ModuleGraph moduleGraph_;

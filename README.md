@@ -699,8 +699,9 @@ Module product reuse is opt-in. The cache stores stable source/public-interface
 keys, paired `.cdi` public-interface sidecars, and reports every reuse or
 rebuild reason. A later invocation can preload valid dependency sidecars with
 `--module-interface-cache`; `--module-cache` enables that directory
-automatically. Source-hash, dependency-sidecar, interface-hash, and product
-checks must all succeed before a dependency sidecar is trusted:
+automatically. Source-hash, dependency-sidecar, interface-hash, product, and
+module-cache manifest-record checks must all succeed before a dependency
+sidecar is trusted by module-product emission:
 
 ```sh
 ./build/compiler_design --emit-module-bytecode module-products \
@@ -712,7 +713,8 @@ On a valid complete sidecar hit, dependency public interfaces are consumed
 directly and the semantic checker checks only source-backed modules (normally
 the entry module); the unchanged dependency bodies are not checked or lowered.
 Module-product emission keeps source fallback for a missing or invalid imported
-sidecar so a cold build or repair can recreate products. Add
+sidecar, manifest, or paired product so a cold build or repair can recreate
+products. Add
 `--module-cache-strict` to that mode when complete cache coverage is required.
 An interface-only `--module-interface-cache` consumer is strict by default and
 rejects those inputs with a stable `Import` diagnostic. Add
@@ -720,6 +722,9 @@ rejects those inputs with a stable `Import` diagnostic. Add
 consumer. The strict and fallback options are mutually exclusive;
 `--module-cache-fallback` is only valid for interface-only cache consumers.
 Strict mode still parses entry modules from source and requires an explicit
-cache directory.
+cache directory. An interface-only cache cannot provide dependency bytecode
+bodies to either emitter: use `--emit-module-bytecode --module-cache` followed
+by Rust `link` for independent products, or omit the cache for the default
+linked `--emit-bytecode` path.
 
 If no file is provided, source is read from stdin. Imported-file and direct multi-file front-end diagnostics report original file paths with file-local line and column; stdin diagnostics remain pathless.

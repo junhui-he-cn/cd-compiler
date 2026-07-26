@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m3b-2026-07-26-r2",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M3B-BOUNDARY-001",
+  "domain": "module-product-lowering-boundary",
+  "status": "resolved",
+  "question": "When may an imported dependency body be omitted from the source AST during module-product emission?",
+  "decision": "Trust a preloaded dependency only when its cdi sidecar, paired module product, and cdbc-cache manifest record agree; source-fallback or strict rejection handles every other cache state.",
+  "boundary": {
+    "preloaded_ast": "An empty ModuleStmt is a graph transport node and is not source-lowerable.",
+    "source_backed_lowering": "Only source-backed modules marked for rebuild enter IRCompiler::compileModule.",
+    "reused_lowering": "An unchanged module-product cache hit copies the validated product without lowering the module again.",
+    "linked_bytecode": "The default linked emitter cannot consume interface-only dependency bodies and rejects that CLI combination."
+  },
+  "cache_requirements": [
+    "validated cdi 0.1 sidecar",
+    "matching current source and dependency interface hashes",
+    "paired module product",
+    "valid cdbc-cache 0.2 manifest record, cache key, sidecar path, and product path"
+  ],
+  "fallback_policy": {
+    "module_product_default": "source fallback",
+    "module_product_strict_option": "--module-cache-strict",
+    "interface_only_policy": "unchanged strict-by-default or explicit --module-cache-fallback"
+  },
+  "compatibility": {
+    "cdi": "unchanged",
+    "cdbc": "unchanged",
+    "direct_single_file": "unchanged",
+    "direct_multi_file": "unchanged",
+    "snapshot_ids": "not serialized or used in persistent cache keys"
+  },
+  "quantitative_gate": {
+    "new_case_id": "module_cache.product_source_fallback",
+    "module_cache_cases": 11,
+    "focused_runner": "tests/bytecode_module_cache_tests.py",
+    "runtime_proof": "Rust links and executes cold and manifest-repair products with unchanged output"
+  },
+  "old_path_deletion_condition": "Keep source fallback for cold, missing, malformed, stale, and repaired module products until a later strict creation/repair decision proves diagnostics and direct-input compatibility.",
+  "out_of_scope": [
+    "cdbc or cdi wire-format changes",
+    "remote cache storage",
+    "package resolution",
+    "removal of the documented direct-input entry adapter"
+  ]
+}

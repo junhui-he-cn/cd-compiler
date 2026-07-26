@@ -28329,6 +28329,36 @@
       "expected_files": []
     },
     {
+      "case_id": "module_cache.product_source_fallback",
+      "runner": "module_cache",
+      "result_name": "module product source fallback boundary",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "module-product",
+        "source-fallback",
+        "invalid-manifest",
+        "rust-vm"
+      ],
+      "backend": "mixed",
+      "expected_result_kind": "artifact-and-runtime-parity",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "module_cache.rebuild_reuse",
       "runner": "module_cache",
       "result_name": "module cache rebuild/reuse matrix",

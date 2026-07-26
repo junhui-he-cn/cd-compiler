@@ -497,6 +497,12 @@ int main(int argc, char** argv)
         return 64;
     }
 
+    if (moduleInterfaceCachePath
+        && (emitBytecodePath || (emitModuleBytecodePath && !moduleCachePath))) {
+        std::cerr << "--module-interface-cache cannot provide bytecode bodies; use --module-cache with --emit-module-bytecode\n";
+        return 64;
+    }
+
     if (moduleCacheStrict && !moduleCachePath && !moduleInterfaceCachePath) {
         std::cerr << "--module-cache-strict requires --module-cache or --module-interface-cache\n";
         return 64;
@@ -538,6 +544,7 @@ int main(int argc, char** argv)
     } else if (moduleCachePath) {
         frontend.setModuleInterfaceCacheDirectory(*moduleCachePath);
     }
+    frontend.setModuleProductCacheMode(moduleCachePath.has_value());
     frontend.setModuleInterfaceCacheStrict(moduleCacheStrict);
     try {
         Program program = inputPaths.empty()

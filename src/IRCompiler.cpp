@@ -332,6 +332,10 @@ void IRCompiler::compileStatement(const Stmt& statement)
 
 void IRCompiler::compileModule(const ModuleStmt& module)
 {
+    if (!module.bodySourceBacked) {
+        throw IRCompileError(
+            "preloaded module body cannot be lowered; emit module products and link them");
+    }
     if (compiledModules_.find(module.moduleId) != compiledModules_.end()) {
         return;
     }

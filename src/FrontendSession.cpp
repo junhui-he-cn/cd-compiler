@@ -291,6 +291,7 @@ void FrontendSession::reset()
     combinedSource_.clear();
     moduleGraph_ = ModuleGraph{};
     preloadedModuleInterfaces_.clear();
+    moduleProductCacheLoad_.reset();
     hasImports_ = false;
 }
 
@@ -305,11 +306,18 @@ void FrontendSession::setImportSearchPaths(std::vector<std::string> paths)
 void FrontendSession::setModuleInterfaceCacheDirectory(std::filesystem::path path)
 {
     moduleInterfaceCacheDirectory_ = path.lexically_normal();
+    moduleProductCacheLoad_.reset();
 }
 
 void FrontendSession::setModuleInterfaceCacheStrict(bool strict)
 {
     moduleInterfaceCacheStrict_ = strict;
+}
+
+void FrontendSession::setModuleProductCacheMode(bool enabled)
+{
+    moduleProductCacheMode_ = enabled;
+    moduleProductCacheLoad_.reset();
 }
 
 const std::vector<ModuleInterface>& FrontendSession::preloadedModuleInterfaces() const
@@ -344,6 +352,11 @@ FrontendSession::CachedInterfaceLoad FrontendSession::loadCachedInterface(
         return CachedInterfaceLoad{std::nullopt, "source hash mismatch"};
     }
 
+    const std::string productCacheRejection = moduleProductCacheRejection(canonicalPath, artifact);
+    if (!productCacheRejection.empty()) {
+        return CachedInterfaceLoad{std::nullopt, productCacheRejection};
+    }
+
     ModuleCacheModule module;
     module.identity = artifact.identity;
     module.sourceHash = artifact.sourceHash;
@@ -364,6 +377,60 @@ FrontendSession::CachedInterfaceLoad FrontendSession::loadCachedInterface(
         return CachedInterfaceLoad{std::nullopt, "missing paired product"};
     }
     return CachedInterfaceLoad{artifact, {}};
+}
+
+std::string FrontendSession::moduleProductCacheRejection(
+    const std::string& canonicalPath,
+    const ModuleInterfaceArtifact& artifact) const
+{
+    if (!moduleProductCacheMode_) {
+        return {};
+    }
+    if (!moduleInterfaceCacheDirectory_) {
+        return "missing module cache directory";
+    }
+
+    if (!moduleProductCacheLoad_) {
+        moduleProductCacheLoad_ = readModuleCache(
+            *moduleInterfaceCacheDirectory_ / "module-cache.cdbc");
+    }
+    const ModuleCacheLoadResult& loaded = *moduleProductCacheLoad_;
+    if (!loaded.manifest) {
+        return loaded.found ? "invalid module cache manifest" : "missing module cache manifest";
+    }
+
+    const ModuleCacheRecord* record = nullptr;
+    for (const ModuleCacheRecord& candidate : loaded.manifest->records) {
+        if (candidate.module.identity == canonicalPath) {
+            record = &candidate;
+            break;
+        }
+    }
+    if (!record) {
+        return "missing module cache record";
+    }
+
+    ModuleCacheModule expected;
+    expected.identity = artifact.identity;
+    expected.sourceHash = artifact.sourceHash;
+    expected.interfaceHash = artifact.interfaceHash;
+    expected.isEntry = artifact.isEntry;
+    expected.entryOrder = artifact.entryOrder;
+    for (const ModuleInterfaceArtifactDependency& dependency : artifact.dependencies) {
+        expected.dependencies.push_back(ModuleCacheDependency{
+            dependency.identity,
+            dependency.kind,
+            dependency.requestedPath,
+            dependency.interfaceHash,
+        });
+    }
+    const std::string expectedKey = moduleCacheKey(expected);
+    if (record->module.cacheKey != expectedKey
+        || record->artifactPath != moduleCacheArtifactPath(expected)
+        || record->interfaceArtifactPath != moduleInterfaceArtifactPath({}, canonicalPath).generic_string()) {
+        return "module cache record mismatch";
+    }
+    return {};
 }
 
 void FrontendSession::annotateSourceTokens(std::vector<Token>& tokens, std::size_t sourceId) const
@@ -786,6 +853,7 @@ Program FrontendSession::assembleProgram()
                 unit.isEntry,
                 SourceFileId{unit.sourceId});
             module->sourceHash = moduleCacheHash(module->source);
+            module->bodySourceBacked = !unit.interfaceArtifact.has_value();
             program.statements.push_back(std::move(module));
         }
         finalizeSyntaxMetadata(program);

@@ -27,11 +27,12 @@ story that remains understandable as the implementation expands. The current
 bottleneck is integration cost: type checking, name resolution, flow facts,
 module metadata, and AST-to-IR lowering still meet in a large front-end
 boundary. Source imports are already lexed and parsed per file and represented
-as module AST nodes, but type checking and lowering still consume a whole-program
-AST containing dependency bodies. Module interfaces are emitted but are not yet
-the compilation input for importers. The C++ compiler, `.cdbc` format, and Rust
-VM have broad parity coverage, but their compatibility and debugging contracts
-can be made more explicit.
+as module AST nodes. Source fallback and the default linked path still retain a
+whole-program dependency-body adapter, while valid interface/product cache hits
+now use module interfaces as the semantic input and independent products as the
+lowering input. The C++ compiler, `.cdbc` format, and Rust VM have broad parity
+coverage, but their compatibility and debugging contracts can be made more
+explicit.
 
 From this point forward, a small user-visible feature is a means of validating
 one of these capabilities, not a roadmap item by itself.
@@ -57,9 +58,10 @@ The main architectural constraints are:
   responsibilities;
 - the type checker and IR compiler independently interpret the AST, so semantic
   decisions can be duplicated across passes;
-- module interfaces exist, but importers still consume dependency AST bodies;
-  interfaces do not yet form a complete separate-compilation or incremental-
-  build model;
+- module interfaces drive valid same-process and cache-backed dependency
+  consumption, while source fallback and the documented linked entry adapter
+  remain; separate-compilation and incremental-build policy is still scoped to
+  the module-product path;
 - diagnostics, point locations, runtime stack information, and artifact metadata
   are available in pieces rather than one consistently shared full-range source
   contract;
@@ -971,7 +973,12 @@ links those products into a final program. `M3B-CACHE-001`, recorded in
 `docs/decisions/m3b-module-cache.json`, adds an opt-in local product cache and
 per-module rebuild measurement. The cache manifest is `cdbc-cache 0.2` and
 records the paired `.cdi` sidecar path; valid sidecars can preload unchanged
-dependency interfaces during cache-backed builds.
+dependency interfaces during cache-backed builds. `M3B-BOUNDARY-001`, recorded
+in `docs/decisions/m3b-module-boundary-001.md` and
+`docs/decisions/m3b-module-boundary-001.json`, makes that preload conditional
+on the matching manifest record and product, marks preloaded `ModuleStmt`
+bodies as transport-only, and rejects linked bytecode modes that cannot obtain
+dependency bodies from independent products.
 
 **Migration:** produce independent module results in parallel with the current
 whole-program semantic check, preserving import/re-export order as dependency
@@ -979,8 +986,10 @@ marker offsets. Compare interfaces, linked program artifacts, diagnostics, and
 execution before allowing cache reuse; cache hits currently skip module
 lowering and, for valid imported sidecars, dependency-body parsing/type
 checking. Entry modules and invalid or missing sidecars still use the current
-source path by default; strict cache consumers may reject those sidecars at
-the frontend boundary.
+source path by default; invalid or missing manifests and records use the same
+module-product source fallback. Strict cache consumers may reject those
+conditions at the frontend boundary. The linked emitter remains source-backed
+and does not silently lower an empty preloaded dependency node.
 
 **Quantitative gate:** on the named incremental-build graphs in the M0A
 inventory, a no-change rebuild reuses every unchanged dependency interface and
@@ -1001,9 +1010,11 @@ independent results, the module-set linker and cache invalidation pass the
 declared change matrix, independently loadable serialized interfaces preserve
 diagnostics and visibility, and no import build performs whole-program
 dependency-body type checking or lowering for a valid sidecar as a fallback.
+`M3B-BOUNDARY-001` closes the unsafe case where a sidecar was trusted while a
+missing or invalid module-cache manifest forced a rebuild of its empty body.
 The current implementation still permits source fallback for missing or
-invalid sidecars by default; removing that safety path requires the complete
-M3A-INTERFACE-011 policy/diagnostic gate. Keep deliberately documented
+invalid sidecars, manifests, and products by default; removing that safety path
+requires a later strict creation/repair decision. Keep deliberately documented
 single-entry adapters that consume the same graph and interfaces.
 
 Package management and a large standard library are later product decisions.
@@ -1286,6 +1297,10 @@ M3A-INTERFACE-015 records the default-strict interface-only policy and the
 module-product fallback boundary. M3A-INTERFACE-016 records the reviewed
 semantic cutover: valid preloaded dependencies are not entered into the body
 checker, while cold and repair source fallback remains authoritative.
+`M3B-BOUNDARY-001` now binds valid sidecar preload to the module-cache manifest
+and product record, rejects unsafe linked bytecode combinations, and proves
+manifest-missing/invalid repair through source lowering, Rust linking, and VM
+execution.
 `M4A-VALIDATION-001` is also complete: the existing `cdbc 0.1` family has an
 explicit linked/module compatibility matrix, centralized Rust pre-execution
 reference validation, fixed native capability rejection, and malformed/module
@@ -1320,16 +1335,17 @@ cases, including lexer/parser seeds, the existing parse-error family, and
 `.cdbc` mutations; the original canonical inventory reported 1,658 cases. The
 M4A-VALIDATION-001 extension uses manifest revision `m0c-2026-07-26-r2`, adds
 seven pre-execution bytecode-reference cases, and currently validates 95
-malformed cases in the 1,768-case inventory. The harness, minimizer selftest,
+malformed cases in the 1,770-case inventory. The harness, minimizer selftest,
 and observed baseline are recorded in
 `docs/verification/m0c-malformed-design.md` and
 `docs/verification/m0c-baseline.json`. M0D, M0.5A, M0.5B, M1F, and
 M2A-FLOW-001 through M2A-FLOW-021 are now implemented; M3A-INTERFACE-006
-through M3A-INTERFACE-016, M3B-ARTIFACT-001, and M3B-CACHE-001 are the completed
-module-boundary, module-product, and artifact-cache slices. The next gate is
-the next independent roadmap slice after the reviewed dependency semantic
-cutover; module-product source fallback remains required for cold builds and
-repairs.
+through M3A-INTERFACE-016, M3B-ARTIFACT-001, M3B-CACHE-001, and
+M3B-BOUNDARY-001 are the completed module-boundary, module-product, and
+artifact-cache slices. Module-product source fallback remains required for
+cold builds and repairs. The next independent tool slice is M5A formatter;
+M2B type-recovery expansion remains separately admitted only with a new
+diagnostic decision and corpus.
 
 The hard dependency gates are:
 
@@ -1373,8 +1389,9 @@ M4B source/debug metadata ----------------------------> M5D debugger
 ```
 
 Keeping these schedules separate prevents one delayed tool from blocking the
-others. The immediate project is therefore M0A only; its first checked-in result
-is the versioned case inventory, canonical command, and legacy-comparison report.
+others. The module boundary and artifact/cache foundations are now complete
+through `M3B-BOUNDARY-001`; the next independent implementation slice is M5A
+formatter, while source fallback and direct-input adapters remain intentional.
 
 ## Metrics dashboard
 

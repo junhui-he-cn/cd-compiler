@@ -300,6 +300,9 @@ void test_explicit_relative_import_does_not_use_search_path(const fs::path& root
         "failed to open import: " + pathString(app / "missing"));
 }
 
+void writeSingleModuleCacheCase(const fs::path& caseRoot, const std::string& source);
+std::string writeSingleModuleSidecar(const fs::path& caseRoot, const std::string& source);
+
 void test_module_interface_cache_hit_reuses_dependency_interfaces(const fs::path& root)
 {
     fs::remove_all(root);
@@ -406,6 +409,32 @@ void test_module_interface_cache_hit_reuses_dependency_interfaces(const fs::path
     checker.check(program);
     assert(checker.moduleInterfaceMismatchCount() == 0);
     assert(checker.checkedModuleBodyIds() == std::vector<std::size_t>{entryModule->moduleId});
+}
+
+void test_module_product_cache_requires_manifest_for_preload(const fs::path& root)
+{
+    fs::remove_all(root);
+    const std::string source =
+        "let value = 7;\n"
+        "export value;\n";
+    writeSingleModuleCacheCase(root, source);
+    (void)writeSingleModuleSidecar(root, source);
+
+    FrontendSession session;
+    session.setModuleInterfaceCacheDirectory(root / "cache");
+    session.setModuleProductCacheMode(true);
+    Program program = session.loadFiles({(root / "entry.cd").string()});
+
+    const ModuleStmt* dependency = moduleByPath(program, root / "lib.cd");
+    assert(!dependency->statements.empty());
+    assert(dependency->bodySourceBacked);
+    const std::string canonicalPath = pathString(fs::weakly_canonical(root / "lib.cd"));
+    assert(std::none_of(
+        session.preloadedModuleInterfaces().begin(),
+        session.preloadedModuleInterfaces().end(),
+        [&canonicalPath](const ModuleInterface& interfaceInfo) {
+            return interfaceInfo.canonicalPath == canonicalPath;
+        }));
 }
 
 void assertSourceFallback(
@@ -912,6 +941,7 @@ int main()
     test_importing_file_directory_precedes_search_path(root / "precedence");
     test_explicit_relative_import_does_not_use_search_path(root / "explicit_no_fallback");
     test_module_interface_cache_hit_reuses_dependency_interfaces(root / "module_interface_cache");
+    test_module_product_cache_requires_manifest_for_preload(root / "module_product_cache_boundary");
     test_module_interface_cache_fallbacks(root / "module_interface_cache_fallbacks");
     test_module_interface_cache_dependency_hash_fallback(root / "module_interface_cache_dependency_hash");
     test_module_interface_cache_strict(root / "module_interface_cache_strict");

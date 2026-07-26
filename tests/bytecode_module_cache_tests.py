@@ -624,6 +624,50 @@ def run_cache_policy_matrix(compiler: Path) -> None:
                 f"stderr={default_hit.stderr}"
             )
 
+        linked_with_interface_cache = run(
+            [
+                str(compiler),
+                "--emit-bytecode",
+                str(root / "linked.cdbc"),
+                "--module-interface-cache",
+                str(cache),
+                str(entry),
+            ]
+        )
+        if (
+            linked_with_interface_cache.returncode != 64
+            or linked_with_interface_cache.stdout
+            or "cannot provide bytecode bodies" not in linked_with_interface_cache.stderr
+        ):
+            raise AssertionError(
+                "linked bytecode accepted an interface-only cache\n"
+                f"exit={linked_with_interface_cache.returncode}\n"
+                f"stdout={linked_with_interface_cache.stdout}\n"
+                f"stderr={linked_with_interface_cache.stderr}"
+            )
+
+        module_without_product_cache = run(
+            [
+                str(compiler),
+                "--emit-module-bytecode",
+                str(root / "module-products-without-cache"),
+                "--module-interface-cache",
+                str(cache),
+                str(entry),
+            ]
+        )
+        if (
+            module_without_product_cache.returncode != 64
+            or module_without_product_cache.stdout
+            or "cannot provide bytecode bodies" not in module_without_product_cache.stderr
+        ):
+            raise AssertionError(
+                "module emission accepted an interface-only cache without a product cache\n"
+                f"exit={module_without_product_cache.returncode}\n"
+                f"stdout={module_without_product_cache.stdout}\n"
+                f"stderr={module_without_product_cache.stderr}"
+            )
+
         baseline = frontend_output(compiler, entry)
         missing_cache = root / "missing-cache"
         missing_cache.mkdir()
@@ -797,6 +841,66 @@ def run_rebuild_matrix(compiler: Path, vm: Path) -> None:
         link_and_run(vm, output, root / "public-linked.cdbc", "lib-v3\nmid\nentry\n")
 
 
+def run_product_source_fallback_boundary(compiler: Path, vm: Path) -> None:
+    with tempfile.TemporaryDirectory() as temporary:
+        root = Path(temporary)
+        lib = root / "lib.cd"
+        mid = root / "mid.cd"
+        entry = root / "entry.cd"
+        lib.write_text('print("lib");\n', encoding="utf-8")
+        mid.write_text('import "./lib.cd";\nprint("mid");\n', encoding="utf-8")
+        entry.write_text('import "./mid.cd";\nprint("entry");\n', encoding="utf-8")
+
+        cache = root / "cache"
+        first_output = root / "first-products"
+        first_report = root / "first-report.json"
+        emit(compiler, entry, first_output, cache, first_report)
+
+        manifest = cache / "module-cache.cdbc"
+        if not manifest.is_file():
+            raise AssertionError("cold module-product build did not write its cache manifest")
+        manifest.unlink()
+
+        missing_manifest_output = root / "missing-manifest-products"
+        missing_manifest_report = root / "missing-manifest-report.json"
+        emit(compiler, entry, missing_manifest_output, cache, missing_manifest_report)
+        missing_manifest = report(missing_manifest_report)
+        if missing_manifest["cache_status"] != "missing" or missing_manifest["summary"] != {
+            "module_count": 3,
+            "reused": 0,
+            "rebuilt": 3,
+        }:
+            raise AssertionError(f"missing-manifest repair did not rebuild from source: {missing_manifest}")
+        if not any('string "lib"' in text.decode("utf-8") for text in module_products(missing_manifest_output).values()):
+            raise AssertionError("missing-manifest repair lowered an empty preloaded dependency")
+        link_and_run(
+            vm,
+            missing_manifest_output,
+            root / "missing-manifest-linked.cdbc",
+            "lib\nmid\nentry\n",
+        )
+
+        manifest.write_text("cdbc-cache 9.9\n", encoding="utf-8")
+        invalid_manifest_output = root / "invalid-manifest-products"
+        invalid_manifest_report = root / "invalid-manifest-report.json"
+        emit(compiler, entry, invalid_manifest_output, cache, invalid_manifest_report)
+        invalid_manifest = report(invalid_manifest_report)
+        if invalid_manifest["cache_status"] != "invalid" or invalid_manifest["summary"] != {
+            "module_count": 3,
+            "reused": 0,
+            "rebuilt": 3,
+        }:
+            raise AssertionError(f"invalid-manifest repair did not rebuild from source: {invalid_manifest}")
+        if not any('string "lib"' in text.decode("utf-8") for text in module_products(invalid_manifest_output).values()):
+            raise AssertionError("invalid-manifest repair lowered an empty preloaded dependency")
+        link_and_run(
+            vm,
+            invalid_manifest_output,
+            root / "invalid-manifest-linked.cdbc",
+            "lib\nmid\nentry\n",
+        )
+
+
 def run_fallback_case(compiler: Path, case: str) -> None:
     with tempfile.TemporaryDirectory() as temporary:
         root = Path(temporary)
@@ -948,6 +1052,10 @@ def run_all(compiler: Path, vm: Path) -> list[CheckResult]:
         run_case(
             "module cache rebuild/reuse matrix",
             lambda: run_rebuild_matrix(compiler, vm),
+        ),
+        run_case(
+            "module product source fallback boundary",
+            lambda: run_product_source_fallback_boundary(compiler, vm),
         ),
         run_case(
             "module cache fallback/direct import",
