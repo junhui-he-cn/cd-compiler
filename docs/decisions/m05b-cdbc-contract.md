@@ -20,20 +20,24 @@ input; its `dump` formatter is the canonical text representation.
 The audit covers every `artifact` runner case in the current verification
 inventory: 116 case IDs over 58 checked-in `expected.cdbc` fixtures. Every case
 records the observed header/version and envelope capabilities in the audit
-report. All 58 fixtures contain optional debug sources and locations; 28 contain
-functions and 31 contain `native_call` instructions.
+report. All 58 fixtures contain optional debug sources and locations; four
+import-aware fixtures now also contain canonical source-to-module identities;
+28 contain functions and 31 contain `native_call` instructions.
 
 ## Audit results
 
 The executable audit is `tests/cdbc_contract_audit.py`. It reuses
 `tests/bytecode_artifact_tests.py`, dumps every reference artifact through the
-Rust VM, and probes invalid family/version headers through `dump` only:
+Rust VM, and probes invalid family/version headers plus malformed bytecode
+references through `dump` only. M4A hardening is recorded in
+`docs/decisions/m4a-artifact-validation.md` and its JSON decision record.
 
 | Check | Result |
 | --- | ---: |
 | artifact assertions | 116/116 |
 | reference Rust dumps | 58/58 byte-for-byte |
 | invalid family/version probes | 2/2 rejected |
+| invalid bytecode reference probes | 7/7 rejected |
 | VM `run` calls for invalid probes | 0 |
 
 The checked-in machine-readable baseline is
@@ -56,11 +60,11 @@ from sorted artifact paths and their complete-text SHA-256 values.
 | Candidate | Classification | Current decision |
 | --- | --- | --- |
 | artifact kind | resolved after audit | linked programs omit an artifact declaration; M3B module products use strict `artifact: module` metadata in the same `cdbc 0.1` family |
-| debug sources/locations | already present | optional source-mapped runtime metadata is consumed by the Rust VM |
+| debug sources/locations | already present | optional source-mapped runtime metadata is consumed by the Rust VM; M4B adds an optional source-to-module identity field |
 | unknown-section policy | already present | strict rejection protects older readers |
 | runtime/target identity | deferred | wait for a second runtime, target, or transport consumer |
 | capability flags | deferred | wait for a named negotiation requirement |
-| module identity | resolved by M3B | module products serialize graph canonical-path identity and dependency target identities; linked programs remain identity-free |
+| module identity | resolved by M3B/M4B | module products serialize graph canonical-path identity and dependency target identities; import-aware debug source tables also retain canonical source-to-module identity |
 | explicit framing | not currently required | no streaming, binary, or embedded transport exists |
 | integrity metadata | deferred | requires a trust boundary or shared artifact cache |
 | successor version/negotiation | successor-version candidate | conditional M4A path only if a breaking change is selected |

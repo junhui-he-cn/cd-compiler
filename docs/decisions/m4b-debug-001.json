@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m4b-2026-07-26-r1",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M4B-DEBUG-001",
+  "domain": "runtime-debug-metadata",
+  "status": "resolved",
+  "question": "How must existing debug metadata behave when independently emitted module products are linked?",
+  "decision": "Keep cdbc 0.1 debug_sources/debug_locations, append module-local source tables in deterministic linker expansion order, and rebase every main/function location so imported runtime errors retain source paths and inner-to-outer call-stack order.",
+  "compatibility_boundary": {
+    "cdbc": "cdbc 0.1 unchanged",
+    "linked_text": "valid canonical emission unchanged",
+    "metadata_free": "legacy one-line runtime diagnostics unchanged",
+    "module_identity_fields": "deferred"
+  },
+  "conformance": {
+    "fixture_shape": "two module products with an imported function dividing by zero",
+    "required_sources": [
+      "dependency source path",
+      "entry source path"
+    ],
+    "required_runtime": [
+      "division by zero",
+      "dependency line and column",
+      "entry call-site line and column",
+      "Call stack",
+      "inner function before outer main",
+      "no stdout",
+      "repeatable stderr"
+    ]
+  },
+  "old_path_deletion_condition": "Do not remove current debug-location tables or metadata-free fallback until all compiler-emitted frames use shared M4B metadata and the source-level runtime corpus has zero fallback source guesses.",
+  "out_of_scope": [
+    "module IDs in cdbc wire format",
+    "binary framing",
+    "debugger protocol",
+    "breakpoints",
+    "successor cdbc version"
+  ],
+  "verification": {
+    "ctest": "module_debug_metadata",
+    "source": "tests/module_debug_metadata_tests.py",
+    "focused_commands": [
+      "cmake -S . -B build",
+      "cmake --build build",
+      "ctest --test-dir build --output-on-failure -R '^module_debug_metadata$'",
+      "cargo test --manifest-path vm-rs/Cargo.toml",
+      "git diff --check"
+    ]
+  }
+}

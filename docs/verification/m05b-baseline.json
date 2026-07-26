@@ -19,7 +19,7 @@
     "observed_header_versions": [
       "cdbc 0.1"
     ],
-    "reference_corpus_sha256": "00aa8ea18d26b303dd76e0542b509b19add9af5ca112668807c8897a8f277c64"
+    "reference_corpus_sha256": "8a618dfa7df1cbd76eb723336bbf727103322043252ffd68fa6259b783505903"
   },
   "envelope": {
     "core_sections": [
@@ -36,7 +36,8 @@
       "with_functions": 28,
       "with_native_call": 31,
       "with_debug_sources": 58,
-      "with_debug_locations": 58
+      "with_debug_locations": 58,
+      "with_debug_source_modules": 4
     },
     "parser_policy": "strict required sections, references, instruction shapes, debug mappings, and trailing/unknown sections"
   },

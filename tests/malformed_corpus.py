@@ -110,6 +110,47 @@ def mutate_cdbc(source: str, mutation: str) -> str:
         return source[:start] + "unknown_opcode" + source[end:]
     if mutation == "trailing_garbage":
         return source.rstrip("\n") + "\nnot_a_cdbc_section\n"
+    if mutation == "invalid_register":
+        match = re.search(r"(?m)^  r0 = ", source)
+        if match is None:
+            raise ValueError("cdbc seed has no main destination register to mutate")
+        start = match.start() + 2
+        return source[:start] + "r999" + source[start + 2 :]
+    if mutation == "invalid_constant":
+        match = re.search(r"constant c\d+", source)
+        if match is None:
+            raise ValueError("cdbc seed has no constant reference to mutate")
+        return source[: match.start()] + "constant c999" + source[match.end() :]
+    if mutation == "invalid_function":
+        match = re.search(r"make_function f\d+", source)
+        if match is None:
+            raise ValueError("cdbc seed has no function reference to mutate")
+        return source[: match.start()] + "make_function f999" + source[match.end() :]
+    if mutation == "invalid_name":
+        insertion = "  store_var n999, r0\n"
+        for marker in ("\nfunction ", "\ndebug_sources:", "\ndebug_locations:"):
+            position = source.find(marker)
+            if position != -1:
+                return source[:position] + "\n" + insertion + source[position:]
+        return source.rstrip("\n") + "\n" + insertion
+    if mutation == "invalid_jump":
+        insertion = "  jump 999\n"
+        for marker in ("\nfunction ", "\ndebug_sources:", "\ndebug_locations:"):
+            position = source.find(marker)
+            if position != -1:
+                return source[:position] + "\n" + insertion + source[position:]
+        return source.rstrip("\n") + "\n" + insertion
+    if mutation == "invalid_number":
+        match = re.search(r"(?m)^  c\d+ = number [^\n]+", source)
+        if match is None:
+            raise ValueError("cdbc seed has no number constant to mutate")
+        prefix = source[match.start() :].split(" = number ", 1)[0]
+        return source[: match.start()] + prefix + " = number not-a-number" + source[match.end() :]
+    if mutation == "invalid_native":
+        match = re.search(r"native_call n\d+", source)
+        if match is None:
+            raise ValueError("cdbc seed has no native call to mutate")
+        return source[: match.start()] + "native_call n0" + source[match.end() :]
     raise ValueError(f"unknown cdbc mutation: {mutation}")
 
 

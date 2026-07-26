@@ -52,6 +52,7 @@ mod tests {
 
     fn debug_failure_program() -> Program {
         let source = DebugSource {
+            module: None,
             path: "demo.cd".to_string(),
             text: "fun fail() { return 1 / 0; }\nfail();\n".to_string(),
         };
@@ -1218,6 +1219,7 @@ mod tests {
             },
             functions: Vec::new(),
             debug_sources: vec![DebugSource {
+                module: None,
                 path: "native.cd".to_string(),
                 text: "sqrt(nil);\n".to_string(),
             }],

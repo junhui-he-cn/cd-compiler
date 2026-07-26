@@ -4,6 +4,7 @@
 #include "SourceIdentity.hpp"
 
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -11,6 +12,9 @@ struct SourceFile {
     std::string path;
     std::string text;
     SourceFileId id{};
+    // `id` is snapshot-local; this optional identity is the stable canonical
+    // module key used when source metadata crosses the artifact boundary.
+    std::optional<std::string> moduleIdentity = std::nullopt;
 };
 
 struct SourceSpan {

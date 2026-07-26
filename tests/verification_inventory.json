@@ -4043,6 +4043,27 @@
       "expected_files": []
     },
     {
+      "case_id": "ctest.module_debug_metadata",
+      "runner": "ctest",
+      "result_name": "module_debug_metadata",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "module_debug_metadata"
+      ],
+      "backend": "python",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt",
+        "tests/module_debug_metadata_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "ctest.module_interface_artifact",
       "runner": "ctest",
       "result_name": "module_interface_artifact",
@@ -25449,6 +25470,136 @@
       "fixture": "tests/bytecode_artifacts/arithmetic"
     },
     {
+      "case_id": "malformed.cdbc.arithmetic.invalid_constant",
+      "runner": "malformed",
+      "result_name": "malformed.cdbc.arithmetic.invalid_constant",
+      "stage": "cdbc-parser",
+      "capability_tags": [
+        "malformed",
+        "cdbc",
+        "rust-parser",
+        "invalid_constant"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "cdbc",
+        "rust_decode"
+      ],
+      "terminal_boundary": "rust_decode",
+      "sources": [
+        "tests/bytecode_artifacts/arithmetic/expected.cdbc"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/arithmetic/expected.cdbc"
+      ],
+      "fixture": "tests/bytecode_artifacts/arithmetic"
+    },
+    {
+      "case_id": "malformed.cdbc.arithmetic.invalid_jump",
+      "runner": "malformed",
+      "result_name": "malformed.cdbc.arithmetic.invalid_jump",
+      "stage": "cdbc-parser",
+      "capability_tags": [
+        "malformed",
+        "cdbc",
+        "rust-parser",
+        "invalid_jump"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "cdbc",
+        "rust_decode"
+      ],
+      "terminal_boundary": "rust_decode",
+      "sources": [
+        "tests/bytecode_artifacts/arithmetic/expected.cdbc"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/arithmetic/expected.cdbc"
+      ],
+      "fixture": "tests/bytecode_artifacts/arithmetic"
+    },
+    {
+      "case_id": "malformed.cdbc.arithmetic.invalid_name",
+      "runner": "malformed",
+      "result_name": "malformed.cdbc.arithmetic.invalid_name",
+      "stage": "cdbc-parser",
+      "capability_tags": [
+        "malformed",
+        "cdbc",
+        "rust-parser",
+        "invalid_name"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "cdbc",
+        "rust_decode"
+      ],
+      "terminal_boundary": "rust_decode",
+      "sources": [
+        "tests/bytecode_artifacts/arithmetic/expected.cdbc"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/arithmetic/expected.cdbc"
+      ],
+      "fixture": "tests/bytecode_artifacts/arithmetic"
+    },
+    {
+      "case_id": "malformed.cdbc.arithmetic.invalid_number",
+      "runner": "malformed",
+      "result_name": "malformed.cdbc.arithmetic.invalid_number",
+      "stage": "cdbc-parser",
+      "capability_tags": [
+        "malformed",
+        "cdbc",
+        "rust-parser",
+        "invalid_number"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "cdbc",
+        "rust_decode"
+      ],
+      "terminal_boundary": "rust_decode",
+      "sources": [
+        "tests/bytecode_artifacts/arithmetic/expected.cdbc"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/arithmetic/expected.cdbc"
+      ],
+      "fixture": "tests/bytecode_artifacts/arithmetic"
+    },
+    {
+      "case_id": "malformed.cdbc.arithmetic.invalid_register",
+      "runner": "malformed",
+      "result_name": "malformed.cdbc.arithmetic.invalid_register",
+      "stage": "cdbc-parser",
+      "capability_tags": [
+        "malformed",
+        "cdbc",
+        "rust-parser",
+        "invalid_register"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "cdbc",
+        "rust_decode"
+      ],
+      "terminal_boundary": "rust_decode",
+      "sources": [
+        "tests/bytecode_artifacts/arithmetic/expected.cdbc"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/arithmetic/expected.cdbc"
+      ],
+      "fixture": "tests/bytecode_artifacts/arithmetic"
+    },
+    {
       "case_id": "malformed.cdbc.arithmetic.trailing_garbage",
       "runner": "malformed",
       "result_name": "malformed.cdbc.arithmetic.trailing_garbage",
@@ -25553,6 +25704,32 @@
       "fixture": "tests/bytecode_artifacts/functions_arrays"
     },
     {
+      "case_id": "malformed.cdbc.functions_arrays.invalid_function",
+      "runner": "malformed",
+      "result_name": "malformed.cdbc.functions_arrays.invalid_function",
+      "stage": "cdbc-parser",
+      "capability_tags": [
+        "malformed",
+        "cdbc",
+        "rust-parser",
+        "invalid_function"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "cdbc",
+        "rust_decode"
+      ],
+      "terminal_boundary": "rust_decode",
+      "sources": [
+        "tests/bytecode_artifacts/functions_arrays/expected.cdbc"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/functions_arrays/expected.cdbc"
+      ],
+      "fixture": "tests/bytecode_artifacts/functions_arrays"
+    },
+    {
       "case_id": "malformed.cdbc.functions_arrays.trailing_garbage",
       "runner": "malformed",
       "result_name": "malformed.cdbc.functions_arrays.trailing_garbage",
@@ -25640,6 +25817,32 @@
         "cdbc",
         "rust-parser",
         "bad_header"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "cdbc",
+        "rust_decode"
+      ],
+      "terminal_boundary": "rust_decode",
+      "sources": [
+        "tests/bytecode_artifacts/maps/expected.cdbc"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/maps/expected.cdbc"
+      ],
+      "fixture": "tests/bytecode_artifacts/maps"
+    },
+    {
+      "case_id": "malformed.cdbc.maps.invalid_native",
+      "runner": "malformed",
+      "result_name": "malformed.cdbc.maps.invalid_native",
+      "stage": "cdbc-parser",
+      "capability_tags": [
+        "malformed",
+        "cdbc",
+        "rust-parser",
+        "invalid_native"
       ],
       "backend": "rust-vm",
       "expected_result_kind": "reject",
@@ -27891,6 +28094,204 @@
       ],
       "expected_files": [],
       "fixture": "tests/malformed_cases.json"
+    },
+    {
+      "case_id": "module_cache.fallback.diagnostics",
+      "runner": "module_cache",
+      "result_name": "module cache fallback/diagnostics",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "interface-fallback",
+        "file-diagnostics",
+        "parse-diagnostic",
+        "type-diagnostic"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit-parity",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "module_cache.fallback.direct",
+      "runner": "module_cache",
+      "result_name": "module cache fallback/direct import",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "interface-fallback",
+        "direct-import"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "frontend-output-parity",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "module_cache.fallback.namespace",
+      "runner": "module_cache",
+      "result_name": "module cache fallback/namespace import",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "interface-fallback",
+        "namespace-import"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "frontend-output-parity",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "module_cache.fallback.partial_dependency",
+      "runner": "module_cache",
+      "result_name": "module cache fallback/partial dependency reuse",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "interface-fallback",
+        "partial-reuse",
+        "dependency-interface"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "partial-reuse-and-fallback",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "module_cache.fallback.re_export",
+      "runner": "module_cache",
+      "result_name": "module cache fallback/re-export chain",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "interface-fallback",
+        "re-export"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "frontend-output-parity",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "module_cache.fallback.search_path",
+      "runner": "module_cache",
+      "result_name": "module cache fallback/search path",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "interface-fallback",
+        "search-path"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "frontend-output-parity",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "module_cache.rebuild_reuse",
+      "runner": "module_cache",
+      "result_name": "module cache rebuild/reuse matrix",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "incremental-rebuild",
+        "public-interface-invalidation",
+        "rust-vm"
+      ],
+      "backend": "mixed",
+      "expected_result_kind": "cache-report-and-runtime-parity",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "module_cache.strict_rejection",
+      "runner": "module_cache",
+      "result_name": "module cache strict rejection matrix",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "strict-cache",
+        "import-diagnostics"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "import-diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "import_diagnostic"
+      ],
+      "terminal_boundary": "import_diagnostic",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
     },
     {
       "case_id": "runner.cargo_test",

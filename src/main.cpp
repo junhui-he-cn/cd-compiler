@@ -26,8 +26,8 @@ void printUsage(const char* executable)
 {
     std::cerr << "Usage: " << executable << " [--tokens] [--ir] [--bytecode] [--module-interface] [-I dir] [--import-path dir] [file ...]\n"
               << "       " << executable << " [--emit-bytecode output.cdbc] [-I dir] [--import-path dir] file [...]\n"
-              << "       " << executable << " [--emit-module-bytecode output-directory] [--module-cache cache-directory] [--module-rebuild-report report.json] [-I dir] [--import-path dir] file [...]\n"
-              << "       " << executable << " [--module-interface-cache cache-directory] [-I dir] [--import-path dir] file [...]\n"
+              << "       " << executable << " [--emit-module-bytecode output-directory] [--module-cache cache-directory] [--module-cache-strict] [--module-rebuild-report report.json] [-I dir] [--import-path dir] file [...]\n"
+              << "       " << executable << " [--module-interface-cache cache-directory] [--module-cache-strict] [-I dir] [--import-path dir] file [...]\n"
               << "If no file is provided, source is read from stdin except for bytecode emission modes, which require at least one file.\n"
               << "Import search paths are used for non-explicit string imports after the importing file's directory.\n";
 }
@@ -405,6 +405,7 @@ int main(int argc, char** argv)
     std::optional<std::string> moduleCachePath;
     std::optional<std::string> moduleInterfaceCachePath;
     std::optional<std::string> moduleRebuildReportPath;
+    bool moduleCacheStrict = false;
     std::vector<std::string> inputPaths;
     std::vector<std::string> importSearchPaths;
 
@@ -451,6 +452,8 @@ int main(int argc, char** argv)
                 return 64;
             }
             moduleInterfaceCachePath = argv[++i];
+        } else if (arg == "--module-cache-strict") {
+            moduleCacheStrict = true;
         } else if (arg == "--module-rebuild-report") {
             if (i + 1 >= argc) {
                 printUsage(argv[0]);
@@ -465,7 +468,13 @@ int main(int argc, char** argv)
         }
     }
 
-    if (emitBytecodePath || emitModuleBytecodePath || moduleCachePath || moduleInterfaceCachePath || moduleRebuildReportPath) {
+    if (moduleCacheStrict && !moduleCachePath && !moduleInterfaceCachePath) {
+        std::cerr << "--module-cache-strict requires --module-cache or --module-interface-cache\n";
+        return 64;
+    }
+
+    if (emitBytecodePath || emitModuleBytecodePath || moduleCachePath || moduleInterfaceCachePath
+        || moduleRebuildReportPath || moduleCacheStrict) {
         if (inputPaths.empty()
             || showTokens
             || showIr
@@ -493,6 +502,7 @@ int main(int argc, char** argv)
     } else if (moduleCachePath) {
         frontend.setModuleInterfaceCacheDirectory(*moduleCachePath);
     }
+    frontend.setModuleInterfaceCacheStrict(moduleCacheStrict);
     try {
         Program program = inputPaths.empty()
             ? frontend.loadStdin(std::cin)

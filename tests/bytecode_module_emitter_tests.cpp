@@ -58,11 +58,36 @@ void testModuleEnvelopeAndDependencyMarker()
         "main registers=0:\n");
 }
 
+void testDebugSourceModuleIdentity()
+{
+    BytecodeProgram program;
+    SourceFile source;
+    source.path = "lib.cd";
+    source.text = "print 1;\n";
+    source.id = SourceFileId{0};
+    source.moduleIdentity = "/workspace/lib.cd";
+    program.setSources({source});
+
+    std::ostringstream output;
+    writeBytecodeText(output, program);
+    assert(output.str() ==
+        "cdbc 0.1\n\n"
+        "constants:\n"
+        "\n"
+        "names:\n"
+        "\n"
+        "main registers=0:\n"
+        "\n"
+        "debug_sources:\n"
+        "  s0 module=\"/workspace/lib.cd\" path=\"lib.cd\" text=\"print 1;\\n\"\n");
+}
+
 } // namespace
 
 int main()
 {
     testLinkedArtifactRemainsUnchanged();
     testModuleEnvelopeAndDependencyMarker();
+    testDebugSourceModuleIdentity();
     return 0;
 }

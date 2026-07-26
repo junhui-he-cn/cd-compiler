@@ -137,6 +137,10 @@
   "envelope": {
     "current": {
       "header": "cdbc 0.1",
+      "artifact_kinds": [
+        "linked program (no artifact declaration)",
+        "independent module (artifact: module)"
+      ],
       "core_sections": [
         "constants",
         "names",
@@ -144,12 +148,13 @@
         "function*"
       ],
       "optional_sections": [
+        "artifact: module and module metadata for independent products",
         "debug_sources",
         "debug_locations"
       ],
-      "section_order": "constants, names, main, zero or more function sections, optional debug_sources, optional debug_locations",
-      "parser_policy": "Rust parsing is strict: required sections, sequential references, instruction shapes, debug references, and trailing/unknown sections are rejected.",
-      "formatter_policy": "Rust dump canonicalizes a parsed program to the same cdbc 0.1 text representation used by the checked-in reference corpus.",
+      "section_order": "optional artifact: module and module metadata, constants, names, main, zero or more function sections, optional debug_sources, optional debug_locations",
+      "parser_policy": "Rust parsing is strict: artifact kind, module fields, dependency markers, required sections, sequential references, instruction shapes, debug references, and trailing/unknown sections are rejected.",
+      "formatter_policy": "Rust dump canonicalizes either linked cdbc 0.1 programs or module products to the same text representation emitted by C++.",
       "debug_policy": "Debug metadata is additive and optional; source/function/instruction indexes are artifact-local, while line and column values are one-based."
     },
     "observed_header_versions": [
@@ -159,7 +164,8 @@
       "with_functions": 28,
       "with_native_call": 31,
       "with_debug_sources": 58,
-      "with_debug_locations": 58
+      "with_debug_locations": 58,
+      "with_debug_source_modules": 4
     },
     "artifacts": [
       {
@@ -180,6 +186,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -206,6 +213,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -234,6 +242,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -264,6 +273,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -295,6 +305,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -326,6 +337,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -356,6 +368,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -386,6 +399,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -416,6 +430,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -447,6 +462,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -480,6 +496,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -511,6 +528,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -539,6 +557,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -566,6 +585,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -592,6 +612,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -618,6 +639,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -644,6 +666,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -670,6 +693,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -698,6 +722,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -727,6 +752,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -739,8 +765,8 @@
       },
       {
         "path": "tests/bytecode_artifacts/generic_explicit_type_arguments/expected.cdbc",
-        "bytes": 4305,
-        "sha256": "22e888280ddf5d90c0332ae8e6c6eb8c8646135bdebfc4f8d18873b2b64cb8d2",
+        "bytes": 4495,
+        "sha256": "6bd0aaf07a2009776b29760a0df822d962f523e58c3bdd87ffb43700fcfc627e",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -759,13 +785,15 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": true,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_source_module"
         ]
       },
       {
@@ -789,6 +817,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -820,6 +849,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -850,6 +880,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -861,8 +892,8 @@
       },
       {
         "path": "tests/bytecode_artifacts/import_basic/expected.cdbc",
-        "bytes": 1097,
-        "sha256": "9fe94d91ca30490f00b62fe0d0c4c7d12389c29cbc47d600a31f290979a243f3",
+        "bytes": 1249,
+        "sha256": "a1ad576727938a96787fe3783e33f3188c5bb3bd053fcd49f64590849e0486b2",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -878,13 +909,15 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": true,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_source_module"
         ]
       },
       {
@@ -905,6 +938,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -934,6 +968,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -962,6 +997,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -989,6 +1025,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1016,6 +1053,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1043,6 +1081,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1070,6 +1109,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1097,6 +1137,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1124,6 +1165,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1150,6 +1192,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1176,6 +1219,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1203,6 +1247,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1214,8 +1259,8 @@
       },
       {
         "path": "tests/bytecode_artifacts/module_exports/expected.cdbc",
-        "bytes": 1689,
-        "sha256": "678b1919faa7be7429b4395cc9008f48934d2b3cde0cd3a2c957608de0e4e393",
+        "bytes": 1845,
+        "sha256": "b4f0b532f62e0a439b812e748318f30cd952e5c077c406be67fb337dfe86613a",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1232,13 +1277,15 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": true,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_source_module"
         ]
       },
       {
@@ -1260,6 +1307,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1287,6 +1335,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1313,6 +1362,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1340,6 +1390,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1350,8 +1401,8 @@
       },
       {
         "path": "tests/bytecode_artifacts/namespace_imports/expected.cdbc",
-        "bytes": 1114,
-        "sha256": "5c1a65a5a5b876c4a1b3971b9f39d2a8e027959a9877d563bfa56bfee92659cd",
+        "bytes": 1276,
+        "sha256": "2c3b1b7148547cce91def08342d5061d3c571221668792f134e73ec072349e6a",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1367,13 +1418,15 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": true,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_source_module"
         ]
       },
       {
@@ -1394,6 +1447,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1421,6 +1475,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1448,6 +1503,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1475,6 +1531,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1503,6 +1560,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1533,6 +1591,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1561,6 +1620,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1589,6 +1649,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1618,6 +1679,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1645,6 +1707,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1672,6 +1735,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1700,6 +1764,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1728,6 +1793,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1755,6 +1821,7 @@
         "has_native_call": false,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -1781,6 +1848,7 @@
         "has_native_call": true,
         "has_debug_sources": true,
         "has_debug_locations": true,
+        "has_debug_source_modules": false,
         "envelope_capabilities": [
           "header_family_version",
           "canonical_core_sections",
@@ -2806,7 +2874,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_source_module"
         ]
       },
       {
@@ -2833,7 +2902,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_source_module"
         ]
       },
       {
@@ -3015,7 +3085,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_source_module"
         ]
       },
       {
@@ -3039,7 +3110,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_source_module"
         ]
       },
       {
@@ -3618,7 +3690,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_source_module"
         ]
       },
       {
@@ -3643,7 +3716,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_source_module"
         ]
       },
       {
@@ -3849,7 +3923,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_source_module"
         ]
       },
       {
@@ -3873,7 +3948,8 @@
           "strict_reference_indices",
           "function_sections",
           "debug_sources",
-          "debug_locations"
+          "debug_locations",
+          "debug_source_module"
         ]
       },
       {
@@ -4590,16 +4666,18 @@
     {
       "field_id": "artifact-kind",
       "field": "artifact kind",
-      "classification": "already present",
-      "current_state": "The cdbc family header, .cdbc extension, compiler emit mode, and Rust dump/run commands identify the current artifact kind.",
-      "named_consumer": "C++ BytecodeTextEmitter and Rust format parser/CLI",
+      "classification": "resolved",
+      "current_state": "The cdbc 0.1 envelope distinguishes linked programs by the absence of an artifact declaration and independent products with artifact: module; the module CLI emits one product per graph node and Rust dump/run enforce the distinction.",
+      "named_consumer": "C++ BytecodeTextEmitter, C++ module emitter, and Rust format parser/CLI",
       "planned_fixtures": [
-        "tests/bytecode_artifacts/arithmetic/expected.cdbc"
+        "tests/bytecode_artifacts/arithmetic/expected.cdbc",
+        "tests/golden/module_import_order/input.cd",
+        "tests/bytecode_module_artifact_tests.py"
       ],
-      "rationale": "No second artifact family is currently transported or consumed.",
+      "rationale": "Independent products need a strict non-executable envelope, but their bytecode sections remain compatible with the existing cdbc 0.1 family and parser.",
       "revisit": {
         "milestone": "M4A",
-        "condition": "Introduce a distinct artifact family only if a concrete consumer cannot use the cdbc 0.1 envelope."
+        "condition": "Change only if linking, runtime compatibility, or a concrete transport requires a successor version or separate family."
       }
     },
     {
@@ -4666,16 +4744,17 @@
     {
       "field_id": "module-identity",
       "field": "module identity",
-      "classification": "deferred",
-      "current_state": "Current .cdbc output is one linked program artifact; module-interface text is inspection metadata and not a separate-compilation input.",
-      "named_consumer": "M3A/M3B module graph and separate/incremental compilation",
+      "classification": "resolved",
+      "current_state": "Independent module products serialize the ModuleGraph canonical path as identity, retain display/canonical paths, entry ordering, and dependency target identities, while linked program artifacts remain identity-free.",
+      "named_consumer": "M3B module product emitter/linker and Rust module artifact validator",
       "planned_fixtures": [
-        "tests/bytecode_artifacts/compatibility/module-identity.cdbc (M3B/M4A planned fixture)"
+        "tests/bytecode_module_artifact_tests.py",
+        "docs/decisions/m3b-module-artifacts.json"
       ],
-      "rationale": "Module identity belongs to the module graph and separate-compilation decision; it is not needed in the current whole-program artifact.",
+      "rationale": "Per-module products must be linkable across independent files without treating snapshot-local numeric module IDs as persistent identities.",
       "revisit": {
-        "milestone": "M3A/M3B, then M4A if serialized module products use cdbc",
-        "condition": "Choose whether modules link into one final artifact or carry independently validated artifact/interface identities."
+        "milestone": "M3B/M4A",
+        "condition": "Revise if a linker or cross-build cache requires a stronger identity/hash contract."
       }
     },
     {
@@ -4726,12 +4805,12 @@
   "successor_decision": {
     "selected": false,
     "decision": "No cdbc successor is required or selected at M0.5B.",
-    "rationale": "The current 0.1 envelope already provides the emitted core sections, strict Rust parse/dump, optional debug metadata, and the only current compiler/VM consumer pair. All proposed additions without a concrete consumer or transport are deferred or not currently required. M4A remains authorized to select a successor if a later compatibility requirement proves that a 0.1-compatible extension is insufficient.",
+    "rationale": "M0.5B selected no successor because the current 0.1 envelope covered the linked compiler/VM pair. M3B later introduced independent module products as a compatible artifact-kind extension, without selecting a successor version. M4A remains authorized to select a successor if a later compatibility requirement proves that a 0.1-compatible extension is insufficient.",
     "m4_owner": "M4A",
     "triggers": [
       "breaking opcode or value-layout change",
       "a second runtime/target requiring negotiation",
-      "separate compiled module artifacts requiring a new envelope",
+      "module linking requiring fields that cannot remain a compatible cdbc 0.1 extension",
       "a named transport/security requirement that cannot fit a compatible extension"
     ]
   },
@@ -4742,7 +4821,91 @@
     "reference_corpus": "tests/malformed_cases.json cdbc mutations plus vm-rs format unit tests",
     "audit_probes": [
       "invalid-family",
-      "invalid-version"
+      "invalid-version",
+      "invalid-register",
+      "invalid-constant",
+      "invalid-jump",
+      "invalid-name",
+      "invalid-number",
+      "invalid-function",
+      "invalid-native"
+    ]
+  },
+  "m4a_compatibility": {
+    "schema_version": 1,
+    "decision_revision": "m4a-2026-07-26-r1",
+    "inventory_revision": "m0d-2026-07-22-r1",
+    "decision_id": "M4A-VALIDATION-001",
+    "domain": "cdbc-compatibility",
+    "status": "resolved",
+    "question": "How should the current cdbc 0.1 artifact family be accepted, rejected, and validated before execution?",
+    "decision": "Keep exact cdbc 0.1 support for linked programs and independent module products, reject other family/version headers and unsupported native capabilities, and validate every serialized cross-reference before dump, link, or VM execution.",
+    "compatibility_matrix": [
+      {
+        "header": "cdbc 0.1",
+        "kind": "linked_program",
+        "dump": "accept after structural and reference validation",
+        "run": "accept after the same validation",
+        "link": "reject as a non-module product"
+      },
+      {
+        "header": "cdbc 0.1",
+        "kind": "module_product",
+        "dump": "accept after structural, reference, and module-envelope validation",
+        "run": "reject before VM execution",
+        "link": "accept only when the complete product set validates"
+      },
+      {
+        "header": "other family or version",
+        "kind": "any",
+        "dump": "reject before decode",
+        "run": "reject before VM execution",
+        "link": "reject before product loading"
+      },
+      {
+        "header": "missing or unversioned",
+        "kind": "any",
+        "dump": "reject before decode",
+        "run": "reject before VM execution",
+        "link": "reject before product loading"
+      }
+    ],
+    "validation_contract": [
+      "constant number literals must parse as finite f64 values",
+      "constant, name, function, and register references must address their tables",
+      "jump targets may equal the instruction count but may not exceed it",
+      "debug location arrays must match instruction counts and retain parser range checks",
+      "native_call names must belong to the cdbc 0.1 native capability set",
+      "module identities, entry metadata, dependency targets, and insertion offsets must validate before linking"
+    ],
+    "successor_decision": {
+      "selected": false,
+      "rationale": "The current compiler/Rust VM pair needs stronger validation but no new opcode, value layout, target, transport, or negotiation capability. A successor version would add migration surface without a named consumer.",
+      "revisit": "Select a successor only when a breaking runtime/artifact change cannot remain a compatible 0.1 extension."
+    },
+    "migration": "The existing cdbc 0.1 emitter and canonical text remain unchanged. The Rust parser now performs centralized validation before returning an artifact; existing linked and module-product paths retain their current commands and rejection policy.",
+    "verification": {
+      "focused_commands": [
+        "cargo test --manifest-path vm-rs/Cargo.toml",
+        "python3 tests/bytecode_artifact_tests.py ./build/compiler_design vm-rs",
+        "python3 tests/bytecode_module_artifact_tests.py ./build/compiler_design vm-rs",
+        "python3 tests/run_malformed_tests.py ./build/compiler_design vm-rs --case malformed.cdbc",
+        "python3 tests/cdbc_contract_audit.py ./build/compiler_design vm-rs --report build/m05b-cdbc-audit-report.json"
+      ],
+      "coverage": [
+        "tests/bytecode_artifacts/*/expected.cdbc",
+        "tests/bytecode_module_artifact_tests.py",
+        "tests/malformed_cases.json",
+        "vm-rs/src/format.rs"
+      ]
+    },
+    "old_path_deletion_condition": "Do not remove cdbc 0.1 readers or emitters. An older path may be retired only after a separately versioned successor has a complete matrix, migration/rejection policy, deprecation period, and canonical evidence.",
+    "out_of_scope": [
+      "successor version selection",
+      "capability negotiation metadata",
+      "runtime target identity",
+      "embedded integrity or signature metadata",
+      "changing canonical cdbc text emission"
     ]
   },
   "errors": [],
@@ -4785,6 +4948,85 @@
       ],
       "dump_invocations": 2,
       "run_invocations": 0
+    },
+    "invalid_artifact_probes": {
+      "total": 7,
+      "passed": 7,
+      "failed": 0,
+      "probes": [
+        {
+          "probe_id": "invalid-register",
+          "seed": "tests/bytecode_artifacts/arithmetic/expected.cdbc",
+          "mutation": "invalid_register",
+          "mode": "dump-only",
+          "passed": true,
+          "returncode": 1,
+          "stdout_empty": true,
+          "stderr_nonempty": true
+        },
+        {
+          "probe_id": "invalid-constant",
+          "seed": "tests/bytecode_artifacts/arithmetic/expected.cdbc",
+          "mutation": "invalid_constant",
+          "mode": "dump-only",
+          "passed": true,
+          "returncode": 1,
+          "stdout_empty": true,
+          "stderr_nonempty": true
+        },
+        {
+          "probe_id": "invalid-jump",
+          "seed": "tests/bytecode_artifacts/arithmetic/expected.cdbc",
+          "mutation": "invalid_jump",
+          "mode": "dump-only",
+          "passed": true,
+          "returncode": 1,
+          "stdout_empty": true,
+          "stderr_nonempty": true
+        },
+        {
+          "probe_id": "invalid-name",
+          "seed": "tests/bytecode_artifacts/arithmetic/expected.cdbc",
+          "mutation": "invalid_name",
+          "mode": "dump-only",
+          "passed": true,
+          "returncode": 1,
+          "stdout_empty": true,
+          "stderr_nonempty": true
+        },
+        {
+          "probe_id": "invalid-number",
+          "seed": "tests/bytecode_artifacts/arithmetic/expected.cdbc",
+          "mutation": "invalid_number",
+          "mode": "dump-only",
+          "passed": true,
+          "returncode": 1,
+          "stdout_empty": true,
+          "stderr_nonempty": true
+        },
+        {
+          "probe_id": "invalid-function",
+          "seed": "tests/bytecode_artifacts/functions_arrays/expected.cdbc",
+          "mutation": "invalid_function",
+          "mode": "dump-only",
+          "passed": true,
+          "returncode": 1,
+          "stdout_empty": true,
+          "stderr_nonempty": true
+        },
+        {
+          "probe_id": "invalid-native",
+          "seed": "tests/bytecode_artifacts/maps/expected.cdbc",
+          "mutation": "invalid_native",
+          "mode": "dump-only",
+          "passed": true,
+          "returncode": 1,
+          "stdout_empty": true,
+          "stderr_nonempty": true
+        }
+      ],
+      "dump_invocations": 7,
+      "run_invocations": 0
     }
   },
   "summary": {
@@ -4794,6 +5036,7 @@
     "artifact_assertions": 116,
     "reference_dumps": 58,
     "invalid_header_probes": 2,
+    "invalid_artifact_probes": 7,
     "errors": 0
   }
 }

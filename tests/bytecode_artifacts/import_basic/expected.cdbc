@@ -35,8 +35,8 @@ function f0 name="add" arity=2 registers=4:
   return r3
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/import_basic/input.cd" text="import \"./lib.cd\";\nprint add(2, 5);\n"
-  s1 path="tests/bytecode_artifacts/import_basic/lib.cd" text="fun add(a, b) { return a + b; }\nexport add;\n"
+  s0 module="/home/junhe/compiler/tests/bytecode_artifacts/import_basic/input.cd" path="tests/bytecode_artifacts/import_basic/input.cd" text="import \"./lib.cd\";\nprint add(2, 5);\n"
+  s1 module="/home/junhe/compiler/tests/bytecode_artifacts/import_basic/lib.cd" path="tests/bytecode_artifacts/import_basic/lib.cd" text="fun add(a, b) { return a + b; }\nexport add;\n"
 
 debug_locations:
   main 0 = s1:1:1

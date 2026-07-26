@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m3a-2026-07-26-r5",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M3A-INTERFACE-012",
+  "domain": "module-interface-verification",
+  "status": "resolved",
+  "question": "How should the M3A cache fallback and strict-policy graph matrix enter the canonical inventory?",
+  "decision": "Register six independently reported module-cache cases in tests/module_cache_cases.json and run them through the canonical verification runner while retaining the aggregate CTest.",
+  "case_ids": [
+    "module_cache.fallback.direct",
+    "module_cache.fallback.namespace",
+    "module_cache.fallback.re_export",
+    "module_cache.fallback.search_path",
+    "module_cache.rebuild_reuse",
+    "module_cache.strict_rejection"
+  ],
+  "migration": {
+    "legacy_runner": "bytecode_module_cache CTest remains active",
+    "canonical_runner": "tests/run_verification.py records each manifest result",
+    "assertions": "existing module-cache assertions are reused without a second implementation"
+  },
+  "compatibility_boundary": {
+    "language": "unchanged",
+    "cdi": "cdi 0.1 unchanged",
+    "cdbc": "cdbc 0.1 unchanged",
+    "default_fallback": "unchanged"
+  },
+  "quantitative_gate": {
+    "inventory_cases": 1763,
+    "module_cache_cases": 6,
+    "canonical_command": "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json",
+    "observed": "1763 passed, 0 failed"
+  },
+  "old_path_deletion_condition": "Do not remove source fallback or dependency-body checking until the complete imported-file, visibility, diagnostic, and repeated-build inventory has stable IDs and zero unexplained parity differences.",
+  "out_of_scope": [
+    "default cache policy change",
+    "remote cache support",
+    "FrontendSession product-content validation",
+    "Rust-side cdi loading"
+  ],
+  "verification": {
+    "focused_commands": [
+      "python3 tests/verification_inventory.py",
+      "python3 tests/run_verification_selftest.py",
+      "python3 tests/bytecode_module_cache_tests.py ./build/compiler_design vm-rs",
+      "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json",
+      "git diff --check"
+    ],
+    "manifest": "tests/module_cache_cases.json",
+    "runner": "tests/run_verification.py"
+  }
+}

@@ -339,7 +339,10 @@ impl<'a> Parser<'a> {
     fn parse_instructions_until_function(&mut self) -> Result<Vec<Instruction>, ParseError> {
         let mut instructions = Vec::new();
         while let Some((line_number, line)) = self.peek() {
-            if line.starts_with("function ") || line == "debug_sources:" || line == "debug_locations:" {
+            if line.starts_with("function ")
+                || line == "debug_sources:"
+                || line == "debug_locations:"
+            {
                 break;
             }
             self.advance();
@@ -362,7 +365,7 @@ impl<'a> Parser<'a> {
                 break;
             }
             self.advance();
-            let (source_ref, rest) = split_once(line_number, line, " path=")?;
+            let (source_ref, rest) = split_once(line_number, line, " ")?;
             let index = parse_prefixed(line_number, source_ref, 's', "source reference")?;
             if index != sources.len() {
                 return Err(ParseError {
@@ -370,13 +373,27 @@ impl<'a> Parser<'a> {
                     message: format!("expected source s{}", sources.len()),
                 });
             }
+            let (module, rest) = if let Some(module_text) = rest.strip_prefix("module=") {
+                let (module, rest) = parse_string_prefix(line_number, module_text)?;
+                let rest = rest.strip_prefix(" path=").ok_or_else(|| ParseError {
+                    line: line_number,
+                    message: "expected source path".to_string(),
+                })?;
+                (Some(module), rest)
+            } else {
+                let rest = rest.strip_prefix("path=").ok_or_else(|| ParseError {
+                    line: line_number,
+                    message: "expected source path".to_string(),
+                })?;
+                (None, rest)
+            };
             let (path, rest) = parse_string_prefix(line_number, rest)?;
             let rest = rest.strip_prefix(" text=").ok_or_else(|| ParseError {
                 line: line_number,
                 message: "expected source text".to_string(),
             })?;
             let text = parse_string_full(line_number, rest)?;
-            sources.push(DebugSource { path, text });
+            sources.push(DebugSource { module, path, text });
         }
         if self.peek().is_some() && self.peek().unwrap().1 != "debug_locations:" {
             return Err(ParseError {
@@ -515,6 +532,7 @@ pub fn parse_artifact(source: &str) -> Result<Artifact, ParseError> {
         None
     };
     let program = parse_program_body(&mut parser)?;
+    validate_program(&program, parser.last_line())?;
     match module {
         Some(module) => {
             let artifact = ModuleArtifact {
@@ -574,6 +592,430 @@ fn validate_module_artifact(artifact: &ModuleArtifact, line: usize) -> Result<()
             });
         }
         previous_offset = dependency.instruction_offset;
+    }
+    Ok(())
+}
+
+const SUPPORTED_NATIVE_FUNCTIONS: &[&str] = &[
+    "push",
+    "pop",
+    "remove",
+    "clear",
+    "merge",
+    "keys",
+    "values",
+    "floor",
+    "ceil",
+    "sqrt",
+    "str",
+    "substr",
+    "charAt",
+    "typeOf",
+    "contains",
+    "slice",
+    "copy",
+    "concat",
+    "map",
+    "filter",
+    "flatMap",
+    "any",
+    "all",
+    "count",
+    "find",
+    "findIndex",
+    "reduce",
+    "range",
+];
+
+fn validation_error(line: usize, message: impl Into<String>) -> ParseError {
+    ParseError {
+        line,
+        message: message.into(),
+    }
+}
+
+fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
+    for (index, source) in program.debug_sources.iter().enumerate() {
+        if source.module.as_ref().is_some_and(String::is_empty) {
+            return Err(validation_error(
+                line,
+                format!("debug source s{} has an empty module identity", index),
+            ));
+        }
+    }
+    for (index, constant) in program.constants.iter().enumerate() {
+        if let Constant::Number(value) = constant {
+            let parsed = value.parse::<f64>().map_err(|_| {
+                validation_error(
+                    line,
+                    format!("constant c{} is not a valid number literal", index),
+                )
+            })?;
+            if !parsed.is_finite() {
+                return Err(validation_error(
+                    line,
+                    format!("constant c{} must be a finite number literal", index),
+                ));
+            }
+        }
+    }
+
+    validate_body(
+        "main",
+        program.main.registers,
+        &program.main.instructions,
+        &program.main.locations,
+        program,
+        line,
+    )?;
+    for (index, function) in program.functions.iter().enumerate() {
+        if function.index != index {
+            return Err(validation_error(
+                line,
+                format!(
+                    "function table entry {} has index f{}",
+                    index, function.index
+                ),
+            ));
+        }
+        if function.params.len() != function.arity {
+            return Err(validation_error(
+                line,
+                format!(
+                    "function f{} declares arity {}, but has {} parameters",
+                    index,
+                    function.arity,
+                    function.params.len()
+                ),
+            ));
+        }
+        validate_body(
+            &format!("function f{}", index),
+            function.registers,
+            &function.instructions,
+            &function.locations,
+            program,
+            line,
+        )?;
+    }
+    Ok(())
+}
+
+fn validate_body(
+    context: &str,
+    registers: usize,
+    instructions: &[Instruction],
+    locations: &[Option<DebugLocation>],
+    program: &Program,
+    line: usize,
+) -> Result<(), ParseError> {
+    if locations.len() != instructions.len() {
+        return Err(validation_error(
+            line,
+            format!(
+                "{} has {} debug locations for {} instructions",
+                context,
+                locations.len(),
+                instructions.len()
+            ),
+        ));
+    }
+    for (instruction_index, instruction) in instructions.iter().enumerate() {
+        validate_instruction(
+            context,
+            instruction_index,
+            registers,
+            instructions.len(),
+            instruction,
+            program,
+            line,
+        )?;
+    }
+    Ok(())
+}
+
+fn validate_instruction(
+    context: &str,
+    instruction_index: usize,
+    registers: usize,
+    instruction_count: usize,
+    instruction: &Instruction,
+    program: &Program,
+    line: usize,
+) -> Result<(), ParseError> {
+    let register = |index: usize, role: &str| {
+        if index >= registers {
+            Err(validation_error(
+                line,
+                format!(
+                    "{} instruction {} {} register r{} out of range (register count {})",
+                    context, instruction_index, role, index, registers
+                ),
+            ))
+        } else {
+            Ok(())
+        }
+    };
+    let constant = |index: usize| {
+        if index >= program.constants.len() {
+            Err(validation_error(
+                line,
+                format!(
+                    "{} instruction {} constant c{} out of range (constant count {})",
+                    context,
+                    instruction_index,
+                    index,
+                    program.constants.len()
+                ),
+            ))
+        } else {
+            Ok(())
+        }
+    };
+    let name = |index: usize, role: &str| {
+        if index >= program.names.len() {
+            Err(validation_error(
+                line,
+                format!(
+                    "{} instruction {} {} name n{} out of range (name count {})",
+                    context,
+                    instruction_index,
+                    role,
+                    index,
+                    program.names.len()
+                ),
+            ))
+        } else {
+            Ok(())
+        }
+    };
+    let function = |index: usize| {
+        if index >= program.functions.len() {
+            Err(validation_error(
+                line,
+                format!(
+                    "{} instruction {} function f{} out of range (function count {})",
+                    context,
+                    instruction_index,
+                    index,
+                    program.functions.len()
+                ),
+            ))
+        } else {
+            Ok(())
+        }
+    };
+    let jump = |target: usize| {
+        if target > instruction_count {
+            Err(validation_error(
+                line,
+                format!(
+                    "{} instruction {} jump target {} out of range (instruction count {})",
+                    context, instruction_index, target, instruction_count
+                ),
+            ))
+        } else {
+            Ok(())
+        }
+    };
+    let registers = |values: &[usize], role: &str| {
+        for (index, value) in values.iter().enumerate() {
+            register(*value, &format!("{} {}", role, index))?;
+        }
+        Ok(())
+    };
+
+    match instruction {
+        Instruction::Constant {
+            dest,
+            constant: value,
+        } => {
+            register(*dest, "destination")?;
+            constant(*value)?;
+        }
+        Instruction::MakeFunction {
+            dest,
+            function: value,
+        } => {
+            register(*dest, "destination")?;
+            function(*value)?;
+        }
+        Instruction::Array { dest, elements } => {
+            register(*dest, "destination")?;
+            registers(elements, "array element")?;
+        }
+        Instruction::Map { dest, entries } => {
+            register(*dest, "destination")?;
+            for (index, (key, value)) in entries.iter().enumerate() {
+                register(*key, &format!("map entry {} key", index))?;
+                register(*value, &format!("map entry {} value", index))?;
+            }
+        }
+        Instruction::Struct {
+            dest,
+            type_name,
+            fields,
+        } => {
+            register(*dest, "destination")?;
+            if let Some(type_name) = type_name {
+                name(*type_name, "struct type")?;
+            }
+            for (index, (field, value)) in fields.iter().enumerate() {
+                name(*field, &format!("struct field {}", index))?;
+                register(*value, &format!("struct field {} value", index))?;
+            }
+        }
+        Instruction::Variant {
+            dest,
+            enum_name,
+            variant_name,
+            payload,
+        } => {
+            register(*dest, "destination")?;
+            name(*enum_name, "variant enum")?;
+            name(*variant_name, "variant name")?;
+            registers(payload, "variant payload")?;
+        }
+        Instruction::VariantTag {
+            dest,
+            value,
+            enum_name,
+            variant_name,
+        } => {
+            register(*dest, "destination")?;
+            register(*value, "variant tag value")?;
+            name(*enum_name, "variant enum")?;
+            name(*variant_name, "variant name")?;
+        }
+        Instruction::VariantField { dest, value, .. } => {
+            register(*dest, "destination")?;
+            register(*value, "variant field value")?;
+        }
+        Instruction::Move { dest, source } => {
+            register(*dest, "destination")?;
+            register(*source, "source")?;
+        }
+        Instruction::LoadVar { dest, name: value } => {
+            register(*dest, "destination")?;
+            name(*value, "variable")?;
+        }
+        Instruction::StoreVar {
+            name: value,
+            value: source,
+        }
+        | Instruction::AssignVar {
+            name: value,
+            value: source,
+        } => {
+            name(*value, "variable")?;
+            register(*source, "value")?;
+        }
+        Instruction::Call {
+            dest,
+            callee,
+            arguments,
+        } => {
+            register(*dest, "destination")?;
+            register(*callee, "callee")?;
+            registers(arguments, "call argument")?;
+        }
+        Instruction::NativeCall {
+            dest,
+            name: value,
+            arguments,
+        } => {
+            register(*dest, "destination")?;
+            name(*value, "native function")?;
+            if !SUPPORTED_NATIVE_FUNCTIONS.contains(&program.names[*value].as_str()) {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "{} instruction {} unsupported native function `{}`",
+                        context, instruction_index, program.names[*value]
+                    ),
+                ));
+            }
+            registers(arguments, "native argument")?;
+        }
+        Instruction::Index {
+            dest,
+            collection,
+            index,
+        } => {
+            register(*dest, "destination")?;
+            register(*collection, "index collection")?;
+            register(*index, "index value")?;
+        }
+        Instruction::AssignIndex {
+            dest,
+            collection,
+            index,
+            value,
+        } => {
+            register(*dest, "destination")?;
+            register(*collection, "index collection")?;
+            register(*index, "index value")?;
+            register(*value, "assigned value")?;
+        }
+        Instruction::Field {
+            dest,
+            object,
+            name: value,
+        } => {
+            register(*dest, "destination")?;
+            register(*object, "field object")?;
+            name(*value, "field")?;
+        }
+        Instruction::AssignField {
+            dest,
+            object,
+            name: field,
+            value,
+        } => {
+            register(*dest, "destination")?;
+            register(*object, "field object")?;
+            name(*field, "field")?;
+            register(*value, "assigned value")?;
+        }
+        Instruction::Len { dest, value }
+        | Instruction::AssertArray { dest, value }
+        | Instruction::Negate { dest, value }
+        | Instruction::Not { dest, value } => {
+            register(*dest, "destination")?;
+            register(*value, "value")?;
+        }
+        Instruction::AssertNumber {
+            dest,
+            value,
+            message,
+        } => {
+            register(*dest, "destination")?;
+            register(*value, "value")?;
+            name(*message, "assertion message")?;
+        }
+        Instruction::Print { value } | Instruction::Return { value } => {
+            register(*value, "value")?;
+        }
+        Instruction::Add { dest, left, right }
+        | Instruction::Subtract { dest, left, right }
+        | Instruction::Multiply { dest, left, right }
+        | Instruction::Divide { dest, left, right }
+        | Instruction::Equal { dest, left, right }
+        | Instruction::NotEqual { dest, left, right }
+        | Instruction::Greater { dest, left, right }
+        | Instruction::GreaterEqual { dest, left, right }
+        | Instruction::Less { dest, left, right }
+        | Instruction::LessEqual { dest, left, right } => {
+            register(*dest, "destination")?;
+            register(*left, "left operand")?;
+            register(*right, "right operand")?;
+        }
+        Instruction::Jump { target } => jump(*target)?,
+        Instruction::JumpIfFalse { condition, target }
+        | Instruction::JumpIfTrue { condition, target } => {
+            register(*condition, "jump condition")?;
+            jump(*target)?;
+        }
     }
     Ok(())
 }
@@ -678,9 +1120,12 @@ fn format_program_sections(out: &mut String, program: &Program) {
     if !program.debug_sources.is_empty() {
         out.push_str("\ndebug_sources:\n");
         for (index, source) in program.debug_sources.iter().enumerate() {
+            out.push_str(&format!("  s{} ", index));
+            if let Some(module) = &source.module {
+                out.push_str(&format!("module={} ", quote_string(module)));
+            }
             out.push_str(&format!(
-                "  s{} path={} text={}\n",
-                index,
+                "path={} text={}\n",
                 quote_string(&source.path),
                 quote_string(&source.text)
             ));
@@ -779,10 +1224,7 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
             }),
             "map" => {
                 let entries = parse_map_entries(line, operands)?;
-                Ok(Instruction::Map {
-                    dest,
-                    entries,
-                })
+                Ok(Instruction::Map { dest, entries })
             }
             "struct" => {
                 let (type_name, field_text) = parse_optional_struct_type_name(line, operands)?;
@@ -1478,9 +1920,65 @@ mod tests {
     }
 
     #[test]
+    fn rejects_invalid_bytecode_references_before_execution() {
+        let cases = [
+            (
+                "destination register",
+                "cdbc 0.1\n\nconstants:\n  c0 = nil\n\nnames:\n\nmain registers=1:\n  r1 = constant c0\n",
+                "destination register r1 out of range",
+            ),
+            (
+                "constant reference",
+                "cdbc 0.1\n\nconstants:\n  c0 = nil\n\nnames:\n\nmain registers=1:\n  r0 = constant c1\n",
+                "constant c1 out of range",
+            ),
+            (
+                "name reference",
+                "cdbc 0.1\n\nconstants:\n\nnames:\n\nmain registers=1:\n  r0 = load_var n0\n",
+                "name n0 out of range",
+            ),
+            (
+                "function reference",
+                "cdbc 0.1\n\nconstants:\n\nnames:\n\nmain registers=1:\n  r0 = make_function f0\n",
+                "function f0 out of range",
+            ),
+            (
+                "jump target",
+                "cdbc 0.1\n\nconstants:\n\nnames:\n\nmain registers=1:\n  jump 2\n",
+                "jump target 2 out of range",
+            ),
+            (
+                "native capability",
+                "cdbc 0.1\n\nconstants:\n\nnames:\n  n0 = \"not_native\"\n\nmain registers=1:\n  r0 = native_call n0 []\n",
+                "unsupported native function `not_native`",
+            ),
+            (
+                "number constant",
+                "cdbc 0.1\n\nconstants:\n  c0 = number not-a-number\n\nnames:\n\nmain registers=0:\n",
+                "constant c0 is not a valid number literal",
+            ),
+            (
+                "empty debug module identity",
+                "cdbc 0.1\n\nconstants:\n\nnames:\n\nmain registers=0:\n\ndebug_sources:\n  s0 module=\"\" path=\"demo.cd\" text=\"\"\n",
+                "debug source s0 has an empty module identity",
+            ),
+        ];
+        for (name, source, expected) in cases {
+            let error = parse_program(source).expect_err(name);
+            assert!(
+                error.message.contains(expected),
+                "{}: {}",
+                name,
+                error.message
+            );
+        }
+    }
+
+    #[test]
     fn parses_all_opcode_shapes() {
         let source = "cdbc 0.1\n\nconstants:\n  c0 = nil\n  c1 = number 1.5\n  c2 = bool true\n  c3 = string \"hello\"\n\nnames:\n  n0 = \"x#0\"\n  n1 = \"Box\"\n\nmain registers=38:\n  r0 = constant c0\n  r1 = make_function f0\n  r2 = array [r0, r1]\n  r3 = map [r0: r1, r1: r2]\n  r4 = struct {n0: r1}\n  r5 = struct n1 {n0: r1}\n  r6 = move r2\n  r7 = load_var n0\n  store_var n0, r6\n  assign_var n0, r6\n  r8 = call r1 [r0, r2]\n  r9 = index r2, r0\n  r10 = assign_index r2, r0, r1\n  r11 = len r2\n  print r11\n  return r11\n  r12 = negate r11\n  r13 = not r11\n  r14 = add r11, r12\n  r15 = subtract r11, r12\n  r16 = multiply r11, r12\n  r17 = divide r11, r12\n  r18 = equal r11, r12\n  r19 = not_equal r11, r12\n  r20 = greater r11, r12\n  r21 = greater_equal r11, r12\n  r22 = less r11, r12\n  r23 = less_equal r11, r12\n  jump 30\n  jump_if_false r23, 31\n  jump_if_true r23, 32\n\nfunction f0 name=\"id\" arity=1 registers=1:\n  param 0 = \"arg#0\"\n  return r0\n";
-        let program = parse_program(source).expect("parse all opcode shapes");
+        let source = source.replace("jump_if_true r23, 32", "jump_if_true r23, 31");
+        let program = parse_program(&source).expect("parse all opcode shapes");
         assert_eq!(format_program(&program), source);
     }
 
@@ -1507,10 +2005,32 @@ debug_locations:
   main 2 = s0:1:7
 "#;
         let program = parse_program(source).expect("valid debug artifact");
+        assert_eq!(program.debug_sources[0].module, None);
         assert_eq!(program.debug_sources[0].path, "demo.cd");
         assert_eq!(program.debug_sources[0].text, "print 1 / 0;\n");
         assert_eq!(program.main.locations[2].as_ref().unwrap().line, 1);
         assert_eq!(program.main.locations[2].as_ref().unwrap().column, 7);
+    }
+
+    #[test]
+    fn parses_and_formats_debug_source_module_identity() {
+        let source = r#"cdbc 0.1
+
+constants:
+
+names:
+
+main registers=0:
+
+debug_sources:
+  s0 module="/workspace/demo.cd" path="demo.cd" text="print 1;\n"
+"#;
+        let program = parse_program(source).expect("valid module-aware debug artifact");
+        assert_eq!(
+            program.debug_sources[0].module.as_deref(),
+            Some("/workspace/demo.cd")
+        );
+        assert_eq!(format_program(&program), source);
     }
 
     #[test]
@@ -1592,7 +2112,8 @@ main registers=0:
   print r0
   print r0
 "#;
-        let artifact = parse_artifact(source).expect("valid dependency markers");
+        let source = source.replace("main registers=0:", "main registers=1:");
+        let artifact = parse_artifact(&source).expect("valid dependency markers");
         let Artifact::Module(module) = artifact else {
             panic!("expected module artifact");
         };

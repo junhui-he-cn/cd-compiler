@@ -123,8 +123,8 @@ function f3 name="make" arity=0 registers=2:
   return r1
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/generic_explicit_type_arguments/input.cd" text="import \"lib.cd\" as lib;\n\nfun identity<T>(value: T): T {\n  return value;\n}\nfun head<T>(values: [T]): T {\n  return values[0];\n}\nfun make<T>(): T? {\n  return nil;\n}\nprint identity<number>(42);\nprint identity<string>(\"hello\");\nprint head<number>([1, 2]);\nprint identity<[number]>([3, 4]);\nprint make<number>();\nlet alias = identity;\nprint alias<bool>(true);\nprint lib.identity<number>(7);\n"
-  s1 path="tests/bytecode_artifacts/generic_explicit_type_arguments/lib.cd" text="fun identity<T>(value: T): T {\n  return value;\n}\nexport identity;\n"
+  s0 module="/home/junhe/compiler/tests/bytecode_artifacts/generic_explicit_type_arguments/input.cd" path="tests/bytecode_artifacts/generic_explicit_type_arguments/input.cd" text="import \"lib.cd\" as lib;\n\nfun identity<T>(value: T): T {\n  return value;\n}\nfun head<T>(values: [T]): T {\n  return values[0];\n}\nfun make<T>(): T? {\n  return nil;\n}\nprint identity<number>(42);\nprint identity<string>(\"hello\");\nprint head<number>([1, 2]);\nprint identity<[number]>([3, 4]);\nprint make<number>();\nlet alias = identity;\nprint alias<bool>(true);\nprint lib.identity<number>(7);\n"
+  s1 module="/home/junhe/compiler/tests/bytecode_artifacts/generic_explicit_type_arguments/lib.cd" path="tests/bytecode_artifacts/generic_explicit_type_arguments/lib.cd" text="fun identity<T>(value: T): T {\n  return value;\n}\nexport identity;\n"
 
 debug_locations:
   main 0 = s1:1:1

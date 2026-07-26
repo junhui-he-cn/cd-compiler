@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m3a-2026-07-26-r6",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M3A-INTERFACE-013",
+  "domain": "module-interface-fallback",
+  "status": "resolved",
+  "question": "What diagnostic and partial-reuse behavior must be proven when an imported sidecar is rejected?",
+  "decision": "Default source fallback remains authoritative for imported parse and type diagnostics, while independently valid lower dependency sidecars may remain reused when an importer sidecar is invalid.",
+  "case_ids": [
+    "module_cache.fallback.diagnostics",
+    "module_cache.fallback.partial_dependency"
+  ],
+  "diagnostic_contract": {
+    "parse": "preserve Parse error kind, canonical imported path, and source diagnostic text",
+    "type": "preserve Type error kind, canonical imported path, and source diagnostic text",
+    "comparison": "no-cache and malformed-cache return code, stdout, and stderr are identical"
+  },
+  "partial_reuse_contract": {
+    "valid_lower_dependency": "sidecar hit omits its private body",
+    "invalid_importer": "source body remains available to the importer graph",
+    "repeated": "cached output is deterministic across repeated builds"
+  },
+  "compatibility_boundary": {
+    "language": "unchanged",
+    "cdi": "cdi 0.1 unchanged",
+    "cdbc": "cdbc 0.1 unchanged",
+    "default_fallback": "unchanged"
+  },
+  "old_path_deletion_condition": "Do not remove source fallback or dependency-body checking until the complete imported visibility and diagnostic inventory has zero unexplained parity differences.",
+  "out_of_scope": [
+    "strict-policy changes",
+    "cache repair",
+    "remote cache storage",
+    "FrontendSession product-content validation",
+    "Rust-side cdi loading"
+  ],
+  "verification": {
+    "focused_commands": [
+      "python3 tests/bytecode_module_cache_tests.py ./build/compiler_design vm-rs",
+      "python3 tests/verification_inventory.py",
+      "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json",
+      "git diff --check"
+    ],
+    "runner": "tests/run_verification.py",
+    "manifest": "tests/module_cache_cases.json"
+  }
+}

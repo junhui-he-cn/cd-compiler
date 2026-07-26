@@ -91,6 +91,13 @@ def main() -> int:
 
         _, entry_text = entry_artifact
         _, dependency_text = dependency_artifact
+        for module_path in (source.resolve(), (source.parent / "lib.cd").resolve()):
+            identity = f'module="{module_path}" path="'
+            if identity not in entry_text or identity not in dependency_text:
+                return fail(
+                    "module products did not retain canonical source-to-module identity\n"
+                    f"missing={identity}"
+                )
         if 'kind=import at=2 requested="./lib.cd"' not in entry_text:
             return fail("entry artifact did not preserve the import insertion marker")
         if 'string "before"' not in entry_text or 'string "after"' not in entry_text:
@@ -99,6 +106,39 @@ def main() -> int:
             return fail("entry artifact lowered dependency statements into its body")
         if 'string "lib"' not in dependency_text:
             return fail("dependency artifact did not contain its own body")
+
+        def expect_dump_rejection(label: str, text: str) -> int | None:
+            malformed_path = Path(temporary) / f"{label}.cdbc"
+            malformed_path.write_text(text, encoding="utf-8")
+            rejected = run([
+                "cargo",
+                "run",
+                "--quiet",
+                "--manifest-path",
+                str(manifest),
+                "--",
+                "dump",
+                str(malformed_path),
+            ])
+            if rejected.returncode == 0 or rejected.stdout or not rejected.stderr:
+                return fail(
+                    f"{label} module artifact was accepted or produced stdout\n"
+                    f"exit={rejected.returncode}\nstdout={rejected.stdout}\nstderr={rejected.stderr}"
+                )
+            return None
+
+        malformed_offset = entry_text.replace(
+            ' at=2 requested="./lib.cd"',
+            ' at=999 requested="./lib.cd"',
+            1,
+        )
+        rejected = expect_dump_rejection("invalid-module-offset", malformed_offset)
+        if rejected is not None:
+            return rejected
+        malformed_entry_order = entry_text.replace("  entry_order = 0\n", "", 1)
+        rejected = expect_dump_rejection("missing-entry-order", malformed_entry_order)
+        if rejected is not None:
+            return rejected
 
         linked_path = Path(temporary) / "linked.cdbc"
         linked = run([

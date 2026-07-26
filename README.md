@@ -550,7 +550,7 @@ Type error at 1:7: undefined variable `missing`
         ^
 ```
 
-Located lexer, parser, and type diagnostics include a source line and caret. For imported files and direct multi-file inputs, diagnostics report the original file path plus file-local line and column. For stdin and single-file inputs without imports, front-end diagnostics remain pathless. Runtime failures from compiler-emitted `.cdbc` artifacts include the embedded source path, source line, caret, and an innermost-to-outermost `Call stack`; metadata-free hand-written or legacy artifacts retain the one-line runtime form. When the parser can recover at statement boundaries, a single run may report multiple `Parse` diagnostics before later compiler phases are skipped. Lexer, import, type, and compile diagnostics still stop at the first reported error.
+Located lexer, parser, and type diagnostics include a source line and caret. For imported files and direct multi-file inputs, diagnostics report the original file path plus file-local line and column. For stdin and single-file inputs without imports, front-end diagnostics remain pathless. Runtime failures from compiler-emitted `.cdbc` artifacts include the embedded source path, source line, caret, and an innermost-to-outermost `Call stack`; import-aware artifacts also retain each source's canonical module identity for linkers and future debug consumers. Metadata-free hand-written or legacy artifacts retain the one-line runtime form. When the parser can recover at statement boundaries, a single run may report multiple `Parse` diagnostics before later compiler phases are skipped. Lexer, import, type, and compile diagnostics still stop at the first reported error.
 
 ## Build
 
@@ -665,6 +665,7 @@ python3 tests/run_golden_tests.py ./build/compiler_design --update --update-miss
 ./build/compiler_design --emit-bytecode program.cdbc examples/hello.cd
 ./build/compiler_design --emit-module-bytecode module-products examples/hello.cd
 ./build/compiler_design --module-interface-cache module-cache examples/hello.cd
+./build/compiler_design --module-interface-cache module-cache --module-cache-strict examples/hello.cd
 ```
 
 Multiple input files may be provided. They are read in command-line order and compiled as one combined program:
@@ -705,5 +706,10 @@ checks must all succeed, otherwise the dependency is parsed from source:
   --module-cache module-cache \
   --module-rebuild-report rebuild.json main.cd
 ```
+
+The default cache policy falls back to source for a missing or invalid imported
+sidecar. Add `--module-cache-strict` with either cache option to reject those
+inputs with a stable `Import` diagnostic instead. Strict mode still parses
+entry modules from source and requires an explicit cache directory.
 
 If no file is provided, source is read from stdin. Imported-file and direct multi-file front-end diagnostics report original file paths with file-local line and column; stdin diagnostics remain pathless.

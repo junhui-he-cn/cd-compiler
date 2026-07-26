@@ -24,6 +24,7 @@ REPO_ROOT = TESTS_DIR.parent
 sys.path.insert(0, str(TESTS_DIR))
 
 import bytecode_artifact_tests  # noqa: E402
+import bytecode_module_cache_tests  # noqa: E402
 import boundary_comparison  # noqa: E402
 import run_golden_tests  # noqa: E402
 import run_boundary_tests  # noqa: E402
@@ -183,6 +184,18 @@ def run_artifact_suite(
     return run_imported_runner(checks, "artifact", callback)
 
 
+def run_module_cache_suite(
+    compiler: Path,
+    vm_manifest: Path,
+    checks: list[dict[str, object]],
+) -> tuple[list[RecordedResult], list[str]]:
+    return run_imported_runner(
+        checks,
+        "module_cache",
+        lambda: bytecode_module_cache_tests.run_all(compiler, vm_manifest.parent),
+    )
+
+
 def run_rust_artifact_suite(
     compiler: Path,
     vm_manifest: Path,
@@ -302,6 +315,7 @@ def run_canonical(
             ),
         ),
         ("artifact", lambda: run_artifact_suite(compiler, vm_manifest, checks)),
+        ("module_cache", lambda: run_module_cache_suite(compiler, vm_manifest, checks)),
         ("rust_vm_artifact", lambda: run_rust_artifact_suite(compiler, vm_manifest, checks)),
         ("rust_vm_golden", lambda: run_rust_golden_suite(compiler, vm_manifest, checks)),
         (

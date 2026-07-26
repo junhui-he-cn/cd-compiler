@@ -30,6 +30,21 @@ void writeFile(const fs::path& path, const std::string& source)
     output << source;
 }
 
+std::string readFile(const fs::path& path)
+{
+    std::ifstream input(path);
+    std::ostringstream source;
+    source << input.rdbuf();
+    return source.str();
+}
+
+void replaceText(std::string& source, const std::string& from, const std::string& to)
+{
+    const std::size_t position = source.find(from);
+    assert(position != std::string::npos);
+    source.replace(position, from.size(), to);
+}
+
 const ModuleStmt* moduleByPath(const Program& program, const fs::path& path)
 {
     const std::string expected = pathString(path);
@@ -157,6 +172,12 @@ void test_search_path_resolves_extensionless_import_and_reexport(const fs::path&
     for (std::size_t index = 0; index < graph.nodes.size(); ++index) {
         assert(program.moduleGraph->nodes[index].moduleId == graph.nodes[index].moduleId);
         assert(program.moduleGraph->nodes[index].canonicalPath == graph.nodes[index].canonicalPath);
+        const auto source = std::find_if(
+            program.sources.begin(),
+            program.sources.end(),
+            [&](const SourceFile& file) { return file.id == graph.nodes[index].sourceId; });
+        assert(source != program.sources.end());
+        assert(source->moduleIdentity == graph.nodes[index].canonicalPath);
     }
     for (std::size_t index = 0; index < graph.edges.size(); ++index) {
         assert(program.moduleGraph->edges[index].importingModuleId == graph.edges[index].importingModuleId);
@@ -380,6 +401,326 @@ void test_module_interface_cache_hit_reuses_dependency_interfaces(const fs::path
     assert(preloaded[1].values[0].resolvedName == "value#8");
 }
 
+void assertSourceFallback(
+    const fs::path& caseRoot,
+    const std::string& expectedDependencySource)
+{
+    FrontendSession session;
+    session.setModuleInterfaceCacheDirectory(caseRoot / "cache");
+    Program program = session.loadFiles({(caseRoot / "entry.cd").string()});
+    const ModuleStmt* dependency = moduleByPath(program, caseRoot / "lib.cd");
+    assert(!dependency->statements.empty());
+    assert(dependency->source == expectedDependencySource);
+    const std::string canonicalPath = pathString(fs::weakly_canonical(caseRoot / "lib.cd"));
+    assert(std::none_of(
+        session.preloadedModuleInterfaces().begin(),
+        session.preloadedModuleInterfaces().end(),
+        [&canonicalPath](const ModuleInterface& interfaceInfo) {
+            return interfaceInfo.canonicalPath == canonicalPath;
+        }));
+}
+
+void writeSingleModuleCacheCase(
+    const fs::path& caseRoot,
+    const std::string& source)
+{
+    writeFile(caseRoot / "lib.cd", source);
+    writeFile(
+        caseRoot / "entry.cd",
+        "import \"./lib.cd\";\n"
+        "print value;\n");
+}
+
+std::string writeSingleModuleSidecar(
+    const fs::path& caseRoot,
+    const std::string& source)
+{
+    ModuleInterface interfaceInfo;
+    interfaceInfo.values.push_back(ModuleInterfaceValue{
+        "value",
+        simpleType(StaticType::Number),
+        "value#11",
+    });
+    return writeCachedModule(
+        caseRoot / "cache",
+        caseRoot / "lib.cd",
+        source,
+        interfaceInfo,
+        {});
+}
+
+void test_module_interface_cache_fallbacks(const fs::path& root)
+{
+    const std::string validSource =
+        "let value = 7;\n"
+        "export value;\n";
+
+    const fs::path missingSidecar = root / "missing_sidecar";
+    fs::remove_all(missingSidecar);
+    writeSingleModuleCacheCase(missingSidecar, validSource);
+    fs::create_directories(missingSidecar / "cache");
+    assertSourceFallback(missingSidecar, validSource);
+
+    const fs::path malformedSidecar = root / "malformed_sidecar";
+    fs::remove_all(malformedSidecar);
+    writeSingleModuleCacheCase(malformedSidecar, validSource);
+    (void)writeSingleModuleSidecar(malformedSidecar, validSource);
+    writeFile(
+        moduleInterfaceArtifactPath(
+            malformedSidecar / "cache",
+            pathString(fs::weakly_canonical(malformedSidecar / "lib.cd"))),
+        "cdi 9.9\n");
+    assertSourceFallback(malformedSidecar, validSource);
+
+    const fs::path missingProduct = root / "missing_product";
+    fs::remove_all(missingProduct);
+    writeSingleModuleCacheCase(missingProduct, validSource);
+    const std::string interfaceHash = writeSingleModuleSidecar(missingProduct, validSource);
+    ModuleCacheModule cacheModule;
+    cacheModule.identity = pathString(fs::weakly_canonical(missingProduct / "lib.cd"));
+    cacheModule.sourceHash = moduleCacheHash(validSource);
+    cacheModule.interfaceHash = interfaceHash;
+    assert(fs::remove(missingProduct / "cache" / moduleCacheArtifactPath(cacheModule)));
+    assertSourceFallback(missingProduct, validSource);
+
+    const fs::path changedSource = root / "changed_source";
+    fs::remove_all(changedSource);
+    writeSingleModuleCacheCase(changedSource, validSource);
+    (void)writeSingleModuleSidecar(changedSource, validSource);
+    const std::string changedSourceText =
+        "let value = 8;\n"
+        "export value;\n";
+    writeFile(changedSource / "lib.cd", changedSourceText);
+    assertSourceFallback(changedSource, changedSourceText);
+}
+
+void test_module_interface_cache_dependency_hash_fallback(const fs::path& root)
+{
+    fs::remove_all(root);
+    const fs::path base = root / "base.cd";
+    const fs::path library = root / "lib.cd";
+    const fs::path entry = root / "entry.cd";
+    const fs::path cache = root / "cache";
+    const std::string baseSource =
+        "let baseValue = 3;\n"
+        "export baseValue;\n";
+    const std::string librarySource =
+        "import \"./base.cd\";\n"
+        "let value = 7;\n"
+        "export value;\n";
+    writeFile(base, baseSource);
+    writeFile(library, librarySource);
+    writeFile(entry, "import \"./lib.cd\";\nprint value;\n");
+
+    ModuleInterface baseInterface;
+    baseInterface.values.push_back(ModuleInterfaceValue{
+        "baseValue",
+        simpleType(StaticType::Number),
+        "baseValue#12",
+    });
+    const std::string baseHash = writeCachedModule(
+        cache,
+        base,
+        baseSource,
+        baseInterface,
+        {});
+
+    ModuleInterface libraryInterface;
+    libraryInterface.values.push_back(ModuleInterfaceValue{
+        "value",
+        simpleType(StaticType::Number),
+        "value#13",
+    });
+    const std::string baseIdentity = pathString(fs::weakly_canonical(base));
+    writeCachedModule(
+        cache,
+        library,
+        librarySource,
+        libraryInterface,
+        {ModuleInterfaceArtifactDependency{
+            baseIdentity,
+            ModuleGraphEdgeKind::Import,
+            "./base.cd",
+            baseHash + "-stale",
+        }});
+
+    FrontendSession session;
+    session.setModuleInterfaceCacheDirectory(cache);
+    Program program = session.loadFiles({entry.string()});
+    const ModuleStmt* cachedBase = moduleByPath(program, base);
+    const ModuleStmt* parsedLibrary = moduleByPath(program, library);
+    assert(cachedBase->statements.empty());
+    assert(!parsedLibrary->statements.empty());
+    assert(session.preloadedModuleInterfaces().size() == 1);
+    assert(session.preloadedModuleInterfaces().front().canonicalPath == baseIdentity);
+    assert(session.moduleGraph().edges.size() == 2);
+    assert(session.moduleGraph().edges[0].importingModuleId == parsedLibrary->moduleId);
+    assert(session.moduleGraph().edges[0].importedModuleId == cachedBase->moduleId);
+}
+
+void test_module_interface_cache_strict(const fs::path& root)
+{
+    const std::string validSource =
+        "let value = 7;\n"
+        "export value;\n";
+
+    const auto expectedError = [](const fs::path& modulePath, const char* reason) {
+        return "module interface cache rejected for "
+            + pathString(fs::weakly_canonical(modulePath)) + ": " + reason;
+    };
+    const auto loadStrict = [](const fs::path& caseRoot) {
+        FrontendSession session;
+        session.setModuleInterfaceCacheDirectory(caseRoot / "cache");
+        session.setModuleInterfaceCacheStrict(true);
+        return session.loadFiles({(caseRoot / "entry.cd").string()});
+    };
+
+    const fs::path valid = root / "valid";
+    fs::remove_all(valid);
+    writeSingleModuleCacheCase(valid, validSource);
+    (void)writeSingleModuleSidecar(valid, validSource);
+    Program validProgram = loadStrict(valid);
+    const ModuleStmt* validDependency = moduleByPath(validProgram, valid / "lib.cd");
+    assert(validDependency->statements.empty());
+
+    const fs::path missingSidecar = root / "missing_sidecar";
+    fs::remove_all(missingSidecar);
+    writeSingleModuleCacheCase(missingSidecar, validSource);
+    fs::create_directories(missingSidecar / "cache");
+    expectImportError(
+        [&]() { (void)loadStrict(missingSidecar); },
+        expectedError(missingSidecar / "lib.cd", "missing sidecar"));
+
+    const fs::path malformedSidecar = root / "malformed_sidecar";
+    fs::remove_all(malformedSidecar);
+    writeSingleModuleCacheCase(malformedSidecar, validSource);
+    (void)writeSingleModuleSidecar(malformedSidecar, validSource);
+    writeFile(
+        moduleInterfaceArtifactPath(
+            malformedSidecar / "cache",
+            pathString(fs::weakly_canonical(malformedSidecar / "lib.cd"))),
+        "cdi 9.9\n");
+    expectImportError(
+        [&]() { (void)loadStrict(malformedSidecar); },
+        expectedError(malformedSidecar / "lib.cd", "malformed sidecar"));
+
+    const fs::path changedSource = root / "changed_source";
+    fs::remove_all(changedSource);
+    writeSingleModuleCacheCase(changedSource, validSource);
+    (void)writeSingleModuleSidecar(changedSource, validSource);
+    writeFile(changedSource / "lib.cd", "let value = 8;\nexport value;\n");
+    expectImportError(
+        [&]() { (void)loadStrict(changedSource); },
+        expectedError(changedSource / "lib.cd", "source hash mismatch"));
+
+    const fs::path missingProduct = root / "missing_product";
+    fs::remove_all(missingProduct);
+    writeSingleModuleCacheCase(missingProduct, validSource);
+    const std::string missingProductHash = writeSingleModuleSidecar(missingProduct, validSource);
+    ModuleCacheModule missingProductModule;
+    missingProductModule.identity = pathString(fs::weakly_canonical(missingProduct / "lib.cd"));
+    missingProductModule.sourceHash = moduleCacheHash(validSource);
+    missingProductModule.interfaceHash = missingProductHash;
+    assert(fs::remove(missingProduct / "cache" / moduleCacheArtifactPath(missingProductModule)));
+    expectImportError(
+        [&]() { (void)loadStrict(missingProduct); },
+        expectedError(missingProduct / "lib.cd", "missing paired product"));
+
+    const fs::path identityMismatch = root / "identity_mismatch";
+    fs::remove_all(identityMismatch);
+    writeSingleModuleCacheCase(identityMismatch, validSource);
+    (void)writeSingleModuleSidecar(identityMismatch, validSource);
+    const fs::path identitySidecar = moduleInterfaceArtifactPath(
+        identityMismatch / "cache",
+        pathString(fs::weakly_canonical(identityMismatch / "lib.cd")));
+    std::string identityText = readFile(identitySidecar);
+    const std::string identity = pathString(fs::weakly_canonical(identityMismatch / "lib.cd"));
+    const std::string wrongIdentity = pathString(fs::weakly_canonical(identityMismatch / "other.cd"));
+    replaceText(identityText, "identity = \"" + identity + "\"", "identity = \"" + wrongIdentity + "\"");
+    replaceText(
+        identityText,
+        "canonical_path = \"" + identity + "\"",
+        "canonical_path = \"" + wrongIdentity + "\"");
+    writeFile(identitySidecar, identityText);
+    expectImportError(
+        [&]() { (void)loadStrict(identityMismatch); },
+        expectedError(identityMismatch / "lib.cd", "identity/canonical path mismatch"));
+
+    const fs::path dependencyMismatch = root / "dependency_mismatch";
+    fs::remove_all(dependencyMismatch);
+    const fs::path base = dependencyMismatch / "base.cd";
+    const fs::path library = dependencyMismatch / "lib.cd";
+    writeFile(base, "let baseValue = 3;\nexport baseValue;\n");
+    const std::string librarySource =
+        "import \"./base.cd\";\n"
+        "let value = 7;\n"
+        "export value;\n";
+    writeFile(library, librarySource);
+    writeFile(dependencyMismatch / "entry.cd", "import \"./lib.cd\";\nprint value;\n");
+
+    ModuleInterface baseInterface;
+    baseInterface.values.push_back(ModuleInterfaceValue{
+        "baseValue",
+        simpleType(StaticType::Number),
+        "baseValue#14",
+    });
+    const std::string baseHash = writeCachedModule(
+        dependencyMismatch / "cache",
+        base,
+        readFile(base),
+        baseInterface,
+        {});
+
+    ModuleInterface libraryInterface;
+    libraryInterface.values.push_back(ModuleInterfaceValue{
+        "value",
+        simpleType(StaticType::Number),
+        "value#15",
+    });
+    writeCachedModule(
+        dependencyMismatch / "cache",
+        library,
+        librarySource,
+        libraryInterface,
+        {ModuleInterfaceArtifactDependency{
+            pathString(fs::weakly_canonical(base)),
+            ModuleGraphEdgeKind::Import,
+            "./base.cd",
+            baseHash + "-stale",
+        }});
+    expectImportError(
+        [&]() { (void)loadStrict(dependencyMismatch); },
+        expectedError(library, "dependency interface hash mismatch"));
+}
+
+void test_module_interface_cache_fallback_preserves_parse_diagnostics(const fs::path& root)
+{
+    fs::remove_all(root);
+    const std::string validSource =
+        "let value = 7;\n"
+        "export value;\n";
+    writeSingleModuleCacheCase(root, validSource);
+    (void)writeSingleModuleSidecar(root, validSource);
+    const std::string invalidSource =
+        "let value = ;\n"
+        "export value;\n";
+    writeFile(root / "lib.cd", invalidSource);
+
+    try {
+        FrontendSession session;
+        session.setModuleInterfaceCacheDirectory(root / "cache");
+        (void)session.loadFiles({(root / "entry.cd").string()});
+    } catch (const FileDiagnosticErrorList& errors) {
+        assert(errors.errors().size() == 1);
+        const FileDiagnosticError& error = errors.errors().front();
+        assert(error.kind() == DiagnosticKind::Parse);
+        assert(error.sourceContext().path.find("lib.cd") != std::string::npos);
+        assert(error.range().has_value());
+        return;
+    }
+    assert(false && "expected stale-sidecar source parse diagnostic");
+}
+
 void test_direct_inputs_preserve_source_spans(const fs::path& root)
 {
     fs::remove_all(root);
@@ -395,6 +736,8 @@ void test_direct_inputs_preserve_source_spans(const fs::path& root)
     assert(program.sources.size() == 2);
     assert(program.sources[0].path.find("first.cd") != std::string::npos);
     assert(program.sources[1].path.find("second.cd") != std::string::npos);
+    assert(!program.sources[0].moduleIdentity);
+    assert(!program.sources[1].moduleIdentity);
     const auto* firstPrint = dynamic_cast<const PrintStmt*>(program.statements.front().get());
     assert(firstPrint != nullptr);
     assert(firstPrint->span.has_value());
@@ -494,6 +837,11 @@ int main()
     test_importing_file_directory_precedes_search_path(root / "precedence");
     test_explicit_relative_import_does_not_use_search_path(root / "explicit_no_fallback");
     test_module_interface_cache_hit_reuses_dependency_interfaces(root / "module_interface_cache");
+    test_module_interface_cache_fallbacks(root / "module_interface_cache_fallbacks");
+    test_module_interface_cache_dependency_hash_fallback(root / "module_interface_cache_dependency_hash");
+    test_module_interface_cache_strict(root / "module_interface_cache_strict");
+    test_module_interface_cache_fallback_preserves_parse_diagnostics(
+        root / "module_interface_cache_diagnostics");
     test_direct_inputs_preserve_source_spans(root / "direct_sources");
     test_direct_diagnostics_keep_source_ranges(root / "direct_diagnostics");
     test_lossless_source_view_round_trips_comments(root / "lossless_sources");

@@ -25,6 +25,7 @@ SCHEMA_VERSION = 1
 INVENTORY_REVISION = "m0d-2026-07-22-r1"
 BASELINE_COMMIT = "79fbfa0"
 BOUNDARY_CASES_PATH = Path(__file__).resolve().with_name("boundary_cases.json")
+MODULE_CACHE_CASES_PATH = Path(__file__).resolve().with_name("module_cache_cases.json")
 
 CANONICAL_COMMAND = [
     "python3",
@@ -75,6 +76,7 @@ CTEST_SOURCE_OVERRIDES = {
     "type_utils": ["tests/type_utils_tests.cpp"],
     "module_symbols": ["tests/module_symbols_tests.cpp"],
     "module_interface_emitter": ["tests/module_interface_emitter_tests.cpp"],
+    "module_debug_metadata": ["tests/module_debug_metadata_tests.py"],
     "verification_inventory": ["tests/verification_inventory.py", "tests/verification_inventory.json"],
     "verification_runner_selftest": ["tests/run_verification_selftest.py"],
     "boundary_comparison_selftest": [
@@ -490,6 +492,39 @@ def load_boundary_cases(repo_root: Path) -> list[dict[str, object]]:
     return sorted(cases, key=lambda case: str(case["case_id"]))
 
 
+def load_module_cache_cases(repo_root: Path) -> list[dict[str, object]]:
+    manifest_path = repo_root / "tests" / MODULE_CACHE_CASES_PATH.name
+    value = json.loads(read_text(manifest_path))
+    if not isinstance(value, dict) or value.get("schema_version") != 1:
+        raise ValueError(f"invalid module-cache case manifest: {manifest_path}")
+    if value.get("inventory_revision") != INVENTORY_REVISION:
+        raise ValueError(
+            "module-cache case manifest inventory revision does not match inventory: "
+            f"{value.get('inventory_revision')} != {INVENTORY_REVISION}"
+        )
+    manifest_cases = value.get("cases")
+    if not isinstance(manifest_cases, list):
+        raise ValueError(f"module-cache case manifest cases must be a list: {manifest_path}")
+    required_fields = (
+        "case_id",
+        "result_name",
+        "stage",
+        "capability_tags",
+        "backend",
+        "expected_result_kind",
+        "boundary_sequence",
+        "terminal_boundary",
+        "sources",
+        "expected_files",
+    )
+    cases = [case for case in manifest_cases if isinstance(case, dict)]
+    for case in cases:
+        for field in required_fields:
+            if field not in case:
+                raise ValueError(f"module-cache case is missing {field}: {case!r}")
+    return sorted(cases, key=lambda case: str(case["case_id"]))
+
+
 def add_boundary_token_cases(repo_root: Path, cases: list[dict[str, object]]) -> None:
     for boundary_case in load_boundary_cases(repo_root):
         cases.append(
@@ -545,6 +580,23 @@ def add_named_suite_cases(repo_root: Path, cases: list[dict[str, object]]) -> No
             expected_result_kind="pass",
         )
     )
+    for module_cache_case in load_module_cache_cases(repo_root):
+        cases.append(
+            make_case(
+                case_id=str(module_cache_case["case_id"]),
+                runner="module_cache",
+                result_name=str(module_cache_case["result_name"]),
+                fixture=None,
+                sources=[str(source) for source in module_cache_case["sources"]],
+                expected_files=[str(path) for path in module_cache_case["expected_files"]],
+                stage=str(module_cache_case["stage"]),
+                capability_tags=[str(tag) for tag in module_cache_case["capability_tags"]],
+                backend=str(module_cache_case["backend"]),
+                expected_result_kind=str(module_cache_case["expected_result_kind"]),
+                boundary_sequence=[str(boundary) for boundary in module_cache_case["boundary_sequence"]],
+                terminal_boundary=str(module_cache_case["terminal_boundary"]),
+            )
+        )
     cases.append(
         make_case(
             case_id="runner.cargo_test",

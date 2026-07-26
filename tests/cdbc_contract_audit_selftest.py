@@ -27,6 +27,12 @@ class CdbcContractAuditTests(unittest.TestCase):
             [],
         )
 
+    def test_m4a_compatibility_matrix_is_valid(self) -> None:
+        decision = cdbc_contract_audit.load_m4a_decision()
+        self.assertEqual(cdbc_contract_audit.validate_m4a_decision(decision), [])
+        self.assertEqual(decision["decision_id"], "M4A-VALIDATION-001")
+        self.assertFalse(decision["successor_decision"]["selected"])
+
     def test_static_audit_covers_every_artifact_case(self) -> None:
         report = cdbc_contract_audit.build_static_report(
             self.decisions,
@@ -102,6 +108,7 @@ class CdbcContractAuditTests(unittest.TestCase):
         self.assertEqual(checked["dynamic_verification"]["artifact_assertions"]["passed"], 116)
         self.assertEqual(checked["dynamic_verification"]["reference_dumps"]["passed"], 58)
         self.assertEqual(checked["dynamic_verification"]["invalid_header_probes"]["passed"], 2)
+        self.assertEqual(checked["dynamic_verification"]["invalid_artifact_probes"]["passed"], 7)
 
     def test_inspector_rejects_bad_header_and_section_order(self) -> None:
         with tempfile.TemporaryDirectory(prefix="compiler-design-cdbc-selftest-") as temp_dir:
@@ -113,6 +120,23 @@ class CdbcContractAuditTests(unittest.TestCase):
             _, errors = cdbc_contract_audit.inspect_artifact(path, Path(temp_dir))
         self.assertTrue(any("expected cdbc 0.1 header" in error for error in errors))
         self.assertTrue(any("core sections must start" in error for error in errors))
+
+    def test_inspector_records_optional_debug_source_module_identity(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="compiler-design-cdbc-selftest-") as temp_dir:
+            path = Path(temp_dir) / "module-debug.cdbc"
+            path.write_text(
+                "cdbc 0.1\n\n"
+                "constants:\n\n"
+                "names:\n\n"
+                "main registers=0:\n\n"
+                "debug_sources:\n"
+                "  s0 module=\"/workspace/lib.cd\" path=\"lib.cd\" text=\"\"\n",
+                encoding="utf-8",
+            )
+            info, errors = cdbc_contract_audit.inspect_artifact(path, Path(temp_dir))
+        self.assertEqual(errors, [])
+        self.assertTrue(info["has_debug_source_modules"])
+        self.assertIn("debug_source_module", info["envelope_capabilities"])
 
     def test_validation_requires_a_rationale_for_deferred_fields(self) -> None:
         changed = copy.deepcopy(self.decisions)

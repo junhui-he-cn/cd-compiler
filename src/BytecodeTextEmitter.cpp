@@ -359,8 +359,11 @@ void writeBytecodeSections(std::ostream& out, const BytecodeProgram& program)
         out << "\ndebug_sources:\n";
         for (std::size_t index = 0; index < program.sources().size(); ++index) {
             const SourceFile& source = program.sources()[index];
-            out << "  s" << index
-                << " path=" << escapedString(source.path)
+            out << "  s" << index;
+            if (source.moduleIdentity) {
+                out << " module=" << escapedString(*source.moduleIdentity);
+            }
+            out << " path=" << escapedString(source.path)
                 << " text=" << escapedString(source.text)
                 << '\n';
         }

@@ -40,6 +40,9 @@ sidecar skips parsing and body checking for that dependency while preserving
 its source bytes and current-snapshot IDs; missing, malformed, stale, or
 unpaired sidecars fall back to source parsing. This preserves diagnostics for
 cache misses and keeps the product cache an artifact-level incremental slice.
+The optional `--module-cache-strict` policy changes only this error handling:
+it rejects an untrusted imported sidecar with an `Import` diagnostic while
+entry modules continue to use source. The default remains source fallback.
 
 `--module-rebuild-report <report.json>` records cache status, every module's
 key, source/interface digests, reuse/rebuild status, reason, artifact path, and
@@ -49,7 +52,9 @@ change matrix rather than an inferred aggregate hit count.
 ## Compatibility and migration
 
 The default linked `--emit-bytecode` path and the independent
-`--emit-module-bytecode` product text remain unchanged. Cache use is opt-in via
+`--emit-module-bytecode` product keep the same cdbc 0.1 core/envelope
+contract. Import-aware debug source entries may carry the additive canonical
+module identity defined by M4B-DEBUG-002. Cache use is opt-in via
 `--module-cache <directory>`, and a cache directory must be separate from the
 module output directory. Invalid or missing manifests are treated as cold
 caches, all current products are rebuilt, and a fresh manifest is written only
@@ -68,6 +73,9 @@ cross-build linker symbol identities.
 - `tests/bytecode_module_cache_tests.py` exercises a three-module chain through
   cold build, no-change reuse, private leaf change, public leaf change, Rust
   linking, and Rust VM execution.
+- The same runner compares no-cache and source-fallback output for direct,
+  namespace, re-export, search-path, cold-cache, malformed-sidecar, and
+  repeated-build cases.
 - `frontend_session_tests` proves recursive sidecar cache hits reconstruct
   dependency graph edges and preloaded interface IDs while leaving dependency
   statement bodies empty.

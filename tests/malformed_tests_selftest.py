@@ -18,7 +18,7 @@ class MalformedHarnessTests(unittest.TestCase):
         manifest = malformed_corpus.load_manifest()
         cases = malformed_corpus.expand_cases(manifest)
         case_ids = [case["case_id"] for case in cases]
-        self.assertEqual(len(cases), 88)
+        self.assertEqual(len(cases), 95)
         self.assertEqual(case_ids, sorted(case_ids))
         self.assertEqual(len(case_ids), len(set(case_ids)))
         self.assertEqual(manifest["seed"], 20260722)
@@ -26,7 +26,17 @@ class MalformedHarnessTests(unittest.TestCase):
 
     def test_cdbc_mutations_are_deterministic(self) -> None:
         source = malformed_corpus.read_text(TESTS_DIR.parent / "tests/bytecode_artifacts/arithmetic/expected.cdbc")
-        for mutation in ("bad_header", "truncate", "unknown_opcode", "trailing_garbage"):
+        for mutation in (
+            "bad_header",
+            "truncate",
+            "unknown_opcode",
+            "trailing_garbage",
+            "invalid_register",
+            "invalid_constant",
+            "invalid_jump",
+            "invalid_name",
+            "invalid_number",
+        ):
             first = malformed_corpus.mutate_cdbc(source, mutation)
             second = malformed_corpus.mutate_cdbc(source, mutation)
             self.assertEqual(first, second)

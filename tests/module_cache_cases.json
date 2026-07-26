@@ -1,0 +1,196 @@
+{
+  "schema_version": 1,
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "cases": [
+    {
+      "case_id": "module_cache.fallback.direct",
+      "result_name": "module cache fallback/direct import",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "interface-fallback",
+        "direct-import"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "frontend-output-parity",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "module_cache.fallback.namespace",
+      "result_name": "module cache fallback/namespace import",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "interface-fallback",
+        "namespace-import"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "frontend-output-parity",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "module_cache.fallback.re_export",
+      "result_name": "module cache fallback/re-export chain",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "interface-fallback",
+        "re-export"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "frontend-output-parity",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "module_cache.fallback.search_path",
+      "result_name": "module cache fallback/search path",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "interface-fallback",
+        "search-path"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "frontend-output-parity",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "module_cache.fallback.diagnostics",
+      "result_name": "module cache fallback/diagnostics",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "interface-fallback",
+        "file-diagnostics",
+        "parse-diagnostic",
+        "type-diagnostic"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit-parity",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "module_cache.fallback.partial_dependency",
+      "result_name": "module cache fallback/partial dependency reuse",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "interface-fallback",
+        "partial-reuse",
+        "dependency-interface"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "partial-reuse-and-fallback",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "module_cache.rebuild_reuse",
+      "result_name": "module cache rebuild/reuse matrix",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "incremental-rebuild",
+        "public-interface-invalidation",
+        "rust-vm"
+      ],
+      "backend": "mixed",
+      "expected_result_kind": "cache-report-and-runtime-parity",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "module_cache.strict_rejection",
+      "result_name": "module cache strict rejection matrix",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "strict-cache",
+        "import-diagnostics"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "import-diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "import_diagnostic"
+      ],
+      "terminal_boundary": "import_diagnostic",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
+    }
+  ]
+}

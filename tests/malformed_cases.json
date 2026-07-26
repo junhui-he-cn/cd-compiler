@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "corpus_revision": "m0c-2026-07-22-r1",
+  "corpus_revision": "m0c-2026-07-26-r2",
   "seed": 20260722,
   "limits": {
     "max_input_bytes": 8192,
@@ -56,17 +56,17 @@
     {
       "case_prefix": "malformed.cdbc.arithmetic",
       "fixture": "tests/bytecode_artifacts/arithmetic/expected.cdbc",
-      "mutations": ["bad_header", "truncate", "unknown_opcode", "trailing_garbage"]
+      "mutations": ["bad_header", "truncate", "unknown_opcode", "trailing_garbage", "invalid_register", "invalid_constant", "invalid_jump", "invalid_name", "invalid_number"]
     },
     {
       "case_prefix": "malformed.cdbc.functions_arrays",
       "fixture": "tests/bytecode_artifacts/functions_arrays/expected.cdbc",
-      "mutations": ["bad_header", "truncate", "unknown_opcode", "trailing_garbage"]
+      "mutations": ["bad_header", "truncate", "unknown_opcode", "trailing_garbage", "invalid_function"]
     },
     {
       "case_prefix": "malformed.cdbc.maps",
       "fixture": "tests/bytecode_artifacts/maps/expected.cdbc",
-      "mutations": ["bad_header", "truncate", "unknown_opcode", "trailing_garbage"]
+      "mutations": ["bad_header", "truncate", "unknown_opcode", "trailing_garbage", "invalid_native"]
     },
     {
       "case_prefix": "malformed.cdbc.runtime_diagnostics",

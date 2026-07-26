@@ -9,6 +9,7 @@ pub struct Program {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DebugSource {
+    pub module: Option<String>,
     pub path: String,
     pub text: String,
 }

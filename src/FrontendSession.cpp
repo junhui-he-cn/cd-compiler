@@ -307,29 +307,41 @@ void FrontendSession::setModuleInterfaceCacheDirectory(std::filesystem::path pat
     moduleInterfaceCacheDirectory_ = path.lexically_normal();
 }
 
+void FrontendSession::setModuleInterfaceCacheStrict(bool strict)
+{
+    moduleInterfaceCacheStrict_ = strict;
+}
+
 const std::vector<ModuleInterface>& FrontendSession::preloadedModuleInterfaces() const
 {
     return preloadedModuleInterfaces_;
 }
 
-std::optional<ModuleInterfaceArtifact> FrontendSession::loadCachedInterface(
+FrontendSession::CachedInterfaceLoad FrontendSession::loadCachedInterface(
     const std::string& canonicalPath,
     const std::string& source) const
 {
     if (!moduleInterfaceCacheDirectory_) {
-        return std::nullopt;
+        return CachedInterfaceLoad{};
     }
 
     const ModuleInterfaceArtifactLoadResult loaded = readModuleInterfaceArtifact(
         moduleInterfaceArtifactPath(*moduleInterfaceCacheDirectory_, canonicalPath));
     if (!loaded.artifact) {
-        return std::nullopt;
+        const bool identityMetadataError = loaded.error.find("invalid identity metadata") != std::string::npos;
+        return CachedInterfaceLoad{
+            std::nullopt,
+            loaded.found
+                ? (identityMetadataError ? "identity/canonical path mismatch" : "malformed sidecar")
+                : "missing sidecar",
+        };
     }
     const ModuleInterfaceArtifact& artifact = *loaded.artifact;
-    if (artifact.identity != canonicalPath
-        || artifact.canonicalPath != canonicalPath
-        || artifact.sourceHash != moduleCacheHash(source)) {
-        return std::nullopt;
+    if (artifact.identity != canonicalPath || artifact.canonicalPath != canonicalPath) {
+        return CachedInterfaceLoad{std::nullopt, "identity/canonical path mismatch"};
+    }
+    if (artifact.sourceHash != moduleCacheHash(source)) {
+        return CachedInterfaceLoad{std::nullopt, "source hash mismatch"};
     }
 
     ModuleCacheModule module;
@@ -347,10 +359,11 @@ std::optional<ModuleInterfaceArtifact> FrontendSession::loadCachedInterface(
     }
     const std::filesystem::path product = *moduleInterfaceCacheDirectory_
         / moduleCacheArtifactPath(module);
-    if (!std::filesystem::exists(product)) {
-        return std::nullopt;
+    std::error_code productError;
+    if (!std::filesystem::is_regular_file(product, productError)) {
+        return CachedInterfaceLoad{std::nullopt, "missing paired product"};
     }
-    return artifact;
+    return CachedInterfaceLoad{artifact, {}};
 }
 
 void FrontendSession::annotateSourceTokens(std::vector<Token>& tokens, std::size_t sourceId) const
@@ -607,11 +620,18 @@ std::size_t FrontendSession::loadFile(
     try {
         std::string source = readAll(input);
         if (isImport && directEntryCanonicalPaths_.find(canonicalPath) == directEntryCanonicalPaths_.end()) {
-            if (std::optional<ModuleInterfaceArtifact> cached
-                = loadCachedInterface(canonicalPath, source)) {
+            CachedInterfaceLoad cached = loadCachedInterface(canonicalPath, source);
+            if (!cached.artifact) {
+                if (moduleInterfaceCacheStrict_ && !cached.rejectionReason.empty()) {
+                    throw DiagnosticError(
+                        DiagnosticKind::Import,
+                        "module interface cache rejected for " + canonicalPath + ": "
+                            + cached.rejectionReason);
+                }
+            } else {
                 hasImports_ = true;
                 bool dependenciesCached = true;
-                for (const ModuleInterfaceArtifactDependency& dependency : cached->dependencies) {
+                for (const ModuleInterfaceArtifactDependency& dependency : cached.artifact->dependencies) {
                     const std::size_t dependencyId = loadFile(dependency.identity, true, false, true);
                     const ParsedUnit& dependencyUnit = units_.at(dependencyId);
                     if (!dependencyUnit.interfaceArtifact
@@ -624,23 +644,29 @@ std::size_t FrontendSession::loadFile(
                     // safely stand in for the dependency graph.  Continue into
                     // the ordinary parser below; the already loaded dependency
                     // units remain valid and are de-duplicated as before.
+                    if (moduleInterfaceCacheStrict_) {
+                        throw DiagnosticError(
+                            DiagnosticKind::Import,
+                            "module interface cache rejected for " + canonicalPath
+                                + ": dependency interface hash mismatch");
+                    }
                 } else {
                     const std::size_t sourceId = sourceFiles_.size();
                     sourceFiles_.push_back(SourceFile{
-                        cached->path,
+                        cached.artifact->path,
                         source,
                         SourceFileId{sourceId}});
 
                     ParsedUnit unit{
                         0,
                         sourceId,
-                        cached->path,
+                        cached.artifact->path,
                         canonicalPath,
                         std::move(source),
                         {},
                         {},
                         false,
-                        std::move(cached),
+                        std::move(cached.artifact),
                     };
                     unit.id = units_.size();
                     units_.push_back(std::move(unit));
@@ -742,6 +768,14 @@ Program FrontendSession::assembleProgram()
     program.sources = sourceFiles_;
     if (hasImports_) {
         program.moduleGraph = moduleGraph_;
+        for (const ModuleGraphNode& node : program.moduleGraph->nodes) {
+            for (SourceFile& source : program.sources) {
+                if (source.id == node.sourceId) {
+                    source.moduleIdentity = node.canonicalPath;
+                    break;
+                }
+            }
+        }
         rebuildPreloadedModuleInterfaces();
         for (ParsedUnit& unit : units_) {
             auto module = std::make_unique<ModuleStmt>(

@@ -184,6 +184,12 @@ add_test(
 )
 
 add_test(
+    NAME module_debug_metadata
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
+            ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/module_debug_metadata_tests.py $<TARGET_FILE:compiler_design> ${CMAKE_SOURCE_DIR}/vm-rs
+)
+
+add_test(
     NAME rust_vm
     COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
             ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/run_rust_vm_tests.py $<TARGET_FILE:compiler_design> ${CMAKE_SOURCE_DIR}/vm-rs --goldens
@@ -284,6 +290,7 @@ set_tests_properties(
     bytecode_artifacts
     bytecode_module_artifacts
     bytecode_module_cache
+    module_debug_metadata
     rust_vm
     PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )

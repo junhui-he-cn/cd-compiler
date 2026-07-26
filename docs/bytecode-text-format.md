@@ -83,8 +83,19 @@ interface inputs; snapshot-local IDs are never cache keys. A private source
 change rebuilds only that module, while a public-interface change propagates
 through transitive dependents. Valid paired interface sidecars can preload
 dependency public shape before the current importer check; invalid or missing
-sidecars/products fall back to source parsing. The default linked-program
-emitter and its `cdbc 0.1` text remain unchanged.
+sidecars/products fall back to source parsing. Linked programs built from a
+single file or direct multi-file input retain their existing metadata; an
+import-aware graph additionally records each source's canonical module identity
+in its optional debug-source entry.
+
+Module products keep `debug_sources` and `debug_locations` local to the module
+before linking. The Rust linker appends each expanded module's source table in
+deterministic expansion order and rebases every main/function location through
+that table, so runtime diagnostics from an imported function retain the
+original module path and call-stack order in the final linked program. The
+source table also carries the optional canonical module identity described
+below; the linker preserves it while rebasing only artifact-local source
+indexes.
 
 ## Module interface sidecars
 
@@ -147,18 +158,26 @@ The section names and reference prefixes are part of the canonical text format. 
 `debug_sources` and `debug_locations` are optional additive sections. The C++
 compiler emits them for source-backed instructions, and the Rust VM uses them
 to report runtime source locations, source lines, carets, and call stacks. Each
-`debug_sources` entry is ordered by zero-based `sN` index and embeds the display
-path plus original source text. Each location maps a section and instruction
-index to `sN:line:column`, using one-based source coordinates:
+`debug_sources` entry is ordered by zero-based `sN` index and embeds the
+display path plus original source text. Import-aware source entries may add a
+stable canonical module identity before `path`:
 
 ```text
 debug_sources:
-  s0 path="lib.cd" text="fun fail() { return 1 / 0; }\n"
+  s0 module="/workspace/lib.cd" path="lib.cd" text="fun fail() { return 1 / 0; }\n"
 
 debug_locations:
   main 3 = s0:2:1
   function f0 2 = s0:1:21
 ```
+
+`module` is optional for compatibility with older metadata and is omitted for
+source entries without a module graph identity. When present it must be
+non-empty and is the graph's canonical module path; it is not a snapshot-local
+numeric ID. `path` remains the display path used by current runtime
+diagnostics. The Rust parser and formatter accept both the old
+`sN path=... text=...` form and the module-aware form, and preserve the field
+through module linking.
 
 `main` identifies the top-level body; `function fN` identifies a function
 section. Locations are sparse, but every referenced source, function, and
@@ -295,6 +314,21 @@ map for `for-in`, it produces an array snapshot of the map's insertion-ordered
 keys before the existing length/index loop lowering runs.
 
 New opcodes must be added by updating this document, the C++ bytecode artifact emitter, and the Rust VM parser/formatter and executor together.
+
+## Compatibility validation
+
+The Rust parser accepts exactly the `cdbc 0.1` header. Before `dump`, `link`, or
+`run` receives an artifact, it validates finite number constants, constant/name/
+function/register references, jump targets, debug-location table shape, and
+the supported native-call capability set. Module identities, entry metadata,
+dependency targets, and insertion offsets are validated by the module envelope
+and linker path. Invalid artifacts are rejected before VM execution; valid
+linked programs and module products retain the canonical text described above.
+
+The version and compatibility matrix is recorded in
+`docs/decisions/m4a-artifact-validation.md` and
+`docs/decisions/m4a-artifact-validation.json`. No successor version is selected
+for this validation-only extension.
 
 ## Non-Goals for This Phase
 

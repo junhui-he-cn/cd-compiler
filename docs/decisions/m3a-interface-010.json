@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m3a-2026-07-26-r3",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M3A-INTERFACE-010",
+  "domain": "module-interface",
+  "status": "resolved",
+  "question": "Which graph and cache states must prove the existing serialized-interface fallback contract?",
+  "decision": "Keep source fallback for missing or invalid sidecars and compare deterministic compiler output across direct, namespace, re-export, search-path, cold-cache, malformed-sidecar, and repeated-build cases.",
+  "graph_shapes": [
+    "direct import",
+    "namespace import",
+    "re-export chain",
+    "extensionless import through a search path"
+  ],
+  "cache_states": [
+    "missing sidecars",
+    "malformed sidecars after paired products exist",
+    "repeated malformed-sidecar builds"
+  ],
+  "parity_contract": {
+    "baseline": "compiler output without a module-interface cache",
+    "fallback": "compiler output with the cache enabled and source fallback active",
+    "compared": [
+      "return code",
+      "stdout",
+      "stderr"
+    ],
+    "repeated": "two malformed-sidecar invocations must produce identical results"
+  },
+  "compatibility_boundary": {
+    "language": "unchanged",
+    "cdi": "cdi 0.1 unchanged",
+    "cdbc": "cdbc 0.1 module and linked artifacts unchanged",
+    "fallback": "missing or invalid sidecars retain source parsing and existing output"
+  },
+  "migration": "Extend the existing cache integration runner with graph-shaped fallback parity while retaining valid-sidecar reuse and source fallback.",
+  "old_path_deletion_condition": "Require complete inventory parity and an explicit cache-error policy before removing source fallback or unchanged dependency-body checking.",
+  "out_of_scope": [
+    "cache error diagnostics",
+    "remote cache policy",
+    "new sidecar trust metadata",
+    "hard failure for cache corruption"
+  ],
+  "verification": {
+    "focused_commands": [
+      "python3 tests/bytecode_module_cache_tests.py ./build/compiler_design vm-rs",
+      "ctest --test-dir build --output-on-failure -R '^bytecode_module_cache$'",
+      "git diff --check"
+    ],
+    "source": "tests/bytecode_module_cache_tests.py"
+  }
+}

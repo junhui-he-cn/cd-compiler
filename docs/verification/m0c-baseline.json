@@ -98,6 +98,15 @@
     "minimized_input": "needle",
     "saved": true
   },
+  "m4a_validation_extension": {
+    "decision_id": "M4A-VALIDATION-001",
+    "corpus_revision": "m0c-2026-07-26-r2",
+    "added_cdbc_cases": 7,
+    "current_malformed_cases": 95,
+    "current_inventory_cases": 1766,
+    "focused_report": "build/malformed-m4a-report.json",
+    "invalid_artifact_execution": "all malformed cdbc cases use Rust dump only"
+  },
   "comparison": {
     "case_discovery_differences": [],
     "pass_fail_skip_differences": [],

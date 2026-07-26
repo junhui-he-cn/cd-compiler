@@ -52,8 +52,8 @@ function f1 name="answer" arity=0 registers=4:
   return r3
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/module_exports/input.cd" text="import \"./lib.cd\";\nprint answer();\n"
-  s1 path="tests/bytecode_artifacts/module_exports/lib.cd" text="let base = 39;\nfun add3(x) { return x + 3; }\nfun answer() { return add3(base); }\nexport answer;\n"
+  s0 module="/home/junhe/compiler/tests/bytecode_artifacts/module_exports/input.cd" path="tests/bytecode_artifacts/module_exports/input.cd" text="import \"./lib.cd\";\nprint answer();\n"
+  s1 module="/home/junhe/compiler/tests/bytecode_artifacts/module_exports/lib.cd" path="tests/bytecode_artifacts/module_exports/lib.cd" text="let base = 39;\nfun add3(x) { return x + 3; }\nfun answer() { return add3(base); }\nexport answer;\n"
 
 debug_locations:
   main 0 = s1:1:12

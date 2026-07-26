@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m4a-2026-07-26-r1",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M4A-VALIDATION-001",
+  "domain": "cdbc-compatibility",
+  "status": "resolved",
+  "question": "How should the current cdbc 0.1 artifact family be accepted, rejected, and validated before execution?",
+  "decision": "Keep exact cdbc 0.1 support for linked programs and independent module products, reject other family/version headers and unsupported native capabilities, and validate every serialized cross-reference before dump, link, or VM execution.",
+  "compatibility_matrix": [
+    {
+      "header": "cdbc 0.1",
+      "kind": "linked_program",
+      "dump": "accept after structural and reference validation",
+      "run": "accept after the same validation",
+      "link": "reject as a non-module product"
+    },
+    {
+      "header": "cdbc 0.1",
+      "kind": "module_product",
+      "dump": "accept after structural, reference, and module-envelope validation",
+      "run": "reject before VM execution",
+      "link": "accept only when the complete product set validates"
+    },
+    {
+      "header": "other family or version",
+      "kind": "any",
+      "dump": "reject before decode",
+      "run": "reject before VM execution",
+      "link": "reject before product loading"
+    },
+    {
+      "header": "missing or unversioned",
+      "kind": "any",
+      "dump": "reject before decode",
+      "run": "reject before VM execution",
+      "link": "reject before product loading"
+    }
+  ],
+  "validation_contract": [
+    "constant number literals must parse as finite f64 values",
+    "constant, name, function, and register references must address their tables",
+    "jump targets may equal the instruction count but may not exceed it",
+    "debug location arrays must match instruction counts and retain parser range checks",
+    "native_call names must belong to the cdbc 0.1 native capability set",
+    "module identities, entry metadata, dependency targets, and insertion offsets must validate before linking"
+  ],
+  "successor_decision": {
+    "selected": false,
+    "rationale": "The current compiler/Rust VM pair needs stronger validation but no new opcode, value layout, target, transport, or negotiation capability. A successor version would add migration surface without a named consumer.",
+    "revisit": "Select a successor only when a breaking runtime/artifact change cannot remain a compatible 0.1 extension."
+  },
+  "migration": "The existing cdbc 0.1 core emitter, canonical section structure, and runtime behavior remain unchanged. M4B-DEBUG-002 later adds an optional source-to-module field to import-aware debug source entries without changing the version. The Rust parser performs centralized validation before returning an artifact; existing linked and module-product paths retain their commands and rejection policy.",
+  "verification": {
+    "focused_commands": [
+      "cargo test --manifest-path vm-rs/Cargo.toml",
+      "python3 tests/bytecode_artifact_tests.py ./build/compiler_design vm-rs",
+      "python3 tests/bytecode_module_artifact_tests.py ./build/compiler_design vm-rs",
+      "python3 tests/run_malformed_tests.py ./build/compiler_design vm-rs --case malformed.cdbc",
+      "python3 tests/cdbc_contract_audit.py ./build/compiler_design vm-rs --report build/m05b-cdbc-audit-report.json"
+    ],
+    "coverage": [
+      "tests/bytecode_artifacts/*/expected.cdbc",
+      "tests/bytecode_module_artifact_tests.py",
+      "tests/malformed_cases.json",
+      "vm-rs/src/format.rs"
+    ]
+  },
+  "old_path_deletion_condition": "Do not remove cdbc 0.1 readers or emitters. An older path may be retired only after a separately versioned successor has a complete matrix, migration/rejection policy, deprecation period, and canonical evidence.",
+  "out_of_scope": [
+    "successor version selection",
+    "capability negotiation metadata",
+    "runtime target identity",
+    "embedded integrity or signature metadata",
+    "changing canonical cdbc text emission"
+  ]
+}

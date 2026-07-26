@@ -16,9 +16,12 @@ expansion in `tests/malformed_corpus.py`, and the bounded runner
 | Mutated `.cdbc` parser inputs | 16 |
 | **Total** | **88** |
 
-The `.cdbc` cases mutate four checked-in valid artifacts with fixed operations:
-bad header, truncation, unknown opcode, and trailing garbage. They invoke the
-Rust VM's `dump` parser only; malformed inputs are never executed by the VM.
+The original `.cdbc` cases mutate four checked-in valid artifacts with fixed
+operations: bad header, truncation, unknown opcode, and trailing garbage. The
+M4A-VALIDATION-001 extension at manifest revision `m0c-2026-07-26-r2` adds
+invalid register, constant, jump, name, number, function, and native references
+to representative artifacts. All invoke the Rust VM's `dump` parser only;
+malformed inputs are never executed by the VM.
 
 Every case runs twice with the same seed and is classified as `pass`,
 `timeout`, `crash`, `non_deterministic`, `unexpected_accept`,
@@ -48,19 +51,25 @@ generated automatically during a normal verification run.
 
 ## Quantitative gate
 
-The M0C baseline is bound to inventory revision `m0c-2026-07-22-r1` and
-reference commit `30ae329`:
+The original M0C baseline is bound to inventory revision `m0c-2026-07-22-r1` and
+reference commit `30ae329`. The current M4A extension is bound to malformed
+manifest revision `m0c-2026-07-26-r2` and the current inventory revision
+`m0d-2026-07-22-r1`:
 
-1. corpus expansion produces exactly 88 unique case IDs in sorted order;
+1. the original corpus expands to 88 unique case IDs; the M4A extension expands
+   the current corpus to exactly 95 unique case IDs in sorted order;
 2. all 88 cases remain within the declared input and process budgets;
 3. repeated observations are identical for all cases;
 4. malformed compiler inputs are rejected without stdout, and all malformed
    `.cdbc` inputs are rejected by Rust `dump` before execution;
-5. the malformed report records `88 passed`, `0 failed`, `0 timeouts`,
+5. the original malformed report records `88 passed`; the current M4A report
+   records `95 passed`, `0 failed`, `0 timeouts`,
    `0 crashes`, and `0 non_deterministic` cases;
-6. CTest reports 18/18, including the corpus and minimizer selftest; and
-7. the canonical inventory reports `1,658 passed`, `0 failed`, and zero
-   untracked results.
+6. the original M0C CTest baseline reported 18/18; the current tree reports
+   25/25, including the corpus, minimizer selftest, and module debug metadata
+   conformance test; and
+7. the original canonical inventory reported `1,658 passed`; the current
+   inventory reports `1,766 passed`, `0 failed`, and zero untracked results.
 
 The observed values and legacy command projection are recorded in
 `docs/verification/m0c-baseline.json`.

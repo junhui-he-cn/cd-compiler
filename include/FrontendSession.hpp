@@ -24,6 +24,10 @@ public:
     // `interfaces/` directory and only trusted when their cached product is
     // also present.
     void setModuleInterfaceCacheDirectory(std::filesystem::path path);
+    // In strict mode, an imported sidecar that cannot be trusted is a stable
+    // Import diagnostic instead of a source fallback. Entry modules always
+    // use their source path.
+    void setModuleInterfaceCacheStrict(bool strict);
 
     Program loadStdin(std::istream& input);
     Program loadFiles(const std::vector<std::string>& paths);
@@ -63,9 +67,14 @@ private:
         std::vector<std::string> triedDisplayPaths;
     };
 
+    struct CachedInterfaceLoad {
+        std::optional<ModuleInterfaceArtifact> artifact;
+        std::string rejectionReason;
+    };
+
     void reset();
     std::size_t loadFile(const std::string& path, bool isImport, bool isEntry, bool fileDiagnostics);
-    std::optional<ModuleInterfaceArtifact> loadCachedInterface(
+    CachedInterfaceLoad loadCachedInterface(
         const std::string& canonicalPath,
         const std::string& source) const;
     ImportResolution resolveImportPath(const std::filesystem::path& importingPath, const Token& pathToken) const;
@@ -86,6 +95,7 @@ private:
     std::vector<Token> directDisplayTokens_;
     std::vector<std::filesystem::path> importSearchPaths_;
     std::optional<std::filesystem::path> moduleInterfaceCacheDirectory_;
+    bool moduleInterfaceCacheStrict_ = false;
     std::unordered_set<std::string> directEntryCanonicalPaths_;
     std::string combinedSource_;
     ModuleGraph moduleGraph_;

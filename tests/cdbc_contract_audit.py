@@ -19,8 +19,10 @@ from typing import Any
 TESTS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TESTS_DIR.parent
 DEFAULT_DECISION_LOG = REPO_ROOT / "docs" / "decisions" / "m05b-cdbc-contract.json"
+M4A_DECISION_LOG = REPO_ROOT / "docs" / "decisions" / "m4a-artifact-validation.json"
 sys.path.insert(0, str(TESTS_DIR))
 import bytecode_artifact_tests  # noqa: E402
+import malformed_corpus  # noqa: E402
 import verification_inventory  # noqa: E402
 
 
@@ -30,6 +32,7 @@ ALLOWED_CLASSIFICATIONS = {
     "successor-version candidate",
     "not currently required",
     "deferred",
+    "resolved",
 }
 FUNCTION_HEADER = re.compile(r"^function f\d+ name=.* arity=\d+ registers=\d+:$")
 MAIN_HEADER = re.compile(r"^main registers=\d+:$")
@@ -44,6 +47,36 @@ def read_json(path: Path) -> dict[str, Any]:
 
 def load_decisions(path: Path = DEFAULT_DECISION_LOG) -> dict[str, Any]:
     return read_json(path)
+
+
+def load_m4a_decision(path: Path = M4A_DECISION_LOG) -> dict[str, Any]:
+    return read_json(path)
+
+
+def validate_m4a_decision(decision: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    if decision.get("decision_id") != "M4A-VALIDATION-001":
+        errors.append("M4A decision id must be M4A-VALIDATION-001")
+    if decision.get("status") != "resolved":
+        errors.append("M4A validation decision must be resolved")
+    matrix = decision.get("compatibility_matrix")
+    if not isinstance(matrix, list) or not matrix:
+        errors.append("M4A compatibility_matrix must be non-empty")
+    else:
+        for index, entry in enumerate(matrix):
+            if not isinstance(entry, dict):
+                errors.append(f"M4A compatibility matrix entry {index} must be an object")
+                continue
+            for field in ("header", "kind", "dump", "run", "link"):
+                if not isinstance(entry.get(field), str) or not entry[field]:
+                    errors.append(f"M4A compatibility matrix entry {index} missing {field}")
+    successor = decision.get("successor_decision")
+    if not isinstance(successor, dict) or successor.get("selected") is not False:
+        errors.append("M4A validation must not select a successor version")
+    validation_contract = decision.get("validation_contract")
+    if not isinstance(validation_contract, list) or not validation_contract:
+        errors.append("M4A validation_contract must be non-empty")
+    return errors
 
 
 def load_inventory(path: Path = TESTS_DIR / "verification_inventory.json") -> dict[str, Any]:
@@ -176,6 +209,39 @@ def inspect_artifact(path: Path, repo_root: Path = REPO_ROOT) -> tuple[dict[str,
     if sections.count("constants") != 1 or sections.count("names") != 1 or sections.count("main") != 1:
         errors.append(f"{path}: core sections must occur exactly once: {sections}")
 
+    debug_source_lines: list[tuple[int, str]] = []
+    in_debug_sources = False
+    for line_number, raw_line in enumerate(text.splitlines(), start=1):
+        line = raw_line.strip()
+        if line == "debug_sources:":
+            in_debug_sources = True
+            continue
+        if line == "debug_locations:":
+            in_debug_sources = False
+            continue
+        if in_debug_sources and line:
+            debug_source_lines.append((line_number, line))
+
+    has_debug_source_modules = False
+    for expected_index, (line_number, line) in enumerate(debug_source_lines):
+        prefix = f"s{expected_index} "
+        if not line.startswith(prefix):
+            errors.append(f"{path}: line {line_number}: expected debug source {prefix.strip()}")
+            continue
+        fields = line[len(prefix):]
+        if fields.startswith("module="):
+            module_text, separator, fields = fields.partition(" path=")
+            if not separator or module_text == 'module=""' or not (
+                module_text.startswith('module="') and module_text.endswith('"')
+            ):
+                errors.append(f"{path}: line {line_number}: invalid debug source module identity")
+            else:
+                has_debug_source_modules = True
+        elif not fields.startswith("path="):
+            errors.append(f"{path}: line {line_number}: expected debug source path")
+        if " text=" not in fields:
+            errors.append(f"{path}: line {line_number}: expected debug source text")
+
     relative = path.resolve().relative_to(repo_root.resolve()).as_posix()
     digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
     info = {
@@ -190,6 +256,7 @@ def inspect_artifact(path: Path, repo_root: Path = REPO_ROOT) -> tuple[dict[str,
         "has_native_call": "native_call " in text,
         "has_debug_sources": "debug_sources" in sections,
         "has_debug_locations": "debug_locations" in sections,
+        "has_debug_source_modules": has_debug_source_modules,
         "envelope_capabilities": [
             "header_family_version",
             "canonical_core_sections",
@@ -198,6 +265,7 @@ def inspect_artifact(path: Path, repo_root: Path = REPO_ROOT) -> tuple[dict[str,
             *(["native_call"] if "native_call " in text else []),
             *(["debug_sources"] if "debug_sources" in sections else []),
             *(["debug_locations"] if "debug_locations" in sections else []),
+            *(["debug_source_module"] if has_debug_source_modules else []),
         ],
     }
     return info, errors
@@ -226,6 +294,8 @@ def build_static_report(
     repo_root: Path = REPO_ROOT,
 ) -> dict[str, Any]:
     errors = validate_evolution_decisions(decisions)
+    m4a_decision = load_m4a_decision(repo_root / "docs" / "decisions" / "m4a-artifact-validation.json")
+    errors.extend(validate_m4a_decision(m4a_decision))
     cases = artifact_checks(inventory)
     paths = artifact_paths(cases, repo_root)
     artifacts: list[dict[str, Any]] = []
@@ -279,6 +349,9 @@ def build_static_report(
         "with_native_call": sum(artifact["has_native_call"] for artifact in artifacts),
         "with_debug_sources": sum(artifact["has_debug_sources"] for artifact in artifacts),
         "with_debug_locations": sum(artifact["has_debug_locations"] for artifact in artifacts),
+        "with_debug_source_modules": sum(
+            artifact["has_debug_source_modules"] for artifact in artifacts
+        ),
     }
     return {
         "schema_version": 1,
@@ -304,6 +377,7 @@ def build_static_report(
         "evolution_decisions": decisions["evolution_decisions"],
         "successor_decision": decisions["successor_decision"],
         "invalid_input_policy": decisions["invalid_input_policy"],
+        "m4a_compatibility": m4a_decision,
         "errors": errors,
     }
 
@@ -371,6 +445,7 @@ def run_dynamic_audit(
             errors.append(f"reference dump mismatch: {artifact['path']}")
 
     invalid_probes: list[dict[str, Any]] = []
+    invalid_artifact_probes: list[dict[str, Any]] = []
     seed_path = repo_root / str(report["envelope"]["artifacts"][0]["path"])
     seed = seed_path.read_text(encoding="utf-8")
     with tempfile.TemporaryDirectory(prefix="compiler-design-cdbc-audit-") as temp_dir:
@@ -410,6 +485,48 @@ def run_dynamic_audit(
             if not passed:
                 errors.append(f"invalid {probe_id} was not rejected by Rust dump")
 
+        artifact_probe_specs = (
+            ("invalid-register", "tests/bytecode_artifacts/arithmetic/expected.cdbc", "invalid_register"),
+            ("invalid-constant", "tests/bytecode_artifacts/arithmetic/expected.cdbc", "invalid_constant"),
+            ("invalid-jump", "tests/bytecode_artifacts/arithmetic/expected.cdbc", "invalid_jump"),
+            ("invalid-name", "tests/bytecode_artifacts/arithmetic/expected.cdbc", "invalid_name"),
+            ("invalid-number", "tests/bytecode_artifacts/arithmetic/expected.cdbc", "invalid_number"),
+            ("invalid-function", "tests/bytecode_artifacts/functions_arrays/expected.cdbc", "invalid_function"),
+            ("invalid-native", "tests/bytecode_artifacts/maps/expected.cdbc", "invalid_native"),
+        )
+        for probe_id, seed_relative, mutation in artifact_probe_specs:
+            probe_seed = (repo_root / seed_relative).read_text(encoding="utf-8")
+            probe_path = temp_root / f"{probe_id}.cdbc"
+            probe_path.write_text(malformed_corpus.mutate_cdbc(probe_seed, mutation), encoding="utf-8")
+            rejected = run_process(
+                [
+                    "cargo",
+                    "run",
+                    "--quiet",
+                    "--manifest-path",
+                    str(vm_manifest),
+                    "--",
+                    "dump",
+                    str(probe_path),
+                ],
+                repo_root,
+            )
+            passed = rejected.returncode != 0 and not rejected.stdout and bool(rejected.stderr)
+            invalid_artifact_probes.append(
+                {
+                    "probe_id": probe_id,
+                    "seed": seed_relative,
+                    "mutation": mutation,
+                    "mode": "dump-only",
+                    "passed": passed,
+                    "returncode": rejected.returncode,
+                    "stdout_empty": not rejected.stdout,
+                    "stderr_nonempty": bool(rejected.stderr),
+                }
+            )
+            if not passed:
+                errors.append(f"invalid artifact probe {probe_id} was not rejected by Rust dump")
+
     report["dynamic_verification"] = {
         "artifact_assertions": assertion_report,
         "reference_dumps": {
@@ -426,6 +543,14 @@ def run_dynamic_audit(
             "dump_invocations": len(invalid_probes),
             "run_invocations": 0,
         },
+        "invalid_artifact_probes": {
+            "total": len(invalid_artifact_probes),
+            "passed": sum(item["passed"] for item in invalid_artifact_probes),
+            "failed": sum(not item["passed"] for item in invalid_artifact_probes),
+            "probes": invalid_artifact_probes,
+            "dump_invocations": len(invalid_artifact_probes),
+            "run_invocations": 0,
+        },
     }
     report["errors"] = errors
     report["summary"] = {
@@ -435,6 +560,7 @@ def run_dynamic_audit(
         "artifact_assertions": assertion_report["passed"],
         "reference_dumps": report["dynamic_verification"]["reference_dumps"]["passed"],
         "invalid_header_probes": report["dynamic_verification"]["invalid_header_probes"]["passed"],
+        "invalid_artifact_probes": report["dynamic_verification"]["invalid_artifact_probes"]["passed"],
         "errors": len(errors),
     }
     return report
@@ -474,7 +600,8 @@ def main() -> int:
         "cdbc contract audit: "
         f"{summary['artifact_assertions']} artifact assertions, "
         f"{summary['reference_dumps']} reference dumps, "
-        f"{summary['invalid_header_probes']} invalid-header probes passed"
+        f"{summary['invalid_header_probes']} invalid-header probes, "
+        f"{summary['invalid_artifact_probes']} invalid-artifact probes passed"
     )
     for error in report["errors"]:
         print(f"FAIL {error}", file=sys.stderr)

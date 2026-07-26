@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m4b-2026-07-26-r2",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M4B-DEBUG-002",
+  "domain": "runtime-debug-metadata",
+  "status": "resolved",
+  "question": "How should compiler-emitted debug source entries retain stable module identity across linked and independently emitted artifacts?",
+  "decision": "Add an optional module field to debug_sources, populated from ModuleGraph canonicalPath through a snapshot-local SourceFile mapping; preserve the field through Rust parsing, formatting, and module linking while keeping path as the runtime display source.",
+  "wire_shape": {
+    "header": "cdbc 0.1",
+    "legacy": "sN path=... text=...",
+    "module_aware": "sN module=... path=... text=...",
+    "module_field": "optional non-empty canonical module path",
+    "snapshot_ids": "never serialized"
+  },
+  "compatibility_boundary": {
+    "old_debug_artifacts": "parse and canonicalize unchanged",
+    "metadata_free_artifacts": "remain valid",
+    "new_linked_graph_artifacts": "carry source-to-module identity",
+    "module_products": "retain identity while source indexes are rebased",
+    "artifact_version": "cdbc 0.1 unchanged",
+    "runtime_display": "path remains the source name in current diagnostics"
+  },
+  "conformance": {
+    "cpp_emitter": "tests/bytecode_module_emitter_tests.cpp",
+    "rust_parser": "vm-rs/src/format.rs",
+    "module_products": "tests/bytecode_module_artifact_tests.py",
+    "linked_runtime": "tests/module_debug_metadata_tests.py",
+    "contract_audit": "tests/cdbc_contract_audit.py",
+    "reference_artifact_count": 58,
+    "reference_artifact_assertions": 116
+  },
+  "quantitative_gate": "The focused C++ and Rust tests pass, module products and linked diagnostics preserve both canonical source identities, old debug entries still round-trip, and the full 58-fixture cdbc audit remains byte-for-byte deterministic after the reviewed identity-field updates.",
+  "old_path_deletion_condition": "Retain module-free debug-source fallback until all supported compiler-emitted debug consumers use module identity or document a source with no graph identity; never persist snapshot-local SourceFileId values.",
+  "out_of_scope": [
+    "full source ranges",
+    "debugger protocol events",
+    "breakpoint tables",
+    "function symbol identities",
+    "module identity hashes",
+    "separate module display in current runtime diagnostics",
+    "successor cdbc version"
+  ],
+  "verification": {
+    "focused_commands": [
+      "cmake --build build --target compiler_design bytecode_module_emitter_tests",
+      "ctest --test-dir build --output-on-failure -R '^(bytecode_module_emitter|module_debug_metadata)$'",
+      "python3 tests/bytecode_module_artifact_tests.py ./build/compiler_design vm-rs",
+      "python3 tests/module_debug_metadata_tests.py ./build/compiler_design vm-rs",
+      "python3 tests/bytecode_artifact_tests.py ./build/compiler_design vm-rs",
+      "cargo test --manifest-path vm-rs/Cargo.toml",
+      "git diff --check"
+    ]
+  }
+}
