@@ -29,7 +29,7 @@
 
 当前库已有：
 
-- `Stack<T>`：数组后端，使用 `add`、`take`、`top` 等方法；
+- `Stack<T>`：数组后端，使用 `push`、`pop`、`top` 等方法；
 - `Queue<T>`：数组后端，带惰性头指针和周期性压缩。
 
 它们的现有 API 和示例继续作为兼容基线。后续新增 API 不应悄悄改变空值、
@@ -60,13 +60,11 @@
   索引”表示可变图/树；
 - 没有文档化的通用哈希函数、位运算或随机数 API，因此通用哈希表、位集、
   布隆过滤器和随机洗牌不列入第一批实现；
-- 没有私有字段和私有方法。工厂函数和方法是约定层面的 API，底层字段在语
-  言层面仍可能被调用者访问；
-- 选定的内置成员调用名称不会被用户结构体方法遮蔽。新方法应避开
-  `push`、`pop`、`remove`、`clear`、`len`、`contains`、`slice`、`copy`、
-  `concat`、`map`、`filter`、`flatMap`、`any`、`all`、`count`、`find`、
-  `findIndex`、`reduce`、`merge`、`keys`、`values`、`substr` 和 `charAt` 等
-  名称；
+- 结构体字段支持 `private`：定义模块内可以初始化和访问，导出给其他模块
+  的类型不公开这些字段；当前没有私有方法语法；
+- 已知命名结构体接收者的方法优先于同名的内置成员调用。数组、map、字符串
+  和 range 接收者仍使用内置形式，因此 `Stack<T>` 可以使用 `push`、`pop`
+  等常规方法名；动态接收者的 API 仍应记录其运行时检查行为；
 - 模块系统还没有包清单、import map、通配符导出或导出重命名。目录结构应
   先按普通源文件导入设计。
 
@@ -130,7 +128,7 @@ enum Result<T, E> {
 | 结构 | 状态 | 主要 API/用途 | 预期实现 |
 | --- | --- | --- | --- |
 | 动态数组/向量 `Vector<T>` | 现有能力 | 直接使用 `[T]`，提供少量约定性辅助函数 | 不重复包装语言内置数组 |
-| 栈 `Stack<T>` | 现有 | `add`、`take`、`top`、`size`、`isEmpty`、`snapshot` | 数组后端，`take/top` 为 `O(1)` |
+| 栈 `Stack<T>` | 现有 | `push`、`pop`、`top`、`size`、`isEmpty`、`snapshot` | 数组后端，`pop/top` 为 `O(1)` |
 | 队列 `Queue<T>` | 现有 | `enqueue`、`dequeue`、`front`、`size`、`isEmpty`、`snapshot` | 头指针 + 周期压缩，操作摊销 `O(1)` |
 | 双端队列 `Deque<T>` | 第一批 | `addFront`、`addBack`、`takeFront`、`takeBack`、`peekFront`、`peekBack` | 环形数组或双数组；两端操作摊销 `O(1)` |
 | 环形缓冲区 `RingBuffer<T>` | 第一批/待定 | 固定容量、`write`、`read`、`peek`、`isFull` | 复用 `Deque` 思路；必须先确定满时拒绝还是覆盖 |
