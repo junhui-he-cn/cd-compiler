@@ -15,6 +15,13 @@ source imports, and builtins such as `len`, `push`, `pop`, `floor`, `ceil`,
 `map`, `filter`, `flatMap`, `reduce`, `any`, `all`, `count`, `find`, `findIndex`, `remove`, `clear`, `merge`, `keys`, `values`,
 and `typeOf`.
 
+Struct declarations may mark fields `private`. Private fields are accessible
+throughout their defining source module, are initialized by module-local
+factory functions or constructors, and are omitted from imported public field
+shapes. Callers can use the resulting struct values and exported methods but
+cannot read, assign, pattern-match, or directly construct a struct with
+private representation fields.
+
 For a user-oriented introduction to the language, see
 [`USER_MANUAL.md`](USER_MANUAL.md).
 
@@ -744,7 +751,7 @@ Multiple input files may be provided. They are read in command-line order and co
 ./build/compiler_design --emit-bytecode program.cdbc lib.cd main.cd
 ```
 
-`--bytecode` remains a debug-print mode for inspecting compiler output. `--module-interface` prints the type-checked public API metadata for every loaded module, including exported values, named structs, struct fields, and exported struct method signatures. It is a debug/introspection mode only; it does not emit a separate-compilation artifact or run a linker. Program execution is handled by the Rust VM via `.cdbc` artifacts:
+`--bytecode` remains a debug-print mode for inspecting compiler output. `--module-interface` prints the type-checked public API metadata for every loaded module, including exported values, named structs, public struct fields, private-field presence markers, and exported struct method signatures. It is a debug/introspection mode only; it does not emit a separate-compilation artifact or run a linker. Program execution is handled by the Rust VM via `.cdbc` artifacts:
 
 The interface output also reports exported enum variants and their payload types.
 

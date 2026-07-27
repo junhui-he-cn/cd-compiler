@@ -1,0 +1,4 @@
+import "./lib.cd" as lib;
+
+let box = lib.newBox();
+print box.label;

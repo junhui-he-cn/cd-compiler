@@ -27,7 +27,9 @@ StructTypeDecl structDecl(std::string name)
         token(std::move(name)),
         {StructFieldType{token("field"), simpleType(StaticType::Number)}},
         {},
-        {}};
+        {},
+        false,
+        std::nullopt};
 }
 
 MethodSignature methodSignature(std::string resolvedName, TypeInfo returnType)

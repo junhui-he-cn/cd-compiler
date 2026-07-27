@@ -293,7 +293,11 @@ void writeInlineStmt(std::ostream& out, const Stmt& stmt)
         out << "(struct " << structDecl->name.lexeme;
         writeTypeParameterList(out, structDecl->typeParameters);
         for (const StructFieldDecl& field : structDecl->fields) {
-            out << ' ' << field.name.lexeme << ": ";
+            out << ' ';
+            if (field.isPrivate) {
+                out << "private ";
+            }
+            out << field.name.lexeme << ": ";
             writeTypeAnnotation(out, field.typeName);
         }
         out << ')';
@@ -966,6 +970,9 @@ void StructDeclStmt::print(std::ostream& out, int indent) const
     for (std::size_t i = 0; i < fields.size(); ++i) {
         if (i != 0) {
             out << ", ";
+        }
+        if (fields[i].isPrivate) {
+            out << "private ";
         }
         out << fields[i].name.lexeme << ": ";
         writeTypeAnnotation(out, fields[i].typeName);

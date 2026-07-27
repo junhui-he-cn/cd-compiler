@@ -315,6 +315,7 @@ void Lexer::identifier()
         {"let", TokenType::Let},
         {"match", TokenType::Match},
         {"print", TokenType::Print},
+        {"private", TokenType::Private},
         {"return", TokenType::Return},
         {"struct", TokenType::Struct},
         {"while", TokenType::While},
@@ -433,6 +434,8 @@ std::string tokenTypeName(TokenType type)
         return "Match";
     case TokenType::Print:
         return "Print";
+    case TokenType::Private:
+        return "Private";
     case TokenType::Return:
         return "Return";
     case TokenType::Struct:

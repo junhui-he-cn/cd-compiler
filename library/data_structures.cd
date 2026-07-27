@@ -5,7 +5,7 @@
 // receivers such as this.items still use the builtin member forms.
 
 struct Stack<T> {
-  items: [T]
+  private items: [T]
 }
 
 impl Stack<T> {
@@ -45,8 +45,8 @@ fun newStack<T>(): Stack<T> {
 }
 
 struct Queue<T> {
-  items: [T],
-  head: number
+  private items: [T],
+  private head: number
 }
 
 impl Queue<T> {

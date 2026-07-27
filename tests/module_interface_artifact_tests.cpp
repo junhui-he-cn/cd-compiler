@@ -30,6 +30,7 @@ ModuleInterface makeInterface()
 
     ModuleInterfaceStruct box;
     box.name = "Box";
+    box.hasPrivateFields = true;
     box.genericParameters = {"T"};
     box.genericParameterConstraints = {std::make_shared<TypeInfo>(simpleType(StaticType::Number))};
     box.fields.push_back(ModuleInterfaceField{"value", typeParameterType("T")});
@@ -102,6 +103,7 @@ int main()
     assert(!loaded.artifact->interfaceInfo.sourceId.valid());
     assert(loaded.artifact->interfaceInfo.values.size() == 1);
     assert(loaded.artifact->interfaceInfo.structs.size() == 1);
+    assert(loaded.artifact->interfaceInfo.structs.front().hasPrivateFields);
     assert(loaded.artifact->interfaceInfo.enums.size() == 1);
     assert(loaded.artifact->interfaceInfo.dependencies.front().importedModuleId == 0);
     assert(loaded.artifact->interfaceInfo.values.front().resolvedName == "identity#4");

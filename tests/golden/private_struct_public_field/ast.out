@@ -1,0 +1,10 @@
+Program
+  Module 0
+    Struct Box {private value: number, label: string}
+    Fun newBox(): Box
+      Return (construct Box value: 7 label: "ready")
+    Export Box newBox
+  Module 1 entry
+    Import "./lib.cd" as lib
+    Let box = (member-call lib newBox)
+    Print (field box label)

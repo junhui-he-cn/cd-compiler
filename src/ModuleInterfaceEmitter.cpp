@@ -98,6 +98,9 @@ void writeModuleInterfaceText(std::ostream& out, const std::vector<ModuleInterfa
                 out << '>';
             }
             out << '\n';
+            if (structInfo.hasPrivateFields) {
+                out << "    private fields\n";
+            }
             for (const ModuleInterfaceField& field : structInfo.fields) {
                 out << "    field " << field.name << ": " << typeInfoName(field.type) << "\n";
             }

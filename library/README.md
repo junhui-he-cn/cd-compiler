@@ -63,6 +63,6 @@ member-call sugar with the same name. Array, map, string, and range receivers
 continue to use the builtin forms, so the stack can expose `push` and `pop`
 without changing array behavior.
 
-The language also has no private struct fields or private methods yet. The
-backing fields are therefore technically accessible to callers; use the
-factory functions and public methods as the supported API.
+The backing fields are private to this module. Construct stacks and queues
+through `newStack` and `newQueue`; callers use the public methods and cannot
+replace the internal storage or queue cursor directly.

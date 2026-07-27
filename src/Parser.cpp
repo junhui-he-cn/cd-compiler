@@ -450,10 +450,11 @@ std::vector<StructFieldDecl> Parser::structFields()
 
 StructFieldDecl Parser::structField()
 {
+    const bool isPrivate = match(TokenType::Private);
     Token name = consume(TokenType::Identifier, "expected struct field name");
     consume(TokenType::Colon, "expected `:` after struct field name");
     TypeAnnotation typeName = typeAnnotation("expected struct field type after `:`");
-    return StructFieldDecl{std::move(name), std::move(typeName)};
+    return StructFieldDecl{std::move(name), std::move(typeName), isPrivate};
 }
 
 StmtPtr Parser::implDeclaration()

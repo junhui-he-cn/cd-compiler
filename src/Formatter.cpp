@@ -47,6 +47,7 @@ bool isKeyword(TokenType type)
     case TokenType::Let:
     case TokenType::Match:
     case TokenType::Print:
+    case TokenType::Private:
     case TokenType::Return:
     case TokenType::Struct:
     case TokenType::While:

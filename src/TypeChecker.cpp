@@ -163,6 +163,12 @@ std::string recordPatternTypeName(const RecordPattern& pattern)
     return pattern.name.lexeme;
 }
 
+std::string unqualifiedStructName(const std::string& name)
+{
+    const std::size_t separator = name.rfind('.');
+    return separator == std::string::npos ? name : name.substr(separator + 1);
+}
+
 std::string binaryTypesMessage(const BinaryExpr& expression, const TypeInfo& left, const TypeInfo& right)
 {
     return "binary `" + expression.op.lexeme + "` expects numbers, got "
@@ -197,8 +203,10 @@ ModuleStructExports structExportsFromInterface(const ModuleInterface& interfaceI
         declaration.name = interfaceToken(anchor, source.name);
         declaration.genericParameters = source.genericParameters;
         declaration.genericParameterConstraints = source.genericParameterConstraints;
+        declaration.hasPrivateFields = source.hasPrivateFields;
+        declaration.definingModuleId = source.definingModuleId.value_or(interfaceInfo.moduleId);
         for (const ModuleInterfaceField& field : source.fields) {
-            declaration.fields.push_back(StructFieldType{interfaceToken(anchor, field.name), field.type});
+            declaration.fields.push_back(StructFieldType{interfaceToken(anchor, field.name), field.type, false});
         }
         exports.emplace(source.name, std::move(declaration));
     }
@@ -622,7 +630,12 @@ void TypeChecker::predeclareStructDeclaration(const StructDeclStmt& statement)
         statement.name,
         {},
         typeParameterNames(statement.typeParameters),
-        {}};
+        {},
+        false,
+        std::nullopt};
+    if (!moduleStack_.empty()) {
+        declaration.definingModuleId = moduleStack_.back();
+    }
     structTypes_.emplace(statement.name.lexeme, std::move(declaration));
     structDeclarations_.emplace(statement.name.lexeme, &statement);
     structCheckStates_.emplace(statement.name.lexeme, StructCheckState::Declared);
@@ -1063,7 +1076,12 @@ void TypeChecker::buildModuleInterface(const Program& program, const ModuleStmt&
             structInfo.name = entry.first;
             structInfo.genericParameters = entry.second.genericParameters;
             structInfo.genericParameterConstraints = entry.second.genericParameterConstraints;
+            structInfo.hasPrivateFields = entry.second.hasPrivateFields;
+            structInfo.definingModuleId = entry.second.definingModuleId.value_or(module.moduleId);
             for (const StructFieldType& field : entry.second.fields) {
+                if (field.isPrivate) {
+                    continue;
+                }
                 structInfo.fields.push_back(ModuleInterfaceField{field.name.lexeme, field.type});
             }
 
@@ -1249,6 +1267,45 @@ std::size_t TypeChecker::validateModuleInterfaces(const Program& program) const
         }
     };
 
+    const auto checkStructFieldVisibility = [&mismatch](
+        const std::vector<ModuleInterfaceStruct>& actual,
+        const ModuleStructExports* expected) {
+        if (!expected) {
+            return;
+        }
+        for (const ModuleInterfaceStruct& structure : actual) {
+            const auto expectedStructure = expected->find(structure.name);
+            if (expectedStructure == expected->end()) {
+                continue;
+            }
+            const StructTypeDecl& declaration = expectedStructure->second;
+            if (structure.hasPrivateFields != declaration.hasPrivateFields) {
+                mismatch();
+            }
+
+            std::size_t publicFieldCount = 0;
+            for (const StructFieldType& field : declaration.fields) {
+                if (!field.isPrivate) {
+                    ++publicFieldCount;
+                }
+            }
+            if (structure.fields.size() != publicFieldCount) {
+                mismatch();
+            }
+            for (const ModuleInterfaceField& field : structure.fields) {
+                const auto expectedField = std::find_if(
+                    declaration.fields.begin(),
+                    declaration.fields.end(),
+                    [&field](const StructFieldType& candidate) {
+                        return candidate.name.lexeme == field.name;
+                    });
+                if (expectedField == declaration.fields.end() || expectedField->isPrivate) {
+                    mismatch();
+                }
+            }
+        }
+    };
+
     const auto checkEnumNames = [&mismatch](
         const std::vector<ModuleInterfaceEnum>& actual,
         const ModuleEnumExports* expected) {
@@ -1389,6 +1446,9 @@ std::size_t TypeChecker::validateModuleInterfaces(const Program& program) const
 
         checkValueNames(interfaceInfo.values, moduleSymbols_.valueExports(interfaceInfo.moduleId));
         checkStructNames(interfaceInfo.structs, moduleSymbols_.structExports(interfaceInfo.moduleId));
+        checkStructFieldVisibility(
+            interfaceInfo.structs,
+            moduleSymbols_.structExports(interfaceInfo.moduleId));
         checkEnumNames(interfaceInfo.enums, moduleSymbols_.enumExports(interfaceInfo.moduleId));
         checkMethodNames(interfaceInfo.structs, moduleSymbols_.methodExports(interfaceInfo.moduleId));
     }
@@ -2280,7 +2340,12 @@ void TypeChecker::checkStructDeclaration(const StructDeclStmt& statement)
         statement.name,
         {},
         typeParameterNames(statement.typeParameters),
-        typeParameterConstraints(statement.typeParameters)};
+        typeParameterConstraints(statement.typeParameters),
+        false,
+        std::nullopt};
+    if (!moduleStack_.empty()) {
+        declaration.definingModuleId = moduleStack_.back();
+    }
     std::unordered_map<std::string, Token> fieldNames;
     for (const StructFieldDecl& field : statement.fields) {
         if (fieldNames.find(field.name.lexeme) != fieldNames.end()) {
@@ -2288,7 +2353,11 @@ void TypeChecker::checkStructDeclaration(const StructDeclStmt& statement)
                 "duplicate field `" + field.name.lexeme + "` in struct `" + statement.name.lexeme + "`");
         }
         fieldNames.emplace(field.name.lexeme, field.name);
-        declaration.fields.push_back(StructFieldType{field.name, resolveStructFieldAnnotation(field)});
+        declaration.hasPrivateFields = declaration.hasPrivateFields || field.isPrivate;
+        declaration.fields.push_back(StructFieldType{
+            field.name,
+            resolveStructFieldAnnotation(field),
+            field.isPrivate});
     }
 
     endTypeParameterScope();
@@ -3201,6 +3270,23 @@ const TypeChecker::StructFieldType* TypeChecker::findStructField(
     return nullptr;
 }
 
+bool TypeChecker::canAccessPrivateFields(const StructTypeDecl& structType) const
+{
+    if (!structType.hasPrivateFields) {
+        return true;
+    }
+
+    // A direct input (including the established ordered multi-file entry
+    // path) is one compilation unit, so all of its declarations share the
+    // same module visibility boundary.
+    if (moduleStack_.empty()) {
+        return true;
+    }
+
+    return structType.definingModuleId
+        && *structType.definingModuleId == moduleStack_.back();
+}
+
 TypeInfo TypeChecker::structFieldTypeForValue(
     const TypeInfo& objectType,
     const StructTypeDecl& structType,
@@ -3224,6 +3310,12 @@ TypeChecker::CheckedExpression TypeChecker::checkNamedStructFields(
     const StructTypeDecl* structType = declared.structName ? findStructType(*declared.structName) : nullptr;
     if (!structType) {
         throw TypeError(diagnosticToken, "unknown struct type `" + typeInfoName(declared) + "`");
+    }
+
+    if (structType->hasPrivateFields && !canAccessPrivateFields(*structType)) {
+        throw TypeError(diagnosticToken,
+            "struct `" + unqualifiedStructName(structType->name.lexeme)
+                + "` has private fields and cannot be constructed outside its defining module");
     }
 
     std::unordered_map<std::string, const StructField*> literalFields;
@@ -3599,7 +3691,13 @@ bool TypeChecker::checkPattern(
             const StructFieldType* structField = findStructField(*structType, field.name.lexeme);
             if (!structField) {
                 throw TypeError(field.name,
-                    "struct `" + patternTypeName + "` has no field `"
+                    "struct `" + unqualifiedStructName(patternTypeName)
+                        + (structType->hasPrivateFields ? "` has no accessible field `" : "` has no field `")
+                        + field.name.lexeme + "` in record pattern");
+            }
+            if (structField->isPrivate && !canAccessPrivateFields(*structType)) {
+                throw TypeError(field.name,
+                    "struct `" + unqualifiedStructName(patternTypeName) + "` has no accessible field `"
                         + field.name.lexeme + "` in record pattern");
             }
 
@@ -4665,7 +4763,16 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
             const StructFieldType* structField = structType ? findStructField(*structType, field->name.lexeme) : nullptr;
             if (!structField) {
                 throw TypeError(field->name,
-                    "struct `" + *object.structName + "` has no field `" + field->name.lexeme + "`");
+                    "struct `" + unqualifiedStructName(*object.structName)
+                        + (structType && structType->hasPrivateFields
+                                ? "` has no accessible field `"
+                                : "` has no field `")
+                        + field->name.lexeme + "`");
+            }
+            if (structField->isPrivate && !canAccessPrivateFields(*structType)) {
+                throw TypeError(field->name,
+                    "struct `" + unqualifiedStructName(*object.structName) + "` has no accessible field `"
+                        + field->name.lexeme + "`");
             }
             const TypeInfo declaredFieldType = structFieldTypeForValue(object, *structType, *structField);
             TypeInfo resultType = declaredFieldType;
@@ -6167,7 +6274,16 @@ std::optional<TypeInfo> TypeChecker::checkStructFieldTarget(
         const StructFieldType* structField = structType ? findStructField(*structType, name.lexeme) : nullptr;
         if (!structField) {
             throw TypeError(name,
-                "struct `" + *object.structName + "` has no field `" + name.lexeme + "`");
+                "struct `" + unqualifiedStructName(*object.structName)
+                    + (structType && structType->hasPrivateFields
+                            ? "` has no accessible field `"
+                            : "` has no field `")
+                    + name.lexeme + "`");
+        }
+        if (structField->isPrivate && !canAccessPrivateFields(*structType)) {
+            throw TypeError(name,
+                "struct `" + unqualifiedStructName(*object.structName) + "` has no accessible field `"
+                    + name.lexeme + "`");
         }
         return structFieldTypeForValue(object, *structType, *structField);
     }

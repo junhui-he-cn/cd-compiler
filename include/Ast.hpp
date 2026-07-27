@@ -242,6 +242,7 @@ struct StructConstructExpr final : Expr {
 struct StructFieldDecl {
     Token name;
     TypeAnnotation typeName;
+    bool isPrivate = false;
 };
 
 struct EnumVariantDecl {

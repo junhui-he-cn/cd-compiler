@@ -1,0 +1,7 @@
+module 0 "<repo>/tests/golden/private_struct_public_field/lib.cd"
+  export value newBox: fun(): Box
+  export struct Box
+    private fields
+    field label: string
+
+module 1 entry "<repo>/tests/golden/private_struct_public_field/input.cd"
