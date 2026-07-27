@@ -465,6 +465,7 @@ def main() -> int:
                             "let value = 42;\n"
                             "export value;\n"
                             "struct Box { value: number }\n"
+                            "impl Box { fun get(): number { return this.value; } }\n"
                             "enum Result { Ok(number), Empty }\n"
                             "export Box, Result;\n"
                         ),
@@ -539,6 +540,7 @@ def main() -> int:
             "let box: api.Box = api.Box { value: 1 };\n"
             "let result: api.Result = api.Result.Ok(2);\n"
             "print box.value;\n"
+            "print box.get();\n"
         )
         send(
             process,
@@ -761,8 +763,8 @@ def main() -> int:
         if qualified_variant_definition.get("result") != {
             "uri": module_uri,
             "range": {
-                "start": {"line": 3, "character": 14},
-                "end": {"line": 3, "character": 16},
+                "start": {"line": 4, "character": 14},
+                "end": {"line": 4, "character": 16},
             },
         }:
             raise AssertionError(
@@ -838,6 +840,41 @@ def main() -> int:
             raise AssertionError(
                 "typed struct field completion response mismatch: "
                 f"{struct_field_completion!r}"
+            )
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 27,
+                "method": "textDocument/completion",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 6, "character": 11},
+                },
+            },
+        )
+        struct_method_completion = receive(process)
+        if struct_method_completion.get("result") != {
+            "isIncomplete": False,
+            "items": [
+                {
+                    "label": "get",
+                    "kind": 2,
+                    "detail": "fun(Box): number",
+                    "textEdit": {
+                        "range": {
+                            "start": {"line": 6, "character": 10},
+                            "end": {"line": 6, "character": 11},
+                        },
+                        "newText": "get",
+                    },
+                }
+            ],
+        }:
+            raise AssertionError(
+                "typed struct method completion response mismatch: "
+                f"{struct_method_completion!r}"
             )
 
         send(

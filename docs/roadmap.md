@@ -1439,6 +1439,15 @@ namespace-value receivers remain outside this slice. The focused protocol
 test covers a field prefix on a re-exported `api.Box` value. The decision is
 recorded in `docs/decisions/m5b-lsp-015.{md,json}`.
 
+`M5B-LSP-016` extends typed struct completion to methods. A member-call
+receiver with a known local or opened struct type returns methods declared for
+the resolved source struct, including methods retained through export-from
+forwarding. Method items use the existing Method kind and TypeChecker-resolved
+signature detail; enum constructors, namespace value members, unknown
+receivers, and unopened modules remain outside this slice. The focused
+protocol test covers `box.get` on a re-exported `api.Box`. The decision is
+recorded in `docs/decisions/m5b-lsp-016.{md,json}`.
+
 ### Milestone 5C: REPL / incremental evaluation
 
 **Dependency:** M3A module/session boundaries, M3B incremental compilation where
@@ -1677,14 +1686,15 @@ bounded list-wrapping, and incomplete-input rejection policies without changing
 language semantics. Source fallback and direct-input adapters remain
 intentional.
 The next active tool slice is workspace-aware completion; M5B-LSP-001 through
-M5B-LSP-013 now cover the single-document
+M5B-LSP-016 now cover the single-document
 protocol, diagnostics, formatting, definitions, document symbols, references,
 bounded hover type information, rename edits, declaration completion,
 open-document workspace symbols, virtual-source workspace analysis, direct
 import definition jumps, namespace-alias member definition jumps,
 cross-module references, validated cross-module rename, opened-module
 completion, namespace-qualified type/variant navigation, qualified enum
-variant completion, and typed struct-field completion while
+variant completion, typed struct-field completion, and typed struct-method
+completion while
 workspace-aware completion remains open.
 
 ## Metrics dashboard

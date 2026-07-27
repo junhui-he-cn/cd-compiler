@@ -576,6 +576,7 @@ enum class ReferenceSiteKind {
     Assignment,
     CompoundAssignment,
     FieldAccess,
+    MemberCall,
 };
 
 struct ReferenceSite {
@@ -745,6 +746,7 @@ private:
             return;
         }
         if (const auto* memberCall = dynamic_cast<const MemberCallExpr*>(expression)) {
+            addReference(ReferenceSiteKind::MemberCall, *memberCall, memberCall->name.range);
             visitExpression(memberCall->receiver.get());
             for (const ExprPtr& argument : memberCall->arguments) {
                 visitExpression(argument.get());
@@ -1601,6 +1603,8 @@ std::optional<ResolvedSymbol> resolvedReference(
     }
     case ReferenceSiteKind::FieldAccess:
         return std::nullopt;
+    case ReferenceSiteKind::MemberCall:
+        return std::nullopt;
     }
     return std::nullopt;
 }
@@ -2428,6 +2432,37 @@ std::optional<SourceRange> typeNavigationRangeAt(
     return best;
 }
 
+const StructDeclStmt* structDeclarationForTypedReceiver(
+    const AnalysisSnapshot& snapshot,
+    const ModuleStmt& module,
+    const Expr& receiver)
+{
+    const TypedExpressionRecord* typedObject
+        = snapshot.declarationIndex.typedExpression(receiver);
+    if (!typedObject) {
+        return nullptr;
+    }
+    TypeInfo objectType = typedObject->type;
+    if (objectType.kind == StaticType::Nullable && objectType.nullableOf) {
+        objectType = *objectType.nullableOf;
+    }
+    if (objectType.kind != StaticType::Struct || !objectType.structName) {
+        return nullptr;
+    }
+    const std::optional<DefinitionTarget> target = typeDefinitionForPath(
+        snapshot,
+        module,
+        *objectType.structName);
+    if (!target || !target->declaration || !target->declaration->statement) {
+        return nullptr;
+    }
+    if (const auto* declaration
+        = dynamic_cast<const StructDeclStmt*>(target->declaration->statement)) {
+        return declaration;
+    }
+    return nullptr;
+}
+
 const StructDeclStmt* structFieldCompletionTargetAt(
     const AnalysisSnapshot& snapshot,
     SourceFileId sourceId,
@@ -2445,31 +2480,42 @@ const StructDeclStmt* structFieldCompletionTargetAt(
             continue;
         }
         const auto* field = dynamic_cast<const FieldAccessExpr*>(site.expression);
-        if (!field) {
+        if (field) {
+            if (const StructDeclStmt* declaration = structDeclarationForTypedReceiver(
+                    snapshot,
+                    *module,
+                    *field->object)) {
+                return declaration;
+            }
+        }
+    }
+    return nullptr;
+}
+
+const StructDeclStmt* structMethodCompletionTargetAt(
+    const AnalysisSnapshot& snapshot,
+    SourceFileId sourceId,
+    std::size_t byte)
+{
+    const ModuleStmt* module = moduleForSource(snapshot, sourceId);
+    if (!module) {
+        return nullptr;
+    }
+    for (const ReferenceSite& site : snapshot.referenceSites) {
+        if (site.kind != ReferenceSiteKind::MemberCall
+            || !site.range
+            || !rangeContains(*site.range, sourceId, byte)
+            || !site.expression) {
             continue;
         }
-        const TypedExpressionRecord* typedObject
-            = snapshot.declarationIndex.typedExpression(*field->object);
-        if (!typedObject) {
-            continue;
-        }
-        TypeInfo objectType = typedObject->type;
-        if (objectType.kind == StaticType::Nullable && objectType.nullableOf) {
-            objectType = *objectType.nullableOf;
-        }
-        if (objectType.kind != StaticType::Struct || !objectType.structName) {
-            continue;
-        }
-        const std::optional<DefinitionTarget> target = typeDefinitionForPath(
-            snapshot,
-            *module,
-            *objectType.structName);
-        if (!target || !target->declaration || !target->declaration->statement) {
-            continue;
-        }
-        if (const auto* declaration
-            = dynamic_cast<const StructDeclStmt*>(target->declaration->statement)) {
-            return declaration;
+        const auto* memberCall = dynamic_cast<const MemberCallExpr*>(site.expression);
+        if (memberCall) {
+            if (const StructDeclStmt* declaration = structDeclarationForTypedReceiver(
+                    snapshot,
+                    *module,
+                    *memberCall->receiver)) {
+                return declaration;
+            }
         }
     }
     return nullptr;
@@ -3354,6 +3400,39 @@ private:
                         && matchesPrefix(field.name.lexeme)) {
                         candidates.push_back(Candidate{nullptr, nullptr, &field});
                     }
+                }
+                const SourceFileId structSource = structDeclaration->name.range
+                    ? structDeclaration->name.range->source
+                    : SourceFileId{};
+                for (const DeclarationRecord& declaration
+                     : snapshot.declarationIndex.declarations()) {
+                    if (declaration.kind != DeclarationKind::Method
+                        || declaration.ownerType != structDeclaration->name.lexeme
+                        || !declaration.range
+                        || declaration.range->source != structSource
+                        || !matchesPrefix(declaration.name)) {
+                        continue;
+                    }
+                    candidates.push_back(Candidate{&declaration, nullptr, nullptr});
+                }
+            } else if (const StructDeclStmt* structDeclaration = structMethodCompletionTargetAt(
+                           snapshot,
+                           found->second.analysis.sourceId,
+                           *byte)) {
+                matchedStructFields = true;
+                const SourceFileId structSource = structDeclaration->name.range
+                    ? structDeclaration->name.range->source
+                    : SourceFileId{};
+                for (const DeclarationRecord& declaration
+                     : snapshot.declarationIndex.declarations()) {
+                    if (declaration.kind != DeclarationKind::Method
+                        || declaration.ownerType != structDeclaration->name.lexeme
+                        || !declaration.range
+                        || declaration.range->source != structSource
+                        || !matchesPrefix(declaration.name)) {
+                        continue;
+                    }
+                    candidates.push_back(Candidate{&declaration, nullptr, nullptr});
                 }
             }
         }
