@@ -1660,28 +1660,28 @@ Program
     Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder shortestDistances shortestPath inDegrees topologicalOrder hasCycle shortestWeightedDistances shortestWeightedPath some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
-    Fun renderEntries(values: [ds.MultiSetEntry<string>]): string
-      Let result = ""
-      Let index = 0
-      While (group (< index (member-call values len)))
-        Body
-          Block
-            If (group (> index 0))
-              Then
-                Block
-                  Expr (= result (+ result ","))
-            Let entry = (index values index)
-            Expr (= result (+ (+ (+ result (field entry value)) ":") (call str (field entry count))))
-            Expr (+= index 1)
-      Return result
-    Let words = (array "cat" "dog" "cat" "bird" "dog" "cat")
-    Print (call renderEntries (member-call ds frequencyEntries words))
-    Print (member-call ds mostFrequent words)
-    Let tie = (array "a" "b" "a" "b")
-    Print (call renderEntries (member-call ds frequencyEntries tie))
-    Print (member-call ds mostFrequent tie)
-    Print (member-call ds frequencyEntries (array 2 2 3 2))
-    Print (member-call ds mostFrequent (array 2 2 3 2))
-    Let empty: [number] = (array)
-    Print (member-call ds frequencyEntries<number> empty)
-    Print (member-call ds mostFrequent<number> empty)
+    Let dag = (member-call ds newGraph 4 true)
+    Expr (member-call dag addEdge 0 1)
+    Expr (member-call dag addEdge 1 2)
+    Expr (member-call dag addEdge 0 3)
+    Print (member-call ds hasCycle dag)
+    Let directedCycle = (member-call ds newGraph 3 true)
+    Expr (member-call directedCycle addEdge 0 1)
+    Expr (member-call directedCycle addEdge 1 2)
+    Expr (member-call directedCycle addEdge 2 0)
+    Print (member-call ds hasCycle directedCycle)
+    Let tree = (member-call ds newGraph 4 false)
+    Expr (member-call tree addEdge 0 1)
+    Expr (member-call tree addEdge 1 2)
+    Expr (member-call tree addEdge 1 3)
+    Print (member-call ds hasCycle tree)
+    Let undirectedCycle = (member-call ds newGraph 3 false)
+    Expr (member-call undirectedCycle addEdge 0 1)
+    Expr (member-call undirectedCycle addEdge 1 2)
+    Expr (member-call undirectedCycle addEdge 2 0)
+    Print (member-call ds hasCycle undirectedCycle)
+    Let selfLoop = (member-call ds newGraph 1 false)
+    Expr (member-call selfLoop addEdge 0 0)
+    Print (member-call ds hasCycle selfLoop)
+    Let empty = (member-call ds newGraph 0 true)
+    Print (member-call ds hasCycle empty)

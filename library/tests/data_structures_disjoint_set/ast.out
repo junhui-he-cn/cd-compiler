@@ -781,6 +781,59 @@ Program
           Block
             Return (array)
       Return result
+    Fun hasCycle(graph: Graph): bool
+      Let count = (member-call graph vertexCount)
+      If (group (field graph directed))
+        Then
+          Block
+            Return (!= (member-call (call topologicalOrder graph) len) count)
+      Let visited: [bool] = (array)
+      Let parents: [number] = (array)
+      Let index = 0
+      While (group (< index count))
+        Body
+          Block
+            Expr (member-call visited push false)
+            Expr (member-call parents push (- 1))
+            Expr (+= index 1)
+      Let root = 0
+      While (group (< root count))
+        Body
+          Block
+            If (group (index visited root))
+              Then
+                Block
+                  Expr (+= root 1)
+                  Continue
+            Let stack: [number] = (array root)
+            Expr (= (index visited root) true)
+            While (group (> (member-call stack len) 0))
+              Body
+                Block
+                  Let vertexIndex = (- (member-call stack len) 1)
+                  Let vertex = (index stack vertexIndex)
+                  Expr (member-call stack pop)
+                  Let neighbors = (member-call graph neighbors vertex)
+                  Let neighborIndex = 0
+                  While (group (< neighborIndex (member-call neighbors len)))
+                    Body
+                      Block
+                        Let neighbor = (index neighbors neighborIndex)
+                        If (group (! (index visited neighbor)))
+                          Then
+                            Block
+                              Expr (= (index visited neighbor) true)
+                              Expr (= (index parents neighbor) vertex)
+                              Expr (member-call stack push neighbor)
+                          Else
+                            Block
+                              If (group (!= (index parents vertex) neighbor))
+                                Then
+                                  Block
+                                    Return true
+                        Expr (+= neighborIndex 1)
+            Expr (+= root 1)
+      Return false
     Struct WeightedEdge {to: number, weight: number}
     Struct WeightedGraph {adjacency: [[WeightedEdge]], directed: bool, edges: number}
     Impl WeightedGraph
@@ -1604,7 +1657,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder shortestDistances shortestPath inDegrees topologicalOrder shortestWeightedDistances shortestWeightedPath some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder shortestDistances shortestPath inDegrees topologicalOrder hasCycle shortestWeightedDistances shortestWeightedPath some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let sets = (member-call ds newDisjointSet 6)

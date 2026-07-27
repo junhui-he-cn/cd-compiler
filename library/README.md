@@ -104,6 +104,7 @@ dag.addEdge(0, 1);
 dag.addEdge(1, 2);
 print ds.inDegrees(dag);
 print ds.topologicalOrder(dag);
+print ds.hasCycle(dag);
 
 let weighted = ds.newWeightedGraph(3, false);
 weighted.addEdge(0, 1, 2);
@@ -344,6 +345,11 @@ graph, or `[]` for an undirected graph. `topologicalOrder(graph)` uses Kahn's
 algorithm and preserves vertex/adjacency insertion order when multiple vertices
 are ready. It returns `[]` for an undirected graph or a directed graph with a
 cycle, and otherwise runs in `O(V + E)` time with `O(V)` auxiliary space.
+
+`hasCycle(graph)` detects directed cycles with the topological-order check and
+undirected cycles with an iterative parent-aware DFS. It handles self-loops,
+returns `false` for empty or acyclic graphs, and runs in `O(V + E)` time with
+`O(V)` auxiliary space.
 
 `WeightedGraph` stores non-negative numeric edge weights. Its Dijkstra helpers
 `shortestWeightedDistances` and `shortestWeightedPath` return `-1`/`[]` for
