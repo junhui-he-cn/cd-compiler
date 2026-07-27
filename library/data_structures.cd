@@ -829,6 +829,51 @@ fun quickSort<T>(values: [T], less: fun(T, T): bool): [T] {
   return result;
 }
 
+fun heapSortSiftDown<T>(values: [T], root: number, heapSize: number, less: fun(T, T): bool) {
+  let index = root;
+  while (true) {
+    let candidate = index;
+    let left = index * 2 + 1;
+    if (left < heapSize && less(values[candidate], values[left])) {
+      candidate = left;
+    }
+    let right = left + 1;
+    if (right < heapSize && less(values[candidate], values[right])) {
+      candidate = right;
+    }
+    if (candidate == index) {
+      break;
+    }
+    let value = values[index];
+    values[index] = values[candidate];
+    values[candidate] = value;
+    index = candidate;
+  }
+}
+
+fun heapSortInPlace<T>(values: [T], less: fun(T, T): bool) {
+  let start = floor(values.len() / 2) - 1;
+  while (start >= 0) {
+    heapSortSiftDown(values, start, values.len(), less);
+    start -= 1;
+  }
+
+  let heapSize = values.len();
+  while (heapSize > 1) {
+    let value = values[0];
+    values[0] = values[heapSize - 1];
+    values[heapSize - 1] = value;
+    heapSize -= 1;
+    heapSortSiftDown(values, 0, heapSize, less);
+  }
+}
+
+fun heapSort<T>(values: [T], less: fun(T, T): bool): [T] {
+  let result = copy(values);
+  heapSortInPlace(result, less);
+  return result;
+}
+
 fun chunkArray<T>(values: [T], size: number): [[T]] {
   let result: [[T]] = [];
   if (size <= 0) {
@@ -1138,4 +1183,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;

@@ -672,6 +672,50 @@ Program
       Let result = (call copy values)
       Expr (call quickSortInPlace result less)
       Return result
+    Fun heapSortSiftDown<T>(values: [T], root: number, heapSize: number, less: fun(T, T): bool)
+      Let index = root
+      While (group true)
+        Body
+          Block
+            Let candidate = index
+            Let left = (+ (* index 2) 1)
+            If (group (&& (< left heapSize) (call less (index values candidate) (index values left))))
+              Then
+                Block
+                  Expr (= candidate left)
+            Let right = (+ left 1)
+            If (group (&& (< right heapSize) (call less (index values candidate) (index values right))))
+              Then
+                Block
+                  Expr (= candidate right)
+            If (group (== candidate index))
+              Then
+                Block
+                  Break
+            Let value = (index values index)
+            Expr (= (index values index) (index values candidate))
+            Expr (= (index values candidate) value)
+            Expr (= index candidate)
+    Fun heapSortInPlace<T>(values: [T], less: fun(T, T): bool)
+      Let start = (- (call floor (/ (member-call values len) 2)) 1)
+      While (group (>= start 0))
+        Body
+          Block
+            Expr (call heapSortSiftDown values start (member-call values len) less)
+            Expr (-= start 1)
+      Let heapSize = (member-call values len)
+      While (group (> heapSize 1))
+        Body
+          Block
+            Let value = (index values 0)
+            Expr (= (index values 0) (index values (- heapSize 1)))
+            Expr (= (index values (- heapSize 1)) value)
+            Expr (-= heapSize 1)
+            Expr (call heapSortSiftDown values 0 heapSize less)
+    Fun heapSort<T>(values: [T], less: fun(T, T): bool): [T]
+      Let result = (call copy values)
+      Expr (call heapSortInPlace result less)
+      Return result
     Fun chunkArray<T>(values: [T], size: number): [[T]]
       Let result: [[T]] = (array)
       If (group (<= size 0))
@@ -968,7 +1012,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let map = (member-call ds newMultiMap<string, number>)

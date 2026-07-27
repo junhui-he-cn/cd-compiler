@@ -97,6 +97,7 @@ fun ascending(left: number, right: number): bool {
 print ds.sortArray(values, ascending);
 print ds.mergeSort(values, ascending);
 print ds.quickSort(values, ascending);
+print ds.heapSort(values, ascending);
 print ds.chunkArray(values, 2);
 print ds.slidingWindows(values, 2);
 print ds.prefixSums(values);
@@ -318,6 +319,11 @@ case remains `O(n^2)`. The copying version uses `O(n)` outer-array space, and
 the in-place version additionally uses recursion stack space proportional to
 the partition depth.
 
+`heapSort<T>(values, less)` returns a sorted shallow copy, while
+`heapSortInPlace<T>(values, less)` sorts the supplied array in place. Heap sort
+is not stable, runs in `O(n log n)` time, and uses `O(1)` extra space for the
+in-place version; the copying version additionally allocates the result array.
+
 Window and prefix helpers are also non-mutating:
 
 - `chunkArray<T>(values, size): [[T]]` — split into consecutive chunks;
@@ -419,7 +425,8 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
 `--case array_algorithms_binary_search`, `--case array_algorithms_merge_sort`,
-`--case array_algorithms_quick_sort`, `--case array_algorithms_two_pointer`,
+`--case array_algorithms_quick_sort`, `--case array_algorithms_heap_sort`,
+`--case array_algorithms_two_pointer`,
 `--case array_algorithms_sets`, or `--case array_algorithms_window_stats` for
 focused coverage. Use `--update` only when
 an intentional compiler-output change requires refreshing library fixtures'

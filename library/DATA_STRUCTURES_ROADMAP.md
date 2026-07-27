@@ -42,7 +42,7 @@
 - `MultiMap<K,V>`：数组条目表示一个键对应多个值的泛型映射。
 - 数组基础算法：`reverseArray`、`linearSearch`、`countValue`。
 - 数组排序：稳定插入排序 `sortArray`、`sortArrayInPlace`、归并排序 `mergeSort`、
-  快速排序 `quickSort` 和 `quickSortInPlace`。
+  快速排序 `quickSort`/`quickSortInPlace` 和堆排序 `heapSort`/`heapSortInPlace`。
 - 数组窗口算法：`chunkArray`、`slidingWindows`、`prefixSums`。
 - 区间算法：`Interval`、`mergeIntervals` 和 `intersectIntervals`。
 - 双指针算法：`mergeSortedNumbers`、`twoSumSorted`。
@@ -243,6 +243,8 @@ enum Result<T, E> {
 `mergeSort` 使用稳定的自底向上归并排序，返回新数组，不改变输入。
 `quickSort` 和 `quickSortInPlace` 使用中点 pivot 的原地分区版本；它们不保证
 稳定性，平均为 `O(n log n)`，最坏为 `O(n^2)`。
+`heapSort` 和 `heapSortInPlace` 使用 comparator 定义的相反堆序完成原地堆排序，
+不保证稳定性，时间复杂度为 `O(n log n)`。
 
 - 遍历、复制、拼接、分块、窗口、批处理；
 - `reverse`、`rotate`、`partition`、稳定分区、按谓词分组；
@@ -418,7 +420,8 @@ S2 已完成 `Set<T>` 的数组后端版本：使用语言 `==` 做线性去重�
 键数组和每键 value 数组，`discard(key,value)` 删除一个匹配 pair。随后完成
 了基础数组搜索/计数/逆序算法、稳定插入排序、窗口/前缀和算法、区间合并、
 双指针、数组集合算法、固定窗口统计、区间交集、最大子数组和、二分查找、归并
-排序以及快速排序已经完成，下一步进入堆排序或其他数值算法。
+排序、快速排序以及堆排序已经完成，下一步进入选择/冒泡等教学排序或其他数值
+算法。
 
 ### S2：集合和序列算法
 
