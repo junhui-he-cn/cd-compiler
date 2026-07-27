@@ -570,6 +570,55 @@ Program
                         Expr (= (field (index merged (- (member-call merged len) 1)) end) (field current end))
             Expr (+= index 1)
       Return merged
+    Fun mergeSortedNumbers(left: [number], right: [number]): [number]
+      Let result: [number] = (array)
+      Let leftIndex = 0
+      Let rightIndex = 0
+      While (group (&& (< leftIndex (member-call left len)) (< rightIndex (member-call right len))))
+        Body
+          Block
+            If (group (<= (index left leftIndex) (index right rightIndex)))
+              Then
+                Block
+                  Expr (member-call result push (index left leftIndex))
+                  Expr (+= leftIndex 1)
+              Else
+                Block
+                  Expr (member-call result push (index right rightIndex))
+                  Expr (+= rightIndex 1)
+      While (group (< leftIndex (member-call left len)))
+        Body
+          Block
+            Expr (member-call result push (index left leftIndex))
+            Expr (+= leftIndex 1)
+      While (group (< rightIndex (member-call right len)))
+        Body
+          Block
+            Expr (member-call result push (index right rightIndex))
+            Expr (+= rightIndex 1)
+      Return result
+    Fun twoSumSorted(values: [number], target: number): [number]
+      Let result: [number] = (array)
+      Let left = 0
+      Let right = (- (member-call values len) 1)
+      While (group (< left right))
+        Body
+          Block
+            Let sum = (+ (index values left) (index values right))
+            If (group (== sum target))
+              Then
+                Block
+                  Expr (member-call result push left)
+                  Expr (member-call result push right)
+                  Return result
+            If (group (< sum target))
+              Then
+                Block
+                  Expr (+= left 1)
+              Else
+                Block
+                  Expr (-= right 1)
+      Return result
     Struct PriorityQueue<T> {heap: BinaryHeap<T>}
     Impl PriorityQueue<T>
       Method enqueue(value: T)
@@ -586,7 +635,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums mergeIntervals
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums mergeIntervals mergeSortedNumbers twoSumSorted
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let deque = (member-call ds newDeque<number>)

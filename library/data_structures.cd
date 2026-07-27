@@ -734,6 +734,50 @@ fun mergeIntervals(intervals: [Interval]): [Interval] {
   return merged;
 }
 
+fun mergeSortedNumbers(left: [number], right: [number]): [number] {
+  let result: [number] = [];
+  let leftIndex = 0;
+  let rightIndex = 0;
+  while (leftIndex < left.len() && rightIndex < right.len()) {
+    if (left[leftIndex] <= right[rightIndex]) {
+      result.push(left[leftIndex]);
+      leftIndex += 1;
+    } else {
+      result.push(right[rightIndex]);
+      rightIndex += 1;
+    }
+  }
+  while (leftIndex < left.len()) {
+    result.push(left[leftIndex]);
+    leftIndex += 1;
+  }
+  while (rightIndex < right.len()) {
+    result.push(right[rightIndex]);
+    rightIndex += 1;
+  }
+  return result;
+}
+
+fun twoSumSorted(values: [number], target: number): [number] {
+  let result: [number] = [];
+  let left = 0;
+  let right = values.len() - 1;
+  while (left < right) {
+    let sum = values[left] + values[right];
+    if (sum == target) {
+      result.push(left);
+      result.push(right);
+      return result;
+    }
+    if (sum < target) {
+      left += 1;
+    } else {
+      right -= 1;
+    }
+  }
+  return result;
+}
+
 struct PriorityQueue<T> {
   heap: BinaryHeap<T>
 }
@@ -768,4 +812,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, countValue, sortArray, sortArrayInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, countValue, sortArray, sortArrayInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, mergeSortedNumbers, twoSumSorted;

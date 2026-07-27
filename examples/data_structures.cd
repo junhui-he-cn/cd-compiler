@@ -106,3 +106,6 @@ let ranges: [ds.Interval] = [
   ds.Interval { start: 2, end: 5 }
 ];
 print ds.mergeIntervals(ranges);
+
+print ds.mergeSortedNumbers([1, 3], [2, 4]);
+print ds.twoSumSorted([1, 2, 4, 7], 6);

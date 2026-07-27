@@ -7,6 +7,7 @@ generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
 `Set<T>` and `MultiSet<T>` types. It also provides an array-backed
 `MultiMap<K, V>` for one-to-many mappings and basic generic array algorithms,
 including comparator-based insertion sort, window helpers, and interval merge.
+It also includes numeric two-pointer helpers for sorted arrays.
 
 The planned structure and algorithm inventory, implementation constraints, and
 staged delivery order are documented in
@@ -102,6 +103,9 @@ let ranges: [ds.Interval] = [
   ds.Interval { start: 2, end: 5 }
 ];
 print ds.mergeIntervals(ranges);
+
+print ds.mergeSortedNumbers([1, 3], [2, 4]);
+print ds.twoSumSorted([1, 2, 4, 7], 6);
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -298,6 +302,12 @@ sorted by start, merges overlapping or touching intervals, and leaves the input
 array unchanged. It uses `O(n log n)` sorting time plus linear merging and
 allocates `O(n)` output space.
 
+For non-decreasing numeric arrays, `mergeSortedNumbers(left, right)` returns a
+linear-time merged copy and `twoSumSorted(values, target)` uses two pointers to
+return the first matching `[leftIndex, rightIndex]`, or `[]` when no pair exists.
+Both are `O(n)` time with `O(n)` output space for the returned arrays and do not
+modify their inputs. `twoSumSorted` requires its input to already be sorted.
+
 ## Current language limitation
 
 The language's builtin member-call sugar reserves names such as `push`, `pop`,
@@ -328,5 +338,6 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_multimap`, `--case array_algorithms_basic`,
 `--case array_algorithms_sort`, or `--case array_algorithms_windows` for a
 focused run, or `--case array_algorithms_intervals` for interval-focused
-coverage. Use `--update` only when an intentional compiler-output change
-requires refreshing library fixtures' `ast.out` files.
+coverage, or `--case array_algorithms_two_pointer` for two-pointer coverage.
+Use `--update` only when an intentional compiler-output change requires
+refreshing library fixtures' `ast.out` files.
