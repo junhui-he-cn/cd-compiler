@@ -97,6 +97,7 @@ fun ascendingValues(left: number, right: number): bool {
 }
 
 print ds.sortArray(values, ascendingValues);
+print ds.mergeSort(values, ascendingValues);
 print ds.chunkArray(values, 2);
 print ds.slidingWindows(values, 2);
 print ds.prefixSums(values);

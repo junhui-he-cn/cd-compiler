@@ -1,0 +1,49 @@
+import "../../data_structures.cd" as ds;
+
+fun ascending(left: number, right: number): bool {
+  return left < right;
+}
+
+struct Entry {
+  key: number,
+  label: string
+}
+
+fun entryLess(left: Entry, right: Entry): bool {
+  return left.key < right.key;
+}
+
+fun renderEntries(values: [Entry]): string {
+  let result = "";
+  let index = 0;
+  while (index < values.len()) {
+    if (index > 0) {
+      result = result + ",";
+    }
+    let value = values[index];
+    result = result + str(value.key) + ":" + value.label;
+    index += 1;
+  }
+  return result;
+}
+
+let numbers = [4, 1, 3, 1, 2];
+print ds.mergeSort(numbers, ascending);
+print numbers;
+
+let words = ["fox", "ant", "dog", "cat"];
+print ds.mergeSort(words, ds.stringLess);
+print words;
+
+let entries: [Entry] = [
+  Entry { key: 2, label: "first" },
+  Entry { key: 1, label: "middle" },
+  Entry { key: 2, label: "second" },
+  Entry { key: 3, label: "last" }
+];
+print renderEntries(ds.mergeSort(entries, entryLess));
+print renderEntries(entries);
+
+let empty: [number] = [];
+print ds.mergeSort<number>(empty, ascending);
+print ds.mergeSort([42], ascending);

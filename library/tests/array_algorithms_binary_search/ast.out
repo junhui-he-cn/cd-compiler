@@ -581,6 +581,60 @@ Program
       Let result = (call copy values)
       Expr (call sortArrayInPlace result less)
       Return result
+    Fun mergeSort<T>(values: [T], less: fun(T, T): bool): [T]
+      Let result = (call copy values)
+      Let width = 1
+      While (group (< width (member-call result len)))
+        Body
+          Block
+            Let start = 0
+            While (group (< start (member-call result len)))
+              Body
+                Block
+                  Let middle = (+ start width)
+                  If (group (> middle (member-call result len)))
+                    Then
+                      Block
+                        Expr (= middle (member-call result len))
+                  Let end = (+ middle width)
+                  If (group (> end (member-call result len)))
+                    Then
+                      Block
+                        Expr (= end (member-call result len))
+                  Let leftIndex = start
+                  Let rightIndex = middle
+                  Let merged: [T] = (array)
+                  While (group (&& (< leftIndex middle) (< rightIndex end)))
+                    Body
+                      Block
+                        If (group (call less (index result rightIndex) (index result leftIndex)))
+                          Then
+                            Block
+                              Expr (member-call merged push (index result rightIndex))
+                              Expr (+= rightIndex 1)
+                          Else
+                            Block
+                              Expr (member-call merged push (index result leftIndex))
+                              Expr (+= leftIndex 1)
+                  While (group (< leftIndex middle))
+                    Body
+                      Block
+                        Expr (member-call merged push (index result leftIndex))
+                        Expr (+= leftIndex 1)
+                  While (group (< rightIndex end))
+                    Body
+                      Block
+                        Expr (member-call merged push (index result rightIndex))
+                        Expr (+= rightIndex 1)
+                  Let mergedIndex = 0
+                  While (group (< mergedIndex (member-call merged len)))
+                    Body
+                      Block
+                        Expr (= (index result (+ start mergedIndex)) (index merged mergedIndex))
+                        Expr (+= mergedIndex 1)
+                  Expr (= start end)
+            Expr (*= width 2)
+      Return result
     Fun chunkArray<T>(values: [T], size: number): [[T]]
       Let result: [[T]] = (array)
       If (group (<= size 0))
@@ -877,7 +931,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue sortArray sortArrayInPlace mergeSort chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Fun ascendingNumber(left: number, right: number): bool

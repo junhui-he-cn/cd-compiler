@@ -95,6 +95,7 @@ fun ascending(left: number, right: number): bool {
 }
 
 print ds.sortArray(values, ascending);
+print ds.mergeSort(values, ascending);
 print ds.chunkArray(values, 2);
 print ds.slidingWindows(values, 2);
 print ds.prefixSums(values);
@@ -304,6 +305,11 @@ that `left` should appear first. Sorting is `O(n^2)`; the copying version uses
 space. Neither function requires a total-order check beyond the comparator's
 behavior.
 
+`mergeSort<T>(values, less)` returns a stable, sorted shallow copy and leaves
+the input unchanged. It uses bottom-up merge sort in `O(n log n)` time and
+`O(n)` temporary outer-array space. Equal comparator values keep their input
+order.
+
 Window and prefix helpers are also non-mutating:
 
 - `chunkArray<T>(values, size): [[T]]` — split into consecutive chunks;
@@ -404,7 +410,8 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_multimap`, `--case array_algorithms_basic`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
-`--case array_algorithms_binary_search`, `--case array_algorithms_two_pointer`,
+`--case array_algorithms_binary_search`, `--case array_algorithms_merge_sort`,
+`--case array_algorithms_two_pointer`,
 `--case array_algorithms_sets`, or `--case array_algorithms_window_stats` for
 focused coverage. Use `--update` only when
 an intentional compiler-output change requires refreshing library fixtures'
