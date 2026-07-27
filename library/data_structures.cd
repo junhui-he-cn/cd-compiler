@@ -778,6 +778,56 @@ fun twoSumSorted(values: [number], target: number): [number] {
   return result;
 }
 
+fun uniqueValues<T>(values: [T]): [T] {
+  let result: [T] = [];
+  let index = 0;
+  while (index < values.len()) {
+    if (linearSearch(result, values[index]) < 0) {
+      result.push(values[index]);
+    }
+    index += 1;
+  }
+  return result;
+}
+
+fun intersectionValues<T>(left: [T], right: [T]): [T] {
+  let result: [T] = [];
+  let index = 0;
+  while (index < left.len()) {
+    let value = left[index];
+    if (linearSearch(right, value) >= 0 && linearSearch(result, value) < 0) {
+      result.push(value);
+    }
+    index += 1;
+  }
+  return result;
+}
+
+fun unionValues<T>(left: [T], right: [T]): [T] {
+  let result = uniqueValues(left);
+  let index = 0;
+  while (index < right.len()) {
+    if (linearSearch(result, right[index]) < 0) {
+      result.push(right[index]);
+    }
+    index += 1;
+  }
+  return result;
+}
+
+fun differenceValues<T>(left: [T], right: [T]): [T] {
+  let result: [T] = [];
+  let index = 0;
+  while (index < left.len()) {
+    let value = left[index];
+    if (linearSearch(right, value) < 0 && linearSearch(result, value) < 0) {
+      result.push(value);
+    }
+    index += 1;
+  }
+  return result;
+}
+
 struct PriorityQueue<T> {
   heap: BinaryHeap<T>
 }
@@ -812,4 +862,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, countValue, sortArray, sortArrayInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, mergeSortedNumbers, twoSumSorted;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, countValue, sortArray, sortArrayInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues;

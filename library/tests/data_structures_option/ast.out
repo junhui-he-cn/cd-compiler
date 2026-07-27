@@ -619,6 +619,56 @@ Program
                 Block
                   Expr (-= right 1)
       Return result
+    Fun uniqueValues<T>(values: [T]): [T]
+      Let result: [T] = (array)
+      Let index = 0
+      While (group (< index (member-call values len)))
+        Body
+          Block
+            If (group (< (call linearSearch result (index values index)) 0))
+              Then
+                Block
+                  Expr (member-call result push (index values index))
+            Expr (+= index 1)
+      Return result
+    Fun intersectionValues<T>(left: [T], right: [T]): [T]
+      Let result: [T] = (array)
+      Let index = 0
+      While (group (< index (member-call left len)))
+        Body
+          Block
+            Let value = (index left index)
+            If (group (&& (>= (call linearSearch right value) 0) (< (call linearSearch result value) 0)))
+              Then
+                Block
+                  Expr (member-call result push value)
+            Expr (+= index 1)
+      Return result
+    Fun unionValues<T>(left: [T], right: [T]): [T]
+      Let result = (call uniqueValues left)
+      Let index = 0
+      While (group (< index (member-call right len)))
+        Body
+          Block
+            If (group (< (call linearSearch result (index right index)) 0))
+              Then
+                Block
+                  Expr (member-call result push (index right index))
+            Expr (+= index 1)
+      Return result
+    Fun differenceValues<T>(left: [T], right: [T]): [T]
+      Let result: [T] = (array)
+      Let index = 0
+      While (group (< index (member-call left len)))
+        Body
+          Block
+            Let value = (index left index)
+            If (group (&& (< (call linearSearch right value) 0) (< (call linearSearch result value) 0)))
+              Then
+                Block
+                  Expr (member-call result push value)
+            Expr (+= index 1)
+      Return result
     Struct PriorityQueue<T> {heap: BinaryHeap<T>}
     Impl PriorityQueue<T>
       Method enqueue(value: T)
@@ -635,7 +685,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums mergeIntervals mergeSortedNumbers twoSumSorted
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums mergeIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Fun render(value: ds.Option<number>): string

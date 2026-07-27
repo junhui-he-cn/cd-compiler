@@ -8,6 +8,7 @@ generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
 `MultiMap<K, V>` for one-to-many mappings and basic generic array algorithms,
 including comparator-based insertion sort, window helpers, and interval merge.
 It also includes numeric two-pointer helpers for sorted arrays.
+Array set operations preserve first-occurrence order and use language equality.
 
 The planned structure and algorithm inventory, implementation constraints, and
 staged delivery order are documented in
@@ -106,6 +107,9 @@ print ds.mergeIntervals(ranges);
 
 print ds.mergeSortedNumbers([1, 3], [2, 4]);
 print ds.twoSumSorted([1, 2, 4, 7], 6);
+
+print ds.uniqueValues([3, 1, 3, 2]);
+print ds.unionValues([1, 2], [2, 3]);
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -308,6 +312,18 @@ return the first matching `[leftIndex, rightIndex]`, or `[]` when no pair exists
 Both are `O(n)` time with `O(n)` output space for the returned arrays and do not
 modify their inputs. `twoSumSorted` requires its input to already be sorted.
 
+The array set helpers are non-mutating and remove duplicate output values while
+preserving the first occurrence order:
+
+- `uniqueValues<T>(values)` — stable de-duplication;
+- `intersectionValues<T>(left, right)` — values present in both arrays;
+- `unionValues<T>(left, right)` — all values from left, followed by new values
+  from right;
+- `differenceValues<T>(left, right)` — values from left that are absent in right.
+
+They use linear scans, so the current array-backed versions are `O(n*m)` in the
+worst case for the input sizes involved and allocate a new result array.
+
 ## Current language limitation
 
 The language's builtin member-call sugar reserves names such as `push`, `pop`,
@@ -336,8 +352,8 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_result`, `--case data_structures_list`,
 `--case data_structures_set`, `--case data_structures_multiset`,
 `--case data_structures_multimap`, `--case array_algorithms_basic`,
-`--case array_algorithms_sort`, or `--case array_algorithms_windows` for a
-focused run, or `--case array_algorithms_intervals` for interval-focused
-coverage, or `--case array_algorithms_two_pointer` for two-pointer coverage.
-Use `--update` only when an intentional compiler-output change requires
-refreshing library fixtures' `ast.out` files.
+`--case array_algorithms_sort`, `--case array_algorithms_windows`,
+`--case array_algorithms_intervals`, `--case array_algorithms_two_pointer`, or
+`--case array_algorithms_sets` for focused coverage. Use `--update` only when
+an intentional compiler-output change requires refreshing library fixtures'
+`ast.out` files.
