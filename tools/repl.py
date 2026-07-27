@@ -15,6 +15,10 @@ import json
 import subprocess
 import sys
 import tempfile
+try:
+    import readline
+except ImportError:  # pragma: no cover - platform fallback
+    readline = None
 from pathlib import Path
 from typing import Optional, TextIO
 
@@ -158,6 +162,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="use one JSON request and response per input line",
     )
+    parser.add_argument(
+        "--history-file",
+        type=Path,
+        help="read and write interactive readline history at this path",
+    )
     return parser.parse_args()
 
 
@@ -296,6 +305,7 @@ def run_session(
     input_stream: TextIO,
     output_stream: TextIO,
     error_stream: TextIO,
+    history_file: Optional[Path] = None,
 ) -> int:
     pending: list[str] = []
     interactive = input_stream.isatty() and error_stream.isatty()
@@ -305,12 +315,11 @@ def run_session(
             error_stream.write("... " if pending else ">>> ")
             error_stream.flush()
 
-    show_prompt()
-    for raw_line in input_stream:
-        line = raw_line.rstrip("\n")
+    def consume_line(raw_line: str) -> bool:
+        line = raw_line.rstrip("\r\n")
         if not pending and line.startswith(":"):
             if line == ":quit":
-                return 0
+                return True
             if line == ":reset":
                 session.reset()
             elif line == ":help":
@@ -327,8 +336,7 @@ def run_session(
                     )
             else:
                 error_stream.write(f"REPL error: unknown command `{line}`\n")
-            show_prompt()
-            continue
+            return False
 
         if not line.strip():
             if pending:
@@ -338,14 +346,60 @@ def run_session(
                     error_stream,
                 )
                 pending.clear()
-            show_prompt()
-            continue
+            return False
 
         pending.append(line)
-        show_prompt()
+        return False
 
-    if pending:
-        emit_submission(session.submit("\n".join(pending)), output_stream, error_stream)
+    def finish_pending() -> None:
+        if pending:
+            emit_submission(session.submit("\n".join(pending)), output_stream, error_stream)
+
+    def load_history() -> None:
+        if not history_file or readline is None:
+            return
+        try:
+            readline.read_history_file(str(history_file))
+        except FileNotFoundError:
+            pass
+        except OSError as error:
+            error_stream.write(f"REPL error: failed to read history file: {error}\n")
+            error_stream.flush()
+
+    def save_history() -> None:
+        if not history_file or readline is None:
+            return
+        try:
+            readline.write_history_file(str(history_file))
+        except OSError as error:
+            error_stream.write(f"REPL error: failed to write history file: {error}\n")
+            error_stream.flush()
+
+    if interactive and readline is not None:
+        load_history()
+        try:
+            while True:
+                show_prompt()
+                try:
+                    raw_line = input() + "\n"
+                except EOFError:
+                    break
+                line = raw_line.rstrip("\r\n")
+                if line.strip():
+                    readline.add_history(line)
+                if consume_line(raw_line):
+                    return 0
+            finish_pending()
+        finally:
+            save_history()
+        return 0
+
+    show_prompt()
+    for raw_line in input_stream:
+        if consume_line(raw_line):
+            return 0
+        show_prompt()
+    finish_pending()
     return 0
 
 
@@ -385,7 +439,8 @@ def main() -> int:
             )
             if args.json_lines:
                 return run_json_lines(session, sys.stdin, sys.stdout)
-            return run_session(session, sys.stdin, sys.stdout, sys.stderr)
+            history_file = args.history_file.resolve() if args.history_file else None
+            return run_session(session, sys.stdin, sys.stdout, sys.stderr, history_file)
     except OSError as error:
         print(f"failed to create REPL session source: {error}", file=sys.stderr)
         return 2

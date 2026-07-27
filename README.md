@@ -94,7 +94,9 @@ session state. Add repeatable `--import-path DIR` options to resolve non-
 explicit imports through the production module search path, or
 `--session-root DIR` to resolve explicit relative imports from a project root.
 At a form boundary, `:eval EXPR` evaluates an expression and prints its result
-through the same production runtime.
+through the same production runtime. On an interactive terminal, readline
+editing and in-session history are enabled; pass `--history-file PATH` to load
+and save history across sessions.
 
 For one-request/one-response machine integration, add `--json-lines`. Each
 input line is a JSON object with either a `source` or `expression` string, or a

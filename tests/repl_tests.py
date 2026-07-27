@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import json
+import os
+import pty
+import select
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -38,6 +42,72 @@ def run_repl(
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise AssertionError(message)
+
+
+def read_until(master_fd: int, marker: bytes, timeout: float = 30.0) -> bytes:
+    chunks = bytearray()
+    deadline = time.monotonic() + timeout
+    while marker not in chunks:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise AssertionError(f"timed out waiting for {marker!r}: {bytes(chunks)!r}")
+        readable, _, _ = select.select([master_fd], [], [], remaining)
+        if not readable:
+            raise AssertionError(f"timed out waiting for {marker!r}: {bytes(chunks)!r}")
+        try:
+            chunk = os.read(master_fd, 4096)
+        except OSError as error:
+            raise AssertionError(f"failed to read interactive REPL: {error}") from error
+        if not chunk:
+            raise AssertionError(f"interactive REPL exited before {marker!r}: {bytes(chunks)!r}")
+        chunks.extend(chunk)
+    return bytes(chunks)
+
+
+def run_interactive_history(compiler: Path, vm_manifest: Path, history_file: Path) -> None:
+    repl = Path(__file__).resolve().parents[1] / "tools" / "repl.py"
+    command = [
+        sys.executable,
+        str(repl),
+        str(compiler),
+        str(vm_manifest),
+        "--history-file",
+        str(history_file),
+    ]
+    master_fd, slave_fd = pty.openpty()
+    process = subprocess.Popen(
+        command,
+        stdin=slave_fd,
+        stdout=slave_fd,
+        stderr=slave_fd,
+        close_fds=True,
+    )
+    os.close(slave_fd)
+    try:
+        read_until(master_fd, b">>> ")
+        os.write(master_fd, b"let value = 5;\n\n")
+        read_until(master_fd, b">>> ")
+        os.write(master_fd, b"print value;\n\n")
+        first_output = read_until(master_fd, b">>> ")
+        os.write(master_fd, b"\x1b[A\n\n")
+        repeated_output = read_until(master_fd, b">>> ")
+        os.write(master_fd, b":quit\n")
+        process.wait(timeout=30)
+    finally:
+        os.close(master_fd)
+        if process.poll() is None:
+            process.terminate()
+            process.wait(timeout=10)
+
+    normalized_first = first_output.replace(b"\r\n", b"\n")
+    normalized_repeated = repeated_output.replace(b"\r\n", b"\n")
+    require(b"5\n" in normalized_first, f"interactive print output missing: {first_output!r}")
+    require(b"5\n" in normalized_repeated, f"readline history replay missing: {repeated_output!r}")
+    require(process.returncode == 0, f"interactive history session returned {process.returncode}")
+    history = history_file.read_text(encoding="utf-8")
+    require("let value = 5;" in history, f"history file missed declaration: {history!r}")
+    require("print value;" in history, f"history file missed recalled form: {history!r}")
+    require(":quit" in history, f"history file missed command: {history!r}")
 
 
 def main() -> int:
@@ -270,6 +340,14 @@ print message;
         require(relative.returncode == 0, f"relative import session returned {relative.returncode}: {relative.stderr}")
         require(relative.stdout == "relative\n", f"unexpected relative import stdout: {relative.stdout!r}")
         require(relative.stderr == "", f"unexpected relative import stderr: {relative.stderr!r}")
+
+    if os.name == "posix":
+        with tempfile.TemporaryDirectory(prefix="compiler-repl-history-") as directory:
+            run_interactive_history(
+                compiler,
+                vm_manifest,
+                Path(directory) / "history",
+            )
     return 0
 
 

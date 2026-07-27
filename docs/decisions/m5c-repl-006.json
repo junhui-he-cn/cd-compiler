@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m5c-2026-07-27-r6",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M5C-REPL-006",
+  "domain": "source-backed-incremental-session-terminal-history",
+  "status": "resolved",
+  "question": "How should the REPL provide terminal editing and history without affecting protocol sessions?",
+  "decision": "Use Python readline for ordinary TTY sessions and provide an optional --history-file path; retain the existing stream loop for pipes and JSON Lines.",
+  "terminal": {
+    "activation": "input and diagnostic streams are both TTYs",
+    "editing": "readline cursor editing and up/down history",
+    "persistence": "optional --history-file PATH loaded at startup and written at exit",
+    "fallback": "existing stream loop when readline is unavailable"
+  },
+  "compatibility_boundary": {
+    "pipe_sessions": "no prompts or history bytes",
+    "json_lines": "no prompts or history bytes",
+    "transcript": "accepted source and rollback behavior remain unchanged"
+  },
+  "shared_services": [
+    "Python readline terminal adapter",
+    "existing TranscriptSession replay and rollback",
+    "existing interactive command handling"
+  ],
+  "quantitative_gate": "tests/repl_tests.py covers pseudo-terminal prompts, up-arrow replay, history-file persistence, and non-interactive output isolation.",
+  "out_of_scope": [
+    "in-process compiler or VM state",
+    "automatic echoing for unmarked expression statements",
+    "history search or completion",
+    "a default persistent history path"
+  ],
+  "verification": {
+    "focused_commands": [
+      "cmake -S . -B build",
+      "cmake --build build -j2",
+      "python3 tests/repl_tests.py ./build/compiler_design vm-rs/Cargo.toml",
+      "ctest --test-dir build --output-on-failure -R '^repl$'",
+      "git diff --check"
+    ]
+  }
+}

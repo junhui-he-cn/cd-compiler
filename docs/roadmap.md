@@ -1515,6 +1515,14 @@ echoing of every unmarked expression statement, in-process VM state, and
 terminal history remain deferred. The decision is recorded in
 `docs/decisions/m5c-repl-005.{md,json}`.
 
+`M5C-REPL-006` adds interactive terminal editing and history through Python's
+readline integration when both input and diagnostic streams are TTYs. An
+optional `--history-file PATH` loads and saves history across sessions; pipe,
+JSON Lines, and non-readline environments retain their existing stream
+behavior and never receive prompts or history bytes. In-process VM state and
+automatic echoing of unmarked expression statements remain deferred. The
+decision is recorded in `docs/decisions/m5c-repl-006.{md,json}`.
+
 **Migration:** expose an incremental wrapper around the production front end and
 VM. Keep session state separate from compiler-global state, and use the same
 module identity and artifact rules as project builds.
