@@ -1,0 +1,26 @@
+import "../../data_structures.cd" as ds;
+
+let graph = ds.newGraph(5, true);
+graph.addEdge(0, 2);
+graph.addEdge(0, 1);
+graph.addEdge(2, 3);
+graph.addEdge(1, 3);
+graph.addEdge(3, 4);
+print ds.inDegrees(graph);
+print ds.topologicalOrder(graph);
+
+let cycle = ds.newGraph(3, true);
+cycle.addEdge(0, 1);
+cycle.addEdge(1, 2);
+cycle.addEdge(2, 0);
+print ds.inDegrees(cycle);
+print ds.topologicalOrder(cycle);
+
+let undirected = ds.newGraph(3, false);
+undirected.addEdge(0, 1);
+print ds.inDegrees(undirected);
+print ds.topologicalOrder(undirected);
+
+let empty = ds.newGraph(0, true);
+print ds.inDegrees(empty);
+print ds.topologicalOrder(empty);

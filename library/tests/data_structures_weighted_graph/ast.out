@@ -713,6 +713,74 @@ Program
             Expr (-= resultIndex 1)
             Expr (member-call reversed push (index result resultIndex))
       Return reversed
+    Fun inDegrees(graph: Graph): [number]
+      Let degrees: [number] = (array)
+      If (group (! (field graph directed)))
+        Then
+          Block
+            Return degrees
+      Let count = (member-call graph vertexCount)
+      Let index = 0
+      While (group (< index count))
+        Body
+          Block
+            Expr (member-call degrees push 0)
+            Expr (+= index 1)
+      Let vertex = 0
+      While (group (< vertex count))
+        Body
+          Block
+            Let neighbors = (member-call graph neighbors vertex)
+            Let neighborIndex = 0
+            While (group (< neighborIndex (member-call neighbors len)))
+              Body
+                Block
+                  Expr (+= (index degrees (index neighbors neighborIndex)) 1)
+                  Expr (+= neighborIndex 1)
+            Expr (+= vertex 1)
+      Return degrees
+    Fun topologicalOrder(graph: Graph): [number]
+      Let result: [number] = (array)
+      If (group (! (field graph directed)))
+        Then
+          Block
+            Return result
+      Let count = (member-call graph vertexCount)
+      Let degrees = (call inDegrees graph)
+      Let queue: [number] = (array)
+      Let index = 0
+      While (group (< index count))
+        Body
+          Block
+            If (group (== (index degrees index) 0))
+              Then
+                Block
+                  Expr (member-call queue push index)
+            Expr (+= index 1)
+      Let head = 0
+      While (group (< head (member-call queue len)))
+        Body
+          Block
+            Let vertex = (index queue head)
+            Expr (+= head 1)
+            Expr (member-call result push vertex)
+            Let neighbors = (member-call graph neighbors vertex)
+            Let neighborIndex = 0
+            While (group (< neighborIndex (member-call neighbors len)))
+              Body
+                Block
+                  Let neighbor = (index neighbors neighborIndex)
+                  Expr (-= (index degrees neighbor) 1)
+                  If (group (== (index degrees neighbor) 0))
+                    Then
+                      Block
+                        Expr (member-call queue push neighbor)
+                  Expr (+= neighborIndex 1)
+      If (group (!= (member-call result len) count))
+        Then
+          Block
+            Return (array)
+      Return result
     Struct WeightedEdge {to: number, weight: number}
     Struct WeightedGraph {adjacency: [[WeightedEdge]], directed: bool, edges: number}
     Impl WeightedGraph
@@ -1536,7 +1604,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder shortestDistances shortestPath shortestWeightedDistances shortestWeightedPath some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder shortestDistances shortestPath inDegrees topologicalOrder shortestWeightedDistances shortestWeightedPath some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let graph = (member-call ds newWeightedGraph 5 false)

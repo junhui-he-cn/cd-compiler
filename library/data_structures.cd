@@ -891,6 +891,69 @@ fun shortestPath(graph: Graph, start: number, goal: number): [number] {
   return reversed;
 }
 
+fun inDegrees(graph: Graph): [number] {
+  let degrees: [number] = [];
+  if (!graph.directed) {
+    return degrees;
+  }
+  let count = graph.vertexCount();
+  let index = 0;
+  while (index < count) {
+    degrees.push(0);
+    index += 1;
+  }
+  let vertex = 0;
+  while (vertex < count) {
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      degrees[neighbors[neighborIndex]] += 1;
+      neighborIndex += 1;
+    }
+    vertex += 1;
+  }
+  return degrees;
+}
+
+fun topologicalOrder(graph: Graph): [number] {
+  let result: [number] = [];
+  if (!graph.directed) {
+    return result;
+  }
+  let count = graph.vertexCount();
+  let degrees = inDegrees(graph);
+  let queue: [number] = [];
+  let index = 0;
+  while (index < count) {
+    if (degrees[index] == 0) {
+      queue.push(index);
+    }
+    index += 1;
+  }
+
+  let head = 0;
+  while (head < queue.len()) {
+    let vertex = queue[head];
+    head += 1;
+    result.push(vertex);
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let neighbor = neighbors[neighborIndex];
+      degrees[neighbor] -= 1;
+      if (degrees[neighbor] == 0) {
+        queue.push(neighbor);
+      }
+      neighborIndex += 1;
+    }
+  }
+
+  if (result.len() != count) {
+    return [];
+  }
+  return result;
+}
+
 struct WeightedEdge {
   to: number,
   weight: number
@@ -1737,4 +1800,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, shortestDistances, shortestPath, shortestWeightedDistances, shortestWeightedPath, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, shortestDistances, shortestPath, inDegrees, topologicalOrder, shortestWeightedDistances, shortestWeightedPath, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;

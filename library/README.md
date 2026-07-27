@@ -99,6 +99,12 @@ print ds.breadthFirstOrder(graph, 0);
 print ds.depthFirstOrder(graph, 0);
 print ds.shortestPath(graph, 0, 2);
 
+let dag = ds.newGraph(3, true);
+dag.addEdge(0, 1);
+dag.addEdge(1, 2);
+print ds.inDegrees(dag);
+print ds.topologicalOrder(dag);
+
 let weighted = ds.newWeightedGraph(3, false);
 weighted.addEdge(0, 1, 2);
 weighted.addEdge(1, 2, 3);
@@ -333,6 +339,12 @@ goal)` returns a shortest path including both endpoints, or `[]` when either
 vertex is invalid or unreachable. Both operate on unweighted edges in
 `O(V + E)` time and `O(V)` auxiliary space.
 
+`inDegrees(graph)` returns one incoming-edge count per vertex for a directed
+graph, or `[]` for an undirected graph. `topologicalOrder(graph)` uses Kahn's
+algorithm and preserves vertex/adjacency insertion order when multiple vertices
+are ready. It returns `[]` for an undirected graph or a directed graph with a
+cycle, and otherwise runs in `O(V + E)` time with `O(V)` auxiliary space.
+
 `WeightedGraph` stores non-negative numeric edge weights. Its Dijkstra helpers
 `shortestWeightedDistances` and `shortestWeightedPath` return `-1`/`[]` for
 unreachable results and reject negative weights at insertion. The current array
@@ -490,6 +502,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_set`, `--case data_structures_multiset`,
 `--case data_structures_multimap`, `--case data_structures_disjoint_set`,
 `--case data_structures_graph`, `--case data_structures_weighted_graph`,
+`--case algorithms_graph_topological`,
 `--case algorithms_graph_traversal`,
 `--case algorithms_graph_paths`,
 `--case array_algorithms_basic`,
