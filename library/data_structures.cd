@@ -806,6 +806,91 @@ fun depthFirstOrder(graph: Graph, start: number): [number] {
   return result;
 }
 
+fun shortestDistances(graph: Graph, start: number): [number] {
+  let distances: [number] = [];
+  let count = graph.vertexCount();
+  let index = 0;
+  while (index < count) {
+    distances.push(-1);
+    index += 1;
+  }
+  if (start < 0 || start >= count) {
+    return distances;
+  }
+
+  let queue: [number] = [start];
+  distances[start] = 0;
+  let head = 0;
+  while (head < queue.len()) {
+    let vertex = queue[head];
+    head += 1;
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let neighbor = neighbors[neighborIndex];
+      if (distances[neighbor] < 0) {
+        distances[neighbor] = distances[vertex] + 1;
+        queue.push(neighbor);
+      }
+      neighborIndex += 1;
+    }
+  }
+  return distances;
+}
+
+fun shortestPath(graph: Graph, start: number, goal: number): [number] {
+  let result: [number] = [];
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count || goal < 0 || goal >= count) {
+    return result;
+  }
+
+  let parents: [number] = [];
+  let index = 0;
+  while (index < count) {
+    parents.push(-1);
+    index += 1;
+  }
+  let queue: [number] = [start];
+  parents[start] = start;
+  let head = 0;
+  while (head < queue.len()) {
+    let vertex = queue[head];
+    head += 1;
+    if (vertex == goal) {
+      break;
+    }
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let neighbor = neighbors[neighborIndex];
+      if (parents[neighbor] < 0) {
+        parents[neighbor] = vertex;
+        queue.push(neighbor);
+      }
+      neighborIndex += 1;
+    }
+  }
+
+  if (parents[goal] < 0) {
+    return result;
+  }
+  let current = goal;
+  while (current != start) {
+    result.push(current);
+    current = parents[current];
+  }
+  result.push(start);
+
+  let reversed: [number] = [];
+  let resultIndex = result.len();
+  while (resultIndex > 0) {
+    resultIndex -= 1;
+    reversed.push(result[resultIndex]);
+  }
+  return reversed;
+}
+
 fun reverseArray<T>(values: [T]): [T] {
   let result: [T] = [];
   let index = values.len();
@@ -1460,4 +1545,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, breadthFirstOrder, depthFirstOrder, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, breadthFirstOrder, depthFirstOrder, shortestDistances, shortestPath, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;

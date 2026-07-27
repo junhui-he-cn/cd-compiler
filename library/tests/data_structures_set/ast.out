@@ -622,6 +622,97 @@ Program
                         Expr (= (index visited neighbor) true)
                         Expr (member-call stack push neighbor)
       Return result
+    Fun shortestDistances(graph: Graph, start: number): [number]
+      Let distances: [number] = (array)
+      Let count = (member-call graph vertexCount)
+      Let index = 0
+      While (group (< index count))
+        Body
+          Block
+            Expr (member-call distances push (- 1))
+            Expr (+= index 1)
+      If (group (|| (< start 0) (>= start count)))
+        Then
+          Block
+            Return distances
+      Let queue: [number] = (array start)
+      Expr (= (index distances start) 0)
+      Let head = 0
+      While (group (< head (member-call queue len)))
+        Body
+          Block
+            Let vertex = (index queue head)
+            Expr (+= head 1)
+            Let neighbors = (member-call graph neighbors vertex)
+            Let neighborIndex = 0
+            While (group (< neighborIndex (member-call neighbors len)))
+              Body
+                Block
+                  Let neighbor = (index neighbors neighborIndex)
+                  If (group (< (index distances neighbor) 0))
+                    Then
+                      Block
+                        Expr (= (index distances neighbor) (+ (index distances vertex) 1))
+                        Expr (member-call queue push neighbor)
+                  Expr (+= neighborIndex 1)
+      Return distances
+    Fun shortestPath(graph: Graph, start: number, goal: number): [number]
+      Let result: [number] = (array)
+      Let count = (member-call graph vertexCount)
+      If (group (|| (|| (|| (< start 0) (>= start count)) (< goal 0)) (>= goal count)))
+        Then
+          Block
+            Return result
+      Let parents: [number] = (array)
+      Let index = 0
+      While (group (< index count))
+        Body
+          Block
+            Expr (member-call parents push (- 1))
+            Expr (+= index 1)
+      Let queue: [number] = (array start)
+      Expr (= (index parents start) start)
+      Let head = 0
+      While (group (< head (member-call queue len)))
+        Body
+          Block
+            Let vertex = (index queue head)
+            Expr (+= head 1)
+            If (group (== vertex goal))
+              Then
+                Block
+                  Break
+            Let neighbors = (member-call graph neighbors vertex)
+            Let neighborIndex = 0
+            While (group (< neighborIndex (member-call neighbors len)))
+              Body
+                Block
+                  Let neighbor = (index neighbors neighborIndex)
+                  If (group (< (index parents neighbor) 0))
+                    Then
+                      Block
+                        Expr (= (index parents neighbor) vertex)
+                        Expr (member-call queue push neighbor)
+                  Expr (+= neighborIndex 1)
+      If (group (< (index parents goal) 0))
+        Then
+          Block
+            Return result
+      Let current = goal
+      While (group (!= current start))
+        Body
+          Block
+            Expr (member-call result push current)
+            Expr (= current (index parents current))
+      Expr (member-call result push start)
+      Let reversed: [number] = (array)
+      Let resultIndex = (member-call result len)
+      While (group (> resultIndex 0))
+        Body
+          Block
+            Expr (-= resultIndex 1)
+            Expr (member-call reversed push (index result resultIndex))
+      Return reversed
     Fun reverseArray<T>(values: [T]): [T]
       Let result: [T] = (array)
       Let index = (member-call values len)
@@ -1262,7 +1353,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph breadthFirstOrder depthFirstOrder some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph breadthFirstOrder depthFirstOrder shortestDistances shortestPath some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let numbers = (member-call ds newSet<number>)

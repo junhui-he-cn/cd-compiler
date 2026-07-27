@@ -55,6 +55,7 @@
 - 并查集：整数顶点 `DisjointSet`，支持路径压缩和按大小合并。
 - 图基础结构：整数顶点数组邻接表 `Graph`，支持有向/无向边。
 - 图遍历：`breadthFirstOrder`、`depthFirstOrder`。
+- 无权图路径：`shortestDistances`、`shortestPath`。
 
 它们的现有 API 和示例继续作为兼容基线。后续新增 API 不应悄悄改变空值、
 快照或引用共享语义。
@@ -258,6 +259,8 @@ enum Result<T, E> {
 无效顶点查询返回安全空结果。
 `breadthFirstOrder` 和 `depthFirstOrder` 已提供基于邻接插入顺序的 BFS/DFS，
 只返回起点所在可达分量。
+`shortestDistances` 和 `shortestPath` 已提供基于 BFS 的无权图距离和路径，
+不可达顶点使用 `-1` 或空路径。
 
 - 遍历、复制、拼接、分块、窗口、批处理；
 - `reverse`、`rotate`、`partition`、稳定分区、按谓词分组；
