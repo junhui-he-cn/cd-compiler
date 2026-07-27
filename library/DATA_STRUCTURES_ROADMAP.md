@@ -46,6 +46,7 @@
 - 区间算法：`Interval` 和 `mergeIntervals`。
 - 双指针算法：`mergeSortedNumbers`、`twoSumSorted`。
 - 数组集合算法：`uniqueValues`、`intersectionValues`、`unionValues`、`differenceValues`。
+- 固定窗口统计：`windowSums`、`maxWindowSum`。
 
 它们的现有 API 和示例继续作为兼容基线。后续新增 API 不应悄悄改变空值、
 快照或引用共享语义。
@@ -225,6 +226,8 @@ enum Result<T, E> {
 `mergeSortedNumbers` 和 `twoSumSorted` 已提供非降序数字数组上的双指针版本。
 `uniqueValues`、`intersectionValues`、`unionValues` 和 `differenceValues` 已
 提供保序去重、交集、并集和差集的线性扫描版本。
+`windowSums` 使用滚动和生成每个固定宽度窗口的和，`maxWindowSum` 在这些
+窗口中选择最大值；非法窗口宽度返回空数组或 `nil`。
 
 - 遍历、复制、拼接、分块、窗口、批处理；
 - `reverse`、`rotate`、`partition`、稳定分区、按谓词分组；
@@ -399,7 +402,7 @@ S2 已完成 `Set<T>` 的数组后端版本：使用语言 `==` 做线性去重�
 重复计数，`entries()` 按首次插入顺序返回新条目数组；`MultiMap<K,V>` 使用
 键数组和每键 value 数组，`discard(key,value)` 删除一个匹配 pair。随后完成
 了基础数组搜索/计数/逆序算法、稳定插入排序、窗口/前缀和算法、区间合并、
-双指针和数组集合算法，下一步进入滑动窗口统计和区间交集算法。
+双指针、数组集合算法和固定窗口统计，下一步进入区间交集算法。
 
 ### S2：集合和序列算法
 

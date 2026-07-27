@@ -828,6 +828,47 @@ fun differenceValues<T>(left: [T], right: [T]): [T] {
   return result;
 }
 
+fun windowSums(values: [number], width: number): [number] {
+  let result: [number] = [];
+  if (width <= 0 || width > values.len()) {
+    return result;
+  }
+
+  let sum = 0;
+  let index = 0;
+  while (index < width) {
+    sum += values[index];
+    index += 1;
+  }
+  result.push(sum);
+
+  let start = width;
+  while (start < values.len()) {
+    sum += values[start];
+    sum -= values[start - width];
+    result.push(sum);
+    start += 1;
+  }
+  return result;
+}
+
+fun maxWindowSum(values: [number], width: number): number? {
+  let sums = windowSums(values, width);
+  if (sums.len() == 0) {
+    return nil;
+  }
+
+  let best = sums[0];
+  let index = 1;
+  while (index < sums.len()) {
+    if (sums[index] > best) {
+      best = sums[index];
+    }
+    index += 1;
+  }
+  return best;
+}
+
 struct PriorityQueue<T> {
   heap: BinaryHeap<T>
 }
@@ -862,4 +903,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, countValue, sortArray, sortArrayInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, countValue, sortArray, sortArrayInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum;

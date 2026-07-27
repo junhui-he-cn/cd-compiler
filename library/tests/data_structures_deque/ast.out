@@ -669,6 +669,46 @@ Program
                   Expr (member-call result push value)
             Expr (+= index 1)
       Return result
+    Fun windowSums(values: [number], width: number): [number]
+      Let result: [number] = (array)
+      If (group (|| (<= width 0) (> width (member-call values len))))
+        Then
+          Block
+            Return result
+      Let sum = 0
+      Let index = 0
+      While (group (< index width))
+        Body
+          Block
+            Expr (+= sum (index values index))
+            Expr (+= index 1)
+      Expr (member-call result push sum)
+      Let start = width
+      While (group (< start (member-call values len)))
+        Body
+          Block
+            Expr (+= sum (index values start))
+            Expr (-= sum (index values (- start width)))
+            Expr (member-call result push sum)
+            Expr (+= start 1)
+      Return result
+    Fun maxWindowSum(values: [number], width: number): number?
+      Let sums = (call windowSums values width)
+      If (group (== (member-call sums len) 0))
+        Then
+          Block
+            Return nil
+      Let best = (index sums 0)
+      Let index = 1
+      While (group (< index (member-call sums len)))
+        Body
+          Block
+            If (group (> (index sums index) best))
+              Then
+                Block
+                  Expr (= best (index sums index))
+            Expr (+= index 1)
+      Return best
     Struct PriorityQueue<T> {heap: BinaryHeap<T>}
     Impl PriorityQueue<T>
       Method enqueue(value: T)
@@ -685,7 +725,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums mergeIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums mergeIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let deque = (member-call ds newDeque<number>)

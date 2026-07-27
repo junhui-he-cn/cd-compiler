@@ -110,6 +110,8 @@ print ds.twoSumSorted([1, 2, 4, 7], 6);
 
 print ds.uniqueValues([3, 1, 3, 2]);
 print ds.unionValues([1, 2], [2, 3]);
+print ds.windowSums([2, -1, 3, 4, -2, 1], 3);
+print ds.maxWindowSum([2, -1, 3, 4, -2, 1], 3);
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -300,6 +302,13 @@ windows are fresh outer arrays with shallowly shared elements. Chunking and
 window generation are `O(n)` in the input plus output size; `prefixSums` is
 `O(n)` and allocates one array.
 
+`windowSums(values, width)` returns the numeric sum of every fixed-width window
+using a rolling sum. `maxWindowSum(values, width)` returns the largest such sum,
+or `nil` when the width is non-positive, exceeds the input length, or the input
+is empty. Both functions leave the input unchanged; `windowSums` allocates one
+result array and runs in `O(n)`, while `maxWindowSum` runs in `O(n)` and uses
+`O(n)` temporary space for the current array-backed implementation.
+
 `Interval { start, end }` represents a numeric interval with the documented
 precondition `start <= end`. `mergeIntervals(intervals)` returns a new array
 sorted by start, merges overlapping or touching intervals, and leaves the input
@@ -353,7 +362,8 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_set`, `--case data_structures_multiset`,
 `--case data_structures_multimap`, `--case array_algorithms_basic`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
-`--case array_algorithms_intervals`, `--case array_algorithms_two_pointer`, or
-`--case array_algorithms_sets` for focused coverage. Use `--update` only when
+`--case array_algorithms_intervals`, `--case array_algorithms_two_pointer`,
+`--case array_algorithms_sets`, or `--case array_algorithms_window_stats` for
+focused coverage. Use `--update` only when
 an intentional compiler-output change requires refreshing library fixtures'
 `ast.out` files.
