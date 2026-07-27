@@ -5,7 +5,7 @@ Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 `Queue<T>`, `Deque<T>`, `BinaryHeap<T>`, and `PriorityQueue<T>` types, plus the
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
 `Set<T>` and `MultiSet<T>` types. It also provides an array-backed
-`MultiMap<K, V>` for one-to-many mappings.
+`MultiMap<K, V>` for one-to-many mappings and basic generic array algorithms.
 
 The planned structure and algorithm inventory, implementation constraints, and
 staged delivery order are documented in
@@ -81,6 +81,11 @@ let index = ds.newMultiMap<string, number>();
 index.add("even", 2);
 index.add("even", 4);
 print index.getAll("even");
+
+let values = [3, 1, 3, 2];
+print ds.reverseArray(values);
+print ds.linearSearch(values, 2);
+print ds.countValue(values, 3);
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -238,6 +243,19 @@ language equality. `add`, `getAll`, and `discard` are linear in the number of
 keys or values for the selected key; key/value arrays are maintained without a
 hash table, and key order is preserved after removals.
 
+The array algorithms are non-mutating and return shallow copies where they
+return arrays:
+
+- `reverseArray<T>(values): [T]` — return values in reverse order;
+- `linearSearch<T>(values, target): number` — return the first matching index,
+  or `-1` when absent;
+- `countValue<T>(values, target): number` — count matching values.
+
+`reverseArray`, `linearSearch`, and `countValue` are all `O(n)`; only
+`reverseArray` allocates a new outer array. Empty array arguments need an
+explicit type argument, such as `reverseArray<number>([])`, because they carry
+no element from which to infer `T`.
+
 ## Current language limitation
 
 The language's builtin member-call sugar reserves names such as `push`, `pop`,
@@ -265,6 +283,6 @@ python3 library/tests/run_tests.py ./build/compiler_design vm-rs
 Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_result`, `--case data_structures_list`,
 `--case data_structures_set`, `--case data_structures_multiset`, or
-`--case data_structures_multimap` for a focused run, or `--update` only when an
-intentional compiler-output change requires refreshing library fixtures'
-`ast.out` files.
+`--case data_structures_multimap`, or `--case array_algorithms_basic` for a
+focused run, or `--update` only when an intentional compiler-output change
+requires refreshing library fixtures' `ast.out` files.

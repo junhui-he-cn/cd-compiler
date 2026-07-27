@@ -488,20 +488,17 @@ Program
     Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue
   Module 1 entry
     Import "../../data_structures.cd" as ds
-    Fun describeTail(value: ds.List<number>?): string
-      Return (match value (arm nil "nil") (arm ds.List.Nil "empty") (arm ds.List.Cons(value, rest) (+ "head:" (call str value))))
-    Let empty = (member-call ds emptyList<number>)
-    Let numbers = (member-call ds prepend 3 (member-call ds prepend 2 (member-call ds prepend 1 empty)))
-    Print (member-call ds head empty)
-    Print (member-call ds head numbers)
-    Print (call describeTail (member-call ds tail empty))
-    Print (call describeTail (member-call ds tail numbers))
-    Print (member-call ds toArray numbers)
-    Print (member-call ds toArray (member-call ds reverse numbers))
-    Print (member-call ds toArray (member-call ds reverse empty))
-    Let snapshot = (member-call ds toArray numbers)
-    Expr (member-call snapshot push 99)
-    Print (member-call ds toArray numbers)
-    Print snapshot
-    Let words = (member-call ds prepend "second" (member-call ds prepend "first" (member-call ds emptyList<string>)))
-    Print (member-call ds toArray words)
+    Let numbers = (array 4 1 4 2)
+    Print (member-call ds reverseArray numbers)
+    Print numbers
+    Print (member-call ds linearSearch numbers 4)
+    Print (member-call ds linearSearch numbers 9)
+    Print (member-call ds countValue numbers 4)
+    Let reversed = (member-call ds reverseArray numbers)
+    Expr (member-call reversed push 99)
+    Print numbers
+    Print reversed
+    Let words = (array "alpha" "beta" "alpha")
+    Print (member-call ds linearSearch words "beta")
+    Print (member-call ds countValue words "alpha")
+    Print (member-call ds reverseArray<number> (array))

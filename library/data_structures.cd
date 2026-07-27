@@ -595,6 +595,39 @@ fun newMultiMap<K, V>(): MultiMap<K, V> {
   return MultiMap<K, V> { keys: [], values: [] };
 }
 
+fun reverseArray<T>(values: [T]): [T] {
+  let result: [T] = [];
+  let index = values.len();
+  while (index > 0) {
+    index -= 1;
+    result.push(values[index]);
+  }
+  return result;
+}
+
+fun linearSearch<T>(values: [T], target: T): number {
+  let index = 0;
+  while (index < values.len()) {
+    if (values[index] == target) {
+      return index;
+    }
+    index += 1;
+  }
+  return -1;
+}
+
+fun countValue<T>(values: [T], target: T): number {
+  let count = 0;
+  let index = 0;
+  while (index < values.len()) {
+    if (values[index] == target) {
+      count += 1;
+    }
+    index += 1;
+  }
+  return count;
+}
+
 struct PriorityQueue<T> {
   heap: BinaryHeap<T>
 }
@@ -629,4 +662,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, countValue;

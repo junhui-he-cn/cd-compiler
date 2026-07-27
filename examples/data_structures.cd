@@ -86,3 +86,8 @@ let index = ds.newMultiMap<string, number>();
 index.add("even", 2);
 index.add("even", 4);
 print index.getAll("even");
+
+let values = [3, 1, 3, 2];
+print ds.reverseArray(values);
+print ds.linearSearch(values, 2);
+print ds.countValue(values, 3);
