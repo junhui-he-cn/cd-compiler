@@ -36,6 +36,7 @@
 - `PriorityQueue<T>`：`BinaryHeap<T>` 的队列命名包装。
 - `Option<T>`：用于显式区分携带值和缺失值的泛型枚举。
 - `Result<T, E>`：用于携带成功值或错误值的泛型枚举。
+- `List<T>`：递归泛型枚举表示的不可变持久化链表。
 
 它们的现有 API 和示例继续作为兼容基线。后续新增 API 不应悄悄改变空值、
 快照或引用共享语义。
@@ -139,7 +140,7 @@ enum Result<T, E> {
 | 队列 `Queue<T>` | 现有 | `enqueue`、`dequeue`、`front`、`size`、`isEmpty`、`snapshot` | 头指针 + 周期压缩，操作摊销 `O(1)` |
 | 双端队列 `Deque<T>` | 现有（S1） | `addFront`、`addBack`、`takeFront`、`takeBack`、`peekFront`、`peekBack` | 双数组栈；两端操作摊销 `O(1)` |
 | 环形缓冲区 `RingBuffer<T>` | 第一批/待定 | 固定容量、`write`、`read`、`peek`、`isFull` | 复用 `Deque` 思路；必须先确定满时拒绝还是覆盖 |
-| 不可变链表 `List<T>` | 受限实现 | `empty`、`prepend`、`head`、`tail`、`reverse`、`toArray` | 递归泛型枚举，持久化/共享尾部 |
+| 不可变链表 `List<T>` | 现有（S1） | `emptyList`、`prepend`、`head`、`tail`、`reverse`、`toArray` | 递归泛型枚举，持久化/共享尾部 |
 | 单向链表 | 后续 | 插入、删除、反转、合并、快慢指针 | 等待递归结构体/引用节点方案，或改为索引节点 |
 | 双向链表 | 后续 | 两端插入删除、迭代器、节点移动 | 需要可表达的双向节点和稳定节点引用 |
 | 循环链表 | 后续 | 循环调度、约瑟夫问题 | 需要先确定节点引用和空结构语义 |
@@ -370,9 +371,9 @@ enum Result<T, E> {
 `library/tests`，由 `library/tests/run_tests.py` 独立运行，复用现有
 golden/Rust VM 检查接口。
 
-已完成 `Option<T>`、`Result<T,E>` 及其构造工厂和独立库级 fixture；调用者通过
-`match` 区分成功、缺失和错误值。下一步实现递归枚举版 `List<T>`，这是后续
-BFS、调度、排序和树算法共同依赖的最小集合。
+已完成 `Option<T>`、`Result<T,E>` 和递归枚举版 `List<T>`，均有构造工厂、
+匹配示例和独立库级 fixture。`List<T>` 使用共享尾部表达持久化值，下一步
+进入 S2 的集合和序列算法。
 
 ### S2：集合和序列算法
 

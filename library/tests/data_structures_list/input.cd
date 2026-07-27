@@ -1,0 +1,28 @@
+import "../../data_structures.cd" as ds;
+
+fun describeTail(value: ds.List<number>?): string {
+  return match value {
+    nil => "nil",
+    ds.List.Nil => "empty",
+    ds.List.Cons(value, rest) => "head:" + str(value),
+  };
+}
+
+let empty = ds.emptyList<number>();
+let numbers = ds.prepend(3, ds.prepend(2, ds.prepend(1, empty)));
+
+print ds.head(empty);
+print ds.head(numbers);
+print describeTail(ds.tail(empty));
+print describeTail(ds.tail(numbers));
+print ds.toArray(numbers);
+print ds.toArray(ds.reverse(numbers));
+print ds.toArray(ds.reverse(empty));
+
+let snapshot = ds.toArray(numbers);
+snapshot.push(99);
+print ds.toArray(numbers);
+print snapshot;
+
+let words = ds.prepend("second", ds.prepend("first", ds.emptyList<string>()));
+print ds.toArray(words);

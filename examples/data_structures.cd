@@ -66,3 +66,7 @@ print match result {
   ds.Result.Ok(value) => value,
   ds.Result.Err(error) => 0,
 };
+
+let list = ds.prepend(2, ds.prepend(1, ds.emptyList<number>()));
+print ds.toArray(list);
+print ds.toArray(ds.reverse(list));

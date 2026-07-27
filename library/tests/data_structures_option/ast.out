@@ -218,6 +218,43 @@ Program
       Return (member-call Result Ok value)
     Fun err<T, E>(error: E): Result<T, E>
       Return (member-call Result Err error)
+    Enum List<T> {Nil, Cons(head: T, tail: List<T>)}
+    Fun emptyList<T>(): List<T>
+      Return (member-call List Nil<T>)
+    Fun prepend<T>(value: T, list: List<T>): List<T>
+      Return (member-call List Cons value list)
+    Fun head<T>(list: List<T>): T?
+      Match list
+        Arm List.Nil
+          Block
+            Return nil
+        Arm List.Cons(value, rest)
+          Block
+            Return value
+    Fun tail<T>(list: List<T>): List<T>?
+      Match list
+        Arm List.Nil
+          Block
+            Return nil
+        Arm List.Cons(value, rest)
+          Block
+            Return rest
+    Fun reverseInto<T>(remaining: List<T>, result: List<T>): List<T>
+      Return (match remaining (arm List.Nil result) (arm List.Cons(value, rest) (call reverseInto rest (member-call List Cons value result))))
+    Fun reverse<T>(list: List<T>): List<T>
+      Return (call reverseInto list (member-call List Nil<T>))
+    Fun appendListToArray<T>(list: List<T>, values: [T])
+      Match list
+        Arm List.Nil
+          Block
+        Arm List.Cons(value, rest)
+          Block
+            Expr (member-call values push value)
+            Expr (call appendListToArray rest values)
+    Fun toArray<T>(list: List<T>): [T]
+      Let values: [T] = (array)
+      Expr (call appendListToArray list values)
+      Return values
     Struct PriorityQueue<T> {heap: BinaryHeap<T>}
     Impl PriorityQueue<T>
       Method enqueue(value: T)
@@ -234,7 +271,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Fun render(value: ds.Option<number>): string

@@ -317,6 +317,60 @@ fun err<T, E>(error: E): Result<T, E> {
   return Result.Err(error);
 }
 
+enum List<T> {
+  Nil,
+  Cons(head: T, tail: List<T>),
+}
+
+fun emptyList<T>(): List<T> {
+  return List.Nil<T>();
+}
+
+fun prepend<T>(value: T, list: List<T>): List<T> {
+  return List.Cons(value, list);
+}
+
+fun head<T>(list: List<T>): T? {
+  match list {
+    List.Nil => { return nil; }
+    List.Cons(value, rest) => { return value; }
+  }
+}
+
+fun tail<T>(list: List<T>): List<T>? {
+  match list {
+    List.Nil => { return nil; }
+    List.Cons(value, rest) => { return rest; }
+  }
+}
+
+fun reverseInto<T>(remaining: List<T>, result: List<T>): List<T> {
+  return match remaining {
+    List.Nil => result,
+    List.Cons(value, rest) => reverseInto(rest, List.Cons(value, result)),
+  };
+}
+
+fun reverse<T>(list: List<T>): List<T> {
+  return reverseInto(list, List.Nil<T>());
+}
+
+fun appendListToArray<T>(list: List<T>, values: [T]) {
+  match list {
+    List.Nil => { }
+    List.Cons(value, rest) => {
+      values.push(value);
+      appendListToArray(rest, values);
+    }
+  }
+}
+
+fun toArray<T>(list: List<T>): [T] {
+  let values: [T] = [];
+  appendListToArray(list, values);
+  return values;
+}
+
 struct PriorityQueue<T> {
   heap: BinaryHeap<T>
 }
@@ -351,4 +405,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray;

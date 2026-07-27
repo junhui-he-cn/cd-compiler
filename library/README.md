@@ -3,7 +3,7 @@
 This directory contains a small data-structure library written in the public
 Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 `Queue<T>`, `Deque<T>`, `BinaryHeap<T>`, and `PriorityQueue<T>` types, plus the
-generic `Option<T>` and `Result<T, E>` result enums.
+generic `Option<T>`, `Result<T, E>`, and immutable `List<T>` enums.
 
 The planned structure and algorithm inventory, implementation constraints, and
 staged delivery order are documented in
@@ -60,6 +60,9 @@ print match result {
   ds.Result.Ok(value) => value,
   ds.Result.Err(error) => 0,
 };
+
+let list = ds.prepend(2, ds.prepend(1, ds.emptyList<number>()));
+print ds.toArray(ds.reverse(list));
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -160,6 +163,22 @@ callers should usually provide both type arguments explicitly. `Result<T, E>`
 does not throw or log errors; callers must inspect it with an exhaustive
 `match`.
 
+`List<T>` is an immutable recursive list:
+
+- `emptyList<T>(): List<T>` — create an empty list;
+- `prepend(value: T, list: List<T>): List<T>` — add a value at the front without
+  changing the existing list;
+- `head(list): T?` and `tail(list): List<T>?` — inspect the first value or the
+  remaining list, returning `nil` for an empty list;
+- `reverse(list): List<T>` — return a persistent reversed list;
+- `toArray(list): [T]` — copy the values into a new array in list order.
+
+`prepend`, `head`, and `tail` are `O(1)`. `reverse` and `toArray` are `O(n)`;
+`reverse` allocates a new list while `toArray` allocates one new array. Tails
+are shared between list values, so the structure supports persistent snapshots.
+The type argument for `emptyList` must be explicit because the empty constructor
+has no payload from which to infer `T`.
+
 ## Current language limitation
 
 The language's builtin member-call sugar reserves names such as `push`, `pop`,
@@ -184,7 +203,7 @@ its fixture root independent:
 python3 library/tests/run_tests.py ./build/compiler_design vm-rs
 ```
 
-Use `--case data_structures_binary_heap`, `--case data_structures_option`, or
-`--case data_structures_result` for a focused run, or `--update` only when an
-intentional compiler-output change requires refreshing library fixtures'
-`ast.out` files.
+Use `--case data_structures_binary_heap`, `--case data_structures_option`,
+`--case data_structures_result`, or `--case data_structures_list` for a focused
+run, or `--update` only when an intentional compiler-output change requires
+refreshing library fixtures' `ast.out` files.
