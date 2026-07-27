@@ -806,6 +806,50 @@ fun depthFirstOrder(graph: Graph, start: number): [number] {
   return result;
 }
 
+fun connectedComponents(graph: Graph): [[number]] {
+  let components: [[number]] = [];
+  if (graph.directed) {
+    return components;
+  }
+  let count = graph.vertexCount();
+  let visited: [bool] = [];
+  let index = 0;
+  while (index < count) {
+    visited.push(false);
+    index += 1;
+  }
+
+  let root = 0;
+  while (root < count) {
+    if (visited[root]) {
+      root += 1;
+      continue;
+    }
+    let component: [number] = [];
+    let queue: [number] = [root];
+    visited[root] = true;
+    let head = 0;
+    while (head < queue.len()) {
+      let vertex = queue[head];
+      head += 1;
+      component.push(vertex);
+      let neighbors = graph.adjacency[vertex];
+      let neighborIndex = 0;
+      while (neighborIndex < neighbors.len()) {
+        let neighbor = neighbors[neighborIndex];
+        if (!visited[neighbor]) {
+          visited[neighbor] = true;
+          queue.push(neighbor);
+        }
+        neighborIndex += 1;
+      }
+    }
+    components.push(component);
+    root += 1;
+  }
+  return components;
+}
+
 fun shortestDistances(graph: Graph, start: number): [number] {
   let distances: [number] = [];
   let count = graph.vertexCount();
@@ -2013,4 +2057,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, shortestWeightedDistances, shortestWeightedPath, minimumSpanningForest, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, shortestWeightedDistances, shortestWeightedPath, minimumSpanningForest, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
