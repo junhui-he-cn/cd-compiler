@@ -99,6 +99,11 @@ print ds.breadthFirstOrder(graph, 0);
 print ds.depthFirstOrder(graph, 0);
 print ds.shortestPath(graph, 0, 2);
 
+let weighted = ds.newWeightedGraph(3, false);
+weighted.addEdge(0, 1, 2);
+weighted.addEdge(1, 2, 3);
+print ds.shortestWeightedPath(weighted, 0, 2);
+
 let values = [3, 1, 3, 2];
 print ds.reverseArray(values);
 print ds.rotateArray(values, 1);
@@ -328,6 +333,11 @@ goal)` returns a shortest path including both endpoints, or `[]` when either
 vertex is invalid or unreachable. Both operate on unweighted edges in
 `O(V + E)` time and `O(V)` auxiliary space.
 
+`WeightedGraph` stores non-negative numeric edge weights. Its Dijkstra helpers
+`shortestWeightedDistances` and `shortestWeightedPath` return `-1`/`[]` for
+unreachable results and reject negative weights at insertion. The current array
+scan implementation runs in `O(V^2 + E)` time and `O(V)` auxiliary space.
+
 The array algorithms are non-mutating and return shallow copies where they
 return arrays:
 
@@ -479,7 +489,8 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_result`, `--case data_structures_list`,
 `--case data_structures_set`, `--case data_structures_multiset`,
 `--case data_structures_multimap`, `--case data_structures_disjoint_set`,
-`--case data_structures_graph`, `--case algorithms_graph_traversal`,
+`--case data_structures_graph`, `--case data_structures_weighted_graph`,
+`--case algorithms_graph_traversal`,
 `--case algorithms_graph_paths`,
 `--case array_algorithms_basic`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,

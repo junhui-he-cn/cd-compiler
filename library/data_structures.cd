@@ -891,6 +891,198 @@ fun shortestPath(graph: Graph, start: number, goal: number): [number] {
   return reversed;
 }
 
+struct WeightedEdge {
+  to: number,
+  weight: number
+}
+
+struct WeightedGraph {
+  adjacency: [[WeightedEdge]],
+  directed: bool,
+  edges: number
+}
+
+impl WeightedGraph {
+  fun vertexCount(): number {
+    return this.adjacency.len();
+  }
+
+  fun edgeCount(): number {
+    return this.edges;
+  }
+
+  fun validVertex(vertex: number): bool {
+    return vertex >= 0 && vertex < this.adjacency.len();
+  }
+
+  fun edgeIndex(from: number, to: number): number {
+    let index = 0;
+    while (index < this.adjacency[from].len()) {
+      if (this.adjacency[from][index].to == to) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun hasEdge(from: number, to: number): bool {
+    if (!this.validVertex(from) || !this.validVertex(to)) {
+      return false;
+    }
+    return this.edgeIndex(from, to) >= 0;
+  }
+
+  fun addEdge(from: number, to: number, weight: number): bool {
+    if (!this.validVertex(from) || !this.validVertex(to) || weight < 0 || this.hasEdge(from, to)) {
+      return false;
+    }
+    this.adjacency[from].push(WeightedEdge { to: to, weight: weight });
+    if (!this.directed && from != to) {
+      this.adjacency[to].push(WeightedEdge { to: from, weight: weight });
+    }
+    this.edges += 1;
+    return true;
+  }
+
+  fun neighbors(vertex: number): [WeightedEdge] {
+    if (!this.validVertex(vertex)) {
+      return [];
+    }
+    return copy(this.adjacency[vertex]);
+  }
+}
+
+fun newWeightedGraph(vertices: number, directed: bool): WeightedGraph {
+  let count = floor(vertices);
+  if (count < 0) {
+    count = 0;
+  }
+  let adjacency: [[WeightedEdge]] = [];
+  let index = 0;
+  while (index < count) {
+    let neighbors: [WeightedEdge] = [];
+    adjacency.push(neighbors);
+    index += 1;
+  }
+  return WeightedGraph { adjacency: adjacency, directed: directed, edges: 0 };
+}
+
+fun shortestWeightedDistances(graph: WeightedGraph, start: number): [number] {
+  let distances: [number] = [];
+  let visited: [bool] = [];
+  let count = graph.vertexCount();
+  let index = 0;
+  while (index < count) {
+    distances.push(-1);
+    visited.push(false);
+    index += 1;
+  }
+  if (start < 0 || start >= count) {
+    return distances;
+  }
+  distances[start] = 0;
+
+  let step = 0;
+  while (step < count) {
+    let current = -1;
+    index = 0;
+    while (index < count) {
+      if (!visited[index] && distances[index] >= 0
+          && (current < 0 || distances[index] < distances[current])) {
+        current = index;
+      }
+      index += 1;
+    }
+    if (current < 0) {
+      break;
+    }
+    visited[current] = true;
+    let neighbors = graph.neighbors(current);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let edge = neighbors[neighborIndex];
+      let candidate = distances[current] + edge.weight;
+      if (distances[edge.to] < 0 || candidate < distances[edge.to]) {
+        distances[edge.to] = candidate;
+      }
+      neighborIndex += 1;
+    }
+    step += 1;
+  }
+  return distances;
+}
+
+fun shortestWeightedPath(graph: WeightedGraph, start: number, goal: number): [number] {
+  let result: [number] = [];
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count || goal < 0 || goal >= count) {
+    return result;
+  }
+
+  let distances: [number] = [];
+  let parents: [number] = [];
+  let visited: [bool] = [];
+  let index = 0;
+  while (index < count) {
+    distances.push(-1);
+    parents.push(-1);
+    visited.push(false);
+    index += 1;
+  }
+  distances[start] = 0;
+
+  let step = 0;
+  while (step < count) {
+    let current = -1;
+    index = 0;
+    while (index < count) {
+      if (!visited[index] && distances[index] >= 0
+          && (current < 0 || distances[index] < distances[current])) {
+        current = index;
+      }
+      index += 1;
+    }
+    if (current < 0) {
+      break;
+    }
+    visited[current] = true;
+    if (current == goal) {
+      break;
+    }
+    let neighbors = graph.neighbors(current);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let edge = neighbors[neighborIndex];
+      let candidate = distances[current] + edge.weight;
+      if (distances[edge.to] < 0 || candidate < distances[edge.to]) {
+        distances[edge.to] = candidate;
+        parents[edge.to] = current;
+      }
+      neighborIndex += 1;
+    }
+    step += 1;
+  }
+
+  if (start != goal && parents[goal] < 0) {
+    return result;
+  }
+  let current = goal;
+  while (current != start) {
+    result.push(current);
+    current = parents[current];
+  }
+  result.push(start);
+
+  let reversed: [number] = [];
+  let resultIndex = result.len();
+  while (resultIndex > 0) {
+    resultIndex -= 1;
+    reversed.push(result[resultIndex]);
+  }
+  return reversed;
+}
+
 fun reverseArray<T>(values: [T]): [T] {
   let result: [T] = [];
   let index = values.len();
@@ -1545,4 +1737,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, breadthFirstOrder, depthFirstOrder, shortestDistances, shortestPath, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, shortestDistances, shortestPath, shortestWeightedDistances, shortestWeightedPath, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;

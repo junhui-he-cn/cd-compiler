@@ -107,6 +107,11 @@ print ds.breadthFirstOrder(graph, 0);
 print ds.depthFirstOrder(graph, 0);
 print ds.shortestPath(graph, 0, 2);
 
+let weighted = ds.newWeightedGraph(3, false);
+weighted.addEdge(0, 1, 2);
+weighted.addEdge(1, 2, 3);
+print ds.shortestWeightedPath(weighted, 0, 2);
+
 fun ascendingValues(left: number, right: number): bool {
   return left < right;
 }

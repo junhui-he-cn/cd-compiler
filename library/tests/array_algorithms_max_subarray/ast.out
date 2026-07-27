@@ -713,6 +713,189 @@ Program
             Expr (-= resultIndex 1)
             Expr (member-call reversed push (index result resultIndex))
       Return reversed
+    Struct WeightedEdge {to: number, weight: number}
+    Struct WeightedGraph {adjacency: [[WeightedEdge]], directed: bool, edges: number}
+    Impl WeightedGraph
+      Method vertexCount(): number
+        Return (member-call (field this adjacency) len)
+      Method edgeCount(): number
+        Return (field this edges)
+      Method validVertex(vertex: number): bool
+        Return (&& (>= vertex 0) (< vertex (member-call (field this adjacency) len)))
+      Method edgeIndex(from: number, to: number): number
+        Let index = 0
+        While (group (< index (member-call (index (field this adjacency) from) len)))
+          Body
+            Block
+              If (group (== (field (index (index (field this adjacency) from) index) to) to))
+                Then
+                  Block
+                    Return index
+              Expr (+= index 1)
+        Return (- 1)
+      Method hasEdge(from: number, to: number): bool
+        If (group (|| (! (member-call this validVertex from)) (! (member-call this validVertex to))))
+          Then
+            Block
+              Return false
+        Return (>= (member-call this edgeIndex from to) 0)
+      Method addEdge(from: number, to: number, weight: number): bool
+        If (group (|| (|| (|| (! (member-call this validVertex from)) (! (member-call this validVertex to))) (< weight 0)) (member-call this hasEdge from to)))
+          Then
+            Block
+              Return false
+        Expr (member-call (index (field this adjacency) from) push (construct WeightedEdge to: to weight: weight))
+        If (group (&& (! (field this directed)) (!= from to)))
+          Then
+            Block
+              Expr (member-call (index (field this adjacency) to) push (construct WeightedEdge to: from weight: weight))
+        Expr (+= (field this edges) 1)
+        Return true
+      Method neighbors(vertex: number): [WeightedEdge]
+        If (group (! (member-call this validVertex vertex)))
+          Then
+            Block
+              Return (array)
+        Return (call copy (index (field this adjacency) vertex))
+    Fun newWeightedGraph(vertices: number, directed: bool): WeightedGraph
+      Let count = (call floor vertices)
+      If (group (< count 0))
+        Then
+          Block
+            Expr (= count 0)
+      Let adjacency: [[WeightedEdge]] = (array)
+      Let index = 0
+      While (group (< index count))
+        Body
+          Block
+            Let neighbors: [WeightedEdge] = (array)
+            Expr (member-call adjacency push neighbors)
+            Expr (+= index 1)
+      Return (construct WeightedGraph adjacency: adjacency directed: directed edges: 0)
+    Fun shortestWeightedDistances(graph: WeightedGraph, start: number): [number]
+      Let distances: [number] = (array)
+      Let visited: [bool] = (array)
+      Let count = (member-call graph vertexCount)
+      Let index = 0
+      While (group (< index count))
+        Body
+          Block
+            Expr (member-call distances push (- 1))
+            Expr (member-call visited push false)
+            Expr (+= index 1)
+      If (group (|| (< start 0) (>= start count)))
+        Then
+          Block
+            Return distances
+      Expr (= (index distances start) 0)
+      Let step = 0
+      While (group (< step count))
+        Body
+          Block
+            Let current = (- 1)
+            Expr (= index 0)
+            While (group (< index count))
+              Body
+                Block
+                  If (group (&& (&& (! (index visited index)) (>= (index distances index) 0)) (group (|| (< current 0) (< (index distances index) (index distances current))))))
+                    Then
+                      Block
+                        Expr (= current index)
+                  Expr (+= index 1)
+            If (group (< current 0))
+              Then
+                Block
+                  Break
+            Expr (= (index visited current) true)
+            Let neighbors = (member-call graph neighbors current)
+            Let neighborIndex = 0
+            While (group (< neighborIndex (member-call neighbors len)))
+              Body
+                Block
+                  Let edge = (index neighbors neighborIndex)
+                  Let candidate = (+ (index distances current) (field edge weight))
+                  If (group (|| (< (index distances (field edge to)) 0) (< candidate (index distances (field edge to)))))
+                    Then
+                      Block
+                        Expr (= (index distances (field edge to)) candidate)
+                  Expr (+= neighborIndex 1)
+            Expr (+= step 1)
+      Return distances
+    Fun shortestWeightedPath(graph: WeightedGraph, start: number, goal: number): [number]
+      Let result: [number] = (array)
+      Let count = (member-call graph vertexCount)
+      If (group (|| (|| (|| (< start 0) (>= start count)) (< goal 0)) (>= goal count)))
+        Then
+          Block
+            Return result
+      Let distances: [number] = (array)
+      Let parents: [number] = (array)
+      Let visited: [bool] = (array)
+      Let index = 0
+      While (group (< index count))
+        Body
+          Block
+            Expr (member-call distances push (- 1))
+            Expr (member-call parents push (- 1))
+            Expr (member-call visited push false)
+            Expr (+= index 1)
+      Expr (= (index distances start) 0)
+      Let step = 0
+      While (group (< step count))
+        Body
+          Block
+            Let current = (- 1)
+            Expr (= index 0)
+            While (group (< index count))
+              Body
+                Block
+                  If (group (&& (&& (! (index visited index)) (>= (index distances index) 0)) (group (|| (< current 0) (< (index distances index) (index distances current))))))
+                    Then
+                      Block
+                        Expr (= current index)
+                  Expr (+= index 1)
+            If (group (< current 0))
+              Then
+                Block
+                  Break
+            Expr (= (index visited current) true)
+            If (group (== current goal))
+              Then
+                Block
+                  Break
+            Let neighbors = (member-call graph neighbors current)
+            Let neighborIndex = 0
+            While (group (< neighborIndex (member-call neighbors len)))
+              Body
+                Block
+                  Let edge = (index neighbors neighborIndex)
+                  Let candidate = (+ (index distances current) (field edge weight))
+                  If (group (|| (< (index distances (field edge to)) 0) (< candidate (index distances (field edge to)))))
+                    Then
+                      Block
+                        Expr (= (index distances (field edge to)) candidate)
+                        Expr (= (index parents (field edge to)) current)
+                  Expr (+= neighborIndex 1)
+            Expr (+= step 1)
+      If (group (&& (!= start goal) (< (index parents goal) 0)))
+        Then
+          Block
+            Return result
+      Let current = goal
+      While (group (!= current start))
+        Body
+          Block
+            Expr (member-call result push current)
+            Expr (= current (index parents current))
+      Expr (member-call result push start)
+      Let reversed: [number] = (array)
+      Let resultIndex = (member-call result len)
+      While (group (> resultIndex 0))
+        Body
+          Block
+            Expr (-= resultIndex 1)
+            Expr (member-call reversed push (index result resultIndex))
+      Return reversed
     Fun reverseArray<T>(values: [T]): [T]
       Let result: [T] = (array)
       Let index = (member-call values len)
@@ -1353,7 +1536,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph breadthFirstOrder depthFirstOrder shortestDistances shortestPath some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder shortestDistances shortestPath shortestWeightedDistances shortestWeightedPath some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Print (member-call ds maxSubarraySum (array (- 2) 1 (- 3) 4 (- 1) 2 1 (- 5) 4))
