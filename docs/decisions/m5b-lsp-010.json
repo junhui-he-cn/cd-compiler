@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m5b-2026-07-27-r10",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M5B-LSP-010",
+  "domain": "language-server-cross-module-references",
+  "status": "resolved",
+  "question": "How should references include uses of an opened module's exported value?",
+  "decision": "Resolve one local or imported definition target, match local declaration records and direct-import/namespace-alias sites across the shared virtual workspace, and return URI/range locations.",
+  "query": {
+    "target": "local declaration, unqualified direct import, or namespace-alias member",
+    "includeDeclaration": "target declaration included exactly once when requested",
+    "ordering": "URI, source start, source end, source ID tie-break",
+    "sources": "currently open virtual documents only"
+  },
+  "shared_services": [
+    "AnalysisSnapshot",
+    "DeclarationIndex",
+    "ReferenceSiteCollector",
+    "FrontendSession module graph",
+    "explicit module exports"
+  ],
+  "compatibility_boundary": {
+    "single_document": "existing source-local results and ordering remain unchanged",
+    "protocol": "Location[] and includeDeclaration behavior remain unchanged",
+    "ids": "snapshot-local IDs are not serialized"
+  },
+  "quantitative_gate": "tests/lsp_tests.py covers a cross-module namespace-member reference and declaration-inclusive locations.",
+  "out_of_scope": [
+    "cross-module rename",
+    "cross-module completion",
+    "namespace-qualified type navigation",
+    "enum-variant navigation",
+    "persistent semantic caching",
+    "range-based synchronization"
+  ],
+  "verification": {
+    "focused_commands": [
+      "cmake --build build -j2",
+      "python3 tests/lsp_tests.py ./build/compiler_design",
+      "ctest --test-dir build --output-on-failure -R '^language_server$'",
+      "git diff --check"
+    ]
+  }
+}

@@ -1230,6 +1230,16 @@ const DeclarationRecord* definitionAt(
     return best;
 }
 
+struct DefinitionTarget {
+    const DeclarationRecord* declaration = nullptr;
+    SourceFileId sourceId;
+};
+
+std::optional<DefinitionTarget> importedDefinitionAt(
+    const AnalysisSnapshot& snapshot,
+    SourceFileId sourceId,
+    std::size_t byte);
+
 int lspSymbolKind(DeclarationKind kind)
 {
     switch (kind) {
@@ -1282,38 +1292,71 @@ std::vector<SourceRange> referenceRangesAt(
     std::size_t byte,
     bool includeDeclaration)
 {
-    const DeclarationRecord* target = definitionAt(snapshot, sourceId, byte);
-    if (!target) {
+    std::optional<DefinitionTarget> target;
+    if (const DeclarationRecord* local = definitionAt(snapshot, sourceId, byte)) {
+        target = DefinitionTarget{local, local->range ? local->range->source : sourceId};
+    } else {
+        target = importedDefinitionAt(snapshot, sourceId, byte);
+    }
+    if (!target || !target->declaration) {
         return {};
     }
 
     std::vector<SourceRange> ranges;
-    if (includeDeclaration && target->range && declarationRange(*target)) {
-        ranges.push_back(*target->range);
+    if (includeDeclaration
+        && target->declaration->range
+        && declarationRange(*target->declaration)) {
+        ranges.push_back(*target->declaration->range);
     }
     for (const ReferenceSite& site : snapshot.referenceSites) {
-        if (!site.range || site.range->source != sourceId) {
+        if (!site.range) {
             continue;
         }
+        bool matches = false;
         const std::optional<ResolvedSymbol> resolved
             = resolvedReference(snapshot.declarationIndex, site);
-        if (!resolved || resolved->declarationId != target->declarationId) {
-            continue;
+        if (resolved) {
+            const DeclarationRecord* declaration
+                = snapshot.declarationIndex.declaration(resolved->declarationId);
+            matches = declaration == target->declaration;
         }
-        ranges.push_back(*site.range);
+        if (!matches) {
+            const std::optional<DefinitionTarget> imported = importedDefinitionAt(
+                snapshot,
+                site.range->source,
+                site.range->start);
+            matches = imported && imported->declaration == target->declaration;
+        }
+        if (matches) {
+            ranges.push_back(*site.range);
+        }
     }
 
     std::sort(
         ranges.begin(),
         ranges.end(),
-        [](const SourceRange& left, const SourceRange& right) {
-            if (left.source != right.source) {
-                return left.source < right.source;
+        [&snapshot](const SourceRange& left, const SourceRange& right) {
+            const auto sourceUri = [&snapshot](SourceFileId source) {
+                const auto found = snapshot.sourceUris.find(source.value);
+                return found == snapshot.sourceUris.end()
+                    ? std::string()
+                    : found->second;
+            };
+            const std::string leftUri = sourceUri(left.source);
+            const std::string rightUri = sourceUri(right.source);
+            if (leftUri != rightUri) {
+                return leftUri < rightUri;
             }
             if (left.start != right.start) {
                 return left.start < right.start;
             }
-            return left.end < right.end;
+            if (left.end != right.end) {
+                return left.end < right.end;
+            }
+            if (left.source != right.source) {
+                return left.source < right.source;
+            }
+            return false;
         });
     ranges.erase(
         std::unique(
@@ -1596,11 +1639,6 @@ bool exportNamesContain(const ExportStmt& exportStatement, std::string_view name
         exportStatement.names.end(),
         [name](const Token& token) { return token.lexeme == name; });
 }
-
-struct DefinitionTarget {
-    const DeclarationRecord* declaration = nullptr;
-    SourceFileId sourceId;
-};
 
 std::optional<DefinitionTarget> exportedDefinition(
     const AnalysisSnapshot& snapshot,
@@ -2255,7 +2293,13 @@ private:
         std::vector<JsonValue> locations;
         locations.reserve(ranges.size());
         for (const SourceRange& range : ranges) {
-            locations.push_back(sourceLocation(*uri, found->second.text, range));
+            const auto sourceUri = snapshot.sourceUris.find(range.source.value);
+            const std::string* source = sourceTextFor(snapshot, range.source);
+            if (sourceUri != snapshot.sourceUris.end() && source) {
+                locations.push_back(sourceLocation(sourceUri->second, *source, range));
+            } else if (range.source == found->second.analysis.sourceId) {
+                locations.push_back(sourceLocation(*uri, found->second.text, range));
+            }
         }
         return JsonValue::array(std::move(locations));
     }

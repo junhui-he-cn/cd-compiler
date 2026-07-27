@@ -553,6 +553,68 @@ def main() -> int:
             process,
             {
                 "jsonrpc": "2.0",
+                "id": 19,
+                "method": "textDocument/references",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 1, "character": 11},
+                    "context": {"includeDeclaration": False},
+                },
+            },
+        )
+        namespace_references = receive(process)
+        if namespace_references.get("result") != [
+            {
+                "uri": uri,
+                "range": {
+                    "start": {"line": 1, "character": 10},
+                    "end": {"line": 1, "character": 15},
+                },
+            }
+        ]:
+            raise AssertionError(
+                f"cross-module references response mismatch: {namespace_references!r}"
+            )
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 20,
+                "method": "textDocument/references",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 1, "character": 11},
+                    "context": {"includeDeclaration": True},
+                },
+            },
+        )
+        namespace_references_with_declaration = receive(process)
+        if namespace_references_with_declaration.get("result") != [
+            {
+                "uri": module_uri,
+                "range": {
+                    "start": {"line": 0, "character": 4},
+                    "end": {"line": 0, "character": 9},
+                },
+            },
+            {
+                "uri": uri,
+                "range": {
+                    "start": {"line": 1, "character": 10},
+                    "end": {"line": 1, "character": 15},
+                },
+            },
+        ]:
+            raise AssertionError(
+                "cross-module references-with-declaration response mismatch: "
+                f"{namespace_references_with_declaration!r}"
+            )
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
                 "method": "textDocument/didClose",
                 "params": {"textDocument": {"uri": module_uri}},
             },

@@ -47,9 +47,10 @@ The compiler pipeline includes:
   workspace symbols. File-backed open URIs are analyzed as a shared virtual
   workspace; unqualified direct imports and members selected through opened
   namespace aliases can navigate to declarations in other modules, including
-  explicit export-from forwarding. Closed imports, namespace-qualified types
-  and variants, cross-module references/rename/completion, and workspace-wide
-  completion remain later slices.
+  explicit export-from forwarding. References can cross the same opened
+  direct-import and namespace-alias boundaries. Closed imports,
+  namespace-qualified types and variants, cross-module rename/completion, and
+  workspace-wide completion remain later slices.
 
 For example:
 
