@@ -18,6 +18,10 @@ and `typeOf`.
 For a user-oriented introduction to the language, see
 [`USER_MANUAL.md`](USER_MANUAL.md).
 
+A public-language data-structure example library is available under
+[`library/`](library/), with a runnable example at
+[`examples/data_structures.cd`](examples/data_structures.cd).
+
 The compiler pipeline includes:
 
 - Lexer: turns source text into tokens.

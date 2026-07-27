@@ -1,0 +1,102 @@
+// Generic stack and queue implementations built from the public language API.
+//
+// Stack uses add/take instead of push/pop because those names are reserved by
+// the current builtin member-call sugar. Queue exposes enqueue/dequeue, which
+// do not collide with a builtin member call.
+
+struct Stack<T> {
+  items: [T]
+}
+
+impl Stack<T> {
+  fun add(value: T) {
+    this.items.push(value);
+  }
+
+  fun take(): T? {
+    if (this.items.len() == 0) {
+      return nil;
+    }
+    return this.items.pop();
+  }
+
+  fun top(): T? {
+    if (this.items.len() == 0) {
+      return nil;
+    }
+    return this.items[this.items.len() - 1];
+  }
+
+  fun size(): number {
+    return this.items.len();
+  }
+
+  fun isEmpty(): bool {
+    return this.items.len() == 0;
+  }
+
+  fun snapshot(): [T] {
+    return copy(this.items);
+  }
+}
+
+fun newStack<T>(): Stack<T> {
+  return Stack<T> { items: [] };
+}
+
+struct Queue<T> {
+  items: [T],
+  head: number
+}
+
+impl Queue<T> {
+  fun enqueue(value: T) {
+    this.items.push(value);
+  }
+
+  // Keep consumed entries only until the unread suffix is at least half of
+  // the backing array. This keeps dequeue amortized while retaining a simple
+  // array-backed implementation.
+  fun compact() {
+    if (this.head > 0 && this.head * 2 >= this.items.len()) {
+      this.items = this.items.slice(this.head, this.items.len() - this.head);
+      this.head = 0;
+    }
+  }
+
+  fun dequeue(): T? {
+    if (this.head >= this.items.len()) {
+      return nil;
+    }
+
+    let value = this.items[this.head];
+    this.head += 1;
+    this.compact();
+    return value;
+  }
+
+  fun front(): T? {
+    if (this.head >= this.items.len()) {
+      return nil;
+    }
+    return this.items[this.head];
+  }
+
+  fun size(): number {
+    return this.items.len() - this.head;
+  }
+
+  fun isEmpty(): bool {
+    return this.head >= this.items.len();
+  }
+
+  fun snapshot(): [T] {
+    return this.items.slice(this.head, this.items.len() - this.head);
+  }
+}
+
+fun newQueue<T>(): Queue<T> {
+  return Queue<T> { items: [], head: 0 };
+}
+
+export Stack, Queue, newStack, newQueue;
