@@ -1,0 +1,25 @@
+struct Stack<T> { items: [T] }
+
+impl Stack<T> {
+  fun pop(): T? {
+    return nil;
+  }
+
+  fun push(value: T) {
+    return nil;
+  }
+
+  fun len(): number {
+    return 42;
+  }
+}
+
+let stack: Stack<number> = Stack<number> { items: [] };
+print stack.pop();
+print stack.push(7);
+print stack.len();
+
+let values = [1];
+values.push(2);
+print values.pop();
+print values.len();

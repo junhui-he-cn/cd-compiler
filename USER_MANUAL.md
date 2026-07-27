@@ -301,7 +301,9 @@ let person = Person { name: "Ada" };
 print person.greeting();
 ```
 
-方法可以使用 `impl Box<T>` 这样的泛型接收者。当前不支持继承、重载、动态派发或静态方法。
+方法可以使用 `impl Box<T>` 这样的泛型接收者。对已知结构体接收者，用户定义的
+同名方法会优先于 builtin member-call sugar；数组、map、字符串和 range 接收者
+仍使用对应的 builtin fallback。当前不支持继承、重载、动态派发或静态方法。
 
 ## 7. 数组、map 和 range
 
@@ -490,7 +492,8 @@ cargo run --manifest-path vm-rs/Cargo.toml -- run program.cdbc
 
 ## 10. 内置函数
 
-函数形式的内置函数可以被同名的词法绑定遮蔽；表中列出的成员形式是编译器提供的内置 sugar，不会被同名普通绑定遮蔽。
+函数形式的内置函数可以被同名的词法绑定遮蔽；表中列出的成员形式是编译器提供的内置 sugar，
+不会被同名普通绑定遮蔽。若已知结构体接收者声明了同名方法，则优先调用该用户方法。
 
 | 函数 | 作用 |
 | --- | --- |
@@ -525,6 +528,9 @@ print scores.contains("Ada");
 print scores.keys();
 print "你好".charAt(1);
 ```
+
+例如，结构体可以声明 `push` 或 `pop` 方法；只有数组等 builtin receiver
+才会使用对应的内置 member-call sugar。
 
 回调型函数按从左到右的顺序处理输入快照；`map`、`filter`、`flatMap`、`slice`、`copy`、`concat` 和 `keys`/`values` 返回新的一层容器，内部结构体、数组和闭包仍可能与原值共享。`any`、`all`、`find` 和 `findIndex` 会在可以确定结果时短路。
 
@@ -561,20 +567,20 @@ Type error at 1:7: undefined variable `missing`
 import "../library/data_structures.cd" as ds;
 
 let stack = ds.newStack<number>();
-stack.add(10);
-stack.add(20);
+stack.push(10);
+stack.push(20);
 print stack.top();
-print stack.take();
+print stack.pop();
 
 let queue = ds.newQueue<string>();
 queue.enqueue("first");
 print queue.dequeue();
 ```
 
-栈提供 `add`、`take`、`top`、`size`、`isEmpty` 和 `snapshot`；队列提供
+栈提供 `push`、`pop`、`top`、`size`、`isEmpty` 和 `snapshot`；队列提供
 `enqueue`、`dequeue`、`front`、`size`、`isEmpty` 和 `snapshot`。当前库使用
-`add`/`take` 而不是传统的 `push`/`pop`，原因和语言层限制见
-[`library/README.md`](library/README.md)。
+传统的 `push`/`pop` API；已知结构体接收者上的用户方法会优先于同名的
+builtin member-call sugar，数组接收者仍使用数组 builtin。
 
 ## 13. 当前边界
 

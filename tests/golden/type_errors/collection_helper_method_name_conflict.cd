@@ -1,5 +1,0 @@
-struct Bag { value: number }
-
-impl Bag {
-  fun copy(): number { return this.value; }
-}
