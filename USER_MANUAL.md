@@ -550,7 +550,33 @@ Type error at 1:7: undefined variable `missing`
 
 字节码运行时错误会附带源位置；通过函数调用产生的运行时错误还会显示调用栈。
 
-## 12. 当前边界
+## 12. 数据结构库示例
+
+仓库中的 [`library/data_structures.cd`](library/data_structures.cd) 是一个
+完全使用公开语言能力编写的示例库，当前提供泛型 `Stack<T>` 和
+`Queue<T>`。示例程序见
+[`examples/data_structures.cd`](examples/data_structures.cd)：
+
+```cd
+import "../library/data_structures.cd" as ds;
+
+let stack = ds.newStack<number>();
+stack.add(10);
+stack.add(20);
+print stack.top();
+print stack.take();
+
+let queue = ds.newQueue<string>();
+queue.enqueue("first");
+print queue.dequeue();
+```
+
+栈提供 `add`、`take`、`top`、`size`、`isEmpty` 和 `snapshot`；队列提供
+`enqueue`、`dequeue`、`front`、`size`、`isEmpty` 和 `snapshot`。当前库使用
+`add`/`take` 而不是传统的 `push`/`pop`，原因和语言层限制见
+[`library/README.md`](library/README.md)。
+
+## 13. 当前边界
 
 当前实现仍是实验性语言，以下能力尚未提供或仍较保守：
 
