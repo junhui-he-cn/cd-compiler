@@ -362,6 +362,81 @@ Program
         Return result
     Fun newMultiSet<T>(): MultiSet<T>
       Return (construct MultiSet<T> values: (array) counts: (array))
+    Struct MultiMap<K, V> {keys: [K], values: [[V]]}
+    Impl MultiMap<K, V>
+      Method indexOfKey(key: K): number
+        Let index = 0
+        While (group (< index (member-call (field this keys) len)))
+          Body
+            Block
+              If (group (== (index (field this keys) index) key))
+                Then
+                  Block
+                    Return index
+              Expr (+= index 1)
+        Return (- 1)
+      Method indexOfValue(values: [V], value: V): number
+        Let index = 0
+        While (group (< index (member-call values len)))
+          Body
+            Block
+              If (group (== (index values index) value))
+                Then
+                  Block
+                    Return index
+              Expr (+= index 1)
+        Return (- 1)
+      Method add(key: K, value: V)
+        Let keyIndex = (member-call this indexOfKey key)
+        If (group (< keyIndex 0))
+          Then
+            Block
+              Let values: [V] = (array)
+              Expr (member-call values push value)
+              Expr (member-call (field this keys) push key)
+              Expr (member-call (field this values) push values)
+              Return nil
+        Expr (member-call (index (field this values) keyIndex) push value)
+      Method getAll(key: K): [V]
+        Let keyIndex = (member-call this indexOfKey key)
+        If (group (< keyIndex 0))
+          Then
+            Block
+              Return (array)
+        Return (call copy (index (field this values) keyIndex))
+      Method removeKeyAt(index: number)
+        While (group (< (+ index 1) (member-call (field this keys) len)))
+          Body
+            Block
+              Expr (= (index (field this keys) index) (index (field this keys) (+ index 1)))
+              Expr (= (index (field this values) index) (index (field this values) (+ index 1)))
+              Expr (+= index 1)
+        Expr (member-call (field this keys) pop)
+        Expr (member-call (field this values) pop)
+      Method discard(key: K, value: V): bool
+        Let keyIndex = (member-call this indexOfKey key)
+        If (group (< keyIndex 0))
+          Then
+            Block
+              Return false
+        Let valueIndex = (member-call this indexOfValue (index (field this values) keyIndex) value)
+        If (group (< valueIndex 0))
+          Then
+            Block
+              Return false
+        While (group (< (+ valueIndex 1) (member-call (index (field this values) keyIndex) len)))
+          Body
+            Block
+              Expr (= (index (index (field this values) keyIndex) valueIndex) (index (index (field this values) keyIndex) (+ valueIndex 1)))
+              Expr (+= valueIndex 1)
+        Expr (member-call (index (field this values) keyIndex) pop)
+        If (group (== (member-call (index (field this values) keyIndex) len) 0))
+          Then
+            Block
+              Expr (member-call this removeKeyAt keyIndex)
+        Return true
+    Fun newMultiMap<K, V>(): MultiMap<K, V>
+      Return (construct MultiMap<K, V> keys: (array) values: (array))
     Struct PriorityQueue<T> {heap: BinaryHeap<T>}
     Impl PriorityQueue<T>
       Method enqueue(value: T)
@@ -378,7 +453,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Fun ascending(left: number, right: number): bool

@@ -81,3 +81,8 @@ let bag = ds.newMultiSet<string>();
 bag.add("tag");
 bag.add("tag");
 print bag.countOf("tag");
+
+let index = ds.newMultiMap<string, number>();
+index.add("even", 2);
+index.add("even", 4);
+print index.getAll("even");

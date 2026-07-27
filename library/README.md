@@ -4,7 +4,8 @@ This directory contains a small data-structure library written in the public
 Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 `Queue<T>`, `Deque<T>`, `BinaryHeap<T>`, and `PriorityQueue<T>` types, plus the
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
-`Set<T>` and `MultiSet<T>` types.
+`Set<T>` and `MultiSet<T>` types. It also provides an array-backed
+`MultiMap<K, V>` for one-to-many mappings.
 
 The planned structure and algorithm inventory, implementation constraints, and
 staged delivery order are documented in
@@ -75,6 +76,11 @@ let bag = ds.newMultiSet<string>();
 bag.add("tag");
 bag.add("tag");
 print bag.countOf("tag");
+
+let index = ds.newMultiMap<string, number>();
+index.add("even", 2);
+index.add("even", 4);
+print index.getAll("even");
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -219,6 +225,19 @@ the number of distinct values; `takeOne` is `O(n)` when the last occurrence is
 removed because it preserves entry order. `entries` is `O(n)` and allocates a
 new outer array plus one entry value per distinct element.
 
+`MultiMap<K, V>` stores each key once and keeps its values in insertion order:
+
+- `add(key: K, value: V)` — append one value to a key;
+- `getAll(key: K): [V]` — return a fresh shallow array, or `[]` for an unknown
+  key;
+- `discard(key: K, value: V): bool` — remove the first matching pair and report
+  whether it was present; removing the last value removes the key entry.
+
+`newMultiMap<K, V>()` creates an empty mapping. Key and value lookup use
+language equality. `add`, `getAll`, and `discard` are linear in the number of
+keys or values for the selected key; key/value arrays are maintained without a
+hash table, and key order is preserved after removals.
+
 ## Current language limitation
 
 The language's builtin member-call sugar reserves names such as `push`, `pop`,
@@ -244,7 +263,8 @@ python3 library/tests/run_tests.py ./build/compiler_design vm-rs
 ```
 
 Use `--case data_structures_binary_heap`, `--case data_structures_option`,
-`--case data_structures_result`, `--case data_structures_list`, or
-`--case data_structures_set`, or `--case data_structures_multiset` for a focused
-run, or `--update` only when an intentional compiler-output change requires
-refreshing library fixtures' `ast.out` files.
+`--case data_structures_result`, `--case data_structures_list`,
+`--case data_structures_set`, `--case data_structures_multiset`, or
+`--case data_structures_multimap` for a focused run, or `--update` only when an
+intentional compiler-output change requires refreshing library fixtures'
+`ast.out` files.

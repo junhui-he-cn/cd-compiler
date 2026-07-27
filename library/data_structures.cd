@@ -511,6 +511,90 @@ fun newMultiSet<T>(): MultiSet<T> {
   return MultiSet<T> { values: [], counts: [] };
 }
 
+struct MultiMap<K, V> {
+  keys: [K],
+  values: [[V]]
+}
+
+impl MultiMap<K, V> {
+  fun indexOfKey(key: K): number {
+    let index = 0;
+    while (index < this.keys.len()) {
+      if (this.keys[index] == key) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun indexOfValue(values: [V], value: V): number {
+    let index = 0;
+    while (index < values.len()) {
+      if (values[index] == value) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun add(key: K, value: V) {
+    let keyIndex = this.indexOfKey(key);
+    if (keyIndex < 0) {
+      let values: [V] = [];
+      values.push(value);
+      this.keys.push(key);
+      this.values.push(values);
+      return;
+    }
+    this.values[keyIndex].push(value);
+  }
+
+  fun getAll(key: K): [V] {
+    let keyIndex = this.indexOfKey(key);
+    if (keyIndex < 0) {
+      return [];
+    }
+    return copy(this.values[keyIndex]);
+  }
+
+  fun removeKeyAt(index: number) {
+    while (index + 1 < this.keys.len()) {
+      this.keys[index] = this.keys[index + 1];
+      this.values[index] = this.values[index + 1];
+      index += 1;
+    }
+    this.keys.pop();
+    this.values.pop();
+  }
+
+  fun discard(key: K, value: V): bool {
+    let keyIndex = this.indexOfKey(key);
+    if (keyIndex < 0) {
+      return false;
+    }
+    let valueIndex = this.indexOfValue(this.values[keyIndex], value);
+    if (valueIndex < 0) {
+      return false;
+    }
+
+    while (valueIndex + 1 < this.values[keyIndex].len()) {
+      this.values[keyIndex][valueIndex] = this.values[keyIndex][valueIndex + 1];
+      valueIndex += 1;
+    }
+    this.values[keyIndex].pop();
+    if (this.values[keyIndex].len() == 0) {
+      this.removeKeyAt(keyIndex);
+    }
+    return true;
+  }
+}
+
+fun newMultiMap<K, V>(): MultiMap<K, V> {
+  return MultiMap<K, V> { keys: [], values: [] };
+}
+
 struct PriorityQueue<T> {
   heap: BinaryHeap<T>
 }
@@ -545,4 +629,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap;

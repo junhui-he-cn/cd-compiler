@@ -456,41 +456,25 @@ Program
     Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap
   Module 1 entry
     Import "../../data_structures.cd" as ds
-    Fun renderEntries(values: [ds.MultiSetEntry<number>]): string
-      Let result = ""
-      Let index = 0
-      While (group (< index (member-call values len)))
-        Body
-          Block
-            If (group (> index 0))
-              Then
-                Block
-                  Expr (= result (+ result ","))
-            Let entry = (index values index)
-            Expr (= result (+ (+ (+ result (call str (field entry value))) ":") (call str (field entry count))))
-            Expr (+= index 1)
-      Return result
-    Let numbers = (member-call ds newMultiSet<number>)
-    Print (member-call numbers countOf 4)
-    Print (member-call numbers has 4)
-    Expr (member-call numbers add 4)
-    Expr (member-call numbers add 4)
-    Expr (member-call numbers add 2)
-    Print (member-call numbers countOf 4)
-    Print (call renderEntries (member-call numbers entries))
-    Let alias = numbers
-    Expr (member-call alias add 2)
-    Print (call renderEntries (member-call numbers entries))
-    Print (member-call numbers takeOne 4)
-    Print (call renderEntries (member-call numbers entries))
-    Print (member-call numbers takeOne 4)
-    Print (call renderEntries (member-call numbers entries))
-    Print (member-call numbers takeOne 4)
-    Print (member-call numbers has 2)
-    Let words = (member-call ds newMultiSet<string>)
-    Expr (member-call words add "alpha")
-    Expr (member-call words add "alpha")
-    Expr (member-call words add "beta")
-    Print (member-call words countOf "alpha")
-    Print (member-call words takeOne "alpha")
-    Print (member-call words countOf "alpha")
+    Let map = (member-call ds newMultiMap<string, number>)
+    Print (member-call map getAll "missing")
+    Expr (member-call map add "a" 1)
+    Expr (member-call map add "a" 2)
+    Expr (member-call map add "b" 3)
+    Print (member-call map getAll "a")
+    Let alias = map
+    Expr (member-call alias add "a" 4)
+    Print (member-call map getAll "a")
+    Let values = (member-call map getAll "a")
+    Expr (member-call values push 99)
+    Print (member-call map getAll "a")
+    Print values
+    Print (member-call map discard "a" 2)
+    Print (member-call map getAll "a")
+    Print (member-call map discard "a" 9)
+    Print (member-call map discard "a" 1)
+    Print (member-call map discard "a" 4)
+    Print (member-call map getAll "a")
+    Expr (member-call map add "b" 5)
+    Print (member-call map getAll "b")
+    Print (member-call map discard "missing" 0)
