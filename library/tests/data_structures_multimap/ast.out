@@ -437,6 +437,61 @@ Program
         Return true
     Fun newMultiMap<K, V>(): MultiMap<K, V>
       Return (construct MultiMap<K, V> keys: (array) values: (array))
+    Struct DisjointSet {parents: [number], sizes: [number], components: number}
+    Impl DisjointSet
+      Method representative(value: number): number
+        Let root = value
+        While (group (!= (index (field this parents) root) root))
+          Body
+            Block
+              Expr (= root (index (field this parents) root))
+        Let current = value
+        While (group (!= current root))
+          Body
+            Block
+              Let next = (index (field this parents) current)
+              Expr (= (index (field this parents) current) root)
+              Expr (= current next)
+        Return root
+      Method union(left: number, right: number): bool
+        Let leftRoot = (member-call this representative left)
+        Let rightRoot = (member-call this representative right)
+        If (group (== leftRoot rightRoot))
+          Then
+            Block
+              Return false
+        If (group (< (index (field this sizes) leftRoot) (index (field this sizes) rightRoot)))
+          Then
+            Block
+              Let value = leftRoot
+              Expr (= leftRoot rightRoot)
+              Expr (= rightRoot value)
+        Expr (= (index (field this parents) rightRoot) leftRoot)
+        Expr (+= (index (field this sizes) leftRoot) (index (field this sizes) rightRoot))
+        Expr (-= (field this components) 1)
+        Return true
+      Method connected(left: number, right: number): bool
+        Return (== (member-call this representative left) (member-call this representative right))
+      Method componentCount(): number
+        Return (field this components)
+      Method size(): number
+        Return (member-call (field this parents) len)
+    Fun newDisjointSet(count: number): DisjointSet
+      Let length = (call floor count)
+      If (group (< length 0))
+        Then
+          Block
+            Expr (= length 0)
+      Let parents: [number] = (array)
+      Let sizes: [number] = (array)
+      Let index = 0
+      While (group (< index length))
+        Body
+          Block
+            Expr (member-call parents push index)
+            Expr (member-call sizes push 1)
+            Expr (+= index 1)
+      Return (construct DisjointSet parents: parents sizes: sizes components: length)
     Fun reverseArray<T>(values: [T]): [T]
       Let result: [T] = (array)
       Let index = (member-call values len)
@@ -1077,7 +1132,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let map = (member-call ds newMultiMap<string, number>)

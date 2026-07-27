@@ -1135,41 +1135,21 @@ Program
     Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
-    Fun renderEntries(values: [ds.MultiSetEntry<number>]): string
-      Let result = ""
-      Let index = 0
-      While (group (< index (member-call values len)))
-        Body
-          Block
-            If (group (> index 0))
-              Then
-                Block
-                  Expr (= result (+ result ","))
-            Let entry = (index values index)
-            Expr (= result (+ (+ (+ result (call str (field entry value))) ":") (call str (field entry count))))
-            Expr (+= index 1)
-      Return result
-    Let numbers = (member-call ds newMultiSet<number>)
-    Print (member-call numbers countOf 4)
-    Print (member-call numbers has 4)
-    Expr (member-call numbers add 4)
-    Expr (member-call numbers add 4)
-    Expr (member-call numbers add 2)
-    Print (member-call numbers countOf 4)
-    Print (call renderEntries (member-call numbers entries))
-    Let alias = numbers
-    Expr (member-call alias add 2)
-    Print (call renderEntries (member-call numbers entries))
-    Print (member-call numbers takeOne 4)
-    Print (call renderEntries (member-call numbers entries))
-    Print (member-call numbers takeOne 4)
-    Print (call renderEntries (member-call numbers entries))
-    Print (member-call numbers takeOne 4)
-    Print (member-call numbers has 2)
-    Let words = (member-call ds newMultiSet<string>)
-    Expr (member-call words add "alpha")
-    Expr (member-call words add "alpha")
-    Expr (member-call words add "beta")
-    Print (member-call words countOf "alpha")
-    Print (member-call words takeOne "alpha")
-    Print (member-call words countOf "alpha")
+    Let sets = (member-call ds newDisjointSet 6)
+    Print (member-call sets size)
+    Print (member-call sets componentCount)
+    Print (member-call sets connected 0 1)
+    Print (member-call sets union 0 1)
+    Print (member-call sets union 1 2)
+    Print (member-call sets union 0 2)
+    Print (member-call sets connected 0 2)
+    Print (member-call sets componentCount)
+    Print (member-call sets union 3 4)
+    Print (member-call sets union 2 4)
+    Print (member-call sets connected 0 4)
+    Print (member-call sets componentCount)
+    Print (member-call sets representative 4)
+    Print (member-call sets representative 5)
+    Let empty = (member-call ds newDisjointSet 0)
+    Print (member-call empty size)
+    Print (member-call empty componentCount)

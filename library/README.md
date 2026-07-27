@@ -85,6 +85,12 @@ index.add("even", 2);
 index.add("even", 4);
 print index.getAll("even");
 
+let components = ds.newDisjointSet(4);
+components.union(0, 1);
+components.union(2, 3);
+print components.connected(0, 3);
+print components.componentCount();
+
 let values = [3, 1, 3, 2];
 print ds.reverseArray(values);
 print ds.rotateArray(values, 1);
@@ -288,6 +294,13 @@ language equality. `add`, `getAll`, and `discard` are linear in the number of
 keys or values for the selected key; key/value arrays are maintained without a
 hash table, and key order is preserved after removals.
 
+`DisjointSet` represents integer vertices `[0, size)` with parent and component
+size arrays. `representative` performs path compression, `union` uses union by size and
+returns whether two components were joined, and `connected`, `componentCount`,
+and `size` provide queries. Construction with a non-positive count creates an
+empty set; vertex arguments must be in range. `representative` and `union` are amortized
+near-constant time (`O(alpha(n))`), while construction is `O(n)`.
+
 The array algorithms are non-mutating and return shallow copies where they
 return arrays:
 
@@ -438,7 +451,8 @@ python3 library/tests/run_tests.py ./build/compiler_design vm-rs
 Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_result`, `--case data_structures_list`,
 `--case data_structures_set`, `--case data_structures_multiset`,
-`--case data_structures_multimap`, `--case array_algorithms_basic`,
+`--case data_structures_multimap`, `--case data_structures_disjoint_set`,
+`--case array_algorithms_basic`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
 `--case array_algorithms_binary_search`, `--case array_algorithms_merge_sort`,

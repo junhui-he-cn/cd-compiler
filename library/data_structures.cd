@@ -595,6 +595,74 @@ fun newMultiMap<K, V>(): MultiMap<K, V> {
   return MultiMap<K, V> { keys: [], values: [] };
 }
 
+struct DisjointSet {
+  parents: [number],
+  sizes: [number],
+  components: number
+}
+
+impl DisjointSet {
+  fun representative(value: number): number {
+    let root = value;
+    while (this.parents[root] != root) {
+      root = this.parents[root];
+    }
+
+    let current = value;
+    while (current != root) {
+      let next = this.parents[current];
+      this.parents[current] = root;
+      current = next;
+    }
+    return root;
+  }
+
+  fun union(left: number, right: number): bool {
+    let leftRoot = this.representative(left);
+    let rightRoot = this.representative(right);
+    if (leftRoot == rightRoot) {
+      return false;
+    }
+    if (this.sizes[leftRoot] < this.sizes[rightRoot]) {
+      let value = leftRoot;
+      leftRoot = rightRoot;
+      rightRoot = value;
+    }
+    this.parents[rightRoot] = leftRoot;
+    this.sizes[leftRoot] += this.sizes[rightRoot];
+    this.components -= 1;
+    return true;
+  }
+
+  fun connected(left: number, right: number): bool {
+    return this.representative(left) == this.representative(right);
+  }
+
+  fun componentCount(): number {
+    return this.components;
+  }
+
+  fun size(): number {
+    return this.parents.len();
+  }
+}
+
+fun newDisjointSet(count: number): DisjointSet {
+  let length = floor(count);
+  if (length < 0) {
+    length = 0;
+  }
+  let parents: [number] = [];
+  let sizes: [number] = [];
+  let index = 0;
+  while (index < length) {
+    parents.push(index);
+    sizes.push(1);
+    index += 1;
+  }
+  return DisjointSet { parents: parents, sizes: sizes, components: length };
+}
+
 fun reverseArray<T>(values: [T]): [T] {
   let result: [T] = [];
   let index = values.len();
@@ -1249,4 +1317,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;

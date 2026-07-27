@@ -52,6 +52,7 @@
 - 子数组统计：`maxSubarraySum`。
 - 二分查找：`lowerBound`、`upperBound`、`binarySearch`。
 - 字符串比较辅助：`compareStrings`、`stringLess`（当前限定可打印 ASCII）。
+- 并查集：整数顶点 `DisjointSet`，支持路径压缩和按大小合并。
 
 它们的现有 API 和示例继续作为兼容基线。后续新增 API 不应悄悄改变空值、
 快照或引用共享语义。
@@ -205,7 +206,7 @@ enum Result<T, E> {
 | 邻接表图 `Graph` | 第一批 | 加边、删边、邻居、顶点数、边数 | `[[number]]` 或边数组；支持有向/无向配置 |
 | 加权图 `WeightedGraph` | 第一批 | 加权邻居、边遍历 | 邻接边数组；先固定 `number` 权重 |
 | 邻接矩阵图 | 后续 | 稠密图、矩阵算法 | `[[number]]`，需要定义无边哨兵值 |
-| 并查集 `DisjointSet` | 第一批 | `find`、`union`、`connected`、`componentCount` | 整数 parent/size 数组，路径压缩 + 按大小合并 |
+| 并查集 `DisjointSet` | 第一批 | `representative`、`union`、`connected`、`componentCount` | 整数 parent/size 数组，路径压缩 + 按大小合并 |
 | DAG 视图 | 第一批 | 拓扑排序、入度 | 在 `Graph` 上提供算法，不单独复制存储 |
 | 流网络 | 后续 | 容量边、残量网络 | 需要明确无穷容量、浮点误差和结果结构 |
 
@@ -249,6 +250,8 @@ enum Result<T, E> {
 `rotateArray` 和 `isSorted` 已补充为不改变输入的旋转与有序性检查辅助。
 `frequencyEntries` 和 `mostFrequent` 复用 `MultiSet` 的数组后端，保留首次
 出现顺序并在并列时选择首次出现值。
+`DisjointSet` 已提供整数顶点的路径压缩与按大小合并版本；越界顶点仍遵循
+数组索引的运行时边界行为。
 
 - 遍历、复制、拼接、分块、窗口、批处理；
 - `reverse`、`rotate`、`partition`、稳定分区、按谓词分组；
