@@ -6,7 +6,7 @@ Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
 `Set<T>` and `MultiSet<T>` types. It also provides an array-backed
 `MultiMap<K, V>` for one-to-many mappings and basic generic array algorithms,
-including comparator-based insertion sort and window helpers.
+including comparator-based insertion sort, window helpers, and interval merge.
 
 The planned structure and algorithm inventory, implementation constraints, and
 staged delivery order are documented in
@@ -96,6 +96,12 @@ print ds.sortArray(values, ascending);
 print ds.chunkArray(values, 2);
 print ds.slidingWindows(values, 2);
 print ds.prefixSums(values);
+
+let ranges: [ds.Interval] = [
+  ds.Interval { start: 1, end: 3 },
+  ds.Interval { start: 2, end: 5 }
+];
+print ds.mergeIntervals(ranges);
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -286,6 +292,12 @@ windows are fresh outer arrays with shallowly shared elements. Chunking and
 window generation are `O(n)` in the input plus output size; `prefixSums` is
 `O(n)` and allocates one array.
 
+`Interval { start, end }` represents a numeric interval with the documented
+precondition `start <= end`. `mergeIntervals(intervals)` returns a new array
+sorted by start, merges overlapping or touching intervals, and leaves the input
+array unchanged. It uses `O(n log n)` sorting time plus linear merging and
+allocates `O(n)` output space.
+
 ## Current language limitation
 
 The language's builtin member-call sugar reserves names such as `push`, `pop`,
@@ -315,5 +327,6 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_set`, `--case data_structures_multiset`,
 `--case data_structures_multimap`, `--case array_algorithms_basic`,
 `--case array_algorithms_sort`, or `--case array_algorithms_windows` for a
-focused run. Use `--update` only when an intentional compiler-output change
+focused run, or `--case array_algorithms_intervals` for interval-focused
+coverage. Use `--update` only when an intentional compiler-output change
 requires refreshing library fixtures' `ast.out` files.

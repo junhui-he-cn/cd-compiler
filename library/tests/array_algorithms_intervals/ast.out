@@ -589,20 +589,24 @@ Program
     Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums mergeIntervals
   Module 1 entry
     Import "../../data_structures.cd" as ds
-    Fun ascending(left: number, right: number): bool
-      Return (< left right)
-    Fun descending(left: number, right: number): bool
-      Return (> left right)
-    Let numbers = (array 4 1 3 1 2)
-    Let sorted = (member-call ds sortArray numbers ascending)
-    Print sorted
-    Print numbers
-    Expr (member-call sorted push 99)
-    Print numbers
-    Print sorted
-    Expr (member-call ds sortArrayInPlace numbers descending)
-    Print numbers
-    Let empty: [number] = (array)
-    Print (member-call ds sortArray empty ascending)
-    Expr (member-call ds sortArrayInPlace empty descending)
-    Print empty
+    Fun renderIntervals(values: [ds.Interval]): string
+      Let result = ""
+      Let index = 0
+      While (group (< index (member-call values len)))
+        Body
+          Block
+            If (group (> index 0))
+              Then
+                Block
+                  Expr (= result (+ result ","))
+            Let value = (index values index)
+            Expr (= result (+ (+ (+ (+ (+ result "[") (call str (field value start))) ",") (call str (field value end))) "]"))
+            Expr (+= index 1)
+      Return result
+    Let intervals: [ds.Interval] = (array (construct ds.Interval start: 5 end: 7) (construct ds.Interval start: 1 end: 3) (construct ds.Interval start: 2 end: 6) (construct ds.Interval start: 8 end: 10) (construct ds.Interval start: 10 end: 12))
+    Print (call renderIntervals (member-call ds mergeIntervals intervals))
+    Print (call renderIntervals intervals)
+    Let single: [ds.Interval] = (array (construct ds.Interval start: 4 end: 4))
+    Print (call renderIntervals (member-call ds mergeIntervals single))
+    Let empty: [ds.Interval] = (array)
+    Print (call renderIntervals (member-call ds mergeIntervals empty))

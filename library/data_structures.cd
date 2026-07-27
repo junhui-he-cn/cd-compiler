@@ -704,6 +704,36 @@ fun prefixSums(values: [number]): [number] {
   return result;
 }
 
+struct Interval {
+  start: number,
+  end: number
+}
+
+fun intervalLess(left: Interval, right: Interval): bool {
+  if (left.start == right.start) {
+    return left.end < right.end;
+  }
+  return left.start < right.start;
+}
+
+fun mergeIntervals(intervals: [Interval]): [Interval] {
+  let ordered = sortArray(intervals, intervalLess);
+  let merged: [Interval] = [];
+  let index = 0;
+  while (index < ordered.len()) {
+    let current = ordered[index];
+    if (merged.len() == 0 || current.start > merged[merged.len() - 1].end) {
+      merged.push(Interval { start: current.start, end: current.end });
+    } else {
+      if (current.end > merged[merged.len() - 1].end) {
+        merged[merged.len() - 1].end = current.end;
+      }
+    }
+    index += 1;
+  }
+  return merged;
+}
+
 struct PriorityQueue<T> {
   heap: BinaryHeap<T>
 }
@@ -738,4 +768,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, countValue, sortArray, sortArrayInPlace, chunkArray, slidingWindows, prefixSums;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, countValue, sortArray, sortArrayInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals;

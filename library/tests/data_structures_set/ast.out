@@ -543,6 +543,33 @@ Program
             Expr (member-call result push sum)
             Expr (+= index 1)
       Return result
+    Struct Interval {start: number, end: number}
+    Fun intervalLess(left: Interval, right: Interval): bool
+      If (group (== (field left start) (field right start)))
+        Then
+          Block
+            Return (< (field left end) (field right end))
+      Return (< (field left start) (field right start))
+    Fun mergeIntervals(intervals: [Interval]): [Interval]
+      Let ordered = (call sortArray intervals intervalLess)
+      Let merged: [Interval] = (array)
+      Let index = 0
+      While (group (< index (member-call ordered len)))
+        Body
+          Block
+            Let current = (index ordered index)
+            If (group (|| (== (member-call merged len) 0) (> (field current start) (field (index merged (- (member-call merged len) 1)) end))))
+              Then
+                Block
+                  Expr (member-call merged push (construct Interval start: (field current start) end: (field current end)))
+              Else
+                Block
+                  If (group (> (field current end) (field (index merged (- (member-call merged len) 1)) end)))
+                    Then
+                      Block
+                        Expr (= (field (index merged (- (member-call merged len) 1)) end) (field current end))
+            Expr (+= index 1)
+      Return merged
     Struct PriorityQueue<T> {heap: BinaryHeap<T>}
     Impl PriorityQueue<T>
       Method enqueue(value: T)
@@ -559,7 +586,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums mergeIntervals
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let numbers = (member-call ds newSet<number>)

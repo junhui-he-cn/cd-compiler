@@ -100,3 +100,9 @@ print ds.sortArray(values, ascendingValues);
 print ds.chunkArray(values, 2);
 print ds.slidingWindows(values, 2);
 print ds.prefixSums(values);
+
+let ranges: [ds.Interval] = [
+  ds.Interval { start: 1, end: 3 },
+  ds.Interval { start: 2, end: 5 }
+];
+print ds.mergeIntervals(ranges);
