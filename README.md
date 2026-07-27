@@ -94,6 +94,11 @@ session state. Add repeatable `--import-path DIR` options to resolve non-
 explicit imports through the production module search path, or
 `--session-root DIR` to resolve explicit relative imports from a project root.
 
+For one-request/one-response machine integration, add `--json-lines`. Each
+input line is a JSON object with either a `source` string or a `command` of
+`reset`, `help`, or `quit`; each response contains `ok` and the newly produced
+`stdout` suffix, with normalized diagnostics in `error` when a request fails.
+
 ## Language
 
 Supported statements:

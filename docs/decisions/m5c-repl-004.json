@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m5c-2026-07-27-r4",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M5C-REPL-004",
+  "domain": "source-backed-incremental-session-json-lines",
+  "status": "resolved",
+  "question": "How should machine clients submit and observe REPL session forms?",
+  "decision": "Expose an optional --json-lines adapter with one JSON request and response per line while retaining the source-backed transcript replay boundary.",
+  "protocol": {
+    "flag": "--json-lines",
+    "requests": [
+      "{\"source\":\"let value = 3;\"}",
+      "{\"command\":\"reset\"}",
+      "{\"command\":\"help\"}",
+      "{\"command\":\"quit\"}"
+    ],
+    "success_response": "{\"ok\":true,\"stdout\":\"<new suffix>\"}",
+    "failure_response": "{\"ok\":false,\"stdout\":\"\",\"error\":\"<diagnostic>\"}",
+    "commands": ["reset", "help", "quit"]
+  },
+  "compatibility_boundary": {
+    "state": "accepted source transcript plus accepted VM stdout",
+    "rollback": "compiler and runtime failures do not commit the candidate",
+    "output": "only a successful replay stdout suffix is returned",
+    "diagnostics": "temporary session paths render as <repl> or <repl-root>"
+  },
+  "shared_services": [
+    "production C++ --emit-bytecode path",
+    "Rust compiler-design-vm run command",
+    "existing TranscriptSession import and diagnostic behavior"
+  ],
+  "quantitative_gate": "tests/repl_tests.py covers JSON declaration persistence, output suffixes, compiler/runtime rollback, reset, quit, and stderr isolation.",
+  "out_of_scope": [
+    "JSON-RPC framing or request identifiers",
+    "in-process compiler or VM state",
+    "incremental bytecode or runtime-state reuse",
+    "expression-result echo",
+    "terminal history or completion"
+  ],
+  "verification": {
+    "focused_commands": [
+      "cmake -S . -B build",
+      "cmake --build build -j2",
+      "python3 tests/repl_tests.py ./build/compiler_design vm-rs/Cargo.toml",
+      "ctest --test-dir build --output-on-failure -R '^repl$'",
+      "git diff --check"
+    ]
+  }
+}

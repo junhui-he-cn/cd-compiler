@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import tempfile
@@ -15,6 +16,7 @@ def run_repl(
     transcript: str,
     import_paths: tuple[Path, ...] = (),
     session_root: Optional[Path] = None,
+    json_lines: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     repl = Path(__file__).resolve().parents[1] / "tools" / "repl.py"
     command = [sys.executable, str(repl), str(compiler), str(vm_manifest)]
@@ -22,6 +24,8 @@ def run_repl(
         command.extend(["--import-path", str(import_path)])
     if session_root:
         command.extend(["--session-root", str(session_root)])
+    if json_lines:
+        command.append("--json-lines")
     return subprocess.run(
         command,
         input=transcript,
@@ -96,6 +100,70 @@ print values[0];
         f"runtime diagnostic missing: {runtime.stderr!r}",
     )
     require("compiler-repl-" not in runtime.stderr, f"runtime diagnostic leaked temp path: {runtime.stderr!r}")
+
+    json_session = run_repl(
+        compiler,
+        vm_manifest,
+        "\n".join(
+            json.dumps(request, separators=(",", ":"))
+            for request in (
+                {"source": "let value = 3;"},
+                {"source": "print value;"},
+                {"source": "let broken = missing;"},
+                {"source": "print value;"},
+                {"command": "reset"},
+                {"source": "print value;"},
+                {"source": "let value = 8;"},
+                {"source": "print value;"},
+                {"command": "quit"},
+            )
+        )
+        + "\n",
+        json_lines=True,
+    )
+    require(json_session.returncode == 0, f"JSON session returned {json_session.returncode}: {json_session.stderr}")
+    require(json_session.stderr == "", f"JSON protocol wrote stderr: {json_session.stderr!r}")
+    json_responses = [json.loads(line) for line in json_session.stdout.splitlines()]
+    require(len(json_responses) == 9, f"unexpected JSON response count: {json_responses!r}")
+    require(json_responses[0] == {"ok": True, "stdout": ""}, f"unexpected JSON declaration response: {json_responses[0]!r}")
+    require(json_responses[1] == {"ok": True, "stdout": "3\n"}, f"unexpected JSON output response: {json_responses[1]!r}")
+    require(not json_responses[2]["ok"], f"JSON compile failure unexpectedly succeeded: {json_responses[2]!r}")
+    require(json_responses[2]["stdout"] == "", f"JSON compile failure leaked stdout: {json_responses[2]!r}")
+    require("Type error" in json_responses[2]["error"], f"JSON compile diagnostic missing: {json_responses[2]!r}")
+    require(json_responses[3] == {"ok": True, "stdout": "3\n"}, f"JSON failure rollback leaked state: {json_responses[3]!r}")
+    require(json_responses[4] == {"ok": True, "stdout": ""}, f"unexpected JSON reset response: {json_responses[4]!r}")
+    require(not json_responses[5]["ok"], f"JSON reset did not clear state: {json_responses[5]!r}")
+    require(json_responses[5]["stdout"] == "", f"JSON reset failure leaked stdout: {json_responses[5]!r}")
+    require(json_responses[6] == {"ok": True, "stdout": ""}, f"unexpected JSON post-reset declaration: {json_responses[6]!r}")
+    require(json_responses[7] == {"ok": True, "stdout": "8\n"}, f"unexpected JSON post-reset output: {json_responses[7]!r}")
+    require(json_responses[8] == {"ok": True, "stdout": ""}, f"unexpected JSON quit response: {json_responses[8]!r}")
+
+    json_runtime = run_repl(
+        compiler,
+        vm_manifest,
+        "\n".join(
+            json.dumps(request, separators=(",", ":"))
+            for request in (
+                {"source": "let values = [1];"},
+                {"source": "print values[0];"},
+                {"source": "print values[1];"},
+                {"source": "print values[0];"},
+                {"command": "quit"},
+            )
+        )
+        + "\n",
+        json_lines=True,
+    )
+    require(json_runtime.returncode == 0, f"JSON runtime session returned {json_runtime.returncode}: {json_runtime.stderr}")
+    require(json_runtime.stderr == "", f"JSON runtime protocol wrote stderr: {json_runtime.stderr!r}")
+    runtime_responses = [json.loads(line) for line in json_runtime.stdout.splitlines()]
+    require(runtime_responses[0] == {"ok": True, "stdout": ""}, f"unexpected JSON runtime declaration: {runtime_responses!r}")
+    require(runtime_responses[1] == {"ok": True, "stdout": "1\n"}, f"unexpected JSON runtime output: {runtime_responses!r}")
+    require(not runtime_responses[2]["ok"], f"JSON runtime failure unexpectedly succeeded: {runtime_responses!r}")
+    require(runtime_responses[2]["stdout"] == "", f"JSON runtime failure leaked stdout: {runtime_responses!r}")
+    require("array index out of range" in runtime_responses[2]["error"], f"JSON runtime diagnostic missing: {runtime_responses!r}")
+    require(runtime_responses[3] == {"ok": True, "stdout": "1\n"}, f"JSON runtime rollback leaked state: {runtime_responses!r}")
+    require(runtime_responses[4] == {"ok": True, "stdout": ""}, f"unexpected JSON runtime quit: {runtime_responses!r}")
 
     multiline = run_repl(
         compiler,

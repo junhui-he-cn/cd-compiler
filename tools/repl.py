@@ -11,6 +11,7 @@ is exposed to the user.
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 import tempfile
@@ -22,6 +23,9 @@ HELP_TEXT = """Compiler Design REPL prototype
 
 Submit one source form at a time. A blank line commits a multi-line form.
 Forms are compiled by the production compiler and evaluated by the Rust VM.
+
+The optional --json-lines mode accepts one JSON request per input line and
+returns one JSON response per output line for machine clients.
 
 Commands at a form boundary:
   :help   show this help
@@ -94,31 +98,27 @@ class TranscriptSession:
             check=False,
         )
 
-    def submit(self, form: str, error_stream: TextIO) -> bool:
+    def submit(self, form: str) -> tuple[bool, str, str]:
         source = self._candidate_source(form)
         compiled = self._compile(source)
         if compiled.returncode != 0:
-            error_stream.write(self._normalize_diagnostics(compiled.stderr))
-            return False
+            return False, "", self._normalize_diagnostics(compiled.stderr)
 
         executed = self._run_vm()
         if executed.returncode != 0:
-            error_stream.write(self._normalize_diagnostics(executed.stderr))
-            return False
+            return False, "", self._normalize_diagnostics(executed.stderr)
 
         if not executed.stdout.startswith(self.accepted_output):
-            error_stream.write(
-                "REPL error: transcript replay did not preserve prior output\n"
+            return (
+                False,
+                "",
+                "REPL error: transcript replay did not preserve prior output\n",
             )
-            return False
 
         new_output = executed.stdout[len(self.accepted_output):]
-        if new_output:
-            sys.stdout.write(new_output)
-            sys.stdout.flush()
         self.accepted_source = source
         self.accepted_output = executed.stdout
-        return True
+        return True, new_output, ""
 
     def reset(self) -> None:
         self.accepted_source = ""
@@ -146,10 +146,131 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         help="directory used as the base for explicit relative imports",
     )
+    parser.add_argument(
+        "--json-lines",
+        action="store_true",
+        help="use one JSON request and response per input line",
+    )
     return parser.parse_args()
 
 
-def run_session(session: TranscriptSession, input_stream: TextIO, error_stream: TextIO) -> int:
+def emit_submission(
+    result: tuple[bool, str, str],
+    output_stream: TextIO,
+    error_stream: TextIO,
+) -> None:
+    _, stdout, error = result
+    if stdout:
+        output_stream.write(stdout)
+        output_stream.flush()
+    if error:
+        error_stream.write(error)
+        error_stream.flush()
+
+
+def write_json_response(
+    output_stream: TextIO,
+    result: tuple[bool, str, str],
+) -> None:
+    ok, stdout, error = result
+    response = {"ok": ok, "stdout": stdout}
+    if not ok:
+        response["error"] = error
+    output_stream.write(
+        json.dumps(response, ensure_ascii=False, separators=(",", ":")) + "\n"
+    )
+    output_stream.flush()
+
+
+def protocol_error(message: str) -> tuple[bool, str, str]:
+    return False, "", f"REPL error: {message}"
+
+
+def run_json_lines(
+    session: TranscriptSession,
+    input_stream: TextIO,
+    output_stream: TextIO,
+) -> int:
+    for raw_line in input_stream:
+        line = raw_line.rstrip("\r\n")
+        if not line.strip():
+            continue
+        try:
+            request = json.loads(line)
+        except json.JSONDecodeError as error:
+            write_json_response(
+                output_stream,
+                protocol_error(f"invalid JSON: {error.msg}"),
+            )
+            continue
+
+        if not isinstance(request, dict):
+            write_json_response(
+                output_stream,
+                protocol_error("request must be a JSON object"),
+            )
+            continue
+
+        if "source" in request:
+            if set(request) != {"source"}:
+                write_json_response(
+                    output_stream,
+                    protocol_error("source requests must contain only `source`"),
+                )
+                continue
+            source = request["source"]
+            if not isinstance(source, str):
+                write_json_response(
+                    output_stream,
+                    protocol_error("`source` must be a string"),
+                )
+                continue
+            write_json_response(output_stream, session.submit(source))
+            continue
+
+        if "command" in request:
+            if set(request) != {"command"}:
+                write_json_response(
+                    output_stream,
+                    protocol_error("command requests must contain only `command`"),
+                )
+                continue
+            command = request["command"]
+            if not isinstance(command, str):
+                write_json_response(
+                    output_stream,
+                    protocol_error("`command` must be a string"),
+                )
+                continue
+            if command == "reset":
+                session.reset()
+                write_json_response(output_stream, (True, "", ""))
+                continue
+            if command == "help":
+                write_json_response(output_stream, (True, HELP_TEXT, ""))
+                continue
+            if command == "quit":
+                write_json_response(output_stream, (True, "", ""))
+                return 0
+            write_json_response(
+                output_stream,
+                protocol_error(f"unknown command `{command}`"),
+            )
+            continue
+
+        write_json_response(
+            output_stream,
+            protocol_error("request must contain exactly one of `source` or `command`"),
+        )
+    return 0
+
+
+def run_session(
+    session: TranscriptSession,
+    input_stream: TextIO,
+    output_stream: TextIO,
+    error_stream: TextIO,
+) -> int:
     pending: list[str] = []
     interactive = input_stream.isatty() and error_stream.isatty()
 
@@ -175,7 +296,11 @@ def run_session(session: TranscriptSession, input_stream: TextIO, error_stream: 
 
         if not line.strip():
             if pending:
-                session.submit("\n".join(pending), error_stream)
+                emit_submission(
+                    session.submit("\n".join(pending)),
+                    output_stream,
+                    error_stream,
+                )
                 pending.clear()
             show_prompt()
             continue
@@ -184,7 +309,7 @@ def run_session(session: TranscriptSession, input_stream: TextIO, error_stream: 
         show_prompt()
 
     if pending:
-        session.submit("\n".join(pending), error_stream)
+        emit_submission(session.submit("\n".join(pending)), output_stream, error_stream)
     return 0
 
 
@@ -222,7 +347,9 @@ def main() -> int:
                 [path.resolve() for path in args.import_path],
                 session_source_path,
             )
-            return run_session(session, sys.stdin, sys.stderr)
+            if args.json_lines:
+                return run_json_lines(session, sys.stdin, sys.stdout)
+            return run_session(session, sys.stdin, sys.stdout, sys.stderr)
     except OSError as error:
         print(f"failed to create REPL session source: {error}", file=sys.stderr)
         return 2
