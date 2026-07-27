@@ -1,6 +1,6 @@
 # M6-LANG-001: static generic capability constraints for library APIs
 
-Status: direction resolved; implementation has not started on `master`.
+Status: direction resolved; implementation complete on `master`.
 
 ## Question
 
@@ -73,3 +73,23 @@ data-structure library implementation.
 The corresponding library decisions, including nullable versus `Option` versus
 `Result`, ring-buffer full behavior, `number` boundaries, and integer graph IDs,
 are recorded in [`library/DATA_STRUCTURES_ROADMAP.md`](../../library/DATA_STRUCTURES_ROADMAP.md).
+
+## Implementation record
+
+The contract was implemented in `d032887` (`feat: add generic capability
+bounds`) and is verified against the current `master` baseline at `fbe0a0d`
+(`refactor: consolidate build and artifact loading paths`). The implementation
+covers inferred and explicit `Eq`/`Ord` arguments, concrete bound validation,
+generic comparator forwarding through imports, namespace aliases, and
+re-exports, plus public-interface and module-cache validation. Capability
+constraints remain compile-time-only; no runtime value or Rust VM
+representation was added.
+
+The completed verification gate recorded at `fbe0a0d` is:
+
+- canonical inventory: 1,810/1,810;
+- boundary cases: 5/5; malformed cases: 102/102;
+- CTest: 31/31; golden tests: 783/783; golden-runner selftests: 24/24;
+- bytecode artifacts: 116/116; module cache: 11/11; Rust VM goldens: 760/760;
+- Cargo tests: 47/47; LSP, debugger, and module-artifact suites passed; and
+- `git diff --check` passed.

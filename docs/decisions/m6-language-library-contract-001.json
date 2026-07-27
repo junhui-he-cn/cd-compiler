@@ -1,11 +1,13 @@
 {
   "schema_version": 1,
-  "decision_revision": "m6-lang-001-2026-07-27-r1",
+  "decision_revision": "m6-lang-001-2026-07-27-r2",
   "baseline_commit": "608d856",
   "decision_id": "M6-LANG-001",
   "domain": "static-generic-capability-constraints",
   "status": "resolved",
-  "implementation_status": "not_started",
+  "implementation_status": "complete",
+  "implementation_commit": "d032887",
+  "verification_commit": "fbe0a0d",
   "question": "What language capability should be developed next so generic library APIs can express ordering and equality without adding concrete data-structure implementations?",
   "decision": "Add a compile-time-only generic capability model, initially focused on Eq and Ord style constraints, using the existing generic-bound position where practical. Preserve explicit fun(T, T): bool comparator values and validate their signatures through local, imported, namespace-qualified, and re-exported calls.",
   "runtime_boundary": {
@@ -45,6 +47,64 @@
     "public-interface and module-cache parity",
     "C++ compiler and Rust VM parity where the changed boundary is exercised"
   ],
+  "verification": {
+    "canonical_inventory": {
+      "total": 1810,
+      "passed": 1810,
+      "failed": 0
+    },
+    "boundary": {
+      "total": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    "malformed": {
+      "total": 102,
+      "passed": 102,
+      "failed": 0
+    },
+    "ctest": {
+      "total": 31,
+      "passed": 31,
+      "failed": 0
+    },
+    "golden": {
+      "total": 783,
+      "passed": 783,
+      "failed": 0
+    },
+    "golden_selftest": {
+      "total": 24,
+      "passed": 24,
+      "failed": 0
+    },
+    "bytecode_artifacts": {
+      "total": 116,
+      "passed": 116,
+      "failed": 0
+    },
+    "module_cache": {
+      "total": 11,
+      "passed": 11,
+      "failed": 0
+    },
+    "rust_vm_goldens": {
+      "total": 760,
+      "passed": 760,
+      "failed": 0
+    },
+    "cargo": {
+      "total": 47,
+      "passed": 47,
+      "failed": 0
+    },
+    "additional_suites": [
+      "LSP passed",
+      "debugger passed",
+      "module artifact passed",
+      "git diff --check passed"
+    ]
+  },
   "explicitly_deferred": [
     "Hash protocol and generic hash containers",
     "recursive structs and node references",

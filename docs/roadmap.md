@@ -28,15 +28,16 @@ behavior must update the implementation contract and tests together.
 
 | Area | `master` status | Evidence / remaining boundary |
 | --- | --- | --- |
-| Verification | M0A-M0D complete | `tests/verification_inventory.json` is revision `m0d-2026-07-22-r1` with 1,801 checks; `tests/run_verification.py` is the canonical runner. |
+| Verification | M0A-M0D complete | `tests/verification_inventory.json` is revision `m0d-2026-07-22-r1` with 1,810 checks; `tests/run_verification.py` is the canonical runner. |
 | Semantic front end | M1A1-M1F complete | `SourceIdentity`, `LosslessSourceView`, `DeclarationIndex`, shared type/pattern metadata, and HIR-only IR lowering are shipped. |
 | Language semantics | Admitted M2A flow slices and M2B recovery slices complete | M2A `FLOW-001..021`, M2B type recovery, parser recovery `001..003`, and lexer recovery `001` are shipped; the broader flow policy remains open below. |
+| Generic capabilities | M6-LANG-001 complete | Compile-time `Eq`/`Ord` bounds, inference, explicit arguments, comparator forwarding, public interfaces, and module-cache validation are shipped; runtime capability dispatch is not part of the contract. |
 | Modules and cache | M3A graph/interface slices plus M3B artifact/cache boundaries complete | Independent module products, linker inputs, `.cdi` interfaces, `cdbc-cache 0.2`, invalidation, and safe source fallback are shipped. Removing fallback is not approved. |
 | Artifact/runtime | M4A validation and M4B debug metadata complete | `cdbc 0.1` remains the contract; validation, module identity, source ranges, and link-time debug rebasing are shipped. |
 | Formatter | M5A-FORMAT-001..008 complete | `--format`, `--format-check`, lossless comments/trivia, idempotence, blank-line/trailing-comma policies, bounded list wrapping, and invalid-input rejection are shipped. |
 | Language server | M5B-LSP-001..017 complete | Single-document and opened-virtual-workspace queries are shipped; closed imports and unknown/dynamic receivers remain outside the current boundary. |
 | REPL | Not shipped on `master` | A partial prototype exists only on `feat/m5c-repl`; it is not part of the current baseline. |
-| Source debugger | M5D-DEBUG-001 complete | One-shot `compiler-design-vm trace` with source events, stacks, locals, output, returns, and failures is shipped; interactive control is next. |
+| Source debugger | M5D-DEBUG-001 complete | One-shot `compiler-design-vm trace` with source events, stacks, locals, output, returns, and failures is shipped; interactive control is explicitly deferred. |
 
 The detailed records for completed slices are deliberately left in
 `docs/decisions/` as evidence, but they are no longer repeated as roadmap
@@ -46,7 +47,7 @@ work. The completed groups are:
 - M1A1, M1A2, M1B, M1C, M1D, M1E1, M1E2, M1E3, and M1F;
 - the admitted M2A flow and M2B recovery slices;
 - M3A graph/interface work, M3B artifact/cache/boundary work, and M4A/M4B;
-- M5A-FORMAT-001..008, M5B-LSP-001..017, and M5D-DEBUG-001.
+- M5A-FORMAT-001..008, M5B-LSP-001..017, M5D-DEBUG-001, and M6-LANG-001.
 
 These names are a completion record, not a to-do list.
 
@@ -77,63 +78,23 @@ being designed:
 
 ## Next active slice
 
-### M6-LANG-001: Static generic capability constraints
-
-**Status:** proposed next language slice. The direction is resolved in
-`docs/decisions/m6-language-library-contract-001.{md,json}`; implementation has
-not started on `master`.
-
-**Objective:** give generic functions, generic struct methods, and generic
-callbacks statically checkable `Eq`/`Ord`-style capabilities that can survive
-module interfaces and re-exports. The first slice is a compiler/language
-capability slice, not an implementation of a data structure library.
-
-**Deliverable:** fix the capability-bound surface (using the existing bound
-position such as `T: Eq` and `T: Ord` where possible), then implement its
-declaration, inference, explicit arguments, nested propagation, diagnostics,
-and public-interface representation. Preserve explicit
-`fun(T, T): bool` comparators as the runtime API shape and prove their type
-signature through local, imported, namespace-qualified, and re-exported calls.
-The capability model is compile-time only: no runtime trait objects,
-inheritance, overloading, or dynamic dispatch.
-
-**Migration:** reuse the existing generic type inference, function-value
-checking, named-struct methods, module graph, public interface emitter, `.cdi`
-validation, and module-product cache. Add language-only positive and negative
-fixtures for `Eq`/`Ord`-style constraints and comparator forwarding; do not add
-`Deque`, heap, list, tree, graph, sort, or set implementations as part of this
-slice. Keep `Hash`, recursive structs, and a separate integer type out of the
-implementation boundary.
-
-**Quantitative gate:** add independently named inventory cases for local generic
-constraints, inferred and explicit capability arguments, missing-capability
-diagnostics, generic callback/comparator forwarding, imported and re-exported
-interfaces, and C++/Rust artifact or module-interface parity where applicable.
-Regenerate the inventory after adding the corpus, then pass the focused golden,
-module-interface/module-cache, artifact, Rust VM, CTest, and `git diff --check`
-gates. The gate must show that the compiler accepts the intended language
-forms without requiring a concrete data-structure implementation.
-
-**Delete the old path when:** capability-constrained generic signatures are
-checked by one shared semantic path, their public shape is emitted and restored
-without duplicate ad-hoc checks, explicit comparator signatures remain stable
-across module boundaries, and no runtime dispatch fallback is needed.
-
-**Dependency:** current `master`, shipped generic functions/structs/enums,
-function values and callbacks, M3A public interfaces, and M3B `.cdi`/module
-cache validation.
+No implementation slice is currently active on `master`. M6-LANG-001 is
+complete; its implementation and verification evidence are recorded in
+`docs/decisions/m6-language-library-contract-001.{md,json}`. A follow-up slice
+must be explicitly selected and admitted before code changes begin.
 
 ## Planned follow-up specifications
 
-These are ordered candidates after M6-LANG-001. They are not permission to
+These are deferred candidates after M6-LANG-001. They are not permission to
 start implementation before their decision records and focused inventories are
 written. In particular, the data-structure roadmap does not authorize adding
 concrete data-structure code to the compiler slice.
 
 ### M5D-DEBUG-002: Interactive breakpoints and stepping
 
-**Status:** queued follow-up tool slice. It remains a valid independent
-direction, but it is not the next language implementation slice.
+**Status:** explicitly deferred. It remains a valid independent direction, but
+interactive debugger work is postponed after M6-LANG-001 and is not currently
+active.
 
 **Purpose:** turn the shipped one-shot trace event boundary into a small,
 deterministic interactive debugger session without changing the language or
@@ -225,11 +186,11 @@ belongs in the baseline until that re-audit is merged and verified.
 
 ```text
 master + shipped generic functions, callbacks, and module interfaces
-  -> M6-LANG-001 static generic capability constraints
+  -> completed M6-LANG-001 static generic capability constraints
   -> language-enabled library specifications (no compiler-owned data structures)
 
 master + M5D-DEBUG-001
-  -> M5D-DEBUG-002 interactive debugger (queued after the language slice)
+  -> M5D-DEBUG-002 interactive debugger (explicitly deferred)
 
 M1 semantic services + M3A graph/interfaces
   -> M5B-LSP-018 closed-module workspace navigation
@@ -244,10 +205,10 @@ feat/m5c-repl
   -> M5C-REPL-001 re-audit, outside the active queue for now
 ```
 
-Only M6-LANG-001 is the next implementation slice. M5D-DEBUG-002 and the other
-entries are sequenced specifications so a future development request has a
-clear scope; they do not reopen completed work or authorize concrete data
-structure implementations in the compiler repository.
+No implementation slice is currently active. M5D-DEBUG-002 and the other
+entries remain deferred specifications with clear future boundaries; they do
+not reopen completed work or authorize concrete data-structure implementations
+in the compiler repository.
 
 ## Verification contract
 
@@ -255,21 +216,6 @@ Before every development slice, rebuild from the current checkout. A stale
 `build/compiler_design` can make a completed feature appear broken, as happened
 when the formatter corpus was run before rebuilding the merged private-field
 parser.
-
-Focused M6-LANG-001 verification will use the newly registered capability and
-module-interface cases, followed by:
-
-```sh
-cmake -S . -B build
-cmake --build build
-python3 tests/verification_inventory.py --write
-python3 tests/run_golden_tests.py ./build/compiler_design
-python3 tests/bytecode_module_artifact_tests.py ./build/compiler_design vm-rs
-python3 tests/bytecode_module_cache_tests.py ./build/compiler_design vm-rs
-ctest --test-dir build --output-on-failure
-cargo test --manifest-path vm-rs/Cargo.toml
-git diff --check
-```
 
 Before claiming a slice complete, run the repository gate:
 

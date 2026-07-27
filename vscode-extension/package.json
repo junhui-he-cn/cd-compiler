@@ -1,0 +1,66 @@
+{
+  "name": "compiler-design-language-support",
+  "displayName": "Compiler Design Language Support",
+  "description": "VS Code client for the Compiler Design stdio language server.",
+  "version": "0.1.0",
+  "publisher": "compiler-design",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/junhui-he-cn/my-compiler.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:compiler-design"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "compiler-design",
+        "aliases": [
+          "Compiler Design",
+          "compiler-design"
+        ],
+        "extensions": [
+          ".cd"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "configuration": {
+      "title": "Compiler Design",
+      "properties": {
+        "compilerDesign.serverPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path or command name for compiler_design. Empty uses build/compiler_design in the first workspace folder."
+        },
+        "compilerDesign.serverArgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "--lsp"
+          ],
+          "description": "Arguments passed to compiler_design. --lsp is added automatically when omitted."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "check": "node --check src/extension.js && node test/extension-check.js",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.2.2"
+  }
+}

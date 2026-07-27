@@ -88,6 +88,14 @@ For an editor-compatible stdio session:
 ./build/compiler_design --lsp
 ```
 
+The repository also includes a small VS Code client under
+[`vscode-extension/`](vscode-extension/). Build the compiler, then run
+`npm install && npm run package` in that directory and install the generated
+`.vsix` with `code --install-extension`. The client automatically uses
+`build/compiler_design` from the first workspace folder; set
+`compilerDesign.serverPath` when the executable is elsewhere. See the
+[extension README](vscode-extension/README.md) for local installation details.
+
 ## Language
 
 Supported statements:
