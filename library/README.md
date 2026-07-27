@@ -4,6 +4,10 @@ This directory contains a small data-structure library written in the public
 Compiler Design language. It currently provides generic array-backed `Stack<T>`
 and `Queue<T>` types.
 
+The planned structure and algorithm inventory, implementation constraints, and
+staged delivery order are documented in
+[`DATA_STRUCTURES_ROADMAP.md`](DATA_STRUCTURES_ROADMAP.md).
+
 ## Usage
 
 Import the module with a namespace alias:
