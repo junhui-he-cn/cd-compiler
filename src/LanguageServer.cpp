@@ -1,5 +1,6 @@
 #include "LanguageServer.hpp"
 
+#include "DeclarationIndex.hpp"
 #include "Diagnostic.hpp"
 #include "Formatter.hpp"
 #include "FrontendSession.hpp"
@@ -567,6 +568,241 @@ struct LspPosition {
     std::size_t character = 0;
 };
 
+enum class ReferenceSiteKind {
+    Variable,
+    Assignment,
+    CompoundAssignment,
+};
+
+struct ReferenceSite {
+    ReferenceSiteKind kind = ReferenceSiteKind::Variable;
+    const Expr* expression = nullptr;
+    std::optional<SourceRange> range;
+};
+
+class ReferenceSiteCollector {
+public:
+    std::vector<ReferenceSite> collect(const Program& program)
+    {
+        for (const StmtPtr& statement : program.statements) {
+            visitStatement(statement.get());
+        }
+        return std::move(sites_);
+    }
+
+private:
+    void visitStatement(const Stmt* statement)
+    {
+        if (!statement) {
+            return;
+        }
+        if (const auto* module = dynamic_cast<const ModuleStmt*>(statement)) {
+            for (const StmtPtr& child : module->statements) {
+                visitStatement(child.get());
+            }
+            return;
+        }
+        if (const auto* function = dynamic_cast<const FunctionStmt*>(statement)) {
+            for (const StmtPtr& child : function->body) {
+                visitStatement(child.get());
+            }
+            return;
+        }
+        if (const auto* methodOwner = dynamic_cast<const ImplStmt*>(statement)) {
+            for (const MethodDecl& method : methodOwner->methods) {
+                for (const StmtPtr& child : method.body) {
+                    visitStatement(child.get());
+                }
+            }
+            return;
+        }
+        if (const auto* let = dynamic_cast<const LetStmt*>(statement)) {
+            visitExpression(let->initializer.get());
+            return;
+        }
+        if (const auto* print = dynamic_cast<const PrintStmt*>(statement)) {
+            visitExpression(print->expression.get());
+            return;
+        }
+        if (const auto* expression = dynamic_cast<const ExpressionStmt*>(statement)) {
+            visitExpression(expression->expression.get());
+            return;
+        }
+        if (const auto* block = dynamic_cast<const BlockStmt*>(statement)) {
+            for (const StmtPtr& child : block->statements) {
+                visitStatement(child.get());
+            }
+            return;
+        }
+        if (const auto* ifStatement = dynamic_cast<const IfStmt*>(statement)) {
+            visitExpression(ifStatement->condition.get());
+            visitStatement(ifStatement->thenBranch.get());
+            visitStatement(ifStatement->elseBranch.get());
+            return;
+        }
+        if (const auto* whileStatement = dynamic_cast<const WhileStmt*>(statement)) {
+            visitExpression(whileStatement->condition.get());
+            visitStatement(whileStatement->body.get());
+            return;
+        }
+        if (const auto* forStatement = dynamic_cast<const ForStmt*>(statement)) {
+            visitStatement(forStatement->initializer.get());
+            visitExpression(forStatement->condition.get());
+            visitExpression(forStatement->increment.get());
+            visitStatement(forStatement->body.get());
+            return;
+        }
+        if (const auto* forIn = dynamic_cast<const ForInStmt*>(statement)) {
+            visitExpression(forIn->iterable.get());
+            visitStatement(forIn->body.get());
+            return;
+        }
+        if (const auto* match = dynamic_cast<const MatchStmt*>(statement)) {
+            visitExpression(match->value.get());
+            for (const MatchArm& arm : match->arms) {
+                visitExpression(arm.guard.get());
+                visitStatement(arm.body.get());
+            }
+            return;
+        }
+        if (const auto* returnStatement = dynamic_cast<const ReturnStmt*>(statement)) {
+            visitExpression(returnStatement->value.get());
+        }
+    }
+
+    void addReference(
+        ReferenceSiteKind kind,
+        const Expr& expression,
+        const std::optional<SourceRange>& range)
+    {
+        if (!range) {
+            return;
+        }
+        sites_.push_back(ReferenceSite{kind, &expression, range});
+    }
+
+    void visitExpression(const Expr* expression)
+    {
+        if (!expression) {
+            return;
+        }
+        if (const auto* variable = dynamic_cast<const VariableExpr*>(expression)) {
+            addReference(ReferenceSiteKind::Variable, *variable, variable->name.range);
+            return;
+        }
+        if (const auto* assign = dynamic_cast<const AssignExpr*>(expression)) {
+            addReference(ReferenceSiteKind::Assignment, *assign, assign->name.range);
+            visitExpression(assign->value.get());
+            return;
+        }
+        if (const auto* compound = dynamic_cast<const CompoundAssignExpr*>(expression)) {
+            addReference(
+                ReferenceSiteKind::CompoundAssignment,
+                *compound,
+                compound->name.range);
+            visitExpression(compound->value.get());
+            return;
+        }
+        if (const auto* indexAssign = dynamic_cast<const IndexAssignExpr*>(expression)) {
+            visitExpression(indexAssign->collection.get());
+            visitExpression(indexAssign->index.get());
+            visitExpression(indexAssign->value.get());
+            return;
+        }
+        if (const auto* indexCompound = dynamic_cast<const IndexCompoundAssignExpr*>(expression)) {
+            visitExpression(indexCompound->collection.get());
+            visitExpression(indexCompound->index.get());
+            visitExpression(indexCompound->value.get());
+            return;
+        }
+        if (const auto* unary = dynamic_cast<const UnaryExpr*>(expression)) {
+            visitExpression(unary->right.get());
+            return;
+        }
+        if (const auto* binary = dynamic_cast<const BinaryExpr*>(expression)) {
+            visitExpression(binary->left.get());
+            visitExpression(binary->right.get());
+            return;
+        }
+        if (const auto* logical = dynamic_cast<const LogicalExpr*>(expression)) {
+            visitExpression(logical->left.get());
+            visitExpression(logical->right.get());
+            return;
+        }
+        if (const auto* grouping = dynamic_cast<const GroupingExpr*>(expression)) {
+            visitExpression(grouping->expression.get());
+            return;
+        }
+        if (const auto* call = dynamic_cast<const CallExpr*>(expression)) {
+            visitExpression(call->callee.get());
+            for (const ExprPtr& argument : call->arguments) {
+                visitExpression(argument.get());
+            }
+            return;
+        }
+        if (const auto* memberCall = dynamic_cast<const MemberCallExpr*>(expression)) {
+            visitExpression(memberCall->receiver.get());
+            for (const ExprPtr& argument : memberCall->arguments) {
+                visitExpression(argument.get());
+            }
+            return;
+        }
+        if (const auto* array = dynamic_cast<const ArrayExpr*>(expression)) {
+            for (const ExprPtr& element : array->elements) {
+                visitExpression(element.get());
+            }
+            return;
+        }
+        if (const auto* map = dynamic_cast<const MapExpr*>(expression)) {
+            for (const MapEntry& entry : map->entries) {
+                visitExpression(entry.key.get());
+                visitExpression(entry.value.get());
+            }
+            return;
+        }
+        if (const auto* construct = dynamic_cast<const StructConstructExpr*>(expression)) {
+            for (const StructField& field : construct->fields) {
+                visitExpression(field.value.get());
+            }
+            return;
+        }
+        if (const auto* index = dynamic_cast<const IndexExpr*>(expression)) {
+            visitExpression(index->collection.get());
+            visitExpression(index->index.get());
+            return;
+        }
+        if (const auto* field = dynamic_cast<const FieldAccessExpr*>(expression)) {
+            visitExpression(field->object.get());
+            return;
+        }
+        if (const auto* fieldAssign = dynamic_cast<const FieldAssignExpr*>(expression)) {
+            visitExpression(fieldAssign->object.get());
+            visitExpression(fieldAssign->value.get());
+            return;
+        }
+        if (const auto* fieldCompound = dynamic_cast<const FieldCompoundAssignExpr*>(expression)) {
+            visitExpression(fieldCompound->object.get());
+            visitExpression(fieldCompound->value.get());
+            return;
+        }
+        if (const auto* function = dynamic_cast<const FunctionExpr*>(expression)) {
+            for (const StmtPtr& child : function->body) {
+                visitStatement(child.get());
+            }
+            return;
+        }
+        if (const auto* match = dynamic_cast<const MatchExpr*>(expression)) {
+            visitExpression(match->value.get());
+            for (const MatchExprArm& arm : match->arms) {
+                visitExpression(arm.guard.get());
+                visitExpression(arm.value.get());
+            }
+        }
+    }
+
+    std::vector<ReferenceSite> sites_;
+};
+
 std::optional<std::uint32_t> decodeUtf8(
     std::string_view text,
     std::size_t offset,
@@ -639,6 +875,64 @@ LspPosition lspPositionAt(std::string_view text, std::size_t byte)
     return position;
 }
 
+std::optional<std::size_t> sourceByteAtLspPosition(
+    std::string_view text,
+    std::size_t line,
+    std::size_t character)
+{
+    std::size_t currentLine = 0;
+    std::size_t lineStart = 0;
+    while (currentLine < line) {
+        const std::size_t newline = text.find('\n', lineStart);
+        if (newline == std::string_view::npos) {
+            return std::nullopt;
+        }
+        lineStart = newline + 1;
+        ++currentLine;
+    }
+
+    const std::size_t lineEnd = text.find('\n', lineStart);
+    const std::size_t limit = lineEnd == std::string_view::npos ? text.size() : lineEnd;
+    std::size_t offset = lineStart;
+    std::size_t currentCharacter = 0;
+    while (offset < limit) {
+        if (currentCharacter >= character) {
+            return offset;
+        }
+        std::size_t width = 1;
+        const std::optional<std::uint32_t> codePoint = decodeUtf8(text, offset, limit, width);
+        const std::size_t units = codePoint && *codePoint > 0xffff ? 2 : 1;
+        if (currentCharacter + units > character) {
+            return offset;
+        }
+        currentCharacter += units;
+        offset += width;
+    }
+    return currentCharacter == character ? std::optional<std::size_t>(offset) : std::nullopt;
+}
+
+bool rangeContains(const SourceRange& range, std::size_t byte)
+{
+    return range.source.valid() && range.source.value == 0
+        && range.start <= byte && byte < range.end;
+}
+
+std::optional<SourceRange> declarationRange(const DeclarationRecord& declaration)
+{
+    if (!declaration.range || !declaration.range->valid()
+        || declaration.range->source.value != 0) {
+        return std::nullopt;
+    }
+    return declaration.range;
+}
+
+struct DocumentAnalysis {
+    std::vector<FileDiagnosticError> diagnostics;
+    std::optional<Program> program;
+    DeclarationIndex declarationIndex;
+    std::vector<ReferenceSite> referenceSites;
+};
+
 LspPosition diagnosticFallbackPosition(const DiagnosticError& error)
 {
     if (!error.location()) {
@@ -685,46 +979,51 @@ JsonValue diagnosticValue(const FileDiagnosticError& error, std::string_view sou
     });
 }
 
-std::vector<FileDiagnosticError> analyzeDocument(const std::string& source)
+DocumentAnalysis analyzeDocument(const std::string& source)
 {
-    std::vector<FileDiagnosticError> diagnostics;
+    DocumentAnalysis analysis;
     std::istringstream input(source);
+    TypeChecker typeChecker;
     try {
         FrontendSession frontend;
-        Program program = frontend.loadStdin(input);
-        TypeChecker typeChecker;
-        typeChecker.check(program);
+        analysis.program.emplace(frontend.loadStdin(input));
+        analysis.declarationIndex = DeclarationIndex::collect(*analysis.program);
+        ReferenceSiteCollector referenceCollector;
+        analysis.referenceSites = referenceCollector.collect(*analysis.program);
+        typeChecker.check(*analysis.program);
+        analysis.declarationIndex = typeChecker.declarationIndex();
     } catch (const TypeErrorList& errors) {
-        diagnostics = errors.errors();
+        analysis.declarationIndex = typeChecker.declarationIndex();
+        analysis.diagnostics = errors.errors();
     } catch (const FileDiagnosticErrorList& errors) {
-        diagnostics = errors.errors();
+        analysis.diagnostics = errors.errors();
     } catch (const ParseErrorList& errors) {
-        diagnostics.reserve(errors.errors().size());
+        analysis.diagnostics.reserve(errors.errors().size());
         for (const ParseError& error : errors.errors()) {
-            diagnostics.emplace_back(
+            analysis.diagnostics.emplace_back(
                 error,
                 DiagnosticSourceContext{"<stdin>", source, true});
         }
     } catch (const LexErrorList& errors) {
-        diagnostics.reserve(errors.errors().size());
+        analysis.diagnostics.reserve(errors.errors().size());
         for (const DiagnosticError& error : errors.errors()) {
-            diagnostics.emplace_back(
+            analysis.diagnostics.emplace_back(
                 error,
                 DiagnosticSourceContext{"<stdin>", source, true});
         }
     } catch (const FileDiagnosticError& error) {
-        diagnostics.push_back(error);
+        analysis.diagnostics.push_back(error);
     } catch (const DiagnosticError& error) {
-        diagnostics.emplace_back(
+        analysis.diagnostics.emplace_back(
             error,
             DiagnosticSourceContext{"<stdin>", source, true});
     } catch (const std::exception& error) {
         DiagnosticError diagnostic(DiagnosticKind::Compile, error.what());
-        diagnostics.emplace_back(
+        analysis.diagnostics.emplace_back(
             diagnostic,
             DiagnosticSourceContext{"<stdin>", source, true});
     }
-    return diagnostics;
+    return analysis;
 }
 
 std::optional<std::string> formatDocument(const std::string& source)
@@ -767,6 +1066,196 @@ JsonValue textDocumentPosition(std::string_view text, std::size_t byte)
     return makeObject({
         {"line", JsonValue::number(std::to_string(position.line))},
         {"character", JsonValue::number(std::to_string(position.character))},
+    });
+}
+
+JsonValue textDocumentRange(std::string_view text, const SourceRange& range)
+{
+    return makeObject({
+        {"start", textDocumentPosition(text, range.start)},
+        {"end", textDocumentPosition(text, range.end)},
+    });
+}
+
+std::optional<std::size_t> unsignedJsonNumber(const JsonValue* value)
+{
+    if (!value || value->kind != JsonValue::Kind::Number || value->text.empty()
+        || value->text.front() == '-') {
+        return std::nullopt;
+    }
+    std::size_t parsedCharacters = 0;
+    unsigned long long parsed = 0;
+    try {
+        parsed = std::stoull(value->text, &parsedCharacters);
+    } catch (const std::exception&) {
+        return std::nullopt;
+    }
+    if (parsedCharacters != value->text.size()
+        || parsed > std::numeric_limits<std::size_t>::max()) {
+        return std::nullopt;
+    }
+    return static_cast<std::size_t>(parsed);
+}
+
+struct LspRequestPosition {
+    std::size_t line = 0;
+    std::size_t character = 0;
+};
+
+std::optional<LspRequestPosition> requestPosition(const JsonValue& request)
+{
+    const JsonValue* params = memberObject(request, "params");
+    const JsonValue* position = params ? memberObject(*params, "position") : nullptr;
+    if (!position) {
+        return std::nullopt;
+    }
+    const std::optional<std::size_t> line = unsignedJsonNumber(member(*position, "line"));
+    const std::optional<std::size_t> character
+        = unsignedJsonNumber(member(*position, "character"));
+    if (!line || !character) {
+        return std::nullopt;
+    }
+    return LspRequestPosition{*line, *character};
+}
+
+std::optional<ResolvedSymbol> resolvedReference(
+    const DeclarationIndex& index,
+    const ReferenceSite& site)
+{
+    if (!site.expression) {
+        return std::nullopt;
+    }
+    switch (site.kind) {
+    case ReferenceSiteKind::Variable: {
+        const auto* variable = dynamic_cast<const VariableExpr*>(site.expression);
+        if (const std::optional<ResolvedSymbol> resolved = index.variableReference(*variable)) {
+            return resolved;
+        }
+        if (const BindingMetadataRecord* metadata = index.variableBindingMetadata(*variable)) {
+            return metadata->symbol;
+        }
+        return std::nullopt;
+    }
+    case ReferenceSiteKind::Assignment: {
+        const auto* assignment = dynamic_cast<const AssignExpr*>(site.expression);
+        if (const std::optional<ResolvedSymbol> resolved = index.assignmentReference(*assignment)) {
+            return resolved;
+        }
+        if (const BindingMetadataRecord* metadata = index.assignmentBindingMetadata(*assignment)) {
+            return metadata->symbol;
+        }
+        return std::nullopt;
+    }
+    case ReferenceSiteKind::CompoundAssignment: {
+        const auto* assignment = dynamic_cast<const CompoundAssignExpr*>(site.expression);
+        if (const std::optional<ResolvedSymbol> resolved
+            = index.compoundAssignmentReference(*assignment)) {
+            return resolved;
+        }
+        if (const BindingMetadataRecord* metadata
+            = index.compoundAssignmentBindingMetadata(*assignment)) {
+            return metadata->symbol;
+        }
+        return std::nullopt;
+    }
+    }
+    return std::nullopt;
+}
+
+const DeclarationRecord* definitionAt(
+    const DocumentAnalysis& analysis,
+    std::size_t byte)
+{
+    const DeclarationRecord* best = nullptr;
+    std::size_t bestWidth = std::numeric_limits<std::size_t>::max();
+    const auto consider = [&](const DeclarationRecord* declaration) {
+        if (!declaration) {
+            return;
+        }
+        const std::optional<SourceRange> range = declarationRange(*declaration);
+        if (!range || !rangeContains(*range, byte)
+            || declaration->kind == DeclarationKind::Module) {
+            return;
+        }
+        const std::size_t width = range->end - range->start;
+        if (!best || width < bestWidth
+            || (width == bestWidth && range->start < best->range->start)) {
+            best = declaration;
+            bestWidth = width;
+        }
+    };
+
+    for (const DeclarationRecord& declaration : analysis.declarationIndex.declarations()) {
+        consider(&declaration);
+    }
+
+    for (const ReferenceSite& site : analysis.referenceSites) {
+        if (!site.range || !rangeContains(*site.range, byte)) {
+            continue;
+        }
+        const std::optional<ResolvedSymbol> resolved
+            = resolvedReference(analysis.declarationIndex, site);
+        if (resolved) {
+            const DeclarationRecord* target
+                = analysis.declarationIndex.declaration(resolved->declarationId);
+            if (target && declarationRange(*target)) {
+                return target;
+            }
+        }
+    }
+    return best;
+}
+
+int lspSymbolKind(DeclarationKind kind)
+{
+    switch (kind) {
+    case DeclarationKind::Module:
+        return 2; // Namespace
+    case DeclarationKind::Variable:
+    case DeclarationKind::Parameter:
+    case DeclarationKind::ForInVariable:
+        return 13; // Variable
+    case DeclarationKind::Function:
+        return 12; // Function
+    case DeclarationKind::Struct:
+        return 23; // Struct
+    case DeclarationKind::Enum:
+        return 10; // Enum
+    case DeclarationKind::Method:
+        return 6; // Method
+    case DeclarationKind::NamespaceAlias:
+        return 3; // Namespace
+    }
+    return 13;
+}
+
+JsonValue definitionLocation(
+    const std::string& uri,
+    std::string_view source,
+    const DeclarationRecord& declaration)
+{
+    const SourceRange range = *declaration.range;
+    return makeObject({
+        {"uri", JsonValue::string(uri)},
+        {"range", textDocumentRange(source, range)},
+    });
+}
+
+JsonValue documentSymbol(
+    std::string_view source,
+    const DeclarationRecord& declaration)
+{
+    const SourceRange range = *declaration.range;
+    std::string detail = declarationKindName(declaration.kind);
+    if (!declaration.ownerType.empty()) {
+        detail += " " + declaration.ownerType;
+    }
+    return makeObject({
+        {"name", JsonValue::string(declaration.name)},
+        {"kind", JsonValue::number(std::to_string(lspSymbolKind(declaration.kind)))},
+        {"range", textDocumentRange(source, range)},
+        {"selectionRange", textDocumentRange(source, range)},
+        {"detail", JsonValue::string(std::move(detail))},
     });
 }
 
@@ -826,6 +1315,8 @@ public:
                                 {"capabilities", makeObject({
                                     {"textDocumentSync", JsonValue::number("1")},
                                     {"documentFormattingProvider", JsonValue::booleanValue(true)},
+                                    {"definitionProvider", JsonValue::booleanValue(true)},
+                                    {"documentSymbolProvider", JsonValue::booleanValue(true)},
                                 })},
                             })));
                 }
@@ -859,6 +1350,18 @@ public:
                 }
                 continue;
             }
+            if (*method == "textDocument/definition") {
+                if (id) {
+                    writeMessage(output, response(*id, handleDefinition(request)));
+                }
+                continue;
+            }
+            if (*method == "textDocument/documentSymbol") {
+                if (id) {
+                    writeMessage(output, response(*id, handleDocumentSymbols(request)));
+                }
+                continue;
+            }
             if (id) {
                 writeMessage(output, errorResponse(*id, -32601, "method not found"));
             }
@@ -869,6 +1372,7 @@ private:
     struct Document {
         std::string text;
         std::int64_t version = 0;
+        DocumentAnalysis analysis;
     };
 
     static std::optional<JsonValue> requestId(const JsonValue& request)
@@ -896,12 +1400,11 @@ private:
         return stringMember(*document, "uri");
     }
 
-    void publish(
-        std::ostream& output,
-        const std::string& uri,
-        const std::string& source)
+    void publish(std::ostream& output, const std::string& uri, const Document& document)
     {
-        writeMessage(output, publishDiagnostics(uri, source, analyzeDocument(source)));
+        writeMessage(
+            output,
+            publishDiagnostics(uri, document.text, document.analysis.diagnostics));
     }
 
     void handleDidOpen(const JsonValue& request, std::ostream& output)
@@ -919,7 +1422,10 @@ private:
         if (!uri || !text) {
             return;
         }
-        documents_[*uri] = Document{*text, 0};
+        Document state;
+        state.text = *text;
+        state.analysis = analyzeDocument(state.text);
+        documents_[*uri] = std::move(state);
         if (const JsonValue* version = member(*document, "version")) {
             if (version->kind == JsonValue::Kind::Number) {
                 try {
@@ -930,7 +1436,7 @@ private:
                 }
             }
         }
-        publish(output, *uri, *text);
+        publish(output, *uri, documents_.at(*uri));
     }
 
     void handleDidChange(const JsonValue& request, std::ostream& output)
@@ -953,6 +1459,7 @@ private:
         }
         Document& document = documents_[*uri];
         document.text = *text;
+        document.analysis = analyzeDocument(document.text);
         if (const JsonValue* version = member(*params, "textDocument")) {
             if (const JsonValue* value = member(*version, "version")) {
                 if (value->kind == JsonValue::Kind::Number) {
@@ -963,7 +1470,7 @@ private:
                 }
             }
         }
-        publish(output, *uri, document.text);
+        publish(output, *uri, document);
     }
 
     void handleDidClose(const JsonValue& request, std::ostream& output)
@@ -999,6 +1506,71 @@ private:
             })},
             {"newText", JsonValue::string(*formatted)},
         })});
+    }
+
+    JsonValue handleDefinition(const JsonValue& request) const
+    {
+        const std::optional<std::string> uri = documentUri(request);
+        const std::optional<LspRequestPosition> position = requestPosition(request);
+        if (!uri || !position) {
+            return JsonValue::null();
+        }
+        const auto found = documents_.find(*uri);
+        if (found == documents_.end() || !found->second.analysis.program) {
+            return JsonValue::null();
+        }
+        const std::optional<std::size_t> byte = sourceByteAtLspPosition(
+            found->second.text,
+            position->line,
+            position->character);
+        if (!byte) {
+            return JsonValue::null();
+        }
+        const DeclarationRecord* declaration = definitionAt(
+            found->second.analysis,
+            *byte);
+        if (!declaration || !declaration->range) {
+            return JsonValue::null();
+        }
+        return definitionLocation(*uri, found->second.text, *declaration);
+    }
+
+    JsonValue handleDocumentSymbols(const JsonValue& request) const
+    {
+        const std::optional<std::string> uri = documentUri(request);
+        if (!uri) {
+            return JsonValue::array({});
+        }
+        const auto found = documents_.find(*uri);
+        if (found == documents_.end() || !found->second.analysis.program) {
+            return JsonValue::array({});
+        }
+
+        std::vector<const DeclarationRecord*> declarations;
+        for (const DeclarationRecord& declaration : found->second.analysis.declarationIndex.declarations()) {
+            if (declarationRange(declaration)) {
+                declarations.push_back(&declaration);
+            }
+        }
+        std::sort(
+            declarations.begin(),
+            declarations.end(),
+            [](const DeclarationRecord* left, const DeclarationRecord* right) {
+                if (left->range->start != right->range->start) {
+                    return left->range->start < right->range->start;
+                }
+                if (left->range->end != right->range->end) {
+                    return left->range->end < right->range->end;
+                }
+                return left->name < right->name;
+            });
+
+        std::vector<JsonValue> symbols;
+        symbols.reserve(declarations.size());
+        for (const DeclarationRecord* declaration : declarations) {
+            symbols.push_back(documentSymbol(found->second.text, *declaration));
+        }
+        return JsonValue::array(std::move(symbols));
     }
 
     std::map<std::string, Document> documents_;

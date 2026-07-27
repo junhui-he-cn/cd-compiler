@@ -40,9 +40,10 @@ The compiler pipeline includes:
   `--format-check` performs the same comparison without rewriting or printing
   source and exits nonzero for noncanonical input.
 - Language server: `--lsp` starts a stdio JSON-RPC service with full-document
-  synchronization, shared lexer/parser/type diagnostics, and whole-document
-  formatting edits. The first service boundary is single-document and keeps
-  stdin's existing import restriction; it does not yet expose symbol queries.
+  synchronization, shared lexer/parser/type diagnostics, whole-document
+  formatting edits, definition lookup, and document symbols. The first service
+  boundary is single-document and keeps stdin's existing import restriction;
+  references, completion, and cross-module navigation remain later slices.
 
 For example:
 

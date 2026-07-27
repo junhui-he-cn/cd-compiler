@@ -1267,12 +1267,27 @@ formatting, tracks open documents, publishes shared lexer/parser/type
 diagnostics on open and change, clears diagnostics on close, and returns a
 whole-document formatting edit from the production `Formatter`. The prototype
 is intentionally single-document in scope and uses the existing stdin source
-path, so imports retain their current rejection behavior. Symbol lookup,
-definition/references, type information, completion, module navigation, and
-incremental unchanged-module caching remain later M5B slices. The focused gate
+path, so imports retain their current rejection behavior. For this first
+protocol slice, symbol lookup, definition/references, type information,
+completion, module navigation, and incremental unchanged-module caching were
+later M5B work. The focused gate
 is `tests/lsp_tests.py` registered as the `language_server` CTest and inventory
 case; the full M5B quantitative gate is not claimed by this prototype. The
 decision is recorded in `docs/decisions/m5b-lsp-001.{md,json}`.
+
+`M5B-LSP-002` adds `textDocument/definition` and
+`textDocument/documentSymbol`. Definition lookup consumes the existing
+`DeclarationIndex` lexical references plus TypeChecker binding metadata and
+returns source ranges for declarations; document symbols consume the same
+declaration records and return a deterministic, flat `DocumentSymbol[]` for
+the current document. The adapter serializes URI, name, kind, and source
+ranges only, so snapshot-local declaration/symbol IDs do not cross the LSP
+boundary. Parseable documents with type errors retain their index for queries;
+incomplete documents return no query result. The focused protocol test covers
+function-call and variable definitions plus symbol ordering. References,
+completion, hover/type information, and cross-module navigation remain later
+M5B slices. The decision is recorded in
+`docs/decisions/m5b-lsp-002.{md,json}`.
 
 ### Milestone 5C: REPL / incremental evaluation
 
@@ -1511,9 +1526,10 @@ retain the resolved top-level blank-line, parser-accepted trailing-comma,
 bounded list-wrapping, and incomplete-input rejection policies without changing
 language semantics. Source fallback and direct-input adapters remain
 intentional.
-The next active tool slice is `M5B-LSP-001`; its single-document protocol
-boundary is implemented while the broader symbol and module-query deliverable
-remains open.
+The next active tool slice is `M5B-LSP-003`; M5B-LSP-001 and M5B-LSP-002 now
+cover the single-document protocol, diagnostics, formatting, definitions, and
+document symbols while references and the broader module-query deliverable
+remain open.
 
 ## Metrics dashboard
 

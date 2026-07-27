@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Exercise the first stdio JSON-RPC language-server boundary."""
+"""Exercise the stdio JSON-RPC language-server boundaries."""
 
 from __future__ import annotations
 
@@ -82,6 +82,8 @@ def main() -> int:
             initialize.get("id") != 1
             or capabilities.get("textDocumentSync") != 1
             or capabilities.get("documentFormattingProvider") is not True
+            or capabilities.get("definitionProvider") is not True
+            or capabilities.get("documentSymbolProvider") is not True
         ):
             raise AssertionError(f"initialize response mismatch: {initialize!r}")
 
@@ -129,6 +131,11 @@ def main() -> int:
         ):
             raise AssertionError(f"formatting response mismatch: {formatting!r}")
 
+        valid_source = (
+            "fun add(value: number): number { return value; }\n"
+            "let result = add(1);\n"
+            "print result;\n"
+        )
         send(
             process,
             {
@@ -136,6 +143,82 @@ def main() -> int:
                 "method": "textDocument/didChange",
                 "params": {
                     "textDocument": {"uri": uri, "version": 2},
+                    "contentChanges": [{"text": valid_source}],
+                },
+            },
+        )
+        assert_publish(receive(process), uri, 0)
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "textDocument/documentSymbol",
+                "params": {"textDocument": {"uri": uri}},
+            },
+        )
+        symbols = receive(process)
+        symbol_values = symbols.get("result")
+        if (
+            symbols.get("id") != 3
+            or not isinstance(symbol_values, list)
+            or [symbol.get("name") for symbol in symbol_values]
+            != ["add", "value", "result"]
+        ):
+            raise AssertionError(f"document symbol response mismatch: {symbols!r}")
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 4,
+                "method": "textDocument/definition",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 1, "character": 13},
+                },
+            },
+        )
+        add_definition = receive(process)
+        if add_definition.get("result") != {
+            "uri": uri,
+            "range": {
+                "start": {"line": 0, "character": 4},
+                "end": {"line": 0, "character": 7},
+            },
+        }:
+            raise AssertionError(f"function definition response mismatch: {add_definition!r}")
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 5,
+                "method": "textDocument/definition",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 2, "character": 6},
+                },
+            },
+        )
+        result_definition = receive(process)
+        if result_definition.get("result") != {
+            "uri": uri,
+            "range": {
+                "start": {"line": 1, "character": 4},
+                "end": {"line": 1, "character": 10},
+            },
+        }:
+            raise AssertionError(f"variable definition response mismatch: {result_definition!r}")
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didChange",
+                "params": {
+                    "textDocument": {"uri": uri, "version": 3},
                     "contentChanges": [{"text": "let =;\n"}],
                 },
             },
@@ -150,7 +233,7 @@ def main() -> int:
                 "jsonrpc": "2.0",
                 "method": "textDocument/didChange",
                 "params": {
-                    "textDocument": {"uri": uri, "version": 3},
+                    "textDocument": {"uri": uri, "version": 4},
                     "contentChanges": [{"text": "print missing;\n"}],
                 },
             },
@@ -169,9 +252,9 @@ def main() -> int:
         )
         assert_publish(receive(process), uri, 0)
 
-        send(process, {"jsonrpc": "2.0", "id": 3, "method": "shutdown", "params": None})
+        send(process, {"jsonrpc": "2.0", "id": 6, "method": "shutdown", "params": None})
         shutdown = receive(process)
-        if shutdown.get("id") != 3 or shutdown.get("result") is not None:
+        if shutdown.get("id") != 6 or shutdown.get("result") is not None:
             raise AssertionError(f"shutdown response mismatch: {shutdown!r}")
         send(process, {"jsonrpc": "2.0", "method": "exit"})
         process.stdin.close()
@@ -185,7 +268,7 @@ def main() -> int:
             process.kill()
             process.wait()
 
-    print("language server: initialize, diagnostics, formatting, shutdown passed")
+    print("language server: initialize, queries, diagnostics, formatting, shutdown passed")
     return 0
 
 

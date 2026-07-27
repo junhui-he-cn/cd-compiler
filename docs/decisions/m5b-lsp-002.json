@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m5b-2026-07-27-r2",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M5B-LSP-002",
+  "domain": "language-server-symbol-queries",
+  "status": "resolved",
+  "question": "Which symbol queries should cross the first single-document LSP boundary?",
+  "decision": "Add textDocument/definition and textDocument/documentSymbol using the shared DeclarationIndex, TypeChecker binding metadata, and source-local ranges without serializing snapshot-local IDs.",
+  "queries": {
+    "definition": "one Location or null",
+    "document_symbol": "flat deterministic DocumentSymbol[]",
+    "position_encoding": "UTF-16 code units mapped to source-local bytes",
+    "type_error_documents": "retain parseable declaration index",
+    "incomplete_documents": "no query snapshot"
+  },
+  "shared_services": [
+    "DeclarationIndex",
+    "TypeChecker binding metadata",
+    "Program source ranges"
+  ],
+  "compatibility_boundary": {
+    "documents": "single document per URI",
+    "imports": "existing stdin import rejection remains",
+    "protocol_ids": "snapshot-local IDs are not serialized"
+  },
+  "quantitative_gate": "tests/lsp_tests.py covers function and variable definition locations, deterministic document-symbol names, and the existing LSP protocol flow.",
+  "out_of_scope": [
+    "references and rename",
+    "completion and hover/type information",
+    "cross-module definitions",
+    "persistent semantic caches",
+    "range-based synchronization"
+  ],
+  "verification": {
+    "focused_commands": [
+      "cmake --build build --target compiler_design",
+      "ctest --test-dir build --output-on-failure -R '^language_server$'",
+      "python3 tests/lsp_tests.py ./build/compiler_design",
+      "git diff --check"
+    ]
+  }
+}
