@@ -1,0 +1,31 @@
+import "../../data_structures.cd" as ds;
+
+fun ascending(left: number, right: number): bool {
+  return left < right;
+}
+
+fun descending(left: number, right: number): bool {
+  return left > right;
+}
+
+let numbers = [4, 1, 3, 1, 2];
+let sorted = ds.quickSort(numbers, ascending);
+print sorted;
+print numbers;
+
+sorted.push(99);
+print numbers;
+print sorted;
+
+ds.quickSortInPlace(numbers, descending);
+print numbers;
+
+let words = ["fox", "ant", "dog", "cat"];
+print ds.quickSort(words, ds.stringLess);
+print words;
+
+let empty: [number] = [];
+print ds.quickSort<number>(empty, ascending);
+ds.quickSortInPlace(empty, descending);
+print empty;
+print ds.quickSort([42], ascending);

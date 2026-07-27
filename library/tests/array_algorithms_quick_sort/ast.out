@@ -971,30 +971,24 @@ Program
     Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
-    Let numbers = (member-call ds newSet<number>)
-    Print (member-call numbers has 1)
-    Expr (member-call numbers add 3)
-    Expr (member-call numbers add 1)
-    Expr (member-call numbers add 3)
-    Print (member-call numbers snapshot)
-    Print (member-call numbers has 1)
-    Print (member-call numbers size)
-    Let alias = numbers
-    Expr (member-call alias add 2)
-    Print (member-call numbers snapshot)
-    Print (member-call numbers discard 1)
-    Print (member-call numbers snapshot)
-    Print (member-call numbers discard 9)
-    Print (member-call numbers isEmpty)
-    Let snapshot = (member-call numbers snapshot)
-    Expr (member-call snapshot push 99)
-    Print (member-call numbers snapshot)
-    Print snapshot
-    Let words = (member-call ds newSet<string>)
-    Expr (member-call words add "alpha")
-    Expr (member-call words add "beta")
-    Expr (member-call words add "alpha")
-    Print (member-call words snapshot)
-    Print (member-call words has "beta")
-    Print (member-call words discard "alpha")
-    Print (member-call words snapshot)
+    Fun ascending(left: number, right: number): bool
+      Return (< left right)
+    Fun descending(left: number, right: number): bool
+      Return (> left right)
+    Let numbers = (array 4 1 3 1 2)
+    Let sorted = (member-call ds quickSort numbers ascending)
+    Print sorted
+    Print numbers
+    Expr (member-call sorted push 99)
+    Print numbers
+    Print sorted
+    Expr (member-call ds quickSortInPlace numbers descending)
+    Print numbers
+    Let words = (array "fox" "ant" "dog" "cat")
+    Print (member-call ds quickSort words (field ds stringLess))
+    Print words
+    Let empty: [number] = (array)
+    Print (member-call ds quickSort<number> empty ascending)
+    Expr (member-call ds quickSortInPlace empty descending)
+    Print empty
+    Print (member-call ds quickSort (array 42) ascending)

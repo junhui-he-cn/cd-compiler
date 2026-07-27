@@ -635,6 +635,43 @@ Program
                   Expr (= start end)
             Expr (*= width 2)
       Return result
+    Fun quickSortRange<T>(values: [T], start: number, end: number, less: fun(T, T): bool)
+      If (group (>= start end))
+        Then
+          Block
+            Return nil
+      Let pivotIndex = (call floor (/ (group (+ start end)) 2))
+      Let pivotValue = (index values pivotIndex)
+      Expr (= (index values pivotIndex) (index values end))
+      Expr (= (index values end) pivotValue)
+      Let pivot = (index values end)
+      Let store = start
+      Let index = start
+      While (group (< index end))
+        Body
+          Block
+            If (group (call less (index values index) pivot))
+              Then
+                Block
+                  Let value = (index values store)
+                  Expr (= (index values store) (index values index))
+                  Expr (= (index values index) value)
+                  Expr (+= store 1)
+            Expr (+= index 1)
+      Let value = (index values store)
+      Expr (= (index values store) (index values end))
+      Expr (= (index values end) value)
+      Expr (call quickSortRange values start (- store 1) less)
+      Expr (call quickSortRange values (+ store 1) end less)
+    Fun quickSortInPlace<T>(values: [T], less: fun(T, T): bool)
+      If (group (> (member-call values len) 1))
+        Then
+          Block
+            Expr (call quickSortRange values 0 (- (member-call values len) 1) less)
+    Fun quickSort<T>(values: [T], less: fun(T, T): bool): [T]
+      Let result = (call copy values)
+      Expr (call quickSortInPlace result less)
+      Return result
     Fun chunkArray<T>(values: [T], size: number): [[T]]
       Let result: [[T]] = (array)
       If (group (<= size 0))
@@ -931,7 +968,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue sortArray sortArrayInPlace mergeSort chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Fun ascendingNumber(left: number, right: number): bool

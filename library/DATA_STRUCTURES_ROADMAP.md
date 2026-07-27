@@ -41,7 +41,8 @@
 - `MultiSet<T>`：数组条目和计数构成的泛型多重集合。
 - `MultiMap<K,V>`：数组条目表示一个键对应多个值的泛型映射。
 - 数组基础算法：`reverseArray`、`linearSearch`、`countValue`。
-- 数组排序：稳定插入排序 `sortArray`、`sortArrayInPlace` 和归并排序 `mergeSort`。
+- 数组排序：稳定插入排序 `sortArray`、`sortArrayInPlace`、归并排序 `mergeSort`、
+  快速排序 `quickSort` 和 `quickSortInPlace`。
 - 数组窗口算法：`chunkArray`、`slidingWindows`、`prefixSums`。
 - 区间算法：`Interval`、`mergeIntervals` 和 `intersectIntervals`。
 - 双指针算法：`mergeSortedNumbers`、`twoSumSorted`。
@@ -240,6 +241,8 @@ enum Result<T, E> {
 `compareStrings` 和 `stringLess` 暂时使用库层可打印 ASCII 顺序，非 ASCII
 字符返回不可用结果，等待语言层字符串排序和运算符扩展决策。
 `mergeSort` 使用稳定的自底向上归并排序，返回新数组，不改变输入。
+`quickSort` 和 `quickSortInPlace` 使用中点 pivot 的原地分区版本；它们不保证
+稳定性，平均为 `O(n log n)`，最坏为 `O(n^2)`。
 
 - 遍历、复制、拼接、分块、窗口、批处理；
 - `reverse`、`rotate`、`partition`、稳定分区、按谓词分组；
@@ -414,8 +417,8 @@ S2 已完成 `Set<T>` 的数组后端版本：使用语言 `==` 做线性去重�
 重复计数，`entries()` 按首次插入顺序返回新条目数组；`MultiMap<K,V>` 使用
 键数组和每键 value 数组，`discard(key,value)` 删除一个匹配 pair。随后完成
 了基础数组搜索/计数/逆序算法、稳定插入排序、窗口/前缀和算法、区间合并、
-双指针、数组集合算法、固定窗口统计、区间交集、最大子数组和、二分查找以及
-归并排序已经完成，下一步进入更一般的排序算法。
+双指针、数组集合算法、固定窗口统计、区间交集、最大子数组和、二分查找、归并
+排序以及快速排序已经完成，下一步进入堆排序或其他数值算法。
 
 ### S2：集合和序列算法
 
