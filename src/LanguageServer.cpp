@@ -2428,6 +2428,53 @@ std::optional<SourceRange> typeNavigationRangeAt(
     return best;
 }
 
+const StructDeclStmt* structFieldCompletionTargetAt(
+    const AnalysisSnapshot& snapshot,
+    SourceFileId sourceId,
+    std::size_t byte)
+{
+    const ModuleStmt* module = moduleForSource(snapshot, sourceId);
+    if (!module) {
+        return nullptr;
+    }
+    for (const ReferenceSite& site : snapshot.referenceSites) {
+        if (site.kind != ReferenceSiteKind::FieldAccess
+            || !site.range
+            || !rangeContains(*site.range, sourceId, byte)
+            || !site.expression) {
+            continue;
+        }
+        const auto* field = dynamic_cast<const FieldAccessExpr*>(site.expression);
+        if (!field) {
+            continue;
+        }
+        const TypedExpressionRecord* typedObject
+            = snapshot.declarationIndex.typedExpression(*field->object);
+        if (!typedObject) {
+            continue;
+        }
+        TypeInfo objectType = typedObject->type;
+        if (objectType.kind == StaticType::Nullable && objectType.nullableOf) {
+            objectType = *objectType.nullableOf;
+        }
+        if (objectType.kind != StaticType::Struct || !objectType.structName) {
+            continue;
+        }
+        const std::optional<DefinitionTarget> target = typeDefinitionForPath(
+            snapshot,
+            *module,
+            *objectType.structName);
+        if (!target || !target->declaration || !target->declaration->statement) {
+            continue;
+        }
+        if (const auto* declaration
+            = dynamic_cast<const StructDeclStmt*>(target->declaration->statement)) {
+            return declaration;
+        }
+    }
+    return nullptr;
+}
+
 std::shared_ptr<AnalysisSnapshot> analyzeVirtualWorkspace(
     const std::vector<FrontendVirtualFile>& files,
     const std::map<std::string, std::string>& uriByCanonicalPath)
@@ -3266,6 +3313,7 @@ private:
         struct Candidate {
             const DeclarationRecord* declaration = nullptr;
             const EnumVariantDecl* variant = nullptr;
+            const StructFieldDecl* field = nullptr;
         };
         std::vector<Candidate> candidates;
         const auto matchesPrefix = [&prefix](const std::string& name) {
@@ -3288,14 +3336,29 @@ private:
                     for (const EnumVariantDecl& variant : enumDeclaration->variants) {
                         if (variant.name.range && variant.name.range->valid()
                             && matchesPrefix(variant.name.lexeme)) {
-                            candidates.push_back(Candidate{nullptr, &variant});
+                            candidates.push_back(Candidate{nullptr, &variant, nullptr});
                         }
                     }
                 }
             }
         }
+        bool matchedStructFields = false;
+        if (!matchedQualifiedType && receiverPath && module) {
+            if (const StructDeclStmt* structDeclaration = structFieldCompletionTargetAt(
+                    snapshot,
+                    found->second.analysis.sourceId,
+                    *byte)) {
+                matchedStructFields = true;
+                for (const StructFieldDecl& field : structDeclaration->fields) {
+                    if (field.name.range && field.name.range->valid()
+                        && matchesPrefix(field.name.lexeme)) {
+                        candidates.push_back(Candidate{nullptr, nullptr, &field});
+                    }
+                }
+            }
+        }
         bool matchedNamespaceAlias = false;
-        if (!matchedQualifiedType && namespaceAlias && module) {
+        if (!matchedQualifiedType && !matchedStructFields && namespaceAlias && module) {
             for (const StmtPtr& statement : module->statements) {
                 const auto* import = dynamic_cast<const ImportStmt*>(statement.get());
                 if (!import || !import->alias
@@ -3312,12 +3375,12 @@ private:
                         || !importedNames.insert(exported.first).second) {
                         continue;
                     }
-                    candidates.push_back(Candidate{exported.second.declaration, nullptr});
+                    candidates.push_back(Candidate{exported.second.declaration, nullptr, nullptr});
                 }
             }
         }
 
-        if (!matchedQualifiedType && !matchedNamespaceAlias) {
+        if (!matchedQualifiedType && !matchedStructFields && !matchedNamespaceAlias) {
             for (const DeclarationRecord& declaration
                  : snapshot.declarationIndex.declarations()) {
                 if (!declarationRange(declaration)
@@ -3326,7 +3389,7 @@ private:
                     || !matchesPrefix(declaration.name)) {
                     continue;
                 }
-                candidates.push_back(Candidate{&declaration, nullptr});
+                candidates.push_back(Candidate{&declaration, nullptr, nullptr});
             }
 
             if (module) {
@@ -3344,18 +3407,28 @@ private:
                             || !importedNames.insert(exported.first).second) {
                             continue;
                         }
-                        candidates.push_back(Candidate{exported.second.declaration, nullptr});
+                        candidates.push_back(Candidate{exported.second.declaration, nullptr, nullptr});
                     }
                 }
             }
         }
         const auto candidateName = [](const Candidate& candidate) -> std::string_view {
-            return candidate.variant ? candidate.variant->name.lexeme : candidate.declaration->name;
+            if (candidate.variant) {
+                return candidate.variant->name.lexeme;
+            }
+            if (candidate.field) {
+                return candidate.field->name.lexeme;
+            }
+            return candidate.declaration->name;
         };
         const auto candidateRange = [](const Candidate& candidate) -> const SourceRange& {
-            return candidate.variant
-                ? *candidate.variant->name.range
-                : *candidate.declaration->range;
+            if (candidate.variant) {
+                return *candidate.variant->name.range;
+            }
+            if (candidate.field) {
+                return *candidate.field->name.range;
+            }
+            return *candidate.declaration->range;
         };
         std::sort(
             candidates.begin(),
@@ -3384,10 +3457,14 @@ private:
             items.push_back(makeObject({
                 {"label", JsonValue::string(label)},
                 {"kind", JsonValue::number(std::to_string(
-                    candidate.variant ? 20 : completionItemKind(candidate.declaration->kind)))},
+                    candidate.variant
+                        ? 20
+                        : candidate.field ? 5 : completionItemKind(candidate.declaration->kind)))},
                 {"detail", JsonValue::string(candidate.variant
                         ? "variant"
-                        : completionDetail(snapshot.declarationIndex, *candidate.declaration))},
+                        : candidate.field
+                            ? "field"
+                            : completionDetail(snapshot.declarationIndex, *candidate.declaration))},
                 {"textEdit", makeObject({
                     {"range", textDocumentRange(found->second.text, replaceRange)},
                     {"newText", JsonValue::string(label)},

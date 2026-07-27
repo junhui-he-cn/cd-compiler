@@ -1430,6 +1430,15 @@ candidates. The focused protocol test covers the re-exported `api.Result.O`
 prefix. The decision is recorded in
 `docs/decisions/m5b-lsp-014.{md,json}`.
 
+`M5B-LSP-015` adds completion for fields on a source expression whose
+TypeChecker record has a named struct type. Local structs and opened direct,
+namespace-alias, or export-from struct types reuse the shared type/export
+resolution and return source-declared fields with Field completion kind and
+the existing prefix replacement. Unknown, dynamic, enum, and ordinary
+namespace-value receivers remain outside this slice. The focused protocol
+test covers a field prefix on a re-exported `api.Box` value. The decision is
+recorded in `docs/decisions/m5b-lsp-015.{md,json}`.
+
 ### Milestone 5C: REPL / incremental evaluation
 
 **Dependency:** M3A module/session boundaries, M3B incremental compilation where
@@ -1674,8 +1683,8 @@ bounded hover type information, rename edits, declaration completion,
 open-document workspace symbols, virtual-source workspace analysis, direct
 import definition jumps, namespace-alias member definition jumps,
 cross-module references, validated cross-module rename, opened-module
-completion, namespace-qualified type/variant navigation, and qualified enum
-variant completion while
+completion, namespace-qualified type/variant navigation, qualified enum
+variant completion, and typed struct-field completion while
 workspace-aware completion remains open.
 
 ## Metrics dashboard

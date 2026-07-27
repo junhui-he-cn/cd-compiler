@@ -538,6 +538,7 @@ def main() -> int:
             'import "./compiler-design-lsp-api.cd" as api;\n'
             "let box: api.Box = api.Box { value: 1 };\n"
             "let result: api.Result = api.Result.Ok(2);\n"
+            "print box.value;\n"
         )
         send(
             process,
@@ -802,6 +803,41 @@ def main() -> int:
             raise AssertionError(
                 "namespace-qualified enum variant completion response mismatch: "
                 f"{qualified_variant_completion!r}"
+            )
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 26,
+                "method": "textDocument/completion",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 5, "character": 12},
+                },
+            },
+        )
+        struct_field_completion = receive(process)
+        if struct_field_completion.get("result") != {
+            "isIncomplete": False,
+            "items": [
+                {
+                    "label": "value",
+                    "kind": 5,
+                    "detail": "field",
+                    "textEdit": {
+                        "range": {
+                            "start": {"line": 5, "character": 10},
+                            "end": {"line": 5, "character": 12},
+                        },
+                        "newText": "value",
+                    },
+                }
+            ],
+        }:
+            raise AssertionError(
+                "typed struct field completion response mismatch: "
+                f"{struct_field_completion!r}"
             )
 
         send(

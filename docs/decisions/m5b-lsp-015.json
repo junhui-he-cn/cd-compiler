@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m5b-2026-07-27-r15",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M5B-LSP-015",
+  "domain": "language-server-typed-struct-field-completion",
+  "status": "resolved",
+  "question": "How should completion expose fields for known struct receivers?",
+  "decision": "Use the typed receiver expression and opened-module type/export resolution to return source-declared struct fields with bounded replacement edits.",
+  "query": {
+    "receiver": "field access with a known named struct TypeInfo",
+    "types": "local, direct-import, namespace-alias, and export-from struct declarations",
+    "items": "Field kind 5 with field detail",
+    "ordering": "field name, source ID, source start, source end",
+    "nullable": "unwrap an existing nullable struct type record"
+  },
+  "shared_services": [
+    "AnalysisSnapshot",
+    "DeclarationIndex typed expressions",
+    "FrontendSession module graph",
+    "exported type resolver",
+    "production struct declaration ranges"
+  ],
+  "compatibility_boundary": {
+    "sources": "currently open virtual documents only",
+    "unknown_receivers": "dynamic and unknown receivers keep bounded fallback behavior",
+    "ids": "snapshot-local IDs are not serialized"
+  },
+  "quantitative_gate": "tests/lsp_tests.py covers the va prefix on a re-exported api.Box value.",
+  "out_of_scope": [
+    "unknown or dynamic receiver fields",
+    "unopened dependencies",
+    "method completion",
+    "field documentation",
+    "persistent semantic caching",
+    "range-based synchronization"
+  ],
+  "verification": {
+    "focused_commands": [
+      "cmake --build build -j2",
+      "python3 tests/lsp_tests.py ./build/compiler_design",
+      "ctest --test-dir build --output-on-failure -R '^language_server$'",
+      "git diff --check"
+    ]
+  }
+}
