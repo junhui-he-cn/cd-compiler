@@ -43,9 +43,9 @@ The compiler pipeline includes:
   synchronization, shared lexer/parser/type diagnostics, whole-document
   formatting edits, definition lookup, document symbols, references, hover
   type information for known typed expressions and callable declarations, and
-  single-document rename edits. The first service boundary is single-document
-  and keeps stdin's existing import restriction; completion and cross-module
-  navigation remain later slices.
+  single-document rename edits and declaration completion. The first service
+  boundary is single-document and keeps stdin's existing import restriction;
+  cross-module navigation and workspace-wide completion remain later slices.
 
 For example:
 

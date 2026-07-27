@@ -1389,6 +1389,56 @@ bool validRenameName(std::string_view name)
     }
 }
 
+std::string completionPrefix(std::string_view source, std::size_t byte)
+{
+    std::size_t start = std::min(byte, source.size());
+    while (start > 0) {
+        const unsigned char character = static_cast<unsigned char>(source[start - 1]);
+        if (!(std::isalnum(character) || character == '_')) {
+            break;
+        }
+        --start;
+    }
+    return std::string(source.substr(start, std::min(byte, source.size()) - start));
+}
+
+int completionItemKind(DeclarationKind kind)
+{
+    switch (kind) {
+    case DeclarationKind::Function:
+        return 3; // Function
+    case DeclarationKind::Method:
+        return 2; // Method
+    case DeclarationKind::Struct:
+        return 22; // Struct
+    case DeclarationKind::Enum:
+        return 13; // Enum
+    case DeclarationKind::Module:
+        return 9; // Module
+    case DeclarationKind::Variable:
+    case DeclarationKind::Parameter:
+    case DeclarationKind::ForInVariable:
+    case DeclarationKind::NamespaceAlias:
+        return 6; // Variable
+    }
+    return 6;
+}
+
+std::string completionDetail(
+    const DeclarationIndex& index,
+    const DeclarationRecord& declaration)
+{
+    if (const ResolvedSignatureRecord* signature
+        = index.resolvedSignature(declaration.declarationId)) {
+        return typeInfoName(signature->type);
+    }
+    std::string detail = declarationKindName(declaration.kind);
+    if (!declaration.ownerType.empty()) {
+        detail += " " + declaration.ownerType;
+    }
+    return detail;
+}
+
 JsonValue documentSymbol(
     std::string_view source,
     const DeclarationRecord& declaration)
@@ -1468,6 +1518,7 @@ public:
                                     {"referencesProvider", JsonValue::booleanValue(true)},
                                     {"hoverProvider", JsonValue::booleanValue(true)},
                                     {"renameProvider", JsonValue::booleanValue(true)},
+                                    {"completionProvider", JsonValue::booleanValue(true)},
                                 })},
                             })));
                 }
@@ -1528,6 +1579,12 @@ public:
             if (*method == "textDocument/rename") {
                 if (id) {
                     writeMessage(output, response(*id, handleRename(request)));
+                }
+                continue;
+            }
+            if (*method == "textDocument/completion") {
+                if (id) {
+                    writeMessage(output, response(*id, handleCompletion(request)));
                 }
                 continue;
             }
@@ -1822,6 +1879,82 @@ private:
         changes.emplace(*uri, JsonValue::array(std::move(edits)));
         return makeObject({
             {"changes", JsonValue::object(std::move(changes))},
+        });
+    }
+
+    JsonValue handleCompletion(const JsonValue& request) const
+    {
+        const std::optional<std::string> uri = documentUri(request);
+        const std::optional<LspRequestPosition> position = requestPosition(request);
+        if (!uri || !position) {
+            return makeObject({
+                {"isIncomplete", JsonValue::booleanValue(false)},
+                {"items", JsonValue::array({})},
+            });
+        }
+        const auto found = documents_.find(*uri);
+        if (found == documents_.end() || !found->second.analysis.program) {
+            return makeObject({
+                {"isIncomplete", JsonValue::booleanValue(false)},
+                {"items", JsonValue::array({})},
+            });
+        }
+        const std::optional<std::size_t> byte = sourceByteAtLspPosition(
+            found->second.text,
+            position->line,
+            position->character);
+        if (!byte) {
+            return makeObject({
+                {"isIncomplete", JsonValue::booleanValue(false)},
+                {"items", JsonValue::array({})},
+            });
+        }
+
+        const std::string prefix = completionPrefix(found->second.text, *byte);
+        std::size_t prefixStart = *byte - prefix.size();
+        const SourceRange replaceRange{SourceFileId{0}, prefixStart, *byte};
+        std::vector<const DeclarationRecord*> declarations;
+        for (const DeclarationRecord& declaration
+             : found->second.analysis.declarationIndex.declarations()) {
+            if (!declarationRange(declaration)
+                || declaration.kind == DeclarationKind::Module
+                || (declaration.name.size() < prefix.size())
+                || declaration.name.compare(0, prefix.size(), prefix) != 0) {
+                continue;
+            }
+            declarations.push_back(&declaration);
+        }
+        std::sort(
+            declarations.begin(),
+            declarations.end(),
+            [](const DeclarationRecord* left, const DeclarationRecord* right) {
+                if (left->name != right->name) {
+                    return left->name < right->name;
+                }
+                if (left->range->start != right->range->start) {
+                    return left->range->start < right->range->start;
+                }
+                return left->range->end < right->range->end;
+            });
+
+        std::vector<JsonValue> items;
+        items.reserve(declarations.size());
+        for (const DeclarationRecord* declaration : declarations) {
+            items.push_back(makeObject({
+                {"label", JsonValue::string(declaration->name)},
+                {"kind", JsonValue::number(std::to_string(completionItemKind(declaration->kind)))},
+                {"detail", JsonValue::string(completionDetail(
+                    found->second.analysis.declarationIndex,
+                    *declaration))},
+                {"textEdit", makeObject({
+                    {"range", textDocumentRange(found->second.text, replaceRange)},
+                    {"newText", JsonValue::string(declaration->name)},
+                })},
+            }));
+        }
+        return makeObject({
+            {"isIncomplete", JsonValue::booleanValue(false)},
+            {"items", JsonValue::array(std::move(items))},
         });
     }
 

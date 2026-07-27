@@ -87,6 +87,7 @@ def main() -> int:
             or capabilities.get("referencesProvider") is not True
             or capabilities.get("hoverProvider") is not True
             or capabilities.get("renameProvider") is not True
+            or capabilities.get("completionProvider") is not True
         ):
             raise AssertionError(f"initialize response mismatch: {initialize!r}")
 
@@ -376,6 +377,38 @@ def main() -> int:
             process,
             {
                 "jsonrpc": "2.0",
+                "id": 13,
+                "method": "textDocument/completion",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 1, "character": 15},
+                },
+            },
+        )
+        completion = receive(process)
+        if completion.get("result") != {
+            "isIncomplete": False,
+            "items": [
+                {
+                    "label": "add",
+                    "kind": 3,
+                    "detail": "fun(number): number",
+                    "textEdit": {
+                        "range": {
+                            "start": {"line": 1, "character": 13},
+                            "end": {"line": 1, "character": 15},
+                        },
+                        "newText": "add",
+                    },
+                }
+            ],
+        }:
+            raise AssertionError(f"completion response mismatch: {completion!r}")
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
                 "method": "textDocument/didChange",
                 "params": {
                     "textDocument": {"uri": uri, "version": 3},
@@ -412,9 +445,9 @@ def main() -> int:
         )
         assert_publish(receive(process), uri, 0)
 
-        send(process, {"jsonrpc": "2.0", "id": 12, "method": "shutdown", "params": None})
+        send(process, {"jsonrpc": "2.0", "id": 14, "method": "shutdown", "params": None})
         shutdown = receive(process)
-        if shutdown.get("id") != 12 or shutdown.get("result") is not None:
+        if shutdown.get("id") != 14 or shutdown.get("result") is not None:
             raise AssertionError(f"shutdown response mismatch: {shutdown!r}")
         send(process, {"jsonrpc": "2.0", "method": "exit"})
         process.stdin.close()
