@@ -76,3 +76,8 @@ seen.add(2);
 seen.add(2);
 seen.add(1);
 print seen.snapshot();
+
+let bag = ds.newMultiSet<string>();
+bag.add("tag");
+bag.add("tag");
+print bag.countOf("tag");

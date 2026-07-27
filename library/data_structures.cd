@@ -429,6 +429,88 @@ fun newSet<T>(): Set<T> {
   return Set<T> { items: [] };
 }
 
+struct MultiSetEntry<T> {
+  value: T,
+  count: number
+}
+
+struct MultiSet<T> {
+  values: [T],
+  counts: [number]
+}
+
+impl MultiSet<T> {
+  fun indexOf(value: T): number {
+    let index = 0;
+    while (index < this.values.len()) {
+      if (this.values[index] == value) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun add(value: T) {
+    let index = this.indexOf(value);
+    if (index >= 0) {
+      this.counts[index] += 1;
+      return;
+    }
+    this.values.push(value);
+    this.counts.push(1);
+  }
+
+  fun countOf(value: T): number {
+    let index = this.indexOf(value);
+    if (index < 0) {
+      return 0;
+    }
+    return this.counts[index];
+  }
+
+  fun has(value: T): bool {
+    return this.indexOf(value) >= 0;
+  }
+
+  fun removeAt(index: number) {
+    while (index + 1 < this.values.len()) {
+      this.values[index] = this.values[index + 1];
+      this.counts[index] = this.counts[index + 1];
+      index += 1;
+    }
+    this.values.pop();
+    this.counts.pop();
+  }
+
+  fun takeOne(value: T): bool {
+    let index = this.indexOf(value);
+    if (index < 0) {
+      return false;
+    }
+    if (this.counts[index] > 1) {
+      this.counts[index] -= 1;
+      return true;
+    }
+    this.removeAt(index);
+    return true;
+  }
+
+  fun entries(): [MultiSetEntry<T>] {
+    let result: [MultiSetEntry<T>] = [];
+    let index = 0;
+    while (index < this.values.len()) {
+      result.push(MultiSetEntry<T> { value: this.values[index], count: this.counts[index] });
+      index += 1;
+    }
+    return result;
+  }
+}
+
+fun newMultiSet<T>(): MultiSet<T> {
+  return MultiSet<T> { values: [], counts: [] };
+}
+
 struct PriorityQueue<T> {
   heap: BinaryHeap<T>
 }
@@ -463,4 +545,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet;

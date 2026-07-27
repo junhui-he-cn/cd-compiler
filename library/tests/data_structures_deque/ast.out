@@ -297,6 +297,71 @@ Program
         Return (call copy (field this items))
     Fun newSet<T>(): Set<T>
       Return (construct Set<T> items: (array))
+    Struct MultiSetEntry<T> {value: T, count: number}
+    Struct MultiSet<T> {values: [T], counts: [number]}
+    Impl MultiSet<T>
+      Method indexOf(value: T): number
+        Let index = 0
+        While (group (< index (member-call (field this values) len)))
+          Body
+            Block
+              If (group (== (index (field this values) index) value))
+                Then
+                  Block
+                    Return index
+              Expr (+= index 1)
+        Return (- 1)
+      Method add(value: T)
+        Let index = (member-call this indexOf value)
+        If (group (>= index 0))
+          Then
+            Block
+              Expr (+= (index (field this counts) index) 1)
+              Return nil
+        Expr (member-call (field this values) push value)
+        Expr (member-call (field this counts) push 1)
+      Method countOf(value: T): number
+        Let index = (member-call this indexOf value)
+        If (group (< index 0))
+          Then
+            Block
+              Return 0
+        Return (index (field this counts) index)
+      Method has(value: T): bool
+        Return (>= (member-call this indexOf value) 0)
+      Method removeAt(index: number)
+        While (group (< (+ index 1) (member-call (field this values) len)))
+          Body
+            Block
+              Expr (= (index (field this values) index) (index (field this values) (+ index 1)))
+              Expr (= (index (field this counts) index) (index (field this counts) (+ index 1)))
+              Expr (+= index 1)
+        Expr (member-call (field this values) pop)
+        Expr (member-call (field this counts) pop)
+      Method takeOne(value: T): bool
+        Let index = (member-call this indexOf value)
+        If (group (< index 0))
+          Then
+            Block
+              Return false
+        If (group (> (index (field this counts) index) 1))
+          Then
+            Block
+              Expr (-= (index (field this counts) index) 1)
+              Return true
+        Expr (member-call this removeAt index)
+        Return true
+      Method entries(): [MultiSetEntry<T>]
+        Let result: [MultiSetEntry<T>] = (array)
+        Let index = 0
+        While (group (< index (member-call (field this values) len)))
+          Body
+            Block
+              Expr (member-call result push (construct MultiSetEntry<T> value: (index (field this values) index) count: (index (field this counts) index)))
+              Expr (+= index 1)
+        Return result
+    Fun newMultiSet<T>(): MultiSet<T>
+      Return (construct MultiSet<T> values: (array) counts: (array))
     Struct PriorityQueue<T> {heap: BinaryHeap<T>}
     Impl PriorityQueue<T>
       Method enqueue(value: T)
@@ -313,7 +378,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let deque = (member-call ds newDeque<number>)

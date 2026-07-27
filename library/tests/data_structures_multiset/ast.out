@@ -381,41 +381,41 @@ Program
     Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet
   Module 1 entry
     Import "../../data_structures.cd" as ds
-    Fun ascending(left: number, right: number): bool
-      Return (< left right)
-    Let heap = (member-call ds newBinaryHeap<number> ascending)
-    Print (member-call heap peek)
-    Expr (member-call heap add 5)
-    Expr (member-call heap add 1)
-    Expr (member-call heap add 3)
-    Expr (member-call heap add 1)
-    Print (member-call heap snapshot)
-    Print (member-call heap peek)
-    Print (member-call heap size)
-    Print (member-call heap take)
-    Print (member-call heap take)
-    Print (member-call heap peek)
-    Let alias = heap
+    Fun renderEntries(values: [ds.MultiSetEntry<number>]): string
+      Let result = ""
+      Let index = 0
+      While (group (< index (member-call values len)))
+        Body
+          Block
+            If (group (> index 0))
+              Then
+                Block
+                  Expr (= result (+ result ","))
+            Let entry = (index values index)
+            Expr (= result (+ (+ (+ result (call str (field entry value))) ":") (call str (field entry count))))
+            Expr (+= index 1)
+      Return result
+    Let numbers = (member-call ds newMultiSet<number>)
+    Print (member-call numbers countOf 4)
+    Print (member-call numbers has 4)
+    Expr (member-call numbers add 4)
+    Expr (member-call numbers add 4)
+    Expr (member-call numbers add 2)
+    Print (member-call numbers countOf 4)
+    Print (call renderEntries (member-call numbers entries))
+    Let alias = numbers
     Expr (member-call alias add 2)
-    Print (member-call heap snapshot)
-    Let snapshot = (member-call heap snapshot)
-    Expr (member-call snapshot push 99)
-    Print (member-call heap snapshot)
-    Print snapshot
-    Print (member-call heap take)
-    Print (member-call heap take)
-    Print (member-call heap take)
-    Print (member-call heap take)
-    Print (member-call heap isEmpty)
-    Fun descending(left: number, right: number): bool
-      Return (> left right)
-    Let maxHeap = (member-call ds newBinaryHeap<number> descending)
-    Expr (member-call maxHeap add 4)
-    Expr (member-call maxHeap add 9)
-    Expr (member-call maxHeap add 7)
-    Print (member-call maxHeap snapshot)
-    Print (member-call maxHeap take)
-    Print (member-call maxHeap peek)
-    Print (member-call maxHeap take)
-    Print (member-call maxHeap take)
-    Print (member-call maxHeap isEmpty)
+    Print (call renderEntries (member-call numbers entries))
+    Print (member-call numbers takeOne 4)
+    Print (call renderEntries (member-call numbers entries))
+    Print (member-call numbers takeOne 4)
+    Print (call renderEntries (member-call numbers entries))
+    Print (member-call numbers takeOne 4)
+    Print (member-call numbers has 2)
+    Let words = (member-call ds newMultiSet<string>)
+    Expr (member-call words add "alpha")
+    Expr (member-call words add "alpha")
+    Expr (member-call words add "beta")
+    Print (member-call words countOf "alpha")
+    Print (member-call words takeOne "alpha")
+    Print (member-call words countOf "alpha")

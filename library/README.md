@@ -4,7 +4,7 @@ This directory contains a small data-structure library written in the public
 Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 `Queue<T>`, `Deque<T>`, `BinaryHeap<T>`, and `PriorityQueue<T>` types, plus the
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
-`Set<T>` types.
+`Set<T>` and `MultiSet<T>` types.
 
 The planned structure and algorithm inventory, implementation constraints, and
 staged delivery order are documented in
@@ -70,6 +70,11 @@ seen.add(2);
 seen.add(2);
 seen.add(1);
 print seen.snapshot();
+
+let bag = ds.newMultiSet<string>();
+bag.add("tag");
+bag.add("tag");
+print bag.countOf("tag");
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -200,6 +205,20 @@ values and is also `O(n)`. `snapshot` is `O(n)` and allocates one outer array.
 Membership follows the language's `==` semantics, including its behavior for
 reference values.
 
+`MultiSet<T>` stores one entry per distinct value and its occurrence count:
+
+- `add(value: T)` — add one occurrence;
+- `countOf(value: T): number` and `has(value: T): bool` — query occurrences;
+- `takeOne(value: T): bool` — remove one occurrence, returning whether it was
+  present;
+- `entries(): [MultiSetEntry<T>]` — return `{ value, count }` snapshots in first
+  insertion order.
+
+`newMultiSet<T>()` creates an empty multiset. Lookup and `add` are `O(n)` over
+the number of distinct values; `takeOne` is `O(n)` when the last occurrence is
+removed because it preserves entry order. `entries` is `O(n)` and allocates a
+new outer array plus one entry value per distinct element.
+
 ## Current language limitation
 
 The language's builtin member-call sugar reserves names such as `push`, `pop`,
@@ -226,6 +245,6 @@ python3 library/tests/run_tests.py ./build/compiler_design vm-rs
 
 Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_result`, `--case data_structures_list`, or
-`--case data_structures_set` for a focused run, or `--update` only when an
-intentional compiler-output change requires refreshing library fixtures'
-`ast.out` files.
+`--case data_structures_set`, or `--case data_structures_multiset` for a focused
+run, or `--update` only when an intentional compiler-output change requires
+refreshing library fixtures' `ast.out` files.
