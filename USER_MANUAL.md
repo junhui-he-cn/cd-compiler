@@ -301,6 +301,11 @@ let person = Person { name: "Ada" };
 print person.greeting();
 ```
 
+结构体字段也可以声明为 `private`。私有字段在定义它的源模块内可读写和初始化，
+但不会出现在导入模块的公开字段形状中；外部代码不能直接读取、赋值、用于 record
+pattern 或直接构造带有私有表示的结构体。库通常通过模块内 factory 函数返回这类值，
+再通过公开方法提供操作。
+
 方法可以使用 `impl Box<T>` 这样的泛型接收者。对已知结构体接收者，用户定义的
 同名方法会优先于 builtin member-call sugar；数组、map、字符串和 range 接收者
 仍使用对应的 builtin fallback。当前不支持继承、重载、动态派发或静态方法。
@@ -580,7 +585,8 @@ print queue.dequeue();
 栈提供 `push`、`pop`、`top`、`size`、`isEmpty` 和 `snapshot`；队列提供
 `enqueue`、`dequeue`、`front`、`size`、`isEmpty` 和 `snapshot`。当前库使用
 传统的 `push`/`pop` API；已知结构体接收者上的用户方法会优先于同名的
-builtin member-call sugar，数组接收者仍使用数组 builtin。
+builtin member-call sugar，数组接收者仍使用数组 builtin。栈和队列的内部数组及
+队列游标是模块私有字段，只能通过 `newStack` 和 `newQueue` 初始化。
 
 ## 13. 当前边界
 

@@ -351,6 +351,7 @@ private:
         bool& coversStruct,
         PatternBindings* deferredBindings = nullptr);
     const StructFieldType* findStructField(const StructTypeDecl& structType, const std::string& name) const;
+    bool canAccessPrivateFields(const StructTypeDecl& structType) const;
     TypeInfo structFieldTypeForValue(
         const TypeInfo& objectType,
         const StructTypeDecl& structType,

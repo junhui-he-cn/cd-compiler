@@ -1,0 +1,3 @@
+Type error at <repo>/tests/golden/type_errors/private_struct_record_pattern.cd:5:13: struct `Box` has no accessible field `value` in record pattern
+    lib.Box { value: hidden } => {
+              ^

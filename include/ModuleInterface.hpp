@@ -36,6 +36,13 @@ struct ModuleInterfaceStruct {
     std::vector<std::shared_ptr<TypeInfo>> genericParameterConstraints;
     std::vector<ModuleInterfaceField> fields;
     std::vector<ModuleInterfaceMethod> methods;
+    // Private fields are omitted from `fields`, but this marker keeps the
+    // representation boundary visible to separate semantic consumers and
+    // cache invalidation.
+    bool hasPrivateFields = false;
+    // Snapshot-local ownership metadata.  Sidecars restore ownership from
+    // the containing ModuleInterface instead of serializing this ID.
+    std::optional<std::size_t> definingModuleId;
 };
 
 struct ModuleInterfaceVariant {

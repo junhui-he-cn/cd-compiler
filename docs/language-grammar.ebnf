@@ -60,7 +60,7 @@ methodDecl  = "fun", identifier, [ typeParameters ],
 structFields = structField,
                { ",", structField } ;
 
-structField = identifier, ":", typeExpr ;
+structField = [ "private" ], identifier, ":", typeExpr ;
 
 parameters  = parameter,
               { ",", parameter } ;

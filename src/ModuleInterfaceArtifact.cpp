@@ -331,6 +331,7 @@ void encodeInterfaceBody(CodecWriter& writer, const ModuleInterface& interfaceIn
         writer.string(structure.name);
         encodeStringVector(writer, structure.genericParameters);
         encodeOptionalTypes(writer, structure.genericParameterConstraints);
+        writer.boolean(structure.hasPrivateFields);
 
         writer.number(structure.fields.size());
         for (const ModuleInterfaceField& field : structure.fields) {
@@ -716,6 +717,7 @@ void writeInterfaceBody(std::ostream& out, const ModuleInterface& source)
             << "  name = " << quotedString(structure.name) << '\n';
         writeStringVector(out, "  generic_parameters = ", structure.genericParameters);
         writeOptionalTypes(out, "  generic_constraints = ", structure.genericParameterConstraints);
+        out << "  private_fields = " << (structure.hasPrivateFields ? "true" : "false") << '\n';
         out << "  fields = " << structure.fields.size() << '\n';
         for (std::size_t fieldIndex = 0; fieldIndex < structure.fields.size(); ++fieldIndex) {
             const ModuleInterfaceField& field = structure.fields[fieldIndex];
@@ -792,6 +794,7 @@ ModuleInterface parseInterfaceBody(LineReader& lines)
         structure.name = parseQuoted(lines.next(), "  name = ");
         parseStringVector(lines, "  generic_parameters = ", structure.genericParameters);
         parseOptionalTypes(lines, "  generic_constraints = ", structure.genericParameterConstraints);
+        structure.hasPrivateFields = parseBoolean(lines.next(), "  private_fields = ");
 
         const std::size_t fieldCount = parseNumber(lines.next(), "  fields = ");
         if (fieldCount > kMaxCollectionSize) {

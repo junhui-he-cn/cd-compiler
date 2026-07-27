@@ -1,0 +1,9 @@
+struct Box {
+  private value: number
+}
+
+fun newBox(): Box {
+  return Box { value: 7 };
+}
+
+export Box, newBox;

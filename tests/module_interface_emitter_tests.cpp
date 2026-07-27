@@ -74,6 +74,7 @@ void testValuesStructsFieldsMethodsAndTypes()
 
     ModuleInterfaceStruct point;
     point.name = "Point";
+    point.hasPrivateFields = true;
     point.fields.push_back(ModuleInterfaceField{"y", simpleType(StaticType::Number)});
     point.fields.push_back(ModuleInterfaceField{"x", nullableType(simpleType(StaticType::Number))});
     point.methods.push_back(ModuleInterfaceMethod{
@@ -119,6 +120,7 @@ void testValuesStructsFieldsMethodsAndTypes()
         "  export struct Box\n"
         "    field items: [Point]\n"
         "  export struct Point\n"
+        "    private fields\n"
         "    field y: number\n"
         "    field x: number?\n"
         "    method echo<T: number>(T): T\n"

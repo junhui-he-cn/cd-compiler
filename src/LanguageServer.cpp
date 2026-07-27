@@ -3409,8 +3409,11 @@ private:
                     found->second.analysis.sourceId,
                     *byte)) {
                 matchedStructFields = true;
+                const bool sameModule = structDeclaration->name.range
+                    && structDeclaration->name.range->source == module->sourceId;
                 for (const StructFieldDecl& field : structDeclaration->fields) {
-                    if (field.name.range && field.name.range->valid()
+                    if ((!field.isPrivate || sameModule)
+                        && field.name.range && field.name.range->valid()
                         && matchesPrefix(field.name.lexeme)) {
                         candidates.push_back(Candidate{nullptr, nullptr, &field});
                     }

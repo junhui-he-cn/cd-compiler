@@ -1,0 +1,6 @@
+Program
+  Struct Box {private value: number}
+  Fun newBox(): Box
+    Return (construct Box value: 7)
+  Let box = (call newBox)
+  Print (field box value)

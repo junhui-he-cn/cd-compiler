@@ -25,6 +25,7 @@ struct TypeBinding {
 struct StructFieldType {
     Token name;
     TypeInfo type;
+    bool isPrivate = false;
 };
 
 struct StructTypeDecl {
@@ -32,6 +33,11 @@ struct StructTypeDecl {
     std::vector<StructFieldType> fields;
     std::vector<std::string> genericParameters;
     std::vector<std::shared_ptr<TypeInfo>> genericParameterConstraints;
+    bool hasPrivateFields = false;
+    // Snapshot-local ownership used by the checker to distinguish a local
+    // declaration from a type imported from another module.  It is never
+    // serialized into a module interface artifact.
+    std::optional<std::size_t> definingModuleId;
 };
 
 struct EnumVariantType {

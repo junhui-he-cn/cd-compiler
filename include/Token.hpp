@@ -61,6 +61,7 @@ enum class TokenType {
     Let,
     Match,
     Print,
+    Private,
     Return,
     Struct,
     While,

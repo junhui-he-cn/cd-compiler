@@ -1,0 +1,11 @@
+import "./private_struct_field_access_deps/lib.cd" as lib;
+
+let box = lib.newBox();
+match box {
+  lib.Box { value: hidden } => {
+    print hidden;
+  }
+  _ => {
+    print 0;
+  }
+}

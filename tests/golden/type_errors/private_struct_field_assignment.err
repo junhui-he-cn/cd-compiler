@@ -1,0 +1,3 @@
+Type error at <repo>/tests/golden/type_errors/private_struct_field_assignment.cd:4:5: struct `Box` has no accessible field `value`
+  box.value = 1;
+      ^
