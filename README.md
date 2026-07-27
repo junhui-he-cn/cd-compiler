@@ -674,6 +674,12 @@ diagnostics, formatting, document close, and shutdown:
 python3 tests/lsp_tests.py ./build/compiler_design
 ```
 
+The source-tracing debugger boundary has a focused integration test:
+
+```sh
+python3 tests/debugger_tests.py ./build/compiler_design vm-rs
+```
+
 The canonical report includes the expected boundary sequence for each case and
 reports the first failing boundary across tokens, AST, semantic diagnostics,
 IR, bytecode, `.cdbc`, Rust decoding, and VM output. The focused lexical
@@ -759,7 +765,15 @@ The interface output also reports exported enum variants and their payload types
 ./build/compiler_design --emit-bytecode program.cdbc examples/hello.cd
 cargo run --manifest-path vm-rs/Cargo.toml -- dump program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- run program.cdbc
+cargo run --manifest-path vm-rs/Cargo.toml -- trace program.cdbc
 ```
+
+`trace` executes the same linked artifact while emitting a deterministic source
+event stream. Events include function entry/exit, source-location changes,
+active call stacks, current-frame locals, printed/returned values, and runtime
+failure frames. It reuses the artifact's existing `debug_sources`,
+`debug_locations`, and `debug_ranges` metadata; program output is represented by
+`output` events and runtime diagnostics remain on stderr.
 
 For an import-aware graph, `--emit-module-bytecode` emits one independently
 validated `artifact: module` product per graph node. Rust links the product set

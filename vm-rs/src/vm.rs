@@ -7,6 +7,7 @@ use crate::runtime::{
 };
 use crate::value::Value;
 use std::cell::RefCell;
+use std::collections::BTreeMap;
 use std::fmt;
 use std::rc::Rc;
 
@@ -14,6 +15,46 @@ use std::rc::Rc;
 pub struct StackFrame {
     pub function: String,
     pub location: Option<DebugLocation>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TraceEventKind {
+    Enter,
+    Line,
+    Output,
+    Return,
+    Exit,
+    Error,
+}
+
+impl TraceEventKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Enter => "enter",
+            Self::Line => "line",
+            Self::Output => "output",
+            Self::Return => "return",
+            Self::Exit => "exit",
+            Self::Error => "error",
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TraceEvent {
+    pub sequence: usize,
+    pub kind: TraceEventKind,
+    pub function: String,
+    pub instruction: Option<usize>,
+    pub location: Option<DebugLocation>,
+    pub stack: Vec<StackFrame>,
+    pub locals: Vec<(String, String)>,
+    pub value: Option<String>,
+}
+
+pub struct TraceRun {
+    pub events: Vec<TraceEvent>,
+    pub result: Result<String, RuntimeError>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1337,6 +1378,10 @@ pub struct VM<'a> {
     next_array_identity: usize,
     next_map_identity: usize,
     next_struct_identity: usize,
+    trace_enabled: bool,
+    trace_events: Vec<TraceEvent>,
+    trace_stack: Vec<StackFrame>,
+    trace_last_locations: Vec<Option<DebugLocation>>,
 }
 
 impl<'a> VM<'a> {
@@ -1349,10 +1394,27 @@ impl<'a> VM<'a> {
             next_array_identity: 1,
             next_map_identity: 1,
             next_struct_identity: 1,
+            trace_enabled: false,
+            trace_events: Vec::new(),
+            trace_stack: Vec::new(),
+            trace_last_locations: Vec::new(),
         }
     }
 
     pub fn run(mut self) -> Result<String, RuntimeError> {
+        self.run_inner()
+    }
+
+    pub fn trace(mut self) -> TraceRun {
+        self.trace_enabled = true;
+        let result = self.run_inner();
+        TraceRun {
+            events: self.trace_events,
+            result,
+        }
+    }
+
+    fn run_inner(&mut self) -> Result<String, RuntimeError> {
         let mut frame = Frame {
             ip: 0,
             registers: vec![Value::Nil; self.program.main.registers],
@@ -1368,7 +1430,7 @@ impl<'a> VM<'a> {
             locations: self.program.main.locations.clone(),
         };
         match self.execute_body(&main, &mut frame) {
-            Ok(_) => Ok(self.output),
+            Ok(_) => Ok(std::mem::take(&mut self.output)),
             Err(mut error) => {
                 if error.sources.is_empty() {
                     error.sources = self.program.debug_sources.clone();
@@ -1384,8 +1446,12 @@ impl<'a> VM<'a> {
         frame: &mut Frame,
     ) -> Result<Option<Value>, RuntimeError> {
         frame.ip = 0;
+        self.trace_enter(frame, body.locations.first().cloned().flatten());
         while frame.ip < body.instructions.len() {
-            let instruction = &body.instructions[frame.ip];
+            let instruction_index = frame.ip;
+            let location = body.locations.get(instruction_index).cloned().flatten();
+            self.trace_instruction(frame, instruction_index, location);
+            let instruction = &body.instructions[instruction_index];
             let mut jumped = false;
             let result = (|| -> Result<Option<Value>, RuntimeError> {
                 match instruction {
@@ -1397,6 +1463,13 @@ impl<'a> VM<'a> {
                     let value = self.read_register(frame, *value)?;
                     self.output.push_str(&value.to_string());
                     self.output.push('\n');
+                    self.emit_trace(
+                        TraceEventKind::Output,
+                        frame,
+                        Some(instruction_index),
+                        body.locations.get(instruction_index).cloned().flatten(),
+                        Some(value.to_string()),
+                    );
                 }
                 Instruction::MakeFunction { dest, function } => {
                     let value = self.make_function(*function, frame)?;
@@ -1711,7 +1784,17 @@ impl<'a> VM<'a> {
                 Ok(None)
             })();
             match result {
-                Ok(Some(value)) => return Ok(Some(value)),
+                Ok(Some(value)) => {
+                    self.emit_trace(
+                        TraceEventKind::Return,
+                        frame,
+                        Some(instruction_index),
+                        body.locations.get(instruction_index).cloned().flatten(),
+                        Some(value.to_string()),
+                    );
+                    self.trace_leave(frame, Some(instruction_index), Some(value.to_string()));
+                    return Ok(Some(value));
+                }
                 Ok(None) => {
                     if !jumped {
                         frame.ip += 1;
@@ -1725,11 +1808,124 @@ impl<'a> VM<'a> {
                     if error.stack.is_empty() {
                         error.push_frame(frame.function.clone(), location);
                     }
+                    self.emit_trace(
+                        TraceEventKind::Error,
+                        frame,
+                        Some(instruction_index),
+                        body.locations.get(instruction_index).cloned().flatten(),
+                        Some(error.message.clone()),
+                    );
+                    self.trace_leave(frame, Some(instruction_index), None);
                     return Err(error);
                 }
             }
         }
+        self.trace_leave(frame, body.instructions.len().checked_sub(1), None);
         Ok(None)
+    }
+
+    fn trace_enter(&mut self, frame: &Frame, location: Option<DebugLocation>) {
+        if !self.trace_enabled {
+            return;
+        }
+        self.trace_stack.push(StackFrame {
+            function: frame.function.clone(),
+            location: location.clone(),
+        });
+        self.trace_last_locations.push(location.clone());
+        self.emit_trace(
+            TraceEventKind::Enter,
+            frame,
+            Some(0),
+            location,
+            None,
+        );
+    }
+
+    fn trace_instruction(
+        &mut self,
+        frame: &Frame,
+        instruction: usize,
+        location: Option<DebugLocation>,
+    ) {
+        if !self.trace_enabled {
+            return;
+        }
+        let changed = self
+            .trace_last_locations
+            .last()
+            .map(|last| *last != location)
+            .unwrap_or(true);
+        if let Some(last) = self.trace_last_locations.last_mut() {
+            *last = location.clone();
+        }
+        if let Some(active) = self.trace_stack.last_mut() {
+            active.location = location.clone();
+        }
+        if changed {
+            self.emit_trace(
+                TraceEventKind::Line,
+                frame,
+                Some(instruction),
+                location,
+                None,
+            );
+        }
+    }
+
+    fn trace_leave(&mut self, frame: &Frame, instruction: Option<usize>, value: Option<String>) {
+        if !self.trace_enabled {
+            return;
+        }
+        let location = self.trace_stack.last().and_then(|active| active.location.clone());
+        self.emit_trace(
+            TraceEventKind::Exit,
+            frame,
+            instruction,
+            location,
+            value,
+        );
+        self.trace_stack.pop();
+        self.trace_last_locations.pop();
+    }
+
+    fn emit_trace(
+        &mut self,
+        kind: TraceEventKind,
+        frame: &Frame,
+        instruction: Option<usize>,
+        location: Option<DebugLocation>,
+        value: Option<String>,
+    ) {
+        if !self.trace_enabled {
+            return;
+        }
+        self.trace_events.push(TraceEvent {
+            sequence: self.trace_events.len(),
+            kind,
+            function: frame.function.clone(),
+            instruction,
+            location,
+            stack: self.trace_stack.clone(),
+            locals: self.trace_locals(frame),
+            value,
+        });
+    }
+
+    fn trace_locals(&self, frame: &Frame) -> Vec<(String, String)> {
+        let mut locals = BTreeMap::new();
+        if frame.is_main {
+            for (name, cell) in self.globals.borrow().iter() {
+                locals.insert(name.clone(), cell.borrow().to_string());
+            }
+        }
+        for (name, cell) in frame.closure.borrow().iter() {
+            locals.insert(name.clone(), cell.borrow().to_string());
+        }
+        for (name, cell) in frame.locals.borrow().iter() {
+            locals.insert(name.clone(), cell.borrow().to_string());
+        }
+        locals.into_iter().collect()
     }
 
     fn capture_environment(&self, frame: &Frame) -> SharedEnvironment {

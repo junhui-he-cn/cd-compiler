@@ -5,6 +5,8 @@ mod runtime;
 mod value;
 mod vm;
 
+use crate::bytecode::{DebugLocation, Program};
+use std::collections::BTreeMap;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
@@ -15,8 +17,9 @@ Usage:\n\
   compiler-design-vm --help\n\
   compiler-design-vm dump <program.cdbc>\n\
   compiler-design-vm run <program.cdbc>\n\
+  compiler-design-vm trace <program.cdbc>\n\
   compiler-design-vm link <module-directory> <output.cdbc>\n\n\
-Current phase: .cdbc parsing, canonical dump, and bytecode execution are implemented.\n";
+Current phase: .cdbc parsing, canonical dump, bytecode execution, and source tracing are implemented.\n";
 
 fn help_text() -> &'static str {
     HELP
@@ -42,6 +45,122 @@ fn run(path: &str) -> Result<(), String> {
         .map_err(|error| error.to_string())?;
     print!("{}", output);
     Ok(())
+}
+
+fn trace_location(program: &Program, location: Option<&DebugLocation>) -> String {
+    let Some(location) = location else {
+        return "<unknown>".to_string();
+    };
+    let Some(source) = program.debug_sources.get(location.source) else {
+        return format!(
+            "<invalid-source:{}:{}:{}>",
+            location.source, location.line, location.column
+        );
+    };
+    format!("{}:{}:{}", source.path, location.line, location.column)
+}
+
+fn trace_quote(text: &str) -> String {
+    let mut quoted = String::from("\"");
+    for character in text.chars() {
+        match character {
+            '\\' => quoted.push_str("\\\\"),
+            '"' => quoted.push_str("\\\""),
+            '\n' => quoted.push_str("\\n"),
+            '\r' => quoted.push_str("\\r"),
+            '\t' => quoted.push_str("\\t"),
+            character => quoted.push(character),
+        }
+    }
+    quoted.push('"');
+    quoted
+}
+
+fn source_local_name(name: &str) -> String {
+    let Some((base, suffix)) = name.rsplit_once('#') else {
+        return name.to_string();
+    };
+    if !base.is_empty() && !suffix.is_empty() && suffix.chars().all(|character| character.is_ascii_digit()) {
+        base.to_string()
+    } else {
+        name.to_string()
+    }
+}
+
+fn format_trace_event(program: &Program, event: &vm::TraceEvent) -> String {
+    let location = trace_location(program, event.location.as_ref());
+    let stack = event
+        .stack
+        .iter()
+        .map(|frame| {
+            format!(
+                "{}@{}",
+                frame.function,
+                trace_location(program, frame.location.as_ref())
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(">");
+    let display_names = event
+        .locals
+        .iter()
+        .map(|(name, _)| source_local_name(name))
+        .collect::<Vec<_>>();
+    let mut name_counts = BTreeMap::new();
+    for name in &display_names {
+        *name_counts.entry(name.clone()).or_insert(0usize) += 1;
+    }
+    let locals = event
+        .locals
+        .iter()
+        .zip(display_names)
+        .map(|((raw_name, value), display_name)| {
+            let name = if name_counts.get(&display_name).copied().unwrap_or(0) > 1 {
+                raw_name
+            } else {
+                &display_name
+            };
+            format!("{}={}", name, trace_quote(value))
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+    let mut output = format!(
+        "trace {} kind={} function={} location={} stack={} locals={{{}}}",
+        event.sequence,
+        event.kind.as_str(),
+        event.function,
+        location,
+        stack,
+        locals,
+    );
+    if let Some(instruction) = event.instruction {
+        output.push_str(&format!(" instruction={}", instruction));
+    }
+    if let Some(range) = event
+        .location
+        .as_ref()
+        .and_then(|location| location.range.as_ref())
+    {
+        output.push_str(&format!(" range=s{}:{}:{}", range.source, range.start, range.end));
+    }
+    if let Some(value) = &event.value {
+        output.push_str(&format!(" value={}", trace_quote(value)));
+    }
+    output
+}
+
+fn trace(path: &str) -> Result<(), String> {
+    let source = fs::read_to_string(path)
+        .map_err(|error| format!("error: failed to read `{}`: {}", path, error))?;
+    let artifact = format::parse_artifact(&source).map_err(|error| format!("error: {}", error))?;
+    let format::Artifact::Program(program) = artifact else {
+        return Err("error: cannot trace an unlinked module artifact".to_string());
+    };
+    let traced = vm::VM::new(&program).trace();
+    for event in &traced.events {
+        println!("{}", format_trace_event(&program, event));
+    }
+    traced.result.map(|_| ()).map_err(|error| error.to_string())
 }
 
 fn link(directory: &str, output_path: &str) -> Result<(), String> {
@@ -121,6 +240,24 @@ fn main() {
                 process::exit(1);
             }
         }
+        Some("trace") => {
+            let Some(path) = args.next() else {
+                eprintln!("error: trace expects <program.cdbc>");
+                eprintln!();
+                eprint!("{}", help_text());
+                process::exit(64);
+            };
+            if args.next().is_some() {
+                eprintln!("error: trace expects exactly one input file");
+                eprintln!();
+                eprint!("{}", help_text());
+                process::exit(64);
+            }
+            if let Err(error) = trace(&path) {
+                eprintln!("{}", error);
+                process::exit(1);
+            }
+        }
         Some("link") => {
             let Some(directory) = args.next() else {
                 eprintln!("error: link expects <module-directory> <output.cdbc>");
@@ -163,9 +300,12 @@ mod tests {
         let help = help_text();
         assert!(help.contains("compiler-design-vm dump <program.cdbc>"));
         assert!(help.contains("compiler-design-vm run <program.cdbc>"));
+        assert!(help.contains("compiler-design-vm trace <program.cdbc>"));
         assert!(help.contains("compiler-design-vm link <module-directory> <output.cdbc>"));
         assert!(
-            help.contains(".cdbc parsing, canonical dump, and bytecode execution are implemented")
+            help.contains(
+                ".cdbc parsing, canonical dump, bytecode execution, and source tracing are implemented",
+            )
         );
     }
 }

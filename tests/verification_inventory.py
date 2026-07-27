@@ -79,6 +79,7 @@ CTEST_SOURCE_OVERRIDES = {
     "type_utils": ["tests/type_utils_tests.cpp"],
     "module_symbols": ["tests/module_symbols_tests.cpp"],
     "module_interface_emitter": ["tests/module_interface_emitter_tests.cpp"],
+    "debugger": ["tests/debugger_tests.py", "vm-rs"],
     "module_debug_metadata": ["tests/module_debug_metadata_tests.py"],
     "verification_inventory": ["tests/verification_inventory.py", "tests/verification_inventory.json"],
     "verification_runner_selftest": ["tests/run_verification_selftest.py"],
