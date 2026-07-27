@@ -45,10 +45,11 @@ The compiler pipeline includes:
   type information for known typed expressions and callable declarations,
   single-document rename edits and declaration completion, and open-document
   workspace symbols. File-backed open URIs are analyzed as a shared virtual
-  workspace; unqualified direct imports can navigate to declarations in other
-  opened modules, including explicit export-from forwarding. Closed imports,
-  namespace aliases, cross-module references/rename/completion, and
-  workspace-wide completion remain later slices.
+  workspace; unqualified direct imports and members selected through opened
+  namespace aliases can navigate to declarations in other modules, including
+  explicit export-from forwarding. Closed imports, namespace-qualified types
+  and variants, cross-module references/rename/completion, and workspace-wide
+  completion remain later slices.
 
 For example:
 

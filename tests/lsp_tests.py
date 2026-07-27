@@ -508,6 +508,47 @@ def main() -> int:
                 f"cross-module definition response mismatch: {imported_definition!r}"
             )
 
+        namespace_source = (
+            'import "./compiler-design-lsp-module.cd" as lib;\n'
+            "print lib.value;\n"
+        )
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didChange",
+                "params": {
+                    "textDocument": {"uri": uri, "version": 4},
+                    "contentChanges": [{"text": namespace_source}],
+                },
+            },
+        )
+        assert_publish(receive(process), uri, 0)
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 18,
+                "method": "textDocument/definition",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 1, "character": 11},
+                },
+            },
+        )
+        namespace_definition = receive(process)
+        if namespace_definition.get("result") != {
+            "uri": module_uri,
+            "range": {
+                "start": {"line": 0, "character": 4},
+                "end": {"line": 0, "character": 9},
+            },
+        }:
+            raise AssertionError(
+                f"namespace definition response mismatch: {namespace_definition!r}"
+            )
+
         send(
             process,
             {
@@ -534,7 +575,7 @@ def main() -> int:
                 "jsonrpc": "2.0",
                 "method": "textDocument/didChange",
                 "params": {
-                    "textDocument": {"uri": uri, "version": 4},
+                    "textDocument": {"uri": uri, "version": 5},
                     "contentChanges": [{"text": "let =;\n"}],
                 },
             },
@@ -549,7 +590,7 @@ def main() -> int:
                 "jsonrpc": "2.0",
                 "method": "textDocument/didChange",
                 "params": {
-                    "textDocument": {"uri": uri, "version": 5},
+                    "textDocument": {"uri": uri, "version": 6},
                     "contentChanges": [{"text": "print missing;\n"}],
                 },
             },

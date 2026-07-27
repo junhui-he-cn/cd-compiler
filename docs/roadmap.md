@@ -1363,6 +1363,17 @@ two open modules, clean diagnostics, and a direct-import definition jump. The
 decision is recorded in
 `docs/decisions/m5b-lsp-008.{md,json}`.
 
+`M5B-LSP-009` extends the same virtual workspace definition path to members
+selected through an opened namespace alias, such as `lib.value`. The
+reference-site collector records field-access ranges, and the LSP adapter
+distinguishes a namespace-alias receiver from an ordinary struct field before
+following the alias import through explicit exports or export-from chains.
+Namespace alias declarations still resolve locally, while namespace-qualified
+types, enum variants, cross-module references, rename, and completion remain
+later slices. The focused protocol test covers both unqualified direct-import
+and namespace-alias member definition locations. The decision is recorded in
+`docs/decisions/m5b-lsp-009.{md,json}`.
+
 ### Milestone 5C: REPL / incremental evaluation
 
 **Dependency:** M3A module/session boundaries, M3B incremental compilation where
@@ -1600,13 +1611,14 @@ retain the resolved top-level blank-line, parser-accepted trailing-comma,
 bounded list-wrapping, and incomplete-input rejection policies without changing
 language semantics. Source fallback and direct-input adapters remain
 intentional.
-The next active tool slice is cross-module navigation beyond direct imported
-values; M5B-LSP-001 through M5B-LSP-008 now cover the single-document
+The next active tool slice is cross-module navigation beyond namespace-alias
+members; M5B-LSP-001 through M5B-LSP-009 now cover the single-document
 protocol, diagnostics, formatting, definitions, document symbols, references,
 bounded hover type information, rename edits, declaration completion,
-open-document workspace symbols, virtual-source workspace analysis, and direct
-import definition jumps while namespace-aware navigation and workspace-aware
-completion remain open.
+open-document workspace symbols, virtual-source workspace analysis, direct
+import definition jumps, and namespace-alias member definition jumps while
+namespace-qualified type/variant navigation and workspace-aware completion
+remain open.
 
 ## Metrics dashboard
 

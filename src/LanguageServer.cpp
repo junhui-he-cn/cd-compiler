@@ -575,6 +575,7 @@ enum class ReferenceSiteKind {
     Variable,
     Assignment,
     CompoundAssignment,
+    FieldAccess,
 };
 
 struct ReferenceSite {
@@ -775,6 +776,7 @@ private:
             return;
         }
         if (const auto* field = dynamic_cast<const FieldAccessExpr*>(expression)) {
+            addReference(ReferenceSiteKind::FieldAccess, *field, field->name.range);
             visitExpression(field->object.get());
             return;
         }
@@ -1176,6 +1178,8 @@ std::optional<ResolvedSymbol> resolvedReference(
         }
         return std::nullopt;
     }
+    case ReferenceSiteKind::FieldAccess:
+        return std::nullopt;
     }
     return std::nullopt;
 }
@@ -1651,8 +1655,18 @@ std::optional<DefinitionTarget> importedDefinitionAt(
     }
 
     std::string name;
+    std::string namespaceAlias;
     for (const ReferenceSite& site : snapshot.referenceSites) {
         if (!site.range || !rangeContains(*site.range, sourceId, byte) || !site.expression) {
+            continue;
+        }
+        if (const auto* field = dynamic_cast<const FieldAccessExpr*>(site.expression)) {
+            const auto* receiver = dynamic_cast<const VariableExpr*>(field->object.get());
+            if (receiver) {
+                namespaceAlias = receiver->name.lexeme;
+                name = field->name.lexeme;
+                break;
+            }
             continue;
         }
         if (const auto* variable = dynamic_cast<const VariableExpr*>(site.expression)) {
@@ -1669,6 +1683,26 @@ std::optional<DefinitionTarget> importedDefinitionAt(
         }
     }
     if (name.empty()) {
+        return std::nullopt;
+    }
+
+    if (!namespaceAlias.empty()) {
+        for (const StmtPtr& statement : module->statements) {
+            const auto* import = dynamic_cast<const ImportStmt*>(statement.get());
+            if (!import || !import->alias
+                || import->alias->lexeme != namespaceAlias
+                || import->resolvedModuleId == static_cast<std::size_t>(-1)) {
+                continue;
+            }
+            std::unordered_set<std::size_t> visiting;
+            if (const std::optional<DefinitionTarget> target = exportedDefinition(
+                    snapshot,
+                    import->resolvedModuleId,
+                    name,
+                    visiting)) {
+                return target;
+            }
+        }
         return std::nullopt;
     }
 
