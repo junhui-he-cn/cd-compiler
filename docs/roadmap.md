@@ -77,11 +77,65 @@ being designed:
 
 ## Next active slice
 
+### M6-LANG-001: Static generic capability constraints
+
+**Status:** proposed next language slice. The direction is resolved in
+`docs/decisions/m6-language-library-contract-001.{md,json}`; implementation has
+not started on `master`.
+
+**Objective:** give generic functions, generic struct methods, and generic
+callbacks statically checkable `Eq`/`Ord`-style capabilities that can survive
+module interfaces and re-exports. The first slice is a compiler/language
+capability slice, not an implementation of a data structure library.
+
+**Deliverable:** fix the capability-bound surface (using the existing bound
+position such as `T: Eq` and `T: Ord` where possible), then implement its
+declaration, inference, explicit arguments, nested propagation, diagnostics,
+and public-interface representation. Preserve explicit
+`fun(T, T): bool` comparators as the runtime API shape and prove their type
+signature through local, imported, namespace-qualified, and re-exported calls.
+The capability model is compile-time only: no runtime trait objects,
+inheritance, overloading, or dynamic dispatch.
+
+**Migration:** reuse the existing generic type inference, function-value
+checking, named-struct methods, module graph, public interface emitter, `.cdi`
+validation, and module-product cache. Add language-only positive and negative
+fixtures for `Eq`/`Ord`-style constraints and comparator forwarding; do not add
+`Deque`, heap, list, tree, graph, sort, or set implementations as part of this
+slice. Keep `Hash`, recursive structs, and a separate integer type out of the
+implementation boundary.
+
+**Quantitative gate:** add independently named inventory cases for local generic
+constraints, inferred and explicit capability arguments, missing-capability
+diagnostics, generic callback/comparator forwarding, imported and re-exported
+interfaces, and C++/Rust artifact or module-interface parity where applicable.
+Regenerate the inventory after adding the corpus, then pass the focused golden,
+module-interface/module-cache, artifact, Rust VM, CTest, and `git diff --check`
+gates. The gate must show that the compiler accepts the intended language
+forms without requiring a concrete data-structure implementation.
+
+**Delete the old path when:** capability-constrained generic signatures are
+checked by one shared semantic path, their public shape is emitted and restored
+without duplicate ad-hoc checks, explicit comparator signatures remain stable
+across module boundaries, and no runtime dispatch fallback is needed.
+
+**Dependency:** current `master`, shipped generic functions/structs/enums,
+function values and callbacks, M3A public interfaces, and M3B `.cdi`/module
+cache validation.
+
+## Planned follow-up specifications
+
+These are ordered candidates after M6-LANG-001. They are not permission to
+start implementation before their decision records and focused inventories are
+written. In particular, the data-structure roadmap does not authorize adding
+concrete data-structure code to the compiler slice.
+
 ### M5D-DEBUG-002: Interactive breakpoints and stepping
 
-**Status:** proposed next slice. No implementation has started on `master`.
+**Status:** queued follow-up tool slice. It remains a valid independent
+direction, but it is not the next language implementation slice.
 
-**Objective:** turn the shipped one-shot trace event boundary into a small,
+**Purpose:** turn the shipped one-shot trace event boundary into a small,
 deterministic interactive debugger session without changing the language or
 the `cdbc 0.1` artifact.
 
@@ -110,12 +164,6 @@ metadata and VM event boundary, no debugger path guesses source locations, and
 the old one-shot trace behavior remains covered as a compatibility case.
 
 **Dependency:** current `master`, M4B debug metadata, and M5D-DEBUG-001.
-
-## Planned follow-up specifications
-
-These are ordered candidates after M5D-DEBUG-002. They are not permission to
-start implementation before their decision records and focused inventories are
-written.
 
 ### M5B-LSP-018: Closed-module workspace navigation
 
@@ -176,8 +224,12 @@ belongs in the baseline until that re-audit is merged and verified.
 ## Dependency order
 
 ```text
+master + shipped generic functions, callbacks, and module interfaces
+  -> M6-LANG-001 static generic capability constraints
+  -> language-enabled library specifications (no compiler-owned data structures)
+
 master + M5D-DEBUG-001
-  -> M5D-DEBUG-002 interactive debugger
+  -> M5D-DEBUG-002 interactive debugger (queued after the language slice)
 
 M1 semantic services + M3A graph/interfaces
   -> M5B-LSP-018 closed-module workspace navigation
@@ -192,9 +244,10 @@ feat/m5c-repl
   -> M5C-REPL-001 re-audit, outside the active queue for now
 ```
 
-Only M5D-DEBUG-002 is the next implementation slice. The other entries are
-sequenced specifications so a future development request has a clear scope;
-they do not reopen completed work.
+Only M6-LANG-001 is the next implementation slice. M5D-DEBUG-002 and the other
+entries are sequenced specifications so a future development request has a
+clear scope; they do not reopen completed work or authorize concrete data
+structure implementations in the compiler repository.
 
 ## Verification contract
 
@@ -203,13 +256,17 @@ Before every development slice, rebuild from the current checkout. A stale
 when the formatter corpus was run before rebuilding the merged private-field
 parser.
 
-Focused M5D-DEBUG-002 verification will use:
+Focused M6-LANG-001 verification will use the newly registered capability and
+module-interface cases, followed by:
 
 ```sh
 cmake -S . -B build
 cmake --build build
-python3 tests/debugger_tests.py ./build/compiler_design vm-rs
-ctest --test-dir build --output-on-failure -R '^(debugger|module_debug_metadata)$'
+python3 tests/verification_inventory.py --write
+python3 tests/run_golden_tests.py ./build/compiler_design
+python3 tests/bytecode_module_artifact_tests.py ./build/compiler_design vm-rs
+python3 tests/bytecode_module_cache_tests.py ./build/compiler_design vm-rs
+ctest --test-dir build --output-on-failure
 cargo test --manifest-path vm-rs/Cargo.toml
 git diff --check
 ```

@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m6-lang-001-2026-07-27-r1",
+  "baseline_commit": "608d856",
+  "decision_id": "M6-LANG-001",
+  "domain": "static-generic-capability-constraints",
+  "status": "resolved",
+  "implementation_status": "not_started",
+  "question": "What language capability should be developed next so generic library APIs can express ordering and equality without adding concrete data-structure implementations?",
+  "decision": "Add a compile-time-only generic capability model, initially focused on Eq and Ord style constraints, using the existing generic-bound position where practical. Preserve explicit fun(T, T): bool comparator values and validate their signatures through local, imported, namespace-qualified, and re-exported calls.",
+  "runtime_boundary": {
+    "representation": "unchanged",
+    "dispatch": "static only",
+    "trait_objects": false,
+    "inheritance": false,
+    "overloading": false,
+    "dynamic_dispatch": false,
+    "implicit_generic_less": false
+  },
+  "migration": {
+    "semantic_services": [
+      "generic inference",
+      "function-value checking",
+      "named-struct methods",
+      "module graph",
+      "public interface emitter",
+      ".cdi validation",
+      "module cache"
+    ],
+    "interface_rule": "Exported generic constraints are part of public interface shape and must validate on cache hits; the Rust VM has no runtime constraint representation unless a later decision adds runtime semantics.",
+    "direct_input_rule": "Direct single-file and ordered direct-multi-file compilation retain existing semantics.",
+    "corpus_boundary": "Language-only fixtures; no concrete data-structure implementation is part of M6."
+  },
+  "initial_capabilities": [
+    "Eq",
+    "Ord"
+  ],
+  "comparator_policy": "Explicit less: fun(T, T): bool remains supported and its signature must survive imports, namespace aliases, and re-exports.",
+  "quantitative_gate": [
+    "local capability declarations and calls",
+    "inferred and explicit capability arguments",
+    "missing-capability diagnostics",
+    "incompatible generic callback signatures",
+    "cross-module and re-exported comparator forwarding",
+    "public-interface and module-cache parity",
+    "C++ compiler and Rust VM parity where the changed boundary is exercised"
+  ],
+  "explicitly_deferred": [
+    "Hash protocol and generic hash containers",
+    "recursive structs and node references",
+    "separate integer type and arbitrary-precision integers",
+    "dynamic dispatch, inheritance, overloading, runtime trait objects, and static methods",
+    "library-specific test runner"
+  ]
+}
