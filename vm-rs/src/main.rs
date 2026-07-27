@@ -9,7 +9,7 @@ use crate::bytecode::{DebugLocation, Program};
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process;
 
 const HELP: &str = "compiler-design-vm 0.1.0\n\n\
@@ -25,21 +25,30 @@ fn help_text() -> &'static str {
     HELP
 }
 
-fn dump(path: &str) -> Result<(), String> {
+fn read_artifact(path: impl AsRef<Path>) -> Result<format::Artifact, String> {
+    let path = path.as_ref();
     let source = fs::read_to_string(path)
-        .map_err(|error| format!("error: failed to read `{}`: {}", path, error))?;
-    let artifact = format::parse_artifact(&source).map_err(|error| format!("error: {}", error))?;
+        .map_err(|error| format!("error: failed to read `{}`: {}", path.display(), error))?;
+    format::parse_artifact(&source).map_err(|error| format!("error: {}", error))
+}
+
+fn read_program(path: impl AsRef<Path>) -> Result<Program, String> {
+    match read_artifact(path)? {
+        format::Artifact::Program(program) => Ok(program),
+        format::Artifact::Module(_) => {
+            Err("error: cannot run an unlinked module artifact".to_string())
+        }
+    }
+}
+
+fn dump(path: &str) -> Result<(), String> {
+    let artifact = read_artifact(path)?;
     print!("{}", format::format_artifact(&artifact));
     Ok(())
 }
 
 fn run(path: &str) -> Result<(), String> {
-    let source = fs::read_to_string(path)
-        .map_err(|error| format!("error: failed to read `{}`: {}", path, error))?;
-    let artifact = format::parse_artifact(&source).map_err(|error| format!("error: {}", error))?;
-    let format::Artifact::Program(program) = artifact else {
-        return Err("error: cannot run an unlinked module artifact".to_string());
-    };
+    let program = read_program(path)?;
     let output = vm::VM::new(&program)
         .run()
         .map_err(|error| error.to_string())?;
@@ -150,12 +159,7 @@ fn format_trace_event(program: &Program, event: &vm::TraceEvent) -> String {
 }
 
 fn trace(path: &str) -> Result<(), String> {
-    let source = fs::read_to_string(path)
-        .map_err(|error| format!("error: failed to read `{}`: {}", path, error))?;
-    let artifact = format::parse_artifact(&source).map_err(|error| format!("error: {}", error))?;
-    let format::Artifact::Program(program) = artifact else {
-        return Err("error: cannot trace an unlinked module artifact".to_string());
-    };
+    let program = read_program(path)?;
     let traced = vm::VM::new(&program).trace();
     for event in &traced.events {
         println!("{}", format_trace_event(&program, event));
@@ -177,10 +181,7 @@ fn link(directory: &str, output_path: &str) -> Result<(), String> {
 
     let mut modules = Vec::new();
     for path in paths {
-        let source = fs::read_to_string(&path)
-            .map_err(|error| format!("error: failed to read `{}`: {}", path.display(), error))?;
-        let artifact = format::parse_artifact(&source)
-            .map_err(|error| format!("error: {}", error))?;
+        let artifact = read_artifact(&path)?;
         match artifact {
             format::Artifact::Module(module) => modules.push(module),
             format::Artifact::Program(_) => {

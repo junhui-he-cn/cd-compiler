@@ -39,70 +39,60 @@ function(compiler_design_apply_sanitizers target_name)
     endif()
 endfunction()
 
-add_executable(compiler_design
+function(compiler_design_configure_target target_name)
+    target_include_directories(${target_name} PRIVATE include)
+    compiler_design_apply_warnings(${target_name})
+    compiler_design_apply_sanitizers(${target_name})
+endfunction()
+
+set(COMPILER_DESIGN_FRONTEND_SOURCES
     src/Ast.cpp
-    src/Bytecode.cpp
-    src/BytecodeTextEmitter.cpp
-    src/BytecodeCompiler.cpp
     src/DeclarationIndex.cpp
     src/Diagnostic.cpp
-    src/FrontendSession.cpp
     src/FlowFacts.cpp
-    src/Formatter.cpp
-    src/IR.cpp
-    src/IRCompiler.cpp
-    src/LanguageServer.cpp
+    src/FrontendSession.cpp
     src/Lexer.cpp
     src/LosslessSource.cpp
     src/ModuleCache.cpp
     src/ModuleInterfaceArtifact.cpp
     src/ModuleSymbols.cpp
-    src/ModuleInterfaceEmitter.cpp
     src/NativeStdlib.cpp
     src/Parser.cpp
     src/SourceMap.cpp
     src/TypeChecker.cpp
     src/TypeUtils.cpp
     src/Value.cpp
-    src/main.cpp
 )
 
-target_include_directories(compiler_design PRIVATE include)
-compiler_design_apply_warnings(compiler_design)
-compiler_design_apply_sanitizers(compiler_design)
+set(COMPILER_DESIGN_IR_SOURCES
+    ${COMPILER_DESIGN_FRONTEND_SOURCES}
+    src/IR.cpp
+    src/IRCompiler.cpp
+)
+
+add_executable(compiler_design
+    ${COMPILER_DESIGN_IR_SOURCES}
+    src/Bytecode.cpp
+    src/BytecodeTextEmitter.cpp
+    src/BytecodeCompiler.cpp
+    src/Formatter.cpp
+    src/LanguageServer.cpp
+    src/ModuleInterfaceEmitter.cpp
+    src/main.cpp
+)
+compiler_design_configure_target(compiler_design)
 
 add_executable(source_map_tests
     tests/source_map_tests.cpp
     src/SourceMap.cpp
 )
-target_include_directories(source_map_tests PRIVATE include)
-compiler_design_apply_warnings(source_map_tests)
-compiler_design_apply_sanitizers(source_map_tests)
+compiler_design_configure_target(source_map_tests)
 
 add_executable(ir_source_location_tests
     tests/ir_source_location_tests.cpp
-    src/Ast.cpp
-    src/DeclarationIndex.cpp
-    src/Diagnostic.cpp
-    src/FlowFacts.cpp
-    src/FrontendSession.cpp
-    src/IR.cpp
-    src/IRCompiler.cpp
-    src/Lexer.cpp
-    src/LosslessSource.cpp
-    src/ModuleCache.cpp
-    src/ModuleInterfaceArtifact.cpp
-    src/ModuleSymbols.cpp
-    src/NativeStdlib.cpp
-    src/Parser.cpp
-    src/SourceMap.cpp
-    src/TypeChecker.cpp
-    src/TypeUtils.cpp
-    src/Value.cpp
+    ${COMPILER_DESIGN_IR_SOURCES}
 )
-target_include_directories(ir_source_location_tests PRIVATE include)
-compiler_design_apply_warnings(ir_source_location_tests)
-compiler_design_apply_sanitizers(ir_source_location_tests)
+compiler_design_configure_target(ir_source_location_tests)
 
 enable_testing()
 add_test(NAME source_map COMMAND source_map_tests)
@@ -211,24 +201,9 @@ add_test(
 
 add_executable(frontend_session_tests
     tests/frontend_session_tests.cpp
-    src/Ast.cpp
-    src/DeclarationIndex.cpp
-    src/Diagnostic.cpp
-    src/FlowFacts.cpp
-    src/FrontendSession.cpp
-    src/Lexer.cpp
-    src/LosslessSource.cpp
-    src/ModuleCache.cpp
-    src/ModuleInterfaceArtifact.cpp
-    src/ModuleSymbols.cpp
-    src/NativeStdlib.cpp
-    src/Parser.cpp
-    src/TypeChecker.cpp
-    src/TypeUtils.cpp
+    ${COMPILER_DESIGN_FRONTEND_SOURCES}
 )
-target_include_directories(frontend_session_tests PRIVATE include)
-compiler_design_apply_warnings(frontend_session_tests)
-compiler_design_apply_sanitizers(frontend_session_tests)
+compiler_design_configure_target(frontend_session_tests)
 add_test(NAME frontend_session COMMAND frontend_session_tests)
 
 add_executable(formatter_tests
@@ -241,9 +216,7 @@ add_executable(formatter_tests
     src/Parser.cpp
     src/SourceMap.cpp
 )
-target_include_directories(formatter_tests PRIVATE include)
-compiler_design_apply_warnings(formatter_tests)
-compiler_design_apply_sanitizers(formatter_tests)
+compiler_design_configure_target(formatter_tests)
 add_test(NAME formatter COMMAND formatter_tests)
 add_test(
     NAME formatter_cli
@@ -268,18 +241,14 @@ add_executable(flow_facts_tests
     src/FlowFacts.cpp
     src/TypeUtils.cpp
 )
-target_include_directories(flow_facts_tests PRIVATE include)
-compiler_design_apply_warnings(flow_facts_tests)
-compiler_design_apply_sanitizers(flow_facts_tests)
+compiler_design_configure_target(flow_facts_tests)
 add_test(NAME flow_facts COMMAND flow_facts_tests)
 
 add_executable(type_utils_tests
     tests/type_utils_tests.cpp
     src/TypeUtils.cpp
 )
-target_include_directories(type_utils_tests PRIVATE include)
-compiler_design_apply_warnings(type_utils_tests)
-compiler_design_apply_sanitizers(type_utils_tests)
+compiler_design_configure_target(type_utils_tests)
 add_test(NAME type_utils COMMAND type_utils_tests)
 
 add_executable(module_symbols_tests
@@ -287,9 +256,7 @@ add_executable(module_symbols_tests
     src/ModuleSymbols.cpp
     src/TypeUtils.cpp
 )
-target_include_directories(module_symbols_tests PRIVATE include)
-compiler_design_apply_warnings(module_symbols_tests)
-compiler_design_apply_sanitizers(module_symbols_tests)
+compiler_design_configure_target(module_symbols_tests)
 add_test(NAME module_symbols COMMAND module_symbols_tests)
 
 add_executable(module_interface_emitter_tests
@@ -297,9 +264,7 @@ add_executable(module_interface_emitter_tests
     src/ModuleInterfaceEmitter.cpp
     src/TypeUtils.cpp
 )
-target_include_directories(module_interface_emitter_tests PRIVATE include)
-compiler_design_apply_warnings(module_interface_emitter_tests)
-compiler_design_apply_sanitizers(module_interface_emitter_tests)
+compiler_design_configure_target(module_interface_emitter_tests)
 add_test(NAME module_interface_emitter COMMAND module_interface_emitter_tests)
 
 add_executable(bytecode_module_emitter_tests
@@ -308,9 +273,7 @@ add_executable(bytecode_module_emitter_tests
     src/BytecodeTextEmitter.cpp
     src/Value.cpp
 )
-target_include_directories(bytecode_module_emitter_tests PRIVATE include)
-compiler_design_apply_warnings(bytecode_module_emitter_tests)
-compiler_design_apply_sanitizers(bytecode_module_emitter_tests)
+compiler_design_configure_target(bytecode_module_emitter_tests)
 add_test(NAME bytecode_module_emitter COMMAND bytecode_module_emitter_tests)
 
 add_executable(module_cache_tests
@@ -318,9 +281,7 @@ add_executable(module_cache_tests
     src/ModuleCache.cpp
     src/ModuleInterfaceArtifact.cpp
 )
-target_include_directories(module_cache_tests PRIVATE include)
-compiler_design_apply_warnings(module_cache_tests)
-compiler_design_apply_sanitizers(module_cache_tests)
+compiler_design_configure_target(module_cache_tests)
 add_test(NAME module_cache COMMAND module_cache_tests)
 
 add_executable(module_interface_artifact_tests
@@ -329,9 +290,7 @@ add_executable(module_interface_artifact_tests
     src/ModuleCache.cpp
     src/TypeUtils.cpp
 )
-target_include_directories(module_interface_artifact_tests PRIVATE include)
-compiler_design_apply_warnings(module_interface_artifact_tests)
-compiler_design_apply_sanitizers(module_interface_artifact_tests)
+compiler_design_configure_target(module_interface_artifact_tests)
 add_test(NAME module_interface_artifact COMMAND module_interface_artifact_tests)
 
 set_tests_properties(
