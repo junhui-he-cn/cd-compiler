@@ -283,8 +283,15 @@ original source bytes, including comments, whitespace, and comment placement.
 
 The first formatter slice consumes this view through
 `formatLosslessSource()`. It copies token lexemes and line-comment text while
-normalizing whitespace and indentation. The CLI's `--format` mode parses with
-the production front end before formatting, so invalid input keeps the normal
-parser diagnostics; formatting does not enter type checking or backend
-lowering. Imported dependencies are parsed but only directly requested entry
-sources are emitted.
+normalizing whitespace and indentation, while retaining at most one blank line
+between top-level syntax items. Leading/trailing blank lines and blank lines
+inside nested delimiters are normalized. Parser-accepted trailing comma tokens
+are copied without insertion or removal. Comma-separated array and
+parenthesized lists wrap when their canonical inline estimate exceeds 100
+emitted source bytes; continuation lines add one indentation level, while long
+non-list expressions and strings/comments remain intact. The CLI's `--format`
+mode parses with the production front end before formatting, so invalid or
+incomplete input keeps the normal lexer/parser diagnostics and produces no
+partial output; formatting does not enter type checking or backend lowering.
+Imported dependencies are parsed but only directly requested entry sources are
+emitted.

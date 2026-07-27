@@ -27,15 +27,33 @@ The compiler pipeline includes:
 - AST printer: prints the parsed program in prefix form.
 - Formatter: `--format` prints a stable two-space layout from the production
   lossless token/trivia view. It accepts stdin or source files, preserves
-  string and line-comment text, and rejects invalid syntax with normal parser
-  diagnostics. Use `--format-indent-width N` to select another positive
-  indentation width. `--format-check` performs the same comparison without
-  rewriting or printing source and exits nonzero for noncanonical input.
+  string and line-comment text, retains at most one blank line between
+  top-level syntax items, preserves parser-accepted trailing commas, and
+  wraps over-wide comma-separated arrays and parenthesized lists at the
+  canonical 100-byte line width. Continuation lines use one extra indentation
+  level; long non-list expressions remain intact, and strings/comments are
+  never split. It rejects invalid or incomplete syntax with normal lexer/parser
+  diagnostics and emits no partial output. It does not insert or remove
+  trailing commas. Leading/trailing blank lines and blank lines inside nested
+  syntax are normalized. Use
+  `--format-indent-width N` to select another positive indentation width.
+  `--format-check` performs the same comparison without rewriting or printing
+  source and exits nonzero for noncanonical input.
+- Language server: `--lsp` starts a stdio JSON-RPC service with full-document
+  synchronization, shared lexer/parser/type diagnostics, and whole-document
+  formatting edits. The first service boundary is single-document and keeps
+  stdin's existing import restriction; it does not yet expose symbol queries.
 
 For example:
 
 ```sh
 printf 'let values={"a":1,"b":[2,3]};\n' | ./build/compiler_design --format
+```
+
+For an editor-compatible stdio session:
+
+```sh
+./build/compiler_design --lsp
 ```
 
 ## Language
@@ -608,6 +626,13 @@ fixture or CTest check, refresh it explicitly and validate the result:
 ```sh
 python3 tests/verification_inventory.py --write
 python3 tests/verification_inventory.py
+```
+
+The LSP protocol boundary has a focused test that exercises initialization,
+diagnostics, formatting, document close, and shutdown:
+
+```sh
+python3 tests/lsp_tests.py ./build/compiler_design
 ```
 
 The canonical report includes the expected boundary sequence for each case and

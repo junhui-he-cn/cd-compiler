@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m5a-2026-07-27-r8",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M5A-FORMAT-008",
+  "domain": "formatter-input-policy",
+  "status": "resolved",
+  "question": "Should the formatter emit output for invalid or incomplete source?",
+  "decision": "Reject invalid and incomplete input through the production lexer/parser before emitting output; never return a partially formatted prefix.",
+  "compatibility_boundary": {
+    "format_mode": "exit 1 with existing lexer/parser diagnostics and empty stdout",
+    "format_check_mode": "exit 1 with existing lexer/parser diagnostics and empty stdout",
+    "semantic_and_backend_stages": "not entered",
+    "editor_partial_documents": "out of scope"
+  },
+  "covered_inputs": [
+    "unterminated delimiters",
+    "unfinished statements",
+    "unterminated strings"
+  ],
+  "quantitative_gate": "CLI tests reject incomplete arrays, blocks, and strings in both formatter modes; the formatter C++ suite and 235-case corpus remain green.",
+  "out_of_scope": [
+    "partial-document formatting",
+    "parser recovery changes",
+    "editor protocol integration",
+    "automatic file rewriting"
+  ],
+  "verification": {
+    "focused_commands": [
+      "cmake --build build --target compiler_design formatter_tests",
+      "ctest --test-dir build --output-on-failure -R '^(formatter|formatter_cli|formatter_corpus)$'",
+      "python3 tests/formatter_corpus_tests.py ./build/compiler_design",
+      "git diff --check"
+    ]
+  }
+}

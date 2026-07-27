@@ -96,6 +96,83 @@ void test_formats_generic_calls_and_for_headers()
     assert(astFor(source) == astFor(formatted));
 }
 
+void test_preserves_top_level_blank_lines_only()
+{
+    const std::string source =
+        "\n\n"
+        "let first=1;\n\n\n"
+        "// between\n\n\n"
+        "let second=2;\n"
+        "if(true){\n"
+        "print 1;\n\n"
+        "print 2;\n"
+        "}\n\n\n"
+        "let third=3;\n\n";
+    const std::string formatted = formatLosslessSource(losslessViewFor(source));
+    const std::string expected =
+        "let first = 1;\n\n"
+        "// between\n\n"
+        "let second = 2;\n"
+        "if (true) {\n"
+        "  print 1;\n"
+        "  print 2;\n"
+        "}\n\n"
+        "let third = 3;\n";
+    assert(formatted == expected);
+    assert(formatLosslessSource(losslessViewFor(formatted)) == formatted);
+    assert(astFor(source) == astFor(formatted));
+}
+
+void test_preserves_supported_trailing_commas()
+{
+    const std::string source =
+        "enum Choice{First,Second,}\n"
+        "let value=match 1{1=>2,_=>0,};\n";
+    const std::string formatted = formatLosslessSource(losslessViewFor(source));
+    const std::string expected =
+        "enum Choice {\n"
+        "  First,\n"
+        "  Second,\n"
+        "}\n"
+        "let value = match 1 {\n"
+        "  1 => 2,\n"
+        "  _ => 0,\n"
+        "};\n";
+    assert(formatted == expected);
+    assert(formatLosslessSource(losslessViewFor(formatted)) == formatted);
+    assert(astFor(source) == astFor(formatted));
+}
+
+void test_wraps_long_delimited_lists()
+{
+    const std::string first = "123456789012345678901234567890123456789012345";
+    const std::string second = "234567890123456789012345678901234567890123456";
+    const std::string third = "345678901234567890123456789012345678901234567";
+    const std::string firstString = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const std::string secondString = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const std::string source =
+        "let values=[" + first + "," + second + "," + third + "];\n"
+        "let result=concat(\"" + firstString + "\",\"" + secondString + "\");\n"
+        "let expression=111111111111111111111111111111111111111111111111111111111111+222222222222222222222222222222222222222222222222222222222222;\n"
+        "let grouped=(111111111111111111111111111111111111111111111111111111111111+222222222222222222222222222222222222222222222222222222222222);\n";
+    const std::string formatted = formatLosslessSource(losslessViewFor(source));
+    const std::string expected =
+        "let values = [\n"
+        "  " + first + ",\n"
+        "  " + second + ",\n"
+        "  " + third + "\n"
+        "];\n"
+        "let result = concat(\n"
+        "  \"" + firstString + "\",\n"
+        "  \"" + secondString + "\"\n"
+        ");\n"
+        "let expression = 111111111111111111111111111111111111111111111111111111111111 + 222222222222222222222222222222222222222222222222222222222222;\n"
+        "let grouped = (111111111111111111111111111111111111111111111111111111111111 + 222222222222222222222222222222222222222222222222222222222222);\n";
+    assert(formatted == expected);
+    assert(formatLosslessSource(losslessViewFor(formatted)) == formatted);
+    assert(astFor(source) == astFor(formatted));
+}
+
 void test_empty_and_invalid_options()
 {
     assert(formatLosslessSource(losslessViewFor("")) == "");
@@ -114,6 +191,9 @@ int main()
 {
     test_formats_lossless_source_and_preserves_semantics();
     test_formats_generic_calls_and_for_headers();
+    test_preserves_top_level_blank_lines_only();
+    test_preserves_supported_trailing_commas();
+    test_wraps_long_delimited_lists();
     test_empty_and_invalid_options();
     return 0;
 }

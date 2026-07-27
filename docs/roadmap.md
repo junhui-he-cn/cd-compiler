@@ -1192,14 +1192,17 @@ from their unformatted forms.
 recovery, parser, or grammar code once all formatter inputs use the production
 lossless syntax path and the range/comment/idempotence gates pass.
 
-Current implementation slices `M5A-FORMAT-001` through `M5A-FORMAT-003` add
+Current implementation slices `M5A-FORMAT-001` through `M5A-FORMAT-008` add
 `Formatter`, the `--format` CLI mode, production lossless token/trivia
-consumption, the 235-case corpus gate, and configurable positive indentation
-width. The default layout remains stable and invalid input is rejected through
-the existing parser diagnostics. Line wrapping, trailing-comma policy,
-incomplete-input formatting, and further editor-facing options remain later
-M5A slices. The decisions and gates are recorded in
-`docs/decisions/m5a-formatter-001..003.{md,json}`.
+consumption, the 235-case corpus gate, configurable positive indentation width,
+read-only canonical checking, the top-level blank-line policy, the
+parser-accepted trailing-comma policy, and bounded 100-byte wrapping for
+comma-separated array and parenthesized lists, plus explicit rejection of
+invalid/incomplete input without partial output. The default two-space options
+remain stable and invalid input is rejected through the existing lexer/parser
+diagnostics. Further editor-facing options remain later M5A slices. The
+decisions and gates are recorded in
+`docs/decisions/m5a-formatter-001..008.{md,json}`.
 
 `M5A-FORMAT-002` now binds the formatter to all 235 successful golden source
 cases. The corpus gate checks exact comment retention, parseability,
@@ -1215,6 +1218,24 @@ Its decision is recorded in `docs/decisions/m5a-formatter-003.{md,json}`.
 and editor workflows; it reports noncanonical entry sources without rewriting
 them and preserves the default formatter output. Its decision is recorded in
 `docs/decisions/m5a-formatter-004.{md,json}`.
+
+`M5A-FORMAT-005` retains at most one source blank line between top-level syntax
+items, while leading/trailing blank lines and nested blank lines remain
+canonicalized. Its decision is recorded in
+`docs/decisions/m5a-formatter-005.{md,json}`.
+
+`M5A-FORMAT-006` preserves trailing comma tokens wherever the production parser
+accepts them and never inserts or removes those tokens. Its decision is
+recorded in `docs/decisions/m5a-formatter-006.{md,json}`.
+
+`M5A-FORMAT-007` wraps over-wide comma-separated array and parenthesized lists
+at a fixed 100-byte canonical width, with one extra indentation level for
+continuations. Long non-list expressions and strings/comments are not split.
+Its decision is recorded in `docs/decisions/m5a-formatter-007.{md,json}`.
+
+`M5A-FORMAT-008` rejects invalid and incomplete formatter input through the
+existing lexer/parser diagnostics, with no partial formatted output. Its
+decision is recorded in `docs/decisions/m5a-formatter-008.{md,json}`.
 
 ### Milestone 5B: Language Server
 
@@ -1239,6 +1260,19 @@ policy.
 **Old-path deletion condition:** remove editor-specific diagnostic and symbol
 resolution code when all supported LSP queries use shared semantic IDs and
 module interfaces.
+
+`M5B-LSP-001` implements the first protocol boundary: `compiler_design --lsp`
+speaks stdio JSON-RPC/LSP framing, advertises full-document synchronization and
+formatting, tracks open documents, publishes shared lexer/parser/type
+diagnostics on open and change, clears diagnostics on close, and returns a
+whole-document formatting edit from the production `Formatter`. The prototype
+is intentionally single-document in scope and uses the existing stdin source
+path, so imports retain their current rejection behavior. Symbol lookup,
+definition/references, type information, completion, module navigation, and
+incremental unchanged-module caching remain later M5B slices. The focused gate
+is `tests/lsp_tests.py` registered as the `language_server` CTest and inventory
+case; the full M5B quantitative gate is not claimed by this prototype. The
+decision is recorded in `docs/decisions/m5b-lsp-001.{md,json}`.
 
 ### Milestone 5C: REPL / incremental evaluation
 
@@ -1470,12 +1504,16 @@ M4B source/debug metadata ----------------------------> M5D debugger
 Keeping these schedules separate prevents one delayed tool from blocking the
 others. The module boundary and artifact/cache foundations are now complete
 through `M3B-BOUNDARY-001`. M5A formatter slices `M5A-FORMAT-001` through
-`M5A-FORMAT-003` are implemented: the CLI and reusable formatter consume the
+`M5A-FORMAT-008` are implemented: the CLI and reusable formatter consume the
 production lossless source view, preserve token and line-comment text, pass the
-235-case corpus gate, and expose indentation width without changing defaults.
-The next M5A slice should address another layout rule or an explicit
-formatting-policy decision; source fallback and direct-input adapters remain
+235-case corpus gate, expose indentation width and canonical checking, and
+retain the resolved top-level blank-line, parser-accepted trailing-comma,
+bounded list-wrapping, and incomplete-input rejection policies without changing
+language semantics. Source fallback and direct-input adapters remain
 intentional.
+The next active tool slice is `M5B-LSP-001`; its single-document protocol
+boundary is implemented while the broader symbol and module-query deliverable
+remains open.
 
 ## Metrics dashboard
 

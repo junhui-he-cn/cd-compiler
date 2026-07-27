@@ -70,6 +70,7 @@ CTEST_SOURCE_OVERRIDES = {
     "cli_multi_source": ["tests/cli_multi_source_tests.py"],
     "formatter_cli": ["tests/formatter_cli_tests.py"],
     "formatter_corpus": ["tests/formatter_corpus_tests.py"],
+    "language_server": ["tests/lsp_tests.py"],
     "golden": ["tests/run_golden_tests.py"],
     "bytecode_artifacts": ["tests/bytecode_artifact_tests.py"],
     "rust_vm": ["tests/run_rust_vm_tests.py", "vm-rs"],

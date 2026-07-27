@@ -51,6 +51,7 @@ add_executable(compiler_design
     src/Formatter.cpp
     src/IR.cpp
     src/IRCompiler.cpp
+    src/LanguageServer.cpp
     src/Lexer.cpp
     src/LosslessSource.cpp
     src/ModuleCache.cpp
@@ -247,6 +248,12 @@ add_test(
     NAME formatter_corpus
     COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
             ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/formatter_corpus_tests.py $<TARGET_FILE:compiler_design>
+)
+
+add_test(
+    NAME language_server
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
+            ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/lsp_tests.py $<TARGET_FILE:compiler_design>
 )
 
 add_executable(flow_facts_tests

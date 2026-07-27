@@ -97,6 +97,8 @@ This is a small C++17 Compiler Design front-end/interpreter project. It currentl
 - `include/BytecodeCompiler.hpp`, `src/BytecodeCompiler.cpp`: IR-to-bytecode lowering.
 - `vm-rs/src/vm.rs`, `vm-rs/src/value.rs`, `vm-rs/src/runtime.rs`: Rust `.cdbc` bytecode execution, runtime values, shared cells, closures, arrays, and structs.
 - `include/Value.hpp`, `src/Value.cpp`: runtime value representation and formatting.
+- `include/LanguageServer.hpp`, `src/LanguageServer.cpp`: stdio JSON-RPC/LSP
+  document synchronization, shared diagnostics, and formatting requests.
 - `src/main.cpp`: CLI modes and top-level error handling.
 - `docs/language-grammar.ebnf`: implemented grammar and precedence reference.
 - `tests/run_golden_tests.py`: golden test runner.
@@ -116,6 +118,7 @@ python3 tests/run_golden_tests_selftest.py
 python3 tests/bytecode_artifact_tests.py ./build/compiler_design vm-rs
 python3 tests/bytecode_module_artifact_tests.py ./build/compiler_design vm-rs
 python3 tests/bytecode_module_cache_tests.py ./build/compiler_design vm-rs
+python3 tests/lsp_tests.py ./build/compiler_design
 python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens
 cargo test --manifest-path vm-rs/Cargo.toml
 rm -rf tests/__pycache__
@@ -290,6 +293,7 @@ For file-backed lexer, parser, and type diagnostics in imported files and direct
 - A valid paired `.cdi` sidecar can preload an imported module's public interface and leave its dependency AST body empty; the dependency-order semantic scheduler consumes that interface without entering dependency body checking or lowering. For module-product emission, the sidecar must also match a valid `cdbc-cache 0.2` manifest record and paired product; otherwise source fallback or `--module-cache-strict` rejection applies. `--module-interface-cache` reads sidecars for interface-only source consumers, and `--module-cache` enables the stronger module-product boundary automatically. Interface-only consumers are strict by default; `--module-cache-fallback` explicitly restores source fallback for that mode. The default linked `--emit-bytecode` path rejects interface-only cache inputs because a sidecar cannot supply dependency bytecode bodies; use independent module products and Rust linking instead. Module-product emission retains source fallback and body checking for cold builds and repairs.
 - Future VM backend work targets the Rust `compiler-design-vm` project under `vm-rs/` and `.cdbc` artifacts.
 - The CLI accepts multiple input files for normal modes and `--emit-bytecode`; files are read in command-line order and compiled as one combined source. `--emit-module-bytecode <directory>` requires an import-aware graph and writes `module-<snapshot-id>.cdbc` products without recursively lowering dependency bodies. `--module-cache` and `--module-rebuild-report` are opt-in module-product cache/measurement options and require module emission; `--module-interface-cache` may preload a cache for normal source modes as well. `--module-cache-fallback` is restricted to interface-only cache consumers and is mutually exclusive with `--module-cache-strict`. If no input file is provided, source is read from stdin except bytecode emission modes, which require at least one file. Imported-file and direct multi-file front-end diagnostics report original file paths with file-local line/column; stdin and single-file pathless diagnostics remain pathless.
+- The additive `--lsp` mode runs a stdio JSON-RPC service with full-document open/change/close synchronization, shared lexer/parser/type diagnostics, and whole-document formatting edits. The first boundary is intentionally single-document in semantic scope and uses the existing stdin import restriction; symbol/navigation queries are not implemented yet.
 - Front-end source metadata also carries snapshot-local typed source, syntax,
   declaration/symbol, binding, and scope IDs plus source-local half-open byte
   ranges. These IDs are compatibility metadata for the current snapshot and

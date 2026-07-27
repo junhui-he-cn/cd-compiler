@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m5a-2026-07-27-r5",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M5A-FORMAT-005",
+  "domain": "formatter-layout",
+  "status": "resolved",
+  "question": "Which source blank lines belong in canonical formatter output?",
+  "decision": "Retain at most one blank line between top-level syntax items when the source gap contains at least two line breaks; normalize leading/trailing blank lines and blank lines inside nested delimiters.",
+  "layout": {
+    "top_level_blank_lines": "at most one source blank line between syntax items",
+    "leading_blank_lines": "discard",
+    "trailing_blank_lines": "discard",
+    "nested_blank_lines": "normalize using the existing delimiter layout",
+    "comments": "preserve exact text and source order; adjacent top-level blank gaps are retained"
+  },
+  "compatibility_boundary": {
+    "input": "production lex and parse",
+    "invalid_input": "existing diagnostics and exit status",
+    "semantic_and_backend_stages": "not entered",
+    "existing_cli_modes": "unchanged",
+    "default_indent_width": 2
+  },
+  "quantitative_gate": "Formatter C++ and CLI suites pass; the 235-case corpus remains parseable, idempotent, comment-stable, and AST/semantic-parity equivalent where applicable.",
+  "out_of_scope": [
+    "line-width wrapping",
+    "trailing-comma insertion or removal",
+    "incomplete-input formatting",
+    "automatic file rewriting",
+    "editor protocol integration"
+  ],
+  "verification": {
+    "focused_commands": [
+      "cmake --build build --target compiler_design formatter_tests",
+      "ctest --test-dir build --output-on-failure -R '^(formatter|formatter_cli|formatter_corpus)$'",
+      "python3 tests/formatter_corpus_tests.py ./build/compiler_design",
+      "git diff --check"
+    ]
+  }
+}

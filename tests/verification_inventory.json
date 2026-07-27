@@ -4062,6 +4062,27 @@
       "expected_files": []
     },
     {
+      "case_id": "ctest.language_server",
+      "runner": "ctest",
+      "result_name": "language_server",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "language_server"
+      ],
+      "backend": "python",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt",
+        "tests/lsp_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "ctest.lexer_recovery",
       "runner": "ctest",
       "result_name": "lexer_recovery",

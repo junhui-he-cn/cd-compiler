@@ -59,6 +59,67 @@ def main() -> int:
         print("canonical formatter check did not pass", file=sys.stderr)
         return 1
 
+    blank_lines = run(
+        compiler,
+        "--format",
+        source="\n\nlet first=1;\n\n\n// between\n\n\nlet second=2;\n",
+    )
+    blank_expected = "let first = 1;\n\n// between\n\nlet second = 2;\n"
+    if blank_lines.returncode != 0 or blank_lines.stdout != blank_expected or blank_lines.stderr:
+        print("top-level blank-line formatter result mismatch", file=sys.stderr)
+        print(blank_lines.stdout, file=sys.stderr)
+        print(blank_lines.stderr, file=sys.stderr)
+        return 1
+
+    trailing_commas = run(
+        compiler,
+        "--format",
+        source="enum Choice{First,Second,}\nlet value=match 1{1=>2,_=>0,};\n",
+    )
+    trailing_expected = (
+        "enum Choice {\n"
+        "  First,\n"
+        "  Second,\n"
+        "}\n"
+        "let value = match 1 {\n"
+        "  1 => 2,\n"
+        "  _ => 0,\n"
+        "};\n"
+    )
+    if trailing_commas.returncode != 0 or trailing_commas.stdout != trailing_expected or trailing_commas.stderr:
+        print("trailing-comma formatter result mismatch", file=sys.stderr)
+        print(trailing_commas.stdout, file=sys.stderr)
+        print(trailing_commas.stderr, file=sys.stderr)
+        return 1
+
+    long_list = run(
+        compiler,
+        "--format",
+        source=(
+            "let values=[123456789012345678901234567890123456789012345,"
+            "234567890123456789012345678901234567890123456,"
+            "345678901234567890123456789012345678901234567];\n"
+        ),
+    )
+    long_expected = (
+        "let values = [\n"
+        "  123456789012345678901234567890123456789012345,\n"
+        "  234567890123456789012345678901234567890123456,\n"
+        "  345678901234567890123456789012345678901234567\n"
+        "];\n"
+    )
+    if long_list.returncode != 0 or long_list.stdout != long_expected or long_list.stderr:
+        print("line-width formatter result mismatch", file=sys.stderr)
+        print(long_list.stdout, file=sys.stderr)
+        print(long_list.stderr, file=sys.stderr)
+        return 1
+    long_check = run(compiler, "--format-check", source=long_expected)
+    if long_check.returncode != 0 or long_check.stdout or long_check.stderr:
+        print("line-width canonical formatter check mismatch", file=sys.stderr)
+        print(long_check.stdout, file=sys.stderr)
+        print(long_check.stderr, file=sys.stderr)
+        return 1
+
     with tempfile.TemporaryDirectory(prefix="compiler_formatter_") as directory:
         root = Path(directory)
         entry = root / "entry.cd"
@@ -100,6 +161,30 @@ def main() -> int:
     invalid = run(compiler, "--format", source="let =;")
     if invalid.returncode != 1 or invalid.stdout or not invalid.stderr.startswith("Parse error"):
         print("invalid formatter input did not use parser diagnostics", file=sys.stderr)
+        return 1
+
+    incomplete_cases = (
+        ("let values=[1,2", "Parse error"),
+        ("if (true) {", "Parse error"),
+        ('let text="unfinished', "Lex error"),
+    )
+    for incomplete_source, diagnostic_prefix in incomplete_cases:
+        incomplete = run(compiler, "--format", source=incomplete_source)
+        if (
+            incomplete.returncode != 1
+            or incomplete.stdout
+            or not incomplete.stderr.startswith(diagnostic_prefix)
+        ):
+            print("incomplete formatter input was not rejected without output", file=sys.stderr)
+            print(incomplete.stdout, file=sys.stderr)
+            print(incomplete.stderr, file=sys.stderr)
+            return 1
+
+    incomplete_check = run(compiler, "--format-check", source="let values=[1,2")
+    if incomplete_check.returncode != 1 or incomplete_check.stdout or not incomplete_check.stderr.startswith("Parse error"):
+        print("incomplete formatter check did not use parser diagnostics", file=sys.stderr)
+        print(incomplete_check.stdout, file=sys.stderr)
+        print(incomplete_check.stderr, file=sys.stderr)
         return 1
 
     conflict = run(compiler, "--format", "--tokens", source="let x=1;")

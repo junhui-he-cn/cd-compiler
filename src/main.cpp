@@ -3,6 +3,7 @@
 #include "FrontendSession.hpp"
 #include "Formatter.hpp"
 #include "IRCompiler.hpp"
+#include "LanguageServer.hpp"
 #include "Lexer.hpp"
 #include "ModuleCache.hpp"
 #include "ModuleInterfaceArtifact.hpp"
@@ -28,6 +29,7 @@ void printUsage(const char* executable)
 {
     std::cerr << "Usage: " << executable << " [--tokens] [--ir] [--bytecode] [--module-interface] [-I dir] [--import-path dir] [file ...]\n"
               << "       " << executable << " [--format | --format-check] [--format-indent-width N] [-I dir] [--import-path dir] [file ...]\n"
+              << "       " << executable << " --lsp\n"
               << "       " << executable << " [--emit-bytecode output.cdbc] [-I dir] [--import-path dir] file [...]\n"
               << "       " << executable << " [--emit-module-bytecode output-directory] [--module-cache cache-directory] [--module-cache-strict] [--module-rebuild-report report.json] [-I dir] [--import-path dir] file [...]\n"
               << "       " << executable << " [--module-interface-cache cache-directory] [--module-cache-strict | --module-cache-fallback] [-I dir] [--import-path dir] file [...]\n"
@@ -427,6 +429,7 @@ int main(int argc, char** argv)
     bool showIr = false;
     bool showBytecode = false;
     bool showModuleInterface = false;
+    bool runLsp = false;
     bool showFormat = false;
     bool checkFormat = false;
     std::size_t formatIndentWidth = 2;
@@ -451,6 +454,8 @@ int main(int argc, char** argv)
             showBytecode = true;
         } else if (arg == "--module-interface") {
             showModuleInterface = true;
+        } else if (arg == "--lsp") {
+            runLsp = true;
         } else if (arg == "--format") {
             showFormat = true;
         } else if (arg == "--format-check") {
@@ -523,6 +528,34 @@ int main(int argc, char** argv)
             return 0;
         } else {
             inputPaths.push_back(arg);
+        }
+    }
+
+    if (runLsp) {
+        if (showTokens
+            || showIr
+            || showBytecode
+            || showModuleInterface
+            || showFormat
+            || checkFormat
+            || formatIndentWidthSpecified
+            || emitBytecodePath
+            || emitModuleBytecodePath
+            || moduleCachePath
+            || moduleInterfaceCachePath
+            || moduleRebuildReportPath
+            || moduleCacheStrict
+            || moduleCacheFallback
+            || !inputPaths.empty()
+            || !importSearchPaths.empty()) {
+            printUsage(argv[0]);
+            return 64;
+        }
+        try {
+            return runLanguageServer(std::cin, std::cout);
+        } catch (const std::exception& error) {
+            std::cerr << error.what() << '\n';
+            return 1;
         }
     }
 

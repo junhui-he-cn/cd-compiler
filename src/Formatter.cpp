@@ -21,7 +21,13 @@ enum class DelimiterKind {
 struct Delimiter {
     DelimiterKind kind;
     bool empty = false;
+    std::size_t baseIndent = 0;
+    bool wrapped = false;
 };
+
+// Line width is measured in emitted source bytes. Strings and comments are
+// never split; this width only decides whether a delimited comma list wraps.
+constexpr std::size_t kCanonicalLineWidth = 100;
 
 bool isKeyword(TokenType type)
 {
@@ -230,6 +236,7 @@ struct FormatterState {
     bool pendingLineBreak = false;
     bool pendingClose = false;
     bool sourceNewlineSinceLastItem = false;
+    bool sourceBlankLineSinceLastItem = false;
     bool inForHeader = false;
     std::vector<Delimiter> delimiters;
     std::optional<TokenType> previous;
@@ -274,6 +281,43 @@ struct FormatterState {
             output.push_back('\n');
         }
         lineStart = true;
+    }
+
+    void ensureBlankLine()
+    {
+        trimTrailingSpaces();
+        if (output.empty()) {
+            return;
+        }
+        if (!lineStart) {
+            output.push_back('\n');
+            lineStart = true;
+        }
+        output.push_back('\n');
+        lineStart = true;
+    }
+
+    std::size_t currentLineColumn() const
+    {
+        const std::size_t newline = output.find_last_of('\n');
+        return newline == std::string::npos
+            ? output.size()
+            : output.size() - newline - 1;
+    }
+
+    void wrapTopList()
+    {
+        if (delimiters.empty()) {
+            return;
+        }
+        Delimiter& delimiter = delimiters.back();
+        if (delimiter.kind != DelimiterKind::Parenthesis
+            && delimiter.kind != DelimiterKind::Bracket) {
+            return;
+        }
+        delimiter.wrapped = true;
+        newline();
+        indent = delimiter.baseIndent + 1;
     }
 
     void flushLineBreak()
@@ -327,6 +371,175 @@ bool canFollowClosingBraceOnSameLine(TokenType type)
         || type == TokenType::LeftParen
         || type == TokenType::LeftBracket
         || isBinaryOperator(type);
+}
+
+bool isListClosing(DelimiterKind kind, TokenType type)
+{
+    return (kind == DelimiterKind::Parenthesis && type == TokenType::RightParen)
+        || (kind == DelimiterKind::Bracket && type == TokenType::RightBracket);
+}
+
+std::size_t estimatedListContentWidth(
+    const std::vector<const Token*>& tokens,
+    const std::vector<bool>& genericAngles,
+    std::size_t openIndex,
+    DelimiterKind enclosing)
+{
+    int parenthesisDepth = 0;
+    int bracketDepth = 0;
+    int braceDepth = 0;
+    int angleDepth = 0;
+    std::size_t width = 0;
+
+    for (std::size_t index = openIndex + 1; index < tokens.size(); ++index) {
+        const TokenType type = tokens[index]->type;
+        const bool atEnclosingDepth = parenthesisDepth == 0
+            && bracketDepth == 0
+            && braceDepth == 0
+            && angleDepth == 0;
+        if (atEnclosingDepth && isListClosing(enclosing, type)) {
+            return width;
+        }
+
+        // Add a conservative separator allowance so operators and colons do
+        // not make a supposedly fitting list cross the canonical width.
+        width += tokens[index]->lexeme.size() + 2;
+        if (genericAngles[index] && type == TokenType::Less) {
+            ++angleDepth;
+        } else if (genericAngles[index] && type == TokenType::Greater) {
+            if (angleDepth > 0) {
+                --angleDepth;
+            }
+        } else {
+            switch (type) {
+            case TokenType::LeftParen:
+                ++parenthesisDepth;
+                break;
+            case TokenType::RightParen:
+                if (parenthesisDepth > 0) {
+                    --parenthesisDepth;
+                }
+                break;
+            case TokenType::LeftBracket:
+                ++bracketDepth;
+                break;
+            case TokenType::RightBracket:
+                if (bracketDepth > 0) {
+                    --bracketDepth;
+                }
+                break;
+            case TokenType::LeftBrace:
+                ++braceDepth;
+                break;
+            case TokenType::RightBrace:
+                if (braceDepth > 0) {
+                    --braceDepth;
+                }
+                break;
+            default:
+                break;
+            }
+        }
+    }
+    return width;
+}
+
+bool containsTopLevelListComma(
+    const std::vector<const Token*>& tokens,
+    const std::vector<bool>& genericAngles,
+    std::size_t openIndex,
+    DelimiterKind enclosing)
+{
+    int parenthesisDepth = 0;
+    int bracketDepth = 0;
+    int braceDepth = 0;
+    int angleDepth = 0;
+
+    for (std::size_t index = openIndex + 1; index < tokens.size(); ++index) {
+        const TokenType type = tokens[index]->type;
+        const bool atEnclosingDepth = parenthesisDepth == 0
+            && bracketDepth == 0
+            && braceDepth == 0
+            && angleDepth == 0;
+        if (atEnclosingDepth) {
+            if (type == TokenType::Comma) {
+                return true;
+            }
+            if (isListClosing(enclosing, type)) {
+                return false;
+            }
+        }
+
+        if (genericAngles[index] && type == TokenType::Less) {
+            ++angleDepth;
+        } else if (genericAngles[index] && type == TokenType::Greater) {
+            if (angleDepth > 0) {
+                --angleDepth;
+            }
+        } else {
+            switch (type) {
+            case TokenType::LeftParen:
+                ++parenthesisDepth;
+                break;
+            case TokenType::RightParen:
+                if (parenthesisDepth > 0) {
+                    --parenthesisDepth;
+                }
+                break;
+            case TokenType::LeftBracket:
+                ++bracketDepth;
+                break;
+            case TokenType::RightBracket:
+                if (bracketDepth > 0) {
+                    --bracketDepth;
+                }
+                break;
+            case TokenType::LeftBrace:
+                ++braceDepth;
+                break;
+            case TokenType::RightBrace:
+                if (braceDepth > 0) {
+                    --braceDepth;
+                }
+                break;
+            default:
+                break;
+            }
+        }
+    }
+    return false;
+}
+
+bool shouldWrapListAtOpen(
+    const FormatterState& state,
+    const std::vector<const Token*>& tokens,
+    const std::vector<bool>& genericAngles,
+    std::size_t tokenIndex,
+    DelimiterKind kind)
+{
+    if (!containsTopLevelListComma(tokens, genericAngles, tokenIndex, kind)) {
+        return false;
+    }
+    const std::size_t contentWidth = estimatedListContentWidth(
+        tokens,
+        genericAngles,
+        tokenIndex,
+        kind);
+    return contentWidth > 0
+        && state.currentLineColumn() + 1 + contentWidth > kCanonicalLineWidth;
+}
+
+bool shouldWrapAfterComma(const FormatterState& state)
+{
+    if (state.delimiters.empty()) {
+        return false;
+    }
+    const Delimiter& delimiter = state.delimiters.back();
+    if (delimiter.kind != DelimiterKind::Parenthesis
+        && delimiter.kind != DelimiterKind::Bracket) {
+        return false;
+    }
+    return delimiter.wrapped;
 }
 
 bool shouldSpaceBeforeLeftParen(TokenType previous)
@@ -426,16 +639,34 @@ void popDelimiter(FormatterState& state, DelimiterKind kind)
 
 void flushBeforeToken(FormatterState& state, TokenType current)
 {
+    const bool preserveTopLevelBlankLine = state.sourceBlankLineSinceLastItem
+        && state.delimiters.empty();
+    bool blankLineHandled = false;
+
     if (state.pendingLineBreak) {
         state.newline();
         state.pendingLineBreak = false;
+        if (preserveTopLevelBlankLine) {
+            state.ensureBlankLine();
+            blankLineHandled = true;
+        }
     }
 
     if (state.pendingClose) {
         if (!canFollowClosingBraceOnSameLine(current) && !state.lineStart) {
-            state.newline();
+            if (preserveTopLevelBlankLine) {
+                state.ensureBlankLine();
+                blankLineHandled = true;
+            } else {
+                state.newline();
+            }
         }
         state.pendingClose = false;
+    }
+
+    if (!state.pendingLineBreak && !state.pendingClose
+        && !blankLineHandled && preserveTopLevelBlankLine && state.lineStart) {
+        state.ensureBlankLine();
     }
 }
 
@@ -477,20 +708,72 @@ void emitToken(
     switch (token.type) {
     case TokenType::LeftParen:
         state.writeRaw(token.lexeme);
-        state.delimiters.push_back(Delimiter{DelimiterKind::Parenthesis, false});
+        state.delimiters.push_back(Delimiter{
+            DelimiterKind::Parenthesis,
+            false,
+            state.indent,
+            false});
+        if (shouldWrapListAtOpen(
+                state,
+                tokens,
+                genericAngles,
+                tokenIndex,
+                DelimiterKind::Parenthesis)) {
+            state.wrapTopList();
+        }
         break;
-    case TokenType::RightParen:
+    case TokenType::RightParen: {
+        bool wrapped = false;
+        std::size_t baseIndent = state.indent;
+        if (!state.delimiters.empty()
+            && state.delimiters.back().kind == DelimiterKind::Parenthesis) {
+            wrapped = state.delimiters.back().wrapped;
+            baseIndent = state.delimiters.back().baseIndent;
+        }
+        if (wrapped) {
+            if (!state.lineStart) {
+                state.newline();
+            }
+            state.indent = baseIndent;
+        }
         state.writeRaw(token.lexeme);
         popDelimiter(state, DelimiterKind::Parenthesis);
         break;
+    }
     case TokenType::LeftBracket:
         state.writeRaw(token.lexeme);
-        state.delimiters.push_back(Delimiter{DelimiterKind::Bracket, false});
+        state.delimiters.push_back(Delimiter{
+            DelimiterKind::Bracket,
+            false,
+            state.indent,
+            false});
+        if (shouldWrapListAtOpen(
+                state,
+                tokens,
+                genericAngles,
+                tokenIndex,
+                DelimiterKind::Bracket)) {
+            state.wrapTopList();
+        }
         break;
-    case TokenType::RightBracket:
+    case TokenType::RightBracket: {
+        bool wrapped = false;
+        std::size_t baseIndent = state.indent;
+        if (!state.delimiters.empty()
+            && state.delimiters.back().kind == DelimiterKind::Bracket) {
+            wrapped = state.delimiters.back().wrapped;
+            baseIndent = state.delimiters.back().baseIndent;
+        }
+        if (wrapped) {
+            if (!state.lineStart) {
+                state.newline();
+            }
+            state.indent = baseIndent;
+        }
         state.writeRaw(token.lexeme);
         popDelimiter(state, DelimiterKind::Bracket);
         break;
+    }
     case TokenType::LeftBrace: {
         bool hasComment = false;
         for (std::size_t pieceIndex = currentPieceIndex + 1;
@@ -543,6 +826,8 @@ void emitToken(
         state.writeRaw(token.lexeme);
         if (state.hasTopDelimiter(DelimiterKind::Brace)) {
             state.pendingLineBreak = true;
+        } else if (shouldWrapAfterComma(state)) {
+            state.wrapTopList();
         } else {
             state.space();
         }
@@ -615,6 +900,16 @@ void emitToken(
     }
     state.previous = token.type;
     state.sourceNewlineSinceLastItem = false;
+    state.sourceBlankLineSinceLastItem = false;
+}
+
+} // namespace
+
+namespace {
+
+std::size_t countLineBreaks(std::string_view text)
+{
+    return static_cast<std::size_t>(std::count(text.begin(), text.end(), '\n'));
 }
 
 } // namespace
@@ -661,6 +956,9 @@ std::string formatLosslessSource(const LosslessSourceFileView& source, Formatter
         const LosslessPiece& piece = pieces[pieceIndex];
         if (piece.isTrivia()) {
             if (piece.triviaKind && *piece.triviaKind == TriviaKind::LineComment) {
+                if (state.sourceBlankLineSinceLastItem && state.delimiters.empty()) {
+                    state.ensureBlankLine();
+                }
                 if (state.pendingLineBreak) {
                     if (state.sourceNewlineSinceLastItem) {
                         state.newline();
@@ -683,8 +981,12 @@ std::string formatLosslessSource(const LosslessSourceFileView& source, Formatter
                 state.writeRaw(piece.text);
                 state.newline();
                 state.sourceNewlineSinceLastItem = false;
+                state.sourceBlankLineSinceLastItem = false;
             } else if (piece.text.find('\n') != std::string::npos) {
                 state.sourceNewlineSinceLastItem = true;
+                if (state.delimiters.empty() && countLineBreaks(piece.text) >= 2) {
+                    state.sourceBlankLineSinceLastItem = true;
+                }
             }
             continue;
         }
