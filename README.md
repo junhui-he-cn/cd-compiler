@@ -25,6 +25,18 @@ The compiler pipeline includes:
 - Rust VM: executes emitted `.cdbc` bytecode artifacts via `compiler-design-vm`.
 - Bytecode compiler: lowers register IR into a bytecode program and `.cdbc` artifacts for the Rust VM.
 - AST printer: prints the parsed program in prefix form.
+- Formatter: `--format` prints a stable two-space layout from the production
+  lossless token/trivia view. It accepts stdin or source files, preserves
+  string and line-comment text, and rejects invalid syntax with normal parser
+  diagnostics. Use `--format-indent-width N` to select another positive
+  indentation width. `--format-check` performs the same comparison without
+  rewriting or printing source and exits nonzero for noncanonical input.
+
+For example:
+
+```sh
+printf 'let values={"a":1,"b":[2,3]};\n' | ./build/compiler_design --format
+```
 
 ## Language
 

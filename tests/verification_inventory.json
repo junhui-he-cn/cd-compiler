@@ -3916,6 +3916,68 @@
       "expected_files": []
     },
     {
+      "case_id": "ctest.formatter",
+      "runner": "ctest",
+      "result_name": "formatter",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "formatter"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "ctest.formatter_cli",
+      "runner": "ctest",
+      "result_name": "formatter_cli",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "formatter_cli"
+      ],
+      "backend": "python",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt",
+        "tests/formatter_cli_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "ctest.formatter_corpus",
+      "runner": "ctest",
+      "result_name": "formatter_corpus",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "formatter_corpus"
+      ],
+      "backend": "python",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt",
+        "tests/formatter_corpus_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "ctest.frontend_session",
       "runner": "ctest",
       "result_name": "frontend_session",

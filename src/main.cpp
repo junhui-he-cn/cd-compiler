@@ -1,6 +1,7 @@
 #include "BytecodeCompiler.hpp"
 #include "BytecodeTextEmitter.hpp"
 #include "FrontendSession.hpp"
+#include "Formatter.hpp"
 #include "IRCompiler.hpp"
 #include "Lexer.hpp"
 #include "ModuleCache.hpp"
@@ -26,6 +27,7 @@ namespace {
 void printUsage(const char* executable)
 {
     std::cerr << "Usage: " << executable << " [--tokens] [--ir] [--bytecode] [--module-interface] [-I dir] [--import-path dir] [file ...]\n"
+              << "       " << executable << " [--format | --format-check] [--format-indent-width N] [-I dir] [--import-path dir] [file ...]\n"
               << "       " << executable << " [--emit-bytecode output.cdbc] [-I dir] [--import-path dir] file [...]\n"
               << "       " << executable << " [--emit-module-bytecode output-directory] [--module-cache cache-directory] [--module-cache-strict] [--module-rebuild-report report.json] [-I dir] [--import-path dir] file [...]\n"
               << "       " << executable << " [--module-interface-cache cache-directory] [--module-cache-strict | --module-cache-fallback] [-I dir] [--import-path dir] file [...]\n"
@@ -425,6 +427,10 @@ int main(int argc, char** argv)
     bool showIr = false;
     bool showBytecode = false;
     bool showModuleInterface = false;
+    bool showFormat = false;
+    bool checkFormat = false;
+    std::size_t formatIndentWidth = 2;
+    bool formatIndentWidthSpecified = false;
     std::optional<std::string> emitBytecodePath;
     std::optional<std::string> emitModuleBytecodePath;
     std::optional<std::string> moduleCachePath;
@@ -445,6 +451,30 @@ int main(int argc, char** argv)
             showBytecode = true;
         } else if (arg == "--module-interface") {
             showModuleInterface = true;
+        } else if (arg == "--format") {
+            showFormat = true;
+        } else if (arg == "--format-check") {
+            checkFormat = true;
+        } else if (arg == "--format-indent-width") {
+            if (i + 1 >= argc) {
+                printUsage(argv[0]);
+                return 64;
+            }
+            const std::string widthText = argv[++i];
+            try {
+                std::size_t parsedCharacters = 0;
+                const unsigned long long parsed = std::stoull(widthText, &parsedCharacters);
+                if (parsedCharacters != widthText.size()
+                    || parsed == 0
+                    || parsed > std::numeric_limits<std::size_t>::max()) {
+                    throw std::invalid_argument("invalid formatter indentation width");
+                }
+                formatIndentWidth = static_cast<std::size_t>(parsed);
+                formatIndentWidthSpecified = true;
+            } catch (const std::exception&) {
+                std::cerr << "--format-indent-width requires a positive integer\n";
+                return 64;
+            }
         } else if (arg == "-I" || arg == "--import-path") {
             if (i + 1 >= argc) {
                 printUsage(argv[0]);
@@ -501,6 +531,33 @@ int main(int argc, char** argv)
         return 64;
     }
 
+    const bool formatMode = showFormat || checkFormat;
+    if (showFormat && checkFormat) {
+        printUsage(argv[0]);
+        return 64;
+    }
+
+    if (formatMode
+        && (showTokens
+            || showIr
+            || showBytecode
+            || showModuleInterface
+            || emitBytecodePath
+            || emitModuleBytecodePath
+            || moduleCachePath
+            || moduleInterfaceCachePath
+            || moduleRebuildReportPath
+            || moduleCacheStrict
+            || moduleCacheFallback)) {
+        printUsage(argv[0]);
+        return 64;
+    }
+
+    if (formatIndentWidthSpecified && !formatMode) {
+        std::cerr << "--format-indent-width requires --format or --format-check\n";
+        return 64;
+    }
+
     if (moduleCacheFallback && !moduleInterfaceCachePath) {
         std::cerr << "--module-cache-fallback requires --module-interface-cache\n";
         return 64;
@@ -525,6 +582,7 @@ int main(int argc, char** argv)
     if (emitBytecodePath || emitModuleBytecodePath || moduleCachePath || moduleInterfaceCachePath
         || moduleRebuildReportPath || moduleCacheStrict || moduleCacheFallback) {
         if (inputPaths.empty()
+            || formatMode
             || showTokens
             || showIr
             || showBytecode
@@ -564,6 +622,50 @@ int main(int argc, char** argv)
         Program program = inputPaths.empty()
             ? frontend.loadStdin(std::cin)
             : frontend.loadFiles(inputPaths);
+
+        if (formatMode) {
+            const LosslessSourceView view = frontend.losslessSourceView();
+            std::vector<SourceFileId> outputSourceIds;
+            if (program.moduleGraph) {
+                for (const ModuleGraphNode& node : program.moduleGraph->nodes) {
+                    if (node.isEntry) {
+                        outputSourceIds.push_back(node.sourceId);
+                    }
+                }
+            } else {
+                for (const SourceFile& source : program.sources) {
+                    outputSourceIds.push_back(source.id);
+                }
+            }
+
+            bool emittedSource = false;
+            bool formatCheckFailed = false;
+            for (const SourceFileId sourceId : outputSourceIds) {
+                const auto source = std::find_if(
+                    program.sources.begin(),
+                    program.sources.end(),
+                    [sourceId](const SourceFile& candidate) { return candidate.id == sourceId; });
+                if (source == program.sources.end()) {
+                    throw std::runtime_error("internal error: formatter source ID is not present");
+                }
+                const std::string formatted = formatLosslessSource(
+                    view.file(sourceId),
+                    FormatterOptions{formatIndentWidth});
+                if (checkFormat) {
+                    if (formatted != source->text) {
+                        std::cerr << "format check failed: " << source->path << '\n';
+                        formatCheckFailed = true;
+                    }
+                    continue;
+                }
+                if (emittedSource) {
+                    std::cout << '\n';
+                }
+                emittedSource = true;
+                std::cout << formatted;
+            }
+            return formatCheckFailed ? 1 : 0;
+        }
 
         if (showTokens) {
             for (const Token& token : frontend.displayTokens()) {

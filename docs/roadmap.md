@@ -1192,6 +1192,30 @@ from their unformatted forms.
 recovery, parser, or grammar code once all formatter inputs use the production
 lossless syntax path and the range/comment/idempotence gates pass.
 
+Current implementation slices `M5A-FORMAT-001` through `M5A-FORMAT-003` add
+`Formatter`, the `--format` CLI mode, production lossless token/trivia
+consumption, the 235-case corpus gate, and configurable positive indentation
+width. The default layout remains stable and invalid input is rejected through
+the existing parser diagnostics. Line wrapping, trailing-comma policy,
+incomplete-input formatting, and further editor-facing options remain later
+M5A slices. The decisions and gates are recorded in
+`docs/decisions/m5a-formatter-001..003.{md,json}`.
+
+`M5A-FORMAT-002` now binds the formatter to all 235 successful golden source
+cases. The corpus gate checks exact comment retention, parseability,
+idempotence, and AST/semantic parity for non-import cases while retaining
+relative import directory context for import cases. Its decision is recorded
+in `docs/decisions/m5a-formatter-002.{md,json}`.
+
+`M5A-FORMAT-003` exposes positive indentation-width selection while preserving
+the default two-space output and rejecting formatter options in other modes.
+Its decision is recorded in `docs/decisions/m5a-formatter-003.{md,json}`.
+
+`M5A-FORMAT-004` adds the read-only `--format-check` comparison mode for CI
+and editor workflows; it reports noncanonical entry sources without rewriting
+them and preserves the default formatter output. Its decision is recorded in
+`docs/decisions/m5a-formatter-004.{md,json}`.
+
 ### Milestone 5B: Language Server
 
 **Dependency:** M1 semantic identities and M3A module graph; M2 diagnostics make
@@ -1445,8 +1469,13 @@ M4B source/debug metadata ----------------------------> M5D debugger
 
 Keeping these schedules separate prevents one delayed tool from blocking the
 others. The module boundary and artifact/cache foundations are now complete
-through `M3B-BOUNDARY-001`; the next independent implementation slice is M5A
-formatter, while source fallback and direct-input adapters remain intentional.
+through `M3B-BOUNDARY-001`. M5A formatter slices `M5A-FORMAT-001` through
+`M5A-FORMAT-003` are implemented: the CLI and reusable formatter consume the
+production lossless source view, preserve token and line-comment text, pass the
+235-case corpus gate, and expose indentation width without changing defaults.
+The next M5A slice should address another layout rule or an explicit
+formatting-policy decision; source fallback and direct-input adapters remain
+intentional.
 
 ## Metrics dashboard
 

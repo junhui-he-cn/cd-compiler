@@ -68,6 +68,8 @@ CTEST_SOURCE_OVERRIDES = {
     "cmake_config": ["tests/cmake_config_tests.py"],
     "ci_workflow": ["tests/ci_workflow_tests.py", ".github/workflows/ci.yml"],
     "cli_multi_source": ["tests/cli_multi_source_tests.py"],
+    "formatter_cli": ["tests/formatter_cli_tests.py"],
+    "formatter_corpus": ["tests/formatter_corpus_tests.py"],
     "golden": ["tests/run_golden_tests.py"],
     "bytecode_artifacts": ["tests/bytecode_artifact_tests.py"],
     "rust_vm": ["tests/run_rust_vm_tests.py", "vm-rs"],

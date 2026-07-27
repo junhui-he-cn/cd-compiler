@@ -280,3 +280,11 @@ are classified from those already-known gaps, while their bytes and all other
 trivia are copied directly from `SourceFile::text`. No second lexer or parser
 grammar is involved. Concatenating a file view's pieces reproduces the exact
 original source bytes, including comments, whitespace, and comment placement.
+
+The first formatter slice consumes this view through
+`formatLosslessSource()`. It copies token lexemes and line-comment text while
+normalizing whitespace and indentation. The CLI's `--format` mode parses with
+the production front end before formatting, so invalid input keeps the normal
+parser diagnostics; formatting does not enter type checking or backend
+lowering. Imported dependencies are parsed but only directly requested entry
+sources are emitted.

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m5a-2026-07-27-r2",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M5A-FORMAT-002",
+  "domain": "formatter-verification",
+  "status": "resolved",
+  "question": "Which existing source corpus proves formatter idempotence, comment retention, and semantic parity?",
+  "decision": "Bind the first formatter gate to all 235 successful golden source cases; compare AST/semantic output for non-import cases and preserve import directory context for syntax/idempotence checks.",
+  "corpus": {
+    "success_cases": 235,
+    "error_cases": "existing parser/type/import/runtime suites",
+    "comment_check": "string-aware exact text and source order",
+    "idempotence": "format(format(source)) equals format(source)",
+    "semantic_parity": "AST/semantic stdout equality for non-import cases",
+    "import_context": "temporary sibling source file"
+  },
+  "quantitative_gate": "tests/formatter_corpus_tests.py passes 235/235 cases with zero comment, parse, idempotence, or non-import AST/semantic mismatches; formatter CTest entries are present in the verification inventory.",
+  "out_of_scope": [
+    "formatting parser/type/import/runtime error fixtures",
+    "relocated import AST path comparison",
+    "invalid or incomplete input formatting",
+    "source rewriting"
+  ],
+  "verification": {
+    "focused_commands": [
+      "cmake --build build --target compiler_design",
+      "ctest --test-dir build --output-on-failure -R '^formatter'",
+      "python3 tests/formatter_corpus_tests.py ./build/compiler_design",
+      "python3 tests/verification_inventory.py --write",
+      "git diff --check"
+    ]
+  }
+}

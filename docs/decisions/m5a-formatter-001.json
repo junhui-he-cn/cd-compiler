@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m5a-2026-07-27-r1",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M5A-FORMAT-001",
+  "domain": "formatter",
+  "status": "resolved",
+  "question": "What is the first production formatter boundary and how does it consume source trivia?",
+  "decision": "Expose --format and formatLosslessSource() over the production LosslessSourceFileView; normalize whitespace and layout while copying token lexemes, strings, and line-comment text without a second lexer or grammar.",
+  "layout": {
+    "indent_width": 2,
+    "non_empty_braces": "multiline",
+    "arrays_and_delimited_lists": "inline",
+    "final_newline": "one when output is non-empty",
+    "comments": "exact text and source order; inline versus leading placement follows the source line break"
+  },
+  "compatibility_boundary": {
+    "input": "production lex and parse",
+    "invalid_input": "existing diagnostics and exit status",
+    "semantic_and_backend_stages": "not entered",
+    "imports": "parse dependencies but emit directly requested entry sources",
+    "existing_modes": "unchanged"
+  },
+  "quantitative_gate": "Formatter C++ and CLI suites pass; formatted output is idempotent, reparses, retains comments exactly once in order, and has the same AST output for the named corpus; both suites are registered in the canonical verification inventory.",
+  "old_path_deletion_condition": "Do not add formatter-specific tokenization, trivia recovery, parser, or grammar code; any temporary path can be deleted only after the complete M5A corpus uses the production lossless view and all range/comment/parse/semantic/idempotence gates pass.",
+  "out_of_scope": [
+    "invalid or incomplete input formatting",
+    "line-width wrapping",
+    "configuration files",
+    "doc comments",
+    "LSP formatting requests",
+    "error-fixture formatter corpus"
+  ],
+  "verification": {
+    "focused_commands": [
+      "cmake --build build --target compiler_design formatter_tests",
+      "ctest --test-dir build --output-on-failure -R '^(formatter|formatter_cli)$'",
+      "python3 tests/verification_inventory.py --write",
+      "git diff --check"
+    ]
+  }
+}

@@ -48,6 +48,7 @@ add_executable(compiler_design
     src/Diagnostic.cpp
     src/FrontendSession.cpp
     src/FlowFacts.cpp
+    src/Formatter.cpp
     src/IR.cpp
     src/IRCompiler.cpp
     src/Lexer.cpp
@@ -223,6 +224,31 @@ compiler_design_apply_warnings(frontend_session_tests)
 compiler_design_apply_sanitizers(frontend_session_tests)
 add_test(NAME frontend_session COMMAND frontend_session_tests)
 
+add_executable(formatter_tests
+    tests/formatter_tests.cpp
+    src/Ast.cpp
+    src/Diagnostic.cpp
+    src/Formatter.cpp
+    src/Lexer.cpp
+    src/LosslessSource.cpp
+    src/Parser.cpp
+    src/SourceMap.cpp
+)
+target_include_directories(formatter_tests PRIVATE include)
+compiler_design_apply_warnings(formatter_tests)
+compiler_design_apply_sanitizers(formatter_tests)
+add_test(NAME formatter COMMAND formatter_tests)
+add_test(
+    NAME formatter_cli
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
+            ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/formatter_cli_tests.py $<TARGET_FILE:compiler_design>
+)
+add_test(
+    NAME formatter_corpus
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
+            ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/formatter_corpus_tests.py $<TARGET_FILE:compiler_design>
+)
+
 add_executable(flow_facts_tests
     tests/flow_facts_tests.cpp
     src/Ast.cpp
@@ -297,6 +323,8 @@ add_test(NAME module_interface_artifact COMMAND module_interface_artifact_tests)
 
 set_tests_properties(
     cli_multi_source
+    formatter_cli
+    formatter_corpus
     golden
     bytecode_artifacts
     bytecode_module_artifacts
