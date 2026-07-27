@@ -91,3 +91,9 @@ let values = [3, 1, 3, 2];
 print ds.reverseArray(values);
 print ds.linearSearch(values, 2);
 print ds.countValue(values, 3);
+
+fun ascendingValues(left: number, right: number): bool {
+  return left < right;
+}
+
+print ds.sortArray(values, ascendingValues);

@@ -5,7 +5,8 @@ Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 `Queue<T>`, `Deque<T>`, `BinaryHeap<T>`, and `PriorityQueue<T>` types, plus the
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
 `Set<T>` and `MultiSet<T>` types. It also provides an array-backed
-`MultiMap<K, V>` for one-to-many mappings and basic generic array algorithms.
+`MultiMap<K, V>` for one-to-many mappings and basic generic array algorithms,
+including comparator-based insertion sort.
 
 The planned structure and algorithm inventory, implementation constraints, and
 staged delivery order are documented in
@@ -86,6 +87,12 @@ let values = [3, 1, 3, 2];
 print ds.reverseArray(values);
 print ds.linearSearch(values, 2);
 print ds.countValue(values, 3);
+
+fun ascending(left: number, right: number): bool {
+  return left < right;
+}
+
+print ds.sortArray(values, ascending);
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -256,6 +263,14 @@ return arrays:
 explicit type argument, such as `reverseArray<number>([])`, because they carry
 no element from which to infer `T`.
 
+`sortArray<T>(values, less)` returns a stable insertion-sorted shallow copy;
+`sortArrayInPlace<T>(values, less)` applies the same stable insertion sort to
+the supplied array. Both take `fun(T, T): bool`, where `less(left, right)` means
+that `left` should appear first. Sorting is `O(n^2)`; the copying version uses
+`O(n)` additional outer-array space and the in-place version uses `O(1)` extra
+space. Neither function requires a total-order check beyond the comparator's
+behavior.
+
 ## Current language limitation
 
 The language's builtin member-call sugar reserves names such as `push`, `pop`,
@@ -284,5 +299,6 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_result`, `--case data_structures_list`,
 `--case data_structures_set`, `--case data_structures_multiset`, or
 `--case data_structures_multimap`, or `--case array_algorithms_basic` for a
-focused run, or `--update` only when an intentional compiler-output change
-requires refreshing library fixtures' `ast.out` files.
+focused run, or `--case array_algorithms_sort` for a sorting-focused run, or
+`--update` only when an intentional compiler-output change requires refreshing
+library fixtures' `ast.out` files.

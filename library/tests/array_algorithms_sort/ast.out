@@ -506,36 +506,20 @@ Program
     Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace
   Module 1 entry
     Import "../../data_structures.cd" as ds
-    Let deque = (member-call ds newDeque<number>)
-    Print (member-call deque peekFront)
-    Print (member-call deque peekBack)
-    Print (member-call deque takeFront)
-    Expr (member-call deque addBack 2)
-    Expr (member-call deque addFront 1)
-    Expr (member-call deque addBack 3)
-    Expr (member-call deque addFront 0)
-    Let alias = deque
-    Expr (member-call alias addBack 4)
-    Print (member-call deque snapshot)
-    Print (member-call deque size)
-    Print (member-call deque peekFront)
-    Print (member-call deque peekBack)
-    Print (member-call deque takeFront)
-    Print (member-call deque takeBack)
-    Let snapshot = (member-call deque snapshot)
-    Expr (member-call snapshot push 99)
-    Print (member-call deque snapshot)
-    Print snapshot
-    Let strings = (member-call ds newDeque<string>)
-    Expr (member-call strings addBack "a")
-    Expr (member-call strings addBack "b")
-    Print (member-call strings takeFront)
-    Print (member-call strings peekBack)
-    Print (member-call strings takeBack)
-    Print (member-call strings isEmpty)
-    Let frontOnly = (member-call ds newDeque<number>)
-    Expr (member-call frontOnly addFront 1)
-    Expr (member-call frontOnly addFront 2)
-    Print (member-call frontOnly takeBack)
-    Print (member-call frontOnly takeFront)
-    Print (member-call frontOnly isEmpty)
+    Fun ascending(left: number, right: number): bool
+      Return (< left right)
+    Fun descending(left: number, right: number): bool
+      Return (> left right)
+    Let numbers = (array 4 1 3 1 2)
+    Let sorted = (member-call ds sortArray numbers ascending)
+    Print sorted
+    Print numbers
+    Expr (member-call sorted push 99)
+    Print numbers
+    Print sorted
+    Expr (member-call ds sortArrayInPlace numbers descending)
+    Print numbers
+    Let empty: [number] = (array)
+    Print (member-call ds sortArray empty ascending)
+    Expr (member-call ds sortArrayInPlace empty descending)
+    Print empty

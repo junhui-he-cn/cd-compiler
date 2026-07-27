@@ -628,6 +628,26 @@ fun countValue<T>(values: [T], target: T): number {
   return count;
 }
 
+fun sortArrayInPlace<T>(values: [T], less: fun(T, T): bool) {
+  let index = 1;
+  while (index < values.len()) {
+    let value = values[index];
+    let position = index;
+    while (position > 0 && less(value, values[position - 1])) {
+      values[position] = values[position - 1];
+      position -= 1;
+    }
+    values[position] = value;
+    index += 1;
+  }
+}
+
+fun sortArray<T>(values: [T], less: fun(T, T): bool): [T] {
+  let result = copy(values);
+  sortArrayInPlace(result, less);
+  return result;
+}
+
 struct PriorityQueue<T> {
   heap: BinaryHeap<T>
 }
@@ -662,4 +682,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, countValue;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, countValue, sortArray, sortArrayInPlace;

@@ -469,6 +469,24 @@ Program
                   Expr (+= count 1)
             Expr (+= index 1)
       Return count
+    Fun sortArrayInPlace<T>(values: [T], less: fun(T, T): bool)
+      Let index = 1
+      While (group (< index (member-call values len)))
+        Body
+          Block
+            Let value = (index values index)
+            Let position = index
+            While (group (&& (> position 0) (call less value (index values (- position 1)))))
+              Body
+                Block
+                  Expr (= (index values position) (index values (- position 1)))
+                  Expr (-= position 1)
+            Expr (= (index values position) value)
+            Expr (+= index 1)
+    Fun sortArray<T>(values: [T], less: fun(T, T): bool): [T]
+      Let result = (call copy values)
+      Expr (call sortArrayInPlace result less)
+      Return result
     Struct PriorityQueue<T> {heap: BinaryHeap<T>}
     Impl PriorityQueue<T>
       Method enqueue(value: T)
@@ -485,7 +503,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let numbers = (array 4 1 4 2)
