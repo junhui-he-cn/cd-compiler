@@ -99,4 +99,102 @@ fun newQueue<T>(): Queue<T> {
   return Queue<T> { items: [], head: 0 };
 }
 
-export Stack, Queue, newStack, newQueue;
+// A deque stores the front half in reverse order and the back half in forward
+// order. Moving one side to the other happens only when that side is empty,
+// so each element moves at most once between transfers.
+struct Deque<T> {
+  frontItems: [T],
+  backItems: [T]
+}
+
+impl Deque<T> {
+  fun addFront(value: T) {
+    this.frontItems.push(value);
+  }
+
+  fun addBack(value: T) {
+    this.backItems.push(value);
+  }
+
+  fun shiftBackToFront() {
+    while (this.backItems.len() > 0) {
+      this.frontItems.push(this.backItems.pop());
+    }
+  }
+
+  fun shiftFrontToBack() {
+    while (this.frontItems.len() > 0) {
+      this.backItems.push(this.frontItems.pop());
+    }
+  }
+
+  fun takeFront(): T? {
+    if (this.frontItems.len() == 0) {
+      if (this.backItems.len() == 0) {
+        return nil;
+      }
+      this.shiftBackToFront();
+    }
+    return this.frontItems.pop();
+  }
+
+  fun takeBack(): T? {
+    if (this.backItems.len() == 0) {
+      if (this.frontItems.len() == 0) {
+        return nil;
+      }
+      this.shiftFrontToBack();
+    }
+    return this.backItems.pop();
+  }
+
+  fun peekFront(): T? {
+    if (this.frontItems.len() == 0) {
+      if (this.backItems.len() == 0) {
+        return nil;
+      }
+      this.shiftBackToFront();
+    }
+    return this.frontItems[this.frontItems.len() - 1];
+  }
+
+  fun peekBack(): T? {
+    if (this.backItems.len() == 0) {
+      if (this.frontItems.len() == 0) {
+        return nil;
+      }
+      this.shiftFrontToBack();
+    }
+    return this.backItems[this.backItems.len() - 1];
+  }
+
+  fun size(): number {
+    return this.frontItems.len() + this.backItems.len();
+  }
+
+  fun isEmpty(): bool {
+    return this.frontItems.len() == 0 && this.backItems.len() == 0;
+  }
+
+  fun snapshot(): [T] {
+    let values: [T] = [];
+    let frontIndex = this.frontItems.len();
+    while (frontIndex > 0) {
+      frontIndex -= 1;
+      values.push(this.frontItems[frontIndex]);
+    }
+
+    let backIndex = 0;
+    while (backIndex < this.backItems.len()) {
+      values.push(this.backItems[backIndex]);
+      backIndex += 1;
+    }
+    return values;
+  }
+}
+
+fun newDeque<T>(): Deque<T> {
+  return Deque<T> { frontItems: [], backItems: [] };
+}
+
+export Stack, Queue, Deque, newStack, newQueue, newDeque;

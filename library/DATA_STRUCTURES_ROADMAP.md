@@ -31,6 +31,7 @@
 
 - `Stack<T>`：数组后端，使用 `add`、`take`、`top` 等方法；
 - `Queue<T>`：数组后端，带惰性头指针和周期性压缩。
+- `Deque<T>`：双数组栈后端，提供两端插入、删除、查看和快照。
 
 它们的现有 API 和示例继续作为兼容基线。后续新增 API 不应悄悄改变空值、
 快照或引用共享语义。
@@ -132,7 +133,7 @@ enum Result<T, E> {
 | 动态数组/向量 `Vector<T>` | 现有能力 | 直接使用 `[T]`，提供少量约定性辅助函数 | 不重复包装语言内置数组 |
 | 栈 `Stack<T>` | 现有 | `add`、`take`、`top`、`size`、`isEmpty`、`snapshot` | 数组后端，`take/top` 为 `O(1)` |
 | 队列 `Queue<T>` | 现有 | `enqueue`、`dequeue`、`front`、`size`、`isEmpty`、`snapshot` | 头指针 + 周期压缩，操作摊销 `O(1)` |
-| 双端队列 `Deque<T>` | 第一批 | `addFront`、`addBack`、`takeFront`、`takeBack`、`peekFront`、`peekBack` | 环形数组或双数组；两端操作摊销 `O(1)` |
+| 双端队列 `Deque<T>` | 现有（S1） | `addFront`、`addBack`、`takeFront`、`takeBack`、`peekFront`、`peekBack` | 双数组栈；两端操作摊销 `O(1)` |
 | 环形缓冲区 `RingBuffer<T>` | 第一批/待定 | 固定容量、`write`、`read`、`peek`、`isFull` | 复用 `Deque` 思路；必须先确定满时拒绝还是覆盖 |
 | 不可变链表 `List<T>` | 受限实现 | `empty`、`prepend`、`head`、`tail`、`reverse`、`toArray` | 递归泛型枚举，持久化/共享尾部 |
 | 单向链表 | 后续 | 插入、删除、反转、合并、快慢指针 | 等待递归结构体/引用节点方案，或改为索引节点 |
@@ -359,7 +360,11 @@ enum Result<T, E> {
 
 ### S1：线性容器基础
 
-实现 `Deque<T>`、`BinaryHeap<T>`/`PriorityQueue<T>`、`Option<T>`、
+已完成 `Deque<T>`：使用前端反向数组和后端正向数组；库级 fixture 位于
+`library/tests/data_structures_deque`，由
+`library/tests/run_tests.py` 独立运行，复用现有 golden/Rust VM 检查接口。
+
+后续实现 `BinaryHeap<T>`/`PriorityQueue<T>`、`Option<T>`、
 `Result<T,E>` 和递归枚举版 `List<T>`。这是后续 BFS、调度、排序和树算法
 共同依赖的最小集合。
 
@@ -398,6 +403,7 @@ library/
   README.md
   DATA_STRUCTURES_ROADMAP.md
   data_structures.cd          # 兼容入口/公共导出
+  tests/                      # 独立库 fixture 和 runner
   sequence.cd                 # Deque、List、数组序列辅助
   heap.cd                     # BinaryHeap、PriorityQueue
   collections.cd              # Set、MultiSet、MultiMap、频率表
@@ -427,6 +433,9 @@ examples/
 - 有 API README、源代码注释和一个可复制的 import 示例；
 - 对排序、堆、图和区间树记录复杂度；
 - 每个公开函数的参数/返回类型稳定后再加入入口模块的 `export`。
+
+库 fixture 使用现有项目测试接口但不放入 `tests/golden` 或
+`tests/bytecode_artifacts`；根项目测试和库测试必须分别执行。
 
 ## 9. 需要确认或可以提交 issue 的问题
 

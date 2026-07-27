@@ -1,0 +1,172 @@
+Program
+  Module 0
+    Struct Stack<T> {items: [T]}
+    Impl Stack<T>
+      Method add(value: T)
+        Expr (member-call (field this items) push value)
+      Method take(): T?
+        If (group (== (member-call (field this items) len) 0))
+          Then
+            Block
+              Return nil
+        Return (member-call (field this items) pop)
+      Method top(): T?
+        If (group (== (member-call (field this items) len) 0))
+          Then
+            Block
+              Return nil
+        Return (index (field this items) (- (member-call (field this items) len) 1))
+      Method size(): number
+        Return (member-call (field this items) len)
+      Method isEmpty(): bool
+        Return (== (member-call (field this items) len) 0)
+      Method snapshot(): [T]
+        Return (call copy (field this items))
+    Fun newStack<T>(): Stack<T>
+      Return (construct Stack<T> items: (array))
+    Struct Queue<T> {items: [T], head: number}
+    Impl Queue<T>
+      Method enqueue(value: T)
+        Expr (member-call (field this items) push value)
+      Method compact()
+        If (group (&& (> (field this head) 0) (>= (* (field this head) 2) (member-call (field this items) len))))
+          Then
+            Block
+              Expr (= (field this items) (member-call (field this items) slice (field this head) (- (member-call (field this items) len) (field this head))))
+              Expr (= (field this head) 0)
+      Method dequeue(): T?
+        If (group (>= (field this head) (member-call (field this items) len)))
+          Then
+            Block
+              Return nil
+        Let value = (index (field this items) (field this head))
+        Expr (+= (field this head) 1)
+        Expr (member-call this compact)
+        Return value
+      Method front(): T?
+        If (group (>= (field this head) (member-call (field this items) len)))
+          Then
+            Block
+              Return nil
+        Return (index (field this items) (field this head))
+      Method size(): number
+        Return (- (member-call (field this items) len) (field this head))
+      Method isEmpty(): bool
+        Return (>= (field this head) (member-call (field this items) len))
+      Method snapshot(): [T]
+        Return (member-call (field this items) slice (field this head) (- (member-call (field this items) len) (field this head)))
+    Fun newQueue<T>(): Queue<T>
+      Return (construct Queue<T> items: (array) head: 0)
+    Struct Deque<T> {frontItems: [T], backItems: [T]}
+    Impl Deque<T>
+      Method addFront(value: T)
+        Expr (member-call (field this frontItems) push value)
+      Method addBack(value: T)
+        Expr (member-call (field this backItems) push value)
+      Method shiftBackToFront()
+        While (group (> (member-call (field this backItems) len) 0))
+          Body
+            Block
+              Expr (member-call (field this frontItems) push (member-call (field this backItems) pop))
+      Method shiftFrontToBack()
+        While (group (> (member-call (field this frontItems) len) 0))
+          Body
+            Block
+              Expr (member-call (field this backItems) push (member-call (field this frontItems) pop))
+      Method takeFront(): T?
+        If (group (== (member-call (field this frontItems) len) 0))
+          Then
+            Block
+              If (group (== (member-call (field this backItems) len) 0))
+                Then
+                  Block
+                    Return nil
+              Expr (member-call this shiftBackToFront)
+        Return (member-call (field this frontItems) pop)
+      Method takeBack(): T?
+        If (group (== (member-call (field this backItems) len) 0))
+          Then
+            Block
+              If (group (== (member-call (field this frontItems) len) 0))
+                Then
+                  Block
+                    Return nil
+              Expr (member-call this shiftFrontToBack)
+        Return (member-call (field this backItems) pop)
+      Method peekFront(): T?
+        If (group (== (member-call (field this frontItems) len) 0))
+          Then
+            Block
+              If (group (== (member-call (field this backItems) len) 0))
+                Then
+                  Block
+                    Return nil
+              Expr (member-call this shiftBackToFront)
+        Return (index (field this frontItems) (- (member-call (field this frontItems) len) 1))
+      Method peekBack(): T?
+        If (group (== (member-call (field this backItems) len) 0))
+          Then
+            Block
+              If (group (== (member-call (field this frontItems) len) 0))
+                Then
+                  Block
+                    Return nil
+              Expr (member-call this shiftFrontToBack)
+        Return (index (field this backItems) (- (member-call (field this backItems) len) 1))
+      Method size(): number
+        Return (+ (member-call (field this frontItems) len) (member-call (field this backItems) len))
+      Method isEmpty(): bool
+        Return (&& (== (member-call (field this frontItems) len) 0) (== (member-call (field this backItems) len) 0))
+      Method snapshot(): [T]
+        Let values: [T] = (array)
+        Let frontIndex = (member-call (field this frontItems) len)
+        While (group (> frontIndex 0))
+          Body
+            Block
+              Expr (-= frontIndex 1)
+              Expr (member-call values push (index (field this frontItems) frontIndex))
+        Let backIndex = 0
+        While (group (< backIndex (member-call (field this backItems) len)))
+          Body
+            Block
+              Expr (member-call values push (index (field this backItems) backIndex))
+              Expr (+= backIndex 1)
+        Return values
+    Fun newDeque<T>(): Deque<T>
+      Return (construct Deque<T> frontItems: (array) backItems: (array))
+    Export Stack Queue Deque newStack newQueue newDeque
+  Module 1 entry
+    Import "../../data_structures.cd" as ds
+    Let deque = (member-call ds newDeque<number>)
+    Print (member-call deque peekFront)
+    Print (member-call deque peekBack)
+    Print (member-call deque takeFront)
+    Expr (member-call deque addBack 2)
+    Expr (member-call deque addFront 1)
+    Expr (member-call deque addBack 3)
+    Expr (member-call deque addFront 0)
+    Let alias = deque
+    Expr (member-call alias addBack 4)
+    Print (member-call deque snapshot)
+    Print (member-call deque size)
+    Print (member-call deque peekFront)
+    Print (member-call deque peekBack)
+    Print (member-call deque takeFront)
+    Print (member-call deque takeBack)
+    Let snapshot = (member-call deque snapshot)
+    Expr (member-call snapshot push 99)
+    Print (member-call deque snapshot)
+    Print snapshot
+    Let strings = (member-call ds newDeque<string>)
+    Expr (member-call strings addBack "a")
+    Expr (member-call strings addBack "b")
+    Print (member-call strings takeFront)
+    Print (member-call strings peekBack)
+    Print (member-call strings takeBack)
+    Print (member-call strings isEmpty)
+    Let frontOnly = (member-call ds newDeque<number>)
+    Expr (member-call frontOnly addFront 1)
+    Expr (member-call frontOnly addFront 2)
+    Print (member-call frontOnly takeBack)
+    Print (member-call frontOnly takeFront)
+    Print (member-call frontOnly isEmpty)

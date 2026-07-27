@@ -1,8 +1,8 @@
 # Data structures library
 
 This directory contains a small data-structure library written in the public
-Compiler Design language. It currently provides generic array-backed `Stack<T>`
-and `Queue<T>` types.
+Compiler Design language. It currently provides generic array-backed `Stack<T>`,
+`Queue<T>`, and `Deque<T>` types.
 
 The planned structure and algorithm inventory, implementation constraints, and
 staged delivery order are documented in
@@ -28,6 +28,14 @@ queue.enqueue("second");
 print queue.front();
 print queue.dequeue();
 print queue.snapshot();
+
+let deque = ds.newDeque<number>();
+deque.addFront(2);
+deque.addFront(1);
+deque.addBack(3);
+print deque.peekFront();
+print deque.peekBack();
+print deque.snapshot();
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -36,6 +44,7 @@ backing fields out of normal construction code:
 ```cd
 let numbers = ds.newStack<number>();
 let names = ds.newQueue<string>();
+let work = ds.newDeque<number>();
 ```
 
 ## API
@@ -60,6 +69,21 @@ The queue compacts its backing array as consumed entries accumulate. Both
 structures store references to their element values; snapshots copy only the
 outer array.
 
+`Deque<T>` provides:
+
+- `addFront(value: T)` and `addBack(value: T)` — insert at either end;
+- `takeFront(): T?` and `takeBack(): T?` — remove from either end, or return
+  `nil` when empty;
+- `peekFront(): T?` and `peekBack(): T?` — inspect either end, or return `nil`
+  when empty;
+- `size(): number` and `isEmpty(): bool`;
+- `snapshot(): [T]` — return a shallow copy from front to back.
+
+The deque uses two array-backed stacks. End operations are amortized `O(1)`;
+`snapshot()` is `O(n)` and allocates one outer array. The transfer helpers are
+implementation details of the representation, although the language currently
+has no private methods.
+
 ## Current language limitation
 
 The language's builtin member-call sugar reserves names such as `push`, `pop`,
@@ -72,3 +96,17 @@ collision explicitly.
 The language also has no private struct fields or private methods yet. The
 backing fields are therefore technically accessible to callers; use the
 factory functions and public methods as the supported API.
+
+## Tests
+
+Library fixtures live under `library/tests/` and are intentionally not
+discovered by the compiler project's root test suites. The library runner
+reuses the existing compiler golden and Rust VM test interfaces while keeping
+its fixture root independent:
+
+```sh
+python3 library/tests/run_tests.py ./build/compiler_design vm-rs
+```
+
+Use `--update` with that command only when an intentional compiler-output
+change requires refreshing the library fixture's `ast.out`.

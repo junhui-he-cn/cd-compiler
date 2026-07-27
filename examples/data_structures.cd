@@ -20,3 +20,11 @@ print queue.dequeue();
 print queue.dequeue();
 queue.enqueue("third");
 print queue.snapshot();
+
+let deque = ds.newDeque<number>();
+deque.addFront(2);
+deque.addFront(1);
+deque.addBack(3);
+print deque.peekFront();
+print deque.peekBack();
+print deque.snapshot();
