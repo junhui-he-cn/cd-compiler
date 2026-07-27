@@ -87,6 +87,7 @@ print index.getAll("even");
 
 let values = [3, 1, 3, 2];
 print ds.reverseArray(values);
+print ds.rotateArray(values, 1);
 print ds.linearSearch(values, 2);
 print ds.countValue(values, 3);
 
@@ -299,6 +300,15 @@ return arrays:
 explicit type argument, such as `reverseArray<number>([])`, because they carry
 no element from which to infer `T`.
 
+`rotateArray<T>(values, shift)` returns a shallow copy rotated right for a
+positive shift and left for a negative shift. Shifts larger than the input
+length wrap around; empty inputs return `[]`. It runs in `O(n)` time and uses
+`O(n)` result space without modifying the input.
+
+`isSorted<T>(values, less)` checks whether every adjacent pair is ordered by
+the supplied comparator. Empty and single-element arrays are sorted, and the
+check is `O(n)` with `O(1)` extra space.
+
 `sortArray<T>(values, less)` returns a stable insertion-sorted shallow copy;
 `sortArrayInPlace<T>(values, less)` applies the same stable insertion sort to
 the supplied array. Both take `fun(T, T): bool`, where `less(left, right)` means
@@ -425,6 +435,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
 `--case array_algorithms_binary_search`, `--case array_algorithms_merge_sort`,
+`--case array_algorithms_rotation`,
 `--case array_algorithms_quick_sort`, `--case array_algorithms_heap_sort`,
 `--case array_algorithms_two_pointer`,
 `--case array_algorithms_sets`, or `--case array_algorithms_window_stats` for

@@ -605,6 +605,32 @@ fun reverseArray<T>(values: [T]): [T] {
   return result;
 }
 
+fun rotateArray<T>(values: [T], shift: number): [T] {
+  let result: [T] = [];
+  let length = values.len();
+  if (length == 0) {
+    return result;
+  }
+
+  let offset = floor(shift);
+  let turns = floor(offset / length);
+  offset -= turns * length;
+  if (offset < 0) {
+    offset += length;
+  }
+
+  let index = 0;
+  while (index < length) {
+    let source = index - offset;
+    if (source < 0) {
+      source += length;
+    }
+    result.push(values[source]);
+    index += 1;
+  }
+  return result;
+}
+
 fun linearSearch<T>(values: [T], target: T): number {
   let index = 0;
   while (index < values.len()) {
@@ -717,6 +743,17 @@ fun countValue<T>(values: [T], target: T): number {
     index += 1;
   }
   return count;
+}
+
+fun isSorted<T>(values: [T], less: fun(T, T): bool): bool {
+  let index = 1;
+  while (index < values.len()) {
+    if (less(values[index], values[index - 1])) {
+      return false;
+    }
+    index += 1;
+  }
+  return true;
 }
 
 fun sortArrayInPlace<T>(values: [T], less: fun(T, T): bool) {
@@ -1183,4 +1220,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
