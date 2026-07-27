@@ -127,3 +127,4 @@ fun ascendingSearch(left: number, right: number): bool {
 print ds.lowerBound([1, 2, 2, 4], 2, ascendingSearch);
 print ds.upperBound([1, 2, 2, 4], 2, ascendingSearch);
 print ds.binarySearch([1, 2, 2, 4], 2, ascendingSearch);
+print ds.compareStrings("ant", "apple");

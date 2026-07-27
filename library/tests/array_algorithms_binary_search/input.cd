@@ -14,14 +14,16 @@ print ds.binarySearch(numbers, 3, ascendingNumber);
 print ds.lowerBound(numbers, 0, ascendingNumber);
 print ds.upperBound(numbers, 9, ascendingNumber);
 
-fun ascendingByLength(left: string, right: string): bool {
-  return left.len() < right.len();
-}
+print ds.compareStrings("ant", "apple");
+print ds.compareStrings("same", "same");
+print ds.compareStrings("dog", "cat");
+print ds.compareStrings("cat", "cater");
+print ds.compareStrings("a", "你");
 
-let words = ["a", "bb", "cc", "ddd"];
-print ds.lowerBound(words, "bb", ascendingByLength);
-print ds.upperBound(words, "bb", ascendingByLength);
-print ds.binarySearch(words, "dog", ascendingByLength);
+let words = ["ant", "cat", "cat", "fox"];
+print ds.lowerBound(words, "cat", ds.stringLess);
+print ds.upperBound(words, "cat", ds.stringLess);
+print ds.binarySearch(words, "dog", ds.stringLess);
 
 let empty: [number] = [];
 print ds.lowerBound<number>(empty, 4, ascendingNumber);

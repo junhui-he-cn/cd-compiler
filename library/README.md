@@ -125,6 +125,7 @@ fun ascendingNumber(left: number, right: number): bool {
 print ds.lowerBound([1, 2, 2, 4], 2, ascendingNumber);
 print ds.upperBound([1, 2, 2, 4], 2, ascendingNumber);
 print ds.binarySearch([1, 2, 2, 4], 2, ascendingNumber);
+print ds.compareStrings("ant", "apple");
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -333,6 +334,14 @@ position after all equivalent values. `binarySearch` returns the first matching
 index or `-1`. The three functions use `O(log n)` time and `O(1)` extra space;
 the comparator must define the same ordering used to sort the input. Empty
 arrays return insertion position `0` and `binarySearch` returns `-1`.
+
+`compareStrings(left, right)` provides a library-level comparator for printable
+ASCII strings: it returns `-1`, `0`, or `1` for less/equal/greater, and returns
+`nil` if either input contains a non-ASCII scalar. `stringLess` adapts that
+result to the `fun(string, string): bool` comparator expected by the search
+helpers; unsupported-character pairs are treated as unordered (`false`). The
+language currently has no string relational operator, so this is an explicit
+library contract rather than a replacement for future language-level ordering.
 
 `Interval { start, end }` represents a numeric interval with the documented
 precondition `start <= end`. `mergeIntervals(intervals)` returns a new array

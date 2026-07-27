@@ -457,6 +457,63 @@ Program
                   Return index
             Expr (+= index 1)
       Return (- 1)
+    Fun asciiCharacterRank(character: string): number
+      Let alphabet = " !#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
+      Let index = 0
+      While (group (< index (member-call alphabet len)))
+        Body
+          Block
+            If (group (== (member-call alphabet charAt index) character))
+              Then
+                Block
+                  Return index
+            Expr (+= index 1)
+      Return (- 1)
+    Fun compareStrings(left: string, right: string): number?
+      Let leftLength = (member-call left len)
+      Let rightLength = (member-call right len)
+      Let limit = leftLength
+      If (group (< rightLength limit))
+        Then
+          Block
+            Expr (= limit rightLength)
+      Let index = 0
+      While (group (< index limit))
+        Body
+          Block
+            Let leftCharacter = (member-call left charAt index)
+            Let rightCharacter = (member-call right charAt index)
+            Let leftRank = (call asciiCharacterRank leftCharacter)
+            Let rightRank = (call asciiCharacterRank rightCharacter)
+            If (group (|| (< leftRank 0) (< rightRank 0)))
+              Then
+                Block
+                  Return nil
+            If (group (< leftRank rightRank))
+              Then
+                Block
+                  Return (- 1)
+            If (group (> leftRank rightRank))
+              Then
+                Block
+                  Return 1
+            Expr (+= index 1)
+      If (group (< leftLength rightLength))
+        Then
+          Block
+            Return (- 1)
+      If (group (> leftLength rightLength))
+        Then
+          Block
+            Return 1
+      Return 0
+    Fun stringLess(left: string, right: string): bool
+      Let comparison = (call compareStrings left right)
+      If (group (== comparison nil))
+        Then
+          Block
+            Return false
+      Return (< comparison 0)
     Fun lowerBound<T>(values: [T], target: T, less: fun(T, T): bool): number
       Let low = 0
       Let high = (member-call values len)
@@ -820,7 +877,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch lowerBound upperBound binarySearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Print (member-call ds maxSubarraySum (array (- 2) 1 (- 3) 4 (- 1) 2 1 (- 5) 4))

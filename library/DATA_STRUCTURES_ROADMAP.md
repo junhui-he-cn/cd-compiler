@@ -49,6 +49,7 @@
 - 固定窗口统计：`windowSums`、`maxWindowSum`。
 - 子数组统计：`maxSubarraySum`。
 - 二分查找：`lowerBound`、`upperBound`、`binarySearch`。
+- 字符串比较辅助：`compareStrings`、`stringLess`（当前限定可打印 ASCII）。
 
 它们的现有 API 和示例继续作为兼容基线。后续新增 API 不应悄悄改变空值、
 快照或引用共享语义。
@@ -236,6 +237,8 @@ enum Result<T, E> {
 `nil`，全负输入仍保留最大负值。
 `lowerBound`、`upperBound` 和 `binarySearch` 接受与输入排序一致的泛型比较器；
 前两者返回插入边界，后者返回重复值的首个位置。
+`compareStrings` 和 `stringLess` 暂时使用库层可打印 ASCII 顺序，非 ASCII
+字符返回不可用结果，等待语言层字符串排序和运算符扩展决策。
 
 - 遍历、复制、拼接、分块、窗口、批处理；
 - `reverse`、`rotate`、`partition`、稳定分区、按谓词分组；
