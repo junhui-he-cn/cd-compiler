@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m5c-2026-07-27-r3",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M5C-REPL-003",
+  "domain": "source-backed-incremental-session-relative-imports",
+  "status": "resolved",
+  "question": "How should a REPL transcript resolve explicit relative imports?",
+  "decision": "Place the temporary transcript source inside an explicit --session-root directory and let FrontendSession resolve the existing relative import syntax from that source location.",
+  "session_root": {
+    "option": "--session-root DIR",
+    "source": "temporary session source is created inside DIR",
+    "cleanup": "source is removed when the process exits",
+    "artifact": "linked replay artifact remains private to the wrapper temporary directory"
+  },
+  "shared_services": [
+    "FrontendSession relative import resolution",
+    "production C++ --emit-bytecode path",
+    "Rust compiler-design-vm run command"
+  ],
+  "compatibility_boundary": {
+    "search_paths": "M5C-REPL-002 ordered --import-path forwarding remains active",
+    "diagnostics": "temporary transcript and project paths normalize to <repl> or <repl-root>",
+    "state": "accepted transcript and replay semantics remain unchanged"
+  },
+  "quantitative_gate": "tests/repl_tests.py covers an explicit relative import from a temporary session root.",
+  "out_of_scope": [
+    "package manifests",
+    "import maps",
+    "persistent project roots across restarts",
+    "in-process compiler or VM state",
+    "incremental bytecode or runtime-state reuse",
+    "terminal history or completion"
+  ],
+  "verification": {
+    "focused_commands": [
+      "python3 tests/repl_tests.py ./build/compiler_design vm-rs/Cargo.toml",
+      "ctest --test-dir build --output-on-failure -R '^repl$'",
+      "git diff --check"
+    ]
+  }
+}

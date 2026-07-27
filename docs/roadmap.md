@@ -1489,6 +1489,14 @@ temporary-source relative-import roots, package manifests, and import maps
 remain deferred. The decision is recorded in
 `docs/decisions/m5c-repl-002.{md,json}`.
 
+`M5C-REPL-003` adds `--session-root DIR` for explicit relative imports. The
+temporary transcript source is placed inside the selected root and removed at
+session exit, while `FrontendSession` remains the sole relative-import
+resolver. Transcript replay, output suffixes, failure rollback, and ordered
+`--import-path` forwarding remain unchanged. Package manifests, import maps,
+and persistent roots across process restarts remain deferred. The decision is
+recorded in `docs/decisions/m5c-repl-003.{md,json}`.
+
 **Migration:** expose an incremental wrapper around the production front end and
 VM. Keep session state separate from compiler-global state, and use the same
 module identity and artifact rules as project builds.

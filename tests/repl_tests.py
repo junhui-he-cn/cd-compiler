@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import Optional
 
 
 def run_repl(
@@ -13,11 +14,14 @@ def run_repl(
     vm_manifest: Path,
     transcript: str,
     import_paths: tuple[Path, ...] = (),
+    session_root: Optional[Path] = None,
 ) -> subprocess.CompletedProcess[str]:
     repl = Path(__file__).resolve().parents[1] / "tools" / "repl.py"
     command = [sys.executable, str(repl), str(compiler), str(vm_manifest)]
     for import_path in import_paths:
         command.extend(["--import-path", str(import_path)])
+    if session_root:
+        command.extend(["--session-root", str(session_root)])
     return subprocess.run(
         command,
         input=transcript,
@@ -151,6 +155,28 @@ print value;
         require(failed_import.returncode == 0, f"failed import session returned {failed_import.returncode}")
         require(failed_import.stdout == "9\n", f"failed import polluted stdout: {failed_import.stdout!r}")
         require("Import error" in failed_import.stderr, f"missing import diagnostic: {failed_import.stderr!r}")
+
+    with tempfile.TemporaryDirectory(prefix="compiler-repl-root-") as directory:
+        project = Path(directory) / "project"
+        project.mkdir()
+        (project / "lib.cd").write_text(
+            "let message = \"relative\";\nexport message;\n",
+            encoding="utf-8",
+        )
+        relative = run_repl(
+            compiler,
+            vm_manifest,
+            """import "./lib.cd";
+
+print message;
+
+:quit
+""",
+            session_root=project,
+        )
+        require(relative.returncode == 0, f"relative import session returned {relative.returncode}: {relative.stderr}")
+        require(relative.stdout == "relative\n", f"unexpected relative import stdout: {relative.stdout!r}")
+        require(relative.stderr == "", f"unexpected relative import stderr: {relative.stderr!r}")
     return 0
 
 

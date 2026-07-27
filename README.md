@@ -91,7 +91,8 @@ Enter a source form followed by a blank line to evaluate it. `:reset` clears
 the accepted transcript and `:quit` exits. The prototype replays accepted
 source through the production compiler and Rust VM; failed forms do not change
 session state. Add repeatable `--import-path DIR` options to resolve non-
-explicit imports through the production module search path.
+explicit imports through the production module search path, or
+`--session-root DIR` to resolve explicit relative imports from a project root.
 
 ## Language
 

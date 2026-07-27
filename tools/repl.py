@@ -15,7 +15,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import TextIO
+from typing import Optional, TextIO
 
 
 HELP_TEXT = """Compiler Design REPL prototype
@@ -37,18 +37,23 @@ class TranscriptSession:
         vm_manifest: Path,
         root: Path,
         import_paths: list[Path],
+        source_path: Optional[Path] = None,
     ) -> None:
         self.compiler = compiler
         self.vm_manifest = vm_manifest
         self.root = root
         self.import_paths = import_paths
-        self.source_path = root / "session.cd"
+        self.source_path = source_path or root / "session.cd"
         self.artifact_path = root / "session.cdbc"
         self.accepted_source = ""
         self.accepted_output = ""
 
     def _normalize_diagnostics(self, text: str) -> str:
-        return text.replace(str(self.root), "<repl>")
+        normalized = text.replace(str(self.source_path), "<repl>")
+        normalized = normalized.replace(str(self.root), "<repl>")
+        if self.source_path.parent != self.root:
+            normalized = normalized.replace(str(self.source_path.parent), "<repl-root>")
+        return normalized
 
     def _candidate_source(self, form: str) -> str:
         if not self.accepted_source:
@@ -136,6 +141,11 @@ def parse_args() -> argparse.Namespace:
         default=[],
         help="search path for non-explicit source imports (repeatable)",
     )
+    parser.add_argument(
+        "--session-root",
+        type=Path,
+        help="directory used as the base for explicit relative imports",
+    )
     return parser.parse_args()
 
 
@@ -189,14 +199,36 @@ def main() -> int:
         print(f"VM manifest not found: {vm_manifest}", file=sys.stderr)
         return 2
 
-    with tempfile.TemporaryDirectory(prefix="compiler-repl-") as directory:
-        session = TranscriptSession(
-            compiler,
-            vm_manifest,
-            Path(directory),
-            [path.resolve() for path in args.import_path],
-        )
-        return run_session(session, sys.stdin, sys.stderr)
+    session_root = args.session_root.resolve() if args.session_root else None
+    if session_root and not session_root.is_dir():
+        print(f"session root not found: {session_root}", file=sys.stderr)
+        return 2
+
+    session_source_path: Optional[Path] = None
+    try:
+        with tempfile.TemporaryDirectory(prefix="compiler-repl-") as directory:
+            if session_root:
+                with tempfile.NamedTemporaryFile(
+                    prefix=".compiler-repl-",
+                    suffix=".cd",
+                    dir=session_root,
+                    delete=False,
+                ) as source_file:
+                    session_source_path = Path(source_file.name)
+            session = TranscriptSession(
+                compiler,
+                vm_manifest,
+                Path(directory),
+                [path.resolve() for path in args.import_path],
+                session_source_path,
+            )
+            return run_session(session, sys.stdin, sys.stderr)
+    except OSError as error:
+        print(f"failed to create REPL session source: {error}", file=sys.stderr)
+        return 2
+    finally:
+        if session_source_path:
+            session_source_path.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
