@@ -13,6 +13,10 @@ remain available in Git history. The implemented language contract remains in
 `README.md` and `docs/language-grammar.ebnf`, and the disposition of major
 still-open areas from the previous roadmap is recorded below.
 
+The current project release line is `0.1`, with canonical version `0.1.0` and
+annotated tag `v0.1.0`. Version/tag immutability and the branch discipline for
+roadmap slices are defined in `docs/versioning.md`.
+
 ## Why the roadmap changed
 
 The project has accumulated a broad and useful language surface: functions and

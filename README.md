@@ -22,6 +22,9 @@ A public-language data-structure example library is available under
 [`library/`](library/), with a runnable example at
 [`examples/data_structures.cd`](examples/data_structures.cd).
 
+Current project version: `0.1` (canonical release tag `v0.1.0`). Version and
+branch rules are documented in [`docs/versioning.md`](docs/versioning.md).
+
 The compiler pipeline includes:
 
 - Lexer: turns source text into tokens.

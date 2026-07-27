@@ -257,6 +257,10 @@ For file-backed lexer, parser, and type diagnostics in imported files and direct
 ## Git and Workspace Hygiene
 
 - Check `git status --short` before editing and before finishing.
+- Follow [`docs/versioning.md`](docs/versioning.md): `VERSION` is the canonical
+  full version, `master` is the green integration/release branch, roadmap work
+  starts from `origin/master` in focused `feat/` branches, and release tags
+  are immutable.
 - Do not commit generated artifacts such as `tests/__pycache__/` or build outputs.
 - Remove `tests/__pycache__/` after running Python tests.
 - Keep commits focused: tests, implementation, docs, and golden updates should be easy to review.
