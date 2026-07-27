@@ -91,6 +91,11 @@ components.union(2, 3);
 print components.connected(0, 3);
 print components.componentCount();
 
+let graph = ds.newGraph(3, false);
+graph.addEdge(0, 1);
+graph.addEdge(1, 2);
+print graph.neighbors(1);
+
 let values = [3, 1, 3, 2];
 print ds.reverseArray(values);
 print ds.rotateArray(values, 1);
@@ -301,6 +306,13 @@ and `size` provide queries. Construction with a non-positive count creates an
 empty set; vertex arguments must be in range. `representative` and `union` are amortized
 near-constant time (`O(alpha(n))`), while construction is `O(n)`.
 
+`Graph` is an integer-vertex adjacency-list graph. `newGraph(vertices, directed)`
+creates vertices `[0, vertices)`; `addEdge` rejects invalid or duplicate edges,
+and undirected edges are stored in both adjacency lists while counting once.
+`neighbors` returns a fresh array, and invalid vertex queries return `false` or
+`[]`. Adjacency operations are linear in the degree because this version does
+not use a hash set.
+
 The array algorithms are non-mutating and return shallow copies where they
 return arrays:
 
@@ -452,6 +464,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_result`, `--case data_structures_list`,
 `--case data_structures_set`, `--case data_structures_multiset`,
 `--case data_structures_multimap`, `--case data_structures_disjoint_set`,
+`--case data_structures_graph`,
 `--case array_algorithms_basic`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,

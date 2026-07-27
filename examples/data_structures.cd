@@ -99,6 +99,11 @@ components.union(0, 1);
 components.union(2, 3);
 print components.componentCount();
 
+let graph = ds.newGraph(3, false);
+graph.addEdge(0, 1);
+graph.addEdge(1, 2);
+print graph.neighbors(1);
+
 fun ascendingValues(left: number, right: number): bool {
   return left < right;
 }

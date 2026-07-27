@@ -492,6 +492,64 @@ Program
             Expr (member-call sizes push 1)
             Expr (+= index 1)
       Return (construct DisjointSet parents: parents sizes: sizes components: length)
+    Struct Graph {adjacency: [[number]], directed: bool, edges: number}
+    Impl Graph
+      Method vertexCount(): number
+        Return (member-call (field this adjacency) len)
+      Method edgeCount(): number
+        Return (field this edges)
+      Method validVertex(vertex: number): bool
+        Return (&& (>= vertex 0) (< vertex (member-call (field this adjacency) len)))
+      Method neighborIndex(from: number, to: number): number
+        Let index = 0
+        While (group (< index (member-call (index (field this adjacency) from) len)))
+          Body
+            Block
+              If (group (== (index (index (field this adjacency) from) index) to))
+                Then
+                  Block
+                    Return index
+              Expr (+= index 1)
+        Return (- 1)
+      Method hasEdge(from: number, to: number): bool
+        If (group (|| (! (member-call this validVertex from)) (! (member-call this validVertex to))))
+          Then
+            Block
+              Return false
+        Return (>= (member-call this neighborIndex from to) 0)
+      Method addEdge(from: number, to: number): bool
+        If (group (|| (|| (! (member-call this validVertex from)) (! (member-call this validVertex to))) (member-call this hasEdge from to)))
+          Then
+            Block
+              Return false
+        Expr (member-call (index (field this adjacency) from) push to)
+        If (group (&& (! (field this directed)) (!= from to)))
+          Then
+            Block
+              Expr (member-call (index (field this adjacency) to) push from)
+        Expr (+= (field this edges) 1)
+        Return true
+      Method neighbors(vertex: number): [number]
+        If (group (! (member-call this validVertex vertex)))
+          Then
+            Block
+              Return (array)
+        Return (call copy (index (field this adjacency) vertex))
+    Fun newGraph(vertices: number, directed: bool): Graph
+      Let count = (call floor vertices)
+      If (group (< count 0))
+        Then
+          Block
+            Expr (= count 0)
+      Let adjacency: [[number]] = (array)
+      Let index = 0
+      While (group (< index count))
+        Body
+          Block
+            Let neighbors: [number] = (array)
+            Expr (member-call adjacency push neighbors)
+            Expr (+= index 1)
+      Return (construct Graph adjacency: adjacency directed: directed edges: 0)
     Fun reverseArray<T>(values: [T]): [T]
       Let result: [T] = (array)
       Let index = (member-call values len)
@@ -1132,7 +1190,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Fun render(value: ds.Result<number, string>): string
