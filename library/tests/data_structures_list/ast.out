@@ -487,6 +487,62 @@ Program
       Let result = (call copy values)
       Expr (call sortArrayInPlace result less)
       Return result
+    Fun chunkArray<T>(values: [T], size: number): [[T]]
+      Let result: [[T]] = (array)
+      If (group (<= size 0))
+        Then
+          Block
+            Return result
+      Let start = 0
+      While (group (< start (member-call values len)))
+        Body
+          Block
+            Let end = (+ start size)
+            If (group (> end (member-call values len)))
+              Then
+                Block
+                  Expr (= end (member-call values len))
+            Let chunk: [T] = (array)
+            Let index = start
+            While (group (< index end))
+              Body
+                Block
+                  Expr (member-call chunk push (index values index))
+                  Expr (+= index 1)
+            Expr (member-call result push chunk)
+            Expr (= start end)
+      Return result
+    Fun slidingWindows<T>(values: [T], width: number): [[T]]
+      Let result: [[T]] = (array)
+      If (group (|| (<= width 0) (> width (member-call values len))))
+        Then
+          Block
+            Return result
+      Let start = 0
+      While (group (<= (+ start width) (member-call values len)))
+        Body
+          Block
+            Let window: [T] = (array)
+            Let index = start
+            While (group (< index (+ start width)))
+              Body
+                Block
+                  Expr (member-call window push (index values index))
+                  Expr (+= index 1)
+            Expr (member-call result push window)
+            Expr (+= start 1)
+      Return result
+    Fun prefixSums(values: [number]): [number]
+      Let result: [number] = (array)
+      Let sum = 0
+      Let index = 0
+      While (group (< index (member-call values len)))
+        Body
+          Block
+            Expr (+= sum (index values index))
+            Expr (member-call result push sum)
+            Expr (+= index 1)
+      Return result
     Struct PriorityQueue<T> {heap: BinaryHeap<T>}
     Impl PriorityQueue<T>
       Method enqueue(value: T)
@@ -503,7 +559,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Fun describeTail(value: ds.List<number>?): string

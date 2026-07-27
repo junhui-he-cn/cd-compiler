@@ -562,17 +562,20 @@ Program
     Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums
   Module 1 entry
     Import "../../data_structures.cd" as ds
-    Let numbers = (array 4 1 4 2)
-    Print (member-call ds reverseArray numbers)
-    Print numbers
-    Print (member-call ds linearSearch numbers 4)
-    Print (member-call ds linearSearch numbers 9)
-    Print (member-call ds countValue numbers 4)
-    Let reversed = (member-call ds reverseArray numbers)
-    Expr (member-call reversed push 99)
-    Print numbers
-    Print reversed
-    Let words = (array "alpha" "beta" "alpha")
-    Print (member-call ds linearSearch words "beta")
-    Print (member-call ds countValue words "alpha")
-    Print (member-call ds reverseArray<number> (array))
+    Let values = (array 1 2 3 4 5)
+    Print (member-call ds chunkArray values 2)
+    Print values
+    Print (member-call ds chunkArray values 0)
+    Print (member-call ds chunkArray values (- 1))
+    Let chunks = (member-call ds chunkArray values 3)
+    Expr (member-call (index chunks 0) push 99)
+    Print values
+    Print chunks
+    Print (member-call ds slidingWindows values 3)
+    Print (member-call ds slidingWindows values 6)
+    Print (member-call ds slidingWindows values 0)
+    Print (member-call ds prefixSums values)
+    Let emptyNumbers: [number] = (array)
+    Print (member-call ds prefixSums emptyNumbers)
+    Let words = (array "a" "b" "c")
+    Print (member-call ds slidingWindows words 2)

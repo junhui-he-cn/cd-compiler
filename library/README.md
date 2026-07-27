@@ -6,7 +6,7 @@ Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
 `Set<T>` and `MultiSet<T>` types. It also provides an array-backed
 `MultiMap<K, V>` for one-to-many mappings and basic generic array algorithms,
-including comparator-based insertion sort.
+including comparator-based insertion sort and window helpers.
 
 The planned structure and algorithm inventory, implementation constraints, and
 staged delivery order are documented in
@@ -93,6 +93,9 @@ fun ascending(left: number, right: number): bool {
 }
 
 print ds.sortArray(values, ascending);
+print ds.chunkArray(values, 2);
+print ds.slidingWindows(values, 2);
+print ds.prefixSums(values);
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -271,6 +274,18 @@ that `left` should appear first. Sorting is `O(n^2)`; the copying version uses
 space. Neither function requires a total-order check beyond the comparator's
 behavior.
 
+Window and prefix helpers are also non-mutating:
+
+- `chunkArray<T>(values, size): [[T]]` — split into consecutive chunks;
+- `slidingWindows<T>(values, width): [[T]]` — return every consecutive window;
+- `prefixSums(values: [number]): [number]` — return same-length cumulative sums.
+
+`chunkArray` and `slidingWindows` return `[]` for non-positive sizes; sliding
+windows also return `[]` when the width exceeds the input length. Chunks and
+windows are fresh outer arrays with shallowly shared elements. Chunking and
+window generation are `O(n)` in the input plus output size; `prefixSums` is
+`O(n)` and allocates one array.
+
 ## Current language limitation
 
 The language's builtin member-call sugar reserves names such as `push`, `pop`,
@@ -297,8 +312,8 @@ python3 library/tests/run_tests.py ./build/compiler_design vm-rs
 
 Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_result`, `--case data_structures_list`,
-`--case data_structures_set`, `--case data_structures_multiset`, or
-`--case data_structures_multimap`, or `--case array_algorithms_basic` for a
-focused run, or `--case array_algorithms_sort` for a sorting-focused run, or
-`--update` only when an intentional compiler-output change requires refreshing
-library fixtures' `ast.out` files.
+`--case data_structures_set`, `--case data_structures_multiset`,
+`--case data_structures_multimap`, `--case array_algorithms_basic`,
+`--case array_algorithms_sort`, or `--case array_algorithms_windows` for a
+focused run. Use `--update` only when an intentional compiler-output change
+requires refreshing library fixtures' `ast.out` files.

@@ -648,6 +648,62 @@ fun sortArray<T>(values: [T], less: fun(T, T): bool): [T] {
   return result;
 }
 
+fun chunkArray<T>(values: [T], size: number): [[T]] {
+  let result: [[T]] = [];
+  if (size <= 0) {
+    return result;
+  }
+
+  let start = 0;
+  while (start < values.len()) {
+    let end = start + size;
+    if (end > values.len()) {
+      end = values.len();
+    }
+    let chunk: [T] = [];
+    let index = start;
+    while (index < end) {
+      chunk.push(values[index]);
+      index += 1;
+    }
+    result.push(chunk);
+    start = end;
+  }
+  return result;
+}
+
+fun slidingWindows<T>(values: [T], width: number): [[T]] {
+  let result: [[T]] = [];
+  if (width <= 0 || width > values.len()) {
+    return result;
+  }
+
+  let start = 0;
+  while (start + width <= values.len()) {
+    let window: [T] = [];
+    let index = start;
+    while (index < start + width) {
+      window.push(values[index]);
+      index += 1;
+    }
+    result.push(window);
+    start += 1;
+  }
+  return result;
+}
+
+fun prefixSums(values: [number]): [number] {
+  let result: [number] = [];
+  let sum = 0;
+  let index = 0;
+  while (index < values.len()) {
+    sum += values[index];
+    result.push(sum);
+    index += 1;
+  }
+  return result;
+}
+
 struct PriorityQueue<T> {
   heap: BinaryHeap<T>
 }
@@ -682,4 +738,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, countValue, sortArray, sortArrayInPlace;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, countValue, sortArray, sortArrayInPlace, chunkArray, slidingWindows, prefixSums;
