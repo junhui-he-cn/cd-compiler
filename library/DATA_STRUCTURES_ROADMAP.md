@@ -43,7 +43,7 @@
 - 数组基础算法：`reverseArray`、`linearSearch`、`countValue`。
 - 数组排序：稳定插入排序 `sortArray` 和 `sortArrayInPlace`。
 - 数组窗口算法：`chunkArray`、`slidingWindows`、`prefixSums`。
-- 区间算法：`Interval` 和 `mergeIntervals`。
+- 区间算法：`Interval`、`mergeIntervals` 和 `intersectIntervals`。
 - 双指针算法：`mergeSortedNumbers`、`twoSumSorted`。
 - 数组集合算法：`uniqueValues`、`intersectionValues`、`unionValues`、`differenceValues`。
 - 固定窗口统计：`windowSums`、`maxWindowSum`。
@@ -228,6 +228,8 @@ enum Result<T, E> {
 提供保序去重、交集、并集和差集的线性扫描版本。
 `windowSums` 使用滚动和生成每个固定宽度窗口的和，`maxWindowSum` 在这些
 窗口中选择最大值；非法窗口宽度返回空数组或 `nil`。
+`intersectIntervals` 先独立规范化两侧区间，再用双指针生成包含端点的相交
+区间；因此相接端点会生成零长度区间。
 
 - 遍历、复制、拼接、分块、窗口、批处理；
 - `reverse`、`rotate`、`partition`、稳定分区、按谓词分组；
@@ -402,7 +404,8 @@ S2 已完成 `Set<T>` 的数组后端版本：使用语言 `==` 做线性去重�
 重复计数，`entries()` 按首次插入顺序返回新条目数组；`MultiMap<K,V>` 使用
 键数组和每键 value 数组，`discard(key,value)` 删除一个匹配 pair。随后完成
 了基础数组搜索/计数/逆序算法、稳定插入排序、窗口/前缀和算法、区间合并、
-双指针、数组集合算法和固定窗口统计，下一步进入区间交集算法。
+双指针、数组集合算法、固定窗口统计和区间交集，下一步进入更一般的滑动
+窗口统计或区间查询算法。
 
 ### S2：集合和序列算法
 

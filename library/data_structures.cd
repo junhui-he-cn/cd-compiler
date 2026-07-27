@@ -734,6 +734,37 @@ fun mergeIntervals(intervals: [Interval]): [Interval] {
   return merged;
 }
 
+fun intersectIntervals(left: [Interval], right: [Interval]): [Interval] {
+  let leftMerged = mergeIntervals(left);
+  let rightMerged = mergeIntervals(right);
+  let result: [Interval] = [];
+  let leftIndex = 0;
+  let rightIndex = 0;
+
+  while (leftIndex < leftMerged.len() && rightIndex < rightMerged.len()) {
+    let leftInterval = leftMerged[leftIndex];
+    let rightInterval = rightMerged[rightIndex];
+    let start = leftInterval.start;
+    if (rightInterval.start > start) {
+      start = rightInterval.start;
+    }
+    let end = leftInterval.end;
+    if (rightInterval.end < end) {
+      end = rightInterval.end;
+    }
+    if (start <= end) {
+      result.push(Interval { start: start, end: end });
+    }
+
+    if (leftInterval.end < rightInterval.end) {
+      leftIndex += 1;
+    } else {
+      rightIndex += 1;
+    }
+  }
+  return result;
+}
+
 fun mergeSortedNumbers(left: [number], right: [number]): [number] {
   let result: [number] = [];
   let leftIndex = 0;
@@ -903,4 +934,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, countValue, sortArray, sortArrayInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, countValue, sortArray, sortArrayInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum;

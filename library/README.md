@@ -104,6 +104,10 @@ let ranges: [ds.Interval] = [
   ds.Interval { start: 2, end: 5 }
 ];
 print ds.mergeIntervals(ranges);
+print ds.intersectIntervals(ranges, [
+  ds.Interval { start: 2, end: 4 },
+  ds.Interval { start: 7, end: 9 }
+]);
 
 print ds.mergeSortedNumbers([1, 3], [2, 4]);
 print ds.twoSumSorted([1, 2, 4, 7], 6);
@@ -315,6 +319,13 @@ sorted by start, merges overlapping or touching intervals, and leaves the input
 array unchanged. It uses `O(n log n)` sorting time plus linear merging and
 allocates `O(n)` output space.
 
+`intersectIntervals(left, right)` first applies the same normalization to each
+input and then returns their pairwise intersection as sorted, non-overlapping
+intervals. Endpoints are inclusive, so touching intervals produce a zero-length
+intersection such as `[2,2]`. Empty or disjoint inputs return `[]`; both inputs
+remain unchanged. The two normalization passes take `O(n log n + m log m)` time,
+the sweep is linear afterward, and the result uses `O(n + m)` space.
+
 For non-decreasing numeric arrays, `mergeSortedNumbers(left, right)` returns a
 linear-time merged copy and `twoSumSorted(values, target)` uses two pointers to
 return the first matching `[leftIndex, rightIndex]`, or `[]` when no pair exists.
@@ -362,7 +373,8 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_set`, `--case data_structures_multiset`,
 `--case data_structures_multimap`, `--case array_algorithms_basic`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
-`--case array_algorithms_intervals`, `--case array_algorithms_two_pointer`,
+`--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
+`--case array_algorithms_two_pointer`,
 `--case array_algorithms_sets`, or `--case array_algorithms_window_stats` for
 focused coverage. Use `--update` only when
 an intentional compiler-output change requires refreshing library fixtures'

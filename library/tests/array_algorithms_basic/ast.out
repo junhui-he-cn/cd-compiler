@@ -570,6 +570,39 @@ Program
                         Expr (= (field (index merged (- (member-call merged len) 1)) end) (field current end))
             Expr (+= index 1)
       Return merged
+    Fun intersectIntervals(left: [Interval], right: [Interval]): [Interval]
+      Let leftMerged = (call mergeIntervals left)
+      Let rightMerged = (call mergeIntervals right)
+      Let result: [Interval] = (array)
+      Let leftIndex = 0
+      Let rightIndex = 0
+      While (group (&& (< leftIndex (member-call leftMerged len)) (< rightIndex (member-call rightMerged len))))
+        Body
+          Block
+            Let leftInterval = (index leftMerged leftIndex)
+            Let rightInterval = (index rightMerged rightIndex)
+            Let start = (field leftInterval start)
+            If (group (> (field rightInterval start) start))
+              Then
+                Block
+                  Expr (= start (field rightInterval start))
+            Let end = (field leftInterval end)
+            If (group (< (field rightInterval end) end))
+              Then
+                Block
+                  Expr (= end (field rightInterval end))
+            If (group (<= start end))
+              Then
+                Block
+                  Expr (member-call result push (construct Interval start: start end: end))
+            If (group (< (field leftInterval end) (field rightInterval end)))
+              Then
+                Block
+                  Expr (+= leftIndex 1)
+              Else
+                Block
+                  Expr (+= rightIndex 1)
+      Return result
     Fun mergeSortedNumbers(left: [number], right: [number]): [number]
       Let result: [number] = (array)
       Let leftIndex = 0
@@ -725,7 +758,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums mergeIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let numbers = (array 4 1 4 2)
