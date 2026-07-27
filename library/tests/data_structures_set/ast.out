@@ -457,6 +457,43 @@ Program
                   Return index
             Expr (+= index 1)
       Return (- 1)
+    Fun lowerBound<T>(values: [T], target: T, less: fun(T, T): bool): number
+      Let low = 0
+      Let high = (member-call values len)
+      While (group (< low high))
+        Body
+          Block
+            Let middle = (call floor (/ (group (+ low high)) 2))
+            If (group (call less (index values middle) target))
+              Then
+                Block
+                  Expr (= low (+ middle 1))
+              Else
+                Block
+                  Expr (= high middle)
+      Return low
+    Fun upperBound<T>(values: [T], target: T, less: fun(T, T): bool): number
+      Let low = 0
+      Let high = (member-call values len)
+      While (group (< low high))
+        Body
+          Block
+            Let middle = (call floor (/ (group (+ low high)) 2))
+            If (group (call less target (index values middle)))
+              Then
+                Block
+                  Expr (= high middle)
+              Else
+                Block
+                  Expr (= low (+ middle 1))
+      Return low
+    Fun binarySearch<T>(values: [T], target: T, less: fun(T, T): bool): number
+      Let index = (call lowerBound values target less)
+      If (group (&& (< index (member-call values len)) (== (index values index) target)))
+        Then
+          Block
+            Return index
+      Return (- 1)
     Fun countValue<T>(values: [T], target: T): number
       Let count = 0
       Let index = 0
@@ -783,7 +820,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch lowerBound upperBound binarySearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let numbers = (member-call ds newSet<number>)

@@ -117,6 +117,14 @@ print ds.unionValues([1, 2], [2, 3]);
 print ds.windowSums([2, -1, 3, 4, -2, 1], 3);
 print ds.maxWindowSum([2, -1, 3, 4, -2, 1], 3);
 print ds.maxSubarraySum([-2, 1, -3, 4, -1, 2, 1, -5, 4]);
+
+fun ascendingNumber(left: number, right: number): bool {
+  return left < right;
+}
+
+print ds.lowerBound([1, 2, 2, 4], 2, ascendingNumber);
+print ds.upperBound([1, 2, 2, 4], 2, ascendingNumber);
+print ds.binarySearch([1, 2, 2, 4], 2, ascendingNumber);
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -319,6 +327,13 @@ subarray, or `nil` for an empty input. It preserves the input and handles an
 all-negative array by returning its least-negative element. The scan is `O(n)`
 time and `O(1)` extra space.
 
+For an array already sorted according to `less`, `lowerBound(values, target,
+less)` returns the first insertion position, and `upperBound` returns the
+position after all equivalent values. `binarySearch` returns the first matching
+index or `-1`. The three functions use `O(log n)` time and `O(1)` extra space;
+the comparator must define the same ordering used to sort the input. Empty
+arrays return insertion position `0` and `binarySearch` returns `-1`.
+
 `Interval { start, end }` represents a numeric interval with the documented
 precondition `start <= end`. `mergeIntervals(intervals)` returns a new array
 sorted by start, merges overlapping or touching intervals, and leaves the input
@@ -380,7 +395,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_multimap`, `--case array_algorithms_basic`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
-`--case array_algorithms_two_pointer`,
+`--case array_algorithms_binary_search`, `--case array_algorithms_two_pointer`,
 `--case array_algorithms_sets`, or `--case array_algorithms_window_stats` for
 focused coverage. Use `--update` only when
 an intentional compiler-output change requires refreshing library fixtures'

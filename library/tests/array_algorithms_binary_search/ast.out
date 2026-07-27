@@ -823,16 +823,24 @@ Program
     Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch lowerBound upperBound binarySearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
-    Fun render(value: ds.Result<number, string>): string
-      Return (match value (arm ds.Result.Ok(value) (+ "ok:" (call str value))) (arm ds.Result.Err(error) (+ "err:" error)))
-    Let success: ds.Result<number, string> = (member-call ds ok<number, string> 7)
-    Let failure: ds.Result<number, string> = (member-call ds err<number, string> "bad")
-    Let explicit = (member-call (field ds Result) Ok<number, string> 9)
-    Let explicitError = (member-call (field ds Result) Err<number, string> "worse")
-    Let factoryExplicit = (member-call ds ok<number, string> 11)
-    Print (call render success)
-    Print (call render failure)
-    Print (call render explicit)
-    Print (call render explicitError)
-    Print (call render factoryExplicit)
-    Print (match failure (arm ds.Result.Ok(value) (+ "ok:" (call str value))) (arm ds.Result.Err(error) (+ "error:" error)))
+    Fun ascendingNumber(left: number, right: number): bool
+      Return (< left right)
+    Let numbers = (array 1 2 2 2 4 7)
+    Print (member-call ds lowerBound numbers 2 ascendingNumber)
+    Print (member-call ds upperBound numbers 2 ascendingNumber)
+    Print (member-call ds binarySearch numbers 2 ascendingNumber)
+    Print (member-call ds lowerBound numbers 3 ascendingNumber)
+    Print (member-call ds upperBound numbers 3 ascendingNumber)
+    Print (member-call ds binarySearch numbers 3 ascendingNumber)
+    Print (member-call ds lowerBound numbers 0 ascendingNumber)
+    Print (member-call ds upperBound numbers 9 ascendingNumber)
+    Fun ascendingByLength(left: string, right: string): bool
+      Return (< (member-call left len) (member-call right len))
+    Let words = (array "a" "bb" "cc" "ddd")
+    Print (member-call ds lowerBound words "bb" ascendingByLength)
+    Print (member-call ds upperBound words "bb" ascendingByLength)
+    Print (member-call ds binarySearch words "dog" ascendingByLength)
+    Let empty: [number] = (array)
+    Print (member-call ds lowerBound<number> empty 4 ascendingNumber)
+    Print (member-call ds upperBound<number> empty 4 ascendingNumber)
+    Print (member-call ds binarySearch<number> empty 4 ascendingNumber)

@@ -119,3 +119,11 @@ print ds.unionValues([1, 2], [2, 3]);
 print ds.windowSums([2, -1, 3, 4, -2, 1], 3);
 print ds.maxWindowSum([2, -1, 3, 4, -2, 1], 3);
 print ds.maxSubarraySum([-2, 1, -3, 4, -1, 2, 1, -5, 4]);
+
+fun ascendingSearch(left: number, right: number): bool {
+  return left < right;
+}
+
+print ds.lowerBound([1, 2, 2, 4], 2, ascendingSearch);
+print ds.upperBound([1, 2, 2, 4], 2, ascendingSearch);
+print ds.binarySearch([1, 2, 2, 4], 2, ascendingSearch);

@@ -48,6 +48,7 @@
 - 数组集合算法：`uniqueValues`、`intersectionValues`、`unionValues`、`differenceValues`。
 - 固定窗口统计：`windowSums`、`maxWindowSum`。
 - 子数组统计：`maxSubarraySum`。
+- 二分查找：`lowerBound`、`upperBound`、`binarySearch`。
 
 它们的现有 API 和示例继续作为兼容基线。后续新增 API 不应悄悄改变空值、
 快照或引用共享语义。
@@ -233,6 +234,8 @@ enum Result<T, E> {
 区间；因此相接端点会生成零长度区间。
 `maxSubarraySum` 使用 Kadane 扫描返回非空连续子数组的最大和，空数组返回
 `nil`，全负输入仍保留最大负值。
+`lowerBound`、`upperBound` 和 `binarySearch` 接受与输入排序一致的泛型比较器；
+前两者返回插入边界，后者返回重复值的首个位置。
 
 - 遍历、复制、拼接、分块、窗口、批处理；
 - `reverse`、`rotate`、`partition`、稳定分区、按谓词分组；
@@ -407,8 +410,8 @@ S2 已完成 `Set<T>` 的数组后端版本：使用语言 `==` 做线性去重�
 重复计数，`entries()` 按首次插入顺序返回新条目数组；`MultiMap<K,V>` 使用
 键数组和每键 value 数组，`discard(key,value)` 删除一个匹配 pair。随后完成
 了基础数组搜索/计数/逆序算法、稳定插入排序、窗口/前缀和算法、区间合并、
-双指针、数组集合算法、固定窗口统计、区间交集和最大子数组和，下一步进入
-二分查找与边界位置算法。
+双指针、数组集合算法、固定窗口统计、区间交集、最大子数组和以及二分查找
+已经完成，下一步进入更一般的排序算法。
 
 ### S2：集合和序列算法
 
