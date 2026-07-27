@@ -61,6 +61,7 @@ def main() -> int:
     uri = "file:///tmp/compiler-design-lsp.cd"
     other_uri = "file:///tmp/compiler-design-lsp-other.cd"
     module_uri = "file:///tmp/compiler-design-lsp-module.cd"
+    api_uri = "file:///tmp/compiler-design-lsp-api.cd"
     process = subprocess.Popen(
         [sys.argv[1], "--lsp"],
         stdin=subprocess.PIPE,
@@ -460,12 +461,35 @@ def main() -> int:
                         "uri": module_uri,
                         "languageId": "compiler-design",
                         "version": 1,
-                        "text": "let value = 42;\nexport value;\n",
+                        "text": (
+                            "let value = 42;\n"
+                            "export value;\n"
+                            "struct Box { value: number }\n"
+                            "enum Result { Ok(number), Empty }\n"
+                            "export Box, Result;\n"
+                        ),
                     }
                 },
             },
         )
         assert_publish(receive(process), module_uri, 0)
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didOpen",
+                "params": {
+                    "textDocument": {
+                        "uri": api_uri,
+                        "languageId": "compiler-design",
+                        "version": 1,
+                        "text": 'export Box, Result from "./compiler-design-lsp-module.cd";\n',
+                    }
+                },
+            },
+        )
+        assert_publish(receive(process), api_uri, 0)
 
         imported_source = (
             'import "./compiler-design-lsp-module.cd";\n'
@@ -511,6 +535,9 @@ def main() -> int:
         namespace_source = (
             'import "./compiler-design-lsp-module.cd" as lib;\n'
             "print lib.value;\n"
+            'import "./compiler-design-lsp-api.cd" as api;\n'
+            "let box: api.Box = api.Box { value: 1 };\n"
+            "let result: api.Result = api.Result.Ok(2);\n"
         )
         send(
             process,
@@ -696,6 +723,56 @@ def main() -> int:
             process,
             {
                 "jsonrpc": "2.0",
+                "id": 23,
+                "method": "textDocument/definition",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 3, "character": 15},
+                },
+            },
+        )
+        qualified_type_definition = receive(process)
+        if qualified_type_definition.get("result") != {
+            "uri": module_uri,
+            "range": {
+                "start": {"line": 2, "character": 7},
+                "end": {"line": 2, "character": 10},
+            },
+        }:
+            raise AssertionError(
+                "namespace-qualified type definition response mismatch: "
+                f"{qualified_type_definition!r}"
+            )
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 24,
+                "method": "textDocument/definition",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 4, "character": 37},
+                },
+            },
+        )
+        qualified_variant_definition = receive(process)
+        if qualified_variant_definition.get("result") != {
+            "uri": module_uri,
+            "range": {
+                "start": {"line": 3, "character": 14},
+                "end": {"line": 3, "character": 16},
+            },
+        }:
+            raise AssertionError(
+                "namespace-qualified enum variant definition response mismatch: "
+                f"{qualified_variant_definition!r}"
+            )
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
                 "method": "textDocument/didClose",
                 "params": {"textDocument": {"uri": module_uri}},
             },
@@ -711,6 +788,16 @@ def main() -> int:
             },
         )
         assert_publish(receive(process), other_uri, 0)
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didClose",
+                "params": {"textDocument": {"uri": api_uri}},
+            },
+        )
+        assert_publish(receive(process), api_uri, 0)
 
         send(
             process,

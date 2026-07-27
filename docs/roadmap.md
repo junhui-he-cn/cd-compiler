@@ -1408,6 +1408,18 @@ covers `lib.va` member completion and the existing local function completion.
 The decision is recorded in
 `docs/decisions/m5b-lsp-012.{md,json}`.
 
+`M5B-LSP-013` extends `textDocument/definition` to type and enum-variant
+references in the opened virtual workspace. Qualified type annotations,
+qualified struct constructors, enum constructors, and match patterns resolve
+local declarations or public types reached through direct imports and
+namespace aliases. Export-from chains are followed to the source struct/enum
+declaration, and variant navigation returns the source enum variant token
+range. Ordinary struct fields, unopened dependencies, and type/variant
+references or rename edits remain outside this slice. The focused protocol
+test covers a re-exported `api.Box` type and `api.Result.Ok` variant. The
+decision is recorded in
+`docs/decisions/m5b-lsp-013.{md,json}`.
+
 ### Milestone 5C: REPL / incremental evaluation
 
 **Dependency:** M3A module/session boundaries, M3B incremental compilation where
@@ -1645,15 +1657,15 @@ retain the resolved top-level blank-line, parser-accepted trailing-comma,
 bounded list-wrapping, and incomplete-input rejection policies without changing
 language semantics. Source fallback and direct-input adapters remain
 intentional.
-The next active tool slice is type/variant navigation; M5B-LSP-001 through
-M5B-LSP-012 now cover the single-document
+The next active tool slice is workspace-aware completion; M5B-LSP-001 through
+M5B-LSP-013 now cover the single-document
 protocol, diagnostics, formatting, definitions, document symbols, references,
 bounded hover type information, rename edits, declaration completion,
 open-document workspace symbols, virtual-source workspace analysis, direct
 import definition jumps, namespace-alias member definition jumps,
-cross-module references, validated cross-module rename, and opened-module
-completion while namespace-qualified type/variant navigation and
-workspace-aware completion remain open.
+cross-module references, validated cross-module rename, opened-module
+completion, and namespace-qualified type/variant navigation while
+workspace-aware completion remains open.
 
 ## Metrics dashboard
 

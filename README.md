@@ -48,9 +48,10 @@ The compiler pipeline includes:
   workspace; unqualified direct imports and members selected through opened
   namespace aliases can navigate to declarations in other modules, including
   explicit export-from forwarding. References can cross the same opened
-  direct-import and namespace-alias boundaries. Closed imports,
-  namespace-qualified types and variants, and workspace-wide completion remain
-  later slices. Rename edits validate the
+  direct-import and namespace-alias boundaries. Namespace-qualified struct and
+  enum types plus enum variants navigate through opened export chains. Closed
+  imports, ordinary struct-field completion/navigation, and workspace-wide
+  completion remain later slices. Rename edits validate the
   complete replacement across the opened virtual workspace before returning a
   multi-document `WorkspaceEdit`.
 

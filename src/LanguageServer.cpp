@@ -808,6 +808,424 @@ private:
     std::vector<ReferenceSite> sites_;
 };
 
+enum class TypeNavigationKind {
+    Type,
+    Variant,
+};
+
+struct TypeNavigationSite {
+    TypeNavigationKind kind = TypeNavigationKind::Type;
+    std::string qualifier;
+    std::string name;
+    std::optional<SourceRange> range;
+};
+
+class TypeNavigationSiteCollector {
+public:
+    std::vector<TypeNavigationSite> collect(const Program& program)
+    {
+        for (const StmtPtr& statement : program.statements) {
+            visitStatement(statement.get());
+        }
+        return std::move(sites_);
+    }
+
+private:
+    void add(
+        TypeNavigationKind kind,
+        const Token& token,
+        std::string qualifier,
+        std::string name)
+    {
+        if (!token.range || !token.range->valid() || name.empty()) {
+            return;
+        }
+        sites_.push_back(TypeNavigationSite{
+            kind,
+            std::move(qualifier),
+            std::move(name),
+            token.range});
+    }
+
+    void addTypeAnnotation(const TypeAnnotation& annotation)
+    {
+        switch (annotation.kind) {
+        case TypeAnnotation::Kind::Simple:
+            add(TypeNavigationKind::Type, annotation.token, {}, annotation.token.lexeme);
+            break;
+        case TypeAnnotation::Kind::Qualified:
+            add(
+                TypeNavigationKind::Type,
+                annotation.token,
+                annotation.qualifier.lexeme,
+                annotation.token.lexeme);
+            break;
+        case TypeAnnotation::Kind::Function:
+            for (const TypeAnnotation& parameter : annotation.parameterTypes) {
+                addTypeAnnotation(parameter);
+            }
+            if (annotation.returnType) {
+                addTypeAnnotation(*annotation.returnType);
+            }
+            break;
+        case TypeAnnotation::Kind::Array:
+            if (annotation.elementType) {
+                addTypeAnnotation(*annotation.elementType);
+            }
+            break;
+        case TypeAnnotation::Kind::Map:
+            if (annotation.keyType) {
+                addTypeAnnotation(*annotation.keyType);
+            }
+            if (annotation.valueType) {
+                addTypeAnnotation(*annotation.valueType);
+            }
+            break;
+        case TypeAnnotation::Kind::Nullable:
+            if (annotation.innerType) {
+                addTypeAnnotation(*annotation.innerType);
+            }
+            break;
+        }
+        for (const TypeAnnotation& argument : annotation.typeArguments) {
+            addTypeAnnotation(argument);
+        }
+    }
+
+    void addTypeParameters(const std::vector<TypeParameter>& parameters)
+    {
+        for (const TypeParameter& parameter : parameters) {
+            if (parameter.constraint) {
+                addTypeAnnotation(*parameter.constraint);
+            }
+        }
+    }
+
+    void addParameters(const std::vector<Parameter>& parameters)
+    {
+        for (const Parameter& parameter : parameters) {
+            if (parameter.typeName) {
+                addTypeAnnotation(*parameter.typeName);
+            }
+        }
+    }
+
+    void visitMethod(const MethodDecl& method)
+    {
+        addTypeParameters(method.typeParameters);
+        addParameters(method.parameters);
+        if (method.returnTypeName) {
+            addTypeAnnotation(*method.returnTypeName);
+        }
+        for (const StmtPtr& statement : method.body) {
+            visitStatement(statement.get());
+        }
+    }
+
+    void visitPattern(const Pattern* pattern)
+    {
+        if (!pattern) {
+            return;
+        }
+        if (const auto* orPattern = dynamic_cast<const OrPattern*>(pattern)) {
+            for (const PatternPtr& alternative : orPattern->alternatives) {
+                visitPattern(alternative.get());
+            }
+            return;
+        }
+        if (const auto* record = dynamic_cast<const RecordPattern*>(pattern)) {
+            add(
+                TypeNavigationKind::Type,
+                record->name,
+                record->qualifier ? record->qualifier->lexeme : std::string(),
+                record->name.lexeme);
+            for (const RecordPatternField& field : record->fields) {
+                visitPattern(field.pattern.get());
+            }
+            return;
+        }
+        if (const auto* variant = dynamic_cast<const VariantPattern*>(pattern)) {
+            const std::string enumPath
+                = variant->qualifier ? variant->qualifier->lexeme : std::string();
+            if (variant->qualifier && enumPath.find('.') == std::string::npos) {
+                add(
+                    TypeNavigationKind::Type,
+                    *variant->qualifier,
+                    {},
+                    enumPath);
+            }
+            add(
+                TypeNavigationKind::Variant,
+                variant->name,
+                enumPath,
+                variant->name.lexeme);
+            for (const PatternPtr& argument : variant->arguments) {
+                visitPattern(argument.get());
+            }
+        }
+    }
+
+    void visitStatement(const Stmt* statement)
+    {
+        if (!statement) {
+            return;
+        }
+        if (const auto* module = dynamic_cast<const ModuleStmt*>(statement)) {
+            for (const StmtPtr& child : module->statements) {
+                visitStatement(child.get());
+            }
+            return;
+        }
+        if (const auto* enumDeclaration = dynamic_cast<const EnumDeclStmt*>(statement)) {
+            addTypeParameters(enumDeclaration->typeParameters);
+            for (const EnumVariantDecl& variant : enumDeclaration->variants) {
+                for (const TypeAnnotation& payload : variant.payloadTypes) {
+                    addTypeAnnotation(payload);
+                }
+            }
+            return;
+        }
+        if (const auto* structDeclaration = dynamic_cast<const StructDeclStmt*>(statement)) {
+            addTypeParameters(structDeclaration->typeParameters);
+            for (const StructFieldDecl& field : structDeclaration->fields) {
+                addTypeAnnotation(field.typeName);
+            }
+            return;
+        }
+        if (const auto* impl = dynamic_cast<const ImplStmt*>(statement)) {
+            add(TypeNavigationKind::Type, impl->typeName, {}, impl->typeName.lexeme);
+            addTypeParameters(impl->typeParameters);
+            for (const MethodDecl& method : impl->methods) {
+                visitMethod(method);
+            }
+            return;
+        }
+        if (const auto* function = dynamic_cast<const FunctionStmt*>(statement)) {
+            addTypeParameters(function->typeParameters);
+            addParameters(function->parameters);
+            if (function->returnTypeName) {
+                addTypeAnnotation(*function->returnTypeName);
+            }
+            for (const StmtPtr& child : function->body) {
+                visitStatement(child.get());
+            }
+            return;
+        }
+        if (const auto* let = dynamic_cast<const LetStmt*>(statement)) {
+            if (let->typeName) {
+                addTypeAnnotation(*let->typeName);
+            }
+            visitExpression(let->initializer.get());
+            return;
+        }
+        if (const auto* print = dynamic_cast<const PrintStmt*>(statement)) {
+            visitExpression(print->expression.get());
+            return;
+        }
+        if (const auto* expression = dynamic_cast<const ExpressionStmt*>(statement)) {
+            visitExpression(expression->expression.get());
+            return;
+        }
+        if (const auto* block = dynamic_cast<const BlockStmt*>(statement)) {
+            for (const StmtPtr& child : block->statements) {
+                visitStatement(child.get());
+            }
+            return;
+        }
+        if (const auto* ifStatement = dynamic_cast<const IfStmt*>(statement)) {
+            visitExpression(ifStatement->condition.get());
+            visitStatement(ifStatement->thenBranch.get());
+            visitStatement(ifStatement->elseBranch.get());
+            return;
+        }
+        if (const auto* whileStatement = dynamic_cast<const WhileStmt*>(statement)) {
+            visitExpression(whileStatement->condition.get());
+            visitStatement(whileStatement->body.get());
+            return;
+        }
+        if (const auto* forStatement = dynamic_cast<const ForStmt*>(statement)) {
+            visitStatement(forStatement->initializer.get());
+            visitExpression(forStatement->condition.get());
+            visitExpression(forStatement->increment.get());
+            visitStatement(forStatement->body.get());
+            return;
+        }
+        if (const auto* forIn = dynamic_cast<const ForInStmt*>(statement)) {
+            visitExpression(forIn->iterable.get());
+            visitStatement(forIn->body.get());
+            return;
+        }
+        if (const auto* match = dynamic_cast<const MatchStmt*>(statement)) {
+            visitExpression(match->value.get());
+            for (const MatchArm& arm : match->arms) {
+                visitPattern(arm.pattern.get());
+                visitExpression(arm.guard.get());
+                visitStatement(arm.body.get());
+            }
+            return;
+        }
+        if (const auto* returnStatement = dynamic_cast<const ReturnStmt*>(statement)) {
+            visitExpression(returnStatement->value.get());
+        }
+    }
+
+    void visitExpression(const Expr* expression)
+    {
+        if (!expression) {
+            return;
+        }
+        if (const auto* assign = dynamic_cast<const AssignExpr*>(expression)) {
+            visitExpression(assign->value.get());
+            return;
+        }
+        if (const auto* compound = dynamic_cast<const CompoundAssignExpr*>(expression)) {
+            visitExpression(compound->value.get());
+            return;
+        }
+        if (const auto* indexAssign = dynamic_cast<const IndexAssignExpr*>(expression)) {
+            visitExpression(indexAssign->collection.get());
+            visitExpression(indexAssign->index.get());
+            visitExpression(indexAssign->value.get());
+            return;
+        }
+        if (const auto* indexCompound = dynamic_cast<const IndexCompoundAssignExpr*>(expression)) {
+            visitExpression(indexCompound->collection.get());
+            visitExpression(indexCompound->index.get());
+            visitExpression(indexCompound->value.get());
+            return;
+        }
+        if (const auto* unary = dynamic_cast<const UnaryExpr*>(expression)) {
+            visitExpression(unary->right.get());
+            return;
+        }
+        if (const auto* binary = dynamic_cast<const BinaryExpr*>(expression)) {
+            visitExpression(binary->left.get());
+            visitExpression(binary->right.get());
+            return;
+        }
+        if (const auto* logical = dynamic_cast<const LogicalExpr*>(expression)) {
+            visitExpression(logical->left.get());
+            visitExpression(logical->right.get());
+            return;
+        }
+        if (const auto* grouping = dynamic_cast<const GroupingExpr*>(expression)) {
+            visitExpression(grouping->expression.get());
+            return;
+        }
+        if (const auto* call = dynamic_cast<const CallExpr*>(expression)) {
+            for (const TypeAnnotation& argument : call->typeArguments) {
+                addTypeAnnotation(argument);
+            }
+            visitExpression(call->callee.get());
+            for (const ExprPtr& argument : call->arguments) {
+                visitExpression(argument.get());
+            }
+            return;
+        }
+        if (const auto* memberCall = dynamic_cast<const MemberCallExpr*>(expression)) {
+            for (const TypeAnnotation& argument : memberCall->typeArguments) {
+                addTypeAnnotation(argument);
+            }
+            if (const auto* receiver = dynamic_cast<const VariableExpr*>(memberCall->receiver.get())) {
+                add(TypeNavigationKind::Type, receiver->name, {}, receiver->name.lexeme);
+                add(
+                    TypeNavigationKind::Variant,
+                    memberCall->name,
+                    receiver->name.lexeme,
+                    memberCall->name.lexeme);
+            } else if (const auto* field
+                       = dynamic_cast<const FieldAccessExpr*>(memberCall->receiver.get())) {
+                const auto* namespaceAlias
+                    = dynamic_cast<const VariableExpr*>(field->object.get());
+                if (namespaceAlias) {
+                    add(
+                        TypeNavigationKind::Type,
+                        field->name,
+                        namespaceAlias->name.lexeme,
+                        field->name.lexeme);
+                    add(
+                        TypeNavigationKind::Variant,
+                        memberCall->name,
+                        namespaceAlias->name.lexeme + "." + field->name.lexeme,
+                        memberCall->name.lexeme);
+                }
+            }
+            visitExpression(memberCall->receiver.get());
+            for (const ExprPtr& argument : memberCall->arguments) {
+                visitExpression(argument.get());
+            }
+            return;
+        }
+        if (const auto* array = dynamic_cast<const ArrayExpr*>(expression)) {
+            for (const ExprPtr& element : array->elements) {
+                visitExpression(element.get());
+            }
+            return;
+        }
+        if (const auto* map = dynamic_cast<const MapExpr*>(expression)) {
+            for (const MapEntry& entry : map->entries) {
+                visitExpression(entry.key.get());
+                visitExpression(entry.value.get());
+            }
+            return;
+        }
+        if (const auto* construct = dynamic_cast<const StructConstructExpr*>(expression)) {
+            add(
+                TypeNavigationKind::Type,
+                construct->name,
+                construct->qualifier ? construct->qualifier->lexeme : std::string(),
+                construct->name.lexeme);
+            for (const TypeAnnotation& argument : construct->typeArguments) {
+                addTypeAnnotation(argument);
+            }
+            for (const StructField& field : construct->fields) {
+                visitExpression(field.value.get());
+            }
+            return;
+        }
+        if (const auto* index = dynamic_cast<const IndexExpr*>(expression)) {
+            visitExpression(index->collection.get());
+            visitExpression(index->index.get());
+            return;
+        }
+        if (const auto* field = dynamic_cast<const FieldAccessExpr*>(expression)) {
+            visitExpression(field->object.get());
+            return;
+        }
+        if (const auto* fieldAssign = dynamic_cast<const FieldAssignExpr*>(expression)) {
+            visitExpression(fieldAssign->object.get());
+            visitExpression(fieldAssign->value.get());
+            return;
+        }
+        if (const auto* fieldCompound = dynamic_cast<const FieldCompoundAssignExpr*>(expression)) {
+            visitExpression(fieldCompound->object.get());
+            visitExpression(fieldCompound->value.get());
+            return;
+        }
+        if (const auto* function = dynamic_cast<const FunctionExpr*>(expression)) {
+            addTypeParameters(function->typeParameters);
+            addParameters(function->parameters);
+            if (function->returnTypeName) {
+                addTypeAnnotation(*function->returnTypeName);
+            }
+            for (const StmtPtr& child : function->body) {
+                visitStatement(child.get());
+            }
+            return;
+        }
+        if (const auto* match = dynamic_cast<const MatchExpr*>(expression)) {
+            visitExpression(match->value.get());
+            for (const MatchExprArm& arm : match->arms) {
+                visitPattern(arm.pattern.get());
+                visitExpression(arm.guard.get());
+                visitExpression(arm.value.get());
+            }
+        }
+    }
+
+    std::vector<TypeNavigationSite> sites_;
+};
+
 std::optional<std::uint32_t> decodeUtf8(
     std::string_view text,
     std::size_t offset,
@@ -934,6 +1352,7 @@ struct AnalysisSnapshot {
     std::optional<Program> program;
     DeclarationIndex declarationIndex;
     std::vector<ReferenceSite> referenceSites;
+    std::vector<TypeNavigationSite> typeNavigationSites;
     std::vector<SourceFile> sources;
     std::map<std::size_t, std::string> sourceUris;
     std::vector<FileDiagnosticError> diagnostics;
@@ -1009,6 +1428,8 @@ DocumentAnalysis analyzeDocument(const std::string& source)
         snapshot.declarationIndex = DeclarationIndex::collect(*snapshot.program);
         ReferenceSiteCollector referenceCollector;
         snapshot.referenceSites = referenceCollector.collect(*snapshot.program);
+        TypeNavigationSiteCollector typeNavigationCollector;
+        snapshot.typeNavigationSites = typeNavigationCollector.collect(*snapshot.program);
         typeChecker.check(*snapshot.program);
         snapshot.declarationIndex = typeChecker.declarationIndex();
     } catch (const TypeErrorList& errors) {
@@ -1284,6 +1705,14 @@ JsonValue sourceLocation(
         {"uri", JsonValue::string(uri)},
         {"range", textDocumentRange(source, range)},
     });
+}
+
+JsonValue definitionLocation(
+    const std::string& uri,
+    std::string_view source,
+    const SourceRange& range)
+{
+    return sourceLocation(uri, source, range);
 }
 
 std::vector<SourceRange> referenceRangesAt(
@@ -1827,6 +2256,153 @@ std::vector<std::pair<std::string, DefinitionTarget>> exportedDefinitionsForModu
     return definitions;
 }
 
+bool isTypeDeclaration(const DeclarationRecord* declaration)
+{
+    return declaration
+        && (declaration->kind == DeclarationKind::Struct
+            || declaration->kind == DeclarationKind::Enum);
+}
+
+std::optional<DefinitionTarget> typeDefinitionForName(
+    const AnalysisSnapshot& snapshot,
+    const ModuleStmt& module,
+    std::string_view qualifier,
+    std::string_view name)
+{
+    if (name.empty()) {
+        return std::nullopt;
+    }
+
+    if (!qualifier.empty()) {
+        for (const StmtPtr& statement : module.statements) {
+            const auto* import = dynamic_cast<const ImportStmt*>(statement.get());
+            if (!import || !import->alias
+                || import->alias->lexeme != qualifier
+                || import->resolvedModuleId == static_cast<std::size_t>(-1)) {
+                continue;
+            }
+            std::unordered_set<std::size_t> visiting;
+            if (const std::optional<DefinitionTarget> target = exportedDefinition(
+                    snapshot,
+                    import->resolvedModuleId,
+                    name,
+                    visiting);
+                target && isTypeDeclaration(target->declaration)) {
+                return target;
+            }
+        }
+        return std::nullopt;
+    }
+
+    if (const DeclarationRecord* declaration = topLevelDeclaration(snapshot, module, name);
+        isTypeDeclaration(declaration)) {
+        return DefinitionTarget{declaration, module.sourceId};
+    }
+
+    for (const StmtPtr& statement : module.statements) {
+        const auto* import = dynamic_cast<const ImportStmt*>(statement.get());
+        if (!import || import->alias || import->resolvedModuleId == static_cast<std::size_t>(-1)) {
+            continue;
+        }
+        std::unordered_set<std::size_t> visiting;
+        if (const std::optional<DefinitionTarget> target = exportedDefinition(
+                snapshot,
+                import->resolvedModuleId,
+                name,
+                visiting);
+            target && isTypeDeclaration(target->declaration)) {
+            return target;
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<DefinitionTarget> typeDefinitionForPath(
+    const AnalysisSnapshot& snapshot,
+    const ModuleStmt& module,
+    std::string_view path)
+{
+    const std::size_t separator = path.find('.');
+    if (separator == std::string_view::npos) {
+        return typeDefinitionForName(snapshot, module, {}, path);
+    }
+    return typeDefinitionForName(
+        snapshot,
+        module,
+        path.substr(0, separator),
+        path.substr(separator + 1));
+}
+
+std::optional<SourceRange> variantDefinitionForSite(
+    const AnalysisSnapshot& snapshot,
+    const ModuleStmt& module,
+    const TypeNavigationSite& site)
+{
+    const std::optional<DefinitionTarget> type = typeDefinitionForPath(
+        snapshot,
+        module,
+        site.qualifier);
+    if (!type || !type->declaration || type->declaration->kind != DeclarationKind::Enum
+        || !type->declaration->statement) {
+        return std::nullopt;
+    }
+    const auto* enumDeclaration
+        = dynamic_cast<const EnumDeclStmt*>(type->declaration->statement);
+    if (!enumDeclaration) {
+        return std::nullopt;
+    }
+    for (const EnumVariantDecl& variant : enumDeclaration->variants) {
+        if (variant.name.lexeme == site.name && variant.name.range
+            && variant.name.range->valid()) {
+            return variant.name.range;
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<SourceRange> typeNavigationRangeAt(
+    const AnalysisSnapshot& snapshot,
+    SourceFileId sourceId,
+    std::size_t byte)
+{
+    const ModuleStmt* module = moduleForSource(snapshot, sourceId);
+    if (!module) {
+        return std::nullopt;
+    }
+
+    std::optional<SourceRange> best;
+    std::size_t bestWidth = std::numeric_limits<std::size_t>::max();
+    for (const TypeNavigationSite& site : snapshot.typeNavigationSites) {
+        if (!site.range || !rangeContains(*site.range, sourceId, byte)) {
+            continue;
+        }
+
+        std::optional<SourceRange> candidate;
+        if (site.kind == TypeNavigationKind::Type) {
+            if (const std::optional<DefinitionTarget> type = typeDefinitionForPath(
+                    snapshot,
+                    *module,
+                    site.qualifier.empty() ? site.name : site.qualifier + "." + site.name);
+                type && type->declaration && type->declaration->range) {
+                candidate = *type->declaration->range;
+            }
+        } else {
+            candidate = variantDefinitionForSite(snapshot, *module, site);
+        }
+        if (!candidate) {
+            continue;
+        }
+
+        const std::size_t width = site.range->end - site.range->start;
+        if (!best || width < bestWidth
+            || (width == bestWidth && site.range->start < best->start)) {
+            best = candidate;
+            bestWidth = width;
+        }
+    }
+    return best;
+}
+
 std::shared_ptr<AnalysisSnapshot> analyzeVirtualWorkspace(
     const std::vector<FrontendVirtualFile>& files,
     const std::map<std::string, std::string>& uriByCanonicalPath)
@@ -1840,6 +2416,8 @@ std::shared_ptr<AnalysisSnapshot> analyzeVirtualWorkspace(
         snapshot->declarationIndex = DeclarationIndex::collect(*snapshot->program);
         ReferenceSiteCollector referenceCollector;
         snapshot->referenceSites = referenceCollector.collect(*snapshot->program);
+        TypeNavigationSiteCollector typeNavigationCollector;
+        snapshot->typeNavigationSites = typeNavigationCollector.collect(*snapshot->program);
 
         if (snapshot->program->moduleGraph) {
             for (const ModuleGraphNode& node : snapshot->program->moduleGraph->nodes) {
@@ -2308,6 +2886,21 @@ private:
             found->second.analysis.sourceId,
             *byte);
         if (!imported || !imported->declaration || !imported->declaration->range) {
+            const std::optional<SourceRange> navigation = typeNavigationRangeAt(
+                snapshot,
+                found->second.analysis.sourceId,
+                *byte);
+            if (!navigation) {
+                return JsonValue::null();
+            }
+            const auto uriForSource = snapshot.sourceUris.find(navigation->source.value);
+            const std::string* source = sourceTextFor(snapshot, navigation->source);
+            if (uriForSource != snapshot.sourceUris.end() && source) {
+                return definitionLocation(uriForSource->second, *source, *navigation);
+            }
+            if (navigation->source == found->second.analysis.sourceId) {
+                return definitionLocation(*uri, found->second.text, *navigation);
+            }
             return JsonValue::null();
         }
         const auto uriForSource = snapshot.sourceUris.find(imported->sourceId.value);
