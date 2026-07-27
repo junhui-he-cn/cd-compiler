@@ -670,6 +670,56 @@ Program
             Expr (member-call components push component)
             Expr (+= root 1)
       Return components
+    Fun isBipartite(graph: Graph): bool
+      If (group (field graph directed))
+        Then
+          Block
+            Return false
+      Let count = (member-call graph vertexCount)
+      Let colors: [number] = (array)
+      Let index = 0
+      While (group (< index count))
+        Body
+          Block
+            Expr (member-call colors push (- 1))
+            Expr (+= index 1)
+      Let root = 0
+      While (group (< root count))
+        Body
+          Block
+            If (group (>= (index colors root) 0))
+              Then
+                Block
+                  Expr (+= root 1)
+                  Continue
+            Let queue: [number] = (array root)
+            Expr (= (index colors root) 0)
+            Let head = 0
+            While (group (< head (member-call queue len)))
+              Body
+                Block
+                  Let vertex = (index queue head)
+                  Expr (+= head 1)
+                  Let neighbors = (index (field graph adjacency) vertex)
+                  Let neighborIndex = 0
+                  While (group (< neighborIndex (member-call neighbors len)))
+                    Body
+                      Block
+                        Let neighbor = (index neighbors neighborIndex)
+                        If (group (< (index colors neighbor) 0))
+                          Then
+                            Block
+                              Expr (= (index colors neighbor) (- 1 (index colors vertex)))
+                              Expr (member-call queue push neighbor)
+                          Else
+                            Block
+                              If (group (== (index colors neighbor) (index colors vertex)))
+                                Then
+                                  Block
+                                    Return false
+                        Expr (+= neighborIndex 1)
+            Expr (+= root 1)
+      Return true
     Fun shortestDistances(graph: Graph, start: number): [number]
       Let distances: [number] = (array)
       Let count = (member-call graph vertexCount)
@@ -1887,7 +1937,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let graph = (member-call ds newGraph 8 true)

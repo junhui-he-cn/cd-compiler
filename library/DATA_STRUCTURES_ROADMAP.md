@@ -55,7 +55,7 @@
 - 并查集：整数顶点 `DisjointSet`，支持路径压缩和按大小合并。
 - 图基础结构：整数顶点数组邻接表 `Graph`，支持有向/无向边。
 - 图遍历：`breadthFirstOrder`、`depthFirstOrder`。
-- 无向连通分量：`connectedComponents`。
+- 无向连通性：`connectedComponents`、`isBipartite`。
 - 无权图路径：`shortestDistances`、`shortestPath`。
 - DAG 视图：`inDegrees`、`topologicalOrder`、`hasCycle`。
 - 加权图：非负 `WeightedEdge`/`WeightedGraph`、Dijkstra 与最小生成森林。
@@ -265,6 +265,7 @@ enum Result<T, E> {
 只返回起点所在可达分量。
 `connectedComponents` 已提供无向图的升序根节点 BFS 分量划分；有向图查询返回
 空数组。
+`isBipartite` 已提供无向图的 BFS 二着色检查；有向图、自环和奇环返回 `false`。
 `shortestDistances` 和 `shortestPath` 已提供基于 BFS 的无权图距离和路径，
 不可达顶点使用 `-1` 或空路径。
 `inDegrees` 和 `topologicalOrder` 已提供有向无环图的入度与 Kahn 拓扑排序；

@@ -850,6 +850,50 @@ fun connectedComponents(graph: Graph): [[number]] {
   return components;
 }
 
+fun isBipartite(graph: Graph): bool {
+  if (graph.directed) {
+    return false;
+  }
+  let count = graph.vertexCount();
+  let colors: [number] = [];
+  let index = 0;
+  while (index < count) {
+    colors.push(-1);
+    index += 1;
+  }
+
+  let root = 0;
+  while (root < count) {
+    if (colors[root] >= 0) {
+      root += 1;
+      continue;
+    }
+    let queue: [number] = [root];
+    colors[root] = 0;
+    let head = 0;
+    while (head < queue.len()) {
+      let vertex = queue[head];
+      head += 1;
+      let neighbors = graph.adjacency[vertex];
+      let neighborIndex = 0;
+      while (neighborIndex < neighbors.len()) {
+        let neighbor = neighbors[neighborIndex];
+        if (colors[neighbor] < 0) {
+          colors[neighbor] = 1 - colors[vertex];
+          queue.push(neighbor);
+        } else {
+          if (colors[neighbor] == colors[vertex]) {
+            return false;
+          }
+        }
+        neighborIndex += 1;
+      }
+    }
+    root += 1;
+  }
+  return true;
+}
+
 fun shortestDistances(graph: Graph, start: number): [number] {
   let distances: [number] = [];
   let count = graph.vertexCount();
@@ -2057,4 +2101,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, shortestWeightedDistances, shortestWeightedPath, minimumSpanningForest, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, shortestWeightedDistances, shortestWeightedPath, minimumSpanningForest, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;

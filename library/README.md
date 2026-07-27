@@ -98,6 +98,7 @@ print graph.neighbors(1);
 print ds.breadthFirstOrder(graph, 0);
 print ds.depthFirstOrder(graph, 0);
 print ds.connectedComponents(graph);
+print ds.isBipartite(graph);
 print ds.shortestPath(graph, 0, 2);
 
 let dag = ds.newGraph(3, true);
@@ -341,6 +342,10 @@ over the reachable subgraph, with `O(V)` auxiliary space.
 `connectedComponents(graph)` returns BFS-ordered components for an undirected
 graph, starting roots in ascending vertex order; it returns `[]` for directed
 graphs and empty graphs. It runs in `O(V + E)` time with `O(V)` auxiliary space.
+
+`isBipartite(graph)` colors each undirected component with BFS and returns
+`false` for directed graphs, self-loops, or odd cycles. Empty undirected graphs
+are bipartite; the check runs in `O(V + E)` time with `O(V)` auxiliary space.
 
 `shortestDistances(graph, start)` uses BFS to return one distance per vertex;
 unreachable vertices and invalid starts use `-1`. `shortestPath(graph, start,
