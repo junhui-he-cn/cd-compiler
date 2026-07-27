@@ -90,7 +90,8 @@ python3 tools/repl.py ./build/compiler_design vm-rs/Cargo.toml
 Enter a source form followed by a blank line to evaluate it. `:reset` clears
 the accepted transcript and `:quit` exits. The prototype replays accepted
 source through the production compiler and Rust VM; failed forms do not change
-session state.
+session state. Add repeatable `--import-path DIR` options to resolve non-
+explicit imports through the production module search path.
 
 ## Language
 

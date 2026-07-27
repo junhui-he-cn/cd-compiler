@@ -30,7 +30,7 @@
     "in-process compiler or VM embedding",
     "incremental bytecode or runtime-state reuse",
     "expression-result echo",
-    "imports and persistent project roots",
+    "relative-import project roots, package manifests, and import maps",
     "terminal history or completion",
     "persistent semantic caching"
   ],

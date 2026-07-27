@@ -1477,9 +1477,17 @@ transcript, the production C++ compiler emits a linked `.cdbc`, and the Rust
 VM replays it. Only the new stdout suffix from a successful replay is exposed;
 parse, type, bytecode, and runtime failures leave the accepted transcript and
 output baseline unchanged. `:reset`, `:help`, and `:quit` are explicit session
-commands. The prototype intentionally defers in-process VM state, imports,
-expression-result echo, and terminal editing to later M5C slices. Its decision
+commands. The prototype intentionally defers in-process VM state, project-root
+import policy, expression-result echo, and terminal editing to later M5C slices. Its decision
 is recorded in `docs/decisions/m5c-repl-001.{md,json}`.
+
+`M5C-REPL-002` forwards repeatable `--import-path DIR` options to the
+production compiler. Successful import forms remain in the accepted transcript
+and expose their existing public definitions to later forms; failed imports
+roll back with the same session rule. Ordered search paths are supported while
+temporary-source relative-import roots, package manifests, and import maps
+remain deferred. The decision is recorded in
+`docs/decisions/m5c-repl-002.{md,json}`.
 
 **Migration:** expose an incremental wrapper around the production front end and
 VM. Keep session state separate from compiler-global state, and use the same

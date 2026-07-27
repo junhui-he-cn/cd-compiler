@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m5c-2026-07-27-r2",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M5C-REPL-002",
+  "domain": "source-backed-incremental-session-import-search",
+  "status": "resolved",
+  "question": "How should the first REPL session expose imported public definitions?",
+  "decision": "Forward repeatable --import-path directories to the production compiler for each transcript replay and retain successful import forms in the accepted transcript.",
+  "imports": {
+    "syntax": "existing import syntax",
+    "search": "ordered command-line --import-path directories",
+    "visibility": "existing exported public definitions",
+    "failure": "failed imports do not commit the candidate form"
+  },
+  "shared_services": [
+    "FrontendSession import search paths",
+    "production C++ --emit-bytecode path",
+    "Rust compiler-design-vm run command"
+  ],
+  "compatibility_boundary": {
+    "runtime": "source-backed deterministic replay remains unchanged",
+    "relative_imports": "temporary session source remains the relative-import base",
+    "paths": "command-line order is preserved"
+  },
+  "quantitative_gate": "tests/repl_tests.py covers an exported function from an --import-path module and failed-import recovery.",
+  "out_of_scope": [
+    "explicit relative-import project roots",
+    "package manifests",
+    "import maps",
+    "in-process module/session state",
+    "incremental bytecode or runtime-state reuse",
+    "persistent semantic caching"
+  ],
+  "verification": {
+    "focused_commands": [
+      "python3 tests/repl_tests.py ./build/compiler_design vm-rs/Cargo.toml",
+      "ctest --test-dir build --output-on-failure -R '^repl$'",
+      "git diff --check"
+    ]
+  }
+}

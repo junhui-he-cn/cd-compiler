@@ -6,7 +6,7 @@ Each blank-line-delimited form is appended to the accepted transcript, then
 the production compiler and Rust VM replay that transcript. A failed form is
 never committed to the transcript, and only the newly produced stdout suffix
 is exposed to the user.
-"""
+    """
 
 from __future__ import annotations
 
@@ -31,10 +31,17 @@ Commands at a form boundary:
 
 
 class TranscriptSession:
-    def __init__(self, compiler: Path, vm_manifest: Path, root: Path) -> None:
+    def __init__(
+        self,
+        compiler: Path,
+        vm_manifest: Path,
+        root: Path,
+        import_paths: list[Path],
+    ) -> None:
         self.compiler = compiler
         self.vm_manifest = vm_manifest
         self.root = root
+        self.import_paths = import_paths
         self.source_path = root / "session.cd"
         self.artifact_path = root / "session.cdbc"
         self.accepted_source = ""
@@ -50,13 +57,16 @@ class TranscriptSession:
 
     def _compile(self, source: str) -> subprocess.CompletedProcess[str]:
         self.source_path.write_text(source, encoding="utf-8")
+        command = [
+            str(self.compiler),
+            "--emit-bytecode",
+            str(self.artifact_path),
+        ]
+        for import_path in self.import_paths:
+            command.extend(["--import-path", str(import_path)])
+        command.append(str(self.source_path))
         return subprocess.run(
-            [
-                str(self.compiler),
-                "--emit-bytecode",
-                str(self.artifact_path),
-                str(self.source_path),
-            ],
+            command,
             text=True,
             capture_output=True,
             check=False,
@@ -119,6 +129,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("compiler", type=Path, help="path to compiler_design")
     parser.add_argument("vm_manifest", type=Path, help="path to vm-rs/Cargo.toml")
+    parser.add_argument(
+        "--import-path",
+        action="append",
+        type=Path,
+        default=[],
+        help="search path for non-explicit source imports (repeatable)",
+    )
     return parser.parse_args()
 
 
@@ -173,7 +190,12 @@ def main() -> int:
         return 2
 
     with tempfile.TemporaryDirectory(prefix="compiler-repl-") as directory:
-        session = TranscriptSession(compiler, vm_manifest, Path(directory))
+        session = TranscriptSession(
+            compiler,
+            vm_manifest,
+            Path(directory),
+            [path.resolve() for path in args.import_path],
+        )
         return run_session(session, sys.stdin, sys.stderr)
 
 

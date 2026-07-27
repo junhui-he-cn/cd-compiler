@@ -25,7 +25,7 @@ VM; it does not introduce a parser, semantic checker, bytecode format, or
 second runtime. The source-backed replay is intentionally a correctness-first
 prototype. The session currently uses a temporary file and requires the
 compiler binary plus `vm-rs/Cargo.toml`; a native in-process CLI protocol,
-incremental VM state, and import/session-root policy are later slices.
+incremental VM state, and project-root import policy are later slices.
 
 No expression-result echo is added: language programs use their existing
 `print` statement for observable output. A form is submitted at a blank line,
@@ -43,7 +43,7 @@ path normalization, and a multi-line function form. It is registered as the
 - in-process compiler/VM embedding;
 - incremental bytecode or runtime-state reuse;
 - automatic expression-result display;
-- imports and persistent project roots;
+- relative-import project roots, package manifests, and import maps;
 - line-editing, history, completion, or terminal UI;
 - persistent semantic caching.
 

@@ -4,13 +4,22 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 
-def run_repl(compiler: Path, vm_manifest: Path, transcript: str) -> subprocess.CompletedProcess[str]:
+def run_repl(
+    compiler: Path,
+    vm_manifest: Path,
+    transcript: str,
+    import_paths: tuple[Path, ...] = (),
+) -> subprocess.CompletedProcess[str]:
     repl = Path(__file__).resolve().parents[1] / "tools" / "repl.py"
+    command = [sys.executable, str(repl), str(compiler), str(vm_manifest)]
+    for import_path in import_paths:
+        command.extend(["--import-path", str(import_path)])
     return subprocess.run(
-        [sys.executable, str(repl), str(compiler), str(vm_manifest)],
+        command,
         input=transcript,
         text=True,
         capture_output=True,
@@ -99,6 +108,49 @@ print add(2, 3);
     require(multiline.returncode == 0, f"multiline session returned {multiline.returncode}: {multiline.stderr}")
     require(multiline.stdout == "5\n", f"unexpected multiline stdout: {multiline.stdout!r}")
     require(multiline.stderr == "", f"unexpected multiline stderr: {multiline.stderr!r}")
+
+    with tempfile.TemporaryDirectory(prefix="compiler-repl-import-") as directory:
+        library = Path(directory) / "library"
+        library.mkdir()
+        (library / "math.cd").write_text(
+            "fun answer(): number { return 42; }\nexport answer;\n",
+            encoding="utf-8",
+        )
+        imported = run_repl(
+            compiler,
+            vm_manifest,
+            """import "math";
+
+print answer();
+
+let result = answer();
+
+print result;
+
+:quit
+""",
+            (library,),
+        )
+        require(imported.returncode == 0, f"import session returned {imported.returncode}: {imported.stderr}")
+        require(imported.stdout == "42\n42\n", f"unexpected imported stdout: {imported.stdout!r}")
+        require(imported.stderr == "", f"unexpected imported stderr: {imported.stderr!r}")
+
+        failed_import = run_repl(
+            compiler,
+            vm_manifest,
+            """import "missing";
+
+let value = 9;
+
+print value;
+
+:quit
+""",
+            (library,),
+        )
+        require(failed_import.returncode == 0, f"failed import session returned {failed_import.returncode}")
+        require(failed_import.stdout == "9\n", f"failed import polluted stdout: {failed_import.stdout!r}")
+        require("Import error" in failed_import.stderr, f"missing import diagnostic: {failed_import.stderr!r}")
     return 0
 
 
