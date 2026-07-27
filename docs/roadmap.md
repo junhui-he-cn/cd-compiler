@@ -1284,10 +1284,24 @@ the current document. The adapter serializes URI, name, kind, and source
 ranges only, so snapshot-local declaration/symbol IDs do not cross the LSP
 boundary. Parseable documents with type errors retain their index for queries;
 incomplete documents return no query result. The focused protocol test covers
-function-call and variable definitions plus symbol ordering. References,
-completion, hover/type information, and cross-module navigation remain later
-M5B slices. The decision is recorded in
+function-call and variable definitions plus symbol ordering. Completion,
+hover/type information, and cross-module navigation remain later M5B slices.
+The decision is recorded in
 `docs/decisions/m5b-lsp-002.{md,json}`.
+
+`M5B-LSP-003` adds `textDocument/references` for the current single-document
+snapshot. The query resolves the symbol at the requested UTF-16 position
+through the shared declaration/reference metadata, returns deterministic LSP
+`Location[]` entries sorted by source range, and honors
+`context.includeDeclaration` (default false). With the flag enabled, the
+declaration range is included exactly once; without it, only resolved variable,
+assignment, and compound-assignment occurrences are returned. Parseable
+documents with type errors retain the same query snapshot policy as 002, while
+incomplete documents return an empty result. The focused protocol test covers
+capability negotiation and both declaration-inclusion modes. Rename,
+completion, hover/type information, and cross-module references remain later
+M5B slices. The decision is recorded in
+`docs/decisions/m5b-lsp-003.{md,json}`.
 
 ### Milestone 5C: REPL / incremental evaluation
 
@@ -1526,10 +1540,10 @@ retain the resolved top-level blank-line, parser-accepted trailing-comma,
 bounded list-wrapping, and incomplete-input rejection policies without changing
 language semantics. Source fallback and direct-input adapters remain
 intentional.
-The next active tool slice is `M5B-LSP-003`; M5B-LSP-001 and M5B-LSP-002 now
-cover the single-document protocol, diagnostics, formatting, definitions, and
-document symbols while references and the broader module-query deliverable
-remain open.
+The next active tool slice is `M5B-LSP-004`; M5B-LSP-001 through
+M5B-LSP-003 now cover the single-document protocol, diagnostics, formatting,
+definitions, document symbols, and references while type information,
+completion, and the broader module-query deliverable remain open.
 
 ## Metrics dashboard
 

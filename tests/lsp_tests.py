@@ -84,6 +84,7 @@ def main() -> int:
             or capabilities.get("documentFormattingProvider") is not True
             or capabilities.get("definitionProvider") is not True
             or capabilities.get("documentSymbolProvider") is not True
+            or capabilities.get("referencesProvider") is not True
         ):
             raise AssertionError(f"initialize response mismatch: {initialize!r}")
 
@@ -216,6 +217,66 @@ def main() -> int:
             process,
             {
                 "jsonrpc": "2.0",
+                "id": 6,
+                "method": "textDocument/references",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 1, "character": 13},
+                    "context": {"includeDeclaration": False},
+                },
+            },
+        )
+        add_references = receive(process)
+        if add_references.get("result") != [
+            {
+                "uri": uri,
+                "range": {
+                    "start": {"line": 1, "character": 13},
+                    "end": {"line": 1, "character": 16},
+                },
+            }
+        ]:
+            raise AssertionError(f"reference response mismatch: {add_references!r}")
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 7,
+                "method": "textDocument/references",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 1, "character": 13},
+                    "context": {"includeDeclaration": True},
+                },
+            },
+        )
+        add_references_with_declaration = receive(process)
+        if add_references_with_declaration.get("result") != [
+            {
+                "uri": uri,
+                "range": {
+                    "start": {"line": 0, "character": 4},
+                    "end": {"line": 0, "character": 7},
+                },
+            },
+            {
+                "uri": uri,
+                "range": {
+                    "start": {"line": 1, "character": 13},
+                    "end": {"line": 1, "character": 16},
+                },
+            },
+        ]:
+            raise AssertionError(
+                "reference-with-declaration response mismatch: "
+                f"{add_references_with_declaration!r}"
+            )
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
                 "method": "textDocument/didChange",
                 "params": {
                     "textDocument": {"uri": uri, "version": 3},
@@ -252,9 +313,9 @@ def main() -> int:
         )
         assert_publish(receive(process), uri, 0)
 
-        send(process, {"jsonrpc": "2.0", "id": 6, "method": "shutdown", "params": None})
+        send(process, {"jsonrpc": "2.0", "id": 8, "method": "shutdown", "params": None})
         shutdown = receive(process)
-        if shutdown.get("id") != 6 or shutdown.get("result") is not None:
+        if shutdown.get("id") != 8 or shutdown.get("result") is not None:
             raise AssertionError(f"shutdown response mismatch: {shutdown!r}")
         send(process, {"jsonrpc": "2.0", "method": "exit"})
         process.stdin.close()

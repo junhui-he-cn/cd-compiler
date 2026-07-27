@@ -1241,6 +1241,65 @@ JsonValue definitionLocation(
     });
 }
 
+JsonValue sourceLocation(
+    const std::string& uri,
+    std::string_view source,
+    const SourceRange& range)
+{
+    return makeObject({
+        {"uri", JsonValue::string(uri)},
+        {"range", textDocumentRange(source, range)},
+    });
+}
+
+std::vector<SourceRange> referenceRangesAt(
+    const DocumentAnalysis& analysis,
+    std::size_t byte,
+    bool includeDeclaration)
+{
+    const DeclarationRecord* target = definitionAt(analysis, byte);
+    if (!target) {
+        return {};
+    }
+
+    std::vector<SourceRange> ranges;
+    if (includeDeclaration && target->range && declarationRange(*target)) {
+        ranges.push_back(*target->range);
+    }
+    for (const ReferenceSite& site : analysis.referenceSites) {
+        const std::optional<ResolvedSymbol> resolved
+            = resolvedReference(analysis.declarationIndex, site);
+        if (!resolved || resolved->declarationId != target->declarationId || !site.range) {
+            continue;
+        }
+        ranges.push_back(*site.range);
+    }
+
+    std::sort(
+        ranges.begin(),
+        ranges.end(),
+        [](const SourceRange& left, const SourceRange& right) {
+            if (left.source != right.source) {
+                return left.source < right.source;
+            }
+            if (left.start != right.start) {
+                return left.start < right.start;
+            }
+            return left.end < right.end;
+        });
+    ranges.erase(
+        std::unique(
+            ranges.begin(),
+            ranges.end(),
+            [](const SourceRange& left, const SourceRange& right) {
+                return left.source == right.source
+                    && left.start == right.start
+                    && left.end == right.end;
+            }),
+        ranges.end());
+    return ranges;
+}
+
 JsonValue documentSymbol(
     std::string_view source,
     const DeclarationRecord& declaration)
@@ -1317,6 +1376,7 @@ public:
                                     {"documentFormattingProvider", JsonValue::booleanValue(true)},
                                     {"definitionProvider", JsonValue::booleanValue(true)},
                                     {"documentSymbolProvider", JsonValue::booleanValue(true)},
+                                    {"referencesProvider", JsonValue::booleanValue(true)},
                                 })},
                             })));
                 }
@@ -1359,6 +1419,12 @@ public:
             if (*method == "textDocument/documentSymbol") {
                 if (id) {
                     writeMessage(output, response(*id, handleDocumentSymbols(request)));
+                }
+                continue;
+            }
+            if (*method == "textDocument/references") {
+                if (id) {
+                    writeMessage(output, response(*id, handleReferences(request)));
                 }
                 continue;
             }
@@ -1533,6 +1599,45 @@ private:
             return JsonValue::null();
         }
         return definitionLocation(*uri, found->second.text, *declaration);
+    }
+
+    JsonValue handleReferences(const JsonValue& request) const
+    {
+        const std::optional<std::string> uri = documentUri(request);
+        const std::optional<LspRequestPosition> position = requestPosition(request);
+        if (!uri || !position) {
+            return JsonValue::array({});
+        }
+        const auto found = documents_.find(*uri);
+        if (found == documents_.end() || !found->second.analysis.program) {
+            return JsonValue::array({});
+        }
+        const std::optional<std::size_t> byte = sourceByteAtLspPosition(
+            found->second.text,
+            position->line,
+            position->character);
+        if (!byte) {
+            return JsonValue::array({});
+        }
+
+        bool includeDeclaration = false;
+        const JsonValue* params = memberObject(request, "params");
+        const JsonValue* context = params ? memberObject(*params, "context") : nullptr;
+        const JsonValue* include = context ? member(*context, "includeDeclaration") : nullptr;
+        if (include && include->kind == JsonValue::Kind::Boolean) {
+            includeDeclaration = include->boolean;
+        }
+
+        const std::vector<SourceRange> ranges = referenceRangesAt(
+            found->second.analysis,
+            *byte,
+            includeDeclaration);
+        std::vector<JsonValue> locations;
+        locations.reserve(ranges.size());
+        for (const SourceRange& range : ranges) {
+            locations.push_back(sourceLocation(*uri, found->second.text, range));
+        }
+        return JsonValue::array(std::move(locations));
     }
 
     JsonValue handleDocumentSymbols(const JsonValue& request) const
