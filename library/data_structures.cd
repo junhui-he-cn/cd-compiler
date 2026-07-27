@@ -900,6 +900,29 @@ fun maxWindowSum(values: [number], width: number): number? {
   return best;
 }
 
+fun maxSubarraySum(values: [number]): number? {
+  if (values.len() == 0) {
+    return nil;
+  }
+
+  let current = values[0];
+  let best = values[0];
+  let index = 1;
+  while (index < values.len()) {
+    let extended = current + values[index];
+    if (values[index] > extended) {
+      current = values[index];
+    } else {
+      current = extended;
+    }
+    if (current > best) {
+      best = current;
+    }
+    index += 1;
+  }
+  return best;
+}
+
 struct PriorityQueue<T> {
   heap: BinaryHeap<T>
 }
@@ -934,4 +957,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, countValue, sortArray, sortArrayInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, linearSearch, countValue, sortArray, sortArrayInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;

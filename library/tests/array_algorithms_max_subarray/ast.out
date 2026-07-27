@@ -786,20 +786,11 @@ Program
     Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
-    Let values = (array 1 2 3 4 5)
-    Print (member-call ds chunkArray values 2)
+    Print (member-call ds maxSubarraySum (array (- 2) 1 (- 3) 4 (- 1) 2 1 (- 5) 4))
+    Print (member-call ds maxSubarraySum (array (- 8) (- 3) (- 6)))
+    Print (member-call ds maxSubarraySum (array 7))
+    Let values = (array 3 (- 2) 5 (- 1))
+    Print (member-call ds maxSubarraySum values)
     Print values
-    Print (member-call ds chunkArray values 0)
-    Print (member-call ds chunkArray values (- 1))
-    Let chunks = (member-call ds chunkArray values 3)
-    Expr (member-call (index chunks 0) push 99)
-    Print values
-    Print chunks
-    Print (member-call ds slidingWindows values 3)
-    Print (member-call ds slidingWindows values 6)
-    Print (member-call ds slidingWindows values 0)
-    Print (member-call ds prefixSums values)
-    Let emptyNumbers: [number] = (array)
-    Print (member-call ds prefixSums emptyNumbers)
-    Let words = (array "a" "b" "c")
-    Print (member-call ds slidingWindows words 2)
+    Let empty: [number] = (array)
+    Print (member-call ds maxSubarraySum empty)

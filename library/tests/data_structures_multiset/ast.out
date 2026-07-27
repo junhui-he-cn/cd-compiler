@@ -742,6 +742,31 @@ Program
                   Expr (= best (index sums index))
             Expr (+= index 1)
       Return best
+    Fun maxSubarraySum(values: [number]): number?
+      If (group (== (member-call values len) 0))
+        Then
+          Block
+            Return nil
+      Let current = (index values 0)
+      Let best = (index values 0)
+      Let index = 1
+      While (group (< index (member-call values len)))
+        Body
+          Block
+            Let extended = (+ current (index values index))
+            If (group (> (index values index) extended))
+              Then
+                Block
+                  Expr (= current (index values index))
+              Else
+                Block
+                  Expr (= current extended)
+            If (group (> current best))
+              Then
+                Block
+                  Expr (= best current)
+            Expr (+= index 1)
+      Return best
     Struct PriorityQueue<T> {heap: BinaryHeap<T>}
     Impl PriorityQueue<T>
       Method enqueue(value: T)
@@ -758,7 +783,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray linearSearch countValue sortArray sortArrayInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Fun renderEntries(values: [ds.MultiSetEntry<number>]): string

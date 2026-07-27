@@ -116,6 +116,7 @@ print ds.uniqueValues([3, 1, 3, 2]);
 print ds.unionValues([1, 2], [2, 3]);
 print ds.windowSums([2, -1, 3, 4, -2, 1], 3);
 print ds.maxWindowSum([2, -1, 3, 4, -2, 1], 3);
+print ds.maxSubarraySum([-2, 1, -3, 4, -1, 2, 1, -5, 4]);
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -312,6 +313,11 @@ or `nil` when the width is non-positive, exceeds the input length, or the input
 is empty. Both functions leave the input unchanged; `windowSums` allocates one
 result array and runs in `O(n)`, while `maxWindowSum` runs in `O(n)` and uses
 `O(n)` temporary space for the current array-backed implementation.
+
+`maxSubarraySum(values)` returns the largest sum of a non-empty contiguous
+subarray, or `nil` for an empty input. It preserves the input and handles an
+all-negative array by returning its least-negative element. The scan is `O(n)`
+time and `O(1)` extra space.
 
 `Interval { start, end }` represents a numeric interval with the documented
 precondition `start <= end`. `mergeIntervals(intervals)` returns a new array
