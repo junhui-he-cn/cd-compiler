@@ -22,7 +22,7 @@ cd vscode-extension
 npm install
 npm run check
 npm run package
-code --install-extension compiler-design-language-support-0.1.0.vsix
+code --install-extension compiler-design-language-support-0.1.1.vsix
 ```
 
 When the repository is the first VS Code workspace folder, the extension

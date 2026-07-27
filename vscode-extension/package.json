@@ -2,7 +2,7 @@
   "name": "compiler-design-language-support",
   "displayName": "Compiler Design Language Support",
   "description": "VS Code client for the Compiler Design stdio language server.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "compiler-design",
   "repository": {
     "type": "git",

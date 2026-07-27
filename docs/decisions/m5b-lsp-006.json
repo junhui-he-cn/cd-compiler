@@ -1,18 +1,19 @@
 {
   "schema_version": 1,
-  "decision_revision": "m5b-2026-07-27-r6",
+  "decision_revision": "m5b-2026-07-27-r7",
   "inventory_revision": "m0d-2026-07-22-r1",
   "decision_id": "M5B-LSP-006",
   "domain": "language-server-completion",
   "status": "resolved",
   "question": "What completion boundary can be delivered before workspace/module navigation?",
-  "decision": "Add bounded single-document declaration completion using shared DeclarationIndex records, resolved signatures, UTF-16 positions, and prefix replacement text edits.",
+  "decision": "Add bounded single-document completion using shared DeclarationIndex records, resolved signatures, UTF-16 positions, prefix replacement text edits, the print statement keyword, and a dot trigger for automatic member and namespace completion.",
   "query": {
     "result": "CompletionList",
     "position_encoding": "UTF-16 code units mapped to source-local bytes",
     "filter": "ASCII identifier prefix immediately before the position",
     "is_incomplete": false,
-    "edit": "textEdit replaces the extracted prefix"
+    "edit": "textEdit replaces the extracted prefix",
+    "trigger_characters": ["."]
   },
   "shared_services": [
     "DeclarationIndex declarations",
@@ -24,10 +25,11 @@
     "imports": "existing stdin import rejection remains",
     "protocol_ids": "snapshot-local IDs are not serialized"
   },
-  "quantitative_gate": "tests/lsp_tests.py covers function-prefix filtering, signature detail, and replacement range.",
+  "quantitative_gate": "tests/lsp_tests.py covers the dot trigger, function-prefix filtering, print keyword completion, signature detail, and replacement range.",
   "out_of_scope": [
     "scope-aware ranking and shadowing-aware filtering",
     "imported and cross-module completion",
+    "context-aware completion for other keywords and native library names",
     "completion resolve requests and snippets",
     "persistent semantic caches",
     "range-based synchronization"

@@ -90,7 +90,7 @@ def main() -> int:
             or capabilities.get("referencesProvider") is not True
             or capabilities.get("hoverProvider") is not True
             or capabilities.get("renameProvider") is not True
-            or capabilities.get("completionProvider") is not True
+            or capabilities.get("completionProvider") != {"triggerCharacters": ["."]}
             or capabilities.get("workspaceSymbolProvider") is not True
         ):
             raise AssertionError(f"initialize response mismatch: {initialize!r}")
@@ -428,6 +428,38 @@ def main() -> int:
             ],
         }:
             raise AssertionError(f"completion response mismatch: {completion!r}")
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 14,
+                "method": "textDocument/completion",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 2, "character": 5},
+                },
+            },
+        )
+        print_completion = receive(process)
+        if print_completion.get("result") != {
+            "isIncomplete": False,
+            "items": [
+                {
+                    "label": "print",
+                    "kind": 14,
+                    "detail": "keyword",
+                    "textEdit": {
+                        "range": {
+                            "start": {"line": 2, "character": 0},
+                            "end": {"line": 2, "character": 5},
+                        },
+                        "newText": "print",
+                    },
+                }
+            ],
+        }:
+            raise AssertionError(f"builtin completion response mismatch: {print_completion!r}")
 
         send(
             process,

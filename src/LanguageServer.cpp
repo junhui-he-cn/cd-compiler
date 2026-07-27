@@ -2698,7 +2698,9 @@ public:
                                     {"referencesProvider", JsonValue::booleanValue(true)},
                                     {"hoverProvider", JsonValue::booleanValue(true)},
                                     {"renameProvider", JsonValue::booleanValue(true)},
-                                    {"completionProvider", JsonValue::booleanValue(true)},
+                                    {"completionProvider", makeObject({
+                                        {"triggerCharacters", JsonValue::array({JsonValue::string(".")})},
+                                    })},
                                     {"workspaceSymbolProvider", JsonValue::booleanValue(true)},
                                 })},
                             })));
@@ -3360,6 +3362,8 @@ private:
             const DeclarationRecord* declaration = nullptr;
             const EnumVariantDecl* variant = nullptr;
             const StructFieldDecl* field = nullptr;
+            const char* keyword = nullptr;
+            SourceRange keywordRange{};
         };
         std::vector<Candidate> candidates;
         const auto matchesPrefix = [&prefix](const std::string& name) {
@@ -3375,6 +3379,9 @@ private:
                     return true;
                 }
                 if (candidate.declaration && candidate.declaration->name == name) {
+                    return true;
+                }
+                if (candidate.keyword && candidate.keyword == name) {
                     return true;
                 }
             }
@@ -3528,6 +3535,9 @@ private:
                     }
                 }
             }
+            if (matchesPrefix("print") && !hasCandidateName("print")) {
+                candidates.push_back(Candidate{nullptr, nullptr, nullptr, "print", replaceRange});
+            }
         }
         const auto candidateName = [](const Candidate& candidate) -> std::string_view {
             if (candidate.variant) {
@@ -3535,6 +3545,9 @@ private:
             }
             if (candidate.field) {
                 return candidate.field->name.lexeme;
+            }
+            if (candidate.keyword) {
+                return candidate.keyword;
             }
             return candidate.declaration->name;
         };
@@ -3544,6 +3557,9 @@ private:
             }
             if (candidate.field) {
                 return *candidate.field->name.range;
+            }
+            if (candidate.keyword) {
+                return candidate.keywordRange;
             }
             return *candidate.declaration->range;
         };
@@ -3574,10 +3590,14 @@ private:
             items.push_back(makeObject({
                 {"label", JsonValue::string(label)},
                 {"kind", JsonValue::number(std::to_string(
-                    candidate.variant
+                    candidate.keyword
+                        ? 14
+                        : candidate.variant
                         ? 20
                         : candidate.field ? 5 : completionItemKind(candidate.declaration->kind)))},
-                {"detail", JsonValue::string(candidate.variant
+                {"detail", JsonValue::string(candidate.keyword
+                        ? "keyword"
+                        : candidate.variant
                         ? "variant"
                         : candidate.field
                             ? "field"
