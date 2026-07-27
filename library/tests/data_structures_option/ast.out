@@ -550,6 +550,78 @@ Program
             Expr (member-call adjacency push neighbors)
             Expr (+= index 1)
       Return (construct Graph adjacency: adjacency directed: directed edges: 0)
+    Fun breadthFirstOrder(graph: Graph, start: number): [number]
+      Let result: [number] = (array)
+      Let count = (member-call graph vertexCount)
+      If (group (|| (< start 0) (>= start count)))
+        Then
+          Block
+            Return result
+      Let visited: [bool] = (array)
+      Let index = 0
+      While (group (< index count))
+        Body
+          Block
+            Expr (member-call visited push false)
+            Expr (+= index 1)
+      Let queue: [number] = (array start)
+      Expr (= (index visited start) true)
+      Let head = 0
+      While (group (< head (member-call queue len)))
+        Body
+          Block
+            Let vertex = (index queue head)
+            Expr (+= head 1)
+            Expr (member-call result push vertex)
+            Let neighbors = (member-call graph neighbors vertex)
+            Let neighborIndex = 0
+            While (group (< neighborIndex (member-call neighbors len)))
+              Body
+                Block
+                  Let neighbor = (index neighbors neighborIndex)
+                  If (group (! (index visited neighbor)))
+                    Then
+                      Block
+                        Expr (= (index visited neighbor) true)
+                        Expr (member-call queue push neighbor)
+                  Expr (+= neighborIndex 1)
+      Return result
+    Fun depthFirstOrder(graph: Graph, start: number): [number]
+      Let result: [number] = (array)
+      Let count = (member-call graph vertexCount)
+      If (group (|| (< start 0) (>= start count)))
+        Then
+          Block
+            Return result
+      Let visited: [bool] = (array)
+      Let index = 0
+      While (group (< index count))
+        Body
+          Block
+            Expr (member-call visited push false)
+            Expr (+= index 1)
+      Let stack: [number] = (array start)
+      Expr (= (index visited start) true)
+      While (group (> (member-call stack len) 0))
+        Body
+          Block
+            Let vertexIndex = (- (member-call stack len) 1)
+            Let vertex = (index stack vertexIndex)
+            Expr (member-call stack pop)
+            Expr (member-call result push vertex)
+            Let neighbors = (member-call graph neighbors vertex)
+            Let neighborIndex = (member-call neighbors len)
+            While (group (> neighborIndex 0))
+              Body
+                Block
+                  Expr (-= neighborIndex 1)
+                  Let neighbor = (index neighbors neighborIndex)
+                  If (group (! (index visited neighbor)))
+                    Then
+                      Block
+                        Expr (= (index visited neighbor) true)
+                        Expr (member-call stack push neighbor)
+      Return result
     Fun reverseArray<T>(values: [T]): [T]
       Let result: [T] = (array)
       Let index = (member-call values len)
@@ -1190,7 +1262,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph breadthFirstOrder depthFirstOrder some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Fun render(value: ds.Option<number>): string

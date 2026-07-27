@@ -103,6 +103,8 @@ let graph = ds.newGraph(3, false);
 graph.addEdge(0, 1);
 graph.addEdge(1, 2);
 print graph.neighbors(1);
+print ds.breadthFirstOrder(graph, 0);
+print ds.depthFirstOrder(graph, 0);
 
 fun ascendingValues(left: number, right: number): bool {
   return left < right;

@@ -735,6 +735,77 @@ fun newGraph(vertices: number, directed: bool): Graph {
   return Graph { adjacency: adjacency, directed: directed, edges: 0 };
 }
 
+fun breadthFirstOrder(graph: Graph, start: number): [number] {
+  let result: [number] = [];
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count) {
+    return result;
+  }
+
+  let visited: [bool] = [];
+  let index = 0;
+  while (index < count) {
+    visited.push(false);
+    index += 1;
+  }
+
+  let queue: [number] = [start];
+  visited[start] = true;
+  let head = 0;
+  while (head < queue.len()) {
+    let vertex = queue[head];
+    head += 1;
+    result.push(vertex);
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let neighbor = neighbors[neighborIndex];
+      if (!visited[neighbor]) {
+        visited[neighbor] = true;
+        queue.push(neighbor);
+      }
+      neighborIndex += 1;
+    }
+  }
+  return result;
+}
+
+fun depthFirstOrder(graph: Graph, start: number): [number] {
+  let result: [number] = [];
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count) {
+    return result;
+  }
+
+  let visited: [bool] = [];
+  let index = 0;
+  while (index < count) {
+    visited.push(false);
+    index += 1;
+  }
+
+  let stack: [number] = [start];
+  visited[start] = true;
+  while (stack.len() > 0) {
+    let vertexIndex = stack.len() - 1;
+    let vertex = stack[vertexIndex];
+    stack.pop();
+    result.push(vertex);
+
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = neighbors.len();
+    while (neighborIndex > 0) {
+      neighborIndex -= 1;
+      let neighbor = neighbors[neighborIndex];
+      if (!visited[neighbor]) {
+        visited[neighbor] = true;
+        stack.push(neighbor);
+      }
+    }
+  }
+  return result;
+}
+
 fun reverseArray<T>(values: [T]): [T] {
   let result: [T] = [];
   let index = values.len();
@@ -1389,4 +1460,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, breadthFirstOrder, depthFirstOrder, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;

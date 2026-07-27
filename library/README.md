@@ -95,6 +95,8 @@ let graph = ds.newGraph(3, false);
 graph.addEdge(0, 1);
 graph.addEdge(1, 2);
 print graph.neighbors(1);
+print ds.breadthFirstOrder(graph, 0);
+print ds.depthFirstOrder(graph, 0);
 
 let values = [3, 1, 3, 2];
 print ds.reverseArray(values);
@@ -313,6 +315,12 @@ and undirected edges are stored in both adjacency lists while counting once.
 `[]`. Adjacency operations are linear in the degree because this version does
 not use a hash set.
 
+`breadthFirstOrder(graph, start)` and `depthFirstOrder(graph, start)` return
+reachable vertex orders from a start vertex. BFS uses a queue and DFS uses an
+explicit stack; both mark vertices when scheduled, preserve adjacency insertion
+order, and return `[]` for an invalid start. Their time complexity is `O(V + E)`
+over the reachable subgraph, with `O(V)` auxiliary space.
+
 The array algorithms are non-mutating and return shallow copies where they
 return arrays:
 
@@ -464,7 +472,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_result`, `--case data_structures_list`,
 `--case data_structures_set`, `--case data_structures_multiset`,
 `--case data_structures_multimap`, `--case data_structures_disjoint_set`,
-`--case data_structures_graph`,
+`--case data_structures_graph`, `--case algorithms_graph_traversal`,
 `--case array_algorithms_basic`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
