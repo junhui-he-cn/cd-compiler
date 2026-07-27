@@ -1448,6 +1448,17 @@ receivers, and unopened modules remain outside this slice. The focused
 protocol test covers `box.get` on a re-exported `api.Box`. The decision is
 recorded in `docs/decisions/m5b-lsp-016.{md,json}`.
 
+`M5B-LSP-017` completes unqualified completion for the opened virtual
+workspace. In addition to current-module declarations and direct-import
+exports, a plain identifier prefix may receive explicit exports from every
+other currently opened module. Local and direct-import candidates take
+precedence; duplicate workspace names are suppressed, and member or qualified
+completion paths remain restricted to their existing receiver-specific module
+or type candidates. Closed or disk-only modules do not contribute results. The
+focused protocol test covers a local `hel` prefix alongside an exported
+`helper` from another opened module. The decision is recorded in
+`docs/decisions/m5b-lsp-017.{md,json}`.
+
 ### Milestone 5C: REPL / incremental evaluation
 
 **Dependency:** M3A module/session boundaries, M3B incremental compilation where
@@ -1629,10 +1640,11 @@ M3A-INTERFACE-006
 through M3A-INTERFACE-016, M3B-ARTIFACT-001, M3B-CACHE-001, and
 M3B-BOUNDARY-001 are the completed module-boundary, module-product, and
 artifact-cache slices. Module-product source fallback remains required for
-cold builds and repairs. The next independent tool slice is M5A formatter;
-Broader parser resynchronization and direct/per-module type-recovery expansion
-remain separately admitted only with new diagnostic decisions and compatibility
-corpora.
+cold builds and repairs. M5B-LSP-017 now completes the opened-workspace
+completion boundary; the next independent tool slice is M5C
+REPL/incremental evaluation. Broader parser resynchronization and
+direct/per-module type-recovery expansion remain separately admitted only with
+new diagnostic decisions and compatibility corpora.
 
 The hard dependency gates are:
 
@@ -1685,17 +1697,18 @@ retain the resolved top-level blank-line, parser-accepted trailing-comma,
 bounded list-wrapping, and incomplete-input rejection policies without changing
 language semantics. Source fallback and direct-input adapters remain
 intentional.
-The next active tool slice is workspace-aware completion; M5B-LSP-001 through
-M5B-LSP-016 now cover the single-document
+The next active tool slice is REPL/incremental evaluation; M5B-LSP-001 through
+M5B-LSP-017 now cover the single-document
 protocol, diagnostics, formatting, definitions, document symbols, references,
 bounded hover type information, rename edits, declaration completion,
 open-document workspace symbols, virtual-source workspace analysis, direct
 import definition jumps, namespace-alias member definition jumps,
 cross-module references, validated cross-module rename, opened-module
 completion, namespace-qualified type/variant navigation, qualified enum
-variant completion, typed struct-field completion, and typed struct-method
-completion while
-workspace-aware completion remains open.
+variant completion, typed struct-field completion, typed struct-method
+completion, and unqualified completion from explicit exports in all currently
+opened modules. Closed imports and unknown/dynamic receiver completion remain
+outside the current boundary.
 
 ## Metrics dashboard
 

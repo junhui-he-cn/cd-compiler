@@ -123,7 +123,10 @@ def main() -> int:
                         "uri": other_uri,
                         "languageId": "compiler-design",
                         "version": 1,
-                        "text": "fun helper(value: number): number { return value; }\n",
+                        "text": (
+                            "fun helper(value: number): number { return value; }\n"
+                            "export helper;\n"
+                        ),
                     }
                 },
             },
@@ -541,6 +544,7 @@ def main() -> int:
             "let result: api.Result = api.Result.Ok(2);\n"
             "print box.value;\n"
             "print box.get();\n"
+            "let hel = 1;\n"
         )
         send(
             process,
@@ -875,6 +879,53 @@ def main() -> int:
             raise AssertionError(
                 "typed struct method completion response mismatch: "
                 f"{struct_method_completion!r}"
+            )
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 28,
+                "method": "textDocument/completion",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 7, "character": 7},
+                },
+            },
+        )
+        workspace_completion = receive(process)
+        if workspace_completion.get("result") != {
+            "isIncomplete": False,
+            "items": [
+                {
+                    "label": "hel",
+                    "kind": 6,
+                    "detail": "variable",
+                    "textEdit": {
+                        "range": {
+                            "start": {"line": 7, "character": 4},
+                            "end": {"line": 7, "character": 7},
+                        },
+                        "newText": "hel",
+                    },
+                },
+                {
+                    "label": "helper",
+                    "kind": 3,
+                    "detail": "fun(number): number",
+                    "textEdit": {
+                        "range": {
+                            "start": {"line": 7, "character": 4},
+                            "end": {"line": 7, "character": 7},
+                        },
+                        "newText": "helper",
+                    },
+                },
+            ],
+        }:
+            raise AssertionError(
+                "opened workspace completion response mismatch: "
+                f"{workspace_completion!r}"
             )
 
         send(

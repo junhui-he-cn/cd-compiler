@@ -52,8 +52,10 @@ The compiler pipeline includes:
   enum types plus enum variants navigate through opened export chains, and
   qualified enum paths complete their public variants. Known struct receivers
   also complete their fields and exported methods with shared signatures.
-  Closed imports, unknown/dynamic receiver completion, and workspace-wide
-  completion remain later slices. Rename edits validate the
+  Unqualified completion additionally includes explicit exports from other
+  currently opened modules; local and direct-import names take precedence and
+  duplicate workspace names are suppressed. Closed imports and unknown/dynamic
+  receiver completion remain later slices. Rename edits validate the
   complete replacement across the opened virtual workspace before returning a
   multi-document `WorkspaceEdit`.
 

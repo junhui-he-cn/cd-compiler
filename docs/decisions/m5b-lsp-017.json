@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m5b-2026-07-27-r17",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M5B-LSP-017",
+  "domain": "language-server-opened-workspace-completion",
+  "status": "resolved",
+  "question": "Which opened workspace exports should appear in unqualified completion?",
+  "decision": "Add explicit exports from every other opened module to the unqualified completion fallback, after local declarations and direct-import exports, while suppressing duplicate names.",
+  "query": {
+    "receiver": "plain unqualified identifier prefix without a member or qualified path",
+    "sources": "current module declarations, direct-import exports, and explicit exports from other opened modules",
+    "visibility": "export and export-from chains only",
+    "precedence": "current module and direct imports before workspace candidates",
+    "duplicates": "workspace names already present in earlier candidate sources are omitted",
+    "ordering": "existing completion name, source ID, source start, source end ordering"
+  },
+  "shared_services": [
+    "AnalysisSnapshot",
+    "DeclarationIndex declarations",
+    "FrontendSession opened module graph",
+    "exportedDefinitionsForModule"
+  ],
+  "compatibility_boundary": {
+    "sources": "currently open virtual documents only",
+    "receiver_modes": "member and qualified completion retain their existing restricted candidate sets",
+    "visibility": "private declarations and closed or disk-only modules remain excluded",
+    "ids": "snapshot-local IDs are not serialized"
+  },
+  "quantitative_gate": "tests/lsp_tests.py covers a local hel prefix and an exported helper from another opened module.",
+  "out_of_scope": [
+    "private declarations from other opened modules",
+    "closed or disk-only module completion",
+    "workspace candidates for member or qualified paths",
+    "unknown or dynamic receiver completion",
+    "persistent semantic caching",
+    "range-based synchronization"
+  ],
+  "verification": {
+    "focused_commands": [
+      "cmake --build build -j2",
+      "python3 tests/lsp_tests.py ./build/compiler_design",
+      "ctest --test-dir build --output-on-failure -R '^language_server$'",
+      "git diff --check"
+    ]
+  }
+}

@@ -3366,6 +3366,20 @@ private:
             return name.size() >= prefix.size()
                 && name.compare(0, prefix.size(), prefix) == 0;
         };
+        const auto hasCandidateName = [&candidates](std::string_view name) {
+            for (const Candidate& candidate : candidates) {
+                if (candidate.variant && candidate.variant->name.lexeme == name) {
+                    return true;
+                }
+                if (candidate.field && candidate.field->name.lexeme == name) {
+                    return true;
+                }
+                if (candidate.declaration && candidate.declaration->name == name) {
+                    return true;
+                }
+            }
+            return false;
+        };
         const ModuleStmt* module = moduleForSource(snapshot, found->second.analysis.sourceId);
         bool matchedQualifiedType = false;
         if (receiverPath && module) {
@@ -3487,6 +3501,27 @@ private:
                             continue;
                         }
                         candidates.push_back(Candidate{exported.second.declaration, nullptr, nullptr});
+                    }
+                }
+            }
+
+            if (!receiverPath && snapshot.program) {
+                for (const StmtPtr& statement : snapshot.program->statements) {
+                    const auto* workspaceModule = dynamic_cast<const ModuleStmt*>(statement.get());
+                    if (!workspaceModule || workspaceModule->sourceId == found->second.analysis.sourceId) {
+                        continue;
+                    }
+                    for (const auto& exported : exportedDefinitionsForModule(
+                            snapshot,
+                            workspaceModule->moduleId)) {
+                        if (!matchesPrefix(exported.first)
+                            || hasCandidateName(exported.first)) {
+                            continue;
+                        }
+                        candidates.push_back(Candidate{
+                            exported.second.declaration,
+                            nullptr,
+                            nullptr});
                     }
                 }
             }
