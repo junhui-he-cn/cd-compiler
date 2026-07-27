@@ -1194,6 +1194,72 @@ fun shortestWeightedPath(graph: WeightedGraph, start: number, goal: number): [nu
   return reversed;
 }
 
+fun minimumSpanningForest(graph: WeightedGraph): WeightedGraph {
+  let count = graph.vertexCount();
+  let forest = newWeightedGraph(count, false);
+  if (graph.directed) {
+    return forest;
+  }
+
+  let visited: [bool] = [];
+  let distances: [number] = [];
+  let parents: [number] = [];
+  let parentWeights: [number] = [];
+  let index = 0;
+  while (index < count) {
+    visited.push(false);
+    distances.push(-1);
+    parents.push(-1);
+    parentWeights.push(-1);
+    index += 1;
+  }
+
+  let root = 0;
+  while (root < count) {
+    if (visited[root]) {
+      root += 1;
+      continue;
+    }
+    distances[root] = 0;
+    parents[root] = -1;
+    parentWeights[root] = -1;
+    let step = 0;
+    while (step < count) {
+      let current = -1;
+      index = 0;
+      while (index < count) {
+        if (!visited[index] && distances[index] >= 0
+            && (current < 0 || distances[index] < distances[current])) {
+          current = index;
+        }
+        index += 1;
+      }
+      if (current < 0) {
+        break;
+      }
+      visited[current] = true;
+      if (parents[current] >= 0) {
+        forest.addEdge(parents[current], current, parentWeights[current]);
+      }
+      let neighbors = graph.neighbors(current);
+      let neighborIndex = 0;
+      while (neighborIndex < neighbors.len()) {
+        let edge = neighbors[neighborIndex];
+        if (!visited[edge.to]
+            && (distances[edge.to] < 0 || edge.weight < distances[edge.to])) {
+          distances[edge.to] = edge.weight;
+          parents[edge.to] = current;
+          parentWeights[edge.to] = edge.weight;
+        }
+        neighborIndex += 1;
+      }
+      step += 1;
+    }
+    root += 1;
+  }
+  return forest;
+}
+
 fun reverseArray<T>(values: [T]): [T] {
   let result: [T] = [];
   let index = values.len();
@@ -1848,4 +1914,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, shortestWeightedDistances, shortestWeightedPath, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, shortestWeightedDistances, shortestWeightedPath, minimumSpanningForest, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;

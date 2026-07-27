@@ -111,6 +111,9 @@ weighted.addEdge(0, 1, 2);
 weighted.addEdge(1, 2, 3);
 print ds.shortestWeightedPath(weighted, 0, 2);
 
+let forest = ds.minimumSpanningForest(weighted);
+print forest.edgeCount();
+
 let values = [3, 1, 3, 2];
 print ds.reverseArray(values);
 print ds.rotateArray(values, 1);
@@ -355,6 +358,12 @@ returns `false` for empty or acyclic graphs, and runs in `O(V + E)` time with
 `shortestWeightedDistances` and `shortestWeightedPath` return `-1`/`[]` for
 unreachable results and reject negative weights at insertion. The current array
 scan implementation runs in `O(V^2 + E)` time and `O(V)` auxiliary space.
+
+`minimumSpanningForest(graph)` applies Prim's algorithm to an undirected
+`WeightedGraph`, preserves the vertex count, and returns a new undirected graph.
+Disconnected inputs produce one tree per component; directed inputs produce an
+empty forest with the same vertex count. The array-scan implementation runs in
+`O(V^2 + E)` time and `O(V)` auxiliary space.
 
 The array algorithms are non-mutating and return shallow copies where they
 return arrays:

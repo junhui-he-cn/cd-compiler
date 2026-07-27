@@ -1017,6 +1017,77 @@ Program
             Expr (-= resultIndex 1)
             Expr (member-call reversed push (index result resultIndex))
       Return reversed
+    Fun minimumSpanningForest(graph: WeightedGraph): WeightedGraph
+      Let count = (member-call graph vertexCount)
+      Let forest = (call newWeightedGraph count false)
+      If (group (field graph directed))
+        Then
+          Block
+            Return forest
+      Let visited: [bool] = (array)
+      Let distances: [number] = (array)
+      Let parents: [number] = (array)
+      Let parentWeights: [number] = (array)
+      Let index = 0
+      While (group (< index count))
+        Body
+          Block
+            Expr (member-call visited push false)
+            Expr (member-call distances push (- 1))
+            Expr (member-call parents push (- 1))
+            Expr (member-call parentWeights push (- 1))
+            Expr (+= index 1)
+      Let root = 0
+      While (group (< root count))
+        Body
+          Block
+            If (group (index visited root))
+              Then
+                Block
+                  Expr (+= root 1)
+                  Continue
+            Expr (= (index distances root) 0)
+            Expr (= (index parents root) (- 1))
+            Expr (= (index parentWeights root) (- 1))
+            Let step = 0
+            While (group (< step count))
+              Body
+                Block
+                  Let current = (- 1)
+                  Expr (= index 0)
+                  While (group (< index count))
+                    Body
+                      Block
+                        If (group (&& (&& (! (index visited index)) (>= (index distances index) 0)) (group (|| (< current 0) (< (index distances index) (index distances current))))))
+                          Then
+                            Block
+                              Expr (= current index)
+                        Expr (+= index 1)
+                  If (group (< current 0))
+                    Then
+                      Block
+                        Break
+                  Expr (= (index visited current) true)
+                  If (group (>= (index parents current) 0))
+                    Then
+                      Block
+                        Expr (member-call forest addEdge (index parents current) current (index parentWeights current))
+                  Let neighbors = (member-call graph neighbors current)
+                  Let neighborIndex = 0
+                  While (group (< neighborIndex (member-call neighbors len)))
+                    Body
+                      Block
+                        Let edge = (index neighbors neighborIndex)
+                        If (group (&& (! (index visited (field edge to))) (group (|| (< (index distances (field edge to)) 0) (< (field edge weight) (index distances (field edge to)))))))
+                          Then
+                            Block
+                              Expr (= (index distances (field edge to)) (field edge weight))
+                              Expr (= (index parents (field edge to)) current)
+                              Expr (= (index parentWeights (field edge to)) (field edge weight))
+                        Expr (+= neighborIndex 1)
+                  Expr (+= step 1)
+            Expr (+= root 1)
+      Return forest
     Fun reverseArray<T>(values: [T]): [T]
       Let result: [T] = (array)
       Let index = (member-call values len)
@@ -1657,7 +1728,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder shortestDistances shortestPath inDegrees topologicalOrder hasCycle shortestWeightedDistances shortestWeightedPath some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder shortestDistances shortestPath inDegrees topologicalOrder hasCycle shortestWeightedDistances shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let deque = (member-call ds newDeque<number>)
