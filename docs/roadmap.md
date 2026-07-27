@@ -1467,6 +1467,14 @@ focused protocol test covers a local `hel` prefix alongside an exported
 
 ### Milestone 5C: REPL / incremental evaluation
 
+**Status:** deferred outside the current `master` integration queue as of
+2026-07-27. A partial source-backed prototype is being developed on the
+separate `feat/m5c-repl` branch; its branch-only implementation, tests, and
+decisions do not count as shipped `master` behavior or as part of the current
+verification baseline. Keep this milestone as a future candidate and re-audit
+the branch against the then-current `master` before selecting any slice for
+integration.
+
 **Dependency:** M3A module/session boundaries, M3B incremental compilation where
 file-backed evaluation needs it, and the M4A/M4B runtime and metadata contracts.
 
@@ -1503,6 +1511,16 @@ supported runtime kinds.
 **Old-path deletion condition:** remove temporary debug-location tables when
 all debugger events use the M4B metadata contract and no runtime frame requires
 fallback source guessing.
+
+`M5D-DEBUG-001` adds `compiler-design-vm trace <program.cdbc>` as the first
+source-level debugger boundary. It reuses `debug_sources`, `debug_locations`,
+and `debug_ranges` to emit deterministic function-entry/exit and
+source-location events with active call stacks, current-frame locals, printed
+and returned values, and runtime failure events. Existing `run` behavior and
+the `cdbc 0.1` format remain unchanged. Interactive breakpoints, stepping,
+continue commands, and persistent debugger sessions remain later M5D slices.
+The decision and focused gate are recorded in
+`docs/decisions/m5d-debug-001.{md,json}`.
 
 ## Conditional research track
 
@@ -1647,8 +1665,9 @@ through M3A-INTERFACE-016, M3B-ARTIFACT-001, M3B-CACHE-001, and
 M3B-BOUNDARY-001 are the completed module-boundary, module-product, and
 artifact-cache slices. Module-product source fallback remains required for
 cold builds and repairs. M5B-LSP-017 now completes the opened-workspace
-completion boundary; the next independent tool slice is M5C
-REPL/incremental evaluation. Broader parser resynchronization and
+completion boundary. M5C REPL/incremental evaluation is explicitly parked
+outside the current `master` integration queue; the next active tool slice is
+M5D source tracing and stack/value inspection. Broader parser resynchronization and
 direct/per-module type-recovery expansion remain separately admitted only with
 new diagnostic decisions and compatibility corpora.
 
@@ -1689,7 +1708,7 @@ Independent tool schedules start after their actual prerequisites:
 ```text
 M1A2 lossless syntax/trivia --------------------------> M5A formatter
 M1 semantic services + M3A graph/interfaces ---------> M5B LSP
-M3A session boundary + M3B where needed + M4A/M4B ---> M5C REPL
+M3A session boundary + M3B where needed + M4A/M4B ---> M5C REPL (deferred)
 M4B source/debug metadata ----------------------------> M5D debugger
 ```
 
@@ -1703,7 +1722,8 @@ retain the resolved top-level blank-line, parser-accepted trailing-comma,
 bounded list-wrapping, and incomplete-input rejection policies without changing
 language semantics. Source fallback and direct-input adapters remain
 intentional.
-The next active tool slice is REPL/incremental evaluation; M5B-LSP-001 through
+M5C remains parked outside the current `master` integration queue. The next
+active tool slice is M5D source tracing and stack/value inspection; M5B-LSP-001 through
 M5B-LSP-017 now cover the single-document
 protocol, diagnostics, formatting, definitions, document symbols, references,
 bounded hover type information, rename edits, declaration completion,
@@ -1735,8 +1755,8 @@ Track these measures in each milestone report instead of counting APIs:
   rejection rate, source-mapped frame coverage, artifact size, compile time, and
   named runtime workload performance against the M0D baseline;
 - **Tools:** formatter lossless/comment preservation and idempotence, CLI/LSP
-  diagnostic equivalence, REPL transcript determinism, and debugger source-frame
-  coverage.
+  diagnostic equivalence, deferred REPL transcript determinism, debugger
+  source-frame/stack/value coverage, and later stepping determinism.
 
 The roadmap is successful when the compiler can grow in coherent vertical
 slices without repeatedly redesigning its semantic model, module boundary, or

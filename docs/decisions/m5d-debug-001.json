@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m5d-2026-07-27-r1",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M5D-DEBUG-001",
+  "domain": "source-trace-stack-value-inspection",
+  "status": "resolved",
+  "question": "What is the first testable source-level debugger boundary?",
+  "decision": "Add a Rust VM trace command that reuses cdbc debug_sources, debug_locations, and debug_ranges to emit deterministic source-location events with function names, active call stacks, current locals, output values, return values, and runtime failure events.",
+  "protocol": {
+    "command": "compiler-design-vm trace <program.cdbc>",
+    "event_format": "stable human-readable one-line records on stdout",
+    "event_order": "execution order with a monotonically increasing event sequence",
+    "source_location": "embedded source path plus one-based line and column; unknown metadata is explicit",
+    "stack_order": "outermost caller to innermost active function",
+    "locals": "sorted current-frame names with display-form runtime values",
+    "program_output": "represented as output events rather than raw stdout",
+    "runtime_errors": "trace events remain on stdout and the existing RuntimeError diagnostic remains on stderr"
+  },
+  "compatibility_boundary": {
+    "artifact_format": "cdbc 0.1 unchanged",
+    "metadata": "existing optional debug metadata is the only source mapping",
+    "run_command": "existing run output and diagnostics are unchanged",
+    "metadata_free_artifacts": "trace remains usable with function names and explicit unknown locations"
+  },
+  "quantitative_gate": "tests/debugger_tests.py proves deterministic source tracing, nested stack order, current locals, output and return values, and runtime failure frames.",
+  "out_of_scope": [
+    "interactive breakpoints",
+    "step and continue commands",
+    "persistent debugger sessions",
+    "register-level inspection",
+    "variable identity or source-level mutation watches",
+    "artifact format changes"
+  ],
+  "old_path_deletion_condition": "No existing runtime or source-mapping path is deleted. Later debugger slices may remove temporary event adapters only after all supported debugger consumers use the shared artifact metadata and VM event boundary.",
+  "verification": {
+    "focused_commands": [
+      "cmake --build build -j2",
+      "python3 tests/debugger_tests.py ./build/compiler_design vm-rs",
+      "ctest --test-dir build --output-on-failure -R '^debugger$'",
+      "cargo test --manifest-path vm-rs/Cargo.toml",
+      "git diff --check"
+    ]
+  }
+}
