@@ -10223,6 +10223,117 @@
       "fixture": "tests/golden/function_typed_params_success"
     },
     {
+      "case_id": "golden.success.generic_capabilities.ast",
+      "runner": "golden",
+      "result_name": "generic_capabilities default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:generic_capabilities"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/generic_capabilities/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/generic_capabilities/ast.out"
+      ],
+      "fixture": "tests/golden/generic_capabilities"
+    },
+    {
+      "case_id": "golden.success.generic_capabilities.bytecode",
+      "runner": "golden",
+      "result_name": "generic_capabilities --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:generic_capabilities"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/generic_capabilities/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/generic_capabilities/bytecode.out"
+      ],
+      "fixture": "tests/golden/generic_capabilities"
+    },
+    {
+      "case_id": "golden.success.generic_capabilities.ir",
+      "runner": "golden",
+      "result_name": "generic_capabilities --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:generic_capabilities"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/generic_capabilities/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/generic_capabilities/ir.out"
+      ],
+      "fixture": "tests/golden/generic_capabilities"
+    },
+    {
+      "case_id": "golden.success.generic_capabilities.module_interface",
+      "runner": "golden",
+      "result_name": "generic_capabilities --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:generic_capabilities"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/generic_capabilities/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/generic_capabilities/module-interface.out"
+      ],
+      "fixture": "tests/golden/generic_capabilities"
+    },
+    {
       "case_id": "golden.success.generic_collection_callbacks.ast",
       "runner": "golden",
       "result_name": "generic_collection_callbacks default(ast)",
@@ -19736,6 +19847,90 @@
         "tests/golden/type_errors/function_wrong_arity.cd",
         "tests/golden/type_errors/function_wrong_arity.err",
         "tests/golden/type_errors/function_wrong_arity.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.generic_capability_eq_unconstrained",
+      "runner": "golden",
+      "result_name": "type_errors/generic_capability_eq_unconstrained default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:generic_capability_eq_unconstrained"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/generic_capability_eq_unconstrained.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/generic_capability_eq_unconstrained.cd",
+        "tests/golden/type_errors/generic_capability_eq_unconstrained.err",
+        "tests/golden/type_errors/generic_capability_eq_unconstrained.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.generic_capability_ord_violation",
+      "runner": "golden",
+      "result_name": "type_errors/generic_capability_ord_violation default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:generic_capability_ord_violation"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/generic_capability_ord_violation.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/generic_capability_ord_violation.cd",
+        "tests/golden/type_errors/generic_capability_ord_violation.err",
+        "tests/golden/type_errors/generic_capability_ord_violation.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.generic_capability_unconstrained",
+      "runner": "golden",
+      "result_name": "type_errors/generic_capability_unconstrained default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:generic_capability_unconstrained"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/generic_capability_unconstrained.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/generic_capability_unconstrained.cd",
+        "tests/golden/type_errors/generic_capability_unconstrained.err",
+        "tests/golden/type_errors/generic_capability_unconstrained.exit"
       ],
       "fixture": "tests/golden/type_errors"
     },
@@ -37279,6 +37474,68 @@
         "tests/golden/function_value_unknown_arity_assignment/run.out"
       ],
       "fixture": "tests/golden/function_value_unknown_arity_assignment"
+    },
+    {
+      "case_id": "rust_vm.golden.generic_capabilities.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "generic_capabilities emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:generic_capabilities"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/generic_capabilities/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/generic_capabilities/run.out"
+      ],
+      "fixture": "tests/golden/generic_capabilities"
+    },
+    {
+      "case_id": "rust_vm.golden.generic_capabilities.run",
+      "runner": "rust_vm_golden",
+      "result_name": "generic_capabilities rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:generic_capabilities"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/generic_capabilities/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/generic_capabilities/run.out"
+      ],
+      "fixture": "tests/golden/generic_capabilities"
     },
     {
       "case_id": "rust_vm.golden.generic_collection_callbacks.emit",

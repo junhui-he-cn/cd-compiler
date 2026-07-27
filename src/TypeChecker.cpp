@@ -460,7 +460,7 @@ void TypeChecker::beginTypeParameterScope(const std::vector<TypeParameter>& para
         if (!parameter.constraint) {
             continue;
         }
-        TypeInfo constraint = resolveAnnotation(*parameter.constraint);
+        TypeInfo constraint = resolveTypeParameterConstraint(*parameter.constraint);
         std::unordered_set<std::string> noTypeParameters;
         if (hasEscapingTypeParameter(constraint, noTypeParameters)) {
             throw TypeError(parameter.name,
@@ -2825,7 +2825,7 @@ void TypeChecker::checkImpl(const ImplStmt& statement)
             if (!statement.typeParameters[i].constraint) {
                 continue;
             }
-            const TypeInfo headerConstraint = resolveAnnotation(
+            const TypeInfo headerConstraint = resolveTypeParameterConstraint(
                 *statement.typeParameters[i].constraint);
             const std::shared_ptr<TypeInfo>& declaredConstraint
                 = i < structType->genericParameterConstraints.size()
@@ -6359,6 +6359,16 @@ void TypeChecker::checkKnownNumber(const Token& token, const TypeInfo& type, con
     }
 }
 
+TypeInfo TypeChecker::resolveTypeParameterConstraint(const TypeAnnotation& typeName) const
+{
+    if (typeName.kind == TypeAnnotation::Kind::Simple
+        && typeName.typeArguments.empty()
+        && (typeName.token.lexeme == "Eq" || typeName.token.lexeme == "Ord")) {
+        return capabilityType(typeName.token.lexeme);
+    }
+    return resolveAnnotation(typeName);
+}
+
 TypeInfo TypeChecker::resolveAnnotation(const TypeAnnotation& typeName) const
 {
     if (typeName.kind == TypeAnnotation::Kind::Nullable) {
@@ -6479,6 +6489,17 @@ TypeInfo TypeChecker::checkBinary(const BinaryExpr& expression)
     const TypeInfo left = checkExpression(*expression.left);
     const TypeInfo right = checkExpression(*expression.right);
 
+    const auto requireCapability = [&](const TypeInfo& operand, const std::string& capability) {
+        if (operand.kind != StaticType::TypeParameter
+            || SemanticTypes::satisfiesCapability(operand, capabilityType(capability))) {
+            return;
+        }
+        const std::string parameter = operand.typeParameterName.value_or("<unknown>");
+        throw TypeError(expression.op,
+            "binary `" + expression.op.lexeme + "` requires type parameter `"
+                + parameter + "` to satisfy " + capability);
+    };
+
     switch (expression.op.type) {
     case TokenType::Plus:
         if (!SemanticTypes::isKnown(left) || !SemanticTypes::isKnown(right)) {
@@ -6505,16 +6526,28 @@ TypeInfo TypeChecker::checkBinary(const BinaryExpr& expression)
     case TokenType::Greater:
     case TokenType::GreaterEqual:
     case TokenType::Less:
-    case TokenType::LessEqual:
+    case TokenType::LessEqual: {
+        requireCapability(left, "Ord");
+        requireCapability(right, "Ord");
         if (!SemanticTypes::isKnown(left) || !SemanticTypes::isKnown(right)) {
             return simpleType(StaticType::Bool);
         }
-        if (left.kind != StaticType::Number || right.kind != StaticType::Number) {
+        const bool leftIsOrderedTypeParameter
+            = left.kind == StaticType::TypeParameter
+            && SemanticTypes::satisfiesCapability(left, capabilityType("Ord"));
+        const bool rightIsOrderedTypeParameter
+            = right.kind == StaticType::TypeParameter
+            && SemanticTypes::satisfiesCapability(right, capabilityType("Ord"));
+        if ((!leftIsOrderedTypeParameter && left.kind != StaticType::Number)
+            || (!rightIsOrderedTypeParameter && right.kind != StaticType::Number)) {
             throw TypeError(expression.op, binaryTypesMessage(expression, left, right));
         }
         return simpleType(StaticType::Bool);
+    }
     case TokenType::EqualEqual:
     case TokenType::BangEqual:
+        requireCapability(left, "Eq");
+        requireCapability(right, "Eq");
         return simpleType(StaticType::Bool);
     default:
         throw TypeError(expression.op, "unsupported binary operator `" + expression.op.lexeme + "`");

@@ -228,7 +228,7 @@ TypeInfo decodeType(CodecReader& reader, std::size_t depth = 0)
         throw std::runtime_error("TypeInfo nesting exceeds sidecar limit");
     }
     const std::size_t kindValue = reader.number();
-    if (kindValue > static_cast<std::size_t>(StaticType::TypeParameter)) {
+    if (kindValue > static_cast<std::size_t>(StaticType::Capability)) {
         throw std::runtime_error("invalid TypeInfo kind");
     }
 

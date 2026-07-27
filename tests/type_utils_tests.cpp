@@ -17,6 +17,19 @@ int main()
     assert(compatible(number, boundedT));
     assert(!compatible(simpleType(StaticType::String), boundedT));
 
+    const TypeInfo eq = capabilityType("Eq");
+    const TypeInfo ord = capabilityType("Ord");
+    assert(typeInfoName(eq) == "Eq");
+    assert(typeInfoName(ord) == "Ord");
+    assert(SemanticTypes::isCapability(eq, "Eq"));
+    assert(!SemanticTypes::isCapability(eq, "Ord"));
+    assert(SemanticTypes::satisfiesCapability(number, eq));
+    assert(SemanticTypes::satisfiesCapability(number, ord));
+    assert(SemanticTypes::satisfiesCapability(typeParameterType("T", ord), eq));
+    assert(SemanticTypes::satisfiesCapability(typeParameterType("T", number), ord));
+    assert(!SemanticTypes::satisfiesCapability(typeParameterType("T"), eq));
+    assert(!SemanticTypes::satisfiesCapability(simpleType(StaticType::String), ord));
+
     const TypeInfo identity = functionType(
         {t}, t, {"T"}, {std::make_shared<TypeInfo>(number)});
     assert(SemanticTypes::hasFunctionSignature(identity));

@@ -1,0 +1,20 @@
+import "lib.cd" as lib;
+import "forward.cd" as forwarded;
+
+fun same<T: Eq>(left: T, right: T): bool {
+  return left == right;
+}
+
+fun before<T: Ord>(left: T, right: T): bool {
+  return left < right;
+}
+
+fun numericLess(left: number, right: number): bool {
+  return left < right;
+}
+
+print same<string>("same", "same");
+print before(1, 2);
+print lib.same<number>(3, 3);
+print lib.before<number>(3, 4);
+print forwarded.applyLess(4, 5, numericLess);

@@ -1,0 +1,25 @@
+Program
+  Module 0
+    Fun same<T: Eq>(left: T, right: T): bool
+      Return (== left right)
+    Fun before<T: Ord>(left: T, right: T): bool
+      Return (< left right)
+    Fun applyLess<T: Ord>(left: T, right: T, less: fun(T, T): bool): bool
+      Return (call less left right)
+    Export same before applyLess
+  Module 1
+    Export applyLess from "lib.cd"
+  Module 2 entry
+    Import "lib.cd" as lib
+    Import "forward.cd" as forwarded
+    Fun same<T: Eq>(left: T, right: T): bool
+      Return (== left right)
+    Fun before<T: Ord>(left: T, right: T): bool
+      Return (< left right)
+    Fun numericLess(left: number, right: number): bool
+      Return (< left right)
+    Print (call same<string> "same" "same")
+    Print (call before 1 2)
+    Print (member-call lib same<number> 3 3)
+    Print (member-call lib before<number> 3 4)
+    Print (member-call forwarded applyLess 4 5 numericLess)

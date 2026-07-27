@@ -62,6 +62,16 @@ TypeInfo typeParameterType(std::string name, std::optional<TypeInfo> constraint)
     return result;
 }
 
+TypeInfo capabilityType(std::string name)
+{
+    TypeInfo result;
+    result.kind = StaticType::Capability;
+    // Reuse the existing named-type slot so cdi 0.1 sidecars keep their
+    // established TypeInfo encoding while gaining a new kind value.
+    result.structName = std::move(name);
+    return result;
+}
+
 TypeInfo functionType(
     std::vector<TypeInfo> parameterTypes,
     TypeInfo returnType,
@@ -109,6 +119,48 @@ bool isNullable(const TypeInfo& type)
     return type.kind == StaticType::Nullable && type.nullableOf != nullptr;
 }
 
+bool isCapability(const TypeInfo& type, const std::string& name)
+{
+    return type.kind == StaticType::Capability
+        && type.structName
+        && *type.structName == name;
+}
+
+bool satisfiesCapability(const TypeInfo& actual, const TypeInfo& capability)
+{
+    if (!SemanticTypes::isKnown(actual)) {
+        return true;
+    }
+    if (capability.kind != StaticType::Capability || !capability.structName) {
+        return false;
+    }
+
+    const std::string& name = *capability.structName;
+    if (actual.kind == StaticType::TypeParameter) {
+        if (!actual.typeParameterConstraint) {
+            return false;
+        }
+        return SemanticTypes::satisfiesCapability(*actual.typeParameterConstraint, capability);
+    }
+    if (actual.kind == StaticType::Capability) {
+        return name == "Eq"
+            ? SemanticTypes::isCapability(actual, "Eq")
+                || SemanticTypes::isCapability(actual, "Ord")
+            : SemanticTypes::isCapability(actual, name);
+    }
+    if (name == "Ord") {
+        return actual.kind == StaticType::Number;
+    }
+    if (name == "Eq") {
+        if (actual.kind == StaticType::Nullable) {
+            return actual.nullableOf
+                && SemanticTypes::satisfiesCapability(*actual.nullableOf, capability);
+        }
+        return actual.kind != StaticType::Unknown;
+    }
+    return false;
+}
+
 } // namespace SemanticTypes
 
 std::string staticTypeName(StaticType type)
@@ -140,6 +192,8 @@ std::string staticTypeName(StaticType type)
         return "nullable";
     case StaticType::TypeParameter:
         return "type parameter";
+    case StaticType::Capability:
+        return "capability";
     }
 
     return "unknown";
@@ -179,6 +233,10 @@ std::string typeInfoName(const TypeInfo& type)
             result += '>';
         }
         return result;
+    }
+
+    if (type.kind == StaticType::Capability && type.structName) {
+        return *type.structName;
     }
 
     if (type.kind == StaticType::Array && type.elementType) {
@@ -252,6 +310,11 @@ bool compatible(const TypeInfo& expected, const TypeInfo& actual)
             return SemanticTypes::compatible(expected, *actual.typeParameterConstraint);
         }
         return false;
+    }
+    if (expected.kind == StaticType::Capability || actual.kind == StaticType::Capability) {
+        return expected.kind == StaticType::Capability
+            && actual.kind == StaticType::Capability
+            && expected.structName == actual.structName;
     }
     if (expected.kind != actual.kind) {
         return false;
@@ -419,7 +482,10 @@ std::optional<TypeConstraintViolation> validateTypeParameterConstraints(
         if (found == substitutions.end()) {
             continue;
         }
-        if (!SemanticTypes::compatible(*constraints[i], found->second)) {
+        const bool satisfies = constraints[i]->kind == StaticType::Capability
+            ? SemanticTypes::satisfiesCapability(found->second, *constraints[i])
+            : SemanticTypes::compatible(*constraints[i], found->second);
+        if (!satisfies) {
             return TypeConstraintViolation{parameters[i], *constraints[i], found->second};
         }
     }
@@ -556,6 +622,16 @@ bool hasFunctionSignature(const TypeInfo& type)
 bool isNullable(const TypeInfo& type)
 {
     return SemanticTypes::isNullable(type);
+}
+
+bool isCapability(const TypeInfo& type, const std::string& name)
+{
+    return SemanticTypes::isCapability(type, name);
+}
+
+bool satisfiesCapability(const TypeInfo& actual, const TypeInfo& capability)
+{
+    return SemanticTypes::satisfiesCapability(actual, capability);
 }
 
 bool compatible(const TypeInfo& expected, const TypeInfo& actual)

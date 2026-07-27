@@ -1,0 +1,100 @@
+IR
+0000  v0 = constant #0 nil
+0001  store_var @0 same#0, v0
+0002  v1 = make_function $0 same/2
+0003  assign_var @3 same#0, v1
+0004  v2 = constant #2 nil
+0005  store_var @4 before#3, v2
+0006  v3 = make_function $1 before/2
+0007  assign_var @7 before#3, v3
+0008  v4 = constant #4 nil
+0009  store_var @8 applyLess#6, v4
+0010  v5 = make_function $2 applyLess/3
+0011  assign_var @12 applyLess#6, v5
+0012  v6 = constant #6 nil
+0013  store_var @13 same#10, v6
+0014  v7 = make_function $3 same/2
+0015  assign_var @16 same#10, v7
+0016  v8 = constant #8 nil
+0017  store_var @17 before#13, v8
+0018  v9 = make_function $4 before/2
+0019  assign_var @20 before#13, v9
+0020  v10 = constant #10 nil
+0021  store_var @21 numericLess#16, v10
+0022  v11 = make_function $5 numericLess/2
+0023  assign_var @24 numericLess#16, v11
+0024  v12 = load_var @25 same#10
+0025  v13 = constant #12 "same"
+0026  v14 = constant #13 "same"
+0027  v15 = call v12(v13, v14)
+0028  print v15
+0029  v16 = load_var @26 before#13
+0030  v17 = constant #14 1
+0031  v18 = constant #15 2
+0032  v19 = call v16(v17, v18)
+0033  print v19
+0034  v20 = load_var @27 same#0
+0035  v21 = constant #16 3
+0036  v22 = constant #17 3
+0037  v23 = call v20(v21, v22)
+0038  print v23
+0039  v24 = load_var @28 before#3
+0040  v25 = constant #18 3
+0041  v26 = constant #19 4
+0042  v27 = call v24(v25, v26)
+0043  print v27
+0044  v28 = load_var @29 applyLess#6
+0045  v29 = constant #20 4
+0046  v30 = constant #21 5
+0047  v31 = load_var @30 numericLess#16
+0048  v32 = call v28(v29, v30, v31)
+0049  print v32
+
+function $0 same(left#1, right#2)
+0000  v0 = load_var @1 left#1
+0001  v1 = load_var @2 right#2
+0002  v2 = equal v0, v1
+0003  return v2
+0004  v3 = constant #1 nil
+0005  return v3
+
+function $1 before(left#4, right#5)
+0000  v0 = load_var @5 left#4
+0001  v1 = load_var @6 right#5
+0002  v2 = less v0, v1
+0003  return v2
+0004  v3 = constant #3 nil
+0005  return v3
+
+function $2 applyLess(left#7, right#8, less#9)
+0000  v0 = load_var @9 less#9
+0001  v1 = load_var @10 left#7
+0002  v2 = load_var @11 right#8
+0003  v3 = call v0(v1, v2)
+0004  return v3
+0005  v4 = constant #5 nil
+0006  return v4
+
+function $3 same(left#11, right#12)
+0000  v0 = load_var @14 left#11
+0001  v1 = load_var @15 right#12
+0002  v2 = equal v0, v1
+0003  return v2
+0004  v3 = constant #7 nil
+0005  return v3
+
+function $4 before(left#14, right#15)
+0000  v0 = load_var @18 left#14
+0001  v1 = load_var @19 right#15
+0002  v2 = less v0, v1
+0003  return v2
+0004  v3 = constant #9 nil
+0005  return v3
+
+function $5 numericLess(left#17, right#18)
+0000  v0 = load_var @22 left#17
+0001  v1 = load_var @23 right#18
+0002  v2 = less v0, v1
+0003  return v2
+0004  v3 = constant #11 nil
+0005  return v3

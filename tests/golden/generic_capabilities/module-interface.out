@@ -1,0 +1,9 @@
+module 0 "<repo>/tests/golden/generic_capabilities/lib.cd"
+  export value applyLess: fun<T: Ord>(T, T, fun(T, T): bool): bool
+  export value before: fun<T: Ord>(T, T): bool
+  export value same: fun<T: Eq>(T, T): bool
+
+module 1 "<repo>/tests/golden/generic_capabilities/forward.cd"
+  export value applyLess: fun<T: Ord>(T, T, fun(T, T): bool): bool
+
+module 2 entry "<repo>/tests/golden/generic_capabilities/input.cd"

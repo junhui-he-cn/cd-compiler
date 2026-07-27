@@ -1,0 +1,13 @@
+fun same<T: Eq>(left: T, right: T): bool {
+  return left == right;
+}
+
+fun before<T: Ord>(left: T, right: T): bool {
+  return left < right;
+}
+
+fun applyLess<T: Ord>(left: T, right: T, less: fun(T, T): bool): bool {
+  return less(left, right);
+}
+
+export same, before, applyLess;

@@ -1,0 +1,5 @@
+fun before<T>(left: T, right: T): bool {
+  return left < right;
+}
+
+print before<number>(1, 2);

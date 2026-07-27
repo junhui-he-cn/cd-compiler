@@ -20,6 +20,7 @@ enum class StaticType {
     Enum,
     Nullable,
     TypeParameter,
+    Capability,
 };
 
 struct TypeInfo {
@@ -48,6 +49,7 @@ TypeInfo namedEnumType(std::string name, std::vector<TypeInfo> typeArguments = {
 TypeInfo arrayType(TypeInfo elementType);
 TypeInfo mapType(TypeInfo keyType, TypeInfo valueType);
 TypeInfo typeParameterType(std::string name, std::optional<TypeInfo> constraint = std::nullopt);
+TypeInfo capabilityType(std::string name);
 TypeInfo functionType(
     std::vector<TypeInfo> parameterTypes,
     TypeInfo returnType,
@@ -59,6 +61,8 @@ TypeInfo functionWithoutSignature();
 bool isKnown(const TypeInfo& type);
 bool hasFunctionSignature(const TypeInfo& type);
 bool isNullable(const TypeInfo& type);
+bool isCapability(const TypeInfo& type, const std::string& name);
+bool satisfiesCapability(const TypeInfo& actual, const TypeInfo& capability);
 bool compatible(const TypeInfo& expected, const TypeInfo& actual);
 std::optional<TypeInfo> mergeArrayElementTypes(const TypeInfo& left, const TypeInfo& right);
 TypeInfo substituteTypeParameters(const TypeInfo& type, const TypeSubstitutions& substitutions);
@@ -80,6 +84,8 @@ struct TypeConstraintViolation {
 bool isKnown(const TypeInfo& type);
 bool hasFunctionSignature(const TypeInfo& type);
 bool isNullable(const TypeInfo& type);
+bool isCapability(const TypeInfo& type, const std::string& name);
+bool satisfiesCapability(const TypeInfo& actual, const TypeInfo& capability);
 bool compatible(const TypeInfo& expected, const TypeInfo& actual);
 std::optional<TypeInfo> mergeArrayElementTypes(const TypeInfo& left, const TypeInfo& right);
 TypeInfo substituteTypeParameters(const TypeInfo& type, const TypeSubstitutions& substitutions);

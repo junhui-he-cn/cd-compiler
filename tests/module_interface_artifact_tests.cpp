@@ -27,6 +27,14 @@ ModuleInterface makeInterface()
             {"T"},
             {std::make_shared<TypeInfo>(simpleType(StaticType::Number))}),
         "identity#4"});
+    interfaceInfo.values.push_back(ModuleInterfaceValue{
+        "compare",
+        functionType(
+            {typeParameterType("T"), typeParameterType("T")},
+            simpleType(StaticType::Bool),
+            {"T"},
+            {std::make_shared<TypeInfo>(capabilityType("Ord"))}),
+        "compare#6"});
 
     ModuleInterfaceStruct box;
     box.name = "Box";
@@ -101,12 +109,15 @@ int main()
     assert(loaded.artifact->interfaceHash == moduleInterfaceArtifactHash(artifact.interfaceInfo));
     assert(loaded.artifact->interfaceInfo.moduleId == 0);
     assert(!loaded.artifact->interfaceInfo.sourceId.valid());
-    assert(loaded.artifact->interfaceInfo.values.size() == 1);
+    assert(loaded.artifact->interfaceInfo.values.size() == 2);
     assert(loaded.artifact->interfaceInfo.structs.size() == 1);
     assert(loaded.artifact->interfaceInfo.structs.front().hasPrivateFields);
     assert(loaded.artifact->interfaceInfo.enums.size() == 1);
     assert(loaded.artifact->interfaceInfo.dependencies.front().importedModuleId == 0);
-    assert(loaded.artifact->interfaceInfo.values.front().resolvedName == "identity#4");
+    assert(loaded.artifact->interfaceInfo.values.front().resolvedName == "compare#6");
+    assert(typeInfoName(loaded.artifact->interfaceInfo.values.front().type)
+        == "fun<T: Ord>(T, T): bool");
+    assert(loaded.artifact->interfaceInfo.values.back().resolvedName == "identity#4");
     assert(typeInfoName(loaded.artifact->interfaceInfo.structs.front().methods.front().receiverType)
         == "Box<T>");
 

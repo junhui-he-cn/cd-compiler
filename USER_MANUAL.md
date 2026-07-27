@@ -132,7 +132,7 @@ let count = 3;            // number
 let flags = [true, false]; // [bool]
 ```
 
-函数、结构体和枚举可以声明类型参数，也可以使用具体约束：
+函数、结构体和枚举可以声明类型参数，也可以使用具体约束或静态能力约束：
 
 ```cd
 fun identity<T>(value: T): T {
@@ -141,6 +141,14 @@ fun identity<T>(value: T): T {
 
 fun positive<T: number>(value: T): T {
   return value;
+}
+
+fun same<T: Eq>(left: T, right: T): bool {
+  return left == right;
+}
+
+fun before<T: Ord>(left: T, right: T): bool {
+  return left < right;
 }
 
 struct Box<T> {
@@ -157,7 +165,7 @@ let box: Box<number> = Box { value: 42 };
 let result: Result<number> = Result.Ok(42);
 ```
 
-类型参数通常从实参、字段值或期望类型推断；也可以在调用或构造时显式提供。泛型参数按名义类型处理，结构体和枚举的泛型实参是不变的。
+类型参数通常从实参、字段值或期望类型推断；也可以在调用或构造时显式提供。泛型参数按名义类型处理，结构体和枚举的泛型实参是不变的。`Eq` 和 `Ord` 只在编译期检查，不引入运行时 trait 对象或动态派发；当前 `Ord` 的内置满足关系限于 `number`，并且 `Ord` 同时满足 `Eq`。用户自定义 capability 实现仍未提供。
 
 ## 4. 运算符和赋值
 
@@ -596,6 +604,8 @@ builtin member-call sugar，数组接收者仍使用数组 builtin。栈和队�
 - 没有字符串或自定义迭代器的 `for-in`；
 - 没有 `Person(...)` 形式的结构体构造函数；
 - 没有继承、重载、动态派发、静态方法和函数值字段调用；
+- `Eq`/`Ord` 目前只能作为编译期泛型约束使用，尚无用户自定义 capability
+  实现，且 `Ord` 的内置类型目前只有 `number`；
 - 复杂动态字段、未知索引、map/range 元素和部分循环出口不提供精确 nullable narrowing；
 - 当函数签名或集合元素类型无法可靠推断时，需要补充显式类型注解。
 

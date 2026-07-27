@@ -1,0 +1,5 @@
+fun same<T>(left: T, right: T): bool {
+  return left == right;
+}
+
+print same<number>(1, 1);
