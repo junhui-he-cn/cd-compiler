@@ -28,3 +28,15 @@ deque.addBack(3);
 print deque.peekFront();
 print deque.peekBack();
 print deque.snapshot();
+
+fun ascending(left: number, right: number): bool {
+  return left < right;
+}
+
+let heap = ds.newBinaryHeap<number>(ascending);
+heap.add(5);
+heap.add(1);
+heap.add(3);
+print heap.peek();
+print heap.take();
+print heap.snapshot();

@@ -197,4 +197,98 @@ fun newDeque<T>(): Deque<T> {
   return Deque<T> { frontItems: [], backItems: [] };
 }
 
-export Stack, Queue, Deque, newStack, newQueue, newDeque;
+struct BinaryHeap<T> {
+  items: [T],
+  less: fun(T, T): bool
+}
+
+impl BinaryHeap<T> {
+  fun comesBefore(left: T, right: T): bool {
+    let compare = this.less;
+    return compare(left, right);
+  }
+
+  fun swapItems(left: number, right: number) {
+    let value = this.items[left];
+    this.items[left] = this.items[right];
+    this.items[right] = value;
+  }
+
+  fun siftUp() {
+    let child = this.items.len() - 1;
+    while (child > 0) {
+      let parent = floor((child - 1) / 2);
+      if (!this.comesBefore(this.items[child], this.items[parent])) {
+        break;
+      }
+      this.swapItems(child, parent);
+      child = parent;
+    }
+  }
+
+  fun siftDown() {
+    let index = 0;
+    let length = this.items.len();
+    while (true) {
+      let left = index * 2 + 1;
+      if (left >= length) {
+        break;
+      }
+
+      let right = left + 1;
+      let candidate = left;
+      if (right < length && this.comesBefore(this.items[right], this.items[left])) {
+        candidate = right;
+      }
+      if (!this.comesBefore(this.items[candidate], this.items[index])) {
+        break;
+      }
+      this.swapItems(index, candidate);
+      index = candidate;
+    }
+  }
+
+  fun add(value: T) {
+    this.items.push(value);
+    this.siftUp();
+  }
+
+  fun peek(): T? {
+    if (this.items.len() == 0) {
+      return nil;
+    }
+    return this.items[0];
+  }
+
+  fun take(): T? {
+    if (this.items.len() == 0) {
+      return nil;
+    }
+
+    let value = this.items[0];
+    let last = this.items.pop();
+    if (this.items.len() > 0) {
+      this.items[0] = last;
+      this.siftDown();
+    }
+    return value;
+  }
+
+  fun size(): number {
+    return this.items.len();
+  }
+
+  fun isEmpty(): bool {
+    return this.items.len() == 0;
+  }
+
+  fun snapshot(): [T] {
+    return copy(this.items);
+  }
+}
+
+fun newBinaryHeap<T>(less: fun(T, T): bool): BinaryHeap<T> {
+  return BinaryHeap<T> { items: [], less: less };
+}
+
+export Stack, Queue, Deque, BinaryHeap, newStack, newQueue, newDeque, newBinaryHeap;

@@ -29,14 +29,34 @@ def main() -> int:
         action="store_true",
         help="Refresh existing compiler golden files for the library fixture",
     )
+    parser.add_argument(
+        "--case",
+        action="append",
+        default=[],
+        help="Run only library fixture directories containing this substring; may be repeated",
+    )
     args = parser.parse_args()
 
-    case_dir = Path(__file__).resolve().parent / "data_structures_deque"
+    tests_root = Path(__file__).resolve().parent
+    case_dirs = sorted(
+        path
+        for path in tests_root.iterdir()
+        if path.is_dir()
+        and (path / "input.cd").is_file()
+        and (path / "run.out").is_file()
+        and (not args.case or any(pattern in path.name for pattern in args.case))
+    )
+    if not case_dirs:
+        print("no library fixtures selected", file=sys.stderr)
+        return 1
+
     compiler = args.compiler.resolve()
     vm = args.vm.resolve()
     vm_manifest = vm / "Cargo.toml" if vm.is_dir() else vm
-    results = check_success_case(compiler, case_dir, args.update)
-    results.extend(check_case(compiler, vm_manifest, case_dir))
+    results = []
+    for case_dir in case_dirs:
+        results.extend(check_success_case(compiler, case_dir, args.update))
+        results.extend(check_case(compiler, vm_manifest, case_dir))
 
     failed = [result for result in results if not result.passed]
     for failure in failed:

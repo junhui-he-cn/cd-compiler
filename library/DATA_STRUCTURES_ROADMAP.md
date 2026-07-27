@@ -30,8 +30,9 @@
 当前库已有：
 
 - `Stack<T>`：数组后端，使用 `add`、`take`、`top` 等方法；
-- `Queue<T>`：数组后端，带惰性头指针和周期性压缩。
+- `Queue<T>`：数组后端，带惰性头指针和周期性压缩；
 - `Deque<T>`：双数组栈后端，提供两端插入、删除、查看和快照。
+- `BinaryHeap<T>`：数组后端，通过 `less` 回调实现最小堆或最大堆。
 
 它们的现有 API 和示例继续作为兼容基线。后续新增 API 不应悄悄改变空值、
 快照或引用共享语义。
@@ -145,7 +146,7 @@ enum Result<T, E> {
 
 | 结构 | 状态 | 主要 API/用途 | 预期实现 |
 | --- | --- | --- | --- |
-| 二叉堆 `BinaryHeap<T>` | 第一批 | `add`、`peek`、`take`、`size`、`isEmpty`、`snapshot` | 数组 + `less` 回调；`add/take` 为 `O(log n)` |
+| 二叉堆 `BinaryHeap<T>` | 现有（S1） | `add`、`peek`、`take`、`size`、`isEmpty`、`snapshot` | 数组 + `less` 回调；`add/take` 为 `O(log n)` |
 | 优先队列 `PriorityQueue<T>` | 第一批 | 对外提供队列语义，优先返回最小/最大元素 | `BinaryHeap` 的稳定命名包装 |
 | 双堆中位数 | 后续 | `add`、`median`、流式中位数 | 两个堆；需定义空集合和偶数长度中位数策略 |
 | `Set<T>` | 第一批 | `add`、`has`、`discard`、`size`、`isEmpty`、`snapshot` | 先做数组线性查找，适用于任意可比较相等的值 |
@@ -360,11 +361,12 @@ enum Result<T, E> {
 
 ### S1：线性容器基础
 
-已完成 `Deque<T>`：使用前端反向数组和后端正向数组；库级 fixture 位于
-`library/tests/data_structures_deque`，由
-`library/tests/run_tests.py` 独立运行，复用现有 golden/Rust VM 检查接口。
+已完成 `Deque<T>` 和 `BinaryHeap<T>`：前者使用前端反向数组与后端正向数组，
+后者使用数组和 `fun(T, T): bool` 比较器。库级 fixture 位于
+`library/tests`，由 `library/tests/run_tests.py` 独立运行，复用现有
+golden/Rust VM 检查接口。
 
-后续实现 `BinaryHeap<T>`/`PriorityQueue<T>`、`Option<T>`、
+后续实现 `PriorityQueue<T>`、`Option<T>`、
 `Result<T,E>` 和递归枚举版 `List<T>`。这是后续 BFS、调度、排序和树算法
 共同依赖的最小集合。
 

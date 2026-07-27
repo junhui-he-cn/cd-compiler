@@ -2,7 +2,7 @@
 
 This directory contains a small data-structure library written in the public
 Compiler Design language. It currently provides generic array-backed `Stack<T>`,
-`Queue<T>`, and `Deque<T>` types.
+`Queue<T>`, `Deque<T>`, and `BinaryHeap<T>` types.
 
 The planned structure and algorithm inventory, implementation constraints, and
 staged delivery order are documented in
@@ -36,6 +36,17 @@ deque.addBack(3);
 print deque.peekFront();
 print deque.peekBack();
 print deque.snapshot();
+
+fun ascending(left: number, right: number): bool {
+  return left < right;
+}
+
+let heap = ds.newBinaryHeap<number>(ascending);
+heap.add(5);
+heap.add(1);
+heap.add(3);
+print heap.peek();
+print heap.take();
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -84,6 +95,20 @@ The deque uses two array-backed stacks. End operations are amortized `O(1)`;
 implementation details of the representation, although the language currently
 has no private methods.
 
+`BinaryHeap<T>` provides:
+
+- `add(value: T)` — add a value according to the comparator;
+- `peek(): T?` and `take(): T?` — inspect or remove the highest-priority value,
+  returning `nil` when empty;
+- `size(): number` and `isEmpty(): bool`;
+- `snapshot(): [T]` — return a shallow copy of the internal heap array.
+
+`newBinaryHeap<T>(less)` accepts a `fun(T, T): bool` comparator. When
+`less(a, b)` is true, `a` has higher priority than `b`; passing numeric `<`
+creates a min-heap, while numeric `>` creates a max-heap. `add` and `take` are
+`O(log n)`, `peek` is `O(1)`, and `snapshot` is `O(n)`. Equal-priority values
+are not stable.
+
 ## Current language limitation
 
 The language's builtin member-call sugar reserves names such as `push`, `pop`,
@@ -108,5 +133,6 @@ its fixture root independent:
 python3 library/tests/run_tests.py ./build/compiler_design vm-rs
 ```
 
-Use `--update` with that command only when an intentional compiler-output
-change requires refreshing the library fixture's `ast.out`.
+Use `--case data_structures_binary_heap` for a focused run, or `--update` only
+when an intentional compiler-output change requires refreshing library
+fixtures' `ast.out` files.
