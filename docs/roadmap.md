@@ -1337,6 +1337,17 @@ the replacement range. Scope-aware workspace candidates, imported symbols, and
 cross-module completion remain later M5B slices. The decision is recorded in
 `docs/decisions/m5b-lsp-006.{md,json}`.
 
+`M5B-LSP-007` adds `workspace/symbol` for the current set of open documents.
+The query filters declaration records by an optional substring, returns
+deterministic LSP `SymbolInformation[]` entries grouped by URI and source
+range, and keeps each result tied to its open document's source snapshot.
+Invalid or incomplete documents contribute no symbols; the existing
+single-document stdin import boundary remains unchanged. The focused protocol
+test opens a second URI and verifies cross-document result location and
+cleanup. Scope-aware workspace candidates, imported module materialization,
+and cross-module definition/references remain later M5B slices. The decision
+is recorded in `docs/decisions/m5b-lsp-007.{md,json}`.
+
 ### Milestone 5C: REPL / incremental evaluation
 
 **Dependency:** M3A module/session boundaries, M3B incremental compilation where
@@ -1574,11 +1585,11 @@ retain the resolved top-level blank-line, parser-accepted trailing-comma,
 bounded list-wrapping, and incomplete-input rejection policies without changing
 language semantics. Source fallback and direct-input adapters remain
 intentional.
-The next active tool slice is `M5B-LSP-007`; M5B-LSP-001 through
-M5B-LSP-006 now cover the single-document protocol, diagnostics, formatting,
+The next active tool slice is `M5B-LSP-008`; M5B-LSP-001 through
+M5B-LSP-007 now cover the single-document protocol, diagnostics, formatting,
 definitions, document symbols, references, bounded hover type information,
-rename edits, and declaration completion while cross-module navigation and
-workspace-aware completion remain open.
+rename edits, declaration completion, and open-document workspace symbols
+while cross-module navigation and workspace-aware completion remain open.
 
 ## Metrics dashboard
 

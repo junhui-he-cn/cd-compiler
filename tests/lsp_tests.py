@@ -59,6 +59,7 @@ def main() -> int:
         return 2
 
     uri = "file:///tmp/compiler-design-lsp.cd"
+    other_uri = "file:///tmp/compiler-design-lsp-other.cd"
     process = subprocess.Popen(
         [sys.argv[1], "--lsp"],
         stdin=subprocess.PIPE,
@@ -88,6 +89,7 @@ def main() -> int:
             or capabilities.get("hoverProvider") is not True
             or capabilities.get("renameProvider") is not True
             or capabilities.get("completionProvider") is not True
+            or capabilities.get("workspaceSymbolProvider") is not True
         ):
             raise AssertionError(f"initialize response mismatch: {initialize!r}")
 
@@ -108,6 +110,23 @@ def main() -> int:
             },
         )
         assert_publish(receive(process), uri, 0)
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didOpen",
+                "params": {
+                    "textDocument": {
+                        "uri": other_uri,
+                        "languageId": "compiler-design",
+                        "version": 1,
+                        "text": "fun helper(value: number): number { return value; }\n",
+                    }
+                },
+            },
+        )
+        assert_publish(receive(process), other_uri, 0)
 
         send(
             process,
@@ -409,6 +428,41 @@ def main() -> int:
             process,
             {
                 "jsonrpc": "2.0",
+                "id": 15,
+                "method": "workspace/symbol",
+                "params": {"query": "helper"},
+            },
+        )
+        workspace_symbols = receive(process)
+        if workspace_symbols.get("result") != [
+            {
+                "name": "helper",
+                "kind": 12,
+                "location": {
+                    "uri": other_uri,
+                    "range": {
+                        "start": {"line": 0, "character": 4},
+                        "end": {"line": 0, "character": 10},
+                    },
+                },
+            }
+        ]:
+            raise AssertionError(f"workspace symbol response mismatch: {workspace_symbols!r}")
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didClose",
+                "params": {"textDocument": {"uri": other_uri}},
+            },
+        )
+        assert_publish(receive(process), other_uri, 0)
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
                 "method": "textDocument/didChange",
                 "params": {
                     "textDocument": {"uri": uri, "version": 3},
@@ -445,9 +499,9 @@ def main() -> int:
         )
         assert_publish(receive(process), uri, 0)
 
-        send(process, {"jsonrpc": "2.0", "id": 14, "method": "shutdown", "params": None})
+        send(process, {"jsonrpc": "2.0", "id": 16, "method": "shutdown", "params": None})
         shutdown = receive(process)
-        if shutdown.get("id") != 14 or shutdown.get("result") is not None:
+        if shutdown.get("id") != 16 or shutdown.get("result") is not None:
             raise AssertionError(f"shutdown response mismatch: {shutdown!r}")
         send(process, {"jsonrpc": "2.0", "method": "exit"})
         process.stdin.close()

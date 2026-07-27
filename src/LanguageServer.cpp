@@ -1519,6 +1519,7 @@ public:
                                     {"hoverProvider", JsonValue::booleanValue(true)},
                                     {"renameProvider", JsonValue::booleanValue(true)},
                                     {"completionProvider", JsonValue::booleanValue(true)},
+                                    {"workspaceSymbolProvider", JsonValue::booleanValue(true)},
                                 })},
                             })));
                 }
@@ -1585,6 +1586,12 @@ public:
             if (*method == "textDocument/completion") {
                 if (id) {
                     writeMessage(output, response(*id, handleCompletion(request)));
+                }
+                continue;
+            }
+            if (*method == "workspace/symbol") {
+                if (id) {
+                    writeMessage(output, response(*id, handleWorkspaceSymbols(request)));
                 }
                 continue;
             }
@@ -1956,6 +1963,65 @@ private:
             {"isIncomplete", JsonValue::booleanValue(false)},
             {"items", JsonValue::array(std::move(items))},
         });
+    }
+
+    JsonValue handleWorkspaceSymbols(const JsonValue& request) const
+    {
+        const JsonValue* params = memberObject(request, "params");
+        const std::string query = params
+            ? stringMember(*params, "query").value_or("")
+            : "";
+        struct Candidate {
+            const std::string* uri = nullptr;
+            const Document* document = nullptr;
+            const DeclarationRecord* declaration = nullptr;
+        };
+        std::vector<Candidate> candidates;
+        for (const auto& entry : documents_) {
+            const Document& document = entry.second;
+            if (!document.analysis.program) {
+                continue;
+            }
+            for (const DeclarationRecord& declaration
+                 : document.analysis.declarationIndex.declarations()) {
+                if (declaration.kind == DeclarationKind::Module
+                    || !declarationRange(declaration)
+                    || (!query.empty() && declaration.name.find(query) == std::string::npos)) {
+                    continue;
+                }
+                candidates.push_back(Candidate{&entry.first, &document, &declaration});
+            }
+        }
+        std::sort(
+            candidates.begin(),
+            candidates.end(),
+            [](const Candidate& left, const Candidate& right) {
+                if (*left.uri != *right.uri) {
+                    return *left.uri < *right.uri;
+                }
+                if (left.declaration->range->start != right.declaration->range->start) {
+                    return left.declaration->range->start < right.declaration->range->start;
+                }
+                if (left.declaration->range->end != right.declaration->range->end) {
+                    return left.declaration->range->end < right.declaration->range->end;
+                }
+                return left.declaration->name < right.declaration->name;
+            });
+
+        std::vector<JsonValue> symbols;
+        symbols.reserve(candidates.size());
+        for (const Candidate& candidate : candidates) {
+            symbols.push_back(makeObject({
+                {"name", JsonValue::string(candidate.declaration->name)},
+                {"kind", JsonValue::number(std::to_string(
+                    lspSymbolKind(candidate.declaration->kind)))},
+                {"location", sourceLocation(
+                    *candidate.uri,
+                    candidate.document->text,
+                    *candidate.declaration->range)},
+            }));
+        }
+        return JsonValue::array(std::move(symbols));
     }
 
     JsonValue handleDocumentSymbols(const JsonValue& request) const
