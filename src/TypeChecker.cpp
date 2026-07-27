@@ -2618,9 +2618,6 @@ void TypeChecker::checkMethodNameAvailable(const StructTypeDecl& structType, con
         throw TypeError(method.name,
             "method `" + method.name.lexeme + "` conflicts with field `" + method.name.lexeme + "` on struct `" + statement.typeName.lexeme + "`");
     }
-    if (isBuiltinMemberName(method.name.lexeme)) {
-        throw TypeError(method.name, "method `" + method.name.lexeme + "` conflicts with builtin member call `" + method.name.lexeme + "`");
-    }
 }
 
 void TypeChecker::registerMethodSignature(const StructTypeDecl& structType, const ImplStmt& statement, const MethodDecl& method)
@@ -5602,6 +5599,17 @@ TypeChecker::CheckedExpression TypeChecker::checkMemberCall(
         }
     }
 
+    std::optional<CheckedExpression> builtinReceiver;
+    if (isBuiltinMemberName(name)) {
+        CheckedExpression receiver = checkExpressionInfo(*expression.receiver);
+        if (receiver.type.kind == StaticType::Struct
+            && receiver.type.structName
+            && findMethod(*receiver.type.structName, name)) {
+            return checkStructMethodCall(expression, receiver.type);
+        }
+        builtinReceiver = std::move(receiver);
+    }
+
     if (!expression.typeArguments.empty() && isBuiltinMemberName(name)) {
         throw TypeError(expression.paren, "function is not generic");
     }
@@ -5614,6 +5622,9 @@ TypeChecker::CheckedExpression TypeChecker::checkMemberCall(
     };
 
     auto checkReceiver = [&]() {
+        if (builtinReceiver) {
+            return *builtinReceiver;
+        }
         return checkExpressionInfo(*expression.receiver);
     };
 

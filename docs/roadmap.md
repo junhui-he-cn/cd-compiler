@@ -49,7 +49,9 @@ The repository currently provides:
 - source locations and file-aware front-end diagnostics;
 - lexical scopes, functions, closures, generic functions/enums/structs,
   nullable types, arrays, maps, ranges, named structs, methods, imports, and
-  exhaustive pattern matching;
+  exhaustive pattern matching; known named-struct methods take precedence over
+  same-named builtin member sugar, with builtin fallback preserved for
+  collection and string receivers;
 - a line-oriented, versioned `cdbc 0.1` compiler/VM contract with deterministic
   core sections, optional debug metadata, a standalone Rust VM, end-to-end
   execution, and artifact-parity tests;
@@ -1198,7 +1200,7 @@ lossless syntax path and the range/comment/idempotence gates pass.
 
 Current implementation slices `M5A-FORMAT-001` through `M5A-FORMAT-008` add
 `Formatter`, the `--format` CLI mode, production lossless token/trivia
-consumption, the 235-case corpus gate, configurable positive indentation width,
+consumption, the 236-case corpus gate, configurable positive indentation width,
 read-only canonical checking, the top-level blank-line policy, the
 parser-accepted trailing-comma policy, and bounded 100-byte wrapping for
 comma-separated array and parenthesized lists, plus explicit rejection of
@@ -1208,7 +1210,7 @@ diagnostics. Further editor-facing options remain later M5A slices. The
 decisions and gates are recorded in
 `docs/decisions/m5a-formatter-001..008.{md,json}`.
 
-`M5A-FORMAT-002` now binds the formatter to all 235 successful golden source
+`M5A-FORMAT-002` now binds the formatter to all 236 successful golden source
 cases. The corpus gate checks exact comment retention, parseability,
 idempotence, and AST/semantic parity for non-import cases while retaining
 relative import directory context for import cases. Its decision is recorded
@@ -1696,7 +1698,7 @@ others. The module boundary and artifact/cache foundations are now complete
 through `M3B-BOUNDARY-001`. M5A formatter slices `M5A-FORMAT-001` through
 `M5A-FORMAT-008` are implemented: the CLI and reusable formatter consume the
 production lossless source view, preserve token and line-comment text, pass the
-235-case corpus gate, expose indentation width and canonical checking, and
+236-case corpus gate, expose indentation width and canonical checking, and
 retain the resolved top-level blank-line, parser-accepted trailing-comma,
 bounded list-wrapping, and incomplete-input rejection policies without changing
 language semantics. Source fallback and direct-input adapters remain

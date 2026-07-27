@@ -1,0 +1,17 @@
+Program
+  Struct Stack<T> {items: [T]}
+  Impl Stack<T>
+    Method pop(): T?
+      Return nil
+    Method push(value: T)
+      Return nil
+    Method len(): number
+      Return 42
+  Let stack: Stack<number> = (construct Stack<number> items: (array))
+  Print (member-call stack pop)
+  Print (member-call stack push 7)
+  Print (member-call stack len)
+  Let values = (array 1)
+  Expr (member-call values push 2)
+  Print (member-call values pop)
+  Print (member-call values len)

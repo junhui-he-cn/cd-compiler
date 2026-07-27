@@ -1,19 +1,19 @@
 // Generic stack and queue implementations built from the public language API.
 //
-// Stack uses add/take instead of push/pop because those names are reserved by
-// the current builtin member-call sugar. Queue exposes enqueue/dequeue, which
-// do not collide with a builtin member call.
+// Struct methods on known receivers take precedence over builtin member-call
+// sugar, so the stack can expose the conventional push/pop API. Array
+// receivers such as this.items still use the builtin member forms.
 
 struct Stack<T> {
   items: [T]
 }
 
 impl Stack<T> {
-  fun add(value: T) {
+  fun push(value: T) {
     this.items.push(value);
   }
 
-  fun take(): T? {
+  fun pop(): T? {
     if (this.items.len() == 0) {
       return nil;
     }

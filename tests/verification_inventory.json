@@ -15994,6 +15994,117 @@
       "fixture": "tests/golden/struct_literals_field_access"
     },
     {
+      "case_id": "golden.success.struct_method_builtin_names.ast",
+      "runner": "golden",
+      "result_name": "struct_method_builtin_names default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:struct_method_builtin_names"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/struct_method_builtin_names/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/struct_method_builtin_names/ast.out"
+      ],
+      "fixture": "tests/golden/struct_method_builtin_names"
+    },
+    {
+      "case_id": "golden.success.struct_method_builtin_names.bytecode",
+      "runner": "golden",
+      "result_name": "struct_method_builtin_names --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:struct_method_builtin_names"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/struct_method_builtin_names/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/struct_method_builtin_names/bytecode.out"
+      ],
+      "fixture": "tests/golden/struct_method_builtin_names"
+    },
+    {
+      "case_id": "golden.success.struct_method_builtin_names.ir",
+      "runner": "golden",
+      "result_name": "struct_method_builtin_names --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:struct_method_builtin_names"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/struct_method_builtin_names/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/struct_method_builtin_names/ir.out"
+      ],
+      "fixture": "tests/golden/struct_method_builtin_names"
+    },
+    {
+      "case_id": "golden.success.struct_method_builtin_names.module_interface",
+      "runner": "golden",
+      "result_name": "struct_method_builtin_names --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:struct_method_builtin_names"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/struct_method_builtin_names/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/struct_method_builtin_names/module-interface.out"
+      ],
+      "fixture": "tests/golden/struct_method_builtin_names"
+    },
+    {
       "case_id": "golden.success.struct_method_compound_assignment.ast",
       "runner": "golden",
       "result_name": "struct_method_compound_assignment default(ast)",
@@ -18207,34 +18318,6 @@
         "tests/golden/type_errors/collection_helper_copy_wrong_arity.cd",
         "tests/golden/type_errors/collection_helper_copy_wrong_arity.err",
         "tests/golden/type_errors/collection_helper_copy_wrong_arity.exit"
-      ],
-      "fixture": "tests/golden/type_errors"
-    },
-    {
-      "case_id": "golden.type_errors.collection_helper_method_name_conflict",
-      "runner": "golden",
-      "result_name": "type_errors/collection_helper_method_name_conflict default(ast)",
-      "stage": "type-error",
-      "capability_tags": [
-        "golden",
-        "type_errors",
-        "fixture:collection_helper_method_name_conflict"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "diagnostic-and-exit",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic_diagnostic"
-      ],
-      "terminal_boundary": "semantic_diagnostic",
-      "sources": [
-        "tests/golden/type_errors/collection_helper_method_name_conflict.cd"
-      ],
-      "expected_files": [
-        "tests/golden/type_errors/collection_helper_method_name_conflict.cd",
-        "tests/golden/type_errors/collection_helper_method_name_conflict.err",
-        "tests/golden/type_errors/collection_helper_method_name_conflict.exit"
       ],
       "fixture": "tests/golden/type_errors"
     },
@@ -24787,34 +24870,6 @@
         "tests/golden/type_errors/struct_field_non_struct.cd",
         "tests/golden/type_errors/struct_field_non_struct.err",
         "tests/golden/type_errors/struct_field_non_struct.exit"
-      ],
-      "fixture": "tests/golden/type_errors"
-    },
-    {
-      "case_id": "golden.type_errors.struct_method_builtin_conflict",
-      "runner": "golden",
-      "result_name": "type_errors/struct_method_builtin_conflict default(ast)",
-      "stage": "type-error",
-      "capability_tags": [
-        "golden",
-        "type_errors",
-        "fixture:struct_method_builtin_conflict"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "diagnostic-and-exit",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic_diagnostic"
-      ],
-      "terminal_boundary": "semantic_diagnostic",
-      "sources": [
-        "tests/golden/type_errors/struct_method_builtin_conflict.cd"
-      ],
-      "expected_files": [
-        "tests/golden/type_errors/struct_method_builtin_conflict.cd",
-        "tests/golden/type_errors/struct_method_builtin_conflict.err",
-        "tests/golden/type_errors/struct_method_builtin_conflict.exit"
       ],
       "fixture": "tests/golden/type_errors"
     },
@@ -44762,6 +44817,68 @@
         "tests/golden/struct_literals_field_access/run.out"
       ],
       "fixture": "tests/golden/struct_literals_field_access"
+    },
+    {
+      "case_id": "rust_vm.golden.struct_method_builtin_names.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "struct_method_builtin_names emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:struct_method_builtin_names"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/struct_method_builtin_names/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/struct_method_builtin_names/run.out"
+      ],
+      "fixture": "tests/golden/struct_method_builtin_names"
+    },
+    {
+      "case_id": "rust_vm.golden.struct_method_builtin_names.run",
+      "runner": "rust_vm_golden",
+      "result_name": "struct_method_builtin_names rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:struct_method_builtin_names"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/struct_method_builtin_names/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/struct_method_builtin_names/run.out"
+      ],
+      "fixture": "tests/golden/struct_method_builtin_names"
     },
     {
       "case_id": "rust_vm.golden.struct_method_compound_assignment.emit",

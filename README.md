@@ -390,6 +390,12 @@ namespace imports, so `import "path";` supports `value.method()` and
 overloading, dynamic dispatch, static methods, and function-valued field calls
 are not implemented yet.
 
+When a known named-struct receiver declares a method with the same name as a
+builtin member form, the user-defined struct method wins. Builtin member sugar
+continues to apply to array, map, string, and range receivers, so methods such
+as `Stack<T>.push` and `Stack<T>.pop` can use conventional names without
+changing `array.push(...)` or `array.pop()`.
+
 ```cd
 struct Person { name: string, age: number }
 let person = Person { name: "Ada", age: 36 };
@@ -550,7 +556,8 @@ helpers: `array.push(value)`, `array.pop()`, `array.len()`,
 to the existing builtins with the receiver as the first argument; lexical
 bindings named `push`, `pop`, `len`, `contains`, `slice`, `copy`, `concat`,
 `map`, `filter`, `flatMap`, `any`, `all`, `count`, `find`, `findIndex`, `reduce`, `remove`, `clear`, `merge`, `keys`, `values`, `substr`, or `charAt` do not shadow
-member-call sugar.
+member-call sugar. A matching method declared on a known named-struct receiver
+is resolved before this builtin fallback.
 
 The debug native stdlib function `typeOf(value)` returns the current runtime type name as a string: primitive values report `"nil"`, `"number"`, `"bool"`, `"string"`, or `"function"`; arrays report `"array"`; maps report `"map"`; ranges report `"range"`; enum values report their enum name such as `"Result"`; named struct values report their runtime struct name such as `"Person"` or `"geo.Point"`. A user binding named `typeOf` shadows the builtin.
 

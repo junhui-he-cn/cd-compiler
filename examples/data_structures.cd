@@ -1,13 +1,13 @@
 import "../library/data_structures.cd" as ds;
 
 let stack = ds.newStack<number>();
-stack.add(10);
-stack.add(20);
+stack.push(10);
+stack.push(20);
 print stack.top();
-print stack.take();
+print stack.pop();
 print stack.snapshot();
-print stack.take();
-print stack.take();
+print stack.pop();
+print stack.pop();
 print stack.isEmpty();
 
 let queue = ds.newQueue<string>();

@@ -1,0 +1,59 @@
+IR
+0000  v0 = constant #0 nil
+0001  store_var @0 __method_Stack_pop#0, v0
+0002  v1 = make_function $0 pop/1
+0003  assign_var @1 __method_Stack_pop#0, v1
+0004  v2 = constant #3 nil
+0005  store_var @2 __method_Stack_push#1, v2
+0006  v3 = make_function $1 push/2
+0007  assign_var @3 __method_Stack_push#1, v3
+0008  v4 = constant #6 nil
+0009  store_var @4 __method_Stack_len#2, v4
+0010  v5 = make_function $2 len/1
+0011  assign_var @5 __method_Stack_len#2, v5
+0012  v6 = array []
+0013  v7 = struct Stack {items: v6}
+0014  store_var @8 stack#7, v7
+0015  v8 = load_var @9 __method_Stack_pop#0
+0016  v9 = load_var @10 stack#7
+0017  v10 = call v8(v9)
+0018  print v10
+0019  v11 = load_var @11 __method_Stack_push#1
+0020  v12 = load_var @12 stack#7
+0021  v13 = constant #9 7
+0022  v14 = call v11(v12, v13)
+0023  print v14
+0024  v15 = load_var @13 __method_Stack_len#2
+0025  v16 = load_var @14 stack#7
+0026  v17 = call v15(v16)
+0027  print v17
+0028  v18 = constant #10 1
+0029  v19 = array [v18]
+0030  store_var @15 values#8, v19
+0031  v20 = load_var @16 values#8
+0032  v21 = constant #11 2
+0033  v22 = native_call @17 push(v20, v21)
+0034  v23 = load_var @18 values#8
+0035  v24 = native_call @19 pop(v23)
+0036  print v24
+0037  v25 = load_var @20 values#8
+0038  v26 = len v25
+0039  print v26
+
+function $0 pop(this#3)
+0000  v0 = constant #1 nil
+0001  return v0
+0002  v1 = constant #2 nil
+0003  return v1
+
+function $1 push(this#4, value#5)
+0000  v0 = constant #4 nil
+0001  return v0
+0002  v1 = constant #5 nil
+0003  return v1
+
+function $2 len(this#6)
+0000  v0 = constant #7 42
+0001  return v0
+0002  v1 = constant #8 nil
+0003  return v1

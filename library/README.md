@@ -12,10 +12,10 @@ Import the module with a namespace alias:
 import "./library/data_structures.cd" as ds;
 
 let stack = ds.newStack<number>();
-stack.add(10);
-stack.add(20);
+stack.push(10);
+stack.push(20);
 print stack.top();
-print stack.take();
+print stack.pop();
 print stack.snapshot();
 
 let queue = ds.newQueue<string>();
@@ -38,8 +38,8 @@ let names = ds.newQueue<string>();
 
 `Stack<T>` provides:
 
-- `add(value: T)` — append to the top;
-- `take(): T?` — remove and return the top, or `nil` when empty;
+- `push(value: T)` — append to the top;
+- `pop(): T?` — remove and return the top, or `nil` when empty;
 - `top(): T?` — inspect the top, or `nil` when empty;
 - `size(): number` and `isEmpty(): bool`;
 - `snapshot(): [T]` — return a shallow copy from bottom to top.
@@ -56,14 +56,12 @@ The queue compacts its backing array as consumed entries accumulate. Both
 structures store references to their element values; snapshots copy only the
 outer array.
 
-## Current language limitation
+## Member-call precedence
 
-The language's builtin member-call sugar reserves names such as `push`, `pop`,
-`remove`, and `clear`. A user-defined struct method with one of those names is
-currently rejected, so the stack uses `add` and `take` instead of the usual
-`push` and `pop` API. The public language manual explains that builtin member
-forms are not shadowed, but it does not currently document this method-name
-collision explicitly.
+Methods declared for a known struct receiver take precedence over builtin
+member-call sugar with the same name. Array, map, string, and range receivers
+continue to use the builtin forms, so the stack can expose `push` and `pop`
+without changing array behavior.
 
 The language also has no private struct fields or private methods yet. The
 backing fields are therefore technically accessible to callers; use the
