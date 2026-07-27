@@ -1298,9 +1298,8 @@ declaration range is included exactly once; without it, only resolved variable,
 assignment, and compound-assignment occurrences are returned. Parseable
 documents with type errors retain the same query snapshot policy as 002, while
 incomplete documents return an empty result. The focused protocol test covers
-capability negotiation and both declaration-inclusion modes. Rename,
-completion, and cross-module references remain later M5B slices. The decision
-is recorded in
+capability negotiation and both declaration-inclusion modes. Completion and
+cross-module references remain later M5B slices. The decision is recorded in
 `docs/decisions/m5b-lsp-003.{md,json}`.
 
 `M5B-LSP-004` adds `textDocument/hover` for the current single-document
@@ -1311,9 +1310,21 @@ plaintext type text plus the selected source range, uses the existing UTF-16
 position mapping, and returns `null` when no typed record is available. The
 adapter does not infer types or synthesize declaration types from source text.
 The focused protocol test covers a callable declaration signature and a
-variable reference type. Completion, rename, and cross-module navigation
-remain later M5B slices. The decision is recorded in
+variable reference type. Completion and cross-module navigation remain later
+M5B slices. The decision is recorded in
 `docs/decisions/m5b-lsp-004.{md,json}`.
+
+`M5B-LSP-005` adds `textDocument/rename` for the current single-document
+snapshot. The query reuses the references target and declaration-inclusive
+source ranges, validates the requested name with the production Lexer, and
+returns one URI-scoped `WorkspaceEdit` with deterministic `TextEdit[]`
+entries. A clean current snapshot is required; the renamed source is analyzed
+before the edit is returned, so lexical, parse, or type failures produce
+`null`. The focused protocol test covers a function rename and rejection of an
+invalid identifier. Applying the edit remains the client's responsibility and
+is observed through the existing full-document change path. Completion and
+cross-module rename remain later M5B slices. The decision is recorded in
+`docs/decisions/m5b-lsp-005.{md,json}`.
 
 ### Milestone 5C: REPL / incremental evaluation
 
@@ -1552,11 +1563,11 @@ retain the resolved top-level blank-line, parser-accepted trailing-comma,
 bounded list-wrapping, and incomplete-input rejection policies without changing
 language semantics. Source fallback and direct-input adapters remain
 intentional.
-The next active tool slice is `M5B-LSP-005`; M5B-LSP-001 through
-M5B-LSP-004 now cover the single-document protocol, diagnostics, formatting,
-definitions, document symbols, references, and bounded hover type information
-while completion, rename, and the broader module-query deliverable remain
-open.
+The next active tool slice is `M5B-LSP-006`; M5B-LSP-001 through
+M5B-LSP-005 now cover the single-document protocol, diagnostics, formatting,
+definitions, document symbols, references, bounded hover type information,
+and rename edits while completion and the broader module-query deliverable
+remain open.
 
 ## Metrics dashboard
 

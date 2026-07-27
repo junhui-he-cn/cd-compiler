@@ -1376,6 +1376,19 @@ JsonValue hoverValue(
     });
 }
 
+bool validRenameName(std::string_view name)
+{
+    try {
+        const std::vector<Token> tokens = Lexer(std::string(name)).scanTokens();
+        return tokens.size() == 2
+            && tokens.front().type == TokenType::Identifier
+            && tokens.front().lexeme == name
+            && tokens.back().type == TokenType::EndOfFile;
+    } catch (const LexErrorList&) {
+        return false;
+    }
+}
+
 JsonValue documentSymbol(
     std::string_view source,
     const DeclarationRecord& declaration)
@@ -1454,6 +1467,7 @@ public:
                                     {"documentSymbolProvider", JsonValue::booleanValue(true)},
                                     {"referencesProvider", JsonValue::booleanValue(true)},
                                     {"hoverProvider", JsonValue::booleanValue(true)},
+                                    {"renameProvider", JsonValue::booleanValue(true)},
                                 })},
                             })));
                 }
@@ -1508,6 +1522,12 @@ public:
             if (*method == "textDocument/hover") {
                 if (id) {
                     writeMessage(output, response(*id, handleHover(request)));
+                }
+                continue;
+            }
+            if (*method == "textDocument/rename") {
+                if (id) {
+                    writeMessage(output, response(*id, handleRename(request)));
                 }
                 continue;
             }
@@ -1745,6 +1765,64 @@ private:
         return info
             ? hoverValue(found->second.text, *info)
             : JsonValue::null();
+    }
+
+    JsonValue handleRename(const JsonValue& request) const
+    {
+        const std::optional<std::string> uri = documentUri(request);
+        const std::optional<LspRequestPosition> position = requestPosition(request);
+        const JsonValue* params = memberObject(request, "params");
+        const std::optional<std::string> newName
+            = params ? stringMember(*params, "newName") : std::nullopt;
+        if (!uri || !position || !newName || !validRenameName(*newName)) {
+            return JsonValue::null();
+        }
+        const auto found = documents_.find(*uri);
+        if (found == documents_.end() || !found->second.analysis.program
+            || !found->second.analysis.diagnostics.empty()) {
+            return JsonValue::null();
+        }
+        const std::optional<std::size_t> byte = sourceByteAtLspPosition(
+            found->second.text,
+            position->line,
+            position->character);
+        if (!byte) {
+            return JsonValue::null();
+        }
+        const std::vector<SourceRange> ranges = referenceRangesAt(
+            found->second.analysis,
+            *byte,
+            true);
+        if (ranges.empty()) {
+            return JsonValue::null();
+        }
+
+        std::string renamed = found->second.text;
+        for (auto range = ranges.rbegin(); range != ranges.rend(); ++range) {
+            if (!range->source.valid() || range->source.value != 0
+                || range->start > range->end || range->end > renamed.size()) {
+                return JsonValue::null();
+            }
+            renamed.replace(range->start, range->end - range->start, *newName);
+        }
+        const DocumentAnalysis renamedAnalysis = analyzeDocument(renamed);
+        if (!renamedAnalysis.diagnostics.empty()) {
+            return JsonValue::null();
+        }
+
+        std::vector<JsonValue> edits;
+        edits.reserve(ranges.size());
+        for (const SourceRange& range : ranges) {
+            edits.push_back(makeObject({
+                {"range", textDocumentRange(found->second.text, range)},
+                {"newText", JsonValue::string(*newName)},
+            }));
+        }
+        JsonValue::Object changes;
+        changes.emplace(*uri, JsonValue::array(std::move(edits)));
+        return makeObject({
+            {"changes", JsonValue::object(std::move(changes))},
+        });
     }
 
     JsonValue handleDocumentSymbols(const JsonValue& request) const

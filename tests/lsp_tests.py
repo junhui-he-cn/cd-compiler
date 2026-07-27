@@ -86,6 +86,7 @@ def main() -> int:
             or capabilities.get("documentSymbolProvider") is not True
             or capabilities.get("referencesProvider") is not True
             or capabilities.get("hoverProvider") is not True
+            or capabilities.get("renameProvider") is not True
         ):
             raise AssertionError(f"initialize response mismatch: {initialize!r}")
 
@@ -322,6 +323,59 @@ def main() -> int:
             process,
             {
                 "jsonrpc": "2.0",
+                "id": 10,
+                "method": "textDocument/rename",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 1, "character": 13},
+                    "newName": "sum",
+                },
+            },
+        )
+        rename = receive(process)
+        if rename.get("result") != {
+            "changes": {
+                uri: [
+                    {
+                        "range": {
+                            "start": {"line": 0, "character": 4},
+                            "end": {"line": 0, "character": 7},
+                        },
+                        "newText": "sum",
+                    },
+                    {
+                        "range": {
+                            "start": {"line": 1, "character": 13},
+                            "end": {"line": 1, "character": 16},
+                        },
+                        "newText": "sum",
+                    },
+                ]
+            }
+        }:
+            raise AssertionError(f"rename response mismatch: {rename!r}")
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 11,
+                "method": "textDocument/rename",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 1, "character": 13},
+                    "newName": "1invalid",
+                },
+            },
+        )
+        invalid_rename = receive(process)
+        if invalid_rename.get("result") is not None:
+            raise AssertionError(f"invalid rename response mismatch: {invalid_rename!r}")
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
                 "method": "textDocument/didChange",
                 "params": {
                     "textDocument": {"uri": uri, "version": 3},
@@ -358,9 +412,9 @@ def main() -> int:
         )
         assert_publish(receive(process), uri, 0)
 
-        send(process, {"jsonrpc": "2.0", "id": 10, "method": "shutdown", "params": None})
+        send(process, {"jsonrpc": "2.0", "id": 12, "method": "shutdown", "params": None})
         shutdown = receive(process)
-        if shutdown.get("id") != 10 or shutdown.get("result") is not None:
+        if shutdown.get("id") != 12 or shutdown.get("result") is not None:
             raise AssertionError(f"shutdown response mismatch: {shutdown!r}")
         send(process, {"jsonrpc": "2.0", "method": "exit"})
         process.stdin.close()
