@@ -1420,6 +1420,16 @@ test covers a re-exported `api.Box` type and `api.Result.Ok` variant. The
 decision is recorded in
 `docs/decisions/m5b-lsp-013.{md,json}`.
 
+`M5B-LSP-014` extends completion after a qualified enum path in the opened
+virtual workspace. A receiver such as `api.Result.O` resolves `api.Result`
+through direct imports, namespace aliases, and export-from chains, then
+returns matching public enum variants with EnumMember completion kind and the
+existing prefix replacement range. Qualified struct paths remain outside
+ordinary field completion, and unopened dependencies do not contribute
+candidates. The focused protocol test covers the re-exported `api.Result.O`
+prefix. The decision is recorded in
+`docs/decisions/m5b-lsp-014.{md,json}`.
+
 ### Milestone 5C: REPL / incremental evaluation
 
 **Dependency:** M3A module/session boundaries, M3B incremental compilation where
@@ -1664,7 +1674,8 @@ bounded hover type information, rename edits, declaration completion,
 open-document workspace symbols, virtual-source workspace analysis, direct
 import definition jumps, namespace-alias member definition jumps,
 cross-module references, validated cross-module rename, opened-module
-completion, and namespace-qualified type/variant navigation while
+completion, namespace-qualified type/variant navigation, and qualified enum
+variant completion while
 workspace-aware completion remains open.
 
 ## Metrics dashboard

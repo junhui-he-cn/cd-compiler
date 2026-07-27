@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m5b-2026-07-27-r14",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M5B-LSP-014",
+  "domain": "language-server-qualified-enum-completion",
+  "status": "resolved",
+  "question": "How should completion expose variants after an opened qualified enum path?",
+  "decision": "Resolve the receiver type through opened imports and export chains, then return matching enum variants with a prefix replacement edit.",
+  "query": {
+    "receiver": "direct-import, namespace-alias, or export-from qualified enum path",
+    "prefix": "existing ASCII identifier prefix and UTF-16 replacement range",
+    "items": "EnumMember kind 20 with variant detail",
+    "ordering": "variant name, source ID, source start, source end"
+  },
+  "shared_services": [
+    "AnalysisSnapshot",
+    "FrontendSession module graph",
+    "exported type resolver",
+    "production enum declaration ranges"
+  ],
+  "compatibility_boundary": {
+    "sources": "currently open virtual documents only",
+    "struct_fields": "qualified struct paths do not expose ordinary fields",
+    "ids": "snapshot-local IDs are not serialized"
+  },
+  "quantitative_gate": "tests/lsp_tests.py covers the O prefix in re-exported api.Result.Ok.",
+  "out_of_scope": [
+    "ordinary struct-field completion",
+    "unopened dependencies",
+    "type and variant references",
+    "type and variant rename",
+    "persistent semantic caching",
+    "range-based synchronization"
+  ],
+  "verification": {
+    "focused_commands": [
+      "cmake --build build -j2",
+      "python3 tests/lsp_tests.py ./build/compiler_design",
+      "ctest --test-dir build --output-on-failure -R '^language_server$'",
+      "git diff --check"
+    ]
+  }
+}

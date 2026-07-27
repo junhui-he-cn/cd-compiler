@@ -773,6 +773,41 @@ def main() -> int:
             process,
             {
                 "jsonrpc": "2.0",
+                "id": 25,
+                "method": "textDocument/completion",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 4, "character": 37},
+                },
+            },
+        )
+        qualified_variant_completion = receive(process)
+        if qualified_variant_completion.get("result") != {
+            "isIncomplete": False,
+            "items": [
+                {
+                    "label": "Ok",
+                    "kind": 20,
+                    "detail": "variant",
+                    "textEdit": {
+                        "range": {
+                            "start": {"line": 4, "character": 36},
+                            "end": {"line": 4, "character": 37},
+                        },
+                        "newText": "Ok",
+                    },
+                }
+            ],
+        }:
+            raise AssertionError(
+                "namespace-qualified enum variant completion response mismatch: "
+                f"{qualified_variant_completion!r}"
+            )
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
                 "method": "textDocument/didClose",
                 "params": {"textDocument": {"uri": module_uri}},
             },

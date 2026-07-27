@@ -49,9 +49,10 @@ The compiler pipeline includes:
   namespace aliases can navigate to declarations in other modules, including
   explicit export-from forwarding. References can cross the same opened
   direct-import and namespace-alias boundaries. Namespace-qualified struct and
-  enum types plus enum variants navigate through opened export chains. Closed
-  imports, ordinary struct-field completion/navigation, and workspace-wide
-  completion remain later slices. Rename edits validate the
+  enum types plus enum variants navigate through opened export chains, and
+  qualified enum paths complete their public variants. Closed imports,
+  ordinary struct-field completion/navigation, and workspace-wide completion
+  remain later slices. Rename edits validate the
   complete replacement across the opened virtual workspace before returning a
   multi-document `WorkspaceEdit`.
 

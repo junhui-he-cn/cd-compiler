@@ -1907,6 +1907,31 @@ std::string completionPrefix(std::string_view source, std::size_t byte)
     return std::string(source.substr(start, std::min(byte, source.size()) - start));
 }
 
+std::optional<std::string> completionReceiverPath(
+    std::string_view source,
+    std::size_t prefixStart)
+{
+    if (prefixStart == 0 || source[prefixStart - 1] != '.') {
+        return std::nullopt;
+    }
+    const std::size_t receiverEnd = prefixStart - 1;
+    std::size_t receiverStart = receiverEnd;
+    while (receiverStart > 0) {
+        const unsigned char character
+            = static_cast<unsigned char>(source[receiverStart - 1]);
+        if (!(std::isalnum(character) || character == '_' || character == '.')) {
+            break;
+        }
+        --receiverStart;
+    }
+    if (receiverStart == receiverEnd
+        || source[receiverStart] == '.'
+        || source[receiverEnd - 1] == '.') {
+        return std::nullopt;
+    }
+    return std::string(source.substr(receiverStart, receiverEnd - receiverStart));
+}
+
 int completionItemKind(DeclarationKind kind)
 {
     switch (kind) {
@@ -3218,6 +3243,9 @@ private:
             found->second.analysis.sourceId,
             prefixStart,
             *byte};
+        const std::optional<std::string> receiverPath = completionReceiverPath(
+            found->second.text,
+            prefixStart);
         std::optional<std::string> namespaceAlias;
         if (prefixStart > 0 && found->second.text[prefixStart - 1] == '.') {
             std::size_t aliasEnd = prefixStart - 1;
@@ -3237,6 +3265,7 @@ private:
 
         struct Candidate {
             const DeclarationRecord* declaration = nullptr;
+            const EnumVariantDecl* variant = nullptr;
         };
         std::vector<Candidate> candidates;
         const auto matchesPrefix = [&prefix](const std::string& name) {
@@ -3244,8 +3273,29 @@ private:
                 && name.compare(0, prefix.size(), prefix) == 0;
         };
         const ModuleStmt* module = moduleForSource(snapshot, found->second.analysis.sourceId);
+        bool matchedQualifiedType = false;
+        if (receiverPath && module) {
+            if (const std::optional<DefinitionTarget> type = typeDefinitionForPath(
+                    snapshot,
+                    *module,
+                    *receiverPath);
+                type && type->declaration && type->declaration->statement
+                && isTypeDeclaration(type->declaration)) {
+                matchedQualifiedType = true;
+                const auto* enumDeclaration
+                    = dynamic_cast<const EnumDeclStmt*>(type->declaration->statement);
+                if (enumDeclaration) {
+                    for (const EnumVariantDecl& variant : enumDeclaration->variants) {
+                        if (variant.name.range && variant.name.range->valid()
+                            && matchesPrefix(variant.name.lexeme)) {
+                            candidates.push_back(Candidate{nullptr, &variant});
+                        }
+                    }
+                }
+            }
+        }
         bool matchedNamespaceAlias = false;
-        if (namespaceAlias && module) {
+        if (!matchedQualifiedType && namespaceAlias && module) {
             for (const StmtPtr& statement : module->statements) {
                 const auto* import = dynamic_cast<const ImportStmt*>(statement.get());
                 if (!import || !import->alias
@@ -3262,12 +3312,12 @@ private:
                         || !importedNames.insert(exported.first).second) {
                         continue;
                     }
-                    candidates.push_back(Candidate{exported.second.declaration});
+                    candidates.push_back(Candidate{exported.second.declaration, nullptr});
                 }
             }
         }
 
-        if (!matchedNamespaceAlias) {
+        if (!matchedQualifiedType && !matchedNamespaceAlias) {
             for (const DeclarationRecord& declaration
                  : snapshot.declarationIndex.declarations()) {
                 if (!declarationRange(declaration)
@@ -3276,7 +3326,7 @@ private:
                     || !matchesPrefix(declaration.name)) {
                     continue;
                 }
-                candidates.push_back(Candidate{&declaration});
+                candidates.push_back(Candidate{&declaration, nullptr});
             }
 
             if (module) {
@@ -3294,40 +3344,53 @@ private:
                             || !importedNames.insert(exported.first).second) {
                             continue;
                         }
-                        candidates.push_back(Candidate{exported.second.declaration});
+                        candidates.push_back(Candidate{exported.second.declaration, nullptr});
                     }
                 }
             }
         }
+        const auto candidateName = [](const Candidate& candidate) -> std::string_view {
+            return candidate.variant ? candidate.variant->name.lexeme : candidate.declaration->name;
+        };
+        const auto candidateRange = [](const Candidate& candidate) -> const SourceRange& {
+            return candidate.variant
+                ? *candidate.variant->name.range
+                : *candidate.declaration->range;
+        };
         std::sort(
             candidates.begin(),
             candidates.end(),
-            [](const Candidate& left, const Candidate& right) {
-                if (left.declaration->name != right.declaration->name) {
-                    return left.declaration->name < right.declaration->name;
+            [&](const Candidate& left, const Candidate& right) {
+                const std::string_view leftName = candidateName(left);
+                const std::string_view rightName = candidateName(right);
+                if (leftName != rightName) {
+                    return leftName < rightName;
                 }
-                if (left.declaration->range->source != right.declaration->range->source) {
-                    return left.declaration->range->source < right.declaration->range->source;
+                const SourceRange& leftRange = candidateRange(left);
+                const SourceRange& rightRange = candidateRange(right);
+                if (leftRange.source != rightRange.source) {
+                    return leftRange.source < rightRange.source;
                 }
-                if (left.declaration->range->start != right.declaration->range->start) {
-                    return left.declaration->range->start < right.declaration->range->start;
+                if (leftRange.start != rightRange.start) {
+                    return leftRange.start < rightRange.start;
                 }
-                return left.declaration->range->end < right.declaration->range->end;
+                return leftRange.end < rightRange.end;
             });
 
         std::vector<JsonValue> items;
         items.reserve(candidates.size());
         for (const Candidate& candidate : candidates) {
-            const DeclarationRecord* declaration = candidate.declaration;
+            const std::string label(candidateName(candidate));
             items.push_back(makeObject({
-                {"label", JsonValue::string(declaration->name)},
-                {"kind", JsonValue::number(std::to_string(completionItemKind(declaration->kind)))},
-                {"detail", JsonValue::string(completionDetail(
-                    snapshot.declarationIndex,
-                    *declaration))},
+                {"label", JsonValue::string(label)},
+                {"kind", JsonValue::number(std::to_string(
+                    candidate.variant ? 20 : completionItemKind(candidate.declaration->kind)))},
+                {"detail", JsonValue::string(candidate.variant
+                        ? "variant"
+                        : completionDetail(snapshot.declarationIndex, *candidate.declaration))},
                 {"textEdit", makeObject({
                     {"range", textDocumentRange(found->second.text, replaceRange)},
-                    {"newText", JsonValue::string(declaration->name)},
+                    {"newText", JsonValue::string(label)},
                 })},
             }));
         }
