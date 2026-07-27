@@ -1506,6 +1506,15 @@ prototype while keeping protocol output free of raw compiler/VM stderr. JSON
 RPC framing, in-process VM state, and terminal history remain deferred. The
 decision is recorded in `docs/decisions/m5c-repl-004.{md,json}`.
 
+`M5C-REPL-005` adds explicit expression-result evaluation. Interactive clients
+can submit `:eval EXPR`, while JSON Lines clients can submit an `expression`
+string. The wrapper lowers the request to the production `print` statement so
+expression formatting, type checking, runtime errors, side effects, output
+suffixes, and rollback remain shared with ordinary source forms. Automatic
+echoing of every unmarked expression statement, in-process VM state, and
+terminal history remain deferred. The decision is recorded in
+`docs/decisions/m5c-repl-005.{md,json}`.
+
 **Migration:** expose an incremental wrapper around the production front end and
 VM. Keep session state separate from compiler-global state, and use the same
 module identity and artifact rules as project builds.

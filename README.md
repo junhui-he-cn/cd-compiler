@@ -93,11 +93,14 @@ source through the production compiler and Rust VM; failed forms do not change
 session state. Add repeatable `--import-path DIR` options to resolve non-
 explicit imports through the production module search path, or
 `--session-root DIR` to resolve explicit relative imports from a project root.
+At a form boundary, `:eval EXPR` evaluates an expression and prints its result
+through the same production runtime.
 
 For one-request/one-response machine integration, add `--json-lines`. Each
-input line is a JSON object with either a `source` string or a `command` of
-`reset`, `help`, or `quit`; each response contains `ok` and the newly produced
-`stdout` suffix, with normalized diagnostics in `error` when a request fails.
+input line is a JSON object with either a `source` or `expression` string, or a
+`command` of `reset`, `help`, or `quit`; each response contains `ok` and the
+newly produced `stdout` suffix, with normalized diagnostics in `error` when a
+request fails.
 
 ## Language
 

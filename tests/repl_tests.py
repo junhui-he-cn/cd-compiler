@@ -101,6 +101,29 @@ print values[0];
     )
     require("compiler-repl-" not in runtime.stderr, f"runtime diagnostic leaked temp path: {runtime.stderr!r}")
 
+    expressions = run_repl(
+        compiler,
+        vm_manifest,
+        """:eval 1 + 2;
+
+let value = 4;
+
+:eval value * 2
+
+:eval value = 9
+
+:eval missing
+
+:eval value
+
+:quit
+""",
+    )
+    require(expressions.returncode == 0, f"expression session returned {expressions.returncode}: {expressions.stderr}")
+    require(expressions.stdout == "3\n8\n9\n9\n", f"unexpected expression stdout: {expressions.stdout!r}")
+    require(expressions.stderr.count("Type error") == 1, f"unexpected expression diagnostics: {expressions.stderr!r}")
+    require("compiler-repl-" not in expressions.stderr, f"expression diagnostic leaked temp path: {expressions.stderr!r}")
+
     json_session = run_repl(
         compiler,
         vm_manifest,
@@ -114,6 +137,7 @@ print values[0];
                 {"command": "reset"},
                 {"source": "print value;"},
                 {"source": "let value = 8;"},
+                {"expression": "value * 2"},
                 {"source": "print value;"},
                 {"command": "quit"},
             )
@@ -124,7 +148,7 @@ print values[0];
     require(json_session.returncode == 0, f"JSON session returned {json_session.returncode}: {json_session.stderr}")
     require(json_session.stderr == "", f"JSON protocol wrote stderr: {json_session.stderr!r}")
     json_responses = [json.loads(line) for line in json_session.stdout.splitlines()]
-    require(len(json_responses) == 9, f"unexpected JSON response count: {json_responses!r}")
+    require(len(json_responses) == 10, f"unexpected JSON response count: {json_responses!r}")
     require(json_responses[0] == {"ok": True, "stdout": ""}, f"unexpected JSON declaration response: {json_responses[0]!r}")
     require(json_responses[1] == {"ok": True, "stdout": "3\n"}, f"unexpected JSON output response: {json_responses[1]!r}")
     require(not json_responses[2]["ok"], f"JSON compile failure unexpectedly succeeded: {json_responses[2]!r}")
@@ -135,8 +159,9 @@ print values[0];
     require(not json_responses[5]["ok"], f"JSON reset did not clear state: {json_responses[5]!r}")
     require(json_responses[5]["stdout"] == "", f"JSON reset failure leaked stdout: {json_responses[5]!r}")
     require(json_responses[6] == {"ok": True, "stdout": ""}, f"unexpected JSON post-reset declaration: {json_responses[6]!r}")
-    require(json_responses[7] == {"ok": True, "stdout": "8\n"}, f"unexpected JSON post-reset output: {json_responses[7]!r}")
-    require(json_responses[8] == {"ok": True, "stdout": ""}, f"unexpected JSON quit response: {json_responses[8]!r}")
+    require(json_responses[7] == {"ok": True, "stdout": "16\n"}, f"unexpected JSON expression response: {json_responses[7]!r}")
+    require(json_responses[8] == {"ok": True, "stdout": "8\n"}, f"unexpected JSON post-expression output: {json_responses[8]!r}")
+    require(json_responses[9] == {"ok": True, "stdout": ""}, f"unexpected JSON quit response: {json_responses[9]!r}")
 
     json_runtime = run_repl(
         compiler,

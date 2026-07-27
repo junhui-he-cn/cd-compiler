@@ -29,6 +29,7 @@ returns one JSON response per output line for machine clients.
 
 Commands at a form boundary:
   :help   show this help
+  :eval EXPR  evaluate an expression and show its result
   :reset  clear the accepted transcript and runtime output baseline
   :quit   leave the session
 """
@@ -119,6 +120,12 @@ class TranscriptSession:
         self.accepted_source = source
         self.accepted_output = executed.stdout
         return True, new_output, ""
+
+    def submit_expression(self, expression: str) -> tuple[bool, str, str]:
+        expression = expression.strip()
+        if expression.endswith(";"):
+            expression = expression[:-1].rstrip()
+        return self.submit(f"print ({expression});")
 
     def reset(self) -> None:
         self.accepted_source = ""
@@ -228,6 +235,23 @@ def run_json_lines(
             write_json_response(output_stream, session.submit(source))
             continue
 
+        if "expression" in request:
+            if set(request) != {"expression"}:
+                write_json_response(
+                    output_stream,
+                    protocol_error("expression requests must contain only `expression`"),
+                )
+                continue
+            expression = request["expression"]
+            if not isinstance(expression, str):
+                write_json_response(
+                    output_stream,
+                    protocol_error("`expression` must be a string"),
+                )
+                continue
+            write_json_response(output_stream, session.submit_expression(expression))
+            continue
+
         if "command" in request:
             if set(request) != {"command"}:
                 write_json_response(
@@ -260,7 +284,9 @@ def run_json_lines(
 
         write_json_response(
             output_stream,
-            protocol_error("request must contain exactly one of `source` or `command`"),
+            protocol_error(
+                "request must contain exactly one of `source`, `expression`, or `command`"
+            ),
         )
     return 0
 
@@ -289,6 +315,16 @@ def run_session(
                 session.reset()
             elif line == ":help":
                 error_stream.write(HELP_TEXT)
+            elif line == ":eval" or line.startswith(":eval "):
+                expression = line[len(":eval"):].strip()
+                if not expression:
+                    error_stream.write("REPL error: :eval requires an expression\n")
+                else:
+                    emit_submission(
+                        session.submit_expression(expression),
+                        output_stream,
+                        error_stream,
+                    )
             else:
                 error_stream.write(f"REPL error: unknown command `{line}`\n")
             show_prompt()

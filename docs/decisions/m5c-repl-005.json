@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m5c-2026-07-27-r5",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M5C-REPL-005",
+  "domain": "source-backed-incremental-session-expression-results",
+  "status": "resolved",
+  "question": "How should a REPL client explicitly request an expression result?",
+  "decision": "Accept :eval EXPR interactively and an expression string in JSON Lines, then lower the request through the production print statement and existing transcript replay.",
+  "requests": {
+    "interactive": ":eval EXPR",
+    "json_lines": "{\"expression\":\"value * 2\"}",
+    "lowering": "print (EXPR); appended to the accepted source transcript",
+    "trailing_semicolon": "accepted for the interactive command"
+  },
+  "compatibility_boundary": {
+    "state": "successful expression forms become part of the accepted transcript",
+    "output": "only the new production print stdout suffix is returned",
+    "failure": "parse, type, bytecode, and runtime failures do not commit the expression",
+    "ordinary_source": "unmarked source forms retain their existing no-echo behavior"
+  },
+  "shared_services": [
+    "production print statement lowering",
+    "production C++ --emit-bytecode path",
+    "Rust compiler-design-vm run command"
+  ],
+  "quantitative_gate": "tests/repl_tests.py covers interactive and JSON expression results, side-effect persistence, and failed-expression rollback.",
+  "out_of_scope": [
+    "automatic echoing for unmarked expression statements",
+    "in-process compiler or VM state",
+    "incremental bytecode or runtime-state reuse",
+    "terminal history or completion"
+  ],
+  "verification": {
+    "focused_commands": [
+      "cmake -S . -B build",
+      "cmake --build build -j2",
+      "python3 tests/repl_tests.py ./build/compiler_design vm-rs/Cargo.toml",
+      "ctest --test-dir build --output-on-failure -R '^repl$'",
+      "git diff --check"
+    ]
+  }
+}
