@@ -256,6 +256,13 @@ add_test(
             ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/lsp_tests.py $<TARGET_FILE:compiler_design>
 )
 
+add_test(
+    NAME repl
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
+            ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/repl_tests.py
+            $<TARGET_FILE:compiler_design> ${CMAKE_SOURCE_DIR}/vm-rs/Cargo.toml
+)
+
 add_executable(flow_facts_tests
     tests/flow_facts_tests.cpp
     src/Ast.cpp
@@ -332,6 +339,7 @@ set_tests_properties(
     cli_multi_source
     formatter_cli
     formatter_corpus
+    repl
     golden
     bytecode_artifacts
     bytecode_module_artifacts

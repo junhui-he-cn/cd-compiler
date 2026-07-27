@@ -4229,6 +4229,28 @@
       "expected_files": []
     },
     {
+      "case_id": "ctest.repl",
+      "runner": "ctest",
+      "result_name": "repl",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "repl"
+      ],
+      "backend": "python",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt",
+        "tests/repl_tests.py",
+        "tools/repl.py"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "ctest.rust_vm",
       "runner": "ctest",
       "result_name": "rust_vm",

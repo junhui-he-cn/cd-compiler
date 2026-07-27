@@ -1471,6 +1471,16 @@ file-backed evaluation needs it, and the M4A/M4B runtime and metadata contracts.
 **Deliverable:** add a REPL or incremental evaluation mode with explicit session
 state, imports, definitions, diagnostics, and runtime error behavior.
 
+`M5C-REPL-001` establishes the first session boundary with
+`tools/repl.py`. Blank-line-delimited forms append to an accepted source
+transcript, the production C++ compiler emits a linked `.cdbc`, and the Rust
+VM replays it. Only the new stdout suffix from a successful replay is exposed;
+parse, type, bytecode, and runtime failures leave the accepted transcript and
+output baseline unchanged. `:reset`, `:help`, and `:quit` are explicit session
+commands. The prototype intentionally defers in-process VM state, imports,
+expression-result echo, and terminal editing to later M5C slices. Its decision
+is recorded in `docs/decisions/m5c-repl-001.{md,json}`.
+
 **Migration:** expose an incremental wrapper around the production front end and
 VM. Keep session state separate from compiler-global state, and use the same
 module identity and artifact rules as project builds.

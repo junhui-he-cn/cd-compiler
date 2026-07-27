@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m5c-2026-07-27-r1",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M5C-REPL-001",
+  "domain": "source-backed-incremental-session",
+  "status": "resolved",
+  "question": "What is the first testable incremental evaluation boundary?",
+  "decision": "Use a blank-line-delimited source transcript that is compiled by the production C++ compiler and replayed by the Rust VM; commit only successful forms and expose only the new stdout suffix.",
+  "session": {
+    "entrypoint": "tools/repl.py COMPILER VM_MANIFEST",
+    "submission": "blank line commits the pending source form",
+    "commands": [":help", ":reset", ":quit"],
+    "state": "accepted source transcript plus accepted VM stdout",
+    "failure": "parse, type, bytecode, and runtime failures do not commit the candidate"
+  },
+  "shared_services": [
+    "production FrontendSession and parser/type checker",
+    "C++ --emit-bytecode path",
+    "Rust compiler-design-vm run command"
+  ],
+  "compatibility_boundary": {
+    "runtime": "source-backed deterministic replay; no in-process VM state yet",
+    "diagnostics": "temporary session paths render as <repl> when present; pathless frontend diagnostics retain their existing format",
+    "output": "only a successful replay suffix is emitted",
+    "ids": "existing source-local and snapshot-local IDs remain outside the transcript"
+  },
+  "quantitative_gate": "tests/repl_tests.py covers persistence, compile/runtime rollback, reset, multiline forms, and diagnostic normalization.",
+  "out_of_scope": [
+    "in-process compiler or VM embedding",
+    "incremental bytecode or runtime-state reuse",
+    "expression-result echo",
+    "imports and persistent project roots",
+    "terminal history or completion",
+    "persistent semantic caching"
+  ],
+  "verification": {
+    "focused_commands": [
+      "cmake -S . -B build",
+      "cmake --build build -j2",
+      "python3 tests/repl_tests.py ./build/compiler_design vm-rs/Cargo.toml",
+      "ctest --test-dir build --output-on-failure -R '^repl$'",
+      "git diff --check"
+    ]
+  }
+}

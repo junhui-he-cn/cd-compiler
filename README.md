@@ -81,6 +81,17 @@ For an editor-compatible stdio session:
 ./build/compiler_design --lsp
 ```
 
+For the source-backed incremental session prototype:
+
+```sh
+python3 tools/repl.py ./build/compiler_design vm-rs/Cargo.toml
+```
+
+Enter a source form followed by a blank line to evaluate it. `:reset` clears
+the accepted transcript and `:quit` exits. The prototype replays accepted
+source through the production compiler and Rust VM; failed forms do not change
+session state.
+
 ## Language
 
 Supported statements:
