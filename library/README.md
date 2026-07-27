@@ -3,7 +3,7 @@
 This directory contains a small data-structure library written in the public
 Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 `Queue<T>`, `Deque<T>`, `BinaryHeap<T>`, and `PriorityQueue<T>` types, plus the
-generic `Option<T>` result enum.
+generic `Option<T>` and `Result<T, E>` result enums.
 
 The planned structure and algorithm inventory, implementation constraints, and
 staged delivery order are documented in
@@ -53,6 +53,12 @@ let maybe = ds.some<number>(42);
 print match maybe {
   ds.Option.Some(value) => value,
   ds.Option.None => 0,
+};
+
+let result: ds.Result<number, string> = ds.ok<number, string>(42);
+print match result {
+  ds.Result.Ok(value) => value,
+  ds.Result.Err(error) => 0,
 };
 ```
 
@@ -141,6 +147,19 @@ success from absence with `match`:
 ambiguous or when a caller wants an exhaustive branch. The enum is a value; it
 does not copy or mutate a payload supplied to `Some`.
 
+`Result<T, E>` is an explicit success-or-error enum for APIs that need to carry
+an error value:
+
+- `Ok(value: T)` — carries the successful result;
+- `Err(error: E)` — carries the error value;
+- `ok<T, E>(value: T): Result<T, E>` and `err<T, E>(error: E): Result<T, E>` —
+  construct the two variants.
+
+Because each factory payload supplies only one of the two type parameters,
+callers should usually provide both type arguments explicitly. `Result<T, E>`
+does not throw or log errors; callers must inspect it with an exhaustive
+`match`.
+
 ## Current language limitation
 
 The language's builtin member-call sugar reserves names such as `push`, `pop`,
@@ -165,6 +184,7 @@ its fixture root independent:
 python3 library/tests/run_tests.py ./build/compiler_design vm-rs
 ```
 
-Use `--case data_structures_binary_heap` or `--case data_structures_option` for
-a focused run, or `--update` only when an intentional compiler-output change
-requires refreshing library fixtures' `ast.out` files.
+Use `--case data_structures_binary_heap`, `--case data_structures_option`, or
+`--case data_structures_result` for a focused run, or `--update` only when an
+intentional compiler-output change requires refreshing library fixtures'
+`ast.out` files.

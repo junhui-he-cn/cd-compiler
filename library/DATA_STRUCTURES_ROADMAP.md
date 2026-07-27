@@ -35,6 +35,7 @@
 - `BinaryHeap<T>`：数组后端，通过 `less` 回调实现最小堆或最大堆。
 - `PriorityQueue<T>`：`BinaryHeap<T>` 的队列命名包装。
 - `Option<T>`：用于显式区分携带值和缺失值的泛型枚举。
+- `Result<T, E>`：用于携带成功值或错误值的泛型枚举。
 
 它们的现有 API 和示例继续作为兼容基线。后续新增 API 不应悄悄改变空值、
 快照或引用共享语义。
@@ -93,8 +94,7 @@
 
 ### 3.2 结果类型
 
-库基础模块约定两个公共枚举，供结构和算法复用；当前已经实现
-`Option<T>`，`Result<T, E>` 仍按后续切片交付：
+库基础模块约定两个公共枚举，供结构和算法复用；当前均已实现：
 
 ```cd
 enum Option<T> {
@@ -370,9 +370,9 @@ enum Result<T, E> {
 `library/tests`，由 `library/tests/run_tests.py` 独立运行，复用现有
 golden/Rust VM 检查接口。
 
-已完成 `Option<T>`、`some`、`none` 及其独立库级 fixture；调用者通过
-`match` 区分 `Some(value)` 和 `None`。下一步实现 `Result<T,E>` 和递归枚举版
-`List<T>`，这是后续 BFS、调度、排序和树算法共同依赖的最小集合。
+已完成 `Option<T>`、`Result<T,E>` 及其构造工厂和独立库级 fixture；调用者通过
+`match` 区分成功、缺失和错误值。下一步实现递归枚举版 `List<T>`，这是后续
+BFS、调度、排序和树算法共同依赖的最小集合。
 
 ### S2：集合和序列算法
 

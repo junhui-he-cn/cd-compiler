@@ -213,6 +213,11 @@ Program
       Return (member-call Option Some value)
     Fun none<T>(): Option<T>
       Return (member-call Option None<T>)
+    Enum Result<T, E> {Ok(value: T), Err(error: E)}
+    Fun ok<T, E>(value: T): Result<T, E>
+      Return (member-call Result Ok value)
+    Fun err<T, E>(error: E): Result<T, E>
+      Return (member-call Result Err error)
     Struct PriorityQueue<T> {heap: BinaryHeap<T>}
     Impl PriorityQueue<T>
       Method enqueue(value: T)
@@ -229,7 +234,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option newStack newQueue newDeque newBinaryHeap newPriorityQueue some none
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Fun ascending(left: number, right: number): bool

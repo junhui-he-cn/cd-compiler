@@ -60,3 +60,9 @@ print match absent {
   ds.Option.Some(value) => value,
   ds.Option.None => "missing",
 };
+
+let result: ds.Result<number, string> = ds.ok<number, string>(42);
+print match result {
+  ds.Result.Ok(value) => value,
+  ds.Result.Err(error) => 0,
+};

@@ -304,6 +304,19 @@ fun none<T>(): Option<T> {
   return Option.None<T>();
 }
 
+enum Result<T, E> {
+  Ok(value: T),
+  Err(error: E),
+}
+
+fun ok<T, E>(value: T): Result<T, E> {
+  return Result.Ok(value);
+}
+
+fun err<T, E>(error: E): Result<T, E> {
+  return Result.Err(error);
+}
+
 struct PriorityQueue<T> {
   heap: BinaryHeap<T>
 }
@@ -338,4 +351,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err;
