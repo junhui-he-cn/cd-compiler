@@ -208,7 +208,28 @@ Program
         Return (call copy (field this items))
     Fun newBinaryHeap<T>(less: fun(T, T): bool): BinaryHeap<T>
       Return (construct BinaryHeap<T> items: (array) less: less)
-    Export Stack Queue Deque BinaryHeap newStack newQueue newDeque newBinaryHeap
+    Enum Option<T> {Some(value: T), None}
+    Fun some<T>(value: T): Option<T>
+      Return (member-call Option Some value)
+    Fun none<T>(): Option<T>
+      Return (member-call Option None<T>)
+    Struct PriorityQueue<T> {heap: BinaryHeap<T>}
+    Impl PriorityQueue<T>
+      Method enqueue(value: T)
+        Expr (member-call (field this heap) add value)
+      Method dequeue(): T?
+        Return (member-call (field this heap) take)
+      Method front(): T?
+        Return (member-call (field this heap) peek)
+      Method size(): number
+        Return (member-call (field this heap) size)
+      Method isEmpty(): bool
+        Return (member-call (field this heap) isEmpty)
+      Method snapshot(): [T]
+        Return (member-call (field this heap) snapshot)
+    Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
+      Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option newStack newQueue newDeque newBinaryHeap newPriorityQueue some none
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let deque = (member-call ds newDeque<number>)

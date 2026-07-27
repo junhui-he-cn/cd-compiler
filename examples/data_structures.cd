@@ -40,3 +40,23 @@ heap.add(3);
 print heap.peek();
 print heap.take();
 print heap.snapshot();
+
+let priorities = ds.newPriorityQueue<number>(ascending);
+priorities.enqueue(8);
+priorities.enqueue(2);
+priorities.enqueue(5);
+print priorities.front();
+print priorities.dequeue();
+print priorities.snapshot();
+
+let maybe = ds.some<number>(42);
+print match maybe {
+  ds.Option.Some(value) => value,
+  ds.Option.None => 0,
+};
+
+let absent = ds.none<string>();
+print match absent {
+  ds.Option.Some(value) => value,
+  ds.Option.None => "missing",
+};

@@ -1,0 +1,24 @@
+import "../../data_structures.cd" as ds;
+
+fun render(value: ds.Option<number>): string {
+  return match value {
+    ds.Option.Some(value) => "some:" + str(value),
+    ds.Option.None => "none",
+  };
+}
+
+let present = ds.some<number>(7);
+let missing = ds.none<number>();
+let explicit = ds.Option.None<number>();
+let inferred = ds.some("hello");
+
+print render(present);
+print render(missing);
+print match explicit {
+  ds.Option.Some(value) => "some:" + str(value),
+  ds.Option.None => "none",
+};
+print match inferred {
+  ds.Option.Some(value) => value,
+  ds.Option.None => "none",
+};

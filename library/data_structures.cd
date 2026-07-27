@@ -291,4 +291,51 @@ fun newBinaryHeap<T>(less: fun(T, T): bool): BinaryHeap<T> {
   return BinaryHeap<T> { items: [], less: less };
 }
 
-export Stack, Queue, Deque, BinaryHeap, newStack, newQueue, newDeque, newBinaryHeap;
+enum Option<T> {
+  Some(value: T),
+  None,
+}
+
+fun some<T>(value: T): Option<T> {
+  return Option.Some(value);
+}
+
+fun none<T>(): Option<T> {
+  return Option.None<T>();
+}
+
+struct PriorityQueue<T> {
+  heap: BinaryHeap<T>
+}
+
+impl PriorityQueue<T> {
+  fun enqueue(value: T) {
+    this.heap.add(value);
+  }
+
+  fun dequeue(): T? {
+    return this.heap.take();
+  }
+
+  fun front(): T? {
+    return this.heap.peek();
+  }
+
+  fun size(): number {
+    return this.heap.size();
+  }
+
+  fun isEmpty(): bool {
+    return this.heap.isEmpty();
+  }
+
+  fun snapshot(): [T] {
+    return this.heap.snapshot();
+  }
+}
+
+fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
+  return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
+}
+
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none;

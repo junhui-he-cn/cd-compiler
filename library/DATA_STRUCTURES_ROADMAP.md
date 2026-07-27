@@ -33,6 +33,8 @@
 - `Queue<T>`：数组后端，带惰性头指针和周期性压缩；
 - `Deque<T>`：双数组栈后端，提供两端插入、删除、查看和快照。
 - `BinaryHeap<T>`：数组后端，通过 `less` 回调实现最小堆或最大堆。
+- `PriorityQueue<T>`：`BinaryHeap<T>` 的队列命名包装。
+- `Option<T>`：用于显式区分携带值和缺失值的泛型枚举。
 
 它们的现有 API 和示例继续作为兼容基线。后续新增 API 不应悄悄改变空值、
 快照或引用共享语义。
@@ -91,17 +93,18 @@
 
 ### 3.2 结果类型
 
-库基础模块预留两个公共枚举，供后续结构复用：
+库基础模块约定两个公共枚举，供结构和算法复用；当前已经实现
+`Option<T>`，`Result<T, E>` 仍按后续切片交付：
 
 ```cd
 enum Option<T> {
-  Some(T),
+  Some(value: T),
   None,
 }
 
 enum Result<T, E> {
-  Ok(T),
-  Err(E),
+  Ok(value: T),
+  Err(error: E),
 }
 ```
 
@@ -147,7 +150,7 @@ enum Result<T, E> {
 | 结构 | 状态 | 主要 API/用途 | 预期实现 |
 | --- | --- | --- | --- |
 | 二叉堆 `BinaryHeap<T>` | 现有（S1） | `add`、`peek`、`take`、`size`、`isEmpty`、`snapshot` | 数组 + `less` 回调；`add/take` 为 `O(log n)` |
-| 优先队列 `PriorityQueue<T>` | 第一批 | 对外提供队列语义，优先返回最小/最大元素 | `BinaryHeap` 的稳定命名包装 |
+| 优先队列 `PriorityQueue<T>` | 现有（S1） | 对外提供队列语义，优先返回最小/最大元素 | `BinaryHeap` 的稳定命名包装 |
 | 双堆中位数 | 后续 | `add`、`median`、流式中位数 | 两个堆；需定义空集合和偶数长度中位数策略 |
 | `Set<T>` | 第一批 | `add`、`has`、`discard`、`size`、`isEmpty`、`snapshot` | 先做数组线性查找，适用于任意可比较相等的值 |
 | 有序集合 `OrderedSet<T>` | 后续 | 有序插入、范围查询、前驱后继 | 需要排序比较器和树/有序数组策略 |
@@ -361,14 +364,15 @@ enum Result<T, E> {
 
 ### S1：线性容器基础
 
-已完成 `Deque<T>` 和 `BinaryHeap<T>`：前者使用前端反向数组与后端正向数组，
-后者使用数组和 `fun(T, T): bool` 比较器。库级 fixture 位于
+已完成 `Deque<T>`、`BinaryHeap<T>` 和 `PriorityQueue<T>`：前者使用前端反向数组
+与后端正向数组，后两者使用数组和 `fun(T, T): bool` 比较器，其中优先队列
+只提供队列命名包装。库级 fixture 位于
 `library/tests`，由 `library/tests/run_tests.py` 独立运行，复用现有
 golden/Rust VM 检查接口。
 
-后续实现 `PriorityQueue<T>`、`Option<T>`、
-`Result<T,E>` 和递归枚举版 `List<T>`。这是后续 BFS、调度、排序和树算法
-共同依赖的最小集合。
+已完成 `Option<T>`、`some`、`none` 及其独立库级 fixture；调用者通过
+`match` 区分 `Some(value)` 和 `None`。下一步实现 `Result<T,E>` 和递归枚举版
+`List<T>`，这是后续 BFS、调度、排序和树算法共同依赖的最小集合。
 
 ### S2：集合和序列算法
 

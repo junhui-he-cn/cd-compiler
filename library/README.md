@@ -2,7 +2,8 @@
 
 This directory contains a small data-structure library written in the public
 Compiler Design language. It currently provides generic array-backed `Stack<T>`,
-`Queue<T>`, `Deque<T>`, and `BinaryHeap<T>` types.
+`Queue<T>`, `Deque<T>`, `BinaryHeap<T>`, and `PriorityQueue<T>` types, plus the
+generic `Option<T>` result enum.
 
 The planned structure and algorithm inventory, implementation constraints, and
 staged delivery order are documented in
@@ -47,6 +48,12 @@ heap.add(1);
 heap.add(3);
 print heap.peek();
 print heap.take();
+
+let maybe = ds.some<number>(42);
+print match maybe {
+  ds.Option.Some(value) => value,
+  ds.Option.None => 0,
+};
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -56,6 +63,7 @@ backing fields out of normal construction code:
 let numbers = ds.newStack<number>();
 let names = ds.newQueue<string>();
 let work = ds.newDeque<number>();
+let maybeNumber = ds.some<number>(42);
 ```
 
 ## API
@@ -109,6 +117,30 @@ creates a min-heap, while numeric `>` creates a max-heap. `add` and `take` are
 `O(log n)`, `peek` is `O(1)`, and `snapshot` is `O(n)`. Equal-priority values
 are not stable.
 
+`PriorityQueue<T>` provides:
+
+- `enqueue(value: T)` — add a value according to the comparator;
+- `front(): T?` and `dequeue(): T?` — inspect or remove the highest-priority
+  value, returning `nil` when empty;
+- `size(): number` and `isEmpty(): bool`;
+- `snapshot(): [T]` — return a shallow copy of the underlying heap array.
+
+`newPriorityQueue<T>(less)` uses the same comparator contract as
+`newBinaryHeap<T>`. `enqueue` and `dequeue` are `O(log n)`, `front` is `O(1)`,
+and `snapshot` is `O(n)`.
+
+`Option<T>` is an explicit result enum for APIs where callers should distinguish
+success from absence with `match`:
+
+- `Some(value: T)` — carries a value;
+- `None` — carries no value;
+- `some<T>(value: T): Option<T>` and `none<T>(): Option<T>` — construct the two
+  variants.
+
+`Option<T>` is useful when a nullable return would make the absence case
+ambiguous or when a caller wants an exhaustive branch. The enum is a value; it
+does not copy or mutate a payload supplied to `Some`.
+
 ## Current language limitation
 
 The language's builtin member-call sugar reserves names such as `push`, `pop`,
@@ -133,6 +165,6 @@ its fixture root independent:
 python3 library/tests/run_tests.py ./build/compiler_design vm-rs
 ```
 
-Use `--case data_structures_binary_heap` for a focused run, or `--update` only
-when an intentional compiler-output change requires refreshing library
-fixtures' `ast.out` files.
+Use `--case data_structures_binary_heap` or `--case data_structures_option` for
+a focused run, or `--update` only when an intentional compiler-output change
+requires refreshing library fixtures' `ast.out` files.
