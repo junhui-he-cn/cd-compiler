@@ -1798,6 +1798,35 @@ std::vector<SourceRange> exportRangesForTarget(
     return ranges;
 }
 
+std::vector<std::pair<std::string, DefinitionTarget>> exportedDefinitionsForModule(
+    const AnalysisSnapshot& snapshot,
+    std::size_t moduleId)
+{
+    std::vector<std::pair<std::string, DefinitionTarget>> definitions;
+    const ModuleStmt* module = moduleForId(snapshot, moduleId);
+    if (!module) {
+        return definitions;
+    }
+    for (const StmtPtr& statement : module->statements) {
+        const auto* exportStatement = dynamic_cast<const ExportStmt*>(statement.get());
+        if (!exportStatement) {
+            continue;
+        }
+        for (const Token& name : exportStatement->names) {
+            std::unordered_set<std::size_t> visiting;
+            const std::optional<DefinitionTarget> target = exportedDefinition(
+                snapshot,
+                moduleId,
+                name.lexeme,
+                visiting);
+            if (target && target->declaration) {
+                definitions.emplace_back(name.lexeme, *target);
+            }
+        }
+    }
+    return definitions;
+}
+
 std::shared_ptr<AnalysisSnapshot> analyzeVirtualWorkspace(
     const std::vector<FrontendVirtualFile>& files,
     const std::map<std::string, std::string>& uriByCanonicalPath)
@@ -2596,34 +2625,107 @@ private:
             found->second.analysis.sourceId,
             prefixStart,
             *byte};
-        std::vector<const DeclarationRecord*> declarations;
-        for (const DeclarationRecord& declaration
-             : snapshot.declarationIndex.declarations()) {
-            if (!declarationRange(declaration)
-                || declaration.range->source != found->second.analysis.sourceId
-                || declaration.kind == DeclarationKind::Module
-                || (declaration.name.size() < prefix.size())
-                || declaration.name.compare(0, prefix.size(), prefix) != 0) {
-                continue;
+        std::optional<std::string> namespaceAlias;
+        if (prefixStart > 0 && found->second.text[prefixStart - 1] == '.') {
+            std::size_t aliasEnd = prefixStart - 1;
+            std::size_t aliasStart = aliasEnd;
+            while (aliasStart > 0) {
+                const unsigned char character
+                    = static_cast<unsigned char>(found->second.text[aliasStart - 1]);
+                if (!(std::isalnum(character) || character == '_')) {
+                    break;
+                }
+                --aliasStart;
             }
-            declarations.push_back(&declaration);
+            if (aliasStart != aliasEnd) {
+                namespaceAlias = found->second.text.substr(aliasStart, aliasEnd - aliasStart);
+            }
+        }
+
+        struct Candidate {
+            const DeclarationRecord* declaration = nullptr;
+        };
+        std::vector<Candidate> candidates;
+        const auto matchesPrefix = [&prefix](const std::string& name) {
+            return name.size() >= prefix.size()
+                && name.compare(0, prefix.size(), prefix) == 0;
+        };
+        const ModuleStmt* module = moduleForSource(snapshot, found->second.analysis.sourceId);
+        bool matchedNamespaceAlias = false;
+        if (namespaceAlias && module) {
+            for (const StmtPtr& statement : module->statements) {
+                const auto* import = dynamic_cast<const ImportStmt*>(statement.get());
+                if (!import || !import->alias
+                    || import->alias->lexeme != *namespaceAlias
+                    || import->resolvedModuleId == static_cast<std::size_t>(-1)) {
+                    continue;
+                }
+                matchedNamespaceAlias = true;
+                std::unordered_set<std::string> importedNames;
+                for (const auto& exported : exportedDefinitionsForModule(
+                        snapshot,
+                        import->resolvedModuleId)) {
+                    if (!matchesPrefix(exported.first)
+                        || !importedNames.insert(exported.first).second) {
+                        continue;
+                    }
+                    candidates.push_back(Candidate{exported.second.declaration});
+                }
+            }
+        }
+
+        if (!matchedNamespaceAlias) {
+            for (const DeclarationRecord& declaration
+                 : snapshot.declarationIndex.declarations()) {
+                if (!declarationRange(declaration)
+                    || declaration.range->source != found->second.analysis.sourceId
+                    || declaration.kind == DeclarationKind::Module
+                    || !matchesPrefix(declaration.name)) {
+                    continue;
+                }
+                candidates.push_back(Candidate{&declaration});
+            }
+
+            if (module) {
+                std::unordered_set<std::string> importedNames;
+                for (const StmtPtr& statement : module->statements) {
+                    const auto* import = dynamic_cast<const ImportStmt*>(statement.get());
+                    if (!import || import->alias
+                        || import->resolvedModuleId == static_cast<std::size_t>(-1)) {
+                        continue;
+                    }
+                    for (const auto& exported : exportedDefinitionsForModule(
+                            snapshot,
+                            import->resolvedModuleId)) {
+                        if (!matchesPrefix(exported.first)
+                            || !importedNames.insert(exported.first).second) {
+                            continue;
+                        }
+                        candidates.push_back(Candidate{exported.second.declaration});
+                    }
+                }
+            }
         }
         std::sort(
-            declarations.begin(),
-            declarations.end(),
-            [](const DeclarationRecord* left, const DeclarationRecord* right) {
-                if (left->name != right->name) {
-                    return left->name < right->name;
+            candidates.begin(),
+            candidates.end(),
+            [](const Candidate& left, const Candidate& right) {
+                if (left.declaration->name != right.declaration->name) {
+                    return left.declaration->name < right.declaration->name;
                 }
-                if (left->range->start != right->range->start) {
-                    return left->range->start < right->range->start;
+                if (left.declaration->range->source != right.declaration->range->source) {
+                    return left.declaration->range->source < right.declaration->range->source;
                 }
-                return left->range->end < right->range->end;
+                if (left.declaration->range->start != right.declaration->range->start) {
+                    return left.declaration->range->start < right.declaration->range->start;
+                }
+                return left.declaration->range->end < right.declaration->range->end;
             });
 
         std::vector<JsonValue> items;
-        items.reserve(declarations.size());
-        for (const DeclarationRecord* declaration : declarations) {
+        items.reserve(candidates.size());
+        for (const Candidate& candidate : candidates) {
+            const DeclarationRecord* declaration = candidate.declaration;
             items.push_back(makeObject({
                 {"label", JsonValue::string(declaration->name)},
                 {"kind", JsonValue::number(std::to_string(completionItemKind(declaration->kind)))},

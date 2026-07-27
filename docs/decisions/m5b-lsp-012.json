@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m5b-2026-07-27-r12",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M5B-LSP-012",
+  "domain": "language-server-opened-module-completion",
+  "status": "resolved",
+  "question": "How should completion expose public names from modules synchronized in the LSP workspace?",
+  "decision": "Add direct-import public names to unqualified completion and expose export-chain members for a namespace-alias member prefix.",
+  "query": {
+    "unqualified": "current-source declarations plus opened direct-import exports",
+    "namespace_member": "opened namespace-alias exports only",
+    "prefix": "existing ASCII prefix and UTF-16 replacement mapping",
+    "detail": "target declaration kind and shared signature detail",
+    "ordering": "name, source ID, source start, source end"
+  },
+  "shared_services": [
+    "AnalysisSnapshot",
+    "DeclarationIndex",
+    "FrontendSession module graph",
+    "explicit module exports",
+    "TypeChecker signature records"
+  ],
+  "compatibility_boundary": {
+    "sources": "currently open virtual documents only",
+    "ordinary_fields": "struct field completion remains outside this slice",
+    "ids": "snapshot-local IDs are not serialized"
+  },
+  "quantitative_gate": "tests/lsp_tests.py covers namespace member completion and retains local function completion coverage.",
+  "out_of_scope": [
+    "unopened dependencies",
+    "ordinary struct field completion",
+    "namespace-qualified type completion",
+    "enum-variant completion",
+    "persistent semantic caching",
+    "range-based synchronization"
+  ],
+  "verification": {
+    "focused_commands": [
+      "cmake --build build -j2",
+      "python3 tests/lsp_tests.py ./build/compiler_design",
+      "ctest --test-dir build --output-on-failure -R '^language_server$'",
+      "git diff --check"
+    ]
+  }
+}

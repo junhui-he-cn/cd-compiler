@@ -49,8 +49,8 @@ The compiler pipeline includes:
   namespace aliases can navigate to declarations in other modules, including
   explicit export-from forwarding. References can cross the same opened
   direct-import and namespace-alias boundaries. Closed imports,
-  namespace-qualified types and variants, cross-module completion, and
-  workspace-wide completion remain later slices. Rename edits validate the
+  namespace-qualified types and variants, and workspace-wide completion remain
+  later slices. Rename edits validate the
   complete replacement across the opened virtual workspace before returning a
   multi-document `WorkspaceEdit`.
 

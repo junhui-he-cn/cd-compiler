@@ -662,6 +662,40 @@ def main() -> int:
             process,
             {
                 "jsonrpc": "2.0",
+                "id": 22,
+                "method": "textDocument/completion",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 1, "character": 12},
+                },
+            },
+        )
+        namespace_completion = receive(process)
+        if namespace_completion.get("result") != {
+            "isIncomplete": False,
+            "items": [
+                {
+                    "label": "value",
+                    "kind": 6,
+                    "detail": "variable",
+                    "textEdit": {
+                        "range": {
+                            "start": {"line": 1, "character": 10},
+                            "end": {"line": 1, "character": 12},
+                        },
+                        "newText": "value",
+                    },
+                }
+            ],
+        }:
+            raise AssertionError(
+                f"namespace completion response mismatch: {namespace_completion!r}"
+            )
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
                 "method": "textDocument/didClose",
                 "params": {"textDocument": {"uri": module_uri}},
             },
