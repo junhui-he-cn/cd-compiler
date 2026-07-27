@@ -7,6 +7,8 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+import boundary_comparison
+
 
 @dataclass(frozen=True)
 class CheckResult:
@@ -17,6 +19,10 @@ class CheckResult:
 
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
+
+
+def normalize_checkout_paths(text: str) -> str:
+    return boundary_comparison.canonicalize(text)
 
 
 def compiler_inputs(case_dir: Path) -> list[Path]:
@@ -79,12 +85,14 @@ def check_case(compiler: Path, vm_manifest: Path, case_dir: Path) -> list[CheckR
             results.append(CheckResult(compile_name, False, f"FAIL {compile_name} did not create {actual_path}"))
             return results
 
-        actual = read_text(actual_path)
-        if actual != expected:
+        actual = normalize_checkout_paths(read_text(actual_path))
+        canonical_expected = normalize_checkout_paths(expected)
+        if actual != canonical_expected:
             results.append(CheckResult(
                 compile_name,
                 False,
-                f"FAIL {compile_name} artifact mismatch\n\n" + unified_diff(expected, actual, "expected", "actual"),
+                f"FAIL {compile_name} artifact mismatch\n\n"
+                + unified_diff(canonical_expected, actual, "expected", "actual"),
             ))
         else:
             results.append(CheckResult(compile_name, True))
@@ -101,11 +109,13 @@ def check_case(compiler: Path, vm_manifest: Path, case_dir: Path) -> list[CheckR
             return results
         if dumped.stderr:
             results.append(CheckResult(dump_name, False, f"FAIL {dump_name} produced unexpected stderr\n\n{dumped.stderr}"))
-        if dumped.stdout != expected:
+        dumped_stdout = normalize_checkout_paths(dumped.stdout)
+        if dumped_stdout != canonical_expected:
             results.append(CheckResult(
                 dump_name,
                 False,
-                f"FAIL {dump_name} stdout mismatch\n\n" + unified_diff(expected, dumped.stdout, "expected", "actual"),
+                f"FAIL {dump_name} stdout mismatch\n\n"
+                + unified_diff(canonical_expected, dumped_stdout, "expected", "actual"),
             ))
         else:
             results.append(CheckResult(dump_name, True))
