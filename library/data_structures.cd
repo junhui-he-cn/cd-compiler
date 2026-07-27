@@ -894,6 +894,160 @@ fun isBipartite(graph: Graph): bool {
   return true;
 }
 
+fun articulationPoints(graph: Graph): [number] {
+  let result: [number] = [];
+  if (graph.directed) {
+    return result;
+  }
+  let count = graph.vertexCount();
+  let discovery: [number] = [];
+  let low: [number] = [];
+  let parents: [number] = [];
+  let childCounts: [number] = [];
+  let articulation: [bool] = [];
+  let index = 0;
+  while (index < count) {
+    discovery.push(-1);
+    low.push(-1);
+    parents.push(-1);
+    childCounts.push(0);
+    articulation.push(false);
+    index += 1;
+  }
+
+  let time = 0;
+  let root = 0;
+  while (root < count) {
+    if (discovery[root] >= 0) {
+      root += 1;
+      continue;
+    }
+    discovery[root] = time;
+    low[root] = time;
+    time += 1;
+    let stack: [number] = [root];
+    let nextIndices: [number] = [0];
+    while (stack.len() > 0) {
+      let top = stack.len() - 1;
+      let vertex = stack[top];
+      let neighbors = graph.adjacency[vertex];
+      let neighborIndex = nextIndices[top];
+      if (neighborIndex < neighbors.len()) {
+        let neighbor = neighbors[neighborIndex];
+        nextIndices[top] += 1;
+        if (discovery[neighbor] < 0) {
+          parents[neighbor] = vertex;
+          childCounts[vertex] += 1;
+          discovery[neighbor] = time;
+          low[neighbor] = time;
+          time += 1;
+          stack.push(neighbor);
+          nextIndices.push(0);
+        } else {
+          if (neighbor != parents[vertex] && discovery[neighbor] < low[vertex]) {
+            low[vertex] = discovery[neighbor];
+          }
+        }
+      } else {
+        stack.pop();
+        nextIndices.pop();
+        let parent = parents[vertex];
+        if (parent >= 0) {
+          if (low[vertex] < low[parent]) {
+            low[parent] = low[vertex];
+          }
+          if (parents[parent] >= 0 && low[vertex] >= discovery[parent]) {
+            articulation[parent] = true;
+          }
+        } else {
+          if (childCounts[vertex] > 1) {
+            articulation[vertex] = true;
+          }
+        }
+      }
+    }
+    root += 1;
+  }
+
+  index = 0;
+  while (index < count) {
+    if (articulation[index]) {
+      result.push(index);
+    }
+    index += 1;
+  }
+  return result;
+}
+
+fun bridges(graph: Graph): [[number]] {
+  let result: [[number]] = [];
+  if (graph.directed) {
+    return result;
+  }
+  let count = graph.vertexCount();
+  let discovery: [number] = [];
+  let low: [number] = [];
+  let parents: [number] = [];
+  let index = 0;
+  while (index < count) {
+    discovery.push(-1);
+    low.push(-1);
+    parents.push(-1);
+    index += 1;
+  }
+
+  let time = 0;
+  let root = 0;
+  while (root < count) {
+    if (discovery[root] >= 0) {
+      root += 1;
+      continue;
+    }
+    discovery[root] = time;
+    low[root] = time;
+    time += 1;
+    let stack: [number] = [root];
+    let nextIndices: [number] = [0];
+    while (stack.len() > 0) {
+      let top = stack.len() - 1;
+      let vertex = stack[top];
+      let neighbors = graph.adjacency[vertex];
+      let neighborIndex = nextIndices[top];
+      if (neighborIndex < neighbors.len()) {
+        let neighbor = neighbors[neighborIndex];
+        nextIndices[top] += 1;
+        if (discovery[neighbor] < 0) {
+          parents[neighbor] = vertex;
+          discovery[neighbor] = time;
+          low[neighbor] = time;
+          time += 1;
+          stack.push(neighbor);
+          nextIndices.push(0);
+        } else {
+          if (neighbor != parents[vertex] && discovery[neighbor] < low[vertex]) {
+            low[vertex] = discovery[neighbor];
+          }
+        }
+      } else {
+        stack.pop();
+        nextIndices.pop();
+        let parent = parents[vertex];
+        if (parent >= 0) {
+          if (low[vertex] > discovery[parent]) {
+            let bridge: [number] = [parent, vertex];
+            result.push(bridge);
+          }
+          if (low[vertex] < low[parent]) {
+            low[parent] = low[vertex];
+          }
+        }
+      }
+    }
+    root += 1;
+  }
+  return result;
+}
+
 fun shortestDistances(graph: Graph, start: number): [number] {
   let distances: [number] = [];
   let count = graph.vertexCount();
@@ -2101,4 +2255,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, shortestWeightedDistances, shortestWeightedPath, minimumSpanningForest, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, shortestWeightedDistances, shortestWeightedPath, minimumSpanningForest, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;

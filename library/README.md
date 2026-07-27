@@ -99,6 +99,8 @@ print ds.breadthFirstOrder(graph, 0);
 print ds.depthFirstOrder(graph, 0);
 print ds.connectedComponents(graph);
 print ds.isBipartite(graph);
+print ds.articulationPoints(graph);
+print ds.bridges(graph);
 print ds.shortestPath(graph, 0, 2);
 
 let dag = ds.newGraph(3, true);
@@ -346,6 +348,11 @@ graphs and empty graphs. It runs in `O(V + E)` time with `O(V)` auxiliary space.
 `isBipartite(graph)` colors each undirected component with BFS and returns
 `false` for directed graphs, self-loops, or odd cycles. Empty undirected graphs
 are bipartite; the check runs in `O(V + E)` time with `O(V)` auxiliary space.
+
+`articulationPoints(graph)` returns undirected cut vertices in ascending vertex
+order. `bridges(graph)` returns `[parent, child]` edge pairs in DFS completion
+order. Both return `[]` for directed graphs and use iterative Tarjan low-link
+traversal in `O(V + E)` time and `O(V)` auxiliary space.
 
 `shortestDistances(graph, start)` uses BFS to return one distance per vertex;
 unreachable vertices and invalid starts use `-1`. `shortestPath(graph, start,

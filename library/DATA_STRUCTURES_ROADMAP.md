@@ -56,6 +56,7 @@
 - 图基础结构：整数顶点数组邻接表 `Graph`，支持有向/无向边。
 - 图遍历：`breadthFirstOrder`、`depthFirstOrder`。
 - 无向连通性：`connectedComponents`、`isBipartite`。
+- 无向割点与桥：`articulationPoints`、`bridges`。
 - 无权图路径：`shortestDistances`、`shortestPath`。
 - DAG 视图：`inDegrees`、`topologicalOrder`、`hasCycle`。
 - 加权图：非负 `WeightedEdge`/`WeightedGraph`、Dijkstra 与最小生成森林。
@@ -266,6 +267,8 @@ enum Result<T, E> {
 `connectedComponents` 已提供无向图的升序根节点 BFS 分量划分；有向图查询返回
 空数组。
 `isBipartite` 已提供无向图的 BFS 二着色检查；有向图、自环和奇环返回 `false`。
+`articulationPoints` 和 `bridges` 已提供迭代 Tarjan low-link 版本；有向图查询
+返回空数组，割点按编号排序而桥保留 DFS 完成顺序。
 `shortestDistances` 和 `shortestPath` 已提供基于 BFS 的无权图距离和路径，
 不可达顶点使用 `-1` 或空路径。
 `inDegrees` 和 `topologicalOrder` 已提供有向无环图的入度与 Kahn 拓扑排序；

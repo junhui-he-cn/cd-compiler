@@ -720,6 +720,183 @@ Program
                         Expr (+= neighborIndex 1)
             Expr (+= root 1)
       Return true
+    Fun articulationPoints(graph: Graph): [number]
+      Let result: [number] = (array)
+      If (group (field graph directed))
+        Then
+          Block
+            Return result
+      Let count = (member-call graph vertexCount)
+      Let discovery: [number] = (array)
+      Let low: [number] = (array)
+      Let parents: [number] = (array)
+      Let childCounts: [number] = (array)
+      Let articulation: [bool] = (array)
+      Let index = 0
+      While (group (< index count))
+        Body
+          Block
+            Expr (member-call discovery push (- 1))
+            Expr (member-call low push (- 1))
+            Expr (member-call parents push (- 1))
+            Expr (member-call childCounts push 0)
+            Expr (member-call articulation push false)
+            Expr (+= index 1)
+      Let time = 0
+      Let root = 0
+      While (group (< root count))
+        Body
+          Block
+            If (group (>= (index discovery root) 0))
+              Then
+                Block
+                  Expr (+= root 1)
+                  Continue
+            Expr (= (index discovery root) time)
+            Expr (= (index low root) time)
+            Expr (+= time 1)
+            Let stack: [number] = (array root)
+            Let nextIndices: [number] = (array 0)
+            While (group (> (member-call stack len) 0))
+              Body
+                Block
+                  Let top = (- (member-call stack len) 1)
+                  Let vertex = (index stack top)
+                  Let neighbors = (index (field graph adjacency) vertex)
+                  Let neighborIndex = (index nextIndices top)
+                  If (group (< neighborIndex (member-call neighbors len)))
+                    Then
+                      Block
+                        Let neighbor = (index neighbors neighborIndex)
+                        Expr (+= (index nextIndices top) 1)
+                        If (group (< (index discovery neighbor) 0))
+                          Then
+                            Block
+                              Expr (= (index parents neighbor) vertex)
+                              Expr (+= (index childCounts vertex) 1)
+                              Expr (= (index discovery neighbor) time)
+                              Expr (= (index low neighbor) time)
+                              Expr (+= time 1)
+                              Expr (member-call stack push neighbor)
+                              Expr (member-call nextIndices push 0)
+                          Else
+                            Block
+                              If (group (&& (!= neighbor (index parents vertex)) (< (index discovery neighbor) (index low vertex))))
+                                Then
+                                  Block
+                                    Expr (= (index low vertex) (index discovery neighbor))
+                    Else
+                      Block
+                        Expr (member-call stack pop)
+                        Expr (member-call nextIndices pop)
+                        Let parent = (index parents vertex)
+                        If (group (>= parent 0))
+                          Then
+                            Block
+                              If (group (< (index low vertex) (index low parent)))
+                                Then
+                                  Block
+                                    Expr (= (index low parent) (index low vertex))
+                              If (group (&& (>= (index parents parent) 0) (>= (index low vertex) (index discovery parent))))
+                                Then
+                                  Block
+                                    Expr (= (index articulation parent) true)
+                          Else
+                            Block
+                              If (group (> (index childCounts vertex) 1))
+                                Then
+                                  Block
+                                    Expr (= (index articulation vertex) true)
+            Expr (+= root 1)
+      Expr (= index 0)
+      While (group (< index count))
+        Body
+          Block
+            If (group (index articulation index))
+              Then
+                Block
+                  Expr (member-call result push index)
+            Expr (+= index 1)
+      Return result
+    Fun bridges(graph: Graph): [[number]]
+      Let result: [[number]] = (array)
+      If (group (field graph directed))
+        Then
+          Block
+            Return result
+      Let count = (member-call graph vertexCount)
+      Let discovery: [number] = (array)
+      Let low: [number] = (array)
+      Let parents: [number] = (array)
+      Let index = 0
+      While (group (< index count))
+        Body
+          Block
+            Expr (member-call discovery push (- 1))
+            Expr (member-call low push (- 1))
+            Expr (member-call parents push (- 1))
+            Expr (+= index 1)
+      Let time = 0
+      Let root = 0
+      While (group (< root count))
+        Body
+          Block
+            If (group (>= (index discovery root) 0))
+              Then
+                Block
+                  Expr (+= root 1)
+                  Continue
+            Expr (= (index discovery root) time)
+            Expr (= (index low root) time)
+            Expr (+= time 1)
+            Let stack: [number] = (array root)
+            Let nextIndices: [number] = (array 0)
+            While (group (> (member-call stack len) 0))
+              Body
+                Block
+                  Let top = (- (member-call stack len) 1)
+                  Let vertex = (index stack top)
+                  Let neighbors = (index (field graph adjacency) vertex)
+                  Let neighborIndex = (index nextIndices top)
+                  If (group (< neighborIndex (member-call neighbors len)))
+                    Then
+                      Block
+                        Let neighbor = (index neighbors neighborIndex)
+                        Expr (+= (index nextIndices top) 1)
+                        If (group (< (index discovery neighbor) 0))
+                          Then
+                            Block
+                              Expr (= (index parents neighbor) vertex)
+                              Expr (= (index discovery neighbor) time)
+                              Expr (= (index low neighbor) time)
+                              Expr (+= time 1)
+                              Expr (member-call stack push neighbor)
+                              Expr (member-call nextIndices push 0)
+                          Else
+                            Block
+                              If (group (&& (!= neighbor (index parents vertex)) (< (index discovery neighbor) (index low vertex))))
+                                Then
+                                  Block
+                                    Expr (= (index low vertex) (index discovery neighbor))
+                    Else
+                      Block
+                        Expr (member-call stack pop)
+                        Expr (member-call nextIndices pop)
+                        Let parent = (index parents vertex)
+                        If (group (>= parent 0))
+                          Then
+                            Block
+                              If (group (> (index low vertex) (index discovery parent)))
+                                Then
+                                  Block
+                                    Let bridge: [number] = (array parent vertex)
+                                    Expr (member-call result push bridge)
+                              If (group (< (index low vertex) (index low parent)))
+                                Then
+                                  Block
+                                    Expr (= (index low parent) (index low vertex))
+            Expr (+= root 1)
+      Return result
     Fun shortestDistances(graph: Graph, start: number): [number]
       Let distances: [number] = (array)
       Let count = (member-call graph vertexCount)
@@ -1937,7 +2114,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let graph = (member-call ds newGraph 5 false)
