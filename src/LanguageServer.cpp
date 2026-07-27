@@ -1300,6 +1300,82 @@ std::vector<SourceRange> referenceRangesAt(
     return ranges;
 }
 
+struct HoverInfo {
+    TypeInfo type;
+    SourceRange range;
+};
+
+std::optional<HoverInfo> hoverInfoAt(
+    const DocumentAnalysis& analysis,
+    std::size_t byte)
+{
+    const ReferenceSite* bestSite = nullptr;
+    const TypedExpressionRecord* bestType = nullptr;
+    std::size_t bestWidth = std::numeric_limits<std::size_t>::max();
+    for (const ReferenceSite& site : analysis.referenceSites) {
+        if (!site.expression || !site.range || !rangeContains(*site.range, byte)) {
+            continue;
+        }
+        const TypedExpressionRecord* typed
+            = analysis.declarationIndex.typedExpression(*site.expression);
+        if (!typed) {
+            continue;
+        }
+        const std::size_t width = site.range->end - site.range->start;
+        if (!bestSite || width < bestWidth) {
+            bestSite = &site;
+            bestType = typed;
+            bestWidth = width;
+        }
+    }
+    if (bestSite && bestType) {
+        return HoverInfo{bestType->type, *bestSite->range};
+    }
+
+    const DeclarationRecord* declaration = definitionAt(analysis, byte);
+    if (!declaration || !declaration->range) {
+        return std::nullopt;
+    }
+    if (const ResolvedSignatureRecord* signature
+        = analysis.declarationIndex.resolvedSignature(declaration->declarationId)) {
+        return HoverInfo{signature->type, *declaration->range};
+    }
+    if (const auto* let = dynamic_cast<const LetStmt*>(declaration->statement)) {
+        if (let->initializer) {
+            if (const TypedExpressionRecord* typed
+                = analysis.declarationIndex.typedExpression(*let->initializer)) {
+                return HoverInfo{typed->type, *declaration->range};
+            }
+        }
+    }
+    for (const ReferenceSite& site : analysis.referenceSites) {
+        const std::optional<ResolvedSymbol> resolved
+            = resolvedReference(analysis.declarationIndex, site);
+        if (!resolved || resolved->declarationId != declaration->declarationId
+            || !site.expression) {
+            continue;
+        }
+        if (const TypedExpressionRecord* typed
+            = analysis.declarationIndex.typedExpression(*site.expression)) {
+            return HoverInfo{typed->type, *declaration->range};
+        }
+    }
+    return std::nullopt;
+}
+
+JsonValue hoverValue(
+    std::string_view source,
+    const HoverInfo& info)
+{
+    return makeObject({
+        {"contents", makeObject({
+            {"kind", JsonValue::string("plaintext")},
+            {"value", JsonValue::string(typeInfoName(info.type))},
+        })},
+        {"range", textDocumentRange(source, info.range)},
+    });
+}
+
 JsonValue documentSymbol(
     std::string_view source,
     const DeclarationRecord& declaration)
@@ -1377,6 +1453,7 @@ public:
                                     {"definitionProvider", JsonValue::booleanValue(true)},
                                     {"documentSymbolProvider", JsonValue::booleanValue(true)},
                                     {"referencesProvider", JsonValue::booleanValue(true)},
+                                    {"hoverProvider", JsonValue::booleanValue(true)},
                                 })},
                             })));
                 }
@@ -1425,6 +1502,12 @@ public:
             if (*method == "textDocument/references") {
                 if (id) {
                     writeMessage(output, response(*id, handleReferences(request)));
+                }
+                continue;
+            }
+            if (*method == "textDocument/hover") {
+                if (id) {
+                    writeMessage(output, response(*id, handleHover(request)));
                 }
                 continue;
             }
@@ -1638,6 +1721,30 @@ private:
             locations.push_back(sourceLocation(*uri, found->second.text, range));
         }
         return JsonValue::array(std::move(locations));
+    }
+
+    JsonValue handleHover(const JsonValue& request) const
+    {
+        const std::optional<std::string> uri = documentUri(request);
+        const std::optional<LspRequestPosition> position = requestPosition(request);
+        if (!uri || !position) {
+            return JsonValue::null();
+        }
+        const auto found = documents_.find(*uri);
+        if (found == documents_.end() || !found->second.analysis.program) {
+            return JsonValue::null();
+        }
+        const std::optional<std::size_t> byte = sourceByteAtLspPosition(
+            found->second.text,
+            position->line,
+            position->character);
+        if (!byte) {
+            return JsonValue::null();
+        }
+        const std::optional<HoverInfo> info = hoverInfoAt(found->second.analysis, *byte);
+        return info
+            ? hoverValue(found->second.text, *info)
+            : JsonValue::null();
     }
 
     JsonValue handleDocumentSymbols(const JsonValue& request) const

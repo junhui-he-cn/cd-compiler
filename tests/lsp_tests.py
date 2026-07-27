@@ -85,6 +85,7 @@ def main() -> int:
             or capabilities.get("definitionProvider") is not True
             or capabilities.get("documentSymbolProvider") is not True
             or capabilities.get("referencesProvider") is not True
+            or capabilities.get("hoverProvider") is not True
         ):
             raise AssertionError(f"initialize response mismatch: {initialize!r}")
 
@@ -277,6 +278,50 @@ def main() -> int:
             process,
             {
                 "jsonrpc": "2.0",
+                "id": 8,
+                "method": "textDocument/hover",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 0, "character": 4},
+                },
+            },
+        )
+        add_hover = receive(process)
+        if add_hover.get("result") != {
+            "contents": {"kind": "plaintext", "value": "fun(number): number"},
+            "range": {
+                "start": {"line": 0, "character": 4},
+                "end": {"line": 0, "character": 7},
+            },
+        }:
+            raise AssertionError(f"function hover response mismatch: {add_hover!r}")
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 9,
+                "method": "textDocument/hover",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 2, "character": 6},
+                },
+            },
+        )
+        result_hover = receive(process)
+        if result_hover.get("result") != {
+            "contents": {"kind": "plaintext", "value": "number"},
+            "range": {
+                "start": {"line": 2, "character": 6},
+                "end": {"line": 2, "character": 12},
+            },
+        }:
+            raise AssertionError(f"variable hover response mismatch: {result_hover!r}")
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
                 "method": "textDocument/didChange",
                 "params": {
                     "textDocument": {"uri": uri, "version": 3},
@@ -313,9 +358,9 @@ def main() -> int:
         )
         assert_publish(receive(process), uri, 0)
 
-        send(process, {"jsonrpc": "2.0", "id": 8, "method": "shutdown", "params": None})
+        send(process, {"jsonrpc": "2.0", "id": 10, "method": "shutdown", "params": None})
         shutdown = receive(process)
-        if shutdown.get("id") != 8 or shutdown.get("result") is not None:
+        if shutdown.get("id") != 10 or shutdown.get("result") is not None:
             raise AssertionError(f"shutdown response mismatch: {shutdown!r}")
         send(process, {"jsonrpc": "2.0", "method": "exit"})
         process.stdin.close()

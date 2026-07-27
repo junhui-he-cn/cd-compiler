@@ -41,10 +41,10 @@ The compiler pipeline includes:
   source and exits nonzero for noncanonical input.
 - Language server: `--lsp` starts a stdio JSON-RPC service with full-document
   synchronization, shared lexer/parser/type diagnostics, whole-document
-  formatting edits, definition lookup, document symbols, and references. The
+  formatting edits, definition lookup, document symbols, references, and hover
+  type information for known typed expressions and callable declarations. The
   first service boundary is single-document and keeps stdin's existing import
-  restriction; completion, hover/type information, and cross-module navigation
-  remain later slices.
+  restriction; completion and cross-module navigation remain later slices.
 
 For example:
 
