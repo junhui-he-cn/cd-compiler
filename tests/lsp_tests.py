@@ -615,6 +615,53 @@ def main() -> int:
             process,
             {
                 "jsonrpc": "2.0",
+                "id": 21,
+                "method": "textDocument/rename",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 1, "character": 11},
+                    "newName": "amount",
+                },
+            },
+        )
+        namespace_rename = receive(process)
+        if namespace_rename.get("result") != {
+            "changes": {
+                module_uri: [
+                    {
+                        "range": {
+                            "start": {"line": 0, "character": 4},
+                            "end": {"line": 0, "character": 9},
+                        },
+                        "newText": "amount",
+                    },
+                    {
+                        "range": {
+                            "start": {"line": 1, "character": 7},
+                            "end": {"line": 1, "character": 12},
+                        },
+                        "newText": "amount",
+                    },
+                ],
+                uri: [
+                    {
+                        "range": {
+                            "start": {"line": 1, "character": 10},
+                            "end": {"line": 1, "character": 15},
+                        },
+                        "newText": "amount",
+                    }
+                ],
+            }
+        }:
+            raise AssertionError(
+                f"cross-module rename response mismatch: {namespace_rename!r}"
+            )
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
                 "method": "textDocument/didClose",
                 "params": {"textDocument": {"uri": module_uri}},
             },

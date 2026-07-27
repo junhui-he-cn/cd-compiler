@@ -1761,6 +1761,43 @@ std::optional<DefinitionTarget> importedDefinitionAt(
     return std::nullopt;
 }
 
+std::vector<SourceRange> exportRangesForTarget(
+    const AnalysisSnapshot& snapshot,
+    const DeclarationRecord& target)
+{
+    std::vector<SourceRange> ranges;
+    if (!snapshot.program) {
+        return ranges;
+    }
+    for (const StmtPtr& statement : snapshot.program->statements) {
+        const auto* module = dynamic_cast<const ModuleStmt*>(statement.get());
+        if (!module) {
+            continue;
+        }
+        for (const StmtPtr& child : module->statements) {
+            const auto* exportStatement = dynamic_cast<const ExportStmt*>(child.get());
+            if (!exportStatement) {
+                continue;
+            }
+            for (const Token& name : exportStatement->names) {
+                if (!name.range) {
+                    continue;
+                }
+                std::unordered_set<std::size_t> visiting;
+                const std::optional<DefinitionTarget> exported = exportedDefinition(
+                    snapshot,
+                    module->moduleId,
+                    name.lexeme,
+                    visiting);
+                if (exported && exported->declaration == &target) {
+                    ranges.push_back(*name.range);
+                }
+            }
+        }
+    }
+    return ranges;
+}
+
 std::shared_ptr<AnalysisSnapshot> analyzeVirtualWorkspace(
     const std::vector<FrontendVirtualFile>& files,
     const std::map<std::string, std::string>& uriByCanonicalPath)
@@ -2352,9 +2389,6 @@ private:
             return JsonValue::null();
         }
         const AnalysisSnapshot& snapshot = *found->second.analysis.snapshot;
-        if (snapshot.program->moduleGraph) {
-            return JsonValue::null();
-        }
         const std::optional<std::size_t> byte = sourceByteAtLspPosition(
             found->second.text,
             position->line,
@@ -2362,38 +2396,164 @@ private:
         if (!byte) {
             return JsonValue::null();
         }
-        const std::vector<SourceRange> ranges = referenceRangesAt(
+        std::optional<DefinitionTarget> target;
+        if (const DeclarationRecord* local = definitionAt(
+                snapshot,
+                found->second.analysis.sourceId,
+                *byte)) {
+            target = DefinitionTarget{
+                local,
+                local->range ? local->range->source : found->second.analysis.sourceId};
+        } else {
+            target = importedDefinitionAt(
+                snapshot,
+                found->second.analysis.sourceId,
+                *byte);
+        }
+        if (!target || !target->declaration) {
+            return JsonValue::null();
+        }
+
+        std::vector<SourceRange> ranges = referenceRangesAt(
             snapshot,
             found->second.analysis.sourceId,
             *byte,
             true);
+        const std::vector<SourceRange> exportRanges = exportRangesForTarget(
+            snapshot,
+            *target->declaration);
+        ranges.insert(ranges.end(), exportRanges.begin(), exportRanges.end());
+        std::sort(
+            ranges.begin(),
+            ranges.end(),
+            [](const SourceRange& left, const SourceRange& right) {
+                if (left.source != right.source) {
+                    return left.source < right.source;
+                }
+                if (left.start != right.start) {
+                    return left.start < right.start;
+                }
+                return left.end < right.end;
+            });
+        ranges.erase(
+            std::unique(
+                ranges.begin(),
+                ranges.end(),
+                [](const SourceRange& left, const SourceRange& right) {
+                    return left.source == right.source
+                        && left.start == right.start
+                        && left.end == right.end;
+                }),
+            ranges.end());
         if (ranges.empty()) {
             return JsonValue::null();
         }
 
-        std::string renamed = found->second.text;
-        for (auto range = ranges.rbegin(); range != ranges.rend(); ++range) {
-            if (!range->source.valid() || range->source != found->second.analysis.sourceId
-                || range->start > range->end || range->end > renamed.size()) {
+        std::map<std::string, std::vector<SourceRange>> rangesByUri;
+        for (const SourceRange& range : ranges) {
+            if (!range.source.valid() || range.start > range.end) {
                 return JsonValue::null();
             }
-            renamed.replace(range->start, range->end - range->start, *newName);
-        }
-        const DocumentAnalysis renamedAnalysis = analyzeDocument(renamed);
-        if (!renamedAnalysis.diagnostics.empty()) {
-            return JsonValue::null();
+            std::string targetUri;
+            const auto sourceUri = snapshot.sourceUris.find(range.source.value);
+            if (sourceUri != snapshot.sourceUris.end()) {
+                targetUri = sourceUri->second;
+            } else if (range.source == found->second.analysis.sourceId) {
+                targetUri = *uri;
+            } else {
+                return JsonValue::null();
+            }
+            if (documents_.find(targetUri) == documents_.end()
+                || range.end > documents_.at(targetUri).text.size()) {
+                return JsonValue::null();
+            }
+            rangesByUri[targetUri].push_back(range);
         }
 
-        std::vector<JsonValue> edits;
-        edits.reserve(ranges.size());
-        for (const SourceRange& range : ranges) {
-            edits.push_back(makeObject({
-                {"range", textDocumentRange(found->second.text, range)},
-                {"newText", JsonValue::string(*newName)},
-            }));
+        std::map<std::string, std::string> renamedTexts;
+        for (const auto& entry : documents_) {
+            renamedTexts.emplace(entry.first, entry.second.text);
         }
+        for (auto& entry : rangesByUri) {
+            std::vector<SourceRange>& documentRanges = entry.second;
+            std::sort(
+                documentRanges.begin(),
+                documentRanges.end(),
+                [](const SourceRange& left, const SourceRange& right) {
+                    if (left.start != right.start) {
+                        return left.start > right.start;
+                    }
+                    return left.end > right.end;
+                });
+            std::string& renamed = renamedTexts.at(entry.first);
+            for (const SourceRange& range : documentRanges) {
+                renamed.replace(range.start, range.end - range.start, *newName);
+            }
+        }
+
+        bool canAnalyzeVirtualWorkspace = true;
+        std::vector<std::string> orderedUris;
+        orderedUris.reserve(documents_.size());
+        orderedUris.push_back(*uri);
+        for (const auto& entry : documents_) {
+            if (entry.first != *uri) {
+                orderedUris.push_back(entry.first);
+            }
+        }
+        std::vector<FrontendVirtualFile> virtualFiles;
+        std::map<std::string, std::string> uriByCanonicalPath;
+        for (const std::string& documentUri : orderedUris) {
+            const std::optional<std::string> path = uriFilePath(documentUri);
+            if (!path) {
+                canAnalyzeVirtualWorkspace = false;
+                break;
+            }
+            virtualFiles.push_back(FrontendVirtualFile{
+                *path,
+                renamedTexts.at(documentUri)});
+            uriByCanonicalPath[canonicalPathFor(*path)] = documentUri;
+        }
+        if (canAnalyzeVirtualWorkspace) {
+            const std::shared_ptr<AnalysisSnapshot> renamedSnapshot = analyzeVirtualWorkspace(
+                virtualFiles,
+                uriByCanonicalPath);
+            if (!renamedSnapshot->diagnostics.empty()) {
+                return JsonValue::null();
+            }
+        } else {
+            if (snapshot.program->moduleGraph || rangesByUri.size() != 1
+                || rangesByUri.find(*uri) == rangesByUri.end()) {
+                return JsonValue::null();
+            }
+            const DocumentAnalysis renamedAnalysis = analyzeDocument(renamedTexts.at(*uri));
+            if (!renamedAnalysis.diagnostics.empty()) {
+                return JsonValue::null();
+            }
+        }
+
         JsonValue::Object changes;
-        changes.emplace(*uri, JsonValue::array(std::move(edits)));
+        for (const auto& entry : rangesByUri) {
+            const Document& document = documents_.at(entry.first);
+            std::vector<SourceRange> documentRanges = entry.second;
+            std::sort(
+                documentRanges.begin(),
+                documentRanges.end(),
+                [](const SourceRange& left, const SourceRange& right) {
+                    if (left.start != right.start) {
+                        return left.start < right.start;
+                    }
+                    return left.end < right.end;
+                });
+            std::vector<JsonValue> edits;
+            edits.reserve(documentRanges.size());
+            for (const SourceRange& range : documentRanges) {
+                edits.push_back(makeObject({
+                    {"range", textDocumentRange(document.text, range)},
+                    {"newText", JsonValue::string(*newName)},
+                }));
+            }
+            changes.emplace(entry.first, JsonValue::array(std::move(edits)));
+        }
         return makeObject({
             {"changes", JsonValue::object(std::move(changes))},
         });

@@ -1386,6 +1386,17 @@ its local reference-only result, and the declaration-inclusive cross-module
 result. The decision is recorded in
 `docs/decisions/m5b-lsp-010.{md,json}`.
 
+`M5B-LSP-011` extends rename to value targets that cross the opened virtual
+workspace. The adapter groups declaration, local/imported reference,
+namespace-member, and explicit export-name ranges into a multi-document
+`WorkspaceEdit`, then applies the proposed edits to virtual sources and
+re-runs the production frontend and TypeChecker before returning them. Invalid
+names or resulting diagnostics return `null`; namespace-qualified types and
+enum variants remain outside this value-focused slice. The focused protocol
+test covers target declaration, export-name, and imported-use edits while
+retaining the existing local rename assertions. The decision is recorded in
+`docs/decisions/m5b-lsp-011.{md,json}`.
+
 ### Milestone 5C: REPL / incremental evaluation
 
 **Dependency:** M3A module/session boundaries, M3B incremental compilation where
@@ -1623,14 +1634,15 @@ retain the resolved top-level blank-line, parser-accepted trailing-comma,
 bounded list-wrapping, and incomplete-input rejection policies without changing
 language semantics. Source fallback and direct-input adapters remain
 intentional.
-The next active tool slice is cross-module edits and type/variant navigation;
-M5B-LSP-001 through M5B-LSP-010 now cover the single-document
+The next active tool slice is cross-module completion and type/variant
+navigation; M5B-LSP-001 through M5B-LSP-011 now cover the single-document
 protocol, diagnostics, formatting, definitions, document symbols, references,
 bounded hover type information, rename edits, declaration completion,
 open-document workspace symbols, virtual-source workspace analysis, direct
-import definition jumps, namespace-alias member definition jumps, and
-cross-module references while namespace-qualified type/variant navigation,
-cross-module rename/completion, and workspace-aware completion remain open.
+import definition jumps, namespace-alias member definition jumps,
+cross-module references, and validated cross-module rename while
+namespace-qualified type/variant navigation, cross-module completion, and
+workspace-aware completion remain open.
 
 ## Metrics dashboard
 
