@@ -1122,6 +1122,35 @@ fun differenceValues<T>(left: [T], right: [T]): [T] {
   return result;
 }
 
+fun frequencyEntries<T>(values: [T]): [MultiSetEntry<T>] {
+  let counts = newMultiSet<T>();
+  let index = 0;
+  while (index < values.len()) {
+    counts.add(values[index]);
+    index += 1;
+  }
+  return counts.entries();
+}
+
+fun mostFrequent<T>(values: [T]): T? {
+  let entries = frequencyEntries(values);
+  if (entries.len() == 0) {
+    return nil;
+  }
+
+  let best = entries[0].value;
+  let bestCount = entries[0].count;
+  let index = 1;
+  while (index < entries.len()) {
+    if (entries[index].count > bestCount) {
+      best = entries[index].value;
+      bestCount = entries[index].count;
+    }
+    index += 1;
+  }
+  return best;
+}
+
 fun windowSums(values: [number], width: number): [number] {
   let result: [number] = [];
   if (width <= 0 || width > values.len()) {
@@ -1220,4 +1249,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;

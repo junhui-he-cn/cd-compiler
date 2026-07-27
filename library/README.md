@@ -90,6 +90,7 @@ print ds.reverseArray(values);
 print ds.rotateArray(values, 1);
 print ds.linearSearch(values, 2);
 print ds.countValue(values, 3);
+print ds.mostFrequent([3, 1, 3, 2, 3]);
 
 fun ascending(left: number, right: number): bool {
   return left < right;
@@ -309,6 +310,12 @@ length wrap around; empty inputs return `[]`. It runs in `O(n)` time and uses
 the supplied comparator. Empty and single-element arrays are sorted, and the
 check is `O(n)` with `O(1)` extra space.
 
+`frequencyEntries<T>(values)` returns `MultiSetEntry<T>` values in first-seen
+order, and `mostFrequent<T>(values)` returns the value with the largest count
+or `nil` for an empty input. Ties keep the first-seen value. Both use the
+array-backed multiset and therefore scan linearly over the input plus the
+number of distinct values.
+
 `sortArray<T>(values, less)` returns a stable insertion-sorted shallow copy;
 `sortArrayInPlace<T>(values, less)` applies the same stable insertion sort to
 the supplied array. Both take `fun(T, T): bool`, where `less(left, right)` means
@@ -436,6 +443,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
 `--case array_algorithms_binary_search`, `--case array_algorithms_merge_sort`,
 `--case array_algorithms_rotation`,
+`--case array_algorithms_frequency`,
 `--case array_algorithms_quick_sort`, `--case array_algorithms_heap_sort`,
 `--case array_algorithms_two_pointer`,
 `--case array_algorithms_sets`, or `--case array_algorithms_window_stats` for

@@ -41,6 +41,7 @@
 - `MultiSet<T>`：数组条目和计数构成的泛型多重集合。
 - `MultiMap<K,V>`：数组条目表示一个键对应多个值的泛型映射。
 - 数组基础算法：`reverseArray`、`rotateArray`、`linearSearch`、`countValue`、`isSorted`。
+- 频率统计：`frequencyEntries`、`mostFrequent`。
 - 数组排序：稳定插入排序 `sortArray`、`sortArrayInPlace`、归并排序 `mergeSort`、
   快速排序 `quickSort`/`quickSortInPlace` 和堆排序 `heapSort`/`heapSortInPlace`。
 - 数组窗口算法：`chunkArray`、`slidingWindows`、`prefixSums`。
@@ -246,6 +247,8 @@ enum Result<T, E> {
 `heapSort` 和 `heapSortInPlace` 使用 comparator 定义的相反堆序完成原地堆排序，
 不保证稳定性，时间复杂度为 `O(n log n)`。
 `rotateArray` 和 `isSorted` 已补充为不改变输入的旋转与有序性检查辅助。
+`frequencyEntries` 和 `mostFrequent` 复用 `MultiSet` 的数组后端，保留首次
+出现顺序并在并列时选择首次出现值。
 
 - 遍历、复制、拼接、分块、窗口、批处理；
 - `reverse`、`rotate`、`partition`、稳定分区、按谓词分组；
