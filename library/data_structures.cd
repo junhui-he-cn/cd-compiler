@@ -371,6 +371,64 @@ fun toArray<T>(list: List<T>): [T] {
   return values;
 }
 
+struct Set<T> {
+  items: [T]
+}
+
+impl Set<T> {
+  fun indexOf(value: T): number {
+    let index = 0;
+    while (index < this.items.len()) {
+      if (this.items[index] == value) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun add(value: T) {
+    if (this.indexOf(value) >= 0) {
+      return;
+    }
+    this.items.push(value);
+  }
+
+  fun has(value: T): bool {
+    return this.indexOf(value) >= 0;
+  }
+
+  fun discard(value: T): bool {
+    let index = this.indexOf(value);
+    if (index < 0) {
+      return false;
+    }
+
+    while (index + 1 < this.items.len()) {
+      this.items[index] = this.items[index + 1];
+      index += 1;
+    }
+    this.items.pop();
+    return true;
+  }
+
+  fun size(): number {
+    return this.items.len();
+  }
+
+  fun isEmpty(): bool {
+    return this.items.len() == 0;
+  }
+
+  fun snapshot(): [T] {
+    return copy(this.items);
+  }
+}
+
+fun newSet<T>(): Set<T> {
+  return Set<T> { items: [] };
+}
+
 struct PriorityQueue<T> {
   heap: BinaryHeap<T>
 }
@@ -405,4 +463,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet;

@@ -37,6 +37,7 @@
 - `Option<T>`：用于显式区分携带值和缺失值的泛型枚举。
 - `Result<T, E>`：用于携带成功值或错误值的泛型枚举。
 - `List<T>`：递归泛型枚举表示的不可变持久化链表。
+- `Set<T>`：数组线性查找的泛型集合，按插入顺序提供快照。
 
 它们的现有 API 和示例继续作为兼容基线。后续新增 API 不应悄悄改变空值、
 快照或引用共享语义。
@@ -153,7 +154,7 @@ enum Result<T, E> {
 | 二叉堆 `BinaryHeap<T>` | 现有（S1） | `add`、`peek`、`take`、`size`、`isEmpty`、`snapshot` | 数组 + `less` 回调；`add/take` 为 `O(log n)` |
 | 优先队列 `PriorityQueue<T>` | 现有（S1） | 对外提供队列语义，优先返回最小/最大元素 | `BinaryHeap` 的稳定命名包装 |
 | 双堆中位数 | 后续 | `add`、`median`、流式中位数 | 两个堆；需定义空集合和偶数长度中位数策略 |
-| `Set<T>` | 第一批 | `add`、`has`、`discard`、`size`、`isEmpty`、`snapshot` | 先做数组线性查找，适用于任意可比较相等的值 |
+| `Set<T>` | 现有（S2） | `add`、`has`、`discard`、`size`、`isEmpty`、`snapshot` | 数组线性查找，按语言 `==` 去重，保留快照插入顺序 |
 | 有序集合 `OrderedSet<T>` | 后续 | 有序插入、范围查询、前驱后继 | 需要排序比较器和树/有序数组策略 |
 | 多重集合 `MultiSet<T>` | 第一批/受限 | `add`、`countOf`、`takeOne`、`has`、`entries` | 先用条目数组，通用键不依赖 map |
 | 多重映射 `MultiMap<K,V>` | 第一批/受限 | 一个键对应多个值，`add`、`getAll`、`discard` | 条目数组；若 `K` 为基础键可再提供 map 优化版 |
@@ -372,8 +373,11 @@ enum Result<T, E> {
 golden/Rust VM 检查接口。
 
 已完成 `Option<T>`、`Result<T,E>` 和递归枚举版 `List<T>`，均有构造工厂、
-匹配示例和独立库级 fixture。`List<T>` 使用共享尾部表达持久化值，下一步
-进入 S2 的集合和序列算法。
+匹配示例和独立库级 fixture。`List<T>` 使用共享尾部表达持久化值。
+
+S2 已完成 `Set<T>` 的数组后端版本：使用语言 `==` 做线性去重和查找，删除
+时保持剩余值的插入顺序。下一步评估 `MultiSet<T>` 或无需额外语言契约的
+数组序列算法。
 
 ### S2：集合和序列算法
 

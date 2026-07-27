@@ -255,6 +255,48 @@ Program
       Let values: [T] = (array)
       Expr (call appendListToArray list values)
       Return values
+    Struct Set<T> {items: [T]}
+    Impl Set<T>
+      Method indexOf(value: T): number
+        Let index = 0
+        While (group (< index (member-call (field this items) len)))
+          Body
+            Block
+              If (group (== (index (field this items) index) value))
+                Then
+                  Block
+                    Return index
+              Expr (+= index 1)
+        Return (- 1)
+      Method add(value: T)
+        If (group (>= (member-call this indexOf value) 0))
+          Then
+            Block
+              Return nil
+        Expr (member-call (field this items) push value)
+      Method has(value: T): bool
+        Return (>= (member-call this indexOf value) 0)
+      Method discard(value: T): bool
+        Let index = (member-call this indexOf value)
+        If (group (< index 0))
+          Then
+            Block
+              Return false
+        While (group (< (+ index 1) (member-call (field this items) len)))
+          Body
+            Block
+              Expr (= (index (field this items) index) (index (field this items) (+ index 1)))
+              Expr (+= index 1)
+        Expr (member-call (field this items) pop)
+        Return true
+      Method size(): number
+        Return (member-call (field this items) len)
+      Method isEmpty(): bool
+        Return (== (member-call (field this items) len) 0)
+      Method snapshot(): [T]
+        Return (call copy (field this items))
+    Fun newSet<T>(): Set<T>
+      Return (construct Set<T> items: (array))
     Struct PriorityQueue<T> {heap: BinaryHeap<T>}
     Impl PriorityQueue<T>
       Method enqueue(value: T)
@@ -271,7 +313,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set newStack newQueue newDeque newBinaryHeap newPriorityQueue some none ok err emptyList prepend head tail reverse toArray newSet
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Fun render(value: ds.Option<number>): string

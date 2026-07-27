@@ -3,7 +3,8 @@
 This directory contains a small data-structure library written in the public
 Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 `Queue<T>`, `Deque<T>`, `BinaryHeap<T>`, and `PriorityQueue<T>` types, plus the
-generic `Option<T>`, `Result<T, E>`, and immutable `List<T>` enums.
+generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
+`Set<T>` types.
 
 The planned structure and algorithm inventory, implementation constraints, and
 staged delivery order are documented in
@@ -63,6 +64,12 @@ print match result {
 
 let list = ds.prepend(2, ds.prepend(1, ds.emptyList<number>()));
 print ds.toArray(ds.reverse(list));
+
+let seen = ds.newSet<number>();
+seen.add(2);
+seen.add(2);
+seen.add(1);
+print seen.snapshot();
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -179,6 +186,20 @@ are shared between list values, so the structure supports persistent snapshots.
 The type argument for `emptyList` must be explicit because the empty constructor
 has no payload from which to infer `T`.
 
+`Set<T>` provides an array-backed set with language equality:
+
+- `add(value: T)` — insert a value if it is not already present;
+- `has(value: T): bool` — test membership;
+- `discard(value: T): bool` — remove a value and report whether it was present;
+- `size(): number` and `isEmpty(): bool`;
+- `snapshot(): [T]` — return a shallow copy in insertion order.
+
+`newSet<T>()` creates an empty set. `add`, `has`, and `discard` use linear
+search, so they are `O(n)`; `discard` preserves the order of the remaining
+values and is also `O(n)`. `snapshot` is `O(n)` and allocates one outer array.
+Membership follows the language's `==` semantics, including its behavior for
+reference values.
+
 ## Current language limitation
 
 The language's builtin member-call sugar reserves names such as `push`, `pop`,
@@ -204,6 +225,7 @@ python3 library/tests/run_tests.py ./build/compiler_design vm-rs
 ```
 
 Use `--case data_structures_binary_heap`, `--case data_structures_option`,
-`--case data_structures_result`, or `--case data_structures_list` for a focused
-run, or `--update` only when an intentional compiler-output change requires
-refreshing library fixtures' `ast.out` files.
+`--case data_structures_result`, `--case data_structures_list`, or
+`--case data_structures_set` for a focused run, or `--update` only when an
+intentional compiler-output change requires refreshing library fixtures'
+`ast.out` files.

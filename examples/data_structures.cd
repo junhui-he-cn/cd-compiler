@@ -70,3 +70,9 @@ print match result {
 let list = ds.prepend(2, ds.prepend(1, ds.emptyList<number>()));
 print ds.toArray(list);
 print ds.toArray(ds.reverse(list));
+
+let seen = ds.newSet<number>();
+seen.add(2);
+seen.add(2);
+seen.add(1);
+print seen.snapshot();
