@@ -307,6 +307,8 @@ void FrontendSession::reset()
     moduleGraph_ = ModuleGraph{};
     preloadedModuleInterfaces_.clear();
     moduleProductCacheLoad_.reset();
+    virtualSources_.clear();
+    virtualSourceMode_ = false;
     hasImports_ = false;
 }
 
@@ -513,7 +515,11 @@ FrontendSession::ImportResolution FrontendSession::resolveImportPath(
         for (const std::filesystem::path& candidate : importCandidatesForBase(base, requestedPath)) {
             const std::string displayPath = pathString(candidate);
             triedDisplayPaths.push_back(displayPath);
-            if (canOpenFile(candidate)) {
+            const bool available = virtualSourceMode_
+                ? virtualSources_.find(pathString(normalizedExistingPath(candidate)))
+                    != virtualSources_.end()
+                : canOpenFile(candidate);
+            if (available) {
                 return ImportResolution{candidate, std::move(triedDisplayPaths)};
             }
         }
@@ -670,6 +676,27 @@ Program FrontendSession::loadFiles(const std::vector<std::string>& paths)
     return assembleProgram();
 }
 
+Program FrontendSession::loadVirtualFiles(const std::vector<FrontendVirtualFile>& files)
+{
+    reset();
+    virtualSourceMode_ = true;
+    for (const FrontendVirtualFile& file : files) {
+        virtualSources_.insert_or_assign(
+            pathString(normalizedExistingPath(file.path)),
+            file.source);
+    }
+
+    for (const FrontendVirtualFile& file : files) {
+        const std::size_t id = loadFile(file.path, false, true, true);
+        if (std::find(entryUnitIds_.begin(), entryUnitIds_.end(), id) == entryUnitIds_.end()) {
+            entryUnitIds_.push_back(id);
+        }
+    }
+    rebuildModuleGraph();
+    rebuildCombinedSource();
+    return assembleProgram();
+}
+
 std::size_t FrontendSession::loadFile(
     const std::string& path,
     bool isImport,
@@ -695,8 +722,14 @@ std::size_t FrontendSession::loadFile(
         return loaded->second;
     }
 
-    std::ifstream input(requestedPath);
-    if (!input) {
+    const auto virtualSource = virtualSources_.find(canonicalPath);
+    if (virtualSource == virtualSources_.end() && virtualSourceMode_) {
+        if (isImport) {
+            throw DiagnosticError(DiagnosticKind::Import, "failed to open import: " + displayPath);
+        }
+        throw std::runtime_error("failed to open input file: " + displayPath);
+    }
+    if (virtualSource == virtualSources_.end() && !canOpenFile(requestedPath)) {
         if (isImport) {
             throw DiagnosticError(DiagnosticKind::Import, "failed to open import: " + displayPath);
         }
@@ -705,7 +738,13 @@ std::size_t FrontendSession::loadFile(
 
     loadingStack_.push_back(canonicalPath);
     try {
-        std::string source = readAll(input);
+        std::string source;
+        if (virtualSource != virtualSources_.end()) {
+            source = virtualSource->second;
+        } else {
+            std::ifstream input(requestedPath);
+            source = readAll(input);
+        }
         if (isImport && directEntryCanonicalPaths_.find(canonicalPath) == directEntryCanonicalPaths_.end()) {
             CachedInterfaceLoad cached = loadCachedInterface(canonicalPath, source);
             if (!cached.artifact) {

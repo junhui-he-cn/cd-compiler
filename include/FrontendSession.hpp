@@ -20,6 +20,11 @@
 
 class LexErrorList;
 
+struct FrontendVirtualFile {
+    std::string path;
+    std::string source;
+};
+
 class FrontendSession {
 public:
     void setImportSearchPaths(std::vector<std::string> paths);
@@ -39,6 +44,7 @@ public:
 
     Program loadStdin(std::istream& input);
     Program loadFiles(const std::vector<std::string>& paths);
+    Program loadVirtualFiles(const std::vector<FrontendVirtualFile>& files);
 
     std::vector<Token> displayTokens() const;
     LosslessSourceView losslessSourceView() const;
@@ -114,5 +120,7 @@ private:
     std::string combinedSource_;
     ModuleGraph moduleGraph_;
     std::vector<ModuleInterface> preloadedModuleInterfaces_;
+    std::unordered_map<std::string, std::string> virtualSources_;
+    bool virtualSourceMode_ = false;
     bool hasImports_ = false;
 };
