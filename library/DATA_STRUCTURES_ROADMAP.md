@@ -58,6 +58,7 @@
 - 无权图路径：`shortestDistances`、`shortestPath`。
 - DAG 视图：`inDegrees`、`topologicalOrder`、`hasCycle`。
 - 加权图：非负 `WeightedEdge`/`WeightedGraph`、Dijkstra 与最小生成森林。
+- 强连通分量：有向图的 `stronglyConnectedComponents`。
 
 它们的现有 API 和示例继续作为兼容基线。后续新增 API 不应悄悄改变空值、
 快照或引用共享语义。
@@ -266,6 +267,8 @@ enum Result<T, E> {
 `inDegrees` 和 `topologicalOrder` 已提供有向无环图的入度与 Kahn 拓扑排序；
 无向图或有环图的拓扑查询返回空数组，并保持顶点/邻接插入顺序。
 `hasCycle` 已覆盖有向图拓扑检测和无向图带父节点 DFS，包括自环。
+`stronglyConnectedComponents` 已提供迭代 Kosaraju 版本；组件顺序按完成序，
+组件内部按 DFS 发现序，不对结果额外排序。
 `WeightedGraph` 和 Dijkstra 查询已提供非负数权重版本；负权边不加入图，当前
 实现使用数组扫描选择最短未访问顶点。
 `minimumSpanningForest` 已提供无向加权图的 Prim 版本；非连通输入返回森林，

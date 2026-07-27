@@ -354,6 +354,11 @@ undirected cycles with an iterative parent-aware DFS. It handles self-loops,
 returns `false` for empty or acyclic graphs, and runs in `O(V + E)` time with
 `O(V)` auxiliary space.
 
+`stronglyConnectedComponents(graph)` applies iterative Kosaraju traversal to a
+directed graph and returns components in finish-order discovery order, with
+each component listing vertices in its DFS discovery order. It returns `[]`
+for undirected graphs and uses `O(V + E)` time and `O(V + E)` auxiliary space.
+
 `WeightedGraph` stores non-negative numeric edge weights. Its Dijkstra helpers
 `shortestWeightedDistances` and `shortestWeightedPath` return `-1`/`[]` for
 unreachable results and reject negative weights at insertion. The current array

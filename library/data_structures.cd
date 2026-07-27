@@ -1002,6 +1002,105 @@ fun hasCycle(graph: Graph): bool {
   return false;
 }
 
+fun stronglyConnectedComponents(graph: Graph): [[number]] {
+  let components: [[number]] = [];
+  if (!graph.directed) {
+    return components;
+  }
+  let count = graph.vertexCount();
+  let visited: [bool] = [];
+  let finish: [number] = [];
+  let index = 0;
+  while (index < count) {
+    visited.push(false);
+    index += 1;
+  }
+
+  let root = 0;
+  while (root < count) {
+    if (visited[root]) {
+      root += 1;
+      continue;
+    }
+    let stack: [number] = [root];
+    let nextIndices: [number] = [0];
+    visited[root] = true;
+    while (stack.len() > 0) {
+      let top = stack.len() - 1;
+      let vertex = stack[top];
+      let neighbors = graph.adjacency[vertex];
+      let neighborIndex = nextIndices[top];
+      if (neighborIndex < neighbors.len()) {
+        let neighbor = neighbors[neighborIndex];
+        nextIndices[top] += 1;
+        if (!visited[neighbor]) {
+          visited[neighbor] = true;
+          stack.push(neighbor);
+          nextIndices.push(0);
+        }
+      } else {
+        stack.pop();
+        nextIndices.pop();
+        finish.push(vertex);
+      }
+    }
+    root += 1;
+  }
+
+  let reversed: [[number]] = [];
+  index = 0;
+  while (index < count) {
+    let neighbors: [number] = [];
+    reversed.push(neighbors);
+    index += 1;
+  }
+  let vertex = 0;
+  while (vertex < count) {
+    let neighbors = graph.adjacency[vertex];
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let neighbor = neighbors[neighborIndex];
+      reversed[neighbor].push(vertex);
+      neighborIndex += 1;
+    }
+    vertex += 1;
+  }
+
+  index = 0;
+  while (index < count) {
+    visited[index] = false;
+    index += 1;
+  }
+  let finishIndex = finish.len();
+  while (finishIndex > 0) {
+    finishIndex -= 1;
+    root = finish[finishIndex];
+    if (!visited[root]) {
+      let component: [number] = [];
+      let componentStack: [number] = [root];
+      visited[root] = true;
+      while (componentStack.len() > 0) {
+        let top = componentStack.len() - 1;
+        vertex = componentStack[top];
+        componentStack.pop();
+        component.push(vertex);
+        let neighbors = reversed[vertex];
+        let neighborIndex = 0;
+        while (neighborIndex < neighbors.len()) {
+          let neighbor = neighbors[neighborIndex];
+          if (!visited[neighbor]) {
+            visited[neighbor] = true;
+            componentStack.push(neighbor);
+          }
+          neighborIndex += 1;
+        }
+      }
+      components.push(component);
+    }
+  }
+  return components;
+}
+
 struct WeightedEdge {
   to: number,
   weight: number
@@ -1914,4 +2013,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, shortestWeightedDistances, shortestWeightedPath, minimumSpanningForest, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, shortestWeightedDistances, shortestWeightedPath, minimumSpanningForest, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
