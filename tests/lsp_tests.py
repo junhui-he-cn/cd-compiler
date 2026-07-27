@@ -60,6 +60,7 @@ def main() -> int:
 
     uri = "file:///tmp/compiler-design-lsp.cd"
     other_uri = "file:///tmp/compiler-design-lsp-other.cd"
+    module_uri = "file:///tmp/compiler-design-lsp-module.cd"
     process = subprocess.Popen(
         [sys.argv[1], "--lsp"],
         stdin=subprocess.PIPE,
@@ -453,6 +454,74 @@ def main() -> int:
             process,
             {
                 "jsonrpc": "2.0",
+                "method": "textDocument/didOpen",
+                "params": {
+                    "textDocument": {
+                        "uri": module_uri,
+                        "languageId": "compiler-design",
+                        "version": 1,
+                        "text": "let value = 42;\nexport value;\n",
+                    }
+                },
+            },
+        )
+        assert_publish(receive(process), module_uri, 0)
+
+        imported_source = (
+            'import "./compiler-design-lsp-module.cd";\n'
+            "print value;\n"
+        )
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didChange",
+                "params": {
+                    "textDocument": {"uri": uri, "version": 3},
+                    "contentChanges": [{"text": imported_source}],
+                },
+            },
+        )
+        assert_publish(receive(process), uri, 0)
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 17,
+                "method": "textDocument/definition",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 1, "character": 7},
+                },
+            },
+        )
+        imported_definition = receive(process)
+        if imported_definition.get("result") != {
+            "uri": module_uri,
+            "range": {
+                "start": {"line": 0, "character": 4},
+                "end": {"line": 0, "character": 9},
+            },
+        }:
+            raise AssertionError(
+                f"cross-module definition response mismatch: {imported_definition!r}"
+            )
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didClose",
+                "params": {"textDocument": {"uri": module_uri}},
+            },
+        )
+        assert_publish(receive(process), module_uri, 0)
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
                 "method": "textDocument/didClose",
                 "params": {"textDocument": {"uri": other_uri}},
             },
@@ -465,7 +534,7 @@ def main() -> int:
                 "jsonrpc": "2.0",
                 "method": "textDocument/didChange",
                 "params": {
-                    "textDocument": {"uri": uri, "version": 3},
+                    "textDocument": {"uri": uri, "version": 4},
                     "contentChanges": [{"text": "let =;\n"}],
                 },
             },
@@ -480,7 +549,7 @@ def main() -> int:
                 "jsonrpc": "2.0",
                 "method": "textDocument/didChange",
                 "params": {
-                    "textDocument": {"uri": uri, "version": 4},
+                    "textDocument": {"uri": uri, "version": 5},
                     "contentChanges": [{"text": "print missing;\n"}],
                 },
             },

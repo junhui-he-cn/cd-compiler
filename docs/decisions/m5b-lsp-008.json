@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m5b-2026-07-27-r8",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M5B-LSP-008",
+  "domain": "language-server-virtual-workspace",
+  "status": "resolved",
+  "question": "How should the prototype LSP analyze opened modules and navigate an unqualified imported symbol?",
+  "decision": "Analyze the open file URIs as one virtual-source frontend snapshot and resolve direct-import definitions through explicit exports and export-from chains.",
+  "workspace": {
+    "sources": "currently open file URIs only",
+    "ordering": "the document that triggered the update first, then URI order",
+    "dependency_loading": "virtual sources only; closed or missing imports produce diagnostics",
+    "snapshot": "one shared FrontendSession, module graph, DeclarationIndex, reference collection, and TypeChecker result per workspace update"
+  },
+  "definition": {
+    "local": "DeclarationIndex plus TypeChecker binding metadata",
+    "imported": "unqualified direct import followed through explicit export or export-from declarations",
+    "response": "target URI and source-local range",
+    "namespace_alias": "out of scope",
+    "snapshot_ids": "never serialized"
+  },
+  "compatibility_boundary": {
+    "local_queries": "references, hover, completion, rename, document symbols, and workspace symbols remain source-local",
+    "disk": "opened module sources do not fall back to filesystem reads",
+    "synchronization": "full-document open/change/close remains unchanged"
+  },
+  "quantitative_gate": "tests/lsp_tests.py covers two open modules, clean diagnostics, direct-import definition URI, and declaration range.",
+  "out_of_scope": [
+    "filesystem dependency discovery",
+    "namespace-alias definition",
+    "cross-module references",
+    "cross-module rename and completion",
+    "persistent semantic caching",
+    "range-based synchronization"
+  ],
+  "verification": {
+    "focused_commands": [
+      "cmake --build build -j2",
+      "python3 tests/lsp_tests.py ./build/compiler_design",
+      "ctest --test-dir build --output-on-failure -R '^language_server$'",
+      "git diff --check"
+    ]
+  }
+}

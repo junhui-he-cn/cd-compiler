@@ -1348,6 +1348,21 @@ cleanup. Scope-aware workspace candidates, imported module materialization,
 and cross-module definition/references remain later M5B slices. The decision
 is recorded in `docs/decisions/m5b-lsp-007.{md,json}`.
 
+`M5B-LSP-008` adds virtual-source workspace analysis for file-backed open
+documents. Each workspace update reuses one `FrontendSession`, module graph,
+`DeclarationIndex`, reference-site collection, and TypeChecker snapshot over
+the synchronized URI set; imports do not read closed or unrelated files from
+disk. `textDocument/definition` retains the local declaration-index path and
+adds unqualified direct-import navigation by following explicit exports and
+export-from chains to the target source declaration. Results serialize the
+target URI and source-local range, never snapshot-local IDs. Source-local
+references, hover, completion, rename, and document/workspace symbols retain
+their existing per-document query boundary; namespace aliases and broader
+cross-module navigation remain later slices. The focused protocol test covers
+two open modules, clean diagnostics, and a direct-import definition jump. The
+decision is recorded in
+`docs/decisions/m5b-lsp-008.{md,json}`.
+
 ### Milestone 5C: REPL / incremental evaluation
 
 **Dependency:** M3A module/session boundaries, M3B incremental compilation where
@@ -1585,11 +1600,13 @@ retain the resolved top-level blank-line, parser-accepted trailing-comma,
 bounded list-wrapping, and incomplete-input rejection policies without changing
 language semantics. Source fallback and direct-input adapters remain
 intentional.
-The next active tool slice is `M5B-LSP-008`; M5B-LSP-001 through
-M5B-LSP-007 now cover the single-document protocol, diagnostics, formatting,
-definitions, document symbols, references, bounded hover type information,
-rename edits, declaration completion, and open-document workspace symbols
-while cross-module navigation and workspace-aware completion remain open.
+The next active tool slice is cross-module navigation beyond direct imported
+values; M5B-LSP-001 through M5B-LSP-008 now cover the single-document
+protocol, diagnostics, formatting, definitions, document symbols, references,
+bounded hover type information, rename edits, declaration completion,
+open-document workspace symbols, virtual-source workspace analysis, and direct
+import definition jumps while namespace-aware navigation and workspace-aware
+completion remain open.
 
 ## Metrics dashboard
 

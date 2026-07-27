@@ -11,13 +11,16 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
+#include <filesystem>
 #include <limits>
 #include <map>
+#include <memory>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -911,26 +914,33 @@ std::optional<std::size_t> sourceByteAtLspPosition(
     return currentCharacter == character ? std::optional<std::size_t>(offset) : std::nullopt;
 }
 
-bool rangeContains(const SourceRange& range, std::size_t byte)
+bool rangeContains(const SourceRange& range, SourceFileId sourceId, std::size_t byte)
 {
-    return range.source.valid() && range.source.value == 0
+    return range.source.valid() && range.source == sourceId
         && range.start <= byte && byte < range.end;
 }
 
 std::optional<SourceRange> declarationRange(const DeclarationRecord& declaration)
 {
-    if (!declaration.range || !declaration.range->valid()
-        || declaration.range->source.value != 0) {
+    if (!declaration.range || !declaration.range->valid()) {
         return std::nullopt;
     }
     return declaration.range;
 }
 
-struct DocumentAnalysis {
-    std::vector<FileDiagnosticError> diagnostics;
+struct AnalysisSnapshot {
     std::optional<Program> program;
     DeclarationIndex declarationIndex;
     std::vector<ReferenceSite> referenceSites;
+    std::vector<SourceFile> sources;
+    std::map<std::size_t, std::string> sourceUris;
+    std::vector<FileDiagnosticError> diagnostics;
+};
+
+struct DocumentAnalysis {
+    std::vector<FileDiagnosticError> diagnostics;
+    std::shared_ptr<AnalysisSnapshot> snapshot;
+    SourceFileId sourceId;
 };
 
 LspPosition diagnosticFallbackPosition(const DiagnosticError& error)
@@ -944,13 +954,16 @@ LspPosition diagnosticFallbackPosition(const DiagnosticError& error)
     };
 }
 
-JsonValue diagnosticValue(const FileDiagnosticError& error, std::string_view source)
+JsonValue diagnosticValue(
+    const FileDiagnosticError& error,
+    std::string_view source,
+    SourceFileId sourceId)
 {
     LspPosition start = diagnosticFallbackPosition(error);
     LspPosition end = start;
     if (error.range()
         && error.range()->source.valid()
-        && error.range()->source.value == 0
+        && error.range()->source == sourceId
         && error.range()->end <= source.size()
         && error.range()->start <= error.range()->end) {
         start = lspPositionAt(source, error.range()->start);
@@ -982,47 +995,52 @@ JsonValue diagnosticValue(const FileDiagnosticError& error, std::string_view sou
 DocumentAnalysis analyzeDocument(const std::string& source)
 {
     DocumentAnalysis analysis;
+    analysis.snapshot = std::make_shared<AnalysisSnapshot>();
+    analysis.sourceId = SourceFileId{0};
+    AnalysisSnapshot& snapshot = *analysis.snapshot;
     std::istringstream input(source);
     TypeChecker typeChecker;
     try {
         FrontendSession frontend;
-        analysis.program.emplace(frontend.loadStdin(input));
-        analysis.declarationIndex = DeclarationIndex::collect(*analysis.program);
+        snapshot.program.emplace(frontend.loadStdin(input));
+        snapshot.sources = snapshot.program->sources;
+        snapshot.declarationIndex = DeclarationIndex::collect(*snapshot.program);
         ReferenceSiteCollector referenceCollector;
-        analysis.referenceSites = referenceCollector.collect(*analysis.program);
-        typeChecker.check(*analysis.program);
-        analysis.declarationIndex = typeChecker.declarationIndex();
+        snapshot.referenceSites = referenceCollector.collect(*snapshot.program);
+        typeChecker.check(*snapshot.program);
+        snapshot.declarationIndex = typeChecker.declarationIndex();
     } catch (const TypeErrorList& errors) {
-        analysis.declarationIndex = typeChecker.declarationIndex();
-        analysis.diagnostics = errors.errors();
+        snapshot.declarationIndex = typeChecker.declarationIndex();
+        snapshot.diagnostics = errors.errors();
     } catch (const FileDiagnosticErrorList& errors) {
-        analysis.diagnostics = errors.errors();
+        snapshot.diagnostics = errors.errors();
     } catch (const ParseErrorList& errors) {
-        analysis.diagnostics.reserve(errors.errors().size());
+        snapshot.diagnostics.reserve(errors.errors().size());
         for (const ParseError& error : errors.errors()) {
-            analysis.diagnostics.emplace_back(
+            snapshot.diagnostics.emplace_back(
                 error,
                 DiagnosticSourceContext{"<stdin>", source, true});
         }
     } catch (const LexErrorList& errors) {
-        analysis.diagnostics.reserve(errors.errors().size());
+        snapshot.diagnostics.reserve(errors.errors().size());
         for (const DiagnosticError& error : errors.errors()) {
-            analysis.diagnostics.emplace_back(
+            snapshot.diagnostics.emplace_back(
                 error,
                 DiagnosticSourceContext{"<stdin>", source, true});
         }
     } catch (const FileDiagnosticError& error) {
-        analysis.diagnostics.push_back(error);
+        snapshot.diagnostics.push_back(error);
     } catch (const DiagnosticError& error) {
-        analysis.diagnostics.emplace_back(
+        snapshot.diagnostics.emplace_back(
             error,
             DiagnosticSourceContext{"<stdin>", source, true});
     } catch (const std::exception& error) {
         DiagnosticError diagnostic(DiagnosticKind::Compile, error.what());
-        analysis.diagnostics.emplace_back(
+        snapshot.diagnostics.emplace_back(
             diagnostic,
             DiagnosticSourceContext{"<stdin>", source, true});
     }
+    analysis.diagnostics = snapshot.diagnostics;
     return analysis;
 }
 
@@ -1163,7 +1181,8 @@ std::optional<ResolvedSymbol> resolvedReference(
 }
 
 const DeclarationRecord* definitionAt(
-    const DocumentAnalysis& analysis,
+    const AnalysisSnapshot& snapshot,
+    SourceFileId sourceId,
     std::size_t byte)
 {
     const DeclarationRecord* best = nullptr;
@@ -1173,7 +1192,7 @@ const DeclarationRecord* definitionAt(
             return;
         }
         const std::optional<SourceRange> range = declarationRange(*declaration);
-        if (!range || !rangeContains(*range, byte)
+        if (!range || !rangeContains(*range, sourceId, byte)
             || declaration->kind == DeclarationKind::Module) {
             return;
         }
@@ -1185,20 +1204,21 @@ const DeclarationRecord* definitionAt(
         }
     };
 
-    for (const DeclarationRecord& declaration : analysis.declarationIndex.declarations()) {
+    for (const DeclarationRecord& declaration : snapshot.declarationIndex.declarations()) {
         consider(&declaration);
     }
 
-    for (const ReferenceSite& site : analysis.referenceSites) {
-        if (!site.range || !rangeContains(*site.range, byte)) {
+    for (const ReferenceSite& site : snapshot.referenceSites) {
+        if (!site.range || !rangeContains(*site.range, sourceId, byte)) {
             continue;
         }
         const std::optional<ResolvedSymbol> resolved
-            = resolvedReference(analysis.declarationIndex, site);
+            = resolvedReference(snapshot.declarationIndex, site);
         if (resolved) {
             const DeclarationRecord* target
-                = analysis.declarationIndex.declaration(resolved->declarationId);
-            if (target && declarationRange(*target)) {
+                = snapshot.declarationIndex.declaration(resolved->declarationId);
+            if (target && declarationRange(*target)
+                && target->range->source == sourceId) {
                 return target;
             }
         }
@@ -1253,11 +1273,12 @@ JsonValue sourceLocation(
 }
 
 std::vector<SourceRange> referenceRangesAt(
-    const DocumentAnalysis& analysis,
+    const AnalysisSnapshot& snapshot,
+    SourceFileId sourceId,
     std::size_t byte,
     bool includeDeclaration)
 {
-    const DeclarationRecord* target = definitionAt(analysis, byte);
+    const DeclarationRecord* target = definitionAt(snapshot, sourceId, byte);
     if (!target) {
         return {};
     }
@@ -1266,10 +1287,13 @@ std::vector<SourceRange> referenceRangesAt(
     if (includeDeclaration && target->range && declarationRange(*target)) {
         ranges.push_back(*target->range);
     }
-    for (const ReferenceSite& site : analysis.referenceSites) {
+    for (const ReferenceSite& site : snapshot.referenceSites) {
+        if (!site.range || site.range->source != sourceId) {
+            continue;
+        }
         const std::optional<ResolvedSymbol> resolved
-            = resolvedReference(analysis.declarationIndex, site);
-        if (!resolved || resolved->declarationId != target->declarationId || !site.range) {
+            = resolvedReference(snapshot.declarationIndex, site);
+        if (!resolved || resolved->declarationId != target->declarationId) {
             continue;
         }
         ranges.push_back(*site.range);
@@ -1306,18 +1330,20 @@ struct HoverInfo {
 };
 
 std::optional<HoverInfo> hoverInfoAt(
-    const DocumentAnalysis& analysis,
+    const AnalysisSnapshot& snapshot,
+    SourceFileId sourceId,
     std::size_t byte)
 {
     const ReferenceSite* bestSite = nullptr;
     const TypedExpressionRecord* bestType = nullptr;
     std::size_t bestWidth = std::numeric_limits<std::size_t>::max();
-    for (const ReferenceSite& site : analysis.referenceSites) {
-        if (!site.expression || !site.range || !rangeContains(*site.range, byte)) {
+    for (const ReferenceSite& site : snapshot.referenceSites) {
+        if (!site.expression || !site.range
+            || !rangeContains(*site.range, sourceId, byte)) {
             continue;
         }
         const TypedExpressionRecord* typed
-            = analysis.declarationIndex.typedExpression(*site.expression);
+            = snapshot.declarationIndex.typedExpression(*site.expression);
         if (!typed) {
             continue;
         }
@@ -1332,31 +1358,34 @@ std::optional<HoverInfo> hoverInfoAt(
         return HoverInfo{bestType->type, *bestSite->range};
     }
 
-    const DeclarationRecord* declaration = definitionAt(analysis, byte);
+    const DeclarationRecord* declaration = definitionAt(snapshot, sourceId, byte);
     if (!declaration || !declaration->range) {
         return std::nullopt;
     }
     if (const ResolvedSignatureRecord* signature
-        = analysis.declarationIndex.resolvedSignature(declaration->declarationId)) {
+        = snapshot.declarationIndex.resolvedSignature(declaration->declarationId)) {
         return HoverInfo{signature->type, *declaration->range};
     }
     if (const auto* let = dynamic_cast<const LetStmt*>(declaration->statement)) {
         if (let->initializer) {
             if (const TypedExpressionRecord* typed
-                = analysis.declarationIndex.typedExpression(*let->initializer)) {
+                = snapshot.declarationIndex.typedExpression(*let->initializer)) {
                 return HoverInfo{typed->type, *declaration->range};
             }
         }
     }
-    for (const ReferenceSite& site : analysis.referenceSites) {
+    for (const ReferenceSite& site : snapshot.referenceSites) {
+        if (!site.range || site.range->source != sourceId) {
+            continue;
+        }
         const std::optional<ResolvedSymbol> resolved
-            = resolvedReference(analysis.declarationIndex, site);
+            = resolvedReference(snapshot.declarationIndex, site);
         if (!resolved || resolved->declarationId != declaration->declarationId
             || !site.expression) {
             continue;
         }
         if (const TypedExpressionRecord* typed
-            = analysis.declarationIndex.typedExpression(*site.expression)) {
+            = snapshot.declarationIndex.typedExpression(*site.expression)) {
             return HoverInfo{typed->type, *declaration->range};
         }
     }
@@ -1439,6 +1468,322 @@ std::string completionDetail(
     return detail;
 }
 
+std::string canonicalPathFor(std::string_view path)
+{
+    const std::filesystem::path input{std::string(path)};
+    std::error_code error;
+    const std::filesystem::path canonical = std::filesystem::weakly_canonical(input, error);
+    if (!error) {
+        return canonical.lexically_normal().generic_string();
+    }
+    return std::filesystem::absolute(input, error).lexically_normal().generic_string();
+}
+
+std::optional<unsigned char> hexDigit(char character)
+{
+    if (character >= '0' && character <= '9') {
+        return static_cast<unsigned char>(character - '0');
+    }
+    if (character >= 'a' && character <= 'f') {
+        return static_cast<unsigned char>(character - 'a' + 10);
+    }
+    if (character >= 'A' && character <= 'F') {
+        return static_cast<unsigned char>(character - 'A' + 10);
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> uriFilePath(std::string_view uri)
+{
+    constexpr std::string_view prefix = "file://";
+    if (uri.rfind(prefix, 0) != 0) {
+        return std::nullopt;
+    }
+
+    std::string encoded(uri.substr(prefix.size()));
+    const std::size_t slash = encoded.find('/');
+    if (slash == std::string::npos) {
+        return std::nullopt;
+    }
+    if (slash != 0 && encoded.substr(0, slash) != "localhost") {
+        return std::nullopt;
+    }
+    std::string decoded = encoded.substr(slash);
+    std::string result;
+    result.reserve(decoded.size());
+    for (std::size_t index = 0; index < decoded.size(); ++index) {
+        if (decoded[index] != '%') {
+            result.push_back(decoded[index]);
+            continue;
+        }
+        if (index + 2 >= decoded.size()) {
+            return std::nullopt;
+        }
+        const std::optional<unsigned char> high = hexDigit(decoded[index + 1]);
+        const std::optional<unsigned char> low = hexDigit(decoded[index + 2]);
+        if (!high || !low) {
+            return std::nullopt;
+        }
+        result.push_back(static_cast<char>((*high << 4) | *low));
+        index += 2;
+    }
+    return result;
+}
+
+const std::string* sourceTextFor(const AnalysisSnapshot& snapshot, SourceFileId sourceId)
+{
+    for (const SourceFile& source : snapshot.sources) {
+        if (source.id == sourceId) {
+            return &source.text;
+        }
+    }
+    return nullptr;
+}
+
+const ModuleStmt* moduleForSource(const AnalysisSnapshot& snapshot, SourceFileId sourceId)
+{
+    if (!snapshot.program) {
+        return nullptr;
+    }
+    for (const StmtPtr& statement : snapshot.program->statements) {
+        const auto* module = dynamic_cast<const ModuleStmt*>(statement.get());
+        if (module && module->sourceId == sourceId) {
+            return module;
+        }
+    }
+    return nullptr;
+}
+
+const ModuleStmt* moduleForId(const AnalysisSnapshot& snapshot, std::size_t moduleId)
+{
+    if (!snapshot.program) {
+        return nullptr;
+    }
+    for (const StmtPtr& statement : snapshot.program->statements) {
+        const auto* module = dynamic_cast<const ModuleStmt*>(statement.get());
+        if (module && module->moduleId == moduleId) {
+            return module;
+        }
+    }
+    return nullptr;
+}
+
+const DeclarationRecord* topLevelDeclaration(
+    const AnalysisSnapshot& snapshot,
+    const ModuleStmt& module,
+    std::string_view name)
+{
+    for (const StmtPtr& statement : module.statements) {
+        if (!statement) {
+            continue;
+        }
+        const DeclarationRecord* declaration = snapshot.declarationIndex.declaration(*statement);
+        if (declaration && declaration->name == name && declarationRange(*declaration)) {
+            return declaration;
+        }
+    }
+    return nullptr;
+}
+
+bool exportNamesContain(const ExportStmt& exportStatement, std::string_view name)
+{
+    return std::any_of(
+        exportStatement.names.begin(),
+        exportStatement.names.end(),
+        [name](const Token& token) { return token.lexeme == name; });
+}
+
+struct DefinitionTarget {
+    const DeclarationRecord* declaration = nullptr;
+    SourceFileId sourceId;
+};
+
+std::optional<DefinitionTarget> exportedDefinition(
+    const AnalysisSnapshot& snapshot,
+    std::size_t moduleId,
+    std::string_view name,
+    std::unordered_set<std::size_t>& visiting)
+{
+    if (!visiting.insert(moduleId).second) {
+        return std::nullopt;
+    }
+    const ModuleStmt* module = moduleForId(snapshot, moduleId);
+    if (!module) {
+        visiting.erase(moduleId);
+        return std::nullopt;
+    }
+
+    for (const StmtPtr& statement : module->statements) {
+        const auto* exportStatement = dynamic_cast<const ExportStmt*>(statement.get());
+        if (!exportStatement || !exportNamesContain(*exportStatement, name)) {
+            continue;
+        }
+        if (exportStatement->sourcePath) {
+            const std::optional<DefinitionTarget> forwarded = exportedDefinition(
+                snapshot,
+                exportStatement->resolvedModuleId,
+                name,
+                visiting);
+            if (forwarded) {
+                visiting.erase(moduleId);
+                return forwarded;
+            }
+            continue;
+        }
+        if (const DeclarationRecord* declaration = topLevelDeclaration(snapshot, *module, name)) {
+            visiting.erase(moduleId);
+            return DefinitionTarget{declaration, module->sourceId};
+        }
+    }
+
+    visiting.erase(moduleId);
+    return std::nullopt;
+}
+
+std::optional<DefinitionTarget> importedDefinitionAt(
+    const AnalysisSnapshot& snapshot,
+    SourceFileId sourceId,
+    std::size_t byte)
+{
+    const ModuleStmt* module = moduleForSource(snapshot, sourceId);
+    if (!module) {
+        return std::nullopt;
+    }
+
+    std::string name;
+    for (const ReferenceSite& site : snapshot.referenceSites) {
+        if (!site.range || !rangeContains(*site.range, sourceId, byte) || !site.expression) {
+            continue;
+        }
+        if (const auto* variable = dynamic_cast<const VariableExpr*>(site.expression)) {
+            name = variable->name.lexeme;
+            break;
+        }
+        if (const auto* assignment = dynamic_cast<const AssignExpr*>(site.expression)) {
+            name = assignment->name.lexeme;
+            break;
+        }
+        if (const auto* compound = dynamic_cast<const CompoundAssignExpr*>(site.expression)) {
+            name = compound->name.lexeme;
+            break;
+        }
+    }
+    if (name.empty()) {
+        return std::nullopt;
+    }
+
+    for (const StmtPtr& statement : module->statements) {
+        const auto* import = dynamic_cast<const ImportStmt*>(statement.get());
+        if (!import || import->alias || import->resolvedModuleId == static_cast<std::size_t>(-1)) {
+            continue;
+        }
+        std::unordered_set<std::size_t> visiting;
+        if (const std::optional<DefinitionTarget> target = exportedDefinition(
+                snapshot,
+                import->resolvedModuleId,
+                name,
+                visiting)) {
+            return target;
+        }
+    }
+    return std::nullopt;
+}
+
+std::shared_ptr<AnalysisSnapshot> analyzeVirtualWorkspace(
+    const std::vector<FrontendVirtualFile>& files,
+    const std::map<std::string, std::string>& uriByCanonicalPath)
+{
+    auto snapshot = std::make_shared<AnalysisSnapshot>();
+    TypeChecker typeChecker;
+    try {
+        FrontendSession frontend;
+        snapshot->program.emplace(frontend.loadVirtualFiles(files));
+        snapshot->sources = snapshot->program->sources;
+        snapshot->declarationIndex = DeclarationIndex::collect(*snapshot->program);
+        ReferenceSiteCollector referenceCollector;
+        snapshot->referenceSites = referenceCollector.collect(*snapshot->program);
+
+        if (snapshot->program->moduleGraph) {
+            for (const ModuleGraphNode& node : snapshot->program->moduleGraph->nodes) {
+                const auto found = uriByCanonicalPath.find(node.canonicalPath);
+                if (found != uriByCanonicalPath.end()) {
+                    snapshot->sourceUris[node.sourceId.value] = found->second;
+                }
+            }
+        }
+        for (const SourceFile& source : snapshot->sources) {
+            if (snapshot->sourceUris.find(source.id.value) != snapshot->sourceUris.end()) {
+                continue;
+            }
+            const auto found = uriByCanonicalPath.find(canonicalPathFor(source.path));
+            if (found != uriByCanonicalPath.end()) {
+                snapshot->sourceUris[source.id.value] = found->second;
+            }
+        }
+
+        typeChecker.check(*snapshot->program);
+        snapshot->declarationIndex = typeChecker.declarationIndex();
+    } catch (const TypeErrorList& errors) {
+        snapshot->declarationIndex = typeChecker.declarationIndex();
+        snapshot->diagnostics = errors.errors();
+    } catch (const FileDiagnosticErrorList& errors) {
+        snapshot->diagnostics = errors.errors();
+    } catch (const FileDiagnosticError& error) {
+        snapshot->diagnostics.push_back(error);
+    } catch (const DiagnosticError& error) {
+        snapshot->diagnostics.emplace_back(
+            error,
+            DiagnosticSourceContext{"<workspace>", {}, false});
+    } catch (const std::exception& error) {
+        DiagnosticError diagnostic(DiagnosticKind::Compile, error.what());
+        snapshot->diagnostics.emplace_back(
+            diagnostic,
+            DiagnosticSourceContext{"<workspace>", {}, false});
+    }
+    return snapshot;
+}
+
+DocumentAnalysis documentAnalysisFor(
+    const std::shared_ptr<AnalysisSnapshot>& snapshot,
+    const std::string& uri,
+    const std::string& path)
+{
+    DocumentAnalysis analysis;
+    analysis.snapshot = snapshot;
+    for (const auto& entry : snapshot->sourceUris) {
+        if (entry.second == uri) {
+            analysis.sourceId = SourceFileId{entry.first};
+            break;
+        }
+    }
+    if (!analysis.sourceId.valid()) {
+        const std::string canonicalPath = canonicalPathFor(path);
+        for (const FileDiagnosticError& error : snapshot->diagnostics) {
+            if (!error.range() || !error.range()->source.valid()) {
+                continue;
+            }
+            if (canonicalPathFor(error.sourceContext().path) == canonicalPath) {
+                analysis.sourceId = error.range()->source;
+                break;
+            }
+        }
+    }
+    for (const FileDiagnosticError& error : snapshot->diagnostics) {
+        if (error.range() && error.range()->source.valid()) {
+            if (error.range()->source == analysis.sourceId) {
+                analysis.diagnostics.push_back(error);
+            }
+            continue;
+        }
+        if (!error.sourceContext().path.empty()
+            && canonicalPathFor(error.sourceContext().path) != canonicalPathFor(path)) {
+            continue;
+        }
+        analysis.diagnostics.push_back(error);
+    }
+    return analysis;
+}
+
 JsonValue documentSymbol(
     std::string_view source,
     const DeclarationRecord& declaration)
@@ -1460,12 +1805,13 @@ JsonValue documentSymbol(
 JsonValue publishDiagnostics(
     const std::string& uri,
     const std::string& source,
+    SourceFileId sourceId,
     const std::vector<FileDiagnosticError>& diagnostics)
 {
     std::vector<JsonValue> values;
     values.reserve(diagnostics.size());
     for (const FileDiagnosticError& diagnostic : diagnostics) {
-        values.push_back(diagnosticValue(diagnostic, source));
+        values.push_back(diagnosticValue(diagnostic, source, sourceId));
     }
     return makeObject({
         {"jsonrpc", JsonValue::string("2.0")},
@@ -1633,11 +1979,60 @@ private:
         return stringMember(*document, "uri");
     }
 
+    void rebuildWorkspaceAnalyses(const std::optional<std::string>& preferredUri = std::nullopt)
+    {
+        if (documents_.empty()) {
+            return;
+        }
+
+        std::vector<std::string> orderedUris;
+        orderedUris.reserve(documents_.size());
+        if (preferredUri && documents_.find(*preferredUri) != documents_.end()) {
+            orderedUris.push_back(*preferredUri);
+        }
+        for (const auto& entry : documents_) {
+            if (!preferredUri || entry.first != *preferredUri) {
+                orderedUris.push_back(entry.first);
+            }
+        }
+
+        std::vector<FrontendVirtualFile> files;
+        files.reserve(orderedUris.size());
+        std::map<std::string, std::string> uriByCanonicalPath;
+        for (const std::string& uri : orderedUris) {
+            const std::optional<std::string> path = uriFilePath(uri);
+            if (!path) {
+                for (auto& entry : documents_) {
+                    entry.second.analysis = analyzeDocument(entry.second.text);
+                }
+                return;
+            }
+            files.push_back(FrontendVirtualFile{*path, documents_.at(uri).text});
+            uriByCanonicalPath[canonicalPathFor(*path)] = uri;
+        }
+
+        const std::shared_ptr<AnalysisSnapshot> snapshot = analyzeVirtualWorkspace(
+            files,
+            uriByCanonicalPath);
+        for (auto& entry : documents_) {
+            const std::optional<std::string> path = uriFilePath(entry.first);
+            if (!path) {
+                entry.second.analysis = analyzeDocument(entry.second.text);
+                continue;
+            }
+            entry.second.analysis = documentAnalysisFor(snapshot, entry.first, *path);
+        }
+    }
+
     void publish(std::ostream& output, const std::string& uri, const Document& document)
     {
         writeMessage(
             output,
-            publishDiagnostics(uri, document.text, document.analysis.diagnostics));
+            publishDiagnostics(
+                uri,
+                document.text,
+                document.analysis.sourceId,
+                document.analysis.diagnostics));
     }
 
     void handleDidOpen(const JsonValue& request, std::ostream& output)
@@ -1657,7 +2052,6 @@ private:
         }
         Document state;
         state.text = *text;
-        state.analysis = analyzeDocument(state.text);
         documents_[*uri] = std::move(state);
         if (const JsonValue* version = member(*document, "version")) {
             if (version->kind == JsonValue::Kind::Number) {
@@ -1669,6 +2063,7 @@ private:
                 }
             }
         }
+        rebuildWorkspaceAnalyses(*uri);
         publish(output, *uri, documents_.at(*uri));
     }
 
@@ -1692,7 +2087,6 @@ private:
         }
         Document& document = documents_[*uri];
         document.text = *text;
-        document.analysis = analyzeDocument(document.text);
         if (const JsonValue* version = member(*params, "textDocument")) {
             if (const JsonValue* value = member(*version, "version")) {
                 if (value->kind == JsonValue::Kind::Number) {
@@ -1703,6 +2097,7 @@ private:
                 }
             }
         }
+        rebuildWorkspaceAnalyses(*uri);
         publish(output, *uri, document);
     }
 
@@ -1713,9 +2108,10 @@ private:
             return;
         }
         documents_.erase(*uri);
+        rebuildWorkspaceAnalyses();
         writeMessage(
             output,
-            publishDiagnostics(*uri, "", {}));
+            publishDiagnostics(*uri, "", SourceFileId{}, {}));
     }
 
     JsonValue handleFormatting(const JsonValue& request) const
@@ -1749,9 +2145,12 @@ private:
             return JsonValue::null();
         }
         const auto found = documents_.find(*uri);
-        if (found == documents_.end() || !found->second.analysis.program) {
+        if (found == documents_.end()
+            || !found->second.analysis.snapshot
+            || !found->second.analysis.snapshot->program) {
             return JsonValue::null();
         }
+        const AnalysisSnapshot& snapshot = *found->second.analysis.snapshot;
         const std::optional<std::size_t> byte = sourceByteAtLspPosition(
             found->second.text,
             position->line,
@@ -1760,12 +2159,28 @@ private:
             return JsonValue::null();
         }
         const DeclarationRecord* declaration = definitionAt(
-            found->second.analysis,
+            snapshot,
+            found->second.analysis.sourceId,
             *byte);
-        if (!declaration || !declaration->range) {
+        if (declaration && declaration->range) {
+            return definitionLocation(*uri, found->second.text, *declaration);
+        }
+        const std::optional<DefinitionTarget> imported = importedDefinitionAt(
+            snapshot,
+            found->second.analysis.sourceId,
+            *byte);
+        if (!imported || !imported->declaration || !imported->declaration->range) {
             return JsonValue::null();
         }
-        return definitionLocation(*uri, found->second.text, *declaration);
+        const auto uriForSource = snapshot.sourceUris.find(imported->sourceId.value);
+        const std::string* source = sourceTextFor(snapshot, imported->sourceId);
+        if (uriForSource == snapshot.sourceUris.end() || !source) {
+            return JsonValue::null();
+        }
+        return definitionLocation(
+            uriForSource->second,
+            *source,
+            *imported->declaration);
     }
 
     JsonValue handleReferences(const JsonValue& request) const
@@ -1776,9 +2191,12 @@ private:
             return JsonValue::array({});
         }
         const auto found = documents_.find(*uri);
-        if (found == documents_.end() || !found->second.analysis.program) {
+        if (found == documents_.end()
+            || !found->second.analysis.snapshot
+            || !found->second.analysis.snapshot->program) {
             return JsonValue::array({});
         }
+        const AnalysisSnapshot& snapshot = *found->second.analysis.snapshot;
         const std::optional<std::size_t> byte = sourceByteAtLspPosition(
             found->second.text,
             position->line,
@@ -1796,7 +2214,8 @@ private:
         }
 
         const std::vector<SourceRange> ranges = referenceRangesAt(
-            found->second.analysis,
+            snapshot,
+            found->second.analysis.sourceId,
             *byte,
             includeDeclaration);
         std::vector<JsonValue> locations;
@@ -1815,9 +2234,12 @@ private:
             return JsonValue::null();
         }
         const auto found = documents_.find(*uri);
-        if (found == documents_.end() || !found->second.analysis.program) {
+        if (found == documents_.end()
+            || !found->second.analysis.snapshot
+            || !found->second.analysis.snapshot->program) {
             return JsonValue::null();
         }
+        const AnalysisSnapshot& snapshot = *found->second.analysis.snapshot;
         const std::optional<std::size_t> byte = sourceByteAtLspPosition(
             found->second.text,
             position->line,
@@ -1825,7 +2247,10 @@ private:
         if (!byte) {
             return JsonValue::null();
         }
-        const std::optional<HoverInfo> info = hoverInfoAt(found->second.analysis, *byte);
+        const std::optional<HoverInfo> info = hoverInfoAt(
+            snapshot,
+            found->second.analysis.sourceId,
+            *byte);
         return info
             ? hoverValue(found->second.text, *info)
             : JsonValue::null();
@@ -1842,8 +2267,14 @@ private:
             return JsonValue::null();
         }
         const auto found = documents_.find(*uri);
-        if (found == documents_.end() || !found->second.analysis.program
+        if (found == documents_.end()
+            || !found->second.analysis.snapshot
+            || !found->second.analysis.snapshot->program
             || !found->second.analysis.diagnostics.empty()) {
+            return JsonValue::null();
+        }
+        const AnalysisSnapshot& snapshot = *found->second.analysis.snapshot;
+        if (snapshot.program->moduleGraph) {
             return JsonValue::null();
         }
         const std::optional<std::size_t> byte = sourceByteAtLspPosition(
@@ -1854,7 +2285,8 @@ private:
             return JsonValue::null();
         }
         const std::vector<SourceRange> ranges = referenceRangesAt(
-            found->second.analysis,
+            snapshot,
+            found->second.analysis.sourceId,
             *byte,
             true);
         if (ranges.empty()) {
@@ -1863,7 +2295,7 @@ private:
 
         std::string renamed = found->second.text;
         for (auto range = ranges.rbegin(); range != ranges.rend(); ++range) {
-            if (!range->source.valid() || range->source.value != 0
+            if (!range->source.valid() || range->source != found->second.analysis.sourceId
                 || range->start > range->end || range->end > renamed.size()) {
                 return JsonValue::null();
             }
@@ -1900,12 +2332,15 @@ private:
             });
         }
         const auto found = documents_.find(*uri);
-        if (found == documents_.end() || !found->second.analysis.program) {
+        if (found == documents_.end()
+            || !found->second.analysis.snapshot
+            || !found->second.analysis.snapshot->program) {
             return makeObject({
                 {"isIncomplete", JsonValue::booleanValue(false)},
                 {"items", JsonValue::array({})},
             });
         }
+        const AnalysisSnapshot& snapshot = *found->second.analysis.snapshot;
         const std::optional<std::size_t> byte = sourceByteAtLspPosition(
             found->second.text,
             position->line,
@@ -1919,11 +2354,15 @@ private:
 
         const std::string prefix = completionPrefix(found->second.text, *byte);
         std::size_t prefixStart = *byte - prefix.size();
-        const SourceRange replaceRange{SourceFileId{0}, prefixStart, *byte};
+        const SourceRange replaceRange{
+            found->second.analysis.sourceId,
+            prefixStart,
+            *byte};
         std::vector<const DeclarationRecord*> declarations;
         for (const DeclarationRecord& declaration
-             : found->second.analysis.declarationIndex.declarations()) {
+             : snapshot.declarationIndex.declarations()) {
             if (!declarationRange(declaration)
+                || declaration.range->source != found->second.analysis.sourceId
                 || declaration.kind == DeclarationKind::Module
                 || (declaration.name.size() < prefix.size())
                 || declaration.name.compare(0, prefix.size(), prefix) != 0) {
@@ -1951,7 +2390,7 @@ private:
                 {"label", JsonValue::string(declaration->name)},
                 {"kind", JsonValue::number(std::to_string(completionItemKind(declaration->kind)))},
                 {"detail", JsonValue::string(completionDetail(
-                    found->second.analysis.declarationIndex,
+                    snapshot.declarationIndex,
                     *declaration))},
                 {"textEdit", makeObject({
                     {"range", textDocumentRange(found->second.text, replaceRange)},
@@ -1979,13 +2418,15 @@ private:
         std::vector<Candidate> candidates;
         for (const auto& entry : documents_) {
             const Document& document = entry.second;
-            if (!document.analysis.program) {
+            if (!document.analysis.snapshot || !document.analysis.snapshot->program) {
                 continue;
             }
+            const AnalysisSnapshot& snapshot = *document.analysis.snapshot;
             for (const DeclarationRecord& declaration
-                 : document.analysis.declarationIndex.declarations()) {
+                 : snapshot.declarationIndex.declarations()) {
                 if (declaration.kind == DeclarationKind::Module
                     || !declarationRange(declaration)
+                    || declaration.range->source != document.analysis.sourceId
                     || (!query.empty() && declaration.name.find(query) == std::string::npos)) {
                     continue;
                 }
@@ -2031,13 +2472,17 @@ private:
             return JsonValue::array({});
         }
         const auto found = documents_.find(*uri);
-        if (found == documents_.end() || !found->second.analysis.program) {
+        if (found == documents_.end()
+            || !found->second.analysis.snapshot
+            || !found->second.analysis.snapshot->program) {
             return JsonValue::array({});
         }
+        const AnalysisSnapshot& snapshot = *found->second.analysis.snapshot;
 
         std::vector<const DeclarationRecord*> declarations;
-        for (const DeclarationRecord& declaration : found->second.analysis.declarationIndex.declarations()) {
-            if (declarationRange(declaration)) {
+        for (const DeclarationRecord& declaration : snapshot.declarationIndex.declarations()) {
+            if (declarationRange(declaration)
+                && declaration.range->source == found->second.analysis.sourceId) {
                 declarations.push_back(&declaration);
             }
         }

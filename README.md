@@ -42,10 +42,13 @@ The compiler pipeline includes:
 - Language server: `--lsp` starts a stdio JSON-RPC service with full-document
   synchronization, shared lexer/parser/type diagnostics, whole-document
   formatting edits, definition lookup, document symbols, references, hover
-  type information for known typed expressions and callable declarations, and
-  single-document rename edits and declaration completion. The first service
-  boundary is single-document and keeps stdin's existing import restriction;
-  cross-module navigation and workspace-wide completion remain later slices.
+  type information for known typed expressions and callable declarations,
+  single-document rename edits and declaration completion, and open-document
+  workspace symbols. File-backed open URIs are analyzed as a shared virtual
+  workspace; unqualified direct imports can navigate to declarations in other
+  opened modules, including explicit export-from forwarding. Closed imports,
+  namespace aliases, cross-module references/rename/completion, and
+  workspace-wide completion remain later slices.
 
 For example:
 
