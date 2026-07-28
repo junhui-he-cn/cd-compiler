@@ -897,6 +897,106 @@ Program
                                     Expr (= (index low parent) (index low vertex))
             Expr (+= root 1)
       Return result
+    Fun eulerTrail(graph: Graph, start: number): [number]
+      Let result: [number] = (array)
+      If (group (field graph directed))
+        Then
+          Block
+            Return result
+      Let count = (member-call graph vertexCount)
+      If (group (|| (< start 0) (>= start count)))
+        Then
+          Block
+            Return result
+      Let degrees: [number] = (array)
+      Let oddCount = 0
+      Let index = 0
+      While (group (< index count))
+        Body
+          Block
+            Let degree = (member-call (index (field graph adjacency) index) len)
+            Let neighborIndex = 0
+            While (group (< neighborIndex (member-call (index (field graph adjacency) index) len)))
+              Body
+                Block
+                  If (group (== (index (index (field graph adjacency) index) neighborIndex) index))
+                    Then
+                      Block
+                        Expr (+= degree 1)
+                  Expr (+= neighborIndex 1)
+            Expr (member-call degrees push degree)
+            If (group (!= (* (call floor (/ degree 2)) 2) degree))
+              Then
+                Block
+                  Expr (+= oddCount 1)
+            Expr (+= index 1)
+      If (group (&& (!= oddCount 0) (!= oddCount 2)))
+        Then
+          Block
+            Return result
+      If (group (&& (== oddCount 2) (== (* (call floor (/ (index degrees start) 2)) 2) (index degrees start))))
+        Then
+          Block
+            Return result
+      Let remaining: [[number]] = (array)
+      Expr (= index 0)
+      While (group (< index count))
+        Body
+          Block
+            Let neighbors: [number] = (array)
+            Let neighborIndex = 0
+            While (group (< neighborIndex (member-call (index (field graph adjacency) index) len)))
+              Body
+                Block
+                  Expr (member-call neighbors push (index (index (field graph adjacency) index) neighborIndex))
+                  Expr (+= neighborIndex 1)
+            Expr (member-call remaining push neighbors)
+            Expr (+= index 1)
+      Let stack: [number] = (array start)
+      While (group (> (member-call stack len) 0))
+        Body
+          Block
+            Let currentIndex = (- (member-call stack len) 1)
+            Let current = (index stack currentIndex)
+            If (group (> (member-call (index remaining current) len) 0))
+              Then
+                Block
+                  Let neighbor = (member-call (index remaining current) pop)
+                  If (group (!= neighbor current))
+                    Then
+                      Block
+                        Let reverseIndex = 0
+                        While (group (&& (< reverseIndex (member-call (index remaining neighbor) len)) (!= (index (index remaining neighbor) reverseIndex) current)))
+                          Body
+                            Block
+                              Expr (+= reverseIndex 1)
+                        If (group (>= reverseIndex (member-call (index remaining neighbor) len)))
+                          Then
+                            Block
+                              Return (array)
+                        While (group (< (+ reverseIndex 1) (member-call (index remaining neighbor) len)))
+                          Body
+                            Block
+                              Expr (= (index (index remaining neighbor) reverseIndex) (index (index remaining neighbor) (+ reverseIndex 1)))
+                              Expr (+= reverseIndex 1)
+                        Expr (member-call (index remaining neighbor) pop)
+                  Expr (member-call stack push neighbor)
+              Else
+                Block
+                  Expr (member-call result push current)
+                  Expr (member-call stack pop)
+      If (group (!= (member-call result len) (+ (member-call graph edgeCount) 1)))
+        Then
+          Block
+            Return (array)
+      Let reversed: [number] = (array)
+      Expr (= index (member-call result len))
+      While (group (> index 0))
+        Body
+          Block
+            Expr (-= index 1)
+            Expr (member-call reversed push (index result index))
+      Return reversed
     Fun shortestDistances(graph: Graph, start: number): [number]
       Let distances: [number] = (array)
       Let count = (member-call graph vertexCount)
@@ -2174,7 +2274,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances allPairsWeightedDistances shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances allPairsWeightedDistances shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Fun renderEntries(values: [ds.MultiSetEntry<string>]): string

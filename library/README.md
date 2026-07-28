@@ -101,6 +101,7 @@ print ds.connectedComponents(graph);
 print ds.isBipartite(graph);
 print ds.articulationPoints(graph);
 print ds.bridges(graph);
+print ds.eulerTrail(graph, 0);
 print ds.shortestPath(graph, 0, 2);
 
 let dag = ds.newGraph(3, true);
@@ -354,6 +355,11 @@ are bipartite; the check runs in `O(V + E)` time with `O(V)` auxiliary space.
 order. `bridges(graph)` returns `[parent, child]` edge pairs in DFS completion
 order. Both return `[]` for directed graphs and use iterative Tarjan low-link
 traversal in `O(V + E)` time and `O(V)` auxiliary space.
+
+`eulerTrail(graph, start)` uses Hierholzer traversal for undirected graphs and
+returns a vertex sequence covering every edge once. It requires zero or two odd
+vertices, uses an odd vertex as the start when two exist, and returns `[]` for
+invalid, disconnected, directed, or empty-edge cases. Self-loops are supported.
 
 `shortestDistances(graph, start)` uses BFS to return one distance per vertex;
 unreachable vertices and invalid starts use `-1`. `shortestPath(graph, start,

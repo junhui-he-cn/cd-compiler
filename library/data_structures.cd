@@ -1048,6 +1048,94 @@ fun bridges(graph: Graph): [[number]] {
   return result;
 }
 
+fun eulerTrail(graph: Graph, start: number): [number] {
+  let result: [number] = [];
+  if (graph.directed) {
+    return result;
+  }
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count) {
+    return result;
+  }
+
+  let degrees: [number] = [];
+  let oddCount = 0;
+  let index = 0;
+  while (index < count) {
+    let degree = graph.adjacency[index].len();
+    let neighborIndex = 0;
+    while (neighborIndex < graph.adjacency[index].len()) {
+      if (graph.adjacency[index][neighborIndex] == index) {
+        degree += 1;
+      }
+      neighborIndex += 1;
+    }
+    degrees.push(degree);
+    if (floor(degree / 2) * 2 != degree) {
+      oddCount += 1;
+    }
+    index += 1;
+  }
+  if (oddCount != 0 && oddCount != 2) {
+    return result;
+  }
+  if (oddCount == 2 && floor(degrees[start] / 2) * 2 == degrees[start]) {
+    return result;
+  }
+
+  let remaining: [[number]] = [];
+  index = 0;
+  while (index < count) {
+    let neighbors: [number] = [];
+    let neighborIndex = 0;
+    while (neighborIndex < graph.adjacency[index].len()) {
+      neighbors.push(graph.adjacency[index][neighborIndex]);
+      neighborIndex += 1;
+    }
+    remaining.push(neighbors);
+    index += 1;
+  }
+
+  let stack: [number] = [start];
+  while (stack.len() > 0) {
+    let currentIndex = stack.len() - 1;
+    let current = stack[currentIndex];
+    if (remaining[current].len() > 0) {
+      let neighbor = remaining[current].pop();
+      if (neighbor != current) {
+        let reverseIndex = 0;
+        while (reverseIndex < remaining[neighbor].len()
+               && remaining[neighbor][reverseIndex] != current) {
+          reverseIndex += 1;
+        }
+        if (reverseIndex >= remaining[neighbor].len()) {
+          return [];
+        }
+        while (reverseIndex + 1 < remaining[neighbor].len()) {
+          remaining[neighbor][reverseIndex] = remaining[neighbor][reverseIndex + 1];
+          reverseIndex += 1;
+        }
+        remaining[neighbor].pop();
+      }
+      stack.push(neighbor);
+    } else {
+      result.push(current);
+      stack.pop();
+    }
+  }
+
+  if (result.len() != graph.edgeCount() + 1) {
+    return [];
+  }
+  let reversed: [number] = [];
+  index = result.len();
+  while (index > 0) {
+    index -= 1;
+    reversed.push(result[index]);
+  }
+  return reversed;
+}
+
 fun shortestDistances(graph: Graph, start: number): [number] {
   let distances: [number] = [];
   let count = graph.vertexCount();
@@ -2308,4 +2396,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, shortestWeightedDistances, allPairsWeightedDistances, shortestWeightedPath, minimumSpanningForest, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, shortestWeightedDistances, allPairsWeightedDistances, shortestWeightedPath, minimumSpanningForest, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;

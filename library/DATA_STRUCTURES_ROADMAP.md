@@ -57,6 +57,7 @@
 - 图遍历：`breadthFirstOrder`、`depthFirstOrder`。
 - 无向连通性：`connectedComponents`、`isBipartite`。
 - 无向割点与桥：`articulationPoints`、`bridges`。
+- 欧拉路径：无向图 `eulerTrail`。
 - 无权图路径：`shortestDistances`、`shortestPath`。
 - DAG 视图：`inDegrees`、`topologicalOrder`、`hasCycle`。
 - 加权图：非负 `WeightedEdge`/`WeightedGraph`、Dijkstra、Floyd-Warshall 与最小生成森林。
@@ -269,6 +270,8 @@ enum Result<T, E> {
 `isBipartite` 已提供无向图的 BFS 二着色检查；有向图、自环和奇环返回 `false`。
 `articulationPoints` 和 `bridges` 已提供迭代 Tarjan low-link 版本；有向图查询
 返回空数组，割点按编号排序而桥保留 DFS 完成顺序。
+`eulerTrail` 已提供无向图 Hierholzer 路径恢复，检查奇度顶点、连通性和起点，
+当前图的自环表示也纳入处理。
 `shortestDistances` 和 `shortestPath` 已提供基于 BFS 的无权图距离和路径，
 不可达顶点使用 `-1` 或空路径。
 `inDegrees` 和 `topologicalOrder` 已提供有向无环图的入度与 Kahn 拓扑排序；
