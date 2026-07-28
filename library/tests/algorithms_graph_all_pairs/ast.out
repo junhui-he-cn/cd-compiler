@@ -2177,34 +2177,15 @@ Program
     Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances allPairsWeightedDistances shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
-    Fun renderIntervals(values: [ds.Interval]): string
-      If (group (== (member-call values len) 0))
-        Then
-          Block
-            Return "empty"
-      Let result = ""
-      Let index = 0
-      While (group (< index (member-call values len)))
-        Body
-          Block
-            If (group (> index 0))
-              Then
-                Block
-                  Expr (= result (+ result ","))
-            Let value = (index values index)
-            Expr (= result (+ (+ (+ (+ (+ result "[") (call str (field value start))) ",") (call str (field value end))) "]"))
-            Expr (+= index 1)
-      Return result
-    Let left: [ds.Interval] = (array (construct ds.Interval start: 5 end: 7) (construct ds.Interval start: 1 end: 3) (construct ds.Interval start: 2 end: 6) (construct ds.Interval start: 8 end: 10) (construct ds.Interval start: 10 end: 12))
-    Let right: [ds.Interval] = (array (construct ds.Interval start: 11 end: 14) (construct ds.Interval start: 6 end: 9) (construct ds.Interval start: 0 end: 2) (construct ds.Interval start: 3 end: 5))
-    Print (call renderIntervals (member-call ds intersectIntervals left right))
-    Print (call renderIntervals left)
-    Print (call renderIntervals right)
-    Let touching: [ds.Interval] = (array (construct ds.Interval start: 1 end: 2))
-    Let touchingRight: [ds.Interval] = (array (construct ds.Interval start: 2 end: 4))
-    Print (call renderIntervals (member-call ds intersectIntervals touching touchingRight))
-    Let disjoint: [ds.Interval] = (array (construct ds.Interval start: 10 end: 12))
-    Print (call renderIntervals (member-call ds intersectIntervals touching disjoint))
-    Let empty: [ds.Interval] = (array)
-    Print (call renderIntervals (member-call ds intersectIntervals empty right))
-    Print (call renderIntervals (member-call ds intersectIntervals left empty))
+    Let directed = (member-call ds newWeightedGraph 4 true)
+    Expr (member-call directed addEdge 0 1 2)
+    Expr (member-call directed addEdge 1 2 3)
+    Expr (member-call directed addEdge 0 2 10)
+    Expr (member-call directed addEdge 2 3 1)
+    Print (member-call ds allPairsWeightedDistances directed)
+    Let undirected = (member-call ds newWeightedGraph 3 false)
+    Expr (member-call undirected addEdge 0 1 4)
+    Expr (member-call undirected addEdge 1 2 1)
+    Print (member-call ds allPairsWeightedDistances undirected)
+    Let empty = (member-call ds newWeightedGraph 0 false)
+    Print (member-call ds allPairsWeightedDistances empty)

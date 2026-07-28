@@ -114,6 +114,7 @@ let weighted = ds.newWeightedGraph(3, false);
 weighted.addEdge(0, 1, 2);
 weighted.addEdge(1, 2, 3);
 print ds.shortestWeightedPath(weighted, 0, 2);
+print ds.allPairsWeightedDistances(weighted);
 
 let forest = ds.minimumSpanningForest(weighted);
 print forest.edgeCount();
@@ -386,6 +387,11 @@ scan implementation runs in `O(V^2 + E)` time and `O(V)` auxiliary space.
 Disconnected inputs produce one tree per component; directed inputs produce an
 empty forest with the same vertex count. The array-scan implementation runs in
 `O(V^2 + E)` time and `O(V)` auxiliary space.
+
+`allPairsWeightedDistances(graph)` returns a Floyd–Warshall distance matrix for
+the non-negative weighted graph, with diagonal zeroes and `-1` for unreachable
+pairs. It supports directed and undirected graphs, runs in `O(V^3)` time, and
+uses `O(V^2)` auxiliary space.
 
 The array algorithms are non-mutating and return shallow copies where they
 return arrays:

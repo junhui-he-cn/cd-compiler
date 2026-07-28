@@ -59,7 +59,7 @@
 - 无向割点与桥：`articulationPoints`、`bridges`。
 - 无权图路径：`shortestDistances`、`shortestPath`。
 - DAG 视图：`inDegrees`、`topologicalOrder`、`hasCycle`。
-- 加权图：非负 `WeightedEdge`/`WeightedGraph`、Dijkstra 与最小生成森林。
+- 加权图：非负 `WeightedEdge`/`WeightedGraph`、Dijkstra、Floyd-Warshall 与最小生成森林。
 - 强连通分量：有向图的 `stronglyConnectedComponents`。
 
 它们的现有 API 和示例继续作为兼容基线。后续新增 API 不应悄悄改变空值、
@@ -280,6 +280,8 @@ enum Result<T, E> {
 实现使用数组扫描选择最短未访问顶点。
 `minimumSpanningForest` 已提供无向加权图的 Prim 版本；非连通输入返回森林，
 有向输入返回同顶点数的空森林。
+`allPairsWeightedDistances` 已提供非负权图的 Floyd-Warshall 全源距离矩阵，
+不可达项使用 `-1`。
 
 - 遍历、复制、拼接、分块、窗口、批处理；
 - `reverse`、`rotate`、`partition`、稳定分区、按谓词分组；

@@ -1465,6 +1465,59 @@ fun shortestWeightedDistances(graph: WeightedGraph, start: number): [number] {
   return distances;
 }
 
+fun allPairsWeightedDistances(graph: WeightedGraph): [[number]] {
+  let distances: [[number]] = [];
+  let count = graph.vertexCount();
+  let index = 0;
+  while (index < count) {
+    let row: [number] = [];
+    let column = 0;
+    while (column < count) {
+      row.push(-1);
+      column += 1;
+    }
+    row[index] = 0;
+    distances.push(row);
+    index += 1;
+  }
+
+  let from = 0;
+  while (from < count) {
+    let neighbors = graph.adjacency[from];
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let edge = neighbors[neighborIndex];
+      if (distances[from][edge.to] < 0 || edge.weight < distances[from][edge.to]) {
+        distances[from][edge.to] = edge.weight;
+      }
+      neighborIndex += 1;
+    }
+    from += 1;
+  }
+
+  let via = 0;
+  while (via < count) {
+    from = 0;
+    while (from < count) {
+      if (distances[from][via] >= 0) {
+        let to = 0;
+        while (to < count) {
+          if (distances[via][to] >= 0) {
+            let candidate = distances[from][via] + distances[via][to];
+            if (distances[from][to] < 0 || candidate < distances[from][to]) {
+              distances[from][to] = candidate;
+            }
+          }
+          to += 1;
+        }
+      }
+      from += 1;
+    }
+    via += 1;
+  }
+  return distances;
+}
+
 fun shortestWeightedPath(graph: WeightedGraph, start: number, goal: number): [number] {
   let result: [number] = [];
   let count = graph.vertexCount();
@@ -2255,4 +2308,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, shortestWeightedDistances, shortestWeightedPath, minimumSpanningForest, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, shortestWeightedDistances, allPairsWeightedDistances, shortestWeightedPath, minimumSpanningForest, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
