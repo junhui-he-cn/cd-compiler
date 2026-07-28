@@ -561,6 +561,15 @@ primes in ascending order up to `floor(limit)`, or `[]` below `2`. The primality
 check uses trial division with `O(sqrt(n))` arithmetic steps; the sieve uses
 `O(n log log n)` time and `O(n)` auxiliary space for an integer bound `n`.
 
+`fastPower(base, exponent)` uses exponentiation by squaring for a non-negative
+integer exponent and returns `nil` for negative or non-integer exponents;
+`base^0`, including `0^0`, returns `1`. `factorial(value)` and
+`fibonacci(index)` likewise return `nil` for negative or non-integer inputs,
+with `factorial(0) == 1`, `fibonacci(0) == 0`, and `fibonacci(1) == 1`.
+`fastPower` takes `O(log exponent)` steps, while the current factorial and
+Fibonacci implementations take `O(value)`/`O(index)` steps; none define numeric
+overflow behavior.
+
 ## Current language limitation
 
 The language's builtin member-call sugar reserves names such as `push`, `pop`,
@@ -599,6 +608,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case numeric_algorithms_gcd`,
 `--case numeric_algorithms_extended_gcd`,
 `--case numeric_algorithms_primes`,
+`--case numeric_algorithms_sequences`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
 `--case array_algorithms_binary_search`, `--case array_algorithms_merge_sort`,

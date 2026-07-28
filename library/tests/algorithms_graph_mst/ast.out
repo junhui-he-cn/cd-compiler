@@ -2599,6 +2599,53 @@ Program
                   Expr (member-call primes push index)
             Expr (+= index 1)
       Return primes
+    Fun fastPower(base: number, exponent: number): number?
+      If (group (|| (< exponent 0) (!= (call floor exponent) exponent)))
+        Then
+          Block
+            Return nil
+      Let result = 1
+      Let factor = base
+      Let remaining = exponent
+      While (group (> remaining 0))
+        Body
+          Block
+            If (group (!= (* (call floor (/ remaining 2)) 2) remaining))
+              Then
+                Block
+                  Expr (*= result factor)
+            Expr (*= factor factor)
+            Expr (= remaining (call floor (/ remaining 2)))
+      Return result
+    Fun factorial(value: number): number?
+      If (group (|| (< value 0) (!= (call floor value) value)))
+        Then
+          Block
+            Return nil
+      Let result = 1
+      Let current = 2
+      While (group (<= current value))
+        Body
+          Block
+            Expr (*= result current)
+            Expr (+= current 1)
+      Return result
+    Fun fibonacci(index: number): number?
+      If (group (|| (< index 0) (!= (call floor index) index)))
+        Then
+          Block
+            Return nil
+      Let previous = 0
+      Let current = 1
+      Let step = 0
+      While (group (< step index))
+        Body
+          Block
+            Let next = (+ previous current)
+            Expr (= previous current)
+            Expr (= current next)
+            Expr (+= step 1)
+      Return previous
     Struct PriorityQueue<T> {heap: BinaryHeap<T>}
     Impl PriorityQueue<T>
       Method enqueue(value: T)
@@ -2615,7 +2662,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph ExtendedGcdResult newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph ExtendedGcdResult newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let graph = (member-call ds newWeightedGraph 5 false)
