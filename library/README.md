@@ -117,6 +117,7 @@ weighted.addEdge(1, 2, 3);
 print ds.shortestWeightedPath(weighted, 0, 2);
 print ds.allPairsWeightedDistances(weighted);
 print ds.maxFlow(weighted, 0, 2);
+print ds.minCut(weighted, 0, 2);
 
 let forest = ds.minimumSpanningForest(weighted);
 print forest.edgeCount();
@@ -405,6 +406,12 @@ capacities without modifying the input. It returns `0` for undirected or
 invalid source/sink inputs and uses `O(V * E^2)` time and `O(V^2)` auxiliary
 space.
 
+`minCut(graph, source, sink)` runs the same residual search and returns original
+positive-capacity edges crossing from the source-reachable side to the
+non-reachable side after maximum flow. It preserves input order and returns
+`[]` for undirected or invalid source/sink inputs. It uses `O(V * E^2)` time and
+`O(V^2)` auxiliary space.
+
 The array algorithms are non-mutating and return shallow copies where they
 return arrays:
 
@@ -560,6 +567,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case algorithms_graph_topological`,
 `--case algorithms_graph_traversal`,
 `--case algorithms_graph_paths`,
+`--case algorithms_graph_max_flow`, `--case algorithms_graph_min_cut`,
 `--case array_algorithms_basic`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
