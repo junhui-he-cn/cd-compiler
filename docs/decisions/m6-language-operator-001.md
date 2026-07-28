@@ -1,7 +1,8 @@
 # M6-LANG-OPERATOR-001: statically dispatched user-defined ordering operators
 
-Status: design resolved; builtin string-ordering slice implemented; user-defined
-struct operator implementation is not admitted yet.
+Status: design resolved; builtin string-ordering and local named-struct operator
+slices are implemented. Public interface/cache propagation and imported operator
+dispatch remain deferred.
 
 Baseline: `master` at `2592027` (`feat: add VSCode syntax highlighting`).
 
@@ -192,9 +193,9 @@ diagnostic convention for local and imported modules.
 
 ## Admission and verification gate
 
-This record resolves the language direction but does not activate an
-implementation slice. Before code changes, add a focused inventory and admit
-the slice in the roadmap. The corpus must independently cover:
+The local implementation slice is admitted in the roadmap. The remaining
+public interface/cache migration still requires a focused inventory and
+separate admission. Its corpus must independently cover:
 
 - parser, AST, formatter, and invalid declaration cases for all four symbols;
 - local struct operators, missing implementations, wrong right types, wrong

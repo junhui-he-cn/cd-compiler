@@ -1,0 +1,26 @@
+main registers=10
+0000  b0 = constant #0 nil
+0001  store_var @0 __method_Box_operator_Less#0, b0
+0002  b1 = make_function $0 </2
+0003  assign_var @5 __method_Box_operator_Less#0, b1
+0004  b2 = constant #2 1
+0005  b3 = struct @6 Box { @7 value: b2}
+0006  store_var @8 one#3, b3
+0007  b4 = constant #3 2
+0008  b5 = struct @9 Box { @10 value: b4}
+0009  store_var @11 two#4, b5
+0010  b6 = load_var @12 __method_Box_operator_Less#0
+0011  b7 = load_var @13 one#3
+0012  b8 = load_var @14 two#4
+0013  b9 = call b6(b7, b8)
+0014  print b9
+
+function $0 </2 registers=6
+0000  b0 = load_var @1 this#1
+0001  b1 = field b0,  @2 value
+0002  b2 = load_var @3 other#2
+0003  b3 = field b2,  @4 value
+0004  b4 = less b1, b3
+0005  return b4
+0006  b5 = constant #1 nil
+0007  return b5

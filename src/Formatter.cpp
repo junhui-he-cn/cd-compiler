@@ -37,6 +37,7 @@ bool isKeyword(TokenType type)
     case TokenType::For:
     case TokenType::If:
     case TokenType::Impl:
+    case TokenType::Operator:
     case TokenType::Import:
     case TokenType::In:
     case TokenType::As:
@@ -174,10 +175,11 @@ std::vector<bool> findGenericAngles(const std::vector<const Token*>& tokens)
 
         const Token& previous = *tokens[index - 1];
         const bool canStartAfterFun = previous.type == TokenType::Fun;
-        const bool canStartAdjacent = isWordLike(previous.type)
+        const bool canStartAdjacent = previous.type != TokenType::Operator
+            && (isWordLike(previous.type)
             || previous.type == TokenType::RightBracket
             || previous.type == TokenType::RightParen
-            || previous.type == TokenType::Greater;
+            || previous.type == TokenType::Greater);
         if (!canStartAfterFun && !canStartAdjacent) {
             continue;
         }
@@ -685,9 +687,13 @@ void emitOperator(
         return;
     }
 
+    const bool isDeclarationOperator = index > 0
+        && tokens[index - 1]->type == TokenType::Operator;
     state.space();
     state.writeRaw(token.lexeme);
-    state.space();
+    if (!isDeclarationOperator) {
+        state.space();
+    }
 }
 
 void emitToken(

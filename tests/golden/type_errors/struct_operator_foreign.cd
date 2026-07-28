@@ -1,0 +1,6 @@
+import "../import_struct_operator_foreign/lib.cd";
+impl Point {
+  operator <(other: Point): bool {
+    return this.x < other.x;
+  }
+}

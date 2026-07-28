@@ -206,7 +206,7 @@ void Parser::synchronizeImplMethod()
             continue;
         }
 
-        if (braceDepth == 0 && check(TokenType::Fun)) {
+        if (braceDepth == 0 && (check(TokenType::Fun) || check(TokenType::Operator))) {
             return;
         }
         advance();
@@ -479,9 +479,22 @@ StmtPtr Parser::implDeclaration()
 
 MethodDecl Parser::methodDeclaration()
 {
-    consume(TokenType::Fun, "expected `fun` method declaration in impl block");
-    Token name = consume(TokenType::Identifier, "expected method name after `fun`");
-    std::vector<TypeParameter> parsedTypeParameters = typeParameters();
+    const bool isOperator = match(TokenType::Operator);
+    Token name;
+    std::vector<TypeParameter> parsedTypeParameters;
+    if (isOperator) {
+        if (!match(TokenType::Less) && !match(TokenType::LessEqual)
+            && !match(TokenType::Greater) && !match(TokenType::GreaterEqual)) {
+            throw ParseError(
+                peek(),
+                "expected `<`, `<=`, `>`, or `>=` after `operator`");
+        }
+        name = previous();
+    } else {
+        consume(TokenType::Fun, "expected `fun` or `operator` method declaration in impl block");
+        name = consume(TokenType::Identifier, "expected method name after `fun`");
+        parsedTypeParameters = typeParameters();
+    }
     consume(TokenType::LeftParen, "expected `(` after method name");
     std::vector<Parameter> parsedParameters = parameters();
     consume(TokenType::RightParen, "expected `)` after method parameters");
@@ -495,7 +508,8 @@ MethodDecl Parser::methodDeclaration()
         std::move(parsedTypeParameters),
         std::move(parsedParameters),
         std::move(returnTypeName),
-        std::move(body));
+        std::move(body),
+        isOperator);
 }
 
 StmtPtr Parser::functionDeclaration()

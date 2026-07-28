@@ -1,0 +1,18 @@
+Program
+  Struct Person {age: number}
+  Impl Person
+    Operator <(other: Person): bool
+      Return (< (field this age) (field other age))
+    Operator <=(other: Person): bool
+      Return (<= (field this age) (field other age))
+    Operator >(other: Person): bool
+      Return (> (field this age) (field other age))
+    Operator >=(other: Person): bool
+      Return (>= (field this age) (field other age))
+  Let one = (construct Person age: 1)
+  Let two = (construct Person age: 2)
+  Print (< one two)
+  Print (<= one two)
+  Print (> two one)
+  Print (>= two one)
+  Print (< two one)

@@ -111,11 +111,41 @@ path. This slice is complete only when C++ emission and Rust execution agree,
 and the later user-defined operator slice can reuse the same comparison
 operations without introducing a second builtin path.
 
+### M6-LANG-OPERATOR-001B: local named-struct comparison operators
+
+**Status:** complete for local named structs in the defining compilation unit
+and linked `.cdbc 0.1` emission. Public interface/cache propagation remains a
+later slice.
+
+**Purpose:** add `operator <`, `operator <=`, `operator >`, and `operator >=`
+inside `impl` blocks. The left operand is the implicit `this` receiver, the
+right operand is one same nominal struct parameter, and the result is `bool`.
+Dispatch is resolved by the left operand and lowered through the existing
+ordinary function-call path.
+
+**Deliverable:** reserve `operator`, parse and print all four declarations,
+validate receiver/parameter/return/duplicate rules, reject foreign module
+implementations, and cover local generic receivers plus C++/Rust linked-artifact
+parity. Numeric and string comparisons retain their existing builtin paths.
+
+**Boundary:** user-defined operators are not exported through `.cdi` or module
+cache products in this slice, independent module products and imported/re-exported
+operator dispatch remain deferred, and custom structs do not satisfy `T: Ord`.
+`==`, `!=`, arithmetic, unary, logical, compound-assignment, enum, primitive,
+and dynamic operator behavior remain deferred.
+
+**Quantitative gate:** cover all four local symbols, invalid symbol recovery,
+missing implementation, wrong right type, wrong return, wrong parameter, and
+duplicate implementation diagnostics; run focused golden, Rust VM, formatter,
+CTest, and canonical verification; refresh the verification inventory and pass
+`git diff --check`.
+
 ## Next active slice
 
 No implementation slice is currently active. The next candidate is
-`M6-LANG-OPERATOR-001B`, which remains deferred until its focused inventory and
-implementation admission are reviewed against the resolved operator contract.
+`M6-LANG-OPERATOR-001C`, the public operator metadata/interface/cache migration
+described by the resolved decision record, followed by imported/re-exported and
+independent module-product parity.
 
 ## Planned follow-up specifications
 
@@ -124,16 +154,16 @@ start implementation before their decision records and focused inventories are
 written. In particular, the data-structure roadmap does not authorize adding
 concrete data-structure code to the compiler slice.
 
-### M6-LANG-OPERATOR-001B: user-defined struct comparison operators
+### M6-LANG-OPERATOR-001C: public operator metadata and module products
 
-**Status:** deferred after the completed builtin string-ordering slice. The
-resolved declaration and dispatch contract is recorded in
-`docs/decisions/m6-language-operator-001.{md,json}`; implementation requires a
-separate focused inventory admission.
+**Status:** local implementation complete after the builtin string-ordering
+slice. The public interface/cache portion remains deferred; the resolved
+declaration and dispatch contract is recorded in
+`docs/decisions/m6-language-operator-001.{md,json}`.
 
-**Purpose:** add `operator <`, `<=`, `>`, and `>=` declarations inside local
-named-struct `impl` blocks, with left-operand nominal dispatch, owner-module
-visibility, direct call lowering, and public interface/cache propagation.
+**Purpose:** extend the local operator implementation with public interface and
+module-cache propagation, imported/re-exported dispatch, and independent module
+product parity.
 
 **Boundary:** keep `==`, `!=`, arithmetic, unary, logical, compound-assignment,
 enum, primitive, dynamic, and generic capability-dictionary behavior deferred.
@@ -243,7 +273,8 @@ belongs in the baseline until that re-audit is merged and verified.
 master + shipped generic functions, callbacks, and module interfaces
   -> completed M6-LANG-001 static generic capability constraints
   -> completed M6-LANG-OPERATOR-001A builtin string ordering
-  -> M6-LANG-OPERATOR-001B user-defined struct comparison operators (deferred)
+  -> completed M6-LANG-OPERATOR-001B local struct comparison operators
+  -> M6-LANG-OPERATOR-001C public operator metadata and module products (deferred)
   -> language-enabled library specifications (no compiler-owned data structures)
 
 master + M5D-DEBUG-001
@@ -262,11 +293,11 @@ feat/m5c-repl
   -> M5C-REPL-001 re-audit, outside the active queue for now
 ```
 
-No implementation slice is currently active. M6-LANG-OPERATOR-001A is complete;
-M6-LANG-OPERATOR-001B, M5D-DEBUG-002, and the other entries remain deferred
-specifications with clear future boundaries. They do not reopen completed work
-or authorize concrete data-structure implementations in the compiler
-repository.
+No implementation slice is currently active. M6-LANG-OPERATOR-001A and the
+local 001B slice are complete; M6-LANG-OPERATOR-001C, M5D-DEBUG-002, and the
+other entries remain deferred specifications with clear future boundaries. They
+do not reopen completed work or authorize concrete data-structure
+implementations in the compiler repository.
 
 ## Verification contract
 

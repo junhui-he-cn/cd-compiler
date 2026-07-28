@@ -1,0 +1,6 @@
+struct Point { x: number }
+impl Point {
+  operator <(other: Point): number {
+    return this.x < other.x;
+  }
+}

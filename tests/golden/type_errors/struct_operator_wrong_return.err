@@ -1,0 +1,3 @@
+Type error at 3:12: operator `<` for struct `Point` must return bool
+    operator <(other: Point): number {
+             ^

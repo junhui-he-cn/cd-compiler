@@ -6459,6 +6459,34 @@
       "fixture": "tests/golden/parse_errors"
     },
     {
+      "case_id": "golden.parse_errors.struct_operator_invalid_symbol",
+      "runner": "golden",
+      "result_name": "parse_errors/struct_operator_invalid_symbol default(ast)",
+      "stage": "parse-error",
+      "capability_tags": [
+        "golden",
+        "parse_errors",
+        "fixture:struct_operator_invalid_symbol"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/struct_operator_invalid_symbol.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/struct_operator_invalid_symbol.cd",
+        "tests/golden/parse_errors/struct_operator_invalid_symbol.err",
+        "tests/golden/parse_errors/struct_operator_invalid_symbol.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
       "case_id": "golden.parse_errors.struct_trailing_comma",
       "runner": "golden",
       "result_name": "parse_errors/struct_trailing_comma default(ast)",
@@ -11864,6 +11892,89 @@
       "fixture": "tests/golden/generic_struct_methods"
     },
     {
+      "case_id": "golden.success.generic_struct_operator_ordering.ast",
+      "runner": "golden",
+      "result_name": "generic_struct_operator_ordering default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:generic_struct_operator_ordering"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/generic_struct_operator_ordering/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/generic_struct_operator_ordering/ast.out"
+      ],
+      "fixture": "tests/golden/generic_struct_operator_ordering"
+    },
+    {
+      "case_id": "golden.success.generic_struct_operator_ordering.bytecode",
+      "runner": "golden",
+      "result_name": "generic_struct_operator_ordering --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:generic_struct_operator_ordering"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/generic_struct_operator_ordering/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/generic_struct_operator_ordering/bytecode.out"
+      ],
+      "fixture": "tests/golden/generic_struct_operator_ordering"
+    },
+    {
+      "case_id": "golden.success.generic_struct_operator_ordering.ir",
+      "runner": "golden",
+      "result_name": "generic_struct_operator_ordering --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:generic_struct_operator_ordering"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/generic_struct_operator_ordering/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/generic_struct_operator_ordering/ir.out"
+      ],
+      "fixture": "tests/golden/generic_struct_operator_ordering"
+    },
+    {
       "case_id": "golden.success.generic_structs.ast",
       "runner": "golden",
       "result_name": "generic_structs default(ast)",
@@ -16593,6 +16704,117 @@
         "tests/golden/struct_methods_mutation/ir.out"
       ],
       "fixture": "tests/golden/struct_methods_mutation"
+    },
+    {
+      "case_id": "golden.success.struct_operator_ordering.ast",
+      "runner": "golden",
+      "result_name": "struct_operator_ordering default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:struct_operator_ordering"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/struct_operator_ordering/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/struct_operator_ordering/ast.out"
+      ],
+      "fixture": "tests/golden/struct_operator_ordering"
+    },
+    {
+      "case_id": "golden.success.struct_operator_ordering.bytecode",
+      "runner": "golden",
+      "result_name": "struct_operator_ordering --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:struct_operator_ordering"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/struct_operator_ordering/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/struct_operator_ordering/bytecode.out"
+      ],
+      "fixture": "tests/golden/struct_operator_ordering"
+    },
+    {
+      "case_id": "golden.success.struct_operator_ordering.ir",
+      "runner": "golden",
+      "result_name": "struct_operator_ordering --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:struct_operator_ordering"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/struct_operator_ordering/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/struct_operator_ordering/ir.out"
+      ],
+      "fixture": "tests/golden/struct_operator_ordering"
+    },
+    {
+      "case_id": "golden.success.struct_operator_ordering.module_interface",
+      "runner": "golden",
+      "result_name": "struct_operator_ordering --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:struct_operator_ordering"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/struct_operator_ordering/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/struct_operator_ordering/module-interface.out"
+      ],
+      "fixture": "tests/golden/struct_operator_ordering"
     },
     {
       "case_id": "golden.success.truthiness.ast",
@@ -25624,6 +25846,202 @@
       "fixture": "tests/golden/type_errors"
     },
     {
+      "case_id": "golden.type_errors.struct_operator_duplicate",
+      "runner": "golden",
+      "result_name": "type_errors/struct_operator_duplicate default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:struct_operator_duplicate"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/struct_operator_duplicate.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/struct_operator_duplicate.cd",
+        "tests/golden/type_errors/struct_operator_duplicate.err",
+        "tests/golden/type_errors/struct_operator_duplicate.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.struct_operator_foreign",
+      "runner": "golden",
+      "result_name": "type_errors/struct_operator_foreign default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:struct_operator_foreign"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/struct_operator_foreign.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/struct_operator_foreign.cd",
+        "tests/golden/type_errors/struct_operator_foreign.err",
+        "tests/golden/type_errors/struct_operator_foreign.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.struct_operator_missing",
+      "runner": "golden",
+      "result_name": "type_errors/struct_operator_missing default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:struct_operator_missing"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/struct_operator_missing.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/struct_operator_missing.cd",
+        "tests/golden/type_errors/struct_operator_missing.err",
+        "tests/golden/type_errors/struct_operator_missing.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.struct_operator_not_ord",
+      "runner": "golden",
+      "result_name": "type_errors/struct_operator_not_ord default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:struct_operator_not_ord"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/struct_operator_not_ord.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/struct_operator_not_ord.cd",
+        "tests/golden/type_errors/struct_operator_not_ord.err",
+        "tests/golden/type_errors/struct_operator_not_ord.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.struct_operator_wrong_parameter",
+      "runner": "golden",
+      "result_name": "type_errors/struct_operator_wrong_parameter default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:struct_operator_wrong_parameter"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/struct_operator_wrong_parameter.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/struct_operator_wrong_parameter.cd",
+        "tests/golden/type_errors/struct_operator_wrong_parameter.err",
+        "tests/golden/type_errors/struct_operator_wrong_parameter.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.struct_operator_wrong_return",
+      "runner": "golden",
+      "result_name": "type_errors/struct_operator_wrong_return default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:struct_operator_wrong_return"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/struct_operator_wrong_return.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/struct_operator_wrong_return.cd",
+        "tests/golden/type_errors/struct_operator_wrong_return.err",
+        "tests/golden/type_errors/struct_operator_wrong_return.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.struct_operator_wrong_right",
+      "runner": "golden",
+      "result_name": "type_errors/struct_operator_wrong_right default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:struct_operator_wrong_right"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/struct_operator_wrong_right.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/struct_operator_wrong_right.cd",
+        "tests/golden/type_errors/struct_operator_wrong_right.err",
+        "tests/golden/type_errors/struct_operator_wrong_right.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
       "case_id": "golden.type_errors.substr_non_number_length_static",
       "runner": "golden",
       "result_name": "type_errors/substr_non_number_length_static default(ast)",
@@ -28788,6 +29206,35 @@
         "tests/golden/parse_errors/struct_missing_value.cd",
         "tests/golden/parse_errors/struct_missing_value.err",
         "tests/golden/parse_errors/struct_missing_value.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
+      "case_id": "malformed.parse_error.struct_operator_invalid_symbol",
+      "runner": "malformed",
+      "result_name": "malformed.parse_error.struct_operator_invalid_symbol",
+      "stage": "diagnostic-recovery",
+      "capability_tags": [
+        "malformed",
+        "parser",
+        "diagnostic-recovery",
+        "golden-corpus"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/struct_operator_invalid_symbol.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/struct_operator_invalid_symbol.cd",
+        "tests/golden/parse_errors/struct_operator_invalid_symbol.err",
+        "tests/golden/parse_errors/struct_operator_invalid_symbol.exit"
       ],
       "fixture": "tests/golden/parse_errors"
     },
@@ -38591,6 +39038,68 @@
       "fixture": "tests/golden/generic_struct_methods"
     },
     {
+      "case_id": "rust_vm.golden.generic_struct_operator_ordering.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "generic_struct_operator_ordering emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:generic_struct_operator_ordering"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/generic_struct_operator_ordering/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/generic_struct_operator_ordering/run.out"
+      ],
+      "fixture": "tests/golden/generic_struct_operator_ordering"
+    },
+    {
+      "case_id": "rust_vm.golden.generic_struct_operator_ordering.run",
+      "runner": "rust_vm_golden",
+      "result_name": "generic_struct_operator_ordering rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:generic_struct_operator_ordering"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/generic_struct_operator_ordering/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/generic_struct_operator_ordering/run.out"
+      ],
+      "fixture": "tests/golden/generic_struct_operator_ordering"
+    },
+    {
       "case_id": "rust_vm.golden.generic_structs.emit",
       "runner": "rust_vm_golden",
       "result_name": "generic_structs emit",
@@ -45845,6 +46354,68 @@
         "tests/golden/struct_methods_mutation/run.out"
       ],
       "fixture": "tests/golden/struct_methods_mutation"
+    },
+    {
+      "case_id": "rust_vm.golden.struct_operator_ordering.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "struct_operator_ordering emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:struct_operator_ordering"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/struct_operator_ordering/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/struct_operator_ordering/run.out"
+      ],
+      "fixture": "tests/golden/struct_operator_ordering"
+    },
+    {
+      "case_id": "rust_vm.golden.struct_operator_ordering.run",
+      "runner": "rust_vm_golden",
+      "result_name": "struct_operator_ordering rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:struct_operator_ordering"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/struct_operator_ordering/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/struct_operator_ordering/run.out"
+      ],
+      "fixture": "tests/golden/struct_operator_ordering"
     },
     {
       "case_id": "rust_vm.golden.struct_runtime_type_name.emit",

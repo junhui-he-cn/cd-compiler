@@ -19,7 +19,7 @@ IMPORT_GRAPH_DIRECTIVE = re.compile(
     r"(?m)^\s*(?:import\b|export\b[^\n;]*\bfrom\b)"
 )
 EXPECTED_IMPORT_GRAPH_ENTRIES = 44
-EXPECTED_IMPORT_DIAGNOSTIC_ENTRIES = 31
+EXPECTED_IMPORT_DIAGNOSTIC_ENTRIES = 32
 
 
 def run(command: list[str]) -> subprocess.CompletedProcess[str]:

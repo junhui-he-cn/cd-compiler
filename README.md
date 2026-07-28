@@ -307,6 +307,25 @@ Static generic capability bounds `T: Eq` and `T: Ord` are also supported. `Eq`
   These bounds are compile-time checks only: they do not introduce trait
   objects, dynamic dispatch, or user-defined capability implementations.
 
+Named structs may define local ordering operators in an `impl` block. Each
+operator uses the left operand as `this`, accepts exactly one parameter of the
+same nominal struct type, and must return `bool`:
+
+```cd
+struct Person { age: number }
+impl Person {
+  operator <(other: Person): bool {
+    return this.age < other.age;
+  }
+}
+```
+
+The supported symbols are `<`, `<=`, `>`, and `>=`; dispatch is static and
+lowers to an ordinary direct function call. This slice is local to the struct's
+defining compilation unit, so the operator metadata is not yet exported via
+`.cdi` or module cache products, and custom structs do not automatically satisfy
+`T: Ord`.
+
 Struct values are created with named constructor expressions such as `Person { name: "Ada", age: 36 }` after a matching `struct Person { ... }` declaration. Generic declarations such as `struct Box<T> { value: T }` produce nominal types such as `Box<number>`; constructors infer type arguments from field values or expected annotations and may provide explicit arguments such as `Box<number> { value: 1 }`. Generic struct arguments are invariant and erased at runtime. Constructors preserve declared field behavior, require exact field names, and allow fields in any order. Field reads use `value.field`. Existing fields can be reassigned with `value.field = expression`; the assignment evaluates to the assigned value. Structs are reference values with identity equality, so aliases observe field mutation. Assigning a missing field is a runtime error when the target type is not statically known, and a type error when it is known.
 
 Named struct values also support record patterns in `match`, such as

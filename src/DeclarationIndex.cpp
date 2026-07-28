@@ -1091,6 +1091,18 @@ const CallTargetRecord* DeclarationIndex::callTarget(const MemberCallExpr& expre
     return found == memberCallTargets_.end() ? nullptr : &found->second;
 }
 
+const BinaryOperationRecord* DeclarationIndex::binaryOperation(const BinaryExpr& expression) const
+{
+    const auto found = binaryOperations_.find(&expression);
+    return found == binaryOperations_.end() ? nullptr : &found->second;
+}
+
+const CallTargetRecord* DeclarationIndex::callTarget(const BinaryExpr& expression) const
+{
+    const auto found = binaryOperationTargets_.find(&expression);
+    return found == binaryOperationTargets_.end() ? nullptr : &found->second;
+}
+
 const TypedExpressionRecord* DeclarationIndex::typedExpression(const Expr& expression) const
 {
     const auto found = typedExpressions_.find(&expression);
@@ -1367,6 +1379,20 @@ void DeclarationIndex::recordMemberCallTarget(
     memberCallTargets_.insert_or_assign(&expression, std::move(record));
 }
 
+void DeclarationIndex::recordBinaryOperation(
+    const BinaryExpr& expression,
+    BinaryOperationRecord record)
+{
+    binaryOperations_.insert_or_assign(&expression, std::move(record));
+}
+
+void DeclarationIndex::recordBinaryOperationTarget(
+    const BinaryExpr& expression,
+    CallTargetRecord record)
+{
+    binaryOperationTargets_.insert_or_assign(&expression, std::move(record));
+}
+
 void DeclarationIndex::recordReturn(const ReturnStmt& statement, TypeInfo type)
 {
     returnMetadata_.insert_or_assign(&statement, ReturnRecord{std::move(type)});
@@ -1605,6 +1631,23 @@ std::size_t DeclarationIndex::validateMetadata() const
             && targetFound->second.kind != CallTargetKind::StructMethod) {
             ++mismatches;
         }
+    }
+
+    for (const auto& entry : binaryOperations_) {
+        const BinaryOperationRecord& metadata = entry.second;
+        const auto targetFound = binaryOperationTargets_.find(entry.first);
+        const DeclarationRecord* target = targetFound == binaryOperationTargets_.end()
+            ? nullptr
+            : declaration(targetFound->second.target.declarationId);
+        if (metadata.calleeName.empty()
+            || targetFound == binaryOperationTargets_.end()
+            || targetFound->second.kind != CallTargetKind::StructMethod
+            || !target
+            || target->kind != DeclarationKind::Method) {
+            ++mismatches;
+            continue;
+        }
+        requireTypedExpression(*entry.first);
     }
 
     for (const FunctionExpr* expression : functionExpressions_) {

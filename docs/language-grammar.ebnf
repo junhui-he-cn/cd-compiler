@@ -55,7 +55,13 @@ implDecl    = "impl", identifier, [ typeParameters ],
 methodDecl  = "fun", identifier, [ typeParameters ],
               "(", [ parameters ], ")",
               [ ":", typeExpr ],
-              block ;
+              block
+            | operatorDecl ;
+
+operatorDecl = "operator", orderingOperator, "(", parameter, ")",
+               ":", "bool", block ;
+
+orderingOperator = "<" | "<=" | ">" | ">=" ;
 
 structFields = structField,
                { ",", structField } ;
@@ -287,9 +293,12 @@ functionType = "fun", "(", [ typeArguments ], ")", ":", typeExpr ;
    `geo.Point { x: 1 }`; fields may be omitted or reordered. OR-pattern
    alternatives must bind the same names. This slice supports nullable
    function parameter and return types, but not nullable function values such
-   as `(fun(number): string)?`. Ordering comparisons support `number` and
-   `string`; string order is Unicode-scalar lexicographic order with no
-   normalization or locale collation. *)
+   as `(fun(number): string)?`. Ordering comparisons support `number`,
+   `string`, and locally implemented named-struct operators. Struct operators
+   use the left operand as `this`, accept one same-typed right operand, and
+   return `bool`; they are not exported through the current module interface.
+   String order is Unicode-scalar lexicographic order with no normalization or
+   locale collation. *)
 
 typeArguments = typeExpr,
                 { ",", typeExpr } ;

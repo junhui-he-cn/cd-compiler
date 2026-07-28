@@ -51,6 +51,10 @@ struct MemberCallMetadataRecord {
     bool hasTarget = false;
 };
 
+struct BinaryOperationRecord {
+    std::string calleeName;
+};
+
 enum class CallTargetKind {
     Direct,
     StructMethod,
@@ -256,6 +260,7 @@ public:
     const FunctionMetadataRecord* functionMetadata(const FunctionExpr& expression) const;
     const FunctionMetadataRecord* functionMetadata(const MethodDecl& method) const;
     const MemberCallMetadataRecord* memberCallMetadata(const MemberCallExpr& expression) const;
+    const BinaryOperationRecord* binaryOperation(const BinaryExpr& expression) const;
     std::optional<DeclarationSignature> signature(DeclarationId id) const;
     const ResolvedSignatureRecord* resolvedSignature(DeclarationId id) const;
     std::optional<DeclarationShape> shape(DeclarationId id) const;
@@ -265,6 +270,7 @@ public:
     std::optional<ResolvedSymbol> patternBinding(const VariablePattern& pattern) const;
     const CallTargetRecord* callTarget(const CallExpr& expression) const;
     const CallTargetRecord* callTarget(const MemberCallExpr& expression) const;
+    const CallTargetRecord* callTarget(const BinaryExpr& expression) const;
     const TypedExpressionRecord* typedExpression(const Expr& expression) const;
     const NativeCallRecord* nativeCall(const Expr& expression) const;
     const VariantConstructorRecord* variantConstructor(const MemberCallExpr& expression) const;
@@ -336,6 +342,12 @@ private:
     void recordMemberCallTarget(
         const MemberCallExpr& expression,
         CallTargetRecord record);
+    void recordBinaryOperation(
+        const BinaryExpr& expression,
+        BinaryOperationRecord record);
+    void recordBinaryOperationTarget(
+        const BinaryExpr& expression,
+        CallTargetRecord record);
     void recordReturn(const ReturnStmt& statement, TypeInfo type);
     void recordResolvedSignature(DeclarationId id, TypeInfo type);
 
@@ -352,6 +364,8 @@ private:
     std::unordered_map<const CallExpr*, CallTargetRecord> callTargets_;
     std::unordered_map<const MemberCallExpr*, std::string> memberCallCandidates_;
     std::unordered_map<const MemberCallExpr*, CallTargetRecord> memberCallTargets_;
+    std::unordered_map<const BinaryExpr*, BinaryOperationRecord> binaryOperations_;
+    std::unordered_map<const BinaryExpr*, CallTargetRecord> binaryOperationTargets_;
     std::unordered_map<const VariableExpr*, ResolvedSymbol> variableReferences_;
     std::unordered_map<const AssignExpr*, ResolvedSymbol> assignmentReferences_;
     std::unordered_map<const CompoundAssignExpr*, ResolvedSymbol> compoundAssignmentReferences_;

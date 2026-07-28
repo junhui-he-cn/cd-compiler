@@ -1,0 +1,3 @@
+Type error at 6:12: duplicate operator `<` for struct `Point`
+    operator <(other: Point): bool {
+             ^

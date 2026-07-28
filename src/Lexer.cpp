@@ -305,6 +305,7 @@ void Lexer::identifier()
         {"for", TokenType::For},
         {"if", TokenType::If},
         {"impl", TokenType::Impl},
+        {"operator", TokenType::Operator},
         {"import", TokenType::Import},
         {"in", TokenType::In},
         {"as", TokenType::As},
@@ -414,6 +415,8 @@ std::string tokenTypeName(TokenType type)
         return "If";
     case TokenType::Impl:
         return "Impl";
+    case TokenType::Operator:
+        return "Operator";
     case TokenType::Import:
         return "Import";
     case TokenType::In:

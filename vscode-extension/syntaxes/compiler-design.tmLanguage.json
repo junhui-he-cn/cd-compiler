@@ -129,7 +129,7 @@
         },
         {
           "name": "keyword.declaration.compiler-design",
-          "match": "\\b(?:as|enum|export|fun|impl|import|let|private|struct)\\b"
+          "match": "\\b(?:as|enum|export|fun|impl|import|let|operator|private|struct)\\b"
         },
         {
           "name": "keyword.control.print.compiler-design",

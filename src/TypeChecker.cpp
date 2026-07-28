@@ -2680,6 +2680,12 @@ void TypeChecker::recordStructMethodExports(std::size_t moduleId, const std::str
         return;
     }
     for (const auto& method : methods->second) {
+        if (method.second.declaration && method.second.declaration->isOperator) {
+            // User-defined operators are local-only in this implementation
+            // slice.  They must not be advertised as ordinary public methods
+            // until their dedicated interface/cache shape is admitted.
+            continue;
+        }
         moduleSymbols_.recordMethodExport(moduleId, structName, method.first, methodSignatureFromInfo(method.second));
     }
 }
@@ -2687,9 +2693,14 @@ void TypeChecker::recordStructMethodExports(std::size_t moduleId, const std::str
 void TypeChecker::checkMethodNameAvailable(const StructTypeDecl& structType, const ImplStmt& statement, const MethodDecl& method) const
 {
     if (findMethod(statement.typeName.lexeme, method.name.lexeme)) {
+        if (method.isOperator) {
+            throw TypeError(method.name,
+                "duplicate operator `" + method.name.lexeme
+                    + "` for struct `" + statement.typeName.lexeme + "`");
+        }
         throw TypeError(method.name, "duplicate method `" + method.name.lexeme + "` for struct `" + statement.typeName.lexeme + "`");
     }
-    if (findStructField(structType, method.name.lexeme)) {
+    if (!method.isOperator && findStructField(structType, method.name.lexeme)) {
         throw TypeError(method.name,
             "method `" + method.name.lexeme + "` conflicts with field `" + method.name.lexeme + "` on struct `" + statement.typeName.lexeme + "`");
     }
@@ -2698,6 +2709,12 @@ void TypeChecker::checkMethodNameAvailable(const StructTypeDecl& structType, con
 void TypeChecker::registerMethodSignature(const StructTypeDecl& structType, const ImplStmt& statement, const MethodDecl& method)
 {
     checkMethodNameAvailable(structType, statement, method);
+
+    if (method.isOperator && !method.typeParameters.empty()) {
+        throw TypeError(method.name,
+            "operator `" + method.name.lexeme + "` for struct `"
+                + statement.typeName.lexeme + "` cannot declare type parameters");
+    }
 
     for (const std::string& receiverParameter : structType.genericParameters) {
         for (const TypeParameter& methodParameter : method.typeParameters) {
@@ -2717,19 +2734,45 @@ void TypeChecker::registerMethodSignature(const StructTypeDecl& structType, cons
     std::vector<std::shared_ptr<TypeInfo>> genericParameterConstraints
         = typeParameterConstraints(method.typeParameters);
     endTypeParameterScope();
-    MethodInfo info;
-    info.declaration = &method;
+
     std::vector<TypeInfo> receiverTypeArguments;
     receiverTypeArguments.reserve(structType.genericParameters.size());
     for (const std::string& receiverParameter : structType.genericParameters) {
         const TypeInfo* type = findTypeParameter(receiverParameter);
         receiverTypeArguments.push_back(type ? *type : typeParameterType(receiverParameter));
     }
-    info.receiverType = namedStructType(
+    TypeInfo receiverType = namedStructType(
         statement.typeName.lexeme, std::move(receiverTypeArguments));
+
+    if (method.isOperator) {
+        if (method.parameters.size() != 1
+            || parameterTypes.size() != 1
+            || !method.parameters.front().typeName
+            || !SemanticTypes::compatible(receiverType, parameterTypes.front())
+            || !SemanticTypes::compatible(parameterTypes.front(), receiverType)) {
+            throw TypeError(method.name,
+                "operator `" + method.name.lexeme + "` for struct `"
+                    + statement.typeName.lexeme
+                    + "` must accept exactly one right operand of type `"
+                    + typeInfoName(receiverType) + "`");
+        }
+        if (!expectedReturnType || expectedReturnType->kind != StaticType::Bool) {
+            throw TypeError(method.name,
+                "operator `" + method.name.lexeme + "` for struct `"
+                    + statement.typeName.lexeme + "` must return bool");
+        }
+    }
+
+    MethodInfo info;
+    info.declaration = &method;
+    info.receiverType = std::move(receiverType);
     info.parameterTypes = std::move(parameterTypes);
     info.returnType = expectedReturnType ? *expectedReturnType : unknownType();
-    info.resolvedName = makeResolvedName("__method_" + statement.typeName.lexeme + "_" + method.name.lexeme);
+    const std::string methodLabel = method.isOperator
+        ? "operator_" + tokenTypeName(method.name.type)
+        : method.name.lexeme;
+    info.resolvedName = makeResolvedName(
+        "__method_" + statement.typeName.lexeme + "_" + methodLabel);
     info.genericParameters = typeParameterNames(method.typeParameters);
     info.genericParameterConstraints = std::move(genericParameterConstraints);
     static_cast<void>(nextDeclarationId_++);
@@ -2863,6 +2906,14 @@ void TypeChecker::checkImpl(const ImplStmt& statement)
 
     auto& structMethods = methods_[statement.typeName.lexeme];
     for (const MethodDecl& method : statement.methods) {
+        if (method.isOperator
+            && !moduleStack_.empty()
+            && !moduleSymbols_.isLocalStruct(
+                moduleStack_.back(), statement.typeName.lexeme)) {
+            throw TypeError(method.name,
+                "cannot implement operator `" + method.name.lexeme
+                    + "` for imported struct `" + statement.typeName.lexeme + "`");
+        }
         registerMethodSignature(*structType, statement, method);
     }
     for (const MethodDecl& method : statement.methods) {
@@ -4671,7 +4722,9 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
     }
 
     if (const auto* binary = dynamic_cast<const BinaryExpr*>(&expression)) {
-        return CheckedExpression{checkBinary(*binary)};
+        CheckedExpression result{checkBinary(*binary)};
+        declarationIndex_.recordTypedExpression(*binary, result.type);
+        return result;
     }
 
     if (const auto* logical = dynamic_cast<const LogicalExpr*>(&expression)) {
@@ -6505,6 +6558,71 @@ TypeInfo TypeChecker::checkBinary(const BinaryExpr& expression)
             "binary `" + expression.op.lexeme + "` requires type parameter `"
                 + parameter + "` to satisfy " + capability);
     };
+
+    const bool isOrderingOperator = expression.op.type == TokenType::Greater
+        || expression.op.type == TokenType::GreaterEqual
+        || expression.op.type == TokenType::Less
+        || expression.op.type == TokenType::LessEqual;
+    if (isOrderingOperator
+        && left.kind == StaticType::Struct
+        && left.structName) {
+        const MethodInfo* method = findMethod(*left.structName, expression.op.lexeme);
+        if (!method || !method->declaration || !method->declaration->isOperator) {
+            throw TypeError(expression.op,
+                "struct `" + *left.structName
+                    + "` has no implementation for operator `"
+                    + expression.op.lexeme + "`");
+        }
+        if (method->parameterTypes.size() != 1) {
+            throw TypeError(expression.op, "internal error: invalid operator signature");
+        }
+        TypeSubstitutions receiverSubstitutions;
+        if (!method->receiverType.typeArguments.empty()) {
+            if (method->receiverType.typeArguments.size() != left.typeArguments.size()) {
+                throw TypeError(expression.op, "internal error: invalid operator receiver type");
+            }
+            for (std::size_t index = 0; index < method->receiverType.typeArguments.size(); ++index) {
+                inferTypeArguments(
+                    method->receiverType.typeArguments[index],
+                    left.typeArguments[index],
+                    receiverSubstitutions,
+                    expression.op);
+            }
+            const StructTypeDecl* structType = findStructType(*left.structName);
+            if (structType) {
+                validateGenericTypeArguments(
+                    structType->genericParameters,
+                    structType->genericParameterConstraints,
+                    receiverSubstitutions,
+                    expression.op,
+                    "operator receiver");
+            }
+        }
+        const TypeInfo expectedRight = SemanticTypes::substituteTypeParameters(
+            method->parameterTypes.front(), receiverSubstitutions);
+        if (SemanticTypes::isKnown(right)
+            && (!SemanticTypes::compatible(expectedRight, right)
+                || !SemanticTypes::compatible(right, expectedRight))) {
+            throw TypeError(expression.op,
+                "operator `" + expression.op.lexeme + "` for `"
+                    + *left.structName + "` expects right operand `"
+                    + typeInfoName(expectedRight) + "`, got "
+                    + typeInfoName(right));
+        }
+        const DeclarationRecord* target = declarationIndex_.declaration(*method->declaration);
+        if (!target) {
+            throw TypeError(expression.op, "internal error: missing operator declaration");
+        }
+        declarationIndex_.recordBinaryOperation(
+            expression,
+            BinaryOperationRecord{method->resolvedName});
+        declarationIndex_.recordBinaryOperationTarget(
+            expression,
+            CallTargetRecord{
+                CallTargetKind::StructMethod,
+                ResolvedSymbol{target->declarationId, target->symbolId}});
+        return simpleType(StaticType::Bool);
+    }
 
     switch (expression.op.type) {
     case TokenType::Plus:

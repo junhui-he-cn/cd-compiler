@@ -72,13 +72,15 @@ struct MethodDecl {
         std::vector<TypeParameter> typeParameters,
         std::vector<Parameter> parameters,
         std::optional<TypeAnnotation> returnTypeName,
-        std::vector<StmtPtr> body);
+        std::vector<StmtPtr> body,
+        bool isOperator = false);
 
     Token name;
     std::vector<TypeParameter> typeParameters;
     std::vector<Parameter> parameters;
     std::optional<TypeAnnotation> returnTypeName;
     std::vector<StmtPtr> body;
+    bool isOperator = false;
     std::optional<SourceRange> range;
     std::optional<SyntaxNodeId> syntaxNodeId;
 };

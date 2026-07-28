@@ -1,0 +1,11 @@
+struct Point { x: number }
+impl Point {
+  operator <(other: Point): bool {
+    return this.x < other.x;
+  }
+}
+fun before<T: Ord>(left: T, right: T): bool {
+  return left < right;
+}
+let point = Point { x: 1 };
+print before(point, point);

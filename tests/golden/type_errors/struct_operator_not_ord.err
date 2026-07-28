@@ -1,0 +1,3 @@
+Type error at 11:26: function call: type parameter T must satisfy Ord, got Point
+  print before(point, point);
+                           ^

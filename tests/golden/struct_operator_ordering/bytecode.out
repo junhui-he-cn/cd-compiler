@@ -1,0 +1,88 @@
+main registers=32
+0000  b0 = constant #0 nil
+0001  store_var @0 __method_Person_operator_Less#0, b0
+0002  b1 = make_function $0 </2
+0003  assign_var @5 __method_Person_operator_Less#0, b1
+0004  b2 = constant #2 nil
+0005  store_var @6 __method_Person_operator_LessEqual#1, b2
+0006  b3 = make_function $1 <=/2
+0007  assign_var @11 __method_Person_operator_LessEqual#1, b3
+0008  b4 = constant #4 nil
+0009  store_var @12 __method_Person_operator_Greater#2, b4
+0010  b5 = make_function $2 >/2
+0011  assign_var @17 __method_Person_operator_Greater#2, b5
+0012  b6 = constant #6 nil
+0013  store_var @18 __method_Person_operator_GreaterEqual#3, b6
+0014  b7 = make_function $3 >=/2
+0015  assign_var @23 __method_Person_operator_GreaterEqual#3, b7
+0016  b8 = constant #8 1
+0017  b9 = struct @24 Person { @25 age: b8}
+0018  store_var @26 one#12, b9
+0019  b10 = constant #9 2
+0020  b11 = struct @27 Person { @28 age: b10}
+0021  store_var @29 two#13, b11
+0022  b12 = load_var @30 __method_Person_operator_Less#0
+0023  b13 = load_var @31 one#12
+0024  b14 = load_var @32 two#13
+0025  b15 = call b12(b13, b14)
+0026  print b15
+0027  b16 = load_var @33 __method_Person_operator_LessEqual#1
+0028  b17 = load_var @34 one#12
+0029  b18 = load_var @35 two#13
+0030  b19 = call b16(b17, b18)
+0031  print b19
+0032  b20 = load_var @36 __method_Person_operator_Greater#2
+0033  b21 = load_var @37 two#13
+0034  b22 = load_var @38 one#12
+0035  b23 = call b20(b21, b22)
+0036  print b23
+0037  b24 = load_var @39 __method_Person_operator_GreaterEqual#3
+0038  b25 = load_var @40 two#13
+0039  b26 = load_var @41 one#12
+0040  b27 = call b24(b25, b26)
+0041  print b27
+0042  b28 = load_var @42 __method_Person_operator_Less#0
+0043  b29 = load_var @43 two#13
+0044  b30 = load_var @44 one#12
+0045  b31 = call b28(b29, b30)
+0046  print b31
+
+function $0 </2 registers=6
+0000  b0 = load_var @1 this#4
+0001  b1 = field b0,  @2 age
+0002  b2 = load_var @3 other#5
+0003  b3 = field b2,  @4 age
+0004  b4 = less b1, b3
+0005  return b4
+0006  b5 = constant #1 nil
+0007  return b5
+
+function $1 <=/2 registers=6
+0000  b0 = load_var @7 this#6
+0001  b1 = field b0,  @8 age
+0002  b2 = load_var @9 other#7
+0003  b3 = field b2,  @10 age
+0004  b4 = less_equal b1, b3
+0005  return b4
+0006  b5 = constant #3 nil
+0007  return b5
+
+function $2 >/2 registers=6
+0000  b0 = load_var @13 this#8
+0001  b1 = field b0,  @14 age
+0002  b2 = load_var @15 other#9
+0003  b3 = field b2,  @16 age
+0004  b4 = greater b1, b3
+0005  return b4
+0006  b5 = constant #5 nil
+0007  return b5
+
+function $3 >=/2 registers=6
+0000  b0 = load_var @19 this#10
+0001  b1 = field b0,  @20 age
+0002  b2 = load_var @21 other#11
+0003  b3 = field b2,  @22 age
+0004  b4 = greater_equal b1, b3
+0005  return b4
+0006  b5 = constant #7 nil
+0007  return b5
