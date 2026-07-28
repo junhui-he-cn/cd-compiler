@@ -2152,6 +2152,88 @@ fun stringLess(left: string, right: string): bool {
   return comparison < 0;
 }
 
+fun findSubstring(text: string, pattern: string): number {
+  if (pattern.len() == 0) {
+    return 0;
+  }
+  if (pattern.len() > text.len()) {
+    return -1;
+  }
+  let start = 0;
+  while (start <= text.len() - pattern.len()) {
+    let offset = 0;
+    while (offset < pattern.len()
+        && text.charAt(start + offset) == pattern.charAt(offset)) {
+      offset += 1;
+    }
+    if (offset == pattern.len()) {
+      return start;
+    }
+    start += 1;
+  }
+  return -1;
+}
+
+fun prefixFunction(pattern: string): [number] {
+  let prefix: [number] = [];
+  let index = 0;
+  while (index < pattern.len()) {
+    prefix.push(0);
+    index += 1;
+  }
+  let matched = 0;
+  index = 1;
+  while (index < pattern.len()) {
+    while (matched > 0 && pattern.charAt(index) != pattern.charAt(matched)) {
+      matched = prefix[matched - 1];
+    }
+    if (pattern.charAt(index) == pattern.charAt(matched)) {
+      matched += 1;
+    }
+    prefix[index] = matched;
+    index += 1;
+  }
+  return prefix;
+}
+
+fun kmpSearch(text: string, pattern: string): number {
+  if (pattern.len() == 0) {
+    return 0;
+  }
+  let prefix = prefixFunction(pattern);
+  let textIndex = 0;
+  let patternIndex = 0;
+  while (textIndex < text.len()) {
+    if (text.charAt(textIndex) == pattern.charAt(patternIndex)) {
+      textIndex += 1;
+      patternIndex += 1;
+      if (patternIndex == pattern.len()) {
+        return textIndex - patternIndex;
+      }
+    } else {
+      if (patternIndex > 0) {
+        patternIndex = prefix[patternIndex - 1];
+      } else {
+        textIndex += 1;
+      }
+    }
+  }
+  return -1;
+}
+
+fun isPalindrome(text: string): bool {
+  let left = 0;
+  let right = text.len() - 1;
+  while (left < right) {
+    if (text.charAt(left) != text.charAt(right)) {
+      return false;
+    }
+    left += 1;
+    right -= 1;
+  }
+  return true;
+}
+
 fun lowerBound<T>(values: [T], target: T, less: fun(T, T): bool): number {
   let low = 0;
   let high = values.len();
@@ -2991,4 +3073,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, ExtendedGcdResult, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, minimumSpanningForestKruskal, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, ExtendedGcdResult, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, minimumSpanningForestKruskal, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, kmpSearch, isPalindrome, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci;

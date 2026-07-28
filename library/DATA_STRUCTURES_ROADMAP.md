@@ -55,6 +55,7 @@
   `factorial`、`fibonacci`（整数输入契约）。
 - 二分查找：`lowerBound`、`upperBound`、`binarySearch`。
 - 字符串比较辅助：`compareStrings`、`stringLess`（当前限定可打印 ASCII）。
+- 字符串匹配：`findSubstring`、`prefixFunction`、`kmpSearch`、`isPalindrome`。
 - 并查集：整数顶点 `DisjointSet`，支持路径压缩和按大小合并。
 - 图基础结构：整数顶点数组邻接表 `Graph`，支持有向/无向边。
 - 图遍历：`breadthFirstOrder`、`depthFirstOrder`。
@@ -256,6 +257,8 @@ enum Result<T, E> {
 前两者返回插入边界，后者返回重复值的首个位置。
 `compareStrings` 和 `stringLess` 暂时使用库层可打印 ASCII 顺序，非 ASCII
 字符返回不可用结果，等待语言层字符串排序和运算符扩展决策。
+`findSubstring`、`prefixFunction` 和 `kmpSearch` 使用现有 Unicode scalar-value
+字符串位置语义；`isPalindrome` 按 scalar value 比较字符，不依赖 ASCII 排序。
 `mergeSort` 使用稳定的自底向上归并排序，返回新数组，不改变输入。
 `quickSort` 和 `quickSortInPlace` 使用中点 pivot 的原地分区版本；它们不保证
 稳定性，平均为 `O(n log n)`，最坏为 `O(n^2)`。

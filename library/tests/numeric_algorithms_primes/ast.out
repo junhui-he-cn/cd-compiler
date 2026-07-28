@@ -2032,6 +2032,97 @@ Program
           Block
             Return false
       Return (< comparison 0)
+    Fun findSubstring(text: string, pattern: string): number
+      If (group (== (member-call pattern len) 0))
+        Then
+          Block
+            Return 0
+      If (group (> (member-call pattern len) (member-call text len)))
+        Then
+          Block
+            Return (- 1)
+      Let start = 0
+      While (group (<= start (- (member-call text len) (member-call pattern len))))
+        Body
+          Block
+            Let offset = 0
+            While (group (&& (< offset (member-call pattern len)) (== (member-call text charAt (+ start offset)) (member-call pattern charAt offset))))
+              Body
+                Block
+                  Expr (+= offset 1)
+            If (group (== offset (member-call pattern len)))
+              Then
+                Block
+                  Return start
+            Expr (+= start 1)
+      Return (- 1)
+    Fun prefixFunction(pattern: string): [number]
+      Let prefix: [number] = (array)
+      Let index = 0
+      While (group (< index (member-call pattern len)))
+        Body
+          Block
+            Expr (member-call prefix push 0)
+            Expr (+= index 1)
+      Let matched = 0
+      Expr (= index 1)
+      While (group (< index (member-call pattern len)))
+        Body
+          Block
+            While (group (&& (> matched 0) (!= (member-call pattern charAt index) (member-call pattern charAt matched))))
+              Body
+                Block
+                  Expr (= matched (index prefix (- matched 1)))
+            If (group (== (member-call pattern charAt index) (member-call pattern charAt matched)))
+              Then
+                Block
+                  Expr (+= matched 1)
+            Expr (= (index prefix index) matched)
+            Expr (+= index 1)
+      Return prefix
+    Fun kmpSearch(text: string, pattern: string): number
+      If (group (== (member-call pattern len) 0))
+        Then
+          Block
+            Return 0
+      Let prefix = (call prefixFunction pattern)
+      Let textIndex = 0
+      Let patternIndex = 0
+      While (group (< textIndex (member-call text len)))
+        Body
+          Block
+            If (group (== (member-call text charAt textIndex) (member-call pattern charAt patternIndex)))
+              Then
+                Block
+                  Expr (+= textIndex 1)
+                  Expr (+= patternIndex 1)
+                  If (group (== patternIndex (member-call pattern len)))
+                    Then
+                      Block
+                        Return (- textIndex patternIndex)
+              Else
+                Block
+                  If (group (> patternIndex 0))
+                    Then
+                      Block
+                        Expr (= patternIndex (index prefix (- patternIndex 1)))
+                    Else
+                      Block
+                        Expr (+= textIndex 1)
+      Return (- 1)
+    Fun isPalindrome(text: string): bool
+      Let left = 0
+      Let right = (- (member-call text len) 1)
+      While (group (< left right))
+        Body
+          Block
+            If (group (!= (member-call text charAt left) (member-call text charAt right)))
+              Then
+                Block
+                  Return false
+            Expr (+= left 1)
+            Expr (-= right 1)
+      Return true
     Fun lowerBound<T>(values: [T], target: T, less: fun(T, T): bool): number
       Let low = 0
       Let high = (member-call values len)
@@ -2855,7 +2946,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction kmpSearch isPalindrome lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Print (member-call ds isPrime (- 3))

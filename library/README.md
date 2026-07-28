@@ -527,6 +527,12 @@ helpers; unsupported-character pairs are treated as unordered (`false`). The
 language currently has no string relational operator, so this is an explicit
 library contract rather than a replacement for future language-level ordering.
 
+`findSubstring(text, pattern)` returns the first Unicode scalar-value offset,
+or `-1` when absent; an empty pattern matches at `0`. `prefixFunction(pattern)`
+returns the KMP failure table, and `kmpSearch` uses it for `O(n + m)` matching.
+`isPalindrome` compares scalar values from both ends and treats an empty string
+as a palindrome. These functions do not normalize combining marks.
+
 `Interval { start, end }` represents a numeric interval with the documented
 precondition `start <= end`. `mergeIntervals(intervals)` returns a new array
 sorted by start, merges overlapping or touching intervals, and leaves the input
@@ -620,6 +626,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case algorithms_graph_paths`,
 `--case algorithms_graph_bellman_ford`,
 `--case algorithms_graph_kruskal`,
+`--case algorithms_string_matching`,
 `--case algorithms_graph_max_flow`, `--case algorithms_graph_min_cut`,
 `--case array_algorithms_basic`,
 `--case array_algorithms_teaching_sort`,
