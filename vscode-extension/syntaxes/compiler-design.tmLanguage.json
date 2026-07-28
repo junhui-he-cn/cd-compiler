@@ -1,0 +1,236 @@
+{
+  "name": "Compiler Design",
+  "scopeName": "source.compiler-design",
+  "fileTypes": [
+    "cd"
+  ],
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#declarations"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#constants"
+    },
+    {
+      "include": "#types"
+    },
+    {
+      "include": "#functions"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#variables"
+    },
+    {
+      "include": "#operators"
+    },
+    {
+      "include": "#punctuation"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.compiler-design",
+          "match": "//.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.compiler-design",
+          "begin": "\"",
+          "end": "\"",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.begin.compiler-design"
+            }
+          },
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.definition.string.end.compiler-design"
+            }
+          },
+          "patterns": [
+            {
+              "name": "constant.character.escape.compiler-design",
+              "match": "\\\\(?:[\\\"'\\\\nrt]|u[0-9A-Fa-f]{4})"
+            }
+          ]
+        }
+      ]
+    },
+    "declarations": {
+      "patterns": [
+        {
+          "match": "\\b(fun)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.declaration.function.compiler-design"
+            },
+            "2": {
+              "name": "entity.name.function.compiler-design"
+            }
+          }
+        },
+        {
+          "match": "\\b(struct|enum|impl)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.declaration.type.compiler-design"
+            },
+            "2": {
+              "name": "entity.name.type.class.compiler-design"
+            }
+          }
+        },
+        {
+          "match": "\\b(let|for)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.declaration.variable.compiler-design"
+            },
+            "2": {
+              "name": "variable.other.readwrite.compiler-design"
+            }
+          }
+        },
+        {
+          "match": "\\b(import)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.import.compiler-design"
+            },
+            "2": {
+              "name": "variable.other.constant.compiler-design"
+            }
+          }
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.compiler-design",
+          "match": "\\b(?:break|continue|else|for|if|in|match|return|while)\\b"
+        },
+        {
+          "name": "keyword.declaration.compiler-design",
+          "match": "\\b(?:as|enum|export|fun|impl|import|let|private|struct)\\b"
+        },
+        {
+          "name": "keyword.control.print.compiler-design",
+          "match": "\\bprint\\b"
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.compiler-design",
+          "match": "\\b(?:true|false|nil)\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "support.type.primitive.compiler-design",
+          "match": "\\b(?:number|bool|string)\\b"
+        },
+        {
+          "name": "support.type.map.compiler-design",
+          "match": "\\bmap\\b(?=\\s*<)"
+        },
+        {
+          "name": "entity.name.namespace.compiler-design",
+          "match": "\\b[A-Za-z_][A-Za-z0-9_]*(?=\\.[A-Z][A-Za-z0-9_]*)"
+        },
+        {
+          "name": "entity.name.type.class.compiler-design",
+          "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "support.function.builtin.compiler-design",
+          "match": "\\b(?:any|all|charAt|clear|concat|contains|copy|count|ceil|filter|find|findIndex|flatMap|floor|keys|len|map|merge|pop|push|range|reduce|remove|slice|sqrt|str|substr|typeOf|values)\\b(?=\\s*\\()"
+        },
+        {
+          "match": "(\\.)([A-Za-z_][A-Za-z0-9_]*)(?=\\s*\\()",
+          "captures": {
+            "1": {
+              "name": "punctuation.accessor.dot.compiler-design"
+            },
+            "2": {
+              "name": "support.function.member.compiler-design"
+            }
+          }
+        },
+        {
+          "name": "support.function.compiler-design",
+          "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b(?=\\s*\\()"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.compiler-design",
+          "match": "\\b(?:[0-9]+\\.[0-9]*|\\.[0-9]+)(?:[eE][+-]?[0-9]+)?\\b"
+        },
+        {
+          "name": "constant.numeric.integer.compiler-design",
+          "match": "\\b[0-9]+\\b"
+        }
+      ]
+    },
+    "variables": {
+      "patterns": [
+        {
+          "name": "variable.other.compiler-design",
+          "match": "\\b[a-z_][A-Za-z0-9_]*\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.compiler-design",
+          "match": "(?:\\+=|-=|\\*=|/=|==|!=|<=|>=|=>|&&|\\|\\||\\+|-|\\*|/|=|!|<|>|\\||\\?)"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.separator.compiler-design",
+          "match": "[,;:]"
+        },
+        {
+          "name": "punctuation.accessor.dot.compiler-design",
+          "match": "\\."
+        },
+        {
+          "name": "punctuation.bracket.compiler-design",
+          "match": "[{}()\\[\\]]"
+        }
+      ]
+    }
+  }
+}

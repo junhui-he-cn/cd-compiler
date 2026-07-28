@@ -2,7 +2,7 @@
   "name": "compiler-design-language-support",
   "displayName": "Compiler Design Language Support",
   "description": "VS Code client for the Compiler Design stdio language server.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "compiler-design",
   "repository": {
     "type": "git",
@@ -30,6 +30,13 @@
           ".cd"
         ],
         "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "compiler-design",
+        "scopeName": "source.compiler-design",
+        "path": "./syntaxes/compiler-design.tmLanguage.json"
       }
     ],
     "configuration": {

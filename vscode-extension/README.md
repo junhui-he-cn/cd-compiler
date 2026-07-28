@@ -4,7 +4,9 @@ This extension connects VS Code to the repository's stdio language server.
 It registers `.cd` files as `compiler-design` documents and enables the LSP
 features advertised by `compiler_design --lsp`: diagnostics, formatting,
 definition and reference navigation, hover, rename, completion, document
-symbols, and workspace symbols.
+symbols, and workspace symbols. It also provides TextMate syntax highlighting
+for comments, keywords, declarations, types, functions, literals, operators,
+and punctuation.
 
 ## Local installation
 
@@ -22,8 +24,11 @@ cd vscode-extension
 npm install
 npm run check
 npm run package
-code --install-extension compiler-design-language-support-0.1.1.vsix
+code --install-extension compiler-design-language-support-0.1.2.vsix
 ```
+
+After installing or updating the extension, run `Developer: Reload Window` so
+VS Code reloads both the grammar and the language-server client.
 
 When the repository is the first VS Code workspace folder, the extension
 automatically uses `build/compiler_design`. For another checkout or a
