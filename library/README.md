@@ -555,6 +555,12 @@ returns zero coefficients for `(0, 0)` and otherwise uses the same integer
 input contract as `gcd`; its iterative Euclidean pass uses logarithmic steps
 for the usual inputs.
 
+`isPrime(value)` returns `false` for values below `2`, non-integers, and
+composites. `sievePrimes(limit)` uses the Sieve of Eratosthenes and returns
+primes in ascending order up to `floor(limit)`, or `[]` below `2`. The primality
+check uses trial division with `O(sqrt(n))` arithmetic steps; the sieve uses
+`O(n log log n)` time and `O(n)` auxiliary space for an integer bound `n`.
+
 ## Current language limitation
 
 The language's builtin member-call sugar reserves names such as `push`, `pop`,
@@ -592,6 +598,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case array_algorithms_teaching_sort`,
 `--case numeric_algorithms_gcd`,
 `--case numeric_algorithms_extended_gcd`,
+`--case numeric_algorithms_primes`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
 `--case array_algorithms_binary_search`, `--case array_algorithms_merge_sort`,

@@ -2640,6 +2640,61 @@ fun extendedGcd(left: number, right: number): ExtendedGcdResult {
   };
 }
 
+fun isPrime(value: number): bool {
+  if (value < 2 || floor(value) != value) {
+    return false;
+  }
+  if (value == 2) {
+    return true;
+  }
+  if (floor(value / 2) * 2 == value) {
+    return false;
+  }
+  let divisor = 3;
+  while (divisor <= value / divisor) {
+    if (floor(value / divisor) * divisor == value) {
+      return false;
+    }
+    divisor += 2;
+  }
+  return true;
+}
+
+fun sievePrimes(limit: number): [number] {
+  let primes: [number] = [];
+  let bound = floor(limit);
+  if (bound < 2) {
+    return primes;
+  }
+  let composite: [bool] = [];
+  let index = 0;
+  while (index <= bound) {
+    composite.push(false);
+    index += 1;
+  }
+
+  let candidate = 2;
+  while (candidate <= bound / candidate) {
+    if (!composite[candidate]) {
+      let multiple = candidate * candidate;
+      while (multiple <= bound) {
+        composite[multiple] = true;
+        multiple += candidate;
+      }
+    }
+    candidate += 1;
+  }
+
+  index = 2;
+  while (index <= bound) {
+    if (!composite[index]) {
+      primes.push(index);
+    }
+    index += 1;
+  }
+  return primes;
+}
+
 struct PriorityQueue<T> {
   heap: BinaryHeap<T>
 }
@@ -2674,4 +2729,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, ExtendedGcdResult, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, gcd, lcm, extendedGcd;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, ExtendedGcdResult, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, gcd, lcm, extendedGcd, isPrime, sievePrimes;

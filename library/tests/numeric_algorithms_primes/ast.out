@@ -2618,16 +2618,15 @@ Program
     Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph ExtendedGcdResult newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes
   Module 1 entry
     Import "../../data_structures.cd" as ds
-    Fun render(value: ds.Result<number, string>): string
-      Return (match value (arm ds.Result.Ok(value) (+ "ok:" (call str value))) (arm ds.Result.Err(error) (+ "err:" error)))
-    Let success: ds.Result<number, string> = (member-call ds ok<number, string> 7)
-    Let failure: ds.Result<number, string> = (member-call ds err<number, string> "bad")
-    Let explicit = (member-call (field ds Result) Ok<number, string> 9)
-    Let explicitError = (member-call (field ds Result) Err<number, string> "worse")
-    Let factoryExplicit = (member-call ds ok<number, string> 11)
-    Print (call render success)
-    Print (call render failure)
-    Print (call render explicit)
-    Print (call render explicitError)
-    Print (call render factoryExplicit)
-    Print (match failure (arm ds.Result.Ok(value) (+ "ok:" (call str value))) (arm ds.Result.Err(error) (+ "error:" error)))
+    Print (member-call ds isPrime (- 3))
+    Print (member-call ds isPrime 0)
+    Print (member-call ds isPrime 1)
+    Print (member-call ds isPrime 2)
+    Print (member-call ds isPrime 3)
+    Print (member-call ds isPrime 4)
+    Print (member-call ds isPrime 25)
+    Print (member-call ds isPrime 29)
+    Print (member-call ds isPrime 2.5)
+    Print (member-call ds sievePrimes 30)
+    Print (member-call ds sievePrimes 1)
+    Print (member-call ds sievePrimes (- 5))

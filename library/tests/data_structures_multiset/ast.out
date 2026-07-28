@@ -2538,6 +2538,67 @@ Program
           Block
             Expr (= oldT (- oldT))
       Return (construct ExtendedGcdResult gcd: oldR leftCoefficient: oldS rightCoefficient: oldT)
+    Fun isPrime(value: number): bool
+      If (group (|| (< value 2) (!= (call floor value) value)))
+        Then
+          Block
+            Return false
+      If (group (== value 2))
+        Then
+          Block
+            Return true
+      If (group (== (* (call floor (/ value 2)) 2) value))
+        Then
+          Block
+            Return false
+      Let divisor = 3
+      While (group (<= divisor (/ value divisor)))
+        Body
+          Block
+            If (group (== (* (call floor (/ value divisor)) divisor) value))
+              Then
+                Block
+                  Return false
+            Expr (+= divisor 2)
+      Return true
+    Fun sievePrimes(limit: number): [number]
+      Let primes: [number] = (array)
+      Let bound = (call floor limit)
+      If (group (< bound 2))
+        Then
+          Block
+            Return primes
+      Let composite: [bool] = (array)
+      Let index = 0
+      While (group (<= index bound))
+        Body
+          Block
+            Expr (member-call composite push false)
+            Expr (+= index 1)
+      Let candidate = 2
+      While (group (<= candidate (/ bound candidate)))
+        Body
+          Block
+            If (group (! (index composite candidate)))
+              Then
+                Block
+                  Let multiple = (* candidate candidate)
+                  While (group (<= multiple bound))
+                    Body
+                      Block
+                        Expr (= (index composite multiple) true)
+                        Expr (+= multiple candidate)
+            Expr (+= candidate 1)
+      Expr (= index 2)
+      While (group (<= index bound))
+        Body
+          Block
+            If (group (! (index composite index)))
+              Then
+                Block
+                  Expr (member-call primes push index)
+            Expr (+= index 1)
+      Return primes
     Struct PriorityQueue<T> {heap: BinaryHeap<T>}
     Impl PriorityQueue<T>
       Method enqueue(value: T)
@@ -2554,7 +2615,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph ExtendedGcdResult newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph ExtendedGcdResult newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Fun renderEntries(values: [ds.MultiSetEntry<number>]): string
