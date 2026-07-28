@@ -63,7 +63,7 @@
 - 欧拉路径：无向图 `eulerTrail`。
 - 无权图路径：`shortestDistances`、`shortestPath`。
 - DAG 视图：`inDegrees`、`topologicalOrder`、`hasCycle`。
-- 加权图：非负 `WeightedEdge`/`WeightedGraph`、Dijkstra、Floyd-Warshall、最大流、最小割与最小生成森林。
+- 加权图：非负 `WeightedEdge`/`WeightedGraph`、Dijkstra、Floyd-Warshall、最大流、最小割、Prim 与 Kruskal 最小生成森林。
 - 有符号加权图：`SignedWeightedGraph`、`BellmanFordResult` 与 Bellman-Ford 负环检测。
 - 强连通分量：有向图的 `stronglyConnectedComponents`。
 
@@ -291,6 +291,8 @@ enum Result<T, E> {
 从起点可达的负环分别报告为 `BellmanFordError`。
 `minimumSpanningForest` 已提供无向加权图的 Prim 版本；非连通输入返回森林，
 有向输入返回同顶点数的空森林。
+`minimumSpanningForestKruskal` 已提供基于边排序和并查集的等价版本，保留非连通
+输入的森林语义，并对有向输入返回空森林。
 `allPairsWeightedDistances` 已提供非负权图的 Floyd-Warshall 全源距离矩阵，
 不可达项使用 `-1`。
 `maxFlow` 已提供有向非负容量图的 Edmonds-Karp 增广路径版本，不修改输入图。

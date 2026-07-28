@@ -406,6 +406,12 @@ Disconnected inputs produce one tree per component; directed inputs produce an
 empty forest with the same vertex count. The array-scan implementation runs in
 `O(V^2 + E)` time and `O(V)` auxiliary space.
 
+`minimumSpanningForestKruskal(graph)` returns the same forest contract using
+weight-sorted edges and the array-backed `DisjointSet`. Ties are ordered by
+`from` and then `to` vertex, disconnected inputs remain forests, and directed
+inputs return an empty forest. The implementation runs in `O(E log E)` time and
+uses `O(V + E)` auxiliary space.
+
 `allPairsWeightedDistances(graph)` returns a Floyd–Warshall distance matrix for
 the non-negative weighted graph, with diagonal zeroes and `-1` for unreachable
 pairs. It supports directed and undirected graphs, runs in `O(V^3)` time, and
@@ -613,6 +619,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case algorithms_graph_traversal`,
 `--case algorithms_graph_paths`,
 `--case algorithms_graph_bellman_ford`,
+`--case algorithms_graph_kruskal`,
 `--case algorithms_graph_max_flow`, `--case algorithms_graph_min_cut`,
 `--case array_algorithms_basic`,
 `--case array_algorithms_teaching_sort`,

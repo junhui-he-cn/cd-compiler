@@ -2163,6 +2163,54 @@ Program
       Let result = (call copy values)
       Expr (call bubbleSortInPlace result less)
       Return result
+    Struct KruskalEdge {from: number, to: number, weight: number}
+    Fun kruskalEdgeLess(left: KruskalEdge, right: KruskalEdge): bool
+      If (group (== (field left weight) (field right weight)))
+        Then
+          Block
+            If (group (== (field left from) (field right from)))
+              Then
+                Block
+                  Return (< (field left to) (field right to))
+            Return (< (field left from) (field right from))
+      Return (< (field left weight) (field right weight))
+    Fun minimumSpanningForestKruskal(graph: WeightedGraph): WeightedGraph
+      Let count = (member-call graph vertexCount)
+      Let forest = (call newWeightedGraph count false)
+      If (group (field graph directed))
+        Then
+          Block
+            Return forest
+      Let edges: [KruskalEdge] = (array)
+      Let from = 0
+      While (group (< from count))
+        Body
+          Block
+            Let neighbors = (index (field graph adjacency) from)
+            Let neighborIndex = 0
+            While (group (< neighborIndex (member-call neighbors len)))
+              Body
+                Block
+                  Let edge = (index neighbors neighborIndex)
+                  If (group (< from (field edge to)))
+                    Then
+                      Block
+                        Expr (member-call edges push (construct KruskalEdge from: from to: (field edge to) weight: (field edge weight)))
+                  Expr (+= neighborIndex 1)
+            Expr (+= from 1)
+      Let ordered = (call sortArray edges kruskalEdgeLess)
+      Let components = (call newDisjointSet count)
+      Let index = 0
+      While (group (< index (member-call ordered len)))
+        Body
+          Block
+            Let edge = (index ordered index)
+            If (group (member-call components union (field edge from) (field edge to)))
+              Then
+                Block
+                  Expr (member-call forest addEdge (field edge from) (field edge to) (field edge weight))
+            Expr (+= index 1)
+      Return forest
     Fun mergeSort<T>(values: [T], less: fun(T, T): bool): [T]
       Let result = (call copy values)
       Let width = 1
@@ -2807,7 +2855,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let graph = (member-call ds newGraph 6 false)
