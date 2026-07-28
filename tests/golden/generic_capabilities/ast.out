@@ -20,6 +20,7 @@ Program
       Return (< left right)
     Print (call same<string> "same" "same")
     Print (call before 1 2)
+    Print (call before<string> "a" "b")
     Print (member-call lib same<number> 3 3)
     Print (member-call lib before<number> 3 4)
     Print (member-call forwarded applyLess 4 5 numericLess)

@@ -28,7 +28,7 @@ int main()
     assert(SemanticTypes::satisfiesCapability(typeParameterType("T", ord), eq));
     assert(SemanticTypes::satisfiesCapability(typeParameterType("T", number), ord));
     assert(!SemanticTypes::satisfiesCapability(typeParameterType("T"), eq));
-    assert(!SemanticTypes::satisfiesCapability(simpleType(StaticType::String), ord));
+    assert(SemanticTypes::satisfiesCapability(simpleType(StaticType::String), ord));
 
     const TypeInfo identity = functionType(
         {t}, t, {"T"}, {std::make_shared<TypeInfo>(number)});

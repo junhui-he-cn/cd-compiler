@@ -76,12 +76,46 @@ being designed:
 - M5C is parked until its branch-only prototype is re-audited against the
   then-current `master`; branch code does not count as shipped behavior.
 
+## Latest admitted slice
+
+### M6-LANG-OPERATOR-001A: builtin string ordering
+
+**Status:** complete in the current working tree under the resolved
+`M6-LANG-OPERATOR-001` design; user-defined struct declarations remain a later
+slice.
+
+**Purpose:** extend the existing four ordering operators to `string` using
+Unicode scalar-value lexicographic semantics. Preserve numeric ordering,
+compile-time-only generic capabilities, the current bytecode instruction set,
+and the `.cdbc 0.1` artifact boundary.
+
+**Deliverable:** accept `<`, `<=`, `>`, and `>=` for known string operands;
+execute the same behavior in the Rust VM; add an artifact/runtime parity
+fixture; and update the public language documentation. Do not add the
+`operator` declaration syntax or user-defined dispatch in this slice.
+
+**Migration:** reuse the existing `Ord` capability and comparison IR/bytecode
+operations. Extend only their builtin string type checks and runtime operands;
+do not add an opcode, runtime operator table, hidden generic comparator, or
+change to `cdbc 0.1`.
+
+**Quantitative gate:** `rust_vm.artifact.string_ordering.emit` and
+`rust_vm.artifact.string_ordering.run` cover all four symbols, ASCII ordering,
+non-ASCII scalar ordering, prefix ordering, equality boundaries, and
+canonically equivalent but differently encoded sequences. Run the focused
+golden/artifact/Rust checks, refresh the verification inventory, and pass
+`git diff --check`.
+
+**Delete the old path when:** none; numeric comparison remains the compatibility
+path. This slice is complete only when C++ emission and Rust execution agree,
+and the later user-defined operator slice can reuse the same comparison
+operations without introducing a second builtin path.
+
 ## Next active slice
 
-No implementation slice is currently active on `master`. M6-LANG-001 is
-complete; its implementation and verification evidence are recorded in
-`docs/decisions/m6-language-library-contract-001.{md,json}`. A follow-up slice
-must be explicitly selected and admitted before code changes begin.
+No implementation slice is currently active. The next candidate is
+`M6-LANG-OPERATOR-001B`, which remains deferred until its focused inventory and
+implementation admission are reviewed against the resolved operator contract.
 
 ## Planned follow-up specifications
 
@@ -89,6 +123,27 @@ These are deferred candidates after M6-LANG-001. They are not permission to
 start implementation before their decision records and focused inventories are
 written. In particular, the data-structure roadmap does not authorize adding
 concrete data-structure code to the compiler slice.
+
+### M6-LANG-OPERATOR-001B: user-defined struct comparison operators
+
+**Status:** deferred after the completed builtin string-ordering slice. The
+resolved declaration and dispatch contract is recorded in
+`docs/decisions/m6-language-operator-001.{md,json}`; implementation requires a
+separate focused inventory admission.
+
+**Purpose:** add `operator <`, `<=`, `>`, and `>=` declarations inside local
+named-struct `impl` blocks, with left-operand nominal dispatch, owner-module
+visibility, direct call lowering, and public interface/cache propagation.
+
+**Boundary:** keep `==`, `!=`, arithmetic, unary, logical, compound-assignment,
+enum, primitive, dynamic, and generic capability-dictionary behavior deferred.
+Generic algorithms continue to use explicit comparator values for custom
+structs.
+
+**Gate:** cover declaration/parser recovery, local and imported/re-exported
+operators, missing and conflicting implementations, return/parameter
+diagnostics, `.cdi` and module-cache invalidation, linked and independent
+`.cdbc 0.1` products, and C++/Rust parity before implementation is admitted.
 
 ### M5D-DEBUG-002: Interactive breakpoints and stepping
 
@@ -187,6 +242,8 @@ belongs in the baseline until that re-audit is merged and verified.
 ```text
 master + shipped generic functions, callbacks, and module interfaces
   -> completed M6-LANG-001 static generic capability constraints
+  -> completed M6-LANG-OPERATOR-001A builtin string ordering
+  -> M6-LANG-OPERATOR-001B user-defined struct comparison operators (deferred)
   -> language-enabled library specifications (no compiler-owned data structures)
 
 master + M5D-DEBUG-001
@@ -205,10 +262,11 @@ feat/m5c-repl
   -> M5C-REPL-001 re-audit, outside the active queue for now
 ```
 
-No implementation slice is currently active. M5D-DEBUG-002 and the other
-entries remain deferred specifications with clear future boundaries; they do
-not reopen completed work or authorize concrete data-structure implementations
-in the compiler repository.
+No implementation slice is currently active. M6-LANG-OPERATOR-001A is complete;
+M6-LANG-OPERATOR-001B, M5D-DEBUG-002, and the other entries remain deferred
+specifications with clear future boundaries. They do not reopen completed work
+or authorize concrete data-structure implementations in the compiler
+repository.
 
 ## Verification contract
 

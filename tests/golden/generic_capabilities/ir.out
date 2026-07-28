@@ -33,22 +33,27 @@ IR
 0031  v18 = constant #15 2
 0032  v19 = call v16(v17, v18)
 0033  print v19
-0034  v20 = load_var @27 same#0
-0035  v21 = constant #16 3
-0036  v22 = constant #17 3
+0034  v20 = load_var @27 before#13
+0035  v21 = constant #16 "a"
+0036  v22 = constant #17 "b"
 0037  v23 = call v20(v21, v22)
 0038  print v23
-0039  v24 = load_var @28 before#3
+0039  v24 = load_var @28 same#0
 0040  v25 = constant #18 3
-0041  v26 = constant #19 4
+0041  v26 = constant #19 3
 0042  v27 = call v24(v25, v26)
 0043  print v27
-0044  v28 = load_var @29 applyLess#6
-0045  v29 = constant #20 4
-0046  v30 = constant #21 5
-0047  v31 = load_var @30 numericLess#16
-0048  v32 = call v28(v29, v30, v31)
-0049  print v32
+0044  v28 = load_var @29 before#3
+0045  v29 = constant #20 3
+0046  v30 = constant #21 4
+0047  v31 = call v28(v29, v30)
+0048  print v31
+0049  v32 = load_var @30 applyLess#6
+0050  v33 = constant #22 4
+0051  v34 = constant #23 5
+0052  v35 = load_var @31 numericLess#16
+0053  v36 = call v32(v33, v34, v35)
+0054  print v36
 
 function $0 same(left#1, right#2)
 0000  v0 = load_var @1 left#1

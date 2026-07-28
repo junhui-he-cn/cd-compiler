@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m6-lang-operator-001-2026-07-28-r1",
+  "baseline_commit": "2592027",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M6-LANG-OPERATOR-001",
+  "domain": "static-user-defined-ordering-operators",
+  "status": "resolved",
+  "implementation_status": "partial_builtin_string_ordering",
+  "issue": 10,
+  "question": "How should user-defined types declare and resolve comparison operators while preserving static dispatch, module/interface boundaries, generic compatibility, and C++/Rust artifact parity?",
+  "decision": "Add operator <, <=, >, and >= declarations inside impl blocks for named structs. The left operand is the implicit this receiver, the right operand is the single explicit parameter, and the implementation must return bool. Resolve by nominal left-operand type to one direct function target; do not add runtime operator lookup or overload ranking.",
+  "surface": {
+    "keyword": "operator",
+    "declaration": "operator <(other: Point): bool { ... }",
+    "operators": ["<", "<=", ">", ">="],
+    "receiver": "existing top-level impl for a named struct",
+    "explicit_parameters": 1,
+    "parameter_type": "exact invariant receiver type after generic substitution",
+    "return_type": "bool",
+    "method_type_parameters": false,
+    "receiver_type_parameters": "existing impl parameters and matching struct constraints"
+  },
+  "dispatch": {
+    "order": [
+      "known number/number uses numeric builtin",
+      "known string/string uses Unicode-scalar lexicographic builtin",
+      "known named-struct left operand uses its defining-module operator slot"
+    ],
+    "receiver": "left operand",
+    "right_operand": "same nominal struct type with invariant matching generic arguments",
+    "resolution": "compile-time direct function target",
+    "reverse_lookup": false,
+    "conversion": false,
+    "dynamic_dispatch": false,
+    "candidate_ranking": false,
+    "nullable_ordering": false,
+    "unknown_operand_user_dispatch": false
+  },
+  "ownership_and_visibility": {
+    "implementation_owner": "module defining the named struct",
+    "foreign_impl": false,
+    "export_rule": "exported struct operators follow existing exported-struct method visibility",
+    "re_export_rule": "re-exported structs forward operator metadata",
+    "private_struct_rule": "non-exported structs and their operators remain module-private",
+    "enum_implementations": false,
+    "primitive_implementations": false
+  },
+  "builtin_semantics": {
+    "number": ["<", "<=", ">", ">="],
+    "string": {
+      "operators": ["<", "<=", ">", ">="],
+      "ordering": "lexicographic sequence of Unicode scalar values",
+      "prefix_rule": "a strict prefix is smaller",
+      "normalization": "none",
+      "locale": "none",
+      "grapheme_ordering": false
+    },
+    "not_ordered": ["nil", "bool", "array", "map", "range", "enum", "function"],
+    "equality": "existing == and != behavior is unchanged"
+  },
+  "generic_boundary": {
+    "user_operator_implies_ord": false,
+    "builtin_ord_types": ["number", "string"],
+    "custom_type_generic_use": "explicit fun(T, T): bool comparator wrapper",
+    "implicit_dictionary": false,
+    "hidden_comparator_parameters": false,
+    "monomorphization": false,
+    "future_requirement": "A successor decision must define witnesses or static specialization before custom operators can satisfy T: Ord."
+  },
+  "module_and_artifact_boundary": {
+    "module_interface": "Add canonical operator records to exported named-struct public shape",
+    "sidecar": "Include operator shape in strict cdi 0.1 body and public-interface hash",
+    "cache": "Invalidate importers when public operator shape or linkage changes",
+    "cdbc_version": "unchanged cdbc 0.1",
+    "user_operator_lowering": "ordinary direct function call",
+    "new_operator_opcode": false,
+    "rust_vm_metadata_lookup": false,
+    "builtin_string_runtime": "C++ and Rust comparison instructions share Unicode-scalar ordering and unsupported-value diagnostics"
+  },
+  "diagnostics": {
+    "duplicate": "duplicate operator `<` for struct `Point`",
+    "invalid_parameter": "operator `<` for struct `Point` must accept exactly one right operand of type `Point`",
+    "invalid_return": "operator `<` for struct `Point` must return bool",
+    "foreign_impl": "cannot implement operator `<` for imported struct `lib.Point`",
+    "missing": "struct `Point` has no implementation for operator `<`",
+    "right_mismatch": "operator `<` for `Point` expects right operand `Point`, got `number`",
+    "generic_capability": "reuse the existing T: Ord diagnostic for a custom struct"
+  },
+  "migration": {
+    "semantic_services": [
+      "parser and AST operator declarations",
+      "formatter and grammar documentation",
+      "TypeChecker operator table and static resolution",
+      "DeclarationIndex and resolved direct-call metadata",
+      "ModuleInterface and cdi public-shape serialization",
+      "module cache public invalidation",
+      "IR and bytecode ordinary call lowering",
+      "C++ and Rust builtin string comparison parity"
+    ],
+    "snapshot_ids": "never persistent",
+    "source_fallback": "retained for cold and invalid cache paths"
+  },
+  "quantitative_gate": [
+    "all four local struct operator declarations and calls",
+    "missing, mismatched, duplicate, wrong-parameter, and wrong-return diagnostics",
+    "ASCII, non-ASCII, emoji, prefix, and canonically equivalent string ordering",
+    "direct import, namespace alias, re-export, owner-module, cdi, and module-cache cases",
+    "generic explicit comparator wrappers and negative custom T: Ord cases",
+    "linked and independent cdbc 0.1 products with C++/Rust VM parity",
+    "canonical inventory, CTest/golden, artifact, module-cache, Cargo, and diff-check gates"
+  ],
+  "explicitly_deferred": [
+    "user-defined ==, !=, arithmetic, unary, logical, and compound-assignment operators",
+    "enum and primitive operator implementations",
+    "dynamic dispatch, trait objects, implicit capability dictionaries, hidden comparator parameters, and generic specialization",
+    "automatic Eq/Ord capability implementation from an operator set",
+    "first-class operator values without an explicit wrapper",
+    "ordering laws, locale collation, and Unicode normalization"
+  ]
+}

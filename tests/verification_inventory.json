@@ -3235,6 +3235,67 @@
       "fixture": "tests/bytecode_artifacts/runtime_diagnostics"
     },
     {
+      "case_id": "artifact.string_ordering.emit",
+      "runner": "artifact",
+      "result_name": "string_ordering emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "artifact",
+        "cdbc",
+        "emit",
+        "fixture:string_ordering"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "cdbc-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/bytecode_artifacts/string_ordering/input.cd"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/string_ordering/expected.cdbc"
+      ],
+      "fixture": "tests/bytecode_artifacts/string_ordering"
+    },
+    {
+      "case_id": "artifact.string_ordering.rust_dump",
+      "runner": "artifact",
+      "result_name": "string_ordering rust-dump",
+      "stage": "artifact-parse",
+      "capability_tags": [
+        "artifact",
+        "cdbc",
+        "rust-parser",
+        "fixture:string_ordering"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "cdbc-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode"
+      ],
+      "terminal_boundary": "rust_decode",
+      "sources": [
+        "tests/bytecode_artifacts/string_ordering/input.cd"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/string_ordering/expected.cdbc"
+      ],
+      "fixture": "tests/bytecode_artifacts/string_ordering"
+    },
+    {
       "case_id": "artifact.struct_field_assignment.emit",
       "runner": "artifact",
       "result_name": "struct_field_assignment emit",
@@ -32266,6 +32327,68 @@
         "tests/bytecode_artifacts/record_patterns/run.out"
       ],
       "fixture": "tests/bytecode_artifacts/record_patterns"
+    },
+    {
+      "case_id": "rust_vm.artifact.string_ordering.emit",
+      "runner": "rust_vm_artifact",
+      "result_name": "string_ordering emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "artifact",
+        "emit",
+        "fixture:string_ordering"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/bytecode_artifacts/string_ordering/input.cd"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/string_ordering/run.out"
+      ],
+      "fixture": "tests/bytecode_artifacts/string_ordering"
+    },
+    {
+      "case_id": "rust_vm.artifact.string_ordering.run",
+      "runner": "rust_vm_artifact",
+      "result_name": "string_ordering rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "artifact",
+        "runtime",
+        "fixture:string_ordering"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/bytecode_artifacts/string_ordering/input.cd"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/string_ordering/run.out"
+      ],
+      "fixture": "tests/bytecode_artifacts/string_ordering"
     },
     {
       "case_id": "rust_vm.artifact.struct_method_compound_assignment.emit",

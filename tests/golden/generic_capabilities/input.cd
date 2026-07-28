@@ -15,6 +15,7 @@ fun numericLess(left: number, right: number): bool {
 
 print same<string>("same", "same");
 print before(1, 2);
+print before<string>("a", "b");
 print lib.same<number>(3, 3);
 print lib.before<number>(3, 4);
 print forwarded.applyLess(4, 5, numericLess);

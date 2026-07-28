@@ -287,7 +287,9 @@ functionType = "fun", "(", [ typeArguments ], ")", ":", typeExpr ;
    `geo.Point { x: 1 }`; fields may be omitted or reordered. OR-pattern
    alternatives must bind the same names. This slice supports nullable
    function parameter and return types, but not nullable function values such
-   as `(fun(number): string)?`. *)
+   as `(fun(number): string)?`. Ordering comparisons support `number` and
+   `string`; string order is Unicode-scalar lexicographic order with no
+   normalization or locale collation. *)
 
 typeArguments = typeExpr,
                 { ",", typeExpr } ;

@@ -3113,7 +3113,27 @@ impl<'a> VM<'a> {
         op_name: &str,
         operation: fn(f64, f64) -> bool,
     ) -> Result<(), RuntimeError> {
-        let (left, right) = self.expect_two_numbers(frame, left, right, op_name)?;
-        self.write_register(frame, dest, Value::boolean(operation(left, right)))
+        let left_value = self.read_register(frame, left)?;
+        let right_value = self.read_register(frame, right)?;
+        let result = match (left_value, right_value) {
+            (Value::Number(left), Value::Number(right)) => operation(left, right),
+            (Value::String(left), Value::String(right)) => {
+                let ordering = left.chars().cmp(right.chars());
+                match op_name {
+                    "greater" => ordering.is_gt(),
+                    "greater_equal" => ordering.is_ge(),
+                    "less" => ordering.is_lt(),
+                    "less_equal" => ordering.is_le(),
+                    _ => return Err(RuntimeError::new(format!("unknown comparison `{}`", op_name))),
+                }
+            }
+            _ => {
+                return Err(RuntimeError::new(format!(
+                    "{} expects two numbers or two strings",
+                    op_name
+                )))
+            }
+        };
+        self.write_register(frame, dest, Value::boolean(result))
     }
 }

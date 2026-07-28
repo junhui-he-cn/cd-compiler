@@ -149,7 +149,8 @@ bool satisfiesCapability(const TypeInfo& actual, const TypeInfo& capability)
             : SemanticTypes::isCapability(actual, name);
     }
     if (name == "Ord") {
-        return actual.kind == StaticType::Number;
+        return actual.kind == StaticType::Number
+            || actual.kind == StaticType::String;
     }
     if (name == "Eq") {
         if (actual.kind == StaticType::Nullable) {

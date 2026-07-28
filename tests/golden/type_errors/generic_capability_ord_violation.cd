@@ -2,4 +2,4 @@ fun before<T: Ord>(left: T, right: T): bool {
   return left < right;
 }
 
-print before<string>("a", "b");
+print before<bool>(true, false);

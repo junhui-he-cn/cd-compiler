@@ -1,0 +1,182 @@
+cdbc 0.1
+
+constants:
+  c0 = string "apple"
+  c1 = string "banana"
+  c2 = string "same"
+  c3 = string "same"
+  c4 = string "z"
+  c5 = string "a"
+  c6 = string "same"
+  c7 = string "same"
+  c8 = string "你"
+  c9 = string "a"
+  c10 = string "🙂"
+  c11 = string "你"
+  c12 = string "é"
+  c13 = string "é"
+  c14 = string "abc"
+  c15 = string "abcd"
+  c16 = string "banana"
+  c17 = string "apple"
+  c18 = string "same"
+  c19 = string "other"
+  c20 = string "a"
+  c21 = string "z"
+  c22 = string "a"
+  c23 = string "z"
+
+names:
+
+main registers=36:
+  r0 = constant c0
+  r1 = constant c1
+  r2 = less r0, r1
+  print r2
+  r3 = constant c2
+  r4 = constant c3
+  r5 = less_equal r3, r4
+  print r5
+  r6 = constant c4
+  r7 = constant c5
+  r8 = greater r6, r7
+  print r8
+  r9 = constant c6
+  r10 = constant c7
+  r11 = greater_equal r9, r10
+  print r11
+  r12 = constant c8
+  r13 = constant c9
+  r14 = greater r12, r13
+  print r14
+  r15 = constant c10
+  r16 = constant c11
+  r17 = greater r15, r16
+  print r17
+  r18 = constant c12
+  r19 = constant c13
+  r20 = less r18, r19
+  print r20
+  r21 = constant c14
+  r22 = constant c15
+  r23 = less r21, r22
+  print r23
+  r24 = constant c16
+  r25 = constant c17
+  r26 = less r24, r25
+  print r26
+  r27 = constant c18
+  r28 = constant c19
+  r29 = less_equal r27, r28
+  print r29
+  r30 = constant c20
+  r31 = constant c21
+  r32 = greater r30, r31
+  print r32
+  r33 = constant c22
+  r34 = constant c23
+  r35 = greater_equal r33, r34
+  print r35
+
+debug_sources:
+  s0 path="tests/bytecode_artifacts/string_ordering/input.cd" text="print \"apple\" < \"banana\";\nprint \"same\" <= \"same\";\nprint \"z\" > \"a\";\nprint \"same\" >= \"same\";\nprint \"你\" > \"a\";\nprint \"🙂\" > \"你\";\nprint \"é\" < \"é\";\nprint \"abc\" < \"abcd\";\nprint \"banana\" < \"apple\";\nprint \"same\" <= \"other\";\nprint \"a\" > \"z\";\nprint \"a\" >= \"z\";\n"
+
+debug_locations:
+  main 0 = s0:1:7
+  main 1 = s0:1:17
+  main 2 = s0:1:7
+  main 3 = s0:1:1
+  main 4 = s0:2:7
+  main 5 = s0:2:17
+  main 6 = s0:2:7
+  main 7 = s0:2:1
+  main 8 = s0:3:7
+  main 9 = s0:3:13
+  main 10 = s0:3:7
+  main 11 = s0:3:1
+  main 12 = s0:4:7
+  main 13 = s0:4:17
+  main 14 = s0:4:7
+  main 15 = s0:4:1
+  main 16 = s0:5:7
+  main 17 = s0:5:15
+  main 18 = s0:5:7
+  main 19 = s0:5:1
+  main 20 = s0:6:7
+  main 21 = s0:6:16
+  main 22 = s0:6:7
+  main 23 = s0:6:1
+  main 24 = s0:7:7
+  main 25 = s0:7:15
+  main 26 = s0:7:7
+  main 27 = s0:7:1
+  main 28 = s0:8:7
+  main 29 = s0:8:15
+  main 30 = s0:8:7
+  main 31 = s0:8:1
+  main 32 = s0:9:7
+  main 33 = s0:9:18
+  main 34 = s0:9:7
+  main 35 = s0:9:1
+  main 36 = s0:10:7
+  main 37 = s0:10:17
+  main 38 = s0:10:7
+  main 39 = s0:10:1
+  main 40 = s0:11:7
+  main 41 = s0:11:13
+  main 42 = s0:11:7
+  main 43 = s0:11:1
+  main 44 = s0:12:7
+  main 45 = s0:12:14
+  main 46 = s0:12:7
+  main 47 = s0:12:1
+
+debug_ranges:
+  main 0 = s0:6:13
+  main 1 = s0:16:24
+  main 2 = s0:6:24
+  main 3 = s0:6:24
+  main 4 = s0:32:38
+  main 5 = s0:42:48
+  main 6 = s0:32:48
+  main 7 = s0:32:48
+  main 8 = s0:56:59
+  main 9 = s0:62:65
+  main 10 = s0:56:65
+  main 11 = s0:56:65
+  main 12 = s0:73:79
+  main 13 = s0:83:89
+  main 14 = s0:73:89
+  main 15 = s0:73:89
+  main 16 = s0:97:102
+  main 17 = s0:105:108
+  main 18 = s0:97:108
+  main 19 = s0:97:108
+  main 20 = s0:116:122
+  main 21 = s0:125:130
+  main 22 = s0:116:130
+  main 23 = s0:116:130
+  main 24 = s0:138:143
+  main 25 = s0:146:150
+  main 26 = s0:138:150
+  main 27 = s0:138:150
+  main 28 = s0:158:163
+  main 29 = s0:166:172
+  main 30 = s0:158:172
+  main 31 = s0:158:172
+  main 32 = s0:180:188
+  main 33 = s0:191:198
+  main 34 = s0:180:198
+  main 35 = s0:180:198
+  main 36 = s0:206:212
+  main 37 = s0:216:223
+  main 38 = s0:206:223
+  main 39 = s0:206:223
+  main 40 = s0:231:234
+  main 41 = s0:237:240
+  main 42 = s0:231:240
+  main 43 = s0:231:240
+  main 44 = s0:248:251
+  main 45 = s0:255:258
+  main 46 = s0:248:258
+  main 47 = s0:248:258

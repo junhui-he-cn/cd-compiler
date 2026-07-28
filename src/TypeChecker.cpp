@@ -175,6 +175,12 @@ std::string binaryTypesMessage(const BinaryExpr& expression, const TypeInfo& lef
         + typeInfoName(left) + " and " + typeInfoName(right);
 }
 
+std::string orderingTypesMessage(const BinaryExpr& expression, const TypeInfo& left, const TypeInfo& right)
+{
+    return "binary `" + expression.op.lexeme + "` expects two numbers or two strings, got "
+        + typeInfoName(left) + " and " + typeInfoName(right);
+}
+
 Token interfaceToken(const Token& anchor, const std::string& lexeme)
 {
     Token token = anchor;
@@ -6538,9 +6544,13 @@ TypeInfo TypeChecker::checkBinary(const BinaryExpr& expression)
         const bool rightIsOrderedTypeParameter
             = right.kind == StaticType::TypeParameter
             && SemanticTypes::satisfiesCapability(right, capabilityType("Ord"));
-        if ((!leftIsOrderedTypeParameter && left.kind != StaticType::Number)
-            || (!rightIsOrderedTypeParameter && right.kind != StaticType::Number)) {
-            throw TypeError(expression.op, binaryTypesMessage(expression, left, right));
+        if ((!leftIsOrderedTypeParameter
+                && left.kind != StaticType::Number
+                && left.kind != StaticType::String)
+            || (!rightIsOrderedTypeParameter
+                && right.kind != StaticType::Number
+                && right.kind != StaticType::String)) {
+            throw TypeError(expression.op, orderingTypesMessage(expression, left, right));
         }
         return simpleType(StaticType::Bool);
     }
