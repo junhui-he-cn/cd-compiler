@@ -64,6 +64,7 @@
 - 无权图路径：`shortestDistances`、`shortestPath`。
 - DAG 视图：`inDegrees`、`topologicalOrder`、`hasCycle`。
 - 加权图：非负 `WeightedEdge`/`WeightedGraph`、Dijkstra、Floyd-Warshall、最大流、最小割与最小生成森林。
+- 有符号加权图：`SignedWeightedGraph`、`BellmanFordResult` 与 Bellman-Ford 负环检测。
 - 强连通分量：有向图的 `stronglyConnectedComponents`。
 
 它们的现有 API 和示例继续作为兼容基线。后续新增 API 不应悄悄改变空值、
@@ -217,6 +218,7 @@ enum Result<T, E> {
 | 边 `Edge`/加权边 `WeightedEdge` | 第一批 | `from`、`to`、`weight` | 普通结构体；权重先使用 `number` |
 | 邻接表图 `Graph` | 第一批 | 加边、删边、邻居、顶点数、边数 | `[[number]]` 或边数组；支持有向/无向配置 |
 | 加权图 `WeightedGraph` | 第一批 | 加权邻居、边遍历 | 邻接边数组；先固定 `number` 权重 |
+| 有符号加权图 `SignedWeightedGraph` | 第一批 | 负权边、Bellman-Ford | 与非负图分离，结果使用 `Result` |
 | 邻接矩阵图 | 后续 | 稠密图、矩阵算法 | `[[number]]`，需要定义无边哨兵值 |
 | 并查集 `DisjointSet` | 第一批 | `representative`、`union`、`connected`、`componentCount` | 整数 parent/size 数组，路径压缩 + 按大小合并 |
 | DAG 视图 | 第一批 | 拓扑排序、入度 | 在 `Graph` 上提供算法，不单独复制存储 |
@@ -284,6 +286,9 @@ enum Result<T, E> {
 组件内部按 DFS 发现序，不对结果额外排序。
 `WeightedGraph` 和 Dijkstra 查询已提供非负数权重版本；负权边不加入图，当前
 实现使用数组扫描选择最短未访问顶点。
+`SignedWeightedGraph` 单独接受负权边，避免改变 Dijkstra、最小生成森林和最大流
+的非负权前置条件。`bellmanFord` 返回带父节点的可空距离数组，并将无效起点和
+从起点可达的负环分别报告为 `BellmanFordError`。
 `minimumSpanningForest` 已提供无向加权图的 Prim 版本；非连通输入返回森林，
 有向输入返回同顶点数的空森林。
 `allPairsWeightedDistances` 已提供非负权图的 Floyd-Warshall 全源距离矩阵，

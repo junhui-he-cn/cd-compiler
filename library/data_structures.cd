@@ -1508,6 +1508,171 @@ fun newWeightedGraph(vertices: number, directed: bool): WeightedGraph {
   return WeightedGraph { adjacency: adjacency, directed: directed, edges: 0 };
 }
 
+struct SignedWeightedEdge {
+  to: number,
+  weight: number
+}
+
+struct SignedWeightedGraph {
+  adjacency: [[SignedWeightedEdge]],
+  directed: bool,
+  edges: number
+}
+
+impl SignedWeightedGraph {
+  fun vertexCount(): number {
+    return this.adjacency.len();
+  }
+
+  fun edgeCount(): number {
+    return this.edges;
+  }
+
+  fun validVertex(vertex: number): bool {
+    return vertex >= 0 && vertex < this.adjacency.len();
+  }
+
+  fun edgeIndex(from: number, to: number): number {
+    let index = 0;
+    while (index < this.adjacency[from].len()) {
+      if (this.adjacency[from][index].to == to) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun hasEdge(from: number, to: number): bool {
+    if (!this.validVertex(from) || !this.validVertex(to)) {
+      return false;
+    }
+    return this.edgeIndex(from, to) >= 0;
+  }
+
+  fun addEdge(from: number, to: number, weight: number): bool {
+    if (!this.validVertex(from) || !this.validVertex(to) || this.hasEdge(from, to)) {
+      return false;
+    }
+    this.adjacency[from].push(SignedWeightedEdge { to: to, weight: weight });
+    if (!this.directed && from != to) {
+      this.adjacency[to].push(SignedWeightedEdge { to: from, weight: weight });
+    }
+    this.edges += 1;
+    return true;
+  }
+
+  fun neighbors(vertex: number): [SignedWeightedEdge] {
+    if (!this.validVertex(vertex)) {
+      return [];
+    }
+    return copy(this.adjacency[vertex]);
+  }
+}
+
+fun newSignedWeightedGraph(vertices: number, directed: bool): SignedWeightedGraph {
+  let count = floor(vertices);
+  if (count < 0) {
+    count = 0;
+  }
+  let adjacency: [[SignedWeightedEdge]] = [];
+  let index = 0;
+  while (index < count) {
+    let neighbors: [SignedWeightedEdge] = [];
+    adjacency.push(neighbors);
+    index += 1;
+  }
+  return SignedWeightedGraph { adjacency: adjacency, directed: directed, edges: 0 };
+}
+
+enum BellmanFordError {
+  InvalidStart,
+  NegativeCycle
+}
+
+struct BellmanFordResult {
+  distances: [number?],
+  parents: [number]
+}
+
+fun bellmanFord(
+    graph: SignedWeightedGraph,
+    start: number
+): Result<BellmanFordResult, BellmanFordError> {
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count) {
+    return Result.Err<BellmanFordResult, BellmanFordError>(BellmanFordError.InvalidStart());
+  }
+
+  let distances: [number?] = [];
+  let parents: [number] = [];
+  let index = 0;
+  while (index < count) {
+    distances.push(nil);
+    parents.push(-1);
+    index += 1;
+  }
+  distances[start] = 0;
+
+  let pass = 0;
+  while (pass < count - 1) {
+    let changed = false;
+    let from = 0;
+    while (from < count) {
+      let current = distances[from];
+      if (current != nil) {
+        let neighbors = graph.adjacency[from];
+        let neighborIndex = 0;
+        while (neighborIndex < neighbors.len()) {
+          let edge = neighbors[neighborIndex];
+          let candidate = current + edge.weight;
+          let existing = distances[edge.to];
+          if (existing == nil) {
+            distances[edge.to] = candidate;
+            parents[edge.to] = from;
+            changed = true;
+          } else {
+            if (candidate < existing) {
+              distances[edge.to] = candidate;
+              parents[edge.to] = from;
+              changed = true;
+            }
+          }
+          neighborIndex += 1;
+        }
+      }
+      from += 1;
+    }
+    if (!changed) {
+      break;
+    }
+    pass += 1;
+  }
+
+  let from = 0;
+  while (from < count) {
+    let current = distances[from];
+    if (current != nil) {
+      let neighbors = graph.adjacency[from];
+      let neighborIndex = 0;
+      while (neighborIndex < neighbors.len()) {
+        let edge = neighbors[neighborIndex];
+        let candidate = current + edge.weight;
+        let existing = distances[edge.to];
+        if (existing != nil) {
+          if (candidate < existing) {
+            return Result.Err<BellmanFordResult, BellmanFordError>(BellmanFordError.NegativeCycle());
+          }
+        }
+        neighborIndex += 1;
+      }
+    }
+    from += 1;
+  }
+  return Result.Ok<BellmanFordResult, BellmanFordError>(
+      BellmanFordResult { distances: distances, parents: parents });
+}
+
 fun shortestWeightedDistances(graph: WeightedGraph, start: number): [number] {
   let distances: [number] = [];
   let visited: [bool] = [];
@@ -2775,4 +2940,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, ExtendedGcdResult, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, ExtendedGcdResult, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci;

@@ -390,6 +390,16 @@ for undirected graphs and uses `O(V + E)` time and `O(V + E)` auxiliary space.
 unreachable results and reject negative weights at insertion. The current array
 scan implementation runs in `O(V^2 + E)` time and `O(V)` auxiliary space.
 
+`SignedWeightedGraph` is the separate signed-weight graph type. Its
+`addEdge` accepts negative weights while retaining duplicate/vertex validation;
+the existing non-negative `WeightedGraph` contract is unchanged.
+`bellmanFord(graph, start)` returns
+`Result<BellmanFordResult, BellmanFordError>`. A successful result contains
+nullable `distances` (`nil` means unreachable) and `parents`; invalid starts
+return `InvalidStart`, and a negative cycle reachable from `start` returns
+`NegativeCycle`. The algorithm runs in `O(V * E)` time and `O(V)` auxiliary
+space.
+
 `minimumSpanningForest(graph)` applies Prim's algorithm to an undirected
 `WeightedGraph`, preserves the vertex count, and returns a new undirected graph.
 Disconnected inputs produce one tree per component; directed inputs produce an
@@ -602,6 +612,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case algorithms_graph_topological`,
 `--case algorithms_graph_traversal`,
 `--case algorithms_graph_paths`,
+`--case algorithms_graph_bellman_ford`,
 `--case algorithms_graph_max_flow`, `--case algorithms_graph_min_cut`,
 `--case array_algorithms_basic`,
 `--case array_algorithms_teaching_sort`,

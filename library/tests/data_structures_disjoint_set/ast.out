@@ -1379,6 +1379,151 @@ Program
             Expr (member-call adjacency push neighbors)
             Expr (+= index 1)
       Return (construct WeightedGraph adjacency: adjacency directed: directed edges: 0)
+    Struct SignedWeightedEdge {to: number, weight: number}
+    Struct SignedWeightedGraph {adjacency: [[SignedWeightedEdge]], directed: bool, edges: number}
+    Impl SignedWeightedGraph
+      Method vertexCount(): number
+        Return (member-call (field this adjacency) len)
+      Method edgeCount(): number
+        Return (field this edges)
+      Method validVertex(vertex: number): bool
+        Return (&& (>= vertex 0) (< vertex (member-call (field this adjacency) len)))
+      Method edgeIndex(from: number, to: number): number
+        Let index = 0
+        While (group (< index (member-call (index (field this adjacency) from) len)))
+          Body
+            Block
+              If (group (== (field (index (index (field this adjacency) from) index) to) to))
+                Then
+                  Block
+                    Return index
+              Expr (+= index 1)
+        Return (- 1)
+      Method hasEdge(from: number, to: number): bool
+        If (group (|| (! (member-call this validVertex from)) (! (member-call this validVertex to))))
+          Then
+            Block
+              Return false
+        Return (>= (member-call this edgeIndex from to) 0)
+      Method addEdge(from: number, to: number, weight: number): bool
+        If (group (|| (|| (! (member-call this validVertex from)) (! (member-call this validVertex to))) (member-call this hasEdge from to)))
+          Then
+            Block
+              Return false
+        Expr (member-call (index (field this adjacency) from) push (construct SignedWeightedEdge to: to weight: weight))
+        If (group (&& (! (field this directed)) (!= from to)))
+          Then
+            Block
+              Expr (member-call (index (field this adjacency) to) push (construct SignedWeightedEdge to: from weight: weight))
+        Expr (+= (field this edges) 1)
+        Return true
+      Method neighbors(vertex: number): [SignedWeightedEdge]
+        If (group (! (member-call this validVertex vertex)))
+          Then
+            Block
+              Return (array)
+        Return (call copy (index (field this adjacency) vertex))
+    Fun newSignedWeightedGraph(vertices: number, directed: bool): SignedWeightedGraph
+      Let count = (call floor vertices)
+      If (group (< count 0))
+        Then
+          Block
+            Expr (= count 0)
+      Let adjacency: [[SignedWeightedEdge]] = (array)
+      Let index = 0
+      While (group (< index count))
+        Body
+          Block
+            Let neighbors: [SignedWeightedEdge] = (array)
+            Expr (member-call adjacency push neighbors)
+            Expr (+= index 1)
+      Return (construct SignedWeightedGraph adjacency: adjacency directed: directed edges: 0)
+    Enum BellmanFordError {InvalidStart, NegativeCycle}
+    Struct BellmanFordResult {distances: [number?], parents: [number]}
+    Fun bellmanFord(graph: SignedWeightedGraph, start: number): Result<BellmanFordResult, BellmanFordError>
+      Let count = (member-call graph vertexCount)
+      If (group (|| (< start 0) (>= start count)))
+        Then
+          Block
+            Return (member-call Result Err<BellmanFordResult, BellmanFordError> (member-call BellmanFordError InvalidStart))
+      Let distances: [number?] = (array)
+      Let parents: [number] = (array)
+      Let index = 0
+      While (group (< index count))
+        Body
+          Block
+            Expr (member-call distances push nil)
+            Expr (member-call parents push (- 1))
+            Expr (+= index 1)
+      Expr (= (index distances start) 0)
+      Let pass = 0
+      While (group (< pass (- count 1)))
+        Body
+          Block
+            Let changed = false
+            Let from = 0
+            While (group (< from count))
+              Body
+                Block
+                  Let current = (index distances from)
+                  If (group (!= current nil))
+                    Then
+                      Block
+                        Let neighbors = (index (field graph adjacency) from)
+                        Let neighborIndex = 0
+                        While (group (< neighborIndex (member-call neighbors len)))
+                          Body
+                            Block
+                              Let edge = (index neighbors neighborIndex)
+                              Let candidate = (+ current (field edge weight))
+                              Let existing = (index distances (field edge to))
+                              If (group (== existing nil))
+                                Then
+                                  Block
+                                    Expr (= (index distances (field edge to)) candidate)
+                                    Expr (= (index parents (field edge to)) from)
+                                    Expr (= changed true)
+                                Else
+                                  Block
+                                    If (group (< candidate existing))
+                                      Then
+                                        Block
+                                          Expr (= (index distances (field edge to)) candidate)
+                                          Expr (= (index parents (field edge to)) from)
+                                          Expr (= changed true)
+                              Expr (+= neighborIndex 1)
+                  Expr (+= from 1)
+            If (group (! changed))
+              Then
+                Block
+                  Break
+            Expr (+= pass 1)
+      Let from = 0
+      While (group (< from count))
+        Body
+          Block
+            Let current = (index distances from)
+            If (group (!= current nil))
+              Then
+                Block
+                  Let neighbors = (index (field graph adjacency) from)
+                  Let neighborIndex = 0
+                  While (group (< neighborIndex (member-call neighbors len)))
+                    Body
+                      Block
+                        Let edge = (index neighbors neighborIndex)
+                        Let candidate = (+ current (field edge weight))
+                        Let existing = (index distances (field edge to))
+                        If (group (!= existing nil))
+                          Then
+                            Block
+                              If (group (< candidate existing))
+                                Then
+                                  Block
+                                    Return (member-call Result Err<BellmanFordResult, BellmanFordError> (member-call BellmanFordError NegativeCycle))
+                        Expr (+= neighborIndex 1)
+            Expr (+= from 1)
+      Return (member-call Result Ok<BellmanFordResult, BellmanFordError> (construct BellmanFordResult distances: distances parents: parents))
     Fun shortestWeightedDistances(graph: WeightedGraph, start: number): [number]
       Let distances: [number] = (array)
       Let visited: [bool] = (array)
@@ -2662,7 +2807,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph ExtendedGcdResult newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let sets = (member-call ds newDisjointSet 6)
