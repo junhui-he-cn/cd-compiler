@@ -2309,6 +2309,120 @@ fun areAnagrams(left: string, right: string): bool {
   return true;
 }
 
+struct Trie {
+  edgeCharacters: [[string]],
+  edgeChildren: [[number]],
+  terminal: [bool]
+}
+
+impl Trie {
+  fun findChild(node: number, character: string): number {
+    let index = 0;
+    while (index < this.edgeCharacters[node].len()) {
+      if (this.edgeCharacters[node][index] == character) {
+        return this.edgeChildren[node][index];
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun addNode(): number {
+    let node = this.terminal.len();
+    this.edgeCharacters.push([]);
+    this.edgeChildren.push([]);
+    this.terminal.push(false);
+    return node;
+  }
+
+  fun locate(text: string): number {
+    let node = 0;
+    let index = 0;
+    while (index < text.len()) {
+      let child = this.findChild(node, text.charAt(index));
+      if (child < 0) {
+        return -1;
+      }
+      node = child;
+      index += 1;
+    }
+    return node;
+  }
+
+  fun insert(word: string): bool {
+    let node = 0;
+    let index = 0;
+    while (index < word.len()) {
+      let character = word.charAt(index);
+      let child = this.findChild(node, character);
+      if (child < 0) {
+        child = this.addNode();
+        this.edgeCharacters[node].push(character);
+        this.edgeChildren[node].push(child);
+      }
+      node = child;
+      index += 1;
+    }
+    if (this.terminal[node]) {
+      return false;
+    }
+    this.terminal[node] = true;
+    return true;
+  }
+
+  fun has(word: string): bool {
+    let node = this.locate(word);
+    return node >= 0 && this.terminal[node];
+  }
+
+  fun startsWith(prefix: string): bool {
+    return this.locate(prefix) >= 0;
+  }
+
+  fun wordsWithPrefix(prefix: string): [string] {
+    let result: [string] = [];
+    let root = this.locate(prefix);
+    if (root < 0) {
+      return result;
+    }
+    let nodes: [number] = [root];
+    let positions: [number] = [0];
+    let words: [string] = [prefix];
+    while (nodes.len() > 0) {
+      let top = nodes.len() - 1;
+      let node = nodes[top];
+      if (positions[top] == 0 && this.terminal[node]) {
+        result.push(words[top]);
+      }
+      if (positions[top] >= this.edgeCharacters[node].len()) {
+        nodes.pop();
+        positions.pop();
+        words.pop();
+        continue;
+      }
+      let edgeIndex = positions[top];
+      positions[top] += 1;
+      let child = this.edgeChildren[node][edgeIndex];
+      let word = words[top] + this.edgeCharacters[node][edgeIndex];
+      nodes.push(child);
+      positions.push(0);
+      words.push(word);
+    }
+    return result;
+  }
+}
+
+fun newTrie(): Trie {
+  let edgeCharacters: [[string]] = [[]];
+  let edgeChildren: [[number]] = [[]];
+  let terminal: [bool] = [false];
+  return Trie {
+    edgeCharacters: edgeCharacters,
+    edgeChildren: edgeChildren,
+    terminal: terminal
+  };
+}
+
 fun lowerBound<T>(values: [T], target: T, less: fun(T, T): bool): number {
   let low = 0;
   let high = values.len();
@@ -3148,4 +3262,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, ExtendedGcdResult, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, minimumSpanningForestKruskal, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, ExtendedGcdResult, Trie, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, newTrie, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, minimumSpanningForestKruskal, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci;

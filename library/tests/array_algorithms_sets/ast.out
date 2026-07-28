@@ -2205,6 +2205,105 @@ Program
                   Return false
             Expr (+= index 1)
       Return true
+    Struct Trie {edgeCharacters: [[string]], edgeChildren: [[number]], terminal: [bool]}
+    Impl Trie
+      Method findChild(node: number, character: string): number
+        Let index = 0
+        While (group (< index (member-call (index (field this edgeCharacters) node) len)))
+          Body
+            Block
+              If (group (== (index (index (field this edgeCharacters) node) index) character))
+                Then
+                  Block
+                    Return (index (index (field this edgeChildren) node) index)
+              Expr (+= index 1)
+        Return (- 1)
+      Method addNode(): number
+        Let node = (member-call (field this terminal) len)
+        Expr (member-call (field this edgeCharacters) push (array))
+        Expr (member-call (field this edgeChildren) push (array))
+        Expr (member-call (field this terminal) push false)
+        Return node
+      Method locate(text: string): number
+        Let node = 0
+        Let index = 0
+        While (group (< index (member-call text len)))
+          Body
+            Block
+              Let child = (member-call this findChild node (member-call text charAt index))
+              If (group (< child 0))
+                Then
+                  Block
+                    Return (- 1)
+              Expr (= node child)
+              Expr (+= index 1)
+        Return node
+      Method insert(word: string): bool
+        Let node = 0
+        Let index = 0
+        While (group (< index (member-call word len)))
+          Body
+            Block
+              Let character = (member-call word charAt index)
+              Let child = (member-call this findChild node character)
+              If (group (< child 0))
+                Then
+                  Block
+                    Expr (= child (member-call this addNode))
+                    Expr (member-call (index (field this edgeCharacters) node) push character)
+                    Expr (member-call (index (field this edgeChildren) node) push child)
+              Expr (= node child)
+              Expr (+= index 1)
+        If (group (index (field this terminal) node))
+          Then
+            Block
+              Return false
+        Expr (= (index (field this terminal) node) true)
+        Return true
+      Method has(word: string): bool
+        Let node = (member-call this locate word)
+        Return (&& (>= node 0) (index (field this terminal) node))
+      Method startsWith(prefix: string): bool
+        Return (>= (member-call this locate prefix) 0)
+      Method wordsWithPrefix(prefix: string): [string]
+        Let result: [string] = (array)
+        Let root = (member-call this locate prefix)
+        If (group (< root 0))
+          Then
+            Block
+              Return result
+        Let nodes: [number] = (array root)
+        Let positions: [number] = (array 0)
+        Let words: [string] = (array prefix)
+        While (group (> (member-call nodes len) 0))
+          Body
+            Block
+              Let top = (- (member-call nodes len) 1)
+              Let node = (index nodes top)
+              If (group (&& (== (index positions top) 0) (index (field this terminal) node)))
+                Then
+                  Block
+                    Expr (member-call result push (index words top))
+              If (group (>= (index positions top) (member-call (index (field this edgeCharacters) node) len)))
+                Then
+                  Block
+                    Expr (member-call nodes pop)
+                    Expr (member-call positions pop)
+                    Expr (member-call words pop)
+                    Continue
+              Let edgeIndex = (index positions top)
+              Expr (+= (index positions top) 1)
+              Let child = (index (index (field this edgeChildren) node) edgeIndex)
+              Let word = (+ (index words top) (index (index (field this edgeCharacters) node) edgeIndex))
+              Expr (member-call nodes push child)
+              Expr (member-call positions push 0)
+              Expr (member-call words push word)
+        Return result
+    Fun newTrie(): Trie
+      Let edgeCharacters: [[string]] = (array (array))
+      Let edgeChildren: [[number]] = (array (array))
+      Let terminal: [bool] = (array false)
+      Return (construct Trie edgeCharacters: edgeCharacters edgeChildren: edgeChildren terminal: terminal)
     Fun lowerBound<T>(values: [T], target: T, less: fun(T, T): bool): number
       Let low = 0
       Let high = (member-call values len)
@@ -3028,7 +3127,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let left = (array 3 1 3 2 1)

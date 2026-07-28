@@ -535,6 +535,12 @@ Unicode scalar-value offsets and return `[]` for an empty string.
 `isPalindrome` compares scalar values from both ends and treats an empty string
 as a palindrome. These functions do not normalize combining marks.
 
+`Trie` is an array-node prefix tree. `insert(word)` returns `true` only when a
+new word is added; `has`, `startsWith`, and `wordsWithPrefix` handle empty and
+Unicode scalar-value strings. Prefix results use child insertion order rather
+than lexical sorting, and the current linear edge scans take `O(k)` per node
+lookup where `k` is that node's outgoing edge count.
+
 `Interval { start, end }` represents a numeric interval with the documented
 precondition `start <= end`. `mergeIntervals(intervals)` returns a new array
 sorted by start, merges overlapping or touching intervals, and leaves the input
@@ -629,6 +635,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case algorithms_graph_bellman_ford`,
 `--case algorithms_graph_kruskal`,
 `--case algorithms_string_matching`,
+`--case algorithms_string_trie`,
 `--case algorithms_graph_max_flow`, `--case algorithms_graph_min_cut`,
 `--case array_algorithms_basic`,
 `--case array_algorithms_teaching_sort`,
