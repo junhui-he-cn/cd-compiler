@@ -2496,6 +2496,48 @@ Program
           Block
             Expr (= rightMagnitude (- rightMagnitude))
       Return (* (group (/ leftMagnitude (call gcd leftMagnitude rightMagnitude))) rightMagnitude)
+    Struct ExtendedGcdResult {gcd: number, leftCoefficient: number, rightCoefficient: number}
+    Fun extendedGcd(left: number, right: number): ExtendedGcdResult
+      If (group (&& (== left 0) (== right 0)))
+        Then
+          Block
+            Return (construct ExtendedGcdResult gcd: 0 leftCoefficient: 0 rightCoefficient: 0)
+      Let oldR = left
+      If (group (< oldR 0))
+        Then
+          Block
+            Expr (= oldR (- oldR))
+      Let remainder = right
+      If (group (< remainder 0))
+        Then
+          Block
+            Expr (= remainder (- remainder))
+      Let oldS = 1
+      Let coefficientS = 0
+      Let oldT = 0
+      Let coefficientT = 1
+      While (group (!= remainder 0))
+        Body
+          Block
+            Let quotient = (call floor (/ oldR remainder))
+            Let next = (- oldR (* quotient remainder))
+            Expr (= oldR remainder)
+            Expr (= remainder next)
+            Expr (= next (- oldS (* quotient coefficientS)))
+            Expr (= oldS coefficientS)
+            Expr (= coefficientS next)
+            Expr (= next (- oldT (* quotient coefficientT)))
+            Expr (= oldT coefficientT)
+            Expr (= coefficientT next)
+      If (group (< left 0))
+        Then
+          Block
+            Expr (= oldS (- oldS))
+      If (group (< right 0))
+        Then
+          Block
+            Expr (= oldT (- oldT))
+      Return (construct ExtendedGcdResult gcd: oldR leftCoefficient: oldS rightCoefficient: oldT)
     Struct PriorityQueue<T> {heap: BinaryHeap<T>}
     Impl PriorityQueue<T>
       Method enqueue(value: T)
@@ -2512,7 +2554,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph ExtendedGcdResult newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Fun renderIntervals(values: [ds.Interval]): string

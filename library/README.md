@@ -549,6 +549,12 @@ with `0` whenever either operand is zero. Both APIs require finite integer
 `number` inputs, run in `O(log(min(|left|, |right|)))` arithmetic steps in the
 usual case, and do not define overflow behavior.
 
+`ExtendedGcdResult` stores the non-negative `gcd` and coefficients satisfying
+`left * leftCoefficient + right * rightCoefficient == gcd`. `extendedGcd`
+returns zero coefficients for `(0, 0)` and otherwise uses the same integer
+input contract as `gcd`; its iterative Euclidean pass uses logarithmic steps
+for the usual inputs.
+
 ## Current language limitation
 
 The language's builtin member-call sugar reserves names such as `push`, `pop`,
@@ -585,6 +591,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case array_algorithms_basic`,
 `--case array_algorithms_teaching_sort`,
 `--case numeric_algorithms_gcd`,
+`--case numeric_algorithms_extended_gcd`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
 `--case array_algorithms_binary_search`, `--case array_algorithms_merge_sort`,

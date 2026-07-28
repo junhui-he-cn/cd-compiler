@@ -51,7 +51,7 @@
 - 数组集合算法：`uniqueValues`、`intersectionValues`、`unionValues`、`differenceValues`。
 - 固定窗口统计：`windowSums`、`maxWindowSum`。
 - 子数组统计：`maxSubarraySum`。
-- 基础数值算法：`gcd`、`lcm`（整数输入契约）。
+- 基础数值算法：`gcd`、`lcm`、`extendedGcd`（整数输入契约）。
 - 二分查找：`lowerBound`、`upperBound`、`binarySearch`。
 - 字符串比较辅助：`compareStrings`、`stringLess`（当前限定可打印 ASCII）。
 - 并查集：整数顶点 `DisjointSet`，支持路径压缩和按大小合并。
@@ -466,7 +466,7 @@ S2 已完成 `Set<T>` 的数组后端版本：使用语言 `==` 做线性去重�
 了基础数组搜索/计数/逆序算法、稳定插入排序、窗口/前缀和算法、区间合并、
 双指针、数组集合算法、固定窗口统计、区间交集、最大子数组和、二分查找、归并
 排序、快速排序、堆排序以及选择排序和冒泡排序教学版本；基础数值算法已加入
-`gcd` 与 `lcm`。
+`gcd`、`lcm` 与 `extendedGcd`。
 
 ### S2：集合和序列算法
 
