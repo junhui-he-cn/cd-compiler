@@ -529,7 +529,9 @@ library contract rather than a replacement for future language-level ordering.
 
 `findSubstring(text, pattern)` returns the first Unicode scalar-value offset,
 or `-1` when absent; an empty pattern matches at `0`. `prefixFunction(pattern)`
-returns the KMP failure table, and `kmpSearch` uses it for `O(n + m)` matching.
+returns the KMP failure table, `zFunction(text)` returns the Z table, and
+`kmpSearch` uses the prefix table for `O(n + m)` matching. Both tables use
+Unicode scalar-value offsets and return `[]` for an empty string.
 `isPalindrome` compares scalar values from both ends and treats an empty string
 as a palindrome. These functions do not normalize combining marks.
 

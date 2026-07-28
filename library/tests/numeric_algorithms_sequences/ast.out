@@ -2080,6 +2080,45 @@ Program
             Expr (= (index prefix index) matched)
             Expr (+= index 1)
       Return prefix
+    Fun zFunction(text: string): [number]
+      Let z: [number] = (array)
+      Let index = 0
+      While (group (< index (member-call text len)))
+        Body
+          Block
+            Expr (member-call z push 0)
+            Expr (+= index 1)
+      If (group (== (member-call text len) 0))
+        Then
+          Block
+            Return z
+      Expr (= (index z 0) (member-call text len))
+      Let left = 0
+      Let right = 0
+      Expr (= index 1)
+      While (group (< index (member-call text len)))
+        Body
+          Block
+            If (group (<= index right))
+              Then
+                Block
+                  Let mirror = (- index left)
+                  Expr (= (index z index) (index z mirror))
+                  If (group (> (index z index) (+ (- right index) 1)))
+                    Then
+                      Block
+                        Expr (= (index z index) (+ (- right index) 1))
+            While (group (&& (< (+ index (index z index)) (member-call text len)) (== (member-call text charAt (index z index)) (member-call text charAt (+ index (index z index))))))
+              Body
+                Block
+                  Expr (+= (index z index) 1)
+            If (group (> (- (+ index (index z index)) 1) right))
+              Then
+                Block
+                  Expr (= left index)
+                  Expr (= right (- (+ index (index z index)) 1))
+            Expr (+= index 1)
+      Return z
     Fun kmpSearch(text: string, pattern: string): number
       If (group (== (member-call pattern len) 0))
         Then
@@ -2946,7 +2985,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction kmpSearch isPalindrome lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Print (member-call ds fastPower 2 10)
