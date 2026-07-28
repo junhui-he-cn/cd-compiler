@@ -2162,6 +2162,49 @@ Program
             Expr (+= left 1)
             Expr (-= right 1)
       Return true
+    Fun characterFrequency(text: string): [MultiSetEntry<string>]
+      Let counts = (call newMultiSet<string>)
+      Let index = 0
+      While (group (< index (member-call text len)))
+        Body
+          Block
+            Expr (member-call counts add (member-call text charAt index))
+            Expr (+= index 1)
+      Return (member-call counts entries)
+    Fun areAnagrams(left: string, right: string): bool
+      If (group (!= (member-call left len) (member-call right len)))
+        Then
+          Block
+            Return false
+      Let leftEntries = (call characterFrequency left)
+      Let rightEntries = (call characterFrequency right)
+      Let index = 0
+      While (group (< index (member-call leftEntries len)))
+        Body
+          Block
+            Let leftEntry = (index leftEntries index)
+            Let rightIndex = 0
+            Let found = false
+            While (group (< rightIndex (member-call rightEntries len)))
+              Body
+                Block
+                  Let rightEntry = (index rightEntries rightIndex)
+                  If (group (== (field leftEntry value) (field rightEntry value)))
+                    Then
+                      Block
+                        Expr (= found true)
+                        If (group (!= (field leftEntry count) (field rightEntry count)))
+                          Then
+                            Block
+                              Return false
+                        Break
+                  Expr (+= rightIndex 1)
+            If (group (! found))
+              Then
+                Block
+                  Return false
+            Expr (+= index 1)
+      Return true
     Fun lowerBound<T>(values: [T], target: T, less: fun(T, T): bool): number
       Let low = 0
       Let high = (member-call values len)
@@ -2985,7 +3028,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let path = (member-call ds newGraph 4 false)

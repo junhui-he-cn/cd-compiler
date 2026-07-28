@@ -1,5 +1,18 @@
 import "../../data_structures.cd" as ds;
 
+fun renderFrequency(entries: [ds.MultiSetEntry<string>]): string {
+  let result = "";
+  let index = 0;
+  while (index < entries.len()) {
+    if (index > 0) {
+      result = result + ",";
+    }
+    result = result + entries[index].value + ":" + str(entries[index].count);
+    index += 1;
+  }
+  return result;
+}
+
 print ds.findSubstring("hello world", "world");
 print ds.findSubstring("hello", "ell");
 print ds.findSubstring("hello", "xyz");
@@ -16,3 +29,8 @@ print ds.isPalindrome("");
 print ds.isPalindrome("level");
 print ds.isPalindrome("你🙂你");
 print ds.isPalindrome("hello");
+print renderFrequency(ds.characterFrequency("banana"));
+print renderFrequency(ds.characterFrequency("你🙂你"));
+print ds.areAnagrams("listen", "silent");
+print ds.areAnagrams("你🙂你", "🙂你你");
+print ds.areAnagrams("hello", "world");
