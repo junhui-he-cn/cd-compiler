@@ -542,6 +542,13 @@ preserving the first occurrence order:
 They use linear scans, so the current array-backed versions are `O(n*m)` in the
 worst case for the input sizes involved and allocate a new result array.
 
+`gcd(left, right)` uses the Euclidean algorithm and returns a non-negative
+greatest common divisor; `gcd(0, 0)` is `0`, and negative operands are treated
+by magnitude. `lcm(left, right)` returns a non-negative least common multiple
+with `0` whenever either operand is zero. Both APIs require finite integer
+`number` inputs, run in `O(log(min(|left|, |right|)))` arithmetic steps in the
+usual case, and do not define overflow behavior.
+
 ## Current language limitation
 
 The language's builtin member-call sugar reserves names such as `push`, `pop`,
@@ -577,6 +584,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case algorithms_graph_max_flow`, `--case algorithms_graph_min_cut`,
 `--case array_algorithms_basic`,
 `--case array_algorithms_teaching_sort`,
+`--case numeric_algorithms_gcd`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
 `--case array_algorithms_binary_search`, `--case array_algorithms_merge_sort`,

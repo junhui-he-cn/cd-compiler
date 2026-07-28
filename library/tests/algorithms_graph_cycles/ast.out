@@ -2461,6 +2461,41 @@ Program
                   Expr (= best current)
             Expr (+= index 1)
       Return best
+    Fun gcd(left: number, right: number): number
+      Let a = left
+      If (group (< a 0))
+        Then
+          Block
+            Expr (= a (- a))
+      Let b = right
+      If (group (< b 0))
+        Then
+          Block
+            Expr (= b (- b))
+      While (group (!= b 0))
+        Body
+          Block
+            Let quotient = (call floor (/ a b))
+            Let remainder = (- a (* quotient b))
+            Expr (= a b)
+            Expr (= b remainder)
+      Return a
+    Fun lcm(left: number, right: number): number
+      If (group (|| (== left 0) (== right 0)))
+        Then
+          Block
+            Return 0
+      Let leftMagnitude = left
+      If (group (< leftMagnitude 0))
+        Then
+          Block
+            Expr (= leftMagnitude (- leftMagnitude))
+      Let rightMagnitude = right
+      If (group (< rightMagnitude 0))
+        Then
+          Block
+            Expr (= rightMagnitude (- rightMagnitude))
+      Return (* (group (/ leftMagnitude (call gcd leftMagnitude rightMagnitude))) rightMagnitude)
     Struct PriorityQueue<T> {heap: BinaryHeap<T>}
     Impl PriorityQueue<T>
       Method enqueue(value: T)
@@ -2477,7 +2512,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let dag = (member-call ds newGraph 4 true)
