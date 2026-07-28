@@ -1911,6 +1911,62 @@ std::string completionPrefix(std::string_view source, std::size_t byte)
     return std::string(source.substr(start, std::min(byte, source.size()) - start));
 }
 
+const std::vector<const char*>& completionKeywordNames()
+{
+    static const std::vector<const char*> names = {
+        "as",
+        "break",
+        "continue",
+        "else",
+        "enum",
+        "export",
+        "false",
+        "for",
+        "fun",
+        "if",
+        "impl",
+        "import",
+        "in",
+        "let",
+        "match",
+        "nil",
+        "print",
+        "private",
+        "return",
+        "struct",
+        "true",
+        "while",
+    };
+    return names;
+}
+
+JsonValue keywordCompletionList(
+    std::string_view source,
+    const SourceRange& replaceRange,
+    std::string_view prefix)
+{
+    std::vector<JsonValue> items;
+    for (const char* keyword : completionKeywordNames()) {
+        if (std::string_view(keyword).size() < prefix.size()
+            || std::string_view(keyword).compare(0, prefix.size(), prefix) != 0) {
+            continue;
+        }
+        items.push_back(makeObject({
+            {"label", JsonValue::string(keyword)},
+            {"kind", JsonValue::number("14")},
+            {"detail", JsonValue::string("keyword")},
+            {"textEdit", makeObject({
+                {"range", textDocumentRange(source, replaceRange)},
+                {"newText", JsonValue::string(keyword)},
+            })},
+        }));
+    }
+    return makeObject({
+        {"isIncomplete", JsonValue::booleanValue(false)},
+        {"items", JsonValue::array(std::move(items))},
+    });
+}
+
 std::optional<std::string> completionReceiverPath(
     std::string_view source,
     std::size_t prefixStart)
@@ -3312,15 +3368,12 @@ private:
             });
         }
         const auto found = documents_.find(*uri);
-        if (found == documents_.end()
-            || !found->second.analysis.snapshot
-            || !found->second.analysis.snapshot->program) {
+        if (found == documents_.end()) {
             return makeObject({
                 {"isIncomplete", JsonValue::booleanValue(false)},
                 {"items", JsonValue::array({})},
             });
         }
-        const AnalysisSnapshot& snapshot = *found->second.analysis.snapshot;
         const std::optional<std::size_t> byte = sourceByteAtLspPosition(
             found->second.text,
             position->line,
@@ -3338,6 +3391,11 @@ private:
             found->second.analysis.sourceId,
             prefixStart,
             *byte};
+        if (!found->second.analysis.snapshot
+            || !found->second.analysis.snapshot->program) {
+            return keywordCompletionList(found->second.text, replaceRange, prefix);
+        }
+        const AnalysisSnapshot& snapshot = *found->second.analysis.snapshot;
         const std::optional<std::string> receiverPath = completionReceiverPath(
             found->second.text,
             prefixStart);
@@ -3381,7 +3439,7 @@ private:
                 if (candidate.declaration && candidate.declaration->name == name) {
                     return true;
                 }
-                if (candidate.keyword && candidate.keyword == name) {
+                if (candidate.keyword && std::string_view(candidate.keyword) == name) {
                     return true;
                 }
             }
@@ -3535,8 +3593,10 @@ private:
                     }
                 }
             }
-            if (matchesPrefix("print") && !hasCandidateName("print")) {
-                candidates.push_back(Candidate{nullptr, nullptr, nullptr, "print", replaceRange});
+            for (const char* keyword : completionKeywordNames()) {
+                if (matchesPrefix(keyword) && !hasCandidateName(keyword)) {
+                    candidates.push_back(Candidate{nullptr, nullptr, nullptr, keyword, replaceRange});
+                }
             }
         }
         const auto candidateName = [](const Candidate& candidate) -> std::string_view {
@@ -3547,7 +3607,7 @@ private:
                 return candidate.field->name.lexeme;
             }
             if (candidate.keyword) {
-                return candidate.keyword;
+                return std::string_view(candidate.keyword);
             }
             return candidate.declaration->name;
         };

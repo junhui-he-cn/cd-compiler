@@ -62,6 +62,7 @@ def main() -> int:
     other_uri = "file:///tmp/compiler-design-lsp-other.cd"
     module_uri = "file:///tmp/compiler-design-lsp-module.cd"
     api_uri = "file:///tmp/compiler-design-lsp-api.cd"
+    incomplete_uri = "file:///tmp/compiler-design-lsp-incomplete.cd"
     process = subprocess.Popen(
         [sys.argv[1], "--lsp"],
         stdin=subprocess.PIPE,
@@ -132,6 +133,79 @@ def main() -> int:
             },
         )
         assert_publish(receive(process), other_uri, 0)
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didOpen",
+                "params": {
+                    "textDocument": {
+                        "uri": incomplete_uri,
+                        "languageId": "compiler-design",
+                        "version": 1,
+                        "text": "pri",
+                    }
+                },
+            },
+        )
+        assert_publish(receive(process), incomplete_uri, 1)
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 16,
+                "method": "textDocument/completion",
+                "params": {
+                    "textDocument": {"uri": incomplete_uri},
+                    "position": {"line": 0, "character": 3},
+                },
+            },
+        )
+        incomplete_completion = receive(process)
+        if incomplete_completion.get("result") != {
+            "isIncomplete": False,
+            "items": [
+                {
+                    "label": "print",
+                    "kind": 14,
+                    "detail": "keyword",
+                    "textEdit": {
+                        "range": {
+                            "start": {"line": 0, "character": 0},
+                            "end": {"line": 0, "character": 3},
+                        },
+                        "newText": "print",
+                    },
+                },
+                {
+                    "label": "private",
+                    "kind": 14,
+                    "detail": "keyword",
+                    "textEdit": {
+                        "range": {
+                            "start": {"line": 0, "character": 0},
+                            "end": {"line": 0, "character": 3},
+                        },
+                        "newText": "private",
+                    },
+                },
+            ],
+        }:
+            raise AssertionError(
+                f"incomplete document completion response mismatch: {incomplete_completion!r}"
+            )
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didClose",
+                "params": {"textDocument": {"uri": incomplete_uri}},
+            },
+        )
+        assert_publish(receive(process), incomplete_uri, 0)
 
         send(
             process,
