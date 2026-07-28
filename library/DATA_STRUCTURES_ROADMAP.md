@@ -60,7 +60,7 @@
 - 欧拉路径：无向图 `eulerTrail`。
 - 无权图路径：`shortestDistances`、`shortestPath`。
 - DAG 视图：`inDegrees`、`topologicalOrder`、`hasCycle`。
-- 加权图：非负 `WeightedEdge`/`WeightedGraph`、Dijkstra、Floyd-Warshall 与最小生成森林。
+- 加权图：非负 `WeightedEdge`/`WeightedGraph`、Dijkstra、Floyd-Warshall、最大流与最小生成森林。
 - 强连通分量：有向图的 `stronglyConnectedComponents`。
 
 它们的现有 API 和示例继续作为兼容基线。后续新增 API 不应悄悄改变空值、
@@ -285,6 +285,7 @@ enum Result<T, E> {
 有向输入返回同顶点数的空森林。
 `allPairsWeightedDistances` 已提供非负权图的 Floyd-Warshall 全源距离矩阵，
 不可达项使用 `-1`。
+`maxFlow` 已提供有向非负容量图的 Edmonds-Karp 增广路径版本，不修改输入图。
 
 - 遍历、复制、拼接、分块、窗口、批处理；
 - `reverse`、`rotate`、`partition`、稳定分区、按谓词分组；

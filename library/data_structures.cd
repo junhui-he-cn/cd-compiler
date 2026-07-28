@@ -1606,6 +1606,88 @@ fun allPairsWeightedDistances(graph: WeightedGraph): [[number]] {
   return distances;
 }
 
+fun maxFlow(graph: WeightedGraph, source: number, sink: number): number {
+  if (!graph.directed || source < 0 || source >= graph.vertexCount()
+      || sink < 0 || sink >= graph.vertexCount() || source == sink) {
+    return 0;
+  }
+  let count = graph.vertexCount();
+  let capacities: [[number]] = [];
+  let index = 0;
+  while (index < count) {
+    let row: [number] = [];
+    let column = 0;
+    while (column < count) {
+      row.push(0);
+      column += 1;
+    }
+    capacities.push(row);
+    index += 1;
+  }
+
+  let from = 0;
+  while (from < count) {
+    let neighbors = graph.adjacency[from];
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let edge = neighbors[neighborIndex];
+      capacities[from][edge.to] += edge.weight;
+      neighborIndex += 1;
+    }
+    from += 1;
+  }
+
+  let total = 0;
+  while (true) {
+    let parents: [number] = [];
+    let visited: [bool] = [];
+    index = 0;
+    while (index < count) {
+      parents.push(-1);
+      visited.push(false);
+      index += 1;
+    }
+    let queue: [number] = [source];
+    visited[source] = true;
+    let head = 0;
+    while (head < queue.len() && !visited[sink]) {
+      let current = queue[head];
+      head += 1;
+      let neighbor = 0;
+      while (neighbor < count) {
+        if (!visited[neighbor] && capacities[current][neighbor] > 0) {
+          visited[neighbor] = true;
+          parents[neighbor] = current;
+          queue.push(neighbor);
+        }
+        neighbor += 1;
+      }
+    }
+    if (!visited[sink]) {
+      break;
+    }
+
+    let bottleneck = -1;
+    let current = sink;
+    while (current != source) {
+      let parent = parents[current];
+      if (bottleneck < 0 || capacities[parent][current] < bottleneck) {
+        bottleneck = capacities[parent][current];
+      }
+      current = parent;
+    }
+    current = sink;
+    while (current != source) {
+      let parent = parents[current];
+      capacities[parent][current] -= bottleneck;
+      capacities[current][parent] += bottleneck;
+      current = parent;
+    }
+    total += bottleneck;
+  }
+  return total;
+}
+
 fun shortestWeightedPath(graph: WeightedGraph, start: number, goal: number): [number] {
   let result: [number] = [];
   let count = graph.vertexCount();
@@ -2396,4 +2478,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, shortestWeightedDistances, allPairsWeightedDistances, shortestWeightedPath, minimumSpanningForest, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, shortestWeightedPath, minimumSpanningForest, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum;

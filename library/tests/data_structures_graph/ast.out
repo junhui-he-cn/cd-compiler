@@ -1488,6 +1488,96 @@ Program
                   Expr (+= from 1)
             Expr (+= via 1)
       Return distances
+    Fun maxFlow(graph: WeightedGraph, source: number, sink: number): number
+      If (group (|| (|| (|| (|| (|| (! (field graph directed)) (< source 0)) (>= source (member-call graph vertexCount))) (< sink 0)) (>= sink (member-call graph vertexCount))) (== source sink)))
+        Then
+          Block
+            Return 0
+      Let count = (member-call graph vertexCount)
+      Let capacities: [[number]] = (array)
+      Let index = 0
+      While (group (< index count))
+        Body
+          Block
+            Let row: [number] = (array)
+            Let column = 0
+            While (group (< column count))
+              Body
+                Block
+                  Expr (member-call row push 0)
+                  Expr (+= column 1)
+            Expr (member-call capacities push row)
+            Expr (+= index 1)
+      Let from = 0
+      While (group (< from count))
+        Body
+          Block
+            Let neighbors = (index (field graph adjacency) from)
+            Let neighborIndex = 0
+            While (group (< neighborIndex (member-call neighbors len)))
+              Body
+                Block
+                  Let edge = (index neighbors neighborIndex)
+                  Expr (+= (index (index capacities from) (field edge to)) (field edge weight))
+                  Expr (+= neighborIndex 1)
+            Expr (+= from 1)
+      Let total = 0
+      While (group true)
+        Body
+          Block
+            Let parents: [number] = (array)
+            Let visited: [bool] = (array)
+            Expr (= index 0)
+            While (group (< index count))
+              Body
+                Block
+                  Expr (member-call parents push (- 1))
+                  Expr (member-call visited push false)
+                  Expr (+= index 1)
+            Let queue: [number] = (array source)
+            Expr (= (index visited source) true)
+            Let head = 0
+            While (group (&& (< head (member-call queue len)) (! (index visited sink))))
+              Body
+                Block
+                  Let current = (index queue head)
+                  Expr (+= head 1)
+                  Let neighbor = 0
+                  While (group (< neighbor count))
+                    Body
+                      Block
+                        If (group (&& (! (index visited neighbor)) (> (index (index capacities current) neighbor) 0)))
+                          Then
+                            Block
+                              Expr (= (index visited neighbor) true)
+                              Expr (= (index parents neighbor) current)
+                              Expr (member-call queue push neighbor)
+                        Expr (+= neighbor 1)
+            If (group (! (index visited sink)))
+              Then
+                Block
+                  Break
+            Let bottleneck = (- 1)
+            Let current = sink
+            While (group (!= current source))
+              Body
+                Block
+                  Let parent = (index parents current)
+                  If (group (|| (< bottleneck 0) (< (index (index capacities parent) current) bottleneck)))
+                    Then
+                      Block
+                        Expr (= bottleneck (index (index capacities parent) current))
+                  Expr (= current parent)
+            Expr (= current sink)
+            While (group (!= current source))
+              Body
+                Block
+                  Let parent = (index parents current)
+                  Expr (-= (index (index capacities parent) current) bottleneck)
+                  Expr (+= (index (index capacities current) parent) bottleneck)
+                  Expr (= current parent)
+            Expr (+= total bottleneck)
+      Return total
     Fun shortestWeightedPath(graph: WeightedGraph, start: number, goal: number): [number]
       Let result: [number] = (array)
       Let count = (member-call graph vertexCount)
@@ -2274,7 +2364,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances allPairsWeightedDistances shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances allPairsWeightedDistances maxFlow shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let graph = (member-call ds newGraph 4 false)
