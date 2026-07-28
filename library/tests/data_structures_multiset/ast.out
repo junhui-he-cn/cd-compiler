@@ -1965,6 +1965,59 @@ Program
       Let result = (call copy values)
       Expr (call sortArrayInPlace result less)
       Return result
+    Fun selectionSortInPlace<T>(values: [T], less: fun(T, T): bool)
+      Let start = 0
+      While (group (< start (member-call values len)))
+        Body
+          Block
+            Let smallest = start
+            Let index = (+ start 1)
+            While (group (< index (member-call values len)))
+              Body
+                Block
+                  If (group (call less (index values index) (index values smallest)))
+                    Then
+                      Block
+                        Expr (= smallest index)
+                  Expr (+= index 1)
+            If (group (!= smallest start))
+              Then
+                Block
+                  Let value = (index values start)
+                  Expr (= (index values start) (index values smallest))
+                  Expr (= (index values smallest) value)
+            Expr (+= start 1)
+    Fun selectionSort<T>(values: [T], less: fun(T, T): bool): [T]
+      Let result = (call copy values)
+      Expr (call selectionSortInPlace result less)
+      Return result
+    Fun bubbleSortInPlace<T>(values: [T], less: fun(T, T): bool)
+      Let end = (- (member-call values len) 1)
+      While (group (> end 0))
+        Body
+          Block
+            Let index = 0
+            Let swapped = false
+            While (group (< index end))
+              Body
+                Block
+                  If (group (call less (index values (+ index 1)) (index values index)))
+                    Then
+                      Block
+                        Let value = (index values index)
+                        Expr (= (index values index) (index values (+ index 1)))
+                        Expr (= (index values (+ index 1)) value)
+                        Expr (= swapped true)
+                  Expr (+= index 1)
+            If (group (! swapped))
+              Then
+                Block
+                  Break
+            Expr (-= end 1)
+    Fun bubbleSort<T>(values: [T], less: fun(T, T): bool): [T]
+      Let result = (call copy values)
+      Expr (call bubbleSortInPlace result less)
+      Return result
     Fun mergeSort<T>(values: [T], less: fun(T, T): bool): [T]
       Let result = (call copy values)
       Let width = 1
@@ -2424,7 +2477,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Fun renderEntries(values: [ds.MultiSetEntry<number>]): string

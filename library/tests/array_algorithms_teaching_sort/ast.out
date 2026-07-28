@@ -2480,34 +2480,21 @@ Program
     Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum
   Module 1 entry
     Import "../../data_structures.cd" as ds
-    Fun renderIntervals(values: [ds.Interval]): string
-      If (group (== (member-call values len) 0))
-        Then
-          Block
-            Return "empty"
-      Let result = ""
-      Let index = 0
-      While (group (< index (member-call values len)))
-        Body
-          Block
-            If (group (> index 0))
-              Then
-                Block
-                  Expr (= result (+ result ","))
-            Let value = (index values index)
-            Expr (= result (+ (+ (+ (+ (+ result "[") (call str (field value start))) ",") (call str (field value end))) "]"))
-            Expr (+= index 1)
-      Return result
-    Let left: [ds.Interval] = (array (construct ds.Interval start: 5 end: 7) (construct ds.Interval start: 1 end: 3) (construct ds.Interval start: 2 end: 6) (construct ds.Interval start: 8 end: 10) (construct ds.Interval start: 10 end: 12))
-    Let right: [ds.Interval] = (array (construct ds.Interval start: 11 end: 14) (construct ds.Interval start: 6 end: 9) (construct ds.Interval start: 0 end: 2) (construct ds.Interval start: 3 end: 5))
-    Print (call renderIntervals (member-call ds intersectIntervals left right))
-    Print (call renderIntervals left)
-    Print (call renderIntervals right)
-    Let touching: [ds.Interval] = (array (construct ds.Interval start: 1 end: 2))
-    Let touchingRight: [ds.Interval] = (array (construct ds.Interval start: 2 end: 4))
-    Print (call renderIntervals (member-call ds intersectIntervals touching touchingRight))
-    Let disjoint: [ds.Interval] = (array (construct ds.Interval start: 10 end: 12))
-    Print (call renderIntervals (member-call ds intersectIntervals touching disjoint))
-    Let empty: [ds.Interval] = (array)
-    Print (call renderIntervals (member-call ds intersectIntervals empty right))
-    Print (call renderIntervals (member-call ds intersectIntervals left empty))
+    Fun ascending(left: number, right: number): bool
+      Return (< left right)
+    Fun descending(left: number, right: number): bool
+      Return (> left right)
+    Let numbers = (array 5 1 4 2 8 2)
+    Print (member-call ds selectionSort numbers ascending)
+    Print numbers
+    Expr (member-call ds selectionSortInPlace numbers descending)
+    Print numbers
+    Let words = (array "pear" "apple" "orange" "apple")
+    Print (member-call ds bubbleSort words (field ds stringLess))
+    Print words
+    Expr (member-call ds bubbleSortInPlace words (field ds stringLess))
+    Print words
+    Let empty: [number] = (array)
+    Print (member-call ds selectionSort<number> empty ascending)
+    Expr (member-call ds bubbleSortInPlace empty descending)
+    Print empty

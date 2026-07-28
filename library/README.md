@@ -448,6 +448,13 @@ that `left` should appear first. Sorting is `O(n^2)`; the copying version uses
 space. Neither function requires a total-order check beyond the comparator's
 behavior.
 
+`selectionSort<T>` and `bubbleSort<T>` return sorted shallow copies, while
+their `...InPlace` variants modify the supplied array. Selection sort is not
+stable, uses `O(n^2)` time and `O(1)` extra space in place; bubble sort preserves
+the input order of comparator-equal values, can stop early for an already
+ordered input, and uses `O(n^2)` worst-case time and `O(1)` extra space. All
+four use the same `less` callback contract as `sortArray`.
+
 `mergeSort<T>(values, less)` returns a stable, sorted shallow copy and leaves
 the input unchanged. It uses bottom-up merge sort in `O(n log n)` time and
 `O(n)` temporary outer-array space. Equal comparator values keep their input
@@ -569,6 +576,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case algorithms_graph_paths`,
 `--case algorithms_graph_max_flow`, `--case algorithms_graph_min_cut`,
 `--case array_algorithms_basic`,
+`--case array_algorithms_teaching_sort`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
 `--case array_algorithms_binary_search`, `--case array_algorithms_merge_sort`,
