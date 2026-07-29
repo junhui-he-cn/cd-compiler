@@ -237,7 +237,110 @@ def main() -> int:
                 f"exit={function_run.returncode}\nstdout={function_run.stdout}\nstderr={function_run.stderr}"
             )
 
-    print("module bytecode artifact tests: import-order and function module sets validated")
+        operator_fixture = Path(__file__).resolve().parent / "golden" / "import_struct_operator_direct"
+        operator_source = operator_fixture / "input.cd"
+        operator_output_dir = Path(temporary) / "operator-modules"
+        emitted_operator = run([
+            str(compiler),
+            "--emit-module-bytecode",
+            str(operator_output_dir),
+            str(operator_source),
+        ])
+        if emitted_operator.returncode != 0 or emitted_operator.stdout or emitted_operator.stderr:
+            return fail(
+                "operator module emission failed\n"
+                f"exit={emitted_operator.returncode}\nstdout={emitted_operator.stdout}\nstderr={emitted_operator.stderr}"
+            )
+
+        operator_artifacts = sorted(operator_output_dir.glob("module-*.cdbc"))
+        if len(operator_artifacts) != 2:
+            return fail(
+                "expected two operator module artifacts, found "
+                f"{[path.name for path in operator_artifacts]}"
+            )
+
+        operator_entry_text = None
+        operator_owner_text = None
+        for artifact in operator_artifacts:
+            text = artifact.read_text(encoding="utf-8")
+            dumped = run([
+                "cargo",
+                "run",
+                "--quiet",
+                "--manifest-path",
+                str(manifest),
+                "--",
+                "dump",
+                str(artifact),
+            ])
+            if dumped.returncode != 0 or dumped.stdout != text or dumped.stderr:
+                return fail(
+                    f"{artifact.name} failed Rust operator artifact dump\n"
+                    f"exit={dumped.returncode}\nstdout={dumped.stdout}\nstderr={dumped.stderr}"
+                )
+            if "  entry = true\n" in text:
+                operator_entry_text = text
+            elif "  entry = false\n" in text:
+                operator_owner_text = text
+            else:
+                return fail(f"{artifact.name} has no operator entry declaration")
+
+        if operator_entry_text is None or operator_owner_text is None:
+            return fail("did not identify operator entry and owner artifacts")
+
+        if 'kind=import at=0 requested="./lib.cd"' not in operator_entry_text:
+            return fail("operator entry artifact did not preserve its dependency marker")
+        linkage_names = (
+            "__method_Point_operator_Less#0",
+            "__method_Point_operator_LessEqual#1",
+            "__method_Point_operator_Greater#2",
+            "__method_Point_operator_GreaterEqual#3",
+        )
+        for linkage_name in linkage_names:
+            if f'"{linkage_name}"' not in operator_owner_text:
+                return fail(f"operator owner artifact lost linkage name {linkage_name}")
+            if f'"{linkage_name}"' not in operator_entry_text:
+                return fail(f"operator entry artifact lost linkage name {linkage_name}")
+        for function_name in ("<", "<=", ">", ">="):
+            if f'name="{function_name}"' not in operator_owner_text:
+                return fail(f"operator owner artifact lost function {function_name}")
+        if "function f0 name=" in operator_entry_text:
+            return fail("operator entry artifact unexpectedly contained owner functions")
+
+        operator_linked_path = Path(temporary) / "operator-linked.cdbc"
+        linked_operator = run([
+            "cargo",
+            "run",
+            "--quiet",
+            "--manifest-path",
+            str(manifest),
+            "--",
+            "link",
+            str(operator_output_dir),
+            str(operator_linked_path),
+        ])
+        if linked_operator.returncode != 0 or linked_operator.stdout or linked_operator.stderr:
+            return fail(
+                "operator module link failed\n"
+                f"exit={linked_operator.returncode}\nstdout={linked_operator.stdout}\nstderr={linked_operator.stderr}"
+            )
+        operator_run = run([
+            "cargo",
+            "run",
+            "--quiet",
+            "--manifest-path",
+            str(manifest),
+            "--",
+            "run",
+            str(operator_linked_path),
+        ])
+        if operator_run.returncode != 0 or operator_run.stdout != "true\ntrue\ntrue\ntrue\n" or operator_run.stderr:
+            return fail(
+                "linked operator module execution mismatch\n"
+                f"exit={operator_run.returncode}\nstdout={operator_run.stdout}\nstderr={operator_run.stderr}"
+            )
+
+    print("module bytecode artifact tests: import-order, function, and operator module sets validated")
     return 0
 
 

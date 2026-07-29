@@ -47,7 +47,8 @@ work. The completed groups are:
 - M1A1, M1A2, M1B, M1C, M1D, M1E1, M1E2, M1E3, and M1F;
 - the admitted M2A flow and M2B recovery slices;
 - M3A graph/interface work, M3B artifact/cache/boundary work, and M4A/M4B;
-- M5A-FORMAT-001..008, M5B-LSP-001..017, M5D-DEBUG-001, and M6-LANG-001.
+- M5A-FORMAT-001..008, M5B-LSP-001..017, M5D-DEBUG-001, M6-LANG-001, and
+  M6-LANG-OPERATOR-001A..001C.
 
 These names are a completion record, not a to-do list.
 
@@ -140,12 +141,12 @@ duplicate implementation diagnostics; run focused golden, Rust VM, formatter,
 CTest, and canonical verification; refresh the verification inventory and pass
 `git diff --check`.
 
-## Next active slice
+## Operator slice status
 
-The public operator metadata/interface phase and source-backed imported
-operator dispatch are complete. The next continuation of `M6-LANG-OPERATOR-001C`
-is independent module-product/linker parity, as described by the resolved
-decision record.
+The public operator metadata/interface phase, source-backed imported dispatch,
+and independent module-product/linker parity are complete. The operator
+contract remains ordinary function-call lowering with no new opcode or runtime
+operator table.
 
 ## Planned follow-up specifications
 
@@ -156,10 +157,10 @@ concrete data-structure code to the compiler slice.
 
 ### M6-LANG-OPERATOR-001C: public operator metadata and module products
 
-**Status:** local implementation, public interface/cache shape, and
-source-backed imported dispatch are complete. Independent module-product parity
-remains deferred; the resolved declaration and dispatch contract is recorded in
-`docs/decisions/m6-language-operator-001.{md,json}`.
+**Status:** complete. Local implementation, public interface/cache shape,
+source-backed imported dispatch, and independent module-product/linker parity
+are covered by the resolved declaration, focused module-artifact regression,
+and C++/Rust execution paths.
 
 **Purpose:** extend the local operator implementation with public interface and
 module-cache propagation, imported/re-exported dispatch, and independent module
@@ -183,9 +184,10 @@ Imported operators retain resolved linkage names without requiring a local AST
 method declaration; the source-backed C++ and Rust VM paths are covered by
 focused fixtures and declaration-index validation.
 
-**Remaining gate:** cover independent `.cdbc 0.1` products, linker validation,
-and C++/Rust parity across that separate compilation boundary before the full
-slice is admitted.
+**Completed gate:** independent `.cdbc 0.1` products preserve the owner
+operator functions, importer dependency markers, and resolved linkage names;
+Rust canonical dump, link, and execution agree with the C++ source-backed
+operator goldens.
 
 ### M5D-DEBUG-002: Interactive breakpoints and stepping
 
@@ -287,8 +289,7 @@ master + shipped generic functions, callbacks, and module interfaces
   -> completed M6-LANG-OPERATOR-001A builtin string ordering
   -> completed M6-LANG-OPERATOR-001B local struct comparison operators
   -> completed M6-LANG-OPERATOR-001C public operator metadata/cache shape and
-     source-backed imported dispatch
-  -> M6-LANG-OPERATOR-001C independent module products/linker parity (deferred)
+     source-backed imported dispatch and independent module products/linker parity
   -> language-enabled library specifications (no compiler-owned data structures)
 
 master + M5D-DEBUG-001
@@ -307,11 +308,10 @@ feat/m5c-repl
   -> M5C-REPL-001 re-audit, outside the active queue for now
 ```
 
-No implementation slice is currently active. M6-LANG-OPERATOR-001A and the
-local 001B slice are complete; M6-LANG-OPERATOR-001C, M5D-DEBUG-002, and the
-other entries remain deferred specifications with clear future boundaries. They
-do not reopen completed work or authorize concrete data-structure
-implementations in the compiler repository.
+No implementation slice is currently active. M6-LANG-OPERATOR-001A..001C are
+complete; M5D-DEBUG-002 and the other entries remain deferred specifications
+with clear future boundaries. They do not reopen completed work or authorize
+concrete data-structure implementations in the compiler repository.
 
 ## Verification contract
 

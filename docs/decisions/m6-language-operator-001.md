@@ -1,8 +1,8 @@
 # M6-LANG-OPERATOR-001: statically dispatched user-defined ordering operators
 
-Status: design resolved; builtin string-ordering, local named-struct operators,
-the public interface/cache shape, and source-backed imported operator dispatch
-are implemented. Independent module-product parity remains deferred.
+Status: design resolved and implemented; builtin string-ordering, local
+named-struct operators, the public interface/cache shape, source-backed
+imported operator dispatch, and independent module-product parity are covered.
 
 Baseline: `master` at `2592027` (`feat: add VSCode syntax highlighting`).
 

@@ -3840,14 +3840,16 @@
         "ctest",
         "bytecode_module_artifacts"
       ],
-      "backend": "cpp",
+      "backend": "python",
       "expected_result_kind": "pass",
       "boundary_sequence": [
         "verification"
       ],
       "terminal_boundary": "verification",
       "sources": [
-        "CMakeLists.txt"
+        "CMakeLists.txt",
+        "tests/bytecode_module_artifact_tests.py",
+        "vm-rs"
       ],
       "expected_files": []
     },
