@@ -65,6 +65,11 @@ CTEST_SOURCE_OVERRIDES = {
     "source_map": ["tests/source_map_tests.cpp"],
     "ir_source_location": ["tests/ir_source_location_tests.cpp"],
     "golden_runner_selftest": ["tests/run_golden_tests_selftest.py"],
+    "benchmark_runner_selftest": [
+        "tests/run_benchmarks_selftest.py",
+        "tests/run_benchmarks.py",
+        "tests/benchmark_manifest.json",
+    ],
     "cmake_config": ["tests/cmake_config_tests.py"],
     "ci_workflow": ["tests/ci_workflow_tests.py", ".github/workflows/ci.yml"],
     "cli_multi_source": ["tests/cli_multi_source_tests.py"],

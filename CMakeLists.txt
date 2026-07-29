@@ -104,6 +104,12 @@ add_test(
 )
 
 add_test(
+    NAME benchmark_runner_selftest
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
+            ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/run_benchmarks_selftest.py
+)
+
+add_test(
     NAME verification_inventory
     COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
             ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/verification_inventory.py

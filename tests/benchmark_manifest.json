@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "benchmark_revision": "bench-2026-07-29-r1",
+  "default_repeat": 3,
+  "workloads": [
+    {
+      "workload_id": "arithmetic",
+      "description": "Integer arithmetic and control flow.",
+      "sources": [
+        "tests/bytecode_artifacts/arithmetic/input.cd"
+      ],
+      "expected_output": "tests/bytecode_artifacts/arithmetic/run.out"
+    },
+    {
+      "workload_id": "collection_helpers",
+      "description": "Array higher-order helper calls.",
+      "sources": [
+        "tests/bytecode_artifacts/collection_helpers/input.cd"
+      ],
+      "expected_output": "tests/bytecode_artifacts/collection_helpers/run.out"
+    },
+    {
+      "workload_id": "maps",
+      "description": "Map construction, lookup, and iteration.",
+      "sources": [
+        "tests/bytecode_artifacts/maps/input.cd"
+      ],
+      "expected_output": "tests/bytecode_artifacts/maps/run.out"
+    },
+    {
+      "workload_id": "native_stdlib_math",
+      "description": "Native standard-library math calls.",
+      "sources": [
+        "tests/bytecode_artifacts/native_stdlib_math/input.cd"
+      ],
+      "expected_output": "tests/bytecode_artifacts/native_stdlib_math/run.out"
+    },
+    {
+      "workload_id": "unicode_strings",
+      "description": "Unicode string operations.",
+      "sources": [
+        "tests/bytecode_artifacts/unicode_strings/input.cd"
+      ],
+      "expected_output": "tests/bytecode_artifacts/unicode_strings/run.out"
+    }
+  ]
+}

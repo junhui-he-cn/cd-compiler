@@ -3788,6 +3788,29 @@
       "fixture": "tests/golden/unicode_strings"
     },
     {
+      "case_id": "ctest.benchmark_runner_selftest",
+      "runner": "ctest",
+      "result_name": "benchmark_runner_selftest",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "benchmark_runner_selftest"
+      ],
+      "backend": "python",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt",
+        "tests/run_benchmarks_selftest.py",
+        "tests/run_benchmarks.py",
+        "tests/benchmark_manifest.json"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "ctest.boundary_comparison_selftest",
       "runner": "ctest",
       "result_name": "boundary_comparison_selftest",
