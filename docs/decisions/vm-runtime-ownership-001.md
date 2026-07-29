@@ -173,10 +173,11 @@ deletion in this slice.
 
 ## VM-2B entry gate
 
-VM-2B may start only after an explicit architecture decision compares retaining
-the current reference-counted model, wrapping it behind a `Heap`/handle facade,
-or introducing another ownership strategy. The comparison must include live
-and dead aggregates, closure graphs, cyclic graphs, native callback temporaries,
-runtime-error exits, debug observation, peak memory, and identity stability.
-Until that decision and measurements exist, no `Heap`/Handle abstraction or GC
-implementation should be added under this roadmap slice.
+The no-semantic-change first facade is recorded in
+[`vm-heap-facade-001.md`](vm-heap-facade-001.md): the selected transitional
+strategy is to wrap the existing reference-counted storage while keeping roots
+owned by `VM`. Any storage replacement, relocating handle table, or GC still
+requires measurements of live and dead aggregates, closure graphs, cyclic
+graphs, native callback temporaries, runtime-error exits, debug observation,
+peak memory, and identity stability. Until those measurements exist, do not
+extend the facade into a collector or persistent host-value API.

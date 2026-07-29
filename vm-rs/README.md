@@ -31,7 +31,8 @@ stdout.
 - `bytecode`: parsed bytecode structures.
 - `format`: `.cdbc` parser and serializer.
 - `value`: runtime values, printing, truthiness, and equality.
-- `runtime`: shared cells, environments, functions, and arrays.
+- `runtime`: the `Heap` construction/identity facade over shared cells,
+  environments, functions, and aggregates.
 - `vm`: executor, frames, instruction dispatch, calls, and runtime errors.
 
 Future backend tracks may add GC-aware heap ownership, task scheduling, and JIT metadata modules.

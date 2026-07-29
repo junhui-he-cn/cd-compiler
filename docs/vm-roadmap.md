@@ -203,6 +203,13 @@ aggregate、cell/environment、identity equality、native 浅拷贝、callback �
 **边界：** 不为了抽象而更换数据结构；如果基准显示当前 reference-counted
   实现足够，保留它也是合法结果，但必须由测量和循环引用决策支持。
 
+**状态（第一窄切片已完成，2026-07-29）：** `runtime::Heap` 已集中 VM-local
+identity 分配、environment/cell 创建和 function/array/map/range/struct/variant
+构造；VM 的 globals、frame、capture、parameter 和 native allocation 路径已迁移，
+现有 `Rc<RefCell>` alias/equality/lifetime 语义保持不变。完整存储替换、root
+registry、cycle policy、GC 和 peak-memory measurement 仍未完成，详见
+[`docs/decisions/vm-heap-facade-001.md`](decisions/vm-heap-facade-001.md)。
+
 ### VM-2C：可选的 tracing GC 或其他回收策略
 
 **目标：** 只有在 VM-2A/2B 证明有必要时，提供可测量的堆回收，覆盖 closures、
@@ -431,11 +438,10 @@ canonical verification 和 malformed corpus。完整仓库 gate 仍以
 
 ## 12. 当前下一步
 
-VM-1A、VM-1B、VM-1C 和 VM-2A 决策记录已完成。当前停在 **VM-2B：统一
-Heap/Handle 抽象** 的入口门槛：需要先比较保留 reference counting、包装现有
-存储，或引入其他所有权策略，并用 live/dead/cycle、closure、native 临时 root、
-错误退出、debug 观察和 peak memory workload 做测量。该架构取舍未决定前不
-修改运行时存储，也不推进 GC、persistent VM、JIT 或新的 artifact version。
+VM-1A、VM-1B、VM-1C 和 VM-2A 决策记录已完成，VM-2B 的第一窄切片也已完成。
+下一步仍是 VM-2B 的 live/dead/cycle、closure、native 临时 root、错误退出、
+debug 观察和 peak-memory 测量；在这些证据完成前不推进 GC、persistent VM、JIT
+或新的 artifact version。
 
 这份路线图的成功标准不是同时铺开所有 VM 研究方向，而是让每个运行时能力
 都有清楚的契约、独立的证据和可回退的迁移路径；语言 roadmap 继续独立演进，

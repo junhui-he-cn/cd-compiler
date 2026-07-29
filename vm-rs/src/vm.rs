@@ -2,14 +2,11 @@
 
 use crate::bytecode::{Constant, DebugLocation, DebugSource, FunctionBody, Instruction, Program};
 use crate::runtime::{
-    new_cell, new_environment, ArrayValue, Cell, FunctionValue, MapValue, RangeValue,
-    SharedEnvironment, StructValue,
+    Cell, FunctionValue, Heap, SharedEnvironment,
 };
 use crate::value::Value;
-use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt;
-use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -180,6 +177,7 @@ pub struct RuntimeError {
 mod tests {
     use super::*;
     use crate::bytecode::Function;
+    use crate::runtime::{new_cell, new_environment};
 
     fn empty_program() -> Program {
         Program {
@@ -1697,15 +1695,12 @@ struct Frame {
 pub struct VM<'a> {
     program: &'a Program,
     config: RunConfig,
+    heap: Heap,
     globals: SharedEnvironment,
     output: String,
     instruction_steps: usize,
     call_depth: usize,
     runtime_elements: usize,
-    next_function_identity: usize,
-    next_array_identity: usize,
-    next_map_identity: usize,
-    next_struct_identity: usize,
     trace_enabled: bool,
     trace_events: Vec<TraceEvent>,
     trace_stack: Vec<StackFrame>,
@@ -1718,18 +1713,17 @@ impl<'a> VM<'a> {
     }
 
     pub fn with_config(program: &'a Program, config: RunConfig) -> Self {
+        let heap = Heap::new();
+        let globals = heap.new_environment();
         Self {
             program,
             config,
-            globals: new_environment(),
+            heap,
+            globals,
             output: String::new(),
             instruction_steps: 0,
             call_depth: 0,
             runtime_elements: 0,
-            next_function_identity: 1,
-            next_array_identity: 1,
-            next_map_identity: 1,
-            next_struct_identity: 1,
             trace_enabled: false,
             trace_events: Vec::new(),
             trace_stack: Vec::new(),
@@ -1755,8 +1749,8 @@ impl<'a> VM<'a> {
         let mut frame = Frame {
             ip: 0,
             registers: vec![Value::Nil; self.program.main.registers],
-            locals: new_environment(),
-            closure: new_environment(),
+            locals: self.heap.new_environment(),
+            closure: self.heap.new_environment(),
             is_main: true,
             function: "main".to_string(),
             function_index: None,
@@ -2344,7 +2338,7 @@ impl<'a> VM<'a> {
     }
 
     fn capture_environment(&self, frame: &Frame) -> SharedEnvironment {
-        let captured = new_environment();
+        let captured = self.heap.new_environment();
         {
             let mut target = captured.borrow_mut();
             for (name, cell) in frame.closure.borrow().iter() {
@@ -2368,15 +2362,15 @@ impl<'a> VM<'a> {
             .get(function_index)
             .ok_or_else(|| RuntimeError::new("function index out of range"))?;
         self.charge_runtime_elements(1)?;
-        let identity = self.next_function_identity;
-        self.next_function_identity += 1;
-        Ok(Value::function(FunctionValue {
-            name: function.name.clone(),
-            function_index,
-            arity: function.params.len(),
-            identity,
-            closure: self.capture_environment(frame),
-        }))
+        let closure = self.capture_environment(frame);
+        self.heap
+            .allocate_function(
+                function.name.clone(),
+                function_index,
+                function.params.len(),
+                closure,
+            )
+            .map_err(|error| RuntimeError::new(error.to_string()))
     }
 
     fn call_function(
@@ -2412,7 +2406,7 @@ impl<'a> VM<'a> {
         let mut frame = Frame {
             ip: 0,
             registers: vec![Value::Nil; registers],
-            locals: new_environment(),
+            locals: self.heap.new_environment(),
             closure: function.closure.clone(),
             is_main: false,
             function: bytecode_function.name.clone(),
@@ -2423,7 +2417,7 @@ impl<'a> VM<'a> {
             frame
                 .locals
                 .borrow_mut()
-                .insert(params[index].clone(), new_cell(argument));
+                .insert(params[index].clone(), self.heap.new_cell(argument));
         }
 
         let body = FunctionBody {
@@ -2448,33 +2442,17 @@ impl<'a> VM<'a> {
 
     fn allocate_array(&mut self, elements: Vec<Value>) -> Result<Value, RuntimeError> {
         self.charge_runtime_elements(1usize.saturating_add(elements.len()))?;
-        let identity = self.next_array_identity;
-        self.next_array_identity += 1;
-        Ok(Value::array(ArrayValue {
-            identity,
-            elements: Rc::new(RefCell::new(elements)),
-        }))
+        self.heap
+            .allocate_array(elements)
+            .map_err(|error| RuntimeError::new(error.to_string()))
     }
 
     fn allocate_map(&mut self, entries: Vec<(Value, Value)>) -> Result<Value, RuntimeError> {
-        let identity = self.next_map_identity;
-        let mut ordered: Vec<(Value, Value)> = Vec::with_capacity(entries.len());
-        for (key, value) in entries {
-            if let Some((_, existing)) = ordered
-                .iter_mut()
-                .find(|(existing_key, _)| existing_key.runtime_equals(&key))
-            {
-                *existing = value;
-            } else {
-                ordered.push((key, value));
-            }
-        }
-        self.charge_runtime_elements(1usize.saturating_add(ordered.len()))?;
-        self.next_map_identity += 1;
-        Ok(Value::map(MapValue {
-            identity,
-            entries: Rc::new(RefCell::new(ordered)),
-        }))
+        let entry_count = Heap::map_entry_count(&entries);
+        self.charge_runtime_elements(1usize.saturating_add(entry_count))?;
+        self.heap
+            .allocate_map(entries)
+            .map_err(|error| RuntimeError::new(error.to_string()))
     }
 
     #[cfg(test)]
@@ -2555,12 +2533,7 @@ impl<'a> VM<'a> {
         }
         let length = Self::range_length(start, stop, step)?;
         self.charge_runtime_elements(1)?;
-        Ok(Value::range(RangeValue {
-            start,
-            stop,
-            step,
-            length,
-        }))
+        Ok(self.heap.allocate_range(start, stop, step, length))
     }
 
     fn validate_map_key(&self, key: &Value) -> Result<(), RuntimeError> {
@@ -2578,11 +2551,7 @@ impl<'a> VM<'a> {
         fields: Vec<Value>,
     ) -> Result<Value, RuntimeError> {
         self.charge_runtime_elements(1usize.saturating_add(fields.len()))?;
-        Ok(Value::variant(crate::runtime::VariantValue {
-            enum_name,
-            variant_name,
-            fields,
-        }))
+        Ok(self.heap.allocate_variant(enum_name, variant_name, fields))
     }
 
     fn make_struct(
@@ -2599,13 +2568,9 @@ impl<'a> VM<'a> {
             ));
         }
         self.charge_runtime_elements(1usize.saturating_add(values.len()))?;
-        let identity = self.next_struct_identity;
-        self.next_struct_identity += 1;
-        Ok(Value::structure(StructValue {
-            identity,
-            type_name,
-            fields: Rc::new(RefCell::new(values)),
-        }))
+        self.heap
+            .allocate_struct(type_name, values)
+            .map_err(|error| RuntimeError::new(error.to_string()))
     }
 
     fn checked_array_index(&self, index_value: Value) -> Result<usize, RuntimeError> {
@@ -3519,7 +3484,7 @@ impl<'a> VM<'a> {
     }
 
     fn store_variable(&self, frame: &mut Frame, name: String, value: Value) {
-        let cell = new_cell(value);
+        let cell = self.heap.new_cell(value);
         if frame.is_main {
             self.globals.borrow_mut().insert(name, cell);
         } else {
