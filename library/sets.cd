@@ -293,6 +293,126 @@ fun newOrderedMap<K, V>(less: fun(K, K): bool): OrderedMap<K, V> {
   return OrderedMap<K, V> { keys: [], values: [], less: less };
 }
 
+struct BiMapEntry<K, V> {
+  key: K,
+  value: V
+}
+
+struct BiMap<K: Eq, V: Eq> {
+  private keys: [K],
+  private values: [V]
+}
+
+impl BiMap<K: Eq, V: Eq> {
+  fun indexOfKey(key: K): number {
+    let index = 0;
+    while (index < this.keys.len()) {
+      if (this.keys[index] == key) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun indexOfValue(value: V): number {
+    let index = 0;
+    while (index < this.values.len()) {
+      if (this.values[index] == value) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun put(key: K, value: V): bool {
+    if (this.indexOfKey(key) >= 0 || this.indexOfValue(value) >= 0) {
+      return false;
+    }
+    this.keys.push(key);
+    this.values.push(value);
+    return true;
+  }
+
+  fun get(key: K): optional<V> {
+    let index = this.indexOfKey(key);
+    if (index < 0) {
+      return nil;
+    }
+    return this.values[index];
+  }
+
+  fun getKey(value: V): optional<K> {
+    let index = this.indexOfValue(value);
+    if (index < 0) {
+      return nil;
+    }
+    return this.keys[index];
+  }
+
+  fun hasKey(key: K): bool {
+    return this.indexOfKey(key) >= 0;
+  }
+
+  fun hasValue(value: V): bool {
+    return this.indexOfValue(value) >= 0;
+  }
+
+  fun removeAt(index: number) {
+    while (index + 1 < this.keys.len()) {
+      this.keys[index] = this.keys[index + 1];
+      this.values[index] = this.values[index + 1];
+      index += 1;
+    }
+    this.keys.pop();
+    this.values.pop();
+  }
+
+  fun discardKey(key: K): bool {
+    let index = this.indexOfKey(key);
+    if (index < 0) {
+      return false;
+    }
+    this.removeAt(index);
+    return true;
+  }
+
+  fun discardValue(value: V): bool {
+    let index = this.indexOfValue(value);
+    if (index < 0) {
+      return false;
+    }
+    this.removeAt(index);
+    return true;
+  }
+
+  fun size(): number {
+    return this.keys.len();
+  }
+
+  fun isEmpty(): bool {
+    return this.keys.len() == 0;
+  }
+
+  fun snapshot(): [BiMapEntry<K, V>] {
+    let result: [BiMapEntry<K, V>] = [];
+    let index = 0;
+    while (index < this.keys.len()) {
+      result.push(BiMapEntry<K, V> {
+        key: this.keys[index],
+        value: this.values[index]
+      });
+      index += 1;
+    }
+    return result;
+  }
+}
+
+fun newBiMap<K: Eq, V: Eq>(): BiMap<K, V> {
+  return BiMap<K, V> { keys: [], values: [] };
+}
+
 struct MultiSetEntry<T> {
   value: T,
   count: number
@@ -460,4 +580,4 @@ fun newMultiMap<K: Eq, V: Eq>(): MultiMap<K, V> {
 }
 
 
-export Set, OrderedSet, OrderedMapEntry, OrderedMap, MultiSetEntry, MultiSet, MultiMap, newSet, newOrderedSet, newOrderedMap, newMultiSet, newMultiMap;
+export Set, OrderedSet, OrderedMapEntry, OrderedMap, BiMapEntry, BiMap, MultiSetEntry, MultiSet, MultiMap, newSet, newOrderedSet, newOrderedMap, newBiMap, newMultiSet, newMultiMap;

@@ -5,7 +5,7 @@ Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 `Queue<T>`, `Deque<T>`, `RingBuffer<T>`, `BinaryHeap<T>`, `PriorityQueue<T>`, and
 numeric `MedianHeap` types, plus the
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
-`Tree<T>`, `Set<T: Eq>`, `OrderedSet<T>`, `OrderedMap<K, V>`, `LruCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
+`Tree<T>`, `Set<T: Eq>`, `OrderedSet<T>`, `OrderedMap<K, V>`, `BiMap<K: Eq, V: Eq>`, `LruCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
 `MultiMap<K: Eq, V: Eq>` for one-to-many mappings, immutable BST helpers, and basic generic array algorithms,
 including comparator-based sorting, window helpers, and interval merge.
 It also includes array-backed numeric `FenwickTree` and `SegmentTree` types,
@@ -497,6 +497,24 @@ share one entry; updating one changes the value while preserving the first
 stored key and its sorted position. `get` uses `optional<V>`, so callers storing
 a `nil` value should use `has` to distinguish it from a missing key. Lookup is
 `O(log n)`, insertion and deletion are `O(n)` because of array movement, and
+`snapshot` is `O(n)` with a fresh outer array and entry values.
+
+`BiMap<K: Eq, V: Eq>` maintains a one-to-one mapping with lookup from either
+side:
+
+- `newBiMap<K: Eq, V: Eq>(): BiMap<K, V>` — create an empty bidirectional map;
+- `put(key: K, value: V): bool` — insert a new pair, returning `false` when
+  either side is already present; rejected pairs leave the map unchanged;
+- `get(key: K): optional<V>` and `getKey(value: V): optional<K>` — query either
+  direction;
+- `hasKey`, `hasValue`, `discardKey`, and `discardValue` — inspect or remove
+  either side while preserving the one-to-one invariant;
+- `size`, `isEmpty`, and `snapshot` — inspect state or return
+  `[BiMapEntry<K, V>]` in insertion order.
+
+This implementation deliberately rejects duplicate keys and duplicate values;
+it does not replace an existing association implicitly. Both lookup directions
+are linear `O(n)`, removal is `O(n)` because paired arrays are compacted, and
 `snapshot` is `O(n)` with a fresh outer array and entry values.
 
 `LruCache<K: Eq, V>` is an array-backed least-recently-used cache:

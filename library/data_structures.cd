@@ -17,8 +17,9 @@ export Tree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount,
        bstSuccessor
        from "./trees.cd";
 
-export Set, OrderedSet, OrderedMapEntry, OrderedMap, MultiSetEntry, MultiSet, MultiMap,
-       newSet, newOrderedSet, newOrderedMap, newMultiSet, newMultiMap
+export Set, OrderedSet, OrderedMapEntry, OrderedMap, BiMapEntry, BiMap, MultiSetEntry,
+       MultiSet, MultiMap, newSet, newOrderedSet, newOrderedMap, newBiMap, newMultiSet,
+       newMultiMap
        from "./sets.cd";
 
 export LruCacheEntry, LruCache, newLruCache
