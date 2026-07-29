@@ -4653,34 +4653,11 @@ Program
     Export Stack Queue Deque RingBuffer BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newRingBuffer newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums differenceArray prefixMinimums prefixMaximums nextGreaterValues mergeIntervals intersectIntervals selectNonOverlappingIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum climbStairs maxNonAdjacentSum minCoinCount uniqueGridPaths uniqueGridPathsWithObstacles minGridPathSum editDistance longestIncreasingSubsequenceLength longestCommonSubsequenceLength knapsack01 completeKnapsack boundedKnapsack subsets combinations permutations generateParentheses nQueens mazePaths gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
   Module 1 entry
     Import "../../data_structures.cd" as ds
-    Fun ascending(left: number, right: number): bool
-      Return (< left right)
-    Struct Entry {key: number, label: string}
-    Fun entryLess(left: Entry, right: Entry): bool
-      Return (< (field left key) (field right key))
-    Fun renderEntries(values: [Entry]): string
-      Let result = ""
-      Let index = 0
-      While (group (< index (member-call values len)))
-        Body
-          Block
-            If (group (> index 0))
-              Then
-                Block
-                  Expr (= result (+ result ","))
-            Let value = (index values index)
-            Expr (= result (+ (+ (+ result (call str (field value key))) ":") (field value label)))
-            Expr (+= index 1)
-      Return result
-    Let numbers = (array 4 1 3 1 2)
-    Print (member-call ds mergeSort numbers ascending)
-    Print numbers
-    Let words = (array "fox" "ant" "dog" "cat")
-    Print (member-call ds mergeSort words (field ds stringLess))
-    Print words
-    Let entries: [Entry] = (array (construct Entry key: 2 label: "first") (construct Entry key: 1 label: "middle") (construct Entry key: 2 label: "second") (construct Entry key: 3 label: "last"))
-    Print (call renderEntries (member-call ds mergeSort entries entryLess))
-    Print (call renderEntries entries)
-    Let empty: [number] = (array)
-    Print (member-call ds mergeSort<number> empty ascending)
-    Print (member-call ds mergeSort (array 42) ascending)
+    Let intervals: [ds.Interval] = (array (construct ds.Interval start: 5 end: 7) (construct ds.Interval start: 1 end: 3) (construct ds.Interval start: 2 end: 4) (construct ds.Interval start: 9 end: 10) (construct ds.Interval start: 6 end: 8))
+    Print (member-call ds selectNonOverlappingIntervals intervals)
+    Print intervals
+    Print (member-call ds selectNonOverlappingIntervals (array (construct ds.Interval start: 1 end: 2) (construct ds.Interval start: 2 end: 3)))
+    Print (member-call ds selectNonOverlappingIntervals (array (construct ds.Interval start: (- 3) end: (- 1)) (construct ds.Interval start: 0 end: 1)))
+    Let empty: [ds.Interval] = (array)
+    Print (member-call ds selectNonOverlappingIntervals empty)
+    Print (member-call ds selectNonOverlappingIntervals (array (construct ds.Interval start: 4 end: 1)))

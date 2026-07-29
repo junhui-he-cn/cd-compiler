@@ -175,6 +175,7 @@ print ds.intersectIntervals(ranges, [
   ds.Interval { start: 2, end: 4 },
   ds.Interval { start: 7, end: 9 }
 ]);
+print ds.selectNonOverlappingIntervals(ranges);
 
 print ds.mergeSortedNumbers([1, 3], [2, 4]);
 print ds.twoSumSorted([1, 2, 4, 7], 6);
@@ -791,6 +792,12 @@ intervals. Endpoints are inclusive, so touching intervals produce a zero-length
 intersection such as `[2,2]`. Empty or disjoint inputs return `[]`; both inputs
 remain unchanged. The two normalization passes take `O(n log n + m log m)` time,
 the sweep is linear afterward, and the result uses `O(n + m)` space.
+
+`selectNonOverlappingIntervals(intervals)` returns a fresh maximum-cardinality
+schedule chosen by earliest end time. It preserves the input, rejects an
+interval with `start > end` by returning `[]`, and treats touching endpoints as
+overlapping, so a selected interval must have `start > lastEnd`. The result is
+ordered by selection and the algorithm takes `O(n log n)` time and `O(n)` space.
 
 For non-decreasing numeric arrays, `mergeSortedNumbers(left, right)` returns a
 linear-time merged copy and `twoSumSorted(values, target)` uses two pointers to
