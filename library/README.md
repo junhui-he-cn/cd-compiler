@@ -5,7 +5,7 @@ Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 `Queue<T>`, `Deque<T>`, `RingBuffer<T>`, `BinaryHeap<T>`, `PriorityQueue<T>`, and
 numeric `MedianHeap` types, plus the
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
-`Tree<T>`, `Set<T: Eq>`, `OrderedSet<T>`, `OrderedMap<K, V>`, `BiMap<K: Eq, V: Eq>`, `LruCache<K: Eq, V>`, `LfuCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
+`Tree<T>`, `AvlTree<T>`, `Set<T: Eq>`, `OrderedSet<T>`, `OrderedMap<K, V>`, `BiMap<K: Eq, V: Eq>`, `LruCache<K: Eq, V>`, `LfuCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
 `MultiMap<K: Eq, V: Eq>` for one-to-many mappings, immutable BST helpers, and basic generic array algorithms,
 including comparator-based sorting, window helpers, and interval merge.
 It also includes array-backed numeric `FenwickTree` and `SegmentTree` types,
@@ -444,6 +444,25 @@ BST insertion ignores comparator-equivalent duplicates. Insert and delete
 return new roots and preserve the original tree's shared subtrees. Operations
 are `O(h)` time and `O(h)` recursive/temporary space, where `h` is the tree
 height; without balancing, the worst case is `O(n)`.
+
+`AvlTree<T>` is a mutable balanced search tree backed by parallel arrays of
+values, child indexes, and heights. Node indexes are private implementation
+details and are reused after deletion:
+
+- `newAvlTree<T>(less): AvlTree<T>` — create an empty tree with a strict-order
+  comparator;
+- `insert(value: T): bool` and `discard(value: T): bool` — add or remove one
+  comparator-equivalent value, returning whether the tree changed;
+- `has`, `minimum`, `maximum`, `predecessor`, and `successor` — query membership,
+  endpoints, or strict neighboring values; missing results return `false` or
+  `nil`;
+- `size`, `height`, `isEmpty`, and `snapshot` — inspect state or return a fresh
+  in-order sorted array.
+
+Comparator-equivalent duplicates are ignored. AVL rotations keep insert and
+delete at `O(log n)` time, while queries are `O(log n)` and `snapshot` is `O(n)`.
+The arrays are mutable through aliases of the tree value, but `snapshot` copies
+the outer result array and does not expose node indexes.
 
 `Set<T: Eq>` provides an array-backed set with language equality:
 

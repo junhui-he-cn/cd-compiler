@@ -14,7 +14,7 @@ export Tree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount,
        treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced,
        treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, bstContains,
        bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor,
-       bstSuccessor
+       bstSuccessor, AvlTree, newAvlTree
        from "./trees.cd";
 
 export Set, OrderedSet, OrderedMapEntry, OrderedMap, BiMapEntry, BiMap, MultiSetEntry,

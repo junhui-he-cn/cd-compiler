@@ -418,5 +418,296 @@ fun bstSuccessor<T>(tree: Tree<T>, target: T, less: fun(T, T): bool): optional<T
   return candidate;
 }
 
+// AvlTree keeps mutable nodes in parallel arrays. Node indexes are an
+// implementation detail; callers only observe values and comparator order.
+struct AvlTree<T> {
+  private values: [T],
+  private left: [number],
+  private right: [number],
+  private heights: [number],
+  private free: [number],
+  private root: number,
+  private count: number,
+  private less: fun(T, T): bool
+}
 
-export Tree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced, treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor;
+impl AvlTree<T> {
+  fun comesBefore(left: T, right: T): bool {
+    let compare = this.less;
+    return compare(left, right);
+  }
+
+  fun equivalent(left: T, right: T): bool {
+    return !this.comesBefore(left, right) && !this.comesBefore(right, left);
+  }
+
+  fun heightAt(index: number): number {
+    if (index < 0) {
+      return 0;
+    }
+    return this.heights[index];
+  }
+
+  fun balanceAt(index: number): number {
+    if (index < 0) {
+      return 0;
+    }
+    return this.heightAt(this.left[index]) - this.heightAt(this.right[index]);
+  }
+
+  fun updateHeight(index: number) {
+    let leftHeight = this.heightAt(this.left[index]);
+    let rightHeight = this.heightAt(this.right[index]);
+    if (leftHeight > rightHeight) {
+      this.heights[index] = leftHeight + 1;
+    } else {
+      this.heights[index] = rightHeight + 1;
+    }
+  }
+
+  fun allocate(value: T): number {
+    let index = 0;
+    if (this.free.len() > 0) {
+      index = this.free.pop();
+      this.values[index] = value;
+      this.left[index] = -1;
+      this.right[index] = -1;
+      this.heights[index] = 1;
+    } else {
+      index = this.values.len();
+      this.values.push(value);
+      this.left.push(-1);
+      this.right.push(-1);
+      this.heights.push(1);
+    }
+    this.count += 1;
+    return index;
+  }
+
+  fun release(index: number) {
+    this.free.push(index);
+    this.count -= 1;
+  }
+
+  fun rotateLeft(index: number): number {
+    let pivot = this.right[index];
+    let transfer = this.left[pivot];
+    this.right[index] = transfer;
+    this.left[pivot] = index;
+    this.updateHeight(index);
+    this.updateHeight(pivot);
+    return pivot;
+  }
+
+  fun rotateRight(index: number): number {
+    let pivot = this.left[index];
+    let transfer = this.right[pivot];
+    this.left[index] = transfer;
+    this.right[pivot] = index;
+    this.updateHeight(index);
+    this.updateHeight(pivot);
+    return pivot;
+  }
+
+  fun rebalance(index: number): number {
+    this.updateHeight(index);
+    let balance = this.balanceAt(index);
+    if (balance > 1) {
+      if (this.balanceAt(this.left[index]) < 0) {
+        this.left[index] = this.rotateLeft(this.left[index]);
+      }
+      return this.rotateRight(index);
+    }
+    if (balance < -1) {
+      if (this.balanceAt(this.right[index]) > 0) {
+        this.right[index] = this.rotateRight(this.right[index]);
+      }
+      return this.rotateLeft(index);
+    }
+    return index;
+  }
+
+  fun insertAt(index: number, value: T): number {
+    if (index < 0) {
+      return this.allocate(value);
+    }
+    if (this.comesBefore(value, this.values[index])) {
+      this.left[index] = this.insertAt(this.left[index], value);
+    } else {
+      this.right[index] = this.insertAt(this.right[index], value);
+    }
+    return this.rebalance(index);
+  }
+
+  fun minimumIndex(index: number): number {
+    let current = index;
+    while (this.left[current] >= 0) {
+      current = this.left[current];
+    }
+    return current;
+  }
+
+  fun deleteMinimumAt(index: number): number {
+    if (this.left[index] < 0) {
+      let child = this.right[index];
+      this.release(index);
+      return child;
+    }
+    this.left[index] = this.deleteMinimumAt(this.left[index]);
+    return this.rebalance(index);
+  }
+
+  fun deleteAt(index: number, value: T): number {
+    if (this.comesBefore(value, this.values[index])) {
+      this.left[index] = this.deleteAt(this.left[index], value);
+      return this.rebalance(index);
+    }
+    if (this.comesBefore(this.values[index], value)) {
+      this.right[index] = this.deleteAt(this.right[index], value);
+      return this.rebalance(index);
+    }
+
+    if (this.left[index] < 0) {
+      let child = this.right[index];
+      this.release(index);
+      return child;
+    }
+    if (this.right[index] < 0) {
+      let child = this.left[index];
+      this.release(index);
+      return child;
+    }
+
+    let successor = this.minimumIndex(this.right[index]);
+    this.values[index] = this.values[successor];
+    this.right[index] = this.deleteMinimumAt(this.right[index]);
+    return this.rebalance(index);
+  }
+
+  fun has(value: T): bool {
+    let current = this.root;
+    while (current >= 0) {
+      if (this.comesBefore(value, this.values[current])) {
+        current = this.left[current];
+        continue;
+      }
+      if (this.comesBefore(this.values[current], value)) {
+        current = this.right[current];
+        continue;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  fun insert(value: T): bool {
+    if (this.has(value)) {
+      return false;
+    }
+    this.root = this.insertAt(this.root, value);
+    return true;
+  }
+
+  fun discard(value: T): bool {
+    if (!this.has(value)) {
+      return false;
+    }
+    this.root = this.deleteAt(this.root, value);
+    return true;
+  }
+
+  fun minimum(): optional<T> {
+    if (this.root < 0) {
+      return nil;
+    }
+    return this.values[this.minimumIndex(this.root)];
+  }
+
+  fun maximum(): optional<T> {
+    if (this.root < 0) {
+      return nil;
+    }
+    let current = this.root;
+    while (this.right[current] >= 0) {
+      current = this.right[current];
+    }
+    return this.values[current];
+  }
+
+  fun predecessor(value: T): optional<T> {
+    let current = this.root;
+    let candidate = -1;
+    while (current >= 0) {
+      if (this.comesBefore(this.values[current], value)) {
+        candidate = current;
+        current = this.right[current];
+      } else {
+        current = this.left[current];
+      }
+    }
+    if (candidate < 0) {
+      return nil;
+    }
+    return this.values[candidate];
+  }
+
+  fun successor(value: T): optional<T> {
+    let current = this.root;
+    let candidate = -1;
+    while (current >= 0) {
+      if (this.comesBefore(value, this.values[current])) {
+        candidate = current;
+        current = this.left[current];
+      } else {
+        current = this.right[current];
+      }
+    }
+    if (candidate < 0) {
+      return nil;
+    }
+    return this.values[candidate];
+  }
+
+  fun size(): number {
+    return this.count;
+  }
+
+  fun isEmpty(): bool {
+    return this.root < 0;
+  }
+
+  fun height(): number {
+    return this.heightAt(this.root);
+  }
+
+  fun appendInorder(index: number, result: [T]) {
+    if (index < 0) {
+      return;
+    }
+    this.appendInorder(this.left[index], result);
+    result.push(this.values[index]);
+    this.appendInorder(this.right[index], result);
+  }
+
+  fun snapshot(): [T] {
+    let result: [T] = [];
+    this.appendInorder(this.root, result);
+    return result;
+  }
+}
+
+fun newAvlTree<T>(less: fun(T, T): bool): AvlTree<T> {
+  return AvlTree<T> {
+    values: [],
+    left: [],
+    right: [],
+    heights: [],
+    free: [],
+    root: -1,
+    count: 0,
+    less: less
+  };
+}
+
+
+export Tree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced, treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor, AvlTree, newAvlTree;
