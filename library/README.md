@@ -203,6 +203,8 @@ print ds.peakIndex([1, 3, 5, 4, 2]);
 print ds.mountainPeakIndex([1, 3, 5, 4, 2]);
 print ds.minimumLargestPartitionSum([7, 2, 5, 10, 8], 2);
 print ds.compareStrings("ant", "apple");
+print ds.longestUniqueSubstringLength("abcabcbb");
+print ds.longestPalindromicSubstring("babad");
 
 print ds.knapsack01([2, 3, 4], [3, 4, 5], 5);
 print ds.completeKnapsack([2, 3], [3, 4], 7);
@@ -796,6 +798,13 @@ Unicode scalar-value offsets and return `[]` for an empty string.
 `isPalindrome` compares scalar values from both ends and treats an empty string
 as a palindrome. These functions do not normalize combining marks.
 
+`longestUniqueSubstringLength(text)` returns the length of the longest substring
+with no repeated Unicode scalar values. The current array-backed window scan
+takes `O(n^2)` time and `O(n)` temporary space; an empty string returns `0`.
+`longestPalindromicSubstring(text)` expands around odd and even centers and
+returns the leftmost longest palindrome, or `""` for empty input. It takes
+`O(n^2)` time and `O(1)` auxiliary space in addition to the returned substring.
+
 `Trie` is an array-node prefix tree. `insert(word)` returns `true` only when a
 new word is added; `has`, `startsWith`, and `wordsWithPrefix` handle empty and
 Unicode scalar-value strings. Prefix results use child insertion order rather
@@ -983,6 +992,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case algorithms_graph_kruskal`,
 `--case algorithms_string_matching`,
 `--case algorithms_string_trie`,
+`--case algorithms_string_sequences`,
 `--case algorithms_graph_max_flow`, `--case algorithms_graph_min_cut`,
 `--case array_algorithms_basic`,
 `--case array_algorithms_teaching_sort`,

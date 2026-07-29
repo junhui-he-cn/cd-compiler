@@ -285,6 +285,9 @@ enum Result<T, E> {
 字符返回不可用结果，等待语言层字符串排序和运算符扩展决策。
 `findSubstring`、`prefixFunction`、`zFunction` 和 `kmpSearch` 使用现有 Unicode scalar-value
 字符串位置语义；`isPalindrome` 按 scalar value 比较字符，不依赖 ASCII 排序。
+`longestUniqueSubstringLength` 用数组窗口扫描 Unicode scalar value，返回最长无重复
+子串长度；`longestPalindromicSubstring` 用奇偶中心扩展返回最左最长回文子串，空串
+分别返回 `0` 和空串，当前实现时间复杂度均为 `O(n^2)`。
 `Trie` 使用数组节点和线性边查找，支持 Unicode scalar-value 字符、重复插入去重
 以及按首次插入的边顺序返回前缀结果，不依赖通用哈希。
 `peakIndex` 在 `O(log n)` 时间内返回一个弱峰值；`isMountainArray` 用线性扫描
@@ -445,7 +448,7 @@ enum Result<T, E> {
 - 朴素子串查找；
 - 前缀函数和 KMP；
 - Z 函数；
-- 回文判断、最长回文子串；
+- 回文判断、无重复子串长度、最长回文子串已完成；
 - 字符频率、字谜/异位词判断、滑动窗口匹配；
 - Trie 前缀查找和补全；
 - Rabin-Karp 作为哈希契约确定后的可选实现；

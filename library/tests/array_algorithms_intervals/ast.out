@@ -2769,6 +2769,69 @@ Program
                   Return false
             Expr (+= index 1)
       Return true
+    Fun longestUniqueSubstringLength(text: string): number
+      Let best = 0
+      Let start = 0
+      While (group (< start (member-call text len)))
+        Body
+          Block
+            Let seen: [string] = (array)
+            Let index = start
+            While (group (< index (member-call text len)))
+              Body
+                Block
+                  Let character = (member-call text charAt index)
+                  If (group (>= (call linearSearch seen character) 0))
+                    Then
+                      Block
+                        Break
+                  Expr (member-call seen push character)
+                  Expr (+= index 1)
+            If (group (> (member-call seen len) best))
+              Then
+                Block
+                  Expr (= best (member-call seen len))
+            Expr (+= start 1)
+      Return best
+    Fun longestPalindromicSubstring(text: string): string
+      If (group (== (member-call text len) 0))
+        Then
+          Block
+            Return ""
+      Let bestStart = 0
+      Let bestLength = 1
+      Let center = 0
+      While (group (< center (member-call text len)))
+        Body
+          Block
+            Let left = center
+            Let right = center
+            While (group (&& (&& (>= left 0) (< right (member-call text len))) (== (member-call text charAt left) (member-call text charAt right))))
+              Body
+                Block
+                  Let length = (+ (- right left) 1)
+                  If (group (> length bestLength))
+                    Then
+                      Block
+                        Expr (= bestStart left)
+                        Expr (= bestLength length)
+                  Expr (-= left 1)
+                  Expr (+= right 1)
+            Expr (= left center)
+            Expr (= right (+ center 1))
+            While (group (&& (&& (>= left 0) (< right (member-call text len))) (== (member-call text charAt left) (member-call text charAt right))))
+              Body
+                Block
+                  Let length = (+ (- right left) 1)
+                  If (group (> length bestLength))
+                    Then
+                      Block
+                        Expr (= bestStart left)
+                        Expr (= bestLength length)
+                  Expr (-= left 1)
+                  Expr (+= right 1)
+            Expr (+= center 1)
+      Return (member-call text substr bestStart bestLength)
     Struct Trie {edgeCharacters: [[string]], edgeChildren: [[number]], terminal: [bool]}
     Impl Trie
       Method findChild(node: number, character: string): number
@@ -5284,6 +5347,7 @@ Program
       Return result
     Export peakIndex isMountainArray mountainPeakIndex minimumLargestPartitionSum
     Export threeSumZero
+    Export longestUniqueSubstringLength longestPalindromicSubstring
     Export Stack Queue Deque RingBuffer BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newRingBuffer newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace shellSort selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums differenceArray prefixMinimums prefixMaximums nextGreaterValues mergeIntervals intersectIntervals selectNonOverlappingIntervals minimumIntervalRooms canReachEnd minimumJumps huffmanMergeCost mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum climbStairs maxNonAdjacentSum minCoinCount uniqueGridPaths uniqueGridPathsWithObstacles minGridPathSum matrixChainCost matrixPower2x2 mergeStonesCost editDistance longestIncreasingSubsequenceLength longestCommonSubsequenceLength knapsack01 completeKnapsack boundedKnapsack subsets combinations permutations generateParentheses nQueens mazePaths gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci primeFactors divisors binomialCoefficient permutationCount pascalTriangle gcdArray prefixProducts
   Module 1 entry
     Import "../../data_structures.cd" as ds
