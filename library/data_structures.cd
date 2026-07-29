@@ -17,7 +17,8 @@ export Tree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount,
        bstSuccessor
        from "./trees.cd";
 
-export Set, MultiSetEntry, MultiSet, MultiMap, newSet, newMultiSet, newMultiMap
+export Set, OrderedSet, MultiSetEntry, MultiSet, MultiMap, newSet, newOrderedSet,
+       newMultiSet, newMultiMap
        from "./sets.cd";
 
 export DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge,

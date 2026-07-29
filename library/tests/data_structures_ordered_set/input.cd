@@ -1,0 +1,44 @@
+import "../../data_structures.cd" as ds;
+
+fun ascending(left: number, right: number): bool {
+  return left < right;
+}
+
+fun stringAscending(left: string, right: string): bool {
+  return left < right;
+}
+
+fun describe(value: optional<number>): string {
+  return match value {
+    nil => "none",
+    value => str(value),
+  };
+}
+
+let ordered = ds.newOrderedSet<number>(ascending);
+print ordered.isEmpty();
+print ordered.add(5);
+print ordered.add(1);
+print ordered.add(3);
+print ordered.add(3);
+print ordered.add(7);
+print ordered.snapshot();
+print ordered.has(3);
+print ordered.has(4);
+print describe(ordered.minimum());
+print describe(ordered.maximum());
+print describe(ordered.predecessor(1));
+print describe(ordered.predecessor(5));
+print describe(ordered.successor(5));
+print describe(ordered.successor(7));
+print ordered.rangeInclusive(2, 6);
+print ordered.rangeInclusive(8, 2);
+print ordered.discard(3);
+print ordered.discard(3);
+print ordered.snapshot();
+
+let words = ds.newOrderedSet<string>(stringAscending);
+words.add("delta");
+words.add("alpha");
+words.add("beta");
+print words.snapshot();

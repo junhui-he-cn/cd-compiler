@@ -5,7 +5,7 @@ Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 `Queue<T>`, `Deque<T>`, `RingBuffer<T>`, `BinaryHeap<T>`, `PriorityQueue<T>`, and
 numeric `MedianHeap` types, plus the
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
-`Tree<T>`, `Set<T: Eq>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
+`Tree<T>`, `Set<T: Eq>`, `OrderedSet<T>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
 `MultiMap<K: Eq, V: Eq>` for one-to-many mappings, immutable BST helpers, and basic generic array algorithms,
 including comparator-based sorting, window helpers, and interval merge.
 It also includes array-backed numeric `FenwickTree` and `SegmentTree` types,
@@ -458,6 +458,28 @@ search, so they are `O(n)`; `discard` preserves the order of the remaining
 values and is also `O(n)`. `snapshot` is `O(n)` and allocates one outer array.
 Membership follows the language's `==` semantics, including its behavior for
 reference values.
+
+`OrderedSet<T>` stores distinct values in comparator order:
+
+- `add(value: T): bool` — insert a comparator-distinct value and report whether
+  the set changed;
+- `has(value: T): bool` and `discard(value: T): bool` — query or remove a value;
+- `minimum(): optional<T>` and `maximum(): optional<T>` — return an endpoint or
+  `nil` when empty;
+- `predecessor(value: T): optional<T>` and `successor(value: T): optional<T>` —
+  return strict neighboring values or `nil` when none exists;
+- `rangeInclusive(lower: T, upper: T): [T]` — return values in comparator order
+  between the inclusive bounds, or `[]` when the bounds are reversed;
+- `size`, `isEmpty`, and `snapshot` — inspect state or return a shallow ordered
+  copy.
+
+`newOrderedSet<T>(less)` accepts a `fun(T, T): bool` strict-order comparator.
+Comparator equivalence means neither value is less than the other, so equivalent
+values are stored only once even when the language `==` relation would differ.
+`add`, `has`, `discard`, `minimum`, `maximum`, `predecessor`, and `successor`
+use a binary search plus array movement where needed: lookup is `O(log n)`,
+insertion and deletion are `O(n)`, and `rangeInclusive` is `O(log n + k)` for
+`k` returned values. `snapshot` is `O(n)` and allocates a new outer array.
 
 `MultiSet<T: Eq>` stores one entry per distinct value and its occurrence count:
 

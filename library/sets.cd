@@ -58,6 +58,132 @@ fun newSet<T: Eq>(): Set<T> {
   return Set<T> { items: [] };
 }
 
+struct OrderedSet<T> {
+  private items: [T],
+  private less: fun(T, T): bool
+}
+
+impl OrderedSet<T> {
+  fun comesBefore(left: T, right: T): bool {
+    let compare = this.less;
+    return compare(left, right);
+  }
+
+  fun equivalent(left: T, right: T): bool {
+    return !this.comesBefore(left, right) && !this.comesBefore(right, left);
+  }
+
+  fun lowerBound(value: T): number {
+    let low = 0;
+    let high = this.items.len();
+    while (low < high) {
+      let middle = floor((low + high) / 2);
+      if (this.comesBefore(this.items[middle], value)) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    return low;
+  }
+
+  fun add(value: T): bool {
+    let index = this.lowerBound(value);
+    if (index < this.items.len() && this.equivalent(this.items[index], value)) {
+      return false;
+    }
+
+    this.items.push(value);
+    let move = this.items.len() - 1;
+    while (move > index) {
+      this.items[move] = this.items[move - 1];
+      move -= 1;
+    }
+    this.items[index] = value;
+    return true;
+  }
+
+  fun has(value: T): bool {
+    let index = this.lowerBound(value);
+    return index < this.items.len() && this.equivalent(this.items[index], value);
+  }
+
+  fun discard(value: T): bool {
+    let index = this.lowerBound(value);
+    if (index >= this.items.len() || !this.equivalent(this.items[index], value)) {
+      return false;
+    }
+    while (index + 1 < this.items.len()) {
+      this.items[index] = this.items[index + 1];
+      index += 1;
+    }
+    this.items.pop();
+    return true;
+  }
+
+  fun minimum(): optional<T> {
+    if (this.items.len() == 0) {
+      return nil;
+    }
+    return this.items[0];
+  }
+
+  fun maximum(): optional<T> {
+    if (this.items.len() == 0) {
+      return nil;
+    }
+    return this.items[this.items.len() - 1];
+  }
+
+  fun predecessor(value: T): optional<T> {
+    let index = this.lowerBound(value);
+    if (index == 0) {
+      return nil;
+    }
+    return this.items[index - 1];
+  }
+
+  fun successor(value: T): optional<T> {
+    let index = this.lowerBound(value);
+    if (index < this.items.len() && this.equivalent(this.items[index], value)) {
+      index += 1;
+    }
+    if (index >= this.items.len()) {
+      return nil;
+    }
+    return this.items[index];
+  }
+
+  fun rangeInclusive(lower: T, upper: T): [T] {
+    let result: [T] = [];
+    if (this.comesBefore(upper, lower)) {
+      return result;
+    }
+    let index = this.lowerBound(lower);
+    while (index < this.items.len() && !this.comesBefore(upper, this.items[index])) {
+      result.push(this.items[index]);
+      index += 1;
+    }
+    return result;
+  }
+
+  fun size(): number {
+    return this.items.len();
+  }
+
+  fun isEmpty(): bool {
+    return this.items.len() == 0;
+  }
+
+  fun snapshot(): [T] {
+    return copy(this.items);
+  }
+}
+
+fun newOrderedSet<T>(less: fun(T, T): bool): OrderedSet<T> {
+  return OrderedSet<T> { items: [], less: less };
+}
+
 struct MultiSetEntry<T> {
   value: T,
   count: number
@@ -225,4 +351,4 @@ fun newMultiMap<K: Eq, V: Eq>(): MultiMap<K, V> {
 }
 
 
-export Set, MultiSetEntry, MultiSet, MultiMap, newSet, newMultiSet, newMultiMap;
+export Set, OrderedSet, MultiSetEntry, MultiSet, MultiMap, newSet, newOrderedSet, newMultiSet, newMultiMap;
