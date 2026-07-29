@@ -21,6 +21,9 @@ export Set, OrderedSet, MultiSetEntry, MultiSet, MultiMap, newSet, newOrderedSet
        newMultiSet, newMultiMap
        from "./sets.cd";
 
+export LruCacheEntry, LruCache, newLruCache
+       from "./caches.cd";
+
 export DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge,
        SignedWeightedGraph, BellmanFordError, BellmanFordResult,
        newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph,

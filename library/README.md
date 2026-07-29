@@ -5,7 +5,7 @@ Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 `Queue<T>`, `Deque<T>`, `RingBuffer<T>`, `BinaryHeap<T>`, `PriorityQueue<T>`, and
 numeric `MedianHeap` types, plus the
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
-`Tree<T>`, `Set<T: Eq>`, `OrderedSet<T>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
+`Tree<T>`, `Set<T: Eq>`, `OrderedSet<T>`, `LruCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
 `MultiMap<K: Eq, V: Eq>` for one-to-many mappings, immutable BST helpers, and basic generic array algorithms,
 including comparator-based sorting, window helpers, and interval merge.
 It also includes array-backed numeric `FenwickTree` and `SegmentTree` types,
@@ -480,6 +480,24 @@ values are stored only once even when the language `==` relation would differ.
 use a binary search plus array movement where needed: lookup is `O(log n)`,
 insertion and deletion are `O(n)`, and `rangeInclusive` is `O(log n + k)` for
 `k` returned values. `snapshot` is `O(n)` and allocates a new outer array.
+
+`LruCache<K: Eq, V>` is an array-backed least-recently-used cache:
+
+- `newLruCache<K: Eq, V>(capacity): LruCache<K, V>` — create a cache with the
+  floored non-negative capacity;
+- `get(key: K): optional<V>` — return a value and mark its entry as most recent,
+  or return `nil` when absent;
+- `put(key: K, value: V): bool` — insert or update a value and mark it most
+  recent; return `false` when the capacity is zero;
+- `has(key: K): bool` and `discard(key: K): bool` — query or remove a key;
+- `capacity`, `size`, `isEmpty`, and `snapshot` — inspect state or return
+  `[LruCacheEntry<K, V>]` entries ordered from least recent to most recent.
+
+When an insertion would exceed capacity, the least-recent entry is discarded.
+Updating an existing key also refreshes its recency. `get` uses `optional<V>`, so
+callers storing a `nil` value should use `has` to distinguish it from a missing
+key. Key lookup and all recency moves are `O(n)` in this simple implementation;
+`snapshot` is `O(n)` and allocates a new outer array and entry values.
 
 `MultiSet<T: Eq>` stores one entry per distinct value and its occurrence count:
 
