@@ -1,0 +1,8 @@
+import "../../data_structures.cd" as ds;
+
+print ds.permutationCount(5, 0);
+print ds.permutationCount(5, 2);
+print ds.permutationCount(10, 3);
+print ds.permutationCount(4, 5);
+print ds.permutationCount(-1, 0);
+print ds.permutationCount(2.5, 1);

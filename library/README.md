@@ -220,6 +220,7 @@ print ds.matrixChainCost([10, 30, 5, 60]);
 print ds.primeFactors(12);
 print ds.divisors(12);
 print ds.binomialCoefficient(5, 2);
+print ds.permutationCount(5, 2);
 print ds.pascalTriangle(5);
 print ds.gcdArray([12, 18, 24]);
 print ds.prefixProducts([2, 3, 4]);
@@ -879,6 +880,7 @@ divisor enumeration use `O(sqrt(n))` trial steps plus output space.
 
 `binomialCoefficient(n, k)` computes `n` choose `k` with non-negative integer
 arguments, returning `nil` when the arguments are invalid or `k > n`.
+`permutationCount(n, k)` computes `nPk` under the same argument contract.
 `pascalTriangle(rows)` returns the first `rows` rows, with invalid row counts
 producing `[]`; both use numeric DP and do not define overflow behavior.
 
