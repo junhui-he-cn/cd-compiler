@@ -2,7 +2,7 @@
 
 This directory contains a small data-structure library written in the public
 Compiler Design language. It currently provides generic array-backed `Stack<T>`,
-`Queue<T>`, `Deque<T>`, `BinaryHeap<T>`, and `PriorityQueue<T>` types, plus the
+`Queue<T>`, `Deque<T>`, `RingBuffer<T>`, `BinaryHeap<T>`, and `PriorityQueue<T>` types, plus the
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
 `Tree<T>`, `Set<T>`, and `MultiSet<T>` types. It also provides an array-backed
 `MultiMap<K, V>` for one-to-many mappings, immutable BST helpers, and basic generic array algorithms,
@@ -43,6 +43,13 @@ deque.addBack(3);
 print deque.peekFront();
 print deque.peekBack();
 print deque.snapshot();
+
+let ring = ds.newRingBuffer<number>(2);
+print ring.offer(10);
+print ring.offer(20);
+print ring.offer(30);
+print ring.snapshot();
+print ring.read();
 
 fun ascending(left: number, right: number): bool {
   return left < right;
@@ -234,6 +241,21 @@ The deque uses two array-backed stacks. End operations are amortized `O(1)`;
 `snapshot()` is `O(n)` and allocates one outer array. The transfer helpers are
 implementation details of the representation, although the language currently
 has no private methods.
+
+`RingBuffer<T>` is a fixed-capacity circular buffer:
+
+- `newRingBuffer<T>(capacity): RingBuffer<T>` — floor the capacity at zero;
+- `offer(value: T): bool` — append when space exists, returning `false` when
+  full without overwriting the oldest value;
+- `read(): Option<T>` and `peek(): Option<T>` — remove or inspect the oldest
+  value, returning `None` when empty;
+- `capacity`, `size`, `isEmpty`, `isFull`, and `snapshot` — inspect state and
+  return logical values in FIFO order.
+
+The buffer uses `Option<T>` slots and keeps FIFO operations at `O(1)`;
+`snapshot()` is `O(n)` and allocates a fresh outer array. This library chooses
+reject-on-full semantics for now, so callers can explicitly handle a failed
+`offer` and no value is silently discarded.
 
 `BinaryHeap<T>` provides:
 
@@ -732,6 +754,7 @@ python3 library/tests/run_tests.py ./build/compiler_design vm-rs
 Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_result`, `--case data_structures_list`,
 `--case data_structures_tree`, `--case data_structures_bst`,
+`--case data_structures_ring_buffer`,
 `--case data_structures_set`, `--case data_structures_multiset`,
 `--case data_structures_multimap`, `--case data_structures_disjoint_set`,
 `--case data_structures_fenwick`,

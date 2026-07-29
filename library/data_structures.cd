@@ -317,6 +317,107 @@ fun err<T, E>(error: E): Result<T, E> {
   return Result.Err(error);
 }
 
+// RingBuffer has fixed capacity. A full offer is rejected, so the oldest
+// element is never silently discarded. Option<T> makes empty reads explicit.
+struct RingBuffer<T> {
+  slots: [Option<T>],
+  limit: number,
+  head: number,
+  count: number
+}
+
+impl RingBuffer<T> {
+  fun capacity(): number {
+    return this.limit;
+  }
+
+  fun size(): number {
+    return this.count;
+  }
+
+  fun isEmpty(): bool {
+    return this.count == 0;
+  }
+
+  fun isFull(): bool {
+    return this.count >= this.limit;
+  }
+
+  fun offer(value: T): bool {
+    if (this.isFull()) {
+      return false;
+    }
+    let index = this.head + this.count;
+    if (index >= this.limit) {
+      index -= this.limit;
+    }
+    this.slots[index] = Option.Some(value);
+    this.count += 1;
+    return true;
+  }
+
+  fun peek(): Option<T> {
+    if (this.count == 0) {
+      return none<T>();
+    }
+    let slot = this.slots[this.head];
+    match slot {
+      Option.None => { return none<T>(); }
+      Option.Some(value) => { return some<T>(value); }
+    }
+  }
+
+  fun read(): Option<T> {
+    if (this.count == 0) {
+      return none<T>();
+    }
+    let slot = this.slots[this.head];
+    match slot {
+      Option.None => { return none<T>(); }
+      Option.Some(value) => {
+        this.slots[this.head] = Option.None<T>();
+        this.head += 1;
+        if (this.head == this.limit) {
+          this.head = 0;
+        }
+        this.count -= 1;
+        return some<T>(value);
+      }
+    }
+  }
+
+  fun snapshot(): [T] {
+    let result: [T] = [];
+    let offset = 0;
+    while (offset < this.count) {
+      let index = this.head + offset;
+      if (index >= this.limit) {
+        index -= this.limit;
+      }
+      match this.slots[index] {
+        Option.None => { }
+        Option.Some(value) => { result.push(value); }
+      }
+      offset += 1;
+    }
+    return result;
+  }
+}
+
+fun newRingBuffer<T>(capacity: number): RingBuffer<T> {
+  let limit = floor(capacity);
+  if (limit < 0) {
+    limit = 0;
+  }
+  let slots: [Option<T>] = [];
+  let index = 0;
+  while (index < limit) {
+    slots.push(Option.None<T>());
+    index += 1;
+  }
+  return RingBuffer<T> { slots: slots, limit: limit, head: 0, count: 0 };
+}
+
 enum List<T> {
   Nil,
   Cons(head: T, tail: List<T>),
@@ -4062,4 +4163,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Tree, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, ExtendedGcdResult, Trie, FenwickTree, SegmentTree, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, newTrie, newFenwickTree, newSegmentTree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced, treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, minimumSpanningForestKruskal, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, listLength, listGet, listAppend, listConcat, listTake, listDrop, mergeSortedLists, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci;
+export Stack, Queue, Deque, RingBuffer, BinaryHeap, PriorityQueue, Option, Result, List, Tree, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, ExtendedGcdResult, Trie, FenwickTree, SegmentTree, newStack, newQueue, newDeque, newRingBuffer, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, newTrie, newFenwickTree, newSegmentTree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced, treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, minimumSpanningForestKruskal, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, listLength, listGet, listAppend, listConcat, listTake, listDrop, mergeSortedLists, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci;

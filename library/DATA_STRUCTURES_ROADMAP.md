@@ -32,6 +32,7 @@
 - `Stack<T>`：数组后端，使用 `add`、`take`、`top` 等方法；
 - `Queue<T>`：数组后端，带惰性头指针和周期性压缩；
 - `Deque<T>`：双数组栈后端，提供两端插入、删除、查看和快照。
+- `RingBuffer<T>`：固定容量，满时拒绝写入，读写使用 `Option<T>`/`bool` 明确表达状态。
 - `BinaryHeap<T>`：数组后端，通过 `less` 回调实现最小堆或最大堆。
 - `PriorityQueue<T>`：`BinaryHeap<T>` 的队列命名包装。
 - `Option<T>`：用于显式区分携带值和缺失值的泛型枚举。
@@ -174,7 +175,7 @@ enum Result<T, E> {
 | 栈 `Stack<T>` | 现有 | `add`、`take`、`top`、`size`、`isEmpty`、`snapshot` | 数组后端，`take/top` 为 `O(1)` |
 | 队列 `Queue<T>` | 现有 | `enqueue`、`dequeue`、`front`、`size`、`isEmpty`、`snapshot` | 头指针 + 周期压缩，操作摊销 `O(1)` |
 | 双端队列 `Deque<T>` | 现有（S1） | `addFront`、`addBack`、`takeFront`、`takeBack`、`peekFront`、`peekBack` | 双数组栈；两端操作摊销 `O(1)` |
-| 环形缓冲区 `RingBuffer<T>` | 第一批/待定 | 固定容量、`write`、`read`、`peek`、`isFull` | 复用 `Deque` 思路；必须先确定满时拒绝还是覆盖 |
+| 环形缓冲区 `RingBuffer<T>` | 现有（S1） | 固定容量、`offer`、`read`、`peek`、`isFull` | `Option<T>` 槽位；满时拒绝并返回 `false` |
 | 不可变链表 `List<T>` | 现有（S1） | `emptyList`、`prepend`、`head`、`tail`、`reverse`、`toArray` | 递归泛型枚举，持久化/共享尾部 |
 | 单向链表 | 后续 | 插入、删除、反转、合并、快慢指针 | 等待递归结构体/引用节点方案，或改为索引节点 |
 | 双向链表 | 后续 | 两端插入删除、迭代器、节点移动 | 需要可表达的双向节点和稳定节点引用 |
@@ -575,8 +576,8 @@ examples/
    运算符重载设计保持关联。
 3. 是否计划支持递归结构体、节点引用或等价的可变递归表示？这决定可变
    链表、AVL/红黑树、标准双向链表和高效 LRU 是否能按传统方式实现。
-4. 环形缓冲区满时应拒绝新值、覆盖最旧值，还是返回 `Result`？这会影响
-   `write`/`offer` 的返回类型。
+4. 环形缓冲区的策略已先确定为满时拒绝新值并返回 `false`，读/窥视返回
+   `Option<T>`；如果语言侧后续提供更合适的容量错误协议，再评估是否迁移。
 5. 库级预期失败统一使用 `T?`、`Option<T>` 还是 `Result<T,E>`？当前语言
    运行时错误可以表达越界，但不适合作为所有用户库查询的正常控制流。
 6. `number` 的整数范围、溢出和浮点精度是否需要作为库的稳定契约？这决定

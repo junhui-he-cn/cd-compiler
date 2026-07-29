@@ -218,6 +218,95 @@ Program
       Return (member-call Result Ok value)
     Fun err<T, E>(error: E): Result<T, E>
       Return (member-call Result Err error)
+    Struct RingBuffer<T> {slots: [Option<T>], limit: number, head: number, count: number}
+    Impl RingBuffer<T>
+      Method capacity(): number
+        Return (field this limit)
+      Method size(): number
+        Return (field this count)
+      Method isEmpty(): bool
+        Return (== (field this count) 0)
+      Method isFull(): bool
+        Return (>= (field this count) (field this limit))
+      Method offer(value: T): bool
+        If (group (member-call this isFull))
+          Then
+            Block
+              Return false
+        Let index = (+ (field this head) (field this count))
+        If (group (>= index (field this limit)))
+          Then
+            Block
+              Expr (-= index (field this limit))
+        Expr (= (index (field this slots) index) (member-call Option Some value))
+        Expr (+= (field this count) 1)
+        Return true
+      Method peek(): Option<T>
+        If (group (== (field this count) 0))
+          Then
+            Block
+              Return (call none<T>)
+        Let slot = (index (field this slots) (field this head))
+        Match slot
+          Arm Option.None
+            Block
+              Return (call none<T>)
+          Arm Option.Some(value)
+            Block
+              Return (call some<T> value)
+      Method read(): Option<T>
+        If (group (== (field this count) 0))
+          Then
+            Block
+              Return (call none<T>)
+        Let slot = (index (field this slots) (field this head))
+        Match slot
+          Arm Option.None
+            Block
+              Return (call none<T>)
+          Arm Option.Some(value)
+            Block
+              Expr (= (index (field this slots) (field this head)) (member-call Option None<T>))
+              Expr (+= (field this head) 1)
+              If (group (== (field this head) (field this limit)))
+                Then
+                  Block
+                    Expr (= (field this head) 0)
+              Expr (-= (field this count) 1)
+              Return (call some<T> value)
+      Method snapshot(): [T]
+        Let result: [T] = (array)
+        Let offset = 0
+        While (group (< offset (field this count)))
+          Body
+            Block
+              Let index = (+ (field this head) offset)
+              If (group (>= index (field this limit)))
+                Then
+                  Block
+                    Expr (-= index (field this limit))
+              Match (index (field this slots) index)
+                Arm Option.None
+                  Block
+                Arm Option.Some(value)
+                  Block
+                    Expr (member-call result push value)
+              Expr (+= offset 1)
+        Return result
+    Fun newRingBuffer<T>(capacity: number): RingBuffer<T>
+      Let limit = (call floor capacity)
+      If (group (< limit 0))
+        Then
+          Block
+            Expr (= limit 0)
+      Let slots: [Option<T>] = (array)
+      Let index = 0
+      While (group (< index limit))
+        Body
+          Block
+            Expr (member-call slots push (member-call Option None<T>))
+            Expr (+= index 1)
+      Return (construct RingBuffer<T> slots: slots limit: limit head: 0 count: 0)
     Enum List<T> {Nil, Cons(head: T, tail: List<T>)}
     Fun emptyList<T>(): List<T>
       Return (member-call List Nil<T>)
@@ -3852,7 +3941,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
+    Export Stack Queue Deque RingBuffer BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newRingBuffer newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let values = (array 1 2 3 4 5)
