@@ -5,7 +5,7 @@ Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 `Queue<T>`, `Deque<T>`, `RingBuffer<T>`, `BinaryHeap<T>`, `PriorityQueue<T>`, and
 numeric `MedianHeap` types, plus the
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
-`Tree<T>`, `AvlTree<T>`, `Set<T: Eq>`, `OrderedSet<T>`, `OrderedMap<K, V>`, `BiMap<K: Eq, V: Eq>`, `LruCache<K: Eq, V>`, `LfuCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
+`Tree<T>`, `AvlTree<T>`, `RedBlackTree<T>`, `Set<T: Eq>`, `OrderedSet<T>`, `OrderedMap<K, V>`, `BiMap<K: Eq, V: Eq>`, `LruCache<K: Eq, V>`, `LfuCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
 `MultiMap<K: Eq, V: Eq>` for one-to-many mappings, immutable BST helpers, and basic generic array algorithms,
 including comparator-based sorting, window helpers, and interval merge.
 It also includes array-backed numeric `FenwickTree` and `SegmentTree` types,
@@ -463,6 +463,21 @@ Comparator-equivalent duplicates are ignored. AVL rotations keep insert and
 delete at `O(log n)` time, while queries are `O(log n)` and `snapshot` is `O(n)`.
 The arrays are mutable through aliases of the tree value, but `snapshot` copies
 the outer result array and does not expose node indexes.
+
+`RedBlackTree<T>` uses the same public search-tree contract with a red-black
+color array and private parent/child indexes:
+
+- `newRedBlackTree<T>(less): RedBlackTree<T>` — create an empty tree with a
+  strict-order comparator;
+- `insert`, `discard`, `has`, `minimum`, `maximum`, `predecessor`, and `successor`
+  — update or query comparator-ordered values; duplicate values are ignored;
+- `size`, `height`, `isEmpty`, and `snapshot` — inspect state or return a fresh
+  in-order sorted array.
+
+Red-black insertion and deletion repair preserve `O(log n)` updates and
+queries. `snapshot` is `O(n)`; `height` currently computes the height in `O(n)`.
+Node indexes remain private and are reused after deletion, so callers should
+use values and snapshots rather than retaining structural references.
 
 `Set<T: Eq>` provides an array-backed set with language equality:
 

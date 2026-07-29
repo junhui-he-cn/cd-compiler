@@ -709,5 +709,506 @@ fun newAvlTree<T>(less: fun(T, T): bool): AvlTree<T> {
   };
 }
 
+// RedBlackTree uses the same private array-node boundary as AvlTree. A color
+// is stored per node, while -1 represents a black, implicit NIL child.
+struct RedBlackTree<T> {
+  private values: [T],
+  private left: [number],
+  private right: [number],
+  private parents: [number],
+  private colors: [bool],
+  private free: [number],
+  private root: number,
+  private count: number,
+  private less: fun(T, T): bool
+}
 
-export Tree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced, treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor, AvlTree, newAvlTree;
+impl RedBlackTree<T> {
+  fun comesBefore(left: T, right: T): bool {
+    let compare = this.less;
+    return compare(left, right);
+  }
+
+  fun equivalent(left: T, right: T): bool {
+    return !this.comesBefore(left, right) && !this.comesBefore(right, left);
+  }
+
+  fun colorAt(index: number): bool {
+    if (index < 0) {
+      return false;
+    }
+    return this.colors[index];
+  }
+
+  fun setColor(index: number, red: bool) {
+    if (index >= 0) {
+      this.colors[index] = red;
+    }
+  }
+
+  fun leftAt(index: number): number {
+    if (index < 0) {
+      return -1;
+    }
+    return this.left[index];
+  }
+
+  fun rightAt(index: number): number {
+    if (index < 0) {
+      return -1;
+    }
+    return this.right[index];
+  }
+
+  fun parentAt(index: number): number {
+    if (index < 0) {
+      return -1;
+    }
+    return this.parents[index];
+  }
+
+  fun allocate(value: T): number {
+    let index = 0;
+    if (this.free.len() > 0) {
+      index = this.free.pop();
+      this.values[index] = value;
+      this.left[index] = -1;
+      this.right[index] = -1;
+      this.parents[index] = -1;
+      this.colors[index] = true;
+    } else {
+      index = this.values.len();
+      this.values.push(value);
+      this.left.push(-1);
+      this.right.push(-1);
+      this.parents.push(-1);
+      this.colors.push(true);
+    }
+    this.count += 1;
+    return index;
+  }
+
+  fun release(index: number) {
+    this.left[index] = -1;
+    this.right[index] = -1;
+    this.parents[index] = -1;
+    this.colors[index] = false;
+    this.free.push(index);
+    this.count -= 1;
+  }
+
+  fun rotateLeft(index: number) {
+    let pivot = this.right[index];
+    let transfer = this.left[pivot];
+    this.right[index] = transfer;
+    if (transfer >= 0) {
+      this.parents[transfer] = index;
+    }
+    this.parents[pivot] = this.parents[index];
+    if (this.parents[index] < 0) {
+      this.root = pivot;
+    } else {
+      let parent = this.parents[index];
+      if (index == this.left[parent]) {
+        this.left[parent] = pivot;
+      } else {
+        this.right[parent] = pivot;
+      }
+    }
+    this.left[pivot] = index;
+    this.parents[index] = pivot;
+  }
+
+  fun rotateRight(index: number) {
+    let pivot = this.left[index];
+    let transfer = this.right[pivot];
+    this.left[index] = transfer;
+    if (transfer >= 0) {
+      this.parents[transfer] = index;
+    }
+    this.parents[pivot] = this.parents[index];
+    if (this.parents[index] < 0) {
+      this.root = pivot;
+    } else {
+      let parent = this.parents[index];
+      if (index == this.left[parent]) {
+        this.left[parent] = pivot;
+      } else {
+        this.right[parent] = pivot;
+      }
+    }
+    this.right[pivot] = index;
+    this.parents[index] = pivot;
+  }
+
+  fun insertFixup(node: number) {
+    let current = node;
+    while (current != this.root && this.colorAt(this.parentAt(current))) {
+      let parent = this.parentAt(current);
+      let grand = this.parentAt(parent);
+      if (parent == this.leftAt(grand)) {
+        let uncle = this.rightAt(grand);
+        if (this.colorAt(uncle)) {
+          this.setColor(parent, false);
+          this.setColor(uncle, false);
+          this.setColor(grand, true);
+          current = grand;
+        } else {
+          if (current == this.rightAt(parent)) {
+            current = parent;
+            this.rotateLeft(current);
+            parent = this.parentAt(current);
+            grand = this.parentAt(parent);
+          }
+          this.setColor(parent, false);
+          this.setColor(grand, true);
+          this.rotateRight(grand);
+        }
+      } else {
+        let uncle = this.leftAt(grand);
+        if (this.colorAt(uncle)) {
+          this.setColor(parent, false);
+          this.setColor(uncle, false);
+          this.setColor(grand, true);
+          current = grand;
+        } else {
+          if (current == this.leftAt(parent)) {
+            current = parent;
+            this.rotateRight(current);
+            parent = this.parentAt(current);
+            grand = this.parentAt(parent);
+          }
+          this.setColor(parent, false);
+          this.setColor(grand, true);
+          this.rotateLeft(grand);
+        }
+      }
+    }
+    this.setColor(this.root, false);
+  }
+
+  fun indexOf(value: T): number {
+    let current = this.root;
+    while (current >= 0) {
+      if (this.comesBefore(value, this.values[current])) {
+        current = this.left[current];
+        continue;
+      }
+      if (this.comesBefore(this.values[current], value)) {
+        current = this.right[current];
+        continue;
+      }
+      return current;
+    }
+    return -1;
+  }
+
+  fun transplant(oldIndex: number, newIndex: number) {
+    let parent = this.parents[oldIndex];
+    if (parent < 0) {
+      this.root = newIndex;
+    } else {
+      if (oldIndex == this.left[parent]) {
+        this.left[parent] = newIndex;
+      } else {
+        this.right[parent] = newIndex;
+      }
+    }
+    if (newIndex >= 0) {
+      this.parents[newIndex] = parent;
+    }
+  }
+
+  fun minimumIndex(index: number): number {
+    let current = index;
+    while (this.left[current] >= 0) {
+      current = this.left[current];
+    }
+    return current;
+  }
+
+  fun deleteFixup(node: number, nodeParent: number, nodeIsLeft: bool) {
+    let current = node;
+    let parent = nodeParent;
+    let isLeft = nodeIsLeft;
+    while (current != this.root && !this.colorAt(current)) {
+      if (parent < 0) {
+        break;
+      }
+      if (current >= 0) {
+        isLeft = current == this.left[parent];
+      }
+      if (isLeft) {
+        let sibling = this.rightAt(parent);
+        if (this.colorAt(sibling)) {
+          this.setColor(sibling, false);
+          this.setColor(parent, true);
+          this.rotateLeft(parent);
+          sibling = this.rightAt(parent);
+        }
+        if (!this.colorAt(this.leftAt(sibling))
+            && !this.colorAt(this.rightAt(sibling))) {
+          this.setColor(sibling, true);
+          current = parent;
+          parent = this.parentAt(current);
+          if (parent >= 0) {
+            isLeft = current == this.left[parent];
+          }
+        } else {
+          if (!this.colorAt(this.rightAt(sibling))) {
+            this.setColor(this.leftAt(sibling), false);
+            this.setColor(sibling, true);
+            if (sibling >= 0) {
+              this.rotateRight(sibling);
+            }
+            sibling = this.rightAt(parent);
+          }
+          this.setColor(sibling, this.colorAt(parent));
+          this.setColor(parent, false);
+          this.setColor(this.rightAt(sibling), false);
+          this.rotateLeft(parent);
+          current = this.root;
+          parent = -1;
+        }
+      } else {
+        let sibling = this.leftAt(parent);
+        if (this.colorAt(sibling)) {
+          this.setColor(sibling, false);
+          this.setColor(parent, true);
+          this.rotateRight(parent);
+          sibling = this.leftAt(parent);
+        }
+        if (!this.colorAt(this.rightAt(sibling))
+            && !this.colorAt(this.leftAt(sibling))) {
+          this.setColor(sibling, true);
+          current = parent;
+          parent = this.parentAt(current);
+          if (parent >= 0) {
+            isLeft = current == this.left[parent];
+          }
+        } else {
+          if (!this.colorAt(this.leftAt(sibling))) {
+            this.setColor(this.rightAt(sibling), false);
+            this.setColor(sibling, true);
+            if (sibling >= 0) {
+              this.rotateLeft(sibling);
+            }
+            sibling = this.leftAt(parent);
+          }
+          this.setColor(sibling, this.colorAt(parent));
+          this.setColor(parent, false);
+          this.setColor(this.leftAt(sibling), false);
+          this.rotateRight(parent);
+          current = this.root;
+          parent = -1;
+        }
+      }
+    }
+    this.setColor(current, false);
+    this.setColor(this.root, false);
+  }
+
+  fun deleteIndex(index: number) {
+    let removed = index;
+    let removedRed = this.colorAt(removed);
+    let replacement = -1;
+    let replacementParent = -1;
+    let replacementIsLeft = false;
+    if (this.left[index] < 0) {
+      replacement = this.right[index];
+      replacementParent = this.parents[index];
+      if (replacementParent >= 0) {
+        replacementIsLeft = this.left[replacementParent] == index;
+      }
+      this.transplant(index, this.right[index]);
+    } else {
+      if (this.right[index] < 0) {
+        replacement = this.left[index];
+        replacementParent = this.parents[index];
+        if (replacementParent >= 0) {
+          replacementIsLeft = this.left[replacementParent] == index;
+        }
+        this.transplant(index, this.left[index]);
+      } else {
+        removed = this.minimumIndex(this.right[index]);
+        removedRed = this.colorAt(removed);
+        replacement = this.right[removed];
+        if (this.parents[removed] == index) {
+          replacementParent = removed;
+          replacementIsLeft = false;
+          if (replacement >= 0) {
+            this.parents[replacement] = removed;
+          }
+        } else {
+          replacementParent = this.parents[removed];
+          replacementIsLeft = true;
+          this.transplant(removed, this.right[removed]);
+          this.right[removed] = this.right[index];
+          if (this.right[removed] >= 0) {
+            this.parents[this.right[removed]] = removed;
+          }
+        }
+        this.transplant(index, removed);
+        this.left[removed] = this.left[index];
+        if (this.left[removed] >= 0) {
+          this.parents[this.left[removed]] = removed;
+        }
+        this.colors[removed] = this.colors[index];
+      }
+    }
+    if (!removedRed) {
+      this.deleteFixup(replacement, replacementParent, replacementIsLeft);
+    }
+    this.release(index);
+  }
+
+  fun has(value: T): bool {
+    return this.indexOf(value) >= 0;
+  }
+
+  fun insert(value: T): bool {
+    if (this.has(value)) {
+      return false;
+    }
+    let node = this.allocate(value);
+    let parent = -1;
+    let current = this.root;
+    while (current >= 0) {
+      parent = current;
+      if (this.comesBefore(value, this.values[current])) {
+        current = this.left[current];
+      } else {
+        current = this.right[current];
+      }
+    }
+    this.parents[node] = parent;
+    if (parent < 0) {
+      this.root = node;
+    } else {
+      if (this.comesBefore(value, this.values[parent])) {
+        this.left[parent] = node;
+      } else {
+        this.right[parent] = node;
+      }
+    }
+    this.insertFixup(node);
+    return true;
+  }
+
+  fun discard(value: T): bool {
+    let index = this.indexOf(value);
+    if (index < 0) {
+      return false;
+    }
+    this.deleteIndex(index);
+    return true;
+  }
+
+  fun minimum(): optional<T> {
+    if (this.root < 0) {
+      return nil;
+    }
+    return this.values[this.minimumIndex(this.root)];
+  }
+
+  fun maximum(): optional<T> {
+    if (this.root < 0) {
+      return nil;
+    }
+    let current = this.root;
+    while (this.right[current] >= 0) {
+      current = this.right[current];
+    }
+    return this.values[current];
+  }
+
+  fun predecessor(value: T): optional<T> {
+    let current = this.root;
+    let candidate = -1;
+    while (current >= 0) {
+      if (this.comesBefore(this.values[current], value)) {
+        candidate = current;
+        current = this.right[current];
+      } else {
+        current = this.left[current];
+      }
+    }
+    if (candidate < 0) {
+      return nil;
+    }
+    return this.values[candidate];
+  }
+
+  fun successor(value: T): optional<T> {
+    let current = this.root;
+    let candidate = -1;
+    while (current >= 0) {
+      if (this.comesBefore(value, this.values[current])) {
+        candidate = current;
+        current = this.left[current];
+      } else {
+        current = this.right[current];
+      }
+    }
+    if (candidate < 0) {
+      return nil;
+    }
+    return this.values[candidate];
+  }
+
+  fun heightAt(index: number): number {
+    if (index < 0) {
+      return 0;
+    }
+    let leftHeight = this.heightAt(this.left[index]);
+    let rightHeight = this.heightAt(this.right[index]);
+    if (leftHeight > rightHeight) {
+      return leftHeight + 1;
+    }
+    return rightHeight + 1;
+  }
+
+  fun size(): number {
+    return this.count;
+  }
+
+  fun isEmpty(): bool {
+    return this.root < 0;
+  }
+
+  fun height(): number {
+    return this.heightAt(this.root);
+  }
+
+  fun appendInorder(index: number, result: [T]) {
+    if (index < 0) {
+      return;
+    }
+    this.appendInorder(this.left[index], result);
+    result.push(this.values[index]);
+    this.appendInorder(this.right[index], result);
+  }
+
+  fun snapshot(): [T] {
+    let result: [T] = [];
+    this.appendInorder(this.root, result);
+    return result;
+  }
+}
+
+fun newRedBlackTree<T>(less: fun(T, T): bool): RedBlackTree<T> {
+  return RedBlackTree<T> {
+    values: [],
+    left: [],
+    right: [],
+    parents: [],
+    colors: [],
+    free: [],
+    root: -1,
+    count: 0,
+    less: less
+  };
+}
+
+
+export Tree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced, treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor, AvlTree, newAvlTree, RedBlackTree, newRedBlackTree;
