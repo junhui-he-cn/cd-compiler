@@ -496,6 +496,124 @@ fun treeLevelOrder<T>(tree: Tree<T>): [T] {
   return result;
 }
 
+fun treeBalanceHeight<T>(tree: Tree<T>): number {
+  match tree {
+    Tree.Empty => { return 0; }
+    Tree.Node(value, left, right) => {
+      let leftHeight = treeBalanceHeight(left);
+      if (leftHeight < 0) {
+        return -1;
+      }
+      let rightHeight = treeBalanceHeight(right);
+      if (rightHeight < 0) {
+        return -1;
+      }
+      if (leftHeight - rightHeight > 1 || rightHeight - leftHeight > 1) {
+        return -1;
+      }
+      if (leftHeight > rightHeight) {
+        return leftHeight + 1;
+      }
+      return rightHeight + 1;
+    }
+  }
+  return -1;
+}
+
+fun treeIsBalanced<T>(tree: Tree<T>): bool {
+  return treeBalanceHeight(tree) >= 0;
+}
+
+fun treeMaxWidth<T>(tree: Tree<T>): number {
+  let queue: [Tree<T>] = [tree];
+  let headIndex = 0;
+  let best = 0;
+  while (headIndex < queue.len()) {
+    let levelEnd = queue.len();
+    let width = 0;
+    while (headIndex < levelEnd) {
+      let current = queue[headIndex];
+      headIndex += 1;
+      match current {
+        Tree.Empty => { }
+        Tree.Node(value, left, right) => {
+          width += 1;
+          queue.push(left);
+          queue.push(right);
+        }
+      }
+    }
+    if (width > best) {
+      best = width;
+    }
+  }
+  return best;
+}
+
+fun appendTreePaths<T>(tree: Tree<T>, path: [T], result: [[T]]) {
+  match tree {
+    Tree.Empty => { }
+    Tree.Node(value, left, right) => {
+      path.push(value);
+      let hasLeft = false;
+      match left {
+        Tree.Empty => { }
+        Tree.Node(leftValue, leftLeft, leftRight) => { hasLeft = true; }
+      }
+      let hasRight = false;
+      match right {
+        Tree.Empty => { }
+        Tree.Node(rightValue, rightLeft, rightRight) => { hasRight = true; }
+      }
+      if (!hasLeft && !hasRight) {
+        result.push(copy(path));
+      } else {
+        appendTreePaths(left, path, result);
+        appendTreePaths(right, path, result);
+      }
+      path.pop();
+    }
+  }
+}
+
+fun treeRootToLeafPaths<T>(tree: Tree<T>): [[T]] {
+  let result: [[T]] = [];
+  let path: [T] = [];
+  appendTreePaths(tree, path, result);
+  return result;
+}
+
+fun appendTreePathSums(tree: Tree<number>, running: number, result: [number]) {
+  match tree {
+    Tree.Empty => { }
+    Tree.Node(value, left, right) => {
+      let next = running + value;
+      let hasLeft = false;
+      match left {
+        Tree.Empty => { }
+        Tree.Node(leftValue, leftLeft, leftRight) => { hasLeft = true; }
+      }
+      let hasRight = false;
+      match right {
+        Tree.Empty => { }
+        Tree.Node(rightValue, rightLeft, rightRight) => { hasRight = true; }
+      }
+      if (!hasLeft && !hasRight) {
+        result.push(next);
+      } else {
+        appendTreePathSums(left, next, result);
+        appendTreePathSums(right, next, result);
+      }
+    }
+  }
+}
+
+fun treeRootToLeafSums(tree: Tree<number>): [number] {
+  let result: [number] = [];
+  appendTreePathSums(tree, 0, result);
+  return result;
+}
+
 struct TreeRemoval<T> {
   value: T,
   rest: Tree<T>
@@ -3848,4 +3966,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Tree, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, ExtendedGcdResult, Trie, FenwickTree, SegmentTree, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, newTrie, newFenwickTree, newSegmentTree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, minimumSpanningForestKruskal, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Tree, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, ExtendedGcdResult, Trie, FenwickTree, SegmentTree, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, newTrie, newFenwickTree, newSegmentTree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced, treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, minimumSpanningForestKruskal, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci;

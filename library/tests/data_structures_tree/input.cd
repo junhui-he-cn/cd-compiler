@@ -16,6 +16,19 @@ print ds.treePreorder(root);
 print ds.treeInorder(root);
 print ds.treePostorder(root);
 print ds.treeLevelOrder(root);
+print ds.treeIsBalanced(root);
+print ds.treeMaxWidth(root);
+print ds.treeRootToLeafPaths(root);
+print ds.treeRootToLeafSums(root);
+
+let skewed = ds.treeNode(
+  1,
+  empty,
+  ds.treeNode(2, empty, ds.treeLeaf(3))
+);
+print ds.treeIsBalanced(skewed);
+print ds.treeMaxWidth(empty);
+print ds.treeRootToLeafPaths(empty);
 
 let snapshot = ds.treeInorder(left);
 snapshot.push(99);

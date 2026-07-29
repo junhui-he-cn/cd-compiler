@@ -349,6 +349,130 @@ Program
                   Expr (member-call queue push left)
                   Expr (member-call queue push right)
       Return result
+    Fun treeBalanceHeight<T>(tree: Tree<T>): number
+      Match tree
+        Arm Tree.Empty
+          Block
+            Return 0
+        Arm Tree.Node(value, left, right)
+          Block
+            Let leftHeight = (call treeBalanceHeight left)
+            If (group (< leftHeight 0))
+              Then
+                Block
+                  Return (- 1)
+            Let rightHeight = (call treeBalanceHeight right)
+            If (group (< rightHeight 0))
+              Then
+                Block
+                  Return (- 1)
+            If (group (|| (> (- leftHeight rightHeight) 1) (> (- rightHeight leftHeight) 1)))
+              Then
+                Block
+                  Return (- 1)
+            If (group (> leftHeight rightHeight))
+              Then
+                Block
+                  Return (+ leftHeight 1)
+            Return (+ rightHeight 1)
+      Return (- 1)
+    Fun treeIsBalanced<T>(tree: Tree<T>): bool
+      Return (>= (call treeBalanceHeight tree) 0)
+    Fun treeMaxWidth<T>(tree: Tree<T>): number
+      Let queue: [Tree<T>] = (array tree)
+      Let headIndex = 0
+      Let best = 0
+      While (group (< headIndex (member-call queue len)))
+        Body
+          Block
+            Let levelEnd = (member-call queue len)
+            Let width = 0
+            While (group (< headIndex levelEnd))
+              Body
+                Block
+                  Let current = (index queue headIndex)
+                  Expr (+= headIndex 1)
+                  Match current
+                    Arm Tree.Empty
+                      Block
+                    Arm Tree.Node(value, left, right)
+                      Block
+                        Expr (+= width 1)
+                        Expr (member-call queue push left)
+                        Expr (member-call queue push right)
+            If (group (> width best))
+              Then
+                Block
+                  Expr (= best width)
+      Return best
+    Fun appendTreePaths<T>(tree: Tree<T>, path: [T], result: [[T]])
+      Match tree
+        Arm Tree.Empty
+          Block
+        Arm Tree.Node(value, left, right)
+          Block
+            Expr (member-call path push value)
+            Let hasLeft = false
+            Match left
+              Arm Tree.Empty
+                Block
+              Arm Tree.Node(leftValue, leftLeft, leftRight)
+                Block
+                  Expr (= hasLeft true)
+            Let hasRight = false
+            Match right
+              Arm Tree.Empty
+                Block
+              Arm Tree.Node(rightValue, rightLeft, rightRight)
+                Block
+                  Expr (= hasRight true)
+            If (group (&& (! hasLeft) (! hasRight)))
+              Then
+                Block
+                  Expr (member-call result push (call copy path))
+              Else
+                Block
+                  Expr (call appendTreePaths left path result)
+                  Expr (call appendTreePaths right path result)
+            Expr (member-call path pop)
+    Fun treeRootToLeafPaths<T>(tree: Tree<T>): [[T]]
+      Let result: [[T]] = (array)
+      Let path: [T] = (array)
+      Expr (call appendTreePaths tree path result)
+      Return result
+    Fun appendTreePathSums(tree: Tree<number>, running: number, result: [number])
+      Match tree
+        Arm Tree.Empty
+          Block
+        Arm Tree.Node(value, left, right)
+          Block
+            Let next = (+ running value)
+            Let hasLeft = false
+            Match left
+              Arm Tree.Empty
+                Block
+              Arm Tree.Node(leftValue, leftLeft, leftRight)
+                Block
+                  Expr (= hasLeft true)
+            Let hasRight = false
+            Match right
+              Arm Tree.Empty
+                Block
+              Arm Tree.Node(rightValue, rightLeft, rightRight)
+                Block
+                  Expr (= hasRight true)
+            If (group (&& (! hasLeft) (! hasRight)))
+              Then
+                Block
+                  Expr (member-call result push next)
+              Else
+                Block
+                  Expr (call appendTreePathSums left next result)
+                  Expr (call appendTreePathSums right next result)
+    Fun treeRootToLeafSums(tree: Tree<number>): [number]
+      Let result: [number] = (array)
+      Expr (call appendTreePathSums tree 0 result)
+      Return result
     Struct TreeRemoval<T> {value: T, rest: Tree<T>}
     Fun bstRemoveMinimum<T>(tree: Tree<T>): TreeRemoval<T>?
       Match tree
@@ -3642,7 +3766,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Fun describe(result: ds.Result<ds.BellmanFordResult, ds.BellmanFordError>): string

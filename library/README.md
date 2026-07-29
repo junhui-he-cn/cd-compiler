@@ -310,11 +310,16 @@ has no payload from which to infer `T`.
 - `treeSize`, `treeHeight`, and `treeLeafCount` — return structural statistics;
 - `treePreorder`, `treeInorder`, `treePostorder`, and `treeLevelOrder` — return
   fresh arrays of values in the selected traversal order.
+- `treeIsBalanced` and `treeMaxWidth` — check height balance and return the
+  largest number of nodes on one level;
+- `treeRootToLeafPaths` — return fresh path arrays in left-to-right order;
+- `treeRootToLeafSums(tree: Tree<number>)` — return numeric root-to-leaf sums.
 
 Tree constructors reuse their child values without mutating them. Traversals
 and statistics are `O(n)`; recursive traversals use `O(h)` call-stack space,
-while level order uses `O(n)` queue space. Empty trees have size, height, and
-leaf count zero and all traversals return `[]`.
+while level order, width, balance checking, and path collection use `O(n)`
+auxiliary space in the current implementation. Empty trees have size, height,
+leaf count, and maximum width zero; all traversals and path helpers return `[]`.
 
 The BST helpers use the same `Tree<T>` representation and a caller-supplied
 `fun(T, T): bool` comparator:
