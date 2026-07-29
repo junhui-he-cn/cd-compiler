@@ -585,12 +585,18 @@ Window and prefix helpers are also non-mutating:
 - `chunkArray<T>(values, size): [[T]]` — split into consecutive chunks;
 - `slidingWindows<T>(values, width): [[T]]` — return every consecutive window;
 - `prefixSums(values: [number]): [number]` — return same-length cumulative sums.
+- `differenceArray(values: [number]): [number]` — return the first value and
+  adjacent differences;
+- `prefixMinimums` and `prefixMaximums` — return the running numeric extrema;
+- `nextGreaterValues(values: [number]): [number]` — return the first strictly
+  greater value to the right, or `-1` when none exists.
 
 `chunkArray` and `slidingWindows` return `[]` for non-positive sizes; sliding
 windows also return `[]` when the width exceeds the input length. Chunks and
 windows are fresh outer arrays with shallowly shared elements. Chunking and
-window generation are `O(n)` in the input plus output size; `prefixSums` is
-`O(n)` and allocates one array.
+window generation are `O(n)` in the input plus output size; all prefix and
+difference helpers are `O(n)` and allocate one array. `nextGreaterValues` is
+`O(n)` time and `O(n)` stack/output space; equal values do not count as greater.
 
 `windowSums(values, width)` returns the numeric sum of every fixed-width window
 using a rolling sum. `maxWindowSum(values, width)` returns the largest such sum,
@@ -775,6 +781,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case numeric_algorithms_primes`,
 `--case numeric_algorithms_sequences`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
+`--case array_algorithms_prefix_monotonic`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
 `--case array_algorithms_binary_search`, `--case array_algorithms_merge_sort`,
 `--case array_algorithms_rotation`,
