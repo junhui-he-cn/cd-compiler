@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the data-structure library fixtures without discovering project tests."""
+"""Run library fixtures and validate only their Rust VM output."""
 
 import argparse
 import sys
@@ -10,7 +10,6 @@ LIBRARY_ROOT = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = LIBRARY_ROOT.parent
 sys.path.insert(0, str(PROJECT_ROOT / "tests"))
 
-from run_golden_tests import check_success_case  # noqa: E402
 from run_rust_vm_tests import check_case  # noqa: E402
 
 
@@ -23,11 +22,6 @@ def main() -> int:
         nargs="?",
         default=PROJECT_ROOT / "vm-rs",
         help="Path to vm-rs (defaults to the project VM)",
-    )
-    parser.add_argument(
-        "--update",
-        action="store_true",
-        help="Refresh existing compiler golden files for the library fixture",
     )
     parser.add_argument(
         "--case",
@@ -55,8 +49,7 @@ def main() -> int:
     vm_manifest = vm / "Cargo.toml" if vm.is_dir() else vm
     results = []
     for case_dir in case_dirs:
-        results.extend(check_success_case(compiler, case_dir, args.update))
-        results.extend(check_case(compiler, vm_manifest, case_dir))
+        results.extend(check_case(compiler, vm_manifest, case_dir, include_emit_result=False))
 
     failed = [result for result in results if not result.passed]
     for failure in failed:

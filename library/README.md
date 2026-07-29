@@ -377,11 +377,18 @@ Additional immutable list algorithms provide:
   or unchanged result;
 - `mergeSortedLists(left, right, less): List<T>` — stable merge of two lists
   already ordered by the supplied comparator.
+- `listMiddle(list): T?` — return the upper middle value, or `nil` for empty;
+- `listIsPalindrome(list): bool` — compare values from both ends;
+- `listRemoveFromEnd(list, count): List<T>` — return a new list without the
+  `count`th value from the end, or the original list for an invalid/out-of-range
+  count.
 
 These operations preserve the input lists. `listLength`/`listGet` and
 `listAppend` are `O(n)` in the traversed list, `listConcat` is `O(n)` in its
 left input and shares the right input, `listTake`/`listDrop` are `O(k)`, and
 `mergeSortedLists` is `O(n + m)` while sharing only its final untouched suffix.
+The three new algorithms use `O(n)` temporary array space and linear time;
+`listRemoveFromEnd` otherwise returns a persistent rebuilt list.
 
 `Tree<T>` is an immutable recursive binary tree:
 
@@ -977,9 +984,9 @@ factory functions and public methods as the supported API.
 ## Tests
 
 Library fixtures live under `library/tests/` and are intentionally not
-discovered by the compiler project's root test suites. The library runner
-reuses the existing compiler golden and Rust VM test interfaces while keeping
-its fixture root independent:
+discovered by the compiler project's root test suites. Each fixture keeps only
+`input.cd` and `run.out`; the runner uses a temporary bytecode artifact to
+execute the Rust VM, but does not compare AST or bytecode text:
 
 ```sh
 python3 library/tests/run_tests.py ./build/compiler_design vm-rs
@@ -987,6 +994,7 @@ python3 library/tests/run_tests.py ./build/compiler_design vm-rs
 
 Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_result`, `--case data_structures_list`,
+`--case data_structures_list_algorithms`,
 `--case data_structures_tree`, `--case data_structures_bst`,
 `--case data_structures_ring_buffer`,
 `--case data_structures_set`, `--case data_structures_multiset`,
@@ -1026,6 +1034,5 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case array_algorithms_three_sum`,
 `--case array_algorithms_two_pointer`,
 `--case array_algorithms_sets`, or `--case array_algorithms_window_stats` for
-focused coverage. Use `--update` only when
-an intentional compiler-output change requires refreshing library fixtures'
-`ast.out` files.
+focused coverage. Every selected fixture contributes one result-validation
+check against its `run.out` file.
