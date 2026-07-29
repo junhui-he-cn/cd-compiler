@@ -8,7 +8,7 @@ generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
 `Tree<T>`, `AvlTree<T>`, `RedBlackTree<T>`, `Set<T: Eq>`, `OrderedSet<T>`, `OrderedMap<K, V>`, `BiMap<K: Eq, V: Eq>`, `LruCache<K: Eq, V>`, `LfuCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
 `MultiMap<K: Eq, V: Eq>` for one-to-many mappings, immutable BST helpers, and basic generic array algorithms,
 including comparator-based sorting, window helpers, and interval merge.
-It also includes array-backed numeric `FenwickTree` and `SegmentTree` types,
+It also includes array-backed numeric `FenwickTree`, `SegmentTree`, and `SparseTable` types,
 numeric two-pointer helpers for sorted arrays, and string/tree/graph algorithms.
 Array set operations preserve first-occurrence order and use language equality.
 
@@ -1010,6 +1010,21 @@ negative values need no sentinel convention. Construction is `O(n)`, point
 updates and aggregate queries are `O(log n)`, and `snapshot` is `O(n)`. Invalid
 indexes/ranges return `false` or `nil` without changing the structure; an
 empty valid sum range returns `0`.
+
+`SparseTable` is an immutable numeric range structure with fixed minimum and
+maximum aggregates:
+
+- `newSparseTable(values: [number]): SparseTable` — copy values and build the
+  static tables;
+- `rangeMinimum(start, endExclusive): optional<number>` and
+  `rangeMaximum(start, endExclusive): optional<number>` — query half-open
+  ranges in `O(1)` time;
+- `size`, `valueAt`, and `snapshot` — inspect the copied input values.
+
+Ranges must be integral and satisfy `0 <= start < endExclusive <= size`; invalid
+or empty ranges return `nil`. The structure has no update operation. Construction
+uses `O(n log n)` time and space, queries use `O(1)` time, and `snapshot` is
+`O(n)` with a fresh outer array.
 
 `Interval { start, end }` represents a numeric interval with the documented
 precondition `start <= end`. `mergeIntervals(intervals)` returns a new array

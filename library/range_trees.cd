@@ -286,5 +286,127 @@ fun newSegmentTree(values: [number]): SegmentTree {
   return result;
 }
 
+// SparseTable is immutable after construction and provides fixed numeric
+// minimum/maximum idempotent range aggregates.
+struct SparseTable {
+  private values: [number],
+  private minimums: [[number]],
+  private maximums: [[number]],
+  private logs: [number],
+  private powers: [number]
+}
 
-export FenwickTree, SegmentTree, newFenwickTree, newSegmentTree;
+impl SparseTable {
+  fun size(): number {
+    return this.values.len();
+  }
+
+  fun validRange(start: number, endExclusive: number): bool {
+    return floor(start) == start && floor(endExclusive) == endExclusive
+      && start >= 0 && endExclusive <= this.values.len();
+  }
+
+  fun rangeMinimum(start: number, endExclusive: number): optional<number> {
+    if (!this.validRange(start, endExclusive) || start == endExclusive) {
+      return nil;
+    }
+    let length = endExclusive - start;
+    let level = this.logs[length];
+    let block = this.powers[level];
+    let rightStart = endExclusive - block;
+    let leftValue = this.minimums[level][start];
+    let rightValue = this.minimums[level][rightStart];
+    if (leftValue < rightValue) {
+      return leftValue;
+    }
+    return rightValue;
+  }
+
+  fun rangeMaximum(start: number, endExclusive: number): optional<number> {
+    if (!this.validRange(start, endExclusive) || start == endExclusive) {
+      return nil;
+    }
+    let length = endExclusive - start;
+    let level = this.logs[length];
+    let block = this.powers[level];
+    let rightStart = endExclusive - block;
+    let leftValue = this.maximums[level][start];
+    let rightValue = this.maximums[level][rightStart];
+    if (leftValue > rightValue) {
+      return leftValue;
+    }
+    return rightValue;
+  }
+
+  fun valueAt(index: number): optional<number> {
+    if (floor(index) != index || index < 0 || index >= this.values.len()) {
+      return nil;
+    }
+    return this.values[index];
+  }
+
+  fun snapshot(): [number] {
+    return copy(this.values);
+  }
+}
+
+fun newSparseTable(values: [number]): SparseTable {
+  let logs: [number] = [0];
+  let powers: [number] = [1];
+  let level = 0;
+  let power = 1;
+  let index = 1;
+  while (index <= values.len()) {
+    if (index >= power * 2) {
+      power *= 2;
+      level += 1;
+      powers.push(power);
+    }
+    logs.push(level);
+    index += 1;
+  }
+
+  let minimums: [[number]] = [];
+  let maximums: [[number]] = [];
+  minimums.push(copy(values));
+  maximums.push(copy(values));
+  let segmentLength = 2;
+  while (segmentLength <= values.len()) {
+    let half = floor(segmentLength / 2);
+    let minimumRow: [number] = [];
+    let maximumRow: [number] = [];
+    let start = 0;
+    while (start + segmentLength <= values.len()) {
+      let leftMinimum = minimums[minimums.len() - 1][start];
+      let rightMinimum = minimums[minimums.len() - 1][start + half];
+      if (leftMinimum < rightMinimum) {
+        minimumRow.push(leftMinimum);
+      } else {
+        minimumRow.push(rightMinimum);
+      }
+
+      let leftMaximum = maximums[maximums.len() - 1][start];
+      let rightMaximum = maximums[maximums.len() - 1][start + half];
+      if (leftMaximum > rightMaximum) {
+        maximumRow.push(leftMaximum);
+      } else {
+        maximumRow.push(rightMaximum);
+      }
+      start += 1;
+    }
+    minimums.push(minimumRow);
+    maximums.push(maximumRow);
+    segmentLength *= 2;
+  }
+
+  return SparseTable {
+    values: copy(values),
+    minimums: minimums,
+    maximums: maximums,
+    logs: logs,
+    powers: powers
+  };
+}
+
+
+export FenwickTree, SegmentTree, SparseTable, newFenwickTree, newSegmentTree, newSparseTable;

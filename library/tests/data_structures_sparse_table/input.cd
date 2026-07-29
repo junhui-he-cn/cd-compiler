@@ -1,0 +1,31 @@
+import "../../data_structures.cd" as ds;
+
+let values = [5, 1, 4, 2, 8, -3];
+let table = ds.newSparseTable(values);
+print table.size();
+print table.snapshot();
+print table.rangeMinimum(0, 6);
+print table.rangeMaximum(0, 6);
+print table.rangeMinimum(1, 4);
+print table.rangeMaximum(1, 4);
+print table.rangeMinimum(2, 5);
+print table.rangeMaximum(2, 5);
+print table.rangeMinimum(4, 5);
+print table.rangeMaximum(4, 5);
+print table.rangeMinimum(3, 3);
+print table.rangeMaximum(3, 3);
+print table.rangeMinimum(-1, 2);
+print table.rangeMaximum(1, 7);
+print table.rangeMinimum(1.5, 3);
+print table.valueAt(0);
+print table.valueAt(6);
+
+let snapshot = table.snapshot();
+snapshot[0] = 99;
+print table.snapshot();
+
+let empty = ds.newSparseTable([]);
+print empty.size();
+print empty.snapshot();
+print empty.rangeMinimum(0, 0);
+print empty.rangeMaximum(0, 0);

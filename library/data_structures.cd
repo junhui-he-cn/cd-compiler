@@ -42,7 +42,7 @@ export Trie, newTrie, reverseArray, rotateArray, linearSearch, compareStrings,
        isBalancedBrackets
        from "./strings.cd";
 
-export FenwickTree, SegmentTree, newFenwickTree, newSegmentTree
+export FenwickTree, SegmentTree, SparseTable, newFenwickTree, newSegmentTree, newSparseTable
        from "./range_trees.cd";
 
 export peakIndex, isMountainArray, mountainPeakIndex, lowerBound, upperBound,
