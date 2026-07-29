@@ -99,9 +99,14 @@ void writeTypeParameterList(std::ostream& out, const std::vector<TypeParameter>&
             out << ", ";
         }
         out << parameters[i].name.lexeme;
-        if (parameters[i].constraint) {
+        if (!parameters[i].constraints.empty()) {
             out << ": ";
-            writeTypeAnnotation(out, *parameters[i].constraint);
+            for (std::size_t constraint = 0; constraint < parameters[i].constraints.size(); ++constraint) {
+                if (constraint != 0) {
+                    out << " + ";
+                }
+                writeTypeAnnotation(out, parameters[i].constraints[constraint]);
+            }
         }
     }
     out << '>';
@@ -1535,8 +1540,8 @@ void populateExpr(Expr& expression)
         mergeRange(result, tokenRange(function->keyword));
         for (const TypeParameter& parameter : function->typeParameters) {
             mergeRange(result, tokenRange(parameter.name));
-            if (parameter.constraint) {
-                mergeRange(result, typeAnnotationRange(*parameter.constraint));
+            for (const TypeAnnotation& constraint : parameter.constraints) {
+                mergeRange(result, typeAnnotationRange(constraint));
             }
         }
         for (const Parameter& parameter : function->parameters) {
@@ -1635,8 +1640,8 @@ void populateMethod(MethodDecl& method)
     mergeRange(result, tokenRange(method.name));
     for (const TypeParameter& parameter : method.typeParameters) {
         mergeRange(result, tokenRange(parameter.name));
-        if (parameter.constraint) {
-            mergeRange(result, typeAnnotationRange(*parameter.constraint));
+        for (const TypeAnnotation& constraint : parameter.constraints) {
+            mergeRange(result, typeAnnotationRange(constraint));
         }
     }
     for (const Parameter& parameter : method.parameters) {
@@ -1664,8 +1669,8 @@ void populateStmt(Stmt& statement)
         mergeRange(result, tokenRange(enumDecl->name));
         for (const TypeParameter& parameter : enumDecl->typeParameters) {
             mergeRange(result, tokenRange(parameter.name));
-            if (parameter.constraint) {
-                mergeRange(result, typeAnnotationRange(*parameter.constraint));
+            for (const TypeAnnotation& constraint : parameter.constraints) {
+                mergeRange(result, typeAnnotationRange(constraint));
             }
         }
         for (const EnumVariantDecl& variant : enumDecl->variants) {
@@ -1702,8 +1707,8 @@ void populateStmt(Stmt& statement)
         mergeRange(result, tokenRange(structDecl->name));
         for (const TypeParameter& parameter : structDecl->typeParameters) {
             mergeRange(result, tokenRange(parameter.name));
-            if (parameter.constraint) {
-                mergeRange(result, typeAnnotationRange(*parameter.constraint));
+            for (const TypeAnnotation& constraint : parameter.constraints) {
+                mergeRange(result, typeAnnotationRange(constraint));
             }
         }
         for (const StructFieldDecl& field : structDecl->fields) {
@@ -1714,8 +1719,8 @@ void populateStmt(Stmt& statement)
         mergeRange(result, tokenRange(impl->typeName));
         for (const TypeParameter& parameter : impl->typeParameters) {
             mergeRange(result, tokenRange(parameter.name));
-            if (parameter.constraint) {
-                mergeRange(result, typeAnnotationRange(*parameter.constraint));
+            for (const TypeAnnotation& constraint : parameter.constraints) {
+                mergeRange(result, typeAnnotationRange(constraint));
             }
         }
         for (MethodDecl& method : impl->methods) {
@@ -1831,8 +1836,8 @@ void populateStmt(Stmt& statement)
         mergeRange(result, tokenRange(function->name));
         for (const TypeParameter& parameter : function->typeParameters) {
             mergeRange(result, tokenRange(parameter.name));
-            if (parameter.constraint) {
-                mergeRange(result, typeAnnotationRange(*parameter.constraint));
+            for (const TypeAnnotation& constraint : parameter.constraints) {
+                mergeRange(result, typeAnnotationRange(constraint));
             }
         }
         for (const Parameter& parameter : function->parameters) {

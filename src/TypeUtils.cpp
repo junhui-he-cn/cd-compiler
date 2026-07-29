@@ -1,8 +1,16 @@
 #include "TypeUtils.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <optional>
+#include <stdexcept>
 #include <utility>
+
+namespace {
+
+constexpr const char* kCapabilitySetName = "<all-capabilities>";
+
+} // namespace
 
 TypeInfo unknownType()
 {
@@ -72,6 +80,41 @@ TypeInfo capabilityType(std::string name)
     return result;
 }
 
+TypeInfo capabilitySetType(std::vector<TypeInfo> capabilities)
+{
+    for (const TypeInfo& capability : capabilities) {
+        if (capability.kind != StaticType::Capability
+            || !capability.structName
+            || *capability.structName == kCapabilitySetName) {
+            throw std::invalid_argument("capability sets may contain only named capabilities");
+        }
+    }
+    if (capabilities.empty()) {
+        throw std::invalid_argument("capability sets may not be empty");
+    }
+
+    std::sort(
+        capabilities.begin(),
+        capabilities.end(),
+        [](const TypeInfo& left, const TypeInfo& right) {
+            return *left.structName < *right.structName;
+        });
+    capabilities.erase(
+        std::unique(
+            capabilities.begin(),
+            capabilities.end(),
+            [](const TypeInfo& left, const TypeInfo& right) {
+                return left.structName == right.structName;
+            }),
+        capabilities.end());
+
+    TypeInfo result;
+    result.kind = StaticType::Capability;
+    result.structName = kCapabilitySetName;
+    result.typeArguments = std::move(capabilities);
+    return result;
+}
+
 TypeInfo functionType(
     std::vector<TypeInfo> parameterTypes,
     TypeInfo returnType,
@@ -121,9 +164,25 @@ bool isNullable(const TypeInfo& type)
 
 bool isCapability(const TypeInfo& type, const std::string& name)
 {
+    if (type.kind != StaticType::Capability || !type.structName) {
+        return false;
+    }
+    if (*type.structName == kCapabilitySetName) {
+        return std::any_of(
+            type.typeArguments.begin(),
+            type.typeArguments.end(),
+            [&name](const TypeInfo& capability) {
+                return SemanticTypes::isCapability(capability, name);
+            });
+    }
+    return *type.structName == name;
+}
+
+bool isCapabilitySet(const TypeInfo& type)
+{
     return type.kind == StaticType::Capability
         && type.structName
-        && *type.structName == name;
+        && *type.structName == kCapabilitySetName;
 }
 
 bool satisfiesCapability(const TypeInfo& actual, const TypeInfo& capability)
@@ -135,6 +194,15 @@ bool satisfiesCapability(const TypeInfo& actual, const TypeInfo& capability)
         return false;
     }
 
+    if (SemanticTypes::isCapabilitySet(capability)) {
+        return std::all_of(
+            capability.typeArguments.begin(),
+            capability.typeArguments.end(),
+            [&actual](const TypeInfo& requirement) {
+                return SemanticTypes::satisfiesCapability(actual, requirement);
+            });
+    }
+
     const std::string& name = *capability.structName;
     if (actual.kind == StaticType::TypeParameter) {
         if (!actual.typeParameterConstraint) {
@@ -143,6 +211,14 @@ bool satisfiesCapability(const TypeInfo& actual, const TypeInfo& capability)
         return SemanticTypes::satisfiesCapability(*actual.typeParameterConstraint, capability);
     }
     if (actual.kind == StaticType::Capability) {
+        if (SemanticTypes::isCapabilitySet(actual)) {
+            return std::any_of(
+                actual.typeArguments.begin(),
+                actual.typeArguments.end(),
+                [&capability](const TypeInfo& provided) {
+                    return SemanticTypes::satisfiesCapability(provided, capability);
+                });
+        }
         return name == "Eq"
             ? SemanticTypes::isCapability(actual, "Eq")
                 || SemanticTypes::isCapability(actual, "Ord")
@@ -158,6 +234,27 @@ bool satisfiesCapability(const TypeInfo& actual, const TypeInfo& capability)
                 && SemanticTypes::satisfiesCapability(*actual.nullableOf, capability);
         }
         return actual.kind != StaticType::Unknown;
+    }
+    if (name == "Hash") {
+        if (actual.kind == StaticType::Nullable) {
+            return actual.nullableOf
+                && SemanticTypes::satisfiesCapability(*actual.nullableOf, capability);
+        }
+        switch (actual.kind) {
+        case StaticType::Nil:
+        case StaticType::Number:
+        case StaticType::Bool:
+        case StaticType::String:
+        case StaticType::Function:
+        case StaticType::Array:
+        case StaticType::Map:
+        case StaticType::Range:
+        case StaticType::Struct:
+        case StaticType::Enum:
+            return true;
+        default:
+            return false;
+        }
     }
     return false;
 }
@@ -237,6 +334,16 @@ std::string typeInfoName(const TypeInfo& type)
     }
 
     if (type.kind == StaticType::Capability && type.structName) {
+        if (*type.structName == kCapabilitySetName) {
+            std::string result;
+            for (std::size_t i = 0; i < type.typeArguments.size(); ++i) {
+                if (i != 0) {
+                    result += " + ";
+                }
+                result += typeInfoName(type.typeArguments[i]);
+            }
+            return result;
+        }
         return *type.structName;
     }
 
@@ -313,9 +420,18 @@ bool compatible(const TypeInfo& expected, const TypeInfo& actual)
         return false;
     }
     if (expected.kind == StaticType::Capability || actual.kind == StaticType::Capability) {
-        return expected.kind == StaticType::Capability
-            && actual.kind == StaticType::Capability
-            && expected.structName == actual.structName;
+        if (expected.kind != StaticType::Capability
+            || actual.kind != StaticType::Capability
+            || expected.structName != actual.structName
+            || expected.typeArguments.size() != actual.typeArguments.size()) {
+            return false;
+        }
+        for (std::size_t i = 0; i < expected.typeArguments.size(); ++i) {
+            if (!SemanticTypes::compatible(expected.typeArguments[i], actual.typeArguments[i])) {
+                return false;
+            }
+        }
+        return true;
     }
     if (expected.kind != actual.kind) {
         return false;
@@ -628,6 +744,11 @@ bool isNullable(const TypeInfo& type)
 bool isCapability(const TypeInfo& type, const std::string& name)
 {
     return SemanticTypes::isCapability(type, name);
+}
+
+bool isCapabilitySet(const TypeInfo& type)
+{
+    return SemanticTypes::isCapabilitySet(type);
 }
 
 bool satisfiesCapability(const TypeInfo& actual, const TypeInfo& capability)

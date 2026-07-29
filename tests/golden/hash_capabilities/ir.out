@@ -1,0 +1,56 @@
+IR
+0000  v0 = constant #0 nil
+0001  store_var @0 hashValue#0, v0
+0002  v1 = make_function $0 hashValue/1
+0003  assign_var @3 hashValue#0, v1
+0004  v2 = constant #2 nil
+0005  store_var @4 sameHash#2, v2
+0006  v3 = make_function $1 sameHash/2
+0007  assign_var @11 sameHash#2, v3
+0008  v4 = constant #4 nil
+0009  store_var @12 localHash#5, v4
+0010  v5 = make_function $2 localHash/1
+0011  assign_var @15 localHash#5, v5
+0012  v6 = load_var @16 localHash#5
+0013  v7 = constant #6 true
+0014  v8 = call v6(v7)
+0015  print v8
+0016  v9 = load_var @17 hashValue#0
+0017  v10 = constant #7 "hello"
+0018  v11 = call v9(v10)
+0019  print v11
+0020  v12 = load_var @18 sameHash#2
+0021  v13 = constant #8 "same"
+0022  v14 = constant #9 "same"
+0023  v15 = call v12(v13, v14)
+0024  print v15
+
+function $0 hashValue(value#1)
+0000  v0 = load_var @1 value#1
+0001  v1 = native_call @2 hash(v0)
+0002  return v1
+0003  v2 = constant #1 nil
+0004  return v2
+
+function $1 sameHash(left#3, right#4)
+0000  v0 = load_var @5 left#3
+0001  v1 = load_var @6 right#4
+0002  v2 = equal v0, v1
+0003  v3 = copy v2
+0004  jump_if_false v3, 0011
+0005  v4 = load_var @7 left#3
+0006  v5 = native_call @8 hash(v4)
+0007  v6 = load_var @9 right#4
+0008  v7 = native_call @10 hash(v6)
+0009  v8 = equal v5, v7
+0010  v3 = copy v8
+0011  return v3
+0012  v9 = constant #3 nil
+0013  return v9
+
+function $2 localHash(value#6)
+0000  v0 = load_var @13 value#6
+0001  v1 = native_call @14 hash(v0)
+0002  return v1
+0003  v2 = constant #5 nil
+0004  return v2

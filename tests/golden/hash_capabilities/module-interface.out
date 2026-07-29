@@ -1,0 +1,9 @@
+module 0 "<repo>/tests/golden/hash_capabilities/lib.cd"
+  export value hashValue: fun<T: Hash>(T): number
+  export value sameHash: fun<T: Eq + Hash>(T, T): bool
+
+module 1 "<repo>/tests/golden/hash_capabilities/forward.cd"
+  export value hashValue: fun<T: Hash>(T): number
+  export value sameHash: fun<T: Eq + Hash>(T, T): bool
+
+module 2 entry "<repo>/tests/golden/hash_capabilities/input.cd"

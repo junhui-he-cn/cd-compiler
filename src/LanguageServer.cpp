@@ -897,8 +897,8 @@ private:
     void addTypeParameters(const std::vector<TypeParameter>& parameters)
     {
         for (const TypeParameter& parameter : parameters) {
-            if (parameter.constraint) {
-                addTypeAnnotation(*parameter.constraint);
+            for (const TypeAnnotation& constraint : parameter.constraints) {
+                addTypeAnnotation(constraint);
             }
         }
     }

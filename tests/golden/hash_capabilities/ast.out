@@ -1,0 +1,17 @@
+Program
+  Module 0
+    Fun hashValue<T: Hash>(value: T): number
+      Return (call hash value)
+    Fun sameHash<T: Eq + Hash>(left: T, right: T): bool
+      Return (&& (== left right) (== (call hash left) (call hash right)))
+    Export hashValue sameHash
+  Module 1
+    Export hashValue sameHash from "lib.cd"
+  Module 2 entry
+    Import "lib.cd" as lib
+    Import "forward.cd" as forwarded
+    Fun localHash<T: Hash>(value: T): number
+      Return (call hash value)
+    Print (call localHash true)
+    Print (member-call lib hashValue "hello")
+    Print (member-call forwarded sameHash "same" "same")

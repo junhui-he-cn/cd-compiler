@@ -702,6 +702,7 @@ const SUPPORTED_NATIVE_FUNCTIONS: &[&str] = &[
     "substr",
     "charAt",
     "typeOf",
+    "hash",
     "contains",
     "slice",
     "copy",

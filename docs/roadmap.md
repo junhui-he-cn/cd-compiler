@@ -28,10 +28,10 @@ behavior must update the implementation contract and tests together.
 
 | Area | `master` status | Evidence / remaining boundary |
 | --- | --- | --- |
-| Verification | M0A-M0D complete | `tests/verification_inventory.json` is revision `m0d-2026-07-22-r1` with 1,810 checks; `tests/run_verification.py` is the canonical runner. |
+| Verification | M0A-M0D complete | `tests/verification_inventory.json` is revision `m0d-2026-07-22-r1` with 1,868 checks; `tests/run_verification.py` is the canonical runner. |
 | Semantic front end | M1A1-M1F complete | `SourceIdentity`, `LosslessSourceView`, `DeclarationIndex`, shared type/pattern metadata, and HIR-only IR lowering are shipped. |
 | Language semantics | Admitted M2A flow slices and M2B recovery slices complete | M2A `FLOW-001..021`, M2B type recovery, parser recovery `001..003`, and lexer recovery `001` are shipped; the broader flow policy remains open below. |
-| Generic capabilities | M6-LANG-001 complete | Compile-time `Eq`/`Ord` bounds, inference, explicit arguments, comparator forwarding, public interfaces, and module-cache validation are shipped; runtime capability dispatch is not part of the contract. |
+| Generic capabilities | M6-LANG-001 and M6-LANG-HASH-001 complete | Compile-time `Eq`/`Ord`/`Hash` bounds, canonical `+` conjunctions, inference, explicit arguments, comparator/hash forwarding, public interfaces, deterministic hash native execution, and module-cache validation are shipped; runtime capability dispatch and hash-container semantics are not part of the contract. |
 | Modules and cache | M3A graph/interface slices plus M3B artifact/cache boundaries complete | Independent module products, linker inputs, `.cdi` interfaces, `cdbc-cache 0.2`, invalidation, and safe source fallback are shipped. Removing fallback is not approved. |
 | Artifact/runtime | M4A validation and M4B debug metadata complete | `cdbc 0.1` remains the contract; validation, module identity, source ranges, and link-time debug rebasing are shipped. |
 | Formatter | M5A-FORMAT-001..008 complete | `--format`, `--format-check`, lossless comments/trivia, idempotence, blank-line/trailing-comma policies, bounded list wrapping, and invalid-input rejection are shipped. |
@@ -47,8 +47,8 @@ work. The completed groups are:
 - M1A1, M1A2, M1B, M1C, M1D, M1E1, M1E2, M1E3, and M1F;
 - the admitted M2A flow and M2B recovery slices;
 - M3A graph/interface work, M3B artifact/cache/boundary work, and M4A/M4B;
-- M5A-FORMAT-001..008, M5B-LSP-001..017, M5D-DEBUG-001, M6-LANG-001, and
-  M6-LANG-OPERATOR-001A..001C.
+- M5A-FORMAT-001..008, M5B-LSP-001..017, M5D-DEBUG-001, M6-LANG-001,
+  M6-LANG-HASH-001, and M6-LANG-OPERATOR-001A..001C.
 
 These names are a completion record, not a to-do list.
 
@@ -78,6 +78,31 @@ being designed:
   then-current `master`; branch code does not count as shipped behavior.
 
 ## Latest admitted slice
+
+### M6-LANG-HASH-001: static hash capability and deterministic hash entry point
+
+**Status:** complete for the language-support boundary; hash-based containers,
+generic map-key admission, mutable-key ownership, and user-defined capability
+implementations remain deferred.
+
+**Purpose:** unblock generic library APIs that need an explicit hash contract
+without adding concrete `HashMap`/`HashSet` implementations to the compiler
+repository.
+
+**Deliverable:** accept `T: Hash` and canonical capability conjunctions such as
+`T: Eq + Hash`; type-check `hash(value)` for concrete and constrained generic
+values; preserve the constraints through public interfaces and `.cdi` sidecars;
+and execute a deterministic typed 32-bit FNV-1a native call in the Rust VM.
+
+**Boundary:** keep `cdbc 0.1` unchanged apart from the registered native name;
+do not add a runtime capability dictionary, generic map-key admission, or
+mutable-key ownership rule. Reference values use identity hashing and enum
+variants use structural payload hashing under the shared C++/Rust contract.
+
+**Quantitative gate:** cover local, imported, namespace/re-exported, inferred,
+and `Eq + Hash` calls; unconstrained diagnostics; interface text; C++ value hash
+constants; Rust VM unit tests; and emitted artifact execution. Run the focused
+golden/artifact/Rust checks, CTest, canonical verification, and `git diff --check`.
 
 ### M6-LANG-OPERATOR-001A: builtin string ordering
 
@@ -308,8 +333,8 @@ feat/m5c-repl
   -> M5C-REPL-001 re-audit, outside the active queue for now
 ```
 
-No implementation slice is currently active. M6-LANG-OPERATOR-001A..001C are
-complete; M5D-DEBUG-002 and the other entries remain deferred specifications
+No implementation slice is currently active. M6-LANG-HASH-001 and
+M6-LANG-OPERATOR-001A..001C are complete; M5D-DEBUG-002 and the other entries remain deferred specifications
 with clear future boundaries. They do not reopen completed work or authorize
 concrete data-structure implementations in the compiler repository.
 

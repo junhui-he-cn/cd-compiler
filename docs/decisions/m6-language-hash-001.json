@@ -1,0 +1,32 @@
+{
+  "decision_id": "M6-LANG-HASH-001",
+  "domain": "static-hash-capability",
+  "status": "implemented",
+  "question": "What language support is required before hash-based generic library APIs can be expressed?",
+  "decision": "Add a compile-time Hash capability, allow canonical capability conjunctions such as T: Eq + Hash, and expose hash(value) as a deterministic native operation without adding a runtime capability dictionary or a new cdbc opcode.",
+  "capabilities": [
+    "Eq",
+    "Hash"
+  ],
+  "hash_contract": {
+    "algorithm": "typed FNV-1a",
+    "width": 32,
+    "result_type": "number",
+    "encoding": "little-endian integer fields and UTF-8 byte strings",
+    "number_normalization": "positive zero and one canonical NaN"
+  },
+  "in_scope": [
+    "Hash bounds",
+    "Eq + Hash bounds",
+    "hash(value) type checking",
+    "public interface and cdi round trips",
+    "C++ value hash utility and Rust VM parity"
+  ],
+  "deferred": [
+    "HashMap and HashSet",
+    "generic map key admission",
+    "mutable key ownership rules",
+    "user-defined capability implementations",
+    "runtime capability dictionaries"
+  ]
+}

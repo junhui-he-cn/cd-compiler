@@ -1,0 +1,10 @@
+import "lib.cd" as lib;
+import "forward.cd" as forwarded;
+
+fun localHash<T: Hash>(value: T): number {
+  return hash(value);
+}
+
+print localHash(true);
+print lib.hashValue("hello");
+print forwarded.sameHash("same", "same");

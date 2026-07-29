@@ -19,16 +19,29 @@ int main()
 
     const TypeInfo eq = capabilityType("Eq");
     const TypeInfo ord = capabilityType("Ord");
+    const TypeInfo hash = capabilityType("Hash");
     assert(typeInfoName(eq) == "Eq");
     assert(typeInfoName(ord) == "Ord");
+    assert(typeInfoName(hash) == "Hash");
     assert(SemanticTypes::isCapability(eq, "Eq"));
     assert(!SemanticTypes::isCapability(eq, "Ord"));
     assert(SemanticTypes::satisfiesCapability(number, eq));
     assert(SemanticTypes::satisfiesCapability(number, ord));
+    assert(SemanticTypes::satisfiesCapability(number, hash));
+    assert(SemanticTypes::satisfiesCapability(simpleType(StaticType::String), hash));
     assert(SemanticTypes::satisfiesCapability(typeParameterType("T", ord), eq));
+    assert(!SemanticTypes::satisfiesCapability(typeParameterType("T", ord), hash));
+    assert(!SemanticTypes::satisfiesCapability(typeParameterType("T", hash), eq));
     assert(SemanticTypes::satisfiesCapability(typeParameterType("T", number), ord));
     assert(!SemanticTypes::satisfiesCapability(typeParameterType("T"), eq));
     assert(SemanticTypes::satisfiesCapability(simpleType(StaticType::String), ord));
+
+    const TypeInfo eqAndHash = capabilitySetType({eq, hash});
+    assert(typeInfoName(eqAndHash) == "Eq + Hash");
+    assert(SemanticTypes::isCapability(eqAndHash, "Eq"));
+    assert(SemanticTypes::isCapability(eqAndHash, "Hash"));
+    assert(SemanticTypes::satisfiesCapability(number, eqAndHash));
+    assert(!SemanticTypes::satisfiesCapability(typeParameterType("T", eq), hash));
 
     const TypeInfo identity = functionType(
         {t}, t, {"T"}, {std::make_shared<TypeInfo>(number)});

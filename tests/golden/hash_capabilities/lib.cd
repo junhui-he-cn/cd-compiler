@@ -1,0 +1,9 @@
+fun hashValue<T: Hash>(value: T): number {
+  return hash(value);
+}
+
+fun sameHash<T: Eq + Hash>(left: T, right: T): bool {
+  return left == right && hash(left) == hash(right);
+}
+
+export hashValue, sameHash;

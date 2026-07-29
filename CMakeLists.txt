@@ -251,6 +251,13 @@ add_executable(type_utils_tests
 compiler_design_configure_target(type_utils_tests)
 add_test(NAME type_utils COMMAND type_utils_tests)
 
+add_executable(value_tests
+    tests/value_tests.cpp
+    src/Value.cpp
+)
+compiler_design_configure_target(value_tests)
+add_test(NAME value_tests COMMAND value_tests)
+
 add_executable(module_symbols_tests
     tests/module_symbols_tests.cpp
     src/ModuleSymbols.cpp

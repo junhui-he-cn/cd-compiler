@@ -19,6 +19,7 @@ enum class NativeFunctionKind {
     Substr,
     CharAt,
     TypeOf,
+    Hash,
     Contains,
     Slice,
     Copy,

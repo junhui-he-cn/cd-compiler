@@ -485,10 +485,10 @@ void TypeChecker::beginTypeParameterScope(const std::vector<TypeParameter>& para
     typeParameterScopes_.push_back(std::move(scope));
 
     for (const TypeParameter& parameter : parameters) {
-        if (!parameter.constraint) {
+        if (parameter.constraints.empty()) {
             continue;
         }
-        TypeInfo constraint = resolveTypeParameterConstraint(*parameter.constraint);
+        TypeInfo constraint = resolveTypeParameterConstraints(parameter);
         std::unordered_set<std::string> noTypeParameters;
         if (hasEscapingTypeParameter(constraint, noTypeParameters)) {
             throw TypeError(parameter.name,
@@ -3054,11 +3054,10 @@ void TypeChecker::checkImpl(const ImplStmt& statement)
                         + "` must bind struct type parameter `"
                         + structType->genericParameters[i] + "`");
             }
-            if (!statement.typeParameters[i].constraint) {
+            if (statement.typeParameters[i].constraints.empty()) {
                 continue;
             }
-            const TypeInfo headerConstraint = resolveTypeParameterConstraint(
-                *statement.typeParameters[i].constraint);
+            const TypeInfo headerConstraint = resolveTypeParameterConstraints(statement.typeParameters[i]);
             const std::shared_ptr<TypeInfo>& declaredConstraint
                 = i < structType->genericParameterConstraints.size()
                 ? structType->genericParameterConstraints[i]
@@ -5706,6 +5705,22 @@ TypeChecker::CheckedExpression TypeChecker::checkNativeStdlibCall(const CallExpr
     case NativeFunctionKind::TypeOf:
         checkExpressionInfo(*expression.arguments[0]);
         return CheckedExpression{simpleType(StaticType::String)};
+    case NativeFunctionKind::Hash: {
+        const CheckedExpression argument = checkExpressionInfo(*expression.arguments[0]);
+        if (SemanticTypes::isKnown(argument.type)
+            && !SemanticTypes::satisfiesCapability(argument.type, capabilityType("Hash"))) {
+            if (argument.type.kind == StaticType::TypeParameter
+                && argument.type.typeParameterName) {
+                throw TypeError(expression.paren,
+                    "hash requires type parameter `"
+                        + *argument.type.typeParameterName
+                        + "` to satisfy Hash");
+            }
+            throw TypeError(expression.paren,
+                "hash expects a value satisfying Hash, got " + typeInfoName(argument.type));
+        }
+        return CheckedExpression{simpleType(StaticType::Number)};
+    }
     case NativeFunctionKind::Contains: {
         const CheckedExpression collectionArgument = checkExpressionInfo(*expression.arguments[0]);
         if (collectionArgument.type.kind != StaticType::Unknown
@@ -6605,10 +6620,31 @@ TypeInfo TypeChecker::resolveTypeParameterConstraint(const TypeAnnotation& typeN
 {
     if (typeName.kind == TypeAnnotation::Kind::Simple
         && typeName.typeArguments.empty()
-        && (typeName.token.lexeme == "Eq" || typeName.token.lexeme == "Ord")) {
+        && (typeName.token.lexeme == "Eq"
+            || typeName.token.lexeme == "Ord"
+            || typeName.token.lexeme == "Hash")) {
         return capabilityType(typeName.token.lexeme);
     }
     return resolveAnnotation(typeName);
+}
+
+TypeInfo TypeChecker::resolveTypeParameterConstraints(const TypeParameter& parameter) const
+{
+    std::vector<TypeInfo> constraints;
+    constraints.reserve(parameter.constraints.size());
+    for (const TypeAnnotation& annotation : parameter.constraints) {
+        constraints.push_back(resolveTypeParameterConstraint(annotation));
+    }
+    if (constraints.size() == 1) {
+        return std::move(constraints.front());
+    }
+    for (const TypeInfo& constraint : constraints) {
+        if (constraint.kind != StaticType::Capability) {
+            throw TypeError(parameter.name,
+                "combined type parameter constraints must be capabilities");
+        }
+    }
+    return capabilitySetType(std::move(constraints));
 }
 
 TypeInfo TypeChecker::resolveAnnotation(const TypeAnnotation& typeName) const
