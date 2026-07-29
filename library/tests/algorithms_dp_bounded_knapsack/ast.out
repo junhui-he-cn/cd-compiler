@@ -4509,16 +4509,13 @@ Program
     Export Stack Queue Deque RingBuffer BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newRingBuffer newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums differenceArray prefixMinimums prefixMaximums nextGreaterValues mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum climbStairs maxNonAdjacentSum minCoinCount uniqueGridPaths uniqueGridPathsWithObstacles minGridPathSum editDistance longestIncreasingSubsequenceLength longestCommonSubsequenceLength knapsack01 completeKnapsack boundedKnapsack subsets combinations permutations gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
   Module 1 entry
     Import "../../data_structures.cd" as ds
-    Let left = (array 3 1 3 2 1)
-    Let right = (array 2 4 2 5)
-    Print (member-call ds uniqueValues left)
-    Print (member-call ds intersectionValues left right)
-    Print (member-call ds unionValues left right)
-    Print (member-call ds differenceValues left right)
-    Print left
-    Print right
-    Let words = (array "a" "b" "a")
-    Print (member-call ds uniqueValues words)
-    Print (member-call ds unionValues words (array "b" "c"))
-    Print (member-call ds intersectionValues words (array "b" "c"))
-    Print (member-call ds differenceValues words (array "a"))
+    Print (member-call ds boundedKnapsack (array 2 3) (array 3 4) (array 2 1) 7)
+    Print (member-call ds boundedKnapsack (array 2 3) (array 3 4) (array 2 1) 6)
+    Print (member-call ds boundedKnapsack (array 2 3) (array 3 4) (array 1 1) 7)
+    Print (member-call ds boundedKnapsack (array 2 3) (array 3 4) (array 2 1) 0)
+    Print (member-call ds boundedKnapsack (array 2) (array 3) (array 2) (- 1))
+    Print (member-call ds boundedKnapsack (array 2) (array) (array 2) 1)
+    Print (member-call ds boundedKnapsack (array 2) (array 3) (array 1.5) 2)
+    Print (member-call ds boundedKnapsack (array 2) (array 3) (array (- 1)) 2)
+    Print (member-call ds boundedKnapsack (array 0) (array 3) (array 1) 2)
+    Print (member-call ds boundedKnapsack (array 2) (array (- 3)) (array 2) 5)

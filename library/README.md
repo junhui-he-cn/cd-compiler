@@ -196,6 +196,7 @@ print ds.compareStrings("ant", "apple");
 
 print ds.knapsack01([2, 3, 4], [3, 4, 5], 5);
 print ds.completeKnapsack([2, 3], [3, 4], 7);
+print ds.boundedKnapsack([2, 3], [3, 4], [2, 1], 7);
 print ds.subsets([1, 2]);
 print ds.combinations([1, 2, 3], 2);
 print ds.permutations([1, 2, 3]);
@@ -671,6 +672,11 @@ The current backtracking and knapsack helpers are:
   arrays, invalid capacity, or a non-positive/non-integral weight; a valid
   zero capacity returns `0`. The ascending-capacity DP uses `O(itemCount *
   capacity)` time and `O(capacity)` space.
+- `boundedKnapsack(weights, values, counts, capacity): number?` — maximize the
+  value with a finite non-negative integer `counts` limit per item. It returns
+  `nil` for mismatched arrays, invalid capacity, non-positive/non-integral
+  weights, or invalid counts; a valid zero capacity returns `0`. Its repeated
+  0/1 passes use `O(capacity * sum(counts))` time and `O(capacity)` space.
 - `subsets<T>(values): [[T]]` — enumerate every subset, including the empty
   subset, in depth-first include/exclude order. The output has `2^n` entries
   and requires `O(n * 2^n)` output space.
