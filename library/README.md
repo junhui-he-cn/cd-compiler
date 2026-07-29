@@ -5,7 +5,7 @@ Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 `Queue<T>`, `Deque<T>`, `RingBuffer<T>`, `BinaryHeap<T>`, `PriorityQueue<T>`, and
 numeric `MedianHeap` types, plus the
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
-`Tree<T>`, `Set<T: Eq>`, `OrderedSet<T>`, `OrderedMap<K, V>`, `BiMap<K: Eq, V: Eq>`, `LruCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
+`Tree<T>`, `Set<T: Eq>`, `OrderedSet<T>`, `OrderedMap<K, V>`, `BiMap<K: Eq, V: Eq>`, `LruCache<K: Eq, V>`, `LfuCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
 `MultiMap<K: Eq, V: Eq>` for one-to-many mappings, immutable BST helpers, and basic generic array algorithms,
 including comparator-based sorting, window helpers, and interval merge.
 It also includes array-backed numeric `FenwickTree` and `SegmentTree` types,
@@ -534,6 +534,24 @@ Updating an existing key also refreshes its recency. `get` uses `optional<V>`, s
 callers storing a `nil` value should use `has` to distinguish it from a missing
 key. Key lookup and all recency moves are `O(n)` in this simple implementation;
 `snapshot` is `O(n)` and allocates a new outer array and entry values.
+
+`LfuCache<K: Eq, V>` is an array-backed least-frequently-used cache:
+
+- `newLfuCache<K: Eq, V>(capacity): LfuCache<K, V>` — create a cache with the
+  floored non-negative capacity;
+- `get(key: K): optional<V>` — return a value, increment its frequency, and
+  refresh its recency, or return `nil` when absent;
+- `put(key: K, value: V): bool` — insert or update a value, counting the
+  operation as a use; return `false` when the capacity is zero;
+- `frequencyOf(key: K): optional<number>` and `has(key: K): bool` — inspect frequency
+  or presence without changing it;
+- `discard`, `capacity`, `size`, `isEmpty`, and `snapshot` — remove or inspect
+  entries; snapshots contain `[LfuCacheEntry<K, V>]` with each frequency.
+
+When full, the entry with the smallest frequency is evicted; ties evict the
+least recently used entry. New entries start at frequency `1`. Lookup, eviction,
+and removal are `O(n)` in this array implementation; `snapshot` is `O(n)` and
+returns entries in current storage order.
 
 `MultiSet<T: Eq>` stores one entry per distinct value and its occurrence count:
 

@@ -22,7 +22,7 @@ export Set, OrderedSet, OrderedMapEntry, OrderedMap, BiMapEntry, BiMap, MultiSet
        newMultiMap
        from "./sets.cd";
 
-export LruCacheEntry, LruCache, newLruCache
+export LruCacheEntry, LruCache, newLruCache, LfuCacheEntry, LfuCache, newLfuCache
        from "./caches.cd";
 
 export DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge,

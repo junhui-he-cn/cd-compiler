@@ -124,4 +124,159 @@ fun newLruCache<K: Eq, V>(capacity: number): LruCache<K, V> {
   return LruCache<K, V> { keys: [], values: [], limit: limit };
 }
 
-export LruCacheEntry, LruCache, newLruCache;
+struct LfuCacheEntry<K, V> {
+  key: K,
+  value: V,
+  frequency: number
+}
+
+struct LfuCache<K: Eq, V> {
+  private keys: [K],
+  private values: [V],
+  private frequencies: [number],
+  private lastUsed: [number],
+  private limit: number,
+  private clock: number
+}
+
+impl LfuCache<K: Eq, V> {
+  fun indexOf(key: K): number {
+    let index = 0;
+    while (index < this.keys.len()) {
+      if (this.keys[index] == key) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun touch(index: number) {
+    this.frequencies[index] += 1;
+    this.clock += 1;
+    this.lastUsed[index] = this.clock;
+  }
+
+  fun evictionIndex(): number {
+    let candidate = 0;
+    let index = 1;
+    while (index < this.keys.len()) {
+      if (this.frequencies[index] < this.frequencies[candidate]
+          || (this.frequencies[index] == this.frequencies[candidate]
+              && this.lastUsed[index] < this.lastUsed[candidate])) {
+        candidate = index;
+      }
+      index += 1;
+    }
+    return candidate;
+  }
+
+  fun removeAt(index: number) {
+    while (index + 1 < this.keys.len()) {
+      this.keys[index] = this.keys[index + 1];
+      this.values[index] = this.values[index + 1];
+      this.frequencies[index] = this.frequencies[index + 1];
+      this.lastUsed[index] = this.lastUsed[index + 1];
+      index += 1;
+    }
+    this.keys.pop();
+    this.values.pop();
+    this.frequencies.pop();
+    this.lastUsed.pop();
+  }
+
+  fun capacity(): number {
+    return this.limit;
+  }
+
+  fun size(): number {
+    return this.keys.len();
+  }
+
+  fun isEmpty(): bool {
+    return this.keys.len() == 0;
+  }
+
+  fun has(key: K): bool {
+    return this.indexOf(key) >= 0;
+  }
+
+  fun get(key: K): optional<V> {
+    let index = this.indexOf(key);
+    if (index < 0) {
+      return nil;
+    }
+    let value = this.values[index];
+    this.touch(index);
+    return value;
+  }
+
+  fun frequencyOf(key: K): optional<number> {
+    let index = this.indexOf(key);
+    if (index < 0) {
+      return nil;
+    }
+    return this.frequencies[index];
+  }
+
+  fun put(key: K, value: V): bool {
+    if (this.limit <= 0) {
+      return false;
+    }
+    let index = this.indexOf(key);
+    if (index >= 0) {
+      this.values[index] = value;
+      this.touch(index);
+      return true;
+    }
+    if (this.keys.len() >= this.limit) {
+      this.removeAt(this.evictionIndex());
+    }
+    this.keys.push(key);
+    this.values.push(value);
+    this.frequencies.push(1);
+    this.clock += 1;
+    this.lastUsed.push(this.clock);
+    return true;
+  }
+
+  fun discard(key: K): bool {
+    let index = this.indexOf(key);
+    if (index < 0) {
+      return false;
+    }
+    this.removeAt(index);
+    return true;
+  }
+
+  fun snapshot(): [LfuCacheEntry<K, V>] {
+    let result: [LfuCacheEntry<K, V>] = [];
+    let index = 0;
+    while (index < this.keys.len()) {
+      result.push(LfuCacheEntry<K, V> {
+        key: this.keys[index],
+        value: this.values[index],
+        frequency: this.frequencies[index]
+      });
+      index += 1;
+    }
+    return result;
+  }
+}
+
+fun newLfuCache<K: Eq, V>(capacity: number): LfuCache<K, V> {
+  let limit = floor(capacity);
+  if (limit < 0) {
+    limit = 0;
+  }
+  return LfuCache<K, V> {
+    keys: [],
+    values: [],
+    frequencies: [],
+    lastUsed: [],
+    limit: limit,
+    clock: 0
+  };
+}
+
+export LruCacheEntry, LruCache, newLruCache, LfuCacheEntry, LfuCache, newLfuCache;
