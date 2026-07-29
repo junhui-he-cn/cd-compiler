@@ -371,6 +371,102 @@ fun toArray<T>(list: List<T>): [T] {
   return values;
 }
 
+fun listLength<T>(list: List<T>): number {
+  let current = list;
+  let length = 0;
+  while (true) {
+    match current {
+      List.Nil => { return length; }
+      List.Cons(value, rest) => {
+        length += 1;
+        current = rest;
+      }
+    }
+  }
+  return length;
+}
+
+fun listGet<T>(list: List<T>, index: number): T? {
+  if (floor(index) != index || index < 0) {
+    return nil;
+  }
+  let current = list;
+  let remaining = index;
+  while (true) {
+    match current {
+      List.Nil => { return nil; }
+      List.Cons(value, rest) => {
+        if (remaining == 0) {
+          return value;
+        }
+        remaining -= 1;
+        current = rest;
+      }
+    }
+  }
+  return nil;
+}
+
+fun listAppend<T>(list: List<T>, value: T): List<T> {
+  return match list {
+    List.Nil => List.Cons(value, List.Nil<T>()),
+    List.Cons(headValue, rest) => List.Cons(headValue, listAppend(rest, value)),
+  };
+}
+
+fun listConcat<T>(left: List<T>, right: List<T>): List<T> {
+  return match left {
+    List.Nil => right,
+    List.Cons(value, rest) => List.Cons(value, listConcat(rest, right)),
+  };
+}
+
+fun listTake<T>(list: List<T>, count: number): List<T> {
+  if (floor(count) != count || count <= 0) {
+    return List.Nil<T>();
+  }
+  return match list {
+    List.Nil => List.Nil<T>(),
+    List.Cons(value, rest) => List.Cons(value, listTake(rest, count - 1)),
+  };
+}
+
+fun listDrop<T>(list: List<T>, count: number): List<T> {
+  if (floor(count) != count || count <= 0) {
+    return list;
+  }
+  let current = list;
+  let remaining = count;
+  while (remaining > 0) {
+    match current {
+      List.Nil => { return current; }
+      List.Cons(value, rest) => {
+        current = rest;
+        remaining -= 1;
+      }
+    }
+  }
+  return current;
+}
+
+fun mergeSortedLists<T>(left: List<T>, right: List<T>, less: fun(T, T): bool): List<T> {
+  match left {
+    List.Nil => { return right; }
+    List.Cons(leftValue, leftRest) => {
+      match right {
+        List.Nil => { return left; }
+        List.Cons(rightValue, rightRest) => {
+          if (less(rightValue, leftValue)) {
+            return List.Cons(rightValue, mergeSortedLists(left, rightRest, less));
+          }
+          return List.Cons(leftValue, mergeSortedLists(leftRest, right, less));
+        }
+      }
+    }
+  }
+  return left;
+}
+
 // Tree is an immutable recursive binary tree. Constructors and all helpers
 // return or consume whole values, so inserting a new root does not mutate an
 // existing tree or any of its shared subtrees.
@@ -3966,4 +4062,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Tree, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, ExtendedGcdResult, Trie, FenwickTree, SegmentTree, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, newTrie, newFenwickTree, newSegmentTree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced, treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, minimumSpanningForestKruskal, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Tree, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, ExtendedGcdResult, Trie, FenwickTree, SegmentTree, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, newTrie, newFenwickTree, newSegmentTree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced, treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, minimumSpanningForestKruskal, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, listLength, listGet, listAppend, listConcat, listTake, listDrop, mergeSortedLists, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci;

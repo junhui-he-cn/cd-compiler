@@ -255,6 +255,92 @@ Program
       Let values: [T] = (array)
       Expr (call appendListToArray list values)
       Return values
+    Fun listLength<T>(list: List<T>): number
+      Let current = list
+      Let length = 0
+      While (group true)
+        Body
+          Block
+            Match current
+              Arm List.Nil
+                Block
+                  Return length
+              Arm List.Cons(value, rest)
+                Block
+                  Expr (+= length 1)
+                  Expr (= current rest)
+      Return length
+    Fun listGet<T>(list: List<T>, index: number): T?
+      If (group (|| (!= (call floor index) index) (< index 0)))
+        Then
+          Block
+            Return nil
+      Let current = list
+      Let remaining = index
+      While (group true)
+        Body
+          Block
+            Match current
+              Arm List.Nil
+                Block
+                  Return nil
+              Arm List.Cons(value, rest)
+                Block
+                  If (group (== remaining 0))
+                    Then
+                      Block
+                        Return value
+                  Expr (-= remaining 1)
+                  Expr (= current rest)
+      Return nil
+    Fun listAppend<T>(list: List<T>, value: T): List<T>
+      Return (match list (arm List.Nil (member-call List Cons value (member-call List Nil<T>))) (arm List.Cons(headValue, rest) (member-call List Cons headValue (call listAppend rest value))))
+    Fun listConcat<T>(left: List<T>, right: List<T>): List<T>
+      Return (match left (arm List.Nil right) (arm List.Cons(value, rest) (member-call List Cons value (call listConcat rest right))))
+    Fun listTake<T>(list: List<T>, count: number): List<T>
+      If (group (|| (!= (call floor count) count) (<= count 0)))
+        Then
+          Block
+            Return (member-call List Nil<T>)
+      Return (match list (arm List.Nil (member-call List Nil<T>)) (arm List.Cons(value, rest) (member-call List Cons value (call listTake rest (- count 1)))))
+    Fun listDrop<T>(list: List<T>, count: number): List<T>
+      If (group (|| (!= (call floor count) count) (<= count 0)))
+        Then
+          Block
+            Return list
+      Let current = list
+      Let remaining = count
+      While (group (> remaining 0))
+        Body
+          Block
+            Match current
+              Arm List.Nil
+                Block
+                  Return current
+              Arm List.Cons(value, rest)
+                Block
+                  Expr (= current rest)
+                  Expr (-= remaining 1)
+      Return current
+    Fun mergeSortedLists<T>(left: List<T>, right: List<T>, less: fun(T, T): bool): List<T>
+      Match left
+        Arm List.Nil
+          Block
+            Return right
+        Arm List.Cons(leftValue, leftRest)
+          Block
+            Match right
+              Arm List.Nil
+                Block
+                  Return left
+              Arm List.Cons(rightValue, rightRest)
+                Block
+                  If (group (call less rightValue leftValue))
+                    Then
+                      Block
+                        Return (member-call List Cons rightValue (call mergeSortedLists left rightRest less))
+                  Return (member-call List Cons leftValue (call mergeSortedLists leftRest right less))
+      Return left
     Enum Tree<T> {Empty, Node(value: T, left: Tree<T>, right: Tree<T>)}
     Fun emptyTree<T>(): Tree<T>
       Return (member-call Tree Empty<T>)
@@ -3766,7 +3852,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let values = (array 1 2 3 4 5)

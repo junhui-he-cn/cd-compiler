@@ -302,6 +302,23 @@ are shared between list values, so the structure supports persistent snapshots.
 The type argument for `emptyList` must be explicit because the empty constructor
 has no payload from which to infer `T`.
 
+Additional immutable list algorithms provide:
+
+- `listLength(list): number` and `listGet(list, index): T?` — length and
+  zero-based lookup, with `nil` for invalid/non-integral indexes;
+- `listAppend(list, value): List<T>` and `listConcat(left, right): List<T>` —
+  persistent tail append and concatenation;
+- `listTake(list, count): List<T>` and `listDrop(list, count): List<T>` —
+  prefix/suffix selection, with non-positive counts producing the natural empty
+  or unchanged result;
+- `mergeSortedLists(left, right, less): List<T>` — stable merge of two lists
+  already ordered by the supplied comparator.
+
+These operations preserve the input lists. `listLength`/`listGet` and
+`listAppend` are `O(n)` in the traversed list, `listConcat` is `O(n)` in its
+left input and shares the right input, `listTake`/`listDrop` are `O(k)`, and
+`mergeSortedLists` is `O(n + m)` while sharing only its final untouched suffix.
+
 `Tree<T>` is an immutable recursive binary tree:
 
 - `emptyTree<T>(): Tree<T>` — create an empty tree;
