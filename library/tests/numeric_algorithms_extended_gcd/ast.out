@@ -4865,6 +4865,67 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
+    Fun binomialCoefficient(n: number, k: number): number?
+      If (group (|| (|| (|| (|| (!= (call floor n) n) (!= (call floor k) k)) (< n 0)) (< k 0)) (> k n)))
+        Then
+          Block
+            Return nil
+      Let effective = k
+      If (group (> effective (- n effective)))
+        Then
+          Block
+            Expr (= effective (- n effective))
+      Let coefficients: [number] = (array 1)
+      Let index = 1
+      While (group (<= index effective))
+        Body
+          Block
+            Expr (member-call coefficients push 0)
+            Expr (+= index 1)
+      Let row = 1
+      While (group (<= row n))
+        Body
+          Block
+            Expr (= index row)
+            If (group (> index effective))
+              Then
+                Block
+                  Expr (= index effective)
+            While (group (> index 0))
+              Body
+                Block
+                  Expr (+= (index coefficients index) (index coefficients (- index 1)))
+                  Expr (-= index 1)
+            Expr (+= row 1)
+      Return (index coefficients effective)
+    Fun pascalTriangle(rows: number): [[number]]
+      Let result: [[number]] = (array)
+      If (group (|| (!= (call floor rows) rows) (< rows 0)))
+        Then
+          Block
+            Return result
+      Let previous: [number] = (array)
+      Let rowIndex = 0
+      While (group (< rowIndex rows))
+        Body
+          Block
+            Let current: [number] = (array)
+            Let column = 0
+            While (group (<= column rowIndex))
+              Body
+                Block
+                  If (group (|| (== column 0) (== column rowIndex)))
+                    Then
+                      Block
+                        Expr (member-call current push 1)
+                    Else
+                      Block
+                        Expr (member-call current push (+ (index previous (- column 1)) (index previous column)))
+                  Expr (+= column 1)
+            Expr (member-call result push current)
+            Expr (= previous current)
+            Expr (+= rowIndex 1)
+      Return result
     Fun primeFactors(value: number): [number]
       Let result: [number] = (array)
       If (group (|| (< value 2) (!= (call floor value) value)))
@@ -4922,7 +4983,7 @@ Program
             Expr (member-call result push (index reversed index))
             Expr (+= index 1)
       Return result
-    Export Stack Queue Deque RingBuffer BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newRingBuffer newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums differenceArray prefixMinimums prefixMaximums nextGreaterValues mergeIntervals intersectIntervals selectNonOverlappingIntervals minimumIntervalRooms canReachEnd minimumJumps huffmanMergeCost mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum climbStairs maxNonAdjacentSum minCoinCount uniqueGridPaths uniqueGridPathsWithObstacles minGridPathSum matrixChainCost editDistance longestIncreasingSubsequenceLength longestCommonSubsequenceLength knapsack01 completeKnapsack boundedKnapsack subsets combinations permutations generateParentheses nQueens mazePaths gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci primeFactors divisors
+    Export Stack Queue Deque RingBuffer BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newRingBuffer newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums differenceArray prefixMinimums prefixMaximums nextGreaterValues mergeIntervals intersectIntervals selectNonOverlappingIntervals minimumIntervalRooms canReachEnd minimumJumps huffmanMergeCost mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum climbStairs maxNonAdjacentSum minCoinCount uniqueGridPaths uniqueGridPathsWithObstacles minGridPathSum matrixChainCost editDistance longestIncreasingSubsequenceLength longestCommonSubsequenceLength knapsack01 completeKnapsack boundedKnapsack subsets combinations permutations generateParentheses nQueens mazePaths gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci primeFactors divisors binomialCoefficient pascalTriangle
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Fun asArray(result: ds.ExtendedGcdResult): [number]

@@ -63,6 +63,7 @@
 - 基础数值算法：`gcd`、`lcm`、`extendedGcd`、`isPrime`、`sievePrimes`、`fastPower`、
   `factorial`、`fibonacci`（整数输入契约）。
 - 数论辅助：`primeFactors`、`divisors`。
+- 组合数辅助：`binomialCoefficient`、`pascalTriangle`。
 - 一维 DP：`climbStairs`、`maxNonAdjacentSum`、`minCoinCount`。
 - 网格/字符串 DP：`uniqueGridPaths`、`uniqueGridPathsWithObstacles`、
   `minGridPathSum`、`editDistance`。
@@ -447,7 +448,7 @@ enum Result<T, E> {
 - 素数判断、埃氏筛、线性筛（若性能需要）；
 - 质因数分解、约数枚举已完成；
 - 最大公约数数组、前缀积和差分；
-- 组合数、排列数、帕斯卡三角；
+- 组合数、帕斯卡三角已完成；数值排列数待实现；
 - 数值二分和牛顿法作为可选专题。
 
 这些函数先使用 `number`，并在 API 文档中明确有限整数、负数、溢出和浮点
