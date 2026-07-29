@@ -18,7 +18,7 @@ class MalformedHarnessTests(unittest.TestCase):
         manifest = malformed_corpus.load_manifest()
         cases = malformed_corpus.expand_cases(manifest)
         case_ids = [case["case_id"] for case in cases]
-        self.assertEqual(len(cases), 104)
+        self.assertEqual(len(cases), 108)
         self.assertEqual(case_ids, sorted(case_ids))
         self.assertEqual(len(case_ids), len(set(case_ids)))
         self.assertEqual(manifest["seed"], 20260722)
@@ -31,6 +31,8 @@ class MalformedHarnessTests(unittest.TestCase):
             "truncate",
             "unknown_opcode",
             "trailing_garbage",
+            "duplicate_section",
+            "reverse_range",
             "invalid_register",
             "invalid_constant",
             "invalid_jump",

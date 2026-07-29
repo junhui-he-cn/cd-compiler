@@ -52,9 +52,9 @@ Rust VM 的长期目标是成为一个可独立验证、可重复执行、可观
 | 跨后端验证 | C++ emission、Rust dump/link/run、模块 artifact、module cache、golden 和 Cargo 测试已经形成验证链 | `tests/bytecode_artifact_tests.py`、`tests/run_rust_vm_tests.py`、`tests/bytecode_module_cache_tests.py` |
 
 当前基线的主要限制也要明确记录：VM 是 binary crate 而不是稳定库 API；
-运行时对象主要由 `Rc<RefCell<...>>` 和手工 identity 管理；没有统一的资源
-预算和取消机制；没有交互式 debugger、快照/回滚、二进制 artifact 或 JIT。
-`cdbc 0.1` 的兼容性优先级高于这些后续能力。
+运行时对象主要由 `Rc<RefCell<...>>` 和手工 identity 管理；资源预算和协作式
+取消已经由 VM-1B 固定，但还没有交互式 debugger、快照/回滚、二进制 artifact
+或 JIT。`cdbc 0.1` 的兼容性优先级高于这些后续能力。
 
 ## 3. 路线图总览
 
@@ -69,7 +69,7 @@ Rust VM 的长期目标是成为一个可独立验证、可重复执行、可观
   -> VM-7 条件研究：持久会话、调度器、GC/JIT
 ```
 
-推荐的近期开发顺序是 `VM-1A -> VM-1B -> VM-2A -> VM-3A -> VM-4A`。
+推荐的近期开发顺序是 `VM-1A -> VM-1B -> VM-1C -> VM-2A -> VM-3A -> VM-4A`。
 `VM-2B`、`VM-5B` 和 `VM-6` 必须以测量结果为依据；`VM-7` 不进入默认
 开发队列，直到前置决策和 workload 证据满足门槛。
 
@@ -77,7 +77,7 @@ Rust VM 的长期目标是成为一个可独立验证、可重复执行、可观
 命名的测试/benchmark case、删除旧路径的条件和可复现命令。完成后把细节
 留在 `docs/decisions/` 与测试中，路线图只保留状态和下一步。
 
-## 4. VM-1：执行安全与契约加固（P0，下一阶段）
+## 4. VM-1：执行安全与契约加固（P0，已完成）
 
 ### VM-1A：独立 artifact verifier（已完成，2026-07-29）
 
@@ -103,13 +103,13 @@ Rust VM 的长期目标是成为一个可独立验证、可重复执行、可观
   dump 和 Rust run 结果不变。对应测试应覆盖 linked、module、debug metadata
   和 native allowlist，而不是只测试算术指令。
 
-**状态与证据：** `format::verify_artifact`、`verify_program` 和
+**状态与证据（已完成，2026-07-29）：** `format::verify_artifact`、`verify_program` 和
 `verify_module_artifact` 已成为 public verifier 边界；parser 返回 artifact 前、
 CLI 的 `dump`/`run`/`trace`/`link` 读取后、module linker 输入和最终 linked
-program 都会经过验证。2026-07-29 的证据为 Rust 单测 `50/50`、CTest
-`33/33`、artifact `118/118`、module cache `11/11`、Rust VM `778/778`、
-canonical verification `1879/1879`、boundary `5/5`、malformed `104/104` 和
-debugger 全部通过；边界决策见
+program 都会经过验证。当前完整证据为 Rust 单测 `59/59`、CTest `34/34`、
+artifact `118/118`、module cache `11/11`、Rust VM `778/778`、canonical
+verification `1884/1884`、boundary `5/5`、malformed `108/108` 和 debugger
+全部通过；边界决策见
 [`docs/decisions/vm-artifact-verifier-001.md`](decisions/vm-artifact-verifier-001.md)。
 
 ### VM-1B：确定性资源预算与取消
@@ -133,7 +133,15 @@ debugger 全部通过；边界决策见
 
 **验收：** 同一 artifact、配置和输入重复运行得到相同的资源错误；预算触发
   时不 panic、不死循环、不残留部分成功状态；正常 workload 的运行输出与
-  现有 `run_rust_vm_tests.py` 完全一致。
+现有 `run_rust_vm_tests.py` 完全一致。
+
+**状态与证据（已完成，2026-07-29）：** `vm::RunConfig` 固定默认预算、单项
+覆盖和 `--unlimited` 语义；`CancellationToken` 在指令循环、native callback
+和容器增长点执行协作式检查。资源错误不会产生部分 `run` stdout，artifact 和
+module expansion 也在读取/链接前受预算保护。Rust 单测 `59/59`、VM resource
+budget focused test、CTest `34/34`、Rust VM `778/778` 和 canonical
+verification `1884/1884` 全部通过；详细边界见
+[`docs/decisions/vm-resource-budget-001.md`](decisions/vm-resource-budget-001.md)。
 
 ### VM-1C：panic-free 与变异 artifact 防线
 
@@ -150,6 +158,12 @@ debugger 全部通过；边界决策见
 **删除条件：** 当 parser/linker/executor 都经过统一 verifier，malformed
   corpus 在固定 seed 下无 panic 且每个拒绝原因稳定后，才可以删除重复的局部
   防御代码；不能以“测试没崩溃”作为删除依据。
+
+**状态与证据（已完成，2026-07-29）：** malformed corpus 已覆盖 duplicate
+section、非法 escape、反向 debug range、非法 UTF-8 artifact 和 module cycle
+回归；parser、linker 和 executor 对这些输入均返回稳定错误而不 panic。malformed
+测试 `108/108`、CTest `34/34`、canonical verification `1884/1884`、Rust
+单测 `59/59` 和 module/artifact/debugger 回归全部通过。
 
 ## 5. VM-2：运行时所有权与堆模型（P0/P1）
 
@@ -411,11 +425,12 @@ canonical verification 和 malformed corpus。完整仓库 gate 仍以
 
 ## 12. 当前下一步
 
-VM-1A 已完成。下一步是 **VM-1B：确定性资源预算与取消**：先为
-`RunConfig`/CLI 固定 instruction steps、call depth、容器规模、输出字节数、
-artifact 大小和模块展开规模的默认值、覆盖方式、计数边界与稳定错误，再实现
-指令循环、native callback 和增长型容器操作中的取消检查点。VM-1B 完成前不
-推进 GC、persistent VM、JIT 或新的 artifact version。
+VM-1A、VM-1B 和 VM-1C 已完成。下一步是 **VM-2A：所有权、别名和生命周期
+决策**：根据当前 `Value`/`runtime`/`VM` 实现和 C++/Rust parity cases，固定
+数组、map、struct、closure、variant、native 返回值、root、错误路径和循环引用
+的可观察语义，再决定是否需要 VM-2B 的 Heap/Handle 抽象。VM-2A 决策完成前不
+推进 GC、persistent VM、JIT 或新的 artifact version；VM-2B 则必须在该决策和
+容量测量之后才开始。
 
 这份路线图的成功标准不是同时铺开所有 VM 研究方向，而是让每个运行时能力
 都有清楚的契约、独立的证据和可回退的迁移路径；语言 roadmap 继续独立演进，

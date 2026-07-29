@@ -80,6 +80,7 @@ CTEST_SOURCE_OVERRIDES = {
     "bytecode_artifacts": ["tests/bytecode_artifact_tests.py"],
     "bytecode_module_artifacts": ["tests/bytecode_module_artifact_tests.py", "vm-rs"],
     "rust_vm": ["tests/run_rust_vm_tests.py", "vm-rs"],
+    "vm_resource_budget": ["tests/vm_resource_budget_tests.py", "vm-rs"],
     "frontend_session": ["tests/frontend_session_tests.cpp"],
     "flow_facts": ["tests/flow_facts_tests.cpp"],
     "type_utils": ["tests/type_utils_tests.cpp"],

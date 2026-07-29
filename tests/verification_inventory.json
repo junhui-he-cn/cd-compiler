@@ -4488,6 +4488,28 @@
       "expected_files": []
     },
     {
+      "case_id": "ctest.vm_resource_budget",
+      "runner": "ctest",
+      "result_name": "vm_resource_budget",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "vm_resource_budget"
+      ],
+      "backend": "python",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt",
+        "tests/vm_resource_budget_tests.py",
+        "vm-rs"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "golden.import_errors.import_cycle",
       "runner": "golden",
       "result_name": "import_errors/import_cycle default(ast)",
@@ -27507,6 +27529,32 @@
       "fixture": "tests/bytecode_artifacts/arithmetic"
     },
     {
+      "case_id": "malformed.cdbc.arithmetic.duplicate_section",
+      "runner": "malformed",
+      "result_name": "malformed.cdbc.arithmetic.duplicate_section",
+      "stage": "cdbc-parser",
+      "capability_tags": [
+        "malformed",
+        "cdbc",
+        "rust-parser",
+        "duplicate_section"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "cdbc",
+        "rust_decode"
+      ],
+      "terminal_boundary": "rust_decode",
+      "sources": [
+        "tests/bytecode_artifacts/arithmetic/expected.cdbc"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/arithmetic/expected.cdbc"
+      ],
+      "fixture": "tests/bytecode_artifacts/arithmetic"
+    },
+    {
       "case_id": "malformed.cdbc.arithmetic.invalid_constant",
       "runner": "malformed",
       "result_name": "malformed.cdbc.arithmetic.invalid_constant",
@@ -27637,6 +27685,32 @@
       "fixture": "tests/bytecode_artifacts/arithmetic"
     },
     {
+      "case_id": "malformed.cdbc.arithmetic.reverse_range",
+      "runner": "malformed",
+      "result_name": "malformed.cdbc.arithmetic.reverse_range",
+      "stage": "cdbc-parser",
+      "capability_tags": [
+        "malformed",
+        "cdbc",
+        "rust-parser",
+        "reverse_range"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "cdbc",
+        "rust_decode"
+      ],
+      "terminal_boundary": "rust_decode",
+      "sources": [
+        "tests/bytecode_artifacts/arithmetic/expected.cdbc"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/arithmetic/expected.cdbc"
+      ],
+      "fixture": "tests/bytecode_artifacts/arithmetic"
+    },
+    {
       "case_id": "malformed.cdbc.arithmetic.trailing_garbage",
       "runner": "malformed",
       "result_name": "malformed.cdbc.arithmetic.trailing_garbage",
@@ -27724,6 +27798,32 @@
         "cdbc",
         "rust-parser",
         "bad_header"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "cdbc",
+        "rust_decode"
+      ],
+      "terminal_boundary": "rust_decode",
+      "sources": [
+        "tests/bytecode_artifacts/functions_arrays/expected.cdbc"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/functions_arrays/expected.cdbc"
+      ],
+      "fixture": "tests/bytecode_artifacts/functions_arrays"
+    },
+    {
+      "case_id": "malformed.cdbc.functions_arrays.duplicate_section",
+      "runner": "malformed",
+      "result_name": "malformed.cdbc.functions_arrays.duplicate_section",
+      "stage": "cdbc-parser",
+      "capability_tags": [
+        "malformed",
+        "cdbc",
+        "rust-parser",
+        "duplicate_section"
       ],
       "backend": "rust-vm",
       "expected_result_kind": "reject",
@@ -27854,6 +27954,32 @@
         "cdbc",
         "rust-parser",
         "bad_header"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "cdbc",
+        "rust_decode"
+      ],
+      "terminal_boundary": "rust_decode",
+      "sources": [
+        "tests/bytecode_artifacts/maps/expected.cdbc"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/maps/expected.cdbc"
+      ],
+      "fixture": "tests/bytecode_artifacts/maps"
+    },
+    {
+      "case_id": "malformed.cdbc.maps.invalid_escape",
+      "runner": "malformed",
+      "result_name": "malformed.cdbc.maps.invalid_escape",
+      "stage": "cdbc-parser",
+      "capability_tags": [
+        "malformed",
+        "cdbc",
+        "rust-parser",
+        "invalid_escape"
       ],
       "backend": "rust-vm",
       "expected_result_kind": "reject",

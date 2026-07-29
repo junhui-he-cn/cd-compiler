@@ -10,6 +10,8 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt;
 use std::rc::Rc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StackFrame {
@@ -57,8 +59,117 @@ pub struct TraceRun {
     pub result: Result<String, RuntimeError>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ResourceKind {
+    InstructionSteps,
+    CallDepth,
+    RuntimeElements,
+    OutputBytes,
+}
+
+impl ResourceKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::InstructionSteps => "instruction steps",
+            Self::CallDepth => "call depth",
+            Self::RuntimeElements => "runtime elements",
+            Self::OutputBytes => "output bytes",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RuntimeErrorKind {
+    Runtime,
+    Resource(ResourceKind),
+    Cancelled,
+}
+
+pub const DEFAULT_MAX_INSTRUCTION_STEPS: usize = 10_000_000;
+pub const DEFAULT_MAX_CALL_DEPTH: usize = 1_024;
+pub const DEFAULT_MAX_RUNTIME_ELEMENTS: usize = 1_000_000;
+pub const DEFAULT_MAX_OUTPUT_BYTES: usize = 16 * 1024 * 1024;
+pub const DEFAULT_MAX_ARTIFACT_BYTES: usize = 64 * 1024 * 1024;
+pub const DEFAULT_MAX_MODULE_COUNT: usize = 1_024;
+pub const DEFAULT_MAX_MODULE_INSTRUCTIONS: usize = 1_000_000;
+
+#[derive(Clone, Debug)]
+pub struct CancellationToken {
+    cancelled: Arc<AtomicBool>,
+}
+
+impl CancellationToken {
+    pub fn new() -> Self {
+        Self {
+            cancelled: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    pub fn cancel(&self) {
+        self.cancelled.store(true, Ordering::Release);
+    }
+
+    fn is_cancelled(&self) -> bool {
+        self.cancelled.load(Ordering::Acquire)
+    }
+}
+
+impl Default for CancellationToken {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct RunConfig {
+    pub max_instruction_steps: Option<usize>,
+    pub max_call_depth: Option<usize>,
+    pub max_runtime_elements: Option<usize>,
+    pub max_output_bytes: Option<usize>,
+    pub max_artifact_bytes: Option<usize>,
+    pub max_module_count: Option<usize>,
+    pub max_module_instructions: Option<usize>,
+    pub cancellation: Option<CancellationToken>,
+}
+
+impl RunConfig {
+    pub fn unlimited() -> Self {
+        Self {
+            max_instruction_steps: None,
+            max_call_depth: None,
+            max_runtime_elements: None,
+            max_output_bytes: None,
+            max_artifact_bytes: None,
+            max_module_count: None,
+            max_module_instructions: None,
+            cancellation: None,
+        }
+    }
+
+    pub fn with_cancellation(mut self, cancellation: CancellationToken) -> Self {
+        self.cancellation = Some(cancellation);
+        self
+    }
+}
+
+impl Default for RunConfig {
+    fn default() -> Self {
+        Self {
+            max_instruction_steps: Some(DEFAULT_MAX_INSTRUCTION_STEPS),
+            max_call_depth: Some(DEFAULT_MAX_CALL_DEPTH),
+            max_runtime_elements: Some(DEFAULT_MAX_RUNTIME_ELEMENTS),
+            max_output_bytes: Some(DEFAULT_MAX_OUTPUT_BYTES),
+            max_artifact_bytes: Some(DEFAULT_MAX_ARTIFACT_BYTES),
+            max_module_count: Some(DEFAULT_MAX_MODULE_COUNT),
+            max_module_instructions: Some(DEFAULT_MAX_MODULE_INSTRUCTIONS),
+            cancellation: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuntimeError {
+    pub kind: RuntimeErrorKind,
     pub message: String,
     pub location: Option<DebugLocation>,
     pub stack: Vec<StackFrame>,
@@ -1283,12 +1394,225 @@ mod tests {
         let error = VM::new(&program).run().unwrap_err();
         assert!(error.to_string().starts_with("Runtime error: "));
     }
+
+    #[test]
+    fn instruction_budget_is_deterministic_and_has_an_explicit_unlimited_mode() {
+        let program = Program {
+            constants: vec![Constant::Number("1".to_string())],
+            names: Vec::new(),
+            main: FunctionBody {
+                registers: 1,
+                instructions: vec![
+                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Jump { target: 0 },
+                ],
+                locations: vec![None, None],
+            },
+            functions: Vec::new(),
+            debug_sources: Vec::new(),
+        };
+        let mut config = RunConfig::unlimited();
+        config.max_instruction_steps = Some(3);
+        let first = VM::with_config(&program, config.clone()).run().unwrap_err();
+        let second = VM::with_config(&program, config).run().unwrap_err();
+        assert_eq!(first.kind, RuntimeErrorKind::Resource(ResourceKind::InstructionSteps));
+        assert_eq!(first.message, "resource limit exceeded: instruction steps (limit 3)");
+        assert_eq!(first.message, second.message);
+        assert!(VM::with_config(
+            &Program {
+                constants: vec![Constant::Number("1".to_string())],
+                names: Vec::new(),
+                main: FunctionBody {
+                    registers: 1,
+                    instructions: vec![
+                        Instruction::Constant { dest: 0, constant: 0 },
+                        Instruction::Return { value: 0 },
+                    ],
+                    locations: vec![None, None],
+                },
+                functions: Vec::new(),
+                debug_sources: Vec::new(),
+            },
+            RunConfig::unlimited(),
+        )
+        .run()
+        .is_ok());
+    }
+
+    #[test]
+    fn call_depth_budget_excludes_main_and_covers_callbacks() {
+        let function = crate::bytecode::Function {
+            index: 0,
+            name: "recurse".to_string(),
+            arity: 0,
+            registers: 2,
+            params: Vec::new(),
+            instructions: vec![
+                Instruction::MakeFunction { dest: 0, function: 0 },
+                Instruction::Call {
+                    dest: 1,
+                    callee: 0,
+                    arguments: Vec::new(),
+                },
+                Instruction::Return { value: 1 },
+            ],
+            locations: vec![None, None, None],
+        };
+        let program = Program {
+            constants: Vec::new(),
+            names: Vec::new(),
+            main: FunctionBody {
+                registers: 2,
+                instructions: vec![
+                    Instruction::MakeFunction { dest: 0, function: 0 },
+                    Instruction::Call {
+                        dest: 1,
+                        callee: 0,
+                        arguments: Vec::new(),
+                    },
+                ],
+                locations: vec![None, None],
+            },
+            functions: vec![function],
+            debug_sources: Vec::new(),
+        };
+        let mut config = RunConfig::unlimited();
+        config.max_call_depth = Some(1);
+        let error = VM::with_config(&program, config).run().unwrap_err();
+        assert_eq!(error.kind, RuntimeErrorKind::Resource(ResourceKind::CallDepth));
+        assert_eq!(error.message, "resource limit exceeded: call depth (limit 1)");
+    }
+
+    #[test]
+    fn native_callback_iteration_consumes_instruction_budget() {
+        let program = Program {
+            constants: Vec::new(),
+            names: vec!["item".to_string()],
+            main: FunctionBody {
+                registers: 0,
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            },
+            functions: vec![crate::bytecode::Function {
+                index: 0,
+                name: "identity".to_string(),
+                arity: 1,
+                registers: 0,
+                params: vec!["item".to_string()],
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            }],
+            debug_sources: Vec::new(),
+        };
+        let mut config = RunConfig::unlimited();
+        config.max_instruction_steps = Some(1);
+        let mut vm = VM::with_config(&program, config);
+        let source = vm.make_array(vec![Value::number(1.0), Value::number(2.0)]);
+        let callback = Value::function(FunctionValue {
+            name: "identity".to_string(),
+            function_index: 0,
+            arity: 1,
+            identity: 1,
+            closure: new_environment(),
+        });
+        let error = vm
+            .execute_native_call("map", vec![source, callback])
+            .expect_err("native iteration should consume the step budget");
+        assert_eq!(error.kind, RuntimeErrorKind::Resource(ResourceKind::InstructionSteps));
+        assert_eq!(error.message, "resource limit exceeded: instruction steps (limit 1)");
+    }
+
+    #[test]
+    fn runtime_element_budget_rejects_growth_before_allocation() {
+        let program = Program {
+            constants: vec![Constant::Nil],
+            names: Vec::new(),
+            main: FunctionBody {
+                registers: 2,
+                instructions: vec![
+                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Array {
+                        dest: 1,
+                        elements: vec![0],
+                    },
+                ],
+                locations: vec![None, None],
+            },
+            functions: Vec::new(),
+            debug_sources: Vec::new(),
+        };
+        let mut config = RunConfig::unlimited();
+        config.max_runtime_elements = Some(1);
+        let error = VM::with_config(&program, config).run().unwrap_err();
+        assert_eq!(error.kind, RuntimeErrorKind::Resource(ResourceKind::RuntimeElements));
+        assert_eq!(error.message, "resource limit exceeded: runtime elements (limit 1)");
+    }
+
+    #[test]
+    fn output_budget_counts_utf8_bytes_and_hides_partial_run_output() {
+        let program = Program {
+            constants: vec![Constant::String("é".to_string())],
+            names: Vec::new(),
+            main: FunctionBody {
+                registers: 1,
+                instructions: vec![
+                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Print { value: 0 },
+                ],
+                locations: vec![None, None],
+            },
+            functions: Vec::new(),
+            debug_sources: Vec::new(),
+        };
+        let mut config = RunConfig::unlimited();
+        config.max_output_bytes = Some(2);
+        let error = VM::with_config(&program, config).run().unwrap_err();
+        assert_eq!(error.kind, RuntimeErrorKind::Resource(ResourceKind::OutputBytes));
+        assert_eq!(error.message, "resource limit exceeded: output bytes (limit 2)");
+    }
+
+    #[test]
+    fn cancellation_is_checked_before_execution_and_does_not_change_other_vms() {
+        let token = CancellationToken::new();
+        token.cancel();
+        let error = VM::with_config(&empty_program(), RunConfig::unlimited().with_cancellation(token))
+            .run()
+            .unwrap_err();
+        assert_eq!(error.kind, RuntimeErrorKind::Cancelled);
+        assert_eq!(error.message, "execution cancelled");
+        assert!(VM::new(&empty_program()).run().is_ok());
+    }
 }
 
 impl RuntimeError {
     fn new(message: impl Into<String>) -> Self {
         Self {
+            kind: RuntimeErrorKind::Runtime,
             message: message.into(),
+            location: None,
+            stack: Vec::new(),
+            sources: Vec::new(),
+        }
+    }
+
+    fn resource(kind: ResourceKind, limit: usize) -> Self {
+        Self {
+            kind: RuntimeErrorKind::Resource(kind),
+            message: format!(
+                "resource limit exceeded: {} (limit {})",
+                kind.as_str(),
+                limit
+            ),
+            location: None,
+            stack: Vec::new(),
+            sources: Vec::new(),
+        }
+    }
+
+    fn cancelled() -> Self {
+        Self {
+            kind: RuntimeErrorKind::Cancelled,
+            message: "execution cancelled".to_string(),
             location: None,
             stack: Vec::new(),
             sources: Vec::new(),
@@ -1372,8 +1696,12 @@ struct Frame {
 
 pub struct VM<'a> {
     program: &'a Program,
+    config: RunConfig,
     globals: SharedEnvironment,
     output: String,
+    instruction_steps: usize,
+    call_depth: usize,
+    runtime_elements: usize,
     next_function_identity: usize,
     next_array_identity: usize,
     next_map_identity: usize,
@@ -1386,10 +1714,18 @@ pub struct VM<'a> {
 
 impl<'a> VM<'a> {
     pub fn new(program: &'a Program) -> Self {
+        Self::with_config(program, RunConfig::default())
+    }
+
+    pub fn with_config(program: &'a Program, config: RunConfig) -> Self {
         Self {
             program,
+            config,
             globals: new_environment(),
             output: String::new(),
+            instruction_steps: 0,
+            call_depth: 0,
+            runtime_elements: 0,
             next_function_identity: 1,
             next_array_identity: 1,
             next_map_identity: 1,
@@ -1415,6 +1751,7 @@ impl<'a> VM<'a> {
     }
 
     fn run_inner(&mut self) -> Result<String, RuntimeError> {
+        self.check_cancellation()?;
         let mut frame = Frame {
             ip: 0,
             registers: vec![Value::Nil; self.program.main.registers],
@@ -1454,6 +1791,7 @@ impl<'a> VM<'a> {
             let instruction = &body.instructions[instruction_index];
             let mut jumped = false;
             let result = (|| -> Result<Option<Value>, RuntimeError> {
+                self.checkpoint_instruction()?;
                 match instruction {
                 Instruction::Constant { dest, constant } => {
                     let value = self.constant_value(*constant)?;
@@ -1461,8 +1799,9 @@ impl<'a> VM<'a> {
                 }
                 Instruction::Print { value } => {
                     let value = self.read_register(frame, *value)?;
-                    self.output.push_str(&value.to_string());
-                    self.output.push('\n');
+                    let mut output = value.to_string();
+                    output.push('\n');
+                    self.append_output(&output)?;
                     self.emit_trace(
                         TraceEventKind::Output,
                         frame,
@@ -1480,7 +1819,7 @@ impl<'a> VM<'a> {
                     for element in elements {
                         values.push(self.read_register(frame, *element)?);
                     }
-                    let value = self.make_array(values);
+                    let value = self.allocate_array(values)?;
                     self.write_register(frame, *dest, value)?;
                 }
                 Instruction::Map { dest, entries } => {
@@ -1491,7 +1830,7 @@ impl<'a> VM<'a> {
                         let value = self.read_register(frame, *value_register)?;
                         values.push((key, value));
                     }
-                    let value = self.make_map(values);
+                    let value = self.allocate_map(values)?;
                     self.write_register(frame, *dest, value)?;
                 }
                 Instruction::Struct {
@@ -1515,15 +1854,8 @@ impl<'a> VM<'a> {
                     for register in payload {
                         fields.push(self.read_register(frame, *register)?);
                     }
-                    self.write_register(
-                        frame,
-                        *dest,
-                        Value::variant(crate::runtime::VariantValue {
-                            enum_name,
-                            variant_name,
-                            fields,
-                        }),
-                    )?;
+                    let value = self.allocate_variant(enum_name, variant_name, fields)?;
+                    self.write_register(frame, *dest, value)?;
                 }
                 Instruction::VariantTag {
                     dest,
@@ -1755,7 +2087,7 @@ impl<'a> VM<'a> {
                                 .iter()
                                 .map(|(key, _)| key.clone())
                                 .collect();
-                            self.make_array(keys)
+                            self.allocate_array(keys)?
                         }
                         _ => {
                             return Err(RuntimeError::new(
@@ -1822,6 +2154,89 @@ impl<'a> VM<'a> {
         }
         self.trace_leave(frame, body.instructions.len().checked_sub(1), None);
         Ok(None)
+    }
+
+    fn check_cancellation(&self) -> Result<(), RuntimeError> {
+        if self
+            .config
+            .cancellation
+            .as_ref()
+            .is_some_and(CancellationToken::is_cancelled)
+        {
+            Err(RuntimeError::cancelled())
+        } else {
+            Ok(())
+        }
+    }
+
+    fn checkpoint_instruction(&mut self) -> Result<(), RuntimeError> {
+        self.check_cancellation()?;
+        if let Some(limit) = self.config.max_instruction_steps {
+            if self.instruction_steps >= limit {
+                return Err(RuntimeError::resource(ResourceKind::InstructionSteps, limit));
+            }
+        }
+        self.instruction_steps = self
+            .instruction_steps
+            .checked_add(1)
+            .ok_or_else(|| RuntimeError::resource(ResourceKind::InstructionSteps, usize::MAX))?;
+        Ok(())
+    }
+
+    fn checkpoint_native(&mut self) -> Result<(), RuntimeError> {
+        self.checkpoint_instruction()
+    }
+
+    fn check_call_depth(&self) -> Result<(), RuntimeError> {
+        let next_depth = self
+            .call_depth
+            .checked_add(1)
+            .ok_or_else(|| RuntimeError::resource(ResourceKind::CallDepth, usize::MAX))?;
+        if let Some(limit) = self.config.max_call_depth {
+            if next_depth > limit {
+                return Err(RuntimeError::resource(ResourceKind::CallDepth, limit));
+            }
+        }
+        Ok(())
+    }
+
+    fn charge_runtime_elements(&mut self, amount: usize) -> Result<(), RuntimeError> {
+        self.check_cancellation()?;
+        self.ensure_runtime_elements(amount)?;
+        self.runtime_elements = self
+            .runtime_elements
+            .checked_add(amount)
+            .ok_or_else(|| RuntimeError::resource(ResourceKind::RuntimeElements, usize::MAX))?;
+        Ok(())
+    }
+
+    fn ensure_runtime_elements(&self, amount: usize) -> Result<(), RuntimeError> {
+        self.check_cancellation()?;
+        let next = self
+            .runtime_elements
+            .checked_add(amount)
+            .ok_or_else(|| RuntimeError::resource(ResourceKind::RuntimeElements, usize::MAX))?;
+        if let Some(limit) = self.config.max_runtime_elements {
+            if next > limit {
+                return Err(RuntimeError::resource(ResourceKind::RuntimeElements, limit));
+            }
+        }
+        Ok(())
+    }
+
+    fn append_output(&mut self, text: &str) -> Result<(), RuntimeError> {
+        let next = self
+            .output
+            .len()
+            .checked_add(text.len())
+            .ok_or_else(|| RuntimeError::resource(ResourceKind::OutputBytes, usize::MAX))?;
+        if let Some(limit) = self.config.max_output_bytes {
+            if next > limit {
+                return Err(RuntimeError::resource(ResourceKind::OutputBytes, limit));
+            }
+        }
+        self.output.push_str(text);
+        Ok(())
     }
 
     fn trace_enter(&mut self, frame: &Frame, location: Option<DebugLocation>) {
@@ -1952,6 +2367,7 @@ impl<'a> VM<'a> {
             .functions
             .get(function_index)
             .ok_or_else(|| RuntimeError::new("function index out of range"))?;
+        self.charge_runtime_elements(1)?;
         let identity = self.next_function_identity;
         self.next_function_identity += 1;
         Ok(Value::function(FunctionValue {
@@ -1991,6 +2407,8 @@ impl<'a> VM<'a> {
             return Err(error);
         }
 
+        self.check_call_depth()?;
+
         let mut frame = Frame {
             ip: 0,
             registers: vec![Value::Nil; registers],
@@ -2013,7 +2431,10 @@ impl<'a> VM<'a> {
             instructions,
             locations: bytecode_function.locations.clone(),
         };
-        match self.execute_body(&body, &mut frame) {
+        self.call_depth += 1;
+        let result = self.execute_body(&body, &mut frame);
+        self.call_depth -= 1;
+        match result {
             Ok(result) => Ok(result.unwrap_or(Value::Nil)),
             Err(mut error) => {
                 if error.location.is_none() {
@@ -2025,18 +2446,18 @@ impl<'a> VM<'a> {
         }
     }
 
-    fn make_array(&mut self, elements: Vec<Value>) -> Value {
+    fn allocate_array(&mut self, elements: Vec<Value>) -> Result<Value, RuntimeError> {
+        self.charge_runtime_elements(1usize.saturating_add(elements.len()))?;
         let identity = self.next_array_identity;
         self.next_array_identity += 1;
-        Value::array(ArrayValue {
+        Ok(Value::array(ArrayValue {
             identity,
             elements: Rc::new(RefCell::new(elements)),
-        })
+        }))
     }
 
-    fn make_map(&mut self, entries: Vec<(Value, Value)>) -> Value {
+    fn allocate_map(&mut self, entries: Vec<(Value, Value)>) -> Result<Value, RuntimeError> {
         let identity = self.next_map_identity;
-        self.next_map_identity += 1;
         let mut ordered: Vec<(Value, Value)> = Vec::with_capacity(entries.len());
         for (key, value) in entries {
             if let Some((_, existing)) = ordered
@@ -2048,10 +2469,24 @@ impl<'a> VM<'a> {
                 ordered.push((key, value));
             }
         }
-        Value::map(MapValue {
+        self.charge_runtime_elements(1usize.saturating_add(ordered.len()))?;
+        self.next_map_identity += 1;
+        Ok(Value::map(MapValue {
             identity,
             entries: Rc::new(RefCell::new(ordered)),
-        })
+        }))
+    }
+
+    #[cfg(test)]
+    fn make_array(&mut self, elements: Vec<Value>) -> Value {
+        self.allocate_array(elements)
+            .expect("test array allocation should fit the default budget")
+    }
+
+    #[cfg(test)]
+    fn make_map(&mut self, entries: Vec<(Value, Value)>) -> Value {
+        self.allocate_map(entries)
+            .expect("test map allocation should fit the default budget")
     }
 
     fn range_bound(value: &Value, position: usize) -> Result<i64, RuntimeError> {
@@ -2097,7 +2532,7 @@ impl<'a> VM<'a> {
         Ok(length as usize)
     }
 
-    fn execute_native_range(&self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_range(&mut self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
         if arguments.is_empty() || arguments.len() > 3 {
             return Err(RuntimeError::new("range expects 1 to 3 arguments"));
         }
@@ -2119,6 +2554,7 @@ impl<'a> VM<'a> {
             return Err(RuntimeError::new("range step must not be zero"));
         }
         let length = Self::range_length(start, stop, step)?;
+        self.charge_runtime_elements(1)?;
         Ok(Value::range(RangeValue {
             start,
             stop,
@@ -2135,14 +2571,26 @@ impl<'a> VM<'a> {
         }
     }
 
+    fn allocate_variant(
+        &mut self,
+        enum_name: String,
+        variant_name: String,
+        fields: Vec<Value>,
+    ) -> Result<Value, RuntimeError> {
+        self.charge_runtime_elements(1usize.saturating_add(fields.len()))?;
+        Ok(Value::variant(crate::runtime::VariantValue {
+            enum_name,
+            variant_name,
+            fields,
+        }))
+    }
+
     fn make_struct(
         &mut self,
         frame: &Frame,
         type_name: Option<String>,
         fields: &[(usize, usize)],
     ) -> Result<Value, RuntimeError> {
-        let identity = self.next_struct_identity;
-        self.next_struct_identity += 1;
         let mut values = Vec::with_capacity(fields.len());
         for (name_index, register) in fields {
             values.push((
@@ -2150,6 +2598,9 @@ impl<'a> VM<'a> {
                 self.read_register(frame, *register)?,
             ));
         }
+        self.charge_runtime_elements(1usize.saturating_add(values.len()))?;
+        let identity = self.next_struct_identity;
+        self.next_struct_identity += 1;
         Ok(Value::structure(StructValue {
             identity,
             type_name,
@@ -2211,7 +2662,7 @@ impl<'a> VM<'a> {
     }
 
     fn execute_assign_index(
-        &self,
+        &mut self,
         collection: Value,
         index: Value,
         value: Value,
@@ -2228,6 +2679,14 @@ impl<'a> VM<'a> {
             }
             Value::Map(map) => {
                 self.validate_map_key(&index)?;
+                let exists = map
+                    .entries
+                    .borrow()
+                    .iter()
+                    .any(|(key, _)| key.runtime_equals(&index));
+                if !exists {
+                    self.charge_runtime_elements(1)?;
+                }
                 let mut entries = map.entries.borrow_mut();
                 if let Some((_, existing)) = entries
                     .iter_mut()
@@ -2359,6 +2818,7 @@ impl<'a> VM<'a> {
         let elements = array.elements.borrow().clone();
         let mut mapped = Vec::with_capacity(elements.len());
         for element in elements {
+            self.checkpoint_native()?;
             mapped.push(self.call_function(
                 callback.clone(),
                 vec![element],
@@ -2366,7 +2826,7 @@ impl<'a> VM<'a> {
                 call_site.clone(),
             )?);
         }
-        Ok(self.make_array(mapped))
+        self.allocate_array(mapped)
     }
 
     fn execute_native_filter(
@@ -2391,6 +2851,7 @@ impl<'a> VM<'a> {
         let elements = array.elements.borrow().clone();
         let mut filtered = Vec::with_capacity(elements.len());
         for element in elements {
+            self.checkpoint_native()?;
             let keep = self.call_function(
                 predicate.clone(),
                 vec![element.clone()],
@@ -2403,7 +2864,7 @@ impl<'a> VM<'a> {
                 _ => return Err(RuntimeError::new("filter expects callback to return bool")),
             }
         }
-        Ok(self.make_array(filtered))
+        self.allocate_array(filtered)
     }
 
     fn execute_native_flat_map(
@@ -2428,6 +2889,7 @@ impl<'a> VM<'a> {
         let elements = array.elements.borrow().clone();
         let mut flattened = Vec::new();
         for element in elements {
+            self.checkpoint_native()?;
             let result = self.call_function(
                 callback.clone(),
                 vec![element],
@@ -2437,9 +2899,12 @@ impl<'a> VM<'a> {
             let Value::Array(mapped) = result else {
                 return Err(RuntimeError::new("flatMap expects callback to return array"));
             };
-            flattened.extend(mapped.elements.borrow().iter().cloned());
+            for value in mapped.elements.borrow().iter().cloned() {
+                self.checkpoint_native()?;
+                flattened.push(value);
+            }
         }
-        Ok(self.make_array(flattened))
+        self.allocate_array(flattened)
     }
 
     fn execute_native_any_all(
@@ -2474,6 +2939,7 @@ impl<'a> VM<'a> {
 
         let elements = array.elements.borrow().clone();
         for element in elements {
+            self.checkpoint_native()?;
             let result = self.call_function(
                 predicate.clone(),
                 vec![element],
@@ -2515,6 +2981,7 @@ impl<'a> VM<'a> {
         let elements = array.elements.borrow().clone();
         let mut count = 0usize;
         for element in elements {
+            self.checkpoint_native()?;
             let result = self.call_function(
                 predicate.clone(),
                 vec![element],
@@ -2551,6 +3018,7 @@ impl<'a> VM<'a> {
 
         let elements = array.elements.borrow().clone();
         for element in elements {
+            self.checkpoint_native()?;
             let result = self.call_function(
                 predicate.clone(),
                 vec![element.clone()],
@@ -2587,6 +3055,7 @@ impl<'a> VM<'a> {
 
         let elements = array.elements.borrow().clone();
         for (index, element) in elements.into_iter().enumerate() {
+            self.checkpoint_native()?;
             let result = self.call_function(
                 predicate.clone(),
                 vec![element],
@@ -2624,6 +3093,7 @@ impl<'a> VM<'a> {
         let elements = array.elements.borrow().clone();
         let mut accumulator = arguments[1].clone();
         for element in elements {
+            self.checkpoint_native()?;
             accumulator = self.call_function(
                 callback.clone(),
                 vec![accumulator, element],
@@ -2634,13 +3104,14 @@ impl<'a> VM<'a> {
         Ok(accumulator)
     }
 
-    fn execute_native_push(&self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_push(&mut self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
             return Err(RuntimeError::new("push expects 2 arguments"));
         }
         let Value::Array(array) = &arguments[0] else {
             return Err(RuntimeError::new("push expects array as first argument"));
         };
+        self.charge_runtime_elements(1)?;
         array.elements.borrow_mut().push(arguments[1].clone());
         Ok(Value::Nil)
     }
@@ -2697,8 +3168,11 @@ impl<'a> VM<'a> {
             return Err(RuntimeError::new("merge expects map as second argument"));
         };
         let mut entries = left.entries.borrow().clone();
-        entries.extend(right.entries.borrow().iter().cloned());
-        Ok(self.make_map(entries))
+        for entry in right.entries.borrow().iter().cloned() {
+            self.checkpoint_native()?;
+            entries.push(entry);
+        }
+        self.allocate_map(entries)
     }
 
     fn execute_native_keys(&mut self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
@@ -2708,13 +3182,14 @@ impl<'a> VM<'a> {
         let Value::Map(map) = &arguments[0] else {
             return Err(RuntimeError::new("keys expects map as first argument"));
         };
-        let elements = map
-            .entries
-            .borrow()
-            .iter()
-            .map(|(key, _)| key.clone())
-            .collect();
-        Ok(self.make_array(elements))
+        self.ensure_runtime_elements(1usize.saturating_add(map.entries.borrow().len()))?;
+        let entries = map.entries.borrow().clone();
+        let mut elements = Vec::with_capacity(entries.len());
+        for (key, _) in entries {
+            self.checkpoint_native()?;
+            elements.push(key);
+        }
+        self.allocate_array(elements)
     }
 
     fn execute_native_values(&mut self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
@@ -2724,13 +3199,14 @@ impl<'a> VM<'a> {
         let Value::Map(map) = &arguments[0] else {
             return Err(RuntimeError::new("values expects map as first argument"));
         };
-        let elements = map
-            .entries
-            .borrow()
-            .iter()
-            .map(|(_, value)| value.clone())
-            .collect();
-        Ok(self.make_array(elements))
+        self.ensure_runtime_elements(1usize.saturating_add(map.entries.borrow().len()))?;
+        let entries = map.entries.borrow().clone();
+        let mut elements = Vec::with_capacity(entries.len());
+        for (_, value) in entries {
+            self.checkpoint_native()?;
+            elements.push(value);
+        }
+        self.allocate_array(elements)
     }
 
     fn execute_native_floor(&self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
@@ -2877,26 +3353,34 @@ impl<'a> VM<'a> {
         Ok(Value::number(arguments[0].runtime_hash()))
     }
 
-    fn execute_native_contains(&self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_contains(&mut self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
             return Err(RuntimeError::new("contains expects 2 arguments"));
         }
         match &arguments[0] {
             Value::Array(array) => {
-                let found = array
-                    .elements
-                    .borrow()
-                    .iter()
-                    .any(|element| element.runtime_equals(&arguments[1]));
+                let elements = array.elements.borrow().clone();
+                let mut found = false;
+                for element in elements {
+                    self.checkpoint_native()?;
+                    if element.runtime_equals(&arguments[1]) {
+                        found = true;
+                        break;
+                    }
+                }
                 Ok(Value::boolean(found))
             }
             Value::Map(map) => {
                 self.validate_map_key(&arguments[1])?;
-                let found = map
-                    .entries
-                    .borrow()
-                    .iter()
-                    .any(|(key, _)| key.runtime_equals(&arguments[1]));
+                let entries = map.entries.borrow().clone();
+                let mut found = false;
+                for (key, _) in entries {
+                    self.checkpoint_native()?;
+                    if key.runtime_equals(&arguments[1]) {
+                        found = true;
+                        break;
+                    }
+                }
                 Ok(Value::boolean(found))
             }
             Value::Range(range) => {
@@ -2956,8 +3440,14 @@ impl<'a> VM<'a> {
         if length > source_len - start {
             return Err(RuntimeError::new("slice length out of bounds"));
         }
-        let elements = array.elements.borrow()[start..start + length].to_vec();
-        Ok(self.make_array(elements))
+        self.ensure_runtime_elements(1usize.saturating_add(length))?;
+        let borrowed = array.elements.borrow();
+        let mut elements = Vec::with_capacity(length);
+        for element in borrowed[start..start + length].iter() {
+            self.checkpoint_native()?;
+            elements.push(element.clone());
+        }
+        self.allocate_array(elements)
     }
 
     fn execute_native_copy(&mut self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
@@ -2967,8 +3457,16 @@ impl<'a> VM<'a> {
         let Value::Array(array) = &arguments[0] else {
             return Err(RuntimeError::new("copy expects array as first argument"));
         };
-        let elements = array.elements.borrow().clone();
-        Ok(self.make_array(elements))
+        self.ensure_runtime_elements(
+            1usize.saturating_add(array.elements.borrow().len()),
+        )?;
+        let borrowed = array.elements.borrow();
+        let mut elements = Vec::with_capacity(borrowed.len());
+        for element in borrowed.iter() {
+            self.checkpoint_native()?;
+            elements.push(element.clone());
+        }
+        self.allocate_array(elements)
     }
 
     fn execute_native_concat(&mut self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
@@ -2981,9 +3479,17 @@ impl<'a> VM<'a> {
         let Value::Array(right) = &arguments[1] else {
             return Err(RuntimeError::new("concat expects array as second argument"));
         };
-        let mut elements = left.elements.borrow().clone();
-        elements.extend(right.elements.borrow().iter().cloned());
-        Ok(self.make_array(elements))
+        let left_len = left.elements.borrow().len();
+        let right_len = right.elements.borrow().len();
+        self.ensure_runtime_elements(1usize.saturating_add(left_len.saturating_add(right_len)))?;
+        let left_elements = left.elements.borrow().clone();
+        let right_elements = right.elements.borrow().clone();
+        let mut elements = Vec::with_capacity(left_elements.len() + right_elements.len());
+        for element in left_elements.into_iter().chain(right_elements) {
+            self.checkpoint_native()?;
+            elements.push(element);
+        }
+        self.allocate_array(elements)
     }
 
     fn read_name(&self, index: usize) -> Result<String, RuntimeError> {

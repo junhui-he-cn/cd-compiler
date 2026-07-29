@@ -235,7 +235,7 @@ pub fn link_modules(modules: Vec<ModuleArtifact>) -> Result<Program, String> {
 mod tests {
     use super::link_modules;
     use crate::bytecode::{FunctionBody, Program};
-    use crate::format::ModuleArtifact;
+    use crate::format::{ModuleArtifact, ModuleDependency, ModuleDependencyKind};
 
     fn empty_program() -> Program {
         Program {
@@ -268,6 +268,37 @@ mod tests {
             error.contains("identity and paths must be non-empty"),
             "{error}"
         );
+    }
+
+    #[test]
+    fn rejects_module_dependency_cycle_deterministically() {
+        let dependency = |identity: &str| ModuleDependency {
+            identity: identity.to_string(),
+            kind: ModuleDependencyKind::Import,
+            instruction_offset: 0,
+            requested_path: format!("./{}.cd", identity),
+        };
+        let entry = ModuleArtifact {
+            identity: "entry".to_string(),
+            path: "entry.cd".to_string(),
+            canonical_path: "entry.cd".to_string(),
+            is_entry: true,
+            entry_order: Some(0),
+            dependencies: vec![dependency("library")],
+            program: empty_program(),
+        };
+        let library = ModuleArtifact {
+            identity: "library".to_string(),
+            path: "library.cd".to_string(),
+            canonical_path: "library.cd".to_string(),
+            is_entry: false,
+            entry_order: None,
+            dependencies: vec![dependency("entry")],
+            program: empty_program(),
+        };
+
+        let error = link_modules(vec![entry, library]).expect_err("cycle must be rejected");
+        assert_eq!(error, "module dependency cycle at `entry`");
     }
 }
 

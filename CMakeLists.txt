@@ -205,6 +205,12 @@ add_test(
             ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/run_rust_vm_tests.py $<TARGET_FILE:compiler_design> ${CMAKE_SOURCE_DIR}/vm-rs --goldens
 )
 
+add_test(
+    NAME vm_resource_budget
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
+            ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/vm_resource_budget_tests.py $<TARGET_FILE:compiler_design> ${CMAKE_SOURCE_DIR}/vm-rs
+)
+
 add_executable(frontend_session_tests
     tests/frontend_session_tests.cpp
     ${COMPILER_DESIGN_FRONTEND_SOURCES}

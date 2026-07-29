@@ -112,6 +112,26 @@ def mutate_cdbc(source: str, mutation: str) -> str:
         return source[:start] + "unknown_opcode" + source[end:]
     if mutation == "trailing_garbage":
         return source.rstrip("\n") + "\nnot_a_cdbc_section\n"
+    if mutation == "duplicate_section":
+        marker = "\nnames:\n"
+        if marker not in source:
+            raise ValueError("cdbc seed has no names section to duplicate around")
+        return source.replace(marker, "\nconstants:\n\n\nnames:\n", 1)
+    if mutation == "invalid_escape":
+        match = re.search(r"(?m)^  c\d+ = string \"", source)
+        if match is None:
+            raise ValueError("cdbc seed has no string constant to mutate")
+        return source[: match.end()] + r"\q" + source[match.end() :]
+    if mutation == "reverse_range":
+        marker = "\ndebug_ranges:\n"
+        if marker not in source:
+            raise ValueError("cdbc seed has no debug range section to reverse")
+        prefix, ranges = source.split(marker, 1)
+        match = re.search(r"(?m)^(  (?:main|function f\d+) \d+ = s\d+:)(\d+):(\d+)$", ranges)
+        if match is None:
+            raise ValueError("cdbc seed has no debug range to reverse")
+        ranges = ranges[: match.start()] + match.group(1) + match.group(3) + ":" + match.group(2) + ranges[match.end() :]
+        return prefix + marker + ranges
     if mutation == "invalid_register":
         match = re.search(r"(?m)^  r0 = ", source)
         if match is None:
