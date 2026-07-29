@@ -638,6 +638,12 @@ Grid DP uses `O(rows * columns)` time and `O(columns)` space for the two numeric
 helpers. `editDistance` uses `O(leftLength * rightLength)` time and
 `O(rightLength)` space; numeric overflow remains outside the library contract.
 
+`longestIncreasingSubsequenceLength(values)` computes the strict numeric LIS
+length with `O(n^2)` time and `O(n)` space; equal values do not extend a
+subsequence. `longestCommonSubsequenceLength(left, right)` computes the LCS
+length over Unicode scalar values with `O(leftLength * rightLength)` time and
+`O(rightLength)` space.
+
 For an array already sorted according to `less`, `lowerBound(values, target,
 less)` returns the first insertion position, and `upperBound` returns the
 position after all equivalent values. `binarySearch` returns the first matching
@@ -810,6 +816,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case numeric_algorithms_sequences`,
 `--case algorithms_dp_1d`,
 `--case algorithms_dp_grid`,
+`--case algorithms_dp_sequences`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
 `--case array_algorithms_prefix_monotonic`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,

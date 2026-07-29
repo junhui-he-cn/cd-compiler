@@ -1,0 +1,12 @@
+import "../../data_structures.cd" as ds;
+
+print ds.longestIncreasingSubsequenceLength([]);
+print ds.longestIncreasingSubsequenceLength([10, 9, 2, 5, 3, 7, 101, 18]);
+print ds.longestIncreasingSubsequenceLength([1, 1, 1]);
+print ds.longestIncreasingSubsequenceLength([-3, -2, -1]);
+
+print ds.longestCommonSubsequenceLength("abcde", "ace");
+print ds.longestCommonSubsequenceLength("abc", "abc");
+print ds.longestCommonSubsequenceLength("abc", "def");
+print ds.longestCommonSubsequenceLength("猫狗猫", "狗猫");
+print ds.longestCommonSubsequenceLength("", "abc");

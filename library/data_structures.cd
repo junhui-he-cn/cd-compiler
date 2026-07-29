@@ -4198,6 +4198,64 @@ fun editDistance(left: string, right: string): number {
   return previous[right.len()];
 }
 
+fun longestIncreasingSubsequenceLength(values: [number]): number {
+  if (values.len() == 0) {
+    return 0;
+  }
+  let lengths: [number] = [];
+  let index = 0;
+  while (index < values.len()) {
+    lengths.push(1);
+    index += 1;
+  }
+  let best = 1;
+  index = 0;
+  while (index < values.len()) {
+    let previous = 0;
+    while (previous < index) {
+      if (values[previous] < values[index] && lengths[previous] + 1 > lengths[index]) {
+        lengths[index] = lengths[previous] + 1;
+      }
+      previous += 1;
+    }
+    if (lengths[index] > best) {
+      best = lengths[index];
+    }
+    index += 1;
+  }
+  return best;
+}
+
+fun longestCommonSubsequenceLength(left: string, right: string): number {
+  let previous: [number] = [];
+  let index = 0;
+  while (index <= right.len()) {
+    previous.push(0);
+    index += 1;
+  }
+
+  let leftIndex = 1;
+  while (leftIndex <= left.len()) {
+    let current: [number] = [0];
+    let rightIndex = 1;
+    while (rightIndex <= right.len()) {
+      if (left.charAt(leftIndex - 1) == right.charAt(rightIndex - 1)) {
+        current.push(previous[rightIndex - 1] + 1);
+      } else {
+        if (previous[rightIndex] > current[rightIndex - 1]) {
+          current.push(previous[rightIndex]);
+        } else {
+          current.push(current[rightIndex - 1]);
+        }
+      }
+      rightIndex += 1;
+    }
+    previous = current;
+    leftIndex += 1;
+  }
+  return previous[right.len()];
+}
+
 fun gcd(left: number, right: number): number {
   let a = left;
   if (a < 0) {
@@ -4415,4 +4473,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, RingBuffer, BinaryHeap, PriorityQueue, Option, Result, List, Tree, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, ExtendedGcdResult, Trie, FenwickTree, SegmentTree, newStack, newQueue, newDeque, newRingBuffer, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, newTrie, newFenwickTree, newSegmentTree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced, treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, minimumSpanningForestKruskal, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, listLength, listGet, listAppend, listConcat, listTake, listDrop, mergeSortedLists, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, differenceArray, prefixMinimums, prefixMaximums, nextGreaterValues, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, climbStairs, maxNonAdjacentSum, minCoinCount, uniqueGridPaths, minGridPathSum, editDistance, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci;
+export Stack, Queue, Deque, RingBuffer, BinaryHeap, PriorityQueue, Option, Result, List, Tree, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, ExtendedGcdResult, Trie, FenwickTree, SegmentTree, newStack, newQueue, newDeque, newRingBuffer, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, newTrie, newFenwickTree, newSegmentTree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced, treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, minimumSpanningForestKruskal, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, listLength, listGet, listAppend, listConcat, listTake, listDrop, mergeSortedLists, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, differenceArray, prefixMinimums, prefixMaximums, nextGreaterValues, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, climbStairs, maxNonAdjacentSum, minCoinCount, uniqueGridPaths, minGridPathSum, editDistance, longestIncreasingSubsequenceLength, longestCommonSubsequenceLength, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci;
