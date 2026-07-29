@@ -1,0 +1,19 @@
+import "../../data_structures.cd" as ds;
+
+let values = [1, 3, 5, 4, 2];
+print ds.peakIndex(values);
+print ds.mountainPeakIndex(values);
+print ds.isMountainArray(values);
+print values;
+
+print ds.peakIndex([5, 4, 3]);
+print ds.peakIndex([1, 2, 3]);
+print ds.peakIndex([1, 2, 2, 1]);
+print ds.isMountainArray([1, 2, 2, 1]);
+print ds.mountainPeakIndex([1, 2, 2, 1]);
+print ds.isMountainArray([1, 2]);
+print ds.isMountainArray([3, 2, 1]);
+
+let empty: [number] = [];
+print ds.peakIndex(empty);
+print ds.mountainPeakIndex(empty);

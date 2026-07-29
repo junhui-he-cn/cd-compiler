@@ -285,6 +285,12 @@ enum Result<T, E> {
 字符串位置语义；`isPalindrome` 按 scalar value 比较字符，不依赖 ASCII 排序。
 `Trie` 使用数组节点和线性边查找，支持 Unicode scalar-value 字符、重复插入去重
 以及按首次插入的边顺序返回前缀结果，不依赖通用哈希。
+`peakIndex` 在 `O(log n)` 时间内返回一个弱峰值；`isMountainArray` 用线性扫描
+验证严格先升后降，`mountainPeakIndex` 在验证后用二分查找峰顶。空数组或非严格
+山脉返回 `nil` 峰值结果。
+`minimumLargestPartitionSum` 对非负整数数组的连续分段容量做答案空间二分，返回
+至多指定分段数时的最小最大段和；空数组返回 `0`，非法分段数或元素返回 `nil`，
+时间复杂度为 `O(n log S)`，其中 `S` 是元素总和。
 `mergeSort` 使用稳定的自底向上归并排序，返回新数组，不改变输入。
 `shellSort` 使用从 `n / 2` 开始不断折半的 gap 序列和分组插入排序，返回浅拷贝，
 不保证稳定性；当前序列的最坏时间复杂度为 `O(n^2)`，额外结果空间为 `O(n)`。
@@ -345,7 +351,8 @@ enum Result<T, E> {
 - 二分查找：有序数组中的精确查找；
 - `lowerBound`、`upperBound`、插入位置和出现次数；
 - 旋转有序数组查找；
-- 峰值、山脉数组、答案空间二分；
+- 峰值、山脉数组：`peakIndex`、`isMountainArray`、`mountainPeakIndex`；
+- 答案空间二分：非负整数数组的 `minimumLargestPartitionSum`；
 - 数值数组的插值查找作为可选专题，不作为通用默认实现。
 
 ### 5.3 排序算法
@@ -454,7 +461,7 @@ enum Result<T, E> {
 - 质因数分解、约数枚举已完成；
 - 最大公约数数组、前缀积已完成；差分已有数组辅助版本；
 - 组合数、数值排列数、帕斯卡三角已完成；
-- 数值二分和牛顿法作为可选专题。
+- 数值二分 `minimumLargestPartitionSum` 已完成；牛顿法作为可选专题。
 
 这些函数先使用 `number`，并在 API 文档中明确有限整数、负数、溢出和浮点
 精度假设；项目文档没有规定的溢出行为不能默默写成库保证。

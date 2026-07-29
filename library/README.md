@@ -198,6 +198,9 @@ fun ascendingNumber(left: number, right: number): bool {
 print ds.lowerBound([1, 2, 2, 4], 2, ascendingNumber);
 print ds.upperBound([1, 2, 2, 4], 2, ascendingNumber);
 print ds.binarySearch([1, 2, 2, 4], 2, ascendingNumber);
+print ds.peakIndex([1, 3, 5, 4, 2]);
+print ds.mountainPeakIndex([1, 3, 5, 4, 2]);
+print ds.minimumLargestPartitionSum([7, 2, 5, 10, 8], 2);
 print ds.compareStrings("ant", "apple");
 
 print ds.knapsack01([2, 3, 4], [3, 4, 5], 5);
@@ -760,6 +763,22 @@ index or `-1`. The three functions use `O(log n)` time and `O(1)` extra space;
 the comparator must define the same ordering used to sort the input. Empty
 arrays return insertion position `0` and `binarySearch` returns `-1`.
 
+`peakIndex(values)` returns the index of a weak local peak using binary search;
+the empty input returns `nil`, and equal neighbors may make either edge of a
+plateau a valid result. `isMountainArray(values)` recognizes a strict mountain
+with at least one increasing and one decreasing step. `mountainPeakIndex(values)`
+returns its peak index or `nil` for an invalid mountain. Peak search is
+`O(log n)`; mountain validation is `O(n)` followed by an `O(log n)` peak search.
+Neither function modifies the input.
+
+`minimumLargestPartitionSum(values, parts)` uses answer-space binary search to
+split a non-negative integer array into at most `parts` non-empty contiguous
+partitions while minimizing the largest partition sum. It returns `0` for a
+valid empty input and `nil` for a non-positive/non-integral partition count or
+invalid values. The result is computed in `O(n log S)` time, where `S` is the
+sum of the values, and `O(1)` auxiliary space; `parts` may exceed the number of
+values.
+
 `compareStrings(left, right)` provides a library-level comparator for printable
 ASCII strings: it returns `-1`, `0`, or `1` for less/equal/greater, and returns
 `nil` if either input contains a non-ASCII scalar. `stringLess` adapts that
@@ -964,6 +983,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case numeric_algorithms_extended_gcd`,
 `--case numeric_algorithms_primes`,
 `--case numeric_algorithms_sequences`,
+`--case numeric_algorithms_answer_space`,
 `--case algorithms_dp_1d`,
 `--case algorithms_dp_grid`,
 `--case algorithms_dp_sequences`,
@@ -975,6 +995,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case array_algorithms_frequency`,
 `--case array_algorithms_quick_sort`, `--case array_algorithms_heap_sort`,
 `--case array_algorithms_shell_sort`,
+`--case array_algorithms_search_peaks`,
 `--case array_algorithms_two_pointer`,
 `--case array_algorithms_sets`, or `--case array_algorithms_window_stats` for
 focused coverage. Use `--update` only when

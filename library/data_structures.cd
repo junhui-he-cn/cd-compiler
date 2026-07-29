@@ -3360,6 +3360,57 @@ fun binarySearch<T>(values: [T], target: T, less: fun(T, T): bool): number {
   return -1;
 }
 
+fun peakIndex(values: [number]): number? {
+  if (values.len() == 0) {
+    return nil;
+  }
+  let low = 0;
+  let high = values.len() - 1;
+  while (low < high) {
+    let middle = floor((low + high) / 2);
+    if (values[middle] < values[middle + 1]) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+  return low;
+}
+
+fun isMountainArray(values: [number]): bool {
+  if (values.len() < 3) {
+    return false;
+  }
+  let index = 1;
+  while (index < values.len() && values[index] > values[index - 1]) {
+    index += 1;
+  }
+  if (index == 1 || index == values.len()) {
+    return false;
+  }
+  while (index < values.len() && values[index] < values[index - 1]) {
+    index += 1;
+  }
+  return index == values.len();
+}
+
+fun mountainPeakIndex(values: [number]): number? {
+  if (!isMountainArray(values)) {
+    return nil;
+  }
+  let low = 1;
+  let high = values.len() - 2;
+  while (low < high) {
+    let middle = floor((low + high) / 2);
+    if (values[middle] < values[middle + 1]) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+  return low;
+}
+
 fun countValue<T>(values: [T], target: T): number {
   let count = 0;
   let index = 0;
@@ -5155,6 +5206,52 @@ fun prefixProducts(values: [number]): [number] {
   return result;
 }
 
+fun minimumLargestPartitionSum(values: [number], parts: number): number? {
+  if (floor(parts) != parts || parts <= 0) {
+    return nil;
+  }
+  if (values.len() == 0) {
+    return 0;
+  }
+
+  let low = 0;
+  let high = 0;
+  let index = 0;
+  while (index < values.len()) {
+    let value = values[index];
+    if (floor(value) != value || value < 0) {
+      return nil;
+    }
+    if (value > low) {
+      low = value;
+    }
+    high += value;
+    index += 1;
+  }
+
+  while (low < high) {
+    let capacity = floor((low + high) / 2);
+    let required = 1;
+    let current = 0;
+    index = 0;
+    while (index < values.len()) {
+      if (current + values[index] <= capacity) {
+        current += values[index];
+      } else {
+        required += 1;
+        current = values[index];
+      }
+      index += 1;
+    }
+    if (required <= parts) {
+      high = capacity;
+    } else {
+      low = capacity + 1;
+    }
+  }
+  return low;
+}
+
 fun binomialCoefficient(n: number, k: number): number? {
   if (floor(n) != n || floor(k) != k || n < 0 || k < 0 || k > n) {
     return nil;
@@ -5271,5 +5368,7 @@ fun divisors(value: number): [number] {
   }
   return result;
 }
+
+export peakIndex, isMountainArray, mountainPeakIndex, minimumLargestPartitionSum;
 
 export Stack, Queue, Deque, RingBuffer, BinaryHeap, PriorityQueue, Option, Result, List, Tree, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, ExtendedGcdResult, Trie, FenwickTree, SegmentTree, newStack, newQueue, newDeque, newRingBuffer, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, newTrie, newFenwickTree, newSegmentTree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced, treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, minimumSpanningForestKruskal, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, listLength, listGet, listAppend, listConcat, listTake, listDrop, mergeSortedLists, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, shellSort, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, differenceArray, prefixMinimums, prefixMaximums, nextGreaterValues, mergeIntervals, intersectIntervals, selectNonOverlappingIntervals, minimumIntervalRooms, canReachEnd, minimumJumps, huffmanMergeCost, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, climbStairs, maxNonAdjacentSum, minCoinCount, uniqueGridPaths, uniqueGridPathsWithObstacles, minGridPathSum, matrixChainCost, matrixPower2x2, mergeStonesCost, editDistance, longestIncreasingSubsequenceLength, longestCommonSubsequenceLength, knapsack01, completeKnapsack, boundedKnapsack, subsets, combinations, permutations, generateParentheses, nQueens, mazePaths, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci, primeFactors, divisors, binomialCoefficient, permutationCount, pascalTriangle, gcdArray, prefixProducts;
