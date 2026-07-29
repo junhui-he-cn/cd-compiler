@@ -560,6 +560,10 @@ examples/
    这决定通用排序、堆和 BST 是否采用回调版 API。
 2. 项目是否计划提供通用哈希/相等协议？当前 map 只接受基础键，通用
    `HashSet<T>`、`HashMap<K,V>`、Bloom filter 和高效缓存都因此只能做受限版。
+   具体的语言支持请求已记录在
+   [Issue #11](https://github.com/junhui-he-cn/my-compiler/issues/11)，并与
+   [Issue #10](https://github.com/junhui-he-cn/my-compiler/issues/10) 的通用
+   运算符重载设计保持关联。
 3. 是否计划支持递归结构体、节点引用或等价的可变递归表示？这决定可变
    链表、AVL/红黑树、标准双向链表和高效 LRU 是否能按传统方式实现。
 4. 环形缓冲区满时应拒绝新值、覆盖最旧值，还是返回 `Result`？这会影响
