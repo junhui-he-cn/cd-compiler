@@ -217,6 +217,7 @@ print ds.uniqueGridPathsWithObstacles([
   [false, false, false]
 ]);
 print ds.matrixChainCost([10, 30, 5, 60]);
+print ds.matrixPower2x2([[1, 1], [1, 0]], 5);
 print ds.primeFactors(12);
 print ds.divisors(12);
 print ds.binomialCoefficient(5, 2);
@@ -684,6 +685,11 @@ for matrices whose adjacent dimensions are given by the array. Positive integer
 dimensions are required; an empty or one-element dimensions array returns `0`,
 and invalid dimensions return `nil`. It uses interval DP in `O(n^3)` time and
 `O(n^2)` space, where `n` is the number of matrices.
+
+`matrixPower2x2(matrix, exponent)` raises a 2×2 numeric matrix to a
+non-negative integer power, returning `nil` for another shape or invalid
+exponent. Exponent zero returns the 2×2 identity matrix; exponentiation by
+squaring takes `O(log exponent)` matrix multiplications.
 
 The current backtracking and knapsack helpers are:
 

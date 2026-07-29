@@ -62,6 +62,7 @@
 - 子数组统计：`maxSubarraySum`。
 - 基础数值算法：`gcd`、`lcm`、`extendedGcd`、`isPrime`、`sievePrimes`、`fastPower`、
   `factorial`、`fibonacci`（整数输入契约）。
+- 矩阵快速幂：`matrixPower2x2`。
 - 数论辅助：`primeFactors`、`divisors`。
 - 组合数辅助：`binomialCoefficient`、`pascalTriangle`。
 - 数组数值辅助：`gcdArray`、`prefixProducts`。
@@ -445,7 +446,7 @@ enum Result<T, E> {
 ### 5.9 数值与基础数学算法
 
 - `gcd`、`lcm`、扩展欧几里得；
-- 快速幂、阶乘、斐波那契和矩阵快速幂；
+- 快速幂、阶乘、斐波那契、2×2 矩阵快速幂已完成；
 - 素数判断、埃氏筛、线性筛（若性能需要）；
 - 质因数分解、约数枚举已完成；
 - 最大公约数数组、前缀积已完成；差分已有数组辅助版本；

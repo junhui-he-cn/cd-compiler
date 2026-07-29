@@ -5047,20 +5047,12 @@ Program
     Export Stack Queue Deque RingBuffer BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newRingBuffer newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums differenceArray prefixMinimums prefixMaximums nextGreaterValues mergeIntervals intersectIntervals selectNonOverlappingIntervals minimumIntervalRooms canReachEnd minimumJumps huffmanMergeCost mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum climbStairs maxNonAdjacentSum minCoinCount uniqueGridPaths uniqueGridPathsWithObstacles minGridPathSum matrixChainCost matrixPower2x2 editDistance longestIncreasingSubsequenceLength longestCommonSubsequenceLength knapsack01 completeKnapsack boundedKnapsack subsets combinations permutations generateParentheses nQueens mazePaths gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci primeFactors divisors binomialCoefficient permutationCount pascalTriangle gcdArray prefixProducts
   Module 1 entry
     Import "../../data_structures.cd" as ds
-    Let values = (array 1 2 3 4 5)
-    Print (member-call ds chunkArray values 2)
-    Print values
-    Print (member-call ds chunkArray values 0)
-    Print (member-call ds chunkArray values (- 1))
-    Let chunks = (member-call ds chunkArray values 3)
-    Expr (member-call (index chunks 0) push 99)
-    Print values
-    Print chunks
-    Print (member-call ds slidingWindows values 3)
-    Print (member-call ds slidingWindows values 6)
-    Print (member-call ds slidingWindows values 0)
-    Print (member-call ds prefixSums values)
-    Let emptyNumbers: [number] = (array)
-    Print (member-call ds prefixSums emptyNumbers)
-    Let words = (array "a" "b" "c")
-    Print (member-call ds slidingWindows words 2)
+    Print (member-call ds matrixPower2x2 (array (array 1 1) (array 1 0)) 0)
+    Print (member-call ds matrixPower2x2 (array (array 1 1) (array 1 0)) 1)
+    Print (member-call ds matrixPower2x2 (array (array 1 1) (array 1 0)) 5)
+    Print (member-call ds matrixPower2x2 (array (array 2 0) (array 0 3)) 3)
+    Print (member-call ds matrixPower2x2 (array (array 1 2 3) (array 4 5 6)) 2)
+    Print (member-call ds matrixPower2x2 (array (array 1 0) (array 0 1)) (- 1))
+    Print (member-call ds matrixPower2x2 (array (array 1 0) (array 0 1)) 1.5)
+    Let empty: [[number]] = (array)
+    Print (member-call ds matrixPower2x2 empty 2)
