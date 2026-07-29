@@ -4,7 +4,7 @@
 
 namespace {
 
-constexpr std::array<NativeFunctionSignature, 28> kNativeFunctions{{
+constexpr std::array<NativeFunctionSignature, 29> kNativeFunctions{{
     {"push", 2, NativeFunctionKind::Push},
     {"pop", 1, NativeFunctionKind::Pop},
     {"remove", 2, NativeFunctionKind::Remove},
@@ -19,6 +19,7 @@ constexpr std::array<NativeFunctionSignature, 28> kNativeFunctions{{
     {"substr", 3, NativeFunctionKind::Substr},
     {"charAt", 2, NativeFunctionKind::CharAt},
     {"typeOf", 1, NativeFunctionKind::TypeOf},
+    {"hash", 1, NativeFunctionKind::Hash},
     {"contains", 2, NativeFunctionKind::Contains},
     {"slice", 3, NativeFunctionKind::Slice},
     {"copy", 1, NativeFunctionKind::Copy},

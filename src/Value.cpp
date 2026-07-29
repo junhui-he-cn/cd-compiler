@@ -1,9 +1,105 @@
 #include "Value.hpp"
 
+#include <cmath>
+#include <cstdint>
+#include <cstring>
 #include <iomanip>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 #include <utility>
+
+namespace {
+
+class Fnv1a32 {
+public:
+    void byte(std::uint8_t value)
+    {
+        hash_ ^= value;
+        hash_ *= 16777619u;
+    }
+
+    void number(std::uint64_t value)
+    {
+        for (std::size_t index = 0; index < sizeof(value); ++index) {
+            byte(static_cast<std::uint8_t>(value >> (index * 8)));
+        }
+    }
+
+    void text(const std::string& value)
+    {
+        number(static_cast<std::uint64_t>(value.size()));
+        for (const unsigned char character : value) {
+            byte(character);
+        }
+    }
+
+    std::uint32_t finish() const
+    {
+        return hash_;
+    }
+
+private:
+    std::uint32_t hash_ = 2166136261u;
+};
+
+void hashValueInto(Fnv1a32& hash, const Value& value)
+{
+    hash.byte(static_cast<std::uint8_t>(value.type()));
+    switch (value.type()) {
+    case Value::Type::Nil:
+        return;
+    case Value::Type::Number: {
+        const double number = value.asNumber();
+        std::uint64_t bits = 0;
+        if (std::isnan(number)) {
+            bits = 0x7ff8000000000000ULL;
+        } else if (number != 0.0) {
+            static_assert(sizeof(number) == sizeof(bits));
+            std::memcpy(&bits, &number, sizeof(bits));
+        }
+        hash.number(bits);
+        return;
+    }
+    case Value::Type::Bool:
+        hash.byte(value.asBool() ? 1 : 0);
+        return;
+    case Value::Type::String:
+        hash.text(value.asString());
+        return;
+    case Value::Type::Function:
+        hash.number(static_cast<std::uint64_t>(value.asFunction().identity));
+        return;
+    case Value::Type::Array:
+        hash.number(static_cast<std::uint64_t>(value.asArray().identity));
+        return;
+    case Value::Type::Map:
+        hash.number(static_cast<std::uint64_t>(value.asMap().identity));
+        return;
+    case Value::Type::Range: {
+        const RangeValue& range = value.asRange();
+        hash.number(static_cast<std::uint64_t>(range.start));
+        hash.number(static_cast<std::uint64_t>(range.stop));
+        hash.number(static_cast<std::uint64_t>(range.step));
+        return;
+    }
+    case Value::Type::Struct:
+        hash.number(static_cast<std::uint64_t>(value.asStruct().identity));
+        return;
+    case Value::Type::Variant: {
+        const VariantValue& variant = value.asVariant();
+        hash.text(variant.enumName);
+        hash.text(variant.variantName);
+        hash.number(static_cast<std::uint64_t>(variant.fields->size()));
+        for (const Value& field : *variant.fields) {
+            hashValueInto(hash, field);
+        }
+        return;
+    }
+    }
+}
+
+} // namespace
 
 Value::Value(Type type)
     : type_(type)
@@ -211,6 +307,13 @@ bool valuesEqual(const Value& left, const Value& right)
     }
 
     return false;
+}
+
+std::uint32_t valueHash(const Value& value)
+{
+    Fnv1a32 hash;
+    hashValueInto(hash, value);
+    return hash.finish();
 }
 
 std::string valueToString(const Value& value)

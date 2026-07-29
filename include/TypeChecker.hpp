@@ -376,6 +376,7 @@ private:
     CheckedExpression checkLetInitializer(const LetStmt& statement);
     TypeInfo resolveAnnotation(const TypeAnnotation& typeName) const;
     TypeInfo resolveTypeParameterConstraint(const TypeAnnotation& typeName) const;
+    TypeInfo resolveTypeParameterConstraints(const TypeParameter& parameter) const;
     void checkAssignable(const Token& token, const std::string& context, const TypeInfo& expected, const TypeInfo& actual) const;
     TypeInfo checkUnary(const UnaryExpr& expression);
     TypeInfo checkBinary(const BinaryExpr& expression);

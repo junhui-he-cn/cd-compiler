@@ -1,0 +1,1 @@
+export hashValue, sameHash from "lib.cd";

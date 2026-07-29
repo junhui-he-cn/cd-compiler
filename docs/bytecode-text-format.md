@@ -322,7 +322,7 @@ Native stdlib calls use a name-table reference for the function name:
 rD = native_call nName [rArg0, rArg1, ...]
 ```
 
-`native_call` invokes a registered VM native stdlib function by name-table reference; in this version `push`, `pop`, `remove`, `clear`, `merge`, `keys`, `values`, `floor`, `ceil`, `sqrt`, `str`, `substr`, `charAt`, `typeOf`, `contains`, `slice`, `copy`, `concat`, `map`, `filter`, `flatMap`, `any`, `all`, `count`, `find`, `findIndex`, and `reduce` are supported.
+`native_call` invokes a registered VM native stdlib function by name-table reference; in this version `push`, `pop`, `remove`, `clear`, `merge`, `keys`, `values`, `floor`, `ceil`, `sqrt`, `str`, `substr`, `charAt`, `typeOf`, `hash`, `contains`, `slice`, `copy`, `concat`, `map`, `filter`, `flatMap`, `any`, `all`, `count`, `find`, `findIndex`, and `reduce` are supported.
 
 The `range` native is also supported with one to three numeric arguments. Its
 result is consumed by the existing `len`, `index`, and `assert_array`

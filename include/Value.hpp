@@ -121,5 +121,6 @@ struct Environment {
 
 bool isTruthy(const Value& value);
 bool valuesEqual(const Value& left, const Value& right);
+std::uint32_t valueHash(const Value& value);
 std::string valueToString(const Value& value);
 std::ostream& operator<<(std::ostream& out, const Value& value);

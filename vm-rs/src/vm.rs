@@ -2315,6 +2315,7 @@ impl<'a> VM<'a> {
             "substr" => self.execute_native_substr(arguments),
             "charAt" => self.execute_native_char_at(arguments),
             "typeOf" => self.execute_native_type_of(arguments),
+            "hash" => self.execute_native_hash(arguments),
             "contains" => self.execute_native_contains(arguments),
             "slice" => self.execute_native_slice(arguments),
             "copy" => self.execute_native_copy(arguments),
@@ -2867,6 +2868,13 @@ impl<'a> VM<'a> {
             return Err(RuntimeError::new("typeOf expects 1 arguments"));
         }
         Ok(Value::string(arguments[0].type_name()))
+    }
+
+    fn execute_native_hash(&self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+        if arguments.len() != 1 {
+            return Err(RuntimeError::new("hash expects 1 argument"));
+        }
+        Ok(Value::number(arguments[0].runtime_hash()))
     }
 
     fn execute_native_contains(&self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {

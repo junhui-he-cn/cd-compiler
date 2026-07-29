@@ -4378,6 +4378,26 @@
       "expected_files": []
     },
     {
+      "case_id": "ctest.value_tests",
+      "runner": "ctest",
+      "result_name": "value_tests",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "value_tests"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "ctest.verification_inventory",
       "runner": "ctest",
       "result_name": "verification_inventory",
@@ -12058,6 +12078,117 @@
         "tests/golden/generic_structs/ir.out"
       ],
       "fixture": "tests/golden/generic_structs"
+    },
+    {
+      "case_id": "golden.success.hash_capabilities.ast",
+      "runner": "golden",
+      "result_name": "hash_capabilities default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:hash_capabilities"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/hash_capabilities/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/hash_capabilities/ast.out"
+      ],
+      "fixture": "tests/golden/hash_capabilities"
+    },
+    {
+      "case_id": "golden.success.hash_capabilities.bytecode",
+      "runner": "golden",
+      "result_name": "hash_capabilities --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:hash_capabilities"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/hash_capabilities/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/hash_capabilities/bytecode.out"
+      ],
+      "fixture": "tests/golden/hash_capabilities"
+    },
+    {
+      "case_id": "golden.success.hash_capabilities.ir",
+      "runner": "golden",
+      "result_name": "hash_capabilities --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:hash_capabilities"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/hash_capabilities/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/hash_capabilities/ir.out"
+      ],
+      "fixture": "tests/golden/hash_capabilities"
+    },
+    {
+      "case_id": "golden.success.hash_capabilities.module_interface",
+      "runner": "golden",
+      "result_name": "hash_capabilities --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:hash_capabilities"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/hash_capabilities/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/hash_capabilities/module-interface.out"
+      ],
+      "fixture": "tests/golden/hash_capabilities"
     },
     {
       "case_id": "golden.success.if_else.ast",
@@ -21780,6 +21911,62 @@
         "tests/golden/type_errors/generic_uninferred_type_parameter.cd",
         "tests/golden/type_errors/generic_uninferred_type_parameter.err",
         "tests/golden/type_errors/generic_uninferred_type_parameter.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.hash_eq_only",
+      "runner": "golden",
+      "result_name": "type_errors/hash_eq_only default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:hash_eq_only"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/hash_eq_only.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/hash_eq_only.cd",
+        "tests/golden/type_errors/hash_eq_only.err",
+        "tests/golden/type_errors/hash_eq_only.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.hash_unconstrained",
+      "runner": "golden",
+      "result_name": "type_errors/hash_unconstrained default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:hash_unconstrained"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/hash_unconstrained.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/hash_unconstrained.cd",
+        "tests/golden/type_errors/hash_unconstrained.err",
+        "tests/golden/type_errors/hash_unconstrained.exit"
       ],
       "fixture": "tests/golden/type_errors"
     },
@@ -39634,6 +39821,68 @@
         "tests/golden/generic_structs/run.out"
       ],
       "fixture": "tests/golden/generic_structs"
+    },
+    {
+      "case_id": "rust_vm.golden.hash_capabilities.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "hash_capabilities emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:hash_capabilities"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/hash_capabilities/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/hash_capabilities/run.out"
+      ],
+      "fixture": "tests/golden/hash_capabilities"
+    },
+    {
+      "case_id": "rust_vm.golden.hash_capabilities.run",
+      "runner": "rust_vm_golden",
+      "result_name": "hash_capabilities rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:hash_capabilities"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/hash_capabilities/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/hash_capabilities/run.out"
+      ],
+      "fixture": "tests/golden/hash_capabilities"
     },
     {
       "case_id": "rust_vm.golden.if_else.emit",

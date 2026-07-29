@@ -321,12 +321,16 @@ Operators do not make a custom struct satisfy the generic `Ord` bound.
 
 Functions are values. Named functions use `fun name[<T, U>](parameter[: type]*) [: type] { declaration* }`, and anonymous function expressions use `fun[<T, U>](parameter[: type]*) [: type] { declaration* }`. Type parameters may have concrete bounds such as `T: number`, for example `fun identity<T: number>(value: T): T { return value; }`; explicit and inferred arguments, generic enum constructors, generic struct constructors, and generic collection callbacks must satisfy every bound. Generic named functions, methods, and anonymous function expressions infer type parameters at each call, including direct, namespace, and re-exported struct method paths; callers may also provide all type arguments explicitly, such as `identity<number>(42)`, `lib.identity<string>("hello")`, `box.echo<string>("hello")`, or `identityLambda<number>(42)`. An unannotated alias preserves the generic signature. Generic function values are not coerced to monomorphic function annotations; when passed to existing array higher-order helpers, known callback argument types specialize them and every generic parameter must be inferable. Anonymous function expressions may appear in expression positions, including direct expression statements such as `fun () { return nil; };`. Known function values carry arity, parameter types when annotated or contextually typed, and inferred, annotated, or contextually checked return types for static checks, including variables initialized from named functions or function expressions. `return expression;` returns a value, `return;` returns `nil`, and reaching the end of a function also returns `nil`. Recursive named calls are supported, though recursive return inference remains conservative. Nested functions and function expressions are by-reference closures: they capture enclosing local variables through shared runtime cells, so reads and assignments share the same variable even after the outer function returns. Example function type annotations: `let f: fun(number): number = fun (x: number): number { return x + 1; };` and `fun apply(f: fun(number): number, x: number): number { return f(x); }`.
 
-Static generic capability bounds `T: Eq` and `T: Ord` are also supported. `Eq`
-  permits `==` and `!=` in generic code; `Ord` permits the ordering operators
-  and admits `number` and `string`, while also satisfying `Eq`. String ordering
-  is lexicographic over Unicode scalar values without locale or normalization.
-  These bounds are compile-time checks only: they do not introduce trait
-  objects, dynamic dispatch, or user-defined capability implementations.
+Static generic capability bounds `T: Eq`, `T: Ord`, and `T: Hash` are supported;
+capability bounds may be combined with `+`, as in `T: Eq + Hash`. `Eq` permits
+`==` and `!=` in generic code; `Ord` permits the ordering operators and admits
+`number` and `string`, while also satisfying `Eq`; `Hash` permits
+`hash(value)`. Hashing returns a deterministic 32-bit FNV-1a result represented
+as a `number`, with typed values, UTF-8 strings, ranges, reference identities,
+and enum payloads covered by the shared C++/Rust contract. These bounds remain
+compile-time checks and the hash entry point is a normal native call: they do
+not introduce trait objects, dynamic dispatch, or user-defined capability
+implementations.
 
 Named structs may define local ordering operators in an `impl` block. Each
 operator uses the left operand as `this`, accepts exactly one parameter of the
@@ -626,6 +630,12 @@ is resolved before this builtin fallback.
 
 The debug native stdlib function `typeOf(value)` returns the current runtime type name as a string: primitive values report `"nil"`, `"number"`, `"bool"`, `"string"`, or `"function"`; arrays report `"array"`; maps report `"map"`; ranges report `"range"`; enum values report their enum name such as `"Result"`; named struct values report their runtime struct name such as `"Person"` or `"geo.Point"`. A user binding named `typeOf` shadows the builtin.
 
+The `hash(value)` native function returns the deterministic 32-bit hash used by
+the generic `Hash` capability. It accepts known runtime values and constrained
+generic values; an unconstrained type parameter must add `T: Hash` before it can
+be hashed. Hash-based containers, generic map-key admission, and mutable-key
+ownership rules are not part of the current language slice.
+
 Supported expressions:
 
 - Literals: numbers, strings, `true`, `false`, `nil`
@@ -645,7 +655,7 @@ Supported expressions:
   `match value { pattern [if condition] => expression, ... }` and return the
   selected arm expression. Guards use existing truthiness and must be followed
   by unguarded exhaustive coverage.
-- Function expressions: `fun[<T, U>](parameter[: type]*) [: type] { declaration* }`, with optional bounds such as `fun<T: number>(value: T): T { return value; }`, `fun<T: Eq>(left: T, right: T): bool { return left == right; }`, or `fun<T: Ord>(left: T, right: T): bool { return left < right; }`, including direct expression statements such as `fun () { return nil; };`
+- Function expressions: `fun[<T, U>](parameter[: type]*) [: type] { declaration* }`, with optional bounds such as `fun<T: number>(value: T): T { return value; }`, `fun<T: Eq>(left: T, right: T): bool { return left == right; }`, `fun<T: Ord>(left: T, right: T): bool { return left < right; }`, or `fun<T: Eq + Hash>(value: T): number { return hash(value); }`, including direct expression statements such as `fun () { return nil; };`
 - Variables: `name`
 - Assignment: `name = expression` updates an existing variable and evaluates to the assigned value. Use `let` to declare variables before assigning to them.
 - Compound assignment: `name += expression`, `array[index] += expression`, and `object.field += expression` forms, plus `-=`, `*=`, and `/=`, update the target and evaluate to the assigned value. Compound assignment is numeric-only for both the old target value and the right-hand value.

@@ -151,6 +151,10 @@ fun before<T: Ord>(left: T, right: T): bool {
   return left < right;
 }
 
+fun sameHash<T: Eq + Hash>(left: T, right: T): bool {
+  return left == right && hash(left) == hash(right);
+}
+
 struct Box<T> {
   value: T
 }
@@ -165,7 +169,7 @@ let box: Box<number> = Box { value: 42 };
 let result: Result<number> = Result.Ok(42);
 ```
 
-类型参数通常从实参、字段值或期望类型推断；也可以在调用或构造时显式提供。泛型参数按名义类型处理，结构体和枚举的泛型实参是不变的。`Eq` 和 `Ord` 只在编译期检查，不引入运行时 trait 对象或动态派发；当前 `Ord` 的内置满足关系限于 `number`，并且 `Ord` 同时满足 `Eq`。用户自定义 capability 实现仍未提供。
+类型参数通常从实参、字段值或期望类型推断；也可以在调用或构造时显式提供。泛型参数按名义类型处理，结构体和枚举的泛型实参是不变的。`Eq`、`Ord` 和 `Hash` 只在编译期检查；多个 capability 可以使用 `+` 组合，例如 `T: Eq + Hash`。`Ord` 的内置满足关系包括 `number` 和 `string`，并且 `Ord` 同时满足 `Eq`；`Hash` 可通过 `hash(value)` 取得确定性的 32 位 FNV-1a 数值。当前仍没有用户自定义 capability 实现、哈希容器或可变 key 所有权规则。
 
 ## 4. 运算符和赋值
 
@@ -605,7 +609,8 @@ builtin member-call sugar，数组接收者仍使用数组 builtin。栈和队�
 - 没有 `Person(...)` 形式的结构体构造函数；
 - 没有继承、重载、动态派发、静态方法和函数值字段调用；
 - `Eq`/`Ord` 目前只能作为编译期泛型约束使用，尚无用户自定义 capability
-  实现，且 `Ord` 的内置类型目前只有 `number`；
+  实现；`Hash` 只提供编译期约束和 `hash(value)` 入口，尚无哈希容器、泛型
+  map key 放宽或可变 key 所有权规则；
 - 复杂动态字段、未知索引、map/range 元素和部分循环出口不提供精确 nullable narrowing；
 - 当函数签名或集合元素类型无法可靠推断时，需要补充显式类型注解。
 

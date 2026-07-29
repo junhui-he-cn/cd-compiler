@@ -547,11 +547,21 @@ std::vector<TypeParameter> Parser::typeParameters()
         Token name = consume(
             TokenType::Identifier,
             "expected type parameter name after `<` or `,`");
-        std::optional<TypeAnnotation> constraint;
+        std::vector<TypeAnnotation> constraints;
         if (match(TokenType::Colon)) {
-            constraint = typeAnnotation("expected type constraint after `:`");
+            TokenType separator = TokenType::Colon;
+            while (true) {
+                constraints.push_back(typeAnnotation(
+                    separator == TokenType::Plus
+                        ? "expected type constraint after `+`"
+                        : "expected type constraint after `:`"));
+                if (!match(TokenType::Plus)) {
+                    break;
+                }
+                separator = TokenType::Plus;
+            }
         }
-        parameters.push_back(TypeParameter{std::move(name), std::move(constraint)});
+        parameters.push_back(TypeParameter{std::move(name), std::move(constraints)});
     } while (match(TokenType::Comma));
     consume(TokenType::Greater, "expected `>` after type parameters");
     return parameters;

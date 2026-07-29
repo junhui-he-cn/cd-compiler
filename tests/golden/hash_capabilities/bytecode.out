@@ -1,0 +1,56 @@
+main registers=16
+0000  b0 = constant #0 nil
+0001  store_var @0 hashValue#0, b0
+0002  b1 = make_function $0 hashValue/1
+0003  assign_var @3 hashValue#0, b1
+0004  b2 = constant #2 nil
+0005  store_var @4 sameHash#2, b2
+0006  b3 = make_function $1 sameHash/2
+0007  assign_var @11 sameHash#2, b3
+0008  b4 = constant #4 nil
+0009  store_var @12 localHash#5, b4
+0010  b5 = make_function $2 localHash/1
+0011  assign_var @15 localHash#5, b5
+0012  b6 = load_var @16 localHash#5
+0013  b7 = constant #6 true
+0014  b8 = call b6(b7)
+0015  print b8
+0016  b9 = load_var @17 hashValue#0
+0017  b10 = constant #7 "hello"
+0018  b11 = call b9(b10)
+0019  print b11
+0020  b12 = load_var @18 sameHash#2
+0021  b13 = constant #8 "same"
+0022  b14 = constant #9 "same"
+0023  b15 = call b12(b13, b14)
+0024  print b15
+
+function $0 hashValue/1 registers=3
+0000  b0 = load_var @1 value#1
+0001  b1 = native_call @2 hash [b0]
+0002  return b1
+0003  b2 = constant #1 nil
+0004  return b2
+
+function $1 sameHash/2 registers=10
+0000  b0 = load_var @5 left#3
+0001  b1 = load_var @6 right#4
+0002  b2 = equal b0, b1
+0003  b3 = move b2
+0004  jump_if_false b3, 0011
+0005  b4 = load_var @7 left#3
+0006  b5 = native_call @8 hash [b4]
+0007  b6 = load_var @9 right#4
+0008  b7 = native_call @10 hash [b6]
+0009  b8 = equal b5, b7
+0010  b3 = move b8
+0011  return b3
+0012  b9 = constant #3 nil
+0013  return b9
+
+function $2 localHash/1 registers=3
+0000  b0 = load_var @13 value#6
+0001  b1 = native_call @14 hash [b0]
+0002  return b1
+0003  b2 = constant #5 nil
+0004  return b2

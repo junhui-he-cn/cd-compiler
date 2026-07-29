@@ -50,6 +50,7 @@ TypeInfo arrayType(TypeInfo elementType);
 TypeInfo mapType(TypeInfo keyType, TypeInfo valueType);
 TypeInfo typeParameterType(std::string name, std::optional<TypeInfo> constraint = std::nullopt);
 TypeInfo capabilityType(std::string name);
+TypeInfo capabilitySetType(std::vector<TypeInfo> capabilities);
 TypeInfo functionType(
     std::vector<TypeInfo> parameterTypes,
     TypeInfo returnType,
@@ -62,6 +63,7 @@ bool isKnown(const TypeInfo& type);
 bool hasFunctionSignature(const TypeInfo& type);
 bool isNullable(const TypeInfo& type);
 bool isCapability(const TypeInfo& type, const std::string& name);
+bool isCapabilitySet(const TypeInfo& type);
 bool satisfiesCapability(const TypeInfo& actual, const TypeInfo& capability);
 bool compatible(const TypeInfo& expected, const TypeInfo& actual);
 std::optional<TypeInfo> mergeArrayElementTypes(const TypeInfo& left, const TypeInfo& right);
@@ -85,6 +87,7 @@ bool isKnown(const TypeInfo& type);
 bool hasFunctionSignature(const TypeInfo& type);
 bool isNullable(const TypeInfo& type);
 bool isCapability(const TypeInfo& type, const std::string& name);
+bool isCapabilitySet(const TypeInfo& type);
 bool satisfiesCapability(const TypeInfo& actual, const TypeInfo& capability);
 bool compatible(const TypeInfo& expected, const TypeInfo& actual);
 std::optional<TypeInfo> mergeArrayElementTypes(const TypeInfo& left, const TypeInfo& right);

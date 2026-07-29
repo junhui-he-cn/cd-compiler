@@ -58,7 +58,7 @@ struct TypeAnnotation {
 
 struct TypeParameter {
     Token name;
-    std::optional<TypeAnnotation> constraint;
+    std::vector<TypeAnnotation> constraints;
 };
 
 struct Parameter {

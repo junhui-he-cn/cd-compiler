@@ -99,6 +99,94 @@ impl Value {
             _ => false,
         }
     }
+
+    pub fn runtime_hash(&self) -> f64 {
+        let mut hash = Fnv1a32::new();
+        hash_value_into(&mut hash, self);
+        hash.finish() as f64
+    }
+}
+
+struct Fnv1a32 {
+    hash: u32,
+}
+
+impl Fnv1a32 {
+    fn new() -> Self {
+        Self {
+            hash: 2_166_136_261,
+        }
+    }
+
+    fn byte(&mut self, value: u8) {
+        self.hash ^= u32::from(value);
+        self.hash = self.hash.wrapping_mul(16_777_619);
+    }
+
+    fn number(&mut self, value: u64) {
+        for byte in value.to_le_bytes() {
+            self.byte(byte);
+        }
+    }
+
+    fn text(&mut self, value: &str) {
+        self.number(value.len() as u64);
+        for byte in value.as_bytes() {
+            self.byte(*byte);
+        }
+    }
+
+    fn finish(&self) -> u32 {
+        self.hash
+    }
+}
+
+fn hash_value_into(hash: &mut Fnv1a32, value: &Value) {
+    hash.byte(match value {
+        Value::Nil => 0,
+        Value::Number(_) => 1,
+        Value::Bool(_) => 2,
+        Value::String(_) => 3,
+        Value::Function(_) => 4,
+        Value::Array(_) => 5,
+        Value::Map(_) => 6,
+        Value::Range(_) => 7,
+        Value::Struct(_) => 8,
+        Value::Variant(_) => 9,
+    });
+
+    match value {
+        Value::Nil => {}
+        Value::Number(number) => {
+            let bits = if number.is_nan() {
+                0x7ff8_0000_0000_0000
+            } else if *number == 0.0 {
+                0
+            } else {
+                number.to_bits()
+            };
+            hash.number(bits);
+        }
+        Value::Bool(value) => hash.byte(u8::from(*value)),
+        Value::String(value) => hash.text(value),
+        Value::Function(value) => hash.number(value.identity as u64),
+        Value::Array(value) => hash.number(value.identity as u64),
+        Value::Map(value) => hash.number(value.identity as u64),
+        Value::Range(value) => {
+            hash.number(value.start as u64);
+            hash.number(value.stop as u64);
+            hash.number(value.step as u64);
+        }
+        Value::Struct(value) => hash.number(value.identity as u64),
+        Value::Variant(value) => {
+            hash.text(&value.enum_name);
+            hash.text(&value.variant_name);
+            hash.number(value.fields.len() as u64);
+            for field in &value.fields {
+                hash_value_into(hash, field);
+            }
+        }
+    }
 }
 
 fn format_number(value: f64) -> String {
@@ -201,6 +289,22 @@ mod tests {
         assert!(Value::boolean(true).runtime_equals(&Value::boolean(true)));
         assert!(Value::string("x").runtime_equals(&Value::string("x")));
         assert!(!Value::string("x").runtime_equals(&Value::number(0.0)));
+    }
+
+    #[test]
+    fn primitive_hash_matches_the_cpp_value_contract() {
+        assert_eq!(Value::Nil.runtime_hash(), 84_696_351.0);
+        assert_eq!(Value::number(42.0).runtime_hash(), 1_983_088_465.0);
+        assert_eq!(Value::boolean(true).runtime_hash(), 1_551_600_396.0);
+        assert_eq!(Value::string("hello").runtime_hash(), 910_946_861.0);
+        assert_eq!(
+            Value::number(-0.0).runtime_hash(),
+            Value::number(0.0).runtime_hash()
+        );
+        assert_ne!(
+            Value::string("hello").runtime_hash(),
+            Value::string("world").runtime_hash()
+        );
     }
 
     #[test]
