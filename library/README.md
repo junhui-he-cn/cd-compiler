@@ -176,6 +176,7 @@ print ds.intersectIntervals(ranges, [
   ds.Interval { start: 7, end: 9 }
 ]);
 print ds.selectNonOverlappingIntervals(ranges);
+print ds.minimumIntervalRooms(ranges);
 print ds.canReachEnd([2, 3, 1, 1, 4]);
 print ds.minimumJumps([2, 3, 1, 1, 4]);
 print ds.huffmanMergeCost([5, 9, 12, 13, 16, 45]);
@@ -801,6 +802,11 @@ schedule chosen by earliest end time. It preserves the input, rejects an
 interval with `start > end` by returning `[]`, and treats touching endpoints as
 overlapping, so a selected interval must have `start > lastEnd`. The result is
 ordered by selection and the algorithm takes `O(n log n)` time and `O(n)` space.
+
+`minimumIntervalRooms(intervals)` returns the maximum number of simultaneously
+active inclusive intervals. Empty input needs `0` rooms; an invalid interval
+returns `nil`; touching endpoints count as simultaneous activity. The event
+sweep takes `O(n log n)` time and `O(n)` space and leaves the input unchanged.
 
 `canReachEnd(values)` treats each non-negative integer as the maximum number of
 positions that can be advanced from that index and returns whether the final

@@ -3659,6 +3659,45 @@ Program
                   Expr (= hasLast true)
             Expr (+= index 1)
       Return result
+    Fun numberLess(left: number, right: number): bool
+      Return (< left right)
+    Fun minimumIntervalRooms(intervals: [Interval]): number?
+      Let starts: [number] = (array)
+      Let ends: [number] = (array)
+      Let index = 0
+      While (group (< index (member-call intervals len)))
+        Body
+          Block
+            If (group (> (field (index intervals index) start) (field (index intervals index) end)))
+              Then
+                Block
+                  Return nil
+            Expr (member-call starts push (field (index intervals index) start))
+            Expr (member-call ends push (field (index intervals index) end))
+            Expr (+= index 1)
+      Let orderedStarts = (call sortArray starts numberLess)
+      Let orderedEnds = (call sortArray ends numberLess)
+      Let startIndex = 0
+      Let endIndex = 0
+      Let active = 0
+      Let best = 0
+      While (group (< startIndex (member-call orderedStarts len)))
+        Body
+          Block
+            If (group (<= (index orderedStarts startIndex) (index orderedEnds endIndex)))
+              Then
+                Block
+                  Expr (+= active 1)
+                  If (group (> active best))
+                    Then
+                      Block
+                        Expr (= best active)
+                  Expr (+= startIndex 1)
+              Else
+                Block
+                  Expr (-= active 1)
+                  Expr (+= endIndex 1)
+      Return best
     Fun canReachEnd(values: [number]): bool
       Let index = 0
       While (group (< index (member-call values len)))
@@ -4772,7 +4811,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque RingBuffer BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newRingBuffer newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums differenceArray prefixMinimums prefixMaximums nextGreaterValues mergeIntervals intersectIntervals selectNonOverlappingIntervals canReachEnd minimumJumps huffmanMergeCost mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum climbStairs maxNonAdjacentSum minCoinCount uniqueGridPaths uniqueGridPathsWithObstacles minGridPathSum editDistance longestIncreasingSubsequenceLength longestCommonSubsequenceLength knapsack01 completeKnapsack boundedKnapsack subsets combinations permutations generateParentheses nQueens mazePaths gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
+    Export Stack Queue Deque RingBuffer BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newRingBuffer newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums differenceArray prefixMinimums prefixMaximums nextGreaterValues mergeIntervals intersectIntervals selectNonOverlappingIntervals minimumIntervalRooms canReachEnd minimumJumps huffmanMergeCost mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum climbStairs maxNonAdjacentSum minCoinCount uniqueGridPaths uniqueGridPathsWithObstacles minGridPathSum editDistance longestIncreasingSubsequenceLength longestCommonSubsequenceLength knapsack01 completeKnapsack boundedKnapsack subsets combinations permutations generateParentheses nQueens mazePaths gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let graph = (member-call ds newWeightedGraph 5 false)
