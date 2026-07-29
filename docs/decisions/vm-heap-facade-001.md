@@ -58,10 +58,36 @@ instances, persistent host roots, or concurrent access.
 - The facade is single-threaded with the VM. `CancellationToken` signalling
   does not make Heap, `Value`, or `VM` `Send`/`Sync`.
 
+## Measurement slice
+
+The follow-up VM-2B measurement slice adds a non-owning `HeapStats` ledger. Each
+tracked shared allocation contributes one `Weak` record for its environment,
+cell, array, map, or struct storage. A snapshot reports allocation totals,
+current live records, and dead records (`allocations - live`) per kind and in
+total. The ledger itself owns no strong reference, so taking a stats handle
+cannot keep a VM root, native temporary, or closure graph alive.
+
+The live/dead result is intentionally based on `Rc` strong-count observation,
+not on formatting or recursively walking values. An acyclic aggregate becomes
+dead after its last root is dropped; an array cycle or a closure/function-cell-
+environment cycle remains live, making the current reference-counting behavior
+visible instead of silently treating it as collected. Runtime error and trace
+tests also take a stats handle before the consuming VM call and verify that
+execution roots are released after the call returns.
+
+The measurement boundary covers shared storage only. Function, range, and
+variant values are inline `Value` payloads in the current representation and do
+not have an independent weak lifetime to observe; counting them would require
+another storage decision. This slice also does not claim exact peak memory,
+ledger compaction, cycle collection, relocating handles, persistent host roots,
+or a production profiling API.
+
 ## Verification
 
-New Rust unit cases cover shared alias storage, distinct aggregate identities,
-shared environment cells, and map duplicate ordering. Existing parity and
+Rust unit cases cover shared alias storage, distinct aggregate identities,
+shared environment cells, map duplicate ordering, shared-storage live/dead
+counts, acyclic versus cyclic graphs, closure cycles, native temporary roots,
+runtime-error root release, and trace observations. Existing parity and
 resource cases remain unchanged.
 
 ```sh
@@ -71,14 +97,14 @@ python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens
 python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json
 ```
 
-The first focused run after this slice passed Rust `62/62`; the existing
+The focused run after the measurement slice passed Rust `68/68`; the existing
 artifact, Rust VM, and canonical verification gates remain the compatibility
 checks for the unchanged `.cdbc` and alias semantics.
 
 ## Next gate
 
 Do not add a GC, relocating handle table, or persistent host-value API in this
-slice. The next VM-2B step must add measurements for live/dead aggregates,
-closure graphs, cyclic graphs, native temporary roots, runtime-error exits,
-debug observations, and peak memory before deciding whether the facade remains
-reference-counted or grows a different storage backend.
+slice. The next VM-2B gate is a workload-level decision about whether the
+reference-counted facade needs a different backend; it must add a reproducible
+peak-memory method and broader allocation workloads before selecting tracing,
+handles, or another storage strategy.

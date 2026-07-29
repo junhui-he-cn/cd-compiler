@@ -5,6 +5,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 use std::rc::Rc;
+use std::rc::Weak;
 
 pub type Cell = Rc<RefCell<Value>>;
 pub type Environment = HashMap<String, Cell>;
@@ -56,6 +57,126 @@ pub struct VariantValue {
     pub fields: Vec<Value>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HeapObjectKind {
+    Environment,
+    Cell,
+    Array,
+    Map,
+    Struct,
+}
+
+impl HeapObjectKind {
+    const COUNT: usize = 5;
+
+    const fn index(self) -> usize {
+        match self {
+            Self::Environment => 0,
+            Self::Cell => 1,
+            Self::Array => 2,
+            Self::Map => 3,
+            Self::Struct => 4,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct HeapObjectStats {
+    pub allocations: usize,
+    pub live: usize,
+    pub dead: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct HeapStatsSnapshot {
+    by_kind: [HeapObjectStats; HeapObjectKind::COUNT],
+    pub total_allocations: usize,
+    pub total_live: usize,
+    pub total_dead: usize,
+}
+
+impl HeapStatsSnapshot {
+    pub fn for_kind(&self, kind: HeapObjectKind) -> HeapObjectStats {
+        self.by_kind[kind.index()]
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct HeapStats {
+    ledger: Rc<RefCell<HeapLedger>>,
+}
+
+impl HeapStats {
+    pub fn snapshot(&self) -> HeapStatsSnapshot {
+        self.ledger.borrow().snapshot()
+    }
+}
+
+#[derive(Debug)]
+enum WeakAllocation {
+    Environment(Weak<RefCell<Environment>>),
+    Cell(Weak<RefCell<Value>>),
+    Array(Weak<RefCell<Vec<Value>>>),
+    Map(Weak<RefCell<Vec<(Value, Value)>>>),
+    Struct(Weak<RefCell<Vec<(String, Value)>>>),
+}
+
+impl WeakAllocation {
+    fn kind(&self) -> HeapObjectKind {
+        match self {
+            Self::Environment(_) => HeapObjectKind::Environment,
+            Self::Cell(_) => HeapObjectKind::Cell,
+            Self::Array(_) => HeapObjectKind::Array,
+            Self::Map(_) => HeapObjectKind::Map,
+            Self::Struct(_) => HeapObjectKind::Struct,
+        }
+    }
+
+    fn is_live(&self) -> bool {
+        match self {
+            Self::Environment(value) => value.strong_count() != 0,
+            Self::Cell(value) => value.strong_count() != 0,
+            Self::Array(value) => value.strong_count() != 0,
+            Self::Map(value) => value.strong_count() != 0,
+            Self::Struct(value) => value.strong_count() != 0,
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+struct HeapLedger {
+    allocations: Vec<WeakAllocation>,
+}
+
+impl HeapLedger {
+    fn record(&mut self, allocation: WeakAllocation) {
+        self.allocations.push(allocation);
+    }
+
+    fn snapshot(&self) -> HeapStatsSnapshot {
+        let mut by_kind = [HeapObjectStats::default(); HeapObjectKind::COUNT];
+        for allocation in &self.allocations {
+            let kind = allocation.kind();
+            let stats = &mut by_kind[kind.index()];
+            stats.allocations += 1;
+            if allocation.is_live() {
+                stats.live += 1;
+            }
+        }
+        for stats in &mut by_kind {
+            stats.dead = stats.allocations - stats.live;
+        }
+        let total_allocations = by_kind.iter().map(|stats| stats.allocations).sum();
+        let total_live = by_kind.iter().map(|stats| stats.live).sum();
+        HeapStatsSnapshot {
+            by_kind,
+            total_allocations,
+            total_live,
+            total_dead: total_allocations - total_live,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HeapError;
 
@@ -77,6 +198,7 @@ pub struct Heap {
     next_array_identity: usize,
     next_map_identity: usize,
     next_struct_identity: usize,
+    ledger: Rc<RefCell<HeapLedger>>,
 }
 
 impl Default for Heap {
@@ -92,15 +214,30 @@ impl Heap {
             next_array_identity: 1,
             next_map_identity: 1,
             next_struct_identity: 1,
+            ledger: Rc::new(RefCell::new(HeapLedger::default())),
+        }
+    }
+
+    pub fn stats(&self) -> HeapStats {
+        HeapStats {
+            ledger: self.ledger.clone(),
         }
     }
 
     pub fn new_environment(&self) -> SharedEnvironment {
-        Rc::new(RefCell::new(HashMap::new()))
+        let environment = Rc::new(RefCell::new(HashMap::new()));
+        self.ledger
+            .borrow_mut()
+            .record(WeakAllocation::Environment(Rc::downgrade(&environment)));
+        environment
     }
 
     pub fn new_cell(&self, value: Value) -> Cell {
-        Rc::new(RefCell::new(value))
+        let cell = Rc::new(RefCell::new(value));
+        self.ledger
+            .borrow_mut()
+            .record(WeakAllocation::Cell(Rc::downgrade(&cell)));
+        cell
     }
 
     fn next_identity(counter: &mut usize) -> Result<usize, HeapError> {
@@ -128,10 +265,11 @@ impl Heap {
 
     pub fn allocate_array(&mut self, elements: Vec<Value>) -> Result<Value, HeapError> {
         let identity = Self::next_identity(&mut self.next_array_identity)?;
-        Ok(Value::array(ArrayValue {
-            identity,
-            elements: Rc::new(RefCell::new(elements)),
-        }))
+        let elements = Rc::new(RefCell::new(elements));
+        self.ledger
+            .borrow_mut()
+            .record(WeakAllocation::Array(Rc::downgrade(&elements)));
+        Ok(Value::array(ArrayValue { identity, elements }))
     }
 
     fn normalize_map_entries(entries: Vec<(Value, Value)>) -> Vec<(Value, Value)> {
@@ -156,10 +294,11 @@ impl Heap {
     pub fn allocate_map(&mut self, entries: Vec<(Value, Value)>) -> Result<Value, HeapError> {
         let ordered = Self::normalize_map_entries(entries);
         let identity = Self::next_identity(&mut self.next_map_identity)?;
-        Ok(Value::map(MapValue {
-            identity,
-            entries: Rc::new(RefCell::new(ordered)),
-        }))
+        let entries = Rc::new(RefCell::new(ordered));
+        self.ledger
+            .borrow_mut()
+            .record(WeakAllocation::Map(Rc::downgrade(&entries)));
+        Ok(Value::map(MapValue { identity, entries }))
     }
 
     pub fn allocate_range(&self, start: i64, stop: i64, step: i64, length: usize) -> Value {
@@ -177,10 +316,14 @@ impl Heap {
         fields: Vec<(String, Value)>,
     ) -> Result<Value, HeapError> {
         let identity = Self::next_identity(&mut self.next_struct_identity)?;
+        let fields = Rc::new(RefCell::new(fields));
+        self.ledger
+            .borrow_mut()
+            .record(WeakAllocation::Struct(Rc::downgrade(&fields)));
         Ok(Value::structure(StructValue {
             identity,
             type_name,
-            fields: Rc::new(RefCell::new(fields)),
+            fields,
         }))
     }
 
@@ -208,7 +351,7 @@ pub fn new_cell(value: Value) -> Cell {
 
 #[cfg(test)]
 mod tests {
-    use super::Heap;
+    use super::{Heap, HeapObjectKind};
     use crate::value::Value;
 
     #[test]
@@ -262,5 +405,106 @@ mod tests {
             Heap::map_entry_count(&[(Value::string("a"), Value::Nil)]),
             1
         );
+    }
+
+    #[test]
+    fn heap_stats_reports_shared_storage_live_and_dead_without_retaining_values() {
+        let mut heap = Heap::new();
+        let stats = heap.stats();
+        let environment = heap.new_environment();
+        let cell = heap.new_cell(Value::number(1.0));
+        let array = heap
+            .allocate_array(vec![Value::number(1.0)])
+            .expect("array identity should be available");
+        let map = heap
+            .allocate_map(vec![(Value::string("key"), Value::number(1.0))])
+            .expect("map identity should be available");
+        let structure = heap
+            .allocate_struct(None, vec![("value".to_string(), Value::number(1.0))])
+            .expect("struct identity should be available");
+
+        let live = stats.snapshot();
+        assert_eq!(live.total_allocations, 5);
+        assert_eq!(live.total_live, 5);
+        assert_eq!(live.total_dead, 0);
+        for kind in [
+            HeapObjectKind::Environment,
+            HeapObjectKind::Cell,
+            HeapObjectKind::Array,
+            HeapObjectKind::Map,
+            HeapObjectKind::Struct,
+        ] {
+            assert_eq!(live.for_kind(kind).allocations, 1);
+            assert_eq!(live.for_kind(kind).live, 1);
+            assert_eq!(live.for_kind(kind).dead, 0);
+        }
+
+        drop(environment);
+        drop(cell);
+        drop(array);
+        drop(map);
+        drop(structure);
+
+        let dead = stats.snapshot();
+        assert_eq!(dead.total_allocations, 5);
+        assert_eq!(dead.total_live, 0);
+        assert_eq!(dead.total_dead, 5);
+        assert_eq!(
+            dead.for_kind(HeapObjectKind::Array).dead,
+            dead.for_kind(HeapObjectKind::Array).allocations
+        );
+    }
+
+    #[test]
+    fn heap_stats_distinguishes_acyclic_storage_from_an_array_cycle() {
+        let mut heap = Heap::new();
+        let stats = heap.stats();
+        let acyclic = heap
+            .allocate_array(Vec::new())
+            .expect("acyclic array identity should be available");
+        let cycle = heap
+            .allocate_array(Vec::new())
+            .expect("cyclic array identity should be available");
+
+        if let Value::Array(array) = &cycle {
+            array.elements.borrow_mut().push(cycle.clone());
+        } else {
+            panic!("expected array cycle");
+        }
+        drop(acyclic);
+        drop(cycle);
+
+        let snapshot = stats.snapshot();
+        let arrays = snapshot.for_kind(HeapObjectKind::Array);
+        assert_eq!(arrays.allocations, 2);
+        assert_eq!(arrays.live, 1);
+        assert_eq!(arrays.dead, 1);
+    }
+
+    #[test]
+    fn heap_stats_observes_a_closure_cell_cycle_without_displaying_it() {
+        let mut heap = Heap::new();
+        let stats = heap.stats();
+        let environment = heap.new_environment();
+        let cell = heap.new_cell(Value::Nil);
+        environment
+            .borrow_mut()
+            .insert("closure".to_string(), cell.clone());
+        let function = heap
+            .allocate_function("cycle", 0, 0, environment.clone())
+            .expect("function identity should be available");
+        *cell.borrow_mut() = function;
+
+        drop(environment);
+        let cycle = stats.snapshot();
+        assert_eq!(cycle.for_kind(HeapObjectKind::Environment).live, 1);
+        assert_eq!(cycle.for_kind(HeapObjectKind::Cell).live, 1);
+
+        *cell.borrow_mut() = Value::Nil;
+        let broken = stats.snapshot();
+        assert_eq!(broken.for_kind(HeapObjectKind::Environment).live, 0);
+        assert_eq!(broken.for_kind(HeapObjectKind::Cell).live, 1);
+        drop(cell);
+        assert_eq!(stats.snapshot().total_live, 0);
     }
 }

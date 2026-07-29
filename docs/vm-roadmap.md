@@ -210,6 +210,15 @@ identity 分配、environment/cell 创建和 function/array/map/range/struct/var
 registry、cycle policy、GC 和 peak-memory measurement 仍未完成，详见
 [`docs/decisions/vm-heap-facade-001.md`](decisions/vm-heap-facade-001.md)。
 
+**状态（测量窄切片已完成，2026-07-29）：** `HeapStats` ledger 现在通过只读
+`Weak` 记录报告 environment、cell、array、map 和 struct 的 allocation total、
+live/dead 数量；它不持有 VM root，也不通过 `Display` 遍历递归值。Rust 单测已
+覆盖 acyclic/cycle、closure cell/environment cycle、native temporary、runtime
+error 和 trace root release，当前 focused 结果为 `68/68`。function、range、
+variant 的 inline `Value` 生命周期、精确 peak、ledger compaction、GC、搬迁
+句柄和持久 host root 仍保持 deferred；下一步需要 workload 级 peak 测量和决策，
+而不是直接替换 `Rc<RefCell>`。
+
 ### VM-2C：可选的 tracing GC 或其他回收策略
 
 **目标：** 只有在 VM-2A/2B 证明有必要时，提供可测量的堆回收，覆盖 closures、

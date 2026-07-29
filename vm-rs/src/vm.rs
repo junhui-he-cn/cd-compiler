@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
 use crate::bytecode::{Constant, DebugLocation, DebugSource, FunctionBody, Instruction, Program};
-use crate::runtime::{
-    Cell, FunctionValue, Heap, SharedEnvironment,
-};
+use crate::runtime::{Cell, FunctionValue, Heap, SharedEnvironment};
+#[cfg(test)]
+use crate::runtime::{HeapObjectKind, HeapStats};
 use crate::value::Value;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -284,6 +284,30 @@ mod tests {
         let source_elements = array_elements(&source);
         let copied_elements = array_elements(&copied);
         assert!(source_elements[1].runtime_equals(&copied_elements[1]));
+    }
+
+    #[test]
+    fn heap_stats_observe_native_temporary_roots_and_release_them() {
+        let program = empty_program();
+        let mut vm = VM::new(&program);
+        let stats = vm.heap_stats();
+        let source = vm.make_array(vec![Value::number(1.0), Value::number(2.0)]);
+        let temporary = vm
+            .execute_native_call(
+                "slice",
+                vec![source.clone(), Value::number(0.0), Value::number(1.0)],
+            )
+            .expect("native temporary allocation should succeed");
+
+        let in_flight = stats.snapshot();
+        assert_eq!(in_flight.for_kind(HeapObjectKind::Array).allocations, 2);
+        assert_eq!(in_flight.for_kind(HeapObjectKind::Array).live, 2);
+
+        drop(temporary);
+        assert_eq!(stats.snapshot().for_kind(HeapObjectKind::Array).live, 1);
+        drop(source);
+        drop(vm);
+        assert_eq!(stats.snapshot().total_live, 0);
     }
 
     #[test]
@@ -1394,6 +1418,36 @@ mod tests {
     }
 
     #[test]
+    fn heap_stats_observe_runtime_error_root_release() {
+        let program = debug_failure_program();
+        let vm = VM::new(&program);
+        let stats = vm.heap_stats();
+        let error = vm.run().expect_err("division by zero should fail");
+        assert_eq!(error.message, "division by zero");
+
+        let snapshot = stats.snapshot();
+        let environments = snapshot.for_kind(HeapObjectKind::Environment);
+        assert!(environments.allocations > 0);
+        assert_eq!(environments.live, 0);
+        assert_eq!(snapshot.total_live, 0);
+        assert_eq!(snapshot.total_dead, snapshot.total_allocations);
+    }
+
+    #[test]
+    fn heap_stats_observe_trace_debug_values_without_retaining_vm_roots() {
+        let program = debug_failure_program();
+        let vm = VM::new(&program);
+        let stats = vm.heap_stats();
+        let trace = vm.trace();
+        assert!(trace.result.is_err());
+        assert!(trace
+            .events
+            .iter()
+            .any(|event| event.kind == TraceEventKind::Error));
+        assert_eq!(stats.snapshot().total_live, 0);
+    }
+
+    #[test]
     fn instruction_budget_is_deterministic_and_has_an_explicit_unlimited_mode() {
         let program = Program {
             constants: vec![Constant::Number("1".to_string())],
@@ -1729,6 +1783,11 @@ impl<'a> VM<'a> {
             trace_stack: Vec::new(),
             trace_last_locations: Vec::new(),
         }
+    }
+
+    #[cfg(test)]
+    fn heap_stats(&self) -> HeapStats {
+        self.heap.stats()
     }
 
     pub fn run(mut self) -> Result<String, RuntimeError> {
