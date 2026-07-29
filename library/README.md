@@ -176,6 +176,8 @@ print ds.intersectIntervals(ranges, [
   ds.Interval { start: 7, end: 9 }
 ]);
 print ds.selectNonOverlappingIntervals(ranges);
+print ds.canReachEnd([2, 3, 1, 1, 4]);
+print ds.minimumJumps([2, 3, 1, 1, 4]);
 
 print ds.mergeSortedNumbers([1, 3], [2, 4]);
 print ds.twoSumSorted([1, 2, 4, 7], 6);
@@ -798,6 +800,13 @@ schedule chosen by earliest end time. It preserves the input, rejects an
 interval with `start > end` by returning `[]`, and treats touching endpoints as
 overlapping, so a selected interval must have `start > lastEnd`. The result is
 ordered by selection and the algorithm takes `O(n log n)` time and `O(n)` space.
+
+`canReachEnd(values)` treats each non-negative integer as the maximum number of
+positions that can be advanced from that index and returns whether the final
+position is reachable. `minimumJumps(values)` returns the corresponding minimum
+number of jumps or `nil` when unreachable. Both reject negative or non-integral
+entries (`false`/`nil`), treat an empty or one-element input as already reached,
+and run in `O(n)` time with `O(1)` extra space.
 
 For non-decreasing numeric arrays, `mergeSortedNumbers(left, right)` returns a
 linear-time merged copy and `twoSumSorted(values, target)` uses two pointers to
