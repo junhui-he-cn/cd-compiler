@@ -2,6 +2,10 @@
 
 `compiler-design-vm` is the standalone Rust bytecode VM for Compiler Design `.cdbc` artifacts.
 
+The VM-specific development plan is tracked separately in
+[`docs/vm-roadmap.md`](../docs/vm-roadmap.md). The compiler and language plan
+remains [`docs/roadmap.md`](../docs/roadmap.md).
+
 ## Current Commands
 
 ```sh
