@@ -12,6 +12,8 @@ using ModuleStructExports = std::unordered_map<std::string, StructTypeDecl>;
 using ModuleEnumExports = std::unordered_map<std::string, EnumTypeDecl>;
 using StructMethodTable = std::unordered_map<std::string, MethodSignature>;
 using ModuleMethodExports = std::unordered_map<std::string, StructMethodTable>;
+using StructOperatorTable = std::unordered_map<std::string, OperatorSignature>;
+using ModuleOperatorExports = std::unordered_map<std::string, StructOperatorTable>;
 
 struct NamespaceImport {
     ModuleValueExports values;
@@ -39,11 +41,21 @@ public:
     const ModuleEnumExports* enumExports(std::size_t moduleId) const;
     void recordMethodExport(std::size_t moduleId, std::string structName, std::string methodName, MethodSignature signature);
     const ModuleMethodExports* methodExports(std::size_t moduleId) const;
+    void recordOperatorExport(
+        std::size_t moduleId,
+        std::string structName,
+        std::string symbol,
+        OperatorSignature signature);
+    const ModuleOperatorExports* operatorExports(std::size_t moduleId) const;
     bool hasValueExport(std::size_t moduleId, const std::string& name) const;
     bool hasStructExport(std::size_t moduleId, const std::string& name) const;
     bool hasEnumExport(std::size_t moduleId, const std::string& name) const;
     bool hasAnyExport(std::size_t moduleId, const std::string& name) const;
     void recordMethodExports(std::size_t moduleId, std::string structName, const StructMethodTable& methods);
+    void recordOperatorExports(
+        std::size_t moduleId,
+        std::string structName,
+        const StructOperatorTable& operators);
 
     bool hasNamespace(std::size_t moduleId, const std::string& alias) const;
     void recordNamespace(std::size_t moduleId, std::string alias, NamespaceImport imported);
@@ -54,6 +66,7 @@ private:
     std::unordered_map<std::size_t, ModuleStructExports> structExports_;
     std::unordered_map<std::size_t, ModuleEnumExports> enumExports_;
     std::unordered_map<std::size_t, ModuleMethodExports> methodExports_;
+    std::unordered_map<std::size_t, ModuleOperatorExports> operatorExports_;
     std::unordered_map<std::size_t, std::unordered_set<std::string>> localStructNames_;
     std::unordered_map<std::size_t, std::unordered_set<std::string>> localEnumNames_;
     std::unordered_map<std::size_t, std::unordered_map<std::string, NamespaceImport>> namespaces_;

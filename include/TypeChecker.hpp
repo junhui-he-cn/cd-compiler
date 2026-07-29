@@ -161,6 +161,10 @@ private:
         const ModuleMethodExports& targetExports,
         std::size_t currentModuleId,
         const std::string& structName);
+    void forwardStructOperatorExports(
+        const ModuleOperatorExports& targetExports,
+        std::size_t currentModuleId,
+        const std::string& structName);
     void checkReExport(const ExportStmt& statement);
     const ModuleStmt* findModule(const Program& program, std::size_t moduleId) const;
     const ModuleInterface* findModuleInterface(std::size_t moduleId) const;

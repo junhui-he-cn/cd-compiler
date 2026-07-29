@@ -6,7 +6,7 @@
   "decision_id": "M6-LANG-OPERATOR-001",
   "domain": "static-user-defined-ordering-operators",
   "status": "resolved",
-  "implementation_status": "partial_builtin_and_local_struct_ordering",
+  "implementation_status": "partial_builtin_local_struct_ordering_and_public_interface_shape",
   "issue": 10,
   "question": "How should user-defined types declare and resolve comparison operators while preserving static dispatch, module/interface boundaries, generic compatibility, and C++/Rust artifact parity?",
   "decision": "Add operator <, <=, >, and >= declarations inside impl blocks for named structs. The left operand is the implicit this receiver, the right operand is the single explicit parameter, and the implementation must return bool. Resolve by nominal left-operand type to one direct function target; do not add runtime operator lookup or overload ranking.",

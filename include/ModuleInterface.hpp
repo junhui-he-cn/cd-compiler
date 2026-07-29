@@ -30,12 +30,25 @@ struct ModuleInterfaceMethod {
     std::string resolvedName;
 };
 
+struct ModuleInterfaceOperator {
+    std::string symbol;
+    TypeInfo receiverType;
+    TypeInfo rightParameterType;
+    TypeInfo returnType;
+    // Operators cannot declare method-level type parameters.  These are the
+    // generic parameters and constraints of the owning receiver struct.
+    std::vector<std::string> genericParameters;
+    std::vector<std::shared_ptr<TypeInfo>> genericParameterConstraints;
+    std::string resolvedName;
+};
+
 struct ModuleInterfaceStruct {
     std::string name;
     std::vector<std::string> genericParameters;
     std::vector<std::shared_ptr<TypeInfo>> genericParameterConstraints;
     std::vector<ModuleInterfaceField> fields;
     std::vector<ModuleInterfaceMethod> methods;
+    std::vector<ModuleInterfaceOperator> operators;
     // Private fields are omitted from `fields`, but this marker keeps the
     // representation boundary visible to separate semantic consumers and
     // cache invalidation.

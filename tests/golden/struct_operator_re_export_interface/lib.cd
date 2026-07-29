@@ -1,0 +1,9 @@
+struct Point { value: number }
+
+impl Point {
+  operator <(other: Point): bool {
+    return this.value < other.value;
+  }
+}
+
+export Point;

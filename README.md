@@ -321,9 +321,12 @@ impl Person {
 ```
 
 The supported symbols are `<`, `<=`, `>`, and `>=`; dispatch is static and
-lowers to an ordinary direct function call. This slice is local to the struct's
-defining compilation unit, so the operator metadata is not yet exported via
-`.cdi` or module cache products, and custom structs do not automatically satisfy
+lowers to an ordinary direct function call. Exported structs now carry a
+canonical operator shape through `--module-interface` and `cdi 0.1` module
+cache sidecars, including the receiver/right-hand types, generic receiver
+metadata, bool result, and resolved linkage name. Re-exported structs preserve
+that metadata. Imported operator dispatch and independent module-product
+linking remain deferred, and custom structs do not automatically satisfy
 `T: Ord`.
 
 Struct values are created with named constructor expressions such as `Person { name: "Ada", age: 36 }` after a matching `struct Person { ... }` declaration. Generic declarations such as `struct Box<T> { value: T }` produce nominal types such as `Box<number>`; constructors infer type arguments from field values or expected annotations and may provide explicit arguments such as `Box<number> { value: 1 }`. Generic struct arguments are invariant and erased at runtime. Constructors preserve declared field behavior, require exact field names, and allow fields in any order. Field reads use `value.field`. Existing fields can be reassigned with `value.field = expression`; the assignment evaluates to the assigned value. Structs are reference values with identity equality, so aliases observe field mutation. Assigning a missing field is a runtime error when the target type is not statically known, and a type error when it is known.

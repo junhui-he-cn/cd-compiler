@@ -10,8 +10,8 @@ uses that interface's public data for the importer operation:
 
 - direct and namespace imports read exported values, structs, enums, and
   methods from the interface;
-- re-exports select values, structs, enums, and struct methods from the target
-  interface; and
+- re-exports select values, structs, enums, struct methods, and struct operator
+  metadata from the target interface; and
 - interface values retain the snapshot-local resolved name needed by the
   current same-program lowering path, while methods retain receiver and
   resolved-name metadata.

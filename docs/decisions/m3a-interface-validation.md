@@ -14,8 +14,8 @@ M3A migration boundary:
 - the interface module set and module-ID order match the `Program` module set;
 - graph nodes, source identity, display/canonical paths, entry markers, and
   dependency edges match the `Program::moduleGraph` snapshot;
-- values, structs, enums, and struct methods are unique and in their canonical
-  in-memory order; and
+- values, structs, enums, struct methods, and struct operators are unique and
+  in their canonical in-memory order; and
 - the public-name sets match the producer-side `ModuleSymbols` export tables.
 
 It is an observability gate, not a second semantic producer. It does not

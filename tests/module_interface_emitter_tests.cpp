@@ -95,6 +95,22 @@ void testValuesStructsFieldsMethodsAndTypes()
         ""});
     point.methods.push_back(ModuleInterfaceMethod{
         "length", {}, simpleType(StaticType::Number), {}, {}, unknownType(), ""});
+    point.operators.push_back(ModuleInterfaceOperator{
+        ">=",
+        namedStructType("Point"),
+        namedStructType("Point"),
+        simpleType(StaticType::Bool),
+        {},
+        {},
+        "__method_Point_operator_GreaterEqual#8"});
+    point.operators.push_back(ModuleInterfaceOperator{
+        "<",
+        namedStructType("Point"),
+        namedStructType("Point"),
+        simpleType(StaticType::Bool),
+        {},
+        {},
+        "__method_Point_operator_Less#7"});
 
     ModuleInterfaceStruct box;
     box.name = "Box";
@@ -126,6 +142,8 @@ void testValuesStructsFieldsMethodsAndTypes()
         "    method echo<T: number>(T): T\n"
         "    method length(): number\n"
         "    method translate(number, number): Point\n"
+        "    operator <(Point): bool\n"
+        "    operator >=(Point): bool\n"
         "  export enum Result\n"
         "    variant Ok(number)\n"
         "    variant Empty\n");

@@ -1,8 +1,8 @@
 # M6-LANG-OPERATOR-001: statically dispatched user-defined ordering operators
 
-Status: design resolved; builtin string-ordering and local named-struct operator
-slices are implemented. Public interface/cache propagation and imported operator
-dispatch remain deferred.
+Status: design resolved; builtin string-ordering, local named-struct operators,
+and the public interface/cache shape phase are implemented. Imported operator
+dispatch and independent module-product parity remain deferred.
 
 Baseline: `master` at `2592027` (`feat: add VSCode syntax highlighting`).
 
@@ -149,7 +149,8 @@ The implementation reuses the existing module and artifact boundaries:
 - `ModuleInterfaceStruct` gains a canonical operator list containing the
   symbol, receiver type, right-parameter type, `bool` result, generic receiver
   metadata, and resolved linkage name. Operators sort by symbol within their
-  owning struct.
+  owning struct. The first phase also forwards that list through explicit
+  struct re-exports.
 - `cdi 0.1` sidecars include that public operator shape in the interface body
   and public-interface hash. A sidecar that predates or omits the operator
   records is invalid for the current shape and follows the existing source

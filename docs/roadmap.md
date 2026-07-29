@@ -142,10 +142,10 @@ CTest, and canonical verification; refresh the verification inventory and pass
 
 ## Next active slice
 
-No implementation slice is currently active. The next candidate is
-`M6-LANG-OPERATOR-001C`, the public operator metadata/interface/cache migration
-described by the resolved decision record, followed by imported/re-exported and
-independent module-product parity.
+The public operator metadata/interface first phase is complete. The next
+continuation of `M6-LANG-OPERATOR-001C` is imported operator dispatch and
+independent module-product/linker parity, as described by the resolved decision
+record.
 
 ## Planned follow-up specifications
 
@@ -156,9 +156,9 @@ concrete data-structure code to the compiler slice.
 
 ### M6-LANG-OPERATOR-001C: public operator metadata and module products
 
-**Status:** local implementation complete after the builtin string-ordering
-slice. The public interface/cache portion remains deferred; the resolved
-declaration and dispatch contract is recorded in
+**Status:** local implementation and the first public interface/cache shape
+phase are complete. Imported dispatch and independent module-product parity
+remain deferred; the resolved declaration and dispatch contract is recorded in
 `docs/decisions/m6-language-operator-001.{md,json}`.
 
 **Purpose:** extend the local operator implementation with public interface and
@@ -170,10 +170,15 @@ enum, primitive, dynamic, and generic capability-dictionary behavior deferred.
 Generic algorithms continue to use explicit comparator values for custom
 structs.
 
-**Gate:** cover declaration/parser recovery, local and imported/re-exported
-operators, missing and conflicting implementations, return/parameter
-diagnostics, `.cdi` and module-cache invalidation, linked and independent
-`.cdbc 0.1` products, and C++/Rust parity before implementation is admitted.
+**Completed first phase:** exported and re-exported struct operators are
+represented in canonical module-interface text, strict `cdi 0.1` sidecars,
+public-interface hashes, and module-interface validation. Sidecars missing the
+operator section follow the existing malformed/stale fallback or strict
+rejection path.
+
+**Remaining gate:** cover imported operator dispatch, `.cdi` and module-cache
+invalidation end to end, linked and independent `.cdbc 0.1` products, and
+C++/Rust parity before the full slice is admitted.
 
 ### M5D-DEBUG-002: Interactive breakpoints and stepping
 
@@ -274,7 +279,8 @@ master + shipped generic functions, callbacks, and module interfaces
   -> completed M6-LANG-001 static generic capability constraints
   -> completed M6-LANG-OPERATOR-001A builtin string ordering
   -> completed M6-LANG-OPERATOR-001B local struct comparison operators
-  -> M6-LANG-OPERATOR-001C public operator metadata and module products (deferred)
+  -> completed M6-LANG-OPERATOR-001C public operator metadata/cache shape
+  -> M6-LANG-OPERATOR-001C imported dispatch and module products (deferred)
   -> language-enabled library specifications (no compiler-owned data structures)
 
 master + M5D-DEBUG-001

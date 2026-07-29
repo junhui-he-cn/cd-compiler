@@ -8,6 +8,7 @@ void ModuleSymbols::clear()
     structExports_.clear();
     enumExports_.clear();
     methodExports_.clear();
+    operatorExports_.clear();
     localStructNames_.clear();
     localEnumNames_.clear();
     namespaces_.clear();
@@ -89,6 +90,23 @@ const ModuleMethodExports* ModuleSymbols::methodExports(std::size_t moduleId) co
     return found == methodExports_.end() ? nullptr : &found->second;
 }
 
+void ModuleSymbols::recordOperatorExport(
+    std::size_t moduleId,
+    std::string structName,
+    std::string symbol,
+    OperatorSignature signature)
+{
+    operatorExports_[moduleId][std::move(structName)].emplace(
+        std::move(symbol),
+        std::move(signature));
+}
+
+const ModuleOperatorExports* ModuleSymbols::operatorExports(std::size_t moduleId) const
+{
+    const auto found = operatorExports_.find(moduleId);
+    return found == operatorExports_.end() ? nullptr : &found->second;
+}
+
 bool ModuleSymbols::hasValueExport(std::size_t moduleId, const std::string& name) const
 {
     const ModuleValueExports* exports = valueExports(moduleId);
@@ -119,6 +137,20 @@ void ModuleSymbols::recordMethodExports(std::size_t moduleId, std::string struct
     }
     auto& destination = methodExports_[moduleId][std::move(structName)];
     for (const auto& entry : methods) {
+        destination.emplace(entry.first, entry.second);
+    }
+}
+
+void ModuleSymbols::recordOperatorExports(
+    std::size_t moduleId,
+    std::string structName,
+    const StructOperatorTable& operators)
+{
+    if (operators.empty()) {
+        return;
+    }
+    auto& destination = operatorExports_[moduleId][std::move(structName)];
+    for (const auto& entry : operators) {
         destination.emplace(entry.first, entry.second);
     }
 }

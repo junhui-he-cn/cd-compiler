@@ -61,3 +61,16 @@ struct MethodSignature {
     std::vector<std::string> genericParameters;
     std::vector<std::shared_ptr<TypeInfo>> genericParameterConstraints;
 };
+
+// Operators have a deliberately separate public shape from ordinary methods.
+// The operator declaration has exactly one right-hand parameter and cannot
+// declare method-level type parameters; the generic metadata belongs to the
+// receiver struct.
+struct OperatorSignature {
+    TypeInfo receiverType;
+    TypeInfo rightParameterType;
+    TypeInfo returnType;
+    std::vector<std::string> genericParameters;
+    std::vector<std::shared_ptr<TypeInfo>> genericParameterConstraints;
+    std::string resolvedName;
+};

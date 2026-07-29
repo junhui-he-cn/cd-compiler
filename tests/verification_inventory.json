@@ -16706,6 +16706,34 @@
       "fixture": "tests/golden/struct_methods_mutation"
     },
     {
+      "case_id": "golden.success.struct_operator_interface.module_interface",
+      "runner": "golden",
+      "result_name": "struct_operator_interface --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:struct_operator_interface"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/struct_operator_interface/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/struct_operator_interface/module-interface.out"
+      ],
+      "fixture": "tests/golden/struct_operator_interface"
+    },
+    {
       "case_id": "golden.success.struct_operator_ordering.ast",
       "runner": "golden",
       "result_name": "struct_operator_ordering default(ast)",
@@ -16789,15 +16817,15 @@
       "fixture": "tests/golden/struct_operator_ordering"
     },
     {
-      "case_id": "golden.success.struct_operator_ordering.module_interface",
+      "case_id": "golden.success.struct_operator_re_export_interface.module_interface",
       "runner": "golden",
-      "result_name": "struct_operator_ordering --module-interface",
+      "result_name": "struct_operator_re_export_interface --module-interface",
       "stage": "semantic",
       "capability_tags": [
         "golden",
         "success",
         "module-interface-output",
-        "fixture:struct_operator_ordering"
+        "fixture:struct_operator_re_export_interface"
       ],
       "backend": "cpp",
       "expected_result_kind": "stdout-golden",
@@ -16809,12 +16837,12 @@
       ],
       "terminal_boundary": "module_interface",
       "sources": [
-        "tests/golden/struct_operator_ordering/input.cd"
+        "tests/golden/struct_operator_re_export_interface/input.cd"
       ],
       "expected_files": [
-        "tests/golden/struct_operator_ordering/module-interface.out"
+        "tests/golden/struct_operator_re_export_interface/module-interface.out"
       ],
-      "fixture": "tests/golden/struct_operator_ordering"
+      "fixture": "tests/golden/struct_operator_re_export_interface"
     },
     {
       "case_id": "golden.success.truthiness.ast",

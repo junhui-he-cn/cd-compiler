@@ -102,8 +102,8 @@ indexes.
 The module cache also stores one `cdi 0.1` sidecar under `interfaces/` for each
 module. A sidecar contains the canonical module identity, exact source hash,
 complete public type shape (including generic constraints, public struct
-fields and methods, private-field presence markers, enum variants, and linkage
-names), dependency identities and public
+fields, methods, and ordering-operator records, private-field presence
+markers, enum variants, and linkage names), dependency identities and public
 interface hashes, entry metadata, and the linkage-name allocator high-water
 mark used to reconstruct unchanged snapshots. The high-water mark is cache
 reconstruction metadata and is not part of the public interface hash.

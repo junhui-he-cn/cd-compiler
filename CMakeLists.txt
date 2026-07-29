@@ -280,6 +280,7 @@ add_executable(module_cache_tests
     tests/module_cache_tests.cpp
     src/ModuleCache.cpp
     src/ModuleInterfaceArtifact.cpp
+    src/TypeUtils.cpp
 )
 compiler_design_configure_target(module_cache_tests)
 add_test(NAME module_cache COMMAND module_cache_tests)
