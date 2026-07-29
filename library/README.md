@@ -5,7 +5,7 @@ Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 `Queue<T>`, `Deque<T>`, `RingBuffer<T>`, `BinaryHeap<T>`, `PriorityQueue<T>`, and
 numeric `MedianHeap` types, plus the
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
-`Tree<T>`, `Set<T: Eq>`, `OrderedSet<T>`, `LruCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
+`Tree<T>`, `Set<T: Eq>`, `OrderedSet<T>`, `OrderedMap<K, V>`, `LruCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
 `MultiMap<K: Eq, V: Eq>` for one-to-many mappings, immutable BST helpers, and basic generic array algorithms,
 including comparator-based sorting, window helpers, and interval merge.
 It also includes array-backed numeric `FenwickTree` and `SegmentTree` types,
@@ -480,6 +480,24 @@ values are stored only once even when the language `==` relation would differ.
 use a binary search plus array movement where needed: lookup is `O(log n)`,
 insertion and deletion are `O(n)`, and `rangeInclusive` is `O(log n + k)` for
 `k` returned values. `snapshot` is `O(n)` and allocates a new outer array.
+
+`OrderedMap<K, V>` stores key/value entries in comparator order:
+
+- `newOrderedMap<K, V>(less): OrderedMap<K, V>` — create an empty map with a
+  `fun(K, K): bool` strict-order comparator;
+- `put(key: K, value: V): bool` — insert a key or update its comparator-equivalent
+  entry; return `true` only when a new key is inserted;
+- `get(key: K): optional<V>` and `has(key: K): bool` — query a value or key;
+- `discard(key: K): bool` — remove a key and report whether it was present;
+- `size`, `isEmpty`, and `snapshot` — inspect state or return
+  `[OrderedMapEntry<K, V>]` in comparator order.
+
+Comparator equivalence means neither key is less than the other. Equivalent keys
+share one entry; updating one changes the value while preserving the first
+stored key and its sorted position. `get` uses `optional<V>`, so callers storing
+a `nil` value should use `has` to distinguish it from a missing key. Lookup is
+`O(log n)`, insertion and deletion are `O(n)` because of array movement, and
+`snapshot` is `O(n)` with a fresh outer array and entry values.
 
 `LruCache<K: Eq, V>` is an array-backed least-recently-used cache:
 

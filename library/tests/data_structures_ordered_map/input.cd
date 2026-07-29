@@ -1,0 +1,73 @@
+import "../../data_structures.cd" as ds;
+
+fun ascending(left: string, right: string): bool {
+  return left < right;
+}
+
+fun descending(left: number, right: number): bool {
+  return left > right;
+}
+
+fun byTens(left: number, right: number): bool {
+  return floor(left / 10) < floor(right / 10);
+}
+
+fun renderStrings(entries: [ds.OrderedMapEntry<string, number>]): string {
+  let result = "";
+  let index = 0;
+  while (index < entries.len()) {
+    if (index > 0) {
+      result = result + ",";
+    }
+    result = result + entries[index].key + "=" + str(entries[index].value);
+    index += 1;
+  }
+  return result;
+}
+
+fun renderNumbers(entries: [ds.OrderedMapEntry<number, string>]): string {
+  let result = "";
+  let index = 0;
+  while (index < entries.len()) {
+    if (index > 0) {
+      result = result + ",";
+    }
+    result = result + str(entries[index].key) + "=" + entries[index].value;
+    index += 1;
+  }
+  return result;
+}
+
+let words = ds.newOrderedMap<string, number>(ascending);
+print words.isEmpty();
+print words.get("missing");
+print words.has("missing");
+print words.discard("missing");
+print words.put("delta", 4);
+print words.put("alpha", 1);
+print words.put("gamma", 3);
+print words.put("beta", 2);
+print renderStrings(words.snapshot());
+print words.size();
+print words.get("gamma");
+print words.put("beta", 20);
+print renderStrings(words.snapshot());
+print words.has("beta");
+print words.discard("gamma");
+print words.discard("gamma");
+print renderStrings(words.snapshot());
+
+let snapshot = words.snapshot();
+snapshot[0].value = 99;
+print renderStrings(words.snapshot());
+
+let numbers = ds.newOrderedMap<number, string>(descending);
+numbers.put(2, "two");
+numbers.put(9, "nine");
+numbers.put(5, "five");
+print renderNumbers(numbers.snapshot());
+
+let buckets = ds.newOrderedMap<number, string>(byTens);
+print buckets.put(19, "first");
+print buckets.put(11, "updated");
+print renderNumbers(buckets.snapshot());
