@@ -43,7 +43,7 @@ Rust VM 的长期目标是成为一个可独立验证、可重复执行、可观
 
 | 区域 | 当前状态 | 事实证据 |
 | --- | --- | --- |
-| `.cdbc` artifact | `cdbc 0.1` 文本格式可解析、规范化打印和结构验证；支持 linked program 与 module product 两种 envelope | [`docs/bytecode-text-format.md`](bytecode-text-format.md)、`vm-rs/src/format.rs` |
+| `.cdbc` artifact | `cdbc 0.1` 文本格式可解析、规范化打印，并在 parser、CLI、linker 和执行入口共享结构 verifier；支持 linked program 与 module product 两种 envelope | [`docs/bytecode-text-format.md`](bytecode-text-format.md)、`vm-rs/src/format.rs` |
 | 指令执行 | Rust register VM 已执行常量、变量、调用、闭包、控制流、算术、比较、数组、map、range、struct、enum、索引和字段操作 | `vm-rs/src/vm.rs`、`vm-rs/src/bytecode.rs` |
 | 运行时值 | 已有 `nil`、number、bool、string、function、array、map、range、struct、variant；数组、map、struct 字段和闭包环境保留共享/别名语义 | `vm-rs/src/value.rs`、`vm-rs/src/runtime.rs` |
 | native 运行时 | 已覆盖集合修改/查询、字符串、数学、`typeOf`、`hash`、`contains`、切片和 callback helpers 等已登记 native | `vm-rs/src/vm.rs`、`docs/bytecode-text-format.md` |
@@ -53,8 +53,8 @@ Rust VM 的长期目标是成为一个可独立验证、可重复执行、可观
 
 当前基线的主要限制也要明确记录：VM 是 binary crate 而不是稳定库 API；
 运行时对象主要由 `Rc<RefCell<...>>` 和手工 identity 管理；没有统一的资源
-预算和取消机制；没有独立 verifier、交互式 debugger、快照/回滚、二进制
-artifact 或 JIT。`cdbc 0.1` 的兼容性优先级高于这些后续能力。
+预算和取消机制；没有交互式 debugger、快照/回滚、二进制 artifact 或 JIT。
+`cdbc 0.1` 的兼容性优先级高于这些后续能力。
 
 ## 3. 路线图总览
 
@@ -79,7 +79,7 @@ artifact 或 JIT。`cdbc 0.1` 的兼容性优先级高于这些后续能力。
 
 ## 4. VM-1：执行安全与契约加固（P0，下一阶段）
 
-### VM-1A：独立 artifact verifier
+### VM-1A：独立 artifact verifier（已完成，2026-07-29）
 
 **目标：** 把“文本能解析”与“程序可以安全执行”分成清晰的验证层。
 
@@ -102,6 +102,15 @@ artifact 或 JIT。`cdbc 0.1` 的兼容性优先级高于这些后续能力。
   输入在执行前失败且不产生 stdout；正常 artifact 的 C++ emission、Rust
   dump 和 Rust run 结果不变。对应测试应覆盖 linked、module、debug metadata
   和 native allowlist，而不是只测试算术指令。
+
+**状态与证据：** `format::verify_artifact`、`verify_program` 和
+`verify_module_artifact` 已成为 public verifier 边界；parser 返回 artifact 前、
+CLI 的 `dump`/`run`/`trace`/`link` 读取后、module linker 输入和最终 linked
+program 都会经过验证。2026-07-29 的证据为 Rust 单测 `50/50`、CTest
+`33/33`、artifact `118/118`、module cache `11/11`、Rust VM `778/778`、
+canonical verification `1879/1879`、boundary `5/5`、malformed `104/104` 和
+debugger 全部通过；边界决策见
+[`docs/decisions/vm-artifact-verifier-001.md`](decisions/vm-artifact-verifier-001.md)。
 
 ### VM-1B：确定性资源预算与取消
 
@@ -402,11 +411,11 @@ canonical verification 和 malformed corpus。完整仓库 gate 仍以
 
 ## 12. 当前下一步
 
-VM 路线切换后的第一个实现切片应是 **VM-1A：独立 artifact verifier**。开始
-前先写 `docs/decisions/vm-artifact-verifier-001.md`，盘点当前
-`format.rs` 已做的检查和 `vm.rs` 仍在执行时检查的项目，再以 malformed
-artifact corpus 建立 red/green gate。VM-1A 完成前不推进 GC、persistent VM、
-JIT 或新的 artifact version。
+VM-1A 已完成。下一步是 **VM-1B：确定性资源预算与取消**：先为
+`RunConfig`/CLI 固定 instruction steps、call depth、容器规模、输出字节数、
+artifact 大小和模块展开规模的默认值、覆盖方式、计数边界与稳定错误，再实现
+指令循环、native callback 和增长型容器操作中的取消检查点。VM-1B 完成前不
+推进 GC、persistent VM、JIT 或新的 artifact version。
 
 这份路线图的成功标准不是同时铺开所有 VM 研究方向，而是让每个运行时能力
 都有清楚的契约、独立的证据和可回退的迁移路径；语言 roadmap 继续独立演进，

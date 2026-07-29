@@ -1,7 +1,7 @@
 use crate::bytecode::{
     Constant, DebugLocation, DebugRange, DebugSource, Function, FunctionBody, Instruction, Program,
 };
-use crate::format::ModuleArtifact;
+use crate::format::{verify_module_artifact, verify_program, ModuleArtifact};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Debug)]
@@ -29,6 +29,8 @@ impl Linker {
     fn new(modules: Vec<ModuleArtifact>) -> Result<Self, String> {
         let mut by_identity = HashMap::new();
         for module in modules {
+            verify_module_artifact(&module)
+                .map_err(|error| format!("module artifact verification failed: {}", error))?;
             if by_identity
                 .insert(module.identity.clone(), module)
                 .is_some()
@@ -223,7 +225,50 @@ impl Linker {
 }
 
 pub fn link_modules(modules: Vec<ModuleArtifact>) -> Result<Program, String> {
-    Linker::new(modules)?.finish()
+    let program = Linker::new(modules)?.finish()?;
+    verify_program(&program)
+        .map_err(|error| format!("linked program verification failed: {}", error))?;
+    Ok(program)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::link_modules;
+    use crate::bytecode::{FunctionBody, Program};
+    use crate::format::ModuleArtifact;
+
+    fn empty_program() -> Program {
+        Program {
+            constants: Vec::new(),
+            names: Vec::new(),
+            main: FunctionBody {
+                registers: 0,
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            },
+            functions: Vec::new(),
+            debug_sources: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn rejects_module_with_empty_identity_before_linking() {
+        let module = ModuleArtifact {
+            identity: String::new(),
+            path: "entry.cd".to_string(),
+            canonical_path: "entry.cd".to_string(),
+            is_entry: true,
+            entry_order: Some(0),
+            dependencies: Vec::new(),
+            program: empty_program(),
+        };
+
+        let error = link_modules(vec![module]).expect_err("invalid module must be rejected");
+        assert!(
+            error.contains("identity and paths must be non-empty"),
+            "{error}"
+        );
+    }
 }
 
 fn emit_pending_main(

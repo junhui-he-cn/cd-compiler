@@ -29,7 +29,9 @@ fn read_artifact(path: impl AsRef<Path>) -> Result<format::Artifact, String> {
     let path = path.as_ref();
     let source = fs::read_to_string(path)
         .map_err(|error| format!("error: failed to read `{}`: {}", path.display(), error))?;
-    format::parse_artifact(&source).map_err(|error| format!("error: {}", error))
+    let artifact = format::parse_artifact(&source).map_err(|error| format!("error: {}", error))?;
+    format::verify_artifact(&artifact).map_err(|error| format!("error: {}", error))?;
+    Ok(artifact)
 }
 
 fn read_program(path: impl AsRef<Path>) -> Result<Program, String> {

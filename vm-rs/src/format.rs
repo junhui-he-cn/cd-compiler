@@ -623,26 +623,23 @@ pub fn parse_artifact(source: &str) -> Result<Artifact, ParseError> {
         None
     };
     let program = parse_program_body(&mut parser)?;
-    validate_program(&program, parser.last_line())?;
-    match module {
-        Some(module) => {
-            let artifact = ModuleArtifact {
-                identity: module.identity,
-                path: module.path,
-                canonical_path: module.canonical_path,
-                is_entry: module.is_entry,
-                entry_order: module.entry_order,
-                dependencies: module.dependencies,
-                program,
-            };
-            validate_module_artifact(&artifact, parser.last_line())?;
-            Ok(Artifact::Module(artifact))
-        }
-        None => Ok(Artifact::Program(program)),
-    }
+    let artifact = match module {
+        Some(module) => Artifact::Module(ModuleArtifact {
+            identity: module.identity,
+            path: module.path,
+            canonical_path: module.canonical_path,
+            is_entry: module.is_entry,
+            entry_order: module.entry_order,
+            dependencies: module.dependencies,
+            program,
+        }),
+        None => Artifact::Program(program),
+    };
+    verify_artifact_at_line(&artifact, parser.last_line())?;
+    Ok(artifact)
 }
 
-fn validate_module_artifact(artifact: &ModuleArtifact, line: usize) -> Result<(), ParseError> {
+fn validate_module_envelope(artifact: &ModuleArtifact, line: usize) -> Result<(), ParseError> {
     if artifact.identity.is_empty()
         || artifact.path.is_empty()
         || artifact.canonical_path.is_empty()
@@ -724,6 +721,33 @@ fn validation_error(line: usize, message: impl Into<String>) -> ParseError {
         line,
         message: message.into(),
     }
+}
+
+pub fn verify_artifact(artifact: &Artifact) -> Result<(), ParseError> {
+    verify_artifact_at_line(artifact, 1)
+}
+
+pub fn verify_program(program: &Program) -> Result<(), ParseError> {
+    validate_program(program, 1)
+}
+
+pub fn verify_module_artifact(artifact: &ModuleArtifact) -> Result<(), ParseError> {
+    verify_module_artifact_at_line(artifact, 1)
+}
+
+fn verify_artifact_at_line(artifact: &Artifact, line: usize) -> Result<(), ParseError> {
+    match artifact {
+        Artifact::Program(program) => validate_program(program, line),
+        Artifact::Module(module) => verify_module_artifact_at_line(module, line),
+    }
+}
+
+fn verify_module_artifact_at_line(
+    artifact: &ModuleArtifact,
+    line: usize,
+) -> Result<(), ParseError> {
+    validate_program(&artifact.program, line)?;
+    validate_module_envelope(artifact, line)
 }
 
 fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
@@ -2148,6 +2172,30 @@ mod tests {
                 error.message
             );
         }
+    }
+
+    #[test]
+    fn public_verifier_rejects_invalid_in_memory_program() {
+        let artifact = Artifact::Program(Program {
+            constants: vec![Constant::Nil],
+            names: Vec::new(),
+            main: FunctionBody {
+                registers: 1,
+                instructions: vec![Instruction::Constant {
+                    dest: 1,
+                    constant: 0,
+                }],
+                locations: vec![None],
+            },
+            functions: Vec::new(),
+            debug_sources: Vec::new(),
+        });
+
+        let error = verify_artifact(&artifact).expect_err("invalid program must be rejected");
+        assert_eq!(error.line, 1);
+        assert!(error
+            .message
+            .contains("destination register r1 out of range"));
     }
 
     #[test]
