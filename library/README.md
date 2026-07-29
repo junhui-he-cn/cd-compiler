@@ -195,6 +195,7 @@ print ds.binarySearch([1, 2, 2, 4], 2, ascendingNumber);
 print ds.compareStrings("ant", "apple");
 
 print ds.knapsack01([2, 3, 4], [3, 4, 5], 5);
+print ds.completeKnapsack([2, 3], [3, 4], 7);
 print ds.subsets([1, 2]);
 print ds.combinations([1, 2, 3], 2);
 print ds.permutations([1, 2, 3]);
@@ -658,13 +659,18 @@ subsequence. `longestCommonSubsequenceLength(left, right)` computes the LCS
 length over Unicode scalar values with `O(leftLength * rightLength)` time and
 `O(rightLength)` space.
 
-The current backtracking and 0/1 knapsack helpers are:
+The current backtracking and knapsack helpers are:
 
 - `knapsack01(weights, values, capacity): number?` — maximize the value of
   selecting each item at most once. It returns `nil` when the arrays differ in
   length, the capacity is negative or non-integral, or a weight is negative or
   non-integral; zero-weight items are supported. The result is `0` for a valid
   zero capacity and uses `O(capacity)` space.
+- `completeKnapsack(weights, values, capacity): number?` — maximize the value
+  when each item may be selected repeatedly. It returns `nil` for mismatched
+  arrays, invalid capacity, or a non-positive/non-integral weight; a valid
+  zero capacity returns `0`. The ascending-capacity DP uses `O(itemCount *
+  capacity)` time and `O(capacity)` space.
 - `subsets<T>(values): [[T]]` — enumerate every subset, including the empty
   subset, in depth-first include/exclude order. The output has `2^n` entries
   and requires `O(n * 2^n)` output space.
