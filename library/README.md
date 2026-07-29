@@ -216,6 +216,7 @@ print ds.uniqueGridPathsWithObstacles([
   [false, true, false],
   [false, false, false]
 ]);
+print ds.matrixChainCost([10, 30, 5, 60]);
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -670,6 +671,12 @@ length with `O(n^2)` time and `O(n)` space; equal values do not extend a
 subsequence. `longestCommonSubsequenceLength(left, right)` computes the LCS
 length over Unicode scalar values with `O(leftLength * rightLength)` time and
 `O(rightLength)` space.
+
+`matrixChainCost(dimensions)` computes the minimum scalar multiplication cost
+for matrices whose adjacent dimensions are given by the array. Positive integer
+dimensions are required; an empty or one-element dimensions array returns `0`,
+and invalid dimensions return `nil`. It uses interval DP in `O(n^3)` time and
+`O(n^2)` space, where `n` is the number of matrices.
 
 The current backtracking and knapsack helpers are:
 
