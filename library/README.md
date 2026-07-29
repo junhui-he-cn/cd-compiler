@@ -200,6 +200,7 @@ print ds.boundedKnapsack([2, 3], [3, 4], [2, 1], 7);
 print ds.subsets([1, 2]);
 print ds.combinations([1, 2, 3], 2);
 print ds.permutations([1, 2, 3]);
+print ds.generateParentheses(3);
 print ds.uniqueGridPathsWithObstacles([
   [false, false, false],
   [false, true, false],
@@ -688,6 +689,11 @@ The current backtracking and knapsack helpers are:
   depth-first source-index order. An empty input returns `[[]]`; repeated
   values are treated as distinct positions, so duplicate values can produce
   duplicate-looking permutations.
+- `generateParentheses(pairs): [string]` — enumerate balanced parenthesis
+  strings in depth-first order, trying `(` before `)`. Negative or
+  non-integral counts return `[]`; `0` returns the one empty string. The
+  result count is the Catalan number for `pairs`, so the complete output has
+  exponential time and space cost.
 
 The three generators allocate complete nested arrays rather than exposing a
 lazy iterator. Their running time and output space are proportional to the
