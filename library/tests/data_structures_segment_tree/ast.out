@@ -3726,6 +3726,61 @@ Program
                   Expr (= currentEnd farthest)
             Expr (+= index 1)
       Return jumps
+    Fun huffmanMergeCost(weights: [number]): number?
+      Let working: [number] = (array)
+      Let index = 0
+      While (group (< index (member-call weights len)))
+        Body
+          Block
+            If (group (< (index weights index) 0))
+              Then
+                Block
+                  Return nil
+            Expr (member-call working push (index weights index))
+            Expr (+= index 1)
+      Let total = 0
+      While (group (> (member-call working len) 1))
+        Body
+          Block
+            Let firstIndex = 0
+            Let secondIndex = 1
+            If (group (< (index working secondIndex) (index working firstIndex)))
+              Then
+                Block
+                  Let swap = firstIndex
+                  Expr (= firstIndex secondIndex)
+                  Expr (= secondIndex swap)
+            Expr (= index 2)
+            While (group (< index (member-call working len)))
+              Body
+                Block
+                  If (group (< (index working index) (index working firstIndex)))
+                    Then
+                      Block
+                        Expr (= secondIndex firstIndex)
+                        Expr (= firstIndex index)
+                    Else
+                      Block
+                        If (group (< (index working index) (index working secondIndex)))
+                          Then
+                            Block
+                              Expr (= secondIndex index)
+                  Expr (+= index 1)
+            Let merged = (+ (index working firstIndex) (index working secondIndex))
+            Expr (+= total merged)
+            Let remaining: [number] = (array)
+            Expr (= index 0)
+            While (group (< index (member-call working len)))
+              Body
+                Block
+                  If (group (&& (!= index firstIndex) (!= index secondIndex)))
+                    Then
+                      Block
+                        Expr (member-call remaining push (index working index))
+                  Expr (+= index 1)
+            Expr (member-call remaining push merged)
+            Expr (= working remaining)
+      Return total
     Fun mergeSortedNumbers(left: [number], right: [number]): [number]
       Let result: [number] = (array)
       Let leftIndex = 0
@@ -4717,7 +4772,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque RingBuffer BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newRingBuffer newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums differenceArray prefixMinimums prefixMaximums nextGreaterValues mergeIntervals intersectIntervals selectNonOverlappingIntervals canReachEnd minimumJumps mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum climbStairs maxNonAdjacentSum minCoinCount uniqueGridPaths uniqueGridPathsWithObstacles minGridPathSum editDistance longestIncreasingSubsequenceLength longestCommonSubsequenceLength knapsack01 completeKnapsack boundedKnapsack subsets combinations permutations generateParentheses nQueens mazePaths gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
+    Export Stack Queue Deque RingBuffer BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newRingBuffer newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums differenceArray prefixMinimums prefixMaximums nextGreaterValues mergeIntervals intersectIntervals selectNonOverlappingIntervals canReachEnd minimumJumps huffmanMergeCost mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum climbStairs maxNonAdjacentSum minCoinCount uniqueGridPaths uniqueGridPathsWithObstacles minGridPathSum editDistance longestIncreasingSubsequenceLength longestCommonSubsequenceLength knapsack01 completeKnapsack boundedKnapsack subsets combinations permutations generateParentheses nQueens mazePaths gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let tree = (member-call ds newSegmentTree (array 5 1 4 2 8))
