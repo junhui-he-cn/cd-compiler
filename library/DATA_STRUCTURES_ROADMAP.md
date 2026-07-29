@@ -45,8 +45,8 @@
 - `MultiMap<K,V>`：数组条目表示一个键对应多个值的泛型映射。
 - 数组基础算法：`reverseArray`、`rotateArray`、`linearSearch`、`countValue`、`isSorted`。
 - 频率统计：`frequencyEntries`、`mostFrequent`。
-- 数组排序：稳定插入排序 `sortArray`、`sortArrayInPlace`、选择排序、冒泡排序、
-  归并排序 `mergeSort`、快速排序 `quickSort`/`quickSortInPlace` 和堆排序
+- 数组排序：稳定插入排序 `sortArray`、`sortArrayInPlace`、希尔排序 `shellSort`、
+  选择排序、冒泡排序、归并排序 `mergeSort`、快速排序 `quickSort`/`quickSortInPlace` 和堆排序
   `heapSort`/`heapSortInPlace`。
 - 数组窗口算法：`chunkArray`、`slidingWindows`、`prefixSums`。
 - 数组前缀/差分与单调栈：`differenceArray`、`prefixMinimums`、`prefixMaximums`、
@@ -286,6 +286,8 @@ enum Result<T, E> {
 `Trie` 使用数组节点和线性边查找，支持 Unicode scalar-value 字符、重复插入去重
 以及按首次插入的边顺序返回前缀结果，不依赖通用哈希。
 `mergeSort` 使用稳定的自底向上归并排序，返回新数组，不改变输入。
+`shellSort` 使用从 `n / 2` 开始不断折半的 gap 序列和分组插入排序，返回浅拷贝，
+不保证稳定性；当前序列的最坏时间复杂度为 `O(n^2)`，额外结果空间为 `O(n)`。
 `quickSort` 和 `quickSortInPlace` 使用中点 pivot 的原地分区版本；它们不保证
 稳定性，平均为 `O(n log n)`，最坏为 `O(n^2)`。
 `heapSort` 和 `heapSortInPlace` 使用 comparator 定义的相反堆序完成原地堆排序，
@@ -349,7 +351,8 @@ enum Result<T, E> {
 ### 5.3 排序算法
 
 当前库已提供稳定插入排序：`sortArray` 返回浅拷贝，`sortArrayInPlace` 原地
-修改；两者都接受 `less` 比较器，时间复杂度为 `O(n^2)`。
+修改；两者都接受 `less` 比较器，时间复杂度为 `O(n^2)`。库还提供不修改输入的
+`shellSort`、选择排序、冒泡排序、归并排序、快速排序和堆排序版本。
 
 先提供可读、容易验证的实现，再提供工程上常用的实现：
 
@@ -357,8 +360,8 @@ enum Result<T, E> {
 | --- | --- | --- |
 | 冒泡排序 | `O(n^2)`，教学用途 | 已完成 |
 | 选择排序 | `O(n^2)`，低额外空间 | 已完成 |
-| 插入排序 | `O(n^2)`，小数组表现好，稳定 | 第一批 |
-| 希尔排序 | 依赖 gap 序列，通常不稳定 | 后续 |
+| 插入排序 | `O(n^2)`，小数组表现好，稳定 | 已完成 |
+| 希尔排序 | 折半 gap 序列，通常不稳定 | 已完成 |
 | 归并排序 | `O(n log n)`，稳定，需额外数组 | 第一批 |
 | 快速排序 | 平均 `O(n log n)`，最坏 `O(n^2)` | 第一批/需栈深度策略 |
 | 堆排序 | `O(n log n)`，原地，不稳定 | 第一批，复用堆 |
@@ -511,7 +514,7 @@ S2 已完成 `Set<T>` 的数组后端版本：使用语言 `==` 做线性去重�
 键数组和每键 value 数组，`discard(key,value)` 删除一个匹配 pair。随后完成
 了基础数组搜索/计数/逆序算法、稳定插入排序、窗口/前缀和算法、区间合并、
 双指针、数组集合算法、固定窗口统计、区间交集、最大子数组和、二分查找、归并
-排序、快速排序、堆排序以及选择排序和冒泡排序教学版本；基础数值算法已加入
+排序、快速排序、堆排序、希尔排序以及选择排序和冒泡排序教学版本；基础数值算法已加入
 `gcd`、`lcm`、`extendedGcd`、`isPrime`、`sievePrimes`、`fastPower`、`factorial`
 与 `fibonacci`。
 

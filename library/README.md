@@ -6,7 +6,7 @@ Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
 `Tree<T>`, `Set<T>`, and `MultiSet<T>` types. It also provides an array-backed
 `MultiMap<K, V>` for one-to-many mappings, immutable BST helpers, and basic generic array algorithms,
-including comparator-based insertion sort, window helpers, and interval merge.
+including comparator-based sorting, window helpers, and interval merge.
 It also includes array-backed numeric `FenwickTree` and `SegmentTree` types,
 numeric two-pointer helpers for sorted arrays, and string/tree/graph algorithms.
 Array set operations preserve first-occurrence order and use language equality.
@@ -159,6 +159,7 @@ fun ascending(left: number, right: number): bool {
 let ordered = ds.bstInsert(ds.bstInsert(ds.emptyTree<number>(), 2, ascending), 1, ascending);
 print ds.treeInorder(ordered);
 print ds.sortArray(values, ascending);
+print ds.shellSort(values, ascending);
 print ds.mergeSort(values, ascending);
 print ds.quickSort(values, ascending);
 print ds.heapSort(values, ascending);
@@ -596,6 +597,12 @@ the input order of comparator-equal values, can stop early for an already
 ordered input, and uses `O(n^2)` worst-case time and `O(1)` extra space. All
 four use the same `less` callback contract as `sortArray`.
 
+`shellSort<T>(values, less)` returns a sorted shallow copy and leaves the input
+unchanged. It uses a halving gap sequence and gapped insertion sort; it is not
+stable, has `O(n^2)` worst-case time with the current gap sequence, and uses
+`O(n)` result space. Empty arrays need an explicit type argument when `T` cannot
+be inferred.
+
 `mergeSort<T>(values, less)` returns a stable, sorted shallow copy and leaves
 the input unchanged. It uses bottom-up merge sort in `O(n log n)` time and
 `O(n)` temporary outer-array space. Equal comparator values keep their input
@@ -967,6 +974,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case array_algorithms_rotation`,
 `--case array_algorithms_frequency`,
 `--case array_algorithms_quick_sort`, `--case array_algorithms_heap_sort`,
+`--case array_algorithms_shell_sort`,
 `--case array_algorithms_two_pointer`,
 `--case array_algorithms_sets`, or `--case array_algorithms_window_stats` for
 focused coverage. Use `--update` only when
