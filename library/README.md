@@ -201,6 +201,7 @@ print ds.subsets([1, 2]);
 print ds.combinations([1, 2, 3], 2);
 print ds.permutations([1, 2, 3]);
 print ds.generateParentheses(3);
+print ds.nQueens(4);
 print ds.uniqueGridPathsWithObstacles([
   [false, false, false],
   [false, true, false],
@@ -694,6 +695,10 @@ The current backtracking and knapsack helpers are:
   non-integral counts return `[]`; `0` returns the one empty string. The
   result count is the Catalan number for `pairs`, so the complete output has
   exponential time and space cost.
+- `nQueens(size): [[number]]` — enumerate every N-Queens solution as one
+  zero-based column index per row, with rows and columns searched in ascending
+  order. Negative or non-integral sizes return `[]`; `0` returns `[[]]`.
+  Complete enumeration has exponential search cost and stores all solutions.
 
 The three generators allocate complete nested arrays rather than exposing a
 lazy iterator. Their running time and output space are proportional to the

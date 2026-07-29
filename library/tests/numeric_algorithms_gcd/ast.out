@@ -4327,6 +4327,57 @@ Program
             Return result
       Expr (call appendParentheses pairs 0 0 "" result)
       Return result
+    Fun appendNQueens(size: number, row: number, columns: [number], usedColumns: [bool], diagonals: [bool], antiDiagonals: [bool], result: [[number]])
+      If (group (== row size))
+        Then
+          Block
+            Expr (member-call result push (call copy columns))
+            Return nil
+      Let column = 0
+      While (group (< column size))
+        Body
+          Block
+            Let diagonal = (- (+ (- row column) size) 1)
+            Let antiDiagonal = (+ row column)
+            If (group (&& (&& (! (index usedColumns column)) (! (index diagonals diagonal))) (! (index antiDiagonals antiDiagonal))))
+              Then
+                Block
+                  Expr (= (index usedColumns column) true)
+                  Expr (= (index diagonals diagonal) true)
+                  Expr (= (index antiDiagonals antiDiagonal) true)
+                  Expr (member-call columns push column)
+                  Expr (call appendNQueens size (+ row 1) columns usedColumns diagonals antiDiagonals result)
+                  Expr (member-call columns pop)
+                  Expr (= (index antiDiagonals antiDiagonal) false)
+                  Expr (= (index diagonals diagonal) false)
+                  Expr (= (index usedColumns column) false)
+            Expr (+= column 1)
+    Fun nQueens(size: number): [[number]]
+      Let result: [[number]] = (array)
+      If (group (|| (!= (call floor size) size) (< size 0)))
+        Then
+          Block
+            Return result
+      Let usedColumns: [bool] = (array)
+      Let diagonals: [bool] = (array)
+      Let antiDiagonals: [bool] = (array)
+      Let index = 0
+      While (group (< index size))
+        Body
+          Block
+            Expr (member-call usedColumns push false)
+            Expr (+= index 1)
+      Let diagonalCount = (- (* size 2) 1)
+      Expr (= index 0)
+      While (group (< index diagonalCount))
+        Body
+          Block
+            Expr (member-call diagonals push false)
+            Expr (member-call antiDiagonals push false)
+            Expr (+= index 1)
+      Let columns: [number] = (array)
+      Expr (call appendNQueens size 0 columns usedColumns diagonals antiDiagonals result)
+      Return result
     Fun gcd(left: number, right: number): number
       Let a = left
       If (group (< a 0))
@@ -4528,7 +4579,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque RingBuffer BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newRingBuffer newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums differenceArray prefixMinimums prefixMaximums nextGreaterValues mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum climbStairs maxNonAdjacentSum minCoinCount uniqueGridPaths uniqueGridPathsWithObstacles minGridPathSum editDistance longestIncreasingSubsequenceLength longestCommonSubsequenceLength knapsack01 completeKnapsack boundedKnapsack subsets combinations permutations generateParentheses gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
+    Export Stack Queue Deque RingBuffer BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newRingBuffer newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums differenceArray prefixMinimums prefixMaximums nextGreaterValues mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum climbStairs maxNonAdjacentSum minCoinCount uniqueGridPaths uniqueGridPathsWithObstacles minGridPathSum editDistance longestIncreasingSubsequenceLength longestCommonSubsequenceLength knapsack01 completeKnapsack boundedKnapsack subsets combinations permutations generateParentheses nQueens gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Print (member-call ds gcd 84 30)
