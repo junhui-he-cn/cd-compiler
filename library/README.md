@@ -4,8 +4,8 @@ This directory contains a small data-structure library written in the public
 Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 `Queue<T>`, `Deque<T>`, `BinaryHeap<T>`, and `PriorityQueue<T>` types, plus the
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
-`Set<T>` and `MultiSet<T>` types. It also provides an array-backed
-`MultiMap<K, V>` for one-to-many mappings and basic generic array algorithms,
+`Tree<T>`, `Set<T>`, and `MultiSet<T>` types. It also provides an array-backed
+`MultiMap<K, V>` for one-to-many mappings, immutable BST helpers, and basic generic array algorithms,
 including comparator-based insertion sort, window helpers, and interval merge.
 It also includes an array-backed numeric `FenwickTree`, numeric two-pointer
 helpers for sorted arrays, and string/tree/graph algorithms.
@@ -129,6 +129,9 @@ print sums.rangeSum(1, 4);
 sums.add(2, 7);
 print sums.snapshot();
 
+let tree = ds.treeNode(2, ds.treeLeaf(1), ds.treeLeaf(3));
+print ds.treeInorder(tree);
+
 let values = [3, 1, 3, 2];
 print ds.reverseArray(values);
 print ds.rotateArray(values, 1);
@@ -140,6 +143,8 @@ fun ascending(left: number, right: number): bool {
   return left < right;
 }
 
+let ordered = ds.bstInsert(ds.bstInsert(ds.emptyTree<number>(), 2, ascending), 1, ascending);
+print ds.treeInorder(ordered);
 print ds.sortArray(values, ascending);
 print ds.mergeSort(values, ascending);
 print ds.quickSort(values, ascending);
@@ -290,6 +295,36 @@ does not throw or log errors; callers must inspect it with an exhaustive
 are shared between list values, so the structure supports persistent snapshots.
 The type argument for `emptyList` must be explicit because the empty constructor
 has no payload from which to infer `T`.
+
+`Tree<T>` is an immutable recursive binary tree:
+
+- `emptyTree<T>(): Tree<T>` — create an empty tree;
+- `treeNode(value, left, right): Tree<T>` and `treeLeaf(value): Tree<T>` —
+  construct nodes and leaves;
+- `treeSize`, `treeHeight`, and `treeLeafCount` — return structural statistics;
+- `treePreorder`, `treeInorder`, `treePostorder`, and `treeLevelOrder` — return
+  fresh arrays of values in the selected traversal order.
+
+Tree constructors reuse their child values without mutating them. Traversals
+and statistics are `O(n)`; recursive traversals use `O(h)` call-stack space,
+while level order uses `O(n)` queue space. Empty trees have size, height, and
+leaf count zero and all traversals return `[]`.
+
+The BST helpers use the same `Tree<T>` representation and a caller-supplied
+`fun(T, T): bool` comparator:
+
+- `bstContains(tree, target, less): bool` — search for a value;
+- `bstInsert(tree, value, less): Tree<T>` — return a tree with the value added;
+- `bstDelete(tree, value, less): Tree<T>` — return a tree with one matching
+  value removed;
+- `bstMinimum` and `bstMaximum` — return the extrema or `nil` for an empty tree;
+- `bstPredecessor` and `bstSuccessor` — return the strict neighboring value or
+  `nil` when none exists.
+
+BST insertion ignores comparator-equivalent duplicates. Insert and delete
+return new roots and preserve the original tree's shared subtrees. Operations
+are `O(h)` time and `O(h)` recursive/temporary space, where `h` is the tree
+height; without balancing, the worst case is `O(n)`.
 
 `Set<T>` provides an array-backed set with language equality:
 
@@ -652,6 +687,7 @@ python3 library/tests/run_tests.py ./build/compiler_design vm-rs
 
 Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_result`, `--case data_structures_list`,
+`--case data_structures_tree`, `--case data_structures_bst`,
 `--case data_structures_set`, `--case data_structures_multiset`,
 `--case data_structures_multimap`, `--case data_structures_disjoint_set`,
 `--case data_structures_fenwick`,

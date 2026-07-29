@@ -1,0 +1,40 @@
+import "../../data_structures.cd" as ds;
+
+fun ascending(left: number, right: number): bool {
+  return left < right;
+}
+
+let empty = ds.emptyTree<number>();
+let tree0 = ds.bstInsert(empty, 4, ascending);
+let tree1 = ds.bstInsert(tree0, 2, ascending);
+let tree2 = ds.bstInsert(tree1, 6, ascending);
+let tree3 = ds.bstInsert(tree2, 1, ascending);
+let tree4 = ds.bstInsert(tree3, 3, ascending);
+let tree5 = ds.bstInsert(tree4, 5, ascending);
+let tree = ds.bstInsert(tree5, 7, ascending);
+
+print ds.treeInorder(tree);
+print ds.bstContains(tree, 5, ascending);
+print ds.bstContains(tree, 8, ascending);
+print ds.bstMinimum(tree);
+print ds.bstMaximum(tree);
+print ds.bstPredecessor(tree, 4, ascending);
+print ds.bstSuccessor(tree, 4, ascending);
+
+let duplicate = ds.bstInsert(tree, 4, ascending);
+print ds.treeInorder(duplicate);
+print ds.treeInorder(tree);
+
+let afterLeaf = ds.bstDelete(tree, 1, ascending);
+print ds.treeInorder(afterLeaf);
+let afterOneChild = ds.bstDelete(afterLeaf, 2, ascending);
+print ds.treeInorder(afterOneChild);
+let afterTwoChildren = ds.bstDelete(afterOneChild, 4, ascending);
+print ds.treeInorder(afterTwoChildren);
+print ds.treeInorder(tree);
+
+print ds.bstContains(empty, 1, ascending);
+print ds.bstMinimum(empty);
+print ds.bstMaximum(empty);
+print ds.bstPredecessor(empty, 1, ascending);
+print ds.bstSuccessor(empty, 1, ascending);

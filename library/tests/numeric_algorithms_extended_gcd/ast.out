@@ -255,6 +255,271 @@ Program
       Let values: [T] = (array)
       Expr (call appendListToArray list values)
       Return values
+    Enum Tree<T> {Empty, Node(value: T, left: Tree<T>, right: Tree<T>)}
+    Fun emptyTree<T>(): Tree<T>
+      Return (member-call Tree Empty<T>)
+    Fun treeNode<T>(value: T, left: Tree<T>, right: Tree<T>): Tree<T>
+      Return (member-call Tree Node value left right)
+    Fun treeLeaf<T>(value: T): Tree<T>
+      Return (member-call Tree Node value (member-call Tree Empty<T>) (member-call Tree Empty<T>))
+    Fun treeSize<T>(tree: Tree<T>): number
+      Return (match tree (arm Tree.Empty 0) (arm Tree.Node(value, left, right) (+ (+ 1 (call treeSize left)) (call treeSize right))))
+    Fun treeHeight<T>(tree: Tree<T>): number
+      Match tree
+        Arm Tree.Empty
+          Block
+            Return 0
+        Arm Tree.Node(value, left, right)
+          Block
+            Let leftHeight = (call treeHeight left)
+            Let rightHeight = (call treeHeight right)
+            If (group (> leftHeight rightHeight))
+              Then
+                Block
+                  Return (+ leftHeight 1)
+            Return (+ rightHeight 1)
+      Return 0
+    Fun treeLeafCount<T>(tree: Tree<T>): number
+      Match tree
+        Arm Tree.Empty
+          Block
+            Return 0
+        Arm Tree.Node(value, left, right)
+          Block
+            If (group (&& (== left (member-call Tree Empty<T>)) (== right (member-call Tree Empty<T>))))
+              Then
+                Block
+                  Return 1
+            Return (+ (call treeLeafCount left) (call treeLeafCount right))
+      Return 0
+    Fun appendTreePreorder<T>(tree: Tree<T>, result: [T])
+      Match tree
+        Arm Tree.Empty
+          Block
+        Arm Tree.Node(value, left, right)
+          Block
+            Expr (member-call result push value)
+            Expr (call appendTreePreorder left result)
+            Expr (call appendTreePreorder right result)
+    Fun appendTreeInorder<T>(tree: Tree<T>, result: [T])
+      Match tree
+        Arm Tree.Empty
+          Block
+        Arm Tree.Node(value, left, right)
+          Block
+            Expr (call appendTreeInorder left result)
+            Expr (member-call result push value)
+            Expr (call appendTreeInorder right result)
+    Fun appendTreePostorder<T>(tree: Tree<T>, result: [T])
+      Match tree
+        Arm Tree.Empty
+          Block
+        Arm Tree.Node(value, left, right)
+          Block
+            Expr (call appendTreePostorder left result)
+            Expr (call appendTreePostorder right result)
+            Expr (member-call result push value)
+    Fun treePreorder<T>(tree: Tree<T>): [T]
+      Let result: [T] = (array)
+      Expr (call appendTreePreorder tree result)
+      Return result
+    Fun treeInorder<T>(tree: Tree<T>): [T]
+      Let result: [T] = (array)
+      Expr (call appendTreeInorder tree result)
+      Return result
+    Fun treePostorder<T>(tree: Tree<T>): [T]
+      Let result: [T] = (array)
+      Expr (call appendTreePostorder tree result)
+      Return result
+    Fun treeLevelOrder<T>(tree: Tree<T>): [T]
+      Let result: [T] = (array)
+      Let queue: [Tree<T>] = (array tree)
+      Let headIndex = 0
+      While (group (< headIndex (member-call queue len)))
+        Body
+          Block
+            Let current = (index queue headIndex)
+            Expr (+= headIndex 1)
+            Match current
+              Arm Tree.Empty
+                Block
+              Arm Tree.Node(value, left, right)
+                Block
+                  Expr (member-call result push value)
+                  Expr (member-call queue push left)
+                  Expr (member-call queue push right)
+      Return result
+    Struct TreeRemoval<T> {value: T, rest: Tree<T>}
+    Fun bstRemoveMinimum<T>(tree: Tree<T>): TreeRemoval<T>?
+      Match tree
+        Arm Tree.Empty
+          Block
+            Return nil
+        Arm Tree.Node(value, left, right)
+          Block
+            Match left
+              Arm Tree.Empty
+                Block
+                  Return (construct TreeRemoval<T> value: value rest: right)
+              Arm Tree.Node(leftValue, leftLeft, leftRight)
+                Block
+                  Let removal = (call bstRemoveMinimum left)
+                  If (group (== removal nil))
+                    Then
+                      Block
+                        Return nil
+                  Return (construct TreeRemoval<T> value: (field removal value) rest: (member-call Tree Node value (field removal rest) right))
+      Return nil
+    Fun bstRemoveMaximum<T>(tree: Tree<T>): TreeRemoval<T>?
+      Match tree
+        Arm Tree.Empty
+          Block
+            Return nil
+        Arm Tree.Node(value, left, right)
+          Block
+            Match right
+              Arm Tree.Empty
+                Block
+                  Return (construct TreeRemoval<T> value: value rest: left)
+              Arm Tree.Node(rightValue, rightLeft, rightRight)
+                Block
+                  Let removal = (call bstRemoveMaximum right)
+                  If (group (== removal nil))
+                    Then
+                      Block
+                        Return nil
+                  Return (construct TreeRemoval<T> value: (field removal value) rest: (member-call Tree Node value left (field removal rest)))
+      Return nil
+    Fun bstContains<T>(tree: Tree<T>, target: T, less: fun(T, T): bool): bool
+      Let current = tree
+      While (group true)
+        Body
+          Block
+            Match current
+              Arm Tree.Empty
+                Block
+                  Return false
+              Arm Tree.Node(value, left, right)
+                Block
+                  If (group (call less target value))
+                    Then
+                      Block
+                        Expr (= current left)
+                        Continue
+                  If (group (call less value target))
+                    Then
+                      Block
+                        Expr (= current right)
+                        Continue
+                  Return true
+      Return false
+    Fun bstInsert<T>(tree: Tree<T>, value: T, less: fun(T, T): bool): Tree<T>
+      Match tree
+        Arm Tree.Empty
+          Block
+            Return (member-call Tree Node value (member-call Tree Empty<T>) (member-call Tree Empty<T>))
+        Arm Tree.Node(current, left, right)
+          Block
+            If (group (call less value current))
+              Then
+                Block
+                  Return (member-call Tree Node current (call bstInsert left value less) right)
+            If (group (call less current value))
+              Then
+                Block
+                  Return (member-call Tree Node current left (call bstInsert right value less))
+            Return tree
+      Return tree
+    Fun bstDelete<T>(tree: Tree<T>, value: T, less: fun(T, T): bool): Tree<T>
+      Match tree
+        Arm Tree.Empty
+          Block
+            Return tree
+        Arm Tree.Node(current, left, right)
+          Block
+            If (group (call less value current))
+              Then
+                Block
+                  Return (member-call Tree Node current (call bstDelete left value less) right)
+            If (group (call less current value))
+              Then
+                Block
+                  Return (member-call Tree Node current left (call bstDelete right value less))
+            Match left
+              Arm Tree.Empty
+                Block
+                  Return right
+              Arm Tree.Node(leftValue, leftLeft, leftRight)
+                Block
+                  Match right
+                    Arm Tree.Empty
+                      Block
+                        Return left
+                    Arm Tree.Node(rightValue, rightLeft, rightRight)
+                      Block
+                        Let removal = (call bstRemoveMinimum right)
+                        If (group (== removal nil))
+                          Then
+                            Block
+                              Return left
+                        Return (member-call Tree Node (field removal value) left (field removal rest))
+      Return tree
+    Fun bstMinimum<T>(tree: Tree<T>): T?
+      Let removal = (call bstRemoveMinimum tree)
+      If (group (== removal nil))
+        Then
+          Block
+            Return nil
+      Return (field removal value)
+    Fun bstMaximum<T>(tree: Tree<T>): T?
+      Let removal = (call bstRemoveMaximum tree)
+      If (group (== removal nil))
+        Then
+          Block
+            Return nil
+      Return (field removal value)
+    Fun bstPredecessor<T>(tree: Tree<T>, target: T, less: fun(T, T): bool): T?
+      Let current = tree
+      Let candidate: T? = nil
+      While (group true)
+        Body
+          Block
+            Match current
+              Arm Tree.Empty
+                Block
+                  Return candidate
+              Arm Tree.Node(value, left, right)
+                Block
+                  If (group (call less value target))
+                    Then
+                      Block
+                        Expr (= candidate value)
+                        Expr (= current right)
+                    Else
+                      Block
+                        Expr (= current left)
+      Return candidate
+    Fun bstSuccessor<T>(tree: Tree<T>, target: T, less: fun(T, T): bool): T?
+      Let current = tree
+      Let candidate: T? = nil
+      While (group true)
+        Body
+          Block
+            Match current
+              Arm Tree.Empty
+                Block
+                  Return candidate
+              Arm Tree.Node(value, left, right)
+                Block
+                  If (group (call less target value))
+                    Then
+                      Block
+                        Expr (= candidate value)
+                        Expr (= current left)
+                    Else
+                      Block
+                        Expr (= current right)
+      Return candidate
     Struct Set<T> {items: [T]}
     Impl Set<T>
       Method indexOf(value: T): number
@@ -3205,7 +3470,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Fun asArray(result: ds.ExtendedGcdResult): [number]
