@@ -58,6 +58,7 @@
 - 子数组统计：`maxSubarraySum`。
 - 基础数值算法：`gcd`、`lcm`、`extendedGcd`、`isPrime`、`sievePrimes`、`fastPower`、
   `factorial`、`fibonacci`（整数输入契约）。
+- 一维 DP：`climbStairs`、`maxNonAdjacentSum`、`minCoinCount`。
 - 二分查找：`lowerBound`、`upperBound`、`binarySearch`。
 - 字符串比较辅助：`compareStrings`、`stringLess`（当前限定可打印 ASCII）。
 - 字符串匹配：`findSubstring`、`prefixFunction`、`zFunction`、`kmpSearch`、`isPalindrome`。
@@ -444,6 +445,9 @@ enum Result<T, E> {
 精度假设；项目文档没有规定的溢出行为不能默默写成库保证。
 
 ### 5.10 动态规划、贪心与回溯
+
+当前已完成一维 DP 的爬楼梯、非相邻最大和和最少硬币数基础版本；它们只使用
+数组与数值运算，暂不承诺溢出行为。
 
 - 一维 DP：爬楼梯、打家劫舍、硬币兑换；
 - 背包：0/1、完全、多重背包；

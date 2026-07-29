@@ -610,6 +610,20 @@ subarray, or `nil` for an empty input. It preserves the input and handles an
 all-negative array by returning its least-negative element. The scan is `O(n)`
 time and `O(1)` extra space.
 
+The one-dimensional DP helpers are:
+
+- `climbStairs(steps): number?` — count one-step/two-step climbs; `0` has one
+  empty climb and invalid/non-integral inputs return `nil`;
+- `maxNonAdjacentSum(values): number` — maximize a sum without adjacent picks;
+  an empty or all-negative input returns `0` by allowing the empty selection;
+- `minCoinCount(amount, coins): number?` — return the minimum number of
+  positive-integer coins or `nil` when the target is invalid/unreachable;
+  non-positive or non-integral coin entries are ignored.
+
+`climbStairs` is `O(steps)` time and `O(1)` space. `maxNonAdjacentSum` is
+`O(n)` time and `O(1)` space. `minCoinCount` is `O(amount * coinCount)` time
+and `O(amount)` space; these numeric helpers do not define overflow behavior.
+
 For an array already sorted according to `less`, `lowerBound(values, target,
 less)` returns the first insertion position, and `upperBound` returns the
 position after all equivalent values. `binarySearch` returns the first matching
@@ -780,6 +794,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case numeric_algorithms_extended_gcd`,
 `--case numeric_algorithms_primes`,
 `--case numeric_algorithms_sequences`,
+`--case algorithms_dp_1d`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
 `--case array_algorithms_prefix_monotonic`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,

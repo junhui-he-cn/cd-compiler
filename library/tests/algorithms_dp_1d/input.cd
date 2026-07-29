@@ -1,0 +1,20 @@
+import "../../data_structures.cd" as ds;
+
+print ds.climbStairs(0);
+print ds.climbStairs(1);
+print ds.climbStairs(2);
+print ds.climbStairs(5);
+print ds.climbStairs(-1);
+print ds.climbStairs(2.5);
+
+print ds.maxNonAdjacentSum([]);
+print ds.maxNonAdjacentSum([2, 7, 9, 3, 1]);
+print ds.maxNonAdjacentSum([-3, -1]);
+print ds.maxNonAdjacentSum([5, 1, 1, 5]);
+
+print ds.minCoinCount(0, [1, 2, 5]);
+print ds.minCoinCount(11, [1, 2, 5]);
+print ds.minCoinCount(3, [2]);
+print ds.minCoinCount(-1, [1]);
+print ds.minCoinCount(5, []);
+print ds.minCoinCount(6, [0, 2]);
