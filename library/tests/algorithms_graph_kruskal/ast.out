@@ -2304,6 +2304,84 @@ Program
       Let edgeChildren: [[number]] = (array (array))
       Let terminal: [bool] = (array false)
       Return (construct Trie edgeCharacters: edgeCharacters edgeChildren: edgeChildren terminal: terminal)
+    Struct FenwickTree {tree: [number], values: [number], jumps: [number]}
+    Impl FenwickTree
+      Method size(): number
+        Return (member-call (field this values) len)
+      Method updateTree(index: number, delta: number)
+        Let node = (+ index 1)
+        While (group (<= node (member-call (field this values) len)))
+          Body
+            Block
+              Expr (+= (index (field this tree) node) delta)
+              Expr (+= node (index (field this jumps) node))
+      Method add(index: number, delta: number): bool
+        If (group (|| (|| (!= (call floor index) index) (< index 0)) (>= index (member-call (field this values) len))))
+          Then
+            Block
+              Return false
+        Expr (+= (index (field this values) index) delta)
+        Expr (member-call this updateTree index delta)
+        Return true
+      Method prefixSumUnchecked(endExclusive: number): number
+        Let result = 0
+        Let node = endExclusive
+        While (group (> node 0))
+          Body
+            Block
+              Expr (+= result (index (field this tree) node))
+              Expr (-= node (index (field this jumps) node))
+        Return result
+      Method prefixSum(endExclusive: number): number?
+        If (group (|| (|| (!= (call floor endExclusive) endExclusive) (< endExclusive 0)) (> endExclusive (member-call (field this values) len))))
+          Then
+            Block
+              Return nil
+        Return (member-call this prefixSumUnchecked endExclusive)
+      Method rangeSum(start: number, endExclusive: number): number?
+        If (group (|| (|| (|| (|| (!= (call floor start) start) (!= (call floor endExclusive) endExclusive)) (< start 0)) (< endExclusive start)) (> endExclusive (member-call (field this values) len))))
+          Then
+            Block
+              Return nil
+        Return (- (member-call this prefixSumUnchecked endExclusive) (member-call this prefixSumUnchecked start))
+      Method valueAt(index: number): number?
+        If (group (|| (|| (!= (call floor index) index) (< index 0)) (>= index (member-call (field this values) len))))
+          Then
+            Block
+              Return nil
+        Return (index (field this values) index)
+      Method snapshot(): [number]
+        Return (call copy (field this values))
+    Fun newFenwickTree(values: [number]): FenwickTree
+      Let jumps: [number] = (array 0)
+      Let index = 1
+      While (group (<= index (member-call values len)))
+        Body
+          Block
+            Let jump = 1
+            Let current = index
+            While (group (== (* (call floor (/ current 2)) 2) current))
+              Body
+                Block
+                  Expr (= current (call floor (/ current 2)))
+                  Expr (*= jump 2)
+            Expr (member-call jumps push jump)
+            Expr (+= index 1)
+      Let tree: [number] = (array 0)
+      Expr (= index 0)
+      While (group (< index (member-call values len)))
+        Body
+          Block
+            Expr (member-call tree push 0)
+            Expr (+= index 1)
+      Let result = (construct FenwickTree tree: tree values: (call copy values) jumps: jumps)
+      Expr (= index 0)
+      While (group (< index (member-call values len)))
+        Body
+          Block
+            Expr (member-call result updateTree index (index values index))
+            Expr (+= index 1)
+      Return result
     Fun lowerBound<T>(values: [T], target: T, less: fun(T, T): bool): number
       Let low = 0
       Let high = (member-call values len)
@@ -3127,7 +3205,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Fun totalWeight(graph: ds.WeightedGraph): number

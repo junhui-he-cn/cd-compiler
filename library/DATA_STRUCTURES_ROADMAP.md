@@ -57,6 +57,7 @@
 - 字符串比较辅助：`compareStrings`、`stringLess`（当前限定可打印 ASCII）。
 - 字符串匹配：`findSubstring`、`prefixFunction`、`zFunction`、`kmpSearch`、`isPalindrome`。
 - Trie：`Trie`、`newTrie`、`has`、`startsWith`、`wordsWithPrefix`。
+- Fenwick 树：数值 `FenwickTree`，支持点更新、前缀和、区间和与快照。
 - 并查集：整数顶点 `DisjointSet`，支持路径压缩和按大小合并。
 - 图基础结构：整数顶点数组邻接表 `Graph`，支持有向/无向边。
 - 图遍历：`breadthFirstOrder`、`depthFirstOrder`。
@@ -203,7 +204,7 @@ enum Result<T, E> {
 | AVL 树 | 后续 | 严格平衡的搜索树 | 先完成 BST 和旋转契约；递归结构表示仍需确认 |
 | 红黑树 | 后续 | 工程化平衡搜索树 | 实现复杂，排在 AVL 之后 |
 | B 树/B+ 树 | 后续 | 磁盘/大规模索引 | 当前没有持久化文件 API，不列入近期目标 |
-| Fenwick 树 | 第一批/受限 | 单点更新、前缀和、区间和 | 数值数组，`O(log n)`；先固定 `number` 版本 |
+| Fenwick 树 | 现有（S3） | 单点更新、前缀和、区间和 | 数值数组，零基公共索引；内部预计算低位跨度 |
 | 线段树 | 第一批/受限 | 区间查询、单点/区间更新 | 数值数组；先提供求和/最小值等固定聚合版本 |
 | 稀疏表 | 后续 | 静态数组区间幂等查询 | 需要明确内存和聚合函数契约 |
 | Trie | 受限实现 | 字符串插入、查找、前缀查询、自动补全 | 字符串键 + 数组节点索引，不依赖递归结构体 |
@@ -490,8 +491,8 @@ S2 已完成 `Set<T>` 的数组后端版本：使用语言 `==` 做线性去重�
 
 ### S3：树和区间查询
 
-实现不可变二叉树/BST、Trie、Fenwick 树和基础线段树，再决定是否值得引入
-可变平衡树。
+已实现 Trie 和 Fenwick 树；后续实现不可变二叉树/BST 及基础线段树，再决定
+是否值得引入可变平衡树。
 
 ### S4：图和路径算法
 

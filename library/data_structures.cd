@@ -2423,6 +2423,109 @@ fun newTrie(): Trie {
   };
 }
 
+// FenwickTree uses zero-based public indexes and one-based internal nodes.
+// The language does not currently expose bitwise operators, so the least
+// significant bit for each internal node is precomputed once at construction
+// time. This keeps updates and prefix queries at O(log n) after construction.
+struct FenwickTree {
+  tree: [number],
+  values: [number],
+  jumps: [number]
+}
+
+impl FenwickTree {
+  fun size(): number {
+    return this.values.len();
+  }
+
+  fun updateTree(index: number, delta: number) {
+    let node = index + 1;
+    while (node <= this.values.len()) {
+      this.tree[node] += delta;
+      node += this.jumps[node];
+    }
+  }
+
+  fun add(index: number, delta: number): bool {
+    if (floor(index) != index || index < 0 || index >= this.values.len()) {
+      return false;
+    }
+    this.values[index] += delta;
+    this.updateTree(index, delta);
+    return true;
+  }
+
+  fun prefixSumUnchecked(endExclusive: number): number {
+    let result = 0;
+    let node = endExclusive;
+    while (node > 0) {
+      result += this.tree[node];
+      node -= this.jumps[node];
+    }
+    return result;
+  }
+
+  fun prefixSum(endExclusive: number): number? {
+    if (floor(endExclusive) != endExclusive || endExclusive < 0 || endExclusive > this.values.len()) {
+      return nil;
+    }
+    return this.prefixSumUnchecked(endExclusive);
+  }
+
+  fun rangeSum(start: number, endExclusive: number): number? {
+    if (floor(start) != start || floor(endExclusive) != endExclusive
+        || start < 0 || endExclusive < start || endExclusive > this.values.len()) {
+      return nil;
+    }
+    return this.prefixSumUnchecked(endExclusive) - this.prefixSumUnchecked(start);
+  }
+
+  fun valueAt(index: number): number? {
+    if (floor(index) != index || index < 0 || index >= this.values.len()) {
+      return nil;
+    }
+    return this.values[index];
+  }
+
+  fun snapshot(): [number] {
+    return copy(this.values);
+  }
+}
+
+fun newFenwickTree(values: [number]): FenwickTree {
+  let jumps: [number] = [0];
+  let index = 1;
+  while (index <= values.len()) {
+    let jump = 1;
+    let current = index;
+    while (floor(current / 2) * 2 == current) {
+      current = floor(current / 2);
+      jump *= 2;
+    }
+    jumps.push(jump);
+    index += 1;
+  }
+
+  let tree: [number] = [0];
+  index = 0;
+  while (index < values.len()) {
+    tree.push(0);
+    index += 1;
+  }
+
+  let result = FenwickTree {
+    tree: tree,
+    values: copy(values),
+    jumps: jumps
+  };
+  index = 0;
+  while (index < values.len()) {
+    result.updateTree(index, values[index]);
+    index += 1;
+  }
+  return result;
+}
+
 fun lowerBound<T>(values: [T], target: T, less: fun(T, T): bool): number {
   let low = 0;
   let high = values.len();
@@ -3262,4 +3365,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, ExtendedGcdResult, Trie, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, newTrie, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, minimumSpanningForestKruskal, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, ExtendedGcdResult, Trie, FenwickTree, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, newTrie, newFenwickTree, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, minimumSpanningForestKruskal, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci;

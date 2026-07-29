@@ -7,7 +7,8 @@ generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
 `Set<T>` and `MultiSet<T>` types. It also provides an array-backed
 `MultiMap<K, V>` for one-to-many mappings and basic generic array algorithms,
 including comparator-based insertion sort, window helpers, and interval merge.
-It also includes numeric two-pointer helpers for sorted arrays.
+It also includes an array-backed numeric `FenwickTree`, numeric two-pointer
+helpers for sorted arrays, and string/tree/graph algorithms.
 Array set operations preserve first-occurrence order and use language equality.
 
 The planned structure and algorithm inventory, implementation constraints, and
@@ -121,6 +122,12 @@ print ds.minCut(weighted, 0, 2);
 
 let forest = ds.minimumSpanningForest(weighted);
 print forest.edgeCount();
+
+let sums = ds.newFenwickTree([1, 2, 3, 4, 5]);
+print sums.prefixSum(3);
+print sums.rangeSum(1, 4);
+sums.add(2, 7);
+print sums.snapshot();
 
 let values = [3, 1, 3, 2];
 print ds.reverseArray(values);
@@ -541,6 +548,25 @@ Unicode scalar-value strings. Prefix results use child insertion order rather
 than lexical sorting, and the current linear edge scans take `O(k)` per node
 lookup where `k` is that node's outgoing edge count.
 
+`FenwickTree` stores numeric values in an array-backed binary indexed tree:
+
+- `newFenwickTree(values: [number]): FenwickTree` — build from a copied initial
+  value array;
+- `size(): number` and `snapshot(): [number]` — inspect the logical values;
+- `add(index: number, delta: number): bool` — apply a point update using a
+  zero-based index;
+- `valueAt(index: number): number?` — read one value, or `nil` for an invalid
+  index;
+- `prefixSum(endExclusive: number): number?` — sum `[0, endExclusive)`;
+- `rangeSum(start: number, endExclusive: number): number?` — sum the half-open
+  range `[start, endExclusive)`.
+
+Invalid or non-integral indexes and ranges return `false` or `nil` without
+changing the tree. The constructor copies the input array, and `snapshot`
+returns another outer-array copy. Construction is `O(n log n)` with the
+language's arithmetic-only low-bit precomputation; point updates and both
+query methods are `O(log n)`, while `snapshot` is `O(n)`.
+
 `Interval { start, end }` represents a numeric interval with the documented
 precondition `start <= end`. `mergeIntervals(intervals)` returns a new array
 sorted by start, merges overlapping or touching intervals, and leaves the input
@@ -628,6 +654,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_result`, `--case data_structures_list`,
 `--case data_structures_set`, `--case data_structures_multiset`,
 `--case data_structures_multimap`, `--case data_structures_disjoint_set`,
+`--case data_structures_fenwick`,
 `--case data_structures_graph`, `--case data_structures_weighted_graph`,
 `--case algorithms_graph_topological`,
 `--case algorithms_graph_traversal`,
