@@ -18,6 +18,7 @@ import argparse
 import difflib
 import hashlib
 import json
+import math
 import os
 import platform
 import shlex
@@ -37,6 +38,7 @@ DEFAULT_REPORT = REPO_ROOT / "build" / "benchmark-report.json"
 DEFAULT_COMPILER = REPO_ROOT / "build" / "compiler_design"
 DEFAULT_VM = REPO_ROOT / "vm-rs"
 SCHEMA_VERSION = 1
+DEFAULT_TIMEOUT_SECONDS = 60.0
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -137,7 +139,19 @@ def rounded(value: float) -> float:
     return round(value, 6)
 
 
-def run_command(command: list[str], cwd: Path) -> tuple[float, int, str, str]:
+def _captured_text(value: str | bytes | None) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return value
+
+
+def run_command(
+    command: list[str],
+    cwd: Path,
+    timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+) -> tuple[float, int, str, str]:
     """Run a command and measure its wall-clock duration."""
 
     environment = os.environ.copy()
@@ -151,7 +165,17 @@ def run_command(command: list[str], cwd: Path) -> tuple[float, int, str, str]:
             capture_output=True,
             check=False,
             env=environment,
+            timeout=timeout_seconds,
         )
+    except subprocess.TimeoutExpired as error:
+        stdout = _captured_text(error.stdout)
+        stderr = _captured_text(error.stderr)
+        timeout_message = f"command timed out after {timeout_seconds:g}s"
+        if stderr:
+            stderr = f"{timeout_message}\n{stderr}"
+        else:
+            stderr = timeout_message
+        return time.perf_counter() - started, 124, stdout, stderr
     except OSError as error:
         return time.perf_counter() - started, 127, "", f"{type(error).__name__}: {error}"
     return (
@@ -207,6 +231,7 @@ def run_workload(
     vm_binary: Path,
     workload: dict[str, Any],
     repetitions: int,
+    timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
     workload_id = str(workload["workload_id"])
     expected_path = _repo_path(
@@ -221,6 +246,7 @@ def run_workload(
     compile_exit_ok: list[bool] = []
     compile_stdout_ok: list[bool] = []
     compile_stderr_ok: list[bool] = []
+    compile_artifact_ok: list[bool] = []
     runtime_exit_ok: list[bool] = []
     runtime_stdout_ok: list[bool] = []
     runtime_stderr_ok: list[bool] = []
@@ -236,7 +262,9 @@ def run_workload(
                 str(artifact),
                 *(str(source) for source in sources),
             ]
-            duration, returncode, stdout, stderr = run_command(compile_command, repo_root)
+            duration, returncode, stdout, stderr = run_command(
+                compile_command, repo_root, timeout_seconds
+            )
             compile_samples.append(duration)
             exit_ok = returncode == 0
             stdout_ok = not stdout
@@ -244,6 +272,8 @@ def run_workload(
             compile_exit_ok.append(exit_ok)
             compile_stdout_ok.append(stdout_ok)
             compile_stderr_ok.append(stderr_ok)
+            artifact_ok = artifact.is_file()
+            compile_artifact_ok.append(artifact_ok)
             if not exit_ok:
                 errors.append(
                     f"{workload_id} compile {repetition + 1}: "
@@ -257,7 +287,7 @@ def run_workload(
                 errors.append(
                     f"{workload_id} compile {repetition + 1} produced stderr: {stderr.rstrip()}"
                 )
-            elif not artifact.is_file():
+            elif not artifact_ok:
                 errors.append(
                     f"{workload_id} compile {repetition + 1} did not emit {artifact}"
                 )
@@ -269,13 +299,16 @@ def run_workload(
             and all(compile_exit_ok)
             and all(compile_stdout_ok)
             and all(compile_stderr_ok)
+            and all(compile_artifact_ok)
             and last_artifact is not None
         )
 
         if compile_passed and last_artifact is not None:
             runtime_command = [str(vm_binary), "run", str(last_artifact)]
             for repetition in range(repetitions):
-                duration, returncode, stdout, stderr = run_command(runtime_command, repo_root)
+                duration, returncode, stdout, stderr = run_command(
+                    runtime_command, repo_root, timeout_seconds
+                )
                 runtime_samples.append(duration)
                 exit_ok = returncode == 0
                 stdout_ok = stdout == expected
@@ -310,6 +343,7 @@ def run_workload(
         "compile_exit_code_validated": bool(compile_exit_ok) and all(compile_exit_ok),
         "compile_stdout_validated": bool(compile_stdout_ok) and all(compile_stdout_ok),
         "compile_stderr_validated": bool(compile_stderr_ok) and all(compile_stderr_ok),
+        "compile_artifact_validated": bool(compile_artifact_ok) and all(compile_artifact_ok),
         "exit_code_validated": bool(runtime_exit_ok) and all(runtime_exit_ok),
         "stdout_validated": bool(runtime_stdout_ok) and all(runtime_stdout_ok),
         "stderr_validated": bool(runtime_stderr_ok) and all(runtime_stderr_ok),
@@ -324,10 +358,12 @@ def run_workload(
 
 def resolve_vm_binary(vm_path: Path) -> Path:
     path = vm_path.resolve()
+    if path.name == "Cargo.toml":
+        if not path.is_file():
+            raise ValueError(f"Rust VM manifest not found: {path}")
+        path = path.parent
     if path.is_file():
         return path
-    if path.name == "Cargo.toml":
-        path = path.parent
     if path.is_dir():
         candidates = (
             path / "target" / "debug" / "compiler-design-vm",
@@ -373,6 +409,7 @@ def run_benchmarks(
     repetitions: int,
     selected_workloads: list[str] | None = None,
     manifest_path: Path | None = None,
+    timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
     workload_map = {str(item["workload_id"]): item for item in manifest["workloads"]}
     selected = [str(item["workload_id"]) for item in manifest["workloads"]]
@@ -389,6 +426,7 @@ def run_benchmarks(
             vm_binary,
             workload_map[workload_id],
             repetitions,
+            timeout_seconds,
         )
         for workload_id in selected
     ]
@@ -408,10 +446,12 @@ def run_benchmarks(
         "commit": git_commit(repo_root),
         "manifest": manifest_display,
         "repetitions": repetitions,
+        "timeout_seconds": rounded(timeout_seconds),
         "measurement": {
             "compile": "compiler_design --emit-bytecode wall-clock time, including process startup and artifact write",
             "runtime": "already-built Rust VM run wall-clock time, excluding compilation and Cargo",
             "statistic": "min, median, and max over the requested repetitions",
+            "timeout_seconds": rounded(timeout_seconds),
             "enforcement": "informational; correctness failures return non-zero",
         },
         "commands": {
@@ -455,6 +495,12 @@ def parse_args() -> argparse.Namespace:
         help="number of compile and runtime samples per workload (default: manifest value)",
     )
     parser.add_argument(
+        "--timeout",
+        type=float,
+        default=DEFAULT_TIMEOUT_SECONDS,
+        help="per-process timeout in seconds (default: 60)",
+    )
+    parser.add_argument(
         "--workload",
         "--case",
         action="append",
@@ -479,6 +525,9 @@ def main() -> int:
         if repetitions <= 0:
             print("FAIL --repeat must be a positive integer", file=sys.stderr)
             return 64
+        if not math.isfinite(args.timeout) or args.timeout <= 0:
+            print("FAIL --timeout must be a positive finite number", file=sys.stderr)
+            return 64
         compiler = args.compiler.resolve()
         if not compiler.is_file():
             print(f"compiler not found: {compiler}", file=sys.stderr)
@@ -492,14 +541,19 @@ def main() -> int:
             repetitions,
             selected_workloads=args.workloads,
             manifest_path=manifest_path,
+            timeout_seconds=args.timeout,
         )
     except (OSError, ValueError, json.JSONDecodeError) as error:
         print(f"benchmark runner: {error}", file=sys.stderr)
         return 64
 
-    report_path = args.report.resolve()
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    try:
+        report_path = args.report.resolve()
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    except OSError as error:
+        print(f"benchmark runner: unable to write report {args.report}: {error}", file=sys.stderr)
+        return 1
 
     summary = report["summary"]
     print(

@@ -36,5 +36,7 @@ The default repetition count is three. Use `--repeat N` to override it and
 `--workload NAME` (repeatable) to select a subset. The JSON report records
 samples and min/median/max seconds for both phases, the commit and executable
 paths, command templates, expected-output digest, host metadata, and validation
-flags. Timing is not compared against a baseline and does not create a CI
-performance gate in this slice.
+flags. Each compiler and VM subprocess has a configurable 60-second default
+timeout; use `--timeout N` when a workload needs a different limit. Timing is
+not compared against a baseline and does not create a CI performance gate in
+this slice.

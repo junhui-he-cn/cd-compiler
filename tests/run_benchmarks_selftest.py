@@ -3,6 +3,7 @@
 import copy
 import json
 import stat
+import sys
 import tempfile
 import textwrap
 import unittest
@@ -39,6 +40,27 @@ class BenchmarkRunnerTests(unittest.TestCase):
         self.assertEqual(record["min"], 1.0)
         self.assertEqual(record["median"], 2.0)
         self.assertEqual(record["max"], 3.0)
+
+    def test_run_command_times_out_with_a_controlled_result(self) -> None:
+        duration, returncode, stdout, stderr = run_benchmarks.run_command(
+            [sys.executable, "-c", "import time; time.sleep(1)"],
+            self.repo_root,
+            timeout_seconds=0.01,
+        )
+        self.assertGreaterEqual(duration, 0.0)
+        self.assertEqual(returncode, 124)
+        self.assertEqual(stdout, "")
+        self.assertIn("timed out", stderr)
+
+    def test_vm_manifest_path_resolves_to_built_binary(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            manifest = root / "Cargo.toml"
+            binary = root / "target" / "debug" / "compiler-design-vm"
+            manifest.write_text("[package]\n", encoding="utf-8")
+            binary.parent.mkdir(parents=True)
+            binary.write_text("binary\n", encoding="utf-8")
+            self.assertEqual(run_benchmarks.resolve_vm_binary(manifest), binary)
 
     def test_runner_validates_output_and_uses_direct_vm_binary(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
