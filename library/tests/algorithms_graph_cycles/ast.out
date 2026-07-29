@@ -2647,6 +2647,178 @@ Program
             Expr (member-call result updateTree index (index values index))
             Expr (+= index 1)
       Return result
+    Struct SegmentTree {sums: [number], minimums: [number], active: [bool], values: [number], base: number}
+    Impl SegmentTree
+      Method size(): number
+        Return (member-call (field this values) len)
+      Method rebuild(node: number)
+        Let left = (* node 2)
+        Let right = (+ left 1)
+        Expr (= (index (field this sums) node) (+ (index (field this sums) left) (index (field this sums) right)))
+        If (group (index (field this active) left))
+          Then
+            Block
+              If (group (index (field this active) right))
+                Then
+                  Block
+                    If (group (< (index (field this minimums) left) (index (field this minimums) right)))
+                      Then
+                        Block
+                          Expr (= (index (field this minimums) node) (index (field this minimums) left))
+                      Else
+                        Block
+                          Expr (= (index (field this minimums) node) (index (field this minimums) right))
+                Else
+                  Block
+                    Expr (= (index (field this minimums) node) (index (field this minimums) left))
+          Else
+            Block
+              If (group (index (field this active) right))
+                Then
+                  Block
+                    Expr (= (index (field this minimums) node) (index (field this minimums) right))
+                Else
+                  Block
+                    Expr (= (index (field this minimums) node) 0)
+        Expr (= (index (field this active) node) (|| (index (field this active) left) (index (field this active) right)))
+      Method updateLeaf(index: number, value: number)
+        Let node = (+ (field this base) index)
+        Expr (= (index (field this sums) node) value)
+        Expr (= (index (field this minimums) node) value)
+        Expr (= (index (field this active) node) true)
+        While (group (> node 1))
+          Body
+            Block
+              Expr (= node (call floor (/ node 2)))
+              Expr (member-call this rebuild node)
+      Method setValue(index: number, value: number): bool
+        If (group (|| (|| (!= (call floor index) index) (< index 0)) (>= index (member-call (field this values) len))))
+          Then
+            Block
+              Return false
+        Expr (= (index (field this values) index) value)
+        Expr (member-call this updateLeaf index value)
+        Return true
+      Method add(index: number, delta: number): bool
+        If (group (|| (|| (!= (call floor index) index) (< index 0)) (>= index (member-call (field this values) len))))
+          Then
+            Block
+              Return false
+        Expr (+= (index (field this values) index) delta)
+        Expr (member-call this updateLeaf index (index (field this values) index))
+        Return true
+      Method validRange(start: number, endExclusive: number): bool
+        Return (&& (&& (&& (&& (== (call floor start) start) (== (call floor endExclusive) endExclusive)) (>= start 0)) (>= endExclusive start)) (<= endExclusive (member-call (field this values) len)))
+      Method rangeSum(start: number, endExclusive: number): number?
+        If (group (! (member-call this validRange start endExclusive)))
+          Then
+            Block
+              Return nil
+        Let left = (+ (field this base) start)
+        Let right = (+ (field this base) endExclusive)
+        Let result = 0
+        While (group (< left right))
+          Body
+            Block
+              If (group (!= (* (call floor (/ left 2)) 2) left))
+                Then
+                  Block
+                    Expr (+= result (index (field this sums) left))
+                    Expr (+= left 1)
+              If (group (!= (* (call floor (/ right 2)) 2) right))
+                Then
+                  Block
+                    Expr (-= right 1)
+                    Expr (+= result (index (field this sums) right))
+              Expr (= left (call floor (/ left 2)))
+              Expr (= right (call floor (/ right 2)))
+        Return result
+      Method rangeMinimum(start: number, endExclusive: number): number?
+        If (group (|| (! (member-call this validRange start endExclusive)) (== start endExclusive)))
+          Then
+            Block
+              Return nil
+        Let left = (+ (field this base) start)
+        Let right = (+ (field this base) endExclusive)
+        Let found = false
+        Let result = 0
+        While (group (< left right))
+          Body
+            Block
+              If (group (!= (* (call floor (/ left 2)) 2) left))
+                Then
+                  Block
+                    If (group (index (field this active) left))
+                      Then
+                        Block
+                          If (group (|| (! found) (< (index (field this minimums) left) result)))
+                            Then
+                              Block
+                                Expr (= result (index (field this minimums) left))
+                          Expr (= found true)
+                    Expr (+= left 1)
+              If (group (!= (* (call floor (/ right 2)) 2) right))
+                Then
+                  Block
+                    Expr (-= right 1)
+                    If (group (index (field this active) right))
+                      Then
+                        Block
+                          If (group (|| (! found) (< (index (field this minimums) right) result)))
+                            Then
+                              Block
+                                Expr (= result (index (field this minimums) right))
+                          Expr (= found true)
+              Expr (= left (call floor (/ left 2)))
+              Expr (= right (call floor (/ right 2)))
+        If (group (! found))
+          Then
+            Block
+              Return nil
+        Return result
+      Method valueAt(index: number): number?
+        If (group (|| (|| (!= (call floor index) index) (< index 0)) (>= index (member-call (field this values) len))))
+          Then
+            Block
+              Return nil
+        Return (index (field this values) index)
+      Method snapshot(): [number]
+        Return (call copy (field this values))
+    Fun newSegmentTree(values: [number]): SegmentTree
+      Let base = 1
+      While (group (< base (member-call values len)))
+        Body
+          Block
+            Expr (*= base 2)
+      Let capacity = (* base 2)
+      Let sums: [number] = (array)
+      Let minimums: [number] = (array)
+      Let active: [bool] = (array)
+      Let index = 0
+      While (group (< index capacity))
+        Body
+          Block
+            Expr (member-call sums push 0)
+            Expr (member-call minimums push 0)
+            Expr (member-call active push false)
+            Expr (+= index 1)
+      Let result = (construct SegmentTree sums: sums minimums: minimums active: active values: (call copy values) base: base)
+      Expr (= index 0)
+      While (group (< index (member-call values len)))
+        Body
+          Block
+            Let node = (+ base index)
+            Expr (= (index (field result sums) node) (index values index))
+            Expr (= (index (field result minimums) node) (index values index))
+            Expr (= (index (field result active) node) true)
+            Expr (+= index 1)
+      Let node = (- base 1)
+      While (group (> node 0))
+        Body
+          Block
+            Expr (member-call result rebuild node)
+            Expr (-= node 1)
+      Return result
     Fun lowerBound<T>(values: [T], target: T, less: fun(T, T): bool): number
       Let low = 0
       Let high = (member-call values len)
@@ -3470,7 +3642,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
+    Export Stack Queue Deque BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let dag = (member-call ds newGraph 4 true)

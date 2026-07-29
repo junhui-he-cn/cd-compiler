@@ -7,8 +7,8 @@ generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
 `Tree<T>`, `Set<T>`, and `MultiSet<T>` types. It also provides an array-backed
 `MultiMap<K, V>` for one-to-many mappings, immutable BST helpers, and basic generic array algorithms,
 including comparator-based insertion sort, window helpers, and interval merge.
-It also includes an array-backed numeric `FenwickTree`, numeric two-pointer
-helpers for sorted arrays, and string/tree/graph algorithms.
+It also includes array-backed numeric `FenwickTree` and `SegmentTree` types,
+numeric two-pointer helpers for sorted arrays, and string/tree/graph algorithms.
 Array set operations preserve first-occurrence order and use language equality.
 
 The planned structure and algorithm inventory, implementation constraints, and
@@ -128,6 +128,12 @@ print sums.prefixSum(3);
 print sums.rangeSum(1, 4);
 sums.add(2, 7);
 print sums.snapshot();
+
+let aggregates = ds.newSegmentTree([5, 1, 4, 2, 8]);
+print aggregates.rangeSum(1, 4);
+print aggregates.rangeMinimum(0, 5);
+aggregates.add(1, 5);
+print aggregates.snapshot();
 
 let tree = ds.treeNode(2, ds.treeLeaf(1), ds.treeLeaf(3));
 print ds.treeInorder(tree);
@@ -602,6 +608,22 @@ returns another outer-array copy. Construction is `O(n log n)` with the
 language's arithmetic-only low-bit precomputation; point updates and both
 query methods are `O(log n)`, while `snapshot` is `O(n)`.
 
+`SegmentTree` stores numeric values with fixed sum and minimum aggregates:
+
+- `newSegmentTree(values: [number]): SegmentTree` — build from a copied input;
+- `setValue(index: number, value: number): bool` and `add(index, delta): bool` —
+  replace or increment one zero-based element;
+- `rangeSum(start, endExclusive): number?` — query the half-open range sum;
+- `rangeMinimum(start, endExclusive): number?` — query its minimum, or `nil`
+  for an empty/invalid range;
+- `size`, `valueAt`, and `snapshot` — inspect the logical values.
+
+The tree uses inactive padded leaves, so non-power-of-two input lengths and
+negative values need no sentinel convention. Construction is `O(n)`, point
+updates and aggregate queries are `O(log n)`, and `snapshot` is `O(n)`. Invalid
+indexes/ranges return `false` or `nil` without changing the structure; an
+empty valid sum range returns `0`.
+
 `Interval { start, end }` represents a numeric interval with the documented
 precondition `start <= end`. `mergeIntervals(intervals)` returns a new array
 sorted by start, merges overlapping or touching intervals, and leaves the input
@@ -691,6 +713,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_set`, `--case data_structures_multiset`,
 `--case data_structures_multimap`, `--case data_structures_disjoint_set`,
 `--case data_structures_fenwick`,
+`--case data_structures_segment_tree`,
 `--case data_structures_graph`, `--case data_structures_weighted_graph`,
 `--case algorithms_graph_topological`,
 `--case algorithms_graph_traversal`,

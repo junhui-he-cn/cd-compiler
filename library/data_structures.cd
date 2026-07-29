@@ -2826,6 +2826,189 @@ fun newFenwickTree(values: [number]): FenwickTree {
   return result;
 }
 
+// SegmentTree keeps fixed numeric sum and minimum aggregates. Padded leaves
+// are marked inactive, so minimum queries do not need an infinity sentinel.
+struct SegmentTree {
+  sums: [number],
+  minimums: [number],
+  active: [bool],
+  values: [number],
+  base: number
+}
+
+impl SegmentTree {
+  fun size(): number {
+    return this.values.len();
+  }
+
+  fun rebuild(node: number) {
+    let left = node * 2;
+    let right = left + 1;
+    this.sums[node] = this.sums[left] + this.sums[right];
+    if (this.active[left]) {
+      if (this.active[right]) {
+        if (this.minimums[left] < this.minimums[right]) {
+          this.minimums[node] = this.minimums[left];
+        } else {
+          this.minimums[node] = this.minimums[right];
+        }
+      } else {
+        this.minimums[node] = this.minimums[left];
+      }
+    } else {
+      if (this.active[right]) {
+        this.minimums[node] = this.minimums[right];
+      } else {
+        this.minimums[node] = 0;
+      }
+    }
+    this.active[node] = this.active[left] || this.active[right];
+  }
+
+  fun updateLeaf(index: number, value: number) {
+    let node = this.base + index;
+    this.sums[node] = value;
+    this.minimums[node] = value;
+    this.active[node] = true;
+    while (node > 1) {
+      node = floor(node / 2);
+      this.rebuild(node);
+    }
+  }
+
+  fun setValue(index: number, value: number): bool {
+    if (floor(index) != index || index < 0 || index >= this.values.len()) {
+      return false;
+    }
+    this.values[index] = value;
+    this.updateLeaf(index, value);
+    return true;
+  }
+
+  fun add(index: number, delta: number): bool {
+    if (floor(index) != index || index < 0 || index >= this.values.len()) {
+      return false;
+    }
+    this.values[index] += delta;
+    this.updateLeaf(index, this.values[index]);
+    return true;
+  }
+
+  fun validRange(start: number, endExclusive: number): bool {
+    return floor(start) == start && floor(endExclusive) == endExclusive
+      && start >= 0 && endExclusive >= start && endExclusive <= this.values.len();
+  }
+
+  fun rangeSum(start: number, endExclusive: number): number? {
+    if (!this.validRange(start, endExclusive)) {
+      return nil;
+    }
+    let left = this.base + start;
+    let right = this.base + endExclusive;
+    let result = 0;
+    while (left < right) {
+      if (floor(left / 2) * 2 != left) {
+        result += this.sums[left];
+        left += 1;
+      }
+      if (floor(right / 2) * 2 != right) {
+        right -= 1;
+        result += this.sums[right];
+      }
+      left = floor(left / 2);
+      right = floor(right / 2);
+    }
+    return result;
+  }
+
+  fun rangeMinimum(start: number, endExclusive: number): number? {
+    if (!this.validRange(start, endExclusive) || start == endExclusive) {
+      return nil;
+    }
+    let left = this.base + start;
+    let right = this.base + endExclusive;
+    let found = false;
+    let result = 0;
+    while (left < right) {
+      if (floor(left / 2) * 2 != left) {
+        if (this.active[left]) {
+          if (!found || this.minimums[left] < result) {
+            result = this.minimums[left];
+          }
+          found = true;
+        }
+        left += 1;
+      }
+      if (floor(right / 2) * 2 != right) {
+        right -= 1;
+        if (this.active[right]) {
+          if (!found || this.minimums[right] < result) {
+            result = this.minimums[right];
+          }
+          found = true;
+        }
+      }
+      left = floor(left / 2);
+      right = floor(right / 2);
+    }
+    if (!found) {
+      return nil;
+    }
+    return result;
+  }
+
+  fun valueAt(index: number): number? {
+    if (floor(index) != index || index < 0 || index >= this.values.len()) {
+      return nil;
+    }
+    return this.values[index];
+  }
+
+  fun snapshot(): [number] {
+    return copy(this.values);
+  }
+}
+
+fun newSegmentTree(values: [number]): SegmentTree {
+  let base = 1;
+  while (base < values.len()) {
+    base *= 2;
+  }
+  let capacity = base * 2;
+  let sums: [number] = [];
+  let minimums: [number] = [];
+  let active: [bool] = [];
+  let index = 0;
+  while (index < capacity) {
+    sums.push(0);
+    minimums.push(0);
+    active.push(false);
+    index += 1;
+  }
+
+  let result = SegmentTree {
+    sums: sums,
+    minimums: minimums,
+    active: active,
+    values: copy(values),
+    base: base
+  };
+  index = 0;
+  while (index < values.len()) {
+    let node = base + index;
+    result.sums[node] = values[index];
+    result.minimums[node] = values[index];
+    result.active[node] = true;
+    index += 1;
+  }
+  let node = base - 1;
+  while (node > 0) {
+    result.rebuild(node);
+    node -= 1;
+  }
+  return result;
+}
+
 fun lowerBound<T>(values: [T], target: T, less: fun(T, T): bool): number {
   let low = 0;
   let high = values.len();
@@ -3665,4 +3848,4 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
-export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Tree, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, ExtendedGcdResult, Trie, FenwickTree, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, newTrie, newFenwickTree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, minimumSpanningForestKruskal, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci;
+export Stack, Queue, Deque, BinaryHeap, PriorityQueue, Option, Result, List, Tree, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, ExtendedGcdResult, Trie, FenwickTree, SegmentTree, newStack, newQueue, newDeque, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, newTrie, newFenwickTree, newSegmentTree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, minimumSpanningForestKruskal, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, mergeIntervals, intersectIntervals, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci;
