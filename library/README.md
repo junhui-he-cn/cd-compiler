@@ -202,6 +202,10 @@ print ds.combinations([1, 2, 3], 2);
 print ds.permutations([1, 2, 3]);
 print ds.generateParentheses(3);
 print ds.nQueens(4);
+print ds.mazePaths([
+  [true, true],
+  [true, true]
+]);
 print ds.uniqueGridPathsWithObstacles([
   [false, false, false],
   [false, true, false],
@@ -699,6 +703,11 @@ The current backtracking and knapsack helpers are:
   zero-based column index per row, with rows and columns searched in ascending
   order. Negative or non-integral sizes return `[]`; `0` returns `[[]]`.
   Complete enumeration has exponential search cost and stores all solutions.
+- `mazePaths(maze: [[bool]]): [string]` — enumerate paths from the top-left
+  to bottom-right of a rectangular maze where `true` is walkable. The current
+  version permits only right (`R`) and down (`D`) moves, tries `R` before `D`,
+  and returns `[]` for empty, non-rectangular, or blocked-endpoint mazes.
+  It stores all generated path strings.
 
 The three generators allocate complete nested arrays rather than exposing a
 lazy iterator. Their running time and output space are proportional to the
