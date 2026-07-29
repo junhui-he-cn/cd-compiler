@@ -640,6 +640,14 @@ std::optional<TypeAnnotation> Parser::optionalReturnType()
 
 TypeAnnotation Parser::typeAnnotation(const std::string& simpleTypeMessage)
 {
+    if (checkContextualIdentifier("optional") && checkNext(TokenType::Less)) {
+        Token optionalToken = advance();
+        consume(TokenType::Less, "expected `<` after `optional`");
+        TypeAnnotation innerType = typeAnnotation("expected type argument after `optional<`");
+        consume(TokenType::Greater, "expected `>` after optional type argument");
+        return TypeAnnotation::optional(std::move(optionalToken), std::move(innerType));
+    }
+
     if (match(TokenType::LeftBracket)) {
         Token bracket = previous();
         TypeAnnotation elementType = typeAnnotation("expected array element type after `[`");

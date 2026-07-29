@@ -1,0 +1,41 @@
+IR
+0000  v0 = constant #0 nil
+0001  store_var @0 unwrap#0, v0
+0002  v1 = make_function $0 unwrap/1
+0003  assign_var @3 unwrap#0, v1
+0004  v2 = constant #4 nil
+0005  store_var @4 age#2, v2
+0006  v3 = constant #5 1
+0007  v4 = constant #6 nil
+0008  v5 = array [v3, v4]
+0009  store_var @5 values#3, v5
+0010  v6 = constant #7 nil
+0011  store_var @6 maybeValues#4, v6
+0012  v7 = constant #8 2
+0013  v8 = struct Box {value: v7}
+0014  store_var @9 box#5, v8
+0015  v9 = load_var @10 unwrap#0
+0016  v10 = load_var @11 age#2
+0017  v11 = call v9(v10)
+0018  print v11
+0019  v12 = load_var @12 values#3
+0020  v13 = constant #9 0
+0021  v14 = index v12, v13
+0022  print v14
+0023  v15 = load_var @13 maybeValues#4
+0024  print v15
+0025  v16 = load_var @14 box#5
+0026  v17 = field v16.value
+0027  print v17
+
+function $0 unwrap(value#1)
+0000  v0 = load_var @1 value#1
+0001  v1 = constant #1 nil
+0002  v2 = not_equal v0, v1
+0003  jump_if_false v2, 0006
+0004  v3 = load_var @2 value#1
+0005  return v3
+0006  v4 = constant #2 0
+0007  return v4
+0008  v5 = constant #3 nil
+0009  return v5

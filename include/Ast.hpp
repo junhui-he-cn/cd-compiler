@@ -35,6 +35,7 @@ struct TypeAnnotation {
         Array,
         Map,
         Nullable,
+        Optional,
     };
 
     static TypeAnnotation simple(Token token);
@@ -43,6 +44,7 @@ struct TypeAnnotation {
     static TypeAnnotation array(Token token, TypeAnnotation elementType);
     static TypeAnnotation map(Token token, TypeAnnotation keyType, TypeAnnotation valueType);
     static TypeAnnotation nullable(Token token, TypeAnnotation innerType);
+    static TypeAnnotation optional(Token token, TypeAnnotation innerType);
 
     Kind kind = Kind::Simple;
     Token token{TokenType::Identifier, "", 0, 0};

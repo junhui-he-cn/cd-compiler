@@ -1,0 +1,3 @@
+Type error at 1:12: optional function values are not supported
+  let maybe: optional<fun(number): number> = nil;
+             ^

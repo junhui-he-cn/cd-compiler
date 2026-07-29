@@ -260,7 +260,10 @@ primary     = functionExpr
             | identifier
             | "(", expression, ")" ;
 
-typeExpr    = nullableType ;
+typeExpr    = optionalType
+            | nullableType ;
+
+optionalType = "optional", "<", typeExpr, ">" ;
 
 nullableType = primaryType,
                [ "?" ] ;
@@ -286,15 +289,18 @@ genericTypeArguments = "<", typeExpr,
 functionType = "fun", "(", [ typeArguments ], ")", ":", typeExpr ;
 
 (* A single `|` separates OR-pattern alternatives; `||` remains the logical
-   expression operator. `T?` means `T` or `nil`. Generic enum declarations use `enum Box<T>`, and
+   expression operator. `optional<T>` means `T` or `nil`; postfix `T?` remains
+   accepted as a compatibility spelling during migration. Generic enum declarations use `enum Box<T>`, and
    generic enum values use `Box<number>` type annotations. Literal patterns
    match primitive values directly or nested inside enum payloads; nullable
    primitive and enum matches may use `nil`. Named struct values may use
    partial or nested record patterns such as `Person { name: "Ada" }` and
    `geo.Point { x: 1 }`; fields may be omitted or reordered. OR-pattern
-   alternatives must bind the same names. This slice supports nullable
+   alternatives must bind the same names. `optional<T>` is the canonical
+   generic spelling for a nullable type; postfix `T?` remains a compatibility
+   spelling during the migration. This slice supports nullable
    function parameter and return types, but not nullable function values such
-   as `(fun(number): string)?`. Ordering comparisons support `number`,
+   as `optional<fun(number): string>`. Ordering comparisons support `number`,
    `string`, and locally implemented named-struct operators. Struct operators
    use the left operand as `this`, accept one same-typed right operand, and
    return `bool`; they are not exported through the current module interface.

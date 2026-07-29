@@ -108,6 +108,13 @@ bool mapKeyTypeAllowed(const TypeInfo& type)
     }
 }
 
+bool isOptionalFunctionValue(const TypeAnnotation& typeName)
+{
+    return typeName.kind == TypeAnnotation::Kind::Optional
+        && typeName.innerType
+        && typeName.innerType->kind == TypeAnnotation::Kind::Function;
+}
+
 bool isNativeCallbackName(const std::string& name)
 {
     return name == "map"
@@ -2339,7 +2346,12 @@ TypeInfo TypeChecker::resolveStructFieldAnnotation(const StructFieldDecl& field)
 
 TypeInfo TypeChecker::resolveStructFieldAnnotation(const TypeAnnotation& typeName, const Token& fieldName)
 {
-    if (typeName.kind == TypeAnnotation::Kind::Nullable) {
+    if (isOptionalFunctionValue(typeName)) {
+        throw TypeError(typeName.token, "optional function values are not supported");
+    }
+
+    if (typeName.kind == TypeAnnotation::Kind::Nullable
+        || typeName.kind == TypeAnnotation::Kind::Optional) {
         return nullableType(resolveStructFieldAnnotation(*typeName.innerType, fieldName));
     }
 
@@ -6649,7 +6661,12 @@ TypeInfo TypeChecker::resolveTypeParameterConstraints(const TypeParameter& param
 
 TypeInfo TypeChecker::resolveAnnotation(const TypeAnnotation& typeName) const
 {
-    if (typeName.kind == TypeAnnotation::Kind::Nullable) {
+    if (isOptionalFunctionValue(typeName)) {
+        throw TypeError(typeName.token, "optional function values are not supported");
+    }
+
+    if (typeName.kind == TypeAnnotation::Kind::Nullable
+        || typeName.kind == TypeAnnotation::Kind::Optional) {
         return nullableType(resolveAnnotation(*typeName.innerType));
     }
 

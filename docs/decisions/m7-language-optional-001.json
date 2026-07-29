@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m7-lang-optional-001-2026-07-29-r1",
+  "baseline_commit": "b533d59",
+  "decision_id": "M7-LANG-OPTIONAL-001",
+  "domain": "canonical-optional-type-syntax",
+  "status": "resolved",
+  "implementation_status": "complete-on-feature-branch",
+  "question": "How should source code spell a value that may contain T or nil as type annotations become more generic and compositional?",
+  "decision": "Make optional<T> the canonical source spelling for nullable types, map it to the existing StaticType::Nullable semantics, and retain postfix T? as a compatibility spelling during migration.",
+  "surface": {
+    "canonical": "optional<T>",
+    "compatibility": "T?",
+    "contextual_identifier": true,
+    "nested": true,
+    "ast_preserves_spelling": true,
+    "lsp_type_navigation": true
+  },
+  "semantic_boundary": {
+    "static_representation": "StaticType::Nullable",
+    "assignment_and_flow": "existing nullable assignment and narrowing rules",
+    "function_parameters_and_returns": "optional types supported",
+    "optional_function_values": "rejected",
+    "semantic_display_name": "legacy postfix T? until a separate output-format decision"
+  },
+  "runtime_boundary": {
+    "ir": "unchanged",
+    "bytecode": "unchanged",
+    "artifact_format": "cdbc 0.1 unchanged",
+    "rust_vm_representation": "unchanged",
+    "module_cache_identity": "unchanged"
+  },
+  "migration": {
+    "new_documentation_and_fixtures": "use optional<T>",
+    "legacy_fixtures": "retain T? compatibility coverage",
+    "warnings": false,
+    "source_rewriter": false,
+    "deletion_requires": [
+      "repository-owned examples and active fixtures migrated",
+      "audited compatibility corpus with no required T? outside an allowlist",
+      "separate deprecation diagnostic and release-timeline decision"
+    ]
+  },
+  "quantitative_gate": [
+    "golden.success.optional_type_syntax.*",
+    "golden.parse_errors.optional_missing_argument",
+    "golden.type_errors.optional_function_value",
+    "golden.type_errors.optional_function_field",
+    "rust_vm.golden.optional_type_syntax.*",
+    "canonical inventory",
+    "full CTest, golden, artifact, LSP, debugger, Rust VM, Cargo, boundary, malformed, and git diff checks"
+  ],
+  "out_of_scope": [
+    "runtime Option wrapper values",
+    "new bytecode opcodes",
+    "postfix T? removal",
+    "deprecation warnings or automated rewriting",
+    "nullable function values",
+    "changing semantic display or module-interface text to optional<T>"
+  ],
+  "verification": {
+    "inventory_revision": "m0d-2026-07-22-r1",
+    "focused_commands": [
+      "cmake --build build",
+      "python3 tests/run_golden_tests.py ./build/compiler_design --case optional",
+      "python3 tests/verification_inventory.py --write",
+      "git diff --check"
+    ],
+    "full_commands": [
+      "python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json",
+      "python3 tests/run_boundary_tests.py ./build/compiler_design",
+      "python3 tests/run_malformed_tests.py ./build/compiler_design vm-rs --report build/malformed-report.json",
+      "ctest --test-dir build --output-on-failure",
+      "python3 tests/run_golden_tests_selftest.py",
+      "python3 tests/bytecode_artifact_tests.py ./build/compiler_design vm-rs",
+      "python3 tests/bytecode_module_artifact_tests.py ./build/compiler_design vm-rs",
+      "python3 tests/bytecode_module_cache_tests.py ./build/compiler_design vm-rs",
+      "python3 tests/lsp_tests.py ./build/compiler_design",
+      "python3 tests/debugger_tests.py ./build/compiler_design vm-rs",
+      "python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens",
+      "cargo test --manifest-path vm-rs/Cargo.toml",
+      "git diff --check"
+    ],
+    "results": {
+      "inventory": "1879/1879",
+      "boundary": "5/5",
+      "malformed": "104/104",
+      "ctest": "33/33",
+      "golden": "828/828",
+      "golden_selftest": "24/24",
+      "bytecode_artifacts": "118/118",
+      "module_cache": "11/11",
+      "rust_vm_goldens": "778/778",
+      "cargo": "48/48",
+      "additional": [
+        "LSP passed",
+        "debugger passed",
+        "module artifact passed",
+        "JSON validation passed",
+        "git diff --check passed"
+      ]
+    }
+  }
+}

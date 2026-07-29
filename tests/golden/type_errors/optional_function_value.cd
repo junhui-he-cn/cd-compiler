@@ -1,0 +1,1 @@
+let maybe: optional<fun(number): number> = nil;

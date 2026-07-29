@@ -884,6 +884,7 @@ private:
             }
             break;
         case TypeAnnotation::Kind::Nullable:
+        case TypeAnnotation::Kind::Optional:
             if (annotation.innerType) {
                 addTypeAnnotation(*annotation.innerType);
             }

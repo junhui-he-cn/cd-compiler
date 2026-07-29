@@ -1,0 +1,18 @@
+struct Box { value: optional<number> }
+
+fun unwrap(value: optional<number>): optional<number> {
+  if (value != nil) {
+    return value;
+  }
+  return 0;
+}
+
+let age: optional<number> = nil;
+let values: [optional<number>] = [1, nil];
+let maybeValues: optional<[number]> = nil;
+let box: Box = Box { value: 2 };
+
+print unwrap(age);
+print values[0];
+print maybeValues;
+print box.value;

@@ -6168,6 +6168,34 @@
       "fixture": "tests/golden/parse_errors"
     },
     {
+      "case_id": "golden.parse_errors.optional_missing_argument",
+      "runner": "golden",
+      "result_name": "parse_errors/optional_missing_argument default(ast)",
+      "stage": "parse-error",
+      "capability_tags": [
+        "golden",
+        "parse_errors",
+        "fixture:optional_missing_argument"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/optional_missing_argument.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/optional_missing_argument.cd",
+        "tests/golden/parse_errors/optional_missing_argument.err",
+        "tests/golden/parse_errors/optional_missing_argument.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
       "case_id": "golden.parse_errors.or_pattern_missing_rhs",
       "runner": "golden",
       "result_name": "parse_errors/or_pattern_missing_rhs default(ast)",
@@ -16153,6 +16181,117 @@
       "fixture": "tests/golden/nullable_narrowing_nested_index_recheck"
     },
     {
+      "case_id": "golden.success.optional_type_syntax.ast",
+      "runner": "golden",
+      "result_name": "optional_type_syntax default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:optional_type_syntax"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/optional_type_syntax/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/optional_type_syntax/ast.out"
+      ],
+      "fixture": "tests/golden/optional_type_syntax"
+    },
+    {
+      "case_id": "golden.success.optional_type_syntax.bytecode",
+      "runner": "golden",
+      "result_name": "optional_type_syntax --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:optional_type_syntax"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/optional_type_syntax/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/optional_type_syntax/bytecode.out"
+      ],
+      "fixture": "tests/golden/optional_type_syntax"
+    },
+    {
+      "case_id": "golden.success.optional_type_syntax.ir",
+      "runner": "golden",
+      "result_name": "optional_type_syntax --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:optional_type_syntax"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/optional_type_syntax/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/optional_type_syntax/ir.out"
+      ],
+      "fixture": "tests/golden/optional_type_syntax"
+    },
+    {
+      "case_id": "golden.success.optional_type_syntax.module_interface",
+      "runner": "golden",
+      "result_name": "optional_type_syntax --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:optional_type_syntax"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/optional_type_syntax/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/optional_type_syntax/module-interface.out"
+      ],
+      "fixture": "tests/golden/optional_type_syntax"
+    },
+    {
       "case_id": "golden.success.or_patterns.ast",
       "runner": "golden",
       "result_name": "or_patterns default(ast)",
@@ -25102,6 +25241,62 @@
       "fixture": "tests/golden/type_errors"
     },
     {
+      "case_id": "golden.type_errors.optional_function_field",
+      "runner": "golden",
+      "result_name": "type_errors/optional_function_field default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:optional_function_field"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/optional_function_field.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/optional_function_field.cd",
+        "tests/golden/type_errors/optional_function_field.err",
+        "tests/golden/type_errors/optional_function_field.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.optional_function_value",
+      "runner": "golden",
+      "result_name": "type_errors/optional_function_value default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:optional_function_value"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/optional_function_value.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/optional_function_value.cd",
+        "tests/golden/type_errors/optional_function_value.err",
+        "tests/golden/type_errors/optional_function_value.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
       "case_id": "golden.type_errors.or_pattern_binding_set_mismatch",
       "runner": "golden",
       "result_name": "type_errors/or_pattern_binding_set_mismatch default(ast)",
@@ -29542,6 +29737,35 @@
         "tests/golden/parse_errors/nullable_double_question.cd",
         "tests/golden/parse_errors/nullable_double_question.err",
         "tests/golden/parse_errors/nullable_double_question.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
+      "case_id": "malformed.parse_error.optional_missing_argument",
+      "runner": "malformed",
+      "result_name": "malformed.parse_error.optional_missing_argument",
+      "stage": "diagnostic-recovery",
+      "capability_tags": [
+        "malformed",
+        "parser",
+        "diagnostic-recovery",
+        "golden-corpus"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/optional_missing_argument.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/optional_missing_argument.cd",
+        "tests/golden/parse_errors/optional_missing_argument.err",
+        "tests/golden/parse_errors/optional_missing_argument.exit"
       ],
       "fixture": "tests/golden/parse_errors"
     },
@@ -45984,6 +46208,68 @@
         "tests/golden/nullable_narrowing_while_exit_recheck/run.out"
       ],
       "fixture": "tests/golden/nullable_narrowing_while_exit_recheck"
+    },
+    {
+      "case_id": "rust_vm.golden.optional_type_syntax.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "optional_type_syntax emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:optional_type_syntax"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/optional_type_syntax/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/optional_type_syntax/run.out"
+      ],
+      "fixture": "tests/golden/optional_type_syntax"
+    },
+    {
+      "case_id": "rust_vm.golden.optional_type_syntax.run",
+      "runner": "rust_vm_golden",
+      "result_name": "optional_type_syntax rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:optional_type_syntax"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/optional_type_syntax/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/optional_type_syntax/run.out"
+      ],
+      "fixture": "tests/golden/optional_type_syntax"
     },
     {
       "case_id": "rust_vm.golden.or_patterns.emit",

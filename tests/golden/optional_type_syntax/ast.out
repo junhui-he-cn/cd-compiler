@@ -1,0 +1,16 @@
+Program
+  Struct Box {value: optional<number>}
+  Fun unwrap(value: optional<number>): optional<number>
+    If (group (!= value nil))
+      Then
+        Block
+          Return value
+    Return 0
+  Let age: optional<number> = nil
+  Let values: [optional<number>] = (array 1 nil)
+  Let maybeValues: optional<[number]> = nil
+  Let box: Box = (construct Box value: 2)
+  Print (call unwrap age)
+  Print (index values 0)
+  Print maybeValues
+  Print (field box value)

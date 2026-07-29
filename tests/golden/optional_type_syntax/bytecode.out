@@ -1,0 +1,41 @@
+main registers=18
+0000  b0 = constant #0 nil
+0001  store_var @0 unwrap#0, b0
+0002  b1 = make_function $0 unwrap/1
+0003  assign_var @3 unwrap#0, b1
+0004  b2 = constant #4 nil
+0005  store_var @4 age#2, b2
+0006  b3 = constant #5 1
+0007  b4 = constant #6 nil
+0008  b5 = array [b3, b4]
+0009  store_var @5 values#3, b5
+0010  b6 = constant #7 nil
+0011  store_var @6 maybeValues#4, b6
+0012  b7 = constant #8 2
+0013  b8 = struct @7 Box { @8 value: b7}
+0014  store_var @9 box#5, b8
+0015  b9 = load_var @10 unwrap#0
+0016  b10 = load_var @11 age#2
+0017  b11 = call b9(b10)
+0018  print b11
+0019  b12 = load_var @12 values#3
+0020  b13 = constant #9 0
+0021  b14 = index b12, b13
+0022  print b14
+0023  b15 = load_var @13 maybeValues#4
+0024  print b15
+0025  b16 = load_var @14 box#5
+0026  b17 = field b16,  @15 value
+0027  print b17
+
+function $0 unwrap/1 registers=6
+0000  b0 = load_var @1 value#1
+0001  b1 = constant #1 nil
+0002  b2 = not_equal b0, b1
+0003  jump_if_false b2, 0006
+0004  b3 = load_var @2 value#1
+0005  return b3
+0006  b4 = constant #2 0
+0007  return b4
+0008  b5 = constant #3 nil
+0009  return b5

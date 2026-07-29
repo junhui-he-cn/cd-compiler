@@ -173,6 +173,47 @@ and independent module-product/linker parity are complete. The operator
 contract remains ordinary function-call lowering with no new opcode or runtime
 operator table.
 
+### M7-LANG-OPTIONAL-001: canonical optional type syntax
+
+**Status:** implementation complete on `feat/optional-type-syntax`; the
+compatibility spelling remains intentionally retained until the deletion gate
+is met.
+
+**Purpose:** make `optional<T>` the readable, compositional spelling for a
+value that is either `T` or `nil`, replacing postfix `T?` in new source while
+preserving the existing nullable-flow semantics.
+
+**Deliverable:** parse nested `optional<T>` annotations anywhere a type
+annotation is accepted; preserve the spelling in AST output; resolve it to the
+existing `StaticType::Nullable`; expose its inner type through LSP type
+navigation; and migrate the public README, grammar, decision record, and
+focused success/parse/type-error fixtures. The C++ IR, bytecode, `.cdbc 0.1`,
+and Rust VM representations remain unchanged. Direct optional function values
+such as `optional<fun(number): number>` remain rejected, while nullable
+parameter and return types use `optional<...>` normally.
+
+**Migration:** recognize `optional` contextually only when followed by `<`, so
+existing identifiers named `optional` remain valid. Keep postfix `T?` as a
+compatibility parser path and retain its historical diagnostics and AST
+spelling during the migration. New documentation and fixtures use
+`optional<T>`, including array elements, nullable arrays, struct fields, and
+function parameter/return annotations.
+
+**Quantitative gate:** the focused corpus must register and pass
+`golden.success.optional_type_syntax.*`,
+`golden.parse_errors.optional_missing_argument`,
+`golden.type_errors.optional_function_value`,
+`golden.type_errors.optional_function_field`, and
+`rust_vm.golden.optional_type_syntax.*`; then run the canonical inventory,
+golden, CTest, boundary, malformed, artifact, LSP, debugger, Rust VM, Cargo,
+and `git diff --check` commands from the verification contract.
+
+**Delete the old path when:** all repository-owned user-facing examples and
+active fixtures use `optional<T>`, a separately audited compatibility corpus
+shows no required `T?` source outside an explicit migration allowlist, and a
+follow-up decision fixes the deprecation diagnostic and release timeline. Until
+then, removing `T?` is out of scope.
+
 ## Planned follow-up specifications
 
 These are deferred candidates after M6-LANG-001. They are not permission to
@@ -315,6 +356,7 @@ master + shipped generic functions, callbacks, and module interfaces
   -> completed M6-LANG-OPERATOR-001B local struct comparison operators
   -> completed M6-LANG-OPERATOR-001C public operator metadata/cache shape and
      source-backed imported dispatch and independent module products/linker parity
+  -> M7-LANG-OPTIONAL-001 canonical optional type syntax
   -> language-enabled library specifications (no compiler-owned data structures)
 
 master + M5D-DEBUG-001
@@ -333,10 +375,12 @@ feat/m5c-repl
   -> M5C-REPL-001 re-audit, outside the active queue for now
 ```
 
-No implementation slice is currently active. M6-LANG-HASH-001 and
-M6-LANG-OPERATOR-001A..001C are complete; M5D-DEBUG-002 and the other entries remain deferred specifications
-with clear future boundaries. They do not reopen completed work or authorize
-concrete data-structure implementations in the compiler repository.
+M6-LANG-HASH-001 and M6-LANG-OPERATOR-001A..001C are complete. The
+M7-LANG-OPTIONAL-001 implementation is complete on its focused feature branch;
+its compatibility deletion remains a later decision. M5D-DEBUG-002 and the
+other entries remain deferred specifications with clear future boundaries. They
+do not reopen completed work or authorize concrete data-structure
+implementations in the compiler repository.
 
 ## Verification contract
 
