@@ -778,6 +778,20 @@ without running the canonical suites a second time:
 python3 tests/run_verification_matrix.py --mode reuse ./build/compiler_design vm-rs --build-dir build --canonical-report build/verification-report.json --report build/verification-matrix-report.json
 ```
 
+The independent compile/runtime benchmark runner measures compiler CLI time and
+already-built Rust VM time separately. Build the VM executable once, then run:
+
+```sh
+cargo build --manifest-path vm-rs/Cargo.toml
+python3 tests/run_benchmarks.py --report build/benchmark-report.json
+```
+
+It validates each workload's stdout, stderr, and exit status, and records
+sample/minimum/median/maximum timings in JSON. See
+[`docs/benchmarking.md`](docs/benchmarking.md) for the measurement boundary
+and selection options. Benchmark results are informational and are not part of
+the canonical verification gate.
+
 The checked-in M0D baseline is `docs/verification/m0d-baseline.json`; its
 measurement policy and migration/deletion conditions are documented in
 `docs/verification/m0d-verification-matrix-design.md`.
