@@ -1,4 +1,4 @@
-// Number-theory, arithmetic, and priority-queue helpers.
+// Number-theory, arithmetic, priority-queue, and running-median helpers.
 import "./collections.cd";
 import "./strings.cd";
 
@@ -219,6 +219,88 @@ fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
   return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
 }
 
+fun medianLowerLess(left: number, right: number): bool {
+  return left > right;
+}
+
+fun medianUpperLess(left: number, right: number): bool {
+  return left < right;
+}
+
+struct MedianHeap {
+  private lower: BinaryHeap<number>,
+  private upper: BinaryHeap<number>
+}
+
+impl MedianHeap {
+  fun rebalance() {
+    if (this.lower.size() > this.upper.size() + 1) {
+      let value = this.lower.take();
+      if (value != nil) {
+        this.upper.add(value);
+      }
+    }
+    if (this.upper.size() > this.lower.size()) {
+      let value = this.upper.take();
+      if (value != nil) {
+        this.lower.add(value);
+      }
+    }
+  }
+
+  fun add(value: number) {
+    if (this.lower.isEmpty()) {
+      this.lower.add(value);
+    } else {
+      let boundary = this.lower.peek();
+      if (boundary == nil) {
+        this.lower.add(value);
+      } else {
+        if (value <= boundary) {
+          this.lower.add(value);
+        } else {
+          this.upper.add(value);
+        }
+      }
+    }
+    this.rebalance();
+  }
+
+  fun median(): optional<number> {
+    if (this.isEmpty()) {
+      return nil;
+    }
+    if (this.lower.size() > this.upper.size()) {
+      return this.lower.peek();
+    }
+
+    let lowerValue = this.lower.peek();
+    if (lowerValue == nil) {
+      return nil;
+    }
+    let upperValue = this.upper.peek();
+    if (upperValue == nil) {
+      return nil;
+    }
+    return (lowerValue + upperValue) / 2;
+  }
+
+  fun size(): number {
+    return this.lower.size() + this.upper.size();
+  }
+
+  fun isEmpty(): bool {
+    return this.size() == 0;
+  }
+}
+
+fun newMedianHeap(): MedianHeap {
+  return MedianHeap {
+    lower: newBinaryHeap<number>(medianLowerLess),
+    upper: newBinaryHeap<number>(medianUpperLess)
+  };
+}
+
 fun gcdArray(values: [number]): optional<number> {
   if (values.len() == 0) {
     return nil;
@@ -410,4 +492,4 @@ fun divisors(value: number): [number] {
   return result;
 }
 
-export PriorityQueue, newPriorityQueue, ExtendedGcdResult, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci, primeFactors, divisors, binomialCoefficient, permutationCount, pascalTriangle, gcdArray, prefixProducts, minimumLargestPartitionSum;
+export PriorityQueue, newPriorityQueue, MedianHeap, newMedianHeap, ExtendedGcdResult, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci, primeFactors, divisors, binomialCoefficient, permutationCount, pascalTriangle, gcdArray, prefixProducts, minimumLargestPartitionSum;

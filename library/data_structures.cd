@@ -68,7 +68,8 @@ export subsets, combinations, permutations, generateParentheses, nQueens,
        mazePaths
        from "./backtracking.cd";
 
-export PriorityQueue, newPriorityQueue, ExtendedGcdResult, gcd, lcm,
+export PriorityQueue, newPriorityQueue, MedianHeap, newMedianHeap,
+       ExtendedGcdResult, gcd, lcm,
        extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci,
        primeFactors, divisors, binomialCoefficient, permutationCount,
        pascalTriangle, gcdArray, prefixProducts, minimumLargestPartitionSum

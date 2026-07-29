@@ -2,7 +2,8 @@
 
 This directory contains a small data-structure library written in the public
 Compiler Design language. It currently provides generic array-backed `Stack<T>`,
-`Queue<T>`, `Deque<T>`, `RingBuffer<T>`, `BinaryHeap<T>`, and `PriorityQueue<T>` types, plus the
+`Queue<T>`, `Deque<T>`, `RingBuffer<T>`, `BinaryHeap<T>`, `PriorityQueue<T>`, and
+numeric `MedianHeap` types, plus the
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
 `Tree<T>`, `Set<T: Eq>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
 `MultiMap<K: Eq, V: Eq>` for one-to-many mappings, immutable BST helpers, and basic generic array algorithms,
@@ -330,6 +331,18 @@ are not stable.
 `newPriorityQueue<T>(less)` uses the same comparator contract as
 `newBinaryHeap<T>`. `enqueue` and `dequeue` are `O(log n)`, `front` is `O(1)`,
 and `snapshot` is `O(n)`.
+
+`MedianHeap` maintains the running median of numeric values with two heaps:
+
+- `newMedianHeap(): MedianHeap` — create an empty tracker;
+- `add(value: number)` — insert a value;
+- `median(): optional<number>` — return `nil` when empty, the middle value for
+  odd sizes, or the arithmetic mean of the two middle values for even sizes;
+- `size(): number` and `isEmpty(): bool` — inspect the number of values.
+
+The lower max-heap and upper min-heap differ in size by at most one. Insertion
+is `O(log n)`, median lookup is `O(1)`, and storage is `O(n)`; values are kept
+with their normal numeric semantics and no overflow behavior is promised.
 
 `Option<T>` is an explicit result enum for APIs where callers should distinguish
 success from absence with `match`:
