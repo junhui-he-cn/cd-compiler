@@ -1,0 +1,1460 @@
+// Integer-vertex graph containers and graph algorithms.
+import "./collections.cd";
+
+struct DisjointSet {
+  parents: [number],
+  sizes: [number],
+  components: number
+}
+
+impl DisjointSet {
+  fun representative(value: number): number {
+    let root = value;
+    while (this.parents[root] != root) {
+      root = this.parents[root];
+    }
+
+    let current = value;
+    while (current != root) {
+      let next = this.parents[current];
+      this.parents[current] = root;
+      current = next;
+    }
+    return root;
+  }
+
+  fun union(left: number, right: number): bool {
+    let leftRoot = this.representative(left);
+    let rightRoot = this.representative(right);
+    if (leftRoot == rightRoot) {
+      return false;
+    }
+    if (this.sizes[leftRoot] < this.sizes[rightRoot]) {
+      let value = leftRoot;
+      leftRoot = rightRoot;
+      rightRoot = value;
+    }
+    this.parents[rightRoot] = leftRoot;
+    this.sizes[leftRoot] += this.sizes[rightRoot];
+    this.components -= 1;
+    return true;
+  }
+
+  fun connected(left: number, right: number): bool {
+    return this.representative(left) == this.representative(right);
+  }
+
+  fun componentCount(): number {
+    return this.components;
+  }
+
+  fun size(): number {
+    return this.parents.len();
+  }
+}
+
+fun newDisjointSet(count: number): DisjointSet {
+  let length = floor(count);
+  if (length < 0) {
+    length = 0;
+  }
+  let parents: [number] = [];
+  let sizes: [number] = [];
+  let index = 0;
+  while (index < length) {
+    parents.push(index);
+    sizes.push(1);
+    index += 1;
+  }
+  return DisjointSet { parents: parents, sizes: sizes, components: length };
+}
+
+struct Graph {
+  adjacency: [[number]],
+  directed: bool,
+  edges: number
+}
+
+impl Graph {
+  fun vertexCount(): number {
+    return this.adjacency.len();
+  }
+
+  fun edgeCount(): number {
+    return this.edges;
+  }
+
+  fun validVertex(vertex: number): bool {
+    return vertex >= 0 && vertex < this.adjacency.len();
+  }
+
+  fun neighborIndex(from: number, to: number): number {
+    let index = 0;
+    while (index < this.adjacency[from].len()) {
+      if (this.adjacency[from][index] == to) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun hasEdge(from: number, to: number): bool {
+    if (!this.validVertex(from) || !this.validVertex(to)) {
+      return false;
+    }
+    return this.neighborIndex(from, to) >= 0;
+  }
+
+  fun addEdge(from: number, to: number): bool {
+    if (!this.validVertex(from) || !this.validVertex(to) || this.hasEdge(from, to)) {
+      return false;
+    }
+    this.adjacency[from].push(to);
+    if (!this.directed && from != to) {
+      this.adjacency[to].push(from);
+    }
+    this.edges += 1;
+    return true;
+  }
+
+  fun neighbors(vertex: number): [number] {
+    if (!this.validVertex(vertex)) {
+      return [];
+    }
+    return copy(this.adjacency[vertex]);
+  }
+}
+
+fun newGraph(vertices: number, directed: bool): Graph {
+  let count = floor(vertices);
+  if (count < 0) {
+    count = 0;
+  }
+  let adjacency: [[number]] = [];
+  let index = 0;
+  while (index < count) {
+    let neighbors: [number] = [];
+    adjacency.push(neighbors);
+    index += 1;
+  }
+  return Graph { adjacency: adjacency, directed: directed, edges: 0 };
+}
+
+fun breadthFirstOrder(graph: Graph, start: number): [number] {
+  let result: [number] = [];
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count) {
+    return result;
+  }
+
+  let visited: [bool] = [];
+  let index = 0;
+  while (index < count) {
+    visited.push(false);
+    index += 1;
+  }
+
+  let queue: [number] = [start];
+  visited[start] = true;
+  let head = 0;
+  while (head < queue.len()) {
+    let vertex = queue[head];
+    head += 1;
+    result.push(vertex);
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let neighbor = neighbors[neighborIndex];
+      if (!visited[neighbor]) {
+        visited[neighbor] = true;
+        queue.push(neighbor);
+      }
+      neighborIndex += 1;
+    }
+  }
+  return result;
+}
+
+fun depthFirstOrder(graph: Graph, start: number): [number] {
+  let result: [number] = [];
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count) {
+    return result;
+  }
+
+  let visited: [bool] = [];
+  let index = 0;
+  while (index < count) {
+    visited.push(false);
+    index += 1;
+  }
+
+  let stack: [number] = [start];
+  visited[start] = true;
+  while (stack.len() > 0) {
+    let vertexIndex = stack.len() - 1;
+    let vertex = stack[vertexIndex];
+    stack.pop();
+    result.push(vertex);
+
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = neighbors.len();
+    while (neighborIndex > 0) {
+      neighborIndex -= 1;
+      let neighbor = neighbors[neighborIndex];
+      if (!visited[neighbor]) {
+        visited[neighbor] = true;
+        stack.push(neighbor);
+      }
+    }
+  }
+  return result;
+}
+
+fun connectedComponents(graph: Graph): [[number]] {
+  let components: [[number]] = [];
+  if (graph.directed) {
+    return components;
+  }
+  let count = graph.vertexCount();
+  let visited: [bool] = [];
+  let index = 0;
+  while (index < count) {
+    visited.push(false);
+    index += 1;
+  }
+
+  let root = 0;
+  while (root < count) {
+    if (visited[root]) {
+      root += 1;
+      continue;
+    }
+    let component: [number] = [];
+    let queue: [number] = [root];
+    visited[root] = true;
+    let head = 0;
+    while (head < queue.len()) {
+      let vertex = queue[head];
+      head += 1;
+      component.push(vertex);
+      let neighbors = graph.adjacency[vertex];
+      let neighborIndex = 0;
+      while (neighborIndex < neighbors.len()) {
+        let neighbor = neighbors[neighborIndex];
+        if (!visited[neighbor]) {
+          visited[neighbor] = true;
+          queue.push(neighbor);
+        }
+        neighborIndex += 1;
+      }
+    }
+    components.push(component);
+    root += 1;
+  }
+  return components;
+}
+
+fun isBipartite(graph: Graph): bool {
+  if (graph.directed) {
+    return false;
+  }
+  let count = graph.vertexCount();
+  let colors: [number] = [];
+  let index = 0;
+  while (index < count) {
+    colors.push(-1);
+    index += 1;
+  }
+
+  let root = 0;
+  while (root < count) {
+    if (colors[root] >= 0) {
+      root += 1;
+      continue;
+    }
+    let queue: [number] = [root];
+    colors[root] = 0;
+    let head = 0;
+    while (head < queue.len()) {
+      let vertex = queue[head];
+      head += 1;
+      let neighbors = graph.adjacency[vertex];
+      let neighborIndex = 0;
+      while (neighborIndex < neighbors.len()) {
+        let neighbor = neighbors[neighborIndex];
+        if (colors[neighbor] < 0) {
+          colors[neighbor] = 1 - colors[vertex];
+          queue.push(neighbor);
+        } else {
+          if (colors[neighbor] == colors[vertex]) {
+            return false;
+          }
+        }
+        neighborIndex += 1;
+      }
+    }
+    root += 1;
+  }
+  return true;
+}
+
+fun articulationPoints(graph: Graph): [number] {
+  let result: [number] = [];
+  if (graph.directed) {
+    return result;
+  }
+  let count = graph.vertexCount();
+  let discovery: [number] = [];
+  let low: [number] = [];
+  let parents: [number] = [];
+  let childCounts: [number] = [];
+  let articulation: [bool] = [];
+  let index = 0;
+  while (index < count) {
+    discovery.push(-1);
+    low.push(-1);
+    parents.push(-1);
+    childCounts.push(0);
+    articulation.push(false);
+    index += 1;
+  }
+
+  let time = 0;
+  let root = 0;
+  while (root < count) {
+    if (discovery[root] >= 0) {
+      root += 1;
+      continue;
+    }
+    discovery[root] = time;
+    low[root] = time;
+    time += 1;
+    let stack: [number] = [root];
+    let nextIndices: [number] = [0];
+    while (stack.len() > 0) {
+      let top = stack.len() - 1;
+      let vertex = stack[top];
+      let neighbors = graph.adjacency[vertex];
+      let neighborIndex = nextIndices[top];
+      if (neighborIndex < neighbors.len()) {
+        let neighbor = neighbors[neighborIndex];
+        nextIndices[top] += 1;
+        if (discovery[neighbor] < 0) {
+          parents[neighbor] = vertex;
+          childCounts[vertex] += 1;
+          discovery[neighbor] = time;
+          low[neighbor] = time;
+          time += 1;
+          stack.push(neighbor);
+          nextIndices.push(0);
+        } else {
+          if (neighbor != parents[vertex] && discovery[neighbor] < low[vertex]) {
+            low[vertex] = discovery[neighbor];
+          }
+        }
+      } else {
+        stack.pop();
+        nextIndices.pop();
+        let parent = parents[vertex];
+        if (parent >= 0) {
+          if (low[vertex] < low[parent]) {
+            low[parent] = low[vertex];
+          }
+          if (parents[parent] >= 0 && low[vertex] >= discovery[parent]) {
+            articulation[parent] = true;
+          }
+        } else {
+          if (childCounts[vertex] > 1) {
+            articulation[vertex] = true;
+          }
+        }
+      }
+    }
+    root += 1;
+  }
+
+  index = 0;
+  while (index < count) {
+    if (articulation[index]) {
+      result.push(index);
+    }
+    index += 1;
+  }
+  return result;
+}
+
+fun bridges(graph: Graph): [[number]] {
+  let result: [[number]] = [];
+  if (graph.directed) {
+    return result;
+  }
+  let count = graph.vertexCount();
+  let discovery: [number] = [];
+  let low: [number] = [];
+  let parents: [number] = [];
+  let index = 0;
+  while (index < count) {
+    discovery.push(-1);
+    low.push(-1);
+    parents.push(-1);
+    index += 1;
+  }
+
+  let time = 0;
+  let root = 0;
+  while (root < count) {
+    if (discovery[root] >= 0) {
+      root += 1;
+      continue;
+    }
+    discovery[root] = time;
+    low[root] = time;
+    time += 1;
+    let stack: [number] = [root];
+    let nextIndices: [number] = [0];
+    while (stack.len() > 0) {
+      let top = stack.len() - 1;
+      let vertex = stack[top];
+      let neighbors = graph.adjacency[vertex];
+      let neighborIndex = nextIndices[top];
+      if (neighborIndex < neighbors.len()) {
+        let neighbor = neighbors[neighborIndex];
+        nextIndices[top] += 1;
+        if (discovery[neighbor] < 0) {
+          parents[neighbor] = vertex;
+          discovery[neighbor] = time;
+          low[neighbor] = time;
+          time += 1;
+          stack.push(neighbor);
+          nextIndices.push(0);
+        } else {
+          if (neighbor != parents[vertex] && discovery[neighbor] < low[vertex]) {
+            low[vertex] = discovery[neighbor];
+          }
+        }
+      } else {
+        stack.pop();
+        nextIndices.pop();
+        let parent = parents[vertex];
+        if (parent >= 0) {
+          if (low[vertex] > discovery[parent]) {
+            let bridge: [number] = [parent, vertex];
+            result.push(bridge);
+          }
+          if (low[vertex] < low[parent]) {
+            low[parent] = low[vertex];
+          }
+        }
+      }
+    }
+    root += 1;
+  }
+  return result;
+}
+
+fun eulerTrail(graph: Graph, start: number): [number] {
+  let result: [number] = [];
+  if (graph.directed) {
+    return result;
+  }
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count) {
+    return result;
+  }
+
+  let degrees: [number] = [];
+  let oddCount = 0;
+  let index = 0;
+  while (index < count) {
+    let degree = graph.adjacency[index].len();
+    let neighborIndex = 0;
+    while (neighborIndex < graph.adjacency[index].len()) {
+      if (graph.adjacency[index][neighborIndex] == index) {
+        degree += 1;
+      }
+      neighborIndex += 1;
+    }
+    degrees.push(degree);
+    if (floor(degree / 2) * 2 != degree) {
+      oddCount += 1;
+    }
+    index += 1;
+  }
+  if (oddCount != 0 && oddCount != 2) {
+    return result;
+  }
+  if (oddCount == 2 && floor(degrees[start] / 2) * 2 == degrees[start]) {
+    return result;
+  }
+
+  let remaining: [[number]] = [];
+  index = 0;
+  while (index < count) {
+    let neighbors: [number] = [];
+    let neighborIndex = 0;
+    while (neighborIndex < graph.adjacency[index].len()) {
+      neighbors.push(graph.adjacency[index][neighborIndex]);
+      neighborIndex += 1;
+    }
+    remaining.push(neighbors);
+    index += 1;
+  }
+
+  let stack: [number] = [start];
+  while (stack.len() > 0) {
+    let currentIndex = stack.len() - 1;
+    let current = stack[currentIndex];
+    if (remaining[current].len() > 0) {
+      let neighbor = remaining[current].pop();
+      if (neighbor != current) {
+        let reverseIndex = 0;
+        while (reverseIndex < remaining[neighbor].len()
+               && remaining[neighbor][reverseIndex] != current) {
+          reverseIndex += 1;
+        }
+        if (reverseIndex >= remaining[neighbor].len()) {
+          return [];
+        }
+        while (reverseIndex + 1 < remaining[neighbor].len()) {
+          remaining[neighbor][reverseIndex] = remaining[neighbor][reverseIndex + 1];
+          reverseIndex += 1;
+        }
+        remaining[neighbor].pop();
+      }
+      stack.push(neighbor);
+    } else {
+      result.push(current);
+      stack.pop();
+    }
+  }
+
+  if (result.len() != graph.edgeCount() + 1) {
+    return [];
+  }
+  let reversed: [number] = [];
+  index = result.len();
+  while (index > 0) {
+    index -= 1;
+    reversed.push(result[index]);
+  }
+  return reversed;
+}
+
+fun shortestDistances(graph: Graph, start: number): [number] {
+  let distances: [number] = [];
+  let count = graph.vertexCount();
+  let index = 0;
+  while (index < count) {
+    distances.push(-1);
+    index += 1;
+  }
+  if (start < 0 || start >= count) {
+    return distances;
+  }
+
+  let queue: [number] = [start];
+  distances[start] = 0;
+  let head = 0;
+  while (head < queue.len()) {
+    let vertex = queue[head];
+    head += 1;
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let neighbor = neighbors[neighborIndex];
+      if (distances[neighbor] < 0) {
+        distances[neighbor] = distances[vertex] + 1;
+        queue.push(neighbor);
+      }
+      neighborIndex += 1;
+    }
+  }
+  return distances;
+}
+
+fun shortestPath(graph: Graph, start: number, goal: number): [number] {
+  let result: [number] = [];
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count || goal < 0 || goal >= count) {
+    return result;
+  }
+
+  let parents: [number] = [];
+  let index = 0;
+  while (index < count) {
+    parents.push(-1);
+    index += 1;
+  }
+  let queue: [number] = [start];
+  parents[start] = start;
+  let head = 0;
+  while (head < queue.len()) {
+    let vertex = queue[head];
+    head += 1;
+    if (vertex == goal) {
+      break;
+    }
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let neighbor = neighbors[neighborIndex];
+      if (parents[neighbor] < 0) {
+        parents[neighbor] = vertex;
+        queue.push(neighbor);
+      }
+      neighborIndex += 1;
+    }
+  }
+
+  if (parents[goal] < 0) {
+    return result;
+  }
+  let current = goal;
+  while (current != start) {
+    result.push(current);
+    current = parents[current];
+  }
+  result.push(start);
+
+  let reversed: [number] = [];
+  let resultIndex = result.len();
+  while (resultIndex > 0) {
+    resultIndex -= 1;
+    reversed.push(result[resultIndex]);
+  }
+  return reversed;
+}
+
+fun inDegrees(graph: Graph): [number] {
+  let degrees: [number] = [];
+  if (!graph.directed) {
+    return degrees;
+  }
+  let count = graph.vertexCount();
+  let index = 0;
+  while (index < count) {
+    degrees.push(0);
+    index += 1;
+  }
+  let vertex = 0;
+  while (vertex < count) {
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      degrees[neighbors[neighborIndex]] += 1;
+      neighborIndex += 1;
+    }
+    vertex += 1;
+  }
+  return degrees;
+}
+
+fun topologicalOrder(graph: Graph): [number] {
+  let result: [number] = [];
+  if (!graph.directed) {
+    return result;
+  }
+  let count = graph.vertexCount();
+  let degrees = inDegrees(graph);
+  let queue: [number] = [];
+  let index = 0;
+  while (index < count) {
+    if (degrees[index] == 0) {
+      queue.push(index);
+    }
+    index += 1;
+  }
+
+  let head = 0;
+  while (head < queue.len()) {
+    let vertex = queue[head];
+    head += 1;
+    result.push(vertex);
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let neighbor = neighbors[neighborIndex];
+      degrees[neighbor] -= 1;
+      if (degrees[neighbor] == 0) {
+        queue.push(neighbor);
+      }
+      neighborIndex += 1;
+    }
+  }
+
+  if (result.len() != count) {
+    return [];
+  }
+  return result;
+}
+
+fun hasCycle(graph: Graph): bool {
+  let count = graph.vertexCount();
+  if (graph.directed) {
+    return topologicalOrder(graph).len() != count;
+  }
+
+  let visited: [bool] = [];
+  let parents: [number] = [];
+  let index = 0;
+  while (index < count) {
+    visited.push(false);
+    parents.push(-1);
+    index += 1;
+  }
+
+  let root = 0;
+  while (root < count) {
+    if (visited[root]) {
+      root += 1;
+      continue;
+    }
+    let stack: [number] = [root];
+    visited[root] = true;
+    while (stack.len() > 0) {
+      let vertexIndex = stack.len() - 1;
+      let vertex = stack[vertexIndex];
+      stack.pop();
+      let neighbors = graph.neighbors(vertex);
+      let neighborIndex = 0;
+      while (neighborIndex < neighbors.len()) {
+        let neighbor = neighbors[neighborIndex];
+        if (!visited[neighbor]) {
+          visited[neighbor] = true;
+          parents[neighbor] = vertex;
+          stack.push(neighbor);
+        } else {
+          if (parents[vertex] != neighbor) {
+            return true;
+          }
+        }
+        neighborIndex += 1;
+      }
+    }
+    root += 1;
+  }
+  return false;
+}
+
+fun stronglyConnectedComponents(graph: Graph): [[number]] {
+  let components: [[number]] = [];
+  if (!graph.directed) {
+    return components;
+  }
+  let count = graph.vertexCount();
+  let visited: [bool] = [];
+  let finish: [number] = [];
+  let index = 0;
+  while (index < count) {
+    visited.push(false);
+    index += 1;
+  }
+
+  let root = 0;
+  while (root < count) {
+    if (visited[root]) {
+      root += 1;
+      continue;
+    }
+    let stack: [number] = [root];
+    let nextIndices: [number] = [0];
+    visited[root] = true;
+    while (stack.len() > 0) {
+      let top = stack.len() - 1;
+      let vertex = stack[top];
+      let neighbors = graph.adjacency[vertex];
+      let neighborIndex = nextIndices[top];
+      if (neighborIndex < neighbors.len()) {
+        let neighbor = neighbors[neighborIndex];
+        nextIndices[top] += 1;
+        if (!visited[neighbor]) {
+          visited[neighbor] = true;
+          stack.push(neighbor);
+          nextIndices.push(0);
+        }
+      } else {
+        stack.pop();
+        nextIndices.pop();
+        finish.push(vertex);
+      }
+    }
+    root += 1;
+  }
+
+  let reversed: [[number]] = [];
+  index = 0;
+  while (index < count) {
+    let neighbors: [number] = [];
+    reversed.push(neighbors);
+    index += 1;
+  }
+  let vertex = 0;
+  while (vertex < count) {
+    let neighbors = graph.adjacency[vertex];
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let neighbor = neighbors[neighborIndex];
+      reversed[neighbor].push(vertex);
+      neighborIndex += 1;
+    }
+    vertex += 1;
+  }
+
+  index = 0;
+  while (index < count) {
+    visited[index] = false;
+    index += 1;
+  }
+  let finishIndex = finish.len();
+  while (finishIndex > 0) {
+    finishIndex -= 1;
+    root = finish[finishIndex];
+    if (!visited[root]) {
+      let component: [number] = [];
+      let componentStack: [number] = [root];
+      visited[root] = true;
+      while (componentStack.len() > 0) {
+        let top = componentStack.len() - 1;
+        vertex = componentStack[top];
+        componentStack.pop();
+        component.push(vertex);
+        let neighbors = reversed[vertex];
+        let neighborIndex = 0;
+        while (neighborIndex < neighbors.len()) {
+          let neighbor = neighbors[neighborIndex];
+          if (!visited[neighbor]) {
+            visited[neighbor] = true;
+            componentStack.push(neighbor);
+          }
+          neighborIndex += 1;
+        }
+      }
+      components.push(component);
+    }
+  }
+  return components;
+}
+
+struct WeightedEdge {
+  to: number,
+  weight: number
+}
+
+struct WeightedGraph {
+  adjacency: [[WeightedEdge]],
+  directed: bool,
+  edges: number
+}
+
+impl WeightedGraph {
+  fun vertexCount(): number {
+    return this.adjacency.len();
+  }
+
+  fun edgeCount(): number {
+    return this.edges;
+  }
+
+  fun validVertex(vertex: number): bool {
+    return vertex >= 0 && vertex < this.adjacency.len();
+  }
+
+  fun edgeIndex(from: number, to: number): number {
+    let index = 0;
+    while (index < this.adjacency[from].len()) {
+      if (this.adjacency[from][index].to == to) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun hasEdge(from: number, to: number): bool {
+    if (!this.validVertex(from) || !this.validVertex(to)) {
+      return false;
+    }
+    return this.edgeIndex(from, to) >= 0;
+  }
+
+  fun addEdge(from: number, to: number, weight: number): bool {
+    if (!this.validVertex(from) || !this.validVertex(to) || weight < 0 || this.hasEdge(from, to)) {
+      return false;
+    }
+    this.adjacency[from].push(WeightedEdge { to: to, weight: weight });
+    if (!this.directed && from != to) {
+      this.adjacency[to].push(WeightedEdge { to: from, weight: weight });
+    }
+    this.edges += 1;
+    return true;
+  }
+
+  fun neighbors(vertex: number): [WeightedEdge] {
+    if (!this.validVertex(vertex)) {
+      return [];
+    }
+    return copy(this.adjacency[vertex]);
+  }
+}
+
+fun newWeightedGraph(vertices: number, directed: bool): WeightedGraph {
+  let count = floor(vertices);
+  if (count < 0) {
+    count = 0;
+  }
+  let adjacency: [[WeightedEdge]] = [];
+  let index = 0;
+  while (index < count) {
+    let neighbors: [WeightedEdge] = [];
+    adjacency.push(neighbors);
+    index += 1;
+  }
+  return WeightedGraph { adjacency: adjacency, directed: directed, edges: 0 };
+}
+
+struct SignedWeightedEdge {
+  to: number,
+  weight: number
+}
+
+struct SignedWeightedGraph {
+  adjacency: [[SignedWeightedEdge]],
+  directed: bool,
+  edges: number
+}
+
+impl SignedWeightedGraph {
+  fun vertexCount(): number {
+    return this.adjacency.len();
+  }
+
+  fun edgeCount(): number {
+    return this.edges;
+  }
+
+  fun validVertex(vertex: number): bool {
+    return vertex >= 0 && vertex < this.adjacency.len();
+  }
+
+  fun edgeIndex(from: number, to: number): number {
+    let index = 0;
+    while (index < this.adjacency[from].len()) {
+      if (this.adjacency[from][index].to == to) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun hasEdge(from: number, to: number): bool {
+    if (!this.validVertex(from) || !this.validVertex(to)) {
+      return false;
+    }
+    return this.edgeIndex(from, to) >= 0;
+  }
+
+  fun addEdge(from: number, to: number, weight: number): bool {
+    if (!this.validVertex(from) || !this.validVertex(to) || this.hasEdge(from, to)) {
+      return false;
+    }
+    this.adjacency[from].push(SignedWeightedEdge { to: to, weight: weight });
+    if (!this.directed && from != to) {
+      this.adjacency[to].push(SignedWeightedEdge { to: from, weight: weight });
+    }
+    this.edges += 1;
+    return true;
+  }
+
+  fun neighbors(vertex: number): [SignedWeightedEdge] {
+    if (!this.validVertex(vertex)) {
+      return [];
+    }
+    return copy(this.adjacency[vertex]);
+  }
+}
+
+fun newSignedWeightedGraph(vertices: number, directed: bool): SignedWeightedGraph {
+  let count = floor(vertices);
+  if (count < 0) {
+    count = 0;
+  }
+  let adjacency: [[SignedWeightedEdge]] = [];
+  let index = 0;
+  while (index < count) {
+    let neighbors: [SignedWeightedEdge] = [];
+    adjacency.push(neighbors);
+    index += 1;
+  }
+  return SignedWeightedGraph { adjacency: adjacency, directed: directed, edges: 0 };
+}
+
+enum BellmanFordError {
+  InvalidStart,
+  NegativeCycle
+}
+
+struct BellmanFordResult {
+  distances: [optional<number>],
+  parents: [number]
+}
+
+fun bellmanFord(
+    graph: SignedWeightedGraph,
+    start: number
+): Result<BellmanFordResult, BellmanFordError> {
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count) {
+    return Result.Err<BellmanFordResult, BellmanFordError>(BellmanFordError.InvalidStart());
+  }
+
+  let distances: [optional<number>] = [];
+  let parents: [number] = [];
+  let index = 0;
+  while (index < count) {
+    distances.push(nil);
+    parents.push(-1);
+    index += 1;
+  }
+  distances[start] = 0;
+
+  let pass = 0;
+  while (pass < count - 1) {
+    let changed = false;
+    let from = 0;
+    while (from < count) {
+      let current = distances[from];
+      if (current != nil) {
+        let neighbors = graph.adjacency[from];
+        let neighborIndex = 0;
+        while (neighborIndex < neighbors.len()) {
+          let edge = neighbors[neighborIndex];
+          let candidate = current + edge.weight;
+          let existing = distances[edge.to];
+          if (existing == nil) {
+            distances[edge.to] = candidate;
+            parents[edge.to] = from;
+            changed = true;
+          } else {
+            if (candidate < existing) {
+              distances[edge.to] = candidate;
+              parents[edge.to] = from;
+              changed = true;
+            }
+          }
+          neighborIndex += 1;
+        }
+      }
+      from += 1;
+    }
+    if (!changed) {
+      break;
+    }
+    pass += 1;
+  }
+
+  let from = 0;
+  while (from < count) {
+    let current = distances[from];
+    if (current != nil) {
+      let neighbors = graph.adjacency[from];
+      let neighborIndex = 0;
+      while (neighborIndex < neighbors.len()) {
+        let edge = neighbors[neighborIndex];
+        let candidate = current + edge.weight;
+        let existing = distances[edge.to];
+        if (existing != nil) {
+          if (candidate < existing) {
+            return Result.Err<BellmanFordResult, BellmanFordError>(BellmanFordError.NegativeCycle());
+          }
+        }
+        neighborIndex += 1;
+      }
+    }
+    from += 1;
+  }
+  return Result.Ok<BellmanFordResult, BellmanFordError>(
+      BellmanFordResult { distances: distances, parents: parents });
+}
+
+fun shortestWeightedDistances(graph: WeightedGraph, start: number): [number] {
+  let distances: [number] = [];
+  let visited: [bool] = [];
+  let count = graph.vertexCount();
+  let index = 0;
+  while (index < count) {
+    distances.push(-1);
+    visited.push(false);
+    index += 1;
+  }
+  if (start < 0 || start >= count) {
+    return distances;
+  }
+  distances[start] = 0;
+
+  let step = 0;
+  while (step < count) {
+    let current = -1;
+    index = 0;
+    while (index < count) {
+      if (!visited[index] && distances[index] >= 0
+          && (current < 0 || distances[index] < distances[current])) {
+        current = index;
+      }
+      index += 1;
+    }
+    if (current < 0) {
+      break;
+    }
+    visited[current] = true;
+    let neighbors = graph.neighbors(current);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let edge = neighbors[neighborIndex];
+      let candidate = distances[current] + edge.weight;
+      if (distances[edge.to] < 0 || candidate < distances[edge.to]) {
+        distances[edge.to] = candidate;
+      }
+      neighborIndex += 1;
+    }
+    step += 1;
+  }
+  return distances;
+}
+
+fun allPairsWeightedDistances(graph: WeightedGraph): [[number]] {
+  let distances: [[number]] = [];
+  let count = graph.vertexCount();
+  let index = 0;
+  while (index < count) {
+    let row: [number] = [];
+    let column = 0;
+    while (column < count) {
+      row.push(-1);
+      column += 1;
+    }
+    row[index] = 0;
+    distances.push(row);
+    index += 1;
+  }
+
+  let from = 0;
+  while (from < count) {
+    let neighbors = graph.adjacency[from];
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let edge = neighbors[neighborIndex];
+      if (distances[from][edge.to] < 0 || edge.weight < distances[from][edge.to]) {
+        distances[from][edge.to] = edge.weight;
+      }
+      neighborIndex += 1;
+    }
+    from += 1;
+  }
+
+  let via = 0;
+  while (via < count) {
+    from = 0;
+    while (from < count) {
+      if (distances[from][via] >= 0) {
+        let to = 0;
+        while (to < count) {
+          if (distances[via][to] >= 0) {
+            let candidate = distances[from][via] + distances[via][to];
+            if (distances[from][to] < 0 || candidate < distances[from][to]) {
+              distances[from][to] = candidate;
+            }
+          }
+          to += 1;
+        }
+      }
+      from += 1;
+    }
+    via += 1;
+  }
+  return distances;
+}
+
+struct FlowResult {
+  residual: [[number]],
+  total: number
+}
+
+fun computeFlow(graph: WeightedGraph, source: number, sink: number): FlowResult {
+  if (!graph.directed || source < 0 || source >= graph.vertexCount()
+      || sink < 0 || sink >= graph.vertexCount() || source == sink) {
+    let empty: [[number]] = [];
+    return FlowResult { residual: empty, total: 0 };
+  }
+  let count = graph.vertexCount();
+  let capacities: [[number]] = [];
+  let index = 0;
+  while (index < count) {
+    let row: [number] = [];
+    let column = 0;
+    while (column < count) {
+      row.push(0);
+      column += 1;
+    }
+    capacities.push(row);
+    index += 1;
+  }
+
+  let from = 0;
+  while (from < count) {
+    let neighbors = graph.adjacency[from];
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let edge = neighbors[neighborIndex];
+      capacities[from][edge.to] += edge.weight;
+      neighborIndex += 1;
+    }
+    from += 1;
+  }
+
+  let total = 0;
+  while (true) {
+    let parents: [number] = [];
+    let visited: [bool] = [];
+    index = 0;
+    while (index < count) {
+      parents.push(-1);
+      visited.push(false);
+      index += 1;
+    }
+    let queue: [number] = [source];
+    visited[source] = true;
+    let head = 0;
+    while (head < queue.len() && !visited[sink]) {
+      let current = queue[head];
+      head += 1;
+      let neighbor = 0;
+      while (neighbor < count) {
+        if (!visited[neighbor] && capacities[current][neighbor] > 0) {
+          visited[neighbor] = true;
+          parents[neighbor] = current;
+          queue.push(neighbor);
+        }
+        neighbor += 1;
+      }
+    }
+    if (!visited[sink]) {
+      break;
+    }
+
+    let bottleneck = -1;
+    let current = sink;
+    while (current != source) {
+      let parent = parents[current];
+      if (bottleneck < 0 || capacities[parent][current] < bottleneck) {
+        bottleneck = capacities[parent][current];
+      }
+      current = parent;
+    }
+    current = sink;
+    while (current != source) {
+      let parent = parents[current];
+      capacities[parent][current] -= bottleneck;
+      capacities[current][parent] += bottleneck;
+      current = parent;
+    }
+    total += bottleneck;
+  }
+  return FlowResult { residual: capacities, total: total };
+}
+
+fun maxFlow(graph: WeightedGraph, source: number, sink: number): number {
+  let result = computeFlow(graph, source, sink);
+  return result.total;
+}
+
+fun minCut(graph: WeightedGraph, source: number, sink: number): [[number]] {
+  let cut: [[number]] = [];
+  if (!graph.directed || source < 0 || source >= graph.vertexCount()
+      || sink < 0 || sink >= graph.vertexCount() || source == sink) {
+    return cut;
+  }
+  let result = computeFlow(graph, source, sink);
+  let residual = result.residual;
+  let count = graph.vertexCount();
+  let reachable: [bool] = [];
+  let index = 0;
+  while (index < count) {
+    reachable.push(false);
+    index += 1;
+  }
+  let queue: [number] = [source];
+  reachable[source] = true;
+  let head = 0;
+  while (head < queue.len()) {
+    let current = queue[head];
+    head += 1;
+    let neighbor = 0;
+    while (neighbor < count) {
+      if (!reachable[neighbor] && residual[current][neighbor] > 0) {
+        reachable[neighbor] = true;
+        queue.push(neighbor);
+      }
+      neighbor += 1;
+    }
+  }
+
+  let from = 0;
+  while (from < count) {
+    if (reachable[from]) {
+      let neighbors = graph.adjacency[from];
+      let neighborIndex = 0;
+      while (neighborIndex < neighbors.len()) {
+        let edge = neighbors[neighborIndex];
+        if (edge.weight > 0 && !reachable[edge.to]) {
+          let pair: [number] = [from, edge.to];
+          cut.push(pair);
+        }
+        neighborIndex += 1;
+      }
+    }
+    from += 1;
+  }
+  return cut;
+}
+
+fun shortestWeightedPath(graph: WeightedGraph, start: number, goal: number): [number] {
+  let result: [number] = [];
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count || goal < 0 || goal >= count) {
+    return result;
+  }
+
+  let distances: [number] = [];
+  let parents: [number] = [];
+  let visited: [bool] = [];
+  let index = 0;
+  while (index < count) {
+    distances.push(-1);
+    parents.push(-1);
+    visited.push(false);
+    index += 1;
+  }
+  distances[start] = 0;
+
+  let step = 0;
+  while (step < count) {
+    let current = -1;
+    index = 0;
+    while (index < count) {
+      if (!visited[index] && distances[index] >= 0
+          && (current < 0 || distances[index] < distances[current])) {
+        current = index;
+      }
+      index += 1;
+    }
+    if (current < 0) {
+      break;
+    }
+    visited[current] = true;
+    if (current == goal) {
+      break;
+    }
+    let neighbors = graph.neighbors(current);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let edge = neighbors[neighborIndex];
+      let candidate = distances[current] + edge.weight;
+      if (distances[edge.to] < 0 || candidate < distances[edge.to]) {
+        distances[edge.to] = candidate;
+        parents[edge.to] = current;
+      }
+      neighborIndex += 1;
+    }
+    step += 1;
+  }
+
+  if (start != goal && parents[goal] < 0) {
+    return result;
+  }
+  let current = goal;
+  while (current != start) {
+    result.push(current);
+    current = parents[current];
+  }
+  result.push(start);
+
+  let reversed: [number] = [];
+  let resultIndex = result.len();
+  while (resultIndex > 0) {
+    resultIndex -= 1;
+    reversed.push(result[resultIndex]);
+  }
+  return reversed;
+}
+
+fun minimumSpanningForest(graph: WeightedGraph): WeightedGraph {
+  let count = graph.vertexCount();
+  let forest = newWeightedGraph(count, false);
+  if (graph.directed) {
+    return forest;
+  }
+
+  let visited: [bool] = [];
+  let distances: [number] = [];
+  let parents: [number] = [];
+  let parentWeights: [number] = [];
+  let index = 0;
+  while (index < count) {
+    visited.push(false);
+    distances.push(-1);
+    parents.push(-1);
+    parentWeights.push(-1);
+    index += 1;
+  }
+
+  let root = 0;
+  while (root < count) {
+    if (visited[root]) {
+      root += 1;
+      continue;
+    }
+    distances[root] = 0;
+    parents[root] = -1;
+    parentWeights[root] = -1;
+    let step = 0;
+    while (step < count) {
+      let current = -1;
+      index = 0;
+      while (index < count) {
+        if (!visited[index] && distances[index] >= 0
+            && (current < 0 || distances[index] < distances[current])) {
+          current = index;
+        }
+        index += 1;
+      }
+      if (current < 0) {
+        break;
+      }
+      visited[current] = true;
+      if (parents[current] >= 0) {
+        forest.addEdge(parents[current], current, parentWeights[current]);
+      }
+      let neighbors = graph.neighbors(current);
+      let neighborIndex = 0;
+      while (neighborIndex < neighbors.len()) {
+        let edge = neighbors[neighborIndex];
+        if (!visited[edge.to]
+            && (distances[edge.to] < 0 || edge.weight < distances[edge.to])) {
+          distances[edge.to] = edge.weight;
+          parents[edge.to] = current;
+          parentWeights[edge.to] = edge.weight;
+        }
+        neighborIndex += 1;
+      }
+      step += 1;
+    }
+    root += 1;
+  }
+  return forest;
+}
+
+
+export DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest;

@@ -1,0 +1,422 @@
+// Immutable recursive trees and binary-search-tree algorithms.
+
+// Tree is an immutable recursive binary tree. Constructors and all helpers
+// return or consume whole values, so inserting a new root does not mutate an
+// existing tree or any of its shared subtrees.
+enum Tree<T> {
+  Empty,
+  Node(value: T, left: Tree<T>, right: Tree<T>)
+}
+
+fun emptyTree<T>(): Tree<T> {
+  return Tree.Empty<T>();
+}
+
+fun treeNode<T>(value: T, left: Tree<T>, right: Tree<T>): Tree<T> {
+  return Tree.Node(value, left, right);
+}
+
+fun treeLeaf<T>(value: T): Tree<T> {
+  return Tree.Node(value, Tree.Empty<T>(), Tree.Empty<T>());
+}
+
+fun treeSize<T>(tree: Tree<T>): number {
+  return match tree {
+    Tree.Empty => 0,
+    Tree.Node(value, left, right) => 1 + treeSize(left) + treeSize(right),
+  };
+}
+
+fun treeHeight<T>(tree: Tree<T>): number {
+  match tree {
+    Tree.Empty => { return 0; }
+    Tree.Node(value, left, right) => {
+      let leftHeight = treeHeight(left);
+      let rightHeight = treeHeight(right);
+      if (leftHeight > rightHeight) {
+        return leftHeight + 1;
+      }
+      return rightHeight + 1;
+    }
+  }
+  return 0;
+}
+
+fun treeLeafCount<T>(tree: Tree<T>): number {
+  match tree {
+    Tree.Empty => { return 0; }
+    Tree.Node(value, left, right) => {
+      if (left == Tree.Empty<T>() && right == Tree.Empty<T>()) {
+        return 1;
+      }
+      return treeLeafCount(left) + treeLeafCount(right);
+    }
+  }
+  return 0;
+}
+
+fun appendTreePreorder<T>(tree: Tree<T>, result: [T]) {
+  match tree {
+    Tree.Empty => { }
+    Tree.Node(value, left, right) => {
+      result.push(value);
+      appendTreePreorder(left, result);
+      appendTreePreorder(right, result);
+    }
+  }
+}
+
+fun appendTreeInorder<T>(tree: Tree<T>, result: [T]) {
+  match tree {
+    Tree.Empty => { }
+    Tree.Node(value, left, right) => {
+      appendTreeInorder(left, result);
+      result.push(value);
+      appendTreeInorder(right, result);
+    }
+  }
+}
+
+fun appendTreePostorder<T>(tree: Tree<T>, result: [T]) {
+  match tree {
+    Tree.Empty => { }
+    Tree.Node(value, left, right) => {
+      appendTreePostorder(left, result);
+      appendTreePostorder(right, result);
+      result.push(value);
+    }
+  }
+}
+
+fun treePreorder<T>(tree: Tree<T>): [T] {
+  let result: [T] = [];
+  appendTreePreorder(tree, result);
+  return result;
+}
+
+fun treeInorder<T>(tree: Tree<T>): [T] {
+  let result: [T] = [];
+  appendTreeInorder(tree, result);
+  return result;
+}
+
+fun treePostorder<T>(tree: Tree<T>): [T] {
+  let result: [T] = [];
+  appendTreePostorder(tree, result);
+  return result;
+}
+
+fun treeLevelOrder<T>(tree: Tree<T>): [T] {
+  let result: [T] = [];
+  let queue: [Tree<T>] = [tree];
+  let headIndex = 0;
+  while (headIndex < queue.len()) {
+    let current = queue[headIndex];
+    headIndex += 1;
+    match current {
+      Tree.Empty => { }
+      Tree.Node(value, left, right) => {
+        result.push(value);
+        queue.push(left);
+        queue.push(right);
+      }
+    }
+  }
+  return result;
+}
+
+fun treeBalanceHeight<T>(tree: Tree<T>): number {
+  match tree {
+    Tree.Empty => { return 0; }
+    Tree.Node(value, left, right) => {
+      let leftHeight = treeBalanceHeight(left);
+      if (leftHeight < 0) {
+        return -1;
+      }
+      let rightHeight = treeBalanceHeight(right);
+      if (rightHeight < 0) {
+        return -1;
+      }
+      if (leftHeight - rightHeight > 1 || rightHeight - leftHeight > 1) {
+        return -1;
+      }
+      if (leftHeight > rightHeight) {
+        return leftHeight + 1;
+      }
+      return rightHeight + 1;
+    }
+  }
+  return -1;
+}
+
+fun treeIsBalanced<T>(tree: Tree<T>): bool {
+  return treeBalanceHeight(tree) >= 0;
+}
+
+fun treeMaxWidth<T>(tree: Tree<T>): number {
+  let queue: [Tree<T>] = [tree];
+  let headIndex = 0;
+  let best = 0;
+  while (headIndex < queue.len()) {
+    let levelEnd = queue.len();
+    let width = 0;
+    while (headIndex < levelEnd) {
+      let current = queue[headIndex];
+      headIndex += 1;
+      match current {
+        Tree.Empty => { }
+        Tree.Node(value, left, right) => {
+          width += 1;
+          queue.push(left);
+          queue.push(right);
+        }
+      }
+    }
+    if (width > best) {
+      best = width;
+    }
+  }
+  return best;
+}
+
+fun appendTreePaths<T>(tree: Tree<T>, path: [T], result: [[T]]) {
+  match tree {
+    Tree.Empty => { }
+    Tree.Node(value, left, right) => {
+      path.push(value);
+      let hasLeft = false;
+      match left {
+        Tree.Empty => { }
+        Tree.Node(leftValue, leftLeft, leftRight) => { hasLeft = true; }
+      }
+      let hasRight = false;
+      match right {
+        Tree.Empty => { }
+        Tree.Node(rightValue, rightLeft, rightRight) => { hasRight = true; }
+      }
+      if (!hasLeft && !hasRight) {
+        result.push(copy(path));
+      } else {
+        appendTreePaths(left, path, result);
+        appendTreePaths(right, path, result);
+      }
+      path.pop();
+    }
+  }
+}
+
+fun treeRootToLeafPaths<T>(tree: Tree<T>): [[T]] {
+  let result: [[T]] = [];
+  let path: [T] = [];
+  appendTreePaths(tree, path, result);
+  return result;
+}
+
+fun appendTreePathSums(tree: Tree<number>, running: number, result: [number]) {
+  match tree {
+    Tree.Empty => { }
+    Tree.Node(value, left, right) => {
+      let next = running + value;
+      let hasLeft = false;
+      match left {
+        Tree.Empty => { }
+        Tree.Node(leftValue, leftLeft, leftRight) => { hasLeft = true; }
+      }
+      let hasRight = false;
+      match right {
+        Tree.Empty => { }
+        Tree.Node(rightValue, rightLeft, rightRight) => { hasRight = true; }
+      }
+      if (!hasLeft && !hasRight) {
+        result.push(next);
+      } else {
+        appendTreePathSums(left, next, result);
+        appendTreePathSums(right, next, result);
+      }
+    }
+  }
+}
+
+fun treeRootToLeafSums(tree: Tree<number>): [number] {
+  let result: [number] = [];
+  appendTreePathSums(tree, 0, result);
+  return result;
+}
+
+struct TreeRemoval<T> {
+  value: T,
+  rest: Tree<T>
+}
+
+fun bstRemoveMinimum<T>(tree: Tree<T>): optional<TreeRemoval<T>> {
+  match tree {
+    Tree.Empty => { return nil; }
+    Tree.Node(value, left, right) => {
+      match left {
+        Tree.Empty => {
+          return TreeRemoval<T> { value: value, rest: right };
+        }
+        Tree.Node(leftValue, leftLeft, leftRight) => {
+          let removal = bstRemoveMinimum(left);
+          if (removal == nil) {
+            return nil;
+          }
+          return TreeRemoval<T> {
+            value: removal.value,
+            rest: Tree.Node(value, removal.rest, right)
+          };
+        }
+      }
+    }
+  }
+  return nil;
+}
+
+fun bstRemoveMaximum<T>(tree: Tree<T>): optional<TreeRemoval<T>> {
+  match tree {
+    Tree.Empty => { return nil; }
+    Tree.Node(value, left, right) => {
+      match right {
+        Tree.Empty => {
+          return TreeRemoval<T> { value: value, rest: left };
+        }
+        Tree.Node(rightValue, rightLeft, rightRight) => {
+          let removal = bstRemoveMaximum(right);
+          if (removal == nil) {
+            return nil;
+          }
+          return TreeRemoval<T> {
+            value: removal.value,
+            rest: Tree.Node(value, left, removal.rest)
+          };
+        }
+      }
+    }
+  }
+  return nil;
+}
+
+fun bstContains<T>(tree: Tree<T>, target: T, less: fun(T, T): bool): bool {
+  let current = tree;
+  while (true) {
+    match current {
+      Tree.Empty => { return false; }
+      Tree.Node(value, left, right) => {
+        if (less(target, value)) {
+          current = left;
+          continue;
+        }
+        if (less(value, target)) {
+          current = right;
+          continue;
+        }
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+fun bstInsert<T>(tree: Tree<T>, value: T, less: fun(T, T): bool): Tree<T> {
+  match tree {
+    Tree.Empty => { return Tree.Node(value, Tree.Empty<T>(), Tree.Empty<T>()); }
+    Tree.Node(current, left, right) => {
+      if (less(value, current)) {
+        return Tree.Node(current, bstInsert(left, value, less), right);
+      }
+      if (less(current, value)) {
+        return Tree.Node(current, left, bstInsert(right, value, less));
+      }
+      return tree;
+    }
+  }
+  return tree;
+}
+
+fun bstDelete<T>(tree: Tree<T>, value: T, less: fun(T, T): bool): Tree<T> {
+  match tree {
+    Tree.Empty => { return tree; }
+    Tree.Node(current, left, right) => {
+      if (less(value, current)) {
+        return Tree.Node(current, bstDelete(left, value, less), right);
+      }
+      if (less(current, value)) {
+        return Tree.Node(current, left, bstDelete(right, value, less));
+      }
+
+      match left {
+        Tree.Empty => { return right; }
+        Tree.Node(leftValue, leftLeft, leftRight) => {
+          match right {
+            Tree.Empty => { return left; }
+            Tree.Node(rightValue, rightLeft, rightRight) => {
+              let removal = bstRemoveMinimum(right);
+              if (removal == nil) {
+                return left;
+              }
+              return Tree.Node(removal.value, left, removal.rest);
+            }
+          }
+        }
+      }
+    }
+  }
+  return tree;
+}
+
+fun bstMinimum<T>(tree: Tree<T>): optional<T> {
+  let removal = bstRemoveMinimum(tree);
+  if (removal == nil) {
+    return nil;
+  }
+  return removal.value;
+}
+
+fun bstMaximum<T>(tree: Tree<T>): optional<T> {
+  let removal = bstRemoveMaximum(tree);
+  if (removal == nil) {
+    return nil;
+  }
+  return removal.value;
+}
+
+fun bstPredecessor<T>(tree: Tree<T>, target: T, less: fun(T, T): bool): optional<T> {
+  let current = tree;
+  let candidate: optional<T> = nil;
+  while (true) {
+    match current {
+      Tree.Empty => { return candidate; }
+      Tree.Node(value, left, right) => {
+        if (less(value, target)) {
+          candidate = value;
+          current = right;
+        } else {
+          current = left;
+        }
+      }
+    }
+  }
+  return candidate;
+}
+
+fun bstSuccessor<T>(tree: Tree<T>, target: T, less: fun(T, T): bool): optional<T> {
+  let current = tree;
+  let candidate: optional<T> = nil;
+  while (true) {
+    match current {
+      Tree.Empty => { return candidate; }
+      Tree.Node(value, left, right) => {
+        if (less(target, value)) {
+          candidate = value;
+          current = left;
+        } else {
+          current = right;
+        }
+      }
+    }
+  }
+  return candidate;
+}
+
+
+export Tree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced, treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor;

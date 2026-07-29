@@ -1,0 +1,514 @@
+// Dynamic-programming algorithms.
+
+fun climbStairs(steps: number): optional<number> {
+  if (floor(steps) != steps || steps < 0) {
+    return nil;
+  }
+  if (steps <= 1) {
+    return 1;
+  }
+  let previous = 1;
+  let current = 1;
+  let index = 2;
+  while (index <= steps) {
+    let next = previous + current;
+    previous = current;
+    current = next;
+    index += 1;
+  }
+  return current;
+}
+
+fun maxNonAdjacentSum(values: [number]): number {
+  let included = 0;
+  let excluded = 0;
+  let index = 0;
+  while (index < values.len()) {
+    let nextIncluded = excluded + values[index];
+    let nextExcluded = included;
+    if (excluded > nextExcluded) {
+      nextExcluded = excluded;
+    }
+    included = nextIncluded;
+    excluded = nextExcluded;
+    index += 1;
+  }
+  if (included > excluded) {
+    return included;
+  }
+  return excluded;
+}
+
+fun minCoinCount(amount: number, coins: [number]): optional<number> {
+  if (floor(amount) != amount || amount < 0) {
+    return nil;
+  }
+  let target = floor(amount);
+  let impossible = target + 1;
+  let counts: [number] = [];
+  let index = 0;
+  while (index <= target) {
+    counts.push(impossible);
+    index += 1;
+  }
+  counts[0] = 0;
+
+  let current = 1;
+  while (current <= target) {
+    let best = impossible;
+    let coinIndex = 0;
+    while (coinIndex < coins.len()) {
+      let coin = coins[coinIndex];
+      if (floor(coin) == coin && coin > 0 && coin <= current) {
+        let candidate = counts[current - coin] + 1;
+        if (candidate < best) {
+          best = candidate;
+        }
+      }
+      coinIndex += 1;
+    }
+    counts[current] = best;
+    current += 1;
+  }
+  if (counts[target] == impossible) {
+    return nil;
+  }
+  return counts[target];
+}
+
+fun uniqueGridPaths(rows: number, columns: number): optional<number> {
+  if (floor(rows) != rows || floor(columns) != columns || rows < 0 || columns < 0) {
+    return nil;
+  }
+  if (rows == 0 || columns == 0) {
+    return 0;
+  }
+  let ways: [number] = [];
+  let column = 0;
+  while (column < columns) {
+    ways.push(1);
+    column += 1;
+  }
+  let row = 1;
+  while (row < rows) {
+    column = 1;
+    while (column < columns) {
+      ways[column] += ways[column - 1];
+      column += 1;
+    }
+    row += 1;
+  }
+  return ways[columns - 1];
+}
+
+fun uniqueGridPathsWithObstacles(grid: [[bool]]): optional<number> {
+  if (grid.len() == 0 || grid[0].len() == 0) {
+    return 0;
+  }
+  let columns = grid[0].len();
+  let row = 0;
+  while (row < grid.len()) {
+    if (grid[row].len() != columns) {
+      return nil;
+    }
+    row += 1;
+  }
+
+  let ways: [number] = [];
+  let column = 0;
+  while (column < columns) {
+    ways.push(0);
+    column += 1;
+  }
+
+  row = 0;
+  while (row < grid.len()) {
+    column = 0;
+    while (column < columns) {
+      if (grid[row][column]) {
+        ways[column] = 0;
+      } else {
+        if (column > 0) {
+          ways[column] += ways[column - 1];
+        } else {
+          if (row == 0) {
+            ways[column] = 1;
+          }
+        }
+      }
+      column += 1;
+    }
+    row += 1;
+  }
+  return ways[columns - 1];
+}
+
+fun minGridPathSum(grid: [[number]]): optional<number> {
+  if (grid.len() == 0 || grid[0].len() == 0) {
+    return nil;
+  }
+  let columns = grid[0].len();
+  let row = 0;
+  while (row < grid.len()) {
+    if (grid[row].len() != columns) {
+      return nil;
+    }
+    row += 1;
+  }
+
+  let costs: [number] = [];
+  let column = 0;
+  costs.push(grid[0][0]);
+  column = 1;
+  while (column < columns) {
+    costs.push(costs[column - 1] + grid[0][column]);
+    column += 1;
+  }
+
+  row = 1;
+  while (row < grid.len()) {
+    costs[0] += grid[row][0];
+    column = 1;
+    while (column < columns) {
+      let top = costs[column];
+      let left = costs[column - 1];
+      if (top < left) {
+        costs[column] = top + grid[row][column];
+      } else {
+        costs[column] = left + grid[row][column];
+      }
+      column += 1;
+    }
+    row += 1;
+  }
+  return costs[columns - 1];
+}
+
+fun editDistance(left: string, right: string): number {
+  let previous: [number] = [];
+  let index = 0;
+  while (index <= right.len()) {
+    previous.push(index);
+    index += 1;
+  }
+
+  let leftIndex = 1;
+  while (leftIndex <= left.len()) {
+    let current: [number] = [leftIndex];
+    let rightIndex = 1;
+    while (rightIndex <= right.len()) {
+      let substitutionCost = 0;
+      if (left.charAt(leftIndex - 1) != right.charAt(rightIndex - 1)) {
+        substitutionCost = 1;
+      }
+      let deletion = previous[rightIndex] + 1;
+      let insertion = current[rightIndex - 1] + 1;
+      let substitution = previous[rightIndex - 1] + substitutionCost;
+      let best = deletion;
+      if (insertion < best) {
+        best = insertion;
+      }
+      if (substitution < best) {
+        best = substitution;
+      }
+      current.push(best);
+      rightIndex += 1;
+    }
+    previous = current;
+    leftIndex += 1;
+  }
+  return previous[right.len()];
+}
+
+fun longestIncreasingSubsequenceLength(values: [number]): number {
+  if (values.len() == 0) {
+    return 0;
+  }
+  let lengths: [number] = [];
+  let index = 0;
+  while (index < values.len()) {
+    lengths.push(1);
+    index += 1;
+  }
+  let best = 1;
+  index = 0;
+  while (index < values.len()) {
+    let previous = 0;
+    while (previous < index) {
+      if (values[previous] < values[index] && lengths[previous] + 1 > lengths[index]) {
+        lengths[index] = lengths[previous] + 1;
+      }
+      previous += 1;
+    }
+    if (lengths[index] > best) {
+      best = lengths[index];
+    }
+    index += 1;
+  }
+  return best;
+}
+
+fun longestCommonSubsequenceLength(left: string, right: string): number {
+  let previous: [number] = [];
+  let index = 0;
+  while (index <= right.len()) {
+    previous.push(0);
+    index += 1;
+  }
+
+  let leftIndex = 1;
+  while (leftIndex <= left.len()) {
+    let current: [number] = [0];
+    let rightIndex = 1;
+    while (rightIndex <= right.len()) {
+      if (left.charAt(leftIndex - 1) == right.charAt(rightIndex - 1)) {
+        current.push(previous[rightIndex - 1] + 1);
+      } else {
+        if (previous[rightIndex] > current[rightIndex - 1]) {
+          current.push(previous[rightIndex]);
+        } else {
+          current.push(current[rightIndex - 1]);
+        }
+      }
+      rightIndex += 1;
+    }
+    previous = current;
+    leftIndex += 1;
+  }
+  return previous[right.len()];
+}
+
+fun matrixChainCost(dimensions: [number]): optional<number> {
+  let index = 0;
+  while (index < dimensions.len()) {
+    if (floor(dimensions[index]) != dimensions[index] || dimensions[index] <= 0) {
+      return nil;
+    }
+    index += 1;
+  }
+  if (dimensions.len() <= 1) {
+    return 0;
+  }
+
+  let matrixCount = dimensions.len() - 1;
+  let costs: [[number]] = [];
+  index = 0;
+  while (index < matrixCount) {
+    let row: [number] = [];
+    let column = 0;
+    while (column < matrixCount) {
+      row.push(0);
+      column += 1;
+    }
+    costs.push(row);
+    index += 1;
+  }
+
+  let chainLength = 2;
+  while (chainLength <= matrixCount) {
+    index = 0;
+    while (index + chainLength <= matrixCount) {
+      let end = index + chainLength - 1;
+      let best = -1;
+      let split = index;
+      while (split < end) {
+        let candidate = costs[index][split] + costs[split + 1][end];
+        candidate += dimensions[index] * dimensions[split + 1] * dimensions[end + 1];
+        if (best < 0 || candidate < best) {
+          best = candidate;
+        }
+        split += 1;
+      }
+      costs[index][end] = best;
+      index += 1;
+    }
+    chainLength += 1;
+  }
+  return costs[0][matrixCount - 1];
+}
+
+fun multiplyMatrix2x2(left: [[number]], right: [[number]]): [[number]] {
+  return [
+    [
+      left[0][0] * right[0][0] + left[0][1] * right[1][0],
+      left[0][0] * right[0][1] + left[0][1] * right[1][1]
+    ],
+    [
+      left[1][0] * right[0][0] + left[1][1] * right[1][0],
+      left[1][0] * right[0][1] + left[1][1] * right[1][1]
+    ]
+  ];
+}
+
+fun matrixPower2x2(matrix: [[number]], exponent: number): optional<[[number]]> {
+  if (floor(exponent) != exponent || exponent < 0 || matrix.len() != 2 || matrix[0].len() != 2 || matrix[1].len() != 2) {
+    return nil;
+  }
+  let result: [[number]] = [[1, 0], [0, 1]];
+  let factor = matrix;
+  let remaining = exponent;
+  while (remaining > 0) {
+    if (floor(remaining / 2) * 2 != remaining) {
+      result = multiplyMatrix2x2(result, factor);
+    }
+    factor = multiplyMatrix2x2(factor, factor);
+    remaining = floor(remaining / 2);
+  }
+  return result;
+}
+
+fun mergeStonesCost(values: [number]): optional<number> {
+  let index = 0;
+  while (index < values.len()) {
+    if (floor(values[index]) != values[index] || values[index] < 0) {
+      return nil;
+    }
+    index += 1;
+  }
+  if (values.len() <= 1) {
+    return 0;
+  }
+
+  let prefix: [number] = [0];
+  index = 0;
+  while (index < values.len()) {
+    prefix.push(prefix[index] + values[index]);
+    index += 1;
+  }
+
+  let costs: [[number]] = [];
+  index = 0;
+  while (index < values.len()) {
+    let row: [number] = [];
+    let column = 0;
+    while (column < values.len()) {
+      row.push(0);
+      column += 1;
+    }
+    costs.push(row);
+    index += 1;
+  }
+
+  let length = 2;
+  while (length <= values.len()) {
+    index = 0;
+    while (index + length <= values.len()) {
+      let end = index + length - 1;
+      let total = prefix[end + 1] - prefix[index];
+      let best = -1;
+      let split = index;
+      while (split < end) {
+        let candidate = costs[index][split] + costs[split + 1][end] + total;
+        if (best < 0 || candidate < best) {
+          best = candidate;
+        }
+        split += 1;
+      }
+      costs[index][end] = best;
+      index += 1;
+    }
+    length += 1;
+  }
+  return costs[0][values.len() - 1];
+}
+
+fun knapsack01(weights: [number], values: [number], capacity: number): optional<number> {
+  if (floor(capacity) != capacity || capacity < 0 || weights.len() != values.len()) {
+    return nil;
+  }
+  let limit = floor(capacity);
+  let best: [number] = [];
+  let index = 0;
+  while (index <= limit) {
+    best.push(0);
+    index += 1;
+  }
+
+  let item = 0;
+  while (item < weights.len()) {
+    let weight = weights[item];
+    if (floor(weight) != weight || weight < 0) {
+      return nil;
+    }
+    let remaining = limit;
+    while (remaining >= weight) {
+      let candidate = best[remaining - weight] + values[item];
+      if (candidate > best[remaining]) {
+        best[remaining] = candidate;
+      }
+      remaining -= 1;
+    }
+    item += 1;
+  }
+  return best[limit];
+}
+
+fun completeKnapsack(weights: [number], values: [number], capacity: number): optional<number> {
+  if (floor(capacity) != capacity || capacity < 0 || weights.len() != values.len()) {
+    return nil;
+  }
+  let limit = floor(capacity);
+  let best: [number] = [];
+  let index = 0;
+  while (index <= limit) {
+    best.push(0);
+    index += 1;
+  }
+
+  let item = 0;
+  while (item < weights.len()) {
+    let weight = weights[item];
+    if (floor(weight) != weight || weight <= 0) {
+      return nil;
+    }
+    let remaining = weight;
+    while (remaining <= limit) {
+      let candidate = best[remaining - weight] + values[item];
+      if (candidate > best[remaining]) {
+        best[remaining] = candidate;
+      }
+      remaining += 1;
+    }
+    item += 1;
+  }
+  return best[limit];
+}
+
+fun boundedKnapsack(weights: [number], values: [number], counts: [number], capacity: number): optional<number> {
+  if (floor(capacity) != capacity || capacity < 0 || weights.len() != values.len() || weights.len() != counts.len()) {
+    return nil;
+  }
+  let limit = floor(capacity);
+  let best: [number] = [];
+  let index = 0;
+  while (index <= limit) {
+    best.push(0);
+    index += 1;
+  }
+
+  let item = 0;
+  while (item < weights.len()) {
+    let weight = weights[item];
+    let count = counts[item];
+    if (floor(weight) != weight || weight <= 0 || floor(count) != count || count < 0) {
+      return nil;
+    }
+    let copy = 0;
+    while (copy < count) {
+      let remaining = limit;
+      while (remaining >= weight) {
+        let candidate = best[remaining - weight] + values[item];
+        if (candidate > best[remaining]) {
+          best[remaining] = candidate;
+        }
+        remaining -= 1;
+      }
+      copy += 1;
+    }
+    item += 1;
+  }
+  return best[limit];
+}
+
+
+export climbStairs, maxNonAdjacentSum, minCoinCount, uniqueGridPaths, uniqueGridPathsWithObstacles, minGridPathSum, editDistance, longestIncreasingSubsequenceLength, longestCommonSubsequenceLength, matrixChainCost, matrixPower2x2, mergeStonesCost, knapsack01, completeKnapsack, boundedKnapsack;

@@ -1,0 +1,413 @@
+// Number-theory, arithmetic, and priority-queue helpers.
+import "./collections.cd";
+import "./strings.cd";
+
+fun gcd(left: number, right: number): number {
+  let a = left;
+  if (a < 0) {
+    a = -a;
+  }
+  let b = right;
+  if (b < 0) {
+    b = -b;
+  }
+  while (b != 0) {
+    let quotient = floor(a / b);
+    let remainder = a - quotient * b;
+    a = b;
+    b = remainder;
+  }
+  return a;
+}
+
+fun lcm(left: number, right: number): number {
+  if (left == 0 || right == 0) {
+    return 0;
+  }
+  let leftMagnitude = left;
+  if (leftMagnitude < 0) {
+    leftMagnitude = -leftMagnitude;
+  }
+  let rightMagnitude = right;
+  if (rightMagnitude < 0) {
+    rightMagnitude = -rightMagnitude;
+  }
+  return (leftMagnitude / gcd(leftMagnitude, rightMagnitude)) * rightMagnitude;
+}
+
+struct ExtendedGcdResult {
+  gcd: number,
+  leftCoefficient: number,
+  rightCoefficient: number
+}
+
+fun extendedGcd(left: number, right: number): ExtendedGcdResult {
+  if (left == 0 && right == 0) {
+    return ExtendedGcdResult { gcd: 0, leftCoefficient: 0, rightCoefficient: 0 };
+  }
+  let oldR = left;
+  if (oldR < 0) {
+    oldR = -oldR;
+  }
+  let remainder = right;
+  if (remainder < 0) {
+    remainder = -remainder;
+  }
+  let oldS = 1;
+  let coefficientS = 0;
+  let oldT = 0;
+  let coefficientT = 1;
+  while (remainder != 0) {
+    let quotient = floor(oldR / remainder);
+    let next = oldR - quotient * remainder;
+    oldR = remainder;
+    remainder = next;
+
+    next = oldS - quotient * coefficientS;
+    oldS = coefficientS;
+    coefficientS = next;
+
+    next = oldT - quotient * coefficientT;
+    oldT = coefficientT;
+    coefficientT = next;
+  }
+  if (left < 0) {
+    oldS = -oldS;
+  }
+  if (right < 0) {
+    oldT = -oldT;
+  }
+  return ExtendedGcdResult {
+    gcd: oldR,
+    leftCoefficient: oldS,
+    rightCoefficient: oldT
+  };
+}
+
+fun isPrime(value: number): bool {
+  if (value < 2 || floor(value) != value) {
+    return false;
+  }
+  if (value == 2) {
+    return true;
+  }
+  if (floor(value / 2) * 2 == value) {
+    return false;
+  }
+  let divisor = 3;
+  while (divisor <= value / divisor) {
+    if (floor(value / divisor) * divisor == value) {
+      return false;
+    }
+    divisor += 2;
+  }
+  return true;
+}
+
+fun sievePrimes(limit: number): [number] {
+  let primes: [number] = [];
+  let bound = floor(limit);
+  if (bound < 2) {
+    return primes;
+  }
+  let composite: [bool] = [];
+  let index = 0;
+  while (index <= bound) {
+    composite.push(false);
+    index += 1;
+  }
+
+  let candidate = 2;
+  while (candidate <= bound / candidate) {
+    if (!composite[candidate]) {
+      let multiple = candidate * candidate;
+      while (multiple <= bound) {
+        composite[multiple] = true;
+        multiple += candidate;
+      }
+    }
+    candidate += 1;
+  }
+
+  index = 2;
+  while (index <= bound) {
+    if (!composite[index]) {
+      primes.push(index);
+    }
+    index += 1;
+  }
+  return primes;
+}
+
+fun fastPower(base: number, exponent: number): optional<number> {
+  if (exponent < 0 || floor(exponent) != exponent) {
+    return nil;
+  }
+  let result = 1;
+  let factor = base;
+  let remaining = exponent;
+  while (remaining > 0) {
+    if (floor(remaining / 2) * 2 != remaining) {
+      result *= factor;
+    }
+    factor *= factor;
+    remaining = floor(remaining / 2);
+  }
+  return result;
+}
+
+fun factorial(value: number): optional<number> {
+  if (value < 0 || floor(value) != value) {
+    return nil;
+  }
+  let result = 1;
+  let current = 2;
+  while (current <= value) {
+    result *= current;
+    current += 1;
+  }
+  return result;
+}
+
+fun fibonacci(index: number): optional<number> {
+  if (index < 0 || floor(index) != index) {
+    return nil;
+  }
+  let previous = 0;
+  let current = 1;
+  let step = 0;
+  while (step < index) {
+    let next = previous + current;
+    previous = current;
+    current = next;
+    step += 1;
+  }
+  return previous;
+}
+
+struct PriorityQueue<T> {
+  heap: BinaryHeap<T>
+}
+
+impl PriorityQueue<T> {
+  fun enqueue(value: T) {
+    this.heap.add(value);
+  }
+
+  fun dequeue(): optional<T> {
+    return this.heap.take();
+  }
+
+  fun front(): optional<T> {
+    return this.heap.peek();
+  }
+
+  fun size(): number {
+    return this.heap.size();
+  }
+
+  fun isEmpty(): bool {
+    return this.heap.isEmpty();
+  }
+
+  fun snapshot(): [T] {
+    return this.heap.snapshot();
+  }
+}
+
+fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
+  return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
+}
+
+fun gcdArray(values: [number]): optional<number> {
+  if (values.len() == 0) {
+    return nil;
+  }
+  let result = 0;
+  let index = 0;
+  while (index < values.len()) {
+    if (floor(values[index]) != values[index]) {
+      return nil;
+    }
+    result = gcd(result, values[index]);
+    index += 1;
+  }
+  return result;
+}
+
+fun prefixProducts(values: [number]): [number] {
+  let result: [number] = [];
+  let product = 1;
+  let index = 0;
+  while (index < values.len()) {
+    product *= values[index];
+    result.push(product);
+    index += 1;
+  }
+  return result;
+}
+
+fun minimumLargestPartitionSum(values: [number], parts: number): optional<number> {
+  if (floor(parts) != parts || parts <= 0) {
+    return nil;
+  }
+  if (values.len() == 0) {
+    return 0;
+  }
+
+  let low = 0;
+  let high = 0;
+  let index = 0;
+  while (index < values.len()) {
+    let value = values[index];
+    if (floor(value) != value || value < 0) {
+      return nil;
+    }
+    if (value > low) {
+      low = value;
+    }
+    high += value;
+    index += 1;
+  }
+
+  while (low < high) {
+    let capacity = floor((low + high) / 2);
+    let required = 1;
+    let current = 0;
+    index = 0;
+    while (index < values.len()) {
+      if (current + values[index] <= capacity) {
+        current += values[index];
+      } else {
+        required += 1;
+        current = values[index];
+      }
+      index += 1;
+    }
+    if (required <= parts) {
+      high = capacity;
+    } else {
+      low = capacity + 1;
+    }
+  }
+  return low;
+}
+
+fun binomialCoefficient(n: number, k: number): optional<number> {
+  if (floor(n) != n || floor(k) != k || n < 0 || k < 0 || k > n) {
+    return nil;
+  }
+  let effective = k;
+  if (effective > n - effective) {
+    effective = n - effective;
+  }
+  let coefficients: [number] = [1];
+  let index = 1;
+  while (index <= effective) {
+    coefficients.push(0);
+    index += 1;
+  }
+  let row = 1;
+  while (row <= n) {
+    index = row;
+    if (index > effective) {
+      index = effective;
+    }
+    while (index > 0) {
+      coefficients[index] += coefficients[index - 1];
+      index -= 1;
+    }
+    row += 1;
+  }
+  return coefficients[effective];
+}
+
+fun permutationCount(n: number, k: number): optional<number> {
+  if (floor(n) != n || floor(k) != k || n < 0 || k < 0 || k > n) {
+    return nil;
+  }
+  let result = 1;
+  let step = 0;
+  while (step < k) {
+    result *= n - step;
+    step += 1;
+  }
+  return result;
+}
+
+fun pascalTriangle(rows: number): [[number]] {
+  let result: [[number]] = [];
+  if (floor(rows) != rows || rows < 0) {
+    return result;
+  }
+  let previous: [number] = [];
+  let rowIndex = 0;
+  while (rowIndex < rows) {
+    let current: [number] = [];
+    let column = 0;
+    while (column <= rowIndex) {
+      if (column == 0 || column == rowIndex) {
+        current.push(1);
+      } else {
+        current.push(previous[column - 1] + previous[column]);
+      }
+      column += 1;
+    }
+    result.push(current);
+    previous = current;
+    rowIndex += 1;
+  }
+  return result;
+}
+
+fun primeFactors(value: number): [number] {
+  let result: [number] = [];
+  if (value < 2 || floor(value) != value) {
+    return result;
+  }
+  let remaining = value;
+  let factor = 2;
+  while (factor <= remaining / factor) {
+    while (floor(remaining / factor) * factor == remaining) {
+      result.push(factor);
+      remaining = floor(remaining / factor);
+    }
+    if (factor == 2) {
+      factor = 3;
+    } else {
+      factor += 2;
+    }
+  }
+  if (remaining > 1) {
+    result.push(remaining);
+  }
+  return result;
+}
+
+fun divisors(value: number): [number] {
+  let result: [number] = [];
+  if (value < 1 || floor(value) != value) {
+    return result;
+  }
+  let large: [number] = [];
+  let divisor = 1;
+  while (divisor <= value / divisor) {
+    if (floor(value / divisor) * divisor == value) {
+      result.push(divisor);
+      let paired = floor(value / divisor);
+      if (paired != divisor) {
+        large.push(paired);
+      }
+    }
+    divisor += 1;
+  }
+  let reversed = reverseArray(large);
+  let index = 0;
+  while (index < reversed.len()) {
+    result.push(reversed[index]);
+    index += 1;
+  }
+  return result;
+}
+
+export PriorityQueue, newPriorityQueue, ExtendedGcdResult, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci, primeFactors, divisors, binomialCoefficient, permutationCount, pascalTriangle, gcdArray, prefixProducts, minimumLargestPartitionSum;

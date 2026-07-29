@@ -1,0 +1,440 @@
+// Search, sorting, and ordering algorithms.
+import "./graphs.cd";
+
+fun lowerBound<T>(values: [T], target: T, less: fun(T, T): bool): number {
+  let low = 0;
+  let high = values.len();
+  while (low < high) {
+    let middle = floor((low + high) / 2);
+    if (less(values[middle], target)) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+  return low;
+}
+
+fun upperBound<T>(values: [T], target: T, less: fun(T, T): bool): number {
+  let low = 0;
+  let high = values.len();
+  while (low < high) {
+    let middle = floor((low + high) / 2);
+    if (less(target, values[middle])) {
+      high = middle;
+    } else {
+      low = middle + 1;
+    }
+  }
+  return low;
+}
+
+fun binarySearch<T>(values: [T], target: T, less: fun(T, T): bool): number {
+  let index = lowerBound(values, target, less);
+  if (index < values.len()
+      && !less(values[index], target)
+      && !less(target, values[index])) {
+    return index;
+  }
+  return -1;
+}
+
+fun peakIndex(values: [number]): optional<number> {
+  if (values.len() == 0) {
+    return nil;
+  }
+  let low = 0;
+  let high = values.len() - 1;
+  while (low < high) {
+    let middle = floor((low + high) / 2);
+    if (values[middle] < values[middle + 1]) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+  return low;
+}
+
+fun isMountainArray(values: [number]): bool {
+  if (values.len() < 3) {
+    return false;
+  }
+  let index = 1;
+  while (index < values.len() && values[index] > values[index - 1]) {
+    index += 1;
+  }
+  if (index == 1 || index == values.len()) {
+    return false;
+  }
+  while (index < values.len() && values[index] < values[index - 1]) {
+    index += 1;
+  }
+  return index == values.len();
+}
+
+fun mountainPeakIndex(values: [number]): optional<number> {
+  if (!isMountainArray(values)) {
+    return nil;
+  }
+  let low = 1;
+  let high = values.len() - 2;
+  while (low < high) {
+    let middle = floor((low + high) / 2);
+    if (values[middle] < values[middle + 1]) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+  return low;
+}
+
+fun countValue<T: Eq>(values: [T], target: T): number {
+  let count = 0;
+  let index = 0;
+  while (index < values.len()) {
+    if (values[index] == target) {
+      count += 1;
+    }
+    index += 1;
+  }
+  return count;
+}
+
+fun isSorted<T>(values: [T], less: fun(T, T): bool): bool {
+  let index = 1;
+  while (index < values.len()) {
+    if (less(values[index], values[index - 1])) {
+      return false;
+    }
+    index += 1;
+  }
+  return true;
+}
+
+fun sortArrayInPlace<T>(values: [T], less: fun(T, T): bool) {
+  let index = 1;
+  while (index < values.len()) {
+    let value = values[index];
+    let position = index;
+    while (position > 0 && less(value, values[position - 1])) {
+      values[position] = values[position - 1];
+      position -= 1;
+    }
+    values[position] = value;
+    index += 1;
+  }
+}
+
+fun sortArray<T>(values: [T], less: fun(T, T): bool): [T] {
+  let result = copy(values);
+  sortArrayInPlace(result, less);
+  return result;
+}
+
+fun shellSort<T>(values: [T], less: fun(T, T): bool): [T] {
+  let result = copy(values);
+  let gap = floor(result.len() / 2);
+  while (gap > 0) {
+    let index = gap;
+    while (index < result.len()) {
+      let value = result[index];
+      let position = index;
+      while (position >= gap && less(value, result[position - gap])) {
+        result[position] = result[position - gap];
+        position -= gap;
+      }
+      result[position] = value;
+      index += 1;
+    }
+    gap = floor(gap / 2);
+  }
+  return result;
+}
+
+fun selectionSortInPlace<T>(values: [T], less: fun(T, T): bool) {
+  let start = 0;
+  while (start < values.len()) {
+    let smallest = start;
+    let index = start + 1;
+    while (index < values.len()) {
+      if (less(values[index], values[smallest])) {
+        smallest = index;
+      }
+      index += 1;
+    }
+    if (smallest != start) {
+      let value = values[start];
+      values[start] = values[smallest];
+      values[smallest] = value;
+    }
+    start += 1;
+  }
+}
+
+fun selectionSort<T>(values: [T], less: fun(T, T): bool): [T] {
+  let result = copy(values);
+  selectionSortInPlace(result, less);
+  return result;
+}
+
+fun bubbleSortInPlace<T>(values: [T], less: fun(T, T): bool) {
+  let end = values.len() - 1;
+  while (end > 0) {
+    let index = 0;
+    let swapped = false;
+    while (index < end) {
+      if (less(values[index + 1], values[index])) {
+        let value = values[index];
+        values[index] = values[index + 1];
+        values[index + 1] = value;
+        swapped = true;
+      }
+      index += 1;
+    }
+    if (!swapped) {
+      break;
+    }
+    end -= 1;
+  }
+}
+
+fun bubbleSort<T>(values: [T], less: fun(T, T): bool): [T] {
+  let result = copy(values);
+  bubbleSortInPlace(result, less);
+  return result;
+}
+
+struct KruskalEdge {
+  from: number,
+  to: number,
+  weight: number
+}
+
+fun kruskalEdgeLess(left: KruskalEdge, right: KruskalEdge): bool {
+  if (left.weight == right.weight) {
+    if (left.from == right.from) {
+      return left.to < right.to;
+    }
+    return left.from < right.from;
+  }
+  return left.weight < right.weight;
+}
+
+fun minimumSpanningForestKruskal(graph: WeightedGraph): WeightedGraph {
+  let count = graph.vertexCount();
+  let forest = newWeightedGraph(count, false);
+  if (graph.directed) {
+    return forest;
+  }
+
+  let edges: [KruskalEdge] = [];
+  let from = 0;
+  while (from < count) {
+    let neighbors = graph.adjacency[from];
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let edge = neighbors[neighborIndex];
+      if (from < edge.to) {
+        edges.push(KruskalEdge { from: from, to: edge.to, weight: edge.weight });
+      }
+      neighborIndex += 1;
+    }
+    from += 1;
+  }
+
+  let ordered = sortArray(edges, kruskalEdgeLess);
+  let components = newDisjointSet(count);
+  let index = 0;
+  while (index < ordered.len()) {
+    let edge = ordered[index];
+    if (components.union(edge.from, edge.to)) {
+      forest.addEdge(edge.from, edge.to, edge.weight);
+    }
+    index += 1;
+  }
+  return forest;
+}
+
+fun mergeSort<T>(values: [T], less: fun(T, T): bool): [T] {
+  let result = copy(values);
+  let width = 1;
+  while (width < result.len()) {
+    let start = 0;
+    while (start < result.len()) {
+      let middle = start + width;
+      if (middle > result.len()) {
+        middle = result.len();
+      }
+      let end = middle + width;
+      if (end > result.len()) {
+        end = result.len();
+      }
+
+      let leftIndex = start;
+      let rightIndex = middle;
+      let merged: [T] = [];
+      while (leftIndex < middle && rightIndex < end) {
+        if (less(result[rightIndex], result[leftIndex])) {
+          merged.push(result[rightIndex]);
+          rightIndex += 1;
+        } else {
+          merged.push(result[leftIndex]);
+          leftIndex += 1;
+        }
+      }
+      while (leftIndex < middle) {
+        merged.push(result[leftIndex]);
+        leftIndex += 1;
+      }
+      while (rightIndex < end) {
+        merged.push(result[rightIndex]);
+        rightIndex += 1;
+      }
+
+      let mergedIndex = 0;
+      while (mergedIndex < merged.len()) {
+        result[start + mergedIndex] = merged[mergedIndex];
+        mergedIndex += 1;
+      }
+      start = end;
+    }
+    width *= 2;
+  }
+  return result;
+}
+
+fun quickSortRange<T>(values: [T], start: number, end: number, less: fun(T, T): bool) {
+  if (start >= end) {
+    return;
+  }
+
+  let pivotIndex = floor((start + end) / 2);
+  let pivotValue = values[pivotIndex];
+  values[pivotIndex] = values[end];
+  values[end] = pivotValue;
+
+  let pivot = values[end];
+  let store = start;
+  let index = start;
+  while (index < end) {
+    if (less(values[index], pivot)) {
+      let value = values[store];
+      values[store] = values[index];
+      values[index] = value;
+      store += 1;
+    }
+    index += 1;
+  }
+
+  let value = values[store];
+  values[store] = values[end];
+  values[end] = value;
+  quickSortRange(values, start, store - 1, less);
+  quickSortRange(values, store + 1, end, less);
+}
+
+fun quickSortInPlace<T>(values: [T], less: fun(T, T): bool) {
+  if (values.len() > 1) {
+    quickSortRange(values, 0, values.len() - 1, less);
+  }
+}
+
+fun quickSort<T>(values: [T], less: fun(T, T): bool): [T] {
+  let result = copy(values);
+  quickSortInPlace(result, less);
+  return result;
+}
+
+fun heapSortSiftDown<T>(values: [T], root: number, heapSize: number, less: fun(T, T): bool) {
+  let index = root;
+  while (true) {
+    let candidate = index;
+    let left = index * 2 + 1;
+    if (left < heapSize && less(values[candidate], values[left])) {
+      candidate = left;
+    }
+    let right = left + 1;
+    if (right < heapSize && less(values[candidate], values[right])) {
+      candidate = right;
+    }
+    if (candidate == index) {
+      break;
+    }
+    let value = values[index];
+    values[index] = values[candidate];
+    values[candidate] = value;
+    index = candidate;
+  }
+}
+
+fun heapSortInPlace<T>(values: [T], less: fun(T, T): bool) {
+  let start = floor(values.len() / 2) - 1;
+  while (start >= 0) {
+    heapSortSiftDown(values, start, values.len(), less);
+    start -= 1;
+  }
+
+  let heapSize = values.len();
+  while (heapSize > 1) {
+    let value = values[0];
+    values[0] = values[heapSize - 1];
+    values[heapSize - 1] = value;
+    heapSize -= 1;
+    heapSortSiftDown(values, 0, heapSize, less);
+  }
+}
+
+fun heapSort<T>(values: [T], less: fun(T, T): bool): [T] {
+  let result = copy(values);
+  heapSortInPlace(result, less);
+  return result;
+}
+
+fun chunkArray<T>(values: [T], size: number): [[T]] {
+  let result: [[T]] = [];
+  if (size <= 0) {
+    return result;
+  }
+
+  let start = 0;
+  while (start < values.len()) {
+    let end = start + size;
+    if (end > values.len()) {
+      end = values.len();
+    }
+    let chunk: [T] = [];
+    let index = start;
+    while (index < end) {
+      chunk.push(values[index]);
+      index += 1;
+    }
+    result.push(chunk);
+    start = end;
+  }
+  return result;
+}
+
+fun slidingWindows<T>(values: [T], width: number): [[T]] {
+  let result: [[T]] = [];
+  if (width <= 0 || width > values.len()) {
+    return result;
+  }
+
+  let start = 0;
+  while (start + width <= values.len()) {
+    let window: [T] = [];
+    let index = start;
+    while (index < start + width) {
+      window.push(values[index]);
+      index += 1;
+    }
+    result.push(window);
+    start += 1;
+  }
+  return result;
+}
+
+
+export peakIndex, isMountainArray, mountainPeakIndex, lowerBound, upperBound, binarySearch, countValue, isSorted, sortArray, sortArrayInPlace, shellSort, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, minimumSpanningForestKruskal;

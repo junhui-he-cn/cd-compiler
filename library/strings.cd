@@ -1,0 +1,466 @@
+// Array and string sequence algorithms, including the trie.
+import "./sets.cd";
+
+fun reverseArray<T>(values: [T]): [T] {
+  let result: [T] = [];
+  let index = values.len();
+  while (index > 0) {
+    index -= 1;
+    result.push(values[index]);
+  }
+  return result;
+}
+
+fun rotateArray<T>(values: [T], shift: number): [T] {
+  let result: [T] = [];
+  let length = values.len();
+  if (length == 0) {
+    return result;
+  }
+
+  let offset = floor(shift);
+  let turns = floor(offset / length);
+  offset -= turns * length;
+  if (offset < 0) {
+    offset += length;
+  }
+
+  let index = 0;
+  while (index < length) {
+    let source = index - offset;
+    if (source < 0) {
+      source += length;
+    }
+    result.push(values[source]);
+    index += 1;
+  }
+  return result;
+}
+
+fun linearSearch<T: Eq>(values: [T], target: T): number {
+  let index = 0;
+  while (index < values.len()) {
+    if (values[index] == target) {
+      return index;
+    }
+    index += 1;
+  }
+  return -1;
+}
+
+fun asciiCharacterRank(character: string): number {
+  let alphabet = " !#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+  let index = 0;
+  while (index < alphabet.len()) {
+    if (alphabet.charAt(index) == character) {
+      return index;
+    }
+    index += 1;
+  }
+  return -1;
+}
+
+fun compareStrings(left: string, right: string): optional<number> {
+  let leftLength = left.len();
+  let rightLength = right.len();
+  let limit = leftLength;
+  if (rightLength < limit) {
+    limit = rightLength;
+  }
+
+  let index = 0;
+  while (index < limit) {
+    let leftCharacter = left.charAt(index);
+    let rightCharacter = right.charAt(index);
+    let leftRank = asciiCharacterRank(leftCharacter);
+    let rightRank = asciiCharacterRank(rightCharacter);
+    if (leftRank < 0 || rightRank < 0) {
+      return nil;
+    }
+    if (leftRank < rightRank) {
+      return -1;
+    }
+    if (leftRank > rightRank) {
+      return 1;
+    }
+    index += 1;
+  }
+
+  if (leftLength < rightLength) {
+    return -1;
+  }
+  if (leftLength > rightLength) {
+    return 1;
+  }
+  return 0;
+}
+
+fun stringLess(left: string, right: string): bool {
+  let comparison = compareStrings(left, right);
+  if (comparison == nil) {
+    return false;
+  }
+  return comparison < 0;
+}
+
+fun findSubstring(text: string, pattern: string): number {
+  if (pattern.len() == 0) {
+    return 0;
+  }
+  if (pattern.len() > text.len()) {
+    return -1;
+  }
+  let start = 0;
+  while (start <= text.len() - pattern.len()) {
+    let offset = 0;
+    while (offset < pattern.len()
+        && text.charAt(start + offset) == pattern.charAt(offset)) {
+      offset += 1;
+    }
+    if (offset == pattern.len()) {
+      return start;
+    }
+    start += 1;
+  }
+  return -1;
+}
+
+fun prefixFunction(pattern: string): [number] {
+  let prefix: [number] = [];
+  let index = 0;
+  while (index < pattern.len()) {
+    prefix.push(0);
+    index += 1;
+  }
+  let matched = 0;
+  index = 1;
+  while (index < pattern.len()) {
+    while (matched > 0 && pattern.charAt(index) != pattern.charAt(matched)) {
+      matched = prefix[matched - 1];
+    }
+    if (pattern.charAt(index) == pattern.charAt(matched)) {
+      matched += 1;
+    }
+    prefix[index] = matched;
+    index += 1;
+  }
+  return prefix;
+}
+
+fun zFunction(text: string): [number] {
+  let z: [number] = [];
+  let index = 0;
+  while (index < text.len()) {
+    z.push(0);
+    index += 1;
+  }
+  if (text.len() == 0) {
+    return z;
+  }
+  z[0] = text.len();
+  let left = 0;
+  let right = 0;
+  index = 1;
+  while (index < text.len()) {
+    if (index <= right) {
+      let mirror = index - left;
+      z[index] = z[mirror];
+      if (z[index] > right - index + 1) {
+        z[index] = right - index + 1;
+      }
+    }
+    while (index + z[index] < text.len()
+        && text.charAt(z[index]) == text.charAt(index + z[index])) {
+      z[index] += 1;
+    }
+    if (index + z[index] - 1 > right) {
+      left = index;
+      right = index + z[index] - 1;
+    }
+    index += 1;
+  }
+  return z;
+}
+
+fun kmpSearch(text: string, pattern: string): number {
+  if (pattern.len() == 0) {
+    return 0;
+  }
+  let prefix = prefixFunction(pattern);
+  let textIndex = 0;
+  let patternIndex = 0;
+  while (textIndex < text.len()) {
+    if (text.charAt(textIndex) == pattern.charAt(patternIndex)) {
+      textIndex += 1;
+      patternIndex += 1;
+      if (patternIndex == pattern.len()) {
+        return textIndex - patternIndex;
+      }
+    } else {
+      if (patternIndex > 0) {
+        patternIndex = prefix[patternIndex - 1];
+      } else {
+        textIndex += 1;
+      }
+    }
+  }
+  return -1;
+}
+
+fun isPalindrome(text: string): bool {
+  let left = 0;
+  let right = text.len() - 1;
+  while (left < right) {
+    if (text.charAt(left) != text.charAt(right)) {
+      return false;
+    }
+    left += 1;
+    right -= 1;
+  }
+  return true;
+}
+
+fun characterFrequency(text: string): [MultiSetEntry<string>] {
+  let counts = newMultiSet<string>();
+  let index = 0;
+  while (index < text.len()) {
+    counts.add(text.charAt(index));
+    index += 1;
+  }
+  return counts.entries();
+}
+
+fun areAnagrams(left: string, right: string): bool {
+  if (left.len() != right.len()) {
+    return false;
+  }
+  let leftEntries = characterFrequency(left);
+  let rightEntries = characterFrequency(right);
+  let index = 0;
+  while (index < leftEntries.len()) {
+    let leftEntry = leftEntries[index];
+    let rightIndex = 0;
+    let found = false;
+    while (rightIndex < rightEntries.len()) {
+      let rightEntry = rightEntries[rightIndex];
+      if (leftEntry.value == rightEntry.value) {
+        found = true;
+        if (leftEntry.count != rightEntry.count) {
+          return false;
+        }
+        break;
+      }
+      rightIndex += 1;
+    }
+    if (!found) {
+      return false;
+    }
+    index += 1;
+  }
+  return true;
+}
+
+fun isBalancedBrackets(text: string): bool {
+  let stack: [string] = [];
+  let index = 0;
+  while (index < text.len()) {
+    let character = text.charAt(index);
+    let opening = character == "(" || character == "[" || character == "{";
+    if (opening) {
+      stack.push(character);
+    } else {
+      let closing = character == ")" || character == "]" || character == "}";
+      if (closing) {
+        if (stack.len() == 0) {
+          return false;
+        }
+        let top = stack[stack.len() - 1];
+        if ((character == ")" && top != "(")
+            || (character == "]" && top != "[")
+            || (character == "}" && top != "{")) {
+          return false;
+        }
+        stack.pop();
+      }
+    }
+    index += 1;
+  }
+  return stack.len() == 0;
+}
+
+fun longestUniqueSubstringLength(text: string): number {
+  let best = 0;
+  let start = 0;
+  while (start < text.len()) {
+    let seen: [string] = [];
+    let index = start;
+    while (index < text.len()) {
+      let character = text.charAt(index);
+      if (linearSearch(seen, character) >= 0) {
+        break;
+      }
+      seen.push(character);
+      index += 1;
+    }
+    if (seen.len() > best) {
+      best = seen.len();
+    }
+    start += 1;
+  }
+  return best;
+}
+
+fun longestPalindromicSubstring(text: string): string {
+  if (text.len() == 0) {
+    return "";
+  }
+  let bestStart = 0;
+  let bestLength = 1;
+  let center = 0;
+  while (center < text.len()) {
+    let left = center;
+    let right = center;
+    while (left >= 0 && right < text.len()
+        && text.charAt(left) == text.charAt(right)) {
+      let length = right - left + 1;
+      if (length > bestLength) {
+        bestStart = left;
+        bestLength = length;
+      }
+      left -= 1;
+      right += 1;
+    }
+
+    left = center;
+    right = center + 1;
+    while (left >= 0 && right < text.len()
+        && text.charAt(left) == text.charAt(right)) {
+      let length = right - left + 1;
+      if (length > bestLength) {
+        bestStart = left;
+        bestLength = length;
+      }
+      left -= 1;
+      right += 1;
+    }
+    center += 1;
+  }
+  return text.substr(bestStart, bestLength);
+}
+
+struct Trie {
+  edgeCharacters: [[string]],
+  edgeChildren: [[number]],
+  terminal: [bool]
+}
+
+impl Trie {
+  fun findChild(node: number, character: string): number {
+    let index = 0;
+    while (index < this.edgeCharacters[node].len()) {
+      if (this.edgeCharacters[node][index] == character) {
+        return this.edgeChildren[node][index];
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun addNode(): number {
+    let node = this.terminal.len();
+    this.edgeCharacters.push([]);
+    this.edgeChildren.push([]);
+    this.terminal.push(false);
+    return node;
+  }
+
+  fun locate(text: string): number {
+    let node = 0;
+    let index = 0;
+    while (index < text.len()) {
+      let child = this.findChild(node, text.charAt(index));
+      if (child < 0) {
+        return -1;
+      }
+      node = child;
+      index += 1;
+    }
+    return node;
+  }
+
+  fun insert(word: string): bool {
+    let node = 0;
+    let index = 0;
+    while (index < word.len()) {
+      let character = word.charAt(index);
+      let child = this.findChild(node, character);
+      if (child < 0) {
+        child = this.addNode();
+        this.edgeCharacters[node].push(character);
+        this.edgeChildren[node].push(child);
+      }
+      node = child;
+      index += 1;
+    }
+    if (this.terminal[node]) {
+      return false;
+    }
+    this.terminal[node] = true;
+    return true;
+  }
+
+  fun has(word: string): bool {
+    let node = this.locate(word);
+    return node >= 0 && this.terminal[node];
+  }
+
+  fun startsWith(prefix: string): bool {
+    return this.locate(prefix) >= 0;
+  }
+
+  fun wordsWithPrefix(prefix: string): [string] {
+    let result: [string] = [];
+    let root = this.locate(prefix);
+    if (root < 0) {
+      return result;
+    }
+    let nodes: [number] = [root];
+    let positions: [number] = [0];
+    let words: [string] = [prefix];
+    while (nodes.len() > 0) {
+      let top = nodes.len() - 1;
+      let node = nodes[top];
+      if (positions[top] == 0 && this.terminal[node]) {
+        result.push(words[top]);
+      }
+      if (positions[top] >= this.edgeCharacters[node].len()) {
+        nodes.pop();
+        positions.pop();
+        words.pop();
+        continue;
+      }
+      let edgeIndex = positions[top];
+      positions[top] += 1;
+      let child = this.edgeChildren[node][edgeIndex];
+      let word = words[top] + this.edgeCharacters[node][edgeIndex];
+      nodes.push(child);
+      positions.push(0);
+      words.push(word);
+    }
+    return result;
+  }
+}
+
+fun newTrie(): Trie {
+  let edgeCharacters: [[string]] = [[]];
+  let edgeChildren: [[number]] = [[]];
+  let terminal: [bool] = [false];
+  return Trie {
+    edgeCharacters: edgeCharacters,
+    edgeChildren: edgeChildren,
+    terminal: terminal
+  };
+}
+
+
+export Trie, newTrie, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, longestUniqueSubstringLength, longestPalindromicSubstring, isBalancedBrackets;

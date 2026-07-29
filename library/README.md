@@ -15,6 +15,12 @@ The planned structure and algorithm inventory, implementation constraints, and
 staged delivery order are documented in
 [`DATA_STRUCTURES_ROADMAP.md`](DATA_STRUCTURES_ROADMAP.md).
 
+The implementation is split into topic modules: `collections.cd`, `trees.cd`,
+`sets.cd`, `graphs.cd`, `strings.cd`, `range_trees.cd`, `sorting.cd`,
+`array_algorithms.cd`, `dynamic_programming.cd`, `backtracking.cd`, and
+`numeric.cd`. `data_structures.cd` remains the compatibility facade and
+re-exports the stable public API, so existing `as ds` imports do not change.
+
 ## Usage
 
 Import the module with a namespace alias:
@@ -252,16 +258,16 @@ let maybeNumber = ds.some<number>(42);
 `Stack<T>` provides:
 
 - `push(value: T)` — append to the top;
-- `pop(): T?` — remove and return the top, or `nil` when empty;
-- `top(): T?` — inspect the top, or `nil` when empty;
+- `pop(): optional<T>` — remove and return the top, or `nil` when empty;
+- `top(): optional<T>` — inspect the top, or `nil` when empty;
 - `size(): number` and `isEmpty(): bool`;
 - `snapshot(): [T]` — return a shallow copy from bottom to top.
 
 `Queue<T>` provides:
 
 - `enqueue(value: T)` — add at the back;
-- `dequeue(): T?` — remove and return the front, or `nil` when empty;
-- `front(): T?` — inspect the front, or `nil` when empty;
+- `dequeue(): optional<T>` — remove and return the front, or `nil` when empty;
+- `front(): optional<T>` — inspect the front, or `nil` when empty;
 - `size(): number` and `isEmpty(): bool`;
 - `snapshot(): [T]` — return a shallow copy from front to back.
 
@@ -272,9 +278,9 @@ outer array.
 `Deque<T>` provides:
 
 - `addFront(value: T)` and `addBack(value: T)` — insert at either end;
-- `takeFront(): T?` and `takeBack(): T?` — remove from either end, or return
+- `takeFront(): optional<T>` and `takeBack(): optional<T>` — remove from either end, or return
   `nil` when empty;
-- `peekFront(): T?` and `peekBack(): T?` — inspect either end, or return `nil`
+- `peekFront(): optional<T>` and `peekBack(): optional<T>` — inspect either end, or return `nil`
   when empty;
 - `size(): number` and `isEmpty(): bool`;
 - `snapshot(): [T]` — return a shallow copy from front to back.
@@ -302,7 +308,7 @@ reject-on-full semantics for now, so callers can explicitly handle a failed
 `BinaryHeap<T>` provides:
 
 - `add(value: T)` — add a value according to the comparator;
-- `peek(): T?` and `take(): T?` — inspect or remove the highest-priority value,
+- `peek(): optional<T>` and `take(): optional<T>` — inspect or remove the highest-priority value,
   returning `nil` when empty;
 - `size(): number` and `isEmpty(): bool`;
 - `snapshot(): [T]` — return a shallow copy of the internal heap array.
@@ -316,7 +322,7 @@ are not stable.
 `PriorityQueue<T>` provides:
 
 - `enqueue(value: T)` — add a value according to the comparator;
-- `front(): T?` and `dequeue(): T?` — inspect or remove the highest-priority
+- `front(): optional<T>` and `dequeue(): optional<T>` — inspect or remove the highest-priority
   value, returning `nil` when empty;
 - `size(): number` and `isEmpty(): bool`;
 - `snapshot(): [T]` — return a shallow copy of the underlying heap array.
@@ -333,9 +339,10 @@ success from absence with `match`:
 - `some<T>(value: T): Option<T>` and `none<T>(): Option<T>` — construct the two
   variants.
 
-`Option<T>` is useful when a nullable return would make the absence case
-ambiguous or when a caller wants an exhaustive branch. The enum is a value; it
-does not copy or mutate a payload supplied to `Some`.
+Simple missing-value APIs use the language's `optional<T>` return type and
+return `nil`. `Option<T>` is useful when a nullable return would make the
+absence case ambiguous or when a caller wants an exhaustive branch. The enum
+is a value; it does not copy or mutate a payload supplied to `Some`.
 
 `Result<T, E>` is an explicit success-or-error enum for APIs that need to carry
 an error value:
@@ -355,7 +362,7 @@ does not throw or log errors; callers must inspect it with an exhaustive
 - `emptyList<T>(): List<T>` — create an empty list;
 - `prepend(value: T, list: List<T>): List<T>` — add a value at the front without
   changing the existing list;
-- `head(list): T?` and `tail(list): List<T>?` — inspect the first value or the
+- `head(list): optional<T>` and `tail(list): optional<List<T>>` — inspect the first value or the
   remaining list, returning `nil` for an empty list;
 - `reverse(list): List<T>` — return a persistent reversed list;
 - `toArray(list): [T]` — copy the values into a new array in list order.
@@ -368,7 +375,7 @@ has no payload from which to infer `T`.
 
 Additional immutable list algorithms provide:
 
-- `listLength(list): number` and `listGet(list, index): T?` — length and
+- `listLength(list): number` and `listGet(list, index): optional<T>` — length and
   zero-based lookup, with `nil` for invalid/non-integral indexes;
 - `listAppend(list, value): List<T>` and `listConcat(left, right): List<T>` —
   persistent tail append and concatenation;
@@ -377,7 +384,7 @@ Additional immutable list algorithms provide:
   or unchanged result;
 - `mergeSortedLists(left, right, less): List<T>` — stable merge of two lists
   already ordered by the supplied comparator.
-- `listMiddle(list): T?` — return the upper middle value, or `nil` for empty;
+- `listMiddle(list): optional<T>` — return the upper middle value, or `nil` for empty;
 - `listIsPalindrome<T: Eq>(list): bool` — compare values from both ends;
 - `listRemoveFromEnd(list, count): List<T>` — return a new list without the
   `count`th value from the end, or the original list for an invalid/out-of-range
@@ -674,11 +681,11 @@ time and `O(1)` extra space.
 
 The one-dimensional DP helpers are:
 
-- `climbStairs(steps): number?` — count one-step/two-step climbs; `0` has one
+- `climbStairs(steps): optional<number>` — count one-step/two-step climbs; `0` has one
   empty climb and invalid/non-integral inputs return `nil`;
 - `maxNonAdjacentSum(values): number` — maximize a sum without adjacent picks;
   an empty or all-negative input returns `0` by allowing the empty selection;
-- `minCoinCount(amount, coins): number?` — return the minimum number of
+- `minCoinCount(amount, coins): optional<number>` — return the minimum number of
   positive-integer coins or `nil` when the target is invalid/unreachable;
   non-positive or non-integral coin entries are ignored.
 
@@ -688,12 +695,12 @@ and `O(amount)` space; these numeric helpers do not define overflow behavior.
 
 The two-dimensional/string DP helpers are:
 
-- `uniqueGridPaths(rows, columns): number?` — count right/down paths in a
+- `uniqueGridPaths(rows, columns): optional<number>` — count right/down paths in a
   positive rectangular grid; zero dimensions return `0` and invalid dimensions
   return `nil`;
-- `minGridPathSum(grid): number?` — find the minimum top-left to bottom-right
+- `minGridPathSum(grid): optional<number>` — find the minimum top-left to bottom-right
   sum using right/down moves; empty or non-rectangular grids return `nil`;
-- `uniqueGridPathsWithObstacles(grid: [[bool]]): number?` — count right/down
+- `uniqueGridPathsWithObstacles(grid: [[bool]]): optional<number>` — count right/down
   paths where `true` cells are blocked. Empty grids and zero-width grids return
   `0`, non-rectangular grids return `nil`, and a blocked start or end returns
   `0`;
@@ -728,17 +735,17 @@ return `nil`. The interval DP uses `O(n^3)` time and `O(n^2)` space.
 
 The current backtracking and knapsack helpers are:
 
-- `knapsack01(weights, values, capacity): number?` — maximize the value of
+- `knapsack01(weights, values, capacity): optional<number>` — maximize the value of
   selecting each item at most once. It returns `nil` when the arrays differ in
   length, the capacity is negative or non-integral, or a weight is negative or
   non-integral; zero-weight items are supported. The result is `0` for a valid
   zero capacity and uses `O(capacity)` space.
-- `completeKnapsack(weights, values, capacity): number?` — maximize the value
+- `completeKnapsack(weights, values, capacity): optional<number>` — maximize the value
   when each item may be selected repeatedly. It returns `nil` for mismatched
   arrays, invalid capacity, or a non-positive/non-integral weight; a valid
   zero capacity returns `0`. The ascending-capacity DP uses `O(itemCount *
   capacity)` time and `O(capacity)` space.
-- `boundedKnapsack(weights, values, counts, capacity): number?` — maximize the
+- `boundedKnapsack(weights, values, counts, capacity): optional<number>` — maximize the
   value with a finite non-negative integer `counts` limit per item. It returns
   `nil` for mismatched arrays, invalid capacity, non-positive/non-integral
   weights, or invalid counts; a valid zero capacity returns `0`. Its repeated
@@ -835,10 +842,10 @@ lookup where `k` is that node's outgoing edge count.
 - `size(): number` and `snapshot(): [number]` — inspect the logical values;
 - `add(index: number, delta: number): bool` — apply a point update using a
   zero-based index;
-- `valueAt(index: number): number?` — read one value, or `nil` for an invalid
+- `valueAt(index: number): optional<number>` — read one value, or `nil` for an invalid
   index;
-- `prefixSum(endExclusive: number): number?` — sum `[0, endExclusive)`;
-- `rangeSum(start: number, endExclusive: number): number?` — sum the half-open
+- `prefixSum(endExclusive: number): optional<number>` — sum `[0, endExclusive)`;
+- `rangeSum(start: number, endExclusive: number): optional<number>` — sum the half-open
   range `[start, endExclusive)`.
 
 Invalid or non-integral indexes and ranges return `false` or `nil` without
@@ -852,8 +859,8 @@ query methods are `O(log n)`, while `snapshot` is `O(n)`.
 - `newSegmentTree(values: [number]): SegmentTree` — build from a copied input;
 - `setValue(index: number, value: number): bool` and `add(index, delta): bool` —
   replace or increment one zero-based element;
-- `rangeSum(start, endExclusive): number?` — query the half-open range sum;
-- `rangeMinimum(start, endExclusive): number?` — query its minimum, or `nil`
+- `rangeSum(start, endExclusive): optional<number>` — query the half-open range sum;
+- `rangeMinimum(start, endExclusive): optional<number>` — query its minimum, or `nil`
   for an empty/invalid range;
 - `size`, `valueAt`, and `snapshot` — inspect the logical values.
 
@@ -983,6 +990,9 @@ deterministic `hash(value)`, builtin string ordering, and statically dispatched
 ordering operators for named structs. Generic library algorithms continue to
 accept explicit `less` callbacks where a user-defined type is involved; custom
 struct operators are not implicitly converted into a generic `T: Ord` witness.
+Nullable annotations in this library use the canonical `optional<T>` spelling;
+the compiler retains the postfix nullable spelling only for migration
+compatibility.
 
 ## Tests
 
