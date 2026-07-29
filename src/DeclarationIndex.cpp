@@ -1636,6 +1636,14 @@ std::size_t DeclarationIndex::validateMetadata() const
     for (const auto& entry : binaryOperations_) {
         const BinaryOperationRecord& metadata = entry.second;
         const auto targetFound = binaryOperationTargets_.find(entry.first);
+        if (metadata.imported) {
+            if (metadata.calleeName.empty() || targetFound != binaryOperationTargets_.end()) {
+                ++mismatches;
+                continue;
+            }
+            requireTypedExpression(*entry.first);
+            continue;
+        }
         const DeclarationRecord* target = targetFound == binaryOperationTargets_.end()
             ? nullptr
             : declaration(targetFound->second.target.declarationId);

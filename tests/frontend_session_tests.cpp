@@ -411,6 +411,70 @@ void test_module_interface_cache_hit_reuses_dependency_interfaces(const fs::path
     assert(checker.checkedModuleBodyIds() == std::vector<std::size_t>{entryModule->moduleId});
 }
 
+void test_module_interface_cache_imports_operator_metadata(const fs::path& root)
+{
+    fs::remove_all(root);
+    const fs::path library = root / "lib.cd";
+    const fs::path entry = root / "entry.cd";
+    const fs::path cache = root / "cache";
+    const std::string librarySource =
+        "struct Point { value: number }\n"
+        "impl Point {\n"
+        "  operator <(other: Point): bool {\n"
+        "    return this.value < other.value;\n"
+        "  }\n"
+        "}\n"
+        "export Point;\n";
+    writeFile(library, librarySource);
+    writeFile(
+        entry,
+        "import \"./lib.cd\";\n"
+        "let lower: Point = Point { value: 1 };\n"
+        "let upper: Point = Point { value: 2 };\n"
+        "print lower < upper;\n");
+
+    ModuleInterface libraryInterface;
+    ModuleInterfaceStruct point;
+    point.name = "Point";
+    point.fields.push_back(ModuleInterfaceField{"value", simpleType(StaticType::Number)});
+    point.operators.push_back(ModuleInterfaceOperator{
+        "<",
+        namedStructType("Point"),
+        namedStructType("Point"),
+        simpleType(StaticType::Bool),
+        {},
+        {},
+        "__method_Point_operator_Less#0",
+    });
+    libraryInterface.structs.push_back(std::move(point));
+    writeCachedModule(cache, library, librarySource, std::move(libraryInterface), {});
+
+    FrontendSession session;
+    session.setModuleInterfaceCacheDirectory(cache);
+    Program program = session.loadFiles({entry.string()});
+    const ModuleStmt* cachedLibrary = moduleByPath(program, library);
+    const ModuleStmt* entryModule = moduleByPath(program, entry);
+    assert(cachedLibrary->statements.empty());
+    assert(!cachedLibrary->bodySourceBacked);
+
+    const auto* print = dynamic_cast<const PrintStmt*>(entryModule->statements.back().get());
+    const auto* comparison = print
+        ? dynamic_cast<const BinaryExpr*>(print->expression.get())
+        : nullptr;
+    assert(comparison != nullptr);
+
+    TypeChecker checker;
+    checker.setPreloadedModuleInterfaces(session.preloadedModuleInterfaces());
+    checker.check(program);
+    assert(checker.declarationIndexMismatchCount() == 0);
+    const BinaryOperationRecord* operation = checker.declarationIndex().binaryOperation(*comparison);
+    assert(operation != nullptr);
+    assert(operation->imported);
+    assert(checker.declarationIndex().callTarget(*comparison) == nullptr);
+    assert(checker.checkedModuleBodyIds() == std::vector<std::size_t>{entryModule->moduleId});
+    fs::remove_all(root);
+}
+
 void test_module_product_cache_requires_manifest_for_preload(const fs::path& root)
 {
     fs::remove_all(root);
@@ -941,6 +1005,7 @@ int main()
     test_importing_file_directory_precedes_search_path(root / "precedence");
     test_explicit_relative_import_does_not_use_search_path(root / "explicit_no_fallback");
     test_module_interface_cache_hit_reuses_dependency_interfaces(root / "module_interface_cache");
+    test_module_interface_cache_imports_operator_metadata(root / "module_interface_operator");
     test_module_product_cache_requires_manifest_for_preload(root / "module_product_cache_boundary");
     test_module_interface_cache_fallbacks(root / "module_interface_cache_fallbacks");
     test_module_interface_cache_dependency_hash_fallback(root / "module_interface_cache_dependency_hash");

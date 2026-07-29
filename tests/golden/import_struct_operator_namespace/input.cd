@@ -1,0 +1,5 @@
+import "./lib.cd" as shapes;
+
+let lower: shapes.Point = shapes.Point { value: 1 };
+let upper: shapes.Point = shapes.Point { value: 2 };
+print lower < upper;

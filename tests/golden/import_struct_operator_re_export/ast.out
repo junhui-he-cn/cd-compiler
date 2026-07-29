@@ -1,0 +1,14 @@
+Program
+  Module 0
+    Struct Point {value: number}
+    Impl Point
+      Operator <(other: Point): bool
+        Return (< (field this value) (field other value))
+    Export Point
+  Module 1
+    Export Point from "./lib.cd"
+  Module 2 entry
+    Import "./api.cd"
+    Let lower: Point = (construct Point value: 1)
+    Let upper: Point = (construct Point value: 2)
+    Print (< lower upper)

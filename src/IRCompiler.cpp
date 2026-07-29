@@ -885,9 +885,11 @@ IRRegister IRCompiler::compileExpression(const Expr& expression)
     if (const auto* binary = dynamic_cast<const BinaryExpr*>(&expression)) {
         if (const BinaryOperationRecord* operation = declarationIndex_->binaryOperation(*binary)) {
             typedExpressionType(*binary, "binary operator");
-            const CallTargetRecord* target = declarationIndex_->callTarget(*binary);
-            if (!target || target->kind != CallTargetKind::StructMethod) {
-                throw IRCompileError("missing binary operator call target metadata");
+            if (!operation->imported) {
+                const CallTargetRecord* target = declarationIndex_->callTarget(*binary);
+                if (!target || target->kind != CallTargetKind::StructMethod) {
+                    throw IRCompileError("missing binary operator call target metadata");
+                }
             }
             const IRRegister callee = ir_.emitLoadVar(operation->calleeName);
             std::vector<IRRegister> arguments;

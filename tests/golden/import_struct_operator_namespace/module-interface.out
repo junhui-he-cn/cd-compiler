@@ -1,0 +1,6 @@
+module 0 "<repo>/tests/golden/import_struct_operator_namespace/lib.cd"
+  export struct Point
+    field value: number
+    operator <(Point): bool
+
+module 1 entry "<repo>/tests/golden/import_struct_operator_namespace/input.cd"

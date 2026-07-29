@@ -1,0 +1,11 @@
+struct Box<T: number> {
+  value: T
+}
+
+impl Box<T: number> {
+  operator <(other: Box<T>): bool {
+    return this.value < other.value;
+  }
+}
+
+export Box;

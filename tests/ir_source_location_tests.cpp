@@ -183,6 +183,60 @@ void test_module_interface_graph_identity(const fs::path& root)
     fs::remove_all(root);
 }
 
+void test_imported_operator_metadata(const fs::path& root)
+{
+    fs::remove_all(root);
+    const fs::path library = root / "lib.cd";
+    const fs::path entry = root / "input.cd";
+    writeModuleSource(
+        library,
+        "struct Point { value: number }\n"
+        "impl Point {\n"
+        "  operator <(other: Point): bool {\n"
+        "    return this.value < other.value;\n"
+        "  }\n"
+        "}\n"
+        "export Point;\n");
+    writeModuleSource(
+        entry,
+        "import \"./lib.cd\";\n"
+        "let lower: Point = Point { value: 1 };\n"
+        "let upper: Point = Point { value: 2 };\n"
+        "print lower < upper;\n");
+
+    FrontendSession frontend;
+    Program program = frontend.loadFiles({entry.string()});
+    const ModuleStmt* entryModule = nullptr;
+    for (const auto& statement : program.statements) {
+        const auto* module = dynamic_cast<const ModuleStmt*>(statement.get());
+        if (module && module->isEntry) {
+            entryModule = module;
+            break;
+        }
+    }
+    assert(entryModule != nullptr);
+    const auto* print = dynamic_cast<const PrintStmt*>(entryModule->statements.back().get());
+    const auto* comparison = print
+        ? dynamic_cast<const BinaryExpr*>(print->expression.get())
+        : nullptr;
+    assert(comparison != nullptr);
+
+    TypeChecker checker;
+    checker.check(program);
+    const DeclarationIndex& index = checker.declarationIndex();
+    assert(checker.declarationIndexMismatchCount() == 0);
+    assert(checker.moduleInterfaceMismatchCount() == 0);
+    const BinaryOperationRecord* operation = index.binaryOperation(*comparison);
+    assert(operation != nullptr);
+    assert(operation->imported);
+    assert(!operation->calleeName.empty());
+    assert(index.callTarget(*comparison) == nullptr);
+
+    IRCompiler compiler;
+    compiler.compile(program, index);
+    fs::remove_all(root);
+}
+
 void test_declaration_index()
 {
     const std::string source =
@@ -1694,6 +1748,8 @@ int main()
     test_snapshot_identity_metadata();
     test_module_interface_graph_identity(
         fs::temp_directory_path() / "compiler_module_interface_graph_identity");
+    test_imported_operator_metadata(
+        fs::temp_directory_path() / "compiler_imported_operator_metadata");
     test_declaration_index();
     test_declaration_index_module_metadata();
     test_declaration_index_for_in_binding();

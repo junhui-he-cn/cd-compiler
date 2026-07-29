@@ -79,6 +79,7 @@ private:
 
     struct MethodInfo {
         const MethodDecl* declaration = nullptr;
+        bool isOperator = false;
         TypeInfo receiverType;
         std::vector<TypeInfo> parameterTypes;
         TypeInfo returnType;
@@ -183,6 +184,7 @@ private:
     const MethodInfo* findMethod(const std::string& structName, const std::string& methodName) const;
     MethodSignature methodSignatureFromInfo(const MethodInfo& method) const;
     MethodInfo methodInfoFromSignature(const MethodSignature& signature) const;
+    MethodInfo operatorInfoFromSignature(const OperatorSignature& signature) const;
     TypeInfo qualifyNamespaceType(
         const TypeInfo& type,
         const std::string& alias,
@@ -193,9 +195,20 @@ private:
         const std::string& alias,
         const ModuleStructExports& structs,
         const ModuleEnumExports& enums) const;
+    OperatorSignature qualifyNamespaceOperatorSignature(
+        const OperatorSignature& signature,
+        const std::string& alias,
+        const ModuleStructExports& structs,
+        const ModuleEnumExports& enums) const;
     void importMethodExports(
         const Token& diagnosticToken,
         const ModuleMethodExports& methodExports,
+        const std::string* namespaceAlias = nullptr,
+        const ModuleStructExports* namespaceStructs = nullptr,
+        const ModuleEnumExports* namespaceEnums = nullptr);
+    void importOperatorExports(
+        const Token& diagnosticToken,
+        const ModuleOperatorExports& operatorExports,
         const std::string* namespaceAlias = nullptr,
         const ModuleStructExports* namespaceStructs = nullptr,
         const ModuleEnumExports* namespaceEnums = nullptr);

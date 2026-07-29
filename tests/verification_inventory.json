@@ -12138,6 +12138,450 @@
       "fixture": "tests/golden/import_basic"
     },
     {
+      "case_id": "golden.success.import_struct_operator_direct.ast",
+      "runner": "golden",
+      "result_name": "import_struct_operator_direct default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:import_struct_operator_direct"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/import_struct_operator_direct/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_direct/ast.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_direct"
+    },
+    {
+      "case_id": "golden.success.import_struct_operator_direct.bytecode",
+      "runner": "golden",
+      "result_name": "import_struct_operator_direct --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:import_struct_operator_direct"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/import_struct_operator_direct/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_direct/bytecode.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_direct"
+    },
+    {
+      "case_id": "golden.success.import_struct_operator_direct.ir",
+      "runner": "golden",
+      "result_name": "import_struct_operator_direct --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:import_struct_operator_direct"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/import_struct_operator_direct/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_direct/ir.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_direct"
+    },
+    {
+      "case_id": "golden.success.import_struct_operator_direct.module_interface",
+      "runner": "golden",
+      "result_name": "import_struct_operator_direct --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:import_struct_operator_direct"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/import_struct_operator_direct/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_direct/module-interface.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_direct"
+    },
+    {
+      "case_id": "golden.success.import_struct_operator_generic.ast",
+      "runner": "golden",
+      "result_name": "import_struct_operator_generic default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:import_struct_operator_generic"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/import_struct_operator_generic/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_generic/ast.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_generic"
+    },
+    {
+      "case_id": "golden.success.import_struct_operator_generic.bytecode",
+      "runner": "golden",
+      "result_name": "import_struct_operator_generic --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:import_struct_operator_generic"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/import_struct_operator_generic/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_generic/bytecode.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_generic"
+    },
+    {
+      "case_id": "golden.success.import_struct_operator_generic.ir",
+      "runner": "golden",
+      "result_name": "import_struct_operator_generic --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:import_struct_operator_generic"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/import_struct_operator_generic/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_generic/ir.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_generic"
+    },
+    {
+      "case_id": "golden.success.import_struct_operator_generic.module_interface",
+      "runner": "golden",
+      "result_name": "import_struct_operator_generic --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:import_struct_operator_generic"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/import_struct_operator_generic/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_generic/module-interface.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_generic"
+    },
+    {
+      "case_id": "golden.success.import_struct_operator_namespace.ast",
+      "runner": "golden",
+      "result_name": "import_struct_operator_namespace default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:import_struct_operator_namespace"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/import_struct_operator_namespace/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_namespace/ast.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_namespace"
+    },
+    {
+      "case_id": "golden.success.import_struct_operator_namespace.bytecode",
+      "runner": "golden",
+      "result_name": "import_struct_operator_namespace --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:import_struct_operator_namespace"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/import_struct_operator_namespace/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_namespace/bytecode.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_namespace"
+    },
+    {
+      "case_id": "golden.success.import_struct_operator_namespace.ir",
+      "runner": "golden",
+      "result_name": "import_struct_operator_namespace --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:import_struct_operator_namespace"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/import_struct_operator_namespace/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_namespace/ir.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_namespace"
+    },
+    {
+      "case_id": "golden.success.import_struct_operator_namespace.module_interface",
+      "runner": "golden",
+      "result_name": "import_struct_operator_namespace --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:import_struct_operator_namespace"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/import_struct_operator_namespace/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_namespace/module-interface.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_namespace"
+    },
+    {
+      "case_id": "golden.success.import_struct_operator_re_export.ast",
+      "runner": "golden",
+      "result_name": "import_struct_operator_re_export default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:import_struct_operator_re_export"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/import_struct_operator_re_export/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_re_export/ast.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_re_export"
+    },
+    {
+      "case_id": "golden.success.import_struct_operator_re_export.bytecode",
+      "runner": "golden",
+      "result_name": "import_struct_operator_re_export --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:import_struct_operator_re_export"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/import_struct_operator_re_export/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_re_export/bytecode.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_re_export"
+    },
+    {
+      "case_id": "golden.success.import_struct_operator_re_export.ir",
+      "runner": "golden",
+      "result_name": "import_struct_operator_re_export --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:import_struct_operator_re_export"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/import_struct_operator_re_export/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_re_export/ir.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_re_export"
+    },
+    {
+      "case_id": "golden.success.import_struct_operator_re_export.module_interface",
+      "runner": "golden",
+      "result_name": "import_struct_operator_re_export --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:import_struct_operator_re_export"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/import_struct_operator_re_export/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_re_export/module-interface.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_re_export"
+    },
+    {
       "case_id": "golden.success.index_compound_assignment.ast",
       "runner": "golden",
       "result_name": "index_compound_assignment default(ast)",
@@ -39746,6 +40190,254 @@
         "tests/golden/import_struct_method_namespaced_signature/run.out"
       ],
       "fixture": "tests/golden/import_struct_method_namespaced_signature"
+    },
+    {
+      "case_id": "rust_vm.golden.import_struct_operator_direct.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "import_struct_operator_direct emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:import_struct_operator_direct"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/import_struct_operator_direct/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_direct/run.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_direct"
+    },
+    {
+      "case_id": "rust_vm.golden.import_struct_operator_direct.run",
+      "runner": "rust_vm_golden",
+      "result_name": "import_struct_operator_direct rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:import_struct_operator_direct"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/import_struct_operator_direct/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_direct/run.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_direct"
+    },
+    {
+      "case_id": "rust_vm.golden.import_struct_operator_generic.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "import_struct_operator_generic emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:import_struct_operator_generic"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/import_struct_operator_generic/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_generic/run.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_generic"
+    },
+    {
+      "case_id": "rust_vm.golden.import_struct_operator_generic.run",
+      "runner": "rust_vm_golden",
+      "result_name": "import_struct_operator_generic rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:import_struct_operator_generic"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/import_struct_operator_generic/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_generic/run.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_generic"
+    },
+    {
+      "case_id": "rust_vm.golden.import_struct_operator_namespace.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "import_struct_operator_namespace emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:import_struct_operator_namespace"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/import_struct_operator_namespace/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_namespace/run.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_namespace"
+    },
+    {
+      "case_id": "rust_vm.golden.import_struct_operator_namespace.run",
+      "runner": "rust_vm_golden",
+      "result_name": "import_struct_operator_namespace rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:import_struct_operator_namespace"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/import_struct_operator_namespace/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_namespace/run.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_namespace"
+    },
+    {
+      "case_id": "rust_vm.golden.import_struct_operator_re_export.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "import_struct_operator_re_export emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:import_struct_operator_re_export"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/import_struct_operator_re_export/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_re_export/run.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_re_export"
+    },
+    {
+      "case_id": "rust_vm.golden.import_struct_operator_re_export.run",
+      "runner": "rust_vm_golden",
+      "result_name": "import_struct_operator_re_export rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:import_struct_operator_re_export"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/import_struct_operator_re_export/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/import_struct_operator_re_export/run.out"
+      ],
+      "fixture": "tests/golden/import_struct_operator_re_export"
     },
     {
       "case_id": "rust_vm.golden.index_compound_assignment.emit",

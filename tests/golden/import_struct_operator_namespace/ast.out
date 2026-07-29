@@ -1,0 +1,12 @@
+Program
+  Module 0
+    Struct Point {value: number}
+    Impl Point
+      Operator <(other: Point): bool
+        Return (< (field this value) (field other value))
+    Export Point
+  Module 1 entry
+    Import "./lib.cd" as shapes
+    Let lower: shapes.Point = (construct shapes.Point value: 1)
+    Let upper: shapes.Point = (construct shapes.Point value: 2)
+    Print (< lower upper)

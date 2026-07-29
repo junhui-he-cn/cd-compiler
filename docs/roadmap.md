@@ -142,10 +142,10 @@ CTest, and canonical verification; refresh the verification inventory and pass
 
 ## Next active slice
 
-The public operator metadata/interface first phase is complete. The next
-continuation of `M6-LANG-OPERATOR-001C` is imported operator dispatch and
-independent module-product/linker parity, as described by the resolved decision
-record.
+The public operator metadata/interface phase and source-backed imported
+operator dispatch are complete. The next continuation of `M6-LANG-OPERATOR-001C`
+is independent module-product/linker parity, as described by the resolved
+decision record.
 
 ## Planned follow-up specifications
 
@@ -156,9 +156,9 @@ concrete data-structure code to the compiler slice.
 
 ### M6-LANG-OPERATOR-001C: public operator metadata and module products
 
-**Status:** local implementation and the first public interface/cache shape
-phase are complete. Imported dispatch and independent module-product parity
-remain deferred; the resolved declaration and dispatch contract is recorded in
+**Status:** local implementation, public interface/cache shape, and
+source-backed imported dispatch are complete. Independent module-product parity
+remains deferred; the resolved declaration and dispatch contract is recorded in
 `docs/decisions/m6-language-operator-001.{md,json}`.
 
 **Purpose:** extend the local operator implementation with public interface and
@@ -176,9 +176,16 @@ public-interface hashes, and module-interface validation. Sidecars missing the
 operator section follow the existing malformed/stale fallback or strict
 rejection path.
 
-**Remaining gate:** cover imported operator dispatch, `.cdi` and module-cache
-invalidation end to end, linked and independent `.cdbc 0.1` products, and
-C++/Rust parity before the full slice is admitted.
+**Completed imported-dispatch phase:** direct imports, namespace aliases,
+re-exported structs, and generic receiver operators restore operator metadata
+from the public interface and lower through the existing ordinary call path.
+Imported operators retain resolved linkage names without requiring a local AST
+method declaration; the source-backed C++ and Rust VM paths are covered by
+focused fixtures and declaration-index validation.
+
+**Remaining gate:** cover independent `.cdbc 0.1` products, linker validation,
+and C++/Rust parity across that separate compilation boundary before the full
+slice is admitted.
 
 ### M5D-DEBUG-002: Interactive breakpoints and stepping
 
@@ -279,8 +286,9 @@ master + shipped generic functions, callbacks, and module interfaces
   -> completed M6-LANG-001 static generic capability constraints
   -> completed M6-LANG-OPERATOR-001A builtin string ordering
   -> completed M6-LANG-OPERATOR-001B local struct comparison operators
-  -> completed M6-LANG-OPERATOR-001C public operator metadata/cache shape
-  -> M6-LANG-OPERATOR-001C imported dispatch and module products (deferred)
+  -> completed M6-LANG-OPERATOR-001C public operator metadata/cache shape and
+     source-backed imported dispatch
+  -> M6-LANG-OPERATOR-001C independent module products/linker parity (deferred)
   -> language-enabled library specifications (no compiler-owned data structures)
 
 master + M5D-DEBUG-001

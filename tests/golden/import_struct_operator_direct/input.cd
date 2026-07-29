@@ -1,0 +1,8 @@
+import "./lib.cd";
+
+let lower: Point = Point { value: 1 };
+let upper: Point = Point { value: 2 };
+print lower < upper;
+print lower <= upper;
+print upper > lower;
+print upper >= lower;

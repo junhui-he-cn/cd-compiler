@@ -9,7 +9,8 @@ The language currently supports variables, lexical blocks, `if`/`else`,
 and exhaustive pattern matching (including primitive literal and named-struct
 record patterns), indexing, array
 and map element assignment, numeric compound assignment for variables, array elements, and struct fields, structs, field access and assignment, short-circuit logical
-operators, typed `let` declarations, typed function parameters and returns,
+operators, named-struct ordering operators (`<`, `<=`, `>`, `>=`), typed `let`
+declarations, typed function parameters and returns,
 source imports, and builtins such as `len`, `push`, `pop`, `floor`, `ceil`,
 `sqrt`, `str`, `substr`, `charAt`, `contains`, `slice`, `copy`, `concat`,
 `map`, `filter`, `flatMap`, `reduce`, `any`, `all`, `count`, `find`, `findIndex`, `remove`, `clear`, `merge`, `keys`, `values`,
@@ -288,8 +289,8 @@ Point;` expose already-defined top-level variables, functions, and structs.
 Re-export declarations such as `export value, Point from "./lib.cd";` forward
 selected exports from another source file without making those names local to
 the forwarding module; import the dependency explicitly when the forwarding
-module also needs to use the name. Re-exported structs forward their method
-metadata for direct and namespace importers. The module system does not add
+module also needs to use the name. Re-exported structs forward their method and
+ordering operator metadata for direct and namespace importers. The module system does not add
 renaming re-exports, wildcard exports, package manifests, import maps, separate
 compilation, or imports from stdin. `import` inside strings or `//` comments is
 ignored by the loader.
@@ -297,6 +298,27 @@ ignored by the loader.
 Exported enums are available through direct imports and namespace aliases,
 including qualified annotations, constructors, and patterns such as
 lib.Outcome.Good(value).
+
+Named structs can implement ordering operators in their defining module:
+
+```cd
+struct Point { value: number }
+
+impl Point {
+  operator <(other: Point): bool {
+    return this.value < other.value;
+  }
+}
+
+export Point;
+```
+
+The left operand selects the operator implementation and the right operand must
+have the same nominal struct type. Exported operators work through direct
+imports, namespace aliases, and struct re-exports; they use the existing
+ordinary function-call lowering path. Operators do not make a custom struct
+satisfy the generic `Ord` bound, and independent module-product linking remains
+a separate boundary.
 
 Functions are values. Named functions use `fun name[<T, U>](parameter[: type]*) [: type] { declaration* }`, and anonymous function expressions use `fun[<T, U>](parameter[: type]*) [: type] { declaration* }`. Type parameters may have concrete bounds such as `T: number`, for example `fun identity<T: number>(value: T): T { return value; }`; explicit and inferred arguments, generic enum constructors, generic struct constructors, and generic collection callbacks must satisfy every bound. Generic named functions, methods, and anonymous function expressions infer type parameters at each call, including direct, namespace, and re-exported struct method paths; callers may also provide all type arguments explicitly, such as `identity<number>(42)`, `lib.identity<string>("hello")`, `box.echo<string>("hello")`, or `identityLambda<number>(42)`. An unannotated alias preserves the generic signature. Generic function values are not coerced to monomorphic function annotations; when passed to existing array higher-order helpers, known callback argument types specialize them and every generic parameter must be inferable. Anonymous function expressions may appear in expression positions, including direct expression statements such as `fun () { return nil; };`. Known function values carry arity, parameter types when annotated or contextually typed, and inferred, annotated, or contextually checked return types for static checks, including variables initialized from named functions or function expressions. `return expression;` returns a value, `return;` returns `nil`, and reaching the end of a function also returns `nil`. Recursive named calls are supported, though recursive return inference remains conservative. Nested functions and function expressions are by-reference closures: they capture enclosing local variables through shared runtime cells, so reads and assignments share the same variable even after the outer function returns. Example function type annotations: `let f: fun(number): number = fun (x: number): number { return x + 1; };` and `fun apply(f: fun(number): number, x: number): number { return f(x); }`.
 

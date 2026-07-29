@@ -53,6 +53,7 @@ struct MemberCallMetadataRecord {
 
 struct BinaryOperationRecord {
     std::string calleeName;
+    bool imported = false;
 };
 
 enum class CallTargetKind {

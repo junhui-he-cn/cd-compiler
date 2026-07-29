@@ -1,8 +1,8 @@
 # M6-LANG-OPERATOR-001: statically dispatched user-defined ordering operators
 
 Status: design resolved; builtin string-ordering, local named-struct operators,
-and the public interface/cache shape phase are implemented. Imported operator
-dispatch and independent module-product parity remain deferred.
+the public interface/cache shape, and source-backed imported operator dispatch
+are implemented. Independent module-product parity remains deferred.
 
 Baseline: `master` at `2592027` (`feat: add VSCode syntax highlighting`).
 
@@ -194,9 +194,10 @@ diagnostic convention for local and imported modules.
 
 ## Admission and verification gate
 
-The local implementation slice is admitted in the roadmap. The remaining
-public interface/cache migration still requires a focused inventory and
-separate admission. Its corpus must independently cover:
+The local implementation, public interface/cache shape, and source-backed
+imported dispatch phases are admitted in the roadmap. Independent module
+product/linker migration still requires a focused inventory and separate
+admission. Its corpus must independently cover:
 
 - parser, AST, formatter, and invalid declaration cases for all four symbols;
 - local struct operators, missing implementations, wrong right types, wrong

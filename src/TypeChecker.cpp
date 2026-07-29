@@ -1842,6 +1842,7 @@ void TypeChecker::declareNamespaceAlias(const ImportStmt& statement, NamespaceIm
     }
 
     importMethodExports(alias, imported.methods, &alias.lexeme, &imported.structs, &imported.enums);
+    importOperatorExports(alias, imported.operators, &alias.lexeme, &imported.structs, &imported.enums);
     moduleSymbols_.recordNamespace(moduleId, alias.lexeme, std::move(imported));
 }
 
@@ -1867,6 +1868,7 @@ void TypeChecker::checkImport(const ImportStmt& statement)
         namespaceImport.structs = structExportsFromInterface(*importedInterface, statement.keyword);
         namespaceImport.enums = enumExportsFromInterface(*importedInterface, statement.keyword);
         namespaceImport.methods = methodExportsFromInterface(*importedInterface);
+        namespaceImport.operators = operatorExportsFromInterface(*importedInterface);
         declareNamespaceAlias(statement, std::move(namespaceImport));
         return;
     }
@@ -1898,6 +1900,8 @@ void TypeChecker::checkImport(const ImportStmt& statement)
 
     const ModuleMethodExports methods = methodExportsFromInterface(*importedInterface);
     importMethodExports(statement.keyword, methods);
+    const ModuleOperatorExports operators = operatorExportsFromInterface(*importedInterface);
+    importOperatorExports(statement.keyword, operators);
 }
 
 std::string TypeChecker::sourcePathLabel(const Token& path) const
@@ -2662,6 +2666,19 @@ TypeChecker::MethodInfo TypeChecker::methodInfoFromSignature(const MethodSignatu
     return info;
 }
 
+TypeChecker::MethodInfo TypeChecker::operatorInfoFromSignature(const OperatorSignature& signature) const
+{
+    MethodInfo info;
+    info.isOperator = true;
+    info.receiverType = signature.receiverType;
+    info.parameterTypes = {signature.rightParameterType};
+    info.returnType = signature.returnType;
+    info.resolvedName = signature.resolvedName;
+    info.genericParameters = signature.genericParameters;
+    info.genericParameterConstraints = signature.genericParameterConstraints;
+    return info;
+}
+
 TypeInfo TypeChecker::qualifyNamespaceType(
     const TypeInfo& type,
     const std::string& alias,
@@ -2748,6 +2765,25 @@ MethodSignature TypeChecker::qualifyNamespaceMethodSignature(
     return result;
 }
 
+OperatorSignature TypeChecker::qualifyNamespaceOperatorSignature(
+    const OperatorSignature& signature,
+    const std::string& alias,
+    const ModuleStructExports& structs,
+    const ModuleEnumExports& enums) const
+{
+    OperatorSignature result = signature;
+    result.receiverType = qualifyNamespaceType(result.receiverType, alias, structs, enums);
+    result.rightParameterType = qualifyNamespaceType(result.rightParameterType, alias, structs, enums);
+    result.returnType = qualifyNamespaceType(result.returnType, alias, structs, enums);
+    for (std::shared_ptr<TypeInfo>& constraint : result.genericParameterConstraints) {
+        if (constraint) {
+            constraint = std::make_shared<TypeInfo>(
+                qualifyNamespaceType(*constraint, alias, structs, enums));
+        }
+    }
+    return result;
+}
+
 void TypeChecker::importMethodExports(
     const Token& diagnosticToken,
     const ModuleMethodExports& methodExports,
@@ -2773,6 +2809,36 @@ void TypeChecker::importMethodExports(
                     "duplicate method `" + methodEntry.first + "` for struct `" + structName + "`");
             }
             table.emplace(methodEntry.first, methodInfoFromSignature(signature));
+        }
+    }
+}
+
+void TypeChecker::importOperatorExports(
+    const Token& diagnosticToken,
+    const ModuleOperatorExports& operatorExports,
+    const std::string* namespaceAlias,
+    const ModuleStructExports* namespaceStructs,
+    const ModuleEnumExports* namespaceEnums)
+{
+    for (const auto& structEntry : operatorExports) {
+        std::string structName = structEntry.first;
+        if (namespaceAlias) {
+            structName = *namespaceAlias + "." + structName;
+        }
+
+        auto& table = methods_[structName];
+        for (const auto& operatorEntry : structEntry.second) {
+            OperatorSignature signature = operatorEntry.second;
+            if (namespaceAlias && namespaceStructs && namespaceEnums) {
+                signature = qualifyNamespaceOperatorSignature(
+                    signature, *namespaceAlias, *namespaceStructs, *namespaceEnums);
+            }
+            if (table.find(operatorEntry.first) != table.end()) {
+                throw TypeError(diagnosticToken,
+                    "duplicate operator `" + operatorEntry.first
+                        + "` for struct `" + structName + "`");
+            }
+            table.emplace(operatorEntry.first, operatorInfoFromSignature(signature));
         }
     }
 }
@@ -2881,6 +2947,7 @@ void TypeChecker::registerMethodSignature(const StructTypeDecl& structType, cons
 
     MethodInfo info;
     info.declaration = &method;
+    info.isOperator = method.isOperator;
     info.receiverType = std::move(receiverType);
     info.parameterTypes = std::move(parameterTypes);
     info.returnType = expectedReturnType ? *expectedReturnType : unknownType();
@@ -6683,7 +6750,7 @@ TypeInfo TypeChecker::checkBinary(const BinaryExpr& expression)
         && left.kind == StaticType::Struct
         && left.structName) {
         const MethodInfo* method = findMethod(*left.structName, expression.op.lexeme);
-        if (!method || !method->declaration || !method->declaration->isOperator) {
+        if (!method || !method->isOperator) {
             throw TypeError(expression.op,
                 "struct `" + *left.structName
                     + "` has no implementation for operator `"
@@ -6725,18 +6792,20 @@ TypeInfo TypeChecker::checkBinary(const BinaryExpr& expression)
                     + typeInfoName(expectedRight) + "`, got "
                     + typeInfoName(right));
         }
-        const DeclarationRecord* target = declarationIndex_.declaration(*method->declaration);
-        if (!target) {
-            throw TypeError(expression.op, "internal error: missing operator declaration");
-        }
         declarationIndex_.recordBinaryOperation(
             expression,
-            BinaryOperationRecord{method->resolvedName});
-        declarationIndex_.recordBinaryOperationTarget(
-            expression,
-            CallTargetRecord{
-                CallTargetKind::StructMethod,
-                ResolvedSymbol{target->declarationId, target->symbolId}});
+            BinaryOperationRecord{method->resolvedName, method->declaration == nullptr});
+        if (method->declaration) {
+            const DeclarationRecord* target = declarationIndex_.declaration(*method->declaration);
+            if (!target) {
+                throw TypeError(expression.op, "internal error: missing operator declaration");
+            }
+            declarationIndex_.recordBinaryOperationTarget(
+                expression,
+                CallTargetRecord{
+                    CallTargetKind::StructMethod,
+                    ResolvedSymbol{target->declarationId, target->symbolId}});
+        }
         return simpleType(StaticType::Bool);
     }
 

@@ -1,0 +1,12 @@
+Program
+  Module 0
+    Struct Box<T: number> {value: T}
+    Impl Box<T: number>
+      Operator <(other: Box<T>): bool
+        Return (< (field this value) (field other value))
+    Export Box
+  Module 1 entry
+    Import "./lib.cd"
+    Let lower: Box<number> = (construct Box value: 1)
+    Let upper: Box<number> = (construct Box value: 2)
+    Print (< lower upper)

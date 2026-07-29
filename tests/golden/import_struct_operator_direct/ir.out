@@ -1,0 +1,83 @@
+IR
+0000  v0 = constant #0 nil
+0001  store_var @0 __method_Point_operator_Less#0, v0
+0002  v1 = make_function $0 </2
+0003  assign_var @5 __method_Point_operator_Less#0, v1
+0004  v2 = constant #2 nil
+0005  store_var @6 __method_Point_operator_LessEqual#1, v2
+0006  v3 = make_function $1 <=/2
+0007  assign_var @11 __method_Point_operator_LessEqual#1, v3
+0008  v4 = constant #4 nil
+0009  store_var @12 __method_Point_operator_Greater#2, v4
+0010  v5 = make_function $2 >/2
+0011  assign_var @17 __method_Point_operator_Greater#2, v5
+0012  v6 = constant #6 nil
+0013  store_var @18 __method_Point_operator_GreaterEqual#3, v6
+0014  v7 = make_function $3 >=/2
+0015  assign_var @23 __method_Point_operator_GreaterEqual#3, v7
+0016  v8 = constant #8 1
+0017  v9 = struct Point {value: v8}
+0018  store_var @26 lower#12, v9
+0019  v10 = constant #9 2
+0020  v11 = struct Point {value: v10}
+0021  store_var @29 upper#13, v11
+0022  v12 = load_var @30 __method_Point_operator_Less#0
+0023  v13 = load_var @31 lower#12
+0024  v14 = load_var @32 upper#13
+0025  v15 = call v12(v13, v14)
+0026  print v15
+0027  v16 = load_var @33 __method_Point_operator_LessEqual#1
+0028  v17 = load_var @34 lower#12
+0029  v18 = load_var @35 upper#13
+0030  v19 = call v16(v17, v18)
+0031  print v19
+0032  v20 = load_var @36 __method_Point_operator_Greater#2
+0033  v21 = load_var @37 upper#13
+0034  v22 = load_var @38 lower#12
+0035  v23 = call v20(v21, v22)
+0036  print v23
+0037  v24 = load_var @39 __method_Point_operator_GreaterEqual#3
+0038  v25 = load_var @40 upper#13
+0039  v26 = load_var @41 lower#12
+0040  v27 = call v24(v25, v26)
+0041  print v27
+
+function $0 <(this#4, other#5)
+0000  v0 = load_var @1 this#4
+0001  v1 = field v0.value
+0002  v2 = load_var @3 other#5
+0003  v3 = field v2.value
+0004  v4 = less v1, v3
+0005  return v4
+0006  v5 = constant #1 nil
+0007  return v5
+
+function $1 <=(this#6, other#7)
+0000  v0 = load_var @7 this#6
+0001  v1 = field v0.value
+0002  v2 = load_var @9 other#7
+0003  v3 = field v2.value
+0004  v4 = less_equal v1, v3
+0005  return v4
+0006  v5 = constant #3 nil
+0007  return v5
+
+function $2 >(this#8, other#9)
+0000  v0 = load_var @13 this#8
+0001  v1 = field v0.value
+0002  v2 = load_var @15 other#9
+0003  v3 = field v2.value
+0004  v4 = greater v1, v3
+0005  return v4
+0006  v5 = constant #5 nil
+0007  return v5
+
+function $3 >=(this#10, other#11)
+0000  v0 = load_var @19 this#10
+0001  v1 = field v0.value
+0002  v2 = load_var @21 other#11
+0003  v3 = field v2.value
+0004  v4 = greater_equal v1, v3
+0005  return v4
+0006  v5 = constant #7 nil
+0007  return v5

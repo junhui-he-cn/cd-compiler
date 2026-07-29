@@ -20,6 +20,7 @@ struct NamespaceImport {
     ModuleStructExports structs;
     ModuleEnumExports enums;
     ModuleMethodExports methods;
+    ModuleOperatorExports operators;
 };
 
 class ModuleSymbols {
