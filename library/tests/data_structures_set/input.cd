@@ -1,0 +1,32 @@
+import "../../data_structures.cd" as ds;
+
+let numbers = ds.newSet<number>();
+print numbers.has(1);
+numbers.add(3);
+numbers.add(1);
+numbers.add(3);
+print numbers.snapshot();
+print numbers.has(1);
+print numbers.size();
+
+let alias = numbers;
+alias.add(2);
+print numbers.snapshot();
+print numbers.discard(1);
+print numbers.snapshot();
+print numbers.discard(9);
+print numbers.isEmpty();
+
+let snapshot = numbers.snapshot();
+snapshot.push(99);
+print numbers.snapshot();
+print snapshot;
+
+let words = ds.newSet<string>();
+words.add("alpha");
+words.add("beta");
+words.add("alpha");
+print words.snapshot();
+print words.has("beta");
+print words.discard("alpha");
+print words.snapshot();

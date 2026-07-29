@@ -103,21 +103,31 @@ def emit_bytecode(compiler: Path, sources: list[Path], artifact: Path, name: str
     return results, True
 
 
-def check_case(compiler: Path, vm_manifest: Path, case_dir: Path) -> list[CheckResult]:
+def check_case(
+    compiler: Path,
+    vm_manifest: Path,
+    case_dir: Path,
+    include_emit_result: bool = True,
+) -> list[CheckResult]:
     sources = compiler_inputs(case_dir)
     expected = expected_output(case_dir)
     results: list[CheckResult] = []
+    run_name = f"{case_dir.name} rust-run"
 
     with tempfile.TemporaryDirectory() as temp_dir:
         artifact = Path(temp_dir) / "program.cdbc"
         emit_results, can_run = emit_bytecode(compiler, sources, artifact, case_dir.name)
-        results.extend(emit_results)
+        if include_emit_result:
+            results.extend(emit_results)
         if not can_run:
+            if not include_emit_result:
+                failure = next((result for result in emit_results if not result.passed), None)
+                message = failure.message if failure is not None else f"FAIL {run_name} could not prepare VM execution"
+                results.append(CheckResult(run_name, False, message))
             return results
 
         run_command_line = ["cargo", "run", "--quiet", "--manifest-path", str(vm_manifest), "--", "run", str(artifact)]
         executed = run_command(run_command_line)
-        run_name = f"{case_dir.name} rust-run"
         if executed.returncode != 0:
             results.append(CheckResult(
                 run_name,

@@ -99,4 +99,5488 @@ fun newQueue<T>(): Queue<T> {
   return Queue<T> { items: [], head: 0 };
 }
 
-export Stack, Queue, newStack, newQueue;
+// A deque stores the front half in reverse order and the back half in forward
+// order. Moving one side to the other happens only when that side is empty,
+// so each element moves at most once between transfers.
+struct Deque<T> {
+  frontItems: [T],
+  backItems: [T]
+}
+
+impl Deque<T> {
+  fun addFront(value: T) {
+    this.frontItems.push(value);
+  }
+
+  fun addBack(value: T) {
+    this.backItems.push(value);
+  }
+
+  fun shiftBackToFront() {
+    while (this.backItems.len() > 0) {
+      this.frontItems.push(this.backItems.pop());
+    }
+  }
+
+  fun shiftFrontToBack() {
+    while (this.frontItems.len() > 0) {
+      this.backItems.push(this.frontItems.pop());
+    }
+  }
+
+  fun takeFront(): T? {
+    if (this.frontItems.len() == 0) {
+      if (this.backItems.len() == 0) {
+        return nil;
+      }
+      this.shiftBackToFront();
+    }
+    return this.frontItems.pop();
+  }
+
+  fun takeBack(): T? {
+    if (this.backItems.len() == 0) {
+      if (this.frontItems.len() == 0) {
+        return nil;
+      }
+      this.shiftFrontToBack();
+    }
+    return this.backItems.pop();
+  }
+
+  fun peekFront(): T? {
+    if (this.frontItems.len() == 0) {
+      if (this.backItems.len() == 0) {
+        return nil;
+      }
+      this.shiftBackToFront();
+    }
+    return this.frontItems[this.frontItems.len() - 1];
+  }
+
+  fun peekBack(): T? {
+    if (this.backItems.len() == 0) {
+      if (this.frontItems.len() == 0) {
+        return nil;
+      }
+      this.shiftFrontToBack();
+    }
+    return this.backItems[this.backItems.len() - 1];
+  }
+
+  fun size(): number {
+    return this.frontItems.len() + this.backItems.len();
+  }
+
+  fun isEmpty(): bool {
+    return this.frontItems.len() == 0 && this.backItems.len() == 0;
+  }
+
+  fun snapshot(): [T] {
+    let values: [T] = [];
+    let frontIndex = this.frontItems.len();
+    while (frontIndex > 0) {
+      frontIndex -= 1;
+      values.push(this.frontItems[frontIndex]);
+    }
+
+    let backIndex = 0;
+    while (backIndex < this.backItems.len()) {
+      values.push(this.backItems[backIndex]);
+      backIndex += 1;
+    }
+    return values;
+  }
+}
+
+fun newDeque<T>(): Deque<T> {
+  return Deque<T> { frontItems: [], backItems: [] };
+}
+
+struct BinaryHeap<T> {
+  items: [T],
+  less: fun(T, T): bool
+}
+
+impl BinaryHeap<T> {
+  fun comesBefore(left: T, right: T): bool {
+    let compare = this.less;
+    return compare(left, right);
+  }
+
+  fun swapItems(left: number, right: number) {
+    let value = this.items[left];
+    this.items[left] = this.items[right];
+    this.items[right] = value;
+  }
+
+  fun siftUp() {
+    let child = this.items.len() - 1;
+    while (child > 0) {
+      let parent = floor((child - 1) / 2);
+      if (!this.comesBefore(this.items[child], this.items[parent])) {
+        break;
+      }
+      this.swapItems(child, parent);
+      child = parent;
+    }
+  }
+
+  fun siftDown() {
+    let index = 0;
+    let length = this.items.len();
+    while (true) {
+      let left = index * 2 + 1;
+      if (left >= length) {
+        break;
+      }
+
+      let right = left + 1;
+      let candidate = left;
+      if (right < length && this.comesBefore(this.items[right], this.items[left])) {
+        candidate = right;
+      }
+      if (!this.comesBefore(this.items[candidate], this.items[index])) {
+        break;
+      }
+      this.swapItems(index, candidate);
+      index = candidate;
+    }
+  }
+
+  fun add(value: T) {
+    this.items.push(value);
+    this.siftUp();
+  }
+
+  fun peek(): T? {
+    if (this.items.len() == 0) {
+      return nil;
+    }
+    return this.items[0];
+  }
+
+  fun take(): T? {
+    if (this.items.len() == 0) {
+      return nil;
+    }
+
+    let value = this.items[0];
+    let last = this.items.pop();
+    if (this.items.len() > 0) {
+      this.items[0] = last;
+      this.siftDown();
+    }
+    return value;
+  }
+
+  fun size(): number {
+    return this.items.len();
+  }
+
+  fun isEmpty(): bool {
+    return this.items.len() == 0;
+  }
+
+  fun snapshot(): [T] {
+    return copy(this.items);
+  }
+}
+
+fun newBinaryHeap<T>(less: fun(T, T): bool): BinaryHeap<T> {
+  return BinaryHeap<T> { items: [], less: less };
+}
+
+enum Option<T> {
+  Some(value: T),
+  None,
+}
+
+fun some<T>(value: T): Option<T> {
+  return Option.Some(value);
+}
+
+fun none<T>(): Option<T> {
+  return Option.None<T>();
+}
+
+enum Result<T, E> {
+  Ok(value: T),
+  Err(error: E),
+}
+
+fun ok<T, E>(value: T): Result<T, E> {
+  return Result.Ok(value);
+}
+
+fun err<T, E>(error: E): Result<T, E> {
+  return Result.Err(error);
+}
+
+// RingBuffer has fixed capacity. A full offer is rejected, so the oldest
+// element is never silently discarded. Option<T> makes empty reads explicit.
+struct RingBuffer<T> {
+  slots: [Option<T>],
+  limit: number,
+  head: number,
+  count: number
+}
+
+impl RingBuffer<T> {
+  fun capacity(): number {
+    return this.limit;
+  }
+
+  fun size(): number {
+    return this.count;
+  }
+
+  fun isEmpty(): bool {
+    return this.count == 0;
+  }
+
+  fun isFull(): bool {
+    return this.count >= this.limit;
+  }
+
+  fun offer(value: T): bool {
+    if (this.isFull()) {
+      return false;
+    }
+    let index = this.head + this.count;
+    if (index >= this.limit) {
+      index -= this.limit;
+    }
+    this.slots[index] = Option.Some(value);
+    this.count += 1;
+    return true;
+  }
+
+  fun peek(): Option<T> {
+    if (this.count == 0) {
+      return none<T>();
+    }
+    let slot = this.slots[this.head];
+    match slot {
+      Option.None => { return none<T>(); }
+      Option.Some(value) => { return some<T>(value); }
+    }
+  }
+
+  fun read(): Option<T> {
+    if (this.count == 0) {
+      return none<T>();
+    }
+    let slot = this.slots[this.head];
+    match slot {
+      Option.None => { return none<T>(); }
+      Option.Some(value) => {
+        this.slots[this.head] = Option.None<T>();
+        this.head += 1;
+        if (this.head == this.limit) {
+          this.head = 0;
+        }
+        this.count -= 1;
+        return some<T>(value);
+      }
+    }
+  }
+
+  fun snapshot(): [T] {
+    let result: [T] = [];
+    let offset = 0;
+    while (offset < this.count) {
+      let index = this.head + offset;
+      if (index >= this.limit) {
+        index -= this.limit;
+      }
+      match this.slots[index] {
+        Option.None => { }
+        Option.Some(value) => { result.push(value); }
+      }
+      offset += 1;
+    }
+    return result;
+  }
+}
+
+fun newRingBuffer<T>(capacity: number): RingBuffer<T> {
+  let limit = floor(capacity);
+  if (limit < 0) {
+    limit = 0;
+  }
+  let slots: [Option<T>] = [];
+  let index = 0;
+  while (index < limit) {
+    slots.push(Option.None<T>());
+    index += 1;
+  }
+  return RingBuffer<T> { slots: slots, limit: limit, head: 0, count: 0 };
+}
+
+enum List<T> {
+  Nil,
+  Cons(head: T, tail: List<T>),
+}
+
+fun emptyList<T>(): List<T> {
+  return List.Nil<T>();
+}
+
+fun prepend<T>(value: T, list: List<T>): List<T> {
+  return List.Cons(value, list);
+}
+
+fun head<T>(list: List<T>): T? {
+  match list {
+    List.Nil => { return nil; }
+    List.Cons(value, rest) => { return value; }
+  }
+}
+
+fun tail<T>(list: List<T>): List<T>? {
+  match list {
+    List.Nil => { return nil; }
+    List.Cons(value, rest) => { return rest; }
+  }
+}
+
+fun reverseInto<T>(remaining: List<T>, result: List<T>): List<T> {
+  return match remaining {
+    List.Nil => result,
+    List.Cons(value, rest) => reverseInto(rest, List.Cons(value, result)),
+  };
+}
+
+fun reverse<T>(list: List<T>): List<T> {
+  return reverseInto(list, List.Nil<T>());
+}
+
+fun appendListToArray<T>(list: List<T>, values: [T]) {
+  match list {
+    List.Nil => { }
+    List.Cons(value, rest) => {
+      values.push(value);
+      appendListToArray(rest, values);
+    }
+  }
+}
+
+fun toArray<T>(list: List<T>): [T] {
+  let values: [T] = [];
+  appendListToArray(list, values);
+  return values;
+}
+
+fun listLength<T>(list: List<T>): number {
+  let current = list;
+  let length = 0;
+  while (true) {
+    match current {
+      List.Nil => { return length; }
+      List.Cons(value, rest) => {
+        length += 1;
+        current = rest;
+      }
+    }
+  }
+  return length;
+}
+
+fun listGet<T>(list: List<T>, index: number): T? {
+  if (floor(index) != index || index < 0) {
+    return nil;
+  }
+  let current = list;
+  let remaining = index;
+  while (true) {
+    match current {
+      List.Nil => { return nil; }
+      List.Cons(value, rest) => {
+        if (remaining == 0) {
+          return value;
+        }
+        remaining -= 1;
+        current = rest;
+      }
+    }
+  }
+  return nil;
+}
+
+fun listAppend<T>(list: List<T>, value: T): List<T> {
+  return match list {
+    List.Nil => List.Cons(value, List.Nil<T>()),
+    List.Cons(headValue, rest) => List.Cons(headValue, listAppend(rest, value)),
+  };
+}
+
+fun listConcat<T>(left: List<T>, right: List<T>): List<T> {
+  return match left {
+    List.Nil => right,
+    List.Cons(value, rest) => List.Cons(value, listConcat(rest, right)),
+  };
+}
+
+fun listTake<T>(list: List<T>, count: number): List<T> {
+  if (floor(count) != count || count <= 0) {
+    return List.Nil<T>();
+  }
+  return match list {
+    List.Nil => List.Nil<T>(),
+    List.Cons(value, rest) => List.Cons(value, listTake(rest, count - 1)),
+  };
+}
+
+fun listDrop<T>(list: List<T>, count: number): List<T> {
+  if (floor(count) != count || count <= 0) {
+    return list;
+  }
+  let current = list;
+  let remaining = count;
+  while (remaining > 0) {
+    match current {
+      List.Nil => { return current; }
+      List.Cons(value, rest) => {
+        current = rest;
+        remaining -= 1;
+      }
+    }
+  }
+  return current;
+}
+
+fun listMiddle<T>(list: List<T>): T? {
+  let values = toArray(list);
+  if (values.len() == 0) {
+    return nil;
+  }
+  return values[floor(values.len() / 2)];
+}
+
+fun listIsPalindrome<T: Eq>(list: List<T>): bool {
+  let values = toArray(list);
+  let left = 0;
+  let right = values.len() - 1;
+  while (left < right) {
+    if (values[left] != values[right]) {
+      return false;
+    }
+    left += 1;
+    right -= 1;
+  }
+  return true;
+}
+
+fun listRemoveFromEnd<T>(list: List<T>, count: number): List<T> {
+  if (floor(count) != count || count <= 0) {
+    return list;
+  }
+  let values = toArray(list);
+  if (count > values.len()) {
+    return list;
+  }
+  let removeIndex = values.len() - count;
+  let result: List<T> = emptyList<T>();
+  let index = values.len();
+  while (index > 0) {
+    index -= 1;
+    if (index != removeIndex) {
+      result = prepend(values[index], result);
+    }
+  }
+  return result;
+}
+
+fun mergeSortedLists<T>(left: List<T>, right: List<T>, less: fun(T, T): bool): List<T> {
+  match left {
+    List.Nil => { return right; }
+    List.Cons(leftValue, leftRest) => {
+      match right {
+        List.Nil => { return left; }
+        List.Cons(rightValue, rightRest) => {
+          if (less(rightValue, leftValue)) {
+            return List.Cons(rightValue, mergeSortedLists(left, rightRest, less));
+          }
+          return List.Cons(leftValue, mergeSortedLists(leftRest, right, less));
+        }
+      }
+    }
+  }
+  return left;
+}
+
+// Tree is an immutable recursive binary tree. Constructors and all helpers
+// return or consume whole values, so inserting a new root does not mutate an
+// existing tree or any of its shared subtrees.
+enum Tree<T> {
+  Empty,
+  Node(value: T, left: Tree<T>, right: Tree<T>)
+}
+
+fun emptyTree<T>(): Tree<T> {
+  return Tree.Empty<T>();
+}
+
+fun treeNode<T>(value: T, left: Tree<T>, right: Tree<T>): Tree<T> {
+  return Tree.Node(value, left, right);
+}
+
+fun treeLeaf<T>(value: T): Tree<T> {
+  return Tree.Node(value, Tree.Empty<T>(), Tree.Empty<T>());
+}
+
+fun treeSize<T>(tree: Tree<T>): number {
+  return match tree {
+    Tree.Empty => 0,
+    Tree.Node(value, left, right) => 1 + treeSize(left) + treeSize(right),
+  };
+}
+
+fun treeHeight<T>(tree: Tree<T>): number {
+  match tree {
+    Tree.Empty => { return 0; }
+    Tree.Node(value, left, right) => {
+      let leftHeight = treeHeight(left);
+      let rightHeight = treeHeight(right);
+      if (leftHeight > rightHeight) {
+        return leftHeight + 1;
+      }
+      return rightHeight + 1;
+    }
+  }
+  return 0;
+}
+
+fun treeLeafCount<T>(tree: Tree<T>): number {
+  match tree {
+    Tree.Empty => { return 0; }
+    Tree.Node(value, left, right) => {
+      if (left == Tree.Empty<T>() && right == Tree.Empty<T>()) {
+        return 1;
+      }
+      return treeLeafCount(left) + treeLeafCount(right);
+    }
+  }
+  return 0;
+}
+
+fun appendTreePreorder<T>(tree: Tree<T>, result: [T]) {
+  match tree {
+    Tree.Empty => { }
+    Tree.Node(value, left, right) => {
+      result.push(value);
+      appendTreePreorder(left, result);
+      appendTreePreorder(right, result);
+    }
+  }
+}
+
+fun appendTreeInorder<T>(tree: Tree<T>, result: [T]) {
+  match tree {
+    Tree.Empty => { }
+    Tree.Node(value, left, right) => {
+      appendTreeInorder(left, result);
+      result.push(value);
+      appendTreeInorder(right, result);
+    }
+  }
+}
+
+fun appendTreePostorder<T>(tree: Tree<T>, result: [T]) {
+  match tree {
+    Tree.Empty => { }
+    Tree.Node(value, left, right) => {
+      appendTreePostorder(left, result);
+      appendTreePostorder(right, result);
+      result.push(value);
+    }
+  }
+}
+
+fun treePreorder<T>(tree: Tree<T>): [T] {
+  let result: [T] = [];
+  appendTreePreorder(tree, result);
+  return result;
+}
+
+fun treeInorder<T>(tree: Tree<T>): [T] {
+  let result: [T] = [];
+  appendTreeInorder(tree, result);
+  return result;
+}
+
+fun treePostorder<T>(tree: Tree<T>): [T] {
+  let result: [T] = [];
+  appendTreePostorder(tree, result);
+  return result;
+}
+
+fun treeLevelOrder<T>(tree: Tree<T>): [T] {
+  let result: [T] = [];
+  let queue: [Tree<T>] = [tree];
+  let headIndex = 0;
+  while (headIndex < queue.len()) {
+    let current = queue[headIndex];
+    headIndex += 1;
+    match current {
+      Tree.Empty => { }
+      Tree.Node(value, left, right) => {
+        result.push(value);
+        queue.push(left);
+        queue.push(right);
+      }
+    }
+  }
+  return result;
+}
+
+fun treeBalanceHeight<T>(tree: Tree<T>): number {
+  match tree {
+    Tree.Empty => { return 0; }
+    Tree.Node(value, left, right) => {
+      let leftHeight = treeBalanceHeight(left);
+      if (leftHeight < 0) {
+        return -1;
+      }
+      let rightHeight = treeBalanceHeight(right);
+      if (rightHeight < 0) {
+        return -1;
+      }
+      if (leftHeight - rightHeight > 1 || rightHeight - leftHeight > 1) {
+        return -1;
+      }
+      if (leftHeight > rightHeight) {
+        return leftHeight + 1;
+      }
+      return rightHeight + 1;
+    }
+  }
+  return -1;
+}
+
+fun treeIsBalanced<T>(tree: Tree<T>): bool {
+  return treeBalanceHeight(tree) >= 0;
+}
+
+fun treeMaxWidth<T>(tree: Tree<T>): number {
+  let queue: [Tree<T>] = [tree];
+  let headIndex = 0;
+  let best = 0;
+  while (headIndex < queue.len()) {
+    let levelEnd = queue.len();
+    let width = 0;
+    while (headIndex < levelEnd) {
+      let current = queue[headIndex];
+      headIndex += 1;
+      match current {
+        Tree.Empty => { }
+        Tree.Node(value, left, right) => {
+          width += 1;
+          queue.push(left);
+          queue.push(right);
+        }
+      }
+    }
+    if (width > best) {
+      best = width;
+    }
+  }
+  return best;
+}
+
+fun appendTreePaths<T>(tree: Tree<T>, path: [T], result: [[T]]) {
+  match tree {
+    Tree.Empty => { }
+    Tree.Node(value, left, right) => {
+      path.push(value);
+      let hasLeft = false;
+      match left {
+        Tree.Empty => { }
+        Tree.Node(leftValue, leftLeft, leftRight) => { hasLeft = true; }
+      }
+      let hasRight = false;
+      match right {
+        Tree.Empty => { }
+        Tree.Node(rightValue, rightLeft, rightRight) => { hasRight = true; }
+      }
+      if (!hasLeft && !hasRight) {
+        result.push(copy(path));
+      } else {
+        appendTreePaths(left, path, result);
+        appendTreePaths(right, path, result);
+      }
+      path.pop();
+    }
+  }
+}
+
+fun treeRootToLeafPaths<T>(tree: Tree<T>): [[T]] {
+  let result: [[T]] = [];
+  let path: [T] = [];
+  appendTreePaths(tree, path, result);
+  return result;
+}
+
+fun appendTreePathSums(tree: Tree<number>, running: number, result: [number]) {
+  match tree {
+    Tree.Empty => { }
+    Tree.Node(value, left, right) => {
+      let next = running + value;
+      let hasLeft = false;
+      match left {
+        Tree.Empty => { }
+        Tree.Node(leftValue, leftLeft, leftRight) => { hasLeft = true; }
+      }
+      let hasRight = false;
+      match right {
+        Tree.Empty => { }
+        Tree.Node(rightValue, rightLeft, rightRight) => { hasRight = true; }
+      }
+      if (!hasLeft && !hasRight) {
+        result.push(next);
+      } else {
+        appendTreePathSums(left, next, result);
+        appendTreePathSums(right, next, result);
+      }
+    }
+  }
+}
+
+fun treeRootToLeafSums(tree: Tree<number>): [number] {
+  let result: [number] = [];
+  appendTreePathSums(tree, 0, result);
+  return result;
+}
+
+struct TreeRemoval<T> {
+  value: T,
+  rest: Tree<T>
+}
+
+fun bstRemoveMinimum<T>(tree: Tree<T>): TreeRemoval<T>? {
+  match tree {
+    Tree.Empty => { return nil; }
+    Tree.Node(value, left, right) => {
+      match left {
+        Tree.Empty => {
+          return TreeRemoval<T> { value: value, rest: right };
+        }
+        Tree.Node(leftValue, leftLeft, leftRight) => {
+          let removal = bstRemoveMinimum(left);
+          if (removal == nil) {
+            return nil;
+          }
+          return TreeRemoval<T> {
+            value: removal.value,
+            rest: Tree.Node(value, removal.rest, right)
+          };
+        }
+      }
+    }
+  }
+  return nil;
+}
+
+fun bstRemoveMaximum<T>(tree: Tree<T>): TreeRemoval<T>? {
+  match tree {
+    Tree.Empty => { return nil; }
+    Tree.Node(value, left, right) => {
+      match right {
+        Tree.Empty => {
+          return TreeRemoval<T> { value: value, rest: left };
+        }
+        Tree.Node(rightValue, rightLeft, rightRight) => {
+          let removal = bstRemoveMaximum(right);
+          if (removal == nil) {
+            return nil;
+          }
+          return TreeRemoval<T> {
+            value: removal.value,
+            rest: Tree.Node(value, left, removal.rest)
+          };
+        }
+      }
+    }
+  }
+  return nil;
+}
+
+fun bstContains<T>(tree: Tree<T>, target: T, less: fun(T, T): bool): bool {
+  let current = tree;
+  while (true) {
+    match current {
+      Tree.Empty => { return false; }
+      Tree.Node(value, left, right) => {
+        if (less(target, value)) {
+          current = left;
+          continue;
+        }
+        if (less(value, target)) {
+          current = right;
+          continue;
+        }
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+fun bstInsert<T>(tree: Tree<T>, value: T, less: fun(T, T): bool): Tree<T> {
+  match tree {
+    Tree.Empty => { return Tree.Node(value, Tree.Empty<T>(), Tree.Empty<T>()); }
+    Tree.Node(current, left, right) => {
+      if (less(value, current)) {
+        return Tree.Node(current, bstInsert(left, value, less), right);
+      }
+      if (less(current, value)) {
+        return Tree.Node(current, left, bstInsert(right, value, less));
+      }
+      return tree;
+    }
+  }
+  return tree;
+}
+
+fun bstDelete<T>(tree: Tree<T>, value: T, less: fun(T, T): bool): Tree<T> {
+  match tree {
+    Tree.Empty => { return tree; }
+    Tree.Node(current, left, right) => {
+      if (less(value, current)) {
+        return Tree.Node(current, bstDelete(left, value, less), right);
+      }
+      if (less(current, value)) {
+        return Tree.Node(current, left, bstDelete(right, value, less));
+      }
+
+      match left {
+        Tree.Empty => { return right; }
+        Tree.Node(leftValue, leftLeft, leftRight) => {
+          match right {
+            Tree.Empty => { return left; }
+            Tree.Node(rightValue, rightLeft, rightRight) => {
+              let removal = bstRemoveMinimum(right);
+              if (removal == nil) {
+                return left;
+              }
+              return Tree.Node(removal.value, left, removal.rest);
+            }
+          }
+        }
+      }
+    }
+  }
+  return tree;
+}
+
+fun bstMinimum<T>(tree: Tree<T>): T? {
+  let removal = bstRemoveMinimum(tree);
+  if (removal == nil) {
+    return nil;
+  }
+  return removal.value;
+}
+
+fun bstMaximum<T>(tree: Tree<T>): T? {
+  let removal = bstRemoveMaximum(tree);
+  if (removal == nil) {
+    return nil;
+  }
+  return removal.value;
+}
+
+fun bstPredecessor<T>(tree: Tree<T>, target: T, less: fun(T, T): bool): T? {
+  let current = tree;
+  let candidate: T? = nil;
+  while (true) {
+    match current {
+      Tree.Empty => { return candidate; }
+      Tree.Node(value, left, right) => {
+        if (less(value, target)) {
+          candidate = value;
+          current = right;
+        } else {
+          current = left;
+        }
+      }
+    }
+  }
+  return candidate;
+}
+
+fun bstSuccessor<T>(tree: Tree<T>, target: T, less: fun(T, T): bool): T? {
+  let current = tree;
+  let candidate: T? = nil;
+  while (true) {
+    match current {
+      Tree.Empty => { return candidate; }
+      Tree.Node(value, left, right) => {
+        if (less(target, value)) {
+          candidate = value;
+          current = left;
+        } else {
+          current = right;
+        }
+      }
+    }
+  }
+  return candidate;
+}
+
+struct Set<T: Eq> {
+  items: [T]
+}
+
+impl Set<T: Eq> {
+  fun indexOf(value: T): number {
+    let index = 0;
+    while (index < this.items.len()) {
+      if (this.items[index] == value) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun add(value: T) {
+    if (this.indexOf(value) >= 0) {
+      return;
+    }
+    this.items.push(value);
+  }
+
+  fun has(value: T): bool {
+    return this.indexOf(value) >= 0;
+  }
+
+  fun discard(value: T): bool {
+    let index = this.indexOf(value);
+    if (index < 0) {
+      return false;
+    }
+
+    while (index + 1 < this.items.len()) {
+      this.items[index] = this.items[index + 1];
+      index += 1;
+    }
+    this.items.pop();
+    return true;
+  }
+
+  fun size(): number {
+    return this.items.len();
+  }
+
+  fun isEmpty(): bool {
+    return this.items.len() == 0;
+  }
+
+  fun snapshot(): [T] {
+    return copy(this.items);
+  }
+}
+
+fun newSet<T: Eq>(): Set<T> {
+  return Set<T> { items: [] };
+}
+
+struct MultiSetEntry<T> {
+  value: T,
+  count: number
+}
+
+struct MultiSet<T: Eq> {
+  values: [T],
+  counts: [number]
+}
+
+impl MultiSet<T: Eq> {
+  fun indexOf(value: T): number {
+    let index = 0;
+    while (index < this.values.len()) {
+      if (this.values[index] == value) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun add(value: T) {
+    let index = this.indexOf(value);
+    if (index >= 0) {
+      this.counts[index] += 1;
+      return;
+    }
+    this.values.push(value);
+    this.counts.push(1);
+  }
+
+  fun countOf(value: T): number {
+    let index = this.indexOf(value);
+    if (index < 0) {
+      return 0;
+    }
+    return this.counts[index];
+  }
+
+  fun has(value: T): bool {
+    return this.indexOf(value) >= 0;
+  }
+
+  fun removeAt(index: number) {
+    while (index + 1 < this.values.len()) {
+      this.values[index] = this.values[index + 1];
+      this.counts[index] = this.counts[index + 1];
+      index += 1;
+    }
+    this.values.pop();
+    this.counts.pop();
+  }
+
+  fun takeOne(value: T): bool {
+    let index = this.indexOf(value);
+    if (index < 0) {
+      return false;
+    }
+    if (this.counts[index] > 1) {
+      this.counts[index] -= 1;
+      return true;
+    }
+    this.removeAt(index);
+    return true;
+  }
+
+  fun entries(): [MultiSetEntry<T>] {
+    let result: [MultiSetEntry<T>] = [];
+    let index = 0;
+    while (index < this.values.len()) {
+      result.push(MultiSetEntry<T> { value: this.values[index], count: this.counts[index] });
+      index += 1;
+    }
+    return result;
+  }
+}
+
+fun newMultiSet<T: Eq>(): MultiSet<T> {
+  return MultiSet<T> { values: [], counts: [] };
+}
+
+struct MultiMap<K: Eq, V: Eq> {
+  keys: [K],
+  values: [[V]]
+}
+
+impl MultiMap<K: Eq, V: Eq> {
+  fun indexOfKey(key: K): number {
+    let index = 0;
+    while (index < this.keys.len()) {
+      if (this.keys[index] == key) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun indexOfValue(values: [V], value: V): number {
+    let index = 0;
+    while (index < values.len()) {
+      if (values[index] == value) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun add(key: K, value: V) {
+    let keyIndex = this.indexOfKey(key);
+    if (keyIndex < 0) {
+      let values: [V] = [];
+      values.push(value);
+      this.keys.push(key);
+      this.values.push(values);
+      return;
+    }
+    this.values[keyIndex].push(value);
+  }
+
+  fun getAll(key: K): [V] {
+    let keyIndex = this.indexOfKey(key);
+    if (keyIndex < 0) {
+      return [];
+    }
+    return copy(this.values[keyIndex]);
+  }
+
+  fun removeKeyAt(index: number) {
+    while (index + 1 < this.keys.len()) {
+      this.keys[index] = this.keys[index + 1];
+      this.values[index] = this.values[index + 1];
+      index += 1;
+    }
+    this.keys.pop();
+    this.values.pop();
+  }
+
+  fun discard(key: K, value: V): bool {
+    let keyIndex = this.indexOfKey(key);
+    if (keyIndex < 0) {
+      return false;
+    }
+    let valueIndex = this.indexOfValue(this.values[keyIndex], value);
+    if (valueIndex < 0) {
+      return false;
+    }
+
+    while (valueIndex + 1 < this.values[keyIndex].len()) {
+      this.values[keyIndex][valueIndex] = this.values[keyIndex][valueIndex + 1];
+      valueIndex += 1;
+    }
+    this.values[keyIndex].pop();
+    if (this.values[keyIndex].len() == 0) {
+      this.removeKeyAt(keyIndex);
+    }
+    return true;
+  }
+}
+
+fun newMultiMap<K: Eq, V: Eq>(): MultiMap<K, V> {
+  return MultiMap<K, V> { keys: [], values: [] };
+}
+
+struct DisjointSet {
+  parents: [number],
+  sizes: [number],
+  components: number
+}
+
+impl DisjointSet {
+  fun representative(value: number): number {
+    let root = value;
+    while (this.parents[root] != root) {
+      root = this.parents[root];
+    }
+
+    let current = value;
+    while (current != root) {
+      let next = this.parents[current];
+      this.parents[current] = root;
+      current = next;
+    }
+    return root;
+  }
+
+  fun union(left: number, right: number): bool {
+    let leftRoot = this.representative(left);
+    let rightRoot = this.representative(right);
+    if (leftRoot == rightRoot) {
+      return false;
+    }
+    if (this.sizes[leftRoot] < this.sizes[rightRoot]) {
+      let value = leftRoot;
+      leftRoot = rightRoot;
+      rightRoot = value;
+    }
+    this.parents[rightRoot] = leftRoot;
+    this.sizes[leftRoot] += this.sizes[rightRoot];
+    this.components -= 1;
+    return true;
+  }
+
+  fun connected(left: number, right: number): bool {
+    return this.representative(left) == this.representative(right);
+  }
+
+  fun componentCount(): number {
+    return this.components;
+  }
+
+  fun size(): number {
+    return this.parents.len();
+  }
+}
+
+fun newDisjointSet(count: number): DisjointSet {
+  let length = floor(count);
+  if (length < 0) {
+    length = 0;
+  }
+  let parents: [number] = [];
+  let sizes: [number] = [];
+  let index = 0;
+  while (index < length) {
+    parents.push(index);
+    sizes.push(1);
+    index += 1;
+  }
+  return DisjointSet { parents: parents, sizes: sizes, components: length };
+}
+
+struct Graph {
+  adjacency: [[number]],
+  directed: bool,
+  edges: number
+}
+
+impl Graph {
+  fun vertexCount(): number {
+    return this.adjacency.len();
+  }
+
+  fun edgeCount(): number {
+    return this.edges;
+  }
+
+  fun validVertex(vertex: number): bool {
+    return vertex >= 0 && vertex < this.adjacency.len();
+  }
+
+  fun neighborIndex(from: number, to: number): number {
+    let index = 0;
+    while (index < this.adjacency[from].len()) {
+      if (this.adjacency[from][index] == to) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun hasEdge(from: number, to: number): bool {
+    if (!this.validVertex(from) || !this.validVertex(to)) {
+      return false;
+    }
+    return this.neighborIndex(from, to) >= 0;
+  }
+
+  fun addEdge(from: number, to: number): bool {
+    if (!this.validVertex(from) || !this.validVertex(to) || this.hasEdge(from, to)) {
+      return false;
+    }
+    this.adjacency[from].push(to);
+    if (!this.directed && from != to) {
+      this.adjacency[to].push(from);
+    }
+    this.edges += 1;
+    return true;
+  }
+
+  fun neighbors(vertex: number): [number] {
+    if (!this.validVertex(vertex)) {
+      return [];
+    }
+    return copy(this.adjacency[vertex]);
+  }
+}
+
+fun newGraph(vertices: number, directed: bool): Graph {
+  let count = floor(vertices);
+  if (count < 0) {
+    count = 0;
+  }
+  let adjacency: [[number]] = [];
+  let index = 0;
+  while (index < count) {
+    let neighbors: [number] = [];
+    adjacency.push(neighbors);
+    index += 1;
+  }
+  return Graph { adjacency: adjacency, directed: directed, edges: 0 };
+}
+
+fun breadthFirstOrder(graph: Graph, start: number): [number] {
+  let result: [number] = [];
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count) {
+    return result;
+  }
+
+  let visited: [bool] = [];
+  let index = 0;
+  while (index < count) {
+    visited.push(false);
+    index += 1;
+  }
+
+  let queue: [number] = [start];
+  visited[start] = true;
+  let head = 0;
+  while (head < queue.len()) {
+    let vertex = queue[head];
+    head += 1;
+    result.push(vertex);
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let neighbor = neighbors[neighborIndex];
+      if (!visited[neighbor]) {
+        visited[neighbor] = true;
+        queue.push(neighbor);
+      }
+      neighborIndex += 1;
+    }
+  }
+  return result;
+}
+
+fun depthFirstOrder(graph: Graph, start: number): [number] {
+  let result: [number] = [];
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count) {
+    return result;
+  }
+
+  let visited: [bool] = [];
+  let index = 0;
+  while (index < count) {
+    visited.push(false);
+    index += 1;
+  }
+
+  let stack: [number] = [start];
+  visited[start] = true;
+  while (stack.len() > 0) {
+    let vertexIndex = stack.len() - 1;
+    let vertex = stack[vertexIndex];
+    stack.pop();
+    result.push(vertex);
+
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = neighbors.len();
+    while (neighborIndex > 0) {
+      neighborIndex -= 1;
+      let neighbor = neighbors[neighborIndex];
+      if (!visited[neighbor]) {
+        visited[neighbor] = true;
+        stack.push(neighbor);
+      }
+    }
+  }
+  return result;
+}
+
+fun connectedComponents(graph: Graph): [[number]] {
+  let components: [[number]] = [];
+  if (graph.directed) {
+    return components;
+  }
+  let count = graph.vertexCount();
+  let visited: [bool] = [];
+  let index = 0;
+  while (index < count) {
+    visited.push(false);
+    index += 1;
+  }
+
+  let root = 0;
+  while (root < count) {
+    if (visited[root]) {
+      root += 1;
+      continue;
+    }
+    let component: [number] = [];
+    let queue: [number] = [root];
+    visited[root] = true;
+    let head = 0;
+    while (head < queue.len()) {
+      let vertex = queue[head];
+      head += 1;
+      component.push(vertex);
+      let neighbors = graph.adjacency[vertex];
+      let neighborIndex = 0;
+      while (neighborIndex < neighbors.len()) {
+        let neighbor = neighbors[neighborIndex];
+        if (!visited[neighbor]) {
+          visited[neighbor] = true;
+          queue.push(neighbor);
+        }
+        neighborIndex += 1;
+      }
+    }
+    components.push(component);
+    root += 1;
+  }
+  return components;
+}
+
+fun isBipartite(graph: Graph): bool {
+  if (graph.directed) {
+    return false;
+  }
+  let count = graph.vertexCount();
+  let colors: [number] = [];
+  let index = 0;
+  while (index < count) {
+    colors.push(-1);
+    index += 1;
+  }
+
+  let root = 0;
+  while (root < count) {
+    if (colors[root] >= 0) {
+      root += 1;
+      continue;
+    }
+    let queue: [number] = [root];
+    colors[root] = 0;
+    let head = 0;
+    while (head < queue.len()) {
+      let vertex = queue[head];
+      head += 1;
+      let neighbors = graph.adjacency[vertex];
+      let neighborIndex = 0;
+      while (neighborIndex < neighbors.len()) {
+        let neighbor = neighbors[neighborIndex];
+        if (colors[neighbor] < 0) {
+          colors[neighbor] = 1 - colors[vertex];
+          queue.push(neighbor);
+        } else {
+          if (colors[neighbor] == colors[vertex]) {
+            return false;
+          }
+        }
+        neighborIndex += 1;
+      }
+    }
+    root += 1;
+  }
+  return true;
+}
+
+fun articulationPoints(graph: Graph): [number] {
+  let result: [number] = [];
+  if (graph.directed) {
+    return result;
+  }
+  let count = graph.vertexCount();
+  let discovery: [number] = [];
+  let low: [number] = [];
+  let parents: [number] = [];
+  let childCounts: [number] = [];
+  let articulation: [bool] = [];
+  let index = 0;
+  while (index < count) {
+    discovery.push(-1);
+    low.push(-1);
+    parents.push(-1);
+    childCounts.push(0);
+    articulation.push(false);
+    index += 1;
+  }
+
+  let time = 0;
+  let root = 0;
+  while (root < count) {
+    if (discovery[root] >= 0) {
+      root += 1;
+      continue;
+    }
+    discovery[root] = time;
+    low[root] = time;
+    time += 1;
+    let stack: [number] = [root];
+    let nextIndices: [number] = [0];
+    while (stack.len() > 0) {
+      let top = stack.len() - 1;
+      let vertex = stack[top];
+      let neighbors = graph.adjacency[vertex];
+      let neighborIndex = nextIndices[top];
+      if (neighborIndex < neighbors.len()) {
+        let neighbor = neighbors[neighborIndex];
+        nextIndices[top] += 1;
+        if (discovery[neighbor] < 0) {
+          parents[neighbor] = vertex;
+          childCounts[vertex] += 1;
+          discovery[neighbor] = time;
+          low[neighbor] = time;
+          time += 1;
+          stack.push(neighbor);
+          nextIndices.push(0);
+        } else {
+          if (neighbor != parents[vertex] && discovery[neighbor] < low[vertex]) {
+            low[vertex] = discovery[neighbor];
+          }
+        }
+      } else {
+        stack.pop();
+        nextIndices.pop();
+        let parent = parents[vertex];
+        if (parent >= 0) {
+          if (low[vertex] < low[parent]) {
+            low[parent] = low[vertex];
+          }
+          if (parents[parent] >= 0 && low[vertex] >= discovery[parent]) {
+            articulation[parent] = true;
+          }
+        } else {
+          if (childCounts[vertex] > 1) {
+            articulation[vertex] = true;
+          }
+        }
+      }
+    }
+    root += 1;
+  }
+
+  index = 0;
+  while (index < count) {
+    if (articulation[index]) {
+      result.push(index);
+    }
+    index += 1;
+  }
+  return result;
+}
+
+fun bridges(graph: Graph): [[number]] {
+  let result: [[number]] = [];
+  if (graph.directed) {
+    return result;
+  }
+  let count = graph.vertexCount();
+  let discovery: [number] = [];
+  let low: [number] = [];
+  let parents: [number] = [];
+  let index = 0;
+  while (index < count) {
+    discovery.push(-1);
+    low.push(-1);
+    parents.push(-1);
+    index += 1;
+  }
+
+  let time = 0;
+  let root = 0;
+  while (root < count) {
+    if (discovery[root] >= 0) {
+      root += 1;
+      continue;
+    }
+    discovery[root] = time;
+    low[root] = time;
+    time += 1;
+    let stack: [number] = [root];
+    let nextIndices: [number] = [0];
+    while (stack.len() > 0) {
+      let top = stack.len() - 1;
+      let vertex = stack[top];
+      let neighbors = graph.adjacency[vertex];
+      let neighborIndex = nextIndices[top];
+      if (neighborIndex < neighbors.len()) {
+        let neighbor = neighbors[neighborIndex];
+        nextIndices[top] += 1;
+        if (discovery[neighbor] < 0) {
+          parents[neighbor] = vertex;
+          discovery[neighbor] = time;
+          low[neighbor] = time;
+          time += 1;
+          stack.push(neighbor);
+          nextIndices.push(0);
+        } else {
+          if (neighbor != parents[vertex] && discovery[neighbor] < low[vertex]) {
+            low[vertex] = discovery[neighbor];
+          }
+        }
+      } else {
+        stack.pop();
+        nextIndices.pop();
+        let parent = parents[vertex];
+        if (parent >= 0) {
+          if (low[vertex] > discovery[parent]) {
+            let bridge: [number] = [parent, vertex];
+            result.push(bridge);
+          }
+          if (low[vertex] < low[parent]) {
+            low[parent] = low[vertex];
+          }
+        }
+      }
+    }
+    root += 1;
+  }
+  return result;
+}
+
+fun eulerTrail(graph: Graph, start: number): [number] {
+  let result: [number] = [];
+  if (graph.directed) {
+    return result;
+  }
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count) {
+    return result;
+  }
+
+  let degrees: [number] = [];
+  let oddCount = 0;
+  let index = 0;
+  while (index < count) {
+    let degree = graph.adjacency[index].len();
+    let neighborIndex = 0;
+    while (neighborIndex < graph.adjacency[index].len()) {
+      if (graph.adjacency[index][neighborIndex] == index) {
+        degree += 1;
+      }
+      neighborIndex += 1;
+    }
+    degrees.push(degree);
+    if (floor(degree / 2) * 2 != degree) {
+      oddCount += 1;
+    }
+    index += 1;
+  }
+  if (oddCount != 0 && oddCount != 2) {
+    return result;
+  }
+  if (oddCount == 2 && floor(degrees[start] / 2) * 2 == degrees[start]) {
+    return result;
+  }
+
+  let remaining: [[number]] = [];
+  index = 0;
+  while (index < count) {
+    let neighbors: [number] = [];
+    let neighborIndex = 0;
+    while (neighborIndex < graph.adjacency[index].len()) {
+      neighbors.push(graph.adjacency[index][neighborIndex]);
+      neighborIndex += 1;
+    }
+    remaining.push(neighbors);
+    index += 1;
+  }
+
+  let stack: [number] = [start];
+  while (stack.len() > 0) {
+    let currentIndex = stack.len() - 1;
+    let current = stack[currentIndex];
+    if (remaining[current].len() > 0) {
+      let neighbor = remaining[current].pop();
+      if (neighbor != current) {
+        let reverseIndex = 0;
+        while (reverseIndex < remaining[neighbor].len()
+               && remaining[neighbor][reverseIndex] != current) {
+          reverseIndex += 1;
+        }
+        if (reverseIndex >= remaining[neighbor].len()) {
+          return [];
+        }
+        while (reverseIndex + 1 < remaining[neighbor].len()) {
+          remaining[neighbor][reverseIndex] = remaining[neighbor][reverseIndex + 1];
+          reverseIndex += 1;
+        }
+        remaining[neighbor].pop();
+      }
+      stack.push(neighbor);
+    } else {
+      result.push(current);
+      stack.pop();
+    }
+  }
+
+  if (result.len() != graph.edgeCount() + 1) {
+    return [];
+  }
+  let reversed: [number] = [];
+  index = result.len();
+  while (index > 0) {
+    index -= 1;
+    reversed.push(result[index]);
+  }
+  return reversed;
+}
+
+fun shortestDistances(graph: Graph, start: number): [number] {
+  let distances: [number] = [];
+  let count = graph.vertexCount();
+  let index = 0;
+  while (index < count) {
+    distances.push(-1);
+    index += 1;
+  }
+  if (start < 0 || start >= count) {
+    return distances;
+  }
+
+  let queue: [number] = [start];
+  distances[start] = 0;
+  let head = 0;
+  while (head < queue.len()) {
+    let vertex = queue[head];
+    head += 1;
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let neighbor = neighbors[neighborIndex];
+      if (distances[neighbor] < 0) {
+        distances[neighbor] = distances[vertex] + 1;
+        queue.push(neighbor);
+      }
+      neighborIndex += 1;
+    }
+  }
+  return distances;
+}
+
+fun shortestPath(graph: Graph, start: number, goal: number): [number] {
+  let result: [number] = [];
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count || goal < 0 || goal >= count) {
+    return result;
+  }
+
+  let parents: [number] = [];
+  let index = 0;
+  while (index < count) {
+    parents.push(-1);
+    index += 1;
+  }
+  let queue: [number] = [start];
+  parents[start] = start;
+  let head = 0;
+  while (head < queue.len()) {
+    let vertex = queue[head];
+    head += 1;
+    if (vertex == goal) {
+      break;
+    }
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let neighbor = neighbors[neighborIndex];
+      if (parents[neighbor] < 0) {
+        parents[neighbor] = vertex;
+        queue.push(neighbor);
+      }
+      neighborIndex += 1;
+    }
+  }
+
+  if (parents[goal] < 0) {
+    return result;
+  }
+  let current = goal;
+  while (current != start) {
+    result.push(current);
+    current = parents[current];
+  }
+  result.push(start);
+
+  let reversed: [number] = [];
+  let resultIndex = result.len();
+  while (resultIndex > 0) {
+    resultIndex -= 1;
+    reversed.push(result[resultIndex]);
+  }
+  return reversed;
+}
+
+fun inDegrees(graph: Graph): [number] {
+  let degrees: [number] = [];
+  if (!graph.directed) {
+    return degrees;
+  }
+  let count = graph.vertexCount();
+  let index = 0;
+  while (index < count) {
+    degrees.push(0);
+    index += 1;
+  }
+  let vertex = 0;
+  while (vertex < count) {
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      degrees[neighbors[neighborIndex]] += 1;
+      neighborIndex += 1;
+    }
+    vertex += 1;
+  }
+  return degrees;
+}
+
+fun topologicalOrder(graph: Graph): [number] {
+  let result: [number] = [];
+  if (!graph.directed) {
+    return result;
+  }
+  let count = graph.vertexCount();
+  let degrees = inDegrees(graph);
+  let queue: [number] = [];
+  let index = 0;
+  while (index < count) {
+    if (degrees[index] == 0) {
+      queue.push(index);
+    }
+    index += 1;
+  }
+
+  let head = 0;
+  while (head < queue.len()) {
+    let vertex = queue[head];
+    head += 1;
+    result.push(vertex);
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let neighbor = neighbors[neighborIndex];
+      degrees[neighbor] -= 1;
+      if (degrees[neighbor] == 0) {
+        queue.push(neighbor);
+      }
+      neighborIndex += 1;
+    }
+  }
+
+  if (result.len() != count) {
+    return [];
+  }
+  return result;
+}
+
+fun hasCycle(graph: Graph): bool {
+  let count = graph.vertexCount();
+  if (graph.directed) {
+    return topologicalOrder(graph).len() != count;
+  }
+
+  let visited: [bool] = [];
+  let parents: [number] = [];
+  let index = 0;
+  while (index < count) {
+    visited.push(false);
+    parents.push(-1);
+    index += 1;
+  }
+
+  let root = 0;
+  while (root < count) {
+    if (visited[root]) {
+      root += 1;
+      continue;
+    }
+    let stack: [number] = [root];
+    visited[root] = true;
+    while (stack.len() > 0) {
+      let vertexIndex = stack.len() - 1;
+      let vertex = stack[vertexIndex];
+      stack.pop();
+      let neighbors = graph.neighbors(vertex);
+      let neighborIndex = 0;
+      while (neighborIndex < neighbors.len()) {
+        let neighbor = neighbors[neighborIndex];
+        if (!visited[neighbor]) {
+          visited[neighbor] = true;
+          parents[neighbor] = vertex;
+          stack.push(neighbor);
+        } else {
+          if (parents[vertex] != neighbor) {
+            return true;
+          }
+        }
+        neighborIndex += 1;
+      }
+    }
+    root += 1;
+  }
+  return false;
+}
+
+fun stronglyConnectedComponents(graph: Graph): [[number]] {
+  let components: [[number]] = [];
+  if (!graph.directed) {
+    return components;
+  }
+  let count = graph.vertexCount();
+  let visited: [bool] = [];
+  let finish: [number] = [];
+  let index = 0;
+  while (index < count) {
+    visited.push(false);
+    index += 1;
+  }
+
+  let root = 0;
+  while (root < count) {
+    if (visited[root]) {
+      root += 1;
+      continue;
+    }
+    let stack: [number] = [root];
+    let nextIndices: [number] = [0];
+    visited[root] = true;
+    while (stack.len() > 0) {
+      let top = stack.len() - 1;
+      let vertex = stack[top];
+      let neighbors = graph.adjacency[vertex];
+      let neighborIndex = nextIndices[top];
+      if (neighborIndex < neighbors.len()) {
+        let neighbor = neighbors[neighborIndex];
+        nextIndices[top] += 1;
+        if (!visited[neighbor]) {
+          visited[neighbor] = true;
+          stack.push(neighbor);
+          nextIndices.push(0);
+        }
+      } else {
+        stack.pop();
+        nextIndices.pop();
+        finish.push(vertex);
+      }
+    }
+    root += 1;
+  }
+
+  let reversed: [[number]] = [];
+  index = 0;
+  while (index < count) {
+    let neighbors: [number] = [];
+    reversed.push(neighbors);
+    index += 1;
+  }
+  let vertex = 0;
+  while (vertex < count) {
+    let neighbors = graph.adjacency[vertex];
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let neighbor = neighbors[neighborIndex];
+      reversed[neighbor].push(vertex);
+      neighborIndex += 1;
+    }
+    vertex += 1;
+  }
+
+  index = 0;
+  while (index < count) {
+    visited[index] = false;
+    index += 1;
+  }
+  let finishIndex = finish.len();
+  while (finishIndex > 0) {
+    finishIndex -= 1;
+    root = finish[finishIndex];
+    if (!visited[root]) {
+      let component: [number] = [];
+      let componentStack: [number] = [root];
+      visited[root] = true;
+      while (componentStack.len() > 0) {
+        let top = componentStack.len() - 1;
+        vertex = componentStack[top];
+        componentStack.pop();
+        component.push(vertex);
+        let neighbors = reversed[vertex];
+        let neighborIndex = 0;
+        while (neighborIndex < neighbors.len()) {
+          let neighbor = neighbors[neighborIndex];
+          if (!visited[neighbor]) {
+            visited[neighbor] = true;
+            componentStack.push(neighbor);
+          }
+          neighborIndex += 1;
+        }
+      }
+      components.push(component);
+    }
+  }
+  return components;
+}
+
+struct WeightedEdge {
+  to: number,
+  weight: number
+}
+
+struct WeightedGraph {
+  adjacency: [[WeightedEdge]],
+  directed: bool,
+  edges: number
+}
+
+impl WeightedGraph {
+  fun vertexCount(): number {
+    return this.adjacency.len();
+  }
+
+  fun edgeCount(): number {
+    return this.edges;
+  }
+
+  fun validVertex(vertex: number): bool {
+    return vertex >= 0 && vertex < this.adjacency.len();
+  }
+
+  fun edgeIndex(from: number, to: number): number {
+    let index = 0;
+    while (index < this.adjacency[from].len()) {
+      if (this.adjacency[from][index].to == to) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun hasEdge(from: number, to: number): bool {
+    if (!this.validVertex(from) || !this.validVertex(to)) {
+      return false;
+    }
+    return this.edgeIndex(from, to) >= 0;
+  }
+
+  fun addEdge(from: number, to: number, weight: number): bool {
+    if (!this.validVertex(from) || !this.validVertex(to) || weight < 0 || this.hasEdge(from, to)) {
+      return false;
+    }
+    this.adjacency[from].push(WeightedEdge { to: to, weight: weight });
+    if (!this.directed && from != to) {
+      this.adjacency[to].push(WeightedEdge { to: from, weight: weight });
+    }
+    this.edges += 1;
+    return true;
+  }
+
+  fun neighbors(vertex: number): [WeightedEdge] {
+    if (!this.validVertex(vertex)) {
+      return [];
+    }
+    return copy(this.adjacency[vertex]);
+  }
+}
+
+fun newWeightedGraph(vertices: number, directed: bool): WeightedGraph {
+  let count = floor(vertices);
+  if (count < 0) {
+    count = 0;
+  }
+  let adjacency: [[WeightedEdge]] = [];
+  let index = 0;
+  while (index < count) {
+    let neighbors: [WeightedEdge] = [];
+    adjacency.push(neighbors);
+    index += 1;
+  }
+  return WeightedGraph { adjacency: adjacency, directed: directed, edges: 0 };
+}
+
+struct SignedWeightedEdge {
+  to: number,
+  weight: number
+}
+
+struct SignedWeightedGraph {
+  adjacency: [[SignedWeightedEdge]],
+  directed: bool,
+  edges: number
+}
+
+impl SignedWeightedGraph {
+  fun vertexCount(): number {
+    return this.adjacency.len();
+  }
+
+  fun edgeCount(): number {
+    return this.edges;
+  }
+
+  fun validVertex(vertex: number): bool {
+    return vertex >= 0 && vertex < this.adjacency.len();
+  }
+
+  fun edgeIndex(from: number, to: number): number {
+    let index = 0;
+    while (index < this.adjacency[from].len()) {
+      if (this.adjacency[from][index].to == to) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun hasEdge(from: number, to: number): bool {
+    if (!this.validVertex(from) || !this.validVertex(to)) {
+      return false;
+    }
+    return this.edgeIndex(from, to) >= 0;
+  }
+
+  fun addEdge(from: number, to: number, weight: number): bool {
+    if (!this.validVertex(from) || !this.validVertex(to) || this.hasEdge(from, to)) {
+      return false;
+    }
+    this.adjacency[from].push(SignedWeightedEdge { to: to, weight: weight });
+    if (!this.directed && from != to) {
+      this.adjacency[to].push(SignedWeightedEdge { to: from, weight: weight });
+    }
+    this.edges += 1;
+    return true;
+  }
+
+  fun neighbors(vertex: number): [SignedWeightedEdge] {
+    if (!this.validVertex(vertex)) {
+      return [];
+    }
+    return copy(this.adjacency[vertex]);
+  }
+}
+
+fun newSignedWeightedGraph(vertices: number, directed: bool): SignedWeightedGraph {
+  let count = floor(vertices);
+  if (count < 0) {
+    count = 0;
+  }
+  let adjacency: [[SignedWeightedEdge]] = [];
+  let index = 0;
+  while (index < count) {
+    let neighbors: [SignedWeightedEdge] = [];
+    adjacency.push(neighbors);
+    index += 1;
+  }
+  return SignedWeightedGraph { adjacency: adjacency, directed: directed, edges: 0 };
+}
+
+enum BellmanFordError {
+  InvalidStart,
+  NegativeCycle
+}
+
+struct BellmanFordResult {
+  distances: [number?],
+  parents: [number]
+}
+
+fun bellmanFord(
+    graph: SignedWeightedGraph,
+    start: number
+): Result<BellmanFordResult, BellmanFordError> {
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count) {
+    return Result.Err<BellmanFordResult, BellmanFordError>(BellmanFordError.InvalidStart());
+  }
+
+  let distances: [number?] = [];
+  let parents: [number] = [];
+  let index = 0;
+  while (index < count) {
+    distances.push(nil);
+    parents.push(-1);
+    index += 1;
+  }
+  distances[start] = 0;
+
+  let pass = 0;
+  while (pass < count - 1) {
+    let changed = false;
+    let from = 0;
+    while (from < count) {
+      let current = distances[from];
+      if (current != nil) {
+        let neighbors = graph.adjacency[from];
+        let neighborIndex = 0;
+        while (neighborIndex < neighbors.len()) {
+          let edge = neighbors[neighborIndex];
+          let candidate = current + edge.weight;
+          let existing = distances[edge.to];
+          if (existing == nil) {
+            distances[edge.to] = candidate;
+            parents[edge.to] = from;
+            changed = true;
+          } else {
+            if (candidate < existing) {
+              distances[edge.to] = candidate;
+              parents[edge.to] = from;
+              changed = true;
+            }
+          }
+          neighborIndex += 1;
+        }
+      }
+      from += 1;
+    }
+    if (!changed) {
+      break;
+    }
+    pass += 1;
+  }
+
+  let from = 0;
+  while (from < count) {
+    let current = distances[from];
+    if (current != nil) {
+      let neighbors = graph.adjacency[from];
+      let neighborIndex = 0;
+      while (neighborIndex < neighbors.len()) {
+        let edge = neighbors[neighborIndex];
+        let candidate = current + edge.weight;
+        let existing = distances[edge.to];
+        if (existing != nil) {
+          if (candidate < existing) {
+            return Result.Err<BellmanFordResult, BellmanFordError>(BellmanFordError.NegativeCycle());
+          }
+        }
+        neighborIndex += 1;
+      }
+    }
+    from += 1;
+  }
+  return Result.Ok<BellmanFordResult, BellmanFordError>(
+      BellmanFordResult { distances: distances, parents: parents });
+}
+
+fun shortestWeightedDistances(graph: WeightedGraph, start: number): [number] {
+  let distances: [number] = [];
+  let visited: [bool] = [];
+  let count = graph.vertexCount();
+  let index = 0;
+  while (index < count) {
+    distances.push(-1);
+    visited.push(false);
+    index += 1;
+  }
+  if (start < 0 || start >= count) {
+    return distances;
+  }
+  distances[start] = 0;
+
+  let step = 0;
+  while (step < count) {
+    let current = -1;
+    index = 0;
+    while (index < count) {
+      if (!visited[index] && distances[index] >= 0
+          && (current < 0 || distances[index] < distances[current])) {
+        current = index;
+      }
+      index += 1;
+    }
+    if (current < 0) {
+      break;
+    }
+    visited[current] = true;
+    let neighbors = graph.neighbors(current);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let edge = neighbors[neighborIndex];
+      let candidate = distances[current] + edge.weight;
+      if (distances[edge.to] < 0 || candidate < distances[edge.to]) {
+        distances[edge.to] = candidate;
+      }
+      neighborIndex += 1;
+    }
+    step += 1;
+  }
+  return distances;
+}
+
+fun allPairsWeightedDistances(graph: WeightedGraph): [[number]] {
+  let distances: [[number]] = [];
+  let count = graph.vertexCount();
+  let index = 0;
+  while (index < count) {
+    let row: [number] = [];
+    let column = 0;
+    while (column < count) {
+      row.push(-1);
+      column += 1;
+    }
+    row[index] = 0;
+    distances.push(row);
+    index += 1;
+  }
+
+  let from = 0;
+  while (from < count) {
+    let neighbors = graph.adjacency[from];
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let edge = neighbors[neighborIndex];
+      if (distances[from][edge.to] < 0 || edge.weight < distances[from][edge.to]) {
+        distances[from][edge.to] = edge.weight;
+      }
+      neighborIndex += 1;
+    }
+    from += 1;
+  }
+
+  let via = 0;
+  while (via < count) {
+    from = 0;
+    while (from < count) {
+      if (distances[from][via] >= 0) {
+        let to = 0;
+        while (to < count) {
+          if (distances[via][to] >= 0) {
+            let candidate = distances[from][via] + distances[via][to];
+            if (distances[from][to] < 0 || candidate < distances[from][to]) {
+              distances[from][to] = candidate;
+            }
+          }
+          to += 1;
+        }
+      }
+      from += 1;
+    }
+    via += 1;
+  }
+  return distances;
+}
+
+struct FlowResult {
+  residual: [[number]],
+  total: number
+}
+
+fun computeFlow(graph: WeightedGraph, source: number, sink: number): FlowResult {
+  if (!graph.directed || source < 0 || source >= graph.vertexCount()
+      || sink < 0 || sink >= graph.vertexCount() || source == sink) {
+    let empty: [[number]] = [];
+    return FlowResult { residual: empty, total: 0 };
+  }
+  let count = graph.vertexCount();
+  let capacities: [[number]] = [];
+  let index = 0;
+  while (index < count) {
+    let row: [number] = [];
+    let column = 0;
+    while (column < count) {
+      row.push(0);
+      column += 1;
+    }
+    capacities.push(row);
+    index += 1;
+  }
+
+  let from = 0;
+  while (from < count) {
+    let neighbors = graph.adjacency[from];
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let edge = neighbors[neighborIndex];
+      capacities[from][edge.to] += edge.weight;
+      neighborIndex += 1;
+    }
+    from += 1;
+  }
+
+  let total = 0;
+  while (true) {
+    let parents: [number] = [];
+    let visited: [bool] = [];
+    index = 0;
+    while (index < count) {
+      parents.push(-1);
+      visited.push(false);
+      index += 1;
+    }
+    let queue: [number] = [source];
+    visited[source] = true;
+    let head = 0;
+    while (head < queue.len() && !visited[sink]) {
+      let current = queue[head];
+      head += 1;
+      let neighbor = 0;
+      while (neighbor < count) {
+        if (!visited[neighbor] && capacities[current][neighbor] > 0) {
+          visited[neighbor] = true;
+          parents[neighbor] = current;
+          queue.push(neighbor);
+        }
+        neighbor += 1;
+      }
+    }
+    if (!visited[sink]) {
+      break;
+    }
+
+    let bottleneck = -1;
+    let current = sink;
+    while (current != source) {
+      let parent = parents[current];
+      if (bottleneck < 0 || capacities[parent][current] < bottleneck) {
+        bottleneck = capacities[parent][current];
+      }
+      current = parent;
+    }
+    current = sink;
+    while (current != source) {
+      let parent = parents[current];
+      capacities[parent][current] -= bottleneck;
+      capacities[current][parent] += bottleneck;
+      current = parent;
+    }
+    total += bottleneck;
+  }
+  return FlowResult { residual: capacities, total: total };
+}
+
+fun maxFlow(graph: WeightedGraph, source: number, sink: number): number {
+  let result = computeFlow(graph, source, sink);
+  return result.total;
+}
+
+fun minCut(graph: WeightedGraph, source: number, sink: number): [[number]] {
+  let cut: [[number]] = [];
+  if (!graph.directed || source < 0 || source >= graph.vertexCount()
+      || sink < 0 || sink >= graph.vertexCount() || source == sink) {
+    return cut;
+  }
+  let result = computeFlow(graph, source, sink);
+  let residual = result.residual;
+  let count = graph.vertexCount();
+  let reachable: [bool] = [];
+  let index = 0;
+  while (index < count) {
+    reachable.push(false);
+    index += 1;
+  }
+  let queue: [number] = [source];
+  reachable[source] = true;
+  let head = 0;
+  while (head < queue.len()) {
+    let current = queue[head];
+    head += 1;
+    let neighbor = 0;
+    while (neighbor < count) {
+      if (!reachable[neighbor] && residual[current][neighbor] > 0) {
+        reachable[neighbor] = true;
+        queue.push(neighbor);
+      }
+      neighbor += 1;
+    }
+  }
+
+  let from = 0;
+  while (from < count) {
+    if (reachable[from]) {
+      let neighbors = graph.adjacency[from];
+      let neighborIndex = 0;
+      while (neighborIndex < neighbors.len()) {
+        let edge = neighbors[neighborIndex];
+        if (edge.weight > 0 && !reachable[edge.to]) {
+          let pair: [number] = [from, edge.to];
+          cut.push(pair);
+        }
+        neighborIndex += 1;
+      }
+    }
+    from += 1;
+  }
+  return cut;
+}
+
+fun shortestWeightedPath(graph: WeightedGraph, start: number, goal: number): [number] {
+  let result: [number] = [];
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count || goal < 0 || goal >= count) {
+    return result;
+  }
+
+  let distances: [number] = [];
+  let parents: [number] = [];
+  let visited: [bool] = [];
+  let index = 0;
+  while (index < count) {
+    distances.push(-1);
+    parents.push(-1);
+    visited.push(false);
+    index += 1;
+  }
+  distances[start] = 0;
+
+  let step = 0;
+  while (step < count) {
+    let current = -1;
+    index = 0;
+    while (index < count) {
+      if (!visited[index] && distances[index] >= 0
+          && (current < 0 || distances[index] < distances[current])) {
+        current = index;
+      }
+      index += 1;
+    }
+    if (current < 0) {
+      break;
+    }
+    visited[current] = true;
+    if (current == goal) {
+      break;
+    }
+    let neighbors = graph.neighbors(current);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let edge = neighbors[neighborIndex];
+      let candidate = distances[current] + edge.weight;
+      if (distances[edge.to] < 0 || candidate < distances[edge.to]) {
+        distances[edge.to] = candidate;
+        parents[edge.to] = current;
+      }
+      neighborIndex += 1;
+    }
+    step += 1;
+  }
+
+  if (start != goal && parents[goal] < 0) {
+    return result;
+  }
+  let current = goal;
+  while (current != start) {
+    result.push(current);
+    current = parents[current];
+  }
+  result.push(start);
+
+  let reversed: [number] = [];
+  let resultIndex = result.len();
+  while (resultIndex > 0) {
+    resultIndex -= 1;
+    reversed.push(result[resultIndex]);
+  }
+  return reversed;
+}
+
+fun minimumSpanningForest(graph: WeightedGraph): WeightedGraph {
+  let count = graph.vertexCount();
+  let forest = newWeightedGraph(count, false);
+  if (graph.directed) {
+    return forest;
+  }
+
+  let visited: [bool] = [];
+  let distances: [number] = [];
+  let parents: [number] = [];
+  let parentWeights: [number] = [];
+  let index = 0;
+  while (index < count) {
+    visited.push(false);
+    distances.push(-1);
+    parents.push(-1);
+    parentWeights.push(-1);
+    index += 1;
+  }
+
+  let root = 0;
+  while (root < count) {
+    if (visited[root]) {
+      root += 1;
+      continue;
+    }
+    distances[root] = 0;
+    parents[root] = -1;
+    parentWeights[root] = -1;
+    let step = 0;
+    while (step < count) {
+      let current = -1;
+      index = 0;
+      while (index < count) {
+        if (!visited[index] && distances[index] >= 0
+            && (current < 0 || distances[index] < distances[current])) {
+          current = index;
+        }
+        index += 1;
+      }
+      if (current < 0) {
+        break;
+      }
+      visited[current] = true;
+      if (parents[current] >= 0) {
+        forest.addEdge(parents[current], current, parentWeights[current]);
+      }
+      let neighbors = graph.neighbors(current);
+      let neighborIndex = 0;
+      while (neighborIndex < neighbors.len()) {
+        let edge = neighbors[neighborIndex];
+        if (!visited[edge.to]
+            && (distances[edge.to] < 0 || edge.weight < distances[edge.to])) {
+          distances[edge.to] = edge.weight;
+          parents[edge.to] = current;
+          parentWeights[edge.to] = edge.weight;
+        }
+        neighborIndex += 1;
+      }
+      step += 1;
+    }
+    root += 1;
+  }
+  return forest;
+}
+
+fun reverseArray<T>(values: [T]): [T] {
+  let result: [T] = [];
+  let index = values.len();
+  while (index > 0) {
+    index -= 1;
+    result.push(values[index]);
+  }
+  return result;
+}
+
+fun rotateArray<T>(values: [T], shift: number): [T] {
+  let result: [T] = [];
+  let length = values.len();
+  if (length == 0) {
+    return result;
+  }
+
+  let offset = floor(shift);
+  let turns = floor(offset / length);
+  offset -= turns * length;
+  if (offset < 0) {
+    offset += length;
+  }
+
+  let index = 0;
+  while (index < length) {
+    let source = index - offset;
+    if (source < 0) {
+      source += length;
+    }
+    result.push(values[source]);
+    index += 1;
+  }
+  return result;
+}
+
+fun linearSearch<T: Eq>(values: [T], target: T): number {
+  let index = 0;
+  while (index < values.len()) {
+    if (values[index] == target) {
+      return index;
+    }
+    index += 1;
+  }
+  return -1;
+}
+
+fun asciiCharacterRank(character: string): number {
+  let alphabet = " !#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+  let index = 0;
+  while (index < alphabet.len()) {
+    if (alphabet.charAt(index) == character) {
+      return index;
+    }
+    index += 1;
+  }
+  return -1;
+}
+
+fun compareStrings(left: string, right: string): number? {
+  let leftLength = left.len();
+  let rightLength = right.len();
+  let limit = leftLength;
+  if (rightLength < limit) {
+    limit = rightLength;
+  }
+
+  let index = 0;
+  while (index < limit) {
+    let leftCharacter = left.charAt(index);
+    let rightCharacter = right.charAt(index);
+    let leftRank = asciiCharacterRank(leftCharacter);
+    let rightRank = asciiCharacterRank(rightCharacter);
+    if (leftRank < 0 || rightRank < 0) {
+      return nil;
+    }
+    if (leftRank < rightRank) {
+      return -1;
+    }
+    if (leftRank > rightRank) {
+      return 1;
+    }
+    index += 1;
+  }
+
+  if (leftLength < rightLength) {
+    return -1;
+  }
+  if (leftLength > rightLength) {
+    return 1;
+  }
+  return 0;
+}
+
+fun stringLess(left: string, right: string): bool {
+  let comparison = compareStrings(left, right);
+  if (comparison == nil) {
+    return false;
+  }
+  return comparison < 0;
+}
+
+fun findSubstring(text: string, pattern: string): number {
+  if (pattern.len() == 0) {
+    return 0;
+  }
+  if (pattern.len() > text.len()) {
+    return -1;
+  }
+  let start = 0;
+  while (start <= text.len() - pattern.len()) {
+    let offset = 0;
+    while (offset < pattern.len()
+        && text.charAt(start + offset) == pattern.charAt(offset)) {
+      offset += 1;
+    }
+    if (offset == pattern.len()) {
+      return start;
+    }
+    start += 1;
+  }
+  return -1;
+}
+
+fun prefixFunction(pattern: string): [number] {
+  let prefix: [number] = [];
+  let index = 0;
+  while (index < pattern.len()) {
+    prefix.push(0);
+    index += 1;
+  }
+  let matched = 0;
+  index = 1;
+  while (index < pattern.len()) {
+    while (matched > 0 && pattern.charAt(index) != pattern.charAt(matched)) {
+      matched = prefix[matched - 1];
+    }
+    if (pattern.charAt(index) == pattern.charAt(matched)) {
+      matched += 1;
+    }
+    prefix[index] = matched;
+    index += 1;
+  }
+  return prefix;
+}
+
+fun zFunction(text: string): [number] {
+  let z: [number] = [];
+  let index = 0;
+  while (index < text.len()) {
+    z.push(0);
+    index += 1;
+  }
+  if (text.len() == 0) {
+    return z;
+  }
+  z[0] = text.len();
+  let left = 0;
+  let right = 0;
+  index = 1;
+  while (index < text.len()) {
+    if (index <= right) {
+      let mirror = index - left;
+      z[index] = z[mirror];
+      if (z[index] > right - index + 1) {
+        z[index] = right - index + 1;
+      }
+    }
+    while (index + z[index] < text.len()
+        && text.charAt(z[index]) == text.charAt(index + z[index])) {
+      z[index] += 1;
+    }
+    if (index + z[index] - 1 > right) {
+      left = index;
+      right = index + z[index] - 1;
+    }
+    index += 1;
+  }
+  return z;
+}
+
+fun kmpSearch(text: string, pattern: string): number {
+  if (pattern.len() == 0) {
+    return 0;
+  }
+  let prefix = prefixFunction(pattern);
+  let textIndex = 0;
+  let patternIndex = 0;
+  while (textIndex < text.len()) {
+    if (text.charAt(textIndex) == pattern.charAt(patternIndex)) {
+      textIndex += 1;
+      patternIndex += 1;
+      if (patternIndex == pattern.len()) {
+        return textIndex - patternIndex;
+      }
+    } else {
+      if (patternIndex > 0) {
+        patternIndex = prefix[patternIndex - 1];
+      } else {
+        textIndex += 1;
+      }
+    }
+  }
+  return -1;
+}
+
+fun isPalindrome(text: string): bool {
+  let left = 0;
+  let right = text.len() - 1;
+  while (left < right) {
+    if (text.charAt(left) != text.charAt(right)) {
+      return false;
+    }
+    left += 1;
+    right -= 1;
+  }
+  return true;
+}
+
+fun characterFrequency(text: string): [MultiSetEntry<string>] {
+  let counts = newMultiSet<string>();
+  let index = 0;
+  while (index < text.len()) {
+    counts.add(text.charAt(index));
+    index += 1;
+  }
+  return counts.entries();
+}
+
+fun areAnagrams(left: string, right: string): bool {
+  if (left.len() != right.len()) {
+    return false;
+  }
+  let leftEntries = characterFrequency(left);
+  let rightEntries = characterFrequency(right);
+  let index = 0;
+  while (index < leftEntries.len()) {
+    let leftEntry = leftEntries[index];
+    let rightIndex = 0;
+    let found = false;
+    while (rightIndex < rightEntries.len()) {
+      let rightEntry = rightEntries[rightIndex];
+      if (leftEntry.value == rightEntry.value) {
+        found = true;
+        if (leftEntry.count != rightEntry.count) {
+          return false;
+        }
+        break;
+      }
+      rightIndex += 1;
+    }
+    if (!found) {
+      return false;
+    }
+    index += 1;
+  }
+  return true;
+}
+
+fun isBalancedBrackets(text: string): bool {
+  let stack: [string] = [];
+  let index = 0;
+  while (index < text.len()) {
+    let character = text.charAt(index);
+    let opening = character == "(" || character == "[" || character == "{";
+    if (opening) {
+      stack.push(character);
+    } else {
+      let closing = character == ")" || character == "]" || character == "}";
+      if (closing) {
+        if (stack.len() == 0) {
+          return false;
+        }
+        let top = stack[stack.len() - 1];
+        if ((character == ")" && top != "(")
+            || (character == "]" && top != "[")
+            || (character == "}" && top != "{")) {
+          return false;
+        }
+        stack.pop();
+      }
+    }
+    index += 1;
+  }
+  return stack.len() == 0;
+}
+
+fun longestUniqueSubstringLength(text: string): number {
+  let best = 0;
+  let start = 0;
+  while (start < text.len()) {
+    let seen: [string] = [];
+    let index = start;
+    while (index < text.len()) {
+      let character = text.charAt(index);
+      if (linearSearch(seen, character) >= 0) {
+        break;
+      }
+      seen.push(character);
+      index += 1;
+    }
+    if (seen.len() > best) {
+      best = seen.len();
+    }
+    start += 1;
+  }
+  return best;
+}
+
+fun longestPalindromicSubstring(text: string): string {
+  if (text.len() == 0) {
+    return "";
+  }
+  let bestStart = 0;
+  let bestLength = 1;
+  let center = 0;
+  while (center < text.len()) {
+    let left = center;
+    let right = center;
+    while (left >= 0 && right < text.len()
+        && text.charAt(left) == text.charAt(right)) {
+      let length = right - left + 1;
+      if (length > bestLength) {
+        bestStart = left;
+        bestLength = length;
+      }
+      left -= 1;
+      right += 1;
+    }
+
+    left = center;
+    right = center + 1;
+    while (left >= 0 && right < text.len()
+        && text.charAt(left) == text.charAt(right)) {
+      let length = right - left + 1;
+      if (length > bestLength) {
+        bestStart = left;
+        bestLength = length;
+      }
+      left -= 1;
+      right += 1;
+    }
+    center += 1;
+  }
+  return text.substr(bestStart, bestLength);
+}
+
+struct Trie {
+  edgeCharacters: [[string]],
+  edgeChildren: [[number]],
+  terminal: [bool]
+}
+
+impl Trie {
+  fun findChild(node: number, character: string): number {
+    let index = 0;
+    while (index < this.edgeCharacters[node].len()) {
+      if (this.edgeCharacters[node][index] == character) {
+        return this.edgeChildren[node][index];
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun addNode(): number {
+    let node = this.terminal.len();
+    this.edgeCharacters.push([]);
+    this.edgeChildren.push([]);
+    this.terminal.push(false);
+    return node;
+  }
+
+  fun locate(text: string): number {
+    let node = 0;
+    let index = 0;
+    while (index < text.len()) {
+      let child = this.findChild(node, text.charAt(index));
+      if (child < 0) {
+        return -1;
+      }
+      node = child;
+      index += 1;
+    }
+    return node;
+  }
+
+  fun insert(word: string): bool {
+    let node = 0;
+    let index = 0;
+    while (index < word.len()) {
+      let character = word.charAt(index);
+      let child = this.findChild(node, character);
+      if (child < 0) {
+        child = this.addNode();
+        this.edgeCharacters[node].push(character);
+        this.edgeChildren[node].push(child);
+      }
+      node = child;
+      index += 1;
+    }
+    if (this.terminal[node]) {
+      return false;
+    }
+    this.terminal[node] = true;
+    return true;
+  }
+
+  fun has(word: string): bool {
+    let node = this.locate(word);
+    return node >= 0 && this.terminal[node];
+  }
+
+  fun startsWith(prefix: string): bool {
+    return this.locate(prefix) >= 0;
+  }
+
+  fun wordsWithPrefix(prefix: string): [string] {
+    let result: [string] = [];
+    let root = this.locate(prefix);
+    if (root < 0) {
+      return result;
+    }
+    let nodes: [number] = [root];
+    let positions: [number] = [0];
+    let words: [string] = [prefix];
+    while (nodes.len() > 0) {
+      let top = nodes.len() - 1;
+      let node = nodes[top];
+      if (positions[top] == 0 && this.terminal[node]) {
+        result.push(words[top]);
+      }
+      if (positions[top] >= this.edgeCharacters[node].len()) {
+        nodes.pop();
+        positions.pop();
+        words.pop();
+        continue;
+      }
+      let edgeIndex = positions[top];
+      positions[top] += 1;
+      let child = this.edgeChildren[node][edgeIndex];
+      let word = words[top] + this.edgeCharacters[node][edgeIndex];
+      nodes.push(child);
+      positions.push(0);
+      words.push(word);
+    }
+    return result;
+  }
+}
+
+fun newTrie(): Trie {
+  let edgeCharacters: [[string]] = [[]];
+  let edgeChildren: [[number]] = [[]];
+  let terminal: [bool] = [false];
+  return Trie {
+    edgeCharacters: edgeCharacters,
+    edgeChildren: edgeChildren,
+    terminal: terminal
+  };
+}
+
+// FenwickTree uses zero-based public indexes and one-based internal nodes.
+// The language does not currently expose bitwise operators, so the least
+// significant bit for each internal node is precomputed once at construction
+// time. This keeps updates and prefix queries at O(log n) after construction.
+struct FenwickTree {
+  tree: [number],
+  values: [number],
+  jumps: [number]
+}
+
+impl FenwickTree {
+  fun size(): number {
+    return this.values.len();
+  }
+
+  fun updateTree(index: number, delta: number) {
+    let node = index + 1;
+    while (node <= this.values.len()) {
+      this.tree[node] += delta;
+      node += this.jumps[node];
+    }
+  }
+
+  fun add(index: number, delta: number): bool {
+    if (floor(index) != index || index < 0 || index >= this.values.len()) {
+      return false;
+    }
+    this.values[index] += delta;
+    this.updateTree(index, delta);
+    return true;
+  }
+
+  fun prefixSumUnchecked(endExclusive: number): number {
+    let result = 0;
+    let node = endExclusive;
+    while (node > 0) {
+      result += this.tree[node];
+      node -= this.jumps[node];
+    }
+    return result;
+  }
+
+  fun prefixSum(endExclusive: number): number? {
+    if (floor(endExclusive) != endExclusive || endExclusive < 0 || endExclusive > this.values.len()) {
+      return nil;
+    }
+    return this.prefixSumUnchecked(endExclusive);
+  }
+
+  fun rangeSum(start: number, endExclusive: number): number? {
+    if (floor(start) != start || floor(endExclusive) != endExclusive
+        || start < 0 || endExclusive < start || endExclusive > this.values.len()) {
+      return nil;
+    }
+    return this.prefixSumUnchecked(endExclusive) - this.prefixSumUnchecked(start);
+  }
+
+  fun valueAt(index: number): number? {
+    if (floor(index) != index || index < 0 || index >= this.values.len()) {
+      return nil;
+    }
+    return this.values[index];
+  }
+
+  fun snapshot(): [number] {
+    return copy(this.values);
+  }
+}
+
+fun newFenwickTree(values: [number]): FenwickTree {
+  let jumps: [number] = [0];
+  let index = 1;
+  while (index <= values.len()) {
+    let jump = 1;
+    let current = index;
+    while (floor(current / 2) * 2 == current) {
+      current = floor(current / 2);
+      jump *= 2;
+    }
+    jumps.push(jump);
+    index += 1;
+  }
+
+  let tree: [number] = [0];
+  index = 0;
+  while (index < values.len()) {
+    tree.push(0);
+    index += 1;
+  }
+
+  let result = FenwickTree {
+    tree: tree,
+    values: copy(values),
+    jumps: jumps
+  };
+  index = 0;
+  while (index < values.len()) {
+    result.updateTree(index, values[index]);
+    index += 1;
+  }
+  return result;
+}
+
+// SegmentTree keeps fixed numeric sum and minimum aggregates. Padded leaves
+// are marked inactive, so minimum queries do not need an infinity sentinel.
+struct SegmentTree {
+  sums: [number],
+  minimums: [number],
+  active: [bool],
+  values: [number],
+  base: number
+}
+
+impl SegmentTree {
+  fun size(): number {
+    return this.values.len();
+  }
+
+  fun rebuild(node: number) {
+    let left = node * 2;
+    let right = left + 1;
+    this.sums[node] = this.sums[left] + this.sums[right];
+    if (this.active[left]) {
+      if (this.active[right]) {
+        if (this.minimums[left] < this.minimums[right]) {
+          this.minimums[node] = this.minimums[left];
+        } else {
+          this.minimums[node] = this.minimums[right];
+        }
+      } else {
+        this.minimums[node] = this.minimums[left];
+      }
+    } else {
+      if (this.active[right]) {
+        this.minimums[node] = this.minimums[right];
+      } else {
+        this.minimums[node] = 0;
+      }
+    }
+    this.active[node] = this.active[left] || this.active[right];
+  }
+
+  fun updateLeaf(index: number, value: number) {
+    let node = this.base + index;
+    this.sums[node] = value;
+    this.minimums[node] = value;
+    this.active[node] = true;
+    while (node > 1) {
+      node = floor(node / 2);
+      this.rebuild(node);
+    }
+  }
+
+  fun setValue(index: number, value: number): bool {
+    if (floor(index) != index || index < 0 || index >= this.values.len()) {
+      return false;
+    }
+    this.values[index] = value;
+    this.updateLeaf(index, value);
+    return true;
+  }
+
+  fun add(index: number, delta: number): bool {
+    if (floor(index) != index || index < 0 || index >= this.values.len()) {
+      return false;
+    }
+    this.values[index] += delta;
+    this.updateLeaf(index, this.values[index]);
+    return true;
+  }
+
+  fun validRange(start: number, endExclusive: number): bool {
+    return floor(start) == start && floor(endExclusive) == endExclusive
+      && start >= 0 && endExclusive >= start && endExclusive <= this.values.len();
+  }
+
+  fun rangeSum(start: number, endExclusive: number): number? {
+    if (!this.validRange(start, endExclusive)) {
+      return nil;
+    }
+    let left = this.base + start;
+    let right = this.base + endExclusive;
+    let result = 0;
+    while (left < right) {
+      if (floor(left / 2) * 2 != left) {
+        result += this.sums[left];
+        left += 1;
+      }
+      if (floor(right / 2) * 2 != right) {
+        right -= 1;
+        result += this.sums[right];
+      }
+      left = floor(left / 2);
+      right = floor(right / 2);
+    }
+    return result;
+  }
+
+  fun rangeMinimum(start: number, endExclusive: number): number? {
+    if (!this.validRange(start, endExclusive) || start == endExclusive) {
+      return nil;
+    }
+    let left = this.base + start;
+    let right = this.base + endExclusive;
+    let found = false;
+    let result = 0;
+    while (left < right) {
+      if (floor(left / 2) * 2 != left) {
+        if (this.active[left]) {
+          if (!found || this.minimums[left] < result) {
+            result = this.minimums[left];
+          }
+          found = true;
+        }
+        left += 1;
+      }
+      if (floor(right / 2) * 2 != right) {
+        right -= 1;
+        if (this.active[right]) {
+          if (!found || this.minimums[right] < result) {
+            result = this.minimums[right];
+          }
+          found = true;
+        }
+      }
+      left = floor(left / 2);
+      right = floor(right / 2);
+    }
+    if (!found) {
+      return nil;
+    }
+    return result;
+  }
+
+  fun valueAt(index: number): number? {
+    if (floor(index) != index || index < 0 || index >= this.values.len()) {
+      return nil;
+    }
+    return this.values[index];
+  }
+
+  fun snapshot(): [number] {
+    return copy(this.values);
+  }
+}
+
+fun newSegmentTree(values: [number]): SegmentTree {
+  let base = 1;
+  while (base < values.len()) {
+    base *= 2;
+  }
+  let capacity = base * 2;
+  let sums: [number] = [];
+  let minimums: [number] = [];
+  let active: [bool] = [];
+  let index = 0;
+  while (index < capacity) {
+    sums.push(0);
+    minimums.push(0);
+    active.push(false);
+    index += 1;
+  }
+
+  let result = SegmentTree {
+    sums: sums,
+    minimums: minimums,
+    active: active,
+    values: copy(values),
+    base: base
+  };
+  index = 0;
+  while (index < values.len()) {
+    let node = base + index;
+    result.sums[node] = values[index];
+    result.minimums[node] = values[index];
+    result.active[node] = true;
+    index += 1;
+  }
+  let node = base - 1;
+  while (node > 0) {
+    result.rebuild(node);
+    node -= 1;
+  }
+  return result;
+}
+
+fun lowerBound<T>(values: [T], target: T, less: fun(T, T): bool): number {
+  let low = 0;
+  let high = values.len();
+  while (low < high) {
+    let middle = floor((low + high) / 2);
+    if (less(values[middle], target)) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+  return low;
+}
+
+fun upperBound<T>(values: [T], target: T, less: fun(T, T): bool): number {
+  let low = 0;
+  let high = values.len();
+  while (low < high) {
+    let middle = floor((low + high) / 2);
+    if (less(target, values[middle])) {
+      high = middle;
+    } else {
+      low = middle + 1;
+    }
+  }
+  return low;
+}
+
+fun binarySearch<T>(values: [T], target: T, less: fun(T, T): bool): number {
+  let index = lowerBound(values, target, less);
+  if (index < values.len()
+      && !less(values[index], target)
+      && !less(target, values[index])) {
+    return index;
+  }
+  return -1;
+}
+
+fun peakIndex(values: [number]): number? {
+  if (values.len() == 0) {
+    return nil;
+  }
+  let low = 0;
+  let high = values.len() - 1;
+  while (low < high) {
+    let middle = floor((low + high) / 2);
+    if (values[middle] < values[middle + 1]) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+  return low;
+}
+
+fun isMountainArray(values: [number]): bool {
+  if (values.len() < 3) {
+    return false;
+  }
+  let index = 1;
+  while (index < values.len() && values[index] > values[index - 1]) {
+    index += 1;
+  }
+  if (index == 1 || index == values.len()) {
+    return false;
+  }
+  while (index < values.len() && values[index] < values[index - 1]) {
+    index += 1;
+  }
+  return index == values.len();
+}
+
+fun mountainPeakIndex(values: [number]): number? {
+  if (!isMountainArray(values)) {
+    return nil;
+  }
+  let low = 1;
+  let high = values.len() - 2;
+  while (low < high) {
+    let middle = floor((low + high) / 2);
+    if (values[middle] < values[middle + 1]) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+  return low;
+}
+
+fun countValue<T: Eq>(values: [T], target: T): number {
+  let count = 0;
+  let index = 0;
+  while (index < values.len()) {
+    if (values[index] == target) {
+      count += 1;
+    }
+    index += 1;
+  }
+  return count;
+}
+
+fun isSorted<T>(values: [T], less: fun(T, T): bool): bool {
+  let index = 1;
+  while (index < values.len()) {
+    if (less(values[index], values[index - 1])) {
+      return false;
+    }
+    index += 1;
+  }
+  return true;
+}
+
+fun sortArrayInPlace<T>(values: [T], less: fun(T, T): bool) {
+  let index = 1;
+  while (index < values.len()) {
+    let value = values[index];
+    let position = index;
+    while (position > 0 && less(value, values[position - 1])) {
+      values[position] = values[position - 1];
+      position -= 1;
+    }
+    values[position] = value;
+    index += 1;
+  }
+}
+
+fun sortArray<T>(values: [T], less: fun(T, T): bool): [T] {
+  let result = copy(values);
+  sortArrayInPlace(result, less);
+  return result;
+}
+
+fun shellSort<T>(values: [T], less: fun(T, T): bool): [T] {
+  let result = copy(values);
+  let gap = floor(result.len() / 2);
+  while (gap > 0) {
+    let index = gap;
+    while (index < result.len()) {
+      let value = result[index];
+      let position = index;
+      while (position >= gap && less(value, result[position - gap])) {
+        result[position] = result[position - gap];
+        position -= gap;
+      }
+      result[position] = value;
+      index += 1;
+    }
+    gap = floor(gap / 2);
+  }
+  return result;
+}
+
+fun selectionSortInPlace<T>(values: [T], less: fun(T, T): bool) {
+  let start = 0;
+  while (start < values.len()) {
+    let smallest = start;
+    let index = start + 1;
+    while (index < values.len()) {
+      if (less(values[index], values[smallest])) {
+        smallest = index;
+      }
+      index += 1;
+    }
+    if (smallest != start) {
+      let value = values[start];
+      values[start] = values[smallest];
+      values[smallest] = value;
+    }
+    start += 1;
+  }
+}
+
+fun selectionSort<T>(values: [T], less: fun(T, T): bool): [T] {
+  let result = copy(values);
+  selectionSortInPlace(result, less);
+  return result;
+}
+
+fun bubbleSortInPlace<T>(values: [T], less: fun(T, T): bool) {
+  let end = values.len() - 1;
+  while (end > 0) {
+    let index = 0;
+    let swapped = false;
+    while (index < end) {
+      if (less(values[index + 1], values[index])) {
+        let value = values[index];
+        values[index] = values[index + 1];
+        values[index + 1] = value;
+        swapped = true;
+      }
+      index += 1;
+    }
+    if (!swapped) {
+      break;
+    }
+    end -= 1;
+  }
+}
+
+fun bubbleSort<T>(values: [T], less: fun(T, T): bool): [T] {
+  let result = copy(values);
+  bubbleSortInPlace(result, less);
+  return result;
+}
+
+struct KruskalEdge {
+  from: number,
+  to: number,
+  weight: number
+}
+
+fun kruskalEdgeLess(left: KruskalEdge, right: KruskalEdge): bool {
+  if (left.weight == right.weight) {
+    if (left.from == right.from) {
+      return left.to < right.to;
+    }
+    return left.from < right.from;
+  }
+  return left.weight < right.weight;
+}
+
+fun minimumSpanningForestKruskal(graph: WeightedGraph): WeightedGraph {
+  let count = graph.vertexCount();
+  let forest = newWeightedGraph(count, false);
+  if (graph.directed) {
+    return forest;
+  }
+
+  let edges: [KruskalEdge] = [];
+  let from = 0;
+  while (from < count) {
+    let neighbors = graph.adjacency[from];
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let edge = neighbors[neighborIndex];
+      if (from < edge.to) {
+        edges.push(KruskalEdge { from: from, to: edge.to, weight: edge.weight });
+      }
+      neighborIndex += 1;
+    }
+    from += 1;
+  }
+
+  let ordered = sortArray(edges, kruskalEdgeLess);
+  let components = newDisjointSet(count);
+  let index = 0;
+  while (index < ordered.len()) {
+    let edge = ordered[index];
+    if (components.union(edge.from, edge.to)) {
+      forest.addEdge(edge.from, edge.to, edge.weight);
+    }
+    index += 1;
+  }
+  return forest;
+}
+
+fun mergeSort<T>(values: [T], less: fun(T, T): bool): [T] {
+  let result = copy(values);
+  let width = 1;
+  while (width < result.len()) {
+    let start = 0;
+    while (start < result.len()) {
+      let middle = start + width;
+      if (middle > result.len()) {
+        middle = result.len();
+      }
+      let end = middle + width;
+      if (end > result.len()) {
+        end = result.len();
+      }
+
+      let leftIndex = start;
+      let rightIndex = middle;
+      let merged: [T] = [];
+      while (leftIndex < middle && rightIndex < end) {
+        if (less(result[rightIndex], result[leftIndex])) {
+          merged.push(result[rightIndex]);
+          rightIndex += 1;
+        } else {
+          merged.push(result[leftIndex]);
+          leftIndex += 1;
+        }
+      }
+      while (leftIndex < middle) {
+        merged.push(result[leftIndex]);
+        leftIndex += 1;
+      }
+      while (rightIndex < end) {
+        merged.push(result[rightIndex]);
+        rightIndex += 1;
+      }
+
+      let mergedIndex = 0;
+      while (mergedIndex < merged.len()) {
+        result[start + mergedIndex] = merged[mergedIndex];
+        mergedIndex += 1;
+      }
+      start = end;
+    }
+    width *= 2;
+  }
+  return result;
+}
+
+fun quickSortRange<T>(values: [T], start: number, end: number, less: fun(T, T): bool) {
+  if (start >= end) {
+    return;
+  }
+
+  let pivotIndex = floor((start + end) / 2);
+  let pivotValue = values[pivotIndex];
+  values[pivotIndex] = values[end];
+  values[end] = pivotValue;
+
+  let pivot = values[end];
+  let store = start;
+  let index = start;
+  while (index < end) {
+    if (less(values[index], pivot)) {
+      let value = values[store];
+      values[store] = values[index];
+      values[index] = value;
+      store += 1;
+    }
+    index += 1;
+  }
+
+  let value = values[store];
+  values[store] = values[end];
+  values[end] = value;
+  quickSortRange(values, start, store - 1, less);
+  quickSortRange(values, store + 1, end, less);
+}
+
+fun quickSortInPlace<T>(values: [T], less: fun(T, T): bool) {
+  if (values.len() > 1) {
+    quickSortRange(values, 0, values.len() - 1, less);
+  }
+}
+
+fun quickSort<T>(values: [T], less: fun(T, T): bool): [T] {
+  let result = copy(values);
+  quickSortInPlace(result, less);
+  return result;
+}
+
+fun heapSortSiftDown<T>(values: [T], root: number, heapSize: number, less: fun(T, T): bool) {
+  let index = root;
+  while (true) {
+    let candidate = index;
+    let left = index * 2 + 1;
+    if (left < heapSize && less(values[candidate], values[left])) {
+      candidate = left;
+    }
+    let right = left + 1;
+    if (right < heapSize && less(values[candidate], values[right])) {
+      candidate = right;
+    }
+    if (candidate == index) {
+      break;
+    }
+    let value = values[index];
+    values[index] = values[candidate];
+    values[candidate] = value;
+    index = candidate;
+  }
+}
+
+fun heapSortInPlace<T>(values: [T], less: fun(T, T): bool) {
+  let start = floor(values.len() / 2) - 1;
+  while (start >= 0) {
+    heapSortSiftDown(values, start, values.len(), less);
+    start -= 1;
+  }
+
+  let heapSize = values.len();
+  while (heapSize > 1) {
+    let value = values[0];
+    values[0] = values[heapSize - 1];
+    values[heapSize - 1] = value;
+    heapSize -= 1;
+    heapSortSiftDown(values, 0, heapSize, less);
+  }
+}
+
+fun heapSort<T>(values: [T], less: fun(T, T): bool): [T] {
+  let result = copy(values);
+  heapSortInPlace(result, less);
+  return result;
+}
+
+fun chunkArray<T>(values: [T], size: number): [[T]] {
+  let result: [[T]] = [];
+  if (size <= 0) {
+    return result;
+  }
+
+  let start = 0;
+  while (start < values.len()) {
+    let end = start + size;
+    if (end > values.len()) {
+      end = values.len();
+    }
+    let chunk: [T] = [];
+    let index = start;
+    while (index < end) {
+      chunk.push(values[index]);
+      index += 1;
+    }
+    result.push(chunk);
+    start = end;
+  }
+  return result;
+}
+
+fun slidingWindows<T>(values: [T], width: number): [[T]] {
+  let result: [[T]] = [];
+  if (width <= 0 || width > values.len()) {
+    return result;
+  }
+
+  let start = 0;
+  while (start + width <= values.len()) {
+    let window: [T] = [];
+    let index = start;
+    while (index < start + width) {
+      window.push(values[index]);
+      index += 1;
+    }
+    result.push(window);
+    start += 1;
+  }
+  return result;
+}
+
+fun prefixSums(values: [number]): [number] {
+  let result: [number] = [];
+  let sum = 0;
+  let index = 0;
+  while (index < values.len()) {
+    sum += values[index];
+    result.push(sum);
+    index += 1;
+  }
+  return result;
+}
+
+fun differenceArray(values: [number]): [number] {
+  let result: [number] = [];
+  if (values.len() == 0) {
+    return result;
+  }
+  result.push(values[0]);
+  let index = 1;
+  while (index < values.len()) {
+    result.push(values[index] - values[index - 1]);
+    index += 1;
+  }
+  return result;
+}
+
+fun prefixMinimums(values: [number]): [number] {
+  let result: [number] = [];
+  if (values.len() == 0) {
+    return result;
+  }
+  let best = values[0];
+  result.push(best);
+  let index = 1;
+  while (index < values.len()) {
+    if (values[index] < best) {
+      best = values[index];
+    }
+    result.push(best);
+    index += 1;
+  }
+  return result;
+}
+
+fun prefixMaximums(values: [number]): [number] {
+  let result: [number] = [];
+  if (values.len() == 0) {
+    return result;
+  }
+  let best = values[0];
+  result.push(best);
+  let index = 1;
+  while (index < values.len()) {
+    if (values[index] > best) {
+      best = values[index];
+    }
+    result.push(best);
+    index += 1;
+  }
+  return result;
+}
+
+fun nextGreaterValues(values: [number]): [number] {
+  let result: [number] = [];
+  let index = 0;
+  while (index < values.len()) {
+    result.push(-1);
+    index += 1;
+  }
+  let stack: [number] = [];
+  index = 0;
+  while (index < values.len()) {
+    while (stack.len() > 0) {
+      let topIndex = stack[stack.len() - 1];
+      if (values[topIndex] >= values[index]) {
+        break;
+      }
+      result[topIndex] = values[index];
+      stack.pop();
+    }
+    stack.push(index);
+    index += 1;
+  }
+  return result;
+}
+
+fun largestHistogramArea(heights: [number]): number? {
+  let validationIndex = 0;
+  while (validationIndex < heights.len()) {
+    if (floor(heights[validationIndex]) != heights[validationIndex]
+        || heights[validationIndex] < 0) {
+      return nil;
+    }
+    validationIndex += 1;
+  }
+
+  let stack: [number] = [];
+  let best = 0;
+  let index = 0;
+  while (index <= heights.len()) {
+    let current = 0;
+    if (index < heights.len()) {
+      current = heights[index];
+    }
+    while (stack.len() > 0 && current < heights[stack[stack.len() - 1]]) {
+      let top = stack.pop();
+      let width = index;
+      if (stack.len() > 0) {
+        width = index - stack[stack.len() - 1] - 1;
+      }
+      let area = heights[top] * width;
+      if (area > best) {
+        best = area;
+      }
+    }
+    stack.push(index);
+    index += 1;
+  }
+  return best;
+}
+
+struct Interval {
+  start: number,
+  end: number
+}
+
+fun intervalLess(left: Interval, right: Interval): bool {
+  if (left.start == right.start) {
+    return left.end < right.end;
+  }
+  return left.start < right.start;
+}
+
+fun mergeIntervals(intervals: [Interval]): [Interval] {
+  let ordered = sortArray(intervals, intervalLess);
+  let merged: [Interval] = [];
+  let index = 0;
+  while (index < ordered.len()) {
+    let current = ordered[index];
+    if (merged.len() == 0 || current.start > merged[merged.len() - 1].end) {
+      merged.push(Interval { start: current.start, end: current.end });
+    } else {
+      if (current.end > merged[merged.len() - 1].end) {
+        merged[merged.len() - 1].end = current.end;
+      }
+    }
+    index += 1;
+  }
+  return merged;
+}
+
+fun intersectIntervals(left: [Interval], right: [Interval]): [Interval] {
+  let leftMerged = mergeIntervals(left);
+  let rightMerged = mergeIntervals(right);
+  let result: [Interval] = [];
+  let leftIndex = 0;
+  let rightIndex = 0;
+
+  while (leftIndex < leftMerged.len() && rightIndex < rightMerged.len()) {
+    let leftInterval = leftMerged[leftIndex];
+    let rightInterval = rightMerged[rightIndex];
+    let start = leftInterval.start;
+    if (rightInterval.start > start) {
+      start = rightInterval.start;
+    }
+    let end = leftInterval.end;
+    if (rightInterval.end < end) {
+      end = rightInterval.end;
+    }
+    if (start <= end) {
+      result.push(Interval { start: start, end: end });
+    }
+
+    if (leftInterval.end < rightInterval.end) {
+      leftIndex += 1;
+    } else {
+      rightIndex += 1;
+    }
+  }
+  return result;
+}
+
+fun intervalEndLess(left: Interval, right: Interval): bool {
+  if (left.end == right.end) {
+    return left.start < right.start;
+  }
+  return left.end < right.end;
+}
+
+fun selectNonOverlappingIntervals(intervals: [Interval]): [Interval] {
+  let index = 0;
+  while (index < intervals.len()) {
+    if (intervals[index].start > intervals[index].end) {
+      return [];
+    }
+    index += 1;
+  }
+
+  let ordered = sortArray(intervals, intervalEndLess);
+  let result: [Interval] = [];
+  let hasLast = false;
+  let lastEnd = 0;
+  index = 0;
+  while (index < ordered.len()) {
+    let current = ordered[index];
+    if (!hasLast || current.start > lastEnd) {
+      result.push(Interval { start: current.start, end: current.end });
+      lastEnd = current.end;
+      hasLast = true;
+    }
+    index += 1;
+  }
+  return result;
+}
+
+fun numberLess(left: number, right: number): bool {
+  return left < right;
+}
+
+fun minimumIntervalRooms(intervals: [Interval]): number? {
+  let starts: [number] = [];
+  let ends: [number] = [];
+  let index = 0;
+  while (index < intervals.len()) {
+    if (intervals[index].start > intervals[index].end) {
+      return nil;
+    }
+    starts.push(intervals[index].start);
+    ends.push(intervals[index].end);
+    index += 1;
+  }
+
+  let orderedStarts = sortArray(starts, numberLess);
+  let orderedEnds = sortArray(ends, numberLess);
+  let startIndex = 0;
+  let endIndex = 0;
+  let active = 0;
+  let best = 0;
+  while (startIndex < orderedStarts.len()) {
+    if (orderedStarts[startIndex] <= orderedEnds[endIndex]) {
+      active += 1;
+      if (active > best) {
+        best = active;
+      }
+      startIndex += 1;
+    } else {
+      active -= 1;
+      endIndex += 1;
+    }
+  }
+  return best;
+}
+
+fun canReachEnd(values: [number]): bool {
+  let index = 0;
+  while (index < values.len()) {
+    if (floor(values[index]) != values[index] || values[index] < 0) {
+      return false;
+    }
+    index += 1;
+  }
+  if (values.len() <= 1) {
+    return true;
+  }
+
+  let farthest = 0;
+  index = 0;
+  while (index < values.len() && index <= farthest) {
+    let reach = index + values[index];
+    if (reach > farthest) {
+      farthest = reach;
+    }
+    if (farthest >= values.len() - 1) {
+      return true;
+    }
+    index += 1;
+  }
+  return false;
+}
+
+fun minimumJumps(values: [number]): number? {
+  let index = 0;
+  while (index < values.len()) {
+    if (floor(values[index]) != values[index] || values[index] < 0) {
+      return nil;
+    }
+    index += 1;
+  }
+  if (values.len() <= 1) {
+    return 0;
+  }
+
+  let jumps = 0;
+  let currentEnd = 0;
+  let farthest = 0;
+  index = 0;
+  while (index < values.len() - 1) {
+    let reach = index + values[index];
+    if (reach > farthest) {
+      farthest = reach;
+    }
+    if (index == currentEnd) {
+      if (farthest == currentEnd) {
+        return nil;
+      }
+      jumps += 1;
+      currentEnd = farthest;
+    }
+    index += 1;
+  }
+  return jumps;
+}
+
+fun huffmanMergeCost(weights: [number]): number? {
+  let working: [number] = [];
+  let index = 0;
+  while (index < weights.len()) {
+    if (weights[index] < 0) {
+      return nil;
+    }
+    working.push(weights[index]);
+    index += 1;
+  }
+
+  let total = 0;
+  while (working.len() > 1) {
+    let firstIndex = 0;
+    let secondIndex = 1;
+    if (working[secondIndex] < working[firstIndex]) {
+      let swap = firstIndex;
+      firstIndex = secondIndex;
+      secondIndex = swap;
+    }
+    index = 2;
+    while (index < working.len()) {
+      if (working[index] < working[firstIndex]) {
+        secondIndex = firstIndex;
+        firstIndex = index;
+      } else {
+        if (working[index] < working[secondIndex]) {
+          secondIndex = index;
+        }
+      }
+      index += 1;
+    }
+
+    let merged = working[firstIndex] + working[secondIndex];
+    total += merged;
+    let remaining: [number] = [];
+    index = 0;
+    while (index < working.len()) {
+      if (index != firstIndex && index != secondIndex) {
+        remaining.push(working[index]);
+      }
+      index += 1;
+    }
+    remaining.push(merged);
+    working = remaining;
+  }
+  return total;
+}
+
+fun mergeSortedNumbers(left: [number], right: [number]): [number] {
+  let result: [number] = [];
+  let leftIndex = 0;
+  let rightIndex = 0;
+  while (leftIndex < left.len() && rightIndex < right.len()) {
+    if (left[leftIndex] <= right[rightIndex]) {
+      result.push(left[leftIndex]);
+      leftIndex += 1;
+    } else {
+      result.push(right[rightIndex]);
+      rightIndex += 1;
+    }
+  }
+  while (leftIndex < left.len()) {
+    result.push(left[leftIndex]);
+    leftIndex += 1;
+  }
+  while (rightIndex < right.len()) {
+    result.push(right[rightIndex]);
+    rightIndex += 1;
+  }
+  return result;
+}
+
+fun twoSumSorted(values: [number], target: number): [number] {
+  let result: [number] = [];
+  let left = 0;
+  let right = values.len() - 1;
+  while (left < right) {
+    let sum = values[left] + values[right];
+    if (sum == target) {
+      result.push(left);
+      result.push(right);
+      return result;
+    }
+    if (sum < target) {
+      left += 1;
+    } else {
+      right -= 1;
+    }
+  }
+  return result;
+}
+
+fun threeSumNumberLess(left: number, right: number): bool {
+  return left < right;
+}
+
+fun threeSumZero(values: [number]): [[number]] {
+  let result: [[number]] = [];
+  let sorted = sortArray(values, threeSumNumberLess);
+  let index = 0;
+  while (index + 2 < sorted.len()) {
+    if (index > 0 && sorted[index] == sorted[index - 1]) {
+      index += 1;
+    } else {
+      let left = index + 1;
+      let right = sorted.len() - 1;
+      while (left < right) {
+        let total = sorted[index] + sorted[left] + sorted[right];
+        if (total == 0) {
+          let triple: [number] = [sorted[index], sorted[left], sorted[right]];
+          result.push(triple);
+          let leftValue = sorted[left];
+          let rightValue = sorted[right];
+          while (left < right && sorted[left] == leftValue) {
+            left += 1;
+          }
+          while (left < right && sorted[right] == rightValue) {
+            right -= 1;
+          }
+        } else {
+          if (total < 0) {
+            left += 1;
+          } else {
+            right -= 1;
+          }
+        }
+      }
+      index += 1;
+    }
+  }
+  return result;
+}
+
+fun uniqueValues<T: Eq>(values: [T]): [T] {
+  let result: [T] = [];
+  let index = 0;
+  while (index < values.len()) {
+    if (linearSearch(result, values[index]) < 0) {
+      result.push(values[index]);
+    }
+    index += 1;
+  }
+  return result;
+}
+
+fun intersectionValues<T: Eq>(left: [T], right: [T]): [T] {
+  let result: [T] = [];
+  let index = 0;
+  while (index < left.len()) {
+    let value = left[index];
+    if (linearSearch(right, value) >= 0 && linearSearch(result, value) < 0) {
+      result.push(value);
+    }
+    index += 1;
+  }
+  return result;
+}
+
+fun unionValues<T: Eq>(left: [T], right: [T]): [T] {
+  let result = uniqueValues(left);
+  let index = 0;
+  while (index < right.len()) {
+    if (linearSearch(result, right[index]) < 0) {
+      result.push(right[index]);
+    }
+    index += 1;
+  }
+  return result;
+}
+
+fun differenceValues<T: Eq>(left: [T], right: [T]): [T] {
+  let result: [T] = [];
+  let index = 0;
+  while (index < left.len()) {
+    let value = left[index];
+    if (linearSearch(right, value) < 0 && linearSearch(result, value) < 0) {
+      result.push(value);
+    }
+    index += 1;
+  }
+  return result;
+}
+
+fun frequencyEntries<T: Eq>(values: [T]): [MultiSetEntry<T>] {
+  let counts = newMultiSet<T>();
+  let index = 0;
+  while (index < values.len()) {
+    counts.add(values[index]);
+    index += 1;
+  }
+  return counts.entries();
+}
+
+fun mostFrequent<T: Eq>(values: [T]): T? {
+  let entries = frequencyEntries(values);
+  if (entries.len() == 0) {
+    return nil;
+  }
+
+  let best = entries[0].value;
+  let bestCount = entries[0].count;
+  let index = 1;
+  while (index < entries.len()) {
+    if (entries[index].count > bestCount) {
+      best = entries[index].value;
+      bestCount = entries[index].count;
+    }
+    index += 1;
+  }
+  return best;
+}
+
+fun windowSums(values: [number], width: number): [number] {
+  let result: [number] = [];
+  if (width <= 0 || width > values.len()) {
+    return result;
+  }
+
+  let sum = 0;
+  let index = 0;
+  while (index < width) {
+    sum += values[index];
+    index += 1;
+  }
+  result.push(sum);
+
+  let start = width;
+  while (start < values.len()) {
+    sum += values[start];
+    sum -= values[start - width];
+    result.push(sum);
+    start += 1;
+  }
+  return result;
+}
+
+fun maxWindowSum(values: [number], width: number): number? {
+  let sums = windowSums(values, width);
+  if (sums.len() == 0) {
+    return nil;
+  }
+
+  let best = sums[0];
+  let index = 1;
+  while (index < sums.len()) {
+    if (sums[index] > best) {
+      best = sums[index];
+    }
+    index += 1;
+  }
+  return best;
+}
+
+fun maxSubarraySum(values: [number]): number? {
+  if (values.len() == 0) {
+    return nil;
+  }
+
+  let current = values[0];
+  let best = values[0];
+  let index = 1;
+  while (index < values.len()) {
+    let extended = current + values[index];
+    if (values[index] > extended) {
+      current = values[index];
+    } else {
+      current = extended;
+    }
+    if (current > best) {
+      best = current;
+    }
+    index += 1;
+  }
+  return best;
+}
+
+fun climbStairs(steps: number): number? {
+  if (floor(steps) != steps || steps < 0) {
+    return nil;
+  }
+  if (steps <= 1) {
+    return 1;
+  }
+  let previous = 1;
+  let current = 1;
+  let index = 2;
+  while (index <= steps) {
+    let next = previous + current;
+    previous = current;
+    current = next;
+    index += 1;
+  }
+  return current;
+}
+
+fun maxNonAdjacentSum(values: [number]): number {
+  let included = 0;
+  let excluded = 0;
+  let index = 0;
+  while (index < values.len()) {
+    let nextIncluded = excluded + values[index];
+    let nextExcluded = included;
+    if (excluded > nextExcluded) {
+      nextExcluded = excluded;
+    }
+    included = nextIncluded;
+    excluded = nextExcluded;
+    index += 1;
+  }
+  if (included > excluded) {
+    return included;
+  }
+  return excluded;
+}
+
+fun minCoinCount(amount: number, coins: [number]): number? {
+  if (floor(amount) != amount || amount < 0) {
+    return nil;
+  }
+  let target = floor(amount);
+  let impossible = target + 1;
+  let counts: [number] = [];
+  let index = 0;
+  while (index <= target) {
+    counts.push(impossible);
+    index += 1;
+  }
+  counts[0] = 0;
+
+  let current = 1;
+  while (current <= target) {
+    let best = impossible;
+    let coinIndex = 0;
+    while (coinIndex < coins.len()) {
+      let coin = coins[coinIndex];
+      if (floor(coin) == coin && coin > 0 && coin <= current) {
+        let candidate = counts[current - coin] + 1;
+        if (candidate < best) {
+          best = candidate;
+        }
+      }
+      coinIndex += 1;
+    }
+    counts[current] = best;
+    current += 1;
+  }
+  if (counts[target] == impossible) {
+    return nil;
+  }
+  return counts[target];
+}
+
+fun uniqueGridPaths(rows: number, columns: number): number? {
+  if (floor(rows) != rows || floor(columns) != columns || rows < 0 || columns < 0) {
+    return nil;
+  }
+  if (rows == 0 || columns == 0) {
+    return 0;
+  }
+  let ways: [number] = [];
+  let column = 0;
+  while (column < columns) {
+    ways.push(1);
+    column += 1;
+  }
+  let row = 1;
+  while (row < rows) {
+    column = 1;
+    while (column < columns) {
+      ways[column] += ways[column - 1];
+      column += 1;
+    }
+    row += 1;
+  }
+  return ways[columns - 1];
+}
+
+fun uniqueGridPathsWithObstacles(grid: [[bool]]): number? {
+  if (grid.len() == 0 || grid[0].len() == 0) {
+    return 0;
+  }
+  let columns = grid[0].len();
+  let row = 0;
+  while (row < grid.len()) {
+    if (grid[row].len() != columns) {
+      return nil;
+    }
+    row += 1;
+  }
+
+  let ways: [number] = [];
+  let column = 0;
+  while (column < columns) {
+    ways.push(0);
+    column += 1;
+  }
+
+  row = 0;
+  while (row < grid.len()) {
+    column = 0;
+    while (column < columns) {
+      if (grid[row][column]) {
+        ways[column] = 0;
+      } else {
+        if (column > 0) {
+          ways[column] += ways[column - 1];
+        } else {
+          if (row == 0) {
+            ways[column] = 1;
+          }
+        }
+      }
+      column += 1;
+    }
+    row += 1;
+  }
+  return ways[columns - 1];
+}
+
+fun minGridPathSum(grid: [[number]]): number? {
+  if (grid.len() == 0 || grid[0].len() == 0) {
+    return nil;
+  }
+  let columns = grid[0].len();
+  let row = 0;
+  while (row < grid.len()) {
+    if (grid[row].len() != columns) {
+      return nil;
+    }
+    row += 1;
+  }
+
+  let costs: [number] = [];
+  let column = 0;
+  costs.push(grid[0][0]);
+  column = 1;
+  while (column < columns) {
+    costs.push(costs[column - 1] + grid[0][column]);
+    column += 1;
+  }
+
+  row = 1;
+  while (row < grid.len()) {
+    costs[0] += grid[row][0];
+    column = 1;
+    while (column < columns) {
+      let top = costs[column];
+      let left = costs[column - 1];
+      if (top < left) {
+        costs[column] = top + grid[row][column];
+      } else {
+        costs[column] = left + grid[row][column];
+      }
+      column += 1;
+    }
+    row += 1;
+  }
+  return costs[columns - 1];
+}
+
+fun editDistance(left: string, right: string): number {
+  let previous: [number] = [];
+  let index = 0;
+  while (index <= right.len()) {
+    previous.push(index);
+    index += 1;
+  }
+
+  let leftIndex = 1;
+  while (leftIndex <= left.len()) {
+    let current: [number] = [leftIndex];
+    let rightIndex = 1;
+    while (rightIndex <= right.len()) {
+      let substitutionCost = 0;
+      if (left.charAt(leftIndex - 1) != right.charAt(rightIndex - 1)) {
+        substitutionCost = 1;
+      }
+      let deletion = previous[rightIndex] + 1;
+      let insertion = current[rightIndex - 1] + 1;
+      let substitution = previous[rightIndex - 1] + substitutionCost;
+      let best = deletion;
+      if (insertion < best) {
+        best = insertion;
+      }
+      if (substitution < best) {
+        best = substitution;
+      }
+      current.push(best);
+      rightIndex += 1;
+    }
+    previous = current;
+    leftIndex += 1;
+  }
+  return previous[right.len()];
+}
+
+fun longestIncreasingSubsequenceLength(values: [number]): number {
+  if (values.len() == 0) {
+    return 0;
+  }
+  let lengths: [number] = [];
+  let index = 0;
+  while (index < values.len()) {
+    lengths.push(1);
+    index += 1;
+  }
+  let best = 1;
+  index = 0;
+  while (index < values.len()) {
+    let previous = 0;
+    while (previous < index) {
+      if (values[previous] < values[index] && lengths[previous] + 1 > lengths[index]) {
+        lengths[index] = lengths[previous] + 1;
+      }
+      previous += 1;
+    }
+    if (lengths[index] > best) {
+      best = lengths[index];
+    }
+    index += 1;
+  }
+  return best;
+}
+
+fun longestCommonSubsequenceLength(left: string, right: string): number {
+  let previous: [number] = [];
+  let index = 0;
+  while (index <= right.len()) {
+    previous.push(0);
+    index += 1;
+  }
+
+  let leftIndex = 1;
+  while (leftIndex <= left.len()) {
+    let current: [number] = [0];
+    let rightIndex = 1;
+    while (rightIndex <= right.len()) {
+      if (left.charAt(leftIndex - 1) == right.charAt(rightIndex - 1)) {
+        current.push(previous[rightIndex - 1] + 1);
+      } else {
+        if (previous[rightIndex] > current[rightIndex - 1]) {
+          current.push(previous[rightIndex]);
+        } else {
+          current.push(current[rightIndex - 1]);
+        }
+      }
+      rightIndex += 1;
+    }
+    previous = current;
+    leftIndex += 1;
+  }
+  return previous[right.len()];
+}
+
+fun matrixChainCost(dimensions: [number]): number? {
+  let index = 0;
+  while (index < dimensions.len()) {
+    if (floor(dimensions[index]) != dimensions[index] || dimensions[index] <= 0) {
+      return nil;
+    }
+    index += 1;
+  }
+  if (dimensions.len() <= 1) {
+    return 0;
+  }
+
+  let matrixCount = dimensions.len() - 1;
+  let costs: [[number]] = [];
+  index = 0;
+  while (index < matrixCount) {
+    let row: [number] = [];
+    let column = 0;
+    while (column < matrixCount) {
+      row.push(0);
+      column += 1;
+    }
+    costs.push(row);
+    index += 1;
+  }
+
+  let chainLength = 2;
+  while (chainLength <= matrixCount) {
+    index = 0;
+    while (index + chainLength <= matrixCount) {
+      let end = index + chainLength - 1;
+      let best = -1;
+      let split = index;
+      while (split < end) {
+        let candidate = costs[index][split] + costs[split + 1][end];
+        candidate += dimensions[index] * dimensions[split + 1] * dimensions[end + 1];
+        if (best < 0 || candidate < best) {
+          best = candidate;
+        }
+        split += 1;
+      }
+      costs[index][end] = best;
+      index += 1;
+    }
+    chainLength += 1;
+  }
+  return costs[0][matrixCount - 1];
+}
+
+fun multiplyMatrix2x2(left: [[number]], right: [[number]]): [[number]] {
+  return [
+    [
+      left[0][0] * right[0][0] + left[0][1] * right[1][0],
+      left[0][0] * right[0][1] + left[0][1] * right[1][1]
+    ],
+    [
+      left[1][0] * right[0][0] + left[1][1] * right[1][0],
+      left[1][0] * right[0][1] + left[1][1] * right[1][1]
+    ]
+  ];
+}
+
+fun matrixPower2x2(matrix: [[number]], exponent: number): [[number]]? {
+  if (floor(exponent) != exponent || exponent < 0 || matrix.len() != 2 || matrix[0].len() != 2 || matrix[1].len() != 2) {
+    return nil;
+  }
+  let result: [[number]] = [[1, 0], [0, 1]];
+  let factor = matrix;
+  let remaining = exponent;
+  while (remaining > 0) {
+    if (floor(remaining / 2) * 2 != remaining) {
+      result = multiplyMatrix2x2(result, factor);
+    }
+    factor = multiplyMatrix2x2(factor, factor);
+    remaining = floor(remaining / 2);
+  }
+  return result;
+}
+
+fun mergeStonesCost(values: [number]): number? {
+  let index = 0;
+  while (index < values.len()) {
+    if (floor(values[index]) != values[index] || values[index] < 0) {
+      return nil;
+    }
+    index += 1;
+  }
+  if (values.len() <= 1) {
+    return 0;
+  }
+
+  let prefix: [number] = [0];
+  index = 0;
+  while (index < values.len()) {
+    prefix.push(prefix[index] + values[index]);
+    index += 1;
+  }
+
+  let costs: [[number]] = [];
+  index = 0;
+  while (index < values.len()) {
+    let row: [number] = [];
+    let column = 0;
+    while (column < values.len()) {
+      row.push(0);
+      column += 1;
+    }
+    costs.push(row);
+    index += 1;
+  }
+
+  let length = 2;
+  while (length <= values.len()) {
+    index = 0;
+    while (index + length <= values.len()) {
+      let end = index + length - 1;
+      let total = prefix[end + 1] - prefix[index];
+      let best = -1;
+      let split = index;
+      while (split < end) {
+        let candidate = costs[index][split] + costs[split + 1][end] + total;
+        if (best < 0 || candidate < best) {
+          best = candidate;
+        }
+        split += 1;
+      }
+      costs[index][end] = best;
+      index += 1;
+    }
+    length += 1;
+  }
+  return costs[0][values.len() - 1];
+}
+
+fun knapsack01(weights: [number], values: [number], capacity: number): number? {
+  if (floor(capacity) != capacity || capacity < 0 || weights.len() != values.len()) {
+    return nil;
+  }
+  let limit = floor(capacity);
+  let best: [number] = [];
+  let index = 0;
+  while (index <= limit) {
+    best.push(0);
+    index += 1;
+  }
+
+  let item = 0;
+  while (item < weights.len()) {
+    let weight = weights[item];
+    if (floor(weight) != weight || weight < 0) {
+      return nil;
+    }
+    let remaining = limit;
+    while (remaining >= weight) {
+      let candidate = best[remaining - weight] + values[item];
+      if (candidate > best[remaining]) {
+        best[remaining] = candidate;
+      }
+      remaining -= 1;
+    }
+    item += 1;
+  }
+  return best[limit];
+}
+
+fun completeKnapsack(weights: [number], values: [number], capacity: number): number? {
+  if (floor(capacity) != capacity || capacity < 0 || weights.len() != values.len()) {
+    return nil;
+  }
+  let limit = floor(capacity);
+  let best: [number] = [];
+  let index = 0;
+  while (index <= limit) {
+    best.push(0);
+    index += 1;
+  }
+
+  let item = 0;
+  while (item < weights.len()) {
+    let weight = weights[item];
+    if (floor(weight) != weight || weight <= 0) {
+      return nil;
+    }
+    let remaining = weight;
+    while (remaining <= limit) {
+      let candidate = best[remaining - weight] + values[item];
+      if (candidate > best[remaining]) {
+        best[remaining] = candidate;
+      }
+      remaining += 1;
+    }
+    item += 1;
+  }
+  return best[limit];
+}
+
+fun boundedKnapsack(weights: [number], values: [number], counts: [number], capacity: number): number? {
+  if (floor(capacity) != capacity || capacity < 0 || weights.len() != values.len() || weights.len() != counts.len()) {
+    return nil;
+  }
+  let limit = floor(capacity);
+  let best: [number] = [];
+  let index = 0;
+  while (index <= limit) {
+    best.push(0);
+    index += 1;
+  }
+
+  let item = 0;
+  while (item < weights.len()) {
+    let weight = weights[item];
+    let count = counts[item];
+    if (floor(weight) != weight || weight <= 0 || floor(count) != count || count < 0) {
+      return nil;
+    }
+    let copy = 0;
+    while (copy < count) {
+      let remaining = limit;
+      while (remaining >= weight) {
+        let candidate = best[remaining - weight] + values[item];
+        if (candidate > best[remaining]) {
+          best[remaining] = candidate;
+        }
+        remaining -= 1;
+      }
+      copy += 1;
+    }
+    item += 1;
+  }
+  return best[limit];
+}
+
+fun appendSubsets<T>(values: [T], index: number, current: [T], result: [[T]]) {
+  if (index >= values.len()) {
+    result.push(copy(current));
+    return;
+  }
+  appendSubsets(values, index + 1, current, result);
+  current.push(values[index]);
+  appendSubsets(values, index + 1, current, result);
+  current.pop();
+}
+
+fun subsets<T>(values: [T]): [[T]] {
+  let result: [[T]] = [];
+  let current: [T] = [];
+  appendSubsets(values, 0, current, result);
+  return result;
+}
+
+fun appendCombinations<T>(values: [T], start: number, count: number, current: [T], result: [[T]]) {
+  if (count == 0) {
+    result.push(copy(current));
+    return;
+  }
+  let last = values.len() - count;
+  let index = start;
+  while (index <= last) {
+    current.push(values[index]);
+    appendCombinations(values, index + 1, count - 1, current, result);
+    current.pop();
+    index += 1;
+  }
+}
+
+fun combinations<T>(values: [T], count: number): [[T]] {
+  let result: [[T]] = [];
+  if (floor(count) != count || count < 0 || count > values.len()) {
+    return result;
+  }
+  let current: [T] = [];
+  appendCombinations(values, 0, count, current, result);
+  return result;
+}
+
+fun appendPermutations<T>(values: [T], used: [bool], current: [T], result: [[T]]) {
+  if (current.len() == values.len()) {
+    result.push(copy(current));
+    return;
+  }
+  let index = 0;
+  while (index < values.len()) {
+    if (!used[index]) {
+      used[index] = true;
+      current.push(values[index]);
+      appendPermutations(values, used, current, result);
+      current.pop();
+      used[index] = false;
+    }
+    index += 1;
+  }
+}
+
+fun permutations<T>(values: [T]): [[T]] {
+  let result: [[T]] = [];
+  let used: [bool] = [];
+  let index = 0;
+  while (index < values.len()) {
+    used.push(false);
+    index += 1;
+  }
+  let current: [T] = [];
+  appendPermutations(values, used, current, result);
+  return result;
+}
+
+fun appendParentheses(pairs: number, opened: number, closed: number, current: string, result: [string]) {
+  if (opened == pairs && closed == pairs) {
+    result.push(current);
+    return;
+  }
+  if (opened < pairs) {
+    appendParentheses(pairs, opened + 1, closed, current + "(", result);
+  }
+  if (closed < opened) {
+    appendParentheses(pairs, opened, closed + 1, current + ")", result);
+  }
+}
+
+fun generateParentheses(pairs: number): [string] {
+  let result: [string] = [];
+  if (floor(pairs) != pairs || pairs < 0) {
+    return result;
+  }
+  appendParentheses(pairs, 0, 0, "", result);
+  return result;
+}
+
+fun appendNQueens(size: number, row: number, columns: [number], usedColumns: [bool], diagonals: [bool], antiDiagonals: [bool], result: [[number]]) {
+  if (row == size) {
+    result.push(copy(columns));
+    return;
+  }
+  let column = 0;
+  while (column < size) {
+    let diagonal = row - column + size - 1;
+    let antiDiagonal = row + column;
+    if (!usedColumns[column] && !diagonals[diagonal] && !antiDiagonals[antiDiagonal]) {
+      usedColumns[column] = true;
+      diagonals[diagonal] = true;
+      antiDiagonals[antiDiagonal] = true;
+      columns.push(column);
+      appendNQueens(size, row + 1, columns, usedColumns, diagonals, antiDiagonals, result);
+      columns.pop();
+      antiDiagonals[antiDiagonal] = false;
+      diagonals[diagonal] = false;
+      usedColumns[column] = false;
+    }
+    column += 1;
+  }
+}
+
+fun nQueens(size: number): [[number]] {
+  let result: [[number]] = [];
+  if (floor(size) != size || size < 0) {
+    return result;
+  }
+  let usedColumns: [bool] = [];
+  let diagonals: [bool] = [];
+  let antiDiagonals: [bool] = [];
+  let index = 0;
+  while (index < size) {
+    usedColumns.push(false);
+    index += 1;
+  }
+  let diagonalCount = size * 2 - 1;
+  index = 0;
+  while (index < diagonalCount) {
+    diagonals.push(false);
+    antiDiagonals.push(false);
+    index += 1;
+  }
+  let columns: [number] = [];
+  appendNQueens(size, 0, columns, usedColumns, diagonals, antiDiagonals, result);
+  return result;
+}
+
+fun appendMazePaths(maze: [[bool]], row: number, column: number, current: string, result: [string]) {
+  let lastRow = maze.len() - 1;
+  let lastColumn = maze[0].len() - 1;
+  if (row == lastRow && column == lastColumn) {
+    result.push(current);
+    return;
+  }
+  if (column + 1 < maze[0].len() && maze[row][column + 1]) {
+    appendMazePaths(maze, row, column + 1, current + "R", result);
+  }
+  if (row + 1 < maze.len() && maze[row + 1][column]) {
+    appendMazePaths(maze, row + 1, column, current + "D", result);
+  }
+}
+
+fun mazePaths(maze: [[bool]]): [string] {
+  let result: [string] = [];
+  if (maze.len() == 0 || maze[0].len() == 0) {
+    return result;
+  }
+  let columns = maze[0].len();
+  let row = 0;
+  while (row < maze.len()) {
+    if (maze[row].len() != columns) {
+      return result;
+    }
+    row += 1;
+  }
+  if (!maze[0][0] || !maze[maze.len() - 1][columns - 1]) {
+    return result;
+  }
+  appendMazePaths(maze, 0, 0, "", result);
+  return result;
+}
+
+fun gcd(left: number, right: number): number {
+  let a = left;
+  if (a < 0) {
+    a = -a;
+  }
+  let b = right;
+  if (b < 0) {
+    b = -b;
+  }
+  while (b != 0) {
+    let quotient = floor(a / b);
+    let remainder = a - quotient * b;
+    a = b;
+    b = remainder;
+  }
+  return a;
+}
+
+fun lcm(left: number, right: number): number {
+  if (left == 0 || right == 0) {
+    return 0;
+  }
+  let leftMagnitude = left;
+  if (leftMagnitude < 0) {
+    leftMagnitude = -leftMagnitude;
+  }
+  let rightMagnitude = right;
+  if (rightMagnitude < 0) {
+    rightMagnitude = -rightMagnitude;
+  }
+  return (leftMagnitude / gcd(leftMagnitude, rightMagnitude)) * rightMagnitude;
+}
+
+struct ExtendedGcdResult {
+  gcd: number,
+  leftCoefficient: number,
+  rightCoefficient: number
+}
+
+fun extendedGcd(left: number, right: number): ExtendedGcdResult {
+  if (left == 0 && right == 0) {
+    return ExtendedGcdResult { gcd: 0, leftCoefficient: 0, rightCoefficient: 0 };
+  }
+  let oldR = left;
+  if (oldR < 0) {
+    oldR = -oldR;
+  }
+  let remainder = right;
+  if (remainder < 0) {
+    remainder = -remainder;
+  }
+  let oldS = 1;
+  let coefficientS = 0;
+  let oldT = 0;
+  let coefficientT = 1;
+  while (remainder != 0) {
+    let quotient = floor(oldR / remainder);
+    let next = oldR - quotient * remainder;
+    oldR = remainder;
+    remainder = next;
+
+    next = oldS - quotient * coefficientS;
+    oldS = coefficientS;
+    coefficientS = next;
+
+    next = oldT - quotient * coefficientT;
+    oldT = coefficientT;
+    coefficientT = next;
+  }
+  if (left < 0) {
+    oldS = -oldS;
+  }
+  if (right < 0) {
+    oldT = -oldT;
+  }
+  return ExtendedGcdResult {
+    gcd: oldR,
+    leftCoefficient: oldS,
+    rightCoefficient: oldT
+  };
+}
+
+fun isPrime(value: number): bool {
+  if (value < 2 || floor(value) != value) {
+    return false;
+  }
+  if (value == 2) {
+    return true;
+  }
+  if (floor(value / 2) * 2 == value) {
+    return false;
+  }
+  let divisor = 3;
+  while (divisor <= value / divisor) {
+    if (floor(value / divisor) * divisor == value) {
+      return false;
+    }
+    divisor += 2;
+  }
+  return true;
+}
+
+fun sievePrimes(limit: number): [number] {
+  let primes: [number] = [];
+  let bound = floor(limit);
+  if (bound < 2) {
+    return primes;
+  }
+  let composite: [bool] = [];
+  let index = 0;
+  while (index <= bound) {
+    composite.push(false);
+    index += 1;
+  }
+
+  let candidate = 2;
+  while (candidate <= bound / candidate) {
+    if (!composite[candidate]) {
+      let multiple = candidate * candidate;
+      while (multiple <= bound) {
+        composite[multiple] = true;
+        multiple += candidate;
+      }
+    }
+    candidate += 1;
+  }
+
+  index = 2;
+  while (index <= bound) {
+    if (!composite[index]) {
+      primes.push(index);
+    }
+    index += 1;
+  }
+  return primes;
+}
+
+fun fastPower(base: number, exponent: number): number? {
+  if (exponent < 0 || floor(exponent) != exponent) {
+    return nil;
+  }
+  let result = 1;
+  let factor = base;
+  let remaining = exponent;
+  while (remaining > 0) {
+    if (floor(remaining / 2) * 2 != remaining) {
+      result *= factor;
+    }
+    factor *= factor;
+    remaining = floor(remaining / 2);
+  }
+  return result;
+}
+
+fun factorial(value: number): number? {
+  if (value < 0 || floor(value) != value) {
+    return nil;
+  }
+  let result = 1;
+  let current = 2;
+  while (current <= value) {
+    result *= current;
+    current += 1;
+  }
+  return result;
+}
+
+fun fibonacci(index: number): number? {
+  if (index < 0 || floor(index) != index) {
+    return nil;
+  }
+  let previous = 0;
+  let current = 1;
+  let step = 0;
+  while (step < index) {
+    let next = previous + current;
+    previous = current;
+    current = next;
+    step += 1;
+  }
+  return previous;
+}
+
+struct PriorityQueue<T> {
+  heap: BinaryHeap<T>
+}
+
+impl PriorityQueue<T> {
+  fun enqueue(value: T) {
+    this.heap.add(value);
+  }
+
+  fun dequeue(): T? {
+    return this.heap.take();
+  }
+
+  fun front(): T? {
+    return this.heap.peek();
+  }
+
+  fun size(): number {
+    return this.heap.size();
+  }
+
+  fun isEmpty(): bool {
+    return this.heap.isEmpty();
+  }
+
+  fun snapshot(): [T] {
+    return this.heap.snapshot();
+  }
+}
+
+fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T> {
+  return PriorityQueue<T> { heap: newBinaryHeap<T>(less) };
+}
+
+fun gcdArray(values: [number]): number? {
+  if (values.len() == 0) {
+    return nil;
+  }
+  let result = 0;
+  let index = 0;
+  while (index < values.len()) {
+    if (floor(values[index]) != values[index]) {
+      return nil;
+    }
+    result = gcd(result, values[index]);
+    index += 1;
+  }
+  return result;
+}
+
+fun prefixProducts(values: [number]): [number] {
+  let result: [number] = [];
+  let product = 1;
+  let index = 0;
+  while (index < values.len()) {
+    product *= values[index];
+    result.push(product);
+    index += 1;
+  }
+  return result;
+}
+
+fun minimumLargestPartitionSum(values: [number], parts: number): number? {
+  if (floor(parts) != parts || parts <= 0) {
+    return nil;
+  }
+  if (values.len() == 0) {
+    return 0;
+  }
+
+  let low = 0;
+  let high = 0;
+  let index = 0;
+  while (index < values.len()) {
+    let value = values[index];
+    if (floor(value) != value || value < 0) {
+      return nil;
+    }
+    if (value > low) {
+      low = value;
+    }
+    high += value;
+    index += 1;
+  }
+
+  while (low < high) {
+    let capacity = floor((low + high) / 2);
+    let required = 1;
+    let current = 0;
+    index = 0;
+    while (index < values.len()) {
+      if (current + values[index] <= capacity) {
+        current += values[index];
+      } else {
+        required += 1;
+        current = values[index];
+      }
+      index += 1;
+    }
+    if (required <= parts) {
+      high = capacity;
+    } else {
+      low = capacity + 1;
+    }
+  }
+  return low;
+}
+
+fun binomialCoefficient(n: number, k: number): number? {
+  if (floor(n) != n || floor(k) != k || n < 0 || k < 0 || k > n) {
+    return nil;
+  }
+  let effective = k;
+  if (effective > n - effective) {
+    effective = n - effective;
+  }
+  let coefficients: [number] = [1];
+  let index = 1;
+  while (index <= effective) {
+    coefficients.push(0);
+    index += 1;
+  }
+  let row = 1;
+  while (row <= n) {
+    index = row;
+    if (index > effective) {
+      index = effective;
+    }
+    while (index > 0) {
+      coefficients[index] += coefficients[index - 1];
+      index -= 1;
+    }
+    row += 1;
+  }
+  return coefficients[effective];
+}
+
+fun permutationCount(n: number, k: number): number? {
+  if (floor(n) != n || floor(k) != k || n < 0 || k < 0 || k > n) {
+    return nil;
+  }
+  let result = 1;
+  let step = 0;
+  while (step < k) {
+    result *= n - step;
+    step += 1;
+  }
+  return result;
+}
+
+fun pascalTriangle(rows: number): [[number]] {
+  let result: [[number]] = [];
+  if (floor(rows) != rows || rows < 0) {
+    return result;
+  }
+  let previous: [number] = [];
+  let rowIndex = 0;
+  while (rowIndex < rows) {
+    let current: [number] = [];
+    let column = 0;
+    while (column <= rowIndex) {
+      if (column == 0 || column == rowIndex) {
+        current.push(1);
+      } else {
+        current.push(previous[column - 1] + previous[column]);
+      }
+      column += 1;
+    }
+    result.push(current);
+    previous = current;
+    rowIndex += 1;
+  }
+  return result;
+}
+
+fun primeFactors(value: number): [number] {
+  let result: [number] = [];
+  if (value < 2 || floor(value) != value) {
+    return result;
+  }
+  let remaining = value;
+  let factor = 2;
+  while (factor <= remaining / factor) {
+    while (floor(remaining / factor) * factor == remaining) {
+      result.push(factor);
+      remaining = floor(remaining / factor);
+    }
+    if (factor == 2) {
+      factor = 3;
+    } else {
+      factor += 2;
+    }
+  }
+  if (remaining > 1) {
+    result.push(remaining);
+  }
+  return result;
+}
+
+fun divisors(value: number): [number] {
+  let result: [number] = [];
+  if (value < 1 || floor(value) != value) {
+    return result;
+  }
+  let large: [number] = [];
+  let divisor = 1;
+  while (divisor <= value / divisor) {
+    if (floor(value / divisor) * divisor == value) {
+      result.push(divisor);
+      let paired = floor(value / divisor);
+      if (paired != divisor) {
+        large.push(paired);
+      }
+    }
+    divisor += 1;
+  }
+  let reversed = reverseArray(large);
+  let index = 0;
+  while (index < reversed.len()) {
+    result.push(reversed[index]);
+    index += 1;
+  }
+  return result;
+}
+
+export peakIndex, isMountainArray, mountainPeakIndex, minimumLargestPartitionSum;
+export threeSumZero;
+export longestUniqueSubstringLength, longestPalindromicSubstring;
+export isBalancedBrackets, largestHistogramArea;
+export listMiddle, listIsPalindrome, listRemoveFromEnd;
+
+export Stack, Queue, Deque, RingBuffer, BinaryHeap, PriorityQueue, Option, Result, List, Tree, Set, MultiSetEntry, MultiSet, MultiMap, Interval, DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, ExtendedGcdResult, Trie, FenwickTree, SegmentTree, newStack, newQueue, newDeque, newRingBuffer, newBinaryHeap, newPriorityQueue, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, newTrie, newFenwickTree, newSegmentTree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced, treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest, minimumSpanningForestKruskal, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, listLength, listGet, listAppend, listConcat, listTake, listDrop, mergeSortedLists, newSet, newMultiSet, newMultiMap, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, lowerBound, upperBound, binarySearch, countValue, isSorted, frequencyEntries, mostFrequent, sortArray, sortArrayInPlace, shellSort, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, prefixSums, differenceArray, prefixMinimums, prefixMaximums, nextGreaterValues, mergeIntervals, intersectIntervals, selectNonOverlappingIntervals, minimumIntervalRooms, canReachEnd, minimumJumps, huffmanMergeCost, mergeSortedNumbers, twoSumSorted, uniqueValues, intersectionValues, unionValues, differenceValues, windowSums, maxWindowSum, maxSubarraySum, climbStairs, maxNonAdjacentSum, minCoinCount, uniqueGridPaths, uniqueGridPathsWithObstacles, minGridPathSum, matrixChainCost, matrixPower2x2, mergeStonesCost, editDistance, longestIncreasingSubsequenceLength, longestCommonSubsequenceLength, knapsack01, completeKnapsack, boundedKnapsack, subsets, combinations, permutations, generateParentheses, nQueens, mazePaths, gcd, lcm, extendedGcd, isPrime, sievePrimes, fastPower, factorial, fibonacci, primeFactors, divisors, binomialCoefficient, permutationCount, pascalTriangle, gcdArray, prefixProducts;

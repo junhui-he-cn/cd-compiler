@@ -1,0 +1,8 @@
+import "../../data_structures.cd" as ds;
+
+print ds.nQueens(0);
+print ds.nQueens(1);
+print ds.nQueens(2);
+print ds.nQueens(4);
+print ds.nQueens(-1);
+print ds.nQueens(1.5);

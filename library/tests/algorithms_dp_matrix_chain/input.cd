@@ -1,0 +1,10 @@
+import "../../data_structures.cd" as ds;
+
+print ds.matrixChainCost([]);
+print ds.matrixChainCost([10]);
+print ds.matrixChainCost([10, 30, 5, 60]);
+print ds.matrixChainCost([40, 20, 30, 10, 30]);
+print ds.matrixChainCost([1, 2, 3, 4, 5]);
+print ds.matrixChainCost([0, 2]);
+print ds.matrixChainCost([-1, 2]);
+print ds.matrixChainCost([1.5, 2]);

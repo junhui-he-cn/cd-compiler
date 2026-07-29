@@ -1,0 +1,32 @@
+import "../../data_structures.cd" as ds;
+
+fun renderIntervals(values: [ds.Interval]): string {
+  let result = "";
+  let index = 0;
+  while (index < values.len()) {
+    if (index > 0) {
+      result = result + ",";
+    }
+    let value = values[index];
+    result = result + "[" + str(value.start) + "," + str(value.end) + "]";
+    index += 1;
+  }
+  return result;
+}
+
+let intervals: [ds.Interval] = [
+  ds.Interval { start: 5, end: 7 },
+  ds.Interval { start: 1, end: 3 },
+  ds.Interval { start: 2, end: 6 },
+  ds.Interval { start: 8, end: 10 },
+  ds.Interval { start: 10, end: 12 }
+];
+
+print renderIntervals(ds.mergeIntervals(intervals));
+print renderIntervals(intervals);
+
+let single: [ds.Interval] = [ds.Interval { start: 4, end: 4 }];
+print renderIntervals(ds.mergeIntervals(single));
+
+let empty: [ds.Interval] = [];
+print "empty=" + renderIntervals(ds.mergeIntervals(empty));

@@ -1,0 +1,47 @@
+import "../../data_structures.cd" as ds;
+
+fun ascending(left: number, right: number): bool {
+  return left < right;
+}
+
+let queue = ds.newPriorityQueue<number>(ascending);
+print queue.front();
+queue.enqueue(8);
+queue.enqueue(2);
+queue.enqueue(5);
+print queue.snapshot();
+print queue.front();
+print queue.size();
+
+let alias = queue;
+alias.enqueue(1);
+print queue.snapshot();
+print queue.dequeue();
+print queue.front();
+
+let snapshot = queue.snapshot();
+snapshot.push(99);
+print queue.snapshot();
+print snapshot;
+
+print queue.dequeue();
+print queue.dequeue();
+print queue.dequeue();
+print queue.dequeue();
+print queue.isEmpty();
+
+fun descending(left: number, right: number): bool {
+  return left > right;
+}
+
+let maxQueue = ds.newPriorityQueue<number>(descending);
+maxQueue.enqueue(4);
+maxQueue.enqueue(9);
+maxQueue.enqueue(7);
+print maxQueue.snapshot();
+print maxQueue.front();
+print maxQueue.dequeue();
+print maxQueue.front();
+print maxQueue.dequeue();
+print maxQueue.dequeue();
+print maxQueue.isEmpty();

@@ -1,0 +1,39 @@
+import "../../data_structures.cd" as ds;
+
+let deque = ds.newDeque<number>();
+print deque.peekFront();
+print deque.peekBack();
+print deque.takeFront();
+
+deque.addBack(2);
+deque.addFront(1);
+deque.addBack(3);
+deque.addFront(0);
+let alias = deque;
+alias.addBack(4);
+print deque.snapshot();
+print deque.size();
+print deque.peekFront();
+print deque.peekBack();
+print deque.takeFront();
+print deque.takeBack();
+
+let snapshot = deque.snapshot();
+snapshot.push(99);
+print deque.snapshot();
+print snapshot;
+
+let strings = ds.newDeque<string>();
+strings.addBack("a");
+strings.addBack("b");
+print strings.takeFront();
+print strings.peekBack();
+print strings.takeBack();
+print strings.isEmpty();
+
+let frontOnly = ds.newDeque<number>();
+frontOnly.addFront(1);
+frontOnly.addFront(2);
+print frontOnly.takeBack();
+print frontOnly.takeFront();
+print frontOnly.isEmpty();

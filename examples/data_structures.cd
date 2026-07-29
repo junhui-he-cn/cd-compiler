@@ -20,3 +20,134 @@ print queue.dequeue();
 print queue.dequeue();
 queue.enqueue("third");
 print queue.snapshot();
+
+let deque = ds.newDeque<number>();
+deque.addFront(2);
+deque.addFront(1);
+deque.addBack(3);
+print deque.peekFront();
+print deque.peekBack();
+print deque.snapshot();
+
+fun ascending(left: number, right: number): bool {
+  return left < right;
+}
+
+let heap = ds.newBinaryHeap<number>(ascending);
+heap.add(5);
+heap.add(1);
+heap.add(3);
+print heap.peek();
+print heap.take();
+print heap.snapshot();
+
+let priorities = ds.newPriorityQueue<number>(ascending);
+priorities.enqueue(8);
+priorities.enqueue(2);
+priorities.enqueue(5);
+print priorities.front();
+print priorities.dequeue();
+print priorities.snapshot();
+
+let maybe = ds.some<number>(42);
+print match maybe {
+  ds.Option.Some(value) => value,
+  ds.Option.None => 0,
+};
+
+let absent = ds.none<string>();
+print match absent {
+  ds.Option.Some(value) => value,
+  ds.Option.None => "missing",
+};
+
+let result: ds.Result<number, string> = ds.ok<number, string>(42);
+print match result {
+  ds.Result.Ok(value) => value,
+  ds.Result.Err(error) => 0,
+};
+
+let list = ds.prepend(2, ds.prepend(1, ds.emptyList<number>()));
+print ds.toArray(list);
+print ds.toArray(ds.reverse(list));
+
+let seen = ds.newSet<number>();
+seen.add(2);
+seen.add(2);
+seen.add(1);
+print seen.snapshot();
+
+let bag = ds.newMultiSet<string>();
+bag.add("tag");
+bag.add("tag");
+print bag.countOf("tag");
+
+let index = ds.newMultiMap<string, number>();
+index.add("even", 2);
+index.add("even", 4);
+print index.getAll("even");
+
+let values = [3, 1, 3, 2];
+print ds.reverseArray(values);
+print ds.rotateArray(values, 1);
+print ds.linearSearch(values, 2);
+print ds.countValue(values, 3);
+print ds.mostFrequent([3, 1, 3, 2, 3]);
+
+let components = ds.newDisjointSet(4);
+components.union(0, 1);
+components.union(2, 3);
+print components.componentCount();
+
+let graph = ds.newGraph(3, false);
+graph.addEdge(0, 1);
+graph.addEdge(1, 2);
+print graph.neighbors(1);
+print ds.breadthFirstOrder(graph, 0);
+print ds.depthFirstOrder(graph, 0);
+print ds.shortestPath(graph, 0, 2);
+
+let weighted = ds.newWeightedGraph(3, false);
+weighted.addEdge(0, 1, 2);
+weighted.addEdge(1, 2, 3);
+print ds.shortestWeightedPath(weighted, 0, 2);
+
+fun ascendingValues(left: number, right: number): bool {
+  return left < right;
+}
+
+print ds.sortArray(values, ascendingValues);
+print ds.mergeSort(values, ascendingValues);
+print ds.quickSort(values, ascendingValues);
+print ds.heapSort(values, ascendingValues);
+print ds.chunkArray(values, 2);
+print ds.slidingWindows(values, 2);
+print ds.prefixSums(values);
+
+let ranges: [ds.Interval] = [
+  ds.Interval { start: 1, end: 3 },
+  ds.Interval { start: 2, end: 5 }
+];
+print ds.mergeIntervals(ranges);
+print ds.intersectIntervals(ranges, [
+  ds.Interval { start: 2, end: 4 },
+  ds.Interval { start: 7, end: 9 }
+]);
+
+print ds.mergeSortedNumbers([1, 3], [2, 4]);
+print ds.twoSumSorted([1, 2, 4, 7], 6);
+
+print ds.uniqueValues([3, 1, 3, 2]);
+print ds.unionValues([1, 2], [2, 3]);
+print ds.windowSums([2, -1, 3, 4, -2, 1], 3);
+print ds.maxWindowSum([2, -1, 3, 4, -2, 1], 3);
+print ds.maxSubarraySum([-2, 1, -3, 4, -1, 2, 1, -5, 4]);
+
+fun ascendingSearch(left: number, right: number): bool {
+  return left < right;
+}
+
+print ds.lowerBound([1, 2, 2, 4], 2, ascendingSearch);
+print ds.upperBound([1, 2, 2, 4], 2, ascendingSearch);
+print ds.binarySearch([1, 2, 2, 4], 2, ascendingSearch);
+print ds.compareStrings("ant", "apple");

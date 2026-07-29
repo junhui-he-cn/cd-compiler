@@ -1,0 +1,13 @@
+import "../../data_structures.cd" as ds;
+
+print ds.longestUniqueSubstringLength("abcabcbb");
+print ds.longestUniqueSubstringLength("bbbbb");
+print ds.longestUniqueSubstringLength("pwwkew");
+print ds.longestUniqueSubstringLength("");
+print ds.longestUniqueSubstringLength("你我你🙂");
+
+print ds.longestPalindromicSubstring("babad");
+print ds.longestPalindromicSubstring("cbbd");
+print ds.longestPalindromicSubstring("forgeeksskeegfor");
+print ds.longestPalindromicSubstring("你我你");
+print ds.longestPalindromicSubstring("") == "";
