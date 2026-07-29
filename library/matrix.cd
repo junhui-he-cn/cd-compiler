@@ -1,0 +1,113 @@
+// Immutable rectangular numeric matrices.
+
+// Matrix owns a deep copy of its rectangular input. Operations return new
+// matrices, so callers cannot mutate the matrix through an input or snapshot
+// array alias.
+struct Matrix {
+  private rows: [[number]],
+  private rowCountValue: number,
+  private columnCountValue: number
+}
+
+impl Matrix {
+  fun rowCount(): number {
+    return this.rowCountValue;
+  }
+
+  fun columnCount(): number {
+    return this.columnCountValue;
+  }
+
+  fun valueAt(row: number, column: number): optional<number> {
+    if (floor(row) != row || floor(column) != column
+        || row < 0 || row >= this.rowCountValue
+        || column < 0 || column >= this.columnCountValue) {
+      return nil;
+    }
+    return this.rows[row][column];
+  }
+
+  fun snapshot(): [[number]] {
+    let result: [[number]] = [];
+    let row = 0;
+    while (row < this.rowCountValue) {
+      result.push(copy(this.rows[row]));
+      row += 1;
+    }
+    return result;
+  }
+
+  fun transpose(): Matrix {
+    let result: [[number]] = [];
+    let column = 0;
+    while (column < this.columnCountValue) {
+      let rowValues: [number] = [];
+      let row = 0;
+      while (row < this.rowCountValue) {
+        rowValues.push(this.rows[row][column]);
+        row += 1;
+      }
+      result.push(rowValues);
+      column += 1;
+    }
+    return Matrix {
+      rows: result,
+      rowCountValue: this.columnCountValue,
+      columnCountValue: this.rowCountValue
+    };
+  }
+
+  fun multiply(other: Matrix): optional<Matrix> {
+    if (this.columnCountValue != other.rowCountValue) {
+      return nil;
+    }
+
+    let result: [[number]] = [];
+    let row = 0;
+    while (row < this.rowCountValue) {
+      let rowValues: [number] = [];
+      let column = 0;
+      while (column < other.columnCountValue) {
+        let value = 0;
+        let inner = 0;
+        while (inner < this.columnCountValue) {
+          value += this.rows[row][inner] * other.rows[inner][column];
+          inner += 1;
+        }
+        rowValues.push(value);
+        column += 1;
+      }
+      result.push(rowValues);
+      row += 1;
+    }
+    return Matrix {
+      rows: result,
+      rowCountValue: this.rowCountValue,
+      columnCountValue: other.columnCountValue
+    };
+  }
+}
+
+fun newMatrix(rows: [[number]]): optional<Matrix> {
+  if (rows.len() == 0 || rows[0].len() == 0) {
+    return nil;
+  }
+
+  let columns = rows[0].len();
+  let copied: [[number]] = [];
+  let row = 0;
+  while (row < rows.len()) {
+    if (rows[row].len() != columns) {
+      return nil;
+    }
+    copied.push(copy(rows[row]));
+    row += 1;
+  }
+  return Matrix {
+    rows: copied,
+    rowCountValue: rows.len(),
+    columnCountValue: columns
+  };
+}
+
+export Matrix, newMatrix;

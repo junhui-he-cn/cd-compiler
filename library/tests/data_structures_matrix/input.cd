@@ -1,0 +1,62 @@
+import "../../data_structures.cd" as ds;
+
+let source = [[1, 2, 3], [4, 5, 6]];
+let matrix: optional<ds.Matrix> = ds.newMatrix(source);
+print matrix == nil;
+source[0][0] = 99;
+if (matrix != nil) {
+  let concrete: ds.Matrix = matrix;
+  print concrete.snapshot();
+  let copied = concrete.snapshot();
+  copied[0][0] = -1;
+  print concrete.snapshot();
+}
+
+if (matrix != nil) {
+  let concrete: ds.Matrix = matrix;
+  print concrete.rowCount();
+  print concrete.columnCount();
+  print concrete.valueAt(0, 2);
+  print concrete.valueAt(2, 0);
+  print concrete.valueAt(0.5, 0);
+  print concrete.transpose().snapshot();
+}
+
+let right: optional<ds.Matrix> = ds.newMatrix([[7, 8], [9, 10], [11, 12]]);
+if (matrix != nil) {
+  if (right != nil) {
+    let concrete: ds.Matrix = matrix;
+    let other: ds.Matrix = right;
+    let product = concrete.multiply(other);
+    if (product == nil) {
+      print "none";
+    } else {
+      print product.snapshot();
+    }
+
+    let reverseProduct = other.multiply(concrete);
+    if (reverseProduct == nil) {
+      print "none";
+    } else {
+      print reverseProduct.snapshot();
+    }
+  }
+}
+
+let incompatible: optional<ds.Matrix> = ds.newMatrix([[1, 2]]);
+if (matrix != nil) {
+  if (incompatible != nil) {
+    let concrete: ds.Matrix = matrix;
+    let other: ds.Matrix = incompatible;
+    let product = concrete.multiply(other);
+    if (product == nil) {
+      print "none";
+    } else {
+      print product.snapshot();
+    }
+  }
+}
+
+print ds.newMatrix([]) == nil;
+print ds.newMatrix([[]]) == nil;
+print ds.newMatrix([[1, 2], [3]]) == nil;

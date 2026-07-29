@@ -8,7 +8,8 @@ generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
 `Tree<T>`, `AvlTree<T>`, `RedBlackTree<T>`, `Set<T: Eq>`, `OrderedSet<T>`, `OrderedMap<K, V>`, `BiMap<K: Eq, V: Eq>`, `LruCache<K: Eq, V>`, `LfuCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
 `MultiMap<K: Eq, V: Eq>` for one-to-many mappings, immutable BST helpers, and basic generic array algorithms,
 including comparator-based sorting, window helpers, and interval merge.
-It also includes array-backed numeric `FenwickTree`, `SegmentTree`, and `SparseTable` types,
+It also includes array-backed numeric `FenwickTree`, `SegmentTree`, and `SparseTable`,
+and immutable numeric `Matrix` types,
 numeric two-pointer helpers for sorted arrays, and string/tree/graph algorithms.
 Array set operations preserve first-occurrence order and use language equality.
 
@@ -1025,6 +1026,21 @@ Ranges must be integral and satisfy `0 <= start < endExclusive <= size`; invalid
 or empty ranges return `nil`. The structure has no update operation. Construction
 uses `O(n log n)` time and space, queries use `O(1)` time, and `snapshot` is
 `O(n)` with a fresh outer array.
+
+`Matrix` is an immutable rectangular numeric matrix:
+
+- `newMatrix(rows: [[number]]): optional<Matrix>` — validate a non-empty
+  rectangular input and make a deep copy; empty or ragged inputs return `nil`;
+- `rowCount`, `columnCount`, and `valueAt(row, column): optional<number>` —
+  inspect dimensions and return `nil` for non-integral or out-of-range indexes;
+- `snapshot` — return a fresh deep copy of all rows;
+- `transpose(): Matrix` — create the transposed matrix;
+- `multiply(other: Matrix): optional<Matrix>` — multiply compatible dimensions,
+  or return `nil` when the left column count differs from the right row count.
+
+The constructor and snapshot are `O(rows * columns)`, transpose is
+`O(rows * columns)`, and multiplication is `O(rows * shared * columns)`. Matrix
+values use the language's numeric arithmetic and do not define overflow behavior.
 
 `Interval { start, end }` represents a numeric interval with the documented
 precondition `start <= end`. `mergeIntervals(intervals)` returns a new array

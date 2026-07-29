@@ -45,6 +45,9 @@ export Trie, newTrie, reverseArray, rotateArray, linearSearch, compareStrings,
 export FenwickTree, SegmentTree, SparseTable, newFenwickTree, newSegmentTree, newSparseTable
        from "./range_trees.cd";
 
+export Matrix, newMatrix
+       from "./matrix.cd";
+
 export peakIndex, isMountainArray, mountainPeakIndex, lowerBound, upperBound,
        binarySearch, countValue, isSorted, sortArray,
        sortArrayInPlace, shellSort, selectionSort, selectionSortInPlace,
