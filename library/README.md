@@ -422,7 +422,17 @@ The three new algorithms use `O(n)` temporary array space and linear time;
 - `treeIsBalanced` and `treeMaxWidth` — check height balance and return the
   largest number of nodes on one level;
 - `treeRootToLeafPaths` — return fresh path arrays in left-to-right order;
-- `treeRootToLeafSums(tree: Tree<number>)` — return numeric root-to-leaf sums.
+- `treeRootToLeafSums(tree: Tree<number>)` — return numeric root-to-leaf sums;
+- `treeLowestCommonAncestor(tree, firstPath, secondPath): optional<T>` — return
+  the value at the lowest common ancestor of two node paths.
+
+LCA paths start at the root and use `0` for a left edge and `1` for a right
+edge. Both paths must contain integral `0`/`1` entries and identify existing
+nodes; invalid paths or an empty tree return `nil`. A path may be empty to name
+the root, and if one path is a prefix of the other the prefix node is returned.
+Paths identify occurrences rather than values, so duplicate node values remain
+unambiguous. Path validation and the common-prefix walk take `O(p + q)` time
+and `O(1)` extra space for path lengths `p` and `q`.
 
 Tree constructors reuse their child values without mutating them. Traversals
 and statistics are `O(n)`; recursive traversals use `O(h)` call-stack space,

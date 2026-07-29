@@ -243,6 +243,67 @@ fun treeRootToLeafSums(tree: Tree<number>): [number] {
   return result;
 }
 
+fun treePathExists<T>(tree: Tree<T>, path: [number]): bool {
+  let current = tree;
+  let index = 0;
+  while (index < path.len()) {
+    match current {
+      Tree.Empty => { return false; }
+      Tree.Node(value, left, right) => {
+        let direction = path[index];
+        if (floor(direction) != direction || (direction != 0 && direction != 1)) {
+          return false;
+        }
+        if (direction == 0) {
+          current = left;
+        } else {
+          current = right;
+        }
+      }
+    }
+    index += 1;
+  }
+
+  match current {
+    Tree.Empty => { return false; }
+    Tree.Node(value, left, right) => { return true; }
+  }
+  return false;
+}
+
+fun treeLowestCommonAncestor<T>(
+    tree: Tree<T>,
+    firstPath: [number],
+    secondPath: [number]
+): optional<T> {
+  if (!treePathExists(tree, firstPath) || !treePathExists(tree, secondPath)) {
+    return nil;
+  }
+
+  let current = tree;
+  let index = 0;
+  while (index < firstPath.len() && index < secondPath.len()
+      && firstPath[index] == secondPath[index]) {
+    match current {
+      Tree.Empty => { return nil; }
+      Tree.Node(value, left, right) => {
+        if (firstPath[index] == 0) {
+          current = left;
+        } else {
+          current = right;
+        }
+      }
+    }
+    index += 1;
+  }
+
+  match current {
+    Tree.Empty => { return nil; }
+    Tree.Node(value, left, right) => { return value; }
+  }
+  return nil;
+}
+
 struct TreeRemoval<T> {
   value: T,
   rest: Tree<T>
@@ -1211,4 +1272,4 @@ fun newRedBlackTree<T>(less: fun(T, T): bool): RedBlackTree<T> {
 }
 
 
-export Tree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced, treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor, AvlTree, newAvlTree, RedBlackTree, newRedBlackTree;
+export Tree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced, treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, treeLowestCommonAncestor, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor, AvlTree, newAvlTree, RedBlackTree, newRedBlackTree;
