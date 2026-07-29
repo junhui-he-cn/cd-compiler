@@ -4395,6 +4395,66 @@ Program
             Expr (= factor (call multiplyMatrix2x2 factor factor))
             Expr (= remaining (call floor (/ remaining 2)))
       Return result
+    Fun mergeStonesCost(values: [number]): number?
+      Let index = 0
+      While (group (< index (member-call values len)))
+        Body
+          Block
+            If (group (|| (!= (call floor (index values index)) (index values index)) (< (index values index) 0)))
+              Then
+                Block
+                  Return nil
+            Expr (+= index 1)
+      If (group (<= (member-call values len) 1))
+        Then
+          Block
+            Return 0
+      Let prefix: [number] = (array 0)
+      Expr (= index 0)
+      While (group (< index (member-call values len)))
+        Body
+          Block
+            Expr (member-call prefix push (+ (index prefix index) (index values index)))
+            Expr (+= index 1)
+      Let costs: [[number]] = (array)
+      Expr (= index 0)
+      While (group (< index (member-call values len)))
+        Body
+          Block
+            Let row: [number] = (array)
+            Let column = 0
+            While (group (< column (member-call values len)))
+              Body
+                Block
+                  Expr (member-call row push 0)
+                  Expr (+= column 1)
+            Expr (member-call costs push row)
+            Expr (+= index 1)
+      Let length = 2
+      While (group (<= length (member-call values len)))
+        Body
+          Block
+            Expr (= index 0)
+            While (group (<= (+ index length) (member-call values len)))
+              Body
+                Block
+                  Let end = (- (+ index length) 1)
+                  Let total = (- (index prefix (+ end 1)) (index prefix index))
+                  Let best = (- 1)
+                  Let split = index
+                  While (group (< split end))
+                    Body
+                      Block
+                        Let candidate = (+ (+ (index (index costs index) split) (index (index costs (+ split 1)) end)) total)
+                        If (group (|| (< best 0) (< candidate best)))
+                          Then
+                            Block
+                              Expr (= best candidate)
+                        Expr (+= split 1)
+                  Expr (= (index (index costs index) end) best)
+                  Expr (+= index 1)
+            Expr (+= length 1)
+      Return (index (index costs 0) (- (member-call values len) 1))
     Fun knapsack01(weights: [number], values: [number], capacity: number): number?
       If (group (|| (|| (!= (call floor capacity) capacity) (< capacity 0)) (!= (member-call weights len) (member-call values len))))
         Then
@@ -5044,7 +5104,7 @@ Program
             Expr (member-call result push (index reversed index))
             Expr (+= index 1)
       Return result
-    Export Stack Queue Deque RingBuffer BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newRingBuffer newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums differenceArray prefixMinimums prefixMaximums nextGreaterValues mergeIntervals intersectIntervals selectNonOverlappingIntervals minimumIntervalRooms canReachEnd minimumJumps huffmanMergeCost mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum climbStairs maxNonAdjacentSum minCoinCount uniqueGridPaths uniqueGridPathsWithObstacles minGridPathSum matrixChainCost matrixPower2x2 editDistance longestIncreasingSubsequenceLength longestCommonSubsequenceLength knapsack01 completeKnapsack boundedKnapsack subsets combinations permutations generateParentheses nQueens mazePaths gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci primeFactors divisors binomialCoefficient permutationCount pascalTriangle gcdArray prefixProducts
+    Export Stack Queue Deque RingBuffer BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newRingBuffer newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums differenceArray prefixMinimums prefixMaximums nextGreaterValues mergeIntervals intersectIntervals selectNonOverlappingIntervals minimumIntervalRooms canReachEnd minimumJumps huffmanMergeCost mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum climbStairs maxNonAdjacentSum minCoinCount uniqueGridPaths uniqueGridPathsWithObstacles minGridPathSum matrixChainCost matrixPower2x2 mergeStonesCost editDistance longestIncreasingSubsequenceLength longestCommonSubsequenceLength knapsack01 completeKnapsack boundedKnapsack subsets combinations permutations generateParentheses nQueens mazePaths gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci primeFactors divisors binomialCoefficient permutationCount pascalTriangle gcdArray prefixProducts
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let graph = (member-call ds newGraph 5 true)

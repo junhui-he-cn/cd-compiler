@@ -218,6 +218,7 @@ print ds.uniqueGridPathsWithObstacles([
 ]);
 print ds.matrixChainCost([10, 30, 5, 60]);
 print ds.matrixPower2x2([[1, 1], [1, 0]], 5);
+print ds.mergeStonesCost([4, 1, 1, 4]);
 print ds.primeFactors(12);
 print ds.divisors(12);
 print ds.binomialCoefficient(5, 2);
@@ -690,6 +691,11 @@ and invalid dimensions return `nil`. It uses interval DP in `O(n^3)` time and
 non-negative integer power, returning `nil` for another shape or invalid
 exponent. Exponent zero returns the 2×2 identity matrix; exponentiation by
 squaring takes `O(log exponent)` matrix multiplications.
+
+`mergeStonesCost(values)` computes the minimum cost to repeatedly merge
+adjacent non-negative integer piles, where each merge costs the sum of the two
+resulting adjacent ranges. Empty or single-pile inputs cost `0`; invalid values
+return `nil`. The interval DP uses `O(n^3)` time and `O(n^2)` space.
 
 The current backtracking and knapsack helpers are:
 

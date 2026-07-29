@@ -70,7 +70,7 @@
 - 网格/字符串 DP：`uniqueGridPaths`、`uniqueGridPathsWithObstacles`、
   `minGridPathSum`、`editDistance`。
 - 序列 DP：`longestIncreasingSubsequenceLength`、`longestCommonSubsequenceLength`。
-- 区间 DP：`matrixChainCost`。
+- 区间 DP：`matrixChainCost`、`mergeStonesCost`。
 - 二分查找：`lowerBound`、`upperBound`、`binarySearch`。
 - 字符串比较辅助：`compareStrings`、`stringLess`（当前限定可打印 ASCII）。
 - 字符串匹配：`findSubstring`、`prefixFunction`、`zFunction`、`kmpSearch`、`isPalindrome`。
@@ -466,7 +466,7 @@ enum Result<T, E> {
 - 背包：0/1、完全、多重背包已完成；
 - 序列：LIS、LCS、编辑距离；
 - 网格：路径计数、障碍物路径、最小路径和已完成；
-- 区间 DP：矩阵链已完成；合并石子等待实现；
+- 区间 DP：矩阵链、二路合并石子已完成；
 - 贪心：区间调度、区间资源分配、跳跃游戏、Huffman 合并核心已完成；
 - 回溯：子集、组合、排列、括号生成、N 皇后、迷宫路径已完成；
 - 记忆化搜索和状态压缩作为后续实现方式。
