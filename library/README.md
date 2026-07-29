@@ -624,6 +624,20 @@ The one-dimensional DP helpers are:
 `O(n)` time and `O(1)` space. `minCoinCount` is `O(amount * coinCount)` time
 and `O(amount)` space; these numeric helpers do not define overflow behavior.
 
+The two-dimensional/string DP helpers are:
+
+- `uniqueGridPaths(rows, columns): number?` — count right/down paths in a
+  positive rectangular grid; zero dimensions return `0` and invalid dimensions
+  return `nil`;
+- `minGridPathSum(grid): number?` — find the minimum top-left to bottom-right
+  sum using right/down moves; empty or non-rectangular grids return `nil`;
+- `editDistance(left, right): number` — compute insertion/deletion/substitution
+  distance over Unicode scalar-value characters.
+
+Grid DP uses `O(rows * columns)` time and `O(columns)` space for the two numeric
+helpers. `editDistance` uses `O(leftLength * rightLength)` time and
+`O(rightLength)` space; numeric overflow remains outside the library contract.
+
 For an array already sorted according to `less`, `lowerBound(values, target,
 less)` returns the first insertion position, and `upperBound` returns the
 position after all equivalent values. `binarySearch` returns the first matching
@@ -795,6 +809,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case numeric_algorithms_primes`,
 `--case numeric_algorithms_sequences`,
 `--case algorithms_dp_1d`,
+`--case algorithms_dp_grid`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
 `--case array_algorithms_prefix_monotonic`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,

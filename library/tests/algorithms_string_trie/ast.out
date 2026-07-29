@@ -3900,6 +3900,118 @@ Program
           Block
             Return nil
       Return (index counts target)
+    Fun uniqueGridPaths(rows: number, columns: number): number?
+      If (group (|| (|| (|| (!= (call floor rows) rows) (!= (call floor columns) columns)) (< rows 0)) (< columns 0)))
+        Then
+          Block
+            Return nil
+      If (group (|| (== rows 0) (== columns 0)))
+        Then
+          Block
+            Return 0
+      Let ways: [number] = (array)
+      Let column = 0
+      While (group (< column columns))
+        Body
+          Block
+            Expr (member-call ways push 1)
+            Expr (+= column 1)
+      Let row = 1
+      While (group (< row rows))
+        Body
+          Block
+            Expr (= column 1)
+            While (group (< column columns))
+              Body
+                Block
+                  Expr (+= (index ways column) (index ways (- column 1)))
+                  Expr (+= column 1)
+            Expr (+= row 1)
+      Return (index ways (- columns 1))
+    Fun minGridPathSum(grid: [[number]]): number?
+      If (group (|| (== (member-call grid len) 0) (== (member-call (index grid 0) len) 0)))
+        Then
+          Block
+            Return nil
+      Let columns = (member-call (index grid 0) len)
+      Let row = 0
+      While (group (< row (member-call grid len)))
+        Body
+          Block
+            If (group (!= (member-call (index grid row) len) columns))
+              Then
+                Block
+                  Return nil
+            Expr (+= row 1)
+      Let costs: [number] = (array)
+      Let column = 0
+      Expr (member-call costs push (index (index grid 0) 0))
+      Expr (= column 1)
+      While (group (< column columns))
+        Body
+          Block
+            Expr (member-call costs push (+ (index costs (- column 1)) (index (index grid 0) column)))
+            Expr (+= column 1)
+      Expr (= row 1)
+      While (group (< row (member-call grid len)))
+        Body
+          Block
+            Expr (+= (index costs 0) (index (index grid row) 0))
+            Expr (= column 1)
+            While (group (< column columns))
+              Body
+                Block
+                  Let top = (index costs column)
+                  Let left = (index costs (- column 1))
+                  If (group (< top left))
+                    Then
+                      Block
+                        Expr (= (index costs column) (+ top (index (index grid row) column)))
+                    Else
+                      Block
+                        Expr (= (index costs column) (+ left (index (index grid row) column)))
+                  Expr (+= column 1)
+            Expr (+= row 1)
+      Return (index costs (- columns 1))
+    Fun editDistance(left: string, right: string): number
+      Let previous: [number] = (array)
+      Let index = 0
+      While (group (<= index (member-call right len)))
+        Body
+          Block
+            Expr (member-call previous push index)
+            Expr (+= index 1)
+      Let leftIndex = 1
+      While (group (<= leftIndex (member-call left len)))
+        Body
+          Block
+            Let current: [number] = (array leftIndex)
+            Let rightIndex = 1
+            While (group (<= rightIndex (member-call right len)))
+              Body
+                Block
+                  Let substitutionCost = 0
+                  If (group (!= (member-call left charAt (- leftIndex 1)) (member-call right charAt (- rightIndex 1))))
+                    Then
+                      Block
+                        Expr (= substitutionCost 1)
+                  Let deletion = (+ (index previous rightIndex) 1)
+                  Let insertion = (+ (index current (- rightIndex 1)) 1)
+                  Let substitution = (+ (index previous (- rightIndex 1)) substitutionCost)
+                  Let best = deletion
+                  If (group (< insertion best))
+                    Then
+                      Block
+                        Expr (= best insertion)
+                  If (group (< substitution best))
+                    Then
+                      Block
+                        Expr (= best substitution)
+                  Expr (member-call current push best)
+                  Expr (+= rightIndex 1)
+            Expr (= previous current)
+            Expr (+= leftIndex 1)
+      Return (index previous (member-call right len))
     Fun gcd(left: number, right: number): number
       Let a = left
       If (group (< a 0))
@@ -4101,7 +4213,7 @@ Program
         Return (member-call (field this heap) snapshot)
     Fun newPriorityQueue<T>(less: fun(T, T): bool): PriorityQueue<T>
       Return (construct PriorityQueue<T> heap: (call newBinaryHeap<T> less))
-    Export Stack Queue Deque RingBuffer BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newRingBuffer newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums differenceArray prefixMinimums prefixMaximums nextGreaterValues mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum climbStairs maxNonAdjacentSum minCoinCount gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
+    Export Stack Queue Deque RingBuffer BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newRingBuffer newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums differenceArray prefixMinimums prefixMaximums nextGreaterValues mergeIntervals intersectIntervals mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum climbStairs maxNonAdjacentSum minCoinCount uniqueGridPaths minGridPathSum editDistance gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci
   Module 1 entry
     Import "../../data_structures.cd" as ds
     Let trie = (member-call ds newTrie)
