@@ -193,6 +193,11 @@ print ds.lowerBound([1, 2, 2, 4], 2, ascendingNumber);
 print ds.upperBound([1, 2, 2, 4], 2, ascendingNumber);
 print ds.binarySearch([1, 2, 2, 4], 2, ascendingNumber);
 print ds.compareStrings("ant", "apple");
+
+print ds.knapsack01([2, 3, 4], [3, 4, 5], 5);
+print ds.subsets([1, 2]);
+print ds.combinations([1, 2, 3], 2);
+print ds.permutations([1, 2, 3]);
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -643,6 +648,31 @@ length with `O(n^2)` time and `O(n)` space; equal values do not extend a
 subsequence. `longestCommonSubsequenceLength(left, right)` computes the LCS
 length over Unicode scalar values with `O(leftLength * rightLength)` time and
 `O(rightLength)` space.
+
+The current backtracking and 0/1 knapsack helpers are:
+
+- `knapsack01(weights, values, capacity): number?` — maximize the value of
+  selecting each item at most once. It returns `nil` when the arrays differ in
+  length, the capacity is negative or non-integral, or a weight is negative or
+  non-integral; zero-weight items are supported. The result is `0` for a valid
+  zero capacity and uses `O(capacity)` space.
+- `subsets<T>(values): [[T]]` — enumerate every subset, including the empty
+  subset, in depth-first include/exclude order. The output has `2^n` entries
+  and requires `O(n * 2^n)` output space.
+- `combinations<T>(values, count): [[T]]` — enumerate index-preserving
+  selections of the requested size. Invalid or out-of-range counts return an
+  empty array; `count == 0` returns `[[]]`. Output order follows increasing
+  source indexes.
+- `permutations<T>(values): [[T]]` — enumerate index-based permutations in
+  depth-first source-index order. An empty input returns `[[]]`; repeated
+  values are treated as distinct positions, so duplicate values can produce
+  duplicate-looking permutations.
+
+The three generators allocate complete nested arrays rather than exposing a
+lazy iterator. Their running time and output space are proportional to the
+number and total size of generated results; callers should keep exponential
+inputs small. All generated rows are fresh outer arrays, while their elements
+are shallowly copied.
 
 For an array already sorted according to `less`, `lowerBound(values, target,
 less)` returns the first insertion position, and `upperBound` returns the
