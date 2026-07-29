@@ -213,6 +213,8 @@ print ds.subsets([1, 2]);
 print ds.combinations([1, 2, 3], 2);
 print ds.permutations([1, 2, 3]);
 print ds.generateParentheses(3);
+print ds.isBalancedBrackets("([{}])");
+print ds.largestHistogramArea([2, 1, 5, 6, 2, 3]);
 print ds.nQueens(4);
 print ds.mazePaths([
   [true, true],
@@ -644,6 +646,13 @@ window generation are `O(n)` in the input plus output size; all prefix and
 difference helpers are `O(n)` and allocate one array. `nextGreaterValues` is
 `O(n)` time and `O(n)` stack/output space; equal values do not count as greater.
 
+`isBalancedBrackets(text)` checks `()[]{}` nesting with an array-backed stack;
+non-bracket characters are ignored, and an empty string is balanced. It runs in
+`O(n)` time and `O(n)` auxiliary space. `largestHistogramArea(heights)` uses a
+monotonic index stack to return the largest rectangle area, with `0` for an
+empty array and `nil` for negative or non-integral heights. It runs in `O(n)`
+time and `O(n)` stack space.
+
 `windowSums(values, width)` returns the numeric sum of every fixed-width window
 using a rolling sum. `maxWindowSum(values, width)` returns the largest such sum,
 or `nil` when the width is non-positive, exceeds the input length, or the input
@@ -993,6 +1002,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case algorithms_string_matching`,
 `--case algorithms_string_trie`,
 `--case algorithms_string_sequences`,
+`--case algorithms_stack`,
 `--case algorithms_graph_max_flow`, `--case algorithms_graph_min_cut`,
 `--case array_algorithms_basic`,
 `--case array_algorithms_teaching_sort`,

@@ -2769,6 +2769,36 @@ Program
                   Return false
             Expr (+= index 1)
       Return true
+    Fun isBalancedBrackets(text: string): bool
+      Let stack: [string] = (array)
+      Let index = 0
+      While (group (< index (member-call text len)))
+        Body
+          Block
+            Let character = (member-call text charAt index)
+            Let opening = (|| (|| (== character "(") (== character "[")) (== character "{"))
+            If (group opening)
+              Then
+                Block
+                  Expr (member-call stack push character)
+              Else
+                Block
+                  Let closing = (|| (|| (== character ")") (== character "]")) (== character "}"))
+                  If (group closing)
+                    Then
+                      Block
+                        If (group (== (member-call stack len) 0))
+                          Then
+                            Block
+                              Return false
+                        Let top = (index stack (- (member-call stack len) 1))
+                        If (group (|| (|| (group (&& (== character ")") (!= top "("))) (group (&& (== character "]") (!= top "[")))) (group (&& (== character "}") (!= top "{")))))
+                          Then
+                            Block
+                              Return false
+                        Expr (member-call stack pop)
+            Expr (+= index 1)
+      Return (== (member-call stack len) 0)
     Fun longestUniqueSubstringLength(text: string): number
       Let best = 0
       Let start = 0
@@ -3707,6 +3737,44 @@ Program
             Expr (member-call stack push index)
             Expr (+= index 1)
       Return result
+    Fun largestHistogramArea(heights: [number]): number?
+      Let validationIndex = 0
+      While (group (< validationIndex (member-call heights len)))
+        Body
+          Block
+            If (group (|| (!= (call floor (index heights validationIndex)) (index heights validationIndex)) (< (index heights validationIndex) 0)))
+              Then
+                Block
+                  Return nil
+            Expr (+= validationIndex 1)
+      Let stack: [number] = (array)
+      Let best = 0
+      Let index = 0
+      While (group (<= index (member-call heights len)))
+        Body
+          Block
+            Let current = 0
+            If (group (< index (member-call heights len)))
+              Then
+                Block
+                  Expr (= current (index heights index))
+            While (group (&& (> (member-call stack len) 0) (< current (index heights (index stack (- (member-call stack len) 1))))))
+              Body
+                Block
+                  Let top = (member-call stack pop)
+                  Let width = index
+                  If (group (> (member-call stack len) 0))
+                    Then
+                      Block
+                        Expr (= width (- (- index (index stack (- (member-call stack len) 1))) 1))
+                  Let area = (* (index heights top) width)
+                  If (group (> area best))
+                    Then
+                      Block
+                        Expr (= best area)
+            Expr (member-call stack push index)
+            Expr (+= index 1)
+      Return best
     Struct Interval {start: number, end: number}
     Fun intervalLess(left: Interval, right: Interval): bool
       If (group (== (field left start) (field right start)))
@@ -5348,6 +5416,7 @@ Program
     Export peakIndex isMountainArray mountainPeakIndex minimumLargestPartitionSum
     Export threeSumZero
     Export longestUniqueSubstringLength longestPalindromicSubstring
+    Export isBalancedBrackets largestHistogramArea
     Export Stack Queue Deque RingBuffer BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newRingBuffer newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace shellSort selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums differenceArray prefixMinimums prefixMaximums nextGreaterValues mergeIntervals intersectIntervals selectNonOverlappingIntervals minimumIntervalRooms canReachEnd minimumJumps huffmanMergeCost mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum climbStairs maxNonAdjacentSum minCoinCount uniqueGridPaths uniqueGridPathsWithObstacles minGridPathSum matrixChainCost matrixPower2x2 mergeStonesCost editDistance longestIncreasingSubsequenceLength longestCommonSubsequenceLength knapsack01 completeKnapsack boundedKnapsack subsets combinations permutations generateParentheses nQueens mazePaths gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci primeFactors divisors binomialCoefficient permutationCount pascalTriangle gcdArray prefixProducts
   Module 1 entry
     Import "../../data_structures.cd" as ds
