@@ -217,6 +217,8 @@ print ds.uniqueGridPathsWithObstacles([
   [false, false, false]
 ]);
 print ds.matrixChainCost([10, 30, 5, 60]);
+print ds.primeFactors(12);
+print ds.divisors(12);
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -864,6 +866,12 @@ composites. `sievePrimes(limit)` uses the Sieve of Eratosthenes and returns
 primes in ascending order up to `floor(limit)`, or `[]` below `2`. The primality
 check uses trial division with `O(sqrt(n))` arithmetic steps; the sieve uses
 `O(n log log n)` time and `O(n)` auxiliary space for an integer bound `n`.
+
+`primeFactors(value)` returns the prime factorization with repeated factors in
+ascending order, while `divisors(value)` returns all positive divisors in
+ascending order. Both return `[]` for non-positive or non-integral inputs;
+`primeFactors(1)` is also empty and `divisors(1)` is `[1]`. Factorization and
+divisor enumeration use `O(sqrt(n))` trial steps plus output space.
 
 `fastPower(base, exponent)` uses exponentiation by squaring for a non-negative
 integer exponent and returns `nil` for negative or non-integer exponents;

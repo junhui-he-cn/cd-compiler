@@ -62,6 +62,7 @@
 - 子数组统计：`maxSubarraySum`。
 - 基础数值算法：`gcd`、`lcm`、`extendedGcd`、`isPrime`、`sievePrimes`、`fastPower`、
   `factorial`、`fibonacci`（整数输入契约）。
+- 数论辅助：`primeFactors`、`divisors`。
 - 一维 DP：`climbStairs`、`maxNonAdjacentSum`、`minCoinCount`。
 - 网格/字符串 DP：`uniqueGridPaths`、`uniqueGridPathsWithObstacles`、
   `minGridPathSum`、`editDistance`。
@@ -444,7 +445,7 @@ enum Result<T, E> {
 - `gcd`、`lcm`、扩展欧几里得；
 - 快速幂、阶乘、斐波那契和矩阵快速幂；
 - 素数判断、埃氏筛、线性筛（若性能需要）；
-- 质因数分解、约数枚举；
+- 质因数分解、约数枚举已完成；
 - 最大公约数数组、前缀积和差分；
 - 组合数、排列数、帕斯卡三角；
 - 数值二分和牛顿法作为可选专题。

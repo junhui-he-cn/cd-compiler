@@ -1,0 +1,16 @@
+import "../../data_structures.cd" as ds;
+
+print ds.primeFactors(1);
+print ds.primeFactors(2);
+print ds.primeFactors(12);
+print ds.primeFactors(97);
+print ds.primeFactors(-1);
+print ds.primeFactors(1.5);
+
+print ds.divisors(1);
+print ds.divisors(12);
+print ds.divisors(36);
+print ds.divisors(13);
+print ds.divisors(0);
+print ds.divisors(-2);
+print ds.divisors(1.5);
