@@ -56,7 +56,7 @@
 - 区间资源分配：`minimumIntervalRooms`。
 - 跳跃游戏贪心：`canReachEnd`、`minimumJumps`。
 - Huffman 贪心核心：`huffmanMergeCost`。
-- 双指针算法：`mergeSortedNumbers`、`twoSumSorted`。
+- 双指针算法：`mergeSortedNumbers`、`twoSumSorted`、`threeSumZero`。
 - 数组集合算法：`uniqueValues`、`intersectionValues`、`unionValues`、`differenceValues`。
 - 固定窗口统计：`windowSums`、`maxWindowSum`。
 - 子数组统计：`maxSubarraySum`。
@@ -266,6 +266,8 @@ enum Result<T, E> {
 浅拷贝和新建输出数组；空数组调用需要显式元素类型参数。`Interval` 和
 `mergeIntervals` 也已提供，合并时会排序并合并重叠或相接区间。
 `mergeSortedNumbers` 和 `twoSumSorted` 已提供非降序数字数组上的双指针版本。
+`threeSumZero` 会先排序副本，再用双指针生成去重的非降序零和三元组，保持输入
+不变，时间复杂度为 `O(n^2)`。
 `uniqueValues`、`intersectionValues`、`unionValues` 和 `differenceValues` 已
 提供保序去重、交集、并集和差集的线性扫描版本。
 `windowSums` 使用滚动和生成每个固定宽度窗口的和，`maxWindowSum` 在这些
