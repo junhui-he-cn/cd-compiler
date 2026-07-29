@@ -59,7 +59,8 @@
 - 基础数值算法：`gcd`、`lcm`、`extendedGcd`、`isPrime`、`sievePrimes`、`fastPower`、
   `factorial`、`fibonacci`（整数输入契约）。
 - 一维 DP：`climbStairs`、`maxNonAdjacentSum`、`minCoinCount`。
-- 网格/字符串 DP：`uniqueGridPaths`、`minGridPathSum`、`editDistance`。
+- 网格/字符串 DP：`uniqueGridPaths`、`uniqueGridPathsWithObstacles`、
+  `minGridPathSum`、`editDistance`。
 - 序列 DP：`longestIncreasingSubsequenceLength`、`longestCommonSubsequenceLength`。
 - 二分查找：`lowerBound`、`upperBound`、`binarySearch`。
 - 字符串比较辅助：`compareStrings`、`stringLess`（当前限定可打印 ASCII）。
@@ -449,13 +450,13 @@ enum Result<T, E> {
 ### 5.10 动态规划、贪心与回溯
 
 当前已完成一维 DP 的爬楼梯、非相邻最大和、最少硬币数，网格路径/最小和、
-字符串编辑距离、LIS/LCS 以及 0/1 背包；还提供了子集、组合、排列的完整
+字符串编辑距离、障碍网格路径、LIS/LCS 以及 0/1 背包；还提供了子集、组合、排列的完整
 回溯生成版本。它们只使用数组与数值运算，暂不承诺溢出行为。
 
 - 一维 DP：爬楼梯、打家劫舍、硬币兑换；
 - 背包：0/1 已完成；完全、多重背包待实现；
 - 序列：LIS、LCS、编辑距离；
-- 网格：路径计数、最小路径和、障碍物路径；
+- 网格：路径计数、障碍物路径、最小路径和已完成；
 - 区间 DP：矩阵链、合并石子等；
 - 贪心：区间调度、分配、跳跃游戏、Huffman 构造；
 - 回溯：子集、组合、排列已完成；括号生成、N 皇后、迷宫路径待实现；

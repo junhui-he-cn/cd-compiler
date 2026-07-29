@@ -198,6 +198,11 @@ print ds.knapsack01([2, 3, 4], [3, 4, 5], 5);
 print ds.subsets([1, 2]);
 print ds.combinations([1, 2, 3], 2);
 print ds.permutations([1, 2, 3]);
+print ds.uniqueGridPathsWithObstacles([
+  [false, false, false],
+  [false, true, false],
+  [false, false, false]
+]);
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -636,11 +641,15 @@ The two-dimensional/string DP helpers are:
   return `nil`;
 - `minGridPathSum(grid): number?` — find the minimum top-left to bottom-right
   sum using right/down moves; empty or non-rectangular grids return `nil`;
+- `uniqueGridPathsWithObstacles(grid: [[bool]]): number?` — count right/down
+  paths where `true` cells are blocked. Empty grids and zero-width grids return
+  `0`, non-rectangular grids return `nil`, and a blocked start or end returns
+  `0`;
 - `editDistance(left, right): number` — compute insertion/deletion/substitution
   distance over Unicode scalar-value characters.
 
 Grid DP uses `O(rows * columns)` time and `O(columns)` space for the two numeric
-helpers. `editDistance` uses `O(leftLength * rightLength)` time and
+helpers and the obstacle-path helper. `editDistance` uses `O(leftLength * rightLength)` time and
 `O(rightLength)` space; numeric overflow remains outside the library contract.
 
 `longestIncreasingSubsequenceLength(values)` computes the strict numeric LIS
