@@ -182,8 +182,14 @@ machine-readable case matrix），包含值分类、root 集合、native 临时 
   的 copy/borrow 语法。
 
 **验收：** alias、closure capture、嵌套 aggregate、变异、identity equality、
-  variant payload 和错误路径都有 C++/Rust 对照样例；没有明确决策的循环/并发
-  行为保持 deferred，而不是由实现细节悄悄决定。
+variant payload 和错误路径都有 C++/Rust 对照样例；没有明确决策的循环/并发
+行为保持 deferred，而不是由实现细节悄悄决定。
+
+**状态（决策已记录，2026-07-29）：** 当前 `Value`/`runtime`/`VM` 的共享
+aggregate、cell/environment、identity equality、native 浅拷贝、callback 快照、
+执行 root 和错误生命周期已固定为可验证契约；循环引用、持久 host root、并发
+值和回收策略保持 deferred。详见
+[`docs/decisions/vm-runtime-ownership-001.md`](decisions/vm-runtime-ownership-001.md)。
 
 ### VM-2B：统一 Heap/Handle 抽象
 
@@ -425,12 +431,11 @@ canonical verification 和 malformed corpus。完整仓库 gate 仍以
 
 ## 12. 当前下一步
 
-VM-1A、VM-1B 和 VM-1C 已完成。下一步是 **VM-2A：所有权、别名和生命周期
-决策**：根据当前 `Value`/`runtime`/`VM` 实现和 C++/Rust parity cases，固定
-数组、map、struct、closure、variant、native 返回值、root、错误路径和循环引用
-的可观察语义，再决定是否需要 VM-2B 的 Heap/Handle 抽象。VM-2A 决策完成前不
-推进 GC、persistent VM、JIT 或新的 artifact version；VM-2B 则必须在该决策和
-容量测量之后才开始。
+VM-1A、VM-1B、VM-1C 和 VM-2A 决策记录已完成。当前停在 **VM-2B：统一
+Heap/Handle 抽象** 的入口门槛：需要先比较保留 reference counting、包装现有
+存储，或引入其他所有权策略，并用 live/dead/cycle、closure、native 临时 root、
+错误退出、debug 观察和 peak memory workload 做测量。该架构取舍未决定前不
+修改运行时存储，也不推进 GC、persistent VM、JIT 或新的 artifact version。
 
 这份路线图的成功标准不是同时铺开所有 VM 研究方向，而是让每个运行时能力
 都有清楚的契约、独立的证据和可回退的迁移路径；语言 roadmap 继续独立演进，
