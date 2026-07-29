@@ -5014,11 +5014,12 @@ Program
     Export Stack Queue Deque RingBuffer BinaryHeap PriorityQueue Option Result List Tree Set MultiSetEntry MultiSet MultiMap Interval DisjointSet Graph WeightedEdge WeightedGraph SignedWeightedEdge SignedWeightedGraph BellmanFordError BellmanFordResult ExtendedGcdResult Trie FenwickTree SegmentTree newStack newQueue newDeque newRingBuffer newBinaryHeap newPriorityQueue newDisjointSet newGraph newWeightedGraph newSignedWeightedGraph newTrie newFenwickTree newSegmentTree emptyTree treeNode treeLeaf treeSize treeHeight treeLeafCount treePreorder treeInorder treePostorder treeLevelOrder treeIsBalanced treeMaxWidth treeRootToLeafPaths treeRootToLeafSums bstContains bstInsert bstDelete bstMinimum bstMaximum bstPredecessor bstSuccessor breadthFirstOrder depthFirstOrder connectedComponents isBipartite articulationPoints bridges eulerTrail shortestDistances shortestPath inDegrees topologicalOrder hasCycle stronglyConnectedComponents bellmanFord shortestWeightedDistances allPairsWeightedDistances maxFlow minCut shortestWeightedPath minimumSpanningForest minimumSpanningForestKruskal some none ok err emptyList prepend head tail reverse toArray listLength listGet listAppend listConcat listTake listDrop mergeSortedLists newSet newMultiSet newMultiMap reverseArray rotateArray linearSearch compareStrings stringLess findSubstring prefixFunction zFunction kmpSearch isPalindrome characterFrequency areAnagrams lowerBound upperBound binarySearch countValue isSorted frequencyEntries mostFrequent sortArray sortArrayInPlace selectionSort selectionSortInPlace bubbleSort bubbleSortInPlace mergeSort quickSort quickSortInPlace heapSort heapSortInPlace chunkArray slidingWindows prefixSums differenceArray prefixMinimums prefixMaximums nextGreaterValues mergeIntervals intersectIntervals selectNonOverlappingIntervals minimumIntervalRooms canReachEnd minimumJumps huffmanMergeCost mergeSortedNumbers twoSumSorted uniqueValues intersectionValues unionValues differenceValues windowSums maxWindowSum maxSubarraySum climbStairs maxNonAdjacentSum minCoinCount uniqueGridPaths uniqueGridPathsWithObstacles minGridPathSum matrixChainCost editDistance longestIncreasingSubsequenceLength longestCommonSubsequenceLength knapsack01 completeKnapsack boundedKnapsack subsets combinations permutations generateParentheses nQueens mazePaths gcd lcm extendedGcd isPrime sievePrimes fastPower factorial fibonacci primeFactors divisors binomialCoefficient pascalTriangle gcdArray prefixProducts
   Module 1 entry
     Import "../../data_structures.cd" as ds
-    Let intervals: [ds.Interval] = (array (construct ds.Interval start: 5 end: 7) (construct ds.Interval start: 1 end: 3) (construct ds.Interval start: 2 end: 4) (construct ds.Interval start: 9 end: 10) (construct ds.Interval start: 6 end: 8))
-    Print (member-call ds selectNonOverlappingIntervals intervals)
-    Print intervals
-    Print (member-call ds selectNonOverlappingIntervals (array (construct ds.Interval start: 1 end: 2) (construct ds.Interval start: 2 end: 3)))
-    Print (member-call ds selectNonOverlappingIntervals (array (construct ds.Interval start: (- 3) end: (- 1)) (construct ds.Interval start: 0 end: 1)))
-    Let empty: [ds.Interval] = (array)
-    Print (member-call ds selectNonOverlappingIntervals empty)
-    Print (member-call ds selectNonOverlappingIntervals (array (construct ds.Interval start: 4 end: 1)))
+    Print (member-call ds gcdArray (array))
+    Print (member-call ds gcdArray (array 12 18 24))
+    Print (member-call ds gcdArray (array (- 12) 18))
+    Print (member-call ds gcdArray (array 0 0))
+    Print (member-call ds gcdArray (array 1.5 3))
+    Print (member-call ds prefixProducts (array))
+    Print (member-call ds prefixProducts (array 2 3 4))
+    Print (member-call ds prefixProducts (array (- 1) 2 (- 3)))
+    Print (member-call ds prefixProducts (array 0 5))

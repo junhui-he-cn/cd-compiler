@@ -64,6 +64,7 @@
   `factorial`、`fibonacci`（整数输入契约）。
 - 数论辅助：`primeFactors`、`divisors`。
 - 组合数辅助：`binomialCoefficient`、`pascalTriangle`。
+- 数组数值辅助：`gcdArray`、`prefixProducts`。
 - 一维 DP：`climbStairs`、`maxNonAdjacentSum`、`minCoinCount`。
 - 网格/字符串 DP：`uniqueGridPaths`、`uniqueGridPathsWithObstacles`、
   `minGridPathSum`、`editDistance`。
@@ -447,7 +448,7 @@ enum Result<T, E> {
 - 快速幂、阶乘、斐波那契和矩阵快速幂；
 - 素数判断、埃氏筛、线性筛（若性能需要）；
 - 质因数分解、约数枚举已完成；
-- 最大公约数数组、前缀积和差分；
+- 最大公约数数组、前缀积已完成；差分已有数组辅助版本；
 - 组合数、帕斯卡三角已完成；数值排列数待实现；
 - 数值二分和牛顿法作为可选专题。
 

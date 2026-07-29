@@ -221,6 +221,8 @@ print ds.primeFactors(12);
 print ds.divisors(12);
 print ds.binomialCoefficient(5, 2);
 print ds.pascalTriangle(5);
+print ds.gcdArray([12, 18, 24]);
+print ds.prefixProducts([2, 3, 4]);
 ```
 
 The factory functions make the generic argument explicit while keeping the
@@ -879,6 +881,11 @@ divisor enumeration use `O(sqrt(n))` trial steps plus output space.
 arguments, returning `nil` when the arguments are invalid or `k > n`.
 `pascalTriangle(rows)` returns the first `rows` rows, with invalid row counts
 producing `[]`; both use numeric DP and do not define overflow behavior.
+
+`gcdArray(values)` folds the non-negative `gcd` over a non-empty integer array,
+returning `nil` for an empty or non-integral input. `prefixProducts(values)`
+returns cumulative products in a fresh array and returns `[]` for empty input;
+both are linear scans and numeric overflow is outside the contract.
 
 `fastPower(base, exponent)` uses exponentiation by squaring for a non-negative
 integer exponent and returns `nil` for negative or non-integer exponents;
