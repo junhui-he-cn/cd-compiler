@@ -306,6 +306,37 @@ rebuild reports, diagnostics, linked artifacts, and VM execution asserted.
 small compatible slice or discard the branch-only assumptions. No REPL claim
 belongs in the baseline until that re-audit is merged and verified.
 
+### M7-IR-SSA-001: Internal SSA and optimization pipeline
+
+**Status:** the CFG foundation is implemented only on
+`feat/ssa-optimization-design`; full SSA construction and optimization are
+still proposed and are not shipped on `master`. The design and machine-readable
+decision are in `docs/superpowers/specs/2026-07-30-ssa-optimization-design.md`
+and `docs/decisions/m7-ir-ssa-optimization-001.{md,json}`.
+
+**Purpose:** introduce explicit basic blocks, dominance/phi-based SSA, and a
+small opt-in O1 pass pipeline behind the existing linear register IR while
+preserving source semantics, closure cells, module-product boundaries,
+`cdbc 0.1`, and C++/Rust execution parity.
+
+**Initial boundary:** O0 remains the default. O1 may simplify CFGs, propagate
+copies/constants, fold proven-safe primitive operations, simplify phis, and
+remove only non-trapping pure dead code. Captured/module/unknown bindings,
+aggregate aliasing, calls, callbacks, and runtime traps remain conservative.
+SSA is de-lowered to the existing IR; phi nodes and optimizer metadata are not
+serialized.
+
+**Required decision before SSA/O1 implementation:** define binding storage
+metadata, the trap/effect table, dependency-offset remapping, optimized
+debug-local policy, and the optimization-level/pipeline identity used by
+`cdbc-cache 0.2`. The current foundation only establishes CFG shape and
+verification.
+
+**Gate:** CFG/SSA verifier and O0 round-trip tests; O0/O1 semantic parity over
+control flow, closures, mutation, callbacks, traps, and evaluation order;
+C++/Rust artifact parity; imported/re-exported module and cache coverage; and
+the canonical verification suite.
+
 ## Dependency order
 
 ```text
@@ -331,9 +362,14 @@ M3B cache/product boundary
 
 feat/m5c-repl
   -> M5C-REPL-001 re-audit, outside the active queue for now
+
+master + M1 semantic metadata + existing linear register IR
+  -> M7-IR-SSA-001 design and CFG foundation (branch-only)
+  -> opt-in O1 implementation only after the focused corpus is admitted
 ```
 
-No implementation slice is currently active. M6-LANG-HASH-001 and
+No M7 implementation slice is shipped on `master`; the branch-only CFG
+foundation is not yet an integration claim. M6-LANG-HASH-001 and
 M6-LANG-OPERATOR-001A..001C are complete; M5D-DEBUG-002 and the other entries remain deferred specifications
 with clear future boundaries. They do not reopen completed work or authorize
 concrete data-structure implementations in the compiler repository.

@@ -3958,6 +3958,26 @@
       "expected_files": []
     },
     {
+      "case_id": "ctest.control_flow_graph",
+      "runner": "ctest",
+      "result_name": "control_flow_graph",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "control_flow_graph"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "ctest.debugger",
       "runner": "ctest",
       "result_name": "debugger",

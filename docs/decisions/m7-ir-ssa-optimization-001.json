@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "decision_revision": "m7-2026-07-30-r1",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "decision_id": "M7-IR-SSA-001",
+  "domain": "internal-ssa-optimization",
+  "status": "proposed",
+  "question": "How should the compiler add SSA and optimization without changing source semantics, closure cells, cdbc 0.1, or the Rust VM boundary?",
+  "decision": "Insert a verified internal CFG/SSA and pass-manager pipeline between the existing linear register IR and BytecodeCompiler. Keep O0 as the default, enable only conservative opt-in O1 passes initially, and de-SSA back to the existing IR operation set.",
+  "foundation_slice": {
+    "status": "implemented_on_feature_branch",
+    "branch": "feat/ssa-optimization-design",
+    "capabilities": [
+      "deterministic basic-block construction",
+      "synthetic exit block",
+      "reachability marking",
+      "module dependency offset anchors",
+      "structural CFG verification"
+    ],
+    "test_case_id": "ctest.control_flow_graph",
+    "not_included": [
+      "SSA value construction",
+      "phi insertion",
+      "optimization passes",
+      "bytecode changes"
+    ]
+  },
+  "pipeline": [
+    "existing linear register IR",
+    "CFG construction and verification",
+    "SSA construction and verification",
+    "opt-in optimization passes",
+    "de-SSA and offset remapping",
+    "existing bytecode lowering"
+  ],
+  "memory_boundary": {
+    "promotable": "explicitly identified local, non-captured, non-address-taken bindings",
+    "preserve_cells": [
+      "top-level and module bindings",
+      "exported bindings",
+      "captured bindings",
+      "unknown-storage bindings"
+    ],
+    "aggregate_aliasing": "conservative; no first-slice Memory SSA"
+  },
+  "artifact_compatibility": {
+    "cdbc": "0.1 unchanged",
+    "ssa_serialization": "none",
+    "default_optimization": "O0",
+    "module_products": "optimized independently with remapped dependency anchors",
+    "cache_identity": "must include optimization level and pipeline fingerprint"
+  },
+  "initial_o1_passes": [
+    "unreachable-block removal",
+    "jump threading and block merging",
+    "constant propagation and proven-safe folding",
+    "copy and phi simplification",
+    "limited non-trapping dead-code elimination"
+  ],
+  "verification": {
+    "required": [
+      "CFG/SSA verifier unit tests",
+      "O0 CFG/SSA/de-SSA round trip",
+      "O0/O1 semantic parity corpus",
+      "C++ artifact and Rust VM parity",
+      "module dependency/cache/debug metadata checks",
+      "canonical repository verification"
+    ],
+    "new_inventory_prefix": "optimizer."
+  },
+  "out_of_scope": [
+    "language syntax changes",
+    "new cdbc opcode",
+    "cross-module optimization",
+    "mandatory optimization",
+    "JIT compilation",
+    "garbage collection",
+    "inlining and speculative optimization",
+    "optimized debug-local contract"
+  ],
+  "old_path_deletion_condition": "Keep the existing direct linear IR and O0 path until the verifier, semantic parity corpus, debug policy, dependency-offset remapping, and cache identity are all proven.",
+  "implementation_plan": "docs/superpowers/plans/2026-07-30-ssa-optimization.md"
+}

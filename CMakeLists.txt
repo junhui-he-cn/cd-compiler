@@ -66,6 +66,7 @@ set(COMPILER_DESIGN_FRONTEND_SOURCES
 
 set(COMPILER_DESIGN_IR_SOURCES
     ${COMPILER_DESIGN_FRONTEND_SOURCES}
+    src/ControlFlowGraph.cpp
     src/IR.cpp
     src/IRCompiler.cpp
 )
@@ -94,9 +95,18 @@ add_executable(ir_source_location_tests
 )
 compiler_design_configure_target(ir_source_location_tests)
 
+add_executable(control_flow_graph_tests
+    tests/control_flow_graph_tests.cpp
+    src/ControlFlowGraph.cpp
+    src/IR.cpp
+    src/Value.cpp
+)
+compiler_design_configure_target(control_flow_graph_tests)
+
 enable_testing()
 add_test(NAME source_map COMMAND source_map_tests)
 add_test(NAME ir_source_location COMMAND ir_source_location_tests)
+add_test(NAME control_flow_graph COMMAND control_flow_graph_tests)
 add_test(
     NAME golden_runner_selftest
     COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
