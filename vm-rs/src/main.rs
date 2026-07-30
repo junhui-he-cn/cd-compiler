@@ -1,12 +1,7 @@
-mod bytecode;
-mod format;
-mod link;
-mod runtime;
-mod value;
-mod vm;
-
-use crate::bytecode::{DebugLocation, Program};
-use crate::vm::RunConfig;
+use compiler_design_vm::bytecode::{DebugLocation, Program};
+use compiler_design_vm::format;
+use compiler_design_vm::link;
+use compiler_design_vm::vm::{self, RunConfig};
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;

@@ -263,6 +263,16 @@ inline function/range/variant、ledger compaction、GC、搬迁句柄或持久 h
   CLI 与 library 对同一 artifact 得到相同 stdout/stderr/result/trace；一个
   实例失败不能污染另一个实例的 globals、identity allocator 或输出缓冲。
 
+**状态（第一 library boundary 窄切片已完成，2026-07-30）：** 新增
+`vm-rs/src/lib.rs`，公开 artifact parse/format/verify、module link、
+`Program`、`RunConfig`、`VM`、runtime error、cancellation 和 trace 类型；CLI
+继续负责文件 IO、参数、输出渲染和退出码。`vm-rs/tests/library_api.rs` 已覆盖
+内存 artifact 的 parse/verify/run/trace、module link 以及两个 VM 实例隔离。
+当前 crate 仍保持 `publish = false`、单线程 `Rc<RefCell>` 语义和现有错误类型，
+API versioning、structured linker error、persistent session 和 `Send`/`Sync`
+保持 deferred；决策记录见
+[`docs/decisions/vm-library-api-001.md`](decisions/vm-library-api-001.md)。
+
 ### VM-3B：模块链接器的产品级加固
 
 **目标：** 在已有 module product/link 基础上，提升大模块图的诊断、可测试性和
@@ -460,10 +470,11 @@ canonical verification 和 malformed corpus。完整仓库 gate 仍以
 
 ## 12. 当前下一步
 
-VM-1A、VM-1B、VM-1C 和 VM-2A 决策记录已完成，VM-2B 的第一窄切片也已完成。
-下一步仍是 VM-2B 的 live/dead/cycle、closure、native 临时 root、错误退出、
-debug 观察和 peak-memory 测量；在这些证据完成前不推进 GC、persistent VM、JIT
-或新的 artifact version。
+VM-1A、VM-1B、VM-1C、VM-2A、VM-2B 的 tracked-object/retained-byte 测量边界和
+VM-3A 的第一 library boundary 已完成；GC、persistent VM、JIT 和新的 artifact
+version 仍未进入默认队列。下一步是根据实际 embedding 需求继续稳定 library
+error/version boundary，或推进 VM-3B 的 module linker report/diagnostic slice；
+两者都必须保持现有 CLI、linked/module artifact 和 trace 兼容。
 
 这份路线图的成功标准不是同时铺开所有 VM 研究方向，而是让每个运行时能力
 都有清楚的契约、独立的证据和可回退的迁移路径；语言 roadmap 继续独立演进，
