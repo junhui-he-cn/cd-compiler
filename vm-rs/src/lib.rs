@@ -18,7 +18,7 @@ pub use format::{
     verify_module_artifact, verify_program, Artifact, ModuleArtifact, ModuleDependency,
     ModuleDependencyKind, ParseError,
 };
-pub use link::link_modules;
+pub use link::{link_modules, link_modules_with_report, LinkReport, LinkResult};
 pub use vm::{
     CancellationToken, ResourceKind, RunConfig, RuntimeError, RuntimeErrorKind, StackFrame,
     TraceEvent, TraceEventKind, TraceRun, VM,

@@ -289,6 +289,15 @@ API versioning、structured linker error、persistent session 和 `Send`/`Sync`
   metadata 图都有固定测试；link 后的执行、trace stack 和 source path 与
   直接 linked artifact 一致。
 
+**状态（第一 linker report 窄切片已完成，2026-07-30）：** 新增
+`link_modules_with_report`/`LinkResult`/`LinkReport`，记录排序后的输入模块、
+entry order、dependency source-order expansion、输入依赖规模和 linked
+program 规模；旧 `link_modules` 保持原返回值，CLI 默认不输出报告。当前已用
+diamond、cycle、invalid-input 和 library linked-run tests 固定顺序、计数和错误
+兼容性；报告文件 schema、structured linker error、大图容量和性能仍 deferred，
+决策记录见
+[`docs/decisions/vm-module-link-report-001.md`](decisions/vm-module-link-report-001.md)。
+
 ### VM-3C：artifact 版本和二进制表示决策
 
 **目标：** 在需要更快加载、更小产物或更安全校验时，决定是否增加 binary
@@ -470,11 +479,12 @@ canonical verification 和 malformed corpus。完整仓库 gate 仍以
 
 ## 12. 当前下一步
 
-VM-1A、VM-1B、VM-1C、VM-2A、VM-2B 的 tracked-object/retained-byte 测量边界和
-VM-3A 的第一 library boundary 已完成；GC、persistent VM、JIT 和新的 artifact
-version 仍未进入默认队列。下一步是根据实际 embedding 需求继续稳定 library
-error/version boundary，或推进 VM-3B 的 module linker report/diagnostic slice；
-两者都必须保持现有 CLI、linked/module artifact 和 trace 兼容。
+VM-1A、VM-1B、VM-1C、VM-2A、VM-2B 的 tracked-object/retained-byte 测量边界、
+VM-3A 的第一 library boundary 和 VM-3B 的第一 linker report slice 已完成；
+GC、persistent VM、JIT 和新的 artifact version 仍未进入默认队列。下一步是根据
+实际 embedding/容量需求继续稳定 library error/version boundary，或推进已有
+trace 之上的 VM-4A interactive debugger；两者都必须保持现有 CLI、linked/module
+artifact 和 trace 兼容。
 
 这份路线图的成功标准不是同时铺开所有 VM 研究方向，而是让每个运行时能力
 都有清楚的契约、独立的证据和可回退的迁移路径；语言 roadmap 继续独立演进，

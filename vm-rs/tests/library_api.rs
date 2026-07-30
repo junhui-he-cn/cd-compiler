@@ -1,7 +1,7 @@
 use compiler_design_vm::bytecode::{Constant, FunctionBody, Instruction};
 use compiler_design_vm::{
-    format_artifact, link_modules, parse_artifact, verify_artifact, verify_module_artifact,
-    Artifact, ModuleArtifact, Program, RunConfig, TraceEventKind, VM,
+    format_artifact, link_modules_with_report, parse_artifact, verify_artifact,
+    verify_module_artifact, Artifact, ModuleArtifact, Program, RunConfig, TraceEventKind, VM,
 };
 
 fn print_program() -> Program {
@@ -59,7 +59,12 @@ fn library_api_links_modules_and_keeps_vm_instances_independent() {
         program: print_program(),
     };
     verify_module_artifact(&module).expect("library verifier should accept module artifacts");
-    let linked = link_modules(vec![module]).expect("library linker should link one entry");
+    let linked =
+        link_modules_with_report(vec![module]).expect("library linker should link one entry");
+    assert_eq!(linked.report.entry_module_identities, vec!["entry"]);
+    assert_eq!(linked.report.input_instruction_count, 2);
+    assert_eq!(linked.report.linked_instruction_count, 2);
+    let linked = linked.program;
 
     let first = VM::with_config(&linked, RunConfig::unlimited())
         .run()

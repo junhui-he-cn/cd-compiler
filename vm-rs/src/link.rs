@@ -4,6 +4,26 @@ use crate::bytecode::{
 use crate::format::{verify_module_artifact, verify_program, ModuleArtifact};
 use std::collections::{HashMap, HashSet};
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LinkReport {
+    pub input_module_identities: Vec<String>,
+    pub entry_module_identities: Vec<String>,
+    pub expanded_module_order: Vec<String>,
+    pub input_instruction_count: usize,
+    pub input_dependency_count: usize,
+    pub linked_instruction_count: usize,
+    pub linked_function_count: usize,
+    pub linked_constant_count: usize,
+    pub linked_name_count: usize,
+    pub linked_debug_source_count: usize,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct LinkResult {
+    pub program: Program,
+    pub report: LinkReport,
+}
+
 #[derive(Clone, Debug)]
 struct ModuleContext {
     constant_base: usize,
@@ -18,6 +38,11 @@ struct Linker {
     contexts: HashMap<String, ModuleContext>,
     visiting: HashSet<String>,
     expanded: HashSet<String>,
+    input_module_identities: Vec<String>,
+    entry_module_identities: Vec<String>,
+    input_instruction_count: usize,
+    input_dependency_count: usize,
+    expansion_order: Vec<String>,
     constants: Vec<Constant>,
     names: Vec<String>,
     main: FunctionBody,
@@ -25,8 +50,26 @@ struct Linker {
     debug_sources: Vec<DebugSource>,
 }
 
+fn program_instruction_count(program: &Program) -> usize {
+    program.main.instructions.len().saturating_add(
+        program
+            .functions
+            .iter()
+            .map(|function| function.instructions.len())
+            .fold(0usize, usize::saturating_add),
+    )
+}
+
 impl Linker {
     fn new(modules: Vec<ModuleArtifact>) -> Result<Self, String> {
+        let input_instruction_count = modules
+            .iter()
+            .map(|module| program_instruction_count(&module.program))
+            .fold(0usize, usize::saturating_add);
+        let input_dependency_count = modules
+            .iter()
+            .map(|module| module.dependencies.len())
+            .fold(0usize, usize::saturating_add);
         let mut by_identity = HashMap::new();
         for module in modules {
             verify_module_artifact(&module)
@@ -55,6 +98,12 @@ impl Linker {
                 return Err("entry module orders must be contiguous from zero".to_string());
             }
         }
+        let mut input_module_identities = by_identity.keys().cloned().collect::<Vec<_>>();
+        input_module_identities.sort();
+        let entry_module_identities = entries
+            .iter()
+            .map(|module| module.identity.clone())
+            .collect();
 
         for module in by_identity.values() {
             let mut previous_offset = 0;
@@ -86,6 +135,11 @@ impl Linker {
             contexts: HashMap::new(),
             visiting: HashSet::new(),
             expanded: HashSet::new(),
+            input_module_identities,
+            entry_module_identities,
+            input_instruction_count,
+            input_dependency_count,
+            expansion_order: Vec::new(),
             constants: Vec::new(),
             names: Vec::new(),
             main: FunctionBody {
@@ -127,6 +181,7 @@ impl Linker {
         if !self.visiting.insert(identity.to_string()) {
             return Err(format!("module dependency cycle at `{}`", identity));
         }
+        self.expansion_order.push(identity.to_string());
 
         let module = self
             .modules
@@ -198,42 +253,48 @@ impl Linker {
         Ok(())
     }
 
-    fn finish(mut self) -> Result<Program, String> {
-        let mut entries = self
-            .modules
-            .values()
-            .filter(|module| module.is_entry)
-            .map(|module| {
-                (
-                    module.entry_order.expect("validated entry order"),
-                    module.identity.clone(),
-                )
-            })
-            .collect::<Vec<_>>();
-        entries.sort_by_key(|(order, _)| *order);
-        for (_, identity) in entries {
+    fn finish(mut self) -> Result<LinkResult, String> {
+        for identity in self.entry_module_identities.clone() {
             self.expand(&identity)?;
         }
-        Ok(Program {
+
+        let report = LinkReport {
+            input_module_identities: self.input_module_identities.clone(),
+            entry_module_identities: self.entry_module_identities.clone(),
+            expanded_module_order: self.expansion_order.clone(),
+            input_instruction_count: self.input_instruction_count,
+            input_dependency_count: self.input_dependency_count,
+            linked_instruction_count: self.main.instructions.len(),
+            linked_function_count: self.functions.len(),
+            linked_constant_count: self.constants.len(),
+            linked_name_count: self.names.len(),
+            linked_debug_source_count: self.debug_sources.len(),
+        };
+        let program = Program {
             constants: self.constants,
             names: self.names,
             main: self.main,
             functions: self.functions,
             debug_sources: self.debug_sources,
-        })
+        };
+        Ok(LinkResult { program, report })
     }
 }
 
-pub fn link_modules(modules: Vec<ModuleArtifact>) -> Result<Program, String> {
-    let program = Linker::new(modules)?.finish()?;
-    verify_program(&program)
+pub fn link_modules_with_report(modules: Vec<ModuleArtifact>) -> Result<LinkResult, String> {
+    let result = Linker::new(modules)?.finish()?;
+    verify_program(&result.program)
         .map_err(|error| format!("linked program verification failed: {}", error))?;
-    Ok(program)
+    Ok(result)
+}
+
+pub fn link_modules(modules: Vec<ModuleArtifact>) -> Result<Program, String> {
+    link_modules_with_report(modules).map(|result| result.program)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::link_modules;
+    use super::{link_modules, link_modules_with_report};
     use crate::bytecode::{FunctionBody, Program};
     use crate::format::{ModuleArtifact, ModuleDependency, ModuleDependencyKind};
 
@@ -248,6 +309,32 @@ mod tests {
             },
             functions: Vec::new(),
             debug_sources: Vec::new(),
+        }
+    }
+
+    fn dependency(identity: &str) -> ModuleDependency {
+        ModuleDependency {
+            identity: identity.to_string(),
+            kind: ModuleDependencyKind::Import,
+            instruction_offset: 0,
+            requested_path: format!("./{}.cd", identity),
+        }
+    }
+
+    fn module(
+        identity: &str,
+        is_entry: bool,
+        entry_order: Option<usize>,
+        dependencies: Vec<ModuleDependency>,
+    ) -> ModuleArtifact {
+        ModuleArtifact {
+            identity: identity.to_string(),
+            path: format!("{}.cd", identity),
+            canonical_path: format!("{}.cd", identity),
+            is_entry,
+            entry_order,
+            dependencies,
+            program: empty_program(),
         }
     }
 
@@ -271,13 +358,39 @@ mod tests {
     }
 
     #[test]
+    fn reports_deterministic_diamond_expansion_and_link_sizes() {
+        let shared = module("shared", false, None, Vec::new());
+        let left = module("left", false, None, vec![dependency("shared")]);
+        let right = module("right", false, None, vec![dependency("shared")]);
+        let entry = module(
+            "entry",
+            true,
+            Some(0),
+            vec![dependency("left"), dependency("right")],
+        );
+
+        let result = link_modules_with_report(vec![right, shared, entry, left])
+            .expect("diamond modules should link");
+        assert_eq!(
+            result.report.input_module_identities,
+            vec!["entry", "left", "right", "shared"]
+        );
+        assert_eq!(result.report.entry_module_identities, vec!["entry"]);
+        assert_eq!(
+            result.report.expanded_module_order,
+            vec!["entry", "left", "shared", "right"]
+        );
+        assert_eq!(result.report.input_instruction_count, 0);
+        assert_eq!(result.report.input_dependency_count, 4);
+        assert_eq!(result.report.linked_instruction_count, 0);
+        assert_eq!(result.report.linked_function_count, 0);
+        assert_eq!(result.report.linked_constant_count, 0);
+        assert_eq!(result.report.linked_name_count, 0);
+        assert_eq!(result.report.linked_debug_source_count, 0);
+    }
+
+    #[test]
     fn rejects_module_dependency_cycle_deterministically() {
-        let dependency = |identity: &str| ModuleDependency {
-            identity: identity.to_string(),
-            kind: ModuleDependencyKind::Import,
-            instruction_offset: 0,
-            requested_path: format!("./{}.cd", identity),
-        };
         let entry = ModuleArtifact {
             identity: "entry".to_string(),
             path: "entry.cd".to_string(),
