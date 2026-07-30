@@ -2,9 +2,9 @@
 
 Date: 2026-07-30
 
-Status: design proposal; the CFG foundation, SSA structural shell, and
-deterministic dominance analysis described below are implemented on the feature
-branch, while dominance-based SSA construction and optimization remain
+Status: design proposal; the CFG foundation, SSA structural shell,
+deterministic dominance analysis, and phi placement described below are
+implemented on the feature branch, while SSA renaming and optimization remain
 unadmitted. This document expands
 [`M7-IR-SSA-001`](../../decisions/m7-ir-ssa-optimization-001.md); it does not
 authorize implementation by itself.
@@ -121,6 +121,15 @@ an ordinary CFG node; predecessor edges from unreachable blocks do not
 contribute to its or any other frontier. The result is verified against CFG
 reachability, idom-tree, and frontier invariants before it is exposed to later
 SSA construction.
+
+## Phi placement slice
+
+The current branch applies iterated dominance-frontier placement to
+block-level definition sites supplied by a future IR lowering boundary. Only
+`Local` memory slots are eligible. Definitions from unreachable blocks are
+ignored, synthetic exit blocks are never placement targets, and returned
+placements are sorted by slot ID and block ID. This slice deliberately stops
+before SSA value allocation, incoming-value filling, or renaming.
 
 ## SSA construction
 

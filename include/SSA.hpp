@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ControlFlowGraph.hpp"
+#include "Dominance.hpp"
 
 #include <cstddef>
 #include <optional>
@@ -26,6 +27,18 @@ struct SSAMemorySlot {
     SSAMemoryStorage storage = SSAMemoryStorage::Unknown;
 
     bool canPromote() const;
+};
+
+// A block-level write site collected by the future IR lowering boundary. The
+// current phi-placement slice intentionally does not inspect IR instructions.
+struct SSAMemoryDefinition {
+    SSAMemorySlotId slot = 0;
+    CFGBlockId block = 0;
+};
+
+struct SSAPhiPlacement {
+    SSAMemorySlotId slot = 0;
+    CFGBlockId block = 0;
 };
 
 struct SSAIncoming {
@@ -83,3 +96,13 @@ struct SSAFunction {
 };
 
 SSAFunction makeSSAFunction(const ControlFlowGraph& cfg);
+
+// Place phis for promotable local slots using iterated dominance frontiers.
+// Definitions in unreachable blocks are ignored, and synthetic exit blocks
+// never receive values. This returns placement metadata only; it does not
+// allocate SSA values, fill incoming operands, or rename uses.
+std::vector<SSAPhiPlacement> placePromotableMemoryPhis(
+    const ControlFlowGraph& cfg,
+    const DominanceInfo& dominance,
+    const std::vector<SSAMemorySlot>& memorySlots,
+    const std::vector<SSAMemoryDefinition>& definitions);

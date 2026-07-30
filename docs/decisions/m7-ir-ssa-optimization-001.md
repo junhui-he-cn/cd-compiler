@@ -1,9 +1,9 @@
 # M7-IR-SSA-001: internal SSA and optimization boundary
 
 Status: proposed overall on `feat/ssa-optimization-design`. The CFG
-foundation, SSA structural shell, and deterministic dominance-analysis
-sub-slices are implemented on this branch; dominance-based SSA construction
-and optimization remain unadmitted.
+foundation, SSA structural shell, deterministic dominance-analysis, and
+phi-placement sub-slices are implemented on this branch; SSA renaming and
+optimization remain unadmitted.
 
 ## Question
 
@@ -230,8 +230,8 @@ The branch also implements the SSA structural shell in `include/SSA.hpp` and
 `src/SSA.cpp`: value IDs, ordered phi incoming records, entry parameters,
 conservative memory-slot storage classes, CFG/SSA block alignment, duplicate
 definition and undefined-use checks, and phi predecessor completeness/order
-validation. It does not yet perform automatic phi insertion, renaming, de-SSA,
-or optimization.
+validation. It does not yet allocate SSA values, fill phi incoming values,
+rename definitions and uses, de-SSA, or optimize.
 
 The branch also implements deterministic dominance analysis in
 `include/Dominance.hpp` and `src/Dominance.cpp`: reachable-subgraph dominator
@@ -239,6 +239,13 @@ sets, immediate-dominator tree children, and dominance frontiers. Unreachable
 blocks have no dominance metadata; reachable synthetic exit blocks participate
 normally, and unreachable predecessor edges are excluded from frontier
 calculation. This slice does not place phis or rename SSA values.
+
+The branch also implements iterated dominance-frontier phi placement through
+`placePromotableMemoryPhis`. It accepts block-level definition sites supplied
+by a future IR lowering boundary, places phis only for `Local` slots, ignores
+unreachable definitions, and never places values in the synthetic exit block.
+The result is placement metadata ordered by slot and block; SSA value
+allocation, incoming-value filling, and renaming remain later slices.
 
 ## Non-goals
 

@@ -1,6 +1,7 @@
 #include "SSA.hpp"
 
 #include <algorithm>
+#include <set>
 #include <unordered_map>
 #include <utility>
 
@@ -138,5 +139,77 @@ SSAFunction makeSSAFunction(const ControlFlowGraph& cfg)
             {}});
     }
     result.verify(cfg);
+    return result;
+}
+
+std::vector<SSAPhiPlacement> placePromotableMemoryPhis(
+    const ControlFlowGraph& cfg,
+    const DominanceInfo& dominance,
+    const std::vector<SSAMemorySlot>& memorySlots,
+    const std::vector<SSAMemoryDefinition>& definitions)
+{
+    cfg.verify();
+    dominance.verify(cfg);
+
+    for (SSAMemorySlotId id = 0; id < memorySlots.size(); ++id) {
+        const SSAMemorySlot& slot = memorySlots[id];
+        if (slot.id != id) {
+            throw SSAError("SSA memory slot IDs are not deterministic");
+        }
+        if (slot.name.empty()) {
+            throw SSAError("SSA memory slot name cannot be empty");
+        }
+    }
+
+    std::vector<std::set<CFGBlockId>> definitionBlocks(memorySlots.size());
+    for (const SSAMemoryDefinition& definition : definitions) {
+        if (definition.slot >= memorySlots.size()) {
+            throw SSAError("SSA memory definition references an invalid slot");
+        }
+        if (definition.block >= cfg.blocks.size()) {
+            throw SSAError("SSA memory definition references an invalid block");
+        }
+        const SSAMemorySlot& slot = memorySlots[definition.slot];
+        const CFGBlock& block = cfg.blocks[definition.block];
+        if (!slot.canPromote() || !block.reachable || block.syntheticExit) {
+            continue;
+        }
+        definitionBlocks[definition.slot].insert(definition.block);
+    }
+
+    std::vector<SSAPhiPlacement> result;
+    for (SSAMemorySlotId slot = 0; slot < memorySlots.size(); ++slot) {
+        if (!memorySlots[slot].canPromote()) {
+            continue;
+        }
+
+        std::set<CFGBlockId> worklist = definitionBlocks[slot];
+        std::set<CFGBlockId> processed;
+        std::set<CFGBlockId> phiBlocks;
+        while (!worklist.empty()) {
+            const CFGBlockId definitionBlock = *worklist.begin();
+            worklist.erase(worklist.begin());
+            if (!processed.insert(definitionBlock).second) {
+                continue;
+            }
+
+            for (const CFGBlockId frontierBlock :
+                 dominance.dominanceFrontiers[definitionBlock]) {
+                const CFGBlock& block = cfg.blocks[frontierBlock];
+                if (!block.reachable || block.syntheticExit) {
+                    continue;
+                }
+                if (phiBlocks.insert(frontierBlock).second
+                    && definitionBlocks[slot].find(frontierBlock)
+                        == definitionBlocks[slot].end()) {
+                    worklist.insert(frontierBlock);
+                }
+            }
+        }
+
+        for (const CFGBlockId block : phiBlocks) {
+            result.push_back(SSAPhiPlacement{slot, block});
+        }
+    }
     return result;
 }

@@ -11,11 +11,12 @@ promotion behind explicit follow-up decisions.
 
 ## Sequence
 
-Current progress: the CFG foundation, SSA structural-shell, and deterministic
-dominance-analysis slices in steps 2-3 are implemented on
+Current progress: the CFG foundation, SSA structural-shell, deterministic
+dominance-analysis, and phi-placement slices in steps 2-3 are implemented on
 `feat/ssa-optimization-design` and covered by `ctest.control_flow_graph`,
-`ctest.ssa`, and `ctest.dominance`. Automatic phi insertion, SSA renaming, O1
-passes, and later work remain future implementation slices.
+`ctest.ssa`, `ctest.dominance`, and `ctest.ssa_phi_placement`. SSA value
+allocation, incoming-value filling, SSA renaming, O1 passes, and later work
+remain future implementation slices.
 
 ### 1. Freeze the baseline and internal contracts
 

@@ -38,7 +38,6 @@
     "test_case_id": "ctest.ssa",
     "not_included": [
       "SSA renaming",
-      "automatic phi insertion",
       "de-SSA",
       "optimization passes"
     ]
@@ -53,7 +52,23 @@
     ],
     "test_case_id": "ctest.dominance",
     "not_included": [
-      "automatic phi insertion",
+      "SSA renaming",
+      "de-SSA",
+      "optimization passes"
+    ]
+  },
+  "phi_placement_slice": {
+    "status": "implemented_on_feature_branch",
+    "capabilities": [
+      "iterated dominance-frontier placement for local memory slots",
+      "block-level definition input contract",
+      "unreachable and synthetic-exit exclusion",
+      "deterministic slot/block placement ordering"
+    ],
+    "test_case_id": "ctest.ssa_phi_placement",
+    "not_included": [
+      "SSA value allocation",
+      "phi incoming value filling",
       "SSA renaming",
       "de-SSA",
       "optimization passes"
