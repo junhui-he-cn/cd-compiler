@@ -9,6 +9,7 @@ use crate::runtime::{HeapObjectKind, HeapStats};
 use crate::value::Value;
 use std::collections::BTreeMap;
 use std::fmt;
+use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -430,6 +431,44 @@ mod tests {
             }],
             debug_sources: Vec::new(),
         }
+    }
+
+    #[test]
+    fn function_bodies_are_lazily_cached_between_calls() {
+        let program = recursive_closure_program(2);
+        let mut vm = VM::new(&program);
+        assert!(vm.function_body_cache[0].is_none());
+
+        let invoke = |vm: &mut VM<'_>| {
+            vm.call_function(
+                FunctionValue {
+                    name: "recurse".to_string(),
+                    function_index: 0,
+                    arity: 1,
+                    identity: 0,
+                    closure: vm.heap.new_environment(),
+                },
+                vec![Value::number(2.0)],
+                "main".to_string(),
+                None,
+            )
+            .expect("recursive function call should complete")
+        };
+
+        let first_result = invoke(&mut vm);
+        let first_body = vm.function_body_cache[0]
+            .as_ref()
+            .expect("first call should populate the function body cache")
+            .clone();
+        let second_result = invoke(&mut vm);
+        let second_body = vm.function_body_cache[0]
+            .as_ref()
+            .expect("second call should retain the function body cache")
+            .clone();
+
+        assert_eq!(first_result.to_string(), "0");
+        assert_eq!(second_result.to_string(), "0");
+        assert!(Rc::ptr_eq(&first_body, &second_body));
     }
 
     #[test]
@@ -2070,11 +2109,18 @@ struct Frame {
     function_index: Option<usize>,
 }
 
+struct CachedFunctionBody {
+    name: String,
+    params: Vec<String>,
+    body: FunctionBody,
+}
+
 pub struct VM<'a> {
     program: &'a Program,
     config: RunConfig,
     heap: Heap,
     globals: SharedEnvironment,
+    function_body_cache: Vec<Option<Rc<CachedFunctionBody>>>,
     output: String,
     instruction_steps: usize,
     call_depth: usize,
@@ -2106,6 +2152,7 @@ impl<'a> VM<'a> {
             config,
             heap,
             globals,
+            function_body_cache: vec![None; program.functions.len()],
             output: String::new(),
             instruction_steps: 0,
             call_depth: 0,
@@ -2922,6 +2969,32 @@ impl<'a> VM<'a> {
         captured
     }
 
+    fn cached_function_body(&mut self, function_index: usize) -> Option<Rc<CachedFunctionBody>> {
+        if let Some(cached) = self
+            .function_body_cache
+            .get(function_index)
+            .and_then(Option::as_ref)
+        {
+            return Some(Rc::clone(cached));
+        }
+
+        let cached = {
+            let function = self.program.functions.get(function_index)?;
+            Rc::new(CachedFunctionBody {
+                name: function.name.clone(),
+                params: function.params.clone(),
+                body: FunctionBody {
+                    registers: function.registers,
+                    instructions: function.instructions.clone(),
+                    locations: function.locations.clone(),
+                },
+            })
+        };
+        let slot = self.function_body_cache.get_mut(function_index)?;
+        *slot = Some(Rc::clone(&cached));
+        Some(cached)
+    }
+
     fn make_function(
         &mut self,
         function_index: usize,
@@ -2951,20 +3024,17 @@ impl<'a> VM<'a> {
         caller: String,
         call_site: Option<DebugLocation>,
     ) -> Result<Value, RuntimeError> {
-        let Some(bytecode_function) = self.program.functions.get(function.function_index) else {
+        let Some(cached) = self.cached_function_body(function.function_index) else {
             let mut error = RuntimeError::new("function index out of range");
             error.location = call_site.clone();
             error.push_frame(caller, call_site);
             return Err(error);
         };
-        let params = bytecode_function.params.clone();
-        let registers = bytecode_function.registers;
-        let instructions = bytecode_function.instructions.clone();
 
-        if arguments.len() != params.len() {
+        if arguments.len() != cached.params.len() {
             let mut error = RuntimeError::new(format!(
                 "expected {} arguments but got {}",
-                params.len(),
+                cached.params.len(),
                 arguments.len()
             ));
             error.location = call_site.clone();
@@ -2976,11 +3046,11 @@ impl<'a> VM<'a> {
 
         let mut frame = Frame {
             ip: 0,
-            registers: vec![Value::Nil; registers],
+            registers: vec![Value::Nil; cached.body.registers],
             locals: self.heap.new_environment(),
             closure: function.closure.clone(),
             is_main: false,
-            function: bytecode_function.name.clone(),
+            function: cached.name.clone(),
             function_index: Some(function.function_index),
         };
 
@@ -2988,16 +3058,11 @@ impl<'a> VM<'a> {
             frame
                 .locals
                 .borrow_mut()
-                .insert(params[index].clone(), self.heap.new_cell(argument));
+                .insert(cached.params[index].clone(), self.heap.new_cell(argument));
         }
 
-        let body = FunctionBody {
-            registers,
-            instructions,
-            locations: bytecode_function.locations.clone(),
-        };
         self.call_depth += 1;
-        let result = self.execute_body(&body, &mut frame);
+        let result = self.execute_body(&cached.body, &mut frame);
         self.call_depth -= 1;
         match result {
             Ok(result) => Ok(result.unwrap_or(Value::Nil)),
