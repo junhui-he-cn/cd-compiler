@@ -2332,7 +2332,9 @@ impl<'a> VM<'a> {
     ) -> Result<Option<Value>, RuntimeError> {
         frame.ip = 0;
         self.profile_function_entry(frame);
-        self.trace_enter(frame, body.locations.first().cloned().flatten());
+        if self.trace_enabled {
+            self.trace_enter(frame, body.locations.first().cloned().flatten());
+        }
         while frame.ip < body.instructions.len() {
             let instruction_index = frame.ip;
             // The default `run` path has no observability consumer. Avoid
@@ -2366,13 +2368,15 @@ impl<'a> VM<'a> {
                     let mut output = value.to_string();
                     output.push('\n');
                     self.append_output(&output)?;
-                    self.emit_trace(
-                        TraceEventKind::Output,
-                        frame,
-                        Some(instruction_index),
-                        body.locations.get(instruction_index).cloned().flatten(),
-                        Some(value.to_string()),
-                    );
+                    if self.trace_enabled {
+                        self.emit_trace(
+                            TraceEventKind::Output,
+                            frame,
+                            Some(instruction_index),
+                            body.locations.get(instruction_index).cloned().flatten(),
+                            Some(value.to_string()),
+                        );
+                    }
                 }
                 Instruction::MakeFunction { dest, function } => {
                     let value = self.make_function(*function, frame)?;
@@ -2682,14 +2686,16 @@ impl<'a> VM<'a> {
             self.heap.observe_estimated_bytes();
             match result {
                 Ok(Some(value)) => {
-                    self.emit_trace(
-                        TraceEventKind::Return,
-                        frame,
-                        Some(instruction_index),
-                        body.locations.get(instruction_index).cloned().flatten(),
-                        Some(value.to_string()),
-                    );
-                    self.trace_leave(frame, Some(instruction_index), Some(value.to_string()));
+                    if self.trace_enabled {
+                        self.emit_trace(
+                            TraceEventKind::Return,
+                            frame,
+                            Some(instruction_index),
+                            body.locations.get(instruction_index).cloned().flatten(),
+                            Some(value.to_string()),
+                        );
+                        self.trace_leave(frame, Some(instruction_index), Some(value.to_string()));
+                    }
                     return Ok(Some(value));
                 }
                 Ok(None) => {
@@ -2722,19 +2728,23 @@ impl<'a> VM<'a> {
                             return Err(RuntimeError::debug_quit());
                         }
                     }
-                    self.emit_trace(
-                        TraceEventKind::Error,
-                        frame,
-                        Some(instruction_index),
-                        body.locations.get(instruction_index).cloned().flatten(),
-                        Some(error.message.clone()),
-                    );
-                    self.trace_leave(frame, Some(instruction_index), None);
+                    if self.trace_enabled {
+                        self.emit_trace(
+                            TraceEventKind::Error,
+                            frame,
+                            Some(instruction_index),
+                            body.locations.get(instruction_index).cloned().flatten(),
+                            Some(error.message.clone()),
+                        );
+                        self.trace_leave(frame, Some(instruction_index), None);
+                    }
                     return Err(error);
                 }
             }
         }
-        self.trace_leave(frame, body.instructions.len().checked_sub(1), None);
+        if self.trace_enabled {
+            self.trace_leave(frame, body.instructions.len().checked_sub(1), None);
+        }
         Ok(None)
     }
 
