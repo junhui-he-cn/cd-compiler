@@ -793,6 +793,128 @@
       "fixture": "tests/bytecode_artifacts/array_reduce_shadowing"
     },
     {
+      "case_id": "artifact.benchmark_execution_closure.emit",
+      "runner": "artifact",
+      "result_name": "benchmark_execution_closure emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "artifact",
+        "cdbc",
+        "emit",
+        "fixture:benchmark_execution_closure"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "cdbc-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/bytecode_artifacts/benchmark_execution_closure/input.cd"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/benchmark_execution_closure/expected.cdbc"
+      ],
+      "fixture": "tests/bytecode_artifacts/benchmark_execution_closure"
+    },
+    {
+      "case_id": "artifact.benchmark_execution_closure.rust_dump",
+      "runner": "artifact",
+      "result_name": "benchmark_execution_closure rust-dump",
+      "stage": "artifact-parse",
+      "capability_tags": [
+        "artifact",
+        "cdbc",
+        "rust-parser",
+        "fixture:benchmark_execution_closure"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "cdbc-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode"
+      ],
+      "terminal_boundary": "rust_decode",
+      "sources": [
+        "tests/bytecode_artifacts/benchmark_execution_closure/input.cd"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/benchmark_execution_closure/expected.cdbc"
+      ],
+      "fixture": "tests/bytecode_artifacts/benchmark_execution_closure"
+    },
+    {
+      "case_id": "artifact.benchmark_execution_loop.emit",
+      "runner": "artifact",
+      "result_name": "benchmark_execution_loop emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "artifact",
+        "cdbc",
+        "emit",
+        "fixture:benchmark_execution_loop"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "cdbc-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/bytecode_artifacts/benchmark_execution_loop/input.cd"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/benchmark_execution_loop/expected.cdbc"
+      ],
+      "fixture": "tests/bytecode_artifacts/benchmark_execution_loop"
+    },
+    {
+      "case_id": "artifact.benchmark_execution_loop.rust_dump",
+      "runner": "artifact",
+      "result_name": "benchmark_execution_loop rust-dump",
+      "stage": "artifact-parse",
+      "capability_tags": [
+        "artifact",
+        "cdbc",
+        "rust-parser",
+        "fixture:benchmark_execution_loop"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "cdbc-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode"
+      ],
+      "terminal_boundary": "rust_decode",
+      "sources": [
+        "tests/bytecode_artifacts/benchmark_execution_loop/input.cd"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/benchmark_execution_loop/expected.cdbc"
+      ],
+      "fixture": "tests/bytecode_artifacts/benchmark_execution_loop"
+    },
+    {
       "case_id": "artifact.collection_helpers.emit",
       "runner": "artifact",
       "result_name": "collection_helpers emit",
@@ -31530,6 +31652,130 @@
         "tests/bytecode_artifacts/array_reduce_shadowing/run.out"
       ],
       "fixture": "tests/bytecode_artifacts/array_reduce_shadowing"
+    },
+    {
+      "case_id": "rust_vm.artifact.benchmark_execution_closure.emit",
+      "runner": "rust_vm_artifact",
+      "result_name": "benchmark_execution_closure emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "artifact",
+        "emit",
+        "fixture:benchmark_execution_closure"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/bytecode_artifacts/benchmark_execution_closure/input.cd"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/benchmark_execution_closure/run.out"
+      ],
+      "fixture": "tests/bytecode_artifacts/benchmark_execution_closure"
+    },
+    {
+      "case_id": "rust_vm.artifact.benchmark_execution_closure.run",
+      "runner": "rust_vm_artifact",
+      "result_name": "benchmark_execution_closure rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "artifact",
+        "runtime",
+        "fixture:benchmark_execution_closure"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/bytecode_artifacts/benchmark_execution_closure/input.cd"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/benchmark_execution_closure/run.out"
+      ],
+      "fixture": "tests/bytecode_artifacts/benchmark_execution_closure"
+    },
+    {
+      "case_id": "rust_vm.artifact.benchmark_execution_loop.emit",
+      "runner": "rust_vm_artifact",
+      "result_name": "benchmark_execution_loop emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "artifact",
+        "emit",
+        "fixture:benchmark_execution_loop"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/bytecode_artifacts/benchmark_execution_loop/input.cd"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/benchmark_execution_loop/run.out"
+      ],
+      "fixture": "tests/bytecode_artifacts/benchmark_execution_loop"
+    },
+    {
+      "case_id": "rust_vm.artifact.benchmark_execution_loop.run",
+      "runner": "rust_vm_artifact",
+      "result_name": "benchmark_execution_loop rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "artifact",
+        "runtime",
+        "fixture:benchmark_execution_loop"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/bytecode_artifacts/benchmark_execution_loop/input.cd"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/benchmark_execution_loop/run.out"
+      ],
+      "fixture": "tests/bytecode_artifacts/benchmark_execution_loop"
     },
     {
       "case_id": "rust_vm.artifact.collection_helpers.emit",

@@ -787,8 +787,9 @@ python3 tests/run_verification_matrix.py --mode reuse ./build/compiler_design vm
 
 The independent benchmark runner measures compiler, module-link, artifact-load,
 and already-built Rust VM execution time separately. It covers startup/load,
-calls/closures, collections, callbacks, Unicode, module linking, and an
-expected runtime-error path. Build the VM executable once, then run:
+calls/closures, scaled interpreter loops, collections, callbacks, Unicode,
+module linking, and an expected runtime-error path. Build the VM executable
+once, then run:
 
 ```sh
 cargo build --manifest-path vm-rs/Cargo.toml

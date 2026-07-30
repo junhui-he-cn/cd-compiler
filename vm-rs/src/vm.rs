@@ -2288,14 +2288,27 @@ impl<'a> VM<'a> {
         self.trace_enter(frame, body.locations.first().cloned().flatten());
         while frame.ip < body.instructions.len() {
             let instruction_index = frame.ip;
-            let location = body.locations.get(instruction_index).cloned().flatten();
-            self.trace_instruction(frame, instruction_index, location.clone());
-            self.debug_instruction(frame, instruction_index, location.clone())?;
+            // The default `run` path has no observability consumer. Avoid
+            // cloning a source location and calling no-op hooks on every
+            // instruction; diagnostics reconstruct the location on failure.
+            let needs_location =
+                self.trace_enabled || self.debug_hook.is_some() || self.profile_enabled;
+            let location = needs_location
+                .then(|| body.locations.get(instruction_index).cloned().flatten())
+                .flatten();
+            if self.trace_enabled {
+                self.trace_instruction(frame, instruction_index, location.clone());
+            }
+            if self.debug_hook.is_some() {
+                self.debug_instruction(frame, instruction_index, location.clone())?;
+            }
             let instruction = &body.instructions[instruction_index];
             let mut jumped = false;
             let result = (|| -> Result<Option<Value>, RuntimeError> {
                 self.checkpoint_instruction()?;
-                self.profile_instruction(frame, location.as_ref());
+                if self.profile_enabled {
+                    self.profile_instruction(frame, location.as_ref());
+                }
                 match instruction {
                 Instruction::Constant { dest, constant } => {
                     let value = self.constant_value(*constant)?;

@@ -42,6 +42,8 @@ The checked-in manifest covers:
 - startup and standalone artifact load (`artifact_load`);
 - arithmetic/control flow (`arithmetic`);
 - calls and closure capture (`call_closure`);
+- scaled closure calls (`execution_closure`) and arithmetic dispatch
+  (`execution_loop`);
 - array callback helpers and map mutation/iteration;
 - native math and Unicode strings;
 - independent module emission, linking, load, and execution (`module_link`);
@@ -60,4 +62,6 @@ compile/link/load/runtime samples and min/median/max seconds for each phase,
 the commit and executable paths, manifest revision, expected-output digests,
 host/toolchain metadata, command templates, and validation flags. Timings are
 not compared against a baseline and do not create a CI performance gate in
-this slice; correctness failures still return non-zero.
+this slice; correctness failures still return non-zero. The two scaled
+workloads deliberately run hundreds of thousands to millions of instructions
+so VM execution changes can be compared separately from process startup.

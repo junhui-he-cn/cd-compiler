@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "benchmark_revision": "bench-2026-07-30-r2",
+  "benchmark_revision": "bench-2026-07-30-r3",
   "default_repeat": 3,
   "workloads": [
     {
@@ -42,6 +42,26 @@
         "tests/bytecode_artifacts/collection_helpers/input.cd"
       ],
       "expected_output": "tests/bytecode_artifacts/collection_helpers/run.out"
+    },
+    {
+      "workload_id": "execution_closure",
+      "description": "Scaled closure calls and captured-cell reads.",
+      "artifact_mode": "linked",
+      "execution": "success",
+      "sources": [
+        "tests/bytecode_artifacts/benchmark_execution_closure/input.cd"
+      ],
+      "expected_output": "tests/bytecode_artifacts/benchmark_execution_closure/run.out"
+    },
+    {
+      "workload_id": "execution_loop",
+      "description": "Scaled arithmetic loop for instruction-dispatch measurement.",
+      "artifact_mode": "linked",
+      "execution": "success",
+      "sources": [
+        "tests/bytecode_artifacts/benchmark_execution_loop/input.cd"
+      ],
+      "expected_output": "tests/bytecode_artifacts/benchmark_execution_loop/run.out"
     },
     {
       "workload_id": "maps",

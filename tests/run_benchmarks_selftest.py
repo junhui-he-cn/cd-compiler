@@ -22,6 +22,12 @@ class BenchmarkRunnerTests(unittest.TestCase):
         self.assertEqual(
             run_benchmarks.validate_manifest(self.manifest, self.repo_root), []
         )
+        workload_ids = {
+            str(workload["workload_id"]) for workload in self.manifest["workloads"]
+        }
+        self.assertTrue(
+            {"execution_closure", "execution_loop"}.issubset(workload_ids)
+        )
 
     def test_validation_rejects_duplicate_and_unsorted_workloads(self) -> None:
         changed = copy.deepcopy(self.manifest)

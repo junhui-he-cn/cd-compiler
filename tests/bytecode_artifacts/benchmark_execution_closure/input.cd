@@ -1,0 +1,15 @@
+fun makeAdder(offset) {
+  fun add(value) {
+    return value + offset;
+  }
+  return add;
+}
+
+let add = makeAdder(1);
+let i = 0;
+let total = 0;
+while i < 50000 {
+  total = add(total);
+  i = i + 1;
+}
+print total;
