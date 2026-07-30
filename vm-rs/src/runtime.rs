@@ -4,15 +4,16 @@ use crate::value::Value;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
+use std::ops::Deref;
 use std::rc::Rc;
 use std::rc::Weak;
 
-pub type Cell = Rc<RefCell<Value>>;
+pub type Cell = Rc<TrackedStorage<Value>>;
 pub type Environment = HashMap<String, Cell>;
-pub type SharedEnvironment = Rc<RefCell<Environment>>;
-pub type SharedArrayElements = Rc<RefCell<Vec<Value>>>;
-pub type SharedMapEntries = Rc<RefCell<Vec<(Value, Value)>>>;
-pub type SharedStructFields = Rc<RefCell<Vec<(String, Value)>>>;
+pub type SharedEnvironment = Rc<TrackedStorage<Environment>>;
+pub type SharedArrayElements = Rc<TrackedStorage<Vec<Value>>>;
+pub type SharedMapEntries = Rc<TrackedStorage<Vec<(Value, Value)>>>;
+pub type SharedStructFields = Rc<TrackedStorage<Vec<(String, Value)>>>;
 
 #[derive(Clone, Debug)]
 pub struct FunctionValue {
@@ -93,6 +94,7 @@ pub struct HeapStatsSnapshot {
     pub total_allocations: usize,
     pub total_live: usize,
     pub total_dead: usize,
+    pub peak_live: usize,
 }
 
 impl HeapStatsSnapshot {
@@ -114,11 +116,11 @@ impl HeapStats {
 
 #[derive(Debug)]
 enum WeakAllocation {
-    Environment(Weak<RefCell<Environment>>),
-    Cell(Weak<RefCell<Value>>),
-    Array(Weak<RefCell<Vec<Value>>>),
-    Map(Weak<RefCell<Vec<(Value, Value)>>>),
-    Struct(Weak<RefCell<Vec<(String, Value)>>>),
+    Environment(Weak<TrackedStorage<Environment>>),
+    Cell(Weak<TrackedStorage<Value>>),
+    Array(Weak<TrackedStorage<Vec<Value>>>),
+    Map(Weak<TrackedStorage<Vec<(Value, Value)>>>),
+    Struct(Weak<TrackedStorage<Vec<(String, Value)>>>),
 }
 
 impl WeakAllocation {
@@ -131,26 +133,29 @@ impl WeakAllocation {
             Self::Struct(_) => HeapObjectKind::Struct,
         }
     }
-
-    fn is_live(&self) -> bool {
-        match self {
-            Self::Environment(value) => value.strong_count() != 0,
-            Self::Cell(value) => value.strong_count() != 0,
-            Self::Array(value) => value.strong_count() != 0,
-            Self::Map(value) => value.strong_count() != 0,
-            Self::Struct(value) => value.strong_count() != 0,
-        }
-    }
 }
 
 #[derive(Debug, Default)]
 struct HeapLedger {
     allocations: Vec<WeakAllocation>,
+    live: [usize; HeapObjectKind::COUNT],
+    peak_live: usize,
 }
 
 impl HeapLedger {
     fn record(&mut self, allocation: WeakAllocation) {
+        let kind = allocation.kind();
         self.allocations.push(allocation);
+        self.live[kind.index()] += 1;
+        self.peak_live = self.live.iter().sum::<usize>().max(self.peak_live);
+    }
+
+    fn release(&mut self, kind: HeapObjectKind) {
+        let live = &mut self.live[kind.index()];
+        debug_assert!(*live > 0, "heap live counter underflow for {:?}", kind);
+        if *live > 0 {
+            *live -= 1;
+        }
     }
 
     fn snapshot(&self) -> HeapStatsSnapshot {
@@ -159,9 +164,9 @@ impl HeapLedger {
             let kind = allocation.kind();
             let stats = &mut by_kind[kind.index()];
             stats.allocations += 1;
-            if allocation.is_live() {
-                stats.live += 1;
-            }
+        }
+        for (index, stats) in by_kind.iter_mut().enumerate() {
+            stats.live = self.live[index];
         }
         for stats in &mut by_kind {
             stats.dead = stats.allocations - stats.live;
@@ -173,8 +178,54 @@ impl HeapLedger {
             total_allocations,
             total_live,
             total_dead: total_allocations - total_live,
+            peak_live: self.peak_live,
         }
     }
+}
+
+/// Shared mutable storage with a non-owning accounting token.
+///
+/// The `Rc` remains the alias/lifetime boundary. The token only holds a weak
+/// ledger reference, so accounting cannot keep storage alive or change cycle
+/// behavior.
+#[derive(Debug)]
+pub struct TrackedStorage<T> {
+    value: RefCell<T>,
+    ledger: Weak<RefCell<HeapLedger>>,
+    kind: HeapObjectKind,
+}
+
+impl<T> Deref for TrackedStorage<T> {
+    type Target = RefCell<T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
+}
+
+impl<T> Drop for TrackedStorage<T> {
+    fn drop(&mut self) {
+        if let Some(ledger) = self.ledger.upgrade() {
+            ledger.borrow_mut().release(self.kind);
+        }
+    }
+}
+
+fn tracked_storage<T>(
+    ledger: &Rc<RefCell<HeapLedger>>,
+    kind: HeapObjectKind,
+    value: T,
+    make_weak: impl FnOnce(Weak<TrackedStorage<T>>) -> WeakAllocation,
+) -> Rc<TrackedStorage<T>> {
+    let storage = Rc::new(TrackedStorage {
+        value: RefCell::new(value),
+        ledger: Rc::downgrade(ledger),
+        kind,
+    });
+    ledger
+        .borrow_mut()
+        .record(make_weak(Rc::downgrade(&storage)));
+    storage
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -225,19 +276,21 @@ impl Heap {
     }
 
     pub fn new_environment(&self) -> SharedEnvironment {
-        let environment = Rc::new(RefCell::new(HashMap::new()));
-        self.ledger
-            .borrow_mut()
-            .record(WeakAllocation::Environment(Rc::downgrade(&environment)));
-        environment
+        tracked_storage(
+            &self.ledger,
+            HeapObjectKind::Environment,
+            HashMap::new(),
+            WeakAllocation::Environment,
+        )
     }
 
     pub fn new_cell(&self, value: Value) -> Cell {
-        let cell = Rc::new(RefCell::new(value));
-        self.ledger
-            .borrow_mut()
-            .record(WeakAllocation::Cell(Rc::downgrade(&cell)));
-        cell
+        tracked_storage(
+            &self.ledger,
+            HeapObjectKind::Cell,
+            value,
+            WeakAllocation::Cell,
+        )
     }
 
     fn next_identity(counter: &mut usize) -> Result<usize, HeapError> {
@@ -265,10 +318,12 @@ impl Heap {
 
     pub fn allocate_array(&mut self, elements: Vec<Value>) -> Result<Value, HeapError> {
         let identity = Self::next_identity(&mut self.next_array_identity)?;
-        let elements = Rc::new(RefCell::new(elements));
-        self.ledger
-            .borrow_mut()
-            .record(WeakAllocation::Array(Rc::downgrade(&elements)));
+        let elements = tracked_storage(
+            &self.ledger,
+            HeapObjectKind::Array,
+            elements,
+            WeakAllocation::Array,
+        );
         Ok(Value::array(ArrayValue { identity, elements }))
     }
 
@@ -294,10 +349,12 @@ impl Heap {
     pub fn allocate_map(&mut self, entries: Vec<(Value, Value)>) -> Result<Value, HeapError> {
         let ordered = Self::normalize_map_entries(entries);
         let identity = Self::next_identity(&mut self.next_map_identity)?;
-        let entries = Rc::new(RefCell::new(ordered));
-        self.ledger
-            .borrow_mut()
-            .record(WeakAllocation::Map(Rc::downgrade(&entries)));
+        let entries = tracked_storage(
+            &self.ledger,
+            HeapObjectKind::Map,
+            ordered,
+            WeakAllocation::Map,
+        );
         Ok(Value::map(MapValue { identity, entries }))
     }
 
@@ -316,10 +373,12 @@ impl Heap {
         fields: Vec<(String, Value)>,
     ) -> Result<Value, HeapError> {
         let identity = Self::next_identity(&mut self.next_struct_identity)?;
-        let fields = Rc::new(RefCell::new(fields));
-        self.ledger
-            .borrow_mut()
-            .record(WeakAllocation::Struct(Rc::downgrade(&fields)));
+        let fields = tracked_storage(
+            &self.ledger,
+            HeapObjectKind::Struct,
+            fields,
+            WeakAllocation::Struct,
+        );
         Ok(Value::structure(StructValue {
             identity,
             type_name,
@@ -427,6 +486,7 @@ mod tests {
         assert_eq!(live.total_allocations, 5);
         assert_eq!(live.total_live, 5);
         assert_eq!(live.total_dead, 0);
+        assert_eq!(live.peak_live, 5);
         for kind in [
             HeapObjectKind::Environment,
             HeapObjectKind::Cell,
@@ -449,6 +509,7 @@ mod tests {
         assert_eq!(dead.total_allocations, 5);
         assert_eq!(dead.total_live, 0);
         assert_eq!(dead.total_dead, 5);
+        assert_eq!(dead.peak_live, 5);
         assert_eq!(
             dead.for_kind(HeapObjectKind::Array).dead,
             dead.for_kind(HeapObjectKind::Array).allocations
@@ -479,6 +540,7 @@ mod tests {
         assert_eq!(arrays.allocations, 2);
         assert_eq!(arrays.live, 1);
         assert_eq!(arrays.dead, 1);
+        assert_eq!(snapshot.peak_live, 2);
     }
 
     #[test]
@@ -499,6 +561,7 @@ mod tests {
         let cycle = stats.snapshot();
         assert_eq!(cycle.for_kind(HeapObjectKind::Environment).live, 1);
         assert_eq!(cycle.for_kind(HeapObjectKind::Cell).live, 1);
+        assert_eq!(cycle.peak_live, 2);
 
         *cell.borrow_mut() = Value::Nil;
         let broken = stats.snapshot();

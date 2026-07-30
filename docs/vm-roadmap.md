@@ -207,17 +207,25 @@ aggregate、cell/environment、identity equality、native 浅拷贝、callback �
 identity 分配、environment/cell 创建和 function/array/map/range/struct/variant
 构造；VM 的 globals、frame、capture、parameter 和 native allocation 路径已迁移，
 现有 `Rc<RefCell>` alias/equality/lifetime 语义保持不变。完整存储替换、root
-registry、cycle policy、GC 和 peak-memory measurement 仍未完成，详见
+registry、cycle policy、GC 和 host-byte peak-memory measurement 仍未完成，详见
 [`docs/decisions/vm-heap-facade-001.md`](decisions/vm-heap-facade-001.md)。
 
 **状态（测量窄切片已完成，2026-07-29）：** `HeapStats` ledger 现在通过只读
 `Weak` 记录报告 environment、cell、array、map 和 struct 的 allocation total、
 live/dead 数量；它不持有 VM root，也不通过 `Display` 遍历递归值。Rust 单测已
 覆盖 acyclic/cycle、closure cell/environment cycle、native temporary、runtime
-error 和 trace root release，当前 focused 结果为 `68/68`。function、range、
-variant 的 inline `Value` 生命周期、精确 peak、ledger compaction、GC、搬迁
-句柄和持久 host root 仍保持 deferred；下一步需要 workload 级 peak 测量和决策，
-而不是直接替换 `Rc<RefCell>`。
+error 和 trace root release，当前 focused 结果为 `69/69`。function、range、
+variant 的 inline `Value` 生命周期、host-byte peak、ledger compaction、GC、
+搬迁句柄和持久 host root 仍保持 deferred；下一步需要 workload 级 peak 测量
+和决策，而不是直接替换 `Rc<RefCell>`。
+
+**状态（peak workload 窄切片已完成，2026-07-30）：** 共享存储现在由
+`TrackedStorage<T>` 保留原有 `Rc<RefCell>` alias 边界，并在最后一个 `Rc` 释放
+时更新 live ledger；`HeapStatsSnapshot.peak_live` 提供本次 VM 生命周期内 tracked
+environment、cell、array、map、struct 的最大同时存活数量。新增混合 aggregate 和
+native temporary workload 测试，Rust focused 结果为 `69/69`。这不是 host 字节
+峰值，也不覆盖 inline function/range/variant、ledger compaction、GC、搬迁句柄或
+持久 host root；下一步继续扩展可复现 workload corpus 后再决定 backend。
 
 ### VM-2C：可选的 tracing GC 或其他回收策略
 

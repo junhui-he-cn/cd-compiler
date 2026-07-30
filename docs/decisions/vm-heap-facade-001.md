@@ -61,24 +61,27 @@ instances, persistent host roots, or concurrent access.
 ## Measurement slice
 
 The follow-up VM-2B measurement slice adds a non-owning `HeapStats` ledger. Each
-tracked shared allocation contributes one `Weak` record for its environment,
-cell, array, map, or struct storage. A snapshot reports allocation totals,
-current live records, and dead records (`allocations - live`) per kind and in
-total. The ledger itself owns no strong reference, so taking a stats handle
-cannot keep a VM root, native temporary, or closure graph alive.
+tracked shared allocation contributes one `Weak` record and one accounting token
+for its environment, cell, array, map, or struct storage. A snapshot reports
+allocation totals, current live records, dead records (`allocations - live`),
+and the maximum simultaneously live tracked records (`peak_live`) per run. The
+ledger and tokens own no strong reference, so taking a stats handle cannot keep
+a VM root, native temporary, or closure graph alive.
 
-The live/dead result is intentionally based on `Rc` strong-count observation,
-not on formatting or recursively walking values. An acyclic aggregate becomes
-dead after its last root is dropped; an array cycle or a closure/function-cell-
-environment cycle remains live, making the current reference-counting behavior
-visible instead of silently treating it as collected. Runtime error and trace
-tests also take a stats handle before the consuming VM call and verify that
-execution roots are released after the call returns.
+The live/dead result follows the existing `Rc` storage boundary: the token is
+released only when the last shared storage `Rc` is dropped. It does not use
+formatting or recursively walk values. An acyclic aggregate becomes dead after
+its last root is dropped; an array cycle or a closure/function-cell-environment
+cycle remains live, making the current reference-counting behavior visible
+instead of silently treating it as collected. Runtime error, trace, native
+temporary, and mixed allocation workload tests take a stats handle before the
+consuming VM call and verify root release and peak behavior.
 
 The measurement boundary covers shared storage only. Function, range, and
 variant values are inline `Value` payloads in the current representation and do
 not have an independent weak lifetime to observe; counting them would require
-another storage decision. This slice also does not claim exact peak memory,
+another storage decision. `peak_live` is a reproducible count of tracked shared
+storage objects, not a host-byte measurement. This slice also does not claim
 ledger compaction, cycle collection, relocating handles, persistent host roots,
 or a production profiling API.
 
@@ -87,8 +90,8 @@ or a production profiling API.
 Rust unit cases cover shared alias storage, distinct aggregate identities,
 shared environment cells, map duplicate ordering, shared-storage live/dead
 counts, acyclic versus cyclic graphs, closure cycles, native temporary roots,
-runtime-error root release, and trace observations. Existing parity and
-resource cases remain unchanged.
+runtime-error root release, trace observations, and mixed-workload peak live
+counts. Existing parity and resource cases remain unchanged.
 
 ```sh
 cargo test --manifest-path vm-rs/Cargo.toml
@@ -97,7 +100,7 @@ python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens
 python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json
 ```
 
-The focused run after the measurement slice passed Rust `68/68`; the existing
+The focused run after the peak measurement slice passed Rust `69/69`; the existing
 artifact, Rust VM, and canonical verification gates remain the compatibility
 checks for the unchanged `.cdbc` and alias semantics.
 
@@ -105,6 +108,6 @@ checks for the unchanged `.cdbc` and alias semantics.
 
 Do not add a GC, relocating handle table, or persistent host-value API in this
 slice. The next VM-2B gate is a workload-level decision about whether the
-reference-counted facade needs a different backend; it must add a reproducible
-peak-memory method and broader allocation workloads before selecting tracing,
-handles, or another storage strategy.
+reference-counted facade needs a different backend; it must add broader,
+reproducible allocation workloads and host-byte measurement before selecting
+tracing, handles, or another storage strategy.

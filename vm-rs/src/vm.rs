@@ -302,12 +302,51 @@ mod tests {
         let in_flight = stats.snapshot();
         assert_eq!(in_flight.for_kind(HeapObjectKind::Array).allocations, 2);
         assert_eq!(in_flight.for_kind(HeapObjectKind::Array).live, 2);
+        assert_eq!(in_flight.peak_live, 3);
 
         drop(temporary);
         assert_eq!(stats.snapshot().for_kind(HeapObjectKind::Array).live, 1);
         drop(source);
         drop(vm);
         assert_eq!(stats.snapshot().total_live, 0);
+    }
+
+    #[test]
+    fn heap_stats_peak_live_tracks_a_mixed_vm_workload() {
+        let program = empty_program();
+        let mut vm = VM::new(&program);
+        let stats = vm.heap_stats();
+        let array = vm.make_array(vec![Value::number(1.0), Value::number(2.0)]);
+        let map = vm.make_map(vec![(Value::string("items"), array.clone())]);
+        let structure = vm
+            .heap
+            .allocate_struct(
+                Some("Workload".to_string()),
+                vec![
+                    ("array".to_string(), array.clone()),
+                    ("map".to_string(), map.clone()),
+                ],
+            )
+            .expect("struct allocation should succeed");
+        let temporary = vm
+            .execute_native_call("copy", vec![array.clone()])
+            .expect("native copy should succeed");
+
+        let snapshot = stats.snapshot();
+        assert_eq!(snapshot.total_live, 5);
+        assert_eq!(snapshot.peak_live, 5);
+        assert_eq!(snapshot.for_kind(HeapObjectKind::Array).live, 2);
+        assert_eq!(snapshot.for_kind(HeapObjectKind::Map).live, 1);
+        assert_eq!(snapshot.for_kind(HeapObjectKind::Struct).live, 1);
+
+        drop(temporary);
+        drop(structure);
+        drop(map);
+        drop(array);
+        drop(vm);
+        let released = stats.snapshot();
+        assert_eq!(released.total_live, 0);
+        assert_eq!(released.peak_live, 5);
     }
 
     #[test]
