@@ -1,4 +1,4 @@
-struct Inner { value: number? }
+struct Inner { value: optional<number> }
 struct Box { inner: Inner }
 fun takesNumber(value: number): number { return value; }
 fun get(box: Box): Box { return box; }

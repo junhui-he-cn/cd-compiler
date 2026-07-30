@@ -1,5 +1,5 @@
 struct Box { value: number }
-let maybe: number? = 42;
+let maybe: optional<number> = 42;
 
 impl Box {
   fun show() {

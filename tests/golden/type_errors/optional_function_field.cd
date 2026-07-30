@@ -1,1 +1,0 @@
-struct Holder { callback: optional<fun(number): number> }

@@ -1,4 +1,4 @@
-fun sumNullable(values: [number?]): number {
+fun sumNullable(values: [optional<number>]): number {
   let total = 0;
   for item in values {
     if (item == nil) {
@@ -9,7 +9,7 @@ fun sumNullable(values: [number?]): number {
   return total;
 }
 
-fun readAfterBreak(value: number?): number {
+fun readAfterBreak(value: optional<number>): number {
   while (true) {
     if (value == nil) {
       break;

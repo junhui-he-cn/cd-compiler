@@ -1,4 +1,4 @@
-module 0 "/home/junhe/compiler/tests/golden/collection_inference_nullable_widening_interface/lib.cd"
-  export value xs: [number?]
+module 0 "<repo>/tests/golden/collection_inference_nullable_widening_interface/lib.cd"
+  export value xs: [optional<number>]
 
-module 1 entry "/home/junhe/compiler/tests/golden/collection_inference_nullable_widening_interface/input.cd"
+module 1 entry "<repo>/tests/golden/collection_inference_nullable_widening_interface/input.cd"

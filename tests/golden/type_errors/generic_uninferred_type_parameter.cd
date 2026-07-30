@@ -1,2 +1,2 @@
-fun make<T>(): T? { return nil; }
+fun make<T>(): optional<T> { return nil; }
 make();

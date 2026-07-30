@@ -175,44 +175,35 @@ operator table.
 
 ### M7-LANG-OPTIONAL-001: canonical optional type syntax
 
-**Status:** implementation complete on `feat/optional-type-syntax`; the
-compatibility spelling remains intentionally retained until the deletion gate
-is met.
+**Status:** implementation complete; `optional<T>` is the only nullable type
+spelling accepted by the language.
 
 **Purpose:** make `optional<T>` the readable, compositional spelling for a
-value that is either `T` or `nil`, replacing postfix `T?` in new source while
-preserving the existing nullable-flow semantics.
+value that is either `T` or `nil`, with the existing nullable-flow semantics.
 
 **Deliverable:** parse nested `optional<T>` annotations anywhere a type
 annotation is accepted; preserve the spelling in AST output; resolve it to the
 existing `StaticType::Nullable`; expose its inner type through LSP type
 navigation; and migrate the public README, grammar, decision record, and
 focused success/parse/type-error fixtures. The C++ IR, bytecode, `.cdbc 0.1`,
-and Rust VM representations remain unchanged. Direct optional function values
-such as `optional<fun(number): number>` remain rejected, while nullable
-parameter and return types use `optional<...>` normally.
+and Rust VM representations remain unchanged. Optional function values such as
+`optional<fun(number): number>` are supported, as are nullable parameter and
+return types written with `optional<...>`.
 
-**Migration:** recognize `optional` contextually only when followed by `<`, so
-existing identifiers named `optional` remain valid. Keep postfix `T?` as a
-compatibility parser path and retain its historical diagnostics and AST
-spelling during the migration. New documentation and fixtures use
-`optional<T>`, including array elements, nullable arrays, struct fields, and
-function parameter/return annotations.
+**Source rule:** recognize `optional` contextually only when followed by `<`, so
+existing identifiers named `optional` remain valid. Postfix `T?` is rejected
+with a parser diagnostic directing users to `optional<T>`. New documentation
+and fixtures use `optional<T>`, including array elements, nullable arrays,
+struct fields, and function parameter/return annotations.
 
 **Quantitative gate:** the focused corpus must register and pass
 `golden.success.optional_type_syntax.*`,
+`golden.success.optional_function_values.*`,
 `golden.parse_errors.optional_missing_argument`,
-`golden.type_errors.optional_function_value`,
-`golden.type_errors.optional_function_field`, and
+`golden.parse_errors.nullable_double_question`, and
 `rust_vm.golden.optional_type_syntax.*`; then run the canonical inventory,
 golden, CTest, boundary, malformed, artifact, LSP, debugger, Rust VM, Cargo,
 and `git diff --check` commands from the verification contract.
-
-**Delete the old path when:** all repository-owned user-facing examples and
-active fixtures use `optional<T>`, a separately audited compatibility corpus
-shows no required `T?` source outside an explicit migration allowlist, and a
-follow-up decision fixes the deprecation diagnostic and release timeline. Until
-then, removing `T?` is out of scope.
 
 ## Planned follow-up specifications
 

@@ -1,6 +1,6 @@
 import "../../data_structures.cd" as ds;
 
-fun describeTail(value: ds.List<number>?): string {
+fun describeTail(value: optional<ds.List<number>>): string {
   return match value {
     nil => "nil",
     ds.List.Nil => "empty",

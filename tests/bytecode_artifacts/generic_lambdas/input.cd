@@ -6,7 +6,7 @@ let identity = fun<T>(value: T): T {
 let head = fun<T>(values: [T]): T {
   return values[0];
 };
-let maybe = fun<T>(): T? {
+let maybe = fun<T>(): optional<T> {
   return nil;
 };
 

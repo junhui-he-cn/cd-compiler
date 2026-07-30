@@ -1,4 +1,4 @@
-fun read(values: [number?], index: number): number {
+fun read(values: [optional<number>], index: number): number {
   if (values[index] == nil) {
     return 0;
   }

@@ -10,7 +10,7 @@ print first;
 
 let maybe = [1];
 maybe.push(nil);
-let item: number? = maybe[1];
+let item: optional<number> = maybe[1];
 print item;
 
 let total = 0;

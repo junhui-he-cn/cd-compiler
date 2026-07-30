@@ -16,3 +16,13 @@ print unwrap(age);
 print values[0];
 print maybeValues;
 print box.value;
+
+let optional = 7;
+let maybe: optional<number> = nil;
+let nested: optional<[optional<number>]> = nil;
+let callback: optional<fun(number): string> = nil;
+
+print optional;
+print maybe;
+print nested;
+print callback;

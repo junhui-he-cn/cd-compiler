@@ -1,4 +1,4 @@
-module 0 "/home/junhe/compiler/tests/golden/collection_inference_function_push_interface/lib.cd"
+module 0 "<repo>/tests/golden/collection_inference_function_push_interface/lib.cd"
   export value xs: [string]
 
-module 1 entry "/home/junhe/compiler/tests/golden/collection_inference_function_push_interface/input.cd"
+module 1 entry "<repo>/tests/golden/collection_inference_function_push_interface/input.cd"

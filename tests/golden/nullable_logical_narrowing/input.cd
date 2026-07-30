@@ -1,12 +1,12 @@
 fun takesNumber(value: number): number { return value; }
 
-let withAnd: number? = 41;
+let withAnd: optional<number> = 41;
 let guard = true;
 if (withAnd != nil && guard) {
   print takesNumber(withAnd);
 }
 
-let withOr: number? = 42;
+let withOr: optional<number> = 42;
 if (withOr == nil || false) {
   print 0;
 } else {

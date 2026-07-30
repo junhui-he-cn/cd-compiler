@@ -1,7 +1,7 @@
 struct Stack<T> { items: [T] }
 
 impl Stack<T> {
-  fun pop(): T? {
+  fun pop(): optional<T> {
     return nil;
   }
 

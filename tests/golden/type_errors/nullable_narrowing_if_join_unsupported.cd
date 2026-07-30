@@ -1,4 +1,4 @@
-fun unsupported(value: number?, flag: bool): number {
+fun unsupported(value: optional<number>, flag: bool): number {
   if (flag) {
     if (value == nil) {
       return 0;

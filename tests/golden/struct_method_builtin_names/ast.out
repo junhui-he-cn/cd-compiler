@@ -1,7 +1,7 @@
 Program
   Struct Stack<T> {items: [T]}
   Impl Stack<T>
-    Method pop(): T?
+    Method pop(): optional<T>
       Return nil
     Method push(value: T)
       Return nil

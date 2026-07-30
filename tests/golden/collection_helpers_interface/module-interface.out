@@ -1,7 +1,7 @@
 module 0 "<repo>/tests/golden/collection_helpers_interface/lib.cd"
   export value copied: [number]
   export value mixed: array
-  export value nullable: [number?]
+  export value nullable: [optional<number>]
   export value present: bool
   export value sliced: [number]
 

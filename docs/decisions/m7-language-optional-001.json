@@ -1,16 +1,16 @@
 {
   "schema_version": 1,
-  "decision_revision": "m7-lang-optional-001-2026-07-29-r1",
+  "decision_revision": "m7-lang-optional-001-2026-07-30-r2",
   "baseline_commit": "b533d59",
   "decision_id": "M7-LANG-OPTIONAL-001",
   "domain": "canonical-optional-type-syntax",
   "status": "resolved",
-  "implementation_status": "complete-on-feature-branch",
+  "implementation_status": "complete",
   "question": "How should source code spell a value that may contain T or nil as type annotations become more generic and compositional?",
-  "decision": "Make optional<T> the canonical source spelling for nullable types, map it to the existing StaticType::Nullable semantics, and retain postfix T? as a compatibility spelling during migration.",
+  "decision": "Make optional<T> the only source spelling for nullable types, map it to the existing StaticType::Nullable semantics, and reject postfix T? with a parser diagnostic.",
   "surface": {
     "canonical": "optional<T>",
-    "compatibility": "T?",
+    "compatibility": "postfix T? rejected",
     "contextual_identifier": true,
     "nested": true,
     "ast_preserves_spelling": true,
@@ -20,8 +20,8 @@
     "static_representation": "StaticType::Nullable",
     "assignment_and_flow": "existing nullable assignment and narrowing rules",
     "function_parameters_and_returns": "optional types supported",
-    "optional_function_values": "rejected",
-    "semantic_display_name": "legacy postfix T? until a separate output-format decision"
+    "optional_function_values": "supported",
+    "semantic_display_name": "canonical optional<T>"
   },
   "runtime_boundary": {
     "ir": "unchanged",
@@ -32,20 +32,19 @@
   },
   "migration": {
     "new_documentation_and_fixtures": "use optional<T>",
-    "legacy_fixtures": "retain T? compatibility coverage",
+    "legacy_fixtures": "retain postfix T? rejection coverage",
     "warnings": false,
     "source_rewriter": false,
     "deletion_requires": [
       "repository-owned examples and active fixtures migrated",
-      "audited compatibility corpus with no required T? outside an allowlist",
-      "separate deprecation diagnostic and release-timeline decision"
+      "postfix T? parser rejection covered"
     ]
   },
   "quantitative_gate": [
     "golden.success.optional_type_syntax.*",
+    "golden.success.optional_function_values.*",
     "golden.parse_errors.optional_missing_argument",
-    "golden.type_errors.optional_function_value",
-    "golden.type_errors.optional_function_field",
+    "golden.parse_errors.nullable_double_question",
     "rust_vm.golden.optional_type_syntax.*",
     "canonical inventory",
     "full CTest, golden, artifact, LSP, debugger, Rust VM, Cargo, boundary, malformed, and git diff checks"
@@ -53,10 +52,7 @@
   "out_of_scope": [
     "runtime Option wrapper values",
     "new bytecode opcodes",
-    "postfix T? removal",
-    "deprecation warnings or automated rewriting",
-    "nullable function values",
-    "changing semantic display or module-interface text to optional<T>"
+    "deprecation warnings or automated rewriting"
   ],
   "verification": {
     "inventory_revision": "m0d-2026-07-22-r1",
@@ -82,16 +78,17 @@
       "git diff --check"
     ],
     "results": {
-      "inventory": "1879/1879",
+      "inventory": "1888/1888",
       "boundary": "5/5",
-      "malformed": "104/104",
-      "ctest": "33/33",
+      "malformed": "108/108",
+      "ctest": "34/34",
       "golden": "828/828",
       "golden_selftest": "24/24",
       "bytecode_artifacts": "118/118",
       "module_cache": "11/11",
-      "rust_vm_goldens": "778/778",
-      "cargo": "48/48",
+      "rust_vm_goldens": "782/782",
+      "cargo": "79/79",
+      "library": "83/83",
       "additional": [
         "LSP passed",
         "debugger passed",

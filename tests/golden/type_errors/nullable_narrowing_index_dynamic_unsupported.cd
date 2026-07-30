@@ -1,7 +1,7 @@
 fun takesNumber(value: number): number { return value; }
 fun getIndex(): number { return 0; }
 
-fun read(values: [number?]): number {
+fun read(values: [optional<number>]): number {
   if (values[getIndex()] != nil) {
     return takesNumber(values[getIndex()]);
   }

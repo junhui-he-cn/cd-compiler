@@ -1,6 +1,6 @@
 import "./lib.cd" as lib;
 
-fun render(value: lib.Outcome?): string {
+fun render(value: optional<lib.Outcome>): string {
   return match value {
     nil => "nil",
     lib.Outcome.Good(number) => "good:" + str(number),

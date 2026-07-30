@@ -1,3 +1,3 @@
-Type error at 8:15: binary `+` expects two numbers or two strings, got number? and number
+Type error at 8:15: binary `+` expects two numbers or two strings, got optional<number> and number
     print maybe + 1;
                 ^

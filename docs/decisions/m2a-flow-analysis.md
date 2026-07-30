@@ -620,3 +620,30 @@ The M0D inventory now validates 1745 cases, including:
 The FlowFacts CTest, focused golden and Rust VM subsets,
 `python3 tests/verification_inventory.py`, and the full canonical verification
 command are the gates for this revision.
+
+## M2A-FLOW-022A: truthiness then-branch narrowing
+
+A supported nullable target used directly as a truthiness condition is narrowed
+to its inner type only in the then branch. Runtime truthiness treats `nil` as
+falsey, so entering that branch proves the target is non-nil. The else branch
+does not receive a narrowing because the non-nil value `false` is also falsey;
+`0` and empty strings are truthy. The rule applies to the same direct variable,
+known field, and supported array-index targets already accepted by the
+nil-comparison resolver, and composes with existing `&&` then-branch facts.
+
+Unary `!`, truthiness-based else narrowing, call-based indexes, aliases,
+map/range elements, and loop/post-branch policy are not changed by this slice.
+Mutation and call invalidation continue to clear the fact through the existing
+`FlowFacts` invalidation paths.
+
+The positive fixture checks direct truthiness and an `&&` combination; the
+negative fixture confirms that an explicit else join does not retain the
+then-only fact. The focused inventory cases are:
+
+- `golden.success.nullable_truthiness_narrowing.ast`
+- `golden.type_errors.nullable_truthiness_else_unsupported`
+- `rust_vm.golden.nullable_truthiness_narrowing.run`
+
+The FlowFacts CTest, focused golden and Rust VM subsets,
+`python3 tests/verification_inventory.py`, and the full canonical verification
+command are the gates for this revision.

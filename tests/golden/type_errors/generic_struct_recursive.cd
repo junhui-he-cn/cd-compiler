@@ -1,1 +1,1 @@
-struct Node<T> { next: Node<T>? }
+struct Node<T> { next: optional<Node<T>> }

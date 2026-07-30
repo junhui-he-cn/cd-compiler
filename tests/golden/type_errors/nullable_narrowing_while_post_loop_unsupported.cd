@@ -1,4 +1,4 @@
-fun after(value: number?): number {
+fun after(value: optional<number>): number {
   while (value != nil) {
     break;
   }

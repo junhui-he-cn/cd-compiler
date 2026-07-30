@@ -123,8 +123,8 @@ function f3 name="make" arity=0 registers=2:
   return r1
 
 debug_sources:
-  s0 module="/home/junhe/compiler/tests/bytecode_artifacts/generic_explicit_type_arguments/input.cd" path="tests/bytecode_artifacts/generic_explicit_type_arguments/input.cd" text="import \"lib.cd\" as lib;\n\nfun identity<T>(value: T): T {\n  return value;\n}\nfun head<T>(values: [T]): T {\n  return values[0];\n}\nfun make<T>(): T? {\n  return nil;\n}\nprint identity<number>(42);\nprint identity<string>(\"hello\");\nprint head<number>([1, 2]);\nprint identity<[number]>([3, 4]);\nprint make<number>();\nlet alias = identity;\nprint alias<bool>(true);\nprint lib.identity<number>(7);\n"
-  s1 module="/home/junhe/compiler/tests/bytecode_artifacts/generic_explicit_type_arguments/lib.cd" path="tests/bytecode_artifacts/generic_explicit_type_arguments/lib.cd" text="fun identity<T>(value: T): T {\n  return value;\n}\nexport identity;\n"
+  s0 module="<repo>/tests/bytecode_artifacts/generic_explicit_type_arguments/input.cd" path="tests/bytecode_artifacts/generic_explicit_type_arguments/input.cd" text="import \"lib.cd\" as lib;\n\nfun identity<T>(value: T): T {\n  return value;\n}\nfun head<T>(values: [T]): T {\n  return values[0];\n}\nfun make<T>(): optional<T> {\n  return nil;\n}\nprint identity<number>(42);\nprint identity<string>(\"hello\");\nprint head<number>([1, 2]);\nprint identity<[number]>([3, 4]);\nprint make<number>();\nlet alias = identity;\nprint alias<bool>(true);\nprint lib.identity<number>(7);\n"
+  s1 module="<repo>/tests/bytecode_artifacts/generic_explicit_type_arguments/lib.cd" path="tests/bytecode_artifacts/generic_explicit_type_arguments/lib.cd" text="fun identity<T>(value: T): T {\n  return value;\n}\nexport identity;\n"
 
 debug_locations:
   main 0 = s1:1:1
@@ -208,43 +208,43 @@ debug_ranges:
   main 9 = s0:78:121
   main 10 = s0:78:121
   main 11 = s0:78:121
-  main 12 = s0:130:158
-  main 13 = s0:130:158
-  main 14 = s0:130:158
-  main 15 = s0:130:158
-  main 16 = s0:168:176
-  main 17 = s0:185:187
-  main 18 = s0:168:188
-  main 19 = s0:168:188
-  main 20 = s0:196:204
-  main 21 = s0:213:220
-  main 22 = s0:196:221
-  main 23 = s0:196:221
-  main 24 = s0:229:233
-  main 25 = s0:243:244
-  main 26 = s0:246:247
-  main 27 = s0:242:247
-  main 28 = s0:229:249
-  main 29 = s0:229:249
-  main 30 = s0:257:265
-  main 31 = s0:277:278
-  main 32 = s0:280:281
-  main 33 = s0:276:281
-  main 34 = s0:257:283
-  main 35 = s0:257:283
-  main 36 = s0:291:295
-  main 37 = s0:291:305
-  main 38 = s0:291:305
-  main 39 = s0:319:327
-  main 40 = s0:311:327
-  main 41 = s0:335:340
-  main 42 = s0:347:351
-  main 43 = s0:335:352
-  main 44 = s0:335:352
-  main 45 = s0:360:383
-  main 46 = s0:381:382
-  main 47 = s0:360:383
-  main 48 = s0:360:383
+  main 12 = s0:130:167
+  main 13 = s0:130:167
+  main 14 = s0:130:167
+  main 15 = s0:130:167
+  main 16 = s0:177:185
+  main 17 = s0:194:196
+  main 18 = s0:177:197
+  main 19 = s0:177:197
+  main 20 = s0:205:213
+  main 21 = s0:222:229
+  main 22 = s0:205:230
+  main 23 = s0:205:230
+  main 24 = s0:238:242
+  main 25 = s0:252:253
+  main 26 = s0:255:256
+  main 27 = s0:251:256
+  main 28 = s0:238:258
+  main 29 = s0:238:258
+  main 30 = s0:266:274
+  main 31 = s0:286:287
+  main 32 = s0:289:290
+  main 33 = s0:285:290
+  main 34 = s0:266:292
+  main 35 = s0:266:292
+  main 36 = s0:300:304
+  main 37 = s0:300:314
+  main 38 = s0:300:314
+  main 39 = s0:328:336
+  main 40 = s0:320:336
+  main 41 = s0:344:349
+  main 42 = s0:356:360
+  main 43 = s0:344:361
+  main 44 = s0:344:361
+  main 45 = s0:369:392
+  main 46 = s0:390:391
+  main 47 = s0:369:392
+  main 48 = s0:369:392
   function f0 0 = s1:40:45
   function f0 1 = s1:33:45
   function f0 2 = s1:4:45
@@ -259,7 +259,7 @@ debug_ranges:
   function f2 3 = s0:106:121
   function f2 4 = s0:78:121
   function f2 5 = s0:78:121
-  function f3 0 = s0:155:158
-  function f3 1 = s0:148:158
-  function f3 2 = s0:130:158
-  function f3 3 = s0:130:158
+  function f3 0 = s0:164:167
+  function f3 1 = s0:157:167
+  function f3 2 = s0:130:167
+  function f3 3 = s0:130:167

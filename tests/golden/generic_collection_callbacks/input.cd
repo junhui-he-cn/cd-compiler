@@ -17,8 +17,8 @@ print flatMap(values, singleton);
 print values.reduce(0, keepAccumulator);
 print map(values, fun<T>(value: T): T { return value; });
 
-fun acceptsNullable<T>(value: T?): bool { return true; }
-let nullableValues: [number?] = [1, nil];
+fun acceptsNullable<T>(value: optional<T>): bool { return true; }
+let nullableValues: [optional<number>] = [1, nil];
 print nullableValues.all(acceptsNullable);
 
 fun identityArray<T>(value: [T]): [T] { return value; }

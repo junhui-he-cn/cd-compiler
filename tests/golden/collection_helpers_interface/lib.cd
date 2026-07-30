@@ -1,5 +1,5 @@
 let numbers: [number] = [1, 2];
-let maybeNumbers: [number?] = [nil];
+let maybeNumbers: [optional<number>] = [nil];
 let sliced = slice(numbers, 0, 1);
 let copied = numbers.copy();
 let nullable = concat(numbers, maybeNumbers);

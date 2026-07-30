@@ -1,0 +1,7 @@
+struct Holder { callback: optional<fun(number): number> }
+
+let maybe: optional<fun(number): number> = nil;
+let holder: Holder = Holder { callback: nil };
+
+print maybe;
+print holder.callback;

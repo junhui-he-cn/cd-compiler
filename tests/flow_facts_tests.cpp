@@ -33,6 +33,11 @@ ExprPtr nilCheck(std::string name, TokenType op)
         nilLiteral());
 }
 
+ExprPtr truthy(std::string name)
+{
+    return variable(std::move(name));
+}
+
 ExprPtr field(ExprPtr object, std::string name)
 {
     return std::make_unique<FieldAccessExpr>(
@@ -179,6 +184,19 @@ void test_non_narrowable_variable_produces_no_facts()
     const BranchFlowFacts branchFacts = facts.factsForIfCondition(*condition, resolver());
 
     assert(branchFacts.thenNarrowings.empty());
+    assert(branchFacts.elseNarrowings.empty());
+}
+
+void test_truthiness_narrows_then_branch_only()
+{
+    FlowFacts facts;
+    const ExprPtr condition = truthy("numberValue");
+
+    const BranchFlowFacts branchFacts = facts.factsForIfConditionTargets(*condition, targetResolver());
+
+    assert(branchFacts.thenNarrowings.size() == 1);
+    assert(branchFacts.thenNarrowings.front().resolvedName == "numberValue#0");
+    assert(branchFacts.thenNarrowings.front().type.kind == StaticType::Number);
     assert(branchFacts.elseNarrowings.empty());
 }
 
@@ -450,6 +468,7 @@ int main()
     test_logical_and_combines_then_facts();
     test_logical_or_combines_else_facts();
     test_non_narrowable_variable_produces_no_facts();
+    test_truthiness_narrows_then_branch_only();
     test_target_resolver_narrows_direct_field_targets();
     test_target_resolver_narrows_direct_index_targets();
     test_active_narrowings_can_be_appended_after_branch_analysis();

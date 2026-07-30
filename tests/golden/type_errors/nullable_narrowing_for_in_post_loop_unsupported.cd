@@ -1,4 +1,4 @@
-fun after(values: [number], value: number?): number {
+fun after(values: [number], value: optional<number>): number {
   for item in values {
     if (value == nil) {
       return 0;

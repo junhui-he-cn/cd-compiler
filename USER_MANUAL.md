@@ -174,7 +174,7 @@ if (age >= 18) {
 | `number` | `42`, `3.14` | 数值；数组索引和 range 参数需要整数值 |
 | `bool` | `true`, `false` | 布尔值 |
 | `string` | `"hello"` | 字符串；字符串操作按 Unicode scalar value 计算位置 |
-| `[T]` | `[number]`, `[string?]` | 数组；数组是可变的引用值 |
+| `[T]` | `[number]`, `[optional<string>]` | 数组；数组是可变的引用值 |
 | `map<K, V>` | `map<string, number>` | 映射；键只能是 `nil`、`number`、`bool` 或 `string` |
 | `range` | `range(0, 3)` | 不可变的有限整数范围 |
 | `fun(...) : T` | `fun(number): string` | 函数值和闭包 |
@@ -187,10 +187,10 @@ if (age >= 18) {
 
 ```cd
 let score: number = 100;
-let maybeScore: number? = nil;
-let values: [number?] = [1, nil, 3];
+let maybeScore: optional<number> = nil;
+let values: [optional<number>] = [1, nil, 3];
 
-fun parseScore(text: string): number? {
+fun parseScore(text: string): optional<number> {
   return nil;
 }
 
@@ -199,10 +199,10 @@ let addOne: fun(number): number = fun (value: number): number {
 };
 ```
 
-`T?` 表示 `T` 或 `nil`。非空值可以赋给 `T?`，但 `T?` 不能直接当作 `T` 使用。类型检查器支持对简单变量、已知结构体直接字段，以及编译期可确定的数组索引进行 nil 检查收窄：
+`optional<T>` 表示 `T` 或 `nil`。非空值可以赋给 `optional<T>`，但 `optional<T>` 不能直接当作 `T` 使用。类型检查器支持对简单变量、已知结构体直接字段，以及编译期可确定的数组索引进行 nil 检查收窄；truthiness 条件的 then 分支也会收窄，例如 `if (name) { ... }`，但 else 分支不会收窄，因为非空值 `false` 也可能为假，而 `0` 和空字符串为真：
 
 ```cd
-fun printName(name: string?) {
+fun printName(name: optional<string>) {
   if (name == nil) {
     return;
   }
@@ -210,6 +210,8 @@ fun printName(name: string?) {
   print name;
 }
 ```
+
+truthiness 收窄只保证 then 分支中的值非 `nil`，并且可以和支持的 `&&` then 分支守卫组合；一元 `!` 和基于 truthiness 的 else 收窄仍未实现。
 
 调用结果、未知索引、map/range 元素和复杂循环出口的收窄仍保持保守行为；发生赋值、字段写入、索引写入或可能改变捕获变量的调用后，应重新检查 nil。
 
@@ -803,7 +805,7 @@ builtin member-call sugar，数组接收者仍使用数组 builtin。栈和队�
 - 没有包管理、包清单、import map、导出重命名和通配符导出；
 - 没有字符串或自定义迭代器的 `for-in`；
 - 没有 `Person(...)` 形式的结构体构造函数；
-- 递归枚举 payload 可以使用，递归命名结构体字段（例如 `struct Node { next: Node? }`）仍被拒绝；
+- 递归枚举 payload 可以使用，递归命名结构体字段（例如 `struct Node { next: optional<Node> }`）仍被拒绝；
 - 没有继承、重载、动态派发、静态方法和函数值字段调用；
 - `Eq`/`Ord` 目前只能作为编译期泛型约束使用，尚无用户自定义 capability
   实现；`Hash` 只提供编译期约束和 `hash(value)` 入口，尚无哈希容器、泛型

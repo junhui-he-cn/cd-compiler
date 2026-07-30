@@ -1,4 +1,4 @@
-fun ensure(value: number?, flag: bool): number {
+fun ensure(value: optional<number>, flag: bool): number {
   if (flag) {
     if (value == nil) {
       return 0;

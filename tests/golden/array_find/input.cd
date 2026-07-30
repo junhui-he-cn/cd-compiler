@@ -1,5 +1,5 @@
 let values: [number] = [1, 2, 3];
-let first: number? = find(values, fun (value) {
+let first: optional<number> = find(values, fun (value) {
   return value > 1;
 });
 print first;

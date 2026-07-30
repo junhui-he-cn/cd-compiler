@@ -19,7 +19,7 @@ Program
       Arm false
         Block
           Return "false"
-  Fun describeResult(value: Result?): string
+  Fun describeResult(value: optional<Result>): string
     Match value
       Arm nil
         Block
@@ -39,7 +39,7 @@ Program
       Arm Result.Empty
         Block
           Return "empty"
-  Let maybe: bool? = nil
+  Let maybe: optional<bool> = nil
   Print (call describeNumber 0)
   Print (call describeNumber 8)
   Print (call describeBool false)

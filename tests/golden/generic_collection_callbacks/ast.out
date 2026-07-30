@@ -20,9 +20,9 @@ Program
   Print (call flatMap values singleton)
   Print (member-call values reduce 0 keepAccumulator)
   Print (call map values (fun <T>(value: T): T (return value)))
-  Fun acceptsNullable<T>(value: T?): bool
+  Fun acceptsNullable<T>(value: optional<T>): bool
     Return true
-  Let nullableValues: [number?] = (array 1 nil)
+  Let nullableValues: [optional<number>] = (array 1 nil)
   Print (member-call nullableValues all acceptsNullable)
   Fun identityArray<T>(value: [T]): [T]
     Return value

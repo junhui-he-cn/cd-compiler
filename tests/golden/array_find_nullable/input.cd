@@ -1,10 +1,10 @@
-let nullableValues: [number?] = [1, nil];
-let first: number? = nullableValues.find(fun (value: number?): bool {
+let nullableValues: [optional<number>] = [1, nil];
+let first: optional<number> = nullableValues.find(fun (value: optional<number>): bool {
   return value != nil;
 });
 print first;
 
 let nonNullableValues: [number] = [2];
-print nonNullableValues.find(fun (value: number?): bool {
+print nonNullableValues.find(fun (value: optional<number>): bool {
   return value != nil;
 });

@@ -260,13 +260,10 @@ primary     = functionExpr
             | identifier
             | "(", expression, ")" ;
 
-typeExpr    = optionalType
-            | nullableType ;
+typeExpr    = optionalType ;
 
-optionalType = "optional", "<", typeExpr, ">" ;
-
-nullableType = primaryType,
-               [ "?" ] ;
+optionalType = "optional", "<", typeExpr, ">"
+             | primaryType ;
 
 primaryType = arrayType
             | mapType
@@ -289,18 +286,17 @@ genericTypeArguments = "<", typeExpr,
 functionType = "fun", "(", [ typeArguments ], ")", ":", typeExpr ;
 
 (* A single `|` separates OR-pattern alternatives; `||` remains the logical
-   expression operator. `optional<T>` means `T` or `nil`; postfix `T?` remains
-   accepted as a compatibility spelling during migration. Generic enum declarations use `enum Box<T>`, and
+   expression operator. `optional<T>` means `T` or `nil`. Generic enum declarations use `enum Box<T>`, and
    generic enum values use `Box<number>` type annotations. Literal patterns
    match primitive values directly or nested inside enum payloads; nullable
    primitive and enum matches may use `nil`. Named struct values may use
    partial or nested record patterns such as `Person { name: "Ada" }` and
    `geo.Point { x: 1 }`; fields may be omitted or reordered. OR-pattern
-   alternatives must bind the same names. `optional<T>` is the canonical
-   generic spelling for a nullable type; postfix `T?` remains a compatibility
-   spelling during the migration. This slice supports nullable
-   function parameter and return types, but not nullable function values such
-   as `optional<fun(number): string>`. Ordering comparisons support `number`,
+   alternatives must bind the same names. Nullable function parameters,
+   returns, and function values use the same `optional<T>` wrapper. A supported
+   truthiness condition narrows an optional target only in its then branch;
+   falsey non-nil values keep the else branch conservative. Ordering
+   comparisons support `number`,
    `string`, and locally implemented named-struct operators. Struct operators
    use the left operand as `this`, accept one same-typed right operand, and
    return `bool`; they are not exported through the current module interface.

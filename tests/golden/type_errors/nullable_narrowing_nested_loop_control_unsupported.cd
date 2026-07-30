@@ -1,4 +1,4 @@
-fun nested(value: number?): number {
+fun nested(value: optional<number>): number {
   while (true) {
     if (value == nil) {
       while (true) {

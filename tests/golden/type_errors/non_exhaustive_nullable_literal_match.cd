@@ -1,4 +1,4 @@
-let value: number? = 1;
+let value: optional<number> = 1;
 print match value {
   1 => "one",
 };

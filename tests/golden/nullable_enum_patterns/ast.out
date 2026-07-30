@@ -1,6 +1,6 @@
 Program
   Enum Option {Some(value: number), None}
-  Fun describe(value: Option?): string
+  Fun describe(value: optional<Option>): string
     Match value
       Arm nil
         Block
@@ -14,8 +14,8 @@ Program
       Arm Option.None
         Block
           Return "none"
-  Let some: Option? = (member-call Option Some 7)
-  Let none: Option? = nil
+  Let some: optional<Option> = (member-call Option Some 7)
+  Let none: optional<Option> = nil
   Print (call describe some)
   Print (call describe none)
   Print (match some (arm nil "nil") (arm Option.Some(value) if (> value 10) "large") (arm Option.Some(_) "some") (arm Option.None "none"))

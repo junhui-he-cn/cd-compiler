@@ -147,7 +147,6 @@ bool genericCloseCanBeFollowedBy(TokenType type)
     switch (type) {
     case TokenType::LeftParen:
     case TokenType::LeftBrace:
-    case TokenType::Question:
     case TokenType::Comma:
     case TokenType::RightParen:
     case TokenType::RightBracket:
@@ -354,7 +353,6 @@ bool tokenIsPunctuationWithoutLeadingSpace(TokenType type)
     case TokenType::Comma:
     case TokenType::Semicolon:
     case TokenType::Dot:
-    case TokenType::Question:
         return true;
     default:
         return false;
@@ -370,7 +368,6 @@ bool canFollowClosingBraceOnSameLine(TokenType type)
         || type == TokenType::RightBracket
         || type == TokenType::RightBrace
         || type == TokenType::Dot
-        || type == TokenType::Question
         || type == TokenType::LeftParen
         || type == TokenType::LeftBracket
         || isBinaryOperator(type);
@@ -857,10 +854,6 @@ void emitToken(
         state.trimTrailingSpaces();
         state.writeRaw(token.lexeme);
         break;
-    case TokenType::Question:
-        state.trimTrailingSpaces();
-        state.writeRaw(token.lexeme);
-        break;
     case TokenType::Less:
     case TokenType::Greater:
         if (genericAngle) {
@@ -936,6 +929,13 @@ std::string formatLosslessSource(const LosslessSourceFileView& source, Formatter
         }
         tokenPieceIndexes.push_back(pieceIndex);
         tokens.push_back(&*pieces[pieceIndex].token);
+    }
+
+    for (const Token* token : tokens) {
+        if (token->type == TokenType::Question) {
+            throw std::invalid_argument(
+                "postfix `?` nullable syntax was removed; use `optional<T>`");
+        }
     }
 
     if (tokens.empty()) {

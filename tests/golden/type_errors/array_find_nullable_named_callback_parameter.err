@@ -1,3 +1,3 @@
-Type error at 2:26: find callback expects number?, got number
+Type error at 2:26: find callback expects optional<number>, got number
   find([1, nil], onlyNumber);
                            ^

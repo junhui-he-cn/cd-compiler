@@ -19,7 +19,7 @@ fun describeBool(value: bool): string {
   }
 }
 
-fun describeResult(value: Result?): string {
+fun describeResult(value: optional<Result>): string {
   match value {
     nil => { return "nil"; }
     Result.Number(0) => { return "zero"; }
@@ -30,7 +30,7 @@ fun describeResult(value: Result?): string {
   }
 }
 
-let maybe: bool? = nil;
+let maybe: optional<bool> = nil;
 print describeNumber(0);
 print describeNumber(8);
 print describeBool(false);

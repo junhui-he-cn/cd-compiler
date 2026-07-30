@@ -1,4 +1,4 @@
-fun increment(value: number?): number {
+fun increment(value: optional<number>): number {
   if (value == nil) {
     value = nil;
     return 0;
@@ -11,7 +11,7 @@ fun increment(value: number?): number {
 print increment(nil);
 print increment(41);
 
-fun incrementElse(value: number?): number {
+fun incrementElse(value: optional<number>): number {
   if (value != nil) {
     let stable: number = value;
   } else {

@@ -2,14 +2,14 @@ fun takesString(value: string): string {
   return value;
 }
 
-let name: string? = "Ada";
+let name: optional<string> = "Ada";
 if (name == nil) {
   print "missing";
 } else {
   print takesString(name);
 }
 
-let title: string? = "Dr";
+let title: optional<string> = "Dr";
 if (nil != title) {
   print takesString(title);
 }

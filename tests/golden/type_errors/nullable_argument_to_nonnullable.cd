@@ -1,3 +1,3 @@
 fun takesNumber(value: number) { print value; }
-let maybe: number? = 1;
+let maybe: optional<number> = 1;
 takesNumber(maybe);

@@ -10,7 +10,7 @@ impl Box {
     return values[0];
   }
 
-  fun make<T>(): T? {
+  fun make<T>(): optional<T> {
     return nil;
   }
 }

@@ -1,11 +1,11 @@
-fun maybe(flag: bool): number? {
+fun maybe(flag: bool): optional<number> {
   if flag {
     return 7;
   }
   return nil;
 }
 
-fun describe(value: number?): string? {
+fun describe(value: optional<number>): optional<string> {
   if value == nil {
     return nil;
   }

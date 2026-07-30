@@ -300,7 +300,7 @@ std::string staticTypeName(StaticType type)
 std::string typeInfoName(const TypeInfo& type)
 {
     if (SemanticTypes::isNullable(type)) {
-        return typeInfoName(*type.nullableOf) + "?";
+        return "optional<" + typeInfoName(*type.nullableOf) + ">";
     }
 
     if (type.kind == StaticType::Struct && type.structName) {

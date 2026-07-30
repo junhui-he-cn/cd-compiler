@@ -13,7 +13,7 @@ Program
   Let shallow = (member-call shallowLeft merge shallowRight)
   Expr (call push shared 8)
   Print shallow
-  Let optional: map<string, number?> = (map (entry "empty" nil))
+  Let optional: map<string, optional<number>> = (map (entry "empty" nil))
   Let required: map<string, number> = (map (entry "value" 9))
-  Let typed: map<string, number?> = (call merge optional required)
+  Let typed: map<string, optional<number>> = (call merge optional required)
   Print typed
