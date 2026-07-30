@@ -2432,8 +2432,8 @@ impl<'a> VM<'a> {
                     variant_name,
                 } => {
                     let input = self.read_register(frame, *value)?;
-                    let enum_name = self.read_name(*enum_name)?;
-                    let variant_name = self.read_name(*variant_name)?;
+                    let enum_name = self.read_name_ref(*enum_name)?;
+                    let variant_name = self.read_name_ref(*variant_name)?;
                     let matched = matches!(
                         input,
                         Value::Variant(ref variant)
@@ -2459,8 +2459,8 @@ impl<'a> VM<'a> {
                     self.write_register(frame, *dest, value)?;
                 }
                 Instruction::LoadVar { dest, name } => {
-                    let name = self.read_name(*name)?;
-                    let value = self.load_variable(frame, &name)?;
+                    let name = self.read_name_ref(*name)?;
+                    let value = self.load_variable(frame, name)?;
                     self.write_register(frame, *dest, value)?;
                 }
                 Instruction::StoreVar { name, value } => {
@@ -2469,9 +2469,9 @@ impl<'a> VM<'a> {
                     self.store_variable(frame, name, value);
                 }
                 Instruction::AssignVar { name, value } => {
-                    let name = self.read_name(*name)?;
+                    let name = self.read_name_ref(*name)?;
                     let value = self.read_register(frame, *value)?;
-                    self.assign_variable(frame, &name, value)?;
+                    self.assign_variable(frame, name, value)?;
                 }
                 Instruction::Call {
                     dest,
@@ -2623,8 +2623,8 @@ impl<'a> VM<'a> {
                 }
                 Instruction::Field { dest, object, name } => {
                     let object = self.read_register(frame, *object)?;
-                    let name = self.read_name(*name)?;
-                    let value = self.execute_field(object, &name)?;
+                    let name = self.read_name_ref(*name)?;
+                    let value = self.execute_field(object, name)?;
                     self.write_register(frame, *dest, value)?;
                 }
                 Instruction::AssignField {
@@ -2634,9 +2634,9 @@ impl<'a> VM<'a> {
                     value,
                 } => {
                     let object = self.read_register(frame, *object)?;
-                    let name = self.read_name(*name)?;
+                    let name = self.read_name_ref(*name)?;
                     let value = self.read_register(frame, *value)?;
-                    let assigned = self.execute_assign_field(object, &name, value)?;
+                    let assigned = self.execute_assign_field(object, name, value)?;
                     self.write_register(frame, *dest, assigned)?;
                 }
                 Instruction::Len { dest, value } => {
@@ -4104,12 +4104,16 @@ impl<'a> VM<'a> {
         self.allocate_array(elements)
     }
 
-    fn read_name(&self, index: usize) -> Result<String, RuntimeError> {
+    fn read_name_ref(&self, index: usize) -> Result<&str, RuntimeError> {
         self.program
             .names
             .get(index)
-            .cloned()
+            .map(String::as_str)
             .ok_or_else(|| RuntimeError::new("name index out of range"))
+    }
+
+    fn read_name(&self, index: usize) -> Result<String, RuntimeError> {
+        Ok(self.read_name_ref(index)?.to_string())
     }
 
     fn find_cell(&self, frame: &Frame, name: &str) -> Option<Cell> {

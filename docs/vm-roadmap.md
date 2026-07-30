@@ -464,6 +464,13 @@ runtime error 的位置和 stack 顺序不变。scaled closure 的 runtime media
 参考。详见
 [`docs/decisions/vm-execution-loop-004-borrow-call-sites.md`](decisions/vm-execution-loop-004-borrow-call-sites.md)。
 
+**状态（第五 borrowed name-operand 窄切片已完成，2026-07-30）：**
+`LoadVar`、`AssignVar`、`VariantTag` 和 struct field access 直接借用 immutable
+`Program` 的 name 字符串；需要长期持有名称的 declaration/native/constructor/error
+路径仍复制，未引入 per-VM name cache。scaled closure 的 runtime median 从
+0.392948s 降至 0.376456s，scaled loop 从 0.885938s 降至 0.829240s；详见
+[`docs/decisions/vm-execution-loop-005-borrow-name-operands.md`](decisions/vm-execution-loop-005-borrow-name-operands.md)。
+
 ### VM-5C：容量与大模块图
 
 **目标：** 让 VM 在大 artifact、深调用、长字符串、大数组和多模块 link 下
@@ -570,7 +577,7 @@ VM-3A 的第一 library boundary、typed error/version boundary、VM-3B 的第�
 linker report slice、VM-4A 的第一 interactive debugger slice、VM-4B 的第一
 deterministic profile counter slice、VM-4C 的第一 structured kind slice、VM-5A
 的 reproducible benchmark baseline/scale slices 和 VM-5B 的 trace-off instruction
-preamble/function-body cache/frame-boundary/borrowed-call-site slices 已完成；GC、persistent VM、
+preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand slices 已完成；GC、persistent VM、
 JIT 和新的 artifact version 仍未进入默认队列。VM-4B 的 wall-clock 与
 allocation/peak 扩展、VM-4C 的统一 host schema，以及 VM-5B 的后续性能优化都
 需要独立决策；下一步应依据十一个 workload 的 baseline 数据选择下一个明确的
