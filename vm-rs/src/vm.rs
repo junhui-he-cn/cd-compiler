@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 
-use crate::bytecode::{Constant, DebugLocation, DebugSource, FunctionBody, Instruction, Program};
+use crate::bytecode::{
+    Constant, DebugLocation, DebugRange, DebugSource, FunctionBody, Instruction, Program,
+};
 use crate::runtime::{Cell, FunctionValue, Heap, SharedEnvironment};
 #[cfg(test)]
 use crate::runtime::{HeapObjectKind, HeapStats};
@@ -85,6 +87,46 @@ pub struct DebugRun {
     pub quit: bool,
 }
 
+/// Deterministic execution counters collected by the opt-in profile API.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct ProfileReport {
+    pub instruction_count: usize,
+    pub output_bytes: usize,
+    pub functions: Vec<ProfileFunction>,
+    pub natives: Vec<ProfileNative>,
+    pub source_ranges: Vec<ProfileSourceRange>,
+}
+
+/// Counters for one bytecode function. `index` is `None` for the entry body.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProfileFunction {
+    pub index: Option<usize>,
+    pub name: String,
+    pub calls: usize,
+    pub instructions: usize,
+}
+
+/// Invocation count for one registered native name.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProfileNative {
+    pub name: String,
+    pub calls: usize,
+}
+
+/// Execution hits for one source-local debug range.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProfileSourceRange {
+    pub range: DebugRange,
+    pub hits: usize,
+}
+
+/// The profile report is returned even when execution fails.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProfileRun {
+    pub report: ProfileReport,
+    pub result: Result<String, RuntimeError>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ResourceKind {
     InstructionSteps,
@@ -110,6 +152,17 @@ pub enum RuntimeErrorKind {
     Resource(ResourceKind),
     Cancelled,
     DebuggerQuit,
+}
+
+impl RuntimeErrorKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Runtime => "runtime",
+            Self::Resource(_) => "resource",
+            Self::Cancelled => "cancelled",
+            Self::DebuggerQuit => "debugger_quit",
+        }
+    }
 }
 
 pub const DEFAULT_MAX_INSTRUCTION_STEPS: usize = 10_000_000;
@@ -2032,6 +2085,12 @@ pub struct VM<'a> {
     trace_stack: Vec<StackFrame>,
     trace_last_locations: Vec<Option<DebugLocation>>,
     debug_hook: Option<Box<dyn DebugHook + 'a>>,
+    profile_enabled: bool,
+    profile_instruction_count: usize,
+    profile_output_bytes: usize,
+    profile_functions: Vec<ProfileFunction>,
+    profile_natives: BTreeMap<String, usize>,
+    profile_source_ranges: BTreeMap<(usize, usize, usize), usize>,
 }
 
 impl<'a> VM<'a> {
@@ -2057,6 +2116,12 @@ impl<'a> VM<'a> {
             trace_stack: Vec::new(),
             trace_last_locations: Vec::new(),
             debug_hook: None,
+            profile_enabled: false,
+            profile_instruction_count: 0,
+            profile_output_bytes: 0,
+            profile_functions: Vec::new(),
+            profile_natives: BTreeMap::new(),
+            profile_source_ranges: BTreeMap::new(),
         }
     }
 
@@ -2067,6 +2132,34 @@ impl<'a> VM<'a> {
 
     pub fn run(mut self) -> Result<String, RuntimeError> {
         self.run_inner()
+    }
+
+    /// Execute the program with deterministic counters enabled.
+    ///
+    /// Program output remains in `result` for successful execution, while the
+    /// report is returned for both successful and failed execution. The CLI
+    /// deliberately renders only the report so program stdout cannot be
+    /// confused with profile records.
+    pub fn profile(mut self) -> ProfileRun {
+        self.profile_enabled = true;
+        self.profile_functions = std::iter::once(ProfileFunction {
+            index: None,
+            name: "main".to_string(),
+            calls: 0,
+            instructions: 0,
+        })
+        .chain(self.program.functions.iter().map(|function| ProfileFunction {
+            index: Some(function.index),
+            name: function.name.clone(),
+            calls: 0,
+            instructions: 0,
+        }))
+        .collect();
+        let result = self.run_inner();
+        ProfileRun {
+            report: self.profile_report(),
+            result,
+        }
     }
 
     pub fn trace(mut self) -> TraceRun {
@@ -2094,6 +2187,68 @@ impl<'a> VM<'a> {
             result
         };
         DebugRun { result, quit }
+    }
+
+    fn profile_report(&self) -> ProfileReport {
+        ProfileReport {
+            instruction_count: self.profile_instruction_count,
+            output_bytes: self.profile_output_bytes,
+            functions: self.profile_functions.clone(),
+            natives: self
+                .profile_natives
+                .iter()
+                .map(|(name, calls)| ProfileNative {
+                    name: name.clone(),
+                    calls: *calls,
+                })
+                .collect(),
+            source_ranges: self
+                .profile_source_ranges
+                .iter()
+                .map(|((source, start, end), hits)| ProfileSourceRange {
+                    range: DebugRange {
+                        source: *source,
+                        start: *start,
+                        end: *end,
+                    },
+                    hits: *hits,
+                })
+                .collect(),
+        }
+    }
+
+    fn profile_function_entry(&mut self, frame: &Frame) {
+        if !self.profile_enabled {
+            return;
+        }
+        let index = frame.function_index.map(|index| index.saturating_add(1)).unwrap_or(0);
+        if let Some(function) = self.profile_functions.get_mut(index) {
+            function.calls = function.calls.saturating_add(1);
+        }
+    }
+
+    fn profile_instruction(&mut self, frame: &Frame, location: Option<&DebugLocation>) {
+        if !self.profile_enabled {
+            return;
+        }
+        self.profile_instruction_count = self.profile_instruction_count.saturating_add(1);
+        let index = frame.function_index.map(|index| index.saturating_add(1)).unwrap_or(0);
+        if let Some(function) = self.profile_functions.get_mut(index) {
+            function.instructions = function.instructions.saturating_add(1);
+        }
+        if let Some(range) = location.and_then(|location| location.range.as_ref()) {
+            let key = (range.source, range.start, range.end);
+            let hits = self.profile_source_ranges.entry(key).or_insert(0);
+            *hits = hits.saturating_add(1);
+        }
+    }
+
+    fn profile_native_call(&mut self, name: &str) {
+        if !self.profile_enabled {
+            return;
+        }
+        let calls = self.profile_natives.entry(name.to_string()).or_insert(0);
+        *calls = calls.saturating_add(1);
     }
 
     fn run_inner(&mut self) -> Result<String, RuntimeError> {
@@ -2129,16 +2284,18 @@ impl<'a> VM<'a> {
         frame: &mut Frame,
     ) -> Result<Option<Value>, RuntimeError> {
         frame.ip = 0;
+        self.profile_function_entry(frame);
         self.trace_enter(frame, body.locations.first().cloned().flatten());
         while frame.ip < body.instructions.len() {
             let instruction_index = frame.ip;
             let location = body.locations.get(instruction_index).cloned().flatten();
             self.trace_instruction(frame, instruction_index, location.clone());
-            self.debug_instruction(frame, instruction_index, location)?;
+            self.debug_instruction(frame, instruction_index, location.clone())?;
             let instruction = &body.instructions[instruction_index];
             let mut jumped = false;
             let result = (|| -> Result<Option<Value>, RuntimeError> {
                 self.checkpoint_instruction()?;
+                self.profile_instruction(frame, location.as_ref());
                 match instruction {
                 Instruction::Constant { dest, constant } => {
                     let value = self.constant_value(*constant)?;
@@ -2601,6 +2758,9 @@ impl<'a> VM<'a> {
             }
         }
         self.output.push_str(text);
+        if self.profile_enabled {
+            self.profile_output_bytes = self.output.len();
+        }
         Ok(())
     }
 
@@ -3122,6 +3282,7 @@ impl<'a> VM<'a> {
         caller: String,
         call_site: Option<DebugLocation>,
     ) -> Result<Value, RuntimeError> {
+        self.profile_native_call(name);
         match name {
             "push" => self.execute_native_push(arguments),
             "pop" => self.execute_native_pop(arguments),

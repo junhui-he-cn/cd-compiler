@@ -856,6 +856,7 @@ cargo run --manifest-path vm-rs/Cargo.toml -- dump program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- run program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- trace program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- debug program.cdbc
+cargo run --manifest-path vm-rs/Cargo.toml -- profile program.cdbc
 ```
 
 `trace` executes the same linked artifact while emitting a deterministic source
@@ -871,6 +872,16 @@ the first instruction and accepts `break <path>:<line>`,
 `help`, and `quit` commands on stdin. Pause records include the current module,
 source location/range, call stack, and locals. Module products must be linked
 before debugging; `run` and `trace` behavior is unchanged.
+
+`profile` runs the same linked artifact with opt-in deterministic counters. It
+prints machine-readable instruction counts, function calls/instructions,
+native calls, existing source-range hits, and successfully written output
+bytes; the program's output is not mixed into the report. Function records use
+artifact order, while native and range records use stable sorting. A failed
+execution still prints its partial report before the existing runtime/resource
+diagnostic is written to stderr. The library equivalent is `VM::profile()`;
+wall-clock timing and allocation/peak counters remain deferred by the
+[`VM-4B-001` decision](docs/decisions/vm-profile-001.md).
 
 For an import-aware graph, `--emit-module-bytecode` emits one independently
 validated `artifact: module` product per graph node. Rust links the product set

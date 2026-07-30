@@ -13,9 +13,24 @@ cargo run --manifest-path vm-rs/Cargo.toml -- --help
 cargo run --manifest-path vm-rs/Cargo.toml -- dump program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- run program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- run --max-steps 100000 program.cdbc
+cargo run --manifest-path vm-rs/Cargo.toml -- trace program.cdbc
+cargo run --manifest-path vm-rs/Cargo.toml -- debug program.cdbc
+cargo run --manifest-path vm-rs/Cargo.toml -- profile program.cdbc
 ```
 
-`dump` parses and prints canonical `.cdbc` text. `run` executes the artifact and writes program output to stdout.
+`dump` parses and prints canonical `.cdbc` text. `run` executes the artifact
+and writes program output to stdout. `trace` emits deterministic source events,
+and `debug` starts the interactive breakpoint/step session.
+
+`profile` is an opt-in machine-readable report. It prints instruction counts,
+function calls/instructions, native calls, existing debug-range hits, and
+output byte counts without printing the program's output. Function records are
+in artifact order; native and source-range records are sorted. A runtime or
+resource failure still emits the partial report before the normal diagnostic
+goes to stderr. The embeddable equivalent is `vm::VM::profile()`, which
+returns `ProfileRun` with both `ProfileReport` and the typed execution result.
+Wall-clock timing and allocation/peak counters are intentionally deferred;
+see [`docs/decisions/vm-profile-001.md`](../docs/decisions/vm-profile-001.md).
 
 Execution and link commands use deterministic resource budgets by default. The
 available overrides are `--max-steps`, `--max-call-depth`, `--max-elements`,

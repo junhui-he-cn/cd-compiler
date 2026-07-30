@@ -1,4 +1,6 @@
-use compiler_design_vm::bytecode::{Constant, FunctionBody, Instruction};
+use compiler_design_vm::bytecode::{
+    Constant, DebugLocation, DebugRange, DebugSource, Function, FunctionBody, Instruction,
+};
 use compiler_design_vm::{
     format_artifact, link_modules_checked, link_modules_with_report, parse_artifact,
     parse_artifact_checked, verify_artifact, verify_module_artifact, verify_program_checked,
@@ -29,6 +31,90 @@ fn print_program() -> Program {
     }
 }
 
+fn profile_program() -> Program {
+    let range = DebugRange {
+        source: 0,
+        start: 0,
+        end: 8,
+    };
+    let location = || {
+        Some(DebugLocation {
+            source: 0,
+            line: 1,
+            column: 1,
+            range: Some(range.clone()),
+        })
+    };
+    Program {
+        constants: vec![Constant::Number("7".to_string())],
+        names: vec!["value".to_string(), "str".to_string()],
+        main: FunctionBody {
+            registers: 4,
+            instructions: vec![
+                Instruction::MakeFunction { dest: 0, function: 0 },
+                Instruction::Constant { dest: 1, constant: 0 },
+                Instruction::Call {
+                    dest: 2,
+                    callee: 0,
+                    arguments: vec![1],
+                },
+                Instruction::NativeCall {
+                    dest: 3,
+                    name: 1,
+                    arguments: vec![2],
+                },
+                Instruction::Print { value: 3 },
+            ],
+            locations: (0..5).map(|_| location()).collect(),
+        },
+        functions: vec![Function {
+            index: 0,
+            name: "identity".to_string(),
+            arity: 1,
+            registers: 1,
+            params: vec!["value".to_string()],
+            instructions: vec![
+                Instruction::LoadVar { dest: 0, name: 0 },
+                Instruction::Return { value: 0 },
+            ],
+            locations: (0..2).map(|_| location()).collect(),
+        }],
+        debug_sources: vec![DebugSource {
+            module: None,
+            path: "profile.cd".to_string(),
+            text: "print 7;\n".to_string(),
+        }],
+    }
+}
+
+fn profile_failure_program() -> Program {
+    Program {
+        constants: vec![
+            Constant::String("ok".to_string()),
+            Constant::Number("1".to_string()),
+            Constant::Number("0".to_string()),
+        ],
+        names: Vec::new(),
+        main: FunctionBody {
+            registers: 3,
+            instructions: vec![
+                Instruction::Constant { dest: 0, constant: 0 },
+                Instruction::Print { value: 0 },
+                Instruction::Constant { dest: 1, constant: 1 },
+                Instruction::Constant { dest: 2, constant: 2 },
+                Instruction::Divide {
+                    dest: 2,
+                    left: 1,
+                    right: 2,
+                },
+            ],
+            locations: vec![None; 5],
+        },
+        functions: Vec::new(),
+        debug_sources: Vec::new(),
+    }
+}
+
 #[test]
 fn library_api_parses_verifies_runs_and_traces_programs() {
     let source = format_artifact(&Artifact::Program(print_program()));
@@ -50,6 +136,49 @@ fn library_api_parses_verifies_runs_and_traces_programs() {
         .events
         .iter()
         .any(|event| event.kind == TraceEventKind::Output));
+}
+
+#[test]
+fn library_api_profiles_functions_natives_ranges_and_output() {
+    let profiled = VM::with_config(&profile_program(), RunConfig::unlimited()).profile();
+    assert_eq!(profiled.result.expect("profiled program should run"), "7\n");
+    assert_eq!(profiled.report.instruction_count, 7);
+    assert_eq!(profiled.report.output_bytes, 2);
+    assert_eq!(profiled.report.functions[0].name, "main");
+    assert_eq!(profiled.report.functions[0].calls, 1);
+    assert_eq!(profiled.report.functions[0].instructions, 5);
+    assert_eq!(profiled.report.functions[1].name, "identity");
+    assert_eq!(profiled.report.functions[1].calls, 1);
+    assert_eq!(profiled.report.functions[1].instructions, 2);
+    assert_eq!(
+        profiled.report.natives,
+        vec![compiler_design_vm::ProfileNative {
+            name: "str".to_string(),
+            calls: 1,
+        }]
+    );
+    assert_eq!(
+        profiled.report.source_ranges,
+        vec![compiler_design_vm::ProfileSourceRange {
+            range: DebugRange {
+                source: 0,
+                start: 0,
+                end: 8,
+            },
+            hits: 7,
+        }]
+    );
+}
+
+#[test]
+fn library_api_returns_partial_profile_on_runtime_failure() {
+    let profiled = VM::with_config(&profile_failure_program(), RunConfig::unlimited()).profile();
+    let error = profiled.result.expect_err("profiled program should fail");
+    assert_eq!(error.kind, compiler_design_vm::RuntimeErrorKind::Runtime);
+    assert_eq!(profiled.report.instruction_count, 5);
+    assert_eq!(profiled.report.output_bytes, 3);
+    assert_eq!(profiled.report.functions[0].calls, 1);
+    assert_eq!(profiled.report.functions[0].instructions, 5);
 }
 
 #[test]

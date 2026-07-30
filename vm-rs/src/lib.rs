@@ -29,5 +29,6 @@ pub use link::{
 };
 pub use vm::{
     CancellationToken, DebugControl, DebugHook, DebugPause, DebugRun, ResourceKind, RunConfig,
-    RuntimeError, RuntimeErrorKind, StackFrame, TraceEvent, TraceEventKind, TraceRun, VM,
+    ProfileFunction, ProfileNative, ProfileReport, ProfileRun, ProfileSourceRange, RuntimeError,
+    RuntimeErrorKind, StackFrame, TraceEvent, TraceEventKind, TraceRun, VM,
 };

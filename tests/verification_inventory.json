@@ -4337,6 +4337,26 @@
       "expected_files": []
     },
     {
+      "case_id": "ctest.profile",
+      "runner": "ctest",
+      "result_name": "profile",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "profile"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "ctest.rust_vm",
       "runner": "ctest",
       "result_name": "rust_vm",

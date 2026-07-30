@@ -82,13 +82,21 @@ print answer;
 cargo run --manifest-path vm-rs/Cargo.toml -- run hello.cdbc
 ```
 
-`--emit-bytecode` 只负责生成链接后的 `.cdbc` 文件；执行由 Rust VM 的 `run` 子命令完成。VM 还提供 `dump`（规范化打印 artifact）、`trace`（输出带源码位置的确定性执行事件）和 `debug`（交互式断点/单步会话）：
+`--emit-bytecode` 只负责生成链接后的 `.cdbc` 文件；执行由 Rust VM 的 `run` 子命令完成。VM 还提供 `dump`（规范化打印 artifact）、`trace`（输出带源码位置的确定性执行事件）、`debug`（交互式断点/单步会话）和 `profile`（机器可读的确定性执行统计）：
 
 ```sh
 cargo run --manifest-path vm-rs/Cargo.toml -- dump hello.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- trace hello.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- debug hello.cdbc
+cargo run --manifest-path vm-rs/Cargo.toml -- profile hello.cdbc
 ```
+
+`profile` 不打印程序本身的 stdout，只输出指令总数、函数调用/指令数、
+native 调用数、已有源码 range 命中数和执行期间成功写入的 output 字节数。
+函数记录按 artifact 定义顺序排列，native 和 range 记录稳定排序。程序运行
+失败时仍会输出已经收集的 partial report，正常运行时错误或资源错误继续写入
+stderr 并返回非零状态。wall-clock 时间和 allocation/peak 统计尚未纳入这个
+确定性报告。
 
 如果只想使用 C++ 编译器检查语法和类型，不需要生成字节码。
 
@@ -758,7 +766,7 @@ Type error at 1:7: undefined variable `missing`
 
 字节码运行时错误会附带 artifact 中保存的源码路径、行列位置和 caret；通过函数调用产生的运行时错误还会显示从内层到外层的调用栈。`trace` 的事件写到 stdout，`debug` 在执行中的暂停记录也写到 stdout，运行时失败诊断仍写到 stderr；错误程序不应依赖 stdout 中存在完整业务输出。
 
-普通编译器在成功时退出 `0`，语法、类型、导入和编译失败退出 `1`，命令行参数组合错误退出 `64`。Rust VM 的 `dump`、`run`、`trace`、`debug` 和 `link` 在 artifact 或执行失败时退出非零；参数数量错误同样使用 `64`。发布脚本应同时检查退出状态和 stderr，而不要只检查是否生成了输出文件。
+普通编译器在成功时退出 `0`，语法、类型、导入和编译失败退出 `1`，命令行参数组合错误退出 `64`。Rust VM 的 `dump`、`run`、`trace`、`debug`、`profile` 和 `link` 在 artifact 或执行失败时退出非零；参数数量错误同样使用 `64`。发布脚本应同时检查退出状态和 stderr，而不要只检查是否生成了输出文件。
 
 调试 artifact 的常用路径如下：
 
@@ -767,6 +775,7 @@ Type error at 1:7: undefined variable `missing`
 cargo run --manifest-path vm-rs/Cargo.toml -- dump program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- trace program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- debug program.cdbc
+cargo run --manifest-path vm-rs/Cargo.toml -- profile program.cdbc
 ```
 
 手写或缺少调试元数据的旧 `.cdbc` 只会得到兼容的一行运行时错误；由当前编译器生成的 artifact 会携带源码、函数、调用位置和可选的源码字节范围信息。
@@ -813,7 +822,7 @@ builtin member-call sugar，数组接收者仍使用数组 builtin。栈和队�
 - 复杂动态字段、未知索引、map/range 元素和部分循环出口不提供精确 nullable narrowing；
 - 当函数签名或集合元素类型无法可靠推断时，需要补充显式类型注解。
 
-交互式 REPL、动态派发、包管理和自定义 iterator 不属于当前 `master` 发布面；`trace` 和 `debug` 是可用的源码级确定性执行/调试工具。
+交互式 REPL、动态派发、包管理和自定义 iterator 不属于当前 `master` 发布面；`trace`、`debug` 和 `profile` 是可用的源码级确定性执行/调试/观测工具。profile 的 wall-clock 与 allocation/peak 扩展仍需独立的 VM 决策和 workload 证据。
 
 ### 发布维护者检查
 

@@ -200,6 +200,12 @@ add_test(
 )
 
 add_test(
+    NAME profile
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
+            ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/profile_tests.py $<TARGET_FILE:compiler_design> ${CMAKE_SOURCE_DIR}/vm-rs
+)
+
+add_test(
     NAME rust_vm
     COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
             ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/run_rust_vm_tests.py $<TARGET_FILE:compiler_design> ${CMAKE_SOURCE_DIR}/vm-rs --goldens
@@ -323,6 +329,7 @@ set_tests_properties(
     bytecode_module_cache
     module_debug_metadata
     debugger
+    profile
     rust_vm
     PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )

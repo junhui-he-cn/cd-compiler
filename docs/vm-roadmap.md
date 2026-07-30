@@ -51,10 +51,11 @@ Rust VM 的长期目标是成为一个可独立验证、可重复执行、可观
 | 调试与错误 | `run` 提供运行时错误和调用栈；`trace` 使用 `debug_sources`、`debug_locations`、`debug_ranges` 输出源码事件、局部变量、返回和失败 | `vm-rs/src/main.rs`、`tests/debugger_tests.py`、`docs/decisions/m5d-debug-001.md` |
 | 跨后端验证 | C++ emission、Rust dump/link/run、模块 artifact、module cache、golden 和 Cargo 测试已经形成验证链 | `tests/bytecode_artifact_tests.py`、`tests/run_rust_vm_tests.py`、`tests/bytecode_module_cache_tests.py` |
 
-当前基线的主要限制也要明确记录：VM 是 binary crate 而不是稳定库 API；
-运行时对象主要由 `Rc<RefCell<...>>` 和手工 identity 管理；资源预算和协作式
-取消已经由 VM-1B 固定，但还没有交互式 debugger、快照/回滚、二进制 artifact
-或 JIT。`cdbc 0.1` 的兼容性优先级高于这些后续能力。
+当前基线的主要限制也要明确记录：库 API 已存在但仍是 `0.1` additive boundary，
+不是 crates.io/跨线程稳定承诺；运行时对象主要由 `Rc<RefCell<...>>` 和手工
+identity 管理；资源预算和协作式取消已经由 VM-1B 固定，profile 当前只提供
+确定性 counters，不包含 wall-clock 或 allocation/peak 字段；快照/回滚、二进制
+artifact 或 JIT 仍未进入默认队列。`cdbc 0.1` 的兼容性优先级高于这些后续能力。
 
 ## 3. 路线图总览
 
@@ -364,6 +365,17 @@ return、runtime error、metadata-free artifact 和重复 quit 会话，决策�
 **边界：** profiling 默认关闭，不改变 stdout、runtime error、trace sequence
   或资源预算；不把 profile 结果直接当作 JIT 输入，除非 VM-7 单独决策。
 
+**状态（第一 deterministic counter 窄切片已完成，2026-07-30）：** library
+`VM::profile`/`ProfileRun`/`ProfileReport` 和 `compiler-design-vm profile`
+现在统计通过 instruction checkpoint 的 bytecode 指令、entry/函数调用与指令、
+native 调用、已有 `DebugRange` 命中和成功写入的 output bytes。函数按 artifact
+定义顺序输出，native 和 source range 使用稳定排序；运行时错误、资源错误和取消
+仍返回已经收集的 partial report，CLI 只输出报告而不混入业务 stdout。`run`、
+`trace`、`debug`、`.cdbc 0.1` 和资源语义保持不变，边界记录见
+[`docs/decisions/vm-profile-001.md`](decisions/vm-profile-001.md)。wall-clock
+执行时间和 allocation/peak counters 需要单独的确定性/heap 测量决策，暂不伪装
+为本 slice 的完成项。
+
 ### VM-4C：错误与诊断 API 稳定化
 
 **目标：** 把 CLI 文本之外的 runtime error、stack frame、source range、
@@ -475,6 +487,7 @@ python3 tests/bytecode_artifact_tests.py ./build/compiler_design vm-rs
 python3 tests/bytecode_module_artifact_tests.py ./build/compiler_design vm-rs
 python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens
 python3 tests/debugger_tests.py ./build/compiler_design vm-rs
+python3 tests/profile_tests.py ./build/compiler_design vm-rs
 git diff --check
 ```
 
@@ -501,10 +514,11 @@ canonical verification 和 malformed corpus。完整仓库 gate 仍以
 
 VM-1A、VM-1B、VM-1C、VM-2A、VM-2B 的 tracked-object/retained-byte 测量边界、
 VM-3A 的第一 library boundary、typed error/version boundary、VM-3B 的第一
-linker report slice 和 VM-4A 的第一 interactive debugger slice 已完成；GC、
-persistent VM、JIT 和新的 artifact version 仍未进入默认队列。下一步应在已有
-执行/heap 证据上选择 VM-4B profile/coverage 或 VM-4C structured diagnostics 的
-一个明确窄切片，并保持现有 CLI、linked/module artifact 和 trace 兼容。
+linker report slice、VM-4A 的第一 interactive debugger slice 和 VM-4B 的第一
+deterministic profile counter slice 已完成；GC、persistent VM、JIT 和新的
+artifact version 仍未进入默认队列。VM-4B 的 wall-clock 与 allocation/peak
+扩展需要独立测量决策；在该边界之外，下一步可进入 VM-4C structured diagnostics，
+同时保持现有 CLI、linked/module artifact、trace 和 profile 兼容。
 
 这份路线图的成功标准不是同时铺开所有 VM 研究方向，而是让每个运行时能力
 都有清楚的契约、独立的证据和可回退的迁移路径；语言 roadmap 继续独立演进，

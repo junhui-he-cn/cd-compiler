@@ -17,8 +17,9 @@ Usage:\n\
   compiler-design-vm run <program.cdbc>\n\
   compiler-design-vm trace <program.cdbc>\n\
   compiler-design-vm debug <program.cdbc>\n\
+  compiler-design-vm profile <program.cdbc>\n\
   compiler-design-vm link <module-directory> <output.cdbc>\n\n\
-Current phase: .cdbc parsing, canonical dump, bytecode execution, source tracing, and interactive debugging are implemented.\nResource options: --max-steps N, --max-call-depth N, --max-elements N, --max-output-bytes N, --max-artifact-bytes N, --max-modules N, --max-module-instructions N, --unlimited (0 disables an individual limit).\n";
+Current phase: .cdbc parsing, canonical dump, bytecode execution, source tracing, interactive debugging, and deterministic execution profiling are implemented.\nResource options: --max-steps N, --max-call-depth N, --max-elements N, --max-output-bytes N, --max-artifact-bytes N, --max-modules N, --max-module-instructions N, --unlimited (0 disables an individual limit).\n";
 
 fn help_text() -> &'static str {
     HELP
@@ -594,6 +595,70 @@ fn trace(path: &str, config: &RunConfig) -> Result<(), String> {
     traced.result.map(|_| ()).map_err(|error| error.to_string())
 }
 
+fn format_profile_status(result: &Result<String, vm::RuntimeError>) -> String {
+    match result {
+        Ok(_) => "profile status=ok".to_string(),
+        Err(error) => {
+            let mut status = format!("profile status=error kind={}", error.kind.as_str());
+            if let vm::RuntimeErrorKind::Resource(resource) = error.kind {
+                status.push_str(&format!(" resource={}", trace_quote(resource.as_str())));
+            }
+            status
+        }
+    }
+}
+
+fn print_profile_report(program: &Program, profiled: &vm::ProfileRun) {
+    println!("{}", format_profile_status(&profiled.result));
+    println!(
+        "profile instruction_count={} output_bytes={}",
+        profiled.report.instruction_count, profiled.report.output_bytes
+    );
+    for function in &profiled.report.functions {
+        let index = function
+            .index
+            .map(|index| format!("f{}", index))
+            .unwrap_or_else(|| "main".to_string());
+        println!(
+            "profile function index={} name={} calls={} instructions={}",
+            index,
+            trace_quote(&function.name),
+            function.calls,
+            function.instructions
+        );
+    }
+    for native in &profiled.report.natives {
+        println!(
+            "profile native name={} calls={}",
+            trace_quote(&native.name),
+            native.calls
+        );
+    }
+    for source_range in &profiled.report.source_ranges {
+        let source_index = source_range.range.source;
+        let path = program
+            .debug_sources
+            .get(source_index)
+            .map(|source| source.path.as_str())
+            .unwrap_or("<invalid-source>");
+        println!(
+            "profile source_range source=s{} path={} start={} end={} hits={}",
+            source_index,
+            trace_quote(path),
+            source_range.range.start,
+            source_range.range.end,
+            source_range.hits
+        );
+    }
+}
+
+fn profile(path: &str, config: &RunConfig) -> Result<(), String> {
+    let program = read_program(path, config)?;
+    let profiled = vm::VM::with_config(&program, config.clone()).profile();
+    print_profile_report(&program, &profiled);
+    profiled.result.map(|_| ()).map_err(|error| error.to_string())
+}
+
 fn debug(path: &str, config: &RunConfig) -> Result<(), String> {
     let program = read_program(path, config)?;
     let sources = program.debug_sources.clone();
@@ -816,6 +881,14 @@ fn main() {
                 process::exit(1);
             }
         }
+        Some("profile") => {
+            let (path, config) =
+                parse_single_path("profile", remaining).unwrap_or_else(|error| usage_error(error));
+            if let Err(error) = profile(&path, &config) {
+                eprintln!("{}", error);
+                process::exit(1);
+            }
+        }
         Some("link") => {
             let ((directory, output), config) =
                 parse_link_paths(remaining).unwrap_or_else(|error| usage_error(error));
@@ -844,10 +917,11 @@ mod tests {
         assert!(help.contains("compiler-design-vm run <program.cdbc>"));
         assert!(help.contains("compiler-design-vm trace <program.cdbc>"));
         assert!(help.contains("compiler-design-vm debug <program.cdbc>"));
+        assert!(help.contains("compiler-design-vm profile <program.cdbc>"));
         assert!(help.contains("compiler-design-vm link <module-directory> <output.cdbc>"));
         assert!(
             help.contains(
-                ".cdbc parsing, canonical dump, bytecode execution, source tracing, and interactive debugging are implemented",
+                ".cdbc parsing, canonical dump, bytecode execution, source tracing, interactive debugging, and deterministic execution profiling are implemented",
             )
         );
         assert!(help.contains("--max-steps N"));
