@@ -467,6 +467,8 @@ mod tests {
         assert_eq!(snapshot.for_kind(HeapObjectKind::Array).live, 0);
         assert_eq!(snapshot.for_kind(HeapObjectKind::Array).dead, ITERATIONS);
         assert_eq!(snapshot.peak_live, 5);
+        assert!(snapshot.for_kind(HeapObjectKind::Array).peak_estimated_bytes > 0);
+        assert!(snapshot.estimated_peak_live_bytes > 0);
         assert_eq!(snapshot.total_live, 0);
     }
 
@@ -522,12 +524,21 @@ mod tests {
         let snapshot = stats.snapshot();
         assert_eq!(snapshot.for_kind(HeapObjectKind::Array).allocations, 1);
         assert_eq!(snapshot.for_kind(HeapObjectKind::Map).allocations, 1);
+        assert!(snapshot.for_kind(HeapObjectKind::Array).estimated_bytes > ARRAY_LENGTH);
+        assert!(snapshot.for_kind(HeapObjectKind::Map).estimated_bytes > MAP_LENGTH);
         assert_eq!(snapshot.peak_live, 3);
+        assert!(snapshot.estimated_peak_live_bytes >= snapshot.estimated_live_bytes);
 
         drop(array);
         drop(map);
         drop(vm);
-        assert_eq!(stats.snapshot().total_live, 0);
+        let released = stats.snapshot();
+        assert_eq!(released.total_live, 0);
+        assert_eq!(released.estimated_live_bytes, 0);
+        assert_eq!(
+            released.estimated_peak_live_bytes,
+            snapshot.estimated_peak_live_bytes
+        );
     }
 
     #[test]
@@ -2388,6 +2399,7 @@ impl<'a> VM<'a> {
                 }
                 Ok(None)
             })();
+            self.heap.observe_estimated_bytes();
             match result {
                 Ok(Some(value)) => {
                     self.emit_trace(

@@ -215,7 +215,7 @@ registry、cycle policy、GC 和 host-byte peak-memory measurement 仍未完成�
 live/dead 数量；它不持有 VM root，也不通过 `Display` 遍历递归值。Rust 单测已
 覆盖 acyclic/cycle、closure cell/environment cycle、native temporary、runtime
 error 和 trace root release，当前 focused 结果为 `69/69`。function、range、
-variant 的 inline `Value` 生命周期、host-byte peak、ledger compaction、GC、
+variant 的 inline `Value` 生命周期、exact host-byte peak、ledger compaction、GC、
 搬迁句柄和持久 host root 仍保持 deferred；下一步需要 workload 级 peak 测量
 和决策，而不是直接替换 `Rc<RefCell>`。
 
@@ -224,9 +224,13 @@ variant 的 inline `Value` 生命周期、host-byte peak、ledger compaction、G
 时更新 live ledger；`HeapStatsSnapshot.peak_live` 提供本次 VM 生命周期内 tracked
 environment、cell、array、map、struct 的最大同时存活数量。新增混合 aggregate、
 native temporary、长数组 churn、深递归闭包和大数组/map payload workload 测试，
-Rust focused 结果为 `72/72`。这不是 host 字节峰值，也不覆盖 inline
-function/range/variant、ledger compaction、GC、搬迁句柄或持久 host root；下一步
-进入 host-byte measurement 和 backend 决策，而不是直接替换 `Rc<RefCell>`。
+Rust focused 结果为 `72/72`。随后增加 opt-in 的
+`estimated_live_bytes`/`estimated_peak_live_bytes`，统计 tracked storage 的
+representation pressure，并以独立 decision record 固定其非全局 allocator 边界；
+本轮 Rust focused 结果为 `73/73`。这不是 exact host allocator/RSS，也不覆盖
+inline function/range/variant、ledger compaction、GC、搬迁句柄或持久 host root；
+下一步基于这组对象与字节 workload 证据评估 backend，而不是直接替换
+`Rc<RefCell>`。
 
 ### VM-2C：可选的 tracing GC 或其他回收策略
 

@@ -85,6 +85,12 @@ storage objects, not a host-byte measurement. This slice also does not claim
 ledger compaction, cycle collection, relocating handles, persistent host roots,
 or a production profiling API.
 
+The follow-up retained-byte boundary adds opt-in `estimated_live_bytes` and
+`estimated_peak_live_bytes` for the same tracked storage. Its representation
+estimate, observation points, and explicit exclusion of global allocator/RSS
+measurement are recorded in
+[`vm-heap-byte-measurement-001.md`](vm-heap-byte-measurement-001.md).
+
 ## Verification
 
 Rust unit cases cover shared alias storage, distinct aggregate identities,
@@ -101,7 +107,7 @@ python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens
 python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json
 ```
 
-The focused run after the peak workload corpus slice passed Rust `72/72`; the existing
+The focused run after the retained-byte workload slice passed Rust `73/73`; the existing
 artifact, Rust VM, and canonical verification gates remain the compatibility
 checks for the unchanged `.cdbc` and alias semantics.
 
@@ -110,6 +116,6 @@ checks for the unchanged `.cdbc` and alias semantics.
 Do not add a GC, relocating handle table, or persistent host-value API in this
 slice. The next VM-2B gate is a workload-level decision about whether the
 reference-counted facade needs a different backend. The current corpus now
-provides reproducible tracked-object pressure; host-byte measurement still
-needs a separate measurement boundary before selecting tracing, handles, or
-another storage strategy.
+provides reproducible tracked-object and retained-byte pressure; exact global
+allocator/RSS measurement remains a separate capacity-study boundary before
+selecting tracing, handles, or another storage strategy.

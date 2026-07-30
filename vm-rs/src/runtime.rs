@@ -1,9 +1,10 @@
 #![allow(dead_code)]
 
 use crate::value::Value;
-use std::cell::RefCell;
+use std::cell::{Cell as ScalarCell, RefCell};
 use std::collections::HashMap;
 use std::fmt;
+use std::mem::size_of;
 use std::ops::Deref;
 use std::rc::Rc;
 use std::rc::Weak;
@@ -86,6 +87,10 @@ pub struct HeapObjectStats {
     pub allocations: usize,
     pub live: usize,
     pub dead: usize,
+    /// Estimated bytes retained by currently live storage of this kind.
+    pub estimated_bytes: usize,
+    /// Maximum estimated bytes retained by this kind during observation.
+    pub peak_estimated_bytes: usize,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -95,6 +100,10 @@ pub struct HeapStatsSnapshot {
     pub total_live: usize,
     pub total_dead: usize,
     pub peak_live: usize,
+    /// Estimated bytes retained by all currently live tracked storage.
+    pub estimated_live_bytes: usize,
+    /// Maximum estimated bytes retained by all tracked storage during observation.
+    pub estimated_peak_live_bytes: usize,
 }
 
 impl HeapStatsSnapshot {
@@ -110,7 +119,9 @@ pub struct HeapStats {
 
 impl HeapStats {
     pub fn snapshot(&self) -> HeapStatsSnapshot {
-        self.ledger.borrow().snapshot()
+        let mut ledger = self.ledger.borrow_mut();
+        ledger.observe_estimated_bytes();
+        ledger.snapshot()
     }
 }
 
@@ -133,6 +144,26 @@ impl WeakAllocation {
             Self::Struct(_) => HeapObjectKind::Struct,
         }
     }
+
+    fn observe_estimated_bytes(&self) -> Option<usize> {
+        match self {
+            Self::Environment(value) => value
+                .upgrade()
+                .map(|storage| storage.observe_estimated_bytes()),
+            Self::Cell(value) => value
+                .upgrade()
+                .map(|storage| storage.observe_estimated_bytes()),
+            Self::Array(value) => value
+                .upgrade()
+                .map(|storage| storage.observe_estimated_bytes()),
+            Self::Map(value) => value
+                .upgrade()
+                .map(|storage| storage.observe_estimated_bytes()),
+            Self::Struct(value) => value
+                .upgrade()
+                .map(|storage| storage.observe_estimated_bytes()),
+        }
+    }
 }
 
 #[derive(Debug, Default)]
@@ -140,6 +171,10 @@ struct HeapLedger {
     allocations: Vec<WeakAllocation>,
     live: [usize; HeapObjectKind::COUNT],
     peak_live: usize,
+    track_estimated_bytes: bool,
+    live_estimated_bytes: [usize; HeapObjectKind::COUNT],
+    peak_estimated_bytes: [usize; HeapObjectKind::COUNT],
+    peak_estimated_live_bytes: usize,
 }
 
 impl HeapLedger {
@@ -148,13 +183,39 @@ impl HeapLedger {
         self.allocations.push(allocation);
         self.live[kind.index()] += 1;
         self.peak_live = self.live.iter().sum::<usize>().max(self.peak_live);
+        self.observe_estimated_bytes();
     }
 
-    fn release(&mut self, kind: HeapObjectKind) {
+    fn release(&mut self, kind: HeapObjectKind, estimated_bytes: usize) {
         let live = &mut self.live[kind.index()];
         debug_assert!(*live > 0, "heap live counter underflow for {:?}", kind);
         if *live > 0 {
             *live -= 1;
+        }
+        if self.track_estimated_bytes {
+            let bytes = &mut self.live_estimated_bytes[kind.index()];
+            *bytes = bytes.saturating_sub(estimated_bytes);
+        }
+    }
+
+    fn observe_estimated_bytes(&mut self) {
+        if !self.track_estimated_bytes {
+            return;
+        }
+        let mut live_estimated_bytes = [0usize; HeapObjectKind::COUNT];
+        for allocation in &self.allocations {
+            if let Some(estimated_bytes) = allocation.observe_estimated_bytes() {
+                let bytes = &mut live_estimated_bytes[allocation.kind().index()];
+                *bytes = bytes.saturating_add(estimated_bytes);
+            }
+        }
+        self.live_estimated_bytes = live_estimated_bytes;
+        self.peak_estimated_live_bytes = self
+            .peak_estimated_live_bytes
+            .max(live_estimated_bytes.iter().sum());
+        for (index, estimated_bytes) in live_estimated_bytes.iter().enumerate() {
+            self.peak_estimated_bytes[index] =
+                self.peak_estimated_bytes[index].max(*estimated_bytes);
         }
     }
 
@@ -167,6 +228,8 @@ impl HeapLedger {
         }
         for (index, stats) in by_kind.iter_mut().enumerate() {
             stats.live = self.live[index];
+            stats.estimated_bytes = self.live_estimated_bytes[index];
+            stats.peak_estimated_bytes = self.peak_estimated_bytes[index];
         }
         for stats in &mut by_kind {
             stats.dead = stats.allocations - stats.live;
@@ -179,6 +242,8 @@ impl HeapLedger {
             total_live,
             total_dead: total_allocations - total_live,
             peak_live: self.peak_live,
+            estimated_live_bytes: self.live_estimated_bytes.iter().sum(),
+            estimated_peak_live_bytes: self.peak_estimated_live_bytes,
         }
     }
 }
@@ -193,6 +258,8 @@ pub struct TrackedStorage<T> {
     value: RefCell<T>,
     ledger: Weak<RefCell<HeapLedger>>,
     kind: HeapObjectKind,
+    size_estimator: fn(&T) -> usize,
+    accounted_bytes: ScalarCell<usize>,
 }
 
 impl<T> Deref for TrackedStorage<T> {
@@ -203,24 +270,110 @@ impl<T> Deref for TrackedStorage<T> {
     }
 }
 
+impl<T> TrackedStorage<T> {
+    fn observe_estimated_bytes(&self) -> usize {
+        let estimated_bytes = self
+            .value
+            .try_borrow()
+            .map(|value| {
+                size_of::<Self>()
+                    .saturating_add(2usize.saturating_mul(size_of::<usize>()))
+                    .saturating_add((self.size_estimator)(&value))
+            })
+            .unwrap_or_else(|_| self.accounted_bytes.get());
+        self.accounted_bytes.set(estimated_bytes);
+        estimated_bytes
+    }
+}
+
 impl<T> Drop for TrackedStorage<T> {
     fn drop(&mut self) {
         if let Some(ledger) = self.ledger.upgrade() {
-            ledger.borrow_mut().release(self.kind);
+            ledger
+                .borrow_mut()
+                .release(self.kind, self.accounted_bytes.get());
         }
     }
+}
+
+fn estimate_inline_value_dynamic_bytes(value: &Value) -> usize {
+    let mut bytes = 0usize;
+    match value {
+        Value::String(value) => {
+            bytes = bytes.saturating_add(value.capacity());
+        }
+        Value::Function(value) => {
+            bytes = bytes.saturating_add(value.name.capacity());
+        }
+        Value::Variant(value) => {
+            bytes = bytes
+                .saturating_add(value.enum_name.capacity())
+                .saturating_add(value.variant_name.capacity())
+                .saturating_add(value.fields.capacity().saturating_mul(size_of::<Value>()));
+            for field in &value.fields {
+                bytes = bytes.saturating_add(estimate_inline_value_dynamic_bytes(field));
+            }
+        }
+        _ => {}
+    }
+    bytes
+}
+
+fn estimate_environment_payload(value: &Environment) -> usize {
+    let mut bytes = value.capacity().saturating_mul(size_of::<(String, Cell)>());
+    for (name, _) in value {
+        bytes = bytes.saturating_add(name.capacity());
+    }
+    bytes
+}
+
+fn estimate_cell_payload(value: &Value) -> usize {
+    estimate_inline_value_dynamic_bytes(value)
+}
+
+fn estimate_array_payload(value: &Vec<Value>) -> usize {
+    let mut bytes = value.capacity().saturating_mul(size_of::<Value>());
+    for element in value {
+        bytes = bytes.saturating_add(estimate_inline_value_dynamic_bytes(element));
+    }
+    bytes
+}
+
+fn estimate_map_payload(value: &Vec<(Value, Value)>) -> usize {
+    let mut bytes = value.capacity().saturating_mul(size_of::<(Value, Value)>());
+    for (key, value) in value {
+        bytes = bytes
+            .saturating_add(estimate_inline_value_dynamic_bytes(key))
+            .saturating_add(estimate_inline_value_dynamic_bytes(value));
+    }
+    bytes
+}
+
+fn estimate_struct_payload(value: &Vec<(String, Value)>) -> usize {
+    let mut bytes = value
+        .capacity()
+        .saturating_mul(size_of::<(String, Value)>());
+    for (name, value) in value {
+        bytes = bytes
+            .saturating_add(name.capacity())
+            .saturating_add(estimate_inline_value_dynamic_bytes(value));
+    }
+    bytes
 }
 
 fn tracked_storage<T>(
     ledger: &Rc<RefCell<HeapLedger>>,
     kind: HeapObjectKind,
     value: T,
+    size_estimator: fn(&T) -> usize,
     make_weak: impl FnOnce(Weak<TrackedStorage<T>>) -> WeakAllocation,
 ) -> Rc<TrackedStorage<T>> {
     let storage = Rc::new(TrackedStorage {
         value: RefCell::new(value),
         ledger: Rc::downgrade(ledger),
         kind,
+        size_estimator,
+        accounted_bytes: ScalarCell::new(0),
     });
     ledger
         .borrow_mut()
@@ -242,7 +395,8 @@ impl fmt::Display for HeapError {
 /// This facade deliberately retains the current reference-counted storage. It
 /// owns VM-local identity allocation and the construction of runtime storage;
 /// VM execution remains responsible for resource-budget charging and root
-/// ownership until a later slice adds explicit heap accounting or handles.
+/// ownership. Opt-in retained-storage estimates are observational and do not
+/// replace the reference-counted backend.
 #[derive(Debug)]
 pub struct Heap {
     next_function_identity: usize,
@@ -270,9 +424,17 @@ impl Heap {
     }
 
     pub fn stats(&self) -> HeapStats {
+        let mut ledger = self.ledger.borrow_mut();
+        ledger.track_estimated_bytes = true;
+        ledger.observe_estimated_bytes();
+        drop(ledger);
         HeapStats {
             ledger: self.ledger.clone(),
         }
+    }
+
+    pub(crate) fn observe_estimated_bytes(&self) {
+        self.ledger.borrow_mut().observe_estimated_bytes();
     }
 
     pub fn new_environment(&self) -> SharedEnvironment {
@@ -280,6 +442,7 @@ impl Heap {
             &self.ledger,
             HeapObjectKind::Environment,
             HashMap::new(),
+            estimate_environment_payload,
             WeakAllocation::Environment,
         )
     }
@@ -289,6 +452,7 @@ impl Heap {
             &self.ledger,
             HeapObjectKind::Cell,
             value,
+            estimate_cell_payload,
             WeakAllocation::Cell,
         )
     }
@@ -322,6 +486,7 @@ impl Heap {
             &self.ledger,
             HeapObjectKind::Array,
             elements,
+            estimate_array_payload,
             WeakAllocation::Array,
         );
         Ok(Value::array(ArrayValue { identity, elements }))
@@ -353,6 +518,7 @@ impl Heap {
             &self.ledger,
             HeapObjectKind::Map,
             ordered,
+            estimate_map_payload,
             WeakAllocation::Map,
         );
         Ok(Value::map(MapValue { identity, entries }))
@@ -377,6 +543,7 @@ impl Heap {
             &self.ledger,
             HeapObjectKind::Struct,
             fields,
+            estimate_struct_payload,
             WeakAllocation::Struct,
         );
         Ok(Value::structure(StructValue {
@@ -514,6 +681,43 @@ mod tests {
             dead.for_kind(HeapObjectKind::Array).dead,
             dead.for_kind(HeapObjectKind::Array).allocations
         );
+    }
+
+    #[test]
+    fn heap_stats_estimates_payload_capacity_and_releases_it() {
+        let mut heap = Heap::new();
+        let stats = heap.stats();
+        let array = heap
+            .allocate_array(vec![Value::number(1.0)])
+            .expect("array identity should be available");
+
+        let initial = stats.snapshot();
+        let initial_bytes = initial.for_kind(HeapObjectKind::Array).estimated_bytes;
+        assert!(initial_bytes > 0);
+
+        if let Value::Array(array) = &array {
+            array
+                .elements
+                .borrow_mut()
+                .extend((0..256).map(|value| Value::number(value as f64)));
+        } else {
+            panic!("expected array payload");
+        }
+
+        let grown = stats.snapshot();
+        let grown_array = grown.for_kind(HeapObjectKind::Array);
+        assert!(grown_array.estimated_bytes > initial_bytes);
+        assert_eq!(grown.estimated_live_bytes, grown_array.estimated_bytes);
+        assert_eq!(grown.estimated_peak_live_bytes, grown_array.estimated_bytes);
+
+        drop(array);
+        let released = stats.snapshot();
+        assert_eq!(released.estimated_live_bytes, 0);
+        assert_eq!(
+            released.estimated_peak_live_bytes,
+            grown.estimated_peak_live_bytes
+        );
+        assert_eq!(released.for_kind(HeapObjectKind::Array).estimated_bytes, 0);
     }
 
     #[test]
