@@ -286,7 +286,9 @@ enum Result<T, E> {
 `maxSubarraySum` 使用 Kadane 扫描返回非空连续子数组的最大和，空数组返回
 `nil`，全负输入仍保留最大负值。
 `lowerBound`、`upperBound` 和 `binarySearch` 接受与输入排序一致的泛型比较器；
-前两者返回插入边界，后者返回重复值的首个位置。
+前两者返回插入边界，后者返回重复值的首个位置。`rotatedBinarySearch` 在一次
+旋转后的非降序数组中查找 comparator 等价值；无重复值时为 `O(log n)`，重复值
+导致两侧都可能有序时安全退化为 `O(n)`，未找到或空数组返回 `-1`。
 `compareStrings` 和 `stringLess` 保留库层可打印 ASCII 的三路比较与回调契约；
 语言层现在额外提供 Unicode scalar-value 字符串排序和比较运算符。
 `findSubstring`、`prefixFunction`、`zFunction` 和 `kmpSearch` 使用现有 Unicode scalar-value
@@ -361,7 +363,7 @@ enum Result<T, E> {
 - 线性查找：`O(n)`；
 - 二分查找：有序数组中的精确查找；
 - `lowerBound`、`upperBound`、插入位置和出现次数；
-- 旋转有序数组查找；
+- 旋转有序数组查找：`rotatedBinarySearch`；
 - 峰值、山脉数组：`peakIndex`、`isMountainArray`、`mountainPeakIndex`；
 - 答案空间二分：非负整数数组的 `minimumLargestPartitionSum`；
 - 数值数组的插值查找作为可选专题，不作为通用默认实现。

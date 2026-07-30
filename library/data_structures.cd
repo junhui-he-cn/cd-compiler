@@ -49,7 +49,7 @@ export Matrix, newMatrix
        from "./matrix.cd";
 
 export peakIndex, isMountainArray, mountainPeakIndex, lowerBound, upperBound,
-       binarySearch, countValue, isSorted, sortArray,
+       binarySearch, rotatedBinarySearch, countValue, isSorted, sortArray,
        sortArrayInPlace, shellSort, selectionSort, selectionSortInPlace,
        bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace,
        heapSort, heapSortInPlace, chunkArray, slidingWindows,

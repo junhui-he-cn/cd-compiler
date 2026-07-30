@@ -207,6 +207,7 @@ fun ascendingNumber(left: number, right: number): bool {
 print ds.lowerBound([1, 2, 2, 4], 2, ascendingNumber);
 print ds.upperBound([1, 2, 2, 4], 2, ascendingNumber);
 print ds.binarySearch([1, 2, 2, 4], 2, ascendingNumber);
+print ds.rotatedBinarySearch([4, 5, 6, 7, 0, 1, 2], 0, ascendingNumber);
 print ds.peakIndex([1, 3, 5, 4, 2]);
 print ds.mountainPeakIndex([1, 3, 5, 4, 2]);
 print ds.minimumLargestPartitionSum([7, 2, 5, 10, 8], 2);
@@ -941,6 +942,14 @@ index or `-1`. The three functions use `O(log n)` time and `O(1)` extra space;
 the comparator must define the same ordering used to sort the input. Empty
 arrays return insertion position `0` and `binarySearch` returns `-1`.
 
+`rotatedBinarySearch<T>(values, target, less)` searches a non-decreasing array
+that was rotated at one pivot and returns an index whose value is comparator-
+equivalent to `target`, or `-1` when no such value exists. It does not modify
+the input and returns `-1` for an empty array. With distinct values it runs in
+`O(log n)` time; duplicate values may make the sorted side ambiguous, so the
+duplicate-safe implementation can degrade to `O(n)`. The comparator defines
+equivalence through `!less(left, right) && !less(right, left)`.
+
 `peakIndex(values)` returns the index of a weak local peak using binary search;
 the empty input returns `nil`, and equal neighbors may make either edge of a
 plateau a valid result. `isMountainArray(values)` recognizes a strict mountain
@@ -1220,7 +1229,8 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
 `--case array_algorithms_prefix_monotonic`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
-`--case array_algorithms_binary_search`, `--case array_algorithms_merge_sort`,
+`--case array_algorithms_binary_search`, `--case array_algorithms_rotated_search`,
+`--case array_algorithms_merge_sort`,
 `--case array_algorithms_rotation`,
 `--case array_algorithms_frequency`,
 `--case array_algorithms_quick_sort`, `--case array_algorithms_heap_sort`,
