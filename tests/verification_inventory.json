@@ -4377,6 +4377,26 @@
       "expected_files": []
     },
     {
+      "case_id": "ctest.ssa",
+      "runner": "ctest",
+      "result_name": "ssa",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "ssa"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "ctest.type_utils",
       "runner": "ctest",
       "result_name": "type_utils",

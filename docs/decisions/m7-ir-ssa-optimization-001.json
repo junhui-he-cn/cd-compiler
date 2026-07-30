@@ -25,6 +25,25 @@
       "bytecode changes"
     ]
   },
+  "ssa_shell_slice": {
+    "status": "implemented_on_feature_branch",
+    "capabilities": [
+      "SSA value IDs",
+      "ordered phi incoming records",
+      "entry parameters",
+      "conservative memory-slot storage classes",
+      "CFG/SSA block alignment verification",
+      "definition/use and phi completeness verification"
+    ],
+    "test_case_id": "ctest.ssa",
+    "not_included": [
+      "dominance computation",
+      "SSA renaming",
+      "automatic phi insertion",
+      "de-SSA",
+      "optimization passes"
+    ]
+  },
   "pipeline": [
     "existing linear register IR",
     "CFG construction and verification",

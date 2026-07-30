@@ -1,8 +1,8 @@
 # M7-IR-SSA-001: internal SSA and optimization boundary
 
 Status: proposed overall on `feat/ssa-optimization-design`. The CFG
-foundation sub-slice is implemented on this branch; SSA construction and
-optimization remain unadmitted.
+foundation and SSA structural-shell sub-slices are implemented on this
+branch; dominance-based SSA construction and optimization remain unadmitted.
 
 ## Question
 
@@ -223,6 +223,13 @@ semantics:
 The focused CTest case is `control_flow_graph`; it is registered in the
 verification inventory as `ctest.control_flow_graph`. This foundation does
 not construct SSA values, insert phi nodes, simplify IR, or alter bytecode.
+
+The branch also implements the SSA structural shell in `include/SSA.hpp` and
+`src/SSA.cpp`: value IDs, ordered phi incoming records, entry parameters,
+conservative memory-slot storage classes, CFG/SSA block alignment, duplicate
+definition and undefined-use checks, and phi predecessor completeness/order
+validation. It does not yet perform dominance, renaming, automatic phi
+insertion, de-SSA, or optimization.
 
 ## Non-goals
 

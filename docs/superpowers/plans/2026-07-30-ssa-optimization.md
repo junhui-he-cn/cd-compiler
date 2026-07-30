@@ -11,9 +11,10 @@ promotion behind explicit follow-up decisions.
 
 ## Sequence
 
-Current progress: the CFG foundation slice in step 2 is implemented on
-`feat/ssa-optimization-design` and covered by `ctest.control_flow_graph`.
-Steps 3-6 remain future implementation slices.
+Current progress: the CFG foundation and SSA structural-shell slices in steps
+2-3 are implemented on `feat/ssa-optimization-design` and covered by
+`ctest.control_flow_graph` and `ctest.ssa`. Dominance/renaming, O1 passes, and
+later work remain future implementation slices.
 
 ### 1. Freeze the baseline and internal contracts
 

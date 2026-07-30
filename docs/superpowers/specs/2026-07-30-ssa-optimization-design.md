@@ -2,9 +2,9 @@
 
 Date: 2026-07-30
 
-Status: design proposal; the CFG foundation described below is implemented on
-the feature branch, while SSA and optimization remain unadmitted. This
-document expands
+Status: design proposal; the CFG foundation and SSA structural shell described
+below are implemented on the feature branch, while dominance-based SSA
+construction and optimization remain unadmitted. This document expands
 [`M7-IR-SSA-001`](../../decisions/m7-ir-ssa-optimization-001.md); it does not
 authorize implementation by itself.
 
