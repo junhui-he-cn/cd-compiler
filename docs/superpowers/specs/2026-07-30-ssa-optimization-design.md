@@ -2,9 +2,10 @@
 
 Date: 2026-07-30
 
-Status: design proposal; the CFG foundation and SSA structural shell described
-below are implemented on the feature branch, while dominance-based SSA
-construction and optimization remain unadmitted. This document expands
+Status: design proposal; the CFG foundation, SSA structural shell, and
+deterministic dominance analysis described below are implemented on the feature
+branch, while dominance-based SSA construction and optimization remain
+unadmitted. This document expands
 [`M7-IR-SSA-001`](../../decisions/m7-ir-ssa-optimization-001.md); it does not
 authorize implementation by itself.
 
@@ -109,6 +110,17 @@ For each main stream and function body:
 The builder must reject malformed jumps instead of silently repairing them.
 The independent module dependency markers are attached to the nearest ordered
 block/offset anchor and are included in the remapping table.
+
+## Dominance analysis slice
+
+The current branch computes sorted dominator sets, immediate-dominator tree
+children, and dominance frontiers for the reachable CFG subgraph. Unreachable
+blocks retain empty dominance metadata so later reachability passes can remove
+them without inventing definitions. A reachable synthetic exit is treated as
+an ordinary CFG node; predecessor edges from unreachable blocks do not
+contribute to its or any other frontier. The result is verified against CFG
+reachability, idom-tree, and frontier invariants before it is exposed to later
+SSA construction.
 
 ## SSA construction
 
@@ -247,7 +259,8 @@ policy; it must never reuse a product compiled under another optimizer.
 | File | Responsibility |
 | --- | --- |
 | `include/ControlFlowGraph.hpp`, `src/ControlFlowGraph.cpp` | block formation, successors/predecessors, CFG verifier, offset map |
-| `include/SSA.hpp`, `src/SSA.cpp` | SSA values, memory slots, dominance, phi insertion, rename, verify, de-SSA |
+| `include/Dominance.hpp`, `src/Dominance.cpp` | reachable dominators, immediate-dominator tree, dominance frontiers, verifier |
+| `include/SSA.hpp`, `src/SSA.cpp` | SSA values, memory slots, phi insertion, rename, verify, de-SSA |
 | `include/Optimizer.hpp`, `src/Optimizer.cpp` | options, pass ordering, effect classification, counters, fingerprint |
 | `include/IR.hpp`, `src/IR.cpp` | carry explicit binding metadata and preserve remappable internal IR data |
 | `src/IRCompiler.cpp` | emit binding/storage facts at the lowering boundary |

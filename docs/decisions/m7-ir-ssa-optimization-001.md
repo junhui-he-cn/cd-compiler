@@ -1,8 +1,9 @@
 # M7-IR-SSA-001: internal SSA and optimization boundary
 
 Status: proposed overall on `feat/ssa-optimization-design`. The CFG
-foundation and SSA structural-shell sub-slices are implemented on this
-branch; dominance-based SSA construction and optimization remain unadmitted.
+foundation, SSA structural shell, and deterministic dominance-analysis
+sub-slices are implemented on this branch; dominance-based SSA construction
+and optimization remain unadmitted.
 
 ## Question
 
@@ -144,6 +145,7 @@ The implementation should add private/internal services with narrow ownership:
 
 ```text
 include/ControlFlowGraph.hpp  src/ControlFlowGraph.cpp
+include/Dominance.hpp         src/Dominance.cpp
 include/SSA.hpp               src/SSA.cpp
 include/Optimizer.hpp         src/Optimizer.cpp
 ```
@@ -228,8 +230,15 @@ The branch also implements the SSA structural shell in `include/SSA.hpp` and
 `src/SSA.cpp`: value IDs, ordered phi incoming records, entry parameters,
 conservative memory-slot storage classes, CFG/SSA block alignment, duplicate
 definition and undefined-use checks, and phi predecessor completeness/order
-validation. It does not yet perform dominance, renaming, automatic phi
-insertion, de-SSA, or optimization.
+validation. It does not yet perform automatic phi insertion, renaming, de-SSA,
+or optimization.
+
+The branch also implements deterministic dominance analysis in
+`include/Dominance.hpp` and `src/Dominance.cpp`: reachable-subgraph dominator
+sets, immediate-dominator tree children, and dominance frontiers. Unreachable
+blocks have no dominance metadata; reachable synthetic exit blocks participate
+normally, and unreachable predecessor edges are excluded from frontier
+calculation. This slice does not place phis or rename SSA values.
 
 ## Non-goals
 
@@ -238,7 +247,7 @@ flow, change closure ownership, add a new runtime representation, change
 `cdbc 0.1`, optimize across module boundaries, add a JIT, add garbage
 collection, or make optimization mandatory.
 
-## Open decisions before implementation
+## Open decisions before SSA construction and optimization
 
 The following must be resolved in the first implementation decision revision:
 

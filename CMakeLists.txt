@@ -67,6 +67,7 @@ set(COMPILER_DESIGN_FRONTEND_SOURCES
 set(COMPILER_DESIGN_IR_SOURCES
     ${COMPILER_DESIGN_FRONTEND_SOURCES}
     src/ControlFlowGraph.cpp
+    src/Dominance.cpp
     src/IR.cpp
     src/IRCompiler.cpp
     src/SSA.cpp
@@ -104,6 +105,15 @@ add_executable(control_flow_graph_tests
 )
 compiler_design_configure_target(control_flow_graph_tests)
 
+add_executable(dominance_tests
+    tests/dominance_tests.cpp
+    src/ControlFlowGraph.cpp
+    src/Dominance.cpp
+    src/IR.cpp
+    src/Value.cpp
+)
+compiler_design_configure_target(dominance_tests)
+
 add_executable(ssa_tests
     tests/ssa_tests.cpp
     src/ControlFlowGraph.cpp
@@ -117,6 +127,7 @@ enable_testing()
 add_test(NAME source_map COMMAND source_map_tests)
 add_test(NAME ir_source_location COMMAND ir_source_location_tests)
 add_test(NAME control_flow_graph COMMAND control_flow_graph_tests)
+add_test(NAME dominance COMMAND dominance_tests)
 add_test(NAME ssa COMMAND ssa_tests)
 add_test(
     NAME golden_runner_selftest

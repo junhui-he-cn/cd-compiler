@@ -37,9 +37,24 @@
     ],
     "test_case_id": "ctest.ssa",
     "not_included": [
-      "dominance computation",
       "SSA renaming",
       "automatic phi insertion",
+      "de-SSA",
+      "optimization passes"
+    ]
+  },
+  "dominance_slice": {
+    "status": "implemented_on_feature_branch",
+    "capabilities": [
+      "reachable-subgraph dominator sets",
+      "immediate-dominator tree",
+      "deterministic dominance frontiers",
+      "synthetic-exit and unreachable-block boundary validation"
+    ],
+    "test_case_id": "ctest.dominance",
+    "not_included": [
+      "automatic phi insertion",
+      "SSA renaming",
       "de-SSA",
       "optimization passes"
     ]

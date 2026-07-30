@@ -4000,6 +4000,26 @@
       "expected_files": []
     },
     {
+      "case_id": "ctest.dominance",
+      "runner": "ctest",
+      "result_name": "dominance",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "dominance"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "ctest.flow_facts",
       "runner": "ctest",
       "result_name": "flow_facts",

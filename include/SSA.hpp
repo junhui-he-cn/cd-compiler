@@ -76,8 +76,9 @@ struct SSAFunction {
     std::vector<SSAParameter> parameters;
     std::vector<SSAMemorySlot> memorySlots;
 
-    // Validate the structural SSA contract. Dominance and renaming are later
-    // passes; this validator checks definitions, uses, phi edges, and shape.
+    // Validate the structural SSA contract. SSA construction and renaming are
+    // later passes; this validator checks definitions, uses, phi edges, and
+    // shape.
     void verify(const ControlFlowGraph& cfg) const;
 };
 
