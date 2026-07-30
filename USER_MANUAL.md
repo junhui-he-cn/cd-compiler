@@ -82,11 +82,12 @@ print answer;
 cargo run --manifest-path vm-rs/Cargo.toml -- run hello.cdbc
 ```
 
-`--emit-bytecode` 只负责生成链接后的 `.cdbc` 文件；执行由 Rust VM 的 `run` 子命令完成。VM 还提供 `dump`（规范化打印 artifact）和 `trace`（输出带源码位置的确定性执行事件）：
+`--emit-bytecode` 只负责生成链接后的 `.cdbc` 文件；执行由 Rust VM 的 `run` 子命令完成。VM 还提供 `dump`（规范化打印 artifact）、`trace`（输出带源码位置的确定性执行事件）和 `debug`（交互式断点/单步会话）：
 
 ```sh
 cargo run --manifest-path vm-rs/Cargo.toml -- dump hello.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- trace hello.cdbc
+cargo run --manifest-path vm-rs/Cargo.toml -- debug hello.cdbc
 ```
 
 如果只想使用 C++ 编译器检查语法和类型，不需要生成字节码。
@@ -753,9 +754,9 @@ Type error at 1:7: undefined variable `missing`
 - `pop` 空数组、`range` 使用零步长、`sqrt` 传入负数；
 - match 没有穷尽覆盖，或不同 arm 的返回类型不兼容。
 
-字节码运行时错误会附带 artifact 中保存的源码路径、行列位置和 caret；通过函数调用产生的运行时错误还会显示从内层到外层的调用栈。`trace` 的事件写到 stdout，运行时失败诊断仍写到 stderr；错误程序不应依赖 stdout 中存在完整业务输出。
+字节码运行时错误会附带 artifact 中保存的源码路径、行列位置和 caret；通过函数调用产生的运行时错误还会显示从内层到外层的调用栈。`trace` 的事件写到 stdout，`debug` 在执行中的暂停记录也写到 stdout，运行时失败诊断仍写到 stderr；错误程序不应依赖 stdout 中存在完整业务输出。
 
-普通编译器在成功时退出 `0`，语法、类型、导入和编译失败退出 `1`，命令行参数组合错误退出 `64`。Rust VM 的 `dump`、`run`、`trace` 和 `link` 在 artifact 或执行失败时退出非零；参数数量错误同样使用 `64`。发布脚本应同时检查退出状态和 stderr，而不要只检查是否生成了输出文件。
+普通编译器在成功时退出 `0`，语法、类型、导入和编译失败退出 `1`，命令行参数组合错误退出 `64`。Rust VM 的 `dump`、`run`、`trace`、`debug` 和 `link` 在 artifact 或执行失败时退出非零；参数数量错误同样使用 `64`。发布脚本应同时检查退出状态和 stderr，而不要只检查是否生成了输出文件。
 
 调试 artifact 的常用路径如下：
 
@@ -763,6 +764,7 @@ Type error at 1:7: undefined variable `missing`
 ./build/compiler_design --emit-bytecode program.cdbc main.cd
 cargo run --manifest-path vm-rs/Cargo.toml -- dump program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- trace program.cdbc
+cargo run --manifest-path vm-rs/Cargo.toml -- debug program.cdbc
 ```
 
 手写或缺少调试元数据的旧 `.cdbc` 只会得到兼容的一行运行时错误；由当前编译器生成的 artifact 会携带源码、函数、调用位置和可选的源码字节范围信息。
@@ -809,7 +811,7 @@ builtin member-call sugar，数组接收者仍使用数组 builtin。栈和队�
 - 复杂动态字段、未知索引、map/range 元素和部分循环出口不提供精确 nullable narrowing；
 - 当函数签名或集合元素类型无法可靠推断时，需要补充显式类型注解。
 
-交互式 REPL、断点/单步调试、动态派发、包管理和自定义 iterator 不属于当前 `master` 发布面；`trace` 是可用的源码级确定性执行跟踪工具。
+交互式 REPL、动态派发、包管理和自定义 iterator 不属于当前 `master` 发布面；`trace` 和 `debug` 是可用的源码级确定性执行/调试工具。
 
 ### 发布维护者检查
 

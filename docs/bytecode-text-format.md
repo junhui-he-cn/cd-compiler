@@ -17,6 +17,7 @@ compiler_design --emit-module-bytecode module-products --module-cache module-cac
 compiler-design-vm dump output.cdbc
 compiler-design-vm link module-products output.cdbc
 compiler-design-vm run output.cdbc
+compiler-design-vm debug output.cdbc
 ```
 
 ## Header

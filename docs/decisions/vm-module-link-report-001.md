@@ -30,7 +30,10 @@ format or CLI exit behavior changes in this slice.
 The report is an in-memory library result. The `link` CLI does not print or
 write it by default, so existing stdout, output artifact bytes, and command
 arguments remain compatible. A future opt-in report file or structured linker
-error requires a separate schema decision.
+error requires a separate schema decision. The structured linker error follow-up
+is now recorded in
+[`vm-library-error-boundary-001.md`](vm-library-error-boundary-001.md); this
+report slice still does not include a report-file schema.
 
 This slice does not change dependency resolution, cache policy, `.cdbc` text,
 debug-source rebasing, module identity rules, instruction budgets, or linker

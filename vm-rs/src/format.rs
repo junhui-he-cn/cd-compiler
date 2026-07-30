@@ -3,6 +3,13 @@ use crate::bytecode::{
 };
 use std::fmt;
 
+/// Stable artifact family accepted and emitted by this VM.
+pub const ARTIFACT_FORMAT_FAMILY: &str = "cdbc";
+/// Stable artifact version accepted and emitted by this VM.
+pub const ARTIFACT_FORMAT_VERSION: &str = "0.1";
+/// Canonical header for the current artifact family and version.
+pub const ARTIFACT_HEADER: &str = "cdbc 0.1";
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParseError {
     pub line: usize,
@@ -12,6 +19,61 @@ pub struct ParseError {
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "parse error at line {}: {}", self.line, self.message)
+    }
+}
+
+/// Machine-readable class for an artifact loading or validation failure.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ArtifactErrorKind {
+    Parse,
+    UnsupportedVersion,
+    Verification,
+}
+
+/// Stable artifact error returned by the checked library facade.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ArtifactError {
+    pub kind: ArtifactErrorKind,
+    pub line: usize,
+    pub message: String,
+}
+
+impl ArtifactError {
+    fn from_parse(source: &str, error: ParseError) -> Self {
+        let family_prefix = format!("{} ", ARTIFACT_FORMAT_FAMILY);
+        let first_line = source.lines().map(str::trim).find(|line| !line.is_empty());
+        let expected_header = format!("expected `{}`", ARTIFACT_HEADER);
+        let kind = if error.message == expected_header
+            && first_line.is_some_and(|line| line.starts_with(&family_prefix))
+        {
+            ArtifactErrorKind::UnsupportedVersion
+        } else {
+            ArtifactErrorKind::Parse
+        };
+        Self {
+            kind,
+            line: error.line,
+            message: error.message,
+        }
+    }
+
+    fn from_verification(error: ParseError) -> Self {
+        Self {
+            kind: ArtifactErrorKind::Verification,
+            line: error.line,
+            message: error.message,
+        }
+    }
+}
+
+impl fmt::Display for ArtifactError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let kind = match self.kind {
+            ArtifactErrorKind::Parse => "parse error",
+            ArtifactErrorKind::UnsupportedVersion => "unsupported artifact version",
+            ArtifactErrorKind::Verification => "artifact verification error",
+        };
+        write!(f, "{} at line {}: {}", kind, self.line, self.message)
     }
 }
 
@@ -610,9 +672,9 @@ fn parse_program_body(parser: &mut Parser<'_>) -> Result<Program, ParseError> {
     Ok(program)
 }
 
-pub fn parse_artifact(source: &str) -> Result<Artifact, ParseError> {
+fn parse_artifact_unverified(source: &str) -> Result<(Artifact, usize), ParseError> {
     let mut parser = Parser::new(source);
-    parser.require_line("cdbc 0.1")?;
+    parser.require_line(ARTIFACT_HEADER)?;
     let module = if parser
         .peek()
         .map(|(_, line)| line == "artifact: module")
@@ -635,7 +697,12 @@ pub fn parse_artifact(source: &str) -> Result<Artifact, ParseError> {
         }),
         None => Artifact::Program(program),
     };
-    verify_artifact_at_line(&artifact, parser.last_line())?;
+    Ok((artifact, parser.last_line()))
+}
+
+pub fn parse_artifact(source: &str) -> Result<Artifact, ParseError> {
+    let (artifact, line) = parse_artifact_unverified(source)?;
+    verify_artifact_at_line(&artifact, line)?;
     Ok(artifact)
 }
 
@@ -725,6 +792,29 @@ fn validation_error(line: usize, message: impl Into<String>) -> ParseError {
 
 pub fn verify_artifact(artifact: &Artifact) -> Result<(), ParseError> {
     verify_artifact_at_line(artifact, 1)
+}
+
+/// Parse and verify an in-memory artifact with a typed failure boundary.
+pub fn parse_artifact_checked(source: &str) -> Result<Artifact, ArtifactError> {
+    let (artifact, line) = parse_artifact_unverified(source)
+        .map_err(|error| ArtifactError::from_parse(source, error))?;
+    verify_artifact_at_line(&artifact, line).map_err(ArtifactError::from_verification)?;
+    Ok(artifact)
+}
+
+/// Verify an in-memory linked or module artifact with a typed failure boundary.
+pub fn verify_artifact_checked(artifact: &Artifact) -> Result<(), ArtifactError> {
+    verify_artifact(artifact).map_err(ArtifactError::from_verification)
+}
+
+/// Verify an in-memory linked program with a typed failure boundary.
+pub fn verify_program_checked(program: &Program) -> Result<(), ArtifactError> {
+    verify_program(program).map_err(ArtifactError::from_verification)
+}
+
+/// Verify an in-memory module product with a typed failure boundary.
+pub fn verify_module_artifact_checked(artifact: &ModuleArtifact) -> Result<(), ArtifactError> {
+    verify_module_artifact(artifact).map_err(ArtifactError::from_verification)
 }
 
 pub fn verify_program(program: &Program) -> Result<(), ParseError> {
@@ -1193,7 +1283,8 @@ pub fn parse_program(source: &str) -> Result<Program, ParseError> {
 
 pub fn format_program(program: &Program) -> String {
     let mut out = String::new();
-    out.push_str("cdbc 0.1\n\n");
+    out.push_str(ARTIFACT_HEADER);
+    out.push_str("\n\n");
     format_program_sections(&mut out, program);
     out
 }
@@ -1203,7 +1294,8 @@ pub fn format_artifact(artifact: &Artifact) -> String {
         Artifact::Program(program) => format_program(program),
         Artifact::Module(module) => {
             let mut out = String::new();
-            out.push_str("cdbc 0.1\n\n");
+            out.push_str(ARTIFACT_HEADER);
+            out.push_str("\n\n");
             out.push_str("artifact: module\n\n");
             out.push_str("module:\n");
             out.push_str(&format!(

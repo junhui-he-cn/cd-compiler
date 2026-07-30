@@ -3,6 +3,78 @@ use crate::bytecode::{
 };
 use crate::format::{verify_module_artifact, verify_program, ModuleArtifact};
 use std::collections::{HashMap, HashSet};
+use std::fmt;
+
+/// Machine-readable class for a module-linking failure.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LinkErrorKind {
+    InvalidModule,
+    DuplicateModuleIdentity,
+    EmptyModuleSet,
+    MissingEntryModule,
+    InvalidEntryOrder,
+    MissingDependency,
+    InvalidDependency,
+    DependencyCycle,
+    InvalidInstruction,
+    Overflow,
+    InvalidLinkedProgram,
+}
+
+/// Stable linker error returned by the checked library facade.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LinkError {
+    pub kind: LinkErrorKind,
+    pub module_identity: Option<String>,
+    pub dependency_index: Option<usize>,
+    pub message: String,
+}
+
+impl LinkError {
+    fn new(kind: LinkErrorKind, message: impl Into<String>) -> Self {
+        Self {
+            kind,
+            module_identity: None,
+            dependency_index: None,
+            message: message.into(),
+        }
+    }
+
+    fn module(
+        kind: LinkErrorKind,
+        module_identity: impl Into<String>,
+        message: impl Into<String>,
+    ) -> Self {
+        Self {
+            kind,
+            module_identity: Some(module_identity.into()),
+            dependency_index: None,
+            message: message.into(),
+        }
+    }
+
+    fn dependency(
+        kind: LinkErrorKind,
+        module_identity: impl Into<String>,
+        dependency_index: usize,
+        message: impl Into<String>,
+    ) -> Self {
+        Self {
+            kind,
+            module_identity: Some(module_identity.into()),
+            dependency_index: Some(dependency_index),
+            message: message.into(),
+        }
+    }
+}
+
+impl fmt::Display for LinkError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.message)
+    }
+}
+
+impl std::error::Error for LinkError {}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LinkReport {
@@ -61,7 +133,7 @@ fn program_instruction_count(program: &Program) -> usize {
 }
 
 impl Linker {
-    fn new(modules: Vec<ModuleArtifact>) -> Result<Self, String> {
+    fn new(modules: Vec<ModuleArtifact>) -> Result<Self, LinkError> {
         let input_instruction_count = modules
             .iter()
             .map(|module| program_instruction_count(&module.program))
@@ -72,17 +144,26 @@ impl Linker {
             .fold(0usize, usize::saturating_add);
         let mut by_identity = HashMap::new();
         for module in modules {
-            verify_module_artifact(&module)
-                .map_err(|error| format!("module artifact verification failed: {}", error))?;
-            if by_identity
-                .insert(module.identity.clone(), module)
-                .is_some()
-            {
-                return Err("duplicate module identity".to_string());
+            let identity = module.identity.clone();
+            verify_module_artifact(&module).map_err(|error| {
+                LinkError::module(
+                    LinkErrorKind::InvalidModule,
+                    identity.clone(),
+                    format!("module artifact verification failed: {}", error),
+                )
+            })?;
+            if by_identity.insert(identity, module).is_some() {
+                return Err(LinkError::new(
+                    LinkErrorKind::DuplicateModuleIdentity,
+                    "duplicate module identity",
+                ));
             }
         }
         if by_identity.is_empty() {
-            return Err("module product set is empty".to_string());
+            return Err(LinkError::new(
+                LinkErrorKind::EmptyModuleSet,
+                "module product set is empty",
+            ));
         }
 
         let mut entries = by_identity
@@ -91,11 +172,17 @@ impl Linker {
             .collect::<Vec<_>>();
         entries.sort_by_key(|module| module.entry_order);
         if entries.is_empty() {
-            return Err("module product set has no entry module".to_string());
+            return Err(LinkError::new(
+                LinkErrorKind::MissingEntryModule,
+                "module product set has no entry module",
+            ));
         }
         for (expected, module) in entries.iter().enumerate() {
             if module.entry_order != Some(expected) {
-                return Err("entry module orders must be contiguous from zero".to_string());
+                return Err(LinkError::new(
+                    LinkErrorKind::InvalidEntryOrder,
+                    "entry module orders must be contiguous from zero",
+                ));
             }
         }
         let mut input_module_identities = by_identity.keys().cloned().collect::<Vec<_>>();
@@ -109,21 +196,35 @@ impl Linker {
             let mut previous_offset = 0;
             for (index, dependency) in module.dependencies.iter().enumerate() {
                 if !by_identity.contains_key(&dependency.identity) {
-                    return Err(format!(
-                        "module `{}` dependency d{} targets missing module `{}`",
-                        module.identity, index, dependency.identity
+                    return Err(LinkError::dependency(
+                        LinkErrorKind::MissingDependency,
+                        module.identity.clone(),
+                        index,
+                        format!(
+                            "module `{}` dependency d{} targets missing module `{}`",
+                            module.identity, index, dependency.identity
+                        ),
                     ));
                 }
                 if dependency.instruction_offset > module.program.main.instructions.len() {
-                    return Err(format!(
-                        "module `{}` dependency d{} instruction offset out of range",
-                        module.identity, index
+                    return Err(LinkError::dependency(
+                        LinkErrorKind::InvalidDependency,
+                        module.identity.clone(),
+                        index,
+                        format!(
+                            "module `{}` dependency d{} instruction offset out of range",
+                            module.identity, index
+                        ),
                     ));
                 }
                 if index != 0 && dependency.instruction_offset < previous_offset {
-                    return Err(format!(
-                        "module `{}` dependency offsets are not ordered",
-                        module.identity
+                    return Err(LinkError::module(
+                        LinkErrorKind::InvalidDependency,
+                        module.identity.clone(),
+                        format!(
+                            "module `{}` dependency offsets are not ordered",
+                            module.identity
+                        ),
                     ));
                 }
                 previous_offset = dependency.instruction_offset;
@@ -152,7 +253,7 @@ impl Linker {
         })
     }
 
-    fn allocate_context(&mut self, module: &ModuleArtifact) -> Result<ModuleContext, String> {
+    fn allocate_context(&mut self, module: &ModuleArtifact) -> Result<ModuleContext, LinkError> {
         let context = ModuleContext {
             constant_base: self.constants.len(),
             name_base: self.names.len(),
@@ -170,24 +271,36 @@ impl Linker {
             self.main.registers,
             module.program.main.registers,
             "linked main register count",
-        )?;
+        )
+        .map_err(|error| {
+            LinkError::module(
+                LinkErrorKind::Overflow,
+                module.identity.clone(),
+                error.to_string(),
+            )
+        })?;
         Ok(context)
     }
 
-    fn expand(&mut self, identity: &str) -> Result<(), String> {
+    fn expand(&mut self, identity: &str) -> Result<(), LinkError> {
         if self.expanded.contains(identity) {
             return Ok(());
         }
         if !self.visiting.insert(identity.to_string()) {
-            return Err(format!("module dependency cycle at `{}`", identity));
+            return Err(LinkError::module(
+                LinkErrorKind::DependencyCycle,
+                identity,
+                format!("module dependency cycle at `{}`", identity),
+            ));
         }
         self.expansion_order.push(identity.to_string());
 
-        let module = self
-            .modules
-            .get(identity)
-            .cloned()
-            .ok_or_else(|| format!("missing module `{}`", identity))?;
+        let module = self.modules.get(identity).cloned().ok_or_else(|| {
+            LinkError::new(
+                LinkErrorKind::MissingDependency,
+                format!("missing module `{}`", identity),
+            )
+        })?;
         let context = self.allocate_context(&module)?;
         self.contexts.insert(identity.to_string(), context.clone());
 
@@ -253,7 +366,7 @@ impl Linker {
         Ok(())
     }
 
-    fn finish(mut self) -> Result<LinkResult, String> {
+    fn finish(mut self) -> Result<LinkResult, LinkError> {
         for identity in self.entry_module_identities.clone() {
             self.expand(&identity)?;
         }
@@ -281,11 +394,27 @@ impl Linker {
     }
 }
 
-pub fn link_modules_with_report(modules: Vec<ModuleArtifact>) -> Result<LinkResult, String> {
+/// Link module products and return deterministic size/order metadata with a typed error.
+pub fn link_modules_with_report_checked(
+    modules: Vec<ModuleArtifact>,
+) -> Result<LinkResult, LinkError> {
     let result = Linker::new(modules)?.finish()?;
-    verify_program(&result.program)
-        .map_err(|error| format!("linked program verification failed: {}", error))?;
+    verify_program(&result.program).map_err(|error| {
+        LinkError::new(
+            LinkErrorKind::InvalidLinkedProgram,
+            format!("linked program verification failed: {}", error),
+        )
+    })?;
     Ok(result)
+}
+
+pub fn link_modules_with_report(modules: Vec<ModuleArtifact>) -> Result<LinkResult, String> {
+    link_modules_with_report_checked(modules).map_err(|error| error.to_string())
+}
+
+/// Link module products and return only the linked program with a typed error.
+pub fn link_modules_checked(modules: Vec<ModuleArtifact>) -> Result<Program, LinkError> {
+    link_modules_with_report_checked(modules).map(|result| result.program)
 }
 
 pub fn link_modules(modules: Vec<ModuleArtifact>) -> Result<Program, String> {
@@ -437,7 +566,7 @@ fn emit_pending_main(
 fn map_function_instruction(
     instruction: &Instruction,
     context: &ModuleContext,
-) -> Result<Instruction, String> {
+) -> Result<Instruction, LinkError> {
     map_instruction(instruction, context, 0, |target| Ok(target))
 }
 
@@ -445,12 +574,14 @@ fn map_main_instruction(
     instruction: &Instruction,
     context: &ModuleContext,
     local_to_global: &[usize],
-) -> Result<Instruction, String> {
+) -> Result<Instruction, LinkError> {
     map_instruction(instruction, context, context.main_register_base, |target| {
-        local_to_global
-            .get(target)
-            .copied()
-            .ok_or_else(|| "jump target out of range while linking".to_string())
+        local_to_global.get(target).copied().ok_or_else(|| {
+            LinkError::new(
+                LinkErrorKind::InvalidInstruction,
+                "jump target out of range while linking",
+            )
+        })
     })
 }
 
@@ -458,8 +589,8 @@ fn map_instruction(
     instruction: &Instruction,
     context: &ModuleContext,
     register_base: usize,
-    map_jump: impl Fn(usize) -> Result<usize, String>,
-) -> Result<Instruction, String> {
+    map_jump: impl Fn(usize) -> Result<usize, LinkError>,
+) -> Result<Instruction, LinkError> {
     let register = |value: usize| checked_add(value, register_base, "linked register index");
     let constant =
         |value: usize| checked_add(value, context.constant_base, "linked constant index");
@@ -493,7 +624,7 @@ fn map_instruction(
             entries: entries
                 .iter()
                 .map(|(key, value)| Ok((register(*key)?, register(*value)?)))
-                .collect::<Result<Vec<_>, String>>()?,
+                .collect::<Result<Vec<_>, LinkError>>()?,
         },
         Instruction::Struct {
             dest,
@@ -505,7 +636,7 @@ fn map_instruction(
             fields: fields
                 .iter()
                 .map(|(field, value)| Ok((name(*field)?, register(*value)?)))
-                .collect::<Result<Vec<_>, String>>()?,
+                .collect::<Result<Vec<_>, LinkError>>()?,
         },
         Instruction::Variant {
             dest,
@@ -731,7 +862,11 @@ fn remap_location(location: &Option<DebugLocation>, source_base: usize) -> Optio
     })
 }
 
-fn checked_add(left: usize, right: usize, description: &str) -> Result<usize, String> {
-    left.checked_add(right)
-        .ok_or_else(|| format!("{} out of range", description))
+fn checked_add(left: usize, right: usize, description: &str) -> Result<usize, LinkError> {
+    left.checked_add(right).ok_or_else(|| {
+        LinkError::new(
+            LinkErrorKind::Overflow,
+            format!("{} out of range", description),
+        )
+    })
 }

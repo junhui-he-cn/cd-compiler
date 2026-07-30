@@ -269,9 +269,18 @@ inline function/range/variant、ledger compaction、GC、搬迁句柄或持久 h
 继续负责文件 IO、参数、输出渲染和退出码。`vm-rs/tests/library_api.rs` 已覆盖
 内存 artifact 的 parse/verify/run/trace、module link 以及两个 VM 实例隔离。
 当前 crate 仍保持 `publish = false`、单线程 `Rc<RefCell>` 语义和现有错误类型，
-API versioning、structured linker error、persistent session 和 `Send`/`Sync`
-保持 deferred；决策记录见
+persistent session 和 `Send`/`Sync` 保持 deferred；第一版 API 与错误边界见
 [`docs/decisions/vm-library-api-001.md`](decisions/vm-library-api-001.md)。
+
+**状态（typed error/version boundary 窄切片已完成，2026-07-30）：** 新增
+`LIBRARY_API_VERSION`、`ARTIFACT_FORMAT_*` 常量，以及 additive 的
+`parse_artifact_checked`/`verify_*_checked` 和
+`link_modules*_checked` API。`ArtifactError` 区分 parse、unsupported version、
+verification；`LinkError` 暴露 kind、module identity 和 dependency index，旧
+`ParseError`/`String` 函数通过兼容适配器保留原文字诊断。`cdbc 0.1`、CLI、旧
+linker API 和 artifact bytes 不变；integration tests 已固定 typed fields 和
+legacy display。详细边界见
+[`docs/decisions/vm-library-error-boundary-001.md`](decisions/vm-library-error-boundary-001.md)。
 
 ### VM-3B：模块链接器的产品级加固
 
@@ -294,7 +303,8 @@ API versioning、structured linker error、persistent session 和 `Send`/`Sync`
 entry order、dependency source-order expansion、输入依赖规模和 linked
 program 规模；旧 `link_modules` 保持原返回值，CLI 默认不输出报告。当前已用
 diamond、cycle、invalid-input 和 library linked-run tests 固定顺序、计数和错误
-兼容性；报告文件 schema、structured linker error、大图容量和性能仍 deferred，
+兼容性；typed linker error 已作为 VM-3A-002 的 additive facade 交付，报告文件
+schema、大图容量和性能仍 deferred，
 决策记录见
 [`docs/decisions/vm-module-link-report-001.md`](decisions/vm-module-link-report-001.md)。
 
@@ -332,6 +342,16 @@ diamond、cycle、invalid-input 和 library linked-run tests 固定顺序、计�
 **验收：** `tests/debugger_tests.py` 扩展为重复会话、断点命中、step/next、
   import、闭包 locals、错误和 metadata-free artifact 的矩阵；`trace` 和
   普通 `run` 的输出保持兼容。
+
+**状态（第一 interactive debugger 窄切片已完成，2026-07-30）：** 新增
+`compiler-design-vm debug` 和 library `VM::debug`/`DebugHook` 边界；会话在真实
+执行中的每条指令前暂停，支持 entry、source line/range breakpoint、continue、
+step、next、delete、quit，并复用已有 debug source/location/range、调用栈和
+locals。错误沿嵌套 frame 以稳定的 inner-to-outer `error` pause 暴露，最终
+`RuntimeError` 仍保持原 stderr 诊断；`run`、`trace`、`.cdbc 0.1` 和资源预算
+不变。debugger matrix 已覆盖 linked/imported module、range、闭包/函数 locals、
+return、runtime error、metadata-free artifact 和重复 quit 会话，决策记录见
+[`docs/decisions/vm-debugger-001.md`](decisions/vm-debugger-001.md)。
 
 ### VM-4B：profile、coverage 和运行报告
 
@@ -480,11 +500,11 @@ canonical verification 和 malformed corpus。完整仓库 gate 仍以
 ## 12. 当前下一步
 
 VM-1A、VM-1B、VM-1C、VM-2A、VM-2B 的 tracked-object/retained-byte 测量边界、
-VM-3A 的第一 library boundary 和 VM-3B 的第一 linker report slice 已完成；
-GC、persistent VM、JIT 和新的 artifact version 仍未进入默认队列。下一步是根据
-实际 embedding/容量需求继续稳定 library error/version boundary，或推进已有
-trace 之上的 VM-4A interactive debugger；两者都必须保持现有 CLI、linked/module
-artifact 和 trace 兼容。
+VM-3A 的第一 library boundary、typed error/version boundary、VM-3B 的第一
+linker report slice 和 VM-4A 的第一 interactive debugger slice 已完成；GC、
+persistent VM、JIT 和新的 artifact version 仍未进入默认队列。下一步应在已有
+执行/heap 证据上选择 VM-4B profile/coverage 或 VM-4C structured diagnostics 的
+一个明确窄切片，并保持现有 CLI、linked/module artifact 和 trace 兼容。
 
 这份路线图的成功标准不是同时铺开所有 VM 研究方向，而是让每个运行时能力
 都有清楚的契约、独立的证据和可回退的迁移路径；语言 roadmap 继续独立演进，

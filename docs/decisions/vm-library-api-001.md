@@ -30,9 +30,11 @@ verifier, linker, and VM implementation.
 This first slice preserves existing error contracts: artifact parsing and
 verification return `format::ParseError`, linking returns its existing
 deterministic `String` diagnostics, and execution returns
-`Result<String, RuntimeError>`. A later API-stability slice may introduce a
-structured linker error or a versioned facade after real embedding use cases
-show the required shape.
+`Result<String, RuntimeError>`. The additive follow-up that introduces the
+first typed linker/artifact facade and version constants is recorded in
+[`vm-library-error-boundary-001.md`](vm-library-error-boundary-001.md); this
+record remains the decision for the initial library extraction and its
+compatibility-preserving starting point.
 
 The crate remains `publish = false`, has no crates.io or SemVer promise, and
 does not promise `Send`/`Sync`. `Rc`/`RefCell`, VM-borrowed programs, and

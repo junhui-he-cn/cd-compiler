@@ -56,6 +56,35 @@ pub struct TraceRun {
     pub result: Result<String, RuntimeError>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DebugPause {
+    pub function: String,
+    pub instruction: usize,
+    pub location: Option<DebugLocation>,
+    pub stack: Vec<StackFrame>,
+    pub locals: Vec<(String, String)>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DebugControl {
+    Continue,
+    Quit,
+}
+
+pub trait DebugHook {
+    fn on_instruction(&mut self, pause: DebugPause) -> DebugControl;
+
+    fn on_error(&mut self, pause: DebugPause, _error: &RuntimeError) -> DebugControl {
+        let _ = pause;
+        DebugControl::Continue
+    }
+}
+
+pub struct DebugRun {
+    pub result: Result<String, RuntimeError>,
+    pub quit: bool,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ResourceKind {
     InstructionSteps,
@@ -80,6 +109,7 @@ pub enum RuntimeErrorKind {
     Runtime,
     Resource(ResourceKind),
     Cancelled,
+    DebuggerQuit,
 }
 
 pub const DEFAULT_MAX_INSTRUCTION_STEPS: usize = 10_000_000;
@@ -1902,6 +1932,16 @@ impl RuntimeError {
         }
     }
 
+    fn debug_quit() -> Self {
+        Self {
+            kind: RuntimeErrorKind::DebuggerQuit,
+            message: "debugger session quit".to_string(),
+            location: None,
+            stack: Vec::new(),
+            sources: Vec::new(),
+        }
+    }
+
     fn push_frame(&mut self, function: String, location: Option<DebugLocation>) {
         self.stack.push(StackFrame { function, location });
     }
@@ -1987,9 +2027,11 @@ pub struct VM<'a> {
     call_depth: usize,
     runtime_elements: usize,
     trace_enabled: bool,
+    trace_collect_events: bool,
     trace_events: Vec<TraceEvent>,
     trace_stack: Vec<StackFrame>,
     trace_last_locations: Vec<Option<DebugLocation>>,
+    debug_hook: Option<Box<dyn DebugHook + 'a>>,
 }
 
 impl<'a> VM<'a> {
@@ -2010,9 +2052,11 @@ impl<'a> VM<'a> {
             call_depth: 0,
             runtime_elements: 0,
             trace_enabled: false,
+            trace_collect_events: false,
             trace_events: Vec::new(),
             trace_stack: Vec::new(),
             trace_last_locations: Vec::new(),
+            debug_hook: None,
         }
     }
 
@@ -2027,11 +2071,29 @@ impl<'a> VM<'a> {
 
     pub fn trace(mut self) -> TraceRun {
         self.trace_enabled = true;
+        self.trace_collect_events = true;
         let result = self.run_inner();
         TraceRun {
             events: self.trace_events,
             result,
         }
+    }
+
+    pub fn debug(mut self, hook: Box<dyn DebugHook + 'a>) -> DebugRun {
+        self.trace_enabled = true;
+        self.trace_collect_events = false;
+        self.debug_hook = Some(hook);
+        let result = self.run_inner();
+        let quit = result
+            .as_ref()
+            .err()
+            .is_some_and(|error| error.kind == RuntimeErrorKind::DebuggerQuit);
+        let result = if quit {
+            Ok(std::mem::take(&mut self.output))
+        } else {
+            result
+        };
+        DebugRun { result, quit }
     }
 
     fn run_inner(&mut self) -> Result<String, RuntimeError> {
@@ -2071,7 +2133,8 @@ impl<'a> VM<'a> {
         while frame.ip < body.instructions.len() {
             let instruction_index = frame.ip;
             let location = body.locations.get(instruction_index).cloned().flatten();
-            self.trace_instruction(frame, instruction_index, location);
+            self.trace_instruction(frame, instruction_index, location.clone());
+            self.debug_instruction(frame, instruction_index, location)?;
             let instruction = &body.instructions[instruction_index];
             let mut jumped = false;
             let result = (|| -> Result<Option<Value>, RuntimeError> {
@@ -2425,6 +2488,23 @@ impl<'a> VM<'a> {
                     if error.stack.is_empty() {
                         error.push_frame(frame.function.clone(), location);
                     }
+                    if error.kind != RuntimeErrorKind::DebuggerQuit {
+                        let pause = DebugPause {
+                            function: frame.function.clone(),
+                            instruction: instruction_index,
+                            location: body.locations.get(instruction_index).cloned().flatten(),
+                            stack: self.trace_stack.clone(),
+                            locals: self.trace_locals(frame),
+                        };
+                        let control = self
+                            .debug_hook
+                            .as_mut()
+                            .map(|hook| hook.on_error(pause, &error))
+                            .unwrap_or(DebugControl::Continue);
+                        if control == DebugControl::Quit {
+                            return Err(RuntimeError::debug_quit());
+                        }
+                    }
                     self.emit_trace(
                         TraceEventKind::Error,
                         frame,
@@ -2542,6 +2622,33 @@ impl<'a> VM<'a> {
         );
     }
 
+    fn debug_instruction(
+        &mut self,
+        frame: &Frame,
+        instruction: usize,
+        location: Option<DebugLocation>,
+    ) -> Result<(), RuntimeError> {
+        if self.debug_hook.is_none() {
+            return Ok(());
+        }
+        let pause = DebugPause {
+            function: frame.function.clone(),
+            instruction,
+            location,
+            stack: self.trace_stack.clone(),
+            locals: self.trace_locals(frame),
+        };
+        let control = self
+            .debug_hook
+            .as_mut()
+            .expect("debug hook checked above")
+            .on_instruction(pause);
+        if control == DebugControl::Quit {
+            return Err(RuntimeError::debug_quit());
+        }
+        Ok(())
+    }
+
     fn trace_instruction(
         &mut self,
         frame: &Frame,
@@ -2597,7 +2704,7 @@ impl<'a> VM<'a> {
         location: Option<DebugLocation>,
         value: Option<String>,
     ) {
-        if !self.trace_enabled {
+        if !self.trace_enabled || !self.trace_collect_events {
             return;
         }
         self.trace_events.push(TraceEvent {

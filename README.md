@@ -854,6 +854,7 @@ The interface output also reports exported enum variants and their payload types
 cargo run --manifest-path vm-rs/Cargo.toml -- dump program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- run program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- trace program.cdbc
+cargo run --manifest-path vm-rs/Cargo.toml -- debug program.cdbc
 ```
 
 `trace` executes the same linked artifact while emitting a deterministic source
@@ -862,6 +863,13 @@ active call stacks, current-frame locals, printed/returned values, and runtime
 failure frames. It reuses the artifact's existing `debug_sources`,
 `debug_locations`, and `debug_ranges` metadata; program output is represented by
 `output` events and runtime diagnostics remain on stderr.
+
+`debug` starts a live source debugger over the same artifact. It pauses before
+the first instruction and accepts `break <path>:<line>`,
+`break-range <path>:<start>-<end>`, `continue`, `step`, `next`, `delete <id>`,
+`help`, and `quit` commands on stdin. Pause records include the current module,
+source location/range, call stack, and locals. Module products must be linked
+before debugging; `run` and `trace` behavior is unchanged.
 
 For an import-aware graph, `--emit-module-bytecode` emits one independently
 validated `artifact: module` product per graph node. Rust links the product set

@@ -1,10 +1,12 @@
-use compiler_design_vm::bytecode::{DebugLocation, Program};
+use compiler_design_vm::bytecode::{DebugLocation, DebugSource, Program};
 use compiler_design_vm::format;
 use compiler_design_vm::link;
 use compiler_design_vm::vm::{self, RunConfig};
+use compiler_design_vm::{DebugControl, DebugHook, DebugPause};
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process;
 
@@ -14,8 +16,9 @@ Usage:\n\
   compiler-design-vm dump <program.cdbc>\n\
   compiler-design-vm run <program.cdbc>\n\
   compiler-design-vm trace <program.cdbc>\n\
+  compiler-design-vm debug <program.cdbc>\n\
   compiler-design-vm link <module-directory> <output.cdbc>\n\n\
-Current phase: .cdbc parsing, canonical dump, bytecode execution, and source tracing are implemented.\nResource options: --max-steps N, --max-call-depth N, --max-elements N, --max-output-bytes N, --max-artifact-bytes N, --max-modules N, --max-module-instructions N, --unlimited (0 disables an individual limit).\n";
+Current phase: .cdbc parsing, canonical dump, bytecode execution, source tracing, and interactive debugging are implemented.\nResource options: --max-steps N, --max-call-depth N, --max-elements N, --max-output-bytes N, --max-artifact-bytes N, --max-modules N, --max-module-instructions N, --unlimited (0 disables an individual limit).\n";
 
 fn help_text() -> &'static str {
     HELP
@@ -78,10 +81,14 @@ fn run(path: &str, config: &RunConfig) -> Result<(), String> {
 }
 
 fn trace_location(program: &Program, location: Option<&DebugLocation>) -> String {
+    source_location(&program.debug_sources, location)
+}
+
+fn source_location(sources: &[DebugSource], location: Option<&DebugLocation>) -> String {
     let Some(location) = location else {
         return "<unknown>".to_string();
     };
-    let Some(source) = program.debug_sources.get(location.source) else {
+    let Some(source) = sources.get(location.source) else {
         return format!(
             "<invalid-source:{}:{}:{}>",
             location.source, location.line, location.column
@@ -115,6 +122,405 @@ fn source_local_name(name: &str) -> String {
     } else {
         name.to_string()
     }
+}
+
+fn normalize_debug_path(path: &str) -> String {
+    Path::new(path)
+        .canonicalize()
+        .map(|path| path.to_string_lossy().into_owned())
+        .unwrap_or_else(|_| path.to_string())
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum Breakpoint {
+    Line {
+        id: usize,
+        path: String,
+        line: usize,
+    },
+    Range {
+        id: usize,
+        path: String,
+        start: usize,
+        end: usize,
+    },
+}
+
+impl Breakpoint {
+    fn id(&self) -> usize {
+        match self {
+            Self::Line { id, .. } | Self::Range { id, .. } => *id,
+        }
+    }
+
+    fn matches(&self, sources: &[DebugSource], pause: &DebugPause) -> bool {
+        let Some(location) = pause.location.as_ref() else {
+            return false;
+        };
+        let Some(source) = sources.get(location.source) else {
+            return false;
+        };
+        let source_path = normalize_debug_path(&source.path);
+        match self {
+            Self::Line { path, line, .. } => source_path == *path && location.line == *line,
+            Self::Range {
+                path, start, end, ..
+            } => {
+                let Some(range) = location.range.as_ref() else {
+                    return false;
+                };
+                source_path == *path
+                    && range.start < *end
+                    && *start < range.end
+                    && range.source == location.source
+            }
+        }
+    }
+
+    fn description(&self) -> String {
+        match self {
+            Self::Line { path, line, .. } => format!("{}:{}", path, line),
+            Self::Range {
+                path, start, end, ..
+            } => format!("{}:{}-{}", path, start, end),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct DebugKey {
+    function: String,
+    instruction: usize,
+    depth: usize,
+}
+
+impl DebugKey {
+    fn from_pause(pause: &DebugPause) -> Self {
+        Self {
+            function: pause.function.clone(),
+            instruction: pause.instruction,
+            depth: pause.stack.len(),
+        }
+    }
+}
+
+enum ResumeMode {
+    Entry,
+    Continue,
+    Step(DebugKey),
+    Next { key: DebugKey, depth: usize },
+}
+
+struct InteractiveDebugger {
+    sources: Vec<DebugSource>,
+    input: io::Stdin,
+    breakpoints: Vec<Breakpoint>,
+    next_breakpoint_id: usize,
+    mode: ResumeMode,
+    suppressed_breakpoints: Vec<usize>,
+    paused_breakpoints: Vec<usize>,
+}
+
+impl InteractiveDebugger {
+    fn new(sources: Vec<DebugSource>) -> Self {
+        Self {
+            sources,
+            input: io::stdin(),
+            breakpoints: Vec::new(),
+            next_breakpoint_id: 1,
+            mode: ResumeMode::Entry,
+            suppressed_breakpoints: Vec::new(),
+            paused_breakpoints: Vec::new(),
+        }
+    }
+
+    fn pause_reason(&mut self, pause: &DebugPause) -> Option<&'static str> {
+        let key = DebugKey::from_pause(pause);
+        if matches!(self.mode, ResumeMode::Entry) {
+            return Some("entry");
+        }
+        let mode_reason = match &self.mode {
+            ResumeMode::Step(previous) if key != *previous => Some("step"),
+            ResumeMode::Next { key: previous, depth }
+                if key != *previous && pause.stack.len() <= *depth => Some("next"),
+            _ => None,
+        };
+        if let Some(reason) = mode_reason {
+            return Some(reason);
+        }
+        if !self.suppressed_breakpoints.is_empty() {
+            let still_suppressed = self.breakpoints.iter().any(|breakpoint| {
+                self.suppressed_breakpoints.contains(&breakpoint.id())
+                    && breakpoint.matches(&self.sources, pause)
+            });
+            if still_suppressed {
+                return None;
+            }
+            self.suppressed_breakpoints.clear();
+        }
+        if self
+            .breakpoints
+            .iter()
+            .any(|breakpoint| breakpoint.matches(&self.sources, pause))
+        {
+            return Some("breakpoint");
+        }
+        None
+    }
+
+    fn parse_line_breakpoint(spec: &str) -> Result<(String, usize), String> {
+        let Some((path, line)) = spec.rsplit_once(':') else {
+            return Err("break expects <path>:<line>".to_string());
+        };
+        if path.is_empty() {
+            return Err("break path must not be empty".to_string());
+        }
+        let line = line
+            .parse::<usize>()
+            .map_err(|_| "break line must be a positive integer".to_string())?;
+        if line == 0 {
+            return Err("break line must be a positive integer".to_string());
+        }
+        Ok((path.to_string(), line))
+    }
+
+    fn parse_range_breakpoint(spec: &str) -> Result<(String, usize, usize), String> {
+        let Some((path, range)) = spec.rsplit_once(':') else {
+            return Err("break-range expects <path>:<start>-<end>".to_string());
+        };
+        let Some((start, end)) = range.split_once('-') else {
+            return Err("break-range expects <path>:<start>-<end>".to_string());
+        };
+        if path.is_empty() {
+            return Err("break-range path must not be empty".to_string());
+        }
+        let start = start
+            .parse::<usize>()
+            .map_err(|_| "break-range start must be a non-negative integer".to_string())?;
+        let end = end
+            .parse::<usize>()
+            .map_err(|_| "break-range end must be a non-negative integer".to_string())?;
+        if start >= end {
+            return Err("break-range end must be greater than start".to_string());
+        }
+        Ok((path.to_string(), start, end))
+    }
+
+    fn add_line_breakpoint(&mut self, spec: &str) -> Result<(), String> {
+        let (path, line) = Self::parse_line_breakpoint(spec)?;
+        let breakpoint = Breakpoint::Line {
+            id: self.next_breakpoint_id,
+            path: normalize_debug_path(&path),
+            line,
+        };
+        self.next_breakpoint_id += 1;
+        println!(
+            "debug breakpoint id={} spec={}",
+            breakpoint.id(),
+            breakpoint.description()
+        );
+        self.breakpoints.push(breakpoint);
+        Ok(())
+    }
+
+    fn add_range_breakpoint(&mut self, spec: &str) -> Result<(), String> {
+        let (path, start, end) = Self::parse_range_breakpoint(spec)?;
+        let breakpoint = Breakpoint::Range {
+            id: self.next_breakpoint_id,
+            path: normalize_debug_path(&path),
+            start,
+            end,
+        };
+        self.next_breakpoint_id += 1;
+        println!(
+            "debug breakpoint id={} spec={}",
+            breakpoint.id(),
+            breakpoint.description()
+        );
+        self.breakpoints.push(breakpoint);
+        Ok(())
+    }
+
+    fn print_help() {
+        println!(
+            "debug help: break <path>:<line> | break-range <path>:<start>-<end> | continue | step | next | delete <id> | quit"
+        );
+    }
+
+    fn suppress_current_breakpoints(&mut self) {
+        self.suppressed_breakpoints = self.paused_breakpoints.clone();
+    }
+
+    fn command(
+        &mut self,
+        command: &str,
+        pause: &DebugPause,
+    ) -> Option<DebugControl> {
+        if command == "continue" || command == "c" {
+            self.mode = ResumeMode::Continue;
+            self.suppress_current_breakpoints();
+            println!("debug resumed command=continue");
+            return Some(DebugControl::Continue);
+        }
+        if command == "step" || command == "s" {
+            self.mode = ResumeMode::Step(DebugKey::from_pause(pause));
+            self.suppress_current_breakpoints();
+            println!("debug resumed command=step");
+            return Some(DebugControl::Continue);
+        }
+        if command == "next" || command == "n" {
+            self.mode = ResumeMode::Next {
+                key: DebugKey::from_pause(pause),
+                depth: pause.stack.len(),
+            };
+            self.suppress_current_breakpoints();
+            println!("debug resumed command=next");
+            return Some(DebugControl::Continue);
+        }
+        if command == "quit" || command == "q" {
+            println!("debug quit");
+            return Some(DebugControl::Quit);
+        }
+        if command == "help" {
+            Self::print_help();
+            return None;
+        }
+        if let Some(spec) = command.strip_prefix("break-range ") {
+            if let Err(error) = self.add_range_breakpoint(spec) {
+                println!("debug error message={}", error);
+            }
+            return None;
+        }
+        if let Some(spec) = command.strip_prefix("break ") {
+            if let Err(error) = self.add_line_breakpoint(spec) {
+                println!("debug error message={}", error);
+            }
+            return None;
+        }
+        if let Some(id) = command.strip_prefix("delete ") {
+            match id.parse::<usize>() {
+                Ok(id) => {
+                    let before = self.breakpoints.len();
+                    self.breakpoints.retain(|breakpoint| breakpoint.id() != id);
+                    if self.breakpoints.len() == before {
+                        println!("debug error message=unknown breakpoint id {}", id);
+                    } else {
+                        println!("debug breakpoint-deleted id={}", id);
+                    }
+                }
+                Err(_) => println!("debug error message=delete expects a breakpoint id"),
+            }
+            return None;
+        }
+        if !command.is_empty() {
+            println!("debug error message=unknown command `{}`", command);
+        }
+        None
+    }
+
+    fn pause(&mut self, pause: &DebugPause, reason: &str) -> DebugControl {
+        self.paused_breakpoints = self
+            .breakpoints
+            .iter()
+            .filter(|breakpoint| breakpoint.matches(&self.sources, pause))
+            .map(Breakpoint::id)
+            .collect();
+        println!("{}", format_debug_pause(&self.sources, pause, reason));
+        let _ = io::stdout().flush();
+        loop {
+            let mut command = String::new();
+            match self.input.read_line(&mut command) {
+                Ok(0) => return DebugControl::Quit,
+                Ok(_) => {
+                    let command = command.trim();
+                    if let Some(control) = self.command(command, pause) {
+                        return control;
+                    }
+                    let _ = io::stdout().flush();
+                }
+                Err(error) => {
+                    println!("debug error message=failed to read command: {}", error);
+                    return DebugControl::Quit;
+                }
+            }
+        }
+    }
+}
+
+impl DebugHook for InteractiveDebugger {
+    fn on_instruction(&mut self, pause: DebugPause) -> DebugControl {
+        let Some(reason) = self.pause_reason(&pause) else {
+            return DebugControl::Continue;
+        };
+        self.pause(&pause, reason)
+    }
+
+    fn on_error(&mut self, pause: DebugPause, _error: &vm::RuntimeError) -> DebugControl {
+        self.pause(&pause, "error")
+    }
+}
+
+fn format_debug_pause(sources: &[DebugSource], pause: &DebugPause, reason: &str) -> String {
+    let (module, range) = pause
+        .location
+        .as_ref()
+        .and_then(|location| sources.get(location.source).map(|source| (source, location)))
+        .map(|(source, location)| {
+            let range = location.range.as_ref().map(|range| {
+                format!(" range=s{}:{}:{}", range.source, range.start, range.end)
+            });
+            (
+                source.module.as_deref().unwrap_or("none"),
+                range.unwrap_or_default(),
+            )
+        })
+        .unwrap_or(("none", String::new()));
+    let stack = pause
+        .stack
+        .iter()
+        .map(|frame| {
+            format!(
+                "{}@{}",
+                frame.function,
+                source_location(sources, frame.location.as_ref())
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(">");
+    let display_names = pause
+        .locals
+        .iter()
+        .map(|(name, _)| source_local_name(name))
+        .collect::<Vec<_>>();
+    let mut name_counts = BTreeMap::new();
+    for name in &display_names {
+        *name_counts.entry(name.clone()).or_insert(0usize) += 1;
+    }
+    let locals = pause
+        .locals
+        .iter()
+        .zip(display_names)
+        .map(|((raw_name, value), display_name)| {
+            let name = if name_counts.get(&display_name).copied().unwrap_or(0) > 1 {
+                raw_name
+            } else {
+                &display_name
+            };
+            format!("{}={}", name, trace_quote(value))
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+    format!(
+        "pause reason={} function={} instruction={} module={} location={} stack={} locals={{{}}}{}",
+        reason,
+        pause.function,
+        pause.instruction,
+        module,
+        source_location(sources, pause.location.as_ref()),
+        stack,
+        locals,
+        range,
+    )
 }
 
 fn format_trace_event(program: &Program, event: &vm::TraceEvent) -> String {
@@ -186,6 +592,20 @@ fn trace(path: &str, config: &RunConfig) -> Result<(), String> {
         println!("{}", format_trace_event(&program, event));
     }
     traced.result.map(|_| ()).map_err(|error| error.to_string())
+}
+
+fn debug(path: &str, config: &RunConfig) -> Result<(), String> {
+    let program = read_program(path, config)?;
+    let sources = program.debug_sources.clone();
+    let session = vm::VM::with_config(&program, config.clone())
+        .debug(Box::new(InteractiveDebugger::new(sources)));
+    if session.quit {
+        return Ok(());
+    }
+    session
+        .result
+        .map(|output| print!("{}", output))
+        .map_err(|error| error.to_string())
 }
 
 fn program_instruction_count(program: &Program) -> usize {
@@ -388,6 +808,14 @@ fn main() {
                 process::exit(1);
             }
         }
+        Some("debug") => {
+            let (path, config) =
+                parse_single_path("debug", remaining).unwrap_or_else(|error| usage_error(error));
+            if let Err(error) = debug(&path, &config) {
+                eprintln!("{}", error);
+                process::exit(1);
+            }
+        }
         Some("link") => {
             let ((directory, output), config) =
                 parse_link_paths(remaining).unwrap_or_else(|error| usage_error(error));
@@ -415,10 +843,11 @@ mod tests {
         assert!(help.contains("compiler-design-vm dump <program.cdbc>"));
         assert!(help.contains("compiler-design-vm run <program.cdbc>"));
         assert!(help.contains("compiler-design-vm trace <program.cdbc>"));
+        assert!(help.contains("compiler-design-vm debug <program.cdbc>"));
         assert!(help.contains("compiler-design-vm link <module-directory> <output.cdbc>"));
         assert!(
             help.contains(
-                ".cdbc parsing, canonical dump, bytecode execution, and source tracing are implemented",
+                ".cdbc parsing, canonical dump, bytecode execution, source tracing, and interactive debugging are implemented",
             )
         );
         assert!(help.contains("--max-steps N"));
