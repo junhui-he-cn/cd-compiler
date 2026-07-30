@@ -1,5 +1,5 @@
 Program
-  Fun read(value: number?): number
+  Fun read(value: optional<number>): number
     If (group (== value nil))
       Then
         Block

@@ -7,7 +7,7 @@ Program
     Return (match list (arm List.Nil 0) (arm List.Cons(head: first, tail: rest) (+ first (call sum rest))))
   Let some: Option<number> = (member-call Option Some 7)
   Let none: Option<number> = (member-call Option None<number>)
-  Let maybe: Option<number>? = nil
+  Let maybe: optional<Option<number>> = nil
   Let inferred = (member-call Option Some "hello")
   Print (call describe some)
   Print (call describe none)

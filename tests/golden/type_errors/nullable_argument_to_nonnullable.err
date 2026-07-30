@@ -1,1 +1,1 @@
-Type error at 3:18: argument 1 expects number, got number?
+Type error at 3:18: argument 1 expects number, got optional<number>

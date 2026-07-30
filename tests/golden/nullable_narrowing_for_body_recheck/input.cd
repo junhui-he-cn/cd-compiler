@@ -1,4 +1,4 @@
-fun sumOnce(value: number?): number {
+fun sumOnce(value: optional<number>): number {
   let result = 0;
   for let pass = 0; value != nil; value = nil {
     result = result + value;

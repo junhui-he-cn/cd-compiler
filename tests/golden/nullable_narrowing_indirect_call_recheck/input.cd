@@ -2,7 +2,7 @@ fun noop() {
   return nil;
 }
 
-let value: number? = 42;
+let value: optional<number> = 42;
 if (value != nil) {
   let alias = noop;
   alias();

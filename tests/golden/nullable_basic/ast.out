@@ -1,9 +1,9 @@
 Program
-  Let age: number? = nil
+  Let age: optional<number> = nil
   Print age
   Expr (= age 42)
   Print age
   Expr (= age nil)
   Print age
-  Let label: string? = "ok"
+  Let label: optional<string> = "ok"
   Print label

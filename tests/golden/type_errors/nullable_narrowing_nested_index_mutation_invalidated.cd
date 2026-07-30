@@ -1,4 +1,4 @@
-fun invalid(values: [[number?]]): number {
+fun invalid(values: [[optional<number>]]): number {
   if (values[0][1] == nil) {
     return 0;
   }

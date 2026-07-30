@@ -1,5 +1,5 @@
 Program
-  Fun read(values: [number], value: number?): number
+  Fun read(values: [number], value: optional<number>): number
     If (group (== value nil))
       Then
         Block
@@ -9,7 +9,7 @@ Program
       Block
         Expr (= total (+ (+ total value) item))
     Return total
-  Fun sumNullable(values: [number?]): number
+  Fun sumNullable(values: [optional<number>]): number
     Let total = 0
     ForIn item in values
       Block

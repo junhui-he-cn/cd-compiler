@@ -1,6 +1,6 @@
 Program
   Let values: [number] = (array 1 2 3)
-  Let first: number? = (call find values (fun (value) (return (> value 1))))
+  Let first: optional<number> = (call find values (fun (value) (return (> value 1))))
   Print first
   Print (member-call values find (fun (value: number): bool (return (== value 9))))
   Let snapshot: [number] = (array 1 2)

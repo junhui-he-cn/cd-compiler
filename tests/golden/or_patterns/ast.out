@@ -4,7 +4,7 @@ Program
     Return (match value (arm (or 0 1) "small") (arm _ "other"))
   Fun shapeLabel(value: Shape): string
     Return (match value (arm (or Shape.Point(x) Shape.Line(x, _)) if (> x 3) (+ "large:" (call str x))) (arm (or Shape.Point(_) Shape.Line(_, _)) "small") (arm Shape.Empty "empty"))
-  Let maybe: bool? = false
+  Let maybe: optional<bool> = false
   Print (call numberLabel 1)
   Print (call numberLabel 8)
   Print (call shapeLabel (member-call Shape Point 3))

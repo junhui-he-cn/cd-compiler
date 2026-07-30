@@ -1,4 +1,4 @@
-fun invalid(values: [number?], index: number): number {
+fun invalid(values: [optional<number>], index: number): number {
   if (values[index] == nil) {
     return 0;
   }

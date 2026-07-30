@@ -1,11 +1,11 @@
 Program
-  Fun maybe(flag: bool): number?
+  Fun maybe(flag: bool): optional<number>
     If flag
       Then
         Block
           Return 7
     Return nil
-  Fun describe(value: number?): string?
+  Fun describe(value: optional<number>): optional<string>
     If (== value nil)
       Then
         Block

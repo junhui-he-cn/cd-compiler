@@ -1,5 +1,5 @@
 Program
-  Fun sumNullable(values: [number?]): number
+  Fun sumNullable(values: [optional<number>]): number
     Let total = 0
     ForIn item in values
       Block
@@ -9,7 +9,7 @@ Program
               Continue
         Expr (= total (+ total item))
     Return total
-  Fun readAfterBreak(value: number?): number
+  Fun readAfterBreak(value: optional<number>): number
     While (group true)
       Body
         Block

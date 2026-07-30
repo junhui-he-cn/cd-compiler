@@ -6,7 +6,7 @@ Program
       Return copy
     Method head<T>(values: [T]): T
       Return (index values 0)
-    Method make<T>(): T?
+    Method make<T>(): optional<T>
       Return nil
   Let box: Box = (construct Box value: 0)
   Print (member-call box echo<number> 42)

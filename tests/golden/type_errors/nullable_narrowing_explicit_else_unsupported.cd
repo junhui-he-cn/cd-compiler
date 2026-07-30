@@ -1,4 +1,4 @@
-fun increment(value: number?): number {
+fun increment(value: optional<number>): number {
   if (value == nil) {
     print "nil";
   } else {

@@ -2,7 +2,7 @@ Program
   Expr (fun <T>(value: T): T (return value))
   Let identity = (fun <T>(value: T): T (return value))
   Let head = (fun <T>(values: [T]): T (return (index values 0)))
-  Let maybe = (fun <T>(): T? (return nil))
+  Let maybe = (fun <T>(): optional<T> (return nil))
   Print (call identity<number> 41)
   Print (call identity "generic")
   Print (call head (array 7 8))

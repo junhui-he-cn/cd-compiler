@@ -1,14 +1,14 @@
 fun takesNumber(value: number): number { return value; }
 
-let first: number? = 10;
-let second: number? = 20;
+let first: optional<number> = 10;
+let second: optional<number> = 20;
 if (first != nil && second != nil) {
   print takesNumber(first);
   print takesNumber(second);
 }
 
-let third: number? = 30;
-let fourth: number? = 40;
+let third: optional<number> = 30;
+let fourth: optional<number> = 40;
 if (third == nil || fourth == nil) {
   print 0;
 } else {

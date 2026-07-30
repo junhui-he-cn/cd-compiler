@@ -1,4 +1,4 @@
-fun increment(value: number?): number {
+fun increment(value: optional<number>): number {
   if (value == nil) {
     return 0;
   }
@@ -7,7 +7,7 @@ fun increment(value: number?): number {
 
 print increment(41);
 
-fun preserveOuter(value: number?, other: number?): number {
+fun preserveOuter(value: optional<number>, other: optional<number>): number {
   if (other != nil) {
     if (value == nil) {
       other = nil;

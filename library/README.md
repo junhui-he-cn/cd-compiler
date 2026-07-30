@@ -43,16 +43,16 @@ let names = ds.newQueue<string>();
 `Stack<T>` provides:
 
 - `push(value: T)` — append to the top;
-- `pop(): T?` — remove and return the top, or `nil` when empty;
-- `top(): T?` — inspect the top, or `nil` when empty;
+- `pop(): optional<T>` — remove and return the top, or `nil` when empty;
+- `top(): optional<T>` — inspect the top, or `nil` when empty;
 - `size(): number` and `isEmpty(): bool`;
 - `snapshot(): [T]` — return a shallow copy from bottom to top.
 
 `Queue<T>` provides:
 
 - `enqueue(value: T)` — add at the back;
-- `dequeue(): T?` — remove and return the front, or `nil` when empty;
-- `front(): T?` — inspect the front, or `nil` when empty;
+- `dequeue(): optional<T>` — remove and return the front, or `nil` when empty;
+- `front(): optional<T>` — inspect the front, or `nil` when empty;
 - `size(): number` and `isEmpty(): bool`;
 - `snapshot(): [T]` — return a shallow copy from front to back.
 

@@ -1,6 +1,6 @@
 Program
-  Struct Box {values: [number?]}
-  Fun read(values: [[number?]], box: Box): number
+  Struct Box {values: [optional<number>]}
+  Fun read(values: [[optional<number>]], box: Box): number
     If (group (== (index (index values 0) 1) nil))
       Then
         Block

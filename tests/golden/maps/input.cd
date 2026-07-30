@@ -26,7 +26,7 @@ print duplicates;
 
 let nested: map<string, map<string, number>> = {"inner": {"value": 7}};
 print nested["inner"]["value"];
-let nullable: map<string, number?> = {"present": 1, "missing": nil};
+let nullable: map<string, optional<number>> = {"present": 1, "missing": nil};
 print nullable["missing"];
 
 let same = duplicates;

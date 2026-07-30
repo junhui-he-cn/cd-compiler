@@ -1,6 +1,6 @@
 struct Box { value: number }
 impl Box {
-  fun make<T>(): T? { return nil; }
+  fun make<T>(): optional<T> { return nil; }
 }
 let box: Box = Box { value: 0 };
 box.make();

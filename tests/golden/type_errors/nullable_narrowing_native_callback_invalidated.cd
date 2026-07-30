@@ -1,5 +1,5 @@
 let values: [number] = [1, 2];
-let maybe: number? = 40;
+let maybe: optional<number> = 40;
 
 if (maybe != nil) {
   values.map(fun (item: number): number {

@@ -14,7 +14,7 @@ let shallow = shallowLeft.merge(shallowRight);
 push(shared, 8);
 print shallow;
 
-let optional: map<string, number?> = {"empty": nil};
+let optional: map<string, optional<number>> = {"empty": nil};
 let required: map<string, number> = {"value": 9};
-let typed: map<string, number?> = merge(optional, required);
+let typed: map<string, optional<number>> = merge(optional, required);
 print typed;

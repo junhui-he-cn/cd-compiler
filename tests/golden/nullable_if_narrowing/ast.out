@@ -1,7 +1,7 @@
 Program
   Fun takesNumber(value: number): number
     Return value
-  Let maybe: number? = 3
+  Let maybe: optional<number> = 3
   If (group (!= maybe nil))
     Then
       Block

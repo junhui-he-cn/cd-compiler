@@ -1,5 +1,5 @@
 struct Person { name: string }
-let person: Person? = nil;
+let person: optional<Person> = nil;
 print match person {
   Person { name: _ } => "person",
 };

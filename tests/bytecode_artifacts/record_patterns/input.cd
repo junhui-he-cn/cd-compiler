@@ -1,7 +1,7 @@
 struct Address { city: string, zip: number }
 struct Person { name: string, age: number, address: Address }
 
-fun describe(value: Person?): string {
+fun describe(value: optional<Person>): string {
   return match value {
     nil => "nil",
     Person { name: "Ada" } => "ada",
@@ -20,7 +20,7 @@ let hongKong = Person {
   age: 40,
   address: Address { city: "Hong Kong", zip: 2 }
 };
-let nilPerson: Person? = nil;
+let nilPerson: optional<Person> = nil;
 print describe(ada);
 print describe(hongKong);
 print describe(nilPerson);

@@ -1,10 +1,10 @@
-fun takesNullable(value: number?): number? {
+fun takesNullable(value: optional<number>): optional<number> {
   return value;
 }
 
-let maybe: number? = 1;
+let maybe: optional<number> = 1;
 if (maybe != nil) {
-  fun read(): number? {
+  fun read(): optional<number> {
     return takesNullable(maybe);
   }
   print read();

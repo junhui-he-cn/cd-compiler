@@ -1,0 +1,9 @@
+Program
+  Let optional = 7
+  Let maybe: optional<number> = nil
+  Let nested: optional<[optional<number>]> = nil
+  Let callback: optional<fun(number): string> = nil
+  Print optional
+  Print maybe
+  Print nested
+  Print callback

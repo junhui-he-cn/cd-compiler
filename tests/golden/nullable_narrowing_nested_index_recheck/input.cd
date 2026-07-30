@@ -1,6 +1,6 @@
-struct Box { values: [number?] }
+struct Box { values: [optional<number>] }
 
-fun read(values: [[number?]], box: Box): number {
+fun read(values: [[optional<number>]], box: Box): number {
   if (values[0][1] == nil) {
     return 0;
   }

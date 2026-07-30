@@ -102,6 +102,16 @@ BranchFlowFacts FlowFacts::factsForIfConditionTargets(
         return result;
     }
 
+    // Truthiness is false for nil, so a supported nullable target is known to
+    // be non-nil on the true branch of `if (target)`.  The false branch stays
+    // unconstrained because numbers, booleans, strings, and other values may
+    // also be falsey without being nil.
+    if (const std::optional<FlowNarrowing> narrowing = resolveTargetNarrowing(narrowedCondition)) {
+        BranchFlowFacts result;
+        result.thenNarrowings.push_back(*narrowing);
+        return result;
+    }
+
     const auto* binary = dynamic_cast<const BinaryExpr*>(&narrowedCondition);
     if (!binary || (binary->op.type != TokenType::BangEqual && binary->op.type != TokenType::EqualEqual)) {
         return BranchFlowFacts{};

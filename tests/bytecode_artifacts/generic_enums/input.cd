@@ -24,7 +24,7 @@ fun sum(list: List<number>): number {
 
 let some: Option<number> = Option.Some(7);
 let none: Option<number> = Option.None<number>();
-let maybe: Option<number>? = nil;
+let maybe: optional<Option<number>> = nil;
 let inferred = Option.Some("hello");
 print describe(some);
 print describe(none);

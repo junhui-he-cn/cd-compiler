@@ -1,8 +1,8 @@
-let age: number? = nil;
+let age: optional<number> = nil;
 print age;
 age = 42;
 print age;
 age = nil;
 print age;
-let label: string? = "ok";
+let label: optional<string> = "ok";
 print label;

@@ -1,5 +1,5 @@
 Program
-  Fun read(values: [number?], index: number): number
+  Fun read(values: [optional<number>], index: number): number
     If (group (== (index values index) nil))
       Then
         Block

@@ -19,7 +19,7 @@ fun shapeLabel(value: Shape): string {
   };
 }
 
-let maybe: bool? = false;
+let maybe: optional<bool> = false;
 print numberLabel(1);
 print numberLabel(8);
 print shapeLabel(Shape.Point(3));

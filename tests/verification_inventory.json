@@ -16130,6 +16130,58 @@
       "fixture": "tests/golden/nullable_narrowing_nested_index_recheck"
     },
     {
+      "case_id": "golden.success.nullable_truthiness_narrowing.ast",
+      "runner": "golden",
+      "result_name": "nullable_truthiness_narrowing default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:nullable_truthiness_narrowing"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/nullable_truthiness_narrowing/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_truthiness_narrowing/ast.out"
+      ],
+      "fixture": "tests/golden/nullable_truthiness_narrowing"
+    },
+    {
+      "case_id": "golden.success.optional_type_syntax.ast",
+      "runner": "golden",
+      "result_name": "optional_type_syntax default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:optional_type_syntax"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/optional_type_syntax/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/optional_type_syntax/ast.out"
+      ],
+      "fixture": "tests/golden/optional_type_syntax"
+    },
+    {
       "case_id": "golden.success.or_patterns.ast",
       "runner": "golden",
       "result_name": "or_patterns default(ast)",
@@ -25047,6 +25099,34 @@
         "tests/golden/type_errors/nullable_to_nonnullable_assignment.cd",
         "tests/golden/type_errors/nullable_to_nonnullable_assignment.err",
         "tests/golden/type_errors/nullable_to_nonnullable_assignment.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.nullable_truthiness_else_unsupported",
+      "runner": "golden",
+      "result_name": "type_errors/nullable_truthiness_else_unsupported default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:nullable_truthiness_else_unsupported"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/nullable_truthiness_else_unsupported.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/nullable_truthiness_else_unsupported.cd",
+        "tests/golden/type_errors/nullable_truthiness_else_unsupported.err",
+        "tests/golden/type_errors/nullable_truthiness_else_unsupported.exit"
       ],
       "fixture": "tests/golden/type_errors"
     },
@@ -45961,6 +46041,130 @@
         "tests/golden/nullable_narrowing_while_exit_recheck/run.out"
       ],
       "fixture": "tests/golden/nullable_narrowing_while_exit_recheck"
+    },
+    {
+      "case_id": "rust_vm.golden.nullable_truthiness_narrowing.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "nullable_truthiness_narrowing emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:nullable_truthiness_narrowing"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/nullable_truthiness_narrowing/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_truthiness_narrowing/run.out"
+      ],
+      "fixture": "tests/golden/nullable_truthiness_narrowing"
+    },
+    {
+      "case_id": "rust_vm.golden.nullable_truthiness_narrowing.run",
+      "runner": "rust_vm_golden",
+      "result_name": "nullable_truthiness_narrowing rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:nullable_truthiness_narrowing"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/nullable_truthiness_narrowing/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_truthiness_narrowing/run.out"
+      ],
+      "fixture": "tests/golden/nullable_truthiness_narrowing"
+    },
+    {
+      "case_id": "rust_vm.golden.optional_type_syntax.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "optional_type_syntax emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:optional_type_syntax"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/optional_type_syntax/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/optional_type_syntax/run.out"
+      ],
+      "fixture": "tests/golden/optional_type_syntax"
+    },
+    {
+      "case_id": "rust_vm.golden.optional_type_syntax.run",
+      "runner": "rust_vm_golden",
+      "result_name": "optional_type_syntax rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:optional_type_syntax"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/optional_type_syntax/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/optional_type_syntax/run.out"
+      ],
+      "fixture": "tests/golden/optional_type_syntax"
     },
     {
       "case_id": "rust_vm.golden.or_patterns.emit",

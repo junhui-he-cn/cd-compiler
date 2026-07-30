@@ -9,7 +9,7 @@ Program
       Return value
     Fun head<T>(values: [T]): T
       Return (index values 0)
-    Fun make<T>(): T?
+    Fun make<T>(): optional<T>
       Return nil
     Print (call identity<number> 42)
     Print (call identity<string> "hello")

@@ -1,7 +1,7 @@
 Program
   Fun takesString(value: string): string
     Return value
-  Let name: string? = "Ada"
+  Let name: optional<string> = "Ada"
   If (group (== name nil))
     Then
       Block
@@ -9,7 +9,7 @@ Program
     Else
       Block
         Print (call takesString name)
-  Let title: string? = "Dr"
+  Let title: optional<string> = "Dr"
   If (group (!= nil title))
     Then
       Block

@@ -1,14 +1,14 @@
 Program
-  Struct Box {value: number?}
+  Struct Box {value: optional<number>}
   Let box: Box = (construct Box value: nil)
   Print (field box value)
   Expr (= (field box value) 5)
   Print (field box value)
-  Let maybeBox: Box? = nil
+  Let maybeBox: optional<Box> = nil
   Print maybeBox
-  Let values: [number?] = (array 1 nil 3)
+  Let values: [optional<number>] = (array 1 nil 3)
   Print values
   Expr (call push values nil)
   Print values
-  Let maybeValues: [number]? = nil
+  Let maybeValues: optional<[number]> = nil
   Print maybeValues

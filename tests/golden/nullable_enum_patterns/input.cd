@@ -3,7 +3,7 @@ enum Option {
   None,
 }
 
-fun describe(value: Option?): string {
+fun describe(value: optional<Option>): string {
   match value {
     nil => { return "nil"; }
     Option.Some(value) if value > 10 => { return "large"; }
@@ -12,8 +12,8 @@ fun describe(value: Option?): string {
   }
 }
 
-let some: Option? = Option.Some(7);
-let none: Option? = nil;
+let some: optional<Option> = Option.Some(7);
+let none: optional<Option> = nil;
 print describe(some);
 print describe(none);
 print match some {

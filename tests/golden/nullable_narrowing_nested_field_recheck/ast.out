@@ -1,5 +1,5 @@
 Program
-  Struct Profile {score: number?}
+  Struct Profile {score: optional<number>}
   Struct User {profile: Profile}
   Fun read(user: User): number
     If (group (== (field (field user profile) score) nil))

@@ -1,0 +1,1 @@
+Type error at 7:16: binary `+` expects two numbers or two strings, got optional<number> and number

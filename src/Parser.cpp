@@ -640,61 +640,64 @@ std::optional<TypeAnnotation> Parser::optionalReturnType()
 
 TypeAnnotation Parser::typeAnnotation(const std::string& simpleTypeMessage)
 {
+    TypeAnnotation annotation;
+
     if (match(TokenType::LeftBracket)) {
         Token bracket = previous();
         TypeAnnotation elementType = typeAnnotation("expected array element type after `[`");
         consume(TokenType::RightBracket, "expected `]` after array element type");
-        TypeAnnotation annotation = TypeAnnotation::array(std::move(bracket), std::move(elementType));
-        if (match(TokenType::Question)) {
-            annotation = TypeAnnotation::nullable(previous(), std::move(annotation));
-        }
-        return annotation;
-    }
-
-    if (checkContextualIdentifier("map") && checkNext(TokenType::Less)) {
+        annotation = TypeAnnotation::array(std::move(bracket), std::move(elementType));
+    } else if (checkContextualIdentifier("map") && checkNext(TokenType::Less)) {
         Token mapToken = advance();
         consume(TokenType::Less, "expected `<` after `map` type");
         TypeAnnotation keyType = typeAnnotation("expected map key type after `<`");
         consume(TokenType::Comma, "expected `,` between map key and value types");
         TypeAnnotation valueType = typeAnnotation("expected map value type after `,`");
         consume(TokenType::Greater, "expected `>` after map value type");
-        TypeAnnotation annotation = TypeAnnotation::map(
+        annotation = TypeAnnotation::map(
             std::move(mapToken), std::move(keyType), std::move(valueType));
-        if (match(TokenType::Question)) {
-            annotation = TypeAnnotation::nullable(previous(), std::move(annotation));
+    } else if (checkContextualIdentifier("optional") && checkNext(TokenType::Less)) {
+        Token optionalToken = advance();
+        consume(TokenType::Less, "expected `<` after `optional` type");
+        if (check(TokenType::Greater)) {
+            throw ParseError(peek(), "expected type argument after `optional<`");
         }
-        return annotation;
-    }
-
-    if (match(TokenType::Fun)) {
+        TypeAnnotation innerType = typeAnnotation("expected type argument after `optional<`");
+        consume(TokenType::Greater, "expected `>` after optional type");
+        annotation = TypeAnnotation::nullable(std::move(optionalToken), std::move(innerType));
+    } else if (match(TokenType::Fun)) {
         Token keyword = previous();
         consume(TokenType::LeftParen, "expected `(` after `fun` in function type");
         std::vector<TypeAnnotation> parameterTypes = typeArguments();
         consume(TokenType::RightParen, "expected `)` after function type parameters");
         consume(TokenType::Colon, "expected `:` before function type return");
         TypeAnnotation returnType = typeAnnotation();
-        return TypeAnnotation::function(std::move(keyword), std::move(parameterTypes), std::move(returnType));
+        annotation = TypeAnnotation::function(
+            std::move(keyword), std::move(parameterTypes), std::move(returnType));
+    } else {
+        Token name = consume(TokenType::Identifier, simpleTypeMessage);
+        if (match(TokenType::Dot)) {
+            Token member = consume(TokenType::Identifier, "expected type name after `.`");
+            annotation = TypeAnnotation::qualified(std::move(name), std::move(member));
+        } else {
+            annotation = TypeAnnotation::simple(std::move(name));
+        }
+
+        if (match(TokenType::Less)) {
+            if (check(TokenType::Greater)) {
+                throw ParseError(peek(), "expected type argument after `<`");
+            }
+            do {
+                annotation.typeArguments.push_back(typeAnnotation("expected type argument after `<`"));
+            } while (match(TokenType::Comma));
+            consume(TokenType::Greater, "expected `>` after type arguments");
+        }
     }
 
-    Token name = consume(TokenType::Identifier, simpleTypeMessage);
-    TypeAnnotation annotation;
-    if (match(TokenType::Dot)) {
-        Token member = consume(TokenType::Identifier, "expected type name after `.`");
-        annotation = TypeAnnotation::qualified(std::move(name), std::move(member));
-    } else {
-        annotation = TypeAnnotation::simple(std::move(name));
-    }
-    if (match(TokenType::Less)) {
-        if (check(TokenType::Greater)) {
-            throw ParseError(peek(), "expected type argument after `<`");
-        }
-        do {
-            annotation.typeArguments.push_back(typeAnnotation("expected type argument after `<`"));
-        } while (match(TokenType::Comma));
-        consume(TokenType::Greater, "expected `>` after type arguments");
-    }
     if (match(TokenType::Question)) {
-        annotation = TypeAnnotation::nullable(previous(), std::move(annotation));
+        throw ParseError(
+            previous(),
+            "postfix `?` nullable syntax was removed; use `optional<T>`");
     }
     return annotation;
 }

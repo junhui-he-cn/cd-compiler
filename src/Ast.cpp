@@ -55,8 +55,9 @@ void writeTypeAnnotation(std::ostream& out, const TypeAnnotation& annotation)
     }
 
     if (annotation.kind == TypeAnnotation::Kind::Nullable) {
+        out << "optional<";
         writeTypeAnnotation(out, *annotation.innerType);
-        out << '?';
+        out << '>';
         return;
     }
 

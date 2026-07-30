@@ -13,14 +13,14 @@ impl Stack<T> {
     this.items.push(value);
   }
 
-  fun pop(): T? {
+  fun pop(): optional<T> {
     if (this.items.len() == 0) {
       return nil;
     }
     return this.items.pop();
   }
 
-  fun top(): T? {
+  fun top(): optional<T> {
     if (this.items.len() == 0) {
       return nil;
     }
@@ -64,7 +64,7 @@ impl Queue<T> {
     }
   }
 
-  fun dequeue(): T? {
+  fun dequeue(): optional<T> {
     if (this.head >= this.items.len()) {
       return nil;
     }
@@ -75,7 +75,7 @@ impl Queue<T> {
     return value;
   }
 
-  fun front(): T? {
+  fun front(): optional<T> {
     if (this.head >= this.items.len()) {
       return nil;
     }

@@ -80,7 +80,7 @@ function f3 name="<lambda>" arity=0 registers=2:
   return r1
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/generic_lambdas/input.cd" text="fun<T>(value: T): T { return value; };\n\nlet identity = fun<T>(value: T): T {\n  return value;\n};\nlet head = fun<T>(values: [T]): T {\n  return values[0];\n};\nlet maybe = fun<T>(): T? {\n  return nil;\n};\n\nprint identity<number>(41);\nprint identity(\"generic\");\nprint head([7, 8]);\nprint maybe<string>();\n"
+  s0 path="tests/bytecode_artifacts/generic_lambdas/input.cd" text="fun<T>(value: T): T { return value; };\n\nlet identity = fun<T>(value: T): T {\n  return value;\n};\nlet head = fun<T>(values: [T]): T {\n  return values[0];\n};\nlet maybe = fun<T>(): optional<T> {\n  return nil;\n};\n\nprint identity<number>(41);\nprint identity(\"generic\");\nprint head([7, 8]);\nprint maybe<string>();\n"
 
 debug_locations:
   main 0 = s0:1:1
@@ -132,25 +132,25 @@ debug_ranges:
   main 2 = s0:44:91
   main 3 = s0:107:149
   main 4 = s0:100:149
-  main 5 = s0:167:194
-  main 6 = s0:159:194
-  main 7 = s0:206:214
-  main 8 = s0:223:225
-  main 9 = s0:206:226
-  main 10 = s0:206:226
-  main 11 = s0:234:242
-  main 12 = s0:243:252
-  main 13 = s0:234:253
-  main 14 = s0:234:253
-  main 15 = s0:261:265
-  main 16 = s0:267:268
-  main 17 = s0:270:271
-  main 18 = s0:266:271
-  main 19 = s0:261:273
-  main 20 = s0:261:273
-  main 21 = s0:281:286
-  main 22 = s0:281:296
-  main 23 = s0:281:296
+  main 5 = s0:167:203
+  main 6 = s0:159:203
+  main 7 = s0:215:223
+  main 8 = s0:232:234
+  main 9 = s0:215:235
+  main 10 = s0:215:235
+  main 11 = s0:243:251
+  main 12 = s0:252:261
+  main 13 = s0:243:262
+  main 14 = s0:243:262
+  main 15 = s0:270:274
+  main 16 = s0:276:277
+  main 17 = s0:279:280
+  main 18 = s0:275:280
+  main 19 = s0:270:282
+  main 20 = s0:270:282
+  main 21 = s0:290:295
+  main 22 = s0:290:305
+  main 23 = s0:290:305
   function f0 0 = s0:29:34
   function f0 1 = s0:22:34
   function f0 2 = s0:0:34
@@ -165,7 +165,7 @@ debug_ranges:
   function f2 3 = s0:134:149
   function f2 4 = s0:107:149
   function f2 5 = s0:107:149
-  function f3 0 = s0:191:194
-  function f3 1 = s0:184:194
-  function f3 2 = s0:167:194
-  function f3 3 = s0:167:194
+  function f3 0 = s0:200:203
+  function f3 1 = s0:193:203
+  function f3 2 = s0:167:203
+  function f3 3 = s0:167:203

@@ -1,4 +1,4 @@
-struct Box { value: number? }
+struct Box { value: optional<number> }
 
 fun stale(box: Box): number {
   if (box.value != nil) {

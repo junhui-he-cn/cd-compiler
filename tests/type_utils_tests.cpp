@@ -122,7 +122,7 @@ int main()
         nullableType(t),
         {"T", "U"});
     const TypeInfo specialized = SemanticTypes::substituteTypeParameters(generic, substitutions);
-    assert(typeInfoName(specialized) == "fun<T, U>([number], map<number, string>): number?");
+    assert(typeInfoName(specialized) == "fun<T, U>([number], map<number, string>): optional<number>");
     assert(SemanticTypes::isNullable(*specialized.returnType));
     assert(typeInfoName(substituteTypeParameters(t, substitutions)) == "number");
     assert(SemanticTypes::compatible(number, typeParameterType("T", number)));

@@ -959,7 +959,7 @@ void test_method_call_lowering_metadata()
 void test_literal_pattern_metadata()
 {
     std::istringstream input(
-        "fun choose(value: bool?): number {\n"
+        "fun choose(value: optional<bool>): number {\n"
         "  return match value {\n"
         "    nil => 0,\n"
         "    true => 1,\n"
@@ -1011,7 +1011,7 @@ void test_variant_pattern_metadata()
         "  Ok(value: T, tag: string),\n"
         "  Empty,\n"
         "}\n"
-        "fun choose(value: Result<number>?): number {\n"
+        "fun choose(value: optional<Result<number>>): number {\n"
         "  return match value {\n"
         "    nil => 0,\n"
         "    Result.Ok(tag: label, value: numberValue) => numberValue,\n"
@@ -1071,7 +1071,7 @@ void test_record_pattern_metadata()
 {
     std::istringstream input(
         "struct Box<T> { value: T, label: string }\n"
-        "fun choose(value: Box<number>?): string {\n"
+        "fun choose(value: optional<Box<number>>): string {\n"
         "  return match value {\n"
         "    nil => \"nil\",\n"
         "    Box { label: label, value: numberValue } => label + str(numberValue),\n"

@@ -1,2 +1,2 @@
-let make = fun<T>(): T? { return nil; };
+let make = fun<T>(): optional<T> { return nil; };
 make();

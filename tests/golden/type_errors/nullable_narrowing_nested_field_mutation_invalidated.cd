@@ -1,4 +1,4 @@
-struct Profile { score: number? }
+struct Profile { score: optional<number> }
 struct User { profile: Profile }
 
 fun invalid(user: User): number {

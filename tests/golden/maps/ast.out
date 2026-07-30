@@ -23,7 +23,7 @@ Program
   Print duplicates
   Let nested: map<string, map<string, number>> = (map (entry "inner" (map (entry "value" 7))))
   Print (index (index nested "inner") "value")
-  Let nullable: map<string, number?> = (map (entry "present" 1) (entry "missing" nil))
+  Let nullable: map<string, optional<number>> = (map (entry "present" 1) (entry "missing" nil))
   Print (index nullable "missing")
   Let same = duplicates
   Let other = (map (entry "a" 2) (entry "b" 3))

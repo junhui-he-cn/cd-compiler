@@ -1,1 +1,1 @@
-let value: number? = "x";
+let value: optional<number> = "x";

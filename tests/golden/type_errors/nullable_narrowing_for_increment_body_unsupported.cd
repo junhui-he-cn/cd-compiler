@@ -1,4 +1,4 @@
-fun invalid(value: number?): number {
+fun invalid(value: optional<number>): number {
   for ; true; value = 1 {
     return value + 1;
   }

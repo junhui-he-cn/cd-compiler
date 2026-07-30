@@ -1,4 +1,4 @@
-module 0 "/home/junhe/compiler/tests/golden/collection_inference_mixed_dynamic_interface/lib.cd"
+module 0 "<repo>/tests/golden/collection_inference_mixed_dynamic_interface/lib.cd"
   export value xs: array
 
-module 1 entry "/home/junhe/compiler/tests/golden/collection_inference_mixed_dynamic_interface/input.cd"
+module 1 entry "<repo>/tests/golden/collection_inference_mixed_dynamic_interface/input.cd"

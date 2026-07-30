@@ -104,7 +104,7 @@ function f2 name="make" arity=1 registers=2:
   return r1
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/generic_methods/input.cd" text="struct Box { value: number }\n\nimpl Box {\n  fun echo<T>(value: T): T {\n    let copy: T = value;\n    return copy;\n  }\n\n  fun head<T>(values: [T]): T {\n    return values[0];\n  }\n\n  fun make<T>(): T? {\n    return nil;\n  }\n}\n\nlet box: Box = Box { value: 0 };\nprint box.echo<number>(42);\nprint box.echo(\"hello\");\nprint box.head<number>([3, 4]);\nprint box.make<string>();\n"
+  s0 path="tests/bytecode_artifacts/generic_methods/input.cd" text="struct Box { value: number }\n\nimpl Box {\n  fun echo<T>(value: T): T {\n    let copy: T = value;\n    return copy;\n  }\n\n  fun head<T>(values: [T]): T {\n    return values[0];\n  }\n\n  fun make<T>(): optional<T> {\n    return nil;\n  }\n}\n\nlet box: Box = Box { value: 0 };\nprint box.echo<number>(42);\nprint box.echo(\"hello\");\nprint box.head<number>([3, 4]);\nprint box.make<string>();\n"
 
 debug_locations:
   main 0 = s0:3:1
@@ -161,55 +161,55 @@ debug_locations:
   function f2 3 = s0:3:1
 
 debug_ranges:
-  main 0 = s0:35:212
-  main 1 = s0:35:212
-  main 2 = s0:35:212
-  main 3 = s0:35:212
-  main 4 = s0:35:212
-  main 5 = s0:35:212
-  main 6 = s0:35:212
-  main 7 = s0:35:212
-  main 8 = s0:35:212
-  main 9 = s0:35:212
-  main 10 = s0:35:212
-  main 11 = s0:35:212
-  main 12 = s0:249:250
-  main 13 = s0:236:250
-  main 14 = s0:225:250
-  main 15 = s0:260:280
-  main 16 = s0:260:263
-  main 17 = s0:277:279
-  main 18 = s0:260:280
-  main 19 = s0:260:280
-  main 20 = s0:288:305
-  main 21 = s0:288:291
-  main 22 = s0:297:304
-  main 23 = s0:288:305
-  main 24 = s0:288:305
-  main 25 = s0:313:337
-  main 26 = s0:313:316
-  main 27 = s0:331:332
-  main 28 = s0:334:335
-  main 29 = s0:330:335
-  main 30 = s0:313:337
-  main 31 = s0:313:337
-  main 32 = s0:345:363
-  main 33 = s0:345:348
-  main 34 = s0:345:363
-  main 35 = s0:345:363
+  main 0 = s0:35:221
+  main 1 = s0:35:221
+  main 2 = s0:35:221
+  main 3 = s0:35:221
+  main 4 = s0:35:221
+  main 5 = s0:35:221
+  main 6 = s0:35:221
+  main 7 = s0:35:221
+  main 8 = s0:35:221
+  main 9 = s0:35:221
+  main 10 = s0:35:221
+  main 11 = s0:35:221
+  main 12 = s0:258:259
+  main 13 = s0:245:259
+  main 14 = s0:234:259
+  main 15 = s0:269:289
+  main 16 = s0:269:272
+  main 17 = s0:286:288
+  main 18 = s0:269:289
+  main 19 = s0:269:289
+  main 20 = s0:297:314
+  main 21 = s0:297:300
+  main 22 = s0:306:313
+  main 23 = s0:297:314
+  main 24 = s0:297:314
+  main 25 = s0:322:346
+  main 26 = s0:322:325
+  main 27 = s0:340:341
+  main 28 = s0:343:344
+  main 29 = s0:339:344
+  main 30 = s0:322:346
+  main 31 = s0:322:346
+  main 32 = s0:354:372
+  main 33 = s0:354:357
+  main 34 = s0:354:372
+  main 35 = s0:354:372
   function f0 0 = s0:88:93
   function f0 1 = s0:78:93
   function f0 2 = s0:106:110
   function f0 3 = s0:99:110
-  function f0 4 = s0:35:212
-  function f0 5 = s0:35:212
+  function f0 4 = s0:35:221
+  function f0 5 = s0:35:221
   function f1 0 = s0:160:166
   function f1 1 = s0:167:168
   function f1 2 = s0:160:168
   function f1 3 = s0:153:168
-  function f1 4 = s0:35:212
-  function f1 5 = s0:35:212
-  function f2 0 = s0:209:212
-  function f2 1 = s0:202:212
-  function f2 2 = s0:35:212
-  function f2 3 = s0:35:212
+  function f1 4 = s0:35:221
+  function f1 5 = s0:35:221
+  function f2 0 = s0:218:221
+  function f2 1 = s0:211:221
+  function f2 2 = s0:35:221
+  function f2 3 = s0:35:221

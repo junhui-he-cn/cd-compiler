@@ -2,7 +2,7 @@ fun takesNumber(value: number): number {
   return value;
 }
 
-let maybe: number? = 3;
+let maybe: optional<number> = 3;
 if (maybe != nil) {
   print takesNumber(maybe);
 }
