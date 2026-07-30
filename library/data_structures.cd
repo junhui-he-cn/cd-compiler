@@ -60,7 +60,8 @@ export prefixSums, differenceArray, prefixMinimums, prefixMaximums,
        nextGreaterValues, largestHistogramArea, Interval, mergeIntervals,
        intersectIntervals, selectNonOverlappingIntervals, minimumIntervalRooms,
        canReachEnd, minimumJumps, huffmanMergeCost, mergeSortedNumbers,
-       twoSumSorted, threeSumZero, uniqueValues, intersectionValues,
+       mergeSortedArrays, twoSumSorted, threeSumZero, uniqueValues,
+       intersectionValues,
        unionValues, differenceValues, frequencyEntries, mostFrequent,
        windowSums, maxWindowSum, maxSubarraySum
        from "./array_algorithms.cd";

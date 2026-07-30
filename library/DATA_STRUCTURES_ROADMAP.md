@@ -61,6 +61,7 @@
 - 跳跃游戏贪心：`canReachEnd`、`minimumJumps`。
 - Huffman 贪心核心：`huffmanMergeCost`。
 - 双指针算法：`mergeSortedNumbers`、`twoSumSorted`、`threeSumZero`。
+- 多路有序数组合并：`mergeSortedArrays`。
 - 数组集合算法：`uniqueValues`、`intersectionValues`、`unionValues`、`differenceValues`。
 - 固定窗口统计：`windowSums`、`maxWindowSum`。
 - 子数组统计：`maxSubarraySum`。
@@ -274,6 +275,10 @@ enum Result<T, E> {
 `mergeSortedNumbers` 和 `twoSumSorted` 已提供非降序数字数组上的双指针版本。
 `threeSumZero` 会先排序副本，再用双指针生成去重的非降序零和三元组，保持输入
 不变，时间复杂度为 `O(n^2)`。
+`mergeSortedArrays<T>` 接受多个按同一 `less` 比较器排序的数组，逐轮扫描各数组
+当前头部并返回一个新的扁平数组；比较器等价时按输入数组下标优先，因此跨输入
+数组保持稳定。空数组集合或全空输入返回 `[]`，算法时间复杂度为 `O(n*k)`，其中
+`k` 是输入数组数量，位置数组额外占用 `O(k)`，输出占用 `O(n)`；输入数组不会被修改。
 `uniqueValues`、`intersectionValues`、`unionValues` 和 `differenceValues` 已
 提供保序去重、交集、并集和差集的线性扫描版本。
 `windowSums` 使用滚动和生成每个固定宽度窗口的和，`maxWindowSum` 在这些
@@ -354,7 +359,7 @@ enum Result<T, E> {
 - 去重、保序去重、频率统计、交集、并集、差集；
 - 前缀和、差分数组、前缀最小/最大值；
 - 两指针、滑动窗口、快慢指针、单调栈、单调队列；
-- 合并两个有序数组、合并多个有序数组、区间合并和区间相交；
+- 合并两个有序数组、合并多个有序数组（`mergeSortedArrays`）、区间合并和区间相交；
 - 子数组最大和、最长无重复子数组、固定/可变窗口统计；
 - 逆序对、配对和、三数和、最接近目标值等常用题型。
 
@@ -399,7 +404,7 @@ enum Result<T, E> {
 - BFS 使用队列，DFS 使用显式栈；
 - 堆化、堆排序、前 `k` 个元素、第 `k` 大/小元素；
 - 两个优先队列求数据流中位数；
-- 多路有序流合并；
+- 多路有序流合并（数组版本 `mergeSortedArrays` 已完成）；
 - 任务调度、区间资源分配和会议室数量。
 
 ### 5.5 链表算法

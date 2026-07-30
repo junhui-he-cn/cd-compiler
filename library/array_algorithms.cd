@@ -389,6 +389,38 @@ fun mergeSortedNumbers(left: [number], right: [number]): [number] {
   return result;
 }
 
+fun mergeSortedArrays<T>(sequences: [[T]], less: fun(T, T): bool): [T] {
+  let result: [T] = [];
+  let positions: [number] = [];
+  let sequenceIndex = 0;
+  while (sequenceIndex < sequences.len()) {
+    positions.push(0);
+    sequenceIndex += 1;
+  }
+
+  while (true) {
+    let bestSequence = -1;
+    sequenceIndex = 0;
+    while (sequenceIndex < sequences.len()) {
+      if (positions[sequenceIndex] < sequences[sequenceIndex].len()) {
+        if (bestSequence < 0
+            || less(sequences[sequenceIndex][positions[sequenceIndex]],
+                    sequences[bestSequence][positions[bestSequence]])) {
+          bestSequence = sequenceIndex;
+        }
+      }
+      sequenceIndex += 1;
+    }
+
+    if (bestSequence < 0) {
+      break;
+    }
+    result.push(sequences[bestSequence][positions[bestSequence]]);
+    positions[bestSequence] += 1;
+  }
+  return result;
+}
+
 fun twoSumSorted(values: [number], target: number): [number] {
   let result: [number] = [];
   let left = 0;
@@ -594,4 +626,4 @@ fun maxSubarraySum(values: [number]): optional<number> {
 }
 
 
-export prefixSums, differenceArray, prefixMinimums, prefixMaximums, nextGreaterValues, largestHistogramArea, Interval, mergeIntervals, intersectIntervals, selectNonOverlappingIntervals, minimumIntervalRooms, canReachEnd, minimumJumps, huffmanMergeCost, mergeSortedNumbers, twoSumSorted, threeSumZero, uniqueValues, intersectionValues, unionValues, differenceValues, frequencyEntries, mostFrequent, windowSums, maxWindowSum, maxSubarraySum;
+export prefixSums, differenceArray, prefixMinimums, prefixMaximums, nextGreaterValues, largestHistogramArea, Interval, mergeIntervals, intersectIntervals, selectNonOverlappingIntervals, minimumIntervalRooms, canReachEnd, minimumJumps, huffmanMergeCost, mergeSortedNumbers, mergeSortedArrays, twoSumSorted, threeSumZero, uniqueValues, intersectionValues, unionValues, differenceValues, frequencyEntries, mostFrequent, windowSums, maxWindowSum, maxSubarraySum;

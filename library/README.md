@@ -191,6 +191,7 @@ print ds.minimumJumps([2, 3, 1, 1, 4]);
 print ds.huffmanMergeCost([5, 9, 12, 13, 16, 45]);
 
 print ds.mergeSortedNumbers([1, 3], [2, 4]);
+print ds.mergeSortedArrays([[1, 3], [2, 4]], ascending);
 print ds.twoSumSorted([1, 2, 4, 7], 6);
 print ds.threeSumZero([-1, 0, 1, 2, -1, -4]);
 
@@ -1104,6 +1105,14 @@ return the first matching `[leftIndex, rightIndex]`, or `[]` when no pair exists
 Both are `O(n)` time with `O(n)` output space for the returned arrays and do not
 modify their inputs. `twoSumSorted` requires its input to already be sorted.
 
+`mergeSortedArrays<T>(sequences, less)` merges any number of already sorted
+arrays into one new array. It accepts a strict `fun(T, T): bool` comparator,
+does not modify the outer or inner input arrays, and returns `[]` for an empty
+collection of arrays or when all arrays are empty. Comparator-equivalent values
+are selected by increasing source-array index, so the merge is stable across
+the input arrays. Scanning all `k` current heads takes `O(n * k)` time and
+`O(k)` position space, in addition to the `O(n)` output.
+
 `threeSumZero(values)` returns unique nondecreasing triples whose values sum to
 zero. It sorts a shallow copy, uses two pointers, and keeps triples in the
 sorted outer-index order; the input is unchanged. The algorithm takes
@@ -1230,7 +1239,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case array_algorithms_prefix_monotonic`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
 `--case array_algorithms_binary_search`, `--case array_algorithms_rotated_search`,
-`--case array_algorithms_merge_sort`,
+`--case array_algorithms_merge_sort`, `--case array_algorithms_merge_sorted`,
 `--case array_algorithms_rotation`,
 `--case array_algorithms_frequency`,
 `--case array_algorithms_quick_sort`, `--case array_algorithms_heap_sort`,
