@@ -21,6 +21,24 @@ pub enum LinkErrorKind {
     InvalidLinkedProgram,
 }
 
+impl LinkErrorKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::InvalidModule => "invalid_module",
+            Self::DuplicateModuleIdentity => "duplicate_module_identity",
+            Self::EmptyModuleSet => "empty_module_set",
+            Self::MissingEntryModule => "missing_entry_module",
+            Self::InvalidEntryOrder => "invalid_entry_order",
+            Self::MissingDependency => "missing_dependency",
+            Self::InvalidDependency => "invalid_dependency",
+            Self::DependencyCycle => "dependency_cycle",
+            Self::InvalidInstruction => "invalid_instruction",
+            Self::Overflow => "overflow",
+            Self::InvalidLinkedProgram => "invalid_linked_program",
+        }
+    }
+}
+
 /// Stable linker error returned by the checked library facade.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LinkError {

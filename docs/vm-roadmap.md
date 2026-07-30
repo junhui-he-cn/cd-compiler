@@ -385,6 +385,15 @@ native 调用、已有 `DebugRange` 命中和成功写入的 output bytes。函�
 **验收：** 每种错误至少有结构化字段、稳定 kind、最小复现 artifact 和 CLI
   渲染；path canonicalization 只在显示层处理，不污染 artifact identity。
 
+**状态（第一 structured kind 窄切片已完成，2026-07-30）：** 现有
+`ArtifactError`、`LinkError` 和 `RuntimeError` typed domains 保持分离，并为
+`ArtifactErrorKind`、`LinkErrorKind`、`RuntimeErrorKind` 和 `ResourceKind` 增加
+稳定 `as_str()` labels。runtime 结构继续携带 `DebugLocation`、有序调用帧和原始
+`DebugSource` path/module；artifact 和 linker 继续携带 line/module/dependency
+context，CLI 的旧文本和退出码不变。统一 JSON/schema、source mapper 和路径重写
+仍 deferred，边界记录见
+[`docs/decisions/vm-diagnostics-001.md`](decisions/vm-diagnostics-001.md)。
+
 ## 8. VM-5：性能与容量工程（P1/P2）
 
 ### VM-5A：可重复 benchmark 基线
@@ -514,11 +523,13 @@ canonical verification 和 malformed corpus。完整仓库 gate 仍以
 
 VM-1A、VM-1B、VM-1C、VM-2A、VM-2B 的 tracked-object/retained-byte 测量边界、
 VM-3A 的第一 library boundary、typed error/version boundary、VM-3B 的第一
-linker report slice、VM-4A 的第一 interactive debugger slice 和 VM-4B 的第一
-deterministic profile counter slice 已完成；GC、persistent VM、JIT 和新的
-artifact version 仍未进入默认队列。VM-4B 的 wall-clock 与 allocation/peak
-扩展需要独立测量决策；在该边界之外，下一步可进入 VM-4C structured diagnostics，
-同时保持现有 CLI、linked/module artifact、trace 和 profile 兼容。
+linker report slice、VM-4A 的第一 interactive debugger slice、VM-4B 的第一
+deterministic profile counter slice 和 VM-4C 的第一 structured kind slice 已完成；
+GC、persistent VM、JIT 和新的 artifact version 仍未进入默认队列。VM-4B 的
+wall-clock 与 allocation/peak 扩展、以及 VM-4C 的统一 host schema 都需要独立
+决策；下一步可在已有证据上选择 VM-5A benchmark baseline 或其中一个明确窄切片，
+同时保持现有 CLI、linked/module artifact、trace、profile 和 typed diagnostics
+兼容。
 
 这份路线图的成功标准不是同时铺开所有 VM 研究方向，而是让每个运行时能力
 都有清楚的契约、独立的证据和可回退的迁移路径；语言 roadmap 继续独立演进，

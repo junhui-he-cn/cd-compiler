@@ -41,6 +41,14 @@ available overrides are `--max-steps`, `--max-call-depth`, `--max-elements`,
 Budget failures are stable resource errors and do not emit partial `run`
 stdout.
 
+The library exposes separate typed diagnostic domains for artifact loading
+(`ArtifactError`), module linking (`LinkError`), and execution (`RuntimeError`).
+Their public `kind` fields retain structured context such as artifact line,
+module/dependency identity, source location, call frames, and debug sources;
+the corresponding `*Kind::as_str()` methods provide stable labels without
+changing CLI display text. See
+[`docs/decisions/vm-diagnostics-001.md`](../docs/decisions/vm-diagnostics-001.md).
+
 ## Module Boundaries
 
 - `bytecode`: parsed bytecode structures.

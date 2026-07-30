@@ -30,6 +30,16 @@ pub enum ArtifactErrorKind {
     Verification,
 }
 
+impl ArtifactErrorKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Parse => "parse",
+            Self::UnsupportedVersion => "unsupported_version",
+            Self::Verification => "verification",
+        }
+    }
+}
+
 /// Stable artifact error returned by the checked library facade.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ArtifactError {

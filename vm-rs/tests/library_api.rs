@@ -5,8 +5,9 @@ use compiler_design_vm::{
     format_artifact, link_modules_checked, link_modules_with_report, parse_artifact,
     parse_artifact_checked, verify_artifact, verify_module_artifact, verify_program_checked,
     Artifact, ArtifactErrorKind, DebugControl, DebugHook, DebugPause, LinkErrorKind,
-    ModuleArtifact, ModuleDependency, ModuleDependencyKind, Program, RunConfig, TraceEventKind,
-    ARTIFACT_FORMAT_FAMILY, ARTIFACT_FORMAT_VERSION, LIBRARY_API_VERSION, VM,
+    ModuleArtifact, ModuleDependency, ModuleDependencyKind, Program, ResourceKind, RunConfig,
+    RuntimeErrorKind, TraceEventKind, ARTIFACT_FORMAT_FAMILY,
+    ARTIFACT_FORMAT_VERSION, LIBRARY_API_VERSION, VM,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -115,6 +116,56 @@ fn profile_failure_program() -> Program {
     }
 }
 
+fn runtime_diagnostic_program() -> Program {
+    let location = |line: usize, column: usize| {
+        Some(DebugLocation {
+            source: 0,
+            line,
+            column,
+            range: None,
+        })
+    };
+    Program {
+        constants: vec![Constant::Number("1".to_string()), Constant::Number("0".to_string())],
+        names: Vec::new(),
+        main: FunctionBody {
+            registers: 2,
+            instructions: vec![
+                Instruction::MakeFunction { dest: 0, function: 0 },
+                Instruction::Call {
+                    dest: 1,
+                    callee: 0,
+                    arguments: Vec::new(),
+                },
+            ],
+            locations: vec![location(2, 1), location(2, 1)],
+        },
+        functions: vec![Function {
+            index: 0,
+            name: "fail".to_string(),
+            arity: 0,
+            registers: 3,
+            params: Vec::new(),
+            instructions: vec![
+                Instruction::Constant { dest: 0, constant: 0 },
+                Instruction::Constant { dest: 1, constant: 1 },
+                Instruction::Divide {
+                    dest: 2,
+                    left: 0,
+                    right: 1,
+                },
+                Instruction::Return { value: 2 },
+            ],
+            locations: vec![location(1, 21), location(1, 25), location(1, 21), location(1, 14)],
+        }],
+        debug_sources: vec![DebugSource {
+            module: None,
+            path: "diagnostic.cd".to_string(),
+            text: "fun fail() { return 1 / 0; }\nfail();\n".to_string(),
+        }],
+    }
+}
+
 #[test]
 fn library_api_parses_verifies_runs_and_traces_programs() {
     let source = format_artifact(&Artifact::Program(print_program()));
@@ -179,6 +230,53 @@ fn library_api_returns_partial_profile_on_runtime_failure() {
     assert_eq!(profiled.report.output_bytes, 3);
     assert_eq!(profiled.report.functions[0].calls, 1);
     assert_eq!(profiled.report.functions[0].instructions, 5);
+}
+
+#[test]
+fn library_api_exposes_stable_diagnostic_kinds_and_runtime_context() {
+    for (kind, label) in [
+        (ArtifactErrorKind::Parse, "parse"),
+        (
+            ArtifactErrorKind::UnsupportedVersion,
+            "unsupported_version",
+        ),
+        (ArtifactErrorKind::Verification, "verification"),
+    ] {
+        assert_eq!(kind.as_str(), label);
+    }
+    for (kind, label) in [
+        (LinkErrorKind::InvalidModule, "invalid_module"),
+        (
+            LinkErrorKind::DuplicateModuleIdentity,
+            "duplicate_module_identity",
+        ),
+        (LinkErrorKind::EmptyModuleSet, "empty_module_set"),
+        (LinkErrorKind::MissingEntryModule, "missing_entry_module"),
+        (LinkErrorKind::InvalidEntryOrder, "invalid_entry_order"),
+        (LinkErrorKind::MissingDependency, "missing_dependency"),
+        (LinkErrorKind::InvalidDependency, "invalid_dependency"),
+        (LinkErrorKind::DependencyCycle, "dependency_cycle"),
+        (LinkErrorKind::InvalidInstruction, "invalid_instruction"),
+        (LinkErrorKind::Overflow, "overflow"),
+        (LinkErrorKind::InvalidLinkedProgram, "invalid_linked_program"),
+    ] {
+        assert_eq!(kind.as_str(), label);
+    }
+    assert_eq!(RuntimeErrorKind::Runtime.as_str(), "runtime");
+    assert_eq!(RuntimeErrorKind::Resource(ResourceKind::OutputBytes).as_str(), "resource");
+    assert_eq!(RuntimeErrorKind::Cancelled.as_str(), "cancelled");
+    assert_eq!(RuntimeErrorKind::DebuggerQuit.as_str(), "debugger_quit");
+    assert_eq!(ResourceKind::OutputBytes.as_str(), "output bytes");
+
+    let error = VM::with_config(&runtime_diagnostic_program(), RunConfig::unlimited())
+        .run()
+        .expect_err("diagnostic fixture should fail");
+    assert_eq!(error.kind, RuntimeErrorKind::Runtime);
+    assert_eq!(error.location.as_ref().map(|location| location.source), Some(0));
+    assert_eq!(error.sources[0].path, "diagnostic.cd");
+    assert!(error.stack.iter().any(|frame| frame.function == "fail"));
+    assert!(error.stack.iter().any(|frame| frame.function == "main"));
+    assert!(error.to_string().contains("diagnostic.cd:1:21"));
 }
 
 #[test]
