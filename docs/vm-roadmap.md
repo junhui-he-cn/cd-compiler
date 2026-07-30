@@ -409,6 +409,16 @@ context，CLI 的旧文本和退出码不变。统一 JSON/schema、source mappe
   阈值；benchmark 不能因为波动直接阻断正确性 gate，但性能变更必须附带前后
   数据。
 
+**状态（第一四阶段 baseline 窄切片已完成，2026-07-30）：**
+`tests/run_benchmarks.py` 的 schema 2 现在分别测量 compiler emission、模块
+link、artifact load/canonical dump 和 VM execution；report 记录 commit、主机、
+CMake/Rust/Cargo toolchain、workload expectation digest 和每阶段的
+min/median/max。manifest 已固定九个 workload，覆盖 startup/load、算术、调用/闭包、
+数组/map、callback/native、Unicode、module link 和 runtime error；预期 runtime
+error 只有在 stdout、stderr、exit code 全部匹配时才算通过。当前 load 边界复用
+`dump`，所以包含 canonical formatting；不把它伪装成纯 parser 或 RSS 测量。
+详细契约见 [`docs/decisions/vm-benchmark-001.md`](decisions/vm-benchmark-001.md)。
+
 ### VM-5B：执行循环和 frame 优化
 
 **目标：** 在语义和资源边界冻结后，降低 dispatch、寄存器访问、函数调用、
@@ -524,12 +534,13 @@ canonical verification 和 malformed corpus。完整仓库 gate 仍以
 VM-1A、VM-1B、VM-1C、VM-2A、VM-2B 的 tracked-object/retained-byte 测量边界、
 VM-3A 的第一 library boundary、typed error/version boundary、VM-3B 的第一
 linker report slice、VM-4A 的第一 interactive debugger slice、VM-4B 的第一
-deterministic profile counter slice 和 VM-4C 的第一 structured kind slice 已完成；
-GC、persistent VM、JIT 和新的 artifact version 仍未进入默认队列。VM-4B 的
-wall-clock 与 allocation/peak 扩展、以及 VM-4C 的统一 host schema 都需要独立
-决策；下一步可在已有证据上选择 VM-5A benchmark baseline 或其中一个明确窄切片，
-同时保持现有 CLI、linked/module artifact、trace、profile 和 typed diagnostics
-兼容。
+deterministic profile counter slice、VM-4C 的第一 structured kind slice 和
+VM-5A 的第一 reproducible benchmark baseline slice 已完成；GC、persistent VM、
+JIT 和新的 artifact version 仍未进入默认队列。VM-4B 的 wall-clock 与
+allocation/peak 扩展、VM-4C 的统一 host schema，以及 VM-5A 的后续性能优化都
+需要独立决策；下一步应依据九个 workload 的 baseline 数据选择一个明确的
+VM-5B 执行循环或 frame 优化目标，同时保持现有 CLI、linked/module artifact、
+trace、profile 和 typed diagnostics 兼容。
 
 这份路线图的成功标准不是同时铺开所有 VM 研究方向，而是让每个运行时能力
 都有清楚的契约、独立的证据和可回退的迁移路径；语言 roadmap 继续独立演进，

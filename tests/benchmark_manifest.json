@@ -1,19 +1,43 @@
 {
-  "schema_version": 1,
-  "benchmark_revision": "bench-2026-07-29-r1",
+  "schema_version": 2,
+  "benchmark_revision": "bench-2026-07-30-r2",
   "default_repeat": 3,
   "workloads": [
     {
       "workload_id": "arithmetic",
       "description": "Integer arithmetic and control flow.",
+      "artifact_mode": "linked",
+      "execution": "success",
       "sources": [
         "tests/bytecode_artifacts/arithmetic/input.cd"
       ],
       "expected_output": "tests/bytecode_artifacts/arithmetic/run.out"
     },
     {
+      "workload_id": "artifact_load",
+      "description": "VM process startup and standalone linked artifact load.",
+      "artifact_mode": "linked",
+      "execution": "success",
+      "sources": [
+        "tests/bytecode_artifacts/arithmetic/input.cd"
+      ],
+      "expected_output": "tests/bytecode_artifacts/arithmetic/run.out"
+    },
+    {
+      "workload_id": "call_closure",
+      "description": "Function calls, closures, and captured-cell mutation.",
+      "artifact_mode": "linked",
+      "execution": "success",
+      "sources": [
+        "tests/bytecode_artifacts/functions_arrays/input.cd"
+      ],
+      "expected_output": "tests/bytecode_artifacts/functions_arrays/run.out"
+    },
+    {
       "workload_id": "collection_helpers",
       "description": "Array higher-order helper calls.",
+      "artifact_mode": "linked",
+      "execution": "success",
       "sources": [
         "tests/bytecode_artifacts/collection_helpers/input.cd"
       ],
@@ -22,22 +46,49 @@
     {
       "workload_id": "maps",
       "description": "Map construction, lookup, and iteration.",
+      "artifact_mode": "linked",
+      "execution": "success",
       "sources": [
         "tests/bytecode_artifacts/maps/input.cd"
       ],
       "expected_output": "tests/bytecode_artifacts/maps/run.out"
     },
     {
+      "workload_id": "module_link",
+      "description": "Independent module products, deterministic linking, and execution.",
+      "artifact_mode": "module",
+      "execution": "success",
+      "sources": [
+        "tests/bytecode_artifacts/module_exports/input.cd"
+      ],
+      "expected_output": "tests/bytecode_artifacts/module_exports/run.out"
+    },
+    {
       "workload_id": "native_stdlib_math",
       "description": "Native standard-library math calls.",
+      "artifact_mode": "linked",
+      "execution": "success",
       "sources": [
         "tests/bytecode_artifacts/native_stdlib_math/input.cd"
       ],
       "expected_output": "tests/bytecode_artifacts/native_stdlib_math/run.out"
     },
     {
+      "workload_id": "runtime_error",
+      "description": "Deterministic runtime diagnostic and non-zero exit path.",
+      "artifact_mode": "linked",
+      "execution": "runtime_error",
+      "sources": [
+        "tests/golden/runtime_errors/array_index_out_of_range.cd"
+      ],
+      "expected_stderr": "tests/golden/runtime_errors/array_index_out_of_range.run.err",
+      "expected_exit_code": 1
+    },
+    {
       "workload_id": "unicode_strings",
       "description": "Unicode string operations.",
+      "artifact_mode": "linked",
+      "execution": "success",
       "sources": [
         "tests/bytecode_artifacts/unicode_strings/input.cd"
       ],

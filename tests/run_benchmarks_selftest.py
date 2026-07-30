@@ -78,8 +78,20 @@ class BenchmarkRunnerTests(unittest.TestCase):
                     import pathlib
                     import sys
 
-                    artifact = pathlib.Path(sys.argv[sys.argv.index("--emit-bytecode") + 1])
-                    artifact.write_text("artifact\\n", encoding="utf-8")
+                    if "--emit-module-bytecode" in sys.argv:
+                        output = pathlib.Path(
+                            sys.argv[sys.argv.index("--emit-module-bytecode") + 1]
+                        )
+                        output.mkdir(parents=True)
+                        (output / "module-0.cdbc").write_text(
+                            "module\\n", encoding="utf-8"
+                        )
+                    else:
+                        artifact = pathlib.Path(
+                            sys.argv[sys.argv.index("--emit-bytecode") + 1]
+                        )
+                        source = pathlib.Path(sys.argv[-1])
+                        artifact.write_text(source.read_text(), encoding="utf-8")
                     """
                 ),
                 encoding="utf-8",
@@ -89,10 +101,22 @@ class BenchmarkRunnerTests(unittest.TestCase):
                 textwrap.dedent(
                     """\
                     #!/usr/bin/env python3
+                    import pathlib
                     import sys
 
-                    assert sys.argv[1] == "run"
-                    print("ok")
+                    command = sys.argv[1]
+                    if command == "dump":
+                        print("artifact")
+                    elif command == "link":
+                        pathlib.Path(sys.argv[3]).write_text("linked\\n", encoding="utf-8")
+                    elif command == "run":
+                        artifact = pathlib.Path(sys.argv[2]).read_text(encoding="utf-8")
+                        if artifact.startswith("error"):
+                            sys.stderr.write("expected runtime\\n")
+                            raise SystemExit(7)
+                        print("ok")
+                    else:
+                        raise SystemExit(64)
                     """
                 ),
                 encoding="utf-8",
@@ -101,12 +125,14 @@ class BenchmarkRunnerTests(unittest.TestCase):
                 executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
 
             manifest = {
-                "schema_version": 1,
+                "schema_version": 2,
                 "benchmark_revision": "test",
                 "default_repeat": 2,
                 "workloads": [
                     {
                         "workload_id": "fake",
+                        "artifact_mode": "linked",
+                        "execution": "success",
                         "sources": ["input.cd"],
                         "expected_output": "run.out",
                     }
@@ -124,10 +150,116 @@ class BenchmarkRunnerTests(unittest.TestCase):
         result = report["workloads"][0]
         self.assertTrue(result["passed"])
         self.assertEqual(len(result["compile_seconds"]["samples_seconds"]), 2)
+        self.assertEqual(len(result["load_seconds"]["samples_seconds"]), 2)
+        self.assertEqual(result["link_seconds"]["samples_seconds"], [])
         self.assertEqual(len(result["runtime_seconds"]["samples_seconds"]), 2)
         self.assertTrue(result["stdout_validated"])
+        self.assertTrue(result["load_stdout_validated"])
         self.assertEqual(report["commands"]["runtime"], [str(vm), "run", "<artifact>"])
+        self.assertEqual(report["commands"]["load"], [str(vm), "dump", "<artifact>"])
         self.assertNotIn("cargo", json.dumps(report["commands"]))
+
+    def test_runner_measures_module_link_and_accepts_expected_runtime_error(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source = root / "input.cd"
+            source.write_text("print 1;\n", encoding="utf-8")
+            expected = root / "run.out"
+            expected.write_text("ok\n", encoding="utf-8")
+            expected_stderr = root / "runtime.err"
+            expected_stderr.write_text("expected runtime\n", encoding="utf-8")
+
+            compiler = root / "fake-compiler.py"
+            compiler.write_text(
+                "#!/usr/bin/env python3\n"
+                "import pathlib\n"
+                "import sys\n"
+                "if '--emit-module-bytecode' in sys.argv:\n"
+                "    output = pathlib.Path(sys.argv[sys.argv.index('--emit-module-bytecode') + 1])\n"
+                "    output.mkdir(parents=True)\n"
+                "    (output / 'module-0.cdbc').write_text('module\\n', encoding='utf-8')\n"
+                "else:\n"
+                "    artifact = pathlib.Path(sys.argv[sys.argv.index('--emit-bytecode') + 1])\n"
+                "    artifact.write_text(pathlib.Path(sys.argv[-1]).read_text(), encoding='utf-8')\n",
+                encoding="utf-8",
+            )
+            vm = root / "fake-vm.py"
+            vm.write_text(
+                "#!/usr/bin/env python3\n"
+                "import pathlib\n"
+                "import sys\n"
+                "command = sys.argv[1]\n"
+                "if command == 'dump':\n"
+                "    print('artifact')\n"
+                "elif command == 'link':\n"
+                "    pathlib.Path(sys.argv[3]).write_text('linked\\n', encoding='utf-8')\n"
+                "elif command == 'run':\n"
+                "    if pathlib.Path(sys.argv[2]).read_text(encoding='utf-8').startswith('error'):\n"
+                "        sys.stderr.write('expected runtime\\n')\n"
+                "        raise SystemExit(7)\n"
+                "    print('ok')\n"
+                "else:\n"
+                "    raise SystemExit(64)\n",
+                encoding="utf-8",
+            )
+            for executable in (compiler, vm):
+                executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+
+            module_manifest = {
+                "schema_version": 2,
+                "benchmark_revision": "module-test",
+                "default_repeat": 2,
+                "workloads": [
+                    {
+                        "workload_id": "module",
+                        "artifact_mode": "module",
+                        "execution": "success",
+                        "sources": ["input.cd"],
+                        "expected_output": "run.out",
+                    }
+                ],
+            }
+            self.assertEqual(
+                run_benchmarks.validate_manifest(module_manifest, root), []
+            )
+            module_report = run_benchmarks.run_benchmarks(
+                module_manifest, root, compiler, vm, repetitions=2
+            )
+            module_result = module_report["workloads"][0]
+            self.assertTrue(module_result["passed"])
+            self.assertTrue(module_result["link_required"])
+            self.assertEqual(len(module_result["link_seconds"]["samples_seconds"]), 2)
+            self.assertEqual(len(module_result["load_seconds"]["samples_seconds"]), 2)
+            self.assertTrue(module_result["link_artifact_validated"])
+
+            error_source = root / "error.cd"
+            error_source.write_text("error\n", encoding="utf-8")
+            error_manifest = {
+                "schema_version": 2,
+                "benchmark_revision": "error-test",
+                "default_repeat": 2,
+                "workloads": [
+                    {
+                        "workload_id": "runtime_error",
+                        "artifact_mode": "linked",
+                        "execution": "runtime_error",
+                        "sources": ["error.cd"],
+                        "expected_stderr": "runtime.err",
+                        "expected_exit_code": 7,
+                    }
+                ],
+            }
+            self.assertEqual(
+                run_benchmarks.validate_manifest(error_manifest, root), []
+            )
+            error_report = run_benchmarks.run_benchmarks(
+                error_manifest, root, compiler, vm, repetitions=2
+            )
+            error_result = error_report["workloads"][0]
+            self.assertTrue(error_result["passed"])
+            self.assertTrue(error_result["exit_code_validated"])
+            self.assertTrue(error_result["stderr_validated"])
+            self.assertTrue(error_result["stdout_validated"])
 
 
 if __name__ == "__main__":
