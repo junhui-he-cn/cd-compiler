@@ -247,6 +247,108 @@ mod tests {
         }
     }
 
+    fn array_churn_program(iterations: usize) -> Program {
+        Program {
+            constants: vec![
+                Constant::Number("0".to_string()),
+                Constant::Number(iterations.to_string()),
+                Constant::Number("1".to_string()),
+            ],
+            names: Vec::new(),
+            main: FunctionBody {
+                registers: 5,
+                instructions: vec![
+                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Constant { dest: 1, constant: 1 },
+                    Instruction::Constant { dest: 2, constant: 2 },
+                    Instruction::Less {
+                        dest: 3,
+                        left: 0,
+                        right: 1,
+                    },
+                    Instruction::JumpIfFalse {
+                        condition: 3,
+                        target: 8,
+                    },
+                    Instruction::Array {
+                        dest: 4,
+                        elements: vec![0],
+                    },
+                    Instruction::Add {
+                        dest: 0,
+                        left: 0,
+                        right: 2,
+                    },
+                    Instruction::Jump { target: 3 },
+                    Instruction::Return { value: 0 },
+                ],
+                locations: vec![None; 9],
+            },
+            functions: Vec::new(),
+            debug_sources: Vec::new(),
+        }
+    }
+
+    fn recursive_closure_program(depth: usize) -> Program {
+        Program {
+            constants: vec![
+                Constant::Number("0".to_string()),
+                Constant::Number("1".to_string()),
+                Constant::Number(depth.to_string()),
+            ],
+            names: vec!["n".to_string()],
+            main: FunctionBody {
+                registers: 3,
+                instructions: vec![
+                    Instruction::MakeFunction { dest: 0, function: 0 },
+                    Instruction::Constant { dest: 1, constant: 2 },
+                    Instruction::Call {
+                        dest: 2,
+                        callee: 0,
+                        arguments: vec![1],
+                    },
+                ],
+                locations: vec![None; 3],
+            },
+            functions: vec![Function {
+                index: 0,
+                name: "recurse".to_string(),
+                arity: 1,
+                registers: 7,
+                params: vec!["n".to_string()],
+                instructions: vec![
+                    Instruction::LoadVar { dest: 0, name: 0 },
+                    Instruction::Constant { dest: 1, constant: 0 },
+                    Instruction::LessEqual {
+                        dest: 2,
+                        left: 0,
+                        right: 1,
+                    },
+                    Instruction::JumpIfTrue {
+                        condition: 2,
+                        target: 9,
+                    },
+                    Instruction::MakeFunction { dest: 3, function: 0 },
+                    Instruction::Constant { dest: 4, constant: 1 },
+                    Instruction::Subtract {
+                        dest: 5,
+                        left: 0,
+                        right: 4,
+                    },
+                    Instruction::Call {
+                        dest: 6,
+                        callee: 3,
+                        arguments: vec![5],
+                    },
+                    Instruction::Return { value: 6 },
+                    Instruction::Return { value: 0 },
+                ],
+                locations: vec![None; 10],
+            }],
+            debug_sources: Vec::new(),
+        }
+    }
+
     #[test]
     fn native_collection_helpers_query_and_copy_shallowly() {
         let program = empty_program();
@@ -347,6 +449,85 @@ mod tests {
         let released = stats.snapshot();
         assert_eq!(released.total_live, 0);
         assert_eq!(released.peak_live, 5);
+    }
+
+    #[test]
+    fn heap_stats_tracks_long_array_churn_without_retaining_short_lived_values() {
+        const ITERATIONS: usize = 256;
+        let program = array_churn_program(ITERATIONS);
+        let vm = VM::with_config(&program, RunConfig::unlimited());
+        let stats = vm.heap_stats();
+        vm.run().expect("array churn workload should complete");
+
+        let snapshot = stats.snapshot();
+        assert_eq!(
+            snapshot.for_kind(HeapObjectKind::Array).allocations,
+            ITERATIONS
+        );
+        assert_eq!(snapshot.for_kind(HeapObjectKind::Array).live, 0);
+        assert_eq!(snapshot.for_kind(HeapObjectKind::Array).dead, ITERATIONS);
+        assert_eq!(snapshot.peak_live, 5);
+        assert_eq!(snapshot.total_live, 0);
+    }
+
+    #[test]
+    fn heap_stats_tracks_deep_recursive_closure_environment_and_cell_pressure() {
+        const DEPTH: usize = 20;
+        let program = recursive_closure_program(DEPTH);
+        let vm = VM::with_config(&program, RunConfig::unlimited());
+        let stats = vm.heap_stats();
+        vm.run()
+            .expect("recursive closure workload should complete");
+
+        let snapshot = stats.snapshot();
+        let environments = snapshot.for_kind(HeapObjectKind::Environment);
+        let cells = snapshot.for_kind(HeapObjectKind::Cell);
+        assert!(environments.allocations > DEPTH);
+        assert_eq!(cells.allocations, DEPTH + 1);
+        assert_eq!(environments.live, 0);
+        assert_eq!(cells.live, 0);
+        assert!(snapshot.peak_live > DEPTH);
+        assert_eq!(snapshot.total_live, 0);
+    }
+
+    #[test]
+    fn heap_stats_covers_large_array_and_map_payload_workloads_without_display() {
+        const ARRAY_LENGTH: usize = 4096;
+        const MAP_LENGTH: usize = 1024;
+        let program = empty_program();
+        let mut vm = VM::new(&program);
+        let stats = vm.heap_stats();
+        let array = vm.make_array(
+            (0..ARRAY_LENGTH)
+                .map(|value| Value::number(value as f64))
+                .collect(),
+        );
+        let map = vm.make_map(
+            (0..MAP_LENGTH)
+                .map(|value| (Value::number(value as f64), Value::number(value as f64)))
+                .collect(),
+        );
+
+        let array_length = match &array {
+            Value::Array(array) => array.elements.borrow().len(),
+            _ => panic!("expected large array"),
+        };
+        let map_length = match &map {
+            Value::Map(map) => map.entries.borrow().len(),
+            _ => panic!("expected large map"),
+        };
+        assert_eq!(array_length, ARRAY_LENGTH);
+        assert_eq!(map_length, MAP_LENGTH);
+
+        let snapshot = stats.snapshot();
+        assert_eq!(snapshot.for_kind(HeapObjectKind::Array).allocations, 1);
+        assert_eq!(snapshot.for_kind(HeapObjectKind::Map).allocations, 1);
+        assert_eq!(snapshot.peak_live, 3);
+
+        drop(array);
+        drop(map);
+        drop(vm);
+        assert_eq!(stats.snapshot().total_live, 0);
     }
 
     #[test]

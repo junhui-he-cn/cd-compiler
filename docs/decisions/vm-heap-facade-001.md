@@ -90,8 +90,9 @@ or a production profiling API.
 Rust unit cases cover shared alias storage, distinct aggregate identities,
 shared environment cells, map duplicate ordering, shared-storage live/dead
 counts, acyclic versus cyclic graphs, closure cycles, native temporary roots,
-runtime-error root release, trace observations, and mixed-workload peak live
-counts. Existing parity and resource cases remain unchanged.
+runtime-error root release, trace observations, mixed-workload peak live, long
+array churn, recursive closure pressure, and large aggregate payload counts.
+Existing parity and resource cases remain unchanged.
 
 ```sh
 cargo test --manifest-path vm-rs/Cargo.toml
@@ -100,7 +101,7 @@ python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens
 python3 tests/run_verification.py ./build/compiler_design vm-rs --report build/verification-report.json
 ```
 
-The focused run after the peak measurement slice passed Rust `69/69`; the existing
+The focused run after the peak workload corpus slice passed Rust `72/72`; the existing
 artifact, Rust VM, and canonical verification gates remain the compatibility
 checks for the unchanged `.cdbc` and alias semantics.
 
@@ -108,6 +109,7 @@ checks for the unchanged `.cdbc` and alias semantics.
 
 Do not add a GC, relocating handle table, or persistent host-value API in this
 slice. The next VM-2B gate is a workload-level decision about whether the
-reference-counted facade needs a different backend; it must add broader,
-reproducible allocation workloads and host-byte measurement before selecting
-tracing, handles, or another storage strategy.
+reference-counted facade needs a different backend. The current corpus now
+provides reproducible tracked-object pressure; host-byte measurement still
+needs a separate measurement boundary before selecting tracing, handles, or
+another storage strategy.

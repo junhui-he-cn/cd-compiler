@@ -222,10 +222,11 @@ variant 的 inline `Value` 生命周期、host-byte peak、ledger compaction、G
 **状态（peak workload 窄切片已完成，2026-07-30）：** 共享存储现在由
 `TrackedStorage<T>` 保留原有 `Rc<RefCell>` alias 边界，并在最后一个 `Rc` 释放
 时更新 live ledger；`HeapStatsSnapshot.peak_live` 提供本次 VM 生命周期内 tracked
-environment、cell、array、map、struct 的最大同时存活数量。新增混合 aggregate 和
-native temporary workload 测试，Rust focused 结果为 `69/69`。这不是 host 字节
-峰值，也不覆盖 inline function/range/variant、ledger compaction、GC、搬迁句柄或
-持久 host root；下一步继续扩展可复现 workload corpus 后再决定 backend。
+environment、cell、array、map、struct 的最大同时存活数量。新增混合 aggregate、
+native temporary、长数组 churn、深递归闭包和大数组/map payload workload 测试，
+Rust focused 结果为 `72/72`。这不是 host 字节峰值，也不覆盖 inline
+function/range/variant、ledger compaction、GC、搬迁句柄或持久 host root；下一步
+进入 host-byte measurement 和 backend 决策，而不是直接替换 `Rc<RefCell>`。
 
 ### VM-2C：可选的 tracing GC 或其他回收策略
 
