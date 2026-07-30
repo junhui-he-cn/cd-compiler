@@ -471,6 +471,14 @@ runtime error 的位置和 stack 顺序不变。scaled closure 的 runtime media
 0.392948s 降至 0.376456s，scaled loop 从 0.885938s 降至 0.829240s；详见
 [`docs/decisions/vm-execution-loop-005-borrow-name-operands.md`](decisions/vm-execution-loop-005-borrow-name-operands.md)。
 
+**状态（第六 main-frame global cell cache 窄切片已完成，2026-07-30）：**
+主帧按 canonical name slot 缓存已解析的 global `Cell`；重复的 bytecode name
+index 会归一化到同一 slot，`StoreVar` 在绑定创建或替换时刷新 slot，函数帧和
+closure 仍使用原有 locals -> closure -> globals 解析顺序。scaled closure 的
+runtime median 从 0.386656s 降至 0.299741s，scaled loop 从 0.864550s 降至
+0.519380s；详见
+[`docs/decisions/vm-execution-loop-006-global-cell-cache.md`](decisions/vm-execution-loop-006-global-cell-cache.md)。
+
 ### VM-5C：容量与大模块图
 
 **目标：** 让 VM 在大 artifact、深调用、长字符串、大数组和多模块 link 下
@@ -577,7 +585,7 @@ VM-3A 的第一 library boundary、typed error/version boundary、VM-3B 的第�
 linker report slice、VM-4A 的第一 interactive debugger slice、VM-4B 的第一
 deterministic profile counter slice、VM-4C 的第一 structured kind slice、VM-5A
 的 reproducible benchmark baseline/scale slices 和 VM-5B 的 trace-off instruction
-preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand slices 已完成；GC、persistent VM、
+preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache slices 已完成；GC、persistent VM、
 JIT 和新的 artifact version 仍未进入默认队列。VM-4B 的 wall-clock 与
 allocation/peak 扩展、VM-4C 的统一 host schema，以及 VM-5B 的后续性能优化都
 需要独立决策；下一步应依据十一个 workload 的 baseline 数据选择下一个明确的

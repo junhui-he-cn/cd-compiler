@@ -472,6 +472,70 @@ mod tests {
     }
 
     #[test]
+    fn main_global_cell_cache_reuses_and_replaces_binding_cells() {
+        let mut program = empty_program();
+        program.names = vec!["value".to_string(), "value".to_string()];
+        let mut vm = VM::new(&program);
+        let mut main = Frame {
+            ip: 0,
+            registers: Vec::new(),
+            locals: new_environment(),
+            closure: new_environment(),
+            is_main: true,
+            function: "main".to_string(),
+            function_index: None,
+        };
+
+        let missing = vm
+            .load_variable(&main, 1)
+            .expect_err("missing global should still be rejected");
+        assert_eq!(missing.message, "undefined variable `value`");
+        assert!(vm.global_cell_cache[0].is_none());
+
+        vm.store_variable(&mut main, 0, "value".to_string(), Value::number(1.0));
+        let first_cell = vm.global_cell_cache[0]
+            .as_ref()
+            .expect("store should seed the global cache")
+            .clone();
+        assert_eq!(vm.load_variable(&main, 0).unwrap().to_string(), "1");
+        assert!(Rc::ptr_eq(
+            &first_cell,
+            vm.global_cell_cache[0].as_ref().expect("cached cell")
+        ));
+
+        vm.assign_variable(&main, 1, Value::number(2.0))
+            .expect("assignment should reuse the cached cell");
+        assert_eq!(first_cell.borrow().to_string(), "2");
+        assert!(Rc::ptr_eq(
+            &first_cell,
+            vm.global_cell_cache[0].as_ref().expect("cached cell")
+        ));
+
+        let closure = Frame {
+            ip: 0,
+            registers: Vec::new(),
+            locals: new_environment(),
+            closure: new_environment(),
+            is_main: false,
+            function: "closure".to_string(),
+            function_index: Some(0),
+        };
+        closure
+            .closure
+            .borrow_mut()
+            .insert("value".to_string(), first_cell.clone());
+
+        vm.store_variable(&mut main, 0, "value".to_string(), Value::number(3.0));
+        let second_cell = vm.global_cell_cache[0]
+            .as_ref()
+            .expect("replacement should refresh the global cache")
+            .clone();
+        assert!(!Rc::ptr_eq(&first_cell, &second_cell));
+        assert_eq!(vm.load_variable(&main, 1).unwrap().to_string(), "3");
+        assert_eq!(vm.load_variable(&closure, 1).unwrap().to_string(), "2");
+    }
+
+    #[test]
     fn native_collection_helpers_query_and_copy_shallowly() {
         let program = empty_program();
         let mut vm = VM::new(&program);
@@ -2120,6 +2184,8 @@ pub struct VM<'a> {
     config: RunConfig,
     heap: Heap,
     globals: SharedEnvironment,
+    global_name_slots: Vec<usize>,
+    global_cell_cache: Vec<Option<Cell>>,
     function_body_cache: Vec<Option<Rc<CachedFunctionBody>>>,
     output: String,
     instruction_steps: usize,
@@ -2145,6 +2211,15 @@ impl<'a> VM<'a> {
     }
 
     pub fn with_config(program: &'a Program, config: RunConfig) -> Self {
+        let mut global_name_slots = Vec::with_capacity(program.names.len());
+        let mut global_slots_by_name = BTreeMap::new();
+        for name in &program.names {
+            let next_slot = global_slots_by_name.len();
+            let slot = *global_slots_by_name
+                .entry(name.as_str())
+                .or_insert(next_slot);
+            global_name_slots.push(slot);
+        }
         let heap = Heap::new();
         let globals = heap.new_environment();
         Self {
@@ -2152,6 +2227,8 @@ impl<'a> VM<'a> {
             config,
             heap,
             globals,
+            global_name_slots,
+            global_cell_cache: vec![None; global_slots_by_name.len()],
             function_body_cache: vec![None; program.functions.len()],
             output: String::new(),
             instruction_steps: 0,
@@ -2459,19 +2536,18 @@ impl<'a> VM<'a> {
                     self.write_register(frame, *dest, value)?;
                 }
                 Instruction::LoadVar { dest, name } => {
-                    let name = self.read_name_ref(*name)?;
-                    let value = self.load_variable(frame, name)?;
+                    let value = self.load_variable(frame, *name)?;
                     self.write_register(frame, *dest, value)?;
                 }
                 Instruction::StoreVar { name, value } => {
-                    let name = self.read_name(*name)?;
+                    let name_index = *name;
+                    let name = self.read_name(name_index)?;
                     let value = self.read_register(frame, *value)?;
-                    self.store_variable(frame, name, value);
+                    self.store_variable(frame, name_index, name, value);
                 }
                 Instruction::AssignVar { name, value } => {
-                    let name = self.read_name_ref(*name)?;
                     let value = self.read_register(frame, *value)?;
-                    self.assign_variable(frame, name, value)?;
+                    self.assign_variable(frame, *name, value)?;
                 }
                 Instruction::Call {
                     dest,
@@ -4126,29 +4202,70 @@ impl<'a> VM<'a> {
         self.globals.borrow().get(name).cloned()
     }
 
-    fn load_variable(&self, frame: &Frame, name: &str) -> Result<Value, RuntimeError> {
-        let cell = self
-            .find_cell(frame, name)
-            .ok_or_else(|| RuntimeError::new(format!("undefined variable `{}`", name)))?;
+    fn load_variable(&mut self, frame: &Frame, name_index: usize) -> Result<Value, RuntimeError> {
+        let cell = self.variable_cell(frame, name_index)?;
         let value = cell.borrow().clone();
         Ok(value)
     }
 
-    fn store_variable(&self, frame: &mut Frame, name: String, value: Value) {
+    fn store_variable(&mut self, frame: &mut Frame, name_index: usize, name: String, value: Value) {
         let cell = self.heap.new_cell(value);
         if frame.is_main {
-            self.globals.borrow_mut().insert(name, cell);
+            self.globals.borrow_mut().insert(name, cell.clone());
+            if let Some(cache_index) = self.global_name_slots.get(name_index).copied() {
+                self.global_cell_cache[cache_index] = Some(cell);
+            }
         } else {
             frame.locals.borrow_mut().insert(name, cell);
         }
     }
 
-    fn assign_variable(&self, frame: &Frame, name: &str, value: Value) -> Result<(), RuntimeError> {
-        let cell = self
-            .find_cell(frame, name)
-            .ok_or_else(|| RuntimeError::new(format!("undefined variable `{}`", name)))?;
+    fn assign_variable(
+        &mut self,
+        frame: &Frame,
+        name_index: usize,
+        value: Value,
+    ) -> Result<(), RuntimeError> {
+        let cell = self.variable_cell(frame, name_index)?;
         *cell.borrow_mut() = value;
         Ok(())
+    }
+
+    fn variable_cell(&mut self, frame: &Frame, name_index: usize) -> Result<Cell, RuntimeError> {
+        if frame.is_main {
+            return self.global_cell(name_index);
+        }
+
+        let name = self.read_name_ref(name_index)?;
+        self.find_cell(frame, name)
+            .ok_or_else(|| RuntimeError::new(format!("undefined variable `{}`", name)))
+    }
+
+    fn global_cell(&mut self, name_index: usize) -> Result<Cell, RuntimeError> {
+        let cache_index = self
+            .global_name_slots
+            .get(name_index)
+            .copied()
+            .ok_or_else(|| RuntimeError::new("name index out of range"))?;
+        if let Some(cell) = self
+            .global_cell_cache
+            .get(cache_index)
+            .and_then(Option::as_ref)
+        {
+            return Ok(cell.clone());
+        }
+
+        let name = self.read_name_ref(name_index)?;
+        let cell = self
+            .globals
+            .borrow()
+            .get(name)
+            .cloned()
+            .ok_or_else(|| RuntimeError::new(format!("undefined variable `{}`", name)))?;
+        if let Some(slot) = self.global_cell_cache.get_mut(cache_index) {
+            *slot = Some(cell.clone());
+        }
+        Ok(cell)
     }
 
     fn validate_jump_target(
