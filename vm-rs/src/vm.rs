@@ -2486,7 +2486,7 @@ impl<'a> VM<'a> {
                     for argument in arguments {
                         values.push(self.read_register(frame, *argument)?);
                     }
-                    let call_site = body.locations.get(frame.ip).cloned().flatten();
+                    let call_site = body.locations.get(frame.ip).and_then(Option::as_ref);
                     let result = self.call_function(
                         function,
                         values,
@@ -2505,7 +2505,7 @@ impl<'a> VM<'a> {
                     for argument in arguments {
                         values.push(self.read_register(frame, *argument)?);
                     }
-                    let call_site = body.locations.get(frame.ip).cloned().flatten();
+                    let call_site = body.locations.get(frame.ip).and_then(Option::as_ref);
                     let result = self.execute_native_call_at(
                         &name,
                         values,
@@ -3032,12 +3032,12 @@ impl<'a> VM<'a> {
         function: FunctionValue,
         arguments: Vec<Value>,
         caller: String,
-        call_site: Option<DebugLocation>,
+        call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
         let Some(cached) = self.cached_function_body(function.function_index) else {
             let mut error = RuntimeError::new("function index out of range");
-            error.location = call_site.clone();
-            error.push_frame(caller, call_site);
+            error.location = call_site.cloned();
+            error.push_frame(caller, call_site.cloned());
             return Err(error);
         };
 
@@ -3047,8 +3047,8 @@ impl<'a> VM<'a> {
                 cached.params.len(),
                 arguments.len()
             ));
-            error.location = call_site.clone();
-            error.push_frame(caller, call_site);
+            error.location = call_site.cloned();
+            error.push_frame(caller, call_site.cloned());
             return Err(error);
         }
 
@@ -3078,9 +3078,9 @@ impl<'a> VM<'a> {
             Ok(result) => Ok(result.unwrap_or(Value::Nil)),
             Err(mut error) => {
                 if error.location.is_none() {
-                    error.location = call_site.clone();
+                    error.location = call_site.cloned();
                 }
-                error.push_frame(caller, call_site);
+                error.push_frame(caller, call_site.cloned());
                 Err(error)
             }
         }
@@ -3368,7 +3368,7 @@ impl<'a> VM<'a> {
         name: &str,
         arguments: Vec<Value>,
         caller: String,
-        call_site: Option<DebugLocation>,
+        call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
         self.profile_native_call(name);
         match name {
@@ -3412,7 +3412,7 @@ impl<'a> VM<'a> {
         &mut self,
         arguments: Vec<Value>,
         caller: String,
-        call_site: Option<DebugLocation>,
+        call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
             return Err(RuntimeError::new("map expects 2 arguments"));
@@ -3435,7 +3435,7 @@ impl<'a> VM<'a> {
                 callback.clone(),
                 vec![element],
                 caller.clone(),
-                call_site.clone(),
+                call_site,
             )?);
         }
         self.allocate_array(mapped)
@@ -3445,7 +3445,7 @@ impl<'a> VM<'a> {
         &mut self,
         arguments: Vec<Value>,
         caller: String,
-        call_site: Option<DebugLocation>,
+        call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
             return Err(RuntimeError::new("filter expects 2 arguments"));
@@ -3468,7 +3468,7 @@ impl<'a> VM<'a> {
                 predicate.clone(),
                 vec![element.clone()],
                 caller.clone(),
-                call_site.clone(),
+                call_site,
             )?;
             match keep {
                 Value::Bool(true) => filtered.push(element),
@@ -3483,7 +3483,7 @@ impl<'a> VM<'a> {
         &mut self,
         arguments: Vec<Value>,
         caller: String,
-        call_site: Option<DebugLocation>,
+        call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
             return Err(RuntimeError::new("flatMap expects 2 arguments"));
@@ -3506,7 +3506,7 @@ impl<'a> VM<'a> {
                 callback.clone(),
                 vec![element],
                 caller.clone(),
-                call_site.clone(),
+                call_site,
             )?;
             let Value::Array(mapped) = result else {
                 return Err(RuntimeError::new("flatMap expects callback to return array"));
@@ -3523,7 +3523,7 @@ impl<'a> VM<'a> {
         &mut self,
         arguments: Vec<Value>,
         caller: String,
-        call_site: Option<DebugLocation>,
+        call_site: Option<&DebugLocation>,
         any: bool,
     ) -> Result<Value, RuntimeError> {
         let name = if any { "any" } else { "all" };
@@ -3556,7 +3556,7 @@ impl<'a> VM<'a> {
                 predicate.clone(),
                 vec![element],
                 caller.clone(),
-                call_site.clone(),
+                call_site,
             )?;
             let Value::Bool(result) = result else {
                 return Err(RuntimeError::new(format!(
@@ -3575,7 +3575,7 @@ impl<'a> VM<'a> {
         &mut self,
         arguments: Vec<Value>,
         caller: String,
-        call_site: Option<DebugLocation>,
+        call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
             return Err(RuntimeError::new("count expects 2 arguments"));
@@ -3598,7 +3598,7 @@ impl<'a> VM<'a> {
                 predicate.clone(),
                 vec![element],
                 caller.clone(),
-                call_site.clone(),
+                call_site,
             )?;
             match result {
                 Value::Bool(true) => count += 1,
@@ -3613,7 +3613,7 @@ impl<'a> VM<'a> {
         &mut self,
         arguments: Vec<Value>,
         caller: String,
-        call_site: Option<DebugLocation>,
+        call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
             return Err(RuntimeError::new("find expects 2 arguments"));
@@ -3635,7 +3635,7 @@ impl<'a> VM<'a> {
                 predicate.clone(),
                 vec![element.clone()],
                 caller.clone(),
-                call_site.clone(),
+                call_site,
             )?;
             match result {
                 Value::Bool(true) => return Ok(element),
@@ -3650,7 +3650,7 @@ impl<'a> VM<'a> {
         &mut self,
         arguments: Vec<Value>,
         caller: String,
-        call_site: Option<DebugLocation>,
+        call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
             return Err(RuntimeError::new("findIndex expects 2 arguments"));
@@ -3672,7 +3672,7 @@ impl<'a> VM<'a> {
                 predicate.clone(),
                 vec![element],
                 caller.clone(),
-                call_site.clone(),
+                call_site,
             )?;
             match result {
                 Value::Bool(true) => return Ok(Value::number(index as f64)),
@@ -3687,7 +3687,7 @@ impl<'a> VM<'a> {
         &mut self,
         arguments: Vec<Value>,
         caller: String,
-        call_site: Option<DebugLocation>,
+        call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
         if arguments.len() != 3 {
             return Err(RuntimeError::new("reduce expects 3 arguments"));
@@ -3710,7 +3710,7 @@ impl<'a> VM<'a> {
                 callback.clone(),
                 vec![accumulator, element],
                 caller.clone(),
-                call_site.clone(),
+                call_site,
             )?;
         }
         Ok(accumulator)
