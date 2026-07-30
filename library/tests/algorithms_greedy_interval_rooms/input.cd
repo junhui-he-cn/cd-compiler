@@ -1,0 +1,25 @@
+import "../../data_structures.cd" as ds;
+
+print ds.minimumIntervalRooms([
+  ds.Interval { start: 1, end: 3 },
+  ds.Interval { start: 2, end: 4 },
+  ds.Interval { start: 5, end: 7 }
+]);
+print ds.minimumIntervalRooms([
+  ds.Interval { start: 1, end: 2 },
+  ds.Interval { start: 2, end: 3 }
+]);
+print ds.minimumIntervalRooms([
+  ds.Interval { start: 1, end: 1 },
+  ds.Interval { start: 2, end: 2 }
+]);
+print ds.minimumIntervalRooms([
+  ds.Interval { start: -3, end: -1 },
+  ds.Interval { start: -2, end: 0 },
+  ds.Interval { start: 1, end: 2 }
+]);
+let empty: [ds.Interval] = [];
+print ds.minimumIntervalRooms(empty);
+print ds.minimumIntervalRooms([
+  ds.Interval { start: 4, end: 1 }
+]);

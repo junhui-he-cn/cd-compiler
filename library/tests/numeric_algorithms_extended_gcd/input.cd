@@ -1,0 +1,11 @@
+import "../../data_structures.cd" as ds;
+
+fun asArray(result: ds.ExtendedGcdResult): [number] {
+  return [result.gcd, result.leftCoefficient, result.rightCoefficient];
+}
+
+print asArray(ds.extendedGcd(240, 46));
+print asArray(ds.extendedGcd(-240, 46));
+print asArray(ds.extendedGcd(0, 15));
+print asArray(ds.extendedGcd(21, -6));
+print asArray(ds.extendedGcd(0, 0));

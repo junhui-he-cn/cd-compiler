@@ -1,0 +1,24 @@
+import "../../data_structures.cd" as ds;
+
+fun render(value: ds.Result<number, string>): string {
+  return match value {
+    ds.Result.Ok(value) => "ok:" + str(value),
+    ds.Result.Err(error) => "err:" + error,
+  };
+}
+
+let success: ds.Result<number, string> = ds.ok<number, string>(7);
+let failure: ds.Result<number, string> = ds.err<number, string>("bad");
+let explicit = ds.Result.Ok<number, string>(9);
+let explicitError = ds.Result.Err<number, string>("worse");
+let factoryExplicit = ds.ok<number, string>(11);
+
+print render(success);
+print render(failure);
+print render(explicit);
+print render(explicitError);
+print render(factoryExplicit);
+print match failure {
+  ds.Result.Ok(value) => "ok:" + str(value),
+  ds.Result.Err(error) => "error:" + error,
+};

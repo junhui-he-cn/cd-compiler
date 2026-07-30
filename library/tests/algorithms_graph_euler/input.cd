@@ -1,0 +1,34 @@
+import "../../data_structures.cd" as ds;
+
+let path = ds.newGraph(4, false);
+path.addEdge(0, 1);
+path.addEdge(1, 2);
+path.addEdge(2, 3);
+print ds.eulerTrail(path, 0);
+print ds.eulerTrail(path, 1);
+
+let circuit = ds.newGraph(4, false);
+circuit.addEdge(0, 1);
+circuit.addEdge(1, 2);
+circuit.addEdge(2, 3);
+circuit.addEdge(3, 0);
+print ds.eulerTrail(circuit, 0);
+
+let invalid = ds.newGraph(4, false);
+invalid.addEdge(0, 1);
+invalid.addEdge(0, 2);
+invalid.addEdge(0, 3);
+print ds.eulerTrail(invalid, 0);
+
+let disconnected = ds.newGraph(4, false);
+disconnected.addEdge(0, 1);
+disconnected.addEdge(2, 3);
+print ds.eulerTrail(disconnected, 0);
+
+let selfLoop = ds.newGraph(1, false);
+selfLoop.addEdge(0, 0);
+print ds.eulerTrail(selfLoop, 0);
+
+let directed = ds.newGraph(2, true);
+directed.addEdge(0, 1);
+print ds.eulerTrail(directed, 0);

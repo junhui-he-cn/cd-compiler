@@ -1,0 +1,18 @@
+import "../../data_structures.cd" as ds;
+
+let graph = ds.newGraph(7, false);
+graph.addEdge(0, 2);
+graph.addEdge(0, 1);
+graph.addEdge(1, 2);
+graph.addEdge(3, 4);
+graph.addEdge(4, 5);
+let components = ds.connectedComponents(graph);
+print components;
+print components.len();
+
+let directed = ds.newGraph(3, true);
+directed.addEdge(0, 1);
+print ds.connectedComponents(directed);
+
+let empty = ds.newGraph(0, false);
+print ds.connectedComponents(empty);

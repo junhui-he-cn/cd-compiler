@@ -1,0 +1,8 @@
+cat:3,dog:2,bird:1
+cat
+a:2,b:2
+a
+[{value: 2, count: 3}, {value: 3, count: 1}]
+2
+[]
+nil

@@ -1,0 +1,18 @@
+import "../../data_structures.cd" as ds;
+
+print ds.isBalancedBrackets("()[]{}");
+print ds.isBalancedBrackets("([{}])");
+print ds.isBalancedBrackets("(]");
+print ds.isBalancedBrackets("([)]");
+print ds.isBalancedBrackets("hello (world) [again]");
+print ds.isBalancedBrackets("");
+print ds.isBalancedBrackets("abc]");
+
+print ds.largestHistogramArea([2, 1, 5, 6, 2, 3]);
+print ds.largestHistogramArea([2, 4]);
+print ds.largestHistogramArea([2, 2, 2]);
+let empty: [number] = [];
+print ds.largestHistogramArea(empty);
+print ds.largestHistogramArea([0, 1, 0]);
+print ds.largestHistogramArea([1, -1]);
+print ds.largestHistogramArea([1, 1.5]);

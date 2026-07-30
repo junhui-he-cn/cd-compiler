@@ -1,0 +1,45 @@
+import "../../data_structures.cd" as ds;
+
+fun describe(value: ds.Option<number>): string {
+  return match value {
+    ds.Option.None => "none",
+    ds.Option.Some(number) => "some:" + str(number),
+  };
+}
+
+let buffer = ds.newRingBuffer<number>(3);
+print buffer.capacity();
+print buffer.isEmpty();
+print buffer.isFull();
+print describe(buffer.peek());
+print buffer.offer(1);
+print buffer.offer(2);
+print buffer.offer(3);
+print buffer.isFull();
+print buffer.offer(4);
+print buffer.snapshot();
+print describe(buffer.read());
+print buffer.snapshot();
+print buffer.offer(4);
+print buffer.snapshot();
+print describe(buffer.peek());
+print describe(buffer.read());
+print describe(buffer.read());
+print describe(buffer.read());
+print describe(buffer.read());
+print buffer.isEmpty();
+print buffer.size();
+
+print buffer.offer(5);
+print buffer.offer(6);
+print buffer.offer(7);
+print describe(buffer.read());
+print buffer.offer(8);
+print buffer.snapshot();
+
+let empty = ds.newRingBuffer<string>(2.9);
+print empty.capacity();
+print empty.offer("x");
+let zero = ds.newRingBuffer<number>(-1);
+print zero.capacity();
+print zero.offer(1);

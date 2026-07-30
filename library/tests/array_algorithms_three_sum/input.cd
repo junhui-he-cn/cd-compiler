@@ -1,0 +1,11 @@
+import "../../data_structures.cd" as ds;
+
+let values = [-1, 0, 1, 2, -1, -4];
+print ds.threeSumZero(values);
+print values;
+print ds.threeSumZero([0, 0, 0, 0]);
+print ds.threeSumZero([1, 2]);
+print ds.threeSumZero([-2, 0, 1, 1, 2]);
+
+let empty: [number] = [];
+print ds.threeSumZero(empty);

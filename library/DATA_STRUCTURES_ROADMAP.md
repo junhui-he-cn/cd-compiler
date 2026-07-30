@@ -30,7 +30,64 @@
 当前库已有：
 
 - `Stack<T>`：数组后端，使用 `push`、`pop`、`top` 等方法；
-- `Queue<T>`：数组后端，带惰性头指针和周期性压缩。
+- `Queue<T>`：数组后端，带惰性头指针和周期性压缩；
+- `Deque<T>`：双数组栈后端，提供两端插入、删除、查看和快照。
+- `RingBuffer<T>`：固定容量，满时拒绝写入，读写使用 `Option<T>`/`bool` 明确表达状态。
+- `BinaryHeap<T>`：数组后端，通过 `less` 回调实现最小堆或最大堆。
+- `PriorityQueue<T>`：`BinaryHeap<T>` 的队列命名包装。
+- `Option<T>`：用于显式区分携带值和缺失值的泛型枚举。
+- `Result<T, E>`：用于携带成功值或错误值的泛型枚举。
+- `List<T>`：递归泛型枚举表示的不可变持久化链表。
+- `Tree<T>`：递归泛型枚举表示的不可变二叉树，提供遍历和结构统计。
+- BST 辅助：基于 `Tree<T>` 和 `less` 的查找、插入、删除、最值及前驱/后继。
+- `Set<T: Eq>`：数组线性查找的泛型集合，按插入顺序提供快照。
+- `MultiSet<T: Eq>`：数组条目和计数构成的泛型多重集合。
+- `MultiMap<K: Eq,V: Eq>`：数组条目表示一个键对应多个值的泛型映射。
+- 数组基础算法：`reverseArray`、`rotateArray`、`linearSearch`、`countValue`、`isSorted`。
+- 频率统计：`frequencyEntries`、`mostFrequent`。
+- 数组排序：稳定插入排序 `sortArray`、`sortArrayInPlace`、希尔排序 `shellSort`、
+  选择排序、冒泡排序、归并排序 `mergeSort`、快速排序 `quickSort`/`quickSortInPlace` 和堆排序
+  `heapSort`/`heapSortInPlace`。
+- 数组窗口算法：`chunkArray`、`slidingWindows`、`prefixSums`。
+- 数组前缀/差分与单调栈：`differenceArray`、`prefixMinimums`、`prefixMaximums`、
+  `nextGreaterValues`。
+- 区间算法：`Interval`、`mergeIntervals` 和 `intersectIntervals`。
+- 贪心区间调度：`selectNonOverlappingIntervals`。
+- 区间资源分配：`minimumIntervalRooms`。
+- 跳跃游戏贪心：`canReachEnd`、`minimumJumps`。
+- Huffman 贪心核心：`huffmanMergeCost`。
+- 双指针算法：`mergeSortedNumbers`、`twoSumSorted`、`threeSumZero`。
+- 数组集合算法：`uniqueValues`、`intersectionValues`、`unionValues`、`differenceValues`。
+- 固定窗口统计：`windowSums`、`maxWindowSum`。
+- 子数组统计：`maxSubarraySum`。
+- 基础数值算法：`gcd`、`lcm`、`extendedGcd`、`isPrime`、`sievePrimes`、`fastPower`、
+  `factorial`、`fibonacci`（整数输入契约）。
+- 矩阵快速幂：`matrixPower2x2`。
+- 数论辅助：`primeFactors`、`divisors`。
+- 组合数辅助：`binomialCoefficient`、`pascalTriangle`。
+- 数组数值辅助：`gcdArray`、`prefixProducts`。
+- 一维 DP：`climbStairs`、`maxNonAdjacentSum`、`minCoinCount`。
+- 网格/字符串 DP：`uniqueGridPaths`、`uniqueGridPathsWithObstacles`、
+  `minGridPathSum`、`editDistance`。
+- 序列 DP：`longestIncreasingSubsequenceLength`、`longestCommonSubsequenceLength`。
+- 区间 DP：`matrixChainCost`、`mergeStonesCost`。
+- 二分查找：`lowerBound`、`upperBound`、`binarySearch`。
+- 字符串比较辅助：`compareStrings`、`stringLess`（当前限定可打印 ASCII）。
+- 字符串匹配：`findSubstring`、`prefixFunction`、`zFunction`、`kmpSearch`、`isPalindrome`。
+- Trie：`Trie`、`newTrie`、`has`、`startsWith`、`wordsWithPrefix`。
+- Fenwick 树：数值 `FenwickTree`，支持点更新、前缀和、区间和与快照。
+- 线段树：数值 `SegmentTree`，支持点更新、区间和、区间最小值与快照。
+- 并查集：整数顶点 `DisjointSet`，支持路径压缩和按大小合并。
+- 图基础结构：整数顶点数组邻接表 `Graph`，支持有向/无向边。
+- 图遍历：`breadthFirstOrder`、`depthFirstOrder`。
+- 无向连通性：`connectedComponents`、`isBipartite`。
+- 无向割点与桥：`articulationPoints`、`bridges`。
+- 欧拉路径：无向图 `eulerTrail`。
+- 无权图路径：`shortestDistances`、`shortestPath`。
+- DAG 视图：`inDegrees`、`topologicalOrder`、`hasCycle`。
+- 加权图：非负 `WeightedEdge`/`WeightedGraph`、Dijkstra、Floyd-Warshall、最大流、最小割、Prim 与 Kruskal 最小生成森林。
+- 有符号加权图：`SignedWeightedGraph`、`BellmanFordResult` 与 Bellman-Ford 负环检测。
+- 强连通分量：有向图的 `stronglyConnectedComponents`。
 
 它们的现有 API 和示例继续作为兼容基线。后续新增 API 不应悄悄改变空值、
 快照或引用共享语义。
@@ -53,19 +110,19 @@
 
 ### 2.2 设计限制
 
-- 目前没有接口、trait、重载、动态派发或静态方法；算法的多态行为使用
-  泛型参数和显式回调表达。后续可以增加只在编译期生效的能力约束，但在
-  `M6-LANG-001` 完成前不能把 `Eq`、`Ord` 或类似 trait 语法当作现有能力；
+- 现有 `Eq`、`Ord` 和 `Hash` 能力只在编译期检查，不生成运行时 trait 对象、
+  隐式能力字典或动态派发；泛型算法仍可使用显式比较器表达用户定义类型的
+  排序行为；
 - 递归结构体目前被文档明确拒绝，不能直接假设有可变的
   `Node { next: Node? }` 或树节点指针；可用递归枚举，或用“数组节点 + 整数
   索引”表示可变图/树；
-- 没有文档化的通用哈希函数、位运算或随机数 API，因此通用哈希表、位集、
-  布隆过滤器和随机洗牌不列入第一批实现；
-- 结构体字段支持 `private`：定义模块内可以初始化和访问，导出给其他模块
-  的类型不公开这些字段；当前没有私有方法语法；
-- 已知命名结构体接收者的方法优先于同名的内置成员调用。数组、map、字符串
-  和 range 接收者仍使用内置形式，因此 `Stack<T>` 可以使用 `push`、`pop`
-  等常规方法名；动态接收者的 API 仍应记录其运行时检查行为；
+- `hash(value)` 提供确定性的基础哈希入口，但 map 仍只接受基础键；通用哈希表、
+  位集、布隆过滤器和随机洗牌不列入第一批实现；
+- 结构体字段支持 `private`，而私有方法仍未提供。已知命名结构体接收者的方法
+  优先于同名的内置成员调用，因此 `Stack<T>` 可以使用 `push`、`pop` 等常规
+  方法名；数组、map、字符串和 range 接收者仍使用内置形式；
+- 命名结构体可以在 `impl` 中声明 `<`、`<=`、`>`、`>=` 运算符；字符串也提供
+  内置字典序比较。用户定义的结构体运算符不会自动满足泛型 `T: Ord`；
 - 模块系统还没有包清单、import map、通配符导出或导出重命名。目录结构应
   先按普通源文件导入设计。
 
@@ -88,17 +145,17 @@
 
 ### 3.2 结果类型
 
-库基础模块预留两个公共枚举，供后续结构复用：
+库基础模块约定两个公共枚举，供结构和算法复用；当前均已实现：
 
 ```cd
 enum Option<T> {
-  Some(T),
+  Some(value: T),
   None,
 }
 
 enum Result<T, E> {
-  Ok(T),
-  Err(E),
+  Ok(value: T),
+  Err(error: E),
 }
 ```
 
@@ -131,9 +188,9 @@ enum Result<T, E> {
 | 动态数组/向量 `Vector<T>` | 现有能力 | 直接使用 `[T]`，提供少量约定性辅助函数 | 不重复包装语言内置数组 |
 | 栈 `Stack<T>` | 现有 | `push`、`pop`、`top`、`size`、`isEmpty`、`snapshot` | 数组后端，`pop/top` 为 `O(1)` |
 | 队列 `Queue<T>` | 现有 | `enqueue`、`dequeue`、`front`、`size`、`isEmpty`、`snapshot` | 头指针 + 周期压缩，操作摊销 `O(1)` |
-| 双端队列 `Deque<T>` | 第一批 | `addFront`、`addBack`、`takeFront`、`takeBack`、`peekFront`、`peekBack` | 环形数组或双数组；两端操作摊销 `O(1)` |
-| 环形缓冲区 `RingBuffer<T>` | 第一批/待定 | 固定容量、`write`、`read`、`peek`、`isFull` | 复用 `Deque` 思路；必须先确定满时拒绝还是覆盖 |
-| 不可变链表 `List<T>` | 受限实现 | `empty`、`prepend`、`head`、`tail`、`reverse`、`toArray` | 递归泛型枚举，持久化/共享尾部 |
+| 双端队列 `Deque<T>` | 现有（S1） | `addFront`、`addBack`、`takeFront`、`takeBack`、`peekFront`、`peekBack` | 双数组栈；两端操作摊销 `O(1)` |
+| 环形缓冲区 `RingBuffer<T>` | 现有（S1） | 固定容量、`offer`、`read`、`peek`、`isFull` | `Option<T>` 槽位；满时拒绝并返回 `false` |
+| 不可变链表 `List<T>` | 现有（S1） | `emptyList`、`prepend`、`head`、`tail`、`reverse`、`toArray` | 递归泛型枚举，持久化/共享尾部 |
 | 单向链表 | 后续 | 插入、删除、反转、合并、快慢指针 | 等待递归结构体/引用节点方案，或改为索引节点 |
 | 双向链表 | 后续 | 两端插入删除、迭代器、节点移动 | 需要可表达的双向节点和稳定节点引用 |
 | 循环链表 | 后续 | 循环调度、约瑟夫问题 | 需要先确定节点引用和空结构语义 |
@@ -143,13 +200,13 @@ enum Result<T, E> {
 
 | 结构 | 状态 | 主要 API/用途 | 预期实现 |
 | --- | --- | --- | --- |
-| 二叉堆 `BinaryHeap<T>` | 第一批 | `add`、`peek`、`take`、`size`、`isEmpty`、`snapshot` | 数组 + `less` 回调；`add/take` 为 `O(log n)` |
-| 优先队列 `PriorityQueue<T>` | 第一批 | 对外提供队列语义，优先返回最小/最大元素 | `BinaryHeap` 的稳定命名包装 |
+| 二叉堆 `BinaryHeap<T>` | 现有（S1） | `add`、`peek`、`take`、`size`、`isEmpty`、`snapshot` | 数组 + `less` 回调；`add/take` 为 `O(log n)` |
+| 优先队列 `PriorityQueue<T>` | 现有（S1） | 对外提供队列语义，优先返回最小/最大元素 | `BinaryHeap` 的稳定命名包装 |
 | 双堆中位数 | 后续 | `add`、`median`、流式中位数 | 两个堆；需定义空集合和偶数长度中位数策略 |
-| `Set<T>` | 第一批 | `add`、`has`、`discard`、`size`、`isEmpty`、`snapshot` | 先做数组线性查找，适用于任意可比较相等的值 |
+| `Set<T>` | 现有（S2） | `add`、`has`、`discard`、`size`、`isEmpty`、`snapshot` | 数组线性查找，按语言 `==` 去重，保留快照插入顺序 |
 | 有序集合 `OrderedSet<T>` | 后续 | 有序插入、范围查询、前驱后继 | 需要排序比较器和树/有序数组策略 |
-| 多重集合 `MultiSet<T>` | 第一批/受限 | `add`、`countOf`、`takeOne`、`has`、`entries` | 先用条目数组，通用键不依赖 map |
-| 多重映射 `MultiMap<K,V>` | 第一批/受限 | 一个键对应多个值，`add`、`getAll`、`discard` | 条目数组；若 `K` 为基础键可再提供 map 优化版 |
+| 多重集合 `MultiSet<T>` | 现有（S2） | `add`、`countOf`、`takeOne`、`has`、`entries` | 条目值/计数数组，按语言 `==` 查找，不依赖 map |
+| 多重映射 `MultiMap<K,V>` | 现有（S2） | 一个键对应多个值，`add`、`getAll`、`discard(key,value)` | 键数组 + value 数组，按语言 `==` 查找，不依赖 map |
 | 有序映射 `OrderedMap<K,V>` | 后续 | 保持键顺序、更新、删除、遍历条目 | 当前 map 已保持插入顺序，先确认是否需要不同的排序语义 |
 | 双向映射 `BiMap<K,V>` | 后续 | 双向唯一查找 | 需要两侧键约束、重复值策略和一致性契约 |
 | LRU 缓存 `LruCache<K,V>` | 后续/受限 | 容量限制、`get`、`put`、淘汰最久未用项 | 先做数组版本；高效版本需要稳定节点移动 |
@@ -160,13 +217,13 @@ enum Result<T, E> {
 
 | 结构 | 状态 | 主要 API/用途 | 预期实现 |
 | --- | --- | --- | --- |
-| 二叉树 `Tree<T>` | 受限实现 | 前序/中序/后序/层序、大小、高度、叶子 | 递归枚举，优先不可变版本 |
-| 二叉搜索树 `Bst<T>` | 受限实现 | 查找、插入、删除、最小/最大、前驱/后继 | 递归枚举 + `less`，操作返回新树或新根 |
+| 二叉树 `Tree<T>` | 现有（S3） | 前序/中序/后序/层序、大小、高度、叶子 | 递归枚举，不可变版本 |
+| 二叉搜索树 `Bst<T>` | 现有（S3） | 查找、插入、删除、最小/最大、前驱/后继 | 复用 `Tree<T>` + `less`，操作返回新树 |
 | AVL 树 | 后续 | 严格平衡的搜索树 | 先完成 BST 和旋转契约；递归结构表示仍需确认 |
 | 红黑树 | 后续 | 工程化平衡搜索树 | 实现复杂，排在 AVL 之后 |
 | B 树/B+ 树 | 后续 | 磁盘/大规模索引 | 当前没有持久化文件 API，不列入近期目标 |
-| Fenwick 树 | 第一批/受限 | 单点更新、前缀和、区间和 | 数值数组，`O(log n)`；先固定 `number` 版本 |
-| 线段树 | 第一批/受限 | 区间查询、单点/区间更新 | 数值数组；先提供求和/最小值等固定聚合版本 |
+| Fenwick 树 | 现有（S3） | 单点更新、前缀和、区间和 | 数值数组，零基公共索引；内部预计算低位跨度 |
+| 线段树 | 现有（S3） | 区间和、区间最小值、点更新 | 数值数组；固定聚合，非二次幂长度使用活动叶标记 |
 | 稀疏表 | 后续 | 静态数组区间幂等查询 | 需要明确内存和聚合函数契约 |
 | Trie | 受限实现 | 字符串插入、查找、前缀查询、自动补全 | 字符串键 + 数组节点索引，不依赖递归结构体 |
 | 后缀数组/后缀自动机 | 后续 | 子串查询、重复子串分析 | 作为文本算法专题，先不混入基础库 |
@@ -182,8 +239,9 @@ enum Result<T, E> {
 | 边 `Edge`/加权边 `WeightedEdge` | 第一批 | `from`、`to`、`weight` | 普通结构体；权重先使用 `number` |
 | 邻接表图 `Graph` | 第一批 | 加边、删边、邻居、顶点数、边数 | `[[number]]` 或边数组；支持有向/无向配置 |
 | 加权图 `WeightedGraph` | 第一批 | 加权邻居、边遍历 | 邻接边数组；先固定 `number` 权重 |
+| 有符号加权图 `SignedWeightedGraph` | 第一批 | 负权边、Bellman-Ford | 与非负图分离，结果使用 `Result` |
 | 邻接矩阵图 | 后续 | 稠密图、矩阵算法 | `[[number]]`，需要定义无边哨兵值 |
-| 并查集 `DisjointSet` | 第一批 | `find`、`union`、`connected`、`componentCount` | 整数 parent/size 数组，路径压缩 + 按大小合并 |
+| 并查集 `DisjointSet` | 第一批 | `representative`、`union`、`connected`、`componentCount` | 整数 parent/size 数组，路径压缩 + 按大小合并 |
 | DAG 视图 | 第一批 | 拓扑排序、入度 | 在 `Graph` 上提供算法，不单独复制存储 |
 | 流网络 | 后续 | 容量边、残量网络 | 需要明确无穷容量、浮点误差和结果结构 |
 
@@ -191,9 +249,9 @@ enum Result<T, E> {
 
 下列结构会保留在总清单中，但不进入前几轮：哈希表、位集、布隆过滤器、
 并发队列、内存池、对象池、持久化 B 树、跳表和高性能 intrusive list。
-原因不是它们不常用，而是当前项目文档尚未提供通用哈希、位运算、并发、
-文件随机访问、指针/节点引用或内存管理契约。若项目后续补充这些能力，再
-把对应条目从“后续”移入实现路线。
+原因是通用 map 键约束、可变键所有权、位运算、并发、文件随机访问、指针/节点
+引用或内存管理契约仍未形成库级稳定 API。语言已有确定性 `hash(value)` 和
+`Eq`/`Hash` 能力，但这些能力本身不等于通用哈希容器契约。
 
 ## 5. 算法清单
 
@@ -201,6 +259,86 @@ enum Result<T, E> {
 带 `InPlace`。
 
 ### 5.1 数组与序列算法
+
+当前库已提供不修改输入的 `reverseArray`、`linearSearch`、`countValue`、
+`chunkArray`、`slidingWindows` 和 `prefixSums`。这些基础版本使用线性扫描、
+浅拷贝和新建输出数组；空数组调用需要显式元素类型参数。`Interval` 和
+`mergeIntervals` 也已提供，合并时会排序并合并重叠或相接区间。
+`mergeSortedNumbers` 和 `twoSumSorted` 已提供非降序数字数组上的双指针版本。
+`threeSumZero` 会先排序副本，再用双指针生成去重的非降序零和三元组，保持输入
+不变，时间复杂度为 `O(n^2)`。
+`uniqueValues`、`intersectionValues`、`unionValues` 和 `differenceValues` 已
+提供保序去重、交集、并集和差集的线性扫描版本。
+`windowSums` 使用滚动和生成每个固定宽度窗口的和，`maxWindowSum` 在这些
+窗口中选择最大值；非法窗口宽度返回空数组或 `nil`。
+`differenceArray`、`prefixMinimums` 和 `prefixMaximums` 提供数值数组的相邻差分
+及前缀极值；`nextGreaterValues` 使用单调栈返回每个位置右侧第一个严格更大值，
+不存在时使用 `-1`。
+`intersectIntervals` 先独立规范化两侧区间，再用双指针生成包含端点的相交
+区间；因此相接端点会生成零长度区间。
+`maxSubarraySum` 使用 Kadane 扫描返回非空连续子数组的最大和，空数组返回
+`nil`，全负输入仍保留最大负值。
+`lowerBound`、`upperBound` 和 `binarySearch` 接受与输入排序一致的泛型比较器；
+前两者返回插入边界，后者返回重复值的首个位置。
+`compareStrings` 和 `stringLess` 保留库层可打印 ASCII 的三路比较与回调契约；
+语言层现在额外提供 Unicode scalar-value 字符串排序和比较运算符。
+`findSubstring`、`prefixFunction`、`zFunction` 和 `kmpSearch` 使用现有 Unicode scalar-value
+字符串位置语义；`isPalindrome` 按 scalar value 比较字符，不依赖 ASCII 排序。
+`longestUniqueSubstringLength` 用数组窗口扫描 Unicode scalar value，返回最长无重复
+子串长度；`longestPalindromicSubstring` 用奇偶中心扩展返回最左最长回文子串，空串
+分别返回 `0` 和空串，当前实现时间复杂度均为 `O(n^2)`。
+`Trie` 使用数组节点和线性边查找，支持 Unicode scalar-value 字符、重复插入去重
+以及按首次插入的边顺序返回前缀结果，不依赖通用哈希。
+`peakIndex` 在 `O(log n)` 时间内返回一个弱峰值；`isMountainArray` 用线性扫描
+验证严格先升后降，`mountainPeakIndex` 在验证后用二分查找峰顶。空数组或非严格
+山脉返回 `nil` 峰值结果。
+`minimumLargestPartitionSum` 对非负整数数组的连续分段容量做答案空间二分，返回
+至多指定分段数时的最小最大段和；空数组返回 `0`，非法分段数或元素返回 `nil`，
+时间复杂度为 `O(n log S)`，其中 `S` 是元素总和。
+`mergeSort` 使用稳定的自底向上归并排序，返回新数组，不改变输入。
+`shellSort` 使用从 `n / 2` 开始不断折半的 gap 序列和分组插入排序，返回浅拷贝，
+不保证稳定性；当前序列的最坏时间复杂度为 `O(n^2)`，额外结果空间为 `O(n)`。
+`quickSort` 和 `quickSortInPlace` 使用中点 pivot 的原地分区版本；它们不保证
+稳定性，平均为 `O(n log n)`，最坏为 `O(n^2)`。
+`heapSort` 和 `heapSortInPlace` 使用 comparator 定义的相反堆序完成原地堆排序，
+不保证稳定性，时间复杂度为 `O(n log n)`。
+`rotateArray` 和 `isSorted` 已补充为不改变输入的旋转与有序性检查辅助。
+`frequencyEntries` 和 `mostFrequent` 复用 `MultiSet` 的数组后端，保留首次
+出现顺序并在并列时选择首次出现值。
+`DisjointSet` 已提供整数顶点的路径压缩与按大小合并版本；越界顶点仍遵循
+数组索引的运行时边界行为。
+`Graph` 已提供整数顶点的去重邻接表；无向边写入两侧邻接数组但只计数一次，
+无效顶点查询返回安全空结果。
+`breadthFirstOrder` 和 `depthFirstOrder` 已提供基于邻接插入顺序的 BFS/DFS，
+只返回起点所在可达分量。
+`connectedComponents` 已提供无向图的升序根节点 BFS 分量划分；有向图查询返回
+空数组。
+`isBipartite` 已提供无向图的 BFS 二着色检查；有向图、自环和奇环返回 `false`。
+`articulationPoints` 和 `bridges` 已提供迭代 Tarjan low-link 版本；有向图查询
+返回空数组，割点按编号排序而桥保留 DFS 完成顺序。
+`eulerTrail` 已提供无向图 Hierholzer 路径恢复，检查奇度顶点、连通性和起点，
+当前图的自环表示也纳入处理。
+`shortestDistances` 和 `shortestPath` 已提供基于 BFS 的无权图距离和路径，
+不可达顶点使用 `-1` 或空路径。
+`inDegrees` 和 `topologicalOrder` 已提供有向无环图的入度与 Kahn 拓扑排序；
+无向图或有环图的拓扑查询返回空数组，并保持顶点/邻接插入顺序。
+`hasCycle` 已覆盖有向图拓扑检测和无向图带父节点 DFS，包括自环。
+`stronglyConnectedComponents` 已提供迭代 Kosaraju 版本；组件顺序按完成序，
+组件内部按 DFS 发现序，不对结果额外排序。
+`WeightedGraph` 和 Dijkstra 查询已提供非负数权重版本；负权边不加入图，当前
+实现使用数组扫描选择最短未访问顶点。
+`SignedWeightedGraph` 单独接受负权边，避免改变 Dijkstra、最小生成森林和最大流
+的非负权前置条件。`bellmanFord` 返回带父节点的可空距离数组，并将无效起点和
+从起点可达的负环分别报告为 `BellmanFordError`。
+`minimumSpanningForest` 已提供无向加权图的 Prim 版本；非连通输入返回森林，
+有向输入返回同顶点数的空森林。
+`minimumSpanningForestKruskal` 已提供基于边排序和并查集的等价版本，保留非连通
+输入的森林语义，并对有向输入返回空森林。
+`allPairsWeightedDistances` 已提供非负权图的 Floyd-Warshall 全源距离矩阵，
+不可达项使用 `-1`。
+`maxFlow` 已提供有向非负容量图的 Edmonds-Karp 增广路径版本，不修改输入图。
+`minCut` 复用同一残量网络，返回源侧可达顶点到非可达顶点的原图正容量边，
+无效输入和无向图返回空数组。
 
 - 遍历、复制、拼接、分块、窗口、批处理；
 - `reverse`、`rotate`、`partition`、稳定分区、按谓词分组；
@@ -217,19 +355,24 @@ enum Result<T, E> {
 - 二分查找：有序数组中的精确查找；
 - `lowerBound`、`upperBound`、插入位置和出现次数；
 - 旋转有序数组查找；
-- 峰值、山脉数组、答案空间二分；
+- 峰值、山脉数组：`peakIndex`、`isMountainArray`、`mountainPeakIndex`；
+- 答案空间二分：非负整数数组的 `minimumLargestPartitionSum`；
 - 数值数组的插值查找作为可选专题，不作为通用默认实现。
 
 ### 5.3 排序算法
+
+当前库已提供稳定插入排序：`sortArray` 返回浅拷贝，`sortArrayInPlace` 原地
+修改；两者都接受 `less` 比较器，时间复杂度为 `O(n^2)`。库还提供不修改输入的
+`shellSort`、选择排序、冒泡排序、归并排序、快速排序和堆排序版本。
 
 先提供可读、容易验证的实现，再提供工程上常用的实现：
 
 | 算法 | 复杂度/特征 | 计划 |
 | --- | --- | --- |
-| 冒泡排序 | `O(n^2)`，教学用途 | 教学示例 |
-| 选择排序 | `O(n^2)`，低额外空间 | 教学示例 |
-| 插入排序 | `O(n^2)`，小数组表现好，稳定 | 第一批 |
-| 希尔排序 | 依赖 gap 序列，通常不稳定 | 后续 |
+| 冒泡排序 | `O(n^2)`，教学用途 | 已完成 |
+| 选择排序 | `O(n^2)`，低额外空间 | 已完成 |
+| 插入排序 | `O(n^2)`，小数组表现好，稳定 | 已完成 |
+| 希尔排序 | 折半 gap 序列，通常不稳定 | 已完成 |
 | 归并排序 | `O(n log n)`，稳定，需额外数组 | 第一批 |
 | 快速排序 | 平均 `O(n log n)`，最坏 `O(n^2)` | 第一批/需栈深度策略 |
 | 堆排序 | `O(n log n)`，原地，不稳定 | 第一批，复用堆 |
@@ -242,8 +385,8 @@ enum Result<T, E> {
 
 ### 5.4 栈、队列和堆算法
 
-- 括号匹配、表达式后缀化和后缀表达式求值；
-- 单调栈求下一个更大/更小元素、直方图最大矩形；
+- 括号匹配 `isBalancedBrackets` 已完成；表达式后缀化和后缀表达式求值；
+- 单调栈求下一个更大/更小元素、直方图最大矩形 `largestHistogramArea` 已完成；
 - BFS 使用队列，DFS 使用显式栈；
 - 堆化、堆排序、前 `k` 个元素、第 `k` 大/小元素；
 - 两个优先队列求数据流中位数；
@@ -256,14 +399,19 @@ enum Result<T, E> {
 
 - 长度、查找、按位置读取；
 - 前插、尾插、拼接、反转；
+- 截取、丢弃和两个有序不可变链表的稳定归并；
 - 合并两个有序链表；
-- 找中点、判断回文、检测环；
-- 删除倒数第 `n` 个元素；
+- 找中点、判断回文：`listMiddle`、`listIsPalindrome` 已完成；检测环；
+- 删除倒数第 `n` 个元素：`listRemoveFromEnd` 已完成；
 - 两链表相交点。
 
 需要原地节点重连的算法暂缓到可变节点表示明确之后。
 
 ### 5.6 树算法
+
+当前已完成不可变 `Tree<T>` 的遍历、统计、平衡/宽度检查、根到叶路径和
+数值路径和，以及基于它的基础 BST 操作；以下列表中的序列化、AVL 和 LCA
+仍属于后续专题。
 
 - 前序、中序、后序和层序遍历；
 - 高度、大小、叶子数、最大宽度、平衡检查；
@@ -299,7 +447,7 @@ enum Result<T, E> {
 - 朴素子串查找；
 - 前缀函数和 KMP；
 - Z 函数；
-- 回文判断、最长回文子串；
+- 回文判断、无重复子串长度、最长回文子串已完成；
 - 字符频率、字谜/异位词判断、滑动窗口匹配；
 - Trie 前缀查找和补全；
 - Rabin-Karp 作为哈希契约确定后的可选实现；
@@ -312,25 +460,29 @@ enum Result<T, E> {
 ### 5.9 数值与基础数学算法
 
 - `gcd`、`lcm`、扩展欧几里得；
-- 快速幂、阶乘、斐波那契和矩阵快速幂；
+- 快速幂、阶乘、斐波那契、2×2 矩阵快速幂已完成；
 - 素数判断、埃氏筛、线性筛（若性能需要）；
-- 质因数分解、约数枚举；
-- 最大公约数数组、前缀积和差分；
-- 组合数、排列数、帕斯卡三角；
-- 数值二分和牛顿法作为可选专题。
+- 质因数分解、约数枚举已完成；
+- 最大公约数数组、前缀积已完成；差分已有数组辅助版本；
+- 组合数、数值排列数、帕斯卡三角已完成；
+- 数值二分 `minimumLargestPartitionSum` 已完成；牛顿法作为可选专题。
 
 这些函数先使用 `number`，并在 API 文档中明确有限整数、负数、溢出和浮点
 精度假设；项目文档没有规定的溢出行为不能默默写成库保证。
 
 ### 5.10 动态规划、贪心与回溯
 
+当前已完成一维 DP 的爬楼梯、非相邻最大和、最少硬币数，网格路径/最小和、
+字符串编辑距离、障碍网格路径、LIS/LCS 以及 0/1 背包；还提供了子集、组合、排列的完整
+回溯生成版本。它们只使用数组与数值运算，暂不承诺溢出行为。
+
 - 一维 DP：爬楼梯、打家劫舍、硬币兑换；
-- 背包：0/1、完全、多重背包；
+- 背包：0/1、完全、多重背包已完成；
 - 序列：LIS、LCS、编辑距离；
-- 网格：路径计数、最小路径和、障碍物路径；
-- 区间 DP：矩阵链、合并石子等；
-- 贪心：区间调度、分配、跳跃游戏、Huffman 构造；
-- 回溯：子集、组合、排列、括号生成、N 皇后、迷宫路径；
+- 网格：路径计数、障碍物路径、最小路径和已完成；
+- 区间 DP：矩阵链、二路合并石子已完成；
+- 贪心：区间调度、区间资源分配、跳跃游戏、Huffman 合并核心已完成；
+- 回溯：子集、组合、排列、括号生成、N 皇后、迷宫路径已完成；
 - 记忆化搜索和状态压缩作为后续实现方式。
 
 回溯和生成器 API 先返回完整的 `[T]`/嵌套数组，暂不承诺惰性迭代器；若
@@ -358,9 +510,24 @@ enum Result<T, E> {
 
 ### S1：线性容器基础
 
-实现 `Deque<T>`、`BinaryHeap<T>`/`PriorityQueue<T>`、`Option<T>`、
-`Result<T,E>` 和递归枚举版 `List<T>`。这是后续 BFS、调度、排序和树算法
-共同依赖的最小集合。
+已完成 `Deque<T>`、`BinaryHeap<T>` 和 `PriorityQueue<T>`：前者使用前端反向数组
+与后端正向数组，后两者使用数组和 `fun(T, T): bool` 比较器，其中优先队列
+只提供队列命名包装。库级 fixture 位于
+`library/tests`，由 `library/tests/run_tests.py` 独立运行，复用编译器发射和
+Rust VM 执行接口；库测试只比较运行结果，不比较 AST 或 bytecode 文本。
+
+已完成 `Option<T>`、`Result<T,E>` 和递归枚举版 `List<T>`，均有构造工厂、
+匹配示例和独立库级 fixture。`List<T>` 使用共享尾部表达持久化值。
+
+S2 已完成 `Set<T>` 的数组后端版本：使用语言 `==` 做线性去重和查找，删除
+时保持剩余值的插入顺序。随后完成 `MultiSet<T>`：以条目值/计数数组实现
+重复计数，`entries()` 按首次插入顺序返回新条目数组；`MultiMap<K,V>` 使用
+键数组和每键 value 数组，`discard(key,value)` 删除一个匹配 pair。随后完成
+了基础数组搜索/计数/逆序算法、稳定插入排序、窗口/前缀和算法、区间合并、
+双指针、数组集合算法、固定窗口统计、区间交集、最大子数组和、二分查找、归并
+排序、快速排序、堆排序、希尔排序以及选择排序和冒泡排序教学版本；基础数值算法已加入
+`gcd`、`lcm`、`extendedGcd`、`isPrime`、`sievePrimes`、`fastPower`、`factorial`
+与 `fibonacci`。
 
 ### S2：集合和序列算法
 
@@ -369,8 +536,8 @@ enum Result<T, E> {
 
 ### S3：树和区间查询
 
-实现不可变二叉树/BST、Trie、Fenwick 树和基础线段树，再决定是否值得引入
-可变平衡树。
+已实现 Trie、Fenwick 树、不可变二叉树、BST 和基础线段树；后续再决定是否
+值得引入可变平衡树。
 
 ### S4：图和路径算法
 
@@ -379,7 +546,8 @@ enum Result<T, E> {
 
 ### S5：字符串、数学和经典题型
 
-实现 KMP/Z、Trie 辅助、GCD/筛法、基础 DP、贪心和回溯。此阶段开始整理
+已实现 KMP/Z、Trie 辅助、GCD/筛法、基础 DP、矩阵链、0/1/完全/多重背包、区间调度/资源分配、跳跃游戏、Huffman 合并核心以及子集/组合/排列/括号/N 皇后/迷宫路径
+回溯生成。此阶段继续整理
 独立专题 README，避免把教学算法和生产容器 API 混在同一个文件里。
 
 ### S6：高级结构和性能版本
@@ -397,6 +565,7 @@ library/
   README.md
   DATA_STRUCTURES_ROADMAP.md
   data_structures.cd          # 兼容入口/公共导出
+  tests/                      # 独立库 fixture 和 runner
   sequence.cd                 # Deque、List、数组序列辅助
   heap.cd                     # BinaryHeap、PriorityQueue
   collections.cd              # Set、MultiSet、MultiMap、频率表
@@ -427,74 +596,49 @@ examples/
 - 对排序、堆、图和区间树记录复杂度；
 - 每个公开函数的参数/返回类型稳定后再加入入口模块的 `export`。
 
-## 9. 已回答的问题与决定
+库 fixture 使用现有项目测试接口但不放入 `tests/golden` 或
+`tests/bytecode_artifacts`；根项目测试和库测试必须分别执行。
 
-以下决定回答本路线图的开放问题，只约束库 API 和编译器能力方向。本次不
-实现任何新的数据结构代码；标为“后续语言切片”的内容也不能视为当前语言
-已经支持。
+## 9. 已确认的问题与当前决定
 
-1. **泛型比较器。** 当前的 `fun(T, T): bool`、泛型回调和局部类型推断足以
-   表达显式 `less` 比较器。排序、堆和 BST 统一采用显式比较器，不引入未定义
-   的泛型 `<`。跨模块、命名空间和重导出传递比较器签名应作为
-   `M6-LANG-001` 的稳定性验收项；在该验收完成前，库保守地保留显式类型注解
-   和单模块示例。
-2. **Eq/Hash 能力。** 先规划只在编译期检查的 `Eq`/`Ord` 类能力约束，用于
-   泛型相等、排序和有序集合算法；不立即实现完整通用 `Hash` 协议，也不因此
-   开发 `HashSet<T>`、通用 `HashMap<K,V>` 或 Bloom filter。`Hash` 要等哈希
-   函数、基础键相等、浮点/数值稳定性和确定性契约明确后再单独立项。能力约束
-   不引入运行时 trait 对象、继承、重载或动态派发。
-3. **递归结构体。** 近期不支持递归结构体、节点指针或等价的可变递归引用。
-   不可变链表和树优先使用递归枚举；需要可变图或树时使用“节点数组加整数
-   索引”。只有在所有权、别名、突变、调试和 C++/Rust VM 一致性都有独立规格
-   后，才重新评估递归结构体。
-4. **环形缓冲区满载。** 不静默覆盖最旧值。公共 API 采用显式失败结果，首选
-   `Result`（例如 `Result<bool, RingBufferError>`，或其他明确的成功载荷）；具体错误枚举属于库模块
-   的后续代码，不为此新增语言级 unit 类型。是否提供另一个明确命名的覆盖
-   API，留给环形缓冲区模块自己的契约。
-5. **失败约定。** `T?` 表示普通缺失或可忽略的查询未命中；`Option<T>` 表示
-   调用者必须通过 `match` 区分的显式有/无结果；`Result<T,E>` 表示带原因的
-   预期失败。越界、错误索引等程序员误用继续使用运行时错误，不把运行时错误
-   当作普通库控制流。
-6. **`number` 契约。** 保留当前 `number` 的 binary64/f64 语义，不新增独立
-   `int`、大整数或自动溢出异常保证。需要整数的 API 只接受有限的、数学意义上
-   为整数的 `number`，并在文档和测试中写明安全范围、精度边界和溢出处理；不能
-   把 `number` 当作任意精度计数器。
-7. **图顶点。** 第一版图 API 接受非负整数顶点 ID，并明确非法 ID 的行为；这
-   避开当前没有通用 Hash/键约束的问题。泛型顶点适配层排在 `Eq`/`Ord` 能力和
-   后续 `Hash` 契约之后。
-8. **测试入口。** 现有 golden、artifact 和 Rust VM runner 继续作为编译器
-   跨后端基线。库级独立 test runner 是后续测试基础设施任务，不是本次语言
-   规格，也不作为实现数据结构的前置条件；需要时应单独记录输入、输出、错误
-   和 C++/Rust 一致性。
+以下决定记录当前语言与库之间的边界；未实现的高级结构仍不应被文档视为
+已有能力。
 
-## 10. 对编译器路线的影响
+1. **泛型比较器和能力约束。** `fun(T, T): bool` 比较器在本地、跨模块、命名
+   空间和重导出路径上保持稳定，继续作为库排序、堆和 BST 的通用 API。语言的
+   `Eq`、`Ord` 和 `Hash` 是编译期能力约束；`Ord` 隐含 `Eq`，不生成运行时
+   trait 对象或隐式能力字典。
+2. **哈希。** Issue #11 已形成并实现确定性的 `Hash` 能力和 `hash(value)`；
+   但 map 仍限制为基础键，尚未解决通用键的可变性/所有权契约，因此本库暂不
+   实现 `HashSet<T>`、`HashMap<K,V>` 或 Bloom filter。
+3. **比较运算符。** Issue #10 已实现字符串的内置字典序和命名结构体的
+   `<`、`<=`、`>`、`>=` 运算符。用户定义结构体的运算符不会自动满足泛型
+   `T: Ord`，需要泛型算法时仍使用显式 comparator 包装；`==`、`!=` 及算术、
+   逻辑、复合赋值运算符的用户定义版本仍是后续决策。
+4. **递归结构体。** 近期仍不支持递归结构体、节点指针或等价的可变递归引用。
+   不可变链表和树使用递归枚举；可变图或树使用节点数组加整数索引。可变链表、
+   双向链表、环检测、AVL/红黑树和高效 LRU 等待稳定节点引用与别名契约。
+5. **环形缓冲区。** 当前策略是不覆盖最旧值，满时 `offer` 返回 `false`，读/窥视
+   返回 `Option<T>`；后续若出现更合适的错误协议，再单独评估 API 迁移。
+6. **失败和数值约定。** `T?` 用于普通缺失，`Option<T>` 用于显式有/无结果，
+   `Result<T,E>` 用于携带原因的预期失败。需要整数的 API 只接受数学意义上的
+   整数 `number`，不承诺任意精度或溢出异常。
+7. **图顶点。** 第一版图 API 使用非负整数顶点 ID，避开泛型顶点的哈希/编号
+   契约；泛型顶点适配层留待后续。
+8. **测试入口。** 库 fixture 位于 `library/tests`，由独立 runner 执行，不进入
+   `tests/golden` 或 `tests/bytecode_artifacts`。每个库 fixture 只比较 Rust VM
+   的 `run.out`，不比较 AST 或 bytecode 文本；根项目测试和库测试分别运行。
 
-本路线图提出的下一项不是实现 `Deque`、堆、`Option` 或其他数据结构，而是
-让语言能稳定承载更大范围的泛型库 API：
+## 10. 后续语言边界
 
-### M6-LANG-001：静态泛型能力约束
+当前分支已完成可以由现有语言能力稳定表达的库实现。后续工作需要重新确定
+语言或运行时契约的项目包括：
 
-**目标：** 为泛型函数、泛型结构体方法和泛型回调增加可由类型检查器验证、
-可通过模块接口传递的能力约束，第一批聚焦 `Eq`/`Ord` 风格的静态能力。约束
-只影响编译期可接受性，不生成运行时 trait 对象，也不改变现有值表示。
+- 通用哈希容器的键约束、可变键所有权和 map/runtime 表示；
+- 可变链表、稳定节点引用、递归结构体和 AVL/红黑树的别名与调试语义；
+- 让用户定义结构体运算符自动参与泛型 `T: Eq`/`T: Ord` 的静态 witness 或
+  专门化规则；
+- 位集、随机算法、并发结构和高性能缓存所需的额外标准库能力。
 
-**范围：**
-
-- 固定能力约束的声明、推断、显式参数、错误诊断和嵌套泛型传播规则；
-- `fun(T, T): bool` 显式比较器在本地、跨模块、命名空间和重导出路径上的签名
-  保真；
-- 公开模块接口、`.cdi`/模块产品缓存对泛型约束的兼容表示；若没有运行时
-  语义变化，Rust VM 只需保持现有字节码执行兼容，不引入约束的运行时表示；
-- 用最小语言 fixture 验证泛型比较、相等和回调约束，而不是提交数据结构库
-  实现。
-
-**非目标：**
-
-- `Deque<T>`、堆、链表、树、图、排序或集合的具体实现；
-- 完整 `Hash` 协议、通用哈希容器、递归结构体、动态派发、继承、重载或 trait
-  对象；
-- 独立整数类型、大整数、浮点语义改造或把运行时错误改成异常系统。
-
-该切片完成后，才将依赖 `Eq`/`Ord` 的数据结构库 API 从“显式回调的保守子集”
-扩展为“带静态能力约束的泛型 API”。正式的切片规格和验证门槛记录在
-[`docs/decisions/m6-language-library-contract-001.md`](../docs/decisions/m6-language-library-contract-001.md)。
+实现前述项目之前，库继续采用数组后端、递归枚举、整数顶点和显式比较器等
+保守实现；剩余事项同步记录在 [`TODO.md`](TODO.md) 及项目语言决策文档中。
