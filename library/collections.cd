@@ -1,0 +1,616 @@
+// Core sequence containers and explicit result enums.
+
+// Generic stack and queue implementations built from the public language API.
+//
+// Struct methods on known receivers take precedence over builtin member-call
+// sugar, so the stack can expose the conventional push/pop API. Array
+// receivers such as this.items still use the builtin member forms.
+
+struct Stack<T> {
+  private items: [T]
+}
+
+impl Stack<T> {
+  fun push(value: T) {
+    this.items.push(value);
+  }
+
+  fun pop(): optional<T> {
+    if (this.items.len() == 0) {
+      return nil;
+    }
+    return this.items.pop();
+  }
+
+  fun top(): optional<T> {
+    if (this.items.len() == 0) {
+      return nil;
+    }
+    return this.items[this.items.len() - 1];
+  }
+
+  fun size(): number {
+    return this.items.len();
+  }
+
+  fun isEmpty(): bool {
+    return this.items.len() == 0;
+  }
+
+  fun snapshot(): [T] {
+    return copy(this.items);
+  }
+}
+
+fun newStack<T>(): Stack<T> {
+  return Stack<T> { items: [] };
+}
+
+struct Queue<T> {
+  private items: [T],
+  private head: number
+}
+
+impl Queue<T> {
+  fun enqueue(value: T) {
+    this.items.push(value);
+  }
+
+  // Keep consumed entries only until the unread suffix is at least half of
+  // the backing array. This keeps dequeue amortized while retaining a simple
+  // array-backed implementation.
+  fun compact() {
+    if (this.head > 0 && this.head * 2 >= this.items.len()) {
+      this.items = this.items.slice(this.head, this.items.len() - this.head);
+      this.head = 0;
+    }
+  }
+
+  fun dequeue(): optional<T> {
+    if (this.head >= this.items.len()) {
+      return nil;
+    }
+
+    let value = this.items[this.head];
+    this.head += 1;
+    this.compact();
+    return value;
+  }
+
+  fun front(): optional<T> {
+    if (this.head >= this.items.len()) {
+      return nil;
+    }
+    return this.items[this.head];
+  }
+
+  fun size(): number {
+    return this.items.len() - this.head;
+  }
+
+  fun isEmpty(): bool {
+    return this.head >= this.items.len();
+  }
+
+  fun snapshot(): [T] {
+    return this.items.slice(this.head, this.items.len() - this.head);
+  }
+}
+
+fun newQueue<T>(): Queue<T> {
+  return Queue<T> { items: [], head: 0 };
+}
+
+// A deque stores the front half in reverse order and the back half in forward
+// order. Moving one side to the other happens only when that side is empty,
+// so each element moves at most once between transfers.
+struct Deque<T> {
+  frontItems: [T],
+  backItems: [T]
+}
+
+impl Deque<T> {
+  fun addFront(value: T) {
+    this.frontItems.push(value);
+  }
+
+  fun addBack(value: T) {
+    this.backItems.push(value);
+  }
+
+  fun shiftBackToFront() {
+    while (this.backItems.len() > 0) {
+      this.frontItems.push(this.backItems.pop());
+    }
+  }
+
+  fun shiftFrontToBack() {
+    while (this.frontItems.len() > 0) {
+      this.backItems.push(this.frontItems.pop());
+    }
+  }
+
+  fun takeFront(): optional<T> {
+    if (this.frontItems.len() == 0) {
+      if (this.backItems.len() == 0) {
+        return nil;
+      }
+      this.shiftBackToFront();
+    }
+    return this.frontItems.pop();
+  }
+
+  fun takeBack(): optional<T> {
+    if (this.backItems.len() == 0) {
+      if (this.frontItems.len() == 0) {
+        return nil;
+      }
+      this.shiftFrontToBack();
+    }
+    return this.backItems.pop();
+  }
+
+  fun peekFront(): optional<T> {
+    if (this.frontItems.len() == 0) {
+      if (this.backItems.len() == 0) {
+        return nil;
+      }
+      this.shiftBackToFront();
+    }
+    return this.frontItems[this.frontItems.len() - 1];
+  }
+
+  fun peekBack(): optional<T> {
+    if (this.backItems.len() == 0) {
+      if (this.frontItems.len() == 0) {
+        return nil;
+      }
+      this.shiftFrontToBack();
+    }
+    return this.backItems[this.backItems.len() - 1];
+  }
+
+  fun size(): number {
+    return this.frontItems.len() + this.backItems.len();
+  }
+
+  fun isEmpty(): bool {
+    return this.frontItems.len() == 0 && this.backItems.len() == 0;
+  }
+
+  fun snapshot(): [T] {
+    let values: [T] = [];
+    let frontIndex = this.frontItems.len();
+    while (frontIndex > 0) {
+      frontIndex -= 1;
+      values.push(this.frontItems[frontIndex]);
+    }
+
+    let backIndex = 0;
+    while (backIndex < this.backItems.len()) {
+      values.push(this.backItems[backIndex]);
+      backIndex += 1;
+    }
+    return values;
+  }
+}
+
+fun newDeque<T>(): Deque<T> {
+  return Deque<T> { frontItems: [], backItems: [] };
+}
+
+struct BinaryHeap<T> {
+  items: [T],
+  less: fun(T, T): bool
+}
+
+impl BinaryHeap<T> {
+  fun comesBefore(left: T, right: T): bool {
+    let compare = this.less;
+    return compare(left, right);
+  }
+
+  fun swapItems(left: number, right: number) {
+    let value = this.items[left];
+    this.items[left] = this.items[right];
+    this.items[right] = value;
+  }
+
+  fun siftUp() {
+    let child = this.items.len() - 1;
+    while (child > 0) {
+      let parent = floor((child - 1) / 2);
+      if (!this.comesBefore(this.items[child], this.items[parent])) {
+        break;
+      }
+      this.swapItems(child, parent);
+      child = parent;
+    }
+  }
+
+  fun siftDown() {
+    let index = 0;
+    let length = this.items.len();
+    while (true) {
+      let left = index * 2 + 1;
+      if (left >= length) {
+        break;
+      }
+
+      let right = left + 1;
+      let candidate = left;
+      if (right < length && this.comesBefore(this.items[right], this.items[left])) {
+        candidate = right;
+      }
+      if (!this.comesBefore(this.items[candidate], this.items[index])) {
+        break;
+      }
+      this.swapItems(index, candidate);
+      index = candidate;
+    }
+  }
+
+  fun add(value: T) {
+    this.items.push(value);
+    this.siftUp();
+  }
+
+  fun peek(): optional<T> {
+    if (this.items.len() == 0) {
+      return nil;
+    }
+    return this.items[0];
+  }
+
+  fun take(): optional<T> {
+    if (this.items.len() == 0) {
+      return nil;
+    }
+
+    let value = this.items[0];
+    let last = this.items.pop();
+    if (this.items.len() > 0) {
+      this.items[0] = last;
+      this.siftDown();
+    }
+    return value;
+  }
+
+  fun size(): number {
+    return this.items.len();
+  }
+
+  fun isEmpty(): bool {
+    return this.items.len() == 0;
+  }
+
+  fun snapshot(): [T] {
+    return copy(this.items);
+  }
+}
+
+fun newBinaryHeap<T>(less: fun(T, T): bool): BinaryHeap<T> {
+  return BinaryHeap<T> { items: [], less: less };
+}
+
+enum Option<T> {
+  Some(value: T),
+  None,
+}
+
+fun some<T>(value: T): Option<T> {
+  return Option.Some(value);
+}
+
+fun none<T>(): Option<T> {
+  return Option.None<T>();
+}
+
+enum Result<T, E> {
+  Ok(value: T),
+  Err(error: E),
+}
+
+fun ok<T, E>(value: T): Result<T, E> {
+  return Result.Ok(value);
+}
+
+fun err<T, E>(error: E): Result<T, E> {
+  return Result.Err(error);
+}
+
+// RingBuffer has fixed capacity. A full offer is rejected, so the oldest
+// element is never silently discarded. Option<T> makes empty reads explicit.
+struct RingBuffer<T> {
+  slots: [Option<T>],
+  limit: number,
+  head: number,
+  count: number
+}
+
+impl RingBuffer<T> {
+  fun capacity(): number {
+    return this.limit;
+  }
+
+  fun size(): number {
+    return this.count;
+  }
+
+  fun isEmpty(): bool {
+    return this.count == 0;
+  }
+
+  fun isFull(): bool {
+    return this.count >= this.limit;
+  }
+
+  fun offer(value: T): bool {
+    if (this.isFull()) {
+      return false;
+    }
+    let index = this.head + this.count;
+    if (index >= this.limit) {
+      index -= this.limit;
+    }
+    this.slots[index] = Option.Some(value);
+    this.count += 1;
+    return true;
+  }
+
+  fun peek(): Option<T> {
+    if (this.count == 0) {
+      return none<T>();
+    }
+    let slot = this.slots[this.head];
+    match slot {
+      Option.None => { return none<T>(); }
+      Option.Some(value) => { return some<T>(value); }
+    }
+  }
+
+  fun read(): Option<T> {
+    if (this.count == 0) {
+      return none<T>();
+    }
+    let slot = this.slots[this.head];
+    match slot {
+      Option.None => { return none<T>(); }
+      Option.Some(value) => {
+        this.slots[this.head] = Option.None<T>();
+        this.head += 1;
+        if (this.head == this.limit) {
+          this.head = 0;
+        }
+        this.count -= 1;
+        return some<T>(value);
+      }
+    }
+  }
+
+  fun snapshot(): [T] {
+    let result: [T] = [];
+    let offset = 0;
+    while (offset < this.count) {
+      let index = this.head + offset;
+      if (index >= this.limit) {
+        index -= this.limit;
+      }
+      match this.slots[index] {
+        Option.None => { }
+        Option.Some(value) => { result.push(value); }
+      }
+      offset += 1;
+    }
+    return result;
+  }
+}
+
+fun newRingBuffer<T>(capacity: number): RingBuffer<T> {
+  let limit = floor(capacity);
+  if (limit < 0) {
+    limit = 0;
+  }
+  let slots: [Option<T>] = [];
+  let index = 0;
+  while (index < limit) {
+    slots.push(Option.None<T>());
+    index += 1;
+  }
+  return RingBuffer<T> { slots: slots, limit: limit, head: 0, count: 0 };
+}
+
+enum List<T> {
+  Nil,
+  Cons(head: T, tail: List<T>),
+}
+
+fun emptyList<T>(): List<T> {
+  return List.Nil<T>();
+}
+
+fun prepend<T>(value: T, list: List<T>): List<T> {
+  return List.Cons(value, list);
+}
+
+fun head<T>(list: List<T>): optional<T> {
+  match list {
+    List.Nil => { return nil; }
+    List.Cons(value, rest) => { return value; }
+  }
+}
+
+fun tail<T>(list: List<T>): optional<List<T>> {
+  match list {
+    List.Nil => { return nil; }
+    List.Cons(value, rest) => { return rest; }
+  }
+}
+
+fun reverseInto<T>(remaining: List<T>, result: List<T>): List<T> {
+  return match remaining {
+    List.Nil => result,
+    List.Cons(value, rest) => reverseInto(rest, List.Cons(value, result)),
+  };
+}
+
+fun reverse<T>(list: List<T>): List<T> {
+  return reverseInto(list, List.Nil<T>());
+}
+
+fun appendListToArray<T>(list: List<T>, values: [T]) {
+  match list {
+    List.Nil => { }
+    List.Cons(value, rest) => {
+      values.push(value);
+      appendListToArray(rest, values);
+    }
+  }
+}
+
+fun toArray<T>(list: List<T>): [T] {
+  let values: [T] = [];
+  appendListToArray(list, values);
+  return values;
+}
+
+fun listLength<T>(list: List<T>): number {
+  let current = list;
+  let length = 0;
+  while (true) {
+    match current {
+      List.Nil => { return length; }
+      List.Cons(value, rest) => {
+        length += 1;
+        current = rest;
+      }
+    }
+  }
+  return length;
+}
+
+fun listGet<T>(list: List<T>, index: number): optional<T> {
+  if (floor(index) != index || index < 0) {
+    return nil;
+  }
+  let current = list;
+  let remaining = index;
+  while (true) {
+    match current {
+      List.Nil => { return nil; }
+      List.Cons(value, rest) => {
+        if (remaining == 0) {
+          return value;
+        }
+        remaining -= 1;
+        current = rest;
+      }
+    }
+  }
+  return nil;
+}
+
+fun listAppend<T>(list: List<T>, value: T): List<T> {
+  return match list {
+    List.Nil => List.Cons(value, List.Nil<T>()),
+    List.Cons(headValue, rest) => List.Cons(headValue, listAppend(rest, value)),
+  };
+}
+
+fun listConcat<T>(left: List<T>, right: List<T>): List<T> {
+  return match left {
+    List.Nil => right,
+    List.Cons(value, rest) => List.Cons(value, listConcat(rest, right)),
+  };
+}
+
+fun listTake<T>(list: List<T>, count: number): List<T> {
+  if (floor(count) != count || count <= 0) {
+    return List.Nil<T>();
+  }
+  return match list {
+    List.Nil => List.Nil<T>(),
+    List.Cons(value, rest) => List.Cons(value, listTake(rest, count - 1)),
+  };
+}
+
+fun listDrop<T>(list: List<T>, count: number): List<T> {
+  if (floor(count) != count || count <= 0) {
+    return list;
+  }
+  let current = list;
+  let remaining = count;
+  while (remaining > 0) {
+    match current {
+      List.Nil => { return current; }
+      List.Cons(value, rest) => {
+        current = rest;
+        remaining -= 1;
+      }
+    }
+  }
+  return current;
+}
+
+fun listMiddle<T>(list: List<T>): optional<T> {
+  let values = toArray(list);
+  if (values.len() == 0) {
+    return nil;
+  }
+  return values[floor(values.len() / 2)];
+}
+
+fun listIsPalindrome<T: Eq>(list: List<T>): bool {
+  let values = toArray(list);
+  let left = 0;
+  let right = values.len() - 1;
+  while (left < right) {
+    if (values[left] != values[right]) {
+      return false;
+    }
+    left += 1;
+    right -= 1;
+  }
+  return true;
+}
+
+fun listRemoveFromEnd<T>(list: List<T>, count: number): List<T> {
+  if (floor(count) != count || count <= 0) {
+    return list;
+  }
+  let values = toArray(list);
+  if (count > values.len()) {
+    return list;
+  }
+  let removeIndex = values.len() - count;
+  let result: List<T> = emptyList<T>();
+  let index = values.len();
+  while (index > 0) {
+    index -= 1;
+    if (index != removeIndex) {
+      result = prepend(values[index], result);
+    }
+  }
+  return result;
+}
+
+fun mergeSortedLists<T>(left: List<T>, right: List<T>, less: fun(T, T): bool): List<T> {
+  match left {
+    List.Nil => { return right; }
+    List.Cons(leftValue, leftRest) => {
+      match right {
+        List.Nil => { return left; }
+        List.Cons(rightValue, rightRest) => {
+          if (less(rightValue, leftValue)) {
+            return List.Cons(rightValue, mergeSortedLists(left, rightRest, less));
+          }
+          return List.Cons(leftValue, mergeSortedLists(leftRest, right, less));
+        }
+      }
+    }
+  }
+  return left;
+}
+
+
+export Stack, Queue, Deque, RingBuffer, BinaryHeap, Option, Result, List, newStack, newQueue, newDeque, newRingBuffer, newBinaryHeap, some, none, ok, err, emptyList, prepend, head, tail, reverse, toArray, listLength, listGet, listAppend, listConcat, listTake, listDrop, mergeSortedLists, listMiddle, listIsPalindrome, listRemoveFromEnd;

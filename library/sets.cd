@@ -1,0 +1,583 @@
+// Equality-based set, multiset, and multimap containers.
+
+struct Set<T: Eq> {
+  items: [T]
+}
+
+impl Set<T: Eq> {
+  fun indexOf(value: T): number {
+    let index = 0;
+    while (index < this.items.len()) {
+      if (this.items[index] == value) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun add(value: T) {
+    if (this.indexOf(value) >= 0) {
+      return;
+    }
+    this.items.push(value);
+  }
+
+  fun has(value: T): bool {
+    return this.indexOf(value) >= 0;
+  }
+
+  fun discard(value: T): bool {
+    let index = this.indexOf(value);
+    if (index < 0) {
+      return false;
+    }
+
+    while (index + 1 < this.items.len()) {
+      this.items[index] = this.items[index + 1];
+      index += 1;
+    }
+    this.items.pop();
+    return true;
+  }
+
+  fun size(): number {
+    return this.items.len();
+  }
+
+  fun isEmpty(): bool {
+    return this.items.len() == 0;
+  }
+
+  fun snapshot(): [T] {
+    return copy(this.items);
+  }
+}
+
+fun newSet<T: Eq>(): Set<T> {
+  return Set<T> { items: [] };
+}
+
+struct OrderedSet<T> {
+  private items: [T],
+  private less: fun(T, T): bool
+}
+
+impl OrderedSet<T> {
+  fun comesBefore(left: T, right: T): bool {
+    let compare = this.less;
+    return compare(left, right);
+  }
+
+  fun equivalent(left: T, right: T): bool {
+    return !this.comesBefore(left, right) && !this.comesBefore(right, left);
+  }
+
+  fun lowerBound(value: T): number {
+    let low = 0;
+    let high = this.items.len();
+    while (low < high) {
+      let middle = floor((low + high) / 2);
+      if (this.comesBefore(this.items[middle], value)) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    return low;
+  }
+
+  fun add(value: T): bool {
+    let index = this.lowerBound(value);
+    if (index < this.items.len() && this.equivalent(this.items[index], value)) {
+      return false;
+    }
+
+    this.items.push(value);
+    let move = this.items.len() - 1;
+    while (move > index) {
+      this.items[move] = this.items[move - 1];
+      move -= 1;
+    }
+    this.items[index] = value;
+    return true;
+  }
+
+  fun has(value: T): bool {
+    let index = this.lowerBound(value);
+    return index < this.items.len() && this.equivalent(this.items[index], value);
+  }
+
+  fun discard(value: T): bool {
+    let index = this.lowerBound(value);
+    if (index >= this.items.len() || !this.equivalent(this.items[index], value)) {
+      return false;
+    }
+    while (index + 1 < this.items.len()) {
+      this.items[index] = this.items[index + 1];
+      index += 1;
+    }
+    this.items.pop();
+    return true;
+  }
+
+  fun minimum(): optional<T> {
+    if (this.items.len() == 0) {
+      return nil;
+    }
+    return this.items[0];
+  }
+
+  fun maximum(): optional<T> {
+    if (this.items.len() == 0) {
+      return nil;
+    }
+    return this.items[this.items.len() - 1];
+  }
+
+  fun predecessor(value: T): optional<T> {
+    let index = this.lowerBound(value);
+    if (index == 0) {
+      return nil;
+    }
+    return this.items[index - 1];
+  }
+
+  fun successor(value: T): optional<T> {
+    let index = this.lowerBound(value);
+    if (index < this.items.len() && this.equivalent(this.items[index], value)) {
+      index += 1;
+    }
+    if (index >= this.items.len()) {
+      return nil;
+    }
+    return this.items[index];
+  }
+
+  fun rangeInclusive(lower: T, upper: T): [T] {
+    let result: [T] = [];
+    if (this.comesBefore(upper, lower)) {
+      return result;
+    }
+    let index = this.lowerBound(lower);
+    while (index < this.items.len() && !this.comesBefore(upper, this.items[index])) {
+      result.push(this.items[index]);
+      index += 1;
+    }
+    return result;
+  }
+
+  fun size(): number {
+    return this.items.len();
+  }
+
+  fun isEmpty(): bool {
+    return this.items.len() == 0;
+  }
+
+  fun snapshot(): [T] {
+    return copy(this.items);
+  }
+}
+
+fun newOrderedSet<T>(less: fun(T, T): bool): OrderedSet<T> {
+  return OrderedSet<T> { items: [], less: less };
+}
+
+struct OrderedMapEntry<K, V> {
+  key: K,
+  value: V
+}
+
+struct OrderedMap<K, V> {
+  private keys: [K],
+  private values: [V],
+  private less: fun(K, K): bool
+}
+
+impl OrderedMap<K, V> {
+  fun comesBefore(left: K, right: K): bool {
+    let compare = this.less;
+    return compare(left, right);
+  }
+
+  fun equivalent(left: K, right: K): bool {
+    return !this.comesBefore(left, right) && !this.comesBefore(right, left);
+  }
+
+  fun lowerBound(key: K): number {
+    let low = 0;
+    let high = this.keys.len();
+    while (low < high) {
+      let middle = floor((low + high) / 2);
+      if (this.comesBefore(this.keys[middle], key)) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    return low;
+  }
+
+  fun put(key: K, value: V): bool {
+    let index = this.lowerBound(key);
+    if (index < this.keys.len() && this.equivalent(this.keys[index], key)) {
+      this.values[index] = value;
+      return false;
+    }
+
+    this.keys.push(key);
+    this.values.push(value);
+    let move = this.keys.len() - 1;
+    while (move > index) {
+      this.keys[move] = this.keys[move - 1];
+      this.values[move] = this.values[move - 1];
+      move -= 1;
+    }
+    this.keys[index] = key;
+    this.values[index] = value;
+    return true;
+  }
+
+  fun get(key: K): optional<V> {
+    let index = this.lowerBound(key);
+    if (index >= this.keys.len() || !this.equivalent(this.keys[index], key)) {
+      return nil;
+    }
+    return this.values[index];
+  }
+
+  fun has(key: K): bool {
+    let index = this.lowerBound(key);
+    return index < this.keys.len() && this.equivalent(this.keys[index], key);
+  }
+
+  fun discard(key: K): bool {
+    let index = this.lowerBound(key);
+    if (index >= this.keys.len() || !this.equivalent(this.keys[index], key)) {
+      return false;
+    }
+    while (index + 1 < this.keys.len()) {
+      this.keys[index] = this.keys[index + 1];
+      this.values[index] = this.values[index + 1];
+      index += 1;
+    }
+    this.keys.pop();
+    this.values.pop();
+    return true;
+  }
+
+  fun size(): number {
+    return this.keys.len();
+  }
+
+  fun isEmpty(): bool {
+    return this.keys.len() == 0;
+  }
+
+  fun snapshot(): [OrderedMapEntry<K, V>] {
+    let result: [OrderedMapEntry<K, V>] = [];
+    let index = 0;
+    while (index < this.keys.len()) {
+      result.push(OrderedMapEntry<K, V> {
+        key: this.keys[index],
+        value: this.values[index]
+      });
+      index += 1;
+    }
+    return result;
+  }
+}
+
+fun newOrderedMap<K, V>(less: fun(K, K): bool): OrderedMap<K, V> {
+  return OrderedMap<K, V> { keys: [], values: [], less: less };
+}
+
+struct BiMapEntry<K, V> {
+  key: K,
+  value: V
+}
+
+struct BiMap<K: Eq, V: Eq> {
+  private keys: [K],
+  private values: [V]
+}
+
+impl BiMap<K: Eq, V: Eq> {
+  fun indexOfKey(key: K): number {
+    let index = 0;
+    while (index < this.keys.len()) {
+      if (this.keys[index] == key) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun indexOfValue(value: V): number {
+    let index = 0;
+    while (index < this.values.len()) {
+      if (this.values[index] == value) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun put(key: K, value: V): bool {
+    if (this.indexOfKey(key) >= 0 || this.indexOfValue(value) >= 0) {
+      return false;
+    }
+    this.keys.push(key);
+    this.values.push(value);
+    return true;
+  }
+
+  fun get(key: K): optional<V> {
+    let index = this.indexOfKey(key);
+    if (index < 0) {
+      return nil;
+    }
+    return this.values[index];
+  }
+
+  fun getKey(value: V): optional<K> {
+    let index = this.indexOfValue(value);
+    if (index < 0) {
+      return nil;
+    }
+    return this.keys[index];
+  }
+
+  fun hasKey(key: K): bool {
+    return this.indexOfKey(key) >= 0;
+  }
+
+  fun hasValue(value: V): bool {
+    return this.indexOfValue(value) >= 0;
+  }
+
+  fun removeAt(index: number) {
+    while (index + 1 < this.keys.len()) {
+      this.keys[index] = this.keys[index + 1];
+      this.values[index] = this.values[index + 1];
+      index += 1;
+    }
+    this.keys.pop();
+    this.values.pop();
+  }
+
+  fun discardKey(key: K): bool {
+    let index = this.indexOfKey(key);
+    if (index < 0) {
+      return false;
+    }
+    this.removeAt(index);
+    return true;
+  }
+
+  fun discardValue(value: V): bool {
+    let index = this.indexOfValue(value);
+    if (index < 0) {
+      return false;
+    }
+    this.removeAt(index);
+    return true;
+  }
+
+  fun size(): number {
+    return this.keys.len();
+  }
+
+  fun isEmpty(): bool {
+    return this.keys.len() == 0;
+  }
+
+  fun snapshot(): [BiMapEntry<K, V>] {
+    let result: [BiMapEntry<K, V>] = [];
+    let index = 0;
+    while (index < this.keys.len()) {
+      result.push(BiMapEntry<K, V> {
+        key: this.keys[index],
+        value: this.values[index]
+      });
+      index += 1;
+    }
+    return result;
+  }
+}
+
+fun newBiMap<K: Eq, V: Eq>(): BiMap<K, V> {
+  return BiMap<K, V> { keys: [], values: [] };
+}
+
+struct MultiSetEntry<T> {
+  value: T,
+  count: number
+}
+
+struct MultiSet<T: Eq> {
+  values: [T],
+  counts: [number]
+}
+
+impl MultiSet<T: Eq> {
+  fun indexOf(value: T): number {
+    let index = 0;
+    while (index < this.values.len()) {
+      if (this.values[index] == value) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun add(value: T) {
+    let index = this.indexOf(value);
+    if (index >= 0) {
+      this.counts[index] += 1;
+      return;
+    }
+    this.values.push(value);
+    this.counts.push(1);
+  }
+
+  fun countOf(value: T): number {
+    let index = this.indexOf(value);
+    if (index < 0) {
+      return 0;
+    }
+    return this.counts[index];
+  }
+
+  fun has(value: T): bool {
+    return this.indexOf(value) >= 0;
+  }
+
+  fun removeAt(index: number) {
+    while (index + 1 < this.values.len()) {
+      this.values[index] = this.values[index + 1];
+      this.counts[index] = this.counts[index + 1];
+      index += 1;
+    }
+    this.values.pop();
+    this.counts.pop();
+  }
+
+  fun takeOne(value: T): bool {
+    let index = this.indexOf(value);
+    if (index < 0) {
+      return false;
+    }
+    if (this.counts[index] > 1) {
+      this.counts[index] -= 1;
+      return true;
+    }
+    this.removeAt(index);
+    return true;
+  }
+
+  fun entries(): [MultiSetEntry<T>] {
+    let result: [MultiSetEntry<T>] = [];
+    let index = 0;
+    while (index < this.values.len()) {
+      result.push(MultiSetEntry<T> { value: this.values[index], count: this.counts[index] });
+      index += 1;
+    }
+    return result;
+  }
+}
+
+fun newMultiSet<T: Eq>(): MultiSet<T> {
+  return MultiSet<T> { values: [], counts: [] };
+}
+
+struct MultiMap<K: Eq, V: Eq> {
+  keys: [K],
+  values: [[V]]
+}
+
+impl MultiMap<K: Eq, V: Eq> {
+  fun indexOfKey(key: K): number {
+    let index = 0;
+    while (index < this.keys.len()) {
+      if (this.keys[index] == key) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun indexOfValue(values: [V], value: V): number {
+    let index = 0;
+    while (index < values.len()) {
+      if (values[index] == value) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun add(key: K, value: V) {
+    let keyIndex = this.indexOfKey(key);
+    if (keyIndex < 0) {
+      let values: [V] = [];
+      values.push(value);
+      this.keys.push(key);
+      this.values.push(values);
+      return;
+    }
+    this.values[keyIndex].push(value);
+  }
+
+  fun getAll(key: K): [V] {
+    let keyIndex = this.indexOfKey(key);
+    if (keyIndex < 0) {
+      return [];
+    }
+    return copy(this.values[keyIndex]);
+  }
+
+  fun removeKeyAt(index: number) {
+    while (index + 1 < this.keys.len()) {
+      this.keys[index] = this.keys[index + 1];
+      this.values[index] = this.values[index + 1];
+      index += 1;
+    }
+    this.keys.pop();
+    this.values.pop();
+  }
+
+  fun discard(key: K, value: V): bool {
+    let keyIndex = this.indexOfKey(key);
+    if (keyIndex < 0) {
+      return false;
+    }
+    let valueIndex = this.indexOfValue(this.values[keyIndex], value);
+    if (valueIndex < 0) {
+      return false;
+    }
+
+    while (valueIndex + 1 < this.values[keyIndex].len()) {
+      this.values[keyIndex][valueIndex] = this.values[keyIndex][valueIndex + 1];
+      valueIndex += 1;
+    }
+    this.values[keyIndex].pop();
+    if (this.values[keyIndex].len() == 0) {
+      this.removeKeyAt(keyIndex);
+    }
+    return true;
+  }
+}
+
+fun newMultiMap<K: Eq, V: Eq>(): MultiMap<K, V> {
+  return MultiMap<K, V> { keys: [], values: [] };
+}
+
+
+export Set, OrderedSet, OrderedMapEntry, OrderedMap, BiMapEntry, BiMap, MultiSetEntry, MultiSet, MultiMap, newSet, newOrderedSet, newOrderedMap, newBiMap, newMultiSet, newMultiMap;

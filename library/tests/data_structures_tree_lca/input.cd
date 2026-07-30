@@ -1,0 +1,26 @@
+import "../../data_structures.cd" as ds;
+
+fun describe(value: optional<number>): string {
+  return match value {
+    nil => "none",
+    value => str(value),
+  };
+}
+
+let tree = ds.treeNode(
+  1,
+  ds.treeNode(2, ds.treeLeaf(4), ds.treeLeaf(5)),
+  ds.treeNode(2, ds.treeLeaf(6), ds.treeLeaf(7))
+);
+let rootPath: [number] = [];
+
+print describe(ds.treeLowestCommonAncestor(tree, [0, 0], [0, 1]));
+print describe(ds.treeLowestCommonAncestor(tree, [0, 0], [1, 1]));
+print describe(ds.treeLowestCommonAncestor(tree, [1, 0], [1, 1]));
+print describe(ds.treeLowestCommonAncestor(tree, rootPath, [1, 0]));
+print describe(ds.treeLowestCommonAncestor(tree, [0, 0], [0, 0]));
+print describe(ds.treeLowestCommonAncestor(tree, [2], [0, 0]));
+print describe(ds.treeLowestCommonAncestor(tree, [1, 1, 0], [1, 1]));
+
+let empty = ds.emptyTree<number>();
+print describe(ds.treeLowestCommonAncestor(empty, rootPath, rootPath));

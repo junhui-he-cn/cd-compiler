@@ -1,0 +1,48 @@
+import "../../data_structures.cd" as ds;
+
+fun render(entries: [ds.LfuCacheEntry<string, number>]): string {
+  let result = "";
+  let index = 0;
+  while (index < entries.len()) {
+    if (index > 0) {
+      result = result + ",";
+    }
+    result = result + entries[index].key + "=" + str(entries[index].value)
+      + "/" + str(entries[index].frequency);
+    index += 1;
+  }
+  return result;
+}
+
+let zero = ds.newLfuCache<string, number>(0);
+print zero.capacity();
+print zero.put("ignored", 1);
+print zero.snapshot();
+
+let cache = ds.newLfuCache<string, number>(2);
+print cache.put("a", 1);
+print cache.put("b", 2);
+print render(cache.snapshot());
+print cache.get("a");
+print cache.frequencyOf("a");
+print render(cache.snapshot());
+print cache.put("c", 3);
+print render(cache.snapshot());
+print cache.get("c");
+print cache.put("d", 4);
+print render(cache.snapshot());
+print cache.has("a");
+print cache.get("a");
+print cache.put("c", 30);
+print render(cache.snapshot());
+print cache.frequencyOf("c");
+print cache.frequencyOf("missing");
+
+let snapshot = cache.snapshot();
+snapshot[0].value = 99;
+print render(cache.snapshot());
+print cache.discard("d");
+print cache.discard("d");
+print cache.isEmpty();
+print cache.discard("c");
+print cache.isEmpty();

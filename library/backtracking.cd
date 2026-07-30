@@ -1,0 +1,184 @@
+// Backtracking and enumeration algorithms.
+
+fun appendSubsets<T>(values: [T], index: number, current: [T], result: [[T]]) {
+  if (index >= values.len()) {
+    result.push(copy(current));
+    return;
+  }
+  appendSubsets(values, index + 1, current, result);
+  current.push(values[index]);
+  appendSubsets(values, index + 1, current, result);
+  current.pop();
+}
+
+fun subsets<T>(values: [T]): [[T]] {
+  let result: [[T]] = [];
+  let current: [T] = [];
+  appendSubsets(values, 0, current, result);
+  return result;
+}
+
+fun appendCombinations<T>(values: [T], start: number, count: number, current: [T], result: [[T]]) {
+  if (count == 0) {
+    result.push(copy(current));
+    return;
+  }
+  let last = values.len() - count;
+  let index = start;
+  while (index <= last) {
+    current.push(values[index]);
+    appendCombinations(values, index + 1, count - 1, current, result);
+    current.pop();
+    index += 1;
+  }
+}
+
+fun combinations<T>(values: [T], count: number): [[T]] {
+  let result: [[T]] = [];
+  if (floor(count) != count || count < 0 || count > values.len()) {
+    return result;
+  }
+  let current: [T] = [];
+  appendCombinations(values, 0, count, current, result);
+  return result;
+}
+
+fun appendPermutations<T>(values: [T], used: [bool], current: [T], result: [[T]]) {
+  if (current.len() == values.len()) {
+    result.push(copy(current));
+    return;
+  }
+  let index = 0;
+  while (index < values.len()) {
+    if (!used[index]) {
+      used[index] = true;
+      current.push(values[index]);
+      appendPermutations(values, used, current, result);
+      current.pop();
+      used[index] = false;
+    }
+    index += 1;
+  }
+}
+
+fun permutations<T>(values: [T]): [[T]] {
+  let result: [[T]] = [];
+  let used: [bool] = [];
+  let index = 0;
+  while (index < values.len()) {
+    used.push(false);
+    index += 1;
+  }
+  let current: [T] = [];
+  appendPermutations(values, used, current, result);
+  return result;
+}
+
+fun appendParentheses(pairs: number, opened: number, closed: number, current: string, result: [string]) {
+  if (opened == pairs && closed == pairs) {
+    result.push(current);
+    return;
+  }
+  if (opened < pairs) {
+    appendParentheses(pairs, opened + 1, closed, current + "(", result);
+  }
+  if (closed < opened) {
+    appendParentheses(pairs, opened, closed + 1, current + ")", result);
+  }
+}
+
+fun generateParentheses(pairs: number): [string] {
+  let result: [string] = [];
+  if (floor(pairs) != pairs || pairs < 0) {
+    return result;
+  }
+  appendParentheses(pairs, 0, 0, "", result);
+  return result;
+}
+
+fun appendNQueens(size: number, row: number, columns: [number], usedColumns: [bool], diagonals: [bool], antiDiagonals: [bool], result: [[number]]) {
+  if (row == size) {
+    result.push(copy(columns));
+    return;
+  }
+  let column = 0;
+  while (column < size) {
+    let diagonal = row - column + size - 1;
+    let antiDiagonal = row + column;
+    if (!usedColumns[column] && !diagonals[diagonal] && !antiDiagonals[antiDiagonal]) {
+      usedColumns[column] = true;
+      diagonals[diagonal] = true;
+      antiDiagonals[antiDiagonal] = true;
+      columns.push(column);
+      appendNQueens(size, row + 1, columns, usedColumns, diagonals, antiDiagonals, result);
+      columns.pop();
+      antiDiagonals[antiDiagonal] = false;
+      diagonals[diagonal] = false;
+      usedColumns[column] = false;
+    }
+    column += 1;
+  }
+}
+
+fun nQueens(size: number): [[number]] {
+  let result: [[number]] = [];
+  if (floor(size) != size || size < 0) {
+    return result;
+  }
+  let usedColumns: [bool] = [];
+  let diagonals: [bool] = [];
+  let antiDiagonals: [bool] = [];
+  let index = 0;
+  while (index < size) {
+    usedColumns.push(false);
+    index += 1;
+  }
+  let diagonalCount = size * 2 - 1;
+  index = 0;
+  while (index < diagonalCount) {
+    diagonals.push(false);
+    antiDiagonals.push(false);
+    index += 1;
+  }
+  let columns: [number] = [];
+  appendNQueens(size, 0, columns, usedColumns, diagonals, antiDiagonals, result);
+  return result;
+}
+
+fun appendMazePaths(maze: [[bool]], row: number, column: number, current: string, result: [string]) {
+  let lastRow = maze.len() - 1;
+  let lastColumn = maze[0].len() - 1;
+  if (row == lastRow && column == lastColumn) {
+    result.push(current);
+    return;
+  }
+  if (column + 1 < maze[0].len() && maze[row][column + 1]) {
+    appendMazePaths(maze, row, column + 1, current + "R", result);
+  }
+  if (row + 1 < maze.len() && maze[row + 1][column]) {
+    appendMazePaths(maze, row + 1, column, current + "D", result);
+  }
+}
+
+fun mazePaths(maze: [[bool]]): [string] {
+  let result: [string] = [];
+  if (maze.len() == 0 || maze[0].len() == 0) {
+    return result;
+  }
+  let columns = maze[0].len();
+  let row = 0;
+  while (row < maze.len()) {
+    if (maze[row].len() != columns) {
+      return result;
+    }
+    row += 1;
+  }
+  if (!maze[0][0] || !maze[maze.len() - 1][columns - 1]) {
+    return result;
+  }
+  appendMazePaths(maze, 0, 0, "", result);
+  return result;
+}
+
+
+export subsets, combinations, permutations, generateParentheses, nQueens, mazePaths;

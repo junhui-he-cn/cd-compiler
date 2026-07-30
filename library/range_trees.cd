@@ -1,0 +1,412 @@
+// Numeric range-query structures.
+
+// FenwickTree uses zero-based public indexes and one-based internal nodes.
+// The language does not currently expose bitwise operators, so the least
+// significant bit for each internal node is precomputed once at construction
+// time. This keeps updates and prefix queries at O(log n) after construction.
+struct FenwickTree {
+  tree: [number],
+  values: [number],
+  jumps: [number]
+}
+
+impl FenwickTree {
+  fun size(): number {
+    return this.values.len();
+  }
+
+  fun updateTree(index: number, delta: number) {
+    let node = index + 1;
+    while (node <= this.values.len()) {
+      this.tree[node] += delta;
+      node += this.jumps[node];
+    }
+  }
+
+  fun add(index: number, delta: number): bool {
+    if (floor(index) != index || index < 0 || index >= this.values.len()) {
+      return false;
+    }
+    this.values[index] += delta;
+    this.updateTree(index, delta);
+    return true;
+  }
+
+  fun prefixSumUnchecked(endExclusive: number): number {
+    let result = 0;
+    let node = endExclusive;
+    while (node > 0) {
+      result += this.tree[node];
+      node -= this.jumps[node];
+    }
+    return result;
+  }
+
+  fun prefixSum(endExclusive: number): optional<number> {
+    if (floor(endExclusive) != endExclusive || endExclusive < 0 || endExclusive > this.values.len()) {
+      return nil;
+    }
+    return this.prefixSumUnchecked(endExclusive);
+  }
+
+  fun rangeSum(start: number, endExclusive: number): optional<number> {
+    if (floor(start) != start || floor(endExclusive) != endExclusive
+        || start < 0 || endExclusive < start || endExclusive > this.values.len()) {
+      return nil;
+    }
+    return this.prefixSumUnchecked(endExclusive) - this.prefixSumUnchecked(start);
+  }
+
+  fun valueAt(index: number): optional<number> {
+    if (floor(index) != index || index < 0 || index >= this.values.len()) {
+      return nil;
+    }
+    return this.values[index];
+  }
+
+  fun snapshot(): [number] {
+    return copy(this.values);
+  }
+}
+
+fun newFenwickTree(values: [number]): FenwickTree {
+  let jumps: [number] = [0];
+  let index = 1;
+  while (index <= values.len()) {
+    let jump = 1;
+    let current = index;
+    while (floor(current / 2) * 2 == current) {
+      current = floor(current / 2);
+      jump *= 2;
+    }
+    jumps.push(jump);
+    index += 1;
+  }
+
+  let tree: [number] = [0];
+  index = 0;
+  while (index < values.len()) {
+    tree.push(0);
+    index += 1;
+  }
+
+  let result = FenwickTree {
+    tree: tree,
+    values: copy(values),
+    jumps: jumps
+  };
+  index = 0;
+  while (index < values.len()) {
+    result.updateTree(index, values[index]);
+    index += 1;
+  }
+  return result;
+}
+
+// SegmentTree keeps fixed numeric sum and minimum aggregates. Padded leaves
+// are marked inactive, so minimum queries do not need an infinity sentinel.
+struct SegmentTree {
+  sums: [number],
+  minimums: [number],
+  active: [bool],
+  values: [number],
+  base: number
+}
+
+impl SegmentTree {
+  fun size(): number {
+    return this.values.len();
+  }
+
+  fun rebuild(node: number) {
+    let left = node * 2;
+    let right = left + 1;
+    this.sums[node] = this.sums[left] + this.sums[right];
+    if (this.active[left]) {
+      if (this.active[right]) {
+        if (this.minimums[left] < this.minimums[right]) {
+          this.minimums[node] = this.minimums[left];
+        } else {
+          this.minimums[node] = this.minimums[right];
+        }
+      } else {
+        this.minimums[node] = this.minimums[left];
+      }
+    } else {
+      if (this.active[right]) {
+        this.minimums[node] = this.minimums[right];
+      } else {
+        this.minimums[node] = 0;
+      }
+    }
+    this.active[node] = this.active[left] || this.active[right];
+  }
+
+  fun updateLeaf(index: number, value: number) {
+    let node = this.base + index;
+    this.sums[node] = value;
+    this.minimums[node] = value;
+    this.active[node] = true;
+    while (node > 1) {
+      node = floor(node / 2);
+      this.rebuild(node);
+    }
+  }
+
+  fun setValue(index: number, value: number): bool {
+    if (floor(index) != index || index < 0 || index >= this.values.len()) {
+      return false;
+    }
+    this.values[index] = value;
+    this.updateLeaf(index, value);
+    return true;
+  }
+
+  fun add(index: number, delta: number): bool {
+    if (floor(index) != index || index < 0 || index >= this.values.len()) {
+      return false;
+    }
+    this.values[index] += delta;
+    this.updateLeaf(index, this.values[index]);
+    return true;
+  }
+
+  fun validRange(start: number, endExclusive: number): bool {
+    return floor(start) == start && floor(endExclusive) == endExclusive
+      && start >= 0 && endExclusive >= start && endExclusive <= this.values.len();
+  }
+
+  fun rangeSum(start: number, endExclusive: number): optional<number> {
+    if (!this.validRange(start, endExclusive)) {
+      return nil;
+    }
+    let left = this.base + start;
+    let right = this.base + endExclusive;
+    let result = 0;
+    while (left < right) {
+      if (floor(left / 2) * 2 != left) {
+        result += this.sums[left];
+        left += 1;
+      }
+      if (floor(right / 2) * 2 != right) {
+        right -= 1;
+        result += this.sums[right];
+      }
+      left = floor(left / 2);
+      right = floor(right / 2);
+    }
+    return result;
+  }
+
+  fun rangeMinimum(start: number, endExclusive: number): optional<number> {
+    if (!this.validRange(start, endExclusive) || start == endExclusive) {
+      return nil;
+    }
+    let left = this.base + start;
+    let right = this.base + endExclusive;
+    let found = false;
+    let result = 0;
+    while (left < right) {
+      if (floor(left / 2) * 2 != left) {
+        if (this.active[left]) {
+          if (!found || this.minimums[left] < result) {
+            result = this.minimums[left];
+          }
+          found = true;
+        }
+        left += 1;
+      }
+      if (floor(right / 2) * 2 != right) {
+        right -= 1;
+        if (this.active[right]) {
+          if (!found || this.minimums[right] < result) {
+            result = this.minimums[right];
+          }
+          found = true;
+        }
+      }
+      left = floor(left / 2);
+      right = floor(right / 2);
+    }
+    if (!found) {
+      return nil;
+    }
+    return result;
+  }
+
+  fun valueAt(index: number): optional<number> {
+    if (floor(index) != index || index < 0 || index >= this.values.len()) {
+      return nil;
+    }
+    return this.values[index];
+  }
+
+  fun snapshot(): [number] {
+    return copy(this.values);
+  }
+}
+
+fun newSegmentTree(values: [number]): SegmentTree {
+  let base = 1;
+  while (base < values.len()) {
+    base *= 2;
+  }
+  let capacity = base * 2;
+  let sums: [number] = [];
+  let minimums: [number] = [];
+  let active: [bool] = [];
+  let index = 0;
+  while (index < capacity) {
+    sums.push(0);
+    minimums.push(0);
+    active.push(false);
+    index += 1;
+  }
+
+  let result = SegmentTree {
+    sums: sums,
+    minimums: minimums,
+    active: active,
+    values: copy(values),
+    base: base
+  };
+  index = 0;
+  while (index < values.len()) {
+    let node = base + index;
+    result.sums[node] = values[index];
+    result.minimums[node] = values[index];
+    result.active[node] = true;
+    index += 1;
+  }
+  let node = base - 1;
+  while (node > 0) {
+    result.rebuild(node);
+    node -= 1;
+  }
+  return result;
+}
+
+// SparseTable is immutable after construction and provides fixed numeric
+// minimum/maximum idempotent range aggregates.
+struct SparseTable {
+  private values: [number],
+  private minimums: [[number]],
+  private maximums: [[number]],
+  private logs: [number],
+  private powers: [number]
+}
+
+impl SparseTable {
+  fun size(): number {
+    return this.values.len();
+  }
+
+  fun validRange(start: number, endExclusive: number): bool {
+    return floor(start) == start && floor(endExclusive) == endExclusive
+      && start >= 0 && endExclusive <= this.values.len();
+  }
+
+  fun rangeMinimum(start: number, endExclusive: number): optional<number> {
+    if (!this.validRange(start, endExclusive) || start == endExclusive) {
+      return nil;
+    }
+    let length = endExclusive - start;
+    let level = this.logs[length];
+    let block = this.powers[level];
+    let rightStart = endExclusive - block;
+    let leftValue = this.minimums[level][start];
+    let rightValue = this.minimums[level][rightStart];
+    if (leftValue < rightValue) {
+      return leftValue;
+    }
+    return rightValue;
+  }
+
+  fun rangeMaximum(start: number, endExclusive: number): optional<number> {
+    if (!this.validRange(start, endExclusive) || start == endExclusive) {
+      return nil;
+    }
+    let length = endExclusive - start;
+    let level = this.logs[length];
+    let block = this.powers[level];
+    let rightStart = endExclusive - block;
+    let leftValue = this.maximums[level][start];
+    let rightValue = this.maximums[level][rightStart];
+    if (leftValue > rightValue) {
+      return leftValue;
+    }
+    return rightValue;
+  }
+
+  fun valueAt(index: number): optional<number> {
+    if (floor(index) != index || index < 0 || index >= this.values.len()) {
+      return nil;
+    }
+    return this.values[index];
+  }
+
+  fun snapshot(): [number] {
+    return copy(this.values);
+  }
+}
+
+fun newSparseTable(values: [number]): SparseTable {
+  let logs: [number] = [0];
+  let powers: [number] = [1];
+  let level = 0;
+  let power = 1;
+  let index = 1;
+  while (index <= values.len()) {
+    if (index >= power * 2) {
+      power *= 2;
+      level += 1;
+      powers.push(power);
+    }
+    logs.push(level);
+    index += 1;
+  }
+
+  let minimums: [[number]] = [];
+  let maximums: [[number]] = [];
+  minimums.push(copy(values));
+  maximums.push(copy(values));
+  let segmentLength = 2;
+  while (segmentLength <= values.len()) {
+    let half = floor(segmentLength / 2);
+    let minimumRow: [number] = [];
+    let maximumRow: [number] = [];
+    let start = 0;
+    while (start + segmentLength <= values.len()) {
+      let leftMinimum = minimums[minimums.len() - 1][start];
+      let rightMinimum = minimums[minimums.len() - 1][start + half];
+      if (leftMinimum < rightMinimum) {
+        minimumRow.push(leftMinimum);
+      } else {
+        minimumRow.push(rightMinimum);
+      }
+
+      let leftMaximum = maximums[maximums.len() - 1][start];
+      let rightMaximum = maximums[maximums.len() - 1][start + half];
+      if (leftMaximum > rightMaximum) {
+        maximumRow.push(leftMaximum);
+      } else {
+        maximumRow.push(rightMaximum);
+      }
+      start += 1;
+    }
+    minimums.push(minimumRow);
+    maximums.push(maximumRow);
+    segmentLength *= 2;
+  }
+
+  return SparseTable {
+    values: copy(values),
+    minimums: minimums,
+    maximums: maximums,
+    logs: logs,
+    powers: powers
+  };
+}
+
+
+export FenwickTree, SegmentTree, SparseTable, newFenwickTree, newSegmentTree, newSparseTable;

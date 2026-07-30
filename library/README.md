@@ -2,18 +2,26 @@
 
 This directory contains a small data-structure library written in the public
 Compiler Design language. It currently provides generic array-backed `Stack<T>`,
-`Queue<T>`, `Deque<T>`, `RingBuffer<T>`, `BinaryHeap<T>`, and `PriorityQueue<T>` types, plus the
+`Queue<T>`, `Deque<T>`, `RingBuffer<T>`, `BinaryHeap<T>`, `PriorityQueue<T>`, and
+numeric `MedianHeap` types, plus the
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
-`Tree<T>`, `Set<T: Eq>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
+`Tree<T>`, `AvlTree<T>`, `RedBlackTree<T>`, `Set<T: Eq>`, `OrderedSet<T>`, `OrderedMap<K, V>`, `BiMap<K: Eq, V: Eq>`, `LruCache<K: Eq, V>`, `LfuCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
 `MultiMap<K: Eq, V: Eq>` for one-to-many mappings, immutable BST helpers, and basic generic array algorithms,
 including comparator-based sorting, window helpers, and interval merge.
-It also includes array-backed numeric `FenwickTree` and `SegmentTree` types,
+It also includes array-backed numeric `FenwickTree`, `SegmentTree`, and `SparseTable`,
+and immutable numeric `Matrix` types,
 numeric two-pointer helpers for sorted arrays, and string/tree/graph algorithms.
 Array set operations preserve first-occurrence order and use language equality.
 
 The planned structure and algorithm inventory, implementation constraints, and
 staged delivery order are documented in
 [`DATA_STRUCTURES_ROADMAP.md`](DATA_STRUCTURES_ROADMAP.md).
+
+The implementation is split into topic modules: `collections.cd`, `trees.cd`,
+`sets.cd`, `graphs.cd`, `strings.cd`, `range_trees.cd`, `sorting.cd`,
+`array_algorithms.cd`, `dynamic_programming.cd`, `backtracking.cd`, and
+`numeric.cd`. `data_structures.cd` remains the compatibility facade and
+re-exports the stable public API, so existing `as ds` imports do not change.
 
 ## Usage
 
@@ -325,6 +333,18 @@ are not stable.
 `newBinaryHeap<T>`. `enqueue` and `dequeue` are `O(log n)`, `front` is `O(1)`,
 and `snapshot` is `O(n)`.
 
+`MedianHeap` maintains the running median of numeric values with two heaps:
+
+- `newMedianHeap(): MedianHeap` — create an empty tracker;
+- `add(value: number)` — insert a value;
+- `median(): optional<number>` — return `nil` when empty, the middle value for
+  odd sizes, or the arithmetic mean of the two middle values for even sizes;
+- `size(): number` and `isEmpty(): bool` — inspect the number of values.
+
+The lower max-heap and upper min-heap differ in size by at most one. Insertion
+is `O(log n)`, median lookup is `O(1)`, and storage is `O(n)`; values are kept
+with their normal numeric semantics and no overflow behavior is promised.
+
 `Option<T>` is an explicit result enum for APIs where callers should distinguish
 success from absence with `match`:
 
@@ -333,9 +353,10 @@ success from absence with `match`:
 - `some<T>(value: T): Option<T>` and `none<T>(): Option<T>` — construct the two
   variants.
 
-`Option<T>` is useful when a nullable return would make the absence case
-ambiguous or when a caller wants an exhaustive branch. The enum is a value; it
-does not copy or mutate a payload supplied to `Some`.
+Simple missing-value APIs use the language's `optional<T>` return type and
+return `nil`. `Option<T>` is useful when a nullable return would make the
+absence case ambiguous or when a caller wants an exhaustive branch. The enum
+is a value; it does not copy or mutate a payload supplied to `Some`.
 
 `Result<T, E>` is an explicit success-or-error enum for APIs that need to carry
 an error value:
@@ -401,7 +422,17 @@ The three new algorithms use `O(n)` temporary array space and linear time;
 - `treeIsBalanced` and `treeMaxWidth` — check height balance and return the
   largest number of nodes on one level;
 - `treeRootToLeafPaths` — return fresh path arrays in left-to-right order;
-- `treeRootToLeafSums(tree: Tree<number>)` — return numeric root-to-leaf sums.
+- `treeRootToLeafSums(tree: Tree<number>)` — return numeric root-to-leaf sums;
+- `treeLowestCommonAncestor(tree, firstPath, secondPath): optional<T>` — return
+  the value at the lowest common ancestor of two node paths.
+
+LCA paths start at the root and use `0` for a left edge and `1` for a right
+edge. Both paths must contain integral `0`/`1` entries and identify existing
+nodes; invalid paths or an empty tree return `nil`. A path may be empty to name
+the root, and if one path is a prefix of the other the prefix node is returned.
+Paths identify occurrences rather than values, so duplicate node values remain
+unambiguous. Path validation and the common-prefix walk take `O(p + q)` time
+and `O(1)` extra space for path lengths `p` and `q`.
 
 Tree constructors reuse their child values without mutating them. Traversals
 and statistics are `O(n)`; recursive traversals use `O(h)` call-stack space,
@@ -425,6 +456,40 @@ return new roots and preserve the original tree's shared subtrees. Operations
 are `O(h)` time and `O(h)` recursive/temporary space, where `h` is the tree
 height; without balancing, the worst case is `O(n)`.
 
+`AvlTree<T>` is a mutable balanced search tree backed by parallel arrays of
+values, child indexes, and heights. Node indexes are private implementation
+details and are reused after deletion:
+
+- `newAvlTree<T>(less): AvlTree<T>` — create an empty tree with a strict-order
+  comparator;
+- `insert(value: T): bool` and `discard(value: T): bool` — add or remove one
+  comparator-equivalent value, returning whether the tree changed;
+- `has`, `minimum`, `maximum`, `predecessor`, and `successor` — query membership,
+  endpoints, or strict neighboring values; missing results return `false` or
+  `nil`;
+- `size`, `height`, `isEmpty`, and `snapshot` — inspect state or return a fresh
+  in-order sorted array.
+
+Comparator-equivalent duplicates are ignored. AVL rotations keep insert and
+delete at `O(log n)` time, while queries are `O(log n)` and `snapshot` is `O(n)`.
+The arrays are mutable through aliases of the tree value, but `snapshot` copies
+the outer result array and does not expose node indexes.
+
+`RedBlackTree<T>` uses the same public search-tree contract with a red-black
+color array and private parent/child indexes:
+
+- `newRedBlackTree<T>(less): RedBlackTree<T>` — create an empty tree with a
+  strict-order comparator;
+- `insert`, `discard`, `has`, `minimum`, `maximum`, `predecessor`, and `successor`
+  — update or query comparator-ordered values; duplicate values are ignored;
+- `size`, `height`, `isEmpty`, and `snapshot` — inspect state or return a fresh
+  in-order sorted array.
+
+Red-black insertion and deletion repair preserve `O(log n)` updates and
+queries. `snapshot` is `O(n)`; `height` currently computes the height in `O(n)`.
+Node indexes remain private and are reused after deletion, so callers should
+use values and snapshots rather than retaining structural references.
+
 `Set<T: Eq>` provides an array-backed set with language equality:
 
 - `add(value: T)` — insert a value if it is not already present;
@@ -438,6 +503,100 @@ search, so they are `O(n)`; `discard` preserves the order of the remaining
 values and is also `O(n)`. `snapshot` is `O(n)` and allocates one outer array.
 Membership follows the language's `==` semantics, including its behavior for
 reference values.
+
+`OrderedSet<T>` stores distinct values in comparator order:
+
+- `add(value: T): bool` — insert a comparator-distinct value and report whether
+  the set changed;
+- `has(value: T): bool` and `discard(value: T): bool` — query or remove a value;
+- `minimum(): optional<T>` and `maximum(): optional<T>` — return an endpoint or
+  `nil` when empty;
+- `predecessor(value: T): optional<T>` and `successor(value: T): optional<T>` —
+  return strict neighboring values or `nil` when none exists;
+- `rangeInclusive(lower: T, upper: T): [T]` — return values in comparator order
+  between the inclusive bounds, or `[]` when the bounds are reversed;
+- `size`, `isEmpty`, and `snapshot` — inspect state or return a shallow ordered
+  copy.
+
+`newOrderedSet<T>(less)` accepts a `fun(T, T): bool` strict-order comparator.
+Comparator equivalence means neither value is less than the other, so equivalent
+values are stored only once even when the language `==` relation would differ.
+`add`, `has`, `discard`, `minimum`, `maximum`, `predecessor`, and `successor`
+use a binary search plus array movement where needed: lookup is `O(log n)`,
+insertion and deletion are `O(n)`, and `rangeInclusive` is `O(log n + k)` for
+`k` returned values. `snapshot` is `O(n)` and allocates a new outer array.
+
+`OrderedMap<K, V>` stores key/value entries in comparator order:
+
+- `newOrderedMap<K, V>(less): OrderedMap<K, V>` — create an empty map with a
+  `fun(K, K): bool` strict-order comparator;
+- `put(key: K, value: V): bool` — insert a key or update its comparator-equivalent
+  entry; return `true` only when a new key is inserted;
+- `get(key: K): optional<V>` and `has(key: K): bool` — query a value or key;
+- `discard(key: K): bool` — remove a key and report whether it was present;
+- `size`, `isEmpty`, and `snapshot` — inspect state or return
+  `[OrderedMapEntry<K, V>]` in comparator order.
+
+Comparator equivalence means neither key is less than the other. Equivalent keys
+share one entry; updating one changes the value while preserving the first
+stored key and its sorted position. `get` uses `optional<V>`, so callers storing
+a `nil` value should use `has` to distinguish it from a missing key. Lookup is
+`O(log n)`, insertion and deletion are `O(n)` because of array movement, and
+`snapshot` is `O(n)` with a fresh outer array and entry values.
+
+`BiMap<K: Eq, V: Eq>` maintains a one-to-one mapping with lookup from either
+side:
+
+- `newBiMap<K: Eq, V: Eq>(): BiMap<K, V>` — create an empty bidirectional map;
+- `put(key: K, value: V): bool` — insert a new pair, returning `false` when
+  either side is already present; rejected pairs leave the map unchanged;
+- `get(key: K): optional<V>` and `getKey(value: V): optional<K>` — query either
+  direction;
+- `hasKey`, `hasValue`, `discardKey`, and `discardValue` — inspect or remove
+  either side while preserving the one-to-one invariant;
+- `size`, `isEmpty`, and `snapshot` — inspect state or return
+  `[BiMapEntry<K, V>]` in insertion order.
+
+This implementation deliberately rejects duplicate keys and duplicate values;
+it does not replace an existing association implicitly. Both lookup directions
+are linear `O(n)`, removal is `O(n)` because paired arrays are compacted, and
+`snapshot` is `O(n)` with a fresh outer array and entry values.
+
+`LruCache<K: Eq, V>` is an array-backed least-recently-used cache:
+
+- `newLruCache<K: Eq, V>(capacity): LruCache<K, V>` — create a cache with the
+  floored non-negative capacity;
+- `get(key: K): optional<V>` — return a value and mark its entry as most recent,
+  or return `nil` when absent;
+- `put(key: K, value: V): bool` — insert or update a value and mark it most
+  recent; return `false` when the capacity is zero;
+- `has(key: K): bool` and `discard(key: K): bool` — query or remove a key;
+- `capacity`, `size`, `isEmpty`, and `snapshot` — inspect state or return
+  `[LruCacheEntry<K, V>]` entries ordered from least recent to most recent.
+
+When an insertion would exceed capacity, the least-recent entry is discarded.
+Updating an existing key also refreshes its recency. `get` uses `optional<V>`, so
+callers storing a `nil` value should use `has` to distinguish it from a missing
+key. Key lookup and all recency moves are `O(n)` in this simple implementation;
+`snapshot` is `O(n)` and allocates a new outer array and entry values.
+
+`LfuCache<K: Eq, V>` is an array-backed least-frequently-used cache:
+
+- `newLfuCache<K: Eq, V>(capacity): LfuCache<K, V>` — create a cache with the
+  floored non-negative capacity;
+- `get(key: K): optional<V>` — return a value, increment its frequency, and
+  refresh its recency, or return `nil` when absent;
+- `put(key: K, value: V): bool` — insert or update a value, counting the
+  operation as a use; return `false` when the capacity is zero;
+- `frequencyOf(key: K): optional<number>` and `has(key: K): bool` — inspect frequency
+  or presence without changing it;
+- `discard`, `capacity`, `size`, `isEmpty`, and `snapshot` — remove or inspect
+  entries; snapshots contain `[LfuCacheEntry<K, V>]` with each frequency.
+
+When full, the entry with the smallest frequency is evicted; ties evict the
+least recently used entry. New entries start at frequency `1`. Lookup, eviction,
+and removal are `O(n)` in this array implementation; `snapshot` is `O(n)` and
+returns entries in current storage order.
 
 `MultiSet<T: Eq>` stores one entry per distinct value and its occurrence count:
 
@@ -863,6 +1022,36 @@ updates and aggregate queries are `O(log n)`, and `snapshot` is `O(n)`. Invalid
 indexes/ranges return `false` or `nil` without changing the structure; an
 empty valid sum range returns `0`.
 
+`SparseTable` is an immutable numeric range structure with fixed minimum and
+maximum aggregates:
+
+- `newSparseTable(values: [number]): SparseTable` — copy values and build the
+  static tables;
+- `rangeMinimum(start, endExclusive): optional<number>` and
+  `rangeMaximum(start, endExclusive): optional<number>` — query half-open
+  ranges in `O(1)` time;
+- `size`, `valueAt`, and `snapshot` — inspect the copied input values.
+
+Ranges must be integral and satisfy `0 <= start < endExclusive <= size`; invalid
+or empty ranges return `nil`. The structure has no update operation. Construction
+uses `O(n log n)` time and space, queries use `O(1)` time, and `snapshot` is
+`O(n)` with a fresh outer array.
+
+`Matrix` is an immutable rectangular numeric matrix:
+
+- `newMatrix(rows: [[number]]): optional<Matrix>` — validate a non-empty
+  rectangular input and make a deep copy; empty or ragged inputs return `nil`;
+- `rowCount`, `columnCount`, and `valueAt(row, column): optional<number>` —
+  inspect dimensions and return `nil` for non-integral or out-of-range indexes;
+- `snapshot` — return a fresh deep copy of all rows;
+- `transpose(): Matrix` — create the transposed matrix;
+- `multiply(other: Matrix): optional<Matrix>` — multiply compatible dimensions,
+  or return `nil` when the left column count differs from the right row count.
+
+The constructor and snapshot are `O(rows * columns)`, transpose is
+`O(rows * columns)`, and multiplication is `O(rows * shared * columns)`. Matrix
+values use the language's numeric arithmetic and do not define overflow behavior.
+
 `Interval { start, end }` represents a numeric interval with the documented
 precondition `start <= end`. `mergeIntervals(intervals)` returns a new array
 sorted by start, merges overlapping or touching intervals, and leaves the input
@@ -983,6 +1172,9 @@ deterministic `hash(value)`, builtin string ordering, and statically dispatched
 ordering operators for named structs. Generic library algorithms continue to
 accept explicit `less` callbacks where a user-defined type is involved; custom
 struct operators are not implicitly converted into a generic `T: Ord` witness.
+Nullable annotations in this library use the canonical `optional<T>` spelling;
+the compiler retains the postfix nullable spelling only for migration
+compatibility.
 
 ## Tests
 

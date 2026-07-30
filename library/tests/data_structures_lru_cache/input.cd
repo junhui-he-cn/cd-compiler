@@ -1,0 +1,39 @@
+import "../../data_structures.cd" as ds;
+
+fun render(entries: [ds.LruCacheEntry<string, number>]): string {
+  let result = "";
+  let index = 0;
+  while (index < entries.len()) {
+    if (index > 0) {
+      result = result + ",";
+    }
+    result = result + entries[index].key + "=" + str(entries[index].value);
+    index += 1;
+  }
+  return result;
+}
+
+let zero = ds.newLruCache<string, number>(0);
+print zero.put("ignored", 1);
+print zero.get("ignored");
+print zero.snapshot();
+
+let cache = ds.newLruCache<string, number>(2.9);
+print cache.capacity();
+print cache.put("a", 1);
+print cache.put("b", 2);
+print render(cache.snapshot());
+print cache.get("a");
+print render(cache.snapshot());
+print cache.put("c", 3);
+print render(cache.snapshot());
+print cache.get("b");
+print cache.put("a", 10);
+print render(cache.snapshot());
+print cache.discard("c");
+print cache.discard("c");
+print cache.isEmpty();
+
+let snapshot = cache.snapshot();
+snapshot[0].value = 99;
+print render(cache.snapshot());

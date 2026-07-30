@@ -1,0 +1,65 @@
+import "../../data_structures.cd" as ds;
+
+fun ascending(left: number, right: number): bool {
+  return left < right;
+}
+
+fun stringAscending(left: string, right: string): bool {
+  return left < right;
+}
+
+fun describe(value: optional<number>): string {
+  return match value {
+    nil => "none",
+    value => str(value),
+  };
+}
+
+let empty = ds.newAvlTree<number>(ascending);
+print empty.isEmpty();
+print empty.height();
+print describe(empty.minimum());
+print describe(empty.maximum());
+print describe(empty.predecessor(10));
+print describe(empty.successor(10));
+
+let tree = ds.newAvlTree<number>(ascending);
+print tree.insert(30);
+print tree.insert(20);
+print tree.insert(10);
+print tree.insert(25);
+print tree.insert(28);
+print tree.insert(30);
+print tree.snapshot();
+print tree.size();
+print tree.height();
+print describe(tree.minimum());
+print describe(tree.maximum());
+print describe(tree.predecessor(25));
+print describe(tree.successor(25));
+print tree.discard(20);
+print tree.snapshot();
+print tree.discard(10);
+print tree.snapshot();
+print tree.discard(99);
+
+let alias = tree;
+print alias.insert(5);
+print tree.snapshot();
+let snapshot = tree.snapshot();
+snapshot[0] = 99;
+print tree.snapshot();
+print tree.discard(28);
+print tree.snapshot();
+print tree.height();
+print tree.insert(40);
+print tree.snapshot();
+print tree.discard(30);
+print tree.snapshot();
+
+let words = ds.newAvlTree<string>(stringAscending);
+words.insert("delta");
+words.insert("alpha");
+words.insert("beta");
+print words.snapshot();
+print words.height();
