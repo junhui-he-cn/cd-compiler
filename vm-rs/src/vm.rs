@@ -2641,7 +2641,7 @@ impl<'a> VM<'a> {
                     self.write_register(frame, *dest, value)?;
                 }
                 Instruction::Print { value } => {
-                    let value = self.read_register(frame, *value)?;
+                    let value = self.read_register_ref(frame, *value)?;
                     let mut output = value.to_string();
                     output.push('\n');
                     self.append_output(&output)?;
