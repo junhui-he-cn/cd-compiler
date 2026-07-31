@@ -162,7 +162,7 @@ fun intervalLess(left: Interval, right: Interval): bool {
 }
 
 fun mergeIntervals(intervals: [Interval]): [Interval] {
-  let ordered = sortArray(intervals, intervalLess);
+  let ordered = mergeSort(intervals, intervalLess);
   let merged: [Interval] = [];
   let index = 0;
   while (index < ordered.len()) {
@@ -226,7 +226,7 @@ fun selectNonOverlappingIntervals(intervals: [Interval]): [Interval] {
     index += 1;
   }
 
-  let ordered = sortArray(intervals, intervalEndLess);
+  let ordered = mergeSort(intervals, intervalEndLess);
   let result: [Interval] = [];
   let hasLast = false;
   let lastEnd = 0;
@@ -260,8 +260,8 @@ fun minimumIntervalRooms(intervals: [Interval]): optional<number> {
     index += 1;
   }
 
-  let orderedStarts = sortArray(starts, numberLess);
-  let orderedEnds = sortArray(ends, numberLess);
+  let orderedStarts = mergeSort(starts, numberLess);
+  let orderedEnds = mergeSort(ends, numberLess);
   let startIndex = 0;
   let endIndex = 0;
   let active = 0;
@@ -472,7 +472,7 @@ fun threeSumNumberLess(left: number, right: number): bool {
 
 fun threeSumZero(values: [number]): [[number]] {
   let result: [[number]] = [];
-  let sorted = sortArray(values, threeSumNumberLess);
+  let sorted = mergeSort(values, threeSumNumberLess);
   let index = 0;
   while (index + 2 < sorted.len()) {
     if (index > 0 && sorted[index] == sorted[index - 1]) {
@@ -512,7 +512,7 @@ fun threeSumClosest(values: [number], target: number): optional<number> {
     return nil;
   }
 
-  let sorted = sortArray(values, threeSumNumberLess);
+  let sorted = mergeSort(values, threeSumNumberLess);
   let found = false;
   let best = 0;
   let bestDistance = 0;
