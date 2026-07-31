@@ -759,8 +759,8 @@ space.
 `minimumSpanningForest(graph)` applies Prim's algorithm to an undirected
 `WeightedGraph`, preserves the vertex count, and returns a new undirected graph.
 Disconnected inputs produce one tree per component; directed inputs produce an
-empty forest with the same vertex count. The array-scan implementation runs in
-`O(V^2 + E)` time and `O(V)` auxiliary space.
+empty forest with the same vertex count. The min-heap implementation runs in
+`O((V + E) log V)` time and `O(V + E)` auxiliary space.
 
 `minimumSpanningForestKruskal(graph)` returns the same forest contract using
 weight-sorted edges and the array-backed `DisjointSet`. Ties are ordered by

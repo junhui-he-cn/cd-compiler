@@ -372,8 +372,8 @@ enum Result<T, E> {
 `SignedWeightedGraph` 单独接受负权边，避免改变 Dijkstra、最小生成森林和最大流
 的非负权前置条件。`bellmanFord` 返回带父节点的可空距离数组，并将无效起点和
 从起点可达的负环分别报告为 `BellmanFordError`。
-`minimumSpanningForest` 已提供无向加权图的 Prim 版本；非连通输入返回森林，
-有向输入返回同顶点数的空森林。
+`minimumSpanningForest` 已提供无向加权图的最小堆 Prim 版本；非连通输入返回森林，
+有向输入返回同顶点数的空森林，复杂度为 `O((V + E) log V)`。
 `minimumSpanningForestKruskal` 已提供基于边排序和并查集的等价版本，保留非连通
 输入的森林语义，并对有向输入返回空森林。
 `allPairsWeightedDistances` 已提供非负权图的 Floyd-Warshall 全源距离矩阵，

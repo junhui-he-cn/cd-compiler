@@ -1716,19 +1716,17 @@ fun minimumSpanningForest(graph: WeightedGraph): WeightedGraph {
     distances[root] = 0;
     parents[root] = -1;
     parentWeights[root] = -1;
-    let step = 0;
-    while (step < count) {
-      let current = -1;
-      index = 0;
-      while (index < count) {
-        if (!visited[index] && distances[index] >= 0
-            && (current < 0 || distances[index] < distances[current])) {
-          current = index;
-        }
-        index += 1;
-      }
-      if (current < 0) {
+    let pending = newBinaryHeap<WeightedDistanceEntry>(weightedDistanceLess);
+    pending.add(WeightedDistanceEntry { vertex: root, distance: 0 });
+    while (!pending.isEmpty()) {
+      let entry = pending.take();
+      if (entry == nil) {
         break;
+      }
+      let current = entry.vertex;
+      let currentDistance = entry.distance;
+      if (visited[current] || currentDistance != distances[current]) {
+        continue;
       }
       visited[current] = true;
       if (parents[current] >= 0) {
@@ -1743,10 +1741,10 @@ fun minimumSpanningForest(graph: WeightedGraph): WeightedGraph {
           distances[edge.to] = edge.weight;
           parents[edge.to] = current;
           parentWeights[edge.to] = edge.weight;
+          pending.add(WeightedDistanceEntry { vertex: edge.to, distance: edge.weight });
         }
         neighborIndex += 1;
       }
-      step += 1;
     }
     root += 1;
   }
