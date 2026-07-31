@@ -448,7 +448,7 @@ mod tests {
                     identity: 0,
                     closure: vm.heap.new_environment(),
                 },
-                vec![Value::number(2.0)],
+                CallArguments::One(Value::number(2.0)),
                 "main".to_string(),
                 None,
             )
@@ -2179,6 +2179,24 @@ struct CachedFunctionBody {
     body: FunctionBody,
 }
 
+enum CallArguments {
+    Empty,
+    One(Value),
+    Two(Value, Value),
+    Many(Vec<Value>),
+}
+
+impl CallArguments {
+    fn len(&self) -> usize {
+        match self {
+            Self::Empty => 0,
+            Self::One(_) => 1,
+            Self::Two(_, _) => 2,
+            Self::Many(arguments) => arguments.len(),
+        }
+    }
+}
+
 pub struct VM<'a> {
     program: &'a Program,
     config: RunConfig,
@@ -2558,10 +2576,24 @@ impl<'a> VM<'a> {
                     let Value::Function(function) = callee else {
                         return Err(RuntimeError::new("can only call functions"));
                     };
-                    let mut values = Vec::with_capacity(arguments.len());
-                    for argument in arguments {
-                        values.push(self.read_register(frame, *argument)?);
-                    }
+                    let values = match arguments.as_slice() {
+                        [] => CallArguments::Empty,
+                        [argument] => {
+                            CallArguments::One(self.read_register(frame, *argument)?)
+                        }
+                        [left, right] => {
+                            let left = self.read_register(frame, *left)?;
+                            let right = self.read_register(frame, *right)?;
+                            CallArguments::Two(left, right)
+                        }
+                        arguments => {
+                            let mut values = Vec::with_capacity(arguments.len());
+                            for argument in arguments {
+                                values.push(self.read_register(frame, *argument)?);
+                            }
+                            CallArguments::Many(values)
+                        }
+                    };
                     let call_site = body.locations.get(frame.ip).and_then(Option::as_ref);
                     let result = self.call_function(
                         function,
@@ -3106,7 +3138,7 @@ impl<'a> VM<'a> {
     fn call_function(
         &mut self,
         function: FunctionValue,
-        arguments: Vec<Value>,
+        arguments: CallArguments,
         caller: String,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
@@ -3140,11 +3172,32 @@ impl<'a> VM<'a> {
             function_index: Some(function.function_index),
         };
 
-        for (index, argument) in arguments.into_iter().enumerate() {
-            frame
-                .locals
-                .borrow_mut()
-                .insert(cached.params[index].clone(), self.heap.new_cell(argument));
+        match arguments {
+            CallArguments::Empty => {}
+            CallArguments::One(argument) => {
+                frame.locals.borrow_mut().insert(
+                    cached.params[0].clone(),
+                    self.heap.new_cell(argument),
+                );
+            }
+            CallArguments::Two(first, second) => {
+                frame.locals.borrow_mut().insert(
+                    cached.params[0].clone(),
+                    self.heap.new_cell(first),
+                );
+                frame.locals.borrow_mut().insert(
+                    cached.params[1].clone(),
+                    self.heap.new_cell(second),
+                );
+            }
+            CallArguments::Many(arguments) => {
+                for (index, argument) in arguments.into_iter().enumerate() {
+                    frame.locals.borrow_mut().insert(
+                        cached.params[index].clone(),
+                        self.heap.new_cell(argument),
+                    );
+                }
+            }
         }
 
         self.call_depth += 1;
@@ -3509,7 +3562,7 @@ impl<'a> VM<'a> {
             self.checkpoint_native()?;
             mapped.push(self.call_function(
                 callback.clone(),
-                vec![element],
+                CallArguments::One(element),
                 caller.clone(),
                 call_site,
             )?);
@@ -3542,7 +3595,7 @@ impl<'a> VM<'a> {
             self.checkpoint_native()?;
             let keep = self.call_function(
                 predicate.clone(),
-                vec![element.clone()],
+                CallArguments::One(element.clone()),
                 caller.clone(),
                 call_site,
             )?;
@@ -3580,7 +3633,7 @@ impl<'a> VM<'a> {
             self.checkpoint_native()?;
             let result = self.call_function(
                 callback.clone(),
-                vec![element],
+                CallArguments::One(element),
                 caller.clone(),
                 call_site,
             )?;
@@ -3630,7 +3683,7 @@ impl<'a> VM<'a> {
             self.checkpoint_native()?;
             let result = self.call_function(
                 predicate.clone(),
-                vec![element],
+                CallArguments::One(element),
                 caller.clone(),
                 call_site,
             )?;
@@ -3672,7 +3725,7 @@ impl<'a> VM<'a> {
             self.checkpoint_native()?;
             let result = self.call_function(
                 predicate.clone(),
-                vec![element],
+                CallArguments::One(element),
                 caller.clone(),
                 call_site,
             )?;
@@ -3709,7 +3762,7 @@ impl<'a> VM<'a> {
             self.checkpoint_native()?;
             let result = self.call_function(
                 predicate.clone(),
-                vec![element.clone()],
+                CallArguments::One(element.clone()),
                 caller.clone(),
                 call_site,
             )?;
@@ -3746,7 +3799,7 @@ impl<'a> VM<'a> {
             self.checkpoint_native()?;
             let result = self.call_function(
                 predicate.clone(),
-                vec![element],
+                CallArguments::One(element),
                 caller.clone(),
                 call_site,
             )?;
@@ -3784,7 +3837,7 @@ impl<'a> VM<'a> {
             self.checkpoint_native()?;
             accumulator = self.call_function(
                 callback.clone(),
-                vec![accumulator, element],
+                CallArguments::Two(accumulator, element),
                 caller.clone(),
                 call_site,
             )?;
