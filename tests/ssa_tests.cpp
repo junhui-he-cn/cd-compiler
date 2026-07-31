@@ -2,6 +2,7 @@
 
 #include "ControlFlowGraph.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <functional>
 #include <optional>
@@ -360,6 +361,235 @@ void test_de_ssa_plan_breaks_parallel_copy_cycle_with_one_temporary()
     assert(backedge.moves[2].source == 12);
 }
 
+void test_lower_de_ssa_materializes_diamond_copies_and_remaps_offsets()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::JumpIfFalse, 3),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Jump, 4),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Return),
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.parameters.push_back(SSAParameter{0, cfg.entryBlock});
+    SSAInstruction branch = plainInstruction(IROp::JumpIfFalse, 0);
+    branch.left = 0;
+    branch.operand = 3;
+    ssa.blocks[0].instructions.push_back(branch);
+    ssa.blocks[1].instructions.push_back(defineConstant(1, 1));
+    SSAInstruction leftJump = plainInstruction(IROp::Jump, 2);
+    leftJump.operand = 4;
+    ssa.blocks[1].instructions.push_back(leftJump);
+    ssa.blocks[2].instructions.push_back(defineConstant(2, 3));
+    ssa.blocks[3].phis.push_back(SSAPhi{3, {{1, 1}, {2, 2}}});
+    ssa.blocks[3].instructions.push_back(useValue(IROp::Return, 3, 4));
+
+    const SSADeSSALinearFunction linear = lowerSSADeSSACopies(cfg, ssa);
+    linear.verify(cfg);
+
+    assert(linear.blocks.size() == cfg.blocks.size());
+    assert(linear.instructions.size() == 7);
+    assert(linear.blockEntryOffsets == std::vector<std::size_t>({0, 1, 4, 6, 7}));
+    assert(linear.instructions[0].instruction.operand == 4);
+    assert(linear.instructions[2].synthetic);
+    assert(linear.instructions[2].instruction.op == IROp::Copy);
+    assert(linear.instructions[2].instruction.result == std::optional<SSAValueId>(3));
+    assert(linear.instructions[2].instruction.left == std::optional<SSAValueId>(1));
+    assert(linear.instructions[3].instruction.op == IROp::Jump);
+    assert(linear.instructions[3].instruction.operand == 6);
+    assert(linear.instructions[5].synthetic);
+    assert(linear.instructions[5].instruction.result == std::optional<SSAValueId>(3));
+    assert(linear.instructions[5].instruction.left == std::optional<SSAValueId>(2));
+    assert(linear.originalInstructionOffsets
+        == std::vector<std::optional<std::size_t>>({0, 1, 3, 4, 6}));
+    assert(linear.originalInsertionOffsets
+        == std::vector<std::size_t>({0, 1, 2, 4, 6, 7}));
+}
+
+void test_lower_de_ssa_places_noncritical_copy_at_unique_successor_entry()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::JumpIfFalse, 3),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Jump, 4),
+        cfgInstruction(IROp::Jump, 4),
+        cfgInstruction(IROp::Return),
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.parameters.push_back(SSAParameter{0, cfg.entryBlock});
+    SSAInstruction branch = plainInstruction(IROp::JumpIfFalse, 0);
+    branch.left = 0;
+    branch.operand = 3;
+    ssa.blocks[0].instructions.push_back(branch);
+    ssa.blocks[1].instructions.push_back(defineConstant(1, 1));
+    SSAInstruction leftJump = plainInstruction(IROp::Jump, 2);
+    leftJump.operand = 4;
+    ssa.blocks[1].instructions.push_back(leftJump);
+    ssa.blocks[2].phis.push_back(SSAPhi{2, {{0, 0}}});
+    SSAInstruction rightJump = plainInstruction(IROp::Jump, 3);
+    rightJump.operand = 4;
+    ssa.blocks[2].instructions.push_back(rightJump);
+    ssa.blocks[3].instructions.push_back(useValue(IROp::Return, 0, 4));
+
+    const SSADeSSALinearFunction linear = lowerSSADeSSACopies(cfg, ssa);
+    linear.verify(cfg);
+
+    assert(linear.blocks.size() == cfg.blocks.size());
+    const std::size_t successorEntry = linear.blockEntryOffsets[2];
+    assert(!linear.instructions[0].synthetic);
+    assert(linear.instructions[0].instruction.operand == successorEntry);
+    assert(linear.instructions[successorEntry].synthetic);
+    assert(linear.instructions[successorEntry].instruction.op == IROp::Copy);
+    assert(linear.instructions[successorEntry].instruction.result
+        == std::optional<SSAValueId>(2));
+    assert(linear.instructions[successorEntry].instruction.left
+        == std::optional<SSAValueId>(0));
+}
+
+void test_lower_de_ssa_splits_critical_branch_edge_and_remaps_dependency()
+{
+    const std::vector<IRInstruction> instructions{
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::JumpIfFalse, 4),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Jump, 4),
+        cfgInstruction(IROp::Return),
+    };
+    const ControlFlowGraph cfg = buildControlFlowGraph(
+        instructions,
+        {IRModuleDependency{7, ModuleGraphEdgeKind::Import, "dep", 4}});
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[0].instructions.push_back(valueInstruction(IROp::Constant, 0, 0));
+    SSAInstruction branch = plainInstruction(IROp::JumpIfFalse, 1);
+    branch.left = 0;
+    branch.operand = 4;
+    ssa.blocks[0].instructions.push_back(branch);
+    ssa.blocks[1].instructions.push_back(valueInstruction(IROp::Constant, 1, 2));
+    SSAInstruction leftJump = plainInstruction(IROp::Jump, 3);
+    leftJump.operand = 4;
+    ssa.blocks[1].instructions.push_back(leftJump);
+    ssa.blocks[2].phis.push_back(SSAPhi{2, {{0, 0}, {1, 1}}});
+    ssa.blocks[2].instructions.push_back(useValue(IROp::Return, 2, 4));
+
+    const SSADeSSALinearFunction linear = lowerSSADeSSACopies(cfg, ssa);
+    linear.verify(cfg);
+
+    assert(linear.blocks.size() == cfg.blocks.size() + 1);
+    const std::optional<std::pair<CFGBlockId, CFGBlockId>> expectedSplit{
+        std::pair<CFGBlockId, CFGBlockId>{0, 2}};
+    const auto splitIt = std::find_if(
+        linear.blocks.begin(),
+        linear.blocks.end(),
+        [&expectedSplit](const SSADeSSABlock& block) {
+            return block.splitEdge == expectedSplit;
+        });
+    assert(splitIt != linear.blocks.end());
+    const SSADeSSABlock& split = *splitIt;
+    assert(linear.instructions[1].instruction.op == IROp::JumpIfFalse);
+    assert(linear.instructions[1].instruction.operand == split.firstInstruction);
+    assert(linear.instructions[split.firstInstruction].synthetic);
+    assert(linear.instructions[split.firstInstruction].instruction.op == IROp::Copy);
+    assert(linear.instructions[split.firstInstruction + 1].instruction.op == IROp::Jump);
+    assert(linear.instructions[split.firstInstruction + 1].instruction.operand
+        == linear.blockEntryOffsets[2]);
+    assert(linear.moduleDependencies.size() == 1);
+    assert(linear.moduleDependencies.front().instructionOffset
+        == linear.blockEntryOffsets[2]);
+}
+
+void test_lower_de_ssa_splits_critical_fallthrough_edge_in_place()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::JumpIfFalse, 3),
+        cfgInstruction(IROp::Jump, 3),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Jump, 1),
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.parameters.push_back(SSAParameter{0, cfg.entryBlock});
+    ssa.parameters.push_back(SSAParameter{2, cfg.entryBlock});
+    SSAInstruction branch = plainInstruction(IROp::JumpIfFalse, 0);
+    branch.left = 0;
+    branch.operand = 3;
+    ssa.blocks[0].instructions.push_back(branch);
+    SSAInstruction firstJump = plainInstruction(IROp::Jump, 1);
+    firstJump.operand = 3;
+    ssa.blocks[1].instructions.push_back(firstJump);
+    ssa.blocks[2].instructions.push_back(defineConstant(9, 2));
+    SSAInstruction backJump = plainInstruction(IROp::Jump, 3);
+    backJump.operand = 1;
+    ssa.blocks[3].instructions.push_back(backJump);
+    ssa.blocks[1].phis.push_back(SSAPhi{1, {{0, 0}, {3, 2}}});
+
+    const SSADeSSALinearFunction linear = lowerSSADeSSACopies(cfg, ssa);
+    linear.verify(cfg);
+
+    const std::optional<std::pair<CFGBlockId, CFGBlockId>> expectedSplit{
+        std::pair<CFGBlockId, CFGBlockId>{0, 1}};
+    const auto splitIt = std::find_if(
+        linear.blocks.begin(),
+        linear.blocks.end(),
+        [&expectedSplit](const SSADeSSABlock& block) {
+            return block.splitEdge == expectedSplit;
+        });
+    assert(splitIt != linear.blocks.end());
+    const SSADeSSABlock& split = *splitIt;
+    assert(split.id == 1);
+    assert(split.firstInstruction == linear.blocks[0].endInstruction);
+    assert(linear.blockEntryOffsets[1] == split.endInstruction);
+    assert(linear.instructions[0].instruction.operand == linear.blockEntryOffsets[3]);
+    assert(linear.instructions[split.firstInstruction].instruction.op == IROp::Copy);
+    assert(linear.instructions[split.firstInstruction + 1].instruction.op == IROp::Jump);
+    assert(linear.instructions[split.firstInstruction + 1].instruction.operand
+        == linear.blockEntryOffsets[1]);
+}
+
+void test_lower_de_ssa_materializes_cycle_temporary_on_backedge()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Jump, 3),
+        cfgInstruction(IROp::JumpIfFalse, 6),
+        cfgInstruction(IROp::Print),
+        cfgInstruction(IROp::Jump, 3),
+        cfgInstruction(IROp::Return),
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[0].instructions.push_back(valueInstruction(IROp::Constant, 3, 0));
+    ssa.blocks[0].instructions.push_back(valueInstruction(IROp::Constant, 4, 1));
+    ssa.blocks[0].instructions.push_back(plainInstruction(IROp::Jump, 2));
+    ssa.blocks[1].phis.push_back(SSAPhi{10, {{0, 3}, {2, 11}}});
+    ssa.blocks[1].phis.push_back(SSAPhi{11, {{0, 4}, {2, 10}}});
+    SSAInstruction branch = plainInstruction(IROp::JumpIfFalse, 3);
+    branch.left = 10;
+    ssa.blocks[1].instructions.push_back(branch);
+    ssa.blocks[2].instructions.push_back(useValue(IROp::Print, 10, 4));
+    ssa.blocks[2].instructions.push_back(plainInstruction(IROp::Jump, 5));
+    ssa.blocks[3].instructions.push_back(useValue(IROp::Return, 10, 6));
+
+    const SSADeSSALinearFunction linear = lowerSSADeSSACopies(cfg, ssa);
+    linear.verify(cfg);
+
+    assert(linear.temporaryValues == std::vector<SSAValueId>({12}));
+    const SSADeSSABlock& backedgeBlock = linear.blocks[2];
+    assert(backedgeBlock.sourceBlock == std::optional<CFGBlockId>(2));
+    const std::size_t copyStart = backedgeBlock.firstInstruction + 1;
+    assert(linear.instructions[copyStart].synthetic);
+    assert(linear.instructions[copyStart].instruction.result
+        == std::optional<SSAValueId>(12));
+    assert(linear.instructions[copyStart].instruction.left
+        == std::optional<SSAValueId>(10));
+    assert(linear.instructions[copyStart + 1].instruction.result
+        == std::optional<SSAValueId>(10));
+    assert(linear.instructions[copyStart + 1].instruction.left
+        == std::optional<SSAValueId>(11));
+    assert(linear.instructions[copyStart + 2].instruction.result
+        == std::optional<SSAValueId>(11));
+    assert(linear.instructions[copyStart + 2].instruction.left
+        == std::optional<SSAValueId>(12));
+}
+
 void test_rename_eliminates_local_memory_and_fills_diamond_phi()
 {
     const ControlFlowGraph cfg = buildControlFlowGraph({
@@ -617,6 +847,11 @@ int main()
     test_de_ssa_plan_orders_diamond_edge_copies();
     test_de_ssa_plan_marks_critical_edges();
     test_de_ssa_plan_breaks_parallel_copy_cycle_with_one_temporary();
+    test_lower_de_ssa_materializes_diamond_copies_and_remaps_offsets();
+    test_lower_de_ssa_places_noncritical_copy_at_unique_successor_entry();
+    test_lower_de_ssa_splits_critical_branch_edge_and_remaps_dependency();
+    test_lower_de_ssa_splits_critical_fallthrough_edge_in_place();
+    test_lower_de_ssa_materializes_cycle_temporary_on_backedge();
     test_rename_eliminates_local_memory_and_fills_diamond_phi();
     test_rename_handles_loop_backedge_and_initial_definition();
     test_rename_uses_local_parameter_as_initial_slot_value();

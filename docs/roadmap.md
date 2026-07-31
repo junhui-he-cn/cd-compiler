@@ -311,9 +311,10 @@ belongs in the baseline until that re-audit is merged and verified.
 **Status:** the CFG foundation, SSA structural shell, deterministic dominance
 analysis, phi placement, binding/effect contract, IRCompiler binding metadata
 integration, and SSA memory-slot renaming are implemented only on
-`feat/ssa-optimization-design`; de-SSA copy planning is also implemented, while
-linear de-SSA and optimization are still proposed and are not shipped on
-`master`. The design and machine-readable decision are in
+`feat/ssa-optimization-design`; de-SSA copy planning and an internal linear
+de-SSA layout are also implemented, while ordinary IR integration and
+optimization are still proposed and are not shipped on `master`. The design
+and machine-readable decision are in
 `docs/superpowers/specs/2026-07-30-ssa-optimization-design.md` and
 `docs/decisions/m7-ir-ssa-optimization-001.{md,json}`.
 
@@ -329,11 +330,12 @@ aggregate aliasing, calls, callbacks, and runtime traps remain conservative.
 SSA is de-lowered to the existing IR; phi nodes and optimizer metadata are not
 serialized.
 
-**Required decision before linear de-SSA/O1 implementation:** define
-dependency-offset remapping, optimized debug-local policy, and the
-optimization-level/pipeline identity used by `cdbc-cache 0.2`. The current
-branch establishes CFG shape, SSA value/phi structure, dominance analysis,
-phi placement, local-slot value allocation and renaming, edge-copy planning,
+**Required decision before public de-SSA/O1 implementation:** define the
+optimized debug-local policy and the optimization-level/pipeline identity used
+by `cdbc-cache 0.2`, then adapt the verified internal layout to ordinary IR.
+The current branch establishes CFG shape, SSA value/phi structure, dominance
+analysis, phi placement, local-slot value allocation and renaming, edge-copy
+planning, linear layout with critical-edge splits, branch/dependency remapping,
 source binding/storage metadata, the conservative effect table, and
 verification.
 

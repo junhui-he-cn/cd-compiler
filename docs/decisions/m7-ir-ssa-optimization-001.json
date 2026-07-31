@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "decision_revision": "m7-2026-07-31-r4",
+  "decision_revision": "m7-2026-07-31-r5",
   "inventory_revision": "m0d-2026-07-22-r1",
   "decision_id": "M7-IR-SSA-001",
   "domain": "internal-ssa-optimization",
@@ -108,6 +108,24 @@
     "not_included": [
       "CFG edge splitting",
       "linear instruction and jump-offset remapping",
+      "bytecode or artifact integration",
+      "optimization passes"
+    ]
+  },
+  "dessa_linear_layout_slice": {
+    "status": "implemented_on_feature_branch",
+    "capabilities": [
+      "deterministic source-block linear layout",
+      "safe entry and predecessor-exit copy placement",
+      "critical fallthrough and branch-target split blocks",
+      "rewritten block-entry branch targets",
+      "original instruction and insertion-boundary maps",
+      "remapped module dependency offsets"
+    ],
+    "test_case_id": "ctest.ssa",
+    "not_included": [
+      "conversion to IRFunction or IRProgram",
+      "debug-local optimization policy",
       "bytecode or artifact integration",
       "optimization passes"
     ]

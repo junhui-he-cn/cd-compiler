@@ -7,6 +7,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 using SSAValueId = std::size_t;
@@ -98,6 +99,38 @@ struct SSADeSSACopyPlan {
     std::vector<SSAValueId> temporaryValues;
 };
 
+struct SSADeSSAInstruction {
+    SSAInstruction instruction;
+    bool synthetic = false;
+};
+
+struct SSADeSSABlock {
+    std::size_t id = 0;
+    std::optional<CFGBlockId> sourceBlock = std::nullopt;
+    std::optional<std::pair<CFGBlockId, CFGBlockId>> splitEdge = std::nullopt;
+    bool syntheticExit = false;
+    std::size_t firstInstruction = 0;
+    std::size_t endInstruction = 0;
+};
+
+struct SSADeSSALinearFunction {
+    std::vector<SSAParameter> parameters;
+    std::vector<SSAMemorySlot> memorySlots;
+    std::vector<SSADeSSAInstruction> instructions;
+    std::vector<SSADeSSABlock> blocks;
+    // One entry per original CFG block, including the synthetic exit.
+    std::vector<std::size_t> blockEntryOffsets;
+    // A removed source instruction has no corresponding linear instruction.
+    std::vector<std::optional<std::size_t>> originalInstructionOffsets;
+    // Maps an original instruction insertion boundary to a legal output
+    // offset. The final entry maps the end boundary.
+    std::vector<std::size_t> originalInsertionOffsets;
+    std::vector<IRModuleDependency> moduleDependencies;
+    std::vector<SSAValueId> temporaryValues;
+
+    void verify(const ControlFlowGraph& cfg) const;
+};
+
 class SSAError final : public std::runtime_error {
 public:
     explicit SSAError(std::string message);
@@ -133,6 +166,15 @@ SSAFunction renamePromotableMemorySlots(
 // block/edge metadata; it does not split critical edges or remap linear IR
 // offsets yet.
 SSADeSSACopyPlan planSSADeSSACopies(
+    const ControlFlowGraph& cfg,
+    const SSAFunction& input);
+
+// Materialize the copy plan into a deterministic linear block layout. Phi
+// nodes are omitted, copy instructions are marked synthetic, critical edges
+// receive internal split blocks, and branch/dependency offsets are remapped.
+// This remains an internal SSA result and does not alter the original CFG or
+// connect to the default IR/bytecode pipeline.
+SSADeSSALinearFunction lowerSSADeSSACopies(
     const ControlFlowGraph& cfg,
     const SSAFunction& input);
 

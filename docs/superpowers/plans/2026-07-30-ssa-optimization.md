@@ -14,11 +14,13 @@ promotion behind explicit follow-up decisions.
 Current progress: the CFG foundation, SSA structural-shell, deterministic
 dominance-analysis, phi-placement, binding/effect-contract, and SSA
 memory-slot rename and de-SSA copy-plan slices in steps 2-3 are implemented on
-`feat/ssa-optimization-design` and covered by `ctest.control_flow_graph`,
+`feat/ssa-optimization-design`; the internal linear de-SSA layout is now also
+implemented. These slices are covered by `ctest.control_flow_graph`,
 `ctest.ssa`, `ctest.dominance`, and `ctest.ssa_phi_placement`; the rename
 coverage is part of `ctest.ssa`, and the binding contract is additionally
-covered by `ctest.ssa_contract`. De-SSA, O1 passes, and later work remain
-future implementation slices. The binding contract is populated by
+covered by `ctest.ssa_contract`. Ordinary IR de-SSA integration, O1 passes,
+and later work remain future implementation slices. The binding contract is
+populated by
 `IRCompiler` and covered by the existing `ir_source_location` integration
 test.
 
@@ -77,9 +79,10 @@ Tasks:
 The admitted sub-slice currently covers value allocation, local-slot rename,
 parameter initialization, phi incoming filling, non-promotable memory
 preservation, dominance/edge/shape verification, and malformed-input
-rejection. The current de-SSA slice only plans ordered edge copies and cycle
-temporaries; critical-edge splitting and linear lowering remain follow-up
-slices.
+rejection. The current de-SSA slice plans ordered edge copies and cycle
+temporaries, then materializes them into an internal linear layout with
+critical-edge split blocks and offset maps. Conversion to ordinary IR and
+bytecode remains a follow-up slice.
 
 Gate: SSA verifier tests, loop backedge/diamond phi tests, copy-cycle tests,
 and an O0 CFG/SSA/de-SSA semantic round trip with unchanged existing output.

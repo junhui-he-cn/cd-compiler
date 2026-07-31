@@ -2,12 +2,12 @@
 
 Date: 2026-07-30
 
-Status: design proposal with admitted internal SSA rename and de-SSA copy-plan
-slices;
+Status: design proposal with admitted internal SSA rename, de-SSA copy-plan,
+and linear-layout slices;
 the CFG foundation, SSA structural shell, deterministic dominance analysis,
-phi placement, binding/effect contract, rename slice, and edge-copy plan are
-implemented on the feature branch, while linear de-SSA and optimization remain
-unadmitted. This document expands
+phi placement, binding/effect contract, rename slice, edge-copy plan, and
+internal linear layout are implemented on the feature branch, while ordinary IR
+integration and optimization remain unadmitted. This document expands
 [`M7-IR-SSA-001`](../../decisions/m7-ir-ssa-optimization-001.md); it does not
 authorize implementation by itself.
 
@@ -178,7 +178,16 @@ incoming edge into a deterministic sequential move bundle. Identity moves are
 removed, cycles receive one fresh temporary per cycle, and critical edges are
 marked for a later split. This plan does not mutate the CFG, rewrite linear
 jump offsets, or serialize any copy metadata; those responsibilities remain
-part of the next public-boundary decision.
+part of the next lowering boundary.
+
+`lowerSSADeSSACopies` materializes the plan into an internal linear result.
+Non-critical copies use a unique successor entry or predecessor exit; critical
+fallthrough edges receive an in-place split block, and critical branch-target
+edges receive deterministic split blocks before the synthetic exit. The result
+rewrites block-entry branch targets and carries original-instruction,
+insertion-boundary, and module-dependency offset maps. It does not yet convert
+the result to `IRFunction`/`IRProgram` or connect to bytecode, debug-local, or
+cache identity paths.
 
 ## SSA construction
 
@@ -271,9 +280,10 @@ this proposal.
 
 For every phi, insert a parallel copy bundle on each incoming edge. The current
 branch plans these bundles and resolves cycles with one fresh temporary virtual
-register per cycle. A later lowering slice must split a critical edge before
-insertion, remove redundant copies after coalescing, and remap linear
-instruction offsets.
+register per cycle, then materializes them into an internal linear layout with
+critical-edge split blocks and remapped branch/dependency offsets. A later
+lowering boundary must adapt that result to ordinary IR, preserve debug
+locations, and remove redundant copies after any admitted optimization.
 
 The lowering result uses existing `IRRegister`, `IRInstruction`, and `IROp`
 types. It carries an old-to-new instruction offset map for:

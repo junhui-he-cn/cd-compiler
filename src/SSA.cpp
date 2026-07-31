@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <functional>
 #include <limits>
+#include <map>
 #include <set>
 #include <unordered_map>
 #include <utility>
@@ -430,6 +431,43 @@ void validateRenameInput(
             }
         }
     }
+}
+
+bool isSSAControlFlowTerminator(IROp op)
+{
+    return op == IROp::Jump || op == IROp::JumpIfFalse || op == IROp::JumpIfTrue
+        || op == IROp::Return;
+}
+
+bool isSSAConditionalJump(IROp op)
+{
+    return op == IROp::JumpIfFalse || op == IROp::JumpIfTrue;
+}
+
+CFGBlockId blockForSSAOffset(const ControlFlowGraph& cfg, std::size_t offset)
+{
+    if (offset > cfg.instructionCount) {
+        throw SSAError("SSA branch target is out of range");
+    }
+    if (offset == cfg.instructionCount) {
+        return cfg.exitBlock;
+    }
+    return cfg.instructionBlocks.at(offset);
+}
+
+CFGBlockId fallthroughSuccessor(
+    const ControlFlowGraph& cfg,
+    CFGBlockId block)
+{
+    return blockForSSAOffset(cfg, cfg.blocks[block].endInstruction);
+}
+
+void checkedLinearAdvance(std::size_t& value, std::size_t amount)
+{
+    if (amount > std::numeric_limits<std::size_t>::max() - value) {
+        throw SSAError("exhausted linear de-SSA instruction offsets");
+    }
+    value += amount;
 }
 
 } // namespace
@@ -1087,5 +1125,531 @@ SSADeSSACopyPlan planSSADeSSACopies(
             result.edgeCopies.push_back(std::move(bundle));
         }
     }
+    return result;
+}
+
+void SSADeSSALinearFunction::verify(const ControlFlowGraph& cfg) const
+{
+    cfg.verify();
+    if (blocks.empty()) {
+        throw SSAError("linear de-SSA result must contain a synthetic exit block");
+    }
+    if (blockEntryOffsets.size() != cfg.blocks.size()) {
+        throw SSAError("linear de-SSA block-entry map has the wrong size");
+    }
+    if (originalInstructionOffsets.size() != cfg.instructionCount) {
+        throw SSAError("linear de-SSA original-instruction map has the wrong size");
+    }
+    if (originalInsertionOffsets.size() != cfg.instructionCount + 1) {
+        throw SSAError("linear de-SSA insertion map has the wrong size");
+    }
+
+    for (const SSAParameter& parameter : parameters) {
+        if (parameter.value == invalidSSAValue
+            || parameter.block != cfg.entryBlock
+            || parameter.block >= cfg.exitBlock) {
+            throw SSAError("linear de-SSA parameter is not an entry definition");
+        }
+    }
+    for (SSAMemorySlotId id = 0; id < memorySlots.size(); ++id) {
+        const SSAMemorySlot& slot = memorySlots[id];
+        if (slot.id != id || slot.name.empty()) {
+            throw SSAError("linear de-SSA memory slot metadata is malformed");
+        }
+        if (slot.bindingId && !slot.bindingId->valid()) {
+            throw SSAError("linear de-SSA memory slot has an invalid binding ID");
+        }
+    }
+
+    const std::size_t invalidOffset = std::numeric_limits<std::size_t>::max();
+    std::vector<bool> sourceBlocks(cfg.blocks.size(), false);
+    std::set<std::pair<CFGBlockId, CFGBlockId>> splitEdges;
+    std::set<std::size_t> blockStarts;
+    for (const SSADeSSABlock& block : blocks) {
+        blockStarts.insert(block.firstInstruction);
+    }
+    std::size_t nextInstruction = 0;
+    for (std::size_t index = 0; index < blocks.size(); ++index) {
+        const SSADeSSABlock& block = blocks[index];
+        if (block.id != index || block.firstInstruction != nextInstruction
+            || block.endInstruction < block.firstInstruction
+            || block.endInstruction > instructions.size()) {
+            throw SSAError("linear de-SSA block ranges are not contiguous");
+        }
+        if (block.sourceBlock && block.splitEdge) {
+            throw SSAError("linear de-SSA block cannot be both source and split");
+        }
+        if (!block.sourceBlock && !block.splitEdge) {
+            throw SSAError("linear de-SSA block has no source or split identity");
+        }
+
+        if (block.sourceBlock) {
+            const CFGBlockId source = *block.sourceBlock;
+            if (source >= cfg.blocks.size() || sourceBlocks[source]) {
+                throw SSAError("linear de-SSA source block identity is malformed");
+            }
+            sourceBlocks[source] = true;
+            if (blockEntryOffsets[source] != block.firstInstruction) {
+                throw SSAError("linear de-SSA source block entry map is stale");
+            }
+            if (block.syntheticExit != cfg.blocks[source].syntheticExit) {
+                throw SSAError("linear de-SSA synthetic-exit metadata is stale");
+            }
+            if (source == cfg.exitBlock
+                && (index + 1 != blocks.size()
+                    || block.firstInstruction != instructions.size()
+                    || block.endInstruction != instructions.size())) {
+                throw SSAError("linear de-SSA exit block is not last or empty");
+            }
+            if (source != cfg.exitBlock && block.syntheticExit) {
+                throw SSAError("linear de-SSA ordinary block is marked synthetic exit");
+            }
+        } else {
+            if (block.syntheticExit || !block.splitEdge) {
+                throw SSAError("linear de-SSA split block metadata is malformed");
+            }
+            const CFGBlockId predecessor = block.splitEdge->first;
+            const CFGBlockId successor = block.splitEdge->second;
+            if (predecessor >= cfg.blocks.size() || successor >= cfg.blocks.size()
+                || predecessor == cfg.exitBlock || successor == cfg.exitBlock
+                || cfg.blocks[predecessor].successors.size() <= 1
+                || cfg.blocks[successor].predecessors.size() <= 1
+                || !splitEdges.insert(*block.splitEdge).second) {
+                throw SSAError("linear de-SSA split edge is malformed");
+            }
+            if (block.endInstruction - block.firstInstruction < 1) {
+                throw SSAError("linear de-SSA split block is empty");
+            }
+        }
+
+        std::optional<std::size_t> previousOriginal;
+        for (std::size_t instructionIndex = block.firstInstruction;
+             instructionIndex < block.endInstruction;
+             ++instructionIndex) {
+            const SSADeSSAInstruction& current = instructions[instructionIndex];
+            validateInstructionShape(current.instruction);
+            const bool isLast = instructionIndex + 1 == block.endInstruction;
+            if (current.instruction.op == IROp::Jump
+                || isSSAConditionalJump(current.instruction.op)) {
+                if (current.instruction.operand > instructions.size()
+                    || blockStarts.find(current.instruction.operand) == blockStarts.end()) {
+                    throw SSAError("linear de-SSA jump target is not a block entry");
+                }
+            }
+
+            if (!block.sourceBlock) {
+                if (!current.synthetic
+                    || (!isLast && current.instruction.op != IROp::Copy)
+                    || (isLast && current.instruction.op != IROp::Jump)) {
+                    throw SSAError("linear de-SSA split block has invalid instruction shape");
+                }
+                continue;
+            }
+
+            if (current.synthetic) {
+                if (current.instruction.op != IROp::Copy) {
+                    throw SSAError("linear de-SSA source block has invalid synthetic instruction");
+                }
+                continue;
+            }
+            if (*block.sourceBlock == cfg.exitBlock
+                || current.instruction.originalInstruction >= cfg.instructionCount
+                || current.instruction.originalInstruction
+                    < cfg.blocks[*block.sourceBlock].firstInstruction
+                || current.instruction.originalInstruction
+                    >= cfg.blocks[*block.sourceBlock].endInstruction) {
+                throw SSAError("linear de-SSA instruction has an invalid source location");
+            }
+            if (previousOriginal
+                && current.instruction.originalInstruction <= *previousOriginal) {
+                throw SSAError("linear de-SSA source instructions are not ordered");
+            }
+            previousOriginal = current.instruction.originalInstruction;
+            const auto& mapped = originalInstructionOffsets[current.instruction.originalInstruction];
+            if (!mapped || *mapped != instructionIndex) {
+                throw SSAError("linear de-SSA original-instruction map is stale");
+            }
+        }
+
+        if (!block.sourceBlock && instructions[block.endInstruction - 1].instruction.operand
+                != blockEntryOffsets[block.splitEdge->second]) {
+            throw SSAError("linear de-SSA split jump target is stale");
+        }
+        nextInstruction = block.endInstruction;
+    }
+
+    if (blocks.back().sourceBlock != std::optional<CFGBlockId>(cfg.exitBlock)
+        || !blocks.back().syntheticExit || nextInstruction != instructions.size()) {
+        throw SSAError("linear de-SSA result has no final synthetic exit block");
+    }
+    for (const bool seen : sourceBlocks) {
+        if (!seen) {
+            throw SSAError("linear de-SSA result does not cover every CFG block");
+        }
+    }
+    for (const std::size_t entry : blockEntryOffsets) {
+        if (entry == invalidOffset || entry > instructions.size()) {
+            throw SSAError("linear de-SSA block-entry map contains an invalid offset");
+        }
+    }
+    for (std::size_t instruction = 0; instruction < cfg.instructionCount; ++instruction) {
+        if (originalInstructionOffsets[instruction]) {
+            const std::size_t offset = *originalInstructionOffsets[instruction];
+            if (offset >= instructions.size() || instructions[offset].synthetic
+                || instructions[offset].instruction.originalInstruction != instruction) {
+                throw SSAError("linear de-SSA original-instruction map points to the wrong instruction");
+            }
+        }
+        if (originalInsertionOffsets[instruction] > instructions.size()) {
+            throw SSAError("linear de-SSA insertion map contains an invalid offset");
+        }
+    }
+    if (originalInsertionOffsets.back() != instructions.size()) {
+        throw SSAError("linear de-SSA end insertion offset is stale");
+    }
+
+    for (std::size_t index = 0; index < moduleDependencies.size(); ++index) {
+        if (index >= cfg.dependencyAnchors.size()) {
+            throw SSAError("linear de-SSA has extra module dependency metadata");
+        }
+        const IRModuleDependency& actual = moduleDependencies[index];
+        const IRModuleDependency& expected = cfg.dependencyAnchors[index].dependency;
+        if (actual.importedModuleId != expected.importedModuleId
+            || actual.kind != expected.kind
+            || actual.requestedPath != expected.requestedPath
+            || expected.instructionOffset > cfg.instructionCount
+            || actual.instructionOffset != originalInsertionOffsets[expected.instructionOffset]) {
+            throw SSAError("linear de-SSA module dependency offset is stale");
+        }
+    }
+    if (moduleDependencies.size() != cfg.dependencyAnchors.size()) {
+        throw SSAError("linear de-SSA module dependency metadata has the wrong size");
+    }
+
+    std::set<SSAValueId> temporaryValuesSet;
+    std::set<SSAValueId> syntheticCopyResults;
+    for (const SSAValueId value : temporaryValues) {
+        if (value == invalidSSAValue || !temporaryValuesSet.insert(value).second) {
+            throw SSAError("linear de-SSA temporary value metadata is malformed");
+        }
+    }
+    for (const SSADeSSAInstruction& current : instructions) {
+        if (current.synthetic && current.instruction.op == IROp::Copy
+            && current.instruction.result) {
+            syntheticCopyResults.insert(*current.instruction.result);
+        }
+    }
+    for (const SSAValueId value : temporaryValues) {
+        if (syntheticCopyResults.find(value) == syntheticCopyResults.end()) {
+            throw SSAError("linear de-SSA temporary value is not materialized");
+        }
+    }
+}
+
+SSADeSSALinearFunction lowerSSADeSSACopies(
+    const ControlFlowGraph& cfg,
+    const SSAFunction& input)
+{
+    cfg.verify();
+    input.verify(cfg);
+    const SSADeSSACopyPlan plan = planSSADeSSACopies(cfg, input);
+
+    using EdgeKey = std::pair<CFGBlockId, CFGBlockId>;
+    std::map<EdgeKey, SSAEdgeCopyBundle> bundles;
+    for (const SSAEdgeCopyBundle& bundle : plan.edgeCopies) {
+        if (bundle.predecessor >= cfg.blocks.size()
+            || bundle.successor >= cfg.blocks.size()
+            || bundle.predecessor == cfg.exitBlock
+            || bundle.successor == cfg.exitBlock) {
+            throw SSAError("SSA de-SSA copy edge references the synthetic exit");
+        }
+        const bool critical = cfg.blocks[bundle.predecessor].successors.size() > 1
+            && cfg.blocks[bundle.successor].predecessors.size() > 1;
+        if (bundle.requiresCriticalEdgeSplit != critical
+            || !bundles.emplace(
+                    EdgeKey{bundle.predecessor, bundle.successor},
+                    bundle)
+                    .second) {
+            throw SSAError("SSA de-SSA copy plan contains a duplicate or stale edge");
+        }
+    }
+
+    std::vector<std::vector<SSAMove>> entryCopies(cfg.blocks.size());
+    std::vector<std::vector<SSAMove>> exitCopies(cfg.blocks.size());
+    std::vector<std::optional<SSAEdgeCopyBundle>> fallthroughSplits(cfg.blocks.size());
+    std::vector<SSAEdgeCopyBundle> branchSplits;
+    for (const auto& item : bundles) {
+        const SSAEdgeCopyBundle& bundle = item.second;
+        if (bundle.requiresCriticalEdgeSplit) {
+            if (bundle.successor == fallthroughSuccessor(cfg, bundle.predecessor)) {
+                if (fallthroughSplits[bundle.predecessor]) {
+                    throw SSAError("SSA de-SSA predecessor has duplicate fallthrough splits");
+                }
+                fallthroughSplits[bundle.predecessor] = bundle;
+            } else {
+                branchSplits.push_back(bundle);
+            }
+            continue;
+        }
+
+        if (cfg.blocks[bundle.successor].predecessors.size() == 1) {
+            entryCopies[bundle.successor].insert(
+                entryCopies[bundle.successor].end(),
+                bundle.moves.begin(),
+                bundle.moves.end());
+        } else if (cfg.blocks[bundle.predecessor].successors.size() == 1) {
+            exitCopies[bundle.predecessor].insert(
+                exitCopies[bundle.predecessor].end(),
+                bundle.moves.begin(),
+                bundle.moves.end());
+        } else {
+            throw SSAError("SSA de-SSA copy edge is neither splittable nor safely placeable");
+        }
+    }
+    std::sort(
+        branchSplits.begin(),
+        branchSplits.end(),
+        [](const SSAEdgeCopyBundle& left, const SSAEdgeCopyBundle& right) {
+            return std::tie(left.predecessor, left.successor)
+                < std::tie(right.predecessor, right.successor);
+        });
+
+    struct LayoutBlockSpec {
+        std::optional<CFGBlockId> sourceBlock;
+        std::optional<SSAEdgeCopyBundle> split;
+    };
+    std::vector<LayoutBlockSpec> layout;
+    layout.reserve(cfg.blocks.size() + branchSplits.size());
+    for (CFGBlockId block = 0; block < cfg.exitBlock; ++block) {
+        layout.push_back(LayoutBlockSpec{block, std::nullopt});
+        if (fallthroughSplits[block]) {
+            layout.push_back(LayoutBlockSpec{std::nullopt, fallthroughSplits[block]});
+        }
+    }
+    for (const SSAEdgeCopyBundle& split : branchSplits) {
+        layout.push_back(LayoutBlockSpec{std::nullopt, split});
+    }
+    layout.push_back(LayoutBlockSpec{cfg.exitBlock, std::nullopt});
+
+    SSADeSSALinearFunction result;
+    result.parameters = input.parameters;
+    result.memorySlots = input.memorySlots;
+    result.temporaryValues = plan.temporaryValues;
+    result.blockEntryOffsets.assign(
+        cfg.blocks.size(),
+        std::numeric_limits<std::size_t>::max());
+
+    std::map<EdgeKey, std::size_t> splitOutputBlocks;
+    std::size_t instructionCount = 0;
+    result.blocks.reserve(layout.size());
+    for (std::size_t index = 0; index < layout.size(); ++index) {
+        const LayoutBlockSpec& spec = layout[index];
+        std::size_t count = 0;
+        SSADeSSABlock block;
+        block.id = index;
+        block.sourceBlock = spec.sourceBlock;
+        if (spec.split) {
+            block.splitEdge = EdgeKey{spec.split->predecessor, spec.split->successor};
+            checkedLinearAdvance(count, spec.split->moves.size());
+            checkedLinearAdvance(count, 1);
+            splitOutputBlocks.emplace(*block.splitEdge, index);
+        } else {
+            const CFGBlockId source = *spec.sourceBlock;
+            block.syntheticExit = source == cfg.exitBlock;
+            if (source != cfg.exitBlock) {
+                checkedLinearAdvance(count, entryCopies[source].size());
+                checkedLinearAdvance(count, input.blocks[source].instructions.size());
+                checkedLinearAdvance(count, exitCopies[source].size());
+            }
+        }
+        block.firstInstruction = instructionCount;
+        checkedLinearAdvance(instructionCount, count);
+        block.endInstruction = instructionCount;
+        result.blocks.push_back(block);
+        if (spec.sourceBlock) {
+            result.blockEntryOffsets[*spec.sourceBlock] = block.firstInstruction;
+        }
+    }
+
+    result.instructions.reserve(instructionCount);
+    result.originalInstructionOffsets.assign(cfg.instructionCount, std::nullopt);
+    const std::size_t invalidOffset = std::numeric_limits<std::size_t>::max();
+    result.originalInsertionOffsets.assign(cfg.instructionCount + 1, invalidOffset);
+    std::set<EdgeKey> requiredBranchSplits;
+    for (const SSAEdgeCopyBundle& split : branchSplits) {
+        requiredBranchSplits.insert(EdgeKey{split.predecessor, split.successor});
+    }
+    std::set<EdgeKey> rewrittenBranchSplits;
+
+    const auto emitSyntheticCopy = [
+        &result,
+        &cfg](const SSAMove& move, std::size_t anchor) {
+        if (anchor >= cfg.instructionCount) {
+            throw SSAError("SSA de-SSA copy has no source anchor");
+        }
+        SSAInstruction instruction;
+        instruction.op = IROp::Copy;
+        instruction.result = move.destination;
+        instruction.left = move.source;
+        instruction.originalInstruction = anchor;
+        result.instructions.push_back(SSADeSSAInstruction{std::move(instruction), true});
+    };
+
+    const auto emitOriginal = [
+        &result,
+        &cfg,
+        &splitOutputBlocks,
+        &rewrittenBranchSplits](CFGBlockId sourceBlock, const SSAInstruction& source) {
+        SSAInstruction lowered = source;
+        if (lowered.op == IROp::Jump || isSSAConditionalJump(lowered.op)) {
+            const CFGBlockId target = blockForSSAOffset(cfg, lowered.operand);
+            const EdgeKey edge{sourceBlock, target};
+            const auto split = splitOutputBlocks.find(edge);
+            if (split != splitOutputBlocks.end()) {
+                lowered.operand = result.blocks[split->second].firstInstruction;
+                rewrittenBranchSplits.insert(edge);
+            } else {
+                lowered.operand = result.blockEntryOffsets[target];
+            }
+        }
+        result.instructions.push_back(SSADeSSAInstruction{std::move(lowered), false});
+    };
+
+    const auto recordBoundaries = [
+        &result,
+        invalidOffset](std::size_t begin, std::size_t end, std::size_t offset) {
+        if (begin > end) {
+            return;
+        }
+        for (std::size_t boundary = begin; boundary <= end; ++boundary) {
+            if (result.originalInsertionOffsets[boundary] != invalidOffset
+                && result.originalInsertionOffsets[boundary] != offset) {
+                throw SSAError("SSA de-SSA insertion boundary is assigned twice");
+            }
+            result.originalInsertionOffsets[boundary] = offset;
+        }
+    };
+
+    for (std::size_t outputBlockIndex = 0;
+         outputBlockIndex < layout.size();
+         ++outputBlockIndex) {
+        const LayoutBlockSpec& spec = layout[outputBlockIndex];
+        const SSADeSSABlock& outputBlock = result.blocks[outputBlockIndex];
+        if (spec.split) {
+            if (result.instructions.size() != outputBlock.firstInstruction) {
+                throw SSAError("SSA de-SSA split block layout offset is stale");
+            }
+            const std::size_t anchor = cfg.blocks[spec.split->predecessor].endInstruction - 1;
+            for (const SSAMove& move : spec.split->moves) {
+                emitSyntheticCopy(move, anchor);
+            }
+            SSAInstruction jump;
+            jump.op = IROp::Jump;
+            jump.operand = result.blockEntryOffsets[spec.split->successor];
+            jump.originalInstruction = anchor;
+            result.instructions.push_back(SSADeSSAInstruction{std::move(jump), true});
+            continue;
+        }
+
+        const CFGBlockId sourceBlock = *spec.sourceBlock;
+        if (sourceBlock == cfg.exitBlock) {
+            continue;
+        }
+        if (result.instructions.size() != outputBlock.firstInstruction) {
+            throw SSAError("SSA de-SSA source block layout offset is stale");
+        }
+        const CFGBlock& cfgBlock = cfg.blocks[sourceBlock];
+        const std::vector<SSAInstruction>& sourceInstructions
+            = input.blocks[sourceBlock].instructions;
+        if (result.originalInsertionOffsets[cfgBlock.firstInstruction] != invalidOffset) {
+            throw SSAError("SSA de-SSA source block insertion boundary is duplicated");
+        }
+        result.originalInsertionOffsets[cfgBlock.firstInstruction]
+            = outputBlock.firstInstruction;
+
+        const std::size_t entryAnchor = cfgBlock.firstInstruction;
+        for (const SSAMove& move : entryCopies[sourceBlock]) {
+            emitSyntheticCopy(move, entryAnchor);
+        }
+
+        std::optional<std::size_t> previousOriginal;
+        bool insertedExitCopies = false;
+        for (std::size_t index = 0; index < sourceInstructions.size(); ++index) {
+            const SSAInstruction& source = sourceInstructions[index];
+            if (source.originalInstruction < cfgBlock.firstInstruction
+                || source.originalInstruction >= cfgBlock.endInstruction) {
+                throw SSAError("SSA de-SSA source instruction is outside its CFG block");
+            }
+            if (previousOriginal && source.originalInstruction <= *previousOriginal) {
+                throw SSAError("SSA de-SSA source instructions are not ordered");
+            }
+            const std::size_t gapStart = previousOriginal
+                ? *previousOriginal + 1
+                : cfgBlock.firstInstruction + 1;
+            recordBoundaries(gapStart, source.originalInstruction, result.instructions.size());
+
+            const bool insertBeforeTerminator = !exitCopies[sourceBlock].empty()
+                && index + 1 == sourceInstructions.size()
+                && isSSAControlFlowTerminator(source.op);
+            if (insertBeforeTerminator) {
+                const std::size_t exitAnchor = cfgBlock.endInstruction - 1;
+                for (const SSAMove& move : exitCopies[sourceBlock]) {
+                    emitSyntheticCopy(move, exitAnchor);
+                }
+                insertedExitCopies = true;
+            }
+
+            if (result.originalInstructionOffsets[source.originalInstruction]) {
+                throw SSAError("SSA de-SSA source instruction is duplicated");
+            }
+            result.originalInstructionOffsets[source.originalInstruction]
+                = result.instructions.size();
+            emitOriginal(sourceBlock, source);
+            previousOriginal = source.originalInstruction;
+        }
+
+        const std::size_t trailingStart = previousOriginal
+            ? *previousOriginal + 1
+            : cfgBlock.firstInstruction + 1;
+        recordBoundaries(
+            trailingStart,
+            cfgBlock.endInstruction == 0 ? 0 : cfgBlock.endInstruction - 1,
+            result.instructions.size());
+        if (!insertedExitCopies) {
+            const std::size_t exitAnchor = cfgBlock.endInstruction - 1;
+            for (const SSAMove& move : exitCopies[sourceBlock]) {
+                emitSyntheticCopy(move, exitAnchor);
+            }
+        }
+        if (result.instructions.size() != outputBlock.endInstruction) {
+            throw SSAError("SSA de-SSA source block instruction count is stale");
+        }
+    }
+
+    if (result.originalInsertionOffsets.back() != invalidOffset) {
+        throw SSAError("SSA de-SSA end insertion boundary is duplicated");
+    }
+    result.originalInsertionOffsets.back() = result.instructions.size();
+    for (const std::size_t offset : result.originalInsertionOffsets) {
+        if (offset == invalidOffset) {
+            throw SSAError("SSA de-SSA did not map every insertion boundary");
+        }
+    }
+    if (rewrittenBranchSplits != requiredBranchSplits) {
+        throw SSAError("SSA de-SSA did not rewrite every critical branch edge");
+    }
+
+    result.moduleDependencies.reserve(cfg.dependencyAnchors.size());
+    for (const CFGDependencyAnchor& anchor : cfg.dependencyAnchors) {
+        if (anchor.dependency.instructionOffset > cfg.instructionCount) {
+            throw SSAError("SSA de-SSA dependency offset is out of range");
+        }
+        IRModuleDependency dependency = anchor.dependency;
+        dependency.instructionOffset
+            = result.originalInsertionOffsets[dependency.instructionOffset];
+        result.moduleDependencies.push_back(std::move(dependency));
+    }
+
+    result.verify(cfg);
     return result;
 }
