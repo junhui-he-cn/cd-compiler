@@ -15,12 +15,15 @@ Current progress: the CFG foundation, SSA structural-shell, deterministic
 dominance-analysis, phi-placement, binding/effect-contract, and SSA
 memory-slot rename and de-SSA copy-plan slices in steps 2-3 are implemented on
 `feat/ssa-optimization-design`; the internal linear de-SSA layout is now also
-implemented. These slices are covered by `ctest.control_flow_graph`,
+implemented, as is the internal adapter to existing `IRFunction` data. These
+slices plus the internal O1 copy/phi simplification and pure DCE service are
+covered by `ctest.control_flow_graph`,
 `ctest.ssa`, `ctest.dominance`, and `ctest.ssa_phi_placement`; the rename
 coverage is part of `ctest.ssa`, and the binding contract is additionally
-covered by `ctest.ssa_contract`. Ordinary IR de-SSA integration, O1 passes,
-and later work remain future implementation slices. The binding contract is
-populated by
+covered by `ctest.ssa_contract`, while the optimizer boundary is covered by
+`ctest.optimizer`. Default ordinary-IR/CLI integration, CFG rewrites,
+constant folding, and later work remain future implementation slices. The
+binding contract is populated by
 `IRCompiler` and covered by the existing `ir_source_location` integration
 test.
 
@@ -81,8 +84,9 @@ parameter initialization, phi incoming filling, non-promotable memory
 preservation, dominance/edge/shape verification, and malformed-input
 rejection. The current de-SSA slice plans ordered edge copies and cycle
 temporaries, then materializes them into an internal linear layout with
-critical-edge split blocks and offset maps. Conversion to ordinary IR and
-bytecode remains a follow-up slice.
+critical-edge split blocks and offset maps, then adapts the result to existing
+ordinary IR. Default-pipeline and bytecode integration remain follow-up
+slices.
 
 Gate: SSA verifier tests, loop backedge/diamond phi tests, copy-cycle tests,
 and an O0 CFG/SSA/de-SSA semantic round trip with unchanged existing output.
@@ -97,11 +101,17 @@ Files:
 
 Tasks:
 
-- make O0 the default;
+- make O0 the default (the current internal service already treats O0 as an
+  identity result);
 - implement reachability, jump/block simplification, constant/copy/phi
   propagation, safe folding, and limited DCE;
 - run the verifier before and after each pass in debug/test builds; and
 - report deterministic optimization counters outside artifacts.
+
+The admitted sub-slice implements only the internal `optimizeSSA` boundary:
+copy propagation, dominance-checked trivial-phi simplification, and pure
+dead-code removal. It does not add `--opt-level`, invoke `IRCompiler`, rewrite
+CFG blocks, fold constant values, or emit optimized artifacts.
 
 Gate: O0 goldens remain unchanged; O1 branch/constant/copy cases show smaller
 IR and exact C++/Rust output parity; runtime traps and evaluation order remain

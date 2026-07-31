@@ -311,10 +311,11 @@ belongs in the baseline until that re-audit is merged and verified.
 **Status:** the CFG foundation, SSA structural shell, deterministic dominance
 analysis, phi placement, binding/effect contract, IRCompiler binding metadata
 integration, and SSA memory-slot renaming are implemented only on
-`feat/ssa-optimization-design`; de-SSA copy planning and an internal linear
-de-SSA layout are also implemented, while ordinary IR integration and
-optimization are still proposed and are not shipped on `master`. The design
-and machine-readable decision are in
+`feat/ssa-optimization-design`; de-SSA copy planning, an internal linear
+de-SSA layout, an ordinary-IR adapter, and a conservative internal O1
+value-simplification service are also implemented, while default pipeline
+integration and broader optimization are still proposed and are not shipped on
+`master`. The design and machine-readable decision are in
 `docs/superpowers/specs/2026-07-30-ssa-optimization-design.md` and
 `docs/decisions/m7-ir-ssa-optimization-001.{md,json}`.
 
@@ -330,13 +331,15 @@ aggregate aliasing, calls, callbacks, and runtime traps remain conservative.
 SSA is de-lowered to the existing IR; phi nodes and optimizer metadata are not
 serialized.
 
-**Required decision before public de-SSA/O1 implementation:** define the
-optimized debug-local policy and the optimization-level/pipeline identity used
-by `cdbc-cache 0.2`, then adapt the verified internal layout to ordinary IR.
+**Required decision before default-pipeline de-SSA/O1 implementation:** define
+the optimized debug-local policy and the optimization-level/pipeline identity
+used by `cdbc-cache 0.2`, then connect the verified internal adapter to the
+compiler pipeline.
 The current branch establishes CFG shape, SSA value/phi structure, dominance
 analysis, phi placement, local-slot value allocation and renaming, edge-copy
 planning, linear layout with critical-edge splits, branch/dependency remapping,
-source binding/storage metadata, the conservative effect table, and
+ordinary-IR adaptation, source binding/storage metadata, the conservative
+effect table, internal copy/phi simplification, pure dead-code removal, and
 verification.
 
 **Gate:** CFG/SSA verifier and O0 round-trip tests; O0/O1 semantic parity over
@@ -373,7 +376,9 @@ feat/m5c-repl
 master + M1 semantic metadata + existing linear register IR
   -> M7-IR-SSA-001 design, CFG foundation, SSA shell, dominance analysis,
      phi placement, and binding/effect contract (branch-only)
-  -> opt-in O1 implementation only after the focused corpus is admitted
+  -> branch-only internal O1 copy/phi simplification and pure DCE
+  -> default-pipeline O1 only after the debug/cache decisions and focused
+     semantic parity corpus are admitted
 ```
 
 No M7 implementation slice is shipped on `master`; the branch-only CFG

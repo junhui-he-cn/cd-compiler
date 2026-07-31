@@ -3,8 +3,9 @@
 Status: proposed overall on `feat/ssa-optimization-design`. The CFG
 foundation, SSA structural shell, deterministic dominance-analysis,
 phi-placement, binding/effect-contract, SSA memory-slot rename, de-SSA
-copy-plan, and internal linear-layout sub-slices are implemented on this
-branch; ordinary IR integration and optimization remain unadmitted.
+copy-plan, internal linear-layout, ordinary-IR adapter, and conservative
+internal O1 value-simplification sub-slices are implemented on this branch;
+default pipeline integration and broader optimization remain unadmitted.
 
 ## Question
 
@@ -276,6 +277,24 @@ insertion-boundary maps plus remapped module dependency offsets. It remains an
 SSA-owned internal result: it does not convert to `IRFunction`, alter the
 original CFG, or connect to bytecode, debug-local, or cache identity paths.
 
+`lowerSSADeSSAToIR` provides the next internal boundary. It reuses the
+existing `IROp` and operand fields, preserves SSA value IDs as virtual-register
+indices, computes the required register count, forwards caller-supplied
+parameter names and binding metadata, and carries source/offset maps plus
+synthetic-copy provenance. This adapter is not called by `IRCompiler`, the
+CLI, or any artifact emitter.
+
+The branch also adds `optimizeSSA` in `include/Optimizer.hpp` and
+`src/Optimizer.cpp`. O0 is a verified identity result. The current internal O1
+slice propagates `Copy` values, removes trivial phis only when their replacement
+dominates the join, and removes unused value-producing instructions only when
+`irEffectSummary` classifies them as pure. The stable O1 fingerprint is
+diagnostic metadata for this internal service; it is not yet a module-cache key.
+Potential traps, memory operations, allocation, calls, output, and control flow
+remain unchanged. `ctest.optimizer` covers the O0 identity, copy/phi behavior,
+pure dead-code deletion, trap retention, and malformed-input rejection. This
+service is not called by `IRCompiler`, the CLI, or any artifact emitter.
+
 The branch now freezes the internal binding/effect contract in
 `include/BindingMetadata.hpp` and `include/IR.hpp`. `IRBinding` carries a
 snapshot-local `BindingId`, resolved name, and explicit storage class; only
@@ -296,15 +315,15 @@ flow, change closure ownership, add a new runtime representation, change
 `cdbc 0.1`, optimize across module boundaries, add a JIT, add garbage
 collection, or make optimization mandatory.
 
-## Open decisions before public de-SSA and optimization
+## Open decisions before default-pipeline de-SSA and optimization
 
 The following must be resolved in the first implementation decision revision:
 
-1. how the verified internal linear layout is adapted to `IRFunction` while
+1. how the verified internal adapter is invoked by the default pipeline while
    preserving debug locations, dependency anchors, and existing artifact
    boundaries;
-2. whether O1 promotes non-captured locals or only optimizes explicit SSA
-   temporaries;
+2. whether the default-pipeline O1 promotes non-captured locals or only
+   optimizes explicit SSA temporaries;
 3. the source-level local policy for `compiler-design-vm trace` on optimized
    artifacts;
 4. the stable optimizer fingerprint and its `cdbc-cache 0.2` representation;

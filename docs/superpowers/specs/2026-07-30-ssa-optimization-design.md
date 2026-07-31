@@ -3,11 +3,14 @@
 Date: 2026-07-30
 
 Status: design proposal with admitted internal SSA rename, de-SSA copy-plan,
-and linear-layout slices;
+linear-layout, ordinary-IR adapter, and conservative internal O1
+value-simplification slices;
 the CFG foundation, SSA structural shell, deterministic dominance analysis,
 phi placement, binding/effect contract, rename slice, edge-copy plan, and
-internal linear layout are implemented on the feature branch, while ordinary IR
-integration and optimization remain unadmitted. This document expands
+internal linear layout/adapter are implemented on the feature branch. The
+internal O1 slice covers copy/phi simplification and pure dead-code removal;
+CFG rewrites, constant folding, default pipeline integration, and broader
+optimization remain unadmitted. This document expands
 [`M7-IR-SSA-001`](../../decisions/m7-ir-ssa-optimization-001.md); it does not
 authorize implementation by itself.
 
@@ -189,6 +192,32 @@ insertion-boundary, and module-dependency offset maps. It does not yet convert
 the result to `IRFunction`/`IRProgram` or connect to bytecode, debug-local, or
 cache identity paths.
 
+`lowerSSADeSSAToIR` is the internal ordinary-IR adapter. It keeps SSA value IDs
+as virtual-register indices, computes `registerCount`, forwards parameter names
+and binding metadata supplied by the caller, and preserves source spans,
+synthetic-copy provenance, and offset maps. It is deliberately not invoked by
+`IRCompiler`, the CLI, or artifact emission.
+
+## Internal O1 value-simplification slice
+
+`optimizeSSA` is the first internal pass-manager boundary. O0 verifies and
+returns the input unchanged. O1 currently runs two deterministic passes:
+
+1. propagate `Copy` values and simplify a phi only when all incoming values
+   resolve to one value whose definition dominates the join; and
+2. remove unused result-producing instructions only when `irEffectSummary`
+   marks them pure. The current effect table therefore permits removal of
+   unused `Constant` and `Copy` values only.
+
+The result reports copy, phi, and instruction-removal counters; the service
+also exposes a stable diagnostic fingerprint. It re-verifies the SSA function
+after each pass, retains all memory/call/allocation/trap/control-flow
+operations, and does not alter the CFG, de-SSA offsets, ordinary IR, bytecode,
+or cache keys.
+`ctest.optimizer` is the focused verification case. Constant-value folding,
+branch/block rewriting, and default `IRCompiler`/CLI integration remain later
+decisions.
+
 ## SSA construction
 
 The first construction algorithm is the standard dominance-frontier approach:
@@ -252,12 +281,14 @@ linear path remains the O0 implementation until that difference is explained.
 
 ### O1
 
-Run the following deterministic passes in order:
+The full O1 design is still broader than the admitted internal slice. The
+current branch implements only items 4 and 5 below; the other items remain
+planned:
 
 1. CFG reachability and jump normalization;
 2. constant propagation for proven non-trapping values;
 3. constant folding for the approved primitive subset;
-4. copy/phi simplification;
+4. copy/phi simplification; and
 5. local dead-code elimination for non-trapping pure instructions; and
 6. block merge and final jump threading.
 
@@ -282,7 +313,7 @@ For every phi, insert a parallel copy bundle on each incoming edge. The current
 branch plans these bundles and resolves cycles with one fresh temporary virtual
 register per cycle, then materializes them into an internal linear layout with
 critical-edge split blocks and remapped branch/dependency offsets. A later
-lowering boundary must adapt that result to ordinary IR, preserve debug
+default-pipeline boundary must invoke the ordinary-IR adapter, preserve debug
 locations, and remove redundant copies after any admitted optimization.
 
 The lowering result uses existing `IRRegister`, `IRInstruction`, and `IROp`

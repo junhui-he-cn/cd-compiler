@@ -1653,3 +1653,133 @@ SSADeSSALinearFunction lowerSSADeSSACopies(
     result.verify(cfg);
     return result;
 }
+
+void SSADeSSAIRResult::verify() const
+{
+    if (syntheticInstructions.size() != function.instructions.size()) {
+        throw SSAError("SSA de-SSA IR synthetic-instruction map has the wrong size");
+    }
+    if (originalInstructionOffsets.empty()) {
+        if (!originalInsertionOffsets.empty()) {
+            throw SSAError("SSA de-SSA IR insertion map has no instruction map");
+        }
+    } else if (originalInsertionOffsets.size() != originalInstructionOffsets.size() + 1) {
+        throw SSAError("SSA de-SSA IR offset maps have inconsistent sizes");
+    }
+    for (const auto& offset : originalInstructionOffsets) {
+        if (offset && *offset >= function.instructions.size()) {
+            throw SSAError("SSA de-SSA IR original-instruction offset is out of range");
+        }
+    }
+    for (const std::size_t offset : originalInsertionOffsets) {
+        if (offset > function.instructions.size()) {
+            throw SSAError("SSA de-SSA IR insertion offset is out of range");
+        }
+    }
+    if (!originalInsertionOffsets.empty()
+        && originalInsertionOffsets.back() != function.instructions.size()) {
+        throw SSAError("SSA de-SSA IR end insertion offset is stale");
+    }
+    for (const IRModuleDependency& dependency : moduleDependencies) {
+        if (dependency.instructionOffset > function.instructions.size()) {
+            throw SSAError("SSA de-SSA IR dependency offset is out of range");
+        }
+    }
+
+    const auto verifyRegister = [this](const std::optional<IRRegister>& value) {
+        if (value && value->index >= function.registerCount) {
+            throw SSAError("SSA de-SSA IR register is outside registerCount");
+        }
+    };
+    for (const IRInstruction& instruction : function.instructions) {
+        verifyRegister(instruction.dest);
+        verifyRegister(instruction.left);
+        verifyRegister(instruction.right);
+        for (const IRRegister argument : instruction.arguments) {
+            if (argument.index >= function.registerCount) {
+                throw SSAError("SSA de-SSA IR argument register is outside registerCount");
+            }
+        }
+    }
+}
+
+SSADeSSAIRResult lowerSSADeSSAToIR(
+    const ControlFlowGraph& cfg,
+    const SSADeSSALinearFunction& input,
+    std::string name,
+    std::vector<std::string> parameters,
+    std::vector<IRBinding> bindings)
+{
+    input.verify(cfg);
+    if (parameters.size() != input.parameters.size()) {
+        throw SSAError("SSA de-SSA IR parameter names do not match SSA parameters");
+    }
+
+    SSADeSSAIRResult result;
+    result.function.name = std::move(name);
+    result.function.parameters = std::move(parameters);
+    result.function.bindings = std::move(bindings);
+    result.function.instructions.reserve(input.instructions.size());
+    result.syntheticInstructions.reserve(input.instructions.size());
+
+    SSAValueId maximumValue = 0;
+    bool hasValue = false;
+    const auto observeValue = [&maximumValue, &hasValue](SSAValueId value) {
+        if (value == invalidSSAValue) {
+            throw SSAError("SSA de-SSA IR uses the reserved invalid value ID");
+        }
+        if (!hasValue || value > maximumValue) {
+            maximumValue = value;
+            hasValue = true;
+        }
+    };
+    for (const SSAParameter& parameter : input.parameters) {
+        observeValue(parameter.value);
+    }
+
+    const auto lowerOptionalRegister = [&observeValue](
+        const std::optional<SSAValueId>& value) -> std::optional<IRRegister> {
+        if (!value) {
+            return std::nullopt;
+        }
+        observeValue(*value);
+        return IRRegister{*value};
+    };
+    const auto lowerArguments = [&observeValue](const std::vector<SSAValueId>& values) {
+        std::vector<IRRegister> result;
+        result.reserve(values.size());
+        for (const SSAValueId value : values) {
+            observeValue(value);
+            result.push_back(IRRegister{value});
+        }
+        return result;
+    };
+
+    for (const SSADeSSAInstruction& source : input.instructions) {
+        result.function.instructions.push_back(IRInstruction{
+            source.instruction.op,
+            lowerOptionalRegister(source.instruction.result),
+            lowerOptionalRegister(source.instruction.left),
+            lowerOptionalRegister(source.instruction.right),
+            lowerArguments(source.instruction.arguments),
+            source.instruction.operand,
+            source.instruction.operands,
+            source.instruction.typeNameOperand,
+            source.instruction.variantNameOperand,
+            source.instruction.span,
+            source.instruction.bindingId});
+        result.syntheticInstructions.push_back(source.synthetic);
+    }
+
+    if (hasValue) {
+        if (maximumValue == std::numeric_limits<SSAValueId>::max()) {
+            throw SSAError("exhausted SSA de-SSA IR register IDs");
+        }
+        result.function.registerCount = maximumValue + 1;
+    }
+    result.moduleDependencies = input.moduleDependencies;
+    result.originalInstructionOffsets = input.originalInstructionOffsets;
+    result.originalInsertionOffsets = input.originalInsertionOffsets;
+    result.verify();
+    return result;
+}

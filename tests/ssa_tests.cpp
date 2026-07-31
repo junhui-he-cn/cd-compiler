@@ -375,6 +375,7 @@ void test_lower_de_ssa_materializes_diamond_copies_and_remaps_offsets()
     SSAInstruction branch = plainInstruction(IROp::JumpIfFalse, 0);
     branch.left = 0;
     branch.operand = 3;
+    branch.span = SourceSpan{0, 1, 1, SourceSpanRange{0, 1}};
     ssa.blocks[0].instructions.push_back(branch);
     ssa.blocks[1].instructions.push_back(defineConstant(1, 1));
     SSAInstruction leftJump = plainInstruction(IROp::Jump, 2);
@@ -404,6 +405,27 @@ void test_lower_de_ssa_materializes_diamond_copies_and_remaps_offsets()
         == std::vector<std::optional<std::size_t>>({0, 1, 3, 4, 6}));
     assert(linear.originalInsertionOffsets
         == std::vector<std::size_t>({0, 1, 2, 4, 6, 7}));
+
+    const SSADeSSAIRResult ir = lowerSSADeSSAToIR(
+        cfg,
+        linear,
+        "diamond",
+        {"condition"},
+        {IRBinding{BindingId{7}, "condition#7", BindingStorageClass::Local}});
+    ir.verify();
+    assert(ir.function.name == "diamond");
+    assert(ir.function.parameters == std::vector<std::string>({"condition"}));
+    assert(ir.function.bindings.size() == 1);
+    assert(ir.function.registerCount == 4);
+    assert(ir.function.instructions.size() == linear.instructions.size());
+    assert(ir.syntheticInstructions[2]);
+    assert(ir.syntheticInstructions[5]);
+    assert(!ir.function.instructions[2].span);
+    assert(ir.function.instructions[0].span);
+    assert(ir.function.instructions[0].span->source == 0);
+    assert(ir.function.instructions[0].span->line == 1);
+    assert(ir.originalInstructionOffsets == linear.originalInstructionOffsets);
+    assert(ir.originalInsertionOffsets == linear.originalInsertionOffsets);
 }
 
 void test_lower_de_ssa_places_noncritical_copy_at_unique_successor_entry()

@@ -70,6 +70,7 @@ set(COMPILER_DESIGN_IR_SOURCES
     src/Dominance.cpp
     src/IR.cpp
     src/IRCompiler.cpp
+    src/Optimizer.cpp
     src/SSA.cpp
 )
 
@@ -144,6 +145,17 @@ add_executable(ssa_contract_tests
 )
 compiler_design_configure_target(ssa_contract_tests)
 
+add_executable(optimizer_tests
+    tests/optimizer_tests.cpp
+    src/ControlFlowGraph.cpp
+    src/Dominance.cpp
+    src/IR.cpp
+    src/Optimizer.cpp
+    src/SSA.cpp
+    src/Value.cpp
+)
+compiler_design_configure_target(optimizer_tests)
+
 enable_testing()
 add_test(NAME source_map COMMAND source_map_tests)
 add_test(NAME ir_source_location COMMAND ir_source_location_tests)
@@ -152,6 +164,7 @@ add_test(NAME dominance COMMAND dominance_tests)
 add_test(NAME ssa COMMAND ssa_tests)
 add_test(NAME ssa_phi_placement COMMAND ssa_phi_placement_tests)
 add_test(NAME ssa_contract COMMAND ssa_contract_tests)
+add_test(NAME optimizer COMMAND optimizer_tests)
 add_test(
     NAME golden_runner_selftest
     COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1

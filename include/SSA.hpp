@@ -131,6 +131,16 @@ struct SSADeSSALinearFunction {
     void verify(const ControlFlowGraph& cfg) const;
 };
 
+struct SSADeSSAIRResult {
+    IRFunction function;
+    std::vector<IRModuleDependency> moduleDependencies;
+    std::vector<bool> syntheticInstructions;
+    std::vector<std::optional<std::size_t>> originalInstructionOffsets;
+    std::vector<std::size_t> originalInsertionOffsets;
+
+    void verify() const;
+};
+
 class SSAError final : public std::runtime_error {
 public:
     explicit SSAError(std::string message);
@@ -177,6 +187,17 @@ SSADeSSACopyPlan planSSADeSSACopies(
 SSADeSSALinearFunction lowerSSADeSSACopies(
     const ControlFlowGraph& cfg,
     const SSAFunction& input);
+
+// Adapt an already verified linear de-SSA result to the existing ordinary IR
+// instruction representation. SSA value IDs remain stable as virtual-register
+// indices; source parameter names are supplied by the caller because the SSA
+// parameter records intentionally carry only value/block identity.
+SSADeSSAIRResult lowerSSADeSSAToIR(
+    const ControlFlowGraph& cfg,
+    const SSADeSSALinearFunction& input,
+    std::string name,
+    std::vector<std::string> parameters,
+    std::vector<IRBinding> bindings = {});
 
 // Place phis for promotable local slots using iterated dominance frontiers.
 // Definitions in unreachable blocks are ignored, and synthetic exit blocks

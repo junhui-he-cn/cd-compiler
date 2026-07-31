@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "decision_revision": "m7-2026-07-31-r5",
+  "decision_revision": "m7-2026-07-31-r7",
   "inventory_revision": "m0d-2026-07-22-r1",
   "decision_id": "M7-IR-SSA-001",
   "domain": "internal-ssa-optimization",
@@ -130,6 +130,24 @@
       "optimization passes"
     ]
   },
+  "dessa_ir_adapter_slice": {
+    "status": "implemented_on_feature_branch",
+    "capabilities": [
+      "one-to-one existing IROp and operand adaptation",
+      "stable SSA value to virtual-register mapping",
+      "deterministic registerCount calculation",
+      "parameter-name and binding metadata forwarding",
+      "source-span and synthetic-copy provenance forwarding",
+      "linear and module-dependency offset map forwarding"
+    ],
+    "test_case_id": "ctest.ssa",
+    "not_included": [
+      "IRCompiler or CLI pipeline integration",
+      "bytecode or artifact emission",
+      "debugger contract changes",
+      "optimization passes"
+    ]
+  },
   "binding_effect_contract_slice": {
     "status": "implemented_on_feature_branch",
     "capabilities": [
@@ -146,6 +164,27 @@
       "SSA renaming",
       "optimization passes",
       "bytecode changes"
+    ]
+  },
+  "optimizer_internal_slice": {
+    "status": "implemented_on_feature_branch",
+    "capabilities": [
+      "verified O0 identity result",
+      "deterministic Copy propagation",
+      "dominance-checked trivial phi simplification",
+      "unused pure Constant and Copy removal",
+      "per-pass SSA verification",
+      "stable diagnostic pipeline fingerprints",
+      "deterministic optimization counters"
+    ],
+    "test_case_id": "ctest.optimizer",
+    "not_included": [
+      "CFG reachability or block rewriting",
+      "constant-value propagation or folding",
+      "branch simplification",
+      "default IRCompiler or CLI integration",
+      "bytecode or module-cache integration",
+      "optimized debug-local policy"
     ]
   },
   "pipeline": [
