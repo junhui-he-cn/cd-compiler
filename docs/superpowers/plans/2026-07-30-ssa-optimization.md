@@ -22,10 +22,13 @@ covered by `ctest.control_flow_graph`,
 coverage is part of `ctest.ssa`, and the binding contract is additionally
 covered by `ctest.ssa_contract`, while the optimizer boundary is covered by
 `ctest.optimizer`. Default ordinary-IR/CLI integration, CFG rewrites,
-constant folding, and later work remain future implementation slices. The O0
+constant folding, and later work remain future implementation slices. The
+constant-evaluation boundary is now frozen in `Optimizer` and covered by
+`ctest.optimizer`: only finite, serializable primitive successes are foldable;
+runtime traps and non-finite results are never silently folded. The O0
 debug-local policy and schema-3 cache identity are now frozen and covered by
-`ctest.module_cache` plus the existing module-cache matrix. The binding
-contract is populated by
+`ctest.module_cache` plus the existing module-cache matrix. The binding contract
+is populated by
 `IRCompiler` and covered by the existing `ir_source_location` integration
 test.
 

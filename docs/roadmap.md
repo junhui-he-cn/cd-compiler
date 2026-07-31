@@ -341,8 +341,9 @@ The current branch establishes CFG shape, SSA value/phi structure, dominance
 analysis, phi placement, local-slot value allocation and renaming, edge-copy
 planning, linear layout with critical-edge splits, branch/dependency remapping,
 ordinary-IR adaptation, source binding/storage metadata, the conservative
-effect table, internal copy/phi simplification, pure dead-code removal, O0
-cache identity, conservative source-local trace policy, and verification.
+effect table, internal copy/phi simplification, pure dead-code removal, the
+constant-evaluation trap/non-finite boundary, O0 cache identity, conservative
+source-local trace policy, and verification.
 
 **Gate:** CFG/SSA verifier and O0 round-trip tests; O0/O1 semantic parity over
 control flow, closures, mutation, callbacks, traps, and evaluation order;

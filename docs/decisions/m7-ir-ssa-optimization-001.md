@@ -290,11 +290,23 @@ The branch also adds `optimizeSSA` in `include/Optimizer.hpp` and
 slice propagates `Copy` values, removes trivial phis only when their replacement
 dominates the join, and removes unused value-producing instructions only when
 `irEffectSummary` classifies them as pure. The stable O1 fingerprint is
-diagnostic metadata for this internal service; it is not yet a module-cache key.
+diagnostic metadata for this internal service; the current production cache
+identity records the O0 fingerprint only until O1 is admitted to lowering.
 Potential traps, memory operations, allocation, calls, output, and control flow
 remain unchanged. `ctest.optimizer` covers the O0 identity, copy/phi behavior,
 pure dead-code deletion, trap retention, and malformed-input rejection. This
 service is not called by `IRCompiler`, the CLI, or any artifact emitter.
+
+The constant-evaluation boundary is now explicit in
+`evaluateSSAConstantUnary` and `evaluateSSAConstantBinary`. A result is
+`Folded` only for finite, cdbc-serializable primitive values whose runtime
+operation is known to succeed. Division by zero and statically known operand
+type failures are classified as `RuntimeTrap` and remain eligible for runtime
+execution rather than becoming compile-time diagnostics. Non-finite inputs or
+results are `NonFinite` because the current artifact constant contract rejects
+them; non-primitive values and unsupported opcodes are `Unsupported`. This
+classifies legality without adding a constant-propagation/folding pass or
+changing the existing IR and bytecode paths.
 
 The selected debug-local policy keeps source-visible runtime-cell operations in
 the default O1 contract; `renamePromotableMemorySlots` remains an internal
@@ -332,5 +344,4 @@ The following remain before default-pipeline de-SSA and optimization:
 1. how the verified internal adapter is invoked by the default pipeline while
    preserving debug locations, dependency anchors, and existing artifact
    boundaries;
-2. the precise constant-evaluation error/trap classification; and
-3. the register-allocation strategy and its source-location mapping.
+2. the register-allocation strategy and its source-location mapping.

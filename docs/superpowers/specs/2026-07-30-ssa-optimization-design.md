@@ -268,6 +268,13 @@ In particular, constant folding must not turn a runtime division-by-zero or
 dynamic type failure into a compile-time failure, nor move a failing index or
 field access across a print, assignment, or call. A fold is allowed only when
 the operation is known to succeed and has the same value representation.
+The internal constant-evaluation boundary now makes that rule machine-checkable:
+`Folded` is reserved for finite, cdbc-serializable primitive results;
+`RuntimeTrap` covers division by zero and known operand type failures;
+`NonFinite` covers values rejected by the current artifact constant contract;
+and `Unsupported` covers non-primitive values or opcodes outside the admitted
+subset. This is a legality service only; constant propagation and folding are
+still separate passes.
 
 ## Pass pipeline
 

@@ -3,6 +3,7 @@
 #include "SSA.hpp"
 
 #include <cstddef>
+#include <optional>
 #include <string>
 
 enum class SSAOptimizationLevel {
@@ -23,6 +24,33 @@ struct SSAOptimizationResult {
 
     void verify(const ControlFlowGraph& cfg) const;
 };
+
+// Constant evaluation is deliberately classified before a future folding
+// pass is allowed to replace an instruction. Runtime traps stay runtime traps;
+// non-finite values are rejected at the cdbc constant boundary rather than
+// being serialized as optimizer output.
+enum class SSAConstantEvaluationKind {
+    Folded,
+    RuntimeTrap,
+    NonFinite,
+    Unsupported,
+};
+
+struct SSAConstantEvaluation {
+    SSAConstantEvaluationKind kind = SSAConstantEvaluationKind::Unsupported;
+    std::optional<Value> value = std::nullopt;
+
+    bool isFolded() const
+    {
+        return kind == SSAConstantEvaluationKind::Folded && value.has_value();
+    }
+};
+
+SSAConstantEvaluation evaluateSSAConstantUnary(IROp op, const Value& operand);
+SSAConstantEvaluation evaluateSSAConstantBinary(
+    IROp op,
+    const Value& left,
+    const Value& right);
 
 // The fingerprint is a stable internal pipeline identity. O0 cache records
 // mirror this identity; optimized pipeline selection is not yet connected to

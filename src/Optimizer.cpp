@@ -1,5 +1,6 @@
 #include "Optimizer.hpp"
 
+#include <cmath>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
@@ -63,6 +64,74 @@ ValueDefinitions collectDefinitions(
 bool isPureValueInstruction(const SSAInstruction& instruction)
 {
     return instruction.result.has_value() && irEffectSummary(instruction.op).isPure();
+}
+
+bool isSerializablePrimitive(const Value& value)
+{
+    switch (value.type()) {
+    case Value::Type::Nil:
+    case Value::Type::Bool:
+    case Value::Type::String:
+        return true;
+    case Value::Type::Number:
+        return std::isfinite(value.asNumber());
+    default:
+        return false;
+    }
+}
+
+SSAConstantEvaluation constantStatus(SSAConstantEvaluationKind kind)
+{
+    return SSAConstantEvaluation{kind, std::nullopt};
+}
+
+SSAConstantEvaluation foldedConstant(Value value)
+{
+    return SSAConstantEvaluation{
+        SSAConstantEvaluationKind::Folded,
+        std::move(value),
+    };
+}
+
+SSAConstantEvaluationKind validateConstantOperands(
+    const Value& left,
+    const Value* right = nullptr)
+{
+    if (!isSerializablePrimitive(left)
+        || (right && !isSerializablePrimitive(*right))) {
+        const Value* values[] = {&left, right};
+        for (const Value* value : values) {
+            if (value && value->type() == Value::Type::Number
+                && !std::isfinite(value->asNumber())) {
+                return SSAConstantEvaluationKind::NonFinite;
+            }
+        }
+        return SSAConstantEvaluationKind::Unsupported;
+    }
+    return SSAConstantEvaluationKind::Folded;
+}
+
+std::optional<double> finiteNumber(
+    const Value& value,
+    SSAConstantEvaluation& failure)
+{
+    if (value.type() != Value::Type::Number) {
+        failure = constantStatus(SSAConstantEvaluationKind::RuntimeTrap);
+        return std::nullopt;
+    }
+    if (!std::isfinite(value.asNumber())) {
+        failure = constantStatus(SSAConstantEvaluationKind::NonFinite);
+        return std::nullopt;
+    }
+    return value.asNumber();
+}
+
+SSAConstantEvaluation finiteNumberResult(double value)
+{
+    if (!std::isfinite(value)) {
+        return constantStatus(SSAConstantEvaluationKind::NonFinite);
+    }
+    return foldedConstant(Value::number(value));
 }
 
 void replaceOperand(
@@ -264,6 +333,106 @@ void eliminateDeadPureInstructions(
 }
 
 } // namespace
+
+SSAConstantEvaluation evaluateSSAConstantUnary(IROp op, const Value& operand)
+{
+    const SSAConstantEvaluationKind operandKind = validateConstantOperands(operand);
+    if (operandKind != SSAConstantEvaluationKind::Folded) {
+        return constantStatus(operandKind);
+    }
+
+    switch (op) {
+    case IROp::Negate: {
+        SSAConstantEvaluation failure;
+        const std::optional<double> number = finiteNumber(operand, failure);
+        if (!number) {
+            return failure;
+        }
+        return finiteNumberResult(-*number);
+    }
+    case IROp::Not:
+        return foldedConstant(Value::boolean(!isTruthy(operand)));
+    default:
+        return constantStatus(SSAConstantEvaluationKind::Unsupported);
+    }
+}
+
+SSAConstantEvaluation evaluateSSAConstantBinary(
+    IROp op,
+    const Value& left,
+    const Value& right)
+{
+    const SSAConstantEvaluationKind operandKind = validateConstantOperands(left, &right);
+    if (operandKind != SSAConstantEvaluationKind::Folded) {
+        return constantStatus(operandKind);
+    }
+
+    switch (op) {
+    case IROp::Add:
+        if (left.type() == Value::Type::Number && right.type() == Value::Type::Number) {
+            return finiteNumberResult(left.asNumber() + right.asNumber());
+        }
+        if (left.type() == Value::Type::String && right.type() == Value::Type::String) {
+            return foldedConstant(Value::string(left.asString() + right.asString()));
+        }
+        return constantStatus(SSAConstantEvaluationKind::RuntimeTrap);
+    case IROp::Subtract:
+    case IROp::Multiply:
+    case IROp::Divide: {
+        SSAConstantEvaluation failure;
+        const std::optional<double> leftNumber = finiteNumber(left, failure);
+        if (!leftNumber) {
+            return failure;
+        }
+        const std::optional<double> rightNumber = finiteNumber(right, failure);
+        if (!rightNumber) {
+            return failure;
+        }
+        if (op == IROp::Divide && *rightNumber == 0.0) {
+            return constantStatus(SSAConstantEvaluationKind::RuntimeTrap);
+        }
+        if (op == IROp::Subtract) {
+            return finiteNumberResult(*leftNumber - *rightNumber);
+        }
+        if (op == IROp::Multiply) {
+            return finiteNumberResult(*leftNumber * *rightNumber);
+        }
+        return finiteNumberResult(*leftNumber / *rightNumber);
+    }
+    case IROp::Equal:
+    case IROp::NotEqual: {
+        const bool equal = valuesEqual(left, right);
+        return foldedConstant(Value::boolean(op == IROp::Equal ? equal : !equal));
+    }
+    case IROp::Greater:
+    case IROp::GreaterEqual:
+    case IROp::Less:
+    case IROp::LessEqual: {
+        SSAConstantEvaluation failure;
+        const std::optional<double> leftNumber = finiteNumber(left, failure);
+        if (!leftNumber) {
+            return failure;
+        }
+        const std::optional<double> rightNumber = finiteNumber(right, failure);
+        if (!rightNumber) {
+            return failure;
+        }
+        bool result = false;
+        if (op == IROp::Greater) {
+            result = *leftNumber > *rightNumber;
+        } else if (op == IROp::GreaterEqual) {
+            result = *leftNumber >= *rightNumber;
+        } else if (op == IROp::Less) {
+            result = *leftNumber < *rightNumber;
+        } else {
+            result = *leftNumber <= *rightNumber;
+        }
+        return foldedConstant(Value::boolean(result));
+    }
+    default:
+        return constantStatus(SSAConstantEvaluationKind::Unsupported);
+    }
+}
 
 void SSAOptimizationResult::verify(const ControlFlowGraph& cfg) const
 {

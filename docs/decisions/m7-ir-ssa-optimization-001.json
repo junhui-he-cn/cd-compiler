@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "decision_revision": "m7-2026-07-31-r8",
+  "decision_revision": "m7-2026-07-31-r9",
   "inventory_revision": "m0d-2026-07-22-r1",
   "decision_id": "M7-IR-SSA-001",
   "domain": "internal-ssa-optimization",
@@ -180,10 +180,26 @@
     "test_case_id": "ctest.optimizer",
     "not_included": [
       "CFG reachability or block rewriting",
-      "constant-value propagation or folding",
+      "constant-value propagation or folding pass",
       "branch simplification",
       "default IRCompiler or CLI integration",
       "bytecode integration",
+      "optimized trace event-count contract"
+    ]
+  },
+  "constant_evaluation_boundary_slice": {
+    "status": "implemented_on_feature_branch",
+    "capabilities": [
+      "explicit Folded, RuntimeTrap, NonFinite, and Unsupported classifications",
+      "finite cdbc-serializable primitive result gating",
+      "numeric, string, boolean, nil, equality, and ordering semantics aligned with the runtime",
+      "division-by-zero and constant type failures remain runtime traps"
+    ],
+    "test_case_id": "ctest.optimizer",
+    "not_included": [
+      "constant propagation through SSA values",
+      "constant folding pass or branch rewriting",
+      "default IRCompiler or CLI integration",
       "optimized trace event-count contract"
     ]
   },

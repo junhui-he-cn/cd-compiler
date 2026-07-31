@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <functional>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -63,6 +64,91 @@ void assertThrowsSSA(const std::function<void()>& action, const std::string& fra
         return;
     }
     assert(false && "expected SSAError");
+}
+
+void assertConstantKind(
+    const SSAConstantEvaluation& result,
+    SSAConstantEvaluationKind expected)
+{
+    assert(result.kind == expected);
+    assert(!result.value.has_value());
+}
+
+void test_constant_evaluation_folds_only_representable_successes()
+{
+    const SSAConstantEvaluation sum = evaluateSSAConstantBinary(
+        IROp::Add,
+        Value::number(2.0),
+        Value::number(3.0));
+    assert(sum.isFolded());
+    assert(sum.value->type() == Value::Type::Number);
+    assert(sum.value->asNumber() == 5.0);
+
+    const SSAConstantEvaluation text = evaluateSSAConstantBinary(
+        IROp::Add,
+        Value::string("hello "),
+        Value::string("world"));
+    assert(text.isFolded());
+    assert(text.value->asString() == "hello world");
+
+    const SSAConstantEvaluation truth = evaluateSSAConstantUnary(
+        IROp::Not,
+        Value::nil());
+    assert(truth.isFolded());
+    assert(truth.value->type() == Value::Type::Bool);
+    assert(truth.value->asBool());
+
+    const SSAConstantEvaluation comparison = evaluateSSAConstantBinary(
+        IROp::Less,
+        Value::number(2.0),
+        Value::number(3.0));
+    assert(comparison.isFolded());
+    assert(comparison.value->asBool());
+}
+
+void test_constant_evaluation_keeps_runtime_traps_runtime()
+{
+    const SSAConstantEvaluation divisionByZero = evaluateSSAConstantBinary(
+        IROp::Divide,
+        Value::number(1.0),
+        Value::number(0.0));
+    assertConstantKind(divisionByZero, SSAConstantEvaluationKind::RuntimeTrap);
+
+    const SSAConstantEvaluation typeMismatch = evaluateSSAConstantBinary(
+        IROp::Subtract,
+        Value::string("one"),
+        Value::number(1.0));
+    assertConstantKind(typeMismatch, SSAConstantEvaluationKind::RuntimeTrap);
+
+    const SSAConstantEvaluation comparisonMismatch = evaluateSSAConstantBinary(
+        IROp::Greater,
+        Value::boolean(true),
+        Value::number(1.0));
+    assertConstantKind(comparisonMismatch, SSAConstantEvaluationKind::RuntimeTrap);
+}
+
+void test_constant_evaluation_rejects_nonfinite_and_nonprimitive_values()
+{
+    const SSAConstantEvaluation overflow = evaluateSSAConstantBinary(
+        IROp::Multiply,
+        Value::number(std::numeric_limits<double>::max()),
+        Value::number(2.0));
+    assertConstantKind(overflow, SSAConstantEvaluationKind::NonFinite);
+
+    const SSAConstantEvaluation nonfiniteInput = evaluateSSAConstantUnary(
+        IROp::Negate,
+        Value::number(std::numeric_limits<double>::infinity()));
+    assertConstantKind(nonfiniteInput, SSAConstantEvaluationKind::NonFinite);
+
+    const SSAConstantEvaluation unsupportedValue = evaluateSSAConstantUnary(
+        IROp::Not,
+        Value::function(FunctionValue{}));
+    assertConstantKind(unsupportedValue, SSAConstantEvaluationKind::Unsupported);
+
+    const SSAConstantEvaluation unsupportedOp = evaluateSSAConstantUnary(
+        IROp::Print,
+        Value::boolean(true));
+    assertConstantKind(unsupportedOp, SSAConstantEvaluationKind::Unsupported);
 }
 
 void test_o0_is_verified_identity()
@@ -221,6 +307,9 @@ void test_o1_rejects_invalid_input_before_transforming()
 
 int main()
 {
+    test_constant_evaluation_folds_only_representable_successes();
+    test_constant_evaluation_keeps_runtime_traps_runtime();
+    test_constant_evaluation_rejects_nonfinite_and_nonprimitive_values();
     test_o0_is_verified_identity();
     test_o1_propagates_copy_and_removes_copy_instruction();
     test_o1_simplifies_trivial_phi_when_source_dominates_join();
