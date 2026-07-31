@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "decision_revision": "m7-2026-07-31-r3",
+  "decision_revision": "m7-2026-07-31-r4",
   "inventory_revision": "m0d-2026-07-22-r1",
   "decision_id": "M7-IR-SSA-001",
   "domain": "internal-ssa-optimization",
@@ -94,6 +94,22 @@
       "critical-edge splitting",
       "optimization passes",
       "default compiler or bytecode integration"
+    ]
+  },
+  "dessa_copy_plan_slice": {
+    "status": "implemented_on_feature_branch",
+    "capabilities": [
+      "deterministic edge-local phi copy bundles",
+      "identity-move elimination",
+      "one fresh temporary per parallel-copy cycle",
+      "critical-edge split requirement marking"
+    ],
+    "test_case_id": "ctest.ssa",
+    "not_included": [
+      "CFG edge splitting",
+      "linear instruction and jump-offset remapping",
+      "bytecode or artifact integration",
+      "optimization passes"
     ]
   },
   "binding_effect_contract_slice": {

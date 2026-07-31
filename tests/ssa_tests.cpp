@@ -251,6 +251,115 @@ void test_ssa_verifier_rejects_invalid_instruction_shape()
     assertThrowsSSA([&ssa, &cfg] { ssa.verify(cfg); }, "operand shape");
 }
 
+void test_de_ssa_plan_is_empty_without_phis()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::Return),
+    });
+    const SSAFunction ssa = makeSSAFunction(cfg);
+    const SSADeSSACopyPlan plan = planSSADeSSACopies(cfg, ssa);
+
+    assert(plan.edgeCopies.empty());
+    assert(plan.temporaryValues.empty());
+}
+
+void test_de_ssa_plan_orders_diamond_edge_copies()
+{
+    const ControlFlowGraph cfg = makeDiamondCFG();
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[1].instructions.push_back(defineConstant(1, 1));
+    ssa.blocks[2].instructions.push_back(defineConstant(2, 3));
+    ssa.blocks[3].phis.push_back(SSAPhi{3, {{1, 1}, {2, 2}}});
+    ssa.blocks[3].instructions.push_back(useValue(IROp::Return, 3, 4));
+
+    const SSADeSSACopyPlan plan = planSSADeSSACopies(cfg, ssa);
+    assert(plan.edgeCopies.size() == 2);
+    assert(plan.temporaryValues.empty());
+    assert(plan.edgeCopies[0].predecessor == 1);
+    assert(plan.edgeCopies[0].successor == 3);
+    assert(!plan.edgeCopies[0].requiresCriticalEdgeSplit);
+    assert(plan.edgeCopies[0].moves.size() == 1);
+    assert(plan.edgeCopies[0].moves[0].destination == 3);
+    assert(plan.edgeCopies[0].moves[0].source == 1);
+    assert(plan.edgeCopies[1].predecessor == 2);
+    assert(plan.edgeCopies[1].successor == 3);
+    assert(plan.edgeCopies[1].moves.size() == 1);
+    assert(plan.edgeCopies[1].moves[0].destination == 3);
+    assert(plan.edgeCopies[1].moves[0].source == 2);
+}
+
+void test_de_ssa_plan_marks_critical_edges()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::JumpIfFalse, 4),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Jump, 4),
+        cfgInstruction(IROp::Return),
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[0].instructions.push_back(valueInstruction(IROp::Constant, 0, 0));
+    SSAInstruction branch = plainInstruction(IROp::JumpIfFalse, 1);
+    branch.left = 0;
+    ssa.blocks[0].instructions.push_back(branch);
+    ssa.blocks[1].instructions.push_back(valueInstruction(IROp::Constant, 1, 2));
+    ssa.blocks[1].instructions.push_back(plainInstruction(IROp::Jump, 3));
+    ssa.blocks[2].phis.push_back(SSAPhi{2, {{0, 0}, {1, 1}}});
+    ssa.blocks[2].instructions.push_back(useValue(IROp::Return, 2, 4));
+
+    const SSADeSSACopyPlan plan = planSSADeSSACopies(cfg, ssa);
+    assert(plan.edgeCopies.size() == 2);
+    assert(plan.edgeCopies[0].predecessor == 0);
+    assert(plan.edgeCopies[0].successor == 2);
+    assert(plan.edgeCopies[0].requiresCriticalEdgeSplit);
+    assert(plan.edgeCopies[0].moves.size() == 1);
+    assert(plan.edgeCopies[0].moves[0].destination == 2);
+    assert(plan.edgeCopies[0].moves[0].source == 0);
+    assert(plan.edgeCopies[1].predecessor == 1);
+    assert(plan.edgeCopies[1].successor == 2);
+    assert(!plan.edgeCopies[1].requiresCriticalEdgeSplit);
+}
+
+void test_de_ssa_plan_breaks_parallel_copy_cycle_with_one_temporary()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Jump, 3),
+        cfgInstruction(IROp::JumpIfFalse, 6),
+        cfgInstruction(IROp::Print),
+        cfgInstruction(IROp::Jump, 3),
+        cfgInstruction(IROp::Return),
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[0].instructions.push_back(valueInstruction(IROp::Constant, 3, 0));
+    ssa.blocks[0].instructions.push_back(valueInstruction(IROp::Constant, 4, 1));
+    ssa.blocks[0].instructions.push_back(plainInstruction(IROp::Jump, 2));
+    ssa.blocks[1].phis.push_back(SSAPhi{10, {{0, 3}, {2, 11}}});
+    ssa.blocks[1].phis.push_back(SSAPhi{11, {{0, 4}, {2, 10}}});
+    SSAInstruction branch = plainInstruction(IROp::JumpIfFalse, 3);
+    branch.left = 10;
+    ssa.blocks[1].instructions.push_back(branch);
+    ssa.blocks[2].instructions.push_back(useValue(IROp::Print, 10, 4));
+    ssa.blocks[2].instructions.push_back(plainInstruction(IROp::Jump, 5));
+    ssa.blocks[3].instructions.push_back(useValue(IROp::Return, 10, 6));
+
+    const SSADeSSACopyPlan plan = planSSADeSSACopies(cfg, ssa);
+    assert(plan.edgeCopies.size() == 2);
+    assert(plan.temporaryValues.size() == 1);
+    assert(plan.temporaryValues.front() == 12);
+    const SSAEdgeCopyBundle& backedge = plan.edgeCopies[1];
+    assert(backedge.predecessor == 2);
+    assert(backedge.successor == 1);
+    assert(backedge.moves.size() == 3);
+    assert(backedge.moves[0].destination == 12);
+    assert(backedge.moves[0].source == 10);
+    assert(backedge.moves[1].destination == 10);
+    assert(backedge.moves[1].source == 11);
+    assert(backedge.moves[2].destination == 11);
+    assert(backedge.moves[2].source == 12);
+}
+
 void test_rename_eliminates_local_memory_and_fills_diamond_phi()
 {
     const ControlFlowGraph cfg = buildControlFlowGraph({
@@ -504,6 +613,10 @@ int main()
     test_ssa_verifier_rejects_use_before_same_block_definition();
     test_ssa_verifier_rejects_phi_value_not_available_on_edge();
     test_ssa_verifier_rejects_invalid_instruction_shape();
+    test_de_ssa_plan_is_empty_without_phis();
+    test_de_ssa_plan_orders_diamond_edge_copies();
+    test_de_ssa_plan_marks_critical_edges();
+    test_de_ssa_plan_breaks_parallel_copy_cycle_with_one_temporary();
     test_rename_eliminates_local_memory_and_fills_diamond_phi();
     test_rename_handles_loop_backedge_and_initial_definition();
     test_rename_uses_local_parameter_as_initial_slot_value();

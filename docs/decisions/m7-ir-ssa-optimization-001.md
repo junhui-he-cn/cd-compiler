@@ -2,8 +2,9 @@
 
 Status: proposed overall on `feat/ssa-optimization-design`. The CFG
 foundation, SSA structural shell, deterministic dominance-analysis,
-phi-placement, binding/effect-contract, and SSA memory-slot rename sub-slices
-are implemented on this branch; de-SSA and optimization remain unadmitted.
+phi-placement, binding/effect-contract, SSA memory-slot rename, and de-SSA
+copy-plan sub-slices are implemented on this branch; linear de-SSA and
+optimization remain unadmitted.
 
 ## Question
 
@@ -260,6 +261,12 @@ compiler or bytecode path. The SSA verifier additionally checks reachable-use
 dominance, same-block definition order, phi-edge availability, and basic
 opcode operand shape.
 
+The branch also implements `planSSADeSSACopies`, which produces deterministic
+edge-local sequential move bundles for phi lowering, removes identity moves,
+allocates one fresh temporary per parallel-copy cycle, and marks critical
+edges. It intentionally does not split CFG edges, remap instruction offsets,
+or connect to the bytecode path.
+
 The branch now freezes the internal binding/effect contract in
 `include/BindingMetadata.hpp` and `include/IR.hpp`. `IRBinding` carries a
 snapshot-local `BindingId`, resolved name, and explicit storage class; only
@@ -280,11 +287,11 @@ flow, change closure ownership, add a new runtime representation, change
 `cdbc 0.1`, optimize across module boundaries, add a JIT, add garbage
 collection, or make optimization mandatory.
 
-## Open decisions before de-SSA and optimization
+## Open decisions before linear de-SSA and optimization
 
 The following must be resolved in the first implementation decision revision:
 
-1. how de-SSA handles critical-edge splitting, parallel-copy cycles, and
+1. how linear de-SSA applies the copy plan through critical-edge splitting and
    instruction-offset remapping;
 2. whether O1 promotes non-captured locals or only optimizes explicit SSA
    temporaries;

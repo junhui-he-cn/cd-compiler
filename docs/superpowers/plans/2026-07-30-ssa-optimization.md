@@ -13,7 +13,7 @@ promotion behind explicit follow-up decisions.
 
 Current progress: the CFG foundation, SSA structural-shell, deterministic
 dominance-analysis, phi-placement, binding/effect-contract, and SSA
-memory-slot rename slices in steps 2-3 are implemented on
+memory-slot rename and de-SSA copy-plan slices in steps 2-3 are implemented on
 `feat/ssa-optimization-design` and covered by `ctest.control_flow_graph`,
 `ctest.ssa`, `ctest.dominance`, and `ctest.ssa_phi_placement`; the rename
 coverage is part of `ctest.ssa`, and the binding contract is additionally
@@ -77,7 +77,8 @@ Tasks:
 The admitted sub-slice currently covers value allocation, local-slot rename,
 parameter initialization, phi incoming filling, non-promotable memory
 preservation, dominance/edge/shape verification, and malformed-input
-rejection. De-SSA and critical-edge copy lowering remain separate follow-up
+rejection. The current de-SSA slice only plans ordered edge copies and cycle
+temporaries; critical-edge splitting and linear lowering remain follow-up
 slices.
 
 Gate: SSA verifier tests, loop backedge/diamond phi tests, copy-cycle tests,

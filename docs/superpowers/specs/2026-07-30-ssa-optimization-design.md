@@ -2,11 +2,12 @@
 
 Date: 2026-07-30
 
-Status: design proposal with an admitted internal SSA memory-slot rename slice;
+Status: design proposal with admitted internal SSA rename and de-SSA copy-plan
+slices;
 the CFG foundation, SSA structural shell, deterministic dominance analysis,
-phi placement, binding/effect contract, and that rename slice are implemented
-on the feature branch, while de-SSA and optimization remain unadmitted. This
-document expands
+phi placement, binding/effect contract, rename slice, and edge-copy plan are
+implemented on the feature branch, while linear de-SSA and optimization remain
+unadmitted. This document expands
 [`M7-IR-SSA-001`](../../decisions/m7-ir-ssa-optimization-001.md); it does not
 authorize implementation by itself.
 
@@ -172,6 +173,13 @@ order, phi-edge availability, and basic opcode operand shape. This remains an
 internal service: it is not connected to the default `IRCompiler`, CLI,
 bytecode, or module-product path.
 
+The branch also exposes `planSSADeSSACopies`, which converts each phi's
+incoming edge into a deterministic sequential move bundle. Identity moves are
+removed, cycles receive one fresh temporary per cycle, and critical edges are
+marked for a later split. This plan does not mutate the CFG, rewrite linear
+jump offsets, or serialize any copy metadata; those responsibilities remain
+part of the next public-boundary decision.
+
 ## SSA construction
 
 The first construction algorithm is the standard dominance-frontier approach:
@@ -261,9 +269,11 @@ this proposal.
 
 ## De-SSA and lowering
 
-For every phi, insert a parallel copy bundle on each incoming edge. Split a
-critical edge before insertion. If a bundle contains a cycle, use one fresh
-temporary virtual register. Remove redundant copies after coalescing.
+For every phi, insert a parallel copy bundle on each incoming edge. The current
+branch plans these bundles and resolves cycles with one fresh temporary virtual
+register per cycle. A later lowering slice must split a critical edge before
+insertion, remove redundant copies after coalescing, and remap linear
+instruction offsets.
 
 The lowering result uses existing `IRRegister`, `IRInstruction`, and `IROp`
 types. It carries an old-to-new instruction offset map for:

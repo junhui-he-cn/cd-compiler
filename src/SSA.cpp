@@ -241,6 +241,92 @@ void validateInstructionShape(const SSAInstruction& instruction)
     }
 }
 
+void observeSSAValue(
+    std::set<SSAValueId>& values,
+    SSAValueId value,
+    SSAValueId& maximum,
+    bool& hasMaximum)
+{
+    if (value == invalidSSAValue) {
+        throw SSAError("SSA value uses the reserved invalid value ID");
+    }
+    values.insert(value);
+    if (!hasMaximum || value > maximum) {
+        maximum = value;
+        hasMaximum = true;
+    }
+}
+
+std::vector<SSAMove> lowerParallelCopies(
+    std::vector<SSAMove> pending,
+    std::set<SSAValueId>& usedValues,
+    SSAValueId& nextTemporary,
+    std::vector<SSAValueId>& temporaryValues)
+{
+    std::set<SSAValueId> destinations;
+    for (const SSAMove& move : pending) {
+        if (move.destination == invalidSSAValue || move.source == invalidSSAValue) {
+            throw SSAError("SSA edge copy uses the reserved invalid value ID");
+        }
+        if (move.destination == move.source) {
+            continue;
+        }
+        if (!destinations.insert(move.destination).second) {
+            throw SSAError("SSA edge copy has duplicate destinations");
+        }
+    }
+    pending.erase(
+        std::remove_if(
+            pending.begin(),
+            pending.end(),
+            [](const SSAMove& move) {
+                return move.destination == move.source;
+            }),
+        pending.end());
+
+    std::vector<SSAMove> ordered;
+    ordered.reserve(pending.size() + 1);
+    while (!pending.empty()) {
+        std::set<SSAValueId> sources;
+        for (const SSAMove& move : pending) {
+            sources.insert(move.source);
+        }
+
+        const auto safe = std::find_if(
+            pending.begin(),
+            pending.end(),
+            [&sources](const SSAMove& move) {
+                return sources.find(move.destination) == sources.end();
+            });
+        if (safe != pending.end()) {
+            ordered.push_back(*safe);
+            pending.erase(safe);
+            continue;
+        }
+
+        const SSAValueId cycleDestination = pending.front().destination;
+        if (nextTemporary == invalidSSAValue) {
+            throw SSAError("exhausted SSA temporary value IDs");
+        }
+        const SSAValueId temporary = nextTemporary++;
+        while (usedValues.find(temporary) != usedValues.end()) {
+            if (nextTemporary == invalidSSAValue) {
+                throw SSAError("exhausted SSA temporary value IDs");
+            }
+            ++nextTemporary;
+        }
+        usedValues.insert(temporary);
+        temporaryValues.push_back(temporary);
+        ordered.push_back(SSAMove{temporary, cycleDestination});
+        for (SSAMove& move : pending) {
+            if (move.source == cycleDestination) {
+                move.source = temporary;
+            }
+        }
+    }
+    return ordered;
+}
+
 void validateMemorySlot(
     const std::vector<SSAMemorySlot>& memorySlots,
     SSAMemorySlotId slot,
@@ -915,5 +1001,91 @@ SSAFunction renamePromotableMemorySlots(
     }
 
     result.verify(cfg);
+    return result;
+}
+
+SSADeSSACopyPlan planSSADeSSACopies(
+    const ControlFlowGraph& cfg,
+    const SSAFunction& input)
+{
+    cfg.verify();
+    input.verify(cfg);
+
+    SSADeSSACopyPlan result;
+    std::set<SSAValueId> usedValues;
+    SSAValueId maximum = 0;
+    bool hasMaximum = false;
+    const auto observe = [&usedValues, &maximum, &hasMaximum](SSAValueId value) {
+        observeSSAValue(usedValues, value, maximum, hasMaximum);
+    };
+
+    for (const SSAParameter& parameter : input.parameters) {
+        observe(parameter.value);
+    }
+    for (const SSABlock& block : input.blocks) {
+        for (const SSAPhi& phi : block.phis) {
+            observe(phi.result);
+            for (const SSAIncoming& incoming : phi.incoming) {
+                observe(incoming.value);
+            }
+        }
+        for (const SSAInstruction& instruction : block.instructions) {
+            if (instruction.result) {
+                observe(*instruction.result);
+            }
+            if (instruction.left) {
+                observe(*instruction.left);
+            }
+            if (instruction.right) {
+                observe(*instruction.right);
+            }
+            for (const SSAValueId argument : instruction.arguments) {
+                observe(argument);
+            }
+        }
+    }
+
+    SSAValueId nextTemporary = hasMaximum ? maximum + 1 : 0;
+    if (hasMaximum && maximum == invalidSSAValue - 1) {
+        nextTemporary = invalidSSAValue;
+    }
+
+    for (const SSABlock& successorBlock : input.blocks) {
+        if (successorBlock.phis.empty()) {
+            continue;
+        }
+        const CFGBlock& cfgSuccessor = cfg.blocks[successorBlock.id];
+        for (std::size_t predecessorIndex = 0;
+             predecessorIndex < cfgSuccessor.predecessors.size();
+             ++predecessorIndex) {
+            const CFGBlockId predecessor = cfgSuccessor.predecessors[predecessorIndex];
+            std::vector<SSAMove> pending;
+            pending.reserve(successorBlock.phis.size());
+            for (const SSAPhi& phi : successorBlock.phis) {
+                if (phi.incoming.size() != cfgSuccessor.predecessors.size()) {
+                    throw SSAError("SSA phi incoming count changed during de-SSA planning");
+                }
+                const SSAValueId source = phi.incoming[predecessorIndex].value;
+                if (source != phi.result) {
+                    pending.push_back(SSAMove{phi.result, source});
+                }
+            }
+            if (pending.empty()) {
+                continue;
+            }
+
+            SSAEdgeCopyBundle bundle;
+            bundle.predecessor = predecessor;
+            bundle.successor = successorBlock.id;
+            bundle.requiresCriticalEdgeSplit = cfg.blocks[predecessor].successors.size() > 1
+                && cfgSuccessor.predecessors.size() > 1;
+            bundle.moves = lowerParallelCopies(
+                std::move(pending),
+                usedValues,
+                nextTemporary,
+                result.temporaryValues);
+            result.edgeCopies.push_back(std::move(bundle));
+        }
+    }
     return result;
 }

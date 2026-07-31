@@ -77,6 +77,27 @@ struct SSAParameter {
     std::optional<SSAMemorySlotId> memorySlot = std::nullopt;
 };
 
+struct SSAMove {
+    SSAValueId destination = 0;
+    SSAValueId source = 0;
+};
+
+// A deterministic, edge-local copy bundle produced while planning de-SSA.
+// Moves are already ordered for sequential execution; a critical edge is
+// marked for a later CFG split, but this slice does not rewrite block ranges
+// or instruction offsets.
+struct SSAEdgeCopyBundle {
+    CFGBlockId predecessor = 0;
+    CFGBlockId successor = 0;
+    bool requiresCriticalEdgeSplit = false;
+    std::vector<SSAMove> moves;
+};
+
+struct SSADeSSACopyPlan {
+    std::vector<SSAEdgeCopyBundle> edgeCopies;
+    std::vector<SSAValueId> temporaryValues;
+};
+
 class SSAError final : public std::runtime_error {
 public:
     explicit SSAError(std::string message);
@@ -87,9 +108,8 @@ struct SSAFunction {
     std::vector<SSAParameter> parameters;
     std::vector<SSAMemorySlot> memorySlots;
 
-    // Validate the structural SSA contract. SSA construction and renaming are
-    // later passes; this validator checks definitions, uses, phi edges, and
-    // shape.
+    // Validate definitions, uses, dominance, phi edges, and instruction
+    // shape for one CFG-aligned SSA function.
     void verify(const ControlFlowGraph& cfg) const;
 };
 
@@ -105,6 +125,15 @@ SSAFunction makeSSAFunction(const ControlFlowGraph& cfg);
 SSAFunction renamePromotableMemorySlots(
     const ControlFlowGraph& cfg,
     const DominanceInfo& dominance,
+    const SSAFunction& input);
+
+// Plan phi lowering as sequential edge-local parallel copies. Bundles are
+// ordered by successor block ID and then by the CFG predecessor order. A
+// fresh temporary is allocated for each copy cycle. The plan is internal
+// block/edge metadata; it does not split critical edges or remap linear IR
+// offsets yet.
+SSADeSSACopyPlan planSSADeSSACopies(
+    const ControlFlowGraph& cfg,
     const SSAFunction& input);
 
 // Place phis for promotable local slots using iterated dominance frontiers.
