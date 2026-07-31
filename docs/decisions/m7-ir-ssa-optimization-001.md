@@ -3,10 +3,10 @@
 Status: proposed overall on `feat/ssa-optimization-design`. The CFG
 foundation, SSA structural shell, deterministic dominance-analysis,
 phi-placement, binding/effect-contract, SSA memory-slot rename, de-SSA
-copy-plan, internal linear-layout, ordinary-IR adapter, conservative internal
-O1 value-simplification, and O0 optimization/cache-identity sub-slices are
-implemented on this branch; default pipeline integration and broader
-optimization remain unadmitted.
+copy-plan, internal linear-layout, ordinary-IR adapter, verified program-level
+adapter/rebuild boundary, conservative internal O1 value-simplification, and
+O0 optimization/cache-identity sub-slices are implemented on this branch;
+default pipeline integration and broader optimization remain unadmitted.
 
 ## Question
 
@@ -318,6 +318,17 @@ at least the input virtual-register count; O1 reuses virtual SSA IDs and does
 not perform physical register allocation or coalescing. This adapter remains
 internal and is not yet called by `IRCompiler`, the CLI, or an artifact emitter.
 
+`optimizeIRProgram` now applies that adapter to the anonymous main stream and
+every function-table entry in the existing index order. Its
+`SSADeSSAProgramResult` retains one verified offset-map result per stream,
+preserves function names, parameters, binding visibility, and every
+`MakeFunction` index sequence, and remaps only main-stream dependency offsets.
+`verify` checks those invariants against the source `IRProgram`; `rebuild`
+copies the source constant pool, name table, sources, and canonical bindings
+and replaces only the verified streams. This is still an internal opt-in
+boundary: it does not invoke `IRCompiler`, the CLI, bytecode, or artifact
+emission, and nested function results cannot carry module dependency anchors.
+
 The selected debug-local policy keeps source-visible runtime-cell operations in
 the default O1 contract; `renamePromotableMemorySlots` remains an internal
 experiment until optimized local materialization and trace mapping are
@@ -349,10 +360,9 @@ collection, or make optimization mandatory.
 
 ## Open decisions before default-pipeline de-SSA and optimization
 
-The following remain before program-level default-pipeline de-SSA and
-optimization:
+The following remain before default-pipeline de-SSA and optimization:
 
-1. how the verified per-stream adapter is invoked for the main stream and all
-   nested functions while preserving debug locations, dependency anchors, and
-   existing artifact boundaries;
+1. when `IRCompiler`/CLI and independent module-product lowering should invoke
+   the verified program-level result/rebuild boundary while preserving debug
+   locations, dependency anchors, and existing artifact boundaries;
 2. the register-allocation strategy and its source-location mapping.

@@ -478,16 +478,22 @@ SSAOptimizationResult optimizeSSA(
     return result;
 }
 
-SSADeSSAIRResult optimizeIRFunction(
+namespace {
+
+SSADeSSAIRResult optimizeIRFunctionWithStats(
     const IRFunction& input,
     const std::vector<IRModuleDependency>& moduleDependencies,
-    SSAOptimizationLevel level)
+    SSAOptimizationLevel level,
+    SSAOptimizationStats* stats)
 {
     const ControlFlowGraph cfg = buildControlFlowGraph(
         input.instructions,
         moduleDependencies);
     const SSAFunction lifted = liftIRToSSA(cfg, input);
     const SSAOptimizationResult optimized = optimizeSSA(cfg, lifted, level);
+    if (stats) {
+        *stats = optimized.stats;
+    }
     const SSADeSSALinearFunction linear = lowerSSADeSSACopies(cfg, optimized.function);
     SSADeSSAIRResult result = lowerSSADeSSAToIR(
         cfg,
@@ -504,5 +510,186 @@ SSADeSSAIRResult optimizeIRFunction(
         input.registerCount,
         result.function.registerCount);
     result.verify();
+    return result;
+}
+
+bool sameBinding(const IRBinding& left, const IRBinding& right)
+{
+    return left.bindingId == right.bindingId
+        && left.resolvedName == right.resolvedName
+        && left.storage == right.storage;
+}
+
+bool sameBindings(
+    const std::vector<IRBinding>& left,
+    const std::vector<IRBinding>& right)
+{
+    if (left.size() != right.size()) {
+        return false;
+    }
+    for (std::size_t index = 0; index < left.size(); ++index) {
+        if (!sameBinding(left[index], right[index])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool sameFunctionIdentity(
+    const IRFunction& expected,
+    const IRFunction& actual)
+{
+    return expected.name == actual.name
+        && expected.parameters == actual.parameters
+        && sameBindings(expected.bindings, actual.bindings);
+}
+
+std::vector<std::size_t> makeFunctionReferences(
+    const std::vector<IRInstruction>& instructions)
+{
+    std::vector<std::size_t> references;
+    for (const IRInstruction& instruction : instructions) {
+        if (instruction.op == IROp::MakeFunction) {
+            references.push_back(instruction.operand);
+        }
+    }
+    return references;
+}
+
+bool sameDependencyAnchor(
+    const IRModuleDependency& expected,
+    const IRModuleDependency& actual)
+{
+    return expected.importedModuleId == actual.importedModuleId
+        && expected.kind == actual.kind
+        && expected.requestedPath == actual.requestedPath;
+}
+
+} // namespace
+
+SSADeSSAIRResult optimizeIRFunction(
+    const IRFunction& input,
+    const std::vector<IRModuleDependency>& moduleDependencies,
+    SSAOptimizationLevel level)
+{
+    return optimizeIRFunctionWithStats(input, moduleDependencies, level, nullptr);
+}
+
+void SSADeSSAProgramResult::verify(const IRProgram& input) const
+{
+    if (functions.size() != input.functions().size()) {
+        throw SSAError("program optimizer changed the function-table size");
+    }
+    if (functionStats.size() != functions.size()) {
+        throw SSAError("program optimizer function statistics have the wrong size");
+    }
+
+    mainStream.verify();
+    if (!mainStream.function.name.empty() || !mainStream.function.parameters.empty()) {
+        throw SSAError("program optimizer changed the anonymous main signature");
+    }
+    if (!sameBindings(mainStream.function.bindings, input.bindings())) {
+        throw SSAError("program optimizer changed canonical binding metadata");
+    }
+    if (mainStream.moduleDependencies.size() != input.moduleDependencies().size()) {
+        throw SSAError("program optimizer changed main dependency metadata");
+    }
+    for (std::size_t index = 0; index < mainStream.moduleDependencies.size(); ++index) {
+        if (!sameDependencyAnchor(
+                input.moduleDependencies()[index],
+                mainStream.moduleDependencies[index])) {
+            throw SSAError("program optimizer changed main dependency ordering");
+        }
+    }
+    if (makeFunctionReferences(input.instructions())
+        != makeFunctionReferences(mainStream.function.instructions)) {
+        throw SSAError("program optimizer changed main function references");
+    }
+
+    for (std::size_t index = 0; index < functions.size(); ++index) {
+        const IRFunction& expected = input.functions()[index];
+        const SSADeSSAIRResult& actual = functions[index];
+        actual.verify();
+        if (!sameFunctionIdentity(expected, actual.function)) {
+            throw SSAError("program optimizer changed function-table identity or metadata");
+        }
+        if (!actual.moduleDependencies.empty()) {
+            throw SSAError("nested IR function unexpectedly carries module dependencies");
+        }
+        if (makeFunctionReferences(expected.instructions)
+            != makeFunctionReferences(actual.function.instructions)) {
+            throw SSAError("program optimizer changed nested function references");
+        }
+    }
+
+    // This validates the replacement streams against the original immutable
+    // pools and also rejects stale register, name, constant, function, jump,
+    // binding, or dependency references before any caller can rebuild a
+    // program for a later compiler boundary.
+    input.rebuildWithStreams(
+        mainStream.function.instructions,
+        mainStream.function.registerCount,
+        [&]() {
+            std::vector<IRFunction> result;
+            result.reserve(functions.size());
+            for (const SSADeSSAIRResult& function : functions) {
+                result.push_back(function.function);
+            }
+            return result;
+        }(),
+        mainStream.moduleDependencies);
+}
+
+IRProgram SSADeSSAProgramResult::rebuild(const IRProgram& input) const
+{
+    verify(input);
+    std::vector<IRFunction> rebuiltFunctions;
+    rebuiltFunctions.reserve(functions.size());
+    for (const SSADeSSAIRResult& function : functions) {
+        rebuiltFunctions.push_back(function.function);
+    }
+    return input.rebuildWithStreams(
+        mainStream.function.instructions,
+        mainStream.function.registerCount,
+        std::move(rebuiltFunctions),
+        mainStream.moduleDependencies);
+}
+
+SSADeSSAProgramResult optimizeIRProgram(
+    const IRProgram& input,
+    SSAOptimizationLevel level)
+{
+    // Validate the source program once at the program boundary. This also
+    // makes malformed MakeFunction/pool/dependency references fail before any
+    // individual stream is transformed.
+    input.rebuildWithStreams(
+        input.instructions(),
+        input.registerCount(),
+        input.functions(),
+        input.moduleDependencies());
+
+    IRFunction main;
+    main.instructions = input.instructions();
+    main.registerCount = input.registerCount();
+    main.bindings = input.bindings();
+
+    SSADeSSAProgramResult result;
+    result.mainStream = optimizeIRFunctionWithStats(
+        main,
+        input.moduleDependencies(),
+        level,
+        &result.mainStats);
+    result.functions.reserve(input.functions().size());
+    result.functionStats.reserve(input.functions().size());
+    for (const IRFunction& function : input.functions()) {
+        SSAOptimizationStats stats;
+        result.functions.push_back(optimizeIRFunctionWithStats(
+            function,
+            {},
+            level,
+            &stats));
+        result.functionStats.push_back(stats);
+    }
+    result.verify(input);
     return result;
 }

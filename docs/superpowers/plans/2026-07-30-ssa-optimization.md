@@ -15,8 +15,8 @@ Current progress: the CFG foundation, SSA structural-shell, deterministic
 dominance-analysis, phi-placement, binding/effect-contract, and SSA
 memory-slot rename and de-SSA copy-plan slices in steps 2-3 are implemented on
 `feat/ssa-optimization-design`; the internal linear de-SSA layout is now also
-implemented, as is the internal adapter to existing `IRFunction` data. These
-slices plus the internal O1 copy/phi simplification and pure DCE service are
+implemented, as are the internal `IRFunction` and verified program-level
+adapters. These slices plus the internal O1 copy/phi simplification and pure DCE service are
 covered by `ctest.control_flow_graph`,
 `ctest.ssa`, `ctest.dominance`, and `ctest.ssa_phi_placement`; the rename
 coverage is part of `ctest.ssa`, and the binding contract is additionally
@@ -33,6 +33,10 @@ is populated by
 test. `optimizeIRFunction` now proves the internal one-stream adapter and
 preserves ordinary parameter/binding metadata, source/offset maps, and
 dependency anchors without physical register allocation.
+`optimizeIRProgram` now traverses the anonymous main stream and all nested
+functions in stable table order, while `SSADeSSAProgramResult::verify` and
+`rebuild` protect function indices and copy program-level pools/tables without
+connecting the adapter to CLI or artifact emission.
 
 ### 1. Freeze the baseline and internal contracts
 
@@ -97,6 +101,8 @@ slices.
 
 Gate: SSA verifier tests, loop backedge/diamond phi tests, copy-cycle tests,
 and an O0 CFG/SSA/de-SSA semantic round trip with unchanged existing output.
+The program-level result/rebuild boundary is covered by `ctest.optimizer`;
+default-pipeline and bytecode integration remain follow-up slices.
 
 ### 4. Add the pass manager and opt-in O1
 
@@ -115,10 +121,11 @@ Tasks:
 - run the verifier before and after each pass in debug/test builds; and
 - report deterministic optimization counters outside artifacts.
 
-The admitted sub-slice implements only the internal `optimizeSSA` boundary:
-copy propagation, dominance-checked trivial-phi simplification, and pure
-dead-code removal. It does not add `--opt-level`, invoke `IRCompiler`, rewrite
-CFG blocks, fold constant values, or emit optimized artifacts.
+The admitted sub-slice implements only the internal `optimizeSSA` boundary and
+its verified per-stream/program adapters: copy propagation,
+dominance-checked trivial-phi simplification, and pure dead-code removal. It
+does not add `--opt-level`, invoke `IRCompiler`, rewrite CFG blocks, fold
+constant values, or emit optimized artifacts.
 
 Gate: O0 goldens remain unchanged; O1 branch/constant/copy cases show smaller
 IR and exact C++/Rust output parity; runtime traps and evaluation order remain

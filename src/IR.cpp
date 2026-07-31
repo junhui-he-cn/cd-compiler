@@ -331,6 +331,155 @@ void printInstruction(std::ostream& out, const IRProgram& program, const IRInstr
     out << '\n';
 }
 
+void validateRegister(
+    const std::optional<IRRegister>& reg,
+    std::size_t registerCount,
+    const std::string& context)
+{
+    if (reg && reg->index >= registerCount) {
+        throw std::logic_error(context + " register is outside registerCount");
+    }
+}
+
+void validateNameOperand(
+    std::size_t operand,
+    const std::vector<std::string>& names,
+    const std::string& context)
+{
+    if (operand >= names.size()) {
+        throw std::logic_error(context + " name operand is outside the name table");
+    }
+}
+
+void validateInstructionStream(
+    const std::vector<IRInstruction>& instructions,
+    std::size_t registerCount,
+    const std::vector<Value>& constants,
+    const std::vector<std::string>& names,
+    std::size_t functionCount,
+    const std::vector<IRBinding>& bindings,
+    const std::string& context)
+{
+    const auto hasBinding = [&bindings](BindingId id) {
+        return std::find_if(
+                   bindings.begin(),
+                   bindings.end(),
+                   [id](const IRBinding& binding) {
+                       return binding.bindingId == id;
+                   })
+            != bindings.end();
+    };
+
+    for (std::size_t index = 0; index < instructions.size(); ++index) {
+        const IRInstruction& instruction = instructions[index];
+        validateRegister(instruction.dest, registerCount, context);
+        validateRegister(instruction.left, registerCount, context);
+        validateRegister(instruction.right, registerCount, context);
+        for (const IRRegister argument : instruction.arguments) {
+            validateRegister(argument, registerCount, context);
+        }
+
+        if (instruction.bindingId && !hasBinding(*instruction.bindingId)) {
+            throw std::logic_error(context + " instruction references unknown binding metadata");
+        }
+
+        switch (instruction.op) {
+        case IROp::Constant:
+            if (instruction.operand >= constants.size()) {
+                throw std::logic_error(context + " constant operand is outside the constant pool");
+            }
+            break;
+        case IROp::MakeFunction:
+            if (instruction.operand >= functionCount) {
+                throw std::logic_error(context + " function operand is outside the function table");
+            }
+            break;
+        case IROp::Map:
+            if (instruction.arguments.size() % 2 != 0) {
+                throw std::logic_error(context + " map has an incomplete key/value pair");
+            }
+            break;
+        case IROp::Struct:
+            if (instruction.operands.size() != instruction.arguments.size()) {
+                throw std::logic_error(context + " struct field metadata does not match its values");
+            }
+            for (const std::size_t operand : instruction.operands) {
+                validateNameOperand(operand, names, context);
+            }
+            break;
+        case IROp::NativeCall:
+        case IROp::LoadVar:
+        case IROp::StoreVar:
+        case IROp::AssignVar:
+        case IROp::AssertNumber:
+        case IROp::Field:
+        case IROp::AssignField:
+            validateNameOperand(instruction.operand, names, context);
+            break;
+        default:
+            break;
+        }
+
+        if (instruction.typeNameOperand) {
+            validateNameOperand(*instruction.typeNameOperand, names, context);
+        }
+        if (instruction.variantNameOperand) {
+            validateNameOperand(*instruction.variantNameOperand, names, context);
+        }
+
+        if ((instruction.op == IROp::Jump
+                || instruction.op == IROp::JumpIfFalse
+                || instruction.op == IROp::JumpIfTrue)
+            && instruction.operand > instructions.size()) {
+            throw std::logic_error(context + " jump target is outside the instruction stream");
+        }
+    }
+}
+
+void validateFunctionBindings(
+    const std::vector<IRFunction>& functions,
+    const std::vector<IRBinding>& bindings)
+{
+    for (const IRFunction& function : functions) {
+        std::vector<BindingId> seen;
+        for (const IRBinding& binding : function.bindings) {
+            if (!binding.bindingId.valid() || binding.resolvedName.empty()) {
+                throw std::logic_error("function binding metadata is malformed");
+            }
+            if (std::find(seen.begin(), seen.end(), binding.bindingId) != seen.end()) {
+                throw std::logic_error("function binding metadata contains a duplicate ID");
+            }
+            seen.push_back(binding.bindingId);
+            const auto canonical = std::find_if(
+                bindings.begin(),
+                bindings.end(),
+                [&binding](const IRBinding& current) {
+                    return current.bindingId == binding.bindingId;
+                });
+            if (canonical == bindings.end()
+                || canonical->resolvedName != binding.resolvedName
+                || canonical->storage != binding.storage) {
+                throw std::logic_error("function binding metadata is not canonical");
+            }
+        }
+    }
+}
+
+void validateCanonicalBindings(const std::vector<IRBinding>& bindings)
+{
+    for (std::size_t index = 0; index < bindings.size(); ++index) {
+        const IRBinding& binding = bindings[index];
+        if (!binding.bindingId.valid() || binding.resolvedName.empty()) {
+            throw std::logic_error("canonical binding metadata is malformed");
+        }
+        for (std::size_t previous = 0; previous < index; ++previous) {
+            if (bindings[previous].bindingId == binding.bindingId) {
+                throw std::logic_error("canonical binding metadata contains a duplicate ID");
+            }
+        }
+    }
+}
+
 } // namespace
 
 bool IREffectSummary::isPure() const
@@ -840,6 +989,51 @@ std::size_t IRProgram::instructionCount() const
         return activeFunction(functionStack_).instructions.size();
     }
     return instructions_.size();
+}
+
+IRProgram IRProgram::rebuildWithStreams(
+    std::vector<IRInstruction> instructions,
+    std::size_t registerCount,
+    std::vector<IRFunction> functions,
+    std::vector<IRModuleDependency> moduleDependencies) const
+{
+    if (!functionStack_.empty()) {
+        throw std::logic_error("cannot rebuild an IR program while a function is active");
+    }
+
+    validateCanonicalBindings(bindings_);
+    validateInstructionStream(
+        instructions,
+        registerCount,
+        constants_,
+        names_,
+        functions.size(),
+        bindings_,
+        "main IR stream");
+    for (std::size_t index = 0; index < functions.size(); ++index) {
+        const IRFunction& function = functions[index];
+        validateInstructionStream(
+            function.instructions,
+            function.registerCount,
+            constants_,
+            names_,
+            functions.size(),
+            bindings_,
+            "IR function " + std::to_string(index));
+    }
+    validateFunctionBindings(functions, bindings_);
+    for (const IRModuleDependency& dependency : moduleDependencies) {
+        if (dependency.instructionOffset > instructions.size()) {
+            throw std::logic_error("IR module dependency offset is outside the main stream");
+        }
+    }
+
+    IRProgram rebuilt = *this;
+    rebuilt.instructions_ = std::move(instructions);
+    rebuilt.registerCount_ = registerCount;
+    rebuilt.functions_ = std::move(functions);
+    rebuilt.moduleDependencies_ = std::move(moduleDependencies);
+    return rebuilt;
 }
 
 void IRProgram::print(std::ostream& out) const

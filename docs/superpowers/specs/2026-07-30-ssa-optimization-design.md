@@ -190,8 +190,8 @@ fallthrough edges receive an in-place split block, and critical branch-target
 edges receive deterministic split blocks before the synthetic exit. The result
 rewrites block-entry branch targets and carries original-instruction,
 insertion-boundary, and module-dependency offset maps. It does not yet convert
-the result to `IRFunction`/`IRProgram` or connect to bytecode, debug-local, or
-cache identity paths.
+the result to a whole `IRProgram` or connect to bytecode, debug-local, or cache
+identity paths.
 
 `lowerSSADeSSAToIR` is the internal ordinary-IR adapter. It keeps SSA value IDs
 as virtual-register indices, computes `registerCount`, forwards parameter names
@@ -303,8 +303,12 @@ planned:
 `optimizeIRFunction` is the admitted internal adapter for one ordinary
 `IRFunction`: it lifts one stream, runs the selected optimizer, and lowers it
 back while preserving the ordinary signature and dependency/source offset
-metadata. It deliberately does not assemble a whole `IRProgram`, invoke
-`IRCompiler`, allocate physical registers, or emit bytecode.
+metadata. `optimizeIRProgram` now applies the same boundary to the anonymous
+main stream and every function-table entry in stable index order. Its verified
+`SSADeSSAProgramResult` preserves `MakeFunction` references and stream
+metadata, and its explicit `rebuild` copies the constant/name/source/binding
+tables before replacing streams. Neither adapter invokes `IRCompiler`, the
+CLI, allocates physical registers, or emits bytecode.
 
 Every pass has an input/output verifier boundary in debug builds and reports
 small counters such as blocks removed, folds, copies removed, and instructions

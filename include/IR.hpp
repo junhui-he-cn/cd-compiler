@@ -168,6 +168,17 @@ public:
     void patchJump(std::size_t jumpInstruction);
     std::size_t instructionCount() const;
 
+    // Rebuild a completed program with replacement main/function streams.
+    // Program-level compiler tables (constants, names, sources, and the
+    // canonical binding table) are copied unchanged.  The replacement is
+    // validated before it is returned so an internal lowering result cannot
+    // be connected to a later pipeline boundary in a partially valid state.
+    IRProgram rebuildWithStreams(
+        std::vector<IRInstruction> instructions,
+        std::size_t registerCount,
+        std::vector<IRFunction> functions,
+        std::vector<IRModuleDependency> moduleDependencies) const;
+
     const std::vector<Value>& constants() const;
     const std::vector<std::string>& names() const;
     const std::vector<IRInstruction>& instructions() const;

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "decision_revision": "m7-2026-07-31-r10",
+  "decision_revision": "m7-2026-07-31-r11",
   "inventory_revision": "m0d-2026-07-22-r1",
   "decision_id": "M7-IR-SSA-001",
   "domain": "internal-ssa-optimization",
@@ -215,8 +215,25 @@
     ],
     "test_case_id": "ctest.optimizer",
     "not_included": [
-      "program-level main and nested-function integration",
       "IRCompiler or CLI invocation",
+      "physical register allocation or coalescing",
+      "optimized trace event-count contract"
+    ]
+  },
+  "ir_program_adapter_slice": {
+    "status": "implemented_on_feature_branch",
+    "capabilities": [
+      "main-stream and function-table traversal in stable order",
+      "verified program result and explicit rebuild boundary",
+      "MakeFunction function-index preservation",
+      "constant pool, name table, source table, and canonical binding preservation",
+      "main dependency-anchor remapping with nested-function dependency rejection",
+      "per-stream offset maps and deterministic optimization statistics"
+    ],
+    "test_case_id": "ctest.optimizer",
+    "not_included": [
+      "IRCompiler or CLI invocation",
+      "bytecode or artifact emission",
       "physical register allocation or coalescing",
       "optimized trace event-count contract"
     ]

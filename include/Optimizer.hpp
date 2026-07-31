@@ -26,6 +26,26 @@ struct SSAOptimizationResult {
     void verify(const ControlFlowGraph& cfg) const;
 };
 
+// A program-level result owns one verified de-SSA result for the anonymous
+// main stream and one for every function-table entry.  The vector order is
+// intentionally the original function-table order: MakeFunction operands are
+// indices into that table and are never renumbered by this adapter.
+struct SSADeSSAProgramResult {
+    SSADeSSAIRResult mainStream;
+    std::vector<SSADeSSAIRResult> functions;
+    SSAOptimizationStats mainStats;
+    std::vector<SSAOptimizationStats> functionStats;
+
+    // Check stream maps, function identity/order, binding metadata, and
+    // function references against the source program before rebuilding it.
+    void verify(const IRProgram& input) const;
+
+    // Copy the source program's constants, names, sources, and canonical
+    // bindings, replacing only the verified IR streams and main dependency
+    // anchors.
+    IRProgram rebuild(const IRProgram& input) const;
+};
+
 // Constant evaluation is deliberately classified before a future folding
 // pass is allowed to replace an instruction. Runtime traps stay runtime traps;
 // non-finite values are rejected at the cdbc constant boundary rather than
@@ -75,4 +95,11 @@ SSAOptimizationResult optimizeSSA(
 SSADeSSAIRResult optimizeIRFunction(
     const IRFunction& input,
     const std::vector<IRModuleDependency>& moduleDependencies,
+    SSAOptimizationLevel level);
+
+// Run the same internal adapter over the main stream and every nested
+// function. This remains an opt-in service: IRCompiler, CLI, bytecode, and
+// artifact emission do not call it yet.
+SSADeSSAProgramResult optimizeIRProgram(
+    const IRProgram& input,
     SSAOptimizationLevel level);

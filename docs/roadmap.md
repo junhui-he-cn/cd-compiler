@@ -314,7 +314,8 @@ integration, and SSA memory-slot renaming are implemented only on
 `feat/ssa-optimization-design`; de-SSA copy planning, an internal linear
 de-SSA layout, an ordinary-IR adapter, a conservative internal O1
 value-simplification service, and the O0 optimization/cache identity contract
-are also implemented, while default pipeline integration and broader
+are also implemented, as is the verified program-level main/function-table
+adapter and rebuild boundary, while default pipeline integration and broader
 optimization are still proposed and are not shipped on `master`. The design
 and machine-readable decision are in
 `docs/superpowers/specs/2026-07-30-ssa-optimization-design.md` and
@@ -345,9 +346,11 @@ constant-evaluation trap/non-finite boundary, O0 cache identity, conservative
 source-local trace policy, the single-stream ordinary-IR optimizer adapter,
 and verification.
 
-**Required decision before program-level default-pipeline integration:** apply
-the verified per-stream adapter to the main stream and nested functions while
-retaining module anchors, source mappings, and the existing artifact contract.
+**Required decision before program-level default-pipeline integration:** decide
+when `IRCompiler`/CLI and independent module-product lowering should invoke the
+verified program-level result/rebuild boundary while retaining module anchors,
+source mappings, and the existing artifact contract. The internal adapter now
+covers the main stream and nested functions in stable function-table order.
 The branch intentionally keeps virtual-register IDs and defers physical
 allocation/coalescing to O2.
 
