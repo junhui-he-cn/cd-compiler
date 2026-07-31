@@ -70,6 +70,7 @@ export prefixSums, differenceArray, prefixMinimums, prefixMaximums,
 export climbStairs, maxNonAdjacentSum, minCoinCount, uniqueGridPaths,
        uniqueGridPathsWithObstacles, minGridPathSum, editDistance,
        longestIncreasingSubsequenceLength, longestCommonSubsequenceLength,
+       longestCommonSubstringLength,
        matrixChainCost, matrixPower2x2, mergeStonesCost, knapsack01,
        completeKnapsack, boundedKnapsack
        from "./dynamic_programming.cd";

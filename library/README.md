@@ -220,6 +220,7 @@ print ds.minimumLargestPartitionSum([7, 2, 5, 10, 8], 2);
 print ds.compareStrings("ant", "apple");
 print ds.longestUniqueSubstringLength("abcabcbb");
 print ds.longestPalindromicSubstring("babad");
+print ds.longestCommonSubstringLength("ababc", "babca");
 
 print ds.knapsack01([2, 3, 4], [3, 4, 5], 5);
 print ds.completeKnapsack([2, 3], [3, 4], 7);
@@ -887,6 +888,10 @@ length with `O(n^2)` time and `O(n)` space; equal values do not extend a
 subsequence. `longestCommonSubsequenceLength(left, right)` computes the LCS
 length over Unicode scalar values with `O(leftLength * rightLength)` time and
 `O(rightLength)` space.
+`longestCommonSubstringLength(left, right)` computes the longest contiguous
+common Unicode scalar-value run, returning its length. Empty inputs return `0`;
+the rolling-row DP uses `O(leftLength * rightLength)` time and
+`O(rightLength)` space.
 
 `matrixChainCost(dimensions)` computes the minimum scalar multiplication cost
 for matrices whose adjacent dimensions are given by the array. Positive integer
@@ -1251,7 +1256,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case numeric_algorithms_answer_space`,
 `--case algorithms_dp_1d`,
 `--case algorithms_dp_grid`,
-`--case algorithms_dp_sequences`,
+`--case algorithms_dp_sequences`, `--case algorithms_dp_common_substring`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
 `--case array_algorithms_prefix_monotonic`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
