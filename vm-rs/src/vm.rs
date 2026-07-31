@@ -9,6 +9,7 @@ use crate::runtime::{HeapObjectKind, HeapStats};
 use crate::value::Value;
 use std::collections::BTreeMap;
 use std::fmt;
+use std::ops::Index;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -2198,6 +2199,58 @@ impl CallArguments {
     }
 }
 
+enum NativeArguments {
+    Empty,
+    One(Value),
+    Two(Value, Value),
+    Many(Vec<Value>),
+}
+
+impl NativeArguments {
+    fn from_vec(arguments: Vec<Value>) -> Self {
+        match arguments.len() {
+            0 => Self::Empty,
+            1 => Self::One(arguments.into_iter().next().expect("one native argument")),
+            2 => {
+                let mut arguments = arguments.into_iter();
+                Self::Two(
+                    arguments.next().expect("first native argument"),
+                    arguments.next().expect("second native argument"),
+                )
+            }
+            _ => Self::Many(arguments),
+        }
+    }
+
+    fn len(&self) -> usize {
+        match self {
+            Self::Empty => 0,
+            Self::One(_) => 1,
+            Self::Two(_, _) => 2,
+            Self::Many(arguments) => arguments.len(),
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        matches!(self, Self::Empty)
+    }
+}
+
+impl Index<usize> for NativeArguments {
+    type Output = Value;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        match self {
+            Self::Empty => panic!("native argument index {} out of bounds", index),
+            Self::One(argument) if index == 0 => argument,
+            Self::Two(first, _) if index == 0 => first,
+            Self::Two(_, second) if index == 1 => second,
+            Self::Many(arguments) => &arguments[index],
+            _ => panic!("native argument index {} out of bounds", index),
+        }
+    }
+}
+
 pub struct VM<'a> {
     program: &'a Program,
     config: RunConfig,
@@ -2611,10 +2664,24 @@ impl<'a> VM<'a> {
                     arguments,
                 } => {
                     let name = self.read_name_ref(*name)?;
-                    let mut values = Vec::with_capacity(arguments.len());
-                    for argument in arguments {
-                        values.push(self.read_register(frame, *argument)?);
-                    }
+                    let values = match arguments.as_slice() {
+                        [] => NativeArguments::Empty,
+                        [argument] => {
+                            NativeArguments::One(self.read_register(frame, *argument)?)
+                        }
+                        [left, right] => {
+                            let left = self.read_register(frame, *left)?;
+                            let right = self.read_register(frame, *right)?;
+                            NativeArguments::Two(left, right)
+                        }
+                        arguments => {
+                            let mut values = Vec::with_capacity(arguments.len());
+                            for argument in arguments {
+                                values.push(self.read_register(frame, *argument)?);
+                            }
+                            NativeArguments::Many(values)
+                        }
+                    };
                     let call_site = body.locations.get(frame.ip).and_then(Option::as_ref);
                     let result = self.execute_native_call_at(
                         &name,
@@ -3302,7 +3369,7 @@ impl<'a> VM<'a> {
         Ok(length as usize)
     }
 
-    fn execute_native_range(&mut self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_range(&mut self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.is_empty() || arguments.len() > 3 {
             return Err(RuntimeError::new("range expects 1 to 3 arguments"));
         }
@@ -3506,13 +3573,18 @@ impl<'a> VM<'a> {
         name: &str,
         arguments: Vec<Value>,
     ) -> Result<Value, RuntimeError> {
-        self.execute_native_call_at(name, arguments, "<native>", None)
+        self.execute_native_call_at(
+            name,
+            NativeArguments::from_vec(arguments),
+            "<native>",
+            None,
+        )
     }
 
     fn execute_native_call_at(
         &mut self,
         name: &str,
-        arguments: Vec<Value>,
+        arguments: NativeArguments,
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
@@ -3558,7 +3630,7 @@ impl<'a> VM<'a> {
 
     fn execute_native_map(
         &mut self,
-        arguments: Vec<Value>,
+        arguments: NativeArguments,
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
@@ -3591,7 +3663,7 @@ impl<'a> VM<'a> {
 
     fn execute_native_filter(
         &mut self,
-        arguments: Vec<Value>,
+        arguments: NativeArguments,
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
@@ -3629,7 +3701,7 @@ impl<'a> VM<'a> {
 
     fn execute_native_flat_map(
         &mut self,
-        arguments: Vec<Value>,
+        arguments: NativeArguments,
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
@@ -3669,7 +3741,7 @@ impl<'a> VM<'a> {
 
     fn execute_native_any_all(
         &mut self,
-        arguments: Vec<Value>,
+        arguments: NativeArguments,
         caller: &str,
         call_site: Option<&DebugLocation>,
         any: bool,
@@ -3721,7 +3793,7 @@ impl<'a> VM<'a> {
 
     fn execute_native_count(
         &mut self,
-        arguments: Vec<Value>,
+        arguments: NativeArguments,
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
@@ -3759,7 +3831,7 @@ impl<'a> VM<'a> {
 
     fn execute_native_find(
         &mut self,
-        arguments: Vec<Value>,
+        arguments: NativeArguments,
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
@@ -3796,7 +3868,7 @@ impl<'a> VM<'a> {
 
     fn execute_native_find_index(
         &mut self,
-        arguments: Vec<Value>,
+        arguments: NativeArguments,
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
@@ -3833,7 +3905,7 @@ impl<'a> VM<'a> {
 
     fn execute_native_reduce(
         &mut self,
-        arguments: Vec<Value>,
+        arguments: NativeArguments,
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
@@ -3864,7 +3936,7 @@ impl<'a> VM<'a> {
         Ok(accumulator)
     }
 
-    fn execute_native_push(&mut self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_push(&mut self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
             return Err(RuntimeError::new("push expects 2 arguments"));
         }
@@ -3876,7 +3948,7 @@ impl<'a> VM<'a> {
         Ok(Value::Nil)
     }
 
-    fn execute_native_pop(&self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_pop(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.len() != 1 {
             return Err(RuntimeError::new("pop expects 1 arguments"));
         }
@@ -3890,7 +3962,7 @@ impl<'a> VM<'a> {
             .ok_or_else(|| RuntimeError::new("cannot pop from empty array"))
     }
 
-    fn execute_native_remove(&self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_remove(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
             return Err(RuntimeError::new("remove expects 2 arguments"));
         }
@@ -3906,7 +3978,7 @@ impl<'a> VM<'a> {
         Ok(entries.remove(position).1)
     }
 
-    fn execute_native_clear(&self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_clear(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.len() != 1 {
             return Err(RuntimeError::new("clear expects 1 argument"));
         }
@@ -3917,7 +3989,7 @@ impl<'a> VM<'a> {
         Ok(Value::Nil)
     }
 
-    fn execute_native_merge(&mut self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_merge(&mut self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
             return Err(RuntimeError::new("merge expects 2 arguments"));
         }
@@ -3935,7 +4007,7 @@ impl<'a> VM<'a> {
         self.allocate_map(entries)
     }
 
-    fn execute_native_keys(&mut self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_keys(&mut self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.len() != 1 {
             return Err(RuntimeError::new("keys expects 1 argument"));
         }
@@ -3952,7 +4024,7 @@ impl<'a> VM<'a> {
         self.allocate_array(elements)
     }
 
-    fn execute_native_values(&mut self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_values(&mut self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.len() != 1 {
             return Err(RuntimeError::new("values expects 1 argument"));
         }
@@ -3969,7 +4041,7 @@ impl<'a> VM<'a> {
         self.allocate_array(elements)
     }
 
-    fn execute_native_floor(&self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_floor(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.len() != 1 {
             return Err(RuntimeError::new("floor expects 1 arguments"));
         }
@@ -3979,7 +4051,7 @@ impl<'a> VM<'a> {
         Ok(Value::number(value.floor()))
     }
 
-    fn execute_native_ceil(&self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_ceil(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.len() != 1 {
             return Err(RuntimeError::new("ceil expects 1 arguments"));
         }
@@ -3989,7 +4061,7 @@ impl<'a> VM<'a> {
         Ok(Value::number(value.ceil()))
     }
 
-    fn execute_native_sqrt(&self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_sqrt(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.len() != 1 {
             return Err(RuntimeError::new("sqrt expects 1 arguments"));
         }
@@ -4026,14 +4098,14 @@ impl<'a> VM<'a> {
         offsets
     }
 
-    fn execute_native_str(&self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_str(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.len() != 1 {
             return Err(RuntimeError::new("str expects 1 arguments"));
         }
         Ok(Value::string(arguments[0].to_string()))
     }
 
-    fn execute_native_substr(&self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_substr(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.len() != 3 {
             return Err(RuntimeError::new("substr expects 3 arguments"));
         }
@@ -4071,7 +4143,7 @@ impl<'a> VM<'a> {
         Ok(Value::string(text[begin..end].to_string()))
     }
 
-    fn execute_native_char_at(&self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_char_at(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
             return Err(RuntimeError::new("charAt expects 2 arguments"));
         }
@@ -4099,21 +4171,21 @@ impl<'a> VM<'a> {
         Ok(Value::string(text[begin..end].to_string()))
     }
 
-    fn execute_native_type_of(&self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_type_of(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.len() != 1 {
             return Err(RuntimeError::new("typeOf expects 1 arguments"));
         }
         Ok(Value::string(arguments[0].type_name()))
     }
 
-    fn execute_native_hash(&self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_hash(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.len() != 1 {
             return Err(RuntimeError::new("hash expects 1 argument"));
         }
         Ok(Value::number(arguments[0].runtime_hash()))
     }
 
-    fn execute_native_contains(&mut self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_contains(&mut self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
             return Err(RuntimeError::new("contains expects 2 arguments"));
         }
@@ -4170,7 +4242,7 @@ impl<'a> VM<'a> {
         }
     }
 
-    fn execute_native_slice(&mut self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_slice(&mut self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.len() != 3 {
             return Err(RuntimeError::new("slice expects 3 arguments"));
         }
@@ -4210,7 +4282,7 @@ impl<'a> VM<'a> {
         self.allocate_array(elements)
     }
 
-    fn execute_native_copy(&mut self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_copy(&mut self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.len() != 1 {
             return Err(RuntimeError::new("copy expects 1 argument"));
         }
@@ -4229,7 +4301,7 @@ impl<'a> VM<'a> {
         self.allocate_array(elements)
     }
 
-    fn execute_native_concat(&mut self, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    fn execute_native_concat(&mut self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
             return Err(RuntimeError::new("concat expects 2 arguments"));
         }

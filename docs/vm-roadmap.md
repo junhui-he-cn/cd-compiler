@@ -539,6 +539,13 @@ cached body 和 child frame 通过 `Rc<str>` 共享函数名，trace/debug/error
 降至 `0.246518s`，native 小 workload 保持在启动噪声范围；详见
 [`docs/decisions/vm-execution-loop-015-profile-off-hook-guards.md`](decisions/vm-execution-loop-015-profile-off-hook-guards.md)。
 
+**状态（第十六 inline native arguments 窄切片已完成，2026-07-31）：**
+`NativeCall` 的零、一、二参数直接使用内部 `NativeArguments` inline variant，三
+参数以上保留 `Many(Vec<Value>)` fallback；`execute_native_call(name, Vec<Value>)`
+入口和 native arity、callback、资源、profile、诊断语义不变。native 小 workload
+仍处于启动噪声范围；详见
+[`docs/decisions/vm-execution-loop-016-inline-native-arguments.md`](decisions/vm-execution-loop-016-inline-native-arguments.md)。
+
 ### VM-5C：容量与大模块图
 
 **目标：** 让 VM 在大 artifact、深调用、长字符串、大数组和多模块 link 下
@@ -645,7 +652,7 @@ VM-3A 的第一 library boundary、typed error/version boundary、VM-3B 的第�
 linker report slice、VM-4A 的第一 interactive debugger slice、VM-4B 的第一
 deterministic profile counter slice、VM-4C 的第一 structured kind slice、VM-5A
 的 reproducible benchmark baseline/scale slices 和 VM-5B 的 trace-off instruction
-preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard/checkpoint-fast-path/borrow-register-operands/borrow-native-name/borrow-function-values/borrow-caller-name/shared-frame-names/profile-off-hook-guards slices 已完成；GC、persistent VM、
+preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard/checkpoint-fast-path/borrow-register-operands/borrow-native-name/borrow-function-values/borrow-caller-name/shared-frame-names/profile-off-hook-guards/inline-native-arguments slices 已完成；GC、persistent VM、
 JIT 和新的 artifact version 仍未进入默认队列。VM-4B 的 wall-clock 与
 allocation/peak 扩展、VM-4C 的统一 host schema，以及 VM-5B 的后续性能优化都
 需要独立决策；下一步应依据十一个 workload 的 baseline 数据选择下一个明确的
