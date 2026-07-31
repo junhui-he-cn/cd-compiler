@@ -450,7 +450,7 @@ enum Result<T, E> {
 - 前插、尾插、拼接、反转；
 - 截取、丢弃和两个有序不可变链表的稳定归并；
 - 合并两个有序链表；
-- 找中点、判断回文：`listMiddle`、`listIsPalindrome` 已完成；检测环；
+- 找中点、判断回文：`listMiddle` 使用快慢游标，`listIsPalindrome` 已完成；检测环；
 - 删除倒数第 `n` 个元素：`listRemoveFromEnd` 已完成；
 - 两链表相交点。
 

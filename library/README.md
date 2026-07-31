@@ -432,8 +432,9 @@ These operations preserve the input lists. `listLength`/`listGet` and
 `listAppend` are `O(n)` in the traversed list, `listConcat` is `O(n)` in its
 left input and shares the right input, `listTake`/`listDrop` are `O(k)`, and
 `mergeSortedLists` is `O(n + m)` while sharing only its final untouched suffix.
-The three new algorithms use `O(n)` temporary array space and linear time;
-`listRemoveFromEnd` otherwise returns a persistent rebuilt list.
+`listMiddle` uses fast/slow list cursors in `O(n)` time and `O(1)` extra space.
+`listIsPalindrome` uses an `O(n)` temporary array, while `listRemoveFromEnd`
+uses an `O(n)` temporary array before returning a persistent rebuilt list.
 
 `Tree<T>` is an immutable recursive binary tree:
 
