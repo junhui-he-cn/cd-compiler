@@ -1228,8 +1228,8 @@ and run in `O(n)` time with `O(1)` extra space.
 `huffmanMergeCost(weights)` returns the minimum total cost of repeatedly merging
 the two smallest non-negative weights. Empty and single-weight inputs cost `0`,
 negative weights return `nil`, and the input is unchanged. This is the numeric
-Huffman construction core; it does not assign symbol codes. The current
-array-only implementation takes `O(n^2)` time and `O(n)` temporary space.
+Huffman construction core; it does not assign symbol codes. The min-heap
+implementation takes `O(n log n)` time and `O(n)` temporary space.
 
 For non-decreasing numeric arrays, `mergeSortedNumbers(left, right)` returns a
 linear-time merged copy and `twoSumSorted(values, target)` uses two pointers to

@@ -342,50 +342,29 @@ fun minimumJumps(values: [number]): optional<number> {
 }
 
 fun huffmanMergeCost(weights: [number]): optional<number> {
-  let working: [number] = [];
+  let working = newBinaryHeap<number>(numberLess);
   let index = 0;
   while (index < weights.len()) {
     if (weights[index] < 0) {
       return nil;
     }
-    working.push(weights[index]);
+    working.add(weights[index]);
     index += 1;
   }
 
   let total = 0;
-  while (working.len() > 1) {
-    let firstIndex = 0;
-    let secondIndex = 1;
-    if (working[secondIndex] < working[firstIndex]) {
-      let swap = firstIndex;
-      firstIndex = secondIndex;
-      secondIndex = swap;
+  while (working.size() > 1) {
+    let first = working.take();
+    if (first == nil) {
+      return nil;
     }
-    index = 2;
-    while (index < working.len()) {
-      if (working[index] < working[firstIndex]) {
-        secondIndex = firstIndex;
-        firstIndex = index;
-      } else {
-        if (working[index] < working[secondIndex]) {
-          secondIndex = index;
-        }
-      }
-      index += 1;
+    let second = working.take();
+    if (second == nil) {
+      return nil;
     }
-
-    let merged = working[firstIndex] + working[secondIndex];
+    let merged = first + second;
     total += merged;
-    let remaining: [number] = [];
-    index = 0;
-    while (index < working.len()) {
-      if (index != firstIndex && index != secondIndex) {
-        remaining.push(working[index]);
-      }
-      index += 1;
-    }
-    remaining.push(merged);
-    working = remaining;
+    working.add(merged);
   }
   return total;
 }

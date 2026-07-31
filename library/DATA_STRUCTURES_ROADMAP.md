@@ -63,7 +63,7 @@
 - 贪心区间调度：`selectNonOverlappingIntervals`。
 - 区间资源分配：`minimumIntervalRooms`。
 - 跳跃游戏贪心：`canReachEnd`、`minimumJumps`。
-- Huffman 贪心核心：`huffmanMergeCost`。
+- Huffman 贪心核心：`huffmanMergeCost`（最小堆实现，`O(n log n)`）。
 - 双指针算法：`mergeSortedNumbers`、`twoSumSorted`、`threeSumZero`、`threeSumClosest`。
 - 多路有序数组合并：`mergeSortedArrays`。
 - 逆序对统计：`countInversions`。
