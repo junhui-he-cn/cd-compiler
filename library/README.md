@@ -1242,8 +1242,8 @@ arrays into one new array. It accepts a strict `fun(T, T): bool` comparator,
 does not modify the outer or inner input arrays, and returns `[]` for an empty
 collection of arrays or when all arrays are empty. Comparator-equivalent values
 are selected by increasing source-array index, so the merge is stable across
-the input arrays. Scanning all `k` current heads takes `O(n * k)` time and
-`O(k)` position space, in addition to the `O(n)` output.
+the input arrays. A min-heap of the `k` current heads takes `O(n log k)` time and
+`O(k)` heap space, in addition to the `O(n)` output.
 
 `threeSumZero(values)` returns unique nondecreasing triples whose values sum to
 zero. It sorts a shallow copy, uses two pointers, and keeps triples in the

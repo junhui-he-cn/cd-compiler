@@ -1,4 +1,5 @@
 // Array, interval, two-pointer, and frequency algorithms.
+import "./collections.cd";
 import "./sets.cd";
 import "./strings.cd";
 import "./sorting.cd";
@@ -413,34 +414,55 @@ fun mergeSortedNumbers(left: [number], right: [number]): [number] {
   return result;
 }
 
+struct MergeHead<T> {
+  value: T,
+  sequence: number,
+  position: number,
+  less: fun(T, T): bool
+}
+
+fun mergeHeadLess<T>(left: MergeHead<T>, right: MergeHead<T>): bool {
+  let compare = left.less;
+  if (compare(left.value, right.value)) {
+    return true;
+  }
+  if (compare(right.value, left.value)) {
+    return false;
+  }
+  return left.sequence < right.sequence;
+}
+
 fun mergeSortedArrays<T>(sequences: [[T]], less: fun(T, T): bool): [T] {
   let result: [T] = [];
-  let positions: [number] = [];
+  let heads = newBinaryHeap<MergeHead<T>>(mergeHeadLess);
   let sequenceIndex = 0;
   while (sequenceIndex < sequences.len()) {
-    positions.push(0);
+    if (sequences[sequenceIndex].len() > 0) {
+      heads.add(MergeHead<T> {
+        value: sequences[sequenceIndex][0],
+        sequence: sequenceIndex,
+        position: 0,
+        less: less
+      });
+    }
     sequenceIndex += 1;
   }
 
-  while (true) {
-    let bestSequence = -1;
-    sequenceIndex = 0;
-    while (sequenceIndex < sequences.len()) {
-      if (positions[sequenceIndex] < sequences[sequenceIndex].len()) {
-        if (bestSequence < 0
-            || less(sequences[sequenceIndex][positions[sequenceIndex]],
-                    sequences[bestSequence][positions[bestSequence]])) {
-          bestSequence = sequenceIndex;
-        }
-      }
-      sequenceIndex += 1;
-    }
-
-    if (bestSequence < 0) {
+  while (!heads.isEmpty()) {
+    let head = heads.take();
+    if (head == nil) {
       break;
     }
-    result.push(sequences[bestSequence][positions[bestSequence]]);
-    positions[bestSequence] += 1;
+    result.push(head.value);
+    let nextPosition = head.position + 1;
+    if (nextPosition < sequences[head.sequence].len()) {
+      heads.add(MergeHead<T> {
+        value: sequences[head.sequence][nextPosition],
+        sequence: head.sequence,
+        position: nextPosition,
+        less: less
+      });
+    }
   }
   return result;
 }
