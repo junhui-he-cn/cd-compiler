@@ -219,6 +219,7 @@ struct NativeSpec {
     min_arity: usize,
     max_arity: usize,
     callback: bool,
+    arity_error: &'static str,
 }
 
 const NATIVE_SPECS: &[NativeSpec] = &[
@@ -228,6 +229,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 2,
         max_arity: 2,
         callback: false,
+        arity_error: "push expects 2 arguments",
     },
     NativeSpec {
         id: NativeId::Pop,
@@ -235,6 +237,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 1,
         max_arity: 1,
         callback: false,
+        arity_error: "pop expects 1 arguments",
     },
     NativeSpec {
         id: NativeId::Remove,
@@ -242,6 +245,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 2,
         max_arity: 2,
         callback: false,
+        arity_error: "remove expects 2 arguments",
     },
     NativeSpec {
         id: NativeId::Clear,
@@ -249,6 +253,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 1,
         max_arity: 1,
         callback: false,
+        arity_error: "clear expects 1 argument",
     },
     NativeSpec {
         id: NativeId::Merge,
@@ -256,6 +261,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 2,
         max_arity: 2,
         callback: false,
+        arity_error: "merge expects 2 arguments",
     },
     NativeSpec {
         id: NativeId::Keys,
@@ -263,6 +269,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 1,
         max_arity: 1,
         callback: false,
+        arity_error: "keys expects 1 argument",
     },
     NativeSpec {
         id: NativeId::Values,
@@ -270,6 +277,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 1,
         max_arity: 1,
         callback: false,
+        arity_error: "values expects 1 argument",
     },
     NativeSpec {
         id: NativeId::Floor,
@@ -277,6 +285,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 1,
         max_arity: 1,
         callback: false,
+        arity_error: "floor expects 1 arguments",
     },
     NativeSpec {
         id: NativeId::Ceil,
@@ -284,6 +293,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 1,
         max_arity: 1,
         callback: false,
+        arity_error: "ceil expects 1 arguments",
     },
     NativeSpec {
         id: NativeId::Sqrt,
@@ -291,6 +301,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 1,
         max_arity: 1,
         callback: false,
+        arity_error: "sqrt expects 1 arguments",
     },
     NativeSpec {
         id: NativeId::Str,
@@ -298,6 +309,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 1,
         max_arity: 1,
         callback: false,
+        arity_error: "str expects 1 arguments",
     },
     NativeSpec {
         id: NativeId::Substr,
@@ -305,6 +317,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 3,
         max_arity: 3,
         callback: false,
+        arity_error: "substr expects 3 arguments",
     },
     NativeSpec {
         id: NativeId::CharAt,
@@ -312,6 +325,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 2,
         max_arity: 2,
         callback: false,
+        arity_error: "charAt expects 2 arguments",
     },
     NativeSpec {
         id: NativeId::TypeOf,
@@ -319,6 +333,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 1,
         max_arity: 1,
         callback: false,
+        arity_error: "typeOf expects 1 arguments",
     },
     NativeSpec {
         id: NativeId::Hash,
@@ -326,6 +341,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 1,
         max_arity: 1,
         callback: false,
+        arity_error: "hash expects 1 argument",
     },
     NativeSpec {
         id: NativeId::Contains,
@@ -333,6 +349,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 2,
         max_arity: 2,
         callback: false,
+        arity_error: "contains expects 2 arguments",
     },
     NativeSpec {
         id: NativeId::Slice,
@@ -340,6 +357,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 3,
         max_arity: 3,
         callback: false,
+        arity_error: "slice expects 3 arguments",
     },
     NativeSpec {
         id: NativeId::Copy,
@@ -347,6 +365,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 1,
         max_arity: 1,
         callback: false,
+        arity_error: "copy expects 1 argument",
     },
     NativeSpec {
         id: NativeId::Concat,
@@ -354,6 +373,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 2,
         max_arity: 2,
         callback: false,
+        arity_error: "concat expects 2 arguments",
     },
     NativeSpec {
         id: NativeId::Map,
@@ -361,6 +381,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 2,
         max_arity: 2,
         callback: true,
+        arity_error: "map expects 2 arguments",
     },
     NativeSpec {
         id: NativeId::Filter,
@@ -368,6 +389,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 2,
         max_arity: 2,
         callback: true,
+        arity_error: "filter expects 2 arguments",
     },
     NativeSpec {
         id: NativeId::FlatMap,
@@ -375,6 +397,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 2,
         max_arity: 2,
         callback: true,
+        arity_error: "flatMap expects 2 arguments",
     },
     NativeSpec {
         id: NativeId::Any,
@@ -382,6 +405,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 2,
         max_arity: 2,
         callback: true,
+        arity_error: "any expects 2 arguments",
     },
     NativeSpec {
         id: NativeId::All,
@@ -389,6 +413,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 2,
         max_arity: 2,
         callback: true,
+        arity_error: "all expects 2 arguments",
     },
     NativeSpec {
         id: NativeId::Count,
@@ -396,6 +421,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 2,
         max_arity: 2,
         callback: true,
+        arity_error: "count expects 2 arguments",
     },
     NativeSpec {
         id: NativeId::Find,
@@ -403,6 +429,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 2,
         max_arity: 2,
         callback: true,
+        arity_error: "find expects 2 arguments",
     },
     NativeSpec {
         id: NativeId::FindIndex,
@@ -410,6 +437,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 2,
         max_arity: 2,
         callback: true,
+        arity_error: "findIndex expects 2 arguments",
     },
     NativeSpec {
         id: NativeId::Reduce,
@@ -417,6 +445,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 3,
         max_arity: 3,
         callback: true,
+        arity_error: "reduce expects 3 arguments",
     },
     NativeSpec {
         id: NativeId::Range,
@@ -424,6 +453,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         min_arity: 1,
         max_arity: 3,
         callback: false,
+        arity_error: "range expects 1 to 3 arguments",
     },
 ];
 
@@ -570,6 +600,19 @@ mod tests {
         assert!(native_spec("reduce").unwrap().callback);
         assert!(!native_spec("push").unwrap().callback);
         assert!(native_spec("notRegistered").is_none());
+    }
+
+    #[test]
+    fn native_registry_enforces_registered_arity_messages() {
+        let program = empty_program();
+        let mut vm = VM::new(&program);
+        for spec in NATIVE_SPECS {
+            assert!(spec.min_arity > 0);
+            let error = vm
+                .execute_native_call(spec.name, Vec::new())
+                .expect_err("zero arguments should violate every native contract");
+            assert_eq!(error.message, spec.arity_error, "native {}", spec.name);
+        }
     }
 
     #[test]
@@ -3826,9 +3869,6 @@ impl<'a> VM<'a> {
     }
 
     fn execute_native_range(&mut self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.is_empty() || arguments.len() > 3 {
-            return Err(RuntimeError::new("range expects 1 to 3 arguments"));
-        }
         let (start, stop, step) = match arguments.len() {
             1 => (0, Self::range_bound(&arguments[0], 0)?, 1),
             2 => (
@@ -4050,6 +4090,9 @@ impl<'a> VM<'a> {
         if self.profile_enabled {
             self.profile_native_call(name);
         }
+        if arguments.len() < spec.min_arity || arguments.len() > spec.max_arity {
+            return Err(RuntimeError::new(spec.arity_error));
+        }
         match spec.id {
             NativeId::Push => self.execute_native_push(arguments),
             NativeId::Pop => self.execute_native_pop(arguments),
@@ -4089,9 +4132,6 @@ impl<'a> VM<'a> {
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
-        if arguments.len() != 2 {
-            return Err(RuntimeError::new("map expects 2 arguments"));
-        }
         let Value::Array(array) = &arguments[0] else {
             return Err(RuntimeError::new("map expects array as first argument"));
         };
@@ -4122,9 +4162,6 @@ impl<'a> VM<'a> {
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
-        if arguments.len() != 2 {
-            return Err(RuntimeError::new("filter expects 2 arguments"));
-        }
         let Value::Array(array) = &arguments[0] else {
             return Err(RuntimeError::new("filter expects array as first argument"));
         };
@@ -4160,9 +4197,6 @@ impl<'a> VM<'a> {
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
-        if arguments.len() != 2 {
-            return Err(RuntimeError::new("flatMap expects 2 arguments"));
-        }
         let Value::Array(array) = &arguments[0] else {
             return Err(RuntimeError::new("flatMap expects array as first argument"));
         };
@@ -4202,9 +4236,6 @@ impl<'a> VM<'a> {
         any: bool,
     ) -> Result<Value, RuntimeError> {
         let name = if any { "any" } else { "all" };
-        if arguments.len() != 2 {
-            return Err(RuntimeError::new(format!("{} expects 2 arguments", name)));
-        }
         let Value::Array(array) = &arguments[0] else {
             return Err(RuntimeError::new(format!(
                 "{} expects array as first argument",
@@ -4252,9 +4283,6 @@ impl<'a> VM<'a> {
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
-        if arguments.len() != 2 {
-            return Err(RuntimeError::new("count expects 2 arguments"));
-        }
         let Value::Array(array) = &arguments[0] else {
             return Err(RuntimeError::new("count expects array as first argument"));
         };
@@ -4290,9 +4318,6 @@ impl<'a> VM<'a> {
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
-        if arguments.len() != 2 {
-            return Err(RuntimeError::new("find expects 2 arguments"));
-        }
         let Value::Array(array) = &arguments[0] else {
             return Err(RuntimeError::new("find expects array as first argument"));
         };
@@ -4327,9 +4352,6 @@ impl<'a> VM<'a> {
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
-        if arguments.len() != 2 {
-            return Err(RuntimeError::new("findIndex expects 2 arguments"));
-        }
         let Value::Array(array) = &arguments[0] else {
             return Err(RuntimeError::new("findIndex expects array as first argument"));
         };
@@ -4364,9 +4386,6 @@ impl<'a> VM<'a> {
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
-        if arguments.len() != 3 {
-            return Err(RuntimeError::new("reduce expects 3 arguments"));
-        }
         let Value::Array(array) = &arguments[0] else {
             return Err(RuntimeError::new("reduce expects array as first argument"));
         };
@@ -4392,9 +4411,6 @@ impl<'a> VM<'a> {
     }
 
     fn execute_native_push(&mut self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.len() != 2 {
-            return Err(RuntimeError::new("push expects 2 arguments"));
-        }
         let Value::Array(array) = &arguments[0] else {
             return Err(RuntimeError::new("push expects array as first argument"));
         };
@@ -4404,9 +4420,6 @@ impl<'a> VM<'a> {
     }
 
     fn execute_native_pop(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.len() != 1 {
-            return Err(RuntimeError::new("pop expects 1 arguments"));
-        }
         let Value::Array(array) = &arguments[0] else {
             return Err(RuntimeError::new("pop expects array as first argument"));
         };
@@ -4418,9 +4431,6 @@ impl<'a> VM<'a> {
     }
 
     fn execute_native_remove(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.len() != 2 {
-            return Err(RuntimeError::new("remove expects 2 arguments"));
-        }
         let Value::Map(map) = &arguments[0] else {
             return Err(RuntimeError::new("remove expects map as first argument"));
         };
@@ -4434,9 +4444,6 @@ impl<'a> VM<'a> {
     }
 
     fn execute_native_clear(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.len() != 1 {
-            return Err(RuntimeError::new("clear expects 1 argument"));
-        }
         let Value::Map(map) = &arguments[0] else {
             return Err(RuntimeError::new("clear expects map as first argument"));
         };
@@ -4445,9 +4452,6 @@ impl<'a> VM<'a> {
     }
 
     fn execute_native_merge(&mut self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.len() != 2 {
-            return Err(RuntimeError::new("merge expects 2 arguments"));
-        }
         let Value::Map(left) = &arguments[0] else {
             return Err(RuntimeError::new("merge expects map as first argument"));
         };
@@ -4463,9 +4467,6 @@ impl<'a> VM<'a> {
     }
 
     fn execute_native_keys(&mut self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.len() != 1 {
-            return Err(RuntimeError::new("keys expects 1 argument"));
-        }
         let Value::Map(map) = &arguments[0] else {
             return Err(RuntimeError::new("keys expects map as first argument"));
         };
@@ -4480,9 +4481,6 @@ impl<'a> VM<'a> {
     }
 
     fn execute_native_values(&mut self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.len() != 1 {
-            return Err(RuntimeError::new("values expects 1 argument"));
-        }
         let Value::Map(map) = &arguments[0] else {
             return Err(RuntimeError::new("values expects map as first argument"));
         };
@@ -4497,9 +4495,6 @@ impl<'a> VM<'a> {
     }
 
     fn execute_native_floor(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.len() != 1 {
-            return Err(RuntimeError::new("floor expects 1 arguments"));
-        }
         let Value::Number(value) = &arguments[0] else {
             return Err(RuntimeError::new("floor expects number"));
         };
@@ -4507,9 +4502,6 @@ impl<'a> VM<'a> {
     }
 
     fn execute_native_ceil(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.len() != 1 {
-            return Err(RuntimeError::new("ceil expects 1 arguments"));
-        }
         let Value::Number(value) = &arguments[0] else {
             return Err(RuntimeError::new("ceil expects number"));
         };
@@ -4517,9 +4509,6 @@ impl<'a> VM<'a> {
     }
 
     fn execute_native_sqrt(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.len() != 1 {
-            return Err(RuntimeError::new("sqrt expects 1 arguments"));
-        }
         let Value::Number(value) = &arguments[0] else {
             return Err(RuntimeError::new("sqrt expects number"));
         };
@@ -4554,16 +4543,10 @@ impl<'a> VM<'a> {
     }
 
     fn execute_native_str(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.len() != 1 {
-            return Err(RuntimeError::new("str expects 1 arguments"));
-        }
         Ok(Value::string(arguments[0].to_string()))
     }
 
     fn execute_native_substr(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.len() != 3 {
-            return Err(RuntimeError::new("substr expects 3 arguments"));
-        }
         let Value::String(text) = &arguments[0] else {
             return Err(RuntimeError::new("substr expects string as first argument"));
         };
@@ -4599,9 +4582,6 @@ impl<'a> VM<'a> {
     }
 
     fn execute_native_char_at(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.len() != 2 {
-            return Err(RuntimeError::new("charAt expects 2 arguments"));
-        }
         let Value::String(text) = &arguments[0] else {
             return Err(RuntimeError::new("charAt expects string as first argument"));
         };
@@ -4627,23 +4607,14 @@ impl<'a> VM<'a> {
     }
 
     fn execute_native_type_of(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.len() != 1 {
-            return Err(RuntimeError::new("typeOf expects 1 arguments"));
-        }
         Ok(Value::string(arguments[0].type_name()))
     }
 
     fn execute_native_hash(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.len() != 1 {
-            return Err(RuntimeError::new("hash expects 1 argument"));
-        }
         Ok(Value::number(arguments[0].runtime_hash()))
     }
 
     fn execute_native_contains(&mut self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.len() != 2 {
-            return Err(RuntimeError::new("contains expects 2 arguments"));
-        }
         match &arguments[0] {
             Value::Array(array) => {
                 let elements = array.elements.borrow().clone();
@@ -4698,9 +4669,6 @@ impl<'a> VM<'a> {
     }
 
     fn execute_native_slice(&mut self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.len() != 3 {
-            return Err(RuntimeError::new("slice expects 3 arguments"));
-        }
         let Value::Array(array) = &arguments[0] else {
             return Err(RuntimeError::new("slice expects array as first argument"));
         };
@@ -4738,9 +4706,6 @@ impl<'a> VM<'a> {
     }
 
     fn execute_native_copy(&mut self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.len() != 1 {
-            return Err(RuntimeError::new("copy expects 1 argument"));
-        }
         let Value::Array(array) = &arguments[0] else {
             return Err(RuntimeError::new("copy expects array as first argument"));
         };
@@ -4757,9 +4722,6 @@ impl<'a> VM<'a> {
     }
 
     fn execute_native_concat(&mut self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
-        if arguments.len() != 2 {
-            return Err(RuntimeError::new("concat expects 2 arguments"));
-        }
         let Value::Array(left) = &arguments[0] else {
             return Err(RuntimeError::new("concat expects array as first argument"));
         };
