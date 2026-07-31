@@ -865,6 +865,93 @@ fun stronglyConnectedComponents(graph: Graph): [[number]] {
   return components;
 }
 
+struct TarjanSccState {
+  indices: [number],
+  lowLinks: [number],
+  onStack: [bool],
+  stack: [number],
+  nextIndex: number,
+  components: [[number]]
+}
+
+impl TarjanSccState {
+  fun visit(graph: Graph, vertex: number) {
+    this.indices[vertex] = this.nextIndex;
+    this.lowLinks[vertex] = this.nextIndex;
+    this.nextIndex += 1;
+    this.stack.push(vertex);
+    this.onStack[vertex] = true;
+
+    let neighbors = graph.adjacency[vertex];
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let neighbor = neighbors[neighborIndex];
+      if (this.indices[neighbor] < 0) {
+        this.visit(graph, neighbor);
+        if (this.lowLinks[neighbor] < this.lowLinks[vertex]) {
+          this.lowLinks[vertex] = this.lowLinks[neighbor];
+        }
+      } else {
+        if (this.onStack[neighbor]
+            && this.indices[neighbor] < this.lowLinks[vertex]) {
+          this.lowLinks[vertex] = this.indices[neighbor];
+        }
+      }
+      neighborIndex += 1;
+    }
+
+    if (this.lowLinks[vertex] == this.indices[vertex]) {
+      let component: [number] = [];
+      while (true) {
+        let member = this.stack[this.stack.len() - 1];
+        this.stack.pop();
+        this.onStack[member] = false;
+        component.push(member);
+        if (member == vertex) {
+          break;
+        }
+      }
+      this.components.push(component);
+    }
+  }
+}
+
+fun stronglyConnectedComponentsTarjan(graph: Graph): [[number]] {
+  let components: [[number]] = [];
+  if (!graph.directed) {
+    return components;
+  }
+
+  let count = graph.vertexCount();
+  let indices: [number] = [];
+  let lowLinks: [number] = [];
+  let onStack: [bool] = [];
+  let index = 0;
+  while (index < count) {
+    indices.push(-1);
+    lowLinks.push(-1);
+    onStack.push(false);
+    index += 1;
+  }
+
+  let state = TarjanSccState {
+    indices: indices,
+    lowLinks: lowLinks,
+    onStack: onStack,
+    stack: [],
+    nextIndex: 0,
+    components: []
+  };
+  index = 0;
+  while (index < count) {
+    if (state.indices[index] < 0) {
+      state.visit(graph, index);
+    }
+    index += 1;
+  }
+  return state.components;
+}
+
 struct WeightedEdge {
   to: number,
   weight: number
@@ -1541,4 +1628,4 @@ fun minimumSpanningForest(graph: WeightedGraph): WeightedGraph {
 }
 
 
-export DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest;
+export DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, stronglyConnectedComponentsTarjan, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest;

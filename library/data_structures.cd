@@ -32,6 +32,7 @@ export DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge,
        breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite,
        articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath,
        inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents,
+       stronglyConnectedComponentsTarjan,
        bellmanFord, shortestWeightedDistances, allPairsWeightedDistances,
        maxFlow, minCut, shortestWeightedPath, minimumSpanningForest
        from "./graphs.cd";

@@ -712,6 +712,11 @@ directed graph and returns components in finish-order discovery order, with
 each component listing vertices in its DFS discovery order. It returns `[]`
 for undirected graphs and uses `O(V + E)` time and `O(V + E)` auxiliary space.
 
+`stronglyConnectedComponentsTarjan(graph)` provides the recursive low-link
+variant for directed graphs. It returns components when each root completes,
+with members in stack-pop order, returns `[]` for undirected graphs, and uses
+`O(V + E)` time and `O(V)` auxiliary state plus recursion depth.
+
 `WeightedGraph` stores non-negative numeric edge weights. Its Dijkstra helpers
 `shortestWeightedDistances` and `shortestWeightedPath` return `-1`/`[]` for
 unreachable results and reject negative weights at insertion. The current array
@@ -1306,6 +1311,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case algorithms_graph_paths`,
 `--case algorithms_graph_bellman_ford`,
 `--case algorithms_graph_kruskal`,
+`--case algorithms_graph_tarjan`,
 `--case algorithms_string_matching`,
 `--case algorithms_string_trie`, `--case data_structures_trie_remove`,
 `--case algorithms_string_sequences`,

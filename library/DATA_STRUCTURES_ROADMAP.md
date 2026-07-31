@@ -99,7 +99,8 @@
 - DAG 视图：`inDegrees`、`topologicalOrder`、`hasCycle`。
 - 加权图：非负 `WeightedEdge`/`WeightedGraph`、Dijkstra、Floyd-Warshall、最大流、最小割、Prim 与 Kruskal 最小生成森林。
 - 有符号加权图：`SignedWeightedGraph`、`BellmanFordResult` 与 Bellman-Ford 负环检测。
-- 强连通分量：有向图的 `stronglyConnectedComponents`。
+- 强连通分量：有向图的 `stronglyConnectedComponents`（Kosaraju）和
+  `stronglyConnectedComponentsTarjan`。
 
 它们的现有 API 和示例继续作为兼容基线。后续新增 API 不应悄悄改变空值、
 快照或引用共享语义。
@@ -476,7 +477,7 @@ enum Result<T, E> {
 - 可处理负边的 Bellman-Ford；
 - 全源最短路 Floyd-Warshall；
 - Kruskal、Prim 最小生成树；
-- 强连通分量（Kosaraju 优先，Tarjan 后续）；
+- 强连通分量（Kosaraju 与 Tarjan）；
 - 桥和割点；
 - 欧拉路径/回路；
 - 最大流/最小割作为高级专题。
