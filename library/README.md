@@ -1332,8 +1332,8 @@ integer exponent and returns `nil` for negative or non-integer exponents;
 `fibonacci(index)` likewise return `nil` for negative or non-integer inputs,
 with `factorial(0) == 1`, `fibonacci(0) == 0`, and `fibonacci(1) == 1`.
 `fastPower` takes `O(log exponent)` steps, while the current factorial and
-Fibonacci implementations take `O(value)`/`O(index)` steps; none define numeric
-overflow behavior.
+`factorial` takes `O(value)` steps and `fibonacci` uses fast doubling in
+`O(log index)` steps; none define numeric overflow behavior.
 
 ## Current language support
 
