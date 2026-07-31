@@ -176,6 +176,10 @@ print ds.treeInorder(ordered);
 print ds.sortArray(values, ascending);
 print ds.shellSort(values, ascending);
 print ds.mergeSort(values, ascending);
+print ds.topKSmallest(values, 2, ascending);
+print ds.topKLargest(values, 2, ascending);
+print ds.kthSmallest(values, 1, ascending);
+print ds.kthLargest(values, 1, ascending);
 print ds.countInversions(values);
 fun atMostThree(value: number): bool {
   return value <= 3;
@@ -832,6 +836,17 @@ be inferred.
 the input unchanged. It uses bottom-up merge sort in `O(n log n)` time and
 `O(n)` temporary outer-array space. Equal comparator values keep their input
 order.
+
+`topKSmallest<T>(values, count, less)` and `topKLargest<T>(values, count, less)`
+return a new array containing at most `count` values in comparator order.
+The former returns the first values and the latter the last values of the
+ordered input; both clamp an oversized count to the input length and return
+`[]` for empty, non-positive, or non-integral counts. `kthSmallest<T>` and
+`kthLargest<T>` use a zero-based rank and return `nil` for an empty, negative,
+non-integral, or out-of-range rank. These are the correctness-first baseline:
+each uses stable merge sort, takes `O(n log n)` time, `O(n)` temporary space,
+and leaves the input unchanged. A heap/selection implementation can replace
+the internals later without changing this API contract.
 
 `countInversions(values)` counts pairs `i < j` for which
 `values[i] > values[j]`. It returns `0` for empty, one-element, or already

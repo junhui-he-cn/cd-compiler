@@ -343,6 +343,60 @@ fun mergeSort<T>(values: [T], less: fun(T, T): bool): [T] {
   return result;
 }
 
+fun topKSmallest<T>(values: [T], count: number, less: fun(T, T): bool): [T] {
+  let result: [T] = [];
+  if (floor(count) != count || count <= 0 || values.len() == 0) {
+    return result;
+  }
+
+  let ordered = mergeSort(values, less);
+  let limit = count;
+  if (limit > ordered.len()) {
+    limit = ordered.len();
+  }
+  let index = 0;
+  while (index < limit) {
+    result.push(ordered[index]);
+    index += 1;
+  }
+  return result;
+}
+
+fun topKLargest<T>(values: [T], count: number, less: fun(T, T): bool): [T] {
+  let result: [T] = [];
+  if (floor(count) != count || count <= 0 || values.len() == 0) {
+    return result;
+  }
+
+  let ordered = mergeSort(values, less);
+  let limit = count;
+  if (limit > ordered.len()) {
+    limit = ordered.len();
+  }
+  let start = ordered.len() - limit;
+  while (start < ordered.len()) {
+    result.push(ordered[start]);
+    start += 1;
+  }
+  return result;
+}
+
+fun kthSmallest<T>(values: [T], rank: number, less: fun(T, T): bool): optional<T> {
+  if (floor(rank) != rank || rank < 0 || rank >= values.len()) {
+    return nil;
+  }
+  let ordered = mergeSort(values, less);
+  return ordered[rank];
+}
+
+fun kthLargest<T>(values: [T], rank: number, less: fun(T, T): bool): optional<T> {
+  if (floor(rank) != rank || rank < 0 || rank >= values.len()) {
+    return nil;
+  }
+  let ordered = mergeSort(values, less);
+  return ordered[ordered.len() - rank - 1];
+}
+
 fun countInversions(values: [number]): number {
   let result = copy(values);
   let inversions = 0;
@@ -552,4 +606,4 @@ fun slidingWindows<T>(values: [T], width: number): [[T]] {
 }
 
 
-export peakIndex, isMountainArray, mountainPeakIndex, lowerBound, upperBound, binarySearch, rotatedBinarySearch, countValue, isSorted, sortArray, sortArrayInPlace, shellSort, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, countInversions, stablePartition, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, minimumSpanningForestKruskal;
+export peakIndex, isMountainArray, mountainPeakIndex, lowerBound, upperBound, binarySearch, rotatedBinarySearch, countValue, isSorted, sortArray, sortArrayInPlace, shellSort, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, topKSmallest, topKLargest, kthSmallest, kthLargest, countInversions, stablePartition, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, minimumSpanningForestKruskal;
