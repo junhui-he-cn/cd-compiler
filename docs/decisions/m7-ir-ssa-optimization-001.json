@@ -84,6 +84,7 @@
       "CFG-predecessor-ordered phi incoming filling",
       "parameter-backed local-slot initialization",
       "explicit preservation of non-promotable memory operations",
+      "reachable-use, phi-edge, same-block order, and basic opcode-shape verification",
       "malformed input, undefined local slot, duplicate raw definition, and non-dominating use rejection",
       "deterministic linear rename of unreachable blocks without phi participation"
     ],

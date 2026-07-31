@@ -167,8 +167,10 @@ rename boundary rejects invalid slots, undefined local slots, malformed
 variable operations, and uses whose raw definition does not dominate the use.
 Unreachable blocks are renamed linearly for a complete internal shape but do
 not contribute definitions or phi inputs. The result is verified before it is
-returned. This remains an internal service: it is not connected to the
-default `IRCompiler`, CLI, bytecode, or module-product path.
+returned; verification includes reachable-use dominance, same-block definition
+order, phi-edge availability, and basic opcode operand shape. This remains an
+internal service: it is not connected to the default `IRCompiler`, CLI,
+bytecode, or module-product path.
 
 ## SSA construction
 

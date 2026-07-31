@@ -9,8 +9,11 @@
 
 namespace {
 
+constexpr SSAValueId invalidSSAValue = std::numeric_limits<SSAValueId>::max();
+
 struct DefinitionSite {
     CFGBlockId block = 0;
+    std::optional<std::size_t> instructionIndex = std::nullopt;
 };
 
 struct RawDefinitionSite {
@@ -20,9 +23,13 @@ struct RawDefinitionSite {
 void defineValue(
     std::unordered_map<SSAValueId, DefinitionSite>& definitions,
     SSAValueId value,
-    CFGBlockId block)
+    CFGBlockId block,
+    std::optional<std::size_t> instructionIndex = std::nullopt)
 {
-    const auto inserted = definitions.emplace(value, DefinitionSite{block});
+    if (value == invalidSSAValue) {
+        throw SSAError("SSA value uses the reserved invalid value ID");
+    }
+    const auto inserted = definitions.emplace(value, DefinitionSite{block, instructionIndex});
     if (!inserted.second) {
         throw SSAError("SSA value " + std::to_string(value) + " is defined more than once");
     }
@@ -37,6 +44,33 @@ void verifyUse(
     }
 }
 
+void verifyDominatingUse(
+    const std::unordered_map<SSAValueId, DefinitionSite>& definitions,
+    SSAValueId value,
+    CFGBlockId useBlock,
+    std::optional<std::size_t> useInstruction,
+    const ControlFlowGraph& cfg,
+    const DominanceInfo& dominance,
+    bool phiIncoming)
+{
+    verifyUse(definitions, value);
+    const DefinitionSite& definition = definitions.at(value);
+    if (!cfg.blocks[useBlock].reachable) {
+        return;
+    }
+    if (!cfg.blocks[definition.block].reachable
+        || !dominance.dominates(definition.block, useBlock)) {
+        throw SSAError(
+            "SSA value " + std::to_string(value) + " does not dominate its use");
+    }
+    if (!phiIncoming && definition.block == useBlock && definition.instructionIndex
+        && useInstruction && *definition.instructionIndex >= *useInstruction) {
+        throw SSAError(
+            "SSA value " + std::to_string(value)
+            + " is used before its definition in block " + std::to_string(useBlock));
+    }
+}
+
 bool isVariableMemoryOperation(IROp op)
 {
     return op == IROp::LoadVar || op == IROp::StoreVar || op == IROp::AssignVar;
@@ -47,7 +81,165 @@ bool isMemoryDefinition(IROp op)
     return op == IROp::StoreVar || op == IROp::AssignVar;
 }
 
-constexpr SSAValueId invalidSSAValue = std::numeric_limits<SSAValueId>::max();
+bool isBinaryOperation(IROp op)
+{
+    switch (op) {
+    case IROp::Add:
+    case IROp::Subtract:
+    case IROp::Multiply:
+    case IROp::Divide:
+    case IROp::Equal:
+    case IROp::NotEqual:
+    case IROp::Greater:
+    case IROp::GreaterEqual:
+    case IROp::Less:
+    case IROp::LessEqual:
+        return true;
+    default:
+        return false;
+    }
+}
+
+void requireInstructionShape(
+    const SSAInstruction& instruction,
+    bool condition,
+    const char* detail)
+{
+    if (!condition) {
+        throw SSAError(
+            "SSA " + irOpName(instruction.op) + " instruction has invalid " + detail);
+    }
+}
+
+void validateInstructionShape(const SSAInstruction& instruction)
+{
+    const auto noResult = [&instruction] {
+        return !instruction.result;
+    };
+    const auto hasResult = [&instruction] {
+        return instruction.result.has_value();
+    };
+    const auto noLeft = [&instruction] {
+        return !instruction.left;
+    };
+    const auto hasLeft = [&instruction] {
+        return instruction.left.has_value();
+    };
+    const auto noRight = [&instruction] {
+        return !instruction.right;
+    };
+    const auto hasRight = [&instruction] {
+        return instruction.right.has_value();
+    };
+    const auto noArguments = [&instruction] {
+        return instruction.arguments.empty();
+    };
+
+    if (isBinaryOperation(instruction.op)) {
+        requireInstructionShape(
+            instruction,
+            hasResult() && hasLeft() && hasRight() && noArguments(),
+            "operand shape");
+        return;
+    }
+
+    switch (instruction.op) {
+    case IROp::Constant:
+    case IROp::MakeFunction:
+        requireInstructionShape(instruction, hasResult() && noLeft() && noRight() && noArguments(), "operand shape");
+        return;
+    case IROp::Array:
+    case IROp::Variant:
+        requireInstructionShape(instruction, hasResult() && noLeft() && noRight(), "operand shape");
+        return;
+    case IROp::Map:
+        requireInstructionShape(
+            instruction,
+            hasResult() && noLeft() && noRight() && instruction.arguments.size() % 2 == 0,
+            "operand shape");
+        return;
+    case IROp::Struct:
+        requireInstructionShape(
+            instruction,
+            hasResult() && noLeft() && noRight()
+                && instruction.arguments.size() == instruction.operands.size(),
+            "operand shape");
+        return;
+    case IROp::VariantTag:
+    case IROp::VariantField:
+    case IROp::Copy:
+    case IROp::Field:
+    case IROp::Len:
+    case IROp::AssertArray:
+    case IROp::AssertNumber:
+    case IROp::Negate:
+    case IROp::Not:
+        requireInstructionShape(
+            instruction,
+            hasResult() && hasLeft() && noRight() && noArguments(),
+            "operand shape");
+        return;
+    case IROp::LoadVar:
+        requireInstructionShape(
+            instruction,
+            hasResult() && noLeft() && noRight() && noArguments(),
+            "operand shape");
+        return;
+    case IROp::StoreVar:
+    case IROp::AssignVar:
+        requireInstructionShape(
+            instruction,
+            noResult() && hasLeft() && noRight() && noArguments(),
+            "operand shape");
+        return;
+    case IROp::Call:
+        requireInstructionShape(instruction, hasResult() && hasLeft() && noRight(), "operand shape");
+        return;
+    case IROp::NativeCall:
+        requireInstructionShape(instruction, hasResult() && noLeft() && noRight(), "operand shape");
+        return;
+    case IROp::Index:
+        requireInstructionShape(
+            instruction,
+            hasResult() && hasLeft() && hasRight() && noArguments(),
+            "operand shape");
+        return;
+    case IROp::AssignIndex:
+        requireInstructionShape(
+            instruction,
+            hasResult() && hasLeft() && hasRight() && instruction.arguments.size() == 1,
+            "operand shape");
+        return;
+    case IROp::AssignField:
+        requireInstructionShape(
+            instruction,
+            hasResult() && hasLeft() && noRight() && instruction.arguments.size() == 1,
+            "operand shape");
+        return;
+    case IROp::Print:
+    case IROp::Return:
+        requireInstructionShape(
+            instruction,
+            noResult() && hasLeft() && noRight() && noArguments(),
+            "operand shape");
+        return;
+    case IROp::Jump:
+        requireInstructionShape(
+            instruction,
+            noResult() && noLeft() && noRight() && noArguments(),
+            "operand shape");
+        return;
+    case IROp::JumpIfFalse:
+    case IROp::JumpIfTrue:
+        requireInstructionShape(
+            instruction,
+            noResult() && hasLeft() && noRight() && noArguments(),
+            "operand shape");
+        return;
+    default:
+        throw SSAError("SSA instruction has an unknown opcode");
+    }
+}
 
 void validateMemorySlot(
     const std::vector<SSAMemorySlot>& memorySlots,
@@ -169,6 +361,7 @@ SSAError::SSAError(std::string message)
 void SSAFunction::verify(const ControlFlowGraph& cfg) const
 {
     cfg.verify();
+    const DominanceInfo dominance = buildDominanceInfo(cfg);
     if (blocks.size() != cfg.blocks.size()) {
         throw SSAError("SSA block count does not match CFG block count");
     }
@@ -214,13 +407,17 @@ void SSAFunction::verify(const ControlFlowGraph& cfg) const
             }
             defineValue(definitions, phi.result, block.id);
         }
-        for (const SSAInstruction& instruction : block.instructions) {
+        for (std::size_t instructionIndex = 0;
+             instructionIndex < block.instructions.size();
+             ++instructionIndex) {
+            const SSAInstruction& instruction = block.instructions[instructionIndex];
             if (instruction.originalInstruction < block.firstInstruction
                 || instruction.originalInstruction >= block.endInstruction) {
                 throw SSAError("SSA instruction does not belong to its CFG block");
             }
+            validateInstructionShape(instruction);
             if (instruction.result) {
-                defineValue(definitions, *instruction.result, block.id);
+                defineValue(definitions, *instruction.result, block.id, instructionIndex);
             }
             if (instruction.memorySlot && *instruction.memorySlot >= memorySlots.size()) {
                 throw SSAError("SSA instruction references an invalid memory slot");
@@ -242,19 +439,50 @@ void SSAFunction::verify(const ControlFlowGraph& cfg) const
                 if (incoming.predecessor != cfgBlock.predecessors[index]) {
                     throw SSAError("phi incoming predecessors are not in CFG order");
                 }
-                verifyUse(definitions, incoming.value);
+                verifyDominatingUse(
+                    definitions,
+                    incoming.value,
+                    incoming.predecessor,
+                    std::nullopt,
+                    cfg,
+                    dominance,
+                    true);
             }
         }
 
-        for (const SSAInstruction& instruction : block.instructions) {
+        for (std::size_t instructionIndex = 0;
+             instructionIndex < block.instructions.size();
+             ++instructionIndex) {
+            const SSAInstruction& instruction = block.instructions[instructionIndex];
             if (instruction.left) {
-                verifyUse(definitions, *instruction.left);
+                verifyDominatingUse(
+                    definitions,
+                    *instruction.left,
+                    block.id,
+                    instructionIndex,
+                    cfg,
+                    dominance,
+                    false);
             }
             if (instruction.right) {
-                verifyUse(definitions, *instruction.right);
+                verifyDominatingUse(
+                    definitions,
+                    *instruction.right,
+                    block.id,
+                    instructionIndex,
+                    cfg,
+                    dominance,
+                    false);
             }
             for (const SSAValueId argument : instruction.arguments) {
-                verifyUse(definitions, argument);
+                verifyDominatingUse(
+                    definitions,
+                    argument,
+                    block.id,
+                    instructionIndex,
+                    cfg,
+                    dominance,
+                    false);
             }
         }
     }

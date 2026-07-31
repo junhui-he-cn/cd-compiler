@@ -206,6 +206,51 @@ void test_ssa_blocks_must_match_cfg()
     assertThrowsSSA([&ssa, &cfg] { ssa.verify(cfg); }, "block count");
 }
 
+void test_ssa_verifier_rejects_non_dominating_use()
+{
+    const ControlFlowGraph cfg = makeDiamondCFG();
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[1].instructions.push_back(defineConstant(0, 1));
+    ssa.blocks[3].instructions.push_back(useValue(IROp::Return, 0, 4));
+
+    assertThrowsSSA([&ssa, &cfg] { ssa.verify(cfg); }, "does not dominate");
+}
+
+void test_ssa_verifier_rejects_use_before_same_block_definition()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        IRInstruction{IROp::Constant, std::nullopt, std::nullopt, std::nullopt, {}, 0},
+        IRInstruction{IROp::Return, std::nullopt, std::nullopt, std::nullopt, {}, 0},
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[0].instructions.push_back(useValue(IROp::Return, 0, 1));
+    ssa.blocks[0].instructions.push_back(defineConstant(0, 0));
+
+    assertThrowsSSA([&ssa, &cfg] { ssa.verify(cfg); }, "used before");
+}
+
+void test_ssa_verifier_rejects_phi_value_not_available_on_edge()
+{
+    const ControlFlowGraph cfg = makeDiamondCFG();
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[1].instructions.push_back(defineConstant(0, 1));
+    ssa.blocks[3].phis.push_back(SSAPhi{1, {{1, 0}, {2, 0}}});
+    ssa.blocks[3].instructions.push_back(useValue(IROp::Return, 1, 4));
+
+    assertThrowsSSA([&ssa, &cfg] { ssa.verify(cfg); }, "does not dominate");
+}
+
+void test_ssa_verifier_rejects_invalid_instruction_shape()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        IRInstruction{IROp::StoreVar, std::nullopt, std::nullopt, std::nullopt, {}, 0},
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[0].instructions.push_back(valueInstruction(IROp::StoreVar, 0, 0));
+
+    assertThrowsSSA([&ssa, &cfg] { ssa.verify(cfg); }, "operand shape");
+}
+
 void test_rename_eliminates_local_memory_and_fills_diamond_phi()
 {
     const ControlFlowGraph cfg = buildControlFlowGraph({
@@ -392,7 +437,7 @@ void test_rename_rejects_missing_phi_predecessor_definition()
     input.blocks[1].instructions.push_back(memoryInstruction(IROp::StoreVar, 2, 0, std::nullopt, 1));
     input.blocks[1].instructions.push_back(plainInstruction(IROp::Jump, 3));
     input.blocks[2].instructions.push_back(valueInstruction(IROp::Constant, 3, 4));
-    input.blocks[2].instructions.push_back(useValue(IROp::Copy, 3, 5));
+    input.blocks[2].instructions.push_back(useValue(IROp::Print, 3, 5));
     input.blocks[3].instructions.push_back(memoryInstruction(IROp::LoadVar, 6, 0, 4));
     input.blocks[3].instructions.push_back(useValue(IROp::Return, 6, 7));
 
@@ -455,6 +500,10 @@ int main()
     test_memory_slots_keep_capture_and_unknown_storage_conservative();
     test_parameters_are_entry_definitions();
     test_ssa_blocks_must_match_cfg();
+    test_ssa_verifier_rejects_non_dominating_use();
+    test_ssa_verifier_rejects_use_before_same_block_definition();
+    test_ssa_verifier_rejects_phi_value_not_available_on_edge();
+    test_ssa_verifier_rejects_invalid_instruction_shape();
     test_rename_eliminates_local_memory_and_fills_diamond_phi();
     test_rename_handles_loop_backedge_and_initial_definition();
     test_rename_uses_local_parameter_as_initial_slot_value();

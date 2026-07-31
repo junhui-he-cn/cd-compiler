@@ -256,7 +256,9 @@ undefined local slots, malformed variable instructions, duplicate raw virtual
 register definitions, and non-dominating raw uses. Unreachable blocks are
 retained through a deterministic linear rename but do not participate in phi
 placement. This service is internal and is not connected to the default
-compiler or bytecode path.
+compiler or bytecode path. The SSA verifier additionally checks reachable-use
+dominance, same-block definition order, phi-edge availability, and basic
+opcode operand shape.
 
 The branch now freezes the internal binding/effect contract in
 `include/BindingMetadata.hpp` and `include/IR.hpp`. `IRBinding` carries a

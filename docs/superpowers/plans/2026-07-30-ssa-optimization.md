@@ -76,8 +76,9 @@ Tasks:
 
 The admitted sub-slice currently covers value allocation, local-slot rename,
 parameter initialization, phi incoming filling, non-promotable memory
-preservation, and malformed-input rejection. De-SSA and critical-edge copy
-lowering remain separate follow-up slices.
+preservation, dominance/edge/shape verification, and malformed-input
+rejection. De-SSA and critical-edge copy lowering remain separate follow-up
+slices.
 
 Gate: SSA verifier tests, loop backedge/diamond phi tests, copy-cycle tests,
 and an O0 CFG/SSA/de-SSA semantic round trip with unchanged existing output.
