@@ -58,7 +58,7 @@ export peakIndex, isMountainArray, mountainPeakIndex, lowerBound, upperBound,
        from "./sorting.cd";
 
 export prefixSums, differenceArray, prefixMinimums, prefixMaximums,
-       nextGreaterValues, largestHistogramArea, Interval, mergeIntervals,
+       nextGreaterValues, nextSmallerValues, largestHistogramArea, Interval, mergeIntervals,
        intersectIntervals, selectNonOverlappingIntervals, minimumIntervalRooms,
        canReachEnd, minimumJumps, huffmanMergeCost, mergeSortedNumbers,
        mergeSortedArrays, twoSumSorted, threeSumZero, uniqueValues,

@@ -827,13 +827,16 @@ Window and prefix helpers are also non-mutating:
 - `prefixMinimums` and `prefixMaximums` — return the running numeric extrema;
 - `nextGreaterValues(values: [number]): [number]` — return the first strictly
   greater value to the right, or `-1` when none exists.
+- `nextSmallerValues(values: [number]): [number]` — return the first strictly
+  smaller value to the right, or `-1` when none exists.
 
 `chunkArray` and `slidingWindows` return `[]` for non-positive sizes; sliding
 windows also return `[]` when the width exceeds the input length. Chunks and
 windows are fresh outer arrays with shallowly shared elements. Chunking and
 window generation are `O(n)` in the input plus output size; all prefix and
-difference helpers are `O(n)` and allocate one array. `nextGreaterValues` is
-`O(n)` time and `O(n)` stack/output space; equal values do not count as greater.
+difference helpers are `O(n)` and allocate one array. `nextGreaterValues` and
+`nextSmallerValues` are `O(n)` time and `O(n)` stack/output space; equal values
+do not count as greater or smaller.
 
 `isBalancedBrackets(text)` checks `()[]{}` nesting with an array-backed stack;
 non-bracket characters are ignored, and an empty string is balanced. It runs in
@@ -1278,7 +1281,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case array_algorithms_merge_sort`, `--case array_algorithms_inversions`,
 `--case array_algorithms_merge_sorted`, `--case array_algorithms_partition`,
 `--case array_algorithms_window_max`, `--case array_algorithms_window_min`,
-`--case array_algorithms_rotation`,
+`--case array_algorithms_next_smaller`, `--case array_algorithms_rotation`,
 `--case array_algorithms_frequency`,
 `--case array_algorithms_quick_sort`, `--case array_algorithms_heap_sort`,
 `--case array_algorithms_shell_sort`,

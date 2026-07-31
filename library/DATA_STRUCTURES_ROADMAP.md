@@ -54,7 +54,7 @@
   `heapSort`/`heapSortInPlace`。
 - 数组窗口算法：`chunkArray`、`slidingWindows`、`prefixSums`。
 - 数组前缀/差分与单调栈：`differenceArray`、`prefixMinimums`、`prefixMaximums`、
-  `nextGreaterValues`。
+  `nextGreaterValues`、`nextSmallerValues`。
 - 区间算法：`Interval`、`mergeIntervals` 和 `intersectIntervals`。
 - 贪心区间调度：`selectNonOverlappingIntervals`。
 - 区间资源分配：`minimumIntervalRooms`。
@@ -291,8 +291,8 @@ enum Result<T, E> {
 返回每个窗口的最大值或最小值。
 非法窗口宽度返回空数组或 `nil`。
 `differenceArray`、`prefixMinimums` 和 `prefixMaximums` 提供数值数组的相邻差分
-及前缀极值；`nextGreaterValues` 使用单调栈返回每个位置右侧第一个严格更大值，
-不存在时使用 `-1`。
+及前缀极值；`nextGreaterValues` 和 `nextSmallerValues` 使用单调栈返回每个位置
+右侧第一个严格更大或更小值，不存在时使用 `-1`。
 `intersectIntervals` 先独立规范化两侧区间，再用双指针生成包含端点的相交
 区间；因此相接端点会生成零长度区间。
 `maxSubarraySum` 使用 Kadane 扫描返回非空连续子数组的最大和，空数组返回
