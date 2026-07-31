@@ -78,7 +78,7 @@ export climbStairs, maxNonAdjacentSum, minCoinCount, uniqueGridPaths,
        longestIncreasingSubsequenceLength, longestIncreasingSubsequence,
        longestCommonSubsequenceLength,
        longestCommonSubsequence,
-       longestCommonSubstringLength,
+       longestCommonSubstringLength, longestCommonSubstring,
        matrixChainCost, matrixPower2x2, mergeStonesCost, knapsack01,
        completeKnapsack, boundedKnapsack
        from "./dynamic_programming.cd";

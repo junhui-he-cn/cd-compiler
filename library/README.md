@@ -979,6 +979,10 @@ The reconstruction table uses `O(leftLength * rightLength)` time and space.
 common Unicode scalar-value run, returning its length. Empty inputs return `0`;
 the rolling-row DP uses `O(leftLength * rightLength)` time and
 `O(rightLength)` space.
+`longestCommonSubstring(left, right)` reconstructs one such run as a new string,
+returns `""` when no common run exists, leaves both inputs unchanged, and uses
+the same `O(leftLength * rightLength)` time and `O(rightLength)` space. Equal
+length candidates keep the first match found by the left-to-right DP scan.
 
 `matrixChainCost(dimensions)` computes the minimum scalar multiplication cost
 for matrices whose adjacent dimensions are given by the array. Positive integer
