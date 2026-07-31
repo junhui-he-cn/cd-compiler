@@ -308,6 +308,16 @@ them; non-primitive values and unsupported opcodes are `Unsupported`. This
 classifies legality without adding a constant-propagation/folding pass or
 changing the existing IR and bytecode paths.
 
+The internal `optimizeIRFunction` adapter freezes the next invocation boundary:
+one ordinary `IRFunction` and its dependency anchors are lifted as one stream,
+checked through the selected SSA optimizer, and lowered back with source spans,
+original/insertion offset maps, and remapped dependency offsets. Function
+parameters remain runtime-cell bindings during this conservative lift, so the
+adapter restores the ordinary parameter list after SSA lowering. O0 preserves
+at least the input virtual-register count; O1 reuses virtual SSA IDs and does
+not perform physical register allocation or coalescing. This adapter remains
+internal and is not yet called by `IRCompiler`, the CLI, or an artifact emitter.
+
 The selected debug-local policy keeps source-visible runtime-cell operations in
 the default O1 contract; `renamePromotableMemorySlots` remains an internal
 experiment until optimized local materialization and trace mapping are
@@ -339,9 +349,10 @@ collection, or make optimization mandatory.
 
 ## Open decisions before default-pipeline de-SSA and optimization
 
-The following remain before default-pipeline de-SSA and optimization:
+The following remain before program-level default-pipeline de-SSA and
+optimization:
 
-1. how the verified internal adapter is invoked by the default pipeline while
-   preserving debug locations, dependency anchors, and existing artifact
-   boundaries;
+1. how the verified per-stream adapter is invoked for the main stream and all
+   nested functions while preserving debug locations, dependency anchors, and
+   existing artifact boundaries;
 2. the register-allocation strategy and its source-location mapping.

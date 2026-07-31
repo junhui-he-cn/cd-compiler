@@ -332,18 +332,24 @@ aggregate aliasing, calls, callbacks, and runtime traps remain conservative.
 SSA is de-lowered to the existing IR; phi nodes and optimizer metadata are not
 serialized.
 
-**Required decision before default-pipeline de-SSA/O1 implementation:** define
-the default pipeline invocation of the verified adapter and the remaining
-constant/trap and trace mapping rules. The branch has already frozen the
-conservative debug-local policy and `cdbc-cache 0.2` schema-3 optimization
-identity; it must connect those contracts before reusing optimized products.
+The branch has already frozen the conservative debug-local policy,
+constant/trap classification, and `cdbc-cache 0.2` schema-3 optimization
+identity; program-level integration must connect those contracts before
+reusing optimized products.
 The current branch establishes CFG shape, SSA value/phi structure, dominance
 analysis, phi placement, local-slot value allocation and renaming, edge-copy
 planning, linear layout with critical-edge splits, branch/dependency remapping,
 ordinary-IR adaptation, source binding/storage metadata, the conservative
 effect table, internal copy/phi simplification, pure dead-code removal, the
 constant-evaluation trap/non-finite boundary, O0 cache identity, conservative
-source-local trace policy, and verification.
+source-local trace policy, the single-stream ordinary-IR optimizer adapter,
+and verification.
+
+**Required decision before program-level default-pipeline integration:** apply
+the verified per-stream adapter to the main stream and nested functions while
+retaining module anchors, source mappings, and the existing artifact contract.
+The branch intentionally keeps virtual-register IDs and defers physical
+allocation/coalescing to O2.
 
 **Gate:** CFG/SSA verifier and O0 round-trip tests; O0/O1 semantic parity over
 control flow, closures, mutation, callbacks, traps, and evaluation order;

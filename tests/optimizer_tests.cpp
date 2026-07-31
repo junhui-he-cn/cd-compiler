@@ -151,6 +151,104 @@ void test_constant_evaluation_rejects_nonfinite_and_nonprimitive_values()
     assertConstantKind(unsupportedOp, SSAConstantEvaluationKind::Unsupported);
 }
 
+void test_internal_ir_adapter_preserves_o0_stream_contract()
+{
+    IRFunction input;
+    input.name = "identity";
+    input.parameters = {"value"};
+    input.registerCount = 4;
+    input.bindings = {IRBinding{BindingId{1}, "value#1", BindingStorageClass::Local}};
+
+    IRInstruction constant;
+    constant.op = IROp::Constant;
+    constant.dest = IRRegister{0};
+    constant.operand = 0;
+    constant.span = SourceSpan{0, 1, 1, SourceSpanRange{0, 1}};
+    input.instructions.push_back(constant);
+
+    IRInstruction copy;
+    copy.op = IROp::Copy;
+    copy.dest = IRRegister{1};
+    copy.left = IRRegister{0};
+    copy.span = SourceSpan{0, 1, 2, SourceSpanRange{1, 2}};
+    input.instructions.push_back(copy);
+
+    IRInstruction result;
+    result.op = IROp::Return;
+    result.left = IRRegister{1};
+    result.span = SourceSpan{0, 1, 3, SourceSpanRange{2, 3}};
+    input.instructions.push_back(result);
+
+    const SSADeSSAIRResult lowered = optimizeIRFunction(
+        input,
+        {IRModuleDependency{7, ModuleGraphEdgeKind::Import, "./dep.cd", 1}},
+        SSAOptimizationLevel::O0);
+    lowered.verify();
+    assert(lowered.function.name == input.name);
+    assert(lowered.function.parameters == input.parameters);
+    assert(lowered.function.bindings.size() == 1);
+    assert(lowered.function.registerCount == input.registerCount);
+    assert(lowered.function.instructions.size() == input.instructions.size());
+    assert(lowered.function.instructions[1].dest.has_value());
+    assert(lowered.function.instructions[1].dest->index == copy.dest->index);
+    assert(lowered.function.instructions[1].left.has_value());
+    assert(lowered.function.instructions[1].left->index == copy.left->index);
+    assert(lowered.function.instructions[0].span.has_value());
+    assert(lowered.function.instructions[0].span->line == constant.span->line);
+    assert(lowered.function.instructions[0].span->column == constant.span->column);
+    assert(lowered.function.instructions[2].span.has_value());
+    assert(lowered.function.instructions[2].span->line == result.span->line);
+    assert(lowered.function.instructions[2].span->column == result.span->column);
+    assert(lowered.moduleDependencies.size() == 1);
+    assert(lowered.moduleDependencies.front().instructionOffset == 1);
+    assert(!lowered.syntheticInstructions[0]);
+    assert(!lowered.syntheticInstructions[1]);
+    assert(!lowered.syntheticInstructions[2]);
+}
+
+void test_internal_ir_adapter_runs_o1_without_physical_register_allocation()
+{
+    IRFunction input;
+    input.name = "dead";
+    input.registerCount = 3;
+
+    IRInstruction dead;
+    dead.op = IROp::Constant;
+    dead.dest = IRRegister{0};
+    dead.operand = 0;
+    input.instructions.push_back(dead);
+
+    IRInstruction live;
+    live.op = IROp::Constant;
+    live.dest = IRRegister{1};
+    live.operand = 1;
+    input.instructions.push_back(live);
+
+    IRInstruction result;
+    result.op = IROp::Return;
+    result.left = IRRegister{1};
+    input.instructions.push_back(result);
+
+    const SSADeSSAIRResult lowered = optimizeIRFunction(
+        input,
+        {},
+        SSAOptimizationLevel::O1);
+    lowered.verify();
+    assert(lowered.function.instructions.size() == 2);
+    assert(lowered.function.instructions[0].op == IROp::Constant);
+    assert(lowered.function.instructions[0].dest.has_value());
+    assert(lowered.function.instructions[0].dest->index == live.dest->index);
+    assert(lowered.function.instructions[1].op == IROp::Return);
+    assert(lowered.function.instructions[1].left.has_value());
+    assert(lowered.function.instructions[1].left->index == result.left->index);
+    assert(lowered.function.registerCount == input.registerCount);
+    assert(!lowered.originalInstructionOffsets[0].has_value());
+    assert(lowered.originalInstructionOffsets[1] == std::optional<std::size_t>(0));
+    assert(lowered.originalInstructionOffsets[2] == std::optional<std::size_t>(1));
+    assert(!lowered.syntheticInstructions[0]);
+    assert(!lowered.syntheticInstructions[1]);
+}
+
 void test_o0_is_verified_identity()
 {
     const ControlFlowGraph cfg = buildControlFlowGraph({
@@ -310,6 +408,8 @@ int main()
     test_constant_evaluation_folds_only_representable_successes();
     test_constant_evaluation_keeps_runtime_traps_runtime();
     test_constant_evaluation_rejects_nonfinite_and_nonprimitive_values();
+    test_internal_ir_adapter_preserves_o0_stream_contract();
+    test_internal_ir_adapter_runs_o1_without_physical_register_allocation();
     test_o0_is_verified_identity();
     test_o1_propagates_copy_and_removes_copy_instruction();
     test_o1_simplifies_trivial_phi_when_source_dominates_join();

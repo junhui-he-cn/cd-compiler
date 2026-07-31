@@ -1,5 +1,6 @@
 #include "Optimizer.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <set>
 #include <unordered_map>
@@ -474,5 +475,34 @@ SSAOptimizationResult optimizeSSA(
     eliminateDeadPureInstructions(result.function, result.stats);
     ++result.stats.passesRun;
     result.verify(cfg);
+    return result;
+}
+
+SSADeSSAIRResult optimizeIRFunction(
+    const IRFunction& input,
+    const std::vector<IRModuleDependency>& moduleDependencies,
+    SSAOptimizationLevel level)
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph(
+        input.instructions,
+        moduleDependencies);
+    const SSAFunction lifted = liftIRToSSA(cfg, input);
+    const SSAOptimizationResult optimized = optimizeSSA(cfg, lifted, level);
+    const SSADeSSALinearFunction linear = lowerSSADeSSACopies(cfg, optimized.function);
+    SSADeSSAIRResult result = lowerSSADeSSAToIR(
+        cfg,
+        linear,
+        input.name,
+        {},
+        input.bindings);
+    // The conservative lift keeps function parameters as runtime-cell
+    // bindings, so they are not SSAParameter definitions yet. Restore the
+    // ordinary IR function signature after the SSA-owned lowering contract
+    // has validated its empty SSA parameter list.
+    result.function.parameters = input.parameters;
+    result.function.registerCount = std::max(
+        input.registerCount,
+        result.function.registerCount);
+    result.verify();
     return result;
 }

@@ -30,7 +30,9 @@ debug-local policy and schema-3 cache identity are now frozen and covered by
 `ctest.module_cache` plus the existing module-cache matrix. The binding contract
 is populated by
 `IRCompiler` and covered by the existing `ir_source_location` integration
-test.
+test. `optimizeIRFunction` now proves the internal one-stream adapter and
+preserves ordinary parameter/binding metadata, source/offset maps, and
+dependency anchors without physical register allocation.
 
 ### 1. Freeze the baseline and internal contracts
 
@@ -134,7 +136,8 @@ Files:
 
 Tasks:
 
-- remap dependency offsets after optimized module lowering;
+- remap dependency offsets after optimized module lowering (the internal
+  one-stream adapter now exercises this map);
 - include level/pipeline identity in module-product cache decisions (schema 3
   now records the O0 identity and rejects stale schema 2 manifests);
 - retain valid debug source spans, keep source-visible runtime cells in the

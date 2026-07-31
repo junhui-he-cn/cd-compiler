@@ -7,7 +7,8 @@ linear-layout, ordinary-IR adapter, and conservative internal O1
 value-simplification slices;
 the CFG foundation, SSA structural shell, deterministic dominance analysis,
 phi placement, binding/effect contract, rename slice, edge-copy plan, and
-internal linear layout/adapter are implemented on the feature branch. The
+internal linear layout/adapter plus the one-stream optimizer boundary are
+implemented on the feature branch. The
 internal O1 slice covers copy/phi simplification and pure dead-code removal;
 CFG rewrites, constant folding, default pipeline integration, and broader
 optimization remain unadmitted. This document expands
@@ -298,6 +299,12 @@ planned:
 4. copy/phi simplification; and
 5. local dead-code elimination for non-trapping pure instructions; and
 6. block merge and final jump threading.
+
+`optimizeIRFunction` is the admitted internal adapter for one ordinary
+`IRFunction`: it lifts one stream, runs the selected optimizer, and lowers it
+back while preserving the ordinary signature and dependency/source offset
+metadata. It deliberately does not assemble a whole `IRProgram`, invoke
+`IRCompiler`, allocate physical registers, or emit bytecode.
 
 Every pass has an input/output verifier boundary in debug builds and reports
 small counters such as blocks removed, folds, copies removed, and instructions

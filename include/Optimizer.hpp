@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <optional>
 #include <string>
+#include <vector>
 
 enum class SSAOptimizationLevel {
     O0,
@@ -65,4 +66,13 @@ std::string ssaOptimizationPipelineFingerprint(SSAOptimizationLevel level);
 SSAOptimizationResult optimizeSSA(
     const ControlFlowGraph& cfg,
     const SSAFunction& input,
+    SSAOptimizationLevel level);
+
+// Run one ordinary IR function through the internal CFG/SSA optimizer
+// boundary. This preserves the existing virtual-register representation and
+// returns offset metadata for a later program-level integration; it is not
+// called by IRCompiler, the CLI, or any artifact emitter yet.
+SSADeSSAIRResult optimizeIRFunction(
+    const IRFunction& input,
+    const std::vector<IRModuleDependency>& moduleDependencies,
     SSAOptimizationLevel level);

@@ -158,6 +158,14 @@ struct SSAFunction {
 
 SSAFunction makeSSAFunction(const ControlFlowGraph& cfg);
 
+// Lift one ordinary IR stream into the conservative SSA shell. Register
+// operands and source metadata are copied without promoting memory slots; the
+// caller can then select a verified optimizer level before de-SSA lowering.
+SSAFunction liftIRToSSA(
+    const ControlFlowGraph& cfg,
+    const std::vector<IRInstruction>& instructions);
+SSAFunction liftIRToSSA(const ControlFlowGraph& cfg, const IRFunction& function);
+
 // Rename a register-form SSA input along the dominator tree. In the input,
 // SSAInstruction result/operand IDs are pre-SSA virtual register IDs and
 // variable operations identify their memory slot through memorySlot. The

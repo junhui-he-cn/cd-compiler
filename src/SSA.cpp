@@ -635,6 +635,57 @@ SSAFunction makeSSAFunction(const ControlFlowGraph& cfg)
     return result;
 }
 
+SSAFunction liftIRToSSA(
+    const ControlFlowGraph& cfg,
+    const std::vector<IRInstruction>& instructions)
+{
+    cfg.verify();
+    if (cfg.instructionCount != instructions.size()) {
+        throw SSAError("SSA input instruction count does not match CFG");
+    }
+
+    SSAFunction result = makeSSAFunction(cfg);
+    for (const CFGBlock& cfgBlock : cfg.blocks) {
+        SSABlock& block = result.blocks[cfgBlock.id];
+        block.instructions.reserve(cfgBlock.endInstruction - cfgBlock.firstInstruction);
+        for (std::size_t index = cfgBlock.firstInstruction;
+             index < cfgBlock.endInstruction;
+             ++index) {
+            const IRInstruction& source = instructions[index];
+            SSAInstruction lifted;
+            lifted.op = source.op;
+            if (source.dest) {
+                lifted.result = source.dest->index;
+            }
+            if (source.left) {
+                lifted.left = source.left->index;
+            }
+            if (source.right) {
+                lifted.right = source.right->index;
+            }
+            lifted.arguments.reserve(source.arguments.size());
+            for (const IRRegister argument : source.arguments) {
+                lifted.arguments.push_back(argument.index);
+            }
+            lifted.originalInstruction = index;
+            lifted.operand = source.operand;
+            lifted.operands = source.operands;
+            lifted.typeNameOperand = source.typeNameOperand;
+            lifted.variantNameOperand = source.variantNameOperand;
+            lifted.span = source.span;
+            lifted.bindingId = source.bindingId;
+            block.instructions.push_back(std::move(lifted));
+        }
+    }
+    result.verify(cfg);
+    return result;
+}
+
+SSAFunction liftIRToSSA(const ControlFlowGraph& cfg, const IRFunction& function)
+{
+    return liftIRToSSA(cfg, function.instructions);
+}
+
 std::vector<SSAPhiPlacement> placePromotableMemoryPhis(
     const ControlFlowGraph& cfg,
     const DominanceInfo& dominance,

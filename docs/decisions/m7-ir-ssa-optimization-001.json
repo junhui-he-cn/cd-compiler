@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "decision_revision": "m7-2026-07-31-r9",
+  "decision_revision": "m7-2026-07-31-r10",
   "inventory_revision": "m0d-2026-07-22-r1",
   "decision_id": "M7-IR-SSA-001",
   "domain": "internal-ssa-optimization",
@@ -175,7 +175,8 @@
       "unused pure Constant and Copy removal",
       "per-pass SSA verification",
       "stable diagnostic pipeline fingerprints",
-      "deterministic optimization counters"
+      "deterministic optimization counters",
+      "single-stream ordinary IR optimizer adapter"
     ],
     "test_case_id": "ctest.optimizer",
     "not_included": [
@@ -200,6 +201,23 @@
       "constant propagation through SSA values",
       "constant folding pass or branch rewriting",
       "default IRCompiler or CLI integration",
+      "optimized trace event-count contract"
+    ]
+  },
+  "ir_stream_adapter_slice": {
+    "status": "implemented_on_feature_branch",
+    "capabilities": [
+      "one IRFunction plus dependency anchors through CFG, SSA, selected optimization, and de-SSA",
+      "ordinary function parameter and binding metadata preservation",
+      "source span and original/insertion offset maps",
+      "dependency anchor offset remapping",
+      "virtual-register identity preservation without physical allocation"
+    ],
+    "test_case_id": "ctest.optimizer",
+    "not_included": [
+      "program-level main and nested-function integration",
+      "IRCompiler or CLI invocation",
+      "physical register allocation or coalescing",
       "optimized trace event-count contract"
     ]
   },
