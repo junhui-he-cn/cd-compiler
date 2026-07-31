@@ -99,8 +99,13 @@ The current contract represents this boundary with `IRBinding`: a
 snapshot-local `BindingId`, resolved name, and explicit storage class. An
 `IRInstruction` may carry the same binding ID for `LoadVar`, `StoreVar`, or
 `AssignVar`, while the existing name operand remains unchanged for debugging
-and bytecode lowering. Only `Local` is eligible for promotion; the producer
-side in `IRCompiler` remains a later slice.
+and bytecode lowering. `IRProgram::bindings()` owns one canonical record per
+snapshot binding; each `IRFunction` keeps only the bindings visible in that
+body, so a captured binding may be referenced by multiple functions without
+duplicating its identity. The current lowering boundary populates source
+declarations, parameters, captures, module/exported bindings, and compiler
+synthetic cells. Missing identities, including interface-only imported values,
+remain untagged and conservative. Only `Local` is eligible for promotion.
 
 The effect contract is a conservative `IREffectSummary`. It records memory
 reads/writes, potential traps, allocation, calls, observable output, and

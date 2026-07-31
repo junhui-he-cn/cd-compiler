@@ -1,6 +1,7 @@
 #include "IRCompiler.hpp"
 
 #include <cstdlib>
+#include <limits>
 #include <unordered_map>
 #include <utility>
 
@@ -78,6 +79,165 @@ std::optional<SourceSpan> IRCompiler::debugSpan(
         return result;
     }
     return fallback;
+}
+
+void IRCompiler::collectExportedDeclarations(const Program& program)
+{
+    exportedDeclarations_.clear();
+    if (!declarationIndex_) {
+        return;
+    }
+
+    const auto markExport = [this](const ExportStmt& statement, ScopeId scopeId) {
+        if (statement.sourcePath) {
+            return;
+        }
+        for (const Token& name : statement.names) {
+            if (const std::optional<DeclarationId> declaration
+                = declarationIndex_->lookup(scopeId, name.lexeme)) {
+                exportedDeclarations_.insert(*declaration);
+            }
+        }
+    };
+
+    bool hasModules = false;
+    for (const auto& statement : program.statements) {
+        if (dynamic_cast<const ModuleStmt*>(statement.get())) {
+            hasModules = true;
+            break;
+        }
+    }
+
+    if (hasModules) {
+        for (const auto& statement : program.statements) {
+            const auto* module = dynamic_cast<const ModuleStmt*>(statement.get());
+            if (!module) {
+                continue;
+            }
+            const DeclarationRecord* moduleDeclaration = declarationIndex_->declaration(*module);
+            if (!moduleDeclaration) {
+                continue;
+            }
+            for (const auto& child : module->statements) {
+                if (const auto* exportStatement = dynamic_cast<const ExportStmt*>(child.get())) {
+                    markExport(*exportStatement, moduleDeclaration->scopeId);
+                }
+            }
+        }
+        return;
+    }
+
+    std::optional<ScopeId> rootScope;
+    for (const ScopeRecord& scope : declarationIndex_->scopes()) {
+        if (!scope.parent) {
+            rootScope = scope.id;
+            break;
+        }
+    }
+    if (!rootScope) {
+        return;
+    }
+    for (const auto& statement : program.statements) {
+        if (const auto* exportStatement = dynamic_cast<const ExportStmt*>(statement.get())) {
+            markExport(*exportStatement, *rootScope);
+        }
+    }
+}
+
+BindingStorageClass IRCompiler::storageClassFor(
+    std::optional<DeclarationId> declarationId) const
+{
+    if (!declarationIndex_ || !declarationId) {
+        return BindingStorageClass::Unknown;
+    }
+    const DeclarationRecord* declaration = declarationIndex_->declaration(*declarationId);
+    if (!declaration) {
+        return BindingStorageClass::Unknown;
+    }
+    if (declarationIndex_->declarationIsCaptured(*declarationId)) {
+        return BindingStorageClass::Captured;
+    }
+    if (exportedDeclarations_.find(*declarationId) != exportedDeclarations_.end()) {
+        return BindingStorageClass::Exported;
+    }
+    return declaration->functionLocal
+        ? BindingStorageClass::Local
+        : BindingStorageClass::Module;
+}
+
+std::optional<BindingId> IRCompiler::registerBinding(
+    BindingId bindingId,
+    const std::string& resolvedName,
+    std::optional<DeclarationId> declarationId,
+    std::optional<BindingStorageClass> explicitStorage)
+{
+    if (!bindingId.valid()) {
+        return std::nullopt;
+    }
+    if (resolvedName.empty()) {
+        throw IRCompileError("binding metadata has an empty resolved name");
+    }
+
+    const IRBinding candidate{
+        bindingId,
+        resolvedName,
+        explicitStorage ? *explicitStorage : storageClassFor(declarationId)};
+    const auto existing = registeredBindings_.find(bindingId);
+    if (existing == registeredBindings_.end()) {
+        ir_.addBinding(candidate);
+        registeredBindings_.emplace(bindingId, candidate);
+        bindingIdsByResolvedName_.emplace(resolvedName, bindingId);
+    } else if (existing->second.resolvedName != candidate.resolvedName
+        || existing->second.storage != candidate.storage) {
+        throw IRCompileError("conflicting binding storage metadata for `" + resolvedName + "`");
+    }
+
+    if (activeFunctionDepth_ != 0) {
+        ir_.addFunctionBinding(candidate);
+    }
+    return bindingId;
+}
+
+std::optional<BindingId> IRCompiler::registerBindingMetadata(
+    const BindingMetadataRecord& metadata,
+    std::optional<DeclarationId> declarationId)
+{
+    return registerBinding(metadata.bindingId, metadata.resolvedName, declarationId);
+}
+
+std::optional<BindingId> IRCompiler::registerSyntheticBinding(const std::string& resolvedName)
+{
+    while (nextSyntheticBindingId_ < std::numeric_limits<std::size_t>::max()) {
+        const BindingId bindingId{
+            std::numeric_limits<std::size_t>::max() - nextSyntheticBindingId_++};
+        if (registeredBindings_.find(bindingId) == registeredBindings_.end()) {
+            return registerBinding(
+                bindingId,
+                resolvedName,
+                std::nullopt,
+                BindingStorageClass::Synthetic);
+        }
+    }
+    throw IRCompileError("exhausted synthetic binding IDs");
+}
+
+void IRCompiler::registerFunctionParameters(
+    const FunctionMetadataRecord& metadata,
+    const std::vector<DeclarationId>& declarations)
+{
+    if (metadata.parameterNames.size() != metadata.parameterBindingIds.size()
+        || metadata.parameterNames.size() != declarations.size()) {
+        throw IRCompileError("function parameter binding metadata mismatch");
+    }
+    for (std::size_t index = 0; index < metadata.parameterNames.size(); ++index) {
+        if (!metadata.parameterBindingIds[index].valid()) {
+            throw IRCompileError("function parameter binding metadata is missing");
+        }
+        registerBinding(
+            metadata.parameterBindingIds[index],
+            metadata.parameterNames[index],
+            declarations[index]);
+    }
 }
 
 const TypeInfo& IRCompiler::typedExpressionType(
@@ -162,6 +322,13 @@ IRProgram IRCompiler::compileInternal(
     modules_.clear();
     compiledModules_.clear();
     loopContexts_.clear();
+    registeredBindings_.clear();
+    bindingIdsByResolvedName_.clear();
+    exportedDeclarations_.clear();
+    nextSyntheticName_ = 0;
+    nextSyntheticBindingId_ = 0;
+    activeFunctionDepth_ = 0;
+    collectExportedDeclarations(program);
     for (const auto& statement : program.statements) {
         if (const auto* module = dynamic_cast<const ModuleStmt*>(statement.get())) {
             modules_.emplace(module->moduleId, module);
@@ -181,6 +348,10 @@ IRProgram IRCompiler::compileInternal(
     modules_.clear();
     compiledModules_.clear();
     loopContexts_.clear();
+    registeredBindings_.clear();
+    bindingIdsByResolvedName_.clear();
+    exportedDeclarations_.clear();
+    activeFunctionDepth_ = 0;
     independentModuleId_.reset();
     declarationIndex_ = nullptr;
     return std::move(ir_);
@@ -330,7 +501,11 @@ void IRCompiler::compileStatement(const Stmt& statement)
         if (!binding) {
             throw IRCompileError("missing binding metadata for let declaration");
         }
-        ir_.emitStoreVar(binding->resolvedName, value);
+        const DeclarationRecord* declaration = declarationIndex_->declaration(*let);
+        const std::optional<BindingId> bindingId = registerBindingMetadata(
+            *binding,
+            declaration ? std::optional<DeclarationId>(declaration->declarationId) : std::nullopt);
+        ir_.emitStoreVar(binding->resolvedName, value, bindingId);
         return;
     }
 
@@ -368,11 +543,20 @@ void IRCompiler::compileFunctionStatement(const FunctionStmt& function)
     requireFunctionMetadata(function);
     const FunctionMetadataRecord& metadata = *declarationIndex_->functionMetadata(function);
     const std::string& functionName = metadata.resolvedName;
+    const DeclarationRecord* declaration = declarationIndex_->declaration(function);
+    const std::optional<BindingId> functionBinding = registerBinding(
+        metadata.bindingId,
+        functionName,
+        declaration ? std::optional<DeclarationId>(declaration->declarationId) : std::nullopt);
     IRRegister placeholder = ir_.emitConstant(Value::nil());
-    ir_.emitStoreVar(functionName, placeholder);
+    ir_.emitStoreVar(functionName, placeholder, functionBinding);
 
     std::vector<std::string> parameters = metadata.parameterNames;
     ir_.beginFunction(metadata.functionLabel, std::move(parameters));
+    ++activeFunctionDepth_;
+    registerFunctionParameters(
+        metadata,
+        declarationIndex_->functionParameterDeclarations(function));
 
     std::vector<LoopContext> enclosingLoopContexts = std::move(loopContexts_);
     loopContexts_.clear();
@@ -382,10 +566,11 @@ void IRCompiler::compileFunctionStatement(const FunctionStmt& function)
     IRRegister nilValue = ir_.emitConstant(Value::nil());
     ir_.emitReturn(nilValue);
     loopContexts_ = std::move(enclosingLoopContexts);
+    --activeFunctionDepth_;
 
     const std::size_t functionIndex = ir_.endFunction();
     IRRegister value = ir_.emitMakeFunction(functionIndex);
-    ir_.emitAssignVar(functionName, value);
+    ir_.emitAssignVar(functionName, value, functionBinding);
 }
 
 void IRCompiler::compileImpl(const ImplStmt& statement)
@@ -400,11 +585,16 @@ void IRCompiler::compileMethod(const MethodDecl& method)
     requireMethodMetadata(method);
     const FunctionMetadataRecord& metadata = *declarationIndex_->functionMetadata(method);
     const std::string& methodName = metadata.resolvedName;
+    const std::optional<BindingId> methodBinding = registerSyntheticBinding(methodName);
     IRRegister placeholder = ir_.emitConstant(Value::nil());
-    ir_.emitStoreVar(methodName, placeholder);
+    ir_.emitStoreVar(methodName, placeholder, methodBinding);
 
     std::vector<std::string> parameters = metadata.parameterNames;
     ir_.beginFunction(metadata.functionLabel, std::move(parameters));
+    ++activeFunctionDepth_;
+    registerFunctionParameters(
+        metadata,
+        declarationIndex_->functionParameterDeclarations(method));
 
     std::vector<LoopContext> enclosingLoopContexts = std::move(loopContexts_);
     loopContexts_.clear();
@@ -414,10 +604,11 @@ void IRCompiler::compileMethod(const MethodDecl& method)
     IRRegister nilValue = ir_.emitConstant(Value::nil());
     ir_.emitReturn(nilValue);
     loopContexts_ = std::move(enclosingLoopContexts);
+    --activeFunctionDepth_;
 
     const std::size_t functionIndex = ir_.endFunction();
     IRRegister value = ir_.emitMakeFunction(functionIndex);
-    ir_.emitAssignVar(methodName, value);
+    ir_.emitAssignVar(methodName, value, methodBinding);
 }
 
 void IRCompiler::compileReturn(const ReturnStmt& statement)
@@ -434,10 +625,15 @@ void IRCompiler::requireFunctionMetadata(const FunctionStmt& function) const
     const DeclarationRecord* declaration = declarationIndex_
         ? declarationIndex_->declaration(function)
         : nullptr;
+    const FunctionMetadataRecord* metadata = declarationIndex_
+        ? declarationIndex_->functionMetadata(function)
+        : nullptr;
     if (!declaration
         || declaration->kind != DeclarationKind::Function
         || !declarationIndex_->resolvedSignature(declaration->declarationId)
-        || !declarationIndex_->functionMetadata(function)
+        || !metadata
+        || !metadata->bindingId.valid()
+        || metadata->parameterBindingIds.size() != function.parameters.size()
         || !declarationIndex_->captureMetadata(function)) {
         throw IRCompileError("missing function metadata");
     }
@@ -448,10 +644,14 @@ void IRCompiler::requireMethodMetadata(const MethodDecl& method) const
     const DeclarationRecord* declaration = declarationIndex_
         ? declarationIndex_->declaration(method)
         : nullptr;
+    const FunctionMetadataRecord* metadata = declarationIndex_
+        ? declarationIndex_->functionMetadata(method)
+        : nullptr;
     if (!declaration
         || declaration->kind != DeclarationKind::Method
         || !declarationIndex_->resolvedSignature(declaration->declarationId)
-        || !declarationIndex_->functionMetadata(method)
+        || !metadata
+        || metadata->parameterBindingIds.size() != method.parameters.size() + 1
         || !declarationIndex_->captureMetadata(method)) {
         throw IRCompileError("missing method metadata");
     }
@@ -531,6 +731,9 @@ void IRCompiler::compileForIn(const ForInStmt& statement)
     const std::string iterableName = makeSyntheticName("for_in_iter");
     const std::string indexName = makeSyntheticName("for_in_index");
     const std::string lengthName = makeSyntheticName("for_in_len");
+    const std::optional<BindingId> iterableBinding = registerSyntheticBinding(iterableName);
+    const std::optional<BindingId> indexBinding = registerSyntheticBinding(indexName);
+    const std::optional<BindingId> lengthBinding = registerSyntheticBinding(lengthName);
     const BindingMetadataRecord* itemBinding = declarationIndex_
         ? declarationIndex_->forInBindingMetadata(statement)
         : nullptr;
@@ -538,38 +741,44 @@ void IRCompiler::compileForIn(const ForInStmt& statement)
         throw IRCompileError("missing binding metadata for for-in variable");
     }
     const std::string& itemName = itemBinding->resolvedName;
+    const DeclarationRecord* itemDeclaration = declarationIndex_->declaration(statement);
+    const std::optional<BindingId> itemBindingId = registerBindingMetadata(
+        *itemBinding,
+        itemDeclaration
+            ? std::optional<DeclarationId>(itemDeclaration->declarationId)
+            : std::nullopt);
 
     const IRRegister iterableValue = compileExpression(*statement.iterable);
     const IRRegister arrayValue = ir_.emitAssertArray(iterableValue);
-    ir_.emitStoreVar(iterableName, arrayValue);
+    ir_.emitStoreVar(iterableName, arrayValue, iterableBinding);
 
     const IRRegister zero = ir_.emitConstant(Value::number(0));
-    ir_.emitStoreVar(indexName, zero);
+    ir_.emitStoreVar(indexName, zero, indexBinding);
 
     const IRRegister initialItem = ir_.emitConstant(Value::nil());
-    ir_.emitStoreVar(itemName, initialItem);
+    ir_.emitStoreVar(itemName, initialItem, itemBindingId);
 
-    const IRRegister loadedArrayForLen = ir_.emitLoadVar(iterableName);
+    const IRRegister loadedArrayForLen = ir_.emitLoadVar(iterableName, iterableBinding);
     const IRRegister length = ir_.emitLen(loadedArrayForLen);
-    ir_.emitStoreVar(lengthName, length);
+    ir_.emitStoreVar(lengthName, length, lengthBinding);
 
     const std::size_t loopStart = ir_.instructionCount();
-    const IRRegister currentIndex = ir_.emitLoadVar(indexName);
-    const IRRegister currentLength = ir_.emitLoadVar(lengthName);
+    const IRRegister currentIndex = ir_.emitLoadVar(indexName, indexBinding);
+    const IRRegister currentLength = ir_.emitLoadVar(lengthName, lengthBinding);
     const IRRegister condition = ir_.emitBinary(IROp::Less, currentIndex, currentLength);
     const std::size_t exitJump = ir_.emitJumpIfFalse(condition);
 
-    const IRRegister arrayForElement = ir_.emitLoadVar(iterableName);
-    const IRRegister indexForElement = ir_.emitLoadVar(indexName);
+    const IRRegister arrayForElement = ir_.emitLoadVar(iterableName, iterableBinding);
+    const IRRegister indexForElement = ir_.emitLoadVar(indexName, indexBinding);
     const IRRegister item = ir_.emitIndex(arrayForElement, indexForElement);
-    ir_.emitAssignVar(itemName, item);
+    ir_.emitAssignVar(itemName, item, itemBindingId);
 
     const std::size_t jumpOverIncrement = ir_.emitJump();
     const std::size_t incrementStart = ir_.instructionCount();
-    const IRRegister indexBeforeIncrement = ir_.emitLoadVar(indexName);
+    const IRRegister indexBeforeIncrement = ir_.emitLoadVar(indexName, indexBinding);
     const IRRegister one = ir_.emitConstant(Value::number(1));
     const IRRegister nextIndex = ir_.emitBinary(IROp::Add, indexBeforeIncrement, one);
-    ir_.emitAssignVar(indexName, nextIndex);
+    ir_.emitAssignVar(indexName, nextIndex, indexBinding);
     ir_.emitJumpTo(loopStart);
 
     ir_.patchJump(jumpOverIncrement);
@@ -602,7 +811,7 @@ void IRCompiler::compileMatch(const MatchStmt& statement)
         std::vector<CompiledPatternBinding> bindings;
         compilePattern(*arm.pattern, value, failJumps, bindings);
         for (const auto& binding : bindings) {
-            ir_.emitStoreVar(binding.resolvedName, binding.value);
+            ir_.emitStoreVar(binding.resolvedName, binding.value, binding.bindingId);
         }
         if (arm.guard) {
             const PatternGuardRecord* guardRecord = declarationIndex_
@@ -643,7 +852,7 @@ IRRegister IRCompiler::compileMatchExpression(const MatchExpr& expression)
         std::vector<CompiledPatternBinding> bindings;
         compilePattern(*arm.pattern, value, failJumps, bindings);
         for (const auto& binding : bindings) {
-            ir_.emitStoreVar(binding.resolvedName, binding.value);
+            ir_.emitStoreVar(binding.resolvedName, binding.value, binding.bindingId);
         }
         if (arm.guard) {
             const PatternGuardRecord* guardRecord = declarationIndex_
@@ -686,8 +895,13 @@ void IRCompiler::compilePattern(
         if (!record || record->resolvedName.empty()) {
             throw IRCompileError("missing pattern binding metadata");
         }
+        const DeclarationRecord* declaration = declarationIndex_->declaration(*variable);
+        const std::optional<BindingId> bindingId = registerBinding(
+            record->bindingId,
+            record->resolvedName,
+            declaration ? std::optional<DeclarationId>(declaration->declarationId) : std::nullopt);
         bindings.push_back(
-            CompiledPatternBinding{record->sourceName, record->resolvedName, value});
+            CompiledPatternBinding{record->sourceName, record->resolvedName, value, bindingId});
         return;
     }
 
@@ -721,6 +935,7 @@ void IRCompiler::compilePattern(
         std::vector<std::size_t> pendingFailJumps;
         std::unordered_map<std::string, IRRegister> sharedBindings;
         std::unordered_map<std::string, std::string> resolvedNamesByBinding;
+        std::unordered_map<std::string, std::size_t> mergedBindingIndices;
         std::vector<CompiledPatternBinding> mergedBindings;
 
         for (std::size_t i = 0; i < orPattern->alternatives.size(); ++i) {
@@ -748,6 +963,11 @@ void IRCompiler::compilePattern(
                     && resolvedName->second != binding.resolvedName) {
                     throw IRCompileError("OR pattern binding metadata mismatch");
                 }
+                const auto mergedIndex = mergedBindingIndices.find(binding.sourceName);
+                if (mergedIndex != mergedBindingIndices.end()
+                    && mergedBindings[mergedIndex->second].bindingId != binding.bindingId) {
+                    throw IRCompileError("OR pattern binding metadata mismatch");
+                }
                 resolvedNamesByBinding.insert_or_assign(
                     binding.sourceName,
                     binding.resolvedName);
@@ -755,10 +975,12 @@ void IRCompiler::compilePattern(
                 if (shared == sharedBindings.end()) {
                     const IRRegister registerForBinding = ir_.makeRegister();
                     shared = sharedBindings.emplace(binding.resolvedName, registerForBinding).first;
+                    mergedBindingIndices.emplace(binding.sourceName, mergedBindings.size());
                     mergedBindings.push_back(CompiledPatternBinding{
                         binding.sourceName,
                         binding.resolvedName,
-                        registerForBinding});
+                        registerForBinding,
+                        binding.bindingId});
                 }
                 ir_.emitCopyTo(shared->second, binding.value);
             }
@@ -837,7 +1059,14 @@ IRRegister IRCompiler::compileExpression(const Expr& expression)
         if (!binding) {
             throw IRCompileError("missing binding metadata for variable read");
         }
-        return ir_.emitLoadVar(binding->resolvedName);
+        const std::optional<ResolvedSymbol> resolved = declarationIndex_->variableReference(*variable);
+        const DeclarationRecord* declaration = resolved
+            ? declarationIndex_->declaration(resolved->declarationId)
+            : nullptr;
+        const std::optional<BindingId> bindingId = registerBindingMetadata(
+            *binding,
+            declaration ? std::optional<DeclarationId>(declaration->declarationId) : std::nullopt);
+        return ir_.emitLoadVar(binding->resolvedName, bindingId);
     }
 
     if (const auto* assign = dynamic_cast<const AssignExpr*>(&expression)) {
@@ -849,7 +1078,14 @@ IRRegister IRCompiler::compileExpression(const Expr& expression)
         if (!binding) {
             throw IRCompileError("missing binding metadata for assignment");
         }
-        ir_.emitAssignVar(binding->resolvedName, value);
+        const std::optional<ResolvedSymbol> resolved = declarationIndex_->assignmentReference(*assign);
+        const DeclarationRecord* declaration = resolved
+            ? declarationIndex_->declaration(resolved->declarationId)
+            : nullptr;
+        const std::optional<BindingId> bindingId = registerBindingMetadata(
+            *binding,
+            declaration ? std::optional<DeclarationId>(declaration->declarationId) : std::nullopt);
+        ir_.emitAssignVar(binding->resolvedName, value, bindingId);
         return value;
     }
 
@@ -891,7 +1127,11 @@ IRRegister IRCompiler::compileExpression(const Expr& expression)
                     throw IRCompileError("missing binary operator call target metadata");
                 }
             }
-            const IRRegister callee = ir_.emitLoadVar(operation->calleeName);
+            const auto binding = bindingIdsByResolvedName_.find(operation->calleeName);
+            const std::optional<BindingId> bindingId = binding == bindingIdsByResolvedName_.end()
+                ? std::nullopt
+                : std::optional<BindingId>(binding->second);
+            const IRRegister callee = ir_.emitLoadVar(operation->calleeName, bindingId);
             std::vector<IRRegister> arguments;
             arguments.push_back(compileExpression(*binary->left));
             arguments.push_back(compileExpression(*binary->right));
@@ -957,6 +1197,10 @@ IRRegister IRCompiler::emitFunctionExpr(const FunctionExpr& expression)
     }
     std::vector<std::string> parameters = metadata->parameterNames;
     ir_.beginFunction(metadata->functionLabel, std::move(parameters));
+    ++activeFunctionDepth_;
+    registerFunctionParameters(
+        *metadata,
+        declarationIndex_->functionParameterDeclarations(expression));
 
     std::vector<LoopContext> enclosingLoopContexts = std::move(loopContexts_);
     loopContexts_.clear();
@@ -966,6 +1210,7 @@ IRRegister IRCompiler::emitFunctionExpr(const FunctionExpr& expression)
     IRRegister nilValue = ir_.emitConstant(Value::nil());
     ir_.emitReturn(nilValue);
     loopContexts_ = std::move(enclosingLoopContexts);
+    --activeFunctionDepth_;
 
     const std::size_t functionIndex = ir_.endFunction();
     return ir_.emitMakeFunction(functionIndex);
@@ -1026,7 +1271,11 @@ IRRegister IRCompiler::emitMemberCall(const MemberCallExpr& expression)
                 throw IRCompileError("missing struct method call target metadata");
             }
         }
-        const IRRegister callee = ir_.emitLoadVar(memberCall->calleeName);
+        const auto binding = bindingIdsByResolvedName_.find(memberCall->calleeName);
+        const std::optional<BindingId> bindingId = binding == bindingIdsByResolvedName_.end()
+            ? std::nullopt
+            : std::optional<BindingId>(binding->second);
+        const IRRegister callee = ir_.emitLoadVar(memberCall->calleeName, bindingId);
         std::vector<IRRegister> arguments;
         if (memberCall->passesReceiver) {
             arguments.push_back(compileExpression(*expression.receiver));
@@ -1211,10 +1460,17 @@ IRRegister IRCompiler::emitCompoundAssign(const CompoundAssignExpr& expression)
         throw IRCompileError("missing binding metadata for compound assignment");
     }
     const std::string& name = binding->resolvedName;
-    const IRRegister oldValue = ir_.emitLoadVar(name);
+    const std::optional<ResolvedSymbol> resolved = declarationIndex_->compoundAssignmentReference(expression);
+    const DeclarationRecord* declaration = resolved
+        ? declarationIndex_->declaration(resolved->declarationId)
+        : nullptr;
+    const std::optional<BindingId> bindingId = registerBindingMetadata(
+        *binding,
+        declaration ? std::optional<DeclarationId>(declaration->declarationId) : std::nullopt);
+    const IRRegister oldValue = ir_.emitLoadVar(name, bindingId);
     const IRRegister result = emitCompoundAssignmentResult(
         expression.op, oldValue, *expression.value, "`" + expression.op.lexeme + "` expects number variable");
-    ir_.emitAssignVar(name, result);
+    ir_.emitAssignVar(name, result, bindingId);
     return result;
 }
 

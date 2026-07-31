@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "decision_revision": "m7-2026-07-30-r1",
+  "decision_revision": "m7-2026-07-31-r2",
   "inventory_revision": "m0d-2026-07-22-r1",
   "decision_id": "M7-IR-SSA-001",
   "domain": "internal-ssa-optimization",
@@ -80,11 +80,12 @@
       "snapshot-local IR binding identity metadata",
       "explicit conservative storage classes",
       "optional binding IDs on variable memory operations",
+      "IRCompiler source declaration, parameter, capture, module/export, and synthetic binding population",
+      "program-global canonical binding table with per-function visibility references",
       "conservative IR effect summaries"
     ],
     "test_case_id": "ctest.ssa_contract",
     "not_included": [
-      "IRCompiler metadata population",
       "SSA value allocation",
       "SSA renaming",
       "optimization passes",

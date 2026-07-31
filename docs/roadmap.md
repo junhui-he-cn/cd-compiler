@@ -309,8 +309,8 @@ belongs in the baseline until that re-audit is merged and verified.
 ### M7-IR-SSA-001: Internal SSA and optimization pipeline
 
 **Status:** the CFG foundation, SSA structural shell, deterministic dominance
-analysis, phi placement, and the binding/effect contract are implemented only
-on
+analysis, phi placement, binding/effect contract, and IRCompiler binding
+metadata integration are implemented only on
 `feat/ssa-optimization-design`; SSA renaming and optimization are still
 proposed and are not shipped on `master`. The design and machine-readable
 decision are in
@@ -329,12 +329,13 @@ aggregate aliasing, calls, callbacks, and runtime traps remain conservative.
 SSA is de-lowered to the existing IR; phi nodes and optimizer metadata are not
 serialized.
 
-**Required decision before SSA renaming/O1 implementation:** connect
-`IRCompiler` to the frozen binding/effect contract, then define
+**Required decision before SSA renaming/O1 implementation:** consume the
+connected `IRCompiler` binding/effect contract, then define
 dependency-offset remapping, optimized debug-local policy, and the
 optimization-level/pipeline identity used by `cdbc-cache 0.2`. The current
 branch establishes CFG shape, SSA value/phi structure, dominance analysis,
-phi placement, the conservative effect table, and verification.
+phi placement, source binding/storage metadata, the conservative effect table,
+and verification.
 
 **Gate:** CFG/SSA verifier and O0 round-trip tests; O0/O1 semantic parity over
 control flow, closures, mutation, callbacks, traps, and evaluation order;

@@ -43,6 +43,11 @@ struct FunctionMetadataRecord {
     std::string resolvedName;
     std::string functionLabel;
     std::vector<std::string> parameterNames;
+    // Binding IDs are produced by the checker for every source parameter.
+    // The function declaration itself has no binding for lambdas or methods,
+    // so bindingId is intentionally optional-by-invalid-value there.
+    BindingId bindingId;
+    std::vector<BindingId> parameterBindingIds;
 };
 
 struct MemberCallMetadataRecord {
@@ -201,6 +206,10 @@ struct DeclarationRecord {
     DeclarationKind kind = DeclarationKind::Variable;
     std::string name;
     ScopeId scopeId;
+    // True when the declaration is owned by a function body (including a
+    // nested function expression).  This is structural metadata used by
+    // lowering; it is not inferred from the display name.
+    bool functionLocal = false;
     std::optional<SourceRange> range;
     std::optional<SyntaxNodeId> syntaxNodeId;
     const Stmt* statement = nullptr;
@@ -260,6 +269,9 @@ public:
     const FunctionMetadataRecord* functionMetadata(const FunctionStmt& statement) const;
     const FunctionMetadataRecord* functionMetadata(const FunctionExpr& expression) const;
     const FunctionMetadataRecord* functionMetadata(const MethodDecl& method) const;
+    std::vector<DeclarationId> functionParameterDeclarations(const FunctionStmt& statement) const;
+    std::vector<DeclarationId> functionParameterDeclarations(const FunctionExpr& expression) const;
+    std::vector<DeclarationId> functionParameterDeclarations(const MethodDecl& method) const;
     const MemberCallMetadataRecord* memberCallMetadata(const MemberCallExpr& expression) const;
     const BinaryOperationRecord* binaryOperation(const BinaryExpr& expression) const;
     std::optional<DeclarationSignature> signature(DeclarationId id) const;
@@ -290,6 +302,7 @@ public:
     const CaptureRecord* captureMetadata(const FunctionStmt& statement) const;
     const CaptureRecord* captureMetadata(const FunctionExpr& expression) const;
     const CaptureRecord* captureMetadata(const MethodDecl& method) const;
+    bool declarationIsCaptured(DeclarationId id) const;
     const LoopTargetRecord* breakTarget(const BreakStmt& statement) const;
     const LoopTargetRecord* continueTarget(const ContinueStmt& statement) const;
 
@@ -379,6 +392,9 @@ private:
     std::unordered_map<const FunctionStmt*, FunctionMetadataRecord> functionMetadata_;
     std::unordered_map<const FunctionExpr*, FunctionMetadataRecord> functionExpressionMetadata_;
     std::unordered_map<const MethodDecl*, FunctionMetadataRecord> methodMetadata_;
+    std::unordered_map<const FunctionStmt*, std::vector<DeclarationId>> functionParameterDeclarations_;
+    std::unordered_map<const FunctionExpr*, std::vector<DeclarationId>> functionExpressionParameterDeclarations_;
+    std::unordered_map<const MethodDecl*, std::vector<DeclarationId>> methodParameterDeclarations_;
     std::unordered_map<const MemberCallExpr*, MemberCallMetadataRecord> memberCallMetadata_;
     std::unordered_set<const FieldAccessExpr*> fieldAccesses_;
     std::unordered_set<const FieldAssignExpr*> fieldAssignments_;

@@ -16,9 +16,10 @@ dominance-analysis, phi-placement, and binding/effect-contract slices in steps
 2-3 are implemented on
 `feat/ssa-optimization-design` and covered by `ctest.control_flow_graph`,
 `ctest.ssa`, `ctest.dominance`, and `ctest.ssa_phi_placement`. SSA value
-allocation, incoming-value filling, IRCompiler metadata population, SSA
-renaming, O1 passes, and later work remain future implementation slices. The
-contract slice is additionally covered by `ctest.ssa_contract`.
+allocation, incoming-value filling, SSA renaming, O1 passes, and later work
+remain future implementation slices. The binding contract is now populated by
+`IRCompiler` and covered by the existing `ir_source_location` integration test;
+the contract slice is additionally covered by `ctest.ssa_contract`.
 
 ### 1. Freeze the baseline and internal contracts
 

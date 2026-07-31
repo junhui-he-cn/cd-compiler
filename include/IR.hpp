@@ -115,7 +115,11 @@ public:
     std::size_t endFunction();
 
     void addModuleDependency(IRModuleDependency dependency);
+    // Register one canonical snapshot binding.  The program table owns each
+    // BindingId exactly once; function tables contain only visibility
+    // references added through addFunctionBinding().
     void addBinding(IRBinding binding);
+    void addFunctionBinding(IRBinding binding);
 
     IRRegister emitConstant(Value value);
     IRRegister emitMakeFunction(std::size_t functionIndex);

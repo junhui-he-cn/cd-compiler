@@ -43,8 +43,9 @@ void test_ir_program_keeps_binding_tables_outside_printed_ir()
     assert(program.bindings().size() == 1);
     assert(program.bindings().front().bindingId == BindingId{10});
 
-    program.beginFunction("worker", {});
     program.addBinding(IRBinding{BindingId{11}, "local#11", BindingStorageClass::Local});
+    program.beginFunction("worker", {});
+    program.addFunctionBinding(IRBinding{BindingId{11}, "local#11", BindingStorageClass::Local});
     const IRRegister loaded = program.emitLoadVar("local#11", BindingId{11});
     program.emitReturn(loaded);
     const std::size_t functionIndex = program.endFunction();

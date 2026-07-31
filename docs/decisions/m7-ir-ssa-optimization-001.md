@@ -254,7 +254,11 @@ snapshot-local `BindingId`, resolved name, and explicit storage class; only
 Variable memory instructions may carry the binding ID without changing their
 printed IR or bytecode representation. `irEffectSummary` conservatively
 classifies memory reads/writes, traps, allocation, calls, observability, and
-control flow. `IRCompiler` is not yet populating this optional metadata.
+control flow. `IRCompiler` now populates this metadata for source declarations,
+function parameters, captures, module/exported bindings, and synthetic cells;
+the canonical binding table is program-global and function tables contain only
+per-body visibility references. Interface-only imported values without a
+snapshot binding ID remain conservative.
 
 ## Non-goals
 
@@ -267,8 +271,8 @@ collection, or make optimization mandatory.
 
 The following must be resolved in the first implementation decision revision:
 
-1. how `IRCompiler` populates and validates the frozen binding metadata for
-   every variable access;
+1. how SSA renaming consumes the populated binding/storage metadata for every
+   variable access;
 2. whether O1 promotes non-captured locals or only optimizes explicit SSA
    temporaries;
 3. the source-level local policy for `compiler-design-vm trace` on optimized

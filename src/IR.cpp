@@ -1,5 +1,6 @@
 #include "IR.hpp"
 
+#include <algorithm>
 #include <iomanip>
 #include <stdexcept>
 #include <utility>
@@ -478,32 +479,58 @@ void IRProgram::addBinding(IRBinding binding)
         throw std::logic_error("IR binding metadata requires a resolved name");
     }
 
-    const auto containsBinding = [&](const std::vector<IRBinding>& bindings) {
-        return std::any_of(
-            bindings.begin(),
-            bindings.end(),
-            [&binding](const IRBinding& existing) {
-                return existing.bindingId == binding.bindingId;
-            });
-    };
-    if (containsBinding(bindings_)) {
+    const auto existing = std::find_if(
+        bindings_.begin(),
+        bindings_.end(),
+        [&binding](const IRBinding& current) {
+            return current.bindingId == binding.bindingId;
+        });
+    if (existing != bindings_.end()) {
         throw std::logic_error("duplicate IR binding metadata");
     }
-    for (const IRFunction& function : functions_) {
-        if (containsBinding(function.bindings)) {
-            throw std::logic_error("duplicate IR binding metadata");
-        }
+
+    bindings_.push_back(std::move(binding));
+}
+
+void IRProgram::addFunctionBinding(IRBinding binding)
+{
+    if (!binding.bindingId.valid()) {
+        throw std::logic_error("IR binding metadata requires a valid binding ID");
     }
-    for (const IRFunction& function : functionStack_) {
-        if (containsBinding(function.bindings)) {
-            throw std::logic_error("duplicate IR binding metadata");
-        }
+    if (binding.resolvedName.empty()) {
+        throw std::logic_error("IR binding metadata requires a resolved name");
+    }
+    if (!hasActiveFunction(functionStack_)) {
+        throw std::logic_error("function binding metadata requires an active IR function");
     }
 
-    std::vector<IRBinding>& bindings = hasActiveFunction(functionStack_)
-        ? activeFunction(functionStack_).bindings
-        : bindings_;
-    bindings.push_back(std::move(binding));
+    const auto canonical = std::find_if(
+        bindings_.begin(),
+        bindings_.end(),
+        [&binding](const IRBinding& current) {
+            return current.bindingId == binding.bindingId;
+        });
+    if (canonical == bindings_.end()) {
+        throw std::logic_error("function binding metadata has no canonical binding");
+    }
+    if (canonical->resolvedName != binding.resolvedName
+        || canonical->storage != binding.storage) {
+        throw std::logic_error("conflicting IR binding metadata");
+    }
+
+    IRFunction& function = activeFunction(functionStack_);
+    const auto existing = std::find_if(
+        function.bindings.begin(),
+        function.bindings.end(),
+        [&binding](const IRBinding& current) {
+            return current.bindingId == binding.bindingId;
+        });
+    if (existing == function.bindings.end()) {
+        function.bindings.push_back(std::move(binding));
+    } else if (existing->resolvedName != canonical->resolvedName
+        || existing->storage != canonical->storage) {
+        throw std::logic_error("conflicting function IR binding metadata");
+    }
 }
 
 IRRegister IRProgram::emitConstant(Value value)

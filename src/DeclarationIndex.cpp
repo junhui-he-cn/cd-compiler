@@ -193,6 +193,7 @@ private:
         record.kind = kind;
         record.name = std::move(name);
         record.scopeId = currentScope().id;
+        record.functionLocal = !functionStack_.empty();
         record.range = std::move(range);
         record.syntaxNodeId = syntaxNodeId;
         record.statement = statement;
@@ -325,8 +326,10 @@ private:
             }
             beginScope(function);
             beginFunctionContext(scopeStack_.back(), function);
+            std::vector<DeclarationId> parameterDeclarations;
+            parameterDeclarations.reserve(function->parameters.size());
             for (const Parameter& parameter : function->parameters) {
-                addDeclaration(
+                DeclarationRecord& parameterRecord = addDeclaration(
                     DeclarationKind::Parameter,
                     parameter.name.lexeme,
                     tokenRange(parameter.name),
@@ -338,7 +341,11 @@ private:
                     {},
                     {},
                     parameter.typeName);
+                parameterDeclarations.push_back(parameterRecord.declarationId);
             }
+            index_.functionParameterDeclarations_.emplace(
+                function,
+                std::move(parameterDeclarations));
             collectStatementList(function->body);
             endFunctionContext();
             endScope();
@@ -508,7 +515,8 @@ private:
             method.returnTypeName,
             false);
         beginScope(nullptr);
-        addDeclaration(
+        beginFunctionContext(scopeStack_.back(), nullptr, nullptr, &method);
+        DeclarationRecord& thisDeclaration = addDeclaration(
             DeclarationKind::Parameter,
             "this",
             std::nullopt,
@@ -521,9 +529,11 @@ private:
             {},
             {},
             true);
-        beginFunctionContext(scopeStack_.back(), nullptr, nullptr, &method);
+        std::vector<DeclarationId> parameterDeclarations;
+        parameterDeclarations.reserve(method.parameters.size() + 1);
+        parameterDeclarations.push_back(thisDeclaration.declarationId);
         for (const Parameter& parameter : method.parameters) {
-            addDeclaration(
+            DeclarationRecord& parameterRecord = addDeclaration(
                 DeclarationKind::Parameter,
                 parameter.name.lexeme,
                 tokenRange(parameter.name),
@@ -535,7 +545,11 @@ private:
                 {},
                 {},
                 parameter.typeName);
+            parameterDeclarations.push_back(parameterRecord.declarationId);
         }
+        index_.methodParameterDeclarations_.emplace(
+            &method,
+            std::move(parameterDeclarations));
         collectStatementList(method.body);
         endFunctionContext();
         endScope();
@@ -725,8 +739,10 @@ private:
             index_.functionExpressions_.insert(function);
             beginScope(nullptr);
             beginFunctionContext(scopeStack_.back(), nullptr, function);
+            std::vector<DeclarationId> parameterDeclarations;
+            parameterDeclarations.reserve(function->parameters.size());
             for (const Parameter& parameter : function->parameters) {
-                addDeclaration(
+                DeclarationRecord& parameterRecord = addDeclaration(
                     DeclarationKind::Parameter,
                     parameter.name.lexeme,
                     tokenRange(parameter.name),
@@ -738,7 +754,11 @@ private:
                     {},
                     {},
                     parameter.typeName);
+                parameterDeclarations.push_back(parameterRecord.declarationId);
             }
+            index_.functionExpressionParameterDeclarations_.emplace(
+                function,
+                std::move(parameterDeclarations));
             collectStatementList(function->body);
             endFunctionContext();
             endScope();
@@ -1000,6 +1020,27 @@ const FunctionMetadataRecord* DeclarationIndex::functionMetadata(const MethodDec
     return found == methodMetadata_.end() ? nullptr : &found->second;
 }
 
+std::vector<DeclarationId> DeclarationIndex::functionParameterDeclarations(
+    const FunctionStmt& statement) const
+{
+    const auto found = functionParameterDeclarations_.find(&statement);
+    return found == functionParameterDeclarations_.end() ? std::vector<DeclarationId>{} : found->second;
+}
+
+std::vector<DeclarationId> DeclarationIndex::functionParameterDeclarations(
+    const FunctionExpr& expression) const
+{
+    const auto found = functionExpressionParameterDeclarations_.find(&expression);
+    return found == functionExpressionParameterDeclarations_.end() ? std::vector<DeclarationId>{} : found->second;
+}
+
+std::vector<DeclarationId> DeclarationIndex::functionParameterDeclarations(
+    const MethodDecl& method) const
+{
+    const auto found = methodParameterDeclarations_.find(&method);
+    return found == methodParameterDeclarations_.end() ? std::vector<DeclarationId>{} : found->second;
+}
+
 const MemberCallMetadataRecord* DeclarationIndex::memberCallMetadata(
     const MemberCallExpr& expression) const
 {
@@ -1217,6 +1258,26 @@ const CaptureRecord* DeclarationIndex::captureMetadata(const MethodDecl& method)
 {
     const auto found = methodCaptures_.find(&method);
     return found == methodCaptures_.end() ? nullptr : &found->second;
+}
+
+bool DeclarationIndex::declarationIsCaptured(DeclarationId id) const
+{
+    if (!id.valid()) {
+        return false;
+    }
+    const auto contains = [id](const auto& captures) {
+        for (const auto& entry : captures) {
+            for (const ResolvedSymbol& symbol : entry.second.symbols) {
+                if (symbol.declarationId == id) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+    return contains(functionCaptures_)
+        || contains(functionExpressionCaptures_)
+        || contains(methodCaptures_);
 }
 
 const LoopTargetRecord* DeclarationIndex::breakTarget(const BreakStmt& statement) const
@@ -1545,12 +1606,21 @@ std::size_t DeclarationIndex::validateMetadata() const
             parameters.end(),
             [](const std::string& parameter) { return !parameter.empty(); });
     };
+    const auto hasValidBindingIds = [](const std::vector<BindingId>& bindings) {
+        return std::all_of(
+            bindings.begin(),
+            bindings.end(),
+            [](BindingId binding) { return binding.valid(); });
+    };
     for (const auto& entry : functionMetadata_) {
         const FunctionMetadataRecord& metadata = entry.second;
         if (metadata.resolvedName.empty()
             || metadata.functionLabel != entry.first->name.lexeme
             || metadata.parameterNames.size() != entry.first->parameters.size()
-            || !hasResolvedParameters(metadata.parameterNames)) {
+            || !hasResolvedParameters(metadata.parameterNames)
+            || !metadata.bindingId.valid()
+            || metadata.parameterBindingIds.size() != entry.first->parameters.size()
+            || !hasValidBindingIds(metadata.parameterBindingIds)) {
             ++mismatches;
         }
     }
@@ -1559,7 +1629,10 @@ std::size_t DeclarationIndex::validateMetadata() const
         if (metadata.resolvedName.empty()
             || metadata.functionLabel != "<lambda>"
             || metadata.parameterNames.size() != entry.first->parameters.size()
-            || !hasResolvedParameters(metadata.parameterNames)) {
+            || !hasResolvedParameters(metadata.parameterNames)
+            || metadata.bindingId.valid()
+            || metadata.parameterBindingIds.size() != entry.first->parameters.size()
+            || !hasValidBindingIds(metadata.parameterBindingIds)) {
             ++mismatches;
         }
     }
@@ -1568,7 +1641,10 @@ std::size_t DeclarationIndex::validateMetadata() const
         if (metadata.resolvedName.empty()
             || metadata.functionLabel != entry.first->name.lexeme
             || metadata.parameterNames.size() != entry.first->parameters.size() + 1
-            || !hasResolvedParameters(metadata.parameterNames)) {
+            || !hasResolvedParameters(metadata.parameterNames)
+            || metadata.bindingId.valid()
+            || metadata.parameterBindingIds.size() != entry.first->parameters.size() + 1
+            || !hasValidBindingIds(metadata.parameterBindingIds)) {
             ++mismatches;
         }
     }

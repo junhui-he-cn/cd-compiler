@@ -42,6 +42,20 @@ private:
     std::optional<SourceSpan> debugSpan(
         const std::optional<SourceRange>& range,
         const std::optional<SourceSpan>& fallback) const;
+    void collectExportedDeclarations(const Program& program);
+    BindingStorageClass storageClassFor(std::optional<DeclarationId> declarationId) const;
+    std::optional<BindingId> registerBinding(
+        BindingId bindingId,
+        const std::string& resolvedName,
+        std::optional<DeclarationId> declarationId,
+        std::optional<BindingStorageClass> explicitStorage = std::nullopt);
+    std::optional<BindingId> registerBindingMetadata(
+        const BindingMetadataRecord& metadata,
+        std::optional<DeclarationId> declarationId);
+    std::optional<BindingId> registerSyntheticBinding(const std::string& resolvedName);
+    void registerFunctionParameters(
+        const FunctionMetadataRecord& metadata,
+        const std::vector<DeclarationId>& declarations);
     IRProgram compileInternal(
         const Program& program,
         const DeclarationIndex& declarationIndex,
@@ -97,6 +111,7 @@ private:
         std::string sourceName;
         std::string resolvedName;
         IRRegister value;
+        std::optional<BindingId> bindingId;
     };
     void compilePattern(
         const Pattern& pattern,
@@ -133,5 +148,10 @@ private:
     std::optional<std::size_t> independentModuleId_;
     std::vector<LoopContext> loopContexts_;
     std::size_t nextSyntheticName_ = 0;
+    std::size_t nextSyntheticBindingId_ = 0;
+    std::size_t activeFunctionDepth_ = 0;
+    std::unordered_set<DeclarationId, SnapshotIdHash<DeclarationIdTag>> exportedDeclarations_;
+    std::unordered_map<BindingId, IRBinding, SnapshotIdHash<BindingIdTag>> registeredBindings_;
+    std::unordered_map<std::string, BindingId> bindingIdsByResolvedName_;
     std::optional<SourceSpan> currentSpan_;
 };
