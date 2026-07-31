@@ -220,32 +220,33 @@ fun editDistance(left: string, right: string): number {
   return previous[right.len()];
 }
 
-fun longestIncreasingSubsequenceLength(values: [number]): number {
-  if (values.len() == 0) {
-    return 0;
+fun lisLowerBound(values: [number], target: number): number {
+  let low = 0;
+  let high = values.len();
+  while (low < high) {
+    let middle = floor((low + high) / 2);
+    if (values[middle] < target) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
   }
-  let lengths: [number] = [];
+  return low;
+}
+
+fun longestIncreasingSubsequenceLength(values: [number]): number {
+  let tails: [number] = [];
   let index = 0;
   while (index < values.len()) {
-    lengths.push(1);
-    index += 1;
-  }
-  let best = 1;
-  index = 0;
-  while (index < values.len()) {
-    let previous = 0;
-    while (previous < index) {
-      if (values[previous] < values[index] && lengths[previous] + 1 > lengths[index]) {
-        lengths[index] = lengths[previous] + 1;
-      }
-      previous += 1;
-    }
-    if (lengths[index] > best) {
-      best = lengths[index];
+    let position = lisLowerBound(tails, values[index]);
+    if (position == tails.len()) {
+      tails.push(values[index]);
+    } else {
+      tails[position] = values[index];
     }
     index += 1;
   }
-  return best;
+  return tails.len();
 }
 
 fun longestIncreasingSubsequence(values: [number]): [number] {

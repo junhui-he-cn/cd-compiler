@@ -961,8 +961,8 @@ helpers and the obstacle-path helper. `editDistance` uses `O(leftLength * rightL
 `O(rightLength)` space; numeric overflow remains outside the library contract.
 
 `longestIncreasingSubsequenceLength(values)` computes the strict numeric LIS
-length with `O(n^2)` time and `O(n)` space; equal values do not extend a
-subsequence. `longestIncreasingSubsequence(values)` returns one strict numeric
+length with `O(n log n)` time and `O(n)` space using a tails array and lower-bound
+replacement; equal values do not extend a subsequence. `longestIncreasingSubsequence(values)` returns one strict numeric
 LIS as a new array, returns `[]` for empty input, and leaves the input unchanged.
 It uses predecessor pointers with `O(n^2)` time and `O(n)` auxiliary space. When
 multiple predecessors have the same length, the left-to-right DP keeps the first
