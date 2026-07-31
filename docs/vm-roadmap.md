@@ -675,6 +675,17 @@ C++ emission、Rust `run` 输出 `32768`、`dump` 的 constant/debug-source 保�
 下一步只评估有 workload 证据的 resource-cost metadata；在 checkpoint 时序和
 分配/回调预算无法由统一策略覆盖前，资源策略继续留在各 helper 中。
 
+**状态（第三 resource touchpoint profile 窄切片已完成，2026-07-31）：**
+`NativeSpec` 现在以 `None`、`InstructionCheckpoints`、`RuntimeElements` 或
+`Both` 描述现有预算 hook 的可能触点；该字段只读、不计费，`contains` 等按
+值形状变化的 native 使用保守分类，实际 checkpoint、取消优先级和元素预算仍
+由 helper 执行。详见
+[`docs/decisions/vm-native-registry-003-resource-profile.md`](decisions/vm-native-registry-003-resource-profile.md)。
+
+下一材料边界是 parameter/return constraints：当前 `.cdbc 0.1` native call
+只携带 name-table reference，若要让 VM 读取类型描述必须先决定共享 artifact
+契约或 versioned native ID；在该决定前不引入隐式 host ABI。
+
 ### VM-6B：宿主集成与 I/O 策略
 
 **目标：** 明确 VM 是否、以及如何向宿主暴露输出 sink、诊断 sink、时间/随机数、
@@ -762,7 +773,7 @@ VM-3A 的第一 library boundary、typed error/version boundary、VM-3B 的第�
 linker report slice、VM-4A 的第一 interactive debugger slice、VM-4B 的第一
 deterministic profile counter/tracked-heap slice、VM-4C 的第一 structured kind slice、VM-5A
 的 reproducible benchmark baseline/scale slices 和 VM-5B 的 trace-off instruction
-preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard/checkpoint-fast-path/checkpoint-mode-cache/borrow-register-operands/borrow-native-name/borrow-function-values/borrow-caller-name/shared-frame-names/profile-off-hook-guards/inline-native-arguments/decoded-constant-cache/borrowed-global-cell/comparison-dispatch/borrowed-Len-operand/borrowed-Print-operand/borrowed-Field-receiver slices 已完成；VM-6A 的 registry dispatch/metadata 与 centralized arity validation slices 也已完成；GC、persistent VM、
+preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard/checkpoint-fast-path/checkpoint-mode-cache/borrow-register-operands/borrow-native-name/borrow-function-values/borrow-caller-name/shared-frame-names/profile-off-hook-guards/inline-native-arguments/decoded-constant-cache/borrowed-global-cell/comparison-dispatch/borrowed-Len-operand/borrowed-Print-operand/borrowed-Field-receiver slices 已完成；VM-6A 的 registry dispatch/metadata、centralized arity validation 与 resource touchpoint profile slices 也已完成；GC、persistent VM、
 JIT 和新的 artifact version 仍未进入默认队列。VM-5C 的第一 capacity corpus、
 第二 long-Unicode-string 和第三 long-Unicode-output slices，以及 VM-4C 的第二
 resource-context slice 也已完成。VM-4B 的 wall-clock 与

@@ -213,6 +213,14 @@ enum NativeId {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NativeResourceProfile {
+    None,
+    InstructionCheckpoints,
+    RuntimeElements,
+    Both,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct NativeSpec {
     id: NativeId,
     name: &'static str,
@@ -220,6 +228,7 @@ struct NativeSpec {
     max_arity: usize,
     callback: bool,
     arity_error: &'static str,
+    resource: NativeResourceProfile,
 }
 
 const NATIVE_SPECS: &[NativeSpec] = &[
@@ -230,6 +239,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 2,
         callback: false,
         arity_error: "push expects 2 arguments",
+        resource: NativeResourceProfile::RuntimeElements,
     },
     NativeSpec {
         id: NativeId::Pop,
@@ -238,6 +248,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 1,
         callback: false,
         arity_error: "pop expects 1 arguments",
+        resource: NativeResourceProfile::None,
     },
     NativeSpec {
         id: NativeId::Remove,
@@ -246,6 +257,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 2,
         callback: false,
         arity_error: "remove expects 2 arguments",
+        resource: NativeResourceProfile::None,
     },
     NativeSpec {
         id: NativeId::Clear,
@@ -254,6 +266,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 1,
         callback: false,
         arity_error: "clear expects 1 argument",
+        resource: NativeResourceProfile::None,
     },
     NativeSpec {
         id: NativeId::Merge,
@@ -262,6 +275,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 2,
         callback: false,
         arity_error: "merge expects 2 arguments",
+        resource: NativeResourceProfile::Both,
     },
     NativeSpec {
         id: NativeId::Keys,
@@ -270,6 +284,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 1,
         callback: false,
         arity_error: "keys expects 1 argument",
+        resource: NativeResourceProfile::Both,
     },
     NativeSpec {
         id: NativeId::Values,
@@ -278,6 +293,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 1,
         callback: false,
         arity_error: "values expects 1 argument",
+        resource: NativeResourceProfile::Both,
     },
     NativeSpec {
         id: NativeId::Floor,
@@ -286,6 +302,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 1,
         callback: false,
         arity_error: "floor expects 1 arguments",
+        resource: NativeResourceProfile::None,
     },
     NativeSpec {
         id: NativeId::Ceil,
@@ -294,6 +311,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 1,
         callback: false,
         arity_error: "ceil expects 1 arguments",
+        resource: NativeResourceProfile::None,
     },
     NativeSpec {
         id: NativeId::Sqrt,
@@ -302,6 +320,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 1,
         callback: false,
         arity_error: "sqrt expects 1 arguments",
+        resource: NativeResourceProfile::None,
     },
     NativeSpec {
         id: NativeId::Str,
@@ -310,6 +329,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 1,
         callback: false,
         arity_error: "str expects 1 arguments",
+        resource: NativeResourceProfile::None,
     },
     NativeSpec {
         id: NativeId::Substr,
@@ -318,6 +338,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 3,
         callback: false,
         arity_error: "substr expects 3 arguments",
+        resource: NativeResourceProfile::None,
     },
     NativeSpec {
         id: NativeId::CharAt,
@@ -326,6 +347,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 2,
         callback: false,
         arity_error: "charAt expects 2 arguments",
+        resource: NativeResourceProfile::None,
     },
     NativeSpec {
         id: NativeId::TypeOf,
@@ -334,6 +356,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 1,
         callback: false,
         arity_error: "typeOf expects 1 arguments",
+        resource: NativeResourceProfile::None,
     },
     NativeSpec {
         id: NativeId::Hash,
@@ -342,6 +365,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 1,
         callback: false,
         arity_error: "hash expects 1 argument",
+        resource: NativeResourceProfile::None,
     },
     NativeSpec {
         id: NativeId::Contains,
@@ -350,6 +374,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 2,
         callback: false,
         arity_error: "contains expects 2 arguments",
+        resource: NativeResourceProfile::InstructionCheckpoints,
     },
     NativeSpec {
         id: NativeId::Slice,
@@ -358,6 +383,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 3,
         callback: false,
         arity_error: "slice expects 3 arguments",
+        resource: NativeResourceProfile::Both,
     },
     NativeSpec {
         id: NativeId::Copy,
@@ -366,6 +392,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 1,
         callback: false,
         arity_error: "copy expects 1 argument",
+        resource: NativeResourceProfile::Both,
     },
     NativeSpec {
         id: NativeId::Concat,
@@ -374,6 +401,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 2,
         callback: false,
         arity_error: "concat expects 2 arguments",
+        resource: NativeResourceProfile::Both,
     },
     NativeSpec {
         id: NativeId::Map,
@@ -382,6 +410,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 2,
         callback: true,
         arity_error: "map expects 2 arguments",
+        resource: NativeResourceProfile::Both,
     },
     NativeSpec {
         id: NativeId::Filter,
@@ -390,6 +419,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 2,
         callback: true,
         arity_error: "filter expects 2 arguments",
+        resource: NativeResourceProfile::Both,
     },
     NativeSpec {
         id: NativeId::FlatMap,
@@ -398,6 +428,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 2,
         callback: true,
         arity_error: "flatMap expects 2 arguments",
+        resource: NativeResourceProfile::Both,
     },
     NativeSpec {
         id: NativeId::Any,
@@ -406,6 +437,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 2,
         callback: true,
         arity_error: "any expects 2 arguments",
+        resource: NativeResourceProfile::Both,
     },
     NativeSpec {
         id: NativeId::All,
@@ -414,6 +446,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 2,
         callback: true,
         arity_error: "all expects 2 arguments",
+        resource: NativeResourceProfile::Both,
     },
     NativeSpec {
         id: NativeId::Count,
@@ -422,6 +455,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 2,
         callback: true,
         arity_error: "count expects 2 arguments",
+        resource: NativeResourceProfile::Both,
     },
     NativeSpec {
         id: NativeId::Find,
@@ -430,6 +464,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 2,
         callback: true,
         arity_error: "find expects 2 arguments",
+        resource: NativeResourceProfile::Both,
     },
     NativeSpec {
         id: NativeId::FindIndex,
@@ -438,6 +473,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 2,
         callback: true,
         arity_error: "findIndex expects 2 arguments",
+        resource: NativeResourceProfile::Both,
     },
     NativeSpec {
         id: NativeId::Reduce,
@@ -446,6 +482,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 3,
         callback: true,
         arity_error: "reduce expects 3 arguments",
+        resource: NativeResourceProfile::Both,
     },
     NativeSpec {
         id: NativeId::Range,
@@ -454,6 +491,7 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         max_arity: 3,
         callback: false,
         arity_error: "range expects 1 to 3 arguments",
+        resource: NativeResourceProfile::RuntimeElements,
     },
 ];
 
@@ -612,6 +650,48 @@ mod tests {
                 .execute_native_call(spec.name, Vec::new())
                 .expect_err("zero arguments should violate every native contract");
             assert_eq!(error.message, spec.arity_error, "native {}", spec.name);
+        }
+    }
+
+    #[test]
+    fn native_registry_records_resource_touchpoints() {
+        for (name, expected) in [
+            ("pop", NativeResourceProfile::None),
+            ("remove", NativeResourceProfile::None),
+            ("clear", NativeResourceProfile::None),
+            ("floor", NativeResourceProfile::None),
+            ("ceil", NativeResourceProfile::None),
+            ("sqrt", NativeResourceProfile::None),
+            ("str", NativeResourceProfile::None),
+            ("substr", NativeResourceProfile::None),
+            ("charAt", NativeResourceProfile::None),
+            ("typeOf", NativeResourceProfile::None),
+            ("hash", NativeResourceProfile::None),
+            ("push", NativeResourceProfile::RuntimeElements),
+            ("range", NativeResourceProfile::RuntimeElements),
+            ("contains", NativeResourceProfile::InstructionCheckpoints),
+            ("merge", NativeResourceProfile::Both),
+            ("keys", NativeResourceProfile::Both),
+            ("values", NativeResourceProfile::Both),
+            ("slice", NativeResourceProfile::Both),
+            ("copy", NativeResourceProfile::Both),
+            ("concat", NativeResourceProfile::Both),
+            ("map", NativeResourceProfile::Both),
+            ("filter", NativeResourceProfile::Both),
+            ("flatMap", NativeResourceProfile::Both),
+            ("any", NativeResourceProfile::Both),
+            ("all", NativeResourceProfile::Both),
+            ("count", NativeResourceProfile::Both),
+            ("find", NativeResourceProfile::Both),
+            ("findIndex", NativeResourceProfile::Both),
+            ("reduce", NativeResourceProfile::Both),
+        ] {
+            assert_eq!(
+                native_spec(name).unwrap().resource,
+                expected,
+                "native {}",
+                name
+            );
         }
     }
 
