@@ -13,7 +13,8 @@ export Stack, Queue, Deque, RingBuffer, BinaryHeap, Option, Result, List,
 export Tree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount,
        treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced,
        treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, bstContains,
-       treeLowestCommonAncestor, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor,
+       serializeNumericTree, deserializeNumericTree, treeLowestCommonAncestor,
+       bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor,
        bstSuccessor, AvlTree, newAvlTree, RedBlackTree, newRedBlackTree
        from "./trees.cd";
 

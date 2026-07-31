@@ -1,0 +1,46 @@
+import "../../data_structures.cd" as ds;
+
+let empty = ds.emptyTree<number>();
+print ds.serializeNumericTree(empty);
+let restoredEmpty = ds.deserializeNumericTree("#");
+if (restoredEmpty == nil) {
+  print "empty-invalid";
+} else {
+  print ds.treeSize(restoredEmpty);
+}
+
+let tree = ds.treeNode(
+  -2.5,
+  ds.treeNode(1, ds.emptyTree<number>(), ds.treeLeaf(1)),
+  ds.treeNode(3.25, ds.emptyTree<number>(), ds.emptyTree<number>())
+);
+let encoded = ds.serializeNumericTree(tree);
+print encoded;
+let decoded = ds.deserializeNumericTree(encoded);
+if (decoded == nil) {
+  print "round-trip-invalid";
+} else {
+  print ds.treePreorder(decoded);
+  print ds.treeInorder(decoded);
+}
+
+print ds.deserializeNumericTree("") == nil;
+print ds.deserializeNumericTree("1,#") == nil;
+print ds.deserializeNumericTree("1,#,#,") == nil;
+print ds.deserializeNumericTree("1, #,#") == nil;
+print ds.deserializeNumericTree("word,#,#") == nil;
+let scientific = ds.deserializeNumericTree("+1.25e2,#,#");
+if (scientific == nil) {
+  print "scientific-invalid";
+} else {
+  print ds.treePreorder(scientific);
+}
+let negativeScientific = ds.deserializeNumericTree("-1.25e-2,#,#");
+if (negativeScientific == nil) {
+  print "negative-scientific-invalid";
+} else {
+  print ds.treePreorder(negativeScientific);
+}
+let subnormal = ds.deserializeNumericTree("1e-309,#,#");
+print subnormal == nil;
+print ds.deserializeNumericTree("1e,#,#") == nil;

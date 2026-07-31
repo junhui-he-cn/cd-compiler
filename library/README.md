@@ -436,6 +436,10 @@ The three new algorithms use `O(n)` temporary array space and linear time;
   largest number of nodes on one level;
 - `treeRootToLeafPaths` — return fresh path arrays in left-to-right order;
 - `treeRootToLeafSums(tree: Tree<number>)` — return numeric root-to-leaf sums;
+- `serializeNumericTree(tree: Tree<number>): string` — encode a numeric tree in
+  pre-order as `#` for an empty tree or `value,left,right` for a node;
+- `deserializeNumericTree(text: string): optional<Tree<number>>` — parse that
+  format, returning `nil` for malformed input or trailing content;
 - `treeLowestCommonAncestor(tree, firstPath, secondPath): optional<T>` — return
   the value at the lowest common ancestor of two node paths.
 
@@ -452,6 +456,13 @@ and statistics are `O(n)`; recursive traversals use `O(h)` call-stack space,
 while level order, width, balance checking, and path collection use `O(n)`
 auxiliary space in the current implementation. Empty trees have size, height,
 leaf count, and maximum width zero; all traversals and path helpers return `[]`.
+
+Numeric serialization is deterministic and uses the language `str` rendering
+for node values. The wire format is pre-order: `#` means empty and each node is
+`value,left,right`, with no whitespace. Deserialization accepts signed decimal
+and scientific numeric text, but only for `Tree<number>`; malformed input,
+missing children, or trailing text returns `nil`. The recursive parser and
+serializer take `O(n)` time and `O(h)` call-stack space for a tree of height `h`.
 
 The BST helpers use the same `Tree<T>` representation and a caller-supplied
 `fun(T, T): bool` comparator:
@@ -1274,6 +1285,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_segment_tree`,
 `--case data_structures_graph`, `--case data_structures_weighted_graph`,
 `--case data_structures_graph_remove_edge`,
+`--case data_structures_tree_serialization`,
 `--case algorithms_graph_topological`,
 `--case algorithms_graph_traversal`,
 `--case algorithms_graph_paths`,
