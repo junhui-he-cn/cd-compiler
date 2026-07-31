@@ -332,6 +332,87 @@ void printInstruction(std::ostream& out, const IRProgram& program, const IRInstr
 
 } // namespace
 
+bool IREffectSummary::isPure() const
+{
+    return !readsMemory && !writesMemory && !mayTrap && !allocates && !calls
+        && !observable && !controlFlow;
+}
+
+IREffectSummary irEffectSummary(IROp op)
+{
+    IREffectSummary result;
+    switch (op) {
+    case IROp::Constant:
+    case IROp::Copy:
+        return result;
+    case IROp::MakeFunction:
+    case IROp::Array:
+    case IROp::Map:
+    case IROp::Struct:
+    case IROp::Variant:
+        result.allocates = true;
+        return result;
+    case IROp::VariantTag:
+    case IROp::VariantField:
+        result.readsMemory = true;
+        result.mayTrap = true;
+        return result;
+    case IROp::LoadVar:
+        result.readsMemory = true;
+        return result;
+    case IROp::StoreVar:
+    case IROp::AssignVar:
+        result.writesMemory = true;
+        return result;
+    case IROp::Call:
+    case IROp::NativeCall:
+        result.readsMemory = true;
+        result.writesMemory = true;
+        result.mayTrap = true;
+        result.calls = true;
+        return result;
+    case IROp::Index:
+    case IROp::Field:
+    case IROp::Len:
+    case IROp::AssertArray:
+    case IROp::AssertNumber:
+        result.readsMemory = true;
+        result.mayTrap = true;
+        return result;
+    case IROp::AssignIndex:
+    case IROp::AssignField:
+        result.readsMemory = true;
+        result.writesMemory = true;
+        result.mayTrap = true;
+        return result;
+    case IROp::Print:
+        result.observable = true;
+        return result;
+    case IROp::Return:
+    case IROp::Jump:
+    case IROp::JumpIfFalse:
+    case IROp::JumpIfTrue:
+        result.controlFlow = true;
+        return result;
+    case IROp::Negate:
+    case IROp::Not:
+    case IROp::Add:
+    case IROp::Subtract:
+    case IROp::Multiply:
+    case IROp::Divide:
+    case IROp::Equal:
+    case IROp::NotEqual:
+    case IROp::Greater:
+    case IROp::GreaterEqual:
+    case IROp::Less:
+    case IROp::LessEqual:
+        result.mayTrap = true;
+        return result;
+    }
+
+    return result;
+}
+
 void IRProgram::setSources(std::vector<SourceFile> sources)
 {
     sources_ = std::move(sources);
@@ -369,7 +450,7 @@ IRRegister IRProgram::makeRegister()
 
 void IRProgram::beginFunction(std::string name, std::vector<std::string> parameters)
 {
-    functionStack_.push_back(IRFunction{std::move(name), std::move(parameters), {}, 0});
+    functionStack_.push_back(IRFunction{std::move(name), std::move(parameters), {}, 0, {}});
 }
 
 std::size_t IRProgram::endFunction()
@@ -386,6 +467,43 @@ std::size_t IRProgram::endFunction()
 void IRProgram::addModuleDependency(IRModuleDependency dependency)
 {
     moduleDependencies_.push_back(std::move(dependency));
+}
+
+void IRProgram::addBinding(IRBinding binding)
+{
+    if (!binding.bindingId.valid()) {
+        throw std::logic_error("IR binding metadata requires a valid binding ID");
+    }
+    if (binding.resolvedName.empty()) {
+        throw std::logic_error("IR binding metadata requires a resolved name");
+    }
+
+    const auto containsBinding = [&](const std::vector<IRBinding>& bindings) {
+        return std::any_of(
+            bindings.begin(),
+            bindings.end(),
+            [&binding](const IRBinding& existing) {
+                return existing.bindingId == binding.bindingId;
+            });
+    };
+    if (containsBinding(bindings_)) {
+        throw std::logic_error("duplicate IR binding metadata");
+    }
+    for (const IRFunction& function : functions_) {
+        if (containsBinding(function.bindings)) {
+            throw std::logic_error("duplicate IR binding metadata");
+        }
+    }
+    for (const IRFunction& function : functionStack_) {
+        if (containsBinding(function.bindings)) {
+            throw std::logic_error("duplicate IR binding metadata");
+        }
+    }
+
+    std::vector<IRBinding>& bindings = hasActiveFunction(functionStack_)
+        ? activeFunction(functionStack_).bindings
+        : bindings_;
+    bindings.push_back(std::move(binding));
 }
 
 IRRegister IRProgram::emitConstant(Value value)
@@ -474,21 +592,53 @@ void IRProgram::emitCopyTo(IRRegister dest, IRRegister value)
     emit(IRInstruction{IROp::Copy, dest, value, std::nullopt, {}, 0});
 }
 
-IRRegister IRProgram::emitLoadVar(std::string name)
+IRRegister IRProgram::emitLoadVar(
+    std::string name,
+    std::optional<BindingId> bindingId)
 {
     IRRegister dest = makeRegister();
-    emit(IRInstruction{IROp::LoadVar, dest, std::nullopt, std::nullopt, {}, addName(std::move(name))});
+    IRInstruction instruction{
+        IROp::LoadVar,
+        dest,
+        std::nullopt,
+        std::nullopt,
+        {},
+        addName(std::move(name))};
+    instruction.bindingId = bindingId;
+    emit(std::move(instruction));
     return dest;
 }
 
-void IRProgram::emitStoreVar(std::string name, IRRegister value)
+void IRProgram::emitStoreVar(
+    std::string name,
+    IRRegister value,
+    std::optional<BindingId> bindingId)
 {
-    emit(IRInstruction{IROp::StoreVar, std::nullopt, value, std::nullopt, {}, addName(std::move(name))});
+    IRInstruction instruction{
+        IROp::StoreVar,
+        std::nullopt,
+        value,
+        std::nullopt,
+        {},
+        addName(std::move(name))};
+    instruction.bindingId = bindingId;
+    emit(std::move(instruction));
 }
 
-void IRProgram::emitAssignVar(std::string name, IRRegister value)
+void IRProgram::emitAssignVar(
+    std::string name,
+    IRRegister value,
+    std::optional<BindingId> bindingId)
 {
-    emit(IRInstruction{IROp::AssignVar, std::nullopt, value, std::nullopt, {}, addName(std::move(name))});
+    IRInstruction instruction{
+        IROp::AssignVar,
+        std::nullopt,
+        value,
+        std::nullopt,
+        {},
+        addName(std::move(name))};
+    instruction.bindingId = bindingId;
+    emit(std::move(instruction));
 }
 
 IRRegister IRProgram::emitCall(IRRegister callee, std::vector<IRRegister> arguments)
@@ -645,6 +795,11 @@ const std::vector<IRFunction>& IRProgram::functions() const
 const std::vector<IRModuleDependency>& IRProgram::moduleDependencies() const
 {
     return moduleDependencies_;
+}
+
+const std::vector<IRBinding>& IRProgram::bindings() const
+{
+    return bindings_;
 }
 
 std::size_t IRProgram::registerCount() const

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "BindingMetadata.hpp"
 #include "ModuleGraph.hpp"
 #include "SourceMap.hpp"
 #include "Value.hpp"
@@ -66,13 +67,29 @@ struct IRInstruction {
     std::optional<std::size_t> typeNameOperand = std::nullopt;
     std::optional<std::size_t> variantNameOperand = std::nullopt;
     std::optional<SourceSpan> span = std::nullopt;
+    std::optional<BindingId> bindingId = std::nullopt;
 };
+
+struct IREffectSummary {
+    bool readsMemory = false;
+    bool writesMemory = false;
+    bool mayTrap = false;
+    bool allocates = false;
+    bool calls = false;
+    bool observable = false;
+    bool controlFlow = false;
+
+    bool isPure() const;
+};
+
+IREffectSummary irEffectSummary(IROp op);
 
 struct IRFunction {
     std::string name;
     std::vector<std::string> parameters;
     std::vector<IRInstruction> instructions;
     std::size_t registerCount = 0;
+    std::vector<IRBinding> bindings;
 };
 
 // A dependency marker emitted while lowering one module independently.  The
@@ -98,6 +115,7 @@ public:
     std::size_t endFunction();
 
     void addModuleDependency(IRModuleDependency dependency);
+    void addBinding(IRBinding binding);
 
     IRRegister emitConstant(Value value);
     IRRegister emitMakeFunction(std::size_t functionIndex);
@@ -115,9 +133,17 @@ public:
     IRRegister emitVariantField(IRRegister value, std::size_t index);
     IRRegister emitCopy(IRRegister value);
     void emitCopyTo(IRRegister dest, IRRegister value);
-    IRRegister emitLoadVar(std::string name);
-    void emitStoreVar(std::string name, IRRegister value);
-    void emitAssignVar(std::string name, IRRegister value);
+    IRRegister emitLoadVar(
+        std::string name,
+        std::optional<BindingId> bindingId = std::nullopt);
+    void emitStoreVar(
+        std::string name,
+        IRRegister value,
+        std::optional<BindingId> bindingId = std::nullopt);
+    void emitAssignVar(
+        std::string name,
+        IRRegister value,
+        std::optional<BindingId> bindingId = std::nullopt);
     IRRegister emitCall(IRRegister callee, std::vector<IRRegister> arguments);
     IRRegister emitNativeCall(std::string name, std::vector<IRRegister> arguments);
     IRRegister emitIndex(IRRegister collection, IRRegister index);
@@ -143,6 +169,7 @@ public:
     const std::vector<IRInstruction>& instructions() const;
     const std::vector<IRFunction>& functions() const;
     const std::vector<IRModuleDependency>& moduleDependencies() const;
+    const std::vector<IRBinding>& bindings() const;
     std::size_t registerCount() const;
 
     // Print a compact, assembly-like view of the generated register IR.
@@ -158,6 +185,7 @@ private:
     std::vector<IRFunction> functionStack_;
     std::vector<IRFunction> functions_;
     std::vector<IRModuleDependency> moduleDependencies_;
+    std::vector<IRBinding> bindings_;
     std::vector<SourceFile> sources_;
     std::optional<SourceSpan> currentSpan_;
 };

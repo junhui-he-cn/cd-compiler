@@ -1,9 +1,9 @@
 # M7-IR-SSA-001: internal SSA and optimization boundary
 
 Status: proposed overall on `feat/ssa-optimization-design`. The CFG
-foundation, SSA structural shell, deterministic dominance-analysis, and
-phi-placement sub-slices are implemented on this branch; SSA renaming and
-optimization remain unadmitted.
+foundation, SSA structural shell, deterministic dominance-analysis,
+phi-placement, and binding/effect-contract sub-slices are implemented on this
+branch; SSA renaming and optimization remain unadmitted.
 
 ## Question
 
@@ -247,6 +247,15 @@ unreachable definitions, and never places values in the synthetic exit block.
 The result is placement metadata ordered by slot and block; SSA value
 allocation, incoming-value filling, and renaming remain later slices.
 
+The branch now freezes the internal binding/effect contract in
+`include/BindingMetadata.hpp` and `include/IR.hpp`. `IRBinding` carries a
+snapshot-local `BindingId`, resolved name, and explicit storage class; only
+`Local` is promotable, while unknown or absent metadata remains conservative.
+Variable memory instructions may carry the binding ID without changing their
+printed IR or bytecode representation. `irEffectSummary` conservatively
+classifies memory reads/writes, traps, allocation, calls, observability, and
+control flow. `IRCompiler` is not yet populating this optional metadata.
+
 ## Non-goals
 
 This proposal does not add language syntax, change type inference or nullable
@@ -254,11 +263,12 @@ flow, change closure ownership, add a new runtime representation, change
 `cdbc 0.1`, optimize across module boundaries, add a JIT, add garbage
 collection, or make optimization mandatory.
 
-## Open decisions before SSA construction and optimization
+## Open decisions before SSA renaming and optimization
 
 The following must be resolved in the first implementation decision revision:
 
-1. the exact binding metadata shape emitted by `IRCompiler`;
+1. how `IRCompiler` populates and validates the frozen binding metadata for
+   every variable access;
 2. whether O1 promotes non-captured locals or only optimizes explicit SSA
    temporaries;
 3. the source-level local policy for `compiler-design-vm trace` on optimized

@@ -74,6 +74,23 @@
       "optimization passes"
     ]
   },
+  "binding_effect_contract_slice": {
+    "status": "implemented_on_feature_branch",
+    "capabilities": [
+      "snapshot-local IR binding identity metadata",
+      "explicit conservative storage classes",
+      "optional binding IDs on variable memory operations",
+      "conservative IR effect summaries"
+    ],
+    "test_case_id": "ctest.ssa_contract",
+    "not_included": [
+      "IRCompiler metadata population",
+      "SSA value allocation",
+      "SSA renaming",
+      "optimization passes",
+      "bytecode changes"
+    ]
+  },
   "pipeline": [
     "existing linear register IR",
     "CFG construction and verification",

@@ -3,9 +3,9 @@
 Date: 2026-07-30
 
 Status: design proposal; the CFG foundation, SSA structural shell,
-deterministic dominance analysis, and phi placement described below are
-implemented on the feature branch, while SSA renaming and optimization remain
-unadmitted. This document expands
+deterministic dominance analysis, phi placement, and binding/effect contract
+described below are implemented on the feature branch, while SSA renaming and
+optimization remain unadmitted. This document expands
 [`M7-IR-SSA-001`](../../decisions/m7-ir-ssa-optimization-001.md); it does not
 authorize implementation by itself.
 
@@ -95,6 +95,18 @@ The initial storage classes are `local`, `captured`, `module`, `exported`, and
 `synthetic`. Unknown or missing metadata is conservatively treated as
 non-promotable memory.
 
+The current contract represents this boundary with `IRBinding`: a
+snapshot-local `BindingId`, resolved name, and explicit storage class. An
+`IRInstruction` may carry the same binding ID for `LoadVar`, `StoreVar`, or
+`AssignVar`, while the existing name operand remains unchanged for debugging
+and bytecode lowering. Only `Local` is eligible for promotion; the producer
+side in `IRCompiler` remains a later slice.
+
+The effect contract is a conservative `IREffectSummary`. It records memory
+reads/writes, potential traps, allocation, calls, observable output, and
+control flow. The summary is analysis metadata only; it does not authorize
+motion, deletion, folding, or artifact changes.
+
 ## CFG construction
 
 For each main stream and function body:
@@ -171,6 +183,11 @@ value. The initial table is:
 | Field/index assignment | aggregate memory effect; no first-slice alias elimination |
 | Call/native/callback/print | observable effect barrier |
 | Jump/conditional/return | control-flow effect; simplify only with proven target/condition facts |
+
+The `irEffectSummary` implementation follows this table conservatively: only
+constant and copy operations are currently pure; calls, aggregate accesses,
+assertions, arithmetic, and comparisons retain a potential-trap or effect
+classification until a later semantic proof narrows it.
 
 In particular, constant folding must not turn a runtime division-by-zero or
 dynamic type failure into a compile-time failure, nor move a failing index or
@@ -269,6 +286,7 @@ policy; it must never reuse a product compiled under another optimizer.
 | --- | --- |
 | `include/ControlFlowGraph.hpp`, `src/ControlFlowGraph.cpp` | block formation, successors/predecessors, CFG verifier, offset map |
 | `include/Dominance.hpp`, `src/Dominance.cpp` | reachable dominators, immediate-dominator tree, dominance frontiers, verifier |
+| `include/BindingMetadata.hpp` | snapshot-local binding identity and conservative storage contract |
 | `include/SSA.hpp`, `src/SSA.cpp` | SSA values, memory slots, phi insertion, rename, verify, de-SSA |
 | `include/Optimizer.hpp`, `src/Optimizer.cpp` | options, pass ordering, effect classification, counters, fingerprint |
 | `include/IR.hpp`, `src/IR.cpp` | carry explicit binding metadata and preserve remappable internal IR data |

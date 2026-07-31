@@ -12,14 +12,7 @@
 using SSAValueId = std::size_t;
 using SSAMemorySlotId = std::size_t;
 
-enum class SSAMemoryStorage {
-    Unknown,
-    Local,
-    Captured,
-    Module,
-    Exported,
-    Synthetic,
-};
+using SSAMemoryStorage = BindingStorageClass;
 
 struct SSAMemorySlot {
     SSAMemorySlotId id = 0;

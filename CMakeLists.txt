@@ -134,6 +134,16 @@ add_executable(ssa_phi_placement_tests
 )
 compiler_design_configure_target(ssa_phi_placement_tests)
 
+add_executable(ssa_contract_tests
+    tests/ssa_contract_tests.cpp
+    src/ControlFlowGraph.cpp
+    src/Dominance.cpp
+    src/IR.cpp
+    src/SSA.cpp
+    src/Value.cpp
+)
+compiler_design_configure_target(ssa_contract_tests)
+
 enable_testing()
 add_test(NAME source_map COMMAND source_map_tests)
 add_test(NAME ir_source_location COMMAND ir_source_location_tests)
@@ -141,6 +151,7 @@ add_test(NAME control_flow_graph COMMAND control_flow_graph_tests)
 add_test(NAME dominance COMMAND dominance_tests)
 add_test(NAME ssa COMMAND ssa_tests)
 add_test(NAME ssa_phi_placement COMMAND ssa_phi_placement_tests)
+add_test(NAME ssa_contract COMMAND ssa_contract_tests)
 add_test(
     NAME golden_runner_selftest
     COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
