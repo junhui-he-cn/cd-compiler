@@ -409,6 +409,52 @@ impl Trie {
     return true;
   }
 
+  fun discard(word: string): bool {
+    let nodes: [number] = [0];
+    let edgePositions: [number] = [];
+    let node = 0;
+    let index = 0;
+    while (index < word.len()) {
+      let character = word.charAt(index);
+      let edge = 0;
+      while (edge < this.edgeCharacters[node].len()
+             && this.edgeCharacters[node][edge] != character) {
+        edge += 1;
+      }
+      if (edge >= this.edgeCharacters[node].len()) {
+        return false;
+      }
+      node = this.edgeChildren[node][edge];
+      nodes.push(node);
+      edgePositions.push(edge);
+      index += 1;
+    }
+
+    if (!this.terminal[node]) {
+      return false;
+    }
+    this.terminal[node] = false;
+
+    while (nodes.len() > 1) {
+      let child = nodes[nodes.len() - 1];
+      if (this.terminal[child] || this.edgeCharacters[child].len() > 0) {
+        break;
+      }
+      let parent = nodes[nodes.len() - 2];
+      let edge = edgePositions[edgePositions.len() - 1];
+      while (edge + 1 < this.edgeCharacters[parent].len()) {
+        this.edgeCharacters[parent][edge] = this.edgeCharacters[parent][edge + 1];
+        this.edgeChildren[parent][edge] = this.edgeChildren[parent][edge + 1];
+        edge += 1;
+      }
+      this.edgeCharacters[parent].pop();
+      this.edgeChildren[parent].pop();
+      nodes.pop();
+      edgePositions.pop();
+    }
+    return true;
+  }
+
   fun has(word: string): bool {
     let node = this.locate(word);
     return node >= 0 && this.terminal[node];

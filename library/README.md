@@ -111,6 +111,8 @@ let graph = ds.newGraph(3, false);
 graph.addEdge(0, 1);
 graph.addEdge(1, 2);
 print graph.neighbors(1);
+print graph.removeEdge(0, 1);
+print graph.edgeCount();
 print ds.breadthFirstOrder(graph, 0);
 print ds.depthFirstOrder(graph, 0);
 print ds.connectedComponents(graph);
@@ -646,9 +648,12 @@ near-constant time (`O(alpha(n))`), while construction is `O(n)`.
 `Graph` is an integer-vertex adjacency-list graph. `newGraph(vertices, directed)`
 creates vertices `[0, vertices)`; `addEdge` rejects invalid or duplicate edges,
 and undirected edges are stored in both adjacency lists while counting once.
-`neighbors` returns a fresh array, and invalid vertex queries return `false` or
-`[]`. Adjacency operations are linear in the degree because this version does
-not use a hash set.
+`removeEdge` removes one existing edge, updates both adjacency lists for an
+undirected graph, and returns whether the edge was present. Self-loops are
+stored and removed once; directed removal does not affect the reverse edge.
+`neighbors` returns a fresh array, and invalid or non-integral vertex queries
+return `false` or `[]`. Adjacency operations are linear in the degree because
+this version does not use a hash set.
 
 `breadthFirstOrder(graph, start)` and `depthFirstOrder(graph, start)` return
 reachable vertex orders from a start vertex. BFS uses a queue and DFS uses an
@@ -700,10 +705,14 @@ for undirected graphs and uses `O(V + E)` time and `O(V + E)` auxiliary space.
 `shortestWeightedDistances` and `shortestWeightedPath` return `-1`/`[]` for
 unreachable results and reject negative weights at insertion. The current array
 scan implementation runs in `O(V^2 + E)` time and `O(V)` auxiliary space.
+`removeEdge` has the same symmetry and missing-edge behavior as `Graph`; removing
+an edge discards its stored weight and updates the edge count.
 
 `SignedWeightedGraph` is the separate signed-weight graph type. Its
 `addEdge` accepts negative weights while retaining duplicate/vertex validation;
-the existing non-negative `WeightedGraph` contract is unchanged.
+`removeEdge` removes directed or undirected edges without changing their signed
+weight validation contract. The existing non-negative `WeightedGraph` contract
+is unchanged.
 `bellmanFord(graph, start)` returns
 `Result<BellmanFordResult, BellmanFordError>`. A successful result contains
 nullable `distances` (`nil` means unreachable) and `parents`; invalid starts
@@ -860,6 +869,12 @@ extrema functions use a monotonic index queue in `O(n)` time and
 subarray, or `nil` for an empty input. It preserves the input and handles an
 all-negative array by returning its least-negative element. The scan is `O(n)`
 time and `O(1)` extra space.
+
+`longestUniqueSubarrayLength<T: Eq>(values)` returns the maximum length of a
+contiguous range without repeated values. It accepts any equality-capable
+element type, leaves the input unchanged, and returns `0` for an empty array.
+The array-backed window scan takes `O(n^2)` worst-case time and `O(1)` extra
+space because the library does not require a generic hash table.
 
 The one-dimensional DP helpers are:
 
@@ -1024,10 +1039,14 @@ returns the leftmost longest palindrome, or `""` for empty input. It takes
 `O(n^2)` time and `O(1)` auxiliary space in addition to the returned substring.
 
 `Trie` is an array-node prefix tree. `insert(word)` returns `true` only when a
-new word is added; `has`, `startsWith`, and `wordsWithPrefix` handle empty and
-Unicode scalar-value strings. Prefix results use child insertion order rather
-than lexical sorting, and the current linear edge scans take `O(k)` per node
-lookup where `k` is that node's outgoing edge count.
+new word is added; `discard(word)` unmarks and removes a word, returning
+`false` when it was absent. Deleting a prefix word preserves its longer words,
+while deleting the last word on a branch prunes that branch. `has`,
+`startsWith`, and `wordsWithPrefix` handle empty and Unicode scalar-value
+strings. Prefix results use child insertion order rather than lexical sorting,
+and the current linear edge scans take `O(k)` per node lookup where `k` is that
+node's outgoing edge count. `discard` uses `O(n * k)` time in the word length
+and `O(n)` temporary path space.
 
 `FenwickTree` stores numeric values in an array-backed binary indexed tree:
 
@@ -1254,13 +1273,14 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_fenwick`,
 `--case data_structures_segment_tree`,
 `--case data_structures_graph`, `--case data_structures_weighted_graph`,
+`--case data_structures_graph_remove_edge`,
 `--case algorithms_graph_topological`,
 `--case algorithms_graph_traversal`,
 `--case algorithms_graph_paths`,
 `--case algorithms_graph_bellman_ford`,
 `--case algorithms_graph_kruskal`,
 `--case algorithms_string_matching`,
-`--case algorithms_string_trie`,
+`--case algorithms_string_trie`, `--case data_structures_trie_remove`,
 `--case algorithms_string_sequences`,
 `--case algorithms_stack`,
 `--case algorithms_graph_max_flow`, `--case algorithms_graph_min_cut`,
@@ -1288,6 +1308,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case array_algorithms_search_peaks`,
 `--case array_algorithms_three_sum`, `--case array_algorithms_three_sum_closest`,
 `--case array_algorithms_two_pointer`,
-`--case array_algorithms_sets`, or `--case array_algorithms_window_stats` for
+`--case array_algorithms_sets`, `--case array_algorithms_unique_subarray`, or
+`--case array_algorithms_window_stats` for
 focused coverage. Every selected fixture contributes one result-validation
 check against its `run.out` file.

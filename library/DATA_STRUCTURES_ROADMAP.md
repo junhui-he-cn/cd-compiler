@@ -82,13 +82,13 @@
 - 二分查找：`lowerBound`、`upperBound`、`binarySearch`。
 - 字符串比较辅助：`compareStrings`、`stringLess`（当前限定可打印 ASCII）。
 - 字符串匹配：`findSubstring`、`prefixFunction`、`zFunction`、`kmpSearch`、`isPalindrome`。
-- Trie：`Trie`、`newTrie`、`has`、`startsWith`、`wordsWithPrefix`。
+- Trie：`Trie`、`newTrie`、`insert`、`discard`、`has`、`startsWith`、`wordsWithPrefix`。
 - Fenwick 树：数值 `FenwickTree`，支持点更新、前缀和、区间和与快照。
 - 线段树：数值 `SegmentTree`，支持点更新、区间和、区间最小值与快照。
 - 稀疏表：数值 `SparseTable`，静态半开区间最小值/最大值查询。
 - 矩阵：不可变数值 `Matrix`，矩形校验、访问、转置与乘法。
 - 并查集：整数顶点 `DisjointSet`，支持路径压缩和按大小合并。
-- 图基础结构：整数顶点数组邻接表 `Graph`，支持有向/无向边。
+- 图基础结构：整数顶点数组邻接表 `Graph`，支持有向/无向边的增加和删除。
 - 图遍历：`breadthFirstOrder`、`depthFirstOrder`。
 - 无向连通性：`connectedComponents`、`isBipartite`。
 - 无向割点与桥：`articulationPoints`、`bridges`。
@@ -308,8 +308,13 @@ enum Result<T, E> {
 `longestUniqueSubstringLength` 用数组窗口扫描 Unicode scalar value，返回最长无重复
 子串长度；`longestPalindromicSubstring` 用奇偶中心扩展返回最左最长回文子串，空串
 分别返回 `0` 和空串，当前实现时间复杂度均为 `O(n^2)`。
-`Trie` 使用数组节点和线性边查找，支持 Unicode scalar-value 字符、重复插入去重
-以及按首次插入的边顺序返回前缀结果，不依赖通用哈希。
+`longestUniqueSubarrayLength<T: Eq>` 对任意可相等比较的数组元素返回最长无重复
+连续区间长度；它保持输入不变，空数组返回 `0`，使用不依赖通用哈希的数组窗口扫描，
+最坏时间复杂度为 `O(n^2)`、额外空间为 `O(1)`。
+`Trie` 使用数组节点和线性边查找，支持 Unicode scalar-value 字符、重复插入去重、
+`discard` 删除及按首次插入的边顺序返回前缀结果，不依赖通用哈希。删除前缀词会
+保留子词，删除最后一个分支会移除父节点上的边；节点槽位不复用，避免暴露不稳定
+的节点索引。
 `peakIndex` 在 `O(log n)` 时间内返回一个弱峰值；`isMountainArray` 用线性扫描
 验证严格先升后降，`mountainPeakIndex` 在验证后用二分查找峰顶。空数组或非严格
 山脉返回 `nil` 峰值结果。
@@ -335,7 +340,7 @@ enum Result<T, E> {
 `DisjointSet` 已提供整数顶点的路径压缩与按大小合并版本；越界顶点仍遵循
 数组索引的运行时边界行为。
 `Graph` 已提供整数顶点的去重邻接表；无向边写入两侧邻接数组但只计数一次，
-无效顶点查询返回安全空结果。
+非整数或越界顶点查询返回安全空结果。
 `breadthFirstOrder` 和 `depthFirstOrder` 已提供基于邻接插入顺序的 BFS/DFS，
 只返回起点所在可达分量。
 `connectedComponents` 已提供无向图的升序根节点 BFS 分量划分；有向图查询返回

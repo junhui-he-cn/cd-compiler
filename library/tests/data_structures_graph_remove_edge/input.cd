@@ -1,0 +1,43 @@
+import "../../data_structures.cd" as ds;
+
+let graph = ds.newGraph(4, false);
+graph.addEdge(0, 1);
+graph.addEdge(1, 2);
+graph.addEdge(2, 2);
+print graph.removeEdge(0, 1);
+print graph.hasEdge(1, 0);
+print graph.edgeCount();
+print graph.neighbors(1);
+print graph.removeEdge(0, 1);
+print graph.removeEdge(-1, 2);
+print graph.removeEdge(0.5, 2);
+print graph.removeEdge(2, 2);
+print graph.edgeCount();
+
+let directed = ds.newGraph(3, true);
+directed.addEdge(0, 1);
+directed.addEdge(1, 0);
+print directed.removeEdge(0, 1);
+print directed.hasEdge(0, 1);
+print directed.hasEdge(1, 0);
+print directed.edgeCount();
+
+let weighted = ds.newWeightedGraph(3, false);
+weighted.addEdge(0, 1, 4);
+weighted.addEdge(1, 2, 7);
+print weighted.removeEdge(1, 0);
+print weighted.hasEdge(0, 1);
+print weighted.hasEdge(1, 0);
+print weighted.edgeCount();
+print weighted.removeEdge(1, 0);
+print weighted.removeEdge(0, 1.5);
+
+let signed = ds.newSignedWeightedGraph(3, true);
+signed.addEdge(0, 1, -2);
+signed.addEdge(1, 2, 3);
+print signed.removeEdge(0, 1);
+print signed.hasEdge(0, 1);
+print signed.hasEdge(1, 0);
+print signed.edgeCount();
+print signed.removeEdge(3, 0);
+print signed.removeEdge(1.5, 2);

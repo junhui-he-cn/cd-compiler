@@ -1,0 +1,19 @@
+import "../../data_structures.cd" as ds;
+
+let trie = ds.newTrie();
+trie.insert("car");
+trie.insert("cart");
+trie.insert("cat");
+trie.insert("");
+print trie.discard("car");
+print trie.has("car");
+print trie.has("cart");
+print trie.wordsWithPrefix("ca");
+print trie.discard("car");
+print trie.discard("");
+print trie.has("");
+print trie.discard("missing");
+print trie.discard("cart");
+print trie.startsWith("car");
+print trie.discard("cat");
+print trie.startsWith("ca");
