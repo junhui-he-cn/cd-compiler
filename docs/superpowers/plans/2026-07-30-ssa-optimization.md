@@ -12,14 +12,15 @@ promotion behind explicit follow-up decisions.
 ## Sequence
 
 Current progress: the CFG foundation, SSA structural-shell, deterministic
-dominance-analysis, phi-placement, and binding/effect-contract slices in steps
-2-3 are implemented on
+dominance-analysis, phi-placement, binding/effect-contract, and SSA
+memory-slot rename slices in steps 2-3 are implemented on
 `feat/ssa-optimization-design` and covered by `ctest.control_flow_graph`,
-`ctest.ssa`, `ctest.dominance`, and `ctest.ssa_phi_placement`. SSA value
-allocation, incoming-value filling, SSA renaming, O1 passes, and later work
-remain future implementation slices. The binding contract is now populated by
-`IRCompiler` and covered by the existing `ir_source_location` integration test;
-the contract slice is additionally covered by `ctest.ssa_contract`.
+`ctest.ssa`, `ctest.dominance`, and `ctest.ssa_phi_placement`; the rename
+coverage is part of `ctest.ssa`, and the binding contract is additionally
+covered by `ctest.ssa_contract`. De-SSA, O1 passes, and later work remain
+future implementation slices. The binding contract is populated by
+`IRCompiler` and covered by the existing `ir_source_location` integration
+test.
 
 ### 1. Freeze the baseline and internal contracts
 
@@ -72,6 +73,11 @@ Tasks:
 - keep captured/module/unknown slots as explicit memory effects;
 - verify dominance, phi incoming completeness, and instruction shapes; and
 - lower phis with critical-edge splitting and parallel copies.
+
+The admitted sub-slice currently covers value allocation, local-slot rename,
+parameter initialization, phi incoming filling, non-promotable memory
+preservation, and malformed-input rejection. De-SSA and critical-edge copy
+lowering remain separate follow-up slices.
 
 Gate: SSA verifier tests, loop backedge/diamond phi tests, copy-cycle tests,
 and an O0 CFG/SSA/de-SSA semantic round trip with unchanged existing output.

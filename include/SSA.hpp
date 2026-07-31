@@ -18,6 +18,7 @@ struct SSAMemorySlot {
     SSAMemorySlotId id = 0;
     std::string name;
     SSAMemoryStorage storage = SSAMemoryStorage::Unknown;
+    std::optional<BindingId> bindingId = std::nullopt;
 
     bool canPromote() const;
 };
@@ -42,6 +43,7 @@ struct SSAIncoming {
 struct SSAPhi {
     SSAValueId result = 0;
     std::vector<SSAIncoming> incoming;
+    std::optional<SSAMemorySlotId> memorySlot = std::nullopt;
 };
 
 struct SSAInstruction {
@@ -56,6 +58,8 @@ struct SSAInstruction {
     std::optional<std::size_t> typeNameOperand = std::nullopt;
     std::optional<std::size_t> variantNameOperand = std::nullopt;
     std::optional<SourceSpan> span = std::nullopt;
+    std::optional<SSAMemorySlotId> memorySlot = std::nullopt;
+    std::optional<BindingId> bindingId = std::nullopt;
 };
 
 struct SSABlock {
@@ -70,6 +74,7 @@ struct SSABlock {
 struct SSAParameter {
     SSAValueId value = 0;
     CFGBlockId block = 0;
+    std::optional<SSAMemorySlotId> memorySlot = std::nullopt;
 };
 
 class SSAError final : public std::runtime_error {
@@ -89,6 +94,18 @@ struct SSAFunction {
 };
 
 SSAFunction makeSSAFunction(const ControlFlowGraph& cfg);
+
+// Rename a register-form SSA input along the dominator tree. In the input,
+// SSAInstruction result/operand IDs are pre-SSA virtual register IDs and
+// variable operations identify their memory slot through memorySlot. The
+// output allocates single-definition SSA values, removes Local load/store/
+// assign operations, fills Local-slot phi incoming values, and keeps all
+// other memory operations explicit. Register-form virtual register IDs must
+// be unique definitions; register joins are a separate construction slice.
+SSAFunction renamePromotableMemorySlots(
+    const ControlFlowGraph& cfg,
+    const DominanceInfo& dominance,
+    const SSAFunction& input);
 
 // Place phis for promotable local slots using iterated dominance frontiers.
 // Definitions in unreachable blocks are ignored, and synthetic exit blocks

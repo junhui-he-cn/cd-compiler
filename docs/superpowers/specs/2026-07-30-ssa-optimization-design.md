@@ -2,10 +2,11 @@
 
 Date: 2026-07-30
 
-Status: design proposal; the CFG foundation, SSA structural shell,
-deterministic dominance analysis, phi placement, and binding/effect contract
-described below are implemented on the feature branch, while SSA renaming and
-optimization remain unadmitted. This document expands
+Status: design proposal with an admitted internal SSA memory-slot rename slice;
+the CFG foundation, SSA structural shell, deterministic dominance analysis,
+phi placement, binding/effect contract, and that rename slice are implemented
+on the feature branch, while de-SSA and optimization remain unadmitted. This
+document expands
 [`M7-IR-SSA-001`](../../decisions/m7-ir-ssa-optimization-001.md); it does not
 authorize implementation by itself.
 
@@ -145,8 +146,29 @@ The current branch applies iterated dominance-frontier placement to
 block-level definition sites supplied by a future IR lowering boundary. Only
 `Local` memory slots are eligible. Definitions from unreachable blocks are
 ignored, synthetic exit blocks are never placement targets, and returned
-placements are sorted by slot ID and block ID. This slice deliberately stops
-before SSA value allocation, incoming-value filling, or renaming.
+placements are sorted by slot ID and block ID. The placement function remains
+metadata-only; value allocation, incoming-value filling, and renaming are
+performed by the admitted construction slice below.
+
+## SSA memory-slot rename slice
+
+`renamePromotableMemorySlots` now consumes a register-form `SSAFunction` plus
+the verified CFG and dominance tree. It allocates deterministic SSA values for
+parameters, expression results, and local-slot phis; walks the dominator tree;
+replaces promotable local loads with the current slot value; removes local
+stores/assignments while pushing their values; and fills phi incoming values
+in CFG predecessor order. Parameter-backed local slots seed the initial
+memory stack, so a join can merge an initial parameter value with a branch
+definition or loop backedge.
+
+Captured, module, exported, synthetic, and unknown slots remain explicit
+memory operations. Raw virtual-register definitions must be unique, and the
+rename boundary rejects invalid slots, undefined local slots, malformed
+variable operations, and uses whose raw definition does not dominate the use.
+Unreachable blocks are renamed linearly for a complete internal shape but do
+not contribute definitions or phi inputs. The result is verified before it is
+returned. This remains an internal service: it is not connected to the
+default `IRCompiler`, CLI, bytecode, or module-product path.
 
 ## SSA construction
 

@@ -2,8 +2,8 @@
 
 Status: proposed overall on `feat/ssa-optimization-design`. The CFG
 foundation, SSA structural shell, deterministic dominance-analysis,
-phi-placement, and binding/effect-contract sub-slices are implemented on this
-branch; SSA renaming and optimization remain unadmitted.
+phi-placement, binding/effect-contract, and SSA memory-slot rename sub-slices
+are implemented on this branch; de-SSA and optimization remain unadmitted.
 
 ## Question
 
@@ -230,8 +230,7 @@ The branch also implements the SSA structural shell in `include/SSA.hpp` and
 `src/SSA.cpp`: value IDs, ordered phi incoming records, entry parameters,
 conservative memory-slot storage classes, CFG/SSA block alignment, duplicate
 definition and undefined-use checks, and phi predecessor completeness/order
-validation. It does not yet allocate SSA values, fill phi incoming values,
-rename definitions and uses, de-SSA, or optimize.
+validation. The shell remains independent of construction and optimization.
 
 The branch also implements deterministic dominance analysis in
 `include/Dominance.hpp` and `src/Dominance.cpp`: reachable-subgraph dominator
@@ -244,8 +243,20 @@ The branch also implements iterated dominance-frontier phi placement through
 `placePromotableMemoryPhis`. It accepts block-level definition sites supplied
 by a future IR lowering boundary, places phis only for `Local` slots, ignores
 unreachable definitions, and never places values in the synthetic exit block.
-The result is placement metadata ordered by slot and block; SSA value
-allocation, incoming-value filling, and renaming remain later slices.
+The result is placement metadata ordered by slot and block; the placement API
+itself remains metadata-only.
+
+The admitted construction slice adds `renamePromotableMemorySlots` in
+`include/SSA.hpp` and `src/SSA.cpp`. It allocates deterministic values for
+parameters, expression results, and local-slot phis; walks the verified
+dominator tree; eliminates Local `LoadVar`/`StoreVar`/`AssignVar`; fills phi
+incoming values in CFG predecessor order; seeds Local slots from parameter
+values; and preserves non-promotable memory operations. It rejects invalid or
+undefined local slots, malformed variable instructions, duplicate raw virtual
+register definitions, and non-dominating raw uses. Unreachable blocks are
+retained through a deterministic linear rename but do not participate in phi
+placement. This service is internal and is not connected to the default
+compiler or bytecode path.
 
 The branch now freezes the internal binding/effect contract in
 `include/BindingMetadata.hpp` and `include/IR.hpp`. `IRBinding` carries a
@@ -267,12 +278,12 @@ flow, change closure ownership, add a new runtime representation, change
 `cdbc 0.1`, optimize across module boundaries, add a JIT, add garbage
 collection, or make optimization mandatory.
 
-## Open decisions before SSA renaming and optimization
+## Open decisions before de-SSA and optimization
 
 The following must be resolved in the first implementation decision revision:
 
-1. how SSA renaming consumes the populated binding/storage metadata for every
-   variable access;
+1. how de-SSA handles critical-edge splitting, parallel-copy cycles, and
+   instruction-offset remapping;
 2. whether O1 promotes non-captured locals or only optimizes explicit SSA
    temporaries;
 3. the source-level local policy for `compiler-design-vm trace` on optimized
