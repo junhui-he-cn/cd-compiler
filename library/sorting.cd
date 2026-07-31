@@ -260,41 +260,6 @@ fun kruskalEdgeLess(left: KruskalEdge, right: KruskalEdge): bool {
   return left.weight < right.weight;
 }
 
-fun minimumSpanningForestKruskal(graph: WeightedGraph): WeightedGraph {
-  let count = graph.vertexCount();
-  let forest = newWeightedGraph(count, false);
-  if (graph.directed) {
-    return forest;
-  }
-
-  let edges: [KruskalEdge] = [];
-  let from = 0;
-  while (from < count) {
-    let neighbors = graph.adjacency[from];
-    let neighborIndex = 0;
-    while (neighborIndex < neighbors.len()) {
-      let edge = neighbors[neighborIndex];
-      if (from < edge.to) {
-        edges.push(KruskalEdge { from: from, to: edge.to, weight: edge.weight });
-      }
-      neighborIndex += 1;
-    }
-    from += 1;
-  }
-
-  let ordered = sortArray(edges, kruskalEdgeLess);
-  let components = newDisjointSet(count);
-  let index = 0;
-  while (index < ordered.len()) {
-    let edge = ordered[index];
-    if (components.union(edge.from, edge.to)) {
-      forest.addEdge(edge.from, edge.to, edge.weight);
-    }
-    index += 1;
-  }
-  return forest;
-}
-
 fun mergeSort<T>(values: [T], less: fun(T, T): bool): [T] {
   let result = copy(values);
   let width = 1;
@@ -341,6 +306,41 @@ fun mergeSort<T>(values: [T], less: fun(T, T): bool): [T] {
     width *= 2;
   }
   return result;
+}
+
+fun minimumSpanningForestKruskal(graph: WeightedGraph): WeightedGraph {
+  let count = graph.vertexCount();
+  let forest = newWeightedGraph(count, false);
+  if (graph.directed) {
+    return forest;
+  }
+
+  let edges: [KruskalEdge] = [];
+  let from = 0;
+  while (from < count) {
+    let neighbors = graph.adjacency[from];
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let edge = neighbors[neighborIndex];
+      if (from < edge.to) {
+        edges.push(KruskalEdge { from: from, to: edge.to, weight: edge.weight });
+      }
+      neighborIndex += 1;
+    }
+    from += 1;
+  }
+
+  let ordered = mergeSort(edges, kruskalEdgeLess);
+  let components = newDisjointSet(count);
+  let index = 0;
+  while (index < ordered.len()) {
+    let edge = ordered[index];
+    if (components.union(edge.from, edge.to)) {
+      forest.addEdge(edge.from, edge.to, edge.weight);
+    }
+    index += 1;
+  }
+  return forest;
 }
 
 struct ThreeWayPartition {
