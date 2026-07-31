@@ -248,6 +248,54 @@ fun longestIncreasingSubsequenceLength(values: [number]): number {
   return best;
 }
 
+fun longestIncreasingSubsequence(values: [number]): [number] {
+  let result: [number] = [];
+  if (values.len() == 0) {
+    return result;
+  }
+
+  let lengths: [number] = [];
+  let predecessors: [number] = [];
+  let index = 0;
+  while (index < values.len()) {
+    lengths.push(1);
+    predecessors.push(-1);
+    index += 1;
+  }
+
+  let bestEnd = 0;
+  index = 0;
+  while (index < values.len()) {
+    let previous = 0;
+    while (previous < index) {
+      if (values[previous] < values[index]
+          && lengths[previous] + 1 > lengths[index]) {
+        lengths[index] = lengths[previous] + 1;
+        predecessors[index] = previous;
+      }
+      previous += 1;
+    }
+    if (lengths[index] > lengths[bestEnd]) {
+      bestEnd = index;
+    }
+    index += 1;
+  }
+
+  let reversed: [number] = [];
+  let current = bestEnd;
+  while (current >= 0) {
+    reversed.push(values[current]);
+    current = predecessors[current];
+  }
+
+  index = reversed.len() - 1;
+  while (index >= 0) {
+    result.push(reversed[index]);
+    index -= 1;
+  }
+  return result;
+}
+
 fun longestCommonSubsequenceLength(left: string, right: string): number {
   let previous: [number] = [];
   let index = 0;
@@ -600,4 +648,4 @@ fun boundedKnapsack(weights: [number], values: [number], counts: [number], capac
 }
 
 
-export climbStairs, maxNonAdjacentSum, minCoinCount, uniqueGridPaths, uniqueGridPathsWithObstacles, minGridPathSum, editDistance, longestIncreasingSubsequenceLength, longestCommonSubsequenceLength, longestCommonSubsequence, longestCommonSubstringLength, matrixChainCost, matrixPower2x2, mergeStonesCost, knapsack01, completeKnapsack, boundedKnapsack;
+export climbStairs, maxNonAdjacentSum, minCoinCount, uniqueGridPaths, uniqueGridPathsWithObstacles, minGridPathSum, editDistance, longestIncreasingSubsequenceLength, longestIncreasingSubsequence, longestCommonSubsequenceLength, longestCommonSubsequence, longestCommonSubstringLength, matrixChainCost, matrixPower2x2, mergeStonesCost, knapsack01, completeKnapsack, boundedKnapsack;

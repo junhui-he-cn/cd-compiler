@@ -962,7 +962,12 @@ helpers and the obstacle-path helper. `editDistance` uses `O(leftLength * rightL
 
 `longestIncreasingSubsequenceLength(values)` computes the strict numeric LIS
 length with `O(n^2)` time and `O(n)` space; equal values do not extend a
-subsequence. `longestCommonSubsequenceLength(left, right)` computes the LCS
+subsequence. `longestIncreasingSubsequence(values)` returns one strict numeric
+LIS as a new array, returns `[]` for empty input, and leaves the input unchanged.
+It uses predecessor pointers with `O(n^2)` time and `O(n)` auxiliary space. When
+multiple predecessors have the same length, the left-to-right DP keeps the first
+one found; the result is therefore deterministic but no alternate LIS ordering
+is promised. `longestCommonSubsequenceLength(left, right)` computes the LCS
 length over Unicode scalar values with `O(leftLength * rightLength)` time and
 `O(rightLength)` space.
 `longestCommonSubsequence(left, right)` reconstructs one longest common

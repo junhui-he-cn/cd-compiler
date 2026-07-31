@@ -4,6 +4,13 @@ print ds.longestIncreasingSubsequenceLength([]);
 print ds.longestIncreasingSubsequenceLength([10, 9, 2, 5, 3, 7, 101, 18]);
 print ds.longestIncreasingSubsequenceLength([1, 1, 1]);
 print ds.longestIncreasingSubsequenceLength([-3, -2, -1]);
+print ds.longestIncreasingSubsequence([]);
+print ds.longestIncreasingSubsequence([10, 9, 2, 5, 3, 7, 101, 18]);
+print ds.longestIncreasingSubsequence([1, 1, 1]);
+print ds.longestIncreasingSubsequence([3, 4, 1, 2, 5]);
+let lisInput = [4, 2, 3, 1, 5];
+print ds.longestIncreasingSubsequence(lisInput);
+print lisInput;
 
 print ds.longestCommonSubsequenceLength("abcde", "ace");
 print ds.longestCommonSubsequenceLength("abc", "abc");
