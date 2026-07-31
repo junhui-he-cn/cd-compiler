@@ -2090,6 +2090,26 @@ mod tests {
         assert_eq!(error.message, "execution cancelled");
         assert!(VM::new(&empty_program()).run().is_ok());
     }
+
+    #[test]
+    fn checkpoint_cancellation_precedes_a_zero_step_limit() {
+        let token = CancellationToken::new();
+        let mut config = RunConfig::unlimited();
+        config.max_instruction_steps = Some(0);
+        let program = empty_program();
+        let mut vm = VM::with_config(&program, config.with_cancellation(token.clone()));
+
+        let limited = vm
+            .checkpoint_instruction()
+            .expect_err("zero step limit should reject an active checkpoint");
+        assert_eq!(limited.kind, RuntimeErrorKind::Resource(ResourceKind::InstructionSteps));
+
+        token.cancel();
+        let cancelled = vm
+            .checkpoint_instruction()
+            .expect_err("cancellation should be checked before the limit");
+        assert_eq!(cancelled.kind, RuntimeErrorKind::Cancelled);
+    }
 }
 
 impl RuntimeError {
@@ -2246,6 +2266,18 @@ impl Comparison {
     }
 }
 
+enum InstructionCheckpoint {
+    Limited(usize),
+    Unlimited,
+    CancelledLimited {
+        limit: usize,
+        token: CancellationToken,
+    },
+    CancelledUnlimited {
+        token: CancellationToken,
+    },
+}
+
 enum CallArguments {
     Empty,
     One(Value),
@@ -2319,6 +2351,7 @@ impl Index<usize> for NativeArguments {
 pub struct VM<'a> {
     program: &'a Program,
     config: RunConfig,
+    instruction_checkpoint: InstructionCheckpoint,
     heap: Heap,
     globals: SharedEnvironment,
     global_name_slots: Vec<usize>,
@@ -2349,6 +2382,17 @@ impl<'a> VM<'a> {
     }
 
     pub fn with_config(program: &'a Program, config: RunConfig) -> Self {
+        let instruction_checkpoint = match (&config.cancellation, config.max_instruction_steps) {
+            (None, Some(limit)) => InstructionCheckpoint::Limited(limit),
+            (None, None) => InstructionCheckpoint::Unlimited,
+            (Some(token), Some(limit)) => InstructionCheckpoint::CancelledLimited {
+                limit,
+                token: token.clone(),
+            },
+            (Some(token), None) => InstructionCheckpoint::CancelledUnlimited {
+                token: token.clone(),
+            },
+        };
         let mut global_name_slots = Vec::with_capacity(program.names.len());
         let mut global_slots_by_name = BTreeMap::new();
         for name in &program.names {
@@ -2363,6 +2407,7 @@ impl<'a> VM<'a> {
         Self {
             program,
             config,
+            instruction_checkpoint,
             heap,
             globals,
             global_name_slots,
@@ -3009,31 +3054,47 @@ impl<'a> VM<'a> {
     }
 
     fn checkpoint_instruction(&mut self) -> Result<(), RuntimeError> {
-        if self.config.cancellation.is_none() {
-            if let Some(limit) = self.config.max_instruction_steps {
-                if self.instruction_steps >= limit {
-                    return Err(RuntimeError::resource(ResourceKind::InstructionSteps, limit));
+        match &self.instruction_checkpoint {
+            InstructionCheckpoint::Limited(limit) => {
+                if self.instruction_steps >= *limit {
+                    return Err(RuntimeError::resource(
+                        ResourceKind::InstructionSteps,
+                        *limit,
+                    ));
                 }
                 self.instruction_steps += 1;
-            } else {
+            }
+            InstructionCheckpoint::Unlimited => {
                 self.instruction_steps = self
                     .instruction_steps
                     .checked_add(1)
                     .ok_or_else(|| RuntimeError::resource(ResourceKind::InstructionSteps, usize::MAX))?;
             }
-            return Ok(());
-        }
-
-        self.check_cancellation()?;
-        if let Some(limit) = self.config.max_instruction_steps {
-            if self.instruction_steps >= limit {
-                return Err(RuntimeError::resource(ResourceKind::InstructionSteps, limit));
+            InstructionCheckpoint::CancelledLimited { limit, token } => {
+                if token.is_cancelled() {
+                    return Err(RuntimeError::cancelled());
+                }
+                if self.instruction_steps >= *limit {
+                    return Err(RuntimeError::resource(
+                        ResourceKind::InstructionSteps,
+                        *limit,
+                    ));
+                }
+                self.instruction_steps = self
+                    .instruction_steps
+                    .checked_add(1)
+                    .ok_or_else(|| RuntimeError::resource(ResourceKind::InstructionSteps, usize::MAX))?;
+            }
+            InstructionCheckpoint::CancelledUnlimited { token } => {
+                if token.is_cancelled() {
+                    return Err(RuntimeError::cancelled());
+                }
+                self.instruction_steps = self
+                    .instruction_steps
+                    .checked_add(1)
+                    .ok_or_else(|| RuntimeError::resource(ResourceKind::InstructionSteps, usize::MAX))?;
             }
         }
-        self.instruction_steps = self
-            .instruction_steps
-            .checked_add(1)
-            .ok_or_else(|| RuntimeError::resource(ResourceKind::InstructionSteps, usize::MAX))?;
         Ok(())
     }
 
