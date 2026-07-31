@@ -657,6 +657,17 @@ C++ emission、Rust `run` 输出 `32768`、`dump` 的 constant/debug-source 保�
 **边界：** 不开放任意 Rust 函数给 artifact；native ABI 不是动态插件系统，
   不允许未登记的 `.cdbc` native name 进入执行。
 
+**状态（第一 registry dispatch/metadata 窄切片已完成，2026-07-31）：**
+私有 `NativeSpec` 表覆盖当前 29 个 native，统一保存 artifact-facing name、
+内部 dispatch ID、现有 arity 范围和 callback 标记；执行入口先经注册表解析，
+再按 ID 分派。未知名称继续保留原有错误文本，helper 仍负责 arity、callback、
+资源 checkpoint 和具体参数错误，因此本片不改变 `.cdbc 0.1`、profile、debug
+或 runtime contract。详见
+[`docs/decisions/vm-native-registry-001.md`](decisions/vm-native-registry-001.md)。
+
+下一步是消费已登记的 arity metadata，并在不改变现有逐 native 错误文本和
+callback 校验边界的前提下决定是否集中验证；资源成本仍需独立契约与测量。
+
 ### VM-6B：宿主集成与 I/O 策略
 
 **目标：** 明确 VM 是否、以及如何向宿主暴露输出 sink、诊断 sink、时间/随机数、
@@ -744,7 +755,7 @@ VM-3A 的第一 library boundary、typed error/version boundary、VM-3B 的第�
 linker report slice、VM-4A 的第一 interactive debugger slice、VM-4B 的第一
 deterministic profile counter/tracked-heap slice、VM-4C 的第一 structured kind slice、VM-5A
 的 reproducible benchmark baseline/scale slices 和 VM-5B 的 trace-off instruction
-preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard/checkpoint-fast-path/checkpoint-mode-cache/borrow-register-operands/borrow-native-name/borrow-function-values/borrow-caller-name/shared-frame-names/profile-off-hook-guards/inline-native-arguments/decoded-constant-cache/borrowed-global-cell/comparison-dispatch/borrowed-Len-operand/borrowed-Print-operand/borrowed-Field-receiver slices 已完成；GC、persistent VM、
+preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard/checkpoint-fast-path/checkpoint-mode-cache/borrow-register-operands/borrow-native-name/borrow-function-values/borrow-caller-name/shared-frame-names/profile-off-hook-guards/inline-native-arguments/decoded-constant-cache/borrowed-global-cell/comparison-dispatch/borrowed-Len-operand/borrowed-Print-operand/borrowed-Field-receiver slices 已完成；VM-6A 的第一 registry dispatch/metadata slice 也已完成；GC、persistent VM、
 JIT 和新的 artifact version 仍未进入默认队列。VM-5C 的第一 capacity corpus、
 第二 long-Unicode-string 和第三 long-Unicode-output slices，以及 VM-4C 的第二
 resource-context slice 也已完成。VM-4B 的 wall-clock 与

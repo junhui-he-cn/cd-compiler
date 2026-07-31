@@ -179,6 +179,290 @@ pub const DEFAULT_MAX_ARTIFACT_BYTES: usize = 64 * 1024 * 1024;
 pub const DEFAULT_MAX_MODULE_COUNT: usize = 1_024;
 pub const DEFAULT_MAX_MODULE_INSTRUCTIONS: usize = 1_000_000;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NativeId {
+    Push,
+    Pop,
+    Remove,
+    Clear,
+    Merge,
+    Keys,
+    Values,
+    Floor,
+    Ceil,
+    Sqrt,
+    Str,
+    Substr,
+    CharAt,
+    TypeOf,
+    Hash,
+    Contains,
+    Slice,
+    Copy,
+    Concat,
+    Map,
+    Filter,
+    FlatMap,
+    Any,
+    All,
+    Count,
+    Find,
+    FindIndex,
+    Reduce,
+    Range,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct NativeSpec {
+    id: NativeId,
+    name: &'static str,
+    min_arity: usize,
+    max_arity: usize,
+    callback: bool,
+}
+
+const NATIVE_SPECS: &[NativeSpec] = &[
+    NativeSpec {
+        id: NativeId::Push,
+        name: "push",
+        min_arity: 2,
+        max_arity: 2,
+        callback: false,
+    },
+    NativeSpec {
+        id: NativeId::Pop,
+        name: "pop",
+        min_arity: 1,
+        max_arity: 1,
+        callback: false,
+    },
+    NativeSpec {
+        id: NativeId::Remove,
+        name: "remove",
+        min_arity: 2,
+        max_arity: 2,
+        callback: false,
+    },
+    NativeSpec {
+        id: NativeId::Clear,
+        name: "clear",
+        min_arity: 1,
+        max_arity: 1,
+        callback: false,
+    },
+    NativeSpec {
+        id: NativeId::Merge,
+        name: "merge",
+        min_arity: 2,
+        max_arity: 2,
+        callback: false,
+    },
+    NativeSpec {
+        id: NativeId::Keys,
+        name: "keys",
+        min_arity: 1,
+        max_arity: 1,
+        callback: false,
+    },
+    NativeSpec {
+        id: NativeId::Values,
+        name: "values",
+        min_arity: 1,
+        max_arity: 1,
+        callback: false,
+    },
+    NativeSpec {
+        id: NativeId::Floor,
+        name: "floor",
+        min_arity: 1,
+        max_arity: 1,
+        callback: false,
+    },
+    NativeSpec {
+        id: NativeId::Ceil,
+        name: "ceil",
+        min_arity: 1,
+        max_arity: 1,
+        callback: false,
+    },
+    NativeSpec {
+        id: NativeId::Sqrt,
+        name: "sqrt",
+        min_arity: 1,
+        max_arity: 1,
+        callback: false,
+    },
+    NativeSpec {
+        id: NativeId::Str,
+        name: "str",
+        min_arity: 1,
+        max_arity: 1,
+        callback: false,
+    },
+    NativeSpec {
+        id: NativeId::Substr,
+        name: "substr",
+        min_arity: 3,
+        max_arity: 3,
+        callback: false,
+    },
+    NativeSpec {
+        id: NativeId::CharAt,
+        name: "charAt",
+        min_arity: 2,
+        max_arity: 2,
+        callback: false,
+    },
+    NativeSpec {
+        id: NativeId::TypeOf,
+        name: "typeOf",
+        min_arity: 1,
+        max_arity: 1,
+        callback: false,
+    },
+    NativeSpec {
+        id: NativeId::Hash,
+        name: "hash",
+        min_arity: 1,
+        max_arity: 1,
+        callback: false,
+    },
+    NativeSpec {
+        id: NativeId::Contains,
+        name: "contains",
+        min_arity: 2,
+        max_arity: 2,
+        callback: false,
+    },
+    NativeSpec {
+        id: NativeId::Slice,
+        name: "slice",
+        min_arity: 3,
+        max_arity: 3,
+        callback: false,
+    },
+    NativeSpec {
+        id: NativeId::Copy,
+        name: "copy",
+        min_arity: 1,
+        max_arity: 1,
+        callback: false,
+    },
+    NativeSpec {
+        id: NativeId::Concat,
+        name: "concat",
+        min_arity: 2,
+        max_arity: 2,
+        callback: false,
+    },
+    NativeSpec {
+        id: NativeId::Map,
+        name: "map",
+        min_arity: 2,
+        max_arity: 2,
+        callback: true,
+    },
+    NativeSpec {
+        id: NativeId::Filter,
+        name: "filter",
+        min_arity: 2,
+        max_arity: 2,
+        callback: true,
+    },
+    NativeSpec {
+        id: NativeId::FlatMap,
+        name: "flatMap",
+        min_arity: 2,
+        max_arity: 2,
+        callback: true,
+    },
+    NativeSpec {
+        id: NativeId::Any,
+        name: "any",
+        min_arity: 2,
+        max_arity: 2,
+        callback: true,
+    },
+    NativeSpec {
+        id: NativeId::All,
+        name: "all",
+        min_arity: 2,
+        max_arity: 2,
+        callback: true,
+    },
+    NativeSpec {
+        id: NativeId::Count,
+        name: "count",
+        min_arity: 2,
+        max_arity: 2,
+        callback: true,
+    },
+    NativeSpec {
+        id: NativeId::Find,
+        name: "find",
+        min_arity: 2,
+        max_arity: 2,
+        callback: true,
+    },
+    NativeSpec {
+        id: NativeId::FindIndex,
+        name: "findIndex",
+        min_arity: 2,
+        max_arity: 2,
+        callback: true,
+    },
+    NativeSpec {
+        id: NativeId::Reduce,
+        name: "reduce",
+        min_arity: 3,
+        max_arity: 3,
+        callback: true,
+    },
+    NativeSpec {
+        id: NativeId::Range,
+        name: "range",
+        min_arity: 1,
+        max_arity: 3,
+        callback: false,
+    },
+];
+
+fn native_spec(name: &str) -> Option<&'static NativeSpec> {
+    let index = match name {
+        "push" => 0,
+        "pop" => 1,
+        "remove" => 2,
+        "clear" => 3,
+        "merge" => 4,
+        "keys" => 5,
+        "values" => 6,
+        "floor" => 7,
+        "ceil" => 8,
+        "sqrt" => 9,
+        "str" => 10,
+        "substr" => 11,
+        "charAt" => 12,
+        "typeOf" => 13,
+        "hash" => 14,
+        "contains" => 15,
+        "slice" => 16,
+        "copy" => 17,
+        "concat" => 18,
+        "map" => 19,
+        "filter" => 20,
+        "flatMap" => 21,
+        "any" => 22,
+        "all" => 23,
+        "count" => 24,
+        "find" => 25,
+        "findIndex" => 26,
+        "reduce" => 27,
+        "range" => 28,
+        _ => return None,
+    };
+    Some(&NATIVE_SPECS[index])
+}
+
 #[derive(Clone, Debug)]
 pub struct CancellationToken {
     cancelled: Arc<AtomicBool>,
@@ -270,6 +554,36 @@ mod tests {
     use super::*;
     use crate::bytecode::Function;
     use crate::runtime::{new_cell, new_environment};
+
+    #[test]
+    fn native_registry_describes_dispatch_names_and_callback_shapes() {
+        let mut names = Vec::new();
+        for spec in NATIVE_SPECS {
+            assert!(names.iter().all(|name| *name != spec.name));
+            names.push(spec.name);
+            assert_eq!(native_spec(spec.name), Some(spec));
+        }
+        assert_eq!(NATIVE_SPECS.len(), 29);
+        assert_eq!(native_spec("range").unwrap().min_arity, 1);
+        assert_eq!(native_spec("range").unwrap().max_arity, 3);
+        assert!(native_spec("map").unwrap().callback);
+        assert!(native_spec("reduce").unwrap().callback);
+        assert!(!native_spec("push").unwrap().callback);
+        assert!(native_spec("notRegistered").is_none());
+    }
+
+    #[test]
+    fn unregistered_native_keeps_stable_error_text() {
+        let program = empty_program();
+        let mut vm = VM::new(&program);
+        let error = vm
+            .execute_native_call("notRegistered", Vec::new())
+            .expect_err("unregistered native should be rejected");
+        assert_eq!(
+            error.message,
+            "unknown native stdlib function `notRegistered`"
+        );
+    }
 
     fn empty_program() -> Program {
         Program {
@@ -3730,43 +4044,42 @@ impl<'a> VM<'a> {
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
+        let spec = native_spec(name).ok_or_else(|| {
+            RuntimeError::new(format!("unknown native stdlib function `{}`", name))
+        })?;
         if self.profile_enabled {
             self.profile_native_call(name);
         }
-        match name {
-            "push" => self.execute_native_push(arguments),
-            "pop" => self.execute_native_pop(arguments),
-            "remove" => self.execute_native_remove(arguments),
-            "clear" => self.execute_native_clear(arguments),
-            "merge" => self.execute_native_merge(arguments),
-            "keys" => self.execute_native_keys(arguments),
-            "values" => self.execute_native_values(arguments),
-            "floor" => self.execute_native_floor(arguments),
-            "ceil" => self.execute_native_ceil(arguments),
-            "sqrt" => self.execute_native_sqrt(arguments),
-            "str" => self.execute_native_str(arguments),
-            "substr" => self.execute_native_substr(arguments),
-            "charAt" => self.execute_native_char_at(arguments),
-            "typeOf" => self.execute_native_type_of(arguments),
-            "hash" => self.execute_native_hash(arguments),
-            "contains" => self.execute_native_contains(arguments),
-            "slice" => self.execute_native_slice(arguments),
-            "copy" => self.execute_native_copy(arguments),
-            "concat" => self.execute_native_concat(arguments),
-            "map" => self.execute_native_map(arguments, caller, call_site),
-            "filter" => self.execute_native_filter(arguments, caller, call_site),
-            "flatMap" => self.execute_native_flat_map(arguments, caller, call_site),
-            "any" => self.execute_native_any_all(arguments, caller, call_site, true),
-            "all" => self.execute_native_any_all(arguments, caller, call_site, false),
-            "count" => self.execute_native_count(arguments, caller, call_site),
-            "find" => self.execute_native_find(arguments, caller, call_site),
-            "findIndex" => self.execute_native_find_index(arguments, caller, call_site),
-            "reduce" => self.execute_native_reduce(arguments, caller, call_site),
-            "range" => self.execute_native_range(arguments),
-            _ => Err(RuntimeError::new(format!(
-                "unknown native stdlib function `{}`",
-                name
-            ))),
+        match spec.id {
+            NativeId::Push => self.execute_native_push(arguments),
+            NativeId::Pop => self.execute_native_pop(arguments),
+            NativeId::Remove => self.execute_native_remove(arguments),
+            NativeId::Clear => self.execute_native_clear(arguments),
+            NativeId::Merge => self.execute_native_merge(arguments),
+            NativeId::Keys => self.execute_native_keys(arguments),
+            NativeId::Values => self.execute_native_values(arguments),
+            NativeId::Floor => self.execute_native_floor(arguments),
+            NativeId::Ceil => self.execute_native_ceil(arguments),
+            NativeId::Sqrt => self.execute_native_sqrt(arguments),
+            NativeId::Str => self.execute_native_str(arguments),
+            NativeId::Substr => self.execute_native_substr(arguments),
+            NativeId::CharAt => self.execute_native_char_at(arguments),
+            NativeId::TypeOf => self.execute_native_type_of(arguments),
+            NativeId::Hash => self.execute_native_hash(arguments),
+            NativeId::Contains => self.execute_native_contains(arguments),
+            NativeId::Slice => self.execute_native_slice(arguments),
+            NativeId::Copy => self.execute_native_copy(arguments),
+            NativeId::Concat => self.execute_native_concat(arguments),
+            NativeId::Map => self.execute_native_map(arguments, caller, call_site),
+            NativeId::Filter => self.execute_native_filter(arguments, caller, call_site),
+            NativeId::FlatMap => self.execute_native_flat_map(arguments, caller, call_site),
+            NativeId::Any => self.execute_native_any_all(arguments, caller, call_site, true),
+            NativeId::All => self.execute_native_any_all(arguments, caller, call_site, false),
+            NativeId::Count => self.execute_native_count(arguments, caller, call_site),
+            NativeId::Find => self.execute_native_find(arguments, caller, call_site),
+            NativeId::FindIndex => self.execute_native_find_index(arguments, caller, call_site),
+            NativeId::Reduce => self.execute_native_reduce(arguments, caller, call_site),
+            NativeId::Range => self.execute_native_range(arguments),
         }
     }
 
