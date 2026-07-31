@@ -2925,7 +2925,7 @@ impl<'a> VM<'a> {
                     self.write_register(frame, *dest, assigned)?;
                 }
                 Instruction::Field { dest, object, name } => {
-                    let object = self.read_register(frame, *object)?;
+                    let object = self.read_register_ref(frame, *object)?;
                     let name = self.read_name_ref(*name)?;
                     let value = self.execute_field(object, name)?;
                     self.write_register(frame, *dest, value)?;
@@ -3669,7 +3669,7 @@ impl<'a> VM<'a> {
         }
     }
 
-    fn execute_field(&self, object: Value, name: &str) -> Result<Value, RuntimeError> {
+    fn execute_field(&self, object: &Value, name: &str) -> Result<Value, RuntimeError> {
         let Value::Struct(value) = object else {
             return Err(RuntimeError::new("can only access fields on structs"));
         };

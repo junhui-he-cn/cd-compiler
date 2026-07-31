@@ -610,6 +610,13 @@ UTF-8 输出预算、partial-output suppression、trace/debug、profile、错误
 timing threshold；详见
 [`docs/decisions/vm-execution-loop-023-borrow-print-operand.md`](decisions/vm-execution-loop-023-borrow-print-operand.md)。
 
+**状态（第二十四 borrowed-Field-receiver 窄切片已完成，2026-07-31）：** `Field`
+指令借用只读 struct receiver，避免 named-field lookup 前的 `Value` clone；选中
+field value 仍以 owned 结果写入 destination，field assignment、alias、错误和
+`.cdbc 0.1` 行为不变。当前没有 scaled field benchmark，因此不建立 timing
+threshold；详见
+[`docs/decisions/vm-execution-loop-024-borrow-field-receiver.md`](decisions/vm-execution-loop-024-borrow-field-receiver.md)。
+
 ### VM-5C：容量与大模块图
 
 **目标：** 让 VM 在大 artifact、深调用、长字符串、大数组和多模块 link 下
@@ -737,7 +744,7 @@ VM-3A 的第一 library boundary、typed error/version boundary、VM-3B 的第�
 linker report slice、VM-4A 的第一 interactive debugger slice、VM-4B 的第一
 deterministic profile counter/tracked-heap slice、VM-4C 的第一 structured kind slice、VM-5A
 的 reproducible benchmark baseline/scale slices 和 VM-5B 的 trace-off instruction
-preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard/checkpoint-fast-path/checkpoint-mode-cache/borrow-register-operands/borrow-native-name/borrow-function-values/borrow-caller-name/shared-frame-names/profile-off-hook-guards/inline-native-arguments/decoded-constant-cache/borrowed-global-cell/comparison-dispatch/borrowed-Len-operand/borrowed-Print-operand slices 已完成；GC、persistent VM、
+preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard/checkpoint-fast-path/checkpoint-mode-cache/borrow-register-operands/borrow-native-name/borrow-function-values/borrow-caller-name/shared-frame-names/profile-off-hook-guards/inline-native-arguments/decoded-constant-cache/borrowed-global-cell/comparison-dispatch/borrowed-Len-operand/borrowed-Print-operand/borrowed-Field-receiver slices 已完成；GC、persistent VM、
 JIT 和新的 artifact version 仍未进入默认队列。VM-5C 的第一 capacity corpus、
 第二 long-Unicode-string 和第三 long-Unicode-output slices，以及 VM-4C 的第二
 resource-context slice 也已完成。VM-4B 的 wall-clock 与
