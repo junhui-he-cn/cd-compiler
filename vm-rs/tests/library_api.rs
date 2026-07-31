@@ -276,6 +276,7 @@ fn library_api_exposes_stable_diagnostic_kinds_and_runtime_context() {
         .run()
         .expect_err("diagnostic fixture should fail");
     assert_eq!(error.kind, RuntimeErrorKind::Runtime);
+    assert_eq!(error.resource_limit, None);
     assert_eq!(error.location.as_ref().map(|location| location.source), Some(0));
     assert_eq!(error.sources[0].path, "diagnostic.cd");
     assert!(error.stack.iter().any(|frame| frame.function == "fail"));

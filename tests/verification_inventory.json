@@ -4630,6 +4630,28 @@
       "expected_files": []
     },
     {
+      "case_id": "ctest.vm_capacity",
+      "runner": "ctest",
+      "result_name": "vm_capacity",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "vm_capacity"
+      ],
+      "backend": "python",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt",
+        "tests/vm_capacity_tests.py",
+        "vm-rs"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "ctest.vm_resource_budget",
       "runner": "ctest",
       "result_name": "vm_resource_budget",

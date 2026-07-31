@@ -401,6 +401,13 @@ context，CLI 的旧文本和退出码不变。统一 JSON/schema、source mappe
 仍 deferred，边界记录见
 [`docs/decisions/vm-diagnostics-001.md`](decisions/vm-diagnostics-001.md)。
 
+**状态（第二 structured resource-context 窄切片已完成，2026-07-31）：**
+`RuntimeError` 新增 `resource_limit: Option<usize>`，为 instruction steps、call
+depth、runtime elements 和 output bytes 预算错误提供独立上限字段；普通 runtime
+error、取消和 debugger quit 保持 `None`。CLI 文本、退出码、trace/debug/profile、
+`.cdbc 0.1` 和错误传播顺序不变，详见
+[`docs/decisions/vm-diagnostics-002-resource-context.md`](decisions/vm-diagnostics-002-resource-context.md)。
+
 ## 8. VM-5：性能与容量工程（P1/P2）
 
 ### VM-5A：可重复 benchmark 基线
@@ -582,6 +589,13 @@ checkpoint mode；每条指令不再重复读取两个 public `Option`，取消�
 `0.253021s`；详见
 [`docs/decisions/vm-execution-loop-020-checkpoint-mode-cache.md`](decisions/vm-execution-loop-020-checkpoint-mode-cache.md)。
 
+**状态（第二十一 borrowed entry-body 窄切片已完成，2026-07-31）：**
+`run_inner` 直接借用已验证的不可变 main `FunctionBody`，不再为一次执行复制
+instruction/location vectors；frame、资源、profile、trace、debug 和错误语义
+保持不变。定向 benchmark 的 wall-clock 变化处于启动/运行噪声范围，因此只把
+per-run allocation reduction 作为证据，不建立新的 timing threshold；详见
+[`docs/decisions/vm-execution-loop-021-borrow-entry-body.md`](decisions/vm-execution-loop-021-borrow-entry-body.md)。
+
 ### VM-5C：容量与大模块图
 
 **目标：** 让 VM 在大 artifact、深调用、长字符串、大数组和多模块 link 下
@@ -590,6 +604,27 @@ checkpoint mode；每条指令不再重复读取两个 public `Option`，取消�
 **验收：** 测试最大合法/预算内输入、预算外输入、深递归、长链/菱形模块图和
   大 debug table；记录 peak memory、load/link time、执行时间和错误类型。若
   VM-2 的 heap 方案改变测量结果，必须重新基线。
+
+**状态（第一 capacity corpus 窄切片已完成，2026-07-31）：** 新增
+`tests/vm_capacity_tests.py` 与 CTest `vm_capacity`，覆盖 4096-element array、
+深调用、2200+ main debug locations、12 节点长链和 4 节点 diamond module graph；
+成功输出、module product 数量、debug table 保留和元素/call-depth/artifact/module
+预算拒绝均固定。直接 Rust binary 的 load/link/run elapsed 与 peak RSS 只作为同机
+观察值记录，不成为跨平台阈值；详见
+[`docs/decisions/vm-capacity-001.md`](decisions/vm-capacity-001.md)。
+
+**状态（第二 long-Unicode-string 窄切片已完成，2026-07-31）：** 在同一 capacity
+corpus 中加入 32,768 个 `é` Unicode scalar 的 source-backed artifact，固定
+C++ emission、Rust `run` 输出 `32768`、`dump` 的 constant/debug-source 保留，及
+`--max-artifact-bytes 1024` 拒绝。emit/dump/run 的 elapsed 与 peak RSS 继续只作
+同机观察值，不成为 host-memory 或跨平台阈值；详见
+[`docs/decisions/vm-capacity-002-long-string.md`](decisions/vm-capacity-002-long-string.md)。
+
+**状态（第三 long-Unicode-output 窄切片已完成，2026-07-31）：** 固定完整
+32,768-scalar `é` 输出的 65,537 UTF-8 bytes 边界：`--max-output-bytes 65537`
+成功，`65536` 拒绝且 stdout 为空；默认输出、C++ emission 和现有资源错误文本
+保持不变。耗时与 peak RSS 仍只作同机观察值；详见
+[`docs/decisions/vm-capacity-003-long-string-output.md`](decisions/vm-capacity-003-long-string-output.md)。
 
 ## 9. VM-6：运行时生态与兼容性扩展（P2）
 
@@ -689,10 +724,13 @@ linker report slice、VM-4A 的第一 interactive debugger slice、VM-4B 的第�
 deterministic profile counter/tracked-heap slice、VM-4C 的第一 structured kind slice、VM-5A
 的 reproducible benchmark baseline/scale slices 和 VM-5B 的 trace-off instruction
 preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard/checkpoint-fast-path/checkpoint-mode-cache/borrow-register-operands/borrow-native-name/borrow-function-values/borrow-caller-name/shared-frame-names/profile-off-hook-guards/inline-native-arguments/decoded-constant-cache/borrowed-global-cell/comparison-dispatch slices 已完成；GC、persistent VM、
-JIT 和新的 artifact version 仍未进入默认队列。VM-4B 的 wall-clock 与
-estimated retained/host-byte 扩展、VM-4C 的统一 host schema，以及 VM-5B 的
-后续性能优化都需要独立决策；下一步应依据十一个 workload 的 baseline 数据
-选择下一个明确的 VM-5B 执行循环或 frame 优化目标，同时保持现有 CLI、
+JIT 和新的 artifact version 仍未进入默认队列。VM-5C 的第一 capacity corpus、
+第二 long-Unicode-string 和第三 long-Unicode-output slices，以及 VM-4C 的第二
+resource-context slice 也已完成。VM-4B 的 wall-clock 与
+estimated retained/host-byte 扩展、VM-4C 的统一 host schema、VM-5B 的后续性能
+优化和 VM-5C 的更大容量/host-memory policy 都需要独立决策；下一步应等待明确
+的 host consumer 再决定是否进入 versioned structured diagnostics schema，或以
+新 workload 证据继续容量/执行优化，同时保持现有 CLI、
 linked/module artifact、trace、profile 和 typed diagnostics 兼容。
 
 这份路线图的成功标准不是同时铺开所有 VM 研究方向，而是让每个运行时能力

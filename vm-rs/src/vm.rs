@@ -256,6 +256,9 @@ impl Default for RunConfig {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuntimeError {
     pub kind: RuntimeErrorKind,
+    /// The configured limit when `kind` is `RuntimeErrorKind::Resource`.
+    /// Other runtime failures leave this unset.
+    pub resource_limit: Option<usize>,
     pub message: String,
     pub location: Option<DebugLocation>,
     pub stack: Vec<StackFrame>,
@@ -1924,6 +1927,7 @@ mod tests {
         let first = VM::with_config(&program, config.clone()).run().unwrap_err();
         let second = VM::with_config(&program, config).run().unwrap_err();
         assert_eq!(first.kind, RuntimeErrorKind::Resource(ResourceKind::InstructionSteps));
+        assert_eq!(first.resource_limit, Some(3));
         assert_eq!(first.message, "resource limit exceeded: instruction steps (limit 3)");
         assert_eq!(first.message, second.message);
         assert!(VM::with_config(
@@ -1988,6 +1992,7 @@ mod tests {
         config.max_call_depth = Some(1);
         let error = VM::with_config(&program, config).run().unwrap_err();
         assert_eq!(error.kind, RuntimeErrorKind::Resource(ResourceKind::CallDepth));
+        assert_eq!(error.resource_limit, Some(1));
         assert_eq!(error.message, "resource limit exceeded: call depth (limit 1)");
     }
 
@@ -2027,6 +2032,7 @@ mod tests {
             .execute_native_call("map", vec![source, callback])
             .expect_err("native iteration should consume the step budget");
         assert_eq!(error.kind, RuntimeErrorKind::Resource(ResourceKind::InstructionSteps));
+        assert_eq!(error.resource_limit, Some(1));
         assert_eq!(error.message, "resource limit exceeded: instruction steps (limit 1)");
     }
 
@@ -2053,6 +2059,7 @@ mod tests {
         config.max_runtime_elements = Some(1);
         let error = VM::with_config(&program, config).run().unwrap_err();
         assert_eq!(error.kind, RuntimeErrorKind::Resource(ResourceKind::RuntimeElements));
+        assert_eq!(error.resource_limit, Some(1));
         assert_eq!(error.message, "resource limit exceeded: runtime elements (limit 1)");
     }
 
@@ -2076,6 +2083,7 @@ mod tests {
         config.max_output_bytes = Some(2);
         let error = VM::with_config(&program, config).run().unwrap_err();
         assert_eq!(error.kind, RuntimeErrorKind::Resource(ResourceKind::OutputBytes));
+        assert_eq!(error.resource_limit, Some(2));
         assert_eq!(error.message, "resource limit exceeded: output bytes (limit 2)");
     }
 
@@ -2087,6 +2095,7 @@ mod tests {
             .run()
             .unwrap_err();
         assert_eq!(error.kind, RuntimeErrorKind::Cancelled);
+        assert_eq!(error.resource_limit, None);
         assert_eq!(error.message, "execution cancelled");
         assert!(VM::new(&empty_program()).run().is_ok());
     }
@@ -2116,6 +2125,7 @@ impl RuntimeError {
     fn new(message: impl Into<String>) -> Self {
         Self {
             kind: RuntimeErrorKind::Runtime,
+            resource_limit: None,
             message: message.into(),
             location: None,
             stack: Vec::new(),
@@ -2126,6 +2136,7 @@ impl RuntimeError {
     fn resource(kind: ResourceKind, limit: usize) -> Self {
         Self {
             kind: RuntimeErrorKind::Resource(kind),
+            resource_limit: Some(limit),
             message: format!(
                 "resource limit exceeded: {} (limit {})",
                 kind.as_str(),
@@ -2140,6 +2151,7 @@ impl RuntimeError {
     fn cancelled() -> Self {
         Self {
             kind: RuntimeErrorKind::Cancelled,
+            resource_limit: None,
             message: "execution cancelled".to_string(),
             location: None,
             stack: Vec::new(),
@@ -2150,6 +2162,7 @@ impl RuntimeError {
     fn debug_quit() -> Self {
         Self {
             kind: RuntimeErrorKind::DebuggerQuit,
+            resource_limit: None,
             message: "debugger session quit".to_string(),
             location: None,
             stack: Vec::new(),
@@ -2573,12 +2586,10 @@ impl<'a> VM<'a> {
             function: Rc::from("main"),
             function_index: None,
         };
-        let main = FunctionBody {
-            registers: self.program.main.registers,
-            instructions: self.program.main.instructions.clone(),
-            locations: self.program.main.locations.clone(),
-        };
-        match self.execute_body(&main, &mut frame) {
+        // The entry body is immutable after artifact verification. Borrow it
+        // directly instead of cloning its instruction and debug-location
+        // vectors for the one execution of this VM instance.
+        match self.execute_body(&self.program.main, &mut frame) {
             Ok(_) => Ok(std::mem::take(&mut self.output)),
             Err(mut error) => {
                 if error.sources.is_empty() {
