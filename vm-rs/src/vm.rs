@@ -440,16 +440,17 @@ mod tests {
         assert!(vm.function_body_cache[0].is_none());
 
         let invoke = |vm: &mut VM<'_>| {
+            let function = FunctionValue {
+                name: "recurse".to_string(),
+                function_index: 0,
+                arity: 1,
+                identity: 0,
+                closure: vm.heap.new_environment(),
+            };
             vm.call_function(
-                FunctionValue {
-                    name: "recurse".to_string(),
-                    function_index: 0,
-                    arity: 1,
-                    identity: 0,
-                    closure: vm.heap.new_environment(),
-                },
+                &function,
                 CallArguments::One(Value::number(2.0)),
-                "main".to_string(),
+                "main",
                 None,
             )
             .expect("recursive function call should complete")
@@ -482,7 +483,7 @@ mod tests {
             locals: new_environment(),
             closure: new_environment(),
             is_main: true,
-            function: "main".to_string(),
+            function: Rc::from("main"),
             function_index: None,
         };
 
@@ -517,7 +518,7 @@ mod tests {
             locals: new_environment(),
             closure: new_environment(),
             is_main: false,
-            function: "closure".to_string(),
+            function: Rc::from("closure"),
             function_index: Some(0),
         };
         closure
@@ -2169,12 +2170,12 @@ struct Frame {
     locals: SharedEnvironment,
     closure: SharedEnvironment,
     is_main: bool,
-    function: String,
+    function: Rc<str>,
     function_index: Option<usize>,
 }
 
 struct CachedFunctionBody {
-    name: String,
+    name: Rc<str>,
     params: Vec<String>,
     body: FunctionBody,
 }
@@ -2401,7 +2402,7 @@ impl<'a> VM<'a> {
             locals: self.heap.new_environment(),
             closure: self.heap.new_environment(),
             is_main: true,
-            function: "main".to_string(),
+            function: Rc::from("main"),
             function_index: None,
         };
         let main = FunctionBody {
@@ -2426,7 +2427,9 @@ impl<'a> VM<'a> {
         frame: &mut Frame,
     ) -> Result<Option<Value>, RuntimeError> {
         frame.ip = 0;
-        self.profile_function_entry(frame);
+        if self.profile_enabled {
+            self.profile_function_entry(frame);
+        }
         if self.trace_enabled {
             self.trace_enter(frame, body.locations.first().cloned().flatten());
         }
@@ -2526,19 +2529,19 @@ impl<'a> VM<'a> {
                     enum_name,
                     variant_name,
                 } => {
-                    let input = self.read_register(frame, *value)?;
+                    let input = self.read_register_ref(frame, *value)?;
                     let enum_name = self.read_name_ref(*enum_name)?;
                     let variant_name = self.read_name_ref(*variant_name)?;
                     let matched = matches!(
                         input,
-                        Value::Variant(ref variant)
+                        Value::Variant(variant)
                             if variant.enum_name == enum_name
                                 && variant.variant_name == variant_name
                     );
                     self.write_register(frame, *dest, Value::boolean(matched))?;
                 }
                 Instruction::VariantField { dest, value, index } => {
-                    let input = self.read_register(frame, *value)?;
+                    let input = self.read_register_ref(frame, *value)?;
                     let Value::Variant(variant) = input else {
                         return Err(RuntimeError::new("can only access fields on enum variants"));
                     };
@@ -2572,8 +2575,7 @@ impl<'a> VM<'a> {
                     callee,
                     arguments,
                 } => {
-                    let callee = self.read_register(frame, *callee)?;
-                    let Value::Function(function) = callee else {
+                    let Value::Function(function) = self.read_register_ref(frame, *callee)? else {
                         return Err(RuntimeError::new("can only call functions"));
                     };
                     let values = match arguments.as_slice() {
@@ -2598,7 +2600,7 @@ impl<'a> VM<'a> {
                     let result = self.call_function(
                         function,
                         values,
-                        frame.function.clone(),
+                        frame.function.as_ref(),
                         call_site,
                     )?;
                     self.write_register(frame, *dest, result)?;
@@ -2608,7 +2610,7 @@ impl<'a> VM<'a> {
                     name,
                     arguments,
                 } => {
-                    let name = self.read_name(*name)?;
+                    let name = self.read_name_ref(*name)?;
                     let mut values = Vec::with_capacity(arguments.len());
                     for argument in arguments {
                         values.push(self.read_register(frame, *argument)?);
@@ -2617,7 +2619,7 @@ impl<'a> VM<'a> {
                     let result = self.execute_native_call_at(
                         &name,
                         values,
-                        frame.function.clone(),
+                        frame.function.as_ref(),
                         call_site,
                     )?;
                     self.write_register(frame, *dest, result)?;
@@ -2627,12 +2629,12 @@ impl<'a> VM<'a> {
                     self.write_register(frame, *dest, Value::number(-input))?;
                 }
                 Instruction::Not { dest, value } => {
-                    let result = !self.read_register(frame, *value)?.is_truthy();
+                    let result = !self.read_register_ref(frame, *value)?.is_truthy();
                     self.write_register(frame, *dest, Value::boolean(result))?;
                 }
                 Instruction::Add { dest, left, right } => {
-                    let left_value = self.read_register(frame, *left)?;
-                    let right_value = self.read_register(frame, *right)?;
+                    let left_value = self.read_register_ref(frame, *left)?;
+                    let right_value = self.read_register_ref(frame, *right)?;
                     let result = match (left_value, right_value) {
                         (Value::Number(left), Value::Number(right)) => Value::number(left + right),
                         (Value::String(left), Value::String(right)) => {
@@ -2663,14 +2665,14 @@ impl<'a> VM<'a> {
                 }
                 Instruction::Equal { dest, left, right } => {
                     let result = self
-                        .read_register(frame, *left)?
-                        .runtime_equals(&self.read_register(frame, *right)?);
+                        .read_register_ref(frame, *left)?
+                        .runtime_equals(self.read_register_ref(frame, *right)?);
                     self.write_register(frame, *dest, Value::boolean(result))?;
                 }
                 Instruction::NotEqual { dest, left, right } => {
                     let result = !self
-                        .read_register(frame, *left)?
-                        .runtime_equals(&self.read_register(frame, *right)?);
+                        .read_register_ref(frame, *left)?
+                        .runtime_equals(self.read_register_ref(frame, *right)?);
                     self.write_register(frame, *dest, Value::boolean(result))?;
                 }
                 Instruction::Greater { dest, left, right } => {
@@ -2693,7 +2695,7 @@ impl<'a> VM<'a> {
                 }
                 Instruction::JumpIfFalse { condition, target } => {
                     self.validate_jump_target(*target, body.instructions.len())?;
-                    if !self.read_register(frame, *condition)?.is_truthy() {
+                    if !self.read_register_ref(frame, *condition)?.is_truthy() {
                         frame.ip = *target;
                         jumped = true;
                         return Ok(None);
@@ -2701,7 +2703,7 @@ impl<'a> VM<'a> {
                 }
                 Instruction::JumpIfTrue { condition, target } => {
                     self.validate_jump_target(*target, body.instructions.len())?;
-                    if self.read_register(frame, *condition)?.is_truthy() {
+                    if self.read_register_ref(frame, *condition)?.is_truthy() {
                         frame.ip = *target;
                         jumped = true;
                         return Ok(None);
@@ -2817,11 +2819,11 @@ impl<'a> VM<'a> {
                         error.location = location.clone();
                     }
                     if error.stack.is_empty() {
-                        error.push_frame(frame.function.clone(), location);
+                        error.push_frame(frame.function.to_string(), location);
                     }
                     if error.kind != RuntimeErrorKind::DebuggerQuit {
                         let pause = DebugPause {
-                            function: frame.function.clone(),
+                            function: frame.function.to_string(),
                             instruction: instruction_index,
                             location: body.locations.get(instruction_index).cloned().flatten(),
                             stack: self.trace_stack.clone(),
@@ -2870,6 +2872,21 @@ impl<'a> VM<'a> {
     }
 
     fn checkpoint_instruction(&mut self) -> Result<(), RuntimeError> {
+        if self.config.cancellation.is_none() {
+            if let Some(limit) = self.config.max_instruction_steps {
+                if self.instruction_steps >= limit {
+                    return Err(RuntimeError::resource(ResourceKind::InstructionSteps, limit));
+                }
+                self.instruction_steps += 1;
+            } else {
+                self.instruction_steps = self
+                    .instruction_steps
+                    .checked_add(1)
+                    .ok_or_else(|| RuntimeError::resource(ResourceKind::InstructionSteps, usize::MAX))?;
+            }
+            return Ok(());
+        }
+
         self.check_cancellation()?;
         if let Some(limit) = self.config.max_instruction_steps {
             if self.instruction_steps >= limit {
@@ -2947,7 +2964,7 @@ impl<'a> VM<'a> {
             return;
         }
         self.trace_stack.push(StackFrame {
-            function: frame.function.clone(),
+            function: frame.function.to_string(),
             location: location.clone(),
         });
         self.trace_last_locations.push(location.clone());
@@ -2970,7 +2987,7 @@ impl<'a> VM<'a> {
             return Ok(());
         }
         let pause = DebugPause {
-            function: frame.function.clone(),
+            function: frame.function.to_string(),
             instruction,
             location,
             stack: self.trace_stack.clone(),
@@ -3048,7 +3065,7 @@ impl<'a> VM<'a> {
         self.trace_events.push(TraceEvent {
             sequence: self.trace_events.len(),
             kind,
-            function: frame.function.clone(),
+            function: frame.function.to_string(),
             instruction,
             location,
             stack: self.trace_stack.clone(),
@@ -3099,7 +3116,7 @@ impl<'a> VM<'a> {
         let cached = {
             let function = self.program.functions.get(function_index)?;
             Rc::new(CachedFunctionBody {
-                name: function.name.clone(),
+                name: Rc::from(function.name.as_str()),
                 params: function.params.clone(),
                 body: FunctionBody {
                     registers: function.registers,
@@ -3137,15 +3154,15 @@ impl<'a> VM<'a> {
 
     fn call_function(
         &mut self,
-        function: FunctionValue,
+        function: &FunctionValue,
         arguments: CallArguments,
-        caller: String,
+        caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
         let Some(cached) = self.cached_function_body(function.function_index) else {
             let mut error = RuntimeError::new("function index out of range");
             error.location = call_site.cloned();
-            error.push_frame(caller, call_site.cloned());
+            error.push_frame(caller.to_string(), call_site.cloned());
             return Err(error);
         };
 
@@ -3156,7 +3173,7 @@ impl<'a> VM<'a> {
                 arguments.len()
             ));
             error.location = call_site.cloned();
-            error.push_frame(caller, call_site.cloned());
+            error.push_frame(caller.to_string(), call_site.cloned());
             return Err(error);
         }
 
@@ -3168,7 +3185,7 @@ impl<'a> VM<'a> {
             locals: self.heap.new_environment(),
             closure: function.closure.clone(),
             is_main: false,
-            function: cached.name.clone(),
+            function: Rc::clone(&cached.name),
             function_index: Some(function.function_index),
         };
 
@@ -3209,7 +3226,7 @@ impl<'a> VM<'a> {
                 if error.location.is_none() {
                     error.location = call_site.cloned();
                 }
-                error.push_frame(caller, call_site.cloned());
+                error.push_frame(caller.to_string(), call_site.cloned());
                 Err(error)
             }
         }
@@ -3489,17 +3506,19 @@ impl<'a> VM<'a> {
         name: &str,
         arguments: Vec<Value>,
     ) -> Result<Value, RuntimeError> {
-        self.execute_native_call_at(name, arguments, "<native>".to_string(), None)
+        self.execute_native_call_at(name, arguments, "<native>", None)
     }
 
     fn execute_native_call_at(
         &mut self,
         name: &str,
         arguments: Vec<Value>,
-        caller: String,
+        caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
-        self.profile_native_call(name);
+        if self.profile_enabled {
+            self.profile_native_call(name);
+        }
         match name {
             "push" => self.execute_native_push(arguments),
             "pop" => self.execute_native_pop(arguments),
@@ -3540,7 +3559,7 @@ impl<'a> VM<'a> {
     fn execute_native_map(
         &mut self,
         arguments: Vec<Value>,
-        caller: String,
+        caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
@@ -3561,9 +3580,9 @@ impl<'a> VM<'a> {
         for element in elements {
             self.checkpoint_native()?;
             mapped.push(self.call_function(
-                callback.clone(),
+                callback,
                 CallArguments::One(element),
-                caller.clone(),
+                caller,
                 call_site,
             )?);
         }
@@ -3573,7 +3592,7 @@ impl<'a> VM<'a> {
     fn execute_native_filter(
         &mut self,
         arguments: Vec<Value>,
-        caller: String,
+        caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
@@ -3594,9 +3613,9 @@ impl<'a> VM<'a> {
         for element in elements {
             self.checkpoint_native()?;
             let keep = self.call_function(
-                predicate.clone(),
+                predicate,
                 CallArguments::One(element.clone()),
-                caller.clone(),
+                caller,
                 call_site,
             )?;
             match keep {
@@ -3611,7 +3630,7 @@ impl<'a> VM<'a> {
     fn execute_native_flat_map(
         &mut self,
         arguments: Vec<Value>,
-        caller: String,
+        caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
@@ -3632,9 +3651,9 @@ impl<'a> VM<'a> {
         for element in elements {
             self.checkpoint_native()?;
             let result = self.call_function(
-                callback.clone(),
+                callback,
                 CallArguments::One(element),
-                caller.clone(),
+                caller,
                 call_site,
             )?;
             let Value::Array(mapped) = result else {
@@ -3651,7 +3670,7 @@ impl<'a> VM<'a> {
     fn execute_native_any_all(
         &mut self,
         arguments: Vec<Value>,
-        caller: String,
+        caller: &str,
         call_site: Option<&DebugLocation>,
         any: bool,
     ) -> Result<Value, RuntimeError> {
@@ -3682,9 +3701,9 @@ impl<'a> VM<'a> {
         for element in elements {
             self.checkpoint_native()?;
             let result = self.call_function(
-                predicate.clone(),
+                predicate,
                 CallArguments::One(element),
-                caller.clone(),
+                caller,
                 call_site,
             )?;
             let Value::Bool(result) = result else {
@@ -3703,7 +3722,7 @@ impl<'a> VM<'a> {
     fn execute_native_count(
         &mut self,
         arguments: Vec<Value>,
-        caller: String,
+        caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
@@ -3724,9 +3743,9 @@ impl<'a> VM<'a> {
         for element in elements {
             self.checkpoint_native()?;
             let result = self.call_function(
-                predicate.clone(),
+                predicate,
                 CallArguments::One(element),
-                caller.clone(),
+                caller,
                 call_site,
             )?;
             match result {
@@ -3741,7 +3760,7 @@ impl<'a> VM<'a> {
     fn execute_native_find(
         &mut self,
         arguments: Vec<Value>,
-        caller: String,
+        caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
@@ -3761,9 +3780,9 @@ impl<'a> VM<'a> {
         for element in elements {
             self.checkpoint_native()?;
             let result = self.call_function(
-                predicate.clone(),
+                predicate,
                 CallArguments::One(element.clone()),
-                caller.clone(),
+                caller,
                 call_site,
             )?;
             match result {
@@ -3778,7 +3797,7 @@ impl<'a> VM<'a> {
     fn execute_native_find_index(
         &mut self,
         arguments: Vec<Value>,
-        caller: String,
+        caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
         if arguments.len() != 2 {
@@ -3798,9 +3817,9 @@ impl<'a> VM<'a> {
         for (index, element) in elements.into_iter().enumerate() {
             self.checkpoint_native()?;
             let result = self.call_function(
-                predicate.clone(),
+                predicate,
                 CallArguments::One(element),
-                caller.clone(),
+                caller,
                 call_site,
             )?;
             match result {
@@ -3815,7 +3834,7 @@ impl<'a> VM<'a> {
     fn execute_native_reduce(
         &mut self,
         arguments: Vec<Value>,
-        caller: String,
+        caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
         if arguments.len() != 3 {
@@ -3836,9 +3855,9 @@ impl<'a> VM<'a> {
         for element in elements {
             self.checkpoint_native()?;
             accumulator = self.call_function(
-                callback.clone(),
+                callback,
                 CallArguments::Two(accumulator, element),
-                caller.clone(),
+                caller,
                 call_site,
             )?;
         }
@@ -4233,7 +4252,7 @@ impl<'a> VM<'a> {
         self.allocate_array(elements)
     }
 
-    fn read_name_ref(&self, index: usize) -> Result<&str, RuntimeError> {
+    fn read_name_ref(&self, index: usize) -> Result<&'a str, RuntimeError> {
         self.program
             .names
             .get(index)
@@ -4358,6 +4377,17 @@ impl<'a> VM<'a> {
             .ok_or_else(|| RuntimeError::new("register index out of range"))
     }
 
+    fn read_register_ref<'frame>(
+        &self,
+        frame: &'frame Frame,
+        index: usize,
+    ) -> Result<&'frame Value, RuntimeError> {
+        frame
+            .registers
+            .get(index)
+            .ok_or_else(|| RuntimeError::new("register index out of range"))
+    }
+
     fn write_register(
         &self,
         frame: &mut Frame,
@@ -4378,8 +4408,8 @@ impl<'a> VM<'a> {
         value: usize,
         op_name: &str,
     ) -> Result<f64, RuntimeError> {
-        match self.read_register(frame, value)? {
-            Value::Number(value) => Ok(value),
+        match self.read_register_ref(frame, value)? {
+            Value::Number(value) => Ok(*value),
             other => Err(RuntimeError::new(format!(
                 "{} expects number, got {}",
                 op_name,
@@ -4396,10 +4426,10 @@ impl<'a> VM<'a> {
         op_name: &str,
     ) -> Result<(f64, f64), RuntimeError> {
         match (
-            self.read_register(frame, left)?,
-            self.read_register(frame, right)?,
+            self.read_register_ref(frame, left)?,
+            self.read_register_ref(frame, right)?,
         ) {
-            (Value::Number(left), Value::Number(right)) => Ok((left, right)),
+            (Value::Number(left), Value::Number(right)) => Ok((*left, *right)),
             _ => Err(RuntimeError::new(format!("{} expects numbers", op_name))),
         }
     }
@@ -4413,10 +4443,10 @@ impl<'a> VM<'a> {
         op_name: &str,
         operation: fn(f64, f64) -> bool,
     ) -> Result<(), RuntimeError> {
-        let left_value = self.read_register(frame, left)?;
-        let right_value = self.read_register(frame, right)?;
+        let left_value = self.read_register_ref(frame, left)?;
+        let right_value = self.read_register_ref(frame, right)?;
         let result = match (left_value, right_value) {
-            (Value::Number(left), Value::Number(right)) => operation(left, right),
+            (Value::Number(left), Value::Number(right)) => operation(*left, *right),
             (Value::String(left), Value::String(right)) => {
                 let ordering = left.chars().cmp(right.chars());
                 match op_name {

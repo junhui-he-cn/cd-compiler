@@ -493,6 +493,52 @@ scaled closure/loop 的三次 runtime median 分别为 `0.281772s -> 0.286437s` 
 `0.519838s -> 0.514243s`，视为测量噪声范围内的 no-regression 结果；详见
 [`docs/decisions/vm-execution-loop-008-heap-observation-guard.md`](decisions/vm-execution-loop-008-heap-observation-guard.md)。
 
+**状态（第九 cancellation-free instruction checkpoint 窄切片已完成，2026-07-31）：**
+无 cancellation token 的执行直接进行 instruction-step 预算比较和计数递增；有
+token、有限预算、无限预算溢出和 native callback 的 checkpoint 语义保持不变。
+scaled closure 的 runtime median 从 `0.278549s` 降至 `0.265508s`，scaled loop
+从 `0.503744s` 降至 `0.477791s`；详见
+[`docs/decisions/vm-execution-loop-009-checkpoint-fast-path.md`](decisions/vm-execution-loop-009-checkpoint-fast-path.md)。
+
+**状态（第十 borrowed read-only register operands 窄切片已完成，2026-07-31）：**
+数值 unary/binary、比较、相等、truthiness 分支和 enum 读取借用寄存器值；调用、
+索引、字段写入、聚合、store 和 return 仍沿用 owned read。scaled closure 的
+runtime median 从 `0.267173s` 降至 `0.255236s`，scaled loop 从 `0.460723s`
+降至 `0.437132s`；详见
+[`docs/decisions/vm-execution-loop-010-borrow-register-operands.md`](decisions/vm-execution-loop-010-borrow-register-operands.md)。
+
+**状态（第十一 borrowed native-call name 窄切片已完成，2026-07-31）：**
+`NativeCall` 从 immutable name table 借用 native 名称直到 dispatch 返回，profile
+仍只在记录 key 时复制；native ABI、callback、诊断和 artifact contract 不变。
+collection helpers 的 runtime median 从 `0.001312s` 降至 `0.001244s`，math
+workload 保持在启动噪声范围；详见
+[`docs/decisions/vm-execution-loop-011-borrow-native-name.md`](decisions/vm-execution-loop-011-borrow-native-name.md)。
+
+**状态（第十二 borrowed function values 窄切片已完成，2026-07-31）：**
+bytecode call 和 native callback 直接借用 `FunctionValue`，只在新 frame 建立时
+复制 closure；CallArguments、arity、call depth 和错误栈语义不变。call closure、
+collection helpers 和 scaled closure 的 runtime median 分别下降约 `5.9%`、
+`5.5%` 和 `2.5%`；详见
+[`docs/decisions/vm-execution-loop-012-borrow-function-values.md`](decisions/vm-execution-loop-012-borrow-function-values.md)。
+
+**状态（第十三 borrowed caller names 窄切片已完成，2026-07-31）：**
+函数调用和 native callback 成功路径借用 caller name，仅在错误栈构造时复制；
+call-stack、callback budget、debug 和诊断顺序保持不变。scaled closure 的 runtime
+median 从 `0.249626s` 降至 `0.245814s`，详见
+[`docs/decisions/vm-execution-loop-013-borrow-caller-name.md`](decisions/vm-execution-loop-013-borrow-caller-name.md)。
+
+**状态（第十四 shared cached frame names 窄切片已完成，2026-07-31）：**
+cached body 和 child frame 通过 `Rc<str>` 共享函数名，trace/debug/error 边界仍按
+原有 public `String` 形态物化；该切片的 runtime 数据处于测量噪声范围，交付点是
+减少每次 frame 的 name allocation，详见
+[`docs/decisions/vm-execution-loop-014-shared-frame-names.md`](decisions/vm-execution-loop-014-shared-frame-names.md)。
+
+**状态（第十五 profile-off hook guards 窄切片已完成，2026-07-31）：**
+默认执行只在 profile enabled 时进入 function-entry/native-call counters，profile
+模式的计数和顺序保持不变。scaled closure 的 runtime median 从 `0.254472s`
+降至 `0.246518s`，native 小 workload 保持在启动噪声范围；详见
+[`docs/decisions/vm-execution-loop-015-profile-off-hook-guards.md`](decisions/vm-execution-loop-015-profile-off-hook-guards.md)。
+
 ### VM-5C：容量与大模块图
 
 **目标：** 让 VM 在大 artifact、深调用、长字符串、大数组和多模块 link 下
@@ -599,7 +645,7 @@ VM-3A 的第一 library boundary、typed error/version boundary、VM-3B 的第�
 linker report slice、VM-4A 的第一 interactive debugger slice、VM-4B 的第一
 deterministic profile counter slice、VM-4C 的第一 structured kind slice、VM-5A
 的 reproducible benchmark baseline/scale slices 和 VM-5B 的 trace-off instruction
-preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard slices 已完成；GC、persistent VM、
+preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard/checkpoint-fast-path/borrow-register-operands/borrow-native-name/borrow-function-values/borrow-caller-name/shared-frame-names/profile-off-hook-guards slices 已完成；GC、persistent VM、
 JIT 和新的 artifact version 仍未进入默认队列。VM-4B 的 wall-clock 与
 allocation/peak 扩展、VM-4C 的统一 host schema，以及 VM-5B 的后续性能优化都
 需要独立决策；下一步应依据十一个 workload 的 baseline 数据选择下一个明确的
