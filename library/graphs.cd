@@ -1374,47 +1374,54 @@ fun bellmanFord(
       BellmanFordResult { distances: distances, parents: parents });
 }
 
+struct WeightedDistanceEntry {
+  vertex: number,
+  distance: number
+}
+
+fun weightedDistanceLess(left: WeightedDistanceEntry, right: WeightedDistanceEntry): bool {
+  if (left.distance == right.distance) {
+    return left.vertex < right.vertex;
+  }
+  return left.distance < right.distance;
+}
+
 fun shortestWeightedDistances(graph: WeightedGraph, start: number): [number] {
   let distances: [number] = [];
-  let visited: [bool] = [];
   let count = graph.vertexCount();
   let index = 0;
   while (index < count) {
     distances.push(-1);
-    visited.push(false);
     index += 1;
   }
   if (start < 0 || start >= count) {
     return distances;
   }
   distances[start] = 0;
+  let pending = newBinaryHeap<WeightedDistanceEntry>(weightedDistanceLess);
+  pending.add(WeightedDistanceEntry { vertex: start, distance: 0 });
 
-  let step = 0;
-  while (step < count) {
-    let current = -1;
-    index = 0;
-    while (index < count) {
-      if (!visited[index] && distances[index] >= 0
-          && (current < 0 || distances[index] < distances[current])) {
-        current = index;
-      }
-      index += 1;
-    }
-    if (current < 0) {
+  while (!pending.isEmpty()) {
+    let entry = pending.take();
+    if (entry == nil) {
       break;
     }
-    visited[current] = true;
+    let current = entry.vertex;
+    let currentDistance = entry.distance;
+    if (currentDistance != distances[current]) {
+      continue;
+    }
     let neighbors = graph.neighbors(current);
     let neighborIndex = 0;
     while (neighborIndex < neighbors.len()) {
       let edge = neighbors[neighborIndex];
-      let candidate = distances[current] + edge.weight;
+      let candidate = currentDistance + edge.weight;
       if (distances[edge.to] < 0 || candidate < distances[edge.to]) {
         distances[edge.to] = candidate;
+        pending.add(WeightedDistanceEntry { vertex: edge.to, distance: candidate });
       }
       neighborIndex += 1;
     }
-    step += 1;
   }
   return distances;
 }
@@ -1624,31 +1631,26 @@ fun shortestWeightedPath(graph: WeightedGraph, start: number, goal: number): [nu
 
   let distances: [number] = [];
   let parents: [number] = [];
-  let visited: [bool] = [];
   let index = 0;
   while (index < count) {
     distances.push(-1);
     parents.push(-1);
-    visited.push(false);
     index += 1;
   }
   distances[start] = 0;
+  let pending = newBinaryHeap<WeightedDistanceEntry>(weightedDistanceLess);
+  pending.add(WeightedDistanceEntry { vertex: start, distance: 0 });
 
-  let step = 0;
-  while (step < count) {
-    let current = -1;
-    index = 0;
-    while (index < count) {
-      if (!visited[index] && distances[index] >= 0
-          && (current < 0 || distances[index] < distances[current])) {
-        current = index;
-      }
-      index += 1;
-    }
-    if (current < 0) {
+  while (!pending.isEmpty()) {
+    let entry = pending.take();
+    if (entry == nil) {
       break;
     }
-    visited[current] = true;
+    let current = entry.vertex;
+    let currentDistance = entry.distance;
+    if (currentDistance != distances[current]) {
+      continue;
+    }
     if (current == goal) {
       break;
     }
@@ -1656,14 +1658,14 @@ fun shortestWeightedPath(graph: WeightedGraph, start: number, goal: number): [nu
     let neighborIndex = 0;
     while (neighborIndex < neighbors.len()) {
       let edge = neighbors[neighborIndex];
-      let candidate = distances[current] + edge.weight;
+      let candidate = currentDistance + edge.weight;
       if (distances[edge.to] < 0 || candidate < distances[edge.to]) {
         distances[edge.to] = candidate;
         parents[edge.to] = current;
+        pending.add(WeightedDistanceEntry { vertex: edge.to, distance: candidate });
       }
       neighborIndex += 1;
     }
-    step += 1;
   }
 
   if (start != goal && parents[goal] < 0) {

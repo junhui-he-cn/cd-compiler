@@ -738,8 +738,9 @@ undirected input, `InvalidStart` for an invalid or non-integral start, and
 
 `WeightedGraph` stores non-negative numeric edge weights. Its Dijkstra helpers
 `shortestWeightedDistances` and `shortestWeightedPath` return `-1`/`[]` for
-unreachable results and reject negative weights at insertion. The current array
-scan implementation runs in `O(V^2 + E)` time and `O(V)` auxiliary space.
+unreachable results and reject negative weights at insertion. A min-heap
+implementation with stale-entry checks runs in `O((V + E) log V)` time and
+`O(V + E)` auxiliary space; equal distances are settled by smaller vertex ID.
 `removeEdge` has the same symmetry and missing-edge behavior as `Graph`; removing
 an edge discards its stored weight and updates the edge count.
 

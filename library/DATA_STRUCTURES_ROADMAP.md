@@ -367,7 +367,8 @@ enum Result<T, E> {
 `stronglyConnectedComponents` 已提供迭代 Kosaraju 版本；组件顺序按完成序，
 组件内部按 DFS 发现序，不对结果额外排序。
 `WeightedGraph` 和 Dijkstra 查询已提供非负数权重版本；负权边不加入图，当前
-实现使用数组扫描选择最短未访问顶点。
+实现使用带 stale-entry 检查的最小堆，等距时按较小顶点 ID 确定顺序，复杂度为
+`O((V + E) log V)`。
 `SignedWeightedGraph` 单独接受负权边，避免改变 Dijkstra、最小生成森林和最大流
 的非负权前置条件。`bellmanFord` 返回带父节点的可空距离数组，并将无效起点和
 从起点可达的负环分别报告为 `BellmanFordError`。
