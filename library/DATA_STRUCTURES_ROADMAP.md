@@ -82,7 +82,8 @@
 - 区间 DP：`matrixChainCost`、`mergeStonesCost`。
 - 二分查找：`lowerBound`、`upperBound`、`binarySearch`。
 - 字符串比较辅助：`compareStrings`、`stringLess`（当前限定可打印 ASCII）。
-- 字符串匹配：`findSubstring`、`prefixFunction`、`zFunction`、`kmpSearch`、`isPalindrome`。
+- 字符串匹配：`findSubstring`、`prefixFunction`、`zFunction`、`kmpSearch`、`isPalindrome`、
+  `minimumWindowSubstring`。
 - Trie：`Trie`、`newTrie`、`insert`、`discard`、`has`、`startsWith`、`wordsWithPrefix`。
 - Fenwick 树：数值 `FenwickTree`，支持点更新、前缀和、区间和与快照。
 - 线段树：数值 `SegmentTree`，支持点更新、区间和、区间最小值与快照。
@@ -489,7 +490,7 @@ enum Result<T, E> {
 - 前缀函数和 KMP；
 - Z 函数；
 - 回文判断、无重复子串长度、最长回文子串已完成；
-- 字符频率、字谜/异位词判断、滑动窗口匹配；
+- 字符频率、字谜/异位词判断、滑动窗口匹配 `minimumWindowSubstring` 已完成；
 - Trie 前缀查找和补全；
 - Rabin-Karp 作为哈希契约确定后的可选实现；
 - 编辑距离、最长公共子序列、最长公共子串；

@@ -260,6 +260,63 @@ fun areAnagrams(left: string, right: string): bool {
   return true;
 }
 
+// Return the shortest contiguous text span containing every pattern character
+// with at least the pattern's multiplicity. MultiSet keeps this implementation
+// independent from the library's still-deferred generic hash-map contract.
+fun minimumWindowSubstring(text: string, pattern: string): string {
+  if (pattern.len() == 0 || text.len() == 0 || pattern.len() > text.len()) {
+    return "";
+  }
+
+  let required = newMultiSet<string>();
+  let patternIndex = 0;
+  while (patternIndex < pattern.len()) {
+    required.add(pattern.charAt(patternIndex));
+    patternIndex += 1;
+  }
+
+  let window = newMultiSet<string>();
+  let missing = pattern.len();
+  let left = 0;
+  let right = 0;
+  let bestStart = 0;
+  let bestLength = text.len() + 1;
+  while (right < text.len()) {
+    let entering = text.charAt(right);
+    if (required.has(entering)) {
+      let before = window.countOf(entering);
+      window.add(entering);
+      if (before < required.countOf(entering)) {
+        missing -= 1;
+      }
+    }
+    right += 1;
+
+    while (missing == 0) {
+      let length = right - left;
+      if (length < bestLength) {
+        bestStart = left;
+        bestLength = length;
+      }
+
+      let leaving = text.charAt(left);
+      if (required.has(leaving)) {
+        let before = window.countOf(leaving);
+        window.takeOne(leaving);
+        if (before <= required.countOf(leaving)) {
+          missing += 1;
+        }
+      }
+      left += 1;
+    }
+  }
+
+  if (bestLength > text.len()) {
+    return "";
+  }
+  return text.substr(bestStart, bestLength);
+}
+
 fun isBalancedBrackets(text: string): bool {
   let stack: [string] = [];
   let index = 0;
@@ -509,4 +566,4 @@ fun newTrie(): Trie {
 }
 
 
-export Trie, newTrie, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, longestUniqueSubstringLength, longestPalindromicSubstring, isBalancedBrackets;
+export Trie, newTrie, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, minimumWindowSubstring, longestUniqueSubstringLength, longestPalindromicSubstring, isBalancedBrackets;

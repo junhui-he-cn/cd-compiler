@@ -1042,6 +1042,13 @@ Unicode scalar-value offsets and return `[]` for an empty string.
 `isPalindrome` compares scalar values from both ends and treats an empty string
 as a palindrome. These functions do not normalize combining marks.
 
+`minimumWindowSubstring(text, pattern)` returns the shortest contiguous Unicode
+scalar-value span that contains every pattern character with the required
+multiplicity. It returns `""` for an empty pattern, an empty text, or no
+solution; equal-length candidates keep the leftmost window. The current
+`MultiSet`-backed implementation takes `O(n * k)` time, where `k` is the number
+of distinct pattern characters, and `O(k)` auxiliary space.
+
 `longestUniqueSubstringLength(text)` returns the length of the longest substring
 with no repeated Unicode scalar values. The current array-backed window scan
 takes `O(n^2)` time and `O(n)` temporary space; an empty string returns `0`.
@@ -1294,6 +1301,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case algorithms_string_matching`,
 `--case algorithms_string_trie`, `--case data_structures_trie_remove`,
 `--case algorithms_string_sequences`,
+`--case algorithms_string_window`,
 `--case algorithms_stack`,
 `--case algorithms_graph_max_flow`, `--case algorithms_graph_min_cut`,
 `--case array_algorithms_basic`,
