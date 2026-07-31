@@ -205,6 +205,7 @@ print ds.unionValues([1, 2], [2, 3]);
 print ds.windowSums([2, -1, 3, 4, -2, 1], 3);
 print ds.maxWindowSum([2, -1, 3, 4, -2, 1], 3);
 print ds.maxWindowValues([2, -1, 3, 4, -2, 1], 3);
+print ds.minWindowValues([2, -1, 3, 4, -2, 1], 3);
 print ds.maxSubarraySum([-2, 1, -3, 4, -1, 2, 1, -5, 4]);
 
 fun ascendingNumber(left: number, right: number): bool {
@@ -845,9 +846,11 @@ using a rolling sum. `maxWindowSum(values, width)` returns the largest such sum,
 or `nil` when the width is non-positive, exceeds the input length, or the input
 is empty. `maxWindowValues(values, width)` returns the maximum value from every
 window in left-to-right order; non-positive, non-integral, oversized, or empty
-inputs return `[]`. All three functions leave the input unchanged. The sum
-helpers run in `O(n)`, while `maxWindowValues` uses a monotonic index queue in
-`O(n)` time and `O(n)` auxiliary/output space.
+inputs return `[]`. `minWindowValues(values, width)` returns the corresponding
+minimum from every window with the same invalid-width behavior. All four
+functions leave the input unchanged. The sum helpers run in `O(n)`, while both
+extrema functions use a monotonic index queue in `O(n)` time and
+`O(n)` auxiliary/output space.
 
 `maxSubarraySum(values)` returns the largest sum of a non-empty contiguous
 subarray, or `nil` for an empty input. It preserves the input and handles an
@@ -1266,7 +1269,8 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case array_algorithms_binary_search`, `--case array_algorithms_rotated_search`,
 `--case array_algorithms_merge_sort`, `--case array_algorithms_inversions`,
 `--case array_algorithms_merge_sorted`, `--case array_algorithms_partition`,
-`--case array_algorithms_window_max`, `--case array_algorithms_rotation`,
+`--case array_algorithms_window_max`, `--case array_algorithms_window_min`,
+`--case array_algorithms_rotation`,
 `--case array_algorithms_frequency`,
 `--case array_algorithms_quick_sort`, `--case array_algorithms_heap_sort`,
 `--case array_algorithms_shell_sort`,

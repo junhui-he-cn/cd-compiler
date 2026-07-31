@@ -64,7 +64,8 @@ export prefixSums, differenceArray, prefixMinimums, prefixMaximums,
        mergeSortedArrays, twoSumSorted, threeSumZero, uniqueValues,
        intersectionValues,
        unionValues, differenceValues, frequencyEntries, mostFrequent,
-       windowSums, maxWindowSum, maxWindowValues, maxSubarraySum
+       windowSums, maxWindowSum, maxWindowValues, minWindowValues,
+       maxSubarraySum
        from "./array_algorithms.cd";
 
 export climbStairs, maxNonAdjacentSum, minCoinCount, uniqueGridPaths,
