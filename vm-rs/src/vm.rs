@@ -474,6 +474,31 @@ mod tests {
     }
 
     #[test]
+    fn constant_values_are_cached_after_first_decode() {
+        let program = Program {
+            constants: vec![
+                Constant::Number("1.5".to_string()),
+                Constant::String("cached".to_string()),
+            ],
+            ..empty_program()
+        };
+        let mut vm = VM::new(&program);
+        assert!(vm.constant_cache.iter().all(Option::is_none));
+
+        assert_eq!(vm.constant_value(0).unwrap().to_string(), "1.5");
+        assert!(matches!(vm.constant_cache[0], Some(Value::Number(value)) if value == 1.5));
+        assert_eq!(vm.constant_value(0).unwrap().to_string(), "1.5");
+
+        assert_eq!(vm.constant_value(1).unwrap().to_string(), "cached");
+        assert!(matches!(&vm.constant_cache[1], Some(Value::String(value)) if value == "cached"));
+
+        let invalid = vm
+            .constant_value(2)
+            .expect_err("out-of-range constants should remain rejected");
+        assert_eq!(invalid.message, "constant index out of range");
+    }
+
+    #[test]
     fn main_global_cell_cache_reuses_and_replaces_binding_cells() {
         let mut program = empty_program();
         program.names = vec!["value".to_string(), "value".to_string()];
@@ -2258,6 +2283,7 @@ pub struct VM<'a> {
     globals: SharedEnvironment,
     global_name_slots: Vec<usize>,
     global_cell_cache: Vec<Option<Cell>>,
+    constant_cache: Vec<Option<Value>>,
     function_body_cache: Vec<Option<Rc<CachedFunctionBody>>>,
     output: String,
     instruction_steps: usize,
@@ -2301,6 +2327,7 @@ impl<'a> VM<'a> {
             globals,
             global_name_slots,
             global_cell_cache: vec![None; global_slots_by_name.len()],
+            constant_cache: vec![None; program.constants.len()],
             function_body_cache: vec![None; program.functions.len()],
             output: String::new(),
             instruction_steps: 0,
@@ -4347,6 +4374,9 @@ impl<'a> VM<'a> {
     }
 
     fn load_variable(&mut self, frame: &Frame, name_index: usize) -> Result<Value, RuntimeError> {
+        if frame.is_main {
+            return Ok(self.global_cell_ref(name_index)?.borrow().clone());
+        }
         let cell = self.variable_cell(frame, name_index)?;
         let value = cell.borrow().clone();
         Ok(value)
@@ -4370,6 +4400,10 @@ impl<'a> VM<'a> {
         name_index: usize,
         value: Value,
     ) -> Result<(), RuntimeError> {
+        if frame.is_main {
+            *self.global_cell_ref(name_index)?.borrow_mut() = value;
+            return Ok(());
+        }
         let cell = self.variable_cell(frame, name_index)?;
         *cell.borrow_mut() = value;
         Ok(())
@@ -4386,30 +4420,36 @@ impl<'a> VM<'a> {
     }
 
     fn global_cell(&mut self, name_index: usize) -> Result<Cell, RuntimeError> {
+        Ok(self.global_cell_ref(name_index)?.clone())
+    }
+
+    fn global_cell_ref(&mut self, name_index: usize) -> Result<&Cell, RuntimeError> {
         let cache_index = self
             .global_name_slots
             .get(name_index)
             .copied()
             .ok_or_else(|| RuntimeError::new("name index out of range"))?;
-        if let Some(cell) = self
+        if self
             .global_cell_cache
             .get(cache_index)
             .and_then(Option::as_ref)
+            .is_none()
         {
-            return Ok(cell.clone());
+            let name = self.read_name_ref(name_index)?;
+            let cell = self
+                .globals
+                .borrow()
+                .get(name)
+                .cloned()
+                .ok_or_else(|| RuntimeError::new(format!("undefined variable `{}`", name)))?;
+            if let Some(slot) = self.global_cell_cache.get_mut(cache_index) {
+                *slot = Some(cell);
+            }
         }
-
-        let name = self.read_name_ref(name_index)?;
-        let cell = self
-            .globals
-            .borrow()
-            .get(name)
-            .cloned()
-            .ok_or_else(|| RuntimeError::new(format!("undefined variable `{}`", name)))?;
-        if let Some(slot) = self.global_cell_cache.get_mut(cache_index) {
-            *slot = Some(cell.clone());
-        }
-        Ok(cell)
+        self.global_cell_cache
+            .get(cache_index)
+            .and_then(Option::as_ref)
+            .ok_or_else(|| RuntimeError::new("global cache index out of range"))
     }
 
     fn validate_jump_target(
@@ -4424,13 +4464,17 @@ impl<'a> VM<'a> {
         }
     }
 
-    fn constant_value(&self, index: usize) -> Result<Value, RuntimeError> {
+    fn constant_value(&mut self, index: usize) -> Result<Value, RuntimeError> {
+        if let Some(value) = self.constant_cache.get(index).and_then(Option::as_ref) {
+            return Ok(value.clone());
+        }
+
         let constant = self
             .program
             .constants
             .get(index)
             .ok_or_else(|| RuntimeError::new("constant index out of range"))?;
-        match constant {
+        let value = match constant {
             Constant::Nil => Ok(Value::Nil),
             Constant::Number(value) => value
                 .parse::<f64>()
@@ -4438,7 +4482,11 @@ impl<'a> VM<'a> {
                 .map_err(|_| RuntimeError::new("invalid number constant")),
             Constant::Bool(value) => Ok(Value::boolean(*value)),
             Constant::String(value) => Ok(Value::string(value.clone())),
+        }?;
+        if let Some(slot) = self.constant_cache.get_mut(index) {
+            *slot = Some(value.clone());
         }
+        Ok(value)
     }
 
     fn read_register(&self, frame: &Frame, index: usize) -> Result<Value, RuntimeError> {
