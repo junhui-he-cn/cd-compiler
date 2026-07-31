@@ -502,7 +502,8 @@ enum Result<T, E> {
 - 前缀函数和 KMP；
 - Z 函数；
 - 回文判断、无重复子串长度、最长回文子串已完成；
-- 字符频率、字谜/异位词判断、滑动窗口匹配 `minimumWindowSubstring` 已完成；
+- 字符频率、字谜/异位词判断、滑动窗口匹配 `minimumWindowSubstring` 已完成，
+  字符串基础键 map 版本平均为 `O(n)`；
 - Trie 前缀查找和补全；
 - Rabin-Karp 作为哈希契约确定后的可选实现；
 - 编辑距离、最长公共子序列、最长公共子串；

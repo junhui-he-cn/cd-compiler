@@ -1107,12 +1107,18 @@ Unicode scalar-value offsets and return `[]` for an empty string.
 `isPalindrome` compares scalar values from both ends and treats an empty string
 as a palindrome. These functions do not normalize combining marks.
 
+`characterFrequency(text)` returns `MultiSetEntry<string>` values in first-seen
+character order, and `areAnagrams(left, right)` compares scalar-value
+multiplicities without normalizing text. Both use primitive string-keyed maps
+and take average `O(n)` time with `O(k)` auxiliary space for `k` distinct
+characters.
+
 `minimumWindowSubstring(text, pattern)` returns the shortest contiguous Unicode
 scalar-value span that contains every pattern character with the required
 multiplicity. It returns `""` for an empty pattern, an empty text, or no
-solution; equal-length candidates keep the leftmost window. The current
-`MultiSet`-backed implementation takes `O(n * k)` time, where `k` is the number
-of distinct pattern characters, and `O(k)` auxiliary space.
+solution; equal-length candidates keep the leftmost window. Its primitive
+string-keyed sliding-window maps give average `O(n)` time and `O(k)` auxiliary
+space, where `k` is the number of distinct pattern characters.
 
 `canSegmentString(text, dictionary)` returns whether the text can be formed by
 concatenating whole dictionary words. Empty dictionary entries are ignored,

@@ -221,38 +221,62 @@ fun isPalindrome(text: string): bool {
 }
 
 fun characterFrequency(text: string): [MultiSetEntry<string>] {
-  let counts = newMultiSet<string>();
+  let counts: map<string, number> = {};
   let index = 0;
   while (index < text.len()) {
-    counts.add(text.charAt(index));
+    let character = text.charAt(index);
+    if (counts.contains(character)) {
+      counts[character] = counts[character] + 1;
+    } else {
+      counts[character] = 1;
+    }
     index += 1;
   }
-  return counts.entries();
+
+  let result: [MultiSetEntry<string>] = [];
+  let keys = counts.keys();
+  index = 0;
+  while (index < keys.len()) {
+    let character = keys[index];
+    result.push(MultiSetEntry<string> {
+      value: character,
+      count: counts[character]
+    });
+    index += 1;
+  }
+  return result;
 }
 
 fun areAnagrams(left: string, right: string): bool {
   if (left.len() != right.len()) {
     return false;
   }
-  let leftEntries = characterFrequency(left);
-  let rightEntries = characterFrequency(right);
+
+  let leftCounts: map<string, number> = {};
+  let rightCounts: map<string, number> = {};
   let index = 0;
-  while (index < leftEntries.len()) {
-    let leftEntry = leftEntries[index];
-    let rightIndex = 0;
-    let found = false;
-    while (rightIndex < rightEntries.len()) {
-      let rightEntry = rightEntries[rightIndex];
-      if (leftEntry.value == rightEntry.value) {
-        found = true;
-        if (leftEntry.count != rightEntry.count) {
-          return false;
-        }
-        break;
-      }
-      rightIndex += 1;
+  while (index < left.len()) {
+    let leftCharacter = left.charAt(index);
+    if (leftCounts.contains(leftCharacter)) {
+      leftCounts[leftCharacter] = leftCounts[leftCharacter] + 1;
+    } else {
+      leftCounts[leftCharacter] = 1;
     }
-    if (!found) {
+
+    let rightCharacter = right.charAt(index);
+    if (rightCounts.contains(rightCharacter)) {
+      rightCounts[rightCharacter] = rightCounts[rightCharacter] + 1;
+    } else {
+      rightCounts[rightCharacter] = 1;
+    }
+    index += 1;
+  }
+
+  let keys = leftCounts.keys();
+  index = 0;
+  while (index < keys.len()) {
+    let character = keys[index];
+    if (!rightCounts.contains(character) || leftCounts[character] != rightCounts[character]) {
       return false;
     }
     index += 1;
@@ -261,21 +285,26 @@ fun areAnagrams(left: string, right: string): bool {
 }
 
 // Return the shortest contiguous text span containing every pattern character
-// with at least the pattern's multiplicity. MultiSet keeps this implementation
-// independent from the library's still-deferred generic hash-map contract.
+// with at least the pattern's multiplicity. Primitive string keys make the
+// sliding window independent from the library's deferred generic hash-map API.
 fun minimumWindowSubstring(text: string, pattern: string): string {
   if (pattern.len() == 0 || text.len() == 0 || pattern.len() > text.len()) {
     return "";
   }
 
-  let required = newMultiSet<string>();
+  let required: map<string, number> = {};
   let patternIndex = 0;
   while (patternIndex < pattern.len()) {
-    required.add(pattern.charAt(patternIndex));
+    let character = pattern.charAt(patternIndex);
+    if (required.contains(character)) {
+      required[character] = required[character] + 1;
+    } else {
+      required[character] = 1;
+    }
     patternIndex += 1;
   }
 
-  let window = newMultiSet<string>();
+  let window: map<string, number> = {};
   let missing = pattern.len();
   let left = 0;
   let right = 0;
@@ -283,10 +312,13 @@ fun minimumWindowSubstring(text: string, pattern: string): string {
   let bestLength = text.len() + 1;
   while (right < text.len()) {
     let entering = text.charAt(right);
-    if (required.has(entering)) {
-      let before = window.countOf(entering);
-      window.add(entering);
-      if (before < required.countOf(entering)) {
+    if (required.contains(entering)) {
+      let before = 0;
+      if (window.contains(entering)) {
+        before = window[entering];
+      }
+      window[entering] = before + 1;
+      if (before < required[entering]) {
         missing -= 1;
       }
     }
@@ -300,10 +332,10 @@ fun minimumWindowSubstring(text: string, pattern: string): string {
       }
 
       let leaving = text.charAt(left);
-      if (required.has(leaving)) {
-        let before = window.countOf(leaving);
-        window.takeOne(leaving);
-        if (before <= required.countOf(leaving)) {
+      if (required.contains(leaving)) {
+        let before = window[leaving];
+        window[leaving] = before - 1;
+        if (before <= required[leaving]) {
           missing += 1;
         }
       }
