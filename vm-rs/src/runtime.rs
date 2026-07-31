@@ -246,6 +246,10 @@ impl HeapLedger {
             estimated_peak_live_bytes: self.peak_estimated_live_bytes,
         }
     }
+
+    fn profile_counts(&self) -> (usize, usize) {
+        (self.allocations.len(), self.peak_live)
+    }
 }
 
 /// Shared mutable storage with a non-owning accounting token.
@@ -441,6 +445,10 @@ impl Heap {
             return;
         }
         self.ledger.borrow_mut().observe_estimated_bytes();
+    }
+
+    pub(crate) fn profile_counts(&self) -> (usize, usize) {
+        self.ledger.borrow().profile_counts()
     }
 
     pub fn new_environment(&self) -> SharedEnvironment {

@@ -94,6 +94,10 @@ pub struct DebugRun {
 pub struct ProfileReport {
     pub instruction_count: usize,
     pub output_bytes: usize,
+    /// Number of allocations recorded by the tracked VM storage ledger.
+    pub tracked_heap_allocations: usize,
+    /// Maximum simultaneously live allocations in the tracked VM storage ledger.
+    pub tracked_heap_peak_live: usize,
     pub functions: Vec<ProfileFunction>,
     pub natives: Vec<ProfileNative>,
     pub source_ranges: Vec<ProfileSourceRange>,
@@ -496,6 +500,14 @@ mod tests {
             .constant_value(2)
             .expect_err("out-of-range constants should remain rejected");
         assert_eq!(invalid.message, "constant index out of range");
+    }
+
+    #[test]
+    fn profile_reports_tracked_array_allocations_and_peak() {
+        let profiled = VM::with_config(&array_churn_program(4), RunConfig::unlimited()).profile();
+        assert!(profiled.result.is_ok());
+        assert_eq!(profiled.report.tracked_heap_allocations, 7);
+        assert_eq!(profiled.report.tracked_heap_peak_live, 5);
     }
 
     #[test]
@@ -2206,6 +2218,34 @@ struct CachedFunctionBody {
     body: FunctionBody,
 }
 
+#[derive(Clone, Copy)]
+enum Comparison {
+    Greater,
+    GreaterEqual,
+    Less,
+    LessEqual,
+}
+
+impl Comparison {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Greater => "greater",
+            Self::GreaterEqual => "greater_equal",
+            Self::Less => "less",
+            Self::LessEqual => "less_equal",
+        }
+    }
+
+    fn apply_numbers(self, left: f64, right: f64) -> bool {
+        match self {
+            Self::Greater => left > right,
+            Self::GreaterEqual => left >= right,
+            Self::Less => left < right,
+            Self::LessEqual => left <= right,
+        }
+    }
+}
+
 enum CallArguments {
     Empty,
     One(Value),
@@ -2413,9 +2453,12 @@ impl<'a> VM<'a> {
     }
 
     fn profile_report(&self) -> ProfileReport {
+        let (tracked_heap_allocations, tracked_heap_peak_live) = self.heap.profile_counts();
         ProfileReport {
             instruction_count: self.profile_instruction_count,
             output_bytes: self.profile_output_bytes,
+            tracked_heap_allocations,
+            tracked_heap_peak_live,
             functions: self.profile_functions.clone(),
             natives: self
                 .profile_natives
@@ -2770,16 +2813,16 @@ impl<'a> VM<'a> {
                     self.write_register(frame, *dest, Value::boolean(result))?;
                 }
                 Instruction::Greater { dest, left, right } => {
-                    self.compare(frame, *dest, *left, *right, "greater", |l, r| l > r)?
+                    self.compare(frame, *dest, *left, *right, Comparison::Greater)?
                 }
                 Instruction::GreaterEqual { dest, left, right } => {
-                    self.compare(frame, *dest, *left, *right, "greater_equal", |l, r| l >= r)?
+                    self.compare(frame, *dest, *left, *right, Comparison::GreaterEqual)?
                 }
                 Instruction::Less { dest, left, right } => {
-                    self.compare(frame, *dest, *left, *right, "less", |l, r| l < r)?
+                    self.compare(frame, *dest, *left, *right, Comparison::Less)?
                 }
                 Instruction::LessEqual { dest, left, right } => {
-                    self.compare(frame, *dest, *left, *right, "less_equal", |l, r| l <= r)?
+                    self.compare(frame, *dest, *left, *right, Comparison::LessEqual)?
                 }
                 Instruction::Jump { target } => {
                     self.validate_jump_target(*target, body.instructions.len())?;
@@ -4560,27 +4603,25 @@ impl<'a> VM<'a> {
         dest: usize,
         left: usize,
         right: usize,
-        op_name: &str,
-        operation: fn(f64, f64) -> bool,
+        comparison: Comparison,
     ) -> Result<(), RuntimeError> {
         let left_value = self.read_register_ref(frame, left)?;
         let right_value = self.read_register_ref(frame, right)?;
         let result = match (left_value, right_value) {
-            (Value::Number(left), Value::Number(right)) => operation(*left, *right),
+            (Value::Number(left), Value::Number(right)) => comparison.apply_numbers(*left, *right),
             (Value::String(left), Value::String(right)) => {
                 let ordering = left.chars().cmp(right.chars());
-                match op_name {
-                    "greater" => ordering.is_gt(),
-                    "greater_equal" => ordering.is_ge(),
-                    "less" => ordering.is_lt(),
-                    "less_equal" => ordering.is_le(),
-                    _ => return Err(RuntimeError::new(format!("unknown comparison `{}`", op_name))),
+                match comparison {
+                    Comparison::Greater => ordering.is_gt(),
+                    Comparison::GreaterEqual => ordering.is_ge(),
+                    Comparison::Less => ordering.is_lt(),
+                    Comparison::LessEqual => ordering.is_le(),
                 }
             }
             _ => {
                 return Err(RuntimeError::new(format!(
                     "{} expects two numbers or two strings",
-                    op_name
+                    comparison.as_str()
                 )))
             }
         };

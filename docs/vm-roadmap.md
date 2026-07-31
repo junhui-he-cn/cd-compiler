@@ -373,8 +373,15 @@ native 调用、已有 `DebugRange` 命中和成功写入的 output bytes。函�
 仍返回已经收集的 partial report，CLI 只输出报告而不混入业务 stdout。`run`、
 `trace`、`debug`、`.cdbc 0.1` 和资源语义保持不变，边界记录见
 [`docs/decisions/vm-profile-001.md`](decisions/vm-profile-001.md)。wall-clock
-执行时间和 allocation/peak counters 需要单独的确定性/heap 测量决策，暂不伪装
+执行时间和 estimated retained/host byte measurements 仍保持 deferred，暂不伪装
 为本 slice 的完成项。
+
+**状态（第二 deterministic tracked-heap counter 窄切片已完成，2026-07-31）：**
+`ProfileReport` 和 CLI `profile` 新增 tracked environment/cell/array/map/struct
+storage 的 allocation total 与 peak-live counters；计数直接读取 VM-2B ledger，
+不启用 retained-byte 观测，也不把 inline values 或 host RSS 纳入结果。成功、
+runtime/resource/cancellation 失败仍返回已收集的 partial report；详见
+[`docs/decisions/vm-profile-002-tracked-heap-counters.md`](decisions/vm-profile-002-tracked-heap-counters.md)。
 
 ### VM-4C：错误与诊断 API 稳定化
 
@@ -560,6 +567,13 @@ cached body 和 child frame 通过 `Rc<str>` 共享函数名，trace/debug/error
 no-regression allocation reduction，不把它作为新的性能阈值；详见
 [`docs/decisions/vm-execution-loop-018-borrow-global-cells.md`](decisions/vm-execution-loop-018-borrow-global-cells.md)。
 
+**状态（第十九 inline ordered-comparison dispatch 窄切片已完成，2026-07-31）：**
+四种 ordered comparison 通过内部 `Comparison` enum 分派，numeric hot path 不再
+为每次比较调用 function pointer；字符串 Unicode ordering、错误文本、resource
+和 observability 语义不变。`execution_loop` 同工作树七次基线为 `0.446904s`，
+改动后两次中位数为 `0.419459s`/`0.427508s`；详见
+[`docs/decisions/vm-execution-loop-019-comparison-dispatch.md`](decisions/vm-execution-loop-019-comparison-dispatch.md)。
+
 ### VM-5C：容量与大模块图
 
 **目标：** 让 VM 在大 artifact、深调用、长字符串、大数组和多模块 link 下
@@ -664,14 +678,14 @@ canonical verification 和 malformed corpus。完整仓库 gate 仍以
 VM-1A、VM-1B、VM-1C、VM-2A、VM-2B 的 tracked-object/retained-byte 测量边界、
 VM-3A 的第一 library boundary、typed error/version boundary、VM-3B 的第一
 linker report slice、VM-4A 的第一 interactive debugger slice、VM-4B 的第一
-deterministic profile counter slice、VM-4C 的第一 structured kind slice、VM-5A
+deterministic profile counter/tracked-heap slice、VM-4C 的第一 structured kind slice、VM-5A
 的 reproducible benchmark baseline/scale slices 和 VM-5B 的 trace-off instruction
-preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard/checkpoint-fast-path/borrow-register-operands/borrow-native-name/borrow-function-values/borrow-caller-name/shared-frame-names/profile-off-hook-guards/inline-native-arguments/decoded-constant-cache/borrowed-global-cell slices 已完成；GC、persistent VM、
+preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard/checkpoint-fast-path/borrow-register-operands/borrow-native-name/borrow-function-values/borrow-caller-name/shared-frame-names/profile-off-hook-guards/inline-native-arguments/decoded-constant-cache/borrowed-global-cell/comparison-dispatch slices 已完成；GC、persistent VM、
 JIT 和新的 artifact version 仍未进入默认队列。VM-4B 的 wall-clock 与
-allocation/peak 扩展、VM-4C 的统一 host schema，以及 VM-5B 的后续性能优化都
-需要独立决策；下一步应依据十一个 workload 的 baseline 数据选择下一个明确的
-VM-5B 执行循环或 frame 优化目标，同时保持现有 CLI、linked/module artifact、
-trace、profile 和 typed diagnostics 兼容。
+estimated retained/host-byte 扩展、VM-4C 的统一 host schema，以及 VM-5B 的
+后续性能优化都需要独立决策；下一步应依据十一个 workload 的 baseline 数据
+选择下一个明确的 VM-5B 执行循环或 frame 优化目标，同时保持现有 CLI、
+linked/module artifact、trace、profile 和 typed diagnostics 兼容。
 
 这份路线图的成功标准不是同时铺开所有 VM 研究方向，而是让每个运行时能力
 都有清楚的契约、独立的证据和可回退的迁移路径；语言 roadmap 继续独立演进，

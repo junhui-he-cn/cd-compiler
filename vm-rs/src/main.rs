@@ -614,6 +614,10 @@ fn print_profile_report(program: &Program, profiled: &vm::ProfileRun) {
         "profile instruction_count={} output_bytes={}",
         profiled.report.instruction_count, profiled.report.output_bytes
     );
+    println!(
+        "profile heap tracked_heap_allocations={} tracked_heap_peak_live={}",
+        profiled.report.tracked_heap_allocations, profiled.report.tracked_heap_peak_live
+    );
     for function in &profiled.report.functions {
         let index = function
             .index

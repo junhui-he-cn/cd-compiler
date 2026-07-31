@@ -878,13 +878,14 @@ before debugging; `run` and `trace` behavior is unchanged.
 
 `profile` runs the same linked artifact with opt-in deterministic counters. It
 prints machine-readable instruction counts, function calls/instructions,
-native calls, existing source-range hits, and successfully written output
-bytes; the program's output is not mixed into the report. Function records use
-artifact order, while native and range records use stable sorting. A failed
-execution still prints its partial report before the existing runtime/resource
-diagnostic is written to stderr. The library equivalent is `VM::profile()`;
-wall-clock timing and allocation/peak counters remain deferred by the
-[`VM-4B-001` decision](docs/decisions/vm-profile-001.md).
+native calls, existing source-range hits, successfully written output bytes,
+and deterministic tracked-heap allocation/peak counters for environment, cell,
+array, map, and struct storage; the program's output is not mixed into the
+report. Function records use artifact order, while native and range records use
+stable sorting. A failed execution still prints its partial report before the
+existing runtime/resource diagnostic is written to stderr. The library
+equivalent is `VM::profile()`; wall-clock timing, estimated retained bytes,
+inline values, and host allocator/RSS measurements remain outside this report.
 
 For an import-aware graph, `--emit-module-bytecode` emits one independently
 validated `artifact: module` product per graph node. Rust links the product set

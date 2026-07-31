@@ -195,6 +195,8 @@ fn library_api_profiles_functions_natives_ranges_and_output() {
     assert_eq!(profiled.result.expect("profiled program should run"), "7\n");
     assert_eq!(profiled.report.instruction_count, 7);
     assert_eq!(profiled.report.output_bytes, 2);
+    assert_eq!(profiled.report.tracked_heap_allocations, 6);
+    assert_eq!(profiled.report.tracked_heap_peak_live, 6);
     assert_eq!(profiled.report.functions[0].name, "main");
     assert_eq!(profiled.report.functions[0].calls, 1);
     assert_eq!(profiled.report.functions[0].instructions, 5);
@@ -228,6 +230,8 @@ fn library_api_returns_partial_profile_on_runtime_failure() {
     assert_eq!(error.kind, compiler_design_vm::RuntimeErrorKind::Runtime);
     assert_eq!(profiled.report.instruction_count, 5);
     assert_eq!(profiled.report.output_bytes, 3);
+    assert_eq!(profiled.report.tracked_heap_allocations, 3);
+    assert_eq!(profiled.report.tracked_heap_peak_live, 3);
     assert_eq!(profiled.report.functions[0].calls, 1);
     assert_eq!(profiled.report.functions[0].instructions, 5);
 }
