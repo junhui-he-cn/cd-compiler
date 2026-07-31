@@ -53,7 +53,9 @@
 - 数组排序：稳定插入排序 `sortArray`、`sortArrayInPlace`、希尔排序 `shellSort`、
   选择排序、冒泡排序、归并排序 `mergeSort`、快速排序 `quickSort`/`quickSortInPlace` 和堆排序
   `heapSort`/`heapSortInPlace`。
-- 选择算法：`topKSmallest`、`topKLargest`、`kthSmallest`、`kthLargest`（当前复用稳定归并排序基线）。
+- 选择算法：`topKSmallest`、`topKLargest`、`kthSmallest`、`kthLargest`（三向
+  quickselect 定位后只对选中段归并排序；`topK` 平均 `O(n + k log k)`、`kth`
+  平均 `O(n)`，当前中点 pivot 的最坏复杂度为 `O(n²)`，不承诺相等元素稳定顺序）。
 - 数组窗口算法：`chunkArray`、`slidingWindows`、`prefixSums`。
 - 数组前缀/差分与单调栈：`differenceArray`、`prefixMinimums`、`prefixMaximums`、
   `nextGreaterValues`、`nextSmallerValues`。
@@ -428,7 +430,9 @@ enum Result<T, E> {
 - 括号匹配 `isBalancedBrackets` 已完成；表达式后缀化和后缀表达式求值；
 - 单调栈求下一个更大/更小元素、直方图最大矩形 `largestHistogramArea` 已完成；
 - BFS 使用队列，DFS 使用显式栈；
-- 堆化、堆排序、前 `k` 个元素、第 `k` 大/小元素；当前选择 API 使用稳定归并排序基线，堆/选择优化暂不改变结果契约；
+- 堆化、堆排序、前 `k` 个元素、第 `k` 大/小元素；选择 API 已使用三向
+  quickselect 和选中段排序，保持输入不变、非法参数和比较器排序契约；相等
+  元素的相对顺序不属于 API 保证；
 - 两个优先队列求数据流中位数；
 - 多路有序流合并（数组版本 `mergeSortedArrays` 已完成）；
 - 任务调度、区间资源分配和会议室数量。

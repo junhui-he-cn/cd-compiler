@@ -343,23 +343,79 @@ fun mergeSort<T>(values: [T], less: fun(T, T): bool): [T] {
   return result;
 }
 
+struct SelectionPartition {
+  lessEnd: number,
+  equalEnd: number
+}
+
+fun partitionSelection<T>(
+    values: [T],
+    low: number,
+    high: number,
+    pivotIndex: number,
+    less: fun(T, T): bool
+): SelectionPartition {
+  let pivot = values[pivotIndex];
+  let lessEnd = low;
+  let greaterStart = high;
+  let index = low;
+  while (index <= greaterStart) {
+    if (less(values[index], pivot)) {
+      let value = values[lessEnd];
+      values[lessEnd] = values[index];
+      values[index] = value;
+      lessEnd += 1;
+      index += 1;
+    } else {
+      if (less(pivot, values[index])) {
+        let value = values[greaterStart];
+        values[greaterStart] = values[index];
+        values[index] = value;
+        greaterStart -= 1;
+      } else {
+        index += 1;
+      }
+    }
+  }
+  return SelectionPartition { lessEnd: lessEnd, equalEnd: greaterStart + 1 };
+}
+
+fun selectNthInPlace<T>(values: [T], target: number, less: fun(T, T): bool) {
+  let low = 0;
+  let high = values.len() - 1;
+  while (low < high) {
+    let pivotIndex = floor((low + high) / 2);
+    let partition = partitionSelection(values, low, high, pivotIndex, less);
+    if (target < partition.lessEnd) {
+      high = partition.lessEnd - 1;
+    } else {
+      if (target >= partition.equalEnd) {
+        low = partition.equalEnd;
+      } else {
+        return;
+      }
+    }
+  }
+}
+
 fun topKSmallest<T>(values: [T], count: number, less: fun(T, T): bool): [T] {
   let result: [T] = [];
   if (floor(count) != count || count <= 0 || values.len() == 0) {
     return result;
   }
 
-  let ordered = mergeSort(values, less);
+  let work = copy(values);
   let limit = count;
-  if (limit > ordered.len()) {
-    limit = ordered.len();
+  if (limit > work.len()) {
+    limit = work.len();
   }
+  selectNthInPlace(work, limit - 1, less);
   let index = 0;
   while (index < limit) {
-    result.push(ordered[index]);
+    result.push(work[index]);
     index += 1;
   }
-  return result;
+  return mergeSort(result, less);
 }
 
 fun topKLargest<T>(values: [T], count: number, less: fun(T, T): bool): [T] {
@@ -368,33 +424,37 @@ fun topKLargest<T>(values: [T], count: number, less: fun(T, T): bool): [T] {
     return result;
   }
 
-  let ordered = mergeSort(values, less);
+  let work = copy(values);
   let limit = count;
-  if (limit > ordered.len()) {
-    limit = ordered.len();
+  if (limit > work.len()) {
+    limit = work.len();
   }
-  let start = ordered.len() - limit;
-  while (start < ordered.len()) {
-    result.push(ordered[start]);
+  let start = work.len() - limit;
+  selectNthInPlace(work, start, less);
+  while (start < work.len()) {
+    result.push(work[start]);
     start += 1;
   }
-  return result;
+  return mergeSort(result, less);
 }
 
 fun kthSmallest<T>(values: [T], rank: number, less: fun(T, T): bool): optional<T> {
   if (floor(rank) != rank || rank < 0 || rank >= values.len()) {
     return nil;
   }
-  let ordered = mergeSort(values, less);
-  return ordered[rank];
+  let work = copy(values);
+  selectNthInPlace(work, rank, less);
+  return work[rank];
 }
 
 fun kthLargest<T>(values: [T], rank: number, less: fun(T, T): bool): optional<T> {
   if (floor(rank) != rank || rank < 0 || rank >= values.len()) {
     return nil;
   }
-  let ordered = mergeSort(values, less);
-  return ordered[ordered.len() - rank - 1];
+  let work = copy(values);
+  let target = work.len() - rank - 1;
+  selectNthInPlace(work, target, less);
+  return work[target];
 }
 
 fun countInversions(values: [number]): number {

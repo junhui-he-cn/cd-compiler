@@ -843,10 +843,14 @@ The former returns the first values and the latter the last values of the
 ordered input; both clamp an oversized count to the input length and return
 `[]` for empty, non-positive, or non-integral counts. `kthSmallest<T>` and
 `kthLargest<T>` use a zero-based rank and return `nil` for an empty, negative,
-non-integral, or out-of-range rank. These are the correctness-first baseline:
-each uses stable merge sort, takes `O(n log n)` time, `O(n)` temporary space,
-and leaves the input unchanged. A heap/selection implementation can replace
-the internals later without changing this API contract.
+non-integral, or out-of-range rank. The selection functions copy the input,
+use three-way quickselect to isolate the requested prefix/suffix, and merge-sort
+only that selected segment before returning it. They take average `O(n + k log k)`
+time for `k = min(count, n)`, `O(n^2)` worst-case time with the current middle
+pivot, and `O(n + k)` outer-array space. The `kth` functions take average `O(n)`
+and `O(n^2)` worst-case time with `O(n)` work space. Inputs remain unchanged;
+comparator-equal values are ordered correctly but their relative order is not a
+stability guarantee.
 
 `countInversions(values)` counts pairs `i < j` for which
 `values[i] > values[j]`. It returns `0` for empty, one-element, or already
