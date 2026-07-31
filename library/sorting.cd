@@ -343,6 +343,83 @@ fun mergeSort<T>(values: [T], less: fun(T, T): bool): [T] {
   return result;
 }
 
+fun countInversions(values: [number]): number {
+  let result = copy(values);
+  let inversions = 0;
+  let width = 1;
+  while (width < result.len()) {
+    let start = 0;
+    while (start < result.len()) {
+      let middle = start + width;
+      if (middle > result.len()) {
+        middle = result.len();
+      }
+      let end = middle + width;
+      if (end > result.len()) {
+        end = result.len();
+      }
+
+      let leftIndex = start;
+      let rightIndex = middle;
+      let merged: [number] = [];
+      while (leftIndex < middle && rightIndex < end) {
+        if (result[rightIndex] < result[leftIndex]) {
+          merged.push(result[rightIndex]);
+          inversions += middle - leftIndex;
+          rightIndex += 1;
+        } else {
+          merged.push(result[leftIndex]);
+          leftIndex += 1;
+        }
+      }
+      while (leftIndex < middle) {
+        merged.push(result[leftIndex]);
+        leftIndex += 1;
+      }
+      while (rightIndex < end) {
+        merged.push(result[rightIndex]);
+        rightIndex += 1;
+      }
+
+      let mergedIndex = 0;
+      while (mergedIndex < merged.len()) {
+        result[start + mergedIndex] = merged[mergedIndex];
+        mergedIndex += 1;
+      }
+      start = end;
+    }
+    width *= 2;
+  }
+  return inversions;
+}
+
+fun stablePartition<T>(values: [T], predicate: fun(T): bool): [T] {
+  let selected: [T] = [];
+  let rejected: [T] = [];
+  let index = 0;
+  while (index < values.len()) {
+    if (predicate(values[index])) {
+      selected.push(values[index]);
+    } else {
+      rejected.push(values[index]);
+    }
+    index += 1;
+  }
+
+  let result: [T] = [];
+  index = 0;
+  while (index < selected.len()) {
+    result.push(selected[index]);
+    index += 1;
+  }
+  index = 0;
+  while (index < rejected.len()) {
+    result.push(rejected[index]);
+    index += 1;
+  }
+  return result;
+}
+
 fun quickSortRange<T>(values: [T], start: number, end: number, less: fun(T, T): bool) {
   if (start >= end) {
     return;
@@ -475,4 +552,4 @@ fun slidingWindows<T>(values: [T], width: number): [[T]] {
 }
 
 
-export peakIndex, isMountainArray, mountainPeakIndex, lowerBound, upperBound, binarySearch, rotatedBinarySearch, countValue, isSorted, sortArray, sortArrayInPlace, shellSort, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, minimumSpanningForestKruskal;
+export peakIndex, isMountainArray, mountainPeakIndex, lowerBound, upperBound, binarySearch, rotatedBinarySearch, countValue, isSorted, sortArray, sortArrayInPlace, shellSort, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, countInversions, stablePartition, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, minimumSpanningForestKruskal;

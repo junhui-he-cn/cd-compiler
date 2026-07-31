@@ -51,7 +51,8 @@ export Matrix, newMatrix
 export peakIndex, isMountainArray, mountainPeakIndex, lowerBound, upperBound,
        binarySearch, rotatedBinarySearch, countValue, isSorted, sortArray,
        sortArrayInPlace, shellSort, selectionSort, selectionSortInPlace,
-       bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace,
+       bubbleSort, bubbleSortInPlace, mergeSort, countInversions, quickSort,
+       stablePartition, quickSortInPlace,
        heapSort, heapSortInPlace, chunkArray, slidingWindows,
        minimumSpanningForestKruskal
        from "./sorting.cd";

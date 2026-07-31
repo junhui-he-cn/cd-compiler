@@ -169,6 +169,11 @@ print ds.treeInorder(ordered);
 print ds.sortArray(values, ascending);
 print ds.shellSort(values, ascending);
 print ds.mergeSort(values, ascending);
+print ds.countInversions(values);
+fun atMostThree(value: number): bool {
+  return value <= 3;
+}
+print ds.stablePartition(values, atMostThree);
 print ds.quickSort(values, ascending);
 print ds.heapSort(values, ascending);
 print ds.chunkArray(values, 2);
@@ -784,6 +789,18 @@ the input unchanged. It uses bottom-up merge sort in `O(n log n)` time and
 `O(n)` temporary outer-array space. Equal comparator values keep their input
 order.
 
+`countInversions(values)` counts pairs `i < j` for which
+`values[i] > values[j]`. It returns `0` for empty, one-element, or already
+non-decreasing inputs, leaves the input unchanged, and uses the same bottom-up
+merge structure in `O(n log n)` time with `O(n)` temporary outer-array space.
+
+`stablePartition<T>(values, predicate)` returns a new array with every value
+accepted by `predicate: fun(T): bool` before every rejected value. It preserves
+the original order within both groups, invokes the predicate once per input
+element, leaves the input unchanged, and uses `O(n)` time and `O(n)` additional
+outer-array space. Empty input and an all-rejected input retain their natural
+empty/order behavior.
+
 `quickSort<T>(values, less)` returns a sorted shallow copy, while
 `quickSortInPlace<T>(values, less)` sorts the supplied array. Quick sort is not
 stable; the middle-element pivot gives average `O(n log n)` time but the worst
@@ -1239,7 +1256,8 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case array_algorithms_prefix_monotonic`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
 `--case array_algorithms_binary_search`, `--case array_algorithms_rotated_search`,
-`--case array_algorithms_merge_sort`, `--case array_algorithms_merge_sorted`,
+`--case array_algorithms_merge_sort`, `--case array_algorithms_inversions`,
+`--case array_algorithms_merge_sorted`, `--case array_algorithms_partition`,
 `--case array_algorithms_rotation`,
 `--case array_algorithms_frequency`,
 `--case array_algorithms_quick_sort`, `--case array_algorithms_heap_sort`,

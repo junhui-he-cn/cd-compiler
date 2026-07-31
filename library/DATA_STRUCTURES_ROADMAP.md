@@ -62,6 +62,8 @@
 - Huffman 贪心核心：`huffmanMergeCost`。
 - 双指针算法：`mergeSortedNumbers`、`twoSumSorted`、`threeSumZero`。
 - 多路有序数组合并：`mergeSortedArrays`。
+- 逆序对统计：`countInversions`。
+- 稳定分区：`stablePartition`。
 - 数组集合算法：`uniqueValues`、`intersectionValues`、`unionValues`、`differenceValues`。
 - 固定窗口统计：`windowSums`、`maxWindowSum`。
 - 子数组统计：`maxSubarraySum`。
@@ -310,6 +312,12 @@ enum Result<T, E> {
 至多指定分段数时的最小最大段和；空数组返回 `0`，非法分段数或元素返回 `nil`，
 时间复杂度为 `O(n log S)`，其中 `S` 是元素总和。
 `mergeSort` 使用稳定的自底向上归并排序，返回新数组，不改变输入。
+`countInversions` 在同一归并过程中统计 `i < j` 且 `values[i] > values[j]` 的
+严格逆序对，返回 `0` 表示没有逆序对，输入保持不变；时间复杂度为 `O(n log n)`，
+额外数组空间为 `O(n)`。
+`stablePartition<T>` 按谓词把满足条件的元素放到前面、其余元素放到后面，分别
+保持两组元素的输入顺序，返回新数组且不修改输入；它只依赖一元谓词，时间复杂度
+为 `O(n)`，额外数组空间为 `O(n)`。
 `shellSort` 使用从 `n / 2` 开始不断折半的 gap 序列和分组插入排序，返回浅拷贝，
 不保证稳定性；当前序列的最坏时间复杂度为 `O(n^2)`，额外结果空间为 `O(n)`。
 `quickSort` 和 `quickSortInPlace` 使用中点 pivot 的原地分区版本；它们不保证
@@ -359,7 +367,9 @@ enum Result<T, E> {
 - 去重、保序去重、频率统计、交集、并集、差集；
 - 前缀和、差分数组、前缀最小/最大值；
 - 两指针、滑动窗口、快慢指针、单调栈、单调队列；
+- 稳定分区（`stablePartition`）；
 - 合并两个有序数组、合并多个有序数组（`mergeSortedArrays`）、区间合并和区间相交；
+- 逆序对统计（`countInversions`）；
 - 子数组最大和、最长无重复子数组、固定/可变窗口统计；
 - 逆序对、配对和、三数和、最接近目标值等常用题型。
 
