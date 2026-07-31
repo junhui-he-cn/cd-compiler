@@ -65,7 +65,7 @@
 - 逆序对统计：`countInversions`。
 - 稳定分区：`stablePartition`。
 - 数组集合算法：`uniqueValues`、`intersectionValues`、`unionValues`、`differenceValues`。
-- 固定窗口统计：`windowSums`、`maxWindowSum`。
+- 固定窗口统计：`windowSums`、`maxWindowSum`、`maxWindowValues`。
 - 子数组统计：`maxSubarraySum`。
 - 基础数值算法：`gcd`、`lcm`、`extendedGcd`、`isPrime`、`sievePrimes`、`fastPower`、
   `factorial`、`fibonacci`（整数输入契约）。
@@ -285,7 +285,8 @@ enum Result<T, E> {
 `uniqueValues`、`intersectionValues`、`unionValues` 和 `differenceValues` 已
 提供保序去重、交集、并集和差集的线性扫描版本。
 `windowSums` 使用滚动和生成每个固定宽度窗口的和，`maxWindowSum` 在这些
-窗口中选择最大值；非法窗口宽度返回空数组或 `nil`。
+窗口中选择最大值；`maxWindowValues` 使用单调索引队列返回每个窗口的最大值。
+非法窗口宽度返回空数组或 `nil`。
 `differenceArray`、`prefixMinimums` 和 `prefixMaximums` 提供数值数组的相邻差分
 及前缀极值；`nextGreaterValues` 使用单调栈返回每个位置右侧第一个严格更大值，
 不存在时使用 `-1`。
@@ -368,6 +369,7 @@ enum Result<T, E> {
 - 去重、保序去重、频率统计、交集、并集、差集；
 - 前缀和、差分数组、前缀最小/最大值；
 - 两指针、滑动窗口、快慢指针、单调栈、单调队列；
+- 单调队列窗口最大值（`maxWindowValues`）；
 - 稳定分区（`stablePartition`）；
 - 合并两个有序数组、合并多个有序数组（`mergeSortedArrays`）、区间合并和区间相交；
 - 逆序对统计（`countInversions`）；

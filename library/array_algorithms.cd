@@ -602,6 +602,32 @@ fun maxWindowSum(values: [number], width: number): optional<number> {
   return best;
 }
 
+fun maxWindowValues(values: [number], width: number): [number] {
+  let result: [number] = [];
+  if (floor(width) != width || width <= 0 || width > values.len()) {
+    return result;
+  }
+
+  let candidates: [number] = [];
+  let head = 0;
+  let index = 0;
+  while (index < values.len()) {
+    while (head < candidates.len() && candidates[head] <= index - width) {
+      head += 1;
+    }
+    while (candidates.len() > head
+           && values[candidates[candidates.len() - 1]] <= values[index]) {
+      candidates.pop();
+    }
+    candidates.push(index);
+    if (index >= width - 1) {
+      result.push(values[candidates[head]]);
+    }
+    index += 1;
+  }
+  return result;
+}
+
 fun maxSubarraySum(values: [number]): optional<number> {
   if (values.len() == 0) {
     return nil;
@@ -626,4 +652,4 @@ fun maxSubarraySum(values: [number]): optional<number> {
 }
 
 
-export prefixSums, differenceArray, prefixMinimums, prefixMaximums, nextGreaterValues, largestHistogramArea, Interval, mergeIntervals, intersectIntervals, selectNonOverlappingIntervals, minimumIntervalRooms, canReachEnd, minimumJumps, huffmanMergeCost, mergeSortedNumbers, mergeSortedArrays, twoSumSorted, threeSumZero, uniqueValues, intersectionValues, unionValues, differenceValues, frequencyEntries, mostFrequent, windowSums, maxWindowSum, maxSubarraySum;
+export prefixSums, differenceArray, prefixMinimums, prefixMaximums, nextGreaterValues, largestHistogramArea, Interval, mergeIntervals, intersectIntervals, selectNonOverlappingIntervals, minimumIntervalRooms, canReachEnd, minimumJumps, huffmanMergeCost, mergeSortedNumbers, mergeSortedArrays, twoSumSorted, threeSumZero, uniqueValues, intersectionValues, unionValues, differenceValues, frequencyEntries, mostFrequent, windowSums, maxWindowSum, maxWindowValues, maxSubarraySum;
