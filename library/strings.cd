@@ -317,6 +317,33 @@ fun minimumWindowSubstring(text: string, pattern: string): string {
   return text.substr(bestStart, bestLength);
 }
 
+fun canSegmentString(text: string, dictionary: [string]): bool {
+  let reachable: [bool] = [];
+  let index = 0;
+  while (index <= text.len()) {
+    reachable.push(false);
+    index += 1;
+  }
+  reachable[0] = true;
+
+  let end = 1;
+  while (end <= text.len()) {
+    let wordIndex = 0;
+    while (wordIndex < dictionary.len()) {
+      let word = dictionary[wordIndex];
+      if (word.len() > 0 && word.len() <= end
+          && reachable[end - word.len()]
+          && text.substr(end - word.len(), word.len()) == word) {
+        reachable[end] = true;
+        break;
+      }
+      wordIndex += 1;
+    }
+    end += 1;
+  }
+  return reachable[text.len()];
+}
+
 fun isBalancedBrackets(text: string): bool {
   let stack: [string] = [];
   let index = 0;
@@ -566,4 +593,4 @@ fun newTrie(): Trie {
 }
 
 
-export Trie, newTrie, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, minimumWindowSubstring, longestUniqueSubstringLength, longestPalindromicSubstring, isBalancedBrackets;
+export Trie, newTrie, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, minimumWindowSubstring, canSegmentString, longestUniqueSubstringLength, longestPalindromicSubstring, isBalancedBrackets;

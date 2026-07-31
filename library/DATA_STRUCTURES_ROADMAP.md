@@ -83,7 +83,7 @@
 - 二分查找：`lowerBound`、`upperBound`、`binarySearch`。
 - 字符串比较辅助：`compareStrings`、`stringLess`（当前限定可打印 ASCII）。
 - 字符串匹配：`findSubstring`、`prefixFunction`、`zFunction`、`kmpSearch`、`isPalindrome`、
-  `minimumWindowSubstring`。
+  `minimumWindowSubstring`、`canSegmentString`。
 - Trie：`Trie`、`newTrie`、`insert`、`discard`、`has`、`startsWith`、`wordsWithPrefix`。
 - Fenwick 树：数值 `FenwickTree`，支持点更新、前缀和、区间和与快照。
 - 线段树：数值 `SegmentTree`，支持点更新、区间和、区间最小值与快照。
@@ -494,7 +494,7 @@ enum Result<T, E> {
 - Trie 前缀查找和补全；
 - Rabin-Karp 作为哈希契约确定后的可选实现；
 - 编辑距离、最长公共子序列、最长公共子串；
-- 字符串分割和字典匹配。
+- 字符串分割和字典匹配 `canSegmentString` 已完成。
 
 字符串位置必须遵守项目文档的 Unicode scalar value 规则，不能把字节下标
 当作公共 API 的默认下标。

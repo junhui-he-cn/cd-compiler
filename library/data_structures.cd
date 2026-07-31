@@ -39,6 +39,7 @@ export DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge,
 export Trie, newTrie, reverseArray, rotateArray, linearSearch, compareStrings,
        stringLess, findSubstring, prefixFunction, zFunction, kmpSearch,
        isPalindrome, characterFrequency, areAnagrams, minimumWindowSubstring,
+       canSegmentString,
        longestUniqueSubstringLength, longestPalindromicSubstring,
        isBalancedBrackets
        from "./strings.cd";

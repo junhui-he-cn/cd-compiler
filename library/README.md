@@ -1049,6 +1049,14 @@ solution; equal-length candidates keep the leftmost window. The current
 `MultiSet`-backed implementation takes `O(n * k)` time, where `k` is the number
 of distinct pattern characters, and `O(k)` auxiliary space.
 
+`canSegmentString(text, dictionary)` returns whether the text can be formed by
+concatenating whole dictionary words. Empty dictionary entries are ignored,
+empty text is segmentable, and a non-empty text with no valid segmentation
+returns `false`. Matching uses Unicode scalar-value positions and dynamic
+programming; with `d` dictionary entries and maximum word length `w`, the
+current substring-based implementation takes `O(n * d * w)` time and `O(n)`
+space.
+
 `longestUniqueSubstringLength(text)` returns the length of the longest substring
 with no repeated Unicode scalar values. The current array-backed window scan
 takes `O(n^2)` time and `O(n)` temporary space; an empty string returns `0`.
@@ -1302,6 +1310,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case algorithms_string_trie`, `--case data_structures_trie_remove`,
 `--case algorithms_string_sequences`,
 `--case algorithms_string_window`,
+`--case algorithms_string_dictionary`,
 `--case algorithms_stack`,
 `--case algorithms_graph_max_flow`, `--case algorithms_graph_min_cut`,
 `--case array_algorithms_basic`,
