@@ -1123,10 +1123,11 @@ space, where `k` is the number of distinct pattern characters.
 `canSegmentString(text, dictionary)` returns whether the text can be formed by
 concatenating whole dictionary words. Empty dictionary entries are ignored,
 empty text is segmentable, and a non-empty text with no valid segmentation
-returns `false`. Matching uses Unicode scalar-value positions and dynamic
-programming; with `d` dictionary entries and maximum word length `w`, the
-current substring-based implementation takes `O(n * d * w)` time and `O(n)`
-space.
+returns `false`. Matching uses a Unicode scalar-value Trie and dynamic
+programming from reachable text positions. With `D` total dictionary
+characters, `w` maximum word length, and `e` maximum outgoing-edge scan, it
+takes `O((D + n * w) * e)` time and `O(D + n)` space; empty dictionary words
+are not inserted.
 
 `longestUniqueSubstringLength(text)` returns the length of the longest substring
 with no repeated Unicode scalar values. It uses a string-keyed last-seen map and

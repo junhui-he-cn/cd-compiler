@@ -349,33 +349,6 @@ fun minimumWindowSubstring(text: string, pattern: string): string {
   return text.substr(bestStart, bestLength);
 }
 
-fun canSegmentString(text: string, dictionary: [string]): bool {
-  let reachable: [bool] = [];
-  let index = 0;
-  while (index <= text.len()) {
-    reachable.push(false);
-    index += 1;
-  }
-  reachable[0] = true;
-
-  let end = 1;
-  while (end <= text.len()) {
-    let wordIndex = 0;
-    while (wordIndex < dictionary.len()) {
-      let word = dictionary[wordIndex];
-      if (word.len() > 0 && word.len() <= end
-          && reachable[end - word.len()]
-          && text.substr(end - word.len(), word.len()) == word) {
-        reachable[end] = true;
-        break;
-      }
-      wordIndex += 1;
-    }
-    end += 1;
-  }
-  return reachable[text.len()];
-}
-
 fun isBalancedBrackets(text: string): bool {
   let stack: [string] = [];
   let index = 0;
@@ -644,6 +617,47 @@ fun newTrie(): Trie {
     edgeChildren: edgeChildren,
     terminal: terminal
   };
+}
+
+fun canSegmentString(text: string, dictionary: [string]): bool {
+  let trie = newTrie();
+  let dictionaryIndex = 0;
+  while (dictionaryIndex < dictionary.len()) {
+    let word = dictionary[dictionaryIndex];
+    if (word.len() > 0) {
+      trie.insert(word);
+    }
+    dictionaryIndex += 1;
+  }
+
+  let reachable: [bool] = [];
+  let index = 0;
+  while (index <= text.len()) {
+    reachable.push(false);
+    index += 1;
+  }
+  reachable[0] = true;
+
+  let start = 0;
+  while (start < text.len()) {
+    if (reachable[start]) {
+      let node = 0;
+      let end = start;
+      while (end < text.len()) {
+        let child = trie.findChild(node, text.charAt(end));
+        if (child < 0) {
+          break;
+        }
+        node = child;
+        end += 1;
+        if (trie.terminal[node]) {
+          reachable[end] = true;
+        }
+      }
+    }
+    start += 1;
+  }
+  return reachable[text.len()];
 }
 
 

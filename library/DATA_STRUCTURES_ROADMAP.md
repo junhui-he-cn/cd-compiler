@@ -507,7 +507,8 @@ enum Result<T, E> {
 - Trie 前缀查找和补全；
 - Rabin-Karp 作为哈希契约确定后的可选实现；
 - 编辑距离、最长公共子序列、最长公共子串；
-- 字符串分割和字典匹配 `canSegmentString` 已完成。
+- 字符串分割和字典匹配 `canSegmentString` 已完成，使用 Trie 从可达位置做
+  前缀遍历，避免逐终点扫描整个字典。
 
 字符串位置必须遵守项目文档的 Unicode scalar value 规则，不能把字节下标
 当作公共 API 的默认下标。
