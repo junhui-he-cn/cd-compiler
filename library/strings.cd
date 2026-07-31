@@ -373,23 +373,24 @@ fun isBalancedBrackets(text: string): bool {
 }
 
 fun longestUniqueSubstringLength(text: string): number {
+  let lastSeen: map<string, number> = {};
   let best = 0;
   let start = 0;
-  while (start < text.len()) {
-    let seen: [string] = [];
-    let index = start;
-    while (index < text.len()) {
-      let character = text.charAt(index);
-      if (linearSearch(seen, character) >= 0) {
-        break;
+  let index = 0;
+  while (index < text.len()) {
+    let character = text.charAt(index);
+    if (lastSeen.contains(character)) {
+      let previous = lastSeen[character];
+      if (previous >= start) {
+        start = previous + 1;
       }
-      seen.push(character);
-      index += 1;
     }
-    if (seen.len() > best) {
-      best = seen.len();
+    lastSeen[character] = index;
+    let length = index - start + 1;
+    if (length > best) {
+      best = length;
     }
-    start += 1;
+    index += 1;
   }
   return best;
 }

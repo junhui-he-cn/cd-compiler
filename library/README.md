@@ -1123,8 +1123,10 @@ current substring-based implementation takes `O(n * d * w)` time and `O(n)`
 space.
 
 `longestUniqueSubstringLength(text)` returns the length of the longest substring
-with no repeated Unicode scalar values. The current array-backed window scan
-takes `O(n^2)` time and `O(n)` temporary space; an empty string returns `0`.
+with no repeated Unicode scalar values. It uses a string-keyed last-seen map and
+a moving window for average `O(n)` time and `O(n)` space; an empty string
+returns `0`. This string-specific map use does not change the library's
+generic hash-container boundary.
 `longestPalindromicSubstring(text)` uses Manacher radii over Unicode scalar
 values and returns the leftmost longest palindrome, or `""` for empty input.
 It takes `O(n)` time and `O(n)` auxiliary space in addition to the returned

@@ -315,9 +315,9 @@ enum Result<T, E> {
 语言层现在额外提供 Unicode scalar-value 字符串排序和比较运算符。
 `findSubstring`、`prefixFunction`、`zFunction` 和 `kmpSearch` 使用现有 Unicode scalar-value
 字符串位置语义；`isPalindrome` 按 scalar value 比较字符，不依赖 ASCII 排序。
-`longestUniqueSubstringLength` 用数组窗口扫描 Unicode scalar value，返回最长无重复
-子串长度；`longestPalindromicSubstring` 用 Manacher 半径数组返回最左最长回文子串，空串
-分别返回 `0` 和空串，前者为 `O(n^2)`，后者为 `O(n)` 时间和 `O(n)` 辅助空间。
+`longestUniqueSubstringLength` 用 string-keyed map 保存最后出现位置和滑动窗口，返回
+最长无重复子串长度，平均为 `O(n)`；`longestPalindromicSubstring` 用 Manacher 半径数组
+返回最左最长回文子串，空串分别返回 `0` 和空串，后者为 `O(n)` 时间和 `O(n)` 辅助空间。
 `longestUniqueSubarrayLength<T: Eq>` 对任意可相等比较的数组元素返回最长无重复
 连续区间长度；它保持输入不变，空数组返回 `0`，使用不依赖通用哈希的数组窗口扫描，
 最坏时间复杂度为 `O(n^2)`、额外空间为 `O(1)`。
