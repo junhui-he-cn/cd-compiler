@@ -80,7 +80,8 @@
 - 一维 DP：`climbStairs`、`maxNonAdjacentSum`、`minCoinCount`。
 - 网格/字符串 DP：`uniqueGridPaths`、`uniqueGridPathsWithObstacles`、
   `minGridPathSum`、`editDistance`。
-- 序列 DP：`longestIncreasingSubsequenceLength`、`longestIncreasingSubsequence`、
+- 序列 DP：`longestIncreasingSubsequenceLength`、`longestIncreasingSubsequence`（两者均为
+  `O(n log n)` 长度/重建）、
   `longestCommonSubsequenceLength`、`longestCommonSubsequence`、
   `longestCommonSubstringLength`、`longestCommonSubstring`。
 - 区间 DP：`matrixChainCost`、`mergeStonesCost`。
@@ -530,7 +531,7 @@ enum Result<T, E> {
 
 - 一维 DP：爬楼梯、打家劫舍、硬币兑换；
 - 背包：0/1、完全、多重背包已完成；
-- 序列：LIS（长度 `O(n log n)`，以及 `O(n²)` predecessor 重建）、LCS、最长公共子串（长度和重建）、编辑距离；
+- 序列：LIS（长度和 predecessor 重建均为 `O(n log n)`）、LCS、最长公共子串（长度和重建）、编辑距离；
 - 网格：路径计数、障碍物路径、最小路径和已完成；
 - 区间 DP：矩阵链、二路合并石子已完成；
 - 贪心：区间调度、区间资源分配、跳跃游戏、Huffman 合并核心已完成；

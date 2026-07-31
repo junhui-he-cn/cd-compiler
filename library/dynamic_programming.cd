@@ -255,35 +255,29 @@ fun longestIncreasingSubsequence(values: [number]): [number] {
     return result;
   }
 
-  let lengths: [number] = [];
+  let tails: [number] = [];
+  let tailIndices: [number] = [];
   let predecessors: [number] = [];
   let index = 0;
   while (index < values.len()) {
-    lengths.push(1);
     predecessors.push(-1);
-    index += 1;
-  }
-
-  let bestEnd = 0;
-  index = 0;
-  while (index < values.len()) {
-    let previous = 0;
-    while (previous < index) {
-      if (values[previous] < values[index]
-          && lengths[previous] + 1 > lengths[index]) {
-        lengths[index] = lengths[previous] + 1;
-        predecessors[index] = previous;
-      }
-      previous += 1;
+    let position = lisLowerBound(tails, values[index]);
+    if (position > 0) {
+      predecessors[index] = tailIndices[position - 1];
     }
-    if (lengths[index] > lengths[bestEnd]) {
-      bestEnd = index;
+
+    if (position == tails.len()) {
+      tails.push(values[index]);
+      tailIndices.push(index);
+    } else {
+      tails[position] = values[index];
+      tailIndices[position] = index;
     }
     index += 1;
   }
 
   let reversed: [number] = [];
-  let current = bestEnd;
+  let current = tailIndices[tailIndices.len() - 1];
   while (current >= 0) {
     reversed.push(values[current]);
     current = predecessors[current];
