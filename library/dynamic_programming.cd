@@ -278,6 +278,37 @@ fun longestCommonSubsequenceLength(left: string, right: string): number {
   return previous[right.len()];
 }
 
+fun longestCommonSubstringLength(left: string, right: string): number {
+  let previous: [number] = [];
+  let index = 0;
+  while (index <= right.len()) {
+    previous.push(0);
+    index += 1;
+  }
+
+  let best = 0;
+  let leftIndex = 1;
+  while (leftIndex <= left.len()) {
+    let current: [number] = [0];
+    let rightIndex = 1;
+    while (rightIndex <= right.len()) {
+      if (left.charAt(leftIndex - 1) == right.charAt(rightIndex - 1)) {
+        let length = previous[rightIndex - 1] + 1;
+        current.push(length);
+        if (length > best) {
+          best = length;
+        }
+      } else {
+        current.push(0);
+      }
+      rightIndex += 1;
+    }
+    previous = current;
+    leftIndex += 1;
+  }
+  return best;
+}
+
 fun matrixChainCost(dimensions: [number]): optional<number> {
   let index = 0;
   while (index < dimensions.len()) {
@@ -511,4 +542,4 @@ fun boundedKnapsack(weights: [number], values: [number], counts: [number], capac
 }
 
 
-export climbStairs, maxNonAdjacentSum, minCoinCount, uniqueGridPaths, uniqueGridPathsWithObstacles, minGridPathSum, editDistance, longestIncreasingSubsequenceLength, longestCommonSubsequenceLength, matrixChainCost, matrixPower2x2, mergeStonesCost, knapsack01, completeKnapsack, boundedKnapsack;
+export climbStairs, maxNonAdjacentSum, minCoinCount, uniqueGridPaths, uniqueGridPathsWithObstacles, minGridPathSum, editDistance, longestIncreasingSubsequenceLength, longestCommonSubsequenceLength, longestCommonSubstringLength, matrixChainCost, matrixPower2x2, mergeStonesCost, knapsack01, completeKnapsack, boundedKnapsack;

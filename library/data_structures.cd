@@ -49,25 +49,29 @@ export Matrix, newMatrix
        from "./matrix.cd";
 
 export peakIndex, isMountainArray, mountainPeakIndex, lowerBound, upperBound,
-       binarySearch, countValue, isSorted, sortArray,
+       binarySearch, rotatedBinarySearch, countValue, isSorted, sortArray,
        sortArrayInPlace, shellSort, selectionSort, selectionSortInPlace,
-       bubbleSort, bubbleSortInPlace, mergeSort, quickSort, quickSortInPlace,
+       bubbleSort, bubbleSortInPlace, mergeSort, countInversions, quickSort,
+       stablePartition, quickSortInPlace,
        heapSort, heapSortInPlace, chunkArray, slidingWindows,
        minimumSpanningForestKruskal
        from "./sorting.cd";
 
 export prefixSums, differenceArray, prefixMinimums, prefixMaximums,
-       nextGreaterValues, largestHistogramArea, Interval, mergeIntervals,
+       nextGreaterValues, nextSmallerValues, largestHistogramArea, Interval, mergeIntervals,
        intersectIntervals, selectNonOverlappingIntervals, minimumIntervalRooms,
        canReachEnd, minimumJumps, huffmanMergeCost, mergeSortedNumbers,
-       twoSumSorted, threeSumZero, uniqueValues, intersectionValues,
+       mergeSortedArrays, twoSumSorted, threeSumZero, uniqueValues,
+       threeSumClosest, intersectionValues,
        unionValues, differenceValues, frequencyEntries, mostFrequent,
-       windowSums, maxWindowSum, maxSubarraySum
+       windowSums, maxWindowSum, maxWindowValues, minWindowValues,
+       maxSubarraySum
        from "./array_algorithms.cd";
 
 export climbStairs, maxNonAdjacentSum, minCoinCount, uniqueGridPaths,
        uniqueGridPathsWithObstacles, minGridPathSum, editDistance,
        longestIncreasingSubsequenceLength, longestCommonSubsequenceLength,
+       longestCommonSubstringLength,
        matrixChainCost, matrixPower2x2, mergeStonesCost, knapsack01,
        completeKnapsack, boundedKnapsack
        from "./dynamic_programming.cd";

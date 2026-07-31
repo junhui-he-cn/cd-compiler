@@ -1,0 +1,19 @@
+import "../../data_structures.cd" as ds;
+
+fun ascendingNumber(left: number, right: number): bool {
+  return left < right;
+}
+
+print ds.rotatedBinarySearch([4, 5, 6, 7, 0, 1, 2], 0, ascendingNumber);
+print ds.rotatedBinarySearch([4, 5, 6, 7, 0, 1, 2], 3, ascendingNumber);
+print ds.rotatedBinarySearch([1, 2, 3, 4, 5], 4, ascendingNumber);
+print ds.rotatedBinarySearch([2, 5, 6, 0, 0, 1, 2], 0, ascendingNumber);
+print ds.rotatedBinarySearch([2, 5, 6, 0, 0, 1, 2], 3, ascendingNumber);
+
+let words = ["cat", "dog", "fox", "ant", "bird"];
+print ds.rotatedBinarySearch(words, "ant", ds.stringLess);
+print ds.rotatedBinarySearch(words, "cow", ds.stringLess);
+print words;
+
+let empty: [number] = [];
+print ds.rotatedBinarySearch<number>(empty, 4, ascendingNumber);

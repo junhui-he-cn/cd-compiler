@@ -1,0 +1,56 @@
+import "../../data_structures.cd" as ds;
+
+fun ascendingNumber(left: number, right: number): bool {
+  return left < right;
+}
+
+let numbers: [[number]] = [
+  [1, 4, 7],
+  [2, 2, 6],
+  [],
+  [3, 5, 8]
+];
+print ds.mergeSortedArrays(numbers, ascendingNumber);
+print numbers;
+
+let words: [[string]] = [
+  ["ant", "fox"],
+  ["cat", "dog"],
+  ["bird"]
+];
+print ds.mergeSortedArrays(words, ds.stringLess);
+print words;
+
+struct Entry {
+  key: number,
+  label: string
+}
+
+fun entryLess(left: Entry, right: Entry): bool {
+  return left.key < right.key;
+}
+
+fun renderEntries(values: [Entry]): string {
+  let result = "";
+  let index = 0;
+  while (index < values.len()) {
+    if (index > 0) {
+      result = result + ",";
+    }
+    let value = values[index];
+    result = result + str(value.key) + ":" + value.label;
+    index += 1;
+  }
+  return result;
+}
+
+let entries: [[Entry]] = [
+  [Entry { key: 1, label: "a" }, Entry { key: 3, label: "c" }],
+  [Entry { key: 1, label: "b" }, Entry { key: 2, label: "d" }],
+  [Entry { key: 3, label: "e" }]
+];
+print renderEntries(ds.mergeSortedArrays(entries, entryLess));
+
+let empty: [[number]] = [];
+print ds.mergeSortedArrays<number>(empty, ascendingNumber);
+print ds.mergeSortedArrays<number>([[], []], ascendingNumber);

@@ -169,6 +169,11 @@ print ds.treeInorder(ordered);
 print ds.sortArray(values, ascending);
 print ds.shellSort(values, ascending);
 print ds.mergeSort(values, ascending);
+print ds.countInversions(values);
+fun atMostThree(value: number): bool {
+  return value <= 3;
+}
+print ds.stablePartition(values, atMostThree);
 print ds.quickSort(values, ascending);
 print ds.heapSort(values, ascending);
 print ds.chunkArray(values, 2);
@@ -191,13 +196,17 @@ print ds.minimumJumps([2, 3, 1, 1, 4]);
 print ds.huffmanMergeCost([5, 9, 12, 13, 16, 45]);
 
 print ds.mergeSortedNumbers([1, 3], [2, 4]);
+print ds.mergeSortedArrays([[1, 3], [2, 4]], ascending);
 print ds.twoSumSorted([1, 2, 4, 7], 6);
 print ds.threeSumZero([-1, 0, 1, 2, -1, -4]);
+print ds.threeSumClosest([-1, 2, 1, -4], 1);
 
 print ds.uniqueValues([3, 1, 3, 2]);
 print ds.unionValues([1, 2], [2, 3]);
 print ds.windowSums([2, -1, 3, 4, -2, 1], 3);
 print ds.maxWindowSum([2, -1, 3, 4, -2, 1], 3);
+print ds.maxWindowValues([2, -1, 3, 4, -2, 1], 3);
+print ds.minWindowValues([2, -1, 3, 4, -2, 1], 3);
 print ds.maxSubarraySum([-2, 1, -3, 4, -1, 2, 1, -5, 4]);
 
 fun ascendingNumber(left: number, right: number): bool {
@@ -207,12 +216,14 @@ fun ascendingNumber(left: number, right: number): bool {
 print ds.lowerBound([1, 2, 2, 4], 2, ascendingNumber);
 print ds.upperBound([1, 2, 2, 4], 2, ascendingNumber);
 print ds.binarySearch([1, 2, 2, 4], 2, ascendingNumber);
+print ds.rotatedBinarySearch([4, 5, 6, 7, 0, 1, 2], 0, ascendingNumber);
 print ds.peakIndex([1, 3, 5, 4, 2]);
 print ds.mountainPeakIndex([1, 3, 5, 4, 2]);
 print ds.minimumLargestPartitionSum([7, 2, 5, 10, 8], 2);
 print ds.compareStrings("ant", "apple");
 print ds.longestUniqueSubstringLength("abcabcbb");
 print ds.longestPalindromicSubstring("babad");
+print ds.longestCommonSubstringLength("ababc", "babca");
 
 print ds.knapsack01([2, 3, 4], [3, 4, 5], 5);
 print ds.completeKnapsack([2, 3], [3, 4], 7);
@@ -782,6 +793,18 @@ the input unchanged. It uses bottom-up merge sort in `O(n log n)` time and
 `O(n)` temporary outer-array space. Equal comparator values keep their input
 order.
 
+`countInversions(values)` counts pairs `i < j` for which
+`values[i] > values[j]`. It returns `0` for empty, one-element, or already
+non-decreasing inputs, leaves the input unchanged, and uses the same bottom-up
+merge structure in `O(n log n)` time with `O(n)` temporary outer-array space.
+
+`stablePartition<T>(values, predicate)` returns a new array with every value
+accepted by `predicate: fun(T): bool` before every rejected value. It preserves
+the original order within both groups, invokes the predicate once per input
+element, leaves the input unchanged, and uses `O(n)` time and `O(n)` additional
+outer-array space. Empty input and an all-rejected input retain their natural
+empty/order behavior.
+
 `quickSort<T>(values, less)` returns a sorted shallow copy, while
 `quickSortInPlace<T>(values, less)` sorts the supplied array. Quick sort is not
 stable; the middle-element pivot gives average `O(n log n)` time but the worst
@@ -804,13 +827,16 @@ Window and prefix helpers are also non-mutating:
 - `prefixMinimums` and `prefixMaximums` — return the running numeric extrema;
 - `nextGreaterValues(values: [number]): [number]` — return the first strictly
   greater value to the right, or `-1` when none exists.
+- `nextSmallerValues(values: [number]): [number]` — return the first strictly
+  smaller value to the right, or `-1` when none exists.
 
 `chunkArray` and `slidingWindows` return `[]` for non-positive sizes; sliding
 windows also return `[]` when the width exceeds the input length. Chunks and
 windows are fresh outer arrays with shallowly shared elements. Chunking and
 window generation are `O(n)` in the input plus output size; all prefix and
-difference helpers are `O(n)` and allocate one array. `nextGreaterValues` is
-`O(n)` time and `O(n)` stack/output space; equal values do not count as greater.
+difference helpers are `O(n)` and allocate one array. `nextGreaterValues` and
+`nextSmallerValues` are `O(n)` time and `O(n)` stack/output space; equal values
+do not count as greater or smaller.
 
 `isBalancedBrackets(text)` checks `()[]{}` nesting with an array-backed stack;
 non-bracket characters are ignored, and an empty string is balanced. It runs in
@@ -822,9 +848,13 @@ time and `O(n)` stack space.
 `windowSums(values, width)` returns the numeric sum of every fixed-width window
 using a rolling sum. `maxWindowSum(values, width)` returns the largest such sum,
 or `nil` when the width is non-positive, exceeds the input length, or the input
-is empty. Both functions leave the input unchanged; `windowSums` allocates one
-result array and runs in `O(n)`, while `maxWindowSum` runs in `O(n)` and uses
-`O(n)` temporary space for the current array-backed implementation.
+is empty. `maxWindowValues(values, width)` returns the maximum value from every
+window in left-to-right order; non-positive, non-integral, oversized, or empty
+inputs return `[]`. `minWindowValues(values, width)` returns the corresponding
+minimum from every window with the same invalid-width behavior. All four
+functions leave the input unchanged. The sum helpers run in `O(n)`, while both
+extrema functions use a monotonic index queue in `O(n)` time and
+`O(n)` auxiliary/output space.
 
 `maxSubarraySum(values)` returns the largest sum of a non-empty contiguous
 subarray, or `nil` for an empty input. It preserves the input and handles an
@@ -867,6 +897,10 @@ helpers and the obstacle-path helper. `editDistance` uses `O(leftLength * rightL
 length with `O(n^2)` time and `O(n)` space; equal values do not extend a
 subsequence. `longestCommonSubsequenceLength(left, right)` computes the LCS
 length over Unicode scalar values with `O(leftLength * rightLength)` time and
+`O(rightLength)` space.
+`longestCommonSubstringLength(left, right)` computes the longest contiguous
+common Unicode scalar-value run, returning its length. Empty inputs return `0`;
+the rolling-row DP uses `O(leftLength * rightLength)` time and
 `O(rightLength)` space.
 
 `matrixChainCost(dimensions)` computes the minimum scalar multiplication cost
@@ -940,6 +974,14 @@ position after all equivalent values. `binarySearch` returns the first matching
 index or `-1`. The three functions use `O(log n)` time and `O(1)` extra space;
 the comparator must define the same ordering used to sort the input. Empty
 arrays return insertion position `0` and `binarySearch` returns `-1`.
+
+`rotatedBinarySearch<T>(values, target, less)` searches a non-decreasing array
+that was rotated at one pivot and returns an index whose value is comparator-
+equivalent to `target`, or `-1` when no such value exists. It does not modify
+the input and returns `-1` for an empty array. With distinct values it runs in
+`O(log n)` time; duplicate values may make the sorted side ambiguous, so the
+duplicate-safe implementation can degrade to `O(n)`. The comparator defines
+equivalence through `!less(left, right) && !less(right, left)`.
 
 `peakIndex(values)` returns the index of a weak local peak using binary search;
 the empty input returns `nil`, and equal neighbors may make either edge of a
@@ -1095,11 +1137,26 @@ return the first matching `[leftIndex, rightIndex]`, or `[]` when no pair exists
 Both are `O(n)` time with `O(n)` output space for the returned arrays and do not
 modify their inputs. `twoSumSorted` requires its input to already be sorted.
 
+`mergeSortedArrays<T>(sequences, less)` merges any number of already sorted
+arrays into one new array. It accepts a strict `fun(T, T): bool` comparator,
+does not modify the outer or inner input arrays, and returns `[]` for an empty
+collection of arrays or when all arrays are empty. Comparator-equivalent values
+are selected by increasing source-array index, so the merge is stable across
+the input arrays. Scanning all `k` current heads takes `O(n * k)` time and
+`O(k)` position space, in addition to the `O(n)` output.
+
 `threeSumZero(values)` returns unique nondecreasing triples whose values sum to
 zero. It sorts a shallow copy, uses two pointers, and keeps triples in the
 sorted outer-index order; the input is unchanged. The algorithm takes
 `O(n^2)` time and `O(n)` auxiliary/output space. Empty and shorter-than-three
 inputs return `[]`.
+
+`threeSumClosest(values, target)` returns the sum of three distinct input
+positions whose value is closest to `target`, or `nil` when fewer than three
+values are supplied. It sorts a shallow copy and uses two pointers in
+`O(n^2)` time with `O(n)` auxiliary space, leaving the input unchanged. An
+exact target returns immediately; equal absolute distances choose the smaller
+sum for deterministic results.
 
 The array set helpers are non-mutating and remove duplicate output values while
 preserving the first occurrence order:
@@ -1216,17 +1273,20 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case numeric_algorithms_answer_space`,
 `--case algorithms_dp_1d`,
 `--case algorithms_dp_grid`,
-`--case algorithms_dp_sequences`,
+`--case algorithms_dp_sequences`, `--case algorithms_dp_common_substring`,
 `--case array_algorithms_sort`, `--case array_algorithms_windows`,
 `--case array_algorithms_prefix_monotonic`,
 `--case array_algorithms_intervals`, `--case array_algorithms_interval_intersection`,
-`--case array_algorithms_binary_search`, `--case array_algorithms_merge_sort`,
-`--case array_algorithms_rotation`,
+`--case array_algorithms_binary_search`, `--case array_algorithms_rotated_search`,
+`--case array_algorithms_merge_sort`, `--case array_algorithms_inversions`,
+`--case array_algorithms_merge_sorted`, `--case array_algorithms_partition`,
+`--case array_algorithms_window_max`, `--case array_algorithms_window_min`,
+`--case array_algorithms_next_smaller`, `--case array_algorithms_rotation`,
 `--case array_algorithms_frequency`,
 `--case array_algorithms_quick_sort`, `--case array_algorithms_heap_sort`,
 `--case array_algorithms_shell_sort`,
 `--case array_algorithms_search_peaks`,
-`--case array_algorithms_three_sum`,
+`--case array_algorithms_three_sum`, `--case array_algorithms_three_sum_closest`,
 `--case array_algorithms_two_pointer`,
 `--case array_algorithms_sets`, or `--case array_algorithms_window_stats` for
 focused coverage. Every selected fixture contributes one result-validation

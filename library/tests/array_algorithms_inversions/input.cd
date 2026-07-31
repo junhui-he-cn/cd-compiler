@@ -1,0 +1,11 @@
+import "../../data_structures.cd" as ds;
+
+let values = [2, 4, 1, 3, 5];
+print ds.countInversions(values);
+print values;
+
+print ds.countInversions([5, 4, 3, 2, 1]);
+print ds.countInversions([1, 1, 1]);
+print ds.countInversions([0, -1, -2, 3]);
+print ds.countInversions([]);
+print ds.countInversions([1]);

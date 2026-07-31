@@ -54,15 +54,18 @@
   `heapSort`/`heapSortInPlace`。
 - 数组窗口算法：`chunkArray`、`slidingWindows`、`prefixSums`。
 - 数组前缀/差分与单调栈：`differenceArray`、`prefixMinimums`、`prefixMaximums`、
-  `nextGreaterValues`。
+  `nextGreaterValues`、`nextSmallerValues`。
 - 区间算法：`Interval`、`mergeIntervals` 和 `intersectIntervals`。
 - 贪心区间调度：`selectNonOverlappingIntervals`。
 - 区间资源分配：`minimumIntervalRooms`。
 - 跳跃游戏贪心：`canReachEnd`、`minimumJumps`。
 - Huffman 贪心核心：`huffmanMergeCost`。
-- 双指针算法：`mergeSortedNumbers`、`twoSumSorted`、`threeSumZero`。
+- 双指针算法：`mergeSortedNumbers`、`twoSumSorted`、`threeSumZero`、`threeSumClosest`。
+- 多路有序数组合并：`mergeSortedArrays`。
+- 逆序对统计：`countInversions`。
+- 稳定分区：`stablePartition`。
 - 数组集合算法：`uniqueValues`、`intersectionValues`、`unionValues`、`differenceValues`。
-- 固定窗口统计：`windowSums`、`maxWindowSum`。
+- 固定窗口统计：`windowSums`、`maxWindowSum`、`maxWindowValues`、`minWindowValues`。
 - 子数组统计：`maxSubarraySum`。
 - 基础数值算法：`gcd`、`lcm`、`extendedGcd`、`isPrime`、`sievePrimes`、`fastPower`、
   `factorial`、`fibonacci`（整数输入契约）。
@@ -73,7 +76,8 @@
 - 一维 DP：`climbStairs`、`maxNonAdjacentSum`、`minCoinCount`。
 - 网格/字符串 DP：`uniqueGridPaths`、`uniqueGridPathsWithObstacles`、
   `minGridPathSum`、`editDistance`。
-- 序列 DP：`longestIncreasingSubsequenceLength`、`longestCommonSubsequenceLength`。
+- 序列 DP：`longestIncreasingSubsequenceLength`、`longestCommonSubsequenceLength`、
+  `longestCommonSubstringLength`。
 - 区间 DP：`matrixChainCost`、`mergeStonesCost`。
 - 二分查找：`lowerBound`、`upperBound`、`binarySearch`。
 - 字符串比较辅助：`compareStrings`、`stringLess`（当前限定可打印 ASCII）。
@@ -274,19 +278,29 @@ enum Result<T, E> {
 `mergeSortedNumbers` 和 `twoSumSorted` 已提供非降序数字数组上的双指针版本。
 `threeSumZero` 会先排序副本，再用双指针生成去重的非降序零和三元组，保持输入
 不变，时间复杂度为 `O(n^2)`。
+`threeSumClosest` 在排序副本上用双指针寻找距离目标最近的三数和；少于三个值返回
+`nil`，相同距离取较小和，输入保持不变，时间复杂度为 `O(n^2)`，额外空间为 `O(n)`。
+`mergeSortedArrays<T>` 接受多个按同一 `less` 比较器排序的数组，逐轮扫描各数组
+当前头部并返回一个新的扁平数组；比较器等价时按输入数组下标优先，因此跨输入
+数组保持稳定。空数组集合或全空输入返回 `[]`，算法时间复杂度为 `O(n*k)`，其中
+`k` 是输入数组数量，位置数组额外占用 `O(k)`，输出占用 `O(n)`；输入数组不会被修改。
 `uniqueValues`、`intersectionValues`、`unionValues` 和 `differenceValues` 已
 提供保序去重、交集、并集和差集的线性扫描版本。
 `windowSums` 使用滚动和生成每个固定宽度窗口的和，`maxWindowSum` 在这些
-窗口中选择最大值；非法窗口宽度返回空数组或 `nil`。
+窗口中选择最大值；`maxWindowValues` 和 `minWindowValues` 使用单调索引队列
+返回每个窗口的最大值或最小值。
+非法窗口宽度返回空数组或 `nil`。
 `differenceArray`、`prefixMinimums` 和 `prefixMaximums` 提供数值数组的相邻差分
-及前缀极值；`nextGreaterValues` 使用单调栈返回每个位置右侧第一个严格更大值，
-不存在时使用 `-1`。
+及前缀极值；`nextGreaterValues` 和 `nextSmallerValues` 使用单调栈返回每个位置
+右侧第一个严格更大或更小值，不存在时使用 `-1`。
 `intersectIntervals` 先独立规范化两侧区间，再用双指针生成包含端点的相交
 区间；因此相接端点会生成零长度区间。
 `maxSubarraySum` 使用 Kadane 扫描返回非空连续子数组的最大和，空数组返回
 `nil`，全负输入仍保留最大负值。
 `lowerBound`、`upperBound` 和 `binarySearch` 接受与输入排序一致的泛型比较器；
-前两者返回插入边界，后者返回重复值的首个位置。
+前两者返回插入边界，后者返回重复值的首个位置。`rotatedBinarySearch` 在一次
+旋转后的非降序数组中查找 comparator 等价值；无重复值时为 `O(log n)`，重复值
+导致两侧都可能有序时安全退化为 `O(n)`，未找到或空数组返回 `-1`。
 `compareStrings` 和 `stringLess` 保留库层可打印 ASCII 的三路比较与回调契约；
 语言层现在额外提供 Unicode scalar-value 字符串排序和比较运算符。
 `findSubstring`、`prefixFunction`、`zFunction` 和 `kmpSearch` 使用现有 Unicode scalar-value
@@ -303,6 +317,12 @@ enum Result<T, E> {
 至多指定分段数时的最小最大段和；空数组返回 `0`，非法分段数或元素返回 `nil`，
 时间复杂度为 `O(n log S)`，其中 `S` 是元素总和。
 `mergeSort` 使用稳定的自底向上归并排序，返回新数组，不改变输入。
+`countInversions` 在同一归并过程中统计 `i < j` 且 `values[i] > values[j]` 的
+严格逆序对，返回 `0` 表示没有逆序对，输入保持不变；时间复杂度为 `O(n log n)`，
+额外数组空间为 `O(n)`。
+`stablePartition<T>` 按谓词把满足条件的元素放到前面、其余元素放到后面，分别
+保持两组元素的输入顺序，返回新数组且不修改输入；它只依赖一元谓词，时间复杂度
+为 `O(n)`，额外数组空间为 `O(n)`。
 `shellSort` 使用从 `n / 2` 开始不断折半的 gap 序列和分组插入排序，返回浅拷贝，
 不保证稳定性；当前序列的最坏时间复杂度为 `O(n^2)`，额外结果空间为 `O(n)`。
 `quickSort` 和 `quickSortInPlace` 使用中点 pivot 的原地分区版本；它们不保证
@@ -352,7 +372,10 @@ enum Result<T, E> {
 - 去重、保序去重、频率统计、交集、并集、差集；
 - 前缀和、差分数组、前缀最小/最大值；
 - 两指针、滑动窗口、快慢指针、单调栈、单调队列；
-- 合并两个有序数组、合并多个有序数组、区间合并和区间相交；
+- 单调队列窗口最大值（`maxWindowValues`）；
+- 稳定分区（`stablePartition`）；
+- 合并两个有序数组、合并多个有序数组（`mergeSortedArrays`）、区间合并和区间相交；
+- 逆序对统计（`countInversions`）；
 - 子数组最大和、最长无重复子数组、固定/可变窗口统计；
 - 逆序对、配对和、三数和、最接近目标值等常用题型。
 
@@ -361,7 +384,7 @@ enum Result<T, E> {
 - 线性查找：`O(n)`；
 - 二分查找：有序数组中的精确查找；
 - `lowerBound`、`upperBound`、插入位置和出现次数；
-- 旋转有序数组查找；
+- 旋转有序数组查找：`rotatedBinarySearch`；
 - 峰值、山脉数组：`peakIndex`、`isMountainArray`、`mountainPeakIndex`；
 - 答案空间二分：非负整数数组的 `minimumLargestPartitionSum`；
 - 数值数组的插值查找作为可选专题，不作为通用默认实现。
@@ -397,7 +420,7 @@ enum Result<T, E> {
 - BFS 使用队列，DFS 使用显式栈；
 - 堆化、堆排序、前 `k` 个元素、第 `k` 大/小元素；
 - 两个优先队列求数据流中位数；
-- 多路有序流合并；
+- 多路有序流合并（数组版本 `mergeSortedArrays` 已完成）；
 - 任务调度、区间资源分配和会议室数量。
 
 ### 5.5 链表算法
@@ -488,7 +511,7 @@ enum Result<T, E> {
 
 - 一维 DP：爬楼梯、打家劫舍、硬币兑换；
 - 背包：0/1、完全、多重背包已完成；
-- 序列：LIS、LCS、编辑距离；
+- 序列：LIS、LCS、最长公共子串、编辑距离；
 - 网格：路径计数、障碍物路径、最小路径和已完成；
 - 区间 DP：矩阵链、二路合并石子已完成；
 - 贪心：区间调度、区间资源分配、跳跃游戏、Huffman 合并核心已完成；

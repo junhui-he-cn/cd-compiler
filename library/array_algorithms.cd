@@ -89,6 +89,30 @@ fun nextGreaterValues(values: [number]): [number] {
   return result;
 }
 
+fun nextSmallerValues(values: [number]): [number] {
+  let result: [number] = [];
+  let index = 0;
+  while (index < values.len()) {
+    result.push(-1);
+    index += 1;
+  }
+  let stack: [number] = [];
+  index = 0;
+  while (index < values.len()) {
+    while (stack.len() > 0) {
+      let topIndex = stack[stack.len() - 1];
+      if (values[topIndex] <= values[index]) {
+        break;
+      }
+      result[topIndex] = values[index];
+      stack.pop();
+    }
+    stack.push(index);
+    index += 1;
+  }
+  return result;
+}
+
 fun largestHistogramArea(heights: [number]): optional<number> {
   let validationIndex = 0;
   while (validationIndex < heights.len()) {
@@ -389,6 +413,38 @@ fun mergeSortedNumbers(left: [number], right: [number]): [number] {
   return result;
 }
 
+fun mergeSortedArrays<T>(sequences: [[T]], less: fun(T, T): bool): [T] {
+  let result: [T] = [];
+  let positions: [number] = [];
+  let sequenceIndex = 0;
+  while (sequenceIndex < sequences.len()) {
+    positions.push(0);
+    sequenceIndex += 1;
+  }
+
+  while (true) {
+    let bestSequence = -1;
+    sequenceIndex = 0;
+    while (sequenceIndex < sequences.len()) {
+      if (positions[sequenceIndex] < sequences[sequenceIndex].len()) {
+        if (bestSequence < 0
+            || less(sequences[sequenceIndex][positions[sequenceIndex]],
+                    sequences[bestSequence][positions[bestSequence]])) {
+          bestSequence = sequenceIndex;
+        }
+      }
+      sequenceIndex += 1;
+    }
+
+    if (bestSequence < 0) {
+      break;
+    }
+    result.push(sequences[bestSequence][positions[bestSequence]]);
+    positions[bestSequence] += 1;
+  }
+  return result;
+}
+
 fun twoSumSorted(values: [number], target: number): [number] {
   let result: [number] = [];
   let left = 0;
@@ -448,6 +504,45 @@ fun threeSumZero(values: [number]): [[number]] {
     }
   }
   return result;
+}
+
+fun threeSumClosest(values: [number], target: number): optional<number> {
+  if (values.len() < 3) {
+    return nil;
+  }
+
+  let sorted = sortArray(values, threeSumNumberLess);
+  let found = false;
+  let best = 0;
+  let bestDistance = 0;
+  let index = 0;
+  while (index + 2 < sorted.len()) {
+    let left = index + 1;
+    let right = sorted.len() - 1;
+    while (left < right) {
+      let total = sorted[index] + sorted[left] + sorted[right];
+      let distance = total - target;
+      if (distance < 0) {
+        distance = -distance;
+      }
+      if (!found || distance < bestDistance
+          || (distance == bestDistance && total < best)) {
+        found = true;
+        best = total;
+        bestDistance = distance;
+      }
+      if (total == target) {
+        return total;
+      }
+      if (total < target) {
+        left += 1;
+      } else {
+        right -= 1;
+      }
+    }
+    index += 1;
+  }
+  return best;
 }
 
 fun uniqueValues<T: Eq>(values: [T]): [T] {
@@ -570,6 +665,58 @@ fun maxWindowSum(values: [number], width: number): optional<number> {
   return best;
 }
 
+fun maxWindowValues(values: [number], width: number): [number] {
+  let result: [number] = [];
+  if (floor(width) != width || width <= 0 || width > values.len()) {
+    return result;
+  }
+
+  let candidates: [number] = [];
+  let head = 0;
+  let index = 0;
+  while (index < values.len()) {
+    while (head < candidates.len() && candidates[head] <= index - width) {
+      head += 1;
+    }
+    while (candidates.len() > head
+           && values[candidates[candidates.len() - 1]] <= values[index]) {
+      candidates.pop();
+    }
+    candidates.push(index);
+    if (index >= width - 1) {
+      result.push(values[candidates[head]]);
+    }
+    index += 1;
+  }
+  return result;
+}
+
+fun minWindowValues(values: [number], width: number): [number] {
+  let result: [number] = [];
+  if (floor(width) != width || width <= 0 || width > values.len()) {
+    return result;
+  }
+
+  let candidates: [number] = [];
+  let head = 0;
+  let index = 0;
+  while (index < values.len()) {
+    while (head < candidates.len() && candidates[head] <= index - width) {
+      head += 1;
+    }
+    while (candidates.len() > head
+           && values[candidates[candidates.len() - 1]] >= values[index]) {
+      candidates.pop();
+    }
+    candidates.push(index);
+    if (index >= width - 1) {
+      result.push(values[candidates[head]]);
+    }
+    index += 1;
+  }
+  return result;
+}
+
 fun maxSubarraySum(values: [number]): optional<number> {
   if (values.len() == 0) {
     return nil;
@@ -594,4 +741,4 @@ fun maxSubarraySum(values: [number]): optional<number> {
 }
 
 
-export prefixSums, differenceArray, prefixMinimums, prefixMaximums, nextGreaterValues, largestHistogramArea, Interval, mergeIntervals, intersectIntervals, selectNonOverlappingIntervals, minimumIntervalRooms, canReachEnd, minimumJumps, huffmanMergeCost, mergeSortedNumbers, twoSumSorted, threeSumZero, uniqueValues, intersectionValues, unionValues, differenceValues, frequencyEntries, mostFrequent, windowSums, maxWindowSum, maxSubarraySum;
+export prefixSums, differenceArray, prefixMinimums, prefixMaximums, nextGreaterValues, nextSmallerValues, largestHistogramArea, Interval, mergeIntervals, intersectIntervals, selectNonOverlappingIntervals, minimumIntervalRooms, canReachEnd, minimumJumps, huffmanMergeCost, mergeSortedNumbers, mergeSortedArrays, twoSumSorted, threeSumZero, threeSumClosest, uniqueValues, intersectionValues, unionValues, differenceValues, frequencyEntries, mostFrequent, windowSums, maxWindowSum, maxWindowValues, minWindowValues, maxSubarraySum;

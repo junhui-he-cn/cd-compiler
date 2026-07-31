@@ -1,0 +1,19 @@
+import "../../data_structures.cd" as ds;
+
+fun isAtMostThree(value: number): bool {
+  return value <= 3;
+}
+
+let values = [1, 4, 3, 2, 6, 5];
+print ds.stablePartition(values, isAtMostThree);
+print values;
+
+fun isLong(word: string): bool {
+  return word.len() >= 4;
+}
+
+print ds.stablePartition(["ant", "bear", "cat", "dove"], isLong);
+
+let empty: [number] = [];
+print ds.stablePartition<number>(empty, isAtMostThree);
+print ds.stablePartition([1, 3, 5], isAtMostThree);
