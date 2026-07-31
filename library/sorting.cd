@@ -308,6 +308,63 @@ fun mergeSort<T>(values: [T], less: fun(T, T): bool): [T] {
   return result;
 }
 
+fun countingSortNumberLess(left: number, right: number): bool {
+  return left < right;
+}
+
+fun countingSort(values: [number]): [number] {
+  let result: [number] = [];
+  if (values.len() == 0) {
+    return result;
+  }
+
+  let minimum = values[0];
+  let maximum = values[0];
+  let index = 0;
+  while (index < values.len()) {
+    let value = values[index];
+    if (floor(value) != value) {
+      return result;
+    }
+    if (value < minimum) {
+      minimum = value;
+    }
+    if (value > maximum) {
+      maximum = value;
+    }
+    index += 1;
+  }
+
+  let range = maximum - minimum + 1;
+  let denseLimit = values.len() * 8 + 1024;
+  if (range > denseLimit) {
+    return mergeSort(values, countingSortNumberLess);
+  }
+
+  let counts: [number] = [];
+  index = 0;
+  while (index < range) {
+    counts.push(0);
+    index += 1;
+  }
+  index = 0;
+  while (index < values.len()) {
+    counts[values[index] - minimum] += 1;
+    index += 1;
+  }
+
+  let offset = 0;
+  while (offset < counts.len()) {
+    let remaining = counts[offset];
+    while (remaining > 0) {
+      result.push(minimum + offset);
+      remaining -= 1;
+    }
+    offset += 1;
+  }
+  return result;
+}
+
 fun minimumSpanningForestKruskal(graph: WeightedGraph): WeightedGraph {
   let count = graph.vertexCount();
   let forest = newWeightedGraph(count, false);
@@ -661,4 +718,4 @@ fun slidingWindows<T>(values: [T], width: number): [[T]] {
 }
 
 
-export peakIndex, isMountainArray, mountainPeakIndex, lowerBound, upperBound, binarySearch, rotatedBinarySearch, countValue, isSorted, sortArray, sortArrayInPlace, shellSort, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, topKSmallest, topKLargest, kthSmallest, kthLargest, countInversions, stablePartition, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, minimumSpanningForestKruskal;
+export peakIndex, isMountainArray, mountainPeakIndex, lowerBound, upperBound, binarySearch, rotatedBinarySearch, countValue, isSorted, sortArray, sortArrayInPlace, shellSort, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, countingSort, topKSmallest, topKLargest, kthSmallest, kthLargest, countInversions, stablePartition, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, minimumSpanningForestKruskal;

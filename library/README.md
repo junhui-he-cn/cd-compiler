@@ -176,6 +176,7 @@ print ds.treeInorder(ordered);
 print ds.sortArray(values, ascending);
 print ds.shellSort(values, ascending);
 print ds.mergeSort(values, ascending);
+print ds.countingSort(values);
 print ds.topKSmallest(values, 2, ascending);
 print ds.topKLargest(values, 2, ascending);
 print ds.kthSmallest(values, 1, ascending);
@@ -837,6 +838,14 @@ be inferred.
 the input unchanged. It uses bottom-up merge sort in `O(n log n)` time and
 `O(n)` temporary outer-array space. Equal comparator values keep their input
 order.
+
+`countingSort(values: [number])` returns a sorted copy of an integral numeric
+array, including negative values, without modifying the input. Empty input and
+non-integral input return `[]`. Dense bounded ranges use offset counting in
+`O(n + R)` time and `O(R)` auxiliary space, where `R` is `max - min + 1`; a
+sparse range falls back to numeric merge sort instead of allocating a count
+array proportional to a large gap. The fallback uses `O(n log n)` time and
+`O(n)` temporary space.
 
 `topKSmallest<T>(values, count, less)` and `topKLargest<T>(values, count, less)`
 return a new array containing at most `count` values in comparator order.

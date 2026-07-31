@@ -57,7 +57,7 @@ export peakIndex, isMountainArray, mountainPeakIndex, lowerBound, upperBound,
        sortArrayInPlace, shellSort, selectionSort, selectionSortInPlace,
        bubbleSort, bubbleSortInPlace, mergeSort, countInversions, quickSort,
        stablePartition, quickSortInPlace,
-       heapSort, heapSortInPlace, topKSmallest, topKLargest, kthSmallest,
+       heapSort, heapSortInPlace, countingSort, topKSmallest, topKLargest, kthSmallest,
        kthLargest, chunkArray, slidingWindows,
        minimumSpanningForestKruskal
        from "./sorting.cd";

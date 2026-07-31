@@ -51,7 +51,8 @@
 - 数组基础算法：`reverseArray`、`rotateArray`、`linearSearch`、`countValue`、`isSorted`。
 - 频率统计：`frequencyEntries`、`mostFrequent`。
 - 数组排序：稳定插入排序 `sortArray`、`sortArrayInPlace`、希尔排序 `shellSort`、
-  选择排序、冒泡排序、归并排序 `mergeSort`、快速排序 `quickSort`/`quickSortInPlace` 和堆排序
+  选择排序、冒泡排序、归并排序 `mergeSort`、数值计数排序 `countingSort`、
+  快速排序 `quickSort`/`quickSortInPlace` 和堆排序
   `heapSort`/`heapSortInPlace`。
 - 选择算法：`topKSmallest`、`topKLargest`、`kthSmallest`、`kthLargest`（三向
   quickselect 定位后只对选中段归并排序；`topK` 平均 `O(n + k log k)`、`kth`
@@ -422,7 +423,7 @@ enum Result<T, E> {
 | 归并排序 | `O(n log n)`，稳定，需额外数组 | 第一批 |
 | 快速排序 | 平均 `O(n log n)`，最坏 `O(n^2)`，栈深 `O(log n)` | 已完成 |
 | 堆排序 | `O(n log n)`，原地，不稳定 | 第一批，复用堆 |
-| 计数排序 | `O(n+k)`，仅适合受限整数域 | 数值专题 |
+| 计数排序 | `O(n+k)`，稀疏值域回退归并排序 | 已完成（数值专题） |
 | 基数排序 | `O(d(n+k))`，依赖整数表示 | 等待数值/位运算契约 |
 | 桶排序 | 依赖分布和桶策略 | 后续 |
 
