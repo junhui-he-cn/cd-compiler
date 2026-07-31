@@ -486,6 +486,13 @@ scaled closure 的 runtime median 从 0.305398s 降至 0.292319s，无调用的 
 loop 保持在测量噪声范围；详见
 [`docs/decisions/vm-execution-loop-007-inline-call-arguments.md`](decisions/vm-execution-loop-007-inline-call-arguments.md)。
 
+**状态（第八 disabled heap-observation fast path 窄切片已完成，2026-07-31）：**
+默认执行不再为 retained-byte 统计逐指令借用 heap ledger；首次调用
+`Heap::stats()` 后仍逐指令观测，live/dead、峰值和 retained-byte 统计保持不变。
+scaled closure/loop 的三次 runtime median 分别为 `0.281772s -> 0.286437s` 和
+`0.519838s -> 0.514243s`，视为测量噪声范围内的 no-regression 结果；详见
+[`docs/decisions/vm-execution-loop-008-heap-observation-guard.md`](decisions/vm-execution-loop-008-heap-observation-guard.md)。
+
 ### VM-5C：容量与大模块图
 
 **目标：** 让 VM 在大 artifact、深调用、长字符串、大数组和多模块 link 下
@@ -592,7 +599,7 @@ VM-3A 的第一 library boundary、typed error/version boundary、VM-3B 的第�
 linker report slice、VM-4A 的第一 interactive debugger slice、VM-4B 的第一
 deterministic profile counter slice、VM-4C 的第一 structured kind slice、VM-5A
 的 reproducible benchmark baseline/scale slices 和 VM-5B 的 trace-off instruction
-preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments slices 已完成；GC、persistent VM、
+preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard slices 已完成；GC、persistent VM、
 JIT 和新的 artifact version 仍未进入默认队列。VM-4B 的 wall-clock 与
 allocation/peak 扩展、VM-4C 的统一 host schema，以及 VM-5B 的后续性能优化都
 需要独立决策；下一步应依据十一个 workload 的 baseline 数据选择下一个明确的

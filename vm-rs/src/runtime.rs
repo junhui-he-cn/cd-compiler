@@ -403,6 +403,7 @@ pub struct Heap {
     next_array_identity: usize,
     next_map_identity: usize,
     next_struct_identity: usize,
+    track_estimated_bytes: ScalarCell<bool>,
     ledger: Rc<RefCell<HeapLedger>>,
 }
 
@@ -419,11 +420,13 @@ impl Heap {
             next_array_identity: 1,
             next_map_identity: 1,
             next_struct_identity: 1,
+            track_estimated_bytes: ScalarCell::new(false),
             ledger: Rc::new(RefCell::new(HeapLedger::default())),
         }
     }
 
     pub fn stats(&self) -> HeapStats {
+        self.track_estimated_bytes.set(true);
         let mut ledger = self.ledger.borrow_mut();
         ledger.track_estimated_bytes = true;
         ledger.observe_estimated_bytes();
@@ -434,6 +437,9 @@ impl Heap {
     }
 
     pub(crate) fn observe_estimated_bytes(&self) {
+        if !self.track_estimated_bytes.get() {
+            return;
+        }
         self.ledger.borrow_mut().observe_estimated_bytes();
     }
 
