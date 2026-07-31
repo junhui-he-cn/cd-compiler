@@ -1,6 +1,6 @@
 # 数据结构与算法库总纲
 
-> 状态：规划稿（2026-07-27）
+> 状态：规划稿（2026-07-31）
 >
 > 本文规划的是使用 Compiler Design 公共语言编写的用户库，不要求先修改
 > 编译器、字节码格式或 Rust VM。实现时以项目的
@@ -78,7 +78,7 @@
 - 网格/字符串 DP：`uniqueGridPaths`、`uniqueGridPathsWithObstacles`、
   `minGridPathSum`、`editDistance`。
 - 序列 DP：`longestIncreasingSubsequenceLength`、`longestCommonSubsequenceLength`、
-  `longestCommonSubstringLength`。
+  `longestCommonSubsequence`、`longestCommonSubstringLength`。
 - 区间 DP：`matrixChainCost`、`mergeStonesCost`。
 - 二分查找：`lowerBound`、`upperBound`、`binarySearch`。
 - 字符串比较辅助：`compareStrings`、`stringLess`（当前限定可打印 ASCII）。
@@ -97,6 +97,7 @@
 - 欧拉路径：无向图 `eulerTrail`。
 - 无权图路径：`shortestDistances`、`shortestPath`。
 - DAG 视图：`inDegrees`、`topologicalOrder`、`hasCycle`。
+- 关键路径：`criticalPath`，在非负权 DAG 上返回从起点出发的最长距离、父节点和拓扑序。
 - 加权图：非负 `WeightedEdge`/`WeightedGraph`、Dijkstra、Floyd-Warshall、最大流、最小割、Prim 与 Kruskal 最小生成森林。
 - 有符号加权图：`SignedWeightedGraph`、`BellmanFordResult` 与 Bellman-Ford 负环检测。
 - 强连通分量：有向图的 `stronglyConnectedComponents`（Kosaraju）和

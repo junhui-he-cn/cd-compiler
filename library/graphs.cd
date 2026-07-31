@@ -1057,6 +1057,130 @@ fun newWeightedGraph(vertices: number, directed: bool): WeightedGraph {
   return WeightedGraph { adjacency: adjacency, directed: directed, edges: 0 };
 }
 
+enum CriticalPathError {
+  InvalidStart,
+  UndirectedGraph,
+  Cycle
+}
+
+struct CriticalPathResult {
+  distances: [optional<number>],
+  parents: [number],
+  order: [number]
+}
+
+fun criticalPath(
+    graph: WeightedGraph,
+    start: number
+): Result<CriticalPathResult, CriticalPathError> {
+  if (!graph.directed) {
+    return Result.Err<CriticalPathResult, CriticalPathError>(CriticalPathError.UndirectedGraph());
+  }
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count || floor(start) != start) {
+    return Result.Err<CriticalPathResult, CriticalPathError>(CriticalPathError.InvalidStart());
+  }
+
+  let indegrees: [number] = [];
+  let index = 0;
+  while (index < count) {
+    indegrees.push(0);
+    index += 1;
+  }
+  let from = 0;
+  while (from < count) {
+    let neighbors = graph.neighbors(from);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      indegrees[neighbors[neighborIndex].to] += 1;
+      neighborIndex += 1;
+    }
+    from += 1;
+  }
+
+  let ready: [number] = [];
+  index = 0;
+  while (index < count) {
+    if (indegrees[index] == 0) {
+      ready.push(index);
+    }
+    index += 1;
+  }
+
+  let order: [number] = [];
+  let head = 0;
+  while (head < ready.len()) {
+    let vertex = ready[head];
+    head += 1;
+    order.push(vertex);
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let target = neighbors[neighborIndex].to;
+      indegrees[target] -= 1;
+      if (indegrees[target] == 0) {
+        ready.push(target);
+      }
+      neighborIndex += 1;
+    }
+  }
+  if (order.len() != count) {
+    return Result.Err<CriticalPathResult, CriticalPathError>(CriticalPathError.Cycle());
+  }
+
+  let distanceValues: [number] = [];
+  let reachable: [bool] = [];
+  let parents: [number] = [];
+  index = 0;
+  while (index < count) {
+    distanceValues.push(0);
+    reachable.push(false);
+    parents.push(-1);
+    index += 1;
+  }
+  distanceValues[start] = 0;
+  reachable[start] = true;
+
+  let orderIndex = 0;
+  while (orderIndex < order.len()) {
+    from = order[orderIndex];
+    if (reachable[from]) {
+      let neighbors = graph.neighbors(from);
+      let neighborIndex = 0;
+      while (neighborIndex < neighbors.len()) {
+        let edge = neighbors[neighborIndex];
+        let candidate = distanceValues[from] + edge.weight;
+        if (!reachable[edge.to]) {
+          distanceValues[edge.to] = candidate;
+          reachable[edge.to] = true;
+          parents[edge.to] = from;
+        } else {
+          if (candidate > distanceValues[edge.to]) {
+            distanceValues[edge.to] = candidate;
+            parents[edge.to] = from;
+          }
+        }
+        neighborIndex += 1;
+      }
+    }
+    orderIndex += 1;
+  }
+
+  let distances: [optional<number>] = [];
+  index = 0;
+  while (index < count) {
+    if (reachable[index]) {
+      distances.push(distanceValues[index]);
+    } else {
+      distances.push(nil);
+    }
+    index += 1;
+  }
+
+  return Result.Ok<CriticalPathResult, CriticalPathError>(
+      CriticalPathResult { distances: distances, parents: parents, order: order });
+}
+
 struct SignedWeightedEdge {
   to: number,
   weight: number
@@ -1628,4 +1752,4 @@ fun minimumSpanningForest(graph: WeightedGraph): WeightedGraph {
 }
 
 
-export DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, stronglyConnectedComponentsTarjan, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest;
+export DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, CriticalPathError, CriticalPathResult, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, stronglyConnectedComponentsTarjan, criticalPath, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest;

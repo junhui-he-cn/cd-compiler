@@ -127,6 +127,11 @@ dag.addEdge(0, 1);
 dag.addEdge(1, 2);
 print ds.inDegrees(dag);
 print ds.topologicalOrder(dag);
+
+let schedule = ds.newWeightedGraph(3, true);
+schedule.addEdge(0, 1, 3);
+schedule.addEdge(1, 2, 4);
+print ds.criticalPath(schedule, 0);
 print ds.hasCycle(dag);
 
 let weighted = ds.newWeightedGraph(3, false);
@@ -226,6 +231,7 @@ print ds.compareStrings("ant", "apple");
 print ds.longestUniqueSubstringLength("abcabcbb");
 print ds.longestPalindromicSubstring("babad");
 print ds.longestCommonSubstringLength("ababc", "babca");
+print ds.longestCommonSubsequence("abcde", "ace");
 
 print ds.knapsack01([2, 3, 4], [3, 4, 5], 5);
 print ds.completeKnapsack([2, 3], [3, 4], 7);
@@ -717,6 +723,15 @@ variant for directed graphs. It returns components when each root completes,
 with members in stack-pop order, returns `[]` for undirected graphs, and uses
 `O(V + E)` time and `O(V)` auxiliary state plus recursion depth.
 
+`criticalPath(graph, start)` computes longest non-negative-weight paths from a
+start vertex in a directed acyclic `WeightedGraph`. A successful
+`CriticalPathResult` contains nullable `distances` (`nil` means unreachable),
+`parents`, and the stable Kahn topological `order`; equal-length alternatives
+keep the first predecessor encountered. It returns `UndirectedGraph` for an
+undirected input, `InvalidStart` for an invalid or non-integral start, and
+`Cycle` for a directed cycle. The algorithm runs in `O(V + E)` time and uses
+`O(V)` auxiliary space.
+
 `WeightedGraph` stores non-negative numeric edge weights. Its Dijkstra helpers
 `shortestWeightedDistances` and `shortestWeightedPath` return `-1`/`[]` for
 unreachable results and reject negative weights at insertion. The current array
@@ -929,6 +944,11 @@ length with `O(n^2)` time and `O(n)` space; equal values do not extend a
 subsequence. `longestCommonSubsequenceLength(left, right)` computes the LCS
 length over Unicode scalar values with `O(leftLength * rightLength)` time and
 `O(rightLength)` space.
+`longestCommonSubsequence(left, right)` reconstructs one longest common
+subsequence as a new string. It uses Unicode scalar-value positions and leaves
+both inputs unchanged. Empty inputs return `""`; when several choices have the
+same length, backtracking prefers the upper DP cell so the result is stable.
+The reconstruction table uses `O(leftLength * rightLength)` time and space.
 `longestCommonSubstringLength(left, right)` computes the longest contiguous
 common Unicode scalar-value run, returning its length. Empty inputs return `0`;
 the rolling-row DP uses `O(leftLength * rightLength)` time and

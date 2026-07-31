@@ -28,12 +28,13 @@ export LruCacheEntry, LruCache, newLruCache, LfuCacheEntry, LfuCache, newLfuCach
 
 export DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge,
        SignedWeightedGraph, BellmanFordError, BellmanFordResult,
+       CriticalPathError, CriticalPathResult,
        newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph,
        breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite,
        articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath,
        inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents,
        stronglyConnectedComponentsTarjan,
-       bellmanFord, shortestWeightedDistances, allPairsWeightedDistances,
+       criticalPath, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances,
        maxFlow, minCut, shortestWeightedPath, minimumSpanningForest
        from "./graphs.cd";
 
@@ -74,6 +75,7 @@ export prefixSums, differenceArray, prefixMinimums, prefixMaximums,
 export climbStairs, maxNonAdjacentSum, minCoinCount, uniqueGridPaths,
        uniqueGridPathsWithObstacles, minGridPathSum, editDistance,
        longestIncreasingSubsequenceLength, longestCommonSubsequenceLength,
+       longestCommonSubsequence,
        longestCommonSubstringLength,
        matrixChainCost, matrixPower2x2, mergeStonesCost, knapsack01,
        completeKnapsack, boundedKnapsack
