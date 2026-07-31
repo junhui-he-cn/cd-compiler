@@ -343,18 +343,18 @@ fun mergeSort<T>(values: [T], less: fun(T, T): bool): [T] {
   return result;
 }
 
-struct SelectionPartition {
+struct ThreeWayPartition {
   lessEnd: number,
   equalEnd: number
 }
 
-fun partitionSelection<T>(
+fun partitionThreeWay<T>(
     values: [T],
     low: number,
     high: number,
     pivotIndex: number,
     less: fun(T, T): bool
-): SelectionPartition {
+): ThreeWayPartition {
   let pivot = values[pivotIndex];
   let lessEnd = low;
   let greaterStart = high;
@@ -377,7 +377,7 @@ fun partitionSelection<T>(
       }
     }
   }
-  return SelectionPartition { lessEnd: lessEnd, equalEnd: greaterStart + 1 };
+  return ThreeWayPartition { lessEnd: lessEnd, equalEnd: greaterStart + 1 };
 }
 
 fun selectNthInPlace<T>(values: [T], target: number, less: fun(T, T): bool) {
@@ -385,7 +385,7 @@ fun selectNthInPlace<T>(values: [T], target: number, less: fun(T, T): bool) {
   let high = values.len() - 1;
   while (low < high) {
     let pivotIndex = floor((low + high) / 2);
-    let partition = partitionSelection(values, low, high, pivotIndex, less);
+    let partition = partitionThreeWay(values, low, high, pivotIndex, less);
     if (target < partition.lessEnd) {
       high = partition.lessEnd - 1;
     } else {
@@ -535,33 +535,28 @@ fun stablePartition<T>(values: [T], predicate: fun(T): bool): [T] {
 }
 
 fun quickSortRange<T>(values: [T], start: number, end: number, less: fun(T, T): bool) {
-  if (start >= end) {
-    return;
-  }
+  let low = start;
+  let high = end;
+  while (low < high) {
+    let pivotIndex = floor((low + high) / 2);
+    let partition = partitionThreeWay(values, low, high, pivotIndex, less);
+    let leftEnd = partition.lessEnd - 1;
+    let rightStart = partition.equalEnd;
+    let leftSize = leftEnd - low + 1;
+    let rightSize = high - rightStart + 1;
 
-  let pivotIndex = floor((start + end) / 2);
-  let pivotValue = values[pivotIndex];
-  values[pivotIndex] = values[end];
-  values[end] = pivotValue;
-
-  let pivot = values[end];
-  let store = start;
-  let index = start;
-  while (index < end) {
-    if (less(values[index], pivot)) {
-      let value = values[store];
-      values[store] = values[index];
-      values[index] = value;
-      store += 1;
+    if (leftSize < rightSize) {
+      if (low < leftEnd) {
+        quickSortRange(values, low, leftEnd, less);
+      }
+      low = rightStart;
+    } else {
+      if (rightStart < high) {
+        quickSortRange(values, rightStart, high, less);
+      }
+      high = leftEnd;
     }
-    index += 1;
   }
-
-  let value = values[store];
-  values[store] = values[end];
-  values[end] = value;
-  quickSortRange(values, start, store - 1, less);
-  quickSortRange(values, store + 1, end, less);
 }
 
 fun quickSortInPlace<T>(values: [T], less: fun(T, T): bool) {

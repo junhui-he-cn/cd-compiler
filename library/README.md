@@ -866,10 +866,12 @@ empty/order behavior.
 
 `quickSort<T>(values, less)` returns a sorted shallow copy, while
 `quickSortInPlace<T>(values, less)` sorts the supplied array. Quick sort is not
-stable; the middle-element pivot gives average `O(n log n)` time but the worst
-case remains `O(n^2)`. The copying version uses `O(n)` outer-array space, and
-the in-place version additionally uses recursion stack space proportional to
-the partition depth.
+stable; it uses a middle-element pivot and three-way partitioning, then
+recurses into the smaller side before iterating over the larger side. This gives
+average `O(n log n)` time, `O(n^2)` worst-case time for a bad pivot sequence,
+and `O(log n)` recursion stack depth even when the partitions are badly
+unbalanced. All-equal ranges are handled by one linear partition. The copying
+version uses `O(n)` outer-array space in addition to the bounded stack.
 
 `heapSort<T>(values, less)` returns a sorted shallow copy, while
 `heapSortInPlace<T>(values, less)` sorts the supplied array in place. Heap sort
