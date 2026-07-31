@@ -1353,7 +1353,7 @@ mod tests {
             vm.execute_index(map.clone(), Value::string("b")).unwrap(),
             Value::Number(value) if value == 2.0
         ));
-        assert!(matches!(vm.execute_len(map.clone()).unwrap(), Value::Number(value) if value == 2.0));
+        assert!(matches!(vm.execute_len(&map).unwrap(), Value::Number(value) if value == 2.0));
         assert!(matches!(
             vm.execute_native_call("contains", vec![map.clone(), Value::string("a")]).unwrap(),
             Value::Bool(true)
@@ -1450,7 +1450,7 @@ mod tests {
             .expect("remove can return nil");
         assert!(matches!(removed_nil, Value::Nil));
         assert!(matches!(
-            vm.execute_len(alias).unwrap(),
+            vm.execute_len(&alias).unwrap(),
             Value::Number(value) if value == 0.0
         ));
     }
@@ -1471,7 +1471,7 @@ mod tests {
         assert!(matches!(result, Value::Nil));
         assert_eq!(alias.to_string(), "map{}");
         assert!(matches!(
-            vm.execute_len(alias.clone()).unwrap(),
+            vm.execute_len(&alias).unwrap(),
             Value::Number(value) if value == 0.0
         ));
 
@@ -1610,7 +1610,7 @@ mod tests {
         assert!(ascending.runtime_equals(&equivalent));
         assert!(!ascending.runtime_equals(&different));
         assert!(matches!(
-            vm.execute_len(ascending.clone()).unwrap(),
+            vm.execute_len(&ascending).unwrap(),
             Value::Number(value) if value == 5.0
         ));
         assert!(matches!(
@@ -1633,7 +1633,7 @@ mod tests {
             )
             .expect("descending range succeeds");
         assert!(matches!(
-            vm.execute_len(descending.clone()).unwrap(),
+            vm.execute_len(&descending).unwrap(),
             Value::Number(value) if value == 3.0
         ));
         assert!(matches!(
@@ -1645,7 +1645,7 @@ mod tests {
             .execute_native_call("range", vec![Value::number(5.0), Value::number(0.0)])
             .expect("empty range succeeds");
         assert!(matches!(
-            vm.execute_len(empty).unwrap(),
+            vm.execute_len(&empty).unwrap(),
             Value::Number(value) if value == 0.0
         ));
     }
@@ -1755,7 +1755,7 @@ mod tests {
         let mut vm = VM::new(&program);
         let source = Value::string("你🙂e\u{301}");
 
-        let length = vm.execute_len(source.clone()).expect("len succeeds");
+        let length = vm.execute_len(&source).expect("len succeeds");
         assert!(matches!(length, Value::Number(value) if value == 4.0));
 
         let sliced = vm
@@ -2943,7 +2943,7 @@ impl<'a> VM<'a> {
                     self.write_register(frame, *dest, assigned)?;
                 }
                 Instruction::Len { dest, value } => {
-                    let value = self.read_register(frame, *value)?;
+                    let value = self.read_register_ref(frame, *value)?;
                     let length = self.execute_len(value)?;
                     self.write_register(frame, *dest, length)?;
                 }
@@ -3700,7 +3700,7 @@ impl<'a> VM<'a> {
         Err(RuntimeError::new(format!("undefined field `{}`", name)))
     }
 
-    fn execute_len(&self, value: Value) -> Result<Value, RuntimeError> {
+    fn execute_len(&self, value: &Value) -> Result<Value, RuntimeError> {
         match value {
             Value::Array(array) => Ok(Value::number(array.elements.borrow().len() as f64)),
             Value::Map(map) => Ok(Value::number(map.entries.borrow().len() as f64)),

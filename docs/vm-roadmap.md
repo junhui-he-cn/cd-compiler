@@ -596,6 +596,13 @@ instruction/location vectors；frame、资源、profile、trace、debug 和错�
 per-run allocation reduction 作为证据，不建立新的 timing threshold；详见
 [`docs/decisions/vm-execution-loop-021-borrow-entry-body.md`](decisions/vm-execution-loop-021-borrow-entry-body.md)。
 
+**状态（第二十二 borrowed-Len-operand 窄切片已完成，2026-07-31）：** `Len` 指令
+通过 `read_register_ref` 借用只读寄存器值，避免 array/map/range/Unicode string
+长度计算前的 `Value` clone；长度、错误、资源、alias、profile/trace/debug 和
+`.cdbc 0.1` 行为不变。benchmark 全矩阵只作为 no-regression 证据，不建立新的
+timing threshold；详见
+[`docs/decisions/vm-execution-loop-022-borrow-len-operand.md`](decisions/vm-execution-loop-022-borrow-len-operand.md)。
+
 ### VM-5C：容量与大模块图
 
 **目标：** 让 VM 在大 artifact、深调用、长字符串、大数组和多模块 link 下
@@ -723,7 +730,7 @@ VM-3A 的第一 library boundary、typed error/version boundary、VM-3B 的第�
 linker report slice、VM-4A 的第一 interactive debugger slice、VM-4B 的第一
 deterministic profile counter/tracked-heap slice、VM-4C 的第一 structured kind slice、VM-5A
 的 reproducible benchmark baseline/scale slices 和 VM-5B 的 trace-off instruction
-preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard/checkpoint-fast-path/checkpoint-mode-cache/borrow-register-operands/borrow-native-name/borrow-function-values/borrow-caller-name/shared-frame-names/profile-off-hook-guards/inline-native-arguments/decoded-constant-cache/borrowed-global-cell/comparison-dispatch slices 已完成；GC、persistent VM、
+preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard/checkpoint-fast-path/checkpoint-mode-cache/borrow-register-operands/borrow-native-name/borrow-function-values/borrow-caller-name/shared-frame-names/profile-off-hook-guards/inline-native-arguments/decoded-constant-cache/borrowed-global-cell/comparison-dispatch/borrowed-Len-operand slices 已完成；GC、persistent VM、
 JIT 和新的 artifact version 仍未进入默认队列。VM-5C 的第一 capacity corpus、
 第二 long-Unicode-string 和第三 long-Unicode-output slices，以及 VM-4C 的第二
 resource-context slice 也已完成。VM-4B 的 wall-clock 与
