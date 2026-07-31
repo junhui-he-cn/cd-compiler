@@ -398,38 +398,59 @@ fun longestPalindromicSubstring(text: string): string {
   if (text.len() == 0) {
     return "";
   }
-  let bestStart = 0;
-  let bestLength = 1;
+
+  // Empty separators distinguish even and odd centers without assuming that
+  // any particular Unicode scalar value is unavailable in the input.
+  let transformed: [string] = [""];
+  let index = 0;
+  while (index < text.len()) {
+    transformed.push(text.charAt(index));
+    transformed.push("");
+    index += 1;
+  }
+
+  let radii: [number] = [];
+  index = 0;
+  while (index < transformed.len()) {
+    radii.push(0);
+    index += 1;
+  }
+
   let center = 0;
-  while (center < text.len()) {
-    let left = center;
-    let right = center;
-    while (left >= 0 && right < text.len()
-        && text.charAt(left) == text.charAt(right)) {
-      let length = right - left + 1;
-      if (length > bestLength) {
-        bestStart = left;
-        bestLength = length;
+  let right = 0;
+  let bestCenter = 0;
+  let bestRadius = 0;
+  index = 0;
+  while (index < transformed.len()) {
+    let radius = 0;
+    if (index < right) {
+      let mirror = center * 2 - index;
+      radius = radii[mirror];
+      if (right - index < radius) {
+        radius = right - index;
       }
-      left -= 1;
-      right += 1;
     }
 
-    left = center;
-    right = center + 1;
-    while (left >= 0 && right < text.len()
-        && text.charAt(left) == text.charAt(right)) {
-      let length = right - left + 1;
-      if (length > bestLength) {
-        bestStart = left;
-        bestLength = length;
-      }
-      left -= 1;
-      right += 1;
+    while (index - radius - 1 >= 0
+        && index + radius + 1 < transformed.len()
+        && transformed[index - radius - 1] == transformed[index + radius + 1]) {
+      radius += 1;
     }
-    center += 1;
+    radii[index] = radius;
+
+    if (index + radius > right) {
+      center = index;
+      right = index + radius;
+    }
+    if (radius > bestRadius) {
+      bestCenter = index;
+      bestRadius = radius;
+    }
+    index += 1;
   }
-  return text.substr(bestStart, bestLength);
+
+  let bestStart = floor((bestCenter - bestRadius) / 2);
+  return text.substr(bestStart, bestRadius);
 }
 
 struct Trie {

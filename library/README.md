@@ -1125,9 +1125,10 @@ space.
 `longestUniqueSubstringLength(text)` returns the length of the longest substring
 with no repeated Unicode scalar values. The current array-backed window scan
 takes `O(n^2)` time and `O(n)` temporary space; an empty string returns `0`.
-`longestPalindromicSubstring(text)` expands around odd and even centers and
-returns the leftmost longest palindrome, or `""` for empty input. It takes
-`O(n^2)` time and `O(1)` auxiliary space in addition to the returned substring.
+`longestPalindromicSubstring(text)` uses Manacher radii over Unicode scalar
+values and returns the leftmost longest palindrome, or `""` for empty input.
+It takes `O(n)` time and `O(n)` auxiliary space in addition to the returned
+substring.
 
 `Trie` is an array-node prefix tree. `insert(word)` returns `true` only when a
 new word is added; `discard(word)` unmarks and removes a word, returning
