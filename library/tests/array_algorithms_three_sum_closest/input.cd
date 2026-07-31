@@ -1,0 +1,10 @@
+import "../../data_structures.cd" as ds;
+
+let values = [-1, 2, 1, -4];
+print ds.threeSumClosest(values, 1);
+print values;
+print ds.threeSumClosest([1, 2, 4, 8], 7);
+print ds.threeSumClosest([0, 2, 3, 5], 6);
+print ds.threeSumClosest([0, 0, 0], 1);
+print ds.threeSumClosest([1, 2], 3);
+print ds.threeSumClosest([], 5);

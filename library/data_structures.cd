@@ -62,7 +62,7 @@ export prefixSums, differenceArray, prefixMinimums, prefixMaximums,
        intersectIntervals, selectNonOverlappingIntervals, minimumIntervalRooms,
        canReachEnd, minimumJumps, huffmanMergeCost, mergeSortedNumbers,
        mergeSortedArrays, twoSumSorted, threeSumZero, uniqueValues,
-       intersectionValues,
+       threeSumClosest, intersectionValues,
        unionValues, differenceValues, frequencyEntries, mostFrequent,
        windowSums, maxWindowSum, maxWindowValues, minWindowValues,
        maxSubarraySum

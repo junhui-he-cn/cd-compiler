@@ -60,7 +60,7 @@
 - 区间资源分配：`minimumIntervalRooms`。
 - 跳跃游戏贪心：`canReachEnd`、`minimumJumps`。
 - Huffman 贪心核心：`huffmanMergeCost`。
-- 双指针算法：`mergeSortedNumbers`、`twoSumSorted`、`threeSumZero`。
+- 双指针算法：`mergeSortedNumbers`、`twoSumSorted`、`threeSumZero`、`threeSumClosest`。
 - 多路有序数组合并：`mergeSortedArrays`。
 - 逆序对统计：`countInversions`。
 - 稳定分区：`stablePartition`。
@@ -278,6 +278,8 @@ enum Result<T, E> {
 `mergeSortedNumbers` 和 `twoSumSorted` 已提供非降序数字数组上的双指针版本。
 `threeSumZero` 会先排序副本，再用双指针生成去重的非降序零和三元组，保持输入
 不变，时间复杂度为 `O(n^2)`。
+`threeSumClosest` 在排序副本上用双指针寻找距离目标最近的三数和；少于三个值返回
+`nil`，相同距离取较小和，输入保持不变，时间复杂度为 `O(n^2)`，额外空间为 `O(n)`。
 `mergeSortedArrays<T>` 接受多个按同一 `less` 比较器排序的数组，逐轮扫描各数组
 当前头部并返回一个新的扁平数组；比较器等价时按输入数组下标优先，因此跨输入
 数组保持稳定。空数组集合或全空输入返回 `[]`，算法时间复杂度为 `O(n*k)`，其中

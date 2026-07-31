@@ -482,6 +482,45 @@ fun threeSumZero(values: [number]): [[number]] {
   return result;
 }
 
+fun threeSumClosest(values: [number], target: number): optional<number> {
+  if (values.len() < 3) {
+    return nil;
+  }
+
+  let sorted = sortArray(values, threeSumNumberLess);
+  let found = false;
+  let best = 0;
+  let bestDistance = 0;
+  let index = 0;
+  while (index + 2 < sorted.len()) {
+    let left = index + 1;
+    let right = sorted.len() - 1;
+    while (left < right) {
+      let total = sorted[index] + sorted[left] + sorted[right];
+      let distance = total - target;
+      if (distance < 0) {
+        distance = -distance;
+      }
+      if (!found || distance < bestDistance
+          || (distance == bestDistance && total < best)) {
+        found = true;
+        best = total;
+        bestDistance = distance;
+      }
+      if (total == target) {
+        return total;
+      }
+      if (total < target) {
+        left += 1;
+      } else {
+        right -= 1;
+      }
+    }
+    index += 1;
+  }
+  return best;
+}
+
 fun uniqueValues<T: Eq>(values: [T]): [T] {
   let result: [T] = [];
   let index = 0;
@@ -678,4 +717,4 @@ fun maxSubarraySum(values: [number]): optional<number> {
 }
 
 
-export prefixSums, differenceArray, prefixMinimums, prefixMaximums, nextGreaterValues, largestHistogramArea, Interval, mergeIntervals, intersectIntervals, selectNonOverlappingIntervals, minimumIntervalRooms, canReachEnd, minimumJumps, huffmanMergeCost, mergeSortedNumbers, mergeSortedArrays, twoSumSorted, threeSumZero, uniqueValues, intersectionValues, unionValues, differenceValues, frequencyEntries, mostFrequent, windowSums, maxWindowSum, maxWindowValues, minWindowValues, maxSubarraySum;
+export prefixSums, differenceArray, prefixMinimums, prefixMaximums, nextGreaterValues, largestHistogramArea, Interval, mergeIntervals, intersectIntervals, selectNonOverlappingIntervals, minimumIntervalRooms, canReachEnd, minimumJumps, huffmanMergeCost, mergeSortedNumbers, mergeSortedArrays, twoSumSorted, threeSumZero, threeSumClosest, uniqueValues, intersectionValues, unionValues, differenceValues, frequencyEntries, mostFrequent, windowSums, maxWindowSum, maxWindowValues, minWindowValues, maxSubarraySum;

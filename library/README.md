@@ -199,6 +199,7 @@ print ds.mergeSortedNumbers([1, 3], [2, 4]);
 print ds.mergeSortedArrays([[1, 3], [2, 4]], ascending);
 print ds.twoSumSorted([1, 2, 4, 7], 6);
 print ds.threeSumZero([-1, 0, 1, 2, -1, -4]);
+print ds.threeSumClosest([-1, 2, 1, -4], 1);
 
 print ds.uniqueValues([3, 1, 3, 2]);
 print ds.unionValues([1, 2], [2, 3]);
@@ -1147,6 +1148,13 @@ sorted outer-index order; the input is unchanged. The algorithm takes
 `O(n^2)` time and `O(n)` auxiliary/output space. Empty and shorter-than-three
 inputs return `[]`.
 
+`threeSumClosest(values, target)` returns the sum of three distinct input
+positions whose value is closest to `target`, or `nil` when fewer than three
+values are supplied. It sorts a shallow copy and uses two pointers in
+`O(n^2)` time with `O(n)` auxiliary space, leaving the input unchanged. An
+exact target returns immediately; equal absolute distances choose the smaller
+sum for deterministic results.
+
 The array set helpers are non-mutating and remove duplicate output values while
 preserving the first occurrence order:
 
@@ -1275,7 +1283,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case array_algorithms_quick_sort`, `--case array_algorithms_heap_sort`,
 `--case array_algorithms_shell_sort`,
 `--case array_algorithms_search_peaks`,
-`--case array_algorithms_three_sum`,
+`--case array_algorithms_three_sum`, `--case array_algorithms_three_sum_closest`,
 `--case array_algorithms_two_pointer`,
 `--case array_algorithms_sets`, or `--case array_algorithms_window_stats` for
 focused coverage. Every selected fixture contributes one result-validation
