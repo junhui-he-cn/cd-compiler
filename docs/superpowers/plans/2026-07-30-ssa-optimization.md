@@ -22,8 +22,10 @@ covered by `ctest.control_flow_graph`,
 coverage is part of `ctest.ssa`, and the binding contract is additionally
 covered by `ctest.ssa_contract`, while the optimizer boundary is covered by
 `ctest.optimizer`. Default ordinary-IR/CLI integration, CFG rewrites,
-constant folding, and later work remain future implementation slices. The
-binding contract is populated by
+constant folding, and later work remain future implementation slices. The O0
+debug-local policy and schema-3 cache identity are now frozen and covered by
+`ctest.module_cache` plus the existing module-cache matrix. The binding
+contract is populated by
 `IRCompiler` and covered by the existing `ir_source_location` integration
 test.
 
@@ -130,8 +132,10 @@ Files:
 Tasks:
 
 - remap dependency offsets after optimized module lowering;
-- include level/pipeline identity in module-product cache decisions;
-- retain valid debug source spans and make O0 trace the stable debug path; and
+- include level/pipeline identity in module-product cache decisions (schema 3
+  now records the O0 identity and rejects stale schema 2 manifests);
+- retain valid debug source spans, keep source-visible runtime cells in the
+  default O1 policy, and make O0 trace the stable debug path; and
 - prove no SSA-only data leaks into `cdbc 0.1`.
 
 Gate: cold/hit/stale module cache matrix, imports/re-exports, linked product

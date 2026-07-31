@@ -576,6 +576,8 @@ def run_strict_cache_matrix(compiler: Path) -> None:
             + f"identity:{len(middle_identity)}:{middle_identity}"
             + f"source:{len(middle_source_hash)}:{middle_source_hash}"
             + f"interface:{len(middle_interface_hash)}:{middle_interface_hash}"
+            + "optimization_level:2:O0"
+            + "optimizer_pipeline:12:m7-ssa-o0-v1"
             + "entry:5:false"
             + "entry_order:4:none"
             + "dependencies:1"

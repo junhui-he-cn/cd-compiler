@@ -13,20 +13,22 @@ by the graph canonical-path identity and stores:
 - a canonical public-interface-shape digest;
 - ordered import/re-export edges, requested paths, and dependency interface
   digests;
-- entry status/order; and
+- entry status/order;
+- optimization level and optimizer pipeline fingerprint; and
 - the module cache key, relative cached-product path, and relative `cdi 0.1`
   interface-sidecar path.
 
 The module cache key is a length-delimited `fnv1a64` digest over the cache
 schema, the `cdbc 0.1` artifact contract, canonical module identity, source and
-public-interface digests, entry metadata, and ordered dependency metadata. It
-does not contain snapshot-local module, source, syntax, declaration, or binding
-IDs.
+public-interface digests, optimization identity, entry metadata, and ordered
+dependency metadata. It does not contain snapshot-local module, source, syntax,
+declaration, or binding IDs.
 
 The cache planner applies these rules in dependency order:
 
 - a missing record, changed source, changed module metadata, changed dependency
-  edge, changed cache key, or missing product rebuilds that module;
+  edge, changed optimization identity, changed cache key, or missing product
+  rebuilds that module;
 - a source-only change with an unchanged public interface does not invalidate
   dependents;
 - a public-interface change invalidates direct dependents and propagates a
@@ -45,9 +47,9 @@ it rejects an untrusted imported sidecar with an `Import` diagnostic while
 entry modules continue to use source. The default remains source fallback.
 
 `--module-rebuild-report <report.json>` records cache status, every module's
-key, source/interface digests, reuse/rebuild status, reason, artifact path, and
-public-impact marker. This report is the measurement boundary for the M3B
-change matrix rather than an inferred aggregate hit count.
+key, source/interface digests, optimization identity, reuse/rebuild status,
+reason, artifact path, and public-impact marker. This report is the measurement
+boundary for the M3B change matrix rather than an inferred aggregate hit count.
 
 ## Compatibility and migration
 
@@ -60,6 +62,13 @@ module output directory. Invalid or missing manifests are treated as cold
 caches, all current products are rebuilt, and a fresh manifest is written only
 after successful emission.
 
+The manifest remains `cdbc-cache 0.2` but its internal schema is now `3`. Schema
+2 manifests are rejected as stale and treated as cold caches, so products from
+the pre-optimization identity cannot be reused accidentally. The current
+default identity is `O0` with pipeline `m7-ssa-o0-v1`. The O1 policy retains
+source-visible runtime-cell local bindings; local-slot promotion remains an
+internal experiment until an optimized trace-local contract is admitted.
+
 The product cache is local and content-addressed by the stable key, but this
 slice does not provide eviction, remote sharing, package resolution, or
 cross-build linker symbol identities.
@@ -67,9 +76,9 @@ cross-build linker symbol identities.
 ## Verification
 
 - `module_cache_tests` checks deterministic keys, cache manifest and sidecar
-  path round trips,
-  private implementation invalidation, and direct/transitive public-interface
-  invalidation.
+  path round trips, optimization-identity invalidation, schema-2 cold
+  migration, private implementation invalidation, and direct/transitive
+  public-interface invalidation.
 - `tests/bytecode_module_cache_tests.py` exercises a three-module chain through
   cold build, no-change reuse, private leaf change, public leaf change, Rust
   linking, and Rust VM execution.

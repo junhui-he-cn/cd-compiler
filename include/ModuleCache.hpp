@@ -22,6 +22,11 @@ struct ModuleCacheModule {
     std::string identity;
     std::string sourceHash;
     std::string interfaceHash;
+    // Optimization identity is part of the product key.  The default O0
+    // values preserve the current runtime-cell/debug-local contract; an
+    // optimized product must never be reused under another pipeline.
+    std::string optimizationLevel = "O0";
+    std::string optimizerPipeline = "m7-ssa-o0-v1";
     bool isEntry = false;
     std::optional<std::size_t> entryOrder;
     std::vector<ModuleCacheDependency> dependencies;
@@ -35,7 +40,7 @@ struct ModuleCacheRecord {
 };
 
 struct ModuleCacheManifest {
-    int schemaVersion = 2;
+    int schemaVersion = 3;
     std::vector<ModuleCacheRecord> records;
 };
 

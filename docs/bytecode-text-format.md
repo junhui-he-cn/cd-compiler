@@ -75,13 +75,15 @@ program. Missing identities, duplicate identities, non-contiguous entry order,
 cycles, and invalid offsets are rejected before writing the linked artifact.
 The linker does not introduce a new artifact version. The optional module
 product cache is separate from VM artifacts: `--module-cache <directory>`
-stores a `cdbc-cache 0.2` manifest and content-addressed product files, while
+stores a `cdbc-cache 0.2` manifest (internal schema 3) and content-addressed product files, while
 `--module-rebuild-report <report.json>` records per-module reuse/rebuild
 reasons. Keys include the canonical module identity, exact source bytes,
-canonical public interface shape, entry metadata, and source-ordered dependency
-interface inputs; snapshot-local IDs are never cache keys. A private source
-change rebuilds only that module, while a public-interface change propagates
-through transitive dependents. Valid paired interface sidecars can preload
+canonical public interface shape, optimization level, optimizer pipeline
+fingerprint, entry metadata, and source-ordered dependency interface inputs;
+snapshot-local IDs are never cache keys. A private source change rebuilds only
+that module, while a public-interface change propagates through transitive
+dependents. A changed optimization identity rebuilds the affected product
+without marking its public interface changed. Valid paired interface sidecars can preload
 dependency public shape before the current importer check; invalid or missing
 sidecars/products fall back to source parsing. Linked programs built from a
 single file or direct multi-file input retain their existing metadata; an

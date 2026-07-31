@@ -15,7 +15,7 @@
 
 namespace {
 
-constexpr int kModuleCacheSchemaVersion = 2;
+constexpr int kModuleCacheSchemaVersion = 3;
 constexpr std::uint64_t kFnvOffset = 14695981039346656037ULL;
 constexpr std::uint64_t kFnvPrime = 1099511628211ULL;
 
@@ -69,6 +69,14 @@ bool sameModuleMetadata(const ModuleCacheModule& left, const ModuleCacheModule& 
 {
     return left.isEntry == right.isEntry
         && left.entryOrder == right.entryOrder;
+}
+
+bool sameOptimizationIdentity(
+    const ModuleCacheModule& left,
+    const ModuleCacheModule& right)
+{
+    return left.optimizationLevel == right.optimizationLevel
+        && left.optimizerPipeline == right.optimizerPipeline;
 }
 
 std::string parseError(std::size_t line, const std::string& message)
@@ -298,6 +306,8 @@ std::string moduleCacheKey(const ModuleCacheModule& module)
     appendField(input, "identity", module.identity);
     appendField(input, "source", module.sourceHash);
     appendField(input, "interface", module.interfaceHash);
+    appendField(input, "optimization_level", module.optimizationLevel);
+    appendField(input, "optimizer_pipeline", module.optimizerPipeline);
     appendField(input, "entry", module.isEntry ? "true" : "false");
     appendField(
         input,
@@ -367,7 +377,7 @@ ModuleCacheLoadResult readModuleCache(const std::filesystem::path& path)
     std::size_t schemaVersion = 0;
     if (!schema || !parseSizeField(schema->second, "schema = ", schemaVersion)
         || schemaVersion != kModuleCacheSchemaVersion) {
-        fail(schema ? schema->first : 1, "expected schema = 2");
+        fail(schema ? schema->first : 1, "expected schema = 3");
         return result;
     }
     const auto modulesHeader = nextNonEmpty();
@@ -400,15 +410,26 @@ ModuleCacheLoadResult readModuleCache(const std::filesystem::path& path)
         const auto identity = nextNonEmpty();
         const auto sourceHash = nextNonEmpty();
         const auto interfaceHash = nextNonEmpty();
+        const auto optimizationLevel = nextNonEmpty();
+        const auto optimizerPipeline = nextNonEmpty();
         const auto cacheKey = nextNonEmpty();
         const auto artifact = nextNonEmpty();
         const auto interfaceArtifact = nextNonEmpty();
         const auto entry = nextNonEmpty();
-        if (!identity || !sourceHash || !interfaceHash || !cacheKey || !artifact
+        if (!identity || !sourceHash || !interfaceHash || !optimizationLevel
+            || !optimizerPipeline || !cacheKey || !artifact
             || !interfaceArtifact || !entry
             || !parseQuotedField(identity->second, "  identity = ", record.module.identity)
             || !parseQuotedField(sourceHash->second, "  source = ", record.module.sourceHash)
             || !parseQuotedField(interfaceHash->second, "  interface = ", record.module.interfaceHash)
+            || !parseQuotedField(
+                optimizationLevel->second,
+                "  optimization_level = ",
+                record.module.optimizationLevel)
+            || !parseQuotedField(
+                optimizerPipeline->second,
+                "  optimizer_pipeline = ",
+                record.module.optimizerPipeline)
             || !parseQuotedField(cacheKey->second, "  key = ", record.module.cacheKey)
             || !parseQuotedField(artifact->second, "  artifact = ", record.artifactPath)
             || !parseQuotedField(interfaceArtifact->second, "  interface_artifact = ", record.interfaceArtifactPath)
@@ -417,6 +438,8 @@ ModuleCacheLoadResult readModuleCache(const std::filesystem::path& path)
             return result;
         }
         if (record.module.identity.empty()
+            || record.module.optimizationLevel.empty()
+            || record.module.optimizerPipeline.empty()
             || std::filesystem::path(record.artifactPath).is_absolute()
             || std::filesystem::path(record.artifactPath).lexically_normal().string() != record.artifactPath
             || record.interfaceArtifactPath.empty()
@@ -510,7 +533,7 @@ void writeModuleCache(
         throw std::runtime_error("failed to open module cache: " + path.string());
     }
     output << "cdbc-cache 0.2\n\n"
-           << "schema = 2\n"
+           << "schema = 3\n"
            << "modules:\n";
     for (std::size_t index = 0; index < manifest.records.size(); ++index) {
         const ModuleCacheRecord& record = manifest.records[index];
@@ -530,6 +553,8 @@ void writeModuleCache(
                << "  identity = " << quotedString(module.identity) << '\n'
                << "  source = " << quotedString(module.sourceHash) << '\n'
                << "  interface = " << quotedString(module.interfaceHash) << '\n'
+               << "  optimization_level = " << quotedString(module.optimizationLevel) << '\n'
+               << "  optimizer_pipeline = " << quotedString(module.optimizerPipeline) << '\n'
                << "  key = " << quotedString(module.cacheKey) << '\n'
                << "  artifact = " << quotedString(record.artifactPath) << '\n'
                << "  interface_artifact = " << quotedString(interfaceArtifactPath) << '\n'
@@ -606,6 +631,8 @@ std::vector<ModuleCacheDecision> planModuleCacheBuild(
             || !sameDependencies(previousRecord->module.dependencies, module.dependencies);
         const bool metadataChanged = !hasPrevious
             || !sameModuleMetadata(previousRecord->module, module);
+        const bool optimizationChanged = !hasPrevious
+            || !sameOptimizationIdentity(previousRecord->module, module);
         const bool keyChanged = !hasPrevious
             || previousRecord->module.cacheKey != module.cacheKey;
 
@@ -626,6 +653,7 @@ std::vector<ModuleCacheDecision> planModuleCacheBuild(
             || dependencyChanged
             || dependencyPublicImpact
             || metadataChanged
+            || optimizationChanged
             || keyChanged
             || artifactMissing;
 
@@ -655,6 +683,8 @@ std::vector<ModuleCacheDecision> planModuleCacheBuild(
             evaluation.decision.reason = "public_interface_changed";
         } else if (metadataChanged) {
             evaluation.decision.reason = "module_metadata_changed";
+        } else if (optimizationChanged) {
+            evaluation.decision.reason = "optimization_configuration_changed";
         } else if (keyChanged) {
             evaluation.decision.reason = "cache_key_changed";
         } else {
@@ -714,6 +744,10 @@ void writeModuleRebuildReport(
         writeJsonString(out, decision.module.sourceHash);
         out << ",\n      \"interface_hash\": ";
         writeJsonString(out, decision.module.interfaceHash);
+        out << ",\n      \"optimization_level\": ";
+        writeJsonString(out, decision.module.optimizationLevel);
+        out << ",\n      \"optimizer_pipeline\": ";
+        writeJsonString(out, decision.module.optimizerPipeline);
         out << ",\n      \"cache_key\": ";
         writeJsonString(out, decision.module.cacheKey);
         out << ",\n      \"artifact\": ";

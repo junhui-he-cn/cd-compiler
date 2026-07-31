@@ -334,10 +334,12 @@ at the source expression range; edge copies are hidden/internal unless an
 existing location is safe to reuse. Removing a pure instruction may remove its
 instruction-level trace event at O1.
 
-The current trace contract therefore remains tied to O0 artifacts while this
-design is implemented. O1 artifacts may provide valid source locations but do
-not promise identical event counts or runtime-cell local visibility. A later
-debug-local table can make optimized trace a separately specified capability.
+The selected policy keeps the trace-local boundary conservative: O1 retains
+runtime-cell operations for source-visible bindings, and local-slot SSA
+promotion remains an internal experiment rather than a default-pipeline pass.
+O1 may still omit trace events for removed pure instructions, so event-count
+equivalence is not promised. O0 remains the stable debug path until a later
+optimized trace mapping is separately admitted.
 
 ## Module/cache boundary
 
@@ -346,7 +348,7 @@ independently. The linker only sees the existing module dependency markers and
 ordinary bytecode. No importer may optimize a dependency body from its public
 interface.
 
-`cdbc-cache 0.2` records must distinguish products by at least:
+`cdbc-cache 0.2` schema-3 records must distinguish products by at least:
 
 ```text
 source hash
@@ -359,6 +361,10 @@ optimizer pipeline fingerprint
 The fingerprint must be deterministic and versioned. A missing or mismatched
 optimization identity follows the existing source-fallback or strict-rejection
 policy; it must never reuse a product compiled under another optimizer.
+Schema-2 manifests are stale and follow the existing cold-cache repair path.
+The current default identity is `optimization_level = "O0"` and
+`optimizer_pipeline = "m7-ssa-o0-v1"`; a changed identity rebuilds only the
+affected product and does not imply a public-interface change.
 
 ## Proposed files and responsibilities
 

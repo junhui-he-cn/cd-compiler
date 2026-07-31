@@ -3,9 +3,10 @@
 Status: proposed overall on `feat/ssa-optimization-design`. The CFG
 foundation, SSA structural shell, deterministic dominance-analysis,
 phi-placement, binding/effect-contract, SSA memory-slot rename, de-SSA
-copy-plan, internal linear-layout, ordinary-IR adapter, and conservative
-internal O1 value-simplification sub-slices are implemented on this branch;
-default pipeline integration and broader optimization remain unadmitted.
+copy-plan, internal linear-layout, ordinary-IR adapter, conservative internal
+O1 value-simplification, and O0 optimization/cache-identity sub-slices are
+implemented on this branch; default pipeline integration and broader
+optimization remain unadmitted.
 
 ## Question
 
@@ -295,6 +296,15 @@ remain unchanged. `ctest.optimizer` covers the O0 identity, copy/phi behavior,
 pure dead-code deletion, trap retention, and malformed-input rejection. This
 service is not called by `IRCompiler`, the CLI, or any artifact emitter.
 
+The selected debug-local policy keeps source-visible runtime-cell operations in
+the default O1 contract; `renamePromotableMemorySlots` remains an internal
+experiment until optimized local materialization and trace mapping are
+specified. The module-product cache records `optimization_level` and
+`optimizer_pipeline` in schema 3 and includes both in the length-delimited
+cache key. The current O0 identity is `O0` / `m7-ssa-o0-v1`; schema 2 manifests
+are stale and take the existing cold-cache repair path. This does not change the
+`cdbc 0.1` artifact or Rust VM wire format.
+
 The branch now freezes the internal binding/effect contract in
 `include/BindingMetadata.hpp` and `include/IR.hpp`. `IRBinding` carries a
 snapshot-local `BindingId`, resolved name, and explicit storage class; only
@@ -317,15 +327,10 @@ collection, or make optimization mandatory.
 
 ## Open decisions before default-pipeline de-SSA and optimization
 
-The following must be resolved in the first implementation decision revision:
+The following remain before default-pipeline de-SSA and optimization:
 
 1. how the verified internal adapter is invoked by the default pipeline while
    preserving debug locations, dependency anchors, and existing artifact
    boundaries;
-2. whether the default-pipeline O1 promotes non-captured locals or only
-   optimizes explicit SSA temporaries;
-3. the source-level local policy for `compiler-design-vm trace` on optimized
-   artifacts;
-4. the stable optimizer fingerprint and its `cdbc-cache 0.2` representation;
-5. the precise constant-evaluation error/trap classification; and
-6. the register-allocation strategy and its source-location mapping.
+2. the precise constant-evaluation error/trap classification; and
+3. the register-allocation strategy and its source-location mapping.

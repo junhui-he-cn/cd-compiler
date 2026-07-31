@@ -24,9 +24,9 @@ struct SSAOptimizationResult {
     void verify(const ControlFlowGraph& cfg) const;
 };
 
-// The fingerprint is a stable internal pipeline identity. It is not yet part
-// of module-cache keys because this optimizer is not connected to production
-// lowering.
+// The fingerprint is a stable internal pipeline identity. O0 cache records
+// mirror this identity; optimized pipeline selection is not yet connected to
+// production lowering.
 std::string ssaOptimizationPipelineFingerprint(SSAOptimizationLevel level);
 
 // Optimize one already verified SSA function. O0 is an identity pass. O1 is

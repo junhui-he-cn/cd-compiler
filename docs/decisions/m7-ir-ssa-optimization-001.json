@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "decision_revision": "m7-2026-07-31-r7",
+  "decision_revision": "m7-2026-07-31-r8",
   "inventory_revision": "m0d-2026-07-22-r1",
   "decision_id": "M7-IR-SSA-001",
   "domain": "internal-ssa-optimization",
@@ -183,8 +183,26 @@
       "constant-value propagation or folding",
       "branch simplification",
       "default IRCompiler or CLI integration",
-      "bytecode or module-cache integration",
-      "optimized debug-local policy"
+      "bytecode integration",
+      "optimized trace event-count contract"
+    ]
+  },
+  "optimizer_cache_identity_slice": {
+    "status": "implemented_on_feature_branch",
+    "capabilities": [
+      "conservative O1 debug-local policy retaining source-visible runtime cells",
+      "cdbc-cache 0.2 schema 3 optimization_level field",
+      "cdbc-cache 0.2 schema 3 optimizer_pipeline field",
+      "length-delimited optimization identity in module cache keys",
+      "optimization_configuration_changed rebuild reason",
+      "schema 2 stale-cache rejection and cold rebuild policy",
+      "unchanged cdbc 0.1 and Rust VM wire format"
+    ],
+    "test_case_id": "ctest.module_cache",
+    "not_included": [
+      "default optimized IRCompiler pipeline",
+      "optimized trace event-count equivalence",
+      "O1 module-product emission"
     ]
   },
   "pipeline": [
@@ -210,7 +228,7 @@
     "ssa_serialization": "none",
     "default_optimization": "O0",
     "module_products": "optimized independently with remapped dependency anchors",
-    "cache_identity": "must include optimization level and pipeline fingerprint"
+    "cache_identity": "schema 3 includes optimization level and pipeline fingerprint"
   },
   "initial_o1_passes": [
     "unreachable-block removal",
@@ -238,7 +256,7 @@
     "JIT compilation",
     "garbage collection",
     "inlining and speculative optimization",
-    "optimized debug-local contract"
+    "optimized trace event-count equivalence"
   ],
   "old_path_deletion_condition": "Keep the existing direct linear IR and O0 path until the verifier, semantic parity corpus, debug policy, dependency-offset remapping, and cache identity are all proven.",
   "implementation_plan": "docs/superpowers/plans/2026-07-30-ssa-optimization.md"
