@@ -31,7 +31,7 @@ behavior must update the implementation contract and tests together.
 | Verification | M0A-M0D complete | `tests/verification_inventory.json` is revision `m0d-2026-07-22-r1` with 1,868 checks; `tests/run_verification.py` is the canonical runner. |
 | Semantic front end | M1A1-M1F complete | `SourceIdentity`, `LosslessSourceView`, `DeclarationIndex`, shared type/pattern metadata, and HIR-only IR lowering are shipped. |
 | Language semantics | Admitted M2A flow slices and M2B recovery slices complete | M2A `FLOW-001..021`, M2B type recovery, parser recovery `001..003`, and lexer recovery `001` are shipped; the broader flow policy remains open below. |
-| Generic capabilities | M6-LANG-001 and M6-LANG-HASH-001 complete | Compile-time `Eq`/`Ord`/`Hash` bounds, canonical `+` conjunctions, inference, explicit arguments, comparator/hash forwarding, public interfaces, deterministic hash native execution, and module-cache validation are shipped; runtime capability dispatch and hash-container semantics are not part of the contract. |
+| Generic capabilities | M6-LANG-001 and M6-LANG-HASH-001 complete | Compile-time `Eq`/`Ord`/`Hash` bounds, canonical `+` conjunctions, inference, explicit arguments, comparator/hash forwarding, public interfaces, deterministic hash native execution, and module-cache validation are shipped; runtime capability dispatch remains outside the contract. |
 | Modules and cache | M3A graph/interface slices plus M3B artifact/cache boundaries complete | Independent module products, linker inputs, `.cdi` interfaces, `cdbc-cache 0.2`, invalidation, and safe source fallback are shipped. Removing fallback is not approved. |
 | Artifact/runtime | M4A validation and M4B debug metadata complete | `cdbc 0.1` remains the contract; validation, module identity, source ranges, and link-time debug rebasing are shipped. |
 | Formatter | M5A-FORMAT-001..008 complete | `--format`, `--format-check`, lossless comments/trivia, idempotence, blank-line/trailing-comma policies, bounded list wrapping, and invalid-input rejection are shipped. |
@@ -103,6 +103,23 @@ variants use structural payload hashing under the shared C++/Rust contract.
 and `Eq + Hash` calls; unconstrained diagnostics; interface text; C++ value hash
 constants; Rust VM unit tests; and emitted artifact execution. Run the focused
 golden/artifact/Rust checks, CTest, canonical verification, and `git diff --check`.
+
+### M6-LANG-HASH-002: stable generic hash keys (feature branch)
+
+**Status:** implemented on `feat/issue-15-stable-hash-keys`; not yet part of
+`master` until its branch is integrated.
+
+**Decision:** generic `HashSet<T: Eq + Hash>` and
+`HashMap<K: Eq + Hash, V>` use the existing equality/hash law and identity-
+stable semantics for mutable arrays, maps, functions, and named structs.
+Aliases may mutate stored keys without invalidating membership. The public
+library uses array-backed buckets and preserves insertion-order snapshots; the
+built-in `map<K,V>` remains primitive-keyed.
+
+**Evidence:** `docs/decisions/m6-language-hash-002.{md,json}`,
+`library/hash_collections.cd`, the isolated library fixture
+`data_structures_hash_collections`, C++/Rust reference-hash tests, and the
+unconstrained generic diagnostic fixture.
 
 ### M6-LANG-OPERATOR-001A: builtin string ordering
 

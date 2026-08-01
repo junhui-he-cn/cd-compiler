@@ -1,0 +1,82 @@
+import "../../data_structures.cd" as ds;
+
+fun renderMap(entries: [ds.HashMapEntry<string, number>]): string {
+  let result = "";
+  let index = 0;
+  while (index < entries.len()) {
+    if (index > 0) {
+      result = result + ",";
+    }
+    result = result + entries[index].key + "=" + str(entries[index].value);
+    index += 1;
+  }
+  return result;
+}
+
+let set = ds.newHashSet<string>();
+print set.isEmpty();
+print set.add("alpha");
+print set.add("beta");
+print set.add("alpha");
+print set.snapshot();
+print set.has("beta");
+print set.discard("alpha");
+print set.discard("alpha");
+print set.snapshot();
+
+let growing = ds.newHashSet<number>();
+let number = 0;
+while (number < 12) {
+  growing.add(number);
+  number += 1;
+}
+print growing.size();
+print growing.has(11);
+print growing.discard(5);
+print growing.has(5);
+
+let mapping = ds.newHashMap<string, number>();
+print mapping.isEmpty();
+print mapping.put("alpha", 1);
+print mapping.put("beta", 2);
+print mapping.put("alpha", 3);
+print mapping.get("alpha");
+print mapping.get("missing");
+print renderMap(mapping.snapshot());
+print mapping.discard("beta");
+print mapping.discard("beta");
+print renderMap(mapping.snapshot());
+
+let mapIndex = 0;
+while (mapIndex < 12) {
+  mapping.put("key" + str(mapIndex), mapIndex);
+  mapIndex += 1;
+}
+print mapping.size();
+print mapping.get("key11");
+print mapping.discard("key0");
+print mapping.has("key0");
+
+let arrayKey = [1];
+let arrayKeys = ds.newHashSet<[number]>();
+print arrayKeys.add(arrayKey);
+arrayKey.push(2);
+print arrayKeys.has(arrayKey);
+print arrayKeys.has([1, 2]);
+
+let arrayMap = ds.newHashMap<[number], string>();
+print arrayMap.put(arrayKey, "array");
+arrayKey.push(3);
+print arrayMap.get(arrayKey);
+print arrayMap.get([1, 2, 3]);
+
+struct MutableKey {
+  value: number
+}
+
+let mutableKey = MutableKey { value: 1 };
+let objectKeys = ds.newHashSet<MutableKey>();
+print objectKeys.add(mutableKey);
+mutableKey.value = 2;
+print objectKeys.has(mutableKey);
+print objectKeys.has(MutableKey { value: 2 });

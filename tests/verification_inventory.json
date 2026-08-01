@@ -22431,6 +22431,34 @@
       "fixture": "tests/golden/type_errors"
     },
     {
+      "case_id": "golden.type_errors.hash_collection_unconstrained",
+      "runner": "golden",
+      "result_name": "type_errors/hash_collection_unconstrained default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:hash_collection_unconstrained"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/hash_collection_unconstrained.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/hash_collection_unconstrained.cd",
+        "tests/golden/type_errors/hash_collection_unconstrained.err",
+        "tests/golden/type_errors/hash_collection_unconstrained.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
       "case_id": "golden.type_errors.hash_eq_only",
       "runner": "golden",
       "result_name": "type_errors/hash_eq_only default(ast)",

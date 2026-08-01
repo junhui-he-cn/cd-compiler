@@ -23,6 +23,9 @@ export Set, OrderedSet, OrderedMapEntry, OrderedMap, BiMapEntry, BiMap, MultiSet
        newMultiMap
        from "./sets.cd";
 
+export HashSet, HashMapEntry, HashMap, newHashSet, newHashMap
+       from "./hash_collections.cd";
+
 export LruCacheEntry, LruCache, newLruCache, LfuCacheEntry, LfuCache, newLfuCache
        from "./caches.cd";
 
