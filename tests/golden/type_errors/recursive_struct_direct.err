@@ -1,1 +1,0 @@
-Type error at 1:21: recursive struct field `next` references `Node`

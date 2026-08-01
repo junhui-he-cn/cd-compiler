@@ -3296,6 +3296,67 @@
       "fixture": "tests/bytecode_artifacts/record_patterns"
     },
     {
+      "case_id": "artifact.recursive_node_references.emit",
+      "runner": "artifact",
+      "result_name": "recursive_node_references emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "artifact",
+        "cdbc",
+        "emit",
+        "fixture:recursive_node_references"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "cdbc-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/bytecode_artifacts/recursive_node_references/input.cd"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/recursive_node_references/expected.cdbc"
+      ],
+      "fixture": "tests/bytecode_artifacts/recursive_node_references"
+    },
+    {
+      "case_id": "artifact.recursive_node_references.rust_dump",
+      "runner": "artifact",
+      "result_name": "recursive_node_references rust-dump",
+      "stage": "artifact-parse",
+      "capability_tags": [
+        "artifact",
+        "cdbc",
+        "rust-parser",
+        "fixture:recursive_node_references"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "cdbc-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode"
+      ],
+      "terminal_boundary": "rust_decode",
+      "sources": [
+        "tests/bytecode_artifacts/recursive_node_references/input.cd"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/recursive_node_references/expected.cdbc"
+      ],
+      "fixture": "tests/bytecode_artifacts/recursive_node_references"
+    },
+    {
       "case_id": "artifact.runtime_diagnostics.emit",
       "runner": "artifact",
       "result_name": "runtime_diagnostics emit",
@@ -17086,6 +17147,254 @@
       "fixture": "tests/golden/record_patterns"
     },
     {
+      "case_id": "golden.success.recursive_node_import.ast",
+      "runner": "golden",
+      "result_name": "recursive_node_import default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:recursive_node_import"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/recursive_node_import/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/recursive_node_import/ast.out"
+      ],
+      "fixture": "tests/golden/recursive_node_import"
+    },
+    {
+      "case_id": "golden.success.recursive_node_import.bytecode",
+      "runner": "golden",
+      "result_name": "recursive_node_import --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:recursive_node_import"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/recursive_node_import/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/recursive_node_import/bytecode.out"
+      ],
+      "fixture": "tests/golden/recursive_node_import"
+    },
+    {
+      "case_id": "golden.success.recursive_node_import.ir",
+      "runner": "golden",
+      "result_name": "recursive_node_import --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:recursive_node_import"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/recursive_node_import/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/recursive_node_import/ir.out"
+      ],
+      "fixture": "tests/golden/recursive_node_import"
+    },
+    {
+      "case_id": "golden.success.recursive_node_import.module_interface",
+      "runner": "golden",
+      "result_name": "recursive_node_import --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:recursive_node_import"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/recursive_node_import/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/recursive_node_import/module-interface.out"
+      ],
+      "fixture": "tests/golden/recursive_node_import"
+    },
+    {
+      "case_id": "golden.success.recursive_node_references.ast",
+      "runner": "golden",
+      "result_name": "recursive_node_references default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:recursive_node_references"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/recursive_node_references/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/recursive_node_references/ast.out"
+      ],
+      "fixture": "tests/golden/recursive_node_references"
+    },
+    {
+      "case_id": "golden.success.recursive_node_references.bytecode",
+      "runner": "golden",
+      "result_name": "recursive_node_references --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:recursive_node_references"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/recursive_node_references/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/recursive_node_references/bytecode.out"
+      ],
+      "fixture": "tests/golden/recursive_node_references"
+    },
+    {
+      "case_id": "golden.success.recursive_node_references.ir",
+      "runner": "golden",
+      "result_name": "recursive_node_references --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:recursive_node_references"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/recursive_node_references/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/recursive_node_references/ir.out"
+      ],
+      "fixture": "tests/golden/recursive_node_references"
+    },
+    {
+      "case_id": "golden.success.recursive_node_references.module_interface",
+      "runner": "golden",
+      "result_name": "recursive_node_references --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:recursive_node_references"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/recursive_node_references/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/recursive_node_references/module-interface.out"
+      ],
+      "fixture": "tests/golden/recursive_node_references"
+    },
+    {
+      "case_id": "golden.success.recursive_node_type_shapes.ast",
+      "runner": "golden",
+      "result_name": "recursive_node_type_shapes default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:recursive_node_type_shapes"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/recursive_node_type_shapes/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/recursive_node_type_shapes/ast.out"
+      ],
+      "fixture": "tests/golden/recursive_node_type_shapes"
+    },
+    {
       "case_id": "golden.success.strings.ast",
       "runner": "golden",
       "result_name": "strings default(ast)",
@@ -22347,34 +22656,6 @@
       "fixture": "tests/golden/type_errors"
     },
     {
-      "case_id": "golden.type_errors.generic_struct_recursive",
-      "runner": "golden",
-      "result_name": "type_errors/generic_struct_recursive default(ast)",
-      "stage": "type-error",
-      "capability_tags": [
-        "golden",
-        "type_errors",
-        "fixture:generic_struct_recursive"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "diagnostic-and-exit",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic_diagnostic"
-      ],
-      "terminal_boundary": "semantic_diagnostic",
-      "sources": [
-        "tests/golden/type_errors/generic_struct_recursive.cd"
-      ],
-      "expected_files": [
-        "tests/golden/type_errors/generic_struct_recursive.cd",
-        "tests/golden/type_errors/generic_struct_recursive.err",
-        "tests/golden/type_errors/generic_struct_recursive.exit"
-      ],
-      "fixture": "tests/golden/type_errors"
-    },
-    {
       "case_id": "golden.type_errors.generic_struct_wrong_arity",
       "runner": "golden",
       "result_name": "type_errors/generic_struct_wrong_arity default(ast)",
@@ -26407,14 +26688,14 @@
       "fixture": "tests/golden/type_errors"
     },
     {
-      "case_id": "golden.type_errors.recursive_struct_array",
+      "case_id": "golden.type_errors.recursive_node_wrong_field_type",
       "runner": "golden",
-      "result_name": "type_errors/recursive_struct_array default(ast)",
+      "result_name": "type_errors/recursive_node_wrong_field_type default(ast)",
       "stage": "type-error",
       "capability_tags": [
         "golden",
         "type_errors",
-        "fixture:recursive_struct_array"
+        "fixture:recursive_node_wrong_field_type"
       ],
       "backend": "cpp",
       "expected_result_kind": "diagnostic-and-exit",
@@ -26425,152 +26706,12 @@
       ],
       "terminal_boundary": "semantic_diagnostic",
       "sources": [
-        "tests/golden/type_errors/recursive_struct_array.cd"
+        "tests/golden/type_errors/recursive_node_wrong_field_type.cd"
       ],
       "expected_files": [
-        "tests/golden/type_errors/recursive_struct_array.cd",
-        "tests/golden/type_errors/recursive_struct_array.err",
-        "tests/golden/type_errors/recursive_struct_array.exit"
-      ],
-      "fixture": "tests/golden/type_errors"
-    },
-    {
-      "case_id": "golden.type_errors.recursive_struct_direct",
-      "runner": "golden",
-      "result_name": "type_errors/recursive_struct_direct default(ast)",
-      "stage": "type-error",
-      "capability_tags": [
-        "golden",
-        "type_errors",
-        "fixture:recursive_struct_direct"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "diagnostic-and-exit",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic_diagnostic"
-      ],
-      "terminal_boundary": "semantic_diagnostic",
-      "sources": [
-        "tests/golden/type_errors/recursive_struct_direct.cd"
-      ],
-      "expected_files": [
-        "tests/golden/type_errors/recursive_struct_direct.cd",
-        "tests/golden/type_errors/recursive_struct_direct.err",
-        "tests/golden/type_errors/recursive_struct_direct.exit"
-      ],
-      "fixture": "tests/golden/type_errors"
-    },
-    {
-      "case_id": "golden.type_errors.recursive_struct_function_parameter",
-      "runner": "golden",
-      "result_name": "type_errors/recursive_struct_function_parameter default(ast)",
-      "stage": "type-error",
-      "capability_tags": [
-        "golden",
-        "type_errors",
-        "fixture:recursive_struct_function_parameter"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "diagnostic-and-exit",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic_diagnostic"
-      ],
-      "terminal_boundary": "semantic_diagnostic",
-      "sources": [
-        "tests/golden/type_errors/recursive_struct_function_parameter.cd"
-      ],
-      "expected_files": [
-        "tests/golden/type_errors/recursive_struct_function_parameter.cd",
-        "tests/golden/type_errors/recursive_struct_function_parameter.err",
-        "tests/golden/type_errors/recursive_struct_function_parameter.exit"
-      ],
-      "fixture": "tests/golden/type_errors"
-    },
-    {
-      "case_id": "golden.type_errors.recursive_struct_function_return",
-      "runner": "golden",
-      "result_name": "type_errors/recursive_struct_function_return default(ast)",
-      "stage": "type-error",
-      "capability_tags": [
-        "golden",
-        "type_errors",
-        "fixture:recursive_struct_function_return"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "diagnostic-and-exit",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic_diagnostic"
-      ],
-      "terminal_boundary": "semantic_diagnostic",
-      "sources": [
-        "tests/golden/type_errors/recursive_struct_function_return.cd"
-      ],
-      "expected_files": [
-        "tests/golden/type_errors/recursive_struct_function_return.cd",
-        "tests/golden/type_errors/recursive_struct_function_return.err",
-        "tests/golden/type_errors/recursive_struct_function_return.exit"
-      ],
-      "fixture": "tests/golden/type_errors"
-    },
-    {
-      "case_id": "golden.type_errors.recursive_struct_indirect",
-      "runner": "golden",
-      "result_name": "type_errors/recursive_struct_indirect default(ast)",
-      "stage": "type-error",
-      "capability_tags": [
-        "golden",
-        "type_errors",
-        "fixture:recursive_struct_indirect"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "diagnostic-and-exit",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic_diagnostic"
-      ],
-      "terminal_boundary": "semantic_diagnostic",
-      "sources": [
-        "tests/golden/type_errors/recursive_struct_indirect.cd"
-      ],
-      "expected_files": [
-        "tests/golden/type_errors/recursive_struct_indirect.cd",
-        "tests/golden/type_errors/recursive_struct_indirect.err",
-        "tests/golden/type_errors/recursive_struct_indirect.exit"
-      ],
-      "fixture": "tests/golden/type_errors"
-    },
-    {
-      "case_id": "golden.type_errors.recursive_struct_nullable",
-      "runner": "golden",
-      "result_name": "type_errors/recursive_struct_nullable default(ast)",
-      "stage": "type-error",
-      "capability_tags": [
-        "golden",
-        "type_errors",
-        "fixture:recursive_struct_nullable"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "diagnostic-and-exit",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic_diagnostic"
-      ],
-      "terminal_boundary": "semantic_diagnostic",
-      "sources": [
-        "tests/golden/type_errors/recursive_struct_nullable.cd"
-      ],
-      "expected_files": [
-        "tests/golden/type_errors/recursive_struct_nullable.cd",
-        "tests/golden/type_errors/recursive_struct_nullable.err",
-        "tests/golden/type_errors/recursive_struct_nullable.exit"
+        "tests/golden/type_errors/recursive_node_wrong_field_type.cd",
+        "tests/golden/type_errors/recursive_node_wrong_field_type.err",
+        "tests/golden/type_errors/recursive_node_wrong_field_type.exit"
       ],
       "fixture": "tests/golden/type_errors"
     },
@@ -31183,6 +31324,36 @@
       "expected_files": []
     },
     {
+      "case_id": "module_cache.recursive_public_shape",
+      "runner": "module_cache",
+      "result_name": "module cache recursive public shape invalidation",
+      "stage": "module-cache",
+      "capability_tags": [
+        "module-cache",
+        "recursive-struct",
+        "public-interface-invalidation",
+        "transitive-dependency",
+        "rust-vm"
+      ],
+      "backend": "mixed",
+      "expected_result_kind": "recursive-shape-cache-report-and-runtime-parity",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/bytecode_module_cache_tests.py"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "module_cache.strict_rejection",
       "runner": "module_cache",
       "result_name": "module cache strict rejection matrix",
@@ -34348,6 +34519,68 @@
         "tests/bytecode_artifacts/record_patterns/run.out"
       ],
       "fixture": "tests/bytecode_artifacts/record_patterns"
+    },
+    {
+      "case_id": "rust_vm.artifact.recursive_node_references.emit",
+      "runner": "rust_vm_artifact",
+      "result_name": "recursive_node_references emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "artifact",
+        "emit",
+        "fixture:recursive_node_references"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/bytecode_artifacts/recursive_node_references/input.cd"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/recursive_node_references/run.out"
+      ],
+      "fixture": "tests/bytecode_artifacts/recursive_node_references"
+    },
+    {
+      "case_id": "rust_vm.artifact.recursive_node_references.run",
+      "runner": "rust_vm_artifact",
+      "result_name": "recursive_node_references rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "artifact",
+        "runtime",
+        "fixture:recursive_node_references"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/bytecode_artifacts/recursive_node_references/input.cd"
+      ],
+      "expected_files": [
+        "tests/bytecode_artifacts/recursive_node_references/run.out"
+      ],
+      "fixture": "tests/bytecode_artifacts/recursive_node_references"
     },
     {
       "case_id": "rust_vm.artifact.string_ordering.emit",
@@ -47742,6 +47975,130 @@
         "tests/golden/record_pattern_module/run.out"
       ],
       "fixture": "tests/golden/record_pattern_module"
+    },
+    {
+      "case_id": "rust_vm.golden.recursive_node_import.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "recursive_node_import emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:recursive_node_import"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/recursive_node_import/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/recursive_node_import/run.out"
+      ],
+      "fixture": "tests/golden/recursive_node_import"
+    },
+    {
+      "case_id": "rust_vm.golden.recursive_node_import.run",
+      "runner": "rust_vm_golden",
+      "result_name": "recursive_node_import rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:recursive_node_import"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/recursive_node_import/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/recursive_node_import/run.out"
+      ],
+      "fixture": "tests/golden/recursive_node_import"
+    },
+    {
+      "case_id": "rust_vm.golden.recursive_node_references.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "recursive_node_references emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:recursive_node_references"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/recursive_node_references/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/recursive_node_references/run.out"
+      ],
+      "fixture": "tests/golden/recursive_node_references"
+    },
+    {
+      "case_id": "rust_vm.golden.recursive_node_references.run",
+      "runner": "rust_vm_golden",
+      "result_name": "recursive_node_references rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:recursive_node_references"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/recursive_node_references/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/recursive_node_references/run.out"
+      ],
+      "fixture": "tests/golden/recursive_node_references"
     },
     {
       "case_id": "rust_vm.golden.strings.emit",

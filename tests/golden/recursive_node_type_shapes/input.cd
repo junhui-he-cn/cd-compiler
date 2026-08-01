@@ -1,0 +1,7 @@
+struct Direct { next: Direct }
+struct Nullable { next: optional<Nullable> }
+struct ArrayNode { children: [ArrayNode] }
+struct FunctionNode { accept: fun(FunctionNode): number }
+struct GenericNode<T> { next: optional<GenericNode<T>> }
+struct A { b: optional<B> }
+struct B { a: optional<A> }

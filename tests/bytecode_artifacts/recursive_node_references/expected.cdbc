@@ -1,0 +1,187 @@
+cdbc 0.1
+
+constants:
+  c0 = number 2
+  c1 = nil
+  c2 = number 1
+  c3 = nil
+  c4 = number 20
+  c5 = number 3
+  c6 = nil
+  c7 = number 4
+
+names:
+  n0 = "Node"
+  n1 = "value"
+  n2 = "next"
+  n3 = "tail#0"
+  n4 = "Node"
+  n5 = "value"
+  n6 = "next"
+  n7 = "tail#0"
+  n8 = "head#1"
+  n9 = "tail#0"
+  n10 = "alias#2"
+  n11 = "head#1"
+  n12 = "next"
+  n13 = "alias#2"
+  n14 = "value"
+  n15 = "head#1"
+  n16 = "next"
+  n17 = "tail#0"
+  n18 = "value"
+  n19 = "Node"
+  n20 = "value"
+  n21 = "next"
+  n22 = "first#3"
+  n23 = "Node"
+  n24 = "value"
+  n25 = "next"
+  n26 = "first#3"
+  n27 = "second#4"
+  n28 = "first#3"
+  n29 = "second#4"
+  n30 = "next"
+  n31 = "first#3"
+  n32 = "first#3"
+  n33 = "first#3"
+  n34 = "first#3"
+  n35 = "second#4"
+
+main registers=33:
+  r0 = constant c0
+  r1 = constant c1
+  r2 = struct n0 {n1: r0, n2: r1}
+  store_var n3, r2
+  r3 = constant c2
+  r4 = load_var n7
+  r5 = struct n4 {n5: r3, n6: r4}
+  store_var n8, r5
+  r6 = load_var n9
+  store_var n10, r6
+  r7 = load_var n11
+  r8 = constant c3
+  r9 = assign_field r7, n12, r8
+  r10 = load_var n13
+  r11 = constant c4
+  r12 = assign_field r10, n14, r11
+  r13 = load_var n15
+  r14 = field r13, n16
+  print r14
+  r15 = load_var n17
+  r16 = field r15, n18
+  print r16
+  r17 = constant c5
+  r18 = constant c6
+  r19 = struct n19 {n20: r17, n21: r18}
+  store_var n22, r19
+  r20 = constant c7
+  r21 = load_var n26
+  r22 = struct n23 {n24: r20, n25: r21}
+  store_var n27, r22
+  r23 = load_var n28
+  r24 = load_var n29
+  r25 = assign_field r23, n30, r24
+  r26 = load_var n31
+  print r26
+  r27 = load_var n32
+  r28 = load_var n33
+  r29 = equal r27, r28
+  print r29
+  r30 = load_var n34
+  r31 = load_var n35
+  r32 = equal r30, r31
+  print r32
+
+debug_sources:
+  s0 path="tests/bytecode_artifacts/recursive_node_references/input.cd" text="struct Node<T> {\n  value: T,\n  next: optional<Node<T>>\n}\n\nlet tail = Node<number> { value: 2, next: nil };\nlet head = Node<number> { value: 1, next: tail };\nlet alias = tail;\nhead.next = nil;\nalias.value = 20;\nprint head.next;\nprint tail.value;\n\nlet first = Node<number> { value: 3, next: nil };\nlet second = Node<number> { value: 4, next: first };\nfirst.next = second;\nprint first;\nprint first == first;\nprint first == second;\n"
+
+debug_locations:
+  main 0 = s0:6:34
+  main 1 = s0:6:43
+  main 2 = s0:6:12
+  main 3 = s0:6:1
+  main 4 = s0:7:34
+  main 5 = s0:7:43
+  main 6 = s0:7:12
+  main 7 = s0:7:1
+  main 8 = s0:8:13
+  main 9 = s0:8:1
+  main 10 = s0:9:1
+  main 11 = s0:9:13
+  main 12 = s0:9:1
+  main 13 = s0:10:1
+  main 14 = s0:10:15
+  main 15 = s0:10:1
+  main 16 = s0:11:7
+  main 17 = s0:11:7
+  main 18 = s0:11:1
+  main 19 = s0:12:7
+  main 20 = s0:12:7
+  main 21 = s0:12:1
+  main 22 = s0:14:35
+  main 23 = s0:14:44
+  main 24 = s0:14:13
+  main 25 = s0:14:1
+  main 26 = s0:15:36
+  main 27 = s0:15:45
+  main 28 = s0:15:14
+  main 29 = s0:15:1
+  main 30 = s0:16:1
+  main 31 = s0:16:14
+  main 32 = s0:16:1
+  main 33 = s0:17:7
+  main 34 = s0:17:1
+  main 35 = s0:18:7
+  main 36 = s0:18:16
+  main 37 = s0:18:7
+  main 38 = s0:18:1
+  main 39 = s0:19:7
+  main 40 = s0:19:16
+  main 41 = s0:19:7
+  main 42 = s0:19:1
+
+debug_ranges:
+  main 0 = s0:91:92
+  main 1 = s0:100:103
+  main 2 = s0:69:103
+  main 3 = s0:62:103
+  main 4 = s0:140:141
+  main 5 = s0:149:153
+  main 6 = s0:118:153
+  main 7 = s0:111:153
+  main 8 = s0:169:173
+  main 9 = s0:161:173
+  main 10 = s0:175:179
+  main 11 = s0:187:190
+  main 12 = s0:175:190
+  main 13 = s0:192:197
+  main 14 = s0:206:208
+  main 15 = s0:192:208
+  main 16 = s0:216:220
+  main 17 = s0:216:225
+  main 18 = s0:216:225
+  main 19 = s0:233:237
+  main 20 = s0:233:243
+  main 21 = s0:233:243
+  main 22 = s0:280:281
+  main 23 = s0:289:292
+  main 24 = s0:258:292
+  main 25 = s0:250:292
+  main 26 = s0:331:332
+  main 27 = s0:340:345
+  main 28 = s0:309:345
+  main 29 = s0:300:345
+  main 30 = s0:349:354
+  main 31 = s0:362:368
+  main 32 = s0:349:368
+  main 33 = s0:376:381
+  main 34 = s0:376:381
+  main 35 = s0:389:394
+  main 36 = s0:398:403
+  main 37 = s0:389:403
+  main 38 = s0:389:403
+  main 39 = s0:411:416
+  main 40 = s0:420:426
+  main 41 = s0:411:426
+  main 42 = s0:411:426

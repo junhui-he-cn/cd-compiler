@@ -1,0 +1,6 @@
+struct Node<T> {
+  value: T,
+  next: optional<Node<T>>
+}
+
+export Node;

@@ -2368,7 +2368,7 @@ TypeInfo TypeChecker::resolveStructFieldAnnotation(const TypeAnnotation& typeNam
     return resolveSimpleStructFieldAnnotation(typeName, fieldName);
 }
 
-TypeInfo TypeChecker::resolveSimpleStructFieldAnnotation(const TypeAnnotation& typeName, const Token& fieldName)
+TypeInfo TypeChecker::resolveSimpleStructFieldAnnotation(const TypeAnnotation& typeName, const Token&)
 {
     if (typeName.kind == TypeAnnotation::Kind::Qualified) {
         return resolveAnnotation(typeName);
@@ -2409,10 +2409,6 @@ TypeInfo TypeChecker::resolveSimpleStructFieldAnnotation(const TypeAnnotation& t
 
     const auto state = structCheckStates_.find(typeName.token.lexeme);
     if (state != structCheckStates_.end()) {
-        if (state->second == StructCheckState::Checking) {
-            throw TypeError(typeName.token,
-                "recursive struct field `" + fieldName.lexeme + "` references `" + typeName.token.lexeme + "`");
-        }
         if (state->second == StructCheckState::Declared) {
             const auto declaration = structDeclarations_.find(typeName.token.lexeme);
             if (declaration == structDeclarations_.end()) {

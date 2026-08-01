@@ -1,0 +1,5 @@
+nil
+20
+{value: 3, next: {value: 4, next: <cycle>}}
+true
+false

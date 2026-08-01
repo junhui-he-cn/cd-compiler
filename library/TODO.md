@@ -16,6 +16,8 @@ Issue #15 defines the stable key contract for the generic hash containers.
 - [x] Deterministic `hash(value)` shared by the C++ compiler and Rust VM.
 - [x] Builtin string ordering and named-struct ordering operators.
 - [x] Public-interface and module-cache propagation for the implemented shapes.
+- [x] Stable mutable recursive node handles, alias-visible field/link mutation,
+      unlink-with-live-handle behavior, and cycle-safe formatting.
 
 ## Remaining library decisions
 
@@ -27,8 +29,9 @@ Issue #15 defines the stable key contract for the generic hash containers.
       meaningful benefit over the current deterministic scans.
 - [ ] Define whether user-defined struct operators can satisfy generic
       `T: Eq`/`T: Ord` through an explicit static witness or specialization rule.
-- [ ] Implement caches only after key mutation and stable node-reference rules
-      are settled.
+- [ ] Decide whether to migrate LRU/LFU internals to node handles; preserve the
+      current array-backed APIs until key ownership, eviction, and strong-cycle
+      behavior are specified for that separate slice.
 
 The built-in map remains primitive-keyed; generic hash containers use their own
 array-backed bucket tables and the stable key contract above. Other library

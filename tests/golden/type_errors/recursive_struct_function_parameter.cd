@@ -1,1 +1,0 @@
-struct Node { acceptNext: fun(Node): number }

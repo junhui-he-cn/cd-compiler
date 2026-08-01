@@ -1,0 +1,24 @@
+{
+  "decision_id": "M8-LANG-REF-001",
+  "domain": "recursive-nominal-struct-references",
+  "status": "proposed",
+  "issue": 16,
+  "question": "How can mutable linked nodes use stable handles without a second runtime reference representation?",
+  "decision": "Allow recursive nominal struct field types and reuse identity-bearing named struct values as strong handles; use optional<T> for absent links.",
+  "aliasing": "assignment, arguments, captures, and field storage copy the handle; field mutation is visible through all aliases",
+  "lifetime": "strong shared ownership; unlinking does not invalidate retained handles; strong cycles remain until VM teardown",
+  "equality": "struct identity",
+  "hashing": "struct identity",
+  "cycle_format": "<cycle> on an active-path repeat, with existing acyclic formatting unchanged",
+  "artifact_boundary": "reuse existing Struct, Field, and AssignField operations; keep cdbc 0.1",
+  "deferred": [
+    "ref<T> syntax",
+    "borrow checking",
+    "weak references",
+    "finalizers",
+    "cycle collection",
+    "sizeof and packed layout",
+    "automatic node deletion",
+    "node-based cache key ownership"
+  ]
+}
