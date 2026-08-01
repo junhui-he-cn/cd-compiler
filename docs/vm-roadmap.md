@@ -684,6 +684,12 @@ C++ emission、Rust `run` 输出 `32768`、`dump` 的 constant/debug-source 保�
 保持不变。耗时与 peak RSS 仍只作同机观察值；详见
 [`docs/decisions/vm-capacity-003-long-string-output.md`](decisions/vm-capacity-003-long-string-output.md)。
 
+**状态（第四 large-map payload 窄切片已完成，2026-08-01）：** capacity corpus
+新增 2,048-entry map 的 C++ emission、Rust length/key lookup 和
+`--max-elements 1024` rejection；artifact size、map order、string-key lookup、
+stdout、resource error 和 `.cdbc 0.1` 保持不变，elapsed/peak RSS 仍只作同机观察；
+详见 [`docs/decisions/vm-capacity-004-large-map.md`](decisions/vm-capacity-004-large-map.md)。
+
 ## 9. VM-6：运行时生态与兼容性扩展（P2）
 
 ### VM-6A：native ABI 与注册表
@@ -823,7 +829,7 @@ deterministic profile counter/tracked-heap slice、VM-4C 的第一 structured ki
 的 reproducible benchmark baseline/scale slices 和 VM-5B 的 trace-off instruction
 preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard/checkpoint-fast-path/checkpoint-mode-cache/borrow-register-operands/borrow-native-name/borrow-function-values/borrow-caller-name/shared-frame-names/profile-off-hook-guards/inline-native-arguments/decoded-constant-cache/borrowed-global-cell/comparison-dispatch/borrowed-Len-operand/borrowed-Print-operand/borrowed-Field-receiver/borrowed-Index-operands/borrowed-primitive-comparison-operands/borrowed-AssertArray-operand/borrowed-AssertNumber-operand/return-register-transfer slices 已完成；VM-6A 的 registry dispatch/metadata、centralized arity validation、resource touchpoint profile 与 signature shape metadata slices 也已完成；GC、persistent VM、
 JIT 和新的 artifact version 仍未进入默认队列。VM-5C 的第一 capacity corpus、
-第二 long-Unicode-string 和第三 long-Unicode-output slices，以及 VM-4C 的第二
+第二 long-Unicode-string、第三 long-Unicode-output 和第四 large-map payload slices，以及 VM-4C 的第二
 resource-context slice 也已完成。VM-4B 的 wall-clock 与
 estimated retained/host-byte 扩展、VM-4C 的统一 host schema、VM-5B 的后续性能
 优化和 VM-5C 的更大容量/host-memory policy 都需要独立决策；下一步应等待明确

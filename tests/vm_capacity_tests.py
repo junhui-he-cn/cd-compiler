@@ -206,6 +206,57 @@ def main() -> int:
         if error is not None:
             return fail(error)
 
+        large_map_source = root / "large-map.cd"
+        large_map_artifact = root / "large-map.cdbc"
+        map_entry_count = 2048
+        map_entries = ", ".join(
+            f'"key{index}": {index}' for index in range(map_entry_count)
+        )
+        large_map_source.write_text(
+            f'let values = {{{map_entries}}};\n'
+            "print len(values);\n"
+            f'print values["key{map_entry_count - 1}"];\n',
+            encoding="utf-8",
+        )
+        error = emit_bytecode(
+            compiler,
+            large_map_source,
+            large_map_artifact,
+            "large-map emit",
+            measurements,
+        )
+        if error is not None:
+            return fail(error)
+        if large_map_artifact.stat().st_size <= 64 * 1024:
+            return fail("large-map artifact did not cross the intended size boundary")
+
+        result = run_measured(
+            vm_command(vm_binary, "run", str(large_map_artifact)),
+            "large-map run",
+        )
+        measurements.append(result)
+        error = expect_success(
+            result,
+            f"{map_entry_count}\n{map_entry_count - 1}\n",
+        )
+        if error is not None:
+            return fail(error)
+
+        result = run_measured(
+            vm_command(
+                vm_binary,
+                "run",
+                str(large_map_artifact),
+                "--max-elements",
+                "1024",
+            ),
+            "large-map element budget",
+        )
+        measurements.append(result)
+        error = expect_failure(result, "runtime elements (limit 1024)")
+        if error is not None:
+            return fail(error)
+
         long_string_source = root / "long-unicode-string.cd"
         long_string_artifact = root / "long-unicode-string.cdbc"
         scalar_count = 32768
@@ -559,7 +610,7 @@ def main() -> int:
             f"peak_rss_kib={rss} exit={result.returncode}"
         )
     print(
-        "VM capacity tests: large aggregates, long Unicode strings and output budgets, "
+        "VM capacity tests: large arrays/maps, long Unicode strings and output budgets, "
         "deep calls, debug tables, long-chain and diamond module graphs, and budget "
         "rejection boundaries validated"
     )
