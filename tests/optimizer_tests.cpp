@@ -723,6 +723,117 @@ void test_program_adapter_o1_merges_reordered_linear_blocks()
     assert(rebuilt.moduleDependencies().front().instructionOffset == 10);
 }
 
+void test_program_adapter_o1_rejects_unsafe_linear_block_merges()
+{
+    {
+        IRProgram input;
+        const IRRegister condition = input.emitLoadVar("condition");
+        const std::size_t branch = input.emitJumpIfFalse(condition);
+        const IRRegister firstValue = input.emitConstant(Value::number(1.0));
+        input.emitPrint(firstValue);
+        const std::size_t firstJump = input.emitJump();
+
+        input.patchJump(branch);
+        const IRRegister alternateValue = input.emitConstant(Value::number(2.0));
+        input.emitPrint(alternateValue);
+        const std::size_t secondJump = input.emitJump();
+
+        input.patchJump(firstJump);
+        input.patchJump(secondJump);
+        const IRRegister mergedValue = input.emitConstant(Value::number(3.0));
+        input.emitPrint(mergedValue);
+        input.emitReturn(mergedValue);
+
+        const SSADeSSAProgramResult result = optimizeIRProgram(
+            input,
+            SSAOptimizationLevel::O1);
+        result.verify(input);
+        assert(result.mainStats.blocksMerged == 0);
+        // The alternate arm's jump is a pre-existing redundant fallthrough
+        // jump; it is unrelated to the rejected block merge.
+        assert(result.mainStats.jumpsRemoved == 1);
+        assert(result.mainStream.function.instructions.size()
+            == input.instructions().size() - 1);
+    }
+
+    {
+        IRProgram input;
+        input.beginFunction("first", {});
+        const IRRegister firstResult = input.emitConstant(Value::nil());
+        input.emitReturn(firstResult);
+        const std::size_t firstFunction = input.endFunction();
+
+        input.beginFunction("second", {});
+        const IRRegister secondResult = input.emitConstant(Value::nil());
+        input.emitReturn(secondResult);
+        const std::size_t secondFunction = input.endFunction();
+
+        const IRRegister condition = input.emitLoadVar("condition");
+        const std::size_t branch = input.emitJumpIfFalse(condition);
+        const IRRegister firstValue = input.emitMakeFunction(firstFunction);
+        input.emitStoreVar("first", firstValue);
+        const std::size_t mergeJump = input.emitJump();
+
+        input.patchJump(branch);
+        const IRRegister secondValue = input.emitMakeFunction(secondFunction);
+        input.emitStoreVar("second", secondValue);
+        const IRRegister alternateValue = input.emitConstant(Value::nil());
+        input.emitReturn(alternateValue);
+
+        input.patchJump(mergeJump);
+        const IRRegister mergedValue = input.emitMakeFunction(firstFunction);
+        input.emitStoreVar("merged", mergedValue);
+        input.emitReturn(mergedValue);
+
+        const SSADeSSAProgramResult result = optimizeIRProgram(
+            input,
+            SSAOptimizationLevel::O1);
+        result.verify(input);
+        assert(result.mainStats.blocksMerged == 0);
+        assert(result.mainStats.jumpsRemoved == 0);
+        assert(result.mainStream.function.instructions.size() == input.instructions().size());
+        assert(result.mainStream.function.instructions[2].op == IROp::MakeFunction);
+        assert(result.mainStream.function.instructions[2].operand == firstFunction);
+        assert(result.mainStream.function.instructions[5].op == IROp::MakeFunction);
+        assert(result.mainStream.function.instructions[5].operand == secondFunction);
+        assert(result.mainStream.function.instructions[9].op == IROp::MakeFunction);
+        assert(result.mainStream.function.instructions[9].operand == firstFunction);
+    }
+
+    {
+        IRProgram input;
+        const IRRegister condition = input.emitLoadVar("condition");
+        const std::size_t branch = input.emitJumpIfFalse(condition);
+        const IRRegister firstValue = input.emitConstant(Value::number(1.0));
+        input.emitPrint(firstValue);
+        const std::size_t mergeJump = input.emitJump();
+
+        input.patchJump(branch);
+        const IRRegister alternateValue = input.emitConstant(Value::number(2.0));
+        input.emitPrint(alternateValue);
+        input.emitReturn(alternateValue);
+
+        input.patchJump(mergeJump);
+        const IRRegister mergedValue = input.emitConstant(Value::number(3.0));
+        input.emitPrint(mergedValue);
+        input.emitReturn(mergedValue);
+        input.addModuleDependency(
+            IRModuleDependency{45, ModuleGraphEdgeKind::Import, "./first.cd", 5});
+        input.addModuleDependency(
+            IRModuleDependency{46, ModuleGraphEdgeKind::Import, "./second.cd", 8});
+
+        const SSADeSSAProgramResult result = optimizeIRProgram(
+            input,
+            SSAOptimizationLevel::O1);
+        result.verify(input);
+        assert(result.mainStats.blocksMerged == 0);
+        assert(result.mainStats.jumpsRemoved == 0);
+        assert(result.mainStream.moduleDependencies.size() == 2);
+        assert(result.mainStream.moduleDependencies[0].instructionOffset == 5);
+        assert(result.mainStream.moduleDependencies[1].instructionOffset == 8);
+    }
+}
+
 void test_program_adapter_o0_keeps_branch_shape()
 {
     IRProgram input;
@@ -920,6 +1031,7 @@ int main()
     test_program_adapter_o1_prunes_known_dead_blocks_and_remaps_offsets();
     test_program_adapter_o1_threads_empty_jump_blocks();
     test_program_adapter_o1_merges_reordered_linear_blocks();
+    test_program_adapter_o1_rejects_unsafe_linear_block_merges();
     test_program_adapter_o0_keeps_branch_shape();
     test_o0_is_verified_identity();
     test_o1_propagates_copy_and_removes_copy_instruction();
