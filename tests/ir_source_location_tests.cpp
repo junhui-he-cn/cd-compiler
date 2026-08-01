@@ -1725,6 +1725,104 @@ void test_collection_expression_metadata()
     assert(constructor->fieldNames == std::vector<std::string>{"value"});
 }
 
+void test_ir_binding_metadata_integration()
+{
+    const std::string source =
+        "let moduleValue = 1;\n"
+        "let exportedValue = 2;\n"
+        "export exportedValue;\n"
+        "fun outer(seed: number): number {\n"
+        "  let captured = seed;\n"
+        "  fun inner(): number {\n"
+        "    captured = captured + 1;\n"
+        "    return captured;\n"
+        "  }\n"
+        "  return inner();\n"
+        "}\n"
+        "print moduleValue;\n"
+        "print exportedValue;\n";
+    std::istringstream input(source);
+    FrontendSession frontend;
+    Program program = frontend.loadStdin(input);
+    TypeChecker checker;
+    checker.check(program);
+    assert(checker.declarationIndexMismatchCount() == 0);
+
+    const DeclarationIndex& index = checker.declarationIndex();
+    const auto* moduleLet = dynamic_cast<const LetStmt*>(program.statements[0].get());
+    const auto* exportedLet = dynamic_cast<const LetStmt*>(program.statements[1].get());
+    const auto* outer = dynamic_cast<const FunctionStmt*>(program.statements[3].get());
+    assert(moduleLet != nullptr && exportedLet != nullptr && outer != nullptr);
+    const auto* capturedLet = dynamic_cast<const LetStmt*>(outer->body[0].get());
+    const auto* inner = dynamic_cast<const FunctionStmt*>(outer->body[1].get());
+    assert(capturedLet != nullptr && inner != nullptr);
+
+    const BindingMetadataRecord* moduleMetadata = index.letBindingMetadata(*moduleLet);
+    const BindingMetadataRecord* exportedMetadata = index.letBindingMetadata(*exportedLet);
+    const BindingMetadataRecord* capturedMetadata = index.letBindingMetadata(*capturedLet);
+    const FunctionMetadataRecord* outerMetadata = index.functionMetadata(*outer);
+    const FunctionMetadataRecord* innerMetadata = index.functionMetadata(*inner);
+    assert(moduleMetadata != nullptr && exportedMetadata != nullptr && capturedMetadata != nullptr);
+    assert(outerMetadata != nullptr && innerMetadata != nullptr);
+    assert(outerMetadata->bindingId.valid());
+    assert(outerMetadata->parameterBindingIds.size() == 1);
+    assert(outerMetadata->parameterBindingIds.front().valid());
+    assert(innerMetadata->bindingId.valid());
+    assert(innerMetadata->parameterBindingIds.empty());
+
+    const DeclarationRecord* capturedDeclaration = index.declaration(*capturedLet);
+    assert(capturedDeclaration != nullptr);
+    assert(capturedDeclaration->functionLocal);
+    assert(index.declarationIsCaptured(capturedDeclaration->declarationId));
+
+    IRCompiler compiler;
+    const IRProgram ir = compiler.compile(program, index);
+    const auto findBinding = [&ir](BindingId id) -> const IRBinding* {
+        const auto found = std::find_if(
+            ir.bindings().begin(),
+            ir.bindings().end(),
+            [id](const IRBinding& binding) { return binding.bindingId == id; });
+        return found == ir.bindings().end() ? nullptr : &*found;
+    };
+    assert(findBinding(moduleMetadata->bindingId) != nullptr);
+    assert(findBinding(moduleMetadata->bindingId)->storage == BindingStorageClass::Module);
+    assert(findBinding(exportedMetadata->bindingId) != nullptr);
+    assert(findBinding(exportedMetadata->bindingId)->storage == BindingStorageClass::Exported);
+    assert(findBinding(capturedMetadata->bindingId) != nullptr);
+    assert(findBinding(capturedMetadata->bindingId)->storage == BindingStorageClass::Captured);
+
+    const auto findFunction = [&ir](const std::string& name) -> const IRFunction* {
+        const auto found = std::find_if(
+            ir.functions().begin(),
+            ir.functions().end(),
+            [&name](const IRFunction& function) { return function.name == name; });
+        return found == ir.functions().end() ? nullptr : &*found;
+    };
+    const IRFunction* outerIR = findFunction("outer");
+    const IRFunction* innerIR = findFunction("inner");
+    assert(outerIR != nullptr && innerIR != nullptr);
+    const auto hasBinding = [](const IRFunction& function, BindingId id) {
+        return std::any_of(
+            function.bindings.begin(),
+            function.bindings.end(),
+            [id](const IRBinding& binding) { return binding.bindingId == id; });
+    };
+    assert(hasBinding(*outerIR, outerMetadata->parameterBindingIds.front()));
+    assert(hasBinding(*outerIR, capturedMetadata->bindingId));
+    assert(hasBinding(*innerIR, capturedMetadata->bindingId));
+
+    const auto hasTaggedVariableInstruction = [](const IRFunction& function, BindingId id) {
+        return std::any_of(
+            function.instructions.begin(),
+            function.instructions.end(),
+            [id](const IRInstruction& instruction) {
+                return instruction.bindingId == std::optional<BindingId>(id);
+            });
+    };
+    assert(hasTaggedVariableInstruction(*outerIR, capturedMetadata->bindingId));
+    assert(hasTaggedVariableInstruction(*innerIR, capturedMetadata->bindingId));
+}
+
 } // namespace
 
 int main()
@@ -1772,5 +1870,6 @@ int main()
     test_typed_field_assignment_metadata();
     test_native_call_metadata();
     test_collection_expression_metadata();
+    test_ir_binding_metadata_integration();
     return 0;
 }

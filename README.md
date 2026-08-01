@@ -40,6 +40,7 @@ The compiler pipeline includes:
 - Type checker: resolves lexical scopes and checks implemented static type
   annotations.
 - IR compiler: lowers the AST to a small three-address intermediate representation with virtual registers.
+- SSA optimizer: `--opt-level 0` keeps the established linear IR path; explicit `--opt-level 1` runs verified primitive constant folding, known-condition branch normalization, unreachable-block pruning, redundant fallthrough-jump removal, jump-only-block threading, copy/phi simplification, and non-trapping pure-value cleanup before lowering back to the existing IR. The O1 path preserves the `cdbc 0.1` and Rust VM boundaries and remains conservative around runtime-cell effects, traps, and unsupported register joins.
 - Rust VM: executes emitted `.cdbc` bytecode artifacts via `compiler-design-vm`.
 - Bytecode compiler: lowers register IR into a bytecode program and `.cdbc` artifacts for the Rust VM.
 - AST printer: prints the parsed program in prefix form.
@@ -834,9 +835,11 @@ python3 tests/run_golden_tests.py ./build/compiler_design --update --update-miss
 ./build/compiler_design examples/hello.cd
 ./build/compiler_design --tokens examples/hello.cd
 ./build/compiler_design --ir examples/hello.cd
+./build/compiler_design --ir --opt-level 1 examples/hello.cd
 ./build/compiler_design --bytecode examples/hello.cd
 ./build/compiler_design --module-interface examples/hello.cd
 ./build/compiler_design --emit-bytecode program.cdbc examples/hello.cd
+./build/compiler_design --emit-bytecode optimized.cdbc --opt-level 1 examples/hello.cd
 ./build/compiler_design --emit-module-bytecode module-products examples/hello.cd
 ./build/compiler_design --module-interface-cache module-cache examples/hello.cd
 ./build/compiler_design --module-interface-cache module-cache --module-cache-strict examples/hello.cd
@@ -850,6 +853,8 @@ Multiple input files may be provided. They are read in command-line order and co
 ```
 
 `--bytecode` remains a debug-print mode for inspecting compiler output. `--module-interface` prints the type-checked public API metadata for every loaded module, including exported values, named structs, public struct fields, private-field presence markers, and exported struct method signatures. It is a debug/introspection mode only; it does not emit a separate-compilation artifact or run a linker. Program execution is handled by the Rust VM via `.cdbc` artifacts:
+
+`--opt-level 0` is the default and preserves existing IR/bytecode output. `--opt-level 1` is accepted with `--ir`, `--bytecode`, `--emit-bytecode`, and `--emit-module-bytecode`; it performs only verified finite primitive constant folding, known-condition conditional-branch normalization, post-de-SSA pruning of blocks proven unreachable, removal of redundant jumps to the next instruction, jump threading through jump-only blocks, copy propagation, trivial-phi simplification, and removal of unused pure constants/copies. It rewrites only proven conditional paths and remaps retained source/dependency offsets; general block merging and threading across non-empty blocks are not enabled. Division by zero, known type failures, non-finite values, memory effects, and unknown conditions remain on the original runtime path. It is rejected for formatting, LSP, and interface-only modes. Level 1 module products include the O1 pipeline fingerprint in `cdbc-cache 0.2` keys, so O0 and O1 products are never reused interchangeably. Level 2 is reserved for a later register-allocation and debug-local decision.
 
 The interface output also reports exported enum variants and their payload types.
 
@@ -893,6 +898,15 @@ before execution:
 
 ```sh
 ./build/compiler_design --emit-module-bytecode module-products main.cd
+cargo run --manifest-path vm-rs/Cargo.toml -- link module-products program.cdbc
+cargo run --manifest-path vm-rs/Cargo.toml -- run program.cdbc
+```
+
+The same independent-product path can opt into the current O1 pipeline:
+
+```sh
+./build/compiler_design --emit-module-bytecode module-products \
+  --module-cache module-cache --opt-level 1 main.cd
 cargo run --manifest-path vm-rs/Cargo.toml -- link module-products program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- run program.cdbc
 ```

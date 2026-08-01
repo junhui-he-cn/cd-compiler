@@ -1,0 +1,886 @@
+#include "SSA.hpp"
+
+#include "ControlFlowGraph.hpp"
+
+#include <algorithm>
+#include <cassert>
+#include <functional>
+#include <optional>
+#include <string>
+#include <vector>
+
+namespace {
+
+SSAInstruction defineConstant(SSAValueId result, std::size_t originalInstruction)
+{
+    SSAInstruction instruction;
+    instruction.op = IROp::Constant;
+    instruction.result = result;
+    instruction.originalInstruction = originalInstruction;
+    return instruction;
+}
+
+SSAInstruction useValue(IROp op, SSAValueId value, std::size_t originalInstruction)
+{
+    SSAInstruction instruction;
+    instruction.op = op;
+    instruction.left = value;
+    instruction.originalInstruction = originalInstruction;
+    return instruction;
+}
+
+IRInstruction cfgInstruction(IROp op, std::size_t operand = 0)
+{
+    IRInstruction result{op, std::nullopt, std::nullopt, std::nullopt, {}, operand};
+    return result;
+}
+
+SSAInstruction valueInstruction(
+    IROp op,
+    SSAValueId result,
+    std::size_t originalInstruction)
+{
+    SSAInstruction instruction;
+    instruction.op = op;
+    instruction.result = result;
+    instruction.originalInstruction = originalInstruction;
+    return instruction;
+}
+
+SSAInstruction plainInstruction(IROp op, std::size_t originalInstruction)
+{
+    SSAInstruction instruction;
+    instruction.op = op;
+    instruction.originalInstruction = originalInstruction;
+    return instruction;
+}
+
+SSAInstruction memoryInstruction(
+    IROp op,
+    std::size_t originalInstruction,
+    SSAMemorySlotId slot,
+    std::optional<SSAValueId> result = std::nullopt,
+    std::optional<SSAValueId> left = std::nullopt)
+{
+    SSAInstruction instruction;
+    instruction.op = op;
+    instruction.originalInstruction = originalInstruction;
+    instruction.memorySlot = slot;
+    instruction.result = result;
+    instruction.left = left;
+    return instruction;
+}
+
+void assertThrowsSSA(const std::function<void()>& action, const std::string& fragment)
+{
+    try {
+        action();
+    } catch (const SSAError& error) {
+        assert(std::string(error.what()).find(fragment) != std::string::npos);
+        return;
+    }
+    assert(false && "expected SSAError");
+}
+
+ControlFlowGraph makeDiamondCFG()
+{
+    return buildControlFlowGraph({
+        IRInstruction{IROp::JumpIfFalse, std::nullopt, std::nullopt, std::nullopt, {}, 3},
+        IRInstruction{IROp::Constant, std::nullopt, std::nullopt, std::nullopt, {}, 0},
+        IRInstruction{IROp::Jump, std::nullopt, std::nullopt, std::nullopt, {}, 4},
+        IRInstruction{IROp::Constant, std::nullopt, std::nullopt, std::nullopt, {}, 0},
+        IRInstruction{IROp::Return, std::nullopt, std::nullopt, std::nullopt, {}, 0},
+    });
+}
+
+void test_empty_ssa_shell_matches_cfg()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        IRInstruction{IROp::Constant, std::nullopt, std::nullopt, std::nullopt, {}, 0},
+        IRInstruction{IROp::Return, std::nullopt, std::nullopt, std::nullopt, {}, 0},
+    });
+    const SSAFunction ssa = makeSSAFunction(cfg);
+
+    assert(ssa.blocks.size() == cfg.blocks.size());
+    assert(ssa.blocks[0].id == cfg.blocks[0].id);
+    assert(ssa.blocks[0].firstInstruction == 0);
+    assert(ssa.blocks[0].endInstruction == 2);
+    assert(ssa.blocks.back().syntheticExit);
+    ssa.verify(cfg);
+}
+
+void test_phi_requires_ordered_incoming_value_for_each_predecessor()
+{
+    const ControlFlowGraph cfg = makeDiamondCFG();
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[0].instructions.push_back(defineConstant(0, 0));
+    ssa.blocks[1].instructions.push_back(defineConstant(1, 1));
+    ssa.blocks[2].instructions.push_back(defineConstant(2, 3));
+    ssa.blocks[3].phis.push_back(SSAPhi{3, {{1, 1}, {2, 2}}});
+    ssa.blocks[3].instructions.push_back(useValue(IROp::Return, 3, 4));
+
+    ssa.verify(cfg);
+}
+
+void test_duplicate_definitions_are_rejected()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        IRInstruction{IROp::Constant, std::nullopt, std::nullopt, std::nullopt, {}, 0},
+        IRInstruction{IROp::Constant, std::nullopt, std::nullopt, std::nullopt, {}, 0},
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[0].instructions.push_back(defineConstant(0, 0));
+    ssa.blocks[0].instructions.push_back(defineConstant(0, 1));
+
+    assertThrowsSSA([&ssa, &cfg] { ssa.verify(cfg); }, "defined more than once");
+}
+
+void test_phi_predecessor_order_is_rejected()
+{
+    const ControlFlowGraph cfg = makeDiamondCFG();
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[0].instructions.push_back(defineConstant(0, 0));
+    ssa.blocks[1].instructions.push_back(defineConstant(1, 1));
+    ssa.blocks[2].instructions.push_back(defineConstant(2, 3));
+    ssa.blocks[3].phis.push_back(SSAPhi{3, {{2, 2}, {1, 1}}});
+
+    assertThrowsSSA([&ssa, &cfg] { ssa.verify(cfg); }, "phi incoming predecessors");
+}
+
+void test_undefined_uses_are_rejected()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        IRInstruction{IROp::Return, std::nullopt, std::nullopt, std::nullopt, {}, 0},
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[0].instructions.push_back(useValue(IROp::Return, 9, 0));
+
+    assertThrowsSSA([&ssa, &cfg] { ssa.verify(cfg); }, "undefined SSA value");
+}
+
+void test_incomplete_phi_is_rejected()
+{
+    const ControlFlowGraph cfg = makeDiamondCFG();
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[0].instructions.push_back(defineConstant(0, 0));
+    ssa.blocks[1].instructions.push_back(defineConstant(1, 1));
+    ssa.blocks[2].instructions.push_back(defineConstant(2, 3));
+    ssa.blocks[3].phis.push_back(SSAPhi{3, {{1, 1}}});
+
+    assertThrowsSSA([&ssa, &cfg] { ssa.verify(cfg); }, "phi incoming");
+}
+
+void test_memory_slots_keep_capture_and_unknown_storage_conservative()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph(std::vector<IRInstruction>{});
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.memorySlots.push_back(SSAMemorySlot{0, "local", SSAMemoryStorage::Local});
+    ssa.memorySlots.push_back(SSAMemorySlot{1, "captured", SSAMemoryStorage::Captured});
+    ssa.memorySlots.push_back(SSAMemorySlot{2, "unknown", SSAMemoryStorage::Unknown});
+
+    assert(ssa.memorySlots[0].canPromote());
+    assert(!ssa.memorySlots[1].canPromote());
+    assert(!ssa.memorySlots[2].canPromote());
+    ssa.verify(cfg);
+}
+
+void test_parameters_are_entry_definitions()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        IRInstruction{IROp::Return, std::nullopt, std::nullopt, std::nullopt, {}, 0},
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.parameters.push_back(SSAParameter{0, cfg.entryBlock});
+    ssa.blocks[0].instructions.push_back(useValue(IROp::Return, 0, 0));
+
+    ssa.verify(cfg);
+}
+
+void test_ssa_blocks_must_match_cfg()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        IRInstruction{IROp::Return, std::nullopt, std::nullopt, std::nullopt, {}, 0},
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks.pop_back();
+
+    assertThrowsSSA([&ssa, &cfg] { ssa.verify(cfg); }, "block count");
+}
+
+void test_ssa_verifier_rejects_non_dominating_use()
+{
+    const ControlFlowGraph cfg = makeDiamondCFG();
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[1].instructions.push_back(defineConstant(0, 1));
+    ssa.blocks[3].instructions.push_back(useValue(IROp::Return, 0, 4));
+
+    assertThrowsSSA([&ssa, &cfg] { ssa.verify(cfg); }, "does not dominate");
+}
+
+void test_ssa_verifier_rejects_use_before_same_block_definition()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        IRInstruction{IROp::Constant, std::nullopt, std::nullopt, std::nullopt, {}, 0},
+        IRInstruction{IROp::Return, std::nullopt, std::nullopt, std::nullopt, {}, 0},
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[0].instructions.push_back(useValue(IROp::Return, 0, 1));
+    ssa.blocks[0].instructions.push_back(defineConstant(0, 0));
+
+    assertThrowsSSA([&ssa, &cfg] { ssa.verify(cfg); }, "used before");
+}
+
+void test_ssa_verifier_rejects_phi_value_not_available_on_edge()
+{
+    const ControlFlowGraph cfg = makeDiamondCFG();
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[1].instructions.push_back(defineConstant(0, 1));
+    ssa.blocks[3].phis.push_back(SSAPhi{1, {{1, 0}, {2, 0}}});
+    ssa.blocks[3].instructions.push_back(useValue(IROp::Return, 1, 4));
+
+    assertThrowsSSA([&ssa, &cfg] { ssa.verify(cfg); }, "does not dominate");
+}
+
+void test_ssa_verifier_rejects_invalid_instruction_shape()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        IRInstruction{IROp::StoreVar, std::nullopt, std::nullopt, std::nullopt, {}, 0},
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[0].instructions.push_back(valueInstruction(IROp::StoreVar, 0, 0));
+
+    assertThrowsSSA([&ssa, &cfg] { ssa.verify(cfg); }, "operand shape");
+}
+
+void test_de_ssa_plan_is_empty_without_phis()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::Return),
+    });
+    const SSAFunction ssa = makeSSAFunction(cfg);
+    const SSADeSSACopyPlan plan = planSSADeSSACopies(cfg, ssa);
+
+    assert(plan.edgeCopies.empty());
+    assert(plan.temporaryValues.empty());
+}
+
+void test_de_ssa_plan_orders_diamond_edge_copies()
+{
+    const ControlFlowGraph cfg = makeDiamondCFG();
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[1].instructions.push_back(defineConstant(1, 1));
+    ssa.blocks[2].instructions.push_back(defineConstant(2, 3));
+    ssa.blocks[3].phis.push_back(SSAPhi{3, {{1, 1}, {2, 2}}});
+    ssa.blocks[3].instructions.push_back(useValue(IROp::Return, 3, 4));
+
+    const SSADeSSACopyPlan plan = planSSADeSSACopies(cfg, ssa);
+    assert(plan.edgeCopies.size() == 2);
+    assert(plan.temporaryValues.empty());
+    assert(plan.edgeCopies[0].predecessor == 1);
+    assert(plan.edgeCopies[0].successor == 3);
+    assert(!plan.edgeCopies[0].requiresCriticalEdgeSplit);
+    assert(plan.edgeCopies[0].moves.size() == 1);
+    assert(plan.edgeCopies[0].moves[0].destination == 3);
+    assert(plan.edgeCopies[0].moves[0].source == 1);
+    assert(plan.edgeCopies[1].predecessor == 2);
+    assert(plan.edgeCopies[1].successor == 3);
+    assert(plan.edgeCopies[1].moves.size() == 1);
+    assert(plan.edgeCopies[1].moves[0].destination == 3);
+    assert(plan.edgeCopies[1].moves[0].source == 2);
+}
+
+void test_de_ssa_plan_marks_critical_edges()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::JumpIfFalse, 4),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Jump, 4),
+        cfgInstruction(IROp::Return),
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[0].instructions.push_back(valueInstruction(IROp::Constant, 0, 0));
+    SSAInstruction branch = plainInstruction(IROp::JumpIfFalse, 1);
+    branch.left = 0;
+    ssa.blocks[0].instructions.push_back(branch);
+    ssa.blocks[1].instructions.push_back(valueInstruction(IROp::Constant, 1, 2));
+    ssa.blocks[1].instructions.push_back(plainInstruction(IROp::Jump, 3));
+    ssa.blocks[2].phis.push_back(SSAPhi{2, {{0, 0}, {1, 1}}});
+    ssa.blocks[2].instructions.push_back(useValue(IROp::Return, 2, 4));
+
+    const SSADeSSACopyPlan plan = planSSADeSSACopies(cfg, ssa);
+    assert(plan.edgeCopies.size() == 2);
+    assert(plan.edgeCopies[0].predecessor == 0);
+    assert(plan.edgeCopies[0].successor == 2);
+    assert(plan.edgeCopies[0].requiresCriticalEdgeSplit);
+    assert(plan.edgeCopies[0].moves.size() == 1);
+    assert(plan.edgeCopies[0].moves[0].destination == 2);
+    assert(plan.edgeCopies[0].moves[0].source == 0);
+    assert(plan.edgeCopies[1].predecessor == 1);
+    assert(plan.edgeCopies[1].successor == 2);
+    assert(!plan.edgeCopies[1].requiresCriticalEdgeSplit);
+}
+
+void test_de_ssa_plan_breaks_parallel_copy_cycle_with_one_temporary()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Jump, 3),
+        cfgInstruction(IROp::JumpIfFalse, 6),
+        cfgInstruction(IROp::Print),
+        cfgInstruction(IROp::Jump, 3),
+        cfgInstruction(IROp::Return),
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[0].instructions.push_back(valueInstruction(IROp::Constant, 3, 0));
+    ssa.blocks[0].instructions.push_back(valueInstruction(IROp::Constant, 4, 1));
+    ssa.blocks[0].instructions.push_back(plainInstruction(IROp::Jump, 2));
+    ssa.blocks[1].phis.push_back(SSAPhi{10, {{0, 3}, {2, 11}}});
+    ssa.blocks[1].phis.push_back(SSAPhi{11, {{0, 4}, {2, 10}}});
+    SSAInstruction branch = plainInstruction(IROp::JumpIfFalse, 3);
+    branch.left = 10;
+    ssa.blocks[1].instructions.push_back(branch);
+    ssa.blocks[2].instructions.push_back(useValue(IROp::Print, 10, 4));
+    ssa.blocks[2].instructions.push_back(plainInstruction(IROp::Jump, 5));
+    ssa.blocks[3].instructions.push_back(useValue(IROp::Return, 10, 6));
+
+    const SSADeSSACopyPlan plan = planSSADeSSACopies(cfg, ssa);
+    assert(plan.edgeCopies.size() == 2);
+    assert(plan.temporaryValues.size() == 1);
+    assert(plan.temporaryValues.front() == 12);
+    const SSAEdgeCopyBundle& backedge = plan.edgeCopies[1];
+    assert(backedge.predecessor == 2);
+    assert(backedge.successor == 1);
+    assert(backedge.moves.size() == 3);
+    assert(backedge.moves[0].destination == 12);
+    assert(backedge.moves[0].source == 10);
+    assert(backedge.moves[1].destination == 10);
+    assert(backedge.moves[1].source == 11);
+    assert(backedge.moves[2].destination == 11);
+    assert(backedge.moves[2].source == 12);
+}
+
+void test_lower_de_ssa_materializes_diamond_copies_and_remaps_offsets()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::JumpIfFalse, 3),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Jump, 4),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Return),
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.parameters.push_back(SSAParameter{0, cfg.entryBlock});
+    SSAInstruction branch = plainInstruction(IROp::JumpIfFalse, 0);
+    branch.left = 0;
+    branch.operand = 3;
+    branch.span = SourceSpan{0, 1, 1, SourceSpanRange{0, 1}};
+    ssa.blocks[0].instructions.push_back(branch);
+    ssa.blocks[1].instructions.push_back(defineConstant(1, 1));
+    SSAInstruction leftJump = plainInstruction(IROp::Jump, 2);
+    leftJump.operand = 4;
+    ssa.blocks[1].instructions.push_back(leftJump);
+    ssa.blocks[2].instructions.push_back(defineConstant(2, 3));
+    ssa.blocks[3].phis.push_back(SSAPhi{3, {{1, 1}, {2, 2}}});
+    ssa.blocks[3].instructions.push_back(useValue(IROp::Return, 3, 4));
+
+    const SSADeSSALinearFunction linear = lowerSSADeSSACopies(cfg, ssa);
+    linear.verify(cfg);
+
+    assert(linear.blocks.size() == cfg.blocks.size());
+    assert(linear.instructions.size() == 7);
+    assert(linear.blockEntryOffsets == std::vector<std::size_t>({0, 1, 4, 6, 7}));
+    assert(linear.instructions[0].instruction.operand == 4);
+    assert(linear.instructions[2].synthetic);
+    assert(linear.instructions[2].instruction.op == IROp::Copy);
+    assert(linear.instructions[2].instruction.result == std::optional<SSAValueId>(3));
+    assert(linear.instructions[2].instruction.left == std::optional<SSAValueId>(1));
+    assert(linear.instructions[3].instruction.op == IROp::Jump);
+    assert(linear.instructions[3].instruction.operand == 6);
+    assert(linear.instructions[5].synthetic);
+    assert(linear.instructions[5].instruction.result == std::optional<SSAValueId>(3));
+    assert(linear.instructions[5].instruction.left == std::optional<SSAValueId>(2));
+    assert(linear.originalInstructionOffsets
+        == std::vector<std::optional<std::size_t>>({0, 1, 3, 4, 6}));
+    assert(linear.originalInsertionOffsets
+        == std::vector<std::size_t>({0, 1, 2, 4, 6, 7}));
+
+    const SSADeSSAIRResult ir = lowerSSADeSSAToIR(
+        cfg,
+        linear,
+        "diamond",
+        {"condition"},
+        {IRBinding{BindingId{7}, "condition#7", BindingStorageClass::Local}});
+    ir.verify();
+    assert(ir.function.name == "diamond");
+    assert(ir.function.parameters == std::vector<std::string>({"condition"}));
+    assert(ir.function.bindings.size() == 1);
+    assert(ir.function.registerCount == 4);
+    assert(ir.function.instructions.size() == linear.instructions.size());
+    assert(ir.syntheticInstructions[2]);
+    assert(ir.syntheticInstructions[5]);
+    assert(!ir.function.instructions[2].span);
+    assert(ir.function.instructions[0].span);
+    assert(ir.function.instructions[0].span->source == 0);
+    assert(ir.function.instructions[0].span->line == 1);
+    assert(ir.originalInstructionOffsets == linear.originalInstructionOffsets);
+    assert(ir.originalInsertionOffsets == linear.originalInsertionOffsets);
+}
+
+void test_lower_de_ssa_places_noncritical_copy_at_unique_successor_entry()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::JumpIfFalse, 3),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Jump, 4),
+        cfgInstruction(IROp::Jump, 4),
+        cfgInstruction(IROp::Return),
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.parameters.push_back(SSAParameter{0, cfg.entryBlock});
+    SSAInstruction branch = plainInstruction(IROp::JumpIfFalse, 0);
+    branch.left = 0;
+    branch.operand = 3;
+    ssa.blocks[0].instructions.push_back(branch);
+    ssa.blocks[1].instructions.push_back(defineConstant(1, 1));
+    SSAInstruction leftJump = plainInstruction(IROp::Jump, 2);
+    leftJump.operand = 4;
+    ssa.blocks[1].instructions.push_back(leftJump);
+    ssa.blocks[2].phis.push_back(SSAPhi{2, {{0, 0}}});
+    SSAInstruction rightJump = plainInstruction(IROp::Jump, 3);
+    rightJump.operand = 4;
+    ssa.blocks[2].instructions.push_back(rightJump);
+    ssa.blocks[3].instructions.push_back(useValue(IROp::Return, 0, 4));
+
+    const SSADeSSALinearFunction linear = lowerSSADeSSACopies(cfg, ssa);
+    linear.verify(cfg);
+
+    assert(linear.blocks.size() == cfg.blocks.size());
+    const std::size_t successorEntry = linear.blockEntryOffsets[2];
+    assert(!linear.instructions[0].synthetic);
+    assert(linear.instructions[0].instruction.operand == successorEntry);
+    assert(linear.instructions[successorEntry].synthetic);
+    assert(linear.instructions[successorEntry].instruction.op == IROp::Copy);
+    assert(linear.instructions[successorEntry].instruction.result
+        == std::optional<SSAValueId>(2));
+    assert(linear.instructions[successorEntry].instruction.left
+        == std::optional<SSAValueId>(0));
+}
+
+void test_lower_de_ssa_splits_critical_branch_edge_and_remaps_dependency()
+{
+    const std::vector<IRInstruction> instructions{
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::JumpIfFalse, 4),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Jump, 4),
+        cfgInstruction(IROp::Return),
+    };
+    const ControlFlowGraph cfg = buildControlFlowGraph(
+        instructions,
+        {IRModuleDependency{7, ModuleGraphEdgeKind::Import, "dep", 4}});
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[0].instructions.push_back(valueInstruction(IROp::Constant, 0, 0));
+    SSAInstruction branch = plainInstruction(IROp::JumpIfFalse, 1);
+    branch.left = 0;
+    branch.operand = 4;
+    ssa.blocks[0].instructions.push_back(branch);
+    ssa.blocks[1].instructions.push_back(valueInstruction(IROp::Constant, 1, 2));
+    SSAInstruction leftJump = plainInstruction(IROp::Jump, 3);
+    leftJump.operand = 4;
+    ssa.blocks[1].instructions.push_back(leftJump);
+    ssa.blocks[2].phis.push_back(SSAPhi{2, {{0, 0}, {1, 1}}});
+    ssa.blocks[2].instructions.push_back(useValue(IROp::Return, 2, 4));
+
+    const SSADeSSALinearFunction linear = lowerSSADeSSACopies(cfg, ssa);
+    linear.verify(cfg);
+
+    assert(linear.blocks.size() == cfg.blocks.size() + 1);
+    const std::optional<std::pair<CFGBlockId, CFGBlockId>> expectedSplit{
+        std::pair<CFGBlockId, CFGBlockId>{0, 2}};
+    const auto splitIt = std::find_if(
+        linear.blocks.begin(),
+        linear.blocks.end(),
+        [&expectedSplit](const SSADeSSABlock& block) {
+            return block.splitEdge == expectedSplit;
+        });
+    assert(splitIt != linear.blocks.end());
+    const SSADeSSABlock& split = *splitIt;
+    assert(linear.instructions[1].instruction.op == IROp::JumpIfFalse);
+    assert(linear.instructions[1].instruction.operand == split.firstInstruction);
+    assert(linear.instructions[split.firstInstruction].synthetic);
+    assert(linear.instructions[split.firstInstruction].instruction.op == IROp::Copy);
+    assert(linear.instructions[split.firstInstruction + 1].instruction.op == IROp::Jump);
+    assert(linear.instructions[split.firstInstruction + 1].instruction.operand
+        == linear.blockEntryOffsets[2]);
+    assert(linear.moduleDependencies.size() == 1);
+    assert(linear.moduleDependencies.front().instructionOffset
+        == linear.blockEntryOffsets[2]);
+}
+
+void test_lower_de_ssa_splits_critical_fallthrough_edge_in_place()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::JumpIfFalse, 3),
+        cfgInstruction(IROp::Jump, 3),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Jump, 1),
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.parameters.push_back(SSAParameter{0, cfg.entryBlock});
+    ssa.parameters.push_back(SSAParameter{2, cfg.entryBlock});
+    SSAInstruction branch = plainInstruction(IROp::JumpIfFalse, 0);
+    branch.left = 0;
+    branch.operand = 3;
+    ssa.blocks[0].instructions.push_back(branch);
+    SSAInstruction firstJump = plainInstruction(IROp::Jump, 1);
+    firstJump.operand = 3;
+    ssa.blocks[1].instructions.push_back(firstJump);
+    ssa.blocks[2].instructions.push_back(defineConstant(9, 2));
+    SSAInstruction backJump = plainInstruction(IROp::Jump, 3);
+    backJump.operand = 1;
+    ssa.blocks[3].instructions.push_back(backJump);
+    ssa.blocks[1].phis.push_back(SSAPhi{1, {{0, 0}, {3, 2}}});
+
+    const SSADeSSALinearFunction linear = lowerSSADeSSACopies(cfg, ssa);
+    linear.verify(cfg);
+
+    const std::optional<std::pair<CFGBlockId, CFGBlockId>> expectedSplit{
+        std::pair<CFGBlockId, CFGBlockId>{0, 1}};
+    const auto splitIt = std::find_if(
+        linear.blocks.begin(),
+        linear.blocks.end(),
+        [&expectedSplit](const SSADeSSABlock& block) {
+            return block.splitEdge == expectedSplit;
+        });
+    assert(splitIt != linear.blocks.end());
+    const SSADeSSABlock& split = *splitIt;
+    assert(split.id == 1);
+    assert(split.firstInstruction == linear.blocks[0].endInstruction);
+    assert(linear.blockEntryOffsets[1] == split.endInstruction);
+    assert(linear.instructions[0].instruction.operand == linear.blockEntryOffsets[3]);
+    assert(linear.instructions[split.firstInstruction].instruction.op == IROp::Copy);
+    assert(linear.instructions[split.firstInstruction + 1].instruction.op == IROp::Jump);
+    assert(linear.instructions[split.firstInstruction + 1].instruction.operand
+        == linear.blockEntryOffsets[1]);
+}
+
+void test_lower_de_ssa_materializes_cycle_temporary_on_backedge()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Jump, 3),
+        cfgInstruction(IROp::JumpIfFalse, 6),
+        cfgInstruction(IROp::Print),
+        cfgInstruction(IROp::Jump, 3),
+        cfgInstruction(IROp::Return),
+    });
+    SSAFunction ssa = makeSSAFunction(cfg);
+    ssa.blocks[0].instructions.push_back(valueInstruction(IROp::Constant, 3, 0));
+    ssa.blocks[0].instructions.push_back(valueInstruction(IROp::Constant, 4, 1));
+    ssa.blocks[0].instructions.push_back(plainInstruction(IROp::Jump, 2));
+    ssa.blocks[1].phis.push_back(SSAPhi{10, {{0, 3}, {2, 11}}});
+    ssa.blocks[1].phis.push_back(SSAPhi{11, {{0, 4}, {2, 10}}});
+    SSAInstruction branch = plainInstruction(IROp::JumpIfFalse, 3);
+    branch.left = 10;
+    ssa.blocks[1].instructions.push_back(branch);
+    ssa.blocks[2].instructions.push_back(useValue(IROp::Print, 10, 4));
+    ssa.blocks[2].instructions.push_back(plainInstruction(IROp::Jump, 5));
+    ssa.blocks[3].instructions.push_back(useValue(IROp::Return, 10, 6));
+
+    const SSADeSSALinearFunction linear = lowerSSADeSSACopies(cfg, ssa);
+    linear.verify(cfg);
+
+    assert(linear.temporaryValues == std::vector<SSAValueId>({12}));
+    const SSADeSSABlock& backedgeBlock = linear.blocks[2];
+    assert(backedgeBlock.sourceBlock == std::optional<CFGBlockId>(2));
+    const std::size_t copyStart = backedgeBlock.firstInstruction + 1;
+    assert(linear.instructions[copyStart].synthetic);
+    assert(linear.instructions[copyStart].instruction.result
+        == std::optional<SSAValueId>(12));
+    assert(linear.instructions[copyStart].instruction.left
+        == std::optional<SSAValueId>(10));
+    assert(linear.instructions[copyStart + 1].instruction.result
+        == std::optional<SSAValueId>(10));
+    assert(linear.instructions[copyStart + 1].instruction.left
+        == std::optional<SSAValueId>(11));
+    assert(linear.instructions[copyStart + 2].instruction.result
+        == std::optional<SSAValueId>(11));
+    assert(linear.instructions[copyStart + 2].instruction.left
+        == std::optional<SSAValueId>(12));
+}
+
+void test_rename_eliminates_local_memory_and_fills_diamond_phi()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::JumpIfFalse, 4),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::StoreVar),
+        cfgInstruction(IROp::Jump, 6),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::StoreVar),
+        cfgInstruction(IROp::LoadVar),
+        cfgInstruction(IROp::Return),
+    });
+    const DominanceInfo dominance = buildDominanceInfo(cfg);
+    SSAFunction input = makeSSAFunction(cfg);
+    input.memorySlots.push_back(SSAMemorySlot{0, "local", SSAMemoryStorage::Local});
+
+    input.parameters.push_back(SSAParameter{0, cfg.entryBlock});
+    SSAInstruction branch = plainInstruction(IROp::JumpIfFalse, 0);
+    branch.left = 0;
+    input.blocks[0].instructions.push_back(branch);
+
+    input.blocks[1].instructions.push_back(valueInstruction(IROp::Constant, 1, 1));
+    input.blocks[1].instructions.push_back(memoryInstruction(IROp::StoreVar, 2, 0, std::nullopt, 1));
+    input.blocks[1].instructions.push_back(plainInstruction(IROp::Jump, 3));
+    input.blocks[2].instructions.push_back(valueInstruction(IROp::Constant, 2, 4));
+    input.blocks[2].instructions.push_back(memoryInstruction(IROp::StoreVar, 5, 0, std::nullopt, 2));
+    input.blocks[3].instructions.push_back(memoryInstruction(IROp::LoadVar, 6, 0, 3));
+    input.blocks[3].instructions.push_back(useValue(IROp::Return, 3, 7));
+
+    const SSAFunction renamed = renamePromotableMemorySlots(cfg, dominance, input);
+    assert(renamed.blocks[3].phis.size() == 1);
+    const SSAPhi& phi = renamed.blocks[3].phis.front();
+    assert(phi.memorySlot == std::optional<SSAMemorySlotId>(0));
+    assert(phi.incoming.size() == cfg.blocks[3].predecessors.size());
+    assert(phi.incoming[0].predecessor == cfg.blocks[3].predecessors[0]);
+    assert(phi.incoming[1].predecessor == cfg.blocks[3].predecessors[1]);
+    assert(phi.incoming[0].value != phi.incoming[1].value);
+    assert(renamed.blocks[3].instructions.size() == 1);
+    assert(renamed.blocks[3].instructions.front().op == IROp::Return);
+    assert(renamed.blocks[3].instructions.front().left == phi.result);
+
+    for (const SSABlock& block : renamed.blocks) {
+        for (const SSAInstruction& instruction : block.instructions) {
+            assert(instruction.op != IROp::LoadVar);
+            assert(instruction.op != IROp::StoreVar);
+            assert(instruction.op != IROp::AssignVar);
+        }
+    }
+    renamed.verify(cfg);
+}
+
+void test_rename_handles_loop_backedge_and_initial_definition()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::StoreVar),
+        cfgInstruction(IROp::Jump, 3),
+        cfgInstruction(IROp::LoadVar),
+        cfgInstruction(IROp::JumpIfFalse, 8),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::StoreVar),
+        cfgInstruction(IROp::Jump, 3),
+        cfgInstruction(IROp::LoadVar),
+        cfgInstruction(IROp::Return),
+    });
+    const DominanceInfo dominance = buildDominanceInfo(cfg);
+    SSAFunction input = makeSSAFunction(cfg);
+    input.memorySlots.push_back(SSAMemorySlot{0, "counter", SSAMemoryStorage::Local});
+    input.blocks[0].instructions.push_back(valueInstruction(IROp::Constant, 1, 0));
+    input.blocks[0].instructions.push_back(memoryInstruction(IROp::StoreVar, 1, 0, std::nullopt, 1));
+    input.blocks[0].instructions.push_back(plainInstruction(IROp::Jump, 2));
+    input.blocks[1].instructions.push_back(memoryInstruction(IROp::LoadVar, 3, 0, 3));
+    input.blocks[1].instructions.push_back(useValue(IROp::JumpIfFalse, 3, 4));
+    input.blocks[2].instructions.push_back(valueInstruction(IROp::Constant, 4, 5));
+    input.blocks[2].instructions.push_back(memoryInstruction(IROp::StoreVar, 6, 0, std::nullopt, 4));
+    input.blocks[2].instructions.push_back(plainInstruction(IROp::Jump, 7));
+    input.blocks[3].instructions.push_back(memoryInstruction(IROp::LoadVar, 8, 0, 8));
+    input.blocks[3].instructions.push_back(useValue(IROp::Return, 8, 9));
+
+    const SSAFunction renamed = renamePromotableMemorySlots(cfg, dominance, input);
+    assert(renamed.blocks[1].phis.size() == 1);
+    const SSAPhi& phi = renamed.blocks[1].phis.front();
+    assert(phi.memorySlot == std::optional<SSAMemorySlotId>(0));
+    assert(phi.incoming.size() == 2);
+    assert(phi.incoming[0].predecessor == cfg.blocks[1].predecessors[0]);
+    assert(phi.incoming[1].predecessor == cfg.blocks[1].predecessors[1]);
+    assert(renamed.blocks[1].instructions.front().op == IROp::JumpIfFalse);
+    assert(renamed.blocks[1].instructions.front().left == phi.result);
+    assert(renamed.blocks[3].instructions.front().op == IROp::Return);
+    assert(renamed.blocks[3].instructions.front().left == phi.result);
+    renamed.verify(cfg);
+}
+
+void test_rename_uses_local_parameter_as_initial_slot_value()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::StoreVar),
+        cfgInstruction(IROp::LoadVar),
+        cfgInstruction(IROp::Return),
+    });
+    const DominanceInfo dominance = buildDominanceInfo(cfg);
+    SSAFunction input = makeSSAFunction(cfg);
+    input.memorySlots.push_back(SSAMemorySlot{0, "value", SSAMemoryStorage::Local});
+    SSAParameter parameter{0, cfg.entryBlock};
+    parameter.memorySlot = 0;
+    input.parameters.push_back(parameter);
+    input.blocks[0].instructions.push_back(memoryInstruction(IROp::StoreVar, 0, 0, std::nullopt, 0));
+    input.blocks[0].instructions.push_back(memoryInstruction(IROp::LoadVar, 1, 0, 1));
+    input.blocks[0].instructions.push_back(useValue(IROp::Return, 1, 2));
+
+    const SSAFunction renamed = renamePromotableMemorySlots(cfg, dominance, input);
+    assert(renamed.parameters.size() == 1);
+    assert(renamed.blocks[0].instructions.size() == 1);
+    assert(renamed.blocks[0].instructions.front().op == IROp::Return);
+    assert(renamed.blocks[0].instructions.front().left == renamed.parameters.front().value);
+    renamed.verify(cfg);
+}
+
+void test_rename_keeps_non_promotable_memory_explicit()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::LoadVar),
+        cfgInstruction(IROp::StoreVar),
+        cfgInstruction(IROp::AssignVar),
+        cfgInstruction(IROp::Return),
+    });
+    const DominanceInfo dominance = buildDominanceInfo(cfg);
+    SSAFunction input = makeSSAFunction(cfg);
+    input.memorySlots.push_back(SSAMemorySlot{0, "captured", SSAMemoryStorage::Captured});
+    input.blocks[0].instructions.push_back(memoryInstruction(IROp::LoadVar, 0, 0, 0));
+    input.blocks[0].instructions.push_back(memoryInstruction(IROp::StoreVar, 1, 0, std::nullopt, 0));
+    input.blocks[0].instructions.push_back(memoryInstruction(IROp::AssignVar, 2, 0, std::nullopt, 0));
+    input.blocks[0].instructions.push_back(useValue(IROp::Return, 0, 3));
+
+    const SSAFunction renamed = renamePromotableMemorySlots(cfg, dominance, input);
+    assert(renamed.blocks[0].instructions.size() == 4);
+    assert(renamed.blocks[0].instructions[0].op == IROp::LoadVar);
+    assert(renamed.blocks[0].instructions[1].op == IROp::StoreVar);
+    assert(renamed.blocks[0].instructions[2].op == IROp::AssignVar);
+    assert(renamed.blocks[0].instructions[3].op == IROp::Return);
+    for (const SSAInstruction& instruction : renamed.blocks[0].instructions) {
+        if (instruction.op == IROp::LoadVar || instruction.op == IROp::StoreVar
+            || instruction.op == IROp::AssignVar) {
+            assert(instruction.memorySlot == std::optional<SSAMemorySlotId>(0));
+        }
+    }
+    renamed.verify(cfg);
+}
+
+void test_rename_rejects_undefined_local_slot()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::LoadVar),
+        cfgInstruction(IROp::Return),
+    });
+    const DominanceInfo dominance = buildDominanceInfo(cfg);
+    SSAFunction input = makeSSAFunction(cfg);
+    input.memorySlots.push_back(SSAMemorySlot{0, "missing", SSAMemoryStorage::Local});
+    input.blocks[0].instructions.push_back(memoryInstruction(IROp::LoadVar, 0, 0, 0));
+    input.blocks[0].instructions.push_back(useValue(IROp::Return, 0, 1));
+
+    assertThrowsSSA(
+        [&] { renamePromotableMemorySlots(cfg, dominance, input); },
+        "used before definition");
+}
+
+void test_rename_rejects_missing_phi_predecessor_definition()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::JumpIfFalse, 4),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::StoreVar),
+        cfgInstruction(IROp::Jump, 6),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Copy),
+        cfgInstruction(IROp::LoadVar),
+        cfgInstruction(IROp::Return),
+    });
+    const DominanceInfo dominance = buildDominanceInfo(cfg);
+    SSAFunction input = makeSSAFunction(cfg);
+    input.memorySlots.push_back(SSAMemorySlot{0, "partial", SSAMemoryStorage::Local});
+    input.blocks[0].instructions.push_back(plainInstruction(IROp::JumpIfFalse, 0));
+    input.blocks[1].instructions.push_back(valueInstruction(IROp::Constant, 1, 1));
+    input.blocks[1].instructions.push_back(memoryInstruction(IROp::StoreVar, 2, 0, std::nullopt, 1));
+    input.blocks[1].instructions.push_back(plainInstruction(IROp::Jump, 3));
+    input.blocks[2].instructions.push_back(valueInstruction(IROp::Constant, 3, 4));
+    input.blocks[2].instructions.push_back(useValue(IROp::Print, 3, 5));
+    input.blocks[3].instructions.push_back(memoryInstruction(IROp::LoadVar, 6, 0, 4));
+    input.blocks[3].instructions.push_back(useValue(IROp::Return, 6, 7));
+
+    assertThrowsSSA(
+        [&] { renamePromotableMemorySlots(cfg, dominance, input); },
+        "has no value on predecessor");
+}
+
+void test_rename_rejects_invalid_slots_and_duplicate_raw_definitions()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::LoadVar),
+        cfgInstruction(IROp::Constant),
+    });
+    const DominanceInfo dominance = buildDominanceInfo(cfg);
+
+    SSAFunction invalidSlot = makeSSAFunction(cfg);
+    invalidSlot.memorySlots.push_back(SSAMemorySlot{0, "local", SSAMemoryStorage::Local});
+    invalidSlot.blocks[0].instructions.push_back(memoryInstruction(IROp::LoadVar, 0, 1, 0));
+    assertThrowsSSA(
+        [&] { renamePromotableMemorySlots(cfg, dominance, invalidSlot); },
+        "invalid memory slot");
+
+    SSAFunction duplicate = makeSSAFunction(cfg);
+    duplicate.blocks[0].instructions.push_back(valueInstruction(IROp::Constant, 0, 0));
+    duplicate.blocks[0].instructions.push_back(valueInstruction(IROp::Constant, 0, 1));
+    assertThrowsSSA(
+        [&] { renamePromotableMemorySlots(cfg, dominance, duplicate); },
+        "defined more than once");
+}
+
+void test_rename_rejects_non_dominating_raw_register_use()
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph({
+        cfgInstruction(IROp::JumpIfFalse, 2),
+        cfgInstruction(IROp::Constant),
+        cfgInstruction(IROp::Return),
+    });
+    const DominanceInfo dominance = buildDominanceInfo(cfg);
+    SSAFunction input = makeSSAFunction(cfg);
+    input.blocks[0].instructions.push_back(useValue(IROp::JumpIfFalse, 0, 0));
+    input.blocks[1].instructions.push_back(valueInstruction(IROp::Constant, 0, 1));
+    input.blocks[2].instructions.push_back(useValue(IROp::Return, 0, 2));
+
+    assertThrowsSSA(
+        [&] { renamePromotableMemorySlots(cfg, dominance, input); },
+        "does not dominate");
+}
+
+} // namespace
+
+int main()
+{
+    test_empty_ssa_shell_matches_cfg();
+    test_phi_requires_ordered_incoming_value_for_each_predecessor();
+    test_duplicate_definitions_are_rejected();
+    test_phi_predecessor_order_is_rejected();
+    test_undefined_uses_are_rejected();
+    test_incomplete_phi_is_rejected();
+    test_memory_slots_keep_capture_and_unknown_storage_conservative();
+    test_parameters_are_entry_definitions();
+    test_ssa_blocks_must_match_cfg();
+    test_ssa_verifier_rejects_non_dominating_use();
+    test_ssa_verifier_rejects_use_before_same_block_definition();
+    test_ssa_verifier_rejects_phi_value_not_available_on_edge();
+    test_ssa_verifier_rejects_invalid_instruction_shape();
+    test_de_ssa_plan_is_empty_without_phis();
+    test_de_ssa_plan_orders_diamond_edge_copies();
+    test_de_ssa_plan_marks_critical_edges();
+    test_de_ssa_plan_breaks_parallel_copy_cycle_with_one_temporary();
+    test_lower_de_ssa_materializes_diamond_copies_and_remaps_offsets();
+    test_lower_de_ssa_places_noncritical_copy_at_unique_successor_entry();
+    test_lower_de_ssa_splits_critical_branch_edge_and_remaps_dependency();
+    test_lower_de_ssa_splits_critical_fallthrough_edge_in_place();
+    test_lower_de_ssa_materializes_cycle_temporary_on_backedge();
+    test_rename_eliminates_local_memory_and_fills_diamond_phi();
+    test_rename_handles_loop_backedge_and_initial_definition();
+    test_rename_uses_local_parameter_as_initial_slot_value();
+    test_rename_keeps_non_promotable_memory_explicit();
+    test_rename_rejects_undefined_local_slot();
+    test_rename_rejects_missing_phi_predecessor_definition();
+    test_rename_rejects_invalid_slots_and_duplicate_raw_definitions();
+    test_rename_rejects_non_dominating_raw_register_use();
+    return 0;
+}

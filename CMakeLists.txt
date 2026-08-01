@@ -66,8 +66,12 @@ set(COMPILER_DESIGN_FRONTEND_SOURCES
 
 set(COMPILER_DESIGN_IR_SOURCES
     ${COMPILER_DESIGN_FRONTEND_SOURCES}
+    src/ControlFlowGraph.cpp
+    src/Dominance.cpp
     src/IR.cpp
     src/IRCompiler.cpp
+    src/Optimizer.cpp
+    src/SSA.cpp
 )
 
 add_executable(compiler_design
@@ -94,9 +98,73 @@ add_executable(ir_source_location_tests
 )
 compiler_design_configure_target(ir_source_location_tests)
 
+add_executable(control_flow_graph_tests
+    tests/control_flow_graph_tests.cpp
+    src/ControlFlowGraph.cpp
+    src/IR.cpp
+    src/Value.cpp
+)
+compiler_design_configure_target(control_flow_graph_tests)
+
+add_executable(dominance_tests
+    tests/dominance_tests.cpp
+    src/ControlFlowGraph.cpp
+    src/Dominance.cpp
+    src/IR.cpp
+    src/Value.cpp
+)
+compiler_design_configure_target(dominance_tests)
+
+add_executable(ssa_tests
+    tests/ssa_tests.cpp
+    src/ControlFlowGraph.cpp
+    src/Dominance.cpp
+    src/IR.cpp
+    src/SSA.cpp
+    src/Value.cpp
+)
+compiler_design_configure_target(ssa_tests)
+
+add_executable(ssa_phi_placement_tests
+    tests/ssa_phi_placement_tests.cpp
+    src/ControlFlowGraph.cpp
+    src/Dominance.cpp
+    src/IR.cpp
+    src/SSA.cpp
+    src/Value.cpp
+)
+compiler_design_configure_target(ssa_phi_placement_tests)
+
+add_executable(ssa_contract_tests
+    tests/ssa_contract_tests.cpp
+    src/ControlFlowGraph.cpp
+    src/Dominance.cpp
+    src/IR.cpp
+    src/SSA.cpp
+    src/Value.cpp
+)
+compiler_design_configure_target(ssa_contract_tests)
+
+add_executable(optimizer_tests
+    tests/optimizer_tests.cpp
+    src/ControlFlowGraph.cpp
+    src/Dominance.cpp
+    src/IR.cpp
+    src/Optimizer.cpp
+    src/SSA.cpp
+    src/Value.cpp
+)
+compiler_design_configure_target(optimizer_tests)
+
 enable_testing()
 add_test(NAME source_map COMMAND source_map_tests)
 add_test(NAME ir_source_location COMMAND ir_source_location_tests)
+add_test(NAME control_flow_graph COMMAND control_flow_graph_tests)
+add_test(NAME dominance COMMAND dominance_tests)
+add_test(NAME ssa COMMAND ssa_tests)
+add_test(NAME ssa_phi_placement COMMAND ssa_phi_placement_tests)
+add_test(NAME ssa_contract COMMAND ssa_contract_tests)
+add_test(NAME optimizer COMMAND optimizer_tests)
 add_test(
     NAME golden_runner_selftest
     COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
@@ -203,6 +271,12 @@ add_test(
     NAME profile
     COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
             ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/profile_tests.py $<TARGET_FILE:compiler_design> ${CMAKE_SOURCE_DIR}/vm-rs
+)
+
+add_test(
+    NAME optimizer_cli
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
+            ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/optimizer_cli_tests.py $<TARGET_FILE:compiler_design> ${CMAKE_SOURCE_DIR}/vm-rs
 )
 
 add_test(
@@ -336,6 +410,7 @@ set_tests_properties(
     module_debug_metadata
     debugger
     profile
+    optimizer_cli
     rust_vm
     vm_capacity
     PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"

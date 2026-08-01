@@ -2975,21 +2975,27 @@ void TypeChecker::checkMethodBody(const std::string& structName, const MethodInf
     loopDepth_ = 0;
 
     std::vector<std::string> parameterNames;
+    std::vector<BindingId> parameterBindingIds;
+    parameterBindingIds.reserve(declaration.parameters.size() + 1);
     Token thisToken{TokenType::Identifier, "this", declaration.name.line, declaration.name.column};
     Binding thisBinding = declareVariable(thisToken, method.receiverType, true);
     parameterNames.push_back(thisBinding.resolvedName);
+    parameterBindingIds.push_back(thisBinding.bindingId);
 
     for (std::size_t i = 0; i < declaration.parameters.size(); ++i) {
         const Parameter& parameter = declaration.parameters[i];
         Binding parameterBinding = declareVariable(parameter.name, method.parameterTypes[i], parameter.typeName.has_value());
         parameterNames.push_back(parameterBinding.resolvedName);
+        parameterBindingIds.push_back(parameterBinding.bindingId);
     }
     declarationIndex_.recordFunctionMetadata(
         declaration,
         FunctionMetadataRecord{
             method.resolvedName,
             declaration.name.lexeme,
-            parameterNames});
+            parameterNames,
+            BindingId{},
+            std::move(parameterBindingIds)});
 
     std::optional<TypeInfo> expectedReturnType;
     if (declaration.returnTypeName) {
@@ -3148,17 +3154,22 @@ void TypeChecker::checkFunction(const FunctionStmt& statement)
     loopDepth_ = 0;
 
     std::vector<std::string> parameterNames;
+    std::vector<BindingId> parameterBindingIds;
+    parameterBindingIds.reserve(statement.parameters.size());
     for (std::size_t i = 0; i < statement.parameters.size(); ++i) {
         const Parameter& parameter = statement.parameters[i];
         Binding parameterBinding = declareVariable(parameter.name, declaredParameterTypes[i], parameter.typeName.has_value());
         parameterNames.push_back(parameterBinding.resolvedName);
+        parameterBindingIds.push_back(parameterBinding.bindingId);
     }
     declarationIndex_.recordFunctionMetadata(
         statement,
         FunctionMetadataRecord{
             functionBinding.resolvedName,
             statement.name.lexeme,
-            parameterNames});
+            parameterNames,
+            functionBinding.bindingId,
+            std::move(parameterBindingIds)});
 
     const TypeInfo returnType = checkFunctionBody(
         statement.body,
@@ -3421,6 +3432,8 @@ TypeChecker::CheckedExpression TypeChecker::checkFunctionExpression(const Functi
     loopDepth_ = 0;
 
     std::vector<std::string> parameterNames;
+    std::vector<BindingId> parameterBindingIds;
+    parameterBindingIds.reserve(expression.parameters.size());
     for (std::size_t i = 0; i < expression.parameters.size(); ++i) {
         const Parameter& parameter = expression.parameters[i];
         Binding parameterBinding = declareVariable(
@@ -3428,10 +3441,16 @@ TypeChecker::CheckedExpression TypeChecker::checkFunctionExpression(const Functi
             declaredParameterTypes[i],
             parameter.typeName.has_value() || contextualSignature != nullptr);
         parameterNames.push_back(parameterBinding.resolvedName);
+        parameterBindingIds.push_back(parameterBinding.bindingId);
     }
     declarationIndex_.recordFunctionMetadata(
         expression,
-        FunctionMetadataRecord{"<lambda>", "<lambda>", parameterNames});
+        FunctionMetadataRecord{
+            "<lambda>",
+            "<lambda>",
+            parameterNames,
+            BindingId{},
+            std::move(parameterBindingIds)});
 
     const TypeInfo returnType = checkFunctionBody(
         expression.body,

@@ -8,6 +8,7 @@
 #include "ModuleCache.hpp"
 #include "ModuleInterfaceArtifact.hpp"
 #include "ModuleInterfaceEmitter.hpp"
+#include "Optimizer.hpp"
 #include "Parser.hpp"
 #include "TypeChecker.hpp"
 
@@ -27,14 +28,39 @@ namespace {
 
 void printUsage(const char* executable)
 {
-    std::cerr << "Usage: " << executable << " [--tokens] [--ir] [--bytecode] [--module-interface] [-I dir] [--import-path dir] [file ...]\n"
+    std::cerr << "Usage: " << executable << " [--tokens] [--ir] [--bytecode] [--opt-level 0|1] [--module-interface] [-I dir] [--import-path dir] [file ...]\n"
               << "       " << executable << " [--format | --format-check] [--format-indent-width N] [-I dir] [--import-path dir] [file ...]\n"
               << "       " << executable << " --lsp\n"
-              << "       " << executable << " [--emit-bytecode output.cdbc] [-I dir] [--import-path dir] file [...]\n"
-              << "       " << executable << " [--emit-module-bytecode output-directory] [--module-cache cache-directory] [--module-cache-strict] [--module-rebuild-report report.json] [-I dir] [--import-path dir] file [...]\n"
+              << "       " << executable << " [--emit-bytecode output.cdbc] [--opt-level 0|1] [-I dir] [--import-path dir] file [...]\n"
+              << "       " << executable << " [--emit-module-bytecode output-directory] [--opt-level 0|1] [--module-cache cache-directory] [--module-cache-strict] [--module-rebuild-report report.json] [-I dir] [--import-path dir] file [...]\n"
               << "       " << executable << " [--module-interface-cache cache-directory] [--module-cache-strict | --module-cache-fallback] [-I dir] [--import-path dir] file [...]\n"
               << "If no file is provided, source is read from stdin except for bytecode emission modes, which require at least one file.\n"
               << "Import search paths are used for non-explicit string imports after the importing file's directory.\n";
+}
+
+const char* optimizationLevelName(SSAOptimizationLevel level)
+{
+    switch (level) {
+    case SSAOptimizationLevel::O0:
+        return "O0";
+    case SSAOptimizationLevel::O1:
+        return "O1";
+    }
+    throw std::runtime_error("unknown SSA optimization level");
+}
+
+IRProgram optimizeProgram(
+    IRProgram program,
+    SSAOptimizationLevel level)
+{
+    // O0 is the established linear-IR path.  The internal O0 adapter proves
+    // its round-trip contract for already normalized streams, but ordinary
+    // compiler IR may contain branch-local register redefinitions whose
+    // de-SSA layout is intentionally not exposed at the compatibility level.
+    if (level == SSAOptimizationLevel::O0) {
+        return program;
+    }
+    return optimizeIRProgram(program, level).rebuild(program);
 }
 
 const ModuleStmt* findModule(const Program& program, std::size_t moduleId)
@@ -96,7 +122,8 @@ std::unordered_map<std::size_t, std::string> buildModuleInterfaceHashes(
 std::vector<ModuleCacheModule> buildModuleCacheModules(
     const Program& program,
     const std::vector<ModuleInterface>& interfaces,
-    const std::unordered_map<std::size_t, std::optional<std::uint32_t>>& entryOrders)
+    const std::unordered_map<std::size_t, std::optional<std::uint32_t>>& entryOrders,
+    SSAOptimizationLevel optimizationLevel)
 {
     if (!program.moduleGraph) {
         throw std::runtime_error("internal error: module cache requires a module graph");
@@ -118,6 +145,8 @@ std::vector<ModuleCacheModule> buildModuleCacheModules(
             ? moduleCacheHash(module->source)
             : module->sourceHash;
         cacheModule.interfaceHash = interfaceHashes.at(node.moduleId);
+        cacheModule.optimizationLevel = optimizationLevelName(optimizationLevel);
+        cacheModule.optimizerPipeline = ssaOptimizationPipelineFingerprint(optimizationLevel);
         cacheModule.isEntry = node.isEntry;
         const auto entryOrder = entryOrders.find(node.moduleId);
         if (entryOrder != entryOrders.end() && entryOrder->second) {
@@ -193,10 +222,12 @@ BytecodeModuleArtifact compileModuleArtifact(
     const ModuleGraph& graph,
     const ModuleGraphNode& node,
     const std::unordered_map<std::size_t, std::optional<std::uint32_t>>& entryOrders,
-    const DeclarationIndex& declarationIndex)
+    const DeclarationIndex& declarationIndex,
+    SSAOptimizationLevel optimizationLevel)
 {
     IRCompiler compiler;
     IRProgram ir = compiler.compileModule(program, node.moduleId, declarationIndex);
+    ir = optimizeProgram(std::move(ir), optimizationLevel);
     BytecodeCompiler bytecodeCompiler;
 
     BytecodeModuleArtifact artifact;
@@ -242,7 +273,8 @@ void writeModuleArtifacts(
     const DeclarationIndex& declarationIndex,
     const std::vector<ModuleInterface>& interfaces,
     const std::optional<std::filesystem::path>& cacheDirectory,
-    const std::optional<std::filesystem::path>& reportPath)
+    const std::optional<std::filesystem::path>& reportPath,
+    SSAOptimizationLevel optimizationLevel)
 {
     if (!program.moduleGraph || program.moduleGraph->nodes.empty()) {
         throw std::runtime_error("--emit-module-bytecode requires an import-aware module graph");
@@ -278,7 +310,7 @@ void writeModuleArtifacts(
             : "cache_manifest_invalid";
         interfaceHashes = buildModuleInterfaceHashes(graph, interfaces);
         cacheDecisions = planModuleCacheBuild(
-            buildModuleCacheModules(program, interfaces, entryOrders),
+            buildModuleCacheModules(program, interfaces, entryOrders, optimizationLevel),
             previous,
             *cacheDirectory,
             emptyReason);
@@ -316,7 +348,8 @@ void writeModuleArtifacts(
             graph,
             node,
             entryOrders,
-            declarationIndex);
+            declarationIndex,
+            optimizationLevel);
         std::ostringstream text;
         writeBytecodeModuleText(text, artifact);
         if (cached != cacheDecisionsByIdentity.end()) {
@@ -432,6 +465,8 @@ int main(int argc, char** argv)
     bool runLsp = false;
     bool showFormat = false;
     bool checkFormat = false;
+    SSAOptimizationLevel optimizationLevel = SSAOptimizationLevel::O0;
+    bool optimizationLevelSpecified = false;
     std::size_t formatIndentWidth = 2;
     bool formatIndentWidthSpecified = false;
     std::optional<std::string> emitBytecodePath;
@@ -452,6 +487,21 @@ int main(int argc, char** argv)
             showIr = true;
         } else if (arg == "--bytecode") {
             showBytecode = true;
+        } else if (arg == "--opt-level") {
+            if (i + 1 >= argc) {
+                printUsage(argv[0]);
+                return 64;
+            }
+            const std::string level = argv[++i];
+            if (level == "0") {
+                optimizationLevel = SSAOptimizationLevel::O0;
+            } else if (level == "1") {
+                optimizationLevel = SSAOptimizationLevel::O1;
+            } else {
+                std::cerr << "--opt-level requires 0 or 1\n";
+                return 64;
+            }
+            optimizationLevelSpecified = true;
         } else if (arg == "--module-interface") {
             showModuleInterface = true;
         } else if (arg == "--lsp") {
@@ -538,6 +588,7 @@ int main(int argc, char** argv)
             || showModuleInterface
             || showFormat
             || checkFormat
+            || optimizationLevelSpecified
             || formatIndentWidthSpecified
             || emitBytecodePath
             || emitModuleBytecodePath
@@ -575,6 +626,7 @@ int main(int argc, char** argv)
             || showIr
             || showBytecode
             || showModuleInterface
+            || optimizationLevelSpecified
             || emitBytecodePath
             || emitModuleBytecodePath
             || moduleCachePath
@@ -588,6 +640,15 @@ int main(int argc, char** argv)
 
     if (formatIndentWidthSpecified && !formatMode) {
         std::cerr << "--format-indent-width requires --format or --format-check\n";
+        return 64;
+    }
+
+    if (optimizationLevelSpecified
+        && !showIr
+        && !showBytecode
+        && !emitBytecodePath
+        && !emitModuleBytecodePath) {
+        std::cerr << "--opt-level requires --ir, --bytecode, or bytecode emission\n";
         return 64;
     }
 
@@ -726,13 +787,15 @@ int main(int argc, char** argv)
                 typeChecker.declarationIndex(),
                 typeChecker.moduleInterfaces(),
                 moduleCachePath ? std::optional<std::filesystem::path>(*moduleCachePath) : std::nullopt,
-                moduleRebuildReportPath ? std::optional<std::filesystem::path>(*moduleRebuildReportPath) : std::nullopt);
+                moduleRebuildReportPath ? std::optional<std::filesystem::path>(*moduleRebuildReportPath) : std::nullopt,
+                optimizationLevel);
             return 0;
         }
 
         if (emitBytecodePath || showIr || showBytecode) {
             IRCompiler compiler;
             IRProgram ir = compiler.compile(program, typeChecker.declarationIndex());
+            ir = optimizeProgram(std::move(ir), optimizationLevel);
 
             std::optional<BytecodeProgram> bytecode;
             if (emitBytecodePath || showBytecode) {

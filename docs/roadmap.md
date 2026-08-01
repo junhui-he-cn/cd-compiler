@@ -338,6 +338,75 @@ rebuild reports, diagnostics, linked artifacts, and VM execution asserted.
 small compatible slice or discard the branch-only assumptions. No REPL claim
 belongs in the baseline until that re-audit is merged and verified.
 
+### M7-IR-SSA-001: Internal SSA and optimization pipeline
+
+**Status:** the CFG foundation, SSA structural shell, deterministic dominance
+analysis, phi placement, binding/effect contract, IRCompiler binding metadata
+integration, and SSA memory-slot renaming are implemented on `master` through
+the merged `feat/ssa-optimization-design` slice; de-SSA copy planning, an internal linear
+de-SSA layout, an ordinary-IR adapter, a conservative internal O1
+value-simplification service, the verified program-level main/function-table
+adapter and rebuild boundary, and explicit `--opt-level 0|1` CLI/module-product
+integration are also implemented on this branch. Default O0 lowering remains
+the compatibility path, and proven-safe primitive constant folding,
+block-preserving known-condition branch normalization, and post-de-SSA
+unreachable-block pruning are also admitted on this branch. Block
+merging/general CFG rewriting, physical register allocation, and broader
+optimization are still proposed and are not shipped on `master`. The
+design
+and machine-readable decision are in
+`docs/superpowers/specs/2026-07-30-ssa-optimization-design.md` and
+`docs/decisions/m7-ir-ssa-optimization-001.{md,json}`.
+
+**Purpose:** introduce explicit basic blocks, dominance/phi-based SSA, and a
+small opt-in O1 pass pipeline behind the existing linear register IR while
+preserving source semantics, closure cells, module-product boundaries,
+`cdbc 0.1`, and C++/Rust execution parity.
+
+**Initial boundary:** O0 remains the default. O1 may simplify CFGs, propagate
+copies/constants, fold proven-safe primitive operations, simplify phis, and
+remove only non-trapping pure dead code. Captured/module/unknown bindings,
+aggregate aliasing, calls, callbacks, and runtime traps remain conservative.
+SSA is de-lowered to the existing IR; phi nodes and optimizer metadata are not
+serialized.
+
+The branch has already frozen the conservative debug-local policy,
+constant/trap classification, and `cdbc-cache 0.2` schema-3 optimization
+identity. Explicit O1 program/module lowering now consumes those contracts;
+the default O0 path remains unchanged and optimized trace-local equivalence is
+not promised.
+The current branch establishes CFG shape, SSA value/phi structure, dominance
+analysis, phi placement, local-slot value allocation and renaming, edge-copy
+planning, linear layout with critical-edge splits, branch/dependency remapping,
+ordinary-IR adaptation, source binding/storage metadata, the conservative
+effect table, internal copy/phi simplification, pure dead-code removal, the
+constant-evaluation trap/non-finite boundary, proven-safe primitive constant
+folding, post-de-SSA known-condition branch normalization and unreachable-block
+pruning, O0/O1 cache identity,
+conservative source-local trace policy, the single-stream and program-level
+ordinary-IR optimizer adapters, explicit CLI/module-product O1 selection, and
+verification.
+
+**Required decision before default optimized lowering:** decide when the
+compiler should make O1 the default and whether optimized trace-local
+materialization is strong enough for that change. The explicit O1 boundary now
+invokes the verified program-level result/rebuild adapter for the main stream
+and nested functions in stable function-table order, preserves module anchors
+and source mappings, and propagates the optimization identity to module-cache
+products. The branch intentionally keeps O0 as the default, preserves virtual
+register IDs, and defers physical allocation/coalescing to O2. The current O1
+constant slice folds only finite serializable primitive expressions and
+materializes their results through the existing constant pool; its branch
+normalization converts known conditional jumps to ordinary jumps, then removes
+only unreachable ordinary-IR blocks while remapping source and dependency
+offsets. It does not merge blocks, preserving critical-edge copy validity.
+
+**Gate:** CFG/SSA verifier and O0 round-trip tests; O0/O1 semantic parity over
+control flow, closures, mutation, callbacks, traps, and evaluation order;
+explicit CLI and independent module-product selection; C++/Rust artifact
+parity; imported/re-exported module and cache coverage; and the canonical
+verification suite.
+
 ## Dependency order
 
 ```text
@@ -364,13 +433,22 @@ M3B cache/product boundary
 
 feat/m5c-repl
   -> M5C-REPL-001 re-audit, outside the active queue for now
+
+master + M1 semantic metadata + existing linear register IR
+  -> M7-IR-SSA-001 design, CFG foundation, SSA shell, dominance analysis,
+     phi placement, and binding/effect contract (branch-only)
+  -> branch-only internal O1 copy/phi simplification and pure DCE
+  -> default-pipeline O1 only after the debug/cache decisions and focused
+     semantic parity corpus are admitted
 ```
 
 M6-LANG-HASH-001 and M6-LANG-OPERATOR-001A..001C are complete. The
+M7-IR-SSA-001 implementation slice is now integrated on `master`; its default
+O1 policy and broader optimization work remain explicitly deferred. The
 M7-LANG-OPTIONAL-001 implementation is complete on its focused feature branch;
 its compatibility deletion remains a later decision. M5D-DEBUG-002 and the
-other entries remain deferred specifications with clear future boundaries. They
-do not reopen completed work or authorize concrete data-structure
+other entries remain deferred specifications with clear future boundaries.
+They do not reopen completed work or authorize concrete data-structure
 implementations in the compiler repository.
 
 ## Verification contract

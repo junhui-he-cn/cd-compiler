@@ -1,5 +1,6 @@
 #include "IR.hpp"
 
+#include <algorithm>
 #include <iomanip>
 #include <stdexcept>
 #include <utility>
@@ -330,7 +331,237 @@ void printInstruction(std::ostream& out, const IRProgram& program, const IRInstr
     out << '\n';
 }
 
+void validateRegister(
+    const std::optional<IRRegister>& reg,
+    std::size_t registerCount,
+    const std::string& context)
+{
+    if (reg && reg->index >= registerCount) {
+        throw std::logic_error(context + " register is outside registerCount");
+    }
+}
+
+void validateNameOperand(
+    std::size_t operand,
+    const std::vector<std::string>& names,
+    const std::string& context)
+{
+    if (operand >= names.size()) {
+        throw std::logic_error(context + " name operand is outside the name table");
+    }
+}
+
+void validateInstructionStream(
+    const std::vector<IRInstruction>& instructions,
+    std::size_t registerCount,
+    const std::vector<Value>& constants,
+    const std::vector<std::string>& names,
+    std::size_t functionCount,
+    const std::vector<IRBinding>& bindings,
+    const std::string& context)
+{
+    const auto hasBinding = [&bindings](BindingId id) {
+        return std::find_if(
+                   bindings.begin(),
+                   bindings.end(),
+                   [id](const IRBinding& binding) {
+                       return binding.bindingId == id;
+                   })
+            != bindings.end();
+    };
+
+    for (std::size_t index = 0; index < instructions.size(); ++index) {
+        const IRInstruction& instruction = instructions[index];
+        validateRegister(instruction.dest, registerCount, context);
+        validateRegister(instruction.left, registerCount, context);
+        validateRegister(instruction.right, registerCount, context);
+        for (const IRRegister argument : instruction.arguments) {
+            validateRegister(argument, registerCount, context);
+        }
+
+        if (instruction.bindingId && !hasBinding(*instruction.bindingId)) {
+            throw std::logic_error(context + " instruction references unknown binding metadata");
+        }
+
+        switch (instruction.op) {
+        case IROp::Constant:
+            if (instruction.operand >= constants.size()) {
+                throw std::logic_error(context + " constant operand is outside the constant pool");
+            }
+            break;
+        case IROp::MakeFunction:
+            if (instruction.operand >= functionCount) {
+                throw std::logic_error(context + " function operand is outside the function table");
+            }
+            break;
+        case IROp::Map:
+            if (instruction.arguments.size() % 2 != 0) {
+                throw std::logic_error(context + " map has an incomplete key/value pair");
+            }
+            break;
+        case IROp::Struct:
+            if (instruction.operands.size() != instruction.arguments.size()) {
+                throw std::logic_error(context + " struct field metadata does not match its values");
+            }
+            for (const std::size_t operand : instruction.operands) {
+                validateNameOperand(operand, names, context);
+            }
+            break;
+        case IROp::NativeCall:
+        case IROp::LoadVar:
+        case IROp::StoreVar:
+        case IROp::AssignVar:
+        case IROp::AssertNumber:
+        case IROp::Field:
+        case IROp::AssignField:
+            validateNameOperand(instruction.operand, names, context);
+            break;
+        default:
+            break;
+        }
+
+        if (instruction.typeNameOperand) {
+            validateNameOperand(*instruction.typeNameOperand, names, context);
+        }
+        if (instruction.variantNameOperand) {
+            validateNameOperand(*instruction.variantNameOperand, names, context);
+        }
+
+        if ((instruction.op == IROp::Jump
+                || instruction.op == IROp::JumpIfFalse
+                || instruction.op == IROp::JumpIfTrue)
+            && instruction.operand > instructions.size()) {
+            throw std::logic_error(context + " jump target is outside the instruction stream");
+        }
+    }
+}
+
+void validateFunctionBindings(
+    const std::vector<IRFunction>& functions,
+    const std::vector<IRBinding>& bindings)
+{
+    for (const IRFunction& function : functions) {
+        std::vector<BindingId> seen;
+        for (const IRBinding& binding : function.bindings) {
+            if (!binding.bindingId.valid() || binding.resolvedName.empty()) {
+                throw std::logic_error("function binding metadata is malformed");
+            }
+            if (std::find(seen.begin(), seen.end(), binding.bindingId) != seen.end()) {
+                throw std::logic_error("function binding metadata contains a duplicate ID");
+            }
+            seen.push_back(binding.bindingId);
+            const auto canonical = std::find_if(
+                bindings.begin(),
+                bindings.end(),
+                [&binding](const IRBinding& current) {
+                    return current.bindingId == binding.bindingId;
+                });
+            if (canonical == bindings.end()
+                || canonical->resolvedName != binding.resolvedName
+                || canonical->storage != binding.storage) {
+                throw std::logic_error("function binding metadata is not canonical");
+            }
+        }
+    }
+}
+
+void validateCanonicalBindings(const std::vector<IRBinding>& bindings)
+{
+    for (std::size_t index = 0; index < bindings.size(); ++index) {
+        const IRBinding& binding = bindings[index];
+        if (!binding.bindingId.valid() || binding.resolvedName.empty()) {
+            throw std::logic_error("canonical binding metadata is malformed");
+        }
+        for (std::size_t previous = 0; previous < index; ++previous) {
+            if (bindings[previous].bindingId == binding.bindingId) {
+                throw std::logic_error("canonical binding metadata contains a duplicate ID");
+            }
+        }
+    }
+}
+
 } // namespace
+
+bool IREffectSummary::isPure() const
+{
+    return !readsMemory && !writesMemory && !mayTrap && !allocates && !calls
+        && !observable && !controlFlow;
+}
+
+IREffectSummary irEffectSummary(IROp op)
+{
+    IREffectSummary result;
+    switch (op) {
+    case IROp::Constant:
+    case IROp::Copy:
+        return result;
+    case IROp::MakeFunction:
+    case IROp::Array:
+    case IROp::Map:
+    case IROp::Struct:
+    case IROp::Variant:
+        result.allocates = true;
+        return result;
+    case IROp::VariantTag:
+    case IROp::VariantField:
+        result.readsMemory = true;
+        result.mayTrap = true;
+        return result;
+    case IROp::LoadVar:
+        result.readsMemory = true;
+        return result;
+    case IROp::StoreVar:
+    case IROp::AssignVar:
+        result.writesMemory = true;
+        return result;
+    case IROp::Call:
+    case IROp::NativeCall:
+        result.readsMemory = true;
+        result.writesMemory = true;
+        result.mayTrap = true;
+        result.calls = true;
+        return result;
+    case IROp::Index:
+    case IROp::Field:
+    case IROp::Len:
+    case IROp::AssertArray:
+    case IROp::AssertNumber:
+        result.readsMemory = true;
+        result.mayTrap = true;
+        return result;
+    case IROp::AssignIndex:
+    case IROp::AssignField:
+        result.readsMemory = true;
+        result.writesMemory = true;
+        result.mayTrap = true;
+        return result;
+    case IROp::Print:
+        result.observable = true;
+        return result;
+    case IROp::Return:
+    case IROp::Jump:
+    case IROp::JumpIfFalse:
+    case IROp::JumpIfTrue:
+        result.controlFlow = true;
+        return result;
+    case IROp::Negate:
+    case IROp::Not:
+    case IROp::Add:
+    case IROp::Subtract:
+    case IROp::Multiply:
+    case IROp::Divide:
+    case IROp::Equal:
+    case IROp::NotEqual:
+    case IROp::Greater:
+    case IROp::GreaterEqual:
+    case IROp::Less:
+    case IROp::LessEqual:
+        result.mayTrap = true;
+        return result;
+    }
+
+    return result;
+}
 
 void IRProgram::setSources(std::vector<SourceFile> sources)
 {
@@ -369,7 +600,7 @@ IRRegister IRProgram::makeRegister()
 
 void IRProgram::beginFunction(std::string name, std::vector<std::string> parameters)
 {
-    functionStack_.push_back(IRFunction{std::move(name), std::move(parameters), {}, 0});
+    functionStack_.push_back(IRFunction{std::move(name), std::move(parameters), {}, 0, {}});
 }
 
 std::size_t IRProgram::endFunction()
@@ -386,6 +617,69 @@ std::size_t IRProgram::endFunction()
 void IRProgram::addModuleDependency(IRModuleDependency dependency)
 {
     moduleDependencies_.push_back(std::move(dependency));
+}
+
+void IRProgram::addBinding(IRBinding binding)
+{
+    if (!binding.bindingId.valid()) {
+        throw std::logic_error("IR binding metadata requires a valid binding ID");
+    }
+    if (binding.resolvedName.empty()) {
+        throw std::logic_error("IR binding metadata requires a resolved name");
+    }
+
+    const auto existing = std::find_if(
+        bindings_.begin(),
+        bindings_.end(),
+        [&binding](const IRBinding& current) {
+            return current.bindingId == binding.bindingId;
+        });
+    if (existing != bindings_.end()) {
+        throw std::logic_error("duplicate IR binding metadata");
+    }
+
+    bindings_.push_back(std::move(binding));
+}
+
+void IRProgram::addFunctionBinding(IRBinding binding)
+{
+    if (!binding.bindingId.valid()) {
+        throw std::logic_error("IR binding metadata requires a valid binding ID");
+    }
+    if (binding.resolvedName.empty()) {
+        throw std::logic_error("IR binding metadata requires a resolved name");
+    }
+    if (!hasActiveFunction(functionStack_)) {
+        throw std::logic_error("function binding metadata requires an active IR function");
+    }
+
+    const auto canonical = std::find_if(
+        bindings_.begin(),
+        bindings_.end(),
+        [&binding](const IRBinding& current) {
+            return current.bindingId == binding.bindingId;
+        });
+    if (canonical == bindings_.end()) {
+        throw std::logic_error("function binding metadata has no canonical binding");
+    }
+    if (canonical->resolvedName != binding.resolvedName
+        || canonical->storage != binding.storage) {
+        throw std::logic_error("conflicting IR binding metadata");
+    }
+
+    IRFunction& function = activeFunction(functionStack_);
+    const auto existing = std::find_if(
+        function.bindings.begin(),
+        function.bindings.end(),
+        [&binding](const IRBinding& current) {
+            return current.bindingId == binding.bindingId;
+        });
+    if (existing == function.bindings.end()) {
+        function.bindings.push_back(std::move(binding));
+    } else if (existing->resolvedName != canonical->resolvedName
+        || existing->storage != canonical->storage) {
+        throw std::logic_error("conflicting function IR binding metadata");
+    }
 }
 
 IRRegister IRProgram::emitConstant(Value value)
@@ -474,21 +768,53 @@ void IRProgram::emitCopyTo(IRRegister dest, IRRegister value)
     emit(IRInstruction{IROp::Copy, dest, value, std::nullopt, {}, 0});
 }
 
-IRRegister IRProgram::emitLoadVar(std::string name)
+IRRegister IRProgram::emitLoadVar(
+    std::string name,
+    std::optional<BindingId> bindingId)
 {
     IRRegister dest = makeRegister();
-    emit(IRInstruction{IROp::LoadVar, dest, std::nullopt, std::nullopt, {}, addName(std::move(name))});
+    IRInstruction instruction{
+        IROp::LoadVar,
+        dest,
+        std::nullopt,
+        std::nullopt,
+        {},
+        addName(std::move(name))};
+    instruction.bindingId = bindingId;
+    emit(std::move(instruction));
     return dest;
 }
 
-void IRProgram::emitStoreVar(std::string name, IRRegister value)
+void IRProgram::emitStoreVar(
+    std::string name,
+    IRRegister value,
+    std::optional<BindingId> bindingId)
 {
-    emit(IRInstruction{IROp::StoreVar, std::nullopt, value, std::nullopt, {}, addName(std::move(name))});
+    IRInstruction instruction{
+        IROp::StoreVar,
+        std::nullopt,
+        value,
+        std::nullopt,
+        {},
+        addName(std::move(name))};
+    instruction.bindingId = bindingId;
+    emit(std::move(instruction));
 }
 
-void IRProgram::emitAssignVar(std::string name, IRRegister value)
+void IRProgram::emitAssignVar(
+    std::string name,
+    IRRegister value,
+    std::optional<BindingId> bindingId)
 {
-    emit(IRInstruction{IROp::AssignVar, std::nullopt, value, std::nullopt, {}, addName(std::move(name))});
+    IRInstruction instruction{
+        IROp::AssignVar,
+        std::nullopt,
+        value,
+        std::nullopt,
+        {},
+        addName(std::move(name))};
+    instruction.bindingId = bindingId;
+    emit(std::move(instruction));
 }
 
 IRRegister IRProgram::emitCall(IRRegister callee, std::vector<IRRegister> arguments)
@@ -647,6 +973,11 @@ const std::vector<IRModuleDependency>& IRProgram::moduleDependencies() const
     return moduleDependencies_;
 }
 
+const std::vector<IRBinding>& IRProgram::bindings() const
+{
+    return bindings_;
+}
+
 std::size_t IRProgram::registerCount() const
 {
     return registerCount_;
@@ -658,6 +989,51 @@ std::size_t IRProgram::instructionCount() const
         return activeFunction(functionStack_).instructions.size();
     }
     return instructions_.size();
+}
+
+IRProgram IRProgram::rebuildWithStreams(
+    std::vector<IRInstruction> instructions,
+    std::size_t registerCount,
+    std::vector<IRFunction> functions,
+    std::vector<IRModuleDependency> moduleDependencies) const
+{
+    if (!functionStack_.empty()) {
+        throw std::logic_error("cannot rebuild an IR program while a function is active");
+    }
+
+    validateCanonicalBindings(bindings_);
+    validateInstructionStream(
+        instructions,
+        registerCount,
+        constants_,
+        names_,
+        functions.size(),
+        bindings_,
+        "main IR stream");
+    for (std::size_t index = 0; index < functions.size(); ++index) {
+        const IRFunction& function = functions[index];
+        validateInstructionStream(
+            function.instructions,
+            function.registerCount,
+            constants_,
+            names_,
+            functions.size(),
+            bindings_,
+            "IR function " + std::to_string(index));
+    }
+    validateFunctionBindings(functions, bindings_);
+    for (const IRModuleDependency& dependency : moduleDependencies) {
+        if (dependency.instructionOffset > instructions.size()) {
+            throw std::logic_error("IR module dependency offset is outside the main stream");
+        }
+    }
+
+    IRProgram rebuilt = *this;
+    rebuilt.instructions_ = std::move(instructions);
+    rebuilt.registerCount_ = registerCount;
+    rebuilt.functions_ = std::move(functions);
+    rebuilt.moduleDependencies_ = std::move(moduleDependencies);
+    return rebuilt;
 }
 
 void IRProgram::print(std::ostream& out) const

@@ -100,11 +100,25 @@ int main()
     assert(loaded.found);
     assert(loaded.error.empty());
     assert(loaded.manifest);
+    assert(loaded.manifest->schemaVersion == 3);
     assert(loaded.manifest->records.size() == 3);
     for (const ModuleCacheRecord& record : loaded.manifest->records) {
+        assert(record.module.optimizationLevel == "O0");
+        assert(record.module.optimizerPipeline == "m7-ssa-o0-v1");
         assert(record.interfaceArtifactPath
             == moduleInterfaceArtifactPath({}, record.module.identity).generic_string());
     }
+
+    const std::filesystem::path legacyManifestPath = cacheDirectory / "legacy-cache.cdbc";
+    {
+        std::ofstream legacy(legacyManifestPath);
+        assert(legacy);
+        legacy << "cdbc-cache 0.2\n\nschema = 2\nmodules:\n";
+    }
+    const ModuleCacheLoadResult legacy = readModuleCache(legacyManifestPath);
+    assert(legacy.found);
+    assert(!legacy.manifest);
+    assert(!legacy.error.empty());
 
     lib.sourceHash = "source-2";
     const std::vector<ModuleCacheDecision> implementationOnly = planModuleCacheBuild(
@@ -135,6 +149,26 @@ int main()
     ModuleCacheModule equivalent = module("lib", "source-2", "public-2");
     assert(moduleCacheKey(equivalent) == moduleCacheKey(equivalent));
     assert(moduleCacheKey(equivalent) != moduleCacheKey(module("lib", "source-3", "public-2")));
+
+    ModuleCacheModule optimized = module("lib", "source-1", "public-1");
+    optimized.optimizationLevel = "O1";
+    optimized.optimizerPipeline = "m7-ssa-o1-copy-phi-const-branch-dce-reach-thread-v6";
+    assert(moduleCacheKey(optimized) != moduleCacheKey(equivalent));
+    ModuleCacheModule baselineMid = module("mid", "source-1", "public-mid");
+    baselineMid.dependencies.push_back(dependency("lib", "public-1"));
+    ModuleCacheModule baselineEntry = module("entry", "source-1", "public-entry");
+    baselineEntry.isEntry = true;
+    baselineEntry.entryOrder = 0;
+    baselineEntry.dependencies.push_back(dependency("mid", "public-mid"));
+    const std::vector<ModuleCacheDecision> optimizationChange = planModuleCacheBuild(
+        {optimized, baselineMid, baselineEntry},
+        *loaded.manifest,
+        cacheDirectory);
+    assert(optimizationChange[0].status == ModuleCacheDecisionStatus::Rebuilt);
+    assert(optimizationChange[0].reason == "optimization_configuration_changed");
+    assert(!optimizationChange[0].publicImpact);
+    assert(optimizationChange[1].status == ModuleCacheDecisionStatus::Reused);
+    assert(optimizationChange[2].status == ModuleCacheDecisionStatus::Reused);
 
     std::error_code error;
     std::filesystem::remove_all(cacheDirectory, error);

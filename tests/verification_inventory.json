@@ -4103,6 +4103,26 @@
       "expected_files": []
     },
     {
+      "case_id": "ctest.control_flow_graph",
+      "runner": "ctest",
+      "result_name": "control_flow_graph",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "control_flow_graph"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "ctest.debugger",
       "runner": "ctest",
       "result_name": "debugger",
@@ -4121,6 +4141,26 @@
         "CMakeLists.txt",
         "tests/debugger_tests.py",
         "vm-rs"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "ctest.dominance",
+      "runner": "ctest",
+      "result_name": "dominance",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "dominance"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
       ],
       "expected_files": []
     },
@@ -4459,6 +4499,48 @@
       "expected_files": []
     },
     {
+      "case_id": "ctest.optimizer",
+      "runner": "ctest",
+      "result_name": "optimizer",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "optimizer"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "ctest.optimizer_cli",
+      "runner": "ctest",
+      "result_name": "optimizer_cli",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "optimizer_cli"
+      ],
+      "backend": "python",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt",
+        "tests/optimizer_cli_tests.py",
+        "vm-rs"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "ctest.profile",
       "runner": "ctest",
       "result_name": "profile",
@@ -4518,6 +4600,66 @@
       "sources": [
         "CMakeLists.txt",
         "tests/source_map_tests.cpp"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "ctest.ssa",
+      "runner": "ctest",
+      "result_name": "ssa",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "ssa"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "ctest.ssa_contract",
+      "runner": "ctest",
+      "result_name": "ssa_contract",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "ssa_contract"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "ctest.ssa_phi_placement",
+      "runner": "ctest",
+      "result_name": "ssa_phi_placement",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "ssa_phi_placement"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
       ],
       "expected_files": []
     },
