@@ -1163,6 +1163,27 @@ mod tests {
         );
     }
 
+    #[test]
+    fn return_transfer_moves_value_out_of_the_dead_frame_register() {
+        let program = empty_program();
+        let vm = VM::new(&program);
+        let mut frame = Frame {
+            ip: 0,
+            registers: vec![Value::string("returned")],
+            locals: vm.heap.new_environment(),
+            closure: vm.heap.new_environment(),
+            is_main: false,
+            function: Rc::from("returner"),
+            function_index: Some(0),
+        };
+
+        let value = vm
+            .take_register(&mut frame, 0)
+            .expect("return register should be readable");
+        assert!(matches!(value, Value::String(value) if value == "returned"));
+        assert!(matches!(frame.registers[0], Value::Nil));
+    }
+
     fn array_elements(value: &Value) -> Vec<Value> {
         let Value::Array(array) = value else {
             panic!("expected array");
@@ -3915,7 +3936,7 @@ impl<'a> VM<'a> {
                     self.write_register(frame, *dest, Value::number(number))?;
                 }
                 Instruction::Return { value } => {
-                    return Ok(Some(self.read_register(frame, *value)?))
+                    return Ok(Some(self.take_register(frame, *value)?))
                 }
                 }
                 Ok(None)
@@ -5487,6 +5508,14 @@ impl<'a> VM<'a> {
             .ok_or_else(|| RuntimeError::new("register index out of range"))?;
         *slot = value;
         Ok(())
+    }
+
+    fn take_register(&self, frame: &mut Frame, index: usize) -> Result<Value, RuntimeError> {
+        let slot = frame
+            .registers
+            .get_mut(index)
+            .ok_or_else(|| RuntimeError::new("register index out of range"))?;
+        Ok(std::mem::replace(slot, Value::Nil))
     }
 
     fn expect_number(

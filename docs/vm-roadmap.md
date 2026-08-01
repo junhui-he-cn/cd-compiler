@@ -644,9 +644,15 @@ map 先在 borrowed storage 上快照 insertion-ordered keys，再创建 fresh a
 **状态（第二十八 borrowed-AssertNumber-operand 窄切片已完成，2026-08-01）：**
 `AssertNumber` 借用 source register，成功时复制 primitive `f64` 到 destination，
 失败时保持原 diagnostic name/error 顺序；compound-assignment、资源、profile/trace/
-debug 和 `.cdbc 0.1` 行为不变。剩余 `Return`、`Call`、native 和 assignment reads
-仍是值转移、可变或可重入 ownership boundary；详见
+debug 和 `.cdbc 0.1` 行为不变。`Call`、native 和 assignment reads 仍是值转移、
+可变或可重入 ownership boundary；详见
 [`docs/decisions/vm-execution-loop-028-borrow-assert-number-operand.md`](decisions/vm-execution-loop-028-borrow-assert-number-operand.md)。
+
+**状态（第二十九 return-register-transfer 窄切片已完成，2026-08-01）：** `Return`
+从即将结束的 frame register 移出 value，避免 return clone；aggregate identity、
+closure capture、trace/debug/error、资源、profile 和 `.cdbc 0.1` 行为不变。活跃
+frame 的 `Move`、`Call`/native 参数和 assignment ownership 不变；详见
+[`docs/decisions/vm-execution-loop-029-return-register-transfer.md`](decisions/vm-execution-loop-029-return-register-transfer.md)。
 
 ### VM-5C：容量与大模块图
 
@@ -815,7 +821,7 @@ VM-3A 的第一 library boundary、typed error/version boundary、VM-3B 的第�
 linker report slice、VM-4A 的第一 interactive debugger slice、VM-4B 的第一
 deterministic profile counter/tracked-heap slice、VM-4C 的第一 structured kind slice、VM-5A
 的 reproducible benchmark baseline/scale slices 和 VM-5B 的 trace-off instruction
-preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard/checkpoint-fast-path/checkpoint-mode-cache/borrow-register-operands/borrow-native-name/borrow-function-values/borrow-caller-name/shared-frame-names/profile-off-hook-guards/inline-native-arguments/decoded-constant-cache/borrowed-global-cell/comparison-dispatch/borrowed-Len-operand/borrowed-Print-operand/borrowed-Field-receiver/borrowed-Index-operands/borrowed-primitive-comparison-operands/borrowed-AssertArray-operand/borrowed-AssertNumber-operand slices 已完成；VM-6A 的 registry dispatch/metadata、centralized arity validation、resource touchpoint profile 与 signature shape metadata slices 也已完成；GC、persistent VM、
+preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard/checkpoint-fast-path/checkpoint-mode-cache/borrow-register-operands/borrow-native-name/borrow-function-values/borrow-caller-name/shared-frame-names/profile-off-hook-guards/inline-native-arguments/decoded-constant-cache/borrowed-global-cell/comparison-dispatch/borrowed-Len-operand/borrowed-Print-operand/borrowed-Field-receiver/borrowed-Index-operands/borrowed-primitive-comparison-operands/borrowed-AssertArray-operand/borrowed-AssertNumber-operand/return-register-transfer slices 已完成；VM-6A 的 registry dispatch/metadata、centralized arity validation、resource touchpoint profile 与 signature shape metadata slices 也已完成；GC、persistent VM、
 JIT 和新的 artifact version 仍未进入默认队列。VM-5C 的第一 capacity corpus、
 第二 long-Unicode-string 和第三 long-Unicode-output slices，以及 VM-4C 的第二
 resource-context slice 也已完成。VM-4B 的 wall-clock 与
