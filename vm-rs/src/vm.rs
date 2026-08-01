@@ -221,6 +221,40 @@ enum NativeResourceProfile {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NativeArgumentShape {
+    Any,
+    Array,
+    Map,
+    MapKey,
+    Number,
+    String,
+    Collection,
+    Callback1Any,
+    Callback1Bool,
+    Callback1Array,
+    Callback2Any,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NativeReturnShape {
+    Any,
+    AnyOrNil,
+    Nil,
+    Number,
+    Bool,
+    String,
+    Array,
+    Map,
+    Range,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct NativeSignature {
+    arguments: &'static [NativeArgumentShape],
+    result: NativeReturnShape,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct NativeSpec {
     id: NativeId,
     name: &'static str,
@@ -229,6 +263,7 @@ struct NativeSpec {
     callback: bool,
     arity_error: &'static str,
     resource: NativeResourceProfile,
+    signature: NativeSignature,
 }
 
 const NATIVE_SPECS: &[NativeSpec] = &[
@@ -240,6 +275,10 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "push expects 2 arguments",
         resource: NativeResourceProfile::RuntimeElements,
+        signature: NativeSignature {
+            arguments: &[NativeArgumentShape::Array, NativeArgumentShape::Any],
+            result: NativeReturnShape::Nil,
+        },
     },
     NativeSpec {
         id: NativeId::Pop,
@@ -249,6 +288,10 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "pop expects 1 arguments",
         resource: NativeResourceProfile::None,
+        signature: NativeSignature {
+            arguments: &[NativeArgumentShape::Array],
+            result: NativeReturnShape::Any,
+        },
     },
     NativeSpec {
         id: NativeId::Remove,
@@ -258,6 +301,10 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "remove expects 2 arguments",
         resource: NativeResourceProfile::None,
+        signature: NativeSignature {
+            arguments: &[NativeArgumentShape::Map, NativeArgumentShape::MapKey],
+            result: NativeReturnShape::Any,
+        },
     },
     NativeSpec {
         id: NativeId::Clear,
@@ -267,6 +314,10 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "clear expects 1 argument",
         resource: NativeResourceProfile::None,
+        signature: NativeSignature {
+            arguments: &[NativeArgumentShape::Map],
+            result: NativeReturnShape::Nil,
+        },
     },
     NativeSpec {
         id: NativeId::Merge,
@@ -276,6 +327,10 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "merge expects 2 arguments",
         resource: NativeResourceProfile::Both,
+        signature: NativeSignature {
+            arguments: &[NativeArgumentShape::Map, NativeArgumentShape::Map],
+            result: NativeReturnShape::Map,
+        },
     },
     NativeSpec {
         id: NativeId::Keys,
@@ -285,6 +340,10 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "keys expects 1 argument",
         resource: NativeResourceProfile::Both,
+        signature: NativeSignature {
+            arguments: &[NativeArgumentShape::Map],
+            result: NativeReturnShape::Array,
+        },
     },
     NativeSpec {
         id: NativeId::Values,
@@ -294,6 +353,10 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "values expects 1 argument",
         resource: NativeResourceProfile::Both,
+        signature: NativeSignature {
+            arguments: &[NativeArgumentShape::Map],
+            result: NativeReturnShape::Array,
+        },
     },
     NativeSpec {
         id: NativeId::Floor,
@@ -303,6 +366,10 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "floor expects 1 arguments",
         resource: NativeResourceProfile::None,
+        signature: NativeSignature {
+            arguments: &[NativeArgumentShape::Number],
+            result: NativeReturnShape::Number,
+        },
     },
     NativeSpec {
         id: NativeId::Ceil,
@@ -312,6 +379,10 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "ceil expects 1 arguments",
         resource: NativeResourceProfile::None,
+        signature: NativeSignature {
+            arguments: &[NativeArgumentShape::Number],
+            result: NativeReturnShape::Number,
+        },
     },
     NativeSpec {
         id: NativeId::Sqrt,
@@ -321,6 +392,10 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "sqrt expects 1 arguments",
         resource: NativeResourceProfile::None,
+        signature: NativeSignature {
+            arguments: &[NativeArgumentShape::Number],
+            result: NativeReturnShape::Number,
+        },
     },
     NativeSpec {
         id: NativeId::Str,
@@ -330,6 +405,10 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "str expects 1 arguments",
         resource: NativeResourceProfile::None,
+        signature: NativeSignature {
+            arguments: &[NativeArgumentShape::Any],
+            result: NativeReturnShape::String,
+        },
     },
     NativeSpec {
         id: NativeId::Substr,
@@ -339,6 +418,14 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "substr expects 3 arguments",
         resource: NativeResourceProfile::None,
+        signature: NativeSignature {
+            arguments: &[
+                NativeArgumentShape::String,
+                NativeArgumentShape::Number,
+                NativeArgumentShape::Number,
+            ],
+            result: NativeReturnShape::String,
+        },
     },
     NativeSpec {
         id: NativeId::CharAt,
@@ -348,6 +435,10 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "charAt expects 2 arguments",
         resource: NativeResourceProfile::None,
+        signature: NativeSignature {
+            arguments: &[NativeArgumentShape::String, NativeArgumentShape::Number],
+            result: NativeReturnShape::String,
+        },
     },
     NativeSpec {
         id: NativeId::TypeOf,
@@ -357,6 +448,10 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "typeOf expects 1 arguments",
         resource: NativeResourceProfile::None,
+        signature: NativeSignature {
+            arguments: &[NativeArgumentShape::Any],
+            result: NativeReturnShape::String,
+        },
     },
     NativeSpec {
         id: NativeId::Hash,
@@ -366,6 +461,10 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "hash expects 1 argument",
         resource: NativeResourceProfile::None,
+        signature: NativeSignature {
+            arguments: &[NativeArgumentShape::Any],
+            result: NativeReturnShape::Number,
+        },
     },
     NativeSpec {
         id: NativeId::Contains,
@@ -375,6 +474,10 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "contains expects 2 arguments",
         resource: NativeResourceProfile::InstructionCheckpoints,
+        signature: NativeSignature {
+            arguments: &[NativeArgumentShape::Collection, NativeArgumentShape::Any],
+            result: NativeReturnShape::Bool,
+        },
     },
     NativeSpec {
         id: NativeId::Slice,
@@ -384,6 +487,14 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "slice expects 3 arguments",
         resource: NativeResourceProfile::Both,
+        signature: NativeSignature {
+            arguments: &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Number,
+                NativeArgumentShape::Number,
+            ],
+            result: NativeReturnShape::Array,
+        },
     },
     NativeSpec {
         id: NativeId::Copy,
@@ -393,6 +504,10 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "copy expects 1 argument",
         resource: NativeResourceProfile::Both,
+        signature: NativeSignature {
+            arguments: &[NativeArgumentShape::Array],
+            result: NativeReturnShape::Array,
+        },
     },
     NativeSpec {
         id: NativeId::Concat,
@@ -402,6 +517,10 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "concat expects 2 arguments",
         resource: NativeResourceProfile::Both,
+        signature: NativeSignature {
+            arguments: &[NativeArgumentShape::Array, NativeArgumentShape::Array],
+            result: NativeReturnShape::Array,
+        },
     },
     NativeSpec {
         id: NativeId::Map,
@@ -411,6 +530,13 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: true,
         arity_error: "map expects 2 arguments",
         resource: NativeResourceProfile::Both,
+        signature: NativeSignature {
+            arguments: &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Callback1Any,
+            ],
+            result: NativeReturnShape::Array,
+        },
     },
     NativeSpec {
         id: NativeId::Filter,
@@ -420,6 +546,13 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: true,
         arity_error: "filter expects 2 arguments",
         resource: NativeResourceProfile::Both,
+        signature: NativeSignature {
+            arguments: &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Callback1Bool,
+            ],
+            result: NativeReturnShape::Array,
+        },
     },
     NativeSpec {
         id: NativeId::FlatMap,
@@ -429,6 +562,13 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: true,
         arity_error: "flatMap expects 2 arguments",
         resource: NativeResourceProfile::Both,
+        signature: NativeSignature {
+            arguments: &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Callback1Array,
+            ],
+            result: NativeReturnShape::Array,
+        },
     },
     NativeSpec {
         id: NativeId::Any,
@@ -438,6 +578,13 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: true,
         arity_error: "any expects 2 arguments",
         resource: NativeResourceProfile::Both,
+        signature: NativeSignature {
+            arguments: &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Callback1Bool,
+            ],
+            result: NativeReturnShape::Bool,
+        },
     },
     NativeSpec {
         id: NativeId::All,
@@ -447,6 +594,13 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: true,
         arity_error: "all expects 2 arguments",
         resource: NativeResourceProfile::Both,
+        signature: NativeSignature {
+            arguments: &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Callback1Bool,
+            ],
+            result: NativeReturnShape::Bool,
+        },
     },
     NativeSpec {
         id: NativeId::Count,
@@ -456,6 +610,13 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: true,
         arity_error: "count expects 2 arguments",
         resource: NativeResourceProfile::Both,
+        signature: NativeSignature {
+            arguments: &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Callback1Bool,
+            ],
+            result: NativeReturnShape::Number,
+        },
     },
     NativeSpec {
         id: NativeId::Find,
@@ -465,6 +626,13 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: true,
         arity_error: "find expects 2 arguments",
         resource: NativeResourceProfile::Both,
+        signature: NativeSignature {
+            arguments: &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Callback1Bool,
+            ],
+            result: NativeReturnShape::AnyOrNil,
+        },
     },
     NativeSpec {
         id: NativeId::FindIndex,
@@ -474,6 +642,13 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: true,
         arity_error: "findIndex expects 2 arguments",
         resource: NativeResourceProfile::Both,
+        signature: NativeSignature {
+            arguments: &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Callback1Bool,
+            ],
+            result: NativeReturnShape::Number,
+        },
     },
     NativeSpec {
         id: NativeId::Reduce,
@@ -483,6 +658,14 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: true,
         arity_error: "reduce expects 3 arguments",
         resource: NativeResourceProfile::Both,
+        signature: NativeSignature {
+            arguments: &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Any,
+                NativeArgumentShape::Callback2Any,
+            ],
+            result: NativeReturnShape::Any,
+        },
     },
     NativeSpec {
         id: NativeId::Range,
@@ -492,6 +675,10 @@ const NATIVE_SPECS: &[NativeSpec] = &[
         callback: false,
         arity_error: "range expects 1 to 3 arguments",
         resource: NativeResourceProfile::RuntimeElements,
+        signature: NativeSignature {
+            arguments: &[NativeArgumentShape::Number],
+            result: NativeReturnShape::Range,
+        },
     },
 ];
 
@@ -693,6 +880,194 @@ mod tests {
                 name
             );
         }
+    }
+
+    #[test]
+    fn native_registry_records_signature_shapes() {
+        let assert_signature =
+            |name: &str, arguments: &[NativeArgumentShape], result: NativeReturnShape| {
+                let spec = native_spec(name).unwrap();
+                assert_eq!(
+                    spec.signature.arguments, arguments,
+                    "native {} arguments",
+                    name
+                );
+                assert_eq!(spec.signature.result, result, "native {} result", name);
+            };
+
+        assert_signature(
+            "push",
+            &[NativeArgumentShape::Array, NativeArgumentShape::Any],
+            NativeReturnShape::Nil,
+        );
+        assert_signature("pop", &[NativeArgumentShape::Array], NativeReturnShape::Any);
+        assert_signature(
+            "remove",
+            &[NativeArgumentShape::Map, NativeArgumentShape::MapKey],
+            NativeReturnShape::Any,
+        );
+        assert_signature("clear", &[NativeArgumentShape::Map], NativeReturnShape::Nil);
+        assert_signature(
+            "merge",
+            &[NativeArgumentShape::Map, NativeArgumentShape::Map],
+            NativeReturnShape::Map,
+        );
+        assert_signature(
+            "keys",
+            &[NativeArgumentShape::Map],
+            NativeReturnShape::Array,
+        );
+        assert_signature(
+            "values",
+            &[NativeArgumentShape::Map],
+            NativeReturnShape::Array,
+        );
+        assert_signature(
+            "floor",
+            &[NativeArgumentShape::Number],
+            NativeReturnShape::Number,
+        );
+        assert_signature(
+            "ceil",
+            &[NativeArgumentShape::Number],
+            NativeReturnShape::Number,
+        );
+        assert_signature(
+            "sqrt",
+            &[NativeArgumentShape::Number],
+            NativeReturnShape::Number,
+        );
+        assert_signature(
+            "str",
+            &[NativeArgumentShape::Any],
+            NativeReturnShape::String,
+        );
+        assert_signature(
+            "substr",
+            &[
+                NativeArgumentShape::String,
+                NativeArgumentShape::Number,
+                NativeArgumentShape::Number,
+            ],
+            NativeReturnShape::String,
+        );
+        assert_signature(
+            "charAt",
+            &[NativeArgumentShape::String, NativeArgumentShape::Number],
+            NativeReturnShape::String,
+        );
+        assert_signature(
+            "typeOf",
+            &[NativeArgumentShape::Any],
+            NativeReturnShape::String,
+        );
+        assert_signature(
+            "hash",
+            &[NativeArgumentShape::Any],
+            NativeReturnShape::Number,
+        );
+        assert_signature(
+            "contains",
+            &[NativeArgumentShape::Collection, NativeArgumentShape::Any],
+            NativeReturnShape::Bool,
+        );
+        assert_signature(
+            "slice",
+            &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Number,
+                NativeArgumentShape::Number,
+            ],
+            NativeReturnShape::Array,
+        );
+        assert_signature(
+            "copy",
+            &[NativeArgumentShape::Array],
+            NativeReturnShape::Array,
+        );
+        assert_signature(
+            "concat",
+            &[NativeArgumentShape::Array, NativeArgumentShape::Array],
+            NativeReturnShape::Array,
+        );
+        assert_signature(
+            "map",
+            &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Callback1Any,
+            ],
+            NativeReturnShape::Array,
+        );
+        assert_signature(
+            "filter",
+            &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Callback1Bool,
+            ],
+            NativeReturnShape::Array,
+        );
+        assert_signature(
+            "flatMap",
+            &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Callback1Array,
+            ],
+            NativeReturnShape::Array,
+        );
+        assert_signature(
+            "any",
+            &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Callback1Bool,
+            ],
+            NativeReturnShape::Bool,
+        );
+        assert_signature(
+            "all",
+            &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Callback1Bool,
+            ],
+            NativeReturnShape::Bool,
+        );
+        assert_signature(
+            "count",
+            &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Callback1Bool,
+            ],
+            NativeReturnShape::Number,
+        );
+        assert_signature(
+            "find",
+            &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Callback1Bool,
+            ],
+            NativeReturnShape::AnyOrNil,
+        );
+        assert_signature(
+            "findIndex",
+            &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Callback1Bool,
+            ],
+            NativeReturnShape::Number,
+        );
+        assert_signature(
+            "reduce",
+            &[
+                NativeArgumentShape::Array,
+                NativeArgumentShape::Any,
+                NativeArgumentShape::Callback2Any,
+            ],
+            NativeReturnShape::Any,
+        );
+        assert_signature(
+            "range",
+            &[NativeArgumentShape::Number],
+            NativeReturnShape::Range,
+        );
     }
 
     #[test]
