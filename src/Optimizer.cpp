@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <numeric>
 #include <set>
 #include <unordered_map>
@@ -29,6 +30,10 @@ void removeRedundantFallthroughJumps(
     SSAOptimizationStats& stats);
 
 void threadEmptyJumpBlocks(
+    SSADeSSAIRResult& result,
+    SSAOptimizationStats& stats);
+
+void mergeLinearBlocks(
     SSADeSSAIRResult& result,
     SSAOptimizationStats& stats);
 
@@ -648,7 +653,7 @@ std::string ssaOptimizationPipelineFingerprint(SSAOptimizationLevel level)
     case SSAOptimizationLevel::O0:
         return "m7-ssa-o0-v1";
     case SSAOptimizationLevel::O1:
-        return "m7-ssa-o1-copy-phi-const-branch-dce-reach-thread-v6";
+        return "m7-ssa-o1-copy-phi-const-branch-dce-reach-thread-merge-v7";
     }
     throw SSAError("unknown SSA optimization level");
 }
@@ -757,6 +762,7 @@ SSADeSSAIRResult optimizeIRFunctionWithStats(
             threadEmptyJumpBlocks(result, resultStats);
             pruneUnreachableIRInstructions(result, resultStats);
             removeRedundantFallthroughJumps(result, resultStats);
+            mergeLinearBlocks(result, resultStats);
         }
         if (stats) {
             *stats = resultStats;
@@ -1059,6 +1065,248 @@ void threadEmptyJumpBlocks(
     }
     if (changed) {
         result.verify();
+    }
+}
+
+bool isExplicitControlFlowTerminator(IROp op)
+{
+    return op == IROp::Jump || op == IROp::JumpIfFalse || op == IROp::JumpIfTrue
+        || op == IROp::Return;
+}
+
+std::vector<CFGBlockId> blockOrderForMerge(
+    const ControlFlowGraph& cfg,
+    CFGBlockId predecessor,
+    CFGBlockId successor)
+{
+    std::vector<CFGBlockId> order;
+    order.reserve(cfg.exitBlock);
+    for (CFGBlockId block = 0; block < cfg.exitBlock; ++block) {
+        order.push_back(block);
+    }
+
+    const auto successorPosition = std::find(order.begin(), order.end(), successor);
+    if (successorPosition == order.end()) {
+        throw SSAError("block merge successor is not in the linear order");
+    }
+    order.erase(successorPosition);
+
+    const auto predecessorPosition = std::find(order.begin(), order.end(), predecessor);
+    if (predecessorPosition == order.end()) {
+        throw SSAError("block merge predecessor is not in the linear order");
+    }
+    order.insert(predecessorPosition + 1, successor);
+    return order;
+}
+
+bool preservesFallthroughEdges(
+    const ControlFlowGraph& cfg,
+    const IRFunction& function,
+    const std::vector<CFGBlockId>& order,
+    CFGBlockId mergedPredecessor,
+    CFGBlockId mergedSuccessor)
+{
+    std::vector<std::size_t> positions(cfg.exitBlock, std::numeric_limits<std::size_t>::max());
+    for (std::size_t position = 0; position < order.size(); ++position) {
+        if (order[position] >= cfg.exitBlock
+            || positions[order[position]] != std::numeric_limits<std::size_t>::max()) {
+            return false;
+        }
+        positions[order[position]] = position;
+    }
+
+    const auto nextBlock = [&order, &cfg](std::size_t position) {
+        return position + 1 < order.size() ? order[position + 1] : cfg.exitBlock;
+    };
+    if (order.size() != cfg.exitBlock) {
+        return false;
+    }
+    for (CFGBlockId block = 0; block < cfg.exitBlock; ++block) {
+        if (positions[block] == std::numeric_limits<std::size_t>::max()) {
+            return false;
+        }
+        const CFGBlock& cfgBlock = cfg.blocks[block];
+        if (block == mergedPredecessor) {
+            if (nextBlock(positions[block]) != mergedSuccessor) {
+                return false;
+            }
+            continue;
+        }
+        if (cfgBlock.firstInstruction >= cfgBlock.endInstruction
+            || isExplicitControlFlowTerminator(
+                function.instructions[cfgBlock.endInstruction - 1].op)) {
+            continue;
+        }
+        if (cfgBlock.successors.size() != 1
+            || nextBlock(positions[block]) != cfgBlock.successors.front()) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void reorderAndRemoveIRInstruction(
+    SSADeSSAIRResult& result,
+    const ControlFlowGraph& cfg,
+    const std::vector<CFGBlockId>& order,
+    std::size_t removedInstruction,
+    const char* passName)
+{
+    const std::size_t instructionCount = result.function.instructions.size();
+    if (cfg.instructionCount != instructionCount
+        || removedInstruction >= instructionCount
+        || order.size() != cfg.exitBlock) {
+        throw SSAError(std::string(passName) + " received inconsistent block metadata");
+    }
+
+    const std::size_t invalidOffset = std::numeric_limits<std::size_t>::max();
+    std::vector<std::size_t> newOffsets(instructionCount, invalidOffset);
+    std::vector<bool> visitedBlocks(cfg.exitBlock, false);
+    std::vector<IRInstruction> instructions;
+    std::vector<bool> synthetic;
+    instructions.reserve(instructionCount - 1);
+    synthetic.reserve(instructionCount - 1);
+    for (const CFGBlockId block : order) {
+        if (block >= cfg.exitBlock || visitedBlocks[block]) {
+            throw SSAError(std::string(passName) + " block order is malformed");
+        }
+        visitedBlocks[block] = true;
+        const CFGBlock& cfgBlock = cfg.blocks[block];
+        for (std::size_t oldOffset = cfgBlock.firstInstruction;
+             oldOffset < cfgBlock.endInstruction;
+             ++oldOffset) {
+            if (oldOffset == removedInstruction) {
+                continue;
+            }
+            newOffsets[oldOffset] = instructions.size();
+            instructions.push_back(result.function.instructions[oldOffset]);
+            synthetic.push_back(result.syntheticInstructions[oldOffset]);
+        }
+    }
+    if (std::any_of(visitedBlocks.begin(), visitedBlocks.end(), [](bool visited) {
+            return !visited;
+        })) {
+        throw SSAError(std::string(passName) + " block order does not cover the CFG");
+    }
+
+    std::vector<std::size_t> nextSurviving(instructionCount + 1, instructions.size());
+    for (std::size_t oldOffset = instructionCount; oldOffset > 0; --oldOffset) {
+        const std::size_t index = oldOffset - 1;
+        nextSurviving[index] = newOffsets[index] == invalidOffset
+            ? nextSurviving[index + 1]
+            : newOffsets[index];
+    }
+    const auto remapOffset = [
+        &nextSurviving,
+        instructionCount,
+        passName](std::size_t offset) {
+        if (offset > instructionCount) {
+            throw SSAError(std::string(passName) + " encountered an invalid offset");
+        }
+        return nextSurviving[offset];
+    };
+
+    for (IRInstruction& instruction : instructions) {
+        if (instruction.op == IROp::Jump
+            || instruction.op == IROp::JumpIfFalse
+            || instruction.op == IROp::JumpIfTrue) {
+            instruction.operand = remapOffset(instruction.operand);
+        }
+    }
+    for (std::optional<std::size_t>& offset : result.originalInstructionOffsets) {
+        if (!offset || *offset >= instructionCount || newOffsets[*offset] == invalidOffset) {
+            offset.reset();
+        } else {
+            *offset = newOffsets[*offset];
+        }
+    }
+    for (std::size_t& offset : result.originalInsertionOffsets) {
+        offset = remapOffset(offset);
+    }
+    for (IRModuleDependency& dependency : result.moduleDependencies) {
+        dependency.instructionOffset = remapOffset(dependency.instructionOffset);
+    }
+
+    result.function.instructions = std::move(instructions);
+    result.syntheticInstructions = std::move(synthetic);
+    result.verify();
+}
+
+bool dependencyOffsetsRemainOrdered(const SSADeSSAIRResult& result)
+{
+    return std::is_sorted(
+        result.moduleDependencies.begin(),
+        result.moduleDependencies.end(),
+        [](const IRModuleDependency& left, const IRModuleDependency& right) {
+            return left.instructionOffset < right.instructionOffset;
+        });
+}
+
+void mergeLinearBlocks(
+    SSADeSSAIRResult& result,
+    SSAOptimizationStats& stats)
+{
+    while (true) {
+        const ControlFlowGraph cfg = buildControlFlowGraph(
+            result.function.instructions,
+            result.moduleDependencies);
+        bool merged = false;
+        for (CFGBlockId predecessor = 0; predecessor < cfg.exitBlock; ++predecessor) {
+            const CFGBlock& predecessorBlock = cfg.blocks[predecessor];
+            if (!predecessorBlock.reachable || predecessorBlock.successors.size() != 1
+                || predecessorBlock.firstInstruction >= predecessorBlock.endInstruction) {
+                continue;
+            }
+            const CFGBlockId successor = predecessorBlock.successors.front();
+            if (successor == cfg.exitBlock || !cfg.blocks[successor].reachable
+                || cfg.blocks[successor].predecessors.size() != 1
+                || cfg.blocks[successor].predecessors.front() != predecessor) {
+                continue;
+            }
+            const std::size_t jump = predecessorBlock.endInstruction - 1;
+            const IRInstruction& terminator = result.function.instructions[jump];
+            if (terminator.op != IROp::Jump
+                || terminator.operand != cfg.blocks[successor].firstInstruction) {
+                continue;
+            }
+
+            const std::vector<CFGBlockId> order = blockOrderForMerge(
+                cfg,
+                predecessor,
+                successor);
+            if (!preservesFallthroughEdges(
+                    cfg,
+                    result.function,
+                    order,
+                    predecessor,
+                    successor)) {
+                continue;
+            }
+
+            SSADeSSAIRResult candidate = result;
+            reorderAndRemoveIRInstruction(
+                candidate,
+                cfg,
+                order,
+                jump,
+                "linear block merge");
+            if (makeFunctionReferences(result.function.instructions)
+                    != makeFunctionReferences(candidate.function.instructions)
+                || !dependencyOffsetsRemainOrdered(candidate)) {
+                continue;
+            }
+            buildControlFlowGraph(
+                candidate.function.instructions,
+                candidate.moduleDependencies);
+            result = std::move(candidate);
+            ++stats.blocksMerged;
+            ++stats.jumpsRemoved;
+            merged = true;
+            break;
+        }
+        if (!merged) {
+            return;
+        }
     }
 }
 

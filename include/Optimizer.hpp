@@ -19,6 +19,7 @@ struct SSAOptimizationStats {
     std::size_t constantsFolded = 0;
     std::size_t branchesSimplified = 0;
     std::size_t blocksRemoved = 0;
+    std::size_t blocksMerged = 0;
     std::size_t jumpsRemoved = 0;
     std::size_t jumpsThreaded = 0;
     std::size_t instructionsRemoved = 0;
@@ -104,9 +105,9 @@ SSAOptimizationResult optimizeSSA(
 // Run one ordinary IR function through the internal CFG/SSA optimizer
 // boundary. This preserves the existing virtual-register representation and
 // returns offset metadata for the program-level integration. O1 also performs
-// known-condition normalization and post-de-SSA unreachable-block pruning;
-// direct callers without a pool retain source Constant operands without
-// folding them.
+// known-condition normalization, post-de-SSA unreachable-block pruning, and
+// conservative linear block merging; direct callers without a pool retain
+// source Constant operands without folding them.
 SSADeSSAIRResult optimizeIRFunction(
     const IRFunction& input,
     const std::vector<IRModuleDependency>& moduleDependencies,

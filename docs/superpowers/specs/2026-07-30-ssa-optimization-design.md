@@ -307,9 +307,10 @@ linear path remains the O0 implementation until that difference is explained.
 ### O1
 
 The full O1 design is still broader than the admitted internal slice. The
-current branch implements items 1-5 below in a constrained post-de-SSA form and
-the local fallthrough/jump-only threading cleanup; general block merging and
-threading across non-empty blocks remain planned:
+current branch implements items 1-5 below in a constrained post-de-SSA form,
+the local fallthrough/jump-only threading cleanup, and a conservative merge of
+a block with a unique successor; general CFG rewriting and threading across
+arbitrary non-empty blocks remain planned:
 
 1. known-condition jump normalization followed by unreachable-block pruning,
    redundant next-block jump removal, and jump-only-block threading;
@@ -317,7 +318,13 @@ threading across non-empty blocks remain planned:
 3. constant folding for the approved primitive subset;
 4. copy/phi simplification;
 5. local dead-code elimination for non-trapping pure instructions; and
-6. block merge and final jump threading.
+6. conservative block merge and final jump threading.
+
+The admitted merge may move a non-empty successor block next to its unique
+predecessor and remove the predecessor's unconditional jump. It is accepted
+only when the resulting layout preserves every fallthrough edge, the
+`MakeFunction` reference sequence, and ordered module dependency offsets;
+arbitrary block merging remains outside this slice.
 
 `optimizeIRFunction` is the admitted internal adapter for one ordinary
 `IRFunction`: it lifts one stream, runs the selected optimizer, and lowers it
@@ -403,7 +410,7 @@ Schema-2 manifests are stale and follow the existing cold-cache repair path.
 The default identity is `optimization_level = "O0"` and
 `optimizer_pipeline = "m7-ssa-o0-v1"`; explicit O1 products use
 `optimization_level = "O1"` and
-`optimizer_pipeline = "m7-ssa-o1-copy-phi-const-branch-dce-reach-thread-v6"`. A changed identity
+`optimizer_pipeline = "m7-ssa-o1-copy-phi-const-branch-dce-reach-thread-merge-v7"`. A changed identity
 rebuilds only the affected product and does not imply a public-interface
 change.
 

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "decision_revision": "m7-2026-07-31-r17",
+  "decision_revision": "m7-2026-08-01-r18",
   "inventory_revision": "m0d-2026-07-22-r1",
   "decision_id": "M7-IR-SSA-001",
   "domain": "internal-ssa-optimization",
@@ -178,6 +178,8 @@
       "post-de-SSA unreachable-block pruning with offset remapping",
       "redundant fallthrough-jump removal",
       "threading through empty jump-only blocks",
+      "conservative unique-predecessor/unique-successor non-empty block merge",
+      "fallthrough, MakeFunction, and dependency-order preservation during block merge",
       "per-pass SSA verification",
       "stable diagnostic pipeline fingerprints",
       "deterministic optimization counters",
@@ -186,7 +188,7 @@
     ],
     "test_case_id": "ctest.optimizer",
     "not_included": [
-      "block merging and general CFG rewriting",
+      "general CFG rewriting beyond the constrained block merge",
       "default O0 replacement",
       "optimized trace event-count contract"
     ]
