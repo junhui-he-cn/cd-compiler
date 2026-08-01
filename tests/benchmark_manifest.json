@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "benchmark_revision": "bench-2026-07-30-r3",
+  "benchmark_revision": "bench-2026-08-01-r1",
   "default_repeat": 3,
   "workloads": [
     {
@@ -52,6 +52,16 @@
         "tests/bytecode_artifacts/benchmark_execution_closure/input.cd"
       ],
       "expected_output": "tests/bytecode_artifacts/benchmark_execution_closure/run.out"
+    },
+    {
+      "workload_id": "execution_index",
+      "description": "Scaled array indexing and numeric accumulation.",
+      "artifact_mode": "linked",
+      "execution": "success",
+      "sources": [
+        "tests/bytecode_artifacts/benchmark_execution_index/input.cd"
+      ],
+      "expected_output": "tests/bytecode_artifacts/benchmark_execution_index/run.out"
     },
     {
       "workload_id": "execution_loop",

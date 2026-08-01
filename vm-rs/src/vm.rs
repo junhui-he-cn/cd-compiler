@@ -2162,7 +2162,7 @@ mod tests {
             .expect("map assignment succeeds");
         assert!(matches!(updated, Value::Number(value) if value == 2.0));
         assert!(matches!(
-            vm.execute_index(map.clone(), Value::string("b")).unwrap(),
+            vm.execute_index(&map, &Value::string("b")).unwrap(),
             Value::Number(value) if value == 2.0
         ));
         assert!(matches!(vm.execute_len(&map).unwrap(), Value::Number(value) if value == 2.0));
@@ -2170,7 +2170,7 @@ mod tests {
             vm.execute_native_call("contains", vec![map.clone(), Value::string("a")]).unwrap(),
             Value::Bool(true)
         ));
-        assert!(vm.execute_index(map, Value::string("missing")).is_err());
+        assert!(vm.execute_index(&map, &Value::string("missing")).is_err());
     }
 
     #[test]
@@ -2253,7 +2253,7 @@ mod tests {
         assert!(matches!(removed, Value::Number(value) if value == 1.0));
         assert_eq!(map.to_string(), "map{b: nil}");
         assert!(matches!(
-            vm.execute_index(alias.clone(), Value::string("b")).unwrap(),
+            vm.execute_index(&alias, &Value::string("b")).unwrap(),
             Value::Nil
         ));
 
@@ -2361,12 +2361,14 @@ mod tests {
         )
         .expect("map assignment succeeds");
 
+        let left_value = left.borrow();
         assert!(matches!(
-            vm.execute_index(left.borrow().clone(), Value::string("b")).unwrap(),
+            vm.execute_index(&left_value, &Value::string("b")).unwrap(),
             Value::Number(value) if value == 2.0
         ));
+        let right_value = right.borrow();
         assert!(matches!(
-            vm.execute_index(right.borrow().clone(), Value::string("b")).unwrap(),
+            vm.execute_index(&right_value, &Value::string("b")).unwrap(),
             Value::Number(value) if value == 2.0
         ));
     }
@@ -2449,7 +2451,7 @@ mod tests {
             Value::Number(value) if value == 5.0
         ));
         assert!(matches!(
-            vm.execute_index(ascending.clone(), Value::number(2.0)).unwrap(),
+            vm.execute_index(&ascending, &Value::number(2.0)).unwrap(),
             Value::Number(value) if value == 3.0
         ));
         assert!(matches!(
@@ -2472,7 +2474,7 @@ mod tests {
             Value::Number(value) if value == 3.0
         ));
         assert!(matches!(
-            vm.execute_index(descending, Value::number(1.0)).unwrap(),
+            vm.execute_index(&descending, &Value::number(1.0)).unwrap(),
             Value::Number(value) if value == 3.0
         ));
 
@@ -2507,11 +2509,11 @@ mod tests {
             .execute_native_call("range", vec![Value::number(3.0)])
             .expect("range succeeds");
         let wrong_type = vm
-            .execute_index(range.clone(), Value::boolean(true))
+            .execute_index(&range, &Value::boolean(true))
             .expect_err("bool index should fail");
         assert_eq!(wrong_type.message, "range index must be number");
         let out_of_bounds = vm
-            .execute_index(range, Value::number(3.0))
+            .execute_index(&range, &Value::number(3.0))
             .expect_err("out-of-bounds index should fail");
         assert_eq!(out_of_bounds.message, "range index out of bounds");
     }
@@ -3770,8 +3772,8 @@ impl<'a> VM<'a> {
                     collection,
                     index,
                 } => {
-                    let collection = self.read_register(frame, *collection)?;
-                    let index = self.read_register(frame, *index)?;
+                    let collection = self.read_register_ref(frame, *collection)?;
+                    let index = self.read_register_ref(frame, *index)?;
                     let value = self.execute_index(collection, index)?;
                     self.write_register(frame, *dest, value)?;
                 }
@@ -4434,12 +4436,12 @@ impl<'a> VM<'a> {
             .map_err(|error| RuntimeError::new(error.to_string()))
     }
 
-    fn checked_array_index(&self, index_value: Value) -> Result<usize, RuntimeError> {
+    fn checked_array_index(&self, index_value: &Value) -> Result<usize, RuntimeError> {
         let Value::Number(number) = index_value else {
             return Err(RuntimeError::new("array index must be number"));
         };
         let integer = number.trunc();
-        if integer != number {
+        if integer != *number {
             return Err(RuntimeError::new("array index must be integer"));
         }
         if integer < 0.0 {
@@ -4448,7 +4450,7 @@ impl<'a> VM<'a> {
         Ok(integer as usize)
     }
 
-    fn execute_index(&self, collection: Value, index: Value) -> Result<Value, RuntimeError> {
+    fn execute_index(&self, collection: &Value, index: &Value) -> Result<Value, RuntimeError> {
         match collection {
             Value::Array(array) => {
                 let position = self.checked_array_index(index)?;
@@ -4473,7 +4475,7 @@ impl<'a> VM<'a> {
                 }
                 let position = Self::checked_integer_index(
                     match index {
-                        Value::Number(value) => value,
+                        Value::Number(value) => *value,
                         _ => return Err(RuntimeError::new("range index must be number")),
                     },
                     "range index must be integer",
@@ -4495,7 +4497,7 @@ impl<'a> VM<'a> {
     ) -> Result<Value, RuntimeError> {
         match collection {
             Value::Array(array) => {
-                let position = self.checked_array_index(index)?;
+                let position = self.checked_array_index(&index)?;
                 let mut elements = array.elements.borrow_mut();
                 if position >= elements.len() {
                     return Err(RuntimeError::new("array index out of range"));
