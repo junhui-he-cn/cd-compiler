@@ -1097,6 +1097,72 @@ mod tests {
         }
     }
 
+    #[test]
+    fn ordered_comparisons_preserve_primitive_results() {
+        let program = Program {
+            constants: vec![
+                Constant::Number("1".to_string()),
+                Constant::Number("2".to_string()),
+                Constant::String("a".to_string()),
+                Constant::String("b".to_string()),
+            ],
+            names: Vec::new(),
+            main: FunctionBody {
+                registers: 10,
+                instructions: vec![
+                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Constant { dest: 1, constant: 1 },
+                    Instruction::Constant { dest: 2, constant: 2 },
+                    Instruction::Constant { dest: 3, constant: 3 },
+                    Instruction::Less {
+                        dest: 4,
+                        left: 0,
+                        right: 1,
+                    },
+                    Instruction::Greater {
+                        dest: 5,
+                        left: 1,
+                        right: 0,
+                    },
+                    Instruction::LessEqual {
+                        dest: 6,
+                        left: 0,
+                        right: 0,
+                    },
+                    Instruction::GreaterEqual {
+                        dest: 7,
+                        left: 1,
+                        right: 1,
+                    },
+                    Instruction::Less {
+                        dest: 8,
+                        left: 2,
+                        right: 3,
+                    },
+                    Instruction::Greater {
+                        dest: 9,
+                        left: 3,
+                        right: 2,
+                    },
+                    Instruction::Print { value: 4 },
+                    Instruction::Print { value: 5 },
+                    Instruction::Print { value: 6 },
+                    Instruction::Print { value: 7 },
+                    Instruction::Print { value: 8 },
+                    Instruction::Print { value: 9 },
+                ],
+                locations: vec![None; 16],
+            },
+            functions: Vec::new(),
+            debug_sources: Vec::new(),
+        };
+
+        assert_eq!(
+            VM::new(&program).run().expect("primitive comparisons should run"),
+            "true\ntrue\ntrue\ntrue\ntrue\ntrue\n"
+        );
+    }
+
     fn array_elements(value: &Value) -> Vec<Value> {
         let Value::Array(array) = value else {
             panic!("expected array");
@@ -5461,9 +5527,9 @@ impl<'a> VM<'a> {
         comparison: Comparison,
         call_site: Option<&DebugLocation>,
     ) -> Result<(), RuntimeError> {
-        let left_value = self.read_register(frame, left)?;
-        let right_value = self.read_register(frame, right)?;
-        let result = match (&left_value, &right_value) {
+        let left_value = self.read_register_ref(frame, left)?;
+        let right_value = self.read_register_ref(frame, right)?;
+        let result = match (left_value, right_value) {
             (Value::Number(left), Value::Number(right)) => comparison.apply_numbers(*left, *right),
             (Value::String(left), Value::String(right)) => {
                 let ordering = left.chars().cmp(right.chars());
@@ -5475,13 +5541,13 @@ impl<'a> VM<'a> {
                 }
             }
             (Value::Struct(left), Value::Struct(right)) => {
-                let Some(type_name) = left.type_name.as_deref() else {
+                let Some(type_name) = left.type_name.clone() else {
                     return Err(RuntimeError::new(format!(
                         "{} expects a named struct witness",
                         comparison.as_str()
                     )));
                 };
-                if right.type_name.as_deref() != Some(type_name) {
+                if right.type_name.as_deref() != Some(type_name.as_str()) {
                     return Err(RuntimeError::new(format!(
                         "{} expects two values of the same struct type",
                         comparison.as_str()
@@ -5530,7 +5596,10 @@ impl<'a> VM<'a> {
                 };
                 let result = self.call_function(
                     &function,
-                    CallArguments::Two(left_value.clone(), right_value.clone()),
+                    CallArguments::Two(
+                        Value::Struct(left.clone()),
+                        Value::Struct(right.clone()),
+                    ),
                     frame.function.as_ref(),
                     call_site,
                 )?;
