@@ -1,0 +1,32 @@
+import "../../data_structures.cd" as ds;
+
+let list = ds.newLinkedList<number>();
+print list.isEmpty();
+print list.popFront();
+list.pushBack(1);
+list.pushBack(2);
+list.pushFront(0);
+print list.snapshot();
+
+let held = list.nodeAt(1);
+if (held != nil) {
+  held.setValue(20);
+  print held.readValue();
+  print held.nextNode();
+  print list.snapshot();
+}
+
+let removed = list.nodeAt(0);
+print list.popFront();
+if (removed != nil) {
+  print removed.readValue();
+}
+print list.snapshot();
+
+let first = ds.newLinkedNode<number>(3);
+let second = ds.newLinkedNode<number>(4);
+first.setNext(second);
+second.setNext(first);
+print first;
+print first == first;
+print first == second;

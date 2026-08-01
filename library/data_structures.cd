@@ -26,6 +26,9 @@ export Set, OrderedSet, OrderedMapEntry, OrderedMap, BiMapEntry, BiMap, MultiSet
 export LruCacheEntry, LruCache, newLruCache, LfuCacheEntry, LfuCache, newLfuCache
        from "./caches.cd";
 
+export LinkedNode, LinkedList, newLinkedNode, newLinkedList
+       from "./linked_structures.cd";
+
 export DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge,
        SignedWeightedGraph, BellmanFordError, BellmanFordResult,
        CriticalPathError, CriticalPathResult,

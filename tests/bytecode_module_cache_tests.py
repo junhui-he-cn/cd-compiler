@@ -18,7 +18,7 @@ class CheckResult:
 IMPORT_GRAPH_DIRECTIVE = re.compile(
     r"(?m)^\s*(?:import\b|export\b[^\n;]*\bfrom\b)"
 )
-EXPECTED_IMPORT_GRAPH_ENTRIES = 51
+EXPECTED_IMPORT_GRAPH_ENTRIES = 52
 EXPECTED_IMPORT_DIAGNOSTIC_ENTRIES = 32
 
 
@@ -843,6 +843,51 @@ def run_rebuild_matrix(compiler: Path, vm: Path) -> None:
         link_and_run(vm, output, root / "public-linked.cdbc", "lib-v3\nmid\nentry\n")
 
 
+def run_recursive_public_shape_matrix(compiler: Path, vm: Path) -> None:
+    with tempfile.TemporaryDirectory() as temporary:
+        root = Path(temporary)
+        lib = root / "lib.cd"
+        mid = root / "mid.cd"
+        entry = root / "entry.cd"
+        lib.write_text(
+            "struct Node { next: optional<Node> }\n"
+            "export Node;\n"
+            "print(\"lib\");\n",
+            encoding="utf-8",
+        )
+        mid.write_text('import "./lib.cd";\nprint("mid");\n', encoding="utf-8")
+        entry.write_text('import "./mid.cd";\nprint("entry");\n', encoding="utf-8")
+
+        output = root / "modules"
+        cache = root / "cache"
+        first_report_path = root / "first.json"
+        emit(compiler, entry, output, cache, first_report_path)
+        first = report(first_report_path)
+        if first["summary"] != {"module_count": 3, "reused": 0, "rebuilt": 3}:
+            raise AssertionError(f"unexpected recursive first cache report: {first}")
+        link_and_run(vm, output, root / "first-linked.cdbc", "lib\nmid\nentry\n")
+
+        lib.write_text(
+            "struct Node { next: [Node] }\n"
+            "export Node;\n"
+            "print(\"lib\");\n",
+            encoding="utf-8",
+        )
+        public_report_path = root / "public.json"
+        emit(compiler, entry, output, cache, public_report_path)
+        public = module_statuses(report(public_report_path))
+        if public["lib.cd"] != ("rebuilt", "source_and_public_interface_changed", True):
+            raise AssertionError(f"recursive public shape change was not detected: {public}")
+        if public["mid.cd"][:2] != ("rebuilt", "dependency_interface_changed"):
+            raise AssertionError(f"recursive direct dependency invalidation was incorrect: {public}")
+        if public["entry.cd"][:2] != (
+            "rebuilt",
+            "transitive_dependency_interface_changed",
+        ):
+            raise AssertionError(f"recursive transitive invalidation was incorrect: {public}")
+        link_and_run(vm, output, root / "public-linked.cdbc", "lib\nmid\nentry\n")
+
+
 def run_product_source_fallback_boundary(compiler: Path, vm: Path) -> None:
     with tempfile.TemporaryDirectory() as temporary:
         root = Path(temporary)
@@ -1054,6 +1099,10 @@ def run_all(compiler: Path, vm: Path) -> list[CheckResult]:
         run_case(
             "module cache rebuild/reuse matrix",
             lambda: run_rebuild_matrix(compiler, vm),
+        ),
+        run_case(
+            "module cache recursive public shape invalidation",
+            lambda: run_recursive_public_shape_matrix(compiler, vm),
         ),
         run_case(
             "module product source fallback boundary",

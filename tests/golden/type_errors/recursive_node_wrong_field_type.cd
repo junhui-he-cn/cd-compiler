@@ -1,1 +1,2 @@
 struct Node { next: optional<Node> }
+let invalid = Node { next: 1 };

@@ -7,6 +7,7 @@
 #include <limits>
 #include <sstream>
 #include <stdexcept>
+#include <unordered_set>
 #include <utility>
 
 namespace {
@@ -42,6 +43,28 @@ public:
 private:
     std::uint32_t hash_ = 2166136261u;
 };
+
+struct ActiveReference {
+    Value::Type type;
+    std::size_t identity;
+
+    bool operator==(const ActiveReference& other) const
+    {
+        return type == other.type && identity == other.identity;
+    }
+};
+
+struct ActiveReferenceHash {
+    std::size_t operator()(const ActiveReference& reference) const
+    {
+        const std::size_t typeHash = std::hash<int>{}(static_cast<int>(reference.type));
+        const std::size_t identityHash = std::hash<std::size_t>{}(reference.identity);
+        return typeHash ^ (identityHash + static_cast<std::size_t>(0x9e3779b9)
+            + (typeHash << 6) + (typeHash >> 2));
+    }
+};
+
+using ActiveReferences = std::unordered_set<ActiveReference, ActiveReferenceHash>;
 
 void hashValueInto(Fnv1a32& hash, const Value& value)
 {
@@ -316,7 +339,7 @@ std::uint32_t valueHash(const Value& value)
     return hash.finish();
 }
 
-std::string valueToString(const Value& value)
+std::string valueToString(const Value& value, ActiveReferences& activeReferences)
 {
     switch (value.type()) {
     case Value::Type::Nil:
@@ -333,6 +356,10 @@ std::string valueToString(const Value& value)
     case Value::Type::Function:
         return "<fun " + value.asFunction().name + ">";
     case Value::Type::Array: {
+        const ActiveReference reference{Value::Type::Array, value.asArray().identity};
+        if (!activeReferences.insert(reference).second) {
+            return "<cycle>";
+        }
         std::ostringstream out;
         out << '[';
         const auto& elements = *value.asArray().elements;
@@ -340,12 +367,17 @@ std::string valueToString(const Value& value)
             if (i != 0) {
                 out << ", ";
             }
-            out << valueToString(elements[i]);
+            out << valueToString(elements[i], activeReferences);
         }
         out << ']';
+        activeReferences.erase(reference);
         return out.str();
     }
     case Value::Type::Map: {
+        const ActiveReference reference{Value::Type::Map, value.asMap().identity};
+        if (!activeReferences.insert(reference).second) {
+            return "<cycle>";
+        }
         std::ostringstream out;
         out << "map{";
         const auto& entries = *value.asMap().entries;
@@ -353,9 +385,11 @@ std::string valueToString(const Value& value)
             if (i != 0) {
                 out << ", ";
             }
-            out << valueToString(entries[i].first) << ": " << valueToString(entries[i].second);
+            out << valueToString(entries[i].first, activeReferences) << ": "
+                << valueToString(entries[i].second, activeReferences);
         }
         out << '}';
+        activeReferences.erase(reference);
         return out.str();
     }
     case Value::Type::Range: {
@@ -364,6 +398,10 @@ std::string valueToString(const Value& value)
             + std::to_string(range.stop) + ", " + std::to_string(range.step) + ")";
     }
     case Value::Type::Struct: {
+        const ActiveReference reference{Value::Type::Struct, value.asStruct().identity};
+        if (!activeReferences.insert(reference).second) {
+            return "<cycle>";
+        }
         std::ostringstream out;
         out << '{';
         const auto& fields = *value.asStruct().fields;
@@ -371,9 +409,11 @@ std::string valueToString(const Value& value)
             if (i != 0) {
                 out << ", ";
             }
-            out << fields[i].first << ": " << valueToString(fields[i].second);
+            out << fields[i].first << ": "
+                << valueToString(fields[i].second, activeReferences);
         }
         out << '}';
+        activeReferences.erase(reference);
         return out.str();
     }
     case Value::Type::Variant: {
@@ -386,7 +426,7 @@ std::string valueToString(const Value& value)
                 if (i != 0) {
                     out << ", ";
                 }
-                out << valueToString((*variant.fields)[i]);
+                out << valueToString((*variant.fields)[i], activeReferences);
             }
             out << ')';
         }
@@ -395,6 +435,12 @@ std::string valueToString(const Value& value)
     }
 
     return "<unknown>";
+}
+
+std::string valueToString(const Value& value)
+{
+    ActiveReferences activeReferences;
+    return valueToString(value, activeReferences);
 }
 
 std::ostream& operator<<(std::ostream& out, const Value& value)

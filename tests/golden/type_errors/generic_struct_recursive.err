@@ -1,3 +1,0 @@
-Type error at 1:33: recursive struct field `next` references `Node`
-  struct Node<T> { next: optional<Node<T>> }
-                                  ^

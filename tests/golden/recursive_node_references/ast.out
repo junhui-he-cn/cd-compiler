@@ -1,0 +1,15 @@
+Program
+  Struct Node {value: number, next: optional<Node>}
+  Let tail = (construct Node value: 2 next: nil)
+  Let head = (construct Node value: 1 next: tail)
+  Let alias = tail
+  Expr (= (field head next) nil)
+  Expr (= (field alias value) 20)
+  Print (field head next)
+  Print (field tail value)
+  Let first = (construct Node value: 3 next: nil)
+  Let second = (construct Node value: 4 next: first)
+  Expr (= (field first next) second)
+  Print first
+  Print (== first first)
+  Print (== first second)

@@ -1,0 +1,126 @@
+// Stable-handle singly linked structures.
+//
+// LinkedNode values are strong references to shared mutable nodes. Copying a
+// node value copies its handle, while setValue/setNext mutate the shared node.
+// The list owns only its head handle; removing a node from the list does not
+// invalidate handles that callers already obtained.
+
+struct LinkedNode<T> {
+  private value: T,
+  private next: optional<LinkedNode<T>>
+}
+
+impl LinkedNode<T> {
+  fun readValue(): T {
+    return this.value;
+  }
+
+  fun nextNode(): optional<LinkedNode<T>> {
+    return this.next;
+  }
+
+  fun setValue(value: T) {
+    this.value = value;
+  }
+
+  fun setNext(next: optional<LinkedNode<T>>) {
+    this.next = next;
+  }
+}
+
+fun newLinkedNode<T>(value: T): LinkedNode<T> {
+  return LinkedNode<T> { value: value, next: nil };
+}
+
+struct LinkedList<T> {
+  private head: optional<LinkedNode<T>>,
+  private count: number
+}
+
+impl LinkedList<T> {
+  fun size(): number {
+    return this.count;
+  }
+
+  fun isEmpty(): bool {
+    return this.count == 0;
+  }
+
+  fun pushFront(value: T) {
+    let node = newLinkedNode<T>(value);
+    node.setNext(this.head);
+    this.head = node;
+    this.count += 1;
+  }
+
+  fun pushBack(value: T) {
+    let node = newLinkedNode<T>(value);
+    let current = this.head;
+    if (current == nil) {
+      this.head = node;
+      this.count += 1;
+      return;
+    }
+
+    while (current != nil) {
+      let currentNode: LinkedNode<T> = current;
+      let next = currentNode.nextNode();
+      if (next == nil) {
+        currentNode.setNext(node);
+        break;
+      }
+      current = next;
+    }
+    this.count += 1;
+  }
+
+  fun popFront(): optional<T> {
+    let current = this.head;
+    if (current == nil) {
+      return nil;
+    }
+    let currentNode: LinkedNode<T> = current;
+    this.head = currentNode.nextNode();
+    this.count -= 1;
+    return currentNode.readValue();
+  }
+
+  fun frontNode(): optional<LinkedNode<T>> {
+    return this.head;
+  }
+
+  fun nodeAt(index: number): optional<LinkedNode<T>> {
+    if (floor(index) != index || index < 0) {
+      return nil;
+    }
+
+    let current = this.head;
+    let remaining = index;
+    while (remaining > 0) {
+      if (current == nil) {
+        return nil;
+      }
+      let currentNode: LinkedNode<T> = current;
+      current = currentNode.nextNode();
+      remaining -= 1;
+    }
+    return current;
+  }
+
+  fun snapshot(): [T] {
+    let values: [T] = [];
+    let current = this.head;
+    while (current != nil) {
+      let currentNode: LinkedNode<T> = current;
+      values.push(currentNode.readValue());
+      current = currentNode.nextNode();
+    }
+    return values;
+  }
+}
+
+fun newLinkedList<T>(): LinkedList<T> {
+  return LinkedList<T> { head: nil, count: 0 };
+}
+
+export LinkedNode, LinkedList, newLinkedNode, newLinkedList;

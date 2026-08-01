@@ -1,0 +1,8 @@
+Program
+  Struct Direct {next: Direct}
+  Struct Nullable {next: optional<Nullable>}
+  Struct ArrayNode {children: [ArrayNode]}
+  Struct FunctionNode {accept: fun(FunctionNode): number}
+  Struct GenericNode<T> {next: optional<GenericNode<T>>}
+  Struct A {b: optional<B>}
+  Struct B {a: optional<A>}

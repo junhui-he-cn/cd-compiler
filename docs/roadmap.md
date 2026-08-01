@@ -205,9 +205,42 @@ struct fields, and function parameter/return annotations.
 golden, CTest, boundary, malformed, artifact, LSP, debugger, Rust VM, Cargo,
 and `git diff --check` commands from the verification contract.
 
+### M8-LANG-REF-001: stable node references and recursive mutable structs
+
+**Status:** implementation slice and repository verification gate complete on
+the issue branch; Git delivery remains a separate action.
+
+**Purpose:** allow mutable recursive nominal structures without adding a new
+`ref<T>` syntax or runtime opcode. A named struct value is a stable strong
+handle; `optional<Node<T>>` represents an empty link, and existing `Struct`,
+`Field`, and `AssignField` operations preserve alias-visible mutation.
+
+**Contract:** assignment, parameter passing, closure capture, and field storage
+copy handles rather than fields. Replacing a link with `nil` does not invalidate
+previous handles. Struct equality and hashing remain identity-based. C++ and
+Rust formatting emit `<cycle>` when a reference repeats on the active recursive
+path; acyclic output remains compatible. Strong cycles are retained until VM
+teardown. GC, weak references, borrow checking, finalizers, automatic deletion,
+and a fixed object layout are explicitly out of scope.
+
+**Boundary:** no parser or grammar change is required. Public module interfaces,
+`cdi 0.1`, module products, and module-cache hashes carry the finite nominal
+shape (`optional<Node<T>>`) without recursively embedding field tables. The
+library adds `LinkedNode<T>`/`LinkedList<T>` while preserving array-backed LRU/LFU
+APIs; node-based cache migration, bidirectional/circular traversal, and cycle
+collection remain follow-up decisions.
+
+**Quantitative gate:** cover direct, generic, array/function, nullable, and
+mutual recursive field shapes; wrong-field diagnostics; C++/Rust cycle formatting
+and identity equality; source imports; CDI round trips; module-product linking;
+recursive public-interface invalidation; and the isolated linked-structure
+library fixture. Run the canonical inventory, golden, CTest, artifact, module
+cache, LSP, debugger, Rust VM, Cargo, boundary, malformed, library, and
+`git diff --check` gates.
+
 ## Planned follow-up specifications
 
-These are deferred candidates after M6-LANG-001. They are not permission to
+These are deferred candidates after M8-LANG-REF-001. They are not permission to
 start implementation before their decision records and focused inventories are
 written. In particular, the data-structure roadmap does not authorize adding
 concrete data-structure code to the compiler slice.
@@ -487,7 +520,8 @@ be committed.
 
 The following are intentionally not in the active queue:
 
-- recursive structs and richer nominal/structural type relationships;
+- richer nominal/structural type relationships beyond the stable recursive
+  handle contract;
 - protocols, traits, dynamic dispatch, inheritance, or overloading;
 - strings as iterable values and a general iterator abstraction;
 - garbage collection, task scheduling, async execution, and JIT compilation;

@@ -1,0 +1,6 @@
+module 0 "<repo>/tests/golden/recursive_node_import/lib.cd"
+  export struct Node<T>
+    field value: T
+    field next: optional<Node<T>>
+
+module 1 entry "<repo>/tests/golden/recursive_node_import/input.cd"

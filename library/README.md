@@ -8,6 +8,8 @@ generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
 `Tree<T>`, `AvlTree<T>`, `RedBlackTree<T>`, `Set<T: Eq>`, `OrderedSet<T>`, `OrderedMap<K, V>`, `BiMap<K: Eq, V: Eq>`, `LruCache<K: Eq, V>`, `LfuCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
 `MultiMap<K: Eq, V: Eq>` for one-to-many mappings, immutable BST helpers, and basic generic array algorithms,
 including comparator-based sorting, window helpers, and interval merge.
+It also provides mutable singly linked `LinkedNode<T>`/`LinkedList<T>` structures
+with stable node handles and cycle-safe debug output.
 It also includes array-backed numeric `FenwickTree`, `SegmentTree`, and `SparseTable`,
 and immutable numeric `Matrix` types,
 numeric two-pointer helpers for sorted arrays, and string/tree/graph algorithms.
@@ -20,7 +22,7 @@ staged delivery order are documented in
 The implementation is split into topic modules: `collections.cd`, `trees.cd`,
 `sets.cd`, `graphs.cd`, `strings.cd`, `range_trees.cd`, `sorting.cd`,
 `array_algorithms.cd`, `dynamic_programming.cd`, `backtracking.cd`, and
-`numeric.cd`. `data_structures.cd` remains the compatibility facade and
+`numeric.cd`, `linked_structures.cd`. `data_structures.cd` remains the compatibility facade and
 re-exports the stable public API, so existing `as ds` imports do not change.
 
 ## Usage
@@ -300,6 +302,29 @@ let maybeNumber = ds.some<number>(42);
 The queue compacts its backing array as consumed entries accumulate. Both
 structures store references to their element values; snapshots copy only the
 outer array.
+
+`LinkedNode<T>` and `LinkedList<T>` provide mutable singly linked storage:
+
+- `newLinkedNode<T>(value)` — create a node handle with an empty `next` link;
+- `readValue(): T`, `setValue(value: T)`, `nextNode(): optional<LinkedNode<T>>`,
+  and `setNext(next)` — inspect or mutate a node through any alias;
+- `newLinkedList<T>()` — create an empty list;
+- `pushFront(value)` and `pushBack(value)` — insert at either end;
+- `popFront(): optional<T>` — remove and return the front value, or `nil` when empty;
+- `frontNode(): optional<LinkedNode<T>>` and `nodeAt(index): optional<LinkedNode<T>>`
+  — obtain stable node handles;
+- `size(): number`, `isEmpty(): bool`, and `snapshot(): [T]` — inspect the list or
+  copy its values into a fresh outer array.
+
+Node assignment and parameter passing copy the handle, not the node. A value or
+link mutation through one alias is visible through every other alias. Removing a
+node from a list only removes the list's link; a previously returned handle stays
+valid and keeps the node alive. `pushFront`, `popFront`, and `nodeAt` are `O(1)`
+or `O(index)` as applicable; `pushBack` and an acyclic `snapshot` are `O(n)`.
+Snapshots are shallow and assume an acyclic list. Strong cycles are allowed and
+remain retained until VM teardown; there is no cycle collector or weak handle.
+Printing a cyclic node graph emits `<cycle>` on the active recursive path, while
+struct equality remains identity-based.
 
 `Deque<T>` provides:
 

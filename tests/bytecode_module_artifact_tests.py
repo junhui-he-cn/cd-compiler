@@ -340,7 +340,100 @@ def main() -> int:
                 f"exit={operator_run.returncode}\nstdout={operator_run.stdout}\nstderr={operator_run.stderr}"
             )
 
-    print("module bytecode artifact tests: import-order, function, and operator module sets validated")
+        recursive_fixture = Path(__file__).resolve().parent / "golden" / "recursive_node_import"
+        recursive_source = recursive_fixture / "input.cd"
+        recursive_output_dir = Path(temporary) / "recursive-modules"
+        emitted_recursive = run([
+            str(compiler),
+            "--emit-module-bytecode",
+            str(recursive_output_dir),
+            str(recursive_source),
+        ])
+        if emitted_recursive.returncode != 0 or emitted_recursive.stdout or emitted_recursive.stderr:
+            return fail(
+                "recursive module emission failed\n"
+                f"exit={emitted_recursive.returncode}\nstdout={emitted_recursive.stdout}"
+                f"\nstderr={emitted_recursive.stderr}"
+            )
+
+        recursive_artifacts = sorted(recursive_output_dir.glob("module-*.cdbc"))
+        if len(recursive_artifacts) != 2:
+            return fail(
+                "expected two recursive module artifacts, found "
+                f"{[path.name for path in recursive_artifacts]}"
+            )
+
+        recursive_entry_text = None
+        recursive_dependency_text = None
+        for artifact in recursive_artifacts:
+            text = artifact.read_text(encoding="utf-8")
+            dumped = run([
+                "cargo",
+                "run",
+                "--quiet",
+                "--manifest-path",
+                str(manifest),
+                "--",
+                "dump",
+                str(artifact),
+            ])
+            if dumped.returncode != 0 or dumped.stdout != text or dumped.stderr:
+                return fail(
+                    f"{artifact.name} failed Rust recursive artifact dump\n"
+                    f"exit={dumped.returncode}\nstdout={dumped.stdout}\nstderr={dumped.stderr}"
+                )
+            if "  entry = true\n" in text:
+                recursive_entry_text = text
+            elif "  entry = false\n" in text:
+                recursive_dependency_text = text
+            else:
+                return fail(f"{artifact.name} has no recursive entry declaration")
+
+        if recursive_entry_text is None or recursive_dependency_text is None:
+            return fail("did not identify recursive entry and dependency artifacts")
+        if 'kind=import at=0 requested="./lib.cd"' not in recursive_entry_text:
+            return fail("recursive entry artifact did not preserve its dependency marker")
+        if "struct " not in recursive_entry_text or "assign_field" not in recursive_entry_text:
+            return fail("recursive entry artifact did not use existing struct field operations")
+        if "new_ref" in recursive_entry_text or "new_ref" in recursive_dependency_text:
+            return fail("recursive artifact introduced an unsupported reference opcode")
+
+        recursive_linked_path = Path(temporary) / "recursive-linked.cdbc"
+        linked_recursive = run([
+            "cargo",
+            "run",
+            "--quiet",
+            "--manifest-path",
+            str(manifest),
+            "--",
+            "link",
+            str(recursive_output_dir),
+            str(recursive_linked_path),
+        ])
+        if linked_recursive.returncode != 0 or linked_recursive.stdout or linked_recursive.stderr:
+            return fail(
+                "recursive module link failed\n"
+                f"exit={linked_recursive.returncode}\nstdout={linked_recursive.stdout}"
+                f"\nstderr={linked_recursive.stderr}"
+            )
+        recursive_run = run([
+            "cargo",
+            "run",
+            "--quiet",
+            "--manifest-path",
+            str(manifest),
+            "--",
+            "run",
+            str(recursive_linked_path),
+        ])
+        if recursive_run.returncode != 0 or recursive_run.stdout != "nil\n20\n" or recursive_run.stderr:
+            return fail(
+                "linked recursive module execution mismatch\n"
+                f"exit={recursive_run.returncode}\nstdout={recursive_run.stdout}"
+                f"\nstderr={recursive_run.stderr}"
+            )
+
+    print("module bytecode artifact tests: import-order, function, operator, and recursive module sets validated")
     return 0
 
 

@@ -78,6 +78,15 @@ ModuleInterface makeInterface()
         "__method_Box_operator_Less#8"});
     interfaceInfo.structs.push_back(std::move(box));
 
+    ModuleInterfaceStruct node;
+    node.name = "Node";
+    node.genericParameters = {"T"};
+    node.genericParameterConstraints = {nullptr};
+    node.fields.push_back(ModuleInterfaceField{
+        "next",
+        nullableType(namedStructType("Node", {typeParameterType("T")}))});
+    interfaceInfo.structs.push_back(std::move(node));
+
     ModuleInterfaceEnum option;
     option.name = "Option";
     option.genericParameters = {"T"};
@@ -138,7 +147,7 @@ int main()
     assert(loaded.artifact->interfaceInfo.moduleId == 0);
     assert(!loaded.artifact->interfaceInfo.sourceId.valid());
     assert(loaded.artifact->interfaceInfo.values.size() == 3);
-    assert(loaded.artifact->interfaceInfo.structs.size() == 1);
+    assert(loaded.artifact->interfaceInfo.structs.size() == 2);
     assert(loaded.artifact->interfaceInfo.structs.front().hasPrivateFields);
     assert(loaded.artifact->interfaceInfo.enums.size() == 1);
     assert(loaded.artifact->interfaceInfo.dependencies.front().importedModuleId == 0);
@@ -158,6 +167,12 @@ int main()
         == std::vector<std::string>{"T"});
     assert(loaded.artifact->interfaceInfo.structs.front().operators.front().returnType.kind
         == StaticType::Bool);
+    assert(loaded.artifact->interfaceInfo.structs.size() == 2);
+    const ModuleInterfaceStruct& node = loaded.artifact->interfaceInfo.structs.back();
+    assert(node.name == "Node");
+    assert(node.genericParameters == std::vector<std::string>{"T"});
+    assert(node.fields.size() == 1);
+    assert(typeInfoName(node.fields.front().type) == "optional<Node<T>>");
 
     ModuleInterface withoutOperators = makeInterface();
     withoutOperators.structs.front().operators.clear();
@@ -165,6 +180,11 @@ int main()
     ModuleInterface linkageChanged = makeInterface();
     linkageChanged.structs.front().operators.front().resolvedName += "-changed";
     assert(moduleInterfaceArtifactHash(linkageChanged) != moduleInterfaceArtifactHash(artifact.interfaceInfo));
+    ModuleInterface recursiveShapeChanged = makeInterface();
+    recursiveShapeChanged.structs.back().fields.front().type
+        = arrayType(namedStructType("Node", {typeParameterType("T")}));
+    assert(moduleInterfaceArtifactHash(recursiveShapeChanged)
+        != moduleInterfaceArtifactHash(artifact.interfaceInfo));
 
     std::string legacyWithoutOperators = text;
     const std::size_t operatorStart = legacyWithoutOperators.find("  operators = 2\n");

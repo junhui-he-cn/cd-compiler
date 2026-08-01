@@ -1,0 +1,13 @@
+Program
+  Module 0
+    Struct Node<T> {value: T, next: optional<Node<T>>}
+    Export Node
+  Module 1 entry
+    Import "./lib.cd"
+    Let tail: Node<number> = (construct Node<number> value: 2 next: nil)
+    Let head: Node<number> = (construct Node<number> value: 1 next: tail)
+    Let alias = tail
+    Expr (= (field head next) nil)
+    Expr (= (field alias value) 20)
+    Print (field head next)
+    Print (field tail value)

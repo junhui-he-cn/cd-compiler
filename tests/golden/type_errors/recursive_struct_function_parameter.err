@@ -1,1 +1,0 @@
-Type error at 1:31: recursive struct field `acceptNext` references `Node`

@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use crate::runtime::{ArrayValue, FunctionValue, MapValue, RangeValue, StructValue, VariantValue};
+use std::collections::HashSet;
 use std::fmt;
 
 #[derive(Clone, Debug)]
@@ -197,70 +198,97 @@ fn format_number(value: f64) -> String {
     }
 }
 
+fn format_value(value: &Value, active_references: &mut HashSet<(u8, usize)>) -> String {
+    match value {
+        Value::Nil => "nil".to_string(),
+        Value::Number(value) => format_number(*value),
+        Value::Bool(value) => if *value { "true" } else { "false" }.to_string(),
+        Value::String(value) => value.clone(),
+        Value::Function(function) => format!("<fn {}>", function.name),
+        Value::Array(array) => {
+            let reference = (0, array.identity);
+            if !active_references.insert(reference) {
+                return "<cycle>".to_string();
+            }
+            let elements = array.elements.borrow();
+            let mut output = String::from("[");
+            for (index, element) in elements.iter().enumerate() {
+                if index != 0 {
+                    output.push_str(", ");
+                }
+                output.push_str(&format_value(element, active_references));
+            }
+            output.push(']');
+            active_references.remove(&reference);
+            output
+        }
+        Value::Map(map) => {
+            let reference = (1, map.identity);
+            if !active_references.insert(reference) {
+                return "<cycle>".to_string();
+            }
+            let entries = map.entries.borrow();
+            let mut output = String::from("map{");
+            for (index, (key, value)) in entries.iter().enumerate() {
+                if index != 0 {
+                    output.push_str(", ");
+                }
+                output.push_str(&format_value(key, active_references));
+                output.push_str(": ");
+                output.push_str(&format_value(value, active_references));
+            }
+            output.push('}');
+            active_references.remove(&reference);
+            output
+        }
+        Value::Range(range) => format!("range({}, {}, {})", range.start, range.stop, range.step),
+        Value::Struct(value) => {
+            let reference = (2, value.identity);
+            if !active_references.insert(reference) {
+                return "<cycle>".to_string();
+            }
+            let fields = value.fields.borrow();
+            let mut output = String::from("{");
+            for (index, (name, field_value)) in fields.iter().enumerate() {
+                if index != 0 {
+                    output.push_str(", ");
+                }
+                output.push_str(name);
+                output.push_str(": ");
+                output.push_str(&format_value(field_value, active_references));
+            }
+            output.push('}');
+            active_references.remove(&reference);
+            output
+        }
+        Value::Variant(value) => {
+            let mut output = format!("{}.{}", value.enum_name, value.variant_name);
+            if !value.fields.is_empty() {
+                output.push('(');
+                for (index, field) in value.fields.iter().enumerate() {
+                    if index != 0 {
+                        output.push_str(", ");
+                    }
+                    output.push_str(&format_value(field, active_references));
+                }
+                output.push(')');
+            }
+            output
+        }
+    }
+}
+
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Nil => write!(f, "nil"),
-            Self::Number(value) => write!(f, "{}", format_number(*value)),
-            Self::Bool(value) => write!(f, "{}", if *value { "true" } else { "false" }),
-            Self::String(value) => write!(f, "{}", value),
-            Self::Function(function) => write!(f, "<fn {}>", function.name),
-            Self::Array(array) => {
-                write!(f, "[")?;
-                let elements = array.elements.borrow();
-                for (index, value) in elements.iter().enumerate() {
-                    if index != 0 {
-                        write!(f, ", ")?;
-                    }
-                    write!(f, "{}", value)?;
-                }
-                write!(f, "]")
-            }
-            Self::Map(map) => {
-                write!(f, "map{{")?;
-                let entries = map.entries.borrow();
-                for (index, (key, value)) in entries.iter().enumerate() {
-                    if index != 0 {
-                        write!(f, ", ")?;
-                    }
-                    write!(f, "{}: {}", key, value)?;
-                }
-                write!(f, "}}")
-            }
-            Self::Range(range) => write!(f, "range({}, {}, {})", range.start, range.stop, range.step),
-            Self::Struct(value) => {
-                write!(f, "{{")?;
-                let fields = value.fields.borrow();
-                for (index, (name, field_value)) in fields.iter().enumerate() {
-                    if index != 0 {
-                        write!(f, ", ")?;
-                    }
-                    write!(f, "{}: {}", name, field_value)?;
-                }
-                write!(f, "}}")
-            }
-            Self::Variant(value) => {
-                write!(f, "{}.{}", value.enum_name, value.variant_name)?;
-                if !value.fields.is_empty() {
-                    write!(f, "(")?;
-                    for (index, field) in value.fields.iter().enumerate() {
-                        if index != 0 {
-                            write!(f, ", ")?;
-                        }
-                        write!(f, "{}", field)?;
-                    }
-                    write!(f, ")")?;
-                }
-                Ok(())
-            }
-        }
+        let mut active_references = HashSet::new();
+        f.write_str(&format_value(self, &mut active_references))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::Value;
-    use crate::runtime::VariantValue;
+    use crate::runtime::{Heap, VariantValue};
 
     #[test]
     fn formats_primitives_like_cpp_runtime() {
@@ -270,6 +298,43 @@ mod tests {
         assert_eq!(Value::boolean(true).to_string(), "true");
         assert_eq!(Value::boolean(false).to_string(), "false");
         assert_eq!(Value::string("hello").to_string(), "hello");
+    }
+
+    #[test]
+    fn formats_recursive_structs_with_a_cycle_marker() {
+        let mut heap = Heap::new();
+        let node = heap
+            .allocate_struct(Some("Node".to_string()), Vec::new())
+            .expect("node identity should be available");
+        let Value::Struct(struct_value) = &node else {
+            panic!("expected struct value");
+        };
+        struct_value
+            .fields
+            .borrow_mut()
+            .push(("next".to_string(), node.clone()));
+
+        assert!(node.runtime_equals(&node));
+        assert_eq!(node.to_string(), "{next: <cycle>}");
+    }
+
+    #[test]
+    fn formats_repeated_struct_aliases_without_false_cycle_markers() {
+        let mut heap = Heap::new();
+        let child = heap
+            .allocate_struct(Some("Node".to_string()), vec![("value".to_string(), Value::number(1.0))])
+            .expect("child identity should be available");
+        let parent = heap
+            .allocate_struct(
+                Some("Pair".to_string()),
+                vec![
+                    ("left".to_string(), child.clone()),
+                    ("right".to_string(), child),
+                ],
+            )
+            .expect("parent identity should be available");
+
+        assert_eq!(parent.to_string(), "{left: {value: 1}, right: {value: 1}}");
     }
 
     #[test]

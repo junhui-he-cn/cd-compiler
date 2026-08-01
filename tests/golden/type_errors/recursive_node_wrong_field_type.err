@@ -1,0 +1,3 @@
+Type error at 2:22: field `next` expects optional<Node>, got number
+  let invalid = Node { next: 1 };
+                       ^
