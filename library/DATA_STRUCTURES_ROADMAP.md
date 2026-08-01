@@ -1,6 +1,6 @@
 # 数据结构与算法库总纲
 
-> 状态：规划稿（2026-07-27）
+> 状态：规划稿（2026-07-31）
 >
 > 本文规划的是使用 Compiler Design 公共语言编写的用户库，不要求先修改
 > 编译器、字节码格式或 Rust VM。实现时以项目的
@@ -39,6 +39,7 @@
 - `Result<T, E>`：用于携带成功值或错误值的泛型枚举。
 - `List<T>`：递归泛型枚举表示的不可变持久化链表。
 - `Tree<T>`：递归泛型枚举表示的不可变二叉树，提供遍历和结构统计。
+- 数值树编解码：`serializeNumericTree`/`deserializeNumericTree` 使用固定前序文本格式。
 - 路径型 LCA：`treeLowestCommonAncestor` 使用 `0/1` 根路径定位重复值节点。
 - BST 辅助：基于 `Tree<T>` 和 `less` 的查找、插入、删除、最值及前驱/后继。
 - `AvlTree<T>`：数组节点和整数索引的可变平衡搜索树，节点索引不暴露给调用者。
@@ -50,8 +51,12 @@
 - 数组基础算法：`reverseArray`、`rotateArray`、`linearSearch`、`countValue`、`isSorted`。
 - 频率统计：`frequencyEntries`、`mostFrequent`。
 - 数组排序：稳定插入排序 `sortArray`、`sortArrayInPlace`、希尔排序 `shellSort`、
-  选择排序、冒泡排序、归并排序 `mergeSort`、快速排序 `quickSort`/`quickSortInPlace` 和堆排序
+  选择排序、冒泡排序、归并排序 `mergeSort`、数值计数排序 `countingSort`、
+  快速排序 `quickSort`/`quickSortInPlace` 和堆排序
   `heapSort`/`heapSortInPlace`。
+- 选择算法：`topKSmallest`、`topKLargest`、`kthSmallest`、`kthLargest`（三向
+  quickselect 定位后只对选中段归并排序；`topK` 平均 `O(n + k log k)`、`kth`
+  平均 `O(n)`，当前中点 pivot 的最坏复杂度为 `O(n²)`，不承诺相等元素稳定顺序）。
 - 数组窗口算法：`chunkArray`、`slidingWindows`、`prefixSums`。
 - 数组前缀/差分与单调栈：`differenceArray`、`prefixMinimums`、`prefixMaximums`、
   `nextGreaterValues`、`nextSmallerValues`。
@@ -59,7 +64,7 @@
 - 贪心区间调度：`selectNonOverlappingIntervals`。
 - 区间资源分配：`minimumIntervalRooms`。
 - 跳跃游戏贪心：`canReachEnd`、`minimumJumps`。
-- Huffman 贪心核心：`huffmanMergeCost`。
+- Huffman 贪心核心：`huffmanMergeCost`（最小堆实现，`O(n log n)`）。
 - 双指针算法：`mergeSortedNumbers`、`twoSumSorted`、`threeSumZero`、`threeSumClosest`。
 - 多路有序数组合并：`mergeSortedArrays`。
 - 逆序对统计：`countInversions`。
@@ -76,28 +81,33 @@
 - 一维 DP：`climbStairs`、`maxNonAdjacentSum`、`minCoinCount`。
 - 网格/字符串 DP：`uniqueGridPaths`、`uniqueGridPathsWithObstacles`、
   `minGridPathSum`、`editDistance`。
-- 序列 DP：`longestIncreasingSubsequenceLength`、`longestCommonSubsequenceLength`、
-  `longestCommonSubstringLength`。
+- 序列 DP：`longestIncreasingSubsequenceLength`、`longestIncreasingSubsequence`（两者均为
+  `O(n log n)` 长度/重建）、
+  `longestCommonSubsequenceLength`、`longestCommonSubsequence`、
+  `longestCommonSubstringLength`、`longestCommonSubstring`。
 - 区间 DP：`matrixChainCost`、`mergeStonesCost`。
 - 二分查找：`lowerBound`、`upperBound`、`binarySearch`。
 - 字符串比较辅助：`compareStrings`、`stringLess`（当前限定可打印 ASCII）。
-- 字符串匹配：`findSubstring`、`prefixFunction`、`zFunction`、`kmpSearch`、`isPalindrome`。
-- Trie：`Trie`、`newTrie`、`has`、`startsWith`、`wordsWithPrefix`。
+- 字符串匹配：`findSubstring`、`prefixFunction`、`zFunction`、`kmpSearch`、`isPalindrome`、
+  `minimumWindowSubstring`、`canSegmentString`。
+- Trie：`Trie`、`newTrie`、`insert`、`discard`、`has`、`startsWith`、`wordsWithPrefix`。
 - Fenwick 树：数值 `FenwickTree`，支持点更新、前缀和、区间和与快照。
 - 线段树：数值 `SegmentTree`，支持点更新、区间和、区间最小值与快照。
 - 稀疏表：数值 `SparseTable`，静态半开区间最小值/最大值查询。
 - 矩阵：不可变数值 `Matrix`，矩形校验、访问、转置与乘法。
 - 并查集：整数顶点 `DisjointSet`，支持路径压缩和按大小合并。
-- 图基础结构：整数顶点数组邻接表 `Graph`，支持有向/无向边。
+- 图基础结构：整数顶点数组邻接表 `Graph`，支持有向/无向边的增加和删除。
 - 图遍历：`breadthFirstOrder`、`depthFirstOrder`。
 - 无向连通性：`connectedComponents`、`isBipartite`。
 - 无向割点与桥：`articulationPoints`、`bridges`。
 - 欧拉路径：无向图 `eulerTrail`。
 - 无权图路径：`shortestDistances`、`shortestPath`。
 - DAG 视图：`inDegrees`、`topologicalOrder`、`hasCycle`。
+- 关键路径：`criticalPath`，在非负权 DAG 上返回从起点出发的最长距离、父节点和拓扑序。
 - 加权图：非负 `WeightedEdge`/`WeightedGraph`、Dijkstra、Floyd-Warshall、最大流、最小割、Prim 与 Kruskal 最小生成森林。
 - 有符号加权图：`SignedWeightedGraph`、`BellmanFordResult` 与 Bellman-Ford 负环检测。
-- 强连通分量：有向图的 `stronglyConnectedComponents`。
+- 强连通分量：有向图的 `stronglyConnectedComponents`（Kosaraju）和
+  `stronglyConnectedComponentsTarjan`。
 
 它们的现有 API 和示例继续作为兼容基线。后续新增 API 不应悄悄改变空值、
 快照或引用共享语义。
@@ -280,10 +290,10 @@ enum Result<T, E> {
 不变，时间复杂度为 `O(n^2)`。
 `threeSumClosest` 在排序副本上用双指针寻找距离目标最近的三数和；少于三个值返回
 `nil`，相同距离取较小和，输入保持不变，时间复杂度为 `O(n^2)`，额外空间为 `O(n)`。
-`mergeSortedArrays<T>` 接受多个按同一 `less` 比较器排序的数组，逐轮扫描各数组
-当前头部并返回一个新的扁平数组；比较器等价时按输入数组下标优先，因此跨输入
-数组保持稳定。空数组集合或全空输入返回 `[]`，算法时间复杂度为 `O(n*k)`，其中
-`k` 是输入数组数量，位置数组额外占用 `O(k)`，输出占用 `O(n)`；输入数组不会被修改。
+`mergeSortedArrays<T>` 接受多个按同一 `less` 比较器排序的数组，使用当前头部
+最小堆返回一个新的扁平数组；比较器等价时按输入数组下标优先，因此跨输入数组
+保持稳定。空数组集合或全空输入返回 `[]`，算法时间复杂度为 `O(n log k)`，其中
+`k` 是输入数组数量，堆额外占用 `O(k)`，输出占用 `O(n)`；输入数组不会被修改。
 `uniqueValues`、`intersectionValues`、`unionValues` 和 `differenceValues` 已
 提供保序去重、交集、并集和差集的线性扫描版本。
 `windowSums` 使用滚动和生成每个固定宽度窗口的和，`maxWindowSum` 在这些
@@ -305,11 +315,16 @@ enum Result<T, E> {
 语言层现在额外提供 Unicode scalar-value 字符串排序和比较运算符。
 `findSubstring`、`prefixFunction`、`zFunction` 和 `kmpSearch` 使用现有 Unicode scalar-value
 字符串位置语义；`isPalindrome` 按 scalar value 比较字符，不依赖 ASCII 排序。
-`longestUniqueSubstringLength` 用数组窗口扫描 Unicode scalar value，返回最长无重复
-子串长度；`longestPalindromicSubstring` 用奇偶中心扩展返回最左最长回文子串，空串
-分别返回 `0` 和空串，当前实现时间复杂度均为 `O(n^2)`。
-`Trie` 使用数组节点和线性边查找，支持 Unicode scalar-value 字符、重复插入去重
-以及按首次插入的边顺序返回前缀结果，不依赖通用哈希。
+`longestUniqueSubstringLength` 用 string-keyed map 保存最后出现位置和滑动窗口，返回
+最长无重复子串长度，平均为 `O(n)`；`longestPalindromicSubstring` 用 Manacher 半径数组
+返回最左最长回文子串，空串分别返回 `0` 和空串，后者为 `O(n)` 时间和 `O(n)` 辅助空间。
+`longestUniqueSubarrayLength<T: Eq>` 对任意可相等比较的数组元素返回最长无重复
+连续区间长度；它保持输入不变，空数组返回 `0`，使用不依赖通用哈希的数组窗口扫描，
+最坏时间复杂度为 `O(n^2)`、额外空间为 `O(1)`。
+`Trie` 使用数组节点和线性边查找，支持 Unicode scalar-value 字符、重复插入去重、
+`discard` 删除及按首次插入的边顺序返回前缀结果，不依赖通用哈希。删除前缀词会
+保留子词，删除最后一个分支会移除父节点上的边；节点槽位不复用，避免暴露不稳定
+的节点索引。
 `peakIndex` 在 `O(log n)` 时间内返回一个弱峰值；`isMountainArray` 用线性扫描
 验证严格先升后降，`mountainPeakIndex` 在验证后用二分查找峰顶。空数组或非严格
 山脉返回 `nil` 峰值结果。
@@ -325,8 +340,9 @@ enum Result<T, E> {
 为 `O(n)`，额外数组空间为 `O(n)`。
 `shellSort` 使用从 `n / 2` 开始不断折半的 gap 序列和分组插入排序，返回浅拷贝，
 不保证稳定性；当前序列的最坏时间复杂度为 `O(n^2)`，额外结果空间为 `O(n)`。
-`quickSort` 和 `quickSortInPlace` 使用中点 pivot 的原地分区版本；它们不保证
-稳定性，平均为 `O(n log n)`，最坏为 `O(n^2)`。
+`quickSort` 和 `quickSortInPlace` 使用中点 pivot 的三向原地分区版本；它们不保证
+稳定性，平均为 `O(n log n)`，最坏为 `O(n^2)`，并通过先递归较小分区、循环处理
+较大分区把递归栈限制在 `O(log n)`；全等值区间只需一次线性分区。
 `heapSort` 和 `heapSortInPlace` 使用 comparator 定义的相反堆序完成原地堆排序，
 不保证稳定性，时间复杂度为 `O(n log n)`。
 `rotateArray` 和 `isSorted` 已补充为不改变输入的旋转与有序性检查辅助。
@@ -335,7 +351,7 @@ enum Result<T, E> {
 `DisjointSet` 已提供整数顶点的路径压缩与按大小合并版本；越界顶点仍遵循
 数组索引的运行时边界行为。
 `Graph` 已提供整数顶点的去重邻接表；无向边写入两侧邻接数组但只计数一次，
-无效顶点查询返回安全空结果。
+非整数或越界顶点查询返回安全空结果。
 `breadthFirstOrder` 和 `depthFirstOrder` 已提供基于邻接插入顺序的 BFS/DFS，
 只返回起点所在可达分量。
 `connectedComponents` 已提供无向图的升序根节点 BFS 分量划分；有向图查询返回
@@ -353,12 +369,13 @@ enum Result<T, E> {
 `stronglyConnectedComponents` 已提供迭代 Kosaraju 版本；组件顺序按完成序，
 组件内部按 DFS 发现序，不对结果额外排序。
 `WeightedGraph` 和 Dijkstra 查询已提供非负数权重版本；负权边不加入图，当前
-实现使用数组扫描选择最短未访问顶点。
+实现使用带 stale-entry 检查的最小堆，等距时按较小顶点 ID 确定顺序，复杂度为
+`O((V + E) log V)`。
 `SignedWeightedGraph` 单独接受负权边，避免改变 Dijkstra、最小生成森林和最大流
 的非负权前置条件。`bellmanFord` 返回带父节点的可空距离数组，并将无效起点和
 从起点可达的负环分别报告为 `BellmanFordError`。
-`minimumSpanningForest` 已提供无向加权图的 Prim 版本；非连通输入返回森林，
-有向输入返回同顶点数的空森林。
+`minimumSpanningForest` 已提供无向加权图的最小堆 Prim 版本；非连通输入返回森林，
+有向输入返回同顶点数的空森林，复杂度为 `O((V + E) log V)`。
 `minimumSpanningForestKruskal` 已提供基于边排序和并查集的等价版本，保留非连通
 输入的森林语义，并对有向输入返回空森林。
 `allPairsWeightedDistances` 已提供非负权图的 Floyd-Warshall 全源距离矩阵，
@@ -404,9 +421,9 @@ enum Result<T, E> {
 | 插入排序 | `O(n^2)`，小数组表现好，稳定 | 已完成 |
 | 希尔排序 | 折半 gap 序列，通常不稳定 | 已完成 |
 | 归并排序 | `O(n log n)`，稳定，需额外数组 | 第一批 |
-| 快速排序 | 平均 `O(n log n)`，最坏 `O(n^2)` | 第一批/需栈深度策略 |
+| 快速排序 | 平均 `O(n log n)`，最坏 `O(n^2)`，栈深 `O(log n)` | 已完成 |
 | 堆排序 | `O(n log n)`，原地，不稳定 | 第一批，复用堆 |
-| 计数排序 | `O(n+k)`，仅适合受限整数域 | 数值专题 |
+| 计数排序 | `O(n+k)`，稀疏值域回退归并排序 | 已完成（数值专题） |
 | 基数排序 | `O(d(n+k))`，依赖整数表示 | 等待数值/位运算契约 |
 | 桶排序 | 依赖分布和桶策略 | 后续 |
 
@@ -418,7 +435,9 @@ enum Result<T, E> {
 - 括号匹配 `isBalancedBrackets` 已完成；表达式后缀化和后缀表达式求值；
 - 单调栈求下一个更大/更小元素、直方图最大矩形 `largestHistogramArea` 已完成；
 - BFS 使用队列，DFS 使用显式栈；
-- 堆化、堆排序、前 `k` 个元素、第 `k` 大/小元素；
+- 堆化、堆排序、前 `k` 个元素、第 `k` 大/小元素；选择 API 已使用三向
+  quickselect 和选中段排序，保持输入不变、非法参数和比较器排序契约；相等
+  元素的相对顺序不属于 API 保证；
 - 两个优先队列求数据流中位数；
 - 多路有序流合并（数组版本 `mergeSortedArrays` 已完成）；
 - 任务调度、区间资源分配和会议室数量。
@@ -431,7 +450,7 @@ enum Result<T, E> {
 - 前插、尾插、拼接、反转；
 - 截取、丢弃和两个有序不可变链表的稳定归并；
 - 合并两个有序链表；
-- 找中点、判断回文：`listMiddle`、`listIsPalindrome` 已完成；检测环；
+- 找中点、判断回文：`listMiddle` 使用快慢游标，`listIsPalindrome` 已完成；检测环；
 - 删除倒数第 `n` 个元素：`listRemoveFromEnd` 已完成；
 - 两链表相交点。
 
@@ -441,13 +460,15 @@ enum Result<T, E> {
 
 当前已完成不可变 `Tree<T>` 的遍历、统计、平衡/宽度检查、根到叶路径和
 数值路径和，以及基于它的基础 BST 操作；`AvlTree<T>` 和 `RedBlackTree<T>` 使用
-数组节点实现了可变旋转、颜色修复和平衡维护。路径型 LCA 已完成，序列化仍属于后续专题。
+数组节点实现了可变旋转、颜色修复和平衡维护。路径型 LCA 和数值树序列化已完成；
+通用 `Tree<T>` 的文本 codec 仍不承诺。
 
 - 前序、中序、后序和层序遍历；
 - 高度、大小、叶子数、最大宽度、平衡检查；
 - BST 查找、插入、删除、最小/最大、前驱/后继；
 - 路径型最近公共祖先、根到叶路径、路径和；
-- 序列化/反序列化（先固定字符串格式）；
+- 数值 `Tree<number>` 的前序序列化/反序列化：`#` 表示空树，节点使用
+  `value,left,right`，非法格式、缺失子树或尾随内容返回 `nil`；
 - `AvlTree<T>` 的 AVL 旋转和平衡维护；
 - `RedBlackTree<T>` 的颜色修复、旋转和平衡维护；
 - Fenwick/线段树的建树、更新、前缀/区间查询；
@@ -467,7 +488,7 @@ enum Result<T, E> {
 - 可处理负边的 Bellman-Ford；
 - 全源最短路 Floyd-Warshall；
 - Kruskal、Prim 最小生成树；
-- 强连通分量（Kosaraju 优先，Tarjan 后续）；
+- 强连通分量（Kosaraju 与 Tarjan）；
 - 桥和割点；
 - 欧拉路径/回路；
 - 最大流/最小割作为高级专题。
@@ -481,11 +502,13 @@ enum Result<T, E> {
 - 前缀函数和 KMP；
 - Z 函数；
 - 回文判断、无重复子串长度、最长回文子串已完成；
-- 字符频率、字谜/异位词判断、滑动窗口匹配；
+- 字符频率、字谜/异位词判断、滑动窗口匹配 `minimumWindowSubstring` 已完成，
+  字符串基础键 map 版本平均为 `O(n)`；
 - Trie 前缀查找和补全；
 - Rabin-Karp 作为哈希契约确定后的可选实现；
 - 编辑距离、最长公共子序列、最长公共子串；
-- 字符串分割和字典匹配。
+- 字符串分割和字典匹配 `canSegmentString` 已完成，使用 Trie 从可达位置做
+  前缀遍历，避免逐终点扫描整个字典。
 
 字符串位置必须遵守项目文档的 Unicode scalar value 规则，不能把字节下标
 当作公共 API 的默认下标。
@@ -493,7 +516,7 @@ enum Result<T, E> {
 ### 5.9 数值与基础数学算法
 
 - `gcd`、`lcm`、扩展欧几里得；
-- 快速幂、阶乘、斐波那契、2×2 矩阵快速幂已完成；
+- 快速幂、阶乘、斐波那契（fast-doubling）、2×2 矩阵快速幂已完成；
 - 素数判断、埃氏筛、线性筛（若性能需要）；
 - 质因数分解、约数枚举已完成；
 - 最大公约数数组、前缀积已完成；差分已有数组辅助版本；
@@ -511,7 +534,7 @@ enum Result<T, E> {
 
 - 一维 DP：爬楼梯、打家劫舍、硬币兑换；
 - 背包：0/1、完全、多重背包已完成；
-- 序列：LIS、LCS、最长公共子串、编辑距离；
+- 序列：LIS（长度和 predecessor 重建均为 `O(n log n)`）、LCS、最长公共子串（长度和重建）、编辑距离；
 - 网格：路径计数、障碍物路径、最小路径和已完成；
 - 区间 DP：矩阵链、二路合并石子已完成；
 - 贪心：区间调度、区间资源分配、跳跃游戏、Huffman 合并核心已完成；

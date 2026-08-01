@@ -85,7 +85,7 @@ impl Graph {
   }
 
   fun validVertex(vertex: number): bool {
-    return vertex >= 0 && vertex < this.adjacency.len();
+    return floor(vertex) == vertex && vertex >= 0 && vertex < this.adjacency.len();
   }
 
   fun neighborIndex(from: number, to: number): number {
@@ -115,6 +115,34 @@ impl Graph {
       this.adjacency[to].push(from);
     }
     this.edges += 1;
+    return true;
+  }
+
+  fun removeEdge(from: number, to: number): bool {
+    if (!this.validVertex(from) || !this.validVertex(to)) {
+      return false;
+    }
+    let index = this.neighborIndex(from, to);
+    if (index < 0) {
+      return false;
+    }
+    while (index + 1 < this.adjacency[from].len()) {
+      this.adjacency[from][index] = this.adjacency[from][index + 1];
+      index += 1;
+    }
+    this.adjacency[from].pop();
+
+    if (!this.directed && from != to) {
+      let reverseIndex = this.neighborIndex(to, from);
+      if (reverseIndex >= 0) {
+        while (reverseIndex + 1 < this.adjacency[to].len()) {
+          this.adjacency[to][reverseIndex] = this.adjacency[to][reverseIndex + 1];
+          reverseIndex += 1;
+        }
+        this.adjacency[to].pop();
+      }
+    }
+    this.edges -= 1;
     return true;
   }
 
@@ -837,6 +865,93 @@ fun stronglyConnectedComponents(graph: Graph): [[number]] {
   return components;
 }
 
+struct TarjanSccState {
+  indices: [number],
+  lowLinks: [number],
+  onStack: [bool],
+  stack: [number],
+  nextIndex: number,
+  components: [[number]]
+}
+
+impl TarjanSccState {
+  fun visit(graph: Graph, vertex: number) {
+    this.indices[vertex] = this.nextIndex;
+    this.lowLinks[vertex] = this.nextIndex;
+    this.nextIndex += 1;
+    this.stack.push(vertex);
+    this.onStack[vertex] = true;
+
+    let neighbors = graph.adjacency[vertex];
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let neighbor = neighbors[neighborIndex];
+      if (this.indices[neighbor] < 0) {
+        this.visit(graph, neighbor);
+        if (this.lowLinks[neighbor] < this.lowLinks[vertex]) {
+          this.lowLinks[vertex] = this.lowLinks[neighbor];
+        }
+      } else {
+        if (this.onStack[neighbor]
+            && this.indices[neighbor] < this.lowLinks[vertex]) {
+          this.lowLinks[vertex] = this.indices[neighbor];
+        }
+      }
+      neighborIndex += 1;
+    }
+
+    if (this.lowLinks[vertex] == this.indices[vertex]) {
+      let component: [number] = [];
+      while (true) {
+        let member = this.stack[this.stack.len() - 1];
+        this.stack.pop();
+        this.onStack[member] = false;
+        component.push(member);
+        if (member == vertex) {
+          break;
+        }
+      }
+      this.components.push(component);
+    }
+  }
+}
+
+fun stronglyConnectedComponentsTarjan(graph: Graph): [[number]] {
+  let components: [[number]] = [];
+  if (!graph.directed) {
+    return components;
+  }
+
+  let count = graph.vertexCount();
+  let indices: [number] = [];
+  let lowLinks: [number] = [];
+  let onStack: [bool] = [];
+  let index = 0;
+  while (index < count) {
+    indices.push(-1);
+    lowLinks.push(-1);
+    onStack.push(false);
+    index += 1;
+  }
+
+  let state = TarjanSccState {
+    indices: indices,
+    lowLinks: lowLinks,
+    onStack: onStack,
+    stack: [],
+    nextIndex: 0,
+    components: []
+  };
+  index = 0;
+  while (index < count) {
+    if (state.indices[index] < 0) {
+      state.visit(graph, index);
+    }
+    index += 1;
+  }
+  return state.components;
+}
+
 struct WeightedEdge {
   to: number,
   weight: number
@@ -858,7 +973,7 @@ impl WeightedGraph {
   }
 
   fun validVertex(vertex: number): bool {
-    return vertex >= 0 && vertex < this.adjacency.len();
+    return floor(vertex) == vertex && vertex >= 0 && vertex < this.adjacency.len();
   }
 
   fun edgeIndex(from: number, to: number): number {
@@ -891,6 +1006,34 @@ impl WeightedGraph {
     return true;
   }
 
+  fun removeEdge(from: number, to: number): bool {
+    if (!this.validVertex(from) || !this.validVertex(to)) {
+      return false;
+    }
+    let index = this.edgeIndex(from, to);
+    if (index < 0) {
+      return false;
+    }
+    while (index + 1 < this.adjacency[from].len()) {
+      this.adjacency[from][index] = this.adjacency[from][index + 1];
+      index += 1;
+    }
+    this.adjacency[from].pop();
+
+    if (!this.directed && from != to) {
+      let reverseIndex = this.edgeIndex(to, from);
+      if (reverseIndex >= 0) {
+        while (reverseIndex + 1 < this.adjacency[to].len()) {
+          this.adjacency[to][reverseIndex] = this.adjacency[to][reverseIndex + 1];
+          reverseIndex += 1;
+        }
+        this.adjacency[to].pop();
+      }
+    }
+    this.edges -= 1;
+    return true;
+  }
+
   fun neighbors(vertex: number): [WeightedEdge] {
     if (!this.validVertex(vertex)) {
       return [];
@@ -914,6 +1057,130 @@ fun newWeightedGraph(vertices: number, directed: bool): WeightedGraph {
   return WeightedGraph { adjacency: adjacency, directed: directed, edges: 0 };
 }
 
+enum CriticalPathError {
+  InvalidStart,
+  UndirectedGraph,
+  Cycle
+}
+
+struct CriticalPathResult {
+  distances: [optional<number>],
+  parents: [number],
+  order: [number]
+}
+
+fun criticalPath(
+    graph: WeightedGraph,
+    start: number
+): Result<CriticalPathResult, CriticalPathError> {
+  if (!graph.directed) {
+    return Result.Err<CriticalPathResult, CriticalPathError>(CriticalPathError.UndirectedGraph());
+  }
+  let count = graph.vertexCount();
+  if (start < 0 || start >= count || floor(start) != start) {
+    return Result.Err<CriticalPathResult, CriticalPathError>(CriticalPathError.InvalidStart());
+  }
+
+  let indegrees: [number] = [];
+  let index = 0;
+  while (index < count) {
+    indegrees.push(0);
+    index += 1;
+  }
+  let from = 0;
+  while (from < count) {
+    let neighbors = graph.neighbors(from);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      indegrees[neighbors[neighborIndex].to] += 1;
+      neighborIndex += 1;
+    }
+    from += 1;
+  }
+
+  let ready: [number] = [];
+  index = 0;
+  while (index < count) {
+    if (indegrees[index] == 0) {
+      ready.push(index);
+    }
+    index += 1;
+  }
+
+  let order: [number] = [];
+  let head = 0;
+  while (head < ready.len()) {
+    let vertex = ready[head];
+    head += 1;
+    order.push(vertex);
+    let neighbors = graph.neighbors(vertex);
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let target = neighbors[neighborIndex].to;
+      indegrees[target] -= 1;
+      if (indegrees[target] == 0) {
+        ready.push(target);
+      }
+      neighborIndex += 1;
+    }
+  }
+  if (order.len() != count) {
+    return Result.Err<CriticalPathResult, CriticalPathError>(CriticalPathError.Cycle());
+  }
+
+  let distanceValues: [number] = [];
+  let reachable: [bool] = [];
+  let parents: [number] = [];
+  index = 0;
+  while (index < count) {
+    distanceValues.push(0);
+    reachable.push(false);
+    parents.push(-1);
+    index += 1;
+  }
+  distanceValues[start] = 0;
+  reachable[start] = true;
+
+  let orderIndex = 0;
+  while (orderIndex < order.len()) {
+    from = order[orderIndex];
+    if (reachable[from]) {
+      let neighbors = graph.neighbors(from);
+      let neighborIndex = 0;
+      while (neighborIndex < neighbors.len()) {
+        let edge = neighbors[neighborIndex];
+        let candidate = distanceValues[from] + edge.weight;
+        if (!reachable[edge.to]) {
+          distanceValues[edge.to] = candidate;
+          reachable[edge.to] = true;
+          parents[edge.to] = from;
+        } else {
+          if (candidate > distanceValues[edge.to]) {
+            distanceValues[edge.to] = candidate;
+            parents[edge.to] = from;
+          }
+        }
+        neighborIndex += 1;
+      }
+    }
+    orderIndex += 1;
+  }
+
+  let distances: [optional<number>] = [];
+  index = 0;
+  while (index < count) {
+    if (reachable[index]) {
+      distances.push(distanceValues[index]);
+    } else {
+      distances.push(nil);
+    }
+    index += 1;
+  }
+
+  return Result.Ok<CriticalPathResult, CriticalPathError>(
+      CriticalPathResult { distances: distances, parents: parents, order: order });
+}
+
 struct SignedWeightedEdge {
   to: number,
   weight: number
@@ -935,7 +1202,7 @@ impl SignedWeightedGraph {
   }
 
   fun validVertex(vertex: number): bool {
-    return vertex >= 0 && vertex < this.adjacency.len();
+    return floor(vertex) == vertex && vertex >= 0 && vertex < this.adjacency.len();
   }
 
   fun edgeIndex(from: number, to: number): number {
@@ -965,6 +1232,34 @@ impl SignedWeightedGraph {
       this.adjacency[to].push(SignedWeightedEdge { to: from, weight: weight });
     }
     this.edges += 1;
+    return true;
+  }
+
+  fun removeEdge(from: number, to: number): bool {
+    if (!this.validVertex(from) || !this.validVertex(to)) {
+      return false;
+    }
+    let index = this.edgeIndex(from, to);
+    if (index < 0) {
+      return false;
+    }
+    while (index + 1 < this.adjacency[from].len()) {
+      this.adjacency[from][index] = this.adjacency[from][index + 1];
+      index += 1;
+    }
+    this.adjacency[from].pop();
+
+    if (!this.directed && from != to) {
+      let reverseIndex = this.edgeIndex(to, from);
+      if (reverseIndex >= 0) {
+        while (reverseIndex + 1 < this.adjacency[to].len()) {
+          this.adjacency[to][reverseIndex] = this.adjacency[to][reverseIndex + 1];
+          reverseIndex += 1;
+        }
+        this.adjacency[to].pop();
+      }
+    }
+    this.edges -= 1;
     return true;
   }
 
@@ -1079,47 +1374,54 @@ fun bellmanFord(
       BellmanFordResult { distances: distances, parents: parents });
 }
 
+struct WeightedDistanceEntry {
+  vertex: number,
+  distance: number
+}
+
+fun weightedDistanceLess(left: WeightedDistanceEntry, right: WeightedDistanceEntry): bool {
+  if (left.distance == right.distance) {
+    return left.vertex < right.vertex;
+  }
+  return left.distance < right.distance;
+}
+
 fun shortestWeightedDistances(graph: WeightedGraph, start: number): [number] {
   let distances: [number] = [];
-  let visited: [bool] = [];
   let count = graph.vertexCount();
   let index = 0;
   while (index < count) {
     distances.push(-1);
-    visited.push(false);
     index += 1;
   }
   if (start < 0 || start >= count) {
     return distances;
   }
   distances[start] = 0;
+  let pending = newBinaryHeap<WeightedDistanceEntry>(weightedDistanceLess);
+  pending.add(WeightedDistanceEntry { vertex: start, distance: 0 });
 
-  let step = 0;
-  while (step < count) {
-    let current = -1;
-    index = 0;
-    while (index < count) {
-      if (!visited[index] && distances[index] >= 0
-          && (current < 0 || distances[index] < distances[current])) {
-        current = index;
-      }
-      index += 1;
-    }
-    if (current < 0) {
+  while (!pending.isEmpty()) {
+    let entry = pending.take();
+    if (entry == nil) {
       break;
     }
-    visited[current] = true;
+    let current = entry.vertex;
+    let currentDistance = entry.distance;
+    if (currentDistance != distances[current]) {
+      continue;
+    }
     let neighbors = graph.neighbors(current);
     let neighborIndex = 0;
     while (neighborIndex < neighbors.len()) {
       let edge = neighbors[neighborIndex];
-      let candidate = distances[current] + edge.weight;
+      let candidate = currentDistance + edge.weight;
       if (distances[edge.to] < 0 || candidate < distances[edge.to]) {
         distances[edge.to] = candidate;
+        pending.add(WeightedDistanceEntry { vertex: edge.to, distance: candidate });
       }
       neighborIndex += 1;
     }
-    step += 1;
   }
   return distances;
 }
@@ -1329,31 +1631,26 @@ fun shortestWeightedPath(graph: WeightedGraph, start: number, goal: number): [nu
 
   let distances: [number] = [];
   let parents: [number] = [];
-  let visited: [bool] = [];
   let index = 0;
   while (index < count) {
     distances.push(-1);
     parents.push(-1);
-    visited.push(false);
     index += 1;
   }
   distances[start] = 0;
+  let pending = newBinaryHeap<WeightedDistanceEntry>(weightedDistanceLess);
+  pending.add(WeightedDistanceEntry { vertex: start, distance: 0 });
 
-  let step = 0;
-  while (step < count) {
-    let current = -1;
-    index = 0;
-    while (index < count) {
-      if (!visited[index] && distances[index] >= 0
-          && (current < 0 || distances[index] < distances[current])) {
-        current = index;
-      }
-      index += 1;
-    }
-    if (current < 0) {
+  while (!pending.isEmpty()) {
+    let entry = pending.take();
+    if (entry == nil) {
       break;
     }
-    visited[current] = true;
+    let current = entry.vertex;
+    let currentDistance = entry.distance;
+    if (currentDistance != distances[current]) {
+      continue;
+    }
     if (current == goal) {
       break;
     }
@@ -1361,14 +1658,14 @@ fun shortestWeightedPath(graph: WeightedGraph, start: number, goal: number): [nu
     let neighborIndex = 0;
     while (neighborIndex < neighbors.len()) {
       let edge = neighbors[neighborIndex];
-      let candidate = distances[current] + edge.weight;
+      let candidate = currentDistance + edge.weight;
       if (distances[edge.to] < 0 || candidate < distances[edge.to]) {
         distances[edge.to] = candidate;
         parents[edge.to] = current;
+        pending.add(WeightedDistanceEntry { vertex: edge.to, distance: candidate });
       }
       neighborIndex += 1;
     }
-    step += 1;
   }
 
   if (start != goal && parents[goal] < 0) {
@@ -1419,19 +1716,17 @@ fun minimumSpanningForest(graph: WeightedGraph): WeightedGraph {
     distances[root] = 0;
     parents[root] = -1;
     parentWeights[root] = -1;
-    let step = 0;
-    while (step < count) {
-      let current = -1;
-      index = 0;
-      while (index < count) {
-        if (!visited[index] && distances[index] >= 0
-            && (current < 0 || distances[index] < distances[current])) {
-          current = index;
-        }
-        index += 1;
-      }
-      if (current < 0) {
+    let pending = newBinaryHeap<WeightedDistanceEntry>(weightedDistanceLess);
+    pending.add(WeightedDistanceEntry { vertex: root, distance: 0 });
+    while (!pending.isEmpty()) {
+      let entry = pending.take();
+      if (entry == nil) {
         break;
+      }
+      let current = entry.vertex;
+      let currentDistance = entry.distance;
+      if (visited[current] || currentDistance != distances[current]) {
+        continue;
       }
       visited[current] = true;
       if (parents[current] >= 0) {
@@ -1446,10 +1741,10 @@ fun minimumSpanningForest(graph: WeightedGraph): WeightedGraph {
           distances[edge.to] = edge.weight;
           parents[edge.to] = current;
           parentWeights[edge.to] = edge.weight;
+          pending.add(WeightedDistanceEntry { vertex: edge.to, distance: edge.weight });
         }
         neighborIndex += 1;
       }
-      step += 1;
     }
     root += 1;
   }
@@ -1457,4 +1752,4 @@ fun minimumSpanningForest(graph: WeightedGraph): WeightedGraph {
 }
 
 
-export DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest;
+export DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge, SignedWeightedGraph, BellmanFordError, BellmanFordResult, CriticalPathError, CriticalPathResult, newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph, breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite, articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath, inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents, stronglyConnectedComponentsTarjan, criticalPath, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances, maxFlow, minCut, shortestWeightedPath, minimumSpanningForest;

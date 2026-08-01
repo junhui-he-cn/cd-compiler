@@ -111,6 +111,8 @@ let graph = ds.newGraph(3, false);
 graph.addEdge(0, 1);
 graph.addEdge(1, 2);
 print graph.neighbors(1);
+print graph.removeEdge(0, 1);
+print graph.edgeCount();
 print ds.breadthFirstOrder(graph, 0);
 print ds.depthFirstOrder(graph, 0);
 print ds.connectedComponents(graph);
@@ -125,6 +127,11 @@ dag.addEdge(0, 1);
 dag.addEdge(1, 2);
 print ds.inDegrees(dag);
 print ds.topologicalOrder(dag);
+
+let schedule = ds.newWeightedGraph(3, true);
+schedule.addEdge(0, 1, 3);
+schedule.addEdge(1, 2, 4);
+print ds.criticalPath(schedule, 0);
 print ds.hasCycle(dag);
 
 let weighted = ds.newWeightedGraph(3, false);
@@ -169,6 +176,11 @@ print ds.treeInorder(ordered);
 print ds.sortArray(values, ascending);
 print ds.shellSort(values, ascending);
 print ds.mergeSort(values, ascending);
+print ds.countingSort(values);
+print ds.topKSmallest(values, 2, ascending);
+print ds.topKLargest(values, 2, ascending);
+print ds.kthSmallest(values, 1, ascending);
+print ds.kthLargest(values, 1, ascending);
 print ds.countInversions(values);
 fun atMostThree(value: number): bool {
   return value <= 3;
@@ -224,6 +236,7 @@ print ds.compareStrings("ant", "apple");
 print ds.longestUniqueSubstringLength("abcabcbb");
 print ds.longestPalindromicSubstring("babad");
 print ds.longestCommonSubstringLength("ababc", "babca");
+print ds.longestCommonSubsequence("abcde", "ace");
 
 print ds.knapsack01([2, 3, 4], [3, 4, 5], 5);
 print ds.completeKnapsack([2, 3], [3, 4], 7);
@@ -419,8 +432,9 @@ These operations preserve the input lists. `listLength`/`listGet` and
 `listAppend` are `O(n)` in the traversed list, `listConcat` is `O(n)` in its
 left input and shares the right input, `listTake`/`listDrop` are `O(k)`, and
 `mergeSortedLists` is `O(n + m)` while sharing only its final untouched suffix.
-The three new algorithms use `O(n)` temporary array space and linear time;
-`listRemoveFromEnd` otherwise returns a persistent rebuilt list.
+`listMiddle` uses fast/slow list cursors in `O(n)` time and `O(1)` extra space.
+`listIsPalindrome` uses an `O(n)` temporary array, while `listRemoveFromEnd`
+uses an `O(n)` temporary array before returning a persistent rebuilt list.
 
 `Tree<T>` is an immutable recursive binary tree:
 
@@ -434,6 +448,10 @@ The three new algorithms use `O(n)` temporary array space and linear time;
   largest number of nodes on one level;
 - `treeRootToLeafPaths` — return fresh path arrays in left-to-right order;
 - `treeRootToLeafSums(tree: Tree<number>)` — return numeric root-to-leaf sums;
+- `serializeNumericTree(tree: Tree<number>): string` — encode a numeric tree in
+  pre-order as `#` for an empty tree or `value,left,right` for a node;
+- `deserializeNumericTree(text: string): optional<Tree<number>>` — parse that
+  format, returning `nil` for malformed input or trailing content;
 - `treeLowestCommonAncestor(tree, firstPath, secondPath): optional<T>` — return
   the value at the lowest common ancestor of two node paths.
 
@@ -450,6 +468,13 @@ and statistics are `O(n)`; recursive traversals use `O(h)` call-stack space,
 while level order, width, balance checking, and path collection use `O(n)`
 auxiliary space in the current implementation. Empty trees have size, height,
 leaf count, and maximum width zero; all traversals and path helpers return `[]`.
+
+Numeric serialization is deterministic and uses the language `str` rendering
+for node values. The wire format is pre-order: `#` means empty and each node is
+`value,left,right`, with no whitespace. Deserialization accepts signed decimal
+and scientific numeric text, but only for `Tree<number>`; malformed input,
+missing children, or trailing text returns `nil`. The recursive parser and
+serializer take `O(n)` time and `O(h)` call-stack space for a tree of height `h`.
 
 The BST helpers use the same `Tree<T>` representation and a caller-supplied
 `fun(T, T): bool` comparator:
@@ -646,9 +671,12 @@ near-constant time (`O(alpha(n))`), while construction is `O(n)`.
 `Graph` is an integer-vertex adjacency-list graph. `newGraph(vertices, directed)`
 creates vertices `[0, vertices)`; `addEdge` rejects invalid or duplicate edges,
 and undirected edges are stored in both adjacency lists while counting once.
-`neighbors` returns a fresh array, and invalid vertex queries return `false` or
-`[]`. Adjacency operations are linear in the degree because this version does
-not use a hash set.
+`removeEdge` removes one existing edge, updates both adjacency lists for an
+undirected graph, and returns whether the edge was present. Self-loops are
+stored and removed once; directed removal does not affect the reverse edge.
+`neighbors` returns a fresh array, and invalid or non-integral vertex queries
+return `false` or `[]`. Adjacency operations are linear in the degree because
+this version does not use a hash set.
 
 `breadthFirstOrder(graph, start)` and `depthFirstOrder(graph, start)` return
 reachable vertex orders from a start vertex. BFS uses a queue and DFS uses an
@@ -696,14 +724,33 @@ directed graph and returns components in finish-order discovery order, with
 each component listing vertices in its DFS discovery order. It returns `[]`
 for undirected graphs and uses `O(V + E)` time and `O(V + E)` auxiliary space.
 
+`stronglyConnectedComponentsTarjan(graph)` provides the recursive low-link
+variant for directed graphs. It returns components when each root completes,
+with members in stack-pop order, returns `[]` for undirected graphs, and uses
+`O(V + E)` time and `O(V)` auxiliary state plus recursion depth.
+
+`criticalPath(graph, start)` computes longest non-negative-weight paths from a
+start vertex in a directed acyclic `WeightedGraph`. A successful
+`CriticalPathResult` contains nullable `distances` (`nil` means unreachable),
+`parents`, and the stable Kahn topological `order`; equal-length alternatives
+keep the first predecessor encountered. It returns `UndirectedGraph` for an
+undirected input, `InvalidStart` for an invalid or non-integral start, and
+`Cycle` for a directed cycle. The algorithm runs in `O(V + E)` time and uses
+`O(V)` auxiliary space.
+
 `WeightedGraph` stores non-negative numeric edge weights. Its Dijkstra helpers
 `shortestWeightedDistances` and `shortestWeightedPath` return `-1`/`[]` for
-unreachable results and reject negative weights at insertion. The current array
-scan implementation runs in `O(V^2 + E)` time and `O(V)` auxiliary space.
+unreachable results and reject negative weights at insertion. A min-heap
+implementation with stale-entry checks runs in `O((V + E) log V)` time and
+`O(V + E)` auxiliary space; equal distances are settled by smaller vertex ID.
+`removeEdge` has the same symmetry and missing-edge behavior as `Graph`; removing
+an edge discards its stored weight and updates the edge count.
 
 `SignedWeightedGraph` is the separate signed-weight graph type. Its
 `addEdge` accepts negative weights while retaining duplicate/vertex validation;
-the existing non-negative `WeightedGraph` contract is unchanged.
+`removeEdge` removes directed or undirected edges without changing their signed
+weight validation contract. The existing non-negative `WeightedGraph` contract
+is unchanged.
 `bellmanFord(graph, start)` returns
 `Result<BellmanFordResult, BellmanFordError>`. A successful result contains
 nullable `distances` (`nil` means unreachable) and `parents`; invalid starts
@@ -714,8 +761,8 @@ space.
 `minimumSpanningForest(graph)` applies Prim's algorithm to an undirected
 `WeightedGraph`, preserves the vertex count, and returns a new undirected graph.
 Disconnected inputs produce one tree per component; directed inputs produce an
-empty forest with the same vertex count. The array-scan implementation runs in
-`O(V^2 + E)` time and `O(V)` auxiliary space.
+empty forest with the same vertex count. The min-heap implementation runs in
+`O((V + E) log V)` time and `O(V + E)` auxiliary space.
 
 `minimumSpanningForestKruskal(graph)` returns the same forest contract using
 weight-sorted edges and the array-backed `DisjointSet`. Ties are ordered by
@@ -793,6 +840,29 @@ the input unchanged. It uses bottom-up merge sort in `O(n log n)` time and
 `O(n)` temporary outer-array space. Equal comparator values keep their input
 order.
 
+`countingSort(values: [number])` returns a sorted copy of an integral numeric
+array, including negative values, without modifying the input. Empty input and
+non-integral input return `[]`. Dense bounded ranges use offset counting in
+`O(n + R)` time and `O(R)` auxiliary space, where `R` is `max - min + 1`; a
+sparse range falls back to numeric merge sort instead of allocating a count
+array proportional to a large gap. The fallback uses `O(n log n)` time and
+`O(n)` temporary space.
+
+`topKSmallest<T>(values, count, less)` and `topKLargest<T>(values, count, less)`
+return a new array containing at most `count` values in comparator order.
+The former returns the first values and the latter the last values of the
+ordered input; both clamp an oversized count to the input length and return
+`[]` for empty, non-positive, or non-integral counts. `kthSmallest<T>` and
+`kthLargest<T>` use a zero-based rank and return `nil` for an empty, negative,
+non-integral, or out-of-range rank. The selection functions copy the input,
+use three-way quickselect to isolate the requested prefix/suffix, and merge-sort
+only that selected segment before returning it. They take average `O(n + k log k)`
+time for `k = min(count, n)`, `O(n^2)` worst-case time with the current middle
+pivot, and `O(n + k)` outer-array space. The `kth` functions take average `O(n)`
+and `O(n^2)` worst-case time with `O(n)` work space. Inputs remain unchanged;
+comparator-equal values are ordered correctly but their relative order is not a
+stability guarantee.
+
 `countInversions(values)` counts pairs `i < j` for which
 `values[i] > values[j]`. It returns `0` for empty, one-element, or already
 non-decreasing inputs, leaves the input unchanged, and uses the same bottom-up
@@ -807,10 +877,12 @@ empty/order behavior.
 
 `quickSort<T>(values, less)` returns a sorted shallow copy, while
 `quickSortInPlace<T>(values, less)` sorts the supplied array. Quick sort is not
-stable; the middle-element pivot gives average `O(n log n)` time but the worst
-case remains `O(n^2)`. The copying version uses `O(n)` outer-array space, and
-the in-place version additionally uses recursion stack space proportional to
-the partition depth.
+stable; it uses a middle-element pivot and three-way partitioning, then
+recurses into the smaller side before iterating over the larger side. This gives
+average `O(n log n)` time, `O(n^2)` worst-case time for a bad pivot sequence,
+and `O(log n)` recursion stack depth even when the partitions are badly
+unbalanced. All-equal ranges are handled by one linear partition. The copying
+version uses `O(n)` outer-array space in addition to the bounded stack.
 
 `heapSort<T>(values, less)` returns a sorted shallow copy, while
 `heapSortInPlace<T>(values, less)` sorts the supplied array in place. Heap sort
@@ -861,6 +933,12 @@ subarray, or `nil` for an empty input. It preserves the input and handles an
 all-negative array by returning its least-negative element. The scan is `O(n)`
 time and `O(1)` extra space.
 
+`longestUniqueSubarrayLength<T: Eq>(values)` returns the maximum length of a
+contiguous range without repeated values. It accepts any equality-capable
+element type, leaves the input unchanged, and returns `0` for an empty array.
+The array-backed window scan takes `O(n^2)` worst-case time and `O(1)` extra
+space because the library does not require a generic hash table.
+
 The one-dimensional DP helpers are:
 
 - `climbStairs(steps): optional<number>` — count one-step/two-step climbs; `0` has one
@@ -894,14 +972,28 @@ helpers and the obstacle-path helper. `editDistance` uses `O(leftLength * rightL
 `O(rightLength)` space; numeric overflow remains outside the library contract.
 
 `longestIncreasingSubsequenceLength(values)` computes the strict numeric LIS
-length with `O(n^2)` time and `O(n)` space; equal values do not extend a
-subsequence. `longestCommonSubsequenceLength(left, right)` computes the LCS
+length with `O(n log n)` time and `O(n)` space using a tails array and lower-bound
+replacement; equal values do not extend a subsequence. `longestIncreasingSubsequence(values)` returns one strict numeric
+LIS as a new array, returns `[]` for empty input, and leaves the input unchanged.
+It uses tails, tail indices, and predecessor pointers with `O(n log n)` time and
+`O(n)` auxiliary space. Lower-bound replacement makes the selected LIS
+deterministic for a given input, but no particular alternate LIS ordering is
+promised. `longestCommonSubsequenceLength(left, right)` computes the LCS
 length over Unicode scalar values with `O(leftLength * rightLength)` time and
 `O(rightLength)` space.
+`longestCommonSubsequence(left, right)` reconstructs one longest common
+subsequence as a new string. It uses Unicode scalar-value positions and leaves
+both inputs unchanged. Empty inputs return `""`; when several choices have the
+same length, backtracking prefers the upper DP cell so the result is stable.
+The reconstruction table uses `O(leftLength * rightLength)` time and space.
 `longestCommonSubstringLength(left, right)` computes the longest contiguous
 common Unicode scalar-value run, returning its length. Empty inputs return `0`;
 the rolling-row DP uses `O(leftLength * rightLength)` time and
 `O(rightLength)` space.
+`longestCommonSubstring(left, right)` reconstructs one such run as a new string,
+returns `""` when no common run exists, leaves both inputs unchanged, and uses
+the same `O(leftLength * rightLength)` time and `O(rightLength)` space. Equal
+length candidates keep the first match found by the left-to-right DP scan.
 
 `matrixChainCost(dimensions)` computes the minimum scalar multiplication cost
 for matrices whose adjacent dimensions are given by the array. Positive integer
@@ -1016,18 +1108,47 @@ Unicode scalar-value offsets and return `[]` for an empty string.
 `isPalindrome` compares scalar values from both ends and treats an empty string
 as a palindrome. These functions do not normalize combining marks.
 
+`characterFrequency(text)` returns `MultiSetEntry<string>` values in first-seen
+character order, and `areAnagrams(left, right)` compares scalar-value
+multiplicities without normalizing text. Both use primitive string-keyed maps
+and take average `O(n)` time with `O(k)` auxiliary space for `k` distinct
+characters.
+
+`minimumWindowSubstring(text, pattern)` returns the shortest contiguous Unicode
+scalar-value span that contains every pattern character with the required
+multiplicity. It returns `""` for an empty pattern, an empty text, or no
+solution; equal-length candidates keep the leftmost window. Its primitive
+string-keyed sliding-window maps give average `O(n)` time and `O(k)` auxiliary
+space, where `k` is the number of distinct pattern characters.
+
+`canSegmentString(text, dictionary)` returns whether the text can be formed by
+concatenating whole dictionary words. Empty dictionary entries are ignored,
+empty text is segmentable, and a non-empty text with no valid segmentation
+returns `false`. Matching uses a Unicode scalar-value Trie and dynamic
+programming from reachable text positions. With `D` total dictionary
+characters, `w` maximum word length, and `e` maximum outgoing-edge scan, it
+takes `O((D + n * w) * e)` time and `O(D + n)` space; empty dictionary words
+are not inserted.
+
 `longestUniqueSubstringLength(text)` returns the length of the longest substring
-with no repeated Unicode scalar values. The current array-backed window scan
-takes `O(n^2)` time and `O(n)` temporary space; an empty string returns `0`.
-`longestPalindromicSubstring(text)` expands around odd and even centers and
-returns the leftmost longest palindrome, or `""` for empty input. It takes
-`O(n^2)` time and `O(1)` auxiliary space in addition to the returned substring.
+with no repeated Unicode scalar values. It uses a string-keyed last-seen map and
+a moving window for average `O(n)` time and `O(n)` space; an empty string
+returns `0`. This string-specific map use does not change the library's
+generic hash-container boundary.
+`longestPalindromicSubstring(text)` uses Manacher radii over Unicode scalar
+values and returns the leftmost longest palindrome, or `""` for empty input.
+It takes `O(n)` time and `O(n)` auxiliary space in addition to the returned
+substring.
 
 `Trie` is an array-node prefix tree. `insert(word)` returns `true` only when a
-new word is added; `has`, `startsWith`, and `wordsWithPrefix` handle empty and
-Unicode scalar-value strings. Prefix results use child insertion order rather
-than lexical sorting, and the current linear edge scans take `O(k)` per node
-lookup where `k` is that node's outgoing edge count.
+new word is added; `discard(word)` unmarks and removes a word, returning
+`false` when it was absent. Deleting a prefix word preserves its longer words,
+while deleting the last word on a branch prunes that branch. `has`,
+`startsWith`, and `wordsWithPrefix` handle empty and Unicode scalar-value
+strings. Prefix results use child insertion order rather than lexical sorting,
+and the current linear edge scans take `O(k)` per node lookup where `k` is that
+node's outgoing edge count. `discard` uses `O(n * k)` time in the word length
+and `O(n)` temporary path space.
 
 `FenwickTree` stores numeric values in an array-backed binary indexed tree:
 
@@ -1128,8 +1249,8 @@ and run in `O(n)` time with `O(1)` extra space.
 `huffmanMergeCost(weights)` returns the minimum total cost of repeatedly merging
 the two smallest non-negative weights. Empty and single-weight inputs cost `0`,
 negative weights return `nil`, and the input is unchanged. This is the numeric
-Huffman construction core; it does not assign symbol codes. The current
-array-only implementation takes `O(n^2)` time and `O(n)` temporary space.
+Huffman construction core; it does not assign symbol codes. The min-heap
+implementation takes `O(n log n)` time and `O(n)` temporary space.
 
 For non-decreasing numeric arrays, `mergeSortedNumbers(left, right)` returns a
 linear-time merged copy and `twoSumSorted(values, target)` uses two pointers to
@@ -1142,8 +1263,8 @@ arrays into one new array. It accepts a strict `fun(T, T): bool` comparator,
 does not modify the outer or inner input arrays, and returns `[]` for an empty
 collection of arrays or when all arrays are empty. Comparator-equivalent values
 are selected by increasing source-array index, so the merge is stable across
-the input arrays. Scanning all `k` current heads takes `O(n * k)` time and
-`O(k)` position space, in addition to the `O(n)` output.
+the input arrays. A min-heap of the `k` current heads takes `O(n log k)` time and
+`O(k)` heap space, in addition to the `O(n)` output.
 
 `threeSumZero(values)` returns unique nondecreasing triples whose values sum to
 zero. It sorts a shallow copy, uses two pointers, and keeps triples in the
@@ -1212,8 +1333,8 @@ integer exponent and returns `nil` for negative or non-integer exponents;
 `fibonacci(index)` likewise return `nil` for negative or non-integer inputs,
 with `factorial(0) == 1`, `fibonacci(0) == 0`, and `fibonacci(1) == 1`.
 `fastPower` takes `O(log exponent)` steps, while the current factorial and
-Fibonacci implementations take `O(value)`/`O(index)` steps; none define numeric
-overflow behavior.
+`factorial` takes `O(value)` steps and `fibonacci` uses fast doubling in
+`O(log index)` steps; none define numeric overflow behavior.
 
 ## Current language support
 
@@ -1254,14 +1375,19 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_fenwick`,
 `--case data_structures_segment_tree`,
 `--case data_structures_graph`, `--case data_structures_weighted_graph`,
+`--case data_structures_graph_remove_edge`,
+`--case data_structures_tree_serialization`,
 `--case algorithms_graph_topological`,
 `--case algorithms_graph_traversal`,
 `--case algorithms_graph_paths`,
 `--case algorithms_graph_bellman_ford`,
 `--case algorithms_graph_kruskal`,
+`--case algorithms_graph_tarjan`,
 `--case algorithms_string_matching`,
-`--case algorithms_string_trie`,
+`--case algorithms_string_trie`, `--case data_structures_trie_remove`,
 `--case algorithms_string_sequences`,
+`--case algorithms_string_window`,
+`--case algorithms_string_dictionary`,
 `--case algorithms_stack`,
 `--case algorithms_graph_max_flow`, `--case algorithms_graph_min_cut`,
 `--case array_algorithms_basic`,
@@ -1288,6 +1414,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case array_algorithms_search_peaks`,
 `--case array_algorithms_three_sum`, `--case array_algorithms_three_sum_closest`,
 `--case array_algorithms_two_pointer`,
-`--case array_algorithms_sets`, or `--case array_algorithms_window_stats` for
+`--case array_algorithms_sets`, `--case array_algorithms_unique_subarray`, or
+`--case array_algorithms_window_stats` for
 focused coverage. Every selected fixture contributes one result-validation
 check against its `run.out` file.

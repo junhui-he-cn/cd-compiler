@@ -243,6 +243,212 @@ fun treeRootToLeafSums(tree: Tree<number>): [number] {
   return result;
 }
 
+// Numeric tree encoding uses a compact pre-order grammar:
+// `#` is empty and `value,left,right` is a node. The parser is deliberately
+// numeric-only because a generic T has no stable text codec in the language.
+fun treeDigitValue(character: string): number {
+  if (character == "0") { return 0; }
+  if (character == "1") { return 1; }
+  if (character == "2") { return 2; }
+  if (character == "3") { return 3; }
+  if (character == "4") { return 4; }
+  if (character == "5") { return 5; }
+  if (character == "6") { return 6; }
+  if (character == "7") { return 7; }
+  if (character == "8") { return 8; }
+  if (character == "9") { return 9; }
+  return -1;
+}
+
+struct NumericTreeParser {
+  text: string,
+  position: number
+}
+
+impl NumericTreeParser {
+  fun atEnd(): bool {
+    return this.position >= this.text.len();
+  }
+
+  fun consume(separator: string): bool {
+    if (this.atEnd() || this.text.charAt(this.position) != separator) {
+      return false;
+    }
+    this.position += 1;
+    return true;
+  }
+
+  fun parseNumber(): optional<number> {
+    let start = this.position;
+    let sign = 1;
+    if (!this.atEnd() && this.text.charAt(this.position) == "-") {
+      sign = -1;
+      this.position += 1;
+    } else {
+      if (!this.atEnd() && this.text.charAt(this.position) == "+") {
+        this.position += 1;
+      }
+    }
+
+    let value = 0;
+    let integerDigits = 0;
+    while (!this.atEnd()) {
+      let digit = treeDigitValue(this.text.charAt(this.position));
+      if (digit < 0) {
+        break;
+      }
+      value = value * 10 + digit;
+      integerDigits += 1;
+      this.position += 1;
+    }
+    if (integerDigits == 0) {
+      this.position = start;
+      return nil;
+    }
+
+    if (!this.atEnd() && this.text.charAt(this.position) == ".") {
+      this.position += 1;
+      let fractionDigits = 0;
+      let divisor = 10;
+      while (!this.atEnd()) {
+        let digit = treeDigitValue(this.text.charAt(this.position));
+        if (digit < 0) {
+          break;
+        }
+        value += digit / divisor;
+        divisor *= 10;
+        fractionDigits += 1;
+        this.position += 1;
+      }
+      if (fractionDigits == 0) {
+        this.position = start;
+        return nil;
+      }
+    }
+
+    let exponentSign = 1;
+    let exponent = 0;
+    if (!this.atEnd()
+        && (this.text.charAt(this.position) == "e"
+            || this.text.charAt(this.position) == "E")) {
+      this.position += 1;
+      if (!this.atEnd() && this.text.charAt(this.position) == "-") {
+        exponentSign = -1;
+        this.position += 1;
+      } else {
+        if (!this.atEnd() && this.text.charAt(this.position) == "+") {
+          this.position += 1;
+        }
+      }
+
+      let exponentDigits = 0;
+      let exponentTooLarge = false;
+      while (!this.atEnd()) {
+        let digit = treeDigitValue(this.text.charAt(this.position));
+        if (digit < 0) {
+          break;
+        }
+        if (!exponentTooLarge) {
+          exponent = exponent * 10 + digit;
+          if (exponent > 1024) {
+            exponentTooLarge = true;
+          }
+        }
+        exponentDigits += 1;
+        this.position += 1;
+      }
+      if (exponentDigits == 0) {
+        this.position = start;
+        return nil;
+      }
+
+      if (exponentTooLarge) {
+        if (exponentSign < 0 || value == 0) {
+          value = 0;
+        } else {
+          this.position = start;
+          return nil;
+        }
+      } else {
+        let scaleIndex = 0;
+        while (scaleIndex < exponent) {
+          if (exponentSign < 0) {
+            value /= 10;
+          } else {
+            value *= 10;
+          }
+          scaleIndex += 1;
+        }
+      }
+    }
+
+    let result = sign * value;
+    let rendered = str(result);
+    if (rendered == "inf" || rendered == "-inf"
+        || rendered == "nan" || rendered == "-nan") {
+      this.position = start;
+      return nil;
+    }
+    return result;
+  }
+
+  fun parseTree(): optional<Tree<number>> {
+    if (this.atEnd()) {
+      return nil;
+    }
+    if (this.text.charAt(this.position) == "#") {
+      this.position += 1;
+      return Tree.Empty<number>();
+    }
+
+    let value = this.parseNumber();
+    if (value == nil) {
+      return nil;
+    }
+    let parsedValue = value;
+    if (!this.consume(",")) {
+      return nil;
+    }
+    let left = this.parseTree();
+    if (left == nil) {
+      return nil;
+    }
+    let parsedLeft = left;
+    if (!this.consume(",")) {
+      return nil;
+    }
+    let right = this.parseTree();
+    if (right == nil) {
+      return nil;
+    }
+    let parsedRight = right;
+    return Tree.Node(parsedValue, parsedLeft, parsedRight);
+  }
+}
+
+fun serializeNumericTree(tree: Tree<number>): string {
+  match tree {
+    Tree.Empty => { return "#"; }
+    Tree.Node(value, left, right) => {
+      return str(value) + "," + serializeNumericTree(left) + ","
+        + serializeNumericTree(right);
+    }
+  }
+  return "#";
+}
+
+fun deserializeNumericTree(text: string): optional<Tree<number>> {
+  if (text.len() == 0) {
+    return nil;
+  }
+  let parser = NumericTreeParser { text: text, position: 0 };
+  let tree = parser.parseTree();
+  if (tree == nil || !parser.atEnd()) {
+    return nil;
+  }
+  return tree;
+}
+
 fun treePathExists<T>(tree: Tree<T>, path: [number]): bool {
   let current = tree;
   let index = 0;
@@ -1272,4 +1478,4 @@ fun newRedBlackTree<T>(less: fun(T, T): bool): RedBlackTree<T> {
 }
 
 
-export Tree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced, treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, treeLowestCommonAncestor, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor, AvlTree, newAvlTree, RedBlackTree, newRedBlackTree;
+export Tree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount, treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced, treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, serializeNumericTree, deserializeNumericTree, treeLowestCommonAncestor, bstContains, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor, bstSuccessor, AvlTree, newAvlTree, RedBlackTree, newRedBlackTree;

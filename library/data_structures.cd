@@ -13,7 +13,8 @@ export Stack, Queue, Deque, RingBuffer, BinaryHeap, Option, Result, List,
 export Tree, emptyTree, treeNode, treeLeaf, treeSize, treeHeight, treeLeafCount,
        treePreorder, treeInorder, treePostorder, treeLevelOrder, treeIsBalanced,
        treeMaxWidth, treeRootToLeafPaths, treeRootToLeafSums, bstContains,
-       treeLowestCommonAncestor, bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor,
+       serializeNumericTree, deserializeNumericTree, treeLowestCommonAncestor,
+       bstInsert, bstDelete, bstMinimum, bstMaximum, bstPredecessor,
        bstSuccessor, AvlTree, newAvlTree, RedBlackTree, newRedBlackTree
        from "./trees.cd";
 
@@ -27,17 +28,20 @@ export LruCacheEntry, LruCache, newLruCache, LfuCacheEntry, LfuCache, newLfuCach
 
 export DisjointSet, Graph, WeightedEdge, WeightedGraph, SignedWeightedEdge,
        SignedWeightedGraph, BellmanFordError, BellmanFordResult,
+       CriticalPathError, CriticalPathResult,
        newDisjointSet, newGraph, newWeightedGraph, newSignedWeightedGraph,
        breadthFirstOrder, depthFirstOrder, connectedComponents, isBipartite,
        articulationPoints, bridges, eulerTrail, shortestDistances, shortestPath,
        inDegrees, topologicalOrder, hasCycle, stronglyConnectedComponents,
-       bellmanFord, shortestWeightedDistances, allPairsWeightedDistances,
+       stronglyConnectedComponentsTarjan,
+       criticalPath, bellmanFord, shortestWeightedDistances, allPairsWeightedDistances,
        maxFlow, minCut, shortestWeightedPath, minimumSpanningForest
        from "./graphs.cd";
 
 export Trie, newTrie, reverseArray, rotateArray, linearSearch, compareStrings,
        stringLess, findSubstring, prefixFunction, zFunction, kmpSearch,
-       isPalindrome, characterFrequency, areAnagrams,
+       isPalindrome, characterFrequency, areAnagrams, minimumWindowSubstring,
+       canSegmentString,
        longestUniqueSubstringLength, longestPalindromicSubstring,
        isBalancedBrackets
        from "./strings.cd";
@@ -53,7 +57,8 @@ export peakIndex, isMountainArray, mountainPeakIndex, lowerBound, upperBound,
        sortArrayInPlace, shellSort, selectionSort, selectionSortInPlace,
        bubbleSort, bubbleSortInPlace, mergeSort, countInversions, quickSort,
        stablePartition, quickSortInPlace,
-       heapSort, heapSortInPlace, chunkArray, slidingWindows,
+       heapSort, heapSortInPlace, countingSort, topKSmallest, topKLargest, kthSmallest,
+       kthLargest, chunkArray, slidingWindows,
        minimumSpanningForestKruskal
        from "./sorting.cd";
 
@@ -64,14 +69,16 @@ export prefixSums, differenceArray, prefixMinimums, prefixMaximums,
        mergeSortedArrays, twoSumSorted, threeSumZero, uniqueValues,
        threeSumClosest, intersectionValues,
        unionValues, differenceValues, frequencyEntries, mostFrequent,
-       windowSums, maxWindowSum, maxWindowValues, minWindowValues,
+       longestUniqueSubarrayLength, windowSums, maxWindowSum, maxWindowValues, minWindowValues,
        maxSubarraySum
        from "./array_algorithms.cd";
 
 export climbStairs, maxNonAdjacentSum, minCoinCount, uniqueGridPaths,
        uniqueGridPathsWithObstacles, minGridPathSum, editDistance,
-       longestIncreasingSubsequenceLength, longestCommonSubsequenceLength,
-       longestCommonSubstringLength,
+       longestIncreasingSubsequenceLength, longestIncreasingSubsequence,
+       longestCommonSubsequenceLength,
+       longestCommonSubsequence,
+       longestCommonSubstringLength, longestCommonSubstring,
        matrixChainCost, matrixPower2x2, mergeStonesCost, knapsack01,
        completeKnapsack, boundedKnapsack
        from "./dynamic_programming.cd";

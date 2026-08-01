@@ -553,11 +553,37 @@ fun listDrop<T>(list: List<T>, count: number): List<T> {
 }
 
 fun listMiddle<T>(list: List<T>): optional<T> {
-  let values = toArray(list);
-  if (values.len() == 0) {
-    return nil;
+  let slow = list;
+  let fast = list;
+  while (true) {
+    match fast {
+      List.Nil => { return head(slow); }
+      List.Cons(first, afterFirst) => {
+        match afterFirst {
+          List.Nil => { return head(slow); }
+          List.Cons(second, afterSecond) => {
+            match afterSecond {
+              List.Nil => {
+                match slow {
+                  List.Nil => { return nil; }
+                  List.Cons(value, rest) => { return head(rest); }
+                }
+              }
+              List.Cons(third, afterThird) => {
+                match slow {
+                  List.Nil => { return nil; }
+                  List.Cons(value, rest) => {
+                    slow = rest;
+                    fast = afterSecond;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
-  return values[floor(values.len() / 2)];
 }
 
 fun listIsPalindrome<T: Eq>(list: List<T>): bool {

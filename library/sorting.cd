@@ -260,41 +260,6 @@ fun kruskalEdgeLess(left: KruskalEdge, right: KruskalEdge): bool {
   return left.weight < right.weight;
 }
 
-fun minimumSpanningForestKruskal(graph: WeightedGraph): WeightedGraph {
-  let count = graph.vertexCount();
-  let forest = newWeightedGraph(count, false);
-  if (graph.directed) {
-    return forest;
-  }
-
-  let edges: [KruskalEdge] = [];
-  let from = 0;
-  while (from < count) {
-    let neighbors = graph.adjacency[from];
-    let neighborIndex = 0;
-    while (neighborIndex < neighbors.len()) {
-      let edge = neighbors[neighborIndex];
-      if (from < edge.to) {
-        edges.push(KruskalEdge { from: from, to: edge.to, weight: edge.weight });
-      }
-      neighborIndex += 1;
-    }
-    from += 1;
-  }
-
-  let ordered = sortArray(edges, kruskalEdgeLess);
-  let components = newDisjointSet(count);
-  let index = 0;
-  while (index < ordered.len()) {
-    let edge = ordered[index];
-    if (components.union(edge.from, edge.to)) {
-      forest.addEdge(edge.from, edge.to, edge.weight);
-    }
-    index += 1;
-  }
-  return forest;
-}
-
 fun mergeSort<T>(values: [T], less: fun(T, T): bool): [T] {
   let result = copy(values);
   let width = 1;
@@ -341,6 +306,212 @@ fun mergeSort<T>(values: [T], less: fun(T, T): bool): [T] {
     width *= 2;
   }
   return result;
+}
+
+fun countingSortNumberLess(left: number, right: number): bool {
+  return left < right;
+}
+
+fun countingSort(values: [number]): [number] {
+  let result: [number] = [];
+  if (values.len() == 0) {
+    return result;
+  }
+
+  let minimum = values[0];
+  let maximum = values[0];
+  let index = 0;
+  while (index < values.len()) {
+    let value = values[index];
+    if (floor(value) != value) {
+      return result;
+    }
+    if (value < minimum) {
+      minimum = value;
+    }
+    if (value > maximum) {
+      maximum = value;
+    }
+    index += 1;
+  }
+
+  let range = maximum - minimum + 1;
+  let denseLimit = values.len() * 8 + 1024;
+  if (range > denseLimit) {
+    return mergeSort(values, countingSortNumberLess);
+  }
+
+  let counts: [number] = [];
+  index = 0;
+  while (index < range) {
+    counts.push(0);
+    index += 1;
+  }
+  index = 0;
+  while (index < values.len()) {
+    counts[values[index] - minimum] += 1;
+    index += 1;
+  }
+
+  let offset = 0;
+  while (offset < counts.len()) {
+    let remaining = counts[offset];
+    while (remaining > 0) {
+      result.push(minimum + offset);
+      remaining -= 1;
+    }
+    offset += 1;
+  }
+  return result;
+}
+
+fun minimumSpanningForestKruskal(graph: WeightedGraph): WeightedGraph {
+  let count = graph.vertexCount();
+  let forest = newWeightedGraph(count, false);
+  if (graph.directed) {
+    return forest;
+  }
+
+  let edges: [KruskalEdge] = [];
+  let from = 0;
+  while (from < count) {
+    let neighbors = graph.adjacency[from];
+    let neighborIndex = 0;
+    while (neighborIndex < neighbors.len()) {
+      let edge = neighbors[neighborIndex];
+      if (from < edge.to) {
+        edges.push(KruskalEdge { from: from, to: edge.to, weight: edge.weight });
+      }
+      neighborIndex += 1;
+    }
+    from += 1;
+  }
+
+  let ordered = mergeSort(edges, kruskalEdgeLess);
+  let components = newDisjointSet(count);
+  let index = 0;
+  while (index < ordered.len()) {
+    let edge = ordered[index];
+    if (components.union(edge.from, edge.to)) {
+      forest.addEdge(edge.from, edge.to, edge.weight);
+    }
+    index += 1;
+  }
+  return forest;
+}
+
+struct ThreeWayPartition {
+  lessEnd: number,
+  equalEnd: number
+}
+
+fun partitionThreeWay<T>(
+    values: [T],
+    low: number,
+    high: number,
+    pivotIndex: number,
+    less: fun(T, T): bool
+): ThreeWayPartition {
+  let pivot = values[pivotIndex];
+  let lessEnd = low;
+  let greaterStart = high;
+  let index = low;
+  while (index <= greaterStart) {
+    if (less(values[index], pivot)) {
+      let value = values[lessEnd];
+      values[lessEnd] = values[index];
+      values[index] = value;
+      lessEnd += 1;
+      index += 1;
+    } else {
+      if (less(pivot, values[index])) {
+        let value = values[greaterStart];
+        values[greaterStart] = values[index];
+        values[index] = value;
+        greaterStart -= 1;
+      } else {
+        index += 1;
+      }
+    }
+  }
+  return ThreeWayPartition { lessEnd: lessEnd, equalEnd: greaterStart + 1 };
+}
+
+fun selectNthInPlace<T>(values: [T], target: number, less: fun(T, T): bool) {
+  let low = 0;
+  let high = values.len() - 1;
+  while (low < high) {
+    let pivotIndex = floor((low + high) / 2);
+    let partition = partitionThreeWay(values, low, high, pivotIndex, less);
+    if (target < partition.lessEnd) {
+      high = partition.lessEnd - 1;
+    } else {
+      if (target >= partition.equalEnd) {
+        low = partition.equalEnd;
+      } else {
+        return;
+      }
+    }
+  }
+}
+
+fun topKSmallest<T>(values: [T], count: number, less: fun(T, T): bool): [T] {
+  let result: [T] = [];
+  if (floor(count) != count || count <= 0 || values.len() == 0) {
+    return result;
+  }
+
+  let work = copy(values);
+  let limit = count;
+  if (limit > work.len()) {
+    limit = work.len();
+  }
+  selectNthInPlace(work, limit - 1, less);
+  let index = 0;
+  while (index < limit) {
+    result.push(work[index]);
+    index += 1;
+  }
+  return mergeSort(result, less);
+}
+
+fun topKLargest<T>(values: [T], count: number, less: fun(T, T): bool): [T] {
+  let result: [T] = [];
+  if (floor(count) != count || count <= 0 || values.len() == 0) {
+    return result;
+  }
+
+  let work = copy(values);
+  let limit = count;
+  if (limit > work.len()) {
+    limit = work.len();
+  }
+  let start = work.len() - limit;
+  selectNthInPlace(work, start, less);
+  while (start < work.len()) {
+    result.push(work[start]);
+    start += 1;
+  }
+  return mergeSort(result, less);
+}
+
+fun kthSmallest<T>(values: [T], rank: number, less: fun(T, T): bool): optional<T> {
+  if (floor(rank) != rank || rank < 0 || rank >= values.len()) {
+    return nil;
+  }
+  let work = copy(values);
+  selectNthInPlace(work, rank, less);
+  return work[rank];
+}
+
+fun kthLargest<T>(values: [T], rank: number, less: fun(T, T): bool): optional<T> {
+  if (floor(rank) != rank || rank < 0 || rank >= values.len()) {
+    return nil;
+  }
+  let work = copy(values);
+  let target = work.len() - rank - 1;
+  selectNthInPlace(work, target, less);
+  return work[target];
 }
 
 fun countInversions(values: [number]): number {
@@ -421,33 +592,28 @@ fun stablePartition<T>(values: [T], predicate: fun(T): bool): [T] {
 }
 
 fun quickSortRange<T>(values: [T], start: number, end: number, less: fun(T, T): bool) {
-  if (start >= end) {
-    return;
-  }
+  let low = start;
+  let high = end;
+  while (low < high) {
+    let pivotIndex = floor((low + high) / 2);
+    let partition = partitionThreeWay(values, low, high, pivotIndex, less);
+    let leftEnd = partition.lessEnd - 1;
+    let rightStart = partition.equalEnd;
+    let leftSize = leftEnd - low + 1;
+    let rightSize = high - rightStart + 1;
 
-  let pivotIndex = floor((start + end) / 2);
-  let pivotValue = values[pivotIndex];
-  values[pivotIndex] = values[end];
-  values[end] = pivotValue;
-
-  let pivot = values[end];
-  let store = start;
-  let index = start;
-  while (index < end) {
-    if (less(values[index], pivot)) {
-      let value = values[store];
-      values[store] = values[index];
-      values[index] = value;
-      store += 1;
+    if (leftSize < rightSize) {
+      if (low < leftEnd) {
+        quickSortRange(values, low, leftEnd, less);
+      }
+      low = rightStart;
+    } else {
+      if (rightStart < high) {
+        quickSortRange(values, rightStart, high, less);
+      }
+      high = leftEnd;
     }
-    index += 1;
   }
-
-  let value = values[store];
-  values[store] = values[end];
-  values[end] = value;
-  quickSortRange(values, start, store - 1, less);
-  quickSortRange(values, store + 1, end, less);
 }
 
 fun quickSortInPlace<T>(values: [T], less: fun(T, T): bool) {
@@ -552,4 +718,4 @@ fun slidingWindows<T>(values: [T], width: number): [[T]] {
 }
 
 
-export peakIndex, isMountainArray, mountainPeakIndex, lowerBound, upperBound, binarySearch, rotatedBinarySearch, countValue, isSorted, sortArray, sortArrayInPlace, shellSort, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, countInversions, stablePartition, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, minimumSpanningForestKruskal;
+export peakIndex, isMountainArray, mountainPeakIndex, lowerBound, upperBound, binarySearch, rotatedBinarySearch, countValue, isSorted, sortArray, sortArrayInPlace, shellSort, selectionSort, selectionSortInPlace, bubbleSort, bubbleSortInPlace, mergeSort, countingSort, topKSmallest, topKLargest, kthSmallest, kthLargest, countInversions, stablePartition, quickSort, quickSortInPlace, heapSort, heapSortInPlace, chunkArray, slidingWindows, minimumSpanningForestKruskal;

@@ -169,20 +169,30 @@ fun factorial(value: number): optional<number> {
   return result;
 }
 
+struct FibonacciPair {
+  current: number,
+  next: number
+}
+
+fun fibonacciPair(index: number): FibonacciPair {
+  if (index == 0) {
+    return FibonacciPair { current: 0, next: 1 };
+  }
+
+  let half = fibonacciPair(floor(index / 2));
+  let doubled = half.current * (2 * half.next - half.current);
+  let doubledNext = half.current * half.current + half.next * half.next;
+  if (floor(index / 2) * 2 == index) {
+    return FibonacciPair { current: doubled, next: doubledNext };
+  }
+  return FibonacciPair { current: doubledNext, next: doubled + doubledNext };
+}
+
 fun fibonacci(index: number): optional<number> {
   if (index < 0 || floor(index) != index) {
     return nil;
   }
-  let previous = 0;
-  let current = 1;
-  let step = 0;
-  while (step < index) {
-    let next = previous + current;
-    previous = current;
-    current = next;
-    step += 1;
-  }
-  return previous;
+  return fibonacciPair(index).current;
 }
 
 struct PriorityQueue<T> {

@@ -1,0 +1,8 @@
+import "../../data_structures.cd" as ds;
+
+print ds.longestCommonSubsequence("abcde", "ace");
+print ds.longestCommonSubsequence("abc", "bac");
+print ds.longestCommonSubsequence("你🙂好", "🙂好你");
+print ds.longestCommonSubsequence("aaaa", "aa");
+print "empty=" + ds.longestCommonSubsequence("", "abc");
+print "none=" + ds.longestCommonSubsequence("abc", "XYZ");

@@ -12,3 +12,4 @@ print ds.fibonacci(0);
 print ds.fibonacci(1);
 print ds.fibonacci(10);
 print ds.fibonacci(2.5);
+print ds.fibonacci(10000000) != nil;

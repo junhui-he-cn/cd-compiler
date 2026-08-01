@@ -221,43 +221,132 @@ fun isPalindrome(text: string): bool {
 }
 
 fun characterFrequency(text: string): [MultiSetEntry<string>] {
-  let counts = newMultiSet<string>();
+  let counts: map<string, number> = {};
   let index = 0;
   while (index < text.len()) {
-    counts.add(text.charAt(index));
+    let character = text.charAt(index);
+    if (counts.contains(character)) {
+      counts[character] = counts[character] + 1;
+    } else {
+      counts[character] = 1;
+    }
     index += 1;
   }
-  return counts.entries();
+
+  let result: [MultiSetEntry<string>] = [];
+  let keys = counts.keys();
+  index = 0;
+  while (index < keys.len()) {
+    let character = keys[index];
+    result.push(MultiSetEntry<string> {
+      value: character,
+      count: counts[character]
+    });
+    index += 1;
+  }
+  return result;
 }
 
 fun areAnagrams(left: string, right: string): bool {
   if (left.len() != right.len()) {
     return false;
   }
-  let leftEntries = characterFrequency(left);
-  let rightEntries = characterFrequency(right);
+
+  let leftCounts: map<string, number> = {};
+  let rightCounts: map<string, number> = {};
   let index = 0;
-  while (index < leftEntries.len()) {
-    let leftEntry = leftEntries[index];
-    let rightIndex = 0;
-    let found = false;
-    while (rightIndex < rightEntries.len()) {
-      let rightEntry = rightEntries[rightIndex];
-      if (leftEntry.value == rightEntry.value) {
-        found = true;
-        if (leftEntry.count != rightEntry.count) {
-          return false;
-        }
-        break;
-      }
-      rightIndex += 1;
+  while (index < left.len()) {
+    let leftCharacter = left.charAt(index);
+    if (leftCounts.contains(leftCharacter)) {
+      leftCounts[leftCharacter] = leftCounts[leftCharacter] + 1;
+    } else {
+      leftCounts[leftCharacter] = 1;
     }
-    if (!found) {
+
+    let rightCharacter = right.charAt(index);
+    if (rightCounts.contains(rightCharacter)) {
+      rightCounts[rightCharacter] = rightCounts[rightCharacter] + 1;
+    } else {
+      rightCounts[rightCharacter] = 1;
+    }
+    index += 1;
+  }
+
+  let keys = leftCounts.keys();
+  index = 0;
+  while (index < keys.len()) {
+    let character = keys[index];
+    if (!rightCounts.contains(character) || leftCounts[character] != rightCounts[character]) {
       return false;
     }
     index += 1;
   }
   return true;
+}
+
+// Return the shortest contiguous text span containing every pattern character
+// with at least the pattern's multiplicity. Primitive string keys make the
+// sliding window independent from the library's deferred generic hash-map API.
+fun minimumWindowSubstring(text: string, pattern: string): string {
+  if (pattern.len() == 0 || text.len() == 0 || pattern.len() > text.len()) {
+    return "";
+  }
+
+  let required: map<string, number> = {};
+  let patternIndex = 0;
+  while (patternIndex < pattern.len()) {
+    let character = pattern.charAt(patternIndex);
+    if (required.contains(character)) {
+      required[character] = required[character] + 1;
+    } else {
+      required[character] = 1;
+    }
+    patternIndex += 1;
+  }
+
+  let window: map<string, number> = {};
+  let missing = pattern.len();
+  let left = 0;
+  let right = 0;
+  let bestStart = 0;
+  let bestLength = text.len() + 1;
+  while (right < text.len()) {
+    let entering = text.charAt(right);
+    if (required.contains(entering)) {
+      let before = 0;
+      if (window.contains(entering)) {
+        before = window[entering];
+      }
+      window[entering] = before + 1;
+      if (before < required[entering]) {
+        missing -= 1;
+      }
+    }
+    right += 1;
+
+    while (missing == 0) {
+      let length = right - left;
+      if (length < bestLength) {
+        bestStart = left;
+        bestLength = length;
+      }
+
+      let leaving = text.charAt(left);
+      if (required.contains(leaving)) {
+        let before = window[leaving];
+        window[leaving] = before - 1;
+        if (before <= required[leaving]) {
+          missing += 1;
+        }
+      }
+      left += 1;
+    }
+  }
+
+  if (bestLength > text.len()) {
+    return "";
+  }
+  return text.substr(bestStart, bestLength);
 }
 
 fun isBalancedBrackets(text: string): bool {
@@ -289,23 +378,24 @@ fun isBalancedBrackets(text: string): bool {
 }
 
 fun longestUniqueSubstringLength(text: string): number {
+  let lastSeen: map<string, number> = {};
   let best = 0;
   let start = 0;
-  while (start < text.len()) {
-    let seen: [string] = [];
-    let index = start;
-    while (index < text.len()) {
-      let character = text.charAt(index);
-      if (linearSearch(seen, character) >= 0) {
-        break;
+  let index = 0;
+  while (index < text.len()) {
+    let character = text.charAt(index);
+    if (lastSeen.contains(character)) {
+      let previous = lastSeen[character];
+      if (previous >= start) {
+        start = previous + 1;
       }
-      seen.push(character);
-      index += 1;
     }
-    if (seen.len() > best) {
-      best = seen.len();
+    lastSeen[character] = index;
+    let length = index - start + 1;
+    if (length > best) {
+      best = length;
     }
-    start += 1;
+    index += 1;
   }
   return best;
 }
@@ -314,38 +404,59 @@ fun longestPalindromicSubstring(text: string): string {
   if (text.len() == 0) {
     return "";
   }
-  let bestStart = 0;
-  let bestLength = 1;
+
+  // Empty separators distinguish even and odd centers without assuming that
+  // any particular Unicode scalar value is unavailable in the input.
+  let transformed: [string] = [""];
+  let index = 0;
+  while (index < text.len()) {
+    transformed.push(text.charAt(index));
+    transformed.push("");
+    index += 1;
+  }
+
+  let radii: [number] = [];
+  index = 0;
+  while (index < transformed.len()) {
+    radii.push(0);
+    index += 1;
+  }
+
   let center = 0;
-  while (center < text.len()) {
-    let left = center;
-    let right = center;
-    while (left >= 0 && right < text.len()
-        && text.charAt(left) == text.charAt(right)) {
-      let length = right - left + 1;
-      if (length > bestLength) {
-        bestStart = left;
-        bestLength = length;
+  let right = 0;
+  let bestCenter = 0;
+  let bestRadius = 0;
+  index = 0;
+  while (index < transformed.len()) {
+    let radius = 0;
+    if (index < right) {
+      let mirror = center * 2 - index;
+      radius = radii[mirror];
+      if (right - index < radius) {
+        radius = right - index;
       }
-      left -= 1;
-      right += 1;
     }
 
-    left = center;
-    right = center + 1;
-    while (left >= 0 && right < text.len()
-        && text.charAt(left) == text.charAt(right)) {
-      let length = right - left + 1;
-      if (length > bestLength) {
-        bestStart = left;
-        bestLength = length;
-      }
-      left -= 1;
-      right += 1;
+    while (index - radius - 1 >= 0
+        && index + radius + 1 < transformed.len()
+        && transformed[index - radius - 1] == transformed[index + radius + 1]) {
+      radius += 1;
     }
-    center += 1;
+    radii[index] = radius;
+
+    if (index + radius > right) {
+      center = index;
+      right = index + radius;
+    }
+    if (radius > bestRadius) {
+      bestCenter = index;
+      bestRadius = radius;
+    }
+    index += 1;
   }
-  return text.substr(bestStart, bestLength);
+
+  let bestStart = floor((bestCenter - bestRadius) / 2);
+  return text.substr(bestStart, bestRadius);
 }
 
 struct Trie {
@@ -409,6 +520,52 @@ impl Trie {
     return true;
   }
 
+  fun discard(word: string): bool {
+    let nodes: [number] = [0];
+    let edgePositions: [number] = [];
+    let node = 0;
+    let index = 0;
+    while (index < word.len()) {
+      let character = word.charAt(index);
+      let edge = 0;
+      while (edge < this.edgeCharacters[node].len()
+             && this.edgeCharacters[node][edge] != character) {
+        edge += 1;
+      }
+      if (edge >= this.edgeCharacters[node].len()) {
+        return false;
+      }
+      node = this.edgeChildren[node][edge];
+      nodes.push(node);
+      edgePositions.push(edge);
+      index += 1;
+    }
+
+    if (!this.terminal[node]) {
+      return false;
+    }
+    this.terminal[node] = false;
+
+    while (nodes.len() > 1) {
+      let child = nodes[nodes.len() - 1];
+      if (this.terminal[child] || this.edgeCharacters[child].len() > 0) {
+        break;
+      }
+      let parent = nodes[nodes.len() - 2];
+      let edge = edgePositions[edgePositions.len() - 1];
+      while (edge + 1 < this.edgeCharacters[parent].len()) {
+        this.edgeCharacters[parent][edge] = this.edgeCharacters[parent][edge + 1];
+        this.edgeChildren[parent][edge] = this.edgeChildren[parent][edge + 1];
+        edge += 1;
+      }
+      this.edgeCharacters[parent].pop();
+      this.edgeChildren[parent].pop();
+      nodes.pop();
+      edgePositions.pop();
+    }
+    return true;
+  }
+
   fun has(word: string): bool {
     let node = this.locate(word);
     return node >= 0 && this.terminal[node];
@@ -462,5 +619,46 @@ fun newTrie(): Trie {
   };
 }
 
+fun canSegmentString(text: string, dictionary: [string]): bool {
+  let trie = newTrie();
+  let dictionaryIndex = 0;
+  while (dictionaryIndex < dictionary.len()) {
+    let word = dictionary[dictionaryIndex];
+    if (word.len() > 0) {
+      trie.insert(word);
+    }
+    dictionaryIndex += 1;
+  }
 
-export Trie, newTrie, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, longestUniqueSubstringLength, longestPalindromicSubstring, isBalancedBrackets;
+  let reachable: [bool] = [];
+  let index = 0;
+  while (index <= text.len()) {
+    reachable.push(false);
+    index += 1;
+  }
+  reachable[0] = true;
+
+  let start = 0;
+  while (start < text.len()) {
+    if (reachable[start]) {
+      let node = 0;
+      let end = start;
+      while (end < text.len()) {
+        let child = trie.findChild(node, text.charAt(end));
+        if (child < 0) {
+          break;
+        }
+        node = child;
+        end += 1;
+        if (trie.terminal[node]) {
+          reachable[end] = true;
+        }
+      }
+    }
+    start += 1;
+  }
+  return reachable[text.len()];
+}
+
+
+export Trie, newTrie, reverseArray, rotateArray, linearSearch, compareStrings, stringLess, findSubstring, prefixFunction, zFunction, kmpSearch, isPalindrome, characterFrequency, areAnagrams, minimumWindowSubstring, canSegmentString, longestUniqueSubstringLength, longestPalindromicSubstring, isBalancedBrackets;

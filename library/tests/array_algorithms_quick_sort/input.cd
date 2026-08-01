@@ -29,3 +29,14 @@ print ds.quickSort<number>(empty, ascending);
 ds.quickSortInPlace(empty, descending);
 print empty;
 print ds.quickSort([42], ascending);
+
+let repeated: [number] = [];
+let repeatIndex = 0;
+while (repeatIndex < 2048) {
+  repeated.push(7);
+  repeatIndex += 1;
+}
+ds.quickSortInPlace(repeated, ascending);
+print repeated.len();
+print repeated[0];
+print repeated[repeated.len() - 1];

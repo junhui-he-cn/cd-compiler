@@ -1,4 +1,5 @@
 // Array, interval, two-pointer, and frequency algorithms.
+import "./collections.cd";
 import "./sets.cd";
 import "./strings.cd";
 import "./sorting.cd";
@@ -161,7 +162,7 @@ fun intervalLess(left: Interval, right: Interval): bool {
 }
 
 fun mergeIntervals(intervals: [Interval]): [Interval] {
-  let ordered = sortArray(intervals, intervalLess);
+  let ordered = mergeSort(intervals, intervalLess);
   let merged: [Interval] = [];
   let index = 0;
   while (index < ordered.len()) {
@@ -225,7 +226,7 @@ fun selectNonOverlappingIntervals(intervals: [Interval]): [Interval] {
     index += 1;
   }
 
-  let ordered = sortArray(intervals, intervalEndLess);
+  let ordered = mergeSort(intervals, intervalEndLess);
   let result: [Interval] = [];
   let hasLast = false;
   let lastEnd = 0;
@@ -259,8 +260,8 @@ fun minimumIntervalRooms(intervals: [Interval]): optional<number> {
     index += 1;
   }
 
-  let orderedStarts = sortArray(starts, numberLess);
-  let orderedEnds = sortArray(ends, numberLess);
+  let orderedStarts = mergeSort(starts, numberLess);
+  let orderedEnds = mergeSort(ends, numberLess);
   let startIndex = 0;
   let endIndex = 0;
   let active = 0;
@@ -341,50 +342,29 @@ fun minimumJumps(values: [number]): optional<number> {
 }
 
 fun huffmanMergeCost(weights: [number]): optional<number> {
-  let working: [number] = [];
+  let working = newBinaryHeap<number>(numberLess);
   let index = 0;
   while (index < weights.len()) {
     if (weights[index] < 0) {
       return nil;
     }
-    working.push(weights[index]);
+    working.add(weights[index]);
     index += 1;
   }
 
   let total = 0;
-  while (working.len() > 1) {
-    let firstIndex = 0;
-    let secondIndex = 1;
-    if (working[secondIndex] < working[firstIndex]) {
-      let swap = firstIndex;
-      firstIndex = secondIndex;
-      secondIndex = swap;
+  while (working.size() > 1) {
+    let first = working.take();
+    if (first == nil) {
+      return nil;
     }
-    index = 2;
-    while (index < working.len()) {
-      if (working[index] < working[firstIndex]) {
-        secondIndex = firstIndex;
-        firstIndex = index;
-      } else {
-        if (working[index] < working[secondIndex]) {
-          secondIndex = index;
-        }
-      }
-      index += 1;
+    let second = working.take();
+    if (second == nil) {
+      return nil;
     }
-
-    let merged = working[firstIndex] + working[secondIndex];
+    let merged = first + second;
     total += merged;
-    let remaining: [number] = [];
-    index = 0;
-    while (index < working.len()) {
-      if (index != firstIndex && index != secondIndex) {
-        remaining.push(working[index]);
-      }
-      index += 1;
-    }
-    remaining.push(merged);
-    working = remaining;
+    working.add(merged);
   }
   return total;
 }
@@ -413,34 +393,55 @@ fun mergeSortedNumbers(left: [number], right: [number]): [number] {
   return result;
 }
 
+struct MergeHead<T> {
+  value: T,
+  sequence: number,
+  position: number,
+  less: fun(T, T): bool
+}
+
+fun mergeHeadLess<T>(left: MergeHead<T>, right: MergeHead<T>): bool {
+  let compare = left.less;
+  if (compare(left.value, right.value)) {
+    return true;
+  }
+  if (compare(right.value, left.value)) {
+    return false;
+  }
+  return left.sequence < right.sequence;
+}
+
 fun mergeSortedArrays<T>(sequences: [[T]], less: fun(T, T): bool): [T] {
   let result: [T] = [];
-  let positions: [number] = [];
+  let heads = newBinaryHeap<MergeHead<T>>(mergeHeadLess);
   let sequenceIndex = 0;
   while (sequenceIndex < sequences.len()) {
-    positions.push(0);
+    if (sequences[sequenceIndex].len() > 0) {
+      heads.add(MergeHead<T> {
+        value: sequences[sequenceIndex][0],
+        sequence: sequenceIndex,
+        position: 0,
+        less: less
+      });
+    }
     sequenceIndex += 1;
   }
 
-  while (true) {
-    let bestSequence = -1;
-    sequenceIndex = 0;
-    while (sequenceIndex < sequences.len()) {
-      if (positions[sequenceIndex] < sequences[sequenceIndex].len()) {
-        if (bestSequence < 0
-            || less(sequences[sequenceIndex][positions[sequenceIndex]],
-                    sequences[bestSequence][positions[bestSequence]])) {
-          bestSequence = sequenceIndex;
-        }
-      }
-      sequenceIndex += 1;
-    }
-
-    if (bestSequence < 0) {
+  while (!heads.isEmpty()) {
+    let head = heads.take();
+    if (head == nil) {
       break;
     }
-    result.push(sequences[bestSequence][positions[bestSequence]]);
-    positions[bestSequence] += 1;
+    result.push(head.value);
+    let nextPosition = head.position + 1;
+    if (nextPosition < sequences[head.sequence].len()) {
+      heads.add(MergeHead<T> {
+        value: sequences[head.sequence][nextPosition],
+        sequence: head.sequence,
+        position: nextPosition,
+        less: less
+      });
+    }
   }
   return result;
 }
@@ -471,7 +472,7 @@ fun threeSumNumberLess(left: number, right: number): bool {
 
 fun threeSumZero(values: [number]): [[number]] {
   let result: [[number]] = [];
-  let sorted = sortArray(values, threeSumNumberLess);
+  let sorted = mergeSort(values, threeSumNumberLess);
   let index = 0;
   while (index + 2 < sorted.len()) {
     if (index > 0 && sorted[index] == sorted[index - 1]) {
@@ -511,7 +512,7 @@ fun threeSumClosest(values: [number], target: number): optional<number> {
     return nil;
   }
 
-  let sorted = sortArray(values, threeSumNumberLess);
+  let sorted = mergeSort(values, threeSumNumberLess);
   let found = false;
   let best = 0;
   let bestDistance = 0;
@@ -620,6 +621,32 @@ fun mostFrequent<T: Eq>(values: [T]): optional<T> {
       bestCount = entries[index].count;
     }
     index += 1;
+  }
+  return best;
+}
+
+fun longestUniqueSubarrayLength<T: Eq>(values: [T]): number {
+  let best = 0;
+  let start = 0;
+  let end = 0;
+  while (end < values.len()) {
+    let duplicateIndex = -1;
+    let check = start;
+    while (check < end) {
+      if (values[check] == values[end]) {
+        duplicateIndex = check;
+        break;
+      }
+      check += 1;
+    }
+    if (duplicateIndex >= 0) {
+      start = duplicateIndex + 1;
+    } else {
+      end += 1;
+      if (end - start > best) {
+        best = end - start;
+      }
+    }
   }
   return best;
 }
@@ -741,4 +768,4 @@ fun maxSubarraySum(values: [number]): optional<number> {
 }
 
 
-export prefixSums, differenceArray, prefixMinimums, prefixMaximums, nextGreaterValues, nextSmallerValues, largestHistogramArea, Interval, mergeIntervals, intersectIntervals, selectNonOverlappingIntervals, minimumIntervalRooms, canReachEnd, minimumJumps, huffmanMergeCost, mergeSortedNumbers, mergeSortedArrays, twoSumSorted, threeSumZero, threeSumClosest, uniqueValues, intersectionValues, unionValues, differenceValues, frequencyEntries, mostFrequent, windowSums, maxWindowSum, maxWindowValues, minWindowValues, maxSubarraySum;
+export prefixSums, differenceArray, prefixMinimums, prefixMaximums, nextGreaterValues, nextSmallerValues, largestHistogramArea, Interval, mergeIntervals, intersectIntervals, selectNonOverlappingIntervals, minimumIntervalRooms, canReachEnd, minimumJumps, huffmanMergeCost, mergeSortedNumbers, mergeSortedArrays, twoSumSorted, threeSumZero, threeSumClosest, uniqueValues, intersectionValues, unionValues, differenceValues, frequencyEntries, mostFrequent, longestUniqueSubarrayLength, windowSums, maxWindowSum, maxWindowValues, minWindowValues, maxSubarraySum;
