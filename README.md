@@ -582,6 +582,9 @@ existing key replaces its value and assigning a new key appends it. The
 `len(map)`. Equality between maps is identity-based, so aliases compare equal
 but separately constructed maps do not. Map values print as
 `map{key: value, ...}` in insertion order.
+The public library's `HashSet<T: Eq + Hash>` and `HashMap<K: Eq + Hash, V>`
+support identity-stable array, map, function, and named-struct keys through
+their own bucket tables; this does not widen built-in map key admission.
 `remove(map, key)` and `map.remove(key)` delete an existing entry in place and
 return its value; aliases observe the mutation. Removing a missing key is a
 runtime error (`map key not found`), and keys use the same primitive-only
@@ -641,8 +644,13 @@ The debug native stdlib function `typeOf(value)` returns the current runtime typ
 The `hash(value)` native function returns the deterministic 32-bit hash used by
 the generic `Hash` capability. It accepts known runtime values and constrained
 generic values; an unconstrained type parameter must add `T: Hash` before it can
-be hashed. Hash-based containers, generic map-key admission, and mutable-key
-ownership rules are not part of the current language slice.
+be hashed. The public library provides `HashSet<T: Eq + Hash>` and
+`HashMap<K: Eq + Hash, V>` using identity-stable semantics for mutable reference
+keys; aliases may mutate a stored key without changing its membership. These
+containers are library bucket tables and do not widen the built-in map's
+primitive-only key admission. User-defined capability witnesses and deep frozen
+key snapshots remain unsupported; the language does not define a separate
+ownership or freezing mechanism for hash keys.
 
 Supported expressions:
 

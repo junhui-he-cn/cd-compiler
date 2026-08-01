@@ -2385,6 +2385,29 @@ mod tests {
     }
 
     #[test]
+    fn hash_reference_key_identity_remains_stable_after_mutation() {
+        let program = empty_program();
+        let mut vm = VM::new(&program);
+        let key = vm.make_array(vec![Value::number(1.0)]);
+        let alias = key.clone();
+        let before = key.runtime_hash();
+
+        vm.execute_assign_index(
+            alias.clone(),
+            Value::number(0.0),
+            Value::number(2.0),
+        )
+        .expect("reference key mutation succeeds");
+
+        assert!(key.runtime_equals(&alias));
+        assert_eq!(key.runtime_hash(), before);
+        assert_eq!(key.to_string(), "[2]");
+
+        let distinct = vm.make_array(vec![Value::number(2.0)]);
+        assert!(!key.runtime_equals(&distinct));
+    }
+
+    #[test]
     fn map_preserves_order_and_identity_equality() {
         let program = empty_program();
         let mut vm = VM::new(&program);

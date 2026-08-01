@@ -1,0 +1,40 @@
+{
+  "decision_id": "M6-LANG-HASH-002",
+  "domain": "stable-generic-hash-keys",
+  "status": "implemented",
+  "question": "How can generic hash containers use mutable values as keys without undocumented ownership or aliasing rules?",
+  "decision": "Require Eq + Hash, preserve the existing equality/hash contract, and use identity-stable semantics for mutable reference values. Implement HashSet and HashMap as array-backed bucket tables without widening built-in map key admission.",
+  "key_semantics": {
+    "reference_values": [
+      "array identity",
+      "map identity",
+      "function identity",
+      "named struct identity"
+    ],
+    "value_values": [
+      "nil",
+      "bool",
+      "number",
+      "string",
+      "range"
+    ],
+    "enum_values": "structural tag and recursive payload semantics",
+    "equality_hash_law": "equal keys must have equal hashes",
+    "non_reflexive_keys": "rejected by the library API",
+    "copy_policy": "shallow alias retention; no freeze or deep copy"
+  },
+  "in_scope": [
+    "HashSet<T: Eq + Hash>",
+    "HashMap<K: Eq + Hash, V>",
+    "insertion-order snapshots",
+    "collision resolution and resizing",
+    "C++ and Rust reference-hash parity",
+    "generic missing-capability diagnostics"
+  ],
+  "deferred": [
+    "generic built-in map key admission",
+    "user-defined Eq/Hash capability witnesses",
+    "recursive mutable node ownership",
+    "deep immutable key snapshots"
+  ]
+}

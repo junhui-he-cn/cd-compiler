@@ -269,7 +269,7 @@ let box: Box<number> = Box { value: 42 };
 let result: Result<number> = Result.Ok(42);
 ```
 
-类型参数通常从实参、字段值或期望类型推断；也可以在调用或构造时显式提供。泛型参数按名义类型处理，结构体和枚举的泛型实参是不变的。`Eq`、`Ord` 和 `Hash` 只在编译期检查；多个 capability 可以使用 `+` 组合，例如 `T: Eq + Hash`。`Ord` 的内置满足关系包括 `number` 和 `string`，并且 `Ord` 同时满足 `Eq`；`Hash` 可通过 `hash(value)` 取得确定性的 32 位 FNV-1a 数值。当前仍没有用户自定义 capability 实现、哈希容器或可变 key 所有权规则。
+类型参数通常从实参、字段值或期望类型推断；也可以在调用或构造时显式提供。泛型参数按名义类型处理，结构体和枚举的泛型实参是不变的。`Eq`、`Ord` 和 `Hash` 只在编译期检查；多个 capability 可以使用 `+` 组合，例如 `T: Eq + Hash`。`Ord` 的内置满足关系包括 `number` 和 `string`，并且 `Ord` 同时满足 `Eq`；`Hash` 可通过 `hash(value)` 取得确定性的 32 位 FNV-1a 数值。公共库提供要求 `Eq + Hash` 的 `HashSet` 和 `HashMap`，数组、map、函数及命名结构体键使用稳定 identity，别名修改不会使键失效；内置 map 仍只允许基础键。当前仍没有用户自定义 capability 实现或深度冻结 key 快照。
 
 ## 4. 运算符和赋值
 
@@ -718,11 +718,11 @@ cargo run --manifest-path vm-rs/Cargo.toml -- run program.cdbc
 
 数组 helper 的语义如下：`push` 原地追加并返回 `nil`，`pop` 原地移除末项并返回它，空数组 `pop` 是运行时错误；`slice`、`copy`、`concat` 返回新的顶层数组但只做 shallow copy。`map`、`filter`、`flatMap`、`any`、`all`、`count`、`find`、`findIndex` 和 `reduce` 都先对源数组取快照，再从左到右调用回调。`flatMap` 只展开一层；`any`、`all`、`find` 和 `findIndex` 在结果确定后短路；`reduce` 必须显式提供 initial，空数组直接返回 initial。
 
-map 是有插入顺序的共享引用值。`map[key] = value` 会插入或更新，更新不会移动既有 key；缺失 key 的读取和 `remove` 会产生 `map key not found`。`clear` 原地清空并返回 `nil`；`keys`、`values` 返回按插入顺序排列的新数组；`merge(left, right)` 返回新 map，左侧顺序不变，右侧重复 key 只替换值，新 key 追加，输入 map 不被修改。map 的 key 仍只允许 `nil`、`number`、`bool` 和 `string`。
+map 是有插入顺序的共享引用值。`map[key] = value` 会插入或更新，更新不会移动既有 key；缺失 key 的读取和 `remove` 会产生 `map key not found`。`clear` 原地清空并返回 `nil`；`keys`、`values` 返回按插入顺序排列的新数组；`merge(left, right)` 返回新 map，左侧顺序不变，右侧重复 key 只替换值，新 key 追加，输入 map 不被修改。内置 map 的 key 仍只允许 `nil`、`number`、`bool` 和 `string`；泛型哈希容器使用库级 `Eq + Hash` 契约。
 
 `range(stop)`、`range(start, stop)` 和 `range(start, stop, step)` 生成不可变半开整数范围；step 不能为零，边界和 step 必须是有限整数。range 支持索引、`len`、`contains`、`for-in` 和按 `(start, stop, step)` 的结构比较。
 
-`substr` 和 `charAt` 使用 Unicode scalar value 偏移，而不是 UTF-8 字节偏移；组合字符仍按多个 scalar value 计算，不提供 grapheme 分割或 Unicode normalization。`str` 与 `print` 使用相同的文本表示。`typeOf` 返回 `nil`、`number`、`bool`、`string`、`function`、`array`、`map`、`range`、枚举名或命名结构体名。`hash` 是确定性的 32 位 FNV-1a 结果，受 `Hash` 编译期约束保护；当前没有 hash 容器，也不会放宽 map key 类型。
+`substr` 和 `charAt` 使用 Unicode scalar value 偏移，而不是 UTF-8 字节偏移；组合字符仍按多个 scalar value 计算，不提供 grapheme 分割或 Unicode normalization。`str` 与 `print` 使用相同的文本表示。`typeOf` 返回 `nil`、`number`、`bool`、`string`、`function`、`array`、`map`、`range`、枚举名或命名结构体名。`hash` 是确定性的 32 位 FNV-1a 结果，受 `Hash` 编译期约束保护；公共库提供 `HashSet<T: Eq + Hash>` 和 `HashMap<K: Eq + Hash, V>`，但不会放宽内置 map key 类型。
 
 常用成员形式包括：
 
@@ -817,8 +817,8 @@ builtin member-call sugar，数组接收者仍使用数组 builtin。栈和队�
 - 递归枚举 payload 可以使用，递归命名结构体字段（例如 `struct Node { next: optional<Node> }`）仍被拒绝；
 - 没有继承、重载、动态派发、静态方法和函数值字段调用；
 - `Eq`/`Ord` 目前只能作为编译期泛型约束使用，尚无用户自定义 capability
-  实现；`Hash` 只提供编译期约束和 `hash(value)` 入口，尚无哈希容器、泛型
-  map key 放宽或可变 key 所有权规则；
+  实现；`Hash` 只提供编译期约束和 `hash(value)` 入口，公共库的哈希容器使用
+  稳定 identity key，但不会放宽内置 map key 或提供深度冻结快照；
 - 复杂动态字段、未知索引、map/range 元素和部分循环出口不提供精确 nullable narrowing；
 - 当函数签名或集合元素类型无法可靠推断时，需要补充显式类型注解。
 

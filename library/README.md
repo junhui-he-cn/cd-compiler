@@ -5,7 +5,7 @@ Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 `Queue<T>`, `Deque<T>`, `RingBuffer<T>`, `BinaryHeap<T>`, `PriorityQueue<T>`, and
 numeric `MedianHeap` types, plus the
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
-`Tree<T>`, `AvlTree<T>`, `RedBlackTree<T>`, `Set<T: Eq>`, `OrderedSet<T>`, `OrderedMap<K, V>`, `BiMap<K: Eq, V: Eq>`, `LruCache<K: Eq, V>`, `LfuCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
+`Tree<T>`, `AvlTree<T>`, `RedBlackTree<T>`, `Set<T: Eq>`, `HashSet<T: Eq + Hash>`, `OrderedSet<T>`, `OrderedMap<K, V>`, `HashMap<K: Eq + Hash, V>`, `BiMap<K: Eq, V: Eq>`, `LruCache<K: Eq, V>`, `LfuCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
 `MultiMap<K: Eq, V: Eq>` for one-to-many mappings, immutable BST helpers, and basic generic array algorithms,
 including comparator-based sorting, window helpers, and interval merge.
 It also includes array-backed numeric `FenwickTree`, `SegmentTree`, and `SparseTable`,
@@ -18,8 +18,8 @@ staged delivery order are documented in
 [`DATA_STRUCTURES_ROADMAP.md`](DATA_STRUCTURES_ROADMAP.md).
 
 The implementation is split into topic modules: `collections.cd`, `trees.cd`,
-`sets.cd`, `graphs.cd`, `strings.cd`, `range_trees.cd`, `sorting.cd`,
-`array_algorithms.cd`, `dynamic_programming.cd`, `backtracking.cd`, and
+`sets.cd`, `hash_collections.cd`, `graphs.cd`, `strings.cd`, `range_trees.cd`,
+`sorting.cd`, `array_algorithms.cd`, `dynamic_programming.cd`, `backtracking.cd`, and
 `numeric.cd`. `data_structures.cd` remains the compatibility facade and
 re-exports the stable public API, so existing `as ds` imports do not change.
 
@@ -660,6 +660,28 @@ new outer array plus one entry value per distinct element.
 language equality. `add`, `getAll`, and `discard` are linear in the number of
 keys or values for the selected key; key/value arrays are maintained without a
 hash table, and key order is preserved after removals.
+
+`HashSet<T: Eq + Hash>` and `HashMap<K: Eq + Hash, V>` use array-backed bucket
+tables and the deterministic `hash(value)` operation:
+
+- `newHashSet<T: Eq + Hash>()` and `newHashMap<K: Eq + Hash, V>()` create empty
+  containers;
+- `add`/`put` return `true` only when a new entry is inserted; `put` updates an
+  existing value without moving its key;
+- `has`, `discard`, `size`, `isEmpty`, `clear`, and `snapshot` provide lookup,
+  removal, inspection, clearing, and insertion-order shallow snapshots;
+- `HashMapEntry<K, V>` exposes `key` and `value` fields for snapshot results;
+- `get` returns `optional<V>` and therefore returns `nil` for a missing key;
+  use `has` when a stored value may itself be `nil`.
+
+Arrays, maps, functions, and named structs are identity keys. Mutating one
+through an alias does not invalidate its membership, but the mutation is
+visible through the stored key and snapshots. A separately constructed value
+with equal-looking contents is a different identity key. Non-reflexive keys
+such as NaN are rejected by these APIs. The tables resize above a 75% load
+factor, resolve collisions with `Eq`, preserve insertion order, and do not
+shrink after removal. This generic API does not widen the built-in map's
+primitive-only key restriction.
 
 `DisjointSet` represents integer vertices `[0, size)` with parent and component
 size arrays. `representative` performs path compression, `union` uses union by size and
@@ -1350,6 +1372,9 @@ deterministic `hash(value)`, builtin string ordering, and statically dispatched
 ordering operators for named structs. Generic library algorithms continue to
 accept explicit `less` callbacks where a user-defined type is involved; custom
 struct operators are not implicitly converted into a generic `T: Ord` witness.
+Hash containers require `Eq + Hash`; mutable reference keys use stable identity
+semantics and are retained as shallow aliases. User-defined capability
+witnesses remain outside the current library contract.
 Nullable annotations in this library use the canonical `optional<T>` spelling;
 the compiler retains the postfix nullable spelling only for migration
 compatibility.
@@ -1368,6 +1393,7 @@ python3 library/tests/run_tests.py ./build/compiler_design vm-rs
 Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case data_structures_result`, `--case data_structures_list`,
 `--case data_structures_list_algorithms`,
+`--case data_structures_hash_collections`,
 `--case data_structures_tree`, `--case data_structures_bst`,
 `--case data_structures_ring_buffer`,
 `--case data_structures_set`, `--case data_structures_multiset`,

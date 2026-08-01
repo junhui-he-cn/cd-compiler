@@ -8,6 +8,7 @@ The language-side decisions are tracked by
 [Issue #11](https://github.com/junhui-he-cn/my-compiler/issues/11) for hashing
 and [Issue #10](https://github.com/junhui-he-cn/my-compiler/issues/10) for
 operator dispatch. Both issues now have implemented baseline slices.
+Issue #15 defines the stable key contract for the generic hash containers.
 
 ## Language support already available
 
@@ -18,10 +19,10 @@ operator dispatch. Both issues now have implemented baseline slices.
 
 ## Remaining library decisions
 
-- [ ] Define how generic map keys use `Eq`/`Hash` without changing mutable-key
-      ownership and aliasing rules.
-- [ ] Implement `HashSet<T>` and `HashMap<K, V>` only after that key contract is
-      stable, with explicit empty/missing behavior.
+- [x] Define generic map keys through `Eq + Hash` with identity-stable mutable
+      reference semantics and explicit aliasing behavior (Issue #15).
+- [x] Implement array-backed `HashSet<T: Eq + Hash>` and
+      `HashMap<K: Eq + Hash, V>` with explicit empty/missing behavior.
 - [ ] Revisit hash-dependent algorithms such as Rabin–Karp when they provide a
       meaningful benefit over the current deterministic scans.
 - [ ] Define whether user-defined struct operators can satisfy generic
@@ -29,5 +30,7 @@ operator dispatch. Both issues now have implemented baseline slices.
 - [ ] Implement caches only after key mutation and stable node-reference rules
       are settled.
 
-Until then, the library uses array-backed equality/comparator implementations,
-explicit `less` callbacks, and integer-vertex graph APIs.
+The built-in map remains primitive-keyed; generic hash containers use their own
+array-backed bucket tables and the stable key contract above. Other library
+structures continue to use explicit equality or `less` callbacks where that is
+the more appropriate API.

@@ -1,0 +1,9 @@
+import "../../../library/data_structures.cd" as ds;
+
+fun make<T>(value: T): ds.HashSet<T> {
+  let result = ds.newHashSet<T>();
+  result.add(value);
+  return result;
+}
+
+print make<number>(1);

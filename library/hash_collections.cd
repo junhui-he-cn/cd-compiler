@@ -1,0 +1,325 @@
+// Hash-based collections with identity-stable mutable reference keys.
+
+struct HashSetBucket<T> {
+  value: T,
+  hash: number
+}
+
+struct HashSet<T: Eq + Hash> {
+  private buckets: [[HashSetBucket<T>]],
+  private values: [T]
+}
+
+struct HashMapBucket<K, V> {
+  key: K,
+  value: V,
+  hash: number
+}
+
+struct HashMapEntry<K, V> {
+  key: K,
+  value: V
+}
+
+struct HashMap<K: Eq + Hash, V> {
+  private buckets: [[HashMapBucket<K, V>]],
+  private entries: [HashMapEntry<K, V>]
+}
+
+fun hashBucketIndex(hashValue: number, bucketCount: number): number {
+  return hashValue - floor(hashValue / bucketCount) * bucketCount;
+}
+
+fun newHashSetBuckets<T>(capacity: number): [[HashSetBucket<T>]] {
+  let buckets: [[HashSetBucket<T>]] = [];
+  let index = 0;
+  while (index < capacity) {
+    buckets.push([]);
+    index += 1;
+  }
+  return buckets;
+}
+
+fun newHashMapBuckets<K, V>(capacity: number): [[HashMapBucket<K, V>]] {
+  let buckets: [[HashMapBucket<K, V>]] = [];
+  let index = 0;
+  while (index < capacity) {
+    buckets.push([]);
+    index += 1;
+  }
+  return buckets;
+}
+
+impl HashSet<T: Eq + Hash> {
+  fun indexOf(value: T): number {
+    let index = 0;
+    while (index < this.values.len()) {
+      if (this.values[index] == value) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun rehash() {
+    let buckets = newHashSetBuckets<T>(this.buckets.len() * 2);
+    let index = 0;
+    while (index < this.values.len()) {
+      let value = this.values[index];
+      let hashValue = hash(value);
+      let bucketIndex = hashBucketIndex(hashValue, buckets.len());
+      buckets[bucketIndex].push(HashSetBucket<T> {
+        value: value,
+        hash: hashValue
+      });
+      index += 1;
+    }
+    this.buckets = buckets;
+  }
+
+  fun add(value: T): bool {
+    if (value != value) {
+      return false;
+    }
+    let hashValue = hash(value);
+    let bucketIndex = hashBucketIndex(hashValue, this.buckets.len());
+    let bucketIndexInBucket = 0;
+    while (bucketIndexInBucket < this.buckets[bucketIndex].len()) {
+      let entry = this.buckets[bucketIndex][bucketIndexInBucket];
+      if (entry.hash == hashValue && entry.value == value) {
+        return false;
+      }
+      bucketIndexInBucket += 1;
+    }
+    this.buckets[bucketIndex].push(HashSetBucket<T> {
+      value: value,
+      hash: hashValue
+    });
+    this.values.push(value);
+    if (this.values.len() * 4 > this.buckets.len() * 3) {
+      this.rehash();
+    }
+    return true;
+  }
+
+  fun has(value: T): bool {
+    if (value != value) {
+      return false;
+    }
+    let hashValue = hash(value);
+    let bucketIndex = hashBucketIndex(hashValue, this.buckets.len());
+    let index = 0;
+    while (index < this.buckets[bucketIndex].len()) {
+      let entry = this.buckets[bucketIndex][index];
+      if (entry.hash == hashValue && entry.value == value) {
+        return true;
+      }
+      index += 1;
+    }
+    return false;
+  }
+
+  fun discard(value: T): bool {
+    if (value != value) {
+      return false;
+    }
+    let hashValue = hash(value);
+    let bucketIndex = hashBucketIndex(hashValue, this.buckets.len());
+    let bucketEntryIndex = 0;
+    while (bucketEntryIndex < this.buckets[bucketIndex].len()) {
+      let entry = this.buckets[bucketIndex][bucketEntryIndex];
+      if (entry.hash == hashValue && entry.value == value) {
+        while (bucketEntryIndex + 1 < this.buckets[bucketIndex].len()) {
+          this.buckets[bucketIndex][bucketEntryIndex]
+              = this.buckets[bucketIndex][bucketEntryIndex + 1];
+          bucketEntryIndex += 1;
+        }
+        this.buckets[bucketIndex].pop();
+
+        let valueIndex = this.indexOf(value);
+        while (valueIndex + 1 < this.values.len()) {
+          this.values[valueIndex] = this.values[valueIndex + 1];
+          valueIndex += 1;
+        }
+        this.values.pop();
+        return true;
+      }
+      bucketEntryIndex += 1;
+    }
+    return false;
+  }
+
+  fun size(): number {
+    return this.values.len();
+  }
+
+  fun isEmpty(): bool {
+    return this.values.len() == 0;
+  }
+
+  fun clear() {
+    this.buckets = newHashSetBuckets<T>(this.buckets.len());
+    this.values = [];
+  }
+
+  fun snapshot(): [T] {
+    return copy(this.values);
+  }
+}
+
+fun newHashSet<T: Eq + Hash>(): HashSet<T> {
+  return HashSet<T> {
+    buckets: newHashSetBuckets<T>(8),
+    values: []
+  };
+}
+
+impl HashMap<K: Eq + Hash, V> {
+  fun indexOf(key: K): number {
+    let index = 0;
+    while (index < this.entries.len()) {
+      if (this.entries[index].key == key) {
+        return index;
+      }
+      index += 1;
+    }
+    return -1;
+  }
+
+  fun rehash() {
+    let buckets = newHashMapBuckets<K, V>(this.buckets.len() * 2);
+    let index = 0;
+    while (index < this.entries.len()) {
+      let entry = this.entries[index];
+      let hashValue = hash(entry.key);
+      let bucketIndex = hashBucketIndex(hashValue, buckets.len());
+      buckets[bucketIndex].push(HashMapBucket<K, V> {
+        key: entry.key,
+        value: entry.value,
+        hash: hashValue
+      });
+      index += 1;
+    }
+    this.buckets = buckets;
+  }
+
+  fun put(key: K, value: V): bool {
+    if (key != key) {
+      return false;
+    }
+    let hashValue = hash(key);
+    let bucketIndex = hashBucketIndex(hashValue, this.buckets.len());
+    let bucketEntryIndex = 0;
+    while (bucketEntryIndex < this.buckets[bucketIndex].len()) {
+      let entry = this.buckets[bucketIndex][bucketEntryIndex];
+      if (entry.hash == hashValue && entry.key == key) {
+        this.buckets[bucketIndex][bucketEntryIndex].value = value;
+        let entryIndex = this.indexOf(key);
+        this.entries[entryIndex].value = value;
+        return false;
+      }
+      bucketEntryIndex += 1;
+    }
+    this.buckets[bucketIndex].push(HashMapBucket<K, V> {
+      key: key,
+      value: value,
+      hash: hashValue
+    });
+    this.entries.push(HashMapEntry<K, V> { key: key, value: value });
+    if (this.entries.len() * 4 > this.buckets.len() * 3) {
+      this.rehash();
+    }
+    return true;
+  }
+
+  fun get(key: K): optional<V> {
+    if (key != key) {
+      return nil;
+    }
+    let hashValue = hash(key);
+    let bucketIndex = hashBucketIndex(hashValue, this.buckets.len());
+    let index = 0;
+    while (index < this.buckets[bucketIndex].len()) {
+      let entry = this.buckets[bucketIndex][index];
+      if (entry.hash == hashValue && entry.key == key) {
+        return entry.value;
+      }
+      index += 1;
+    }
+    return nil;
+  }
+
+  fun has(key: K): bool {
+    if (key != key) {
+      return false;
+    }
+    let hashValue = hash(key);
+    let bucketIndex = hashBucketIndex(hashValue, this.buckets.len());
+    let index = 0;
+    while (index < this.buckets[bucketIndex].len()) {
+      let entry = this.buckets[bucketIndex][index];
+      if (entry.hash == hashValue && entry.key == key) {
+        return true;
+      }
+      index += 1;
+    }
+    return false;
+  }
+
+  fun discard(key: K): bool {
+    if (key != key) {
+      return false;
+    }
+    let hashValue = hash(key);
+    let bucketIndex = hashBucketIndex(hashValue, this.buckets.len());
+    let bucketEntryIndex = 0;
+    while (bucketEntryIndex < this.buckets[bucketIndex].len()) {
+      let entry = this.buckets[bucketIndex][bucketEntryIndex];
+      if (entry.hash == hashValue && entry.key == key) {
+        while (bucketEntryIndex + 1 < this.buckets[bucketIndex].len()) {
+          this.buckets[bucketIndex][bucketEntryIndex]
+              = this.buckets[bucketIndex][bucketEntryIndex + 1];
+          bucketEntryIndex += 1;
+        }
+        this.buckets[bucketIndex].pop();
+
+        let entryIndex = this.indexOf(key);
+        while (entryIndex + 1 < this.entries.len()) {
+          this.entries[entryIndex] = this.entries[entryIndex + 1];
+          entryIndex += 1;
+        }
+        this.entries.pop();
+        return true;
+      }
+      bucketEntryIndex += 1;
+    }
+    return false;
+  }
+
+  fun size(): number {
+    return this.entries.len();
+  }
+
+  fun isEmpty(): bool {
+    return this.entries.len() == 0;
+  }
+
+  fun clear() {
+    this.buckets = newHashMapBuckets<K, V>(this.buckets.len());
+    this.entries = [];
+  }
+
+  fun snapshot(): [HashMapEntry<K, V>] {
+    return copy(this.entries);
+  }
+}
+
+fun newHashMap<K: Eq + Hash, V>(): HashMap<K, V> {
+  return HashMap<K, V> {
+    buckets: newHashMapBuckets<K, V>(8),
+    entries: []
+  };
+}
+
+export HashSet, HashMapEntry, HashMap, newHashSet, newHashMap;

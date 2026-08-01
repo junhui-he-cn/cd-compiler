@@ -1,0 +1,3 @@
+Type error at <repo>/tests/golden/type_errors/hash_collection_unconstrained.cd:3:27: struct ds.HashSet: type parameter T must satisfy Eq + Hash, got T
+  fun make<T>(value: T): ds.HashSet<T> {
+                            ^
