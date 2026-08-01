@@ -4,6 +4,7 @@
   "baseline_commit": "2592027",
   "inventory_revision": "m0d-2026-07-22-r1",
   "decision_id": "M6-LANG-OPERATOR-001",
+  "superseded_by": "M8-LANG-CAP-ORD-001",
   "domain": "static-user-defined-ordering-operators",
   "status": "resolved",
   "implementation_status": "complete_builtin_local_struct_ordering_public_interface_shape_source_import_dispatch_and_independent_module_products",

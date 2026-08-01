@@ -52,9 +52,10 @@ copies of their outer result arrays.
 
 The compiler reports a type error when a generic key parameter does not satisfy
 `Eq + Hash`. Existing built-in map diagnostics continue to reject reference
-keys with `map key must be nil, number, bool, or string`. User-defined
-capability witnesses remain deferred to issue #17, and recursive mutable node
-ownership remains deferred to issue #16.
+keys with `map key must be nil, number, bool, or string`. The later
+M8-LANG-CAP-ORD-001 decision adds a static witness only for complete named-struct
+ordering; user-defined `Eq`/`Hash` witnesses remain outside this contract.
+Recursive mutable node ownership was resolved separately by M8-LANG-REF-001.
 
 ## Verification boundary
 

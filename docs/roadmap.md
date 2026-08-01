@@ -28,10 +28,10 @@ behavior must update the implementation contract and tests together.
 
 | Area | `master` status | Evidence / remaining boundary |
 | --- | --- | --- |
-| Verification | M0A-M0D complete | `tests/verification_inventory.json` is revision `m0d-2026-07-22-r1` with 1,868 checks; `tests/run_verification.py` is the canonical runner. |
+| Verification | M0A-M0D complete | `tests/verification_inventory.json` is revision `m0d-2026-07-22-r1` with 1,935 checks; `tests/run_verification.py` is the canonical runner. |
 | Semantic front end | M1A1-M1F complete | `SourceIdentity`, `LosslessSourceView`, `DeclarationIndex`, shared type/pattern metadata, and HIR-only IR lowering are shipped. |
 | Language semantics | Admitted M2A flow slices and M2B recovery slices complete | M2A `FLOW-001..021`, M2B type recovery, parser recovery `001..003`, and lexer recovery `001` are shipped; the broader flow policy remains open below. |
-| Generic capabilities | M6-LANG-001 and M6-LANG-HASH-001 complete | Compile-time `Eq`/`Ord`/`Hash` bounds, canonical `+` conjunctions, inference, explicit arguments, comparator/hash forwarding, public interfaces, deterministic hash native execution, and module-cache validation are shipped; runtime capability dispatch remains outside the contract. |
+| Generic capabilities | M6-LANG-001 and M6-LANG-HASH-001/002 complete; M8-LANG-CAP-ORD-001 implemented on the current feature branch | Compile-time `Eq`/`Ord`/`Hash` bounds, canonical `+` conjunctions, inference, explicit arguments, comparator/hash forwarding, public interfaces, deterministic hash native execution, and stable generic hash-key semantics are shipped; the complete named-struct `Ord` witness is implemented locally but not yet delivered to `master`. |
 | Modules and cache | M3A graph/interface slices plus M3B artifact/cache boundaries complete | Independent module products, linker inputs, `.cdi` interfaces, `cdbc-cache 0.2`, invalidation, and safe source fallback are shipped. Removing fallback is not approved. |
 | Artifact/runtime | M4A validation and M4B debug metadata complete | `cdbc 0.1` remains the contract; validation, module identity, source ranges, and link-time debug rebasing are shipped. |
 | Formatter | M5A-FORMAT-001..008 complete | `--format`, `--format-check`, lossless comments/trivia, idempotence, blank-line/trailing-comma policies, bounded list wrapping, and invalid-input rejection are shipped. |
@@ -48,9 +48,12 @@ work. The completed groups are:
 - the admitted M2A flow and M2B recovery slices;
 - M3A graph/interface work, M3B artifact/cache/boundary work, and M4A/M4B;
 - M5A-FORMAT-001..008, M5B-LSP-001..017, M5D-DEBUG-001, M6-LANG-001,
-  M6-LANG-HASH-001, and M6-LANG-OPERATOR-001A..001C.
+  M6-LANG-HASH-001/002, M6-LANG-OPERATOR-001A..001C, and M8-LANG-REF-001.
 
 These names are a completion record, not a to-do list.
+
+M8-LANG-CAP-ORD-001 is implemented and fully verified in the current feature
+working tree; its Git delivery is intentionally a separate action.
 
 ## Active constraints and open contracts
 
@@ -81,9 +84,9 @@ being designed:
 
 ### M6-LANG-HASH-001: static hash capability and deterministic hash entry point
 
-**Status:** complete for the language-support boundary; hash-based containers,
-generic map-key admission, mutable-key ownership, and user-defined capability
-implementations remain deferred.
+**Status:** complete for the language-support boundary; the later
+M6-LANG-HASH-002 slice defines the generic container key contract, while
+user-defined `Eq`/`Hash` implementations remain deferred.
 
 **Purpose:** unblock generic library APIs that need an explicit hash contract
 without adding concrete `HashMap`/`HashSet` implementations to the compiler
@@ -104,10 +107,10 @@ and `Eq + Hash` calls; unconstrained diagnostics; interface text; C++ value hash
 constants; Rust VM unit tests; and emitted artifact execution. Run the focused
 golden/artifact/Rust checks, CTest, canonical verification, and `git diff --check`.
 
-### M6-LANG-HASH-002: stable generic hash keys (feature branch)
+### M6-LANG-HASH-002: stable generic hash keys
 
-**Status:** implemented on `feat/issue-15-stable-hash-keys`; not yet part of
-`master` until its branch is integrated.
+**Status:** implementation and repository verification complete; Git delivery
+is a separate action.
 
 **Decision:** generic `HashSet<T: Eq + Hash>` and
 `HashMap<K: Eq + Hash, V>` use the existing equality/hash law and identity-
@@ -156,9 +159,9 @@ operations without introducing a second builtin path.
 
 ### M6-LANG-OPERATOR-001B: local named-struct comparison operators
 
-**Status:** complete for local named structs in the defining compilation unit
-and linked `.cdbc 0.1` emission. Public interface/cache propagation remains a
-later slice.
+**Status:** complete for local named structs and linked `.cdbc 0.1` emission;
+public interface/cache propagation and imported dispatch are recorded in the
+completed follow-up below.
 
 **Purpose:** add `operator <`, `operator <=`, `operator >`, and `operator >=`
 inside `impl` blocks. The left operand is the implicit `this` receiver, the
@@ -171,9 +174,11 @@ validate receiver/parameter/return/duplicate rules, reject foreign module
 implementations, and cover local generic receivers plus C++/Rust linked-artifact
 parity. Numeric and string comparisons retain their existing builtin paths.
 
-**Boundary:** user-defined operators are not exported through `.cdi` or module
-cache products in this slice, independent module products and imported/re-exported
-operator dispatch remain deferred, and custom structs do not satisfy `T: Ord`.
+**Boundary:** user-defined operators were not exported through `.cdi` or module
+cache products in this local slice; independent module products and
+imported/re-exported operator dispatch are recorded in the completed follow-up
+below. A complete four-operator set now supplies the named struct's static
+`Ord` witness; partial sets remain direct-only.
 `==`, `!=`, arithmetic, unary, logical, compound-assignment, enum, primitive,
 and dynamic operator behavior remain deferred.
 
@@ -224,8 +229,8 @@ and `git diff --check` commands from the verification contract.
 
 ### M8-LANG-REF-001: stable node references and recursive mutable structs
 
-**Status:** implementation slice and repository verification gate complete on
-the issue branch; Git delivery remains a separate action.
+**Status:** implementation slice and repository verification gate complete;
+Git delivery is a separate action.
 
 **Purpose:** allow mutable recursive nominal structures without adding a new
 `ref<T>` syntax or runtime opcode. A named struct value is a stable strong
@@ -255,6 +260,34 @@ library fixture. Run the canonical inventory, golden, CTest, artifact, module
 cache, LSP, debugger, Rust VM, Cargo, boundary, malformed, library, and
 `git diff --check` gates.
 
+### M8-LANG-CAP-ORD-001: struct ordering capability witness
+
+**Status:** implementation and focused/full repository verification complete;
+Git delivery is a separate action.
+
+**Purpose:** let generic `T: Ord` and `T: Eq + Ord` code consume a named
+struct's statically declared ordering behavior without introducing trait
+objects, capability dictionaries, monomorphization, or a new artifact version.
+
+**Contract:** a defining module provides the witness only when its named struct
+has one valid implementation for each `<`, `<=`, `>`, and `>=`. `Ord` implies
+`Eq`, while existing identity equality remains available for every struct.
+Imports and re-exports consume the owner's public operator set; foreign and
+duplicate implementations retain the existing diagnostics. Partial operator
+sets remain valid for direct calls but do not satisfy `T: Ord`.
+
+**Runtime boundary:** generic comparisons reuse the existing four comparison
+instructions. The owner product publishes implementation-private witness
+bindings, and the Rust VM invokes the matching ordinary operator function for
+same-named struct operands. The binding convention is not source-visible and
+does not change `cdbc 0.1`.
+
+**Quantitative gate:** local and imported/re-exported generic comparisons cover
+all four operators, identity `Eq`, partial-witness rejection, module products,
+cache reuse/invalidation, and C++/Rust execution parity. Run the canonical
+inventory, golden, CTest, artifact, module-cache, library, Rust VM, Cargo,
+boundary, malformed, and `git diff --check` gates.
+
 ## Planned follow-up specifications
 
 These are deferred candidates after M8-LANG-REF-001. They are not permission to
@@ -275,8 +308,9 @@ product parity.
 
 **Boundary:** keep `==`, `!=`, arithmetic, unary, logical, compound-assignment,
 enum, primitive, dynamic, and generic capability-dictionary behavior deferred.
-Generic algorithms continue to use explicit comparator values for custom
-structs.
+Generic algorithms continue to use explicit comparator values for partial or
+comparator-specific custom structs; complete four-operator witnesses satisfy
+generic `T: Ord`.
 
 **Completed first phase:** exported and re-exported struct operators are
 represented in canonical module-interface text, strict `cdi 0.1` sidecars,
@@ -462,11 +496,14 @@ verification suite.
 ```text
 master + shipped generic functions, callbacks, and module interfaces
   -> completed M6-LANG-001 static generic capability constraints
+  -> completed M6-LANG-HASH-001/002 stable hash capability and key semantics
   -> completed M6-LANG-OPERATOR-001A builtin string ordering
   -> completed M6-LANG-OPERATOR-001B local struct comparison operators
   -> completed M6-LANG-OPERATOR-001C public operator metadata/cache shape and
      source-backed imported dispatch and independent module products/linker parity
   -> M7-LANG-OPTIONAL-001 canonical optional type syntax
+  -> completed M8-LANG-REF-001 stable node references
+  -> M8-LANG-CAP-ORD-001 struct ordering capability witness (current feature branch)
   -> language-enabled library specifications (no compiler-owned data structures)
 
 master + M5D-DEBUG-001
@@ -492,7 +529,9 @@ master + M1 semantic metadata + existing linear register IR
      semantic parity corpus are admitted
 ```
 
-M6-LANG-HASH-001 and M6-LANG-OPERATOR-001A..001C are complete. The
+M6-LANG-HASH-001/002, M6-LANG-OPERATOR-001A..001C, and M8-LANG-REF-001 are
+complete. M8-LANG-CAP-ORD-001 is fully implemented and verified in the current
+feature working tree; its Git delivery is not part of this task. The
 M7-IR-SSA-001 implementation slice is now integrated on `master`; its default
 O1 policy and broader optimization work remain explicitly deferred. The
 M7-LANG-OPTIONAL-001 implementation is complete on its focused feature branch;

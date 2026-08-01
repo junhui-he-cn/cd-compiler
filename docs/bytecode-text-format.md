@@ -100,6 +100,19 @@ source table also carries the optional canonical module identity described
 below; the linker preserves it while rebasing only artifact-local source
 indexes.
 
+### Erased generic struct ordering
+
+A named struct with valid `<`, `<=`, `>`, and `>=` implementations can satisfy a
+generic `Ord` bound. Generic comparison continues to use the existing four
+comparison instructions. The owning module product also stores each operator
+function under an implementation-private global binding named
+`__capability_ord_<Struct>_<less|less_equal|greater|greater_equal>`; the Rust VM
+uses that binding only when a comparison receives two values of the same
+witnessed struct type. This is not a source-visible global or capability
+dictionary, and it adds no opcode, section, or `cdbc` version. A malformed or
+missing binding is reported as a runtime error after normal artifact
+validation.
+
 ## Module interface sidecars
 
 The module cache also stores one `cdi 0.1` sidecar under `interfaces/` for each

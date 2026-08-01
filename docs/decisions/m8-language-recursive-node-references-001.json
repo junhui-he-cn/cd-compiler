@@ -1,7 +1,7 @@
 {
   "decision_id": "M8-LANG-REF-001",
   "domain": "recursive-nominal-struct-references",
-  "status": "proposed",
+  "status": "implemented",
   "issue": 16,
   "question": "How can mutable linked nodes use stable handles without a second runtime reference representation?",
   "decision": "Allow recursive nominal struct field types and reuse identity-bearing named struct values as strong handles; use optional<T> for absent links.",

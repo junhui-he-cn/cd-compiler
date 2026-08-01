@@ -1,56 +1,64 @@
 IR
 0000  v0 = constant #0 nil
 0001  store_var @0 __method_Person_operator_Less#0, v0
-0002  v1 = make_function $0 </2
-0003  assign_var @5 __method_Person_operator_Less#0, v1
-0004  v2 = constant #2 nil
-0005  store_var @6 __method_Person_operator_LessEqual#1, v2
-0006  v3 = make_function $1 <=/2
-0007  assign_var @11 __method_Person_operator_LessEqual#1, v3
-0008  v4 = constant #4 nil
-0009  store_var @12 __method_Person_operator_Greater#2, v4
-0010  v5 = make_function $2 >/2
-0011  assign_var @17 __method_Person_operator_Greater#2, v5
-0012  v6 = constant #6 nil
-0013  store_var @18 __method_Person_operator_GreaterEqual#3, v6
-0014  v7 = make_function $3 >=/2
-0015  assign_var @23 __method_Person_operator_GreaterEqual#3, v7
-0016  v8 = constant #8 1
-0017  v9 = struct Person {age: v8}
-0018  store_var @26 one#12, v9
-0019  v10 = constant #9 2
-0020  v11 = struct Person {age: v10}
-0021  store_var @29 two#13, v11
-0022  v12 = load_var @30 __method_Person_operator_Less#0
-0023  v13 = load_var @31 one#12
-0024  v14 = load_var @32 two#13
-0025  v15 = call v12(v13, v14)
-0026  print v15
-0027  v16 = load_var @33 __method_Person_operator_LessEqual#1
-0028  v17 = load_var @34 one#12
-0029  v18 = load_var @35 two#13
-0030  v19 = call v16(v17, v18)
-0031  print v19
-0032  v20 = load_var @36 __method_Person_operator_Greater#2
-0033  v21 = load_var @37 two#13
-0034  v22 = load_var @38 one#12
-0035  v23 = call v20(v21, v22)
-0036  print v23
-0037  v24 = load_var @39 __method_Person_operator_GreaterEqual#3
-0038  v25 = load_var @40 two#13
-0039  v26 = load_var @41 one#12
-0040  v27 = call v24(v25, v26)
-0041  print v27
-0042  v28 = load_var @42 __method_Person_operator_Less#0
-0043  v29 = load_var @43 two#13
-0044  v30 = load_var @44 one#12
-0045  v31 = call v28(v29, v30)
-0046  print v31
+0002  store_var @1 __capability_ord_Person_less, v0
+0003  v1 = make_function $0 </2
+0004  assign_var @6 __method_Person_operator_Less#0, v1
+0005  assign_var @7 __capability_ord_Person_less, v1
+0006  v2 = constant #2 nil
+0007  store_var @8 __method_Person_operator_LessEqual#1, v2
+0008  store_var @9 __capability_ord_Person_less_equal, v2
+0009  v3 = make_function $1 <=/2
+0010  assign_var @14 __method_Person_operator_LessEqual#1, v3
+0011  assign_var @15 __capability_ord_Person_less_equal, v3
+0012  v4 = constant #4 nil
+0013  store_var @16 __method_Person_operator_Greater#2, v4
+0014  store_var @17 __capability_ord_Person_greater, v4
+0015  v5 = make_function $2 >/2
+0016  assign_var @22 __method_Person_operator_Greater#2, v5
+0017  assign_var @23 __capability_ord_Person_greater, v5
+0018  v6 = constant #6 nil
+0019  store_var @24 __method_Person_operator_GreaterEqual#3, v6
+0020  store_var @25 __capability_ord_Person_greater_equal, v6
+0021  v7 = make_function $3 >=/2
+0022  assign_var @30 __method_Person_operator_GreaterEqual#3, v7
+0023  assign_var @31 __capability_ord_Person_greater_equal, v7
+0024  v8 = constant #8 1
+0025  v9 = struct Person {age: v8}
+0026  store_var @34 one#12, v9
+0027  v10 = constant #9 2
+0028  v11 = struct Person {age: v10}
+0029  store_var @37 two#13, v11
+0030  v12 = load_var @38 __method_Person_operator_Less#0
+0031  v13 = load_var @39 one#12
+0032  v14 = load_var @40 two#13
+0033  v15 = call v12(v13, v14)
+0034  print v15
+0035  v16 = load_var @41 __method_Person_operator_LessEqual#1
+0036  v17 = load_var @42 one#12
+0037  v18 = load_var @43 two#13
+0038  v19 = call v16(v17, v18)
+0039  print v19
+0040  v20 = load_var @44 __method_Person_operator_Greater#2
+0041  v21 = load_var @45 two#13
+0042  v22 = load_var @46 one#12
+0043  v23 = call v20(v21, v22)
+0044  print v23
+0045  v24 = load_var @47 __method_Person_operator_GreaterEqual#3
+0046  v25 = load_var @48 two#13
+0047  v26 = load_var @49 one#12
+0048  v27 = call v24(v25, v26)
+0049  print v27
+0050  v28 = load_var @50 __method_Person_operator_Less#0
+0051  v29 = load_var @51 two#13
+0052  v30 = load_var @52 one#12
+0053  v31 = call v28(v29, v30)
+0054  print v31
 
 function $0 <(this#4, other#5)
-0000  v0 = load_var @1 this#4
+0000  v0 = load_var @2 this#4
 0001  v1 = field v0.age
-0002  v2 = load_var @3 other#5
+0002  v2 = load_var @4 other#5
 0003  v3 = field v2.age
 0004  v4 = less v1, v3
 0005  return v4
@@ -58,9 +66,9 @@ function $0 <(this#4, other#5)
 0007  return v5
 
 function $1 <=(this#6, other#7)
-0000  v0 = load_var @7 this#6
+0000  v0 = load_var @10 this#6
 0001  v1 = field v0.age
-0002  v2 = load_var @9 other#7
+0002  v2 = load_var @12 other#7
 0003  v3 = field v2.age
 0004  v4 = less_equal v1, v3
 0005  return v4
@@ -68,9 +76,9 @@ function $1 <=(this#6, other#7)
 0007  return v5
 
 function $2 >(this#8, other#9)
-0000  v0 = load_var @13 this#8
+0000  v0 = load_var @18 this#8
 0001  v1 = field v0.age
-0002  v2 = load_var @15 other#9
+0002  v2 = load_var @20 other#9
 0003  v3 = field v2.age
 0004  v4 = greater v1, v3
 0005  return v4
@@ -78,9 +86,9 @@ function $2 >(this#8, other#9)
 0007  return v5
 
 function $3 >=(this#10, other#11)
-0000  v0 = load_var @19 this#10
+0000  v0 = load_var @26 this#10
 0001  v1 = field v0.age
-0002  v2 = load_var @21 other#11
+0002  v2 = load_var @28 other#11
 0003  v3 = field v2.age
 0004  v4 = greater_equal v1, v3
 0005  return v4

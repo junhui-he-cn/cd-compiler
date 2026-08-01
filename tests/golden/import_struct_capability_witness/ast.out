@@ -1,0 +1,23 @@
+Program
+  Module 0
+    Struct Point {value: number}
+    Impl Point
+      Operator <(other: Point): bool
+        Return (< (field this value) (field other value))
+      Operator <=(other: Point): bool
+        Return (<= (field this value) (field other value))
+      Operator >(other: Point): bool
+        Return (> (field this value) (field other value))
+      Operator >=(other: Point): bool
+        Return (>= (field this value) (field other value))
+    Export Point
+  Module 1
+    Export Point from "./lib.cd"
+  Module 2 entry
+    Import "./forward.cd" as forwarded
+    Fun compareAll<T: Ord>(left: T, right: T): [bool]
+      Return (array (< left right) (<= left right) (> left right) (>= left right))
+    Let low = (construct forwarded.Point value: 1)
+    Let high = (construct forwarded.Point value: 2)
+    Print (call compareAll<forwarded.Point> low high)
+    Print (call compareAll<forwarded.Point> high low)

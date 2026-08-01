@@ -3470,6 +3470,7 @@ impl<'a> VM<'a> {
                 if self.profile_enabled {
                     self.profile_instruction(frame, location.as_ref());
                 }
+                let call_site = body.locations.get(frame.ip).and_then(Option::as_ref);
                 match instruction {
                 Instruction::Constant { dest, constant } => {
                     let value = self.constant_value(*constant)?;
@@ -3610,7 +3611,6 @@ impl<'a> VM<'a> {
                             CallArguments::Many(values)
                         }
                     };
-                    let call_site = body.locations.get(frame.ip).and_then(Option::as_ref);
                     let result = self.call_function(
                         function,
                         values,
@@ -3704,16 +3704,44 @@ impl<'a> VM<'a> {
                     self.write_register(frame, *dest, Value::boolean(result))?;
                 }
                 Instruction::Greater { dest, left, right } => {
-                    self.compare(frame, *dest, *left, *right, Comparison::Greater)?
+                    self.compare(
+                        frame,
+                        *dest,
+                        *left,
+                        *right,
+                        Comparison::Greater,
+                        call_site,
+                    )?
                 }
                 Instruction::GreaterEqual { dest, left, right } => {
-                    self.compare(frame, *dest, *left, *right, Comparison::GreaterEqual)?
+                    self.compare(
+                        frame,
+                        *dest,
+                        *left,
+                        *right,
+                        Comparison::GreaterEqual,
+                        call_site,
+                    )?
                 }
                 Instruction::Less { dest, left, right } => {
-                    self.compare(frame, *dest, *left, *right, Comparison::Less)?
+                    self.compare(
+                        frame,
+                        *dest,
+                        *left,
+                        *right,
+                        Comparison::Less,
+                        call_site,
+                    )?
                 }
                 Instruction::LessEqual { dest, left, right } => {
-                    self.compare(frame, *dest, *left, *right, Comparison::LessEqual)?
+                    self.compare(
+                        frame,
+                        *dest,
+                        *left,
+                        *right,
+                        Comparison::LessEqual,
+                        call_site,
+                    )?
                 }
                 Instruction::Jump { target } => {
                     self.validate_jump_target(*target, body.instructions.len())?;
@@ -5423,16 +5451,17 @@ impl<'a> VM<'a> {
     }
 
     fn compare(
-        &self,
+        &mut self,
         frame: &mut Frame,
         dest: usize,
         left: usize,
         right: usize,
         comparison: Comparison,
+        call_site: Option<&DebugLocation>,
     ) -> Result<(), RuntimeError> {
-        let left_value = self.read_register_ref(frame, left)?;
-        let right_value = self.read_register_ref(frame, right)?;
-        let result = match (left_value, right_value) {
+        let left_value = self.read_register(frame, left)?;
+        let right_value = self.read_register(frame, right)?;
+        let result = match (&left_value, &right_value) {
             (Value::Number(left), Value::Number(right)) => comparison.apply_numbers(*left, *right),
             (Value::String(left), Value::String(right)) => {
                 let ordering = left.chars().cmp(right.chars());
@@ -5443,9 +5472,78 @@ impl<'a> VM<'a> {
                     Comparison::LessEqual => ordering.is_le(),
                 }
             }
+            (Value::Struct(left), Value::Struct(right)) => {
+                let Some(type_name) = left.type_name.as_deref() else {
+                    return Err(RuntimeError::new(format!(
+                        "{} expects a named struct witness",
+                        comparison.as_str()
+                    )));
+                };
+                if right.type_name.as_deref() != Some(type_name) {
+                    return Err(RuntimeError::new(format!(
+                        "{} expects two values of the same struct type",
+                        comparison.as_str()
+                    )));
+                }
+                let function = {
+                    let binding_name = format!(
+                        "__capability_ord_{}_{}",
+                        type_name,
+                        comparison.as_str()
+                    );
+                    let fallback_name = type_name
+                        .rsplit_once('.')
+                        .map(|(_, local_name)| {
+                            format!(
+                                "__capability_ord_{}_{}",
+                                local_name,
+                                comparison.as_str()
+                            )
+                        });
+                    let cell = {
+                        let globals = self.globals.borrow();
+                        globals
+                            .get(&binding_name)
+                            .cloned()
+                            .or_else(|| fallback_name.as_ref().and_then(|name| globals.get(name).cloned()))
+                    }
+                    .ok_or_else(|| {
+                        RuntimeError::new(format!(
+                            "{} has no runtime Ord witness for struct `{}`",
+                            comparison.as_str(),
+                            type_name
+                        ))
+                    })?;
+                    let value = cell.borrow().clone();
+                    match value {
+                        Value::Function(function) => function,
+                        _ => {
+                            return Err(RuntimeError::new(format!(
+                                "{} runtime Ord witness for struct `{}` is not callable",
+                                comparison.as_str(),
+                                type_name
+                            )))
+                        }
+                    }
+                };
+                let result = self.call_function(
+                    &function,
+                    CallArguments::Two(left_value.clone(), right_value.clone()),
+                    frame.function.as_ref(),
+                    call_site,
+                )?;
+                let Value::Bool(result) = result else {
+                    return Err(RuntimeError::new(format!(
+                        "{} runtime Ord witness for struct `{}` must return bool",
+                        comparison.as_str(),
+                        type_name
+                    )));
+                };
+                result
+            }
             _ => {
                 return Err(RuntimeError::new(format!(
-                    "{} expects two numbers or two strings",
+                    "{} expects two numbers, two strings, or two values of a witnessed struct",
                     comparison.as_str()
                 )))
             }

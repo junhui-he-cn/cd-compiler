@@ -124,10 +124,14 @@ operator declarations, and logical-operator overloads.
 ## Generic boundary
 
 This decision deliberately does not turn an operator table into a runtime
-capability dictionary. The M6 static `Eq`/`Ord` contract remains compile-time
-only: `Ord` admits the builtin `number` and `string` types in this slice, while
-a user-defined struct with operator declarations is not implicitly admitted as
-`T: Ord`.
+capability dictionary. In the original M6 slice, the static `Eq`/`Ord` contract
+admitted only builtin `number` and `string` for `Ord`; a user-defined struct
+with operator declarations was not implicitly admitted as `T: Ord`.
+
+That boundary is superseded by M8-LANG-CAP-ORD-001: a named struct with one
+valid implementation of all four ordering symbols is now a static `Ord`
+witness, including through public imports and re-exports. Partial operator
+sets remain direct-only, and no general capability dictionary is introduced.
 
 Consequently, a generic function such as `fun<T: Ord>` continues to use the
 existing statically checked builtin path. Generic algorithms that need to

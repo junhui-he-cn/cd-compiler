@@ -3234,14 +3234,84 @@ void TypeChecker::validateGenericTypeArguments(
     const Token& callToken,
     const std::string& context) const
 {
-    if (const auto violation = SemanticTypes::validateTypeParameterConstraints(
-            parameters, constraints, substitutions)) {
-        const std::string prefix = context.empty() ? "" : context + ": ";
-        throw TypeError(callToken,
-            prefix + "type parameter " + violation->parameterName + " must satisfy "
-                + typeInfoName(violation->constraint) + ", got "
-                + typeInfoName(violation->actual));
+    for (std::size_t index = 0; index < parameters.size(); ++index) {
+        if (index >= constraints.size() || !constraints[index]) {
+            continue;
+        }
+        const auto found = substitutions.find(parameters[index]);
+        if (found == substitutions.end()) {
+            continue;
+        }
+        if (!satisfiesCapabilityWitness(found->second, *constraints[index])) {
+            const std::string prefix = context.empty() ? "" : context + ": ";
+            throw TypeError(callToken,
+                prefix + "type parameter " + parameters[index] + " must satisfy "
+                    + typeInfoName(*constraints[index]) + ", got "
+                    + typeInfoName(found->second));
+        }
     }
+}
+
+bool TypeChecker::hasCapabilityWitness(const TypeInfo& actual, const std::string& capability) const
+{
+    if (actual.kind != StaticType::Struct || !actual.structName || capability != "Ord") {
+        return false;
+    }
+
+    const auto structure = methods_.find(*actual.structName);
+    if (structure == methods_.end()) {
+        return false;
+    }
+
+    static constexpr const char* requiredOperators[] = {
+        "<",
+        "<=",
+        ">",
+        ">=",
+    };
+    for (const char* symbol : requiredOperators) {
+        const auto method = structure->second.find(symbol);
+        if (method == structure->second.end() || !method->second.isOperator) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool TypeChecker::satisfiesCapabilityWitness(
+    const TypeInfo& actual,
+    const TypeInfo& capability) const
+{
+    if (!SemanticTypes::isKnown(actual)) {
+        return true;
+    }
+    if (capability.kind != StaticType::Capability || !capability.structName) {
+        return SemanticTypes::compatible(capability, actual);
+    }
+    if (SemanticTypes::isCapabilitySet(capability)) {
+        return std::all_of(
+            capability.typeArguments.begin(),
+            capability.typeArguments.end(),
+            [this, &actual](const TypeInfo& requirement) {
+                return satisfiesCapabilityWitness(actual, requirement);
+            });
+    }
+
+    if (actual.kind == StaticType::TypeParameter) {
+        return actual.typeParameterConstraint
+            && satisfiesCapabilityWitness(*actual.typeParameterConstraint, capability);
+    }
+    if (actual.kind == StaticType::Capability) {
+        return SemanticTypes::satisfiesCapability(actual, capability);
+    }
+
+    const std::string& name = *capability.structName;
+    if (name == "Ord") {
+        return actual.kind == StaticType::Number
+            || actual.kind == StaticType::String
+            || hasCapabilityWitness(actual, name);
+    }
+    return SemanticTypes::satisfiesCapability(actual, capability);
 }
 
 TypeInfo TypeChecker::specializeGenericCallback(

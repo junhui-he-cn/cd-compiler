@@ -1,0 +1,17 @@
+module 0 "<repo>/tests/golden/import_struct_capability_witness/lib.cd"
+  export struct Point
+    field value: number
+    operator <(Point): bool
+    operator <=(Point): bool
+    operator >(Point): bool
+    operator >=(Point): bool
+
+module 1 "<repo>/tests/golden/import_struct_capability_witness/forward.cd"
+  export struct Point
+    field value: number
+    operator <(Point): bool
+    operator <=(Point): bool
+    operator >(Point): bool
+    operator >=(Point): bool
+
+module 2 entry "<repo>/tests/golden/import_struct_capability_witness/input.cd"

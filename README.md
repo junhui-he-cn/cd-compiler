@@ -325,20 +325,24 @@ The left operand selects the operator implementation and the right operand must
 have the same nominal struct type. Exported operators work through direct
 imports, namespace aliases, struct re-exports, and independently emitted
 module products; they use the existing ordinary function-call lowering path.
-Operators do not make a custom struct satisfy the generic `Ord` bound.
+A named struct with one valid implementation of each `<`, `<=`, `>`, and `>=`
+also provides a static `Ord` witness (and therefore satisfies `Eq`) for generic
+code. A partial operator set remains directly callable but does not satisfy
+`T: Ord`.
 
 Functions are values. Named functions use `fun name[<T, U>](parameter[: type]*) [: type] { declaration* }`, and anonymous function expressions use `fun[<T, U>](parameter[: type]*) [: type] { declaration* }`. Type parameters may have concrete bounds such as `T: number`, for example `fun identity<T: number>(value: T): T { return value; }`; explicit and inferred arguments, generic enum constructors, generic struct constructors, and generic collection callbacks must satisfy every bound. Generic named functions, methods, and anonymous function expressions infer type parameters at each call, including direct, namespace, and re-exported struct method paths; callers may also provide all type arguments explicitly, such as `identity<number>(42)`, `lib.identity<string>("hello")`, `box.echo<string>("hello")`, or `identityLambda<number>(42)`. An unannotated alias preserves the generic signature. Generic function values are not coerced to monomorphic function annotations; when passed to existing array higher-order helpers, known callback argument types specialize them and every generic parameter must be inferable. Anonymous function expressions may appear in expression positions, including direct expression statements such as `fun () { return nil; };`. Known function values carry arity, parameter types when annotated or contextually typed, and inferred, annotated, or contextually checked return types for static checks, including variables initialized from named functions or function expressions. `return expression;` returns a value, `return;` returns `nil`, and reaching the end of a function also returns `nil`. Recursive named calls are supported, though recursive return inference remains conservative. Nested functions and function expressions are by-reference closures: they capture enclosing local variables through shared runtime cells, so reads and assignments share the same variable even after the outer function returns. Example function type annotations: `let f: fun(number): number = fun (x: number): number { return x + 1; };` and `fun apply(f: fun(number): number, x: number): number { return f(x); }`.
 
 Static generic capability bounds `T: Eq`, `T: Ord`, and `T: Hash` are supported;
 capability bounds may be combined with `+`, as in `T: Eq + Hash`. `Eq` permits
 `==` and `!=` in generic code; `Ord` permits the ordering operators and admits
-`number` and `string`, while also satisfying `Eq`; `Hash` permits
-`hash(value)`. Hashing returns a deterministic 32-bit FNV-1a result represented
-as a `number`, with typed values, UTF-8 strings, ranges, reference identities,
-and enum payloads covered by the shared C++/Rust contract. These bounds remain
-compile-time checks and the hash entry point is a normal native call: they do
-not introduce trait objects, dynamic dispatch, or user-defined capability
-implementations.
+`number` and `string`; a named struct with all four valid ordering operators
+also satisfies `Ord`, which implies `Eq`; `Hash` permits `hash(value)`. Hashing
+returns a deterministic 32-bit FNV-1a result represented as a `number`, with
+typed values, UTF-8 strings, ranges, reference identities, and enum payloads
+covered by the shared C++/Rust contract. These bounds remain static contracts:
+there are no trait objects or general capability dictionaries. Erased generic
+ordering of a witnessed struct reuses the existing comparison instructions and
+an implementation-private runtime binding in the `.cdbc 0.1` program.
 
 Named structs may define local ordering operators in an `impl` block. Each
 operator uses the left operand as `this`, accepts exactly one parameter of the
@@ -360,7 +364,8 @@ cache sidecars, including the receiver/right-hand types, generic receiver
 metadata, bool result, and resolved linkage name. Re-exported structs preserve
 that metadata. Imported operators and independently emitted `.cdbc 0.1`
 products retain the same linkage and are expanded by the existing Rust module
-linker. Custom structs do not automatically satisfy `T: Ord`.
+linker. A complete four-operator set is the static `Ord` witness for the named
+struct; partial sets remain direct-only and do not satisfy `T: Ord`.
 
 Struct values are created with named constructor expressions such as `Person { name: "Ada", age: 36 }` after a matching `struct Person { ... }` declaration. Generic declarations such as `struct Box<T> { value: T }` produce nominal types such as `Box<number>`; constructors infer type arguments from field values or expected annotations and may provide explicit arguments such as `Box<number> { value: 1 }`. Generic struct arguments are invariant and erased at runtime. Constructors preserve declared field behavior, require exact field names, and allow fields in any order. Field reads use `value.field`. Existing fields can be reassigned with `value.field = expression`; the assignment evaluates to the assigned value. Structs are reference values with identity equality, so aliases observe field mutation. Assigning a missing field is a runtime error when the target type is not statically known, and a type error when it is known.
 
@@ -650,7 +655,9 @@ keys; aliases may mutate a stored key without changing its membership. These
 containers are library bucket tables and do not widen the built-in map's
 primitive-only key admission. User-defined capability witnesses and deep frozen
 key snapshots remain unsupported; the language does not define a separate
-ownership or freezing mechanism for hash keys.
+ownership or freezing mechanism for hash keys. The struct ordering witness is
+the supported exception for `Ord`; user-defined `Eq`/`Hash` witnesses remain
+outside this contract.
 
 Supported expressions:
 

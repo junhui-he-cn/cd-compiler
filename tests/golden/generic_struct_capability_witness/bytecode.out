@@ -23,32 +23,35 @@ main registers=28
 0021  b7 = make_function $3 >=/2
 0022  assign_var @30 __method_Point_operator_GreaterEqual#3, b7
 0023  assign_var @31 __capability_ord_Point_greater_equal, b7
-0024  b8 = constant #8 1
-0025  b9 = struct @32 Point { @33 value: b8}
-0026  store_var @34 lower#12, b9
-0027  b10 = constant #9 2
-0028  b11 = struct @35 Point { @36 value: b10}
-0029  store_var @37 upper#13, b11
-0030  b12 = load_var @38 __method_Point_operator_Less#0
-0031  b13 = load_var @39 lower#12
-0032  b14 = load_var @40 upper#13
-0033  b15 = call b12(b13, b14)
-0034  print b15
-0035  b16 = load_var @41 __method_Point_operator_LessEqual#1
-0036  b17 = load_var @42 lower#12
-0037  b18 = load_var @43 upper#13
-0038  b19 = call b16(b17, b18)
-0039  print b19
-0040  b20 = load_var @44 __method_Point_operator_Greater#2
-0041  b21 = load_var @45 upper#13
-0042  b22 = load_var @46 lower#12
-0043  b23 = call b20(b21, b22)
-0044  print b23
-0045  b24 = load_var @47 __method_Point_operator_GreaterEqual#3
-0046  b25 = load_var @48 upper#13
-0047  b26 = load_var @49 lower#12
-0048  b27 = call b24(b25, b26)
-0049  print b27
+0024  b8 = constant #8 nil
+0025  store_var @32 compareAll#12, b8
+0026  b9 = make_function $4 compareAll/2
+0027  assign_var @41 compareAll#12, b9
+0028  b10 = constant #10 nil
+0029  store_var @42 compareAndEqual#15, b10
+0030  b11 = make_function $5 compareAndEqual/2
+0031  assign_var @47 compareAndEqual#15, b11
+0032  b12 = constant #12 1
+0033  b13 = struct @48 Point { @49 value: b12}
+0034  store_var @50 low#18, b13
+0035  b14 = constant #13 2
+0036  b15 = struct @51 Point { @52 value: b14}
+0037  store_var @53 high#19, b15
+0038  b16 = load_var @54 compareAll#12
+0039  b17 = load_var @55 low#18
+0040  b18 = load_var @56 high#19
+0041  b19 = call b16(b17, b18)
+0042  print b19
+0043  b20 = load_var @57 compareAll#12
+0044  b21 = load_var @58 high#19
+0045  b22 = load_var @59 low#18
+0046  b23 = call b20(b21, b22)
+0047  print b23
+0048  b24 = load_var @60 compareAndEqual#15
+0049  b25 = load_var @61 low#18
+0050  b26 = load_var @62 low#18
+0051  b27 = call b24(b25, b26)
+0052  print b27
 
 function $0 </2 registers=6
 0000  b0 = load_var @2 this#4
@@ -89,3 +92,35 @@ function $3 >=/2 registers=6
 0005  return b4
 0006  b5 = constant #7 nil
 0007  return b5
+
+function $4 compareAll/2 registers=14
+0000  b0 = load_var @33 left#13
+0001  b1 = load_var @34 right#14
+0002  b2 = less b0, b1
+0003  b3 = load_var @35 left#13
+0004  b4 = load_var @36 right#14
+0005  b5 = less_equal b3, b4
+0006  b6 = load_var @37 left#13
+0007  b7 = load_var @38 right#14
+0008  b8 = greater b6, b7
+0009  b9 = load_var @39 left#13
+0010  b10 = load_var @40 right#14
+0011  b11 = greater_equal b9, b10
+0012  b12 = array [b2, b5, b8, b11]
+0013  return b12
+0014  b13 = constant #9 nil
+0015  return b13
+
+function $5 compareAndEqual/2 registers=8
+0000  b0 = load_var @43 left#16
+0001  b1 = load_var @44 right#17
+0002  b2 = equal b0, b1
+0003  b3 = move b2
+0004  jump_if_true b3, 0009
+0005  b4 = load_var @45 left#16
+0006  b5 = load_var @46 right#17
+0007  b6 = less b4, b5
+0008  b3 = move b6
+0009  return b3
+0010  b7 = constant #11 nil
+0011  return b7

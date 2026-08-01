@@ -1,6 +1,6 @@
 # M8-LANG-REF-001: stable node references and recursive mutable structs
 
-Status: proposed for issue #16.
+Status: implemented for issue #16.
 
 ## Question
 
@@ -36,3 +36,8 @@ cache key ownership.
 The slice is admissible only when the recursive type fixtures, C++ value tests,
 Rust VM value tests, imported interface/.cdi round trips, bytecode artifact
 execution, and full repository verification pass with `git diff --check`.
+
+Verified in the current working tree: recursive-node golden/import fixtures and
+the isolated `linked_structures_basic` library fixture pass; the repository
+gates report canonical 1935/1935, CTest 43/43, Rust VM 798/798, Cargo 95/95,
+and `git diff --check` clean.

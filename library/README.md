@@ -1395,12 +1395,13 @@ methods.
 
 The language provides compile-time `Eq`, `Ord`, and `Hash` capability bounds,
 deterministic `hash(value)`, builtin string ordering, and statically dispatched
-ordering operators for named structs. Generic library algorithms continue to
-accept explicit `less` callbacks where a user-defined type is involved; custom
-struct operators are not implicitly converted into a generic `T: Ord` witness.
-Hash containers require `Eq + Hash`; mutable reference keys use stable identity
-semantics and are retained as shallow aliases. User-defined capability
-witnesses remain outside the current library contract.
+ordering operators for named structs. A named struct with all four valid
+ordering operators (`<`, `<=`, `>`, `>=`) satisfies generic `T: Ord` (and thus
+`T: Eq`); partial or comparator-specific implementations remain explicit
+`less` callback inputs for library algorithms. Hash containers require
+`Eq + Hash`; mutable reference keys use stable identity semantics and are
+retained as shallow aliases. User-defined `Eq`/`Hash` witnesses remain outside
+the current library contract.
 Nullable annotations in this library use the canonical `optional<T>` spelling;
 the compiler retains the postfix nullable spelling only for migration
 compatibility.

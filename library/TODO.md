@@ -27,8 +27,8 @@ Issue #15 defines the stable key contract for the generic hash containers.
       `HashMap<K: Eq + Hash, V>` with explicit empty/missing behavior.
 - [ ] Revisit hash-dependent algorithms such as Rabin–Karp when they provide a
       meaningful benefit over the current deterministic scans.
-- [ ] Define whether user-defined struct operators can satisfy generic
-      `T: Eq`/`T: Ord` through an explicit static witness or specialization rule.
+- [x] Complete named-struct ordering operators provide a static `T: Ord`
+      witness (and therefore `T: Eq`); partial sets remain direct-only (Issue #17).
 - [ ] Decide whether to migrate LRU/LFU internals to node handles; preserve the
       current array-backed APIs until key ownership, eviction, and strong-cycle
       behavior are specified for that separate slice.

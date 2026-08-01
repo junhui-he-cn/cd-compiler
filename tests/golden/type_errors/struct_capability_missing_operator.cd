@@ -1,0 +1,22 @@
+struct Point {
+  value: number
+}
+
+impl Point {
+  operator <(other: Point): bool {
+    return this.value < other.value;
+  }
+  operator <=(other: Point): bool {
+    return this.value <= other.value;
+  }
+  operator >(other: Point): bool {
+    return this.value > other.value;
+  }
+}
+
+fun compare<T: Ord>(left: T, right: T): bool {
+  return left < right;
+}
+
+let point = Point { value: 1 };
+print compare(point, point);

@@ -1,0 +1,1 @@
+Type error at 22:27: function call: type parameter T must satisfy Ord, got Point

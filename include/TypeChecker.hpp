@@ -238,6 +238,8 @@ private:
         const TypeSubstitutions& substitutions,
         const Token& callToken,
         const std::string& context) const;
+    bool hasCapabilityWitness(const TypeInfo& actual, const std::string& capability) const;
+    bool satisfiesCapabilityWitness(const TypeInfo& actual, const TypeInfo& capability) const;
     TypeInfo specializeGenericCallback(
         const Token& callToken,
         const TypeInfo& callbackType,

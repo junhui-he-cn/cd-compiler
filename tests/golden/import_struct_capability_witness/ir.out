@@ -23,32 +23,26 @@ IR
 0021  v7 = make_function $3 >=/2
 0022  assign_var @30 __method_Point_operator_GreaterEqual#3, v7
 0023  assign_var @31 __capability_ord_Point_greater_equal, v7
-0024  v8 = constant #8 1
-0025  v9 = struct Point {value: v8}
-0026  store_var @34 lower#12, v9
-0027  v10 = constant #9 2
-0028  v11 = struct Point {value: v10}
-0029  store_var @37 upper#13, v11
-0030  v12 = load_var @38 __method_Point_operator_Less#0
-0031  v13 = load_var @39 lower#12
-0032  v14 = load_var @40 upper#13
-0033  v15 = call v12(v13, v14)
-0034  print v15
-0035  v16 = load_var @41 __method_Point_operator_LessEqual#1
-0036  v17 = load_var @42 lower#12
-0037  v18 = load_var @43 upper#13
-0038  v19 = call v16(v17, v18)
-0039  print v19
-0040  v20 = load_var @44 __method_Point_operator_Greater#2
-0041  v21 = load_var @45 upper#13
-0042  v22 = load_var @46 lower#12
-0043  v23 = call v20(v21, v22)
-0044  print v23
-0045  v24 = load_var @47 __method_Point_operator_GreaterEqual#3
-0046  v25 = load_var @48 upper#13
-0047  v26 = load_var @49 lower#12
-0048  v27 = call v24(v25, v26)
-0049  print v27
+0024  v8 = constant #8 nil
+0025  store_var @32 compareAll#12, v8
+0026  v9 = make_function $4 compareAll/2
+0027  assign_var @41 compareAll#12, v9
+0028  v10 = constant #10 1
+0029  v11 = struct forwarded.Point {value: v10}
+0030  store_var @44 low#15, v11
+0031  v12 = constant #11 2
+0032  v13 = struct forwarded.Point {value: v12}
+0033  store_var @47 high#16, v13
+0034  v14 = load_var @48 compareAll#12
+0035  v15 = load_var @49 low#15
+0036  v16 = load_var @50 high#16
+0037  v17 = call v14(v15, v16)
+0038  print v17
+0039  v18 = load_var @51 compareAll#12
+0040  v19 = load_var @52 high#16
+0041  v20 = load_var @53 low#15
+0042  v21 = call v18(v19, v20)
+0043  print v21
 
 function $0 <(this#4, other#5)
 0000  v0 = load_var @2 this#4
@@ -89,3 +83,21 @@ function $3 >=(this#10, other#11)
 0005  return v4
 0006  v5 = constant #7 nil
 0007  return v5
+
+function $4 compareAll(left#13, right#14)
+0000  v0 = load_var @33 left#13
+0001  v1 = load_var @34 right#14
+0002  v2 = less v0, v1
+0003  v3 = load_var @35 left#13
+0004  v4 = load_var @36 right#14
+0005  v5 = less_equal v3, v4
+0006  v6 = load_var @37 left#13
+0007  v7 = load_var @38 right#14
+0008  v8 = greater v6, v7
+0009  v9 = load_var @39 left#13
+0010  v10 = load_var @40 right#14
+0011  v11 = greater_equal v9, v10
+0012  v12 = array [v2, v5, v8, v11]
+0013  return v12
+0014  v13 = constant #9 nil
+0015  return v13
