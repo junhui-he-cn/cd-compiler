@@ -5,6 +5,10 @@ let matrix: optional<ds.Matrix> = ds.newMatrix(source);
 print matrix == nil;
 source[0][0] = 99;
 if (matrix != nil) {
+  print matrix.snapshot();
+}
+
+if (matrix != nil) {
   let concrete: ds.Matrix = matrix;
   print concrete.snapshot();
   let copied = concrete.snapshot();

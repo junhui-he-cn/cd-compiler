@@ -358,11 +358,12 @@ fun huffmanMergeCost(weights: [number]): optional<number> {
     if (first == nil) {
       return nil;
     }
+    let firstValue: number = first;
     let second = working.take();
     if (second == nil) {
       return nil;
     }
-    let merged = first + second;
+    let merged = firstValue + second;
     total += merged;
     working.add(merged);
   }

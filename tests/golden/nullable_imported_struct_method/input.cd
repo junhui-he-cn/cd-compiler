@@ -1,0 +1,19 @@
+import "./lib.cd" as ds;
+
+struct LocalBox { value: number }
+
+impl LocalBox {
+  fun read(): number {
+    return this.value;
+  }
+}
+
+let local: optional<LocalBox> = LocalBox { value: 7 };
+if (local != nil) {
+  print local.read();
+}
+
+let imported: optional<ds.Box> = ds.newBox(11);
+if (imported != nil) {
+  print imported.read();
+}

@@ -288,11 +288,12 @@ impl MedianHeap {
     if (lowerValue == nil) {
       return nil;
     }
+    let lowerNumber: number = lowerValue;
     let upperValue = this.upper.peek();
     if (upperValue == nil) {
       return nil;
     }
-    return (lowerValue + upperValue) / 2;
+    return (lowerNumber + upperValue) / 2;
   }
 
   fun size(): number {

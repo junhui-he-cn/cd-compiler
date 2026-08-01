@@ -1,0 +1,3 @@
+Type error at <repo>/tests/golden/type_errors/nullable_imported_struct_method_assignment.cd:6:23: can only call methods on known named structs
+    print imported.read();
+                        ^

@@ -6357,8 +6357,8 @@ void TypeChecker::invalidateCapturedBindings(const CallExpr& expression)
 
 void TypeChecker::invalidateStructMethodEffects(const MemberCallExpr& expression)
 {
-    const CallTargetRecord* callTarget = declarationIndex_.callTarget(expression);
-    if (!callTarget || callTarget->kind != CallTargetKind::StructMethod) {
+    const MemberCallMetadataRecord* metadata = declarationIndex_.memberCallMetadata(expression);
+    if (!metadata || !metadata->passesReceiver) {
         return;
     }
 

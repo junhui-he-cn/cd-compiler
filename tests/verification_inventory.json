@@ -24867,6 +24867,90 @@
       "fixture": "tests/golden/type_errors"
     },
     {
+      "case_id": "golden.type_errors.nullable_imported_struct_method_assignment",
+      "runner": "golden",
+      "result_name": "type_errors/nullable_imported_struct_method_assignment default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:nullable_imported_struct_method_assignment"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/nullable_imported_struct_method_assignment.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/nullable_imported_struct_method_assignment.cd",
+        "tests/golden/type_errors/nullable_imported_struct_method_assignment.err",
+        "tests/golden/type_errors/nullable_imported_struct_method_assignment.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.nullable_imported_struct_method_call_invalidation",
+      "runner": "golden",
+      "result_name": "type_errors/nullable_imported_struct_method_call_invalidation default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:nullable_imported_struct_method_call_invalidation"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/nullable_imported_struct_method_call_invalidation.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/nullable_imported_struct_method_call_invalidation.cd",
+        "tests/golden/type_errors/nullable_imported_struct_method_call_invalidation.err",
+        "tests/golden/type_errors/nullable_imported_struct_method_call_invalidation.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.nullable_imported_struct_method_outside",
+      "runner": "golden",
+      "result_name": "type_errors/nullable_imported_struct_method_outside default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:nullable_imported_struct_method_outside"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/nullable_imported_struct_method_outside.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/nullable_imported_struct_method_outside.cd",
+        "tests/golden/type_errors/nullable_imported_struct_method_outside.err",
+        "tests/golden/type_errors/nullable_imported_struct_method_outside.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
       "case_id": "golden.type_errors.nullable_narrowing_assignment_invalidated",
       "runner": "golden",
       "result_name": "type_errors/nullable_narrowing_assignment_invalidated default(ast)",
@@ -45336,6 +45420,68 @@
         "tests/golden/nullable_if_narrowing/run.out"
       ],
       "fixture": "tests/golden/nullable_if_narrowing"
+    },
+    {
+      "case_id": "rust_vm.golden.nullable_imported_struct_method.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "nullable_imported_struct_method emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:nullable_imported_struct_method"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/nullable_imported_struct_method/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_imported_struct_method/run.out"
+      ],
+      "fixture": "tests/golden/nullable_imported_struct_method"
+    },
+    {
+      "case_id": "rust_vm.golden.nullable_imported_struct_method.run",
+      "runner": "rust_vm_golden",
+      "result_name": "nullable_imported_struct_method rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:nullable_imported_struct_method"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/nullable_imported_struct_method/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/nullable_imported_struct_method/run.out"
+      ],
+      "fixture": "tests/golden/nullable_imported_struct_method"
     },
     {
       "case_id": "rust_vm.golden.nullable_logical_multi_narrowing.emit",
