@@ -4,9 +4,14 @@ Status: proposed overall on `feat/ssa-optimization-design`. The CFG
 foundation, SSA structural shell, deterministic dominance-analysis,
 phi-placement, binding/effect-contract, SSA memory-slot rename, de-SSA
 copy-plan, internal linear-layout, ordinary-IR adapter, verified program-level
-adapter/rebuild boundary, conservative internal O1 value-simplification, and
-O0 optimization/cache-identity sub-slices are implemented on this branch;
-default pipeline integration and broader optimization remain unadmitted.
+adapter/rebuild boundary, conservative internal O1 value-simplification, O0/O1
+optimization/cache identity, explicit O1 CLI/module-product integration,
+proven-safe primitive constant folding, block-preserving known-condition branch
+normalization, post-de-SSA unreachable-block pruning, and redundant
+fallthrough-jump removal, and threading through empty jump-only blocks are
+implemented on this branch. Default O0 remains the compatibility path; general
+block merging/jump threading, physical register allocation, and broader
+optimization remain unadmitted.
 
 ## Question
 
@@ -96,7 +101,8 @@ evaluation sequence unless a later pass proves both safety and equivalence.
 
 ## Initial optimization contract
 
-The first enabled level (`O1`) is deliberately small and local:
+The first enabled level (`O1`) is deliberately small and local. Its intended
+contract includes:
 
 - unreachable-block removal and jump threading;
 - block merging and redundant jump removal;
@@ -106,6 +112,18 @@ The first enabled level (`O1`) is deliberately small and local:
 - conditional branch folding when the condition value is proven constant; and
 - dead-code elimination for non-trapping, side-effect-free instructions whose
   results are unused.
+
+The currently admitted control-flow step is narrower than full CFG folding:
+after verified de-SSA lowering, a known primitive condition may change its
+`JumpIfTrue`/`JumpIfFalse` into an ordinary `Jump`, after which a rebuilt CFG
+identifies and removes only unreachable blocks/instructions. Retained
+instruction order, source/insertion maps, and dependency-anchor offsets are
+remapped deterministically. A later local cleanup removes only an unconditional
+`Jump` whose target is the next retained instruction, and a threading step may
+skip a block containing only another unconditional `Jump`. General block
+merging and jump threading across non-empty blocks remain future work. Keeping
+all transformations on verified ordinary IR preserves the critical-edge copy
+contract established by de-SSA.
 
 The initial passes do not perform inlining, loop-invariant code motion,
 speculative devirtualization, vectorization, allocation sinking, or CSE across
@@ -278,24 +296,40 @@ insertion-boundary maps plus remapped module dependency offsets. It remains an
 SSA-owned internal result: it does not convert to `IRFunction`, alter the
 original CFG, or connect to bytecode, debug-local, or cache identity paths.
 
-`lowerSSADeSSAToIR` provides the next internal boundary. It reuses the
+`lowerSSADeSSAToIR` provides the internal lowering boundary. It reuses the
 existing `IROp` and operand fields, preserves SSA value IDs as virtual-register
 indices, computes the required register count, forwards caller-supplied
 parameter names and binding metadata, and carries source/offset maps plus
-synthetic-copy provenance. This adapter is not called by `IRCompiler`, the
-CLI, or any artifact emitter.
+synthetic-copy provenance. The explicit O1 program path invokes the verified
+program-level adapter around this boundary; O0 continues to use the original
+linear stream directly.
 
 The branch also adds `optimizeSSA` in `include/Optimizer.hpp` and
 `src/Optimizer.cpp`. O0 is a verified identity result. The current internal O1
 slice propagates `Copy` values, removes trivial phis only when their replacement
 dominates the join, and removes unused value-producing instructions only when
-`irEffectSummary` classifies them as pure. The stable O1 fingerprint is
-diagnostic metadata for this internal service; the current production cache
-identity records the O0 fingerprint only until O1 is admitted to lowering.
-Potential traps, memory operations, allocation, calls, output, and control flow
-remain unchanged. `ctest.optimizer` covers the O0 identity, copy/phi behavior,
-pure dead-code deletion, trap retention, and malformed-input rejection. This
-service is not called by `IRCompiler`, the CLI, or any artifact emitter.
+`irEffectSummary` classifies them as pure. The O1 constant pass uses the
+constant evaluator only for finite serializable primitive results whose
+operation is proven to succeed; it materializes new values through the
+program-level constant pool. Potential traps, memory operations, allocation,
+calls, and output remain unchanged; CFG pruning only removes blocks proven
+unreachable after known-condition normalization. The explicit O1
+CLI and module-product paths call `optimizeIRProgram`, which applies this
+verified boundary to the main stream and every nested function before existing
+bytecode lowering. After de-SSA, O1 normalizes only known primitive conditions
+on the verified ordinary IR: `JumpIfTrue`/`JumpIfFalse` become ordinary
+`Jump` instructions, removes only unreachable ordinary-IR blocks, and removes
+redundant fallthrough jumps while remapping source/insertion and dependency
+offsets. A jump may thread only through a jump-only block; this placement
+preserves critical-edge copy validation. General block merging, CFG rewriting,
+and threading across non-empty blocks remain future work.
+`ctest.optimizer` and `optimizer_cli` cover
+the O0 identity, copy/phi
+behavior, pure dead-code deletion, proven-safe constant folding,
+known-condition branch normalization, reachability/jump cleanup, jump-only
+threading, trap retention,
+malformed-input
+rejection, C++/Rust output parity, and O0/O1 module-cache identity.
 
 The constant-evaluation boundary is now explicit in
 `evaluateSSAConstantUnary` and `evaluateSSAConstantBinary`. A result is
@@ -305,10 +339,11 @@ type failures are classified as `RuntimeTrap` and remain eligible for runtime
 execution rather than becoming compile-time diagnostics. Non-finite inputs or
 results are `NonFinite` because the current artifact constant contract rejects
 them; non-primitive values and unsupported opcodes are `Unsupported`. This
-classifies legality without adding a constant-propagation/folding pass or
-changing the existing IR and bytecode paths.
+classifies legality for the O1 constant pass. Folded operations remain ordinary
+`Constant` instructions with existing IR/bytecode opcodes; runtime traps and
+non-finite results remain unmodified.
 
-The internal `optimizeIRFunction` adapter freezes the next invocation boundary:
+The internal `optimizeIRFunction` adapter freezes the one-stream invocation boundary:
 one ordinary `IRFunction` and its dependency anchors are lifted as one stream,
 checked through the selected SSA optimizer, and lowered back with source spans,
 original/insertion offset maps, and remapped dependency offsets. Function
@@ -316,7 +351,8 @@ parameters remain runtime-cell bindings during this conservative lift, so the
 adapter restores the ordinary parameter list after SSA lowering. O0 preserves
 at least the input virtual-register count; O1 reuses virtual SSA IDs and does
 not perform physical register allocation or coalescing. This adapter remains
-internal and is not yet called by `IRCompiler`, the CLI, or an artifact emitter.
+an internal service; the program-level wrapper is what the explicit O1 CLI and
+module-product paths invoke.
 
 `optimizeIRProgram` now applies that adapter to the anonymous main stream and
 every function-table entry in the existing index order. Its
@@ -324,19 +360,23 @@ every function-table entry in the existing index order. Its
 preserves function names, parameters, binding visibility, and every
 `MakeFunction` index sequence, and remaps only main-stream dependency offsets.
 `verify` checks those invariants against the source `IRProgram`; `rebuild`
-copies the source constant pool, name table, sources, and canonical bindings
-and replaces only the verified streams. This is still an internal opt-in
-boundary: it does not invoke `IRCompiler`, the CLI, bytecode, or artifact
-emission, and nested function results cannot carry module dependency anchors.
+copies the source constant pool, interns any newly folded primitive values,
+copies the name table, sources, and canonical bindings, and replaces only the
+verified streams. This remains an opt-in boundary: it
+does not invoke `IRCompiler` itself, and nested function results cannot carry
+module dependency anchors. The explicit O1 caller rebuilds the original
+`IRProgram` tables around the verified result and then reuses the existing
+bytecode/artifact emitters.
 
 The selected debug-local policy keeps source-visible runtime-cell operations in
 the default O1 contract; `renamePromotableMemorySlots` remains an internal
 experiment until optimized local materialization and trace mapping are
 specified. The module-product cache records `optimization_level` and
 `optimizer_pipeline` in schema 3 and includes both in the length-delimited
-cache key. The current O0 identity is `O0` / `m7-ssa-o0-v1`; schema 2 manifests
-are stale and take the existing cold-cache repair path. This does not change the
-`cdbc 0.1` artifact or Rust VM wire format.
+cache key. The default identity is `O0` / `m7-ssa-o0-v1`; explicit O1 products
+use `O1` / `m7-ssa-o1-copy-phi-const-branch-dce-reach-thread-v6`. Schema 2 manifests are stale and take
+the existing cold-cache repair path. This does not change the `cdbc 0.1`
+artifact or Rust VM wire format.
 
 The branch now freezes the internal binding/effect contract in
 `include/BindingMetadata.hpp` and `include/IR.hpp`. `IRBinding` carries a
@@ -358,11 +398,13 @@ flow, change closure ownership, add a new runtime representation, change
 `cdbc 0.1`, optimize across module boundaries, add a JIT, add garbage
 collection, or make optimization mandatory.
 
-## Open decisions before default-pipeline de-SSA and optimization
+## Open decisions before making optimized lowering the default
 
-The following remain before default-pipeline de-SSA and optimization:
+The following remain before making optimized lowering the default:
 
-1. when `IRCompiler`/CLI and independent module-product lowering should invoke
-   the verified program-level result/rebuild boundary while preserving debug
-   locations, dependency anchors, and existing artifact boundaries;
-2. the register-allocation strategy and its source-location mapping.
+1. whether the conservative O1 operation set should next admit general block
+   merging and threading across non-empty blocks after the current jump-only
+   threading boundary;
+2. the register-allocation strategy and its source-location mapping;
+3. the optimized trace-local materialization contract and whether it is strong
+   enough to replace the O0 default.

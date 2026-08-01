@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "decision_revision": "m7-2026-07-31-r11",
+  "decision_revision": "m7-2026-07-31-r17",
   "inventory_revision": "m0d-2026-07-22-r1",
   "decision_id": "M7-IR-SSA-001",
   "domain": "internal-ssa-optimization",
@@ -172,19 +172,22 @@
       "verified O0 identity result",
       "deterministic Copy propagation",
       "dominance-checked trivial phi simplification",
+      "proven-safe finite primitive constant folding",
       "unused pure Constant and Copy removal",
+      "block-preserving known-condition branch normalization after de-SSA",
+      "post-de-SSA unreachable-block pruning with offset remapping",
+      "redundant fallthrough-jump removal",
+      "threading through empty jump-only blocks",
       "per-pass SSA verification",
       "stable diagnostic pipeline fingerprints",
       "deterministic optimization counters",
-      "single-stream ordinary IR optimizer adapter"
+      "single-stream ordinary IR optimizer adapter",
+      "explicit O1 CLI and module-product invocation"
     ],
     "test_case_id": "ctest.optimizer",
     "not_included": [
-      "CFG reachability or block rewriting",
-      "constant-value propagation or folding pass",
-      "branch simplification",
-      "default IRCompiler or CLI integration",
-      "bytecode integration",
+      "block merging and general CFG rewriting",
+      "default O0 replacement",
       "optimized trace event-count contract"
     ]
   },
@@ -198,9 +201,8 @@
     ],
     "test_case_id": "ctest.optimizer",
     "not_included": [
-      "constant propagation through SSA values",
-      "constant folding pass or branch rewriting",
-      "default IRCompiler or CLI integration",
+      "CFG rewriting outside post-de-SSA reachability pruning",
+      "default O0 replacement",
       "optimized trace event-count contract"
     ]
   },
@@ -215,7 +217,7 @@
     ],
     "test_case_id": "ctest.optimizer",
     "not_included": [
-      "IRCompiler or CLI invocation",
+      "IRCompiler invocation",
       "physical register allocation or coalescing",
       "optimized trace event-count contract"
     ]
@@ -228,11 +230,13 @@
       "MakeFunction function-index preservation",
       "constant pool, name table, source table, and canonical binding preservation",
       "main dependency-anchor remapping with nested-function dependency rejection",
-      "per-stream offset maps and deterministic optimization statistics"
+      "per-stream offset maps and deterministic optimization statistics",
+      "explicit O1 rebuild boundary before existing bytecode lowering",
+      "folded primitive constant-pool materialization"
     ],
     "test_case_id": "ctest.optimizer",
     "not_included": [
-      "IRCompiler or CLI invocation",
+      "IRCompiler invocation",
       "bytecode or artifact emission",
       "physical register allocation or coalescing",
       "optimized trace event-count contract"
@@ -247,13 +251,13 @@
       "length-delimited optimization identity in module cache keys",
       "optimization_configuration_changed rebuild reason",
       "schema 2 stale-cache rejection and cold rebuild policy",
+      "O1 module-product/cache identity propagation",
       "unchanged cdbc 0.1 and Rust VM wire format"
     ],
     "test_case_id": "ctest.module_cache",
     "not_included": [
-      "default optimized IRCompiler pipeline",
       "optimized trace event-count equivalence",
-      "O1 module-product emission"
+      "default O1 lowering"
     ]
   },
   "pipeline": [
@@ -286,6 +290,7 @@
     "jump threading and block merging",
     "constant propagation and proven-safe folding",
     "copy and phi simplification",
+    "block-preserving known-condition branch normalization",
     "limited non-trapping dead-code elimination"
   ],
   "verification": {
@@ -294,6 +299,7 @@
       "O0 CFG/SSA/de-SSA round trip",
       "O0/O1 semantic parity corpus",
       "C++ artifact and Rust VM parity",
+      "explicit O1 CLI and module-product selection",
       "module dependency/cache/debug metadata checks",
       "canonical repository verification"
     ],

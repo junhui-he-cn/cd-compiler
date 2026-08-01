@@ -3,15 +3,19 @@
 Date: 2026-07-30
 
 Status: design proposal with admitted internal SSA rename, de-SSA copy-plan,
-linear-layout, ordinary-IR adapter, and conservative internal O1
-value-simplification slices;
+linear-layout, ordinary-IR adapter, conservative internal O1
+value-simplification, and explicit O1 CLI/module-product/cache slices;
 the CFG foundation, SSA structural shell, deterministic dominance analysis,
 phi placement, binding/effect contract, rename slice, edge-copy plan, and
 internal linear layout/adapter plus the one-stream optimizer boundary are
 implemented on the feature branch. The
-internal O1 slice covers copy/phi simplification and pure dead-code removal;
-CFG rewrites, constant folding, default pipeline integration, and broader
-optimization remain unadmitted. This document expands
+internal O1 slice covers proven-safe primitive constant folding, copy/phi
+simplification, pure dead-code removal, block-preserving known-condition branch
+normalization, post-de-SSA unreachable-block pruning, redundant
+fallthrough-jump removal, and threading through jump-only blocks; explicit O1
+lowering now invokes the verified program-level boundary. General block
+merging/jump threading across non-empty blocks, default pipeline integration,
+and broader optimization remain unadmitted. This document expands
 [`M7-IR-SSA-001`](../../decisions/m7-ir-ssa-optimization-001.md); it does not
 authorize implementation by itself.
 
@@ -196,28 +200,41 @@ identity paths.
 `lowerSSADeSSAToIR` is the internal ordinary-IR adapter. It keeps SSA value IDs
 as virtual-register indices, computes `registerCount`, forwards parameter names
 and binding metadata supplied by the caller, and preserves source spans,
-synthetic-copy provenance, and offset maps. It is deliberately not invoked by
-`IRCompiler`, the CLI, or artifact emission.
+synthetic-copy provenance, and offset maps. The explicit O1 program caller
+invokes the verified program-level wrapper around this adapter; O0 continues
+to bypass it for compatibility.
 
 ## Internal O1 value-simplification slice
 
 `optimizeSSA` is the first internal pass-manager boundary. O0 verifies and
-returns the input unchanged. O1 currently runs two deterministic passes:
+returns the input unchanged. O1 currently runs three deterministic passes:
 
 1. propagate `Copy` values and simplify a phi only when all incoming values
-   resolve to one value whose definition dominates the join; and
-2. remove unused result-producing instructions only when `irEffectSummary`
+   resolve to one value whose definition dominates the join;
+2. fold a unary or binary expression when all operands are known finite,
+   serializable primitives and the constant evaluator proves the operation
+   succeeds; and
+3. remove unused result-producing instructions only when `irEffectSummary`
    marks them pure. The current effect table therefore permits removal of
    unused `Constant` and `Copy` values only.
 
-The result reports copy, phi, and instruction-removal counters; the service
+The result reports copy, phi, constant-fold, and instruction-removal counters;
+the service
 also exposes a stable diagnostic fingerprint. It re-verifies the SSA function
 after each pass, retains all memory/call/allocation/trap/control-flow
 operations, and does not alter the CFG, de-SSA offsets, ordinary IR, bytecode,
-or cache keys.
-`ctest.optimizer` is the focused verification case. Constant-value folding,
-branch/block rewriting, and default `IRCompiler`/CLI integration remain later
-decisions.
+or cache keys inside the internal service. The explicit O1 program adapter
+materializes newly folded primitive values in the existing constant pool
+before ordinary IR/bytecode lowering. `ctest.optimizer` and `optimizer_cli`
+are the focused verification cases. Known-condition branch normalization runs
+on verified ordinary IR after de-SSA, converting only known primitive
+conditional jumps to ordinary jumps; a rebuilt CFG then removes only blocks
+proven unreachable and remaps retained source/insertion and dependency offsets;
+it also removes only unconditional jumps targeting the next retained
+instruction. A jump may thread only through a block containing one
+unconditional jump. This placement preserves critical-edge copy validity.
+General block merging/jump threading across non-empty blocks and default O0
+replacement remain later decisions.
 
 ## SSA construction
 
@@ -274,8 +291,8 @@ The internal constant-evaluation boundary now makes that rule machine-checkable:
 `RuntimeTrap` covers division by zero and known operand type failures;
 `NonFinite` covers values rejected by the current artifact constant contract;
 and `Unsupported` covers non-primitive values or opcodes outside the admitted
-subset. This is a legality service only; constant propagation and folding are
-still separate passes.
+subset. The O1 constant pass consumes this legality result; it never rewrites
+an operation classified as a runtime trap or non-finite.
 
 ## Pass pipeline
 
@@ -290,13 +307,15 @@ linear path remains the O0 implementation until that difference is explained.
 ### O1
 
 The full O1 design is still broader than the admitted internal slice. The
-current branch implements only items 4 and 5 below; the other items remain
-planned:
+current branch implements items 1-5 below in a constrained post-de-SSA form and
+the local fallthrough/jump-only threading cleanup; general block merging and
+threading across non-empty blocks remain planned:
 
-1. CFG reachability and jump normalization;
+1. known-condition jump normalization followed by unreachable-block pruning,
+   redundant next-block jump removal, and jump-only-block threading;
 2. constant propagation for proven non-trapping values;
 3. constant folding for the approved primitive subset;
-4. copy/phi simplification; and
+4. copy/phi simplification;
 5. local dead-code elimination for non-trapping pure instructions; and
 6. block merge and final jump threading.
 
@@ -306,9 +325,10 @@ back while preserving the ordinary signature and dependency/source offset
 metadata. `optimizeIRProgram` now applies the same boundary to the anonymous
 main stream and every function-table entry in stable index order. Its verified
 `SSADeSSAProgramResult` preserves `MakeFunction` references and stream
-metadata, and its explicit `rebuild` copies the constant/name/source/binding
-tables before replacing streams. Neither adapter invokes `IRCompiler`, the
-CLI, allocates physical registers, or emits bytecode.
+metadata, and its explicit `rebuild` copies the name/source/binding tables and
+interns folded values in the constant pool before replacing streams. The explicit O1 caller then reuses the
+existing bytecode/artifact emitters; neither adapter invokes `IRCompiler` or
+allocates physical registers.
 
 Every pass has an input/output verifier boundary in debug builds and reports
 small counters such as blocks removed, folds, copies removed, and instructions
@@ -380,9 +400,12 @@ The fingerprint must be deterministic and versioned. A missing or mismatched
 optimization identity follows the existing source-fallback or strict-rejection
 policy; it must never reuse a product compiled under another optimizer.
 Schema-2 manifests are stale and follow the existing cold-cache repair path.
-The current default identity is `optimization_level = "O0"` and
-`optimizer_pipeline = "m7-ssa-o0-v1"`; a changed identity rebuilds only the
-affected product and does not imply a public-interface change.
+The default identity is `optimization_level = "O0"` and
+`optimizer_pipeline = "m7-ssa-o0-v1"`; explicit O1 products use
+`optimization_level = "O1"` and
+`optimizer_pipeline = "m7-ssa-o1-copy-phi-const-branch-dce-reach-thread-v6"`. A changed identity
+rebuilds only the affected product and does not imply a public-interface
+change.
 
 ## Proposed files and responsibilities
 

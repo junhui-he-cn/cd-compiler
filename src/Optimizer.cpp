@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numeric>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
@@ -11,6 +12,25 @@ namespace {
 
 using ValueAliases = std::unordered_map<SSAValueId, SSAValueId>;
 using ValueDefinitions = std::unordered_map<SSAValueId, CFGBlockId>;
+using KnownConstants = std::map<SSAValueId, Value>;
+
+void normalizeKnownConditionBranches(
+    IRFunction& function,
+    const std::vector<Value>* constantPool,
+    const std::map<SSAValueId, Value>& foldedConstants,
+    SSAOptimizationStats& stats);
+
+void pruneUnreachableIRInstructions(
+    SSADeSSAIRResult& result,
+    SSAOptimizationStats& stats);
+
+void removeRedundantFallthroughJumps(
+    SSADeSSAIRResult& result,
+    SSAOptimizationStats& stats);
+
+void threadEmptyJumpBlocks(
+    SSADeSSAIRResult& result,
+    SSAOptimizationStats& stats);
 
 std::optional<SSAValueId> resolveAlias(
     SSAValueId value,
@@ -333,6 +353,170 @@ void eliminateDeadPureInstructions(
     }
 }
 
+bool recordKnownConstant(
+    KnownConstants& known,
+    SSAValueId value,
+    const Value& constant)
+{
+    const auto existing = known.find(value);
+    if (existing == known.end()) {
+        known.emplace(value, constant);
+        return true;
+    }
+    if (!valuesEqual(existing->second, constant)) {
+        existing->second = constant;
+        return true;
+    }
+    return false;
+}
+
+bool constantForPhi(
+    const SSAPhi& phi,
+    const KnownConstants& known,
+    Value& result)
+{
+    if (phi.incoming.empty()) {
+        return false;
+    }
+
+    std::optional<Value> first;
+    for (const SSAIncoming& incoming : phi.incoming) {
+        const auto value = known.find(incoming.value);
+        if (value == known.end()) {
+            return false;
+        }
+        if (!first) {
+            first = value->second;
+        } else if (!valuesEqual(*first, value->second)) {
+            return false;
+        }
+    }
+    result = *first;
+    return true;
+}
+
+void foldKnownConstantExpressions(
+    SSAFunction& function,
+    const std::vector<Value>* constantPool,
+    SSAOptimizationStats& stats,
+    std::map<SSAValueId, Value>& foldedConstants)
+{
+    KnownConstants known;
+    const std::size_t maxIterations = function.blocks.size()
+        + std::accumulate(
+            function.blocks.begin(),
+            function.blocks.end(),
+            std::size_t{0},
+            [](std::size_t count, const SSABlock& block) {
+                return count + block.instructions.size() + block.phis.size();
+            })
+        + 1;
+
+    for (std::size_t iteration = 0; iteration < maxIterations; ++iteration) {
+        bool changed = false;
+        for (SSABlock& block : function.blocks) {
+            for (const SSAPhi& phi : block.phis) {
+                Value value = Value::nil();
+                if (constantForPhi(phi, known, value)) {
+                    changed = recordKnownConstant(known, phi.result, value) || changed;
+                }
+            }
+
+            for (SSAInstruction& instruction : block.instructions) {
+                if (!instruction.result) {
+                    continue;
+                }
+
+                const SSAValueId result = *instruction.result;
+                if (instruction.op == IROp::Constant) {
+                    const auto folded = foldedConstants.find(result);
+                    if (folded != foldedConstants.end()) {
+                        changed = recordKnownConstant(known, result, folded->second) || changed;
+                    } else if (constantPool && instruction.operand < constantPool->size()) {
+                        const Value& value = (*constantPool)[instruction.operand];
+                        if (isSerializablePrimitive(value)) {
+                            changed = recordKnownConstant(known, result, value) || changed;
+                        }
+                    }
+                    continue;
+                }
+
+                if (instruction.op == IROp::Copy && instruction.left) {
+                    const auto source = known.find(*instruction.left);
+                    if (source != known.end()) {
+                        changed = recordKnownConstant(known, result, source->second) || changed;
+                    }
+                    continue;
+                }
+
+                std::optional<SSAConstantEvaluation> evaluation;
+                if ((instruction.op == IROp::Negate || instruction.op == IROp::Not)
+                    && instruction.left) {
+                    const auto operand = known.find(*instruction.left);
+                    if (operand != known.end()) {
+                        evaluation = evaluateSSAConstantUnary(instruction.op, operand->second);
+                    }
+                } else if (instruction.left && instruction.right) {
+                    const auto left = known.find(*instruction.left);
+                    const auto right = known.find(*instruction.right);
+                    if (left != known.end() && right != known.end()) {
+                        evaluation = evaluateSSAConstantBinary(
+                            instruction.op,
+                            left->second,
+                            right->second);
+                    }
+                }
+
+                if (!evaluation || !evaluation->isFolded()) {
+                    continue;
+                }
+
+                const Value& value = *evaluation->value;
+                if (instruction.op != IROp::Constant) {
+                    instruction.op = IROp::Constant;
+                    instruction.left.reset();
+                    instruction.right.reset();
+                    instruction.arguments.clear();
+                    instruction.operands.clear();
+                    instruction.typeNameOperand.reset();
+                    instruction.variantNameOperand.reset();
+                    // The replacement pool index is assigned when the
+                    // program-level result is rebuilt.
+                    instruction.operand = 0;
+                    foldedConstants.insert_or_assign(result, value);
+                    ++stats.constantsFolded;
+                    changed = true;
+                }
+                changed = recordKnownConstant(known, result, value) || changed;
+            }
+        }
+        if (!changed) {
+            break;
+        }
+    }
+}
+
+void retainFoldedConstantsForOutput(
+    const SSAFunction& function,
+    std::map<SSAValueId, Value>& foldedConstants)
+{
+    std::set<SSAValueId> surviving;
+    for (const SSABlock& block : function.blocks) {
+        for (const SSAInstruction& instruction : block.instructions) {
+            if (instruction.op == IROp::Constant && instruction.result) {
+                surviving.insert(*instruction.result);
+            }
+        }
+    }
+    for (auto it = foldedConstants.begin(); it != foldedConstants.end();) {
+        if (surviving.find(it->first) == surviving.end()) {
+            it = foldedConstants.erase(it);
+        } else {
+            ++it;
+        }
+    }
+}
+
 } // namespace
 
 SSAConstantEvaluation evaluateSSAConstantUnary(IROp op, const Value& operand)
@@ -438,6 +622,24 @@ SSAConstantEvaluation evaluateSSAConstantBinary(
 void SSAOptimizationResult::verify(const ControlFlowGraph& cfg) const
 {
     function.verify(cfg);
+    std::set<SSAValueId> constantResults;
+    for (const SSABlock& block : function.blocks) {
+        for (const SSAInstruction& instruction : block.instructions) {
+            if (instruction.op == IROp::Constant && instruction.result) {
+                constantResults.insert(*instruction.result);
+            }
+        }
+    }
+    for (const auto& [value, constant] : foldedConstants) {
+        if (constantResults.find(value) == constantResults.end()) {
+            throw SSAError(
+                "SSA optimizer folded-constant metadata has no surviving Constant result");
+        }
+        if (!isSerializablePrimitive(constant)) {
+            throw SSAError(
+                "SSA optimizer folded-constant metadata is not serializable");
+        }
+    }
 }
 
 std::string ssaOptimizationPipelineFingerprint(SSAOptimizationLevel level)
@@ -446,7 +648,7 @@ std::string ssaOptimizationPipelineFingerprint(SSAOptimizationLevel level)
     case SSAOptimizationLevel::O0:
         return "m7-ssa-o0-v1";
     case SSAOptimizationLevel::O1:
-        return "m7-ssa-o1-copy-phi-dce-v1";
+        return "m7-ssa-o1-copy-phi-const-branch-dce-reach-thread-v6";
     }
     throw SSAError("unknown SSA optimization level");
 }
@@ -454,12 +656,14 @@ std::string ssaOptimizationPipelineFingerprint(SSAOptimizationLevel level)
 SSAOptimizationResult optimizeSSA(
     const ControlFlowGraph& cfg,
     const SSAFunction& input,
-    SSAOptimizationLevel level)
+    SSAOptimizationLevel level,
+    const std::vector<Value>* constantPool)
 {
     cfg.verify();
     input.verify(cfg);
 
-    SSAOptimizationResult result{input, {}};
+    SSAOptimizationResult result;
+    result.function = input;
     if (level == SSAOptimizationLevel::O0) {
         result.verify(cfg);
         return result;
@@ -472,8 +676,17 @@ SSAOptimizationResult optimizeSSA(
     ++result.stats.passesRun;
     result.verify(cfg);
 
+    foldKnownConstantExpressions(
+        result.function,
+        constantPool,
+        result.stats,
+        result.foldedConstants);
+    ++result.stats.passesRun;
+    result.verify(cfg);
+
     eliminateDeadPureInstructions(result.function, result.stats);
     ++result.stats.passesRun;
+    retainFoldedConstantsForOutput(result.function, result.foldedConstants);
     result.verify(cfg);
     return result;
 }
@@ -484,33 +697,84 @@ SSADeSSAIRResult optimizeIRFunctionWithStats(
     const IRFunction& input,
     const std::vector<IRModuleDependency>& moduleDependencies,
     SSAOptimizationLevel level,
-    SSAOptimizationStats* stats)
+    SSAOptimizationStats* stats,
+    const std::vector<Value>* constantPool)
 {
-    const ControlFlowGraph cfg = buildControlFlowGraph(
-        input.instructions,
-        moduleDependencies);
-    const SSAFunction lifted = liftIRToSSA(cfg, input);
-    const SSAOptimizationResult optimized = optimizeSSA(cfg, lifted, level);
-    if (stats) {
-        *stats = optimized.stats;
+    const auto identityResult = [&input, &moduleDependencies, stats]() {
+        SSADeSSAIRResult identity;
+        identity.function = input;
+        identity.moduleDependencies = moduleDependencies;
+        identity.syntheticInstructions.assign(input.instructions.size(), false);
+        identity.originalInstructionOffsets.resize(input.instructions.size());
+        for (std::size_t index = 0; index < input.instructions.size(); ++index) {
+            identity.originalInstructionOffsets[index] = index;
+        }
+        identity.originalInsertionOffsets.resize(input.instructions.size() + 1);
+        for (std::size_t index = 0; index < identity.originalInsertionOffsets.size(); ++index) {
+            identity.originalInsertionOffsets[index] = index;
+        }
+        if (stats) {
+            *stats = SSAOptimizationStats{};
+        }
+        identity.verify();
+        return identity;
+    };
+
+    try {
+        const ControlFlowGraph cfg = buildControlFlowGraph(
+            input.instructions,
+            moduleDependencies);
+        const SSAFunction lifted = liftIRToSSA(cfg, input);
+        const SSAOptimizationResult optimized = optimizeSSA(
+            cfg,
+            lifted,
+            level,
+            constantPool);
+        SSAOptimizationStats resultStats = optimized.stats;
+        const SSADeSSALinearFunction linear = lowerSSADeSSACopies(cfg, optimized.function);
+        SSADeSSAIRResult result = lowerSSADeSSAToIR(
+            cfg,
+            linear,
+            input.name,
+            {},
+            input.bindings);
+        // The conservative lift keeps function parameters as runtime-cell
+        // bindings, so they are not SSAParameter definitions yet. Restore the
+        // ordinary IR function signature after the SSA-owned lowering contract
+        // has validated its empty SSA parameter list.
+        result.function.parameters = input.parameters;
+        result.function.registerCount = std::max(
+            input.registerCount,
+            result.function.registerCount);
+        result.foldedConstants = optimized.foldedConstants;
+        if (level == SSAOptimizationLevel::O1) {
+            normalizeKnownConditionBranches(
+                result.function,
+                constantPool,
+                result.foldedConstants,
+                resultStats);
+            pruneUnreachableIRInstructions(result, resultStats);
+            threadEmptyJumpBlocks(result, resultStats);
+            pruneUnreachableIRInstructions(result, resultStats);
+            removeRedundantFallthroughJumps(result, resultStats);
+        }
+        if (stats) {
+            *stats = resultStats;
+        }
+        result.verify();
+        return result;
+    } catch (const SSAError& error) {
+        const std::string message = error.what();
+        if (message.find("ordinary IR register ") == 0
+            && message.find(" has no value on predecessor ") != std::string::npos) {
+            // Exhaustive source constructs may leave a statically impossible
+            // linear-IR path without a runtime register value.  The current
+            // IR has no undef value or unreachable-edge marker, so retaining
+            // the validated stream is the only semantics-preserving result.
+            return identityResult();
+        }
+        throw;
     }
-    const SSADeSSALinearFunction linear = lowerSSADeSSACopies(cfg, optimized.function);
-    SSADeSSAIRResult result = lowerSSADeSSAToIR(
-        cfg,
-        linear,
-        input.name,
-        {},
-        input.bindings);
-    // The conservative lift keeps function parameters as runtime-cell
-    // bindings, so they are not SSAParameter definitions yet. Restore the
-    // ordinary IR function signature after the SSA-owned lowering contract
-    // has validated its empty SSA parameter list.
-    result.function.parameters = input.parameters;
-    result.function.registerCount = std::max(
-        input.registerCount,
-        result.function.registerCount);
-    result.verify();
-    return result;
 }
 
 bool sameBinding(const IRBinding& left, const IRBinding& right)
@@ -565,6 +829,255 @@ bool sameDependencyAnchor(
         && expected.requestedPath == actual.requestedPath;
 }
 
+std::size_t internFoldedConstant(IRProgram& program, const Value& value)
+{
+    for (std::size_t index = 0; index < program.constants().size(); ++index) {
+        if (valuesEqual(program.constants()[index], value)) {
+            return index;
+        }
+    }
+    return program.addConstant(value);
+}
+
+void normalizeKnownConditionBranches(
+    IRFunction& function,
+    const std::vector<Value>* constantPool,
+    const std::map<SSAValueId, Value>& foldedConstants,
+    SSAOptimizationStats& stats)
+{
+    std::map<SSAValueId, Value> known;
+    for (std::size_t index = 0; index < function.instructions.size(); ++index) {
+        IRInstruction& instruction = function.instructions[index];
+        if ((instruction.op == IROp::JumpIfFalse || instruction.op == IROp::JumpIfTrue)
+            && instruction.left) {
+            const auto condition = known.find(instruction.left->index);
+            if (condition != known.end()) {
+                const bool truthy = isTruthy(condition->second);
+                const bool jumpsToTarget = instruction.op == IROp::JumpIfTrue
+                    ? truthy
+                    : !truthy;
+                const std::size_t target = instruction.operand;
+                instruction.op = IROp::Jump;
+                instruction.operand = jumpsToTarget ? target : index + 1;
+                instruction.left.reset();
+                ++stats.branchesSimplified;
+            }
+            continue;
+        }
+
+        if (!instruction.dest) {
+            continue;
+        }
+        const SSAValueId result = instruction.dest->index;
+        if (instruction.op == IROp::Constant) {
+            const auto folded = foldedConstants.find(result);
+            if (folded != foldedConstants.end()) {
+                known.insert_or_assign(result, folded->second);
+            } else if (constantPool && instruction.operand < constantPool->size()) {
+                const Value& value = (*constantPool)[instruction.operand];
+                if (isSerializablePrimitive(value)) {
+                    known.insert_or_assign(result, value);
+                }
+            }
+        } else if (instruction.op == IROp::Copy && instruction.left) {
+            const auto source = known.find(instruction.left->index);
+            if (source != known.end()) {
+                known.insert_or_assign(result, source->second);
+            }
+        }
+    }
+}
+
+void compactIRInstructions(
+    SSADeSSAIRResult& result,
+    const std::vector<bool>& retained,
+    const char* passName)
+{
+    const std::size_t instructionCount = result.function.instructions.size();
+    if (retained.size() != instructionCount
+        || result.syntheticInstructions.size() != instructionCount) {
+        throw SSAError(std::string(passName) + " received inconsistent instruction metadata");
+    }
+
+    std::vector<std::size_t> boundary(instructionCount + 1, 0);
+    for (std::size_t instruction = 0; instruction < instructionCount; ++instruction) {
+        boundary[instruction + 1] = boundary[instruction]
+            + (retained[instruction] ? 1 : 0);
+    }
+
+    const auto remapBoundary = [&boundary, instructionCount, passName](std::size_t offset) {
+        if (offset > instructionCount) {
+            throw SSAError(std::string(passName) + " encountered an invalid offset");
+        }
+        return boundary[offset];
+    };
+
+    std::vector<IRInstruction> instructions;
+    instructions.reserve(boundary.back());
+    std::vector<bool> synthetic;
+    synthetic.reserve(boundary.back());
+    for (std::size_t oldOffset = 0; oldOffset < instructionCount; ++oldOffset) {
+        if (!retained[oldOffset]) {
+            continue;
+        }
+        IRInstruction instruction = result.function.instructions[oldOffset];
+        if (instruction.op == IROp::Jump
+            || instruction.op == IROp::JumpIfFalse
+            || instruction.op == IROp::JumpIfTrue) {
+            instruction.operand = remapBoundary(instruction.operand);
+        }
+        instructions.push_back(std::move(instruction));
+        synthetic.push_back(result.syntheticInstructions[oldOffset]);
+    }
+
+    for (std::optional<std::size_t>& offset : result.originalInstructionOffsets) {
+        if (!offset) {
+            continue;
+        }
+        if (*offset >= instructionCount || !retained[*offset]) {
+            offset.reset();
+        } else {
+            *offset = boundary[*offset];
+        }
+    }
+    for (std::size_t& offset : result.originalInsertionOffsets) {
+        offset = remapBoundary(offset);
+    }
+    for (IRModuleDependency& dependency : result.moduleDependencies) {
+        dependency.instructionOffset = remapBoundary(dependency.instructionOffset);
+    }
+
+    result.function.instructions = std::move(instructions);
+    result.syntheticInstructions = std::move(synthetic);
+    for (auto it = result.foldedConstants.begin(); it != result.foldedConstants.end();) {
+        const bool survives = std::any_of(
+            result.function.instructions.begin(),
+            result.function.instructions.end(),
+            [value = it->first](const IRInstruction& instruction) {
+                return instruction.op == IROp::Constant
+                    && instruction.dest
+                    && instruction.dest->index == value;
+            });
+        if (!survives) {
+            it = result.foldedConstants.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    result.verify();
+}
+
+void pruneUnreachableIRInstructions(
+    SSADeSSAIRResult& result,
+    SSAOptimizationStats& stats)
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph(
+        result.function.instructions,
+        result.moduleDependencies);
+    std::size_t unreachableBlocks = 0;
+    std::vector<bool> retained(result.function.instructions.size(), false);
+    for (const CFGBlock& block : cfg.blocks) {
+        if (!block.syntheticExit && !block.reachable) {
+            ++unreachableBlocks;
+        }
+        if (!block.syntheticExit && block.reachable) {
+            for (std::size_t instruction = block.firstInstruction;
+                 instruction < block.endInstruction;
+                 ++instruction) {
+                retained[instruction] = true;
+            }
+        }
+    }
+    if (unreachableBlocks == 0) {
+        return;
+    }
+
+    compactIRInstructions(result, retained, "unreachable-block pruning");
+    stats.blocksRemoved += unreachableBlocks;
+}
+
+void removeRedundantFallthroughJumps(
+    SSADeSSAIRResult& result,
+    SSAOptimizationStats& stats)
+{
+    const std::size_t instructionCount = result.function.instructions.size();
+    std::vector<bool> retained(instructionCount, true);
+    std::size_t removed = 0;
+    for (std::size_t instruction = 0; instruction < instructionCount; ++instruction) {
+        const IRInstruction& current = result.function.instructions[instruction];
+        if (current.op == IROp::Jump && current.operand == instruction + 1) {
+            retained[instruction] = false;
+            ++removed;
+        }
+    }
+    if (removed == 0) {
+        return;
+    }
+
+    compactIRInstructions(result, retained, "fallthrough-jump removal");
+    stats.jumpsRemoved += removed;
+}
+
+void threadEmptyJumpBlocks(
+    SSADeSSAIRResult& result,
+    SSAOptimizationStats& stats)
+{
+    const ControlFlowGraph cfg = buildControlFlowGraph(
+        result.function.instructions,
+        result.moduleDependencies);
+    bool changed = false;
+    for (std::size_t instruction = 0;
+         instruction < result.function.instructions.size();
+         ++instruction) {
+        IRInstruction& current = result.function.instructions[instruction];
+        if (current.op != IROp::Jump || current.operand >= result.function.instructions.size()) {
+            continue;
+        }
+
+        std::set<std::size_t> visited;
+        std::size_t target = current.operand;
+        while (target < result.function.instructions.size()
+            && visited.insert(target).second) {
+            const auto targetBlockId = cfg.blockForInstruction(target);
+            if (!targetBlockId) {
+                break;
+            }
+            const CFGBlock& targetBlock = cfg.blocks[*targetBlockId];
+            if (targetBlock.firstInstruction != target
+                || targetBlock.endInstruction != target + 1
+                || result.function.instructions[target].op != IROp::Jump) {
+                break;
+            }
+            target = result.function.instructions[target].operand;
+        }
+
+        if (target != current.operand) {
+            current.operand = target;
+            ++stats.jumpsThreaded;
+            changed = true;
+        }
+    }
+    if (changed) {
+        result.verify();
+    }
+}
+
+void materializeFoldedConstants(
+    IRProgram& program,
+    IRFunction& function,
+    const std::map<SSAValueId, Value>& foldedConstants)
+{
+    for (IRInstruction& instruction : function.instructions) {
+        if (instruction.op != IROp::Constant || !instruction.dest) {
+            continue;
+        }
+        const auto folded = foldedConstants.find(instruction.dest->index);
+        if (folded != foldedConstants.end()) {
+            instruction.operand = internFoldedConstant(program, folded->second);
+        }
+    }
+}
+
 } // namespace
 
 SSADeSSAIRResult optimizeIRFunction(
@@ -572,7 +1085,7 @@ SSADeSSAIRResult optimizeIRFunction(
     const std::vector<IRModuleDependency>& moduleDependencies,
     SSAOptimizationLevel level)
 {
-    return optimizeIRFunctionWithStats(input, moduleDependencies, level, nullptr);
+    return optimizeIRFunctionWithStats(input, moduleDependencies, level, nullptr, nullptr);
 }
 
 void SSADeSSAProgramResult::verify(const IRProgram& input) const
@@ -622,35 +1135,43 @@ void SSADeSSAProgramResult::verify(const IRProgram& input) const
         }
     }
 
-    // This validates the replacement streams against the original immutable
-    // pools and also rejects stale register, name, constant, function, jump,
-    // binding, or dependency references before any caller can rebuild a
-    // program for a later compiler boundary.
-    input.rebuildWithStreams(
-        mainStream.function.instructions,
-        mainStream.function.registerCount,
-        [&]() {
-            std::vector<IRFunction> result;
-            result.reserve(functions.size());
-            for (const SSADeSSAIRResult& function : functions) {
-                result.push_back(function.function);
-            }
-            return result;
-        }(),
+    // Validate the replacement streams against a copy of the source pools.
+    // Folded SSA values may need one new primitive constant; materializing
+    // them here keeps the immutable input program and its ordinary IR result
+    // separately verifiable.
+    IRProgram candidate = input;
+    IRFunction main = mainStream.function;
+    materializeFoldedConstants(candidate, main, mainStream.foldedConstants);
+    std::vector<IRFunction> candidateFunctions;
+    candidateFunctions.reserve(functions.size());
+    for (const SSADeSSAIRResult& function : functions) {
+        IRFunction lowered = function.function;
+        materializeFoldedConstants(candidate, lowered, function.foldedConstants);
+        candidateFunctions.push_back(std::move(lowered));
+    }
+    candidate.rebuildWithStreams(
+        std::move(main.instructions),
+        main.registerCount,
+        std::move(candidateFunctions),
         mainStream.moduleDependencies);
 }
 
 IRProgram SSADeSSAProgramResult::rebuild(const IRProgram& input) const
 {
     verify(input);
+    IRProgram rebuilt = input;
+    IRFunction main = mainStream.function;
+    materializeFoldedConstants(rebuilt, main, mainStream.foldedConstants);
     std::vector<IRFunction> rebuiltFunctions;
     rebuiltFunctions.reserve(functions.size());
     for (const SSADeSSAIRResult& function : functions) {
-        rebuiltFunctions.push_back(function.function);
+        IRFunction lowered = function.function;
+        materializeFoldedConstants(rebuilt, lowered, function.foldedConstants);
+        rebuiltFunctions.push_back(std::move(lowered));
     }
-    return input.rebuildWithStreams(
-        mainStream.function.instructions,
-        mainStream.function.registerCount,
+    return rebuilt.rebuildWithStreams(
+        std::move(main.instructions),
+        main.registerCount,
         std::move(rebuiltFunctions),
         mainStream.moduleDependencies);
 }
@@ -678,7 +1199,8 @@ SSADeSSAProgramResult optimizeIRProgram(
         main,
         input.moduleDependencies(),
         level,
-        &result.mainStats);
+        &result.mainStats,
+        &input.constants());
     result.functions.reserve(input.functions().size());
     result.functionStats.reserve(input.functions().size());
     for (const IRFunction& function : input.functions()) {
@@ -687,7 +1209,8 @@ SSADeSSAProgramResult optimizeIRProgram(
             function,
             {},
             level,
-            &stats));
+            &stats,
+            &input.constants()));
         result.functionStats.push_back(stats);
     }
     result.verify(input);

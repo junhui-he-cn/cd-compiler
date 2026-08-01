@@ -21,8 +21,13 @@ covered by `ctest.control_flow_graph`,
 `ctest.ssa`, `ctest.dominance`, and `ctest.ssa_phi_placement`; the rename
 coverage is part of `ctest.ssa`, and the binding contract is additionally
 covered by `ctest.ssa_contract`, while the optimizer boundary is covered by
-`ctest.optimizer`. Default ordinary-IR/CLI integration, CFG rewrites,
-constant folding, and later work remain future implementation slices. The
+`ctest.optimizer`. The explicit O1 ordinary-IR/CLI/module-product integration
+and proven-safe primitive constant folding are now implemented; default O0
+remains unchanged. O1 also performs block-preserving known-condition branch
+normalization followed by post-de-SSA pruning of blocks proven unreachable, and
+removes only redundant fallthrough jumps and threads through jump-only blocks;
+general block merging and threading across non-empty blocks remain future
+implementation slices. The
 constant-evaluation boundary is now frozen in `Optimizer` and covered by
 `ctest.optimizer`: only finite, serializable primitive successes are foldable;
 runtime traps and non-finite results are never silently folded. The O0
@@ -35,8 +40,10 @@ preserves ordinary parameter/binding metadata, source/offset maps, and
 dependency anchors without physical register allocation.
 `optimizeIRProgram` now traverses the anonymous main stream and all nested
 functions in stable table order, while `SSADeSSAProgramResult::verify` and
-`rebuild` protect function indices and copy program-level pools/tables without
-connecting the adapter to CLI or artifact emission.
+`rebuild` protect function indices, copy program-level pools/tables, and
+intern newly folded primitive constants. The explicit O1 CLI and
+module-product paths invoke this boundary before existing bytecode/artifact
+emission.
 
 ### 1. Freeze the baseline and internal contracts
 
@@ -121,15 +128,22 @@ Tasks:
 - run the verifier before and after each pass in debug/test builds; and
 - report deterministic optimization counters outside artifacts.
 
-The admitted sub-slice implements only the internal `optimizeSSA` boundary and
-its verified per-stream/program adapters: copy propagation,
-dominance-checked trivial-phi simplification, and pure dead-code removal. It
-does not add `--opt-level`, invoke `IRCompiler`, rewrite CFG blocks, fold
-constant values, or emit optimized artifacts.
+The admitted sub-slice implements the internal `optimizeSSA` boundary and its
+verified per-stream/program adapters: copy propagation,
+dominance-checked trivial-phi simplification, proven-safe primitive constant
+folding, pure dead-code removal, post-de-SSA known-condition branch
+normalization, unreachable-block pruning, redundant fallthrough-jump removal,
+and jump-only-block threading. The explicit `--opt-level 0|1` CLI and
+independent module-product path invoke the program-level adapter for O1,
+propagate the O1 cache identity, and reuse the existing bytecode/artifact
+emitters. Branch normalization and pruning preserve retained order and
+remap source/insertion and dependency offsets; only jumps targeting the next
+retained instruction are removed, and threading may skip only a block with one
+unconditional jump. General block merging is not admitted.
 
-Gate: O0 goldens remain unchanged; O1 branch/constant/copy cases show smaller
-IR and exact C++/Rust output parity; runtime traps and evaluation order remain
-unchanged.
+Gate: O0 goldens remain unchanged; O1 branch/constant/copy cases show the
+intended IR simplification and exact C++/Rust output parity; runtime traps and
+evaluation order remain unchanged.
 
 ### 5. Reuse artifact/debug/module boundaries
 
@@ -146,13 +160,13 @@ Tasks:
 - remap dependency offsets after optimized module lowering (the internal
   one-stream adapter now exercises this map);
 - include level/pipeline identity in module-product cache decisions (schema 3
-  now records the O0 identity and rejects stale schema 2 manifests);
+  records O0 and O1 identities and rejects stale schema 2 manifests);
 - retain valid debug source spans, keep source-visible runtime cells in the
   default O1 policy, and make O0 trace the stable debug path; and
 - prove no SSA-only data leaks into `cdbc 0.1`.
 
 Gate: cold/hit/stale module cache matrix, imports/re-exports, linked product
-execution, artifact canonicalization, and debugger regression.
+execution for O0 and O1, artifact canonicalization, and debugger regression.
 
 ### 6. Decide and implement later O2 work separately
 

@@ -4,6 +4,7 @@
 #include "Dominance.hpp"
 
 #include <cstddef>
+#include <map>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -12,6 +13,7 @@
 
 using SSAValueId = std::size_t;
 using SSAMemorySlotId = std::size_t;
+using SSARegisterSlotId = std::size_t;
 
 using SSAMemoryStorage = BindingStorageClass;
 
@@ -45,6 +47,10 @@ struct SSAPhi {
     SSAValueId result = 0;
     std::vector<SSAIncoming> incoming;
     std::optional<SSAMemorySlotId> memorySlot = std::nullopt;
+    // A phi created while normalizing an ordinary register stream records
+    // the raw virtual-register slot it joins. Memory-slot phis use
+    // memorySlot instead; a phi never carries both identities.
+    std::optional<SSARegisterSlotId> registerSlot = std::nullopt;
 };
 
 struct SSAInstruction {
@@ -137,6 +143,9 @@ struct SSADeSSAIRResult {
     std::vector<bool> syntheticInstructions;
     std::vector<std::optional<std::size_t>> originalInstructionOffsets;
     std::vector<std::size_t> originalInsertionOffsets;
+    // New values created by constant folding. Original Constant instructions
+    // retain their source-pool operand and therefore do not appear here.
+    std::map<SSAValueId, Value> foldedConstants;
 
     void verify() const;
 };
@@ -158,9 +167,11 @@ struct SSAFunction {
 
 SSAFunction makeSSAFunction(const ControlFlowGraph& cfg);
 
-// Lift one ordinary IR stream into the conservative SSA shell. Register
-// operands and source metadata are copied without promoting memory slots; the
-// caller can then select a verified optimizer level before de-SSA lowering.
+// Lift one ordinary IR stream into the conservative SSA shell. Ordinary
+// virtual-register redefinitions are normalized with dominance-frontier phis;
+// runtime memory slots remain explicit and are not promoted by this boundary.
+// The caller can then select a verified optimizer level before de-SSA
+// lowering.
 SSAFunction liftIRToSSA(
     const ControlFlowGraph& cfg,
     const std::vector<IRInstruction>& instructions);

@@ -249,6 +249,65 @@ void test_internal_ir_adapter_runs_o1_without_physical_register_allocation()
     assert(!lowered.syntheticInstructions[1]);
 }
 
+void test_internal_ir_adapter_normalizes_redefined_registers()
+{
+    IRFunction input;
+    input.name = "logical";
+    input.registerCount = 3;
+
+    IRInstruction left;
+    left.op = IROp::Constant;
+    left.dest = IRRegister{0};
+    left.operand = 0;
+    input.instructions.push_back(left);
+
+    IRInstruction result;
+    result.op = IROp::Copy;
+    result.dest = IRRegister{1};
+    result.left = IRRegister{0};
+    input.instructions.push_back(result);
+
+    IRInstruction branch;
+    branch.op = IROp::JumpIfTrue;
+    branch.left = IRRegister{1};
+    branch.operand = 5;
+    input.instructions.push_back(branch);
+
+    IRInstruction right;
+    right.op = IROp::Constant;
+    right.dest = IRRegister{2};
+    right.operand = 1;
+    input.instructions.push_back(right);
+
+    IRInstruction replacement;
+    replacement.op = IROp::Copy;
+    replacement.dest = IRRegister{1};
+    replacement.left = IRRegister{2};
+    input.instructions.push_back(replacement);
+
+    IRInstruction print;
+    print.op = IROp::Print;
+    print.left = IRRegister{1};
+    input.instructions.push_back(print);
+
+    IRInstruction returned;
+    returned.op = IROp::Return;
+    returned.left = IRRegister{1};
+    input.instructions.push_back(returned);
+
+    const SSADeSSAIRResult lowered = optimizeIRFunction(
+        input,
+        {},
+        SSAOptimizationLevel::O0);
+    lowered.verify();
+    assert(lowered.function.registerCount > input.registerCount);
+    assert(lowered.function.instructions.size() > input.instructions.size());
+    assert(lowered.originalInstructionOffsets.size() == input.instructions.size());
+    for (const auto& offset : lowered.originalInstructionOffsets) {
+        assert(offset.has_value());
+    }
+}
+
 void assertSourceSpanEqual(
     const std::optional<SourceSpan>& expected,
     const std::optional<SourceSpan>& actual)
@@ -487,6 +546,158 @@ void test_program_adapter_o1_preserves_metadata_and_function_indices()
     assert(rebuilt.instructions()[0].operand == outerIndex);
 }
 
+void test_program_adapter_o1_folds_only_proven_constant_expressions()
+{
+    IRProgram input;
+    const IRRegister left = input.emitConstant(Value::number(2.0));
+    const IRRegister right = input.emitConstant(Value::number(3.0));
+    const IRRegister sum = input.emitBinary(IROp::Add, left, right);
+    input.emitReturn(sum);
+
+    const SSADeSSAProgramResult result = optimizeIRProgram(
+        input,
+        SSAOptimizationLevel::O1);
+    result.verify(input);
+    assert(result.mainStats.constantsFolded == 1);
+    assert(result.mainStream.function.instructions.size() == 2);
+    assert(result.mainStream.function.instructions[0].op == IROp::Constant);
+    assert(result.mainStream.function.instructions[1].op == IROp::Return);
+
+    const IRProgram rebuilt = result.rebuild(input);
+    assert(rebuilt.instructions().size() == 2);
+    const IRInstruction& folded = rebuilt.instructions().front();
+    assert(folded.op == IROp::Constant);
+    assert(folded.operand < rebuilt.constants().size());
+    assert(rebuilt.constants()[folded.operand].type() == Value::Type::Number);
+    assert(rebuilt.constants()[folded.operand].asNumber() == 5.0);
+
+    IRProgram trapping;
+    const IRRegister numerator = trapping.emitConstant(Value::number(1.0));
+    const IRRegister zero = trapping.emitConstant(Value::number(0.0));
+    const IRRegister division = trapping.emitBinary(IROp::Divide, numerator, zero);
+    trapping.emitReturn(division);
+    const SSADeSSAProgramResult trappingResult = optimizeIRProgram(
+        trapping,
+        SSAOptimizationLevel::O1);
+    assert(trappingResult.mainStats.constantsFolded == 0);
+    assert(trappingResult.mainStream.function.instructions.size() == 4);
+    assert(trappingResult.mainStream.function.instructions[2].op == IROp::Divide);
+}
+
+void test_program_adapter_o1_normalizes_known_condition_branches()
+{
+    IRProgram input;
+    const IRRegister condition = input.emitConstant(Value::boolean(true));
+    const std::size_t branch = input.emitJumpIfFalse(condition);
+    const IRRegister trueValue = input.emitConstant(Value::number(1.0));
+    input.emitPrint(trueValue);
+    const std::size_t end = input.emitJump();
+    input.patchJump(branch);
+    const IRRegister falseValue = input.emitConstant(Value::number(2.0));
+    input.emitPrint(falseValue);
+    input.patchJump(end);
+
+    const SSADeSSAProgramResult result = optimizeIRProgram(
+        input,
+        SSAOptimizationLevel::O1);
+    result.verify(input);
+    assert(result.mainStats.branchesSimplified == 1);
+    for (const IRInstruction& instruction : result.mainStream.function.instructions) {
+        assert(instruction.op != IROp::JumpIfFalse);
+        assert(instruction.op != IROp::JumpIfTrue);
+    }
+}
+
+void test_program_adapter_o1_prunes_known_dead_blocks_and_remaps_offsets()
+{
+    IRProgram input;
+    const IRRegister condition = input.emitConstant(Value::boolean(true));
+    const std::size_t branch = input.emitJumpIfFalse(condition);
+    const IRRegister liveValue = input.emitConstant(Value::number(1.0));
+    input.emitPrint(liveValue);
+    const std::size_t end = input.emitJump();
+    input.patchJump(branch);
+    const IRRegister deadValue = input.emitConstant(Value::number(2.0));
+    input.emitPrint(deadValue);
+    input.patchJump(end);
+    input.addModuleDependency(
+        IRModuleDependency{42, ModuleGraphEdgeKind::Import, "./dead.cd", input.instructionCount()});
+
+    const SSADeSSAProgramResult result = optimizeIRProgram(
+        input,
+        SSAOptimizationLevel::O1);
+    result.verify(input);
+    assert(result.mainStats.branchesSimplified == 1);
+    assert(result.mainStats.blocksRemoved == 1);
+    assert(result.mainStats.jumpsRemoved == 2);
+    assert(result.mainStream.function.instructions.size() == 3);
+    assert(result.mainStream.function.instructions[0].op == IROp::Constant);
+    assert(result.mainStream.function.instructions[1].op == IROp::Constant);
+    assert(result.mainStream.function.instructions[2].op == IROp::Print);
+    assert(result.mainStream.moduleDependencies.size() == 1);
+    assert(result.mainStream.moduleDependencies.front().instructionOffset == 3);
+    assert(!result.mainStream.originalInstructionOffsets[1].has_value());
+    assert(!result.mainStream.originalInstructionOffsets[5].has_value());
+    assert(!result.mainStream.originalInstructionOffsets[6].has_value());
+
+    const IRProgram rebuilt = result.rebuild(input);
+    assert(rebuilt.instructions().size() == 3);
+    assert(rebuilt.moduleDependencies().front().instructionOffset == 3);
+}
+
+void test_program_adapter_o1_threads_empty_jump_blocks()
+{
+    IRProgram input;
+    input.emitJumpTo(2);
+    input.emitConstant(Value::number(99.0));
+    input.emitJumpTo(3);
+    const IRRegister liveValue = input.emitConstant(Value::number(7.0));
+    input.emitPrint(liveValue);
+    input.addModuleDependency(
+        IRModuleDependency{43, ModuleGraphEdgeKind::Import, "./thread.cd", input.instructionCount()});
+
+    const SSADeSSAProgramResult result = optimizeIRProgram(
+        input,
+        SSAOptimizationLevel::O1);
+    result.verify(input);
+    assert(result.mainStats.jumpsThreaded == 1);
+    assert(result.mainStats.blocksRemoved == 1);
+    assert(result.mainStats.jumpsRemoved == 2);
+    assert(result.mainStream.function.instructions.size() == 2);
+    assert(result.mainStream.function.instructions[0].op == IROp::Constant);
+    assert(result.mainStream.function.instructions[1].op == IROp::Print);
+    assert(result.mainStream.moduleDependencies.front().instructionOffset == 2);
+    assert(!result.mainStream.originalInstructionOffsets[0].has_value());
+    assert(!result.mainStream.originalInstructionOffsets[2].has_value());
+}
+
+void test_program_adapter_o0_keeps_branch_shape()
+{
+    IRProgram input;
+    const IRRegister condition = input.emitConstant(Value::boolean(true));
+    const std::size_t branch = input.emitJumpIfFalse(condition);
+    const IRRegister trueValue = input.emitConstant(Value::number(1.0));
+    input.emitPrint(trueValue);
+    const std::size_t end = input.emitJump();
+    input.patchJump(branch);
+    const IRRegister falseValue = input.emitConstant(Value::number(2.0));
+    input.emitPrint(falseValue);
+    input.patchJump(end);
+
+    const SSADeSSAProgramResult result = optimizeIRProgram(
+        input,
+        SSAOptimizationLevel::O0);
+    result.verify(input);
+    assert(result.mainStats.branchesSimplified == 0);
+    assert(result.mainStats.blocksRemoved == 0);
+    // The internal O0 de-SSA adapter may add a synthetic exit barrier for a
+    // fallthrough stream, but it must not fold or prune the source branch.
+    assert(result.mainStream.function.instructions.size() >= input.instructions().size());
+    assert(result.mainStream.function.instructions[branch].op == IROp::JumpIfFalse);
+    assert(result.mainStream.function.instructions[branch].operand
+        == input.instructions()[branch].operand);
+}
+
 void test_o0_is_verified_identity()
 {
     const ControlFlowGraph cfg = buildControlFlowGraph({
@@ -540,7 +751,7 @@ void test_o1_propagates_copy_and_removes_copy_instruction()
     assert(result.stats.copiesPropagated == 1);
     assert(result.stats.phisSimplified == 0);
     assert(result.stats.instructionsRemoved == 1);
-    assert(result.stats.passesRun == 2);
+    assert(result.stats.passesRun == 3);
     result.function.verify(cfg);
 }
 
@@ -648,8 +859,14 @@ int main()
     test_constant_evaluation_rejects_nonfinite_and_nonprimitive_values();
     test_internal_ir_adapter_preserves_o0_stream_contract();
     test_internal_ir_adapter_runs_o1_without_physical_register_allocation();
+    test_internal_ir_adapter_normalizes_redefined_registers();
     test_program_adapter_preserves_order_and_o0_round_trip();
     test_program_adapter_o1_preserves_metadata_and_function_indices();
+    test_program_adapter_o1_folds_only_proven_constant_expressions();
+    test_program_adapter_o1_normalizes_known_condition_branches();
+    test_program_adapter_o1_prunes_known_dead_blocks_and_remaps_offsets();
+    test_program_adapter_o1_threads_empty_jump_blocks();
+    test_program_adapter_o0_keeps_branch_shape();
     test_o0_is_verified_identity();
     test_o1_propagates_copy_and_removes_copy_instruction();
     test_o1_simplifies_trivial_phi_when_source_dominates_join();

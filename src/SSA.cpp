@@ -1,6 +1,7 @@
 #include "SSA.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <functional>
 #include <limits>
 #include <map>
@@ -470,6 +471,339 @@ void checkedLinearAdvance(std::size_t& value, std::size_t amount)
     value += amount;
 }
 
+SSAInstruction liftIRInstruction(
+    const IRInstruction& source,
+    std::size_t originalInstruction)
+{
+    SSAInstruction lifted;
+    lifted.op = source.op;
+    if (source.dest) {
+        lifted.result = source.dest->index;
+    }
+    if (source.left) {
+        lifted.left = source.left->index;
+    }
+    if (source.right) {
+        lifted.right = source.right->index;
+    }
+    lifted.arguments.reserve(source.arguments.size());
+    for (const IRRegister argument : source.arguments) {
+        lifted.arguments.push_back(argument.index);
+    }
+    lifted.originalInstruction = originalInstruction;
+    lifted.operand = source.operand;
+    lifted.operands = source.operands;
+    lifted.typeNameOperand = source.typeNameOperand;
+    lifted.variantNameOperand = source.variantNameOperand;
+    lifted.span = source.span;
+    lifted.bindingId = source.bindingId;
+    validateInstructionShape(lifted);
+    return lifted;
+}
+
+SSAFunction liftOrdinaryIRToSSA(
+    const ControlFlowGraph& cfg,
+    const std::vector<IRInstruction>& instructions,
+    std::optional<std::size_t> registerCountHint)
+{
+    cfg.verify();
+    if (cfg.instructionCount != instructions.size()) {
+        throw SSAError("SSA input instruction count does not match CFG");
+    }
+
+    std::size_t registerSlotCount = registerCountHint.value_or(0);
+    const auto observeRegister = [&registerSlotCount, &registerCountHint](SSAValueId value) {
+        if (value == invalidSSAValue) {
+            throw SSAError("SSA input uses the reserved invalid register ID");
+        }
+        if (registerCountHint && value >= *registerCountHint) {
+            throw SSAError(
+                "ordinary IR register " + std::to_string(value)
+                + " is outside registerCount");
+        }
+        if (value >= registerSlotCount) {
+            if (value == invalidSSAValue - 1) {
+                throw SSAError("exhausted ordinary IR register slots");
+            }
+            registerSlotCount = value + 1;
+        }
+    };
+
+    SSAFunction raw;
+    raw.blocks.reserve(cfg.blocks.size());
+    std::vector<std::set<CFGBlockId>> definitionBlocks;
+    for (const CFGBlock& cfgBlock : cfg.blocks) {
+        raw.blocks.push_back(SSABlock{
+            cfgBlock.id,
+            cfgBlock.firstInstruction,
+            cfgBlock.endInstruction,
+            cfgBlock.syntheticExit,
+            {},
+            {}});
+    }
+
+    for (const CFGBlock& cfgBlock : cfg.blocks) {
+        SSABlock& block = raw.blocks[cfgBlock.id];
+        block.instructions.reserve(cfgBlock.endInstruction - cfgBlock.firstInstruction);
+        for (std::size_t index = cfgBlock.firstInstruction;
+             index < cfgBlock.endInstruction;
+             ++index) {
+            SSAInstruction lifted = liftIRInstruction(instructions[index], index);
+            if (lifted.result) {
+                observeRegister(*lifted.result);
+            }
+            if (lifted.left) {
+                observeRegister(*lifted.left);
+            }
+            if (lifted.right) {
+                observeRegister(*lifted.right);
+            }
+            for (const SSAValueId argument : lifted.arguments) {
+                observeRegister(argument);
+            }
+            block.instructions.push_back(std::move(lifted));
+        }
+    }
+    definitionBlocks.resize(registerSlotCount);
+    for (const CFGBlock& cfgBlock : cfg.blocks) {
+        if (!cfgBlock.reachable || cfgBlock.syntheticExit) {
+            continue;
+        }
+        for (const SSAInstruction& instruction : raw.blocks[cfgBlock.id].instructions) {
+            if (instruction.result) {
+                definitionBlocks[*instruction.result].insert(cfgBlock.id);
+            }
+        }
+    }
+
+    const DominanceInfo dominance = buildDominanceInfo(cfg);
+    std::vector<std::vector<std::optional<std::size_t>>> phiIndexes(
+        cfg.blocks.size(),
+        std::vector<std::optional<std::size_t>>(registerSlotCount));
+    SSAFunction result;
+    result.blocks.reserve(cfg.blocks.size());
+    for (const CFGBlock& cfgBlock : cfg.blocks) {
+        result.blocks.push_back(SSABlock{
+            cfgBlock.id,
+            cfgBlock.firstInstruction,
+            cfgBlock.endInstruction,
+            cfgBlock.syntheticExit,
+            {},
+            {}});
+    }
+
+    for (SSARegisterSlotId slot = 0; slot < registerSlotCount; ++slot) {
+        // A single defining block either dominates every use or the
+        // ordinary register stream is malformed.  It does not need a phi;
+        // inserting one would create an undefined incoming value on paths
+        // where the slot was never initialized.
+        if (definitionBlocks[slot].size() < 2) {
+            continue;
+        }
+        std::set<CFGBlockId> worklist = definitionBlocks[slot];
+        std::set<CFGBlockId> processed;
+        std::set<CFGBlockId> phiBlocks;
+        while (!worklist.empty()) {
+            const CFGBlockId definitionBlock = *worklist.begin();
+            worklist.erase(worklist.begin());
+            if (!processed.insert(definitionBlock).second) {
+                continue;
+            }
+            for (const CFGBlockId frontierBlock :
+                 dominance.dominanceFrontiers[definitionBlock]) {
+                const CFGBlock& block = cfg.blocks[frontierBlock];
+                if (!block.reachable || block.syntheticExit) {
+                    continue;
+                }
+                if (phiBlocks.insert(frontierBlock).second
+                    && definitionBlocks[slot].find(frontierBlock)
+                        == definitionBlocks[slot].end()) {
+                    worklist.insert(frontierBlock);
+                }
+            }
+        }
+
+        for (const CFGBlockId block : phiBlocks) {
+            SSAPhi phi;
+            phi.result = 0;
+            phi.registerSlot = slot;
+            phi.incoming.reserve(cfg.blocks[block].predecessors.size());
+            for (const CFGBlockId predecessor : cfg.blocks[block].predecessors) {
+                phi.incoming.push_back(SSAIncoming{predecessor, invalidSSAValue});
+            }
+            phiIndexes[block][slot] = result.blocks[block].phis.size();
+            result.blocks[block].phis.push_back(std::move(phi));
+        }
+    }
+
+    SSAValueId nextValue = registerSlotCount;
+    if (nextValue == invalidSSAValue) {
+        throw SSAError("exhausted SSA value IDs while normalizing registers");
+    }
+    const auto allocateValue = [&nextValue]() {
+        if (nextValue == invalidSSAValue) {
+            throw SSAError("exhausted SSA value IDs while normalizing registers");
+        }
+        return nextValue++;
+    };
+
+    const auto allocatePhiValues = [&result, &allocateValue]() {
+        for (SSABlock& block : result.blocks) {
+            for (SSAPhi& phi : block.phis) {
+                phi.result = allocateValue();
+            }
+        }
+    };
+    allocatePhiValues();
+
+    std::vector<std::vector<SSAValueId>> registerStacks(registerSlotCount);
+    std::vector<std::optional<SSAValueId>> firstValues(registerSlotCount);
+    const auto allocateDefinition = [&firstValues, &allocateValue](SSARegisterSlotId slot) {
+        if (!firstValues[slot]) {
+            firstValues[slot] = slot;
+            return slot;
+        }
+        return allocateValue();
+    };
+    const auto resolveCurrent = [&registerStacks](SSARegisterSlotId slot) {
+        if (slot >= registerStacks.size() || registerStacks[slot].empty()) {
+            throw SSAError(
+                "ordinary IR register " + std::to_string(slot)
+                + " is used before its definition");
+        }
+        return registerStacks[slot].back();
+    };
+
+    const auto fillSuccessorPhis = [
+        &cfg,
+        &result,
+        &phiIndexes,
+        &registerStacks,
+        registerSlotCount](CFGBlockId block) {
+        for (const CFGBlockId successor : cfg.blocks[block].successors) {
+            if (!cfg.blocks[successor].reachable) {
+                continue;
+            }
+            const auto predecessor = std::find(
+                cfg.blocks[successor].predecessors.begin(),
+                cfg.blocks[successor].predecessors.end(),
+                block);
+            if (predecessor == cfg.blocks[successor].predecessors.end()) {
+                throw SSAError("CFG successor is missing its predecessor edge");
+            }
+            const std::size_t predecessorIndex = static_cast<std::size_t>(
+                std::distance(cfg.blocks[successor].predecessors.begin(), predecessor));
+            for (SSARegisterSlotId slot = 0; slot < registerSlotCount; ++slot) {
+                const auto phiIndex = phiIndexes[successor][slot];
+                if (!phiIndex) {
+                    continue;
+                }
+                if (registerStacks[slot].empty()) {
+                    throw SSAError(
+                        "ordinary IR register " + std::to_string(slot)
+                        + " has no value on predecessor " + std::to_string(block));
+                }
+                SSAPhi& phi = result.blocks[successor].phis[*phiIndex];
+                if (predecessorIndex >= phi.incoming.size()) {
+                    throw SSAError("SSA register phi incoming metadata is inconsistent");
+                }
+                phi.incoming[predecessorIndex].value = registerStacks[slot].back();
+            }
+        }
+    };
+
+    std::function<void(CFGBlockId)> renameReachable;
+    renameReachable = [&](CFGBlockId blockId) {
+        const CFGBlock& cfgBlock = cfg.blocks[blockId];
+        if (!cfgBlock.reachable) {
+            return;
+        }
+
+        std::vector<SSARegisterSlotId> pushedSlots;
+        for (SSAPhi& phi : result.blocks[blockId].phis) {
+            if (!phi.registerSlot) {
+                throw SSAError("ordinary register phi is missing its source slot");
+            }
+            registerStacks[*phi.registerSlot].push_back(phi.result);
+            pushedSlots.push_back(*phi.registerSlot);
+        }
+
+        for (const SSAInstruction& source : raw.blocks[blockId].instructions) {
+            SSAInstruction lowered = source;
+            if (source.left) {
+                lowered.left = resolveCurrent(*source.left);
+            }
+            if (source.right) {
+                lowered.right = resolveCurrent(*source.right);
+            }
+            for (std::size_t index = 0; index < source.arguments.size(); ++index) {
+                lowered.arguments[index] = resolveCurrent(source.arguments[index]);
+            }
+            if (source.result) {
+                const SSARegisterSlotId slot = *source.result;
+                const SSAValueId value = allocateDefinition(slot);
+                lowered.result = value;
+                registerStacks[slot].push_back(value);
+                pushedSlots.push_back(slot);
+            }
+            result.blocks[blockId].instructions.push_back(std::move(lowered));
+        }
+
+        fillSuccessorPhis(blockId);
+        for (const CFGBlockId child : dominance.dominanceChildren[blockId]) {
+            renameReachable(child);
+        }
+
+        for (auto it = pushedSlots.rbegin(); it != pushedSlots.rend(); ++it) {
+            if (registerStacks[*it].empty()) {
+                throw SSAError("ordinary register SSA stack underflow");
+            }
+            registerStacks[*it].pop_back();
+        }
+    };
+    renameReachable(cfg.entryBlock);
+
+    // Keep unreachable blocks in the internal shape. They do not contribute
+    // phi inputs or dominance facts, but their uses still need a unique
+    // definition so the SSA verifier can reject malformed streams uniformly.
+    std::vector<std::optional<SSAValueId>> unreachableValues = firstValues;
+    for (const CFGBlock& cfgBlock : cfg.blocks) {
+        if (cfgBlock.reachable || cfgBlock.syntheticExit) {
+            continue;
+        }
+        for (const SSAInstruction& source : raw.blocks[cfgBlock.id].instructions) {
+            SSAInstruction lowered = source;
+            const auto resolveUnreachable = [&unreachableValues](SSARegisterSlotId slot) {
+                if (slot >= unreachableValues.size() || !unreachableValues[slot]) {
+                    throw SSAError(
+                        "ordinary IR register " + std::to_string(slot)
+                        + " is used before its definition");
+                }
+                return *unreachableValues[slot];
+            };
+            if (source.left) {
+                lowered.left = resolveUnreachable(*source.left);
+            }
+            if (source.right) {
+                lowered.right = resolveUnreachable(*source.right);
+            }
+            for (std::size_t index = 0; index < source.arguments.size(); ++index) {
+                lowered.arguments[index] = resolveUnreachable(source.arguments[index]);
+            }
+            if (source.result) {
+                const SSARegisterSlotId slot = *source.result;
+                const SSAValueId value = allocateDefinition(slot);
+                lowered.result = value;
+                unreachableValues[slot] = value;
+            }
+            result.blocks[cfgBlock.id].instructions.push_back(std::move(lowered));
+        }
+    }
+
+    result.verify(cfg);
+    return result;
+}
+
 } // namespace
 
 bool SSAMemorySlot::canPromote() const
@@ -555,6 +889,12 @@ void SSAFunction::verify(const ControlFlowGraph& cfg) const
     for (const SSABlock& block : blocks) {
         const CFGBlock& cfgBlock = cfg.blocks[block.id];
         for (const SSAPhi& phi : block.phis) {
+            if (phi.memorySlot && phi.registerSlot) {
+                throw SSAError("SSA phi cannot carry both memory and register slot metadata");
+            }
+            if (phi.registerSlot && *phi.registerSlot == invalidSSAValue) {
+                throw SSAError("SSA register phi uses the reserved invalid slot ID");
+            }
             if (phi.incoming.size() != cfgBlock.predecessors.size()) {
                 throw SSAError("phi incoming count does not match CFG predecessors");
             }
@@ -639,51 +979,12 @@ SSAFunction liftIRToSSA(
     const ControlFlowGraph& cfg,
     const std::vector<IRInstruction>& instructions)
 {
-    cfg.verify();
-    if (cfg.instructionCount != instructions.size()) {
-        throw SSAError("SSA input instruction count does not match CFG");
-    }
-
-    SSAFunction result = makeSSAFunction(cfg);
-    for (const CFGBlock& cfgBlock : cfg.blocks) {
-        SSABlock& block = result.blocks[cfgBlock.id];
-        block.instructions.reserve(cfgBlock.endInstruction - cfgBlock.firstInstruction);
-        for (std::size_t index = cfgBlock.firstInstruction;
-             index < cfgBlock.endInstruction;
-             ++index) {
-            const IRInstruction& source = instructions[index];
-            SSAInstruction lifted;
-            lifted.op = source.op;
-            if (source.dest) {
-                lifted.result = source.dest->index;
-            }
-            if (source.left) {
-                lifted.left = source.left->index;
-            }
-            if (source.right) {
-                lifted.right = source.right->index;
-            }
-            lifted.arguments.reserve(source.arguments.size());
-            for (const IRRegister argument : source.arguments) {
-                lifted.arguments.push_back(argument.index);
-            }
-            lifted.originalInstruction = index;
-            lifted.operand = source.operand;
-            lifted.operands = source.operands;
-            lifted.typeNameOperand = source.typeNameOperand;
-            lifted.variantNameOperand = source.variantNameOperand;
-            lifted.span = source.span;
-            lifted.bindingId = source.bindingId;
-            block.instructions.push_back(std::move(lifted));
-        }
-    }
-    result.verify(cfg);
-    return result;
+    return liftOrdinaryIRToSSA(cfg, instructions, std::nullopt);
 }
 
 SSAFunction liftIRToSSA(const ControlFlowGraph& cfg, const IRFunction& function)
 {
-    return liftIRToSSA(cfg, function.instructions);
+    return liftOrdinaryIRToSSA(cfg, function.instructions, function.registerCount);
 }
 
 std::vector<SSAPhiPlacement> placePromotableMemoryPhis(
@@ -1298,7 +1599,13 @@ void SSADeSSALinearFunction::verify(const ControlFlowGraph& cfg) const
             }
 
             if (current.synthetic) {
-                if (current.instruction.op != IROp::Copy) {
+                const bool isExitFallthroughBarrier =
+                    current.instruction.op == IROp::Jump
+                    && isLast
+                    && *block.sourceBlock + 1 == cfg.exitBlock
+                    && current.instruction.operand == blockEntryOffsets[cfg.exitBlock];
+                if (current.instruction.op != IROp::Copy
+                    && !isExitFallthroughBarrier) {
                     throw SSAError("linear de-SSA source block has invalid synthetic instruction");
                 }
                 continue;
@@ -1468,19 +1775,24 @@ SSADeSSALinearFunction lowerSSADeSSACopies(
     struct LayoutBlockSpec {
         std::optional<CFGBlockId> sourceBlock;
         std::optional<SSAEdgeCopyBundle> split;
+        bool exitFallthroughBarrier = false;
     };
     std::vector<LayoutBlockSpec> layout;
     layout.reserve(cfg.blocks.size() + branchSplits.size());
     for (CFGBlockId block = 0; block < cfg.exitBlock; ++block) {
-        layout.push_back(LayoutBlockSpec{block, std::nullopt});
+        const bool exitFallthroughBarrier = block + 1 == cfg.exitBlock
+            && (input.blocks[block].instructions.empty()
+                || (input.blocks[block].instructions.back().op != IROp::Jump
+                    && input.blocks[block].instructions.back().op != IROp::Return));
+        layout.push_back(LayoutBlockSpec{block, std::nullopt, exitFallthroughBarrier});
         if (fallthroughSplits[block]) {
-            layout.push_back(LayoutBlockSpec{std::nullopt, fallthroughSplits[block]});
+            layout.push_back(LayoutBlockSpec{std::nullopt, fallthroughSplits[block], false});
         }
     }
     for (const SSAEdgeCopyBundle& split : branchSplits) {
-        layout.push_back(LayoutBlockSpec{std::nullopt, split});
+        layout.push_back(LayoutBlockSpec{std::nullopt, split, false});
     }
-    layout.push_back(LayoutBlockSpec{cfg.exitBlock, std::nullopt});
+    layout.push_back(LayoutBlockSpec{cfg.exitBlock, std::nullopt, false});
 
     SSADeSSALinearFunction result;
     result.parameters = input.parameters;
@@ -1511,6 +1823,9 @@ SSADeSSALinearFunction lowerSSADeSSACopies(
                 checkedLinearAdvance(count, entryCopies[source].size());
                 checkedLinearAdvance(count, input.blocks[source].instructions.size());
                 checkedLinearAdvance(count, exitCopies[source].size());
+                if (spec.exitFallthroughBarrier) {
+                    checkedLinearAdvance(count, 1);
+                }
             }
         }
         block.firstInstruction = instructionCount;
@@ -1672,6 +1987,13 @@ SSADeSSALinearFunction lowerSSADeSSACopies(
                 emitSyntheticCopy(move, exitAnchor);
             }
         }
+        if (spec.exitFallthroughBarrier) {
+            SSAInstruction jump;
+            jump.op = IROp::Jump;
+            jump.operand = result.blockEntryOffsets[cfg.exitBlock];
+            jump.originalInstruction = cfgBlock.endInstruction - 1;
+            result.instructions.push_back(SSADeSSAInstruction{std::move(jump), true});
+        }
         if (result.instructions.size() != outputBlock.endInstruction) {
             throw SSAError("SSA de-SSA source block instruction count is stale");
         }
@@ -1750,6 +2072,33 @@ void SSADeSSAIRResult::verify() const
             if (argument.index >= function.registerCount) {
                 throw SSAError("SSA de-SSA IR argument register is outside registerCount");
             }
+        }
+    }
+
+    std::set<SSAValueId> constantResults;
+    for (const IRInstruction& instruction : function.instructions) {
+        if (instruction.op == IROp::Constant && instruction.dest) {
+            constantResults.insert(instruction.dest->index);
+        }
+    }
+    for (const auto& [value, constant] : foldedConstants) {
+        if (constantResults.find(value) == constantResults.end()) {
+            throw SSAError(
+                "SSA de-SSA folded-constant metadata has no Constant result");
+        }
+        if (constant.type() == Value::Type::Number
+            && !std::isfinite(constant.asNumber())) {
+            throw SSAError(
+                "SSA de-SSA folded-constant metadata contains a non-finite number");
+        }
+        if (constant.type() == Value::Type::Function
+            || constant.type() == Value::Type::Array
+            || constant.type() == Value::Type::Map
+            || constant.type() == Value::Type::Range
+            || constant.type() == Value::Type::Struct
+            || constant.type() == Value::Type::Variant) {
+            throw SSAError(
+                "SSA de-SSA folded-constant metadata is not primitive");
         }
     }
 }
