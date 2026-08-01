@@ -3879,16 +3879,17 @@ impl<'a> VM<'a> {
                     self.write_register(frame, *dest, length)?;
                 }
                 Instruction::AssertArray { dest, value } => {
-                    let input = self.read_register(frame, *value)?;
+                    let input = self.read_register_ref(frame, *value)?;
                     let iterable = match input {
-                        Value::Array(_) | Value::Range(_) => input,
+                        Value::Array(_) | Value::Range(_) => input.clone(),
                         Value::Map(map) => {
-                            let keys = map
-                                .entries
-                                .borrow()
-                                .iter()
-                                .map(|(key, _)| key.clone())
-                                .collect();
+                            let keys = {
+                                map.entries
+                                    .borrow()
+                                    .iter()
+                                    .map(|(key, _)| key.clone())
+                                    .collect()
+                            };
                             self.allocate_array(keys)?
                         }
                         _ => {
