@@ -29,11 +29,15 @@ Issue #15 defines the stable key contract for the generic hash containers.
       meaningful benefit over the current deterministic scans.
 - [x] Complete named-struct ordering operators provide a static `T: Ord`
       witness (and therefore `T: Eq`); partial sets remain direct-only (Issue #17).
-- [ ] Decide whether to migrate LRU/LFU internals to node handles; preserve the
-      current array-backed APIs until key ownership, eviction, and strong-cycle
+- [x] Migrate LRU internals to private singly-linked node handles while
+      preserving the public API, `K: Eq` contract, snapshot copies, and explicit
+      detach-on-eviction behavior.
+- [ ] Decide whether to migrate LFU internals to node handles; preserve the
+      current array-backed API until frequency-bucket ownership and eviction
       behavior are specified for that separate slice.
 
 The built-in map remains primitive-keyed; generic hash containers use their own
-array-backed bucket tables and the stable key contract above. Other library
-structures continue to use explicit equality or `less` callbacks where that is
-the more appropriate API.
+array-backed bucket tables and the stable key contract above. LRU uses equality
+lookup plus private one-way nodes and therefore does not add a `Hash` requirement;
+LFU and other library structures continue to use their existing array backends or
+explicit equality/`less` callbacks where that is the more appropriate API.

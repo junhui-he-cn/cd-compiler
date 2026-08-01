@@ -16,3 +16,9 @@ true
 false
 false
 a=10
+true
+true
+nil
+false
+1
+[{key: nil, value: nil}]

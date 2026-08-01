@@ -5,7 +5,7 @@ Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 `Queue<T>`, `Deque<T>`, `RingBuffer<T>`, `BinaryHeap<T>`, `PriorityQueue<T>`, and
 numeric `MedianHeap` types, plus the
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
-`Tree<T>`, `AvlTree<T>`, `RedBlackTree<T>`, `Set<T: Eq>`, `HashSet<T: Eq + Hash>`, `OrderedSet<T>`, `OrderedMap<K, V>`, `HashMap<K: Eq + Hash, V>`, `BiMap<K: Eq, V: Eq>`, `LruCache<K: Eq, V>`, `LfuCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
+`Tree<T>`, `AvlTree<T>`, `RedBlackTree<T>`, `Set<T: Eq>`, `HashSet<T: Eq + Hash>`, `OrderedSet<T>`, `OrderedMap<K, V>`, `HashMap<K: Eq + Hash, V>`, `BiMap<K: Eq, V: Eq>`, node-backed `LruCache<K: Eq, V>`, array-backed `LfuCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
 `MultiMap<K: Eq, V: Eq>` for one-to-many mappings, immutable BST helpers, and basic generic array algorithms,
 including comparator-based sorting, window helpers, and interval merge.
 It also provides mutable singly linked `LinkedNode<T>`/`LinkedList<T>` structures
@@ -624,7 +624,8 @@ it does not replace an existing association implicitly. Both lookup directions
 are linear `O(n)`, removal is `O(n)` because paired arrays are compacted, and
 `snapshot` is `O(n)` with a fresh outer array and entry values.
 
-`LruCache<K: Eq, V>` is an array-backed least-recently-used cache:
+`LruCache<K: Eq, V>` is a least-recently-used cache backed by private singly
+linked nodes:
 
 - `newLruCache<K: Eq, V>(capacity): LruCache<K, V>` — create a cache with the
   floored non-negative capacity;
@@ -639,8 +640,12 @@ are linear `O(n)`, removal is `O(n)` because paired arrays are compacted, and
 When an insertion would exceed capacity, the least-recent entry is discarded.
 Updating an existing key also refreshes its recency. `get` uses `optional<V>`, so
 callers storing a `nil` value should use `has` to distinguish it from a missing
-key. Key lookup and all recency moves are `O(n)` in this simple implementation;
-`snapshot` is `O(n)` and allocates a new outer array and entry values.
+key. Nodes are private handles and only point toward the next entry; eviction
+and discard explicitly clear the removed node's link, so this implementation does
+not create a cache-owned strong cycle. Key lookup, recency moves, insertion, and
+removal are `O(n)`; `snapshot` is `O(n)` and allocates a new outer array and entry
+values. Snapshot entries are independent structs, while their key and value
+fields retain the library's normal shallow alias behavior.
 
 `LfuCache<K: Eq, V>` is an array-backed least-frequently-used cache:
 
