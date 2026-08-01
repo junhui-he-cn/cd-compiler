@@ -3905,12 +3905,14 @@ impl<'a> VM<'a> {
                     value,
                     message,
                 } => {
-                    let input = self.read_register(frame, *value)?;
-                    if !matches!(input, Value::Number(_)) {
-                        let message = self.read_name(*message)?;
-                        return Err(RuntimeError::new(message));
-                    }
-                    self.write_register(frame, *dest, input)?;
+                    let number = match self.read_register_ref(frame, *value)? {
+                        Value::Number(number) => *number,
+                        _ => {
+                            let message = self.read_name(*message)?;
+                            return Err(RuntimeError::new(message));
+                        }
+                    };
+                    self.write_register(frame, *dest, Value::number(number))?;
                 }
                 Instruction::Return { value } => {
                     return Ok(Some(self.read_register(frame, *value)?))
