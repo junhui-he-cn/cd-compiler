@@ -257,6 +257,95 @@ def main() -> int:
         if error is not None:
             return fail(error)
 
+        large_struct_source = root / "large-struct-array.cd"
+        large_struct_artifact = root / "large-struct-array.cdbc"
+        struct_entry_count = 1024
+        struct_entries = ", ".join(
+            "Entry { "
+            f"index: {index}, "
+            "payload: Payload { "
+            f'label: "row{index}", value: {index}'
+            " } }"
+            for index in range(struct_entry_count)
+        )
+        large_struct_source.write_text(
+            "struct Payload { label: string, value: number }\n"
+            "struct Entry { index: number, payload: Payload }\n"
+            f"let values = [{struct_entries}];\n"
+            "print len(values);\n"
+            f"print values[{struct_entry_count - 1}].payload.value;\n",
+            encoding="utf-8",
+        )
+        error = emit_bytecode(
+            compiler,
+            large_struct_source,
+            large_struct_artifact,
+            "large-struct-array emit",
+            measurements,
+        )
+        if error is not None:
+            return fail(error)
+        if large_struct_artifact.stat().st_size <= 96 * 1024:
+            return fail(
+                "large-struct-array artifact did not cross the intended size boundary"
+            )
+
+        result = run_measured(
+            vm_command(vm_binary, "run", str(large_struct_artifact)),
+            "large-struct-array run",
+        )
+        measurements.append(result)
+        error = expect_success(
+            result,
+            f"{struct_entry_count}\n{struct_entry_count - 1}\n",
+        )
+        if error is not None:
+            return fail(error)
+
+        struct_payload_cost = 1 + 2
+        struct_entry_cost = 1 + 2
+        struct_array_cost = 1 + struct_entry_count
+        struct_element_limit = (
+            struct_entry_count * (struct_payload_cost + struct_entry_cost)
+            + struct_array_cost
+            - 1
+        )
+        result = run_measured(
+            vm_command(
+                vm_binary,
+                "run",
+                str(large_struct_artifact),
+                "--max-elements",
+                str(struct_element_limit + 1),
+            ),
+            "large-struct-array exact element budget",
+        )
+        measurements.append(result)
+        error = expect_success(
+            result,
+            f"{struct_entry_count}\n{struct_entry_count - 1}\n",
+        )
+        if error is not None:
+            return fail(error)
+
+        result = run_measured(
+            vm_command(
+                vm_binary,
+                "run",
+                str(large_struct_artifact),
+                "--max-elements",
+                str(struct_element_limit),
+            ),
+            "large-struct-array element budget",
+        )
+        measurements.append(result)
+        error = expect_failure(
+            result,
+            f"runtime elements (limit {struct_element_limit})",
+        )
+        if error is not None:
+            return fail(error)
+
         long_string_source = root / "long-unicode-string.cd"
         long_string_artifact = root / "long-unicode-string.cdbc"
         scalar_count = 32768
@@ -610,7 +699,7 @@ def main() -> int:
             f"peak_rss_kib={rss} exit={result.returncode}"
         )
     print(
-        "VM capacity tests: large arrays/maps, long Unicode strings and output budgets, "
+        "VM capacity tests: large arrays/maps/structs, long Unicode strings and output budgets, "
         "deep calls, debug tables, long-chain and diamond module graphs, and budget "
         "rejection boundaries validated"
     )
