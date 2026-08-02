@@ -133,6 +133,26 @@ bool canOpenFile(const std::filesystem::path& path)
     return input.good();
 }
 
+bool pathWithinRoot(
+    const std::filesystem::path& candidate,
+    const std::filesystem::path& root)
+{
+    std::error_code error;
+    const std::filesystem::path relative = std::filesystem::relative(
+        normalizedExistingPath(candidate),
+        normalizedExistingPath(root),
+        error);
+    if (error || relative.is_absolute()) {
+        return false;
+    }
+    for (const std::filesystem::path& component : relative) {
+        if (component == "..") {
+            return false;
+        }
+    }
+    return true;
+}
+
 std::vector<std::filesystem::path> importCandidatesForBase(
     const std::filesystem::path& base,
     const std::filesystem::path& requested)
@@ -317,6 +337,14 @@ void FrontendSession::setImportSearchPaths(std::vector<std::string> paths)
     importSearchPaths_.clear();
     for (const std::string& path : paths) {
         importSearchPaths_.push_back(std::filesystem::path(path).lexically_normal());
+    }
+}
+
+void FrontendSession::setVirtualImportRoots(std::vector<std::string> paths)
+{
+    virtualImportRoots_.clear();
+    for (const std::string& path : paths) {
+        virtualImportRoots_.push_back(normalizedExistingPath(std::filesystem::path(path)));
     }
 }
 
@@ -515,10 +543,16 @@ FrontendSession::ImportResolution FrontendSession::resolveImportPath(
         for (const std::filesystem::path& candidate : importCandidatesForBase(base, requestedPath)) {
             const std::string displayPath = pathString(candidate);
             triedDisplayPaths.push_back(displayPath);
-            const bool available = virtualSourceMode_
-                ? virtualSources_.find(pathString(normalizedExistingPath(candidate)))
-                    != virtualSources_.end()
-                : canOpenFile(candidate);
+            const bool virtualAvailable = virtualSources_.find(
+                pathString(normalizedExistingPath(candidate))) != virtualSources_.end();
+            const bool diskAvailable = canOpenFile(candidate)
+                && (!virtualSourceMode_ || std::any_of(
+                    virtualImportRoots_.begin(),
+                    virtualImportRoots_.end(),
+                    [&candidate](const std::filesystem::path& root) {
+                        return pathWithinRoot(candidate, root);
+                    }));
+            const bool available = virtualAvailable || diskAvailable;
             if (available) {
                 return ImportResolution{candidate, std::move(triedDisplayPaths)};
             }
@@ -723,7 +757,14 @@ std::size_t FrontendSession::loadFile(
     }
 
     const auto virtualSource = virtualSources_.find(canonicalPath);
-    if (virtualSource == virtualSources_.end() && virtualSourceMode_) {
+    if (virtualSource == virtualSources_.end()
+        && virtualSourceMode_
+        && (isImport && !std::any_of(
+            virtualImportRoots_.begin(),
+            virtualImportRoots_.end(),
+            [&requestedPath](const std::filesystem::path& root) {
+                return pathWithinRoot(requestedPath, root);
+            }))) {
         if (isImport) {
             throw DiagnosticError(DiagnosticKind::Import, "failed to open import: " + displayPath);
         }
@@ -737,8 +778,8 @@ std::size_t FrontendSession::loadFile(
     }
 
     loadingStack_.push_back(canonicalPath);
+    std::string source;
     try {
-        std::string source;
         if (virtualSource != virtualSources_.end()) {
             source = virtualSource->second;
         } else {
@@ -888,6 +929,29 @@ std::size_t FrontendSession::loadFile(
         canonicalToUnitId_.emplace(canonicalPath, units_.back().id);
         loadingStack_.pop_back();
         return units_.back().id;
+    } catch (const FileDiagnosticError& error) {
+        loadingStack_.pop_back();
+        const auto currentVirtualSource = virtualSources_.find(canonicalPath);
+        const bool errorBelongsToVirtualSource = !error.sourceContext().path.empty()
+            && virtualSources_.find(pathString(normalizedExistingPath(error.sourceContext().path)))
+                != virtualSources_.end();
+        if (virtualSourceMode_
+            && error.kind() == DiagnosticKind::Import
+            && currentVirtualSource != virtualSources_.end()
+            && !errorBelongsToVirtualSource) {
+            throw FileDiagnosticError(
+                error,
+                DiagnosticSourceContext{displayPath, source, false});
+        }
+        throw;
+    } catch (const DiagnosticError& error) {
+        loadingStack_.pop_back();
+        if (virtualSourceMode_ && error.kind() == DiagnosticKind::Import) {
+            throw FileDiagnosticError(
+                error,
+                DiagnosticSourceContext{displayPath, source, false});
+        }
+        throw;
     } catch (...) {
         loadingStack_.pop_back();
         throw;

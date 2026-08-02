@@ -28,10 +28,10 @@ behavior must update the implementation contract and tests together.
 
 | Area | `master` status | Evidence / remaining boundary |
 | --- | --- | --- |
-| Verification | M0A-M0D complete | `tests/verification_inventory.json` is revision `m0d-2026-07-22-r1` with 1,935 checks; `tests/run_verification.py` is the canonical runner. |
+| Verification | M0A-M0D complete | `tests/verification_inventory.json` is revision `m0d-2026-07-22-r1` with 1,939 checks; `tests/run_verification.py` is the canonical runner. |
 | Semantic front end | M1A1-M1F complete | `SourceIdentity`, `LosslessSourceView`, `DeclarationIndex`, shared type/pattern metadata, and HIR-only IR lowering are shipped. |
 | Language semantics | Admitted M2A flow slices and M2B recovery slices complete | M2A `FLOW-001..021`, M2B type recovery, parser recovery `001..003`, and lexer recovery `001` are shipped; the broader flow policy remains open below. |
-| Generic capabilities | M6-LANG-001 and M6-LANG-HASH-001/002 complete; M8-LANG-CAP-ORD-001 implemented on the current feature branch | Compile-time `Eq`/`Ord`/`Hash` bounds, canonical `+` conjunctions, inference, explicit arguments, comparator/hash forwarding, public interfaces, deterministic hash native execution, and stable generic hash-key semantics are shipped; the complete named-struct `Ord` witness is implemented locally but not yet delivered to `master`. |
+| Generic capabilities | M6-LANG-001, M6-LANG-HASH-001/002, and M8-LANG-CAP-ORD-001 complete | Compile-time `Eq`/`Ord`/`Hash` bounds, canonical `+` conjunctions, inference, explicit arguments, comparator/hash forwarding, public interfaces, deterministic hash native execution, stable generic hash-key semantics, and complete named-struct `Ord` witnesses are shipped. |
 | Modules and cache | M3A graph/interface slices plus M3B artifact/cache boundaries complete | Independent module products, linker inputs, `.cdi` interfaces, `cdbc-cache 0.2`, invalidation, and safe source fallback are shipped. Removing fallback is not approved. |
 | Artifact/runtime | M4A validation and M4B debug metadata complete | `cdbc 0.1` remains the contract; validation, module identity, source ranges, and link-time debug rebasing are shipped. |
 | Formatter | M5A-FORMAT-001..008 complete | `--format`, `--format-check`, lossless comments/trivia, idempotence, blank-line/trailing-comma policies, bounded list wrapping, and invalid-input rejection are shipped. |
@@ -48,12 +48,13 @@ work. The completed groups are:
 - the admitted M2A flow and M2B recovery slices;
 - M3A graph/interface work, M3B artifact/cache/boundary work, and M4A/M4B;
 - M5A-FORMAT-001..008, M5B-LSP-001..017, M5D-DEBUG-001, M6-LANG-001,
-  M6-LANG-HASH-001/002, M6-LANG-OPERATOR-001A..001C, and M8-LANG-REF-001.
+  M6-LANG-HASH-001/002, M6-LANG-OPERATOR-001A..001C, M8-LANG-REF-001, and
+  M8-LANG-CAP-ORD-001.
 
 These names are a completion record, not a to-do list.
 
-M8-LANG-CAP-ORD-001 is implemented and fully verified in the current feature
-working tree; its Git delivery is intentionally a separate action.
+M8-LANG-REF-001 and M8-LANG-CAP-ORD-001 are implemented, verified, and present
+on `master`.
 
 ## Active constraints and open contracts
 
@@ -71,9 +72,10 @@ being designed:
   indexes, aliases, broader `for-in` exits, and other unsupported mutation
   paths. A new rule requires a soundness decision plus positive, negative, and
   invalidation fixtures.
-- The LSP virtual workspace currently reasons about synchronized/opened
-  modules. Closed or disk-only imports and unknown/dynamic receiver completion
-  are separate work, not implicit bug fixes.
+- The LSP virtual workspace now loads closed disk imports only for
+  `definition`/`references` when their canonical paths are inside declared
+  `rootUri`/`workspaceFolders` roots. Open text wins over disk text; closed
+  completion, rename, and unknown/dynamic receiver support remain separate.
 - `cdbc 0.1` and its metadata-free compatibility behavior remain stable. A
   debugger or tool slice must reuse existing debug metadata before proposing a
   new artifact section or version.
@@ -229,8 +231,8 @@ and `git diff --check` commands from the verification contract.
 
 ### M8-LANG-REF-001: stable node references and recursive mutable structs
 
-**Status:** implementation slice and repository verification gate complete;
-Git delivery is a separate action.
+**Status:** implementation slice and repository verification gate complete on
+`master`.
 
 **Purpose:** allow mutable recursive nominal structures without adding a new
 `ref<T>` syntax or runtime opcode. A named struct value is a stable strong
@@ -262,8 +264,8 @@ cache, LSP, debugger, Rust VM, Cargo, boundary, malformed, library, and
 
 ### M8-LANG-CAP-ORD-001: struct ordering capability witness
 
-**Status:** implementation and focused/full repository verification complete;
-Git delivery is a separate action.
+**Status:** implementation and focused/full repository verification complete on
+`master`.
 
 **Purpose:** let generic `T: Ord` and `T: Eq + Ord` code consume a named
 struct's statically declared ordering behavior without introducing trait
@@ -290,45 +292,10 @@ boundary, malformed, and `git diff --check` gates.
 
 ## Planned follow-up specifications
 
-These are deferred candidates after M8-LANG-REF-001. They are not permission to
+These are deferred candidates after the current M8 baseline. They are not permission to
 start implementation before their decision records and focused inventories are
 written. In particular, the data-structure roadmap does not authorize adding
 concrete data-structure code to the compiler slice.
-
-### M6-LANG-OPERATOR-001C: public operator metadata and module products
-
-**Status:** complete. Local implementation, public interface/cache shape,
-source-backed imported dispatch, and independent module-product/linker parity
-are covered by the resolved declaration, focused module-artifact regression,
-and C++/Rust execution paths.
-
-**Purpose:** extend the local operator implementation with public interface and
-module-cache propagation, imported/re-exported dispatch, and independent module
-product parity.
-
-**Boundary:** keep `==`, `!=`, arithmetic, unary, logical, compound-assignment,
-enum, primitive, dynamic, and generic capability-dictionary behavior deferred.
-Generic algorithms continue to use explicit comparator values for partial or
-comparator-specific custom structs; complete four-operator witnesses satisfy
-generic `T: Ord`.
-
-**Completed first phase:** exported and re-exported struct operators are
-represented in canonical module-interface text, strict `cdi 0.1` sidecars,
-public-interface hashes, and module-interface validation. Sidecars missing the
-operator section follow the existing malformed/stale fallback or strict
-rejection path.
-
-**Completed imported-dispatch phase:** direct imports, namespace aliases,
-re-exported structs, and generic receiver operators restore operator metadata
-from the public interface and lower through the existing ordinary call path.
-Imported operators retain resolved linkage names without requiring a local AST
-method declaration; the source-backed C++ and Rust VM paths are covered by
-focused fixtures and declaration-index validation.
-
-**Completed gate:** independent `.cdbc 0.1` products preserve the owner
-operator functions, importer dependency markers, and resolved linkage names;
-Rust canonical dump, link, and execution agree with the C++ source-backed
-operator goldens.
 
 ### M5D-DEBUG-002: Interactive breakpoints and stepping
 
@@ -368,21 +335,27 @@ the old one-shot trace behavior remains covered as a compatibility case.
 
 ### M5B-LSP-018: Closed-module workspace navigation
 
+**Status:** implementation and focused verification complete on the current
+`feat/lsp-closed-workspace` branch; Git delivery is separate. Decision record:
+`docs/decisions/m5b-lsp-018.{md,json}`.
+
 **Purpose:** extend the existing virtual workspace from opened documents to an
 explicit workspace-root/import set, where open-document text overrides disk
 text and closed imported modules are loaded through `FrontendSession` and the
 module graph. Start with definition and references; keep completion, rename,
 and cache persistence as separate boundaries.
 
-**Required decision:** define workspace roots, import search order, disk/source
-version precedence, diagnostics for unavailable modules, and whether an
-unopened dependency may contribute a public declaration. Do not duplicate
-name resolution in the LSP adapter.
+**Decision:** `workspaceFolders` supplies canonical file roots in order, with
+`rootUri` as the fallback. Open virtual text overrides disk text at the same
+canonical path. Disk imports are allowed only inside those roots; the complete
+module graph supplies closed locations for definition and references. No
+second parser or resolver is added to the LSP adapter.
 
 **Gate:** multi-file protocol cases prove stable URIs/ranges, open-over-disk
-precedence, direct imports, namespace aliases, re-exports, missing modules,
-and no reads outside the declared workspace. CLI diagnostics and LSP ranges
-must remain equivalent for the same source snapshot.
+precedence, direct closed imports, missing modules, and no reads outside the
+declared workspace. Existing opened-module namespace/re-export cases remain
+regression coverage; closed completion, rename, and cache persistence remain
+outside this slice.
 
 ### M2A-FLOW-022: Advanced nullable-flow policy
 
@@ -513,14 +486,14 @@ master + shipped generic functions, callbacks, and module interfaces
      source-backed imported dispatch and independent module products/linker parity
   -> M7-LANG-OPTIONAL-001 canonical optional type syntax
   -> completed M8-LANG-REF-001 stable node references
-  -> M8-LANG-CAP-ORD-001 struct ordering capability witness (current feature branch)
+  -> completed M8-LANG-CAP-ORD-001 struct ordering capability witness
   -> language-enabled library specifications (no compiler-owned data structures)
 
 master + M5D-DEBUG-001
   -> M5D-DEBUG-002 interactive debugger (explicitly deferred)
 
 M1 semantic services + M3A graph/interfaces
-  -> M5B-LSP-018 closed-module workspace navigation
+  -> completed M5B-LSP-018 definition/references slice (current feature branch)
 
 M1F + existing M2A flow facts
   -> M2A-FLOW-022 decision, then one admitted behavior slice
@@ -540,14 +513,14 @@ master + M1 semantic metadata + existing linear register IR
      semantic parity corpus are admitted
 ```
 
-M6-LANG-HASH-001/002, M6-LANG-OPERATOR-001A..001C, and M8-LANG-REF-001 are
-complete. M8-LANG-CAP-ORD-001 is fully implemented and verified in the current
-feature working tree; its Git delivery is not part of this task. The
+M6-LANG-HASH-001/002, M6-LANG-OPERATOR-001A..001C, M8-LANG-REF-001, and
+M8-LANG-CAP-ORD-001 are complete on `master`. The
 M7-IR-SSA-001 implementation slice is now integrated on `master`; its default
 O1 policy and broader optimization work remain explicitly deferred. The
 M7-LANG-OPTIONAL-001 implementation is complete on its focused feature branch;
-its compatibility deletion remains a later decision. M5D-DEBUG-002 and the
-other entries remain deferred specifications with clear future boundaries.
+its compatibility deletion remains a later decision. M5B-LSP-018 is complete
+on its focused feature branch, while M5D-DEBUG-002 and the other entries remain
+deferred specifications with clear future boundaries.
 They do not reopen completed work or authorize concrete data-structure
 implementations in the compiler repository.
 

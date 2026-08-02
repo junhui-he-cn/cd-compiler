@@ -73,8 +73,12 @@ The compiler pipeline includes:
   also complete their fields and exported methods with shared signatures.
   Unqualified completion additionally includes explicit exports from other
   currently opened modules; local and direct-import names take precedence and
-  duplicate workspace names are suppressed. Closed imports and unknown/dynamic
-  receiver completion remain later slices. Rename edits validate the
+  duplicate workspace names are suppressed. `initialize` accepts
+  `workspaceFolders` (or `rootUri` as a fallback) as file-backed roots; closed
+  imports inside those roots participate in `definition` and `references`,
+  and opened text overrides disk text at the same path. Closed-module
+  completion, rename, and unknown/dynamic receiver completion remain later
+  slices. Rename edits validate the
   complete replacement across the opened virtual workspace before returning a
   multi-document `WorkspaceEdit`.
 

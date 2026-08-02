@@ -45,6 +45,9 @@ public:
     Program loadStdin(std::istream& input);
     Program loadFiles(const std::vector<std::string>& paths);
     Program loadVirtualFiles(const std::vector<FrontendVirtualFile>& files);
+    // Virtual workspaces may opt into bounded disk imports.  Open virtual
+    // sources still take precedence over disk files at the same path.
+    void setVirtualImportRoots(std::vector<std::string> paths);
 
     std::vector<Token> displayTokens() const;
     LosslessSourceView losslessSourceView() const;
@@ -116,6 +119,7 @@ private:
     bool moduleInterfaceCacheStrict_ = false;
     bool moduleProductCacheMode_ = false;
     mutable std::optional<ModuleCacheLoadResult> moduleProductCacheLoad_;
+    std::vector<std::filesystem::path> virtualImportRoots_;
     std::unordered_set<std::string> directEntryCanonicalPaths_;
     std::string combinedSource_;
     ModuleGraph moduleGraph_;

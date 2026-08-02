@@ -2092,6 +2092,70 @@ std::optional<std::string> uriFilePath(std::string_view uri)
     return result;
 }
 
+std::string fileUriForPath(std::string_view path)
+{
+    constexpr char hex[] = "0123456789ABCDEF";
+    const std::string canonical = canonicalPathFor(path);
+    std::string uri = "file://";
+    for (const unsigned char character : canonical) {
+        const bool unreserved = (character >= 'a' && character <= 'z')
+            || (character >= 'A' && character <= 'Z')
+            || (character >= '0' && character <= '9')
+            || character == '-'
+            || character == '.'
+            || character == '_'
+            || character == '~'
+            || character == '/'
+            || character == ':';
+        if (unreserved) {
+            uri.push_back(static_cast<char>(character));
+        } else {
+            uri.push_back('%');
+            uri.push_back(hex[character >> 4]);
+            uri.push_back(hex[character & 0x0f]);
+        }
+    }
+    return uri;
+}
+
+std::vector<std::string> workspaceRootPaths(const JsonValue& request)
+{
+    std::vector<std::string> paths;
+    const JsonValue* params = memberObject(request, "params");
+    if (!params) {
+        return paths;
+    }
+
+    const auto appendUri = [&paths](const JsonValue* value) {
+        if (!value || value->kind != JsonValue::Kind::String) {
+            return;
+        }
+        if (const std::optional<std::string> path = uriFilePath(value->text)) {
+            paths.push_back(canonicalPathFor(*path));
+        }
+    };
+
+    const JsonValue* folders = member(*params, "workspaceFolders");
+    if (folders && folders->kind == JsonValue::Kind::Array) {
+        for (const JsonValue& folder : folders->elements) {
+            appendUri(folder.kind == JsonValue::Kind::Object
+                    ? member(folder, "uri")
+                    : nullptr);
+        }
+    }
+    if (paths.empty()) {
+        appendUri(member(*params, "rootUri"));
+    }
+
+    std::vector<std::string> unique;
+    for (const std::string& path : paths) {
+        if (std::find(unique.begin(), unique.end(), path) == unique.end()) {
+            unique.push_back(path);
+        }
+    }
+    return unique;
+}
+
 const std::string* sourceTextFor(const AnalysisSnapshot& snapshot, SourceFileId sourceId)
 {
     for (const SourceFile& source : snapshot.sources) {
@@ -2580,12 +2644,15 @@ const StructDeclStmt* structMethodCompletionTargetAt(
 
 std::shared_ptr<AnalysisSnapshot> analyzeVirtualWorkspace(
     const std::vector<FrontendVirtualFile>& files,
-    const std::map<std::string, std::string>& uriByCanonicalPath)
+    const std::map<std::string, std::string>& uriByCanonicalPath,
+    const std::vector<std::string>& workspaceRoots)
 {
     auto snapshot = std::make_shared<AnalysisSnapshot>();
     TypeChecker typeChecker;
     try {
         FrontendSession frontend;
+        frontend.setImportSearchPaths(workspaceRoots);
+        frontend.setVirtualImportRoots(workspaceRoots);
         snapshot->program.emplace(frontend.loadVirtualFiles(files));
         snapshot->sources = snapshot->program->sources;
         snapshot->declarationIndex = DeclarationIndex::collect(*snapshot->program);
@@ -2609,6 +2676,8 @@ std::shared_ptr<AnalysisSnapshot> analyzeVirtualWorkspace(
             const auto found = uriByCanonicalPath.find(canonicalPathFor(source.path));
             if (found != uriByCanonicalPath.end()) {
                 snapshot->sourceUris[source.id.value] = found->second;
+            } else {
+                snapshot->sourceUris[source.id.value] = fileUriForPath(source.path);
             }
         }
 
@@ -2741,6 +2810,7 @@ public:
                 return shuttingDown_ ? 0 : 0;
             }
             if (*method == "initialize") {
+                workspaceRoots_ = workspaceRootPaths(request);
                 if (id) {
                     writeMessage(
                         output,
@@ -2906,7 +2976,8 @@ private:
 
         const std::shared_ptr<AnalysisSnapshot> snapshot = analyzeVirtualWorkspace(
             files,
-            uriByCanonicalPath);
+            uriByCanonicalPath,
+            workspaceRoots_);
         for (auto& entry : documents_) {
             const std::optional<std::string> path = uriFilePath(entry.first);
             if (!path) {
@@ -3315,7 +3386,8 @@ private:
         if (canAnalyzeVirtualWorkspace) {
             const std::shared_ptr<AnalysisSnapshot> renamedSnapshot = analyzeVirtualWorkspace(
                 virtualFiles,
-                uriByCanonicalPath);
+                uriByCanonicalPath,
+                workspaceRoots_);
             if (!renamedSnapshot->diagnostics.empty()) {
                 return JsonValue::null();
             }
@@ -3397,6 +3469,11 @@ private:
             return keywordCompletionList(found->second.text, replaceRange, prefix);
         }
         const AnalysisSnapshot& snapshot = *found->second.analysis.snapshot;
+        const auto isOpenSource = [&snapshot, this](SourceFileId sourceId) {
+            const auto sourceUri = snapshot.sourceUris.find(sourceId.value);
+            return sourceUri != snapshot.sourceUris.end()
+                && documents_.find(sourceUri->second) != documents_.end();
+        };
         const std::optional<std::string> receiverPath = completionReceiverPath(
             found->second.text,
             prefixStart);
@@ -3453,7 +3530,8 @@ private:
                     snapshot,
                     *module,
                     *receiverPath);
-                type && type->declaration && type->declaration->statement
+                type && isOpenSource(type->sourceId)
+                && type->declaration && type->declaration->statement
                 && isTypeDeclaration(type->declaration)) {
                 matchedQualifiedType = true;
                 const auto* enumDeclaration
@@ -3475,28 +3553,29 @@ private:
                     found->second.analysis.sourceId,
                     *byte)) {
                 matchedStructFields = true;
-                const bool sameModule = structDeclaration->name.range
-                    && structDeclaration->name.range->source == module->sourceId;
-                for (const StructFieldDecl& field : structDeclaration->fields) {
-                    if ((!field.isPrivate || sameModule)
-                        && field.name.range && field.name.range->valid()
-                        && matchesPrefix(field.name.lexeme)) {
-                        candidates.push_back(Candidate{nullptr, nullptr, &field});
-                    }
-                }
                 const SourceFileId structSource = structDeclaration->name.range
                     ? structDeclaration->name.range->source
                     : SourceFileId{};
-                for (const DeclarationRecord& declaration
-                     : snapshot.declarationIndex.declarations()) {
-                    if (declaration.kind != DeclarationKind::Method
-                        || declaration.ownerType != structDeclaration->name.lexeme
-                        || !declaration.range
-                        || declaration.range->source != structSource
-                        || !matchesPrefix(declaration.name)) {
-                        continue;
+                if (isOpenSource(structSource)) {
+                    const bool sameModule = structSource == module->sourceId;
+                    for (const StructFieldDecl& field : structDeclaration->fields) {
+                        if ((!field.isPrivate || sameModule)
+                            && field.name.range && field.name.range->valid()
+                            && matchesPrefix(field.name.lexeme)) {
+                            candidates.push_back(Candidate{nullptr, nullptr, &field});
+                        }
                     }
-                    candidates.push_back(Candidate{&declaration, nullptr, nullptr});
+                    for (const DeclarationRecord& declaration
+                         : snapshot.declarationIndex.declarations()) {
+                        if (declaration.kind != DeclarationKind::Method
+                            || declaration.ownerType != structDeclaration->name.lexeme
+                            || !declaration.range
+                            || declaration.range->source != structSource
+                            || !matchesPrefix(declaration.name)) {
+                            continue;
+                        }
+                        candidates.push_back(Candidate{&declaration, nullptr, nullptr});
+                    }
                 }
             } else if (const StructDeclStmt* structDeclaration = structMethodCompletionTargetAt(
                            snapshot,
@@ -3506,16 +3585,18 @@ private:
                 const SourceFileId structSource = structDeclaration->name.range
                     ? structDeclaration->name.range->source
                     : SourceFileId{};
-                for (const DeclarationRecord& declaration
-                     : snapshot.declarationIndex.declarations()) {
-                    if (declaration.kind != DeclarationKind::Method
-                        || declaration.ownerType != structDeclaration->name.lexeme
-                        || !declaration.range
-                        || declaration.range->source != structSource
-                        || !matchesPrefix(declaration.name)) {
-                        continue;
+                if (isOpenSource(structSource)) {
+                    for (const DeclarationRecord& declaration
+                         : snapshot.declarationIndex.declarations()) {
+                        if (declaration.kind != DeclarationKind::Method
+                            || declaration.ownerType != structDeclaration->name.lexeme
+                            || !declaration.range
+                            || declaration.range->source != structSource
+                            || !matchesPrefix(declaration.name)) {
+                            continue;
+                        }
+                        candidates.push_back(Candidate{&declaration, nullptr, nullptr});
                     }
-                    candidates.push_back(Candidate{&declaration, nullptr, nullptr});
                 }
             }
         }
@@ -3533,7 +3614,8 @@ private:
                 for (const auto& exported : exportedDefinitionsForModule(
                         snapshot,
                         import->resolvedModuleId)) {
-                    if (!matchesPrefix(exported.first)
+                    if (!isOpenSource(exported.second.sourceId)
+                        || !matchesPrefix(exported.first)
                         || !importedNames.insert(exported.first).second) {
                         continue;
                     }
@@ -3565,7 +3647,8 @@ private:
                     for (const auto& exported : exportedDefinitionsForModule(
                             snapshot,
                             import->resolvedModuleId)) {
-                        if (!matchesPrefix(exported.first)
+                        if (!isOpenSource(exported.second.sourceId)
+                            || !matchesPrefix(exported.first)
                             || !importedNames.insert(exported.first).second) {
                             continue;
                         }
@@ -3577,13 +3660,16 @@ private:
             if (!receiverPath && snapshot.program) {
                 for (const StmtPtr& statement : snapshot.program->statements) {
                     const auto* workspaceModule = dynamic_cast<const ModuleStmt*>(statement.get());
-                    if (!workspaceModule || workspaceModule->sourceId == found->second.analysis.sourceId) {
+                    if (!workspaceModule
+                        || workspaceModule->sourceId == found->second.analysis.sourceId
+                        || !isOpenSource(workspaceModule->sourceId)) {
                         continue;
                     }
                     for (const auto& exported : exportedDefinitionsForModule(
                             snapshot,
                             workspaceModule->moduleId)) {
-                        if (!matchesPrefix(exported.first)
+                        if (!isOpenSource(exported.second.sourceId)
+                            || !matchesPrefix(exported.first)
                             || hasCandidateName(exported.first)) {
                             continue;
                         }
@@ -3779,6 +3865,7 @@ private:
     }
 
     std::map<std::string, Document> documents_;
+    std::vector<std::string> workspaceRoots_;
     bool shuttingDown_ = false;
 };
 

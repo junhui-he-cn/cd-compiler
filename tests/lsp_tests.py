@@ -5,8 +5,11 @@
 from __future__ import annotations
 
 import json
+import os
+from pathlib import Path
 import subprocess
 import sys
+import tempfile
 
 
 def frame(message: dict) -> bytes:
@@ -58,11 +61,34 @@ def main() -> int:
         print("usage: lsp_tests.py COMPILER", file=sys.stderr)
         return 2
 
-    uri = "file:///tmp/compiler-design-lsp.cd"
-    other_uri = "file:///tmp/compiler-design-lsp-other.cd"
-    module_uri = "file:///tmp/compiler-design-lsp-module.cd"
-    api_uri = "file:///tmp/compiler-design-lsp-api.cd"
-    incomplete_uri = "file:///tmp/compiler-design-lsp-incomplete.cd"
+    workspace_directory = tempfile.TemporaryDirectory(prefix="compiler-design-lsp-workspace-")
+    outside_directory = tempfile.TemporaryDirectory(prefix="compiler-design-lsp-outside-")
+    workspace_path = Path(workspace_directory.name)
+    outside_path = Path(outside_directory.name)
+    main_path = workspace_path / "main.cd"
+    closed_module_path = workspace_path / "closed-disk.cd"
+    closed_importer_path = workspace_path / "closed-importer.cd"
+    outside_module_path = outside_path / "outside.cd"
+    closed_module_path.write_text(
+        "fun closedHelper(value: number): number { return value; }\n"
+        "export closedHelper;\n",
+        encoding="utf-8",
+    )
+    closed_importer_path.write_text(
+        'import "./missing-from-closed.cd";\n',
+        encoding="utf-8",
+    )
+    outside_module_path.write_text(
+        "fun outsideHelper(value: number): number { return value; }\n"
+        "export outsideHelper;\n",
+        encoding="utf-8",
+    )
+
+    uri = main_path.as_uri()
+    other_uri = (workspace_path / "other.cd").as_uri()
+    module_uri = (workspace_path / "compiler-design-lsp-module.cd").as_uri()
+    api_uri = (workspace_path / "compiler-design-lsp-api.cd").as_uri()
+    incomplete_uri = (workspace_path / "incomplete.cd").as_uri()
     process = subprocess.Popen(
         [sys.argv[1], "--lsp"],
         stdin=subprocess.PIPE,
@@ -76,7 +102,7 @@ def main() -> int:
                 "jsonrpc": "2.0",
                 "id": 1,
                 "method": "initialize",
-                "params": {"capabilities": {}},
+                "params": {"capabilities": {}, "rootUri": workspace_path.as_uri()},
             },
         )
         initialize = receive(process)
@@ -642,6 +668,214 @@ def main() -> int:
                 f"cross-module definition response mismatch: {imported_definition!r}"
             )
 
+        closed_source = (
+            f'import "./{closed_module_path.name}";\n'
+            "print closedHelper(1);\n"
+            "print closedHelper(2);\n"
+        )
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didChange",
+                "params": {
+                    "textDocument": {"uri": uri, "version": 4},
+                    "contentChanges": [{"text": closed_source}],
+                },
+            },
+        )
+        assert_publish(receive(process), uri, 0)
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 29,
+                "method": "textDocument/definition",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 1, "character": 10},
+                },
+            },
+        )
+        closed_definition = receive(process)
+        if closed_definition.get("result") != {
+            "uri": closed_module_path.as_uri(),
+            "range": {
+                "start": {"line": 0, "character": 4},
+                "end": {"line": 0, "character": 16},
+            },
+        }:
+            raise AssertionError(
+                f"closed-module definition response mismatch: {closed_definition!r}"
+            )
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 30,
+                "method": "textDocument/references",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 1, "character": 10},
+                    "context": {"includeDeclaration": False},
+                },
+            },
+        )
+        closed_references = receive(process)
+        if closed_references.get("result") != [
+            {
+                "uri": uri,
+                "range": {
+                    "start": {"line": 1, "character": 6},
+                    "end": {"line": 1, "character": 18},
+                },
+            },
+            {
+                "uri": uri,
+                "range": {
+                    "start": {"line": 2, "character": 6},
+                    "end": {"line": 2, "character": 18},
+                },
+            },
+        ]:
+            raise AssertionError(
+                f"closed-module references response mismatch: {closed_references!r}"
+            )
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 31,
+                "method": "textDocument/references",
+                "params": {
+                    "textDocument": {"uri": uri},
+                    "position": {"line": 1, "character": 10},
+                    "context": {"includeDeclaration": True},
+                },
+            },
+        )
+        closed_references_with_declaration = receive(process)
+        if closed_references_with_declaration.get("result") != [
+            {
+                "uri": closed_module_path.as_uri(),
+                "range": {
+                    "start": {"line": 0, "character": 4},
+                    "end": {"line": 0, "character": 16},
+                },
+            },
+            {
+                "uri": uri,
+                "range": {
+                    "start": {"line": 1, "character": 6},
+                    "end": {"line": 1, "character": 18},
+                },
+            },
+            {
+                "uri": uri,
+                "range": {
+                    "start": {"line": 2, "character": 6},
+                    "end": {"line": 2, "character": 18},
+                },
+            },
+        ]:
+            raise AssertionError(
+                "closed-module references-with-declaration response mismatch: "
+                f"{closed_references_with_declaration!r}"
+            )
+
+        closed_module_path.write_text("let =;\n", encoding="utf-8")
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didOpen",
+                "params": {
+                    "textDocument": {
+                        "uri": closed_module_path.as_uri(),
+                        "languageId": "compiler-design",
+                        "version": 1,
+                        "text": (
+                            "fun closedHelper(value: number): number { return value + 1; }\n"
+                            "export closedHelper;\n"
+                        ),
+                    }
+                },
+            },
+        )
+        assert_publish(receive(process), closed_module_path.as_uri(), 0)
+
+        outside_import = os.path.relpath(outside_module_path, main_path.parent).replace(os.sep, "/")
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didChange",
+                "params": {
+                    "textDocument": {"uri": uri, "version": 5},
+                    "contentChanges": [
+                        {
+                            "text": (
+                                f'import "{outside_import}";\n'
+                                "print outsideHelper(1);\n"
+                            )
+                        }
+                    ],
+                },
+            },
+        )
+        outside_diagnostics = assert_publish(receive(process), uri, 1)
+        if "failed to open import" not in outside_diagnostics[0].get("message", ""):
+            raise AssertionError(f"workspace-boundary diagnostic mismatch: {outside_diagnostics!r}")
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didChange",
+                "params": {
+                    "textDocument": {"uri": uri, "version": 6},
+                    "contentChanges": [
+                        {"text": 'import "./missing-lsp-module.cd";\nprint missingHelper(1);\n'}
+                    ],
+                },
+            },
+        )
+        missing_diagnostics = assert_publish(receive(process), uri, 1)
+        if "failed to open import" not in missing_diagnostics[0].get("message", ""):
+            raise AssertionError(f"missing-module diagnostic mismatch: {missing_diagnostics!r}")
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didClose",
+                "params": {"textDocument": {"uri": closed_module_path.as_uri()}},
+            },
+        )
+        assert_publish(receive(process), closed_module_path.as_uri(), 0)
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didChange",
+                "params": {
+                    "textDocument": {"uri": uri, "version": 7},
+                    "contentChanges": [
+                        {"text": f'import "./{closed_importer_path.name}";\n'}
+                    ],
+                },
+            },
+        )
+        nested_missing_diagnostics = assert_publish(receive(process), uri, 1)
+        if "failed to open import" not in nested_missing_diagnostics[0].get("message", ""):
+            raise AssertionError(
+                f"nested missing-module diagnostic mismatch: {nested_missing_diagnostics!r}"
+            )
+
         namespace_source = (
             'import "./compiler-design-lsp-module.cd" as lib;\n'
             "print lib.value;\n"
@@ -658,7 +892,7 @@ def main() -> int:
                 "jsonrpc": "2.0",
                 "method": "textDocument/didChange",
                 "params": {
-                    "textDocument": {"uri": uri, "version": 4},
+                    "textDocument": {"uri": uri, "version": 8},
                     "contentChanges": [{"text": namespace_source}],
                 },
             },
@@ -1070,7 +1304,7 @@ def main() -> int:
                 "jsonrpc": "2.0",
                 "method": "textDocument/didChange",
                 "params": {
-                    "textDocument": {"uri": uri, "version": 5},
+                    "textDocument": {"uri": uri, "version": 9},
                     "contentChanges": [{"text": "let =;\n"}],
                 },
             },
@@ -1085,7 +1319,7 @@ def main() -> int:
                 "jsonrpc": "2.0",
                 "method": "textDocument/didChange",
                 "params": {
-                    "textDocument": {"uri": uri, "version": 6},
+                    "textDocument": {"uri": uri, "version": 10},
                     "contentChanges": [{"text": "print missing;\n"}],
                 },
             },
@@ -1119,6 +1353,8 @@ def main() -> int:
         if process.poll() is None:
             process.kill()
             process.wait()
+        workspace_directory.cleanup()
+        outside_directory.cleanup()
 
     print("language server: initialize, queries, diagnostics, formatting, shutdown passed")
     return 0
