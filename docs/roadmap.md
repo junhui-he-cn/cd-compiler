@@ -358,6 +358,10 @@ design
 and machine-readable decision are in
 `docs/superpowers/specs/2026-07-30-ssa-optimization-design.md` and
 `docs/decisions/m7-ir-ssa-optimization-001.{md,json}`.
+The existing benchmark runner now also provides an opt-in O0/O1 comparison
+over the checked-in workload matrix, including IR/bytecode shape, register,
+artifact-size, timing, and output/error/exit parity evidence; it remains
+informational and does not make O1 the default.
 
 **Purpose:** introduce explicit basic blocks, dominance/phi-based SSA, and a
 small opt-in O1 pass pipeline behind the existing linear register IR while

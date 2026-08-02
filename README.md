@@ -798,7 +798,10 @@ python3 tests/run_benchmarks.py --report build/benchmark-report.json
 ```
 
 It validates each workload's products, stdout, stderr, and exit status, and
-records sample/minimum/median/maximum timings for every phase in JSON. See
+records sample/minimum/median/maximum timings plus IR/bytecode instruction,
+`registerCount`, and artifact-size metrics in JSON. Use
+`--compare-opt-levels` to run the same matrix under O0 and O1 and record
+correctness parity and metric deltas. See
 [`docs/benchmarking.md`](docs/benchmarking.md) for the measurement boundary
 and selection options. Benchmark results are informational and are not part of
 the canonical verification gate.

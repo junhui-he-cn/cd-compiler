@@ -4,7 +4,7 @@ The benchmark framework is an informational measurement tool separate from the
 canonical verification matrix. It is defined by
 `tests/benchmark_manifest.json` and executed by `tests/run_benchmarks.py`.
 
-Build the two executables once, then run the benchmark:
+Build the two executables once, then run the default O0 measurement:
 
 ```sh
 cmake -S . -B build
@@ -26,16 +26,55 @@ samples repeat the last successfully prepared artifact.
 
 | Phase | Command | Included in the sample |
 | --- | --- | --- |
-| compile | `compiler_design --emit-bytecode ...` or `--emit-module-bytecode ...` | compiler process startup, frontend/backend work, and product write |
+| compile | `compiler_design --opt-level N --emit-bytecode ...` or `--emit-module-bytecode ...` | compiler process startup, frontend/backend work, and product write |
 | link | `compiler-design-vm link <module-directory> <artifact>` | module product reads, verification, deterministic expansion, and linked artifact write; module workloads only |
 | load | `compiler-design-vm dump <artifact>` | VM process startup, artifact read/parse/verification, and canonical formatting |
 | runtime | `compiler-design-vm run <artifact>` | VM process startup, artifact load, and execution |
+| IR inspection | `compiler_design --opt-level N --ir ...` | one un-timed compiler listing used to count IR instructions and virtual registers |
+| bytecode inspection | `compiler_design --opt-level N --bytecode ...` | one un-timed compiler listing used to count bytecode instructions and `registerCount` |
+| artifact size | final artifact from the compile/link phase | byte size of the artifact consumed by `dump` and `run` |
 
-The load phase intentionally uses the existing canonical `dump` boundary. Its
-stdout is validated as non-empty and is not treated as the program's output;
-the runtime phase remains the execution measurement. A workload fails if a
-required phase has a non-zero exit code, unexpected stderr/stdout, a missing
-product, or a runtime result that differs from its checked-in expectation.
+Inspection commands are reported separately and are not included in compile
+timings. The final artifact is the directly emitted artifact for `linked`
+workloads and the VM-linked artifact for `module` workloads.
+
+## Optimization comparisons
+
+The default command measures O0 only. Use the existing workload matrix for an
+O0/O1 comparison:
+
+```sh
+python3 tests/run_benchmarks.py \
+  --compare-opt-levels \
+  --report build/benchmark-report-o0-o1.json
+```
+
+Alternatively, select one or more levels explicitly with repeated
+`--opt-level` options, such as `--opt-level 0 --opt-level 1`. The compiler's
+default O0 path is never changed by the runner.
+
+Every selected level independently checks compile, link, load, runtime output,
+runtime stderr, and exit status against the same checked-in workload contract.
+When multiple levels are selected, the report also compares observed stdout,
+stderr, and exit-code digests and records O0-to-O1 deltas for:
+
+- compile, link, load, and runtime median wall-clock time;
+- IR and bytecode instruction counts;
+- total bytecode `registerCount` across main and function bodies; and
+- final artifact size in bytes.
+
+`bytecode_metrics.register_count` is the sum of the main and function
+`registerCount` values. The report also keeps main/function instruction and
+register subtotals. `ir_metrics.virtual_register_count` is derived from the
+highest virtual register referenced in each listed body; bytecode
+`register_count` is the authoritative register-count measurement.
+
+The report schema is version 3; the checked-in workload manifest remains
+schema version 2. Timing and metric deltas are informational and do not create
+a CI performance threshold. A correctness failure or an O0/O1 output/error/
+exit parity failure still returns non-zero.
+
+## Workloads and reports
 
 The checked-in manifest covers:
 
@@ -57,11 +96,16 @@ program and `module` when the compiler emits independent module products that
 the VM links before loading and running.
 
 The default repetition count is three. Use `--repeat N` to override it and
-`--workload NAME` (repeatable) to select a subset. The JSON report records
-compile/link/load/runtime samples and min/median/max seconds for each phase,
-the commit and executable paths, manifest revision, expected-output digests,
-host/toolchain metadata, command templates, and validation flags. Timings are
-not compared against a baseline and do not create a CI performance gate in
-this slice; correctness failures still return non-zero. The two scaled
-workloads deliberately run hundreds of thousands to millions of instructions
-so VM execution changes can be compared separately from process startup.
+`--workload NAME` (repeatable) to select a subset. The JSON report records the
+commit and executable paths, manifest revision, selected optimization levels,
+expected-output digests, observed runtime digests, host/toolchain metadata,
+command templates, validation flags, timing summaries, compiler-shape metrics,
+artifact sizes, and comparison deltas.
+
+The two scaled workloads deliberately run hundreds of thousands to millions of
+instructions so VM execution changes can be compared separately from process
+startup. Benchmark results remain informational and are not part of the
+canonical verification gate.
+
+Exit code: 0 when all selected workloads and comparisons pass; non-zero when a
+workload product, expected result, or requested parity check fails.
