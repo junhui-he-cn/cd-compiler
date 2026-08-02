@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "milestone": "M0.5B",
-  "audit_revision": "m05b-2026-07-22-r1",
-  "baseline_commit": "42b9da1",
+  "audit_revision": "m05b-2026-08-02-r2",
+  "baseline_commit": "61cbbc79",
   "verification_inventory_revision": "m0d-2026-07-22-r1",
   "contract": {
     "family": "cdbc",
@@ -13,8 +13,8 @@
   "corpus": {
     "inventory_path": "tests/verification_inventory.json",
     "artifact_runner": "artifact",
-    "artifact_case_count": 116,
-    "artifact_fixture_count": 58,
+    "artifact_case_count": 126,
+    "artifact_fixture_count": 63,
     "artifact_case_ids": [
       "artifact.adt_pattern_matching.emit",
       "artifact.adt_pattern_matching.rust_dump",
@@ -40,6 +40,12 @@
       "artifact.array_reduce.rust_dump",
       "artifact.array_reduce_shadowing.emit",
       "artifact.array_reduce_shadowing.rust_dump",
+      "artifact.benchmark_execution_closure.emit",
+      "artifact.benchmark_execution_closure.rust_dump",
+      "artifact.benchmark_execution_index.emit",
+      "artifact.benchmark_execution_index.rust_dump",
+      "artifact.benchmark_execution_loop.emit",
+      "artifact.benchmark_execution_loop.rust_dump",
       "artifact.collection_helpers.emit",
       "artifact.collection_helpers.rust_dump",
       "artifact.compound_assignment.emit",
@@ -118,8 +124,12 @@
       "artifact.ranges.rust_dump",
       "artifact.record_patterns.emit",
       "artifact.record_patterns.rust_dump",
+      "artifact.recursive_node_references.emit",
+      "artifact.recursive_node_references.rust_dump",
       "artifact.runtime_diagnostics.emit",
       "artifact.runtime_diagnostics.rust_dump",
+      "artifact.string_ordering.emit",
+      "artifact.string_ordering.rust_dump",
       "artifact.struct_field_assignment.emit",
       "artifact.struct_field_assignment.rust_dump",
       "artifact.struct_method_compound_assignment.emit",
@@ -162,11 +172,11 @@
       "cdbc 0.1"
     ],
     "observed_capability_counts": {
-      "with_functions": 28,
+      "with_functions": 29,
       "with_native_call": 31,
-      "with_debug_sources": 58,
-      "with_debug_locations": 58,
-      "with_debug_ranges": 58,
+      "with_debug_sources": 63,
+      "with_debug_locations": 63,
+      "with_debug_ranges": 63,
       "with_debug_source_modules": 4
     },
     "artifacts": [
@@ -578,6 +588,99 @@
         ]
       },
       {
+        "path": "tests/bytecode_artifacts/benchmark_execution_closure/expected.cdbc",
+        "bytes": 3605,
+        "sha256": "53d36453fba764d0bff4fd118a94af8324a7cb2f400b43c4d8dcd1986a3058b4",
+        "header": "cdbc 0.1",
+        "format_family": "cdbc",
+        "format_version": "0.1",
+        "section_order": [
+          "constants",
+          "names",
+          "main",
+          "function",
+          "function",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ],
+        "functions": 2,
+        "has_native_call": false,
+        "has_debug_sources": true,
+        "has_debug_locations": true,
+        "has_debug_ranges": true,
+        "has_debug_source_modules": false,
+        "envelope_capabilities": [
+          "header_family_version",
+          "canonical_core_sections",
+          "strict_reference_indices",
+          "function_sections",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ]
+      },
+      {
+        "path": "tests/bytecode_artifacts/benchmark_execution_index/expected.cdbc",
+        "bytes": 3323,
+        "sha256": "5342fd4eb4d8825c1a1e9a0d76d1a67438010cfcbcc0c35058a6b9ed72dd1fa7",
+        "header": "cdbc 0.1",
+        "format_family": "cdbc",
+        "format_version": "0.1",
+        "section_order": [
+          "constants",
+          "names",
+          "main",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ],
+        "functions": 0,
+        "has_native_call": false,
+        "has_debug_sources": true,
+        "has_debug_locations": true,
+        "has_debug_ranges": true,
+        "has_debug_source_modules": false,
+        "envelope_capabilities": [
+          "header_family_version",
+          "canonical_core_sections",
+          "strict_reference_indices",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ]
+      },
+      {
+        "path": "tests/bytecode_artifacts/benchmark_execution_loop/expected.cdbc",
+        "bytes": 1573,
+        "sha256": "cee1718322f2a7b43133a3b5a9b1c4ce6e4cd949506a5ab355c0b70fa42bf837",
+        "header": "cdbc 0.1",
+        "format_family": "cdbc",
+        "format_version": "0.1",
+        "section_order": [
+          "constants",
+          "names",
+          "main",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ],
+        "functions": 0,
+        "has_native_call": false,
+        "has_debug_sources": true,
+        "has_debug_locations": true,
+        "has_debug_ranges": true,
+        "has_debug_source_modules": false,
+        "envelope_capabilities": [
+          "header_family_version",
+          "canonical_core_sections",
+          "strict_reference_indices",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ]
+      },
+      {
         "path": "tests/bytecode_artifacts/collection_helpers/expected.cdbc",
         "bytes": 1768,
         "sha256": "c99d5154f1a0e9481815fbbb595b2060e23eb367a58f537b256ad5f791b43466",
@@ -793,8 +896,8 @@
       },
       {
         "path": "tests/bytecode_artifacts/generic_enums/expected.cdbc",
-        "bytes": 9940,
-        "sha256": "5f606b9c5a8ed719b7bff48a503b1e70db2556b300ddf2212fd525e893a4a30c",
+        "bytes": 9949,
+        "sha256": "f4b73db0321f20f2272f581cb9c96a407ff6fe5abb2026ce22d1d0a64962e17d",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -827,8 +930,8 @@
       },
       {
         "path": "tests/bytecode_artifacts/generic_explicit_type_arguments/expected.cdbc",
-        "bytes": 6105,
-        "sha256": "35929f35abef34a3cdb4f9aa72bc13ec115b33f5468ab85a039afbd09496dfac",
+        "bytes": 6086,
+        "sha256": "5ed2c8835e46de5d9245ed67e3b1409bb219f9aad547c2b53983e30b5ed9eec1",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -897,8 +1000,8 @@
       },
       {
         "path": "tests/bytecode_artifacts/generic_lambdas/expected.cdbc",
-        "bytes": 3798,
-        "sha256": "485580aa577ce0d93611a7d709b25e6367621dac36ba9ce4aedfa4501e27d8f0",
+        "bytes": 3807,
+        "sha256": "098343c4f9b0313bf8d1c840b7ce59bbf612c57eb0ebc4f3d6d71e97b29eb5b3",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -932,8 +1035,8 @@
       },
       {
         "path": "tests/bytecode_artifacts/generic_methods/expected.cdbc",
-        "bytes": 4836,
-        "sha256": "dbb84852332ccf92267f9648137084aad05cfcd73633d0e782b7589bd82b1465",
+        "bytes": 4845,
+        "sha256": "5d6c9001515637622e07769276c9d55e9267c54a0b6821e7e235cdeaef00f17e",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1029,8 +1132,8 @@
       },
       {
         "path": "tests/bytecode_artifacts/literal_patterns/expected.cdbc",
-        "bytes": 16545,
-        "sha256": "7376570a6aaed372209f8edd64de7fd16da7b46c6573eb1f9bb26d382f100425",
+        "bytes": 16565,
+        "sha256": "71d99be7228818dc5dc01dfc97aa40dcc96ecca4cf04bf0e894a66d4dda4a6a3",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1686,8 +1789,8 @@
       },
       {
         "path": "tests/bytecode_artifacts/nullable_enum_patterns/expected.cdbc",
-        "bytes": 8211,
-        "sha256": "cba9c9c9b6940915798f50425d8a59891423eae3bd6235d157e1835ac37c4ec1",
+        "bytes": 8257,
+        "sha256": "0708ac5fe2cccfc83fbc7d190a94060309b7ceb83426a30b1f94a870981fd406",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1719,8 +1822,8 @@
       },
       {
         "path": "tests/bytecode_artifacts/or_patterns/expected.cdbc",
-        "bytes": 10487,
-        "sha256": "f61dca71bbb7e1bb5ca354d5480a67e5666b858430561fe1fcdca82e017ebf1f",
+        "bytes": 10496,
+        "sha256": "ae1adb92294b3bbf7d851031a56b5069787f434dcd69727ecd0e3d920a5f8489",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1784,8 +1887,8 @@
       },
       {
         "path": "tests/bytecode_artifacts/record_patterns/expected.cdbc",
-        "bytes": 8447,
-        "sha256": "457b86877480a5b502699a797224ff526943c894c794c015273763da0bd0cb7f",
+        "bytes": 8465,
+        "sha256": "7eef7ea290dc8e042aa4e2a0b5bd851da91b90d12768dbf87e4abf5b64bd2623",
         "header": "cdbc 0.1",
         "format_family": "cdbc",
         "format_version": "0.1",
@@ -1810,6 +1913,36 @@
           "strict_reference_indices",
           "function_sections",
           "native_call",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ]
+      },
+      {
+        "path": "tests/bytecode_artifacts/recursive_node_references/expected.cdbc",
+        "bytes": 4105,
+        "sha256": "808d785778987105231215489779024a58a4d5442dba768080f8dcf39a1126e8",
+        "header": "cdbc 0.1",
+        "format_family": "cdbc",
+        "format_version": "0.1",
+        "section_order": [
+          "constants",
+          "names",
+          "main",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ],
+        "functions": 0,
+        "has_native_call": false,
+        "has_debug_sources": true,
+        "has_debug_locations": true,
+        "has_debug_ranges": true,
+        "has_debug_source_modules": false,
+        "envelope_capabilities": [
+          "header_family_version",
+          "canonical_core_sections",
+          "strict_reference_indices",
           "debug_sources",
           "debug_locations",
           "debug_ranges"
@@ -1842,6 +1975,36 @@
           "canonical_core_sections",
           "strict_reference_indices",
           "function_sections",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ]
+      },
+      {
+        "path": "tests/bytecode_artifacts/string_ordering/expected.cdbc",
+        "bytes": 3892,
+        "sha256": "d850a783742ca09a0965263ebcad1ab72657adcabf04d1437dfa3b3f28b6700a",
+        "header": "cdbc 0.1",
+        "format_family": "cdbc",
+        "format_version": "0.1",
+        "section_order": [
+          "constants",
+          "names",
+          "main",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ],
+        "functions": 0,
+        "has_native_call": false,
+        "has_debug_sources": true,
+        "has_debug_locations": true,
+        "has_debug_ranges": true,
+        "has_debug_source_modules": false,
+        "envelope_capabilities": [
+          "header_family_version",
+          "canonical_core_sections",
+          "strict_reference_indices",
           "debug_sources",
           "debug_locations",
           "debug_ranges"
@@ -2701,6 +2864,156 @@
           "strict_reference_indices",
           "function_sections",
           "native_call",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ]
+      },
+      {
+        "case_id": "artifact.benchmark_execution_closure.emit",
+        "result_name": "benchmark_execution_closure emit",
+        "fixture": "tests/bytecode_artifacts/benchmark_execution_closure",
+        "artifact": "tests/bytecode_artifacts/benchmark_execution_closure/expected.cdbc",
+        "format_family": "cdbc",
+        "format_version": "0.1",
+        "section_order": [
+          "constants",
+          "names",
+          "main",
+          "function",
+          "function",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ],
+        "envelope_capabilities": [
+          "header_family_version",
+          "canonical_core_sections",
+          "strict_reference_indices",
+          "function_sections",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ]
+      },
+      {
+        "case_id": "artifact.benchmark_execution_closure.rust_dump",
+        "result_name": "benchmark_execution_closure rust-dump",
+        "fixture": "tests/bytecode_artifacts/benchmark_execution_closure",
+        "artifact": "tests/bytecode_artifacts/benchmark_execution_closure/expected.cdbc",
+        "format_family": "cdbc",
+        "format_version": "0.1",
+        "section_order": [
+          "constants",
+          "names",
+          "main",
+          "function",
+          "function",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ],
+        "envelope_capabilities": [
+          "header_family_version",
+          "canonical_core_sections",
+          "strict_reference_indices",
+          "function_sections",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ]
+      },
+      {
+        "case_id": "artifact.benchmark_execution_index.emit",
+        "result_name": "benchmark_execution_index emit",
+        "fixture": "tests/bytecode_artifacts/benchmark_execution_index",
+        "artifact": "tests/bytecode_artifacts/benchmark_execution_index/expected.cdbc",
+        "format_family": "cdbc",
+        "format_version": "0.1",
+        "section_order": [
+          "constants",
+          "names",
+          "main",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ],
+        "envelope_capabilities": [
+          "header_family_version",
+          "canonical_core_sections",
+          "strict_reference_indices",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ]
+      },
+      {
+        "case_id": "artifact.benchmark_execution_index.rust_dump",
+        "result_name": "benchmark_execution_index rust-dump",
+        "fixture": "tests/bytecode_artifacts/benchmark_execution_index",
+        "artifact": "tests/bytecode_artifacts/benchmark_execution_index/expected.cdbc",
+        "format_family": "cdbc",
+        "format_version": "0.1",
+        "section_order": [
+          "constants",
+          "names",
+          "main",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ],
+        "envelope_capabilities": [
+          "header_family_version",
+          "canonical_core_sections",
+          "strict_reference_indices",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ]
+      },
+      {
+        "case_id": "artifact.benchmark_execution_loop.emit",
+        "result_name": "benchmark_execution_loop emit",
+        "fixture": "tests/bytecode_artifacts/benchmark_execution_loop",
+        "artifact": "tests/bytecode_artifacts/benchmark_execution_loop/expected.cdbc",
+        "format_family": "cdbc",
+        "format_version": "0.1",
+        "section_order": [
+          "constants",
+          "names",
+          "main",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ],
+        "envelope_capabilities": [
+          "header_family_version",
+          "canonical_core_sections",
+          "strict_reference_indices",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ]
+      },
+      {
+        "case_id": "artifact.benchmark_execution_loop.rust_dump",
+        "result_name": "benchmark_execution_loop rust-dump",
+        "fixture": "tests/bytecode_artifacts/benchmark_execution_loop",
+        "artifact": "tests/bytecode_artifacts/benchmark_execution_loop/expected.cdbc",
+        "format_family": "cdbc",
+        "format_version": "0.1",
+        "section_order": [
+          "constants",
+          "names",
+          "main",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ],
+        "envelope_capabilities": [
+          "header_family_version",
+          "canonical_core_sections",
+          "strict_reference_indices",
           "debug_sources",
           "debug_locations",
           "debug_ranges"
@@ -4715,6 +5028,54 @@
         ]
       },
       {
+        "case_id": "artifact.recursive_node_references.emit",
+        "result_name": "recursive_node_references emit",
+        "fixture": "tests/bytecode_artifacts/recursive_node_references",
+        "artifact": "tests/bytecode_artifacts/recursive_node_references/expected.cdbc",
+        "format_family": "cdbc",
+        "format_version": "0.1",
+        "section_order": [
+          "constants",
+          "names",
+          "main",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ],
+        "envelope_capabilities": [
+          "header_family_version",
+          "canonical_core_sections",
+          "strict_reference_indices",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ]
+      },
+      {
+        "case_id": "artifact.recursive_node_references.rust_dump",
+        "result_name": "recursive_node_references rust-dump",
+        "fixture": "tests/bytecode_artifacts/recursive_node_references",
+        "artifact": "tests/bytecode_artifacts/recursive_node_references/expected.cdbc",
+        "format_family": "cdbc",
+        "format_version": "0.1",
+        "section_order": [
+          "constants",
+          "names",
+          "main",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ],
+        "envelope_capabilities": [
+          "header_family_version",
+          "canonical_core_sections",
+          "strict_reference_indices",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ]
+      },
+      {
         "case_id": "artifact.runtime_diagnostics.emit",
         "result_name": "runtime_diagnostics emit",
         "fixture": "tests/bytecode_artifacts/runtime_diagnostics",
@@ -4761,6 +5122,54 @@
           "canonical_core_sections",
           "strict_reference_indices",
           "function_sections",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ]
+      },
+      {
+        "case_id": "artifact.string_ordering.emit",
+        "result_name": "string_ordering emit",
+        "fixture": "tests/bytecode_artifacts/string_ordering",
+        "artifact": "tests/bytecode_artifacts/string_ordering/expected.cdbc",
+        "format_family": "cdbc",
+        "format_version": "0.1",
+        "section_order": [
+          "constants",
+          "names",
+          "main",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ],
+        "envelope_capabilities": [
+          "header_family_version",
+          "canonical_core_sections",
+          "strict_reference_indices",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ]
+      },
+      {
+        "case_id": "artifact.string_ordering.rust_dump",
+        "result_name": "string_ordering rust-dump",
+        "fixture": "tests/bytecode_artifacts/string_ordering",
+        "artifact": "tests/bytecode_artifacts/string_ordering/expected.cdbc",
+        "format_family": "cdbc",
+        "format_version": "0.1",
+        "section_order": [
+          "constants",
+          "names",
+          "main",
+          "debug_sources",
+          "debug_locations",
+          "debug_ranges"
+        ],
+        "envelope_capabilities": [
+          "header_family_version",
+          "canonical_core_sections",
+          "strict_reference_indices",
           "debug_sources",
           "debug_locations",
           "debug_ranges"
@@ -5320,14 +5729,14 @@
   "errors": [],
   "dynamic_verification": {
     "artifact_assertions": {
-      "total": 116,
-      "passed": 116,
+      "total": 126,
+      "passed": 126,
       "failed": 0,
       "failure_names": []
     },
     "reference_dumps": {
-      "total": 58,
-      "passed": 58,
+      "total": 63,
+      "passed": 63,
       "failed": 0,
       "byte_for_byte": true
     },
@@ -5440,10 +5849,10 @@
   },
   "summary": {
     "passed": true,
-    "artifact_case_count": 116,
-    "artifact_fixture_count": 58,
-    "artifact_assertions": 116,
-    "reference_dumps": 58,
+    "artifact_case_count": 126,
+    "artifact_fixture_count": 63,
+    "artifact_assertions": 126,
+    "reference_dumps": 63,
     "invalid_header_probes": 2,
     "invalid_artifact_probes": 7,
     "errors": 0

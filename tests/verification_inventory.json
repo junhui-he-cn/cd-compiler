@@ -4916,6 +4916,51 @@
       "expected_files": []
     },
     {
+      "case_id": "ctest.vm_compatibility_matrix",
+      "runner": "ctest",
+      "result_name": "vm_compatibility_matrix",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "vm_compatibility_matrix"
+      ],
+      "backend": "python",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt",
+        "tests/vm_compatibility_matrix.py",
+        "docs/decisions/x1-compiler-vm-compatibility-001.json"
+      ],
+      "expected_files": []
+    },
+    {
+      "case_id": "ctest.vm_compatibility_matrix_selftest",
+      "runner": "ctest",
+      "result_name": "vm_compatibility_matrix_selftest",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "vm_compatibility_matrix_selftest"
+      ],
+      "backend": "python",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt",
+        "tests/vm_compatibility_matrix_selftest.py",
+        "tests/vm_compatibility_matrix.py",
+        "docs/decisions/x1-compiler-vm-compatibility-001.json"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "ctest.vm_resource_budget",
       "runner": "ctest",
       "result_name": "vm_resource_budget",

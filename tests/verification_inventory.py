@@ -108,6 +108,15 @@ CTEST_SOURCE_OVERRIDES = {
         "tests/run_verification_matrix.py",
         "tests/verification_matrix.json",
     ],
+    "vm_compatibility_matrix": [
+        "tests/vm_compatibility_matrix.py",
+        "docs/decisions/x1-compiler-vm-compatibility-001.json",
+    ],
+    "vm_compatibility_matrix_selftest": [
+        "tests/vm_compatibility_matrix_selftest.py",
+        "tests/vm_compatibility_matrix.py",
+        "docs/decisions/x1-compiler-vm-compatibility-001.json",
+    ],
 }
 
 

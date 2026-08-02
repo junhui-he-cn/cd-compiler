@@ -40,9 +40,9 @@ class CdbcContractAuditTests(unittest.TestCase):
             REPO_ROOT,
         )
         self.assertEqual(report["errors"], [])
-        self.assertEqual(report["corpus"]["artifact_case_count"], 116)
-        self.assertEqual(report["corpus"]["artifact_fixture_count"], 58)
-        self.assertEqual(len(report["envelope"]["case_capabilities"]), 116)
+        self.assertEqual(report["corpus"]["artifact_case_count"], 126)
+        self.assertEqual(report["corpus"]["artifact_fixture_count"], 63)
+        self.assertEqual(len(report["envelope"]["case_capabilities"]), 126)
         self.assertEqual(report["envelope"]["observed_header_versions"], ["cdbc 0.1"])
 
     def test_static_audit_is_deterministic(self) -> None:
@@ -105,8 +105,8 @@ class CdbcContractAuditTests(unittest.TestCase):
         )
         self.assertEqual(checked["errors"], [])
         self.assertEqual(checked["envelope"]["case_capabilities"], report["envelope"]["case_capabilities"])
-        self.assertEqual(checked["dynamic_verification"]["artifact_assertions"]["passed"], 116)
-        self.assertEqual(checked["dynamic_verification"]["reference_dumps"]["passed"], 58)
+        self.assertEqual(checked["dynamic_verification"]["artifact_assertions"]["passed"], 126)
+        self.assertEqual(checked["dynamic_verification"]["reference_dumps"]["passed"], 63)
         self.assertEqual(checked["dynamic_verification"]["invalid_header_probes"]["passed"], 2)
         self.assertEqual(checked["dynamic_verification"]["invalid_artifact_probes"]["passed"], 7)
 

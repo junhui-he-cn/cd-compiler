@@ -1,0 +1,221 @@
+{
+  "schema_version": 1,
+  "matrix_revision": "x1-2026-08-02-r1",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "reference_commit": "61cbbc79",
+  "decision_id": "X1-COMPILER-VM-COMPAT-001",
+  "status": "resolved",
+  "question": "What compatibility surfaces must the C++ compiler and Rust VM preserve together before later runtime or optimizer work?",
+  "decision": "Keep cdbc 0.1, cdbc-cache 0.2 schema 3, the 0.1 VM library facade, optional debug metadata, and the fixed non-serialized native-name registry as the current compatibility boundary. Consolidate existing artifact, module, cache, native, and library evidence without changing bytes, versions, or execution behavior.",
+  "version_contract": {
+    "compiler": {
+      "version": "0.1.0",
+      "source": "VERSION"
+    },
+    "artifact": {
+      "family": "cdbc",
+      "version": "0.1",
+      "header": "cdbc 0.1",
+      "source": "vm-rs/src/format.rs"
+    },
+    "module_cache": {
+      "family": "cdbc-cache",
+      "version": "0.2",
+      "schema": 3,
+      "source": "src/ModuleCache.cpp"
+    },
+    "vm_library": {
+      "package": "compiler-design-vm",
+      "crate_version": "0.1.0",
+      "api_version": "0.1",
+      "cargo": "vm-rs/Cargo.toml",
+      "source": "vm-rs/src/lib.rs"
+    },
+    "native_abi": {
+      "mode": "fixed-registered-names",
+      "serialized": false,
+      "source": "vm-rs/src/vm.rs",
+      "names": [
+        "push",
+        "pop",
+        "remove",
+        "clear",
+        "merge",
+        "keys",
+        "values",
+        "floor",
+        "ceil",
+        "sqrt",
+        "str",
+        "substr",
+        "charAt",
+        "typeOf",
+        "hash",
+        "contains",
+        "slice",
+        "copy",
+        "concat",
+        "map",
+        "filter",
+        "flatMap",
+        "any",
+        "all",
+        "count",
+        "find",
+        "findIndex",
+        "reduce",
+        "range"
+      ]
+    },
+    "debug_metadata": {
+      "optional": true,
+      "sections": [
+        "debug_sources",
+        "debug_locations",
+        "debug_ranges"
+      ],
+      "range_unit": "source-local half-open byte interval",
+      "source": "vm-rs/src/format.rs"
+    }
+  },
+  "compatibility_cells": [
+    {
+      "cell_id": "artifact.debug_metadata.cdbc_0_1",
+      "domain": "artifact",
+      "state": "supported-additive",
+      "producer": "C++ BytecodeTextEmitter",
+      "consumer": "Rust parser, VM diagnostics, trace, debug, and profile",
+      "contract": "debug_sources, debug_locations, and debug_ranges are optional; ranges are source-local half-open byte intervals",
+      "evidence": [
+        "docs/decisions/m05b-cdbc-contract.md",
+        "docs/decisions/m4b-debug-001.md",
+        "tests/debugger_tests.py",
+        "tests/profile_tests.py",
+        "vm-rs/src/format.rs"
+      ]
+    },
+    {
+      "cell_id": "artifact.linked.cdbc_0_1",
+      "domain": "artifact",
+      "state": "supported",
+      "producer": "C++ BytecodeTextEmitter",
+      "consumer": "Rust dump and run",
+      "contract": "linked cdbc 0.1 is accepted after structural and reference validation; link rejects it as a non-module product",
+      "evidence": [
+        "docs/decisions/m4a-artifact-validation.md",
+        "tests/bytecode_artifacts/arithmetic/expected.cdbc",
+        "tests/bytecode_artifact_tests.py",
+        "vm-rs/src/format.rs"
+      ]
+    },
+    {
+      "cell_id": "artifact.metadata_free.cdbc_0_1",
+      "domain": "artifact",
+      "state": "supported",
+      "producer": "C++ or hand-authored legacy artifact",
+      "consumer": "Rust parser and VM",
+      "contract": "metadata-free cdbc 0.1 remains valid; debug sections are not required for dump, link, or run",
+      "evidence": [
+        "docs/decisions/m4a-artifact-validation.md",
+        "docs/decisions/m05b-cdbc-contract.md",
+        "vm-rs/src/format.rs",
+        "vm-rs/tests/library_api.rs"
+      ]
+    },
+    {
+      "cell_id": "artifact.module.cdbc_0_1",
+      "domain": "artifact",
+      "state": "supported",
+      "producer": "C++ independent module emitter",
+      "consumer": "Rust dump and linker; run rejects an unlinked module",
+      "contract": "artifact: module products remain cdbc 0.1, validate module identity/dependencies before linking, and never execute as standalone programs",
+      "evidence": [
+        "docs/decisions/m3b-module-artifacts.md",
+        "docs/decisions/m4a-artifact-validation.md",
+        "tests/bytecode_module_artifact_tests.py",
+        "vm-rs/src/link.rs"
+      ]
+    },
+    {
+      "cell_id": "library.cli.version_0_1",
+      "domain": "embedding",
+      "state": "supported-additive",
+      "producer": "Rust library and compiler-design-vm CLI",
+      "consumer": "in-process host callers and command-line workflows",
+      "contract": "the library facade is version 0.1 and the CLI preserves file IO, stdout/stderr, exit codes, dump/run/link/trace/debug/profile commands",
+      "evidence": [
+        "docs/decisions/vm-library-api-001.md",
+        "docs/decisions/vm-library-error-boundary-001.md",
+        "vm-rs/src/lib.rs",
+        "vm-rs/src/main.rs",
+        "vm-rs/tests/library_api.rs",
+        "vm-rs/README.md"
+      ]
+    },
+    {
+      "cell_id": "module_cache.cdbc_cache_0_2_schema3",
+      "domain": "module-cache",
+      "state": "compiler-owned-compatible",
+      "producer": "C++ ModuleCache and FrontendSession",
+      "consumer": "compiler module-product emission and repair; Rust consumes products, not cache manifests",
+      "contract": "cdbc-cache 0.2 schema 3 records source/public-interface/dependency/optimization identity and relative product paths; source fallback remains available according to CLI policy",
+      "evidence": [
+        "docs/bytecode-text-format.md",
+        "docs/decisions/m3b-module-artifacts.md",
+        "src/ModuleCache.cpp",
+        "include/ModuleCache.hpp",
+        "tests/bytecode_module_cache_tests.py"
+      ]
+    },
+    {
+      "cell_id": "native.fixed_registry",
+      "domain": "native-abi",
+      "state": "fixed-nonserialized",
+      "producer": "C++ native lowering and Rust NativeSpec registry",
+      "consumer": "Rust artifact verifier and VM dispatch",
+      "contract": "native_call names use the fixed registered set; arity, callback, resource, and signature metadata remain VM-internal and are not serialized by cdbc 0.1",
+      "evidence": [
+        "docs/decisions/vm-native-registry-001.md",
+        "docs/decisions/vm-native-registry-004-signature-shapes.md",
+        "tests/cdbc_contract_audit.py",
+        "vm-rs/src/format.rs",
+        "vm-rs/src/vm.rs"
+      ]
+    }
+  ],
+  "rules": [
+    "X1 does not change cdbc artifact bytes, cdbc version, cache schema, native names, or VM execution semantics.",
+    "The compiler owns module-cache invalidation and source fallback; the VM validates and executes products but does not read .cdi or cache manifests to synthesize function bodies.",
+    "Debug metadata is additive and optional; metadata-free cdbc 0.1 remains a supported compatibility case.",
+    "Native registry metadata is an internal VM contract until a future artifact version explicitly serializes a successor ABI.",
+    "A successor artifact version, persistent session, GC, JIT, or host I/O capability requires a separate decision record."
+  ],
+  "verification": {
+    "validator": "tests/vm_compatibility_matrix.py",
+    "selftest": "tests/vm_compatibility_matrix_selftest.py",
+    "commands": [
+      ["python3", "tests/verification_inventory.py"],
+      ["python3", "tests/cdbc_contract_audit.py", "./build/compiler_design", "vm-rs", "--report", "build/m05b-cdbc-audit-report.json"],
+      ["python3", "tests/bytecode_artifact_tests.py", "./build/compiler_design", "vm-rs"],
+      ["python3", "tests/bytecode_module_artifact_tests.py", "./build/compiler_design", "vm-rs"],
+      ["python3", "tests/bytecode_module_cache_tests.py", "./build/compiler_design", "vm-rs"],
+      ["cargo", "test", "--manifest-path", "vm-rs/Cargo.toml"],
+      ["python3", "tests/run_verification.py", "./build/compiler_design", "vm-rs", "--report", "build/verification-report.json"]
+    ],
+    "required_existing_evidence": [
+      "M4A artifact acceptance/rejection matrix",
+      "M0.5B artifact corpus audit",
+      "module product and linker parity",
+      "module cache reuse/invalidation/fallback cases",
+      "Rust library version and instance-isolation tests",
+      "fixed native registry and unknown-native rejection"
+    ]
+  },
+  "out_of_scope": [
+    "changing cdbc 0.1 or cdbc-cache 0.2 schema 3",
+    "successor artifact version or binary encoding",
+    "versioned native IDs or plugin loading",
+    "GC, cycle collection, relocating handles, or persistent VM sessions",
+    "changing module-cache fallback or strictness policy"
+  ]
+}

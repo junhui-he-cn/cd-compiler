@@ -5,7 +5,7 @@ IR, module-cache producer, and compiler tools are planned in
 [`docs/roadmap.md`](roadmap.md). Changes to `.cdbc`, native calls, module
 products, debug metadata, or compatibility policy are joint slices.
 
-The baseline was audited on 2026-08-02 at `master` commit `dcbfedf8`. Detailed
+The baseline was audited on 2026-08-02 at `master` commit `61cbbc79`. Detailed
 history lives in `docs/decisions/`, tests, and Git; completed micro-slices are
 not repeated here.
 
@@ -46,19 +46,20 @@ accounting, and C++/Rust parity remain compatibility constraints.
 
 ### X1: Compiler/VM compatibility matrix
 
-**Status:** active. This is shared with `docs/roadmap.md` and is the next VM
-slice.
+**Status:** completed on 2026-08-02. This is shared with
+[`x1-compiler-vm-compatibility-001.md`](decisions/x1-compiler-vm-compatibility-001.md).
 
-Record compiler, artifact, module product, debug metadata, module-cache,
-native-name, VM library, and CLI compatibility in one test-backed matrix.
-Cover current success, metadata-free compatibility, and unsupported-version
-rejection. Do not change artifact bytes or versions in this slice.
+The shipped matrix records compiler, artifact, module product, debug metadata,
+module-cache, native-name, VM library, and CLI compatibility in one test-backed
+matrix. It validates seven cells against source constants, the native registry,
+inventory revision, and evidence paths. The refreshed artifact audit covers 126
+assertions across 63 fixtures. No artifact bytes or versions changed.
 
 ## 4. VM queue
 
 ### V1: Resolve recursive-object lifetime and cycle policy
 
-**Priority:** P0. **Status:** queued after X1.
+**Priority:** P0. **Status:** queued after completed X1.
 
 Recursive named structs make cycles a supported source-level construction, and
 the VM already formats active cycles as `<cycle>`. The remaining lifetime
@@ -109,7 +110,7 @@ or `Send`/`Sync` promise belongs in V2A.
 
 ### V3: Replace micro-optimization with profile-driven performance work
 
-**Priority:** P1. **Status:** queued after X1 and independent of V1. Later
+**Priority:** P1. **Status:** queued after completed X1 and independent of V1. Later
 hotspot work still requires its own profile evidence.
 
 The previous execution-loop micro-slice sequence is closed. New work starts
@@ -129,7 +130,7 @@ resource accounting, and linked/module artifact behavior.
 
 ### V4: Stabilize native and release compatibility
 
-**Priority:** P2. **Status:** queued behind X1 and a real host or artifact need.
+**Priority:** P2. **Status:** queued behind completed X1 and a real host or artifact need.
 
 - Publish native registry metadata only after deciding whether names remain the
   artifact ABI or a successor format introduces versioned native IDs.
@@ -179,12 +180,12 @@ existing benchmark/profile/capacity baseline
   -> V3B one evidence-selected hotspot
   -> V3C exact capacity policy as needed
 
-X1 + demonstrated ABI/release need
+completed X1 + demonstrated ABI/release need
   -> V4 native/release compatibility decision
   -> optional successor artifact work
 ```
 
-The recommended next VM slice after X1 is V1A. V2 must wait for a concrete
+X1 is complete. The recommended next VM slice is V1A. V2 must wait for a concrete
 consumer; V3 may proceed independently only from recorded evidence.
 
 ## 7. Verification contract

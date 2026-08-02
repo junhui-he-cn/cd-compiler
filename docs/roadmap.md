@@ -6,7 +6,7 @@ tools. The Rust runtime has a separate plan in
 native calls, debug metadata, module products, or compatibility policy is a
 joint compiler/VM slice and must satisfy both roadmaps.
 
-The baseline was audited on 2026-08-02 at `master` commit `dcbfedf8`. Code,
+The baseline was audited on 2026-08-02 at `master` commit `61cbbc79`. Code,
 tests, decision records, and Git history are the completion evidence; this
 document intentionally does not repeat the implementation history of every
 finished slice.
@@ -34,7 +34,7 @@ compatibility contracts until an explicit decision changes them.
 
 | Area | Shipped baseline | Open boundary |
 | --- | --- | --- |
-| Verification | Versioned 1,939-case inventory, canonical runner, boundary and malformed corpora | Refresh inventory metadata only when cases or CTest checks change |
+| Verification | Versioned 1,941-case inventory, canonical runner, boundary and malformed corpora | Refresh inventory metadata only when cases or CTest checks change |
 | Front end | Typed source identities, lossless source, declaration/semantic indexes, import-aware module graph | Remove legacy paths only when all consumers use the indexed services |
 | Language | Functions, closures, generics and constraints, `optional<T>`, enums/patterns, named and recursive structs, collection semantics, `Eq`/`Ord`/`Hash` capabilities | New syntax is demand-driven; semantic soundness work has priority |
 | Modules | Public interfaces, `.cdi`, independent module products, linker inputs, `cdbc-cache 0.2`, strict and fallback modes | Cache creation/repair policy is not yet a default-strict contract |
@@ -50,13 +50,19 @@ The authoritative implementation contracts remain in `README.md`,
 
 ### X1: Compiler/VM compatibility matrix
 
-**Status:** active. This is the next repository-wide planning and test slice.
+**Status:** completed on 2026-08-02. Decision record:
+[`x1-compiler-vm-compatibility-001.md`](decisions/x1-compiler-vm-compatibility-001.md).
 
 **Outcome:** add one concise compatibility record covering compiler version,
 `cdbc` version, linked versus module products, metadata-free versus debug
 artifacts, module-cache manifest schema, native-name contract, and Rust VM
 library/CLI versions. Record which combinations execute, are upgraded, or are
 rejected.
+
+The shipped matrix validates seven cells against source constants, the native
+registry, inventory revision, and evidence paths. It is implemented by
+`tests/vm_compatibility_matrix.py` and its selftest; the refreshed artifact
+audit now covers 126 assertions across 63 fixtures.
 
 **Boundary:** this slice documents and tests the existing contract. It does not
 introduce `cdbc 0.2`, a binary format, versioned native IDs, or a new cache
@@ -74,7 +80,7 @@ decision needs a stable statement of the boundary it must preserve.
 
 ### C1: Make O1 ready for a default-policy decision
 
-**Priority:** P0. **Status:** queued after X1.
+**Priority:** P0. **Status:** queued after completed X1.
 
 The existing explicit O1 pipeline is useful but not yet a default replacement
 for O0. Finish the evidence in three narrow slices:
@@ -173,7 +179,7 @@ are not in the default queue:
 ## 6. Dependency order
 
 ```text
-X1 compatibility matrix
+completed X1 compatibility matrix
   -> C1A optimized debug contract
   -> C1B register policy
   -> C1C default-level decision
@@ -195,7 +201,7 @@ C3/C4 stable boundaries
   -> C5 incremental session re-audit
 ```
 
-The recommended next compiler slice after X1 is C1A. C2 and C3 are valid
+X1 is complete. The recommended next compiler slice is C1A. C2 and C3 are valid
 secondary tracks, but should not be mixed into the optimizer slice.
 
 ## 7. Verification contract

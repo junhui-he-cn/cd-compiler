@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "audit_revision": "m05b-2026-07-22-r1",
-  "baseline_commit": "42b9da1",
+  "audit_revision": "m05b-2026-08-02-r2",
+  "baseline_commit": "61cbbc79",
   "inventory_revision": "m0d-2026-07-22-r1",
   "contract": {
     "family": "cdbc",
@@ -12,8 +12,8 @@
   "corpus_scope": {
     "inventory": "tests/verification_inventory.json",
     "artifact_runner": "artifact",
-    "artifact_case_count": 116,
-    "artifact_fixture_count": 58,
+    "artifact_case_count": 126,
+    "artifact_fixture_count": 63,
     "artifact_expected_file": "expected.cdbc",
     "reference_assertion_owner": "tests/bytecode_artifact_tests.py"
   },
