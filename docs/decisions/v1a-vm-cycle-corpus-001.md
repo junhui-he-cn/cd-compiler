@@ -8,9 +8,11 @@ implement a storage policy.
 
 Source programs may construct self and mutual cycles through the existing
 array, map, and recursive-struct operations. Recursive closures also create a
-supported environment cycle. The current `Rc<RefCell<...>>` ownership remains
-the observed behavior: a strong cycle stays live after its external roots are
-dropped, while replacing the back-edge with `nil` releases the storage.
+supported environment cycle. At this pre-policy baseline, the current
+`Rc<RefCell<...>>` ownership leaves a strong cycle live after its external
+roots are dropped, while replacing the back-edge with `nil` releases the
+storage. V1B supersedes that lifetime behavior with a non-moving tracing
+collector; the corpus and compatibility observations remain valid.
 
 `HeapStats` remains an observational, weak-ledger API. The corpus records
 tracked allocation totals, live/dead counts, peak live counts, and estimated

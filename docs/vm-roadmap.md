@@ -32,7 +32,7 @@ cache invalidation, async semantics, or compiler optimization policy.
 | --- | --- | --- |
 | Artifact safety | Shared `cdbc 0.1` parser/formatter/verifier, malformed corpus, resource limits, cancellation | Successor format and integrity envelope are not justified |
 | Execution | Register VM for the complete emitted instruction set and native surface | Further optimization must be workload-driven |
-| Runtime values | Shared cells and identity-bearing arrays, maps, structs, closures, recursive values, cycle-safe formatting | Reference-counted cycles are observable but not reclaimed |
+| Runtime values | Stable identity-bearing storage, non-moving tracing collection at VM safepoints, recursive values, cycle-safe formatting | Incremental/concurrent collection and collection-frequency/resource policy remain open |
 | Modules | Deterministic module validation/linking, debug rebasing, typed errors, optional link report | Versioned report serialization is not defined |
 | Embedding | Rust library parse/verify/link/run/trace/debug/profile API plus CLI adapters | API remains pre-1.0, single-threaded, and without host sink/session guarantees |
 | Observability | Interactive debugger, deterministic counters, tracked heap counts, estimated retained bytes, structured error kinds | No stable host schema, wall-clock field, allocator bytes, or RSS contract |
@@ -59,7 +59,8 @@ assertions across 63 fixtures. No artifact bytes or versions changed.
 
 ### V1: Resolve recursive-object lifetime and cycle policy
 
-**Priority:** P0. **Status:** active; V1A completed on 2026-08-02.
+**Priority:** P0. **Status:** active; V1A completed, V1B resolved, and the
+first V1C implementation slice completed on 2026-08-02.
 
 Recursive named structs make cycles a supported source-level construction, and
 the VM already formats active cycles as `<cycle>`. The remaining lifetime
@@ -75,18 +76,22 @@ Proceed in three slices:
    workloads. Measure tracked live objects and estimated retained bytes before
    and after roots and VM instances are dropped. Host RSS is observational,
    not a portable pass threshold.
-2. **V1B - storage decision:** next. Compare retaining reference counting, explicit
-   weak links, cycle detection/rejection, a non-moving tracing collector, and
-   a handle-based collector. Specify roots, native temporaries, debugger
-   observation, identity/hash/equality, final error state, pause points, and
-   embedding behavior.
-3. **V1C - admitted implementation:** implement only the selected policy with
-   an incremental migration and rollback path. Keep `cdbc 0.1` unchanged unless
-   the decision proves an artifact-visible change is unavoidable.
+2. **V1B - storage decision:** resolved with
+   [`v1b-vm-lifetime-storage-001.md`](decisions/v1b-vm-lifetime-storage-001.md).
+   The selected policy is a non-moving tracing collector over stable tracked
+   storage; roots, native temporaries, debugger observation, identity,
+   diagnostics, pause points, and embedding behavior are specified there.
+3. **V1C - admitted implementation:** first slice complete. `Heap` now exposes
+   explicit non-moving tracing collection and VM execution collects after the
+   top-level frame, with coverage for native callbacks, nested calls,
+   cancellation, debugger pauses, host-held roots, and recursive variant
+   payloads. Collection-frequency/resource measurements remain open before
+   changing storage layout; keep `cdbc 0.1` unchanged and retain an
+   incremental rollback path.
 
-**Decision gate:** do not introduce GC, weak-reference syntax, relocating
-handles, or cycle rejection automatically. Stop after V1B evidence for the
-policy choice.
+**Decision gate:** V1B selects tracing GC. Do not add weak-reference syntax,
+relocating handles, or cycle rejection; stop V1C before changing storage layout
+until root, pause, and resource evidence is complete.
 
 **Gate:** C++/Rust recursive-value parity, alias and identity cases, cycle-safe
 formatting, library multi-instance tests, runtime failure and cancellation,
@@ -169,8 +174,8 @@ These tracks stay outside the default queue until their trigger is met:
 ```text
 completed X1 compatibility matrix
   -> completed V1A cycle corpus and measurement
-  -> V1B lifetime/storage decision
-  -> V1C selected implementation
+  -> completed V1B lifetime/storage decision
+  -> completed V1C top-level tracing slice
 
 real host consumer + X1
   -> V2A structured host outcome
@@ -187,9 +192,9 @@ completed X1 + demonstrated ABI/release need
   -> optional successor artifact work
 ```
 
-X1 and V1A are complete. The recommended next VM slice is V1B. V2 must wait
-for a concrete consumer; V3 may proceed independently only from recorded
-evidence.
+X1, V1A, V1B, and the first V1C implementation slice are complete. Further
+collection scheduling remains evidence-gated. V2 must wait for a concrete
+consumer; V3 may proceed independently only from recorded evidence.
 
 ## 7. Verification contract
 

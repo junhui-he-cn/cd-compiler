@@ -188,6 +188,30 @@ CASES: tuple[tuple[str, str, str, str | None], ...] = (
         None,
     ),
     (
+        "local_cycle",
+        "fun make() {\n"
+        "  let xs = [];\n"
+        "  push(xs, xs);\n"
+        "  print xs;\n"
+        "}\n"
+        "make();\n",
+        "[<cycle>]\n",
+        None,
+    ),
+    (
+        "callback_cycle",
+        "fun make(value) {\n"
+        "  let xs = [];\n"
+        "  push(xs, xs);\n"
+        "  return xs;\n"
+        "}\n"
+        "let values = [1];\n"
+        "let mapped = map(values, make);\n"
+        "print mapped;\n",
+        "[[<cycle>]]\n",
+        None,
+    ),
+    (
         "replace_array",
         "let xs = [];\npush(xs, xs);\nxs[0] = nil;\nprint xs;\n",
         "[nil]\n",
@@ -258,6 +282,10 @@ def main() -> int:
                     return fail(error)
                 if fields["tracked_heap_peak_live"] == 0:
                     return fail(f"{name} profile did not observe tracked storage")
+                if name in {"local_cycle", "callback_cycle"} and fields[
+                    "tracked_heap_estimated_live_bytes"
+                ] >= fields["tracked_heap_estimated_peak_live_bytes"]:
+                    return fail(f"{name} profile did not reclaim the cycle: {fields}")
             else:
                 result = run([str(vm_binary), "run", str(artifact)])
                 if result.returncode == 0 or result.stdout or expected_error not in result.stderr:
@@ -286,7 +314,8 @@ def main() -> int:
 
     print(
         "VM cycle tests: source-backed self and mutual cycles, array/map/struct "
-        "replacement, closure environments, runtime errors, and trace/debug/profile "
+        "replacement, closure environments, callback cycles, runtime errors, and "
+        "trace/debug/profile "
         "determinism validated"
     )
     return 0

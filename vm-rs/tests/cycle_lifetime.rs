@@ -1,7 +1,7 @@
-use compiler_design_vm::bytecode::{FunctionBody, Instruction, Program};
-use compiler_design_vm::runtime::{Heap, HeapObjectKind};
+use compiler_design_vm::bytecode::{Constant, Function, FunctionBody, Instruction, Program};
+use compiler_design_vm::runtime::{Heap, HeapObjectKind, VariantValue};
 use compiler_design_vm::value::Value;
-use compiler_design_vm::{RunConfig, VM};
+use compiler_design_vm::{CancellationToken, DebugControl, DebugHook, DebugPause, RunConfig, VM};
 use std::rc::Rc;
 
 fn self_array_program() -> Program {
@@ -26,6 +26,177 @@ fn self_array_program() -> Program {
         },
         functions: Vec::new(),
         debug_sources: Vec::new(),
+    }
+}
+
+fn callback_cycle_program() -> Program {
+    Program {
+        constants: vec![Constant::Number("1".to_string())],
+        names: vec!["map".to_string(), "push".to_string()],
+        main: FunctionBody {
+            registers: 4,
+            instructions: vec![
+                Instruction::Constant {
+                    dest: 0,
+                    constant: 0,
+                },
+                Instruction::Array {
+                    dest: 1,
+                    elements: vec![0],
+                },
+                Instruction::MakeFunction {
+                    dest: 2,
+                    function: 0,
+                },
+                Instruction::NativeCall {
+                    dest: 3,
+                    name: 0,
+                    arguments: vec![1, 2],
+                },
+                Instruction::Return { value: 3 },
+            ],
+            locations: vec![None; 5],
+        },
+        functions: vec![Function {
+            index: 0,
+            name: "make_cycle".to_string(),
+            arity: 1,
+            registers: 2,
+            params: vec!["item".to_string()],
+            instructions: vec![
+                Instruction::Array {
+                    dest: 0,
+                    elements: Vec::new(),
+                },
+                Instruction::NativeCall {
+                    dest: 1,
+                    name: 1,
+                    arguments: vec![0, 0],
+                },
+                Instruction::Return { value: 0 },
+            ],
+            locations: vec![None; 3],
+        }],
+        debug_sources: Vec::new(),
+    }
+}
+
+fn nested_cycle_program() -> Program {
+    Program {
+        constants: Vec::new(),
+        names: vec!["push".to_string()],
+        main: FunctionBody {
+            registers: 2,
+            instructions: vec![
+                Instruction::MakeFunction {
+                    dest: 0,
+                    function: 1,
+                },
+                Instruction::Call {
+                    dest: 1,
+                    callee: 0,
+                    arguments: Vec::new(),
+                },
+                Instruction::Return { value: 1 },
+            ],
+            locations: vec![None; 3],
+        },
+        functions: vec![
+            Function {
+                index: 0,
+                name: "inner".to_string(),
+                arity: 0,
+                registers: 2,
+                params: Vec::new(),
+                instructions: vec![
+                    Instruction::Array {
+                        dest: 0,
+                        elements: Vec::new(),
+                    },
+                    Instruction::NativeCall {
+                        dest: 1,
+                        name: 0,
+                        arguments: vec![0, 0],
+                    },
+                    Instruction::Return { value: 0 },
+                ],
+                locations: vec![None; 3],
+            },
+            Function {
+                index: 1,
+                name: "outer".to_string(),
+                arity: 0,
+                registers: 2,
+                params: Vec::new(),
+                instructions: vec![
+                    Instruction::MakeFunction {
+                        dest: 0,
+                        function: 0,
+                    },
+                    Instruction::Call {
+                        dest: 1,
+                        callee: 0,
+                        arguments: Vec::new(),
+                    },
+                    Instruction::Return { value: 1 },
+                ],
+                locations: vec![None; 3],
+            },
+        ],
+        debug_sources: Vec::new(),
+    }
+}
+
+fn cycle_until_pause_program() -> Program {
+    Program {
+        constants: Vec::new(),
+        names: vec!["push".to_string()],
+        main: FunctionBody {
+            registers: 2,
+            instructions: vec![
+                Instruction::Array {
+                    dest: 0,
+                    elements: Vec::new(),
+                },
+                Instruction::NativeCall {
+                    dest: 1,
+                    name: 0,
+                    arguments: vec![0, 0],
+                },
+                Instruction::Jump { target: 2 },
+            ],
+            locations: vec![None; 3],
+        },
+        functions: Vec::new(),
+        debug_sources: Vec::new(),
+    }
+}
+
+struct CancelAtInstruction {
+    token: CancellationToken,
+    instruction: usize,
+}
+
+impl DebugHook for CancelAtInstruction {
+    fn on_instruction(&mut self, pause: DebugPause) -> DebugControl {
+        if pause.instruction == self.instruction {
+            self.token.cancel();
+        }
+        DebugControl::Continue
+    }
+}
+
+struct QuitAtInstruction {
+    instruction: usize,
+}
+
+impl DebugHook for QuitAtInstruction {
+    fn on_instruction(&mut self, pause: DebugPause) -> DebugControl {
+        if pause.instruction == self.instruction {
+            DebugControl::Quit
+        } else {
+            DebugControl::Continue
+        }
     }
 }
 
@@ -118,30 +289,13 @@ fn cycle_storage_is_observed_after_roots_are_dropped_and_released_after_replacem
     assert!(retained.estimated_live_bytes > 0);
     assert!(retained.estimated_peak_live_bytes >= retained.estimated_live_bytes);
 
-    array_weak
-        .upgrade()
-        .expect("array cycle should still be reachable through its weak observation")
-        .borrow_mut()
-        .clear();
-    map_weak
-        .upgrade()
-        .expect("map cycle should still be reachable through its weak observation")
-        .borrow_mut()
-        .clear();
-    self_struct_weak
-        .upgrade()
-        .expect("self struct cycle should still be reachable through its weak observation")
-        .borrow_mut()[0]
-        .1 = Value::Nil;
-    first_weak
-        .upgrade()
-        .expect("mutual struct cycle should still be reachable through its weak observation")
-        .borrow_mut()[0]
-        .1 = Value::Nil;
-    cell_weak
-        .upgrade()
-        .expect("closure cycle should still be reachable through its weak observation")
-        .replace(Value::Nil);
+    assert!(array_weak.upgrade().is_some());
+    assert!(map_weak.upgrade().is_some());
+    assert!(self_struct_weak.upgrade().is_some());
+    assert!(first_weak.upgrade().is_some());
+    assert!(cell_weak.upgrade().is_some());
+
+    assert_eq!(heap.collect_garbage(), 5);
 
     let released = stats.snapshot();
     assert_eq!(released.total_live, 0);
@@ -151,6 +305,117 @@ fn cycle_storage_is_observed_after_roots_are_dropped_and_released_after_replacem
     assert_eq!(
         released.estimated_peak_live_bytes,
         retained.estimated_peak_live_bytes
+    );
+}
+
+#[test]
+fn rooted_cycle_survives_collection_until_the_external_root_is_dropped() {
+    let mut heap = Heap::new();
+    let stats = heap.stats();
+    let root = heap
+        .allocate_array(Vec::new())
+        .expect("array identity should be available");
+    let root_pointer = if let Value::Array(value) = &root {
+        value.elements.borrow_mut().push(root.clone());
+        Rc::as_ptr(&value.elements) as usize
+    } else {
+        panic!("expected array cycle");
+    };
+
+    assert_eq!(heap.collect_garbage(), 0);
+    assert_eq!(stats.snapshot().total_live, 1);
+    if let Value::Array(value) = &root {
+        assert_eq!(Rc::as_ptr(&value.elements) as usize, root_pointer);
+    }
+
+    drop(root);
+    assert_eq!(heap.collect_garbage(), 1);
+    let released = stats.snapshot();
+    assert_eq!(released.total_live, 0);
+    assert_eq!(released.total_dead, 1);
+}
+
+#[test]
+fn recursive_variant_payload_edges_are_traced_without_moving_the_array() {
+    let mut heap = Heap::new();
+    let stats = heap.stats();
+    let array = heap
+        .allocate_array(Vec::new())
+        .expect("array identity should be available");
+    let array_weak = match &array {
+        Value::Array(value) => {
+            let variant = Value::variant(VariantValue {
+                enum_name: "Loop".to_string(),
+                variant_name: "Node".to_string(),
+                fields: vec![array.clone()],
+            });
+            value.elements.borrow_mut().push(variant.clone());
+            drop(variant);
+            Rc::downgrade(&value.elements)
+        }
+        _ => panic!("expected array payload"),
+    };
+
+    drop(array);
+    assert_eq!(stats.snapshot().total_live, 1);
+    assert_eq!(heap.collect_garbage(), 1);
+    assert!(array_weak.upgrade().is_none());
+    assert_eq!(stats.snapshot().total_live, 0);
+}
+
+#[test]
+fn native_callback_cycles_are_reclaimed_at_the_top_level_safepoint() {
+    let program = callback_cycle_program();
+    let vm = VM::with_config(&program, RunConfig::unlimited());
+    let profile = vm.profile();
+
+    assert_eq!(profile.result.expect("callback cycle should run"), "");
+    assert!(profile.report.tracked_heap_estimated_peak_live_bytes > 0);
+    assert!(
+        profile.report.tracked_heap_estimated_live_bytes
+            < profile.report.tracked_heap_estimated_peak_live_bytes
+    );
+}
+
+#[test]
+fn nested_call_cycles_are_reclaimed_after_returned_values_are_dropped() {
+    let program = nested_cycle_program();
+    let vm = VM::with_config(&program, RunConfig::unlimited());
+    let profile = vm.profile();
+
+    assert_eq!(profile.result.expect("nested cycle should run"), "");
+    assert!(profile.report.tracked_heap_estimated_peak_live_bytes > 0);
+    assert!(
+        profile.report.tracked_heap_estimated_live_bytes
+            < profile.report.tracked_heap_estimated_peak_live_bytes
+    );
+}
+
+#[test]
+fn cancellation_and_debugger_quit_collect_after_the_cycle_frame_ends() {
+    let token = CancellationToken::new();
+    let program = cycle_until_pause_program();
+    let vm = VM::with_config(
+        &program,
+        RunConfig::unlimited().with_cancellation(token.clone()),
+    );
+    let debug = vm.debug(Box::new(CancelAtInstruction {
+        token,
+        instruction: 2,
+    }));
+    let error = debug
+        .result
+        .expect_err("cancellation should stop the cycle loop");
+    assert_eq!(error.kind, compiler_design_vm::RuntimeErrorKind::Cancelled);
+    assert!(!debug.quit);
+
+    let program = cycle_until_pause_program();
+    let vm = VM::with_config(&program, RunConfig::unlimited());
+    let debug = vm.debug(Box::new(QuitAtInstruction { instruction: 2 }));
+    assert!(debug.quit);
+    assert_eq!(
+        debug.result.expect("debugger quit is a successful stop"),
+        ""
     );
 }
 

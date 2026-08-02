@@ -35,6 +35,13 @@ the typed execution result. The estimated byte fields describe VM-owned
 representation pressure, not wall-clock timing, inline values, or host
 allocator/RSS measurements.
 
+Runtime storage uses a non-moving tracing collector over stable identity-bearing
+objects. `vm::runtime::Heap::collect_garbage()` is available to embedders at a
+safepoint, and VM execution collects after its top-level frame ends. Rooted
+cycles remain live; unreachable cycles are reclaimed without changing value
+identity or the `.cdbc 0.1` boundary. Incremental and concurrent collection are
+not yet promised.
+
 Execution and link commands use deterministic resource budgets by default. The
 available overrides are `--max-steps`, `--max-call-depth`, `--max-elements`,
 `--max-output-bytes`, `--max-artifact-bytes`, `--max-modules`, and
@@ -61,4 +68,5 @@ changing CLI display text. See
   environments, functions, and aggregates.
 - `vm`: executor, frames, instruction dispatch, calls, and runtime errors.
 
-Future backend tracks may add GC-aware heap ownership, task scheduling, and JIT metadata modules.
+Future backend tracks may add incremental GC scheduling, task scheduling, and
+JIT metadata modules.

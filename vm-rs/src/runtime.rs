@@ -2,7 +2,7 @@
 
 use crate::value::Value;
 use std::cell::{Cell as ScalarCell, RefCell};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt;
 use std::mem::size_of;
 use std::ops::Deref;
@@ -125,7 +125,7 @@ impl HeapStats {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 enum WeakAllocation {
     Environment(Weak<TrackedStorage<Environment>>),
     Cell(Weak<TrackedStorage<Value>>),
@@ -163,6 +163,157 @@ impl WeakAllocation {
                 .upgrade()
                 .map(|storage| storage.observe_estimated_bytes()),
         }
+    }
+
+    fn inspect(&self) -> Option<AllocationInfo> {
+        match self {
+            Self::Environment(value) => value.upgrade().and_then(|storage| {
+                let pointer = Rc::as_ptr(&storage) as usize;
+                let strong_count = Rc::strong_count(&storage).saturating_sub(1);
+                let outgoing = storage.try_borrow().ok().map(|environment| {
+                    environment
+                        .values()
+                        .map(|cell| Rc::as_ptr(cell) as usize)
+                        .collect()
+                })?;
+                Some(AllocationInfo {
+                    allocation: self.clone(),
+                    pointer,
+                    strong_count,
+                    outgoing,
+                })
+            }),
+            Self::Cell(value) => value.upgrade().and_then(|storage| {
+                let pointer = Rc::as_ptr(&storage) as usize;
+                let strong_count = Rc::strong_count(&storage).saturating_sub(1);
+                let outgoing = storage.try_borrow().ok().map(|value| {
+                    let mut outgoing = Vec::new();
+                    collect_value_references(&value, &mut outgoing);
+                    outgoing
+                })?;
+                Some(AllocationInfo {
+                    allocation: self.clone(),
+                    pointer,
+                    strong_count,
+                    outgoing,
+                })
+            }),
+            Self::Array(value) => value.upgrade().and_then(|storage| {
+                let pointer = Rc::as_ptr(&storage) as usize;
+                let strong_count = Rc::strong_count(&storage).saturating_sub(1);
+                let outgoing = storage.try_borrow().ok().map(|values| {
+                    let mut outgoing = Vec::new();
+                    for value in values.iter() {
+                        collect_value_references(value, &mut outgoing);
+                    }
+                    outgoing
+                })?;
+                Some(AllocationInfo {
+                    allocation: self.clone(),
+                    pointer,
+                    strong_count,
+                    outgoing,
+                })
+            }),
+            Self::Map(value) => value.upgrade().and_then(|storage| {
+                let pointer = Rc::as_ptr(&storage) as usize;
+                let strong_count = Rc::strong_count(&storage).saturating_sub(1);
+                let outgoing = storage.try_borrow().ok().map(|entries| {
+                    let mut outgoing = Vec::new();
+                    for (key, value) in entries.iter() {
+                        collect_value_references(key, &mut outgoing);
+                        collect_value_references(value, &mut outgoing);
+                    }
+                    outgoing
+                })?;
+                Some(AllocationInfo {
+                    allocation: self.clone(),
+                    pointer,
+                    strong_count,
+                    outgoing,
+                })
+            }),
+            Self::Struct(value) => value.upgrade().and_then(|storage| {
+                let pointer = Rc::as_ptr(&storage) as usize;
+                let strong_count = Rc::strong_count(&storage).saturating_sub(1);
+                let outgoing = storage.try_borrow().ok().map(|fields| {
+                    let mut outgoing = Vec::new();
+                    for (_, value) in fields.iter() {
+                        collect_value_references(value, &mut outgoing);
+                    }
+                    outgoing
+                })?;
+                Some(AllocationInfo {
+                    allocation: self.clone(),
+                    pointer,
+                    strong_count,
+                    outgoing,
+                })
+            }),
+        }
+    }
+
+    fn clear_references(&self) -> bool {
+        match self {
+            Self::Environment(value) => value.upgrade().is_some_and(|storage| {
+                let Ok(mut environment) = storage.try_borrow_mut() else {
+                    return false;
+                };
+                environment.clear();
+                true
+            }),
+            Self::Cell(value) => value.upgrade().is_some_and(|storage| {
+                let Ok(mut value) = storage.try_borrow_mut() else {
+                    return false;
+                };
+                *value = Value::Nil;
+                true
+            }),
+            Self::Array(value) => value.upgrade().is_some_and(|storage| {
+                let Ok(mut values) = storage.try_borrow_mut() else {
+                    return false;
+                };
+                values.clear();
+                true
+            }),
+            Self::Map(value) => value.upgrade().is_some_and(|storage| {
+                let Ok(mut entries) = storage.try_borrow_mut() else {
+                    return false;
+                };
+                entries.clear();
+                true
+            }),
+            Self::Struct(value) => value.upgrade().is_some_and(|storage| {
+                let Ok(mut fields) = storage.try_borrow_mut() else {
+                    return false;
+                };
+                fields.clear();
+                true
+            }),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct AllocationInfo {
+    allocation: WeakAllocation,
+    pointer: usize,
+    strong_count: usize,
+    outgoing: Vec<usize>,
+}
+
+fn collect_value_references(value: &Value, outgoing: &mut Vec<usize>) {
+    match value {
+        Value::Function(value) => outgoing.push(Rc::as_ptr(&value.closure) as usize),
+        Value::Array(value) => outgoing.push(Rc::as_ptr(&value.elements) as usize),
+        Value::Map(value) => outgoing.push(Rc::as_ptr(&value.entries) as usize),
+        Value::Struct(value) => outgoing.push(Rc::as_ptr(&value.fields) as usize),
+        Value::Variant(value) => {
+            for field in &value.fields {
+                collect_value_references(field, outgoing);
+            }
+        }
+        Value::Nil | Value::Number(_) | Value::Bool(_) | Value::String(_) | Value::Range(_) => {}
     }
 }
 
@@ -249,6 +400,52 @@ impl HeapLedger {
 
     fn profile_counts(&self) -> (usize, usize) {
         (self.allocations.len(), self.peak_live)
+    }
+
+    fn unreachable_allocations(&self) -> Vec<WeakAllocation> {
+        let infos: Vec<AllocationInfo> = self
+            .allocations
+            .iter()
+            .filter_map(WeakAllocation::inspect)
+            .collect();
+        let mut by_pointer = HashMap::with_capacity(infos.len());
+        let mut incoming = HashMap::with_capacity(infos.len());
+        for (index, info) in infos.iter().enumerate() {
+            by_pointer.insert(info.pointer, index);
+            incoming.insert(info.pointer, 0usize);
+        }
+        for info in &infos {
+            for pointer in &info.outgoing {
+                if let Some(count) = incoming.get_mut(pointer) {
+                    *count = count.saturating_add(1);
+                }
+            }
+        }
+
+        let mut marked = HashSet::with_capacity(infos.len());
+        let mut worklist = VecDeque::new();
+        for info in &infos {
+            if info.strong_count > incoming.get(&info.pointer).copied().unwrap_or(0) {
+                marked.insert(info.pointer);
+                worklist.push_back(info.pointer);
+            }
+        }
+        while let Some(pointer) = worklist.pop_front() {
+            let Some(index) = by_pointer.get(&pointer).copied() else {
+                continue;
+            };
+            for outgoing in &infos[index].outgoing {
+                if by_pointer.contains_key(outgoing) && marked.insert(*outgoing) {
+                    worklist.push_back(*outgoing);
+                }
+            }
+        }
+
+        infos
+            .into_iter()
+            .filter(|info| !marked.contains(&info.pointer))
+            .map(|info| info.allocation)
+            .collect()
     }
 }
 
@@ -394,13 +591,14 @@ impl fmt::Display for HeapError {
     }
 }
 
-/// The first VM-2B ownership boundary.
+/// Non-moving tracing heap over stable, identity-bearing storage.
 ///
-/// This facade deliberately retains the current reference-counted storage. It
-/// owns VM-local identity allocation and the construction of runtime storage;
-/// VM execution remains responsible for resource-budget charging and root
-/// ownership. Opt-in retained-storage estimates are observational and do not
-/// replace the reference-counted backend.
+/// The storage address remains stable for the lifetime of an object and the
+/// existing `Rc<RefCell<...>>` representation remains the compatibility layer
+/// for aliases and mutation. At collection safepoints the ledger derives
+/// external roots from strong-reference counts, traces tracked edges, and
+/// clears unreachable storage so reference-counted cycles can be reclaimed.
+/// The collector never moves objects or changes value identity.
 #[derive(Debug)]
 pub struct Heap {
     next_function_identity: usize,
@@ -449,6 +647,24 @@ impl Heap {
 
     pub(crate) fn profile_counts(&self) -> (usize, usize) {
         self.ledger.borrow().profile_counts()
+    }
+
+    /// Collect unreachable tracked storage without moving live objects.
+    ///
+    /// All strong references outside tracked storage are treated as roots. A
+    /// caller must invoke this at a VM safepoint, after transient borrows and
+    /// temporary values have ended. The return value is the number of tracked
+    /// storage objects whose references were cleared.
+    pub fn collect_garbage(&self) -> usize {
+        let unreachable = self.ledger.borrow().unreachable_allocations();
+        let mut collected = 0;
+        for allocation in unreachable {
+            if allocation.clear_references() {
+                collected += 1;
+            }
+        }
+        self.observe_estimated_bytes();
+        collected
     }
 
     pub fn new_environment(&self) -> SharedEnvironment {

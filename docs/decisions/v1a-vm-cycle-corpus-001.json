@@ -5,7 +5,7 @@
   "reference_commit": "a78cce37",
   "inventory_revision": "m0d-2026-07-22-r1",
   "question": "What can the current Rust VM prove about recursive values and tracked storage before selecting a lifetime policy?",
-  "decision": "Keep the current Rc<RefCell> storage and treat V1A as an observational corpus. Strong source-level cycles remain live after external roots are dropped; replacing back-edges releases them. HeapStats and profile retained-byte fields remain weak-ledger observations, while host RSS and timing remain non-gating observations.",
+  "decision": "Treat V1A as the pre-policy observational corpus. At that baseline, current Rc<RefCell> storage leaves strong source-level cycles live after external roots are dropped; replacing back-edges releases them. V1B supersedes that lifetime behavior with a non-moving tracing collector. HeapStats and profile retained-byte fields remain weak-ledger observations, while host RSS and timing remain non-gating observations.",
   "corpus": [
     {
       "id": "source.self_array",

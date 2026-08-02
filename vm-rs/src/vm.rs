@@ -1284,6 +1284,59 @@ mod tests {
         }
     }
 
+    fn cycle_until_pause_program() -> Program {
+        Program {
+            constants: Vec::new(),
+            names: vec!["push".to_string()],
+            main: FunctionBody {
+                registers: 2,
+                instructions: vec![
+                    Instruction::Array {
+                        dest: 0,
+                        elements: Vec::new(),
+                    },
+                    Instruction::NativeCall {
+                        dest: 1,
+                        name: 0,
+                        arguments: vec![0, 0],
+                    },
+                    Instruction::Jump { target: 2 },
+                ],
+                locations: vec![None; 3],
+            },
+            functions: Vec::new(),
+            debug_sources: Vec::new(),
+        }
+    }
+
+    struct CancelAtInstruction {
+        token: CancellationToken,
+        instruction: usize,
+    }
+
+    impl DebugHook for CancelAtInstruction {
+        fn on_instruction(&mut self, pause: DebugPause) -> DebugControl {
+            if pause.instruction == self.instruction {
+                self.token.cancel();
+            }
+            DebugControl::Continue
+        }
+    }
+
+    struct QuitAtInstruction {
+        instruction: usize,
+    }
+
+    impl DebugHook for QuitAtInstruction {
+        fn on_instruction(&mut self, pause: DebugPause) -> DebugControl {
+            if pause.instruction == self.instruction {
+                DebugControl::Quit
+            } else {
+                DebugControl::Continue
+            }
+        }
+    }
+
     fn recursive_closure_program(depth: usize) -> Program {
         Program {
             constants: vec![
@@ -2835,6 +2888,39 @@ mod tests {
     }
 
     #[test]
+    fn top_level_safepoint_collects_after_cancellation_and_debugger_quit() {
+        let token = CancellationToken::new();
+        let program = cycle_until_pause_program();
+        let vm = VM::with_config(
+            &program,
+            RunConfig::unlimited().with_cancellation(token.clone()),
+        );
+        let stats = vm.heap_stats();
+        let debug = vm.debug(Box::new(CancelAtInstruction {
+            token,
+            instruction: 2,
+        }));
+        let error = debug
+            .result
+            .expect_err("cancellation should stop the cycle loop");
+        assert_eq!(error.kind, RuntimeErrorKind::Cancelled);
+        assert!(!debug.quit);
+        let cancelled = stats.snapshot();
+        assert_eq!(cancelled.total_live, 0);
+        assert!(cancelled.peak_live > 0);
+
+        let program = cycle_until_pause_program();
+        let vm = VM::with_config(&program, RunConfig::unlimited());
+        let stats = vm.heap_stats();
+        let debug = vm.debug(Box::new(QuitAtInstruction { instruction: 2 }));
+        assert!(debug.quit);
+        assert_eq!(debug.result.expect("debugger quit is a successful stop"), "");
+        let quit = stats.snapshot();
+        assert_eq!(quit.total_live, 0);
+        assert!(quit.peak_live > 0);
+    }
+
+    #[test]
     fn instruction_budget_is_deterministic_and_has_an_explicit_unlimited_mode() {
         let program = Program {
             constants: vec![Constant::Number("1".to_string())],
@@ -3509,27 +3595,35 @@ impl<'a> VM<'a> {
 
     fn run_inner(&mut self) -> Result<String, RuntimeError> {
         self.check_cancellation()?;
-        let mut frame = Frame {
-            ip: 0,
-            registers: vec![Value::Nil; self.program.main.registers],
-            locals: self.heap.new_environment(),
-            closure: self.heap.new_environment(),
-            is_main: true,
-            function: Rc::from("main"),
-            function_index: None,
+        let execution = {
+            let mut frame = Frame {
+                ip: 0,
+                registers: vec![Value::Nil; self.program.main.registers],
+                locals: self.heap.new_environment(),
+                closure: self.heap.new_environment(),
+                is_main: true,
+                function: Rc::from("main"),
+                function_index: None,
+            };
+            // The entry body is immutable after artifact verification. Borrow it
+            // directly instead of cloning its instruction and debug-location
+            // vectors for the one execution of this VM instance.
+            self.execute_body(&self.program.main, &mut frame)
         };
-        // The entry body is immutable after artifact verification. Borrow it
-        // directly instead of cloning its instruction and debug-location
-        // vectors for the one execution of this VM instance.
-        match self.execute_body(&self.program.main, &mut frame) {
-            Ok(_) => Ok(std::mem::take(&mut self.output)),
+        let result = match execution {
+            Ok(value) => {
+                drop(value);
+                Ok(std::mem::take(&mut self.output))
+            }
             Err(mut error) => {
                 if error.sources.is_empty() {
                     error.sources = self.program.debug_sources.clone();
                 }
                 Err(error)
             }
-        }
+        };
+        self.heap.collect_garbage();
+        result
     }
 
     fn execute_body(
