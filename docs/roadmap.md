@@ -434,13 +434,18 @@ adapter and rebuild boundary, and explicit `--opt-level 0|1` CLI/module-product
 integration are also implemented on this branch. Default O0 lowering remains
 the compatibility path, and proven-safe primitive constant folding,
 block-preserving known-condition branch normalization, and post-de-SSA
-unreachable-block pruning are also admitted on this branch. Block
-merging/general CFG rewriting, physical register allocation, and broader
-optimization are still proposed and are not shipped on `master`. The
+unreachable-block pruning, and a constrained unique-predecessor/unique-successor
+non-empty block merge are also admitted on this branch. General CFG rewriting,
+physical register allocation, and broader optimization are still proposed and
+are not shipped on `master`. The
 design
 and machine-readable decision are in
 `docs/superpowers/specs/2026-07-30-ssa-optimization-design.md` and
 `docs/decisions/m7-ir-ssa-optimization-001.{md,json}`.
+The existing benchmark runner now also provides an opt-in O0/O1 comparison
+over the checked-in workload matrix, including IR/bytecode shape, register,
+artifact-size, timing, and output/error/exit parity evidence; it remains
+informational and does not make O1 the default.
 
 **Purpose:** introduce explicit basic blocks, dominance/phi-based SSA, and a
 small opt-in O1 pass pipeline behind the existing linear register IR while
@@ -483,7 +488,12 @@ constant slice folds only finite serializable primitive expressions and
 materializes their results through the existing constant pool; its branch
 normalization converts known conditional jumps to ordinary jumps, then removes
 only unreachable ordinary-IR blocks while remapping source and dependency
-offsets. It does not merge blocks, preserving critical-edge copy validity.
+offsets. Its merge pass only reorders a non-empty block with a unique
+predecessor/successor relationship after validating fallthrough edges,
+`MakeFunction` order, and dependency-offset order; broader block rewriting is
+not admitted. This branch resolves the general CFG rewrite question in favor of
+deferral: revisit it only after a layout-aware edge-rewrite contract and a
+broader semantic/source-mapping parity corpus exist.
 
 **Gate:** CFG/SSA verifier and O0 round-trip tests; O0/O1 semantic parity over
 control flow, closures, mutation, callbacks, traps, and evaluation order;
@@ -524,7 +534,8 @@ feat/m5c-repl
 master + M1 semantic metadata + existing linear register IR
   -> M7-IR-SSA-001 design, CFG foundation, SSA shell, dominance analysis,
      phi placement, and binding/effect contract (branch-only)
-  -> branch-only internal O1 copy/phi simplification and pure DCE
+  -> branch-only internal O1 copy/phi simplification, pure DCE, and constrained
+     non-empty block merge
   -> default-pipeline O1 only after the debug/cache decisions and focused
      semantic parity corpus are admitted
 ```

@@ -173,6 +173,44 @@ def main() -> int:
         if rust_run(vm, constant_optimized_artifact) != "5\nab\n1\n":
             raise AssertionError("O1 constant artifact changed runtime output")
 
+        merge_source = root / "linear-block-merge.cd"
+        merge_source.write_text(
+            "fun choose(): bool { return true; }\n"
+            "fun flow(): number {\n"
+            "  let condition = choose();\n"
+            "  if (condition) {\n"
+            "    print 1;\n"
+            "  } else {\n"
+            "    return 2;\n"
+            "  }\n"
+            "  print 3;\n"
+            "  return 4;\n"
+            "}\n"
+            "print flow();\n",
+            encoding="utf-8",
+        )
+        merge_baseline = run([str(compiler), "--ir", str(merge_source)])
+        require_clean(merge_baseline, "linear block merge baseline IR")
+        merge_optimized = run(
+            [str(compiler), "--ir", "--opt-level", "1", str(merge_source)]
+        )
+        require_clean(merge_optimized, "linear block merge O1 IR")
+        if "jump 0010" not in merge_baseline.stdout:
+            raise AssertionError("baseline did not retain the merge candidate jump")
+        if "jump 0010" in merge_optimized.stdout:
+            raise AssertionError("O1 did not merge the non-empty linear block")
+
+        merge_baseline_artifact = root / "linear-block-merge-baseline.cdbc"
+        merge_optimized_artifact = root / "linear-block-merge-optimized.cdbc"
+        emit(compiler, merge_source, merge_baseline_artifact)
+        emit(compiler, merge_source, merge_optimized_artifact, "1")
+        if merge_baseline_artifact.read_bytes() == merge_optimized_artifact.read_bytes():
+            raise AssertionError("O1 did not change the linear block merge artifact")
+        if rust_run(vm, merge_baseline_artifact) != "1\n3\n4\n":
+            raise AssertionError("baseline linear block merge artifact changed output")
+        if rust_run(vm, merge_optimized_artifact) != "1\n3\n4\n":
+            raise AssertionError("O1 linear block merge artifact changed output")
+
         match_artifact = root / "match.cdbc"
         emit(compiler, match, match_artifact, "1")
         if rust_run(vm, match_artifact) != "ok:7\n3\nok\n":
@@ -186,7 +224,7 @@ def main() -> int:
             raise AssertionError(f"O1 cold module build was incomplete: {first}")
         if any(
             module["optimization_level"] != "O1"
-            or module["optimizer_pipeline"] != "m7-ssa-o1-copy-phi-const-branch-dce-reach-thread-v6"
+            or module["optimizer_pipeline"] != "m7-ssa-o1-copy-phi-const-branch-dce-reach-thread-merge-v7"
             for module in first["modules"]
         ):
             raise AssertionError(f"O1 cache identity was not recorded: {first}")

@@ -152,7 +152,7 @@ int main()
 
     ModuleCacheModule optimized = module("lib", "source-1", "public-1");
     optimized.optimizationLevel = "O1";
-    optimized.optimizerPipeline = "m7-ssa-o1-copy-phi-const-branch-dce-reach-thread-v6";
+    optimized.optimizerPipeline = "m7-ssa-o1-copy-phi-const-branch-dce-reach-thread-merge-v7";
     assert(moduleCacheKey(optimized) != moduleCacheKey(equivalent));
     ModuleCacheModule baselineMid = module("mid", "source-1", "public-mid");
     baselineMid.dependencies.push_back(dependency("lib", "public-1"));

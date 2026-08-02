@@ -47,6 +47,31 @@ class BenchmarkRunnerTests(unittest.TestCase):
         self.assertEqual(record["median"], 2.0)
         self.assertEqual(record["max"], 3.0)
 
+    def test_listing_metrics_include_main_and_function_bodies(self) -> None:
+        ir = run_benchmarks.parse_ir_metrics(
+            "IR\n"
+            "0000  v0 = constant #0 1\n"
+            "\n"
+            "function $0 helper(value)\n"
+            "0000  v0 = load_var @0 value\n"
+            "0001  return v0\n"
+        )
+        bytecode = run_benchmarks.parse_bytecode_metrics(
+            "main registers=2\n"
+            "0000  b0 = constant #0 1\n"
+            "\n"
+            "function $0 helper/1 registers=3\n"
+            "0000  b0 = load_var n0\n"
+            "0001  return b0\n"
+        )
+        self.assertEqual(ir["instruction_count"], 3)
+        self.assertEqual(ir["main_instruction_count"], 1)
+        self.assertEqual(ir["function_instruction_count"], 2)
+        self.assertEqual(ir["function_count"], 1)
+        self.assertEqual(bytecode["instruction_count"], 3)
+        self.assertEqual(bytecode["register_count"], 5)
+        self.assertEqual(bytecode["function_register_count"], 3)
+
     def test_run_command_times_out_with_a_controlled_result(self) -> None:
         duration, returncode, stdout, stderr = run_benchmarks.run_command(
             [sys.executable, "-c", "import time; time.sleep(1)"],
@@ -84,7 +109,11 @@ class BenchmarkRunnerTests(unittest.TestCase):
                     import pathlib
                     import sys
 
-                    if "--emit-module-bytecode" in sys.argv:
+                    if "--ir" in sys.argv:
+                        print("IR\\n0000  v0 = constant #0 1")
+                    elif "--bytecode" in sys.argv:
+                        print("main registers=1\\n0000  b0 = constant #0 1")
+                    elif "--emit-module-bytecode" in sys.argv:
                         output = pathlib.Path(
                             sys.argv[sys.argv.index("--emit-module-bytecode") + 1]
                         )
@@ -152,9 +181,25 @@ class BenchmarkRunnerTests(unittest.TestCase):
                 vm,
                 repetitions=2,
             )
+            comparison_report = run_benchmarks.run_benchmarks(
+                manifest,
+                root,
+                compiler,
+                vm,
+                repetitions=1,
+                optimization_levels=[0, 1],
+            )
+            comparison = comparison_report["workloads"][0]
+            self.assertTrue(comparison["passed"])
+            self.assertEqual(comparison["optimization_levels"].keys(), {"O0", "O1"})
+            self.assertTrue(comparison["comparison"]["parity_passed"])
 
         result = report["workloads"][0]
         self.assertTrue(result["passed"])
+        self.assertTrue(result["inspection_validated"])
+        self.assertEqual(result["ir_metrics"]["instruction_count"], 1)
+        self.assertEqual(result["bytecode_metrics"]["instruction_count"], 1)
+        self.assertEqual(result["bytecode_metrics"]["register_count"], 1)
         self.assertEqual(len(result["compile_seconds"]["samples_seconds"]), 2)
         self.assertEqual(len(result["load_seconds"]["samples_seconds"]), 2)
         self.assertEqual(result["link_seconds"]["samples_seconds"], [])
@@ -180,7 +225,11 @@ class BenchmarkRunnerTests(unittest.TestCase):
                 "#!/usr/bin/env python3\n"
                 "import pathlib\n"
                 "import sys\n"
-                "if '--emit-module-bytecode' in sys.argv:\n"
+                "if '--ir' in sys.argv:\n"
+                "    print('IR\\n0000  v0 = constant #0 1')\n"
+                "elif '--bytecode' in sys.argv:\n"
+                "    print('main registers=1\\n0000  b0 = constant #0 1')\n"
+                "elif '--emit-module-bytecode' in sys.argv:\n"
                 "    output = pathlib.Path(sys.argv[sys.argv.index('--emit-module-bytecode') + 1])\n"
                 "    output.mkdir(parents=True)\n"
                 "    (output / 'module-0.cdbc').write_text('module\\n', encoding='utf-8')\n"

@@ -24,10 +24,13 @@ covered by `ctest.ssa_contract`, while the optimizer boundary is covered by
 `ctest.optimizer`. The explicit O1 ordinary-IR/CLI/module-product integration
 and proven-safe primitive constant folding are now implemented; default O0
 remains unchanged. O1 also performs block-preserving known-condition branch
-normalization followed by post-de-SSA pruning of blocks proven unreachable, and
-removes only redundant fallthrough jumps and threads through jump-only blocks;
-general block merging and threading across non-empty blocks remain future
-implementation slices. The
+normalization followed by post-de-SSA pruning of blocks proven unreachable,
+removes only redundant fallthrough jumps, threads through jump-only blocks,
+and admits a conservative unique-predecessor/unique-successor non-empty block
+merge with deterministic layout remapping. General CFG rewriting and
+threading across arbitrary non-empty blocks are intentionally deferred until a
+layout-aware edge-rewrite contract and broader semantic/source-mapping parity
+corpus are available. The
 constant-evaluation boundary is now frozen in `Optimizer` and covered by
 `ctest.optimizer`: only finite, serializable primitive successes are foldable;
 runtime traps and non-finite results are never silently folded. The O0
@@ -133,13 +136,16 @@ verified per-stream/program adapters: copy propagation,
 dominance-checked trivial-phi simplification, proven-safe primitive constant
 folding, pure dead-code removal, post-de-SSA known-condition branch
 normalization, unreachable-block pruning, redundant fallthrough-jump removal,
-and jump-only-block threading. The explicit `--opt-level 0|1` CLI and
+and jump-only-block threading, plus conservative non-empty linear block
+merging. The explicit `--opt-level 0|1` CLI and
 independent module-product path invoke the program-level adapter for O1,
 propagate the O1 cache identity, and reuse the existing bytecode/artifact
 emitters. Branch normalization and pruning preserve retained order and
 remap source/insertion and dependency offsets; only jumps targeting the next
-retained instruction are removed, and threading may skip only a block with one
-unconditional jump. General block merging is not admitted.
+retained instruction or a merge-safe unique successor are removed, and
+threading may skip only a block with one unconditional jump. General CFG
+rewriting is intentionally deferred; conditional fallthrough edges and
+self-loop merge candidates are checked explicitly.
 
 Gate: O0 goldens remain unchanged; O1 branch/constant/copy cases show the
 intended IR simplification and exact C++/Rust output parity; runtime traps and

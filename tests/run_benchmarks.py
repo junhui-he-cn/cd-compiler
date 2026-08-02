@@ -9,9 +9,9 @@ samples invoke the already-built VM's ``link`` path for module workloads, and
 runtime samples invoke the resulting artifact; Cargo is never part of the
 runtime command.
 
-This runner is informational.  It validates every workload's output and
-returns a failure when a benchmark program is not correct, but it does not
-compare timings with a baseline or enforce a performance threshold.
+This runner is informational.  It validates every workload's output, records
+compiler/bytecode shape metrics, and can compare the existing workloads under
+O0 and O1.  It does not enforce a performance threshold.
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ import json
 import math
 import os
 import platform
+import re
 import shlex
 import statistics
 import subprocess
@@ -40,9 +41,139 @@ DEFAULT_REPORT = REPO_ROOT / "build" / "benchmark-report.json"
 DEFAULT_COMPILER = REPO_ROOT / "build" / "compiler_design"
 DEFAULT_VM = REPO_ROOT / "vm-rs"
 SCHEMA_VERSION = 2
+REPORT_SCHEMA_VERSION = 3
 DEFAULT_TIMEOUT_SECONDS = 60.0
 ARTIFACT_MODES = {"linked", "module"}
 EXECUTION_MODES = {"success", "runtime_error"}
+OPTIMIZATION_LEVELS = {0, 1}
+
+
+def _empty_listing_unit(kind: str, register_count: int | None = None) -> dict[str, Any]:
+    return {
+        "kind": kind,
+        "instruction_count": 0,
+        "register_count": register_count,
+        "max_virtual_register": -1,
+    }
+
+
+def _finish_listing_unit(units: list[dict[str, Any]], current: dict[str, Any] | None) -> None:
+    if current is not None:
+        units.append(current)
+
+
+def _aggregate_listing_units(units: list[dict[str, Any]], include_registers: bool) -> dict[str, Any]:
+    main_units = [unit for unit in units if unit["kind"] == "main"]
+    function_units = [unit for unit in units if unit["kind"] == "function"]
+    result: dict[str, Any] = {
+        "instruction_count": sum(unit["instruction_count"] for unit in units),
+        "main_instruction_count": sum(unit["instruction_count"] for unit in main_units),
+        "function_instruction_count": sum(
+            unit["instruction_count"] for unit in function_units
+        ),
+        "function_count": len(function_units),
+        "unit_count": len(units),
+    }
+    if include_registers:
+        result.update(
+            {
+                "register_count": sum(
+                    int(unit["register_count"] or 0) for unit in units
+                ),
+                "main_register_count": sum(
+                    int(unit["register_count"] or 0) for unit in main_units
+                ),
+                "function_register_count": sum(
+                    int(unit["register_count"] or 0) for unit in function_units
+                ),
+            }
+        )
+    else:
+        result["virtual_register_count"] = sum(
+            unit["max_virtual_register"] + 1
+            for unit in units
+            if unit["max_virtual_register"] >= 0
+        )
+        result["main_virtual_register_count"] = sum(
+            unit["max_virtual_register"] + 1
+            for unit in main_units
+            if unit["max_virtual_register"] >= 0
+        )
+        result["function_virtual_register_count"] = sum(
+            unit["max_virtual_register"] + 1
+            for unit in function_units
+            if unit["max_virtual_register"] >= 0
+        )
+    return result
+
+
+def parse_ir_metrics(text: str) -> dict[str, Any]:
+    """Parse the stable ``--ir`` listing into workload-level counts."""
+
+    units: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+    instruction_pattern = re.compile(r"^\d{4}\s{2}")
+    virtual_register_pattern = re.compile(r"\bv(\d+)\b")
+    for line in text.splitlines():
+        if line == "IR":
+            _finish_listing_unit(units, current)
+            current = _empty_listing_unit("main")
+            continue
+        if re.match(r"^function \$\d+\s+", line):
+            _finish_listing_unit(units, current)
+            current = _empty_listing_unit("function")
+            continue
+        if current is None or not instruction_pattern.match(line):
+            continue
+        current["instruction_count"] += 1
+        registers = [int(match.group(1)) for match in virtual_register_pattern.finditer(line)]
+        if registers:
+            current["max_virtual_register"] = max(
+                current["max_virtual_register"], max(registers)
+            )
+    _finish_listing_unit(units, current)
+    if not units:
+        raise ValueError("compiler --ir output did not contain an IR listing")
+    return _aggregate_listing_units(units, include_registers=False)
+
+
+def parse_bytecode_metrics(text: str) -> dict[str, Any]:
+    """Parse the stable ``--bytecode`` listing into workload-level counts."""
+
+    units: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
+    instruction_pattern = re.compile(r"^\d{4}\s{2}")
+    main_pattern = re.compile(r"^main registers=(\d+)$")
+    function_pattern = re.compile(r"^function \$\d+\s+.* registers=(\d+)$")
+    for line in text.splitlines():
+        main_match = main_pattern.match(line)
+        if main_match:
+            _finish_listing_unit(units, current)
+            current = _empty_listing_unit("main", int(main_match.group(1)))
+            continue
+        function_match = function_pattern.match(line)
+        if function_match:
+            _finish_listing_unit(units, current)
+            current = _empty_listing_unit("function", int(function_match.group(1)))
+            continue
+        if current is None or not instruction_pattern.match(line):
+            continue
+        current["instruction_count"] += 1
+    _finish_listing_unit(units, current)
+    if not units:
+        raise ValueError("compiler --bytecode output did not contain a bytecode listing")
+    return _aggregate_listing_units(units, include_registers=True)
+
+
+def integer_record(samples: list[int]) -> dict[str, Any]:
+    if not samples:
+        return {"samples": [], "min": None, "median": None, "max": None}
+    return {
+        "samples": list(samples),
+        "min": min(samples),
+        "median": statistics.median(samples),
+        "max": max(samples),
+    }
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -274,6 +405,74 @@ def _all_validated(values: list[bool]) -> bool:
     return bool(values) and all(values)
 
 
+def normalize_optimization_levels(levels: Iterable[int] | None) -> list[int]:
+    selected = [0] if levels is None else [int(level) for level in levels]
+    if not selected:
+        raise ValueError("at least one optimization level is required")
+    if any(level not in OPTIMIZATION_LEVELS for level in selected):
+        raise ValueError("optimization levels must be 0 or 1")
+    if len(selected) != len(set(selected)):
+        raise ValueError("optimization levels must be unique")
+    return selected
+
+
+def inspect_compiler_listing(
+    repo_root: Path,
+    compiler: Path,
+    sources: list[Path],
+    workload_id: str,
+    optimization_level: int,
+    timeout_seconds: float,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None, dict[str, Any], list[str]]:
+    """Collect IR/bytecode counts without including inspection in compile timings."""
+
+    metrics: dict[str, dict[str, Any] | None] = {"ir": None, "bytecode": None}
+    inspection_samples: dict[str, list[float]] = {"ir": [], "bytecode": []}
+    errors: list[str] = []
+    for mode, parser, label in (
+        ("--ir", parse_ir_metrics, "IR"),
+        ("--bytecode", parse_bytecode_metrics, "bytecode"),
+    ):
+        command = [
+            str(compiler),
+            "--opt-level",
+            str(optimization_level),
+            mode,
+            *(str(source) for source in sources),
+        ]
+        duration, returncode, stdout, stderr = run_command(
+            command, repo_root, timeout_seconds
+        )
+        inspection_samples["ir" if mode == "--ir" else "bytecode"].append(duration)
+        if returncode != 0:
+            errors.append(
+                f"{workload_id} O{optimization_level} {label} inspection: "
+                + _failure(command, returncode, stdout, stderr)
+            )
+            continue
+        if stderr:
+            errors.append(
+                f"{workload_id} O{optimization_level} {label} inspection produced stderr: "
+                f"{stderr.rstrip()}"
+            )
+            continue
+        try:
+            metrics["ir" if mode == "--ir" else "bytecode"] = parser(stdout)
+        except ValueError as error:
+            errors.append(
+                f"{workload_id} O{optimization_level} {label} inspection: {error}"
+            )
+    return (
+        metrics["ir"],
+        metrics["bytecode"],
+        {
+            "ir": timing_record(inspection_samples["ir"]),
+            "bytecode": timing_record(inspection_samples["bytecode"]),
+        },
+        errors,
+    )
+
+
 def run_workload(
     repo_root: Path,
     compiler: Path,
@@ -281,7 +480,10 @@ def run_workload(
     workload: dict[str, Any],
     repetitions: int,
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+    optimization_level: int = 0,
 ) -> dict[str, Any]:
+    if optimization_level not in OPTIMIZATION_LEVELS:
+        raise ValueError("optimization level must be 0 or 1")
     workload_id = str(workload["workload_id"])
     artifact_mode = str(workload["artifact_mode"])
     execution = str(workload["execution"])
@@ -309,6 +511,19 @@ def run_workload(
         ).hexdigest()
         expected_exit_code = int(workload["expected_exit_code"])
     sources = _workload_sources(repo_root, workload)
+    (
+        ir_metrics,
+        bytecode_metrics,
+        inspection_seconds,
+        inspection_errors,
+    ) = inspect_compiler_listing(
+        repo_root,
+        compiler,
+        sources,
+        workload_id,
+        optimization_level,
+        timeout_seconds,
+    )
     compile_samples: list[float] = []
     link_samples: list[float] = []
     load_samples: list[float] = []
@@ -328,6 +543,12 @@ def run_workload(
     runtime_exit_ok: list[bool] = []
     runtime_stdout_ok: list[bool] = []
     runtime_stderr_ok: list[bool] = []
+    observed_stdout_digests: list[str] = []
+    observed_stderr_digests: list[str] = []
+    observed_exit_codes: list[int] = []
+    artifact_size_samples: list[int] = []
+    artifact_size_ok: list[bool] = []
+    errors: list[str] = list(inspection_errors)
     link_required = artifact_mode == "module"
 
     with tempfile.TemporaryDirectory(prefix=f"compiler-design-benchmark-{workload_id}-") as temp_dir:
@@ -339,6 +560,8 @@ def run_workload(
             if artifact_mode == "linked":
                 compile_command = [
                     str(compiler),
+                    "--opt-level",
+                    str(optimization_level),
                     "--emit-bytecode",
                     str(artifact),
                     *(str(source) for source in sources),
@@ -346,6 +569,8 @@ def run_workload(
             else:
                 compile_command = [
                     str(compiler),
+                    "--opt-level",
+                    str(optimization_level),
                     "--emit-module-bytecode",
                     str(module_directory),
                     *(str(source) for source in sources),
@@ -480,6 +705,14 @@ def run_workload(
                         )
                     else:
                         last_artifact = linked_artifact
+                        try:
+                            artifact_size_samples.append(linked_artifact.stat().st_size)
+                            artifact_size_ok.append(True)
+                        except OSError as error:
+                            artifact_size_ok.append(False)
+                            errors.append(
+                                f"{workload_id} O{optimization_level} artifact size: {error}"
+                            )
 
         compile_passed = (
             len(compile_samples) == repetitions
@@ -515,6 +748,13 @@ def run_workload(
                 runtime_exit_ok.append(exit_ok)
                 runtime_stdout_ok.append(stdout_ok)
                 runtime_stderr_ok.append(stderr_ok)
+                observed_stdout_digests.append(
+                    hashlib.sha256(stdout.encode("utf-8")).hexdigest()
+                )
+                observed_stderr_digests.append(
+                    hashlib.sha256(stderr.encode("utf-8")).hexdigest()
+                )
+                observed_exit_codes.append(returncode)
                 if not exit_ok:
                     errors.append(
                         f"{workload_id} runtime {repetition + 1} expected exit "
@@ -529,11 +769,13 @@ def run_workload(
                 elif not stdout_ok:
                     errors.append(
                         f"{workload_id} runtime {repetition + 1} stdout mismatch:\n"
-                        + _output_mismatch(expected, stdout)
+                        + _output_mismatch(expected_output, stdout)
                     )
 
     result: dict[str, Any] = {
         "workload_id": workload_id,
+        "optimization_level": optimization_level,
+        "compiler_options": ["--opt-level", str(optimization_level)],
         "description": workload.get("description", ""),
         "sources": workload["sources"],
         "artifact_mode": artifact_mode,
@@ -548,6 +790,13 @@ def run_workload(
         "link_seconds": timing_record(link_samples),
         "load_seconds": timing_record(load_samples),
         "runtime_seconds": timing_record(runtime_samples),
+        "ir_metrics": ir_metrics,
+        "bytecode_metrics": bytecode_metrics,
+        "ir_inspection_seconds": inspection_seconds["ir"],
+        "bytecode_inspection_seconds": inspection_seconds["bytecode"],
+        "inspection_validated": ir_metrics is not None and bytecode_metrics is not None,
+        "artifact_size_bytes": integer_record(artifact_size_samples),
+        "artifact_size_validated": _all_validated(artifact_size_ok),
         "link_required": link_required,
         "compile_exit_code_validated": _all_validated(compile_exit_ok),
         "compile_stdout_validated": _all_validated(compile_stdout_ok),
@@ -571,10 +820,17 @@ def run_workload(
         "exit_code_validated": _all_validated(runtime_exit_ok),
         "stdout_validated": _all_validated(runtime_stdout_ok),
         "stderr_validated": _all_validated(runtime_stderr_ok),
+        "observed_stdout_sha256": observed_stdout_digests,
+        "observed_stderr_sha256": observed_stderr_digests,
+        "observed_exit_codes": observed_exit_codes,
         "passed": not errors
+        and ir_metrics is not None
+        and bytecode_metrics is not None
         and len(compile_samples) == repetitions
         and (not link_required or len(link_samples) == repetitions)
         and len(load_samples) == repetitions
+        and len(artifact_size_samples) == repetitions
+        and _all_validated(artifact_size_ok)
         and len(runtime_samples) == repetitions,
     }
     if errors:
@@ -640,6 +896,106 @@ def environment_record(repo_root: Path, compiler: Path, vm_binary: Path) -> dict
     }
 
 
+def _metric_change(baseline: Any, candidate: Any) -> dict[str, Any] | None:
+    if baseline is None or candidate is None:
+        return None
+    delta = candidate - baseline
+    if isinstance(delta, float):
+        delta = rounded(delta)
+    change: dict[str, Any] = {
+        "baseline": baseline,
+        "candidate": candidate,
+        "delta": delta,
+    }
+    if baseline != 0:
+        change["relative_change"] = rounded((candidate - baseline) / baseline)
+    else:
+        change["relative_change"] = None
+    return change
+
+
+def _comparison_metric(result: dict[str, Any], path: tuple[str, ...]) -> Any:
+    value: Any = result
+    for part in path:
+        if not isinstance(value, dict):
+            return None
+        value = value.get(part)
+    return value
+
+
+def compare_optimization_results(
+    level_results: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
+    names = list(level_results)
+    results = [level_results[name] for name in names]
+    validation_fields = (
+        "exit_code_validated",
+        "stdout_validated",
+        "stderr_validated",
+    )
+    validation = {
+        field: bool(results) and all(bool(result.get(field)) for result in results)
+        for field in validation_fields
+    }
+    expected_contracts = {
+        (
+            result.get("expected_output_sha256"),
+            result.get("expected_stderr_sha256"),
+            result.get("expected_exit_code"),
+        )
+        for result in results
+    }
+    observed_contracts = {
+        (
+            tuple(result.get("observed_stdout_sha256", [])),
+            tuple(result.get("observed_stderr_sha256", [])),
+            tuple(result.get("observed_exit_codes", [])),
+        )
+        for result in results
+    }
+    parity_passed = (
+        bool(results)
+        and len(expected_contracts) == 1
+        and len(observed_contracts) == 1
+        and all(validation.values())
+    )
+    comparison: dict[str, Any] = {
+        "levels": names,
+        "passed": bool(results) and all(result.get("passed", False) for result in results),
+        "parity_passed": parity_passed,
+        "output_error_exit_parity": {
+            "passed": parity_passed,
+            "exit_code": validation["exit_code_validated"],
+            "stdout": validation["stdout_validated"],
+            "stderr": validation["stderr_validated"],
+            "same_expected_contract": len(expected_contracts) == 1,
+            "same_observed_contract": len(observed_contracts) == 1,
+        },
+        "metric_deltas": {},
+    }
+    if "O0" in level_results and "O1" in level_results:
+        baseline = level_results["O0"]
+        candidate = level_results["O1"]
+        metric_paths = {
+            "compile_median_seconds": ("compile_seconds", "median"),
+            "link_median_seconds": ("link_seconds", "median"),
+            "load_median_seconds": ("load_seconds", "median"),
+            "runtime_median_seconds": ("runtime_seconds", "median"),
+            "ir_instruction_count": ("ir_metrics", "instruction_count"),
+            "bytecode_instruction_count": ("bytecode_metrics", "instruction_count"),
+            "register_count": ("bytecode_metrics", "register_count"),
+            "artifact_size_bytes": ("artifact_size_bytes", "median"),
+        }
+        comparison["metric_deltas"] = {
+            name: _metric_change(
+                _comparison_metric(baseline, path),
+                _comparison_metric(candidate, path),
+            )
+            for name, path in metric_paths.items()
+        }
+    return comparison
+
+
 def run_benchmarks(
     manifest: dict[str, Any],
     repo_root: Path,
@@ -649,7 +1005,9 @@ def run_benchmarks(
     selected_workloads: list[str] | None = None,
     manifest_path: Path | None = None,
     timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS,
+    optimization_levels: Iterable[int] | None = None,
 ) -> dict[str, Any]:
+    selected_levels = normalize_optimization_levels(optimization_levels)
     workload_map = {str(item["workload_id"]): item for item in manifest["workloads"]}
     selected = [str(item["workload_id"]) for item in manifest["workloads"]]
     if selected_workloads:
@@ -658,17 +1016,36 @@ def run_benchmarks(
             raise ValueError("unknown workload(s): " + ", ".join(unknown))
         selected = [workload_id for workload_id in selected if workload_id in selected_workloads]
 
-    workload_results = [
-        run_workload(
-            repo_root,
-            compiler,
-            vm_binary,
-            workload_map[workload_id],
-            repetitions,
-            timeout_seconds,
-        )
-        for workload_id in selected
-    ]
+    workload_results: list[dict[str, Any]] = []
+    for workload_id in selected:
+        level_results = {
+            f"O{level}": run_workload(
+                repo_root,
+                compiler,
+                vm_binary,
+                workload_map[workload_id],
+                repetitions,
+                timeout_seconds,
+                optimization_level=level,
+            )
+            for level in selected_levels
+        }
+        comparison = compare_optimization_results(level_results)
+        primary_name = "O0" if "O0" in level_results else next(iter(level_results))
+        primary = dict(level_results[primary_name])
+        combined_errors = [
+            error
+            for result in level_results.values()
+            for error in result.get("errors", [])
+        ]
+        primary["optimization_levels"] = level_results
+        primary["comparison"] = comparison
+        primary["passed"] = comparison["passed"] and comparison["parity_passed"]
+        if combined_errors:
+            primary["errors"] = combined_errors
+        else:
+            primary.pop("errors", None)
+        workload_results.append(primary)
     errors = [
         error
         for result in workload_results
@@ -680,33 +1057,56 @@ def run_benchmarks(
         else str(manifest_path) if manifest_path is not None else "<in-memory>"
     )
     return {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": REPORT_SCHEMA_VERSION,
         "benchmark_revision": manifest["benchmark_revision"],
         "commit": git_commit(repo_root),
         "manifest": manifest_display,
         "repetitions": repetitions,
+        "optimization_levels": [f"O{level}" for level in selected_levels],
         "timeout_seconds": rounded(timeout_seconds),
         "measurement": {
             "compile": "compiler_design bytecode emission wall-clock time, including process startup and artifact write",
             "link": "Rust VM link wall-clock time for module workloads, including module product load and linked artifact write",
             "load": "Rust VM dump wall-clock time, including artifact read, parse, verification, and canonical formatting",
             "runtime": "already-built Rust VM run wall-clock time, including process startup and artifact load during run",
+            "ir": "compiler_design --ir inspection used to count IR instructions and virtual registers; not included in compile timing",
+            "bytecode": "compiler_design --bytecode inspection used to count bytecode instructions and registerCount; not included in compile timing",
+            "artifact_size": "size in bytes of the final linked artifact loaded by the VM",
             "statistic": "min, median, and max over the requested repetitions",
             "timeout_seconds": rounded(timeout_seconds),
-            "enforcement": "informational; correctness failures return non-zero",
+            "enforcement": "informational; correctness or O0/O1 parity failures return non-zero",
         },
         "commands": {
-            "compile": [str(compiler), "--emit-bytecode", "<artifact>", "<sources...>"],
+            "compile": [
+                str(compiler),
+                "--opt-level",
+                "<level>",
+                "--emit-bytecode",
+                "<artifact>",
+                "<sources...>",
+            ],
             "compile_linked": [
                 str(compiler),
+                "--opt-level",
+                "<level>",
                 "--emit-bytecode",
                 "<artifact>",
                 "<sources...>",
             ],
             "compile_module": [
                 str(compiler),
+                "--opt-level",
+                "<level>",
                 "--emit-module-bytecode",
                 "<module-directory>",
+                "<sources...>",
+            ],
+            "ir": [str(compiler), "--opt-level", "<level>", "--ir", "<sources...>"],
+            "bytecode": [
+                str(compiler),
+                "--opt-level",
+                "<level>",
+                "--bytecode",
                 "<sources...>",
             ],
             "link": [str(vm_binary), "link", "<module-directory>", "<artifact>"],
@@ -762,6 +1162,19 @@ def parse_args() -> argparse.Namespace:
         dest="workloads",
         help="run only this workload; repeat the option to select multiple workloads",
     )
+    parser.add_argument(
+        "--opt-level",
+        dest="optimization_levels",
+        action="append",
+        type=int,
+        choices=sorted(OPTIMIZATION_LEVELS),
+        help="measure one optimization level; repeat for a custom comparison",
+    )
+    parser.add_argument(
+        "--compare-opt-levels",
+        action="store_true",
+        help="measure O0 and O1 and report their correctness and metric deltas",
+    )
     return parser.parse_args()
 
 
@@ -783,6 +1196,16 @@ def main() -> int:
         if not math.isfinite(args.timeout) or args.timeout <= 0:
             print("FAIL --timeout must be a positive finite number", file=sys.stderr)
             return 64
+        if args.compare_opt_levels and args.optimization_levels:
+            print("FAIL --compare-opt-levels cannot be combined with --opt-level", file=sys.stderr)
+            return 64
+        optimization_levels = (
+            [0, 1]
+            if args.compare_opt_levels
+            else args.optimization_levels
+            if args.optimization_levels
+            else [0]
+        )
         compiler = args.compiler.resolve()
         if not compiler.is_file():
             print(f"compiler not found: {compiler}", file=sys.stderr)
@@ -797,6 +1220,7 @@ def main() -> int:
             selected_workloads=args.workloads,
             manifest_path=manifest_path,
             timeout_seconds=args.timeout,
+            optimization_levels=optimization_levels,
         )
     except (OSError, ValueError, json.JSONDecodeError) as error:
         print(f"benchmark runner: {error}", file=sys.stderr)
@@ -818,17 +1242,43 @@ def main() -> int:
         f"repeat={report['repetitions']}"
     )
     for result in report["workloads"]:
-        compile_median = result["compile_seconds"]["median"]
-        link_median = result["link_seconds"]["median"]
-        load_median = result["load_seconds"]["median"]
-        runtime_median = result["runtime_seconds"]["median"]
+        levels = result.get("optimization_levels", {})
+        if len(levels) == 1:
+            level_result = next(iter(levels.values()))
+            compile_median = level_result["compile_seconds"]["median"]
+            link_median = level_result["link_seconds"]["median"]
+            load_median = level_result["load_seconds"]["median"]
+            runtime_median = level_result["runtime_seconds"]["median"]
+            bytecode_metrics = level_result.get("bytecode_metrics") or {}
+            artifact_size = level_result.get("artifact_size_bytes", {}).get("median")
+            print(
+                f"  {result['workload_id']} O{level_result['optimization_level']}: "
+                f"compile median={compile_median if compile_median is not None else 'n/a'}s, "
+                f"link median={link_median if link_median is not None else 'n/a'}s, "
+                f"load median={load_median if load_median is not None else 'n/a'}s, "
+                f"runtime median={runtime_median if runtime_median is not None else 'n/a'}s, "
+                f"ir={((level_result.get('ir_metrics') or {}).get('instruction_count', 'n/a'))}, "
+                f"bytecode={bytecode_metrics.get('instruction_count', 'n/a')}, "
+                f"registers={bytecode_metrics.get('register_count', 'n/a')}, "
+                f"artifact={artifact_size if artifact_size is not None else 'n/a'}B, "
+                f"{'PASS' if result['passed'] else 'FAIL'}"
+            )
+            continue
+        level_summaries = []
+        for name, level_result in levels.items():
+            runtime_median = level_result["runtime_seconds"]["median"]
+            bytecode_metrics = level_result.get("bytecode_metrics") or {}
+            level_summaries.append(
+                f"{name} runtime={runtime_median if runtime_median is not None else 'n/a'}s"
+                f"/bc={bytecode_metrics.get('instruction_count', 'n/a')}"
+                f"/regs={bytecode_metrics.get('register_count', 'n/a')}"
+            )
+        comparison = result.get("comparison", {})
         print(
             f"  {result['workload_id']}: "
-            f"compile median={compile_median if compile_median is not None else 'n/a'}s, "
-            f"link median={link_median if link_median is not None else 'n/a'}s, "
-            f"load median={load_median if load_median is not None else 'n/a'}s, "
-            f"runtime median={runtime_median if runtime_median is not None else 'n/a'}s, "
-            f"{'PASS' if result['passed'] else 'FAIL'}"
+            + ", ".join(level_summaries)
+            + f", parity={'PASS' if comparison.get('parity_passed') else 'FAIL'}, "
+            + f"{'PASS' if result['passed'] else 'FAIL'}"
         )
     for error in report["errors"]:
         print(f"FAIL {error}", file=sys.stderr)
