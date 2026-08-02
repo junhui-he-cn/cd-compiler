@@ -615,8 +615,14 @@ fn print_profile_report(program: &Program, profiled: &vm::ProfileRun) {
         profiled.report.instruction_count, profiled.report.output_bytes
     );
     println!(
-        "profile heap tracked_heap_allocations={} tracked_heap_peak_live={}",
-        profiled.report.tracked_heap_allocations, profiled.report.tracked_heap_peak_live
+        concat!(
+            "profile heap tracked_heap_allocations={} tracked_heap_peak_live={} ",
+            "tracked_heap_estimated_live_bytes={} tracked_heap_estimated_peak_live_bytes={}"
+        ),
+        profiled.report.tracked_heap_allocations,
+        profiled.report.tracked_heap_peak_live,
+        profiled.report.tracked_heap_estimated_live_bytes,
+        profiled.report.tracked_heap_estimated_peak_live_bytes
     );
     for function in &profiled.report.functions {
         let index = function

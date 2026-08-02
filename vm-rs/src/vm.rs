@@ -3,9 +3,9 @@
 use crate::bytecode::{
     Constant, DebugLocation, DebugRange, DebugSource, FunctionBody, Instruction, Program,
 };
-use crate::runtime::{Cell, FunctionValue, Heap, SharedEnvironment};
 #[cfg(test)]
-use crate::runtime::{HeapObjectKind, HeapStats};
+use crate::runtime::HeapObjectKind;
+use crate::runtime::{Cell, FunctionValue, Heap, HeapStats, SharedEnvironment};
 use crate::value::Value;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -98,6 +98,10 @@ pub struct ProfileReport {
     pub tracked_heap_allocations: usize,
     /// Maximum simultaneously live allocations in the tracked VM storage ledger.
     pub tracked_heap_peak_live: usize,
+    /// Estimated bytes retained by currently live tracked VM storage.
+    pub tracked_heap_estimated_live_bytes: usize,
+    /// Maximum estimated bytes retained by tracked VM storage during execution.
+    pub tracked_heap_estimated_peak_live_bytes: usize,
     pub functions: Vec<ProfileFunction>,
     pub natives: Vec<ProfileNative>,
     pub source_ranges: Vec<ProfileSourceRange>,
@@ -3387,6 +3391,7 @@ impl<'a> VM<'a> {
     /// confused with profile records.
     pub fn profile(mut self) -> ProfileRun {
         self.profile_enabled = true;
+        let heap_stats = self.heap.stats();
         self.profile_functions = std::iter::once(ProfileFunction {
             index: None,
             name: "main".to_string(),
@@ -3402,7 +3407,7 @@ impl<'a> VM<'a> {
         .collect();
         let result = self.run_inner();
         ProfileRun {
-            report: self.profile_report(),
+            report: self.profile_report(&heap_stats),
             result,
         }
     }
@@ -3434,13 +3439,16 @@ impl<'a> VM<'a> {
         DebugRun { result, quit }
     }
 
-    fn profile_report(&self) -> ProfileReport {
+    fn profile_report(&self, heap_stats: &HeapStats) -> ProfileReport {
         let (tracked_heap_allocations, tracked_heap_peak_live) = self.heap.profile_counts();
+        let heap_snapshot = heap_stats.snapshot();
         ProfileReport {
             instruction_count: self.profile_instruction_count,
             output_bytes: self.profile_output_bytes,
             tracked_heap_allocations,
             tracked_heap_peak_live,
+            tracked_heap_estimated_live_bytes: heap_snapshot.estimated_live_bytes,
+            tracked_heap_estimated_peak_live_bytes: heap_snapshot.estimated_peak_live_bytes,
             functions: self.profile_functions.clone(),
             natives: self
                 .profile_natives

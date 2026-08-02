@@ -54,7 +54,8 @@ Rust VM 的长期目标是成为一个可独立验证、可重复执行、可观
 当前基线的主要限制也要明确记录：库 API 已存在但仍是 `0.1` additive boundary，
 不是 crates.io/跨线程稳定承诺；运行时对象主要由 `Rc<RefCell<...>>` 和手工
 identity 管理；资源预算和协作式取消已经由 VM-1B 固定，profile 当前只提供
-确定性 counters，不包含 wall-clock 或 allocation/peak 字段；快照/回滚、二进制
+确定性 counters 和 VM-owned estimated retained-byte 字段，不包含 wall-clock 或
+host allocator/RSS 字段；快照/回滚、二进制
 artifact 或 JIT 仍未进入默认队列。`cdbc 0.1` 的兼容性优先级高于这些后续能力。
 
 ## 3. 路线图总览
@@ -382,6 +383,14 @@ storage 的 allocation total 与 peak-live counters；计数直接读取 VM-2B l
 不启用 retained-byte 观测，也不把 inline values 或 host RSS 纳入结果。成功、
 runtime/resource/cancellation 失败仍返回已收集的 partial report；详见
 [`docs/decisions/vm-profile-002-tracked-heap-counters.md`](decisions/vm-profile-002-tracked-heap-counters.md)。
+
+**状态（第三 deterministic estimated-retained-byte profile 窄切片已完成，2026-08-02）：**
+opt-in `ProfileReport` 和 CLI `profile` 现在在执行前启用既有 `HeapStats` retained-
+storage observer，并报告 `tracked_heap_estimated_live_bytes` 与
+`tracked_heap_estimated_peak_live_bytes`；成功、runtime/resource/cancellation 失败
+都保留 partial report。该字段只描述 VM-owned representation pressure，不是 exact
+host allocator/RSS、wall-clock、inline value 或 GC 指标；详见
+[`docs/decisions/vm-profile-003-estimated-retained-bytes.md`](decisions/vm-profile-003-estimated-retained-bytes.md)。
 
 ### VM-4C：错误与诊断 API 稳定化
 
@@ -845,9 +854,9 @@ deterministic profile counter/tracked-heap slice、VM-4C 的第一 structured ki
 preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard/checkpoint-fast-path/checkpoint-mode-cache/borrow-register-operands/borrow-native-name/borrow-function-values/borrow-caller-name/shared-frame-names/profile-off-hook-guards/inline-native-arguments/decoded-constant-cache/borrowed-global-cell/comparison-dispatch/borrowed-Len-operand/borrowed-Print-operand/borrowed-Field-receiver/borrowed-Index-operands/borrowed-primitive-comparison-operands/borrowed-AssertArray-operand/borrowed-AssertNumber-operand/return-register-transfer slices 已完成；VM-6A 的 registry dispatch/metadata、centralized arity validation、resource touchpoint profile 与 signature shape metadata slices 也已完成；GC、persistent VM、
 JIT 和新的 artifact version 仍未进入默认队列。VM-5C 的第一 capacity corpus、
 第二 long-Unicode-string、第三 long-Unicode-output、第四 large-map payload、第五
-nested named-struct payload 和第六 aggregate-allocation-churn slices，以及 VM-4C 的第二
-resource-context slice 也已完成。VM-4B 的 wall-clock 与
-estimated retained/host-byte 扩展、VM-4C 的统一 host schema、VM-5B 的后续性能
+nested named-struct payload 和第六 aggregate-allocation-churn slices，以及 VM-4B 的第三
+estimated-retained-byte profile、VM-4C 的第二 resource-context slice 也已完成。
+VM-4B 的 wall-clock/host-RSS 扩展、VM-4C 的统一 host schema、VM-5B 的后续性能
 优化和 VM-5C 的更大容量/host-memory policy 都需要独立决策；下一步应等待明确
 的 host consumer 再决定是否进入 versioned structured diagnostics schema，或以
 新 workload 证据继续容量/执行优化，同时保持现有 CLI、

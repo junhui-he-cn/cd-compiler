@@ -90,6 +90,8 @@ def main() -> int:
             "output_bytes=4",
             "profile heap tracked_heap_allocations=",
             "tracked_heap_peak_live=",
+            "tracked_heap_estimated_live_bytes=",
+            "tracked_heap_estimated_peak_live_bytes=",
             'profile function index=main name="main" calls=1 instructions=',
             'profile function index=f0 name="add" calls=1 instructions=',
             'profile source_range source=s0 path=',

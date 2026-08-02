@@ -900,12 +900,13 @@ before debugging; `run` and `trace` behavior is unchanged.
 prints machine-readable instruction counts, function calls/instructions,
 native calls, existing source-range hits, successfully written output bytes,
 and deterministic tracked-heap allocation/peak counters for environment, cell,
-array, map, and struct storage; the program's output is not mixed into the
-report. Function records use artifact order, while native and range records use
-stable sorting. A failed execution still prints its partial report before the
-existing runtime/resource diagnostic is written to stderr. The library
-equivalent is `VM::profile()`; wall-clock timing, estimated retained bytes,
-inline values, and host allocator/RSS measurements remain outside this report.
+array, map, and struct storage, plus opt-in estimated retained/peak bytes for
+that tracked storage; the program's output is not mixed into the report.
+Function records use artifact order, while native and range records use stable
+sorting. A failed execution still prints its partial report before the existing
+runtime/resource diagnostic is written to stderr. The library equivalent is
+`VM::profile()`; the estimated byte fields describe VM-owned representation
+pressure, not wall-clock timing, inline values, or host allocator/RSS bytes.
 
 For an import-aware graph, `--emit-module-bytecode` emits one independently
 validated `artifact: module` product per graph node. Rust links the product set

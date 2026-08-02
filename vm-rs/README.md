@@ -25,14 +25,15 @@ and `debug` starts the interactive breakpoint/step session.
 `profile` is an opt-in machine-readable report. It prints instruction counts,
 function calls/instructions, native calls, existing debug-range hits, and
 output byte counts plus deterministic tracked-heap allocation/peak counters
-for environment, cell, array, map, and struct storage without printing the
-program's output. Function records are in artifact order; native and
-source-range records are sorted. A runtime or resource failure still emits the
-partial report before the normal diagnostic goes to stderr. The embeddable
-equivalent is `vm::VM::profile()`, which returns `ProfileRun` with both
-`ProfileReport` and the typed execution result. Wall-clock timing, estimated
-retained bytes, inline values, and host allocator/RSS measurements remain
-outside the report.
+for environment, cell, array, map, and struct storage, plus estimated live and
+peak retained bytes for that tracked storage, without printing the program's
+output. Function records are in artifact order; native and source-range records
+are sorted. A runtime or resource failure still emits the partial report before
+the normal diagnostic goes to stderr. The embeddable equivalent is
+`vm::VM::profile()`, which returns `ProfileRun` with both `ProfileReport` and
+the typed execution result. The estimated byte fields describe VM-owned
+representation pressure, not wall-clock timing, inline values, or host
+allocator/RSS measurements.
 
 Execution and link commands use deterministic resource budgets by default. The
 available overrides are `--max-steps`, `--max-call-depth`, `--max-elements`,
