@@ -40,6 +40,12 @@ Issue #15 defines the stable key contract for the generic hash containers.
       count but increases allocation pressure and is slower in wall-clock runtime.
       Keep the current node-backed API and defer frequency buckets or an indexed
       backend until a larger real workload justifies that representation.
+- [x] Add a private tail handle to `LinkedList<T>` after the recursive node
+      capability became available; preserve the public API and reduce `pushBack`
+      from linear traversal to `O(1)`. On the 1000-insert workload, the old
+      representation exceeded the default VM instruction budget; with unlimited
+      profiling it used 17,578,780 instructions versus 106,782 for the tail
+      version, so the optimization is retained.
 
 The built-in map remains primitive-keyed; generic hash containers use their own
 array-backed bucket tables and the stable key contract above. LRU and LFU use

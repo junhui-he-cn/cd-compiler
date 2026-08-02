@@ -320,8 +320,8 @@ outer array.
 Node assignment and parameter passing copy the handle, not the node. A value or
 link mutation through one alias is visible through every other alias. Removing a
 node from a list only removes the list's link; a previously returned handle stays
-valid and keeps the node alive. `pushFront`, `popFront`, and `nodeAt` are `O(1)`
-or `O(index)` as applicable; `pushBack` and an acyclic `snapshot` are `O(n)`.
+valid and keeps the node alive. `pushFront`, `pushBack`, and `popFront` are `O(1)`;
+`nodeAt` is `O(index)` and an acyclic `snapshot` is `O(n)`.
 Snapshots are shallow and assume an acyclic list. Strong cycles are allowed and
 remain retained until VM teardown; there is no cycle collector or weak handle.
 Printing a cyclic node graph emits `<cycle>` on the active recursive path, while
@@ -1472,6 +1472,7 @@ Use `--case data_structures_binary_heap`, `--case data_structures_option`,
 `--case array_algorithms_next_smaller`, `--case array_algorithms_rotation`,
 `--case array_algorithms_frequency`,
 `--case data_structures_lfu_cache_workload`,
+`--case linked_structures_tail`, `--case linked_structures_workload`,
 `--case array_algorithms_quick_sort`, `--case array_algorithms_heap_sort`,
 `--case array_algorithms_shell_sort`,
 `--case array_algorithms_search_peaks`,

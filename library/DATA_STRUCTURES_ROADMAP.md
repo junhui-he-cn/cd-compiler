@@ -217,7 +217,7 @@ enum Result<T, E> {
 | 双端队列 `Deque<T>` | 现有（S1） | `addFront`、`addBack`、`takeFront`、`takeBack`、`peekFront`、`peekBack` | 双数组栈；两端操作摊销 `O(1)` |
 | 环形缓冲区 `RingBuffer<T>` | 现有（S1） | 固定容量、`offer`、`read`、`peek`、`isFull` | `Option<T>` 槽位；满时拒绝并返回 `false` |
 | 不可变链表 `List<T>` | 现有（S1） | `emptyList`、`prepend`、`head`、`tail`、`reverse`、`toArray` | 递归泛型枚举，持久化/共享尾部 |
-| 单向链表 | 现有（M8） | 稳定节点句柄、前后插入、前端删除、节点查找和浅快照 | `optional<LinkedNode<T>>` 链接；句柄复制共享节点，`pushBack`/快照为线性遍历 |
+| 单向链表 | 现有（M8） | 稳定节点句柄、前后插入、前端删除、节点查找和浅快照 | `optional<LinkedNode<T>>` 头尾链接；句柄复制共享节点，`pushFront`/`pushBack`/`popFront` 为 `O(1)`，快照为线性遍历 |
 | 双向链表 | 后续 | 两端插入删除、迭代器、节点移动 | 需要可表达的双向节点和稳定节点引用 |
 | 循环链表 | 后续 | 循环调度、约瑟夫问题 | 需要先确定节点引用和空结构语义 |
 | 跳表 | 后续 | 有序集合的平均 `O(log n)` 操作 | 需要随机数和节点/层级表示 |
@@ -708,9 +708,16 @@ examples/
 4. **递归结构体与节点句柄。** M8 已确定命名结构体的稳定强句柄契约，并以
    `LinkedNode<T>`/`LinkedList<T>` 提供可变单向链表。节点别名共享字段和链接；断链
    不删除外部句柄；identity equality 和 `<cycle>` 格式化保持跨 C++/Rust 一致。
-   强引用环保留到 VM teardown，暂不提供 GC、弱引用、终结器或自动删除。LRU 已采用
+   强引用环保留到 VM teardown，暂不提供 GC、弱引用、终结器或自动删除。`LinkedList<T>`
+   现在额外保留私有尾节点句柄，使 `pushBack` 不再扫描整个链表；LRU 已采用
    私有单向节点句柄，并在淘汰/删除时清除链接；LFU、双向链表、循环链表和环安全
    遍历仍需各自的 API 决策。
+
+   2026-08-02 的 `linked_structures_workload` 使用 1000 次尾插、500 次前端删除和
+   500 次追加，旧版在线性扫描下超过默认 10,000,000 指令预算。统一使用
+   `--unlimited` profile 时，旧版/尾句柄版分别为 17,578,780/106,782 条指令和
+   3,518,623/23,122 次 tracked allocation；5 次 runtime 中位数约为 8.24s/0.18s，
+   输出保持一致。因此尾句柄作为当前公开 API 的内部表示保留。
 5. **环形缓冲区。** 当前策略是不覆盖最旧值，满时 `offer` 返回 `false`，读/窥视
    返回 `Option<T>`；后续若出现更合适的错误协议，再单独评估 API 迁移。
 6. **失败和数值约定。** `optional<T>` 用于普通缺失，`Option<T>` 用于显式有/无结果，
