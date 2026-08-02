@@ -257,6 +257,87 @@ def main() -> int:
         if error is not None:
             return fail(error)
 
+        churn_source = root / "aggregate-allocation-churn.cd"
+        churn_artifact = root / "aggregate-allocation-churn.cdbc"
+        churn_iterations = 512
+        churn_struct_cost = 1 + 1
+        churn_map_cost = 1 + 1
+        churn_array_cost = 1 + 3
+        churn_initial_elements = churn_struct_cost + churn_map_cost + churn_array_cost
+        churn_iteration_elements = churn_initial_elements
+        churn_total_elements = churn_initial_elements + (
+            churn_iterations * churn_iteration_elements
+        )
+        churn_source.write_text(
+            "struct Bucket { value: number }\n"
+            "let bucket = Bucket { value: 0 };\n"
+            'let latest = {"value": 0};\n'
+            "let values = [0, 0, 0];\n"
+            "let iteration = 0;\n"
+            f"while (iteration < {churn_iterations}) {{\n"
+            "  bucket = Bucket { value: iteration };\n"
+            '  latest = {"value": iteration};\n'
+            "  values = [iteration, iteration + 1, iteration + 2];\n"
+            "  iteration += 1;\n"
+            "}\n"
+            "print bucket.value;\n"
+            'print latest["value"];\n'
+            "print len(values);\n",
+            encoding="utf-8",
+        )
+        error = emit_bytecode(
+            compiler,
+            churn_source,
+            churn_artifact,
+            "aggregate-allocation-churn emit",
+            measurements,
+        )
+        if error is not None:
+            return fail(error)
+
+        churn_output = f"{churn_iterations - 1}\n{churn_iterations - 1}\n3\n"
+        result = run_measured(
+            vm_command(vm_binary, "run", str(churn_artifact)),
+            "aggregate-allocation-churn run",
+        )
+        measurements.append(result)
+        error = expect_success(result, churn_output)
+        if error is not None:
+            return fail(error)
+
+        result = run_measured(
+            vm_command(
+                vm_binary,
+                "run",
+                str(churn_artifact),
+                "--max-elements",
+                str(churn_total_elements),
+            ),
+            "aggregate-allocation-churn exact element budget",
+        )
+        measurements.append(result)
+        error = expect_success(result, churn_output)
+        if error is not None:
+            return fail(error)
+
+        result = run_measured(
+            vm_command(
+                vm_binary,
+                "run",
+                str(churn_artifact),
+                "--max-elements",
+                str(churn_total_elements - 1),
+            ),
+            "aggregate-allocation-churn element budget",
+        )
+        measurements.append(result)
+        error = expect_failure(
+            result,
+            f"runtime elements (limit {churn_total_elements - 1})",
+        )
+        if error is not None:
+            return fail(error)
+
         large_struct_source = root / "large-struct-array.cd"
         large_struct_artifact = root / "large-struct-array.cdbc"
         struct_entry_count = 1024
@@ -699,9 +780,9 @@ def main() -> int:
             f"peak_rss_kib={rss} exit={result.returncode}"
         )
     print(
-        "VM capacity tests: large arrays/maps/structs, long Unicode strings and output budgets, "
-        "deep calls, debug tables, long-chain and diamond module graphs, and budget "
-        "rejection boundaries validated"
+        "VM capacity tests: aggregate churn, large arrays/maps/structs, long Unicode "
+        "strings and output budgets, deep calls, debug tables, long-chain and diamond "
+        "module graphs, and budget rejection boundaries validated"
     )
     return 0
 
