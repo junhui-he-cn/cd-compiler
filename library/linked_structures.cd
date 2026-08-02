@@ -34,6 +34,7 @@ fun newLinkedNode<T>(value: T): LinkedNode<T> {
 
 struct LinkedList<T> {
   private head: optional<LinkedNode<T>>,
+  private tail: optional<LinkedNode<T>>,
   private count: number
 }
 
@@ -50,27 +51,25 @@ impl LinkedList<T> {
     let node = newLinkedNode<T>(value);
     node.setNext(this.head);
     this.head = node;
+    if (this.count == 0) {
+      this.tail = node;
+    }
     this.count += 1;
   }
 
   fun pushBack(value: T) {
     let node = newLinkedNode<T>(value);
-    let current = this.head;
+    let current = this.tail;
     if (current == nil) {
       this.head = node;
+      this.tail = node;
       this.count += 1;
       return;
     }
 
-    while (current != nil) {
-      let currentNode: LinkedNode<T> = current;
-      let next = currentNode.nextNode();
-      if (next == nil) {
-        currentNode.setNext(node);
-        break;
-      }
-      current = next;
-    }
+    let currentNode: LinkedNode<T> = current;
+    currentNode.setNext(node);
+    this.tail = node;
     this.count += 1;
   }
 
@@ -82,6 +81,9 @@ impl LinkedList<T> {
     let currentNode: LinkedNode<T> = current;
     this.head = currentNode.nextNode();
     this.count -= 1;
+    if (this.count == 0) {
+      this.tail = nil;
+    }
     return currentNode.readValue();
   }
 
@@ -120,7 +122,7 @@ impl LinkedList<T> {
 }
 
 fun newLinkedList<T>(): LinkedList<T> {
-  return LinkedList<T> { head: nil, count: 0 };
+  return LinkedList<T> { head: nil, tail: nil, count: 0 };
 }
 
 export LinkedNode, LinkedList, newLinkedNode, newLinkedList;

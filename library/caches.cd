@@ -1,4 +1,6 @@
-// Array-backed cache structures.
+// Cache structures.
+
+import "./linked_structures.cd";
 
 struct LruCacheEntry<K, V> {
   key: K,
@@ -6,47 +8,77 @@ struct LruCacheEntry<K, V> {
 }
 
 struct LruCache<K: Eq, V> {
-  private keys: [K],
-  private values: [V],
+  private head: optional<LinkedNode<LruCacheEntry<K, V>>>,
+  private tail: optional<LinkedNode<LruCacheEntry<K, V>>>,
+  private count: number,
   private limit: number
 }
 
 impl LruCache<K: Eq, V> {
-  // Entries are kept from least recently used to most recently used.
-  fun indexOf(key: K): number {
-    let index = 0;
-    while (index < this.keys.len()) {
-      if (this.keys[index] == key) {
-        return index;
+  // Entries are kept from least recently used to most recently used. Nodes
+  // are private handles; unlinking clears their outgoing link so eviction
+  // does not retain the rest of the cache through an old node.
+  fun findNode(key: K): optional<LinkedNode<LruCacheEntry<K, V>>> {
+    let current = this.head;
+    while (current != nil) {
+      let node: LinkedNode<LruCacheEntry<K, V>> = current;
+      let entry = node.readValue();
+      if (entry.key == key) {
+        return node;
       }
-      index += 1;
+      current = node.nextNode();
     }
-    return -1;
+    return nil;
   }
 
-  fun removeAt(index: number) {
-    while (index + 1 < this.keys.len()) {
-      this.keys[index] = this.keys[index + 1];
-      this.values[index] = this.values[index + 1];
-      index += 1;
-    }
-    this.keys.pop();
-    this.values.pop();
-  }
-
-  fun moveToBack(index: number) {
-    if (index + 1 >= this.keys.len()) {
+  fun appendNode(node: LinkedNode<LruCacheEntry<K, V>>) {
+    let tail = this.tail;
+    if (tail == nil) {
+      this.head = node;
+      this.tail = node;
       return;
     }
-    let key = this.keys[index];
-    let value = this.values[index];
-    while (index + 1 < this.keys.len()) {
-      this.keys[index] = this.keys[index + 1];
-      this.values[index] = this.values[index + 1];
-      index += 1;
+
+    let tailNode: LinkedNode<LruCacheEntry<K, V>> = tail;
+    tailNode.setNext(node);
+    this.tail = node;
+  }
+
+  fun unlinkNode(target: LinkedNode<LruCacheEntry<K, V>>) {
+    let previous: optional<LinkedNode<LruCacheEntry<K, V>>> = nil;
+    let current = this.head;
+    while (current != nil) {
+      let node: LinkedNode<LruCacheEntry<K, V>> = current;
+      if (node == target) {
+        let next = node.nextNode();
+        if (previous == nil) {
+          this.head = next;
+        } else {
+          let previousNode: LinkedNode<LruCacheEntry<K, V>> = previous;
+          previousNode.setNext(next);
+        }
+        if (next == nil) {
+          this.tail = previous;
+        }
+        node.setNext(nil);
+        return;
+      }
+      previous = current;
+      current = node.nextNode();
     }
-    this.keys[index] = key;
-    this.values[index] = value;
+  }
+
+  fun moveToBack(node: LinkedNode<LruCacheEntry<K, V>>) {
+    if (node.nextNode() == nil) {
+      return;
+    }
+    this.unlinkNode(node);
+    this.appendNode(node);
+  }
+
+  fun removeNode(node: LinkedNode<LruCacheEntry<K, V>>) {
+    this.unlinkNode(node);
+    this.count -= 1;
   }
 
   fun capacity(): number {
@@ -54,63 +86,81 @@ impl LruCache<K: Eq, V> {
   }
 
   fun size(): number {
-    return this.keys.len();
+    return this.count;
   }
 
   fun isEmpty(): bool {
-    return this.keys.len() == 0;
+    return this.count == 0;
   }
 
   fun has(key: K): bool {
-    return this.indexOf(key) >= 0;
+    return this.findNode(key) != nil;
   }
 
   fun get(key: K): optional<V> {
-    let index = this.indexOf(key);
-    if (index < 0) {
+    let found = this.findNode(key);
+    if (found == nil) {
       return nil;
     }
-    let value = this.values[index];
-    this.moveToBack(index);
-    return value;
+    let node: LinkedNode<LruCacheEntry<K, V>> = found;
+    let entry = node.readValue();
+    this.moveToBack(node);
+    return entry.value;
   }
 
   fun put(key: K, value: V): bool {
     if (this.limit <= 0) {
       return false;
     }
-    let index = this.indexOf(key);
-    if (index >= 0) {
-      this.values[index] = value;
-      this.moveToBack(index);
+
+    let found = this.findNode(key);
+    if (found != nil) {
+      let node: LinkedNode<LruCacheEntry<K, V>> = found;
+      let entry = node.readValue();
+      entry.value = value;
+      node.setValue(entry);
+      this.moveToBack(node);
       return true;
     }
-    if (this.keys.len() >= this.limit) {
-      this.removeAt(0);
+
+    if (this.count >= this.limit) {
+      let head = this.head;
+      if (head != nil) {
+        let headNode: LinkedNode<LruCacheEntry<K, V>> = head;
+        this.removeNode(headNode);
+      }
     }
-    this.keys.push(key);
-    this.values.push(value);
+
+    let node = newLinkedNode<LruCacheEntry<K, V>>(LruCacheEntry<K, V> {
+      key: key,
+      value: value
+    });
+    this.appendNode(node);
+    this.count += 1;
     return true;
   }
 
   fun discard(key: K): bool {
-    let index = this.indexOf(key);
-    if (index < 0) {
+    let found = this.findNode(key);
+    if (found == nil) {
       return false;
     }
-    this.removeAt(index);
+    let node: LinkedNode<LruCacheEntry<K, V>> = found;
+    this.removeNode(node);
     return true;
   }
 
   fun snapshot(): [LruCacheEntry<K, V>] {
     let result: [LruCacheEntry<K, V>] = [];
-    let index = 0;
-    while (index < this.keys.len()) {
+    let current = this.head;
+    while (current != nil) {
+      let node: LinkedNode<LruCacheEntry<K, V>> = current;
+      let entry = node.readValue();
       result.push(LruCacheEntry<K, V> {
-        key: this.keys[index],
-        value: this.values[index]
+        key: entry.key,
+        value: entry.value
       });
-      index += 1;
+      current = node.nextNode();
     }
     return result;
   }
@@ -121,7 +171,12 @@ fun newLruCache<K: Eq, V>(capacity: number): LruCache<K, V> {
   if (limit < 0) {
     limit = 0;
   }
-  return LruCache<K, V> { keys: [], values: [], limit: limit };
+  return LruCache<K, V> {
+    head: nil,
+    tail: nil,
+    count: 0,
+    limit: limit
+  };
 }
 
 struct LfuCacheEntry<K, V> {
@@ -130,59 +185,105 @@ struct LfuCacheEntry<K, V> {
   frequency: number
 }
 
+struct LfuCacheNode<K, V> {
+  entry: LfuCacheEntry<K, V>,
+  lastUsed: number
+}
+
 struct LfuCache<K: Eq, V> {
-  private keys: [K],
-  private values: [V],
-  private frequencies: [number],
-  private lastUsed: [number],
+  private head: optional<LinkedNode<LfuCacheNode<K, V>>>,
+  private tail: optional<LinkedNode<LfuCacheNode<K, V>>>,
+  private count: number,
   private limit: number,
   private clock: number
 }
 
 impl LfuCache<K: Eq, V> {
-  fun indexOf(key: K): number {
-    let index = 0;
-    while (index < this.keys.len()) {
-      if (this.keys[index] == key) {
-        return index;
+  // Keep storage order stable for snapshot(); recency is recorded in each
+  // node's lastUsed field and is used only when selecting an eviction.
+  fun findNode(key: K): optional<LinkedNode<LfuCacheNode<K, V>>> {
+    let current = this.head;
+    while (current != nil) {
+      let node: LinkedNode<LfuCacheNode<K, V>> = current;
+      let state = node.readValue();
+      if (state.entry.key == key) {
+        return node;
       }
-      index += 1;
+      current = node.nextNode();
     }
-    return -1;
+    return nil;
   }
 
-  fun touch(index: number) {
-    this.frequencies[index] += 1;
-    this.clock += 1;
-    this.lastUsed[index] = this.clock;
+  fun appendNode(node: LinkedNode<LfuCacheNode<K, V>>) {
+    let tail = this.tail;
+    if (tail == nil) {
+      this.head = node;
+      this.tail = node;
+      return;
+    }
+
+    let tailNode: LinkedNode<LfuCacheNode<K, V>> = tail;
+    tailNode.setNext(node);
+    this.tail = node;
   }
 
-  fun evictionIndex(): number {
-    let candidate = 0;
-    let index = 1;
-    while (index < this.keys.len()) {
-      if (this.frequencies[index] < this.frequencies[candidate]
-          || (this.frequencies[index] == this.frequencies[candidate]
-              && this.lastUsed[index] < this.lastUsed[candidate])) {
-        candidate = index;
+  fun unlinkNode(target: LinkedNode<LfuCacheNode<K, V>>) {
+    let previous: optional<LinkedNode<LfuCacheNode<K, V>>> = nil;
+    let current = this.head;
+    while (current != nil) {
+      let node: LinkedNode<LfuCacheNode<K, V>> = current;
+      if (node == target) {
+        let next = node.nextNode();
+        if (previous == nil) {
+          this.head = next;
+        } else {
+          let previousNode: LinkedNode<LfuCacheNode<K, V>> = previous;
+          previousNode.setNext(next);
+        }
+        if (next == nil) {
+          this.tail = previous;
+        }
+        node.setNext(nil);
+        return;
       }
-      index += 1;
+      previous = current;
+      current = node.nextNode();
+    }
+  }
+
+  fun removeNode(node: LinkedNode<LfuCacheNode<K, V>>) {
+    this.unlinkNode(node);
+    this.count -= 1;
+  }
+
+  fun touch(node: LinkedNode<LfuCacheNode<K, V>>) {
+    let state = node.readValue();
+    state.entry.frequency += 1;
+    this.clock += 1;
+    state.lastUsed = this.clock;
+    node.setValue(state);
+  }
+
+  fun evictionNode(): optional<LinkedNode<LfuCacheNode<K, V>>> {
+    let head = this.head;
+    if (head == nil) {
+      return nil;
+    }
+
+    let candidate: LinkedNode<LfuCacheNode<K, V>> = head;
+    let current = candidate.nextNode();
+    while (current != nil) {
+      let node: LinkedNode<LfuCacheNode<K, V>> = current;
+      let state = node.readValue();
+      let candidateState = candidate.readValue();
+      if (state.entry.frequency < candidateState.entry.frequency
+          || (state.entry.frequency == candidateState.entry.frequency
+              && state.lastUsed < candidateState.lastUsed)) {
+        candidate = node;
+      }
+      current = node.nextNode();
     }
     return candidate;
-  }
-
-  fun removeAt(index: number) {
-    while (index + 1 < this.keys.len()) {
-      this.keys[index] = this.keys[index + 1];
-      this.values[index] = this.values[index + 1];
-      this.frequencies[index] = this.frequencies[index + 1];
-      this.lastUsed[index] = this.lastUsed[index + 1];
-      index += 1;
-    }
-    this.keys.pop();
-    this.values.pop();
-    this.frequencies.pop();
-    this.lastUsed.pop();
   }
 
   fun capacity(): number {
@@ -190,75 +291,97 @@ impl LfuCache<K: Eq, V> {
   }
 
   fun size(): number {
-    return this.keys.len();
+    return this.count;
   }
 
   fun isEmpty(): bool {
-    return this.keys.len() == 0;
+    return this.count == 0;
   }
 
   fun has(key: K): bool {
-    return this.indexOf(key) >= 0;
+    return this.findNode(key) != nil;
   }
 
   fun get(key: K): optional<V> {
-    let index = this.indexOf(key);
-    if (index < 0) {
+    let found = this.findNode(key);
+    if (found == nil) {
       return nil;
     }
-    let value = this.values[index];
-    this.touch(index);
+    let node: LinkedNode<LfuCacheNode<K, V>> = found;
+    let state = node.readValue();
+    let value = state.entry.value;
+    this.touch(node);
     return value;
   }
 
   fun frequencyOf(key: K): optional<number> {
-    let index = this.indexOf(key);
-    if (index < 0) {
+    let found = this.findNode(key);
+    if (found == nil) {
       return nil;
     }
-    return this.frequencies[index];
+    let node: LinkedNode<LfuCacheNode<K, V>> = found;
+    return node.readValue().entry.frequency;
   }
 
   fun put(key: K, value: V): bool {
     if (this.limit <= 0) {
       return false;
     }
-    let index = this.indexOf(key);
-    if (index >= 0) {
-      this.values[index] = value;
-      this.touch(index);
+
+    let found = this.findNode(key);
+    if (found != nil) {
+      let node: LinkedNode<LfuCacheNode<K, V>> = found;
+      let state = node.readValue();
+      state.entry.value = value;
+      node.setValue(state);
+      this.touch(node);
       return true;
     }
-    if (this.keys.len() >= this.limit) {
-      this.removeAt(this.evictionIndex());
+
+    if (this.count >= this.limit) {
+      let eviction = this.evictionNode();
+      if (eviction != nil) {
+        let evictionNode: LinkedNode<LfuCacheNode<K, V>> = eviction;
+        this.removeNode(evictionNode);
+      }
     }
-    this.keys.push(key);
-    this.values.push(value);
-    this.frequencies.push(1);
+
     this.clock += 1;
-    this.lastUsed.push(this.clock);
+    let node = newLinkedNode<LfuCacheNode<K, V>>(LfuCacheNode<K, V> {
+      entry: LfuCacheEntry<K, V> {
+        key: key,
+        value: value,
+        frequency: 1
+      },
+      lastUsed: this.clock
+    });
+    this.appendNode(node);
+    this.count += 1;
     return true;
   }
 
   fun discard(key: K): bool {
-    let index = this.indexOf(key);
-    if (index < 0) {
+    let found = this.findNode(key);
+    if (found == nil) {
       return false;
     }
-    this.removeAt(index);
+    let node: LinkedNode<LfuCacheNode<K, V>> = found;
+    this.removeNode(node);
     return true;
   }
 
   fun snapshot(): [LfuCacheEntry<K, V>] {
     let result: [LfuCacheEntry<K, V>] = [];
-    let index = 0;
-    while (index < this.keys.len()) {
+    let current = this.head;
+    while (current != nil) {
+      let node: LinkedNode<LfuCacheNode<K, V>> = current;
+      let state = node.readValue();
       result.push(LfuCacheEntry<K, V> {
-        key: this.keys[index],
-        value: this.values[index],
-        frequency: this.frequencies[index]
+        key: state.entry.key,
+        value: state.entry.value,
+        frequency: state.entry.frequency
       });
-      index += 1;
+      current = node.nextNode();
     }
     return result;
   }
@@ -270,10 +393,9 @@ fun newLfuCache<K: Eq, V>(capacity: number): LfuCache<K, V> {
     limit = 0;
   }
   return LfuCache<K, V> {
-    keys: [],
-    values: [],
-    frequencies: [],
-    lastUsed: [],
+    head: nil,
+    tail: nil,
+    count: 0,
     limit: limit,
     clock: 0
   };

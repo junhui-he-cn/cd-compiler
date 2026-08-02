@@ -37,3 +37,11 @@ print cache.isEmpty();
 let snapshot = cache.snapshot();
 snapshot[0].value = 99;
 print render(cache.snapshot());
+
+let nullable = ds.newLruCache<string, optional<number>>(2);
+print nullable.put("nil", nil);
+print nullable.has("nil");
+print nullable.get("nil");
+print nullable.has("missing");
+print nullable.size();
+print nullable.snapshot();

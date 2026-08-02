@@ -29,11 +29,27 @@ Issue #15 defines the stable key contract for the generic hash containers.
       meaningful benefit over the current deterministic scans.
 - [x] Complete named-struct ordering operators provide a static `T: Ord`
       witness (and therefore `T: Eq`); partial sets remain direct-only (Issue #17).
-- [ ] Decide whether to migrate LRU/LFU internals to node handles; preserve the
-      current array-backed APIs until key ownership, eviction, and strong-cycle
-      behavior are specified for that separate slice.
+- [x] Migrate LRU internals to private singly-linked node handles while
+      preserving the public API, `K: Eq` contract, snapshot copies, and explicit
+      detach-on-eviction behavior.
+- [x] Migrate LFU internals to private singly-linked node handles while
+      preserving the public API, storage-order snapshots, frequency tie-breaks,
+      and explicit detach-on-eviction behavior.
+- [x] Evaluate the node-backed LFU against the previous array backend with a
+      repeatable scaled workload; the node version reduces profiled instruction
+      count but increases allocation pressure and is slower in wall-clock runtime.
+      Keep the current node-backed API and defer frequency buckets or an indexed
+      backend until a larger real workload justifies that representation.
+- [x] Add a private tail handle to `LinkedList<T>` after the recursive node
+      capability became available; preserve the public API and reduce `pushBack`
+      from linear traversal to `O(1)`. On the 1000-insert workload, the old
+      representation exceeded the default VM instruction budget; with unlimited
+      profiling it used 17,578,780 instructions versus 106,782 for the tail
+      version, so the optimization is retained.
 
 The built-in map remains primitive-keyed; generic hash containers use their own
-array-backed bucket tables and the stable key contract above. Other library
-structures continue to use explicit equality or `less` callbacks where that is
-the more appropriate API.
+array-backed bucket tables and the stable key contract above. LRU and LFU use
+equality lookup plus private one-way nodes and therefore do not add a `Hash`
+requirement; the high-performance LFU backend remains deferred. Other library
+structures continue to use their existing array backends or explicit equality/
+`less` callbacks where that is the more appropriate API.

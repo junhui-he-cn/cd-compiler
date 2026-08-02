@@ -1,0 +1,23 @@
+import "../../data_structures.cd" as ds;
+
+let list = ds.newLinkedList<number>();
+let value = 0;
+while (value < 1000) {
+  list.pushBack(value);
+  value += 1;
+}
+
+let removed = 0;
+while (removed < 500) {
+  list.popFront();
+  removed += 1;
+}
+
+while (value < 1500) {
+  list.pushBack(value);
+  value += 1;
+}
+
+print list.size();
+print list.popFront();
+print list.size();

@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "benchmark_revision": "bench-2026-08-01-r1",
+  "benchmark_revision": "bench-2026-08-02-r2",
   "default_repeat": 3,
   "workloads": [
     {
@@ -72,6 +72,26 @@
         "tests/bytecode_artifacts/benchmark_execution_loop/input.cd"
       ],
       "expected_output": "tests/bytecode_artifacts/benchmark_execution_loop/run.out"
+    },
+    {
+      "workload_id": "library_lfu_cache",
+      "description": "Scaled LFU cache lookup, touch, and eviction workload.",
+      "artifact_mode": "linked",
+      "execution": "success",
+      "sources": [
+        "library/tests/data_structures_lfu_cache_workload/input.cd"
+      ],
+      "expected_output": "library/tests/data_structures_lfu_cache_workload/run.out"
+    },
+    {
+      "workload_id": "library_linked_list",
+      "description": "Scaled linked-list tail insertion and front removal workload.",
+      "artifact_mode": "linked",
+      "execution": "success",
+      "sources": [
+        "library/tests/linked_structures_workload/input.cd"
+      ],
+      "expected_output": "library/tests/linked_structures_workload/run.out"
     },
     {
       "workload_id": "maps",
