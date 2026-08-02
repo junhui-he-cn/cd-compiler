@@ -24,3 +24,9 @@ false
 false
 true
 true
+true
+true
+1
+nil
+false
+[{key: nil, value: nil, frequency: 2}]

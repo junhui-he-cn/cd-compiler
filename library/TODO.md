@@ -32,12 +32,15 @@ Issue #15 defines the stable key contract for the generic hash containers.
 - [x] Migrate LRU internals to private singly-linked node handles while
       preserving the public API, `K: Eq` contract, snapshot copies, and explicit
       detach-on-eviction behavior.
-- [ ] Decide whether to migrate LFU internals to node handles; preserve the
-      current array-backed API until frequency-bucket ownership and eviction
-      behavior are specified for that separate slice.
+- [x] Migrate LFU internals to private singly-linked node handles while
+      preserving the public API, storage-order snapshots, frequency tie-breaks,
+      and explicit detach-on-eviction behavior.
+- [ ] Decide whether to add frequency buckets or an indexed high-performance LFU
+      backend; preserve the current node-backed API until that representation is
+      justified by a workload.
 
 The built-in map remains primitive-keyed; generic hash containers use their own
-array-backed bucket tables and the stable key contract above. LRU uses equality
-lookup plus private one-way nodes and therefore does not add a `Hash` requirement;
-LFU and other library structures continue to use their existing array backends or
-explicit equality/`less` callbacks where that is the more appropriate API.
+array-backed bucket tables and the stable key contract above. LRU and LFU use
+equality lookup plus private one-way nodes and therefore do not add a `Hash`
+requirement; other library structures continue to use their existing array
+backends or explicit equality/`less` callbacks where that is the more appropriate API.

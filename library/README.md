@@ -5,7 +5,7 @@ Compiler Design language. It currently provides generic array-backed `Stack<T>`,
 `Queue<T>`, `Deque<T>`, `RingBuffer<T>`, `BinaryHeap<T>`, `PriorityQueue<T>`, and
 numeric `MedianHeap` types, plus the
 generic `Option<T>`, `Result<T, E>`, immutable `List<T>`, and array-backed
-`Tree<T>`, `AvlTree<T>`, `RedBlackTree<T>`, `Set<T: Eq>`, `HashSet<T: Eq + Hash>`, `OrderedSet<T>`, `OrderedMap<K, V>`, `HashMap<K: Eq + Hash, V>`, `BiMap<K: Eq, V: Eq>`, node-backed `LruCache<K: Eq, V>`, array-backed `LfuCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
+`Tree<T>`, `AvlTree<T>`, `RedBlackTree<T>`, `Set<T: Eq>`, `HashSet<T: Eq + Hash>`, `OrderedSet<T>`, `OrderedMap<K, V>`, `HashMap<K: Eq + Hash, V>`, `BiMap<K: Eq, V: Eq>`, node-backed `LruCache<K: Eq, V>` and `LfuCache<K: Eq, V>`, and `MultiSet<T: Eq>` types. It also provides an array-backed
 `MultiMap<K: Eq, V: Eq>` for one-to-many mappings, immutable BST helpers, and basic generic array algorithms,
 including comparator-based sorting, window helpers, and interval merge.
 It also provides mutable singly linked `LinkedNode<T>`/`LinkedList<T>` structures
@@ -647,7 +647,8 @@ removal are `O(n)`; `snapshot` is `O(n)` and allocates a new outer array and ent
 values. Snapshot entries are independent structs, while their key and value
 fields retain the library's normal shallow alias behavior.
 
-`LfuCache<K: Eq, V>` is an array-backed least-frequently-used cache:
+`LfuCache<K: Eq, V>` is a least-frequently-used cache backed by private singly
+linked nodes:
 
 - `newLfuCache<K: Eq, V>(capacity): LfuCache<K, V>` — create a cache with the
   floored non-negative capacity;
@@ -661,9 +662,12 @@ fields retain the library's normal shallow alias behavior.
   entries; snapshots contain `[LfuCacheEntry<K, V>]` with each frequency.
 
 When full, the entry with the smallest frequency is evicted; ties evict the
-least recently used entry. New entries start at frequency `1`. Lookup, eviction,
-and removal are `O(n)` in this array implementation; `snapshot` is `O(n)` and
-returns entries in current storage order.
+least recently used entry. New entries start at frequency `1`. Nodes retain a
+private `lastUsed` counter while the linked storage order remains stable for
+`snapshot()`, so reads and updates do not reorder snapshot entries. Eviction and
+discard explicitly clear the removed node's link; no cache-owned strong cycle is
+created. Lookup, eviction, and removal are `O(n)`; `snapshot` is `O(n)` and
+returns fresh entries in current storage order.
 
 `MultiSet<T: Eq>` stores one entry per distinct value and its occurrence count:
 

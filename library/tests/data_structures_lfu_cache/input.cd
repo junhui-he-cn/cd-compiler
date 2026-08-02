@@ -46,3 +46,11 @@ print cache.discard("d");
 print cache.isEmpty();
 print cache.discard("c");
 print cache.isEmpty();
+
+let nullable = ds.newLfuCache<string, optional<number>>(1);
+print nullable.put("nil", nil);
+print nullable.has("nil");
+print nullable.frequencyOf("nil");
+print nullable.get("nil");
+print nullable.has("missing");
+print nullable.snapshot();
