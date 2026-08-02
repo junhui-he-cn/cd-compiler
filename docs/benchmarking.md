@@ -46,6 +46,7 @@ The checked-in manifest covers:
   (`execution_loop`);
 - array callback helpers and map mutation/iteration;
 - native math and Unicode strings;
+- the scaled public-library LFU cache workload (`library_lfu_cache`);
 - independent module emission, linking, load, and execution (`module_link`);
 - a deterministic runtime-error/diagnostic path (`runtime_error`).
 

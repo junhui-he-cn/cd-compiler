@@ -1,0 +1,33 @@
+import "../../data_structures.cd" as ds;
+
+let cache = ds.newLfuCache<string, number>(64);
+let keyIndex = 0;
+let iteration = 0;
+let checksum = 0;
+
+while (iteration < 1000) {
+  let key = "key" + str(keyIndex);
+  let found = cache.get(key);
+  if (found != nil) {
+    checksum += found;
+  } else {
+    cache.put(key, iteration);
+  }
+
+  cache.get("key0");
+  cache.get("key1");
+
+  if (keyIndex >= 127) {
+    keyIndex = 0;
+  } else {
+    keyIndex += 1;
+  }
+  iteration += 1;
+}
+
+print cache.size();
+print checksum;
+print cache.frequencyOf("key0");
+print cache.frequencyOf("key1");
+print cache.has("key63");
+print cache.has("key127");

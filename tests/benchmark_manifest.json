@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "benchmark_revision": "bench-2026-07-30-r3",
+  "benchmark_revision": "bench-2026-08-02-r1",
   "default_repeat": 3,
   "workloads": [
     {
@@ -62,6 +62,16 @@
         "tests/bytecode_artifacts/benchmark_execution_loop/input.cd"
       ],
       "expected_output": "tests/bytecode_artifacts/benchmark_execution_loop/run.out"
+    },
+    {
+      "workload_id": "library_lfu_cache",
+      "description": "Scaled LFU cache lookup, touch, and eviction workload.",
+      "artifact_mode": "linked",
+      "execution": "success",
+      "sources": [
+        "library/tests/data_structures_lfu_cache_workload/input.cd"
+      ],
+      "expected_output": "library/tests/data_structures_lfu_cache_workload/run.out"
     },
     {
       "workload_id": "maps",
