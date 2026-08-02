@@ -1068,10 +1068,9 @@ void threadEmptyJumpBlocks(
     }
 }
 
-bool isExplicitControlFlowTerminator(IROp op)
+bool hasNoImplicitFallthrough(IROp op)
 {
-    return op == IROp::Jump || op == IROp::JumpIfFalse || op == IROp::JumpIfTrue
-        || op == IROp::Return;
+    return op == IROp::Jump || op == IROp::Return;
 }
 
 std::vector<CFGBlockId> blockOrderForMerge(
@@ -1132,12 +1131,16 @@ bool preservesFallthroughEdges(
             }
             continue;
         }
-        if (cfgBlock.firstInstruction >= cfgBlock.endInstruction
-            || isExplicitControlFlowTerminator(
-                function.instructions[cfgBlock.endInstruction - 1].op)) {
+        if (cfgBlock.firstInstruction >= cfgBlock.endInstruction) {
             continue;
         }
-        if (cfgBlock.successors.size() != 1
+        const IROp terminator = function.instructions[cfgBlock.endInstruction - 1].op;
+        if (hasNoImplicitFallthrough(terminator)) {
+            continue;
+        }
+        if ((terminator != IROp::JumpIfFalse && terminator != IROp::JumpIfTrue
+                && cfgBlock.successors.size() != 1)
+            || cfgBlock.successors.empty()
             || nextBlock(positions[block]) != cfgBlock.successors.front()) {
             return false;
         }

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "decision_revision": "m7-2026-08-01-r18",
+  "decision_revision": "m7-2026-08-02-r19",
   "inventory_revision": "m0d-2026-07-22-r1",
   "decision_id": "M7-IR-SSA-001",
   "domain": "internal-ssa-optimization",
@@ -180,6 +180,7 @@
       "threading through empty jump-only blocks",
       "conservative unique-predecessor/unique-successor non-empty block merge",
       "fallthrough, MakeFunction, and dependency-order preservation during block merge",
+      "conditional fallthrough validation and self-loop rejection during block merge",
       "per-pass SSA verification",
       "stable diagnostic pipeline fingerprints",
       "deterministic optimization counters",
@@ -191,6 +192,26 @@
       "general CFG rewriting beyond the constrained block merge",
       "default O0 replacement",
       "optimized trace event-count contract"
+    ]
+  },
+  "cfg_rewrite_boundary_slice": {
+    "status": "deferred_on_feature_branch",
+    "decision": "Keep O1 limited to the validated unique-predecessor/unique-successor non-empty block merge. Do not admit general non-empty block merging or threading until a layout-aware edge-rewrite contract exists.",
+    "rationale": [
+      "The current post-de-SSA transform must preserve implicit conditional fallthrough edges.",
+      "General rewriting would require explicit handling for critical edges, dependency anchors, source mappings, and MakeFunction ordering.",
+      "The existing O0 default and cdbc 0.1 boundary do not require broader CFG rewriting."
+    ],
+    "revisit_gate": [
+      "layout-aware edge rewrite representation",
+      "semantic parity corpus for loops, nested branches, closures, traps, and evaluation order",
+      "source/debug and module-dependency remapping proof"
+    ],
+    "test_case_id": "ctest.optimizer",
+    "not_included": [
+      "general CFG rewriting beyond the constrained block merge",
+      "optimized trace-event equivalence",
+      "default O1 lowering"
     ]
   },
   "constant_evaluation_boundary_slice": {

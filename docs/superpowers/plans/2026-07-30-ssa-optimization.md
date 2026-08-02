@@ -28,8 +28,9 @@ normalization followed by post-de-SSA pruning of blocks proven unreachable,
 removes only redundant fallthrough jumps, threads through jump-only blocks,
 and admits a conservative unique-predecessor/unique-successor non-empty block
 merge with deterministic layout remapping. General CFG rewriting and
-threading across arbitrary non-empty blocks remain future implementation
-slices. The
+threading across arbitrary non-empty blocks are intentionally deferred until a
+layout-aware edge-rewrite contract and broader semantic/source-mapping parity
+corpus are available. The
 constant-evaluation boundary is now frozen in `Optimizer` and covered by
 `ctest.optimizer`: only finite, serializable primitive successes are foldable;
 runtime traps and non-finite results are never silently folded. The O0
@@ -143,7 +144,8 @@ emitters. Branch normalization and pruning preserve retained order and
 remap source/insertion and dependency offsets; only jumps targeting the next
 retained instruction or a merge-safe unique successor are removed, and
 threading may skip only a block with one unconditional jump. General CFG
-rewriting is not admitted.
+rewriting is intentionally deferred; conditional fallthrough edges and
+self-loop merge candidates are checked explicitly.
 
 Gate: O0 goldens remain unchanged; O1 branch/constant/copy cases show the
 intended IR simplification and exact C++/Rust output parity; runtime traps and

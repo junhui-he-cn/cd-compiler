@@ -403,7 +403,9 @@ only unreachable ordinary-IR blocks while remapping source and dependency
 offsets. Its merge pass only reorders a non-empty block with a unique
 predecessor/successor relationship after validating fallthrough edges,
 `MakeFunction` order, and dependency-offset order; broader block rewriting is
-not admitted.
+not admitted. This branch resolves the general CFG rewrite question in favor of
+deferral: revisit it only after a layout-aware edge-rewrite contract and a
+broader semantic/source-mapping parity corpus exist.
 
 **Gate:** CFG/SSA verifier and O0 round-trip tests; O0/O1 semantic parity over
 control flow, closures, mutation, callbacks, traps, and evaluation order;

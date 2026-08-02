@@ -385,7 +385,9 @@ all fallthrough edges remain valid in the new deterministic order, the
 `MakeFunction` reference sequence is unchanged, and module dependency offsets
 remain ordered after remapping. The merge removes only the predecessor's
 unconditional jump; general CFG rewriting and arbitrary non-empty block
-threading remain deferred.
+threading remain deferred. The implementation explicitly validates implicit
+fallthrough edges for conditional terminators and rejects self-loop candidates
+before attempting layout reordering.
 
 The branch now freezes the internal binding/effect contract in
 `include/BindingMetadata.hpp` and `include/IR.hpp`. `IRBinding` carries a
@@ -407,13 +409,17 @@ flow, change closure ownership, add a new runtime representation, change
 `cdbc 0.1`, optimize across module boundaries, add a JIT, add garbage
 collection, or make optimization mandatory.
 
-## Open decisions before making optimized lowering the default
+## Deferred decisions before making optimized lowering the default
+
+The branch decision is to keep the current unique-predecessor/unique-successor
+merge as the complete O1 CFG rewrite boundary. General non-empty block merging
+and threading are deferred until a layout-aware edge-rewrite contract can prove
+critical-edge handling, dependency-anchor remapping, source/debug mapping, and
+semantic parity. The current O0 default and `cdbc 0.1` boundary do not require
+that broader rewrite.
 
 The following remain before making optimized lowering the default:
 
-1. whether the conservative O1 operation set should next admit general block
-   merging and threading across non-empty blocks beyond the current
-   unique-predecessor/unique-successor merge boundary;
-2. the register-allocation strategy and its source-location mapping;
-3. the optimized trace-local materialization contract and whether it is strong
+1. the register-allocation strategy and its source-location mapping;
+2. the optimized trace-local materialization contract and whether it is strong
    enough to replace the O0 default.
