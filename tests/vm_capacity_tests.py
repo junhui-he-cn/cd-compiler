@@ -137,6 +137,63 @@ def vm_command(binary: Path, *arguments: str) -> list[str]:
     return [str(binary), *arguments]
 
 
+def profile_heap(
+    vm_binary: Path,
+    artifact: Path,
+    label: str,
+    measurements: list[Measurement],
+    observations: list[tuple[str, int, int]],
+) -> str | None:
+    first = run_measured(
+        vm_command(vm_binary, "profile", str(artifact)),
+        f"{label} profile",
+    )
+    measurements.append(first)
+    second = run_measured(
+        vm_command(vm_binary, "profile", str(artifact)),
+        f"{label} profile repeat",
+    )
+    measurements.append(second)
+    if (first.returncode, first.stdout, first.stderr) != (
+        second.returncode,
+        second.stdout,
+        second.stderr,
+    ):
+        return f"{label} profile output was not deterministic"
+    if first.returncode != 0 or first.stderr:
+        return describe_failure(first)
+    if "profile status=ok" not in first.stdout:
+        return f"{label} profile did not report success: {first.stdout!r}"
+
+    heap_line = next(
+        (line for line in first.stdout.splitlines() if line.startswith("profile heap ")),
+        None,
+    )
+    if heap_line is None:
+        return f"{label} profile omitted the heap report: {first.stdout!r}"
+    fields: dict[str, int] = {}
+    for token in heap_line.split()[2:]:
+        name, separator, raw_value = token.partition("=")
+        if not separator:
+            return f"{label} profile has malformed heap field: {token!r}"
+        try:
+            fields[name] = int(raw_value)
+        except ValueError:
+            return f"{label} profile has non-numeric heap field: {token!r}"
+
+    live_bytes = fields.get("tracked_heap_estimated_live_bytes")
+    peak_bytes = fields.get("tracked_heap_estimated_peak_live_bytes")
+    if live_bytes is None or peak_bytes is None:
+        return f"{label} profile omitted estimated heap fields: {heap_line!r}"
+    if live_bytes <= 0 or peak_bytes < live_bytes:
+        return (
+            f"{label} profile has invalid estimated heap values: "
+            f"live={live_bytes} peak={peak_bytes}"
+        )
+    observations.append((label, live_bytes, peak_bytes))
+    return None
+
+
 def main() -> int:
     if len(sys.argv) != 3:
         return fail("usage: vm_capacity_tests.py <compiler> <vm-rs>")
@@ -159,6 +216,7 @@ def main() -> int:
         return fail(f"Rust VM binary was not built: {vm_binary}")
 
     measurements: list[Measurement] = []
+    profile_observations: list[tuple[str, int, int]] = []
     with tempfile.TemporaryDirectory(prefix="compiler-design-vm-capacity-") as temporary:
         root = Path(temporary)
 
@@ -188,6 +246,15 @@ def main() -> int:
         )
         measurements.append(result)
         error = expect_success(result, f"{array_length}\n")
+        if error is not None:
+            return fail(error)
+        error = profile_heap(
+            vm_binary,
+            large_array_artifact,
+            "large-array",
+            measurements,
+            profile_observations,
+        )
         if error is not None:
             return fail(error)
 
@@ -238,6 +305,15 @@ def main() -> int:
         error = expect_success(
             result,
             f"{map_entry_count}\n{map_entry_count - 1}\n",
+        )
+        if error is not None:
+            return fail(error)
+        error = profile_heap(
+            vm_binary,
+            large_map_artifact,
+            "large-map",
+            measurements,
+            profile_observations,
         )
         if error is not None:
             return fail(error)
@@ -302,6 +378,15 @@ def main() -> int:
         )
         measurements.append(result)
         error = expect_success(result, churn_output)
+        if error is not None:
+            return fail(error)
+        error = profile_heap(
+            vm_binary,
+            churn_artifact,
+            "aggregate-allocation-churn",
+            measurements,
+            profile_observations,
+        )
         if error is not None:
             return fail(error)
 
@@ -379,6 +464,15 @@ def main() -> int:
         error = expect_success(
             result,
             f"{struct_entry_count}\n{struct_entry_count - 1}\n",
+        )
+        if error is not None:
+            return fail(error)
+        error = profile_heap(
+            vm_binary,
+            large_struct_artifact,
+            "large-struct-array",
+            measurements,
+            profile_observations,
         )
         if error is not None:
             return fail(error)
@@ -779,10 +873,16 @@ def main() -> int:
             f"  {result.label}: elapsed_ms={result.elapsed_seconds * 1000:.3f} "
             f"peak_rss_kib={rss} exit={result.returncode}"
         )
+    print("VM profile retained-byte observations:")
+    for label, live_bytes, peak_bytes in profile_observations:
+        print(
+            f"  {label}: estimated_live_bytes={live_bytes} "
+            f"estimated_peak_live_bytes={peak_bytes}"
+        )
     print(
         "VM capacity tests: aggregate churn, large arrays/maps/structs, long Unicode "
         "strings and output budgets, deep calls, debug tables, long-chain and diamond "
-        "module graphs, and budget rejection boundaries validated"
+        "module graphs, budget rejection boundaries, and retained-byte profiles validated"
     )
     return 0
 

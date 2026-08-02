@@ -714,6 +714,13 @@ corpus 新增 512 次 array/map/named-struct replacement，固定默认和
 观察策略和 `.cdbc 0.1` 保持不变；详见
 [`docs/decisions/vm-capacity-006-aggregate-churn.md`](decisions/vm-capacity-006-aggregate-churn.md)。
 
+**状态（第七 capacity/profile 交叉观测窄切片已完成，2026-08-02）：** capacity
+corpus 的 large-array、large-map、nested named-struct 和 aggregate-churn artifacts
+现在各自重复执行 Rust `profile`，固定报告确定性、estimated live/peak retained-byte
+字段存在且为正，并打印 VM-owned representation observations；现有 run、预算边界、
+stdout、host RSS 观察策略和 `.cdbc 0.1` 保持不变；详见
+[`docs/decisions/vm-capacity-007-profile-retained-bytes.md`](decisions/vm-capacity-007-profile-retained-bytes.md)。
+
 ## 9. VM-6：运行时生态与兼容性扩展（P2）
 
 ### VM-6A：native ABI 与注册表
@@ -854,8 +861,9 @@ deterministic profile counter/tracked-heap slice、VM-4C 的第一 structured ki
 preamble/function-body cache/frame-boundary/borrowed-call-site/name-operand/global-cell-cache/inline-call-arguments/heap-observation-guard/checkpoint-fast-path/checkpoint-mode-cache/borrow-register-operands/borrow-native-name/borrow-function-values/borrow-caller-name/shared-frame-names/profile-off-hook-guards/inline-native-arguments/decoded-constant-cache/borrowed-global-cell/comparison-dispatch/borrowed-Len-operand/borrowed-Print-operand/borrowed-Field-receiver/borrowed-Index-operands/borrowed-primitive-comparison-operands/borrowed-AssertArray-operand/borrowed-AssertNumber-operand/return-register-transfer slices 已完成；VM-6A 的 registry dispatch/metadata、centralized arity validation、resource touchpoint profile 与 signature shape metadata slices 也已完成；GC、persistent VM、
 JIT 和新的 artifact version 仍未进入默认队列。VM-5C 的第一 capacity corpus、
 第二 long-Unicode-string、第三 long-Unicode-output、第四 large-map payload、第五
-nested named-struct payload 和第六 aggregate-allocation-churn slices，以及 VM-4B 的第三
-estimated-retained-byte profile、VM-4C 的第二 resource-context slice 也已完成。
+nested named-struct payload、第六 aggregate-allocation-churn 和第七 capacity/profile
+交叉观测 slices，以及 VM-4B 的第三 estimated-retained-byte profile、VM-4C 的第二
+resource-context slice 也已完成。
 VM-4B 的 wall-clock/host-RSS 扩展、VM-4C 的统一 host schema、VM-5B 的后续性能
 优化和 VM-5C 的更大容量/host-memory policy 都需要独立决策；下一步应等待明确
 的 host consumer 再决定是否进入 versioned structured diagnostics schema，或以
