@@ -723,6 +723,22 @@ void test_program_adapter_o1_merges_reordered_linear_blocks()
     assert(rebuilt.moduleDependencies().front().instructionOffset == 10);
 }
 
+void test_program_adapter_o1_keeps_self_loop_blocks()
+{
+    IRProgram input;
+    input.emitJumpTo(0);
+
+    const SSADeSSAProgramResult result = optimizeIRProgram(
+        input,
+        SSAOptimizationLevel::O1);
+    result.verify(input);
+    assert(result.mainStats.blocksMerged == 0);
+    assert(result.mainStats.jumpsRemoved == 0);
+    assert(result.mainStream.function.instructions.size() == 1);
+    assert(result.mainStream.function.instructions.front().op == IROp::Jump);
+    assert(result.mainStream.function.instructions.front().operand == 0);
+}
+
 void test_program_adapter_o1_rejects_unsafe_linear_block_merges()
 {
     {
@@ -1031,6 +1047,7 @@ int main()
     test_program_adapter_o1_prunes_known_dead_blocks_and_remaps_offsets();
     test_program_adapter_o1_threads_empty_jump_blocks();
     test_program_adapter_o1_merges_reordered_linear_blocks();
+    test_program_adapter_o1_keeps_self_loop_blocks();
     test_program_adapter_o1_rejects_unsafe_linear_block_merges();
     test_program_adapter_o0_keeps_branch_shape();
     test_o0_is_verified_identity();

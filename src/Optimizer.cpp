@@ -1258,7 +1258,8 @@ void mergeLinearBlocks(
                 continue;
             }
             const CFGBlockId successor = predecessorBlock.successors.front();
-            if (successor == cfg.exitBlock || !cfg.blocks[successor].reachable
+            if (successor == predecessor || successor == cfg.exitBlock
+                || !cfg.blocks[successor].reachable
                 || cfg.blocks[successor].predecessors.size() != 1
                 || cfg.blocks[successor].predecessors.front() != predecessor) {
                 continue;
