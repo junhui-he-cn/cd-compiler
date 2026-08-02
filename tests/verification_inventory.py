@@ -82,6 +82,11 @@ CTEST_SOURCE_OVERRIDES = {
     "rust_vm": ["tests/run_rust_vm_tests.py", "vm-rs"],
     "vm_resource_budget": ["tests/vm_resource_budget_tests.py", "vm-rs"],
     "vm_capacity": ["tests/vm_capacity_tests.py", "vm-rs"],
+    "vm_cycle": [
+        "tests/vm_cycle_tests.py",
+        "vm-rs",
+        "vm-rs/tests/cycle_lifetime.rs",
+    ],
     "frontend_session": ["tests/frontend_session_tests.cpp"],
     "flow_facts": ["tests/flow_facts_tests.cpp"],
     "type_utils": ["tests/type_utils_tests.cpp"],

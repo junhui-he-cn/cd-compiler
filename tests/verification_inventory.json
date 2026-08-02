@@ -4961,6 +4961,29 @@
       "expected_files": []
     },
     {
+      "case_id": "ctest.vm_cycle",
+      "runner": "ctest",
+      "result_name": "vm_cycle",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "vm_cycle"
+      ],
+      "backend": "python",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt",
+        "tests/vm_cycle_tests.py",
+        "vm-rs",
+        "vm-rs/tests/cycle_lifetime.rs"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "ctest.vm_resource_budget",
       "runner": "ctest",
       "result_name": "vm_resource_budget",

@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "decision_id": "V1A-VM-CYCLE-CORPUS-001",
+  "status": "resolved",
+  "reference_commit": "a78cce37",
+  "inventory_revision": "m0d-2026-07-22-r1",
+  "question": "What can the current Rust VM prove about recursive values and tracked storage before selecting a lifetime policy?",
+  "decision": "Keep the current Rc<RefCell> storage and treat V1A as an observational corpus. Strong source-level cycles remain live after external roots are dropped; replacing back-edges releases them. HeapStats and profile retained-byte fields remain weak-ledger observations, while host RSS and timing remain non-gating observations.",
+  "corpus": [
+    {
+      "id": "source.self_array",
+      "source_shape": "array pushed with itself",
+      "expected_output": "[<cycle>]",
+      "evidence": ["tests/vm_cycle_tests.py"]
+    },
+    {
+      "id": "source.self_map",
+      "source_shape": "map entry assigned to the containing map",
+      "expected_output": "map{self: <cycle>}",
+      "evidence": ["tests/vm_cycle_tests.py"]
+    },
+    {
+      "id": "source.self_struct",
+      "source_shape": "recursive struct field assigned to the containing struct",
+      "expected_output": "{next: <cycle>}",
+      "evidence": ["tests/vm_cycle_tests.py"]
+    },
+    {
+      "id": "source.mutual_struct",
+      "source_shape": "two recursive structs linked in both directions",
+      "expected_output": "{value: 1, next: {value: 2, next: <cycle>}}",
+      "evidence": ["tests/vm_cycle_tests.py", "tests/golden/recursive_node_references/input.cd"]
+    },
+    {
+      "id": "source.closure_environment",
+      "source_shape": "recursive nested closure captures its environment",
+      "expected_output": "4",
+      "evidence": ["tests/vm_cycle_tests.py", "tests/golden/closure_nested_recursion/input.cd"]
+    },
+    {
+      "id": "source.replacement",
+      "source_shape": "array, map, and struct back-edges replaced with nil",
+      "expected_output": "acyclic values",
+      "evidence": ["tests/vm_cycle_tests.py", "vm-rs/tests/cycle_lifetime.rs"]
+    },
+    {
+      "id": "source.runtime_error",
+      "source_shape": "retained cycle followed by division by zero",
+      "expected_output": "typed runtime error with partial profile",
+      "evidence": ["tests/vm_cycle_tests.py"]
+    }
+  ],
+  "measurement": {
+    "ledger": "HeapStats uses weak allocation observations and does not retain roots",
+    "fields": [
+      "allocations",
+      "live",
+      "dead",
+      "peak_live",
+      "estimated_live_bytes",
+      "estimated_peak_live_bytes"
+    ],
+    "dropped_root_observation": {
+      "live_tracked_storages": 7,
+      "dead_tracked_storages_after_replacement": 7,
+      "live_tracked_storages_after_replacement": 0
+    },
+    "in_process_repetitions": 16,
+    "host_rss": "observational-only"
+  },
+  "verification": {
+    "source_runner": "tests/vm_cycle_tests.py",
+    "rust_integration": "vm-rs/tests/cycle_lifetime.rs",
+    "commands": [
+      ["cmake", "--build", "build"],
+      ["python3", "tests/vm_cycle_tests.py", "./build/compiler_design", "vm-rs"],
+      ["cargo", "test", "--manifest-path", "vm-rs/Cargo.toml", "--test", "cycle_lifetime"],
+      ["cargo", "test", "--manifest-path", "vm-rs/Cargo.toml"],
+      ["python3", "tests/run_rust_vm_tests.py", "./build/compiler_design", "vm-rs", "--goldens"],
+      ["python3", "tests/debugger_tests.py", "./build/compiler_design", "vm-rs"],
+      ["python3", "tests/profile_tests.py", "./build/compiler_design", "vm-rs"],
+      ["python3", "tests/vm_capacity_tests.py", "./build/compiler_design", "vm-rs"]
+    ]
+  },
+  "out_of_scope": [
+    "GC or cycle collection",
+    "weak-reference syntax",
+    "relocating handles",
+    "cycle detection or rejection",
+    "finalizers or persistent sessions",
+    "host RSS or allocator schema",
+    "cdbc successor version"
+  ],
+  "next_decision": "V1B-VM-LIFETIME-STORAGE-001"
+}

@@ -5,7 +5,7 @@ IR, module-cache producer, and compiler tools are planned in
 [`docs/roadmap.md`](roadmap.md). Changes to `.cdbc`, native calls, module
 products, debug metadata, or compatibility policy are joint slices.
 
-The baseline was audited on 2026-08-02 at `master` commit `61cbbc79`. Detailed
+The baseline was audited on 2026-08-02 at `master` commit `a78cce37`. Detailed
 history lives in `docs/decisions/`, tests, and Git; completed micro-slices are
 not repeated here.
 
@@ -59,7 +59,7 @@ assertions across 63 fixtures. No artifact bytes or versions changed.
 
 ### V1: Resolve recursive-object lifetime and cycle policy
 
-**Priority:** P0. **Status:** queued after completed X1.
+**Priority:** P0. **Status:** active; V1A completed on 2026-08-02.
 
 Recursive named structs make cycles a supported source-level construction, and
 the VM already formats active cycles as `<cycle>`. The remaining lifetime
@@ -67,13 +67,15 @@ behavior can no longer stay as an incidental `Rc<RefCell<...>>` property.
 
 Proceed in three slices:
 
-1. **V1A - cycle corpus and measurement:** add source-backed self-cycle,
+1. **V1A - cycle corpus and measurement:** completed with decision record
+   [`v1a-vm-cycle-corpus-001.md`](decisions/v1a-vm-cycle-corpus-001.md). The
+   source-backed self-cycle,
    mutual-cycle, array/map/struct cycle, closure/environment cycle, cycle
    replacement, runtime-error, debugger/profile, and repeated in-process VM
    workloads. Measure tracked live objects and estimated retained bytes before
    and after roots and VM instances are dropped. Host RSS is observational,
    not a portable pass threshold.
-2. **V1B - storage decision:** compare retaining reference counting, explicit
+2. **V1B - storage decision:** next. Compare retaining reference counting, explicit
    weak links, cycle detection/rejection, a non-moving tracing collector, and
    a handle-based collector. Specify roots, native temporaries, debugger
    observation, identity/hash/equality, final error state, pause points, and
@@ -165,8 +167,8 @@ These tracks stay outside the default queue until their trigger is met:
 ## 6. Dependency order
 
 ```text
-X1 compatibility matrix
-  -> V1A cycle corpus and measurement
+completed X1 compatibility matrix
+  -> completed V1A cycle corpus and measurement
   -> V1B lifetime/storage decision
   -> V1C selected implementation
 
@@ -185,8 +187,9 @@ completed X1 + demonstrated ABI/release need
   -> optional successor artifact work
 ```
 
-X1 is complete. The recommended next VM slice is V1A. V2 must wait for a concrete
-consumer; V3 may proceed independently only from recorded evidence.
+X1 and V1A are complete. The recommended next VM slice is V1B. V2 must wait
+for a concrete consumer; V3 may proceed independently only from recorded
+evidence.
 
 ## 7. Verification contract
 

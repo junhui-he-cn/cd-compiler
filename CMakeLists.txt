@@ -309,6 +309,12 @@ add_test(
             ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/vm_capacity_tests.py $<TARGET_FILE:compiler_design> ${CMAKE_SOURCE_DIR}/vm-rs
 )
 
+add_test(
+    NAME vm_cycle
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
+            ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/vm_cycle_tests.py $<TARGET_FILE:compiler_design> ${CMAKE_SOURCE_DIR}/vm-rs
+)
+
 add_executable(frontend_session_tests
     tests/frontend_session_tests.cpp
     ${COMPILER_DESIGN_FRONTEND_SOURCES}
@@ -425,5 +431,6 @@ set_tests_properties(
     optimizer_cli
     rust_vm
     vm_capacity
+    vm_cycle
     PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
 )
