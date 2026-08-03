@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "benchmark_revision": "bench-2026-08-02-r2",
+  "benchmark_revision": "bench-2026-08-03-r1",
   "default_repeat": 3,
   "workloads": [
     {

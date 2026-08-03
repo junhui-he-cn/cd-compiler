@@ -125,8 +125,11 @@ hotspot work still requires its own profile evidence.
 The previous execution-loop micro-slice sequence is closed. New work starts
 only from a reproducible profile or capacity result:
 
-1. **V3A - isolate artifact load:** separate parse/verify load measurement from
-   canonical `dump` formatting in the benchmark runner.
+1. **V3A - isolate artifact load:** completed on 2026-08-03 with
+   [`v3a-vm-artifact-load-001.md`](decisions/v3a-vm-artifact-load-001.md).
+   The benchmark runner now measures a no-output `verify` load phase
+   (read/parse/verify) separately from the canonical `dump` phase, while
+   preserving the existing artifact bytes and output contract.
 2. **V3B - select one hotspot:** name the workload, allocation/instruction
    mechanism, expected metric, correctness boundary, and same-sequence
    baseline/candidate runs before editing the VM.
@@ -185,7 +188,7 @@ real host consumer + X1
   -> optional V2C external schema
 
 existing benchmark/profile/capacity baseline
-  -> V3A pure load measurement
+  -> completed V3A pure load measurement
   -> V3B one evidence-selected hotspot
   -> V3C exact capacity policy as needed
 

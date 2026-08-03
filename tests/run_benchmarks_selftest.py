@@ -140,7 +140,9 @@ class BenchmarkRunnerTests(unittest.TestCase):
                     import sys
 
                     command = sys.argv[1]
-                    if command == "dump":
+                    if command == "verify":
+                        pass
+                    elif command == "dump":
                         print("artifact")
                     elif command == "link":
                         pathlib.Path(sys.argv[3]).write_text("linked\\n", encoding="utf-8")
@@ -202,12 +204,14 @@ class BenchmarkRunnerTests(unittest.TestCase):
         self.assertEqual(result["bytecode_metrics"]["register_count"], 1)
         self.assertEqual(len(result["compile_seconds"]["samples_seconds"]), 2)
         self.assertEqual(len(result["load_seconds"]["samples_seconds"]), 2)
+        self.assertEqual(len(result["dump_seconds"]["samples_seconds"]), 2)
         self.assertEqual(result["link_seconds"]["samples_seconds"], [])
         self.assertEqual(len(result["runtime_seconds"]["samples_seconds"]), 2)
         self.assertTrue(result["stdout_validated"])
         self.assertTrue(result["load_stdout_validated"])
         self.assertEqual(report["commands"]["runtime"], [str(vm), "run", "<artifact>"])
-        self.assertEqual(report["commands"]["load"], [str(vm), "dump", "<artifact>"])
+        self.assertEqual(report["commands"]["load"], [str(vm), "verify", "<artifact>"])
+        self.assertEqual(report["commands"]["dump"], [str(vm), "dump", "<artifact>"])
         self.assertNotIn("cargo", json.dumps(report["commands"]))
 
     def test_runner_measures_module_link_and_accepts_expected_runtime_error(self) -> None:
@@ -244,7 +248,9 @@ class BenchmarkRunnerTests(unittest.TestCase):
                 "import pathlib\n"
                 "import sys\n"
                 "command = sys.argv[1]\n"
-                "if command == 'dump':\n"
+                "if command == 'verify':\n"
+                "    pass\n"
+                "elif command == 'dump':\n"
                 "    print('artifact')\n"
                 "elif command == 'link':\n"
                 "    pathlib.Path(sys.argv[3]).write_text('linked\\n', encoding='utf-8')\n"
@@ -285,6 +291,7 @@ class BenchmarkRunnerTests(unittest.TestCase):
             self.assertTrue(module_result["link_required"])
             self.assertEqual(len(module_result["link_seconds"]["samples_seconds"]), 2)
             self.assertEqual(len(module_result["load_seconds"]["samples_seconds"]), 2)
+            self.assertEqual(len(module_result["dump_seconds"]["samples_seconds"]), 2)
             self.assertTrue(module_result["link_artifact_validated"])
 
             error_source = root / "error.cd"

@@ -13,13 +13,14 @@ use std::process;
 const HELP: &str = "compiler-design-vm 0.1.0\n\n\
 Usage:\n\
   compiler-design-vm --help\n\
+  compiler-design-vm verify <program.cdbc>\n\
   compiler-design-vm dump <program.cdbc>\n\
   compiler-design-vm run <program.cdbc>\n\
   compiler-design-vm trace <program.cdbc>\n\
   compiler-design-vm debug <program.cdbc>\n\
   compiler-design-vm profile <program.cdbc>\n\
   compiler-design-vm link <module-directory> <output.cdbc>\n\n\
-Current phase: .cdbc parsing, canonical dump, bytecode execution, source tracing, interactive debugging, and deterministic execution profiling are implemented.\nResource options: --max-steps N, --max-call-depth N, --max-elements N, --max-output-bytes N, --max-artifact-bytes N, --max-modules N, --max-module-instructions N, --unlimited (0 disables an individual limit).\n";
+Current phase: .cdbc parsing, artifact verification, canonical dump, bytecode execution, source tracing, interactive debugging, and deterministic execution profiling are implemented.\nResource options: --max-steps N, --max-call-depth N, --max-elements N, --max-output-bytes N, --max-artifact-bytes N, --max-modules N, --max-module-instructions N, --unlimited (0 disables an individual limit).\n";
 
 fn help_text() -> &'static str {
     HELP
@@ -69,6 +70,11 @@ fn read_program(path: impl AsRef<Path>, config: &RunConfig) -> Result<Program, S
 fn dump(path: &str, config: &RunConfig) -> Result<(), String> {
     let artifact = read_artifact(path, config)?;
     print!("{}", format::format_artifact(&artifact));
+    Ok(())
+}
+
+fn verify(path: &str, config: &RunConfig) -> Result<(), String> {
+    read_artifact(path, config)?;
     Ok(())
 }
 
@@ -859,6 +865,14 @@ fn main() {
         None | Some("-h") | Some("--help") => {
             print!("{}", help_text());
         }
+        Some("verify") => {
+            let (path, config) =
+                parse_single_path("verify", remaining).unwrap_or_else(|error| usage_error(error));
+            if let Err(error) = verify(&path, &config) {
+                eprintln!("{}", error);
+                process::exit(1);
+            }
+        }
         Some("dump") => {
             let (path, config) =
                 parse_single_path("dump", remaining).unwrap_or_else(|error| usage_error(error));
@@ -923,6 +937,7 @@ mod tests {
     #[test]
     fn help_mentions_dump_and_run_scope() {
         let help = help_text();
+        assert!(help.contains("compiler-design-vm verify <program.cdbc>"));
         assert!(help.contains("compiler-design-vm dump <program.cdbc>"));
         assert!(help.contains("compiler-design-vm run <program.cdbc>"));
         assert!(help.contains("compiler-design-vm trace <program.cdbc>"));
@@ -931,7 +946,7 @@ mod tests {
         assert!(help.contains("compiler-design-vm link <module-directory> <output.cdbc>"));
         assert!(
             help.contains(
-                ".cdbc parsing, canonical dump, bytecode execution, source tracing, interactive debugging, and deterministic execution profiling are implemented",
+                ".cdbc parsing, artifact verification, canonical dump, bytecode execution, source tracing, interactive debugging, and deterministic execution profiling are implemented",
             )
         );
         assert!(help.contains("--max-steps N"));

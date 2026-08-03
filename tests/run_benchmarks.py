@@ -2,12 +2,13 @@
 
 """Measure compiler and Rust VM wall-clock time for fixed workloads.
 
-Compilation, artifact loading, module linking, and execution are intentionally
-separate measurements.  Each compile sample writes fresh temporary products.
-Load samples invoke the already-built VM's canonical ``dump`` path, link
-samples invoke the already-built VM's ``link`` path for module workloads, and
-runtime samples invoke the resulting artifact; Cargo is never part of the
-runtime command.
+Compilation, artifact loading, canonical formatting, module linking, and
+execution are intentionally separate measurements.  Each compile sample
+writes fresh temporary products.  Load samples invoke the already-built VM's
+``verify`` path, dump samples invoke its canonical ``dump`` path, link samples
+invoke the already-built VM's ``link`` path for module workloads, and runtime
+samples invoke the resulting artifact; Cargo is never part of the runtime
+command.
 
 This runner is informational.  It validates every workload's output, records
 compiler/bytecode shape metrics, and can compare the existing workloads under
@@ -41,7 +42,7 @@ DEFAULT_REPORT = REPO_ROOT / "build" / "benchmark-report.json"
 DEFAULT_COMPILER = REPO_ROOT / "build" / "compiler_design"
 DEFAULT_VM = REPO_ROOT / "vm-rs"
 SCHEMA_VERSION = 2
-REPORT_SCHEMA_VERSION = 3
+REPORT_SCHEMA_VERSION = 4
 DEFAULT_TIMEOUT_SECONDS = 60.0
 ARTIFACT_MODES = {"linked", "module"}
 EXECUTION_MODES = {"success", "runtime_error"}
@@ -405,6 +406,10 @@ def _all_validated(values: list[bool]) -> bool:
     return bool(values) and all(values)
 
 
+def _all_equal(values: list[Any]) -> bool:
+    return bool(values) and all(value == values[0] for value in values[1:])
+
+
 def normalize_optimization_levels(levels: Iterable[int] | None) -> list[int]:
     selected = [0] if levels is None else [int(level) for level in levels]
     if not selected:
@@ -527,6 +532,7 @@ def run_workload(
     compile_samples: list[float] = []
     link_samples: list[float] = []
     load_samples: list[float] = []
+    dump_samples: list[float] = []
     runtime_samples: list[float] = []
     errors: list[str] = []
     compile_exit_ok: list[bool] = []
@@ -540,12 +546,16 @@ def run_workload(
     load_exit_ok: list[bool] = []
     load_stdout_ok: list[bool] = []
     load_stderr_ok: list[bool] = []
+    dump_exit_ok: list[bool] = []
+    dump_stdout_ok: list[bool] = []
+    dump_stderr_ok: list[bool] = []
     runtime_exit_ok: list[bool] = []
     runtime_stdout_ok: list[bool] = []
     runtime_stderr_ok: list[bool] = []
     observed_stdout_digests: list[str] = []
     observed_stderr_digests: list[str] = []
     observed_exit_codes: list[int] = []
+    dump_output_digests: list[str] = []
     artifact_size_samples: list[int] = []
     artifact_size_ok: list[bool] = []
     errors: list[str] = list(inspection_errors)
@@ -669,7 +679,7 @@ def run_workload(
                     )
                 )
                 if link_sample_ok:
-                    load_command = [str(vm_binary), "dump", str(linked_artifact)]
+                    load_command = [str(vm_binary), "verify", str(linked_artifact)]
                     (
                         load_duration,
                         load_returncode,
@@ -678,7 +688,7 @@ def run_workload(
                     ) = run_command(load_command, repo_root, timeout_seconds)
                     load_samples.append(load_duration)
                     load_exit_is_ok = load_returncode == 0
-                    load_stdout_is_ok = bool(load_stdout)
+                    load_stdout_is_ok = not load_stdout
                     load_stderr_is_ok = not load_stderr
                     load_exit_ok.append(load_exit_is_ok)
                     load_stdout_ok.append(load_stdout_is_ok)
@@ -695,8 +705,8 @@ def run_workload(
                         )
                     elif not load_stdout_is_ok:
                         errors.append(
-                            f"{workload_id} load {repetition + 1} produced no "
-                            "canonical artifact output"
+                            f"{workload_id} load {repetition + 1} produced stdout: "
+                            f"{load_stdout.rstrip()}"
                         )
                     elif not load_stderr_is_ok:
                         errors.append(
@@ -704,15 +714,53 @@ def run_workload(
                             f"{load_stderr.rstrip()}"
                         )
                     else:
-                        last_artifact = linked_artifact
-                        try:
-                            artifact_size_samples.append(linked_artifact.stat().st_size)
-                            artifact_size_ok.append(True)
-                        except OSError as error:
-                            artifact_size_ok.append(False)
+                        dump_command = [str(vm_binary), "dump", str(linked_artifact)]
+                        (
+                            dump_duration,
+                            dump_returncode,
+                            dump_stdout,
+                            dump_stderr,
+                        ) = run_command(dump_command, repo_root, timeout_seconds)
+                        dump_samples.append(dump_duration)
+                        dump_exit_is_ok = dump_returncode == 0
+                        dump_stdout_is_ok = bool(dump_stdout)
+                        dump_stderr_is_ok = not dump_stderr
+                        dump_exit_ok.append(dump_exit_is_ok)
+                        dump_stdout_ok.append(dump_stdout_is_ok)
+                        dump_stderr_ok.append(dump_stderr_is_ok)
+                        dump_output_digests.append(
+                            hashlib.sha256(dump_stdout.encode("utf-8")).hexdigest()
+                        )
+                        if not dump_exit_is_ok:
                             errors.append(
-                                f"{workload_id} O{optimization_level} artifact size: {error}"
+                                f"{workload_id} dump {repetition + 1}: "
+                                + _failure(
+                                    dump_command,
+                                    dump_returncode,
+                                    dump_stdout,
+                                    dump_stderr,
+                                )
                             )
+                        elif not dump_stdout_is_ok:
+                            errors.append(
+                                f"{workload_id} dump {repetition + 1} produced no "
+                                "canonical artifact output"
+                            )
+                        elif not dump_stderr_is_ok:
+                            errors.append(
+                                f"{workload_id} dump {repetition + 1} produced stderr: "
+                                f"{dump_stderr.rstrip()}"
+                            )
+                        else:
+                            last_artifact = linked_artifact
+                            try:
+                                artifact_size_samples.append(linked_artifact.stat().st_size)
+                                artifact_size_ok.append(True)
+                            except OSError as error:
+                                artifact_size_ok.append(False)
+                                errors.append(
+                                    f"{workload_id} O{optimization_level} artifact size: {error}"
+                                )
 
         compile_passed = (
             len(compile_samples) == repetitions
@@ -734,8 +782,25 @@ def run_workload(
             and _all_validated(load_stdout_ok)
             and _all_validated(load_stderr_ok)
         )
+        dump_passed = (
+            len(dump_samples) == repetitions
+            and _all_validated(dump_exit_ok)
+            and _all_validated(dump_stdout_ok)
+            and _all_validated(dump_stderr_ok)
+            and _all_equal(dump_output_digests)
+        )
+        if dump_output_digests and not _all_equal(dump_output_digests):
+            errors.append(
+                f"{workload_id} dump output changed across repetitions"
+            )
 
-        if compile_passed and link_passed and load_passed and last_artifact is not None:
+        if (
+            compile_passed
+            and link_passed
+            and load_passed
+            and dump_passed
+            and last_artifact is not None
+        ):
             runtime_command = [str(vm_binary), "run", str(last_artifact)]
             for repetition in range(repetitions):
                 duration, returncode, stdout, stderr = run_command(
@@ -789,6 +854,7 @@ def run_workload(
         "compile_seconds": timing_record(compile_samples),
         "link_seconds": timing_record(link_samples),
         "load_seconds": timing_record(load_samples),
+        "dump_seconds": timing_record(dump_samples),
         "runtime_seconds": timing_record(runtime_samples),
         "ir_metrics": ir_metrics,
         "bytecode_metrics": bytecode_metrics,
@@ -817,6 +883,11 @@ def run_workload(
         "load_exit_code_validated": _all_validated(load_exit_ok),
         "load_stdout_validated": _all_validated(load_stdout_ok),
         "load_stderr_validated": _all_validated(load_stderr_ok),
+        "dump_exit_code_validated": _all_validated(dump_exit_ok),
+        "dump_stdout_validated": _all_validated(dump_stdout_ok),
+        "dump_stderr_validated": _all_validated(dump_stderr_ok),
+        "dump_output_sha256": dump_output_digests,
+        "dump_output_consistent": _all_equal(dump_output_digests),
         "exit_code_validated": _all_validated(runtime_exit_ok),
         "stdout_validated": _all_validated(runtime_stdout_ok),
         "stderr_validated": _all_validated(runtime_stderr_ok),
@@ -829,6 +900,7 @@ def run_workload(
         and len(compile_samples) == repetitions
         and (not link_required or len(link_samples) == repetitions)
         and len(load_samples) == repetitions
+        and len(dump_samples) == repetitions
         and len(artifact_size_samples) == repetitions
         and _all_validated(artifact_size_ok)
         and len(runtime_samples) == repetitions,
@@ -980,6 +1052,7 @@ def compare_optimization_results(
             "compile_median_seconds": ("compile_seconds", "median"),
             "link_median_seconds": ("link_seconds", "median"),
             "load_median_seconds": ("load_seconds", "median"),
+            "dump_median_seconds": ("dump_seconds", "median"),
             "runtime_median_seconds": ("runtime_seconds", "median"),
             "ir_instruction_count": ("ir_metrics", "instruction_count"),
             "bytecode_instruction_count": ("bytecode_metrics", "instruction_count"),
@@ -1067,7 +1140,8 @@ def run_benchmarks(
         "measurement": {
             "compile": "compiler_design bytecode emission wall-clock time, including process startup and artifact write",
             "link": "Rust VM link wall-clock time for module workloads, including module product load and linked artifact write",
-            "load": "Rust VM dump wall-clock time, including artifact read, parse, verification, and canonical formatting",
+            "load": "Rust VM verify wall-clock time, including artifact read, parse, and verification without canonical output",
+            "dump": "Rust VM dump wall-clock time, including artifact read, parse, verification, and canonical formatting",
             "runtime": "already-built Rust VM run wall-clock time, including process startup and artifact load during run",
             "ir": "compiler_design --ir inspection used to count IR instructions and virtual registers; not included in compile timing",
             "bytecode": "compiler_design --bytecode inspection used to count bytecode instructions and registerCount; not included in compile timing",
@@ -1110,7 +1184,8 @@ def run_benchmarks(
                 "<sources...>",
             ],
             "link": [str(vm_binary), "link", "<module-directory>", "<artifact>"],
-            "load": [str(vm_binary), "dump", "<artifact>"],
+            "load": [str(vm_binary), "verify", "<artifact>"],
+            "dump": [str(vm_binary), "dump", "<artifact>"],
             "runtime": [str(vm_binary), "run", "<artifact>"],
         },
         "environment": environment_record(repo_root, compiler, vm_binary),
@@ -1248,6 +1323,7 @@ def main() -> int:
             compile_median = level_result["compile_seconds"]["median"]
             link_median = level_result["link_seconds"]["median"]
             load_median = level_result["load_seconds"]["median"]
+            dump_median = level_result["dump_seconds"]["median"]
             runtime_median = level_result["runtime_seconds"]["median"]
             bytecode_metrics = level_result.get("bytecode_metrics") or {}
             artifact_size = level_result.get("artifact_size_bytes", {}).get("median")
@@ -1256,6 +1332,7 @@ def main() -> int:
                 f"compile median={compile_median if compile_median is not None else 'n/a'}s, "
                 f"link median={link_median if link_median is not None else 'n/a'}s, "
                 f"load median={load_median if load_median is not None else 'n/a'}s, "
+                f"dump median={dump_median if dump_median is not None else 'n/a'}s, "
                 f"runtime median={runtime_median if runtime_median is not None else 'n/a'}s, "
                 f"ir={((level_result.get('ir_metrics') or {}).get('instruction_count', 'n/a'))}, "
                 f"bytecode={bytecode_metrics.get('instruction_count', 'n/a')}, "
@@ -1266,10 +1343,14 @@ def main() -> int:
             continue
         level_summaries = []
         for name, level_result in levels.items():
+            load_median = level_result["load_seconds"]["median"]
+            dump_median = level_result["dump_seconds"]["median"]
             runtime_median = level_result["runtime_seconds"]["median"]
             bytecode_metrics = level_result.get("bytecode_metrics") or {}
             level_summaries.append(
-                f"{name} runtime={runtime_median if runtime_median is not None else 'n/a'}s"
+                f"{name} load={load_median if load_median is not None else 'n/a'}s"
+                f"/dump={dump_median if dump_median is not None else 'n/a'}s"
+                f"/runtime={runtime_median if runtime_median is not None else 'n/a'}s"
                 f"/bc={bytecode_metrics.get('instruction_count', 'n/a')}"
                 f"/regs={bytecode_metrics.get('register_count', 'n/a')}"
             )

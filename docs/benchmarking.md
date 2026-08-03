@@ -21,14 +21,15 @@ does not use `cargo run`, so Cargo compilation is outside all samples.
 ## Measurement boundary
 
 Each workload is measured in independent phases. Compile samples use fresh
-temporary products; load and link samples use the direct VM executable; runtime
-samples repeat the last successfully prepared artifact.
+temporary products; load, dump, and link samples use the direct VM executable;
+runtime samples repeat the last successfully prepared artifact.
 
 | Phase | Command | Included in the sample |
 | --- | --- | --- |
 | compile | `compiler_design --opt-level N --emit-bytecode ...` or `--emit-module-bytecode ...` | compiler process startup, frontend/backend work, and product write |
 | link | `compiler-design-vm link <module-directory> <artifact>` | module product reads, verification, deterministic expansion, and linked artifact write; module workloads only |
-| load | `compiler-design-vm dump <artifact>` | VM process startup, artifact read/parse/verification, and canonical formatting |
+| load | `compiler-design-vm verify <artifact>` | VM process startup, artifact read, parse, and verification; no canonical output |
+| dump | `compiler-design-vm dump <artifact>` | VM process startup, artifact read/parse/verification, and canonical formatting |
 | runtime | `compiler-design-vm run <artifact>` | VM process startup, artifact load, and execution |
 | IR inspection | `compiler_design --opt-level N --ir ...` | one un-timed compiler listing used to count IR instructions and virtual registers |
 | bytecode inspection | `compiler_design --opt-level N --bytecode ...` | one un-timed compiler listing used to count bytecode instructions and `registerCount` |
@@ -58,7 +59,7 @@ runtime stderr, and exit status against the same checked-in workload contract.
 When multiple levels are selected, the report also compares observed stdout,
 stderr, and exit-code digests and records O0-to-O1 deltas for:
 
-- compile, link, load, and runtime median wall-clock time;
+- compile, link, load, dump, and runtime median wall-clock time;
 - IR and bytecode instruction counts;
 - total bytecode `registerCount` across main and function bodies; and
 - final artifact size in bytes.
@@ -69,10 +70,16 @@ register subtotals. `ir_metrics.virtual_register_count` is derived from the
 highest virtual register referenced in each listed body; bytecode
 `register_count` is the authoritative register-count measurement.
 
-The report schema is version 3; the checked-in workload manifest remains
+The report schema is version 4; the checked-in workload manifest remains
 schema version 2. Timing and metric deltas are informational and do not create
 a CI performance threshold. A correctness failure or an O0/O1 output/error/
 exit parity failure still returns non-zero.
+
+The `load` and `dump` samples are independent process measurements. `dump`
+still performs its own parse and verification before formatting; the runner
+does not subtract the two timings or claim a pure formatter CPU cost. The
+separation makes parse/verify regressions visible without changing the
+canonical artifact output contract.
 
 ## Workloads and reports
 
@@ -88,7 +95,7 @@ The checked-in manifest covers:
 - the scaled public-library LFU cache workload (`library_lfu_cache`);
 - the scaled public-library linked-list tail-insertion workload
   (`library_linked_list`);
-- independent module emission, linking, load, and execution (`module_link`);
+- independent module emission, linking, load, dump, and execution (`module_link`);
 - a deterministic runtime-error/diagnostic path (`runtime_error`).
 
 Successful workloads use `execution: "success"` and an `expected_output` file.
@@ -100,7 +107,7 @@ the VM links before loading and running.
 
 The default repetition count is three. Use `--repeat N` to override it and
 `--workload NAME` (repeatable) to select a subset. The JSON report records
-compile/link/load/runtime samples and min/median/max seconds for each phase,
+compile/link/load/dump/runtime samples and min/median/max seconds for each phase,
 the commit and executable paths, manifest revision, selected optimization
 levels, expected-output digests, observed runtime digests, host/toolchain
 metadata, command templates, validation flags, timing summaries,
