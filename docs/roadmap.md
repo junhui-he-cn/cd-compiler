@@ -38,7 +38,7 @@ compatibility contracts until an explicit decision changes them.
 | Front end | Typed source identities, lossless source, declaration/semantic indexes, import-aware module graph | Remove legacy paths only when all consumers use the indexed services |
 | Language | Functions, closures, generics and constraints, `optional<T>`, enums/patterns, named and recursive structs, collection semantics, `Eq`/`Ord`/`Hash` capabilities | New syntax is demand-driven; semantic soundness work has priority |
 | Modules | Public interfaces, `.cdi`, independent module products, linker inputs, `cdbc-cache 0.2`, strict and fallback modes | Cache creation/repair policy is not yet a default-strict contract |
-| IR and optimization | Linear register IR plus verified CFG/SSA/de-SSA and explicit `--opt-level 1` | O0 stays default; optimized debug-local and register-allocation policy remain open |
+| IR and optimization | Linear register IR plus verified CFG/SSA/de-SSA and explicit `--opt-level 1` | O0 stays default; register-allocation and default-level policy remain open |
 | Tools | Formatter, open/closed-workspace LSP definition and references, trace and interactive VM debugger | Closed-module completion/rename and incremental sessions remain open |
 | Artifact boundary | Compiler emits validated linked and module `cdbc 0.1` products with debug metadata | No successor format has been justified |
 
@@ -80,15 +80,16 @@ decision needs a stable statement of the boundary it must preserve.
 
 ### C1: Make O1 ready for a default-policy decision
 
-**Priority:** P0. **Status:** queued after completed X1.
+**Priority:** P0. **Status:** C1A implemented on 2026-08-03; C1B is next.
 
 The existing explicit O1 pipeline is useful but not yet a default replacement
 for O0. Finish the evidence in three narrow slices:
 
-1. **C1A - optimized debug contract:** define which source locations, trace
-   events, frame locals, and runtime cells must remain observable at O1. Add
-   O0/O1 trace and debugger parity cases for branches, loops, closures,
-   imported functions, eliminated values, and runtime failures.
+1. **C1A - optimized debug contract (implemented):** define which source
+   locations, trace events, frame locals, and runtime cells must remain
+   observable at O1. Add O0/O1 trace and debugger parity cases for branches,
+   loops, closures, imported functions, eliminated values, and runtime failures.
+   See [`c1a-optimized-debug-001.md`](decisions/c1a-optimized-debug-001.md).
 2. **C1B - register policy:** measure virtual-register pressure on the checked-in
    O0/O1 workload matrix and decide whether O1 retains virtual registers or
    needs a separate physical allocation/coalescing stage. Do not add an O2

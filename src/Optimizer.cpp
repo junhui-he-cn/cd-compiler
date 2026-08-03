@@ -736,7 +736,15 @@ SSADeSSAIRResult optimizeIRFunctionWithStats(
             level,
             constantPool);
         SSAOptimizationStats resultStats = optimized.stats;
-        const SSADeSSALinearFunction linear = lowerSSADeSSACopies(cfg, optimized.function);
+        std::vector<std::optional<SourceSpan>> sourceSpans;
+        sourceSpans.reserve(input.instructions.size());
+        for (const IRInstruction& instruction : input.instructions) {
+            sourceSpans.push_back(instruction.span);
+        }
+        const SSADeSSALinearFunction linear = lowerSSADeSSACopies(
+            cfg,
+            optimized.function,
+            &sourceSpans);
         SSADeSSAIRResult result = lowerSSADeSSAToIR(
             cfg,
             linear,

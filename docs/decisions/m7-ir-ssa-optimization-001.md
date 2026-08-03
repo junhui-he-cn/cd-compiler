@@ -133,8 +133,9 @@ their allocation/identity effects have an explicit contract.
 
 Later scalar promotion may remove redundant loads/stores for eligible local
 bindings. It is a separate stage because source tracing currently displays
-runtime cells, and optimized artifacts must either retain source-visible local
-materialization or explicitly use a debug-optimization contract.
+runtime cells. C1A now defines the current O1 contract: runtime-cell locals
+remain visible, while source locations and semantic trace events stay stable
+even when optimized line events and instruction numbers change.
 
 ## De-SSA and bytecode compatibility
 
@@ -145,9 +146,11 @@ serialized and no new bytecode opcode is required.
 
 The optimizer preserves an origin span for every retained instruction. A
 folded instruction uses the source range of the expression it represents;
-generated edge copies have no user source location unless a safe existing span
-can be carried. The existing `debug_sources`, `debug_locations`, and
-`debug_ranges` emitter/linker behavior remains the artifact boundary.
+generated edge copies inherit the original IR span when a safe anchor exists,
+including when O1 removed that source instruction before de-SSA. The C1A
+contract is recorded in [`c1a-optimized-debug-001.md`](c1a-optimized-debug-001.md).
+The existing `debug_sources`, `debug_locations`, and `debug_ranges`
+emitter/linker behavior remains the artifact boundary.
 
 Module dependency markers are treated as ordered CFG anchors, not ordinary
 instructions. Any transformation that changes instruction offsets must return
