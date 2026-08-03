@@ -77,7 +77,9 @@ python3 tests/vm_cycle_tests.py ./build/compiler_design vm-rs
 
 ## Next boundary
 
-The admitted V1C top-level safepoint and root-coverage slice is complete.
-Collection-frequency and resource-cost measurements are still required before
-adding an allocation threshold, incremental scheduling, or background work.
-The storage layout and single-threaded stop-the-world boundary remain unchanged.
+The admitted V1C top-level safepoint and root-coverage slice is complete. The
+follow-up frequency/resource comparison is recorded in
+[`v1c-vm-tracing-frequency-001.md`](v1c-vm-tracing-frequency-001.md); it keeps
+the top-level safepoint and does not justify an allocation threshold,
+incremental scheduling, or background work. The storage layout and
+single-threaded stop-the-world boundary remain unchanged.

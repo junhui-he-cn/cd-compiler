@@ -32,7 +32,7 @@ cache invalidation, async semantics, or compiler optimization policy.
 | --- | --- | --- |
 | Artifact safety | Shared `cdbc 0.1` parser/formatter/verifier, malformed corpus, resource limits, cancellation | Successor format and integrity envelope are not justified |
 | Execution | Register VM for the complete emitted instruction set and native surface | Further optimization must be workload-driven |
-| Runtime values | Stable identity-bearing storage, non-moving tracing collection at VM safepoints, recursive values, cycle-safe formatting | Incremental/concurrent collection and collection-frequency/resource policy remain open |
+| Runtime values | Stable identity-bearing storage, non-moving tracing collection at VM safepoints, recursive values, cycle-safe formatting | Incremental/concurrent scheduling remains open; frequency evidence does not justify a threshold |
 | Modules | Deterministic module validation/linking, debug rebasing, typed errors, optional link report | Versioned report serialization is not defined |
 | Embedding | Rust library parse/verify/link/run/trace/debug/profile API plus CLI adapters | API remains pre-1.0, single-threaded, and without host sink/session guarantees |
 | Observability | Interactive debugger, deterministic counters, tracked heap counts, estimated retained bytes, structured error kinds | No stable host schema, wall-clock field, allocator bytes, or RSS contract |
@@ -85,8 +85,10 @@ Proceed in three slices:
    explicit non-moving tracing collection and VM execution collects after the
    top-level frame, with coverage for native callbacks, nested calls,
    cancellation, debugger pauses, host-held roots, and recursive variant
-   payloads. Collection-frequency/resource measurements remain open before
-   changing storage layout; keep `cdbc 0.1` unchanged and retain an
+   payloads. The frequency/resource comparison is recorded in
+   [`v1c-vm-tracing-frequency-001.md`](decisions/v1c-vm-tracing-frequency-001.md);
+   it retains the top-level safepoint and does not justify an allocation
+   threshold or background work. Keep `cdbc 0.1` unchanged and retain an
    incremental rollback path.
 
 **Decision gate:** V1B selects tracing GC. Do not add weak-reference syntax,
@@ -192,9 +194,10 @@ completed X1 + demonstrated ABI/release need
   -> optional successor artifact work
 ```
 
-X1, V1A, V1B, and the first V1C implementation slice are complete. Further
-collection scheduling remains evidence-gated. V2 must wait for a concrete
-consumer; V3 may proceed independently only from recorded evidence.
+X1, V1A, V1B, the first V1C implementation slice, and its frequency/resource
+measurement are complete. Incremental/concurrent scheduling remains
+evidence-gated. V2 must wait for a concrete consumer; V3 may proceed
+independently only from recorded evidence.
 
 ## 7. Verification contract
 
