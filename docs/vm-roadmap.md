@@ -36,7 +36,7 @@ cache invalidation, async semantics, or compiler optimization policy.
 | Modules | Deterministic module validation/linking, debug rebasing, typed errors, optional link report | Versioned report serialization is not defined |
 | Embedding | Rust library parse/verify/link/run/trace/debug/profile API plus CLI adapters | API remains pre-1.0, single-threaded, and without host sink/session guarantees |
 | Observability | Interactive debugger, deterministic counters, tracked heap counts, estimated retained bytes, structured error kinds | No stable host schema, wall-clock field, allocator bytes, or RSS contract |
-| Performance/capacity | Reproducible phase benchmark, scaled workloads, capacity and budget corpus, V3A/V3B artifact evidence | V3C exact capacity policy remains deferred |
+| Performance/capacity | Reproducible phase benchmark, scaled workloads, capacity and budget corpus, V3A/V3B/V3C artifact evidence | Broader host-cost capacity policy remains deferred |
 | Native boundary | Private registry with arity, callback, resource-touchpoint, and signature-shape metadata | Metadata is not a public ABI or serialized contract |
 
 `cdbc 0.1`, CLI text/exit behavior, deterministic execution, current resource
@@ -119,8 +119,8 @@ or `Send`/`Sync` promise belongs in V2A.
 
 ### V3: Replace micro-optimization with profile-driven performance work
 
-**Priority:** P1. **Status:** queued after completed X1 and independent of V1. Later
-hotspot work still requires its own profile evidence.
+**Priority:** P1. **Status:** V3A-V3C complete; later hotspot or capacity work
+still requires its own profile or exact-boundary evidence.
 
 The previous execution-loop micro-slice sequence is closed. New work starts
 only from a reproducible profile or capacity result:
@@ -135,8 +135,10 @@ only from a reproducible profile or capacity result:
    The selected hotspot is canonical formatting of multi-megabyte artifacts;
    a conservative output-capacity hint reduces formatter buffer growth while
    preserving byte-for-byte dumps and all runtime behavior.
-3. **V3C - capacity policy:** add a capacity case only when it defines a new
-   exact success/rejection boundary or exposes an unbounded host cost.
+3. **V3C - capacity policy:** completed on 2026-08-03 with
+   [`v3c-vm-artifact-budget-boundary-001.md`](decisions/v3c-vm-artifact-budget-boundary-001.md).
+   The new `verify` command now has an exact artifact-byte success/rejection
+   boundary, paired with `dump`, without changing the default limit policy.
 
 Timing remains evidence rather than a cross-platform correctness gate. Every
 candidate must preserve stdout, stderr, exit code, trace/debug/profile events,
@@ -191,8 +193,8 @@ real host consumer + X1
 
 existing benchmark/profile/capacity baseline
   -> completed V3A pure load measurement
-  -> V3B one evidence-selected hotspot
-  -> V3C exact capacity policy as needed
+  -> completed V3B one evidence-selected hotspot
+  -> completed V3C exact artifact-byte boundary
 
 completed X1 + demonstrated ABI/release need
   -> V4 native/release compatibility decision

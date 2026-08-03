@@ -644,6 +644,55 @@ def main() -> int:
         if error is not None:
             return fail(error)
 
+        artifact_size = long_string_artifact.stat().st_size
+        result = run_measured(
+            vm_command(
+                vm_binary,
+                "verify",
+                str(long_string_artifact),
+                "--max-artifact-bytes",
+                str(artifact_size),
+            ),
+            "long-unicode-string verify exact artifact budget",
+        )
+        measurements.append(result)
+        error = expect_success(result)
+        if error is not None:
+            return fail(error)
+
+        result = run_measured(
+            vm_command(
+                vm_binary,
+                "verify",
+                str(long_string_artifact),
+                "--max-artifact-bytes",
+                str(artifact_size - 1),
+            ),
+            "long-unicode-string verify artifact budget rejection",
+        )
+        measurements.append(result)
+        error = expect_failure(
+            result,
+            f"artifact bytes (limit {artifact_size - 1})",
+        )
+        if error is not None:
+            return fail(error)
+
+        result = run_measured(
+            vm_command(
+                vm_binary,
+                "dump",
+                str(long_string_artifact),
+                "--max-artifact-bytes",
+                str(artifact_size),
+            ),
+            "long-unicode-string dump exact artifact budget",
+        )
+        measurements.append(result)
+        error = expect_success(result, None)
+        if error is not None:
+            return fail(error)
+
         recursive_source = root / "deep-recursion.cd"
         recursive_artifact = root / "deep-recursion.cdbc"
         recursive_source.write_text(
