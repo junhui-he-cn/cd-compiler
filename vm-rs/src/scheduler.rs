@@ -1,7 +1,10 @@
 #![allow(dead_code)]
 
+use crate::runtime::SharedEnvironment;
+use crate::value::Value;
 use std::collections::{BTreeMap, VecDeque};
 use std::fmt;
+use std::rc::Rc;
 
 /// Stable only within one scheduler instance. Task IDs are not artifact data
 /// and must not be persisted or transferred between VM instances.
@@ -74,6 +77,169 @@ impl fmt::Display for SchedulerError {
             Self::UnknownTask(task_id) => write!(formatter, "unknown {}", task_id),
             Self::TaskNotBlocked(task_id) => write!(formatter, "{} is not blocked", task_id),
         }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct ReturnTarget {
+    pub(crate) register: usize,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum FrameStackError {
+    Empty,
+    RootHasReturnTarget,
+    MissingReturnTarget,
+    InvalidReturnRegister { register: usize, available: usize },
+}
+
+impl fmt::Display for FrameStackError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Empty => write!(formatter, "frame stack is empty"),
+            Self::RootHasReturnTarget => write!(formatter, "root frame has a return target"),
+            Self::MissingReturnTarget => write!(formatter, "callee frame has no return target"),
+            Self::InvalidReturnRegister {
+                register,
+                available,
+            } => write!(
+                formatter,
+                "return register {} is outside caller register count {}",
+                register, available
+            ),
+        }
+    }
+}
+
+/// Explicit execution state for one resumable bytecode frame.
+///
+/// The instruction body is intentionally kept outside this foundation slice;
+/// the next VM adapter will associate a verified function body with each
+/// frame while retaining these state and root fields.
+pub(crate) struct ResumableFrame {
+    pub(crate) ip: usize,
+    pub(crate) registers: Vec<Value>,
+    pub(crate) locals: SharedEnvironment,
+    pub(crate) closure: SharedEnvironment,
+    pub(crate) is_main: bool,
+    pub(crate) function: Rc<str>,
+    pub(crate) function_index: Option<usize>,
+    pub(crate) return_target: Option<ReturnTarget>,
+}
+
+impl ResumableFrame {
+    pub(crate) fn main(
+        register_count: usize,
+        locals: SharedEnvironment,
+        closure: SharedEnvironment,
+    ) -> Self {
+        Self {
+            ip: 0,
+            registers: vec![Value::Nil; register_count],
+            locals,
+            closure,
+            is_main: true,
+            function: Rc::from("main"),
+            function_index: None,
+            return_target: None,
+        }
+    }
+
+    pub(crate) fn callee(
+        function: impl Into<Rc<str>>,
+        function_index: usize,
+        register_count: usize,
+        locals: SharedEnvironment,
+        closure: SharedEnvironment,
+        return_target: ReturnTarget,
+    ) -> Self {
+        Self {
+            ip: 0,
+            registers: vec![Value::Nil; register_count],
+            locals,
+            closure,
+            is_main: false,
+            function: function.into(),
+            function_index: Some(function_index),
+            return_target: Some(return_target),
+        }
+    }
+}
+
+pub(crate) struct FrameStack {
+    frames: Vec<ResumableFrame>,
+}
+
+impl FrameStack {
+    pub(crate) fn new(root: ResumableFrame) -> Result<Self, FrameStackError> {
+        if root.return_target.is_some() {
+            return Err(FrameStackError::RootHasReturnTarget);
+        }
+        Ok(Self { frames: vec![root] })
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.frames.len()
+    }
+
+    pub(crate) fn is_empty(&self) -> bool {
+        self.frames.is_empty()
+    }
+
+    pub(crate) fn current(&self) -> Result<&ResumableFrame, FrameStackError> {
+        self.frames.last().ok_or(FrameStackError::Empty)
+    }
+
+    pub(crate) fn current_mut(&mut self) -> Result<&mut ResumableFrame, FrameStackError> {
+        self.frames.last_mut().ok_or(FrameStackError::Empty)
+    }
+
+    pub(crate) fn frames(&self) -> &[ResumableFrame] {
+        &self.frames
+    }
+
+    pub(crate) fn push(&mut self, frame: ResumableFrame) -> Result<(), FrameStackError> {
+        if frame.return_target.is_none() {
+            return Err(FrameStackError::MissingReturnTarget);
+        }
+        if self.is_empty() {
+            return Err(FrameStackError::Empty);
+        }
+        self.frames.push(frame);
+        Ok(())
+    }
+
+    /// Return from the current frame. A callee result is written to its
+    /// caller's pending destination; returning from the root yields the task
+    /// result instead.
+    pub(crate) fn return_value(&mut self, value: Value) -> Result<Option<Value>, FrameStackError> {
+        let return_target = self.current()?.return_target;
+        let Some(return_target) = return_target else {
+            let _root = self.frames.pop().ok_or(FrameStackError::Empty)?;
+            return Ok(Some(value));
+        };
+        let caller_index = self
+            .frames
+            .len()
+            .checked_sub(2)
+            .ok_or(FrameStackError::Empty)?;
+        let caller = self
+            .frames
+            .get(caller_index)
+            .ok_or(FrameStackError::Empty)?;
+        if return_target.register >= caller.registers.len() {
+            return Err(FrameStackError::InvalidReturnRegister {
+                register: return_target.register,
+                available: caller.registers.len(),
+            });
+        }
+        let _callee = self.frames.pop().ok_or(FrameStackError::Empty)?;
+        let caller = self
+            .frames
+            .get_mut(caller_index)
+            .ok_or(FrameStackError::Empty)?;
+        caller.registers[return_target.register] = value;
+        Ok(None)
     }
 }
 
@@ -280,6 +446,7 @@ impl<T> CooperativeScheduler<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::runtime::Heap;
 
     #[test]
     fn rejects_zero_quantum() {
@@ -398,5 +565,109 @@ mod tests {
             scheduler.wake(task),
             Err(SchedulerError::TaskNotBlocked(task))
         );
+    }
+
+    fn test_frame_stack() -> FrameStack {
+        let heap = Heap::new();
+        let locals = heap.new_environment();
+        let closure = heap.new_environment();
+        FrameStack::new(ResumableFrame::main(2, locals, closure)).expect("valid root frame")
+    }
+
+    #[test]
+    fn frame_stack_preserves_call_state_and_transfers_return_values() {
+        let heap = Heap::new();
+        let mut stack = test_frame_stack();
+        let callee = ResumableFrame::callee(
+            "worker",
+            3,
+            4,
+            heap.new_environment(),
+            heap.new_environment(),
+            ReturnTarget { register: 1 },
+        );
+        stack.push(callee).expect("callee has a caller");
+        stack.current_mut().expect("callee frame").ip = 7;
+
+        assert_eq!(stack.len(), 2);
+        assert_eq!(stack.current().expect("callee frame").ip, 7);
+        assert_eq!(
+            stack.current().expect("callee frame").function.as_ref(),
+            "worker"
+        );
+        assert_eq!(
+            stack.current().expect("callee frame").function_index,
+            Some(3)
+        );
+        assert!(matches!(stack.return_value(Value::number(42.0)), Ok(None)));
+        assert_eq!(stack.len(), 1);
+        assert!(matches!(
+            stack.current().expect("root frame").registers[1],
+            Value::Number(value) if value == 42.0
+        ));
+    }
+
+    #[test]
+    fn returning_from_root_yields_task_result_and_empties_stack() {
+        let mut stack = test_frame_stack();
+        assert!(matches!(
+            stack.return_value(Value::string("done")),
+            Ok(Some(Value::String(value))) if value == "done"
+        ));
+        assert!(stack.is_empty());
+        assert!(matches!(stack.current(), Err(FrameStackError::Empty)));
+    }
+
+    #[test]
+    fn frame_stack_rejects_invalid_root_and_return_targets() {
+        let heap = Heap::new();
+        let invalid_root = ResumableFrame::callee(
+            "root",
+            0,
+            1,
+            heap.new_environment(),
+            heap.new_environment(),
+            ReturnTarget { register: 0 },
+        );
+        assert!(matches!(
+            FrameStack::new(invalid_root),
+            Err(FrameStackError::RootHasReturnTarget)
+        ));
+
+        let mut stack = test_frame_stack();
+        let missing_target = ResumableFrame {
+            ip: 0,
+            registers: vec![Value::Nil],
+            locals: heap.new_environment(),
+            closure: heap.new_environment(),
+            is_main: false,
+            function: Rc::from("missing"),
+            function_index: Some(1),
+            return_target: None,
+        };
+        assert_eq!(
+            stack.push(missing_target),
+            Err(FrameStackError::MissingReturnTarget)
+        );
+
+        let invalid_destination = ResumableFrame::callee(
+            "worker",
+            1,
+            1,
+            heap.new_environment(),
+            heap.new_environment(),
+            ReturnTarget { register: 5 },
+        );
+        stack
+            .push(invalid_destination)
+            .expect("callee has a caller");
+        assert!(matches!(
+            stack.return_value(Value::Nil),
+            Err(FrameStackError::InvalidReturnRegister {
+                register: 5,
+                available: 2,
+            })
+        ));
+        assert_eq!(stack.len(), 2);
     }
 }

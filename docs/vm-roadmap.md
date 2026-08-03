@@ -95,8 +95,8 @@ to expose a plugin ABI.
 ### V5: Define deterministic task scheduling before parallel execution
 
 **Priority:** P1. **Status:** V5A contract recorded on 2026-08-03; the V5B
-scheduler control-plane foundation is implemented and explicit frame
-integration is next. See
+scheduler control-plane and explicit frame-state foundation are implemented;
+the task execution adapter is next. See
 [`v5a-vm-concurrency-contract-001.md`](decisions/v5a-vm-concurrency-contract-001.md).
 
 Concurrency is a runtime and language contract that a later JIT must preserve.
@@ -112,10 +112,11 @@ debugger/profile events. Resume it before JIT work, in these slices:
    promise OS threads, language-level async syntax, or `Send`/`Sync`.
 2. **V5B - cooperative scheduler:** the control-plane foundation is recorded
    in [`v5b-vm-scheduler-control-plane-001.md`](decisions/v5b-vm-scheduler-control-plane-001.md).
-   It provides FIFO task states, quantum requeue, explicit wake, and
-   cancellation transitions. The next slice integrates resumable bytecode
-   frames, task-local roots, and scheduler execution while keeping source
-   syntax, `.cdbc 0.1`, and existing CLI/library behavior unchanged.
+   It provides FIFO task states, quantum requeue, explicit wake,
+   cancellation transitions, and a resumable frame stack with validated return
+   transfer. The next slice integrates that state into scheduler execution
+   while keeping source syntax, `.cdbc 0.1`, and existing CLI/library behavior
+   unchanged.
 3. **V5C - concurrency expansion decision:** only after V5B workloads exist,
    decide whether async syntax, channels/actors, shared-memory concurrency,
    multiple OS threads, or `Send`/`Sync` provides enough product value to
@@ -180,7 +181,8 @@ These tracks stay outside the default queue until their trigger is met:
 ```text
 V5A concurrency contract (recorded)
   -> V5B scheduler control plane (implemented)
-  -> V5B resumable bytecode frames and task execution
+  -> V5B resumable frame foundation (implemented)
+  -> V5B task execution adapter
   -> optional V5C concurrency expansion
 
 completed V5B + stable profile + demonstrated hot workload
@@ -198,11 +200,10 @@ demonstrated ABI/release need
   -> optional successor artifact work
 ```
 
-V5B resumable bytecode frames and task execution are the next implementation
-focus. V6 JIT work starts only after V5B establishes deterministic
-task/frame/root/safepoint behavior and stable hot-workload evidence. V2 host
-integration and V4 release compatibility resume only when their named consumer
-or ABI/release trigger appears.
+V5B task execution adapter is the next implementation focus. V6 JIT work starts
+only after V5B establishes deterministic task/frame/root/safepoint behavior and
+stable hot-workload evidence. V2 host integration and V4 release compatibility
+resume only when their named consumer or ABI/release trigger appears.
 
 ## 6. Verification contract
 

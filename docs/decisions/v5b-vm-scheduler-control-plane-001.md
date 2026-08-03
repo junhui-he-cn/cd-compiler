@@ -1,15 +1,16 @@
 # V5B: scheduler control-plane foundation
 
-Status: first implementation slice completed on 2026-08-03 against the V5A
-contract. The bytecode interpreter, public task API, and resumable frame stack
-remain outside this slice.
+Status: scheduler control-plane and explicit frame-state foundation slices
+completed on 2026-08-03 against the V5A contract. The bytecode interpreter,
+public task API, and scheduler task adapter remain outside this slice.
 
 ## Scope
 
 `vm-rs/src/scheduler.rs` adds a private, one-thread control plane for opaque
-task payloads. It is intentionally independent of the current recursive VM
-execution path so existing `VM::run`, `trace`, `debug`, and `profile` behavior
-does not change while the frame migration is prepared.
+task payloads plus `ResumableFrame` and `FrameStack` state. It is intentionally
+independent of the current recursive VM execution path so existing `VM::run`,
+`trace`, `debug`, and `profile` behavior does not change while the frame
+adapter is prepared.
 
 ## Decision
 
@@ -26,6 +27,10 @@ does not change while the frame migration is prepared.
   running-task checkpoint.
 - A dispatch with no ready task returns `None`, allowing the future VM host to
   distinguish waiting from completion without polling or wall-clock behavior.
+- A resumable frame owns instruction pointer, registers, locals, closure,
+  function identity, and an optional caller return target. Returning from a
+  callee validates and writes the result to the caller register; returning from
+  the root yields the task result.
 
 The control plane does not itself define output, trace/profile records, GC, or
 runtime error payloads. Those remain responsibilities of the VM task adapter
@@ -35,8 +40,8 @@ and the V5A contract.
 
 The module is private to the Rust VM crate. No CLI option, `.cdbc` byte, native
 name, C++ behavior, or existing single-task API changes. The current VM still
-uses its recursive function-call path; the next slice will make frame stacks
-explicit and use them as scheduler payloads.
+uses its recursive function-call path; the next slice will adapt that path to
+use the explicit frame stack as scheduler payload.
 
 ## Evidence
 
@@ -47,15 +52,18 @@ and unknown/non-blocked task diagnostics:
 ```sh
 rustfmt --edition 2021 --check vm-rs/src/scheduler.rs
 cargo test --manifest-path vm-rs/Cargo.toml scheduler
+```
+
+The focused Rust run passed 9 scheduler/frame tests. The full VM regression
+suite also passed:
+
+```sh
+cargo test --manifest-path vm-rs/Cargo.toml
 git diff --check
 ```
 
-The focused Rust run passed 6 scheduler tests. Full VM regression tests remain
-the gate after frame execution is integrated.
-
 ## Next slice
 
-Introduce an explicit `FrameStack` containing instruction pointer, registers,
-locals, closure, function identity, and pending call destination. Preserve the
-current recursive VM as the compatibility path until the new task adapter has
-single-task output, error, debugger/profile, resource, and GC-root parity.
+Adapt the current recursive interpreter to a task-owned frame stack behind an
+internal execution path. Preserve the current single-task API until the new
+adapter has output, error, debugger/profile, resource, and GC-root parity.
