@@ -34,7 +34,7 @@ cache invalidation, async semantics, or compiler optimization policy.
 | Execution | Register VM for the complete emitted instruction set and native surface | Further optimization must be workload-driven |
 | Runtime values | Stable identity-bearing storage, non-moving tracing collection at VM safepoints, recursive values, cycle-safe formatting | Incremental/concurrent scheduling remains open; frequency evidence does not justify a threshold |
 | Modules | Deterministic module validation/linking, debug rebasing, typed errors, optional link report | Versioned report serialization is not defined |
-| Embedding | Rust library parse/verify/link/run/trace/debug/profile API plus CLI adapters | API remains pre-1.0, single-threaded, and without host sink/session guarantees |
+| Embedding | Rust library parse/verify/link/run/trace/debug/profile API plus CLI adapters | Host outcome/sink/session work is explicitly deferred; API remains pre-1.0 and single-threaded |
 | Observability | Interactive debugger, deterministic counters, tracked heap counts, estimated retained bytes, structured error kinds | No stable host schema, wall-clock field, allocator bytes, or RSS contract |
 | Performance/capacity | Reproducible phase benchmark, scaled workloads, capacity and budget corpus, V3A/V3B/V3C artifact evidence | Broader host-cost capacity policy remains deferred |
 | Native boundary | Private registry with arity, callback, resource-touchpoint, and signature-shape metadata | Metadata is not a public ABI or serialized contract |
@@ -102,9 +102,11 @@ tests.
 
 ### V2: Define a real host integration boundary
 
-**Priority:** P1. **Status:** consumer gate audited on 2026-08-03 and remains
-queued; a concrete in-repository host consumer is still required before API
-commitment. See [`v2-host-consumer-gate-001.md`](decisions/v2-host-consumer-gate-001.md).
+**Priority:** P1. **Status:** explicitly deferred on 2026-08-03. The consumer
+gate was audited and a concrete in-repository host consumer is still required
+before API commitment. See
+[`v2-host-consumer-gate-001.md`](decisions/v2-host-consumer-gate-001.md) and
+[`vm-future-work-deferred-001.md`](decisions/vm-future-work-deferred-001.md).
 
 1. **V2A - host outcome:** define one structured execution outcome containing
    output, typed runtime/resource failure, frames/source ranges, and partial
@@ -147,7 +149,9 @@ resource accounting, and linked/module artifact behavior.
 
 ### V4: Stabilize native and release compatibility
 
-**Priority:** P2. **Status:** queued behind completed X1 and a real host or artifact need.
+**Priority:** P2. **Status:** explicitly deferred on 2026-08-03, pending a real
+ABI or release need. See
+[`vm-future-work-deferred-001.md`](decisions/vm-future-work-deferred-001.md).
 
 - Publish native registry metadata only after deciding whether names remain the
   artifact ABI or a successor format introduces versioned native IDs.
@@ -202,10 +206,11 @@ completed X1 + demonstrated ABI/release need
   -> optional successor artifact work
 ```
 
-X1, V1A, V1B, the first V1C implementation slice, and its frequency/resource
-measurement are complete. Incremental/concurrent scheduling remains
-evidence-gated. V2 must wait for a concrete consumer; V3 may proceed
-independently only from recorded evidence.
+X1, V1A, V1B, the first V1C implementation slice, its frequency/resource
+measurement, and V3A-V3C are complete. Incremental/concurrent scheduling
+remains evidence-gated. V2 host integration and V4 release compatibility are
+explicitly deferred; resume them only when their named consumer or ABI/release
+trigger appears.
 
 ## 7. Verification contract
 
