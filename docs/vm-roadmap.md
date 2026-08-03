@@ -36,7 +36,7 @@ cache invalidation, async semantics, or compiler optimization policy.
 | Modules | Deterministic module validation/linking, debug rebasing, typed errors, optional link report | Versioned report serialization is not defined |
 | Embedding | Rust library parse/verify/link/run/trace/debug/profile API plus CLI adapters | API remains pre-1.0, single-threaded, and without host sink/session guarantees |
 | Observability | Interactive debugger, deterministic counters, tracked heap counts, estimated retained bytes, structured error kinds | No stable host schema, wall-clock field, allocator bytes, or RSS contract |
-| Performance/capacity | Reproducible phase benchmark, scaled workloads, capacity and budget corpus, 29 measured execution-loop slices | The micro-optimization queue is closed pending new profile evidence |
+| Performance/capacity | Reproducible phase benchmark, scaled workloads, capacity and budget corpus, V3A/V3B artifact evidence | V3C exact capacity policy remains deferred |
 | Native boundary | Private registry with arity, callback, resource-touchpoint, and signature-shape metadata | Metadata is not a public ABI or serialized contract |
 
 `cdbc 0.1`, CLI text/exit behavior, deterministic execution, current resource
@@ -130,9 +130,11 @@ only from a reproducible profile or capacity result:
    The benchmark runner now measures a no-output `verify` load phase
    (read/parse/verify) separately from the canonical `dump` phase, while
    preserving the existing artifact bytes and output contract.
-2. **V3B - select one hotspot:** name the workload, allocation/instruction
-   mechanism, expected metric, correctness boundary, and same-sequence
-   baseline/candidate runs before editing the VM.
+2. **V3B - select one hotspot:** completed on 2026-08-03 with
+   [`v3b-vm-format-capacity-001.md`](decisions/v3b-vm-format-capacity-001.md).
+   The selected hotspot is canonical formatting of multi-megabyte artifacts;
+   a conservative output-capacity hint reduces formatter buffer growth while
+   preserving byte-for-byte dumps and all runtime behavior.
 3. **V3C - capacity policy:** add a capacity case only when it defines a new
    exact success/rejection boundary or exposes an unbounded host cost.
 
