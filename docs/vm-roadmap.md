@@ -110,13 +110,16 @@ debugger/profile events. Resume it before JIT work, in these slices:
    one-thread cooperative scheduling, task lifecycle, join/wake, cancellation,
    resource scopes, output/event ordering, and task-root ownership. It does not
    promise OS threads, language-level async syntax, or `Send`/`Sync`.
-2. **V5B - cooperative scheduler:** the control-plane foundation is recorded
-   in [`v5b-vm-scheduler-control-plane-001.md`](decisions/v5b-vm-scheduler-control-plane-001.md).
+2. **V5B - cooperative scheduler:** the control-plane foundation and private
+   one-task execution adapter are recorded in
+   [`v5b-vm-scheduler-control-plane-001.md`](decisions/v5b-vm-scheduler-control-plane-001.md).
    It provides FIFO task states, quantum requeue, explicit wake,
-   cancellation transitions, and a resumable frame stack with validated return
-   transfer. The next slice integrates that state into scheduler execution
-   while keeping source syntax, `.cdbc 0.1`, and existing CLI/library behavior
-   unchanged.
+   cancellation transitions, a resumable frame stack with validated return
+   transfer, dispatch-boundary GC, and parity checks for output, budgets,
+   callbacks, roots, and runtime-error stacks. The adapter remains host-only
+   and private; source syntax, `.cdbc 0.1`, and existing CLI/library behavior
+   are unchanged. The next slice is the multi-task host result and join/wake
+   integration required by the V5A contract.
 3. **V5C - concurrency expansion decision:** only after V5B workloads exist,
    decide whether async syntax, channels/actors, shared-memory concurrency,
    multiple OS threads, or `Send`/`Sync` provides enough product value to

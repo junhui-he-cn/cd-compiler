@@ -1,16 +1,15 @@
 # V5B: scheduler control-plane foundation
 
-Status: scheduler control-plane and explicit frame-state foundation slices
-completed on 2026-08-03 against the V5A contract. The bytecode interpreter,
-public task API, and scheduler task adapter remain outside this slice.
+Status: scheduler control-plane, explicit frame-state foundation, and the
+private one-task VM adapter completed on 2026-08-03 against the V5A contract.
+The public task API and multi-task host surface remain outside this slice.
 
 ## Scope
 
-`vm-rs/src/scheduler.rs` adds a private, one-thread control plane for opaque
-task payloads plus `ResumableFrame` and `FrameStack` state. It is intentionally
-independent of the current recursive VM execution path so existing `VM::run`,
-`trace`, `debug`, and `profile` behavior does not change while the frame
-adapter is prepared.
+`vm-rs/src/scheduler.rs` adds a private, one-thread control plane for task
+payloads plus `ResumableFrame` and `FrameStack` state. `vm-rs/src/vm.rs` adds a
+private single-task adapter that executes verified bytecode through that frame
+stack without changing the existing public recursive execution path.
 
 ## Decision
 
@@ -33,19 +32,23 @@ adapter is prepared.
   the root yields the task result.
 
 The control plane does not itself define output, trace/profile records, GC, or
-runtime error payloads. Those remain responsibilities of the VM task adapter
-and the V5A contract.
+runtime error payloads. The adapter now preserves output, resource checks,
+native callback behavior, call-site stack locations, and dispatch-boundary
+collection for its host-only path; task-aware output, trace/profile records,
+debugger controls, and a public task result type remain future work.
 
 ## Compatibility boundary
 
 The module is private to the Rust VM crate. No CLI option, `.cdbc` byte, native
-name, C++ behavior, or existing single-task API changes. The current VM still
-uses its recursive function-call path; the next slice will adapt that path to
-use the explicit frame stack as scheduler payload.
+name, C++ behavior, or existing single-task API changes. The current public VM
+still uses its recursive function-call path. The private adapter is not wired
+into `VM::run`, `trace`, `debug`, `profile`, the CLI, or the `.cdbc 0.1`
+boundary. Ordinary single-task construction also avoids copying the entry
+body until the adapter is explicitly requested.
 
-## Evidence
+## Control-plane evidence
 
-The focused tests cover positive-quantum validation, FIFO tail requeue,
+The control-plane tests cover positive-quantum validation, FIFO tail requeue,
 blocked/wake transitions, ready and blocked cancellation, terminal completion,
 and unknown/non-blocked task diagnostics:
 
@@ -62,8 +65,24 @@ cargo test --manifest-path vm-rs/Cargo.toml
 git diff --check
 ```
 
+## Private adapter evidence
+
+The adapter tests cover quantum-stable output, caller-register return
+transfer, synchronous native callbacks, callback and direct-frame call-depth
+budgets, instruction budgets, pre-start cancellation, nested runtime-error
+stack locations, and cyclic task-root release. Each dispatch performs a heap
+safepoint while the scheduler owns the suspended frame roots; terminal task
+results and frames are released before the final collection.
+
+```sh
+cargo test --manifest-path vm-rs/Cargo.toml --lib cooperative_adapter
+cargo test --manifest-path vm-rs/Cargo.toml
+git diff --check
+```
+
 ## Next slice
 
-Adapt the current recursive interpreter to a task-owned frame stack behind an
-internal execution path. Preserve the current single-task API until the new
-adapter has output, error, debugger/profile, resource, and GC-root parity.
+Add the typed multi-task host result and join/wake integration required by the
+V5A contract. Keep source syntax, the CLI, `.cdbc 0.1`, and existing
+single-task APIs unchanged until task-aware output, trace/profile events, and
+debugger controls have an explicit compatibility contract.

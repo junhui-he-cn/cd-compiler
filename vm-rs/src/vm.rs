@@ -6,6 +6,10 @@ use crate::bytecode::{
 #[cfg(test)]
 use crate::runtime::HeapObjectKind;
 use crate::runtime::{Cell, FunctionValue, Heap, HeapStats, SharedEnvironment};
+use crate::scheduler::{
+    CooperativeScheduler, DispatchContext, FrameStack, ResumableFrame as Frame, ReturnTarget,
+    TaskState, TaskStep,
+};
 use crate::value::Value;
 use std::collections::BTreeMap;
 use std::fmt;
@@ -1172,6 +1176,7 @@ mod tests {
         let program = empty_program();
         let vm = VM::new(&program);
         let mut frame = Frame {
+            body: None,
             ip: 0,
             registers: vec![Value::string("returned")],
             locals: vm.heap.new_environment(),
@@ -1179,6 +1184,7 @@ mod tests {
             is_main: false,
             function: Rc::from("returner"),
             function_index: Some(0),
+            return_target: None,
         };
 
         let value = vm
@@ -1186,6 +1192,341 @@ mod tests {
             .expect("return register should be readable");
         assert!(matches!(value, Value::String(value) if value == "returned"));
         assert!(matches!(frame.registers[0], Value::Nil));
+    }
+
+    fn cooperative_print_program() -> Program {
+        Program {
+            constants: vec![Constant::Number("7".to_string())],
+            names: Vec::new(),
+            main: FunctionBody {
+                registers: 1,
+                instructions: vec![
+                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Print { value: 0 },
+                    Instruction::Return { value: 0 },
+                ],
+                locations: vec![None; 3],
+            },
+            functions: Vec::new(),
+            debug_sources: Vec::new(),
+        }
+    }
+
+    fn cooperative_call_program() -> Program {
+        Program {
+            constants: vec![Constant::Number("42".to_string())],
+            names: Vec::new(),
+            main: FunctionBody {
+                registers: 3,
+                instructions: vec![
+                    Instruction::MakeFunction { dest: 0, function: 0 },
+                    Instruction::Call {
+                        dest: 1,
+                        callee: 0,
+                        arguments: Vec::new(),
+                    },
+                    Instruction::Print { value: 1 },
+                    Instruction::Return { value: 1 },
+                ],
+                locations: vec![None; 4],
+            },
+            functions: vec![Function {
+                index: 0,
+                name: "answer".to_string(),
+                arity: 0,
+                registers: 1,
+                params: Vec::new(),
+                instructions: vec![
+                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Return { value: 0 },
+                ],
+                locations: vec![None; 2],
+            }],
+            debug_sources: Vec::new(),
+        }
+    }
+
+    fn cooperative_loop_program() -> Program {
+        Program {
+            constants: vec![Constant::Number("1".to_string())],
+            names: Vec::new(),
+            main: FunctionBody {
+                registers: 1,
+                instructions: vec![
+                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Jump { target: 0 },
+                ],
+                locations: vec![None; 2],
+            },
+            functions: Vec::new(),
+            debug_sources: Vec::new(),
+        }
+    }
+
+    fn cooperative_native_callback_program() -> Program {
+        Program {
+            constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
+            names: vec!["map".to_string(), "item".to_string()],
+            main: FunctionBody {
+                registers: 5,
+                instructions: vec![
+                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Constant { dest: 1, constant: 1 },
+                    Instruction::Array {
+                        dest: 2,
+                        elements: vec![0, 1],
+                    },
+                    Instruction::MakeFunction { dest: 3, function: 0 },
+                    Instruction::NativeCall {
+                        dest: 4,
+                        name: 0,
+                        arguments: vec![2, 3],
+                    },
+                    Instruction::Print { value: 4 },
+                    Instruction::Return { value: 4 },
+                ],
+                locations: vec![None; 7],
+            },
+            functions: vec![Function {
+                index: 0,
+                name: "identity".to_string(),
+                arity: 1,
+                registers: 1,
+                params: vec!["item".to_string()],
+                instructions: vec![
+                    Instruction::LoadVar { dest: 0, name: 1 },
+                    Instruction::Return { value: 0 },
+                ],
+                locations: vec![None; 2],
+            }],
+            debug_sources: Vec::new(),
+        }
+    }
+
+    fn cooperative_nested_native_callback_program() -> Program {
+        Program {
+            constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
+            names: vec!["map".to_string(), "item".to_string()],
+            main: FunctionBody {
+                registers: 2,
+                instructions: vec![
+                    Instruction::MakeFunction { dest: 0, function: 0 },
+                    Instruction::Call {
+                        dest: 1,
+                        callee: 0,
+                        arguments: Vec::new(),
+                    },
+                    Instruction::Return { value: 1 },
+                ],
+                locations: vec![None; 3],
+            },
+            functions: vec![
+                Function {
+                    index: 0,
+                    name: "worker".to_string(),
+                    arity: 0,
+                    registers: 5,
+                    params: Vec::new(),
+                    instructions: vec![
+                        Instruction::Constant { dest: 0, constant: 0 },
+                        Instruction::Constant { dest: 1, constant: 1 },
+                        Instruction::Array {
+                            dest: 2,
+                            elements: vec![0, 1],
+                        },
+                        Instruction::MakeFunction { dest: 3, function: 1 },
+                        Instruction::NativeCall {
+                            dest: 4,
+                            name: 0,
+                            arguments: vec![2, 3],
+                        },
+                        Instruction::Return { value: 4 },
+                    ],
+                    locations: vec![None; 6],
+                },
+                Function {
+                    index: 1,
+                    name: "identity".to_string(),
+                    arity: 1,
+                    registers: 1,
+                    params: vec!["item".to_string()],
+                    instructions: vec![
+                        Instruction::LoadVar { dest: 0, name: 1 },
+                        Instruction::Return { value: 0 },
+                    ],
+                    locations: vec![None; 2],
+                },
+            ],
+            debug_sources: Vec::new(),
+        }
+    }
+
+    fn cooperative_cycle_program() -> Program {
+        Program {
+            constants: vec![Constant::Nil, Constant::Number("0".to_string())],
+            names: Vec::new(),
+            main: FunctionBody {
+                registers: 4,
+                instructions: vec![
+                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Constant { dest: 1, constant: 1 },
+                    Instruction::Array {
+                        dest: 2,
+                        elements: vec![0],
+                    },
+                    Instruction::AssignIndex {
+                        dest: 3,
+                        collection: 2,
+                        index: 1,
+                        value: 2,
+                    },
+                    Instruction::Return { value: 2 },
+                ],
+                locations: vec![None; 5],
+            },
+            functions: Vec::new(),
+            debug_sources: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn cooperative_adapter_preserves_output_across_quantums() {
+        let program = cooperative_print_program();
+        let expected = VM::new(&program)
+            .run()
+            .expect("single-task print should succeed");
+
+        for quantum in [1, 2, 8] {
+            let actual = VM::new(&program)
+                .run_cooperative(quantum)
+                .expect("cooperative print should succeed");
+            assert_eq!(actual, expected, "quantum {} changed output", quantum);
+        }
+    }
+
+    #[test]
+    fn cooperative_adapter_transfers_call_results_to_the_caller() {
+        let program = cooperative_call_program();
+        let expected = VM::new(&program)
+            .run()
+            .expect("single-task call should succeed");
+        let actual = VM::new(&program)
+            .run_cooperative(1)
+            .expect("cooperative call should succeed");
+
+        assert_eq!(actual, expected);
+        assert_eq!(actual, "42\n");
+    }
+
+    #[test]
+    fn cooperative_adapter_preserves_native_callback_behavior() {
+        let program = cooperative_native_callback_program();
+        let expected = VM::new(&program)
+            .run()
+            .expect("single-task native callback should succeed");
+        let actual = VM::new(&program)
+            .run_cooperative(1)
+            .expect("cooperative native callback should succeed");
+
+        assert_eq!(actual, expected);
+        assert_eq!(actual, "[1, 2]\n");
+    }
+
+    #[test]
+    fn cooperative_adapter_counts_native_callbacks_in_task_call_depth() {
+        let program = cooperative_nested_native_callback_program();
+        let mut config = RunConfig::unlimited();
+        config.max_call_depth = Some(1);
+
+        let expected = VM::with_config(&program, config.clone())
+            .run()
+            .expect_err("nested native callback should exceed the depth budget");
+        let actual = VM::with_config(&program, config)
+            .run_cooperative(1)
+            .expect_err("cooperative nested callback should exceed the depth budget");
+
+        assert_eq!(actual.kind, expected.kind);
+        assert_eq!(actual.resource_limit, expected.resource_limit);
+        assert_eq!(actual.message, expected.message);
+        assert_eq!(actual.stack, expected.stack);
+    }
+
+    #[test]
+    fn cooperative_adapter_preserves_instruction_budget_errors() {
+        let program = cooperative_loop_program();
+        let mut config = RunConfig::unlimited();
+        config.max_instruction_steps = Some(3);
+
+        let expected = VM::with_config(&program, config.clone())
+            .run()
+            .expect_err("single-task loop should exhaust its budget");
+        let actual = VM::with_config(&program, config)
+            .run_cooperative(2)
+            .expect_err("cooperative loop should exhaust its budget");
+
+        assert_eq!(actual.kind, expected.kind);
+        assert_eq!(actual.resource_limit, expected.resource_limit);
+        assert_eq!(actual.message, expected.message);
+    }
+
+    #[test]
+    fn cooperative_adapter_preserves_per_task_call_depth_errors() {
+        let program = recursive_closure_program(2);
+        let mut config = RunConfig::unlimited();
+        config.max_call_depth = Some(1);
+
+        let expected = VM::with_config(&program, config.clone())
+            .run()
+            .expect_err("single-task recursion should exceed its depth budget");
+        let actual = VM::with_config(&program, config)
+            .run_cooperative(1)
+            .expect_err("cooperative recursion should exceed its depth budget");
+
+        assert_eq!(actual.kind, expected.kind);
+        assert_eq!(actual.resource_limit, expected.resource_limit);
+        assert_eq!(actual.message, expected.message);
+        assert_eq!(actual.stack, expected.stack);
+    }
+
+    #[test]
+    fn cooperative_adapter_checks_cancellation_before_an_empty_task() {
+        let token = CancellationToken::new();
+        token.cancel();
+        let program = empty_program();
+        let error = VM::with_config(&program, RunConfig::unlimited().with_cancellation(token))
+            .run_cooperative(1)
+            .expect_err("pre-cancelled cooperative task should not start");
+
+        assert_eq!(error.kind, RuntimeErrorKind::Cancelled);
+        assert_eq!(error.message, "execution cancelled");
+    }
+
+    #[test]
+    fn cooperative_adapter_releases_terminated_task_roots_before_gc() {
+        let program = cooperative_cycle_program();
+        let vm = VM::new(&program);
+        let stats = vm.heap_stats();
+
+        vm.run_cooperative(1)
+            .expect("cyclic task result should complete");
+
+        assert_eq!(stats.snapshot().total_live, 0);
+    }
+
+    #[test]
+    fn cooperative_adapter_preserves_nested_runtime_error_stack() {
+        let program = debug_failure_program();
+        let expected = VM::new(&program)
+            .run()
+            .expect_err("single-task failure should be reported");
+        let actual = VM::new(&program)
+            .run_cooperative(1)
+            .expect_err("cooperative failure should be reported");
+
+        assert_eq!(actual.message, expected.message);
+        assert_eq!(actual.location, expected.location);
+        assert_eq!(actual.stack, expected.stack);
+        assert_eq!(actual.to_string(), expected.to_string());
     }
 
     fn array_elements(value: &Value) -> Vec<Value> {
@@ -1475,6 +1816,7 @@ mod tests {
         program.names = vec!["value".to_string(), "value".to_string()];
         let mut vm = VM::new(&program);
         let mut main = Frame {
+            body: None,
             ip: 0,
             registers: Vec::new(),
             locals: new_environment(),
@@ -1482,6 +1824,7 @@ mod tests {
             is_main: true,
             function: Rc::from("main"),
             function_index: None,
+            return_target: None,
         };
 
         let missing = vm
@@ -1510,6 +1853,7 @@ mod tests {
         ));
 
         let closure = Frame {
+            body: None,
             ip: 0,
             registers: Vec::new(),
             locals: new_environment(),
@@ -1517,6 +1861,7 @@ mod tests {
             is_main: false,
             function: Rc::from("closure"),
             function_index: Some(0),
+            return_target: None,
         };
         closure
             .closure
@@ -3249,20 +3594,10 @@ impl fmt::Display for RuntimeError {
     }
 }
 
-struct Frame {
-    ip: usize,
-    registers: Vec<Value>,
-    locals: SharedEnvironment,
-    closure: SharedEnvironment,
-    is_main: bool,
-    function: Rc<str>,
-    function_index: Option<usize>,
-}
-
 struct CachedFunctionBody {
     name: Rc<str>,
     params: Vec<String>,
-    body: FunctionBody,
+    body: Rc<FunctionBody>,
 }
 
 #[derive(Clone, Copy)]
@@ -3310,6 +3645,27 @@ enum CallArguments {
     One(Value),
     Two(Value, Value),
     Many(Vec<Value>),
+}
+
+struct CallRequest {
+    dest: usize,
+    function: FunctionValue,
+    arguments: CallArguments,
+    caller: String,
+    call_site: Option<DebugLocation>,
+}
+
+enum InstructionAction {
+    Continue,
+    Jumped,
+    Call(CallRequest),
+    Return(Value),
+}
+
+struct ScheduledVmTask {
+    frames: FrameStack,
+    result: Option<Value>,
+    error: Option<RuntimeError>,
 }
 
 impl CallArguments {
@@ -3597,6 +3953,7 @@ impl<'a> VM<'a> {
         self.check_cancellation()?;
         let execution = {
             let mut frame = Frame {
+                body: None,
                 ip: 0,
                 registers: vec![Value::Nil; self.program.main.registers],
                 locals: self.heap.new_environment(),
@@ -3604,6 +3961,7 @@ impl<'a> VM<'a> {
                 is_main: true,
                 function: Rc::from("main"),
                 function_index: None,
+                return_target: None,
             };
             // The entry body is immutable after artifact verification. Borrow it
             // directly instead of cloning its instruction and debug-location
@@ -3624,6 +3982,324 @@ impl<'a> VM<'a> {
         };
         self.heap.collect_garbage();
         result
+    }
+
+    /// Execute one host-only cooperative task through the explicit frame
+    /// stack. The public single-task APIs continue to use `run_inner`; this
+    /// adapter is kept private until task-aware output, tracing, debugging,
+    /// and host result types are admitted by later V5B/V2 slices.
+    fn run_cooperative(mut self, quantum: usize) -> Result<String, RuntimeError> {
+        self.check_cancellation()?;
+        let mut scheduler = CooperativeScheduler::new(quantum)
+            .map_err(|error| RuntimeError::new(error.to_string()))?;
+        let main_body = Rc::new(self.program.main.clone());
+        let root = Frame::main(
+            main_body,
+            self.program.main.registers,
+            self.heap.new_environment(),
+            self.heap.new_environment(),
+        );
+        let frames = FrameStack::new(root)
+            .map_err(|error| RuntimeError::new(error.to_string()))?;
+        let task_id = scheduler
+            .spawn(ScheduledVmTask {
+                frames,
+                result: None,
+                error: None,
+            })
+            .map_err(|error| RuntimeError::new(error.to_string()))?;
+
+        loop {
+            let dispatch = scheduler
+                .dispatch(|task, context| self.execute_scheduled_slice(task, context))
+                .map_err(|error| RuntimeError::new(error.to_string()))?;
+            self.heap.collect_garbage();
+            let Some(result) = dispatch else {
+                if scheduler.is_complete() {
+                    break;
+                }
+                return Err(RuntimeError::new("scheduler has blocked tasks"));
+            };
+            if matches!(result.state, TaskState::Failed | TaskState::Cancelled)
+                || scheduler.is_complete()
+            {
+                break;
+            }
+        }
+
+        let task_error = scheduler
+            .task_payload(task_id)
+            .map_err(|error| RuntimeError::new(error.to_string()))?
+            .error
+            .clone();
+        let task_result = scheduler
+            .task_payload_mut(task_id)
+            .map_err(|error| RuntimeError::new(error.to_string()))?
+            .result
+            .take();
+        let result = match task_error {
+            Some(mut error) => {
+                if error.sources.is_empty() {
+                    error.sources = self.program.debug_sources.clone();
+                }
+                Err(error)
+            }
+            None => {
+                drop(task_result);
+                Ok(std::mem::take(&mut self.output))
+            }
+        };
+        drop(scheduler);
+        self.heap.collect_garbage();
+        result
+    }
+
+    fn execute_scheduled_slice(
+        &mut self,
+        task: &mut ScheduledVmTask,
+        context: DispatchContext,
+    ) -> TaskStep {
+        for _ in 0..context.quantum {
+            if context.cancellation_requested {
+                task.error = Some(RuntimeError::cancelled());
+                return TaskStep::Cancel;
+            }
+
+            let (body, instruction_index) = match task.frames.current() {
+                Ok(frame) => {
+                    let Some(body) = frame.body.as_ref() else {
+                        task.error = Some(RuntimeError::new(
+                            "scheduled frame has no bytecode body",
+                        ));
+                        return TaskStep::Fail;
+                    };
+                    (Rc::clone(body), frame.ip)
+                }
+                Err(error) => {
+                    task.error = Some(RuntimeError::new(error.to_string()));
+                    return TaskStep::Fail;
+                }
+            };
+            if instruction_index >= body.instructions.len() {
+                match task.frames.return_value(Value::Nil) {
+                    Ok(Some(value)) => {
+                        task.result = Some(value);
+                        return TaskStep::Complete;
+                    }
+                    Ok(None) => continue,
+                    Err(error) => {
+                        task.error = Some(RuntimeError::new(error.to_string()));
+                        return TaskStep::Fail;
+                    }
+                }
+            }
+
+            let location = body
+                .locations
+                .get(instruction_index)
+                .cloned()
+                .flatten();
+            let previous_call_depth = self.call_depth;
+            let scheduled_call_depth = task.frames.len().saturating_sub(1);
+            let action = {
+                let frame = match task.frames.current_mut() {
+                    Ok(frame) => frame,
+                    Err(error) => {
+                        task.error = Some(RuntimeError::new(error.to_string()));
+                        return TaskStep::Fail;
+                    }
+                };
+                if let Err(error) = self.checkpoint_instruction() {
+                    task.error = Some(self.decorate_scheduled_error(
+                        error,
+                        task,
+                        &body,
+                        instruction_index,
+                    ));
+                    return if task
+                        .error
+                        .as_ref()
+                        .is_some_and(|error| error.kind == RuntimeErrorKind::Cancelled)
+                    {
+                        TaskStep::Cancel
+                    } else {
+                        TaskStep::Fail
+                    };
+                }
+                if self.profile_enabled {
+                    self.profile_instruction(frame, location.as_ref());
+                }
+                self.call_depth = scheduled_call_depth;
+                let action = self.execute_instruction(
+                    &body,
+                    frame,
+                    instruction_index,
+                    &body.instructions[instruction_index],
+                );
+                self.call_depth = previous_call_depth;
+                action
+            };
+            self.heap.observe_estimated_bytes();
+
+            match action {
+                Ok(InstructionAction::Continue) => {
+                    if let Ok(frame) = task.frames.current_mut() {
+                        frame.ip += 1;
+                    }
+                }
+                Ok(InstructionAction::Jumped) => {}
+                Ok(InstructionAction::Return(value)) => {
+                    match task.frames.return_value(value) {
+                        Ok(Some(value)) => {
+                            task.result = Some(value);
+                            return TaskStep::Complete;
+                        }
+                        Ok(None) => {}
+                        Err(error) => {
+                            task.error = Some(RuntimeError::new(error.to_string()));
+                            return TaskStep::Fail;
+                        }
+                    }
+                }
+                Ok(InstructionAction::Call(request)) => {
+                    if let Err(error) = self.push_scheduled_call(task, request) {
+                        task.error = Some(self.decorate_scheduled_error(
+                            error,
+                            task,
+                            &body,
+                            instruction_index,
+                        ));
+                        return TaskStep::Fail;
+                    }
+                }
+                Err(error) => {
+                    task.error = Some(self.decorate_scheduled_error(
+                        error,
+                        task,
+                        &body,
+                        instruction_index,
+                    ));
+                    return TaskStep::Fail;
+                }
+            }
+        }
+        TaskStep::Yield
+    }
+
+    fn push_scheduled_call(
+        &mut self,
+        task: &mut ScheduledVmTask,
+        request: CallRequest,
+    ) -> Result<(), RuntimeError> {
+        let Some(cached) = self.cached_function_body(request.function.function_index) else {
+            let mut error = RuntimeError::new("function index out of range");
+            error.location = request.call_site;
+            error.push_frame(request.caller, error.location.clone());
+            return Err(error);
+        };
+        if request.arguments.len() != cached.params.len() {
+            let mut error = RuntimeError::new(format!(
+                "expected {} arguments but got {}",
+                cached.params.len(),
+                request.arguments.len()
+            ));
+            error.location = request.call_site;
+            error.push_frame(request.caller, error.location.clone());
+            return Err(error);
+        }
+        self.check_call_depth_at(task.frames.len().saturating_sub(1))?;
+
+        let frame = Frame {
+            body: Some(Rc::clone(&cached.body)),
+            ip: 0,
+            registers: vec![Value::Nil; cached.body.registers],
+            locals: self.heap.new_environment(),
+            closure: request.function.closure.clone(),
+            is_main: false,
+            function: Rc::clone(&cached.name),
+            function_index: Some(request.function.function_index),
+            return_target: Some(ReturnTarget {
+                register: request.dest,
+                call_site: request.call_site,
+            }),
+        };
+        match request.arguments {
+            CallArguments::Empty => {}
+            CallArguments::One(argument) => {
+                frame.locals.borrow_mut().insert(
+                    cached.params[0].clone(),
+                    self.heap.new_cell(argument),
+                );
+            }
+            CallArguments::Two(first, second) => {
+                frame.locals.borrow_mut().insert(
+                    cached.params[0].clone(),
+                    self.heap.new_cell(first),
+                );
+                frame.locals.borrow_mut().insert(
+                    cached.params[1].clone(),
+                    self.heap.new_cell(second),
+                );
+            }
+            CallArguments::Many(arguments) => {
+                for (index, argument) in arguments.into_iter().enumerate() {
+                    frame.locals.borrow_mut().insert(
+                        cached.params[index].clone(),
+                        self.heap.new_cell(argument),
+                    );
+                }
+            }
+        }
+        if self.profile_enabled {
+            self.profile_function_entry(&frame);
+        }
+        task.frames
+            .current_mut()
+            .map_err(|error| RuntimeError::new(error.to_string()))?
+            .ip += 1;
+        task.frames
+            .push(frame)
+            .map_err(|error| RuntimeError::new(error.to_string()))
+    }
+
+    fn decorate_scheduled_error(
+        &self,
+        mut error: RuntimeError,
+        task: &ScheduledVmTask,
+        body: &FunctionBody,
+        instruction_index: usize,
+    ) -> RuntimeError {
+        let location = body.locations.get(instruction_index).cloned().flatten();
+        if error.location.is_none() {
+            error.location = location;
+        }
+        if error.stack.is_empty() {
+            let frames = task.frames.frames();
+            for (depth, frame) in frames.iter().rev().enumerate() {
+                let location = if depth == 0 {
+                    frame
+                        .body
+                        .as_ref()
+                        .and_then(|body| body.locations.get(frame.ip).cloned().flatten())
+                } else {
+                    frames
+                        .get(frames.len().saturating_sub(depth))
+                        .and_then(|child| child.return_target.as_ref())
+                        .and_then(|target| target.call_site.clone())
+                        .or_else(|| {
+                            frame
+                                .body
+                                .as_ref()
+                                .and_then(|body| body.locations.get(frame.ip).cloned().flatten())
+                        })
+                };
+                error.stack.push(StackFrame {
+                    function: frame.function.to_string(),
+                    location,
+                });
+            }
+        }
+        error
     }
 
     fn execute_body(
@@ -4108,6 +4784,368 @@ impl<'a> VM<'a> {
         Ok(None)
     }
 
+    fn execute_instruction(
+        &mut self,
+        body: &FunctionBody,
+        frame: &mut Frame,
+        instruction_index: usize,
+        instruction: &Instruction,
+    ) -> Result<InstructionAction, RuntimeError> {
+        let call_site = body
+            .locations
+            .get(instruction_index)
+            .and_then(Option::as_ref);
+        match instruction {
+            Instruction::Constant { dest, constant } => {
+                let value = self.constant_value(*constant)?;
+                self.write_register(frame, *dest, value)?;
+            }
+            Instruction::Print { value } => {
+                let value = self.read_register_ref(frame, *value)?;
+                let mut output = value.to_string();
+                output.push('\n');
+                self.append_output(&output)?;
+                if self.trace_enabled {
+                    self.emit_trace(
+                        TraceEventKind::Output,
+                        frame,
+                        Some(instruction_index),
+                        body.locations.get(instruction_index).cloned().flatten(),
+                        Some(value.to_string()),
+                    );
+                }
+            }
+            Instruction::MakeFunction { dest, function } => {
+                let value = self.make_function(*function, frame)?;
+                self.write_register(frame, *dest, value)?;
+            }
+            Instruction::Array { dest, elements } => {
+                let mut values = Vec::with_capacity(elements.len());
+                for element in elements {
+                    values.push(self.read_register(frame, *element)?);
+                }
+                let value = self.allocate_array(values)?;
+                self.write_register(frame, *dest, value)?;
+            }
+            Instruction::Map { dest, entries } => {
+                let mut values = Vec::with_capacity(entries.len());
+                for (key_register, value_register) in entries {
+                    let key = self.read_register(frame, *key_register)?;
+                    self.validate_map_key(&key)?;
+                    let value = self.read_register(frame, *value_register)?;
+                    values.push((key, value));
+                }
+                let value = self.allocate_map(values)?;
+                self.write_register(frame, *dest, value)?;
+            }
+            Instruction::Struct {
+                dest,
+                type_name,
+                fields,
+            } => {
+                let type_name = type_name.map(|index| self.read_name(index)).transpose()?;
+                let value = self.make_struct(frame, type_name, fields)?;
+                self.write_register(frame, *dest, value)?;
+            }
+            Instruction::Variant {
+                dest,
+                enum_name,
+                variant_name,
+                payload,
+            } => {
+                let enum_name = self.read_name(*enum_name)?;
+                let variant_name = self.read_name(*variant_name)?;
+                let mut fields = Vec::with_capacity(payload.len());
+                for register in payload {
+                    fields.push(self.read_register(frame, *register)?);
+                }
+                let value = self.allocate_variant(enum_name, variant_name, fields)?;
+                self.write_register(frame, *dest, value)?;
+            }
+            Instruction::VariantTag {
+                dest,
+                value,
+                enum_name,
+                variant_name,
+            } => {
+                let input = self.read_register_ref(frame, *value)?;
+                let enum_name = self.read_name_ref(*enum_name)?;
+                let variant_name = self.read_name_ref(*variant_name)?;
+                let matched = matches!(
+                    input,
+                    Value::Variant(variant)
+                        if variant.enum_name == enum_name
+                            && variant.variant_name == variant_name
+                );
+                self.write_register(frame, *dest, Value::boolean(matched))?;
+            }
+            Instruction::VariantField { dest, value, index } => {
+                let input = self.read_register_ref(frame, *value)?;
+                let Value::Variant(variant) = input else {
+                    return Err(RuntimeError::new("can only access fields on enum variants"));
+                };
+                let field = variant
+                    .fields
+                    .get(*index)
+                    .cloned()
+                    .ok_or_else(|| RuntimeError::new("enum variant field index out of bounds"))?;
+                self.write_register(frame, *dest, field)?;
+            }
+            Instruction::Move { dest, source } => {
+                let value = self.read_register(frame, *source)?;
+                self.write_register(frame, *dest, value)?;
+            }
+            Instruction::LoadVar { dest, name } => {
+                let value = self.load_variable(frame, *name)?;
+                self.write_register(frame, *dest, value)?;
+            }
+            Instruction::StoreVar { name, value } => {
+                let name_index = *name;
+                let name = self.read_name(name_index)?;
+                let value = self.read_register(frame, *value)?;
+                self.store_variable(frame, name_index, name, value);
+            }
+            Instruction::AssignVar { name, value } => {
+                let value = self.read_register(frame, *value)?;
+                self.assign_variable(frame, *name, value)?;
+            }
+            Instruction::Call {
+                dest,
+                callee,
+                arguments,
+            } => {
+                let Value::Function(function) = self.read_register_ref(frame, *callee)? else {
+                    return Err(RuntimeError::new("can only call functions"));
+                };
+                let values = match arguments.as_slice() {
+                    [] => CallArguments::Empty,
+                    [argument] => CallArguments::One(self.read_register(frame, *argument)?),
+                    [left, right] => {
+                        let left = self.read_register(frame, *left)?;
+                        let right = self.read_register(frame, *right)?;
+                        CallArguments::Two(left, right)
+                    }
+                    arguments => {
+                        let mut values = Vec::with_capacity(arguments.len());
+                        for argument in arguments {
+                            values.push(self.read_register(frame, *argument)?);
+                        }
+                        CallArguments::Many(values)
+                    }
+                };
+                return Ok(InstructionAction::Call(CallRequest {
+                    dest: *dest,
+                    function: function.clone(),
+                    arguments: values,
+                    caller: frame.function.to_string(),
+                    call_site: call_site.cloned(),
+                }));
+            }
+            Instruction::NativeCall {
+                dest,
+                name,
+                arguments,
+            } => {
+                let name = self.read_name_ref(*name)?;
+                let values = match arguments.as_slice() {
+                    [] => NativeArguments::Empty,
+                    [argument] => NativeArguments::One(self.read_register(frame, *argument)?),
+                    [left, right] => {
+                        let left = self.read_register(frame, *left)?;
+                        let right = self.read_register(frame, *right)?;
+                        NativeArguments::Two(left, right)
+                    }
+                    arguments => {
+                        let mut values = Vec::with_capacity(arguments.len());
+                        for argument in arguments {
+                            values.push(self.read_register(frame, *argument)?);
+                        }
+                        NativeArguments::Many(values)
+                    }
+                };
+                let result = self.execute_native_call_at(
+                    &name,
+                    values,
+                    frame.function.as_ref(),
+                    call_site,
+                )?;
+                self.write_register(frame, *dest, result)?;
+            }
+            Instruction::Negate { dest, value } => {
+                let input = self.expect_number(frame, *value, "negate")?;
+                self.write_register(frame, *dest, Value::number(-input))?;
+            }
+            Instruction::Not { dest, value } => {
+                let result = !self.read_register_ref(frame, *value)?.is_truthy();
+                self.write_register(frame, *dest, Value::boolean(result))?;
+            }
+            Instruction::Add { dest, left, right } => {
+                let left_value = self.read_register_ref(frame, *left)?;
+                let right_value = self.read_register_ref(frame, *right)?;
+                let result = match (left_value, right_value) {
+                    (Value::Number(left), Value::Number(right)) => Value::number(left + right),
+                    (Value::String(left), Value::String(right)) => {
+                        Value::string(format!("{}{}", left, right))
+                    }
+                    _ => return Err(RuntimeError::new("add expects two numbers or two strings")),
+                };
+                self.write_register(frame, *dest, result)?;
+            }
+            Instruction::Subtract { dest, left, right } => {
+                let (left, right) = self.expect_two_numbers(frame, *left, *right, "subtract")?;
+                self.write_register(frame, *dest, Value::number(left - right))?;
+            }
+            Instruction::Multiply { dest, left, right } => {
+                let (left, right) = self.expect_two_numbers(frame, *left, *right, "multiply")?;
+                self.write_register(frame, *dest, Value::number(left * right))?;
+            }
+            Instruction::Divide { dest, left, right } => {
+                let (left, right) = self.expect_two_numbers(frame, *left, *right, "divide")?;
+                if right == 0.0 {
+                    return Err(RuntimeError::new("division by zero"));
+                }
+                self.write_register(frame, *dest, Value::number(left / right))?;
+            }
+            Instruction::Equal { dest, left, right } => {
+                let result = self
+                    .read_register_ref(frame, *left)?
+                    .runtime_equals(self.read_register_ref(frame, *right)?);
+                self.write_register(frame, *dest, Value::boolean(result))?;
+            }
+            Instruction::NotEqual { dest, left, right } => {
+                let result = !self
+                    .read_register_ref(frame, *left)?
+                    .runtime_equals(self.read_register_ref(frame, *right)?);
+                self.write_register(frame, *dest, Value::boolean(result))?;
+            }
+            Instruction::Greater { dest, left, right } => {
+                self.compare(frame, *dest, *left, *right, Comparison::Greater, call_site)?;
+            }
+            Instruction::GreaterEqual { dest, left, right } => {
+                self.compare(
+                    frame,
+                    *dest,
+                    *left,
+                    *right,
+                    Comparison::GreaterEqual,
+                    call_site,
+                )?;
+            }
+            Instruction::Less { dest, left, right } => {
+                self.compare(frame, *dest, *left, *right, Comparison::Less, call_site)?;
+            }
+            Instruction::LessEqual { dest, left, right } => {
+                self.compare(
+                    frame,
+                    *dest,
+                    *left,
+                    *right,
+                    Comparison::LessEqual,
+                    call_site,
+                )?;
+            }
+            Instruction::Jump { target } => {
+                self.validate_jump_target(*target, body.instructions.len())?;
+                frame.ip = *target;
+                return Ok(InstructionAction::Jumped);
+            }
+            Instruction::JumpIfFalse { condition, target } => {
+                self.validate_jump_target(*target, body.instructions.len())?;
+                if !self.read_register_ref(frame, *condition)?.is_truthy() {
+                    frame.ip = *target;
+                    return Ok(InstructionAction::Jumped);
+                }
+            }
+            Instruction::JumpIfTrue { condition, target } => {
+                self.validate_jump_target(*target, body.instructions.len())?;
+                if self.read_register_ref(frame, *condition)?.is_truthy() {
+                    frame.ip = *target;
+                    return Ok(InstructionAction::Jumped);
+                }
+            }
+            Instruction::Index {
+                dest,
+                collection,
+                index,
+            } => {
+                let collection = self.read_register_ref(frame, *collection)?;
+                let index = self.read_register_ref(frame, *index)?;
+                let value = self.execute_index(collection, index)?;
+                self.write_register(frame, *dest, value)?;
+            }
+            Instruction::AssignIndex {
+                dest,
+                collection,
+                index,
+                value,
+            } => {
+                let collection = self.read_register(frame, *collection)?;
+                let index = self.read_register(frame, *index)?;
+                let value = self.read_register(frame, *value)?;
+                let assigned = self.execute_assign_index(collection, index, value)?;
+                self.write_register(frame, *dest, assigned)?;
+            }
+            Instruction::Field { dest, object, name } => {
+                let object = self.read_register_ref(frame, *object)?;
+                let name = self.read_name_ref(*name)?;
+                let value = self.execute_field(object, name)?;
+                self.write_register(frame, *dest, value)?;
+            }
+            Instruction::AssignField {
+                dest,
+                object,
+                name,
+                value,
+            } => {
+                let object = self.read_register(frame, *object)?;
+                let name = self.read_name_ref(*name)?;
+                let value = self.read_register(frame, *value)?;
+                let assigned = self.execute_assign_field(object, name, value)?;
+                self.write_register(frame, *dest, assigned)?;
+            }
+            Instruction::Len { dest, value } => {
+                let value = self.read_register_ref(frame, *value)?;
+                let length = self.execute_len(value)?;
+                self.write_register(frame, *dest, length)?;
+            }
+            Instruction::AssertArray { dest, value } => {
+                let input = self.read_register_ref(frame, *value)?;
+                let iterable = match input {
+                    Value::Array(_) | Value::Range(_) => input.clone(),
+                    Value::Map(map) => {
+                        let keys = map
+                            .entries
+                            .borrow()
+                            .iter()
+                            .map(|(key, _)| key.clone())
+                            .collect();
+                        self.allocate_array(keys)?
+                    }
+                    _ => return Err(RuntimeError::new("for-in expects array, range, or map")),
+                };
+                self.write_register(frame, *dest, iterable)?;
+            }
+            Instruction::AssertNumber {
+                dest,
+                value,
+                message,
+            } => {
+                let number = match self.read_register_ref(frame, *value)? {
+                    Value::Number(number) => *number,
+                    _ => {
+                        let message = self.read_name(*message)?;
+                        return Err(RuntimeError::new(message));
+                    }
+                };
+                self.write_register(frame, *dest, Value::number(number))?;
+            }
+            Instruction::Return { value } => {
+                return Ok(InstructionAction::Return(self.take_register(frame, *value)?));
+            }
+        }
+        Ok(InstructionAction::Continue)
+    }
+
     fn check_cancellation(&self) -> Result<(), RuntimeError> {
         if self
             .config
@@ -4171,8 +5209,11 @@ impl<'a> VM<'a> {
     }
 
     fn check_call_depth(&self) -> Result<(), RuntimeError> {
-        let next_depth = self
-            .call_depth
+        self.check_call_depth_at(self.call_depth)
+    }
+
+    fn check_call_depth_at(&self, current_depth: usize) -> Result<(), RuntimeError> {
+        let next_depth = current_depth
             .checked_add(1)
             .ok_or_else(|| RuntimeError::resource(ResourceKind::CallDepth, usize::MAX))?;
         if let Some(limit) = self.config.max_call_depth {
@@ -4384,11 +5425,11 @@ impl<'a> VM<'a> {
             Rc::new(CachedFunctionBody {
                 name: Rc::from(function.name.as_str()),
                 params: function.params.clone(),
-                body: FunctionBody {
+                body: Rc::new(FunctionBody {
                     registers: function.registers,
                     instructions: function.instructions.clone(),
                     locations: function.locations.clone(),
-                },
+                }),
             })
         };
         let slot = self.function_body_cache.get_mut(function_index)?;
@@ -4446,6 +5487,7 @@ impl<'a> VM<'a> {
         self.check_call_depth()?;
 
         let mut frame = Frame {
+            body: Some(Rc::clone(&cached.body)),
             ip: 0,
             registers: vec![Value::Nil; cached.body.registers],
             locals: self.heap.new_environment(),
@@ -4453,6 +5495,7 @@ impl<'a> VM<'a> {
             is_main: false,
             function: Rc::clone(&cached.name),
             function_index: Some(function.function_index),
+            return_target: None,
         };
 
         match arguments {

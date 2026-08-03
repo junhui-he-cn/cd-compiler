@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use crate::bytecode::{DebugLocation, FunctionBody};
 use crate::runtime::SharedEnvironment;
 use crate::value::Value;
 use std::collections::{BTreeMap, VecDeque};
@@ -80,9 +81,10 @@ impl fmt::Display for SchedulerError {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct ReturnTarget {
     pub(crate) register: usize,
+    pub(crate) call_site: Option<DebugLocation>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -113,10 +115,11 @@ impl fmt::Display for FrameStackError {
 
 /// Explicit execution state for one resumable bytecode frame.
 ///
-/// The instruction body is intentionally kept outside this foundation slice;
-/// the next VM adapter will associate a verified function body with each
-/// frame while retaining these state and root fields.
+/// Scheduler-owned frames always carry a verified function body. The optional
+/// field also lets the legacy recursive VM frame share this state container
+/// without forcing ordinary single-task runs to clone the entry body.
 pub(crate) struct ResumableFrame {
+    pub(crate) body: Option<Rc<FunctionBody>>,
     pub(crate) ip: usize,
     pub(crate) registers: Vec<Value>,
     pub(crate) locals: SharedEnvironment,
@@ -129,11 +132,13 @@ pub(crate) struct ResumableFrame {
 
 impl ResumableFrame {
     pub(crate) fn main(
+        body: Rc<FunctionBody>,
         register_count: usize,
         locals: SharedEnvironment,
         closure: SharedEnvironment,
     ) -> Self {
         Self {
+            body: Some(body),
             ip: 0,
             registers: vec![Value::Nil; register_count],
             locals,
@@ -146,6 +151,7 @@ impl ResumableFrame {
     }
 
     pub(crate) fn callee(
+        body: Rc<FunctionBody>,
         function: impl Into<Rc<str>>,
         function_index: usize,
         register_count: usize,
@@ -154,6 +160,7 @@ impl ResumableFrame {
         return_target: ReturnTarget,
     ) -> Self {
         Self {
+            body: Some(body),
             ip: 0,
             registers: vec![Value::Nil; register_count],
             locals,
@@ -213,7 +220,7 @@ impl FrameStack {
     /// caller's pending destination; returning from the root yields the task
     /// result instead.
     pub(crate) fn return_value(&mut self, value: Value) -> Result<Option<Value>, FrameStackError> {
-        let return_target = self.current()?.return_target;
+        let return_target = self.current()?.return_target.clone();
         let Some(return_target) = return_target else {
             let _root = self.frames.pop().ok_or(FrameStackError::Empty)?;
             return Ok(Some(value));
@@ -251,9 +258,8 @@ struct ScheduledTask<T> {
 
 /// Deterministic one-thread task control plane.
 ///
-/// This first V5B slice deliberately schedules opaque payloads. The next
-/// slice will use an explicit bytecode frame stack as the payload while
-/// preserving this lifecycle and queue contract.
+/// The VM task adapter uses `ScheduledVmTask` as the payload while preserving
+/// this lifecycle and queue contract for later multi-task host APIs.
 pub(crate) struct CooperativeScheduler<T> {
     quantum: usize,
     next_task_id: usize,
@@ -571,7 +577,17 @@ mod tests {
         let heap = Heap::new();
         let locals = heap.new_environment();
         let closure = heap.new_environment();
-        FrameStack::new(ResumableFrame::main(2, locals, closure)).expect("valid root frame")
+        FrameStack::new(ResumableFrame::main(
+            Rc::new(FunctionBody {
+                registers: 2,
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            }),
+            2,
+            locals,
+            closure,
+        ))
+        .expect("valid root frame")
     }
 
     #[test]
@@ -579,12 +595,20 @@ mod tests {
         let heap = Heap::new();
         let mut stack = test_frame_stack();
         let callee = ResumableFrame::callee(
+            Rc::new(FunctionBody {
+                registers: 4,
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            }),
             "worker",
             3,
             4,
             heap.new_environment(),
             heap.new_environment(),
-            ReturnTarget { register: 1 },
+            ReturnTarget {
+                register: 1,
+                call_site: None,
+            },
         );
         stack.push(callee).expect("callee has a caller");
         stack.current_mut().expect("callee frame").ip = 7;
@@ -622,12 +646,20 @@ mod tests {
     fn frame_stack_rejects_invalid_root_and_return_targets() {
         let heap = Heap::new();
         let invalid_root = ResumableFrame::callee(
+            Rc::new(FunctionBody {
+                registers: 1,
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            }),
             "root",
             0,
             1,
             heap.new_environment(),
             heap.new_environment(),
-            ReturnTarget { register: 0 },
+            ReturnTarget {
+                register: 0,
+                call_site: None,
+            },
         );
         assert!(matches!(
             FrameStack::new(invalid_root),
@@ -636,6 +668,11 @@ mod tests {
 
         let mut stack = test_frame_stack();
         let missing_target = ResumableFrame {
+            body: Some(Rc::new(FunctionBody {
+                registers: 1,
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            })),
             ip: 0,
             registers: vec![Value::Nil],
             locals: heap.new_environment(),
@@ -651,12 +688,20 @@ mod tests {
         );
 
         let invalid_destination = ResumableFrame::callee(
+            Rc::new(FunctionBody {
+                registers: 1,
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            }),
             "worker",
             1,
             1,
             heap.new_environment(),
             heap.new_environment(),
-            ReturnTarget { register: 5 },
+            ReturnTarget {
+                register: 5,
+                call_site: None,
+            },
         );
         stack
             .push(invalid_destination)
