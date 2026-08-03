@@ -1292,7 +1292,7 @@ pub fn parse_program(source: &str) -> Result<Program, ParseError> {
 }
 
 pub fn format_program(program: &Program) -> String {
-    let mut out = String::new();
+    let mut out = String::with_capacity(format_program_capacity_hint(program));
     out.push_str(ARTIFACT_HEADER);
     out.push_str("\n\n");
     format_program_sections(&mut out, program);
@@ -1303,7 +1303,21 @@ pub fn format_artifact(artifact: &Artifact) -> String {
     match artifact {
         Artifact::Program(program) => format_program(program),
         Artifact::Module(module) => {
-            let mut out = String::new();
+            let mut out = String::with_capacity(
+                format_program_capacity_hint(&module.program)
+                    .saturating_add(module.identity.len())
+                    .saturating_add(module.path.len())
+                    .saturating_add(module.canonical_path.len())
+                    .saturating_add(
+                        module
+                            .dependencies
+                            .iter()
+                            .map(|dependency| {
+                                dependency.identity.len() + dependency.requested_path.len()
+                            })
+                            .sum(),
+                    ),
+            );
             out.push_str(ARTIFACT_HEADER);
             out.push_str("\n\n");
             out.push_str("artifact: module\n\n");
@@ -1344,6 +1358,34 @@ pub fn format_artifact(artifact: &Artifact) -> String {
             out
         }
     }
+}
+
+fn format_program_capacity_hint(program: &Program) -> usize {
+    let instruction_count = program.main.instructions.len()
+        + program
+            .functions
+            .iter()
+            .map(|function| function.instructions.len())
+            .sum::<usize>();
+    let string_bytes = program
+        .constants
+        .iter()
+        .filter_map(|constant| match constant {
+            Constant::String(value) => Some(value.len()),
+            _ => None,
+        })
+        .sum::<usize>()
+        + program.names.iter().map(String::len).sum::<usize>()
+        + program
+            .debug_sources
+            .iter()
+            .map(|source| source.path.len() + source.text.len())
+            .sum::<usize>();
+    128usize
+        .saturating_add(instruction_count.saturating_mul(128))
+        .saturating_add(program.constants.len().saturating_mul(32))
+        .saturating_add(program.names.len().saturating_mul(32))
+        .saturating_add(string_bytes)
 }
 
 fn format_program_sections(out: &mut String, program: &Program) {
