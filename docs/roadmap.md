@@ -80,7 +80,7 @@ decision needs a stable statement of the boundary it must preserve.
 
 ### C1: Make O1 ready for a default-policy decision
 
-**Priority:** P0. **Status:** C1A implemented on 2026-08-03; C1B is next.
+**Priority:** P0. **Status:** C1A and C1B implemented on 2026-08-03; C1C is next.
 
 The existing explicit O1 pipeline is useful but not yet a default replacement
 for O0. Finish the evidence in three narrow slices:
@@ -90,10 +90,13 @@ for O0. Finish the evidence in three narrow slices:
    observable at O1. Add O0/O1 trace and debugger parity cases for branches,
    loops, closures, imported functions, eliminated values, and runtime failures.
    See [`c1a-optimized-debug-001.md`](decisions/c1a-optimized-debug-001.md).
-2. **C1B - register policy:** measure virtual-register pressure on the checked-in
-   O0/O1 workload matrix and decide whether O1 retains virtual registers or
-   needs a separate physical allocation/coalescing stage. Do not add an O2
-   allocator until the mapping and spill/debug rules are written.
+2. **C1B - register policy (implemented):** measure CFG-aware peak
+   virtual-register pressure on the checked-in O0/O1 workload matrix and
+   decide whether O1 retains virtual registers or needs a separate physical
+   allocation/coalescing stage. O1 retains virtual registers for now; see
+   [`c1b-register-policy-001.md`](decisions/c1b-register-policy-001.md).
+   Do not add an O2 allocator until the mapping and spill/debug rules are
+   written.
 3. **C1C - default-level decision:** compare the semantic, artifact-size,
    compile-time, runtime, cache, and debugger evidence. Choose either to keep
    O0 as the compatibility default or make O1 the default with an explicit
@@ -105,7 +108,8 @@ default automatically.
 
 **Gate:** optimizer unit/CLI cases, all `optimizer.*` inventory cases, O0/O1
 output/error/exit parity, module-cache identity, source/debug mapping, the
-11-workload comparison report, canonical verification, and Rust VM execution.
+checked-in workload comparison report, canonical verification, and Rust VM
+execution.
 
 ### C2: Close semantic-soundness gaps one rule at a time
 

@@ -71,6 +71,34 @@ class BenchmarkRunnerTests(unittest.TestCase):
         self.assertEqual(bytecode["instruction_count"], 3)
         self.assertEqual(bytecode["register_count"], 5)
         self.assertEqual(bytecode["function_register_count"], 3)
+        self.assertEqual(ir["peak_live_virtual_registers"], 1)
+        self.assertEqual(ir["main_peak_live_virtual_registers"], 1)
+        self.assertEqual(ir["function_peak_live_virtual_registers"], 1)
+
+    def test_ir_metrics_compute_cfg_aware_peak_virtual_register_pressure(self) -> None:
+        ir = run_benchmarks.parse_ir_metrics(
+            "IR\n"
+            "0000  v0 = constant #0 1\n"
+            "0001  v1 = constant #1 2\n"
+            "0002  v2 = add v0, v1\n"
+            "0003  jump_if_false v2, 0006\n"
+            "0004  v3 = copy v2\n"
+            "0005  return v3\n"
+            "0006  return v0\n"
+        )
+        self.assertEqual(ir["virtual_register_count"], 4)
+        self.assertEqual(ir["peak_live_virtual_registers"], 3)
+        self.assertEqual(ir["main_peak_live_virtual_registers"], 3)
+        self.assertEqual(ir["function_peak_live_virtual_registers"], 0)
+
+    def test_ir_metrics_ignore_register_like_text_in_string_constants(self) -> None:
+        ir = run_benchmarks.parse_ir_metrics(
+            "IR\n"
+            '0000  v0 = constant #0 "v99"\n'
+            "0001  print v0\n"
+        )
+        self.assertEqual(ir["virtual_register_count"], 1)
+        self.assertEqual(ir["peak_live_virtual_registers"], 1)
 
     def test_run_command_times_out_with_a_controlled_result(self) -> None:
         duration, returncode, stdout, stderr = run_benchmarks.run_command(
@@ -195,6 +223,12 @@ class BenchmarkRunnerTests(unittest.TestCase):
             self.assertTrue(comparison["passed"])
             self.assertEqual(comparison["optimization_levels"].keys(), {"O0", "O1"})
             self.assertTrue(comparison["comparison"]["parity_passed"])
+            self.assertEqual(
+                comparison["comparison"]["metric_deltas"][
+                    "peak_live_virtual_registers"
+                ]["delta"],
+                0,
+            )
 
         result = report["workloads"][0]
         self.assertTrue(result["passed"])

@@ -42,7 +42,7 @@ DEFAULT_REPORT = REPO_ROOT / "build" / "benchmark-report.json"
 DEFAULT_COMPILER = REPO_ROOT / "build" / "compiler_design"
 DEFAULT_VM = REPO_ROOT / "vm-rs"
 SCHEMA_VERSION = 2
-REPORT_SCHEMA_VERSION = 4
+REPORT_SCHEMA_VERSION = 5
 DEFAULT_TIMEOUT_SECONDS = 60.0
 ARTIFACT_MODES = {"linked", "module"}
 EXECUTION_MODES = {"success", "runtime_error"}
@@ -55,11 +55,82 @@ def _empty_listing_unit(kind: str, register_count: int | None = None) -> dict[st
         "instruction_count": 0,
         "register_count": register_count,
         "max_virtual_register": -1,
+        "peak_live_virtual_registers": 0,
+        "_instruction_records": [],
     }
+
+
+def _compute_peak_live_virtual_registers(
+    instructions: list[dict[str, Any]],
+) -> int:
+    """Compute conservative peak live virtual-register pressure for one body."""
+
+    if not instructions:
+        return 0
+
+    offset_to_index: dict[int, int] = {}
+    for index, instruction in enumerate(instructions):
+        offset = int(instruction["offset"])
+        if offset in offset_to_index:
+            raise ValueError(f"IR listing repeated instruction offset {offset}")
+        offset_to_index[offset] = index
+
+    successors: list[list[int]] = []
+    for index, instruction in enumerate(instructions):
+        opcode = instruction["opcode"]
+        target = instruction.get("target")
+        if opcode == "jump":
+            if target is None or target not in offset_to_index:
+                raise ValueError(f"IR listing has invalid jump target {target}")
+            successors.append([offset_to_index[target]])
+            continue
+        if opcode in {"jump_if_false", "jump_if_true"}:
+            next_successors: list[int] = []
+            if index + 1 < len(instructions):
+                next_successors.append(index + 1)
+            if target is None or target not in offset_to_index:
+                raise ValueError(f"IR listing has invalid jump target {target}")
+            target_index = offset_to_index[target]
+            if target_index not in next_successors:
+                next_successors.append(target_index)
+            successors.append(next_successors)
+            continue
+        if opcode == "return":
+            successors.append([])
+            continue
+        successors.append([index + 1] if index + 1 < len(instructions) else [])
+
+    live_in = [set[int]() for _ in instructions]
+    live_out = [set[int]() for _ in instructions]
+    changed = True
+    while changed:
+        changed = False
+        for index in range(len(instructions) - 1, -1, -1):
+            outgoing: set[int] = set()
+            for successor in successors[index]:
+                outgoing.update(live_in[successor])
+            incoming = set(instructions[index]["uses"])
+            incoming.update(outgoing.difference(instructions[index]["defs"]))
+            if outgoing != live_out[index] or incoming != live_in[index]:
+                live_out[index] = outgoing
+                live_in[index] = incoming
+                changed = True
+
+    return max(
+        max(
+            len(live_in[index]),
+            len(live_out[index]),
+            len(live_in[index].union(instructions[index]["defs"])),
+        )
+        for index in range(len(instructions))
+    )
 
 
 def _finish_listing_unit(units: list[dict[str, Any]], current: dict[str, Any] | None) -> None:
     if current is not None:
+        current["peak_live_virtual_registers"] = _compute_peak_live_virtual_registers(
+            current.pop("_instruction_records")
+        )
         units.append(current)
 
 
@@ -105,6 +176,18 @@ def _aggregate_listing_units(units: list[dict[str, Any]], include_registers: boo
             for unit in function_units
             if unit["max_virtual_register"] >= 0
         )
+    result["peak_live_virtual_registers"] = max(
+        (unit["peak_live_virtual_registers"] for unit in units),
+        default=0,
+    )
+    result["main_peak_live_virtual_registers"] = max(
+        (unit["peak_live_virtual_registers"] for unit in main_units),
+        default=0,
+    )
+    result["function_peak_live_virtual_registers"] = max(
+        (unit["peak_live_virtual_registers"] for unit in function_units),
+        default=0,
+    )
     return result
 
 
@@ -127,11 +210,42 @@ def parse_ir_metrics(text: str) -> dict[str, Any]:
         if current is None or not instruction_pattern.match(line):
             continue
         current["instruction_count"] += 1
-        registers = [int(match.group(1)) for match in virtual_register_pattern.finditer(line)]
+        body = line[6:]
+        destination_match = re.match(r"^v(\d+)\s*=\s*", body)
+        definitions: set[int] = set()
+        if destination_match:
+            definitions.add(int(destination_match.group(1)))
+        register_scan_body = re.sub(r'"(?:\\.|[^"\\])*"', '""', body)
+        registers = [
+            int(match.group(1))
+            for match in virtual_register_pattern.finditer(register_scan_body)
+        ]
         if registers:
             current["max_virtual_register"] = max(
                 current["max_virtual_register"], max(registers)
             )
+        uses = list(registers)
+        for definition in definitions:
+            try:
+                uses.remove(definition)
+            except ValueError:
+                pass
+        operation = body[destination_match.end() :].lstrip() if destination_match else body
+        opcode = operation.split(maxsplit=1)[0] if operation else ""
+        target = None
+        if opcode in {"jump", "jump_if_false", "jump_if_true"}:
+            target_match = re.search(r"(\d+)\s*$", operation)
+            if target_match:
+                target = int(target_match.group(1))
+        current["_instruction_records"].append(
+            {
+                "offset": int(line[:4]),
+                "opcode": opcode,
+                "uses": set(uses),
+                "defs": definitions,
+                "target": target,
+            }
+        )
     _finish_listing_unit(units, current)
     if not units:
         raise ValueError("compiler --ir output did not contain an IR listing")
@@ -1055,6 +1169,19 @@ def compare_optimization_results(
             "dump_median_seconds": ("dump_seconds", "median"),
             "runtime_median_seconds": ("runtime_seconds", "median"),
             "ir_instruction_count": ("ir_metrics", "instruction_count"),
+            "virtual_register_count": ("ir_metrics", "virtual_register_count"),
+            "peak_live_virtual_registers": (
+                "ir_metrics",
+                "peak_live_virtual_registers",
+            ),
+            "main_peak_live_virtual_registers": (
+                "ir_metrics",
+                "main_peak_live_virtual_registers",
+            ),
+            "function_peak_live_virtual_registers": (
+                "ir_metrics",
+                "function_peak_live_virtual_registers",
+            ),
             "bytecode_instruction_count": ("bytecode_metrics", "instruction_count"),
             "register_count": ("bytecode_metrics", "register_count"),
             "artifact_size_bytes": ("artifact_size_bytes", "median"),
@@ -1143,7 +1270,7 @@ def run_benchmarks(
             "load": "Rust VM verify wall-clock time, including artifact read, parse, and verification without canonical output",
             "dump": "Rust VM dump wall-clock time, including artifact read, parse, verification, and canonical formatting",
             "runtime": "already-built Rust VM run wall-clock time, including process startup and artifact load during run",
-            "ir": "compiler_design --ir inspection used to count IR instructions and virtual registers; not included in compile timing",
+            "ir": "compiler_design --ir inspection used to count IR instructions, virtual registers, and CFG-aware peak live virtual-register pressure; not included in compile timing",
             "bytecode": "compiler_design --bytecode inspection used to count bytecode instructions and registerCount; not included in compile timing",
             "artifact_size": "size in bytes of the final linked artifact loaded by the VM",
             "statistic": "min, median, and max over the requested repetitions",
@@ -1335,6 +1462,7 @@ def main() -> int:
                 f"dump median={dump_median if dump_median is not None else 'n/a'}s, "
                 f"runtime median={runtime_median if runtime_median is not None else 'n/a'}s, "
                 f"ir={((level_result.get('ir_metrics') or {}).get('instruction_count', 'n/a'))}, "
+                f"pressure={((level_result.get('ir_metrics') or {}).get('peak_live_virtual_registers', 'n/a'))}, "
                 f"bytecode={bytecode_metrics.get('instruction_count', 'n/a')}, "
                 f"registers={bytecode_metrics.get('register_count', 'n/a')}, "
                 f"artifact={artifact_size if artifact_size is not None else 'n/a'}B, "
@@ -1353,6 +1481,7 @@ def main() -> int:
                 f"/runtime={runtime_median if runtime_median is not None else 'n/a'}s"
                 f"/bc={bytecode_metrics.get('instruction_count', 'n/a')}"
                 f"/regs={bytecode_metrics.get('register_count', 'n/a')}"
+                f"/pressure={((level_result.get('ir_metrics') or {}).get('peak_live_virtual_registers', 'n/a'))}"
             )
         comparison = result.get("comparison", {})
         print(
