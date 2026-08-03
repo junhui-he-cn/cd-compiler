@@ -80,7 +80,7 @@ decision needs a stable statement of the boundary it must preserve.
 
 ### C1: Make O1 ready for a default-policy decision
 
-**Priority:** P0. **Status:** C1A and C1B implemented on 2026-08-03; C1C is next.
+**Priority:** P0. **Status:** C1 complete on 2026-08-03; O0 remains the compatibility default.
 
 The existing explicit O1 pipeline is useful but not yet a default replacement
 for O0. Finish the evidence in three narrow slices:
@@ -97,10 +97,10 @@ for O0. Finish the evidence in three narrow slices:
    [`c1b-register-policy-001.md`](decisions/c1b-register-policy-001.md).
    Do not add an O2 allocator until the mapping and spill/debug rules are
    written.
-3. **C1C - default-level decision:** compare the semantic, artifact-size,
-   compile-time, runtime, cache, and debugger evidence. Choose either to keep
-   O0 as the compatibility default or make O1 the default with an explicit
-   migration note.
+3. **C1C - default-level decision (implemented):** compare the semantic,
+   artifact-size, compile-time, runtime, cache, and debugger evidence. Keep O0
+   as the compatibility default and retain explicit O1 opt-in; see
+   [`c1c-default-level-001.md`](decisions/c1c-default-level-001.md).
 
 **Decision gate:** changing the default optimization level is a user-visible
 pipeline decision. Stop after presenting the C1 evidence; do not switch the
