@@ -883,6 +883,7 @@ The interface output also reports exported enum variants and their payload types
 
 ```sh
 ./build/compiler_design --emit-bytecode program.cdbc examples/hello.cd
+cargo run --manifest-path vm-rs/Cargo.toml -- verify program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- dump program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- run program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- trace program.cdbc

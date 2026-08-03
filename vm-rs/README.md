@@ -10,6 +10,7 @@ remains [`docs/roadmap.md`](../docs/roadmap.md).
 
 ```sh
 cargo run --manifest-path vm-rs/Cargo.toml -- --help
+cargo run --manifest-path vm-rs/Cargo.toml -- verify program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- dump program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- run program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- run --max-steps 100000 program.cdbc
@@ -18,7 +19,8 @@ cargo run --manifest-path vm-rs/Cargo.toml -- debug program.cdbc
 cargo run --manifest-path vm-rs/Cargo.toml -- profile program.cdbc
 ```
 
-`dump` parses and prints canonical `.cdbc` text. `run` executes the artifact
+`verify` reads, parses, and verifies an artifact without producing stdout;
+`dump` performs the same load step and prints canonical `.cdbc` text. `run` executes the artifact
 and writes program output to stdout. `trace` emits deterministic source events,
 and `debug` starts the interactive breakpoint/step session.
 
