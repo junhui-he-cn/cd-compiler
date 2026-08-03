@@ -102,8 +102,9 @@ tests.
 
 ### V2: Define a real host integration boundary
 
-**Priority:** P1. **Status:** queued, but requires a concrete in-repository host
-consumer before API commitment.
+**Priority:** P1. **Status:** consumer gate audited on 2026-08-03 and remains
+queued; a concrete in-repository host consumer is still required before API
+commitment. See [`v2-host-consumer-gate-001.md`](decisions/v2-host-consumer-gate-001.md).
 
 1. **V2A - host outcome:** define one structured execution outcome containing
    output, typed runtime/resource failure, frames/source ranges, and partial
