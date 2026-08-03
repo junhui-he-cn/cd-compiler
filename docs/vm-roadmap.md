@@ -49,9 +49,15 @@ profile-driven performance slices are complete and intentionally omitted from
 this active queue. Their decision records and verification evidence remain in
 `docs/decisions/` and Git history.
 
+The next execution plan is deterministic concurrency first, followed by the
+evidence-driven JIT. V5 establishes task, frame, root, safepoint, cancellation,
+and observable-ordering semantics; V6 consumes that contract. V2 host
+integration and V4 native/release compatibility remain trigger-based deferred
+tracks and do not block this sequence.
+
 ### V2: Define a real host integration boundary
 
-**Priority:** P1. **Status:** explicitly deferred on 2026-08-03. The consumer
+**Priority:** trigger-based. **Status:** explicitly deferred on 2026-08-03. The consumer
 gate was audited and a concrete in-repository host consumer is still required
 before API commitment. See
 [`v2-host-consumer-gate-001.md`](decisions/v2-host-consumer-gate-001.md) and
@@ -71,7 +77,7 @@ or `Send`/`Sync` promise belongs in V2A.
 
 ### V4: Stabilize native and release compatibility
 
-**Priority:** P2. **Status:** explicitly deferred on 2026-08-03, pending a real
+**Priority:** trigger-based. **Status:** explicitly deferred on 2026-08-03, pending a real
 ABI or release need. See
 [`vm-future-work-deferred-001.md`](decisions/vm-future-work-deferred-001.md).
 
@@ -88,18 +94,21 @@ to expose a plugin ABI.
 
 ### V5: Define deterministic task scheduling before parallel execution
 
-**Priority:** P3. **Status:** deferred until a real language or product
-concurrency use case exists and the scheduling semantics are explicitly chosen.
+**Priority:** P1. **Status:** V5A contract recorded on 2026-08-03; V5B is the
+next implementation slice. See
+[`v5a-vm-concurrency-contract-001.md`](decisions/v5a-vm-concurrency-contract-001.md).
 
 Concurrency is a runtime and language contract that a later JIT must preserve.
 It determines task-local frames and roots, GC safepoints, cancellation, output
 and failure ordering, resource charging, native callback behavior, and
 debugger/profile events. Resume it before JIT work, in these slices:
 
-1. **V5A - concurrency contract:** name the consumer and define task creation,
-   yield, blocking/wakeup, join, cancellation, deterministic scheduling, error
-   propagation, output ordering, resource budgets, and ownership/sharing rules.
-   Do not promise OS threads, shared mutable state, or `Send`/`Sync` here.
+1. **V5A - concurrency contract:** recorded in
+   [`v5a-vm-concurrency-contract-001.md`](decisions/v5a-vm-concurrency-contract-001.md).
+   The named consumer is an in-process Rust library host; the contract fixes
+   one-thread cooperative scheduling, task lifecycle, join/wake, cancellation,
+   resource scopes, output/event ordering, and task-root ownership. It does not
+   promise OS threads, language-level async syntax, or `Send`/`Sync`.
 2. **V5B - cooperative scheduler:** implement deterministic tasks on one OS
    thread with instruction budgets, explicit yield and blocked states,
    task-local frames and roots, and GC at admitted scheduler safepoints. Keep
@@ -117,7 +126,8 @@ parity.
 
 ### V6: Add an evidence-driven JIT after the scheduling contract
 
-**Priority:** P4. **Status:** deferred and ordered after V5B.
+**Priority:** P2. **Status:** planned immediately after V5B and its evidence
+gate.
 
 JIT compilation is an optional execution optimization, not a new language
 semantic. Starting it after V5B prevents a single-thread-only code generator
@@ -151,11 +161,12 @@ These tracks stay outside the default queue until their trigger is met:
   and the existing compatibility matrix;
 - persistent sessions, snapshot, or rollback: require a host/REPL consumer and
   the established lifetime policy;
-- `Send`/`Sync`, tasks, or async scheduling: follow V5 and require a concrete
-  concurrency consumer plus language and deterministic scheduling decisions;
-- JIT or native code generation: follow V6 after V5B and require stable
-  profiles, a fallback interpreter, debug/error mapping, GC safepoints,
-  code-cache limits, and demonstrated hot workloads;
+- `Send`/`Sync`, async scheduling, or concurrency expansion beyond V5: follow
+  V5C and require a concrete consumer plus language and deterministic
+  scheduling decisions;
+- optimizing JIT tiers or native code generation beyond V6: follow the V6
+  contract and require stable profiles, a fallback interpreter, debug/error
+  mapping, GC safepoints, code-cache limits, and demonstrated hot workloads;
 - exact allocator/RSS reporting: require a platform/tooling policy distinct
   from VM-owned retained-byte estimates;
 - filesystem, network, time, randomness, and dynamic native plugins: require
@@ -165,6 +176,15 @@ These tracks stay outside the default queue until their trigger is met:
 ## 5. Dependency order
 
 ```text
+V5A concurrency contract (recorded)
+  -> V5B deterministic cooperative scheduler
+  -> optional V5C concurrency expansion
+
+completed V5B + stable profile + demonstrated hot workload
+  -> V6A hot-workload evidence
+  -> V6B JIT runtime contract
+  -> optional V6C baseline JIT
+
 real host consumer
   -> V2A structured host outcome
   -> V2B controlled I/O
@@ -173,23 +193,12 @@ real host consumer
 demonstrated ABI/release need
   -> V4 native/release compatibility decision
   -> optional successor artifact work
-
-real concurrency consumer + language scheduling decision
-  -> V5A concurrency contract
-  -> V5B deterministic cooperative scheduler
-  -> optional V5C concurrency expansion
-
-completed V5B + stable profile + demonstrated hot workload
-  -> V6A hot-workload evidence
-  -> V6B JIT runtime contract
-  -> optional V6C baseline JIT
 ```
 
-The active queue contains only open or deferred work. V2 host integration and
-V4 release compatibility resume only when their named consumer or ABI/release
-trigger appears. V5 concurrency and V6 JIT are also deferred, but their future
-order is fixed: establish deterministic task/frame/root/safepoint behavior
-through V5B before admitting JIT implementation work.
+V5B cooperative scheduling is the next implementation focus. V6 JIT work starts
+only after V5B establishes deterministic task/frame/root/safepoint behavior and
+stable hot-workload evidence. V2 host integration and V4 release compatibility
+resume only when their named consumer or ABI/release trigger appears.
 
 ## 6. Verification contract
 
