@@ -94,8 +94,9 @@ to expose a plugin ABI.
 
 ### V5: Define deterministic task scheduling before parallel execution
 
-**Priority:** P1. **Status:** V5A contract recorded on 2026-08-03; V5B is the
-next implementation slice. See
+**Priority:** P1. **Status:** V5A contract recorded on 2026-08-03; the V5B
+scheduler control-plane foundation is implemented and explicit frame
+integration is next. See
 [`v5a-vm-concurrency-contract-001.md`](decisions/v5a-vm-concurrency-contract-001.md).
 
 Concurrency is a runtime and language contract that a later JIT must preserve.
@@ -109,11 +110,12 @@ debugger/profile events. Resume it before JIT work, in these slices:
    one-thread cooperative scheduling, task lifecycle, join/wake, cancellation,
    resource scopes, output/event ordering, and task-root ownership. It does not
    promise OS threads, language-level async syntax, or `Send`/`Sync`.
-2. **V5B - cooperative scheduler:** implement deterministic tasks on one OS
-   thread with instruction budgets, explicit yield and blocked states,
-   task-local frames and roots, and GC at admitted scheduler safepoints. Keep
-   source syntax, `.cdbc 0.1`, and existing CLI/library behavior unchanged
-   unless a separate joint compatibility slice explicitly changes them.
+2. **V5B - cooperative scheduler:** the control-plane foundation is recorded
+   in [`v5b-vm-scheduler-control-plane-001.md`](decisions/v5b-vm-scheduler-control-plane-001.md).
+   It provides FIFO task states, quantum requeue, explicit wake, and
+   cancellation transitions. The next slice integrates resumable bytecode
+   frames, task-local roots, and scheduler execution while keeping source
+   syntax, `.cdbc 0.1`, and existing CLI/library behavior unchanged.
 3. **V5C - concurrency expansion decision:** only after V5B workloads exist,
    decide whether async syntax, channels/actors, shared-memory concurrency,
    multiple OS threads, or `Send`/`Sync` provides enough product value to
@@ -177,7 +179,8 @@ These tracks stay outside the default queue until their trigger is met:
 
 ```text
 V5A concurrency contract (recorded)
-  -> V5B deterministic cooperative scheduler
+  -> V5B scheduler control plane (implemented)
+  -> V5B resumable bytecode frames and task execution
   -> optional V5C concurrency expansion
 
 completed V5B + stable profile + demonstrated hot workload
@@ -195,10 +198,11 @@ demonstrated ABI/release need
   -> optional successor artifact work
 ```
 
-V5B cooperative scheduling is the next implementation focus. V6 JIT work starts
-only after V5B establishes deterministic task/frame/root/safepoint behavior and
-stable hot-workload evidence. V2 host integration and V4 release compatibility
-resume only when their named consumer or ABI/release trigger appears.
+V5B resumable bytecode frames and task execution are the next implementation
+focus. V6 JIT work starts only after V5B establishes deterministic
+task/frame/root/safepoint behavior and stable hot-workload evidence. V2 host
+integration and V4 release compatibility resume only when their named consumer
+or ABI/release trigger appears.
 
 ## 6. Verification contract
 

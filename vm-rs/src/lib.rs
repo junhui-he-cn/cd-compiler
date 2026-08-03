@@ -12,6 +12,7 @@ pub mod bytecode;
 pub mod format;
 pub mod link;
 pub mod runtime;
+mod scheduler;
 pub mod value;
 pub mod vm;
 
