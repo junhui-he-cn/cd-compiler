@@ -36,73 +36,18 @@ cache invalidation, async semantics, or compiler optimization policy.
 | Modules | Deterministic module validation/linking, debug rebasing, typed errors, optional link report | Versioned report serialization is not defined |
 | Embedding | Rust library parse/verify/link/run/trace/debug/profile API plus CLI adapters | Host outcome/sink/session work is explicitly deferred; API remains pre-1.0 and single-threaded |
 | Observability | Interactive debugger, deterministic counters, tracked heap counts, estimated retained bytes, structured error kinds | No stable host schema, wall-clock field, allocator bytes, or RSS contract |
-| Performance/capacity | Reproducible phase benchmark, scaled workloads, capacity and budget corpus, V3A/V3B/V3C artifact evidence | Broader host-cost capacity policy remains deferred |
+| Performance/capacity | Reproducible phase benchmark, scaled workloads, capacity and budget corpus, artifact-load and format-capacity evidence | Broader host-cost capacity policy remains deferred |
 | Native boundary | Private registry with arity, callback, resource-touchpoint, and signature-shape metadata | Metadata is not a public ABI or serialized contract |
 
 `cdbc 0.1`, CLI text/exit behavior, deterministic execution, current resource
 accounting, and C++/Rust parity remain compatibility constraints.
 
-## 3. Joint prerequisite
+## 3. Active VM queue
 
-### X1: Compiler/VM compatibility matrix
-
-**Status:** completed on 2026-08-02. This is shared with
-[`x1-compiler-vm-compatibility-001.md`](decisions/x1-compiler-vm-compatibility-001.md).
-
-The shipped matrix records compiler, artifact, module product, debug metadata,
-module-cache, native-name, VM library, and CLI compatibility in one test-backed
-matrix. It validates seven cells against source constants, the native registry,
-inventory revision, and evidence paths. The refreshed artifact audit covers 126
-assertions across 63 fixtures. No artifact bytes or versions changed.
-
-## 4. VM queue
-
-### V1: Resolve recursive-object lifetime and cycle policy
-
-**Priority:** P0. **Status:** completed on 2026-08-03; V1A completed, V1B
-resolved, the first V1C implementation slice completed on 2026-08-02, and the
-V1C ledger-retention slice completed on 2026-08-03.
-
-Recursive named structs make cycles a supported source-level construction, and
-the VM already formats active cycles as `<cycle>`. The remaining lifetime
-behavior can no longer stay as an incidental `Rc<RefCell<...>>` property.
-
-Proceed in three slices:
-
-1. **V1A - cycle corpus and measurement:** completed with decision record
-   [`v1a-vm-cycle-corpus-001.md`](decisions/v1a-vm-cycle-corpus-001.md). The
-   source-backed self-cycle,
-   mutual-cycle, array/map/struct cycle, closure/environment cycle, cycle
-   replacement, runtime-error, debugger/profile, and repeated in-process VM
-   workloads. Measure tracked live objects and estimated retained bytes before
-   and after roots and VM instances are dropped. Host RSS is observational,
-   not a portable pass threshold.
-2. **V1B - storage decision:** resolved with
-   [`v1b-vm-lifetime-storage-001.md`](decisions/v1b-vm-lifetime-storage-001.md).
-   The selected policy is a non-moving tracing collector over stable tracked
-   storage; roots, native temporaries, debugger observation, identity,
-   diagnostics, pause points, and embedding behavior are specified there.
-3. **V1C - admitted implementation:** first slice complete. `Heap` now exposes
-   explicit non-moving tracing collection and VM execution collects after the
-   top-level frame, with coverage for native callbacks, nested calls,
-   cancellation, debugger pauses, host-held roots, and recursive variant
-   payloads. The frequency/resource comparison is recorded in
-   [`v1c-vm-tracing-frequency-001.md`](decisions/v1c-vm-tracing-frequency-001.md);
-   it retains the top-level safepoint and does not justify an allocation
-   threshold or background work. The ledger-retention follow-up is recorded in
-   [`v1c-vm-ledger-retention-001.md`](decisions/v1c-vm-ledger-retention-001.md);
-   it compacts dead weak entries at explicit collection or estimation
-   safepoints while preserving cumulative allocation/dead counters. Keep
-   `cdbc 0.1` unchanged and retain an incremental rollback path.
-
-**Decision gate:** V1B selects tracing GC. Do not add weak-reference syntax,
-relocating handles, or cycle rejection; stop V1C before changing storage layout
-until root, pause, and resource evidence is complete.
-
-**Gate:** C++/Rust recursive-value parity, alias and identity cases, cycle-safe
-formatting, library multi-instance tests, runtime failure and cancellation,
-trace/debug/profile determinism, resource limits, capacity corpus, and Cargo
-tests.
+The X1 compatibility matrix, V1 recursive-object lifetime policy, and V3
+profile-driven performance slices are complete and intentionally omitted from
+this active queue. Their decision records and verification evidence remain in
+`docs/decisions/` and Git history.
 
 ### V2: Define a real host integration boundary
 
@@ -123,33 +68,6 @@ before API commitment. See
 
 No filesystem, network, clock, randomness, dynamic plugin, persistent-session,
 or `Send`/`Sync` promise belongs in V2A.
-
-### V3: Replace micro-optimization with profile-driven performance work
-
-**Priority:** P1. **Status:** V3A-V3C complete; later hotspot or capacity work
-still requires its own profile or exact-boundary evidence.
-
-The previous execution-loop micro-slice sequence is closed. New work starts
-only from a reproducible profile or capacity result:
-
-1. **V3A - isolate artifact load:** completed on 2026-08-03 with
-   [`v3a-vm-artifact-load-001.md`](decisions/v3a-vm-artifact-load-001.md).
-   The benchmark runner now measures a no-output `verify` load phase
-   (read/parse/verify) separately from the canonical `dump` phase, while
-   preserving the existing artifact bytes and output contract.
-2. **V3B - select one hotspot:** completed on 2026-08-03 with
-   [`v3b-vm-format-capacity-001.md`](decisions/v3b-vm-format-capacity-001.md).
-   The selected hotspot is canonical formatting of multi-megabyte artifacts;
-   a conservative output-capacity hint reduces formatter buffer growth while
-   preserving byte-for-byte dumps and all runtime behavior.
-3. **V3C - capacity policy:** completed on 2026-08-03 with
-   [`v3c-vm-artifact-budget-boundary-001.md`](decisions/v3c-vm-artifact-budget-boundary-001.md).
-   The new `verify` command now has an exact artifact-byte success/rejection
-   boundary, paired with `dump`, without changing the default limit policy.
-
-Timing remains evidence rather than a cross-platform correctness gate. Every
-candidate must preserve stdout, stderr, exit code, trace/debug/profile events,
-resource accounting, and linked/module artifact behavior.
 
 ### V4: Stabilize native and release compatibility
 
@@ -225,14 +143,14 @@ thread state that concurrency would later invalidate.
 before V5B establishes the task, frame, root, and safepoint model. A later JIT
 slice must preserve the interpreter as the compatibility and rollback path.
 
-## 5. Deferred VM work
+## 4. Deferred VM work
 
 These tracks stay outside the default queue until their trigger is met:
 
 - binary or successor artifacts: require measured load/size/integrity pressure
-  and the X1 compatibility matrix;
+  and the existing compatibility matrix;
 - persistent sessions, snapshot, or rollback: require a host/REPL consumer and
-  a completed V1 lifetime policy;
+  the established lifetime policy;
 - `Send`/`Sync`, tasks, or async scheduling: follow V5 and require a concrete
   concurrency consumer plus language and deterministic scheduling decisions;
 - JIT or native code generation: follow V6 after V5B and require stable
@@ -244,29 +162,19 @@ These tracks stay outside the default queue until their trigger is met:
   explicit capabilities, test doubles, resource budgets, and deterministic
   fallback behavior.
 
-## 6. Dependency order
+## 5. Dependency order
 
 ```text
-completed X1 compatibility matrix
-  -> completed V1A cycle corpus and measurement
-  -> completed V1B lifetime/storage decision
-  -> completed V1C top-level tracing slice
-
-real host consumer + X1
+real host consumer
   -> V2A structured host outcome
   -> V2B controlled I/O
   -> optional V2C external schema
 
-existing benchmark/profile/capacity baseline
-  -> completed V3A pure load measurement
-  -> completed V3B one evidence-selected hotspot
-  -> completed V3C exact artifact-byte boundary
-
-completed X1 + demonstrated ABI/release need
+demonstrated ABI/release need
   -> V4 native/release compatibility decision
   -> optional successor artifact work
 
-real concurrency consumer + language scheduling decision + completed V1
+real concurrency consumer + language scheduling decision
   -> V5A concurrency contract
   -> V5B deterministic cooperative scheduler
   -> optional V5C concurrency expansion
@@ -277,16 +185,13 @@ completed V5B + stable profile + demonstrated hot workload
   -> optional V6C baseline JIT
 ```
 
-X1, V1A, V1B, the first V1C implementation slice, its frequency/resource
-measurement, the V1C ledger-retention slice, and V3A-V3C are complete.
-Incremental/concurrent scheduling
-remains evidence-gated. V2 host integration and V4 release compatibility are
-explicitly deferred; resume them only when their named consumer or ABI/release
+The active queue contains only open or deferred work. V2 host integration and
+V4 release compatibility resume only when their named consumer or ABI/release
 trigger appears. V5 concurrency and V6 JIT are also deferred, but their future
 order is fixed: establish deterministic task/frame/root/safepoint behavior
 through V5B before admitting JIT implementation work.
 
-## 7. Verification contract
+## 6. Verification contract
 
 For a Rust VM-only slice, run at least:
 
@@ -311,7 +216,7 @@ workload digest, repetition count, same-sequence measurements, and exact
 output/error/exit parity. Generated reports are evidence artifacts, not source
 files to commit unless a decision explicitly defines a checked-in baseline.
 
-## 8. Completion rule
+## 7. Completion rule
 
 VM progress is measured by closed runtime contracts and reproducible evidence,
 not by the count of interpreter micro-optimizations. A storage, host, native,
