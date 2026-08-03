@@ -165,6 +165,16 @@ impl WeakAllocation {
         }
     }
 
+    fn is_live(&self) -> bool {
+        match self {
+            Self::Environment(value) => value.upgrade().is_some(),
+            Self::Cell(value) => value.upgrade().is_some(),
+            Self::Array(value) => value.upgrade().is_some(),
+            Self::Map(value) => value.upgrade().is_some(),
+            Self::Struct(value) => value.upgrade().is_some(),
+        }
+    }
+
     fn inspect(&self) -> Option<AllocationInfo> {
         match self {
             Self::Environment(value) => value.upgrade().and_then(|storage| {
@@ -320,6 +330,7 @@ fn collect_value_references(value: &Value, outgoing: &mut Vec<usize>) {
 #[derive(Debug, Default)]
 struct HeapLedger {
     allocations: Vec<WeakAllocation>,
+    total_allocations: [usize; HeapObjectKind::COUNT],
     live: [usize; HeapObjectKind::COUNT],
     peak_live: usize,
     track_estimated_bytes: bool,
@@ -332,6 +343,8 @@ impl HeapLedger {
     fn record(&mut self, allocation: WeakAllocation) {
         let kind = allocation.kind();
         self.allocations.push(allocation);
+        self.total_allocations[kind.index()] =
+            self.total_allocations[kind.index()].saturating_add(1);
         self.live[kind.index()] += 1;
         self.peak_live = self.live.iter().sum::<usize>().max(self.peak_live);
         self.observe_estimated_bytes();
@@ -354,12 +367,14 @@ impl HeapLedger {
             return;
         }
         let mut live_estimated_bytes = [0usize; HeapObjectKind::COUNT];
-        for allocation in &self.allocations {
-            if let Some(estimated_bytes) = allocation.observe_estimated_bytes() {
-                let bytes = &mut live_estimated_bytes[allocation.kind().index()];
-                *bytes = bytes.saturating_add(estimated_bytes);
-            }
-        }
+        self.allocations.retain(|allocation| {
+            let Some(estimated_bytes) = allocation.observe_estimated_bytes() else {
+                return false;
+            };
+            let bytes = &mut live_estimated_bytes[allocation.kind().index()];
+            *bytes = bytes.saturating_add(estimated_bytes);
+            true
+        });
         self.live_estimated_bytes = live_estimated_bytes;
         self.peak_estimated_live_bytes = self
             .peak_estimated_live_bytes
@@ -372,10 +387,8 @@ impl HeapLedger {
 
     fn snapshot(&self) -> HeapStatsSnapshot {
         let mut by_kind = [HeapObjectStats::default(); HeapObjectKind::COUNT];
-        for allocation in &self.allocations {
-            let kind = allocation.kind();
-            let stats = &mut by_kind[kind.index()];
-            stats.allocations += 1;
+        for (index, allocations) in self.total_allocations.iter().enumerate() {
+            by_kind[index].allocations = *allocations;
         }
         for (index, stats) in by_kind.iter_mut().enumerate() {
             stats.live = self.live[index];
@@ -399,7 +412,11 @@ impl HeapLedger {
     }
 
     fn profile_counts(&self) -> (usize, usize) {
-        (self.allocations.len(), self.peak_live)
+        (self.total_allocations.iter().copied().sum(), self.peak_live)
+    }
+
+    fn prune_dead_allocations(&mut self) {
+        self.allocations.retain(WeakAllocation::is_live);
     }
 
     fn unreachable_allocations(&self) -> Vec<WeakAllocation> {
@@ -663,6 +680,7 @@ impl Heap {
                 collected += 1;
             }
         }
+        self.ledger.borrow_mut().prune_dead_allocations();
         self.observe_estimated_bytes();
         collected
     }
@@ -911,6 +929,52 @@ mod tests {
             dead.for_kind(HeapObjectKind::Array).dead,
             dead.for_kind(HeapObjectKind::Array).allocations
         );
+    }
+
+    #[test]
+    fn heap_stats_compacts_dead_ledger_entries_without_changing_totals() {
+        let mut heap = Heap::new();
+        let stats = heap.stats();
+        let allocation_count = 64;
+        let values: Vec<_> = (0..allocation_count)
+            .map(|_| {
+                heap.allocate_array(Vec::new())
+                    .expect("array identity should be available")
+            })
+            .collect();
+
+        assert_eq!(stats.snapshot().total_live, allocation_count);
+        drop(values);
+        assert_eq!(heap.ledger.borrow().allocations.len(), allocation_count);
+
+        let snapshot = stats.snapshot();
+        assert_eq!(snapshot.total_allocations, allocation_count);
+        assert_eq!(snapshot.total_live, 0);
+        assert_eq!(snapshot.total_dead, allocation_count);
+        assert_eq!(snapshot.peak_live, allocation_count);
+        assert_eq!(heap.ledger.borrow().allocations.len(), 0);
+    }
+
+    #[test]
+    fn heap_collection_compacts_dead_ledger_entries_without_stats_tracking() {
+        let mut heap = Heap::new();
+        let allocation_count = 64;
+        for _ in 0..allocation_count {
+            let value = heap
+                .allocate_array(Vec::new())
+                .expect("array identity should be available");
+            drop(value);
+        }
+
+        assert_eq!(heap.ledger.borrow().allocations.len(), allocation_count);
+        assert_eq!(heap.collect_garbage(), 0);
+        assert_eq!(heap.ledger.borrow().allocations.len(), 0);
+
+        let stats = heap.stats();
+        let snapshot = stats.snapshot();
+        assert_eq!(snapshot.total_allocations, allocation_count);
+        assert_eq!(snapshot.total_live, 0);
+        assert_eq!(snapshot.total_dead, allocation_count);
     }
 
     #[test]

@@ -59,8 +59,9 @@ assertions across 63 fixtures. No artifact bytes or versions changed.
 
 ### V1: Resolve recursive-object lifetime and cycle policy
 
-**Priority:** P0. **Status:** active; V1A completed, V1B resolved, and the
-first V1C implementation slice completed on 2026-08-02.
+**Priority:** P0. **Status:** completed on 2026-08-03; V1A completed, V1B
+resolved, the first V1C implementation slice completed on 2026-08-02, and the
+V1C ledger-retention slice completed on 2026-08-03.
 
 Recursive named structs make cycles a supported source-level construction, and
 the VM already formats active cycles as `<cycle>`. The remaining lifetime
@@ -88,8 +89,11 @@ Proceed in three slices:
    payloads. The frequency/resource comparison is recorded in
    [`v1c-vm-tracing-frequency-001.md`](decisions/v1c-vm-tracing-frequency-001.md);
    it retains the top-level safepoint and does not justify an allocation
-   threshold or background work. Keep `cdbc 0.1` unchanged and retain an
-   incremental rollback path.
+   threshold or background work. The ledger-retention follow-up is recorded in
+   [`v1c-vm-ledger-retention-001.md`](decisions/v1c-vm-ledger-retention-001.md);
+   it compacts dead weak entries at explicit collection or estimation
+   safepoints while preserving cumulative allocation/dead counters. Keep
+   `cdbc 0.1` unchanged and retain an incremental rollback path.
 
 **Decision gate:** V1B selects tracing GC. Do not add weak-reference syntax,
 relocating handles, or cycle rejection; stop V1C before changing storage layout
@@ -164,6 +168,63 @@ ABI or release need. See
 Private metadata is useful implementation structure, but it is not permission
 to expose a plugin ABI.
 
+### V5: Define deterministic task scheduling before parallel execution
+
+**Priority:** P3. **Status:** deferred until a real language or product
+concurrency use case exists and the scheduling semantics are explicitly chosen.
+
+Concurrency is a runtime and language contract that a later JIT must preserve.
+It determines task-local frames and roots, GC safepoints, cancellation, output
+and failure ordering, resource charging, native callback behavior, and
+debugger/profile events. Resume it before JIT work, in these slices:
+
+1. **V5A - concurrency contract:** name the consumer and define task creation,
+   yield, blocking/wakeup, join, cancellation, deterministic scheduling, error
+   propagation, output ordering, resource budgets, and ownership/sharing rules.
+   Do not promise OS threads, shared mutable state, or `Send`/`Sync` here.
+2. **V5B - cooperative scheduler:** implement deterministic tasks on one OS
+   thread with instruction budgets, explicit yield and blocked states,
+   task-local frames and roots, and GC at admitted scheduler safepoints. Keep
+   source syntax, `.cdbc 0.1`, and existing CLI/library behavior unchanged
+   unless a separate joint compatibility slice explicitly changes them.
+3. **V5C - concurrency expansion decision:** only after V5B workloads exist,
+   decide whether async syntax, channels/actors, shared-memory concurrency,
+   multiple OS threads, or `Send`/`Sync` provides enough product value to
+   justify its nondeterminism and synchronization costs.
+
+**Gate:** repeated-run determinism, task lifecycle and cancellation, per-task
+root tracing and cycle collection, native callbacks, debugger pauses,
+trace/profile event order, resource limits, runtime failures, and CLI/library
+parity.
+
+### V6: Add an evidence-driven JIT after the scheduling contract
+
+**Priority:** P4. **Status:** deferred and ordered after V5B.
+
+JIT compilation is an optional execution optimization, not a new language
+semantic. Starting it after V5B prevents a single-thread-only code generator
+from fixing assumptions about frames, roots, safepoints, cancellation, and
+thread state that concurrency would later invalidate.
+
+1. **V6A - hot-workload evidence:** use stable profiles and reproducible
+   benchmarks to identify an eligible `BytecodeFunction` subset and a concrete
+   performance target. Do not add native code generation for synthetic
+   microbenchmarks alone.
+2. **V6B - JIT runtime contract:** specify interpreter fallback, source/debug
+   and runtime-error mapping, GC root maps and safepoints, cancellation and
+   resource checks, executable code-cache limits, native-call transitions,
+   and invalidation/deoptimization behavior where guards are required. Keep
+   `.cdbc` independent from generated machine code.
+3. **V6C - optional baseline JIT:** compile only the measured hot function
+   subset, retain deterministic interpreter fallback and an off switch, and
+   verify identical output, failures, debug locations, observable profile
+   semantics, and resource-limit behavior. Tiering or optimizing JIT work
+   requires a later profile-backed decision.
+
+**Decision gate:** do not place JIT implementation in the default VM queue
+before V5B establishes the task, frame, root, and safepoint model. A later JIT
+slice must preserve the interpreter as the compatibility and rollback path.
+
 ## 5. Deferred VM work
 
 These tracks stay outside the default queue until their trigger is met:
@@ -172,11 +233,11 @@ These tracks stay outside the default queue until their trigger is met:
   and the X1 compatibility matrix;
 - persistent sessions, snapshot, or rollback: require a host/REPL consumer and
   a completed V1 lifetime policy;
-- `Send`/`Sync`, tasks, or async scheduling: require language and deterministic
-  scheduling decisions;
-- JIT or native code generation: require stable profiles, a fallback
-  interpreter, debug/error mapping, code-cache limits, and demonstrated hot
-  workloads;
+- `Send`/`Sync`, tasks, or async scheduling: follow V5 and require a concrete
+  concurrency consumer plus language and deterministic scheduling decisions;
+- JIT or native code generation: follow V6 after V5B and require stable
+  profiles, a fallback interpreter, debug/error mapping, GC safepoints,
+  code-cache limits, and demonstrated hot workloads;
 - exact allocator/RSS reporting: require a platform/tooling policy distinct
   from VM-owned retained-byte estimates;
 - filesystem, network, time, randomness, and dynamic native plugins: require
@@ -204,13 +265,26 @@ existing benchmark/profile/capacity baseline
 completed X1 + demonstrated ABI/release need
   -> V4 native/release compatibility decision
   -> optional successor artifact work
+
+real concurrency consumer + language scheduling decision + completed V1
+  -> V5A concurrency contract
+  -> V5B deterministic cooperative scheduler
+  -> optional V5C concurrency expansion
+
+completed V5B + stable profile + demonstrated hot workload
+  -> V6A hot-workload evidence
+  -> V6B JIT runtime contract
+  -> optional V6C baseline JIT
 ```
 
 X1, V1A, V1B, the first V1C implementation slice, its frequency/resource
-measurement, and V3A-V3C are complete. Incremental/concurrent scheduling
+measurement, the V1C ledger-retention slice, and V3A-V3C are complete.
+Incremental/concurrent scheduling
 remains evidence-gated. V2 host integration and V4 release compatibility are
 explicitly deferred; resume them only when their named consumer or ABI/release
-trigger appears.
+trigger appears. V5 concurrency and V6 JIT are also deferred, but their future
+order is fixed: establish deterministic task/frame/root/safepoint behavior
+through V5B before admitting JIT implementation work.
 
 ## 7. Verification contract
 
