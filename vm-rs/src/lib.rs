@@ -29,7 +29,9 @@ pub use link::{
     LinkError, LinkErrorKind, LinkReport, LinkResult,
 };
 pub use vm::{
-    CancellationToken, DebugControl, DebugHook, DebugPause, DebugRun, ResourceKind, RunConfig,
-    ProfileFunction, ProfileNative, ProfileReport, ProfileRun, ProfileSourceRange, RuntimeError,
-    RuntimeErrorKind, StackFrame, TraceEvent, TraceEventKind, TraceRun, VM,
+    CancellationToken, CooperativeRun, CooperativeStep, DebugControl, DebugHook, DebugPause,
+    DebugRun, JoinPoll, ProfileFunction, ProfileNative, ProfileReport, ProfileRun,
+    ProfileSourceRange, ResourceKind, RunConfig, RuntimeError, RuntimeErrorKind, StackFrame,
+    TaskControlError, TaskId, TaskOutcome, TaskSpec, TaskState, TraceEvent, TraceEventKind,
+    TraceRun, VM,
 };

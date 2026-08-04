@@ -6,9 +6,10 @@ use crate::bytecode::{
 #[cfg(test)]
 use crate::runtime::HeapObjectKind;
 use crate::runtime::{Cell, FunctionValue, Heap, HeapStats, SharedEnvironment};
+pub use crate::scheduler::{TaskId, TaskState};
 use crate::scheduler::{
-    CooperativeScheduler, DispatchContext, FrameStack, ResumableFrame as Frame, ReturnTarget,
-    TaskState, TaskStep,
+    CooperativeScheduler, DispatchContext, FrameStack, JoinStatus, ResumableFrame as Frame,
+    ReturnTarget, SchedulerError, TaskStep,
 };
 use crate::value::Value;
 use std::collections::BTreeMap;
@@ -1389,6 +1390,80 @@ mod tests {
         }
     }
 
+    fn cooperative_host_task_program() -> Program {
+        Program {
+            constants: vec![
+                Constant::Number("7".to_string()),
+                Constant::Number("8".to_string()),
+                Constant::Number("1".to_string()),
+                Constant::Number("0".to_string()),
+            ],
+            names: Vec::new(),
+            main: FunctionBody {
+                registers: 0,
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            },
+            functions: vec![
+                Function {
+                    index: 0,
+                    name: "target".to_string(),
+                    arity: 0,
+                    registers: 1,
+                    params: Vec::new(),
+                    instructions: vec![
+                        Instruction::Constant { dest: 0, constant: 0 },
+                        Instruction::Return { value: 0 },
+                    ],
+                    locations: vec![None; 2],
+                },
+                Function {
+                    index: 1,
+                    name: "waiter".to_string(),
+                    arity: 0,
+                    registers: 1,
+                    params: Vec::new(),
+                    instructions: vec![
+                        Instruction::Constant { dest: 0, constant: 1 },
+                        Instruction::Return { value: 0 },
+                    ],
+                    locations: vec![None; 2],
+                },
+                Function {
+                    index: 2,
+                    name: "failure".to_string(),
+                    arity: 0,
+                    registers: 3,
+                    params: Vec::new(),
+                    instructions: vec![
+                        Instruction::Constant { dest: 0, constant: 2 },
+                        Instruction::Constant { dest: 1, constant: 3 },
+                        Instruction::Divide {
+                            dest: 2,
+                            left: 0,
+                            right: 1,
+                        },
+                        Instruction::Return { value: 2 },
+                    ],
+                    locations: vec![None; 4],
+                },
+                Function {
+                    index: 3,
+                    name: "pending".to_string(),
+                    arity: 0,
+                    registers: 1,
+                    params: Vec::new(),
+                    instructions: vec![
+                        Instruction::Constant { dest: 0, constant: 0 },
+                        Instruction::Jump { target: 1 },
+                    ],
+                    locations: vec![None; 2],
+                },
+            ],
+            debug_sources: Vec::new(),
+        }
+    }
+
     #[test]
     fn cooperative_adapter_preserves_output_across_quantums() {
         let program = cooperative_print_program();
@@ -1527,6 +1602,118 @@ mod tests {
         assert_eq!(actual.location, expected.location);
         assert_eq!(actual.stack, expected.stack);
         assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn cooperative_host_exposes_typed_multi_task_outcomes() {
+        let program = cooperative_host_task_program();
+        let mut run = VM::new(&program)
+            .start_cooperative(1)
+            .expect("positive quantum should start a session");
+        let first = run
+            .spawn(TaskSpec::function(0, Vec::new()))
+            .expect("first task should spawn");
+        let second = run
+            .spawn(TaskSpec::function(1, Vec::new()))
+            .expect("second task should spawn");
+
+        assert_eq!(
+            run.step().expect("first dispatch should succeed"),
+            CooperativeStep::Dispatched {
+                task_id: first,
+                state: TaskState::Ready,
+            }
+        );
+        run.run_until_waiting()
+            .expect("remaining tasks should complete");
+        assert!(run.is_complete());
+
+        let outcomes = run.outcomes().expect("terminal outcomes should be readable");
+        assert_eq!(outcomes.len(), 2);
+        assert_eq!(outcomes[0].0, first);
+        assert_eq!(outcomes[1].0, second);
+        assert!(matches!(
+            &outcomes[0].1,
+            TaskOutcome::Completed(Value::Number(value)) if *value == 7.0
+        ));
+        assert!(matches!(
+            &outcomes[1].1,
+            TaskOutcome::Completed(Value::Number(value)) if *value == 8.0
+        ));
+    }
+
+    #[test]
+    fn cooperative_host_join_blocks_and_returns_target_outcome_after_wake() {
+        let program = cooperative_host_task_program();
+        let mut run = VM::new(&program)
+            .start_cooperative(1)
+            .expect("positive quantum should start a session");
+        let waiter = run
+            .spawn(TaskSpec::function(1, Vec::new()))
+            .expect("waiter should spawn");
+        let target = run
+            .spawn(TaskSpec::function(0, Vec::new()))
+            .expect("target should spawn");
+
+        assert!(matches!(
+            run.join(waiter, target).expect("join should register"),
+            JoinPoll::Waiting
+        ));
+        assert_eq!(
+            run.task_state(waiter).expect("waiter should exist"),
+            TaskState::Blocked
+        );
+        assert!(matches!(
+            run.step().expect("target should make progress"),
+            CooperativeStep::Dispatched { task_id, .. } if task_id == target
+        ));
+        assert!(matches!(
+            run.step().expect("target should complete"),
+            CooperativeStep::Dispatched {
+                task_id,
+                state: TaskState::Completed,
+            } if task_id == target
+        ));
+        assert_eq!(
+            run.task_state(waiter).expect("joined waiter should wake"),
+            TaskState::Ready
+        );
+        assert!(matches!(
+            run.join(waiter, target).expect("completed join should be ready"),
+            JoinPoll::Ready(TaskOutcome::Completed(Value::Number(value))) if value == 7.0
+        ));
+
+        run.wake(waiter)
+            .expect_err("a ready waiter must not be woken twice");
+        run.run_until_waiting()
+            .expect("woken waiter should finish");
+        assert!(run.is_complete());
+    }
+
+    #[test]
+    fn cooperative_host_failure_is_typed_and_fail_fast() {
+        let program = cooperative_host_task_program();
+        let mut run = VM::new(&program)
+            .start_cooperative(1)
+            .expect("positive quantum should start a session");
+        let failure = run
+            .spawn(TaskSpec::function(2, Vec::new()))
+            .expect("failure task should spawn");
+        let pending = run
+            .spawn(TaskSpec::function(3, Vec::new()))
+            .expect("pending task should spawn");
+
+        run.run_until_waiting()
+            .expect("fail-fast session should reach completion");
+        assert!(run.is_complete());
+        assert!(matches!(
+            run.task_outcome(failure).expect("failure outcome should exist"),
+            Some(TaskOutcome::Failed(error)) if error.message == "division by zero"
+        ));
+        assert!(matches!(
+            run.task_outcome(pending).expect("cancelled outcome should exist"),
+            Some(TaskOutcome::Cancelled)
+        ));
     }
 
     fn array_elements(value: &Value) -> Vec<Value> {
@@ -3594,6 +3781,100 @@ impl fmt::Display for RuntimeError {
     }
 }
 
+/// A host-selected entry point for one cooperative VM task.
+///
+/// `Main` starts a fresh copy of the program entry body. `Function` starts a
+/// verified bytecode function with a fresh empty closure environment; global
+/// variables still use the session's shared global environment. Language-level
+/// task syntax and closure handles remain outside this host-only API.
+#[derive(Clone, Debug)]
+pub enum TaskSpec {
+    Main,
+    Function {
+        index: usize,
+        arguments: Vec<Value>,
+    },
+}
+
+impl TaskSpec {
+    pub fn main() -> Self {
+        Self::Main
+    }
+
+    pub fn function(index: usize, arguments: Vec<Value>) -> Self {
+        Self::Function { index, arguments }
+    }
+}
+
+/// Errors raised while manipulating a cooperative task session.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TaskControlError {
+    InvalidQuantum,
+    TaskIdOverflow,
+    UnknownTask(TaskId),
+    TaskNotBlocked(TaskId),
+    TaskNotJoinable(TaskId),
+    TaskAlreadyWaiting(TaskId),
+    SelfJoin(TaskId),
+    MissingOutcome(TaskId),
+}
+
+impl fmt::Display for TaskControlError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidQuantum => write!(formatter, "scheduler quantum must be positive"),
+            Self::TaskIdOverflow => write!(formatter, "scheduler task id exhausted"),
+            Self::UnknownTask(task_id) => write!(formatter, "unknown {}", task_id),
+            Self::TaskNotBlocked(task_id) => write!(formatter, "{} is not blocked", task_id),
+            Self::TaskNotJoinable(task_id) => {
+                write!(formatter, "{} cannot wait for a join", task_id)
+            }
+            Self::TaskAlreadyWaiting(task_id) => write!(formatter, "{} is already waiting", task_id),
+            Self::SelfJoin(task_id) => write!(formatter, "{} cannot join itself", task_id),
+            Self::MissingOutcome(task_id) => write!(formatter, "{} has no terminal outcome", task_id),
+        }
+    }
+}
+
+impl std::error::Error for TaskControlError {}
+
+impl From<SchedulerError> for TaskControlError {
+    fn from(error: SchedulerError) -> Self {
+        match error {
+            SchedulerError::InvalidQuantum => Self::InvalidQuantum,
+            SchedulerError::TaskIdOverflow => Self::TaskIdOverflow,
+            SchedulerError::UnknownTask(task_id) => Self::UnknownTask(task_id),
+            SchedulerError::TaskNotBlocked(task_id) => Self::TaskNotBlocked(task_id),
+            SchedulerError::TaskNotJoinable(task_id) => Self::TaskNotJoinable(task_id),
+            SchedulerError::TaskAlreadyWaiting(task_id) => Self::TaskAlreadyWaiting(task_id),
+            SchedulerError::SelfJoin(task_id) => Self::SelfJoin(task_id),
+        }
+    }
+}
+
+/// The terminal result retained for one cooperative task.
+#[derive(Clone, Debug)]
+pub enum TaskOutcome {
+    Completed(Value),
+    Failed(RuntimeError),
+    Cancelled,
+}
+
+/// Result of one explicit scheduler dispatch.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CooperativeStep {
+    Dispatched { task_id: TaskId, state: TaskState },
+    Waiting,
+    Complete,
+}
+
+/// Result of a host join registration or query.
+#[derive(Clone, Debug)]
+pub enum JoinPoll {
+    Waiting,
+    Ready(TaskOutcome),
+}
+
 struct CachedFunctionBody {
     name: Rc<str>,
     params: Vec<String>,
@@ -3666,6 +3947,12 @@ struct ScheduledVmTask {
     frames: FrameStack,
     result: Option<Value>,
     error: Option<RuntimeError>,
+}
+
+impl ScheduledVmTask {
+    fn release_frames(&mut self) {
+        self.frames.clear();
+    }
 }
 
 impl CallArguments {
@@ -3759,6 +4046,248 @@ pub struct VM<'a> {
     profile_source_ranges: BTreeMap<(usize, usize, usize), usize>,
 }
 
+/// Host-controlled, deterministic cooperative execution session.
+///
+/// The session owns one VM heap and scheduler. Tasks run one at a time in
+/// FIFO order, and the host explicitly advances the session with `step` or
+/// `run_until_waiting`. Task output is appended in dispatch order. This API
+/// does not add language syntax, OS threads, or a new `.cdbc` format.
+pub struct CooperativeRun<'a> {
+    vm: VM<'a>,
+    scheduler: CooperativeScheduler<ScheduledVmTask>,
+}
+
+impl<'a> CooperativeRun<'a> {
+    /// Spawn a fresh task entry into the session's FIFO queue.
+    pub fn spawn(&mut self, spec: TaskSpec) -> Result<TaskId, RuntimeError> {
+        let task = self.make_task(spec)?;
+        self.scheduler
+            .spawn(task)
+            .map_err(|error| RuntimeError::new(error.to_string()))
+    }
+
+    /// Dispatch one task quantum.
+    ///
+    /// `Waiting` means there are blocked tasks but no ready task. The host can
+    /// then call `wake`, or wait for a joined target to reach a terminal state.
+    /// Task failures are retained in `task_outcome` and trigger fail-fast
+    /// cancellation of all other non-terminal tasks.
+    pub fn step(&mut self) -> Result<CooperativeStep, RuntimeError> {
+        let dispatch = self
+            .scheduler
+            .dispatch(|task, context| self.vm.execute_scheduled_slice(task, context))
+            .map_err(|error| RuntimeError::new(error.to_string()))?;
+
+        let Some(result) = dispatch else {
+            self.release_terminal_frames();
+            self.vm.heap.collect_garbage();
+            return Ok(if self.scheduler.is_complete() {
+                CooperativeStep::Complete
+            } else {
+                CooperativeStep::Waiting
+            });
+        };
+
+        if result.state == TaskState::Failed
+            || (result.state == TaskState::Cancelled
+                && self
+                    .vm
+                    .config
+                    .cancellation
+                    .as_ref()
+                    .is_some_and(CancellationToken::is_cancelled))
+        {
+            self.scheduler.cancel_pending_except(result.task_id);
+        }
+        self.release_terminal_frames();
+        self.vm.heap.collect_garbage();
+        Ok(CooperativeStep::Dispatched {
+            task_id: result.task_id,
+            state: result.state,
+        })
+    }
+
+    /// Dispatch until all currently ready tasks have yielded, completed, or
+    /// failed. A blocked session returns `Waiting`; a terminal session returns
+    /// `Complete`.
+    pub fn run_until_waiting(&mut self) -> Result<CooperativeStep, RuntimeError> {
+        loop {
+            match self.step()? {
+                CooperativeStep::Dispatched { .. } => {}
+                waiting_or_complete => return Ok(waiting_or_complete),
+            }
+        }
+    }
+
+    pub fn quantum(&self) -> usize {
+        self.scheduler.quantum()
+    }
+
+    pub fn task_state(&self, task_id: TaskId) -> Result<TaskState, TaskControlError> {
+        self.scheduler.task_state(task_id).map_err(Into::into)
+    }
+
+    /// Return a task's terminal value, failure, or cancellation state.
+    /// Non-terminal tasks return `Ok(None)`.
+    pub fn task_outcome(
+        &self,
+        task_id: TaskId,
+    ) -> Result<Option<TaskOutcome>, TaskControlError> {
+        let state = self.scheduler.task_state(task_id)?;
+        if !state.is_terminal() {
+            return Ok(None);
+        }
+        let task = self.scheduler.task_payload(task_id)?;
+        let outcome = match state {
+            TaskState::Completed => task
+                .result
+                .clone()
+                .map(TaskOutcome::Completed)
+                .ok_or(TaskControlError::MissingOutcome(task_id))?,
+            TaskState::Failed => {
+                let mut error = task
+                    .error
+                    .clone()
+                    .ok_or(TaskControlError::MissingOutcome(task_id))?;
+                if error.sources.is_empty() {
+                    error.sources = self.vm.program.debug_sources.clone();
+                }
+                TaskOutcome::Failed(error)
+            }
+            TaskState::Cancelled => TaskOutcome::Cancelled,
+            TaskState::Ready | TaskState::Running | TaskState::Blocked => {
+                return Ok(None);
+            }
+        };
+        Ok(Some(outcome))
+    }
+
+    /// Register `waiter` for `target` and return the target outcome if it is
+    /// already terminal. A pending join blocks the waiter and wakes it in FIFO
+    /// registration order when the target terminates.
+    pub fn join(
+        &mut self,
+        waiter: TaskId,
+        target: TaskId,
+    ) -> Result<JoinPoll, TaskControlError> {
+        match self.scheduler.join(waiter, target)? {
+            JoinStatus::Waiting => Ok(JoinPoll::Waiting),
+            JoinStatus::Ready => Ok(JoinPoll::Ready(
+                self.task_outcome(target)?
+                    .ok_or(TaskControlError::MissingOutcome(target))?,
+            )),
+        }
+    }
+
+    /// Explicitly wake a blocked task. A joined task may be woken early and
+    /// can register the join again if it still needs the target outcome.
+    pub fn wake(&mut self, task_id: TaskId) -> Result<(), TaskControlError> {
+        self.scheduler.wake(task_id).map_err(TaskControlError::from)?;
+        self.release_terminal_frames();
+        self.vm.heap.collect_garbage();
+        Ok(())
+    }
+
+    pub fn cancel(&mut self, task_id: TaskId) -> Result<(), TaskControlError> {
+        self.scheduler.cancel(task_id).map_err(TaskControlError::from)?;
+        self.release_terminal_frames();
+        self.vm.heap.collect_garbage();
+        Ok(())
+    }
+
+    pub fn is_complete(&self) -> bool {
+        self.scheduler.is_complete()
+    }
+
+    pub fn is_waiting(&self) -> bool {
+        self.scheduler.is_waiting()
+    }
+
+    /// Return all terminal outcomes in stable task-id order.
+    pub fn outcomes(&self) -> Result<Vec<(TaskId, TaskOutcome)>, TaskControlError> {
+        self.scheduler
+            .task_ids()
+            .map(|task_id| {
+                self.task_outcome(task_id)
+                    .map(|outcome| outcome.map(|outcome| (task_id, outcome)))
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map(|outcomes| outcomes.into_iter().flatten().collect())
+    }
+
+    pub fn take_output(&mut self) -> String {
+        std::mem::take(&mut self.vm.output)
+    }
+
+    fn release_terminal_frames(&mut self) {
+        let terminal_ids = self
+            .scheduler
+            .task_ids()
+            .filter(|task_id| {
+                self.scheduler
+                    .task_state(*task_id)
+                    .is_ok_and(TaskState::is_terminal)
+            })
+            .collect::<Vec<_>>();
+        for task_id in terminal_ids {
+            if let Ok(task) = self.scheduler.task_payload_mut(task_id) {
+                task.release_frames();
+            }
+        }
+    }
+
+    fn make_task(&mut self, spec: TaskSpec) -> Result<ScheduledVmTask, RuntimeError> {
+        let frame = match spec {
+            TaskSpec::Main => Frame {
+                body: Some(Rc::new(self.vm.program.main.clone())),
+                ip: 0,
+                registers: vec![Value::Nil; self.vm.program.main.registers],
+                locals: self.vm.heap.new_environment(),
+                closure: self.vm.heap.new_environment(),
+                is_main: true,
+                function: Rc::from("main"),
+                function_index: None,
+                return_target: None,
+            },
+            TaskSpec::Function { index, arguments } => {
+                let Some(cached) = self.vm.cached_function_body(index) else {
+                    return Err(RuntimeError::new("function index out of range"));
+                };
+                if arguments.len() != cached.params.len() {
+                    return Err(RuntimeError::new(format!(
+                        "expected {} arguments but got {}",
+                        cached.params.len(),
+                        arguments.len()
+                    )));
+                }
+                let locals = self.vm.heap.new_environment();
+                for (name, argument) in cached.params.iter().zip(arguments) {
+                    locals
+                        .borrow_mut()
+                        .insert(name.clone(), self.vm.heap.new_cell(argument));
+                }
+                Frame {
+                    body: Some(Rc::clone(&cached.body)),
+                    ip: 0,
+                    registers: vec![Value::Nil; cached.body.registers],
+                    locals,
+                    closure: self.vm.heap.new_environment(),
+                    is_main: false,
+                    function: Rc::clone(&cached.name),
+                    function_index: Some(index),
+                    return_target: None,
+                }
+            }
+        };
+        let frames = FrameStack::new(frame).map_err(|error| RuntimeError::new(error.to_string()))?;
+        Ok(ScheduledVmTask {
+            frames,
+            result: None,
+            error: None,
+        })
+    }
+}
+
 impl<'a> VM<'a> {
     pub fn new(program: &'a Program) -> Self {
         Self::with_config(program, RunConfig::default())
@@ -3823,6 +4352,16 @@ impl<'a> VM<'a> {
 
     pub fn run(mut self) -> Result<String, RuntimeError> {
         self.run_inner()
+    }
+
+    /// Start a host-controlled cooperative session without changing the
+    /// existing single-task `run`, trace, debug, or profile APIs.
+    pub fn start_cooperative(
+        self,
+        quantum: usize,
+    ) -> Result<CooperativeRun<'a>, TaskControlError> {
+        let scheduler = CooperativeScheduler::new(quantum).map_err(TaskControlError::from)?;
+        Ok(CooperativeRun { vm: self, scheduler })
     }
 
     /// Execute the program with deterministic counters enabled.

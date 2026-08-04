@@ -53,6 +53,15 @@ available overrides are `--max-steps`, `--max-call-depth`, `--max-elements`,
 Budget failures are stable resource errors and do not emit partial `run`
 stdout.
 
+The host-only `VM::start_cooperative(quantum)` API creates a deterministic
+single-thread session. Hosts can spawn `TaskSpec::Main` or a verified function
+entry, advance FIFO quanta with `CooperativeRun::step`, inspect typed
+`TaskOutcome` values, register `join` waiters, explicitly `wake` blocked tasks,
+and cancel tasks. A failed task triggers the V5A fail-fast transition for the
+remaining non-terminal tasks. This surface does not add language task syntax,
+OS threads, `Send`/`Sync`, or changes to `.cdbc 0.1`; output remains in dispatch
+order and the existing `VM::run`, trace, debug, and profile paths are intact.
+
 The library exposes separate typed diagnostic domains for artifact loading
 (`ArtifactError`), module linking (`LinkError`), and execution (`RuntimeError`).
 Their public `kind` fields retain structured context such as artifact line,
@@ -70,5 +79,6 @@ changing CLI display text. See
   environments, functions, and aggregates.
 - `vm`: executor, frames, instruction dispatch, calls, and runtime errors.
 
-Future backend tracks may add incremental GC scheduling, task scheduling, and
-JIT metadata modules.
+Future backend tracks may add language-level task syntax, broader concurrency
+primitives, and JIT metadata modules after the deterministic host scheduler
+contract has workload evidence.

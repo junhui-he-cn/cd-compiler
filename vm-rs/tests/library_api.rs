@@ -4,10 +4,10 @@ use compiler_design_vm::bytecode::{
 use compiler_design_vm::{
     format_artifact, link_modules_checked, link_modules_with_report, parse_artifact,
     parse_artifact_checked, verify_artifact, verify_module_artifact, verify_program_checked,
-    Artifact, ArtifactErrorKind, DebugControl, DebugHook, DebugPause, LinkErrorKind,
-    ModuleArtifact, ModuleDependency, ModuleDependencyKind, Program, ResourceKind, RunConfig,
-    RuntimeErrorKind, TraceEventKind, ARTIFACT_FORMAT_FAMILY,
-    ARTIFACT_FORMAT_VERSION, LIBRARY_API_VERSION, VM,
+    Artifact, ArtifactErrorKind, CooperativeStep, DebugControl, DebugHook, DebugPause, JoinPoll,
+    LinkErrorKind, ModuleArtifact, ModuleDependency, ModuleDependencyKind, Program, ResourceKind,
+    RunConfig, RuntimeErrorKind, TaskOutcome, TaskSpec, TaskState, TraceEventKind,
+    ARTIFACT_FORMAT_FAMILY, ARTIFACT_FORMAT_VERSION, LIBRARY_API_VERSION, VM,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -28,6 +28,45 @@ fn print_program() -> Program {
             locations: vec![None, None],
         },
         functions: Vec::new(),
+        debug_sources: Vec::new(),
+    }
+}
+
+fn cooperative_program() -> Program {
+    Program {
+        constants: vec![Constant::Number("7".to_string()), Constant::Number("8".to_string())],
+        names: Vec::new(),
+        main: FunctionBody {
+            registers: 0,
+            instructions: Vec::new(),
+            locations: Vec::new(),
+        },
+        functions: vec![
+            Function {
+                index: 0,
+                name: "target".to_string(),
+                arity: 0,
+                registers: 1,
+                params: Vec::new(),
+                instructions: vec![
+                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Return { value: 0 },
+                ],
+                locations: vec![None; 2],
+            },
+            Function {
+                index: 1,
+                name: "waiter".to_string(),
+                arity: 0,
+                registers: 1,
+                params: Vec::new(),
+                instructions: vec![
+                    Instruction::Constant { dest: 0, constant: 1 },
+                    Instruction::Return { value: 0 },
+                ],
+                locations: vec![None; 2],
+            },
+        ],
         debug_sources: Vec::new(),
     }
 }
@@ -187,6 +226,42 @@ fn library_api_parses_verifies_runs_and_traces_programs() {
         .events
         .iter()
         .any(|event| event.kind == TraceEventKind::Output));
+}
+
+#[test]
+fn library_api_exposes_typed_cooperative_task_results_and_join() {
+    let program = cooperative_program();
+    let mut session = VM::with_config(&program, RunConfig::unlimited())
+        .start_cooperative(1)
+        .expect("cooperative session should start");
+    let waiter = session
+        .spawn(TaskSpec::function(1, Vec::new()))
+        .expect("waiter should spawn");
+    let target = session
+        .spawn(TaskSpec::function(0, Vec::new()))
+        .expect("target should spawn");
+
+    assert!(matches!(
+        session.join(waiter, target).expect("join should register"),
+        JoinPoll::Waiting
+    ));
+    assert_eq!(session.task_state(waiter), Ok(TaskState::Blocked));
+    assert!(matches!(
+        session.step().expect("target should yield"),
+        CooperativeStep::Dispatched { task_id, .. } if task_id == target
+    ));
+    assert!(matches!(
+        session.step().expect("target should complete"),
+        CooperativeStep::Dispatched {
+            task_id,
+            state: TaskState::Completed,
+        } if task_id == target
+    ));
+    assert!(matches!(
+        session.join(waiter, target).expect("join should return target"),
+        JoinPoll::Ready(TaskOutcome::Completed(value))
+            if matches!(value, compiler_design_vm::value::Value::Number(number) if number == 7.0)
+    ));
 }
 
 #[test]

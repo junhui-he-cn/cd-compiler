@@ -1,8 +1,9 @@
 # V5B: scheduler control-plane foundation
 
 Status: scheduler control-plane, explicit frame-state foundation, and the
-private one-task VM adapter completed on 2026-08-03 against the V5A contract.
-The public task API and multi-task host surface remain outside this slice.
+private one-task VM adapter completed on 2026-08-03. The additive typed
+multi-task host result and join/wake slice completed on 2026-08-04 in
+[`v5b-vm-task-host-result-001.md`](v5b-vm-task-host-result-001.md).
 
 ## Scope
 
@@ -31,11 +32,10 @@ stack without changing the existing public recursive execution path.
   callee validates and writes the result to the caller register; returning from
   the root yields the task result.
 
-The control plane does not itself define output, trace/profile records, GC, or
-runtime error payloads. The adapter now preserves output, resource checks,
-native callback behavior, call-site stack locations, and dispatch-boundary
-collection for its host-only path; task-aware output, trace/profile records,
-debugger controls, and a public task result type remain future work.
+The control plane does not itself define task-aware trace/profile records or
+debugger controls. The host session preserves output, resource checks, native
+callback behavior, call-site stack locations, dispatch-boundary collection,
+typed task outcomes, and join/wake ordering for its host-only path.
 
 ## Compatibility boundary
 
@@ -82,7 +82,6 @@ git diff --check
 
 ## Next slice
 
-Add the typed multi-task host result and join/wake integration required by the
-V5A contract. Keep source syntax, the CLI, `.cdbc 0.1`, and existing
-single-task APIs unchanged until task-aware output, trace/profile events, and
-debugger controls have an explicit compatibility contract.
+Task-aware output, trace/profile events, and debugger controls require a
+separate compatibility contract. V5C concurrency expansion and V6 JIT remain
+gated on repeatable multi-task and stable hot-workload evidence.

@@ -10,10 +10,10 @@ use std::rc::Rc;
 /// Stable only within one scheduler instance. Task IDs are not artifact data
 /// and must not be persisted or transferred between VM instances.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub(crate) struct TaskId(usize);
+pub struct TaskId(usize);
 
 impl TaskId {
-    pub(crate) fn index(self) -> usize {
+    pub fn index(self) -> usize {
         self.0
     }
 }
@@ -25,7 +25,7 @@ impl fmt::Display for TaskId {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum TaskState {
+pub enum TaskState {
     Ready,
     Running,
     Blocked,
@@ -35,7 +35,7 @@ pub(crate) enum TaskState {
 }
 
 impl TaskState {
-    fn is_terminal(self) -> bool {
+    pub(crate) fn is_terminal(self) -> bool {
         matches!(self, Self::Completed | Self::Failed | Self::Cancelled)
     }
 }
@@ -68,6 +68,9 @@ pub(crate) enum SchedulerError {
     TaskIdOverflow,
     UnknownTask(TaskId),
     TaskNotBlocked(TaskId),
+    TaskNotJoinable(TaskId),
+    TaskAlreadyWaiting(TaskId),
+    SelfJoin(TaskId),
 }
 
 impl fmt::Display for SchedulerError {
@@ -77,8 +80,21 @@ impl fmt::Display for SchedulerError {
             Self::TaskIdOverflow => write!(formatter, "scheduler task id exhausted"),
             Self::UnknownTask(task_id) => write!(formatter, "unknown {}", task_id),
             Self::TaskNotBlocked(task_id) => write!(formatter, "{} is not blocked", task_id),
+            Self::TaskNotJoinable(task_id) => {
+                write!(formatter, "{} cannot wait for a join", task_id)
+            }
+            Self::TaskAlreadyWaiting(task_id) => {
+                write!(formatter, "{} is already waiting", task_id)
+            }
+            Self::SelfJoin(task_id) => write!(formatter, "{} cannot join itself", task_id),
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum JoinStatus {
+    Waiting,
+    Ready,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -205,6 +221,10 @@ impl FrameStack {
         &self.frames
     }
 
+    pub(crate) fn clear(&mut self) {
+        self.frames.clear();
+    }
+
     pub(crate) fn push(&mut self, frame: ResumableFrame) -> Result<(), FrameStackError> {
         if frame.return_target.is_none() {
             return Err(FrameStackError::MissingReturnTarget);
@@ -266,6 +286,8 @@ pub(crate) struct CooperativeScheduler<T> {
     tasks: BTreeMap<TaskId, ScheduledTask<T>>,
     ready: VecDeque<TaskId>,
     running: Option<TaskId>,
+    join_waiters: BTreeMap<TaskId, Vec<TaskId>>,
+    waiting_on: BTreeMap<TaskId, TaskId>,
 }
 
 impl<T> CooperativeScheduler<T> {
@@ -279,6 +301,8 @@ impl<T> CooperativeScheduler<T> {
             tasks: BTreeMap::new(),
             ready: VecDeque::new(),
             running: None,
+            join_waiters: BTreeMap::new(),
+            waiting_on: BTreeMap::new(),
         })
     }
 
@@ -392,6 +416,8 @@ impl<T> CooperativeScheduler<T> {
         task.state = next_state;
         if next_state == TaskState::Ready {
             self.ready.push_back(task_id);
+        } else if next_state.is_terminal() {
+            self.wake_joiners(task_id);
         }
         Ok(Some(DispatchResult {
             task_id,
@@ -400,15 +426,17 @@ impl<T> CooperativeScheduler<T> {
     }
 
     pub(crate) fn wake(&mut self, task_id: TaskId) -> Result<(), SchedulerError> {
+        if self.task_state(task_id)? != TaskState::Blocked {
+            return Err(SchedulerError::TaskNotBlocked(task_id));
+        }
+        self.remove_join_waiter(task_id);
         let task = self
             .tasks
             .get_mut(&task_id)
             .ok_or(SchedulerError::UnknownTask(task_id))?;
-        if task.state != TaskState::Blocked {
-            return Err(SchedulerError::TaskNotBlocked(task_id));
-        }
         if task.cancellation_requested {
             task.state = TaskState::Cancelled;
+            self.wake_joiners(task_id);
         } else {
             task.state = TaskState::Ready;
             self.ready.push_back(task_id);
@@ -419,20 +447,131 @@ impl<T> CooperativeScheduler<T> {
     /// Cancel a ready or blocked task immediately. A running task observes the
     /// request at the next checkpoint supplied by its executor callback.
     pub(crate) fn cancel(&mut self, task_id: TaskId) -> Result<(), SchedulerError> {
-        let task = self
-            .tasks
-            .get_mut(&task_id)
-            .ok_or(SchedulerError::UnknownTask(task_id))?;
-        match task.state {
+        let state = self.task_state(task_id)?;
+        match state {
             TaskState::Ready => {
-                task.state = TaskState::Cancelled;
                 self.ready.retain(|queued| *queued != task_id);
+                self.tasks
+                    .get_mut(&task_id)
+                    .expect("validated task id")
+                    .state = TaskState::Cancelled;
+                self.wake_joiners(task_id);
             }
-            TaskState::Running => task.cancellation_requested = true,
-            TaskState::Blocked => task.state = TaskState::Cancelled,
+            TaskState::Running => {
+                self.tasks
+                    .get_mut(&task_id)
+                    .expect("validated task id")
+                    .cancellation_requested = true;
+            }
+            TaskState::Blocked => {
+                self.remove_join_waiter(task_id);
+                self.tasks
+                    .get_mut(&task_id)
+                    .expect("validated task id")
+                    .state = TaskState::Cancelled;
+                self.wake_joiners(task_id);
+            }
             TaskState::Completed | TaskState::Failed | TaskState::Cancelled => {}
         }
         Ok(())
+    }
+
+    /// Register a task as waiting for another task's terminal outcome.
+    ///
+    /// A task that joins a non-terminal target becomes blocked. Once the
+    /// target completes, fails, or is cancelled, the waiter is requeued at
+    /// the tail in registration order. The value/error itself remains owned
+    /// by the task payload and is consumed by the host result layer.
+    pub(crate) fn join(
+        &mut self,
+        waiter: TaskId,
+        target: TaskId,
+    ) -> Result<JoinStatus, SchedulerError> {
+        if waiter == target {
+            return Err(SchedulerError::SelfJoin(waiter));
+        }
+        let waiter_state = self.task_state(waiter)?;
+        let target_state = self.task_state(target)?;
+        if target_state.is_terminal() {
+            return Ok(JoinStatus::Ready);
+        }
+
+        match waiter_state {
+            TaskState::Ready => {
+                self.ready.retain(|queued| *queued != waiter);
+                self.tasks
+                    .get_mut(&waiter)
+                    .expect("validated task id")
+                    .state = TaskState::Blocked;
+            }
+            TaskState::Blocked => {
+                if self.waiting_on.get(&waiter) == Some(&target) {
+                    return Ok(JoinStatus::Waiting);
+                }
+                return Err(SchedulerError::TaskAlreadyWaiting(waiter));
+            }
+            TaskState::Running
+            | TaskState::Completed
+            | TaskState::Failed
+            | TaskState::Cancelled => {
+                return Err(SchedulerError::TaskNotJoinable(waiter));
+            }
+        }
+
+        self.waiting_on.insert(waiter, target);
+        self.join_waiters.entry(target).or_default().push(waiter);
+        Ok(JoinStatus::Waiting)
+    }
+
+    /// Cancel every non-terminal task except the task that produced the
+    /// scheduler's first failure. This is the V5A fail-fast transition.
+    pub(crate) fn cancel_pending_except(&mut self, task_id: TaskId) {
+        let pending = self
+            .tasks
+            .keys()
+            .copied()
+            .filter(|candidate| *candidate != task_id)
+            .collect::<Vec<_>>();
+        for candidate in pending {
+            let _ = self.cancel(candidate);
+        }
+    }
+
+    pub(crate) fn task_ids(&self) -> impl Iterator<Item = TaskId> + '_ {
+        self.tasks.keys().copied()
+    }
+
+    fn remove_join_waiter(&mut self, waiter: TaskId) {
+        let Some(target) = self.waiting_on.remove(&waiter) else {
+            return;
+        };
+        if let Some(waiters) = self.join_waiters.get_mut(&target) {
+            waiters.retain(|candidate| *candidate != waiter);
+            if waiters.is_empty() {
+                self.join_waiters.remove(&target);
+            }
+        }
+    }
+
+    fn wake_joiners(&mut self, target: TaskId) {
+        let waiters = self.join_waiters.remove(&target).unwrap_or_default();
+        for waiter in waiters {
+            if self.waiting_on.get(&waiter) != Some(&target) {
+                continue;
+            }
+            self.waiting_on.remove(&waiter);
+            if self
+                .tasks
+                .get(&waiter)
+                .is_some_and(|task| task.state == TaskState::Blocked)
+            {
+                self.tasks
+                    .get_mut(&waiter)
+                    .expect("validated waiter id")
+                    .state = TaskState::Ready;
+                self.ready.push_back(waiter);
+            }
+        }
     }
 
     fn pop_ready_task(&mut self) -> Option<TaskId> {
@@ -571,6 +710,63 @@ mod tests {
             scheduler.wake(task),
             Err(SchedulerError::TaskNotBlocked(task))
         );
+    }
+
+    #[test]
+    fn joined_waiters_wake_in_registration_order_when_target_completes() {
+        let mut scheduler = CooperativeScheduler::new(1).expect("valid quantum");
+        let first_waiter = scheduler.spawn(()).expect("first waiter");
+        let second_waiter = scheduler.spawn(()).expect("second waiter");
+        let target = scheduler.spawn(()).expect("target");
+
+        assert_eq!(
+            scheduler.join(first_waiter, target),
+            Ok(JoinStatus::Waiting)
+        );
+        assert_eq!(
+            scheduler.join(second_waiter, target),
+            Ok(JoinStatus::Waiting)
+        );
+        assert_eq!(scheduler.task_state(first_waiter), Ok(TaskState::Blocked));
+        assert_eq!(scheduler.task_state(second_waiter), Ok(TaskState::Blocked));
+
+        let completed = scheduler
+            .dispatch(|_, _| TaskStep::Complete)
+            .expect("target dispatch succeeds")
+            .expect("target was ready");
+        assert_eq!(completed.task_id, target);
+        assert_eq!(completed.state, TaskState::Completed);
+        assert_eq!(scheduler.task_state(first_waiter), Ok(TaskState::Ready));
+        assert_eq!(scheduler.task_state(second_waiter), Ok(TaskState::Ready));
+
+        let first = scheduler
+            .dispatch(|_, _| TaskStep::Complete)
+            .expect("first waiter dispatch succeeds")
+            .expect("first waiter was woken");
+        let second = scheduler
+            .dispatch(|_, _| TaskStep::Complete)
+            .expect("second waiter dispatch succeeds")
+            .expect("second waiter was woken");
+        assert_eq!(first.task_id, first_waiter);
+        assert_eq!(second.task_id, second_waiter);
+        assert_eq!(scheduler.join(first_waiter, target), Ok(JoinStatus::Ready));
+    }
+
+    #[test]
+    fn join_rejects_self_and_duplicate_waits_and_explicit_wake_detaches_waiter() {
+        let mut scheduler = CooperativeScheduler::new(1).expect("valid quantum");
+        let waiter = scheduler.spawn(()).expect("waiter");
+        let target = scheduler.spawn(()).expect("target");
+
+        assert_eq!(
+            scheduler.join(waiter, waiter),
+            Err(SchedulerError::SelfJoin(waiter))
+        );
+        assert_eq!(scheduler.join(waiter, target), Ok(JoinStatus::Waiting));
+        assert_eq!(scheduler.join(waiter, target), Ok(JoinStatus::Waiting));
+        scheduler.wake(waiter).expect("explicit wake succeeds");
+        assert_eq!(scheduler.task_state(waiter), Ok(TaskState::Ready));
+        assert_eq!(scheduler.ready_len(), 2);
     }
 
     fn test_frame_stack() -> FrameStack {

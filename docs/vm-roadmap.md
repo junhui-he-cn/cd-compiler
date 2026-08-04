@@ -95,8 +95,8 @@ to expose a plugin ABI.
 ### V5: Define deterministic task scheduling before parallel execution
 
 **Priority:** P1. **Status:** V5A contract recorded on 2026-08-03; the V5B
-scheduler control-plane and explicit frame-state foundation are implemented;
-the task execution adapter is next. See
+scheduler control-plane, explicit frame-state foundation, private adapter, and
+typed host task result/join-wake surface are implemented on 2026-08-04. See
 [`v5a-vm-concurrency-contract-001.md`](decisions/v5a-vm-concurrency-contract-001.md).
 
 Concurrency is a runtime and language contract that a later JIT must preserve.
@@ -110,16 +110,19 @@ debugger/profile events. Resume it before JIT work, in these slices:
    one-thread cooperative scheduling, task lifecycle, join/wake, cancellation,
    resource scopes, output/event ordering, and task-root ownership. It does not
    promise OS threads, language-level async syntax, or `Send`/`Sync`.
-2. **V5B - cooperative scheduler:** the control-plane foundation and private
-   one-task execution adapter are recorded in
-   [`v5b-vm-scheduler-control-plane-001.md`](decisions/v5b-vm-scheduler-control-plane-001.md).
+2. **V5B - cooperative scheduler:** the control-plane foundation, private
+   one-task execution adapter, and additive typed host session are recorded in
+   [`v5b-vm-scheduler-control-plane-001.md`](decisions/v5b-vm-scheduler-control-plane-001.md)
+   and [`v5b-vm-task-host-result-001.md`](decisions/v5b-vm-task-host-result-001.md).
    It provides FIFO task states, quantum requeue, explicit wake,
    cancellation transitions, a resumable frame stack with validated return
    transfer, dispatch-boundary GC, and parity checks for output, budgets,
-   callbacks, roots, and runtime-error stacks. The adapter remains host-only
-   and private; source syntax, `.cdbc 0.1`, and existing CLI/library behavior
-   are unchanged. The next slice is the multi-task host result and join/wake
-   integration required by the V5A contract.
+   callbacks, roots, and runtime-error stacks. The frame adapter remains an
+   internal implementation detail; source syntax, `.cdbc 0.1`, and existing
+   single-task CLI/library behavior are unchanged. The additive host session
+   exposes typed task outcomes, join/wake, explicit stepping, and deterministic
+   fail-fast cancellation; task-aware output, trace/profile, and debugger
+   contracts remain separate slices.
 3. **V5C - concurrency expansion decision:** only after V5B workloads exist,
    decide whether async syntax, channels/actors, shared-memory concurrency,
    multiple OS threads, or `Send`/`Sync` provides enough product value to
@@ -185,7 +188,8 @@ These tracks stay outside the default queue until their trigger is met:
 V5A concurrency contract (recorded)
   -> V5B scheduler control plane (implemented)
   -> V5B resumable frame foundation (implemented)
-  -> V5B task execution adapter
+  -> V5B task execution adapter (implemented)
+  -> V5B typed host result and join/wake (implemented)
   -> optional V5C concurrency expansion
 
 completed V5B + stable profile + demonstrated hot workload
@@ -203,10 +207,11 @@ demonstrated ABI/release need
   -> optional successor artifact work
 ```
 
-V5B task execution adapter is the next implementation focus. V6 JIT work starts
-only after V5B establishes deterministic task/frame/root/safepoint behavior and
-stable hot-workload evidence. V2 host integration and V4 release compatibility
-resume only when their named consumer or ABI/release trigger appears.
+V5B task-aware output/trace/profile/debug contracts are the next compatibility
+decision. V6 JIT work starts only after V5B establishes deterministic
+task/frame/root/safepoint behavior and stable hot-workload evidence. V2 host
+integration and V4 release compatibility resume only when their named consumer
+or ABI/release trigger appears.
 
 ## 6. Verification contract
 
