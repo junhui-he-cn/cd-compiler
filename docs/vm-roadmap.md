@@ -149,9 +149,10 @@ parity.
 
 ### V6: Add an evidence-driven JIT after the scheduling contract
 
-**Priority:** P2. **Status:** V6A hot-workload evidence was recorded on
-2026-08-06; V6B runtime-contract design is now the next slice.** See
-[`v6a-hot-workload-evidence-001.md`](decisions/v6a-hot-workload-evidence-001.md).
+**Priority:** P2. **Status:** V6A hot-workload evidence and the V6B runtime
+contract were recorded on 2026-08-06.** See
+[`v6a-hot-workload-evidence-001.md`](decisions/v6a-hot-workload-evidence-001.md)
+and [`v6b-jit-runtime-contract-001.md`](decisions/v6b-jit-runtime-contract-001.md).
 
 JIT compilation is an optional execution optimization, not a new language
 semantic. Starting it after V5B prevents a single-thread-only code generator
@@ -165,11 +166,14 @@ thread state that concurrency would later invalidate.
    the primary function-level candidate. It establishes stable bytecode,
    artifact, and output/error/exit observations, but deliberately does not
    claim a portable speedup or set a wall-clock threshold.
-2. **V6B - JIT runtime contract:** specify interpreter fallback, source/debug
-   and runtime-error mapping, GC root maps and safepoints, cancellation and
-   resource checks, executable code-cache limits, native-call transitions,
-   and invalidation/deoptimization behavior where guards are required. Keep
-   `.cdbc` independent from generated machine code.
+2. **V6B - JIT runtime contract:** recorded in
+   [`v6b-jit-runtime-contract-001.md`](decisions/v6b-jit-runtime-contract-001.md).
+   The contract keeps the interpreter as the default and fallback, requires
+   frame materialization at scheduler/native/GC/error boundaries, preserves
+   source/debug/profile/resource/cancellation behavior, bounds a per-VM code
+   cache, and keeps `.cdbc` independent from generated machine code. The
+   initial V6C tier is limited to an explicit verified function whitelist and
+   may fall back for cooperative or observable sessions.
 3. **V6C - optional baseline JIT:** compile only the measured hot function
    subset, retain deterministic interpreter fallback and an off switch, and
    verify identical output, failures, debug locations, observable profile
@@ -217,7 +221,7 @@ V5A concurrency contract (recorded)
 
 completed V5B + stable profile + demonstrated hot workload
   -> V6A hot-workload evidence (recorded)
-  -> V6B JIT runtime contract
+  -> V6B JIT runtime contract (recorded)
   -> optional V6C baseline JIT
 
 real host consumer
@@ -234,10 +238,11 @@ V5B's deterministic host concurrency observability and workload evidence are
 complete. A concrete consumer must justify optional V5C expansion. V6A
 characterization is recorded with stable profile surfaces, bytecode shape, and
 repeated correctness observations; the mixed, startup-sensitive timing data
-does not establish a speedup threshold. V6B runtime-contract work is next, and
-V6C JIT implementation remains deferred until that contract is explicit. V2
-host integration and V4 release compatibility resume only when their named
-consumer or ABI/release trigger appears.
+does not establish a speedup threshold. The V6B runtime contract is recorded;
+V6C JIT implementation remains deferred until the explicit whitelist,
+frame-materialization, bounded-code-cache, and interpreter-fallback tests are
+implemented. V2 host integration and V4 release compatibility resume only
+when their named consumer or ABI/release trigger appears.
 
 ## 6. Verification contract
 
