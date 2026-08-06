@@ -541,6 +541,25 @@ impl<T> CooperativeScheduler<T> {
         self.tasks.keys().copied()
     }
 
+    pub(crate) fn ready_task_ids(&self) -> Vec<TaskId> {
+        self.ready
+            .iter()
+            .copied()
+            .filter(|task_id| {
+                self.tasks
+                    .get(task_id)
+                    .is_some_and(|task| task.state == TaskState::Ready)
+            })
+            .collect()
+    }
+
+    pub(crate) fn task_states(&self) -> Vec<(TaskId, TaskState)> {
+        self.tasks
+            .iter()
+            .map(|(task_id, task)| (*task_id, task.state))
+            .collect()
+    }
+
     fn remove_join_waiter(&mut self, waiter: TaskId) {
         let Some(target) = self.waiting_on.remove(&waiter) else {
             return;

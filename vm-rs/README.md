@@ -69,8 +69,13 @@ collection with task-local stacks and the same session sequence as output;
 session aggregate plus task-ID-ordered `TaskProfileReport` execution counters.
 Instruction, function, native, source-range, and output counts are attributed
 to the current task, including synchronous native callbacks; shared-heap
-metrics remain aggregate because tasks share object identity. A failed task
-triggers the V5A fail-fast transition for the remaining non-terminal tasks.
+metrics remain aggregate because tasks share object identity.
+`VM::start_cooperative_debug(quantum, hook)` invokes synchronous
+`CooperativeDebugHook` pauses with the selected task, task-local stack/locals,
+FIFO ready queue, and stable task states. No other task dispatches while a hook
+runs; debugger quit deterministically cancels all non-terminal tasks. A failed
+task triggers the V5A fail-fast transition for the remaining non-terminal
+tasks.
 This surface does not add language task syntax, OS threads, `Send`/`Sync`, or
 changes to `.cdbc 0.1`; the existing `VM::run`, trace, debug, and profile paths
 are intact.

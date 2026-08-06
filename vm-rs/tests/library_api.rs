@@ -4,11 +4,12 @@ use compiler_design_vm::bytecode::{
 use compiler_design_vm::{
     format_artifact, link_modules_checked, link_modules_with_report, parse_artifact,
     parse_artifact_checked, verify_artifact, verify_module_artifact, verify_program_checked,
-    Artifact, ArtifactErrorKind, CooperativeProfileReport, CooperativeStep, DebugControl,
-    DebugHook, DebugPause, JoinPoll, LinkErrorKind, ModuleArtifact, ModuleDependency,
-    ModuleDependencyKind, Program, ResourceKind, RunConfig, RuntimeErrorKind, TaskOutcome,
-    TaskOutputEvent, TaskProfileReport, TaskSpec, TaskState, TaskTraceEvent, TraceEventKind,
-    ARTIFACT_FORMAT_FAMILY, ARTIFACT_FORMAT_VERSION, LIBRARY_API_VERSION, VM,
+    Artifact, ArtifactErrorKind, CooperativeDebugHook, CooperativeDebugPause,
+    CooperativeProfileReport, CooperativeStep, DebugControl, DebugHook, DebugPause, JoinPoll,
+    LinkErrorKind, ModuleArtifact, ModuleDependency, ModuleDependencyKind, Program, ResourceKind,
+    RunConfig, RuntimeErrorKind, TaskOutcome, TaskOutputEvent, TaskProfileReport, TaskSpec,
+    TaskState, TaskTraceEvent, TraceEventKind, ARTIFACT_FORMAT_FAMILY, ARTIFACT_FORMAT_VERSION,
+    LIBRARY_API_VERSION, VM,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -424,6 +425,52 @@ fn library_api_exposes_task_attributed_cooperative_profile() {
     assert_eq!(tasks[1].task_id, second);
     assert_eq!(tasks[1].instruction_count, 3);
     assert_eq!(tasks[1].output_bytes, 2);
+}
+
+struct RecordCooperativePauses {
+    pauses: Rc<RefCell<Vec<CooperativeDebugPause>>>,
+}
+
+impl CooperativeDebugHook for RecordCooperativePauses {
+    fn on_instruction(&mut self, pause: CooperativeDebugPause) -> DebugControl {
+        self.pauses.borrow_mut().push(pause);
+        DebugControl::Continue
+    }
+}
+
+#[test]
+fn library_api_exposes_task_attributed_cooperative_debug_pauses() {
+    let program = cooperative_output_program();
+    let pauses = Rc::new(RefCell::new(Vec::new()));
+    let mut session = VM::with_config(&program, RunConfig::unlimited())
+        .start_cooperative_debug(
+            1,
+            Box::new(RecordCooperativePauses {
+                pauses: Rc::clone(&pauses),
+            }),
+        )
+        .expect("cooperative debug session should start");
+    let first = session
+        .spawn(TaskSpec::function(0, Vec::new()))
+        .expect("first task should spawn");
+    let second = session
+        .spawn(TaskSpec::function(1, Vec::new()))
+        .expect("second task should spawn");
+
+    assert!(matches!(
+        session.step().expect("first task should execute"),
+        CooperativeStep::Dispatched { task_id, .. } if task_id == first
+    ));
+    let pauses = pauses.borrow();
+    assert_eq!(pauses.len(), 1);
+    assert_eq!(pauses[0].task_id, first);
+    assert_eq!(pauses[0].scheduler.running, first);
+    assert_eq!(pauses[0].scheduler.ready, vec![second]);
+    assert_eq!(
+        pauses[0].scheduler.tasks,
+        vec![(first, TaskState::Running), (second, TaskState::Ready)]
+    );
+    assert!(session.trace_events().is_empty());
 }
 
 #[test]

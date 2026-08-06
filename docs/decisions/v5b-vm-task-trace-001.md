@@ -58,7 +58,8 @@ git diff --check
 ## Next boundary
 
 Task-aware profile is implemented in
-[`v5b-vm-task-profile-001.md`](v5b-vm-task-profile-001.md). Next define debugger
-pauses that expose the selected task and scheduler queue state while stopping
-all dispatch. V5C concurrency expansion and V6 JIT remain gated on repeatable
-multi-task workloads and stable hot-workload evidence.
+[`v5b-vm-task-profile-001.md`](v5b-vm-task-profile-001.md). Task-aware debugger
+pauses are implemented in
+[`v5b-vm-task-debugger-001.md`](v5b-vm-task-debugger-001.md). Build repeatable
+multi-task workloads next; V5C expansion and V6 JIT remain gated on their
+evidence and stable hot-workload characterization.

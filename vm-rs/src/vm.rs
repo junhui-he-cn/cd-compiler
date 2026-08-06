@@ -89,6 +89,43 @@ pub trait DebugHook {
     }
 }
 
+/// Scheduler state observed while one cooperative task is paused in its debug
+/// hook. `ready` preserves FIFO dispatch order and excludes `running`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CooperativeDebugState {
+    pub running: TaskId,
+    pub ready: Vec<TaskId>,
+    pub tasks: Vec<(TaskId, TaskState)>,
+}
+
+/// One task-attributed cooperative debugger pause.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CooperativeDebugPause {
+    pub task_id: TaskId,
+    pub function: String,
+    pub instruction: usize,
+    pub location: Option<DebugLocation>,
+    pub stack: Vec<StackFrame>,
+    pub locals: Vec<(String, String)>,
+    pub scheduler: CooperativeDebugState,
+}
+
+/// Synchronous task-aware debugger hook.
+///
+/// No other task is dispatched while either callback is running.
+pub trait CooperativeDebugHook {
+    fn on_instruction(&mut self, pause: CooperativeDebugPause) -> DebugControl;
+
+    fn on_error(
+        &mut self,
+        pause: CooperativeDebugPause,
+        _error: &RuntimeError,
+    ) -> DebugControl {
+        let _ = pause;
+        DebugControl::Continue
+    }
+}
+
 pub struct DebugRun {
     pub result: Result<String, RuntimeError>,
     pub quit: bool,
@@ -839,6 +876,7 @@ mod tests {
     use super::*;
     use crate::bytecode::Function;
     use crate::runtime::{new_cell, new_environment};
+    use std::cell::RefCell;
 
     #[test]
     fn native_registry_describes_dispatch_names_and_callback_shapes() {
@@ -2249,6 +2287,228 @@ mod tests {
         assert_eq!(report.tasks[1].instruction_count, 0);
         assert_eq!(report.tasks[1].functions[4].calls, 0);
         assert_eq!(report.tasks[1].functions[4].instructions, 0);
+    }
+
+    struct RecordingCooperativeDebugger {
+        pauses: Rc<RefCell<Vec<CooperativeDebugPause>>>,
+        errors: Rc<RefCell<Vec<(CooperativeDebugPause, RuntimeError)>>>,
+        quit_on_first_instruction: bool,
+    }
+
+    impl CooperativeDebugHook for RecordingCooperativeDebugger {
+        fn on_instruction(&mut self, pause: CooperativeDebugPause) -> DebugControl {
+            self.pauses.borrow_mut().push(pause);
+            if self.quit_on_first_instruction {
+                DebugControl::Quit
+            } else {
+                DebugControl::Continue
+            }
+        }
+
+        fn on_error(
+            &mut self,
+            pause: CooperativeDebugPause,
+            error: &RuntimeError,
+        ) -> DebugControl {
+            self.errors.borrow_mut().push((pause, error.clone()));
+            DebugControl::Continue
+        }
+    }
+
+    fn recording_cooperative_debugger(
+        quit_on_first_instruction: bool,
+    ) -> (
+        Box<RecordingCooperativeDebugger>,
+        Rc<RefCell<Vec<CooperativeDebugPause>>>,
+        Rc<RefCell<Vec<(CooperativeDebugPause, RuntimeError)>>>,
+    ) {
+        let pauses = Rc::new(RefCell::new(Vec::new()));
+        let errors = Rc::new(RefCell::new(Vec::new()));
+        (
+            Box::new(RecordingCooperativeDebugger {
+                pauses: Rc::clone(&pauses),
+                errors: Rc::clone(&errors),
+                quit_on_first_instruction,
+            }),
+            pauses,
+            errors,
+        )
+    }
+
+    #[test]
+    fn cooperative_debugger_attributes_pauses_and_fifo_scheduler_state() {
+        let program = cooperative_output_program();
+        let (hook, pauses, errors) = recording_cooperative_debugger(false);
+        let mut run = VM::new(&program)
+            .start_cooperative_debug(1, hook)
+            .expect("debug session should start");
+        let odd = run
+            .spawn(TaskSpec::function(0, Vec::new()))
+            .expect("odd task should spawn");
+        let even = run
+            .spawn(TaskSpec::function(1, Vec::new()))
+            .expect("even task should spawn");
+
+        assert_eq!(
+            run.run_until_waiting()
+                .expect("debugged tasks should complete"),
+            CooperativeStep::Complete
+        );
+        assert!(!run.debug_quit());
+        assert!(errors.borrow().is_empty());
+        assert!(run.trace_events().is_empty());
+        assert_eq!(
+            run.output_events()
+                .iter()
+                .map(|event| event.sequence)
+                .collect::<Vec<_>>(),
+            vec![0, 1, 2, 3]
+        );
+        let pauses = pauses.borrow();
+        assert_eq!(pauses.len(), 10);
+        assert_eq!(pauses[0].task_id, odd);
+        assert_eq!(pauses[0].instruction, 0);
+        assert_eq!(pauses[0].scheduler.running, odd);
+        assert_eq!(pauses[0].scheduler.ready, vec![even]);
+        assert_eq!(
+            pauses[0].scheduler.tasks,
+            vec![(odd, TaskState::Running), (even, TaskState::Ready)]
+        );
+        assert_eq!(pauses[1].task_id, even);
+        assert_eq!(pauses[1].scheduler.running, even);
+        assert_eq!(pauses[1].scheduler.ready, vec![odd]);
+        assert_eq!(
+            pauses
+                .iter()
+                .map(|pause| pause.task_id)
+                .collect::<Vec<_>>(),
+            vec![odd, even, odd, even, odd, even, odd, even, odd, even]
+        );
+    }
+
+    #[test]
+    fn cooperative_debugger_preserves_nested_and_native_callback_stacks() {
+        let call_program = cooperative_call_program();
+        let (hook, pauses, _) = recording_cooperative_debugger(false);
+        let mut call_run = VM::new(&call_program)
+            .start_cooperative_debug(8, hook)
+            .expect("call debug session should start");
+        let call_task = call_run
+            .spawn(TaskSpec::main())
+            .expect("call task should spawn");
+        call_run
+            .run_until_waiting()
+            .expect("call task should complete");
+        let nested = pauses
+            .borrow()
+            .iter()
+            .find(|pause| pause.function == "answer" && pause.instruction == 0)
+            .cloned()
+            .expect("callee pause should be recorded");
+        assert_eq!(nested.task_id, call_task);
+        assert_eq!(
+            nested
+                .stack
+                .iter()
+                .map(|frame| frame.function.as_str())
+                .collect::<Vec<_>>(),
+            vec!["main", "answer"]
+        );
+
+        let callback_program = cooperative_native_callback_program();
+        let (hook, pauses, _) = recording_cooperative_debugger(false);
+        let mut callback_run = VM::new(&callback_program)
+            .start_cooperative_debug(8, hook)
+            .expect("callback debug session should start");
+        let callback_task = callback_run
+            .spawn(TaskSpec::main())
+            .expect("callback task should spawn");
+        callback_run
+            .run_until_waiting()
+            .expect("callback task should complete");
+        let callback_pauses = pauses
+            .borrow()
+            .iter()
+            .filter(|pause| pause.function == "identity")
+            .cloned()
+            .collect::<Vec<_>>();
+        assert_eq!(callback_pauses.len(), 4);
+        assert!(callback_pauses.iter().all(|pause| {
+            pause.task_id == callback_task
+                && pause
+                    .stack
+                    .iter()
+                    .map(|frame| frame.function.as_str())
+                    .collect::<Vec<_>>()
+                    == vec!["main", "identity"]
+        }));
+    }
+
+    #[test]
+    fn cooperative_debugger_quit_cancels_the_whole_session_before_execution() {
+        let program = cooperative_output_program();
+        let (hook, pauses, errors) = recording_cooperative_debugger(true);
+        let mut run = VM::new(&program)
+            .start_cooperative_debug(8, hook)
+            .expect("debug session should start");
+        let odd = run
+            .spawn(TaskSpec::function(0, Vec::new()))
+            .expect("odd task should spawn");
+        let even = run
+            .spawn(TaskSpec::function(1, Vec::new()))
+            .expect("even task should spawn");
+
+        assert_eq!(
+            run.step().expect("debug quit should terminate the session"),
+            CooperativeStep::Complete
+        );
+        assert!(run.debug_quit());
+        assert!(run.is_complete());
+        assert_eq!(pauses.borrow().len(), 1);
+        assert!(errors.borrow().is_empty());
+        assert!(run.take_output().is_empty());
+        assert!(run.output_events().is_empty());
+        assert!(matches!(
+            run.task_outcome(odd).expect("odd outcome should exist"),
+            Some(TaskOutcome::Cancelled)
+        ));
+        assert!(matches!(
+            run.task_outcome(even).expect("even outcome should exist"),
+            Some(TaskOutcome::Cancelled)
+        ));
+    }
+
+    #[test]
+    fn cooperative_debugger_attributes_runtime_error_before_fail_fast() {
+        let program = cooperative_host_task_program();
+        let (hook, _, errors) = recording_cooperative_debugger(false);
+        let mut run = VM::new(&program)
+            .start_cooperative_debug(8, hook)
+            .expect("debug session should start");
+        let failure = run
+            .spawn(TaskSpec::function(2, Vec::new()))
+            .expect("failure task should spawn");
+        let pending = run
+            .spawn(TaskSpec::function(3, Vec::new()))
+            .expect("pending task should spawn");
+
+        run.run_until_waiting()
+            .expect("debugged failure should terminate");
+        let errors = errors.borrow();
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].0.task_id, failure);
+        assert_eq!(errors[0].0.function, "failure");
+        assert_eq!(errors[0].0.scheduler.running, failure);
+        assert_eq!(errors[0].0.scheduler.ready, vec![pending]);
+        assert_eq!(errors[0].1.message, "division by zero");
+        assert!(matches!(
+            run.task_outcome(failure).expect("failure outcome should exist"),
+            Some(TaskOutcome::Failed(error)) if error.message == "division by zero"
+        ));
+        assert!(matches!(
+            run.task_outcome(pending).expect("pending outcome should exist"),
+            Some(TaskOutcome::Cancelled)
+        ));
     }
 
     #[test]
@@ -4790,10 +5050,14 @@ pub struct VM<'a> {
     output_bytes: usize,
     task_output_events: Vec<TaskOutputEvent>,
     task_trace_enabled: bool,
+    task_trace_collect_events: bool,
     task_trace_events: Vec<TaskTraceEvent>,
     active_cooperative_task: Option<TaskId>,
     active_task_trace: Option<ActiveTaskTrace>,
     active_task_profile: Option<ActiveTaskProfile>,
+    cooperative_debug_hook: Option<Box<dyn CooperativeDebugHook + 'a>>,
+    active_cooperative_debug_state: Option<CooperativeDebugState>,
+    cooperative_debug_quit: bool,
     next_task_event_sequence: usize,
     instruction_steps: usize,
     call_depth: usize,
@@ -4839,9 +5103,19 @@ impl<'a> CooperativeRun<'a> {
     /// Task failures are retained in `task_outcome` and trigger fail-fast
     /// cancellation of all other non-terminal tasks.
     pub fn step(&mut self) -> Result<CooperativeStep, RuntimeError> {
+        let debug_state = self.debug_state_for_next_dispatch();
         let dispatch = self
             .scheduler
-            .dispatch(|task, context| self.vm.execute_scheduled_slice(task, context))
+            .dispatch(|task, context| {
+                if let Some(state) = debug_state {
+                    debug_assert_eq!(state.running, context.task_id);
+                    debug_assert!(self.vm.active_cooperative_debug_state.is_none());
+                    self.vm.active_cooperative_debug_state = Some(state);
+                }
+                let step = self.vm.execute_scheduled_slice(task, context);
+                self.vm.active_cooperative_debug_state = None;
+                step
+            })
             .map_err(|error| RuntimeError::new(error.to_string()))?;
 
         let Some(result) = dispatch else {
@@ -4853,6 +5127,13 @@ impl<'a> CooperativeRun<'a> {
                 CooperativeStep::Waiting
             });
         };
+
+        if self.vm.cooperative_debug_quit {
+            self.scheduler.cancel_pending_except(result.task_id);
+            self.release_terminal_frames();
+            self.vm.heap.collect_garbage();
+            return Ok(CooperativeStep::Complete);
+        }
 
         if result.state == TaskState::Failed
             || (result.state == TaskState::Cancelled
@@ -4969,6 +5250,11 @@ impl<'a> CooperativeRun<'a> {
         self.scheduler.is_waiting()
     }
 
+    /// Whether the cooperative debugger hook requested a session quit.
+    pub fn debug_quit(&self) -> bool {
+        self.vm.cooperative_debug_quit
+    }
+
     /// Return all terminal outcomes in stable task-id order.
     pub fn outcomes(&self) -> Result<Vec<(TaskId, TaskOutcome)>, TaskControlError> {
         self.scheduler
@@ -5028,6 +5314,30 @@ impl<'a> CooperativeRun<'a> {
             .collect();
         Some(CooperativeProfileReport {
             aggregate: self.vm.profile_report(&heap_stats),
+            tasks,
+        })
+    }
+
+    fn debug_state_for_next_dispatch(&self) -> Option<CooperativeDebugState> {
+        self.vm.cooperative_debug_hook.as_ref()?;
+        let mut ready = self.scheduler.ready_task_ids();
+        let running = ready.first().copied()?;
+        ready.remove(0);
+        let tasks = self
+            .scheduler
+            .task_states()
+            .into_iter()
+            .map(|(task_id, state)| {
+                if task_id == running {
+                    (task_id, TaskState::Running)
+                } else {
+                    (task_id, state)
+                }
+            })
+            .collect();
+        Some(CooperativeDebugState {
+            running,
+            ready,
             tasks,
         })
     }
@@ -5149,10 +5459,14 @@ impl<'a> VM<'a> {
             output_bytes: 0,
             task_output_events: Vec::new(),
             task_trace_enabled: false,
+            task_trace_collect_events: false,
             task_trace_events: Vec::new(),
             active_cooperative_task: None,
             active_task_trace: None,
             active_task_profile: None,
+            cooperative_debug_hook: None,
+            active_cooperative_debug_state: None,
+            cooperative_debug_quit: false,
             next_task_event_sequence: 0,
             instruction_steps: 0,
             call_depth: 0,
@@ -5199,6 +5513,7 @@ impl<'a> VM<'a> {
         quantum: usize,
     ) -> Result<CooperativeRun<'a>, TaskControlError> {
         self.task_trace_enabled = true;
+        self.task_trace_collect_events = true;
         self.start_cooperative(quantum)
     }
 
@@ -5210,6 +5525,20 @@ impl<'a> VM<'a> {
         quantum: usize,
     ) -> Result<CooperativeRun<'a>, TaskControlError> {
         self.enable_profile();
+        self.start_cooperative(quantum)
+    }
+
+    /// Start a cooperative session with task-attributed synchronous debugger
+    /// callbacks. Task trace stacks are maintained privately so pauses remain
+    /// task-local without collecting trace events.
+    pub fn start_cooperative_debug(
+        mut self,
+        quantum: usize,
+        hook: Box<dyn CooperativeDebugHook + 'a>,
+    ) -> Result<CooperativeRun<'a>, TaskControlError> {
+        self.task_trace_enabled = true;
+        self.task_trace_collect_events = false;
+        self.cooperative_debug_hook = Some(hook);
         self.start_cooperative(quantum)
     }
 
@@ -5574,6 +5903,24 @@ impl<'a> VM<'a> {
                     return TaskStep::Fail;
                 }
             }
+            if self.cooperative_debug_hook.is_some() {
+                let debug_result = {
+                    let ScheduledVmTask { frames, trace, .. } = task;
+                    match frames.current() {
+                        Ok(frame) => self.cooperative_debug_instruction(
+                            context.task_id,
+                            trace.stack.clone(),
+                            frame,
+                            instruction_index,
+                            location.clone(),
+                        ),
+                        Err(error) => Err(RuntimeError::new(error.to_string())),
+                    }
+                };
+                if let Err(error) = debug_result {
+                    return self.stop_scheduled_task(context.task_id, task, error);
+                }
+            }
             if let Err(error) = self.checkpoint_instruction() {
                 let error =
                     self.decorate_scheduled_error(error, task, &body, instruction_index);
@@ -5848,6 +6195,28 @@ impl<'a> VM<'a> {
         task: &mut ScheduledVmTask,
         error: RuntimeError,
     ) -> TaskStep {
+        if error.kind == RuntimeErrorKind::DebuggerQuit
+            && self.cooperative_debug_hook.is_some()
+        {
+            task.error = None;
+            return TaskStep::Cancel;
+        }
+        if self.cooperative_debug_hook.is_some() && task.trace.started {
+            let debug_result = task.frames.current().map_or(Ok(()), |frame| {
+                self.cooperative_debug_error(
+                    task_id,
+                    task.trace.stack.clone(),
+                    frame,
+                    frame.ip,
+                    error.location.clone(),
+                    &error,
+                )
+            });
+            if debug_result.is_err() {
+                task.error = None;
+                return TaskStep::Cancel;
+            }
+        }
         let step = if error.kind == RuntimeErrorKind::Cancelled {
             TaskStep::Cancel
         } else {
@@ -6030,6 +6399,20 @@ impl<'a> VM<'a> {
                 .then(|| body.locations.get(instruction_index).cloned().flatten())
                 .flatten();
             self.trace_recursive_instruction(frame, instruction_index, location.clone())?;
+            if self.cooperative_debug_hook.is_some() {
+                let active = self.active_task_trace.as_ref().map(|active| {
+                    (active.task_id, active.state.stack.clone())
+                });
+                if let Some((task_id, stack)) = active {
+                    self.cooperative_debug_instruction(
+                        task_id,
+                        stack,
+                        frame,
+                        instruction_index,
+                        location.clone(),
+                    )?;
+                }
+            }
             if self.debug_hook.is_some() {
                 self.debug_instruction(frame, instruction_index, location.clone())?;
             }
@@ -6430,6 +6813,19 @@ impl<'a> VM<'a> {
                         error.push_frame(frame.function.to_string(), location);
                     }
                     if error.kind != RuntimeErrorKind::DebuggerQuit {
+                        let active = self.active_task_trace.as_ref().map(|active| {
+                            (active.task_id, active.state.stack.clone())
+                        });
+                        if let Some((task_id, stack)) = active {
+                            self.cooperative_debug_error(
+                                task_id,
+                                stack,
+                                frame,
+                                instruction_index,
+                                body.locations.get(instruction_index).cloned().flatten(),
+                                &error,
+                            )?;
+                        }
                         let pause = DebugPause {
                             function: frame.function.to_string(),
                             instruction: instruction_index,
@@ -6969,24 +7365,26 @@ impl<'a> VM<'a> {
         frame: &Frame,
         location: Option<DebugLocation>,
     ) -> Result<(), RuntimeError> {
-        let (sequence, next_sequence) = self.next_cooperative_event_sequence()?;
         trace.started = true;
         trace.stack.push(StackFrame {
             function: frame.function.to_string(),
             location: location.clone(),
         });
         trace.last_locations.push(location.clone());
-        self.next_task_event_sequence = next_sequence;
-        self.push_task_trace_event(
-            sequence,
-            task_id,
-            trace,
-            TraceEventKind::Enter,
-            frame,
-            Some(0),
-            location,
-            None,
-        );
+        if self.task_trace_collect_events {
+            let (sequence, next_sequence) = self.next_cooperative_event_sequence()?;
+            self.next_task_event_sequence = next_sequence;
+            self.push_task_trace_event(
+                sequence,
+                task_id,
+                trace,
+                TraceEventKind::Enter,
+                frame,
+                Some(0),
+                location,
+                None,
+            );
+        }
         Ok(())
     }
 
@@ -7003,7 +7401,7 @@ impl<'a> VM<'a> {
             .last()
             .map(|last| *last != location)
             .unwrap_or(true);
-        let sequence = if changed {
+        let sequence = if changed && self.task_trace_collect_events {
             Some(self.next_cooperative_event_sequence()?)
         } else {
             None
@@ -7040,6 +7438,9 @@ impl<'a> VM<'a> {
         location: Option<DebugLocation>,
         value: Option<String>,
     ) -> Result<(), RuntimeError> {
+        if !self.task_trace_collect_events {
+            return Ok(());
+        }
         let (sequence, next_sequence) = self.next_cooperative_event_sequence()?;
         self.next_task_event_sequence = next_sequence;
         self.push_task_trace_event(
@@ -7066,16 +7467,18 @@ impl<'a> VM<'a> {
         location: Option<DebugLocation>,
         value: Option<String>,
     ) {
-        self.push_task_trace_event(
-            sequence,
-            task_id,
-            trace,
-            kind,
-            frame,
-            instruction,
-            location,
-            value,
-        );
+        if self.task_trace_collect_events {
+            self.push_task_trace_event(
+                sequence,
+                task_id,
+                trace,
+                kind,
+                frame,
+                instruction,
+                location,
+                value,
+            );
+        }
     }
 
     fn task_trace_leave(
@@ -7314,6 +7717,91 @@ impl<'a> VM<'a> {
             return Err(RuntimeError::debug_quit());
         }
         Ok(())
+    }
+
+    fn cooperative_debug_instruction(
+        &mut self,
+        task_id: TaskId,
+        stack: Vec<StackFrame>,
+        frame: &Frame,
+        instruction: usize,
+        location: Option<DebugLocation>,
+    ) -> Result<(), RuntimeError> {
+        if self.cooperative_debug_hook.is_none() {
+            return Ok(());
+        }
+        let pause = self.cooperative_debug_pause(
+            task_id,
+            stack,
+            frame,
+            instruction,
+            location,
+        );
+        let control = self
+            .cooperative_debug_hook
+            .as_mut()
+            .expect("cooperative debug hook checked above")
+            .on_instruction(pause);
+        if control == DebugControl::Quit {
+            self.cooperative_debug_quit = true;
+            return Err(RuntimeError::debug_quit());
+        }
+        Ok(())
+    }
+
+    fn cooperative_debug_error(
+        &mut self,
+        task_id: TaskId,
+        stack: Vec<StackFrame>,
+        frame: &Frame,
+        instruction: usize,
+        location: Option<DebugLocation>,
+        error: &RuntimeError,
+    ) -> Result<(), RuntimeError> {
+        if self.cooperative_debug_hook.is_none() {
+            return Ok(());
+        }
+        let pause = self.cooperative_debug_pause(
+            task_id,
+            stack,
+            frame,
+            instruction,
+            location,
+        );
+        let control = self
+            .cooperative_debug_hook
+            .as_mut()
+            .expect("cooperative debug hook checked above")
+            .on_error(pause, error);
+        if control == DebugControl::Quit {
+            self.cooperative_debug_quit = true;
+            return Err(RuntimeError::debug_quit());
+        }
+        Ok(())
+    }
+
+    fn cooperative_debug_pause(
+        &self,
+        task_id: TaskId,
+        stack: Vec<StackFrame>,
+        frame: &Frame,
+        instruction: usize,
+        location: Option<DebugLocation>,
+    ) -> CooperativeDebugPause {
+        let scheduler = self
+            .active_cooperative_debug_state
+            .clone()
+            .expect("cooperative debug callback retains scheduler state");
+        debug_assert_eq!(scheduler.running, task_id);
+        CooperativeDebugPause {
+            task_id,
+            function: frame.function.to_string(),
+            instruction,
+            location,
+            stack,
+            locals: self.trace_locals(frame),
+            scheduler,
+        }
     }
 
     fn trace_instruction(
