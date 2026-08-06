@@ -59,6 +59,8 @@ git diff --check
 
 ## Next boundary
 
-Add task-aware output, trace/profile, and debugger event contracts only with a
-separate compatibility decision. V5C concurrency expansion and V6 JIT remain
-gated on repeatable multi-task workloads and stable hot-workload evidence.
+Task-aware output is implemented in
+[`v5b-vm-task-output-001.md`](v5b-vm-task-output-001.md). Add task-aware
+trace/profile and debugger event contracts only with separate compatibility
+decisions. V5C concurrency expansion and V6 JIT remain gated on repeatable
+multi-task workloads and stable hot-workload evidence.

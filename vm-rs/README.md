@@ -57,10 +57,13 @@ The host-only `VM::start_cooperative(quantum)` API creates a deterministic
 single-thread session. Hosts can spawn `TaskSpec::Main` or a verified function
 entry, advance FIFO quanta with `CooperativeRun::step`, inspect typed
 `TaskOutcome` values, register `join` waiters, explicitly `wake` blocked tasks,
-and cancel tasks. A failed task triggers the V5A fail-fast transition for the
-remaining non-terminal tasks. This surface does not add language task syntax,
-OS threads, `Send`/`Sync`, or changes to `.cdbc 0.1`; output remains in dispatch
-order and the existing `VM::run`, trace, debug, and profile paths are intact.
+and cancel tasks. `TaskOutputEvent` attributes exact committed output chunks to
+task IDs with a stable session sequence; `output_events`/`take_output_events`
+are independent from the existing dispatch-ordered string buffer, and draining
+that buffer does not reset the cumulative output budget. A failed task triggers
+the V5A fail-fast transition for the remaining non-terminal tasks. This surface
+does not add language task syntax, OS threads, `Send`/`Sync`, or changes to
+`.cdbc 0.1`; the existing `VM::run`, trace, debug, and profile paths are intact.
 
 The library exposes separate typed diagnostic domains for artifact loading
 (`ArtifactError`), module linking (`LinkError`), and execution (`RuntimeError`).

@@ -6,7 +6,7 @@ use compiler_design_vm::{
     parse_artifact_checked, verify_artifact, verify_module_artifact, verify_program_checked,
     Artifact, ArtifactErrorKind, CooperativeStep, DebugControl, DebugHook, DebugPause, JoinPoll,
     LinkErrorKind, ModuleArtifact, ModuleDependency, ModuleDependencyKind, Program, ResourceKind,
-    RunConfig, RuntimeErrorKind, TaskOutcome, TaskSpec, TaskState, TraceEventKind,
+    RunConfig, RuntimeErrorKind, TaskOutcome, TaskOutputEvent, TaskSpec, TaskState, TraceEventKind,
     ARTIFACT_FORMAT_FAMILY, ARTIFACT_FORMAT_VERSION, LIBRARY_API_VERSION, VM,
 };
 use std::cell::RefCell;
@@ -65,6 +65,56 @@ fn cooperative_program() -> Program {
                     Instruction::Return { value: 0 },
                 ],
                 locations: vec![None; 2],
+            },
+        ],
+        debug_sources: Vec::new(),
+    }
+}
+
+fn cooperative_output_program() -> Program {
+    Program {
+        constants: vec![
+            Constant::Number("1".to_string()),
+            Constant::Number("2".to_string()),
+        ],
+        names: Vec::new(),
+        main: FunctionBody {
+            registers: 0,
+            instructions: Vec::new(),
+            locations: Vec::new(),
+        },
+        functions: vec![
+            Function {
+                index: 0,
+                name: "first".to_string(),
+                arity: 0,
+                registers: 1,
+                params: Vec::new(),
+                instructions: vec![
+                    Instruction::Constant {
+                        dest: 0,
+                        constant: 0,
+                    },
+                    Instruction::Print { value: 0 },
+                    Instruction::Return { value: 0 },
+                ],
+                locations: vec![None; 3],
+            },
+            Function {
+                index: 1,
+                name: "second".to_string(),
+                arity: 0,
+                registers: 1,
+                params: Vec::new(),
+                instructions: vec![
+                    Instruction::Constant {
+                        dest: 0,
+                        constant: 1,
+                    },
+                    Instruction::Print { value: 0 },
+                    Instruction::Return { value: 0 },
+                ],
+                locations: vec![None; 3],
             },
         ],
         debug_sources: Vec::new(),
@@ -262,6 +312,43 @@ fn library_api_exposes_typed_cooperative_task_results_and_join() {
         JoinPoll::Ready(TaskOutcome::Completed(value))
             if matches!(value, compiler_design_vm::value::Value::Number(number) if number == 7.0)
     ));
+}
+
+#[test]
+fn library_api_exposes_task_attributed_cooperative_output() {
+    let program = cooperative_output_program();
+    let mut session = VM::with_config(&program, RunConfig::unlimited())
+        .start_cooperative(1)
+        .expect("cooperative session should start");
+    let first = session
+        .spawn(TaskSpec::function(0, Vec::new()))
+        .expect("first task should spawn");
+    let second = session
+        .spawn(TaskSpec::function(1, Vec::new()))
+        .expect("second task should spawn");
+
+    assert_eq!(
+        session
+            .run_until_waiting()
+            .expect("cooperative output should complete"),
+        CooperativeStep::Complete
+    );
+    assert_eq!(session.take_output(), "1\n2\n");
+    assert_eq!(
+        session.take_output_events(),
+        vec![
+            TaskOutputEvent {
+                sequence: 0,
+                task_id: first,
+                text: "1\n".to_string(),
+            },
+            TaskOutputEvent {
+                sequence: 1,
+                task_id: second,
+                text: "2\n".to_string(),
+            },
+        ]
+    );
 }
 
 #[test]

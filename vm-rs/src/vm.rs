@@ -1464,6 +1464,56 @@ mod tests {
         }
     }
 
+    fn cooperative_output_program() -> Program {
+        Program {
+            constants: vec![
+                Constant::Number("1".to_string()),
+                Constant::Number("2".to_string()),
+                Constant::Number("3".to_string()),
+                Constant::Number("4".to_string()),
+            ],
+            names: Vec::new(),
+            main: FunctionBody {
+                registers: 0,
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            },
+            functions: vec![
+                Function {
+                    index: 0,
+                    name: "odd".to_string(),
+                    arity: 0,
+                    registers: 2,
+                    params: Vec::new(),
+                    instructions: vec![
+                        Instruction::Constant { dest: 0, constant: 0 },
+                        Instruction::Print { value: 0 },
+                        Instruction::Constant { dest: 1, constant: 2 },
+                        Instruction::Print { value: 1 },
+                        Instruction::Return { value: 1 },
+                    ],
+                    locations: vec![None; 5],
+                },
+                Function {
+                    index: 1,
+                    name: "even".to_string(),
+                    arity: 0,
+                    registers: 2,
+                    params: Vec::new(),
+                    instructions: vec![
+                        Instruction::Constant { dest: 0, constant: 1 },
+                        Instruction::Print { value: 0 },
+                        Instruction::Constant { dest: 1, constant: 3 },
+                        Instruction::Print { value: 1 },
+                        Instruction::Return { value: 1 },
+                    ],
+                    locations: vec![None; 5],
+                },
+            ],
+            debug_sources: Vec::new(),
+        }
+    }
+
     #[test]
     fn cooperative_adapter_preserves_output_across_quantums() {
         let program = cooperative_print_program();
@@ -1640,6 +1690,104 @@ mod tests {
             &outcomes[1].1,
             TaskOutcome::Completed(Value::Number(value)) if *value == 8.0
         ));
+    }
+
+    #[test]
+    fn cooperative_host_attributes_output_in_dispatch_order() {
+        let program = cooperative_output_program();
+        let mut run = VM::new(&program)
+            .start_cooperative(1)
+            .expect("positive quantum should start a session");
+        let odd = run
+            .spawn(TaskSpec::function(0, Vec::new()))
+            .expect("odd task should spawn");
+        let even = run
+            .spawn(TaskSpec::function(1, Vec::new()))
+            .expect("even task should spawn");
+
+        assert_eq!(
+            run.run_until_waiting()
+                .expect("output tasks should complete"),
+            CooperativeStep::Complete
+        );
+        assert_eq!(run.take_output(), "1\n2\n3\n4\n");
+        assert_eq!(
+            run.output_events(),
+            [
+                TaskOutputEvent {
+                    sequence: 0,
+                    task_id: odd,
+                    text: "1\n".to_string(),
+                },
+                TaskOutputEvent {
+                    sequence: 1,
+                    task_id: even,
+                    text: "2\n".to_string(),
+                },
+                TaskOutputEvent {
+                    sequence: 2,
+                    task_id: odd,
+                    text: "3\n".to_string(),
+                },
+                TaskOutputEvent {
+                    sequence: 3,
+                    task_id: even,
+                    text: "4\n".to_string(),
+                },
+            ]
+        );
+
+        let drained = run.take_output_events();
+        assert_eq!(drained.len(), 4);
+        assert!(run.output_events().is_empty());
+    }
+
+    #[test]
+    fn cooperative_output_budget_is_cumulative_across_host_drains() {
+        let program = cooperative_output_program();
+        let mut config = RunConfig::unlimited();
+        config.max_output_bytes = Some(2);
+        let mut run = VM::with_config(&program, config)
+            .start_cooperative(1)
+            .expect("positive quantum should start a session");
+        let odd = run
+            .spawn(TaskSpec::function(0, Vec::new()))
+            .expect("odd task should spawn");
+        let even = run
+            .spawn(TaskSpec::function(1, Vec::new()))
+            .expect("even task should spawn");
+
+        assert!(matches!(
+            run.step().expect("odd constant should execute"),
+            CooperativeStep::Dispatched { task_id, .. } if task_id == odd
+        ));
+        assert!(matches!(
+            run.step().expect("even constant should execute"),
+            CooperativeStep::Dispatched { task_id, .. } if task_id == even
+        ));
+        assert!(matches!(
+            run.step().expect("odd output should execute"),
+            CooperativeStep::Dispatched { task_id, .. } if task_id == odd
+        ));
+        assert_eq!(run.take_output(), "1\n");
+
+        assert_eq!(
+            run.step().expect("even output should hit the shared budget"),
+            CooperativeStep::Dispatched {
+                task_id: even,
+                state: TaskState::Failed,
+            }
+        );
+        assert!(matches!(
+            run.task_outcome(even)
+                .expect("failed task outcome should be readable"),
+            Some(TaskOutcome::Failed(error))
+                if error.kind == RuntimeErrorKind::Resource(ResourceKind::OutputBytes)
+                    && error.resource_limit == Some(2)
+        ));
+        assert_eq!(run.output_events().len(), 1);
+        assert_eq!(run.output_events()[0].task_id, odd);
+        assert!(run.take_output().is_empty());
     }
 
     #[test]
@@ -3860,6 +4008,17 @@ pub enum TaskOutcome {
     Cancelled,
 }
 
+/// One committed output chunk from a cooperative task.
+///
+/// `sequence` is monotonic for the lifetime of the cooperative session, even
+/// when the host drains buffered output or previously reported events.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TaskOutputEvent {
+    pub sequence: usize,
+    pub task_id: TaskId,
+    pub text: String,
+}
+
 /// Result of one explicit scheduler dispatch.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CooperativeStep {
@@ -4029,6 +4188,9 @@ pub struct VM<'a> {
     constant_cache: Vec<Option<Value>>,
     function_body_cache: Vec<Option<Rc<CachedFunctionBody>>>,
     output: String,
+    output_bytes: usize,
+    task_output_events: Vec<TaskOutputEvent>,
+    next_task_event_sequence: usize,
     instruction_steps: usize,
     call_depth: usize,
     runtime_elements: usize,
@@ -4219,6 +4381,17 @@ impl<'a> CooperativeRun<'a> {
         std::mem::take(&mut self.vm.output)
     }
 
+    /// Return committed output chunks in scheduler dispatch order.
+    pub fn output_events(&self) -> &[TaskOutputEvent] {
+        &self.vm.task_output_events
+    }
+
+    /// Drain committed output chunks without resetting their session sequence
+    /// or the cumulative output-byte resource budget.
+    pub fn take_output_events(&mut self) -> Vec<TaskOutputEvent> {
+        std::mem::take(&mut self.vm.task_output_events)
+    }
+
     fn release_terminal_frames(&mut self) {
         let terminal_ids = self
             .scheduler
@@ -4327,6 +4500,9 @@ impl<'a> VM<'a> {
             constant_cache: vec![None; program.constants.len()],
             function_body_cache: vec![None; program.functions.len()],
             output: String::new(),
+            output_bytes: 0,
+            task_output_events: Vec::new(),
+            next_task_event_sequence: 0,
             instruction_steps: 0,
             call_depth: 0,
             runtime_elements: 0,
@@ -4525,8 +4701,9 @@ impl<'a> VM<'a> {
 
     /// Execute one host-only cooperative task through the explicit frame
     /// stack. The public single-task APIs continue to use `run_inner`; this
-    /// adapter is kept private until task-aware output, tracing, debugging,
-    /// and host result types are admitted by later V5B/V2 slices.
+    /// compatibility adapter remains private while the public cooperative
+    /// session owns task results and output events. Task-aware tracing,
+    /// profiling, and debugging remain later V5B slices.
     fn run_cooperative(mut self, quantum: usize) -> Result<String, RuntimeError> {
         self.check_cancellation()?;
         let mut scheduler = CooperativeScheduler::new(quantum)
@@ -4672,6 +4849,7 @@ impl<'a> VM<'a> {
                 let action = self.execute_instruction(
                     &body,
                     frame,
+                    context.task_id,
                     instruction_index,
                     &body.instructions[instruction_index],
                 );
@@ -5327,6 +5505,7 @@ impl<'a> VM<'a> {
         &mut self,
         body: &FunctionBody,
         frame: &mut Frame,
+        task_id: TaskId,
         instruction_index: usize,
         instruction: &Instruction,
     ) -> Result<InstructionAction, RuntimeError> {
@@ -5343,7 +5522,7 @@ impl<'a> VM<'a> {
                 let value = self.read_register_ref(frame, *value)?;
                 let mut output = value.to_string();
                 output.push('\n');
-                self.append_output(&output)?;
+                self.append_task_output(task_id, &output)?;
                 if self.trace_enabled {
                     self.emit_trace(
                         TraceEventKind::Output,
@@ -5789,8 +5968,7 @@ impl<'a> VM<'a> {
 
     fn append_output(&mut self, text: &str) -> Result<(), RuntimeError> {
         let next = self
-            .output
-            .len()
+            .output_bytes
             .checked_add(text.len())
             .ok_or_else(|| RuntimeError::resource(ResourceKind::OutputBytes, usize::MAX))?;
         if let Some(limit) = self.config.max_output_bytes {
@@ -5799,9 +5977,26 @@ impl<'a> VM<'a> {
             }
         }
         self.output.push_str(text);
+        self.output_bytes = next;
         if self.profile_enabled {
-            self.profile_output_bytes = self.output.len();
+            self.profile_output_bytes = self.output_bytes;
         }
+        Ok(())
+    }
+
+    fn append_task_output(&mut self, task_id: TaskId, text: &str) -> Result<(), RuntimeError> {
+        let next_sequence = self
+            .next_task_event_sequence
+            .checked_add(1)
+            .ok_or_else(|| RuntimeError::new("cooperative task event sequence exhausted"))?;
+        self.append_output(text)?;
+        let sequence = self.next_task_event_sequence;
+        self.next_task_event_sequence = next_sequence;
+        self.task_output_events.push(TaskOutputEvent {
+            sequence,
+            task_id,
+            text: text.to_string(),
+        });
         Ok(())
     }
 
