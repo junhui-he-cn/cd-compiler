@@ -76,6 +76,11 @@ FIFO ready queue, and stable task states. No other task dispatches while a hook
 runs; debugger quit deterministically cancels all non-terminal tasks. A failed
 task triggers the V5A fail-fast transition for the remaining non-terminal
 tasks.
+Deterministic multi-task workload evidence is covered by the integration
+workload harness:
+`cargo test --manifest-path vm-rs/Cargo.toml --test cooperative_workloads`.
+It compares profile, trace, debugger, output, and task outcomes across repeated
+runs and quantum sizes without treating wall-clock timing as a VM contract.
 This surface does not add language task syntax, OS threads, `Send`/`Sync`, or
 changes to `.cdbc 0.1`; the existing `VM::run`, trace, debug, and profile paths
 are intact.

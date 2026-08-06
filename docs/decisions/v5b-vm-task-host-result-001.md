@@ -65,6 +65,8 @@ is implemented in [`v5b-vm-task-trace-001.md`](v5b-vm-task-trace-001.md).
 Task-aware profile is implemented in
 [`v5b-vm-task-profile-001.md`](v5b-vm-task-profile-001.md), and task-aware
 debugger pauses are implemented in
-[`v5b-vm-task-debugger-001.md`](v5b-vm-task-debugger-001.md). Build repeatable
-multi-task workloads next; V5C expansion and V6 JIT remain gated on their
-evidence and stable hot-workload characterization.
+[`v5b-vm-task-debugger-001.md`](v5b-vm-task-debugger-001.md). Repeatable
+multi-task workload evidence is implemented in
+[`v5b-vm-task-workload-001.md`](v5b-vm-task-workload-001.md). The next decision
+is optional V5C expansion; V6 JIT remains gated on stable hot-workload
+characterization.

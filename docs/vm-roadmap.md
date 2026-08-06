@@ -97,8 +97,8 @@ to expose a plugin ABI.
 **Priority:** P1. **Status:** V5A contract recorded on 2026-08-03; the V5B
 scheduler control-plane, explicit frame-state foundation, private adapter, and
 typed host task result/join-wake and task-aware output surfaces were implemented
-on 2026-08-04; task-aware trace, profile, and debugger were implemented on
-2026-08-06. See
+on 2026-08-04; task-aware trace, profile, debugger, and repeatable workload
+evidence were implemented on 2026-08-06. See
 [`v5a-vm-concurrency-contract-001.md`](decisions/v5a-vm-concurrency-contract-001.md).
 
 Concurrency is a runtime and language contract that a later JIT must preserve.
@@ -119,7 +119,8 @@ debugger/profile events. Resume it before JIT work, in these slices:
    [`v5b-vm-task-output-001.md`](decisions/v5b-vm-task-output-001.md),
    [`v5b-vm-task-trace-001.md`](decisions/v5b-vm-task-trace-001.md),
    [`v5b-vm-task-profile-001.md`](decisions/v5b-vm-task-profile-001.md), and
-   [`v5b-vm-task-debugger-001.md`](decisions/v5b-vm-task-debugger-001.md).
+   [`v5b-vm-task-debugger-001.md`](decisions/v5b-vm-task-debugger-001.md),
+   plus [`v5b-vm-task-workload-001.md`](decisions/v5b-vm-task-workload-001.md).
    It provides FIFO task states, quantum requeue, explicit wake,
    cancellation transitions, a resumable frame stack with validated return
    transfer, dispatch-boundary GC, and parity checks for output, budgets,
@@ -134,7 +135,8 @@ debugger/profile events. Resume it before JIT work, in these slices:
    per-task execution counters while keeping shared-heap metrics session-wide.
    Opt-in task debugger hooks expose the selected task, task-local stack and
    locals, FIFO ready queue, and stable task states while all dispatch is
-   stopped.
+   stopped. The deterministic workload harness validates these surfaces across
+   repeated runs and multiple quantum sizes without making timing claims.
 3. **V5C - concurrency expansion decision:** only after V5B workloads exist,
    decide whether async syntax, channels/actors, shared-memory concurrency,
    multiple OS threads, or `Send`/`Sync` provides enough product value to
@@ -206,8 +208,8 @@ V5A concurrency contract (recorded)
   -> V5B task-aware trace (implemented)
   -> V5B task-aware profile (implemented)
   -> V5B task-aware debugger (implemented)
-  -> repeatable multi-task workloads (next)
-  -> optional V5C concurrency expansion
+  -> repeatable multi-task workloads (implemented)
+  -> optional V5C concurrency expansion decision
 
 completed V5B + stable profile + demonstrated hot workload
   -> V6A hot-workload evidence
@@ -224,10 +226,10 @@ demonstrated ABI/release need
   -> optional successor artifact work
 ```
 
-V5B's deterministic host concurrency observability surface is complete.
-Repeatable multi-task workloads are next; their evidence decides whether V5C
-expansion has value or V6A hot-workload characterization should begin. V6 JIT
-work starts only after stable hot-workload evidence. V2 host
+V5B's deterministic host concurrency observability and workload evidence are
+complete. A concrete consumer must justify optional V5C expansion. V6A
+hot-workload characterization may begin only with stable profiles and
+reproducible timing evidence; V6 JIT work starts only after that evidence. V2 host
 integration and V4 release compatibility resume only when their named consumer
 or ABI/release trigger appears.
 

@@ -61,7 +61,9 @@ git diff --check
 
 ## Next boundary
 
-V5B's deterministic host concurrency observability surface is complete. Build
-repeatable multi-task workloads next, then decide whether an optional V5C
-concurrency expansion has demonstrated value or whether the evidence supports
-starting V6A JIT hot-workload characterization.
+V5B's deterministic host concurrency observability surface is complete. The
+repeatable workload evidence is recorded in
+[`v5b-vm-task-workload-001.md`](v5b-vm-task-workload-001.md). Decide whether a
+concrete consumer justifies optional V5C expansion before starting any broader
+concurrency work; V6A JIT hot-workload characterization remains a separate
+evidence gate.
