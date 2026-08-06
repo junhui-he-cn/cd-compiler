@@ -142,6 +142,27 @@ pub struct ProfileRun {
     pub result: Result<String, RuntimeError>,
 }
 
+/// Deterministic counters attributed to one cooperative task.
+///
+/// Shared-heap counters remain session-wide because task values can share
+/// object identity through globals and task outcomes.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaskProfileReport {
+    pub task_id: TaskId,
+    pub instruction_count: usize,
+    pub output_bytes: usize,
+    pub functions: Vec<ProfileFunction>,
+    pub natives: Vec<ProfileNative>,
+    pub source_ranges: Vec<ProfileSourceRange>,
+}
+
+/// Snapshot of an opt-in cooperative profiling session.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CooperativeProfileReport {
+    pub aggregate: ProfileReport,
+    pub tasks: Vec<TaskProfileReport>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ResourceKind {
     InstructionSteps,
@@ -2066,6 +2087,168 @@ mod tests {
         assert!(!run.trace_events().iter().any(|event| {
             event.task_id == pending && event.kind == TraceEventKind::Error
         }));
+    }
+
+    #[test]
+    fn cooperative_profile_attributes_interleaved_counters_and_ranges() {
+        let mut program = cooperative_output_program();
+        program.debug_sources.push(DebugSource {
+            module: None,
+            path: "profile-tasks.cd".to_string(),
+            text: "odd\neven\n".to_string(),
+        });
+        let odd_range = DebugRange {
+            source: 0,
+            start: 0,
+            end: 3,
+        };
+        let even_range = DebugRange {
+            source: 0,
+            start: 4,
+            end: 8,
+        };
+        program.functions[0].locations = vec![
+            Some(DebugLocation {
+                source: 0,
+                line: 1,
+                column: 1,
+                range: Some(odd_range.clone()),
+            });
+            5
+        ];
+        program.functions[1].locations = vec![
+            Some(DebugLocation {
+                source: 0,
+                line: 2,
+                column: 1,
+                range: Some(even_range.clone()),
+            });
+            5
+        ];
+
+        let ordinary = VM::new(&program)
+            .start_cooperative(1)
+            .expect("ordinary session should start");
+        assert!(ordinary.profile_report().is_none());
+
+        let mut run = VM::new(&program)
+            .start_cooperative_profile(1)
+            .expect("profiled session should start");
+        let odd = run
+            .spawn(TaskSpec::function(0, Vec::new()))
+            .expect("odd task should spawn");
+        let even = run
+            .spawn(TaskSpec::function(1, Vec::new()))
+            .expect("even task should spawn");
+        let initial = run.profile_report().expect("profile should be enabled");
+        assert_eq!(initial.aggregate.instruction_count, 0);
+        assert!(initial.tasks.iter().all(|task| task.instruction_count == 0));
+
+        assert_eq!(
+            run.run_until_waiting()
+                .expect("profiled tasks should complete"),
+            CooperativeStep::Complete
+        );
+        let report = run.profile_report().expect("profile should be retained");
+        assert_eq!(report.aggregate.instruction_count, 10);
+        assert_eq!(report.aggregate.output_bytes, 8);
+        assert_eq!(report.aggregate.functions[1].calls, 1);
+        assert_eq!(report.aggregate.functions[1].instructions, 5);
+        assert_eq!(report.aggregate.functions[2].calls, 1);
+        assert_eq!(report.aggregate.functions[2].instructions, 5);
+        assert!(report.aggregate.tracked_heap_allocations > 0);
+        assert_eq!(report.tasks.len(), 2);
+        assert_eq!(report.tasks[0].task_id, odd);
+        assert_eq!(report.tasks[0].instruction_count, 5);
+        assert_eq!(report.tasks[0].output_bytes, 4);
+        assert_eq!(report.tasks[0].functions[1].calls, 1);
+        assert_eq!(report.tasks[0].functions[1].instructions, 5);
+        assert_eq!(
+            report.tasks[0].source_ranges,
+            vec![ProfileSourceRange {
+                range: odd_range,
+                hits: 5,
+            }]
+        );
+        assert_eq!(report.tasks[1].task_id, even);
+        assert_eq!(report.tasks[1].instruction_count, 5);
+        assert_eq!(report.tasks[1].output_bytes, 4);
+        assert_eq!(report.tasks[1].functions[2].calls, 1);
+        assert_eq!(report.tasks[1].functions[2].instructions, 5);
+        assert_eq!(
+            report.tasks[1].source_ranges,
+            vec![ProfileSourceRange {
+                range: even_range,
+                hits: 5,
+            }]
+        );
+    }
+
+    #[test]
+    fn cooperative_profile_attributes_native_callbacks_to_the_current_task() {
+        let mut program = cooperative_native_callback_program();
+        program.functions[0].instructions = vec![
+            Instruction::LoadVar { dest: 0, name: 1 },
+            Instruction::Print { value: 0 },
+            Instruction::Return { value: 0 },
+        ];
+        program.functions[0].locations = vec![None; 3];
+        let mut run = VM::new(&program)
+            .start_cooperative_profile(8)
+            .expect("profiled session should start");
+        let task = run
+            .spawn(TaskSpec::main())
+            .expect("callback task should spawn");
+
+        run.run_until_waiting()
+            .expect("callback task should complete");
+        let report = run.profile_report().expect("profile should be retained");
+        assert_eq!(report.aggregate.instruction_count, 13);
+        assert_eq!(report.aggregate.output_bytes, 11);
+        assert_eq!(report.aggregate.functions[0].calls, 1);
+        assert_eq!(report.aggregate.functions[0].instructions, 7);
+        assert_eq!(report.aggregate.functions[1].calls, 2);
+        assert_eq!(report.aggregate.functions[1].instructions, 6);
+        assert_eq!(
+            report.aggregate.natives,
+            vec![ProfileNative {
+                name: "map".to_string(),
+                calls: 1,
+            }]
+        );
+        assert_eq!(report.tasks.len(), 1);
+        assert_eq!(report.tasks[0].task_id, task);
+        assert_eq!(report.tasks[0].instruction_count, 13);
+        assert_eq!(report.tasks[0].output_bytes, 11);
+        assert_eq!(report.tasks[0].functions, report.aggregate.functions);
+        assert_eq!(report.tasks[0].natives, report.aggregate.natives);
+    }
+
+    #[test]
+    fn cooperative_profile_keeps_partial_failure_and_zero_cancelled_task() {
+        let program = cooperative_host_task_program();
+        let mut run = VM::new(&program)
+            .start_cooperative_profile(8)
+            .expect("profiled session should start");
+        let failure = run
+            .spawn(TaskSpec::function(2, Vec::new()))
+            .expect("failure task should spawn");
+        let pending = run
+            .spawn(TaskSpec::function(3, Vec::new()))
+            .expect("pending task should spawn");
+
+        run.run_until_waiting()
+            .expect("fail-fast session should terminate");
+        let report = run.profile_report().expect("profile should be retained");
+        assert_eq!(report.aggregate.instruction_count, 3);
+        assert_eq!(report.tasks[0].task_id, failure);
+        assert_eq!(report.tasks[0].instruction_count, 3);
+        assert_eq!(report.tasks[0].functions[3].calls, 1);
+        assert_eq!(report.tasks[0].functions[3].instructions, 3);
+        assert_eq!(report.tasks[1].task_id, pending);
+        assert_eq!(report.tasks[1].instruction_count, 0);
+        assert_eq!(report.tasks[1].functions[4].calls, 0);
+        assert_eq!(report.tasks[1].functions[4].instructions, 0);
     }
 
     #[test]
@@ -4410,11 +4593,117 @@ struct ActiveTaskTrace {
     state: TaskTraceState,
 }
 
+#[derive(Default)]
+struct TaskProfileState {
+    started: bool,
+    instruction_count: usize,
+    output_bytes: usize,
+    functions: Vec<ProfileFunction>,
+    natives: BTreeMap<String, usize>,
+    source_ranges: BTreeMap<(usize, usize, usize), usize>,
+}
+
+impl TaskProfileState {
+    fn enabled(program: &Program) -> Self {
+        Self {
+            functions: empty_profile_functions(program),
+            ..Self::default()
+        }
+    }
+
+    fn function_entry(&mut self, frame: &Frame) {
+        let index = profile_function_index(frame);
+        if let Some(function) = self.functions.get_mut(index) {
+            function.calls = function.calls.saturating_add(1);
+        }
+    }
+
+    fn instruction(&mut self, frame: &Frame, location: Option<&DebugLocation>) {
+        self.instruction_count = self.instruction_count.saturating_add(1);
+        let index = profile_function_index(frame);
+        if let Some(function) = self.functions.get_mut(index) {
+            function.instructions = function.instructions.saturating_add(1);
+        }
+        if let Some(range) = location.and_then(|location| location.range.as_ref()) {
+            let key = (range.source, range.start, range.end);
+            let hits = self.source_ranges.entry(key).or_insert(0);
+            *hits = hits.saturating_add(1);
+        }
+    }
+
+    fn native_call(&mut self, name: &str) {
+        let calls = self.natives.entry(name.to_string()).or_insert(0);
+        *calls = calls.saturating_add(1);
+    }
+
+    fn output(&mut self, bytes: usize) {
+        self.output_bytes = self.output_bytes.saturating_add(bytes);
+    }
+
+    fn report(&self, task_id: TaskId) -> TaskProfileReport {
+        TaskProfileReport {
+            task_id,
+            instruction_count: self.instruction_count,
+            output_bytes: self.output_bytes,
+            functions: self.functions.clone(),
+            natives: self
+                .natives
+                .iter()
+                .map(|(name, calls)| ProfileNative {
+                    name: name.clone(),
+                    calls: *calls,
+                })
+                .collect(),
+            source_ranges: self
+                .source_ranges
+                .iter()
+                .map(|((source, start, end), hits)| ProfileSourceRange {
+                    range: DebugRange {
+                        source: *source,
+                        start: *start,
+                        end: *end,
+                    },
+                    hits: *hits,
+                })
+                .collect(),
+        }
+    }
+}
+
+struct ActiveTaskProfile {
+    task_id: TaskId,
+    state: TaskProfileState,
+}
+
+fn profile_function_index(frame: &Frame) -> usize {
+    frame
+        .function_index
+        .map(|index| index.saturating_add(1))
+        .unwrap_or(0)
+}
+
+fn empty_profile_functions(program: &Program) -> Vec<ProfileFunction> {
+    std::iter::once(ProfileFunction {
+        index: None,
+        name: "main".to_string(),
+        calls: 0,
+        instructions: 0,
+    })
+    .chain(program.functions.iter().map(|function| ProfileFunction {
+        index: Some(function.index),
+        name: function.name.clone(),
+        calls: 0,
+        instructions: 0,
+    }))
+    .collect()
+}
+
 struct ScheduledVmTask {
     frames: FrameStack,
     result: Option<Value>,
     error: Option<RuntimeError>,
     trace: TaskTraceState,
+    profile: TaskProfileState,
 }
 
 impl ScheduledVmTask {
@@ -4504,6 +4793,7 @@ pub struct VM<'a> {
     task_trace_events: Vec<TaskTraceEvent>,
     active_cooperative_task: Option<TaskId>,
     active_task_trace: Option<ActiveTaskTrace>,
+    active_task_profile: Option<ActiveTaskProfile>,
     next_task_event_sequence: usize,
     instruction_steps: usize,
     call_depth: usize,
@@ -4717,6 +5007,31 @@ impl<'a> CooperativeRun<'a> {
         std::mem::take(&mut self.vm.task_trace_events)
     }
 
+    /// Return a deterministic snapshot of aggregate and per-task counters.
+    /// Ordinary cooperative sessions return `None` because profiling is
+    /// explicitly opt-in.
+    pub fn profile_report(&self) -> Option<CooperativeProfileReport> {
+        if !self.vm.profile_enabled {
+            return None;
+        }
+        let heap_stats = self.vm.heap.stats();
+        let tasks = self
+            .scheduler
+            .task_ids()
+            .map(|task_id| {
+                self.scheduler
+                    .task_payload(task_id)
+                    .expect("scheduler task id retains a payload")
+                    .profile
+                    .report(task_id)
+            })
+            .collect();
+        Some(CooperativeProfileReport {
+            aggregate: self.vm.profile_report(&heap_stats),
+            tasks,
+        })
+    }
+
     fn release_terminal_frames(&mut self) {
         let terminal_ids = self
             .scheduler
@@ -4783,6 +5098,11 @@ impl<'a> CooperativeRun<'a> {
             result: None,
             error: None,
             trace: TaskTraceState::default(),
+            profile: if self.vm.profile_enabled {
+                TaskProfileState::enabled(self.vm.program)
+            } else {
+                TaskProfileState::default()
+            },
         })
     }
 }
@@ -4832,6 +5152,7 @@ impl<'a> VM<'a> {
             task_trace_events: Vec::new(),
             active_cooperative_task: None,
             active_task_trace: None,
+            active_task_profile: None,
             next_task_event_sequence: 0,
             instruction_steps: 0,
             call_depth: 0,
@@ -4881,6 +5202,17 @@ impl<'a> VM<'a> {
         self.start_cooperative(quantum)
     }
 
+    /// Start a cooperative session with deterministic aggregate and per-task
+    /// profile counters. Existing single-task profile and ordinary cooperative
+    /// sessions remain unchanged.
+    pub fn start_cooperative_profile(
+        mut self,
+        quantum: usize,
+    ) -> Result<CooperativeRun<'a>, TaskControlError> {
+        self.enable_profile();
+        self.start_cooperative(quantum)
+    }
+
     /// Execute the program with deterministic counters enabled.
     ///
     /// Program output remains in `result` for successful execution, while the
@@ -4888,21 +5220,8 @@ impl<'a> VM<'a> {
     /// deliberately renders only the report so program stdout cannot be
     /// confused with profile records.
     pub fn profile(mut self) -> ProfileRun {
-        self.profile_enabled = true;
+        self.enable_profile();
         let heap_stats = self.heap.stats();
-        self.profile_functions = std::iter::once(ProfileFunction {
-            index: None,
-            name: "main".to_string(),
-            calls: 0,
-            instructions: 0,
-        })
-        .chain(self.program.functions.iter().map(|function| ProfileFunction {
-            index: Some(function.index),
-            name: function.name.clone(),
-            calls: 0,
-            instructions: 0,
-        }))
-        .collect();
         let result = self.run_inner();
         ProfileRun {
             report: self.profile_report(&heap_stats),
@@ -4971,13 +5290,21 @@ impl<'a> VM<'a> {
         }
     }
 
+    fn enable_profile(&mut self) {
+        self.profile_enabled = true;
+        self.profile_functions = empty_profile_functions(self.program);
+    }
+
     fn profile_function_entry(&mut self, frame: &Frame) {
         if !self.profile_enabled {
             return;
         }
-        let index = frame.function_index.map(|index| index.saturating_add(1)).unwrap_or(0);
+        let index = profile_function_index(frame);
         if let Some(function) = self.profile_functions.get_mut(index) {
             function.calls = function.calls.saturating_add(1);
+        }
+        if let Some(active) = self.active_task_profile.as_mut() {
+            active.state.function_entry(frame);
         }
     }
 
@@ -4986,7 +5313,7 @@ impl<'a> VM<'a> {
             return;
         }
         self.profile_instruction_count = self.profile_instruction_count.saturating_add(1);
-        let index = frame.function_index.map(|index| index.saturating_add(1)).unwrap_or(0);
+        let index = profile_function_index(frame);
         if let Some(function) = self.profile_functions.get_mut(index) {
             function.instructions = function.instructions.saturating_add(1);
         }
@@ -4994,6 +5321,9 @@ impl<'a> VM<'a> {
             let key = (range.source, range.start, range.end);
             let hits = self.profile_source_ranges.entry(key).or_insert(0);
             *hits = hits.saturating_add(1);
+        }
+        if let Some(active) = self.active_task_profile.as_mut() {
+            active.state.instruction(frame, location);
         }
     }
 
@@ -5003,6 +5333,9 @@ impl<'a> VM<'a> {
         }
         let calls = self.profile_natives.entry(name.to_string()).or_insert(0);
         *calls = calls.saturating_add(1);
+        if let Some(active) = self.active_task_profile.as_mut() {
+            active.state.native_call(name);
+        }
     }
 
     fn run_inner(&mut self) -> Result<String, RuntimeError> {
@@ -5043,8 +5376,9 @@ impl<'a> VM<'a> {
     /// Execute one host-only cooperative task through the explicit frame
     /// stack. The public single-task APIs continue to use `run_inner`; this
     /// compatibility adapter remains private while the public cooperative
-    /// session owns task results and output events. Task-aware tracing,
-    /// profiling, and debugging remain later V5B slices.
+    /// session owns task results and output events. Task-aware tracing and
+    /// profiling are public opt-in sessions; debugging remains a later V5B
+    /// slice.
     fn run_cooperative(mut self, quantum: usize) -> Result<String, RuntimeError> {
         self.check_cancellation()?;
         let mut scheduler = CooperativeScheduler::new(quantum)
@@ -5064,6 +5398,7 @@ impl<'a> VM<'a> {
                 result: None,
                 error: None,
                 trace: TaskTraceState::default(),
+                profile: TaskProfileState::default(),
             })
             .map_err(|error| RuntimeError::new(error.to_string()))?;
 
@@ -5145,6 +5480,22 @@ impl<'a> VM<'a> {
                     );
                 }
             };
+
+            if self.profile_enabled && !task.profile.started {
+                let frame = match task.frames.current() {
+                    Ok(frame) => frame,
+                    Err(error) => {
+                        return self.stop_scheduled_task(
+                            context.task_id,
+                            task,
+                            RuntimeError::new(error.to_string()),
+                        );
+                    }
+                };
+                self.profile_function_entry(frame);
+                task.profile.function_entry(frame);
+                task.profile.started = true;
+            }
 
             if self.task_trace_enabled && !task.trace.started {
                 let location = body.locations.first().cloned().flatten();
@@ -5239,6 +5590,13 @@ impl<'a> VM<'a> {
                     state: std::mem::take(&mut task.trace),
                 });
             }
+            if self.profile_enabled {
+                debug_assert!(self.active_task_profile.is_none());
+                self.active_task_profile = Some(ActiveTaskProfile {
+                    task_id: context.task_id,
+                    state: std::mem::take(&mut task.profile),
+                });
+            }
             let action = match task.frames.current_mut() {
                 Ok(frame) => {
                     if self.profile_enabled {
@@ -5264,6 +5622,14 @@ impl<'a> VM<'a> {
                     .expect("traced scheduled execution retains task state");
                 debug_assert_eq!(active.task_id, context.task_id);
                 task.trace = active.state;
+            }
+            if self.profile_enabled {
+                let active = self
+                    .active_task_profile
+                    .take()
+                    .expect("profiled scheduled execution retains task state");
+                debug_assert_eq!(active.task_id, context.task_id);
+                task.profile = active.state;
             }
             debug_assert_eq!(self.active_cooperative_task.take(), Some(context.task_id));
             self.heap.observe_estimated_bytes();
@@ -5413,6 +5779,7 @@ impl<'a> VM<'a> {
         }
         if self.profile_enabled {
             self.profile_function_entry(&frame);
+            task.profile.function_entry(&frame);
         }
         task.frames
             .current_mut()
@@ -6568,6 +6935,9 @@ impl<'a> VM<'a> {
         self.output_bytes = next;
         if self.profile_enabled {
             self.profile_output_bytes = self.output_bytes;
+            if let Some(active) = self.active_task_profile.as_mut() {
+                active.state.output(text.len());
+            }
         }
         Ok(())
     }

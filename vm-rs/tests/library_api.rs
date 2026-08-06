@@ -4,10 +4,11 @@ use compiler_design_vm::bytecode::{
 use compiler_design_vm::{
     format_artifact, link_modules_checked, link_modules_with_report, parse_artifact,
     parse_artifact_checked, verify_artifact, verify_module_artifact, verify_program_checked,
-    Artifact, ArtifactErrorKind, CooperativeStep, DebugControl, DebugHook, DebugPause, JoinPoll,
-    LinkErrorKind, ModuleArtifact, ModuleDependency, ModuleDependencyKind, Program, ResourceKind,
-    RunConfig, RuntimeErrorKind, TaskOutcome, TaskOutputEvent, TaskSpec, TaskState, TaskTraceEvent,
-    TraceEventKind, ARTIFACT_FORMAT_FAMILY, ARTIFACT_FORMAT_VERSION, LIBRARY_API_VERSION, VM,
+    Artifact, ArtifactErrorKind, CooperativeProfileReport, CooperativeStep, DebugControl,
+    DebugHook, DebugPause, JoinPoll, LinkErrorKind, ModuleArtifact, ModuleDependency,
+    ModuleDependencyKind, Program, ResourceKind, RunConfig, RuntimeErrorKind, TaskOutcome,
+    TaskOutputEvent, TaskProfileReport, TaskSpec, TaskState, TaskTraceEvent, TraceEventKind,
+    ARTIFACT_FORMAT_FAMILY, ARTIFACT_FORMAT_VERSION, LIBRARY_API_VERSION, VM,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -392,6 +393,37 @@ fn library_api_exposes_task_attributed_cooperative_trace() {
             .collect::<Vec<_>>(),
         vec![2, 3]
     );
+}
+
+#[test]
+fn library_api_exposes_task_attributed_cooperative_profile() {
+    let program = cooperative_output_program();
+    let mut session = VM::with_config(&program, RunConfig::unlimited())
+        .start_cooperative_profile(1)
+        .expect("cooperative profile session should start");
+    let first = session
+        .spawn(TaskSpec::function(0, Vec::new()))
+        .expect("first task should spawn");
+    let second = session
+        .spawn(TaskSpec::function(1, Vec::new()))
+        .expect("second task should spawn");
+
+    session
+        .run_until_waiting()
+        .expect("cooperative profile should complete");
+    let report: CooperativeProfileReport = session
+        .profile_report()
+        .expect("profile should be enabled");
+    assert_eq!(report.aggregate.instruction_count, 6);
+    assert_eq!(report.aggregate.output_bytes, 4);
+    let tasks: Vec<TaskProfileReport> = report.tasks;
+    assert_eq!(tasks.len(), 2);
+    assert_eq!(tasks[0].task_id, first);
+    assert_eq!(tasks[0].instruction_count, 3);
+    assert_eq!(tasks[0].output_bytes, 2);
+    assert_eq!(tasks[1].task_id, second);
+    assert_eq!(tasks[1].instruction_count, 3);
+    assert_eq!(tasks[1].output_bytes, 2);
 }
 
 #[test]

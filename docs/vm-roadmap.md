@@ -97,7 +97,7 @@ to expose a plugin ABI.
 **Priority:** P1. **Status:** V5A contract recorded on 2026-08-03; the V5B
 scheduler control-plane, explicit frame-state foundation, private adapter, and
 typed host task result/join-wake and task-aware output surfaces were implemented
-on 2026-08-04; task-aware trace was implemented on 2026-08-06. See
+on 2026-08-04; task-aware trace and profile were implemented on 2026-08-06. See
 [`v5a-vm-concurrency-contract-001.md`](decisions/v5a-vm-concurrency-contract-001.md).
 
 Concurrency is a runtime and language contract that a later JIT must preserve.
@@ -115,8 +115,9 @@ debugger/profile events. Resume it before JIT work, in these slices:
    one-task execution adapter, and additive typed host session are recorded in
    [`v5b-vm-scheduler-control-plane-001.md`](decisions/v5b-vm-scheduler-control-plane-001.md),
    [`v5b-vm-task-host-result-001.md`](decisions/v5b-vm-task-host-result-001.md),
-   [`v5b-vm-task-output-001.md`](decisions/v5b-vm-task-output-001.md), and
-   [`v5b-vm-task-trace-001.md`](decisions/v5b-vm-task-trace-001.md).
+   [`v5b-vm-task-output-001.md`](decisions/v5b-vm-task-output-001.md),
+   [`v5b-vm-task-trace-001.md`](decisions/v5b-vm-task-trace-001.md), and
+   [`v5b-vm-task-profile-001.md`](decisions/v5b-vm-task-profile-001.md).
    It provides FIFO task states, quantum requeue, explicit wake,
    cancellation transitions, a resumable frame stack with validated return
    transfer, dispatch-boundary GC, and parity checks for output, budgets,
@@ -127,8 +128,9 @@ debugger/profile events. Resume it before JIT work, in these slices:
    fail-fast cancellation. Task output has stable session sequences and task
    identity while retaining the dispatch-ordered string buffer and cumulative
    output budget. Opt-in task trace uses per-task stacks and shares the same
-   session event order with output; task-aware profile and debugger contracts
-   remain separate slices.
+   session event order with output. Opt-in task profile exposes aggregate and
+   per-task execution counters while keeping shared-heap metrics session-wide;
+   the debugger contract remains a separate slice.
 3. **V5C - concurrency expansion decision:** only after V5B workloads exist,
    decide whether async syntax, channels/actors, shared-memory concurrency,
    multiple OS threads, or `Send`/`Sync` provides enough product value to
@@ -198,6 +200,8 @@ V5A concurrency contract (recorded)
   -> V5B typed host result and join/wake (implemented)
   -> V5B task-aware output (implemented)
   -> V5B task-aware trace (implemented)
+  -> V5B task-aware profile (implemented)
+  -> V5B task-aware debugger (next)
   -> optional V5C concurrency expansion
 
 completed V5B + stable profile + demonstrated hot workload
@@ -215,8 +219,8 @@ demonstrated ABI/release need
   -> optional successor artifact work
 ```
 
-V5B task-aware profile and debugger contracts are the next compatibility
-decisions. V6 JIT work starts only after V5B establishes deterministic
+The V5B task-aware debugger contract is the next compatibility decision. V6
+JIT work starts only after V5B establishes deterministic
 task/frame/root/safepoint behavior and stable hot-workload evidence. V2 host
 integration and V4 release compatibility resume only when their named consumer
 or ABI/release trigger appears.
