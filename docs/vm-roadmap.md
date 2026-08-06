@@ -149,18 +149,22 @@ parity.
 
 ### V6: Add an evidence-driven JIT after the scheduling contract
 
-**Priority:** P2. **Status:** planned immediately after V5B and its evidence
-gate.
+**Priority:** P2. **Status:** V6A hot-workload evidence was recorded on
+2026-08-06; V6B runtime-contract design is now the next slice.** See
+[`v6a-hot-workload-evidence-001.md`](decisions/v6a-hot-workload-evidence-001.md).
 
 JIT compilation is an optional execution optimization, not a new language
 semantic. Starting it after V5B prevents a single-thread-only code generator
 from fixing assumptions about frames, roots, safepoints, cancellation, and
 thread state that concurrency would later invalidate.
 
-1. **V6A - hot-workload evidence:** use stable profiles and reproducible
-   benchmarks to identify an eligible `BytecodeFunction` subset and a concrete
-   performance target. Do not add native code generation for synthetic
-   microbenchmarks alone.
+1. **V6A - hot-workload evidence:** recorded in
+   [`v6a-hot-workload-evidence-001.md`](decisions/v6a-hot-workload-evidence-001.md).
+   The current evidence identifies `execution_loop` as the primary
+   end-to-end candidate and the two function bodies in `execution_closure` as
+   the primary function-level candidate. It establishes stable bytecode,
+   artifact, and output/error/exit observations, but deliberately does not
+   claim a portable speedup or set a wall-clock threshold.
 2. **V6B - JIT runtime contract:** specify interpreter fallback, source/debug
    and runtime-error mapping, GC root maps and safepoints, cancellation and
    resource checks, executable code-cache limits, native-call transitions,
@@ -212,7 +216,7 @@ V5A concurrency contract (recorded)
   -> optional V5C concurrency expansion decision
 
 completed V5B + stable profile + demonstrated hot workload
-  -> V6A hot-workload evidence
+  -> V6A hot-workload evidence (recorded)
   -> V6B JIT runtime contract
   -> optional V6C baseline JIT
 
@@ -228,10 +232,12 @@ demonstrated ABI/release need
 
 V5B's deterministic host concurrency observability and workload evidence are
 complete. A concrete consumer must justify optional V5C expansion. V6A
-hot-workload characterization may begin only with stable profiles and
-reproducible timing evidence; V6 JIT work starts only after that evidence. V2 host
-integration and V4 release compatibility resume only when their named consumer
-or ABI/release trigger appears.
+characterization is recorded with stable profile surfaces, bytecode shape, and
+repeated correctness observations; the mixed, startup-sensitive timing data
+does not establish a speedup threshold. V6B runtime-contract work is next, and
+V6C JIT implementation remains deferred until that contract is explicit. V2
+host integration and V4 release compatibility resume only when their named
+consumer or ABI/release trigger appears.
 
 ## 6. Verification contract
 
