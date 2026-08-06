@@ -1740,6 +1740,7 @@ mod tests {
         let drained = run.take_output_events();
         assert_eq!(drained.len(), 4);
         assert!(run.output_events().is_empty());
+        assert!(run.trace_events().is_empty());
     }
 
     #[test]
@@ -1788,6 +1789,283 @@ mod tests {
         assert_eq!(run.output_events().len(), 1);
         assert_eq!(run.output_events()[0].task_id, odd);
         assert!(run.take_output().is_empty());
+    }
+
+    #[test]
+    fn cooperative_host_attributes_synchronous_native_callback_output() {
+        let mut program = cooperative_native_callback_program();
+        program.functions[0].instructions = vec![
+            Instruction::LoadVar { dest: 0, name: 1 },
+            Instruction::Print { value: 0 },
+            Instruction::Return { value: 0 },
+        ];
+        program.functions[0].locations = vec![None; 3];
+        let mut run = VM::new(&program)
+            .start_cooperative(8)
+            .expect("positive quantum should start a session");
+        let task = run
+            .spawn(TaskSpec::main())
+            .expect("callback task should spawn");
+
+        run.run_until_waiting()
+            .expect("native callback task should complete");
+        assert_eq!(run.take_output(), "1\n2\n[1, 2]\n");
+        assert_eq!(
+            run.output_events()
+                .iter()
+                .map(|event| (event.task_id, event.text.as_str()))
+                .collect::<Vec<_>>(),
+            vec![(task, "1\n"), (task, "2\n"), (task, "[1, 2]\n")]
+        );
+        assert!(run.trace_events().is_empty());
+    }
+
+    #[test]
+    fn cooperative_trace_attributes_events_and_shares_output_sequence() {
+        let program = cooperative_output_program();
+        let mut run = VM::new(&program)
+            .start_cooperative_trace(1)
+            .expect("positive quantum should start a traced session");
+        let odd = run
+            .spawn(TaskSpec::function(0, Vec::new()))
+            .expect("odd task should spawn");
+        let even = run
+            .spawn(TaskSpec::function(1, Vec::new()))
+            .expect("even task should spawn");
+
+        run.step().expect("odd task should enter");
+        run.step().expect("even task should enter");
+        let initial = run.take_trace_events();
+        assert_eq!(
+            initial
+                .iter()
+                .map(|event| (event.sequence, event.task_id, event.kind))
+                .collect::<Vec<_>>(),
+            vec![
+                (0, odd, TraceEventKind::Enter),
+                (1, even, TraceEventKind::Enter),
+            ]
+        );
+        assert_eq!(initial[0].stack[0].function, "odd");
+        assert_eq!(initial[1].stack[0].function, "even");
+
+        assert_eq!(
+            run.run_until_waiting()
+                .expect("traced tasks should complete"),
+            CooperativeStep::Complete
+        );
+        assert_eq!(
+            run.trace_events()
+                .iter()
+                .map(|event| (event.sequence, event.task_id, event.kind))
+                .collect::<Vec<_>>(),
+            vec![
+                (2, odd, TraceEventKind::Output),
+                (3, even, TraceEventKind::Output),
+                (4, odd, TraceEventKind::Output),
+                (5, even, TraceEventKind::Output),
+                (6, odd, TraceEventKind::Return),
+                (7, odd, TraceEventKind::Exit),
+                (8, even, TraceEventKind::Return),
+                (9, even, TraceEventKind::Exit),
+            ]
+        );
+        assert_eq!(
+            run.output_events()
+                .iter()
+                .map(|event| (event.sequence, event.task_id))
+                .collect::<Vec<_>>(),
+            vec![(2, odd), (3, even), (4, odd), (5, even)]
+        );
+        assert!(run.trace_events().iter().all(|event| {
+            event
+                .stack
+                .last()
+                .is_some_and(|frame| frame.function == event.function)
+        }));
+    }
+
+    #[test]
+    fn cooperative_trace_emits_task_attributed_line_locations() {
+        let mut program = cooperative_output_program();
+        program.debug_sources.push(DebugSource {
+            module: None,
+            path: "trace-task.cd".to_string(),
+            text: "one\ntwo\nthree\nfour\nfive\n".to_string(),
+        });
+        program.functions[0].locations = (1..=5)
+            .map(|line| {
+                Some(DebugLocation {
+                    source: 0,
+                    line,
+                    column: 1,
+                    range: None,
+                })
+            })
+            .collect();
+        let mut run = VM::new(&program)
+            .start_cooperative_trace(8)
+            .expect("positive quantum should start a traced session");
+        let task = run
+            .spawn(TaskSpec::function(0, Vec::new()))
+            .expect("traced task should spawn");
+
+        run.run_until_waiting()
+            .expect("traced task should complete");
+        let lines = run
+            .trace_events()
+            .iter()
+            .filter(|event| event.kind == TraceEventKind::Line)
+            .collect::<Vec<_>>();
+        assert_eq!(lines.len(), 4);
+        assert!(lines.iter().all(|event| event.task_id == task));
+        assert_eq!(
+            lines
+                .iter()
+                .map(|event| event.location.as_ref().map(|location| location.line))
+                .collect::<Vec<_>>(),
+            vec![Some(2), Some(3), Some(4), Some(5)]
+        );
+    }
+
+    #[test]
+    fn cooperative_trace_preserves_task_local_nested_call_stack() {
+        let program = cooperative_call_program();
+        let mut run = VM::new(&program)
+            .start_cooperative_trace(1)
+            .expect("positive quantum should start a traced session");
+        let task = run
+            .spawn(TaskSpec::main())
+            .expect("main task should spawn");
+
+        run.run_until_waiting()
+            .expect("nested traced task should complete");
+        let enter = run
+            .trace_events()
+            .iter()
+            .find(|event| {
+                event.task_id == task
+                    && event.kind == TraceEventKind::Enter
+                    && event.function == "answer"
+            })
+            .expect("callee should emit an enter event");
+        assert_eq!(
+            enter
+                .stack
+                .iter()
+                .map(|frame| frame.function.as_str())
+                .collect::<Vec<_>>(),
+            vec!["main", "answer"]
+        );
+        assert!(run.trace_events().iter().any(|event| {
+            event.task_id == task
+                && event.kind == TraceEventKind::Exit
+                && event.function == "answer"
+        }));
+        assert!(run.trace_events().iter().any(|event| {
+            event.task_id == task
+                && event.kind == TraceEventKind::Exit
+                && event.function == "main"
+        }));
+    }
+
+    #[test]
+    fn cooperative_trace_includes_synchronous_native_callback_frames_and_output() {
+        let mut program = cooperative_native_callback_program();
+        program.functions[0].instructions = vec![
+            Instruction::LoadVar { dest: 0, name: 1 },
+            Instruction::Print { value: 0 },
+            Instruction::Return { value: 0 },
+        ];
+        program.functions[0].locations = vec![None; 3];
+        let mut run = VM::new(&program)
+            .start_cooperative_trace(8)
+            .expect("positive quantum should start a traced session");
+        let task = run
+            .spawn(TaskSpec::main())
+            .expect("callback task should spawn");
+
+        run.run_until_waiting()
+            .expect("native callback task should complete");
+        assert_eq!(run.take_output(), "1\n2\n[1, 2]\n");
+        let callback_enters = run
+            .trace_events()
+            .iter()
+            .filter(|event| {
+                event.task_id == task
+                    && event.kind == TraceEventKind::Enter
+                    && event.function == "identity"
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(callback_enters.len(), 2);
+        assert!(callback_enters.iter().all(|event| {
+            event
+                .stack
+                .iter()
+                .map(|frame| frame.function.as_str())
+                .collect::<Vec<_>>()
+                == vec!["main", "identity"]
+        }));
+        assert_eq!(
+            run.output_events()
+                .iter()
+                .map(|event| (event.task_id, event.text.as_str()))
+                .collect::<Vec<_>>(),
+            vec![(task, "1\n"), (task, "2\n"), (task, "[1, 2]\n")]
+        );
+        assert_eq!(
+            run.trace_events()
+                .iter()
+                .filter(|event| event.kind == TraceEventKind::Output)
+                .map(|event| event.sequence)
+                .collect::<Vec<_>>(),
+            run.output_events()
+                .iter()
+                .map(|event| event.sequence)
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn cooperative_trace_reports_the_failing_task_before_fail_fast_cancellation() {
+        let program = cooperative_host_task_program();
+        let mut run = VM::new(&program)
+            .start_cooperative_trace(1)
+            .expect("positive quantum should start a traced session");
+        let failure = run
+            .spawn(TaskSpec::function(2, Vec::new()))
+            .expect("failure task should spawn");
+        let pending = run
+            .spawn(TaskSpec::function(3, Vec::new()))
+            .expect("pending task should spawn");
+
+        run.run_until_waiting()
+            .expect("traced failure should reach a terminal session");
+        assert!(matches!(
+            run.task_outcome(failure)
+                .expect("failure outcome should be readable"),
+            Some(TaskOutcome::Failed(error)) if error.message == "division by zero"
+        ));
+        assert!(matches!(
+            run.task_outcome(pending)
+                .expect("cancelled outcome should be readable"),
+            Some(TaskOutcome::Cancelled)
+        ));
+
+        let error = run
+            .trace_events()
+            .iter()
+            .find(|event| event.kind == TraceEventKind::Error)
+            .expect("failing task should emit an error event");
+        assert_eq!(error.task_id, failure);
+        assert_eq!(error.function, "failure");
+        assert_eq!(error.value.as_deref(), Some("division by zero"));
+        assert!(run.trace_events().iter().any(|event| {
+            event.task_id == failure && event.kind == TraceEventKind::Exit
+        }));
+        assert!(!run.trace_events().iter().any(|event| {
+            event.task_id == pending && event.kind == TraceEventKind::Error
+        }));
     }
 
     #[test]
@@ -4019,6 +4297,24 @@ pub struct TaskOutputEvent {
     pub text: String,
 }
 
+/// One trace observation from a cooperative task.
+///
+/// Sequence numbers share the cooperative session's observable event order
+/// with `TaskOutputEvent`. An output trace record therefore has the same
+/// sequence as the committed output chunk it describes.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TaskTraceEvent {
+    pub sequence: usize,
+    pub task_id: TaskId,
+    pub kind: TraceEventKind,
+    pub function: String,
+    pub instruction: Option<usize>,
+    pub location: Option<DebugLocation>,
+    pub stack: Vec<StackFrame>,
+    pub locals: Vec<(String, String)>,
+    pub value: Option<String>,
+}
+
 /// Result of one explicit scheduler dispatch.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CooperativeStep {
@@ -4102,15 +4398,29 @@ enum InstructionAction {
     Return(Value),
 }
 
+#[derive(Default)]
+struct TaskTraceState {
+    started: bool,
+    stack: Vec<StackFrame>,
+    last_locations: Vec<Option<DebugLocation>>,
+}
+
+struct ActiveTaskTrace {
+    task_id: TaskId,
+    state: TaskTraceState,
+}
+
 struct ScheduledVmTask {
     frames: FrameStack,
     result: Option<Value>,
     error: Option<RuntimeError>,
+    trace: TaskTraceState,
 }
 
 impl ScheduledVmTask {
     fn release_frames(&mut self) {
         self.frames.clear();
+        self.trace = TaskTraceState::default();
     }
 }
 
@@ -4190,6 +4500,10 @@ pub struct VM<'a> {
     output: String,
     output_bytes: usize,
     task_output_events: Vec<TaskOutputEvent>,
+    task_trace_enabled: bool,
+    task_trace_events: Vec<TaskTraceEvent>,
+    active_cooperative_task: Option<TaskId>,
+    active_task_trace: Option<ActiveTaskTrace>,
     next_task_event_sequence: usize,
     instruction_steps: usize,
     call_depth: usize,
@@ -4392,6 +4706,17 @@ impl<'a> CooperativeRun<'a> {
         std::mem::take(&mut self.vm.task_output_events)
     }
 
+    /// Return task-attributed trace observations in scheduler event order.
+    pub fn trace_events(&self) -> &[TaskTraceEvent] {
+        &self.vm.task_trace_events
+    }
+
+    /// Drain task trace observations without resetting the shared session
+    /// event sequence.
+    pub fn take_trace_events(&mut self) -> Vec<TaskTraceEvent> {
+        std::mem::take(&mut self.vm.task_trace_events)
+    }
+
     fn release_terminal_frames(&mut self) {
         let terminal_ids = self
             .scheduler
@@ -4457,6 +4782,7 @@ impl<'a> CooperativeRun<'a> {
             frames,
             result: None,
             error: None,
+            trace: TaskTraceState::default(),
         })
     }
 }
@@ -4502,6 +4828,10 @@ impl<'a> VM<'a> {
             output: String::new(),
             output_bytes: 0,
             task_output_events: Vec::new(),
+            task_trace_enabled: false,
+            task_trace_events: Vec::new(),
+            active_cooperative_task: None,
+            active_task_trace: None,
             next_task_event_sequence: 0,
             instruction_steps: 0,
             call_depth: 0,
@@ -4538,6 +4868,17 @@ impl<'a> VM<'a> {
     ) -> Result<CooperativeRun<'a>, TaskControlError> {
         let scheduler = CooperativeScheduler::new(quantum).map_err(TaskControlError::from)?;
         Ok(CooperativeRun { vm: self, scheduler })
+    }
+
+    /// Start a cooperative session with task-attributed trace collection.
+    /// Existing single-task trace and ordinary cooperative sessions remain
+    /// unchanged.
+    pub fn start_cooperative_trace(
+        mut self,
+        quantum: usize,
+    ) -> Result<CooperativeRun<'a>, TaskControlError> {
+        self.task_trace_enabled = true;
+        self.start_cooperative(quantum)
     }
 
     /// Execute the program with deterministic counters enabled.
@@ -4722,6 +5063,7 @@ impl<'a> VM<'a> {
                 frames,
                 result: None,
                 error: None,
+                trace: TaskTraceState::default(),
             })
             .map_err(|error| RuntimeError::new(error.to_string()))?;
 
@@ -4777,26 +5119,70 @@ impl<'a> VM<'a> {
     ) -> TaskStep {
         for _ in 0..context.quantum {
             if context.cancellation_requested {
-                task.error = Some(RuntimeError::cancelled());
-                return TaskStep::Cancel;
+                return self.stop_scheduled_task(
+                    context.task_id,
+                    task,
+                    RuntimeError::cancelled(),
+                );
             }
 
             let (body, instruction_index) = match task.frames.current() {
                 Ok(frame) => {
                     let Some(body) = frame.body.as_ref() else {
-                        task.error = Some(RuntimeError::new(
-                            "scheduled frame has no bytecode body",
-                        ));
-                        return TaskStep::Fail;
+                        return self.stop_scheduled_task(
+                            context.task_id,
+                            task,
+                            RuntimeError::new("scheduled frame has no bytecode body"),
+                        );
                     };
                     (Rc::clone(body), frame.ip)
                 }
                 Err(error) => {
-                    task.error = Some(RuntimeError::new(error.to_string()));
-                    return TaskStep::Fail;
+                    return self.stop_scheduled_task(
+                        context.task_id,
+                        task,
+                        RuntimeError::new(error.to_string()),
+                    );
                 }
             };
+
+            if self.task_trace_enabled && !task.trace.started {
+                let location = body.locations.first().cloned().flatten();
+                let trace_result = {
+                    let ScheduledVmTask { frames, trace, .. } = task;
+                    match frames.current() {
+                        Ok(frame) => {
+                            self.task_trace_enter(context.task_id, trace, frame, location)
+                        }
+                        Err(error) => Err(RuntimeError::new(error.to_string())),
+                    }
+                };
+                if let Err(error) = trace_result {
+                    task.error = Some(error);
+                    return TaskStep::Fail;
+                }
+            }
+
             if instruction_index >= body.instructions.len() {
+                if self.task_trace_enabled {
+                    let trace_result = {
+                        let ScheduledVmTask { frames, trace, .. } = task;
+                        match frames.current() {
+                            Ok(frame) => self.task_trace_leave(
+                                context.task_id,
+                                trace,
+                                frame,
+                                body.instructions.len().checked_sub(1),
+                                None,
+                            ),
+                            Err(error) => Err(RuntimeError::new(error.to_string())),
+                        }
+                    };
+                    if let Err(error) = trace_result {
+                        task.error = Some(error);
+                        return TaskStep::Fail;
+                    }
+                }
                 match task.frames.return_value(Value::Nil) {
                     Ok(Some(value)) => {
                         task.result = Some(value);
@@ -4804,8 +5190,11 @@ impl<'a> VM<'a> {
                     }
                     Ok(None) => continue,
                     Err(error) => {
-                        task.error = Some(RuntimeError::new(error.to_string()));
-                        return TaskStep::Fail;
+                        return self.stop_scheduled_task(
+                            context.task_id,
+                            task,
+                            RuntimeError::new(error.to_string()),
+                        );
                     }
                 }
             }
@@ -4815,47 +5204,68 @@ impl<'a> VM<'a> {
                 .get(instruction_index)
                 .cloned()
                 .flatten();
-            let previous_call_depth = self.call_depth;
-            let scheduled_call_depth = task.frames.len().saturating_sub(1);
-            let action = {
-                let frame = match task.frames.current_mut() {
-                    Ok(frame) => frame,
-                    Err(error) => {
-                        task.error = Some(RuntimeError::new(error.to_string()));
-                        return TaskStep::Fail;
+            if self.task_trace_enabled {
+                let trace_result = {
+                    let ScheduledVmTask { frames, trace, .. } = task;
+                    match frames.current() {
+                        Ok(frame) => self.task_trace_instruction(
+                            context.task_id,
+                            trace,
+                            frame,
+                            instruction_index,
+                            location.clone(),
+                        ),
+                        Err(error) => Err(RuntimeError::new(error.to_string())),
                     }
                 };
-                if let Err(error) = self.checkpoint_instruction() {
-                    task.error = Some(self.decorate_scheduled_error(
-                        error,
-                        task,
+                if let Err(error) = trace_result {
+                    task.error = Some(error);
+                    return TaskStep::Fail;
+                }
+            }
+            if let Err(error) = self.checkpoint_instruction() {
+                let error =
+                    self.decorate_scheduled_error(error, task, &body, instruction_index);
+                return self.stop_scheduled_task(context.task_id, task, error);
+            }
+            let previous_call_depth = self.call_depth;
+            let scheduled_call_depth = task.frames.len().saturating_sub(1);
+            debug_assert!(self.active_cooperative_task.is_none());
+            self.active_cooperative_task = Some(context.task_id);
+            if self.task_trace_enabled {
+                debug_assert!(self.active_task_trace.is_none());
+                self.active_task_trace = Some(ActiveTaskTrace {
+                    task_id: context.task_id,
+                    state: std::mem::take(&mut task.trace),
+                });
+            }
+            let action = match task.frames.current_mut() {
+                Ok(frame) => {
+                    if self.profile_enabled {
+                        self.profile_instruction(frame, location.as_ref());
+                    }
+                    self.call_depth = scheduled_call_depth;
+                    let action = self.execute_instruction(
                         &body,
+                        frame,
+                        context.task_id,
                         instruction_index,
-                    ));
-                    return if task
-                        .error
-                        .as_ref()
-                        .is_some_and(|error| error.kind == RuntimeErrorKind::Cancelled)
-                    {
-                        TaskStep::Cancel
-                    } else {
-                        TaskStep::Fail
-                    };
+                        &body.instructions[instruction_index],
+                    );
+                    self.call_depth = previous_call_depth;
+                    action
                 }
-                if self.profile_enabled {
-                    self.profile_instruction(frame, location.as_ref());
-                }
-                self.call_depth = scheduled_call_depth;
-                let action = self.execute_instruction(
-                    &body,
-                    frame,
-                    context.task_id,
-                    instruction_index,
-                    &body.instructions[instruction_index],
-                );
-                self.call_depth = previous_call_depth;
-                action
+                Err(error) => Err(RuntimeError::new(error.to_string())),
             };
+            if self.task_trace_enabled {
+                let active = self
+                    .active_task_trace
+                    .take()
+                    .expect("traced scheduled execution retains task state");
+                debug_assert_eq!(active.task_id, context.task_id);
+                task.trace = active.state;
+            }
+            debug_assert_eq!(self.active_cooperative_task.take(), Some(context.task_id));
             self.heap.observe_estimated_bytes();
 
             match action {
@@ -4866,6 +5276,38 @@ impl<'a> VM<'a> {
                 }
                 Ok(InstructionAction::Jumped) => {}
                 Ok(InstructionAction::Return(value)) => {
+                    if self.task_trace_enabled {
+                        let rendered = value.to_string();
+                        let trace_result = {
+                            let ScheduledVmTask { frames, trace, .. } = task;
+                            match frames.current() {
+                                Ok(frame) => self
+                                    .task_trace_event(
+                                        context.task_id,
+                                        trace,
+                                        TraceEventKind::Return,
+                                        frame,
+                                        Some(instruction_index),
+                                        location.clone(),
+                                        Some(rendered.clone()),
+                                    )
+                                    .and_then(|_| {
+                                        self.task_trace_leave(
+                                            context.task_id,
+                                            trace,
+                                            frame,
+                                            Some(instruction_index),
+                                            Some(rendered),
+                                        )
+                                    }),
+                                Err(error) => Err(RuntimeError::new(error.to_string())),
+                            }
+                        };
+                        if let Err(error) = trace_result {
+                            task.error = Some(error);
+                            return TaskStep::Fail;
+                        }
+                    }
                     match task.frames.return_value(value) {
                         Ok(Some(value)) => {
                             task.result = Some(value);
@@ -4873,30 +5315,31 @@ impl<'a> VM<'a> {
                         }
                         Ok(None) => {}
                         Err(error) => {
-                            task.error = Some(RuntimeError::new(error.to_string()));
-                            return TaskStep::Fail;
+                            return self.stop_scheduled_task(
+                                context.task_id,
+                                task,
+                                RuntimeError::new(error.to_string()),
+                            );
                         }
                     }
                 }
                 Ok(InstructionAction::Call(request)) => {
-                    if let Err(error) = self.push_scheduled_call(task, request) {
-                        task.error = Some(self.decorate_scheduled_error(
+                    if let Err(error) =
+                        self.push_scheduled_call(context.task_id, task, request)
+                    {
+                        let error = self.decorate_scheduled_error(
                             error,
                             task,
                             &body,
                             instruction_index,
-                        ));
-                        return TaskStep::Fail;
+                        );
+                        return self.stop_scheduled_task(context.task_id, task, error);
                     }
                 }
                 Err(error) => {
-                    task.error = Some(self.decorate_scheduled_error(
-                        error,
-                        task,
-                        &body,
-                        instruction_index,
-                    ));
-                    return TaskStep::Fail;
+                    let error =
+                        self.decorate_scheduled_error(error, task, &body, instruction_index);
+                    return self.stop_scheduled_task(context.task_id, task, error);
                 }
             }
         }
@@ -4905,6 +5348,7 @@ impl<'a> VM<'a> {
 
     fn push_scheduled_call(
         &mut self,
+        task_id: TaskId,
         task: &mut ScheduledVmTask,
         request: CallRequest,
     ) -> Result<(), RuntimeError> {
@@ -4976,7 +5420,19 @@ impl<'a> VM<'a> {
             .ip += 1;
         task.frames
             .push(frame)
-            .map_err(|error| RuntimeError::new(error.to_string()))
+            .map_err(|error| RuntimeError::new(error.to_string()))?;
+        if self.task_trace_enabled {
+            let ScheduledVmTask { frames, trace, .. } = task;
+            let frame = frames
+                .current()
+                .map_err(|error| RuntimeError::new(error.to_string()))?;
+            let location = frame
+                .body
+                .as_ref()
+                .and_then(|body| body.locations.first().cloned().flatten());
+            self.task_trace_enter(task_id, trace, frame, location)?;
+        }
+        Ok(())
     }
 
     fn decorate_scheduled_error(
@@ -5019,6 +5475,171 @@ impl<'a> VM<'a> {
         error
     }
 
+    fn stop_scheduled_task(
+        &mut self,
+        task_id: TaskId,
+        task: &mut ScheduledVmTask,
+        error: RuntimeError,
+    ) -> TaskStep {
+        let step = if error.kind == RuntimeErrorKind::Cancelled {
+            TaskStep::Cancel
+        } else {
+            TaskStep::Fail
+        };
+        if self.task_trace_enabled && task.trace.started {
+            if let Err(trace_error) = self.task_trace_failure(task_id, task, &error.message) {
+                task.error = Some(trace_error);
+                return TaskStep::Fail;
+            }
+        }
+        task.error = Some(error);
+        step
+    }
+
+    fn enter_recursive_trace(
+        &mut self,
+        frame: &Frame,
+        location: Option<DebugLocation>,
+    ) -> Result<(), RuntimeError> {
+        if self.trace_enabled {
+            self.trace_enter(frame, location.clone());
+        }
+        if self.active_task_trace.is_some() {
+            self.active_task_trace_enter(frame, location)?;
+        }
+        Ok(())
+    }
+
+    fn trace_recursive_instruction(
+        &mut self,
+        frame: &Frame,
+        instruction: usize,
+        location: Option<DebugLocation>,
+    ) -> Result<(), RuntimeError> {
+        if self.trace_enabled {
+            self.trace_instruction(frame, instruction, location.clone());
+        }
+        if self.active_task_trace.is_some() {
+            self.active_task_trace_instruction(frame, instruction, location)?;
+        }
+        Ok(())
+    }
+
+    fn execute_recursive_print(
+        &mut self,
+        body: &FunctionBody,
+        frame: &Frame,
+        instruction: usize,
+        register: usize,
+    ) -> Result<(), RuntimeError> {
+        let value = self.read_register_ref(frame, register)?.to_string();
+        let mut output = value.clone();
+        output.push('\n');
+        let location = body.locations.get(instruction).cloned().flatten();
+        if let Some(task_id) = self.active_cooperative_task {
+            let sequence = self.append_task_output(task_id, &output)?;
+            if self.active_task_trace.is_some() {
+                self.active_task_trace_event_at_sequence(
+                    sequence,
+                    TraceEventKind::Output,
+                    frame,
+                    Some(instruction),
+                    location.clone(),
+                    Some(value.clone()),
+                )?;
+            }
+        } else {
+            self.append_output(&output)?;
+        }
+        if self.trace_enabled {
+            self.emit_trace(
+                TraceEventKind::Output,
+                frame,
+                Some(instruction),
+                location,
+                Some(value),
+            );
+        }
+        Ok(())
+    }
+
+    fn trace_recursive_return(
+        &mut self,
+        body: &FunctionBody,
+        frame: &Frame,
+        instruction: usize,
+        value: &Value,
+    ) -> Result<(), RuntimeError> {
+        let location = body.locations.get(instruction).cloned().flatten();
+        if self.active_task_trace.is_some() {
+            let rendered = value.to_string();
+            self.active_task_trace_event(
+                TraceEventKind::Return,
+                frame,
+                Some(instruction),
+                location.clone(),
+                Some(rendered.clone()),
+            )?;
+            self.active_task_trace_leave(frame, Some(instruction), Some(rendered))?;
+        }
+        if self.trace_enabled {
+            self.emit_trace(
+                TraceEventKind::Return,
+                frame,
+                Some(instruction),
+                location,
+                Some(value.to_string()),
+            );
+            self.trace_leave(frame, Some(instruction), Some(value.to_string()));
+        }
+        Ok(())
+    }
+
+    fn trace_recursive_error(
+        &mut self,
+        body: &FunctionBody,
+        frame: &Frame,
+        instruction: usize,
+        error: &RuntimeError,
+    ) -> Result<(), RuntimeError> {
+        let location = body.locations.get(instruction).cloned().flatten();
+        if self.trace_enabled {
+            self.emit_trace(
+                TraceEventKind::Error,
+                frame,
+                Some(instruction),
+                location.clone(),
+                Some(error.message.clone()),
+            );
+            self.trace_leave(frame, Some(instruction), None);
+        }
+        if self.active_task_trace.is_some() {
+            self.active_task_trace_event(
+                TraceEventKind::Error,
+                frame,
+                Some(instruction),
+                location,
+                Some(error.message.clone()),
+            )?;
+            self.active_task_trace_leave(frame, Some(instruction), None)?;
+        }
+        Ok(())
+    }
+
+    fn leave_recursive_trace(
+        &mut self,
+        frame: &Frame,
+        instruction: Option<usize>,
+    ) -> Result<(), RuntimeError> {
+        if self.trace_enabled {
+            self.trace_leave(frame, instruction, None);
+        }
+        if self.active_task_trace.is_some() {
+            self.active_task_trace_leave(frame, instruction, None)?;
+        }
+        Ok(())
+    }
+
     fn execute_body(
         &mut self,
         body: &FunctionBody,
@@ -5028,22 +5649,20 @@ impl<'a> VM<'a> {
         if self.profile_enabled {
             self.profile_function_entry(frame);
         }
-        if self.trace_enabled {
-            self.trace_enter(frame, body.locations.first().cloned().flatten());
-        }
+        self.enter_recursive_trace(frame, body.locations.first().cloned().flatten())?;
         while frame.ip < body.instructions.len() {
             let instruction_index = frame.ip;
             // The default `run` path has no observability consumer. Avoid
             // cloning a source location and calling no-op hooks on every
             // instruction; diagnostics reconstruct the location on failure.
-            let needs_location =
-                self.trace_enabled || self.debug_hook.is_some() || self.profile_enabled;
+            let needs_location = self.trace_enabled
+                || self.active_task_trace.is_some()
+                || self.debug_hook.is_some()
+                || self.profile_enabled;
             let location = needs_location
                 .then(|| body.locations.get(instruction_index).cloned().flatten())
                 .flatten();
-            if self.trace_enabled {
-                self.trace_instruction(frame, instruction_index, location.clone());
-            }
+            self.trace_recursive_instruction(frame, instruction_index, location.clone())?;
             if self.debug_hook.is_some() {
                 self.debug_instruction(frame, instruction_index, location.clone())?;
             }
@@ -5061,19 +5680,7 @@ impl<'a> VM<'a> {
                     self.write_register(frame, *dest, value)?;
                 }
                 Instruction::Print { value } => {
-                    let value = self.read_register_ref(frame, *value)?;
-                    let mut output = value.to_string();
-                    output.push('\n');
-                    self.append_output(&output)?;
-                    if self.trace_enabled {
-                        self.emit_trace(
-                            TraceEventKind::Output,
-                            frame,
-                            Some(instruction_index),
-                            body.locations.get(instruction_index).cloned().flatten(),
-                            Some(value.to_string()),
-                        );
-                    }
+                    self.execute_recursive_print(body, frame, instruction_index, *value)?;
                 }
                 Instruction::MakeFunction { dest, function } => {
                     let value = self.make_function(*function, frame)?;
@@ -5439,16 +6046,7 @@ impl<'a> VM<'a> {
             self.heap.observe_estimated_bytes();
             match result {
                 Ok(Some(value)) => {
-                    if self.trace_enabled {
-                        self.emit_trace(
-                            TraceEventKind::Return,
-                            frame,
-                            Some(instruction_index),
-                            body.locations.get(instruction_index).cloned().flatten(),
-                            Some(value.to_string()),
-                        );
-                        self.trace_leave(frame, Some(instruction_index), Some(value.to_string()));
-                    }
+                    self.trace_recursive_return(body, frame, instruction_index, &value)?;
                     return Ok(Some(value));
                 }
                 Ok(None) => {
@@ -5481,23 +6079,12 @@ impl<'a> VM<'a> {
                             return Err(RuntimeError::debug_quit());
                         }
                     }
-                    if self.trace_enabled {
-                        self.emit_trace(
-                            TraceEventKind::Error,
-                            frame,
-                            Some(instruction_index),
-                            body.locations.get(instruction_index).cloned().flatten(),
-                            Some(error.message.clone()),
-                        );
-                        self.trace_leave(frame, Some(instruction_index), None);
-                    }
+                    self.trace_recursive_error(body, frame, instruction_index, &error)?;
                     return Err(error);
                 }
             }
         }
-        if self.trace_enabled {
-            self.trace_leave(frame, body.instructions.len().checked_sub(1), None);
-        }
+        self.leave_recursive_trace(frame, body.instructions.len().checked_sub(1))?;
         Ok(None)
     }
 
@@ -5522,15 +6109,16 @@ impl<'a> VM<'a> {
                 let value = self.read_register_ref(frame, *value)?;
                 let mut output = value.to_string();
                 output.push('\n');
-                self.append_task_output(task_id, &output)?;
-                if self.trace_enabled {
-                    self.emit_trace(
+                let sequence = self.append_task_output(task_id, &output)?;
+                if self.task_trace_enabled {
+                    self.active_task_trace_event_at_sequence(
+                        sequence,
                         TraceEventKind::Output,
                         frame,
                         Some(instruction_index),
                         body.locations.get(instruction_index).cloned().flatten(),
                         Some(value.to_string()),
-                    );
+                    )?;
                 }
             }
             Instruction::MakeFunction { dest, function } => {
@@ -5984,20 +6572,333 @@ impl<'a> VM<'a> {
         Ok(())
     }
 
-    fn append_task_output(&mut self, task_id: TaskId, text: &str) -> Result<(), RuntimeError> {
-        let next_sequence = self
-            .next_task_event_sequence
+    fn next_cooperative_event_sequence(&self) -> Result<(usize, usize), RuntimeError> {
+        let sequence = self.next_task_event_sequence;
+        let next_sequence = sequence
             .checked_add(1)
             .ok_or_else(|| RuntimeError::new("cooperative task event sequence exhausted"))?;
+        Ok((sequence, next_sequence))
+    }
+
+    fn append_task_output(&mut self, task_id: TaskId, text: &str) -> Result<usize, RuntimeError> {
+        let (sequence, next_sequence) = self.next_cooperative_event_sequence()?;
         self.append_output(text)?;
-        let sequence = self.next_task_event_sequence;
         self.next_task_event_sequence = next_sequence;
         self.task_output_events.push(TaskOutputEvent {
             sequence,
             task_id,
             text: text.to_string(),
         });
+        Ok(sequence)
+    }
+
+    fn task_trace_enter(
+        &mut self,
+        task_id: TaskId,
+        trace: &mut TaskTraceState,
+        frame: &Frame,
+        location: Option<DebugLocation>,
+    ) -> Result<(), RuntimeError> {
+        let (sequence, next_sequence) = self.next_cooperative_event_sequence()?;
+        trace.started = true;
+        trace.stack.push(StackFrame {
+            function: frame.function.to_string(),
+            location: location.clone(),
+        });
+        trace.last_locations.push(location.clone());
+        self.next_task_event_sequence = next_sequence;
+        self.push_task_trace_event(
+            sequence,
+            task_id,
+            trace,
+            TraceEventKind::Enter,
+            frame,
+            Some(0),
+            location,
+            None,
+        );
         Ok(())
+    }
+
+    fn task_trace_instruction(
+        &mut self,
+        task_id: TaskId,
+        trace: &mut TaskTraceState,
+        frame: &Frame,
+        instruction: usize,
+        location: Option<DebugLocation>,
+    ) -> Result<(), RuntimeError> {
+        let changed = trace
+            .last_locations
+            .last()
+            .map(|last| *last != location)
+            .unwrap_or(true);
+        let sequence = if changed {
+            Some(self.next_cooperative_event_sequence()?)
+        } else {
+            None
+        };
+        if let Some(last) = trace.last_locations.last_mut() {
+            *last = location.clone();
+        }
+        if let Some(active) = trace.stack.last_mut() {
+            active.location = location.clone();
+        }
+        if let Some((sequence, next_sequence)) = sequence {
+            self.next_task_event_sequence = next_sequence;
+            self.push_task_trace_event(
+                sequence,
+                task_id,
+                trace,
+                TraceEventKind::Line,
+                frame,
+                Some(instruction),
+                location,
+                None,
+            );
+        }
+        Ok(())
+    }
+
+    fn task_trace_event(
+        &mut self,
+        task_id: TaskId,
+        trace: &TaskTraceState,
+        kind: TraceEventKind,
+        frame: &Frame,
+        instruction: Option<usize>,
+        location: Option<DebugLocation>,
+        value: Option<String>,
+    ) -> Result<(), RuntimeError> {
+        let (sequence, next_sequence) = self.next_cooperative_event_sequence()?;
+        self.next_task_event_sequence = next_sequence;
+        self.push_task_trace_event(
+            sequence,
+            task_id,
+            trace,
+            kind,
+            frame,
+            instruction,
+            location,
+            value,
+        );
+        Ok(())
+    }
+
+    fn task_trace_event_at_sequence(
+        &mut self,
+        sequence: usize,
+        task_id: TaskId,
+        trace: &TaskTraceState,
+        kind: TraceEventKind,
+        frame: &Frame,
+        instruction: Option<usize>,
+        location: Option<DebugLocation>,
+        value: Option<String>,
+    ) {
+        self.push_task_trace_event(
+            sequence,
+            task_id,
+            trace,
+            kind,
+            frame,
+            instruction,
+            location,
+            value,
+        );
+    }
+
+    fn task_trace_leave(
+        &mut self,
+        task_id: TaskId,
+        trace: &mut TaskTraceState,
+        frame: &Frame,
+        instruction: Option<usize>,
+        value: Option<String>,
+    ) -> Result<(), RuntimeError> {
+        let location = trace.stack.last().and_then(|active| active.location.clone());
+        self.task_trace_event(
+            task_id,
+            trace,
+            TraceEventKind::Exit,
+            frame,
+            instruction,
+            location,
+            value,
+        )?;
+        trace.stack.pop();
+        trace.last_locations.pop();
+        Ok(())
+    }
+
+    fn push_task_trace_event(
+        &mut self,
+        sequence: usize,
+        task_id: TaskId,
+        trace: &TaskTraceState,
+        kind: TraceEventKind,
+        frame: &Frame,
+        instruction: Option<usize>,
+        location: Option<DebugLocation>,
+        value: Option<String>,
+    ) {
+        self.task_trace_events.push(TaskTraceEvent {
+            sequence,
+            task_id,
+            kind,
+            function: frame.function.to_string(),
+            instruction,
+            location,
+            stack: trace.stack.clone(),
+            locals: self.trace_locals(frame),
+            value,
+        });
+    }
+
+    fn task_trace_failure(
+        &mut self,
+        task_id: TaskId,
+        task: &mut ScheduledVmTask,
+        message: &str,
+    ) -> Result<(), RuntimeError> {
+        while !task.trace.stack.is_empty() {
+            let frame_count = task.frames.frames().len();
+            if frame_count == 0 {
+                task.trace = TaskTraceState::default();
+                break;
+            }
+            let frame_index = task.trace.stack.len().saturating_sub(1).min(frame_count - 1);
+            let is_current = frame_index + 1 == frame_count;
+            let instruction = {
+                let frame = &task.frames.frames()[frame_index];
+                if is_current {
+                    Some(frame.ip)
+                } else {
+                    frame.ip.checked_sub(1)
+                }
+            };
+            let location = task
+                .trace
+                .stack
+                .get(frame_index)
+                .and_then(|frame| frame.location.clone());
+            let ScheduledVmTask { frames, trace, .. } = task;
+            let frame = &frames.frames()[frame_index];
+            self.task_trace_event(
+                task_id,
+                trace,
+                TraceEventKind::Error,
+                frame,
+                instruction,
+                location,
+                Some(message.to_string()),
+            )?;
+            self.task_trace_leave(task_id, trace, frame, instruction, None)?;
+        }
+        Ok(())
+    }
+
+    fn active_task_trace_enter(
+        &mut self,
+        frame: &Frame,
+        location: Option<DebugLocation>,
+    ) -> Result<(), RuntimeError> {
+        let Some(mut active) = self.active_task_trace.take() else {
+            return Err(RuntimeError::new("missing cooperative task trace state"));
+        };
+        let result = self.task_trace_enter(active.task_id, &mut active.state, frame, location);
+        self.active_task_trace = Some(active);
+        result
+    }
+
+    fn active_task_trace_instruction(
+        &mut self,
+        frame: &Frame,
+        instruction: usize,
+        location: Option<DebugLocation>,
+    ) -> Result<(), RuntimeError> {
+        let Some(mut active) = self.active_task_trace.take() else {
+            return Err(RuntimeError::new("missing cooperative task trace state"));
+        };
+        let result = self.task_trace_instruction(
+            active.task_id,
+            &mut active.state,
+            frame,
+            instruction,
+            location,
+        );
+        self.active_task_trace = Some(active);
+        result
+    }
+
+    fn active_task_trace_event(
+        &mut self,
+        kind: TraceEventKind,
+        frame: &Frame,
+        instruction: Option<usize>,
+        location: Option<DebugLocation>,
+        value: Option<String>,
+    ) -> Result<(), RuntimeError> {
+        let Some(active) = self.active_task_trace.take() else {
+            return Err(RuntimeError::new("missing cooperative task trace state"));
+        };
+        let result = self.task_trace_event(
+            active.task_id,
+            &active.state,
+            kind,
+            frame,
+            instruction,
+            location,
+            value,
+        );
+        self.active_task_trace = Some(active);
+        result
+    }
+
+    fn active_task_trace_event_at_sequence(
+        &mut self,
+        sequence: usize,
+        kind: TraceEventKind,
+        frame: &Frame,
+        instruction: Option<usize>,
+        location: Option<DebugLocation>,
+        value: Option<String>,
+    ) -> Result<(), RuntimeError> {
+        let Some(active) = self.active_task_trace.take() else {
+            return Err(RuntimeError::new("missing cooperative task trace state"));
+        };
+        self.task_trace_event_at_sequence(
+            sequence,
+            active.task_id,
+            &active.state,
+            kind,
+            frame,
+            instruction,
+            location,
+            value,
+        );
+        self.active_task_trace = Some(active);
+        Ok(())
+    }
+
+    fn active_task_trace_leave(
+        &mut self,
+        frame: &Frame,
+        instruction: Option<usize>,
+        value: Option<String>,
+    ) -> Result<(), RuntimeError> {
+        let Some(mut active) = self.active_task_trace.take() else {
+            return Err(RuntimeError::new("missing cooperative task trace state"));
+        };
+        let result = self.task_trace_leave(
+            active.task_id,
+            &mut active.state,
+            frame,
+            instruction,
+            value,
+        );
+        self.active_task_trace = Some(active);
+        result
     }
 
     fn trace_enter(&mut self, frame: &Frame, location: Option<DebugLocation>) {

@@ -60,10 +60,14 @@ entry, advance FIFO quanta with `CooperativeRun::step`, inspect typed
 and cancel tasks. `TaskOutputEvent` attributes exact committed output chunks to
 task IDs with a stable session sequence; `output_events`/`take_output_events`
 are independent from the existing dispatch-ordered string buffer, and draining
-that buffer does not reset the cumulative output budget. A failed task triggers
-the V5A fail-fast transition for the remaining non-terminal tasks. This surface
-does not add language task syntax, OS threads, `Send`/`Sync`, or changes to
-`.cdbc 0.1`; the existing `VM::run`, trace, debug, and profile paths are intact.
+that buffer does not reset the cumulative output budget.
+`VM::start_cooperative_trace(quantum)` explicitly enables `TaskTraceEvent`
+collection with task-local stacks and the same session sequence as output;
+`trace_events`/`take_trace_events` expose the retained records. A failed task
+triggers the V5A fail-fast transition for the remaining non-terminal tasks.
+This surface does not add language task syntax, OS threads, `Send`/`Sync`, or
+changes to `.cdbc 0.1`; the existing `VM::run`, trace, debug, and profile paths
+are intact.
 
 The library exposes separate typed diagnostic domains for artifact loading
 (`ArtifactError`), module linking (`LinkError`), and execution (`RuntimeError`).

@@ -6,8 +6,8 @@ use compiler_design_vm::{
     parse_artifact_checked, verify_artifact, verify_module_artifact, verify_program_checked,
     Artifact, ArtifactErrorKind, CooperativeStep, DebugControl, DebugHook, DebugPause, JoinPoll,
     LinkErrorKind, ModuleArtifact, ModuleDependency, ModuleDependencyKind, Program, ResourceKind,
-    RunConfig, RuntimeErrorKind, TaskOutcome, TaskOutputEvent, TaskSpec, TaskState, TraceEventKind,
-    ARTIFACT_FORMAT_FAMILY, ARTIFACT_FORMAT_VERSION, LIBRARY_API_VERSION, VM,
+    RunConfig, RuntimeErrorKind, TaskOutcome, TaskOutputEvent, TaskSpec, TaskState, TaskTraceEvent,
+    TraceEventKind, ARTIFACT_FORMAT_FAMILY, ARTIFACT_FORMAT_VERSION, LIBRARY_API_VERSION, VM,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -348,6 +348,49 @@ fn library_api_exposes_task_attributed_cooperative_output() {
                 text: "2\n".to_string(),
             },
         ]
+    );
+}
+
+#[test]
+fn library_api_exposes_task_attributed_cooperative_trace() {
+    let program = cooperative_output_program();
+    let mut session = VM::with_config(&program, RunConfig::unlimited())
+        .start_cooperative_trace(1)
+        .expect("cooperative trace session should start");
+    let first = session
+        .spawn(TaskSpec::function(0, Vec::new()))
+        .expect("first task should spawn");
+    let second = session
+        .spawn(TaskSpec::function(1, Vec::new()))
+        .expect("second task should spawn");
+
+    session
+        .run_until_waiting()
+        .expect("cooperative trace should complete");
+    let events: Vec<TaskTraceEvent> = session.take_trace_events();
+    assert_eq!(
+        events
+            .iter()
+            .map(|event| (event.sequence, event.task_id, event.kind))
+            .collect::<Vec<_>>(),
+        vec![
+            (0, first, TraceEventKind::Enter),
+            (1, second, TraceEventKind::Enter),
+            (2, first, TraceEventKind::Output),
+            (3, second, TraceEventKind::Output),
+            (4, first, TraceEventKind::Return),
+            (5, first, TraceEventKind::Exit),
+            (6, second, TraceEventKind::Return),
+            (7, second, TraceEventKind::Exit),
+        ]
+    );
+    assert_eq!(
+        session
+            .output_events()
+            .iter()
+            .map(|event| event.sequence)
+            .collect::<Vec<_>>(),
+        vec![2, 3]
     );
 }
 

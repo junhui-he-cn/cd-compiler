@@ -40,8 +40,9 @@ promise is added. `.cdbc 0.1` remains unchanged.
 ## Evidence
 
 Focused coverage checks deterministic two-task interleaving, stable task IDs
-and sequences, independent byte/event draining, cumulative output limits after
-a host drain, and the public library export:
+and sequences, synchronous native callback output, independent byte/event
+draining, cumulative output limits after a host drain, and the public library
+export:
 
 ```sh
 cargo test --manifest-path vm-rs/Cargo.toml cooperative_
@@ -51,8 +52,9 @@ git diff --check
 
 ## Next boundary
 
-Add task identity and one scheduler event order to trace/profile observations,
-then define debugger pauses that expose the selected task and scheduler queue
-state while stopping all task dispatch. V5C concurrency expansion and V6 JIT
-remain gated on repeatable multi-task workloads and stable hot-workload
-evidence.
+Task-aware trace is implemented in
+[`v5b-vm-task-trace-001.md`](v5b-vm-task-trace-001.md). Next define task-aware
+profile observations, then debugger pauses that expose the selected task and
+scheduler queue state while stopping all task dispatch. V5C concurrency
+expansion and V6 JIT remain gated on repeatable multi-task workloads and stable
+hot-workload evidence.
