@@ -174,11 +174,22 @@ thread state that concurrency would later invalidate.
    cache, and keeps `.cdbc` independent from generated machine code. The
    initial V6C tier is limited to an explicit verified function whitelist and
    may fall back for cooperative or observable sessions.
-3. **V6C - optional baseline JIT:** compile only the measured hot function
-   subset, retain deterministic interpreter fallback and an off switch, and
-   verify identical output, failures, debug locations, observable profile
-   semantics, and resource-limit behavior. Tiering or optimizing JIT work
-   requires a later profile-backed decision.
+3. **V6C - optional baseline JIT:** the first admission/cache preflight is
+   implemented in [`v6c-jit-eligibility-cache-001.md`](decisions/v6c-jit-eligibility-cache-001.md).
+   It uses Cranelift `0.134.3` (`cranelift-frontend` plus
+   `cranelift-codegen`) to build and verify IR for an explicit verified-function
+   whitelist, while keeping JIT disabled by default and rejecting
+   observable/cooperative and unsupported units with structured interpreter
+   fallback reasons. Eligible CD values remain opaque handles and cross the
+   future VM helper bridge through Cranelift calls. The bounded per-VM cache
+   currently retains verified IR only; no executable memory or artifact
+   serialization is present. The next slice must define the helper ABI,
+   frame materialization, and safepoint bridge before adding the Cranelift JIT
+   execution layer. The eventual baseline JIT must compile only the measured
+   hot function subset, retain deterministic interpreter fallback and an off
+   switch, and verify identical output, failures, debug locations, observable
+   profile semantics, and resource-limit behavior. Tiering or optimizing JIT
+   work requires a later profile-backed decision.
 
 **Decision gate:** do not place JIT implementation in the default VM queue
 before V5B establishes the task, frame, root, and safepoint model. A later JIT
@@ -222,7 +233,10 @@ V5A concurrency contract (recorded)
 completed V5B + stable profile + demonstrated hot workload
   -> V6A hot-workload evidence (recorded)
   -> V6B JIT runtime contract (recorded)
-  -> optional V6C baseline JIT
+  -> V6C Cranelift IR admission/finite-cache preflight (implemented)
+  -> V6C VM helper ABI and frame materialization
+  -> optional V6C Cranelift JIT execution
+  -> optional V6C baseline JIT execution
 
 real host consumer
   -> V2A structured host outcome
@@ -239,7 +253,7 @@ complete. A concrete consumer must justify optional V5C expansion. V6A
 characterization is recorded with stable profile surfaces, bytecode shape, and
 repeated correctness observations; the mixed, startup-sensitive timing data
 does not establish a speedup threshold. The V6B runtime contract is recorded;
-V6C JIT implementation remains deferred until the explicit whitelist,
+V6C execution remains deferred until the Cranelift helper bridge,
 frame-materialization, bounded-code-cache, and interpreter-fallback tests are
 implemented. V2 host integration and V4 release compatibility resume only
 when their named consumer or ABI/release trigger appears.

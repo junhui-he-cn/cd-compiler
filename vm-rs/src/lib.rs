@@ -10,6 +10,7 @@ pub const LIBRARY_API_VERSION: &str = "0.1";
 
 pub mod bytecode;
 pub mod format;
+mod jit;
 pub mod link;
 pub mod runtime;
 mod scheduler;

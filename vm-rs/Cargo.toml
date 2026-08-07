@@ -6,6 +6,11 @@ description = "Standalone Rust bytecode VM skeleton for Compiler Design"
 license = "MIT"
 publish = false
 
+[dependencies]
+cranelift-codegen = "0.134.3"
+cranelift-frontend = "0.134.3"
+target-lexicon = "0.13.5"
+
 [[bin]]
 name = "compiler-design-vm"
 path = "src/main.rs"

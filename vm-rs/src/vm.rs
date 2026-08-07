@@ -3,6 +3,7 @@
 use crate::bytecode::{
     Constant, DebugLocation, DebugRange, DebugSource, FunctionBody, Instruction, Program,
 };
+use crate::jit::JitState;
 #[cfg(test)]
 use crate::runtime::HeapObjectKind;
 use crate::runtime::{Cell, FunctionValue, Heap, HeapStats, SharedEnvironment};
@@ -2834,6 +2835,67 @@ mod tests {
     }
 
     #[test]
+    fn jit_admission_state_is_vm_local_and_disabled_by_default() {
+        let program = Program {
+            constants: vec![Constant::Number("1".to_string())],
+            functions: vec![Function {
+                index: 0,
+                name: "eligible".to_string(),
+                arity: 0,
+                registers: 1,
+                params: Vec::new(),
+                instructions: vec![
+                    Instruction::Constant {
+                        dest: 0,
+                        constant: 0,
+                    },
+                    Instruction::Return { value: 0 },
+                ],
+                locations: vec![None; 2],
+            }],
+            names: Vec::new(),
+            main: FunctionBody {
+                registers: 0,
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            },
+            debug_sources: Vec::new(),
+        };
+        let mut first = VM::new(&program);
+        let second = VM::new(&program);
+
+        assert_eq!(
+            first
+                .jit
+                .eligibility(&program, Some(0), crate::jit::JitExecutionMode::Ordinary),
+            crate::jit::JitEligibility::Fallback(crate::jit::JitFallbackReason::Disabled)
+        );
+        assert_eq!(
+            second
+                .jit
+                .eligibility(&program, Some(0), crate::jit::JitExecutionMode::Ordinary),
+            crate::jit::JitEligibility::Fallback(crate::jit::JitFallbackReason::Disabled)
+        );
+
+        first.jit = JitState::enabled_for_tests([0], 8);
+        assert_eq!(
+            first
+                .jit
+                .admit(&program, Some(0), crate::jit::JitExecutionMode::Ordinary, 4,),
+            crate::jit::JitAdmission::Reserved {
+                function_index: 0,
+                bytes: 4,
+            }
+        );
+        assert_eq!(
+            second
+                .jit
+                .eligibility(&program, Some(0), crate::jit::JitExecutionMode::Ordinary),
+            crate::jit::JitEligibility::Fallback(crate::jit::JitFallbackReason::Disabled)
+        );
+    }
+
+    #[test]
     fn constant_values_are_cached_after_first_decode() {
         let program = Program {
             constants: vec![
@@ -5046,6 +5108,7 @@ pub struct VM<'a> {
     global_cell_cache: Vec<Option<Cell>>,
     constant_cache: Vec<Option<Value>>,
     function_body_cache: Vec<Option<Rc<CachedFunctionBody>>>,
+    jit: JitState,
     output: String,
     output_bytes: usize,
     task_output_events: Vec<TaskOutputEvent>,
@@ -5455,6 +5518,7 @@ impl<'a> VM<'a> {
             global_cell_cache: vec![None; global_slots_by_name.len()],
             constant_cache: vec![None; program.constants.len()],
             function_body_cache: vec![None; program.functions.len()],
+            jit: JitState::disabled(),
             output: String::new(),
             output_bytes: 0,
             task_output_events: Vec::new(),
