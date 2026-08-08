@@ -44,6 +44,7 @@ int main()
     fields->push_back({"next", node});
     assert(valuesEqual(node, node));
     assert(valueToString(node) == "{next: <cycle>}");
+    fields->clear();
 
     auto childFields = std::make_shared<std::vector<std::pair<std::string, Value>>>();
     Value child = Value::structure(StructValue{8, std::string("Node"), childFields});
