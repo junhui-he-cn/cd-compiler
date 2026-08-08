@@ -13,12 +13,17 @@ import boundary_comparison  # noqa: E402
 
 
 class BoundaryComparisonTests(unittest.TestCase):
-    def test_allowlist_normalizes_checkout_root_only(self) -> None:
+    def test_allowlist_normalizes_known_environment_paths(self) -> None:
         allowlist = boundary_comparison.load_allowlist()
         actual = "/old/checkout/tests/golden/case/input.cd:1:1\n"
         expected = "<repo>/tests/golden/case/input.cd:1:1\n"
         self.assertEqual(boundary_comparison.canonicalize(actual, allowlist), expected)
         self.assertEqual(boundary_comparison.canonicalize("tests/golden/case/input.cd\n", allowlist), "tests/golden/case/input.cd\n")
+        malformed_path = "/tmp/compiler-design-malformed-source-ab12/input.cd:1:1\n"
+        self.assertEqual(
+            boundary_comparison.canonicalize(malformed_path, allowlist),
+            "<malformed-source>/input.cd:1:1\n",
+        )
 
     def test_injected_mismatch_is_attributed_to_boundary(self) -> None:
         comparison = boundary_comparison.compare_text("ir", "IR\n", "different IR\n")

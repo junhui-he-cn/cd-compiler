@@ -39,7 +39,7 @@ def _source_case(manifest_case: dict[str, object]) -> dict[str, object]:
     return {
         "case_id": str(manifest_case["case_id"]),
         "result_name": str(manifest_case["case_id"]),
-        "input_kind": "stdin",
+        "input_kind": "source_text",
         "input_text": str(manifest_case["source"]),
         "fixture": relative_path(MANIFEST_PATH),
         "sources": [relative_path(MANIFEST_PATH)],
@@ -228,7 +228,7 @@ def limits(manifest: Optional[dict[str, object]] = None) -> Dict[str, Union[floa
 
 def case_payload(case: dict[str, object], repo_root: Path = REPO_ROOT) -> str:
     input_kind = case["input_kind"]
-    if input_kind == "stdin":
+    if input_kind == "source_text":
         return str(case["input_text"])
     if input_kind == "source_path":
         return read_text(repo_root / str(case["source_path"]))

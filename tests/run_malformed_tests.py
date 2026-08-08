@@ -11,7 +11,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional
 
 from boundary_comparison import canonicalize, load_allowlist
 from malformed_corpus import MANIFEST_PATH, case_payload, expand_cases, limits, load_manifest, minimize_text
@@ -26,7 +26,6 @@ ALLOWLIST_PATH = TESTS_DIR / "boundary_allowlist.json"
 def command_observation(
     command: List[str],
     *,
-    input_text: Optional[str],
     timeout_seconds: float,
     allowlist: Dict[str, object],
 ) -> dict[str, object]:
@@ -34,7 +33,6 @@ def command_observation(
         completed = subprocess.run(
             command,
             cwd=REPO_ROOT,
-            input=input_text,
             text=True,
             capture_output=True,
             check=False,
@@ -72,12 +70,14 @@ def case_command(
     vm_manifest: Path,
     case: dict[str, object],
     payload_path: Optional[Path] = None,
-) -> Tuple[List[str], Optional[str]]:
+) -> List[str]:
     input_kind = str(case["input_kind"])
-    if input_kind == "stdin":
-        return [str(compiler)], str(case["input_text"])
+    if input_kind == "source_text":
+        if payload_path is None:
+            raise ValueError("source text requires a temporary source path")
+        return [str(compiler), str(payload_path)]
     if input_kind == "source_path":
-        return [str(compiler), str(REPO_ROOT / str(case["source_path"]))], None
+        return [str(compiler), str(REPO_ROOT / str(case["source_path"]))]
     if input_kind == "cdbc_mutation":
         if payload_path is None:
             raise ValueError("cdbc mutation requires a temporary artifact path")
@@ -90,7 +90,7 @@ def case_command(
             "--",
             "dump",
             str(payload_path),
-        ], None
+        ]
     raise ValueError(f"unknown malformed case input kind: {input_kind}")
 
 
@@ -129,26 +129,75 @@ def run_case_once(
     payload: str,
     timeout_seconds: float,
     allowlist: Dict[str, object],
+    workspace: Optional[Path] = None,
 ) -> dict[str, object]:
     input_kind = str(case["input_kind"])
-    if input_kind != "cdbc_mutation":
-        command, input_text = case_command(compiler, vm_manifest, case)
+    if input_kind in ("source_text", "cdbc_mutation"):
+        if workspace is None:
+            prefix = "compiler-design-malformed-source-" if input_kind == "source_text" else "compiler-design-malformed-"
+            with tempfile.TemporaryDirectory(prefix=prefix) as temp_dir:
+                return run_case_once(
+                    compiler,
+                    vm_manifest,
+                    case,
+                    payload,
+                    timeout_seconds,
+                    allowlist,
+                    Path(temp_dir),
+                )
+        payload_name = "input.cd" if input_kind == "source_text" else "mutated.cdbc"
+        payload_path = workspace / payload_name
+        payload_path.write_text(payload, encoding="utf-8")
+        command = case_command(compiler, vm_manifest, case, payload_path)
         return command_observation(
             command,
-            input_text=input_text,
             timeout_seconds=timeout_seconds,
             allowlist=allowlist,
         )
-    with tempfile.TemporaryDirectory(prefix="compiler-design-malformed-") as temp_dir:
-        artifact_path = Path(temp_dir) / "mutated.cdbc"
-        artifact_path.write_text(payload, encoding="utf-8")
-        command, input_text = case_command(compiler, vm_manifest, case, artifact_path)
-        return command_observation(
-            command,
-            input_text=input_text,
-            timeout_seconds=timeout_seconds,
-            allowlist=allowlist,
+    command = case_command(compiler, vm_manifest, case)
+    return command_observation(
+        command,
+        timeout_seconds=timeout_seconds,
+        allowlist=allowlist,
+    )
+
+
+def run_case_pair(
+    compiler: Path,
+    vm_manifest: Path,
+    case: dict[str, object],
+    payload: str,
+    timeout_seconds: float,
+    allowlist: Dict[str, object],
+) -> tuple[dict[str, object], dict[str, object]]:
+    input_kind = str(case["input_kind"])
+    if input_kind not in ("source_text", "cdbc_mutation"):
+        return (
+            run_case_once(compiler, vm_manifest, case, payload, timeout_seconds, allowlist),
+            run_case_once(compiler, vm_manifest, case, payload, timeout_seconds, allowlist),
         )
+    prefix = "compiler-design-malformed-source-" if input_kind == "source_text" else "compiler-design-malformed-"
+    with tempfile.TemporaryDirectory(prefix=prefix) as temp_dir:
+        workspace = Path(temp_dir)
+        first = run_case_once(
+            compiler,
+            vm_manifest,
+            case,
+            payload,
+            timeout_seconds,
+            allowlist,
+            workspace,
+        )
+        second = run_case_once(
+            compiler,
+            vm_manifest,
+            case,
+            payload,
+            timeout_seconds,
+            allowlist,
+            workspace,
+        )
+        return first, second
 
 
 def save_failure_input(
@@ -163,11 +212,29 @@ def save_failure_input(
 ) -> str:
     signature = observation_signature(first_observation)
 
-    def still_fails(candidate: str) -> bool:
-        observation = run_case_once(compiler, vm_manifest, case, candidate, timeout_seconds, allowlist)
-        return observation_signature(observation) == signature
+    def minimize_with_workspace(workspace: Optional[Path]) -> str:
+        def still_fails(candidate: str) -> bool:
+            observation = run_case_once(
+                compiler,
+                vm_manifest,
+                case,
+                candidate,
+                timeout_seconds,
+                allowlist,
+                workspace,
+            )
+            return observation_signature(observation) == signature
 
-    minimized = minimize_text(payload, still_fails, max_rounds=200)
+        return minimize_text(payload, still_fails, max_rounds=200)
+
+    if str(case["input_kind"]) == "source_text":
+        with tempfile.TemporaryDirectory(prefix="compiler-design-malformed-source-") as temp_dir:
+            minimized = minimize_with_workspace(Path(temp_dir))
+    elif str(case["input_kind"]) == "cdbc_mutation":
+        with tempfile.TemporaryDirectory(prefix="compiler-design-malformed-") as temp_dir:
+            minimized = minimize_with_workspace(Path(temp_dir))
+    else:
+        minimized = minimize_with_workspace(None)
     safe_name = str(case["case_id"]).replace("/", "_")
     output_path = failure_dir / f"{safe_name}.input"
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -212,15 +279,7 @@ def run_all(
             detailed_cases.append({"case_id": case_id, "passed": False, "classification": "input_too_large", "input_bytes": input_bytes})
             continue
 
-        first = run_case_once(
-            compiler,
-            vm_manifest,
-            case,
-            payload,
-            float(corpus_limits["per_case_timeout_seconds"]),
-            allowlist,
-        )
-        second = run_case_once(
+        first, second = run_case_pair(
             compiler,
             vm_manifest,
             case,

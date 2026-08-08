@@ -12,6 +12,12 @@
       "pattern": "(?:[A-Za-z]:)?[/\\\\][^\\n]*?(?=[/\\\\]vm-rs[/\\\\])",
       "replacement": "<repo>",
       "reason": "Rust VM paths must compare independently of the checkout root."
+    },
+    {
+      "name": "malformed-source-temporary-path",
+      "pattern": "(?:[A-Za-z]:)?[/\\\\][^\\n]*?[/\\\\]compiler-design-malformed-source-[A-Za-z0-9_-]+[/\\\\]input\\.cd",
+      "replacement": "<malformed-source>/input.cd",
+      "reason": "Generated malformed source paths must not make repeated corpus reports environment-dependent."
     }
   ]
 }

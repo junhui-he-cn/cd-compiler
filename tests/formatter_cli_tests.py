@@ -9,13 +9,23 @@ from pathlib import Path
 
 
 def run(compiler: str, *args: str, source: str | None = None) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        [compiler, *args],
-        input=source,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
+    command = [compiler, *args]
+    if source is None:
+        return subprocess.run(
+            command,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    with tempfile.TemporaryDirectory(prefix="compiler_formatter_source_") as directory:
+        source_path = Path(directory) / "input.cd"
+        source_path.write_text(source, encoding="utf-8")
+        return subprocess.run(
+            [*command, str(source_path)],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
 
 
 def main() -> int:
@@ -33,11 +43,11 @@ def main() -> int:
         "print data[\"a\"];\n"
     )
 
-    stdin_result = run(compiler, "--format", source=source)
-    if stdin_result.returncode != 0 or stdin_result.stdout != expected or stdin_result.stderr:
-        print("stdin formatter result mismatch", file=sys.stderr)
-        print(stdin_result.stdout, file=sys.stderr)
-        print(stdin_result.stderr, file=sys.stderr)
+    source_result = run(compiler, "--format", source=source)
+    if source_result.returncode != 0 or source_result.stdout != expected or source_result.stderr:
+        print("source file formatter result mismatch", file=sys.stderr)
+        print(source_result.stdout, file=sys.stderr)
+        print(source_result.stderr, file=sys.stderr)
         return 1
 
     wide_result = run(compiler, "--format", "--format-indent-width", "4", source=source)
@@ -50,13 +60,22 @@ def main() -> int:
         return 1
 
     check_noncanonical = run(compiler, "--format-check", source=source)
-    if check_noncanonical.returncode != 1 or check_noncanonical.stdout or "format check failed: <stdin>" not in check_noncanonical.stderr:
+    if check_noncanonical.returncode != 1 or check_noncanonical.stdout or "format check failed:" not in check_noncanonical.stderr:
         print("noncanonical formatter check was not reported", file=sys.stderr)
         return 1
 
     check_canonical = run(compiler, "--format-check", source=expected)
     if check_canonical.returncode != 0 or check_canonical.stdout or check_canonical.stderr:
         print("canonical formatter check did not pass", file=sys.stderr)
+        return 1
+
+    missing_input = run(compiler, "--format")
+    if (
+        missing_input.returncode != 64
+        or missing_input.stdout
+        or "All non-LSP modes require at least one source file." not in missing_input.stderr
+    ):
+        print("formatter accepted missing source input", file=sys.stderr)
         return 1
 
     blank_lines = run(

@@ -28,13 +28,13 @@ namespace {
 
 void printUsage(const char* executable)
 {
-    std::cerr << "Usage: " << executable << " [--tokens] [--ir] [--bytecode] [--opt-level 0|1] [--module-interface] [-I dir] [--import-path dir] [file ...]\n"
-              << "       " << executable << " [--format | --format-check] [--format-indent-width N] [-I dir] [--import-path dir] [file ...]\n"
+    std::cerr << "Usage: " << executable << " [--tokens] [--ir] [--bytecode] [--opt-level 0|1] [--module-interface] [-I dir] [--import-path dir] file [...]\n"
+              << "       " << executable << " [--format | --format-check] [--format-indent-width N] [-I dir] [--import-path dir] file [...]\n"
               << "       " << executable << " --lsp\n"
               << "       " << executable << " [--emit-bytecode output.cdbc] [--opt-level 0|1] [-I dir] [--import-path dir] file [...]\n"
               << "       " << executable << " [--emit-module-bytecode output-directory] [--opt-level 0|1] [--module-cache cache-directory] [--module-cache-strict] [--module-rebuild-report report.json] [-I dir] [--import-path dir] file [...]\n"
               << "       " << executable << " [--module-interface-cache cache-directory] [--module-cache-strict | --module-cache-fallback] [-I dir] [--import-path dir] file [...]\n"
-              << "If no file is provided, source is read from stdin except for bytecode emission modes, which require at least one file.\n"
+              << "All non-LSP modes require at least one source file.\n"
               << "Import search paths are used for non-explicit string imports after the importing file's directory.\n";
 }
 
@@ -53,6 +53,7 @@ IRProgram optimizeProgram(
     IRProgram program,
     SSAOptimizationLevel level)
 {
+    // O0 保持兼容的原始 IR；O1 才运行 SSA 优化并重建 IR。
     // O0 is the established linear-IR path.  The internal O0 adapter proves
     // its round-trip contract for already normalized streams, but ordinary
     // compiler IR may contain branch-local register redefinitions whose
@@ -225,6 +226,7 @@ BytecodeModuleArtifact compileModuleArtifact(
     const DeclarationIndex& declarationIndex,
     SSAOptimizationLevel optimizationLevel)
 {
+    // 独立模块按“模块 -> IR -> Bytecode”单独降低，并保留依赖信息。
     IRCompiler compiler;
     IRProgram ir = compiler.compileModule(program, node.moduleId, declarationIndex);
     ir = optimizeProgram(std::move(ir), optimizationLevel);
@@ -276,6 +278,7 @@ void writeModuleArtifacts(
     const std::optional<std::filesystem::path>& reportPath,
     SSAOptimizationLevel optimizationLevel)
 {
+    // 模块产物模式遍历模块图，并在可用时复用缓存中的产品。
     if (!program.moduleGraph || program.moduleGraph->nodes.empty()) {
         throw std::runtime_error("--emit-module-bytecode requires an import-aware module graph");
     }
@@ -479,6 +482,7 @@ int main(int argc, char** argv)
     std::vector<std::string> inputPaths;
     std::vector<std::string> importSearchPaths;
 
+    // 第一阶段只收集 CLI 状态；具体编译在参数校验和前端配置之后进行。
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--tokens") {
@@ -581,6 +585,7 @@ int main(int argc, char** argv)
         }
     }
 
+    // LSP 使用独立的 stdin/stdout 协议，不进入普通编译流水线。
     if (runLsp) {
         if (showTokens
             || showIr
@@ -610,6 +615,7 @@ int main(int argc, char** argv)
         }
     }
 
+    // 先拒绝互斥或缺少前置参数的组合，避免进入不完整的编译流程。
     if (moduleCacheStrict && moduleCacheFallback) {
         std::cerr << "--module-cache-strict and --module-cache-fallback are mutually exclusive\n";
         return 64;
@@ -703,6 +709,13 @@ int main(int argc, char** argv)
         moduleCacheStrict = true;
     }
 
+    // 普通 CLI 必须显式提供源码文件；LSP 的 stdin/stdout 协议已在上方独立处理。
+    if (inputPaths.empty()) {
+        printUsage(argv[0]);
+        return 64;
+    }
+
+    // 前端负责读取源码、解析 import、构建模块图，并提供诊断源信息。
     FrontendSession frontend;
     frontend.setImportSearchPaths(importSearchPaths);
     if (moduleInterfaceCachePath) {
@@ -713,10 +726,9 @@ int main(int argc, char** argv)
     frontend.setModuleProductCacheMode(moduleCachePath.has_value());
     frontend.setModuleInterfaceCacheStrict(moduleCacheStrict);
     try {
-        Program program = inputPaths.empty()
-            ? frontend.loadStdin(std::cin)
-            : frontend.loadFiles(inputPaths);
+        Program program = frontend.loadFiles(inputPaths);
 
+        // 格式化直接使用无损源码视图，完成后提前返回，不做类型检查和代码生成。
         if (formatMode) {
             const LosslessSourceView view = frontend.losslessSourceView();
             std::vector<SourceFileId> outputSourceIds;
@@ -761,6 +773,7 @@ int main(int argc, char** argv)
             return formatCheckFailed ? 1 : 0;
         }
 
+        // Token 是观察性输出；普通流程仍继续到类型检查以验证输入。
         if (showTokens) {
             for (const Token& token : frontend.displayTokens()) {
                 std::cout << token << '\n';
@@ -768,6 +781,7 @@ int main(int argc, char** argv)
             std::cout << '\n';
         }
 
+        // 类型检查同时填充 DeclarationIndex 和模块接口，供后续 lowering 使用。
         TypeChecker typeChecker;
         typeChecker.setPreloadedModuleInterfaces(frontend.preloadedModuleInterfaces());
         typeChecker.check(program);
@@ -780,6 +794,7 @@ int main(int argc, char** argv)
             writeModuleInterfaceText(std::cout, typeChecker.moduleInterfaces());
         }
 
+        // 模块字节码按图节点独立生成，必要时复用缓存并写出相关 sidecar。
         if (emitModuleBytecodePath) {
             writeModuleArtifacts(
                 *emitModuleBytecodePath,
@@ -792,6 +807,7 @@ int main(int argc, char** argv)
             return 0;
         }
 
+        // 普通后端统一经过 IR；O1 优化发生在 IR 和 Bytecode 之间。
         if (emitBytecodePath || showIr || showBytecode) {
             IRCompiler compiler;
             IRProgram ir = compiler.compile(program, typeChecker.declarationIndex());
@@ -836,6 +852,7 @@ int main(int argc, char** argv)
             }
 
         }
+    // 将不同诊断类型统一转换为带源码上下文的 CLI 输出。
     } catch (const TypeErrorList& errors) {
         printTypeErrorList(errors);
         return 1;

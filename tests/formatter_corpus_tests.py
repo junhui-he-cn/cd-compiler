@@ -23,13 +23,23 @@ def compiler_inputs(case_dir: Path) -> list[Path]:
 
 
 def run(compiler: str, *args: str, source: str | None = None) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        [compiler, *args],
-        input=source,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
+    command = [compiler, *args]
+    if source is None:
+        return subprocess.run(
+            command,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+    with tempfile.TemporaryDirectory(prefix="compiler_formatter_source_") as directory:
+        source_path = Path(directory) / "input.cd"
+        source_path.write_text(source, encoding="utf-8")
+        return subprocess.run(
+            [*command, str(source_path)],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
 
 
 def comments(source: str) -> list[str]:

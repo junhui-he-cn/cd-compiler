@@ -18,10 +18,9 @@ class CliMultiSourceTests(unittest.TestCase):
         if not self.vm_manifest.is_file():
             self.fail(f"vm manifest not found: {self.vm_manifest}")
 
-    def run_compiler(self, *args: str, input_text: str | None = None) -> subprocess.CompletedProcess[str]:
+    def run_compiler(self, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [str(self.compiler), *args],
-            input=input_text,
             text=True,
             capture_output=True,
             check=False,
@@ -171,19 +170,24 @@ class CliMultiSourceTests(unittest.TestCase):
                 "        ^\n",
             )
 
-    def test_stdin_still_prints_ast_when_no_input_files_are_given(self) -> None:
-        completed = self.run_compiler(input_text="print 7;\n")
+    def test_no_input_files_are_rejected(self) -> None:
+        completed = subprocess.run(
+            [str(self.compiler)],
+            input="print 7;\n",
+            text=True,
+            capture_output=True,
+            check=False,
+        )
 
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(completed.stderr, "")
-        self.assertIn("Print", completed.stdout)
-        self.assertIn("7", completed.stdout)
+        self.assertEqual(completed.returncode, 64)
+        self.assertEqual(completed.stdout, "")
+        self.assertIn("All non-LSP modes require at least one source file.", completed.stderr)
 
-    def test_emit_bytecode_still_requires_at_least_one_input_file(self) -> None:
+    def test_emit_bytecode_requires_at_least_one_input_file(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             artifact = Path(temp_dir) / "program.cdbc"
 
-            completed = self.run_compiler("--emit-bytecode", str(artifact), input_text="print 1;\n")
+            completed = self.run_compiler("--emit-bytecode", str(artifact))
 
             self.assertEqual(completed.returncode, 64)
             self.assertEqual(completed.stdout, "")
@@ -191,20 +195,12 @@ class CliMultiSourceTests(unittest.TestCase):
 
 
     def test_run_mode_is_removed(self) -> None:
-        completed = self.run_compiler("--run", input_text="print 1;\n")
+        completed = self.run_compiler("--run")
 
         self.assertEqual(completed.returncode, 64)
         self.assertEqual(completed.stdout, "")
         self.assertIn("Usage:", completed.stderr)
         self.assertNotIn("[--run]", completed.stderr)
-
-
-    def test_import_from_stdin_is_rejected(self) -> None:
-        completed = self.run_compiler(input_text='import "./lib.cd";\n')
-
-        self.assertEqual(completed.returncode, 1)
-        self.assertEqual(completed.stdout, "")
-        self.assertEqual(completed.stderr, "Import error: import is not supported from stdin\n")
 
     def test_direct_cli_files_with_export_still_share_entry_scope(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -363,19 +359,6 @@ class CliMultiSourceTests(unittest.TestCase):
             self.assertEqual(completed.stdout, 'import ./missing_from_string.cd;\n')
             self.assertEqual(completed.stderr, "")
 
-
-    def test_lex_error_in_stdin_prints_source_snippet(self) -> None:
-        completed = self.run_compiler(input_text="print @;\n")
-
-        self.assertEqual(completed.returncode, 1)
-        self.assertEqual(completed.stdout, "")
-        self.assertEqual(
-            completed.stderr,
-            "Lex error at 1:7: unexpected character `@`\n"
-            "  print @;\n"
-            "        ^\n",
-        )
-
     def test_short_import_path_option_resolves_extensionless_module(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -497,24 +480,6 @@ class CliMultiSourceTests(unittest.TestCase):
                 self.assertEqual(completed.returncode, 64)
                 self.assertEqual(completed.stdout, "")
                 self.assertIn("Usage:", completed.stderr)
-
-    def test_import_path_does_not_enable_stdin_imports(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            root = Path(temp_dir)
-            (root / "lib.cd").write_text('let value = 1;\nexport value;\n', encoding="utf-8")
-
-            completed = self.run_compiler("-I", str(root), input_text='import "lib";\n')
-
-            self.assertEqual(completed.returncode, 1)
-            self.assertEqual(completed.stdout, "")
-            self.assertEqual(completed.stderr, "Import error: import is not supported from stdin\n")
-
-    def test_import_error_stays_one_line_without_source_snippet(self) -> None:
-        completed = self.run_compiler(input_text='import "./lib.cd";\n')
-
-        self.assertEqual(completed.returncode, 1)
-        self.assertEqual(completed.stdout, "")
-        self.assertEqual(completed.stderr, "Import error: import is not supported from stdin\n")
 
     def test_module_interface_uses_import_search_paths(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

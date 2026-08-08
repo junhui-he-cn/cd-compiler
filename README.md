@@ -30,12 +30,10 @@ cargo test --manifest-path vm-rs/Cargo.toml
 
 ## Compile and Run Source
 
-The compiler accepts a source file, or reads source from stdin when no file is
-provided:
+The compiler requires at least one source file:
 
 ```sh
 ./build/compiler_design examples/hello.cd
-printf 'print 1 + 2;\n' | ./build/compiler_design
 ```
 
 Useful compiler modes include:
