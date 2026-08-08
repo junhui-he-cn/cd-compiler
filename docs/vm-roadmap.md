@@ -183,13 +183,14 @@ thread state that concurrency would later invalidate.
    fallback reasons. Eligible CD values remain opaque handles and cross the
    future VM helper bridge through Cranelift calls. The bounded per-VM cache
    currently retains verified IR only; no executable memory or artifact
-   serialization is present. The next slice must define the helper ABI,
-   frame materialization, and safepoint bridge before adding the Cranelift JIT
-   execution layer. The eventual baseline JIT must compile only the measured
-   hot function subset, retain deterministic interpreter fallback and an off
-   switch, and verify identical output, failures, debug locations, observable
-   profile semantics, and resource-limit behavior. Tiering or optimizing JIT
-   work requires a later profile-backed decision.
+   serialization is present. The helper ABI and VM-owned frame materialization
+   and safepoint bridge are implemented in
+   [`v6c-jit-helper-safepoint-001.md`](decisions/v6c-jit-helper-safepoint-001.md).
+   The eventual baseline JIT must compile only the measured hot function
+   subset, retain deterministic interpreter fallback and an off switch, and
+   verify identical output, failures, debug locations, observable profile
+   semantics, and resource-limit behavior. Tiering or optimizing JIT work
+   requires a later profile-backed decision.
 
 **Decision gate:** do not place JIT implementation in the default VM queue
 before V5B establishes the task, frame, root, and safepoint model. A later JIT
@@ -234,7 +235,7 @@ completed V5B + stable profile + demonstrated hot workload
   -> V6A hot-workload evidence (recorded)
   -> V6B JIT runtime contract (recorded)
   -> V6C Cranelift IR admission/finite-cache preflight (implemented)
-  -> V6C VM helper ABI and frame materialization
+  -> V6C VM helper ABI/frame materialization/safepoint bridge (implemented)
   -> optional V6C Cranelift JIT execution
   -> optional V6C baseline JIT execution
 
@@ -253,10 +254,13 @@ complete. A concrete consumer must justify optional V5C expansion. V6A
 characterization is recorded with stable profile surfaces, bytecode shape, and
 repeated correctness observations; the mixed, startup-sensitive timing data
 does not establish a speedup threshold. The V6B runtime contract is recorded;
-V6C execution remains deferred until the Cranelift helper bridge,
-frame-materialization, bounded-code-cache, and interpreter-fallback tests are
-implemented. V2 host integration and V4 release compatibility resume only
-when their named consumer or ABI/release trigger appears.
+V6C execution remains deferred until executable-code lifetime/rollback tests
+and an explicit optional-path decision justify entering the execution path.
+The bounded cache, typed helper dispatcher, frame materialization, safepoint
+bridge, and interpreter fallback gates are now implemented without changing
+production execution.
+V2 host integration and V4 release compatibility resume only when their named
+consumer or ABI/release trigger appears.
 
 ## 6. Verification contract
 

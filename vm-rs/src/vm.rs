@@ -3,7 +3,9 @@
 use crate::bytecode::{
     Constant, DebugLocation, DebugRange, DebugSource, FunctionBody, Instruction, Program,
 };
-use crate::jit::JitState;
+use crate::jit::{
+    JitFrameMaterialization, JitHelperAbi, JitSafepoint, JitSafepointKind, JitState, RuntimeHelper,
+};
 #[cfg(test)]
 use crate::runtime::HeapObjectKind;
 use crate::runtime::{Cell, FunctionValue, Heap, HeapStats, SharedEnvironment};
@@ -4596,6 +4598,250 @@ mod tests {
             .expect_err("cancellation should be checked before the limit");
         assert_eq!(cancelled.kind, RuntimeErrorKind::Cancelled);
     }
+
+    #[test]
+    fn jit_safepoint_materializes_before_limit_and_cancellation_failures() {
+        let token = CancellationToken::new();
+        let mut config = RunConfig::unlimited();
+        config.max_instruction_steps = Some(0);
+        let program = empty_program();
+        let mut vm = VM::with_config(&program, config.with_cancellation(token.clone()));
+        let mut frame = Frame::callee(
+            Rc::new(FunctionBody {
+                registers: 1,
+                instructions: vec![Instruction::Return { value: 0 }],
+                locations: vec![None],
+            }),
+            "jit_target",
+            3,
+            1,
+            vm.heap.new_environment(),
+            vm.heap.new_environment(),
+            ReturnTarget {
+                register: 0,
+                call_site: None,
+            },
+        );
+        frame.ip = 4;
+        frame.registers[0] = Value::string("rooted across failure");
+
+        let limited = vm.jit_safepoint(&frame, None, JitSafepointKind::Instruction);
+        assert_eq!(
+            limited.checkpoint.as_ref().map_err(|error| error.kind),
+            Err(RuntimeErrorKind::Resource(ResourceKind::InstructionSteps))
+        );
+        assert_eq!(limited.frame.instruction(), 4);
+        assert_eq!(limited.frame.function(), "jit_target");
+        assert_eq!(
+            limited.frame.registers()[0].to_string(),
+            "rooted across failure"
+        );
+        assert_eq!(
+            limited.frame.safepoint(),
+            JitSafepoint::new(JitSafepointKind::Instruction, 4)
+        );
+
+        token.cancel();
+        let cancelled = vm.jit_safepoint(&frame, None, JitSafepointKind::Native);
+        assert_eq!(
+            cancelled.checkpoint.as_ref().map_err(|error| error.kind),
+            Err(RuntimeErrorKind::Cancelled)
+        );
+        assert_eq!(
+            cancelled.frame.registers()[0].to_string(),
+            "rooted across failure"
+        );
+        assert_eq!(
+            cancelled.frame.safepoint(),
+            JitSafepoint::new(JitSafepointKind::Native, 4)
+        );
+    }
+
+    #[test]
+    fn jit_non_budget_safepoints_do_not_charge_instruction_steps() {
+        let program = empty_program();
+        let mut config = RunConfig::unlimited();
+        config.max_instruction_steps = Some(1);
+        let mut vm = VM::with_config(&program, config);
+        let frame = Frame::main(
+            Rc::new(FunctionBody {
+                registers: 0,
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            }),
+            0,
+            vm.heap.new_environment(),
+            vm.heap.new_environment(),
+        );
+
+        let garbage_collection =
+            vm.jit_safepoint(&frame, None, JitSafepointKind::GarbageCollection);
+        assert!(garbage_collection.checkpoint.is_ok());
+        assert_eq!(vm.instruction_steps, 0);
+
+        let instruction = vm.jit_safepoint(&frame, None, JitSafepointKind::Instruction);
+        assert!(instruction.checkpoint.is_ok());
+        assert_eq!(vm.instruction_steps, 1);
+
+        let return_boundary = vm.jit_safepoint(&frame, None, JitSafepointKind::Return);
+        assert!(return_boundary.checkpoint.is_ok());
+        assert_eq!(vm.instruction_steps, 1);
+    }
+
+    #[test]
+    fn jit_helper_bridge_dispatches_existing_value_semantics() {
+        let program = Program {
+            constants: vec![
+                Constant::Number("2".to_string()),
+                Constant::String("left".to_string()),
+                Constant::String("right".to_string()),
+            ],
+            names: vec!["value".to_string()],
+            main: FunctionBody {
+                registers: 0,
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            },
+            functions: Vec::new(),
+            debug_sources: Vec::new(),
+        };
+        let mut vm = VM::new(&program);
+        let mut frame = Frame::callee(
+            Rc::new(FunctionBody {
+                registers: 0,
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            }),
+            "jit_helper",
+            0,
+            0,
+            vm.heap.new_environment(),
+            vm.heap.new_environment(),
+            ReturnTarget {
+                register: 0,
+                call_site: None,
+            },
+        );
+        frame.locals.borrow_mut().insert(
+            "value".to_string(),
+            vm.heap.new_cell(Value::number(4.0)),
+        );
+
+        let mut bridge = vm.jit_helper_bridge(&mut frame, None);
+        let number = bridge
+            .dispatch(RuntimeHelper::Constant, &[0])
+            .expect("constant helper should return a handle");
+        let loaded = bridge
+            .dispatch(RuntimeHelper::LoadVar, &[0])
+            .expect("load helper should return a handle");
+        let sum = bridge
+            .dispatch(RuntimeHelper::Add, &[number, loaded])
+            .expect("add helper should return a handle");
+        assert_eq!(bridge.value(sum).unwrap().to_string(), "6");
+
+        let negated = bridge
+            .dispatch(RuntimeHelper::Negate, &[sum])
+            .expect("negate helper should return a handle");
+        assert_eq!(bridge.value(negated).unwrap().to_string(), "-6");
+        let difference = bridge
+            .dispatch(RuntimeHelper::Subtract, &[loaded, number])
+            .expect("subtract helper should return a handle");
+        assert_eq!(bridge.value(difference).unwrap().to_string(), "2");
+        let product = bridge
+            .dispatch(RuntimeHelper::Multiply, &[number, loaded])
+            .expect("multiply helper should return a handle");
+        assert_eq!(bridge.value(product).unwrap().to_string(), "8");
+        let quotient = bridge
+            .dispatch(RuntimeHelper::Divide, &[loaded, number])
+            .expect("divide helper should return a handle");
+        assert_eq!(bridge.value(quotient).unwrap().to_string(), "2");
+
+        let left = bridge
+            .dispatch(RuntimeHelper::Constant, &[1])
+            .expect("left string constant should return a handle");
+        let right = bridge
+            .dispatch(RuntimeHelper::Constant, &[2])
+            .expect("right string constant should return a handle");
+        let joined = bridge
+            .dispatch(RuntimeHelper::Add, &[left, right])
+            .expect("string add helper should return a handle");
+        assert_eq!(bridge.value(joined).unwrap().to_string(), "leftright");
+
+        let nil = bridge
+            .handle(Value::Nil)
+            .expect("nil should fit in the bridge handle table");
+        let truthiness = bridge
+            .dispatch(RuntimeHelper::Not, &[nil])
+            .expect("not helper should return a handle");
+        assert_eq!(bridge.value(truthiness).unwrap().to_string(), "true");
+
+        for (helper, expected) in [
+            (RuntimeHelper::Equal, "false"),
+            (RuntimeHelper::NotEqual, "true"),
+            (RuntimeHelper::Greater, "false"),
+            (RuntimeHelper::GreaterEqual, "false"),
+            (RuntimeHelper::Less, "true"),
+            (RuntimeHelper::LessEqual, "true"),
+        ] {
+            let result = bridge
+                .dispatch(helper, &[number, loaded])
+                .expect("comparison helper should return a handle");
+            assert_eq!(bridge.value(result).unwrap().to_string(), expected);
+        }
+    }
+
+    #[test]
+    fn jit_helper_bridge_rejects_bad_handles_and_preserves_temporary_roots() {
+        let program = empty_program();
+        let mut vm = VM::new(&program);
+        let mut frame = Frame::main(
+            Rc::new(FunctionBody {
+                registers: 0,
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            }),
+            0,
+            vm.heap.new_environment(),
+            vm.heap.new_environment(),
+        );
+        let array = vm.make_array(vec![Value::number(7.0)]);
+        let mut bridge = vm.jit_helper_bridge(&mut frame, None);
+        let array_handle = bridge
+            .handle(array)
+            .expect("array should fit in the bridge handle table");
+        assert_eq!(bridge.vm.heap.collect_garbage(), 0);
+        assert_eq!(bridge.value(array_handle).unwrap().to_string(), "[7]");
+
+        let wrong_arity = bridge
+            .dispatch(RuntimeHelper::Add, &[array_handle])
+            .expect_err("wrong helper arity should be rejected");
+        assert_eq!(
+            wrong_arity.message,
+            "JIT helper 4 expects 2 operands, got 1"
+        );
+        let invalid_handle = bridge
+            .dispatch(RuntimeHelper::Not, &[99])
+            .expect_err("unknown value handles should be rejected");
+        assert_eq!(
+            invalid_handle.message,
+            "JIT value handle 99 is out of range"
+        );
+        let invalid_constant = bridge
+            .dispatch(RuntimeHelper::Constant, &[99])
+            .expect_err("unknown constant indices should be rejected");
+        assert_eq!(invalid_constant.message, "constant index out of range");
+
+        let zero = bridge
+            .handle(Value::number(0.0))
+            .expect("zero should fit in the bridge handle table");
+        let one = bridge
+            .handle(Value::number(1.0))
+            .expect("one should fit in the bridge handle table");
+        let division = bridge
+            .dispatch(RuntimeHelper::Divide, &[one, zero])
+            .expect_err("division by zero should preserve interpreter semantics");
+        assert_eq!(division.message, "division by zero");
+    }
 }
 
 impl RuntimeError {
@@ -5137,6 +5383,173 @@ pub struct VM<'a> {
     profile_functions: Vec<ProfileFunction>,
     profile_natives: BTreeMap<String, usize>,
     profile_source_ranges: BTreeMap<(usize, usize, usize), usize>,
+}
+
+/// The result of crossing a JIT safepoint back into VM-owned state.
+///
+/// Materialization is performed before the shared instruction/native
+/// checkpoint. This keeps the frame and its values available even when
+/// cancellation or a resource limit rejects the transition.
+#[allow(dead_code)]
+#[derive(Debug)]
+struct JitSafepointTransition {
+    frame: JitFrameMaterialization,
+    checkpoint: Result<(), RuntimeError>,
+}
+
+/// Typed VM-owned adapter for the helper ABI. The handle table is scoped to
+/// one bridge, so its values remain roots during a helper call without
+/// becoming a persistent VM cache or a serialized artifact.
+#[allow(dead_code)]
+struct JitHelperBridge<'vm, 'frame, 'program> {
+    vm: &'vm mut VM<'program>,
+    frame: &'frame mut Frame,
+    values: Vec<Value>,
+    call_site: Option<DebugLocation>,
+}
+
+impl<'vm, 'frame, 'program> JitHelperBridge<'vm, 'frame, 'program> {
+    fn new(
+        vm: &'vm mut VM<'program>,
+        frame: &'frame mut Frame,
+        call_site: Option<DebugLocation>,
+    ) -> Self {
+        Self {
+            vm,
+            frame,
+            values: Vec::new(),
+            call_site,
+        }
+    }
+
+    fn handle(&mut self, value: Value) -> Result<u64, RuntimeError> {
+        let handle = u64::try_from(self.values.len())
+            .map_err(|_| RuntimeError::new("JIT value handle space exhausted"))?;
+        self.values.push(value);
+        Ok(handle)
+    }
+
+    fn operand_index(raw: u64) -> Result<usize, RuntimeError> {
+        usize::try_from(raw)
+            .map_err(|_| RuntimeError::new("JIT helper operand does not fit a platform index"))
+    }
+
+    fn value(&self, handle: u64) -> Result<Value, RuntimeError> {
+        let index = Self::operand_index(handle)?;
+        self.values.get(index).cloned().ok_or_else(|| {
+            RuntimeError::new(format!("JIT value handle {} is out of range", handle))
+        })
+    }
+
+    fn dispatch(
+        &mut self,
+        helper: RuntimeHelper,
+        operands: &[u64],
+    ) -> Result<u64, RuntimeError> {
+        let abi = JitHelperAbi::for_helper(helper);
+        if operands.len() != abi.value_arguments {
+            return Err(RuntimeError::new(format!(
+                "JIT helper {} expects {} operands, got {}",
+                abi.helper_id,
+                abi.value_arguments,
+                operands.len()
+            )));
+        }
+
+        let result = match helper {
+            RuntimeHelper::Constant => {
+                self.vm.constant_value(Self::operand_index(operands[0])?)?
+            }
+            RuntimeHelper::LoadVar => {
+                self.vm
+                    .load_variable(self.frame, Self::operand_index(operands[0])?)?
+            }
+            RuntimeHelper::Negate => {
+                let input = self.value(operands[0])?;
+                let Value::Number(number) = input else {
+                    return Err(RuntimeError::new(format!(
+                        "negate expects number, got {}",
+                        input.type_name()
+                    )));
+                };
+                Value::number(-number)
+            }
+            RuntimeHelper::Not => Value::boolean(!self.value(operands[0])?.is_truthy()),
+            RuntimeHelper::Add => {
+                let left = self.value(operands[0])?;
+                let right = self.value(operands[1])?;
+                match (left, right) {
+                    (Value::Number(left), Value::Number(right)) => Value::number(left + right),
+                    (Value::String(left), Value::String(right)) => {
+                        Value::string(format!("{}{}", left, right))
+                    }
+                    _ => return Err(RuntimeError::new("add expects two numbers or two strings")),
+                }
+            }
+            RuntimeHelper::Subtract => {
+                let left = self.value(operands[0])?;
+                let right = self.value(operands[1])?;
+                match (left, right) {
+                    (Value::Number(left), Value::Number(right)) => Value::number(left - right),
+                    _ => return Err(RuntimeError::new("subtract expects numbers")),
+                }
+            }
+            RuntimeHelper::Multiply => {
+                let left = self.value(operands[0])?;
+                let right = self.value(operands[1])?;
+                match (left, right) {
+                    (Value::Number(left), Value::Number(right)) => Value::number(left * right),
+                    _ => return Err(RuntimeError::new("multiply expects numbers")),
+                }
+            }
+            RuntimeHelper::Divide => {
+                let left = self.value(operands[0])?;
+                let right = self.value(operands[1])?;
+                match (left, right) {
+                    (Value::Number(left), Value::Number(right)) if right != 0.0 => {
+                        Value::number(left / right)
+                    }
+                    (Value::Number(_), Value::Number(0.0)) => {
+                        return Err(RuntimeError::new("division by zero"));
+                    }
+                    _ => return Err(RuntimeError::new("divide expects numbers")),
+                }
+            }
+            RuntimeHelper::Equal => {
+                let left = self.value(operands[0])?;
+                let right = self.value(operands[1])?;
+                Value::boolean(left.runtime_equals(&right))
+            }
+            RuntimeHelper::NotEqual => {
+                let left = self.value(operands[0])?;
+                let right = self.value(operands[1])?;
+                Value::boolean(!left.runtime_equals(&right))
+            }
+            RuntimeHelper::Greater
+            | RuntimeHelper::GreaterEqual
+            | RuntimeHelper::Less
+            | RuntimeHelper::LessEqual => {
+                let left = self.value(operands[0])?;
+                let right = self.value(operands[1])?;
+                let comparison = match helper {
+                    RuntimeHelper::Greater => Comparison::Greater,
+                    RuntimeHelper::GreaterEqual => Comparison::GreaterEqual,
+                    RuntimeHelper::Less => Comparison::Less,
+                    RuntimeHelper::LessEqual => Comparison::LessEqual,
+                    _ => unreachable!("ordered helper arm is exhaustive"),
+                };
+                let call_site = self.call_site.clone();
+                Value::boolean(self.vm.compare_values(
+                    self.frame,
+                    &left,
+                    &right,
+                    comparison,
+                    call_site.as_ref(),
+                )?)
+            }
+        };
+        self.handle(result)
+    }
 }
 
 /// Host-controlled, deterministic cooperative execution session.
@@ -7293,6 +7706,46 @@ impl<'a> VM<'a> {
     }
 
     fn checkpoint_instruction(&mut self) -> Result<(), RuntimeError> {
+        self.checkpoint_safepoint(JitSafepointKind::Instruction)
+    }
+
+    /// Materialize a borrow-free frame before handing control to a VM
+    /// boundary. Instruction and native boundaries use the same checkpoint
+    /// implementation as the interpreter; scheduler, GC, error, and return
+    /// boundaries only capture state because their owner performs the
+    /// corresponding transition.
+    #[allow(dead_code)]
+    fn jit_safepoint(
+        &mut self,
+        frame: &Frame,
+        task_id: Option<TaskId>,
+        kind: JitSafepointKind,
+    ) -> JitSafepointTransition {
+        let frame = self
+            .jit
+            .materialize_frame(frame, task_id, JitSafepoint::new(kind, frame.ip));
+        let checkpoint = if kind.uses_instruction_budget() {
+            self.checkpoint_safepoint(kind)
+        } else {
+            Ok(())
+        };
+        JitSafepointTransition { frame, checkpoint }
+    }
+
+    #[allow(dead_code)]
+    fn jit_helper_bridge<'vm, 'frame>(
+        &'vm mut self,
+        frame: &'frame mut Frame,
+        call_site: Option<DebugLocation>,
+    ) -> JitHelperBridge<'vm, 'frame, 'a> {
+        JitHelperBridge::new(self, frame, call_site)
+    }
+
+    fn checkpoint_safepoint(
+        &mut self,
+        safepoint: JitSafepointKind,
+    ) -> Result<(), RuntimeError> {
+        debug_assert!(safepoint.uses_instruction_budget());
         match &self.instruction_checkpoint {
             InstructionCheckpoint::Limited(limit) => {
                 if self.instruction_steps >= *limit {
@@ -7338,7 +7791,7 @@ impl<'a> VM<'a> {
     }
 
     fn checkpoint_native(&mut self) -> Result<(), RuntimeError> {
-        self.checkpoint_instruction()
+        self.checkpoint_safepoint(JitSafepointKind::Native)
     }
 
     fn check_call_depth(&self) -> Result<(), RuntimeError> {
@@ -9261,9 +9714,27 @@ impl<'a> VM<'a> {
         comparison: Comparison,
         call_site: Option<&DebugLocation>,
     ) -> Result<(), RuntimeError> {
-        let left_value = self.read_register_ref(frame, left)?;
-        let right_value = self.read_register_ref(frame, right)?;
-        let result = match (left_value, right_value) {
+        let left_value = self.read_register(frame, left)?;
+        let right_value = self.read_register(frame, right)?;
+        let result = self.compare_values(
+            frame,
+            &left_value,
+            &right_value,
+            comparison,
+            call_site,
+        )?;
+        self.write_register(frame, dest, Value::boolean(result))
+    }
+
+    fn compare_values(
+        &mut self,
+        frame: &Frame,
+        left_value: &Value,
+        right_value: &Value,
+        comparison: Comparison,
+        call_site: Option<&DebugLocation>,
+    ) -> Result<bool, RuntimeError> {
+        Ok(match (left_value, right_value) {
             (Value::Number(left), Value::Number(right)) => comparison.apply_numbers(*left, *right),
             (Value::String(left), Value::String(right)) => {
                 let ordering = left.chars().cmp(right.chars());
@@ -9352,7 +9823,6 @@ impl<'a> VM<'a> {
                     comparison.as_str()
                 )))
             }
-        };
-        self.write_register(frame, dest, Value::boolean(result))
+        })
     }
 }

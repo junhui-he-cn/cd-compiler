@@ -30,6 +30,9 @@ code, add executable memory, or change the public VM API.
 The current state is a policy/cache and IR owner only. It is intentionally not
 wired to replace `execute_body`, `execute_instruction`, or the cooperative
 frame loop, and it contains no executable memory or machine-code entry point.
+The follow-up helper ABI, frame materialization, and safepoint bridge are
+recorded in [`v6c-jit-helper-safepoint-001.md`](v6c-jit-helper-safepoint-001.md);
+that slice likewise leaves production execution interpreter-controlled.
 
 ## Compatibility boundary
 
@@ -48,6 +51,7 @@ verified IR and makes no claim about machine-code size or runtime speed.
 Unit tests cover disabled behavior, whitelist and mode gates, main-body and
 unsupported-unit fallback, dynamic/native/callback boundaries, Cranelift IR
 construction and verification, bounded cache admission, reuse, eviction, and
-VM-local ownership. The next V6C slice must define the VM helper ABI and frame
-materialization/safepoint bridge before adding `cranelift-jit` execution or
-allowing any compiled path to replace the interpreter.
+VM-local ownership. Before adding `cranelift-jit` execution or allowing any
+compiled path to replace the interpreter, the helper ABI and
+frame-materialization/safepoint bridge must remain covered by the follow-up
+decision and its boundary tests.

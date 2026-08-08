@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
-use crate::bytecode::{Instruction, Program};
+use crate::bytecode::{FunctionBody, Instruction, Program};
+use crate::runtime::SharedEnvironment;
+use crate::scheduler::{ResumableFrame, ReturnTarget, TaskId};
+use crate::value::Value as VmValue;
 use cranelift_codegen::ir::{
     types, AbiParam, ExtFuncData, ExternalName, Function, InstBuilder, Signature, UserExternalName,
     UserFuncName, Value,
@@ -9,12 +12,144 @@ use cranelift_codegen::isa::{CallConv, TargetFrontendConfig};
 use cranelift_codegen::{settings, verifier::verify_function};
 use cranelift_frontend::{FunctionBuilder, FunctionBuilderContext};
 use std::collections::{BTreeMap, BTreeSet};
+use std::rc::Rc;
 use target_lexicon::PointerWidth;
 
 /// The first V6C cache budget is an internal admission bound. It is not a
 /// runtime-element or artifact budget, and it is not exposed through the
 /// public VM configuration until a concrete code representation exists.
 pub(crate) const DEFAULT_CODE_CACHE_BYTES: usize = 64 * 1024;
+
+/// Stable boundary categories used when compiled code hands control back to
+/// the VM. The compiled path never owns scheduling, cancellation, or GC; it
+/// only describes the boundary at which the existing VM frame is restored.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum JitSafepointKind {
+    Instruction,
+    Native,
+    Scheduler,
+    GarbageCollection,
+    Error,
+    Return,
+}
+
+impl JitSafepointKind {
+    pub(crate) const fn uses_instruction_budget(self) -> bool {
+        matches!(self, Self::Instruction | Self::Native)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct JitSafepoint {
+    pub(crate) kind: JitSafepointKind,
+    pub(crate) instruction: usize,
+}
+
+impl JitSafepoint {
+    pub(crate) const fn new(kind: JitSafepointKind, instruction: usize) -> Self {
+        Self { kind, instruction }
+    }
+}
+
+/// Owned, borrow-free state transferred across a future compiled/interpreter
+/// or compiled/runtime boundary. It clones the existing frame's `Rc` handles
+/// and register values instead of retaining raw pointers or `RefCell` borrows.
+#[derive(Clone, Debug)]
+pub(crate) struct JitFrameMaterialization {
+    body: Option<Rc<FunctionBody>>,
+    ip: usize,
+    registers: Vec<VmValue>,
+    locals: SharedEnvironment,
+    closure: SharedEnvironment,
+    is_main: bool,
+    function: Rc<str>,
+    function_index: Option<usize>,
+    return_target: Option<ReturnTarget>,
+    task_id: Option<TaskId>,
+    safepoint: JitSafepoint,
+}
+
+impl JitFrameMaterialization {
+    pub(crate) fn capture(
+        frame: &ResumableFrame,
+        task_id: Option<TaskId>,
+        safepoint: JitSafepoint,
+    ) -> Self {
+        Self {
+            body: frame.body.clone(),
+            ip: frame.ip,
+            registers: frame.registers.clone(),
+            locals: frame.locals.clone(),
+            closure: frame.closure.clone(),
+            is_main: frame.is_main,
+            function: frame.function.clone(),
+            function_index: frame.function_index,
+            return_target: frame.return_target.clone(),
+            task_id,
+            safepoint,
+        }
+    }
+
+    pub(crate) fn restore_into(&self, frame: &mut ResumableFrame) {
+        frame.body = self.body.clone();
+        frame.ip = self.ip;
+        frame.registers = self.registers.clone();
+        frame.locals = self.locals.clone();
+        frame.closure = self.closure.clone();
+        frame.is_main = self.is_main;
+        frame.function = self.function.clone();
+        frame.function_index = self.function_index;
+        frame.return_target = self.return_target.clone();
+    }
+
+    pub(crate) fn body(&self) -> Option<&FunctionBody> {
+        self.body.as_deref()
+    }
+
+    pub(crate) fn instruction(&self) -> usize {
+        self.ip
+    }
+
+    pub(crate) fn registers(&self) -> &[VmValue] {
+        &self.registers
+    }
+
+    pub(crate) fn registers_mut(&mut self) -> &mut [VmValue] {
+        &mut self.registers
+    }
+
+    pub(crate) fn locals(&self) -> &SharedEnvironment {
+        &self.locals
+    }
+
+    pub(crate) fn closure(&self) -> &SharedEnvironment {
+        &self.closure
+    }
+
+    pub(crate) fn is_main(&self) -> bool {
+        self.is_main
+    }
+
+    pub(crate) fn function(&self) -> &str {
+        &self.function
+    }
+
+    pub(crate) fn function_index(&self) -> Option<usize> {
+        self.function_index
+    }
+
+    pub(crate) fn return_target(&self) -> Option<&ReturnTarget> {
+        self.return_target.as_ref()
+    }
+
+    pub(crate) fn task_id(&self) -> Option<TaskId> {
+        self.task_id
+    }
+
+    pub(crate) fn safepoint(&self) -> JitSafepoint {
+        self.safepoint
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum JitExecutionMode {
@@ -203,6 +338,15 @@ impl JitState {
         Self { config, cache }
     }
 
+    pub(crate) fn materialize_frame(
+        &self,
+        frame: &ResumableFrame,
+        task_id: Option<TaskId>,
+        safepoint: JitSafepoint,
+    ) -> JitFrameMaterialization {
+        JitFrameMaterialization::capture(frame, task_id, safepoint)
+    }
+
     #[cfg(test)]
     pub(crate) fn enabled_for_tests(
         whitelist: impl IntoIterator<Item = usize>,
@@ -375,9 +519,12 @@ impl JitCodeCache {
     }
 }
 
+pub(crate) const JIT_HELPER_ABI_VERSION: u32 = 1;
+pub(crate) const JIT_VALUE_HANDLE_BITS: u32 = 64;
+
 #[repr(u32)]
-#[derive(Clone, Copy)]
-enum RuntimeHelper {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum RuntimeHelper {
     Constant = 0,
     LoadVar = 1,
     Negate = 2,
@@ -392,6 +539,66 @@ enum RuntimeHelper {
     GreaterEqual = 11,
     Less = 12,
     LessEqual = 13,
+}
+
+impl RuntimeHelper {
+    const ALL: [Self; 14] = [
+        Self::Constant,
+        Self::LoadVar,
+        Self::Negate,
+        Self::Not,
+        Self::Add,
+        Self::Subtract,
+        Self::Multiply,
+        Self::Divide,
+        Self::Equal,
+        Self::NotEqual,
+        Self::Greater,
+        Self::GreaterEqual,
+        Self::Less,
+        Self::LessEqual,
+    ];
+
+    const fn value_arguments(self) -> usize {
+        match self {
+            Self::Constant | Self::LoadVar | Self::Negate | Self::Not => 1,
+            Self::Add
+            | Self::Subtract
+            | Self::Multiply
+            | Self::Divide
+            | Self::Equal
+            | Self::NotEqual
+            | Self::Greater
+            | Self::GreaterEqual
+            | Self::Less
+            | Self::LessEqual => 2,
+        }
+    }
+}
+
+/// The internal helper ABI is deliberately handle-based: one VM context
+/// handle, zero or more opaque `Value` handles, and one opaque result handle.
+/// The descriptor is shared by Cranelift import generation and the future VM
+/// helper bridge so those paths cannot silently drift apart.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct JitHelperAbi {
+    pub(crate) version: u32,
+    pub(crate) helper_id: u32,
+    pub(crate) context_arguments: usize,
+    pub(crate) value_arguments: usize,
+    pub(crate) value_results: usize,
+}
+
+impl JitHelperAbi {
+    pub(crate) const fn for_helper(helper: RuntimeHelper) -> Self {
+        Self {
+            version: JIT_HELPER_ABI_VERSION,
+            helper_id: helper as u32,
+            context_arguments: 1,
+            value_arguments: helper.value_arguments(),
+            value_results: 1,
+        }
+    }
 }
 
 fn lower_to_cranelift_ir(
@@ -675,17 +882,27 @@ fn emit_runtime_call(
     helper: RuntimeHelper,
     arguments: &[Value],
 ) -> Value {
+    let abi = JitHelperAbi::for_helper(helper);
+    debug_assert_eq!(abi.context_arguments, 1);
+    debug_assert_eq!(abi.value_arguments, arguments.len());
+    debug_assert_eq!(abi.value_results, 1);
     let mut signature = Signature::new(CallConv::SystemV);
-    signature.params.push(AbiParam::new(types::I64));
     signature.params.extend(std::iter::repeat_n(
         AbiParam::new(types::I64),
-        arguments.len(),
+        abi.context_arguments,
     ));
-    signature.returns.push(AbiParam::new(types::I64));
+    signature.params.extend(std::iter::repeat_n(
+        AbiParam::new(types::I64),
+        abi.value_arguments,
+    ));
+    signature.returns.extend(std::iter::repeat_n(
+        AbiParam::new(types::I64),
+        abi.value_results,
+    ));
     let signature = builder.import_signature(signature);
     let user_name = builder
         .func
-        .declare_imported_user_function(UserExternalName::new(1, helper as u32));
+        .declare_imported_user_function(UserExternalName::new(1, abi.helper_id));
     let function = builder.import_function(ExtFuncData {
         name: ExternalName::user(user_name),
         signature,
@@ -753,6 +970,10 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
 mod tests {
     use super::*;
     use crate::bytecode::{Function, FunctionBody};
+    use crate::runtime::Heap;
+    use crate::scheduler::{CooperativeScheduler, ResumableFrame};
+    use crate::value::Value as VmValue;
+    use std::collections::BTreeSet;
 
     fn function(index: usize, instructions: Vec<Instruction>) -> Function {
         Function {
@@ -778,6 +999,106 @@ mod tests {
             functions,
             debug_sources: Vec::new(),
         }
+    }
+
+    #[test]
+    fn helper_abi_is_stable_and_handle_based() {
+        let mut helper_ids = BTreeSet::new();
+        assert_eq!(JIT_VALUE_HANDLE_BITS, 64);
+
+        for helper in RuntimeHelper::ALL {
+            let abi = JitHelperAbi::for_helper(helper);
+            assert_eq!(abi.version, JIT_HELPER_ABI_VERSION);
+            assert_eq!(abi.context_arguments, 1);
+            assert_eq!(abi.value_results, 1);
+            assert!(helper_ids.insert(abi.helper_id));
+        }
+
+        assert_eq!(
+            JitHelperAbi::for_helper(RuntimeHelper::Constant).value_arguments,
+            1
+        );
+        assert_eq!(
+            JitHelperAbi::for_helper(RuntimeHelper::Add).value_arguments,
+            2
+        );
+        assert_eq!(helper_ids.len(), RuntimeHelper::ALL.len());
+    }
+
+    #[test]
+    fn frame_materialization_captures_and_restores_the_existing_frame_contract() {
+        let heap = Heap::new();
+        let locals = heap.new_environment();
+        let closure = heap.new_environment();
+        let body = Rc::new(FunctionBody {
+            registers: 2,
+            instructions: vec![Instruction::Return { value: 0 }],
+            locations: vec![None],
+        });
+        let mut frame = ResumableFrame::callee(
+            body.clone(),
+            "callee",
+            7,
+            2,
+            locals.clone(),
+            closure.clone(),
+            ReturnTarget {
+                register: 1,
+                call_site: None,
+            },
+        );
+        frame.ip = 3;
+        frame.registers[0] = VmValue::number(7.0);
+        frame.registers[1] = VmValue::string("before");
+
+        let mut scheduler = CooperativeScheduler::<()>::new(1).expect("valid quantum");
+        let task_id = scheduler.spawn(()).expect("task id should be allocated");
+        let state = JitState::disabled();
+        let mut materialized = state.materialize_frame(
+            &frame,
+            Some(task_id),
+            JitSafepoint::new(JitSafepointKind::Native, frame.ip),
+        );
+
+        assert_eq!(materialized.body().map(|body| body.registers), Some(2));
+        assert_eq!(materialized.instruction(), 3);
+        assert_eq!(materialized.function(), "callee");
+        assert_eq!(materialized.function_index(), Some(7));
+        assert!(!materialized.is_main());
+        assert_eq!(
+            materialized.return_target().map(|target| target.register),
+            Some(1)
+        );
+        assert_eq!(materialized.task_id(), Some(task_id));
+        assert_eq!(
+            materialized.safepoint(),
+            JitSafepoint::new(JitSafepointKind::Native, 3)
+        );
+        assert!(JitSafepointKind::Native.uses_instruction_budget());
+        assert!(!JitSafepointKind::GarbageCollection.uses_instruction_budget());
+        assert!(Rc::ptr_eq(materialized.locals(), &locals));
+        assert!(Rc::ptr_eq(materialized.closure(), &closure));
+
+        materialized.registers_mut()[0] = VmValue::number(11.0);
+        frame.ip = 0;
+        frame.registers[0] = VmValue::Nil;
+        frame.registers[1] = VmValue::Nil;
+        materialized.restore_into(&mut frame);
+
+        assert!(Rc::ptr_eq(
+            frame.body.as_ref().expect("body is retained"),
+            &body
+        ));
+        assert_eq!(frame.ip, 3);
+        assert_eq!(frame.function_index, Some(7));
+        assert_eq!(frame.registers[0].to_string(), "11");
+        assert_eq!(frame.registers[1].to_string(), "before");
+        assert!(Rc::ptr_eq(&frame.locals, &locals));
+        assert!(Rc::ptr_eq(&frame.closure, &closure));
+        assert_eq!(
+            frame.return_target.as_ref().map(|target| target.register),
+            Some(1)
+        );
     }
 
     fn eligible_function(index: usize) -> Function {
