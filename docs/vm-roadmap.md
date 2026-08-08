@@ -150,9 +150,12 @@ parity.
 ### V6: Add an evidence-driven JIT after the scheduling contract
 
 **Priority:** P2. **Status:** V6A hot-workload evidence and the V6B runtime
-contract were recorded on 2026-08-06.** See
+contract were recorded on 2026-08-06; V6C x86-64 code generation and the
+private VM entry transition were implemented on 2026-08-08.** See
 [`v6a-hot-workload-evidence-001.md`](decisions/v6a-hot-workload-evidence-001.md)
-and [`v6b-jit-runtime-contract-001.md`](decisions/v6b-jit-runtime-contract-001.md).
+and [`v6b-jit-runtime-contract-001.md`](decisions/v6b-jit-runtime-contract-001.md),
+plus [`v6c-jit-x86-64-backend-001.md`](decisions/v6c-jit-x86-64-backend-001.md)
+and [`v6c-jit-entry-transition-001.md`](decisions/v6c-jit-entry-transition-001.md).
 
 JIT compilation is an optional execution optimization, not a new language
 semantic. Starting it after V5B prevents a single-thread-only code generator
@@ -182,17 +185,23 @@ thread state that concurrency would later invalidate.
    observable/cooperative and unsupported units with structured interpreter
    fallback reasons. Eligible CD values remain opaque handles and cross the
    future VM helper bridge through Cranelift calls. The bounded per-VM cache
-   currently retains verified IR only; no executable memory or artifact
-   serialization is present. The helper ABI and VM-owned frame materialization
-   and safepoint bridge are implemented in
+   retains verified IR and VM-local finalized x86-64 code; generated code is
+   never serialized into an artifact. The helper ABI and VM-owned frame
+   materialization and safepoint bridge are implemented in
    [`v6c-jit-helper-safepoint-001.md`](decisions/v6c-jit-helper-safepoint-001.md);
    the pre-executable entry lifetime and rollback guard is implemented in
-   [`v6c-jit-code-lifetime-rollback-001.md`](decisions/v6c-jit-code-lifetime-rollback-001.md).
-   The eventual baseline JIT must compile only the measured hot function
-   subset, retain deterministic interpreter fallback and an off switch, and
-   verify identical output, failures, debug locations, observable profile
-   semantics, and resource-limit behavior. Tiering or optimizing JIT work
-   requires a later profile-backed decision.
+   [`v6c-jit-code-lifetime-rollback-001.md`](decisions/v6c-jit-code-lifetime-rollback-001.md);
+   the x86-64 backend is recorded in
+   [`v6c-jit-x86-64-backend-001.md`](decisions/v6c-jit-x86-64-backend-001.md).
+   The private ordinary-call entry transition is recorded in
+   [`v6c-jit-entry-transition-001.md`](decisions/v6c-jit-entry-transition-001.md):
+   it is enabled only by internal tests, charges the shared instruction
+   checkpoint, materializes registers at the helper boundary, transports
+   typed errors, and restores an entry snapshot for protocol fallback. The
+   production VM constructor, observable modes, and cooperative sessions stay
+   interpreter-controlled; full parity for native/GC/debug/profile and a
+   default execution decision remain later gates.
+   Tiering or optimizing JIT work requires a later profile-backed decision.
 
 **Decision gate:** do not place JIT implementation in the default VM queue
 before V5B establishes the task, frame, root, and safepoint model. A later JIT
@@ -239,7 +248,8 @@ completed V5B + stable profile + demonstrated hot workload
   -> V6C Cranelift IR admission/finite-cache preflight (implemented)
   -> V6C VM helper ABI/frame materialization/safepoint bridge (implemented)
   -> V6C compiled-entry lifetime/rollback guard (implemented)
-  -> optional V6C Cranelift JIT execution
+  -> V6C x86-64 machine-code backend (implemented)
+  -> V6C private ordinary-call entry transition (implemented, test-only)
   -> optional V6C baseline JIT execution
 
 real host consumer
@@ -257,12 +267,15 @@ complete. A concrete consumer must justify optional V5C expansion. V6A
 characterization is recorded with stable profile surfaces, bytecode shape, and
 repeated correctness observations; the mixed, startup-sensitive timing data
 does not establish a speedup threshold. The V6B runtime contract is recorded;
-V6C execution remains deferred until an explicit optional-path decision and
-backend-specific executable-code lifetime/rollback proof justify entering the
-execution path. The bounded cache, typed helper dispatcher, frame
-materialization, safepoint bridge, compiled-entry lifetime guard, and
-interpreter fallback gates are now implemented without changing production
-execution.
+the V6C x86-64 backend now generates and directly exercises finalized host code
+behind the internal helper ABI. A private ordinary-call transition now proves
+callee-frame construction, helper-error transport, checkpoint charging, and
+interpreter snapshot fallback for the admitted scalar subset. Full/default VM
+execution remains deferred: native/callback, GC, debugger/profile, and
+cooperative parity still require their own boundaries and an explicit opt-in
+decision. The bounded cache, typed helper dispatcher, frame materialization,
+safepoint bridge, compiled-entry lifetime guard, executable mapping reset, and
+interpreter fallback gates remain outside the production default.
 V2 host integration and V4 release compatibility resume only when their named
 consumer or ABI/release trigger appears.
 

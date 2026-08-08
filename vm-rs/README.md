@@ -101,7 +101,11 @@ changing CLI display text. See
 - `runtime`: the `Heap` construction/identity facade over shared cells,
   environments, functions, and aggregates.
 - `vm`: executor, frames, instruction dispatch, calls, and runtime errors.
+- `jit`: private Cranelift 0.134.3 x86-64/System V code generation, opaque
+  helper imports, VM-owned ordinary-call transition, executable entry
+  lifetime, and bounded cache accounting. It is disabled by default and does
+  not serialize machine code.
 
-Future backend tracks may add language-level task syntax, broader concurrency
-primitives, and JIT metadata modules after the deterministic host scheduler
-contract has workload evidence.
+The x86-64 backend and its private ordinary-call transition are exercised by
+focused internal tests only. Native/GC/debug/profile/cooperative parity and a
+deliberate user-facing opt-in decision remain future work.

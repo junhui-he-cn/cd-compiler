@@ -96,6 +96,7 @@ This is a small C++17 Compiler Design front-end/interpreter project. It currentl
 - `include/BytecodeTextEmitter.hpp`, `src/BytecodeTextEmitter.cpp`: stable linked-program and independently validated module `.cdbc` text artifact emission for the Rust VM boundary.
 - `include/BytecodeCompiler.hpp`, `src/BytecodeCompiler.cpp`: IR-to-bytecode lowering.
 - `vm-rs/src/vm.rs`, `vm-rs/src/value.rs`, `vm-rs/src/runtime.rs`: Rust `.cdbc` bytecode execution, runtime values, shared cells, closures, arrays, and structs.
+- `vm-rs/src/jit.rs`: private Cranelift IR admission, x86-64/System V machine-code generation, opaque helper imports, VM-local executable-entry lifetime, checkpoint/register materialization, and interpreter fallback policy; generated code is not part of `.cdbc` artifacts and remains disabled by default.
 - `include/Value.hpp`, `src/Value.cpp`: runtime value representation and formatting.
 - `include/LanguageServer.hpp`, `src/LanguageServer.cpp`: stdio JSON-RPC/LSP
   document synchronization, shared diagnostics, formatting requests, virtual

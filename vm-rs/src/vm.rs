@@ -4,7 +4,8 @@ use crate::bytecode::{
     Constant, DebugLocation, DebugRange, DebugSource, FunctionBody, Instruction, Program,
 };
 use crate::jit::{
-    JitFrameMaterialization, JitHelperAbi, JitSafepoint, JitSafepointKind, JitState, RuntimeHelper,
+    JitCallContext, JitFrameMaterialization, JitExecutionMode, JitHelperAbi, JitSafepoint,
+    JitSafepointKind, JitState, RuntimeHelper, JIT_ERROR_HANDLE,
 };
 #[cfg(test)]
 use crate::runtime::HeapObjectKind;
@@ -2879,14 +2880,19 @@ mod tests {
             crate::jit::JitEligibility::Fallback(crate::jit::JitFallbackReason::Disabled)
         );
 
-        first.jit = JitState::enabled_for_tests([0], 8);
+        first.jit = JitState::enabled_for_tests([0], 1024);
         assert!(matches!(
             first
                 .jit
-                .admit(&program, Some(0), crate::jit::JitExecutionMode::Ordinary, 4,),
+                .admit(
+                    &program,
+                    Some(0),
+                    crate::jit::JitExecutionMode::Ordinary,
+                    1024,
+                ),
             crate::jit::JitAdmission::Reserved {
                 function_index: 0,
-                bytes: 4,
+                bytes: 1024,
                 ..
             }
         ));
@@ -4689,6 +4695,196 @@ mod tests {
         assert_eq!(vm.instruction_steps, 1);
     }
 
+    #[cfg(all(target_arch = "x86_64", unix))]
+    #[test]
+    fn jit_entry_executes_a_whitelisted_function_with_frame_registers() {
+        let program = Program {
+            constants: Vec::new(),
+            names: vec!["left".to_string(), "right".to_string()],
+            main: FunctionBody {
+                registers: 0,
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            },
+            functions: vec![Function {
+                index: 0,
+                name: "add".to_string(),
+                arity: 2,
+                registers: 3,
+                params: vec!["left".to_string(), "right".to_string()],
+                instructions: vec![
+                    Instruction::LoadVar { dest: 0, name: 0 },
+                    Instruction::LoadVar { dest: 1, name: 1 },
+                    Instruction::Add {
+                        dest: 2,
+                        left: 0,
+                        right: 1,
+                    },
+                    Instruction::Return { value: 2 },
+                ],
+                locations: vec![None; 4],
+            }],
+            debug_sources: Vec::new(),
+        };
+        let mut vm = VM::new(&program);
+        vm.jit = JitState::enabled_for_tests([0], 4096);
+        let function = FunctionValue {
+            name: "add".to_string(),
+            function_index: 0,
+            arity: 2,
+            identity: 0,
+            closure: vm.heap.new_environment(),
+        };
+
+        let first = vm
+            .call_function(
+                &function,
+                CallArguments::Two(Value::number(2.0), Value::number(3.0)),
+                "main",
+                None,
+            )
+            .expect("generated function should execute");
+        let second = vm
+            .call_function(
+                &function,
+                CallArguments::Two(Value::number(7.0), Value::number(8.0)),
+                "main",
+                None,
+            )
+            .expect("cached generated function should execute");
+
+        assert_eq!(first.to_string(), "5");
+        assert_eq!(second.to_string(), "15");
+        assert_eq!(vm.instruction_steps, 8);
+    }
+
+    #[cfg(all(target_arch = "x86_64", unix))]
+    #[test]
+    fn jit_protocol_failure_restores_the_entry_snapshot_for_interpreter_fallback() {
+        let instructions = vec![
+            Instruction::Constant { dest: 0, constant: 0 },
+            Instruction::Constant { dest: 1, constant: 1 },
+            Instruction::Add {
+                dest: 2,
+                left: 0,
+                right: 1,
+            },
+            Instruction::Return { value: 2 },
+        ];
+        let program = Program {
+            constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
+            names: Vec::new(),
+            main: FunctionBody {
+                registers: 0,
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            },
+            functions: vec![Function {
+                index: 0,
+                name: "protocol_failure".to_string(),
+                arity: 0,
+                registers: 3,
+                params: Vec::new(),
+                instructions: instructions.clone(),
+                locations: vec![None; instructions.len()],
+            }],
+            debug_sources: Vec::new(),
+        };
+        let mut vm = VM::new(&program);
+        vm.jit = JitState::enabled_for_tests([0], 4096);
+        let mut frame = Frame::callee(
+            Rc::new(FunctionBody {
+                registers: 3,
+                instructions,
+                locations: vec![None; 4],
+            }),
+            "protocol_failure",
+            0,
+            1,
+            vm.heap.new_environment(),
+            vm.heap.new_environment(),
+            ReturnTarget {
+                register: 0,
+                call_site: None,
+            },
+        );
+        frame.ip = 9;
+        frame.registers[0] = Value::string("before JIT");
+
+        assert!(matches!(
+            vm.execute_jit_function(0, &mut frame, &[], None),
+            Ok(JitCallOutcome::Fallback)
+        ));
+        assert_eq!(frame.ip, 9);
+        assert_eq!(frame.registers.len(), 1);
+        assert_eq!(frame.registers[0].to_string(), "before JIT");
+        assert_eq!(vm.instruction_steps, 0);
+    }
+
+    #[cfg(all(target_arch = "x86_64", unix))]
+    #[test]
+    fn jit_entry_transports_checkpoint_and_runtime_errors_like_the_interpreter() {
+        let program = Program {
+            constants: vec![Constant::Number("1".to_string()), Constant::Number("0".to_string())],
+            names: Vec::new(),
+            main: FunctionBody {
+                registers: 0,
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            },
+            functions: vec![Function {
+                index: 0,
+                name: "divide".to_string(),
+                arity: 0,
+                registers: 3,
+                params: Vec::new(),
+                instructions: vec![
+                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Constant { dest: 1, constant: 1 },
+                    Instruction::Divide {
+                        dest: 2,
+                        left: 0,
+                        right: 1,
+                    },
+                    Instruction::Return { value: 2 },
+                ],
+                locations: vec![None; 4],
+            }],
+            debug_sources: Vec::new(),
+        };
+        let function = || FunctionValue {
+            name: "divide".to_string(),
+            function_index: 0,
+            arity: 0,
+            identity: 0,
+            closure: new_environment(),
+        };
+        let mut config = RunConfig::unlimited();
+        config.max_instruction_steps = Some(2);
+        let mut jit_vm = VM::with_config(&program, config.clone());
+        jit_vm.jit = JitState::enabled_for_tests([0], 4096);
+        let jit_function = function();
+        let jit_error = jit_vm
+            .call_function(&jit_function, CallArguments::Empty, "main", None)
+            .expect_err("the JIT checkpoint should enforce the step limit");
+
+        let mut interpreter_vm = VM::with_config(&program, config);
+        let interpreter_function = function();
+        let interpreter_error = interpreter_vm
+            .call_function(
+                &interpreter_function,
+                CallArguments::Empty,
+                "main",
+                None,
+            )
+            .expect_err("the interpreter should enforce the same step limit");
+
+        assert_eq!(jit_error.kind, interpreter_error.kind);
+        assert_eq!(jit_error.resource_limit, interpreter_error.resource_limit);
+        assert_eq!(jit_error.message, interpreter_error.message);
+        assert_eq!(jit_vm.instruction_steps, interpreter_vm.instruction_steps);
+    }
+
     #[test]
     fn jit_helper_bridge_dispatches_existing_value_semantics() {
         let program = Program {
@@ -5291,6 +5487,15 @@ impl CallArguments {
             Self::Many(arguments) => arguments.len(),
         }
     }
+
+    fn values(&self) -> Vec<Value> {
+        match self {
+            Self::Empty => Vec::new(),
+            Self::One(value) => vec![value.clone()],
+            Self::Two(first, second) => vec![first.clone(), second.clone()],
+            Self::Many(values) => values.clone(),
+        }
+    }
 }
 
 enum NativeArguments {
@@ -5398,6 +5603,11 @@ struct JitSafepointTransition {
     checkpoint: Result<(), RuntimeError>,
 }
 
+enum JitCallOutcome {
+    Executed(Value),
+    Fallback,
+}
+
 /// Typed VM-owned adapter for the helper ABI. The handle table is scoped to
 /// one bridge, so its values remain roots during a helper call without
 /// becoming a persistent VM cache or a serialized artifact.
@@ -5407,6 +5617,9 @@ struct JitHelperBridge<'vm, 'frame, 'program> {
     frame: &'frame mut Frame,
     values: Vec<Value>,
     call_site: Option<DebugLocation>,
+    last_materialization: Option<JitFrameMaterialization>,
+    error: Option<RuntimeError>,
+    fallback: bool,
 }
 
 impl<'vm, 'frame, 'program> JitHelperBridge<'vm, 'frame, 'program> {
@@ -5420,6 +5633,9 @@ impl<'vm, 'frame, 'program> JitHelperBridge<'vm, 'frame, 'program> {
             frame,
             values: Vec::new(),
             call_site,
+            last_materialization: None,
+            error: None,
+            fallback: false,
         }
     }
 
@@ -5440,6 +5656,83 @@ impl<'vm, 'frame, 'program> JitHelperBridge<'vm, 'frame, 'program> {
         self.values.get(index).cloned().ok_or_else(|| {
             RuntimeError::new(format!("JIT value handle {} is out of range", handle))
         })
+    }
+
+    fn materialize(&mut self, kind: JitSafepointKind) {
+        let task_id = self.vm.active_cooperative_task;
+        let instruction = self.frame.ip;
+        self.last_materialization = Some(self.vm.jit.materialize_frame(
+            self.frame,
+            task_id,
+            JitSafepoint::new(kind, instruction),
+        ));
+    }
+
+    fn checkpoint(&mut self, instruction: u64) -> Result<Value, RuntimeError> {
+        let instruction = Self::operand_index(instruction)?;
+        let Some(body) = self.frame.body.as_ref() else {
+            return Err(RuntimeError::new("JIT frame has no bytecode body"));
+        };
+        if instruction >= body.instructions.len() {
+            return Err(RuntimeError::new(format!(
+                "JIT checkpoint instruction {} is out of range",
+                instruction
+            )));
+        }
+        self.frame.ip = instruction;
+        self.materialize(JitSafepointKind::Instruction);
+        self.vm.checkpoint_instruction()?;
+        Ok(Value::Nil)
+    }
+
+    fn store_register(&mut self, register: u64, value: u64) -> Result<Value, RuntimeError> {
+        let register = Self::operand_index(register)?;
+        let value = self.value(value)?;
+        let Some(slot) = self.frame.registers.get_mut(register) else {
+            return Err(RuntimeError::new(format!(
+                "JIT register {} is out of range",
+                register
+            )));
+        };
+        *slot = value;
+        Ok(self.frame.registers[register].clone())
+    }
+
+    fn record_c_abi_error(&mut self, error: RuntimeError, fallback: bool) {
+        if self.error.is_none() {
+            self.error = Some(error);
+            self.fallback = fallback;
+        }
+    }
+
+    fn dispatch_c_abi(&mut self, helper_id: u32, operands: &[u64]) -> u64 {
+        if self.error.is_some() {
+            return JIT_ERROR_HANDLE;
+        }
+        let Some(helper) = RuntimeHelper::from_id(helper_id) else {
+            self.record_c_abi_error(
+                RuntimeError::new(format!("unknown JIT helper {}", helper_id)),
+                true,
+            );
+            return JIT_ERROR_HANDLE;
+        };
+        match self.dispatch(helper, operands) {
+            Ok(handle) => handle,
+            Err(error) => {
+                let fallback = matches!(helper, RuntimeHelper::StoreRegister)
+                    || error.message.starts_with("JIT fallback:")
+                    || error.message.starts_with("JIT helper ")
+                    || error.message.starts_with("JIT value handle ")
+                    || error.message.starts_with("JIT helper operand ")
+                    || error.message.starts_with("JIT register ");
+                self.record_c_abi_error(error, fallback);
+                JIT_ERROR_HANDLE
+            }
+        }
+    }
+
+    fn take_execution_state(&mut self) -> (Option<RuntimeError>, bool) {
+        (self.error.take(), self.fallback)
     }
 
     fn dispatch(
@@ -5476,6 +5769,10 @@ impl<'vm, 'frame, 'program> JitHelperBridge<'vm, 'frame, 'program> {
                 Value::number(-number)
             }
             RuntimeHelper::Not => Value::boolean(!self.value(operands[0])?.is_truthy()),
+            RuntimeHelper::Checkpoint => self.checkpoint(operands[0])?,
+            RuntimeHelper::StoreRegister => {
+                self.store_register(operands[0], operands[1])?
+            }
             RuntimeHelper::Add => {
                 let left = self.value(operands[0])?;
                 let right = self.value(operands[1])?;
@@ -5532,6 +5829,11 @@ impl<'vm, 'frame, 'program> JitHelperBridge<'vm, 'frame, 'program> {
             | RuntimeHelper::LessEqual => {
                 let left = self.value(operands[0])?;
                 let right = self.value(operands[1])?;
+                if matches!((&left, &right), (Value::Struct(_), Value::Struct(_))) {
+                    return Err(RuntimeError::new(
+                        "JIT fallback: ordered struct comparison requires the interpreter",
+                    ));
+                }
                 let comparison = match helper {
                     RuntimeHelper::Greater => Comparison::Greater,
                     RuntimeHelper::GreaterEqual => Comparison::GreaterEqual,
@@ -5551,6 +5853,32 @@ impl<'vm, 'frame, 'program> JitHelperBridge<'vm, 'frame, 'program> {
         };
         self.handle(result)
     }
+}
+
+unsafe extern "C" fn jit_helper_dispatch(
+    data: *mut (),
+    helper_id: u32,
+    operands: *const u64,
+    operand_count: usize,
+) -> u64 {
+    if data.is_null() {
+        return JIT_ERROR_HANDLE;
+    }
+    let bridge = unsafe {
+        &mut *(data as *mut JitHelperBridge<'static, 'static, 'static>)
+    };
+    let operands = if operand_count == 0 {
+        &[]
+    } else if operands.is_null() {
+        bridge.record_c_abi_error(
+            RuntimeError::new("JIT helper received a null operand pointer"),
+            true,
+        );
+        return JIT_ERROR_HANDLE;
+    } else {
+        unsafe { std::slice::from_raw_parts(operands, operand_count) }
+    };
+    bridge.dispatch_c_abi(helper_id, operands)
 }
 
 /// Host-controlled, deterministic cooperative execution session.
@@ -8470,6 +8798,126 @@ impl<'a> VM<'a> {
             .map_err(|error| RuntimeError::new(error.to_string()))
     }
 
+    fn jit_execution_mode(&self) -> JitExecutionMode {
+        if self.active_cooperative_task.is_some() {
+            JitExecutionMode::Cooperative
+        } else if self.debug_hook.is_some() || self.cooperative_debug_hook.is_some() {
+            JitExecutionMode::Debug
+        } else if self.profile_enabled {
+            JitExecutionMode::Profile
+        } else if self.trace_enabled {
+            JitExecutionMode::Trace
+        } else {
+            JitExecutionMode::Ordinary
+        }
+    }
+
+    fn execute_jit_function(
+        &mut self,
+        function_index: usize,
+        frame: &mut Frame,
+        arguments: &[Value],
+        call_site: Option<&DebugLocation>,
+    ) -> Result<JitCallOutcome, RuntimeError> {
+        let mode = self.jit_execution_mode();
+        let Some(function) = self.program.functions.get(function_index) else {
+            return Ok(JitCallOutcome::Fallback);
+        };
+        let estimated_code_bytes = function
+            .instructions
+            .len()
+            .saturating_mul(32)
+            .saturating_add(function.registers.saturating_mul(8))
+            .max(1);
+        let admission = self.jit.admit(
+            self.program,
+            Some(function_index),
+            mode,
+            estimated_code_bytes,
+        );
+        let handle = match admission {
+            crate::jit::JitAdmission::Reserved { handle, .. }
+            | crate::jit::JitAdmission::Cached { handle, .. } => handle,
+            crate::jit::JitAdmission::Fallback(_) => return Ok(JitCallOutcome::Fallback),
+        };
+        let code = match self.jit.resolve_code_pointer(&handle) {
+            Ok(code) => code,
+            Err(_) => return Ok(JitCallOutcome::Fallback),
+        };
+
+        // A protocol failure can only occur before an observable operation in
+        // the initial scalar subset. Restore the frame and checkpoint counter
+        // before handing the same callee to the authoritative interpreter.
+        let baseline = self.jit.materialize_frame(
+            frame,
+            self.active_cooperative_task,
+            JitSafepoint::new(JitSafepointKind::Error, frame.ip),
+        );
+        let checkpoint_start = self.instruction_steps;
+        let mut bridge = self.jit_helper_bridge(frame, call_site.cloned());
+        let mut argument_handles = Vec::with_capacity(arguments.len());
+        for argument in arguments {
+            argument_handles.push(bridge.handle(argument.clone())?);
+        }
+        let mut context = JitCallContext {
+            data: &mut bridge as *mut _ as *mut (),
+            dispatch: jit_helper_dispatch,
+        };
+        let invocation = unsafe {
+            code.invoke(
+                &mut context as *mut JitCallContext as usize as u64,
+                &argument_handles,
+            )
+        };
+        let invocation_failed = invocation.is_err();
+        if !invocation_failed && bridge.error.is_none() {
+            bridge.materialize(JitSafepointKind::Return);
+        }
+        let (helper_error, helper_fallback) = bridge.take_execution_state();
+        let raw_result = invocation.ok();
+        let result = raw_result
+            .filter(|handle| *handle != JIT_ERROR_HANDLE)
+            .map(|handle| bridge.value(handle));
+        drop(context);
+        drop(bridge);
+
+        if helper_fallback || invocation_failed {
+            baseline.restore_into(frame);
+            self.instruction_steps = checkpoint_start;
+            return Ok(JitCallOutcome::Fallback);
+        }
+        if let Some(mut error) = helper_error {
+            if error.location.is_none() {
+                error.location = frame
+                    .body
+                    .as_ref()
+                    .and_then(|body| body.locations.get(frame.ip).cloned().flatten());
+            }
+            if error.stack.is_empty() {
+                error.push_frame(frame.function.to_string(), error.location.clone());
+            }
+            return Err(error);
+        }
+        if raw_result == Some(JIT_ERROR_HANDLE) {
+            baseline.restore_into(frame);
+            self.instruction_steps = checkpoint_start;
+            return Ok(JitCallOutcome::Fallback);
+        }
+        let Some(result) = result else {
+            baseline.restore_into(frame);
+            self.instruction_steps = checkpoint_start;
+            return Ok(JitCallOutcome::Fallback);
+        };
+        match result {
+            Ok(value) => Ok(JitCallOutcome::Executed(value)),
+            Err(_) => {
+                baseline.restore_into(frame);
+                self.instruction_steps = checkpoint_start;
+                Ok(JitCallOutcome::Fallback)
+            }
+        }
+    }
+
     fn call_function(
         &mut self,
         function: &FunctionValue,
@@ -8494,6 +8942,8 @@ impl<'a> VM<'a> {
             error.push_frame(caller.to_string(), call_site.cloned());
             return Err(error);
         }
+
+        let jit_arguments = arguments.values();
 
         self.check_call_depth()?;
 
@@ -8538,7 +8988,20 @@ impl<'a> VM<'a> {
         }
 
         self.call_depth += 1;
-        let result = self.execute_body(&cached.body, &mut frame);
+        let result = if self.jit.is_enabled() {
+            match self.execute_jit_function(
+                function.function_index,
+                &mut frame,
+                &jit_arguments,
+                call_site,
+            ) {
+                Ok(JitCallOutcome::Executed(value)) => Ok(Some(value)),
+                Ok(JitCallOutcome::Fallback) => self.execute_body(&cached.body, &mut frame),
+                Err(error) => Err(error),
+            }
+        } else {
+            self.execute_body(&cached.body, &mut frame)
+        };
         self.call_depth -= 1;
         match result {
             Ok(result) => Ok(result.unwrap_or(Value::Nil)),

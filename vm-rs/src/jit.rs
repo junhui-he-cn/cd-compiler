@@ -5,12 +5,14 @@ use crate::runtime::SharedEnvironment;
 use crate::scheduler::{ResumableFrame, ReturnTarget, TaskId};
 use crate::value::Value as VmValue;
 use cranelift_codegen::ir::{
-    types, AbiParam, ExtFuncData, ExternalName, Function, InstBuilder, Signature, UserExternalName,
-    UserFuncName, Value,
+    types, AbiParam, ExtFuncData, ExternalName, FuncRef, Function, InstBuilder, Signature,
+    UserExternalName, UserFuncName, Value,
 };
 use cranelift_codegen::isa::{CallConv, TargetFrontendConfig};
 use cranelift_codegen::{settings, verifier::verify_function};
 use cranelift_frontend::{FunctionBuilder, FunctionBuilderContext};
+use cranelift_jit::{JITBuilder, JITModule};
+use cranelift_module::{default_libcall_names, FuncId, Linkage, Module};
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 use target_lexicon::PointerWidth;
@@ -19,6 +21,97 @@ use target_lexicon::PointerWidth;
 /// runtime-element or artifact budget, and it is not exposed through the
 /// public VM configuration until a concrete code representation exists.
 pub(crate) const DEFAULT_CODE_CACHE_BYTES: usize = 64 * 1024;
+const JIT_MAX_ENTRY_ARGUMENTS: usize = 8;
+pub(crate) const JIT_ERROR_HANDLE: u64 = u64::MAX;
+
+/// The small C ABI context passed to generated helper calls. The VM owns the
+/// pointed-to state for the duration of one entry call; generated code never
+/// stores this address or crosses a scheduler/GC boundary with it.
+#[repr(C)]
+pub(crate) struct JitCallContext {
+    pub(crate) data: *mut (),
+    pub(crate) dispatch: unsafe extern "C" fn(*mut (), u32, *const u64, usize) -> u64,
+}
+
+/// A finalized host-code address owned by the VM-local JIT module.
+///
+/// The pointer is only usable while its containing `JITModule` is alive. The
+/// cache therefore returns this value only from the same VM-local state that
+/// owns the module and keeps the old pointer invalidation guard in place.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct JitCodePointer(*const u8);
+
+impl JitCodePointer {
+    /// Invoke the finalized entry while its owning JIT module and call
+    /// context remain live.
+    ///
+    /// # Safety
+    ///
+    /// `self` must still refer to a finalized function in the live
+    /// `JITModule` that produced it. `context` must be the address of a live
+    /// `JitCallContext`, and its `data` and `dispatch` fields must remain valid
+    /// for the complete generated call. The argument count must match the
+    /// function signature used when this entry was compiled.
+    pub(crate) unsafe fn invoke(self, context: u64, arguments: &[u64]) -> Result<u64, String> {
+        // The initial execution boundary supports the common small-arity
+        // function subset. Larger functions remain eligible for code
+        // generation but must use the interpreter until a packed-argument ABI
+        // is specified.
+        match arguments {
+            [] => Ok(unsafe {
+                std::mem::transmute::<*const u8, unsafe extern "C" fn(u64) -> u64>(self.0)(context)
+            }),
+            [a] => Ok(unsafe {
+                std::mem::transmute::<*const u8, unsafe extern "C" fn(u64, u64) -> u64>(self.0)(
+                    context, *a,
+                )
+            }),
+            [a, b] => Ok(unsafe {
+                std::mem::transmute::<*const u8, unsafe extern "C" fn(u64, u64, u64) -> u64>(self.0)(
+                    context, *a, *b,
+                )
+            }),
+            [a, b, c] => Ok(unsafe {
+                std::mem::transmute::<*const u8, unsafe extern "C" fn(u64, u64, u64, u64) -> u64>(
+                    self.0,
+                )(context, *a, *b, *c)
+            }),
+            [a, b, c, d] => Ok(unsafe {
+                std::mem::transmute::<*const u8, unsafe extern "C" fn(u64, u64, u64, u64, u64) -> u64>(
+                    self.0,
+                )(context, *a, *b, *c, *d)
+            }),
+            [a, b, c, d, e] => Ok(unsafe {
+                std::mem::transmute::<
+                    *const u8,
+                    unsafe extern "C" fn(u64, u64, u64, u64, u64, u64) -> u64,
+                >(self.0)(context, *a, *b, *c, *d, *e)
+            }),
+            [a, b, c, d, e, f] => Ok(unsafe {
+                std::mem::transmute::<
+                    *const u8,
+                    unsafe extern "C" fn(u64, u64, u64, u64, u64, u64, u64) -> u64,
+                >(self.0)(context, *a, *b, *c, *d, *e, *f)
+            }),
+            [a, b, c, d, e, f, g] => Ok(unsafe {
+                std::mem::transmute::<
+                    *const u8,
+                    unsafe extern "C" fn(u64, u64, u64, u64, u64, u64, u64, u64) -> u64,
+                >(self.0)(context, *a, *b, *c, *d, *e, *f, *g)
+            }),
+            [a, b, c, d, e, f, g, h] => Ok(unsafe {
+                std::mem::transmute::<
+                    *const u8,
+                    unsafe extern "C" fn(u64, u64, u64, u64, u64, u64, u64, u64, u64) -> u64,
+                >(self.0)(context, *a, *b, *c, *d, *e, *f, *g, *h)
+            }),
+            _ => Err(format!(
+                "JIT entry argument arity {} exceeds the x86-64 entry ABI",
+                arguments.len()
+            )),
+        }
+    }
+}
 
 /// Stable boundary categories used when compiled code hands control back to
 /// the VM. The compiled path never owns scheduling, cancellation, or GC; it
@@ -234,7 +327,17 @@ pub(crate) enum JitFallbackReason {
         function_index: usize,
         generation: u64,
     },
+    BackendUnavailable {
+        message: String,
+    },
+    EntryArity {
+        function_index: usize,
+        arity: usize,
+    },
     CraneliftIr {
+        message: String,
+    },
+    MachineCode {
         message: String,
     },
 }
@@ -280,6 +383,80 @@ impl CraneliftIrUnit {
     }
 }
 
+struct JitBackend {
+    module: JITModule,
+    helper_ids: [FuncId; RuntimeHelper::ALL.len()],
+}
+
+impl JitBackend {
+    fn new() -> Result<Self, String> {
+        #[cfg(not(all(target_arch = "x86_64", unix)))]
+        {
+            return Err("the baseline JIT backend only targets x86-64 System V hosts".to_string());
+        }
+
+        #[cfg(all(target_arch = "x86_64", unix))]
+        {
+            let mut builder = JITBuilder::new(default_libcall_names())
+                .map_err(|error| format!("cannot initialize x86-64 JIT: {error}"))?;
+            for helper in RuntimeHelper::ALL {
+                builder.symbol(helper_symbol(helper), helper_stub(helper));
+            }
+
+            let mut module = JITModule::new(builder);
+            let helper_ids = std::array::from_fn(|index| {
+                let helper = RuntimeHelper::ALL[index];
+                module.declare_function(
+                    helper_symbol(helper),
+                    Linkage::Import,
+                    &helper_signature(helper),
+                )
+            });
+            if let Some(error) = helper_ids
+                .iter()
+                .find_map(|result| result.as_ref().err().map(ToString::to_string))
+            {
+                return Err(format!("cannot declare JIT helper: {error}"));
+            }
+            let helper_ids =
+                helper_ids.map(|result| result.expect("helper declaration was checked above"));
+
+            Ok(Self { module, helper_ids })
+        }
+    }
+
+    fn import_helpers(&mut self, function: &mut Function) -> [FuncRef; RuntimeHelper::ALL.len()] {
+        std::array::from_fn(|index| {
+            self.module
+                .declare_func_in_func(self.helper_ids[index], function)
+        })
+    }
+
+    fn compile(&mut self, ir: &CraneliftIrUnit) -> Result<(JitCodePointer, usize), String> {
+        let function_id = self
+            .module
+            .declare_anonymous_function(&ir.function.signature)
+            .map_err(|error| format!("cannot declare JIT entry: {error}"))?;
+        let mut context = self.module.make_context();
+        context.func = ir.function.clone();
+        self.module
+            .define_function(function_id, &mut context)
+            .map_err(|error| format!("cannot generate x86-64 machine code: {error}"))?;
+        let code_bytes = context
+            .compiled_code()
+            .map(|code| code.code_info().total_size as usize)
+            .unwrap_or_default();
+        self.module
+            .finalize_definitions()
+            .map_err(|error| format!("cannot finalize x86-64 machine code: {error}"))?;
+        let pointer = self.module.get_finalized_function(function_id);
+        if pointer.is_null() {
+            return Err("x86-64 JIT returned a null entry pointer".to_string());
+        }
+        Ok((JitCodePointer(pointer), code_bytes))
+    }
+}
+
 #[derive(Clone, Debug)]
 struct JitConfig {
     enabled: bool,
@@ -306,7 +483,6 @@ impl JitConfig {
     }
 }
 
-#[derive(Debug)]
 struct JitCodeCache {
     capacity: usize,
     used: usize,
@@ -320,6 +496,8 @@ struct CachedJitUnit {
     bytes: usize,
     handle: JitCodeEntryHandle,
     ir: CraneliftIrUnit,
+    code: JitCodePointer,
+    machine_code_bytes: usize,
 }
 
 enum CacheReservation {
@@ -370,11 +548,26 @@ impl JitCodeCache {
         CacheReservation::Inserted(handle)
     }
 
-    fn insert(&mut self, handle: JitCodeEntryHandle, bytes: usize, ir: CraneliftIrUnit) {
+    fn insert(
+        &mut self,
+        handle: JitCodeEntryHandle,
+        bytes: usize,
+        ir: CraneliftIrUnit,
+        code: JitCodePointer,
+        machine_code_bytes: usize,
+    ) {
         debug_assert!(Rc::ptr_eq(&self.owner, &handle.owner));
         debug_assert!(!self.entries.contains_key(&handle.function_index));
-        self.entries
-            .insert(handle.function_index, CachedJitUnit { bytes, handle, ir });
+        self.entries.insert(
+            handle.function_index,
+            CachedJitUnit {
+                bytes,
+                handle,
+                ir,
+                code,
+                machine_code_bytes,
+            },
+        );
         self.used = self.used.saturating_add(bytes);
     }
 
@@ -396,7 +589,10 @@ impl JitCodeCache {
         }
     }
 
-    fn resolve(&self, handle: &JitCodeEntryHandle) -> Result<&CraneliftIrUnit, JitFallbackReason> {
+    fn resolve_entry(
+        &self,
+        handle: &JitCodeEntryHandle,
+    ) -> Result<&CachedJitUnit, JitFallbackReason> {
         if !Rc::ptr_eq(&self.owner, &handle.owner) {
             return Err(JitFallbackReason::ForeignCodeEntry {
                 function_index: handle.function_index,
@@ -415,24 +611,42 @@ impl JitCodeCache {
                 generation: handle.generation,
             });
         }
-        Ok(&entry.ir)
+        Ok(entry)
+    }
+
+    fn resolve(&self, handle: &JitCodeEntryHandle) -> Result<&CraneliftIrUnit, JitFallbackReason> {
+        self.resolve_entry(handle).map(|entry| &entry.ir)
+    }
+
+    fn resolve_code_pointer(
+        &self,
+        handle: &JitCodeEntryHandle,
+    ) -> Result<JitCodePointer, JitFallbackReason> {
+        self.resolve_entry(handle).map(|entry| entry.code)
     }
 }
 
-/// Per-VM JIT admission state. This slice owns policy and cache accounting;
-/// it deliberately does not contain executable code or a machine-code
-/// backend.
-#[derive(Debug)]
+/// Per-VM JIT admission state. Executable memory is held by the VM-local
+/// backend and is never serialized into a `.cdbc` artifact.
 pub(crate) struct JitState {
     config: JitConfig,
     cache: JitCodeCache,
+    backend: Option<JitBackend>,
 }
 
 impl JitState {
     pub(crate) fn disabled() -> Self {
         let config = JitConfig::disabled();
         let cache = JitCodeCache::new(config.max_code_cache_bytes);
-        Self { config, cache }
+        Self {
+            config,
+            cache,
+            backend: None,
+        }
+    }
+
+    pub(crate) fn is_enabled(&self) -> bool {
+        self.config.enabled
     }
 
     pub(crate) fn materialize_frame(
@@ -451,7 +665,11 @@ impl JitState {
     ) -> Self {
         let config = JitConfig::enabled(whitelist, max_code_cache_bytes);
         let cache = JitCodeCache::new(config.max_code_cache_bytes);
-        Self { config, cache }
+        Self {
+            config,
+            cache,
+            backend: JitBackend::new().ok(),
+        }
     }
 
     pub(crate) fn eligibility(
@@ -462,6 +680,11 @@ impl JitState {
     ) -> JitEligibility {
         if !self.config.enabled {
             return JitEligibility::Fallback(JitFallbackReason::Disabled);
+        }
+        if self.backend.is_none() {
+            return JitEligibility::Fallback(JitFallbackReason::BackendUnavailable {
+                message: "x86-64 JIT backend is unavailable on this host".to_string(),
+            });
         }
 
         match mode {
@@ -488,6 +711,12 @@ impl JitState {
         }
         if !self.config.whitelist.contains(&function_index) {
             return JitEligibility::Fallback(JitFallbackReason::NotWhitelisted(function_index));
+        }
+        if function.arity > JIT_MAX_ENTRY_ARGUMENTS {
+            return JitEligibility::Fallback(JitFallbackReason::EntryArity {
+                function_index,
+                arity: function.arity,
+            });
         }
 
         for (instruction, operation) in function.instructions.iter().enumerate() {
@@ -568,7 +797,7 @@ impl JitState {
         let Some(function) = program.functions.get(function_index) else {
             return JitAdmission::Fallback(JitFallbackReason::MissingFunction(function_index));
         };
-        let ir = match lower_to_cranelift_ir(function_index, function) {
+        let ir = match lower_to_cranelift_ir(function_index, function, self.backend.as_mut()) {
             Ok(ir) => ir,
             Err(message) => {
                 return JitAdmission::Fallback(JitFallbackReason::CraneliftIr { message });
@@ -577,8 +806,33 @@ impl JitState {
 
         match self.cache.reserve(function_index, estimated_code_bytes) {
             CacheReservation::Inserted(handle) => {
+                let compiled = self
+                    .backend
+                    .as_mut()
+                    .expect("eligible JIT state has a backend")
+                    .compile(&ir);
+                let (code, machine_code_bytes) = match compiled {
+                    Ok(code) => code,
+                    Err(message) => {
+                        return JitAdmission::Fallback(JitFallbackReason::MachineCode { message });
+                    }
+                };
+                if machine_code_bytes > estimated_code_bytes {
+                    let message = format!(
+                        "generated x86-64 code requires {} bytes, exceeding the admitted budget of {} bytes",
+                        machine_code_bytes, estimated_code_bytes
+                    );
+                    // The new function has already been emitted into the
+                    // shared module, so invalidate that module together with
+                    // all previous entries before falling back. This keeps
+                    // executable bytes bounded even when the caller's
+                    // estimate was not a proven upper bound.
+                    self.clear_cache();
+                    return JitAdmission::Fallback(JitFallbackReason::MachineCode { message });
+                }
                 let admission_handle = handle.clone();
-                self.cache.insert(handle, estimated_code_bytes, ir);
+                self.cache
+                    .insert(handle, estimated_code_bytes, ir, code, machine_code_bytes);
                 JitAdmission::Reserved {
                     function_index,
                     bytes: estimated_code_bytes,
@@ -604,6 +858,20 @@ impl JitState {
 
     pub(crate) fn clear_cache(&mut self) {
         self.cache.clear();
+        let Some(old_backend) = self.backend.take() else {
+            return;
+        };
+
+        // Clearing a finalized module invalidates every raw entry pointer.
+        // The cache has already invalidated its handles above, so it is safe
+        // to release the old executable mapping before installing a fresh
+        // helper-import module. This method is not callable while an entry is
+        // executing.
+        let replacement = JitBackend::new();
+        unsafe {
+            old_backend.module.free_memory();
+        }
+        self.backend = replacement.ok();
     }
 
     /// Resolve a cache handle immediately before a future compiled entry is
@@ -616,6 +884,13 @@ impl JitState {
         self.cache.resolve(handle)
     }
 
+    pub(crate) fn resolve_code_pointer(
+        &self,
+        handle: &JitCodeEntryHandle,
+    ) -> Result<JitCodePointer, JitFallbackReason> {
+        self.cache.resolve_code_pointer(handle)
+    }
+
     #[cfg(test)]
     fn cache_stats(&self) -> JitCacheStats {
         self.cache.stats()
@@ -624,6 +899,14 @@ impl JitState {
     #[cfg(test)]
     fn cached_ir(&self, function_index: usize) -> Option<&CraneliftIrUnit> {
         self.cache.cached_ir(function_index)
+    }
+
+    #[cfg(test)]
+    fn cached_machine_code_bytes(&self, function_index: usize) -> Option<usize> {
+        self.cache
+            .entries
+            .get(&function_index)
+            .map(|entry| entry.machine_code_bytes)
     }
 }
 
@@ -655,10 +938,12 @@ pub(crate) enum RuntimeHelper {
     GreaterEqual = 11,
     Less = 12,
     LessEqual = 13,
+    Checkpoint = 14,
+    StoreRegister = 15,
 }
 
 impl RuntimeHelper {
-    const ALL: [Self; 14] = [
+    const ALL: [Self; 16] = [
         Self::Constant,
         Self::LoadVar,
         Self::Negate,
@@ -673,11 +958,13 @@ impl RuntimeHelper {
         Self::GreaterEqual,
         Self::Less,
         Self::LessEqual,
+        Self::Checkpoint,
+        Self::StoreRegister,
     ];
 
     const fn value_arguments(self) -> usize {
         match self {
-            Self::Constant | Self::LoadVar | Self::Negate | Self::Not => 1,
+            Self::Constant | Self::LoadVar | Self::Negate | Self::Not | Self::Checkpoint => 1,
             Self::Add
             | Self::Subtract
             | Self::Multiply
@@ -687,8 +974,13 @@ impl RuntimeHelper {
             | Self::Greater
             | Self::GreaterEqual
             | Self::Less
-            | Self::LessEqual => 2,
+            | Self::LessEqual
+            | Self::StoreRegister => 2,
         }
+    }
+
+    pub(crate) fn from_id(id: u32) -> Option<Self> {
+        Self::ALL.into_iter().find(|helper| *helper as u32 == id)
     }
 }
 
@@ -717,9 +1009,116 @@ impl JitHelperAbi {
     }
 }
 
+fn helper_signature(helper: RuntimeHelper) -> Signature {
+    let abi = JitHelperAbi::for_helper(helper);
+    let mut signature = Signature::new(CallConv::SystemV);
+    signature.params.extend(std::iter::repeat_n(
+        AbiParam::new(types::I64),
+        abi.context_arguments + abi.value_arguments,
+    ));
+    signature.returns.extend(std::iter::repeat_n(
+        AbiParam::new(types::I64),
+        abi.value_results,
+    ));
+    signature
+}
+
+fn helper_symbol(helper: RuntimeHelper) -> &'static str {
+    match helper {
+        RuntimeHelper::Constant => "cd_vm_jit_constant",
+        RuntimeHelper::LoadVar => "cd_vm_jit_load_var",
+        RuntimeHelper::Negate => "cd_vm_jit_negate",
+        RuntimeHelper::Not => "cd_vm_jit_not",
+        RuntimeHelper::Add => "cd_vm_jit_add",
+        RuntimeHelper::Subtract => "cd_vm_jit_subtract",
+        RuntimeHelper::Multiply => "cd_vm_jit_multiply",
+        RuntimeHelper::Divide => "cd_vm_jit_divide",
+        RuntimeHelper::Equal => "cd_vm_jit_equal",
+        RuntimeHelper::NotEqual => "cd_vm_jit_not_equal",
+        RuntimeHelper::Greater => "cd_vm_jit_greater",
+        RuntimeHelper::GreaterEqual => "cd_vm_jit_greater_equal",
+        RuntimeHelper::Less => "cd_vm_jit_less",
+        RuntimeHelper::LessEqual => "cd_vm_jit_less_equal",
+        RuntimeHelper::Checkpoint => "cd_vm_jit_checkpoint",
+        RuntimeHelper::StoreRegister => "cd_vm_jit_store_register",
+    }
+}
+
+fn helper_stub(helper: RuntimeHelper) -> *const u8 {
+    match helper {
+        RuntimeHelper::Constant => jit_helper_constant as *const u8,
+        RuntimeHelper::LoadVar => jit_helper_load_var as *const u8,
+        RuntimeHelper::Negate => jit_helper_negate as *const u8,
+        RuntimeHelper::Not => jit_helper_not as *const u8,
+        RuntimeHelper::Add => jit_helper_add as *const u8,
+        RuntimeHelper::Subtract => jit_helper_subtract as *const u8,
+        RuntimeHelper::Multiply => jit_helper_multiply as *const u8,
+        RuntimeHelper::Divide => jit_helper_divide as *const u8,
+        RuntimeHelper::Equal => jit_helper_equal as *const u8,
+        RuntimeHelper::NotEqual => jit_helper_not_equal as *const u8,
+        RuntimeHelper::Greater => jit_helper_greater as *const u8,
+        RuntimeHelper::GreaterEqual => jit_helper_greater_equal as *const u8,
+        RuntimeHelper::Less => jit_helper_less as *const u8,
+        RuntimeHelper::LessEqual => jit_helper_less_equal as *const u8,
+        RuntimeHelper::Checkpoint => jit_helper_checkpoint as *const u8,
+        RuntimeHelper::StoreRegister => jit_helper_store_register as *const u8,
+    }
+}
+
+fn call_helper(context: u64, helper: RuntimeHelper, operands: &[u64]) -> u64 {
+    let context = context as *mut JitCallContext;
+    if context.is_null() {
+        return JIT_ERROR_HANDLE;
+    }
+    // The generated code owns no Rust references. The caller keeps the
+    // context and its pointed-to bridge alive until this call returns.
+    unsafe {
+        ((*context).dispatch)(
+            (*context).data,
+            helper as u32,
+            operands.as_ptr(),
+            operands.len(),
+        )
+    }
+}
+
+macro_rules! define_jit_unary_helper {
+    ($name:ident, $helper:expr) => {
+        extern "C" fn $name(context: u64, operand: u64) -> u64 {
+            call_helper(context, $helper, &[operand])
+        }
+    };
+}
+
+macro_rules! define_jit_binary_helper {
+    ($name:ident, $helper:expr) => {
+        extern "C" fn $name(context: u64, left: u64, right: u64) -> u64 {
+            call_helper(context, $helper, &[left, right])
+        }
+    };
+}
+
+define_jit_unary_helper!(jit_helper_constant, RuntimeHelper::Constant);
+define_jit_unary_helper!(jit_helper_load_var, RuntimeHelper::LoadVar);
+define_jit_unary_helper!(jit_helper_negate, RuntimeHelper::Negate);
+define_jit_unary_helper!(jit_helper_not, RuntimeHelper::Not);
+define_jit_binary_helper!(jit_helper_add, RuntimeHelper::Add);
+define_jit_binary_helper!(jit_helper_subtract, RuntimeHelper::Subtract);
+define_jit_binary_helper!(jit_helper_multiply, RuntimeHelper::Multiply);
+define_jit_binary_helper!(jit_helper_divide, RuntimeHelper::Divide);
+define_jit_binary_helper!(jit_helper_equal, RuntimeHelper::Equal);
+define_jit_binary_helper!(jit_helper_not_equal, RuntimeHelper::NotEqual);
+define_jit_binary_helper!(jit_helper_greater, RuntimeHelper::Greater);
+define_jit_binary_helper!(jit_helper_greater_equal, RuntimeHelper::GreaterEqual);
+define_jit_binary_helper!(jit_helper_less, RuntimeHelper::Less);
+define_jit_binary_helper!(jit_helper_less_equal, RuntimeHelper::LessEqual);
+define_jit_unary_helper!(jit_helper_checkpoint, RuntimeHelper::Checkpoint);
+define_jit_binary_helper!(jit_helper_store_register, RuntimeHelper::StoreRegister);
+
 fn lower_to_cranelift_ir(
     function_index: usize,
     function: &crate::bytecode::Function,
+    backend: Option<&mut JitBackend>,
 ) -> Result<CraneliftIrUnit, String> {
     let mut signature = Signature::new(CallConv::SystemV);
     signature.params.push(AbiParam::new(types::I64));
@@ -731,6 +1130,7 @@ fn lower_to_cranelift_ir(
 
     let mut ir_function =
         Function::with_name_signature(UserFuncName::user(0, function_index as u32), signature);
+    let helper_refs = backend.map(|backend| backend.import_helpers(&mut ir_function));
     let mut builder_context = FunctionBuilderContext::new();
     {
         let mut builder = FunctionBuilder::new(&mut ir_function, &mut builder_context);
@@ -755,6 +1155,21 @@ fn lower_to_cranelift_ir(
                 ));
             }
 
+            let instruction = i64::try_from(instruction_index).map_err(|_| {
+                format!(
+                    "instruction index {} does not fit Cranelift i64",
+                    instruction_index
+                )
+            })?;
+            let instruction = builder.ins().iconst(types::I64, instruction);
+            let _ = emit_runtime_call(
+                &mut builder,
+                context,
+                RuntimeHelper::Checkpoint,
+                &[instruction],
+                helper_refs.as_ref(),
+            );
+
             match operation {
                 Instruction::Constant { dest, constant } => {
                     let constant = i64::try_from(*constant).map_err(|_| {
@@ -766,31 +1181,87 @@ fn lower_to_cranelift_ir(
                         context,
                         RuntimeHelper::Constant,
                         &[constant],
+                        helper_refs.as_ref(),
                     );
+                    let value = emit_store_register(
+                        &mut builder,
+                        context,
+                        *dest,
+                        value,
+                        instruction_index,
+                        helper_refs.as_ref(),
+                    )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
                 Instruction::Move { dest, source } => {
                     let value = read_register(&registers, *source, instruction_index)?;
+                    let value = emit_store_register(
+                        &mut builder,
+                        context,
+                        *dest,
+                        value,
+                        instruction_index,
+                        helper_refs.as_ref(),
+                    )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
                 Instruction::LoadVar { dest, name } => {
                     let name = i64::try_from(*name)
                         .map_err(|_| format!("name index {} does not fit Cranelift i64", name))?;
                     let name = builder.ins().iconst(types::I64, name);
-                    let value =
-                        emit_runtime_call(&mut builder, context, RuntimeHelper::LoadVar, &[name]);
+                    let value = emit_runtime_call(
+                        &mut builder,
+                        context,
+                        RuntimeHelper::LoadVar,
+                        &[name],
+                        helper_refs.as_ref(),
+                    );
+                    let value = emit_store_register(
+                        &mut builder,
+                        context,
+                        *dest,
+                        value,
+                        instruction_index,
+                        helper_refs.as_ref(),
+                    )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
                 Instruction::Negate { dest, value } => {
                     let value = read_register(&registers, *value, instruction_index)?;
-                    let value =
-                        emit_runtime_call(&mut builder, context, RuntimeHelper::Negate, &[value]);
+                    let value = emit_runtime_call(
+                        &mut builder,
+                        context,
+                        RuntimeHelper::Negate,
+                        &[value],
+                        helper_refs.as_ref(),
+                    );
+                    let value = emit_store_register(
+                        &mut builder,
+                        context,
+                        *dest,
+                        value,
+                        instruction_index,
+                        helper_refs.as_ref(),
+                    )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
                 Instruction::Not { dest, value } => {
                     let value = read_register(&registers, *value, instruction_index)?;
-                    let value =
-                        emit_runtime_call(&mut builder, context, RuntimeHelper::Not, &[value]);
+                    let value = emit_runtime_call(
+                        &mut builder,
+                        context,
+                        RuntimeHelper::Not,
+                        &[value],
+                        helper_refs.as_ref(),
+                    );
+                    let value = emit_store_register(
+                        &mut builder,
+                        context,
+                        *dest,
+                        value,
+                        instruction_index,
+                        helper_refs.as_ref(),
+                    )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
                 Instruction::Add { dest, left, right } => {
@@ -802,6 +1273,15 @@ fn lower_to_cranelift_ir(
                         *left,
                         *right,
                         instruction_index,
+                        helper_refs.as_ref(),
+                    )?;
+                    let value = emit_store_register(
+                        &mut builder,
+                        context,
+                        *dest,
+                        value,
+                        instruction_index,
+                        helper_refs.as_ref(),
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
@@ -814,6 +1294,15 @@ fn lower_to_cranelift_ir(
                         *left,
                         *right,
                         instruction_index,
+                        helper_refs.as_ref(),
+                    )?;
+                    let value = emit_store_register(
+                        &mut builder,
+                        context,
+                        *dest,
+                        value,
+                        instruction_index,
+                        helper_refs.as_ref(),
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
@@ -826,6 +1315,15 @@ fn lower_to_cranelift_ir(
                         *left,
                         *right,
                         instruction_index,
+                        helper_refs.as_ref(),
+                    )?;
+                    let value = emit_store_register(
+                        &mut builder,
+                        context,
+                        *dest,
+                        value,
+                        instruction_index,
+                        helper_refs.as_ref(),
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
@@ -838,6 +1336,15 @@ fn lower_to_cranelift_ir(
                         *left,
                         *right,
                         instruction_index,
+                        helper_refs.as_ref(),
+                    )?;
+                    let value = emit_store_register(
+                        &mut builder,
+                        context,
+                        *dest,
+                        value,
+                        instruction_index,
+                        helper_refs.as_ref(),
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
@@ -850,6 +1357,15 @@ fn lower_to_cranelift_ir(
                         *left,
                         *right,
                         instruction_index,
+                        helper_refs.as_ref(),
+                    )?;
+                    let value = emit_store_register(
+                        &mut builder,
+                        context,
+                        *dest,
+                        value,
+                        instruction_index,
+                        helper_refs.as_ref(),
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
@@ -862,6 +1378,15 @@ fn lower_to_cranelift_ir(
                         *left,
                         *right,
                         instruction_index,
+                        helper_refs.as_ref(),
+                    )?;
+                    let value = emit_store_register(
+                        &mut builder,
+                        context,
+                        *dest,
+                        value,
+                        instruction_index,
+                        helper_refs.as_ref(),
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
@@ -874,6 +1399,15 @@ fn lower_to_cranelift_ir(
                         *left,
                         *right,
                         instruction_index,
+                        helper_refs.as_ref(),
+                    )?;
+                    let value = emit_store_register(
+                        &mut builder,
+                        context,
+                        *dest,
+                        value,
+                        instruction_index,
+                        helper_refs.as_ref(),
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
@@ -886,6 +1420,15 @@ fn lower_to_cranelift_ir(
                         *left,
                         *right,
                         instruction_index,
+                        helper_refs.as_ref(),
+                    )?;
+                    let value = emit_store_register(
+                        &mut builder,
+                        context,
+                        *dest,
+                        value,
+                        instruction_index,
+                        helper_refs.as_ref(),
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
@@ -898,6 +1441,15 @@ fn lower_to_cranelift_ir(
                         *left,
                         *right,
                         instruction_index,
+                        helper_refs.as_ref(),
+                    )?;
+                    let value = emit_store_register(
+                        &mut builder,
+                        context,
+                        *dest,
+                        value,
+                        instruction_index,
+                        helper_refs.as_ref(),
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
@@ -910,6 +1462,15 @@ fn lower_to_cranelift_ir(
                         *left,
                         *right,
                         instruction_index,
+                        helper_refs.as_ref(),
+                    )?;
+                    let value = emit_store_register(
+                        &mut builder,
+                        context,
+                        *dest,
+                        value,
+                        instruction_index,
+                        helper_refs.as_ref(),
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
@@ -986,10 +1547,41 @@ fn emit_binary_runtime_call(
     left: usize,
     right: usize,
     instruction: usize,
+    helper_refs: Option<&[FuncRef; RuntimeHelper::ALL.len()]>,
 ) -> Result<Value, String> {
     let left = read_register(registers, left, instruction)?;
     let right = read_register(registers, right, instruction)?;
-    Ok(emit_runtime_call(builder, context, helper, &[left, right]))
+    Ok(emit_runtime_call(
+        builder,
+        context,
+        helper,
+        &[left, right],
+        helper_refs,
+    ))
+}
+
+fn emit_store_register(
+    builder: &mut FunctionBuilder<'_>,
+    context: Value,
+    register: usize,
+    value: Value,
+    instruction: usize,
+    helper_refs: Option<&[FuncRef; RuntimeHelper::ALL.len()]>,
+) -> Result<Value, String> {
+    let register = i64::try_from(register).map_err(|_| {
+        format!(
+            "register index {} does not fit Cranelift i64 at instruction {}",
+            register, instruction
+        )
+    })?;
+    let register = builder.ins().iconst(types::I64, register);
+    Ok(emit_runtime_call(
+        builder,
+        context,
+        RuntimeHelper::StoreRegister,
+        &[register, value],
+        helper_refs,
+    ))
 }
 
 fn emit_runtime_call(
@@ -997,6 +1589,7 @@ fn emit_runtime_call(
     context: Value,
     helper: RuntimeHelper,
     arguments: &[Value],
+    helper_refs: Option<&[FuncRef; RuntimeHelper::ALL.len()]>,
 ) -> Value {
     let abi = JitHelperAbi::for_helper(helper);
     debug_assert_eq!(abi.context_arguments, 1);
@@ -1015,16 +1608,20 @@ fn emit_runtime_call(
         AbiParam::new(types::I64),
         abi.value_results,
     ));
-    let signature = builder.import_signature(signature);
-    let user_name = builder
-        .func
-        .declare_imported_user_function(UserExternalName::new(1, abi.helper_id));
-    let function = builder.import_function(ExtFuncData {
-        name: ExternalName::user(user_name),
-        signature,
-        colocated: false,
-        patchable: false,
-    });
+    let function = if let Some(helper_refs) = helper_refs {
+        helper_refs[helper as usize]
+    } else {
+        let signature = builder.import_signature(signature);
+        let user_name = builder
+            .func
+            .declare_imported_user_function(UserExternalName::new(1, abi.helper_id));
+        builder.import_function(ExtFuncData {
+            name: ExternalName::user(user_name),
+            signature,
+            colocated: false,
+            patchable: false,
+        })
+    };
     let mut call_arguments = Vec::with_capacity(arguments.len() + 1);
     call_arguments.push(context);
     call_arguments.extend_from_slice(arguments);
@@ -1232,6 +1829,75 @@ mod tests {
         )
     }
 
+    #[cfg(all(target_arch = "x86_64", unix))]
+    #[derive(Default)]
+    struct ExecutableTestContext {
+        calls: usize,
+    }
+
+    #[cfg(all(target_arch = "x86_64", unix))]
+    unsafe extern "C" fn executable_test_dispatch(
+        data: *mut (),
+        helper_id: u32,
+        operands: *const u64,
+        operand_count: usize,
+    ) -> u64 {
+        let context = unsafe { &mut *(data as *mut ExecutableTestContext) };
+        context.calls += 1;
+        let operands = unsafe { std::slice::from_raw_parts(operands, operand_count) };
+        match helper_id {
+            id if id == RuntimeHelper::LoadVar as u32 => 7,
+            id if id == RuntimeHelper::Checkpoint as u32 => 0,
+            id if id == RuntimeHelper::StoreRegister as u32 => operands[1],
+            id if id == RuntimeHelper::Add as u32 => operands[0] + operands[1],
+            _ => u64::MAX,
+        }
+    }
+
+    #[cfg(all(target_arch = "x86_64", unix))]
+    #[test]
+    fn x86_64_backend_finalizes_and_executes_opaque_helper_calls() {
+        let program = program(vec![eligible_function(0)]);
+        let mut state = JitState::enabled_for_tests([0], 1024);
+        let handle = match state.admit(&program, Some(0), JitExecutionMode::Ordinary, 1024) {
+            JitAdmission::Reserved { handle, .. } => handle,
+            admission => panic!("unexpected admission: {admission:?}"),
+        };
+        assert!(state.resolve_code_pointer(&handle).is_ok());
+        assert!(state.cached_machine_code_bytes(0).unwrap_or_default() > 0);
+
+        let mut test_context = ExecutableTestContext::default();
+        let mut call_context = JitCallContext {
+            data: &mut test_context as *mut _ as *mut (),
+            dispatch: executable_test_dispatch,
+        };
+        let result = unsafe {
+            state
+                .resolve_code_pointer(&handle)
+                .expect("entry should remain live")
+                .invoke(&mut call_context as *mut _ as usize as u64, &[])
+        }
+        .expect("generated entry should return");
+        assert_eq!(result, 14);
+        assert_eq!(test_context.calls, 7);
+    }
+
+    #[cfg(all(target_arch = "x86_64", unix))]
+    #[test]
+    fn machine_code_over_budget_is_not_published() {
+        let program = program(vec![eligible_function(0)]);
+        let mut state = JitState::enabled_for_tests([0], 128);
+        let admission = state.admit(&program, Some(0), JitExecutionMode::Ordinary, 1);
+
+        assert!(matches!(
+            admission,
+            JitAdmission::Fallback(JitFallbackReason::MachineCode { message })
+                if message.contains("exceeding the admitted budget")
+        ));
+        assert_eq!(state.cache_stats().used, 0);
+        assert_eq!(state.cache_stats().entries, 0);
+    }
+
     #[test]
     fn disabled_state_falls_back_without_inspecting_bytecode() {
         let program = program(vec![eligible_function(0)]);
@@ -1334,16 +2000,18 @@ mod tests {
     #[test]
     fn cache_admission_is_bounded_reusable_and_evictable() {
         let program = program(vec![eligible_function(0), eligible_function(1)]);
-        let mut state = JitState::enabled_for_tests([0, 1], 8);
+        let unit_budget = 1024;
+        let mut state = JitState::enabled_for_tests([0, 1], unit_budget * 2);
 
-        let first_handle = match state.admit(&program, Some(0), JitExecutionMode::Ordinary, 5) {
-            JitAdmission::Reserved {
-                function_index: 0,
-                bytes: 5,
-                handle,
-            } => handle,
-            admission => panic!("unexpected first admission: {admission:?}"),
-        };
+        let first_handle =
+            match state.admit(&program, Some(0), JitExecutionMode::Ordinary, unit_budget) {
+                JitAdmission::Reserved {
+                    function_index: 0,
+                    bytes,
+                    handle,
+                } if bytes == unit_budget => handle,
+                admission => panic!("unexpected first admission: {admission:?}"),
+            };
         assert_eq!(first_handle.function_index(), 0);
         assert!(state.resolve_code(&first_handle).is_ok());
         let ir = state
@@ -1355,24 +2023,29 @@ mod tests {
         let cached_handle = match state.admit(&program, Some(0), JitExecutionMode::Ordinary, 7) {
             JitAdmission::Cached {
                 function_index: 0,
-                bytes: 5,
+                bytes,
                 handle,
-            } => handle,
+            } if bytes == unit_budget => handle,
             admission => panic!("unexpected cached admission: {admission:?}"),
         };
         assert_eq!(cached_handle, first_handle);
         assert_eq!(
-            state.admit(&program, Some(1), JitExecutionMode::Ordinary, 4),
+            state.admit(
+                &program,
+                Some(1),
+                JitExecutionMode::Ordinary,
+                unit_budget + 1,
+            ),
             JitAdmission::Fallback(JitFallbackReason::CodeCacheExhausted {
-                requested: 4,
-                remaining: 3,
+                requested: unit_budget + 1,
+                remaining: unit_budget,
             })
         );
         assert_eq!(
             state.cache_stats(),
             JitCacheStats {
-                capacity: 8,
-                used: 5,
+                capacity: unit_budget * 2,
+                used: unit_budget,
                 entries: 1,
             }
         );
@@ -1391,7 +2064,7 @@ mod tests {
         assert_eq!(
             state.cache_stats(),
             JitCacheStats {
-                capacity: 8,
+                capacity: unit_budget * 2,
                 used: 0,
                 entries: 0,
             }
@@ -1401,23 +2074,24 @@ mod tests {
     #[test]
     fn code_entry_handles_reject_foreign_caches_and_failed_publication_rolls_back() {
         let base_program = program(vec![eligible_function(0)]);
-        let mut state = JitState::enabled_for_tests([0], 16);
-        let handle = match state.admit(&base_program, Some(0), JitExecutionMode::Ordinary, 4) {
+        let mut state = JitState::enabled_for_tests([0], 2048);
+        let handle = match state.admit(&base_program, Some(0), JitExecutionMode::Ordinary, 1024) {
             JitAdmission::Reserved { handle, .. } => handle,
             admission => panic!("unexpected admission: {admission:?}"),
         };
 
-        let foreign_state = JitState::enabled_for_tests([0], 16);
+        let foreign_state = JitState::enabled_for_tests([0], 2048);
         assert!(matches!(
             foreign_state.resolve_code(&handle),
             Err(JitFallbackReason::ForeignCodeEntry { function_index: 0 })
         ));
 
         state.clear_cache();
-        let replacement = match state.admit(&base_program, Some(0), JitExecutionMode::Ordinary, 4) {
-            JitAdmission::Reserved { handle, .. } => handle,
-            admission => panic!("unexpected replacement admission: {admission:?}"),
-        };
+        let replacement =
+            match state.admit(&base_program, Some(0), JitExecutionMode::Ordinary, 1024) {
+                JitAdmission::Reserved { handle, .. } => handle,
+                admission => panic!("unexpected replacement admission: {admission:?}"),
+            };
         assert_ne!(replacement, handle);
         assert_ne!(replacement.generation(), handle.generation());
         assert!(state.resolve_code(&replacement).is_ok());
