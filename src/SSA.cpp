@@ -1706,11 +1706,41 @@ void SSADeSSALinearFunction::verify(const ControlFlowGraph& cfg) const
 
 SSADeSSALinearFunction lowerSSADeSSACopies(
     const ControlFlowGraph& cfg,
-    const SSAFunction& input)
+    const SSAFunction& input,
+    const std::vector<std::optional<SourceSpan>>* sourceSpans)
 {
     cfg.verify();
     input.verify(cfg);
     const SSADeSSACopyPlan plan = planSSADeSSACopies(cfg, input);
+
+    // Optimizer-generated copies and control-flow barriers still execute on
+    // behalf of a source instruction.  Preserve that instruction's source
+    // span so trace/debug consumers never lose the source location merely
+    // because de-SSA inserted a legal implementation detail.
+    std::vector<std::optional<SourceSpan>> anchorSpans(cfg.instructionCount);
+    for (const SSABlock& block : input.blocks) {
+        for (const SSAInstruction& instruction : block.instructions) {
+            if (instruction.originalInstruction >= anchorSpans.size()) {
+                throw SSAError("SSA de-SSA source span anchor is out of range");
+            }
+            anchorSpans[instruction.originalInstruction] = instruction.span;
+        }
+    }
+    if (sourceSpans) {
+        if (sourceSpans->size() != anchorSpans.size()) {
+            throw SSAError("SSA de-SSA source span table has the wrong size");
+        }
+        for (std::size_t index = 0; index < anchorSpans.size(); ++index) {
+            if ((*sourceSpans)[index]) {
+                anchorSpans[index] = (*sourceSpans)[index];
+            }
+        }
+    }
+    const auto sourceSpanForAnchor = [&anchorSpans](std::size_t anchor) {
+        return anchor < anchorSpans.size()
+            ? anchorSpans[anchor]
+            : std::optional<SourceSpan>{};
+    };
 
     using EdgeKey = std::pair<CFGBlockId, CFGBlockId>;
     std::map<EdgeKey, SSAEdgeCopyBundle> bundles;
@@ -1849,7 +1879,8 @@ SSADeSSALinearFunction lowerSSADeSSACopies(
 
     const auto emitSyntheticCopy = [
         &result,
-        &cfg](const SSAMove& move, std::size_t anchor) {
+        &cfg,
+        &sourceSpanForAnchor](const SSAMove& move, std::size_t anchor) {
         if (anchor >= cfg.instructionCount) {
             throw SSAError("SSA de-SSA copy has no source anchor");
         }
@@ -1858,6 +1889,7 @@ SSADeSSALinearFunction lowerSSADeSSACopies(
         instruction.result = move.destination;
         instruction.left = move.source;
         instruction.originalInstruction = anchor;
+        instruction.span = sourceSpanForAnchor(anchor);
         result.instructions.push_back(SSADeSSAInstruction{std::move(instruction), true});
     };
 
@@ -1913,6 +1945,7 @@ SSADeSSALinearFunction lowerSSADeSSACopies(
             jump.op = IROp::Jump;
             jump.operand = result.blockEntryOffsets[spec.split->successor];
             jump.originalInstruction = anchor;
+            jump.span = sourceSpanForAnchor(anchor);
             result.instructions.push_back(SSADeSSAInstruction{std::move(jump), true});
             continue;
         }
@@ -1992,6 +2025,7 @@ SSADeSSALinearFunction lowerSSADeSSACopies(
             jump.op = IROp::Jump;
             jump.operand = result.blockEntryOffsets[cfg.exitBlock];
             jump.originalInstruction = cfgBlock.endInstruction - 1;
+            jump.span = sourceSpanForAnchor(jump.originalInstruction);
             result.instructions.push_back(SSADeSSAInstruction{std::move(jump), true});
         }
         if (result.instructions.size() != outputBlock.endInstruction) {

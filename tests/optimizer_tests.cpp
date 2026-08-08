@@ -259,40 +259,47 @@ void test_internal_ir_adapter_normalizes_redefined_registers()
     left.op = IROp::Constant;
     left.dest = IRRegister{0};
     left.operand = 0;
+    left.span = SourceSpan{0, 1, 1, SourceSpanRange{0, 1}};
     input.instructions.push_back(left);
 
     IRInstruction result;
     result.op = IROp::Copy;
     result.dest = IRRegister{1};
     result.left = IRRegister{0};
+    result.span = SourceSpan{0, 1, 2, SourceSpanRange{1, 2}};
     input.instructions.push_back(result);
 
     IRInstruction branch;
     branch.op = IROp::JumpIfTrue;
     branch.left = IRRegister{1};
     branch.operand = 5;
+    branch.span = SourceSpan{0, 1, 3, SourceSpanRange{2, 3}};
     input.instructions.push_back(branch);
 
     IRInstruction right;
     right.op = IROp::Constant;
     right.dest = IRRegister{2};
     right.operand = 1;
+    right.span = SourceSpan{0, 1, 4, SourceSpanRange{3, 4}};
     input.instructions.push_back(right);
 
     IRInstruction replacement;
     replacement.op = IROp::Copy;
     replacement.dest = IRRegister{1};
     replacement.left = IRRegister{2};
+    replacement.span = SourceSpan{0, 1, 5, SourceSpanRange{4, 5}};
     input.instructions.push_back(replacement);
 
     IRInstruction print;
     print.op = IROp::Print;
     print.left = IRRegister{1};
+    print.span = SourceSpan{0, 1, 6, SourceSpanRange{5, 6}};
     input.instructions.push_back(print);
 
     IRInstruction returned;
     returned.op = IROp::Return;
     returned.left = IRRegister{1};
+    returned.span = SourceSpan{0, 1, 7, SourceSpanRange{6, 7}};
     input.instructions.push_back(returned);
 
     const SSADeSSAIRResult lowered = optimizeIRFunction(
@@ -305,6 +312,11 @@ void test_internal_ir_adapter_normalizes_redefined_registers()
     assert(lowered.originalInstructionOffsets.size() == input.instructions.size());
     for (const auto& offset : lowered.originalInstructionOffsets) {
         assert(offset.has_value());
+    }
+    for (std::size_t index = 0; index < lowered.function.instructions.size(); ++index) {
+        if (lowered.syntheticInstructions[index]) {
+            assert(lowered.function.instructions[index].span.has_value());
+        }
     }
 }
 

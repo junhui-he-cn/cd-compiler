@@ -38,7 +38,7 @@ compatibility contracts until an explicit decision changes them.
 | Front end | Typed source identities, lossless source, declaration/semantic indexes, import-aware module graph | Remove legacy paths only when all consumers use the indexed services |
 | Language | Functions, closures, generics and constraints, `optional<T>`, enums/patterns, named and recursive structs, collection semantics, `Eq`/`Ord`/`Hash` capabilities | New syntax is demand-driven; semantic soundness work has priority |
 | Modules | Public interfaces, `.cdi`, independent module products, linker inputs, `cdbc-cache 0.2`, strict and fallback modes | Cache creation/repair policy is not yet a default-strict contract |
-| IR and optimization | Linear register IR plus verified CFG/SSA/de-SSA and explicit `--opt-level 1` | O0 stays default; optimized debug-local and register-allocation policy remain open |
+| IR and optimization | Linear register IR plus verified CFG/SSA/de-SSA and explicit `--opt-level 1` | O0 stays default; register-allocation and default-level policy remain open |
 | Tools | Formatter, open/closed-workspace LSP definition and references, trace and interactive VM debugger | Closed-module completion/rename and incremental sessions remain open |
 | Artifact boundary | Compiler emits validated linked and module `cdbc 0.1` products with debug metadata | No successor format has been justified |
 
@@ -80,23 +80,27 @@ decision needs a stable statement of the boundary it must preserve.
 
 ### C1: Make O1 ready for a default-policy decision
 
-**Priority:** P0. **Status:** queued after completed X1.
+**Priority:** P0. **Status:** C1 complete on 2026-08-03; O0 remains the compatibility default.
 
 The existing explicit O1 pipeline is useful but not yet a default replacement
 for O0. Finish the evidence in three narrow slices:
 
-1. **C1A - optimized debug contract:** define which source locations, trace
-   events, frame locals, and runtime cells must remain observable at O1. Add
-   O0/O1 trace and debugger parity cases for branches, loops, closures,
-   imported functions, eliminated values, and runtime failures.
-2. **C1B - register policy:** measure virtual-register pressure on the checked-in
-   O0/O1 workload matrix and decide whether O1 retains virtual registers or
-   needs a separate physical allocation/coalescing stage. Do not add an O2
-   allocator until the mapping and spill/debug rules are written.
-3. **C1C - default-level decision:** compare the semantic, artifact-size,
-   compile-time, runtime, cache, and debugger evidence. Choose either to keep
-   O0 as the compatibility default or make O1 the default with an explicit
-   migration note.
+1. **C1A - optimized debug contract (implemented):** define which source
+   locations, trace events, frame locals, and runtime cells must remain
+   observable at O1. Add O0/O1 trace and debugger parity cases for branches,
+   loops, closures, imported functions, eliminated values, and runtime failures.
+   See [`c1a-optimized-debug-001.md`](decisions/c1a-optimized-debug-001.md).
+2. **C1B - register policy (implemented):** measure CFG-aware peak
+   virtual-register pressure on the checked-in O0/O1 workload matrix and
+   decide whether O1 retains virtual registers or needs a separate physical
+   allocation/coalescing stage. O1 retains virtual registers for now; see
+   [`c1b-register-policy-001.md`](decisions/c1b-register-policy-001.md).
+   Do not add an O2 allocator until the mapping and spill/debug rules are
+   written.
+3. **C1C - default-level decision (implemented):** compare the semantic,
+   artifact-size, compile-time, runtime, cache, and debugger evidence. Keep O0
+   as the compatibility default and retain explicit O1 opt-in; see
+   [`c1c-default-level-001.md`](decisions/c1c-default-level-001.md).
 
 **Decision gate:** changing the default optimization level is a user-visible
 pipeline decision. Stop after presenting the C1 evidence; do not switch the
@@ -104,7 +108,8 @@ default automatically.
 
 **Gate:** optimizer unit/CLI cases, all `optimizer.*` inventory cases, O0/O1
 output/error/exit parity, module-cache identity, source/debug mapping, the
-11-workload comparison report, canonical verification, and Rust VM execution.
+checked-in workload comparison report, canonical verification, and Rust VM
+execution.
 
 ### C2: Close semantic-soundness gaps one rule at a time
 

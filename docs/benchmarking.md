@@ -31,7 +31,7 @@ runtime samples repeat the last successfully prepared artifact.
 | load | `compiler-design-vm verify <artifact>` | VM process startup, artifact read, parse, and verification; no canonical output |
 | dump | `compiler-design-vm dump <artifact>` | VM process startup, artifact read/parse/verification, and canonical formatting |
 | runtime | `compiler-design-vm run <artifact>` | VM process startup, artifact load, and execution |
-| IR inspection | `compiler_design --opt-level N --ir ...` | one un-timed compiler listing used to count IR instructions and virtual registers |
+| IR inspection | `compiler_design --opt-level N --ir ...` | one un-timed compiler listing used to count IR instructions, virtual registers, and CFG-aware peak live virtual-register pressure |
 | bytecode inspection | `compiler_design --opt-level N --bytecode ...` | one un-timed compiler listing used to count bytecode instructions and `registerCount` |
 | artifact size | final artifact from the compile/link phase | byte size of the artifact consumed by `dump` and `run` |
 
@@ -61,16 +61,23 @@ stderr, and exit-code digests and records O0-to-O1 deltas for:
 
 - compile, link, load, dump, and runtime median wall-clock time;
 - IR and bytecode instruction counts;
+- IR virtual-register count and peak live virtual-register pressure;
 - total bytecode `registerCount` across main and function bodies; and
 - final artifact size in bytes.
 
 `bytecode_metrics.register_count` is the sum of the main and function
 `registerCount` values. The report also keeps main/function instruction and
 register subtotals. `ir_metrics.virtual_register_count` is derived from the
-highest virtual register referenced in each listed body; bytecode
-`register_count` is the authoritative register-count measurement.
+highest virtual register referenced in each listed body. The
+`ir_metrics.peak_live_virtual_registers` value is the maximum number of
+virtual registers simultaneously live at any instruction boundary across the
+main body and function bodies. Conditional successors are joined, and loops
+are solved to a fixed point, so this is a control-flow-aware pressure metric,
+not a textual last-use estimate. The `main_` and `function_` fields retain
+their per-body-class maxima. Bytecode `register_count` remains the
+authoritative allocated-register-file measurement.
 
-The report schema is version 4; the checked-in workload manifest remains
+The report schema is version 5; the checked-in workload manifest remains
 schema version 2. Timing and metric deltas are informational and do not create
 a CI performance threshold. A correctness failure or an O0/O1 output/error/
 exit parity failure still returns non-zero.

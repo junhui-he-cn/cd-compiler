@@ -202,10 +202,13 @@ SSADeSSACopyPlan planSSADeSSACopies(
 // nodes are omitted, copy instructions are marked synthetic, critical edges
 // receive internal split blocks, and branch/dependency offsets are remapped.
 // This remains an internal SSA result and does not alter the original CFG or
-// connect to the default IR/bytecode pipeline.
+// connect to the default IR/bytecode pipeline. When supplied, the optional
+// source-span table preserves provenance for source instructions that O1
+// removed before de-SSA.
 SSADeSSALinearFunction lowerSSADeSSACopies(
     const ControlFlowGraph& cfg,
-    const SSAFunction& input);
+    const SSAFunction& input,
+    const std::vector<std::optional<SourceSpan>>* sourceSpans = nullptr);
 
 // Adapt an already verified linear de-SSA result to the existing ordinary IR
 // instruction representation. SSA value IDs remain stable as virtual-register
