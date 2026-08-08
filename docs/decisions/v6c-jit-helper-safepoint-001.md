@@ -49,9 +49,11 @@ that non-budget safepoints do not consume instruction steps. The existing VM,
 artifact, cooperative, lifecycle, and library tests remain unchanged and
 continue to exercise interpreter behavior.
 
+The pre-executable entry lifetime and rollback guard is recorded in
+[`v6c-jit-code-lifetime-rollback-001.md`](v6c-jit-code-lifetime-rollback-001.md).
 The next decision is whether the measured `execution_closure` subset justifies
-an optional Cranelift execution path. Any such slice must add executable-code
-lifetime and rollback tests, connect only through the materialized-frame and
-typed-helper boundaries above, and prove that a failed or expired compiled
-entry returns to the interpreter without losing roots, diagnostics, resource
-checks, or observability. No interpreter call is replaced by this slice.
+an optional Cranelift execution path. Any such slice must connect only through
+the materialized-frame and typed-helper boundaries above, and prove that a
+failed or expired compiled entry returns to the interpreter without losing
+roots, diagnostics, resource checks, or observability. No interpreter call is
+replaced by either preparation slice.

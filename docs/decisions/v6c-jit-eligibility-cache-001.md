@@ -32,7 +32,9 @@ wired to replace `execute_body`, `execute_instruction`, or the cooperative
 frame loop, and it contains no executable memory or machine-code entry point.
 The follow-up helper ABI, frame materialization, and safepoint bridge are
 recorded in [`v6c-jit-helper-safepoint-001.md`](v6c-jit-helper-safepoint-001.md);
-that slice likewise leaves production execution interpreter-controlled.
+the pre-executable entry lifetime and rollback guard is recorded in
+[`v6c-jit-code-lifetime-rollback-001.md`](v6c-jit-code-lifetime-rollback-001.md).
+Those slices likewise leave production execution interpreter-controlled.
 
 ## Compatibility boundary
 

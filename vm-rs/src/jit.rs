@@ -151,6 +151,41 @@ impl JitFrameMaterialization {
     }
 }
 
+/// VM-local identity for a cached compiled entry. The owner token is an
+/// allocation identity, not a code pointer; it prevents a handle from being
+/// reused with another VM instance after the original cache is dropped.
+#[derive(Debug)]
+struct JitCacheOwner {
+    marker: u8,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct JitCodeEntryHandle {
+    owner: Rc<JitCacheOwner>,
+    function_index: usize,
+    generation: u64,
+}
+
+impl JitCodeEntryHandle {
+    fn function_index(&self) -> usize {
+        self.function_index
+    }
+
+    fn generation(&self) -> u64 {
+        self.generation
+    }
+}
+
+impl PartialEq for JitCodeEntryHandle {
+    fn eq(&self, other: &Self) -> bool {
+        self.function_index == other.function_index
+            && self.generation == other.generation
+            && Rc::ptr_eq(&self.owner, &other.owner)
+    }
+}
+
+impl Eq for JitCodeEntryHandle {}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum JitExecutionMode {
     Ordinary,
@@ -191,6 +226,14 @@ pub(crate) enum JitFallbackReason {
         requested: usize,
         remaining: usize,
     },
+    CodeHandleExhausted,
+    ForeignCodeEntry {
+        function_index: usize,
+    },
+    StaleCodeEntry {
+        function_index: usize,
+        generation: u64,
+    },
     CraneliftIr {
         message: String,
     },
@@ -204,8 +247,16 @@ pub(crate) enum JitEligibility {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum JitAdmission {
-    Reserved { function_index: usize, bytes: usize },
-    Cached { function_index: usize, bytes: usize },
+    Reserved {
+        function_index: usize,
+        bytes: usize,
+        handle: JitCodeEntryHandle,
+    },
+    Cached {
+        function_index: usize,
+        bytes: usize,
+        handle: JitCodeEntryHandle,
+    },
     Fallback(JitFallbackReason),
 }
 
@@ -259,19 +310,28 @@ impl JitConfig {
 struct JitCodeCache {
     capacity: usize,
     used: usize,
+    owner: Rc<JitCacheOwner>,
+    next_generation: u64,
     entries: BTreeMap<usize, CachedJitUnit>,
 }
 
 #[derive(Debug)]
 struct CachedJitUnit {
     bytes: usize,
+    handle: JitCodeEntryHandle,
     ir: CraneliftIrUnit,
 }
 
 enum CacheReservation {
-    Inserted,
-    Existing(usize),
-    Exhausted { remaining: usize },
+    Inserted(JitCodeEntryHandle),
+    Existing {
+        handle: JitCodeEntryHandle,
+        bytes: usize,
+    },
+    Exhausted {
+        remaining: usize,
+    },
+    HandleExhausted,
 }
 
 impl JitCodeCache {
@@ -279,13 +339,18 @@ impl JitCodeCache {
         Self {
             capacity,
             used: 0,
+            owner: Rc::new(JitCacheOwner { marker: 0 }),
+            next_generation: 0,
             entries: BTreeMap::new(),
         }
     }
 
     fn reserve(&mut self, function_index: usize, bytes: usize) -> CacheReservation {
         if let Some(existing) = self.entries.get(&function_index) {
-            return CacheReservation::Existing(existing.bytes);
+            return CacheReservation::Existing {
+                handle: existing.handle.clone(),
+                bytes: existing.bytes,
+            };
         }
 
         let remaining = self.capacity.saturating_sub(self.used);
@@ -293,13 +358,23 @@ impl JitCodeCache {
             return CacheReservation::Exhausted { remaining };
         }
 
-        CacheReservation::Inserted
+        let Some(next_generation) = self.next_generation.checked_add(1) else {
+            return CacheReservation::HandleExhausted;
+        };
+        let handle = JitCodeEntryHandle {
+            owner: self.owner.clone(),
+            function_index,
+            generation: self.next_generation,
+        };
+        self.next_generation = next_generation;
+        CacheReservation::Inserted(handle)
     }
 
-    fn insert(&mut self, function_index: usize, bytes: usize, ir: CraneliftIrUnit) {
-        debug_assert!(!self.entries.contains_key(&function_index));
+    fn insert(&mut self, handle: JitCodeEntryHandle, bytes: usize, ir: CraneliftIrUnit) {
+        debug_assert!(Rc::ptr_eq(&self.owner, &handle.owner));
+        debug_assert!(!self.entries.contains_key(&handle.function_index));
         self.entries
-            .insert(function_index, CachedJitUnit { bytes, ir });
+            .insert(handle.function_index, CachedJitUnit { bytes, handle, ir });
         self.used = self.used.saturating_add(bytes);
     }
 
@@ -319,6 +394,28 @@ impl JitCodeCache {
             used: self.used,
             entries: self.entries.len(),
         }
+    }
+
+    fn resolve(&self, handle: &JitCodeEntryHandle) -> Result<&CraneliftIrUnit, JitFallbackReason> {
+        if !Rc::ptr_eq(&self.owner, &handle.owner) {
+            return Err(JitFallbackReason::ForeignCodeEntry {
+                function_index: handle.function_index,
+            });
+        }
+
+        let Some(entry) = self.entries.get(&handle.function_index) else {
+            return Err(JitFallbackReason::StaleCodeEntry {
+                function_index: handle.function_index,
+                generation: handle.generation,
+            });
+        };
+        if entry.handle.generation != handle.generation {
+            return Err(JitFallbackReason::StaleCodeEntry {
+                function_index: handle.function_index,
+                generation: handle.generation,
+            });
+        }
+        Ok(&entry.ir)
     }
 }
 
@@ -460,10 +557,11 @@ impl JitState {
             return JitAdmission::Fallback(reason);
         };
 
-        if let Some(bytes) = self.cache.cached_bytes(function_index) {
+        if let Some((handle, bytes)) = self.cache.cached_entry(function_index) {
             return JitAdmission::Cached {
                 function_index,
                 bytes,
+                handle,
             };
         }
 
@@ -478,16 +576,19 @@ impl JitState {
         };
 
         match self.cache.reserve(function_index, estimated_code_bytes) {
-            CacheReservation::Inserted => {
-                self.cache.insert(function_index, estimated_code_bytes, ir);
+            CacheReservation::Inserted(handle) => {
+                let admission_handle = handle.clone();
+                self.cache.insert(handle, estimated_code_bytes, ir);
                 JitAdmission::Reserved {
                     function_index,
                     bytes: estimated_code_bytes,
+                    handle: admission_handle,
                 }
             }
-            CacheReservation::Existing(bytes) => JitAdmission::Cached {
+            CacheReservation::Existing { handle, bytes } => JitAdmission::Cached {
                 function_index,
                 bytes,
+                handle,
             },
             CacheReservation::Exhausted { remaining } => {
                 JitAdmission::Fallback(JitFallbackReason::CodeCacheExhausted {
@@ -495,11 +596,24 @@ impl JitState {
                     remaining,
                 })
             }
+            CacheReservation::HandleExhausted => {
+                JitAdmission::Fallback(JitFallbackReason::CodeHandleExhausted)
+            }
         }
     }
 
     pub(crate) fn clear_cache(&mut self) {
         self.cache.clear();
+    }
+
+    /// Resolve a cache handle immediately before a future compiled entry is
+    /// used. Eviction and VM ownership mismatches become interpreter fallback
+    /// reasons instead of allowing a stale entry to cross the boundary.
+    pub(crate) fn resolve_code(
+        &self,
+        handle: &JitCodeEntryHandle,
+    ) -> Result<&CraneliftIrUnit, JitFallbackReason> {
+        self.cache.resolve(handle)
     }
 
     #[cfg(test)]
@@ -514,8 +628,10 @@ impl JitState {
 }
 
 impl JitCodeCache {
-    fn cached_bytes(&self, function_index: usize) -> Option<usize> {
-        self.entries.get(&function_index).map(|entry| entry.bytes)
+    fn cached_entry(&self, function_index: usize) -> Option<(JitCodeEntryHandle, usize)> {
+        self.entries
+            .get(&function_index)
+            .map(|entry| (entry.handle.clone(), entry.bytes))
     }
 }
 
@@ -1220,26 +1336,31 @@ mod tests {
         let program = program(vec![eligible_function(0), eligible_function(1)]);
         let mut state = JitState::enabled_for_tests([0, 1], 8);
 
-        assert_eq!(
-            state.admit(&program, Some(0), JitExecutionMode::Ordinary, 5),
+        let first_handle = match state.admit(&program, Some(0), JitExecutionMode::Ordinary, 5) {
             JitAdmission::Reserved {
                 function_index: 0,
                 bytes: 5,
-            }
-        );
+                handle,
+            } => handle,
+            admission => panic!("unexpected first admission: {admission:?}"),
+        };
+        assert_eq!(first_handle.function_index(), 0);
+        assert!(state.resolve_code(&first_handle).is_ok());
         let ir = state
             .cached_ir(0)
             .expect("admission should retain verified Cranelift IR");
         assert_eq!(ir.function_index, 0);
         assert!(ir.display().contains("call"));
         assert!(ir.display().contains("i64"));
-        assert_eq!(
-            state.admit(&program, Some(0), JitExecutionMode::Ordinary, 7),
+        let cached_handle = match state.admit(&program, Some(0), JitExecutionMode::Ordinary, 7) {
             JitAdmission::Cached {
                 function_index: 0,
                 bytes: 5,
-            }
-        );
+                handle,
+            } => handle,
+            admission => panic!("unexpected cached admission: {admission:?}"),
+        };
+        assert_eq!(cached_handle, first_handle);
         assert_eq!(
             state.admit(&program, Some(1), JitExecutionMode::Ordinary, 4),
             JitAdmission::Fallback(JitFallbackReason::CodeCacheExhausted {
@@ -1257,10 +1378,76 @@ mod tests {
         );
 
         state.clear_cache();
+        assert!(state.cached_ir(0).is_none());
+        let first_generation = first_handle.generation();
+        assert!(matches!(
+            state.resolve_code(&first_handle),
+            Err(JitFallbackReason::StaleCodeEntry {
+                function_index: 0,
+                generation,
+            })
+                if generation == first_generation
+        ));
         assert_eq!(
             state.cache_stats(),
             JitCacheStats {
                 capacity: 8,
+                used: 0,
+                entries: 0,
+            }
+        );
+    }
+
+    #[test]
+    fn code_entry_handles_reject_foreign_caches_and_failed_publication_rolls_back() {
+        let base_program = program(vec![eligible_function(0)]);
+        let mut state = JitState::enabled_for_tests([0], 16);
+        let handle = match state.admit(&base_program, Some(0), JitExecutionMode::Ordinary, 4) {
+            JitAdmission::Reserved { handle, .. } => handle,
+            admission => panic!("unexpected admission: {admission:?}"),
+        };
+
+        let foreign_state = JitState::enabled_for_tests([0], 16);
+        assert!(matches!(
+            foreign_state.resolve_code(&handle),
+            Err(JitFallbackReason::ForeignCodeEntry { function_index: 0 })
+        ));
+
+        state.clear_cache();
+        let replacement = match state.admit(&base_program, Some(0), JitExecutionMode::Ordinary, 4) {
+            JitAdmission::Reserved { handle, .. } => handle,
+            admission => panic!("unexpected replacement admission: {admission:?}"),
+        };
+        assert_ne!(replacement, handle);
+        assert_ne!(replacement.generation(), handle.generation());
+        assert!(state.resolve_code(&replacement).is_ok());
+        let stale_generation = handle.generation();
+        assert!(matches!(
+            state.resolve_code(&handle),
+            Err(JitFallbackReason::StaleCodeEntry {
+                function_index: 0,
+                generation,
+            })
+                if generation == stale_generation
+        ));
+
+        let failed_program = program(vec![function(
+            0,
+            vec![
+                Instruction::Return { value: 0 },
+                Instruction::Return { value: 0 },
+            ],
+        )]);
+        let mut failed_state = JitState::enabled_for_tests([0], 16);
+        let failed = failed_state.admit(&failed_program, Some(0), JitExecutionMode::Ordinary, 4);
+        assert!(matches!(
+            failed,
+            JitAdmission::Fallback(JitFallbackReason::CraneliftIr { .. })
+        ));
+        assert_eq!(
+            failed_state.cache_stats(),
+            JitCacheStats {
+                capacity: 16,
                 used: 0,
                 entries: 0,
             }

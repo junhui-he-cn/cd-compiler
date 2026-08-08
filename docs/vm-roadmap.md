@@ -185,7 +185,9 @@ thread state that concurrency would later invalidate.
    currently retains verified IR only; no executable memory or artifact
    serialization is present. The helper ABI and VM-owned frame materialization
    and safepoint bridge are implemented in
-   [`v6c-jit-helper-safepoint-001.md`](decisions/v6c-jit-helper-safepoint-001.md).
+   [`v6c-jit-helper-safepoint-001.md`](decisions/v6c-jit-helper-safepoint-001.md);
+   the pre-executable entry lifetime and rollback guard is implemented in
+   [`v6c-jit-code-lifetime-rollback-001.md`](decisions/v6c-jit-code-lifetime-rollback-001.md).
    The eventual baseline JIT must compile only the measured hot function
    subset, retain deterministic interpreter fallback and an off switch, and
    verify identical output, failures, debug locations, observable profile
@@ -236,6 +238,7 @@ completed V5B + stable profile + demonstrated hot workload
   -> V6B JIT runtime contract (recorded)
   -> V6C Cranelift IR admission/finite-cache preflight (implemented)
   -> V6C VM helper ABI/frame materialization/safepoint bridge (implemented)
+  -> V6C compiled-entry lifetime/rollback guard (implemented)
   -> optional V6C Cranelift JIT execution
   -> optional V6C baseline JIT execution
 
@@ -254,11 +257,12 @@ complete. A concrete consumer must justify optional V5C expansion. V6A
 characterization is recorded with stable profile surfaces, bytecode shape, and
 repeated correctness observations; the mixed, startup-sensitive timing data
 does not establish a speedup threshold. The V6B runtime contract is recorded;
-V6C execution remains deferred until executable-code lifetime/rollback tests
-and an explicit optional-path decision justify entering the execution path.
-The bounded cache, typed helper dispatcher, frame materialization, safepoint
-bridge, and interpreter fallback gates are now implemented without changing
-production execution.
+V6C execution remains deferred until an explicit optional-path decision and
+backend-specific executable-code lifetime/rollback proof justify entering the
+execution path. The bounded cache, typed helper dispatcher, frame
+materialization, safepoint bridge, compiled-entry lifetime guard, and
+interpreter fallback gates are now implemented without changing production
+execution.
 V2 host integration and V4 release compatibility resume only when their named
 consumer or ABI/release trigger appears.
 

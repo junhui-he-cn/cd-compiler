@@ -2880,15 +2880,16 @@ mod tests {
         );
 
         first.jit = JitState::enabled_for_tests([0], 8);
-        assert_eq!(
+        assert!(matches!(
             first
                 .jit
                 .admit(&program, Some(0), crate::jit::JitExecutionMode::Ordinary, 4,),
             crate::jit::JitAdmission::Reserved {
                 function_index: 0,
                 bytes: 4,
+                ..
             }
-        );
+        ));
         assert_eq!(
             second
                 .jit
