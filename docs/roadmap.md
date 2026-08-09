@@ -39,7 +39,7 @@ compatibility contracts until an explicit decision changes them.
 | Language | Functions, closures, generics and constraints, `optional<T>`, enums/patterns, named and recursive structs, collection semantics, `Eq`/`Ord`/`Hash` capabilities | New syntax is demand-driven; semantic soundness work has priority |
 | Modules | Public interfaces, `.cdi`, independent module products, linker inputs, `cdbc-cache 0.2`, strict and fallback modes | Cache creation/repair policy is not yet a default-strict contract |
 | IR and optimization | Linear register IR plus verified CFG/SSA/de-SSA and explicit `--opt-level 1` | O0 stays default; register-allocation and default-level policy remain open |
-| Tools | Formatter, open/closed-workspace LSP definition and references, trace and interactive VM debugger | Closed-module completion/rename and incremental sessions remain open |
+| Tools | Formatter, open/closed-workspace LSP definition and references, trace and interactive VM debugger | LSP completion, workspace rename, and incremental sessions are deferred |
 | Artifact boundary | Compiler emits validated linked and module `cdbc 0.1` products with debug metadata | No successor format has been justified |
 
 The authoritative implementation contracts remain in `README.md`,
@@ -128,10 +128,13 @@ because the current corpus lacks a counterexample.
 
 ### C3: Complete closed-workspace language tooling
 
-**Priority:** P1. **Status:** queued after the shipped closed-module
-definition/reference boundary.
+**Priority:** P1. **Status:** deferred by user direction on 2026-08-09. See
+[`m5b-lsp-deferred-001.md`](decisions/m5b-lsp-deferred-001.md).
 
-Proceed in this order:
+The shipped closed-module definition/reference boundary remains supported. C3A
+through C3C are outside the default queue and resume only after explicit
+reprioritization or a concrete editor/workspace consumer. When resumed, proceed
+in this order:
 
 1. **C3A - closed-module completion:** reuse `FrontendSession`, module graph,
    interfaces, and open-document precedence; do not add an LSP-only resolver.
@@ -180,6 +183,8 @@ are not in the default queue:
   justifies it;
 - JIT, async language semantics, persistent runtime sessions, or compiler-owned
   concrete data-structure implementations.
+- closed-workspace LSP completion, workspace rename, and incremental analysis
+  until C3 is explicitly resumed.
 
 ## 6. Dependency order
 
@@ -206,8 +211,8 @@ C3/C4 stable boundaries
   -> C5 incremental session re-audit
 ```
 
-X1 is complete. The recommended next compiler slice is C1A. C2 and C3 are valid
-secondary tracks, but should not be mixed into the optimizer slice.
+C1 is complete. The recommended next compiler slice is C2. C3 is deferred; C4
+remains a decision gate, and C5 remains deferred.
 
 ## 7. Verification contract
 
