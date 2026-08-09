@@ -151,7 +151,8 @@ parity.
 
 **Priority:** P2. **Status:** V6A hot-workload evidence and the V6B runtime
 contract were recorded on 2026-08-06; V6C x86-64 code generation and the
-private VM entry transition were implemented on 2026-08-08.** See
+private VM entry transition were implemented on 2026-08-08; the ordinary
+`VM::run` parity gate was added as a test-only slice on 2026-08-09.** See
 [`v6a-hot-workload-evidence-001.md`](decisions/v6a-hot-workload-evidence-001.md)
 and [`v6b-jit-runtime-contract-001.md`](decisions/v6b-jit-runtime-contract-001.md),
 plus [`v6c-jit-x86-64-backend-001.md`](decisions/v6c-jit-x86-64-backend-001.md)
@@ -201,6 +202,10 @@ thread state that concurrency would later invalidate.
    production VM constructor, observable modes, and cooperative sessions stay
    interpreter-controlled; full parity for native/GC/debug/profile and a
    default execution decision remain later gates.
+   The ordinary `VM::run` parity gate is recorded in
+   [`v6c-jit-run-parity-001.md`](decisions/v6c-jit-run-parity-001.md): it covers
+   an eligible main-to-function call, repeated VM-local cache reuse, and
+   runtime-error parity while keeping activation test-only.
    Tiering or optimizing JIT work requires a later profile-backed decision.
 
 **Decision gate:** do not place JIT implementation in the default VM queue
@@ -250,6 +255,7 @@ completed V5B + stable profile + demonstrated hot workload
   -> V6C compiled-entry lifetime/rollback guard (implemented)
   -> V6C x86-64 machine-code backend (implemented)
   -> V6C private ordinary-call entry transition (implemented, test-only)
+  -> V6C ordinary VM::run parity gate (implemented, test-only)
   -> optional V6C baseline JIT execution
 
 real host consumer
@@ -273,7 +279,9 @@ callee-frame construction, helper-error transport, checkpoint charging, and
 interpreter snapshot fallback for the admitted scalar subset. Full/default VM
 execution remains deferred: native/callback, GC, debugger/profile, and
 cooperative parity still require their own boundaries and an explicit opt-in
-decision. The bounded cache, typed helper dispatcher, frame materialization,
+decision. The ordinary `VM::run` path now has test-only output, cache-reuse,
+runtime-error, and instruction-count parity coverage for the admitted scalar
+call. The bounded cache, typed helper dispatcher, frame materialization,
 safepoint bridge, compiled-entry lifetime guard, executable mapping reset, and
 interpreter fallback gates remain outside the production default.
 V2 host integration and V4 release compatibility resume only when their named

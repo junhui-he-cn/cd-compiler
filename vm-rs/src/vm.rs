@@ -1310,6 +1310,32 @@ mod tests {
         }
     }
 
+    fn ordinary_jit_call_program(function: Function, constants: Vec<Constant>) -> Program {
+        Program {
+            constants,
+            names: Vec::new(),
+            main: FunctionBody {
+                registers: 3,
+                instructions: vec![
+                    Instruction::MakeFunction {
+                        dest: 0,
+                        function: 0,
+                    },
+                    Instruction::Call {
+                        dest: 1,
+                        callee: 0,
+                        arguments: Vec::new(),
+                    },
+                    Instruction::Print { value: 1 },
+                    Instruction::Return { value: 1 },
+                ],
+                locations: vec![None; 4],
+            },
+            functions: vec![function],
+            debug_sources: Vec::new(),
+        }
+    }
+
     fn cooperative_loop_program() -> Program {
         Program {
             constants: vec![Constant::Number("1".to_string())],
@@ -4693,6 +4719,120 @@ mod tests {
         let return_boundary = vm.jit_safepoint(&frame, None, JitSafepointKind::Return);
         assert!(return_boundary.checkpoint.is_ok());
         assert_eq!(vm.instruction_steps, 1);
+    }
+
+    #[cfg(all(target_arch = "x86_64", unix))]
+    #[test]
+    fn jit_run_matches_interpreter_and_reuses_ordinary_call_cache() {
+        let program = ordinary_jit_call_program(
+            Function {
+                index: 0,
+                name: "answer".to_string(),
+                arity: 0,
+                registers: 3,
+                params: Vec::new(),
+                instructions: vec![
+                    Instruction::Constant {
+                        dest: 0,
+                        constant: 0,
+                    },
+                    Instruction::Constant {
+                        dest: 1,
+                        constant: 1,
+                    },
+                    Instruction::Add {
+                        dest: 2,
+                        left: 0,
+                        right: 1,
+                    },
+                    Instruction::Return { value: 2 },
+                ],
+                locations: vec![None; 4],
+            },
+            vec![
+                Constant::Number("20".to_string()),
+                Constant::Number("22".to_string()),
+            ],
+        );
+
+        let mut interpreter = VM::with_config(&program, RunConfig::unlimited());
+        let interpreter_first = interpreter
+            .run_inner()
+            .expect("interpreter ordinary run should succeed");
+        let interpreter_first_steps = interpreter.instruction_steps;
+        let interpreter_second = interpreter
+            .run_inner()
+            .expect("interpreter ordinary rerun should succeed");
+        let interpreter_second_steps = interpreter.instruction_steps;
+
+        let mut jit = VM::with_config(&program, RunConfig::unlimited());
+        jit.jit = JitState::enabled_for_tests([0], 4096);
+        let jit_first = jit.run_inner().expect("JIT ordinary run should succeed");
+        let jit_first_steps = jit.instruction_steps;
+        let first_cache = jit.jit.cache_stats();
+        let jit_second = jit.run_inner().expect("JIT ordinary rerun should succeed");
+        let second_cache = jit.jit.cache_stats();
+
+        assert_eq!(interpreter_first, "42\n");
+        assert_eq!(jit_first, interpreter_first);
+        assert_eq!(jit_first_steps, interpreter_first_steps);
+        assert_eq!(jit_second, interpreter_second);
+        assert_eq!(jit.instruction_steps, interpreter_second_steps);
+        assert_eq!(interpreter_first_steps * 2, interpreter_second_steps);
+        assert_eq!(first_cache.entries, 1);
+        assert_eq!(second_cache, first_cache);
+    }
+
+    #[cfg(all(target_arch = "x86_64", unix))]
+    #[test]
+    fn jit_run_matches_interpreter_runtime_error_for_ordinary_call() {
+        let program = ordinary_jit_call_program(
+            Function {
+                index: 0,
+                name: "divide".to_string(),
+                arity: 0,
+                registers: 3,
+                params: Vec::new(),
+                instructions: vec![
+                    Instruction::Constant {
+                        dest: 0,
+                        constant: 0,
+                    },
+                    Instruction::Constant {
+                        dest: 1,
+                        constant: 1,
+                    },
+                    Instruction::Divide {
+                        dest: 2,
+                        left: 0,
+                        right: 1,
+                    },
+                    Instruction::Return { value: 2 },
+                ],
+                locations: vec![None; 4],
+            },
+            vec![
+                Constant::Number("1".to_string()),
+                Constant::Number("0".to_string()),
+            ],
+        );
+
+        let mut interpreter = VM::with_config(&program, RunConfig::unlimited());
+        let interpreter_error = interpreter
+            .run_inner()
+            .expect_err("interpreter ordinary run should fail");
+
+        let mut jit = VM::with_config(&program, RunConfig::unlimited());
+        jit.jit = JitState::enabled_for_tests([0], 4096);
+        let jit_error = jit.run_inner().expect_err("JIT ordinary run should fail");
+
+        assert_eq!(jit_error.kind, interpreter_error.kind);
+        assert_eq!(jit_error.resource_limit, interpreter_error.resource_limit);
+        assert_eq!(jit_error.message, interpreter_error.message);
+        assert_eq!(jit_error.location, interpreter_error.location);
+        assert_eq!(jit_error.stack, interpreter_error.stack);
+        assert_eq!(jit.instruction_steps, interpreter.instruction_steps);
+        assert_eq!(jit.jit.cache_stats().entries, 1);
     }
 
     #[cfg(all(target_arch = "x86_64", unix))]
@@ -8823,11 +8963,16 @@ impl<'a> VM<'a> {
         let Some(function) = self.program.functions.get(function_index) else {
             return Ok(JitCallOutcome::Fallback);
         };
+        // Helper calls and register stores make the generated entry larger
+        // than the bytecode body. Keep the admission estimate conservative;
+        // the backend still verifies the finalized machine-code size before
+        // publishing the cache entry.
         let estimated_code_bytes = function
             .instructions
             .len()
-            .saturating_mul(32)
-            .saturating_add(function.registers.saturating_mul(8))
+            .saturating_mul(96)
+            .saturating_add(function.registers.saturating_mul(16))
+            .saturating_add(64)
             .max(1);
         let admission = self.jit.admit(
             self.program,

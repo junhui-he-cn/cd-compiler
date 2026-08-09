@@ -892,7 +892,7 @@ impl JitState {
     }
 
     #[cfg(test)]
-    fn cache_stats(&self) -> JitCacheStats {
+    pub(crate) fn cache_stats(&self) -> JitCacheStats {
         self.cache.stats()
     }
 
