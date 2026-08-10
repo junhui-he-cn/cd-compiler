@@ -1149,10 +1149,11 @@ fn lower_to_cranelift_ir(
 
         for (instruction_index, operation) in function.instructions.iter().enumerate() {
             if returned {
-                return Err(format!(
-                    "instruction {} follows a return in function {}",
-                    instruction_index, function_index
-                ));
+                // The interpreter stops at the first return. The compiler may
+                // retain an unreachable fallback return tail in a verified
+                // function body, so it must not block lowering of the live
+                // prefix.
+                break;
             }
 
             let instruction = i64::try_from(instruction_index).map_err(|_| {

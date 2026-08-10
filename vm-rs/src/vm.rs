@@ -1336,6 +1336,19 @@ mod tests {
         }
     }
 
+    fn execution_closure_program() -> Program {
+        match crate::format::parse_artifact(include_str!(
+            "../../tests/bytecode_artifacts/benchmark_execution_closure/expected.cdbc"
+        ))
+        .expect("execution_closure artifact should parse")
+        {
+            crate::format::Artifact::Program(program) => program,
+            crate::format::Artifact::Module(_) => {
+                panic!("execution_closure fixture must be a linked program")
+            }
+        }
+    }
+
     fn cooperative_loop_program() -> Program {
         Program {
             constants: vec![Constant::Number("1".to_string())],
@@ -4832,6 +4845,29 @@ mod tests {
         assert_eq!(jit_error.location, interpreter_error.location);
         assert_eq!(jit_error.stack, interpreter_error.stack);
         assert_eq!(jit.instruction_steps, interpreter.instruction_steps);
+        assert_eq!(jit.jit.cache_stats().entries, 1);
+    }
+
+    #[cfg(all(target_arch = "x86_64", unix))]
+    #[test]
+    fn jit_runs_the_real_execution_closure_captured_function() {
+        let program = execution_closure_program();
+
+        let mut interpreter = VM::with_config(&program, RunConfig::unlimited());
+        let interpreter_output = interpreter
+            .run_inner()
+            .expect("interpreter execution_closure should succeed");
+        let interpreter_steps = interpreter.instruction_steps;
+
+        let mut jit = VM::with_config(&program, RunConfig::unlimited());
+        jit.jit = JitState::enabled_for_tests([0], 4096);
+        let jit_output = jit
+            .run_inner()
+            .expect("JIT execution_closure should succeed");
+
+        assert_eq!(interpreter_output, "50000\n");
+        assert_eq!(jit_output, interpreter_output);
+        assert_eq!(jit.instruction_steps, interpreter_steps);
         assert_eq!(jit.jit.cache_stats().entries, 1);
     }
 
