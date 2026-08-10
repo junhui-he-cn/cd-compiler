@@ -184,6 +184,40 @@ class CliMultiSourceTests(unittest.TestCase):
                 "        ^\n",
             )
 
+    def test_single_entry_lex_error_with_later_import_is_pathful(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source = root / "input.cd"
+            source.write_text('print @;\nimport "./missing.cd";\n', encoding="utf-8")
+
+            completed = self.run_compiler(str(source))
+
+            self.assertEqual(completed.returncode, 1)
+            self.assertEqual(completed.stdout, "")
+            self.assertEqual(
+                completed.stderr,
+                f"Lex error at {source}:1:7: unexpected character `@`\n"
+                "  print @;\n"
+                "        ^\n",
+            )
+
+    def test_single_entry_parse_error_with_import_is_pathful(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source = root / "input.cd"
+            source.write_text('let x = ;\nimport "./missing.cd";\n', encoding="utf-8")
+
+            completed = self.run_compiler(str(source))
+
+            self.assertEqual(completed.returncode, 1)
+            self.assertEqual(completed.stdout, "")
+            self.assertEqual(
+                completed.stderr,
+                f"Parse error at {source}:1:9: expected expression\n"
+                "  let x = ;\n"
+                "          ^\n",
+            )
+
     def test_no_input_files_are_rejected(self) -> None:
         completed = subprocess.run(
             [str(self.compiler)],

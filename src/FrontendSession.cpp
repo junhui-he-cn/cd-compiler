@@ -92,22 +92,6 @@ bool hasImportToken(const std::vector<Token>& tokens)
     });
 }
 
-// A single entry source keeps pathless diagnostics only when it contains no
-// import token before the first lexer failure, matching the historical
-// combined-source decision without re-parsing the file.
-bool entryFileContainsImportToken(const std::string& source)
-{
-    try {
-        Lexer lexer(source);
-        const std::vector<Token> tokens = lexer.scanTokensUntil(TokenType::Import);
-        return !tokens.empty() && tokens.back().type == TokenType::Import;
-    } catch (const LexErrorList&) {
-        return false;
-    } catch (const DiagnosticError&) {
-        return false;
-    }
-}
-
 bool statementLoadsSource(const Stmt& statement)
 {
     if (dynamic_cast<const ImportStmt*>(&statement)) {
@@ -483,6 +467,11 @@ void FrontendSession::annotateSourceTokens(std::vector<Token>& tokens, std::size
     }
 }
 
+bool FrontendSession::singleEntryPathless(bool isEntry, bool unitHasImport) const
+{
+    return isEntry && singleEntrySource_ && !unitHasImport;
+}
+
 FrontendSession::ImportResolution FrontendSession::resolveImportPath(
     const std::filesystem::path& importingPath,
     const Token& pathToken) const
@@ -582,7 +571,7 @@ Program FrontendSession::loadFiles(const std::vector<std::string>& paths)
     std::vector<FileDiagnosticError> entryErrors;
     for (const std::string& path : paths) {
         try {
-            const std::size_t id = loadFile(path, false, true, true);
+            const std::size_t id = loadFile(path, false, true);
             if (std::find(entryUnitIds_.begin(), entryUnitIds_.end(), id) == entryUnitIds_.end()) {
                 entryUnitIds_.push_back(id);
             }
@@ -611,7 +600,7 @@ Program FrontendSession::loadVirtualFiles(const std::vector<FrontendVirtualFile>
     }
 
     for (const FrontendVirtualFile& file : files) {
-        const std::size_t id = loadFile(file.path, false, true, true);
+        const std::size_t id = loadFile(file.path, false, true);
         if (std::find(entryUnitIds_.begin(), entryUnitIds_.end(), id) == entryUnitIds_.end()) {
             entryUnitIds_.push_back(id);
         }
@@ -624,8 +613,7 @@ Program FrontendSession::loadVirtualFiles(const std::vector<FrontendVirtualFile>
 std::size_t FrontendSession::loadFile(
     const std::string& path,
     bool isImport,
-    bool isEntry,
-    bool fileDiagnostics)
+    bool isEntry)
 {
     const std::filesystem::path requestedPath(path);
     const std::filesystem::path normalizedPath = normalizedExistingPath(requestedPath);
@@ -688,7 +676,7 @@ std::size_t FrontendSession::loadFile(
             } else {
                 bool dependenciesCached = true;
                 for (const ModuleInterfaceArtifactDependency& dependency : cached.artifact->dependencies) {
-                    const std::size_t dependencyId = loadFile(dependency.identity, true, false, true);
+                    const std::size_t dependencyId = loadFile(dependency.identity, true, false);
                     const ParsedUnit& dependencyUnit = units_.at(dependencyId);
                     if (!dependencyUnit.interfaceArtifact
                         || dependencyUnit.interfaceArtifact->interfaceHash != dependency.interfaceHash) {
@@ -738,9 +726,9 @@ std::size_t FrontendSession::loadFile(
             sourceMetadataPath(displayPath),
             source,
             SourceFileId{sourceId}});
+        Lexer lexer(source);
         std::vector<Token> tokens;
         try {
-            Lexer lexer(source);
             tokens = lexer.scanTokens();
             annotateSourceTokens(tokens, sourceId);
         } catch (const LexErrorList& errors) {
@@ -748,8 +736,7 @@ std::size_t FrontendSession::loadFile(
                 errors,
                 displayPath,
                 source,
-                (!fileDiagnostics && !isImport)
-                    || (isEntry && singleEntrySource_ && !entryFileContainsImportToken(source)));
+                singleEntryPathless(isEntry, hasImportToken(lexer.scannedTokens())));
         } catch (const DiagnosticError& error) {
             if (error.location()) {
                 throw FileDiagnosticError(
@@ -757,10 +744,7 @@ std::size_t FrontendSession::loadFile(
                     DiagnosticSourceContext{
                         displayPath,
                         source,
-                        (!fileDiagnostics && !isImport)
-                            || (isEntry
-                                && singleEntrySource_
-                                && !entryFileContainsImportToken(source))});
+                        singleEntryPathless(isEntry, hasImportToken(lexer.scannedTokens()))});
             }
             throw;
         }
@@ -775,8 +759,7 @@ std::size_t FrontendSession::loadFile(
                 errors,
                 displayPath,
                 source,
-                (!fileDiagnostics && !isImport && !thisUnitHasImport)
-                    || (isEntry && singleEntrySource_ && !thisUnitHasImport));
+                singleEntryPathless(isEntry, thisUnitHasImport));
         } catch (const FileDiagnosticError&) {
             throw;
         } catch (const DiagnosticError& error) {
@@ -786,8 +769,7 @@ std::size_t FrontendSession::loadFile(
                     DiagnosticSourceContext{
                         displayPath,
                         source,
-                        (!fileDiagnostics && !isImport && !thisUnitHasImport)
-                            || (isEntry && singleEntrySource_ && !thisUnitHasImport),
+                        singleEntryPathless(isEntry, thisUnitHasImport),
                     });
             }
             throw;
@@ -808,7 +790,7 @@ std::size_t FrontendSession::loadFile(
         for (StmtPtr& statement : unit.statements) {
             if (auto* import = dynamic_cast<ImportStmt*>(statement.get())) {
                 const ImportResolution resolution = resolveImportPath(normalizedPath, import->path);
-                import->resolvedModuleId = loadFile(resolution.path.string(), true, false, true);
+                import->resolvedModuleId = loadFile(resolution.path.string(), true, false);
                 continue;
             }
 
@@ -817,7 +799,7 @@ std::size_t FrontendSession::loadFile(
                 continue;
             }
             const ImportResolution resolution = resolveImportPath(normalizedPath, *exportStmt->sourcePath);
-            exportStmt->resolvedModuleId = loadFile(resolution.path.string(), true, false, true);
+            exportStmt->resolvedModuleId = loadFile(resolution.path.string(), true, false);
         }
 
         unit.id = units_.size();

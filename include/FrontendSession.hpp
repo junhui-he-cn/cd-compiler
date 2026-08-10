@@ -80,7 +80,7 @@ private:
     };
 
     void reset();
-    std::size_t loadFile(const std::string& path, bool isImport, bool isEntry, bool fileDiagnostics);
+    std::size_t loadFile(const std::string& path, bool isImport, bool isEntry);
     CachedInterfaceLoad loadCachedInterface(
         const std::string& canonicalPath,
         const std::string& source) const;
@@ -93,6 +93,10 @@ private:
     void rebuildPreloadedModuleInterfaces();
     void rebuildCombinedSource();
     void annotateSourceTokens(std::vector<Token>& tokens, std::size_t sourceId) const;
+    // A single CLI entry module with no import statements keeps the
+    // historical pathless diagnostic surface; every other file-backed module
+    // reports its own path.
+    bool singleEntryPathless(bool isEntry, bool unitHasImport) const;
 
     std::vector<ParsedUnit> units_;
     std::unordered_map<std::string, std::size_t> canonicalToUnitId_;
