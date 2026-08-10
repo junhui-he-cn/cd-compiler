@@ -77,9 +77,9 @@ that leaves the module graph empty for combined entry programs.
 - Every file-backed module diagnostic reports the original path and
   file-local line/column through the existing `DiagnosticSourceContext`
   path. The `remapDirect*` combined-source remapping layer is deleted.
-- Compatibility carve-outs pending explicit decisions:
-  - a single entry module (one CLI file, no imports) keeps pathless
-    diagnostics;
+- Compatibility carve-outs (decided 2026-08-10):
+  - all file-backed diagnostics are pathful, preserving the user's path
+    spelling (relative invocations stay relative);
   - stdin keeps pathless diagnostics;
   - AST text output keeps today's shapes: flat `Program` output for a
     single module, `Module N entry` wrappers for multi-module programs.
@@ -142,16 +142,16 @@ that leaves the module graph empty for combined entry programs.
   de-duplication, and stable entry order.
 - Multi-entry `--emit-bytecode` linked output vs multi-entry
   `--emit-module-bytecode` + Rust `link` parity.
-- Diagnostics: pathful for multi-entry programs, pathless for the single
-  entry carve-out, stdin import rejection unchanged.
+- Diagnostics: pathful for every file-backed module, pathless only for stdin,
+  stdin import rejection unchanged.
 - Module cache round trip on a multi-entry module graph.
 
 ## Open decisions (recommendations)
 
 - **D-AST**: keep today's text surfaces (flat single-module print, module
   wrappers for multi-module) to avoid corpus churn. Recommended.
-- **D-DIAG**: keep the single-entry pathless diagnostic carve-out.
-  Recommended for now; revisit with tooling work.
+- **D-DIAG**: resolved on 2026-08-10. All file-backed diagnostics are pathful
+  (user path spelling); stdin stays pathless.
 - **D-ARTIFACT**: multi-entry `--emit-bytecode` emits a linked program in
   CLI order rather than being rejected. Recommended; matches the existing
   compiler behavior.

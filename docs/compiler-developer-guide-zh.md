@@ -74,7 +74,7 @@ CLI 参数解析/校验（main.cpp）
 
 - `units_`（已加载模块记录）、`canonicalToUnitId_`（canonical path -> unit id 映射）、`loadingStack_`（循环检测栈）、`entryUnitIds_`；
 - `sourceFiles_`、`directEntryCanonicalPaths_`、`combinedSource_`、`moduleGraph_`、`preloadedModuleInterfaces_`；
-- `moduleProductCacheLoad_`（manifest 惰性缓存）、`virtualSources_`、`virtualSourceMode_`、`singleEntrySource_`。
+- `moduleProductCacheLoad_`（manifest 惰性缓存）、`virtualSources_`、`virtualSourceMode_`。
 
 配置必须在加载之前通过 setter 设置：
 
@@ -112,15 +112,14 @@ struct ParsedUnit {
 
 **`loadFiles(paths)`（`src/FrontendSession.cpp:574`）—— 普通 CLI 模式**
 
-1. `singleEntrySource_ = paths.size() == 1`（供单文件 pathless 诊断判断）。
-2. 把所有 CLI 路径先做 `normalizedExistingPath` 并写入 `directEntryCanonicalPaths_`：这个集合让“CLI 文件同时又被 import”的模块永远走源码解析，不会使用 sidecar。
-3. 按 CLI 顺序逐个 `loadFile(path, isImport=false, isEntry=true)`。
-4. **入口错误聚合**：每个 entry 的 `FileDiagnosticErrorList` / `FileDiagnosticError`（lex/parse 错误）被收集到 `entryErrors`；全部入口处理完后再一次性抛出。这样 `compiler_design a.cd b.cd` 中两个文件各自的词法/语法错误都会报告。import/循环等 locationless 加载错误不属于这两个类型，仍然立即抛出（stop-first）。
-5. 全部成功后 `rebuildModuleGraph()` -> `rebuildCombinedSource()` -> `assembleProgram()`。
+1. 把所有 CLI 路径先做 `normalizedExistingPath` 并写入 `directEntryCanonicalPaths_`：这个集合让“CLI 文件同时又被 import”的模块永远走源码解析，不会使用 sidecar。
+2. 按 CLI 顺序逐个 `loadFile(path, isImport=false, isEntry=true)`。
+3. **入口错误聚合**：每个 entry 的 `FileDiagnosticErrorList` / `FileDiagnosticError`（lex/parse 错误）被收集到 `entryErrors`；全部入口处理完后再一次性抛出。这样 `compiler_design a.cd b.cd` 中两个文件各自的词法/语法错误都会报告。import/循环等 locationless 加载错误不属于这两个类型，仍然立即抛出（stop-first）。
+4. 全部成功后 `rebuildModuleGraph()` -> `rebuildCombinedSource()` -> `assembleProgram()`。
 
 **`loadStdin(input)`（`src/FrontendSession.cpp:537`）—— LSP 单文档与内部测试**
 
-1. `singleEntrySource_ = true`；源码作为 `<stdin>`、source id 0 的 entry 模块。
+1. 源码作为 `<stdin>`、source id 0 的 entry 模块。
 2. `parseSource("<stdin>", source, pathless=true, 0)`：lex + parse 一步完成并包装为 pathless `FileDiagnosticError(List)`。
 3. `hasImportToken(tokens)` 或 `programLoadsSource(parsed)`（带 `from` 的 re-export）命中即抛 `Import error: import is not supported from stdin`。
 4. 构造单 unit -> `rebuildModuleGraph()` -> `assembleProgram()`。
@@ -141,8 +140,8 @@ struct ParsedUnit {
 4. **虚拟/磁盘边界**：虚拟模式下，不在 `virtualSources_` 且 import 不在任何 `virtualImportRoots_` 内 -> 拒绝；否则 `canOpenFile` 检查。entry 失败抛 `failed to open input file: <path>`（`std::runtime_error`），import 失败抛 Import 诊断。
 5. `loadingStack_.push_back(canonicalPath)` 后读源码（虚拟源优先）。
 6. **缓存 sidecar 预载**（仅 `isImport` 且 canonical path 不在 `directEntryCanonicalPaths_`）：见 4.4。成功则直接构造“无 body”unit 并返回；失败按 strict/fallback 决定抛错或继续源码解析。
-7. **词法**：`Lexer(source).scanTokens()`，随后 `annotateSourceTokens` 把 `source`/`sourceLine`/`sourceId`/`range`（快照本地半开字节区间）写到每个 token。`LexErrorList`/`DiagnosticError` 在此包装为带文件的诊断；失败时直接查询 `lexer.scannedTokens()`（Lexer 保留到失败点为止的部分 token），**不再重新词法**。
-8. **语法**：`hasImportToken(tokens)` 记录本模块是否含 import token（统一 pathless 规则依赖它），`Parser.parse()` 产出 AST；parser recovery 可能一次性带出多条 parse 诊断。
+7. **词法**：`Lexer(source).scanTokens()`，随后 `annotateSourceTokens` 把 `source`/`sourceLine`/`sourceId`/`range`（快照本地半开字节区间）写到每个 token。`LexErrorList`/`DiagnosticError` 在此包装为带文件的诊断。
+8. **语法**：`Parser.parse()` 产出 AST；parser recovery 可能一次性带出多条 parse 诊断。
 9. **import/export 发现**：遍历顶层语句，`ImportStmt` 和带 `sourcePath` 的 `ExportStmt` 经 `resolveImportPath` 得到候选路径，递归 `loadFile(resolution.path, true, false)` 并把返回的 id 写回 `resolvedModuleId`。**依赖先于导入方入列**，因此 `units_`/图节点天然是依赖先序。
 10. **注册**：`unit.id = units_.size()`，压入 `units_`，写入 `canonicalToUnitId_`，`loadingStack_.pop_back()`，返回 id。
 
@@ -200,19 +199,11 @@ struct ParsedUnit {
 - `sourceForDiagnostics()`：返回 `combinedSource_`，保留给 locationless `DiagnosticError` 的兜底显示。
 - `moduleCount()` / `moduleGraph()` / `preloadedModuleInterfaces()`：供 `main.cpp`、TypeChecker 与测试查询。
 
-**pathless 规则**（与旧单文件/组合模式行为对齐）：
+**诊断路径规则**：
 
-| 场景 | 词法/语法/类型诊断 |
-| --- | --- |
-规则统一为一条：**只有“单 CLI 入口且全文无任何 import 语句”的模块保持 pathless**；其余所有文件模块一律 pathful。
-
-- 单入口、无 import：pathless（词法/语法由 `singleEntryPathless(isEntry, hasImport)` 判定；类型由 `TypeChecker::pathlessModuleDiagnostics` 按图判定，两者一致）。
-- 单入口、含 import（无论错误发生在 import 之前还是之后）：pathful。
-- 多个 entry 文件：pathful，且各自 lex/parse 错误按 CLI 顺序聚合后一次报告。
-- 被 import 的文件：pathful。
-- stdin：pathless（`loadStdin` 单独处理，且拒绝 import）。
-
-实现上不再有“错误路径二次词法”：lex 失败时直接使用 `Lexer::scannedTokens()` 的部分 token 流判断是否含 import。
+- 所有文件模块（单文件、多入口、被 import 的文件）一律 pathful：首行形如 `<Kind> error at <path>:<line>:<column>: ...`，路径保留用户拼写（相对调用保持相对，绝对调用保持绝对）。
+- 多个 entry 文件的 lex/parse 错误按 CLI 顺序聚合后一次报告。
+- 只有 stdin 保持 pathless（`loadStdin` 走 `parseSource(..., pathless=true)`，且拒绝 import）。
 
 ### 4.8 与下游的交接
 
@@ -305,8 +296,8 @@ IR 是三地址虚拟寄存器形式，常量池、名字表、源信息随 `IRP
 <Kind> error: <message>
 ```
 
-- 单文件 pathless：`Type error at 3:5: ...`。
-- 文件诊断（imported 文件、直接多文件输入、模块检查）：`Type error at <path>:<line>:<column>: ...`。
+- 文件诊断（单文件、多文件、imported 文件、模块检查）：`Type error at <path>:<line>:<column>: ...`，路径保留用户拼写。
+- stdin 保持 pathless：`Type error at 3:5: ...`。
 - Lexer 可恢复错误先聚合再进入 parser；未终止字符串 stop-at-EOF；parser 语句边界与 `impl` 方法列表可恢复并报告多条。
 - 模块调度每个失败模块在依赖序中报告一条，导入方被抑制。
 - 编译（IR/Bytecode）、import 加载与运行时诊断目前无位置（除非未来切片显式改变）。
