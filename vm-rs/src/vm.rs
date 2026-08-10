@@ -4796,6 +4796,174 @@ mod tests {
         assert_eq!(second_cache, first_cache);
     }
 
+    fn wide_scalar_call_program() -> Program {
+        let main_instructions = vec![
+            Instruction::Constant {
+                dest: 0,
+                constant: 0,
+            },
+            Instruction::Constant {
+                dest: 1,
+                constant: 1,
+            },
+            Instruction::Constant {
+                dest: 2,
+                constant: 2,
+            },
+            Instruction::Constant {
+                dest: 3,
+                constant: 3,
+            },
+            Instruction::MakeFunction { dest: 4, function: 0 },
+            Instruction::Less {
+                dest: 5,
+                left: 0,
+                right: 1,
+            },
+            Instruction::JumpIfFalse {
+                condition: 5,
+                target: 12,
+            },
+            Instruction::Call {
+                dest: 6,
+                callee: 4,
+                arguments: vec![2],
+            },
+            Instruction::Move { dest: 2, source: 6 },
+            Instruction::Add {
+                dest: 7,
+                left: 0,
+                right: 3,
+            },
+            Instruction::Move { dest: 0, source: 7 },
+            Instruction::Jump { target: 5 },
+            Instruction::Print { value: 2 },
+            Instruction::Return { value: 2 },
+        ];
+
+        let mut function_instructions =
+            vec![Instruction::LoadVar { dest: 0, name: 0 }];
+        for index in 1..=32 {
+            function_instructions.push(Instruction::Add {
+                dest: index,
+                left: index - 1,
+                right: index - 1,
+            });
+        }
+        function_instructions.push(Instruction::Return { value: 32 });
+
+        Program {
+            constants: vec![
+                Constant::Number("0".to_string()),
+                Constant::Number("20000".to_string()),
+                Constant::Number("0".to_string()),
+                Constant::Number("1".to_string()),
+            ],
+            names: vec!["value".to_string()],
+            main: FunctionBody {
+                registers: 8,
+                instructions: main_instructions,
+                locations: vec![None; 14],
+            },
+            functions: vec![Function {
+                index: 0,
+                name: "wide_add".to_string(),
+                arity: 1,
+                registers: 33,
+                params: vec!["value".to_string()],
+                instructions: function_instructions,
+                locations: vec![None; 34],
+            }],
+            debug_sources: Vec::new(),
+        }
+    }
+
+    #[cfg(all(target_arch = "x86_64", unix))]
+    #[test]
+    #[ignore = "manual JIT efficiency benchmark; run with -- --ignored --nocapture"]
+    fn jit_efficiency_vs_interpreter_report() {
+        use std::time::Instant;
+
+        fn median(samples: &[f64]) -> f64 {
+            let mut sorted = samples.to_vec();
+            sorted.sort_by(|left, right| left.partial_cmp(right).expect("finite timings"));
+            sorted[sorted.len() / 2]
+        }
+
+        fn measure(
+            program: &Program,
+            jit: bool,
+            repeats: usize,
+        ) -> (f64, f64, usize) {
+            let mut cold_samples = Vec::new();
+            let mut warm_samples = Vec::new();
+            let mut steps = None;
+            let mut expected: Option<String> = None;
+            for _ in 0..repeats {
+                let mut vm = VM::with_config(program, RunConfig::unlimited());
+                if jit {
+                    vm.jit = JitState::enabled_for_tests([0], 1 << 20);
+                }
+                let before = vm.instruction_steps;
+                let start = Instant::now();
+                let cold_output =
+                    vm.run_inner().expect("cold run should succeed");
+                cold_samples.push(start.elapsed().as_secs_f64() * 1e3);
+                let cold_steps = vm.instruction_steps - before;
+                if let Some(expected) = &expected {
+                    assert_eq!(&cold_output, expected);
+                } else {
+                    expected = Some(cold_output);
+                }
+                if let Some(steps) = &steps {
+                    assert_eq!(&cold_steps, steps);
+                } else {
+                    steps = Some(cold_steps);
+                }
+
+                let before = vm.instruction_steps;
+                let start = Instant::now();
+                let warm_output =
+                    vm.run_inner().expect("warm run should succeed");
+                warm_samples.push(start.elapsed().as_secs_f64() * 1e3);
+                assert_eq!(&warm_output, expected.as_ref().expect("expected output"));
+                assert_eq!(vm.instruction_steps - before, cold_steps);
+            }
+            (median(&cold_samples), median(&warm_samples), steps.expect("steps"))
+        }
+
+        let programs: Vec<(&str, Program)> = vec![
+            (
+                "execution_closure (real fixture, 50000 closure calls)",
+                execution_closure_program(),
+            ),
+            (
+                "wide_scalar (synthetic, 20000 calls x 32 scalar ops)",
+                wide_scalar_call_program(),
+            ),
+        ];
+
+        println!("JIT efficiency report (wall-clock medians over 7 runs)");
+        for (label, program) in &programs {
+            let (cold_interp, warm_interp, interp_steps) = measure(program, false, 7);
+            let (cold_jit, warm_jit, jit_steps) = measure(program, true, 7);
+            assert_eq!(interp_steps, jit_steps);
+            println!(
+                "\n{label}\n  interpreter: cold {cold_interp:.3} ms, warm {warm_interp:.3} ms ({} steps)",
+                interp_steps
+            );
+            println!(
+                "  jit:         cold {cold_jit:.3} ms, warm {warm_jit:.3} ms ({} steps)",
+                jit_steps
+            );
+            println!(
+                "  speedup (interp / jit): cold {:.3}x, warm {:.3}x",
+                cold_interp / cold_jit,
+                warm_interp / warm_jit
+            );
+        }
+    }
+
     #[cfg(all(target_arch = "x86_64", unix))]
     #[test]
     fn jit_run_matches_interpreter_runtime_error_for_ordinary_call() {
