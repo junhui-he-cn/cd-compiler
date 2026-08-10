@@ -22,6 +22,11 @@ the default queue until an explicit phase decision reopens them. Existing
 compatibility contracts (`cdbc 0.1`, O0 default, source fallback, C++/Rust
 parity, interpreter-default VM execution) remain unchanged.
 
+On 2026-08-10 the user explicitly reopened one compatibility boundary:
+multi-file compilation moves to the one-module-per-file model and the legacy
+combined-source path is removed (see C6 and
+[`2026-08-10-unified-module-compilation-design.md`](superpowers/specs/2026-08-10-unified-module-compilation-design.md)).
+
 ## 1. Planning rules
 
 Roadmap items use four states:
@@ -37,9 +42,11 @@ or compatibility boundary, named tests, and deletion condition. Only one
 slice per track should be active at a time. A completed item moves to a
 decision record or Git history instead of accumulating in this file.
 
-`cdbc 0.1`, direct ordered multi-file compilation, O0 as the default optimizer
-level, and source fallback for cold or repairable module-product builds remain
-compatibility contracts until an explicit decision changes them.
+`cdbc 0.1`, per-file module compilation with CLI entry order, O0 as the
+default optimizer level, and source fallback for cold or repairable
+module-product builds remain compatibility contracts until an explicit
+decision changes them. The previous "direct ordered multi-file compilation"
+contract is superseded by C6.
 
 ## 2. Current baseline
 
@@ -139,6 +146,33 @@ nested-loop, closure/callback, and import cases. Unsupported cases remain
 conservative. Do not replace the whole flow engine or accept a case merely
 because the current corpus lacks a counterexample.
 
+### C6: Unify multi-file compilation on the per-file module model
+
+**Priority:** P1. **Status:** active; P1 front-end unification is the next
+slice after the design decision on 2026-08-10.
+
+The legacy auto rule ("no import -> combined source, import -> module graph")
+is removed. Every CLI file, stdin input, and LSP virtual file is an
+independent module; the CLI file list is an ordered set of entry modules, and
+cross-file visibility requires `import` plus `export`. The combined-source
+path, the `scanTokensUntil(Import)` mode probe, double source loading, and the
+`remapDirect*` diagnostic machinery are deleted. `Program` always carries a
+module graph, and `--emit-bytecode` emits a linked program whose entry module
+bodies execute in CLI order.
+
+See the full design in
+[`2026-08-10-unified-module-compilation-design.md`](superpowers/specs/2026-08-10-unified-module-compilation-design.md).
+
+**Deliverables:** P1 implements the module-only `FrontendSession` path,
+migrates the `multi_file_functions` fixtures to module semantics, adds
+module-isolation, multi-entry order, and multi-entry artifact parity coverage,
+and refreshes the verification inventory. P2 updates README, AGENTS, the
+developer guide, and superseded decision records.
+
+**Gate:** full verification must pass with the exact commands in the spec;
+`multi_file_functions` goldens and `module-interface` goldens are refreshed
+only where the new uniform module semantics intentionally changes output.
+
 ### C3: Complete closed-workspace language tooling
 
 **Priority:** P1. **Status:** deferred by user direction on 2026-08-09. See
@@ -209,6 +243,10 @@ completed X1 compatibility matrix
   -> C1B register policy
   -> C1C default-level decision
   -> optional O2 design only if evidence requires it
+
+C6 design decision (2026-08-10)
+  -> C6 P1 module-only front-end unification
+  -> C6 P2 documentation and decision-record updates
 
 shipped semantic index + flow facts
   -> C2 one soundness decision/corpus

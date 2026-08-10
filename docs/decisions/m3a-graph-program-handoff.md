@@ -1,5 +1,10 @@
 # M3A-GRAPH-002: graph handoff in the program snapshot
 
+> Superseded on 2026-08-10 by
+> [`2026-08-10-unified-module-compilation-design.md`](../superpowers/specs/2026-08-10-unified-module-compilation-design.md):
+> every `Program` now carries a module graph, and the combined-entry carve-out
+> for direct multi-file inputs no longer exists.
+
 Status: implemented against reference commit `8be3e8e`.
 
 ## Decision

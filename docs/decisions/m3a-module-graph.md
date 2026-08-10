@@ -1,5 +1,10 @@
 # M3A-GRAPH-001: explicit import graph
 
+> Superseded on 2026-08-10 by
+> [`2026-08-10-unified-module-compilation-design.md`](../superpowers/specs/2026-08-10-unified-module-compilation-design.md):
+> stdin and direct multi-file inputs are now graph nodes; only single-module
+> programs keep the historical flat artifact/diagnostic surface.
+
 Status: implemented against reference commit `d41760d`.
 
 ## Purpose and scope
