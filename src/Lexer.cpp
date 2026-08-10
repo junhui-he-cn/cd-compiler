@@ -77,11 +77,6 @@ std::vector<Token> Lexer::scanTokensUntil(TokenType stopType)
     return tokens_;
 }
 
-const std::vector<Token>& Lexer::scannedTokens() const
-{
-    return tokens_;
-}
-
 bool Lexer::isAtEnd() const
 {
     return current_ >= source_.size();

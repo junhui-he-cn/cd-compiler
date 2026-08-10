@@ -93,10 +93,6 @@ private:
     void rebuildPreloadedModuleInterfaces();
     void rebuildCombinedSource();
     void annotateSourceTokens(std::vector<Token>& tokens, std::size_t sourceId) const;
-    // A single CLI entry module with no import statements keeps the
-    // historical pathless diagnostic surface; every other file-backed module
-    // reports its own path.
-    bool singleEntryPathless(bool isEntry, bool unitHasImport) const;
 
     std::vector<ParsedUnit> units_;
     std::unordered_map<std::string, std::size_t> canonicalToUnitId_;
@@ -115,5 +111,4 @@ private:
     std::vector<ModuleInterface> preloadedModuleInterfaces_;
     std::unordered_map<std::string, std::string> virtualSources_;
     bool virtualSourceMode_ = false;
-    bool singleEntrySource_ = false;
 };

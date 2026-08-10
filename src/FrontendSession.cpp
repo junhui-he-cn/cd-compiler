@@ -308,7 +308,6 @@ void FrontendSession::reset()
     moduleProductCacheLoad_.reset();
     virtualSources_.clear();
     virtualSourceMode_ = false;
-    singleEntrySource_ = false;
 }
 
 void FrontendSession::setImportSearchPaths(std::vector<std::string> paths)
@@ -467,11 +466,6 @@ void FrontendSession::annotateSourceTokens(std::vector<Token>& tokens, std::size
     }
 }
 
-bool FrontendSession::singleEntryPathless(bool isEntry, bool unitHasImport) const
-{
-    return isEntry && singleEntrySource_ && !unitHasImport;
-}
-
 FrontendSession::ImportResolution FrontendSession::resolveImportPath(
     const std::filesystem::path& importingPath,
     const Token& pathToken) const
@@ -526,7 +520,6 @@ FrontendSession::ImportResolution FrontendSession::resolveImportPath(
 Program FrontendSession::loadStdin(std::istream& input)
 {
     reset();
-    singleEntrySource_ = true;
 
     std::string source = readAll(input);
     sourceFiles_.push_back(SourceFile{"<stdin>", source, SourceFileId{0}});
@@ -564,7 +557,6 @@ Program FrontendSession::loadFiles(const std::vector<std::string>& paths)
 {
     reset();
 
-    singleEntrySource_ = paths.size() == 1;
     for (const std::string& path : paths) {
         directEntryCanonicalPaths_.insert(pathString(normalizedExistingPath(path)));
     }
@@ -736,7 +728,7 @@ std::size_t FrontendSession::loadFile(
                 errors,
                 displayPath,
                 source,
-                singleEntryPathless(isEntry, hasImportToken(lexer.scannedTokens())));
+                false);
         } catch (const DiagnosticError& error) {
             if (error.location()) {
                 throw FileDiagnosticError(
@@ -744,11 +736,10 @@ std::size_t FrontendSession::loadFile(
                     DiagnosticSourceContext{
                         displayPath,
                         source,
-                        singleEntryPathless(isEntry, hasImportToken(lexer.scannedTokens()))});
+                        false});
             }
             throw;
         }
-        const bool thisUnitHasImport = hasImportToken(tokens);
         ParsedSource parsed;
         try {
             Parser parser(tokens);
@@ -759,7 +750,7 @@ std::size_t FrontendSession::loadFile(
                 errors,
                 displayPath,
                 source,
-                singleEntryPathless(isEntry, thisUnitHasImport));
+                false);
         } catch (const FileDiagnosticError&) {
             throw;
         } catch (const DiagnosticError& error) {
@@ -769,7 +760,7 @@ std::size_t FrontendSession::loadFile(
                     DiagnosticSourceContext{
                         displayPath,
                         source,
-                        singleEntryPathless(isEntry, thisUnitHasImport),
+                        false,
                     });
             }
             throw;

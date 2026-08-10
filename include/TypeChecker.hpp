@@ -169,9 +169,6 @@ private:
     void checkReExport(const ExportStmt& statement);
     const ModuleStmt* findModule(const Program& program, std::size_t moduleId) const;
     const ModuleInterface* findModuleInterface(std::size_t moduleId) const;
-    // A single entry module with no dependencies keeps pathless diagnostics
-    // for compatibility with the historical single-file surface.
-    bool pathlessModuleDiagnostics(const ModuleStmt& module) const;
     void buildModuleInterface(const Program& program, const ModuleStmt& module);
     void buildModuleInterfaces(const Program& program);
     std::size_t validateModuleInterfaces(const Program& program) const;

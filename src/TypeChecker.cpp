@@ -1053,18 +1053,6 @@ const ModuleStmt* TypeChecker::findModule(const Program& program, std::size_t mo
     return nullptr;
 }
 
-bool TypeChecker::pathlessModuleDiagnostics(const ModuleStmt& module) const
-{
-    if (!currentProgram_ || !currentProgram_->moduleGraph) {
-        return false;
-    }
-    const ModuleGraph& graph = *currentProgram_->moduleGraph;
-    return graph.nodes.size() == 1
-        && graph.edges.empty()
-        && graph.nodes.front().isEntry
-        && graph.nodes.front().moduleId == module.moduleId;
-}
-
 const ModuleInterface* TypeChecker::findModuleInterface(std::size_t moduleId) const
 {
     const auto found = std::find_if(
@@ -1650,7 +1638,7 @@ void TypeChecker::checkModule(const ModuleStmt& module)
                 DiagnosticSourceContext{
                     module.path,
                     module.source,
-                    pathlessModuleDiagnostics(module)});
+                    false});
             restoreFailedState();
             throw contextual;
         }
@@ -1735,7 +1723,7 @@ void TypeChecker::checkModulesInDependencyOrder(const Program& program)
                 DiagnosticSourceContext{
                     module->path,
                     module->source,
-                    pathlessModuleDiagnostics(*module)});
+                    false});
             states[moduleId] = VisitState::Failed;
             return VisitState::Failed;
         }

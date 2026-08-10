@@ -28,9 +28,6 @@ public:
     // Scan until a token of the requested type is emitted, or until EndOfFile.
     // The stopping token is included; EndOfFile is included only when reached.
     std::vector<Token> scanTokensUntil(TokenType stopType);
-    // Tokens scanned so far. After scanTokens()/scanTokensUntil() throws, this
-    // retains the partial stream up to the failure point.
-    const std::vector<Token>& scannedTokens() const;
 
 private:
     bool isAtEnd() const;
