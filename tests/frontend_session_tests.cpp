@@ -255,7 +255,7 @@ void test_search_path_resolves_extensionless_import_and_reexport(const fs::path&
 
     std::istringstream stdinSource("print 0;\n");
     session.loadStdin(stdinSource);
-    assert(session.moduleGraph().nodes.empty());
+    assert(session.moduleGraph().nodes.size() == 1);
     assert(session.moduleGraph().edges.empty());
     assert(program.moduleGraph.has_value());
     assert(program.moduleGraph->nodes.size() == 3);
@@ -848,13 +848,18 @@ void test_direct_inputs_preserve_source_spans(const fs::path& root)
     FrontendSession session;
     Program program = session.loadFiles({first.string(), second.string()});
 
-    assert(!program.moduleGraph.has_value());
+    assert(program.moduleGraph.has_value());
+    assert(program.moduleGraph->nodes.size() == 2);
+    assert(program.moduleGraph->edges.empty());
     assert(program.sources.size() == 2);
     assert(program.sources[0].path.find("first.cd") != std::string::npos);
     assert(program.sources[1].path.find("second.cd") != std::string::npos);
-    assert(!program.sources[0].moduleIdentity);
-    assert(!program.sources[1].moduleIdentity);
-    const auto* firstPrint = dynamic_cast<const PrintStmt*>(program.statements.front().get());
+    assert(program.sources[0].moduleIdentity.has_value());
+    assert(program.sources[1].moduleIdentity.has_value());
+    const auto* firstModule = dynamic_cast<const ModuleStmt*>(program.statements.front().get());
+    assert(firstModule != nullptr);
+    assert(firstModule->isEntry);
+    const auto* firstPrint = dynamic_cast<const PrintStmt*>(firstModule->statements.front().get());
     assert(firstPrint != nullptr);
     assert(firstPrint->span.has_value());
     assert(firstPrint->span->source == 0);

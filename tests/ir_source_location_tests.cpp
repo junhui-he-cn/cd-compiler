@@ -20,6 +20,17 @@ void writeModuleSource(const fs::path& path, const std::string& source)
     output << source;
 }
 
+Program loadStdinProgram(FrontendSession& frontend, std::istream& input)
+{
+    Program program = frontend.loadStdin(input);
+    if (program.statements.size() == 1) {
+        if (auto* module = dynamic_cast<ModuleStmt*>(program.statements[0].get())) {
+            program.statements = std::move(module->statements);
+        }
+    }
+    return program;
+}
+
 void test_snapshot_identity_metadata()
 {
     const std::string source =
@@ -28,9 +39,10 @@ void test_snapshot_identity_metadata()
         "x = 4;\n";
     std::istringstream input(source);
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
-    assert(!program.moduleGraph.has_value());
+    assert(program.moduleGraph.has_value());
+    assert(program.moduleGraph->nodes.size() == 1);
     assert(program.sources.size() == 1);
     assert(program.sources[0].id == SourceFileId{0});
     for (const Token& token : frontend.displayTokens()) {
@@ -275,7 +287,7 @@ void test_declaration_index()
         "print use(x);\n";
     std::istringstream input(source);
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
     const auto* structDecl = dynamic_cast<const StructDeclStmt*>(program.statements[0].get());
     const auto* enumDecl = dynamic_cast<const EnumDeclStmt*>(program.statements[1].get());
@@ -467,7 +479,7 @@ void test_declaration_index_for_in_binding()
         "}\n"
         "print outer;\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
     const auto* loop = dynamic_cast<const ForInStmt*>(program.statements[1].get());
     assert(loop != nullptr);
     const auto* body = dynamic_cast<const BlockStmt*>(loop->body.get());
@@ -509,7 +521,7 @@ void test_declaration_index_signature_shapes()
         "let result: Result<number> = Result.Ok(1);\n"
         "print identity<number>(1);\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
     const auto* structDecl = dynamic_cast<const StructDeclStmt*>(program.statements[0].get());
     const auto* enumDecl = dynamic_cast<const EnumDeclStmt*>(program.statements[1].get());
     const auto* function = dynamic_cast<const FunctionStmt*>(program.statements[2].get());
@@ -567,7 +579,7 @@ void test_resolved_declaration_signature_metadata()
         "  fun get(): T { return this.value; }\n"
         "}\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
     const auto* function = dynamic_cast<const FunctionStmt*>(program.statements[0].get());
     const auto* impl = dynamic_cast<const ImplStmt*>(program.statements[2].get());
@@ -610,7 +622,7 @@ void test_typed_expression_metadata()
         "let box = Box { value: 3 };\n"
         "print box.value;\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
     const auto* printVariable = dynamic_cast<const PrintStmt*>(program.statements[3].get());
     const auto* assignmentStatement = dynamic_cast<const ExpressionStmt*>(program.statements[4].get());
@@ -672,7 +684,7 @@ void test_variable_lowering_metadata()
         "dynamic += 1;\n"
         "print dynamic;\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
     const auto* outerLet = dynamic_cast<const LetStmt*>(program.statements[1].get());
     const auto* block = dynamic_cast<const BlockStmt*>(program.statements[2].get());
@@ -775,7 +787,7 @@ void test_typed_index_expression_metadata()
         "id(xs)[0] = 5;\n"
         "id(xs)[0] += 1;\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
     const auto* arrayReadStatement = dynamic_cast<const PrintStmt*>(program.statements[4].get());
     const auto* arrayAssignStatement = dynamic_cast<const ExpressionStmt*>(program.statements[5].get());
@@ -874,7 +886,7 @@ void test_call_lowering_metadata()
         "fun floor(value) { return value; }\n"
         "print floor(3);\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
     const auto* directPrint = dynamic_cast<const PrintStmt*>(program.statements[2].get());
     const auto* aliasPrint = dynamic_cast<const PrintStmt*>(program.statements[3].get());
@@ -921,7 +933,7 @@ void test_method_call_lowering_metadata()
         "let box = Box { value: 1 };\n"
         "print box.add(2);\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
     const auto* print = dynamic_cast<const PrintStmt*>(program.statements[3].get());
     const auto* methodCall = print
@@ -968,7 +980,7 @@ void test_literal_pattern_metadata()
         "}\n"
         "print choose(nil);\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
     const auto* function = dynamic_cast<const FunctionStmt*>(program.statements[0].get());
     assert(function != nullptr && !function->body.empty());
@@ -1020,7 +1032,7 @@ void test_variant_pattern_metadata()
         "}\n"
         "print choose(nil);\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
     const auto* function = dynamic_cast<const FunctionStmt*>(program.statements[1].get());
     assert(function != nullptr && !function->body.empty());
@@ -1079,7 +1091,7 @@ void test_record_pattern_metadata()
         "}\n"
         "print choose(nil);\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
     const auto* function = dynamic_cast<const FunctionStmt*>(program.statements[1].get());
     assert(function != nullptr && !function->body.empty());
@@ -1134,7 +1146,7 @@ void test_literal_or_pattern_metadata()
         "}\n"
         "print choose(false);\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
     const auto* function = dynamic_cast<const FunctionStmt*>(program.statements[0].get());
     assert(function != nullptr && !function->body.empty());
@@ -1182,7 +1194,7 @@ void test_pattern_guard_metadata()
         "  _ => \"other\",\n"
         "};\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
     const auto* function = dynamic_cast<const FunctionStmt*>(program.statements[0].get());
     const auto* statementMatch = function && !function->body.empty()
@@ -1230,7 +1242,7 @@ void test_variant_constructor_lowering_metadata()
         "print ok;\n"
         "print none;\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
     const auto* ok = dynamic_cast<const LetStmt*>(program.statements[2].get());
     const auto* none = dynamic_cast<const LetStmt*>(program.statements[3].get());
@@ -1283,7 +1295,7 @@ void test_function_return_lowering_metadata()
         "let reader = makeReader();\n"
         "print reader();\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
     const auto* factorial = dynamic_cast<const FunctionStmt*>(program.statements[0].get());
     const auto* makeReader = dynamic_cast<const FunctionStmt*>(program.statements[1].get());
@@ -1368,7 +1380,7 @@ void test_function_capture_metadata()
         "  fun makeReader() { return fun () { return this.value; }; }\n"
         "}\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
     const auto* readGlobal = dynamic_cast<const FunctionStmt*>(program.statements[1].get());
     const auto* makeCounter = dynamic_cast<const FunctionStmt*>(program.statements[2].get());
@@ -1441,7 +1453,7 @@ void test_loop_target_metadata()
         "  break;\n"
         "}\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
     const auto* whileStmt = dynamic_cast<const WhileStmt*>(program.statements[0].get());
     const auto* forStmt = dynamic_cast<const ForStmt*>(program.statements[1].get());
@@ -1535,7 +1547,7 @@ void test_typed_field_assignment_metadata()
         "id(box).value += 5;\n"
         "print id(box).value;\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
     const auto* staticAssignStatement = dynamic_cast<const ExpressionStmt*>(program.statements[3].get());
     const auto* staticCompoundStatement = dynamic_cast<const ExpressionStmt*>(program.statements[4].get());
@@ -1611,7 +1623,7 @@ void test_native_call_metadata()
         "print str(rounded);\n"
         "print xs.len();\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
     const auto* shadowed = dynamic_cast<const LetStmt*>(program.statements[2].get());
     const auto* rounded = dynamic_cast<const LetStmt*>(program.statements[3].get());
@@ -1678,7 +1690,7 @@ void test_collection_expression_metadata()
         "let dynamicArray = [id(1)];\n"
         "let dynamicMap = {\"a\": id(1)};\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
 
     const auto* numbers = dynamic_cast<const LetStmt*>(program.statements[2].get());
     const auto* table = dynamic_cast<const LetStmt*>(program.statements[3].get());
@@ -1743,7 +1755,7 @@ void test_ir_binding_metadata_integration()
         "print exportedValue;\n";
     std::istringstream input(source);
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
     TypeChecker checker;
     checker.check(program);
     assert(checker.declarationIndexMismatchCount() == 0);
@@ -1829,7 +1841,7 @@ int main()
 {
     std::istringstream input("print 1 / 0;\n");
     FrontendSession frontend;
-    Program program = frontend.loadStdin(input);
+    Program program = loadStdinProgram(frontend, input);
     TypeChecker checker;
     checker.check(program);
     IRCompiler compiler;

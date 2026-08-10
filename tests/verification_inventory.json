@@ -45040,6 +45040,70 @@
       "fixture": "tests/golden/module_import_order"
     },
     {
+      "case_id": "rust_vm.golden.multi_entry_modules.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "multi_entry_modules emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:multi_entry_modules"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/multi_entry_modules/first.cd",
+        "tests/golden/multi_entry_modules/second.cd"
+      ],
+      "expected_files": [
+        "tests/golden/multi_entry_modules/run.out"
+      ],
+      "fixture": "tests/golden/multi_entry_modules"
+    },
+    {
+      "case_id": "rust_vm.golden.multi_entry_modules.run",
+      "runner": "rust_vm_golden",
+      "result_name": "multi_entry_modules rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:multi_entry_modules"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/multi_entry_modules/first.cd",
+        "tests/golden/multi_entry_modules/second.cd"
+      ],
+      "expected_files": [
+        "tests/golden/multi_entry_modules/run.out"
+      ],
+      "fixture": "tests/golden/multi_entry_modules"
+    },
+    {
       "case_id": "rust_vm.golden.multi_file_functions.emit",
       "runner": "rust_vm_golden",
       "result_name": "multi_file_functions emit",

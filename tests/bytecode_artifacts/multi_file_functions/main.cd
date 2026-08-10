@@ -1,1 +1,2 @@
+import "./lib.cd";
 print add(2, 5);

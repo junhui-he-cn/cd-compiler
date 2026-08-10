@@ -1,6 +1,10 @@
 Program
-  Fun add(a, b)
-    Return (+ a b)
-  Let banner = "sum"
-  Print banner
-  Print (call add 1 2)
+  Module 0 entry
+    Fun add(a, b)
+      Return (+ a b)
+    Let banner = "sum"
+    Export add banner
+  Module 1 entry
+    Import "./lib.cd"
+    Print banner
+    Print (call add 1 2)

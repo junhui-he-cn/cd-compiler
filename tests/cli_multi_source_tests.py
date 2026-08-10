@@ -64,13 +64,27 @@ class CliMultiSourceTests(unittest.TestCase):
             check=False,
         )
 
-    def test_vm_execution_accepts_multiple_input_files_in_order(self) -> None:
+    def test_vm_execution_accepts_multiple_entry_modules_in_order(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            first = root / "first.cd"
+            second = root / "second.cd"
+            first.write_text("print 1;\n", encoding="utf-8")
+            second.write_text("print 2;\n", encoding="utf-8")
+
+            completed = self.emit_and_run_vm(root, first, second)
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertEqual(completed.stderr, "")
+            self.assertEqual(completed.stdout, "1\n2\n")
+
+    def test_vm_execution_accepts_importing_entry_modules(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             lib = root / "lib.cd"
             main = root / "main.cd"
-            lib.write_text("fun add(a, b) { return a + b; }\n", encoding="utf-8")
-            main.write_text("print add(1, 2);\n", encoding="utf-8")
+            lib.write_text("fun add(a, b) { return a + b; }\nexport add;\n", encoding="utf-8")
+            main.write_text('import "./lib.cd";\nprint add(1, 2);\n', encoding="utf-8")
 
             completed = self.emit_and_run_vm(root, lib, main)
 
@@ -78,7 +92,7 @@ class CliMultiSourceTests(unittest.TestCase):
             self.assertEqual(completed.stderr, "")
             self.assertEqual(completed.stdout, "3\n")
 
-    def test_direct_input_files_parse_as_one_combined_source(self) -> None:
+    def test_each_input_file_is_parsed_independently(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             first = root / "first.cd"
@@ -86,13 +100,13 @@ class CliMultiSourceTests(unittest.TestCase):
             first.write_text("let value =\n", encoding="utf-8")
             second.write_text("41;\nprint value;\n", encoding="utf-8")
 
-            completed = self.emit_and_run_vm(root, first, second)
+            completed = self.run_compiler(str(first), str(second))
 
-            self.assertEqual(completed.returncode, 0, completed.stderr)
-            self.assertEqual(completed.stdout, "41\n")
-            self.assertEqual(completed.stderr, "")
+            self.assertEqual(completed.returncode, 1)
+            self.assertEqual(completed.stdout, "")
+            self.assertIn(f"Parse error at {first}", completed.stderr)
 
-    def test_direct_input_files_lex_as_one_combined_source(self) -> None:
+    def test_each_input_file_is_lexed_independently(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             first = root / "first.cd"
@@ -100,11 +114,11 @@ class CliMultiSourceTests(unittest.TestCase):
             first.write_text('print "first\n', encoding="utf-8")
             second.write_text('second";\n', encoding="utf-8")
 
-            completed = self.emit_and_run_vm(root, first, second)
+            completed = self.run_compiler(str(first), str(second))
 
-            self.assertEqual(completed.returncode, 0, completed.stderr)
-            self.assertEqual(completed.stdout, "first\nsecond\n")
-            self.assertEqual(completed.stderr, "")
+            self.assertEqual(completed.returncode, 1)
+            self.assertEqual(completed.stdout, "")
+            self.assertIn(f"Lex error at {first}", completed.stderr)
 
     def test_emit_bytecode_accepts_multiple_input_files(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -112,8 +126,8 @@ class CliMultiSourceTests(unittest.TestCase):
             lib = root / "lib.cd"
             main = root / "main.cd"
             artifact = root / "program.cdbc"
-            lib.write_text("fun add(a, b) { return a + b; }\n", encoding="utf-8")
-            main.write_text("print add(2, 3);\n", encoding="utf-8")
+            lib.write_text("fun add(a, b) { return a + b; }\nexport add;\n", encoding="utf-8")
+            main.write_text('import "./lib.cd";\nprint add(2, 3);\n', encoding="utf-8")
 
             completed = self.run_compiler("--emit-bytecode", str(artifact), str(lib), str(main))
 
@@ -202,17 +216,20 @@ class CliMultiSourceTests(unittest.TestCase):
         self.assertIn("Usage:", completed.stderr)
         self.assertNotIn("[--run]", completed.stderr)
 
-    def test_direct_cli_files_with_export_still_share_entry_scope(self) -> None:
+    def test_entry_modules_do_not_share_top_level_scope(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             (root / "lib.cd").write_text('let value = "direct";\nexport value;\n', encoding="utf-8")
             (root / "main.cd").write_text('print value;\n', encoding="utf-8")
 
-            completed = self.emit_and_run_vm(root, root / "lib.cd", root / "main.cd")
+            completed = self.run_compiler(str(root / "lib.cd"), str(root / "main.cd"))
 
-            self.assertEqual(completed.returncode, 0, completed.stderr)
-            self.assertEqual(completed.stdout, "direct\n")
-            self.assertEqual(completed.stderr, "")
+            self.assertEqual(completed.returncode, 1)
+            self.assertEqual(completed.stdout, "")
+            self.assertIn(
+                f"Type error at {root / 'main.cd'}:1:7: undefined variable `value`",
+                completed.stderr,
+            )
 
     def test_import_path_resolves_relative_to_importing_file(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -499,7 +516,7 @@ class CliMultiSourceTests(unittest.TestCase):
             self.assertIn(f'module 1 entry "{app / "input.cd"}"\n', completed.stdout)
             self.assertEqual(completed.stdout.count('  export value value: number\n'), 2)
 
-    def test_direct_multi_file_parse_errors_reports_all_file_paths(self) -> None:
+    def test_direct_multi_file_parse_errors_reports_all_entry_paths(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             first = root / "first.cd"

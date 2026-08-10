@@ -1,2 +1,3 @@
+import "./lib.cd";
 print banner;
 print add(1, 2);

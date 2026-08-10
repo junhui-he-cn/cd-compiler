@@ -292,7 +292,7 @@ def main() -> int:
             symbols.get("id") != 3
             or not isinstance(symbol_values, list)
             or [symbol.get("name") for symbol in symbol_values]
-            != ["add", "value", "result"]
+            != [str(main_path), "add", "value", "result"]
         ):
             raise AssertionError(f"document symbol response mismatch: {symbols!r}")
 
