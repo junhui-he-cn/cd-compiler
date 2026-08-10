@@ -66,34 +66,159 @@ CLI 参数解析/校验（main.cpp）
 
 ## 4. 前端：源码加载与模块图（FrontendSession）
 
-`FrontendSession::loadFiles(paths)` 是普通模式的前端入口。所有输入统一走单条模块路径，每个 CLI 文件都是 entry 模块：
+`FrontendSession` 是普通模式（非 LSP、非格式化单独路径）唯一的源码加载前端。它负责文件/标准输入/虚拟文档的读取、import 递归发现、模块身份去重、模块图构建、缓存 sidecar 预载，以及文件感知诊断的包装。**所有输入统一走单条模块路径**：每个文件（含 stdin、虚拟文件）都是一个模块，CLI 文件按命令行顺序成为 entry 模块，跨文件可见性必须通过 `import`/`export`。
 
-### 4.1 入口模块加载
+### 4.0 生命周期与配置
 
-对每个直接输入调用 `loadFile(path, isImport=false, isEntry=true, ...)`：
+每次加载入口（`loadFiles` / `loadStdin` / `loadVirtualFiles`）都会先调用 `reset()`（`src/FrontendSession.cpp:313`），清空：
 
-1. **规范化与去重**：`normalizedExistingPath` 得到 canonical path；`canonicalToUnitId_` 命中则复用（entry 标记可叠加）。
-2. **循环检测**：`loadingStack_` 出现重复 canonical path 即抛 `Import` 诊断。
-3. **缓存 sidecar**：对非 entry 的 import，尝试 `loadCachedInterface` 读取 `.cdi` sidecar；strict 模式下不可信即抛 Import 诊断，非 strict 则继续解析源码。sidecar 可用时该 unit 不保留 AST body（`statements` 为空），依赖也须全部可缓存。
-4. **词法/语法**：Lexer `scanTokens()` 后 `annotateSourceTokens` 把快照 source id 关联到 token；Parser `parse()` 产出 AST。
-5. **递归解析 import/export**：遍历语句，`ImportStmt` 与带 `sourcePath` 的 `ExportStmt` 经 `resolveImportPath` 解析后递归 `loadFile`。
-6. `rebuildModuleGraph()`：按 unit 与语句构建 `ModuleGraph`（节点：module id、canonical path、entry；边：import / re-export，带 requested path）。每次编译（文件、stdin、虚拟文件）都产生图；`Program` 始终携带 `moduleGraph` 与 `ModuleStmt` 列表。
-7. `rebuildCombinedSource()` + `assembleProgram()`：模块语句带上 `moduleId`、`isEntry`、`sourceHash` 与 `resolvedModuleId`。多个入口模块的词法/语法错误按 CLI 顺序聚合后一起报告；import/循环等加载错误仍立即停止。
+- `units_`（已加载模块记录）、`canonicalToUnitId_`（canonical path -> unit id 映射）、`loadingStack_`（循环检测栈）、`entryUnitIds_`；
+- `sourceFiles_`、`directEntryCanonicalPaths_`、`combinedSource_`、`moduleGraph_`、`preloadedModuleInterfaces_`；
+- `moduleProductCacheLoad_`（manifest 惰性缓存）、`virtualSources_`、`virtualSourceMode_`、`singleEntrySource_`。
 
-兼容性保留面：
+配置必须在加载之前通过 setter 设置：
 
-- 单个入口模块（一个 CLI 文件且无 import）与 stdin 保持 pathless 诊断。
-- 单个模块的 AST 文本输出保持扁平 `Program` 形状；多模块程序输出 `Module N entry` 包装。
-- 单模块程序的 `.cdbc`/调试元数据不写入 `module=` 属性，保持既有产物表面；多模块图才记录模块身份。
+| setter | 作用 |
+| --- | --- |
+| `setImportSearchPaths(paths)` | 设置 `-I`/`--import-path` 搜索目录（按 CLI 顺序保存，路径做 `lexically_normal`） |
+| `setVirtualImportRoots(paths)` | 虚拟 workspace 模式允许磁盘导入的根目录集合（canonical 化保存） |
+| `setModuleInterfaceCacheDirectory(path)` | 设置缓存根目录，同时使 `moduleProductCacheLoad_` 失效 |
+| `setModuleInterfaceCacheStrict(bool)` | strict 模式：sidecar 不可信时直接抛 Import 诊断而不是源回退 |
+| `setModuleProductCacheMode(bool)` | 模块产物边界：要求 `cdbc-cache 0.2` manifest 与配对产物同时可信 |
 
-### 4.2 import 路径解析
+### 4.1 核心数据模型
 
-`resolveImportPath` 的搜索顺序：
+`ParsedUnit`（`include/FrontendSession.hpp`）表示一个已加载模块：
 
-- 绝对路径：直接作为候选。
-- 相对路径：先 `importingPath.parent_path()`，再（非显式路径时）依次尝试 `--import-path`/`-I` 目录。
-- 每个 base 上按 `importCandidatesForBase` 尝试候选（显式 `./x.cd` 只试该路径；非显式还会试 `x.cd` 等）。
-- 虚拟 workspace 模式（LSP）中，`--import-path` 之外的文件不允许磁盘导入，除非声明 `virtualImportRoots`。
+```cpp
+struct ParsedUnit {
+    std::size_t id = 0;                    // 快照本地模块 id（依赖先序分配）
+    std::size_t sourceId = 0;              // 对应 sourceFiles_ 下标
+    std::string path;                      // display path（用户拼写，诊断用）
+    std::string canonicalPath;             // 归一化身份，去重/缓存/图身份用
+    std::string source;                    // 原始源码
+    std::vector<Token> tokens;             // 词法结果（已关联 source id）
+    std::vector<StmtPtr> statements;       // AST 顶层语句；sidecar 预载时为空
+    bool isEntry = false;                  // 是否为 CLI/stdin/虚拟入口
+    std::optional<ModuleInterfaceArtifact> interfaceArtifact; // 预载 .cdi 时存在
+};
+```
+
+`SourceFile`（`include/SourceIdentity.hpp`）是 `Program::sources` 中的源码元数据：`path`（可能为相对 cwd 的显示路径）、`text`、快照本地 `SourceFileId`，以及可选的 `moduleIdentity`（仅“模块感知”图才填充，见 4.5）。
+
+`ModuleGraph`（`include/ModuleGraph.hpp`）是图的纯值类型：`nodes`（module id、source id、display/canonical path、isEntry）与 `edges`（importing/imported module id、`Import`/`ReExport` 类型、requested path 原文）。
+
+### 4.2 三个加载入口
+
+**`loadFiles(paths)`（`src/FrontendSession.cpp:574`）—— 普通 CLI 模式**
+
+1. `singleEntrySource_ = paths.size() == 1`（供单文件 pathless 诊断判断）。
+2. 把所有 CLI 路径先做 `normalizedExistingPath` 并写入 `directEntryCanonicalPaths_`：这个集合让“CLI 文件同时又被 import”的模块永远走源码解析，不会使用 sidecar。
+3. 按 CLI 顺序逐个 `loadFile(path, isImport=false, isEntry=true)`。
+4. **入口错误聚合**：每个 entry 的 `FileDiagnosticErrorList` / `FileDiagnosticError`（lex/parse 错误）被收集到 `entryErrors`；全部入口处理完后再一次性抛出。这样 `compiler_design a.cd b.cd` 中两个文件各自的词法/语法错误都会报告。import/循环等 locationless 加载错误不属于这两个类型，仍然立即抛出（stop-first）。
+5. 全部成功后 `rebuildModuleGraph()` -> `rebuildCombinedSource()` -> `assembleProgram()`。
+
+**`loadStdin(input)`（`src/FrontendSession.cpp:537`）—— LSP 单文档与内部测试**
+
+1. `singleEntrySource_ = true`；源码作为 `<stdin>`、source id 0 的 entry 模块。
+2. `parseSource("<stdin>", source, pathless=true, 0)`：lex + parse 一步完成并包装为 pathless `FileDiagnosticError(List)`。
+3. `hasImportToken(tokens)` 或 `programLoadsSource(parsed)`（带 `from` 的 re-export）命中即抛 `Import error: import is not supported from stdin`。
+4. 构造单 unit -> `rebuildModuleGraph()` -> `assembleProgram()`。
+
+**`loadVirtualFiles(files)`（`src/FrontendSession.cpp:603`）—— LSP workspace**
+
+1. `virtualSourceMode_ = true`；每个虚拟文件按 canonical path 写入 `virtualSources_`（open 文档优先于磁盘同名文件）。
+2. 每个文件作为 entry 调用 `loadFile`（不聚合错误，保持 LSP 现有 stop-first 行为）。
+3. 组装模块图程序。
+
+### 4.3 `loadFile` 单模块加载流水线（`src/FrontendSession.cpp:613`）
+
+`loadFile(path, isImport, isEntry)` 是唯一递归加载函数：
+
+1. **路径身份**：`normalizedExistingPath`（`weakly_canonical`，失败回退 `absolute`）得到 canonical path；`displayPath` 保留用户拼写用于诊断。
+2. **循环检测**：canonical path 已在 `loadingStack_` 中 -> 抛 `Import error: import cycle detected: <a> -> <b> -> <a>`（`displayCycle` 只打印环段）。
+3. **去重**：`canonicalToUnitId_` 命中 -> 若本次是 entry 则把已有 unit 标记 `isEntry = true` 并返回既有 id（同一文件既被 CLI 指定又被 import 时复用）。
+4. **虚拟/磁盘边界**：虚拟模式下，不在 `virtualSources_` 且 import 不在任何 `virtualImportRoots_` 内 -> 拒绝；否则 `canOpenFile` 检查。entry 失败抛 `failed to open input file: <path>`（`std::runtime_error`），import 失败抛 Import 诊断。
+5. `loadingStack_.push_back(canonicalPath)` 后读源码（虚拟源优先）。
+6. **缓存 sidecar 预载**（仅 `isImport` 且 canonical path 不在 `directEntryCanonicalPaths_`）：见 4.4。成功则直接构造“无 body”unit 并返回；失败按 strict/fallback 决定抛错或继续源码解析。
+7. **词法**：`Lexer(source).scanTokens()`，随后 `annotateSourceTokens` 把 `source`/`sourceLine`/`sourceId`/`range`（快照本地半开字节区间）写到每个 token。`LexErrorList`/`DiagnosticError` 在此包装为带文件的诊断；失败时直接查询 `lexer.scannedTokens()`（Lexer 保留到失败点为止的部分 token），**不再重新词法**。
+8. **语法**：`hasImportToken(tokens)` 记录本模块是否含 import token（统一 pathless 规则依赖它），`Parser.parse()` 产出 AST；parser recovery 可能一次性带出多条 parse 诊断。
+9. **import/export 发现**：遍历顶层语句，`ImportStmt` 和带 `sourcePath` 的 `ExportStmt` 经 `resolveImportPath` 得到候选路径，递归 `loadFile(resolution.path, true, false)` 并把返回的 id 写回 `resolvedModuleId`。**依赖先于导入方入列**，因此 `units_`/图节点天然是依赖先序。
+10. **注册**：`unit.id = units_.size()`，压入 `units_`，写入 `canonicalToUnitId_`，`loadingStack_.pop_back()`，返回 id。
+
+异常路径统一在三个 catch 中 `loadingStack_.pop_back()` 后重抛；虚拟模式下 locationless 的 Import 错误会被重包装为带当前虚拟文件上下文的 `FileDiagnosticError`。
+
+### 4.4 import 路径解析（`resolveImportPath`，`src/FrontendSession.cpp:486`）
+
+1. `importPath(pathToken)` 解码字符串字面量；`isExplicitImportPath` 判定绝对路径或 `./`/`../` 前缀。
+2. **base 列表**：
+   - 绝对路径：单个空 base（直接使用请求路径）；
+   - 相对路径：先 `importingPath.parent_path()`（import 声明所在文件目录）；
+   - 非显式路径再追加 `importSearchPaths_`（`-I`/`--import-path`，按 CLI 顺序）。
+3. **每个 base 的候选**（`importCandidatesForBase`）：`base / requested` 的 `lexically_normal` 形式；若请求路径无扩展名，再追加 `+ ".cd"` 候选。显式路径只产生自身候选。
+4. **可用性**：候选命中 `virtualSources_`（按 canonical 比较）或磁盘可读（虚拟模式下还要求 `pathWithinRoot(candidate, root)`）即返回；`resolveImportPath` 返回的是未规范化的候选路径，真正的 canonical 化在 `loadFile` 内完成。
+5. **失败**：显式路径抛 `failed to open import: <display>`；非显式抛 `failed to resolve import `<x>`; tried: <候选列表>`。
+
+### 4.5 缓存 sidecar 与模块产物边界
+
+`loadCachedInterface(canonicalPath, source)`（`src/FrontendSession.cpp:368`）：
+
+1. 未设置缓存目录 -> 直接返回空结果（走源解析）。
+2. 读取 `<cache>/interfaces/<canonical>.cdi`；按错误文本区分 `invalid identity metadata` / `malformed sidecar` / `missing sidecar` 作为拒绝原因。
+3. 校验 sidecar `identity` 与 `canonicalPath` 字段等于当前 canonical path，且 `sourceHash == moduleCacheHash(source)`。
+4. `moduleProductCacheRejection`（仅 `--module-cache` + `--emit-module-bytecode` 的 module-product 模式）：惰性读取并缓存 `<cache>/module-cache.cdbc`（`cdbc-cache 0.2`），按 identity 找到记录，比较 `cacheKey`、`artifactPath`、`interfaceArtifactPath` 三者与 sidecar 派生的期望值。
+5. 配对产物存在性：`is_regular_file(<cache>/<moduleCacheArtifactPath>)`。
+6. 全部通过才返回可信 artifact。
+
+`loadFile` 中的消费逻辑：
+
+- **strict**（`setModuleInterfaceCacheStrict(true)`）：任何拒绝原因 -> `Import error: module interface cache rejected for <canonical>: <reason>`；
+- **非 strict**：拒绝 -> 源回退（保留已有加载结果）；
+- **成功预载**：递归加载 `artifact.dependencies`（依赖也须为 sidecar 且 `interfaceHash` 匹配）；依赖不齐时 strict 抛 `dependency interface hash mismatch`，非 strict 继续源解析（已加载的依赖 unit 保留并去重）。
+- 预载 unit 的 `statements` 为空、`interfaceArtifact` 有值；`ModuleStmt::bodySourceBacked = false`，TypeChecker 只消费其接口，IR 阶段拒绝降级。
+
+### 4.6 程序组装（`assembleProgram`，`src/FrontendSession.cpp:857`）
+
+1. `program.sources = sourceFiles_`，`program.moduleGraph = moduleGraph_`。
+2. **`moduleAware` 兼容面**：只有图满足 `nodes.size() > 1 || !edges.empty()` 时才把 `SourceFile.moduleIdentity` 填成节点 canonical path。单模块程序保持旧产物/调试表面（`.cdbc` `debug_sources` 不写 `module=` 属性、调试器 `module=none`）。
+3. `rebuildPreloadedModuleInterfaces()`：把所有带 `interfaceArtifact` 的 unit 转成 `ModuleInterface`（快照 id/sourceId/path/canonicalPath/isEntry 写回，依赖边按 canonical 映射为快照 moduleId）。
+4. 每个 unit 构造 `ModuleStmt(unit.id, path, source, statements, isEntry, sourceId)`：`sourceHash = moduleCacheHash(source)`，`bodySourceBacked = !interfaceArtifact.has_value()`；`program.statements` 顺序 = `units_` 顺序（依赖先序）。
+5. `finalizeSyntaxMetadata(program)`：`populateSyntaxRanges` + `assignSyntaxNodeIds`，给 AST 节点补齐快照本地 range 与语法节点 id。
+
+`rebuildModuleGraph()`（`src/FrontendSession.cpp:893`）：
+
+- 节点按 `units_` 顺序生成；
+- 带 artifact 且无语句的 unit：从 `artifact.dependencies` 生成边（identity 必须能在 `canonicalToUnitId_` 中找到）；
+- 普通 unit：遍历语句，`ImportStmt` -> `Import` 边，带 `sourcePath` 的 `ExportStmt` -> `ReExport` 边（requested path 保持源码原文）。
+
+`rebuildCombinedSource()`（`src/FrontendSession.cpp:978`）把全部模块源码按“换行分隔”拼成 `combinedSource_`，供 `--tokens` 的合成 EOF、`sourceForDiagnostics()` 回退显示以及内部测试使用。
+
+### 4.7 观察与诊断接口
+
+- `displayTokens()`（`src/FrontendSession.cpp:986`）：按 `units_` 顺序输出每个模块 token（跳过各 unit 的 EOF），行号叠加到累计偏移，最后合成一个 EOF；供 `--tokens`。
+- `losslessSourceView()`（`src/FrontendSession.cpp:1018`）：按 source id 收集 token，`buildLosslessSourceFileView` 重建注释/空白；供 `--format` / `--format-check`。
+- `sourceForDiagnostics()`：返回 `combinedSource_`，保留给 locationless `DiagnosticError` 的兜底显示。
+- `moduleCount()` / `moduleGraph()` / `preloadedModuleInterfaces()`：供 `main.cpp`、TypeChecker 与测试查询。
+
+**pathless 规则**（与旧单文件/组合模式行为对齐）：
+
+| 场景 | 词法/语法/类型诊断 |
+| --- | --- |
+规则统一为一条：**只有“单 CLI 入口且全文无任何 import 语句”的模块保持 pathless**；其余所有文件模块一律 pathful。
+
+- 单入口、无 import：pathless（词法/语法由 `singleEntryPathless(isEntry, hasImport)` 判定；类型由 `TypeChecker::pathlessModuleDiagnostics` 按图判定，两者一致）。
+- 单入口、含 import（无论错误发生在 import 之前还是之后）：pathful。
+- 多个 entry 文件：pathful，且各自 lex/parse 错误按 CLI 顺序聚合后一次报告。
+- 被 import 的文件：pathful。
+- stdin：pathless（`loadStdin` 单独处理，且拒绝 import）。
+
+实现上不再有“错误路径二次词法”：lex 失败时直接使用 `Lexer::scannedTokens()` 的部分 token 流判断是否含 import。
+
+### 4.8 与下游的交接
+
+- `main.cpp`：`frontend.setImportSearchPaths(importSearchPaths)`；`--module-interface-cache`/`--module-cache` 映射到 `setModuleInterfaceCacheDirectory`；`--module-cache` 额外启用 `setModuleProductCacheMode(true)`；interface-only 消费者默认 `setModuleInterfaceCacheStrict(true)`（除非 `--module-cache-fallback`）。格式化模式从 `program.moduleGraph` 收集 entry source id 逐文件输出。
+- TypeChecker：`setPreloadedModuleInterfaces(frontend.preloadedModuleInterfaces())` 后 `check(program)` 按图做依赖序检查。
+- LSP：`analyzeDocument` 走 `loadStdin`；`analyzeVirtualWorkspace` 走 `loadVirtualFiles` + `setVirtualImportRoots(workspaceRoots)`。
 
 ## 5. 类型检查（TypeChecker）
 
