@@ -48,8 +48,9 @@ Useful compiler modes include:
 ./build/compiler_design --help
 ```
 
-Use `-I` or `--import-path` to add module search paths. Multiple source files
-can be passed together when a combined input is desired.
+Use `-I` or `--import-path` to add module search paths. Every source file is
+an independent module: passing multiple files compiles an ordered set of entry
+modules, and cross-file visibility requires `import` plus `export`.
 
 ## Compile and Run Bytecode
 

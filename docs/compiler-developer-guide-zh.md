@@ -49,7 +49,7 @@ CLI 参数解析/校验（main.cpp）
 - 优化：`--opt-level 0|1`，仅在 `--ir`、`--bytecode` 或产物发射时有效。
 - LSP：`--lsp`，独立 stdio 协议，不允许携带其它参数。
 
-**所有非 LSP 模式都至少需要一个源文件**（参数缺失时打印用法并返回 64）。多个源文件按命令行顺序作为组合输入；含 import 时走独立模块路径。
+**所有非 LSP 模式都至少需要一个源文件**（参数缺失时打印用法并返回 64）。每个源文件都是独立模块；多个源文件按命令行顺序作为入口模块，跨文件可见性必须通过 `import`/`export`。
 
 ### 3.2 关键校验规则
 
@@ -66,15 +66,9 @@ CLI 参数解析/校验（main.cpp）
 
 ## 4. 前端：源码加载与模块图（FrontendSession）
 
-`FrontendSession::loadFiles(paths)` 是普通模式的前端入口，分为两条路径：
+`FrontendSession::loadFiles(paths)` 是普通模式的前端入口。所有输入统一走单条模块路径，每个 CLI 文件都是 entry 模块：
 
-### 4.1 无 import 的快速路径
-
-1. 读取全部直接输入文件，按顺序拼接成 `combinedSource_`，记录每个文件的起始行。
-2. 对整个组合源做一次 Lexer + Parser，`scanTokensUntil(TokenType::Import)` 提前探测 import。
-3. 若无 import，直接返回组合 `Program`（`sources` 携带全部 `SourceFile`）。此时语法错误会按源文件 remap 到原始路径与行/列。
-
-### 4.2 有 import 的模块路径
+### 4.1 入口模块加载
 
 对每个直接输入调用 `loadFile(path, isImport=false, isEntry=true, ...)`：
 
@@ -83,10 +77,16 @@ CLI 参数解析/校验（main.cpp）
 3. **缓存 sidecar**：对非 entry 的 import，尝试 `loadCachedInterface` 读取 `.cdi` sidecar；strict 模式下不可信即抛 Import 诊断，非 strict 则继续解析源码。sidecar 可用时该 unit 不保留 AST body（`statements` 为空），依赖也须全部可缓存。
 4. **词法/语法**：Lexer `scanTokens()` 后 `annotateSourceTokens` 把快照 source id 关联到 token；Parser `parse()` 产出 AST。
 5. **递归解析 import/export**：遍历语句，`ImportStmt` 与带 `sourcePath` 的 `ExportStmt` 经 `resolveImportPath` 解析后递归 `loadFile`。
-6. `rebuildModuleGraph()`：按 unit 与语句构建 `ModuleGraph`（节点：module id、canonical path、entry；边：import / re-export，带 requested path）。
-7. `rebuildCombinedSource()` + `assembleProgram()`：直接输入按序合并，模块语句带上 `moduleId`、`isEntry`、`sourceHash` 与 `resolvedModuleId`。
+6. `rebuildModuleGraph()`：按 unit 与语句构建 `ModuleGraph`（节点：module id、canonical path、entry；边：import / re-export，带 requested path）。每次编译（文件、stdin、虚拟文件）都产生图；`Program` 始终携带 `moduleGraph` 与 `ModuleStmt` 列表。
+7. `rebuildCombinedSource()` + `assembleProgram()`：模块语句带上 `moduleId`、`isEntry`、`sourceHash` 与 `resolvedModuleId`。多个入口模块的词法/语法错误按 CLI 顺序聚合后一起报告；import/循环等加载错误仍立即停止。
 
-### 4.3 import 路径解析
+兼容性保留面：
+
+- 单个入口模块（一个 CLI 文件且无 import）与 stdin 保持 pathless 诊断。
+- 单个模块的 AST 文本输出保持扁平 `Program` 形状；多模块程序输出 `Module N entry` 包装。
+- 单模块程序的 `.cdbc`/调试元数据不写入 `module=` 属性，保持既有产物表面；多模块图才记录模块身份。
+
+### 4.2 import 路径解析
 
 `resolveImportPath` 的搜索顺序：
 
@@ -252,4 +252,3 @@ python3 tests/run_malformed_tests.py ./build/compiler_design vm-rs --report buil
 - 模块产物源 fallback（冷构建/可修复产物），strict 切换属于 C4 决策门；
 - C++/Rust 执行奇偶（`tests/run_rust_vm_tests.py` 与相关 parity 门）；
 - VM 解释器为默认执行路径（JIT 仅测试启用、白名单、可回退）。
-
