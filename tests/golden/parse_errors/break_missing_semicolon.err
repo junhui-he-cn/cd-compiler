@@ -1,1 +1,1 @@
-Parse error at 3:1: expected `;` after break, found RightBrace `}`
+Parse error at <repo>/tests/golden/parse_errors/break_missing_semicolon.cd:3:1: expected `;` after break, found RightBrace `}`

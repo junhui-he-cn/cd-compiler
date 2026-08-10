@@ -1,9 +1,9 @@
-Parse error at 4:17: expected `:` after record pattern field name, found RightBrace `}`
+Parse error at <repo>/tests/golden/parse_errors/record_pattern_missing_colon.cd:4:17: expected `:` after record pattern field name, found RightBrace `}`
     Person { name } => "bad",
                   ^
-Parse error at 4:19: expected expression
+Parse error at <repo>/tests/golden/parse_errors/record_pattern_missing_colon.cd:4:19: expected expression
     Person { name } => "bad",
                     ^
-Parse error at 6:2: expected expression
+Parse error at <repo>/tests/golden/parse_errors/record_pattern_missing_colon.cd:6:2: expected expression
   };
    ^

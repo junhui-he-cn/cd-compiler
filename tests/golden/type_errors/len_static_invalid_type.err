@@ -1,3 +1,3 @@
-Type error at 1:14: len expects array, string, map, or range, got number
+Type error at <repo>/tests/golden/type_errors/len_static_invalid_type.cd:1:14: len expects array, string, map, or range, got number
   print len(123);
                ^

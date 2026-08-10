@@ -1,1 +1,1 @@
-Parse error at 1:7: invalid assignment target
+Parse error at <repo>/tests/golden/parse_errors/call_assignment_target.cd:1:7: invalid assignment target

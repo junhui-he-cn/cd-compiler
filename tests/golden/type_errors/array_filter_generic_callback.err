@@ -1,3 +1,3 @@
-Type error at 4:22: filter cannot infer type parameter T
+Type error at <repo>/tests/golden/type_errors/array_filter_generic_callback.cd:4:22: filter cannot infer type parameter T
   filter([1], predicate);
                        ^

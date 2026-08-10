@@ -1,1 +1,1 @@
-Type error at 2:3: cannot return number from function returning fun(number): number
+Type error at <repo>/tests/golden/type_errors/function_type_return_non_function.cd:2:3: cannot return number from function returning fun(number): number

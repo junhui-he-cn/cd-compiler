@@ -1,3 +1,3 @@
-Type error at 2:17: missing field `age` for struct `Person`
+Type error at <repo>/tests/golden/type_errors/named_struct_missing_field.cd:2:17: missing field `age` for struct `Person`
   let p: Person = Person { name: "Ada" };
                   ^

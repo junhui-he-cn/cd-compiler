@@ -1,3 +1,3 @@
-Type error at 3:3: struct `Person` has no field `title`
+Type error at <repo>/tests/golden/type_errors/named_struct_unknown_field_assignment.cd:3:3: struct `Person` has no field `title`
   p.title = "Dr";
     ^

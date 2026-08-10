@@ -1,1 +1,1 @@
-Type error at 1:9: unknown struct type `Person`
+Type error at <repo>/tests/golden/type_errors/struct_constructor_unknown_type.cd:1:9: unknown struct type `Person`

@@ -1,6 +1,6 @@
-Parse error at 3:3: expected struct field name, found Colon `:`
+Parse error at <repo>/tests/golden/parse_errors/m2b_parser_recovery_members.cd:3:3: expected struct field name, found Colon `:`
     : number,
     ^
-Parse error at 8:3: expected enum variant name, found Comma `,`
+Parse error at <repo>/tests/golden/parse_errors/m2b_parser_recovery_members.cd:8:3: expected enum variant name, found Comma `,`
     ,
     ^

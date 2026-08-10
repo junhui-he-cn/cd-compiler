@@ -1,3 +1,3 @@
-Type error at 2:19: undefined variable `name`
+Type error at <repo>/tests/golden/type_errors/anonymous_struct_annotated_initializer.cd:2:19: undefined variable `name`
   let p: Person = { name: "Ada" };
                     ^

@@ -1,3 +1,3 @@
-Type error at 2:13: clear expects map receiver, got number
+Type error at <repo>/tests/golden/type_errors/map_clear_member_non_map.cd:2:13: clear expects map receiver, got number
   value.clear();
               ^

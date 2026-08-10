@@ -1,3 +1,3 @@
-Type error at 4:19: reduce callback element expects number, got string
+Type error at <repo>/tests/golden/type_errors/array_reduce_callback_element_mismatch.cd:4:19: reduce callback element expects number, got string
   reduce([1], 0, bad);
                     ^

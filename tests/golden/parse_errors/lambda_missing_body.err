@@ -1,1 +1,1 @@
-Parse error at 1:17: expected `{` before function body, found Return `return`
+Parse error at <repo>/tests/golden/parse_errors/lambda_missing_body.cd:1:17: expected `{` before function body, found Return `return`

@@ -1,1 +1,1 @@
-Type error at 1:1: return outside function
+Type error at <repo>/tests/golden/type_errors/return_outside_function.cd:1:1: return outside function

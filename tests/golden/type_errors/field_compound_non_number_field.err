@@ -1,1 +1,1 @@
-Type error at 3:8: compound assignment target must be number, got string
+Type error at <repo>/tests/golden/type_errors/field_compound_non_number_field.cd:3:8: compound assignment target must be number, got string

@@ -1,6 +1,6 @@
-Parse error at 2:10: expected match pattern, found FatArrow `=>`
+Parse error at <repo>/tests/golden/parse_errors/or_pattern_missing_rhs.cd:2:10: expected match pattern, found FatArrow `=>`
     true | => "bad",
            ^
-Parse error at 4:2: expected expression
+Parse error at <repo>/tests/golden/parse_errors/or_pattern_missing_rhs.cd:4:2: expected expression
   };
    ^

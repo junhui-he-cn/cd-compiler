@@ -1,1 +1,1 @@
-Type error at 1:1: undefined variable `missing`
+Type error at <repo>/tests/golden/type_errors/assign_undefined.cd:1:1: undefined variable `missing`

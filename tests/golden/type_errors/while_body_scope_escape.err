@@ -1,1 +1,1 @@
-Type error at 4:7: undefined variable `x`
+Type error at <repo>/tests/golden/type_errors/while_body_scope_escape.cd:4:7: undefined variable `x`

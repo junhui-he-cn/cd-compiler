@@ -1,1 +1,1 @@
-Type error at 1:5: cannot initialize `value` of type optional<number> with string
+Type error at <repo>/tests/golden/type_errors/nullable_wrong_inner_type.cd:1:5: cannot initialize `value` of type optional<number> with string

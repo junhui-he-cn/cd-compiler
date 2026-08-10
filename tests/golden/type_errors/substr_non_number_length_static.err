@@ -1,1 +1,1 @@
-Type error at 1:23: substr expects number as third argument, got bool
+Type error at <repo>/tests/golden/type_errors/substr_non_number_length_static.cd:1:23: substr expects number as third argument, got bool

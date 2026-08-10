@@ -1,1 +1,1 @@
-Type error at 1:19: binary `*` expects numbers, got number and string
+Type error at <repo>/tests/golden/type_errors/binary_number_operator_mismatch.cd:1:19: binary `*` expects numbers, got number and string

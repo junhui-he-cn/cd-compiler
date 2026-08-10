@@ -1,1 +1,1 @@
-Type error at 4:23: cannot return string from function returning number
+Type error at <repo>/tests/golden/type_errors/struct_method_return_mismatch.cd:4:23: cannot return string from function returning number

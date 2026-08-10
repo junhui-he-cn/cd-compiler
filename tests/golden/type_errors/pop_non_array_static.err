@@ -1,1 +1,1 @@
-Type error at 1:8: pop expects array as first argument, got string
+Type error at <repo>/tests/golden/type_errors/pop_non_array_static.cd:1:8: pop expects array as first argument, got string

@@ -1,6 +1,6 @@
-Parse error at 2:9: expected expression
+Parse error at <repo>/tests/golden/parse_errors/multiple_block_parse_errors.cd:2:9: expected expression
     print ;
           ^
-Parse error at 3:11: expected expression
+Parse error at <repo>/tests/golden/parse_errors/multiple_block_parse_errors.cd:3:11: expected expression
     let x = ;
             ^

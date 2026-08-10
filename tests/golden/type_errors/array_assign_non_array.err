@@ -1,3 +1,3 @@
-Type error at 2:2: can only assign array elements, map entries, or range elements
+Type error at <repo>/tests/golden/type_errors/array_assign_non_array.cd:2:2: can only assign array elements, map entries, or range elements
   x[0] = 2;
    ^

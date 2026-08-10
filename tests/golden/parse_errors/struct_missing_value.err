@@ -1,6 +1,6 @@
-Parse error at 2:22: expected expression
+Parse error at <repo>/tests/golden/parse_errors/struct_missing_value.cd:2:22: expected expression
   print Person { name: };
                        ^
-Parse error at 2:23: expected expression
+Parse error at <repo>/tests/golden/parse_errors/struct_missing_value.cd:2:23: expected expression
   print Person { name: };
                         ^

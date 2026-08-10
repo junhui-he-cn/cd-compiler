@@ -1,1 +1,1 @@
-Type error at 1:18: slice expects number as second argument, got string
+Type error at <repo>/tests/golden/type_errors/collection_helper_slice_non_number_start.cd:1:18: slice expects number as second argument, got string

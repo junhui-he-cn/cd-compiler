@@ -1,1 +1,1 @@
-Type error at 3:5: `continue` can only be used inside a loop
+Type error at <repo>/tests/golden/type_errors/for_in_continue_inside_function.cd:3:5: `continue` can only be used inside a loop

@@ -1,3 +1,3 @@
-Type error at 2:23: cannot infer type parameter T for enum Box
+Type error at <repo>/tests/golden/type_errors/generic_enum_uninferable_constructor.cd:2:23: cannot infer type parameter T for enum Box
   let value = Box.Empty();
                         ^

@@ -1,1 +1,1 @@
-Parse error at 1:18: expected re-export path string, found Semicolon `;`
+Parse error at <repo>/tests/golden/parse_errors/re_export_missing_path.cd:1:18: expected re-export path string, found Semicolon `;`

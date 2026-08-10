@@ -1,1 +1,1 @@
-Parse error at 1:8: expected identifier after `export`, found Fun `fun`
+Parse error at <repo>/tests/golden/parse_errors/export_invalid_fun.cd:1:8: expected identifier after `export`, found Fun `fun`

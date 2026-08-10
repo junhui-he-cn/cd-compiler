@@ -1,1 +1,1 @@
-Type error at 2:3: array index must be number
+Type error at <repo>/tests/golden/type_errors/index_compound_non_number_index.cd:2:3: array index must be number

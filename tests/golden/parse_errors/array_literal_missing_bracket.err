@@ -1,1 +1,1 @@
-Parse error at 1:12: expected `]` after array elements, found Semicolon `;`
+Parse error at <repo>/tests/golden/parse_errors/array_literal_missing_bracket.cd:1:12: expected `]` after array elements, found Semicolon `;`

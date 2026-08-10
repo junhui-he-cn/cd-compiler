@@ -1,3 +1,3 @@
-Type error at 2:6: cannot infer type parameter T
+Type error at <repo>/tests/golden/type_errors/generic_uninferred_type_parameter.cd:2:6: cannot infer type parameter T
   make();
        ^

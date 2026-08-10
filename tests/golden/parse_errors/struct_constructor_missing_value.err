@@ -1,1 +1,1 @@
-Parse error at 2:24: expected expression
+Parse error at <repo>/tests/golden/parse_errors/struct_constructor_missing_value.cd:2:24: expected expression

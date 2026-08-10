@@ -1,3 +1,3 @@
-Type error at 9:16: binary `+` expects two numbers or two strings, got optional<number> and number
+Type error at <repo>/tests/golden/type_errors/nullable_narrowing_if_join_unsupported.cd:9:16: binary `+` expects two numbers or two strings, got optional<number> and number
     return value + 1;
                  ^

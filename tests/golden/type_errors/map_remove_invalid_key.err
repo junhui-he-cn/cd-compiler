@@ -1,3 +1,3 @@
-Type error at 2:19: map key must be nil, number, bool, or string
+Type error at <repo>/tests/golden/type_errors/map_remove_invalid_key.cd:2:19: map key must be nil, number, bool, or string
   remove(values, [1]);
                     ^

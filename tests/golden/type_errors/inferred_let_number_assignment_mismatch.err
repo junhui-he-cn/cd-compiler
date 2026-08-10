@@ -1,1 +1,1 @@
-Type error at 2:1: cannot assign string to `x` of type number
+Type error at <repo>/tests/golden/type_errors/inferred_let_number_assignment_mismatch.cd:2:1: cannot assign string to `x` of type number

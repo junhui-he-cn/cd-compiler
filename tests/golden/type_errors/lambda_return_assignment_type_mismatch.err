@@ -1,1 +1,1 @@
-Type error at 5:1: cannot assign bool to `n` of type number
+Type error at <repo>/tests/golden/type_errors/lambda_return_assignment_type_mismatch.cd:5:1: cannot assign bool to `n` of type number

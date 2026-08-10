@@ -1,1 +1,1 @@
-Type error at 22:27: function call: type parameter T must satisfy Ord, got Point
+Type error at <repo>/tests/golden/type_errors/struct_capability_missing_operator.cd:22:27: function call: type parameter T must satisfy Ord, got Point

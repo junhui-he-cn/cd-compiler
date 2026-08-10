@@ -1,1 +1,1 @@
-Type error at 4:17: struct `Person` has no method `missing`
+Type error at <repo>/tests/golden/type_errors/struct_method_unknown_method.cd:4:17: struct `Person` has no method `missing`

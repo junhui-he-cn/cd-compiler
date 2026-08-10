@@ -1,3 +1,3 @@
-Type error at 8:5: cannot return optional<number> from function returning number
+Type error at <repo>/tests/golden/type_errors/nullable_narrowing_nested_loop_control_unsupported.cd:8:5: cannot return optional<number> from function returning number
       return value;
       ^

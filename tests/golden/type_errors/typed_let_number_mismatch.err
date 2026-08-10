@@ -1,1 +1,1 @@
-Type error at 1:5: cannot initialize `x` of type number with string
+Type error at <repo>/tests/golden/type_errors/typed_let_number_mismatch.cd:1:5: cannot initialize `x` of type number with string

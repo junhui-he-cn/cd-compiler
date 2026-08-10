@@ -1,1 +1,1 @@
-Parse error at 3:9: invalid compound assignment target
+Parse error at <repo>/tests/golden/parse_errors/compound_assignment_invalid_expression_target.cd:3:9: invalid compound assignment target

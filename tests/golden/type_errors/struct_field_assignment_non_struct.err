@@ -1,1 +1,1 @@
-Type error at 1:5: can only assign fields on structs
+Type error at <repo>/tests/golden/type_errors/struct_field_assignment_non_struct.cd:1:5: can only assign fields on structs

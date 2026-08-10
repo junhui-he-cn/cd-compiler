@@ -1,3 +1,3 @@
-Type error at 1:43: flatMap expects array as first argument, got number
+Type error at <repo>/tests/golden/type_errors/array_flat_map_non_array.cd:1:43: flatMap expects array as first argument, got number
   flatMap(1, fun (value) { return [value]; });
                                             ^

@@ -1,1 +1,1 @@
-Type error at 1:21: substr expects number as second argument, got string
+Type error at <repo>/tests/golden/type_errors/substr_non_number_start_static.cd:1:21: substr expects number as second argument, got string

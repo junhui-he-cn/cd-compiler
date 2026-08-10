@@ -1,1 +1,1 @@
-Type error at 3:9: compound assignment value must be number, got string
+Type error at <repo>/tests/golden/type_errors/field_compound_non_number_value.cd:3:9: compound assignment value must be number, got string

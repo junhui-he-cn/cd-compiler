@@ -1,1 +1,1 @@
-Type error at 2:15: can only call methods on known named structs
+Type error at <repo>/tests/golden/type_errors/struct_method_unknown_receiver.cd:2:15: can only call methods on known named structs

@@ -1,1 +1,1 @@
-Type error at 4:1: cannot assign number to `f` of type function
+Type error at <repo>/tests/golden/type_errors/inferred_let_function_assignment_mismatch.cd:4:1: cannot assign number to `f` of type function

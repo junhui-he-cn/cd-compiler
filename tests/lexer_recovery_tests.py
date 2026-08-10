@@ -33,10 +33,10 @@ def main() -> int:
         source_path.write_text("print 1 @ 2 & 3;\n", encoding="utf-8")
         result = run(compiler, [str(source_path)])
         expected = (
-            "Lex error at 1:9: unexpected character `@`\n"
+            f"Lex error at {source_path}:1:9: unexpected character `@`\n"
             "  print 1 @ 2 & 3;\n"
             "          ^\n"
-            "Lex error at 1:13: unexpected character `&`\n"
+            f"Lex error at {source_path}:1:13: unexpected character `&`\n"
             "  print 1 @ 2 & 3;\n"
             "              ^\n"
         )

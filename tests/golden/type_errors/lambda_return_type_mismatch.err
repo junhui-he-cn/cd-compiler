@@ -1,1 +1,1 @@
-Type error at 2:3: cannot return number from function returning bool
+Type error at <repo>/tests/golden/type_errors/lambda_return_type_mismatch.cd:2:3: cannot return number from function returning bool

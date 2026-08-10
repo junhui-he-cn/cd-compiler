@@ -1,1 +1,1 @@
-Type error at 1:5: cannot initialize `x` of type number with nil
+Type error at <repo>/tests/golden/type_errors/nullable_nil_to_number.cd:1:5: cannot initialize `x` of type number with nil

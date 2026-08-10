@@ -1,1 +1,1 @@
-Type error at 1:11: expected 1 arguments but got 0
+Type error at <repo>/tests/golden/type_errors/len_wrong_arity_zero.cd:1:11: expected 1 arguments but got 0

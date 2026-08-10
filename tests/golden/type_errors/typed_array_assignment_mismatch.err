@@ -1,1 +1,1 @@
-Type error at 3:1: cannot assign [string] to `xs` of type [number]
+Type error at <repo>/tests/golden/type_errors/typed_array_assignment_mismatch.cd:3:1: cannot assign [string] to `xs` of type [number]

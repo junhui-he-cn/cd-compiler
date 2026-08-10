@@ -1,1 +1,1 @@
-Parse error at 1:9: invalid assignment target
+Parse error at <repo>/tests/golden/parse_errors/invalid_assignment_target.cd:1:9: invalid assignment target

@@ -1,1 +1,1 @@
-Type error at 2:1: cannot assign number to `xs` of type array
+Type error at <repo>/tests/golden/type_errors/inferred_let_array_assignment_mismatch.cd:2:1: cannot assign number to `xs` of type array

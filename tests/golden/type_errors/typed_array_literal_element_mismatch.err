@@ -1,1 +1,1 @@
-Type error at 1:21: array element expects number, got string
+Type error at <repo>/tests/golden/type_errors/typed_array_literal_element_mismatch.cd:1:21: array element expects number, got string

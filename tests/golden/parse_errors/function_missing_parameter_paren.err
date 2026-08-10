@@ -1,1 +1,1 @@
-Parse error at 1:14: expected `)` after function parameters, found LeftBrace `{`
+Parse error at <repo>/tests/golden/parse_errors/function_missing_parameter_paren.cd:1:14: expected `)` after function parameters, found LeftBrace `{`

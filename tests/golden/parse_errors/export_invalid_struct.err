@@ -1,1 +1,1 @@
-Parse error at 1:8: expected identifier after `export`, found Struct `struct`
+Parse error at <repo>/tests/golden/parse_errors/export_invalid_struct.cd:1:8: expected identifier after `export`, found Struct `struct`

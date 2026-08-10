@@ -1,1 +1,1 @@
-Parse error at 1:18: expected `)` after function type parameters, found Colon `:`
+Parse error at <repo>/tests/golden/parse_errors/function_type_missing_paren.cd:1:18: expected `)` after function type parameters, found Colon `:`

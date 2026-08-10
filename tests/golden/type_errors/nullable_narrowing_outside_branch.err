@@ -1,1 +1,1 @@
-Type error at 6:5: cannot initialize `value` of type number with optional<number>
+Type error at <repo>/tests/golden/type_errors/nullable_narrowing_outside_branch.cd:6:5: cannot initialize `value` of type number with optional<number>

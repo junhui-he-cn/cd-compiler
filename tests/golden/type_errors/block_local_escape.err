@@ -1,1 +1,1 @@
-Type error at 4:7: undefined variable `x`
+Type error at <repo>/tests/golden/type_errors/block_local_escape.cd:4:7: undefined variable `x`

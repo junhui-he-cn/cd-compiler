@@ -1,1 +1,1 @@
-Type error at 2:31: extra field `age` for struct `Person`
+Type error at <repo>/tests/golden/type_errors/struct_constructor_extra_field.cd:2:31: extra field `age` for struct `Person`

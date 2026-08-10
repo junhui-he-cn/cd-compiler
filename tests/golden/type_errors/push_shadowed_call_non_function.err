@@ -1,1 +1,1 @@
-Type error at 2:11: can only call functions
+Type error at <repo>/tests/golden/type_errors/push_shadowed_call_non_function.cd:2:11: can only call functions

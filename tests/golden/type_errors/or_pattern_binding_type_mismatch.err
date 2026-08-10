@@ -1,3 +1,3 @@
-Type error at 7:23: OR pattern binding `value` has incompatible types: number and string
+Type error at <repo>/tests/golden/type_errors/or_pattern_binding_type_mismatch.cd:7:23: OR pattern binding `value` has incompatible types: number and string
     Mixed.Number(value) | Mixed.Text(value) => "value",
                         ^

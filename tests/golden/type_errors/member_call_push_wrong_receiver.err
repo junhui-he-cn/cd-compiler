@@ -1,1 +1,1 @@
-Type error at 1:9: push expects array receiver, got number
+Type error at <repo>/tests/golden/type_errors/member_call_push_wrong_receiver.cd:1:9: push expects array receiver, got number

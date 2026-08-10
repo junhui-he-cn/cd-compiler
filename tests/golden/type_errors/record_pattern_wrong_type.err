@@ -1,3 +1,3 @@
-Type error at 4:3: record pattern expects struct value
+Type error at <repo>/tests/golden/type_errors/record_pattern_wrong_type.cd:4:3: record pattern expects struct value
     Person {} => "record",
     ^

@@ -1,1 +1,1 @@
-Type error at 1:19: expected 1 arguments but got 2
+Type error at <repo>/tests/golden/type_errors/len_wrong_arity_two.cd:1:19: expected 1 arguments but got 2

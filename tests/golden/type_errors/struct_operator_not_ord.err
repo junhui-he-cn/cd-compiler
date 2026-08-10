@@ -1,3 +1,3 @@
-Type error at 11:26: function call: type parameter T must satisfy Ord, got Point
+Type error at <repo>/tests/golden/type_errors/struct_operator_not_ord.cd:11:26: function call: type parameter T must satisfy Ord, got Point
   print before(point, point);
                            ^

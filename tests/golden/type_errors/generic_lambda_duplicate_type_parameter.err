@@ -1,3 +1,3 @@
-Type error at 1:24: duplicate type parameter `T`
+Type error at <repo>/tests/golden/type_errors/generic_lambda_duplicate_type_parameter.cd:1:24: duplicate type parameter `T`
   let duplicate = fun<T, T>(value: T): T { return value; };
                          ^

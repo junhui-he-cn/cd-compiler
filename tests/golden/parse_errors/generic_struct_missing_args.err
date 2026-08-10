@@ -1,9 +1,9 @@
-Parse error at 3:17: expected type argument after `<`
+Parse error at <repo>/tests/golden/parse_errors/generic_struct_missing_args.cd:3:17: expected type argument after `<`
   let value = Box<> { value: 1 };
                   ^
-Parse error at 3:26: expected `;` after expression, found Colon `:`
+Parse error at <repo>/tests/golden/parse_errors/generic_struct_missing_args.cd:3:26: expected `;` after expression, found Colon `:`
   let value = Box<> { value: 1 };
                            ^
-Parse error at 3:31: expected expression
+Parse error at <repo>/tests/golden/parse_errors/generic_struct_missing_args.cd:3:31: expected expression
   let value = Box<> { value: 1 };
                                 ^

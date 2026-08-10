@@ -1,1 +1,1 @@
-Parse error at 1:11: expected parameter type after `:`, found RightParen `)`
+Parse error at <repo>/tests/golden/parse_errors/function_param_missing_type.cd:1:11: expected parameter type after `:`, found RightParen `)`

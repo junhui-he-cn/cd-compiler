@@ -1,1 +1,1 @@
-Type error at 1:8: expected 2 arguments but got 1
+Type error at <repo>/tests/golden/type_errors/push_wrong_arity.cd:1:8: expected 2 arguments but got 1

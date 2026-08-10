@@ -1,6 +1,6 @@
-Parse error at 2:21: expected `:` after struct field name, found Number `1`
+Parse error at <repo>/tests/golden/parse_errors/struct_missing_colon.cd:2:21: expected `:` after struct field name, found Number `1`
   print Person { name 1 };
                       ^
-Parse error at 2:24: expected expression
+Parse error at <repo>/tests/golden/parse_errors/struct_missing_colon.cd:2:24: expected expression
   print Person { name 1 };
                          ^

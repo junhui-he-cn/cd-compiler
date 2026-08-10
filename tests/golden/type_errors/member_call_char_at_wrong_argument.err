@@ -1,1 +1,1 @@
-Type error at 1:17: charAt expects number as first argument, got string
+Type error at <repo>/tests/golden/type_errors/member_call_char_at_wrong_argument.cd:1:17: charAt expects number as first argument, got string

@@ -1,3 +1,3 @@
-Type error at 4:5: cannot initialize `textBox` of type Box<string> with Box<number>
+Type error at <repo>/tests/golden/type_errors/generic_struct_invariant.cd:4:5: cannot initialize `textBox` of type Box<string> with Box<number>
   let textBox: Box<string> = numberBox;
       ^

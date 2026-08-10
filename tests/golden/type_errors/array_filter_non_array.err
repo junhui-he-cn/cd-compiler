@@ -1,3 +1,3 @@
-Type error at 1:39: filter expects array as first argument, got number
+Type error at <repo>/tests/golden/type_errors/array_filter_non_array.cd:1:39: filter expects array as first argument, got number
   filter(1, fun (value) { return true; });
                                         ^

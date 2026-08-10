@@ -1,3 +1,3 @@
-Type error at 3:12: struct `Box` expects 1 type arguments but got 0
+Type error at <repo>/tests/golden/type_errors/generic_struct_wrong_arity.cd:3:12: struct `Box` expects 1 type arguments but got 0
   let value: Box = Box { value: 1 };
              ^

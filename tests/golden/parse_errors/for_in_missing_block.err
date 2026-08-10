@@ -1,1 +1,1 @@
-Parse error at 1:13: expected `{` after for-in iterable, found Print `print`
+Parse error at <repo>/tests/golden/parse_errors/for_in_missing_block.cd:1:13: expected `{` after for-in iterable, found Print `print`

@@ -1,6 +1,6 @@
-Parse error at 1:22: expected expression
+Parse error at <repo>/tests/golden/parse_errors/map_trailing_comma.cd:1:22: expected expression
   let values = {"a": 1,};
                        ^
-Parse error at 1:23: expected expression
+Parse error at <repo>/tests/golden/parse_errors/map_trailing_comma.cd:1:23: expected expression
   let values = {"a": 1,};
                         ^

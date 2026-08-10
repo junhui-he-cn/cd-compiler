@@ -1,1 +1,1 @@
-Type error at 1:8: unknown type `Person`
+Type error at <repo>/tests/golden/type_errors/named_struct_unknown_type.cd:1:8: unknown type `Person`

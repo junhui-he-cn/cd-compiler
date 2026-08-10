@@ -1,1 +1,1 @@
-Parse error at 1:12: expected `{` after while condition, found Print `print`
+Parse error at <repo>/tests/golden/parse_errors/while_missing_block.cd:1:12: expected `{` after while condition, found Print `print`

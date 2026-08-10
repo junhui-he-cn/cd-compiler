@@ -1,3 +1,3 @@
-Type error at 1:46: reduce expects array as first argument, got number
+Type error at <repo>/tests/golden/type_errors/array_reduce_non_array.cd:1:46: reduce expects array as first argument, got number
   reduce(1, 0, fun (acc, value) { return acc; });
                                                ^

@@ -1,3 +1,3 @@
-Parse error at 3:13: expected field name after `.`, found Semicolon `;`
+Parse error at <repo>/tests/golden/parse_errors/field_missing_name.cd:3:13: expected field name after `.`, found Semicolon `;`
   print value.;
               ^

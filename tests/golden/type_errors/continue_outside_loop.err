@@ -1,1 +1,1 @@
-Type error at 1:1: `continue` can only be used inside a loop
+Type error at <repo>/tests/golden/type_errors/continue_outside_loop.cd:1:1: `continue` can only be used inside a loop

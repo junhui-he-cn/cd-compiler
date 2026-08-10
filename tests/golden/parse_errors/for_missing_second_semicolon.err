@@ -1,3 +1,3 @@
-Parse error at 1:22: expected `;` after for condition, found Identifier `i`
+Parse error at <repo>/tests/golden/parse_errors/for_missing_second_semicolon.cd:1:22: expected `;` after for condition, found Identifier `i`
   for let i = 0; i < 3 i = i + 1 {
                        ^

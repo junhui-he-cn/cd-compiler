@@ -1,6 +1,6 @@
-Parse error at 1:19: expected `:` after map key, found Number `1`
+Parse error at <repo>/tests/golden/parse_errors/map_missing_colon.cd:1:19: expected `:` after map key, found Number `1`
   let values = {"a" 1};
                     ^
-Parse error at 1:21: expected expression
+Parse error at <repo>/tests/golden/parse_errors/map_missing_colon.cd:1:21: expected expression
   let values = {"a" 1};
                       ^

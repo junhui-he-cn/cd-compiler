@@ -1,1 +1,1 @@
-Type error at 3:5: `break` can only be used inside a loop
+Type error at <repo>/tests/golden/type_errors/break_inside_function_in_loop.cd:3:5: `break` can only be used inside a loop

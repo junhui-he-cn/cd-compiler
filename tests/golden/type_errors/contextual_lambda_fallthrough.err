@@ -1,3 +1,3 @@
-Type error at 1:30: function `<lambda>` may return nil but is annotated number
+Type error at <repo>/tests/golden/type_errors/contextual_lambda_fallthrough.cd:1:30: function `<lambda>` may return nil but is annotated number
   let f: fun(number): number = fun (x) {
                                ^

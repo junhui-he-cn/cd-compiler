@@ -1,1 +1,1 @@
-Type error at 1:12: expected 1 arguments but got 2
+Type error at <repo>/tests/golden/type_errors/collection_helper_copy_wrong_arity.cd:1:12: expected 1 arguments but got 2

@@ -1,1 +1,1 @@
-Type error at 2:3: cannot return nil from function returning number
+Type error at <repo>/tests/golden/type_errors/function_return_nil_mismatch.cd:2:3: cannot return nil from function returning number

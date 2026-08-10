@@ -1,1 +1,1 @@
-Type error at 4:13: expected 1 arguments but got 0
+Type error at <repo>/tests/golden/type_errors/struct_method_wrong_arity.cd:4:13: expected 1 arguments but got 0

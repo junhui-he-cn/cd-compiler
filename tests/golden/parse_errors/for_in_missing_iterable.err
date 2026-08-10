@@ -1,1 +1,1 @@
-Parse error at 3:1: expected `{` after for-in iterable, found EndOfFile
+Parse error at <repo>/tests/golden/parse_errors/for_in_missing_iterable.cd:3:1: expected `{` after for-in iterable, found EndOfFile

@@ -1,3 +1,3 @@
-Type error at 3:12: operator `<` for struct `Point` must accept exactly one right operand of type `Point`
+Type error at <repo>/tests/golden/type_errors/struct_operator_wrong_parameter.cd:3:12: operator `<` for struct `Point` must accept exactly one right operand of type `Point`
     operator <(other: number): bool {
              ^

@@ -1,6 +1,6 @@
-Parse error at 1:7: expected expression
+Parse error at <repo>/tests/golden/parse_errors/multiple_top_level_parse_errors.cd:1:7: expected expression
   print ;
         ^
-Parse error at 2:9: expected expression
+Parse error at <repo>/tests/golden/parse_errors/multiple_top_level_parse_errors.cd:2:9: expected expression
   let x = ;
           ^

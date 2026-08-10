@@ -1,3 +1,3 @@
-Type error at 2:7: cannot assign range elements
+Type error at <repo>/tests/golden/type_errors/range_assignment.cd:2:7: cannot assign range elements
   values[0] = 1;
         ^

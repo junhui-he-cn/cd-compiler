@@ -1,1 +1,1 @@
-Type error at 1:12: push expects array as first argument, got number
+Type error at <repo>/tests/golden/type_errors/push_non_array_static.cd:1:12: push expects array as first argument, got number

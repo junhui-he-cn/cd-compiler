@@ -1,1 +1,1 @@
-Type error at 1:18: contains value expects number, got string
+Type error at <repo>/tests/golden/type_errors/collection_helper_contains_value_mismatch.cd:1:18: contains value expects number, got string

@@ -1,1 +1,1 @@
-Type error at 1:8: copy expects array receiver, got number
+Type error at <repo>/tests/golden/type_errors/collection_helper_copy_bad_receiver.cd:1:8: copy expects array receiver, got number

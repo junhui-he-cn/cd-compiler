@@ -1,3 +1,3 @@
-Type error at 4:5: cannot initialize `person` of type Person with Pet
+Type error at <repo>/tests/golden/type_errors/named_struct_nominal_mismatch.cd:4:5: cannot initialize `person` of type Person with Pet
   let person: Person = pet;
       ^

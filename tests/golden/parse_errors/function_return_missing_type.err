@@ -1,1 +1,1 @@
-Parse error at 1:12: expected return type after `:`, found LeftBrace `{`
+Parse error at <repo>/tests/golden/parse_errors/function_return_missing_type.cd:1:12: expected return type after `:`, found LeftBrace `{`

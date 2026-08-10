@@ -1,1 +1,1 @@
-Parse error at 1:15: expected `{` after struct name, found Identifier `name`
+Parse error at <repo>/tests/golden/parse_errors/struct_decl_missing_left_brace.cd:1:15: expected `{` after struct name, found Identifier `name`

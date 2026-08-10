@@ -1,3 +1,3 @@
-Type error at 3:10: impl type parameter `U` must bind struct type parameter `T`
+Type error at <repo>/tests/golden/type_errors/generic_struct_method_impl_name.cd:3:10: impl type parameter `U` must bind struct type parameter `T`
   impl Box<U> {
            ^

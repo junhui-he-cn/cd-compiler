@@ -1,1 +1,1 @@
-Type error at 1:12: unknown type `nope`
+Type error at <repo>/tests/golden/type_errors/function_unknown_parameter_type.cd:1:12: unknown type `nope`

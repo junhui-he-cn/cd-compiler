@@ -1,1 +1,1 @@
-Parse error at 1:5: expected for loop initializer before `in`
+Parse error at <repo>/tests/golden/parse_errors/for_in_missing_variable.cd:1:5: expected for loop initializer before `in`

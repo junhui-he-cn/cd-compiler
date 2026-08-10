@@ -1,3 +1,3 @@
-Type error at 5:10: enum Result has no variant Missing
+Type error at <repo>/tests/golden/type_errors/adt_unknown_variant.cd:5:10: enum Result has no variant Missing
     Result.Missing => { print 0; }
            ^

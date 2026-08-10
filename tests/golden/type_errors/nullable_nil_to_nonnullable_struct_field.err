@@ -1,1 +1,1 @@
-Type error at 2:22: field `value` expects number, got nil
+Type error at <repo>/tests/golden/type_errors/nullable_nil_to_nonnullable_struct_field.cd:2:22: field `value` expects number, got nil
