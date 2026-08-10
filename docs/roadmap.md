@@ -11,6 +11,17 @@ tests, decision records, and Git history are the completion evidence; this
 document intentionally does not repeat the implementation history of every
 finished slice.
 
+## 0. Current phase: consolidation only
+
+As of 2026-08-10, the default queue accepts consolidation work on existing
+functionality only: semantic-soundness repairs, correctness fixes, internal
+refactors, performance optimization, and evidence or documentation audits.
+New language syntax, new tooling or CLI features, new runtime capabilities,
+new artifact or host surfaces, and concurrency/language expansion are not in
+the default queue until an explicit phase decision reopens them. Existing
+compatibility contracts (`cdbc 0.1`, O0 default, source fallback, C++/Rust
+parity, interpreter-default VM execution) remain unchanged.
+
 ## 1. Planning rules
 
 Roadmap items use four states:
@@ -113,8 +124,10 @@ execution.
 
 ### C2: Close semantic-soundness gaps one rule at a time
 
-**Priority:** P1. **Status:** queued; may proceed independently of C1 when it
-does not change IR or artifact behavior.
+**Priority:** P1. **Status:** active; the first independently deliverable
+slice in the current consolidation phase. It is a semantic-soundness repair of
+existing nullable-flow behavior, not a new language feature, and may proceed
+independently of C1 when it does not change IR or artifact behavior.
 
 Start with a decision/corpus slice for exactly one conservative nullable-flow
 case: alias-aware field/index facts, dynamic index targets, or normal `for-in`
@@ -150,7 +163,9 @@ of C3A.
 
 ### C4: Decide module-product creation and repair policy
 
-**Priority:** P2. **Status:** decision gate, not implementation-ready.
+**Priority:** P2. **Status:** decision gate, not implementation-ready. The
+audit itself is consolidation work; switching to strict-by-default is a policy
+decision and is not authorized by the current phase.
 
 Define cold build, missing product, malformed product, source-only change,
 public-interface change, dependency change, offline build, and explicit repair

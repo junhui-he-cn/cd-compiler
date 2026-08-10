@@ -9,6 +9,16 @@ The baseline was audited on 2026-08-02 at `master` commit `a78cce37`. Detailed
 history lives in `docs/decisions/`, tests, and Git; completed micro-slices are
 not repeated here.
 
+## 0. Current phase: consolidation only
+
+As of 2026-08-10, the default queue accepts consolidation work on existing
+VM functionality only: correctness repairs, interpreter/runtime refactors,
+performance optimization, and evidence or documentation audits. New runtime
+capabilities, host/embedding surfaces, artifact formats, concurrency
+expansion, and new JIT execution modes are not in the default queue until an
+explicit phase decision reopens them. The interpreter remains the default and
+fallback execution path.
+
 ## 1. VM product boundary
 
 The VM is a deterministic, validated, observable `.cdbc` execution engine. It
@@ -142,6 +152,10 @@ debugger/profile events. Resume it before JIT work, in these slices:
    multiple OS threads, or `Send`/`Sync` provides enough product value to
    justify its nondeterminism and synchronization costs.
 
+   Under the current consolidation phase, V5C is not in the default queue:
+   concurrency expansion is new functionality and resumes only after an
+   explicit phase decision.
+
 **Gate:** repeated-run determinism, task lifecycle and cancellation, per-task
 root tracing and cycle collection, native callbacks, debugger pauses,
 trace/profile event order, resource limits, runtime failures, and CLI/library
@@ -152,11 +166,23 @@ parity.
 **Priority:** P2. **Status:** V6A hot-workload evidence and the V6B runtime
 contract were recorded on 2026-08-06; V6C x86-64 code generation and the
 private VM entry transition were implemented on 2026-08-08; the ordinary
-`VM::run` parity gate was added as a test-only slice on 2026-08-09.** See
+`VM::run` parity gate was added as a test-only slice on 2026-08-09; the
+ignored JIT efficiency benchmark was committed on 2026-08-10 (`cb0e04be`).**
+See
 [`v6a-hot-workload-evidence-001.md`](decisions/v6a-hot-workload-evidence-001.md)
 and [`v6b-jit-runtime-contract-001.md`](decisions/v6b-jit-runtime-contract-001.md),
 plus [`v6c-jit-x86-64-backend-001.md`](decisions/v6c-jit-x86-64-backend-001.md)
 and [`v6c-jit-entry-transition-001.md`](decisions/v6c-jit-entry-transition-001.md).
+
+The 2026-08-10 release-mode benchmark shows the admitted scalar JIT path is
+currently slower than the interpreter: about 1.9x slower on the
+`execution_closure` workload and about 11.5x slower on a wider scalar body,
+because every bytecode instruction is still lowered to FFI helper calls plus a
+per-instruction frame materialization. V6C is therefore a correctness and
+safety baseline, not a performance result. Any optimizing JIT slice (for
+example inlining scalar operations and removing per-instruction frame
+cloning) is consolidation work, but it still requires a profile-backed
+decision before implementation and remains outside the production default.
 
 JIT compilation is an optional execution optimization, not a new language
 semantic. Starting it after V5B prevents a single-thread-only code generator
