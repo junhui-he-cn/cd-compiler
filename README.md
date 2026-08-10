@@ -88,6 +88,12 @@ cargo run --manifest-path vm-rs/Cargo.toml -- run build/program.cdbc
 Pass `-I` or `--import-path` to the compiler when imported modules are in
 additional directories.
 
+## Documentation
+
+- [Compiler developer guide (中文)](docs/compiler-developer-guide-zh.md):
+  end-to-end compiler pipeline, module loading, type checking, IR, bytecode,
+  diagnostics, and verification workflow for contributors.
+
 ## Tools
 
 Start the language server as a stdio process with:
