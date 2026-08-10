@@ -280,7 +280,7 @@ void writeModuleArtifacts(
 {
     // 模块产物模式遍历模块图，并在可用时复用缓存中的产品。
     if (!program.moduleGraph || program.moduleGraph->nodes.empty()) {
-        throw std::runtime_error("--emit-module-bytecode requires an import-aware module graph");
+        throw std::runtime_error("internal error: --emit-module-bytecode requires a module graph");
     }
 
     const ModuleGraph& graph = *program.moduleGraph;
@@ -732,15 +732,9 @@ int main(int argc, char** argv)
         if (formatMode) {
             const LosslessSourceView view = frontend.losslessSourceView();
             std::vector<SourceFileId> outputSourceIds;
-            if (program.moduleGraph) {
-                for (const ModuleGraphNode& node : program.moduleGraph->nodes) {
-                    if (node.isEntry) {
-                        outputSourceIds.push_back(node.sourceId);
-                    }
-                }
-            } else {
-                for (const SourceFile& source : program.sources) {
-                    outputSourceIds.push_back(source.id);
+            for (const ModuleGraphNode& node : program.moduleGraph->nodes) {
+                if (node.isEntry) {
+                    outputSourceIds.push_back(node.sourceId);
                 }
             }
 
@@ -869,10 +863,6 @@ int main(int argc, char** argv)
         std::cerr << formatDiagnosticWithSourceContext(error) << '\n';
         return 1;
     } catch (const DiagnosticError& error) {
-        if (const std::optional<FileDiagnosticError> remapped = frontend.remapDirectDiagnostic(error)) {
-            std::cerr << formatDiagnosticWithSourceContext(*remapped) << '\n';
-            return 1;
-        }
         std::cerr << formatDiagnosticWithSource(error, frontend.sourceForDiagnostics()) << '\n';
         return 1;
     } catch (const std::exception& error) {

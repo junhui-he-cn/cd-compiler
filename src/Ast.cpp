@@ -1319,6 +1319,20 @@ void ReturnStmt::print(std::ostream& out, int indent) const
 void Program::print(std::ostream& out) const
 {
     out << "Program\n";
+    if (statements.size() == 1) {
+        if (const auto* module = dynamic_cast<const ModuleStmt*>(statements.front().get())) {
+            if (module->isEntry
+                && moduleGraph
+                && moduleGraph->nodes.size() == 1
+                && moduleGraph->edges.empty()
+                && moduleGraph->nodes.front().moduleId == module->moduleId) {
+                for (const auto& statement : module->statements) {
+                    statement->print(out, 1);
+                }
+                return;
+            }
+        }
+    }
     for (const auto& statement : statements) {
         statement->print(out, 1);
     }

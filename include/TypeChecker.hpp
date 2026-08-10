@@ -116,7 +116,7 @@ private:
     Scope& currentScope();
     const Scope& currentScope() const;
     Binding* findVariable(const std::string& name);
-    const Binding* findBinding(DeclarationId declarationId) const;
+    const Binding* findBindingByRange(const SourceRange& range) const;
     Binding* findSimpleVariableBinding(const Expr& expression);
     const Binding* findSimpleVariableBinding(const Expr& expression) const;
     const Binding* findVariable(const std::string& name) const;
@@ -169,6 +169,9 @@ private:
     void checkReExport(const ExportStmt& statement);
     const ModuleStmt* findModule(const Program& program, std::size_t moduleId) const;
     const ModuleInterface* findModuleInterface(std::size_t moduleId) const;
+    // A single entry module with no dependencies keeps pathless diagnostics
+    // for compatibility with the historical single-file surface.
+    bool pathlessModuleDiagnostics(const ModuleStmt& module) const;
     void buildModuleInterface(const Program& program, const ModuleStmt& module);
     void buildModuleInterfaces(const Program& program);
     std::size_t validateModuleInterfaces(const Program& program) const;

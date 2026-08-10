@@ -557,11 +557,14 @@ const TypeChecker::Binding* TypeChecker::findVariable(const std::string& name) c
     return nullptr;
 }
 
-const TypeChecker::Binding* TypeChecker::findBinding(DeclarationId declarationId) const
+const TypeChecker::Binding* TypeChecker::findBindingByRange(const SourceRange& range) const
 {
     for (auto scope = scopes_.rbegin(); scope != scopes_.rend(); ++scope) {
         for (const auto& entry : *scope) {
-            if (entry.second.declarationId == declarationId) {
+            if (entry.second.range
+                && entry.second.range->source == range.source
+                && entry.second.range->start == range.start
+                && entry.second.range->end == range.end) {
                 return &entry.second;
             }
         }
@@ -1048,6 +1051,18 @@ const ModuleStmt* TypeChecker::findModule(const Program& program, std::size_t mo
         }
     }
     return nullptr;
+}
+
+bool TypeChecker::pathlessModuleDiagnostics(const ModuleStmt& module) const
+{
+    if (!currentProgram_ || !currentProgram_->moduleGraph) {
+        return false;
+    }
+    const ModuleGraph& graph = *currentProgram_->moduleGraph;
+    return graph.nodes.size() == 1
+        && graph.edges.empty()
+        && graph.nodes.front().isEntry
+        && graph.nodes.front().moduleId == module.moduleId;
 }
 
 const ModuleInterface* TypeChecker::findModuleInterface(std::size_t moduleId) const
@@ -1632,7 +1647,10 @@ void TypeChecker::checkModule(const ModuleStmt& module)
         if (error.location()) {
             FileDiagnosticError contextual(
                 error,
-                DiagnosticSourceContext{module.path, module.source, false});
+                DiagnosticSourceContext{
+                    module.path,
+                    module.source,
+                    pathlessModuleDiagnostics(module)});
             restoreFailedState();
             throw contextual;
         }
@@ -1714,7 +1732,10 @@ void TypeChecker::checkModulesInDependencyOrder(const Program& program)
             }
             errors.emplace_back(
                 error,
-                DiagnosticSourceContext{module->path, module->source, false});
+                DiagnosticSourceContext{
+                    module->path,
+                    module->source,
+                    pathlessModuleDiagnostics(*module)});
             states[moduleId] = VisitState::Failed;
             return VisitState::Failed;
         }
@@ -6434,7 +6455,12 @@ void TypeChecker::invalidateStructMethodEffects(const MemberCallExpr& expression
 void TypeChecker::invalidateCapturedSymbols(const CaptureRecord& captures)
 {
     for (const ResolvedSymbol& symbol : captures.symbols) {
-        if (const Binding* binding = findBinding(symbol.declarationId)) {
+        const DeclarationRecord* capturedDeclaration
+            = declarationIndex_.declaration(symbol.declarationId);
+        if (!capturedDeclaration || !capturedDeclaration->range) {
+            continue;
+        }
+        if (const Binding* binding = findBindingByRange(*capturedDeclaration->range)) {
             flowFacts_.invalidate(binding->resolvedName);
         }
     }

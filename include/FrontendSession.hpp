@@ -52,9 +52,6 @@ public:
     std::vector<Token> displayTokens() const;
     LosslessSourceView losslessSourceView() const;
     const std::string& sourceForDiagnostics() const;
-    std::optional<FileDiagnosticError> remapDirectDiagnostic(const DiagnosticError& error) const;
-    std::optional<FileDiagnosticErrorList> remapDirectLexDiagnostics(const LexErrorList& errors) const;
-    std::optional<FileDiagnosticErrorList> remapDirectDiagnostics(const ParseErrorList& errors) const;
     std::size_t moduleCount() const;
     const ModuleGraph& moduleGraph() const;
     const std::vector<ModuleInterface>& preloadedModuleInterfaces() const;
@@ -70,14 +67,6 @@ private:
         std::vector<StmtPtr> statements;
         bool isEntry = false;
         std::optional<ModuleInterfaceArtifact> interfaceArtifact;
-    };
-
-    struct DirectInput {
-        std::size_t sourceId = 0;
-        std::string path;
-        std::string canonicalPath;
-        std::string source;
-        std::size_t combinedStartOffset = 0;
     };
 
     struct ImportResolution {
@@ -104,16 +93,12 @@ private:
     void rebuildPreloadedModuleInterfaces();
     void rebuildCombinedSource();
     void annotateSourceTokens(std::vector<Token>& tokens, std::size_t sourceId) const;
-    void annotateDirectTokens(std::vector<Token>& tokens) const;
 
     std::vector<ParsedUnit> units_;
     std::unordered_map<std::string, std::size_t> canonicalToUnitId_;
     std::vector<std::string> loadingStack_;
     std::vector<std::size_t> entryUnitIds_;
-    std::vector<DirectInput> directInputs_;
     std::vector<SourceFile> sourceFiles_;
-    std::vector<int> directSourceLineStarts_;
-    std::vector<Token> directDisplayTokens_;
     std::vector<std::filesystem::path> importSearchPaths_;
     std::optional<std::filesystem::path> moduleInterfaceCacheDirectory_;
     bool moduleInterfaceCacheStrict_ = false;
@@ -126,5 +111,5 @@ private:
     std::vector<ModuleInterface> preloadedModuleInterfaces_;
     std::unordered_map<std::string, std::string> virtualSources_;
     bool virtualSourceMode_ = false;
-    bool hasImports_ = false;
+    bool singleEntrySource_ = false;
 };

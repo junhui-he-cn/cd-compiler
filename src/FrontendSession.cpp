@@ -92,6 +92,22 @@ bool hasImportToken(const std::vector<Token>& tokens)
     });
 }
 
+// A single entry source keeps pathless diagnostics only when it contains no
+// import token before the first lexer failure, matching the historical
+// combined-source decision without re-parsing the file.
+bool entryFileContainsImportToken(const std::string& source)
+{
+    try {
+        Lexer lexer(source);
+        const std::vector<Token> tokens = lexer.scanTokensUntil(TokenType::Import);
+        return !tokens.empty() && tokens.back().type == TokenType::Import;
+    } catch (const LexErrorList&) {
+        return false;
+    } catch (const DiagnosticError&) {
+        return false;
+    }
+}
+
 bool statementLoadsSource(const Stmt& statement)
 {
     if (dynamic_cast<const ImportStmt*>(&statement)) {
@@ -292,24 +308,6 @@ Token endOfFileToken(const std::string& source)
     return token;
 }
 
-std::size_t sourceLineSpan(const std::string& source)
-{
-    if (source.empty()) {
-        return 0;
-    }
-
-    std::size_t lines = 1;
-    for (const char ch : source) {
-        if (ch == '\n') {
-            ++lines;
-        }
-    }
-    if (source.back() == '\n') {
-        --lines;
-    }
-    return lines;
-}
-
 } // namespace
 
 void FrontendSession::reset()
@@ -318,10 +316,7 @@ void FrontendSession::reset()
     canonicalToUnitId_.clear();
     loadingStack_.clear();
     entryUnitIds_.clear();
-    directInputs_.clear();
     sourceFiles_.clear();
-    directSourceLineStarts_.clear();
-    directDisplayTokens_.clear();
     directEntryCanonicalPaths_.clear();
     combinedSource_.clear();
     moduleGraph_ = ModuleGraph{};
@@ -329,7 +324,7 @@ void FrontendSession::reset()
     moduleProductCacheLoad_.reset();
     virtualSources_.clear();
     virtualSourceMode_ = false;
-    hasImports_ = false;
+    singleEntrySource_ = false;
 }
 
 void FrontendSession::setImportSearchPaths(std::vector<std::string> paths)
@@ -488,38 +483,6 @@ void FrontendSession::annotateSourceTokens(std::vector<Token>& tokens, std::size
     }
 }
 
-void FrontendSession::annotateDirectTokens(std::vector<Token>& tokens) const
-{
-    for (Token& token : tokens) {
-        std::size_t sourceIndex = directInputs_.empty() ? 0 : directInputs_.size() - 1;
-        int sourceStart = 1;
-        for (std::size_t index = 0; index < directSourceLineStarts_.size(); ++index) {
-            if (token.line >= directSourceLineStarts_[index]) {
-                sourceIndex = index;
-                sourceStart = directSourceLineStarts_[index];
-            } else {
-                break;
-            }
-        }
-        if (sourceIndex < directInputs_.size()) {
-            const DirectInput& input = directInputs_[sourceIndex];
-            token.source = input.sourceId;
-            token.sourceLine = token.line - sourceStart + 1;
-            token.sourceId = SourceFileId{input.sourceId};
-            const std::size_t localStart = token.startOffset < input.combinedStartOffset
-                ? 0
-                : token.startOffset - input.combinedStartOffset;
-            const std::size_t localEnd = token.endOffset < input.combinedStartOffset
-                ? 0
-                : token.endOffset - input.combinedStartOffset;
-            token.range = SourceRange{
-                *token.sourceId,
-                std::min(localStart, input.source.size()),
-                std::min(std::max(localEnd, localStart), input.source.size())};
-        }
-    }
-}
-
 FrontendSession::ImportResolution FrontendSession::resolveImportPath(
     const std::filesystem::path& importingPath,
     const Token& pathToken) const
@@ -574,6 +537,7 @@ FrontendSession::ImportResolution FrontendSession::resolveImportPath(
 Program FrontendSession::loadStdin(std::istream& input)
 {
     reset();
+    singleEntrySource_ = true;
 
     std::string source = readAll(input);
     sourceFiles_.push_back(SourceFile{"<stdin>", source, SourceFileId{0}});
@@ -600,6 +564,7 @@ Program FrontendSession::loadStdin(std::istream& input)
         std::nullopt,
     });
     entryUnitIds_.push_back(0);
+    rebuildModuleGraph();
     rebuildCombinedSource();
     Program program = assembleProgram();
     program.sources = sourceFiles_;
@@ -610,100 +575,25 @@ Program FrontendSession::loadFiles(const std::vector<std::string>& paths)
 {
     reset();
 
-    std::unordered_map<std::string, std::size_t> directInputIds;
-    bool hasImports = false;
+    singleEntrySource_ = paths.size() == 1;
     for (const std::string& path : paths) {
         directEntryCanonicalPaths_.insert(pathString(normalizedExistingPath(path)));
     }
+    std::vector<FileDiagnosticError> entryErrors;
     for (const std::string& path : paths) {
-        const std::filesystem::path requestedPath(path);
-        const std::filesystem::path normalizedPath = normalizedExistingPath(requestedPath);
-        const std::string canonicalPath = pathString(normalizedPath);
-        if (directInputIds.find(canonicalPath) != directInputIds.end()) {
-            continue;
-        }
-
-        const std::string displayPath = pathString(requestedPath);
-        std::ifstream input(requestedPath);
-        if (!input) {
-            throw std::runtime_error("failed to open input file: " + displayPath);
-        }
-
-        std::string source = readAll(input);
-        const std::size_t sourceId = sourceFiles_.size();
-        sourceFiles_.push_back(SourceFile{
-            sourceMetadataPath(displayPath),
-            source,
-            SourceFileId{sourceId}});
-        directInputIds.emplace(canonicalPath, directInputs_.size());
-        directInputs_.push_back(DirectInput{
-            sourceId,
-            displayPath,
-            canonicalPath,
-            std::move(source),
-        });
-    }
-
-    for (std::size_t index = 0; index < directInputs_.size(); ++index) {
-        DirectInput& input = directInputs_[index];
-        int sourceStart = lineAtEnd(combinedSource_);
-        if (!combinedSource_.empty() && combinedSource_.back() != '\n') {
-            ++sourceStart;
-        }
-        directSourceLineStarts_.push_back(sourceStart);
-        if (!combinedSource_.empty() && combinedSource_.back() != '\n') {
-            combinedSource_.push_back('\n');
-        }
-        input.combinedStartOffset = combinedSource_.size();
-        combinedSource_ += input.source;
-        if (!combinedSource_.empty() && combinedSource_.back() != '\n') {
-            combinedSource_.push_back('\n');
+        try {
+            const std::size_t id = loadFile(path, false, true, true);
+            if (std::find(entryUnitIds_.begin(), entryUnitIds_.end(), id) == entryUnitIds_.end()) {
+                entryUnitIds_.push_back(id);
+            }
+        } catch (const FileDiagnosticErrorList& errors) {
+            entryErrors.insert(entryErrors.end(), errors.errors().begin(), errors.errors().end());
+        } catch (const FileDiagnosticError& error) {
+            entryErrors.push_back(error);
         }
     }
-    Program directProgram;
-    try {
-        Lexer lexer(combinedSource_);
-        directDisplayTokens_ = lexer.scanTokensUntil(TokenType::Import);
-        hasImports = !directDisplayTokens_.empty()
-            && directDisplayTokens_.back().type == TokenType::Import;
-        if (!hasImports) {
-            annotateDirectTokens(directDisplayTokens_);
-            Parser parser(directDisplayTokens_);
-            directProgram = parser.parse();
-            hasImports = programLoadsSource(directProgram);
-        }
-    } catch (const ParseErrorList& errors) {
-        if (const std::optional<FileDiagnosticErrorList> remapped = remapDirectDiagnostics(errors)) {
-            throw *remapped;
-        }
-        throw;
-    } catch (const LexErrorList& errors) {
-        if (const std::optional<FileDiagnosticErrorList> remapped = remapDirectLexDiagnostics(errors)) {
-            throw *remapped;
-        }
-        throw;
-    } catch (const DiagnosticError& error) {
-        if (const std::optional<FileDiagnosticError> remapped = remapDirectDiagnostic(error)) {
-            throw *remapped;
-        }
-        throw;
-    }
-
-    if (!hasImports) {
-        directProgram.sources = sourceFiles_;
-        finalizeSyntaxMetadata(directProgram);
-        return directProgram;
-    }
-
-    directInputs_.clear();
-    directDisplayTokens_.clear();
-    sourceFiles_.clear();
-    directSourceLineStarts_.clear();
-    for (const std::string& path : paths) {
-        const std::size_t id = loadFile(path, false, true, true);
-        if (std::find(entryUnitIds_.begin(), entryUnitIds_.end(), id) == entryUnitIds_.end()) {
-            entryUnitIds_.push_back(id);
-        }
+    if (!entryErrors.empty()) {
+        throw FileDiagnosticErrorList(std::move(entryErrors));
     }
     rebuildModuleGraph();
     rebuildCombinedSource();
@@ -796,7 +686,6 @@ std::size_t FrontendSession::loadFile(
                             + cached.rejectionReason);
                 }
             } else {
-                hasImports_ = true;
                 bool dependenciesCached = true;
                 for (const ModuleInterfaceArtifactDependency& dependency : cached.artifact->dependencies) {
                     const std::size_t dependencyId = loadFile(dependency.identity, true, false, true);
@@ -859,12 +748,19 @@ std::size_t FrontendSession::loadFile(
                 errors,
                 displayPath,
                 source,
-                !fileDiagnostics && !isImport);
+                (!fileDiagnostics && !isImport)
+                    || (isEntry && singleEntrySource_ && !entryFileContainsImportToken(source)));
         } catch (const DiagnosticError& error) {
             if (error.location()) {
                 throw FileDiagnosticError(
                     error,
-                    DiagnosticSourceContext{displayPath, source, !fileDiagnostics && !isImport});
+                    DiagnosticSourceContext{
+                        displayPath,
+                        source,
+                        (!fileDiagnostics && !isImport)
+                            || (isEntry
+                                && singleEntrySource_
+                                && !entryFileContainsImportToken(source))});
             }
             throw;
         }
@@ -879,7 +775,8 @@ std::size_t FrontendSession::loadFile(
                 errors,
                 displayPath,
                 source,
-                !fileDiagnostics && !isImport && !thisUnitHasImport);
+                (!fileDiagnostics && !isImport && !thisUnitHasImport)
+                    || (isEntry && singleEntrySource_ && !thisUnitHasImport));
         } catch (const FileDiagnosticError&) {
             throw;
         } catch (const DiagnosticError& error) {
@@ -889,7 +786,8 @@ std::size_t FrontendSession::loadFile(
                     DiagnosticSourceContext{
                         displayPath,
                         source,
-                        !fileDiagnostics && !isImport && !thisUnitHasImport,
+                        (!fileDiagnostics && !isImport && !thisUnitHasImport)
+                            || (isEntry && singleEntrySource_ && !thisUnitHasImport),
                     });
             }
             throw;
@@ -909,7 +807,6 @@ std::size_t FrontendSession::loadFile(
 
         for (StmtPtr& statement : unit.statements) {
             if (auto* import = dynamic_cast<ImportStmt*>(statement.get())) {
-                hasImports_ = true;
                 const ImportResolution resolution = resolveImportPath(normalizedPath, import->path);
                 import->resolvedModuleId = loadFile(resolution.path.string(), true, false, true);
                 continue;
@@ -919,7 +816,6 @@ std::size_t FrontendSession::loadFile(
             if (!exportStmt || !exportStmt->sourcePath) {
                 continue;
             }
-            hasImports_ = true;
             const ImportResolution resolution = resolveImportPath(normalizedPath, *exportStmt->sourcePath);
             exportStmt->resolvedModuleId = loadFile(resolution.path.string(), true, false, true);
         }
@@ -962,38 +858,33 @@ Program FrontendSession::assembleProgram()
 {
     Program program;
     program.sources = sourceFiles_;
-    if (hasImports_) {
-        program.moduleGraph = moduleGraph_;
-        for (const ModuleGraphNode& node : program.moduleGraph->nodes) {
-            for (SourceFile& source : program.sources) {
-                if (source.id == node.sourceId) {
+    program.moduleGraph = moduleGraph_;
+    // Single-module programs keep the historical artifact/debug metadata
+    // surface: module identity is recorded only when the graph is module-aware
+    // (multiple modules or dependency edges).
+    const bool moduleAware = moduleGraph_.nodes.size() > 1 || !moduleGraph_.edges.empty();
+    for (const ModuleGraphNode& node : program.moduleGraph->nodes) {
+        for (SourceFile& source : program.sources) {
+            if (source.id == node.sourceId) {
+                if (moduleAware) {
                     source.moduleIdentity = node.canonicalPath;
-                    break;
                 }
+                break;
             }
         }
-        rebuildPreloadedModuleInterfaces();
-        for (ParsedUnit& unit : units_) {
-            auto module = std::make_unique<ModuleStmt>(
-                unit.id,
-                unit.path,
-                unit.source,
-                std::move(unit.statements),
-                unit.isEntry,
-                SourceFileId{unit.sourceId});
-            module->sourceHash = moduleCacheHash(module->source);
-            module->bodySourceBacked = !unit.interfaceArtifact.has_value();
-            program.statements.push_back(std::move(module));
-        }
-        finalizeSyntaxMetadata(program);
-        return program;
     }
-
-    for (const std::size_t id : entryUnitIds_) {
-        ParsedUnit& unit = units_[id];
-        for (StmtPtr& statement : unit.statements) {
-            program.statements.push_back(std::move(statement));
-        }
+    rebuildPreloadedModuleInterfaces();
+    for (ParsedUnit& unit : units_) {
+        auto module = std::make_unique<ModuleStmt>(
+            unit.id,
+            unit.path,
+            unit.source,
+            std::move(unit.statements),
+            unit.isEntry,
+            SourceFileId{unit.sourceId});
+        module->sourceHash = moduleCacheHash(module->source);
+        module->bodySourceBacked = !unit.interfaceArtifact.has_value();
+        program.statements.push_back(std::move(module));
     }
     finalizeSyntaxMetadata(program);
     return program;
@@ -1094,10 +985,6 @@ void FrontendSession::rebuildCombinedSource()
 
 std::vector<Token> FrontendSession::displayTokens() const
 {
-    if (!directDisplayTokens_.empty()) {
-        return directDisplayTokens_;
-    }
-
     std::vector<Token> display;
     std::string combined;
     for (const ParsedUnit& unit : units_) {
@@ -1144,12 +1031,8 @@ LosslessSourceView FrontendSession::losslessSourceView() const
         }
     };
 
-    if (!directDisplayTokens_.empty()) {
-        collect(directDisplayTokens_);
-    } else {
-        for (const ParsedUnit& unit : units_) {
-            collect(unit.tokens);
-        }
+    for (const ParsedUnit& unit : units_) {
+        collect(unit.tokens);
     }
 
     std::vector<LosslessSourceFileView> files;
@@ -1163,134 +1046,6 @@ LosslessSourceView FrontendSession::losslessSourceView() const
 const std::string& FrontendSession::sourceForDiagnostics() const
 {
     return combinedSource_;
-}
-
-std::optional<FileDiagnosticError> FrontendSession::remapDirectDiagnostic(const DiagnosticError& error) const
-{
-    if (!error.location() || directInputs_.size() < 2) {
-        return std::nullopt;
-    }
-
-    std::size_t startLine = 1;
-    for (const DirectInput& input : directInputs_) {
-        const std::size_t span = sourceLineSpan(input.source);
-        if (span == 0) {
-            continue;
-        }
-
-        const std::size_t diagnosticLine = static_cast<std::size_t>(error.location()->line);
-        if (diagnosticLine >= startLine && diagnosticLine < startLine + span) {
-            DiagnosticError remapped(
-                error.kind(),
-                SourceLocation{
-                    static_cast<int>(diagnosticLine - startLine + 1),
-                    error.location()->column,
-                },
-                error.range(),
-                error.message());
-            return FileDiagnosticError(
-                remapped,
-                DiagnosticSourceContext{input.path, input.source, false});
-        }
-        startLine += span;
-    }
-
-    return std::nullopt;
-}
-
-
-std::optional<FileDiagnosticErrorList> FrontendSession::remapDirectDiagnostics(const ParseErrorList& errors) const
-{
-    if (directInputs_.size() < 2) {
-        return std::nullopt;
-    }
-
-    std::vector<FileDiagnosticError> mapped;
-    for (const ParseError& error : errors.errors()) {
-        if (!error.location()) {
-            return std::nullopt;
-        }
-
-        std::size_t startLine = 1;
-        bool foundInput = false;
-        for (const DirectInput& input : directInputs_) {
-            const std::size_t span = sourceLineSpan(input.source);
-            if (span == 0) {
-                continue;
-            }
-
-            const std::size_t diagnosticLine = static_cast<std::size_t>(error.location()->line);
-            if (diagnosticLine >= startLine && diagnosticLine < startLine + span) {
-                DiagnosticError remapped(
-                    error.kind(),
-                    SourceLocation{
-                        static_cast<int>(diagnosticLine - startLine + 1),
-                        error.location()->column,
-                    },
-                    error.range(),
-                    error.message());
-                mapped.push_back(FileDiagnosticError(
-                    remapped,
-                    DiagnosticSourceContext{input.path, input.source, false}));
-                foundInput = true;
-                break;
-            }
-            startLine += span;
-        }
-
-        if (!foundInput) {
-            return std::nullopt;
-        }
-    }
-
-    return FileDiagnosticErrorList(std::move(mapped));
-}
-
-std::optional<FileDiagnosticErrorList> FrontendSession::remapDirectLexDiagnostics(const LexErrorList& errors) const
-{
-    if (directInputs_.size() < 2) {
-        return std::nullopt;
-    }
-
-    std::vector<FileDiagnosticError> mapped;
-    for (const DiagnosticError& error : errors.errors()) {
-        if (!error.location()) {
-            return std::nullopt;
-        }
-
-        std::size_t startLine = 1;
-        bool foundInput = false;
-        for (const DirectInput& input : directInputs_) {
-            const std::size_t span = sourceLineSpan(input.source);
-            if (span == 0) {
-                continue;
-            }
-
-            const std::size_t diagnosticLine = static_cast<std::size_t>(error.location()->line);
-            if (diagnosticLine >= startLine && diagnosticLine < startLine + span) {
-                DiagnosticError remapped(
-                    error.kind(),
-                    SourceLocation{
-                        static_cast<int>(diagnosticLine - startLine + 1),
-                        error.location()->column,
-                    },
-                    error.range(),
-                    error.message());
-                mapped.push_back(FileDiagnosticError(
-                    remapped,
-                    DiagnosticSourceContext{input.path, input.source, false}));
-                foundInput = true;
-                break;
-            }
-            startLine += span;
-        }
-
-        if (!foundInput) {
-            return std::nullopt;
-        }
-    }
-
-    return FileDiagnosticErrorList(std::move(mapped));
 }
 
 std::size_t FrontendSession::moduleCount() const

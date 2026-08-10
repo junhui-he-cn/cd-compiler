@@ -3392,7 +3392,9 @@ private:
                 return JsonValue::null();
             }
         } else {
-            if (snapshot.program->moduleGraph || rangesByUri.size() != 1
+            if ((snapshot.program->moduleGraph
+                    && snapshot.program->moduleGraph->nodes.size() > 1)
+                || rangesByUri.size() != 1
                 || rangesByUri.find(*uri) == rangesByUri.end()) {
                 return JsonValue::null();
             }
