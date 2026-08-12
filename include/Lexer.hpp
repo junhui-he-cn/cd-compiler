@@ -25,10 +25,6 @@ public:
     // Scan the complete source buffer and append a final EndOfFile token.
     std::vector<Token> scanTokens();
 
-    // Scan until a token of the requested type is emitted, or until EndOfFile.
-    // The stopping token is included; EndOfFile is included only when reached.
-    std::vector<Token> scanTokensUntil(TokenType stopType);
-
 private:
     bool isAtEnd() const;
     char advance();

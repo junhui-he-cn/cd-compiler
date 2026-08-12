@@ -296,21 +296,6 @@ TypeError::TypeError(const Token& token, std::string message)
 {
 }
 
-TypeErrorList::TypeErrorList(std::vector<FileDiagnosticError> errors)
-    : errors_(std::move(errors))
-{
-}
-
-const std::vector<FileDiagnosticError>& TypeErrorList::errors() const
-{
-    return errors_;
-}
-
-const char* TypeErrorList::what() const noexcept
-{
-    return "type errors";
-}
-
 void TypeChecker::setPreloadedModuleInterfaces(std::vector<ModuleInterface> interfaces)
 {
     preloadedModuleInterfaces_ = std::move(interfaces);
@@ -384,36 +369,7 @@ void TypeChecker::check(const Program& program)
     returnContexts_.clear();
     flowFacts_.clear();
 
-    bool hasModules = false;
-    for (const auto& statement : program.statements) {
-        if (dynamic_cast<const ModuleStmt*>(statement.get())) {
-            hasModules = true;
-            break;
-        }
-    }
-
-    if (hasModules) {
-        if (program.moduleGraph) {
-            checkModulesInDependencyOrder(program);
-            for (const auto& statement : program.statements) {
-                if (!dynamic_cast<const ModuleStmt*>(statement.get())) {
-                    checkStatement(*statement);
-                }
-            }
-        } else {
-            for (const auto& statement : program.statements) {
-                if (const auto* module = dynamic_cast<const ModuleStmt*>(statement.get())) {
-                    checkModule(*module);
-                } else {
-                    checkStatement(*statement);
-                }
-            }
-        }
-    } else {
-        beginScope();
-        checkStatementList(program.statements);
-        endScope();
-    }
+    checkModulesInDependencyOrder(program);
 
     buildModuleInterfaces(program);
     moduleInterfaceMismatchCount_ = validateModuleInterfaces(program);
@@ -1749,7 +1705,7 @@ void TypeChecker::checkModulesInDependencyOrder(const Program& program)
     }
 
     if (!errors.empty()) {
-        throw TypeErrorList(std::move(errors));
+        throw FileDiagnosticErrorList(std::move(errors));
     }
 }
 
@@ -4897,7 +4853,8 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
                 binding->resolvedName,
                 binding->bindingId,
                 ResolvedSymbol{binding->declarationId, binding->symbolId},
-                binding->range});
+                binding->range,
+                binding->imported});
         CheckedExpression result{variableType(*binding)};
         declarationIndex_.recordTypedExpression(*variable, result.type);
         return result;
@@ -4955,7 +4912,8 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
                 target->resolvedName,
                 target->bindingId,
                 ResolvedSymbol{target->declarationId, target->symbolId},
-                target->range});
+                target->range,
+                target->imported});
         CheckedExpression result{target->type};
         declarationIndex_.recordTypedExpression(*assign, result.type);
         return result;
@@ -4984,7 +4942,8 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
                 target->resolvedName,
                 target->bindingId,
                 ResolvedSymbol{target->declarationId, target->symbolId},
-                target->range});
+                target->range,
+                target->imported});
         CheckedExpression result{simpleType(StaticType::Number)};
         declarationIndex_.recordTypedExpression(*compound, result.type);
         return result;

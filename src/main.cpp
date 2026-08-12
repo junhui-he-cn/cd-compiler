@@ -4,12 +4,10 @@
 #include "Formatter.hpp"
 #include "IRCompiler.hpp"
 #include "LanguageServer.hpp"
-#include "Lexer.hpp"
 #include "ModuleCache.hpp"
 #include "ModuleInterfaceArtifact.hpp"
 #include "ModuleInterfaceEmitter.hpp"
 #include "Optimizer.hpp"
-#include "Parser.hpp"
 #include "TypeChecker.hpp"
 
 #include <algorithm>
@@ -408,32 +406,6 @@ void writeModuleArtifacts(
     }
 }
 
-void printParseErrorList(const ParseErrorList& errors, const std::string& source)
-{
-    bool first = true;
-    for (const ParseError& error : errors.errors()) {
-        if (!first) {
-            std::cerr << '\n';
-        }
-        first = false;
-        std::cerr << formatDiagnosticWithSource(error, source);
-    }
-    std::cerr << '\n';
-}
-
-void printLexErrorList(const LexErrorList& errors, const std::string& source)
-{
-    bool first = true;
-    for (const DiagnosticError& error : errors.errors()) {
-        if (!first) {
-            std::cerr << '\n';
-        }
-        first = false;
-        std::cerr << formatDiagnosticWithSource(error, source);
-    }
-    std::cerr << '\n';
-}
-
 void printFileDiagnosticErrors(const std::vector<FileDiagnosticError>& errors)
 {
     bool first = true;
@@ -448,11 +420,6 @@ void printFileDiagnosticErrors(const std::vector<FileDiagnosticError>& errors)
 }
 
 void printFileDiagnosticErrorList(const FileDiagnosticErrorList& errors)
-{
-    printFileDiagnosticErrors(errors.errors());
-}
-
-void printTypeErrorList(const TypeErrorList& errors)
 {
     printFileDiagnosticErrors(errors.errors());
 }
@@ -847,23 +814,11 @@ int main(int argc, char** argv)
 
         }
     // 将不同诊断类型统一转换为带源码上下文的 CLI 输出。
-    } catch (const TypeErrorList& errors) {
-        printTypeErrorList(errors);
-        return 1;
     } catch (const FileDiagnosticErrorList& errors) {
         printFileDiagnosticErrorList(errors);
         return 1;
-    } catch (const ParseErrorList& errors) {
-        printParseErrorList(errors, frontend.sourceForDiagnostics());
-        return 1;
-    } catch (const LexErrorList& errors) {
-        printLexErrorList(errors, frontend.sourceForDiagnostics());
-        return 1;
     } catch (const FileDiagnosticError& error) {
         std::cerr << formatDiagnosticWithSourceContext(error) << '\n';
-        return 1;
-    } catch (const DiagnosticError& error) {
-        std::cerr << formatDiagnosticWithSource(error, frontend.sourceForDiagnostics()) << '\n';
         return 1;
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

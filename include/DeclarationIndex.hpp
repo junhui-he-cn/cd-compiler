@@ -37,6 +37,9 @@ struct BindingMetadataRecord {
     BindingId bindingId;
     ResolvedSymbol symbol;
     std::optional<SourceRange> range;
+    // Imported bindings are interface copies without snapshot-local identity;
+    // reference metadata for them is skipped by validateMetadata.
+    bool imported = false;
 };
 
 struct FunctionMetadataRecord {

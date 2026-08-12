@@ -1435,25 +1435,9 @@ DocumentAnalysis analyzeDocument(const std::string& source)
         snapshot.typeNavigationSites = typeNavigationCollector.collect(*snapshot.program);
         typeChecker.check(*snapshot.program);
         snapshot.declarationIndex = typeChecker.declarationIndex();
-    } catch (const TypeErrorList& errors) {
+    } catch (const FileDiagnosticErrorList& errors) {
         snapshot.declarationIndex = typeChecker.declarationIndex();
         snapshot.diagnostics = errors.errors();
-    } catch (const FileDiagnosticErrorList& errors) {
-        snapshot.diagnostics = errors.errors();
-    } catch (const ParseErrorList& errors) {
-        snapshot.diagnostics.reserve(errors.errors().size());
-        for (const ParseError& error : errors.errors()) {
-            snapshot.diagnostics.emplace_back(
-                error,
-                DiagnosticSourceContext{"<stdin>", source, true});
-        }
-    } catch (const LexErrorList& errors) {
-        snapshot.diagnostics.reserve(errors.errors().size());
-        for (const DiagnosticError& error : errors.errors()) {
-            snapshot.diagnostics.emplace_back(
-                error,
-                DiagnosticSourceContext{"<stdin>", source, true});
-        }
     } catch (const FileDiagnosticError& error) {
         snapshot.diagnostics.push_back(error);
     } catch (const DiagnosticError& error) {
@@ -2683,10 +2667,8 @@ std::shared_ptr<AnalysisSnapshot> analyzeVirtualWorkspace(
 
         typeChecker.check(*snapshot->program);
         snapshot->declarationIndex = typeChecker.declarationIndex();
-    } catch (const TypeErrorList& errors) {
-        snapshot->declarationIndex = typeChecker.declarationIndex();
-        snapshot->diagnostics = errors.errors();
     } catch (const FileDiagnosticErrorList& errors) {
+        snapshot->declarationIndex = typeChecker.declarationIndex();
         snapshot->diagnostics = errors.errors();
     } catch (const FileDiagnosticError& error) {
         snapshot->diagnostics.push_back(error);

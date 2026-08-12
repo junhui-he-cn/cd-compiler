@@ -92,22 +92,6 @@ bool hasImportToken(const std::vector<Token>& tokens)
     });
 }
 
-bool statementLoadsSource(const Stmt& statement)
-{
-    if (dynamic_cast<const ImportStmt*>(&statement)) {
-        return true;
-    }
-    const auto* exportStmt = dynamic_cast<const ExportStmt*>(&statement);
-    return exportStmt && exportStmt->sourcePath.has_value();
-}
-
-bool programLoadsSource(const Program& program)
-{
-    return std::any_of(program.statements.begin(), program.statements.end(), [](const StmtPtr& statement) {
-        return statementLoadsSource(*statement);
-    });
-}
-
 std::string importPath(const Token& token)
 {
     if (token.lexeme.size() >= 2 && token.lexeme.front() == '"' && token.lexeme.back() == '"') {
@@ -299,10 +283,8 @@ void FrontendSession::reset()
     units_.clear();
     canonicalToUnitId_.clear();
     loadingStack_.clear();
-    entryUnitIds_.clear();
     sourceFiles_.clear();
     directEntryCanonicalPaths_.clear();
-    combinedSource_.clear();
     moduleGraph_ = ModuleGraph{};
     preloadedModuleInterfaces_.clear();
     moduleProductCacheLoad_.reset();
@@ -456,16 +438,6 @@ std::string FrontendSession::moduleProductCacheRejection(
     return {};
 }
 
-void FrontendSession::annotateSourceTokens(std::vector<Token>& tokens, std::size_t sourceId) const
-{
-    for (Token& token : tokens) {
-        token.source = sourceId;
-        token.sourceLine = token.line;
-        token.sourceId = SourceFileId{sourceId};
-        token.range = SourceRange{*token.sourceId, token.startOffset, token.endOffset};
-    }
-}
-
 FrontendSession::ImportResolution FrontendSession::resolveImportPath(
     const std::filesystem::path& importingPath,
     const Token& pathToken) const
@@ -530,8 +502,12 @@ Program FrontendSession::loadStdin(std::istream& input)
 
     Program parsedProgram;
     parsedProgram.statements = std::move(parsed.statements);
-    if (programLoadsSource(parsedProgram)) {
-        throw DiagnosticError(DiagnosticKind::Import, "import is not supported from stdin");
+    for (const StmtPtr& statement : parsedProgram.statements) {
+        if (const auto* exportStmt = dynamic_cast<const ExportStmt*>(statement.get())) {
+            if (exportStmt->sourcePath) {
+                throw DiagnosticError(DiagnosticKind::Import, "import is not supported from stdin");
+            }
+        }
     }
 
     units_.push_back(ParsedUnit{
@@ -545,9 +521,7 @@ Program FrontendSession::loadStdin(std::istream& input)
         true,
         std::nullopt,
     });
-    entryUnitIds_.push_back(0);
     rebuildModuleGraph();
-    rebuildCombinedSource();
     Program program = assembleProgram();
     program.sources = sourceFiles_;
     return program;
@@ -563,10 +537,7 @@ Program FrontendSession::loadFiles(const std::vector<std::string>& paths)
     std::vector<FileDiagnosticError> entryErrors;
     for (const std::string& path : paths) {
         try {
-            const std::size_t id = loadFile(path, false, true);
-            if (std::find(entryUnitIds_.begin(), entryUnitIds_.end(), id) == entryUnitIds_.end()) {
-                entryUnitIds_.push_back(id);
-            }
+            static_cast<void>(loadFile(path, false, true));
         } catch (const FileDiagnosticErrorList& errors) {
             entryErrors.insert(entryErrors.end(), errors.errors().begin(), errors.errors().end());
         } catch (const FileDiagnosticError& error) {
@@ -577,7 +548,6 @@ Program FrontendSession::loadFiles(const std::vector<std::string>& paths)
         throw FileDiagnosticErrorList(std::move(entryErrors));
     }
     rebuildModuleGraph();
-    rebuildCombinedSource();
     return assembleProgram();
 }
 
@@ -592,13 +562,9 @@ Program FrontendSession::loadVirtualFiles(const std::vector<FrontendVirtualFile>
     }
 
     for (const FrontendVirtualFile& file : files) {
-        const std::size_t id = loadFile(file.path, false, true);
-        if (std::find(entryUnitIds_.begin(), entryUnitIds_.end(), id) == entryUnitIds_.end()) {
-            entryUnitIds_.push_back(id);
-        }
+        static_cast<void>(loadFile(file.path, false, true));
     }
     rebuildModuleGraph();
-    rebuildCombinedSource();
     return assembleProgram();
 }
 
@@ -718,53 +684,7 @@ std::size_t FrontendSession::loadFile(
             sourceMetadataPath(displayPath),
             source,
             SourceFileId{sourceId}});
-        Lexer lexer(source);
-        std::vector<Token> tokens;
-        try {
-            tokens = lexer.scanTokens();
-            annotateSourceTokens(tokens, sourceId);
-        } catch (const LexErrorList& errors) {
-            throw fileDiagnosticListFromLexErrors(
-                errors,
-                displayPath,
-                source,
-                false);
-        } catch (const DiagnosticError& error) {
-            if (error.location()) {
-                throw FileDiagnosticError(
-                    error,
-                    DiagnosticSourceContext{
-                        displayPath,
-                        source,
-                        false});
-            }
-            throw;
-        }
-        ParsedSource parsed;
-        try {
-            Parser parser(tokens);
-            Program program = parser.parse();
-            parsed = ParsedSource{std::move(tokens), std::move(program.statements)};
-        } catch (const ParseErrorList& errors) {
-            throw fileDiagnosticListFromParseErrors(
-                errors,
-                displayPath,
-                source,
-                false);
-        } catch (const FileDiagnosticError&) {
-            throw;
-        } catch (const DiagnosticError& error) {
-            if (error.location()) {
-                throw FileDiagnosticError(
-                    error,
-                    DiagnosticSourceContext{
-                        displayPath,
-                        source,
-                        false,
-                    });
-            }
-            throw;
-        }
+        ParsedSource parsed = parseSource(displayPath, source, false, sourceId);
 
         ParsedUnit unit{
             0,
@@ -948,14 +868,6 @@ void FrontendSession::rebuildPreloadedModuleInterfaces()
     }
 }
 
-void FrontendSession::rebuildCombinedSource()
-{
-    combinedSource_.clear();
-    for (const ParsedUnit& unit : units_) {
-        appendWithNewlineSeparation(combinedSource_, unit.source);
-    }
-}
-
 std::vector<Token> FrontendSession::displayTokens() const
 {
     std::vector<Token> display;
@@ -1014,11 +926,6 @@ LosslessSourceView FrontendSession::losslessSourceView() const
         files.push_back(buildLosslessSourceFileView(sourceFiles_[index], tokensBySource[index]));
     }
     return LosslessSourceView(std::move(files));
-}
-
-const std::string& FrontendSession::sourceForDiagnostics() const
-{
-    return combinedSource_;
 }
 
 std::size_t FrontendSession::moduleCount() const

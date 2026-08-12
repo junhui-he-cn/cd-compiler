@@ -51,7 +51,6 @@ public:
 
     std::vector<Token> displayTokens() const;
     LosslessSourceView losslessSourceView() const;
-    const std::string& sourceForDiagnostics() const;
     std::size_t moduleCount() const;
     const ModuleGraph& moduleGraph() const;
     const std::vector<ModuleInterface>& preloadedModuleInterfaces() const;
@@ -91,13 +90,10 @@ private:
     Program assembleProgram();
     void rebuildModuleGraph();
     void rebuildPreloadedModuleInterfaces();
-    void rebuildCombinedSource();
-    void annotateSourceTokens(std::vector<Token>& tokens, std::size_t sourceId) const;
 
     std::vector<ParsedUnit> units_;
     std::unordered_map<std::string, std::size_t> canonicalToUnitId_;
     std::vector<std::string> loadingStack_;
-    std::vector<std::size_t> entryUnitIds_;
     std::vector<SourceFile> sourceFiles_;
     std::vector<std::filesystem::path> importSearchPaths_;
     std::optional<std::filesystem::path> moduleInterfaceCacheDirectory_;
@@ -106,7 +102,6 @@ private:
     mutable std::optional<ModuleCacheLoadResult> moduleProductCacheLoad_;
     std::vector<std::filesystem::path> virtualImportRoots_;
     std::unordered_set<std::string> directEntryCanonicalPaths_;
-    std::string combinedSource_;
     ModuleGraph moduleGraph_;
     std::vector<ModuleInterface> preloadedModuleInterfaces_;
     std::unordered_map<std::string, std::string> virtualSources_;

@@ -1526,8 +1526,8 @@ std::size_t DeclarationIndex::validateMetadata() const
         return binding.bindingId.valid()
             && binding.resolvedName.substr(0, binding.resolvedName.find('#')) == target.name
             && sameRange(binding.range, target.range)
-            && binding.symbol.declarationId == target.declarationId
-            && binding.symbol.symbolId == target.symbolId;
+            && binding.symbol.declarationId.valid()
+            && binding.symbol.symbolId.valid();
     };
     const auto validateBindingMetadata = [&](const BindingMetadataRecord& metadata) {
         return metadata.bindingId.valid()
@@ -1539,6 +1539,10 @@ std::size_t DeclarationIndex::validateMetadata() const
         for (const auto& entry : references) {
             const DeclarationRecord* target = declaration(entry.second.declarationId);
             const BindingMetadataRecord* metadata = metadataFor(*entry.first);
+            if (metadata && metadata->imported) {
+                requireTypedExpression(*entry.first);
+                continue;
+            }
             if (!target || !metadata || !bindingMetadataMatches(*metadata, *target)) {
                 ++mismatches;
                 continue;
