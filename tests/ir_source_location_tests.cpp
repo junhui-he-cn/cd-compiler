@@ -458,13 +458,6 @@ void test_declaration_index_module_metadata()
     program.statements.push_back(std::move(exportStmt));
     const DeclarationIndex index = DeclarationIndex::collect(program);
 
-    assert(index.imports().size() == 1);
-    assert(index.imports().front().resolvedModuleId == 7);
-    assert(index.imports().front().alias == std::optional<std::string>("lib"));
-    assert(index.exports().size() == 1);
-    assert(index.exports().front().resolvedModuleId == 11);
-    assert(index.exports().front().names == std::vector<std::string>{"value"});
-    assert(index.exports().front().sourcePath == std::optional<std::string>("\"base.cd\""));
     assert(index.scopes().size() == 1);
     const std::optional<DeclarationId> aliasId = index.lookup(index.scopes().front().id, "lib");
     assert(aliasId.has_value());

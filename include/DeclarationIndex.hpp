@@ -231,19 +231,6 @@ struct ScopeRecord {
     std::unordered_map<std::string, DeclarationId> declarations;
 };
 
-struct ImportRecord {
-    const ImportStmt* statement = nullptr;
-    std::size_t resolvedModuleId = static_cast<std::size_t>(-1);
-    std::optional<std::string> alias;
-};
-
-struct ExportRecord {
-    const ExportStmt* statement = nullptr;
-    std::vector<std::string> names;
-    std::size_t resolvedModuleId = static_cast<std::size_t>(-1);
-    std::optional<std::string> sourcePath;
-};
-
 // A snapshot-local declaration/symbol index collected from the existing AST.
 // It is intentionally independent of TypeChecker's type decisions: the
 // migration slices record declarations, scopes, signatures, lexical
@@ -255,8 +242,6 @@ public:
 
     const std::vector<DeclarationRecord>& declarations() const;
     const std::vector<ScopeRecord>& scopes() const;
-    const std::vector<ImportRecord>& imports() const;
-    const std::vector<ExportRecord>& exports() const;
 
     const DeclarationRecord* declaration(DeclarationId id) const;
     const DeclarationRecord* declaration(const Stmt& statement) const;
@@ -370,8 +355,6 @@ private:
 
     std::vector<DeclarationRecord> declarations_;
     std::vector<ScopeRecord> scopes_;
-    std::vector<ImportRecord> imports_;
-    std::vector<ExportRecord> exports_;
     std::unordered_map<const Stmt*, DeclarationId> statementDeclarations_;
     std::unordered_map<const MethodDecl*, DeclarationId> methodDeclarations_;
     std::unordered_map<const Parameter*, DeclarationId> parameterDeclarations_;

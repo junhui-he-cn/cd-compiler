@@ -362,10 +362,6 @@ private:
             return;
         }
         if (const auto* import = dynamic_cast<const ImportStmt*>(&statement)) {
-            index_.imports_.push_back(ImportRecord{
-                import,
-                import->resolvedModuleId,
-                import->alias ? std::optional<std::string>(import->alias->lexeme) : std::nullopt});
             if (import->alias) {
                 addDeclaration(
                     DeclarationKind::NamespaceAlias,
@@ -377,17 +373,6 @@ private:
             return;
         }
         if (const auto* exportStmt = dynamic_cast<const ExportStmt*>(&statement)) {
-            std::vector<std::string> names;
-            for (const Token& name : exportStmt->names) {
-                names.push_back(name.lexeme);
-            }
-            index_.exports_.push_back(ExportRecord{
-                exportStmt,
-                std::move(names),
-                exportStmt->resolvedModuleId,
-                exportStmt->sourcePath
-                    ? std::optional<std::string>(exportStmt->sourcePath->lexeme)
-                    : std::nullopt});
             return;
         }
         if (const auto* impl = dynamic_cast<const ImplStmt*>(&statement)) {
@@ -922,16 +907,6 @@ const std::vector<DeclarationRecord>& DeclarationIndex::declarations() const
 const std::vector<ScopeRecord>& DeclarationIndex::scopes() const
 {
     return scopes_;
-}
-
-const std::vector<ImportRecord>& DeclarationIndex::imports() const
-{
-    return imports_;
-}
-
-const std::vector<ExportRecord>& DeclarationIndex::exports() const
-{
-    return exports_;
 }
 
 const DeclarationRecord* DeclarationIndex::declaration(DeclarationId id) const
