@@ -1,5 +1,6 @@
 #include "BytecodeCompiler.hpp"
 #include "BytecodeTextEmitter.hpp"
+#include "CliConfig.hpp"
 #include "FrontendSession.hpp"
 #include "Formatter.hpp"
 #include "IRCompiler.hpp"
@@ -23,18 +24,6 @@
 #include <vector>
 
 namespace {
-
-void printUsage(const char* executable)
-{
-    std::cerr << "Usage: " << executable << " [--tokens] [--ir] [--bytecode] [--opt-level 0|1] [--module-interface] [-I dir] [--import-path dir] file [...]\n"
-              << "       " << executable << " [--format | --format-check] [--format-indent-width N] [-I dir] [--import-path dir] file [...]\n"
-              << "       " << executable << " --lsp\n"
-              << "       " << executable << " [--emit-bytecode output.cdbc] [--opt-level 0|1] [-I dir] [--import-path dir] file [...]\n"
-              << "       " << executable << " [--emit-module-bytecode output-directory] [--opt-level 0|1] [--module-cache cache-directory] [--module-cache-strict] [--module-rebuild-report report.json] [-I dir] [--import-path dir] file [...]\n"
-              << "       " << executable << " [--module-interface-cache cache-directory] [--module-cache-strict | --module-cache-fallback] [-I dir] [--import-path dir] file [...]\n"
-              << "All non-LSP modes require at least one source file.\n"
-              << "Import search paths are used for non-explicit string imports after the importing file's directory.\n";
-}
 
 const char* optimizationLevelName(SSAOptimizationLevel level)
 {
@@ -428,152 +417,20 @@ void printFileDiagnosticErrorList(const FileDiagnosticErrorList& errors)
 
 int main(int argc, char** argv)
 {
-    bool showTokens = false;
-    bool showIr = false;
-    bool showBytecode = false;
-    bool showModuleInterface = false;
-    bool runLsp = false;
-    bool showFormat = false;
-    bool checkFormat = false;
-    SSAOptimizationLevel optimizationLevel = SSAOptimizationLevel::O0;
-    bool optimizationLevelSpecified = false;
-    std::size_t formatIndentWidth = 2;
-    bool formatIndentWidthSpecified = false;
-    std::optional<std::string> emitBytecodePath;
-    std::optional<std::string> emitModuleBytecodePath;
-    std::optional<std::string> moduleCachePath;
-    std::optional<std::string> moduleInterfaceCachePath;
-    std::optional<std::string> moduleRebuildReportPath;
-    bool moduleCacheStrict = false;
-    bool moduleCacheFallback = false;
-    std::vector<std::string> inputPaths;
-    std::vector<std::string> importSearchPaths;
-
-    // 第一阶段只收集 CLI 状态；具体编译在参数校验和前端配置之后进行。
-    for (int i = 1; i < argc; ++i) {
-        const std::string arg = argv[i];
-        if (arg == "--tokens") {
-            showTokens = true;
-        } else if (arg == "--ir") {
-            showIr = true;
-        } else if (arg == "--bytecode") {
-            showBytecode = true;
-        } else if (arg == "--opt-level") {
-            if (i + 1 >= argc) {
-                printUsage(argv[0]);
-                return 64;
-            }
-            const std::string level = argv[++i];
-            if (level == "0") {
-                optimizationLevel = SSAOptimizationLevel::O0;
-            } else if (level == "1") {
-                optimizationLevel = SSAOptimizationLevel::O1;
-            } else {
-                std::cerr << "--opt-level requires 0 or 1\n";
-                return 64;
-            }
-            optimizationLevelSpecified = true;
-        } else if (arg == "--module-interface") {
-            showModuleInterface = true;
-        } else if (arg == "--lsp") {
-            runLsp = true;
-        } else if (arg == "--format") {
-            showFormat = true;
-        } else if (arg == "--format-check") {
-            checkFormat = true;
-        } else if (arg == "--format-indent-width") {
-            if (i + 1 >= argc) {
-                printUsage(argv[0]);
-                return 64;
-            }
-            const std::string widthText = argv[++i];
-            try {
-                std::size_t parsedCharacters = 0;
-                const unsigned long long parsed = std::stoull(widthText, &parsedCharacters);
-                if (parsedCharacters != widthText.size()
-                    || parsed == 0
-                    || parsed > std::numeric_limits<std::size_t>::max()) {
-                    throw std::invalid_argument("invalid formatter indentation width");
-                }
-                formatIndentWidth = static_cast<std::size_t>(parsed);
-                formatIndentWidthSpecified = true;
-            } catch (const std::exception&) {
-                std::cerr << "--format-indent-width requires a positive integer\n";
-                return 64;
-            }
-        } else if (arg == "-I" || arg == "--import-path") {
-            if (i + 1 >= argc) {
-                printUsage(argv[0]);
-                return 64;
-            }
-            importSearchPaths.push_back(argv[++i]);
-        } else if (arg == "--run") {
-            printUsage(argv[0]);
-            return 64;
-        } else if (arg == "--emit-bytecode") {
-            if (i + 1 >= argc) {
-                printUsage(argv[0]);
-                return 64;
-            }
-            emitBytecodePath = argv[++i];
-        } else if (arg == "--emit-module-bytecode") {
-            if (i + 1 >= argc) {
-                printUsage(argv[0]);
-                return 64;
-            }
-            emitModuleBytecodePath = argv[++i];
-        } else if (arg == "--module-cache") {
-            if (i + 1 >= argc) {
-                printUsage(argv[0]);
-                return 64;
-            }
-            moduleCachePath = argv[++i];
-        } else if (arg == "--module-interface-cache") {
-            if (i + 1 >= argc) {
-                printUsage(argv[0]);
-                return 64;
-            }
-            moduleInterfaceCachePath = argv[++i];
-        } else if (arg == "--module-cache-strict") {
-            moduleCacheStrict = true;
-        } else if (arg == "--module-cache-fallback") {
-            moduleCacheFallback = true;
-        } else if (arg == "--module-rebuild-report") {
-            if (i + 1 >= argc) {
-                printUsage(argv[0]);
-                return 64;
-            }
-            moduleRebuildReportPath = argv[++i];
-        } else if (arg == "--help" || arg == "-h") {
-            printUsage(argv[0]);
-            return 0;
-        } else {
-            inputPaths.push_back(arg);
-        }
+    CliConfig config;
+    switch (parseCli(argc, argv, config)) {
+    case CliParseStatus::Help:
+        return 0;
+    case CliParseStatus::Error:
+        return 64;
+    case CliParseStatus::Ok:
+        break;
     }
 
+    const bool formatMode = config.formatMode();
+
     // LSP 使用独立的 stdin/stdout 协议，不进入普通编译流水线。
-    if (runLsp) {
-        if (showTokens
-            || showIr
-            || showBytecode
-            || showModuleInterface
-            || showFormat
-            || checkFormat
-            || optimizationLevelSpecified
-            || formatIndentWidthSpecified
-            || emitBytecodePath
-            || emitModuleBytecodePath
-            || moduleCachePath
-            || moduleInterfaceCachePath
-            || moduleRebuildReportPath
-            || moduleCacheStrict
-            || moduleCacheFallback
-            || !inputPaths.empty()
-            || !importSearchPaths.empty()) {
-            printUsage(argv[0]);
-            return 64;
-        }
+    if (config.runLsp) {
         try {
             return runLanguageServer(std::cin, std::cout);
         } catch (const std::exception& error) {
@@ -582,118 +439,18 @@ int main(int argc, char** argv)
         }
     }
 
-    // 先拒绝互斥或缺少前置参数的组合，避免进入不完整的编译流程。
-    if (moduleCacheStrict && moduleCacheFallback) {
-        std::cerr << "--module-cache-strict and --module-cache-fallback are mutually exclusive\n";
-        return 64;
-    }
-
-    const bool formatMode = showFormat || checkFormat;
-    if (showFormat && checkFormat) {
-        printUsage(argv[0]);
-        return 64;
-    }
-
-    if (formatMode
-        && (showTokens
-            || showIr
-            || showBytecode
-            || showModuleInterface
-            || optimizationLevelSpecified
-            || emitBytecodePath
-            || emitModuleBytecodePath
-            || moduleCachePath
-            || moduleInterfaceCachePath
-            || moduleRebuildReportPath
-            || moduleCacheStrict
-            || moduleCacheFallback)) {
-        printUsage(argv[0]);
-        return 64;
-    }
-
-    if (formatIndentWidthSpecified && !formatMode) {
-        std::cerr << "--format-indent-width requires --format or --format-check\n";
-        return 64;
-    }
-
-    if (optimizationLevelSpecified
-        && !showIr
-        && !showBytecode
-        && !emitBytecodePath
-        && !emitModuleBytecodePath) {
-        std::cerr << "--opt-level requires --ir, --bytecode, or bytecode emission\n";
-        return 64;
-    }
-
-    if (moduleCacheFallback && !moduleInterfaceCachePath) {
-        std::cerr << "--module-cache-fallback requires --module-interface-cache\n";
-        return 64;
-    }
-
-    if (moduleCacheFallback && (moduleCachePath || emitModuleBytecodePath)) {
-        std::cerr << "--module-cache-fallback is only valid for interface-only cache consumers\n";
-        return 64;
-    }
-
-    if (moduleInterfaceCachePath
-        && (emitBytecodePath || (emitModuleBytecodePath && !moduleCachePath))) {
-        std::cerr << "--module-interface-cache cannot provide bytecode bodies; use --module-cache with --emit-module-bytecode\n";
-        return 64;
-    }
-
-    if (moduleCacheStrict && !moduleCachePath && !moduleInterfaceCachePath) {
-        std::cerr << "--module-cache-strict requires --module-cache or --module-interface-cache\n";
-        return 64;
-    }
-
-    if (emitBytecodePath || emitModuleBytecodePath || moduleCachePath || moduleInterfaceCachePath
-        || moduleRebuildReportPath || moduleCacheStrict || moduleCacheFallback) {
-        if (inputPaths.empty()
-            || formatMode
-            || showTokens
-            || showIr
-            || showBytecode
-            || showModuleInterface
-            || (emitBytecodePath && emitModuleBytecodePath)
-            || (!emitModuleBytecodePath && (moduleCachePath || moduleRebuildReportPath))
-            || (moduleRebuildReportPath && !moduleCachePath)) {
-            printUsage(argv[0]);
-            return 64;
-        }
-    }
-
-    if (moduleCachePath && moduleInterfaceCachePath
-        && std::filesystem::path(*moduleCachePath).lexically_normal()
-            != std::filesystem::path(*moduleInterfaceCachePath).lexically_normal()) {
-        std::cerr << "--module-cache and --module-interface-cache must use the same directory\n";
-        return 64;
-    }
-
-    const bool interfaceOnlyCacheConsumer = moduleInterfaceCachePath
-        && !emitModuleBytecodePath
-        && !moduleCachePath;
-    if (interfaceOnlyCacheConsumer && !moduleCacheFallback) {
-        moduleCacheStrict = true;
-    }
-
-    // 普通 CLI 必须显式提供源码文件；LSP 的 stdin/stdout 协议已在上方独立处理。
-    if (inputPaths.empty()) {
-        printUsage(argv[0]);
-        return 64;
-    }
-
     // 前端负责读取源码、解析 import、构建模块图，并提供诊断源信息。
     FrontendSession frontend;
-    frontend.setImportSearchPaths(importSearchPaths);
-    if (moduleInterfaceCachePath) {
-        frontend.setModuleInterfaceCacheDirectory(*moduleInterfaceCachePath);
-    } else if (moduleCachePath) {
-        frontend.setModuleInterfaceCacheDirectory(*moduleCachePath);
+    frontend.setImportSearchPaths(config.importSearchPaths);
+    if (config.moduleInterfaceCachePath) {
+        frontend.setModuleInterfaceCacheDirectory(*config.moduleInterfaceCachePath);
+    } else if (config.moduleCachePath) {
+        frontend.setModuleInterfaceCacheDirectory(*config.moduleCachePath);
     }
-    frontend.setModuleProductCacheMode(moduleCachePath.has_value());
-    frontend.setModuleInterfaceCacheStrict(moduleCacheStrict);
+    frontend.setModuleProductCacheMode(config.moduleCachePath.has_value());
+    frontend.setModuleInterfaceCacheStrict(config.moduleCacheStrict);
     try {
-        Program program = frontend.loadFiles(inputPaths);
+        Program program = frontend.loadFiles(config.inputPaths);
 
         // 格式化直接使用无损源码视图，完成后提前返回，不做类型检查和代码生成。
         if (formatMode) {
@@ -717,8 +474,8 @@ int main(int argc, char** argv)
                 }
                 const std::string formatted = formatLosslessSource(
                     view.file(sourceId),
-                    FormatterOptions{formatIndentWidth});
-                if (checkFormat) {
+                    FormatterOptions{config.formatIndentWidth});
+                if (config.checkFormat) {
                     if (formatted != source->text) {
                         std::cerr << "format check failed: " << source->path << '\n';
                         formatCheckFailed = true;
@@ -735,7 +492,7 @@ int main(int argc, char** argv)
         }
 
         // Token 是观察性输出；普通流程仍继续到类型检查以验证输入。
-        if (showTokens) {
+        if (config.showTokens) {
             for (const Token& token : frontend.displayTokens()) {
                 std::cout << token << '\n';
             }
@@ -747,49 +504,49 @@ int main(int argc, char** argv)
         typeChecker.setPreloadedModuleInterfaces(frontend.preloadedModuleInterfaces());
         typeChecker.check(program);
 
-        if (!emitBytecodePath && !emitModuleBytecodePath && !showIr && !showBytecode && !showModuleInterface) {
+        if (!config.emitBytecodePath && !config.emitModuleBytecodePath && !config.showIr && !config.showBytecode && !config.showModuleInterface) {
             program.print(std::cout);
         }
 
-        if (showModuleInterface) {
+        if (config.showModuleInterface) {
             writeModuleInterfaceText(std::cout, typeChecker.moduleInterfaces());
         }
 
         // 模块字节码按图节点独立生成，必要时复用缓存并写出相关 sidecar。
-        if (emitModuleBytecodePath) {
+        if (config.emitModuleBytecodePath) {
             writeModuleArtifacts(
-                *emitModuleBytecodePath,
+                *config.emitModuleBytecodePath,
                 program,
                 typeChecker.declarationIndex(),
                 typeChecker.moduleInterfaces(),
-                moduleCachePath ? std::optional<std::filesystem::path>(*moduleCachePath) : std::nullopt,
-                moduleRebuildReportPath ? std::optional<std::filesystem::path>(*moduleRebuildReportPath) : std::nullopt,
-                optimizationLevel);
+                config.moduleCachePath ? std::optional<std::filesystem::path>(*config.moduleCachePath) : std::nullopt,
+                config.moduleRebuildReportPath ? std::optional<std::filesystem::path>(*config.moduleRebuildReportPath) : std::nullopt,
+                config.optimizationLevel);
             return 0;
         }
 
         // 普通后端统一经过 IR；O1 优化发生在 IR 和 Bytecode 之间。
-        if (emitBytecodePath || showIr || showBytecode) {
+        if (config.emitBytecodePath || config.showIr || config.showBytecode) {
             IRCompiler compiler;
             IRProgram ir = compiler.compile(program, typeChecker.declarationIndex());
-            ir = optimizeProgram(std::move(ir), optimizationLevel);
+            ir = optimizeProgram(std::move(ir), config.optimizationLevel);
 
             std::optional<BytecodeProgram> bytecode;
-            if (emitBytecodePath || showBytecode) {
+            if (config.emitBytecodePath || config.showBytecode) {
                 BytecodeCompiler bytecodeCompiler;
                 bytecode = bytecodeCompiler.compile(ir);
             }
 
-            if (emitBytecodePath) {
+            if (config.emitBytecodePath) {
                 std::ostringstream artifact;
                 writeBytecodeText(artifact, *bytecode);
-                std::ofstream output(*emitBytecodePath);
+                std::ofstream output(*config.emitBytecodePath);
                 if (!output) {
-                    throw std::runtime_error("failed to open bytecode output file: " + *emitBytecodePath);
+                    throw std::runtime_error("failed to open bytecode output file: " + *config.emitBytecodePath);
                 }
                 output << artifact.str();
                 if (!output) {
-                    throw std::runtime_error("failed to write bytecode output file: " + *emitBytecodePath);
+                    throw std::runtime_error("failed to write bytecode output file: " + *config.emitBytecodePath);
                 }
                 return 0;
             }
@@ -802,12 +559,12 @@ int main(int argc, char** argv)
                 emittedSection = true;
             };
 
-            if (showIr) {
+            if (config.showIr) {
                 separateSection();
                 ir.print(std::cout);
             }
 
-            if (showBytecode) {
+            if (config.showBytecode) {
                 separateSection();
                 bytecode->print(std::cout);
             }

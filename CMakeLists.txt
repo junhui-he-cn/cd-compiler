@@ -84,6 +84,7 @@ add_executable(compiler_design
     src/Bytecode.cpp
     src/BytecodeTextEmitter.cpp
     src/BytecodeCompiler.cpp
+    src/CliConfig.cpp
     src/Formatter.cpp
     src/LanguageServer.cpp
     src/ModuleInterfaceEmitter.cpp
