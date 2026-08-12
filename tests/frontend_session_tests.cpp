@@ -926,7 +926,7 @@ void test_module_type_error_recovery(const fs::path& root)
     TypeChecker checker;
     try {
         checker.check(program);
-    } catch (const TypeErrorList& errors) {
+    } catch (const FileDiagnosticErrorList& errors) {
         assert(errors.errors().size() == 2);
         assert(errors.errors()[0].sourceContext().path == pathString(firstFailure));
         assert(errors.errors()[0].message() == "undefined variable `missing_a_first`");
