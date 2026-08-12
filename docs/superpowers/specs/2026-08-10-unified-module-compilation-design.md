@@ -95,8 +95,7 @@ that leaves the module graph empty for combined entry programs.
   1. deduplicate canonical entry paths;
   2. call `loadFile(path, isImport=false, isEntry=true, fileDiagnostics=true)`
      for each entry in CLI order;
-  3. always `rebuildModuleGraph()`, `rebuildCombinedSource()`, and
-     `assembleProgram()` in module shape.
+  3. always `rebuildModuleGraph()` and `assembleProgram()` in module shape.
 - `loadStdin(input)` loads one pathless entry module and rejects parsed
   top-level imports.
 - Delete: `directInputs_`, `directSourceLineStarts_`, `directDisplayTokens_`,

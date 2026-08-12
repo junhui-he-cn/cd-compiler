@@ -72,8 +72,8 @@ CLI 参数解析/校验（main.cpp）
 
 每次加载入口（`loadFiles` / `loadStdin` / `loadVirtualFiles`）都会先调用 `reset()`（`src/FrontendSession.cpp:313`），清空：
 
-- `units_`（已加载模块记录）、`canonicalToUnitId_`（canonical path -> unit id 映射）、`loadingStack_`（循环检测栈）、`entryUnitIds_`；
-- `sourceFiles_`、`directEntryCanonicalPaths_`、`combinedSource_`、`moduleGraph_`、`preloadedModuleInterfaces_`；
+- `units_`（已加载模块记录）、`canonicalToUnitId_`（canonical path -> unit id 映射）、`loadingStack_`（循环检测栈）；
+- `sourceFiles_`、`directEntryCanonicalPaths_`、`moduleGraph_`、`preloadedModuleInterfaces_`；
 - `moduleProductCacheLoad_`（manifest 惰性缓存）、`virtualSources_`、`virtualSourceMode_`。
 
 配置必须在加载之前通过 setter 设置：
@@ -115,13 +115,13 @@ struct ParsedUnit {
 1. 把所有 CLI 路径先做 `normalizedExistingPath` 并写入 `directEntryCanonicalPaths_`：这个集合让“CLI 文件同时又被 import”的模块永远走源码解析，不会使用 sidecar。
 2. 按 CLI 顺序逐个 `loadFile(path, isImport=false, isEntry=true)`。
 3. **入口错误聚合**：每个 entry 的 `FileDiagnosticErrorList` / `FileDiagnosticError`（lex/parse 错误）被收集到 `entryErrors`；全部入口处理完后再一次性抛出。这样 `compiler_design a.cd b.cd` 中两个文件各自的词法/语法错误都会报告。import/循环等 locationless 加载错误不属于这两个类型，仍然立即抛出（stop-first）。
-4. 全部成功后 `rebuildModuleGraph()` -> `rebuildCombinedSource()` -> `assembleProgram()`。
+4. 全部成功后 `rebuildModuleGraph()` -> `assembleProgram()`。
 
 **`loadStdin(input)`（`src/FrontendSession.cpp:537`）—— LSP 单文档与内部测试**
 
 1. 源码作为 `<stdin>`、source id 0 的 entry 模块。
 2. `parseSource("<stdin>", source, pathless=true, 0)`：lex + parse 一步完成并包装为 pathless `FileDiagnosticError(List)`。
-3. `hasImportToken(tokens)` 或 `programLoadsSource(parsed)`（带 `from` 的 re-export）命中即抛 `Import error: import is not supported from stdin`。
+3. `hasImportToken(tokens)` 或顶层带 `from` 的 `ExportStmt` 命中即抛 `Import error: import is not supported from stdin`。
 4. 构造单 unit -> `rebuildModuleGraph()` -> `assembleProgram()`。
 
 **`loadVirtualFiles(files)`（`src/FrontendSession.cpp:603`）—— LSP workspace**
@@ -140,8 +140,7 @@ struct ParsedUnit {
 4. **虚拟/磁盘边界**：虚拟模式下，不在 `virtualSources_` 且 import 不在任何 `virtualImportRoots_` 内 -> 拒绝；否则 `canOpenFile` 检查。entry 失败抛 `failed to open input file: <path>`（`std::runtime_error`），import 失败抛 Import 诊断。
 5. `loadingStack_.push_back(canonicalPath)` 后读源码（虚拟源优先）。
 6. **缓存 sidecar 预载**（仅 `isImport` 且 canonical path 不在 `directEntryCanonicalPaths_`）：见 4.4。成功则直接构造“无 body”unit 并返回；失败按 strict/fallback 决定抛错或继续源码解析。
-7. **词法**：`Lexer(source).scanTokens()`，随后 `annotateSourceTokens` 把 `source`/`sourceLine`/`sourceId`/`range`（快照本地半开字节区间）写到每个 token。`LexErrorList`/`DiagnosticError` 在此包装为带文件的诊断。
-8. **语法**：`Parser.parse()` 产出 AST；parser recovery 可能一次性带出多条 parse 诊断。
+7. **词法/语法**：`parseSource(displayPath, source, pathless=false, sourceId)` 一步完成 lex + token 标注 + parse，并把 `LexErrorList`/`ParseErrorList`/`DiagnosticError` 统一包装为带文件的诊断；parser recovery 可能一次性带出多条 parse 诊断。
 9. **import/export 发现**：遍历顶层语句，`ImportStmt` 和带 `sourcePath` 的 `ExportStmt` 经 `resolveImportPath` 得到候选路径，递归 `loadFile(resolution.path, true, false)` 并把返回的 id 写回 `resolvedModuleId`。**依赖先于导入方入列**，因此 `units_`/图节点天然是依赖先序。
 10. **注册**：`unit.id = units_.size()`，压入 `units_`，写入 `canonicalToUnitId_`，`loadingStack_.pop_back()`，返回 id。
 
@@ -190,13 +189,10 @@ struct ParsedUnit {
 - 带 artifact 且无语句的 unit：从 `artifact.dependencies` 生成边（identity 必须能在 `canonicalToUnitId_` 中找到）；
 - 普通 unit：遍历语句，`ImportStmt` -> `Import` 边，带 `sourcePath` 的 `ExportStmt` -> `ReExport` 边（requested path 保持源码原文）。
 
-`rebuildCombinedSource()`（`src/FrontendSession.cpp:978`）把全部模块源码按“换行分隔”拼成 `combinedSource_`，供 `--tokens` 的合成 EOF、`sourceForDiagnostics()` 回退显示以及内部测试使用。
-
 ### 4.7 观察与诊断接口
 
 - `displayTokens()`（`src/FrontendSession.cpp:986`）：按 `units_` 顺序输出每个模块 token（跳过各 unit 的 EOF），行号叠加到累计偏移，最后合成一个 EOF；供 `--tokens`。
 - `losslessSourceView()`（`src/FrontendSession.cpp:1018`）：按 source id 收集 token，`buildLosslessSourceFileView` 重建注释/空白；供 `--format` / `--format-check`。
-- `sourceForDiagnostics()`：返回 `combinedSource_`，保留给 locationless `DiagnosticError` 的兜底显示。
 - `moduleCount()` / `moduleGraph()` / `preloadedModuleInterfaces()`：供 `main.cpp`、TypeChecker 与测试查询。
 
 **诊断路径规则**：
