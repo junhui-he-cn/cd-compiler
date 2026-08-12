@@ -12,8 +12,13 @@
 | `include/` + `src/`（Lexer/Parser/Ast） | 词法、语法分析，AST 定义与打印 |
 | `include/FrontendSession.hpp` + `src/FrontendSession.cpp` | 源码加载、import 解析、模块图构建、缓存 sidecar 预载 |
 | `include/DeclarationIndex.hpp` + `src/DeclarationIndex.cpp` | 声明/符号/类型表达式/作用域等快照元数据 |
-| `include/TypeChecker.hpp` + `src/TypeChecker.cpp` | 类型检查、nullable flow（核心与语句/表达式/函数检查） |
+| `include/TypeChecker.hpp` + `src/TypeChecker.cpp` | TypeChecker 入口、作用域/声明、语句分发（核心） |
+| `include/TypeCheckerInternal.hpp` | TypeChecker 各实现文件共享的内部辅助函数（非公共 API） |
 | `src/TypeCheckerModules.cpp` | 模块图调度、模块接口生成/校验、import/export 与命名空间处理 |
+| `src/TypeCheckerTypes.cpp` | struct/enum/impl/method 声明、签名解析与类型声明检查 |
+| `src/TypeCheckerFunctions.cpp` | 函数/泛型/调用、能力约束、调用副作用失效 |
+| `src/TypeCheckerExpressions.cpp` | 表达式检查、字面量/构造/match/pattern、native 与成员调用、索引/字段/一元/二元 |
+| `src/TypeCheckerFlow.cpp` | nullable flow 收窄与事实命名 |
 | `include/ModuleInterface*` | 内存模块接口与 `cdi 0.1` sidecar 产物 |
 | `include/ModuleGraph.hpp` | 模块图节点/边值类型 |
 | `include/ModuleCache.hpp` + `src/ModuleCache.cpp` | 模块产物缓存 key、`cdbc-cache 0.2` manifest |
