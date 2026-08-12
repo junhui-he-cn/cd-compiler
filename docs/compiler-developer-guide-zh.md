@@ -12,7 +12,8 @@
 | `include/` + `src/`（Lexer/Parser/Ast） | 词法、语法分析，AST 定义与打印 |
 | `include/FrontendSession.hpp` + `src/FrontendSession.cpp` | 源码加载、import 解析、模块图构建、缓存 sidecar 预载 |
 | `include/DeclarationIndex.hpp` + `src/DeclarationIndex.cpp` | 声明/符号/类型表达式/作用域等快照元数据 |
-| `include/TypeChecker.hpp` + `src/TypeChecker.cpp` | 类型检查、nullable flow、模块接口生成 |
+| `include/TypeChecker.hpp` + `src/TypeChecker.cpp` | 类型检查、nullable flow（核心与语句/表达式/函数检查） |
+| `src/TypeCheckerModules.cpp` | 模块图调度、模块接口生成/校验、import/export 与命名空间处理 |
 | `include/ModuleInterface*` | 内存模块接口与 `cdi 0.1` sidecar 产物 |
 | `include/ModuleGraph.hpp` | 模块图节点/边值类型 |
 | `include/ModuleCache.hpp` + `src/ModuleCache.cpp` | 模块产物缓存 key、`cdbc-cache 0.2` manifest |

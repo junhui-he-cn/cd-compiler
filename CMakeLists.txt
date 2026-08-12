@@ -60,6 +60,7 @@ set(COMPILER_DESIGN_FRONTEND_SOURCES
     src/Parser.cpp
     src/SourceMap.cpp
     src/TypeChecker.cpp
+    src/TypeCheckerModules.cpp
     src/TypeUtils.cpp
     src/Value.cpp
 )
