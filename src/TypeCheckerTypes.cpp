@@ -775,8 +775,6 @@ void TypeChecker::registerMethodSignature(const StructTypeDecl& structType, cons
         "__method_" + statement.typeName.lexeme + "_" + methodLabel);
     info.genericParameters = typeParameterNames(method.typeParameters);
     info.genericParameterConstraints = std::move(genericParameterConstraints);
-    static_cast<void>(nextDeclarationId_++);
-    static_cast<void>(nextSymbolId_++);
     structMethods.emplace(method.name.lexeme, std::move(info));
 }
 
@@ -794,13 +792,23 @@ void TypeChecker::checkMethodBody(const std::string& structName, const MethodInf
     std::vector<BindingId> parameterBindingIds;
     parameterBindingIds.reserve(declaration.parameters.size() + 1);
     Token thisToken{TokenType::Identifier, "this", declaration.name.line, declaration.name.column};
-    Binding thisBinding = declareVariable(thisToken, method.receiverType, true);
+    const DeclarationRecord* thisRecord = nullptr;
+    const std::vector<DeclarationId> methodParameterIds
+        = declarationIndex_.functionParameterDeclarations(declaration);
+    if (!methodParameterIds.empty()) {
+        thisRecord = declarationIndex_.declaration(methodParameterIds.front());
+    }
+    Binding thisBinding = declareVariable(thisToken, method.receiverType, true, thisRecord);
     parameterNames.push_back(thisBinding.resolvedName);
     parameterBindingIds.push_back(thisBinding.bindingId);
 
     for (std::size_t i = 0; i < declaration.parameters.size(); ++i) {
         const Parameter& parameter = declaration.parameters[i];
-        Binding parameterBinding = declareVariable(parameter.name, method.parameterTypes[i], parameter.typeName.has_value());
+        Binding parameterBinding = declareVariable(
+            parameter.name,
+            method.parameterTypes[i],
+            parameter.typeName.has_value(),
+            declarationIndex_.declaration(parameter));
         parameterNames.push_back(parameterBinding.resolvedName);
         parameterBindingIds.push_back(parameterBinding.bindingId);
     }

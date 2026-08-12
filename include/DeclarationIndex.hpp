@@ -300,9 +300,8 @@ public:
     std::optional<ResolvedSymbol> compoundAssignmentReference(const CompoundAssignExpr& expression) const;
 
     // Validates that the collected and checker-produced semantic records are
-    // complete and source-consistent. IDs are owned by different migration
-    // snapshots, so validation uses declaration kind/name/range rather than
-    // raw integer equality across the two collectors.
+    // complete and source-consistent. Checker bindings source their ids from
+    // this index, so declaration/symbol ids must match exactly.
     std::size_t validateMetadata() const;
 
 private:

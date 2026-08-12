@@ -1495,14 +1495,18 @@ std::size_t DeclarationIndex::validateMetadata() const
             && binding.resolvedName.substr(0, binding.resolvedName.find('#')) == target.name
             && sameRange(binding.range, target.range)
             && binding.symbol.declarationId.valid()
-            && binding.symbol.symbolId.valid();
+            && binding.symbol.symbolId.valid()
+            && binding.symbol.declarationId == target.declarationId
+            && binding.symbol.symbolId == target.symbolId;
     };
     const auto patternBindingMatches = [](const PatternBindingRecord& binding, const DeclarationRecord& target) {
         return binding.bindingId.valid()
             && binding.resolvedName.substr(0, binding.resolvedName.find('#')) == target.name
             && sameRange(binding.range, target.range)
             && binding.symbol.declarationId.valid()
-            && binding.symbol.symbolId.valid();
+            && binding.symbol.symbolId.valid()
+            && binding.symbol.declarationId == target.declarationId
+            && binding.symbol.symbolId == target.symbolId;
     };
     const auto validateBindingMetadata = [&](const BindingMetadataRecord& metadata) {
         return metadata.bindingId.valid()

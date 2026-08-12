@@ -172,8 +172,9 @@ void TypeChecker::checkFunction(const FunctionStmt& statement)
             declaredParameterTypes,
             expectedReturnType ? *expectedReturnType : unknownType(),
             typeParameterNames(statement.typeParameters),
-        genericParameterConstraints),
-        statement.returnTypeName.has_value());
+            genericParameterConstraints),
+        statement.returnTypeName.has_value(),
+        declarationIndex_.declaration(statement));
 
     beginScope();
     ++functionDepth_;
@@ -185,7 +186,11 @@ void TypeChecker::checkFunction(const FunctionStmt& statement)
     parameterBindingIds.reserve(statement.parameters.size());
     for (std::size_t i = 0; i < statement.parameters.size(); ++i) {
         const Parameter& parameter = statement.parameters[i];
-        Binding parameterBinding = declareVariable(parameter.name, declaredParameterTypes[i], parameter.typeName.has_value());
+        Binding parameterBinding = declareVariable(
+            parameter.name,
+            declaredParameterTypes[i],
+            parameter.typeName.has_value(),
+            declarationIndex_.declaration(parameter));
         parameterNames.push_back(parameterBinding.resolvedName);
         parameterBindingIds.push_back(parameterBinding.bindingId);
     }
@@ -536,7 +541,8 @@ TypeChecker::CheckedExpression TypeChecker::checkFunctionExpression(const Functi
         Binding parameterBinding = declareVariable(
             parameter.name,
             declaredParameterTypes[i],
-            parameter.typeName.has_value() || contextualSignature != nullptr);
+            parameter.typeName.has_value() || contextualSignature != nullptr,
+            declarationIndex_.declaration(parameter));
         parameterNames.push_back(parameterBinding.resolvedName);
         parameterBindingIds.push_back(parameterBinding.bindingId);
     }
@@ -738,4 +744,3 @@ void TypeChecker::invalidateCapturedSymbols(const CaptureRecord& captures)
         }
     }
 }
-

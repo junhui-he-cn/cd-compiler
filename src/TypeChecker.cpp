@@ -90,8 +90,6 @@ void TypeChecker::check(const Program& program)
         nextResolvedName_ = std::max(nextResolvedName_, interfaceInfo.resolvedNameNext);
     }
     nextBindingId_ = 0;
-    nextDeclarationId_ = 0;
-    nextSymbolId_ = 0;
     nextScopeId_ = 0;
     functionDepth_ = 0;
     loopDepth_ = 0;
@@ -278,7 +276,8 @@ const TypeChecker::Binding* TypeChecker::findSimpleVariableBinding(const Expr& e
 TypeChecker::Binding TypeChecker::declareVariable(
     const Token& name,
     TypeInfo type,
-    bool explicitType)
+    bool explicitType,
+    const DeclarationRecord* record)
 {
     auto& scope = currentScope();
     if (scope.find(name.lexeme) != scope.end()) {
@@ -293,9 +292,15 @@ TypeChecker::Binding TypeChecker::declareVariable(
     binding.explicitType = explicitType;
     binding.imported = false;
     binding.bindingId = BindingId{nextBindingId_++};
-    binding.declarationId = DeclarationId{nextDeclarationId_++};
-    binding.symbolId = SymbolId{nextSymbolId_++};
-    binding.scopeId = currentScopeId();
+    if (record) {
+        binding.declarationId = record->declarationId;
+        binding.symbolId = record->symbolId;
+        binding.scopeId = record->scopeId;
+    } else {
+        binding.declarationId = DeclarationId{};
+        binding.symbolId = SymbolId{};
+        binding.scopeId = currentScopeId();
+    }
     binding.range = name.range;
     scope.emplace(name.lexeme, binding);
     return binding;
@@ -306,7 +311,11 @@ TypeChecker::Binding TypeChecker::declareVariable(
     TypeInfo type,
     bool explicitType)
 {
-    Binding binding = declareVariable(statement.name, std::move(type), explicitType);
+    Binding binding = declareVariable(
+        statement.name,
+        std::move(type),
+        explicitType,
+        declarationIndex_.declaration(statement));
     declarationIndex_.recordLetBinding(
         statement,
         BindingMetadataRecord{
@@ -355,8 +364,6 @@ void TypeChecker::predeclareStructDeclaration(const StructDeclStmt& statement)
     structTypes_.emplace(statement.name.lexeme, std::move(declaration));
     structDeclarations_.emplace(statement.name.lexeme, &statement);
     structCheckStates_.emplace(statement.name.lexeme, StructCheckState::Declared);
-    static_cast<void>(nextDeclarationId_++);
-    static_cast<void>(nextSymbolId_++);
 
     if (!moduleStack_.empty()) {
         moduleSymbols_.markLocalStruct(moduleStack_.back(), statement.name.lexeme);
@@ -406,8 +413,6 @@ void TypeChecker::predeclareEnumDeclarations(const std::vector<StmtPtr>& stateme
                     {}});
             enumDeclarations_.emplace(enumDecl->name.lexeme, enumDecl);
             enumCheckStates_.emplace(enumDecl->name.lexeme, EnumCheckState::Declared);
-            static_cast<void>(nextDeclarationId_++);
-            static_cast<void>(nextSymbolId_++);
             if (!moduleStack_.empty()) {
                 moduleSymbols_.markLocalEnum(moduleStack_.back(), enumDecl->name.lexeme);
             }
@@ -684,7 +689,11 @@ void TypeChecker::checkStatement(const Stmt& statement)
         }
 
         beginScope();
-        const Binding itemBinding = declareVariable(forInStmt->variable, elementType, false);
+        const Binding itemBinding = declareVariable(
+            forInStmt->variable,
+            elementType,
+            false,
+            declarationIndex_.declaration(*forInStmt));
         declarationIndex_.recordForInBinding(
             *forInStmt,
             BindingMetadataRecord{

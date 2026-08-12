@@ -504,7 +504,11 @@ bool TypeChecker::checkPattern(
             coversStruct = true;
             return true;
         }
-        const Binding binding = declareVariable(variable->name, expectedType, false);
+        const Binding binding = declareVariable(
+            variable->name,
+            expectedType,
+            false,
+            declarationIndex_.declaration(*variable));
         declarationIndex_.recordPatternBinding(
             *variable,
             PatternBindingRecord{
@@ -682,7 +686,8 @@ bool TypeChecker::checkPattern(
                 const Binding binding = declareVariable(
                     entry.second.token,
                     entry.second.type,
-                    false);
+                    false,
+                    declarationIndex_.declaration(*entry.second.occurrences.front()));
                 for (const VariablePattern* occurrence : entry.second.occurrences) {
                     declarationIndex_.recordPatternBinding(
                         *occurrence,

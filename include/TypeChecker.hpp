@@ -108,7 +108,8 @@ private:
     Binding declareVariable(
         const Token& name,
         TypeInfo type,
-        bool explicitType = false);
+        bool explicitType = false,
+        const DeclarationRecord* record = nullptr);
     Binding declareVariable(
         const LetStmt& statement,
         TypeInfo type,
@@ -393,8 +394,6 @@ private:
     const Program* currentProgram_ = nullptr;
     std::size_t nextResolvedName_ = 0;
     std::size_t nextBindingId_ = 0;
-    std::size_t nextDeclarationId_ = 0;
-    std::size_t nextSymbolId_ = 0;
     std::size_t nextScopeId_ = 0;
     std::size_t functionDepth_ = 0;
     std::size_t loopDepth_ = 0;
