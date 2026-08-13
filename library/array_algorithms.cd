@@ -354,15 +354,8 @@ fun huffmanMergeCost(weights: [number]): optional<number> {
 
   let total = 0;
   while (working.size() > 1) {
-    let first = working.take();
-    if (first == nil) {
-      return nil;
-    }
-    let firstValue: number = first;
-    let second = working.take();
-    if (second == nil) {
-      return nil;
-    }
+    let firstValue = working.take()?;
+    let second = working.take()?;
     let merged = firstValue + second;
     total += merged;
     working.add(merged);
@@ -429,19 +422,20 @@ fun mergeSortedArrays<T>(sequences: [[T]], less: fun(T, T): bool): [T] {
   }
 
   while (!heads.isEmpty()) {
-    let head = heads.take();
-    if (head == nil) {
-      break;
-    }
-    result.push(head.value);
-    let nextPosition = head.position + 1;
-    if (nextPosition < sequences[head.sequence].len()) {
-      heads.add(MergeHead<T> {
-        value: sequences[head.sequence][nextPosition],
-        sequence: head.sequence,
-        position: nextPosition,
-        less: less
-      });
+    match heads.take() {
+      nil => { break; }
+      head => {
+        result.push(head.value);
+        let nextPosition = head.position + 1;
+        if (nextPosition < sequences[head.sequence].len()) {
+          heads.add(MergeHead<T> {
+            value: sequences[head.sequence][nextPosition],
+            sequence: head.sequence,
+            position: nextPosition,
+            less: less
+          });
+        }
+      }
     }
   }
   return result;

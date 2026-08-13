@@ -9,8 +9,7 @@ list.pushFront(0);
 print list.snapshot();
 
 let held = list.nodeAt(1);
-if (held != nil) {
-  let heldNode: ds.LinkedNode<number> = held;
+if let heldNode = held {
   heldNode.setValue(20);
   print heldNode.readValue();
   print heldNode.nextNode();
@@ -19,8 +18,8 @@ if (held != nil) {
 
 let removed = list.nodeAt(0);
 print list.popFront();
-if (removed != nil) {
-  print removed.readValue();
+if let removedValue = removed {
+  print removedValue.readValue();
 }
 print list.snapshot();
 

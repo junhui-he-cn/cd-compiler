@@ -1,0 +1,3 @@
+Type error at <repo>/tests/golden/type_errors/unwrap_requires_optional_return.cd:3:12: `?` requires the enclosing function to return optional<T>
+    let y = x?;
+             ^

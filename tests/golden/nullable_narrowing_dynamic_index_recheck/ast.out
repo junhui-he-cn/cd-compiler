@@ -1,9 +1,0 @@
-Program
-  Fun read(values: [optional<number>], index: number): number
-    If (group (== (index values index) nil))
-      Then
-        Block
-          Return 0
-    Return (+ (index values index) 1)
-  Print (call read (array 41) 0)
-  Print (call read (array nil) 0)

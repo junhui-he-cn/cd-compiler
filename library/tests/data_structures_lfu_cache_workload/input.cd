@@ -8,10 +8,9 @@ let checksum = 0;
 while (iteration < 1000) {
   let key = "key" + str(keyIndex);
   let found = cache.get(key);
-  if (found != nil) {
-    checksum += found;
-  } else {
-    cache.put(key, iteration);
+  match found {
+    nil => { cache.put(key, iteration); }
+    value => { checksum += value; }
   }
 
   cache.get("key0");

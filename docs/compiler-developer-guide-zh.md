@@ -18,7 +18,7 @@
 | `src/TypeCheckerTypes.cpp` | struct/enum/impl/method 声明、签名解析与类型声明检查 |
 | `src/TypeCheckerFunctions.cpp` | 函数/泛型/调用、能力约束、调用副作用失效 |
 | `src/TypeCheckerExpressions.cpp` | 表达式检查、字面量/构造/match/pattern、native 与成员调用、索引/字段/一元/二元 |
-| `src/TypeCheckerFlow.cpp` | nullable flow 收窄与事实命名 |
+| （已删除） | nullable flow 收窄已由显式解包（`if let`/`while let`/`?`/`??`）取代 |
 | `include/ModuleInterface*` | 内存模块接口与 `cdi 0.1` sidecar 产物 |
 | `include/ModuleGraph.hpp` | 模块图节点/边值类型 |
 | `include/ModuleCache.hpp` + `src/ModuleCache.cpp` | 模块产物缓存 key、`cdbc-cache 0.2` manifest |
@@ -234,7 +234,7 @@ struct ParsedUnit {
 ### 5.3 检查内容
 
 - 语句/表达式类型检查、重复声明、未定义变量、函数签名与调用兼容、泛型约束。
-- nullable flow：`if`/`while`/`for`/字段/数组索引的 nil 收窄与失效规则（详见 `AGENTS.md` 的 Current Language Semantics）。
+- nullable 解包：`if let` / `while let` / `?` / `??` / `match` 绑定臂；nil 检查不再收窄（详见 `AGENTS.md` 的 Current Language Semantics）。
 - struct/enum 声明、`impl` 方法元数据（operator 重载已移除）。
 - import/export 名称解析与 re-export 兼容性。
 

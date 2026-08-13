@@ -245,15 +245,19 @@ struct MedianHeap {
 impl MedianHeap {
   fun rebalance() {
     if (this.lower.size() > this.upper.size() + 1) {
-      let value = this.lower.take();
-      if (value != nil) {
-        this.upper.add(value);
+      match this.lower.take() {
+        nil => { }
+        value => {
+          this.upper.add(value);
+        }
       }
     }
     if (this.upper.size() > this.lower.size()) {
-      let value = this.upper.take();
-      if (value != nil) {
-        this.lower.add(value);
+      match this.upper.take() {
+        nil => { }
+        value => {
+          this.lower.add(value);
+        }
       }
     }
   }
@@ -262,14 +266,14 @@ impl MedianHeap {
     if (this.lower.isEmpty()) {
       this.lower.add(value);
     } else {
-      let boundary = this.lower.peek();
-      if (boundary == nil) {
-        this.lower.add(value);
-      } else {
+      match this.lower.peek() {
+        nil => { this.lower.add(value); }
+        boundary => {
         if (value <= boundary) {
           this.lower.add(value);
         } else {
           this.upper.add(value);
+        }
         }
       }
     }
@@ -284,15 +288,8 @@ impl MedianHeap {
       return this.lower.peek();
     }
 
-    let lowerValue = this.lower.peek();
-    if (lowerValue == nil) {
-      return nil;
-    }
-    let lowerNumber: number = lowerValue;
-    let upperValue = this.upper.peek();
-    if (upperValue == nil) {
-      return nil;
-    }
+    let lowerNumber = this.lower.peek()?;
+    let upperValue = this.upper.peek()?;
     return (lowerNumber + upperValue) / 2;
   }
 

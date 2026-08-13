@@ -80,6 +80,7 @@ private:
     ExprPtr expression();
     ExprPtr conditionExpression();
     ExprPtr assignment();
+    ExprPtr coalesce();
     bool matchCompoundAssignment();
     ExprPtr logicalOr();
     ExprPtr logicalAnd();

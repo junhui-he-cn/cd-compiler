@@ -133,7 +133,12 @@ void Lexer::scanToken()
         addToken(TokenType::Dot);
         break;
     case '?':
-        addToken(TokenType::Question);
+        if (peek() == '?') {
+            advance();
+            addToken(TokenType::QuestionQuestion);
+        } else {
+            addToken(TokenType::Question);
+        }
         break;
     case '+':
         addToken(match('=') ? TokenType::PlusEqual : TokenType::Plus);
@@ -337,6 +342,8 @@ std::string tokenTypeName(TokenType type)
         return "Dot";
     case TokenType::Question:
         return "Question";
+    case TokenType::QuestionQuestion:
+        return "QuestionQuestion";
     case TokenType::Plus:
         return "Plus";
     case TokenType::Minus:

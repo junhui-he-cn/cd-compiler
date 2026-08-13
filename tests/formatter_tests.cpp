@@ -96,22 +96,21 @@ void test_formats_generic_calls_and_for_headers()
     assert(astFor(source) == astFor(formatted));
 }
 
-void test_formats_optional_types_and_rejects_postfix_question()
+void test_formats_optional_types_and_postfix_question()
 {
     const std::string source =
-        "let maybe:optional<[optional<number>]> = nil;\n";
+        "let maybe:optional<[optional<number>]> = nil;\n"
+        "if let v = maybe { print v; }\n"
+        "print maybe??0;\n";
     const std::string formatted = formatLosslessSource(losslessViewFor(source));
-    assert(formatted == "let maybe: optional<[optional<number>]> = nil;\n");
+    const std::string expected =
+        "let maybe: optional<[optional<number>]> = nil;\n"
+        "if let v = maybe {\n"
+        "  print v;\n"
+        "}\n"
+        "print maybe ?? 0;\n";
+    assert(formatted == expected);
     assert(astFor(source) == astFor(formatted));
-
-    try {
-        static_cast<void>(formatLosslessSource(losslessViewFor("let old:number? = nil;\n")));
-    } catch (const std::invalid_argument& error) {
-        assert(std::string(error.what())
-            == "postfix `?` nullable syntax was removed; use `optional<T>`");
-        return;
-    }
-    assert(false && "expected legacy nullable syntax rejection");
 }
 
 void test_preserves_top_level_blank_lines_only()
@@ -215,7 +214,7 @@ int main()
 {
     test_formats_lossless_source_and_preserves_semantics();
     test_formats_generic_calls_and_for_headers();
-    test_formats_optional_types_and_rejects_postfix_question();
+    test_formats_optional_types_and_postfix_question();
     test_preserves_top_level_blank_lines_only();
     test_preserves_supported_trailing_commas();
     test_wraps_long_delimited_lists();

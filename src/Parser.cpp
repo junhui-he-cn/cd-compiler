@@ -727,6 +727,29 @@ StmtPtr Parser::statement()
 StmtPtr Parser::ifStatement()
 {
     Token keyword = previous();
+    if (match(TokenType::Let)) {
+        Token variable = consume(TokenType::Identifier, "expected binding name after `let` in if-let");
+        consume(TokenType::Equal, "expected `=` after if-let binding name");
+        ExprPtr value = conditionExpression();
+        consume(TokenType::LeftBrace, "expected `{` after if-let value");
+        StmtPtr thenBranch = blockStatement();
+
+        StmtPtr elseBranch;
+        if (match(TokenType::Else)) {
+            consume(TokenType::LeftBrace, "expected `{` after `else`");
+            elseBranch = blockStatement();
+        }
+
+        const std::optional<SourceSpan> span = spanForToken(keyword);
+        return withSpan(
+            std::make_unique<IfLetStmt>(
+                std::move(keyword),
+                std::move(variable),
+                std::move(value),
+                std::move(thenBranch),
+                std::move(elseBranch)),
+            span);
+    }
     ExprPtr condition = conditionExpression();
     consume(TokenType::LeftBrace, "expected `{` after if condition");
     StmtPtr thenBranch = blockStatement();
@@ -827,6 +850,18 @@ StmtPtr Parser::forInStatement(Token keyword, Token variable)
 StmtPtr Parser::whileStatement()
 {
     Token keyword = previous();
+    if (match(TokenType::Let)) {
+        Token variable = consume(TokenType::Identifier, "expected binding name after `let` in while-let");
+        consume(TokenType::Equal, "expected `=` after while-let binding name");
+        ExprPtr value = conditionExpression();
+        consume(TokenType::LeftBrace, "expected `{` after while-let value");
+        StmtPtr body = blockStatement();
+        const std::optional<SourceSpan> span = spanForToken(keyword);
+        return withSpan(
+            std::make_unique<WhileLetStmt>(
+                std::move(keyword), std::move(variable), std::move(value), std::move(body)),
+            span);
+    }
     ExprPtr condition = conditionExpression();
     consume(TokenType::LeftBrace, "expected `{` after while condition");
     StmtPtr body = blockStatement();
@@ -927,7 +962,7 @@ ExprPtr Parser::conditionExpression()
 
 ExprPtr Parser::assignment()
 {
-    ExprPtr expr = logicalOr();
+    ExprPtr expr = coalesce();
 
     if (match(TokenType::Equal)) {
         Token equals = previous();
@@ -979,6 +1014,20 @@ ExprPtr Parser::assignment()
         throw ParseError(op, "invalid compound assignment target");
     }
 
+    return expr;
+}
+
+ExprPtr Parser::coalesce()
+{
+    ExprPtr expr = logicalOr();
+    if (match(TokenType::QuestionQuestion)) {
+        Token op = previous();
+        ExprPtr right = coalesce();
+        const std::optional<SourceSpan> span = expr ? expr->span : std::nullopt;
+        expr = withSpan(
+            std::make_unique<CoalesceExpr>(std::move(expr), std::move(op), std::move(right)),
+            span);
+    }
     return expr;
 }
 
@@ -1103,6 +1152,12 @@ ExprPtr Parser::call()
             expr = finishIndex(std::move(expr));
         } else if (match(TokenType::Dot)) {
             expr = finishFieldAccess(std::move(expr));
+        } else if (match(TokenType::Question)) {
+            const Token op = previous();
+            const std::optional<SourceSpan> span = expr ? expr->span : std::nullopt;
+            expr = withSpan(
+                std::make_unique<UnwrapOrReturnExpr>(std::move(expr), op),
+                span);
         } else {
             break;
         }

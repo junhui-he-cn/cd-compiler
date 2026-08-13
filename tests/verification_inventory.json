@@ -4201,27 +4201,6 @@
       "expected_files": []
     },
     {
-      "case_id": "ctest.flow_facts",
-      "runner": "ctest",
-      "result_name": "flow_facts",
-      "stage": "verification",
-      "capability_tags": [
-        "ctest",
-        "flow_facts"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "pass",
-      "boundary_sequence": [
-        "verification"
-      ],
-      "terminal_boundary": "verification",
-      "sources": [
-        "CMakeLists.txt",
-        "tests/flow_facts_tests.cpp"
-      ],
-      "expected_files": []
-    },
-    {
       "case_id": "ctest.formatter",
       "runner": "ctest",
       "result_name": "formatter",
@@ -6028,6 +6007,34 @@
         "tests/golden/parse_errors/generic_struct_missing_args.cd",
         "tests/golden/parse_errors/generic_struct_missing_args.err",
         "tests/golden/parse_errors/generic_struct_missing_args.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
+      "case_id": "golden.parse_errors.if_let_missing_equal",
+      "runner": "golden",
+      "result_name": "parse_errors/if_let_missing_equal default(ast)",
+      "stage": "parse-error",
+      "capability_tags": [
+        "golden",
+        "parse_errors",
+        "fixture:if_let_missing_equal"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/if_let_missing_equal.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/if_let_missing_equal.cd",
+        "tests/golden/parse_errors/if_let_missing_equal.err",
+        "tests/golden/parse_errors/if_let_missing_equal.exit"
       ],
       "fixture": "tests/golden/parse_errors"
     },
@@ -12609,6 +12616,117 @@
       "fixture": "tests/golden/if_else"
     },
     {
+      "case_id": "golden.success.if_let_unwrap.ast",
+      "runner": "golden",
+      "result_name": "if_let_unwrap default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:if_let_unwrap"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/if_let_unwrap/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/if_let_unwrap/ast.out"
+      ],
+      "fixture": "tests/golden/if_let_unwrap"
+    },
+    {
+      "case_id": "golden.success.if_let_unwrap.bytecode",
+      "runner": "golden",
+      "result_name": "if_let_unwrap --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:if_let_unwrap"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/if_let_unwrap/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/if_let_unwrap/bytecode.out"
+      ],
+      "fixture": "tests/golden/if_let_unwrap"
+    },
+    {
+      "case_id": "golden.success.if_let_unwrap.ir",
+      "runner": "golden",
+      "result_name": "if_let_unwrap --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:if_let_unwrap"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/if_let_unwrap/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/if_let_unwrap/ir.out"
+      ],
+      "fixture": "tests/golden/if_let_unwrap"
+    },
+    {
+      "case_id": "golden.success.if_let_unwrap.module_interface",
+      "runner": "golden",
+      "result_name": "if_let_unwrap --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:if_let_unwrap"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/if_let_unwrap/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/if_let_unwrap/module-interface.out"
+      ],
+      "fixture": "tests/golden/if_let_unwrap"
+    },
+    {
       "case_id": "golden.success.import_basic.ast",
       "runner": "golden",
       "result_name": "import_basic default(ast)",
@@ -15191,806 +15309,6 @@
         "tests/golden/nullable_functions/ast.out"
       ],
       "fixture": "tests/golden/nullable_functions"
-    },
-    {
-      "case_id": "golden.success.nullable_if_else_narrowing.ast",
-      "runner": "golden",
-      "result_name": "nullable_if_else_narrowing default(ast)",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "ast-output",
-        "fixture:nullable_if_else_narrowing"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast"
-      ],
-      "terminal_boundary": "ast",
-      "sources": [
-        "tests/golden/nullable_if_else_narrowing/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_if_else_narrowing/ast.out"
-      ],
-      "fixture": "tests/golden/nullable_if_else_narrowing"
-    },
-    {
-      "case_id": "golden.success.nullable_if_else_narrowing.ir",
-      "runner": "golden",
-      "result_name": "nullable_if_else_narrowing --ir",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "ir-output",
-        "fixture:nullable_if_else_narrowing"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir"
-      ],
-      "terminal_boundary": "ir",
-      "sources": [
-        "tests/golden/nullable_if_else_narrowing/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_if_else_narrowing/ir.out"
-      ],
-      "fixture": "tests/golden/nullable_if_else_narrowing"
-    },
-    {
-      "case_id": "golden.success.nullable_if_narrowing.ast",
-      "runner": "golden",
-      "result_name": "nullable_if_narrowing default(ast)",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "ast-output",
-        "fixture:nullable_if_narrowing"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast"
-      ],
-      "terminal_boundary": "ast",
-      "sources": [
-        "tests/golden/nullable_if_narrowing/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_if_narrowing/ast.out"
-      ],
-      "fixture": "tests/golden/nullable_if_narrowing"
-    },
-    {
-      "case_id": "golden.success.nullable_if_narrowing.ir",
-      "runner": "golden",
-      "result_name": "nullable_if_narrowing --ir",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "ir-output",
-        "fixture:nullable_if_narrowing"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir"
-      ],
-      "terminal_boundary": "ir",
-      "sources": [
-        "tests/golden/nullable_if_narrowing/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_if_narrowing/ir.out"
-      ],
-      "fixture": "tests/golden/nullable_if_narrowing"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_dynamic_index_recheck.ast",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_dynamic_index_recheck default(ast)",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "ast-output",
-        "fixture:nullable_narrowing_dynamic_index_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast"
-      ],
-      "terminal_boundary": "ast",
-      "sources": [
-        "tests/golden/nullable_narrowing_dynamic_index_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_dynamic_index_recheck/ast.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_dynamic_index_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_dynamic_index_recheck.bytecode",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_dynamic_index_recheck --bytecode",
-      "stage": "bytecode",
-      "capability_tags": [
-        "golden",
-        "success",
-        "bytecode-output",
-        "fixture:nullable_narrowing_dynamic_index_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode"
-      ],
-      "terminal_boundary": "bytecode",
-      "sources": [
-        "tests/golden/nullable_narrowing_dynamic_index_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_dynamic_index_recheck/bytecode.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_dynamic_index_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_dynamic_index_recheck.ir",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_dynamic_index_recheck --ir",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "ir-output",
-        "fixture:nullable_narrowing_dynamic_index_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir"
-      ],
-      "terminal_boundary": "ir",
-      "sources": [
-        "tests/golden/nullable_narrowing_dynamic_index_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_dynamic_index_recheck/ir.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_dynamic_index_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_dynamic_index_recheck.module_interface",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_dynamic_index_recheck --module-interface",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "module-interface-output",
-        "fixture:nullable_narrowing_dynamic_index_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "module_interface"
-      ],
-      "terminal_boundary": "module_interface",
-      "sources": [
-        "tests/golden/nullable_narrowing_dynamic_index_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_dynamic_index_recheck/module-interface.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_dynamic_index_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_for_in_body_recheck.ast",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_for_in_body_recheck default(ast)",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "ast-output",
-        "fixture:nullable_narrowing_for_in_body_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast"
-      ],
-      "terminal_boundary": "ast",
-      "sources": [
-        "tests/golden/nullable_narrowing_for_in_body_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_for_in_body_recheck/ast.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_for_in_body_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_for_in_body_recheck.bytecode",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_for_in_body_recheck --bytecode",
-      "stage": "bytecode",
-      "capability_tags": [
-        "golden",
-        "success",
-        "bytecode-output",
-        "fixture:nullable_narrowing_for_in_body_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode"
-      ],
-      "terminal_boundary": "bytecode",
-      "sources": [
-        "tests/golden/nullable_narrowing_for_in_body_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_for_in_body_recheck/bytecode.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_for_in_body_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_for_in_body_recheck.ir",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_for_in_body_recheck --ir",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "ir-output",
-        "fixture:nullable_narrowing_for_in_body_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir"
-      ],
-      "terminal_boundary": "ir",
-      "sources": [
-        "tests/golden/nullable_narrowing_for_in_body_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_for_in_body_recheck/ir.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_for_in_body_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_for_in_body_recheck.module_interface",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_for_in_body_recheck --module-interface",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "module-interface-output",
-        "fixture:nullable_narrowing_for_in_body_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "module_interface"
-      ],
-      "terminal_boundary": "module_interface",
-      "sources": [
-        "tests/golden/nullable_narrowing_for_in_body_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_for_in_body_recheck/module-interface.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_for_in_body_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_for_increment_recheck.ast",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_for_increment_recheck default(ast)",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "ast-output",
-        "fixture:nullable_narrowing_for_increment_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast"
-      ],
-      "terminal_boundary": "ast",
-      "sources": [
-        "tests/golden/nullable_narrowing_for_increment_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_for_increment_recheck/ast.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_for_increment_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_for_increment_recheck.bytecode",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_for_increment_recheck --bytecode",
-      "stage": "bytecode",
-      "capability_tags": [
-        "golden",
-        "success",
-        "bytecode-output",
-        "fixture:nullable_narrowing_for_increment_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode"
-      ],
-      "terminal_boundary": "bytecode",
-      "sources": [
-        "tests/golden/nullable_narrowing_for_increment_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_for_increment_recheck/bytecode.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_for_increment_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_for_increment_recheck.ir",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_for_increment_recheck --ir",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "ir-output",
-        "fixture:nullable_narrowing_for_increment_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir"
-      ],
-      "terminal_boundary": "ir",
-      "sources": [
-        "tests/golden/nullable_narrowing_for_increment_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_for_increment_recheck/ir.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_for_increment_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_for_increment_recheck.module_interface",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_for_increment_recheck --module-interface",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "module-interface-output",
-        "fixture:nullable_narrowing_for_increment_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "module_interface"
-      ],
-      "terminal_boundary": "module_interface",
-      "sources": [
-        "tests/golden/nullable_narrowing_for_increment_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_for_increment_recheck/module-interface.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_for_increment_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_loop_control_recheck.ast",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_loop_control_recheck default(ast)",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "ast-output",
-        "fixture:nullable_narrowing_loop_control_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast"
-      ],
-      "terminal_boundary": "ast",
-      "sources": [
-        "tests/golden/nullable_narrowing_loop_control_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_loop_control_recheck/ast.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_loop_control_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_loop_control_recheck.bytecode",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_loop_control_recheck --bytecode",
-      "stage": "bytecode",
-      "capability_tags": [
-        "golden",
-        "success",
-        "bytecode-output",
-        "fixture:nullable_narrowing_loop_control_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode"
-      ],
-      "terminal_boundary": "bytecode",
-      "sources": [
-        "tests/golden/nullable_narrowing_loop_control_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_loop_control_recheck/bytecode.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_loop_control_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_loop_control_recheck.ir",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_loop_control_recheck --ir",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "ir-output",
-        "fixture:nullable_narrowing_loop_control_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir"
-      ],
-      "terminal_boundary": "ir",
-      "sources": [
-        "tests/golden/nullable_narrowing_loop_control_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_loop_control_recheck/ir.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_loop_control_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_loop_control_recheck.module_interface",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_loop_control_recheck --module-interface",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "module-interface-output",
-        "fixture:nullable_narrowing_loop_control_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "module_interface"
-      ],
-      "terminal_boundary": "module_interface",
-      "sources": [
-        "tests/golden/nullable_narrowing_loop_control_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_loop_control_recheck/module-interface.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_loop_control_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_nested_field_recheck.ast",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_nested_field_recheck default(ast)",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "ast-output",
-        "fixture:nullable_narrowing_nested_field_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast"
-      ],
-      "terminal_boundary": "ast",
-      "sources": [
-        "tests/golden/nullable_narrowing_nested_field_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_nested_field_recheck/ast.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_nested_field_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_nested_field_recheck.bytecode",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_nested_field_recheck --bytecode",
-      "stage": "bytecode",
-      "capability_tags": [
-        "golden",
-        "success",
-        "bytecode-output",
-        "fixture:nullable_narrowing_nested_field_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode"
-      ],
-      "terminal_boundary": "bytecode",
-      "sources": [
-        "tests/golden/nullable_narrowing_nested_field_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_nested_field_recheck/bytecode.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_nested_field_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_nested_field_recheck.ir",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_nested_field_recheck --ir",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "ir-output",
-        "fixture:nullable_narrowing_nested_field_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir"
-      ],
-      "terminal_boundary": "ir",
-      "sources": [
-        "tests/golden/nullable_narrowing_nested_field_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_nested_field_recheck/ir.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_nested_field_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_nested_field_recheck.module_interface",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_nested_field_recheck --module-interface",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "module-interface-output",
-        "fixture:nullable_narrowing_nested_field_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "module_interface"
-      ],
-      "terminal_boundary": "module_interface",
-      "sources": [
-        "tests/golden/nullable_narrowing_nested_field_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_nested_field_recheck/module-interface.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_nested_field_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_nested_index_recheck.ast",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_nested_index_recheck default(ast)",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "ast-output",
-        "fixture:nullable_narrowing_nested_index_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast"
-      ],
-      "terminal_boundary": "ast",
-      "sources": [
-        "tests/golden/nullable_narrowing_nested_index_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_nested_index_recheck/ast.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_nested_index_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_nested_index_recheck.bytecode",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_nested_index_recheck --bytecode",
-      "stage": "bytecode",
-      "capability_tags": [
-        "golden",
-        "success",
-        "bytecode-output",
-        "fixture:nullable_narrowing_nested_index_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode"
-      ],
-      "terminal_boundary": "bytecode",
-      "sources": [
-        "tests/golden/nullable_narrowing_nested_index_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_nested_index_recheck/bytecode.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_nested_index_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_nested_index_recheck.ir",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_nested_index_recheck --ir",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "ir-output",
-        "fixture:nullable_narrowing_nested_index_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir"
-      ],
-      "terminal_boundary": "ir",
-      "sources": [
-        "tests/golden/nullable_narrowing_nested_index_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_nested_index_recheck/ir.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_nested_index_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_narrowing_nested_index_recheck.module_interface",
-      "runner": "golden",
-      "result_name": "nullable_narrowing_nested_index_recheck --module-interface",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "module-interface-output",
-        "fixture:nullable_narrowing_nested_index_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "module_interface"
-      ],
-      "terminal_boundary": "module_interface",
-      "sources": [
-        "tests/golden/nullable_narrowing_nested_index_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_nested_index_recheck/module-interface.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_nested_index_recheck"
-    },
-    {
-      "case_id": "golden.success.nullable_truthiness_narrowing.ast",
-      "runner": "golden",
-      "result_name": "nullable_truthiness_narrowing default(ast)",
-      "stage": "semantic",
-      "capability_tags": [
-        "golden",
-        "success",
-        "ast-output",
-        "fixture:nullable_truthiness_narrowing"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "stdout-golden",
-      "boundary_sequence": [
-        "tokens",
-        "ast"
-      ],
-      "terminal_boundary": "ast",
-      "sources": [
-        "tests/golden/nullable_truthiness_narrowing/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_truthiness_narrowing/ast.out"
-      ],
-      "fixture": "tests/golden/nullable_truthiness_narrowing"
     },
     {
       "case_id": "golden.success.optional_type_syntax.ast",
@@ -19394,6 +18712,62 @@
       "fixture": "tests/golden/type_errors"
     },
     {
+      "case_id": "golden.type_errors.coalesce_non_optional",
+      "runner": "golden",
+      "result_name": "type_errors/coalesce_non_optional default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:coalesce_non_optional"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/coalesce_non_optional.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/coalesce_non_optional.cd",
+        "tests/golden/type_errors/coalesce_non_optional.err",
+        "tests/golden/type_errors/coalesce_non_optional.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.coalesce_type_mismatch",
+      "runner": "golden",
+      "result_name": "type_errors/coalesce_type_mismatch default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:coalesce_type_mismatch"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/coalesce_type_mismatch.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/coalesce_type_mismatch.cd",
+        "tests/golden/type_errors/coalesce_type_mismatch.err",
+        "tests/golden/type_errors/coalesce_type_mismatch.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
       "case_id": "golden.type_errors.collection_helper_concat_non_array_right",
       "runner": "golden",
       "result_name": "type_errors/collection_helper_concat_non_array_right default(ast)",
@@ -22054,6 +21428,34 @@
       "fixture": "tests/golden/type_errors"
     },
     {
+      "case_id": "golden.type_errors.if_let_non_optional",
+      "runner": "golden",
+      "result_name": "type_errors/if_let_non_optional default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:if_let_non_optional"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/if_let_non_optional.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/if_let_non_optional.cd",
+        "tests/golden/type_errors/if_let_non_optional.err",
+        "tests/golden/type_errors/if_let_non_optional.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
       "case_id": "golden.type_errors.import_struct_method_namespace_unknown",
       "runner": "golden",
       "result_name": "type_errors/import_struct_method_namespace_unknown default(ast)",
@@ -24210,90 +23612,6 @@
       "fixture": "tests/golden/type_errors"
     },
     {
-      "case_id": "golden.type_errors.nullable_imported_struct_method_assignment",
-      "runner": "golden",
-      "result_name": "type_errors/nullable_imported_struct_method_assignment default(ast)",
-      "stage": "type-error",
-      "capability_tags": [
-        "golden",
-        "type_errors",
-        "fixture:nullable_imported_struct_method_assignment"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "diagnostic-and-exit",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic_diagnostic"
-      ],
-      "terminal_boundary": "semantic_diagnostic",
-      "sources": [
-        "tests/golden/type_errors/nullable_imported_struct_method_assignment.cd"
-      ],
-      "expected_files": [
-        "tests/golden/type_errors/nullable_imported_struct_method_assignment.cd",
-        "tests/golden/type_errors/nullable_imported_struct_method_assignment.err",
-        "tests/golden/type_errors/nullable_imported_struct_method_assignment.exit"
-      ],
-      "fixture": "tests/golden/type_errors"
-    },
-    {
-      "case_id": "golden.type_errors.nullable_imported_struct_method_call_invalidation",
-      "runner": "golden",
-      "result_name": "type_errors/nullable_imported_struct_method_call_invalidation default(ast)",
-      "stage": "type-error",
-      "capability_tags": [
-        "golden",
-        "type_errors",
-        "fixture:nullable_imported_struct_method_call_invalidation"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "diagnostic-and-exit",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic_diagnostic"
-      ],
-      "terminal_boundary": "semantic_diagnostic",
-      "sources": [
-        "tests/golden/type_errors/nullable_imported_struct_method_call_invalidation.cd"
-      ],
-      "expected_files": [
-        "tests/golden/type_errors/nullable_imported_struct_method_call_invalidation.cd",
-        "tests/golden/type_errors/nullable_imported_struct_method_call_invalidation.err",
-        "tests/golden/type_errors/nullable_imported_struct_method_call_invalidation.exit"
-      ],
-      "fixture": "tests/golden/type_errors"
-    },
-    {
-      "case_id": "golden.type_errors.nullable_imported_struct_method_outside",
-      "runner": "golden",
-      "result_name": "type_errors/nullable_imported_struct_method_outside default(ast)",
-      "stage": "type-error",
-      "capability_tags": [
-        "golden",
-        "type_errors",
-        "fixture:nullable_imported_struct_method_outside"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "diagnostic-and-exit",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic_diagnostic"
-      ],
-      "terminal_boundary": "semantic_diagnostic",
-      "sources": [
-        "tests/golden/type_errors/nullable_imported_struct_method_outside.cd"
-      ],
-      "expected_files": [
-        "tests/golden/type_errors/nullable_imported_struct_method_outside.cd",
-        "tests/golden/type_errors/nullable_imported_struct_method_outside.err",
-        "tests/golden/type_errors/nullable_imported_struct_method_outside.exit"
-      ],
-      "fixture": "tests/golden/type_errors"
-    },
-    {
       "case_id": "golden.type_errors.nullable_narrowing_assignment_invalidated",
       "runner": "golden",
       "result_name": "type_errors/nullable_narrowing_assignment_invalidated default(ast)",
@@ -24794,34 +24112,6 @@
         "tests/golden/type_errors/nullable_narrowing_nested_loop_control_unsupported.cd",
         "tests/golden/type_errors/nullable_narrowing_nested_loop_control_unsupported.err",
         "tests/golden/type_errors/nullable_narrowing_nested_loop_control_unsupported.exit"
-      ],
-      "fixture": "tests/golden/type_errors"
-    },
-    {
-      "case_id": "golden.type_errors.nullable_narrowing_outside_branch",
-      "runner": "golden",
-      "result_name": "type_errors/nullable_narrowing_outside_branch default(ast)",
-      "stage": "type-error",
-      "capability_tags": [
-        "golden",
-        "type_errors",
-        "fixture:nullable_narrowing_outside_branch"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "diagnostic-and-exit",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic_diagnostic"
-      ],
-      "terminal_boundary": "semantic_diagnostic",
-      "sources": [
-        "tests/golden/type_errors/nullable_narrowing_outside_branch.cd"
-      ],
-      "expected_files": [
-        "tests/golden/type_errors/nullable_narrowing_outside_branch.cd",
-        "tests/golden/type_errors/nullable_narrowing_outside_branch.err",
-        "tests/golden/type_errors/nullable_narrowing_outside_branch.exit"
       ],
       "fixture": "tests/golden/type_errors"
     },
@@ -26870,6 +26160,90 @@
       "fixture": "tests/golden/type_errors"
     },
     {
+      "case_id": "golden.type_errors.unwrap_non_optional",
+      "runner": "golden",
+      "result_name": "type_errors/unwrap_non_optional default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:unwrap_non_optional"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/unwrap_non_optional.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/unwrap_non_optional.cd",
+        "tests/golden/type_errors/unwrap_non_optional.err",
+        "tests/golden/type_errors/unwrap_non_optional.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.unwrap_requires_function",
+      "runner": "golden",
+      "result_name": "type_errors/unwrap_requires_function default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:unwrap_requires_function"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/unwrap_requires_function.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/unwrap_requires_function.cd",
+        "tests/golden/type_errors/unwrap_requires_function.err",
+        "tests/golden/type_errors/unwrap_requires_function.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.unwrap_requires_optional_return",
+      "runner": "golden",
+      "result_name": "type_errors/unwrap_requires_optional_return default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:unwrap_requires_optional_return"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/unwrap_requires_optional_return.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/unwrap_requires_optional_return.cd",
+        "tests/golden/type_errors/unwrap_requires_optional_return.err",
+        "tests/golden/type_errors/unwrap_requires_optional_return.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
       "case_id": "golden.type_errors.while_body_scope_escape",
       "runner": "golden",
       "result_name": "type_errors/while_body_scope_escape default(ast)",
@@ -28649,6 +28023,35 @@
         "tests/golden/parse_errors/generic_struct_missing_args.cd",
         "tests/golden/parse_errors/generic_struct_missing_args.err",
         "tests/golden/parse_errors/generic_struct_missing_args.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
+      "case_id": "malformed.parse_error.if_let_missing_equal",
+      "runner": "malformed",
+      "result_name": "malformed.parse_error.if_let_missing_equal",
+      "stage": "diagnostic-recovery",
+      "capability_tags": [
+        "malformed",
+        "parser",
+        "diagnostic-recovery",
+        "golden-corpus"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/if_let_missing_equal.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/if_let_missing_equal.cd",
+        "tests/golden/parse_errors/if_let_missing_equal.err",
+        "tests/golden/parse_errors/if_let_missing_equal.exit"
       ],
       "fixture": "tests/golden/parse_errors"
     },
@@ -39811,6 +39214,68 @@
       "fixture": "tests/golden/if_else"
     },
     {
+      "case_id": "rust_vm.golden.if_let_unwrap.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "if_let_unwrap emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:if_let_unwrap"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/if_let_unwrap/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/if_let_unwrap/run.out"
+      ],
+      "fixture": "tests/golden/if_let_unwrap"
+    },
+    {
+      "case_id": "rust_vm.golden.if_let_unwrap.run",
+      "runner": "rust_vm_golden",
+      "result_name": "if_let_unwrap rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:if_let_unwrap"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/if_let_unwrap/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/if_let_unwrap/run.out"
+      ],
+      "fixture": "tests/golden/if_let_unwrap"
+    },
+    {
       "case_id": "rust_vm.golden.import_basic.emit",
       "runner": "rust_vm_golden",
       "result_name": "import_basic emit",
@@ -44029,1680 +43494,6 @@
         "tests/golden/nullable_functions/run.out"
       ],
       "fixture": "tests/golden/nullable_functions"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_if_else_narrowing.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_if_else_narrowing emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_if_else_narrowing"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_if_else_narrowing/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_if_else_narrowing/run.out"
-      ],
-      "fixture": "tests/golden/nullable_if_else_narrowing"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_if_else_narrowing.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_if_else_narrowing rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_if_else_narrowing"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_if_else_narrowing/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_if_else_narrowing/run.out"
-      ],
-      "fixture": "tests/golden/nullable_if_else_narrowing"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_if_narrowing.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_if_narrowing emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_if_narrowing"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_if_narrowing/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_if_narrowing/run.out"
-      ],
-      "fixture": "tests/golden/nullable_if_narrowing"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_if_narrowing.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_if_narrowing rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_if_narrowing"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_if_narrowing/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_if_narrowing/run.out"
-      ],
-      "fixture": "tests/golden/nullable_if_narrowing"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_imported_struct_method.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_imported_struct_method emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_imported_struct_method"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_imported_struct_method/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_imported_struct_method/run.out"
-      ],
-      "fixture": "tests/golden/nullable_imported_struct_method"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_imported_struct_method.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_imported_struct_method rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_imported_struct_method"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_imported_struct_method/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_imported_struct_method/run.out"
-      ],
-      "fixture": "tests/golden/nullable_imported_struct_method"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_logical_multi_narrowing.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_logical_multi_narrowing emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_logical_multi_narrowing"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_logical_multi_narrowing/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_logical_multi_narrowing/run.out"
-      ],
-      "fixture": "tests/golden/nullable_logical_multi_narrowing"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_logical_multi_narrowing.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_logical_multi_narrowing rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_logical_multi_narrowing"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_logical_multi_narrowing/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_logical_multi_narrowing/run.out"
-      ],
-      "fixture": "tests/golden/nullable_logical_multi_narrowing"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_logical_narrowing.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_logical_narrowing emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_logical_narrowing"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_logical_narrowing/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_logical_narrowing/run.out"
-      ],
-      "fixture": "tests/golden/nullable_logical_narrowing"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_logical_narrowing.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_logical_narrowing rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_logical_narrowing"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_logical_narrowing/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_logical_narrowing/run.out"
-      ],
-      "fixture": "tests/golden/nullable_logical_narrowing"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_assignment_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_assignment_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_assignment_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_assignment_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_assignment_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_assignment_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_assignment_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_assignment_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_assignment_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_assignment_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_assignment_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_assignment_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_captured_call_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_captured_call_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_captured_call_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_captured_call_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_captured_call_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_captured_call_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_captured_call_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_captured_call_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_captured_call_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_captured_call_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_captured_call_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_captured_call_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_dynamic_index_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_dynamic_index_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_dynamic_index_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_dynamic_index_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_dynamic_index_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_dynamic_index_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_dynamic_index_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_dynamic_index_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_dynamic_index_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_dynamic_index_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_dynamic_index_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_dynamic_index_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_explicit_else_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_explicit_else_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_explicit_else_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_explicit_else_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_explicit_else_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_explicit_else_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_explicit_else_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_explicit_else_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_explicit_else_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_explicit_else_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_explicit_else_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_explicit_else_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_field_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_field_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_field_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_field_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_field_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_field_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_field_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_field_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_field_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_field_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_field_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_field_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_for_body_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_for_body_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_for_body_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_for_body_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_for_body_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_for_body_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_for_body_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_for_body_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_for_body_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_for_body_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_for_body_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_for_body_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_for_exit_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_for_exit_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_for_exit_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_for_exit_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_for_exit_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_for_exit_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_for_exit_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_for_exit_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_for_exit_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_for_exit_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_for_exit_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_for_exit_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_for_in_body_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_for_in_body_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_for_in_body_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_for_in_body_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_for_in_body_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_for_in_body_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_for_in_body_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_for_in_body_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_for_in_body_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_for_in_body_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_for_in_body_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_for_in_body_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_for_increment_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_for_increment_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_for_increment_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_for_increment_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_for_increment_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_for_increment_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_for_increment_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_for_increment_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_for_increment_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_for_increment_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_for_increment_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_for_increment_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_function_boundary.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_function_boundary emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_function_boundary"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_function_boundary/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_function_boundary/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_function_boundary"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_function_boundary.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_function_boundary rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_function_boundary"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_function_boundary/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_function_boundary/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_function_boundary"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_if_join_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_if_join_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_if_join_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_if_join_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_if_join_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_if_join_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_if_join_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_if_join_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_if_join_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_if_join_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_if_join_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_if_join_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_index_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_index_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_index_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_index_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_index_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_index_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_index_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_index_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_index_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_index_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_index_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_index_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_indirect_call_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_indirect_call_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_indirect_call_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_indirect_call_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_indirect_call_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_indirect_call_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_indirect_call_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_indirect_call_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_indirect_call_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_indirect_call_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_indirect_call_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_indirect_call_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_loop_control_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_loop_control_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_loop_control_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_loop_control_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_loop_control_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_loop_control_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_loop_control_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_loop_control_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_loop_control_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_loop_control_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_loop_control_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_loop_control_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_native_callback_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_native_callback_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_native_callback_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_native_callback_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_native_callback_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_native_callback_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_native_callback_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_native_callback_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_native_callback_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_native_callback_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_native_callback_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_native_callback_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_nested_field_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_nested_field_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_nested_field_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_nested_field_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_nested_field_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_nested_field_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_nested_field_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_nested_field_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_nested_field_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_nested_field_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_nested_field_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_nested_field_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_nested_index_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_nested_index_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_nested_index_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_nested_index_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_nested_index_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_nested_index_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_nested_index_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_nested_index_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_nested_index_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_nested_index_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_nested_index_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_nested_index_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_post_branch_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_post_branch_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_post_branch_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_post_branch_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_post_branch_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_post_branch_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_post_branch_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_post_branch_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_post_branch_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_post_branch_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_post_branch_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_post_branch_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_struct_method_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_struct_method_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_struct_method_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_struct_method_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_struct_method_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_struct_method_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_struct_method_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_struct_method_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_struct_method_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_struct_method_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_struct_method_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_struct_method_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_while_body_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_while_body_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_while_body_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_while_body_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_while_body_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_while_body_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_while_body_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_while_body_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_while_body_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_while_body_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_while_body_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_while_body_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_while_exit_recheck.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_while_exit_recheck emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_narrowing_while_exit_recheck"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_narrowing_while_exit_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_while_exit_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_while_exit_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_narrowing_while_exit_recheck.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_narrowing_while_exit_recheck rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_narrowing_while_exit_recheck"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_narrowing_while_exit_recheck/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_narrowing_while_exit_recheck/run.out"
-      ],
-      "fixture": "tests/golden/nullable_narrowing_while_exit_recheck"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_truthiness_narrowing.emit",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_truthiness_narrowing emit",
-      "stage": "artifact-emission",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "emit",
-        "fixture:nullable_truthiness_narrowing"
-      ],
-      "backend": "cpp",
-      "expected_result_kind": "artifact-exists",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc"
-      ],
-      "terminal_boundary": "cdbc",
-      "sources": [
-        "tests/golden/nullable_truthiness_narrowing/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_truthiness_narrowing/run.out"
-      ],
-      "fixture": "tests/golden/nullable_truthiness_narrowing"
-    },
-    {
-      "case_id": "rust_vm.golden.nullable_truthiness_narrowing.run",
-      "runner": "rust_vm_golden",
-      "result_name": "nullable_truthiness_narrowing rust-run",
-      "stage": "runtime",
-      "capability_tags": [
-        "rust-vm",
-        "golden",
-        "runtime",
-        "fixture:nullable_truthiness_narrowing"
-      ],
-      "backend": "rust-vm",
-      "expected_result_kind": "runtime-stdout",
-      "boundary_sequence": [
-        "tokens",
-        "ast",
-        "semantic",
-        "ir",
-        "bytecode",
-        "cdbc",
-        "rust_decode",
-        "vm_output"
-      ],
-      "terminal_boundary": "vm_output",
-      "sources": [
-        "tests/golden/nullable_truthiness_narrowing/input.cd"
-      ],
-      "expected_files": [
-        "tests/golden/nullable_truthiness_narrowing/run.out"
-      ],
-      "fixture": "tests/golden/nullable_truthiness_narrowing"
     },
     {
       "case_id": "rust_vm.golden.optional_function_values.emit",

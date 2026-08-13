@@ -70,40 +70,6 @@ bool TypeChecker::statementMayFallThrough(const Stmt& statement) const
     return true;
 }
 
-bool TypeChecker::statementContainsBreakForCurrentLoop(const Stmt& statement) const
-{
-    if (dynamic_cast<const BreakStmt*>(&statement)) {
-        return true;
-    }
-    if (dynamic_cast<const WhileStmt*>(&statement)
-        || dynamic_cast<const ForStmt*>(&statement)
-        || dynamic_cast<const ForInStmt*>(&statement)
-        || dynamic_cast<const FunctionStmt*>(&statement)
-        || dynamic_cast<const ImplStmt*>(&statement)) {
-        return false;
-    }
-    if (const auto* block = dynamic_cast<const BlockStmt*>(&statement)) {
-        for (const auto& child : block->statements) {
-            if (statementContainsBreakForCurrentLoop(*child)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    if (const auto* ifStmt = dynamic_cast<const IfStmt*>(&statement)) {
-        return statementContainsBreakForCurrentLoop(*ifStmt->thenBranch)
-            || (ifStmt->elseBranch && statementContainsBreakForCurrentLoop(*ifStmt->elseBranch));
-    }
-    if (const auto* match = dynamic_cast<const MatchStmt*>(&statement)) {
-        for (const MatchArm& arm : match->arms) {
-            if (statementContainsBreakForCurrentLoop(*arm.body)) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 void TypeChecker::checkImplicitNilReturn(
     const Token& functionToken,
     const std::string& functionLabel,
@@ -122,27 +88,23 @@ TypeInfo TypeChecker::checkFunctionBody(
     const std::string& functionLabel)
 {
     std::optional<TypeInfo> result;
-    flowFacts_.withoutNarrowings([&]() {
-        returnContexts_.push_back(FunctionReturnContext{false, simpleType(StaticType::Nil), expectedReturnType});
+    returnContexts_.push_back(FunctionReturnContext{false, simpleType(StaticType::Nil), expectedReturnType});
 
-        for (const auto& child : body) {
-            checkStatement(*child);
+    for (const auto& child : body) {
+        checkStatement(*child);
+    }
+
+    const FunctionReturnContext context = returnContexts_.back();
+    returnContexts_.pop_back();
+
+    if (expectedReturnType) {
+        if (bodyMayFallThrough(body)) {
+            checkImplicitNilReturn(functionToken, functionLabel, *expectedReturnType);
         }
+        return *expectedReturnType;
+    }
 
-        const FunctionReturnContext context = returnContexts_.back();
-        returnContexts_.pop_back();
-
-        if (expectedReturnType) {
-            if (bodyMayFallThrough(body)) {
-                checkImplicitNilReturn(functionToken, functionLabel, *expectedReturnType);
-            }
-            result = *expectedReturnType;
-            return;
-        }
-
-        result = context.sawReturn ? context.returnType : simpleType(StaticType::Nil);
-    });
-    return *result;
+    return context.sawReturn ? context.returnType : simpleType(StaticType::Nil);
 }
 
 void TypeChecker::checkFunction(const FunctionStmt& statement)
@@ -640,10 +602,6 @@ TypeChecker::CheckedExpression TypeChecker::checkCall(const CallExpr& expression
 
     if (isNativeStdlibCall(expression)) {
         const CheckedExpression result = checkNativeStdlibCall(expression);
-        const auto* variable = dynamic_cast<const VariableExpr*>(expression.callee.get());
-        if (variable && isNativeCallbackName(variable->name.lexeme)) {
-            flowFacts_.invalidateAll();
-        }
         return result;
     }
 
@@ -653,68 +611,5 @@ TypeChecker::CheckedExpression TypeChecker::checkCall(const CallExpr& expression
         callee.type,
         expression.typeArguments,
         expression.arguments);
-    invalidateCallEffects(expression);
     return result;
-}
-
-void TypeChecker::invalidateCallEffects(const CallExpr& expression)
-{
-    const CallTargetRecord* callTarget = declarationIndex_.callTarget(expression);
-    if (!callTarget || callTarget->kind != CallTargetKind::Direct) {
-        flowFacts_.invalidateAll();
-        return;
-    }
-
-    const DeclarationRecord* declaration = declarationIndex_.declaration(callTarget->target.declarationId);
-    if (!declaration || !declaration->statement
-        || !dynamic_cast<const FunctionStmt*>(declaration->statement)) {
-        flowFacts_.invalidateAll();
-        return;
-    }
-
-    invalidateCapturedBindings(expression);
-}
-
-void TypeChecker::invalidateCapturedBindings(const CallExpr& expression)
-{
-    const CallTargetRecord* callTarget = declarationIndex_.callTarget(expression);
-    if (!callTarget || callTarget->kind != CallTargetKind::Direct) {
-        return;
-    }
-
-    const DeclarationRecord* declaration = declarationIndex_.declaration(callTarget->target.declarationId);
-    if (!declaration || !declaration->statement) {
-        return;
-    }
-
-    const auto* function = dynamic_cast<const FunctionStmt*>(declaration->statement);
-    if (!function) {
-        return;
-    }
-
-    const CaptureRecord* captures = declarationIndex_.captureMetadata(*function);
-    if (!captures) {
-        return;
-    }
-
-    invalidateCapturedSymbols(*captures);
-}
-
-void TypeChecker::invalidateStructMethodEffects(const MemberCallExpr& expression)
-{
-    const MemberCallMetadataRecord* metadata = declarationIndex_.memberCallMetadata(expression);
-    if (!metadata || !metadata->passesReceiver) {
-        return;
-    }
-
-    flowFacts_.invalidateAll();
-}
-
-void TypeChecker::invalidateCapturedSymbols(const CaptureRecord& captures)
-{
-    for (const ResolvedSymbol& symbol : captures.symbols) {
-        if (const Binding* binding = bindingById(symbol.declarationId)) {
-            flowFacts_.invalidate(binding->resolvedName);
-        }
-    }
 }

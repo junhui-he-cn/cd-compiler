@@ -234,11 +234,33 @@ void writeInlineStmt(std::ostream& out, const Stmt& stmt)
         return;
     }
 
+    if (const auto* ifLetStmt = dynamic_cast<const IfLetStmt*>(&stmt)) {
+        out << "(if-let " << ifLetStmt->variable.lexeme << ' ';
+        writeExpr(out, ifLetStmt->value);
+        out << ' ';
+        writeInlineStmt(out, *ifLetStmt->thenBranch);
+        if (ifLetStmt->elseBranch) {
+            out << ' ';
+            writeInlineStmt(out, *ifLetStmt->elseBranch);
+        }
+        out << ')';
+        return;
+    }
+
     if (const auto* whileStmt = dynamic_cast<const WhileStmt*>(&stmt)) {
         out << "(while ";
         writeExpr(out, whileStmt->condition);
         out << ' ';
         writeInlineStmt(out, *whileStmt->body);
+        out << ')';
+        return;
+    }
+
+    if (const auto* whileLetStmt = dynamic_cast<const WhileLetStmt*>(&stmt)) {
+        out << "(while-let " << whileLetStmt->variable.lexeme << ' ';
+        writeExpr(out, whileLetStmt->value);
+        out << ' ';
+        writeInlineStmt(out, *whileLetStmt->body);
         out << ')';
         return;
     }
@@ -561,6 +583,35 @@ void LogicalExpr::print(std::ostream& out) const
     writeExpr(out, left);
     out << ' ';
     writeExpr(out, right);
+    out << ')';
+}
+
+CoalesceExpr::CoalesceExpr(ExprPtr left, Token op, ExprPtr right)
+    : left(std::move(left))
+    , op(std::move(op))
+    , right(std::move(right))
+{
+}
+
+void CoalesceExpr::print(std::ostream& out) const
+{
+    out << '(' << op.lexeme << ' ';
+    writeExpr(out, left);
+    out << ' ';
+    writeExpr(out, right);
+    out << ')';
+}
+
+UnwrapOrReturnExpr::UnwrapOrReturnExpr(ExprPtr value, Token op)
+    : value(std::move(value))
+    , op(std::move(op))
+{
+}
+
+void UnwrapOrReturnExpr::print(std::ostream& out) const
+{
+    out << '(' << op.lexeme << ' ';
+    writeExpr(out, value);
     out << ')';
 }
 
@@ -1141,6 +1192,45 @@ void IfStmt::print(std::ostream& out, int indent) const
     }
 }
 
+IfLetStmt::IfLetStmt(
+    Token keyword,
+    Token variable,
+    ExprPtr value,
+    StmtPtr thenBranch,
+    StmtPtr elseBranch)
+    : keyword(std::move(keyword))
+    , variable(std::move(variable))
+    , value(std::move(value))
+    , thenBranch(std::move(thenBranch))
+    , elseBranch(std::move(elseBranch))
+{
+}
+
+void IfLetStmt::print(std::ostream& out, int indent) const
+{
+    writeIndent(out, indent);
+    out << "IfLet " << variable.lexeme << '\n';
+
+    writeIndent(out, indent + 1);
+    out << "Value\n";
+    if (value) {
+        writeExpr(out, value);
+        out << '\n';
+    }
+
+    writeIndent(out, indent + 1);
+    out << "Then\n";
+    if (thenBranch) {
+        thenBranch->print(out, indent + 2);
+    }
+
+    if (elseBranch) {
+        writeIndent(out, indent + 1);
+        out << "Else\n";
+        elseBranch->print(out, indent + 2);
+    }
+}
+
 WhileStmt::WhileStmt(ExprPtr condition, StmtPtr body)
     : condition(std::move(condition))
     , body(std::move(body))
@@ -1153,6 +1243,33 @@ void WhileStmt::print(std::ostream& out, int indent) const
     out << "While ";
     writeExpr(out, condition);
     out << '\n';
+
+    writeIndent(out, indent + 1);
+    out << "Body\n";
+    if (body) {
+        body->print(out, indent + 2);
+    }
+}
+
+WhileLetStmt::WhileLetStmt(Token keyword, Token variable, ExprPtr value, StmtPtr body)
+    : keyword(std::move(keyword))
+    , variable(std::move(variable))
+    , value(std::move(value))
+    , body(std::move(body))
+{
+}
+
+void WhileLetStmt::print(std::ostream& out, int indent) const
+{
+    writeIndent(out, indent);
+    out << "WhileLet " << variable.lexeme << '\n';
+
+    writeIndent(out, indent + 1);
+    out << "Value\n";
+    if (value) {
+        writeExpr(out, value);
+        out << '\n';
+    }
 
     writeIndent(out, indent + 1);
     out << "Body\n";
@@ -1428,6 +1545,22 @@ void populateExpr(Expr& expression)
         if (logical->right) {
             populateExpr(*logical->right);
             mergeRange(result, logical->right->range);
+        }
+    } else if (auto* coalesce = dynamic_cast<CoalesceExpr*>(&expression)) {
+        mergeRange(result, tokenRange(coalesce->op));
+        if (coalesce->left) {
+            populateExpr(*coalesce->left);
+            mergeRange(result, coalesce->left->range);
+        }
+        if (coalesce->right) {
+            populateExpr(*coalesce->right);
+            mergeRange(result, coalesce->right->range);
+        }
+    } else if (auto* unwrap = dynamic_cast<UnwrapOrReturnExpr*>(&expression)) {
+        mergeRange(result, tokenRange(unwrap->op));
+        if (unwrap->value) {
+            populateExpr(*unwrap->value);
+            mergeRange(result, unwrap->value->range);
         }
     } else if (auto* grouping = dynamic_cast<GroupingExpr*>(&expression)) {
         if (grouping->expression) {
@@ -1752,6 +1885,20 @@ void populateStmt(Stmt& statement)
             populateStmt(*ifStmt->elseBranch);
             mergeRange(result, ifStmt->elseBranch->range);
         }
+    } else if (auto* ifLetStmt = dynamic_cast<IfLetStmt*>(&statement)) {
+        mergeRange(result, tokenRange(ifLetStmt->variable));
+        if (ifLetStmt->value) {
+            populateExpr(*ifLetStmt->value);
+            mergeRange(result, ifLetStmt->value->range);
+        }
+        if (ifLetStmt->thenBranch) {
+            populateStmt(*ifLetStmt->thenBranch);
+            mergeRange(result, ifLetStmt->thenBranch->range);
+        }
+        if (ifLetStmt->elseBranch) {
+            populateStmt(*ifLetStmt->elseBranch);
+            mergeRange(result, ifLetStmt->elseBranch->range);
+        }
     } else if (auto* whileStmt = dynamic_cast<WhileStmt*>(&statement)) {
         if (whileStmt->condition) {
             populateExpr(*whileStmt->condition);
@@ -1760,6 +1907,16 @@ void populateStmt(Stmt& statement)
         if (whileStmt->body) {
             populateStmt(*whileStmt->body);
             mergeRange(result, whileStmt->body->range);
+        }
+    } else if (auto* whileLetStmt = dynamic_cast<WhileLetStmt*>(&statement)) {
+        mergeRange(result, tokenRange(whileLetStmt->variable));
+        if (whileLetStmt->value) {
+            populateExpr(*whileLetStmt->value);
+            mergeRange(result, whileLetStmt->value->range);
+        }
+        if (whileLetStmt->body) {
+            populateStmt(*whileLetStmt->body);
+            mergeRange(result, whileLetStmt->body->range);
         }
     } else if (auto* forStmt = dynamic_cast<ForStmt*>(&statement)) {
         if (forStmt->initializer) {
@@ -1881,6 +2038,11 @@ void assignExprIds(Expr& expression, std::size_t& next)
     } else if (auto* logical = dynamic_cast<LogicalExpr*>(&expression)) {
         assign(logical->left);
         assign(logical->right);
+    } else if (auto* coalesce = dynamic_cast<CoalesceExpr*>(&expression)) {
+        assign(coalesce->left);
+        assign(coalesce->right);
+    } else if (auto* unwrap = dynamic_cast<UnwrapOrReturnExpr*>(&expression)) {
+        assign(unwrap->value);
     } else if (auto* grouping = dynamic_cast<GroupingExpr*>(&expression)) {
         assign(grouping->expression);
     } else if (auto* call = dynamic_cast<CallExpr*>(&expression)) {
@@ -1992,12 +2154,29 @@ void assignStmtIds(Stmt& statement, std::size_t& next)
         if (ifStmt->elseBranch) {
             assignStmtIds(*ifStmt->elseBranch, next);
         }
+    } else if (auto* ifLetStmt = dynamic_cast<IfLetStmt*>(&statement)) {
+        if (ifLetStmt->value) {
+            assignExprIds(*ifLetStmt->value, next);
+        }
+        if (ifLetStmt->thenBranch) {
+            assignStmtIds(*ifLetStmt->thenBranch, next);
+        }
+        if (ifLetStmt->elseBranch) {
+            assignStmtIds(*ifLetStmt->elseBranch, next);
+        }
     } else if (auto* whileStmt = dynamic_cast<WhileStmt*>(&statement)) {
         if (whileStmt->condition) {
             assignExprIds(*whileStmt->condition, next);
         }
         if (whileStmt->body) {
             assignStmtIds(*whileStmt->body, next);
+        }
+    } else if (auto* whileLetStmt = dynamic_cast<WhileLetStmt*>(&statement)) {
+        if (whileLetStmt->value) {
+            assignExprIds(*whileLetStmt->value, next);
+        }
+        if (whileLetStmt->body) {
+            assignStmtIds(*whileLetStmt->body, next);
         }
     } else if (auto* forStmt = dynamic_cast<ForStmt*>(&statement)) {
         if (forStmt->initializer) {

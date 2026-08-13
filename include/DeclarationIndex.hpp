@@ -248,6 +248,8 @@ public:
     const BindingMetadataRecord* compoundAssignmentBindingMetadata(
         const CompoundAssignExpr& expression) const;
     const BindingMetadataRecord* forInBindingMetadata(const ForInStmt& statement) const;
+    const BindingMetadataRecord* ifLetBindingMetadata(const IfLetStmt& statement) const;
+    const BindingMetadataRecord* whileLetBindingMetadata(const WhileLetStmt& statement) const;
     const FunctionMetadataRecord* functionMetadata(const FunctionStmt& statement) const;
     const FunctionMetadataRecord* functionMetadata(const FunctionExpr& expression) const;
     const FunctionMetadataRecord* functionMetadata(const MethodDecl& method) const;
@@ -325,6 +327,8 @@ private:
         const CompoundAssignExpr& expression,
         BindingMetadataRecord record);
     void recordForInBinding(const ForInStmt& statement, BindingMetadataRecord record);
+    void recordIfLetBinding(const IfLetStmt& statement, BindingMetadataRecord record);
+    void recordWhileLetBinding(const WhileLetStmt& statement, BindingMetadataRecord record);
     void recordFunctionMetadata(const FunctionStmt& statement, FunctionMetadataRecord record);
     void recordFunctionMetadata(const FunctionExpr& expression, FunctionMetadataRecord record);
     void recordFunctionMetadata(const MethodDecl& method, FunctionMetadataRecord record);
@@ -357,6 +361,8 @@ private:
     std::unordered_map<const CompoundAssignExpr*, BindingMetadataRecord>
         compoundAssignmentBindingMetadata_;
     std::unordered_map<const ForInStmt*, BindingMetadataRecord> forInBindingMetadata_;
+    std::unordered_map<const IfLetStmt*, BindingMetadataRecord> ifLetBindingMetadata_;
+    std::unordered_map<const WhileLetStmt*, BindingMetadataRecord> whileLetBindingMetadata_;
     std::unordered_map<const FunctionStmt*, FunctionMetadataRecord> functionMetadata_;
     std::unordered_map<const FunctionExpr*, FunctionMetadataRecord> functionExpressionMetadata_;
     std::unordered_map<const MethodDecl*, FunctionMetadataRecord> methodMetadata_;

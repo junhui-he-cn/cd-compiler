@@ -1,0 +1,30 @@
+fun find(value: number): optional<number> {
+  if (value > 0) {
+    return value + 1;
+  }
+  return nil;
+}
+
+fun process(value: number): optional<string> {
+  let next = find(value)?;
+  return "got:" + str(next);
+}
+
+let maybe: optional<number> = find(5);
+if let v = maybe {
+  print "if-let:" + str(v);
+} else {
+  print "if-let:none";
+}
+print maybe ?? 0;
+print find(-1) ?? 99;
+print process(3) ?? "missing";
+print process(-1) ?? "missing";
+
+let next: optional<number> = find(1);
+let count = 0;
+while let current = next {
+  count += 1;
+  next = nil;
+}
+print count;

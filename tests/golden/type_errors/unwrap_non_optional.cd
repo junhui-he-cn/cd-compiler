@@ -1,0 +1,4 @@
+fun process(value: number): optional<number> {
+  let x = 1;
+  return x?;
+}

@@ -1,0 +1,34 @@
+Program
+  Fun find(value: number): optional<number>
+    If (group (> value 0))
+      Then
+        Block
+          Return (+ value 1)
+    Return nil
+  Fun process(value: number): optional<string>
+    Let next = (? (call find value))
+    Return (+ "got:" (call str next))
+  Let maybe: optional<number> = (call find 5)
+  IfLet v
+    Value
+maybe
+    Then
+      Block
+        Print (+ "if-let:" (call str v))
+    Else
+      Block
+        Print "if-let:none"
+  Print (?? maybe 0)
+  Print (?? (call find (- 1)) 99)
+  Print (?? (call process 3) "missing")
+  Print (?? (call process (- 1)) "missing")
+  Let next: optional<number> = (call find 1)
+  Let count = 0
+  WhileLet current
+    Value
+next
+    Body
+      Block
+        Expr (+= count 1)
+        Expr (= next nil)
+  Print count

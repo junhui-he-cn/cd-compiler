@@ -49,7 +49,6 @@ set(COMPILER_DESIGN_FRONTEND_SOURCES
     src/Ast.cpp
     src/DeclarationIndex.cpp
     src/Diagnostic.cpp
-    src/FlowFacts.cpp
     src/FrontendSession.cpp
     src/Lexer.cpp
     src/LosslessSource.cpp
@@ -61,7 +60,6 @@ set(COMPILER_DESIGN_FRONTEND_SOURCES
     src/SourceMap.cpp
     src/TypeChecker.cpp
     src/TypeCheckerExpressions.cpp
-    src/TypeCheckerFlow.cpp
     src/TypeCheckerFunctions.cpp
     src/TypeCheckerModules.cpp
     src/TypeCheckerTypes.cpp
@@ -363,15 +361,6 @@ add_test(
     COMMAND ${CMAKE_COMMAND} -E env PYTHONDONTWRITEBYTECODE=1
             ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/lsp_tests.py $<TARGET_FILE:compiler_design>
 )
-
-add_executable(flow_facts_tests
-    tests/flow_facts_tests.cpp
-    src/Ast.cpp
-    src/FlowFacts.cpp
-    src/TypeUtils.cpp
-)
-compiler_design_configure_target(flow_facts_tests)
-add_test(NAME flow_facts COMMAND flow_facts_tests)
 
 add_executable(type_utils_tests
     tests/type_utils_tests.cpp

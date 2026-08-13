@@ -89,6 +89,7 @@ bool isBinaryOperator(TokenType type)
     case TokenType::AmpersandAmpersand:
     case TokenType::Pipe:
     case TokenType::PipePipe:
+    case TokenType::QuestionQuestion:
     case TokenType::FatArrow:
         return true;
     default:
@@ -881,8 +882,13 @@ void emitToken(
     case TokenType::AmpersandAmpersand:
     case TokenType::Pipe:
     case TokenType::PipePipe:
+    case TokenType::QuestionQuestion:
     case TokenType::FatArrow:
         emitOperator(state, token, tokens, tokenIndex);
+        break;
+    case TokenType::Question:
+        state.trimTrailingSpaces();
+        state.writeRaw(token.lexeme);
         break;
     default:
         state.writeRaw(token.lexeme);
@@ -923,13 +929,6 @@ std::string formatLosslessSource(const LosslessSourceFileView& source, Formatter
         }
         tokenPieceIndexes.push_back(pieceIndex);
         tokens.push_back(&*pieces[pieceIndex].token);
-    }
-
-    for (const Token* token : tokens) {
-        if (token->type == TokenType::Question) {
-            throw std::invalid_argument(
-                "postfix `?` nullable syntax was removed; use `optional<T>`");
-        }
     }
 
     if (tokens.empty()) {

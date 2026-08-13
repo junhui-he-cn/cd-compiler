@@ -1,0 +1,5 @@
+fun process(value: number): number {
+  let x: optional<number> = nil;
+  let y = x?;
+  return y;
+}

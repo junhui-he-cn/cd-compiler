@@ -1,6 +1,0 @@
-fun takesNumber(value: number): number { return value; }
-let maybe: optional<number> = 1;
-if (maybe != nil) {
-  print takesNumber(maybe);
-}
-let value: number = maybe;

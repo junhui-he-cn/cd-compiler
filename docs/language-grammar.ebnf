@@ -13,8 +13,10 @@ declaration = importDecl
 
 statement   = printStmt
             | ifStmt
+            | ifLetStmt
             | matchStmt
             | whileStmt
+            | whileLetStmt
             | forStmt
             | breakStmt
             | continueStmt
@@ -83,6 +85,9 @@ exportDecl  = "export", identifier,
 ifStmt      = "if", expression, block,
               [ "else", block ] ;
 
+ifLetStmt   = "if", "let", identifier, "=", expression,
+              block, [ "else", block ] ;
+
 matchStmt   = "match", expression, "{", { matchArm }, "}" ;
 
 matchArm    = pattern, [ "if", expression ], "=>", block ;
@@ -122,6 +127,8 @@ recordPatternField = identifier, ":", pattern ;
 
 whileStmt   = "while", expression, block ;
 
+whileLetStmt = "while", "let", identifier, "=", expression, block ;
+
 forStmt     = "for", ( forInClause | cForClause ), block ;
 
 forInClause = identifier, "in", expression ;
@@ -151,8 +158,12 @@ exprStmt    = expression, ";" ;
 
 expression  = assignment ;
 
-assignment  = logicalOr,
+assignment  = coalesce,
               [ ( "=" | "+=" | "-=" | "*=" | "/=" ), assignment ] ;
+
+coalesce    = logicalOr, [ "??", coalesce ] ;
+
+(* `??` is right-associative: `a ?? b ?? c` groups as `a ?? (b ?? c)`. *)
 
 assignmentTarget = identifier
                  | call, "[", expression, "]"
@@ -189,7 +200,12 @@ call        = primary,
               { genericCall
               | "(", [ arguments ], ")"
               | "[", expression, "]"
-              | memberPostfix } ;
+              | memberPostfix
+              | "?" } ;
+
+(* `?` is a postfix unwrap: `expr?` yields the non-nil value or returns nil
+   from the enclosing function when the expression is nil. It is valid only
+   in functions whose return type is `optional<U>`. *)
 
 genericCall = callTypeArguments, "(", [ arguments ], ")" ;
 
@@ -272,7 +288,10 @@ genericTypeArguments = "<", typeExpr,
 functionType = "fun", "(", [ typeArguments ], ")", ":", typeExpr ;
 
 (* A single `|` separates OR-pattern alternatives; `||` remains the logical
-   expression operator. `optional<T>` means `T` or `nil`. Generic enum declarations use `enum Box<T>`, and
+   expression operator. `optional<T>` means `T` or `nil`. Nil checks do not
+   narrow: `if let v = expr` / `while let v = expr` bind a fresh non-nil
+   value, `expr?` unwraps with an early nil return, `left ?? right` provides a
+   fallback, and `match` binding arms bind the non-nil type. Generic enum declarations use `enum Box<T>`, and
    generic enum values use `Box<number>` type annotations. Literal patterns
    match primitive values directly or nested inside enum payloads; nullable
    primitive and enum matches may use `nil`. Named struct values may use

@@ -4,20 +4,18 @@ let source = [[1, 2, 3], [4, 5, 6]];
 let matrix: optional<ds.Matrix> = ds.newMatrix(source);
 print matrix == nil;
 source[0][0] = 99;
-if (matrix != nil) {
-  print matrix.snapshot();
+if let concrete = matrix {
+  print concrete.snapshot();
 }
 
-if (matrix != nil) {
-  let concrete: ds.Matrix = matrix;
+if let concrete = matrix {
   print concrete.snapshot();
   let copied = concrete.snapshot();
   copied[0][0] = -1;
   print concrete.snapshot();
 }
 
-if (matrix != nil) {
-  let concrete: ds.Matrix = matrix;
+if let concrete = matrix {
   print concrete.rowCount();
   print concrete.columnCount();
   print concrete.valueAt(0, 2);
@@ -27,36 +25,29 @@ if (matrix != nil) {
 }
 
 let right: optional<ds.Matrix> = ds.newMatrix([[7, 8], [9, 10], [11, 12]]);
-if (matrix != nil) {
-  if (right != nil) {
-    let concrete: ds.Matrix = matrix;
-    let other: ds.Matrix = right;
+if let concrete = matrix {
+  if let other = right {
     let product = concrete.multiply(other);
-    if (product == nil) {
-      print "none";
-    } else {
-      print product.snapshot();
+    match product {
+      nil => { print "none"; }
+      value => { print value.snapshot(); }
     }
 
     let reverseProduct = other.multiply(concrete);
-    if (reverseProduct == nil) {
-      print "none";
-    } else {
-      print reverseProduct.snapshot();
+    match reverseProduct {
+      nil => { print "none"; }
+      value => { print value.snapshot(); }
     }
   }
 }
 
 let incompatible: optional<ds.Matrix> = ds.newMatrix([[1, 2]]);
-if (matrix != nil) {
-  if (incompatible != nil) {
-    let concrete: ds.Matrix = matrix;
-    let other: ds.Matrix = incompatible;
+if let concrete = matrix {
+  if let other = incompatible {
     let product = concrete.multiply(other);
-    if (product == nil) {
-      print "none";
-    } else {
-      print product.snapshot();
+    match product {
+      nil => { print "none"; }
+      value => { print value.snapshot(); }
     }
   }
 }

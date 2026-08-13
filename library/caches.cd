@@ -20,8 +20,7 @@ impl LruCache<K: Eq, V> {
   // does not retain the rest of the cache through an old node.
   fun findNode(key: K): optional<LinkedNode<LruCacheEntry<K, V>>> {
     let current = this.head;
-    while (current != nil) {
-      let node: LinkedNode<LruCacheEntry<K, V>> = current;
+    while let node = current {
       let entry = node.readValue();
       if (entry.key == key) {
         return node;
@@ -33,29 +32,29 @@ impl LruCache<K: Eq, V> {
 
   fun appendNode(node: LinkedNode<LruCacheEntry<K, V>>) {
     let tail = this.tail;
-    if (tail == nil) {
-      this.head = node;
-      this.tail = node;
-      return;
+    match tail {
+      nil => {
+        this.head = node;
+        this.tail = node;
+      }
+      tailNode => {
+        tailNode.setNext(node);
+        this.tail = node;
+      }
     }
-
-    let tailNode: LinkedNode<LruCacheEntry<K, V>> = tail;
-    tailNode.setNext(node);
-    this.tail = node;
   }
 
   fun unlinkNode(target: LinkedNode<LruCacheEntry<K, V>>) {
     let previous: optional<LinkedNode<LruCacheEntry<K, V>>> = nil;
     let current = this.head;
-    while (current != nil) {
-      let node: LinkedNode<LruCacheEntry<K, V>> = current;
+    while let node = current {
       if (node == target) {
         let next = node.nextNode();
-        if (previous == nil) {
-          this.head = next;
-        } else {
-          let previousNode: LinkedNode<LruCacheEntry<K, V>> = previous;
-          previousNode.setNext(next);
+        match previous {
+          nil => { this.head = next; }
+          previousNode => {
+            previousNode.setNext(next);
+          }
         }
         if (next == nil) {
           this.tail = previous;
@@ -98,11 +97,7 @@ impl LruCache<K: Eq, V> {
   }
 
   fun get(key: K): optional<V> {
-    let found = this.findNode(key);
-    if (found == nil) {
-      return nil;
-    }
-    let node: LinkedNode<LruCacheEntry<K, V>> = found;
+    let node = this.findNode(key)?;
     let entry = node.readValue();
     this.moveToBack(node);
     return entry.value;
@@ -113,21 +108,23 @@ impl LruCache<K: Eq, V> {
       return false;
     }
 
-    let found = this.findNode(key);
-    if (found != nil) {
-      let node: LinkedNode<LruCacheEntry<K, V>> = found;
+    match this.findNode(key) {
+      nil => { }
+      node => {
       let entry = node.readValue();
       entry.value = value;
       node.setValue(entry);
       this.moveToBack(node);
       return true;
+      }
     }
 
     if (this.count >= this.limit) {
-      let head = this.head;
-      if (head != nil) {
-        let headNode: LinkedNode<LruCacheEntry<K, V>> = head;
-        this.removeNode(headNode);
+      match this.head {
+        nil => { }
+        headNode => {
+          this.removeNode(headNode);
+        }
       }
     }
 
@@ -141,20 +138,19 @@ impl LruCache<K: Eq, V> {
   }
 
   fun discard(key: K): bool {
-    let found = this.findNode(key);
-    if (found == nil) {
-      return false;
+    match this.findNode(key) {
+      nil => { return false; }
+      node => {
+        this.removeNode(node);
+        return true;
+      }
     }
-    let node: LinkedNode<LruCacheEntry<K, V>> = found;
-    this.removeNode(node);
-    return true;
   }
 
   fun snapshot(): [LruCacheEntry<K, V>] {
     let result: [LruCacheEntry<K, V>] = [];
     let current = this.head;
-    while (current != nil) {
-      let node: LinkedNode<LruCacheEntry<K, V>> = current;
+    while let node = current {
       let entry = node.readValue();
       result.push(LruCacheEntry<K, V> {
         key: entry.key,
@@ -203,8 +199,7 @@ impl LfuCache<K: Eq, V> {
   // node's lastUsed field and is used only when selecting an eviction.
   fun findNode(key: K): optional<LinkedNode<LfuCacheNode<K, V>>> {
     let current = this.head;
-    while (current != nil) {
-      let node: LinkedNode<LfuCacheNode<K, V>> = current;
+    while let node = current {
       let state = node.readValue();
       if (state.entry.key == key) {
         return node;
@@ -216,29 +211,29 @@ impl LfuCache<K: Eq, V> {
 
   fun appendNode(node: LinkedNode<LfuCacheNode<K, V>>) {
     let tail = this.tail;
-    if (tail == nil) {
-      this.head = node;
-      this.tail = node;
-      return;
+    match tail {
+      nil => {
+        this.head = node;
+        this.tail = node;
+      }
+      tailNode => {
+        tailNode.setNext(node);
+        this.tail = node;
+      }
     }
-
-    let tailNode: LinkedNode<LfuCacheNode<K, V>> = tail;
-    tailNode.setNext(node);
-    this.tail = node;
   }
 
   fun unlinkNode(target: LinkedNode<LfuCacheNode<K, V>>) {
     let previous: optional<LinkedNode<LfuCacheNode<K, V>>> = nil;
     let current = this.head;
-    while (current != nil) {
-      let node: LinkedNode<LfuCacheNode<K, V>> = current;
+    while let node = current {
       if (node == target) {
         let next = node.nextNode();
-        if (previous == nil) {
-          this.head = next;
-        } else {
-          let previousNode: LinkedNode<LfuCacheNode<K, V>> = previous;
-          previousNode.setNext(next);
+        match previous {
+          nil => { this.head = next; }
+          previousNode => {
+            previousNode.setNext(next);
+          }
         }
         if (next == nil) {
           this.tail = previous;
@@ -265,15 +260,9 @@ impl LfuCache<K: Eq, V> {
   }
 
   fun evictionNode(): optional<LinkedNode<LfuCacheNode<K, V>>> {
-    let head = this.head;
-    if (head == nil) {
-      return nil;
-    }
-
-    let candidate: LinkedNode<LfuCacheNode<K, V>> = head;
+    let candidate = this.head?;
     let current = candidate.nextNode();
-    while (current != nil) {
-      let node: LinkedNode<LfuCacheNode<K, V>> = current;
+    while let node = current {
       let state = node.readValue();
       let candidateState = candidate.readValue();
       if (state.entry.frequency < candidateState.entry.frequency
@@ -303,11 +292,7 @@ impl LfuCache<K: Eq, V> {
   }
 
   fun get(key: K): optional<V> {
-    let found = this.findNode(key);
-    if (found == nil) {
-      return nil;
-    }
-    let node: LinkedNode<LfuCacheNode<K, V>> = found;
+    let node = this.findNode(key)?;
     let state = node.readValue();
     let value = state.entry.value;
     this.touch(node);
@@ -315,12 +300,7 @@ impl LfuCache<K: Eq, V> {
   }
 
   fun frequencyOf(key: K): optional<number> {
-    let found = this.findNode(key);
-    if (found == nil) {
-      return nil;
-    }
-    let node: LinkedNode<LfuCacheNode<K, V>> = found;
-    return node.readValue().entry.frequency;
+    return this.findNode(key)?.readValue().entry.frequency;
   }
 
   fun put(key: K, value: V): bool {
@@ -328,21 +308,23 @@ impl LfuCache<K: Eq, V> {
       return false;
     }
 
-    let found = this.findNode(key);
-    if (found != nil) {
-      let node: LinkedNode<LfuCacheNode<K, V>> = found;
-      let state = node.readValue();
-      state.entry.value = value;
-      node.setValue(state);
-      this.touch(node);
-      return true;
+    match this.findNode(key) {
+      nil => { }
+      node => {
+        let state = node.readValue();
+        state.entry.value = value;
+        node.setValue(state);
+        this.touch(node);
+        return true;
+      }
     }
 
     if (this.count >= this.limit) {
-      let eviction = this.evictionNode();
-      if (eviction != nil) {
-        let evictionNode: LinkedNode<LfuCacheNode<K, V>> = eviction;
-        this.removeNode(evictionNode);
+      match this.evictionNode() {
+        nil => { }
+        evictionNode => {
+          this.removeNode(evictionNode);
+        }
       }
     }
 
@@ -361,20 +343,19 @@ impl LfuCache<K: Eq, V> {
   }
 
   fun discard(key: K): bool {
-    let found = this.findNode(key);
-    if (found == nil) {
-      return false;
+    match this.findNode(key) {
+      nil => { return false; }
+      node => {
+        this.removeNode(node);
+        return true;
+      }
     }
-    let node: LinkedNode<LfuCacheNode<K, V>> = found;
-    this.removeNode(node);
-    return true;
   }
 
   fun snapshot(): [LfuCacheEntry<K, V>] {
     let result: [LfuCacheEntry<K, V>] = [];
     let current = this.head;
-    while (current != nil) {
-      let node: LinkedNode<LfuCacheNode<K, V>> = current;
+    while let node = current {
       let state = node.readValue();
       result.push(LfuCacheEntry<K, V> {
         key: state.entry.key,

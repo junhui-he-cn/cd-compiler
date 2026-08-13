@@ -645,9 +645,20 @@ private:
             visitStatement(ifStatement->elseBranch.get());
             return;
         }
+        if (const auto* ifLet = dynamic_cast<const IfLetStmt*>(statement)) {
+            visitExpression(ifLet->value.get());
+            visitStatement(ifLet->thenBranch.get());
+            visitStatement(ifLet->elseBranch.get());
+            return;
+        }
         if (const auto* whileStatement = dynamic_cast<const WhileStmt*>(statement)) {
             visitExpression(whileStatement->condition.get());
             visitStatement(whileStatement->body.get());
+            return;
+        }
+        if (const auto* whileLet = dynamic_cast<const WhileLetStmt*>(statement)) {
+            visitExpression(whileLet->value.get());
+            visitStatement(whileLet->body.get());
             return;
         }
         if (const auto* forStatement = dynamic_cast<const ForStmt*>(statement)) {
@@ -732,6 +743,15 @@ private:
         if (const auto* logical = dynamic_cast<const LogicalExpr*>(expression)) {
             visitExpression(logical->left.get());
             visitExpression(logical->right.get());
+            return;
+        }
+        if (const auto* coalesce = dynamic_cast<const CoalesceExpr*>(expression)) {
+            visitExpression(coalesce->left.get());
+            visitExpression(coalesce->right.get());
+            return;
+        }
+        if (const auto* unwrap = dynamic_cast<const UnwrapOrReturnExpr*>(expression)) {
+            visitExpression(unwrap->value.get());
             return;
         }
         if (const auto* grouping = dynamic_cast<const GroupingExpr*>(expression)) {
@@ -1034,9 +1054,20 @@ private:
             visitStatement(ifStatement->elseBranch.get());
             return;
         }
+        if (const auto* ifLet = dynamic_cast<const IfLetStmt*>(statement)) {
+            visitExpression(ifLet->value.get());
+            visitStatement(ifLet->thenBranch.get());
+            visitStatement(ifLet->elseBranch.get());
+            return;
+        }
         if (const auto* whileStatement = dynamic_cast<const WhileStmt*>(statement)) {
             visitExpression(whileStatement->condition.get());
             visitStatement(whileStatement->body.get());
+            return;
+        }
+        if (const auto* whileLet = dynamic_cast<const WhileLetStmt*>(statement)) {
+            visitExpression(whileLet->value.get());
+            visitStatement(whileLet->body.get());
             return;
         }
         if (const auto* forStatement = dynamic_cast<const ForStmt*>(statement)) {
@@ -1102,6 +1133,15 @@ private:
         if (const auto* logical = dynamic_cast<const LogicalExpr*>(expression)) {
             visitExpression(logical->left.get());
             visitExpression(logical->right.get());
+            return;
+        }
+        if (const auto* coalesce = dynamic_cast<const CoalesceExpr*>(expression)) {
+            visitExpression(coalesce->left.get());
+            visitExpression(coalesce->right.get());
+            return;
+        }
+        if (const auto* unwrap = dynamic_cast<const UnwrapOrReturnExpr*>(expression)) {
+            visitExpression(unwrap->value.get());
             return;
         }
         if (const auto* grouping = dynamic_cast<const GroupingExpr*>(expression)) {

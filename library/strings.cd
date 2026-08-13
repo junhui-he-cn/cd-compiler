@@ -96,11 +96,7 @@ fun compareStrings(left: string, right: string): optional<number> {
 }
 
 fun stringLess(left: string, right: string): bool {
-  let comparison = compareStrings(left, right);
-  if (comparison == nil) {
-    return false;
-  }
-  return comparison < 0;
+  return (compareStrings(left, right) ?? 0) < 0;
 }
 
 fun findSubstring(text: string, pattern: string): number {

@@ -163,6 +163,23 @@ struct LogicalExpr final : Expr {
     ExprPtr right;
 };
 
+struct CoalesceExpr final : Expr {
+    CoalesceExpr(ExprPtr left, Token op, ExprPtr right);
+    void print(std::ostream& out) const override;
+
+    ExprPtr left;
+    Token op;
+    ExprPtr right;
+};
+
+struct UnwrapOrReturnExpr final : Expr {
+    explicit UnwrapOrReturnExpr(ExprPtr value, Token op);
+    void print(std::ostream& out) const override;
+
+    ExprPtr value;
+    Token op;
+};
+
 struct GroupingExpr final : Expr {
     explicit GroupingExpr(ExprPtr expression);
     void print(std::ostream& out) const override;
@@ -508,11 +525,37 @@ struct IfStmt final : Stmt {
     StmtPtr elseBranch;
 };
 
+struct IfLetStmt final : Stmt {
+    IfLetStmt(
+        Token keyword,
+        Token variable,
+        ExprPtr value,
+        StmtPtr thenBranch,
+        StmtPtr elseBranch);
+    void print(std::ostream& out, int indent) const override;
+
+    Token keyword;
+    Token variable;
+    ExprPtr value;
+    StmtPtr thenBranch;
+    StmtPtr elseBranch;
+};
+
 struct WhileStmt final : Stmt {
     WhileStmt(ExprPtr condition, StmtPtr body);
     void print(std::ostream& out, int indent) const override;
 
     ExprPtr condition;
+    StmtPtr body;
+};
+
+struct WhileLetStmt final : Stmt {
+    WhileLetStmt(Token keyword, Token variable, ExprPtr value, StmtPtr body);
+    void print(std::ostream& out, int indent) const override;
+
+    Token keyword;
+    Token variable;
+    ExprPtr value;
     StmtPtr body;
 };
 

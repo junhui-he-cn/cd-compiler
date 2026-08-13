@@ -545,7 +545,6 @@ void TypeChecker::checkModule(const ModuleStmt& module)
     const std::size_t savedLoopDepth = loopDepth_;
     std::vector<FunctionReturnContext> savedReturnContexts = std::move(returnContexts_);
     ModuleSymbols savedModuleSymbols = moduleSymbols_;
-    const FlowFacts savedFlowFacts = flowFacts_;
     const std::vector<std::size_t> savedModuleStack = moduleStack_;
 
     const auto restoreTransientState = [&]() {
@@ -562,7 +561,6 @@ void TypeChecker::checkModule(const ModuleStmt& module)
         functionDepth_ = savedFunctionDepth;
         loopDepth_ = savedLoopDepth;
         returnContexts_ = std::move(savedReturnContexts);
-        flowFacts_ = savedFlowFacts;
         moduleStack_ = savedModuleStack;
     };
     const auto restoreFailedState = [&]() {
@@ -583,7 +581,6 @@ void TypeChecker::checkModule(const ModuleStmt& module)
     functionDepth_ = 0;
     loopDepth_ = 0;
     returnContexts_.clear();
-    flowFacts_.clear();
 
     moduleStack_.push_back(module.moduleId);
     beginScope();

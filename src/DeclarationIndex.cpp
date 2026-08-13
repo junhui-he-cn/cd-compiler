@@ -401,11 +401,40 @@ private:
             collectStatement(ifStmt->elseBranch.get());
             return;
         }
+        if (const auto* ifLetStmt = dynamic_cast<const IfLetStmt*>(&statement)) {
+            collectExpression(ifLetStmt->value.get());
+            beginScope(nullptr);
+            addDeclaration(
+                DeclarationKind::Variable,
+                ifLetStmt->variable.lexeme,
+                tokenRange(ifLetStmt->variable),
+                ifLetStmt->syntaxNodeId,
+                ifLetStmt);
+            collectStatement(ifLetStmt->thenBranch.get());
+            endScope();
+            collectStatement(ifLetStmt->elseBranch.get());
+            return;
+        }
         if (const auto* whileStmt = dynamic_cast<const WhileStmt*>(&statement)) {
             collectExpression(whileStmt->condition.get());
             loopStack_.push_back(LoopContext{whileStmt, LoopTargetKind::While});
             collectStatement(whileStmt->body.get());
             loopStack_.pop_back();
+            return;
+        }
+        if (const auto* whileLetStmt = dynamic_cast<const WhileLetStmt*>(&statement)) {
+            collectExpression(whileLetStmt->value.get());
+            beginScope(nullptr);
+            addDeclaration(
+                DeclarationKind::Variable,
+                whileLetStmt->variable.lexeme,
+                tokenRange(whileLetStmt->variable),
+                whileLetStmt->syntaxNodeId,
+                whileLetStmt);
+            loopStack_.push_back(LoopContext{whileLetStmt, LoopTargetKind::While});
+            collectStatement(whileLetStmt->body.get());
+            loopStack_.pop_back();
+            endScope();
             return;
         }
         if (const auto* forStmt = dynamic_cast<const ForStmt*>(&statement)) {
@@ -636,6 +665,15 @@ private:
         if (const auto* logical = dynamic_cast<const LogicalExpr*>(expression)) {
             collectExpression(logical->left.get());
             collectExpression(logical->right.get());
+            return;
+        }
+        if (const auto* coalesce = dynamic_cast<const CoalesceExpr*>(expression)) {
+            collectExpression(coalesce->left.get());
+            collectExpression(coalesce->right.get());
+            return;
+        }
+        if (const auto* unwrap = dynamic_cast<const UnwrapOrReturnExpr*>(expression)) {
+            collectExpression(unwrap->value.get());
             return;
         }
         if (const auto* grouping = dynamic_cast<const GroupingExpr*>(expression)) {
@@ -958,6 +996,20 @@ const BindingMetadataRecord* DeclarationIndex::forInBindingMetadata(
 {
     const auto found = forInBindingMetadata_.find(&statement);
     return found == forInBindingMetadata_.end() ? nullptr : &found->second;
+}
+
+const BindingMetadataRecord* DeclarationIndex::ifLetBindingMetadata(
+    const IfLetStmt& statement) const
+{
+    const auto found = ifLetBindingMetadata_.find(&statement);
+    return found == ifLetBindingMetadata_.end() ? nullptr : &found->second;
+}
+
+const BindingMetadataRecord* DeclarationIndex::whileLetBindingMetadata(
+    const WhileLetStmt& statement) const
+{
+    const auto found = whileLetBindingMetadata_.find(&statement);
+    return found == whileLetBindingMetadata_.end() ? nullptr : &found->second;
 }
 
 const FunctionMetadataRecord* DeclarationIndex::functionMetadata(
@@ -1342,6 +1394,20 @@ void DeclarationIndex::recordForInBinding(
     forInBindingMetadata_.insert_or_assign(&statement, std::move(record));
 }
 
+void DeclarationIndex::recordIfLetBinding(
+    const IfLetStmt& statement,
+    BindingMetadataRecord record)
+{
+    ifLetBindingMetadata_.insert_or_assign(&statement, std::move(record));
+}
+
+void DeclarationIndex::recordWhileLetBinding(
+    const WhileLetStmt& statement,
+    BindingMetadataRecord record)
+{
+    whileLetBindingMetadata_.insert_or_assign(&statement, std::move(record));
+}
+
 void DeclarationIndex::recordFunctionMetadata(
     const FunctionStmt& statement,
     FunctionMetadataRecord record)
@@ -1510,6 +1576,8 @@ std::size_t DeclarationIndex::validateMetadata() const
     validateBindingMetadataMap(assignmentBindingMetadata_);
     validateBindingMetadataMap(compoundAssignmentBindingMetadata_);
     validateBindingMetadataMap(forInBindingMetadata_);
+    validateBindingMetadataMap(ifLetBindingMetadata_);
+    validateBindingMetadataMap(whileLetBindingMetadata_);
 
     for (const DeclarationRecord& record : declarations_) {
         if (!record.declarationId.valid() || !record.symbolId.valid()) {
@@ -1530,6 +1598,25 @@ std::size_t DeclarationIndex::validateMetadata() const
                 : nullptr;
             if (!forIn || !metadata || !bindingMetadataMatches(*metadata, record)) {
                 ++mismatches;
+            }
+        } else if (record.kind == DeclarationKind::Variable && record.statement) {
+            const auto* ifLet = dynamic_cast<const IfLetStmt*>(record.statement);
+            const BindingMetadataRecord* metadata = ifLet
+                ? ifLetBindingMetadata(*ifLet)
+                : nullptr;
+            if (ifLet) {
+                if (!metadata || !bindingMetadataMatches(*metadata, record)) {
+                    ++mismatches;
+                }
+            } else {
+                const auto* whileLet = dynamic_cast<const WhileLetStmt*>(record.statement);
+                const BindingMetadataRecord* whileMetadata = whileLet
+                    ? whileLetBindingMetadata(*whileLet)
+                    : nullptr;
+                if (whileLet
+                    && (!whileMetadata || !bindingMetadataMatches(*whileMetadata, record))) {
+                    ++mismatches;
+                }
             }
         }
     }

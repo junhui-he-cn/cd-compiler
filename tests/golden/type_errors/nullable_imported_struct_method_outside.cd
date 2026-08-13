@@ -1,4 +1,0 @@
-import "../nullable_imported_struct_method/lib.cd" as ds;
-
-let imported: optional<ds.Box> = ds.newBox(11);
-print imported.read();

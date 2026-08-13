@@ -60,25 +60,22 @@ impl LinkedList<T> {
   fun pushBack(value: T) {
     let node = newLinkedNode<T>(value);
     let current = this.tail;
-    if (current == nil) {
-      this.head = node;
-      this.tail = node;
-      this.count += 1;
-      return;
+    match current {
+      nil => {
+        this.head = node;
+        this.tail = node;
+        this.count += 1;
+      }
+      currentNode => {
+        currentNode.setNext(node);
+        this.tail = node;
+        this.count += 1;
+      }
     }
-
-    let currentNode: LinkedNode<T> = current;
-    currentNode.setNext(node);
-    this.tail = node;
-    this.count += 1;
   }
 
   fun popFront(): optional<T> {
-    let current = this.head;
-    if (current == nil) {
-      return nil;
-    }
-    let currentNode: LinkedNode<T> = current;
+    let currentNode = this.head?;
     this.head = currentNode.nextNode();
     this.count -= 1;
     if (this.count == 0) {
@@ -99,12 +96,13 @@ impl LinkedList<T> {
     let current = this.head;
     let remaining = index;
     while (remaining > 0) {
-      if (current == nil) {
-        return nil;
+      match current {
+        nil => { return nil; }
+        currentNode => {
+          current = currentNode.nextNode();
+          remaining -= 1;
+        }
       }
-      let currentNode: LinkedNode<T> = current;
-      current = currentNode.nextNode();
-      remaining -= 1;
     }
     return current;
   }
@@ -112,8 +110,7 @@ impl LinkedList<T> {
   fun snapshot(): [T] {
     let values: [T] = [];
     let current = this.head;
-    while (current != nil) {
-      let currentNode: LinkedNode<T> = current;
+    while let currentNode = current {
       values.push(currentNode.readValue());
       current = currentNode.nextNode();
     }

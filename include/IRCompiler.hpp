@@ -81,10 +81,14 @@ private:
     void compileFunctionStatement(const FunctionStmt& function);
     void compileImpl(const ImplStmt& statement);
     void compileMethod(const MethodDecl& method);
+    void compileIfLet(const IfLetStmt& statement);
+    void compileWhileLet(const WhileLetStmt& statement);
     void compileReturn(const ReturnStmt& statement);
     void requireFunctionMetadata(const FunctionStmt& function) const;
     void requireMethodMetadata(const MethodDecl& method) const;
     IRRegister compileExpression(const Expr& expression);
+    IRRegister compileCoalesce(const CoalesceExpr& expression);
+    IRRegister compileUnwrapOrReturn(const UnwrapOrReturnExpr& expression);
     IRRegister emitCall(const CallExpr& expression);
     IRRegister emitMemberCall(const MemberCallExpr& expression);
     bool isBuiltinLenCall(const CallExpr& expression) const;

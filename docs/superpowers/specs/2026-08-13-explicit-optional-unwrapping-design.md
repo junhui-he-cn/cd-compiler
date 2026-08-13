@@ -1,6 +1,6 @@
 # Explicit optional unwrapping design
 
-Status: design proposed on 2026-08-13; implementation requires confirmation.
+Status: implemented on 2026-08-13.
 
 ## Problem
 

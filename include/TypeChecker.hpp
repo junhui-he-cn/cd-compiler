@@ -3,7 +3,6 @@
 #include "Ast.hpp"
 #include "DeclarationIndex.hpp"
 #include "Diagnostic.hpp"
-#include "FlowFacts.hpp"
 #include "ModuleInterface.hpp"
 #include "ModuleSymbols.hpp"
 #include "Token.hpp"
@@ -230,20 +229,11 @@ private:
     void recordReturn(const Token& keyword, TypeInfo type);
     bool bodyMayFallThrough(const std::vector<StmtPtr>& body) const;
     bool statementMayFallThrough(const Stmt& statement) const;
-    bool statementContainsBreakForCurrentLoop(const Stmt& statement) const;
     void checkImplicitNilReturn(const Token& functionToken, const std::string& functionLabel, const TypeInfo& expectedReturnType) const;
     TypeInfo checkExpression(const Expr& expression);
     CheckedExpression checkExpressionInfo(const Expr& expression);
     CheckedExpression checkExpressionInfo(const Expr& expression, const TypeInfo* expectedType);
     TypeInfo variableType(const Binding& binding) const;
-    std::optional<FlowNarrowing> nonNilNarrowingForVariable(const VariableExpr& variable) const;
-    std::optional<FlowNarrowing> nonNilNarrowingForTarget(const Expr& target) const;
-    std::optional<FlowNarrowing> nonNilNarrowingForField(const FieldAccessExpr& field) const;
-    std::optional<std::string> fieldFlowFactName(const Expr& object, const Token& name) const;
-    std::optional<FlowNarrowing> nonNilNarrowingForIndex(const IndexExpr& index) const;
-    std::optional<std::string> indexFlowFactName(
-        const Expr& collection,
-        const Expr& index) const;
     CheckedExpression checkArrayLiteral(const ArrayExpr& expression, const TypeInfo* expectedType);
     TypeInfo inferArrayElementType(const ArrayExpr& expression);
     CheckedExpression checkMapLiteral(const MapExpr& expression, const TypeInfo* expectedType);
@@ -252,10 +242,6 @@ private:
     const TypeInfo* contextualFunctionType(const TypeInfo* expectedType) const;
     CheckedExpression checkFunctionExpression(const FunctionExpr& expression, const TypeInfo* expectedType);
     CheckedExpression checkCall(const CallExpr& expression);
-    void invalidateCallEffects(const CallExpr& expression);
-    void invalidateCapturedBindings(const CallExpr& expression);
-    void invalidateStructMethodEffects(const MemberCallExpr& expression);
-    void invalidateCapturedSymbols(const CaptureRecord& captures);
     CheckedExpression checkMemberCall(
         const MemberCallExpr& expression,
         const TypeInfo* expectedType = nullptr);
@@ -382,5 +368,4 @@ private:
     std::size_t functionDepth_ = 0;
     std::size_t loopDepth_ = 0;
     std::vector<FunctionReturnContext> returnContexts_;
-    FlowFacts flowFacts_;
 };

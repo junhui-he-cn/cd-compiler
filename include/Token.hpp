@@ -20,6 +20,7 @@ enum class TokenType {
     Comma,
     Dot,
     Question,
+    QuestionQuestion,
 
     Plus,
     Minus,

@@ -462,6 +462,11 @@ void IRCompiler::compileStatement(const Stmt& statement)
         return;
     }
 
+    if (const auto* ifLetStmt = dynamic_cast<const IfLetStmt*>(&statement)) {
+        compileIfLet(*ifLetStmt);
+        return;
+    }
+
     if (const auto* match = dynamic_cast<const MatchStmt*>(&statement)) {
         compileMatch(*match);
         return;
@@ -482,6 +487,11 @@ void IRCompiler::compileStatement(const Stmt& statement)
         for (const std::size_t breakJump : loop.breakJumps) {
             ir_.patchJump(breakJump);
         }
+        return;
+    }
+
+    if (const auto* whileLetStmt = dynamic_cast<const WhileLetStmt*>(&statement)) {
+        compileWhileLet(*whileLetStmt);
         return;
     }
 
@@ -797,6 +807,107 @@ void IRCompiler::compileForIn(const ForInStmt& statement)
     }
 }
 
+void IRCompiler::compileIfLet(const IfLetStmt& statement)
+{
+    const BindingMetadataRecord* binding = declarationIndex_
+        ? declarationIndex_->ifLetBindingMetadata(statement)
+        : nullptr;
+    if (!binding) {
+        throw IRCompileError("missing if-let binding metadata");
+    }
+
+    const IRRegister value = compileExpression(*statement.value);
+    const IRRegister nilValue = ir_.emitConstant(Value::nil());
+    const IRRegister notNil = ir_.emitBinary(IROp::NotEqual, value, nilValue);
+    const std::size_t failJump = ir_.emitJumpIfFalse(notNil);
+
+    const DeclarationRecord* declaration = declarationIndex_
+        ? declarationIndex_->declaration(statement)
+        : nullptr;
+    const std::optional<BindingId> bindingId = registerBindingMetadata(
+        *binding,
+        declaration ? std::optional<DeclarationId>(declaration->declarationId) : std::nullopt);
+    ir_.emitStoreVar(binding->resolvedName, value, bindingId);
+
+    compileStatement(*statement.thenBranch);
+    if (statement.elseBranch) {
+        const std::size_t jumpOverElse = ir_.emitJump();
+        ir_.patchJump(failJump);
+        compileStatement(*statement.elseBranch);
+        ir_.patchJump(jumpOverElse);
+    } else {
+        ir_.patchJump(failJump);
+    }
+}
+
+void IRCompiler::compileWhileLet(const WhileLetStmt& statement)
+{
+    const BindingMetadataRecord* binding = declarationIndex_
+        ? declarationIndex_->whileLetBindingMetadata(statement)
+        : nullptr;
+    if (!binding) {
+        throw IRCompileError("missing while-let binding metadata");
+    }
+
+    const DeclarationRecord* declaration = declarationIndex_
+        ? declarationIndex_->declaration(statement)
+        : nullptr;
+    const std::optional<BindingId> bindingId = registerBindingMetadata(
+        *binding,
+        declaration ? std::optional<DeclarationId>(declaration->declarationId) : std::nullopt);
+
+    const std::size_t loopStart = ir_.instructionCount();
+    const IRRegister value = compileExpression(*statement.value);
+    const IRRegister nilValue = ir_.emitConstant(Value::nil());
+    const IRRegister notNil = ir_.emitBinary(IROp::NotEqual, value, nilValue);
+    const std::size_t exitJump = ir_.emitJumpIfFalse(notNil);
+
+    ir_.emitStoreVar(binding->resolvedName, value, bindingId);
+
+    loopContexts_.push_back(LoopContext{&statement, loopStart, {}});
+    compileStatement(*statement.body);
+    LoopContext loop = std::move(loopContexts_.back());
+    loopContexts_.pop_back();
+
+    ir_.emitJumpTo(loopStart);
+    ir_.patchJump(exitJump);
+    for (const std::size_t breakJump : loop.breakJumps) {
+        ir_.patchJump(breakJump);
+    }
+}
+
+IRRegister IRCompiler::compileCoalesce(const CoalesceExpr& expression)
+{
+    const IRRegister left = compileExpression(*expression.left);
+    const IRRegister result = ir_.makeRegister();
+    const IRRegister nilValue = ir_.emitConstant(Value::nil());
+    const IRRegister notNil = ir_.emitBinary(IROp::NotEqual, left, nilValue);
+    const std::size_t nilJump = ir_.emitJumpIfFalse(notNil);
+
+    ir_.emitCopyTo(result, left);
+    const std::size_t endJump = ir_.emitJump();
+
+    ir_.patchJump(nilJump);
+    const IRRegister right = compileExpression(*expression.right);
+    ir_.emitCopyTo(result, right);
+    ir_.patchJump(endJump);
+    return result;
+}
+
+IRRegister IRCompiler::compileUnwrapOrReturn(const UnwrapOrReturnExpr& expression)
+{
+    const IRRegister value = compileExpression(*expression.value);
+    const IRRegister nilValue = ir_.emitConstant(Value::nil());
+    const IRRegister notNil = ir_.emitBinary(IROp::NotEqual, value, nilValue);
+    const std::size_t nilJump = ir_.emitJumpIfFalse(notNil);
+    const std::size_t doneJump = ir_.emitJump();
+
+    ir_.patchJump(nilJump);
+    ir_.emitReturn(nilValue);
+    ir_.patchJump(doneJump);
+    return value;
+}
+
 void IRCompiler::compileMatch(const MatchStmt& statement)
 {
     const MatchCoverageRecord* coverage = declarationIndex_
@@ -1084,6 +1195,14 @@ IRRegister IRCompiler::compileExpression(const Expr& expression)
 
     if (const auto* logical = dynamic_cast<const LogicalExpr*>(&expression)) {
         return emitLogical(*logical);
+    }
+
+    if (const auto* coalesce = dynamic_cast<const CoalesceExpr*>(&expression)) {
+        return compileCoalesce(*coalesce);
+    }
+
+    if (const auto* unwrap = dynamic_cast<const UnwrapOrReturnExpr*>(&expression)) {
+        return compileUnwrapOrReturn(*unwrap);
     }
 
     if (const auto* function = dynamic_cast<const FunctionExpr*>(&expression)) {

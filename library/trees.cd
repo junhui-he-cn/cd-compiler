@@ -401,27 +401,15 @@ impl NumericTreeParser {
       return Tree.Empty<number>();
     }
 
-    let value = this.parseNumber();
-    if (value == nil) {
-      return nil;
-    }
-    let parsedValue = value;
+    let parsedValue = this.parseNumber()?;
     if (!this.consume(",")) {
       return nil;
     }
-    let left = this.parseTree();
-    if (left == nil) {
-      return nil;
-    }
-    let parsedLeft = left;
+    let parsedLeft = this.parseTree()?;
     if (!this.consume(",")) {
       return nil;
     }
-    let right = this.parseTree();
-    if (right == nil) {
-      return nil;
-    }
-    let parsedRight = right;
+    let parsedRight = this.parseTree()?;
     return Tree.Node(parsedValue, parsedLeft, parsedRight);
   }
 }
@@ -524,10 +512,7 @@ fun bstRemoveMinimum<T>(tree: Tree<T>): optional<TreeRemoval<T>> {
           return TreeRemoval<T> { value: value, rest: right };
         }
         Tree.Node(leftValue, leftLeft, leftRight) => {
-          let removal = bstRemoveMinimum(left);
-          if (removal == nil) {
-            return nil;
-          }
+          let removal = bstRemoveMinimum(left)?;
           return TreeRemoval<T> {
             value: removal.value,
             rest: Tree.Node(value, removal.rest, right)
@@ -548,10 +533,7 @@ fun bstRemoveMaximum<T>(tree: Tree<T>): optional<TreeRemoval<T>> {
           return TreeRemoval<T> { value: value, rest: left };
         }
         Tree.Node(rightValue, rightLeft, rightRight) => {
-          let removal = bstRemoveMaximum(right);
-          if (removal == nil) {
-            return nil;
-          }
+          let removal = bstRemoveMaximum(right)?;
           return TreeRemoval<T> {
             value: removal.value,
             rest: Tree.Node(value, left, removal.rest)
@@ -618,10 +600,12 @@ fun bstDelete<T>(tree: Tree<T>, value: T, less: fun(T, T): bool): Tree<T> {
             Tree.Empty => { return left; }
             Tree.Node(rightValue, rightLeft, rightRight) => {
               let removal = bstRemoveMinimum(right);
-              if (removal == nil) {
-                return left;
+              match removal {
+                nil => { return left; }
+                r => {
+                  return Tree.Node(r.value, left, r.rest);
+                }
               }
-              return Tree.Node(removal.value, left, removal.rest);
             }
           }
         }
@@ -632,19 +616,11 @@ fun bstDelete<T>(tree: Tree<T>, value: T, less: fun(T, T): bool): Tree<T> {
 }
 
 fun bstMinimum<T>(tree: Tree<T>): optional<T> {
-  let removal = bstRemoveMinimum(tree);
-  if (removal == nil) {
-    return nil;
-  }
-  return removal.value;
+  return bstRemoveMinimum(tree)?.value;
 }
 
 fun bstMaximum<T>(tree: Tree<T>): optional<T> {
-  let removal = bstRemoveMaximum(tree);
-  if (removal == nil) {
-    return nil;
-  }
-  return removal.value;
+  return bstRemoveMaximum(tree)?.value;
 }
 
 fun bstPredecessor<T>(tree: Tree<T>, target: T, less: fun(T, T): bool): optional<T> {

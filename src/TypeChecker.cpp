@@ -90,7 +90,6 @@ void TypeChecker::check(const Program& program)
     functionDepth_ = 0;
     loopDepth_ = 0;
     returnContexts_.clear();
-    flowFacts_.clear();
 
     checkModulesInDependencyOrder(program);
 
@@ -551,94 +550,41 @@ void TypeChecker::checkStatement(const Stmt& statement)
 
     if (const auto* ifStmt = dynamic_cast<const IfStmt*>(&statement)) {
         checkExpression(*ifStmt->condition);
-        const BranchFlowFacts branchFacts = flowFacts_.factsForIfConditionTargets(
-            *ifStmt->condition,
-            [this](const Expr& target) {
-                return nonNilNarrowingForTarget(target);
-            });
-        if (!ifStmt->elseBranch && !statementMayFallThrough(*ifStmt->thenBranch)) {
-            const std::vector<FlowNarrowing> baseFacts = flowFacts_.activeNarrowings();
-            std::vector<FlowNarrowing> terminatingBranchFacts = baseFacts;
-            terminatingBranchFacts.insert(
-                terminatingBranchFacts.end(),
-                branchFacts.thenNarrowings.begin(),
-                branchFacts.thenNarrowings.end());
-            flowFacts_.withoutNarrowings([&]() {
-                flowFacts_.withNarrowings(terminatingBranchFacts, [&]() {
-                    checkStatement(*ifStmt->thenBranch);
-                });
-            });
-
-            flowFacts_.appendNarrowings(branchFacts.elseNarrowings);
-            return;
-        }
+        checkStatement(*ifStmt->thenBranch);
         if (ifStmt->elseBranch) {
-            const bool thenMayFallThrough = statementMayFallThrough(*ifStmt->thenBranch);
-            const bool elseMayFallThrough = statementMayFallThrough(*ifStmt->elseBranch);
-            const std::vector<FlowNarrowing> baseFacts = flowFacts_.activeNarrowings();
-            const auto checkBranchInIsolation = [&](const Stmt& branch,
-                                                    const std::vector<FlowNarrowing>& branchNarrowings) {
-                std::vector<FlowNarrowing> result;
-                std::vector<FlowNarrowing> branchFactsWithBase = baseFacts;
-                branchFactsWithBase.insert(
-                    branchFactsWithBase.end(),
-                    branchNarrowings.begin(),
-                    branchNarrowings.end());
-                flowFacts_.withoutNarrowings([&]() {
-                    flowFacts_.withNarrowings(branchFactsWithBase, [&]() {
-                        checkStatement(branch);
-                        result = flowFacts_.activeNarrowings();
-                    });
-                });
-                return result;
-            };
-
-            const std::vector<FlowNarrowing> thenResult
-                = checkBranchInIsolation(*ifStmt->thenBranch, branchFacts.thenNarrowings);
-            const std::vector<FlowNarrowing> elseResult
-                = checkBranchInIsolation(*ifStmt->elseBranch, branchFacts.elseNarrowings);
-
-            if (thenMayFallThrough) {
-                if (elseMayFallThrough) {
-                    std::vector<FlowNarrowing> joinedFacts;
-                    for (const FlowNarrowing& candidate : thenResult) {
-                        const auto matching = std::find_if(
-                            elseResult.begin(),
-                            elseResult.end(),
-                            [&candidate](const FlowNarrowing& other) {
-                                return candidate.resolvedName == other.resolvedName
-                                    && candidate.type.kind == other.type.kind
-                                    && SemanticTypes::compatible(candidate.type, other.type)
-                                    && SemanticTypes::compatible(other.type, candidate.type);
-                            });
-                        if (matching == elseResult.end()) {
-                            continue;
-                        }
-                        const auto alreadyJoined = std::find_if(
-                            joinedFacts.begin(),
-                            joinedFacts.end(),
-                            [&candidate](const FlowNarrowing& other) {
-                                return candidate.resolvedName == other.resolvedName;
-                            });
-                        if (alreadyJoined == joinedFacts.end()) {
-                            joinedFacts.push_back(candidate);
-                        }
-                    }
-                    flowFacts_.clear();
-                    flowFacts_.appendNarrowings(joinedFacts);
-                } else {
-                    flowFacts_.clear();
-                    flowFacts_.appendNarrowings(thenResult);
-                }
-            } else if (elseMayFallThrough) {
-                flowFacts_.clear();
-                flowFacts_.appendNarrowings(elseResult);
-            }
-            return;
+            checkStatement(*ifStmt->elseBranch);
         }
-        flowFacts_.withNarrowings(branchFacts.thenNarrowings, [&]() {
-            checkStatement(*ifStmt->thenBranch);
-        });
+        return;
+    }
+
+    if (const auto* ifLetStmt = dynamic_cast<const IfLetStmt*>(&statement)) {
+        const TypeInfo valueType = checkExpression(*ifLetStmt->value);
+        if (SemanticTypes::isKnown(valueType) && !SemanticTypes::isNullable(valueType)) {
+            throw TypeError(ifLetStmt->variable,
+                "if-let expects an optional value, got " + typeInfoName(valueType));
+        }
+        const TypeInfo bindingType = SemanticTypes::isNullable(valueType) && valueType.nullableOf
+            ? *valueType.nullableOf
+            : unknownType();
+
+        beginScope();
+        const Binding binding = declareVariable(
+            ifLetStmt->variable,
+            bindingType,
+            false,
+            declarationIndex_.declaration(*ifLetStmt));
+        declarationIndex_.recordIfLetBinding(
+            *ifLetStmt,
+            BindingMetadataRecord{
+                binding.resolvedName,
+                binding.bindingId,
+                ResolvedSymbol{binding.declarationId, binding.symbolId},
+                binding.range});
+        checkStatement(*ifLetStmt->thenBranch);
+        endScope();
+        if (ifLetStmt->elseBranch) {
+            checkStatement(*ifLetStmt->elseBranch);
+        }
         return;
     }
 
@@ -649,49 +595,56 @@ void TypeChecker::checkStatement(const Stmt& statement)
 
     if (const auto* whileStmt = dynamic_cast<const WhileStmt*>(&statement)) {
         checkExpression(*whileStmt->condition);
-        const BranchFlowFacts branchFacts = flowFacts_.factsForIfConditionTargets(
-            *whileStmt->condition,
-            [this](const Expr& target) {
-                return nonNilNarrowingForTarget(target);
-            });
-        const bool containsCurrentLoopBreak = statementContainsBreakForCurrentLoop(*whileStmt->body);
         ++loopDepth_;
-        flowFacts_.withNarrowings(branchFacts.thenNarrowings, [&]() {
-            checkStatement(*whileStmt->body);
-        });
+        checkStatement(*whileStmt->body);
         --loopDepth_;
-        if (!containsCurrentLoopBreak) {
-            flowFacts_.appendNarrowings(branchFacts.elseNarrowings);
+        return;
+    }
+
+    if (const auto* whileLetStmt = dynamic_cast<const WhileLetStmt*>(&statement)) {
+        const TypeInfo valueType = checkExpression(*whileLetStmt->value);
+        if (SemanticTypes::isKnown(valueType) && !SemanticTypes::isNullable(valueType)) {
+            throw TypeError(whileLetStmt->variable,
+                "while-let expects an optional value, got " + typeInfoName(valueType));
         }
+        const TypeInfo bindingType = SemanticTypes::isNullable(valueType) && valueType.nullableOf
+            ? *valueType.nullableOf
+            : unknownType();
+
+        beginScope();
+        const Binding binding = declareVariable(
+            whileLetStmt->variable,
+            bindingType,
+            false,
+            declarationIndex_.declaration(*whileLetStmt));
+        declarationIndex_.recordWhileLetBinding(
+            *whileLetStmt,
+            BindingMetadataRecord{
+                binding.resolvedName,
+                binding.bindingId,
+                ResolvedSymbol{binding.declarationId, binding.symbolId},
+                binding.range});
+        ++loopDepth_;
+        checkStatement(*whileLetStmt->body);
+        --loopDepth_;
+        endScope();
         return;
     }
 
     if (const auto* forStmt = dynamic_cast<const ForStmt*>(&statement)) {
         beginScope();
-        BranchFlowFacts branchFacts;
         if (forStmt->initializer) {
             checkStatement(*forStmt->initializer);
         }
         if (forStmt->condition) {
             checkExpression(*forStmt->condition);
-            branchFacts = flowFacts_.factsForIfConditionTargets(
-                *forStmt->condition,
-                [this](const Expr& target) {
-                    return nonNilNarrowingForTarget(target);
-                });
         }
-        const bool containsCurrentLoopBreak = statementContainsBreakForCurrentLoop(*forStmt->body);
         ++loopDepth_;
-        flowFacts_.withNarrowings(branchFacts.thenNarrowings, [&]() {
-            checkStatement(*forStmt->body);
-            if (forStmt->increment) {
-                checkExpression(*forStmt->increment);
-            }
-        });
-        --loopDepth_;
-        if (!containsCurrentLoopBreak) {
-            flowFacts_.appendNarrowings(branchFacts.elseNarrowings);
+        checkStatement(*forStmt->body);
+        if (forStmt->increment) {
+            checkExpression(*forStmt->increment);
         }
+        --loopDepth_;
         endScope();
         return;
     }
@@ -729,15 +682,13 @@ void TypeChecker::checkStatement(const Stmt& statement)
                 ResolvedSymbol{itemBinding.declarationId, itemBinding.symbolId},
                 itemBinding.range});
         ++loopDepth_;
-        flowFacts_.withLoopBody([&]() {
-            if (const auto* body = dynamic_cast<const BlockStmt*>(forInStmt->body.get())) {
-                for (const auto& bodyStatement : body->statements) {
-                    checkStatement(*bodyStatement);
-                }
-            } else {
-                checkStatement(*forInStmt->body);
+        if (const auto* body = dynamic_cast<const BlockStmt*>(forInStmt->body.get())) {
+            for (const auto& bodyStatement : body->statements) {
+                checkStatement(*bodyStatement);
             }
-        });
+        } else {
+            checkStatement(*forInStmt->body);
+        }
         --loopDepth_;
         endScope();
         return;

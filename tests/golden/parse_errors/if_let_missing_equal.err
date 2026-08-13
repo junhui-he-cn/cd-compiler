@@ -1,0 +1,3 @@
+Parse error at <repo>/tests/golden/parse_errors/if_let_missing_equal.cd:2:10: expected `=` after if-let binding name, found Identifier `x`
+  if let v x {
+           ^

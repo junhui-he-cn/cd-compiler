@@ -28,8 +28,7 @@ with golden/README/grammar/decision-record updates.
    Redesign recorded
    (`2026-08-13-explicit-optional-unwrapping-design.md`): replace automatic
    narrowing with explicit `if let`/`while let`, `?`, and `??` unwrapping in
-   the Rust style, then delete the flow analysis. Status: design proposed;
-   implementation awaits confirmation.
+   the Rust style, then delete the flow analysis. Status: complete.
 
 C-style `for` is kept as a supported loop form and is not part of this plan.
 The tooling surface (formatter, lossless source, `--tokens`) is kept as
@@ -50,5 +49,5 @@ shipped and is not part of this plan.
 - Operator declaration special cases (one same-typed parameter, forced
   `: bool`, implicit `this` receiver).
 
-Items 1-4 are complete. Item 5 requires a separate semantic decision before
-any implementation and is not in the default queue.
+Items 1-5 are complete. C-style `for` and the tooling surface are kept as
+shipped.

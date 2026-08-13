@@ -493,6 +493,9 @@ bool TypeChecker::checkPattern(
     }
 
     if (const auto* variable = dynamic_cast<const VariablePattern*>(&pattern)) {
+        const TypeInfo bindingType = SemanticTypes::isNullable(expectedType) && expectedType.nullableOf
+            ? *expectedType.nullableOf
+            : expectedType;
         if (deferredBindings) {
             if (deferredBindings->find(variable->name.lexeme) != deferredBindings->end()) {
                 throw TypeError(variable->name,
@@ -500,13 +503,13 @@ bool TypeChecker::checkPattern(
             }
             deferredBindings->emplace(
                 variable->name.lexeme,
-                PatternBindingInfo{variable->name, expectedType, {variable}});
+                PatternBindingInfo{variable->name, bindingType, {variable}});
             coversStruct = true;
             return true;
         }
         const Binding binding = declareVariable(
             variable->name,
-            expectedType,
+            bindingType,
             false,
             declarationIndex_.declaration(*variable));
         declarationIndex_.recordPatternBinding(
@@ -1001,9 +1004,6 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
 
 TypeInfo TypeChecker::variableType(const Binding& binding) const
 {
-    if (std::optional<TypeInfo> narrowed = flowFacts_.narrowedTypeFor(binding.resolvedName)) {
-        return *narrowed;
-    }
     return binding.type;
 }
 
@@ -1245,8 +1245,6 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
             target->type = value.type;
         }
 
-        flowFacts_.invalidate(target->resolvedName);
-
         declarationIndex_.recordAssignmentBinding(
             *assign,
             BindingMetadataRecord{
@@ -1276,7 +1274,6 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
         if (!SemanticTypes::isKnown(target->type)) {
             target->type = simpleType(StaticType::Number);
         }
-        flowFacts_.invalidate(target->resolvedName);
         declarationIndex_.recordCompoundAssignmentBinding(
             *compound,
             BindingMetadataRecord{
@@ -1310,6 +1307,51 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
         return CheckedExpression{logicalResultType(left, right)};
     }
 
+    if (const auto* coalesce = dynamic_cast<const CoalesceExpr*>(&expression)) {
+        const TypeInfo left = checkExpression(*coalesce->left);
+        if (SemanticTypes::isKnown(left) && !SemanticTypes::isNullable(left)) {
+            throw TypeError(coalesce->op,
+                "`??` expects an optional left operand, got " + typeInfoName(left));
+        }
+        const TypeInfo unwrapped = SemanticTypes::isNullable(left) && left.nullableOf
+            ? *left.nullableOf
+            : unknownType();
+        const CheckedExpression right = checkExpressionInfo(*coalesce->right, &unwrapped);
+        if (SemanticTypes::isKnown(unwrapped) && SemanticTypes::isKnown(right.type)
+            && !SemanticTypes::compatible(unwrapped, right.type)) {
+            throw TypeError(coalesce->op,
+                "`??` right operand expects " + typeInfoName(unwrapped)
+                    + ", got " + typeInfoName(right.type));
+        }
+        const TypeInfo resultType = SemanticTypes::isKnown(unwrapped)
+            ? unwrapped
+            : (SemanticTypes::isKnown(right.type) ? right.type : unknownType());
+        declarationIndex_.recordTypedExpression(expression, resultType);
+        return CheckedExpression{resultType};
+    }
+
+    if (const auto* unwrap = dynamic_cast<const UnwrapOrReturnExpr*>(&expression)) {
+        const TypeInfo valueType = checkExpression(*unwrap->value);
+        if (SemanticTypes::isKnown(valueType) && !SemanticTypes::isNullable(valueType)) {
+            throw TypeError(unwrap->op,
+                "`?` expects an optional value, got " + typeInfoName(valueType));
+        }
+        if (returnContexts_.empty()) {
+            throw TypeError(unwrap->op, "`?` requires an enclosing function");
+        }
+        const FunctionReturnContext& context = returnContexts_.back();
+        if (!context.expectedReturnType
+            || !SemanticTypes::isNullable(*context.expectedReturnType)) {
+            throw TypeError(unwrap->op,
+                "`?` requires the enclosing function to return optional<T>");
+        }
+        const TypeInfo resultType = SemanticTypes::isNullable(valueType) && valueType.nullableOf
+            ? *valueType.nullableOf
+            : unknownType();
+        declarationIndex_.recordTypedExpression(expression, resultType);
+        return CheckedExpression{resultType};
+    }
+
     if (const auto* call = dynamic_cast<const CallExpr*>(&expression)) {
         CheckedExpression result = checkCall(*call);
         if (isNativeStdlibCall(*call)) {
@@ -1324,12 +1366,6 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
 
     if (const auto* memberCall = dynamic_cast<const MemberCallExpr*>(&expression)) {
         CheckedExpression result = checkMemberCall(*memberCall, expectedType);
-        invalidateStructMethodEffects(*memberCall);
-        if (isNativeCallbackName(memberCall->name.lexeme)
-            && !declarationIndex_.memberCallMetadata(*memberCall)
-            && !declarationIndex_.variantConstructor(*memberCall)) {
-            flowFacts_.invalidateAll();
-        }
         if (isNativeStdlibName(memberCall->name.lexeme)
             && !declarationIndex_.memberCallMetadata(*memberCall)
             && !declarationIndex_.variantConstructor(*memberCall)) {
@@ -1407,12 +1443,7 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
                         + field->name.lexeme + "`");
             }
             const TypeInfo declaredFieldType = structFieldTypeForValue(object, *structType, *structField);
-            TypeInfo resultType = declaredFieldType;
-            if (const std::optional<std::string> factName = fieldFlowFactName(*field->object, field->name)) {
-                if (const std::optional<TypeInfo> narrowed = flowFacts_.narrowedTypeFor(*factName)) {
-                    resultType = *narrowed;
-                }
-            }
+            const TypeInfo resultType = declaredFieldType;
             CheckedExpression result{resultType};
             declarationIndex_.recordTypedExpression(*field, result.type);
             declarationIndex_.recordFieldOperation(
@@ -2526,13 +2557,6 @@ TypeInfo TypeChecker::checkIndex(const IndexExpr& expression)
     } else if (target.collection.kind == StaticType::Range) {
         result = simpleType(StaticType::Number);
     }
-    if (const std::optional<std::string> factName = indexFlowFactName(
-            *expression.collection,
-            *expression.index)) {
-        if (const std::optional<TypeInfo> narrowed = flowFacts_.narrowedTypeFor(*factName)) {
-            result = *narrowed;
-        }
-    }
     declarationIndex_.recordIndexOperation(
         expression,
         IndexOperationRecord{
@@ -2560,7 +2584,6 @@ TypeChecker::CheckedExpression TypeChecker::checkIndexAssignment(const IndexAssi
         if (target.collection.valueType && !SemanticTypes::compatible(*target.collection.valueType, value.type)) {
             throw TypeError(expression.bracket, "map value is incompatible with map value type");
         }
-        flowFacts_.invalidateAll();
         declarationIndex_.recordIndexOperation(
             expression,
             IndexOperationRecord{
@@ -2582,7 +2605,6 @@ TypeChecker::CheckedExpression TypeChecker::checkIndexAssignment(const IndexAssi
 
     if (binding && binding->type.kind == StaticType::Array) {
         refineArrayBindingFromMutation(*binding, value.type);
-        flowFacts_.invalidateAll();
         declarationIndex_.recordIndexOperation(
             expression,
             IndexOperationRecord{
@@ -2593,7 +2615,6 @@ TypeChecker::CheckedExpression TypeChecker::checkIndexAssignment(const IndexAssi
         return CheckedExpression{value.type};
     }
 
-    flowFacts_.invalidateAll();
     declarationIndex_.recordIndexOperation(
         expression,
         IndexOperationRecord{
@@ -2625,7 +2646,6 @@ TypeChecker::CheckedExpression TypeChecker::checkIndexCompoundAssignment(const I
     checkKnownNumber(expression.op, value.type, "compound assignment value must be number, got ");
 
     const TypeInfo result = simpleType(StaticType::Number);
-    flowFacts_.invalidateAll();
     declarationIndex_.recordIndexOperation(
         expression,
         IndexOperationRecord{
@@ -2682,7 +2702,6 @@ TypeChecker::CheckedExpression TypeChecker::checkFieldAssignment(const FieldAssi
                 "field `" + expression.name.lexeme + "` expects " + typeInfoName(*structField)
                     + ", got " + typeInfoName(value.type));
         }
-        flowFacts_.invalidateAll();
         declarationIndex_.recordFieldOperation(
             expression,
             FieldOperationRecord{
@@ -2694,7 +2713,6 @@ TypeChecker::CheckedExpression TypeChecker::checkFieldAssignment(const FieldAssi
         return CheckedExpression{*structField};
     }
 
-    flowFacts_.invalidateAll();
     declarationIndex_.recordFieldOperation(
         expression,
         FieldOperationRecord{
@@ -2718,7 +2736,6 @@ TypeChecker::CheckedExpression TypeChecker::checkFieldCompoundAssignment(const F
     checkKnownNumber(expression.op, value.type, "compound assignment value must be number, got ");
 
     const TypeInfo result = simpleType(StaticType::Number);
-    flowFacts_.invalidateAll();
     declarationIndex_.recordFieldOperation(
         expression,
         FieldOperationRecord{
