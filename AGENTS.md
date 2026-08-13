@@ -84,6 +84,10 @@ This is a small C++17 Compiler Design front-end/interpreter project. It currentl
   function/return/capture/loop-control lowering consumes the M1D
   metadata slices; function and method lowering consumes resolved signature
   types from the M1E1 slice.
+  Variable reads, assignments, and compound assignments resolve through the
+  index's structural lexical references first and fall back to name lookup
+  only for imported or unindexed bindings; `validateMetadata` cross-checks the
+  two paths and skips imported reference metadata.
 - `include/Parser.hpp`, `src/Parser.cpp`: grammar and recursive-descent parsing.
 - `include/Ast.hpp`, `src/Ast.cpp`: AST node types and AST printer output.
 - `include/TypeUtils.hpp`, `src/TypeUtils.cpp`: canonical `TypeInfo` helpers,

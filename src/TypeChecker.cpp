@@ -36,6 +36,7 @@ void TypeChecker::check(const Program& program)
     declarationIndexMismatchCount_ = 0;
     moduleInterfaceMismatchCount_ = 0;
     scopes_.clear();
+    bindingsById_.clear();
     typeParameterScopes_.clear();
     structTypes_.clear();
     structDeclarations_.clear();
@@ -137,6 +138,11 @@ void TypeChecker::endScope()
     if (scopes_.empty()) {
         throw TypeError("scope stack is empty");
     }
+    for (const auto& entry : scopes_.back()) {
+        if (entry.second.declarationId.valid()) {
+            bindingsById_.erase(entry.second.declarationId);
+        }
+    }
     scopes_.pop_back();
 }
 
@@ -225,6 +231,59 @@ const TypeChecker::Binding* TypeChecker::findVariable(const std::string& name) c
     return nullptr;
 }
 
+TypeChecker::Binding* TypeChecker::bindingById(DeclarationId id)
+{
+    const auto found = bindingsById_.find(id);
+    return found == bindingsById_.end() ? nullptr : found->second;
+}
+
+const TypeChecker::Binding* TypeChecker::bindingById(DeclarationId id) const
+{
+    const auto found = bindingsById_.find(id);
+    return found == bindingsById_.end() ? nullptr : found->second;
+}
+
+TypeChecker::Binding* TypeChecker::resolveVariableReference(const VariableExpr& expression)
+{
+    if (const auto reference = declarationIndex_.variableReference(expression)) {
+        if (Binding* binding = bindingById(reference->declarationId)) {
+            return binding;
+        }
+    }
+    return findVariable(expression.name.lexeme);
+}
+
+const TypeChecker::Binding* TypeChecker::resolveVariableReference(const VariableExpr& expression) const
+{
+    if (const auto reference = declarationIndex_.variableReference(expression)) {
+        if (const Binding* binding = bindingById(reference->declarationId)) {
+            return binding;
+        }
+    }
+    return findVariable(expression.name.lexeme);
+}
+
+TypeChecker::Binding* TypeChecker::resolveAssignmentTarget(const AssignExpr& expression)
+{
+    if (const auto reference = declarationIndex_.assignmentReference(expression)) {
+        if (Binding* binding = bindingById(reference->declarationId)) {
+            return binding;
+        }
+    }
+    return findVariable(expression.name.lexeme);
+}
+
+TypeChecker::Binding* TypeChecker::resolveCompoundAssignmentTarget(
+    const CompoundAssignExpr& expression)
+{
+    if (const auto reference = declarationIndex_.compoundAssignmentReference(expression)) {
+        if (Binding* binding = bindingById(reference->declarationId)) {
+            return binding;
+        }
+    }
+    return findVariable(expression.name.lexeme);
+}
+
 const TypeChecker::Binding* TypeChecker::findBindingByRange(const SourceRange& range) const
 {
     for (auto scope = scopes_.rbegin(); scope != scopes_.rend(); ++scope) {
@@ -246,7 +305,7 @@ TypeChecker::Binding* TypeChecker::findSimpleVariableBinding(const Expr& express
     if (!variable) {
         return nullptr;
     }
-    return findVariable(variable->name.lexeme);
+    return resolveVariableReference(*variable);
 }
 
 const TypeChecker::Binding* TypeChecker::findSimpleVariableBinding(const Expr& expression) const
@@ -255,7 +314,7 @@ const TypeChecker::Binding* TypeChecker::findSimpleVariableBinding(const Expr& e
     if (!variable) {
         return nullptr;
     }
-    return findVariable(variable->name.lexeme);
+    return resolveVariableReference(*variable);
 }
 
 TypeChecker::Binding TypeChecker::declareVariable(
@@ -286,6 +345,9 @@ TypeChecker::Binding TypeChecker::declareVariable(
     }
     binding.range = name.range;
     scope.emplace(name.lexeme, binding);
+    if (binding.declarationId.valid()) {
+        bindingsById_.emplace(binding.declarationId, &scope.at(name.lexeme));
+    }
     return binding;
 }
 

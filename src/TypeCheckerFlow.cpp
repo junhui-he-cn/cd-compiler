@@ -7,7 +7,7 @@
 
 std::optional<FlowNarrowing> TypeChecker::nonNilNarrowingForVariable(const VariableExpr& variable) const
 {
-    const Binding* binding = findVariable(variable.name.lexeme);
+    const Binding* binding = resolveVariableReference(variable);
     if (!binding || !SemanticTypes::isNullable(binding->type)) {
         return std::nullopt;
     }
@@ -21,7 +21,7 @@ std::optional<std::string> TypeChecker::fieldFlowFactName(const Expr& object, co
 
     const auto* variable = dynamic_cast<const VariableExpr*>(&object);
     if (variable) {
-        const Binding* binding = findVariable(variable->name.lexeme);
+        const Binding* binding = resolveVariableReference(*variable);
         if (!binding) {
             return std::nullopt;
         }
@@ -64,7 +64,7 @@ std::optional<FlowNarrowing> TypeChecker::nonNilNarrowingForField(const FieldAcc
 
     TypeInfo objectType = unknownType();
     if (const auto* variable = dynamic_cast<const VariableExpr*>(field.object.get())) {
-        const Binding* binding = findVariable(variable->name.lexeme);
+        const Binding* binding = resolveVariableReference(*variable);
         if (!binding) {
             return std::nullopt;
         }
@@ -103,7 +103,7 @@ std::optional<std::string> TypeChecker::indexFlowFactName(
             return std::nullopt;
         }
 
-        const Binding* binding = findVariable(variable->name.lexeme);
+        const Binding* binding = resolveVariableReference(*variable);
         if (!binding || variableType(*binding).kind != StaticType::Number) {
             return std::nullopt;
         }
@@ -117,7 +117,7 @@ std::optional<std::string> TypeChecker::indexFlowFactName(
     std::optional<std::string> parentFactName;
     TypeInfo collectionType = unknownType();
     if (const auto* variable = dynamic_cast<const VariableExpr*>(&collection)) {
-        const Binding* binding = findVariable(variable->name.lexeme);
+        const Binding* binding = resolveVariableReference(*variable);
         if (!binding) {
             return std::nullopt;
         }
@@ -159,7 +159,7 @@ std::optional<FlowNarrowing> TypeChecker::nonNilNarrowingForIndex(const IndexExp
 
     TypeInfo collectionType = unknownType();
     if (const auto* variable = dynamic_cast<const VariableExpr*>(index.collection.get())) {
-        const Binding* binding = findVariable(variable->name.lexeme);
+        const Binding* binding = resolveVariableReference(*variable);
         if (!binding) {
             return std::nullopt;
         }
@@ -191,4 +191,3 @@ std::optional<FlowNarrowing> TypeChecker::nonNilNarrowingForTarget(const Expr& t
     }
     return std::nullopt;
 }
-

@@ -1232,7 +1232,7 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
     }
 
     if (const auto* variable = dynamic_cast<const VariableExpr*>(&expression)) {
-        const Binding* binding = findVariable(variable->name.lexeme);
+        const Binding* binding = resolveVariableReference(*variable);
         if (!binding) {
             if (findNamespace(variable->name.lexeme)) {
                 throw TypeError(variable->name, "namespace alias `" + variable->name.lexeme + "` is not a value");
@@ -1253,7 +1253,7 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
     }
 
     if (const auto* assign = dynamic_cast<const AssignExpr*>(&expression)) {
-        Binding* target = findVariable(assign->name.lexeme);
+        Binding* target = resolveAssignmentTarget(*assign);
         if (!target) {
             if (findNamespace(assign->name.lexeme)) {
                 throw TypeError(assign->name, "cannot assign to namespace alias `" + assign->name.lexeme + "`");
@@ -1312,7 +1312,7 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
     }
 
     if (const auto* compound = dynamic_cast<const CompoundAssignExpr*>(&expression)) {
-        Binding* target = findVariable(compound->name.lexeme);
+        Binding* target = resolveCompoundAssignmentTarget(*compound);
         if (!target) {
             if (findNamespace(compound->name.lexeme)) {
                 throw TypeError(compound->name, "cannot assign to namespace alias `" + compound->name.lexeme + "`");

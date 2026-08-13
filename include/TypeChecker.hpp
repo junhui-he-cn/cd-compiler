@@ -104,6 +104,12 @@ private:
     Binding* findSimpleVariableBinding(const Expr& expression);
     const Binding* findSimpleVariableBinding(const Expr& expression) const;
     const Binding* findVariable(const std::string& name) const;
+    Binding* resolveVariableReference(const VariableExpr& expression);
+    const Binding* resolveVariableReference(const VariableExpr& expression) const;
+    Binding* resolveAssignmentTarget(const AssignExpr& expression);
+    Binding* resolveCompoundAssignmentTarget(const CompoundAssignExpr& expression);
+    Binding* bindingById(DeclarationId id);
+    const Binding* bindingById(DeclarationId id) const;
     Binding declareVariable(
         const Token& name,
         TypeInfo type,
@@ -371,6 +377,7 @@ private:
     bool isCurrentFunctionBinding(const Binding& binding) const;
 
     std::vector<Scope> scopes_;
+    std::unordered_map<DeclarationId, Binding*, SnapshotIdHash<DeclarationIdTag>> bindingsById_;
     std::vector<std::unordered_map<std::string, TypeInfo>> typeParameterScopes_;
     std::unordered_map<std::string, StructTypeDecl> structTypes_;
     std::unordered_map<std::string, const StructDeclStmt*> structDeclarations_;

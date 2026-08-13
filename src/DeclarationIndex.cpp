@@ -1548,6 +1548,9 @@ std::size_t DeclarationIndex::validateMetadata() const
 
     const auto validateBindingMetadataMap = [&](const auto& records) {
         for (const auto& entry : records) {
+            if (entry.second.imported) {
+                continue;
+            }
             if (!validateBindingMetadata(entry.second)) {
                 ++mismatches;
             }

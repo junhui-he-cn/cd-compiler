@@ -238,6 +238,13 @@ struct ParsedUnit {
 - struct/enum 声明、`impl` 方法、operator 重载元数据。
 - import/export 名称解析与 re-export 兼容性。
 
+变量读取、赋值与复合赋值的解析优先消费 `DeclarationIndex` 的结构化引用
+（`variableReference` / `assignmentReference` / `compoundAssignmentReference`）：
+checker 维护 `DeclarationId -> Binding` 映射（`bindingsById_`），index 命中时按
+符号身份解析；import 注入、无记录合成绑定等 index 未覆盖的名字回退到按名
+`findVariable`。`validateMetadata` 保证两路解析在快照内一致，imported 引用元数据
+因不携带快照身份而被校验跳过。
+
 ## 6. IR 生成（IRCompiler）
 
 ### 6.1 入口

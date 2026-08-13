@@ -104,6 +104,12 @@ add_executable(ir_source_location_tests
 )
 compiler_design_configure_target(ir_source_location_tests)
 
+add_executable(index_resolution_tests
+    tests/index_resolution_tests.cpp
+    ${COMPILER_DESIGN_IR_SOURCES}
+)
+compiler_design_configure_target(index_resolution_tests)
+
 add_executable(control_flow_graph_tests
     tests/control_flow_graph_tests.cpp
     src/ControlFlowGraph.cpp
@@ -165,6 +171,7 @@ compiler_design_configure_target(optimizer_tests)
 enable_testing()
 add_test(NAME source_map COMMAND source_map_tests)
 add_test(NAME ir_source_location COMMAND ir_source_location_tests)
+add_test(NAME index_resolution COMMAND index_resolution_tests)
 add_test(NAME control_flow_graph COMMAND control_flow_graph_tests)
 add_test(NAME dominance COMMAND dominance_tests)
 add_test(NAME ssa COMMAND ssa_tests)

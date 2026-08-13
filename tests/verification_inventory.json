@@ -4433,6 +4433,26 @@
       "expected_files": []
     },
     {
+      "case_id": "ctest.index_resolution",
+      "runner": "ctest",
+      "result_name": "index_resolution",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "index_resolution"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "ctest.ir_source_location",
       "runner": "ctest",
       "result_name": "ir_source_location",
