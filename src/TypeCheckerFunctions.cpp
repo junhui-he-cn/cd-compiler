@@ -235,7 +235,13 @@ void TypeChecker::checkFunction(const FunctionStmt& statement)
     --functionDepth_;
     endScope();
 
-    Binding* storedFunction = findVariable(statement.name.lexeme);
+    Binding* storedFunction = nullptr;
+    if (const DeclarationRecord* record = declarationIndex_.declaration(statement)) {
+        storedFunction = bindingById(record->declarationId);
+    }
+    if (!storedFunction) {
+        storedFunction = findVariable(statement.name.lexeme);
+    }
     if (!storedFunction) {
         throw TypeError(statement.name, "undefined function `" + statement.name.lexeme + "`");
     }
@@ -734,12 +740,7 @@ void TypeChecker::invalidateStructMethodEffects(const MemberCallExpr& expression
 void TypeChecker::invalidateCapturedSymbols(const CaptureRecord& captures)
 {
     for (const ResolvedSymbol& symbol : captures.symbols) {
-        const DeclarationRecord* capturedDeclaration
-            = declarationIndex_.declaration(symbol.declarationId);
-        if (!capturedDeclaration || !capturedDeclaration->range) {
-            continue;
-        }
-        if (const Binding* binding = findBindingByRange(*capturedDeclaration->range)) {
+        if (const Binding* binding = bindingById(symbol.declarationId)) {
             flowFacts_.invalidate(binding->resolvedName);
         }
     }

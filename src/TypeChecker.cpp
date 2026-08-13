@@ -284,21 +284,6 @@ TypeChecker::Binding* TypeChecker::resolveCompoundAssignmentTarget(
     return findVariable(expression.name.lexeme);
 }
 
-const TypeChecker::Binding* TypeChecker::findBindingByRange(const SourceRange& range) const
-{
-    for (auto scope = scopes_.rbegin(); scope != scopes_.rend(); ++scope) {
-        for (const auto& entry : *scope) {
-            if (entry.second.range
-                && entry.second.range->source == range.source
-                && entry.second.range->start == range.start
-                && entry.second.range->end == range.end) {
-                return &entry.second;
-            }
-        }
-    }
-    return nullptr;
-}
-
 TypeChecker::Binding* TypeChecker::findSimpleVariableBinding(const Expr& expression)
 {
     const auto* variable = dynamic_cast<const VariableExpr*>(&expression);

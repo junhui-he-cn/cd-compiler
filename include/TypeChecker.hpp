@@ -100,7 +100,6 @@ private:
     Scope& currentScope();
     const Scope& currentScope() const;
     Binding* findVariable(const std::string& name);
-    const Binding* findBindingByRange(const SourceRange& range) const;
     Binding* findSimpleVariableBinding(const Expr& expression);
     const Binding* findSimpleVariableBinding(const Expr& expression) const;
     const Binding* findVariable(const std::string& name) const;
