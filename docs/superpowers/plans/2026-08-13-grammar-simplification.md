@@ -20,16 +20,16 @@ with golden/README/grammar/decision-record updates.
 3. **Remove named enum payload fields and reordered pattern arguments.**
    Payloads become purely positional in declarations, constructors, and
    patterns. Status: complete.
-4. **Remove C-style `for`, keep `while` and `for-in`.**
-   Deletes `cForClause` parsing and the increment flow rules.
-5. **Reassess the capability system (`Eq`/`Ord`/`Hash` constraints).**
+4. **Reassess the capability system (`Eq`/`Ord`/`Hash` constraints).**
    Decision gate: delete entirely, or keep only the parts with real use.
-6. **Reassess tooling surface.**
+5. **Reassess tooling surface.**
    Decision gate: formatter/lossless-source/`--tokens` merge are product
    decisions, not grammar work.
-7. **Reduce nullable flow analysis to a core subset.**
+6. **Reduce nullable flow analysis to a core subset.**
    Highest code win, highest semantic risk; requires a separate semantic
    decision before any implementation.
+
+C-style `for` is kept as a supported loop form and is not part of this plan.
 
 ## Grammar inconsistencies tracked alongside
 
@@ -46,4 +46,5 @@ with golden/README/grammar/decision-record updates.
 - Operator declaration special cases (one same-typed parameter, forced
   `: bool`, implicit `this` receiver).
 
-Only item 1 is authorized for implementation at this time.
+Items 1-3 are complete. Item 4 is a decision gate, not an implementation
+slice; items 5-6 are not in the default queue without a product decision.
