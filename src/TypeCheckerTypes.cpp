@@ -325,30 +325,7 @@ void TypeChecker::checkEnumDeclaration(const EnumDeclStmt& statement)
         }
         variantNames.emplace(variant.name.lexeme, variant.name);
 
-        EnumVariantType checkedVariant{variant.name, {}, {}};
-        bool hasNamedPayload = false;
-        bool hasPositionalPayload = false;
-        std::unordered_set<std::string> payloadNames;
-        checkedVariant.payloadNames.resize(variant.payloadTypes.size());
-        for (std::size_t i = 0; i < variant.payloadTypes.size(); ++i) {
-            if (i < variant.payloadNames.size() && variant.payloadNames[i]) {
-                hasNamedPayload = true;
-                const Token& payloadName = *variant.payloadNames[i];
-                if (!payloadNames.insert(payloadName.lexeme).second) {
-                    throw TypeError(payloadName,
-                        "duplicate enum payload field " + payloadName.lexeme
-                            + " in variant " + statement.name.lexeme + "." + variant.name.lexeme);
-                }
-                checkedVariant.payloadNames[i] = payloadName;
-            } else {
-                hasPositionalPayload = true;
-            }
-        }
-        if (hasNamedPayload && hasPositionalPayload) {
-            throw TypeError(variant.name,
-                "enum variant " + statement.name.lexeme + "." + variant.name.lexeme
-                    + " must use either all named or all positional payloads");
-        }
+        EnumVariantType checkedVariant{variant.name, {}};
         for (const TypeAnnotation& payloadType : variant.payloadTypes) {
             checkedVariant.payloadTypes.push_back(resolveAnnotation(payloadType));
         }

@@ -989,7 +989,6 @@ void IRCompiler::compilePattern(
         ? declarationIndex_->variantPattern(*variant)
         : nullptr;
     if (!record || record->enumType.kind != StaticType::Enum
-        || record->payloadIndices.size() != variant->arguments.size()
         || record->payloadTypes.size() != variant->arguments.size()) {
         throw IRCompileError("missing variant pattern metadata");
     }
@@ -998,7 +997,7 @@ void IRCompiler::compilePattern(
         value, record->enumName, record->variantName);
     failJumps.push_back(ir_.emitJumpIfFalse(tag));
     for (std::size_t i = 0; i < variant->arguments.size(); ++i) {
-        const IRRegister field = ir_.emitVariantField(value, record->payloadIndices[i]);
+        const IRRegister field = ir_.emitVariantField(value, i);
         compilePattern(*variant->arguments[i], field, failJumps, bindings);
     }
 }

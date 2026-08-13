@@ -136,7 +136,6 @@ struct VariantPatternRecord {
     std::string enumName;
     std::string variantName;
     TypeInfo enumType;
-    std::vector<std::size_t> payloadIndices;
     std::vector<TypeInfo> payloadTypes;
 };
 

@@ -1,16 +1,16 @@
 enum Option<T> {
-  Some(value: T),
+  Some(T),
   None,
 }
 
 enum List<T> {
   Nil,
-  Cons(head: T, tail: List<T>),
+  Cons(T, List<T>),
 }
 
 fun describe(value: Option<number>): string {
   match value {
-    Option.Some(value: numberValue) => { return "some:" + str(numberValue); }
+    Option.Some(numberValue) => { return "some:" + str(numberValue); }
     Option.None => { return "none"; }
   }
 }
@@ -18,7 +18,7 @@ fun describe(value: Option<number>): string {
 fun sum(list: List<number>): number {
   match list {
     List.Nil => { return 0; }
-    List.Cons(head: first, tail: rest) => { return first + sum(rest); }
+    List.Cons(first, rest) => { return first + sum(rest); }
   }
 }
 

@@ -77,9 +77,8 @@ ModuleInterface makeInterface()
     option.genericParameterConstraints = {nullptr};
     option.variants.push_back(ModuleInterfaceVariant{
         "Some",
-        {typeParameterType("T")},
-        {std::optional<std::string>("value")}});
-    option.variants.push_back(ModuleInterfaceVariant{"None", {}, {}});
+        {typeParameterType("T")}});
+    option.variants.push_back(ModuleInterfaceVariant{"None", {}});
     interfaceInfo.enums.push_back(std::move(option));
 
     return interfaceInfo;

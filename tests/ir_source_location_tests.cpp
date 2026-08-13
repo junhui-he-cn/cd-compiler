@@ -455,7 +455,7 @@ void test_declaration_index_signature_shapes()
 {
     std::istringstream input(
         "struct Box<T> { value: T }\n"
-        "enum Result<T> { Ok(value: T), Empty }\n"
+        "enum Result<T> { Ok(T), Empty }\n"
         "fun identity<T>(value: T): T { return value; }\n"
         "let box: Box<number> = Box { value: 1 };\n"
         "let result: Result<number> = Result.Ok(1);\n"
@@ -497,7 +497,6 @@ void test_declaration_index_signature_shapes()
     assert(enumShape->enumVariants.size() == 2);
     assert(enumShape->enumVariants.front().name.lexeme == "Ok");
     assert(enumShape->enumVariants.front().payloadTypes.front().token.lexeme == "T");
-    assert(enumShape->enumVariants.front().payloadNames.front()->lexeme == "value");
 
     const std::optional<DeclarationSignature> functionSignature
         = index.signature(functionRecord->declarationId);
@@ -957,13 +956,13 @@ void test_variant_pattern_metadata()
 {
     std::istringstream input(
         "enum Result<T> {\n"
-        "  Ok(value: T, tag: string),\n"
+        "  Ok(T, string),\n"
         "  Empty,\n"
         "}\n"
         "fun choose(value: optional<Result<number>>): number {\n"
         "  match value {\n"
         "    nil => { return 0; }\n"
-        "    Result.Ok(tag: label, value: numberValue) => { return numberValue; }\n"
+        "    Result.Ok(numberValue, label) => { return numberValue; }\n"
         "    Result.Empty => { return 0; }\n"
         "  }\n"
         "}\n"
@@ -999,14 +998,12 @@ void test_variant_pattern_metadata()
     assert(okRecord->enumName == "Result");
     assert(okRecord->variantName == "Ok");
     assert(typeInfoName(okRecord->enumType) == "Result<number>");
-    assert((okRecord->payloadIndices == std::vector<std::size_t>{1, 0}));
     assert(okRecord->payloadTypes.size() == 2);
-    assert(typeInfoName(okRecord->payloadTypes[0]) == "string");
-    assert(typeInfoName(okRecord->payloadTypes[1]) == "number");
+    assert(typeInfoName(okRecord->payloadTypes[0]) == "number");
+    assert(typeInfoName(okRecord->payloadTypes[1]) == "string");
     assert(emptyRecord->enumName == "Result");
     assert(emptyRecord->variantName == "Empty");
     assert(typeInfoName(emptyRecord->enumType) == "Result<number>");
-    assert(emptyRecord->payloadIndices.empty());
     assert(emptyRecord->payloadTypes.empty());
 
     IRCompiler compiler;

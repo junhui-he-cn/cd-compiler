@@ -1,7 +1,7 @@
 module 0 "<repo>/tests/golden/named_payload_module/lib.cd"
   export value make: fun(): Outcome
   export enum Outcome
-    variant Good(message: string)
-    variant Bad(code: number)
+    variant Good(string)
+    variant Bad(number)
 
 module 1 entry "<repo>/tests/golden/named_payload_module/input.cd"

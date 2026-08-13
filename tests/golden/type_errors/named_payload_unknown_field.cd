@@ -1,6 +1,0 @@
-enum Result { Ok(value: number), Empty }
-let result = Result.Ok(1);
-match result {
-  Result.Ok(missing: value) => { print value; }
-  Result.Empty => { print 0; }
-}

@@ -1,9 +1,9 @@
 Program
-  Enum Option<T> {Some(value: T), None}
-  Enum List<T> {Nil, Cons(head: T, tail: List<T>)}
+  Enum Option<T> {Some(T), None}
+  Enum List<T> {Nil, Cons(T, List<T>)}
   Fun describe(value: Option<number>): string
     Match value
-      Arm Option.Some(value: numberValue)
+      Arm Option.Some(numberValue)
         Block
           Return (+ "some:" (call str numberValue))
       Arm Option.None
@@ -14,7 +14,7 @@ Program
       Arm List.Nil
         Block
           Return 0
-      Arm List.Cons(head: first, tail: rest)
+      Arm List.Cons(first, rest)
         Block
           Return (+ first (call sum rest))
   Let some: Option<number> = (member-call Option Some 7)

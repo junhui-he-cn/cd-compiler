@@ -105,8 +105,8 @@ void testValuesStructsFieldsMethodsAndTypes()
 
     ModuleInterfaceEnum result;
     result.name = "Result";
-    result.variants.push_back(ModuleInterfaceVariant{"Ok", {simpleType(StaticType::Number)}, {}});
-    result.variants.push_back(ModuleInterfaceVariant{"Empty", {}, {}});
+    result.variants.push_back(ModuleInterfaceVariant{"Ok", {simpleType(StaticType::Number)}});
+    result.variants.push_back(ModuleInterfaceVariant{"Empty", {}});
     module.enums.push_back(result);
 
     expectEqual(

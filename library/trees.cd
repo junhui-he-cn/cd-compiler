@@ -5,7 +5,7 @@
 // existing tree or any of its shared subtrees.
 enum Tree<T> {
   Empty,
-  Node(value: T, left: Tree<T>, right: Tree<T>)
+  Node(T, Tree<T>, Tree<T>)
 }
 
 fun emptyTree<T>(): Tree<T> {

@@ -48,7 +48,7 @@ enumVariant = identifier,
 enumPayloads = enumPayload,
                { ",", enumPayload } ;
 
-enumPayload  = [ identifier, ":" ], typeExpr ;
+enumPayload  = typeExpr ;
 
 implDecl    = "impl", identifier, [ typeParameters ],
               "{", { methodDecl }, "}" ;
@@ -110,7 +110,7 @@ variantPattern = identifier, ".", identifier,
 patternArguments = patternArgument,
                    { ",", patternArgument } ;
 
-patternArgument = [ identifier, ":" ], pattern ;
+patternArgument = pattern ;
 
 recordPattern = identifier, "{", [ recordPatternFields ], "}"
               | identifier, ".", identifier, "{", [ recordPatternFields ], "}" ;

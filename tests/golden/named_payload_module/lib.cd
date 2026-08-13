@@ -1,6 +1,6 @@
 enum Outcome {
-  Good(message: string),
-  Bad(code: number),
+  Good(string),
+  Bad(number),
 }
 
 fun make(): Outcome {

@@ -4,6 +4,6 @@ module 0 "<repo>/tests/golden/generic_constraints_imports/lib.cd"
     field value: number
     method echo<T: number>(T): T
   export enum Box<T: number>
-    variant Value(value: T)
+    variant Value(T)
 
 module 1 entry "<repo>/tests/golden/generic_constraints_imports/input.cd"

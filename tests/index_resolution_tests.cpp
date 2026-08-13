@@ -299,7 +299,7 @@ void test_match_pattern_binding_resolution()
 void test_or_pattern_shared_binding_resolution()
 {
     const std::string source =
-        "enum E { A(value: number), B(value: number) }\n"
+        "enum E { A(number), B(number) }\n"
         "let e = E.A(1);\n"
         "match e {\n"
         "  E.A(v) | E.B(v) => { print v; }\n"

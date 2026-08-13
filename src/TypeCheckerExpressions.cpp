@@ -803,56 +803,6 @@ bool TypeChecker::checkPattern(
                 + " patterns but got " + std::to_string(variantPattern->arguments.size()));
     }
 
-    std::vector<std::size_t> payloadIndices;
-    payloadIndices.reserve(variantPattern->arguments.size());
-    bool hasNamedPattern = false;
-    bool hasPositionalPattern = false;
-    for (std::size_t i = 0; i < variantPattern->arguments.size(); ++i) {
-        if (i < variantPattern->argumentNames.size() && variantPattern->argumentNames[i]) {
-            hasNamedPattern = true;
-        } else {
-            hasPositionalPattern = true;
-        }
-    }
-    if (hasNamedPattern && hasPositionalPattern) {
-        throw TypeError(variantPattern->name,
-            "variant pattern " + *enumExpectedType->enumName + "." + variantPattern->name.lexeme
-                + " must use either all named or all positional payloads");
-    }
-
-    if (!hasNamedPattern) {
-        for (std::size_t i = 0; i < variantPattern->arguments.size(); ++i) {
-            payloadIndices.push_back(i);
-        }
-    } else {
-        std::unordered_map<std::string, std::size_t> declaredPayloads;
-        for (std::size_t i = 0; i < variant->payloadTypes.size(); ++i) {
-            if (i >= variant->payloadNames.size() || !variant->payloadNames[i]) {
-                throw TypeError(variantPattern->name,
-                    "variant " + *enumExpectedType->enumName + "." + variantPattern->name.lexeme
-                        + " has no named payload fields");
-            }
-            declaredPayloads.emplace(variant->payloadNames[i]->lexeme, i);
-        }
-
-        std::unordered_set<std::string> usedPayloads;
-        for (std::size_t i = 0; i < variantPattern->arguments.size(); ++i) {
-            const Token& payloadName = *variantPattern->argumentNames[i];
-            const auto found = declaredPayloads.find(payloadName.lexeme);
-            if (found == declaredPayloads.end()) {
-                throw TypeError(payloadName,
-                    "variant " + *enumExpectedType->enumName + "." + variantPattern->name.lexeme
-                        + " has no payload field " + payloadName.lexeme);
-            }
-            if (!usedPayloads.insert(payloadName.lexeme).second) {
-                throw TypeError(payloadName,
-                    "duplicate payload field " + payloadName.lexeme
-                        + " in variant pattern " + *enumExpectedType->enumName
-                        + "." + variantPattern->name.lexeme);
-            }
-            payloadIndices.push_back(found->second);
-        }
-    }
     coveredVariants.insert(variantPattern->name.lexeme);
 
     std::string runtimeEnumName = *enumExpectedType->enumName;
@@ -875,7 +825,7 @@ bool TypeChecker::checkPattern(
         bool nestedCoversNil = false;
         bool nestedCoversStruct = false;
         const TypeInfo payloadType = SemanticTypes::substituteTypeParameters(
-            variant->payloadTypes[payloadIndices[i]], substitutions);
+            variant->payloadTypes[i], substitutions);
         resolvedPayloadTypes.push_back(payloadType);
         checkPattern(
             *variantPattern->arguments[i],
@@ -892,7 +842,6 @@ bool TypeChecker::checkPattern(
             std::move(runtimeEnumName),
             variantPattern->name.lexeme,
             *enumExpectedType,
-            std::move(payloadIndices),
             std::move(resolvedPayloadTypes)});
     return false;
 }

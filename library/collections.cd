@@ -294,7 +294,7 @@ fun newBinaryHeap<T>(less: fun(T, T): bool): BinaryHeap<T> {
 }
 
 enum Option<T> {
-  Some(value: T),
+  Some(T),
   None,
 }
 
@@ -307,8 +307,8 @@ fun none<T>(): Option<T> {
 }
 
 enum Result<T, E> {
-  Ok(value: T),
-  Err(error: E),
+  Ok(T),
+  Err(E),
 }
 
 fun ok<T, E>(value: T): Result<T, E> {
@@ -422,7 +422,7 @@ fun newRingBuffer<T>(capacity: number): RingBuffer<T> {
 
 enum List<T> {
   Nil,
-  Cons(head: T, tail: List<T>),
+  Cons(T, List<T>),
 }
 
 fun emptyList<T>(): List<T> {

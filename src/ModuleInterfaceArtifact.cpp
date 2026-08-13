@@ -365,12 +365,6 @@ void encodeInterfaceBody(CodecWriter& writer, const ModuleInterface& interfaceIn
             writer.string(variant.name);
             writer.number(variant.payloadTypes.size());
             for (std::size_t index = 0; index < variant.payloadTypes.size(); ++index) {
-                const std::optional<std::string> payloadName
-                    = index < variant.payloadNames.size() ? variant.payloadNames[index] : std::nullopt;
-                writer.boolean(payloadName.has_value());
-                if (payloadName) {
-                    writer.string(*payloadName);
-                }
                 encodeType(writer, variant.payloadTypes[index]);
             }
         }
@@ -780,10 +774,7 @@ void writeInterfaceBody(std::ostream& out, const ModuleInterface& source)
                 << "    name = " << quotedString(variant.name) << '\n'
                 << "    payloads = " << variant.payloadTypes.size() << '\n';
             for (std::size_t payloadIndex = 0; payloadIndex < variant.payloadTypes.size(); ++payloadIndex) {
-                const std::optional<std::string> payloadName
-                    = payloadIndex < variant.payloadNames.size() ? variant.payloadNames[payloadIndex] : std::nullopt;
-                out << "      payload " << payloadIndex << "\n"
-                    << "        name = " << (payloadName ? quotedString(*payloadName) : "none") << '\n';
+                out << "      payload " << payloadIndex << "\n";
                 writeTypeField(out, "        type = ", variant.payloadTypes[payloadIndex]);
             }
         }
@@ -888,15 +879,8 @@ ModuleInterface parseInterfaceBody(LineReader& lines)
                 throw std::runtime_error("sidecar variant payloads are too large");
             }
             variant.payloadTypes.reserve(payloadCount);
-            variant.payloadNames.reserve(payloadCount);
             for (std::size_t payloadIndex = 0; payloadIndex < payloadCount; ++payloadIndex) {
                 parseIndexedHeader(lines.next(), "      payload ", payloadIndex);
-                const std::string nameLine = lines.next();
-                if (nameLine == "        name = none") {
-                    variant.payloadNames.push_back(std::nullopt);
-                } else {
-                    variant.payloadNames.push_back(parseQuoted(nameLine, "        name = "));
-                }
                 variant.payloadTypes.push_back(parseTypeField(lines.next(), "        type = "));
             }
             enumeration.variants.push_back(std::move(variant));

@@ -1,6 +1,6 @@
 enum Mixed {
-  Number(value: number),
-  Text(value: string),
+  Number(number),
+  Text(string),
 }
 let value = Mixed.Number(1);
 match value {

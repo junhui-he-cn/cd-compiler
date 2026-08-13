@@ -1,10 +1,10 @@
 Program
-  Enum Pair {Values(left: number, right: number), Empty}
-  Enum Result {Ok(value: number), Err(message: string), Empty}
-  Enum Box {Wrap(item: Result)}
+  Enum Pair {Values(number, number), Empty}
+  Enum Result {Ok(number), Err(string), Empty}
+  Enum Box {Wrap(Result)}
   Fun pairScore(pair: Pair): number
     Match pair
-      Arm Pair.Values(right: rightValue, left: leftValue)
+      Arm Pair.Values(leftValue, rightValue)
         Block
           Return (+ (* rightValue 10) leftValue)
       Arm Pair.Empty
@@ -12,10 +12,10 @@ Program
           Return 0
   Fun describe(result: Result): string
     Match result
-      Arm Result.Ok(value: numberValue)
+      Arm Result.Ok(numberValue)
         Block
           Return (+ "ok:" (call str numberValue))
-      Arm Result.Err(message: text)
+      Arm Result.Err(text)
         Block
           Return (+ "err:" text)
       Arm Result.Empty
@@ -23,13 +23,13 @@ Program
           Return "empty"
   Fun unwrap(box: Box): string
     Match box
-      Arm Box.Wrap(item: Result.Ok(value: numberValue))
+      Arm Box.Wrap(Result.Ok(numberValue))
         Block
           Return (call str numberValue)
-      Arm Box.Wrap(item: Result.Err(message: text))
+      Arm Box.Wrap(Result.Err(text))
         Block
           Return text
-      Arm Box.Wrap(item: Result.Empty)
+      Arm Box.Wrap(Result.Empty)
         Block
           Return "empty"
   Print (call pairScore (member-call Pair Values 2 4))

@@ -1,6 +1,6 @@
 Program
   Module 0
-    Enum Result<T, E> {Ok(value: T), Err(message: E)}
+    Enum Result<T, E> {Ok(T), Err(E)}
     Fun make(): Result<number, string>
       Return (member-call Result Ok 9)
     Export Result make

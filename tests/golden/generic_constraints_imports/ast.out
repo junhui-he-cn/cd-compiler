@@ -1,6 +1,6 @@
 Program
   Module 0
-    Enum Box<T: number> {Value(value: T)}
+    Enum Box<T: number> {Value(T)}
     Struct Boxed {value: number}
     Impl Boxed
       Method echo<T: number>(value: T): T

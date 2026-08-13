@@ -1,7 +1,7 @@
 module 0 "<repo>/tests/golden/generic_enum_module/lib.cd"
   export value make: fun(): Result<number, string>
   export enum Result<T, E>
-    variant Ok(value: T)
-    variant Err(message: E)
+    variant Ok(T)
+    variant Err(E)
 
 module 1 entry "<repo>/tests/golden/generic_enum_module/input.cd"

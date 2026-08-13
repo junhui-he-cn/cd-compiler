@@ -48,7 +48,6 @@ struct ModuleInterfaceStruct {
 struct ModuleInterfaceVariant {
     std::string name;
     std::vector<TypeInfo> payloadTypes;
-    std::vector<std::optional<std::string>> payloadNames;
 };
 
 struct ModuleInterfaceEnum {

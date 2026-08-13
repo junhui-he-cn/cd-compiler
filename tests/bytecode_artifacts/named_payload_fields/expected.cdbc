@@ -13,10 +13,10 @@ names:
   n3 = "pair#0"
   n4 = "Pair"
   n5 = "Values"
-  n6 = "rightValue#1"
-  n7 = "leftValue#2"
-  n8 = "rightValue#1"
-  n9 = "leftValue#2"
+  n6 = "leftValue#1"
+  n7 = "rightValue#2"
+  n8 = "rightValue#2"
+  n9 = "leftValue#1"
   n10 = "Pair"
   n11 = "Empty"
 
@@ -28,8 +28,8 @@ main registers=14:
   r3 = load_var n3
   r4 = variant_tag r3 n4.n5
   jump_if_false r4, 18
-  r5 = variant_field r3 1
-  r6 = variant_field r3 0
+  r5 = variant_field r3 0
+  r6 = variant_field r3 1
   store_var n6, r5
   store_var n7, r6
   r7 = load_var n8
@@ -46,7 +46,7 @@ main registers=14:
   jump 23
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/named_payload_fields/input.cd" text="enum Pair { Values(left: number, right: number), Empty }\nlet pair = Pair.Values(2, 4);\nmatch pair {\n  Pair.Values(right: rightValue, left: leftValue) => { print rightValue * 10 + leftValue; }\n  Pair.Empty => { print 0; }\n}\n"
+  s0 path="tests/bytecode_artifacts/named_payload_fields/input.cd" text="enum Pair { Values(number, number), Empty }\nlet pair = Pair.Values(2, 4);\nmatch pair {\n  Pair.Values(leftValue, rightValue) => { print rightValue * 10 + leftValue; }\n  Pair.Empty => { print 0; }\n}\n"
 
 debug_locations:
   main 0 = s0:2:24
@@ -60,12 +60,12 @@ debug_locations:
   main 8 = s0:3:1
   main 9 = s0:3:1
   main 10 = s0:3:1
-  main 11 = s0:4:62
-  main 12 = s0:4:75
-  main 13 = s0:4:62
-  main 14 = s0:4:80
-  main 15 = s0:4:62
-  main 16 = s0:4:56
+  main 11 = s0:4:49
+  main 12 = s0:4:62
+  main 13 = s0:4:49
+  main 14 = s0:4:67
+  main 15 = s0:4:49
+  main 16 = s0:4:43
   main 17 = s0:3:1
   main 18 = s0:3:1
   main 19 = s0:3:1
@@ -74,26 +74,26 @@ debug_locations:
   main 22 = s0:3:1
 
 debug_ranges:
-  main 0 = s0:80:81
-  main 1 = s0:83:84
-  main 2 = s0:68:85
-  main 3 = s0:61:85
-  main 4 = s0:93:97
-  main 5 = s0:93:217
-  main 6 = s0:93:217
-  main 7 = s0:93:217
-  main 8 = s0:93:217
-  main 9 = s0:93:217
-  main 10 = s0:93:217
-  main 11 = s0:161:171
-  main 12 = s0:174:176
-  main 13 = s0:161:176
-  main 14 = s0:179:188
-  main 15 = s0:161:188
-  main 16 = s0:161:188
-  main 17 = s0:93:217
-  main 18 = s0:93:217
-  main 19 = s0:93:217
-  main 20 = s0:216:217
-  main 21 = s0:216:217
-  main 22 = s0:93:217
+  main 0 = s0:67:68
+  main 1 = s0:70:71
+  main 2 = s0:55:72
+  main 3 = s0:48:72
+  main 4 = s0:80:84
+  main 5 = s0:80:191
+  main 6 = s0:80:191
+  main 7 = s0:80:191
+  main 8 = s0:80:191
+  main 9 = s0:80:191
+  main 10 = s0:80:191
+  main 11 = s0:135:145
+  main 12 = s0:148:150
+  main 13 = s0:135:150
+  main 14 = s0:153:162
+  main 15 = s0:135:162
+  main 16 = s0:135:162
+  main 17 = s0:80:191
+  main 18 = s0:80:191
+  main 19 = s0:80:191
+  main 20 = s0:190:191
+  main 21 = s0:190:191
+  main 22 = s0:80:191

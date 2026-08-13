@@ -1,5 +1,5 @@
 Program
-  Enum Result {Number(value: number), Text(value: string), Empty}
+  Enum Result {Number(number), Text(string), Empty}
   Fun describeNumber(value: number): string
     Match value
       Arm 0

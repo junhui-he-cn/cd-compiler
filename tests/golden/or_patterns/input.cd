@@ -1,6 +1,6 @@
 enum Shape {
-  Point(x: number),
-  Line(x: number, y: number),
+  Point(number),
+  Line(number, number),
   Empty,
 }
 

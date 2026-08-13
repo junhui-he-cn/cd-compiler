@@ -1,6 +1,6 @@
 enum Result {
-  Number(value: number),
-  Text(value: string),
+  Number(number),
+  Text(string),
   Empty,
 }
 

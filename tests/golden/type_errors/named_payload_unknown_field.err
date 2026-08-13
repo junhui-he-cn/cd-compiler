@@ -1,3 +1,0 @@
-Type error at <repo>/tests/golden/type_errors/named_payload_unknown_field.cd:4:13: variant Result.Ok has no payload field missing
-    Result.Ok(missing: value) => { print value; }
-              ^

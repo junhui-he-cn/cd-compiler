@@ -1,5 +1,5 @@
 Program
-  Enum Shape {Point(x: number), Line(x: number, y: number), Empty}
+  Enum Shape {Point(number), Line(number, number), Empty}
   Fun numberLabel(value: number): string
     Match value
       Arm (or 0 1)

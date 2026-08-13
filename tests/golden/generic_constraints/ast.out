@@ -1,5 +1,5 @@
 Program
-  Enum Box<T: number> {Value(value: T)}
+  Enum Box<T: number> {Value(T)}
   Struct Holder {value: number}
   Impl Holder
     Method echo<T: number>(value: T): T

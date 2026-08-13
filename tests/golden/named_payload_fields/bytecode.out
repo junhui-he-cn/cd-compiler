@@ -42,14 +42,14 @@ function $0 pairScore/1 registers=12
 0000  b0 = load_var @1 pair#1
 0001  b1 = variant_tag b0  @2 Pair. @3 Values
 0002  jump_if_false b1, 0014
-0003  b2 = variant_field b0[1]
-0004  b3 = variant_field b0[0]
-0005  store_var @4 rightValue#2, b2
-0006  store_var @5 leftValue#3, b3
-0007  b4 = load_var @6 rightValue#2
+0003  b2 = variant_field b0[0]
+0004  b3 = variant_field b0[1]
+0005  store_var @4 leftValue#2, b2
+0006  store_var @5 rightValue#3, b3
+0007  b4 = load_var @6 rightValue#3
 0008  b5 = constant #1 10
 0009  b6 = multiply b4, b5
-0010  b7 = load_var @7 leftValue#3
+0010  b7 = load_var @7 leftValue#2
 0011  b8 = add b6, b7
 0012  return b8
 0013  jump 0019

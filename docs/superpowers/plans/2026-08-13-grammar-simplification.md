@@ -19,7 +19,7 @@ with golden/README/grammar/decision-record updates.
    capability witness. Status: complete.
 3. **Remove named enum payload fields and reordered pattern arguments.**
    Payloads become purely positional in declarations, constructors, and
-   patterns.
+   patterns. Status: complete.
 4. **Remove C-style `for`, keep `while` and `for-in`.**
    Deletes `cForClause` parsing and the increment flow rules.
 5. **Reassess the capability system (`Eq`/`Ord`/`Hash` constraints).**

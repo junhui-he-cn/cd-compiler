@@ -1,5 +1,5 @@
 Program
-  Enum Option {Some(value: number), None}
+  Enum Option {Some(number), None}
   Fun describe(value: optional<Option>): string
     Match value
       Arm nil

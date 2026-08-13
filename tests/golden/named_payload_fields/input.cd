@@ -1,38 +1,38 @@
 enum Pair {
-  Values(left: number, right: number),
+  Values(number, number),
   Empty,
 }
 
 enum Result {
-  Ok(value: number),
-  Err(message: string),
+  Ok(number),
+  Err(string),
   Empty,
 }
 
 enum Box {
-  Wrap(item: Result),
+  Wrap(Result),
 }
 
 fun pairScore(pair: Pair): number {
   match pair {
-    Pair.Values(right: rightValue, left: leftValue) => { return rightValue * 10 + leftValue; }
+    Pair.Values(leftValue, rightValue) => { return rightValue * 10 + leftValue; }
     Pair.Empty => { return 0; }
   }
 }
 
 fun describe(result: Result): string {
   match result {
-    Result.Ok(value: numberValue) => { return "ok:" + str(numberValue); }
-    Result.Err(message: text) => { return "err:" + text; }
+    Result.Ok(numberValue) => { return "ok:" + str(numberValue); }
+    Result.Err(text) => { return "err:" + text; }
     Result.Empty => { return "empty"; }
   }
 }
 
 fun unwrap(box: Box): string {
   match box {
-    Box.Wrap(item: Result.Ok(value: numberValue)) => { return str(numberValue); }
-    Box.Wrap(item: Result.Err(message: text)) => { return text; }
-    Box.Wrap(item: Result.Empty) => { return "empty"; }
+    Box.Wrap(Result.Ok(numberValue)) => { return str(numberValue); }
+    Box.Wrap(Result.Err(text)) => { return text; }
+    Box.Wrap(Result.Empty) => { return "empty"; }
   }
 }
 

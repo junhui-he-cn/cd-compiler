@@ -2,8 +2,8 @@ import "./lib.cd" as lib;
 
 fun render(value: lib.Outcome): string {
   match value {
-    lib.Outcome.Good(message: text) => { return text; }
-    lib.Outcome.Bad(code: numberValue) => { return str(numberValue); }
+    lib.Outcome.Good(text) => { return text; }
+    lib.Outcome.Bad(numberValue) => { return str(numberValue); }
   }
 }
 

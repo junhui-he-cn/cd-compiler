@@ -1,6 +1,6 @@
 enum Result<T, E> {
-  Ok(value: T),
-  Err(message: E),
+  Ok(T),
+  Err(E),
 }
 
 fun make(): Result<number, string> {

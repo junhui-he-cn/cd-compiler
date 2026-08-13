@@ -55,10 +55,6 @@ ModuleEnumExports enumExportsFromInterface(const ModuleInterface& interfaceInfo,
             EnumVariantType converted;
             converted.name = interfaceToken(anchor, variant.name);
             converted.payloadTypes = variant.payloadTypes;
-            for (const std::optional<std::string>& payloadName : variant.payloadNames) {
-                converted.payloadNames.push_back(
-                    payloadName ? std::optional<Token>(interfaceToken(anchor, *payloadName)) : std::nullopt);
-            }
             declaration.variants.push_back(std::move(converted));
         }
         exports.emplace(source.name, std::move(declaration));
@@ -188,17 +184,9 @@ void TypeChecker::buildModuleInterface(const Program& program, const ModuleStmt&
             enumInfo.name = entry.first;
             enumInfo.genericParameters = entry.second.genericParameters;
             for (const EnumVariantType& variant : entry.second.variants) {
-                std::vector<std::optional<std::string>> payloadNames;
-                payloadNames.reserve(variant.payloadNames.size());
-                for (const std::optional<Token>& payloadName : variant.payloadNames) {
-                    payloadNames.push_back(payloadName
-                        ? std::optional<std::string>(payloadName->lexeme)
-                        : std::nullopt);
-                }
                 enumInfo.variants.push_back(ModuleInterfaceVariant{
                     variant.name.lexeme,
-                    variant.payloadTypes,
-                    std::move(payloadNames)});
+                    variant.payloadTypes});
             }
             enumInfo.genericParameterConstraints = entry.second.genericParameterConstraints;
             interfaceInfo.enums.push_back(std::move(enumInfo));

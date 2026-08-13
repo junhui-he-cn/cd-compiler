@@ -42,14 +42,14 @@ function $0 pairScore(pair#1)
 0000  v0 = load_var @1 pair#1
 0001  v1 = variant_tag v0 Pair.Values
 0002  jump_if_false v1, 0014
-0003  v2 = variant_field v0[1]
-0004  v3 = variant_field v0[0]
-0005  store_var @4 rightValue#2, v2
-0006  store_var @5 leftValue#3, v3
-0007  v4 = load_var @6 rightValue#2
+0003  v2 = variant_field v0[0]
+0004  v3 = variant_field v0[1]
+0005  store_var @4 leftValue#2, v2
+0006  store_var @5 rightValue#3, v3
+0007  v4 = load_var @6 rightValue#3
 0008  v5 = constant #1 10
 0009  v6 = multiply v4, v5
-0010  v7 = load_var @7 leftValue#3
+0010  v7 = load_var @7 leftValue#2
 0011  v8 = add v6, v7
 0012  return v8
 0013  jump 0019
