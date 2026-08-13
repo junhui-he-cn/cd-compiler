@@ -25,8 +25,11 @@ with golden/README/grammar/decision-record updates.
    system; the struct `Ord` witness was already removed by item 2. Status:
    complete.
 5. **Reduce nullable flow analysis to a core subset.**
-   Highest code win, highest semantic risk; requires a separate semantic
-   decision before any implementation.
+   Redesign recorded
+   (`2026-08-13-explicit-optional-unwrapping-design.md`): replace automatic
+   narrowing with explicit `if let`/`while let`, `?`, and `??` unwrapping in
+   the Rust style, then delete the flow analysis. Status: design proposed;
+   implementation awaits confirmation.
 
 C-style `for` is kept as a supported loop form and is not part of this plan.
 The tooling surface (formatter, lossless source, `--tokens`) is kept as
