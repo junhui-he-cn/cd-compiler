@@ -332,6 +332,10 @@ if (condition) {
 
 条件表达式使用与 `!`、`&&`、`||` 相同的 truthiness 规则。
 
+`if` 和 `while` 条件两边的括号是可选的：`if (x)` 与 `if x` 等价，`while (n < 3)`
+与 `while n < 3` 等价。括号只是普通的分组表达式，多余的分组括号会被 formatter
+原样保留，不会在两种写法之间互相转换。
+
 ### `while`
 
 ```cd

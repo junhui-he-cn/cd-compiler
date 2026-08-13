@@ -88,6 +88,10 @@ ifStmt      = "if", expression, block,
 ifLetStmt   = "if", "let", identifier, "=", expression,
               block, [ "else", block ] ;
 
+(* `if`/`while` condition parentheses are optional.  A parenthesized
+   condition is ordinary expression grouping, so `if (x)` and `if x` are
+   equivalent and the formatter preserves whichever spelling was written. *)
+
 matchStmt   = "match", expression, "{", { matchArm }, "}" ;
 
 matchArm    = pattern, [ "if", expression ], "=>", block ;

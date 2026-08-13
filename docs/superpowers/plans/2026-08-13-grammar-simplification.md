@@ -40,7 +40,9 @@ shipped and is not part of this plan.
 - Named enum payloads versus positional constructors (item 3).
 - Stale `operator` "not exported" note in `language-grammar.ebnf` (item 2).
 - Stale `assignmentTarget` EBNF rule mentioning `call` (resolved).
-- Optional versus always-used parentheses around `if`/`while` conditions.
+- Optional versus always-used parentheses around `if`/`while` conditions
+  (resolved: optional parentheses are kept and documented in
+  `USER_MANUAL.md` and `language-grammar.ebnf`).
 - `nil`/`false` falsey but `0`/`""` truthy; nil checks are now plain boolean
   tests with no narrowing, so the old then-only asymmetry is gone (resolved as
   a documented language rule).
