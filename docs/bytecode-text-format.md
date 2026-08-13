@@ -364,8 +364,7 @@ and linker path. Invalid artifacts are rejected before VM execution; valid
 linked programs and module products retain the canonical text described above.
 
 The version and compatibility matrix is recorded in
-`docs/decisions/m4a-artifact-validation.md` and
-`docs/decisions/m4a-artifact-validation.json`. No successor version is selected
+`docs/decisions/m4a-artifact-validation.md`. No successor version is selected
 for this validation-only extension.
 
 ## Non-Goals for This Phase

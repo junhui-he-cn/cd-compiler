@@ -25,7 +25,7 @@ parity, interpreter-default VM execution) remain unchanged.
 On 2026-08-10 the user explicitly reopened one compatibility boundary:
 multi-file compilation moves to the one-module-per-file model and the legacy
 combined-source path is removed (see C6 and
-[`2026-08-10-unified-module-compilation-design.md`](superpowers/specs/2026-08-10-unified-module-compilation-design.md)).
+`2026-08-10-unified-module-compilation-design.md`).
 C6 P1 and P2 landed through 2026-08-12 (`cb8b7aac`): the module-only
 `FrontendSession` path, migrated fixtures, documentation, and decision-record
 updates are complete.
@@ -64,15 +64,14 @@ contract is superseded by C6.
 | Artifact boundary | Compiler emits validated linked and module `cdbc 0.1` products with debug metadata | No successor format has been justified |
 
 The authoritative implementation contracts remain in `README.md`,
-`docs/language-grammar.ebnf`, `docs/bytecode-text-format.md`, and
-`docs/decisions/`.
+`docs/language-grammar.ebnf`, and `docs/bytecode-text-format.md`.
 
 ## 3. Joint prerequisite
 
 ### X1: Compiler/VM compatibility matrix
 
 **Status:** completed on 2026-08-02. Decision record:
-[`x1-compiler-vm-compatibility-001.md`](decisions/x1-compiler-vm-compatibility-001.md).
+`x1-compiler-vm-compatibility-001.md`.
 
 **Outcome:** add one concise compatibility record covering compiler version,
 `cdbc` version, linked versus module products, metadata-free versus debug
@@ -110,18 +109,18 @@ for O0. Finish the evidence in three narrow slices:
    locations, trace events, frame locals, and runtime cells must remain
    observable at O1. Add O0/O1 trace and debugger parity cases for branches,
    loops, closures, imported functions, eliminated values, and runtime failures.
-   See [`c1a-optimized-debug-001.md`](decisions/c1a-optimized-debug-001.md).
+   See `c1a-optimized-debug-001.md`.
 2. **C1B - register policy (implemented):** measure CFG-aware peak
    virtual-register pressure on the checked-in O0/O1 workload matrix and
    decide whether O1 retains virtual registers or needs a separate physical
    allocation/coalescing stage. O1 retains virtual registers for now; see
-   [`c1b-register-policy-001.md`](decisions/c1b-register-policy-001.md).
+   `c1b-register-policy-001.md`.
    Do not add an O2 allocator until the mapping and spill/debug rules are
    written.
 3. **C1C - default-level decision (implemented):** compare the semantic,
    artifact-size, compile-time, runtime, cache, and debugger evidence. Keep O0
    as the compatibility default and retain explicit O1 opt-in; see
-   [`c1c-default-level-001.md`](decisions/c1c-default-level-001.md).
+   `c1c-default-level-001.md`.
 
 **Decision gate:** changing the default optimization level is a user-visible
 pipeline decision. Stop after presenting the C1 evidence; do not switch the
@@ -161,7 +160,7 @@ module graph, and `--emit-bytecode` emits a linked program whose entry module
 bodies execute in CLI order.
 
 See the full design in
-[`2026-08-10-unified-module-compilation-design.md`](superpowers/specs/2026-08-10-unified-module-compilation-design.md).
+`2026-08-10-unified-module-compilation-design.md`.
 
 **Deliverables:** P1 implements the module-only `FrontendSession` path,
 migrates the `multi_file_functions` fixtures to module semantics, adds
@@ -176,7 +175,7 @@ only where the new uniform module semantics intentionally changes output.
 ### C3: Complete closed-workspace language tooling
 
 **Priority:** P1. **Status:** deferred by user direction on 2026-08-09. See
-[`m5b-lsp-deferred-001.md`](decisions/m5b-lsp-deferred-001.md).
+`m5b-lsp-deferred-001.md`.
 
 The shipped closed-module definition/reference boundary remains supported. C3A
 through C3C are outside the default queue and resume only after explicit
@@ -198,7 +197,7 @@ of C3A.
 ### C4: Decide module-product creation and repair policy
 
 **Priority:** P2. **Status:** complete on 2026-08-13. Decision record:
-[`c4-module-product-creation-repair-001.md`](decisions/c4-module-product-creation-repair-001.md).
+`c4-module-product-creation-repair-001.md`.
 
 Module-product builds are strict by default: cold builds bootstrap from
 source, an invalid or inconsistent manifest requires explicit repair

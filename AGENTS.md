@@ -17,8 +17,9 @@ This file is project memory for Codex/AI agents working in this repository. Read
 - Do not invoke or assume `superpowers` skills by default.
 - Use the normal repository workflow unless the user explicitly requests a
   particular skill or workflow.
-- Existing files under `docs/superpowers/` are historical project plans and
-  specifications; their presence does not require activating the skill system.
+- The former `docs/superpowers/` plan and specification files were historical
+  records and have been removed; their old `superpowers:` skill references do
+  not require activating the skill system.
 
 ## Project Overview
 
@@ -261,7 +262,6 @@ File-backed lexer, parser, and type diagnostics always include the file path: `<
 - Update `docs/language-grammar.ebnf` whenever the implemented parser grammar or precedence changes.
 - Update `README.md` whenever user-visible language features, CLI behavior, or test workflows change.
 - Keep docs concise and aligned with actual implementation. Do not document planned behavior as if it exists.
-- For substantial features, keep design and implementation plans under `docs/superpowers/specs/` and `docs/superpowers/plans/`.
 
 ## Git and Workspace Hygiene
 

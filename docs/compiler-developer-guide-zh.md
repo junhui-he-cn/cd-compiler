@@ -1,6 +1,6 @@
 # Compiler Design 编译器端开发者指南（中文）
 
-本文档面向需要阅读、修改或扩展编译器端代码的开发者，梳理**编译器主线的完整编译流程**与其中的关键细节。语言参考和产物契约见 `README.md`、`docs/language-grammar.ebnf`、`docs/bytecode-text-format.md` 与 `docs/decisions/`。
+本文档面向需要阅读、修改或扩展编译器端代码的开发者，梳理**编译器主线的完整编译流程**与其中的关键细节。语言参考和产物契约见 `README.md`、`docs/language-grammar.ebnf` 与 `docs/bytecode-text-format.md`。
 
 ## 1. 仓库结构
 

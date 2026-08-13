@@ -6,8 +6,7 @@ IR, module-cache producer, and compiler tools are planned in
 products, debug metadata, or compatibility policy are joint slices.
 
 The baseline was audited on 2026-08-02 at `master` commit `a78cce37`. Detailed
-history lives in `docs/decisions/`, tests, and Git; completed micro-slices are
-not repeated here.
+history lives in tests and Git; completed micro-slices are not repeated here.
 
 ## 0. Current phase: consolidation only
 
@@ -56,8 +55,8 @@ accounting, and C++/Rust parity remain compatibility constraints.
 
 The X1 compatibility matrix, V1 recursive-object lifetime policy, and V3
 profile-driven performance slices are complete and intentionally omitted from
-this active queue. Their decision records and verification evidence remain in
-`docs/decisions/` and Git history.
+this active queue. Their verification evidence remains in tests and Git
+history.
 
 The next execution plan is deterministic concurrency first, followed by the
 evidence-driven JIT. V5 establishes task, frame, root, safepoint, cancellation,
@@ -70,8 +69,8 @@ tracks and do not block this sequence.
 **Priority:** trigger-based. **Status:** explicitly deferred on 2026-08-03. The consumer
 gate was audited and a concrete in-repository host consumer is still required
 before API commitment. See
-[`v2-host-consumer-gate-001.md`](decisions/v2-host-consumer-gate-001.md) and
-[`vm-future-work-deferred-001.md`](decisions/vm-future-work-deferred-001.md).
+`v2-host-consumer-gate-001.md` and
+`vm-future-work-deferred-001.md`.
 
 1. **V2A - host outcome:** define one structured execution outcome containing
    output, typed runtime/resource failure, frames/source ranges, and partial
@@ -89,7 +88,7 @@ or `Send`/`Sync` promise belongs in V2A.
 
 **Priority:** trigger-based. **Status:** explicitly deferred on 2026-08-03, pending a real
 ABI or release need. See
-[`vm-future-work-deferred-001.md`](decisions/vm-future-work-deferred-001.md).
+`vm-future-work-deferred-001.md`.
 
 - Publish native registry metadata only after deciding whether names remain the
   artifact ABI or a successor format introduces versioned native IDs.
@@ -109,7 +108,7 @@ scheduler control-plane, explicit frame-state foundation, private adapter, and
 typed host task result/join-wake and task-aware output surfaces were implemented
 on 2026-08-04; task-aware trace, profile, debugger, and repeatable workload
 evidence were implemented on 2026-08-06. See
-[`v5a-vm-concurrency-contract-001.md`](decisions/v5a-vm-concurrency-contract-001.md).
+`v5a-vm-concurrency-contract-001.md`.
 
 Concurrency is a runtime and language contract that a later JIT must preserve.
 It determines task-local frames and roots, GC safepoints, cancellation, output
@@ -117,20 +116,20 @@ and failure ordering, resource charging, native callback behavior, and
 debugger/profile events. Resume it before JIT work, in these slices:
 
 1. **V5A - concurrency contract:** recorded in
-   [`v5a-vm-concurrency-contract-001.md`](decisions/v5a-vm-concurrency-contract-001.md).
+   `v5a-vm-concurrency-contract-001.md`.
    The named consumer is an in-process Rust library host; the contract fixes
    one-thread cooperative scheduling, task lifecycle, join/wake, cancellation,
    resource scopes, output/event ordering, and task-root ownership. It does not
    promise OS threads, language-level async syntax, or `Send`/`Sync`.
 2. **V5B - cooperative scheduler:** the control-plane foundation, private
    one-task execution adapter, and additive typed host session are recorded in
-   [`v5b-vm-scheduler-control-plane-001.md`](decisions/v5b-vm-scheduler-control-plane-001.md),
-   [`v5b-vm-task-host-result-001.md`](decisions/v5b-vm-task-host-result-001.md),
-   [`v5b-vm-task-output-001.md`](decisions/v5b-vm-task-output-001.md),
-   [`v5b-vm-task-trace-001.md`](decisions/v5b-vm-task-trace-001.md),
-   [`v5b-vm-task-profile-001.md`](decisions/v5b-vm-task-profile-001.md), and
-   [`v5b-vm-task-debugger-001.md`](decisions/v5b-vm-task-debugger-001.md),
-   plus [`v5b-vm-task-workload-001.md`](decisions/v5b-vm-task-workload-001.md).
+   `v5b-vm-scheduler-control-plane-001.md`,
+   `v5b-vm-task-host-result-001.md`,
+   `v5b-vm-task-output-001.md`,
+   `v5b-vm-task-trace-001.md`,
+   `v5b-vm-task-profile-001.md`, and
+   `v5b-vm-task-debugger-001.md`,
+   plus `v5b-vm-task-workload-001.md`.
    It provides FIFO task states, quantum requeue, explicit wake,
    cancellation transitions, a resumable frame stack with validated return
    transfer, dispatch-boundary GC, and parity checks for output, budgets,
@@ -169,10 +168,10 @@ private VM entry transition were implemented on 2026-08-08; the ordinary
 `VM::run` parity gate was added as a test-only slice on 2026-08-09; the
 ignored JIT efficiency benchmark was committed on 2026-08-10 (`cb0e04be`).**
 See
-[`v6a-hot-workload-evidence-001.md`](decisions/v6a-hot-workload-evidence-001.md)
-and [`v6b-jit-runtime-contract-001.md`](decisions/v6b-jit-runtime-contract-001.md),
-plus [`v6c-jit-x86-64-backend-001.md`](decisions/v6c-jit-x86-64-backend-001.md)
-and [`v6c-jit-entry-transition-001.md`](decisions/v6c-jit-entry-transition-001.md).
+`v6a-hot-workload-evidence-001.md`
+and `v6b-jit-runtime-contract-001.md`,
+plus `v6c-jit-x86-64-backend-001.md`
+and `v6c-jit-entry-transition-001.md`.
 
 The 2026-08-10 release-mode benchmark shows the admitted scalar JIT path is
 currently slower than the interpreter: about 1.9x slower on the
@@ -190,14 +189,14 @@ from fixing assumptions about frames, roots, safepoints, cancellation, and
 thread state that concurrency would later invalidate.
 
 1. **V6A - hot-workload evidence:** recorded in
-   [`v6a-hot-workload-evidence-001.md`](decisions/v6a-hot-workload-evidence-001.md).
+   `v6a-hot-workload-evidence-001.md`.
    The current evidence identifies `execution_loop` as the primary
    end-to-end candidate and the two function bodies in `execution_closure` as
    the primary function-level candidate. It establishes stable bytecode,
    artifact, and output/error/exit observations, but deliberately does not
    claim a portable speedup or set a wall-clock threshold.
 2. **V6B - JIT runtime contract:** recorded in
-   [`v6b-jit-runtime-contract-001.md`](decisions/v6b-jit-runtime-contract-001.md).
+   `v6b-jit-runtime-contract-001.md`.
    The contract keeps the interpreter as the default and fallback, requires
    frame materialization at scheduler/native/GC/error boundaries, preserves
    source/debug/profile/resource/cancellation behavior, bounds a per-VM code
@@ -205,7 +204,7 @@ thread state that concurrency would later invalidate.
    initial V6C tier is limited to an explicit verified function whitelist and
    may fall back for cooperative or observable sessions.
 3. **V6C - optional baseline JIT:** the first admission/cache preflight is
-   implemented in [`v6c-jit-eligibility-cache-001.md`](decisions/v6c-jit-eligibility-cache-001.md).
+   implemented in `v6c-jit-eligibility-cache-001.md`.
    It uses Cranelift `0.134.3` (`cranelift-frontend` plus
    `cranelift-codegen`) to build and verify IR for an explicit verified-function
    whitelist, while keeping JIT disabled by default and rejecting
@@ -215,13 +214,13 @@ thread state that concurrency would later invalidate.
    retains verified IR and VM-local finalized x86-64 code; generated code is
    never serialized into an artifact. The helper ABI and VM-owned frame
    materialization and safepoint bridge are implemented in
-   [`v6c-jit-helper-safepoint-001.md`](decisions/v6c-jit-helper-safepoint-001.md);
+   `v6c-jit-helper-safepoint-001.md`;
    the pre-executable entry lifetime and rollback guard is implemented in
-   [`v6c-jit-code-lifetime-rollback-001.md`](decisions/v6c-jit-code-lifetime-rollback-001.md);
+   `v6c-jit-code-lifetime-rollback-001.md`;
    the x86-64 backend is recorded in
-   [`v6c-jit-x86-64-backend-001.md`](decisions/v6c-jit-x86-64-backend-001.md).
+   `v6c-jit-x86-64-backend-001.md`.
    The private ordinary-call entry transition is recorded in
-   [`v6c-jit-entry-transition-001.md`](decisions/v6c-jit-entry-transition-001.md):
+   `v6c-jit-entry-transition-001.md`:
    it is enabled only by internal tests, charges the shared instruction
    checkpoint, materializes registers at the helper boundary, transports
    typed errors, and restores an entry snapshot for protocol fallback. The
@@ -229,7 +228,7 @@ thread state that concurrency would later invalidate.
    interpreter-controlled; full parity for native/GC/debug/profile and a
    default execution decision remain later gates.
    The ordinary `VM::run` parity gate is recorded in
-   [`v6c-jit-run-parity-001.md`](decisions/v6c-jit-run-parity-001.md): it covers
+   `v6c-jit-run-parity-001.md`: it covers
    an eligible main-to-function call, repeated VM-local cache reuse, and
    runtime-error parity while keeping activation test-only.
    Tiering or optimizing JIT work requires a later profile-backed decision.
