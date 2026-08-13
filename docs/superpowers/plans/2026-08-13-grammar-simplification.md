@@ -42,13 +42,15 @@ shipped and is not part of this plan.
 - Stale `assignmentTarget` EBNF rule mentioning `call` (resolved).
 - Optional versus always-used parentheses around `if`/`while` conditions.
 - `nil`/`false` falsey but `0`/`""` truthy; nil checks are now plain boolean
-  tests with no narrowing, so the old then-only asymmetry is gone.
+  tests with no narrowing, so the old then-only asymmetry is gone (resolved as
+  a documented language rule).
 - No string escape sequences.
 - Compound assignment numeric-only while plain assignment is polymorphic.
 - Re-export cannot rename names; no `export *`.
 - Struct literal versus enum-variant constructor asymmetry.
 - Operator declaration special cases (one same-typed parameter, forced
-  `: bool`, implicit `this` receiver).
+  `: bool`, implicit `this` receiver) (resolved by item 2: operator
+  declarations were removed).
 
 Items 1-5 are complete. C-style `for` and the tooling surface are kept as
 shipped.

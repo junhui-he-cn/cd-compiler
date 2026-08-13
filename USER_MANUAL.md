@@ -207,21 +207,18 @@ let addOne: fun(number): number = fun (value: number): number {
 };
 ```
 
-`optional<T>` 表示 `T` 或 `nil`。非空值可以赋给 `optional<T>`，但 `optional<T>` 不能直接当作 `T` 使用。类型检查器支持对简单变量、已知结构体直接字段，以及编译期可确定的数组索引进行 nil 检查收窄；truthiness 条件的 then 分支也会收窄，例如 `if (name) { ... }`，但 else 分支不会收窄，因为非空值 `false` 也可能为假，而 `0` 和空字符串为真：
+`optional<T>` 表示 `T` 或 `nil`。非空值可以赋给 `optional<T>`，但 `optional<T>` 不能直接当作 `T` 使用。nil 检查不会收窄类型，`optional<T>` 必须显式解包：
 
 ```cd
 fun printName(name: optional<string>) {
-  if (name == nil) {
-    return;
+  if let n = name {
+    // 这里 n 是 string
+    print n;
   }
-  // 这里 name 已经被收窄为 string
-  print name;
 }
 ```
 
-truthiness 收窄只保证 then 分支中的值非 `nil`，并且可以和支持的 `&&` then 分支守卫组合；一元 `!` 和基于 truthiness 的 else 收窄仍未实现。
-
-调用结果、未知索引、map/range 元素和复杂循环出口的收窄仍保持保守行为；发生赋值、字段写入、索引写入或可能改变捕获变量的调用后，应重新检查 nil。
+显式解包形式包括语句级 `if let` / `while let`（在作用域内绑定一个全新的非 nil 值）、表达式后缀 `?`（值为 nil 时从当前函数提前返回 nil，仅当函数返回 `optional<U>` 时可用）、`??`（为 nil 时取右侧值），以及 `match` 的绑定臂。nil 比较和 truthiness 条件都只是普通布尔测试，不改变类型；只有 `nil` 和 `false` 为假，`0` 和空字符串为真。
 
 ### 类型推断和泛型
 
@@ -819,7 +816,7 @@ builtin member-call sugar，数组接收者仍使用数组 builtin。栈和队�
 - `Eq`/`Ord` 目前只能作为编译期泛型约束使用，尚无用户自定义 capability
   实现；`Hash` 只提供编译期约束和 `hash(value)` 入口，公共库的哈希容器使用
   稳定 identity key，但不会放宽内置 map key 或提供深度冻结快照；
-- 复杂动态字段、未知索引、map/range 元素和部分循环出口不提供精确 nullable narrowing；
+- 没有自动 nullable 收窄，`optional<T>` 必须显式解包（`if let`/`while let`/`?`/`??` 或 `match` 绑定臂）；
 - 当函数签名或集合元素类型无法可靠推断时，需要补充显式类型注解。
 
 交互式 REPL、动态派发、包管理和自定义 iterator 不属于当前 `master` 发布面；`trace`、`debug` 和 `profile` 是可用的源码级确定性执行/调试/观测工具。profile 的 wall-clock 与 allocation/peak 扩展仍需独立的 VM 决策和 workload 证据。

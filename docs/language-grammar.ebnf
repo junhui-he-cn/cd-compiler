@@ -300,9 +300,9 @@ functionType = "fun", "(", [ typeArguments ], ")", ":", typeExpr ;
    alternatives must bind the same names. Match is statement-only: every arm
    is a block, and the match requires exhaustive coverage from unguarded arms
    or a wildcard/binding arm. Nullable function parameters,
-   returns, and function values use the same `optional<T>` wrapper. A supported
-   truthiness condition narrows an optional target only in its then branch;
-   falsey non-nil values keep the else branch conservative. Ordering
+   returns, and function values use the same `optional<T>` wrapper. Nil checks
+   and truthiness conditions are plain boolean tests with no type effect:
+   only `nil` and `false` are falsey, while `0` and `""` are truthy. Ordering
    comparisons support `number`,
    `string`.
    String order is Unicode-scalar lexicographic order with no normalization or
