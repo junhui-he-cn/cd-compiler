@@ -24,14 +24,13 @@ with golden/README/grammar/decision-record updates.
    Decision recorded (`m9-language-capability-001.md`): keep the constraint
    system; the struct `Ord` witness was already removed by item 2. Status:
    complete.
-5. **Reassess tooling surface.**
-   Decision gate: formatter/lossless-source/`--tokens` merge are product
-   decisions, not grammar work.
-6. **Reduce nullable flow analysis to a core subset.**
+5. **Reduce nullable flow analysis to a core subset.**
    Highest code win, highest semantic risk; requires a separate semantic
    decision before any implementation.
 
 C-style `for` is kept as a supported loop form and is not part of this plan.
+The tooling surface (formatter, lossless source, `--tokens`) is kept as
+shipped and is not part of this plan.
 
 ## Grammar inconsistencies tracked alongside
 
@@ -48,5 +47,5 @@ C-style `for` is kept as a supported loop form and is not part of this plan.
 - Operator declaration special cases (one same-typed parameter, forced
   `: bool`, implicit `this` receiver).
 
-Items 1-3 are complete. Item 4 is a decision gate, not an implementation
-slice; items 5-6 are not in the default queue without a product decision.
+Items 1-4 are complete. Item 5 requires a separate semantic decision before
+any implementation and is not in the default queue.
