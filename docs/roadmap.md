@@ -26,6 +26,9 @@ On 2026-08-10 the user explicitly reopened one compatibility boundary:
 multi-file compilation moves to the one-module-per-file model and the legacy
 combined-source path is removed (see C6 and
 [`2026-08-10-unified-module-compilation-design.md`](superpowers/specs/2026-08-10-unified-module-compilation-design.md)).
+C6 P1 and P2 landed through 2026-08-12 (`cb8b7aac`): the module-only
+`FrontendSession` path, migrated fixtures, documentation, and decision-record
+updates are complete.
 
 ## 1. Planning rules
 
@@ -52,7 +55,7 @@ contract is superseded by C6.
 
 | Area | Shipped baseline | Open boundary |
 | --- | --- | --- |
-| Verification | Versioned 1,941-case inventory, canonical runner, boundary and malformed corpora | Refresh inventory metadata only when cases or CTest checks change |
+| Verification | Versioned 1,944-case inventory, canonical runner, boundary and malformed corpora | Refresh inventory metadata only when cases or CTest checks change |
 | Front end | Typed source identities, lossless source, declaration/semantic indexes, import-aware module graph | Remove legacy paths only when all consumers use the indexed services |
 | Language | Functions, closures, generics and constraints, `optional<T>`, enums/patterns, named and recursive structs, collection semantics, `Eq`/`Ord`/`Hash` capabilities | New syntax is demand-driven; semantic soundness work has priority |
 | Modules | Public interfaces, `.cdi`, independent module products, linker inputs, `cdbc-cache 0.2`, strict and fallback modes | Cache creation/repair policy is not yet a default-strict contract |
@@ -148,8 +151,11 @@ because the current corpus lacks a counterexample.
 
 ### C6: Unify multi-file compilation on the per-file module model
 
-**Priority:** P1. **Status:** active; P1 front-end unification is the next
-slice after the design decision on 2026-08-10.
+**Priority:** P1. **Status:** complete on 2026-08-12. Both P1 and P2 landed:
+the module-only `FrontendSession` path, the `multi_file_functions` fixture
+migration, module-isolation/multi-entry-order/artifact parity coverage, the
+inventory refresh, and the README/AGENTS/developer-guide/superseded-decision
+updates are all in place through `cb8b7aac`.
 
 The legacy auto rule ("no import -> combined source, import -> module graph")
 is removed. Every CLI file, stdin input, and LSP virtual file is an
@@ -244,9 +250,9 @@ completed X1 compatibility matrix
   -> C1C default-level decision
   -> optional O2 design only if evidence requires it
 
-C6 design decision (2026-08-10)
-  -> C6 P1 module-only front-end unification
-  -> C6 P2 documentation and decision-record updates
+completed C6 design decision (2026-08-10)
+  -> C6 P1 module-only front-end unification (complete)
+  -> C6 P2 documentation and decision-record updates (complete)
 
 shipped semantic index + flow facts
   -> C2 one soundness decision/corpus

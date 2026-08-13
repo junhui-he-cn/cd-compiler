@@ -13,14 +13,13 @@ M1A1 adds source metadata beside the existing compiler representations.
 - `sourcePositionAt` converts a byte offset to the existing 1-based line and
   column coordinates. The end offset is allowed to equal the source length, so
   an end position can identify the point immediately after the final byte.
-- Direct multi-file inputs keep each token and diagnostic range local to its
-  original file even though the parser still consumes the combined source.
-  User-facing diagnostics continue to use the established path/line/column
-  format.
+- Each CLI file, stdin input, and LSP virtual file is an independent module;
+  tokens and diagnostic ranges stay local to their original file. User-facing
+  diagnostics continue to use the established path/line/column format.
 
 The current proof slice covers lexical declarations, block scopes, variable
-reads, assignments, and direct multi-file diagnostics. Bytecode emission does
-not serialize these snapshot-local identities; artifact-local debug identity
+reads, assignments, and multi-file diagnostics. Bytecode emission does not
+serialize these snapshot-local identities; artifact-local debug identity
 remains owned by M4A/M4B.
 
 M4B source-range metadata keeps the same distinction at the artifact boundary.
