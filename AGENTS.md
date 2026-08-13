@@ -277,8 +277,7 @@ File-backed lexer, parser, and type diagnostics always include the file path: `<
 
 ## Current Language Semantics and Limitations
 
-- A successful assignment or numeric compound assignment to a direct variable invalidates its active nullable narrowing within the current flow region and any enclosing region that may observe the mutation. Code must perform a supported nil check again before using the binding as non-null; direct compile-time integer or known number-binding array-index facts are also invalidated by index writes and root assignments, and assigning the numeric index binding invalidates facts that use it, while unresolved dynamic index targets, loop exits, and closure-boundary invalidation/narrowing remain conservative until later M2A slices.
-- Function and closure bodies are checked without inheriting nullable narrowing from their definition-site branch; captured nullable bindings require a fresh supported nil check inside the body. Direct captured-call, indirect/dynamic-call, and callback-capable native effects are handled after successful call checking; struct-method effects remain conservative.
+- There is no nullable flow analysis: nil checks and truthiness conditions are plain boolean tests with no type effect, and assignment, capture, call, index, and loop boundaries carry no narrowing facts to invalidate. Code must use one of the explicit unwrap forms below before treating an `optional<T>` value as its inner type, including re-checking captured nullable bindings inside function and closure bodies.
 - `optional<T>` values are unwrapped explicitly; nil checks do not narrow.
   `if let v = expr { } else { }` and `while let v = expr { }` bind a fresh
   non-nil value in a new scope (statement forms); `expr?` unwraps and returns
