@@ -317,3 +317,7 @@ typeArguments = typeExpr,
 identifier  = letter, { letter | digit | "_" } ;
 number      = digit, { digit }, [ ".", digit, { digit } ] ;
 string      = '"', { character }, '"' ;
+
+(* Source strings are raw: no escape sequences, a backslash is an ordinary
+   character, newlines are allowed, and a double quote cannot be embedded.
+   The `.cdbc` artifact text format has its own separate escaping rules. *)

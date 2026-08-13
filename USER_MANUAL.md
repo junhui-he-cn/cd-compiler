@@ -154,7 +154,9 @@ code --install-extension *.vsix
 
 程序由声明和语句组成。语句使用分号结束，代码块使用大括号；注释使用 `//`，字符串使用双引号。当前没有自动分号插入，也没有块注释。
 
-词法规则的实用摘要：标识符由 ASCII 字母、数字和下划线组成，但不能以数字开头；数字字面量支持整数和带小数部分的十进制数；负数是对数字使用一元 `-` 运算符。字符串在一对双引号之间，当前不提供转义序列，反斜线会作为普通字符保留。关键字包括 `let`、`fun`、`struct`、`enum`、`impl`、`match`、`if`、`else`、`while`、`for`、`break`、`continue`、`return`、`print`、`import`、`export`、`private`、`operator`、`true`、`false` 和 `nil`。
+字符串是原始字符串：没有转义序列，反斜杠就是普通字符，可以包含换行，但不能包含双引号。`.cdbc` 字节码产物文本层使用的转义是独立格式，不属于源语言语法。
+
+词法规则的实用摘要：标识符由 ASCII 字母、数字和下划线组成，但不能以数字开头；数字字面量支持整数和带小数部分的十进制数；负数是对数字使用一元 `-` 运算符。字符串在一对双引号之间，当前不提供转义序列，反斜线会作为普通字符保留。关键字包括 `let`、`fun`、`struct`、`enum`、`impl`、`match`、`if`、`else`、`while`、`for`、`break`、`continue`、`return`、`print`、`import`、`export`、`private`、`true`、`false` 和 `nil`。
 
 表达式位置的大括号表示 map 字面量，例如 `{ "name": "Ada" }`；语句位置的大括号表示 block。匿名 struct 字面量不是独立语法，命名结构体必须使用 `Name { field: value }` 构造。
 
@@ -296,26 +298,7 @@ print b;
 
 普通赋值支持变量、数组元素、map 元素和结构体字段。数值复合赋值支持变量、数组元素和结构体字段；map 元素不支持复合赋值。
 
-相等比较按运行时值的种类处理：`nil`、数字、布尔值和字符串按值比较；数组、map、结构体和函数按引用/身份比较；range 按 `(start, stop, step)` 比较；枚举按枚举名、variant 名和 payload 递归比较。比较不同种类的值结果为不相等。数值和字符串支持内置顺序比较；自定义结构体只有在其定义模块的 `impl` 中声明对应 operator 后才能使用顺序比较。
-
-命名结构体可以声明 `<`、`<=`、`>`、`>=` operator。每个 operator 必须接受一个与接收者相同名义类型的参数，并返回 `bool`：
-
-```cd
-struct Person {
-  age: number
-}
-
-impl Person {
-  operator <(other: Person): bool {
-    return this.age < other.age;
-  }
-}
-
-let younger = Person { age: 18 } < Person { age: 36 };
-print younger;
-```
-
-operator 是静态解析的普通调用路径，不提供动态派发，也不会使自定义结构体自动满足泛型 `T: Ord`。导出的结构体会把 operator 元数据带入公开接口、sidecar 和模块产品，导入方可以继续使用已导出的实现。
+相等比较按运行时值的种类处理：`nil`、数字、布尔值和字符串按值比较；数组、map、结构体和函数按引用/身份比较；range 按 `(start, stop, step)` 比较；枚举按枚举名、variant 名和 payload 递归比较。比较不同种类的值结果为不相等。数值和字符串支持内置顺序比较；结构体值不能与内置 `<`、`<=`、`>`、`>=` 做顺序比较，需要时在 `impl` 中声明普通方法（例如 `before(other: Person): bool`）并显式调用。
 
 ## 5. 条件和循环
 
@@ -668,7 +651,7 @@ cargo run --manifest-path vm-rs/Cargo.toml -- run program.cdbc
 
 输出目录中的每个 `module-*.cdbc` 都是 `artifact: module` 产品，不能直接交给 VM 的 `run`；必须先由 `compiler-design-vm link` 合并成链接 program。模块编译会保留依赖插入点、公开接口和源码调试元数据。
 
-`--module-interface` 只打印类型检查得到的公开接口（导出值、结构体公开字段、私有字段存在标记、方法/operator、枚举 variant 等），它是 introspection 模式，不会写 `.cdi` 或 `.cdbc`。
+`--module-interface` 只打印类型检查得到的公开接口（导出值、结构体公开字段、私有字段存在标记、方法、枚举 variant 等），它是 introspection 模式，不会写 `.cdi` 或 `.cdbc`。
 
 模块缓存是显式 opt-in：
 

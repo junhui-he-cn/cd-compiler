@@ -46,13 +46,20 @@ shipped and is not part of this plan.
 - `nil`/`false` falsey but `0`/`""` truthy; nil checks are now plain boolean
   tests with no narrowing, so the old then-only asymmetry is gone (resolved as
   a documented language rule).
-- No string escape sequences.
-- Compound assignment numeric-only while plain assignment is polymorphic.
-- Re-export cannot rename names; no `export *`.
-- Struct literal versus enum-variant constructor asymmetry.
+- No string escape sequences (resolved as a documented raw-string boundary:
+  no escapes, literal backslashes, newlines allowed, no embedded quotes).
+- Compound assignment numeric-only while plain assignment is polymorphic
+  (resolved as a documented boundary: numeric-only compound assignment is
+  kept while plain `=` stays polymorphic).
+- Re-export cannot rename names; no `export *` (resolved as a documented
+  boundary: exact-name forwarding only).
+- Struct literal versus enum-variant constructor asymmetry (resolved as a
+  documented boundary: record constructors for structs, call constructors for
+  enum variants).
 - Operator declaration special cases (one same-typed parameter, forced
   `: bool`, implicit `this` receiver) (resolved by item 2: operator
   declarations were removed).
 
-Items 1-5 are complete. C-style `for` and the tooling surface are kept as
-shipped.
+Items 1-5 are complete, and every tracked grammar inconsistency is now either
+resolved by an item or documented as an intentional language boundary.
+C-style `for` and the tooling surface are kept as shipped.
