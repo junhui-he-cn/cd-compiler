@@ -17,9 +17,7 @@ const SourceFile* fileForId(const std::vector<SourceFile>& files, SourceFileId i
         }
     }
 
-    // SourceFile used to have no ID.  Treat the old vector index as a
-    // compatibility identity for callers that still construct one directly.
-    return id.value < files.size() ? &files[id.value] : nullptr;
+    return nullptr;
 }
 
 } // namespace

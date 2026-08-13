@@ -81,10 +81,8 @@ struct Token {
     int column;
     // Source identity and source-local line are populated by FrontendSession.
     // Parser diagnostics continue to use the combined `line` coordinate.
-    std::optional<std::size_t> source = std::nullopt;
     std::optional<int> sourceLine = std::nullopt;
-    // Typed source identity and source-local half-open byte range.  `source`
-    // remains as a compatibility field for existing IR/debug consumers.
+    // Typed source identity and source-local half-open byte range.
     std::optional<SourceFileId> sourceId = std::nullopt;
     std::optional<SourceRange> range = std::nullopt;
     // Lexer-owned offsets are source-buffer offsets before FrontendSession

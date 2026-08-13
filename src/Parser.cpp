@@ -19,11 +19,11 @@ std::string expectedFunStartMessage(const Token& token)
 
 std::optional<SourceSpan> spanForToken(const Token& token)
 {
-    if (!token.source) {
+    if (!token.sourceId) {
         return std::nullopt;
     }
     SourceSpan span{
-        *token.source,
+        token.sourceId->value,
         token.sourceLine.value_or(token.line),
         token.column,
     };
