@@ -55,7 +55,7 @@ contract is superseded by C6.
 
 | Area | Shipped baseline | Open boundary |
 | --- | --- | --- |
-| Verification | Versioned 1,944-case inventory, canonical runner, boundary and malformed corpora | Refresh inventory metadata only when cases or CTest checks change |
+| Verification | Versioned 1,794-case inventory, canonical runner, boundary and malformed corpora | Refresh inventory metadata only when cases or CTest checks change |
 | Front end | Typed source identities, lossless source, declaration/semantic indexes, import-aware module graph | Remove legacy paths only when all consumers use the indexed services |
 | Language | Functions, closures, generics and constraints, `optional<T>`, enums/patterns, named and recursive structs, collection semantics, `Eq`/`Ord`/`Hash` capabilities | New syntax is demand-driven; semantic soundness work has priority |
 | Modules | Public interfaces, `.cdi`, independent module products, linker inputs, `cdbc-cache 0.2`, strict and fallback modes | Cache creation/repair policy is not yet a default-strict contract |
@@ -134,20 +134,14 @@ execution.
 
 ### C2: Close semantic-soundness gaps one rule at a time
 
-**Priority:** P1. **Status:** active; the first independently deliverable
-slice in the current consolidation phase. It is a semantic-soundness repair of
-existing nullable-flow behavior, not a new language feature, and may proceed
-independently of C1 when it does not change IR or artifact behavior.
-
-Start with a decision/corpus slice for exactly one conservative nullable-flow
-case: alias-aware field/index facts, dynamic index targets, or normal `for-in`
-exit facts. Specify the alias and mutation model, invalidation, loop exit proof,
-and diagnostic compatibility before implementation.
-
-Each implementation slice must include positive, negative, mutation, alias,
-nested-loop, closure/callback, and import cases. Unsupported cases remain
-conservative. Do not replace the whole flow engine or accept a case merely
-because the current corpus lacks a counterexample.
+**Priority:** P1. **Status:** superseded on 2026-08-13 by the explicit
+optional-unwrapping design
+(`2026-08-13-explicit-optional-unwrapping-design.md`). The nullable
+flow-analysis machinery this item repaired (nil-check narrowing, alias-aware
+field/index facts, dynamic index targets, and loop-exit facts) was removed;
+`optional<T>` is unwrapped explicitly with `if let`, `while let`, `?`, `??`,
+and `match` binding arms. Semantic-soundness work resumes only with a concrete
+proposal against the current language surface.
 
 ### C6: Unify multi-file compilation on the per-file module model
 
@@ -254,9 +248,7 @@ completed C6 design decision (2026-08-10)
   -> C6 P1 module-only front-end unification (complete)
   -> C6 P2 documentation and decision-record updates (complete)
 
-shipped semantic index + flow facts
-  -> C2 one soundness decision/corpus
-  -> C2 one admitted implementation slice
+completed C2 (superseded by explicit optional unwrapping)
 
 shipped closed-module definition/references
   -> C3A closed completion
@@ -270,8 +262,8 @@ C3/C4 stable boundaries
   -> C5 incremental session re-audit
 ```
 
-C1 is complete. The recommended next compiler slice is C2. C3 is deferred; C4
-remains a decision gate, and C5 remains deferred.
+C1, C2, and C6 are complete. There is no active compiler slice in the default
+queue; C3 is deferred, C4 remains a decision gate, and C5 remains deferred.
 
 ## 7. Verification contract
 

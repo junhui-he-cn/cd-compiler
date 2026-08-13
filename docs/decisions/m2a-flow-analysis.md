@@ -1,5 +1,8 @@
 # M2A flow-analysis decisions
 
+Superseded by `2026-08-13-explicit-optional-unwrapping-design.md`: the nullable
+flow analysis recorded here was removed on 2026-08-13.
+
 The M2A flow slices revise `SEM-TYPE-002` from the M0.5A baseline.
 The M1 migration preserved the old behavior in which an active direct-variable
 nullable narrowing survived an assignment to that same binding. M2A now treats

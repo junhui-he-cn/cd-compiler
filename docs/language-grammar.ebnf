@@ -166,8 +166,8 @@ coalesce    = logicalOr, [ "??", coalesce ] ;
 (* `??` is right-associative: `a ?? b ?? c` groups as `a ?? (b ?? c)`. *)
 
 assignmentTarget = identifier
-                 | call, "[", expression, "]"
-                 | call, ".", identifier ;
+                 | expression, "[", expression, "]"
+                 | expression, ".", identifier ;
 
 (* Assignment is right-associative. Plain `=` and compound assignment operators
    accept variable, index, and field targets (`name = value`, `array[index] = value`,

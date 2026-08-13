@@ -39,9 +39,10 @@ shipped and is not part of this plan.
 - Match arm terminators (resolved by item 1).
 - Named enum payloads versus positional constructors (item 3).
 - Stale `operator` "not exported" note in `language-grammar.ebnf` (item 2).
-- Stale `assignmentTarget` EBNF rule mentioning `call`.
+- Stale `assignmentTarget` EBNF rule mentioning `call` (resolved).
 - Optional versus always-used parentheses around `if`/`while` conditions.
-- `nil`/`false` falsey but `0`/`""` truthy; then-only narrowing asymmetry.
+- `nil`/`false` falsey but `0`/`""` truthy; nil checks are now plain boolean
+  tests with no narrowing, so the old then-only asymmetry is gone.
 - No string escape sequences.
 - Compound assignment numeric-only while plain assignment is polymorphic.
 - Re-export cannot rename names; no `export *`.
