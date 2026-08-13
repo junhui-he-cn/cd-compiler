@@ -56,13 +56,7 @@ implDecl    = "impl", identifier, [ typeParameters ],
 methodDecl  = "fun", identifier, [ typeParameters ],
               "(", [ parameters ], ")",
               [ ":", typeExpr ],
-              block
-            | operatorDecl ;
-
-operatorDecl = "operator", orderingOperator, "(", parameter, ")",
-               ":", "bool", block ;
-
-orderingOperator = "<" | "<=" | ">" | ">=" ;
+              block ;
 
 structFields = structField,
                { ",", structField } ;
@@ -291,10 +285,7 @@ functionType = "fun", "(", [ typeArguments ], ")", ":", typeExpr ;
    truthiness condition narrows an optional target only in its then branch;
    falsey non-nil values keep the else branch conservative. Ordering
    comparisons support `number`,
-   `string`, and locally implemented named-struct operators. Struct operators
-   use the left operand as `this`, accept one same-typed right operand, and
-   return `bool`; operator metadata is exported through the module interface,
-   while imported operator dispatch remains deferred.
+   `string`.
    String order is Unicode-scalar lexicographic order with no normalization or
    locale collation. *)
 

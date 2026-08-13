@@ -237,31 +237,31 @@ def main() -> int:
                 f"exit={function_run.returncode}\nstdout={function_run.stdout}\nstderr={function_run.stderr}"
             )
 
-        operator_fixture = Path(__file__).resolve().parent / "golden" / "import_struct_operator_direct"
-        operator_source = operator_fixture / "input.cd"
-        operator_output_dir = Path(temporary) / "operator-modules"
-        emitted_operator = run([
+        method_fixture = Path(__file__).resolve().parent / "golden" / "import_struct_method_direct"
+        method_source = method_fixture / "input.cd"
+        method_output_dir = Path(temporary) / "method-modules"
+        emitted_method = run([
             str(compiler),
             "--emit-module-bytecode",
-            str(operator_output_dir),
-            str(operator_source),
+            str(method_output_dir),
+            str(method_source),
         ])
-        if emitted_operator.returncode != 0 or emitted_operator.stdout or emitted_operator.stderr:
+        if emitted_method.returncode != 0 or emitted_method.stdout or emitted_method.stderr:
             return fail(
-                "operator module emission failed\n"
-                f"exit={emitted_operator.returncode}\nstdout={emitted_operator.stdout}\nstderr={emitted_operator.stderr}"
+                "method module emission failed\n"
+                f"exit={emitted_method.returncode}\nstdout={emitted_method.stdout}\nstderr={emitted_method.stderr}"
             )
 
-        operator_artifacts = sorted(operator_output_dir.glob("module-*.cdbc"))
-        if len(operator_artifacts) != 2:
+        method_artifacts = sorted(method_output_dir.glob("module-*.cdbc"))
+        if len(method_artifacts) != 2:
             return fail(
-                "expected two operator module artifacts, found "
-                f"{[path.name for path in operator_artifacts]}"
+                "expected two method module artifacts, found "
+                f"{[path.name for path in method_artifacts]}"
             )
 
-        operator_entry_text = None
-        operator_owner_text = None
-        for artifact in operator_artifacts:
+        method_entry_text = None
+        method_owner_text = None
+        for artifact in method_artifacts:
             text = artifact.read_text(encoding="utf-8")
             dumped = run([
                 "cargo",
@@ -275,40 +275,34 @@ def main() -> int:
             ])
             if dumped.returncode != 0 or dumped.stdout != text or dumped.stderr:
                 return fail(
-                    f"{artifact.name} failed Rust operator artifact dump\n"
+                    f"{artifact.name} failed Rust method artifact dump\n"
                     f"exit={dumped.returncode}\nstdout={dumped.stdout}\nstderr={dumped.stderr}"
                 )
             if "  entry = true\n" in text:
-                operator_entry_text = text
+                method_entry_text = text
             elif "  entry = false\n" in text:
-                operator_owner_text = text
+                method_owner_text = text
             else:
-                return fail(f"{artifact.name} has no operator entry declaration")
+                return fail(f"{artifact.name} has no method entry declaration")
 
-        if operator_entry_text is None or operator_owner_text is None:
-            return fail("did not identify operator entry and owner artifacts")
+        if method_entry_text is None or method_owner_text is None:
+            return fail("did not identify method entry and owner artifacts")
 
-        if 'kind=import at=0 requested="./lib.cd"' not in operator_entry_text:
-            return fail("operator entry artifact did not preserve its dependency marker")
-        linkage_names = (
-            "__method_Point_operator_Less#0",
-            "__method_Point_operator_LessEqual#1",
-            "__method_Point_operator_Greater#2",
-            "__method_Point_operator_GreaterEqual#3",
-        )
+        if 'kind=import at=0 requested="./lib.cd"' not in method_entry_text:
+            return fail("method entry artifact did not preserve its dependency marker")
+        linkage_names = ("__method_Point_sum#0",)
         for linkage_name in linkage_names:
-            if f'"{linkage_name}"' not in operator_owner_text:
-                return fail(f"operator owner artifact lost linkage name {linkage_name}")
-            if f'"{linkage_name}"' not in operator_entry_text:
-                return fail(f"operator entry artifact lost linkage name {linkage_name}")
-        for function_name in ("<", "<=", ">", ">="):
-            if f'name="{function_name}"' not in operator_owner_text:
-                return fail(f"operator owner artifact lost function {function_name}")
-        if "function f0 name=" in operator_entry_text:
-            return fail("operator entry artifact unexpectedly contained owner functions")
+            if f'"{linkage_name}"' not in method_owner_text:
+                return fail(f"method owner artifact lost linkage name {linkage_name}")
+            if f'"{linkage_name}"' not in method_entry_text:
+                return fail(f"method entry artifact lost linkage name {linkage_name}")
+        if 'name="sum"' not in method_owner_text:
+            return fail("method owner artifact lost function sum")
+        if "function f0 name=" in method_entry_text:
+            return fail("method entry artifact unexpectedly contained owner functions")
 
-        operator_linked_path = Path(temporary) / "operator-linked.cdbc"
-        linked_operator = run([
+        method_linked_path = Path(temporary) / "method-linked.cdbc"
+        linked_method = run([
             "cargo",
             "run",
             "--quiet",
@@ -316,15 +310,15 @@ def main() -> int:
             str(manifest),
             "--",
             "link",
-            str(operator_output_dir),
-            str(operator_linked_path),
+            str(method_output_dir),
+            str(method_linked_path),
         ])
-        if linked_operator.returncode != 0 or linked_operator.stdout or linked_operator.stderr:
+        if linked_method.returncode != 0 or linked_method.stdout or linked_method.stderr:
             return fail(
-                "operator module link failed\n"
-                f"exit={linked_operator.returncode}\nstdout={linked_operator.stdout}\nstderr={linked_operator.stderr}"
+                "method module link failed\n"
+                f"exit={linked_method.returncode}\nstdout={linked_method.stdout}\nstderr={linked_method.stderr}"
             )
-        operator_run = run([
+        method_run = run([
             "cargo",
             "run",
             "--quiet",
@@ -332,12 +326,12 @@ def main() -> int:
             str(manifest),
             "--",
             "run",
-            str(operator_linked_path),
+            str(method_linked_path),
         ])
-        if operator_run.returncode != 0 or operator_run.stdout != "true\ntrue\ntrue\ntrue\n" or operator_run.stderr:
+        if method_run.returncode != 0 or method_run.stdout != "7\n" or method_run.stderr:
             return fail(
-                "linked operator module execution mismatch\n"
-                f"exit={operator_run.returncode}\nstdout={operator_run.stdout}\nstderr={operator_run.stderr}"
+                "linked method module execution mismatch\n"
+                f"exit={method_run.returncode}\nstdout={method_run.stdout}\nstderr={method_run.stderr}"
             )
 
         recursive_fixture = Path(__file__).resolve().parent / "golden" / "recursive_node_import"
@@ -433,7 +427,7 @@ def main() -> int:
                 f"\nstderr={recursive_run.stderr}"
             )
 
-    print("module bytecode artifact tests: import-order, function, operator, and recursive module sets validated")
+    print("module bytecode artifact tests: import-order, function, method, and recursive module sets validated")
     return 0
 
 

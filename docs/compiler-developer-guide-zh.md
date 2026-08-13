@@ -235,7 +235,7 @@ struct ParsedUnit {
 
 - 语句/表达式类型检查、重复声明、未定义变量、函数签名与调用兼容、泛型约束。
 - nullable flow：`if`/`while`/`for`/字段/数组索引的 nil 收窄与失效规则（详见 `AGENTS.md` 的 Current Language Semantics）。
-- struct/enum 声明、`impl` 方法、operator 重载元数据。
+- struct/enum 声明、`impl` 方法元数据（operator 重载已移除）。
 - import/export 名称解析与 re-export 兼容性。
 
 变量读取、赋值与复合赋值的解析优先消费 `DeclarationIndex` 的结构化引用

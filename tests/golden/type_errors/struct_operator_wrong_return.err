@@ -1,3 +1,0 @@
-Type error at <repo>/tests/golden/type_errors/struct_operator_wrong_return.cd:3:12: operator `<` for struct `Point` must return bool
-    operator <(other: Point): number {
-             ^

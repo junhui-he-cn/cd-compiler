@@ -288,7 +288,7 @@ void writeInlineStmt(std::ostream& out, const Stmt& stmt)
         out << "(impl " << implStmt->typeName.lexeme;
         writeTypeParameterList(out, implStmt->typeParameters);
         for (const MethodDecl& method : implStmt->methods) {
-            out << (method.isOperator ? " (operator " : " (method ") << method.name.lexeme;
+            out << " (method " << method.name.lexeme;
             writeTypeParameterList(out, method.typeParameters);
             writeParameterList(out, method.parameters);
             writeReturnAnnotation(out, method.returnTypeName);
@@ -427,14 +427,12 @@ MethodDecl::MethodDecl(
     std::vector<TypeParameter> typeParameters,
     std::vector<Parameter> parameters,
     std::optional<TypeAnnotation> returnTypeName,
-    std::vector<StmtPtr> body,
-    bool isOperator)
+    std::vector<StmtPtr> body)
     : name(std::move(name))
     , typeParameters(std::move(typeParameters))
     , parameters(std::move(parameters))
     , returnTypeName(std::move(returnTypeName))
     , body(std::move(body))
-    , isOperator(isOperator)
 {
 }
 
@@ -997,7 +995,7 @@ void ImplStmt::print(std::ostream& out, int indent) const
     out << '\n';
     for (const MethodDecl& method : methods) {
         writeIndent(out, indent + 1);
-        out << (method.isOperator ? "Operator " : "Method ") << method.name.lexeme;
+        out << "Method " << method.name.lexeme;
         writeTypeParameterList(out, method.typeParameters);
         writeParameterList(out, method.parameters);
         writeReturnAnnotation(out, method.returnTypeName);

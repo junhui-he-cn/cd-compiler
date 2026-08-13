@@ -1,7 +1,0 @@
-module 0 "<repo>/tests/golden/struct_operator_interface/lib.cd"
-  export struct Box<T: number>
-    field value: T
-    operator <(Box<T>): bool
-    operator >(Box<T>): bool
-
-module 1 entry "<repo>/tests/golden/struct_operator_interface/input.cd"

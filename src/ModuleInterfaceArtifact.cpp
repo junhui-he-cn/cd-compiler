@@ -353,16 +353,6 @@ void encodeInterfaceBody(CodecWriter& writer, const ModuleInterface& interfaceIn
             writer.string(method.resolvedName);
         }
 
-        writer.number(structure.operators.size());
-        for (const ModuleInterfaceOperator& op : structure.operators) {
-            writer.string(op.symbol);
-            encodeType(writer, op.receiverType);
-            encodeType(writer, op.rightParameterType);
-            encodeType(writer, op.returnType);
-            encodeStringVector(writer, op.genericParameters);
-            encodeOptionalTypes(writer, op.genericParameterConstraints);
-            writer.string(op.resolvedName);
-        }
     }
 
     writer.number(interfaceInfo.enums.size());
@@ -401,7 +391,6 @@ ModuleInterface canonicalInterface(ModuleInterface interfaceInfo)
     sortByName(interfaceInfo.structs, [](const ModuleInterfaceStruct& value) { return value.name; });
     for (ModuleInterfaceStruct& structure : interfaceInfo.structs) {
         sortByName(structure.methods, [](const ModuleInterfaceMethod& value) { return value.name; });
-        sortByName(structure.operators, [](const ModuleInterfaceOperator& value) { return value.symbol; });
     }
     sortByName(interfaceInfo.enums, [](const ModuleInterfaceEnum& value) { return value.name; });
     return interfaceInfo;
@@ -447,17 +436,6 @@ bool strictlySortedByName(const std::vector<ModuleInterfaceMethod>& values)
                values.end(),
                [](const ModuleInterfaceMethod& left, const ModuleInterfaceMethod& right) {
                    return left.name >= right.name;
-               })
-        == values.end();
-}
-
-bool strictlySortedBySymbol(const std::vector<ModuleInterfaceOperator>& values)
-{
-    return std::adjacent_find(
-               values.begin(),
-               values.end(),
-               [](const ModuleInterfaceOperator& left, const ModuleInterfaceOperator& right) {
-                   return left.symbol >= right.symbol;
                })
         == values.end();
 }
@@ -714,42 +692,12 @@ void validateArtifact(const ModuleInterfaceArtifact& artifact)
         if (!strictlySortedByName(structure.methods)) {
             throw std::runtime_error("module interface sidecar methods are not canonically ordered");
         }
-        if (!strictlySortedBySymbol(structure.operators)) {
-            throw std::runtime_error("module interface sidecar operators are not canonically ordered");
-        }
         if (structure.genericParameters.size() != structure.genericParameterConstraints.size()) {
             throw std::runtime_error("module interface sidecar struct generic metadata is inconsistent");
         }
         for (const ModuleInterfaceMethod& method : structure.methods) {
             if (method.genericParameters.size() != method.genericParameterConstraints.size()) {
                 throw std::runtime_error("module interface sidecar method generic metadata is inconsistent");
-            }
-        }
-        for (const ModuleInterfaceOperator& op : structure.operators) {
-            if (op.symbol != "<" && op.symbol != "<="
-                && op.symbol != ">" && op.symbol != ">=") {
-                throw std::runtime_error("module interface sidecar has invalid operator symbol");
-            }
-            if (op.returnType.kind != StaticType::Bool) {
-                throw std::runtime_error("module interface sidecar operator result is not bool");
-            }
-            if (op.resolvedName.empty()) {
-                throw std::runtime_error("module interface sidecar operator linkage name is empty");
-            }
-            if (op.receiverType.kind != StaticType::Struct
-                || !op.receiverType.structName
-                || *op.receiverType.structName != structure.name
-                || !sameTypeShape(op.receiverType, op.rightParameterType)) {
-                throw std::runtime_error("module interface sidecar operator receiver shape is inconsistent");
-            }
-            if (op.genericParameters != structure.genericParameters
-                || !sameOptionalTypeShape(
-                    op.genericParameterConstraints,
-                    structure.genericParameterConstraints)) {
-                throw std::runtime_error("module interface sidecar operator receiver generics are inconsistent");
-            }
-            if (op.genericParameters.size() != op.genericParameterConstraints.size()) {
-                throw std::runtime_error("module interface sidecar operator generic metadata is inconsistent");
             }
         }
     }
@@ -815,18 +763,6 @@ void writeInterfaceBody(std::ostream& out, const ModuleInterface& source)
             writeOptionalTypes(out, "    generic_constraints = ", method.genericParameterConstraints);
             writeTypeField(out, "    receiver = ", method.receiverType);
             out << "    resolved = " << quotedString(method.resolvedName) << '\n';
-        }
-        out << "  operators = " << structure.operators.size() << '\n';
-        for (std::size_t operatorIndex = 0; operatorIndex < structure.operators.size(); ++operatorIndex) {
-            const ModuleInterfaceOperator& op = structure.operators[operatorIndex];
-            out << "  operator " << operatorIndex << '\n'
-                << "    symbol = " << quotedString(op.symbol) << '\n';
-            writeTypeField(out, "    receiver = ", op.receiverType);
-            writeTypeField(out, "    right = ", op.rightParameterType);
-            writeTypeField(out, "    return = ", op.returnType);
-            writeStringVector(out, "    generic_parameters = ", op.genericParameters);
-            writeOptionalTypes(out, "    generic_constraints = ", op.genericParameterConstraints);
-            out << "    resolved = " << quotedString(op.resolvedName) << '\n';
         }
     }
 
@@ -924,23 +860,6 @@ ModuleInterface parseInterfaceBody(LineReader& lines)
             structure.methods.push_back(std::move(method));
         }
 
-        const std::size_t operatorCount = parseNumber(lines.next(), "  operators = ");
-        if (operatorCount > kMaxCollectionSize) {
-            throw std::runtime_error("sidecar struct operators are too large");
-        }
-        structure.operators.reserve(operatorCount);
-        for (std::size_t operatorIndex = 0; operatorIndex < operatorCount; ++operatorIndex) {
-            parseIndexedHeader(lines.next(), "  operator ", operatorIndex);
-            ModuleInterfaceOperator op;
-            op.symbol = parseQuoted(lines.next(), "    symbol = ");
-            op.receiverType = parseTypeField(lines.next(), "    receiver = ");
-            op.rightParameterType = parseTypeField(lines.next(), "    right = ");
-            op.returnType = parseTypeField(lines.next(), "    return = ");
-            parseStringVector(lines, "    generic_parameters = ", op.genericParameters);
-            parseOptionalTypes(lines, "    generic_constraints = ", op.genericParameterConstraints);
-            op.resolvedName = parseQuoted(lines.next(), "    resolved = ");
-            structure.operators.push_back(std::move(op));
-        }
         interfaceInfo.structs.push_back(std::move(structure));
     }
 

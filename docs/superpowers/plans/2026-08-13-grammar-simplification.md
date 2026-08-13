@@ -16,7 +16,7 @@ with golden/README/grammar/decision-record updates.
 2. **Remove struct ordering operators (`operator <`, `<=`, `>`, `>=`).**
    Removes `OperatorSignature`, operator metadata in interfaces and `cdi 0.1`
    sidecars, re-export/namespace forwarding, and the hardcoded `Ord`
-   capability witness.
+   capability witness. Status: complete.
 3. **Remove named enum payload fields and reordered pattern arguments.**
    Payloads become purely positional in declarations, constructors, and
    patterns.

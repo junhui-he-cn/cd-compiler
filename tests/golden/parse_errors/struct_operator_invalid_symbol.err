@@ -1,3 +1,0 @@
-Parse error at <repo>/tests/golden/parse_errors/struct_operator_invalid_symbol.cd:3:12: expected `<`, `<=`, `>`, or `>=` after `operator`
-    operator +(other: Point): bool {
-             ^

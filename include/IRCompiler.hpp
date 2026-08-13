@@ -80,7 +80,7 @@ private:
     void compileModule(const ModuleStmt& module);
     void compileFunctionStatement(const FunctionStmt& function);
     void compileImpl(const ImplStmt& statement);
-    void compileMethod(const MethodDecl& method, bool capabilityWitness);
+    void compileMethod(const MethodDecl& method);
     void compileReturn(const ReturnStmt& statement);
     void requireFunctionMetadata(const FunctionStmt& function) const;
     void requireMethodMetadata(const MethodDecl& method) const;
@@ -150,7 +150,6 @@ private:
     std::size_t nextSyntheticBindingId_ = 0;
     std::size_t activeFunctionDepth_ = 0;
     std::unordered_set<DeclarationId, SnapshotIdHash<DeclarationIdTag>> exportedDeclarations_;
-    std::unordered_set<std::string> capabilityWitnessStructs_;
     std::unordered_map<BindingId, IRBinding, SnapshotIdHash<BindingIdTag>> registeredBindings_;
     std::unordered_map<std::string, BindingId> bindingIdsByResolvedName_;
     std::optional<SourceSpan> currentSpan_;

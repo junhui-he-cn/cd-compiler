@@ -1,3 +1,0 @@
-struct Point { x: number }
-let point = Point { x: 1 };
-print point < point;

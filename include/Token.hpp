@@ -51,7 +51,6 @@ enum class TokenType {
     For,
     If,
     Impl,
-    Operator,
     Import,
     In,
     As,

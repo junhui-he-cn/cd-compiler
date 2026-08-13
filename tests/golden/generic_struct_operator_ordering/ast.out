@@ -1,8 +1,0 @@
-Program
-  Struct Box<T: Ord> {value: T}
-  Impl Box<T: Ord>
-    Operator <(other: Box<T>): bool
-      Return (< (field this value) (field other value))
-  Let one: Box<number> = (construct Box value: 1)
-  Let two: Box<number> = (construct Box value: 2)
-  Print (< one two)

@@ -42,16 +42,6 @@ MethodSignature methodSignature(std::string resolvedName, TypeInfo returnType)
     return result;
 }
 
-OperatorSignature operatorSignature(std::string resolvedName)
-{
-    OperatorSignature result;
-    result.receiverType = namedStructType("Person");
-    result.rightParameterType = namedStructType("Person");
-    result.returnType = simpleType(StaticType::Bool);
-    result.resolvedName = std::move(resolvedName);
-    return result;
-}
-
 void test_direct_import_deduplicates_per_importing_module()
 {
     ModuleSymbols symbols;
@@ -129,22 +119,6 @@ void test_method_exports_are_recorded_with_struct_names()
     assert(exports->at("Person").at("ageNext").returnType.kind == StaticType::Number);
 }
 
-void test_operator_exports_are_recorded_with_struct_names()
-{
-    ModuleSymbols symbols;
-
-    assert(symbols.operatorExports(3) == nullptr);
-    symbols.recordOperatorExport(3, "Person", "<", operatorSignature("__method_Person_operator_Less#0"));
-
-    const ModuleOperatorExports* exports = symbols.operatorExports(3);
-    assert(exports != nullptr);
-    assert(exports->size() == 1);
-    assert(exports->at("Person").size() == 1);
-    assert(exports->at("Person").at("<").resolvedName == "__method_Person_operator_Less#0");
-    assert(exports->at("Person").at("<").returnType.kind == StaticType::Bool);
-}
-
-
 void test_export_lookup_and_method_table_forwarding()
 {
     ModuleSymbols symbols;
@@ -163,13 +137,6 @@ void test_export_lookup_and_method_table_forwarding()
     const ModuleMethodExports* exports = symbols.methodExports(2);
     assert(exports != nullptr);
     assert(exports->at("Person").at("ageNext").resolvedName == "__method_Person_ageNext#0");
-
-    StructOperatorTable operators;
-    operators.emplace("<", operatorSignature("__method_Person_operator_Less#1"));
-    symbols.recordOperatorExports(2, "Person", operators);
-    assert(symbols.operatorExports(2) != nullptr);
-    assert(symbols.operatorExports(2)->at("Person").at("<").resolvedName
-        == "__method_Person_operator_Less#1");
 }
 
 void test_clear_removes_all_tables()
@@ -180,7 +147,6 @@ void test_clear_removes_all_tables()
     symbols.markLocalStruct(1, "Person");
     symbols.recordStructExport(1, "Person", structDecl("Person"));
     symbols.recordMethodExport(1, "Person", "ageNext", methodSignature("__method_Person_ageNext#0", simpleType(StaticType::Number)));
-    symbols.recordOperatorExport(1, "Person", "<", operatorSignature("__method_Person_operator_Less#1"));
     NamespaceImport imported;
     imported.values.emplace("value", binding("value#1", StaticType::String));
     symbols.recordNamespace(1, "lib", std::move(imported));
@@ -192,7 +158,6 @@ void test_clear_removes_all_tables()
     assert(!symbols.isLocalStruct(1, "Person"));
     assert(symbols.structExports(1) == nullptr);
     assert(symbols.methodExports(1) == nullptr);
-    assert(symbols.operatorExports(1) == nullptr);
     assert(!symbols.hasNamespace(1, "lib"));
     assert(symbols.namespaceImport(1, "lib") == nullptr);
 }
@@ -206,7 +171,6 @@ int main()
     test_struct_exports_and_local_struct_markers_are_independent();
     test_namespace_aliases_are_recorded_and_queried();
     test_method_exports_are_recorded_with_struct_names();
-    test_operator_exports_are_recorded_with_struct_names();
     test_export_lookup_and_method_table_forwarding();
     test_clear_removes_all_tables();
 }

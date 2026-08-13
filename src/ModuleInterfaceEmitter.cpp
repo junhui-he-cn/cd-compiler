@@ -54,12 +54,6 @@ void writeMethodSignature(std::ostream& out, const ModuleInterfaceMethod& method
     out << "): " << typeInfoName(method.returnType);
 }
 
-void writeOperatorSignature(std::ostream& out, const ModuleInterfaceOperator& op)
-{
-    out << op.symbol << '(' << typeInfoName(op.rightParameterType)
-        << "): " << typeInfoName(op.returnType);
-}
-
 } // namespace
 
 void writeModuleInterfaceText(std::ostream& out, const std::vector<ModuleInterface>& interfaces)
@@ -120,14 +114,6 @@ void writeModuleInterfaceText(std::ostream& out, const std::vector<ModuleInterfa
                 out << "\n";
             }
 
-            std::vector<ModuleInterfaceOperator> operators = sortedByName(
-                structInfo.operators,
-                [](const ModuleInterfaceOperator& op) { return op.symbol; });
-            for (const ModuleInterfaceOperator& op : operators) {
-                out << "    operator ";
-                writeOperatorSignature(out, op);
-                out << "\n";
-            }
         }
 
         std::vector<ModuleInterfaceEnum> enums = sortedByName(module.enums, [](const ModuleInterfaceEnum& enumInfo) {

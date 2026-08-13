@@ -40,78 +40,6 @@ std::string importPathForIR(const Token& token)
     return token.lexeme;
 }
 
-void collectCapabilityOperatorSymbols(
-    const std::vector<StmtPtr>& statements,
-    std::unordered_map<std::string, std::unordered_set<std::string>>& symbolsByStruct)
-{
-    for (const StmtPtr& statement : statements) {
-        if (const auto* module = dynamic_cast<const ModuleStmt*>(statement.get())) {
-            collectCapabilityOperatorSymbols(module->statements, symbolsByStruct);
-            continue;
-        }
-        const auto* impl = dynamic_cast<const ImplStmt*>(statement.get());
-        if (!impl) {
-            continue;
-        }
-        auto& symbols = symbolsByStruct[impl->typeName.lexeme];
-        for (const MethodDecl& method : impl->methods) {
-            if (method.isOperator) {
-                symbols.insert(method.name.lexeme);
-            }
-        }
-    }
-}
-
-void collectCapabilityWitnessStructs(
-    const std::vector<StmtPtr>& statements,
-    std::unordered_set<std::string>& witnesses)
-{
-    std::unordered_map<std::string, std::unordered_set<std::string>> symbolsByStruct;
-    collectCapabilityOperatorSymbols(statements, symbolsByStruct);
-    static constexpr const char* requiredOperators[] = {
-        "<",
-        "<=",
-        ">",
-        ">=",
-    };
-    for (const auto& entry : symbolsByStruct) {
-        bool complete = true;
-        for (const char* symbol : requiredOperators) {
-            if (entry.second.find(symbol) == entry.second.end()) {
-                complete = false;
-                break;
-            }
-        }
-        if (complete) {
-            witnesses.insert(entry.first);
-        }
-    }
-}
-
-std::string capabilityOperatorBindingName(
-    const std::string& structName,
-    TokenType operatorToken)
-{
-    const char* operatorName = nullptr;
-    switch (operatorToken) {
-    case TokenType::Less:
-        operatorName = "less";
-        break;
-    case TokenType::LessEqual:
-        operatorName = "less_equal";
-        break;
-    case TokenType::Greater:
-        operatorName = "greater";
-        break;
-    case TokenType::GreaterEqual:
-        operatorName = "greater_equal";
-        break;
-    default:
-        throw IRCompileError("invalid capability operator token");
-    }
-    return "__capability_ord_" + structName + "_" + operatorName;
-}
-
 } // namespace
 
 IRCompileError::IRCompileError(std::string message)
@@ -402,9 +330,7 @@ IRProgram IRCompiler::compileInternal(
     nextSyntheticName_ = 0;
     nextSyntheticBindingId_ = 0;
     activeFunctionDepth_ = 0;
-    capabilityWitnessStructs_.clear();
     collectExportedDeclarations(program);
-    collectCapabilityWitnessStructs(program.statements, capabilityWitnessStructs_);
     for (const auto& statement : program.statements) {
         if (const auto* module = dynamic_cast<const ModuleStmt*>(statement.get())) {
             modules_.emplace(module->moduleId, module);
@@ -427,7 +353,6 @@ IRProgram IRCompiler::compileInternal(
     registeredBindings_.clear();
     bindingIdsByResolvedName_.clear();
     exportedDeclarations_.clear();
-    capabilityWitnessStructs_.clear();
     activeFunctionDepth_ = 0;
     independentModuleId_.reset();
     declarationIndex_ = nullptr;
@@ -653,14 +578,11 @@ void IRCompiler::compileFunctionStatement(const FunctionStmt& function)
 void IRCompiler::compileImpl(const ImplStmt& statement)
 {
     for (const MethodDecl& method : statement.methods) {
-        compileMethod(
-            method,
-            capabilityWitnessStructs_.find(statement.typeName.lexeme)
-                != capabilityWitnessStructs_.end());
+        compileMethod(method);
     }
 }
 
-void IRCompiler::compileMethod(const MethodDecl& method, bool capabilityWitness)
+void IRCompiler::compileMethod(const MethodDecl& method)
 {
     requireMethodMetadata(method);
     const FunctionMetadataRecord& metadata = *declarationIndex_->functionMetadata(method);
@@ -668,20 +590,6 @@ void IRCompiler::compileMethod(const MethodDecl& method, bool capabilityWitness)
     const std::optional<BindingId> methodBinding = registerSyntheticBinding(methodName);
     IRRegister placeholder = ir_.emitConstant(Value::nil());
     ir_.emitStoreVar(methodName, placeholder, methodBinding);
-
-    std::optional<std::string> capabilityBindingName;
-    std::optional<BindingId> capabilityBinding;
-    if (capabilityWitness && method.isOperator) {
-        const DeclarationRecord* declaration = declarationIndex_->declaration(method);
-        if (!declaration || declaration->ownerType.empty()) {
-            throw IRCompileError("missing owner metadata for capability operator");
-        }
-        capabilityBindingName = capabilityOperatorBindingName(
-            declaration->ownerType,
-            method.name.type);
-        capabilityBinding = registerSyntheticBinding(*capabilityBindingName);
-        ir_.emitStoreVar(*capabilityBindingName, placeholder, capabilityBinding);
-    }
 
     std::vector<std::string> parameters = metadata.parameterNames;
     ir_.beginFunction(metadata.functionLabel, std::move(parameters));
@@ -703,9 +611,6 @@ void IRCompiler::compileMethod(const MethodDecl& method, bool capabilityWitness)
     const std::size_t functionIndex = ir_.endFunction();
     IRRegister value = ir_.emitMakeFunction(functionIndex);
     ir_.emitAssignVar(methodName, value, methodBinding);
-    if (capabilityBindingName && capabilityBinding) {
-        ir_.emitAssignVar(*capabilityBindingName, value, capabilityBinding);
-    }
 }
 
 void IRCompiler::compileReturn(const ReturnStmt& statement)
@@ -1173,24 +1078,6 @@ IRRegister IRCompiler::compileExpression(const Expr& expression)
     }
 
     if (const auto* binary = dynamic_cast<const BinaryExpr*>(&expression)) {
-        if (const BinaryOperationRecord* operation = declarationIndex_->binaryOperation(*binary)) {
-            typedExpressionType(*binary, "binary operator");
-            if (!operation->imported) {
-                const CallTargetRecord* target = declarationIndex_->callTarget(*binary);
-                if (!target || target->kind != CallTargetKind::StructMethod) {
-                    throw IRCompileError("missing binary operator call target metadata");
-                }
-            }
-            const auto binding = bindingIdsByResolvedName_.find(operation->calleeName);
-            const std::optional<BindingId> bindingId = binding == bindingIdsByResolvedName_.end()
-                ? std::nullopt
-                : std::optional<BindingId>(binding->second);
-            const IRRegister callee = ir_.emitLoadVar(operation->calleeName, bindingId);
-            std::vector<IRRegister> arguments;
-            arguments.push_back(compileExpression(*binary->left));
-            arguments.push_back(compileExpression(*binary->right));
-            return ir_.emitCall(callee, std::move(arguments));
-        }
         const IRRegister left = compileExpression(*binary->left);
         const IRRegister right = compileExpression(*binary->right);
         return emitBinary(binary->op.type, left, right);

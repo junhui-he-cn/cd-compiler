@@ -83,9 +83,6 @@ void TypeChecker::check(const Program& program)
             for (const ModuleInterfaceMethod& method : structure.methods) {
                 observeResolvedName(method.resolvedName);
             }
-            for (const ModuleInterfaceOperator& op : structure.operators) {
-                observeResolvedName(op.resolvedName);
-            }
         }
         nextResolvedName_ = std::max(nextResolvedName_, interfaceInfo.resolvedNameNext);
     }

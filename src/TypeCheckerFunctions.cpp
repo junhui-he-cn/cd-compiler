@@ -294,32 +294,6 @@ void TypeChecker::validateGenericTypeArguments(
     }
 }
 
-bool TypeChecker::hasCapabilityWitness(const TypeInfo& actual, const std::string& capability) const
-{
-    if (actual.kind != StaticType::Struct || !actual.structName || capability != "Ord") {
-        return false;
-    }
-
-    const auto structure = methods_.find(*actual.structName);
-    if (structure == methods_.end()) {
-        return false;
-    }
-
-    static constexpr const char* requiredOperators[] = {
-        "<",
-        "<=",
-        ">",
-        ">=",
-    };
-    for (const char* symbol : requiredOperators) {
-        const auto method = structure->second.find(symbol);
-        if (method == structure->second.end() || !method->second.isOperator) {
-            return false;
-        }
-    }
-    return true;
-}
-
 bool TypeChecker::satisfiesCapabilityWitness(
     const TypeInfo& actual,
     const TypeInfo& capability) const
@@ -350,8 +324,7 @@ bool TypeChecker::satisfiesCapabilityWitness(
     const std::string& name = *capability.structName;
     if (name == "Ord") {
         return actual.kind == StaticType::Number
-            || actual.kind == StaticType::String
-            || hasCapabilityWitness(actual, name);
+            || actual.kind == StaticType::String;
     }
     return SemanticTypes::satisfiesCapability(actual, capability);
 }

@@ -98,7 +98,7 @@ def main() -> int:
     root = Path(__file__).resolve().parent.parent
     logical = root / "tests" / "golden" / "logical_ir" / "input.cd"
     match = root / "tests" / "golden" / "match_guards" / "input.cd"
-    imported = root / "tests" / "golden" / "import_struct_operator_direct" / "input.cd"
+    imported = root / "tests" / "golden" / "generic_method_imports" / "input.cd"
 
     baseline = run([str(compiler), "--ir", str(logical)])
     require_clean(baseline, "baseline IR")
@@ -236,7 +236,7 @@ def main() -> int:
             "rebuilt": 0,
         }:
             raise AssertionError(f"O1 cache hit was incomplete: {second}")
-        if link_and_run(vm, products, root / "linked-o1.cdbc") != "true\ntrue\ntrue\ntrue\n":
+        if link_and_run(vm, products, root / "linked-o1.cdbc") != "7\nmodule\n":
             raise AssertionError("O1 linked module output changed")
 
         third = emit_modules(compiler, imported, products, cache, report, "0")

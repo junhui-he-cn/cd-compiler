@@ -483,19 +483,6 @@ TypeChecker::MethodInfo TypeChecker::methodInfoFromSignature(const MethodSignatu
     return info;
 }
 
-TypeChecker::MethodInfo TypeChecker::operatorInfoFromSignature(const OperatorSignature& signature) const
-{
-    MethodInfo info;
-    info.isOperator = true;
-    info.receiverType = signature.receiverType;
-    info.parameterTypes = {signature.rightParameterType};
-    info.returnType = signature.returnType;
-    info.resolvedName = signature.resolvedName;
-    info.genericParameters = signature.genericParameters;
-    info.genericParameterConstraints = signature.genericParameterConstraints;
-    return info;
-}
-
 TypeInfo TypeChecker::qualifyNamespaceType(
     const TypeInfo& type,
     const std::string& alias,
@@ -582,25 +569,6 @@ MethodSignature TypeChecker::qualifyNamespaceMethodSignature(
     return result;
 }
 
-OperatorSignature TypeChecker::qualifyNamespaceOperatorSignature(
-    const OperatorSignature& signature,
-    const std::string& alias,
-    const ModuleStructExports& structs,
-    const ModuleEnumExports& enums) const
-{
-    OperatorSignature result = signature;
-    result.receiverType = qualifyNamespaceType(result.receiverType, alias, structs, enums);
-    result.rightParameterType = qualifyNamespaceType(result.rightParameterType, alias, structs, enums);
-    result.returnType = qualifyNamespaceType(result.returnType, alias, structs, enums);
-    for (std::shared_ptr<TypeInfo>& constraint : result.genericParameterConstraints) {
-        if (constraint) {
-            constraint = std::make_shared<TypeInfo>(
-                qualifyNamespaceType(*constraint, alias, structs, enums));
-        }
-    }
-    return result;
-}
-
 void TypeChecker::importMethodExports(
     const Token& diagnosticToken,
     const ModuleMethodExports& methodExports,
@@ -630,61 +598,13 @@ void TypeChecker::importMethodExports(
     }
 }
 
-void TypeChecker::importOperatorExports(
-    const Token& diagnosticToken,
-    const ModuleOperatorExports& operatorExports,
-    const std::string* namespaceAlias,
-    const ModuleStructExports* namespaceStructs,
-    const ModuleEnumExports* namespaceEnums)
-{
-    for (const auto& structEntry : operatorExports) {
-        std::string structName = structEntry.first;
-        if (namespaceAlias) {
-            structName = *namespaceAlias + "." + structName;
-        }
-
-        auto& table = methods_[structName];
-        for (const auto& operatorEntry : structEntry.second) {
-            OperatorSignature signature = operatorEntry.second;
-            if (namespaceAlias && namespaceStructs && namespaceEnums) {
-                signature = qualifyNamespaceOperatorSignature(
-                    signature, *namespaceAlias, *namespaceStructs, *namespaceEnums);
-            }
-            if (table.find(operatorEntry.first) != table.end()) {
-                throw TypeError(diagnosticToken,
-                    "duplicate operator `" + operatorEntry.first
-                        + "` for struct `" + structName + "`");
-            }
-            table.emplace(operatorEntry.first, operatorInfoFromSignature(signature));
-        }
-    }
-}
-
 void TypeChecker::recordStructMethodExports(std::size_t moduleId, const std::string& structName)
 {
     const auto methods = methods_.find(structName);
     if (methods == methods_.end()) {
         return;
     }
-    const StructTypeDecl* structType = findStructType(structName);
     for (const auto& method : methods->second) {
-        if (method.second.declaration && method.second.declaration->isOperator) {
-            if (!structType || method.second.parameterTypes.size() != 1) {
-                continue;
-            }
-            moduleSymbols_.recordOperatorExport(
-                moduleId,
-                structName,
-                method.first,
-                OperatorSignature{
-                    method.second.receiverType,
-                    method.second.parameterTypes.front(),
-                    method.second.returnType,
-                    structType->genericParameters,
-                    structType->genericParameterConstraints,
-                    method.second.resolvedName});
-            continue;
-        }
         moduleSymbols_.recordMethodExport(moduleId, structName, method.first, methodSignatureFromInfo(method.second));
     }
 }
@@ -692,14 +612,9 @@ void TypeChecker::recordStructMethodExports(std::size_t moduleId, const std::str
 void TypeChecker::checkMethodNameAvailable(const StructTypeDecl& structType, const ImplStmt& statement, const MethodDecl& method) const
 {
     if (findMethod(statement.typeName.lexeme, method.name.lexeme)) {
-        if (method.isOperator) {
-            throw TypeError(method.name,
-                "duplicate operator `" + method.name.lexeme
-                    + "` for struct `" + statement.typeName.lexeme + "`");
-        }
         throw TypeError(method.name, "duplicate method `" + method.name.lexeme + "` for struct `" + statement.typeName.lexeme + "`");
     }
-    if (!method.isOperator && findStructField(structType, method.name.lexeme)) {
+    if (findStructField(structType, method.name.lexeme)) {
         throw TypeError(method.name,
             "method `" + method.name.lexeme + "` conflicts with field `" + method.name.lexeme + "` on struct `" + statement.typeName.lexeme + "`");
     }
@@ -708,12 +623,6 @@ void TypeChecker::checkMethodNameAvailable(const StructTypeDecl& structType, con
 void TypeChecker::registerMethodSignature(const StructTypeDecl& structType, const ImplStmt& statement, const MethodDecl& method)
 {
     checkMethodNameAvailable(structType, statement, method);
-
-    if (method.isOperator && !method.typeParameters.empty()) {
-        throw TypeError(method.name,
-            "operator `" + method.name.lexeme + "` for struct `"
-                + statement.typeName.lexeme + "` cannot declare type parameters");
-    }
 
     for (const std::string& receiverParameter : structType.genericParameters) {
         for (const TypeParameter& methodParameter : method.typeParameters) {
@@ -743,34 +652,12 @@ void TypeChecker::registerMethodSignature(const StructTypeDecl& structType, cons
     TypeInfo receiverType = namedStructType(
         statement.typeName.lexeme, std::move(receiverTypeArguments));
 
-    if (method.isOperator) {
-        if (method.parameters.size() != 1
-            || parameterTypes.size() != 1
-            || !method.parameters.front().typeName
-            || !SemanticTypes::compatible(receiverType, parameterTypes.front())
-            || !SemanticTypes::compatible(parameterTypes.front(), receiverType)) {
-            throw TypeError(method.name,
-                "operator `" + method.name.lexeme + "` for struct `"
-                    + statement.typeName.lexeme
-                    + "` must accept exactly one right operand of type `"
-                    + typeInfoName(receiverType) + "`");
-        }
-        if (!expectedReturnType || expectedReturnType->kind != StaticType::Bool) {
-            throw TypeError(method.name,
-                "operator `" + method.name.lexeme + "` for struct `"
-                    + statement.typeName.lexeme + "` must return bool");
-        }
-    }
-
     MethodInfo info;
     info.declaration = &method;
-    info.isOperator = method.isOperator;
     info.receiverType = std::move(receiverType);
     info.parameterTypes = std::move(parameterTypes);
     info.returnType = expectedReturnType ? *expectedReturnType : unknownType();
-    const std::string methodLabel = method.isOperator
-        ? "operator_" + tokenTypeName(method.name.type)
-        : method.name.lexeme;
+    const std::string methodLabel = method.name.lexeme;
     info.resolvedName = makeResolvedName(
         "__method_" + statement.typeName.lexeme + "_" + methodLabel);
     info.genericParameters = typeParameterNames(method.typeParameters);
@@ -919,14 +806,6 @@ void TypeChecker::checkImpl(const ImplStmt& statement)
 
     auto& structMethods = methods_[statement.typeName.lexeme];
     for (const MethodDecl& method : statement.methods) {
-        if (method.isOperator
-            && !moduleStack_.empty()
-            && !moduleSymbols_.isLocalStruct(
-                moduleStack_.back(), statement.typeName.lexeme)) {
-            throw TypeError(method.name,
-                "cannot implement operator `" + method.name.lexeme
-                    + "` for imported struct `" + statement.typeName.lexeme + "`");
-        }
         registerMethodSignature(*structType, statement, method);
     }
     for (const MethodDecl& method : statement.methods) {

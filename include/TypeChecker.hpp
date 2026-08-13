@@ -64,7 +64,6 @@ private:
 
     struct MethodInfo {
         const MethodDecl* declaration = nullptr;
-        bool isOperator = false;
         TypeInfo receiverType;
         std::vector<TypeInfo> parameterTypes;
         TypeInfo returnType;
@@ -152,10 +151,6 @@ private:
         const ModuleMethodExports& targetExports,
         std::size_t currentModuleId,
         const std::string& structName);
-    void forwardStructOperatorExports(
-        const ModuleOperatorExports& targetExports,
-        std::size_t currentModuleId,
-        const std::string& structName);
     void checkReExport(const ExportStmt& statement);
     const ModuleStmt* findModule(const Program& program, std::size_t moduleId) const;
     const ModuleInterface* findModuleInterface(std::size_t moduleId) const;
@@ -174,7 +169,6 @@ private:
     const MethodInfo* findMethod(const std::string& structName, const std::string& methodName) const;
     MethodSignature methodSignatureFromInfo(const MethodInfo& method) const;
     MethodInfo methodInfoFromSignature(const MethodSignature& signature) const;
-    MethodInfo operatorInfoFromSignature(const OperatorSignature& signature) const;
     TypeInfo qualifyNamespaceType(
         const TypeInfo& type,
         const std::string& alias,
@@ -185,20 +179,9 @@ private:
         const std::string& alias,
         const ModuleStructExports& structs,
         const ModuleEnumExports& enums) const;
-    OperatorSignature qualifyNamespaceOperatorSignature(
-        const OperatorSignature& signature,
-        const std::string& alias,
-        const ModuleStructExports& structs,
-        const ModuleEnumExports& enums) const;
     void importMethodExports(
         const Token& diagnosticToken,
         const ModuleMethodExports& methodExports,
-        const std::string* namespaceAlias = nullptr,
-        const ModuleStructExports* namespaceStructs = nullptr,
-        const ModuleEnumExports* namespaceEnums = nullptr);
-    void importOperatorExports(
-        const Token& diagnosticToken,
-        const ModuleOperatorExports& operatorExports,
         const std::string* namespaceAlias = nullptr,
         const ModuleStructExports* namespaceStructs = nullptr,
         const ModuleEnumExports* namespaceEnums = nullptr);
@@ -228,7 +211,6 @@ private:
         const TypeSubstitutions& substitutions,
         const Token& callToken,
         const std::string& context) const;
-    bool hasCapabilityWitness(const TypeInfo& actual, const std::string& capability) const;
     bool satisfiesCapabilityWitness(const TypeInfo& actual, const TypeInfo& capability) const;
     TypeInfo specializeGenericCallback(
         const Token& callToken,

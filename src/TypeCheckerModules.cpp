@@ -85,25 +85,6 @@ ModuleMethodExports methodExportsFromInterface(const ModuleInterface& interfaceI
     return exports;
 }
 
-ModuleOperatorExports operatorExportsFromInterface(const ModuleInterface& interfaceInfo)
-{
-    ModuleOperatorExports exports;
-    for (const ModuleInterfaceStruct& structInfo : interfaceInfo.structs) {
-        for (const ModuleInterfaceOperator& op : structInfo.operators) {
-            exports[structInfo.name].emplace(
-                op.symbol,
-                OperatorSignature{
-                    op.receiverType,
-                    op.rightParameterType,
-                    op.returnType,
-                    op.genericParameters,
-                    op.genericParameterConstraints,
-                    op.resolvedName});
-        }
-    }
-    return exports;
-}
-
 } // namespace
 
 const ModuleStmt* TypeChecker::findModule(const Program& program, std::size_t moduleId) const
@@ -197,22 +178,6 @@ void TypeChecker::buildModuleInterface(const Program& program, const ModuleStmt&
                 }
             }
 
-            if (const ModuleOperatorExports* operatorExports = moduleSymbols_.operatorExports(module.moduleId)) {
-                const auto operatorsForStruct = operatorExports->find(entry.first);
-                if (operatorsForStruct != operatorExports->end()) {
-                    for (const auto& operatorEntry : operatorsForStruct->second) {
-                        structInfo.operators.push_back(ModuleInterfaceOperator{
-                            operatorEntry.first,
-                            operatorEntry.second.receiverType,
-                            operatorEntry.second.rightParameterType,
-                            operatorEntry.second.returnType,
-                            operatorEntry.second.genericParameters,
-                            operatorEntry.second.genericParameterConstraints,
-                            operatorEntry.second.resolvedName});
-                    }
-                }
-            }
-
             interfaceInfo.structs.push_back(std::move(structInfo));
         }
     }
@@ -258,12 +223,6 @@ void TypeChecker::buildModuleInterface(const Program& program, const ModuleStmt&
             structInfo.methods.end(),
             [](const ModuleInterfaceMethod& left, const ModuleInterfaceMethod& right) {
                 return left.name < right.name;
-            });
-        std::sort(
-            structInfo.operators.begin(),
-            structInfo.operators.end(),
-            [](const ModuleInterfaceOperator& left, const ModuleInterfaceOperator& right) {
-                return left.symbol < right.symbol;
             });
     }
     std::sort(
@@ -485,48 +444,6 @@ std::size_t TypeChecker::validateModuleInterfaces(const Program& program) const
         }
     };
 
-    const auto checkOperatorNames = [&mismatch](
-        const std::vector<ModuleInterfaceStruct>& actual,
-        const ModuleOperatorExports* expected) {
-        for (const ModuleInterfaceStruct& structure : actual) {
-            const StructOperatorTable* expectedOperators = nullptr;
-            if (expected) {
-                const auto found = expected->find(structure.name);
-                if (found != expected->end()) {
-                    expectedOperators = &found->second;
-                }
-            }
-            if (!expectedOperators) {
-                if (!structure.operators.empty()) {
-                    mismatch();
-                }
-                continue;
-            }
-            if (structure.operators.size() != expectedOperators->size()) {
-                mismatch();
-            }
-            for (const ModuleInterfaceOperator& op : structure.operators) {
-                if (expectedOperators->find(op.symbol) == expectedOperators->end()) {
-                    mismatch();
-                }
-            }
-        }
-        if (!expected) {
-            return;
-        }
-        for (const auto& entry : *expected) {
-            const auto structure = std::find_if(
-                actual.begin(),
-                actual.end(),
-                [&entry](const ModuleInterfaceStruct& candidate) {
-                    return candidate.name == entry.first;
-                });
-            if (structure == actual.end()) {
-                mismatch();
-            }
-        }
-    };
-
     for (const ModuleInterface& interfaceInfo : moduleInterfaces_) {
         if (!expectedModuleIds.count(interfaceInfo.moduleId)) {
             mismatch();
@@ -598,9 +515,6 @@ std::size_t TypeChecker::validateModuleInterfaces(const Program& program) const
             checkCanonicalNames(
                 structure.methods,
                 [](const ModuleInterfaceMethod& method) { return method.name; });
-            checkCanonicalNames(
-                structure.operators,
-                [](const ModuleInterfaceOperator& op) { return op.symbol; });
         }
 
         if (preloadedModuleIds_.find(interfaceInfo.moduleId) != preloadedModuleIds_.end()) {
@@ -614,7 +528,6 @@ std::size_t TypeChecker::validateModuleInterfaces(const Program& program) const
             moduleSymbols_.structExports(interfaceInfo.moduleId));
         checkEnumNames(interfaceInfo.enums, moduleSymbols_.enumExports(interfaceInfo.moduleId));
         checkMethodNames(interfaceInfo.structs, moduleSymbols_.methodExports(interfaceInfo.moduleId));
-        checkOperatorNames(interfaceInfo.structs, moduleSymbols_.operatorExports(interfaceInfo.moduleId));
     }
 
     return mismatches;
@@ -917,7 +830,6 @@ void TypeChecker::declareNamespaceAlias(const ImportStmt& statement, NamespaceIm
     }
 
     importMethodExports(alias, imported.methods, &alias.lexeme, &imported.structs, &imported.enums);
-    importOperatorExports(alias, imported.operators, &alias.lexeme, &imported.structs, &imported.enums);
     moduleSymbols_.recordNamespace(moduleId, alias.lexeme, std::move(imported));
 }
 
@@ -943,7 +855,6 @@ void TypeChecker::checkImport(const ImportStmt& statement)
         namespaceImport.structs = structExportsFromInterface(*importedInterface, statement.keyword);
         namespaceImport.enums = enumExportsFromInterface(*importedInterface, statement.keyword);
         namespaceImport.methods = methodExportsFromInterface(*importedInterface);
-        namespaceImport.operators = operatorExportsFromInterface(*importedInterface);
         declareNamespaceAlias(statement, std::move(namespaceImport));
         return;
     }
@@ -975,8 +886,6 @@ void TypeChecker::checkImport(const ImportStmt& statement)
 
     const ModuleMethodExports methods = methodExportsFromInterface(*importedInterface);
     importMethodExports(statement.keyword, methods);
-    const ModuleOperatorExports operators = operatorExportsFromInterface(*importedInterface);
-    importOperatorExports(statement.keyword, operators);
 }
 
 std::string TypeChecker::sourcePathLabel(const Token& path) const
@@ -1006,18 +915,6 @@ void TypeChecker::forwardStructMethodExports(
     moduleSymbols_.recordMethodExports(currentModuleId, structName, found->second);
 }
 
-void TypeChecker::forwardStructOperatorExports(
-    const ModuleOperatorExports& targetExports,
-    std::size_t currentModuleId,
-    const std::string& structName)
-{
-    const auto found = targetExports.find(structName);
-    if (found == targetExports.end()) {
-        return;
-    }
-    moduleSymbols_.recordOperatorExports(currentModuleId, structName, found->second);
-}
-
 void TypeChecker::checkReExport(const ExportStmt& statement)
 {
     if (moduleStack_.empty()) {
@@ -1040,7 +937,6 @@ void TypeChecker::checkReExport(const ExportStmt& statement)
     const ModuleStructExports structExports = structExportsFromInterface(*targetInterface, statement.keyword);
     const ModuleEnumExports enumExports = enumExportsFromInterface(*targetInterface, statement.keyword);
     const ModuleMethodExports methodExports = methodExportsFromInterface(*targetInterface);
-    const ModuleOperatorExports operatorExports = operatorExportsFromInterface(*targetInterface);
 
     for (const Token& name : statement.names) {
         ensureExportNameAvailable(currentModuleId, name);
@@ -1056,7 +952,6 @@ void TypeChecker::checkReExport(const ExportStmt& statement)
         if (structure != structExports.end()) {
             moduleSymbols_.recordStructExport(currentModuleId, name.lexeme, structure->second);
             forwardStructMethodExports(methodExports, currentModuleId, name.lexeme);
-            forwardStructOperatorExports(operatorExports, currentModuleId, name.lexeme);
             exported = true;
         }
 

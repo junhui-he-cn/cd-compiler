@@ -1,2 +1,0 @@
-struct Point { x: number }
-export Point;

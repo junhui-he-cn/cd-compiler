@@ -60,22 +60,6 @@ ModuleInterface makeInterface()
         {nullptr},
         namedStructType("Box", {typeParameterType("T")}),
         "__method_Box_echo#5"});
-    box.operators.push_back(ModuleInterfaceOperator{
-        ">",
-        namedStructType("Box", {typeParameterType("T")}),
-        namedStructType("Box", {typeParameterType("T")}),
-        simpleType(StaticType::Bool),
-        {"T"},
-        {std::make_shared<TypeInfo>(simpleType(StaticType::Number))},
-        "__method_Box_operator_Greater#7"});
-    box.operators.push_back(ModuleInterfaceOperator{
-        "<",
-        namedStructType("Box", {typeParameterType("T")}),
-        namedStructType("Box", {typeParameterType("T")}),
-        simpleType(StaticType::Bool),
-        {"T"},
-        {std::make_shared<TypeInfo>(simpleType(StaticType::Number))},
-        "__method_Box_operator_Less#8"});
     interfaceInfo.structs.push_back(std::move(box));
 
     ModuleInterfaceStruct node;
@@ -133,8 +117,6 @@ int main()
     assert(text.rfind("cdi 0.1\n", 0) == 0);
     assert(text.find("module_id") == std::string::npos);
     assert(text.find("source_id") == std::string::npos);
-    assert(text.find("  operators = 2\n") != std::string::npos);
-    assert(text.find("    right = ") != std::string::npos);
 
     const ModuleInterfaceArtifactLoadResult loaded = readModuleInterfaceArtifactText(text);
     assert(loaded.found);
@@ -159,14 +141,6 @@ int main()
     assert(loaded.artifact->interfaceInfo.values.back().resolvedName == "identity#4");
     assert(typeInfoName(loaded.artifact->interfaceInfo.structs.front().methods.front().receiverType)
         == "Box<T>");
-    assert(loaded.artifact->interfaceInfo.structs.front().operators.size() == 2);
-    assert(loaded.artifact->interfaceInfo.structs.front().operators.front().symbol == "<");
-    assert(loaded.artifact->interfaceInfo.structs.front().operators.front().rightParameterType.structName
-        == "Box");
-    assert(loaded.artifact->interfaceInfo.structs.front().operators.front().genericParameters
-        == std::vector<std::string>{"T"});
-    assert(loaded.artifact->interfaceInfo.structs.front().operators.front().returnType.kind
-        == StaticType::Bool);
     assert(loaded.artifact->interfaceInfo.structs.size() == 2);
     const ModuleInterfaceStruct& node = loaded.artifact->interfaceInfo.structs.back();
     assert(node.name == "Node");
@@ -174,29 +148,11 @@ int main()
     assert(node.fields.size() == 1);
     assert(typeInfoName(node.fields.front().type) == "optional<Node<T>>");
 
-    ModuleInterface withoutOperators = makeInterface();
-    withoutOperators.structs.front().operators.clear();
-    assert(moduleInterfaceArtifactHash(withoutOperators) != moduleInterfaceArtifactHash(artifact.interfaceInfo));
-    ModuleInterface linkageChanged = makeInterface();
-    linkageChanged.structs.front().operators.front().resolvedName += "-changed";
-    assert(moduleInterfaceArtifactHash(linkageChanged) != moduleInterfaceArtifactHash(artifact.interfaceInfo));
     ModuleInterface recursiveShapeChanged = makeInterface();
     recursiveShapeChanged.structs.back().fields.front().type
         = arrayType(namedStructType("Node", {typeParameterType("T")}));
     assert(moduleInterfaceArtifactHash(recursiveShapeChanged)
         != moduleInterfaceArtifactHash(artifact.interfaceInfo));
-
-    std::string legacyWithoutOperators = text;
-    const std::size_t operatorStart = legacyWithoutOperators.find("  operators = 2\n");
-    const std::size_t enumStart = legacyWithoutOperators.find("enums = ", operatorStart);
-    assert(operatorStart != std::string::npos);
-    assert(enumStart != std::string::npos);
-    legacyWithoutOperators.erase(operatorStart, enumStart - operatorStart);
-    const ModuleInterfaceArtifactLoadResult missingOperators
-        = readModuleInterfaceArtifactText(legacyWithoutOperators);
-    assert(missingOperators.found);
-    assert(!missingOperators.artifact);
-    assert(!missingOperators.error.empty());
 
     std::string legacy = text;
     const std::string allocatorLine = "resolved_name_next = 6\n";
