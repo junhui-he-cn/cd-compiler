@@ -79,15 +79,13 @@ struct Token {
     // 1-based source location for diagnostics.
     int line;
     int column;
-    // Source identity and source-local line are populated by FrontendSession.
-    // Parser diagnostics continue to use the combined `line` coordinate.
-    std::optional<int> sourceLine = std::nullopt;
-    // Typed source identity and source-local half-open byte range.
+    // Typed source identity and source-local half-open byte range, populated
+    // by FrontendSession.  Parser diagnostics use the per-file `line`
+    // coordinate above.
     std::optional<SourceFileId> sourceId = std::nullopt;
     std::optional<SourceRange> range = std::nullopt;
     // Lexer-owned offsets are source-buffer offsets before FrontendSession
-    // attaches a SourceFileId.  They are also useful for direct multi-file
-    // remapping.
+    // attaches a SourceFileId; FrontendSession converts them into `range`.
     std::size_t startOffset = 0;
     std::size_t endOffset = 0;
 };

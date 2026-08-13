@@ -603,7 +603,7 @@ struct Program {
 // Complete the source metadata produced by the parser.  IDs are allocated in
 // traversal order and are therefore stable for the lifetime of one Program
 // snapshot.  FrontendSession calls this once after assembling all source
-// units, so IDs do not collide across direct multi-file inputs or imports.
+// units, so IDs do not collide across modules or imports.
 void populateSyntaxRanges(Program& program);
 void assignSyntaxNodeIds(Program& program);
 void finalizeSyntaxMetadata(Program& program);

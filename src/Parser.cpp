@@ -24,7 +24,7 @@ std::optional<SourceSpan> spanForToken(const Token& token)
     }
     SourceSpan span{
         token.sourceId->value,
-        token.sourceLine.value_or(token.line),
+        token.line,
         token.column,
     };
     if (token.range) {

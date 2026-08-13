@@ -222,7 +222,6 @@ ParsedSource parseSource(
         std::vector<Token> tokens = lexer.scanTokens();
         if (sourceId) {
             for (Token& token : tokens) {
-                token.sourceLine = token.line;
                 token.sourceId = SourceFileId{*sourceId};
                 token.range = SourceRange{*token.sourceId, token.startOffset, token.endOffset};
             }
@@ -887,7 +886,6 @@ std::vector<Token> FrontendSession::displayTokens() const
     Token eof = endOfFileToken(combined);
     if (!units_.empty()) {
         const ParsedUnit& last = units_.back();
-        eof.sourceLine = lineAtEnd(last.source);
         eof.sourceId = SourceFileId{last.sourceId};
         eof.range = SourceRange{
             *eof.sourceId,
