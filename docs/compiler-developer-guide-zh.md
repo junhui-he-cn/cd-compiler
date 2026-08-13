@@ -60,10 +60,10 @@ CLI 参数解析/校验（main.cpp）
 ### 3.2 关键校验规则
 
 - `--module-cache-strict` 与 `--module-cache-fallback` 互斥。
-- `--module-cache-fallback` 仅允许 interface-only 缓存消费者，且不能与 `--module-cache` / `--emit-module-bytecode` 同用。
+- `--module-cache-fallback` 需要 `--module-cache` 或 `--module-interface-cache`；两种消费者都可用它退回源码修复。
 - `--module-interface-cache` 不能提供字节码体：若同时要产物，必须用 `--module-cache` + `--emit-module-bytecode`。
 - `--module-cache` 与 `--module-interface-cache` 若同时给出，必须指向同一目录。
-- interface-only 消费者默认 strict（除非显式 `--module-cache-fallback`）。
+- 两种缓存消费者都默认 strict（除非显式 `--module-cache-fallback`）。
 - `--module-rebuild-report` 依赖 `--module-cache`。
 
 ### 3.3 错误出口
@@ -89,8 +89,8 @@ CLI 参数解析/校验（main.cpp）
 | `setImportSearchPaths(paths)` | 设置 `-I`/`--import-path` 搜索目录（按 CLI 顺序保存，路径做 `lexically_normal`） |
 | `setVirtualImportRoots(paths)` | 虚拟 workspace 模式允许磁盘导入的根目录集合（canonical 化保存） |
 | `setModuleInterfaceCacheDirectory(path)` | 设置缓存根目录，同时使 `moduleProductCacheLoad_` 失效 |
-| `setModuleInterfaceCacheStrict(bool)` | strict 模式：sidecar 不可信时直接抛 Import 诊断而不是源回退 |
-| `setModuleProductCacheMode(bool)` | 模块产物边界：要求 `cdbc-cache 0.2` manifest 与配对产物同时可信 |
+| `setModuleInterfaceCacheStrict(bool)` | strict 模式：不可信的 sidecar/缓存内容直接抛 Import 诊断而不是源回退 |
+| `setModuleProductCacheMode(bool)` | 模块产物边界：要求 `cdbc-cache 0.2` manifest 记录与配对产品摘要同时可信 |
 
 ### 4.1 核心数据模型
 
@@ -170,13 +170,13 @@ struct ParsedUnit {
 1. 未设置缓存目录 -> 直接返回空结果（走源解析）。
 2. 读取 `<cache>/interfaces/<canonical>.cdi`；按错误文本区分 `invalid identity metadata` / `malformed sidecar` / `missing sidecar` 作为拒绝原因。
 3. 校验 sidecar `identity` 与 `canonicalPath` 字段等于当前 canonical path，且 `sourceHash == moduleCacheHash(source)`。
-4. `moduleProductCacheRejection`（仅 `--module-cache` + `--emit-module-bytecode` 的 module-product 模式）：惰性读取并缓存 `<cache>/module-cache.cdbc`（`cdbc-cache 0.2`），按 identity 找到记录，比较 `cacheKey`、`artifactPath`、`interfaceArtifactPath` 三者与 sidecar 派生的期望值。
+4. `moduleProductCacheRejection`（仅 `--module-cache` + `--emit-module-bytecode` 的 module-product 模式）：惰性读取并缓存 `<cache>/module-cache.cdbc`（`cdbc-cache 0.2`，schema 4），按 identity 找到记录，比较 `cacheKey`、`artifactPath`、`interfaceArtifactPath` 三者与 sidecar 派生的期望值，并用 manifest 中的 `content` 摘要校验配对产品。
 5. 配对产物存在性：`is_regular_file(<cache>/<moduleCacheArtifactPath>)`。
 6. 全部通过才返回可信 artifact。
 
 `loadFile` 中的消费逻辑：
 
-- **strict**（`setModuleInterfaceCacheStrict(true)`）：任何拒绝原因 -> `Import error: module interface cache rejected for <canonical>: <reason>`；
+- **strict**（`setModuleInterfaceCacheStrict(true)`）：interface-only 消费者任何拒绝原因，或 module-product 消费者遇到 `invalid module cache manifest` / `module cache record mismatch` -> `Import error: module interface cache rejected for <canonical>: <reason>`（module-product 致命原因附带 `--module-cache-fallback` 修复提示）；
 - **非 strict**：拒绝 -> 源回退（保留已有加载结果）；
 - **成功预载**：递归加载 `artifact.dependencies`（依赖也须为 sidecar 且 `interfaceHash` 匹配）；依赖不齐时 strict 抛 `dependency interface hash mismatch`，非 strict 继续源解析（已加载的依赖 unit 保留并去重）。
 - 预载 unit 的 `statements` 为空、`interfaceArtifact` 有值；`ModuleStmt::bodySourceBacked = false`，TypeChecker 只消费其接口，IR 阶段拒绝降级。
@@ -209,7 +209,7 @@ struct ParsedUnit {
 
 ### 4.8 与下游的交接
 
-- `main.cpp`：`frontend.setImportSearchPaths(importSearchPaths)`；`--module-interface-cache`/`--module-cache` 映射到 `setModuleInterfaceCacheDirectory`；`--module-cache` 额外启用 `setModuleProductCacheMode(true)`；interface-only 消费者默认 `setModuleInterfaceCacheStrict(true)`（除非 `--module-cache-fallback`）。格式化模式从 `program.moduleGraph` 收集 entry source id 逐文件输出。
+- `main.cpp`：`frontend.setImportSearchPaths(importSearchPaths)`；`--module-interface-cache`/`--module-cache` 映射到 `setModuleInterfaceCacheDirectory`；`--module-cache` 额外启用 `setModuleProductCacheMode(true)`；两种消费者都默认 `setModuleInterfaceCacheStrict(true)`（除非 `--module-cache-fallback`）。格式化模式从 `program.moduleGraph` 收集 entry source id 逐文件输出。
 - TypeChecker：`setPreloadedModuleInterfaces(frontend.preloadedModuleInterfaces())` 后 `check(program)` 按图做依赖序检查。
 - LSP：`analyzeDocument` 走 `loadStdin`；`analyzeVirtualWorkspace` 走 `loadVirtualFiles` + `setVirtualImportRoots(workspaceRoots)`。
 
@@ -289,12 +289,12 @@ IR 是三地址虚拟寄存器形式，常量池、名字表、源信息随 `IRP
 
 `--emit-module-bytecode dir --module-cache cache` 时：
 
-1. 先读 `cache/module-cache.cdbc`（`cdbc-cache 0.2` manifest）。
+1. 先读 `cache/module-cache.cdbc`（`cdbc-cache 0.2` manifest，schema 4）。
 2. 为每个图节点计算 key：identity、source hash、interface hash、优化级别与管线指纹、entry 顺序、依赖（canonical path + kind + requested path + interface hash）。
-3. `planModuleCacheBuild` 决策 Reuse / Rebuild；Reused 直接复制缓存产物，否则重新编译并写 sidecar（`interfaces/`）+ manifest。
+3. `planModuleCacheBuild` 决策 Reuse / Rebuild；Reused 前校验 manifest `content` 摘要，不匹配按 `cache_artifact_invalid` 重建，否则复制缓存产物；重建后写 sidecar（`interfaces/`）+ manifest。
 4. `--module-rebuild-report` 输出私有/公开失效与构建决策。
 
-缓存目录必须与产物目录不同。接口 sidecar 只有在配对产物也存在时才可信（module-product 边界）。
+缓存目录必须与产物目录不同。接口 sidecar 只有在配对产物也存在且内容摘要匹配时才可信（module-product 边界）。strict 默认下，损坏/不一致的 manifest 报错并要求显式修复；`--module-cache-fallback` 退回冷重建。
 
 ## 9. 诊断格式
 
@@ -374,6 +374,6 @@ python3 tests/run_malformed_tests.py ./build/compiler_design vm-rs --report buil
 - `cdbc 0.1` 文本产物契约；
 - O0 作为默认优化级别；
 - 普通 CLI 必须有源文件；
-- 模块产物源 fallback（冷构建/可修复产物），strict 切换属于 C4 决策门；
+- 模块产物策略自 2026-08-13 起为 C4 严格默认（见 `c4-module-product-creation-repair-001.md`）：冷构建自举、损坏 manifest 显式修复、正常漂移源码重建、schema-4 产品摘要校验；
 - C++/Rust 执行奇偶（`tests/run_rust_vm_tests.py` 与相关 parity 门）；
 - VM 解释器为默认执行路径（JIT 仅测试启用、白名单、可回退）。

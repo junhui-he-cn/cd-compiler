@@ -76,7 +76,7 @@ program. Missing identities, duplicate identities, non-contiguous entry order,
 cycles, and invalid offsets are rejected before writing the linked artifact.
 The linker does not introduce a new artifact version. The optional module
 product cache is separate from VM artifacts: `--module-cache <directory>`
-stores a `cdbc-cache 0.2` manifest (internal schema 3) and content-addressed product files, while
+stores a `cdbc-cache 0.2` manifest (internal schema 4) and content-addressed product files, while
 `--module-rebuild-report <report.json>` records per-module reuse/rebuild
 reasons. Keys include the canonical module identity, exact source bytes,
 canonical public interface shape, optimization level, optimizer pipeline
@@ -133,13 +133,18 @@ parsed dependency body; its preloaded interface supplies semantic import
 visibility. An interface-only consumer rejects a missing, malformed, stale, or
 unpaired sidecar by default with an `Import` diagnostic. Pass
 `--module-cache-fallback` to opt back into the normal source parser for those
-cases. `--module-cache` uses the same directory while emitting module products;
-that product-building path retains source fallback by default and can opt into
-rejection with `--module-cache-strict`.
+cases. `--module-cache` uses the same directory while emitting module products.
+That product-building path is strict by default: a cold build bootstraps the
+cache, an invalid or inconsistent manifest requires explicit repair
+(`--module-cache-fallback` or a cache-directory reset), normal source and
+dependency drift rebuilds from source, and schema-4 manifest content digests
+detect corrupted cached products before reuse. `--module-cache-strict` remains
+an explicit assertion and is mutually exclusive with `--module-cache-fallback`.
 
 The cache manifest is separate from VM artifacts and uses `cdbc-cache 0.2`; its
-records include the relative `.cdi` sidecar path. The `.cdi` sidecar is not a
-Rust VM input and has no effect on the linked `cdbc 0.1` wire format.
+records include the relative `.cdi` sidecar path and a product content digest.
+The `.cdi` sidecar is not a Rust VM input and has no effect on the linked
+`cdbc 0.1` wire format.
 
 ## Sections
 

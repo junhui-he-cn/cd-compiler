@@ -15,7 +15,7 @@
 
 namespace {
 
-constexpr int kModuleCacheSchemaVersion = 3;
+constexpr int kModuleCacheSchemaVersion = 4;
 constexpr std::uint64_t kFnvOffset = 14695981039346656037ULL;
 constexpr std::uint64_t kFnvPrime = 1099511628211ULL;
 
@@ -298,6 +298,17 @@ std::string moduleCacheHash(const std::string& value)
     return output.str();
 }
 
+std::string moduleCacheArtifactDigest(const std::filesystem::path& path)
+{
+    std::ifstream input(path, std::ios::binary);
+    if (!input) {
+        return {};
+    }
+    std::ostringstream contents;
+    contents << input.rdbuf();
+    return moduleCacheHash(contents.str());
+}
+
 std::string moduleCacheKey(const ModuleCacheModule& module)
 {
     std::ostringstream input;
@@ -377,7 +388,7 @@ ModuleCacheLoadResult readModuleCache(const std::filesystem::path& path)
     std::size_t schemaVersion = 0;
     if (!schema || !parseSizeField(schema->second, "schema = ", schemaVersion)
         || schemaVersion != kModuleCacheSchemaVersion) {
-        fail(schema ? schema->first : 1, "expected schema = 3");
+        fail(schema ? schema->first : 1, "expected schema = 4");
         return result;
     }
     const auto modulesHeader = nextNonEmpty();
@@ -415,10 +426,11 @@ ModuleCacheLoadResult readModuleCache(const std::filesystem::path& path)
         const auto cacheKey = nextNonEmpty();
         const auto artifact = nextNonEmpty();
         const auto interfaceArtifact = nextNonEmpty();
+        const auto contentDigest = nextNonEmpty();
         const auto entry = nextNonEmpty();
         if (!identity || !sourceHash || !interfaceHash || !optimizationLevel
             || !optimizerPipeline || !cacheKey || !artifact
-            || !interfaceArtifact || !entry
+            || !interfaceArtifact || !contentDigest || !entry
             || !parseQuotedField(identity->second, "  identity = ", record.module.identity)
             || !parseQuotedField(sourceHash->second, "  source = ", record.module.sourceHash)
             || !parseQuotedField(interfaceHash->second, "  interface = ", record.module.interfaceHash)
@@ -433,6 +445,7 @@ ModuleCacheLoadResult readModuleCache(const std::filesystem::path& path)
             || !parseQuotedField(cacheKey->second, "  key = ", record.module.cacheKey)
             || !parseQuotedField(artifact->second, "  artifact = ", record.artifactPath)
             || !parseQuotedField(interfaceArtifact->second, "  interface_artifact = ", record.interfaceArtifactPath)
+            || !parseQuotedField(contentDigest->second, "  content = ", record.module.contentDigest)
             || !parseBooleanField(entry->second, "  entry = ", record.module.isEntry)) {
             fail(identity ? identity->first : moduleHeader->first, "invalid module fields");
             return result;
@@ -445,7 +458,8 @@ ModuleCacheLoadResult readModuleCache(const std::filesystem::path& path)
             || record.interfaceArtifactPath.empty()
             || std::filesystem::path(record.interfaceArtifactPath).is_absolute()
             || std::filesystem::path(record.interfaceArtifactPath).lexically_normal().generic_string()
-                != record.interfaceArtifactPath) {
+                != record.interfaceArtifactPath
+            || record.module.contentDigest.empty()) {
             fail(moduleHeader->first, "invalid module identity, key, or artifact path");
             return result;
         }
@@ -533,7 +547,7 @@ void writeModuleCache(
         throw std::runtime_error("failed to open module cache: " + path.string());
     }
     output << "cdbc-cache 0.2\n\n"
-           << "schema = 3\n"
+           << "schema = " << manifest.schemaVersion << '\n'
            << "modules:\n";
     for (std::size_t index = 0; index < manifest.records.size(); ++index) {
         const ModuleCacheRecord& record = manifest.records[index];
@@ -546,7 +560,8 @@ void writeModuleCache(
             : record.interfaceArtifactPath;
         if (module.cacheKey != moduleCacheKey(module)
             || record.artifactPath != moduleCacheArtifactPath(module)
-            || interfaceArtifactPath != moduleCacheInterfaceArtifactPath(module)) {
+            || interfaceArtifactPath != moduleCacheInterfaceArtifactPath(module)
+            || module.contentDigest.empty()) {
             throw std::runtime_error("invalid module cache record");
         }
         output << "module " << index << '\n'
@@ -558,6 +573,7 @@ void writeModuleCache(
                << "  key = " << quotedString(module.cacheKey) << '\n'
                << "  artifact = " << quotedString(record.artifactPath) << '\n'
                << "  interface_artifact = " << quotedString(interfaceArtifactPath) << '\n'
+               << "  content = " << quotedString(module.contentDigest) << '\n'
                << "  entry = " << (module.isEntry ? "true" : "false") << '\n';
         if (module.entryOrder) {
             output << "  entry_order = " << *module.entryOrder << '\n';
@@ -648,6 +664,14 @@ std::vector<ModuleCacheDecision> planModuleCacheBuild(
 
         const bool artifactMissing = !std::filesystem::exists(
             cacheDirectory / moduleCacheArtifactPath(module));
+        bool artifactDigestMismatch = false;
+        if (!artifactMissing && hasPrevious
+            && !previousRecord->module.contentDigest.empty()) {
+            const std::string currentDigest = moduleCacheArtifactDigest(
+                cacheDirectory / moduleCacheArtifactPath(module));
+            artifactDigestMismatch = currentDigest
+                != previousRecord->module.contentDigest;
+        }
         const bool needsRebuild = !hasPrevious
             || sourceChanged
             || dependencyChanged
@@ -655,7 +679,8 @@ std::vector<ModuleCacheDecision> planModuleCacheBuild(
             || metadataChanged
             || optimizationChanged
             || keyChanged
-            || artifactMissing;
+            || artifactMissing
+            || artifactDigestMismatch;
 
         evaluation.ownPublicChanged = publicChanged;
         evaluation.publicImpact = publicChanged || dependencyPublicImpact;
@@ -687,6 +712,8 @@ std::vector<ModuleCacheDecision> planModuleCacheBuild(
             evaluation.decision.reason = "optimization_configuration_changed";
         } else if (keyChanged) {
             evaluation.decision.reason = "cache_key_changed";
+        } else if (artifactDigestMismatch) {
+            evaluation.decision.reason = "cache_artifact_invalid";
         } else {
             evaluation.decision.reason = "cache_artifact_missing";
         }

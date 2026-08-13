@@ -36,6 +36,12 @@ public:
     // Import diagnostic instead of a source fallback. Entry modules always
     // use their source path.
     void setModuleInterfaceCacheStrict(bool strict);
+    // The current optimization identity participates in the manifest record
+    // key check so an O0-to-O1 switch reads as normal drift (source rebuild)
+    // instead of a strict record-mismatch rejection.
+    void setModuleCacheOptimizationIdentity(
+        const std::string& level,
+        const std::string& pipeline);
     // Module-product emission requires a valid cdbc-cache manifest record in
     // addition to the sidecar and paired product before it can preload an
     // imported body. Interface-only consumers intentionally do not use this
@@ -99,6 +105,8 @@ private:
     std::optional<std::filesystem::path> moduleInterfaceCacheDirectory_;
     bool moduleInterfaceCacheStrict_ = false;
     bool moduleProductCacheMode_ = false;
+    std::string moduleCacheOptimizationLevel_ = "O0";
+    std::string moduleCacheOptimizerPipeline_ = "m7-ssa-o0-v1";
     mutable std::optional<ModuleCacheLoadResult> moduleProductCacheLoad_;
     std::vector<std::filesystem::path> virtualImportRoots_;
     std::unordered_set<std::string> directEntryCanonicalPaths_;

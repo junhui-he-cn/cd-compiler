@@ -23,7 +23,7 @@ REQUIRED_CELL_IDS = {
     "artifact.metadata_free.cdbc_0_1",
     "artifact.module.cdbc_0_1",
     "library.cli.version_0_1",
-    "module_cache.cdbc_cache_0_2_schema3",
+    "module_cache.cdbc_cache_0_2_schema4",
     "native.fixed_registry",
 }
 REQUIRED_COMMAND_MARKERS = {
@@ -142,12 +142,12 @@ def validate_matrix(matrix: dict[str, Any], repo_root: Path = REPO_ROOT) -> list
         errors.append("module cache family must remain cdbc-cache")
     if _field(module_cache, "version") != "0.2":
         errors.append("module cache version must remain 0.2")
-    if _field(module_cache, "schema") != 3:
-        errors.append("module cache schema must remain 3")
+    if _field(module_cache, "schema") != 4:
+        errors.append("module cache schema must remain 4")
     if module_cache_source is not None:
         source = module_cache_source.read_text(encoding="utf-8")
-        if '"cdbc-cache 0.2"' not in source or '"expected schema = 3"' not in source:
-            errors.append("module cache source does not enforce cdbc-cache 0.2 schema 3")
+        if '"cdbc-cache 0.2"' not in source or '"expected schema = 4"' not in source:
+            errors.append("module cache source does not enforce cdbc-cache 0.2 schema 4")
 
     vm_library = _field(contract, "vm_library")
     vm_cargo = _check_source_path(repo_root, _field(vm_library, "cargo"), "VM library", errors)

@@ -676,11 +676,11 @@ cargo run --manifest-path vm-rs/Cargo.toml -- run program.cdbc
   main.cd
 ```
 
-缓存目录包含经过校验的模块产品、`cdi 0.1` 公开接口 sidecar 和 `cdbc-cache 0.2` manifest。编译器会同时校验源 hash、公开接口 hash、依赖接口 hash、配对产品和 manifest；任一项失效就重建模块。`rebuild.json` 记录每个模块的复用或重建原因，可用于 CI 和构建诊断。
+缓存目录包含经过校验的模块产品、`cdi 0.1` 公开接口 sidecar 和 `cdbc-cache 0.2` manifest。编译器会同时校验源 hash、公开接口 hash、依赖接口 hash、配对产品、manifest 和产品内容摘要；正常的源码/接口/依赖漂移会重建对应模块，损坏的 manifest 默认报错并要求显式修复，被篡改的产品会按摘要校验后重建而不是复制。`rebuild.json` 记录每个模块的复用或重建原因，可用于 CI 和构建诊断。
 
 `--module-interface-cache cache-dir` 只预加载公开接口，适用于普通源模式和 `--module-interface` 等不需要依赖 bytecode body 的消费者。接口-only 消费者默认 strict：缺失或无效 sidecar 会产生 `Import` 错误；加 `--module-cache-fallback` 才允许回退到依赖源文件。`--module-cache-strict` 和 `--module-cache-fallback` 互斥。
 
-接口-only cache 不能为默认的单文件 `--emit-bytecode` 提供依赖函数体；要使用缓存生成可运行产物，应采用 `--emit-module-bytecode --module-cache`，然后执行 Rust VM 的 `link`。冷构建或修复构建的模块产物模式允许从源文件回退，必要时加 `--module-cache-strict` 要求完整缓存覆盖。
+接口-only cache 不能为默认的单文件 `--emit-bytecode` 提供依赖函数体；要使用缓存生成可运行产物，应采用 `--emit-module-bytecode --module-cache`，然后执行 Rust VM 的 `link`。模块产物模式同样默认 strict：冷构建（尚无 manifest）会自举并写入新 manifest；manifest 损坏或不一致会报错并要求显式修复（删除缓存目录或改用 `--module-cache-fallback` 重建）；源码/接口/依赖变化等正常漂移会自动从源重建。离线构建仍需依赖源文件存在，入口模块始终从源码编译。
 
 ## 10. 内置函数
 

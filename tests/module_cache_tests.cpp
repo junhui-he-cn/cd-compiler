@@ -53,15 +53,20 @@ void touchProducts(
     }
 }
 
-ModuleCacheManifest manifestFrom(const std::vector<ModuleCacheDecision>& decisions)
+ModuleCacheManifest manifestFrom(
+    const std::filesystem::path& cacheDirectory,
+    const std::vector<ModuleCacheDecision>& decisions)
 {
     ModuleCacheManifest manifest;
     for (const ModuleCacheDecision& decision : decisions) {
-        manifest.records.push_back(ModuleCacheRecord{
+        ModuleCacheRecord record{
             decision.module,
             decision.artifactPath,
             moduleInterfaceArtifactPath({}, decision.module.identity).generic_string(),
-        });
+        };
+        record.module.contentDigest = moduleCacheArtifactDigest(
+            cacheDirectory / decision.artifactPath);
+        manifest.records.push_back(std::move(record));
     }
     return manifest;
 }
@@ -94,17 +99,18 @@ int main()
         assert(decision.publicImpact);
     }
     touchProducts(cacheDirectory, first);
-    writeModuleCache(manifestPath, manifestFrom(first));
+    writeModuleCache(manifestPath, manifestFrom(cacheDirectory, first));
 
     const ModuleCacheLoadResult loaded = readModuleCache(manifestPath);
     assert(loaded.found);
     assert(loaded.error.empty());
     assert(loaded.manifest);
-    assert(loaded.manifest->schemaVersion == 3);
+    assert(loaded.manifest->schemaVersion == 4);
     assert(loaded.manifest->records.size() == 3);
     for (const ModuleCacheRecord& record : loaded.manifest->records) {
         assert(record.module.optimizationLevel == "O0");
         assert(record.module.optimizerPipeline == "m7-ssa-o0-v1");
+        assert(!record.module.contentDigest.empty());
         assert(record.interfaceArtifactPath
             == moduleInterfaceArtifactPath({}, record.module.identity).generic_string());
     }
@@ -119,6 +125,17 @@ int main()
     assert(legacy.found);
     assert(!legacy.manifest);
     assert(!legacy.error.empty());
+
+    const std::filesystem::path schema3ManifestPath = cacheDirectory / "schema-3-cache.cdbc";
+    {
+        std::ofstream schema3(schema3ManifestPath);
+        assert(schema3);
+        schema3 << "cdbc-cache 0.2\n\nschema = 3\nmodules:\n";
+    }
+    const ModuleCacheLoadResult schema3 = readModuleCache(schema3ManifestPath);
+    assert(schema3.found);
+    assert(!schema3.manifest);
+    assert(!schema3.error.empty());
 
     lib.sourceHash = "source-2";
     const std::vector<ModuleCacheDecision> implementationOnly = planModuleCacheBuild(
@@ -169,6 +186,23 @@ int main()
     assert(!optimizationChange[0].publicImpact);
     assert(optimizationChange[1].status == ModuleCacheDecisionStatus::Reused);
     assert(optimizationChange[2].status == ModuleCacheDecisionStatus::Reused);
+
+    ModuleCacheModule originalLib = module("lib", "source-1", "public-1");
+    const std::filesystem::path originalLibProduct = cacheDirectory
+        / moduleCacheArtifactPath(originalLib);
+    {
+        std::ofstream corrupted(originalLibProduct);
+        assert(corrupted);
+        corrupted << "corrupted\n";
+    }
+    const std::vector<ModuleCacheDecision> corrupted = planModuleCacheBuild(
+        {originalLib, baselineMid, baselineEntry},
+        *loaded.manifest,
+        cacheDirectory);
+    assert(corrupted[0].status == ModuleCacheDecisionStatus::Rebuilt);
+    assert(corrupted[0].reason == "cache_artifact_invalid");
+    assert(corrupted[1].status == ModuleCacheDecisionStatus::Reused);
+    assert(corrupted[2].status == ModuleCacheDecisionStatus::Reused);
 
     std::error_code error;
     std::filesystem::remove_all(cacheDirectory, error);

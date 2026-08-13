@@ -46,19 +46,27 @@ def module_statuses(value: dict) -> dict[str, tuple[str, str, bool]]:
     }
 
 
-def emit(compiler: Path, entry: Path, output: Path, cache: Path, report_path: Path) -> None:
-    result = run(
-        [
-            str(compiler),
-            "--emit-module-bytecode",
-            str(output),
-            "--module-cache",
-            str(cache),
-            "--module-rebuild-report",
-            str(report_path),
-            str(entry),
-        ]
-    )
+def emit(
+    compiler: Path,
+    entry: Path,
+    output: Path,
+    cache: Path,
+    report_path: Path,
+    fallback: bool = False,
+) -> None:
+    command = [
+        str(compiler),
+        "--emit-module-bytecode",
+        str(output),
+        "--module-cache",
+        str(cache),
+        "--module-rebuild-report",
+        str(report_path),
+    ]
+    if fallback:
+        command.append("--module-cache-fallback")
+    command.append(str(entry))
+    result = run(command)
     if result.returncode != 0 or result.stdout or result.stderr:
         raise AssertionError(
             "module cache emission failed\n"
@@ -605,7 +613,7 @@ def run_cache_policy_matrix(compiler: Path) -> None:
     if (
         fallback_usage.returncode != 64
         or fallback_usage.stdout
-        or "requires --module-interface-cache" not in fallback_usage.stderr
+        or "requires --module-cache or --module-interface-cache" not in fallback_usage.stderr
     ):
         raise AssertionError(
             "fallback cache option without an interface-cache path was accepted\n"
@@ -743,10 +751,10 @@ def run_cache_policy_matrix(compiler: Path) -> None:
         if (
             scope.returncode != 64
             or scope.stdout
-            or "only valid for interface-only cache consumers" not in scope.stderr
+            or "cannot provide bytecode bodies" not in scope.stderr
         ):
             raise AssertionError(
-                "fallback cache option escaped the interface-only scope\n"
+                "fallback cache option let an interface cache back module emission\n"
                 f"exit={scope.returncode}\nstdout={scope.stdout}\nstderr={scope.stderr}"
             )
 
@@ -764,7 +772,7 @@ def run_cache_policy_matrix(compiler: Path) -> None:
         repair_statuses = module_statuses(report(repair_report))
         if repair_statuses["lib.cd"][:2] != ("rebuilt", "source_changed"):
             raise AssertionError(
-                "module-product repair did not retain source fallback by default: "
+                "module-product repair did not rebuild the changed module from source: "
                 f"{repair_statuses}"
             )
 
@@ -930,7 +938,39 @@ def run_product_source_fallback_boundary(compiler: Path, vm: Path) -> None:
         manifest.write_text("cdbc-cache 9.9\n", encoding="utf-8")
         invalid_manifest_output = root / "invalid-manifest-products"
         invalid_manifest_report = root / "invalid-manifest-report.json"
-        emit(compiler, entry, invalid_manifest_output, cache, invalid_manifest_report)
+        invalid_manifest_attempt = run(
+            [
+                str(compiler),
+                "--emit-module-bytecode",
+                str(invalid_manifest_output),
+                "--module-cache",
+                str(cache),
+                "--module-rebuild-report",
+                str(invalid_manifest_report),
+                str(entry),
+            ]
+        )
+        if (
+            invalid_manifest_attempt.returncode != 1
+            or invalid_manifest_attempt.stdout
+            or "Import error:" not in invalid_manifest_attempt.stderr
+            or "invalid module cache manifest" not in invalid_manifest_attempt.stderr
+            or "--module-cache-fallback" not in invalid_manifest_attempt.stderr
+        ):
+            raise AssertionError(
+                "default strict policy did not reject an invalid module cache manifest\n"
+                f"exit={invalid_manifest_attempt.returncode}\n"
+                f"stdout={invalid_manifest_attempt.stdout}\n"
+                f"stderr={invalid_manifest_attempt.stderr}"
+            )
+        emit(
+            compiler,
+            entry,
+            invalid_manifest_output,
+            cache,
+            invalid_manifest_report,
+            fallback=True,
+        )
         invalid_manifest = report(invalid_manifest_report)
         if invalid_manifest["cache_status"] != "invalid" or invalid_manifest["summary"] != {
             "module_count": 3,
@@ -944,6 +984,23 @@ def run_product_source_fallback_boundary(compiler: Path, vm: Path) -> None:
             vm,
             invalid_manifest_output,
             root / "invalid-manifest-linked.cdbc",
+            "lib\nmid\nentry\n",
+        )
+
+        for product in sorted((cache / "products").glob("*.cdbc")):
+            product.write_bytes(b"corrupted-product\n")
+        corrupt_output = root / "corrupt-products"
+        corrupt_report = root / "corrupt-report.json"
+        emit(compiler, entry, corrupt_output, cache, corrupt_report)
+        corrupt = report(corrupt_report)
+        if corrupt["summary"] != {"module_count": 3, "reused": 0, "rebuilt": 3}:
+            raise AssertionError(f"corrupted product cache summary was wrong: {corrupt}")
+        if any(status[1] != "cache_artifact_invalid" for status in module_statuses(corrupt).values()):
+            raise AssertionError(f"corrupted product rebuild reasons were wrong: {module_statuses(corrupt)}")
+        link_and_run(
+            vm,
+            corrupt_output,
+            root / "corrupt-linked.cdbc",
             "lib\nmid\nentry\n",
         )
 

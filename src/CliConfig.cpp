@@ -13,7 +13,7 @@ void printUsage(const char* executable)
               << "       " << executable << " [--format | --format-check] [--format-indent-width N] [-I dir] [--import-path dir] file [...]\n"
               << "       " << executable << " --lsp\n"
               << "       " << executable << " [--emit-bytecode output.cdbc] [--opt-level 0|1] [-I dir] [--import-path dir] file [...]\n"
-              << "       " << executable << " [--emit-module-bytecode output-directory] [--opt-level 0|1] [--module-cache cache-directory] [--module-cache-strict] [--module-rebuild-report report.json] [-I dir] [--import-path dir] file [...]\n"
+              << "       " << executable << " [--emit-module-bytecode output-directory] [--opt-level 0|1] [--module-cache cache-directory] [--module-cache-strict | --module-cache-fallback] [--module-rebuild-report report.json] [-I dir] [--import-path dir] file [...]\n"
               << "       " << executable << " [--module-interface-cache cache-directory] [--module-cache-strict | --module-cache-fallback] [-I dir] [--import-path dir] file [...]\n"
               << "All non-LSP modes require at least one source file.\n"
               << "Import search paths are used for non-explicit string imports after the importing file's directory.\n";
@@ -194,13 +194,8 @@ CliParseStatus parseCli(int argc, char** argv, CliConfig& config)
         return CliParseStatus::Error;
     }
 
-    if (config.moduleCacheFallback && !config.moduleInterfaceCachePath) {
-        std::cerr << "--module-cache-fallback requires --module-interface-cache\n";
-        return CliParseStatus::Error;
-    }
-
-    if (config.moduleCacheFallback && (config.moduleCachePath || config.emitModuleBytecodePath)) {
-        std::cerr << "--module-cache-fallback is only valid for interface-only cache consumers\n";
+    if (config.moduleCacheFallback && !config.moduleCachePath && !config.moduleInterfaceCachePath) {
+        std::cerr << "--module-cache-fallback requires --module-cache or --module-interface-cache\n";
         return CliParseStatus::Error;
     }
 
@@ -239,10 +234,12 @@ CliParseStatus parseCli(int argc, char** argv, CliConfig& config)
         return CliParseStatus::Error;
     }
 
-    const bool interfaceOnlyCacheConsumer = config.moduleInterfaceCachePath
-        && !config.emitModuleBytecodePath
-        && !config.moduleCachePath;
-    if (interfaceOnlyCacheConsumer && !config.moduleCacheFallback) {
+    // Both cache consumers are strict by default.  A warm interface-only
+    // cache requires trustworthy sidecars; a module-product build validates
+    // its manifest and reused product content.  --module-cache-fallback is
+    // the explicit opt-out that restores source-backed repair.
+    if ((config.moduleCachePath || config.moduleInterfaceCachePath)
+        && !config.moduleCacheFallback) {
         config.moduleCacheStrict = true;
     }
 

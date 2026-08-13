@@ -6,7 +6,7 @@
   "decision_id": "X1-COMPILER-VM-COMPAT-001",
   "status": "resolved",
   "question": "What compatibility surfaces must the C++ compiler and Rust VM preserve together before later runtime or optimizer work?",
-  "decision": "Keep cdbc 0.1, cdbc-cache 0.2 schema 3, the 0.1 VM library facade, optional debug metadata, and the fixed non-serialized native-name registry as the current compatibility boundary. Consolidate existing artifact, module, cache, native, and library evidence without changing bytes, versions, or execution behavior.",
+  "decision": "Keep cdbc 0.1, cdbc-cache 0.2 schema 4, the 0.1 VM library facade, optional debug metadata, and the fixed non-serialized native-name registry as the current compatibility boundary. Consolidate existing artifact, module, cache, native, and library evidence without changing bytes, versions, or execution behavior.",
   "version_contract": {
     "compiler": {
       "version": "0.1.0",
@@ -21,7 +21,7 @@
     "module_cache": {
       "family": "cdbc-cache",
       "version": "0.2",
-      "schema": 3,
+      "schema": 4,
       "source": "src/ModuleCache.cpp"
     },
     "vm_library": {
@@ -153,12 +153,12 @@
       ]
     },
     {
-      "cell_id": "module_cache.cdbc_cache_0_2_schema3",
+      "cell_id": "module_cache.cdbc_cache_0_2_schema4",
       "domain": "module-cache",
       "state": "compiler-owned-compatible",
       "producer": "C++ ModuleCache and FrontendSession",
       "consumer": "compiler module-product emission and repair; Rust consumes products, not cache manifests",
-      "contract": "cdbc-cache 0.2 schema 3 records source/public-interface/dependency/optimization identity and relative product paths; source fallback remains available according to CLI policy",
+      "contract": "cdbc-cache 0.2 schema 4 records source/public-interface/dependency/optimization identity, relative product paths, and product content digests; strict by default with --module-cache-fallback as the explicit repair opt-out",
       "evidence": [
         "docs/bytecode-text-format.md",
         "docs/decisions/m3b-module-artifacts.md",
@@ -212,7 +212,7 @@
     ]
   },
   "out_of_scope": [
-    "changing cdbc 0.1 or cdbc-cache 0.2 schema 3",
+    "changing cdbc 0.1 or cdbc-cache 0.2 schema 4",
     "successor artifact version or binary encoding",
     "versioned native IDs or plugin loading",
     "GC, cycle collection, relocating handles, or persistent VM sessions",

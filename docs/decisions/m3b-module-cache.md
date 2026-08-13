@@ -2,6 +2,13 @@
 
 Status: implemented against the current `cdbc 0.1` module-product contract.
 
+Superseded in part by
+[`c4-module-product-creation-repair-001.md`](c4-module-product-creation-repair-001.md):
+module-product builds are strict by default (invalid manifests require
+explicit repair while normal drift rebuilds), the manifest schema is now 4
+with per-module product content digests, and `--module-cache-fallback` applies
+to both cache modes.
+
 ## Decision
 
 The independent module-product path has a persistent, local cache manifest at

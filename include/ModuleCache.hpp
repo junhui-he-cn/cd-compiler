@@ -31,6 +31,10 @@ struct ModuleCacheModule {
     std::optional<std::size_t> entryOrder;
     std::vector<ModuleCacheDependency> dependencies;
     std::string cacheKey;
+    // Integrity digest of the cached module product body.  The cache planner
+    // re-reads the product file and compares this digest before reuse so a
+    // truncated or externally modified product is rebuilt instead of copied.
+    std::string contentDigest;
 };
 
 struct ModuleCacheRecord {
@@ -40,7 +44,7 @@ struct ModuleCacheRecord {
 };
 
 struct ModuleCacheManifest {
-    int schemaVersion = 3;
+    int schemaVersion = 4;
     std::vector<ModuleCacheRecord> records;
 };
 
@@ -64,6 +68,7 @@ struct ModuleCacheDecision {
 };
 
 std::string moduleCacheHash(const std::string& value);
+std::string moduleCacheArtifactDigest(const std::filesystem::path& path);
 std::string moduleCacheKey(const ModuleCacheModule& module);
 std::string moduleCacheArtifactPath(const ModuleCacheModule& module);
 

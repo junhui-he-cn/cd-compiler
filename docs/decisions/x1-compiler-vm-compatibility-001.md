@@ -13,7 +13,7 @@ The current compiler/Rust VM boundary is:
 | module product | `cdbc 0.1` with `artifact: module`; Rust validates and links products; standalone `run` rejects them | compiler emitter plus Rust linker | M3B/M4A and module artifact tests |
 | debug metadata | optional `debug_sources`, `debug_locations`, `debug_ranges`; ranges are source-local half-open byte intervals | compiler emitter plus VM consumers | M4B, debugger, and profile tests |
 | metadata-free artifacts | still valid `cdbc 0.1` inputs | Rust parser/VM | format unit and library tests |
-| module cache | compiler-owned `cdbc-cache 0.2`, schema 3; source/public-interface/dependency/optimization identity and relative product paths | compiler only | module cache implementation and tests |
+| module cache | compiler-owned `cdbc-cache 0.2`, schema 4; source/public-interface/dependency/optimization identity, relative product paths, and product content digests | compiler only | module cache implementation and tests |
 | native calls | fixed registered names; arity/callback/resource/signature metadata is VM-internal and not serialized | compiler lowering plus Rust VM | native registry and unknown-native tests |
 | library/CLI | Rust library API `0.1`; CLI keeps existing dump/run/link/trace/debug/profile output and exit behavior | Rust VM | library API tests and VM README |
 

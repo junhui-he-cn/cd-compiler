@@ -317,6 +317,15 @@ void FrontendSession::setModuleInterfaceCacheStrict(bool strict)
     moduleInterfaceCacheStrict_ = strict;
 }
 
+void FrontendSession::setModuleCacheOptimizationIdentity(
+    const std::string& level,
+    const std::string& pipeline)
+{
+    moduleCacheOptimizationLevel_ = level;
+    moduleCacheOptimizerPipeline_ = pipeline;
+    moduleProductCacheLoad_.reset();
+}
+
 void FrontendSession::setModuleProductCacheMode(bool enabled)
 {
     moduleProductCacheMode_ = enabled;
@@ -419,6 +428,8 @@ std::string FrontendSession::moduleProductCacheRejection(
     expected.interfaceHash = artifact.interfaceHash;
     expected.isEntry = artifact.isEntry;
     expected.entryOrder = artifact.entryOrder;
+    expected.optimizationLevel = moduleCacheOptimizationLevel_;
+    expected.optimizerPipeline = moduleCacheOptimizerPipeline_;
     for (const ModuleInterfaceArtifactDependency& dependency : artifact.dependencies) {
         expected.dependencies.push_back(ModuleCacheDependency{
             dependency.identity,
@@ -428,10 +439,17 @@ std::string FrontendSession::moduleProductCacheRejection(
         });
     }
     const std::string expectedKey = moduleCacheKey(expected);
-    if (record->module.cacheKey != expectedKey
-        || record->artifactPath != moduleCacheArtifactPath(expected)
+    if (record->module.cacheKey != expectedKey) {
+        return "optimization identity mismatch";
+    }
+    if (record->artifactPath != moduleCacheArtifactPath(expected)
         || record->interfaceArtifactPath != moduleInterfaceArtifactPath({}, canonicalPath).generic_string()) {
         return "module cache record mismatch";
+    }
+    const std::string productDigest = moduleCacheArtifactDigest(
+        *moduleInterfaceCacheDirectory_ / record->artifactPath);
+    if (productDigest != record->module.contentDigest) {
+        return "paired product content mismatch";
     }
     return {};
 }
@@ -623,11 +641,19 @@ std::size_t FrontendSession::loadFile(
         if (isImport && directEntryCanonicalPaths_.find(canonicalPath) == directEntryCanonicalPaths_.end()) {
             CachedInterfaceLoad cached = loadCachedInterface(canonicalPath, source);
             if (!cached.artifact) {
-                if (moduleInterfaceCacheStrict_ && !cached.rejectionReason.empty()) {
+                const bool productModeFatal = moduleProductCacheMode_
+                    && (cached.rejectionReason == "invalid module cache manifest"
+                        || cached.rejectionReason == "module cache record mismatch");
+                if (moduleInterfaceCacheStrict_ && !cached.rejectionReason.empty()
+                    && (!moduleProductCacheMode_ || productModeFatal)) {
                     throw DiagnosticError(
                         DiagnosticKind::Import,
                         "module interface cache rejected for " + canonicalPath + ": "
-                            + cached.rejectionReason);
+                            + cached.rejectionReason
+                            + (moduleProductCacheMode_
+                                ? "; delete the cache directory or rerun with "
+                                  "--module-cache-fallback to rebuild it"
+                                : ""));
                 }
             } else {
                 bool dependenciesCached = true;
@@ -643,8 +669,10 @@ std::size_t FrontendSession::loadFile(
                     // A sidecar with a source-parsed or stale dependency cannot
                     // safely stand in for the dependency graph.  Continue into
                     // the ordinary parser below; the already loaded dependency
-                    // units remain valid and are de-duplicated as before.
-                    if (moduleInterfaceCacheStrict_) {
+                    // units remain valid and are de-duplicated as before.  A
+                    // module-product build can regenerate stale dependents, so
+                    // only interface-only consumers reject here.
+                    if (!moduleProductCacheMode_ && moduleInterfaceCacheStrict_) {
                         throw DiagnosticError(
                             DiagnosticKind::Import,
                             "module interface cache rejected for " + canonicalPath

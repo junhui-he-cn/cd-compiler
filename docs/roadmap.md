@@ -197,15 +197,17 @@ of C3A.
 
 ### C4: Decide module-product creation and repair policy
 
-**Priority:** P2. **Status:** decision gate, not implementation-ready. The
-audit itself is consolidation work; switching to strict-by-default is a policy
-decision and is not authorized by the current phase.
+**Priority:** P2. **Status:** complete on 2026-08-13. Decision record:
+[`c4-module-product-creation-repair-001.md`](decisions/c4-module-product-creation-repair-001.md).
 
-Define cold build, missing product, malformed product, source-only change,
-public-interface change, dependency change, offline build, and explicit repair
-behavior for linked and independent module-product paths. Keep current safe
-fallback until the matrix and migration are approved. A strict-by-default
-change must not be smuggled in as cache cleanup.
+Module-product builds are strict by default: cold builds bootstrap from
+source, an invalid or inconsistent manifest requires explicit repair
+(`--module-cache-fallback` or a cache-directory reset), normal source and
+dependency drift rebuilds transparently, and schema-4 product content digests
+detect corrupted cached products before reuse. Interface-only consumers keep
+their strict sidecar trust boundary, and `--module-cache-fallback` is now
+valid for both modes. Offline product-only builds remain unsupported and entry
+modules always compile from source.
 
 ### C5: Reassess incremental sessions and REPL
 
@@ -227,7 +229,7 @@ are not in the default queue:
 - a default O1 switch before C1 completes;
 - new syntax, operator families, or capability systems without a concrete
   library or language use case;
-- removing source fallback from module creation/repair;
+- offline product-only builds that do not require dependency source files;
 - a successor or binary artifact format before load-time/size/integrity data
   justifies it;
 - JIT, async language semantics, persistent runtime sessions, or compiler-owned
@@ -256,14 +258,14 @@ shipped closed-module definition/references
   -> C3C measured incremental analysis
 
 X1 + shipped module cache
-  -> C4 creation/repair policy decision
+  -> C4 strict-by-default creation/repair policy (complete)
 
 C3/C4 stable boundaries
   -> C5 incremental session re-audit
 ```
 
-C1, C2, and C6 are complete. There is no active compiler slice in the default
-queue; C3 is deferred, C4 remains a decision gate, and C5 remains deferred.
+C1, C2, C4, and C6 are complete. There is no active compiler slice in the
+default queue; C3 is deferred and C5 remains deferred.
 
 ## 7. Verification contract
 

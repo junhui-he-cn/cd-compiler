@@ -263,6 +263,7 @@ void writeModuleArtifacts(
     const std::vector<ModuleInterface>& interfaces,
     const std::optional<std::filesystem::path>& cacheDirectory,
     const std::optional<std::filesystem::path>& reportPath,
+    bool moduleCacheStrict,
     SSAOptimizationLevel optimizationLevel)
 {
     // 模块产物模式遍历模块图，并在可用时复用缓存中的产品。
@@ -294,6 +295,13 @@ void writeModuleArtifacts(
         }
         std::filesystem::create_directories(*cacheDirectory);
         cacheLoad = readModuleCache(*cacheDirectory / "module-cache.cdbc");
+        if (moduleCacheStrict && cacheLoad.found && !cacheLoad.manifest) {
+            throw std::runtime_error(
+                "module cache manifest is invalid: "
+                + (*cacheDirectory / "module-cache.cdbc").string()
+                + "; delete the cache directory or rerun with "
+                  "--module-cache-fallback to rebuild it");
+        }
         const ModuleCacheManifest previous = cacheLoad.manifest.value_or(ModuleCacheManifest{});
         const std::string emptyReason = cacheLoad.error.empty()
             ? (cacheLoad.found ? "new_module" : "cache_miss")
@@ -373,10 +381,13 @@ void writeModuleArtifacts(
         ModuleCacheManifest manifest;
         manifest.records.reserve(cacheDecisions.size());
         for (const ModuleCacheDecision& decision : cacheDecisions) {
-            manifest.records.push_back(ModuleCacheRecord{
+            ModuleCacheRecord record{
                 decision.module,
                 decision.artifactPath,
-                moduleInterfaceArtifactPath({}, decision.module.identity).generic_string()});
+                moduleInterfaceArtifactPath({}, decision.module.identity).generic_string()};
+            record.module.contentDigest = moduleCacheArtifactDigest(
+                *cacheDirectory / decision.artifactPath);
+            manifest.records.push_back(std::move(record));
         }
         writeModuleCache(*cacheDirectory / "module-cache.cdbc", manifest);
         if (reportPath) {
@@ -449,6 +460,11 @@ int main(int argc, char** argv)
     }
     frontend.setModuleProductCacheMode(config.moduleCachePath.has_value());
     frontend.setModuleInterfaceCacheStrict(config.moduleCacheStrict);
+    if (config.moduleCachePath) {
+        frontend.setModuleCacheOptimizationIdentity(
+            optimizationLevelName(config.optimizationLevel),
+            ssaOptimizationPipelineFingerprint(config.optimizationLevel));
+    }
     try {
         Program program = frontend.loadFiles(config.inputPaths);
 
@@ -521,6 +537,7 @@ int main(int argc, char** argv)
                 typeChecker.moduleInterfaces(),
                 config.moduleCachePath ? std::optional<std::filesystem::path>(*config.moduleCachePath) : std::nullopt,
                 config.moduleRebuildReportPath ? std::optional<std::filesystem::path>(*config.moduleRebuildReportPath) : std::nullopt,
+                config.moduleCacheStrict,
                 config.optimizationLevel);
             return 0;
         }
