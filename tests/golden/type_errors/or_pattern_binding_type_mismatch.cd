@@ -3,6 +3,6 @@ enum Mixed {
   Text(value: string),
 }
 let value = Mixed.Number(1);
-print match value {
-  Mixed.Number(value) | Mixed.Text(value) => "value",
-};
+match value {
+  Mixed.Number(value) | Mixed.Text(value) => { print "value"; }
+}

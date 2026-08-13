@@ -1,3 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/non_exhaustive_nullable_literal_match.cd:2:7: non-exhaustive match: missing nil
-  print match value {
+  match value {
         ^

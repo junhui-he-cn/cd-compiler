@@ -9,17 +9,17 @@ enum List<T> {
 }
 
 fun describe(value: Option<number>): string {
-  return match value {
-    Option.Some(value: numberValue) => "some:" + str(numberValue),
-    Option.None => "none",
-  };
+  match value {
+    Option.Some(value: numberValue) => { return "some:" + str(numberValue); }
+    Option.None => { return "none"; }
+  }
 }
 
 fun sum(list: List<number>): number {
-  return match list {
-    List.Nil => 0,
-    List.Cons(head: first, tail: rest) => first + sum(rest),
-  };
+  match list {
+    List.Nil => { return 0; }
+    List.Cons(head: first, tail: rest) => { return first + sum(rest); }
+  }
 }
 
 let some: Option<number> = Option.Some(7);
@@ -29,12 +29,12 @@ let inferred = Option.Some("hello");
 print describe(some);
 print describe(none);
 print sum(List.Cons(1, List.Cons(2, List.Nil<number>())));
-print match maybe {
-  nil => "nil",
-  Option.Some(value) => "some",
-  Option.None => "none",
-};
-print match inferred {
-  Option.Some(value) => value,
-  Option.None => "none",
-};
+match maybe {
+  nil => { print "nil"; }
+  Option.Some(value) => { print "some"; }
+  Option.None => { print "none"; }
+}
+match inferred {
+  Option.Some(value) => { print value; }
+  Option.None => { print "none"; }
+}

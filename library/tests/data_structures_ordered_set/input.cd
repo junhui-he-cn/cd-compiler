@@ -9,10 +9,10 @@ fun stringAscending(left: string, right: string): bool {
 }
 
 fun describe(value: optional<number>): string {
-  return match value {
-    nil => "none",
-    value => str(value),
-  };
+  match value {
+    nil => { return "none"; }
+    value => { return str(value); }
+  }
 }
 
 let ordered = ds.newOrderedSet<number>(ascending);

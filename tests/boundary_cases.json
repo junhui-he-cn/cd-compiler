@@ -36,17 +36,6 @@
       "expected_result_kind": "tokens-golden"
     },
     {
-      "case_id": "boundary.tokens.match_expression",
-      "result_name": "boundary.tokens.match_expression",
-      "fixture": "tests/golden/match_expression",
-      "sources": ["tests/golden/match_expression/input.cd"],
-      "expected_files": ["tests/boundary_references/tokens/match_expression.out"],
-      "stage": "lexical",
-      "capability_tags": ["boundary", "tokens", "patterns", "match"],
-      "backend": "cpp",
-      "expected_result_kind": "tokens-golden"
-    },
-    {
       "case_id": "boundary.tokens.unicode_strings",
       "result_name": "boundary.tokens.unicode_strings",
       "fixture": "tests/golden/unicode_strings",

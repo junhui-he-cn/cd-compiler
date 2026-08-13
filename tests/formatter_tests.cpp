@@ -145,17 +145,23 @@ void test_preserves_supported_trailing_commas()
 {
     const std::string source =
         "enum Choice{First,Second,}\n"
-        "let value=match 1{1=>2,_=>0,};\n";
+        "let value=1;\n"
+        "match value{1=>{print value;}_=>{print 0;}}\n";
     const std::string formatted = formatLosslessSource(losslessViewFor(source));
     const std::string expected =
         "enum Choice {\n"
         "  First,\n"
         "  Second,\n"
         "}\n"
-        "let value = match 1 {\n"
-        "  1 => 2,\n"
-        "  _ => 0,\n"
-        "};\n";
+        "let value = 1;\n"
+        "match value {\n"
+        "  1 => {\n"
+        "    print value;\n"
+        "  }\n"
+        "  _ => {\n"
+        "    print 0;\n"
+        "  }\n"
+        "}\n";
     assert(formatted == expected);
     assert(formatLosslessSource(losslessViewFor(formatted)) == formatted);
     assert(astFor(source) == astFor(formatted));

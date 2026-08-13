@@ -798,13 +798,6 @@ private:
             }
             return;
         }
-        if (const auto* match = dynamic_cast<const MatchExpr*>(expression)) {
-            visitExpression(match->value.get());
-            for (const MatchExprArm& arm : match->arms) {
-                visitExpression(arm.guard.get());
-                visitExpression(arm.value.get());
-            }
-        }
     }
 
     std::vector<ReferenceSite> sites_;
@@ -1215,14 +1208,6 @@ private:
                 visitStatement(child.get());
             }
             return;
-        }
-        if (const auto* match = dynamic_cast<const MatchExpr*>(expression)) {
-            visitExpression(match->value.get());
-            for (const MatchExprArm& arm : match->arms) {
-                visitPattern(arm.pattern.get());
-                visitExpression(arm.guard.get());
-                visitExpression(arm.value.get());
-            }
         }
     }
 

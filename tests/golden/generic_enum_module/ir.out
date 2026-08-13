@@ -22,25 +22,24 @@ function $0 make()
 
 function $1 render(value#2)
 0000  v0 = load_var @5 value#2
-0001  v2 = variant_tag v0 Result.Ok
-0002  jump_if_false v2, 0011
-0003  v3 = variant_field v0[0]
-0004  store_var @8 value#3, v3
-0005  v4 = constant #4 "ok:"
-0006  v5 = load_var @9 value#3
-0007  v6 = native_call @10 str(v5)
-0008  v7 = add v4, v6
-0009  v1 = copy v7
+0001  v1 = variant_tag v0 Result.Ok
+0002  jump_if_false v1, 0011
+0003  v2 = variant_field v0[0]
+0004  store_var @8 value#3, v2
+0005  v3 = constant #4 "ok:"
+0006  v4 = load_var @9 value#3
+0007  v5 = native_call @10 str(v4)
+0008  v6 = add v3, v5
+0009  return v6
 0010  jump 0020
-0011  v8 = variant_tag v0 Result.Err
-0012  jump_if_false v8, 0020
-0013  v9 = variant_field v0[0]
-0014  store_var @13 message#4, v9
-0015  v10 = constant #5 "err:"
-0016  v11 = load_var @14 message#4
-0017  v12 = add v10, v11
-0018  v1 = copy v12
+0011  v7 = variant_tag v0 Result.Err
+0012  jump_if_false v7, 0020
+0013  v8 = variant_field v0[0]
+0014  store_var @13 message#4, v8
+0015  v9 = constant #5 "err:"
+0016  v10 = load_var @14 message#4
+0017  v11 = add v9, v10
+0018  return v11
 0019  jump 0020
-0020  return v1
-0021  v13 = constant #6 nil
-0022  return v13
+0020  v12 = constant #6 nil
+0021  return v12

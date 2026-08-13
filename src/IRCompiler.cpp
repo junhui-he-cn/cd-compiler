@@ -932,49 +932,6 @@ void IRCompiler::compileMatch(const MatchStmt& statement)
     }
 }
 
-IRRegister IRCompiler::compileMatchExpression(const MatchExpr& expression)
-{
-    const MatchCoverageRecord* coverage = declarationIndex_
-        ? declarationIndex_->matchCoverage(expression)
-        : nullptr;
-    if (!coverage || !coverage->exhaustive) {
-        throw IRCompileError("missing match coverage metadata");
-    }
-    const IRRegister value = compileExpression(*expression.value);
-    const IRRegister result = ir_.makeRegister();
-    std::vector<std::size_t> endJumps;
-
-    for (const MatchExprArm& arm : expression.arms) {
-        std::vector<std::size_t> failJumps;
-        std::vector<CompiledPatternBinding> bindings;
-        compilePattern(*arm.pattern, value, failJumps, bindings);
-        for (const auto& binding : bindings) {
-            ir_.emitStoreVar(binding.resolvedName, binding.value, binding.bindingId);
-        }
-        if (arm.guard) {
-            const PatternGuardRecord* guardRecord = declarationIndex_
-                ? declarationIndex_->patternGuard(*arm.guard)
-                : nullptr;
-            if (!guardRecord) {
-                throw IRCompileError("missing pattern guard metadata");
-            }
-            const IRRegister guard = compileExpression(*arm.guard);
-            failJumps.push_back(ir_.emitJumpIfFalse(guard));
-        }
-        const IRRegister armValue = compileExpression(*arm.value);
-        ir_.emitCopyTo(result, armValue);
-        endJumps.push_back(ir_.emitJump());
-        for (const std::size_t jump : failJumps) {
-            ir_.patchJump(jump);
-        }
-    }
-
-    for (const std::size_t jump : endJumps) {
-        ir_.patchJump(jump);
-    }
-    return result;
-}
-
 void IRCompiler::compilePattern(
     const Pattern& pattern,
     IRRegister value,
@@ -1241,10 +1198,6 @@ IRRegister IRCompiler::compileExpression(const Expr& expression)
 
     if (const auto* logical = dynamic_cast<const LogicalExpr*>(&expression)) {
         return emitLogical(*logical);
-    }
-
-    if (const auto* match = dynamic_cast<const MatchExpr*>(&expression)) {
-        return compileMatchExpression(*match);
     }
 
     if (const auto* function = dynamic_cast<const FunctionExpr*>(&expression)) {

@@ -1,10 +1,10 @@
 import "../../data_structures.cd" as ds;
 
 fun render(value: ds.Result<number, string>): string {
-  return match value {
-    ds.Result.Ok(value) => "ok:" + str(value),
-    ds.Result.Err(error) => "err:" + error,
-  };
+  match value {
+    ds.Result.Ok(value) => { return "ok:" + str(value); }
+    ds.Result.Err(error) => { return "err:" + error; }
+  }
 }
 
 let success: ds.Result<number, string> = ds.ok<number, string>(7);
@@ -18,7 +18,7 @@ print render(failure);
 print render(explicit);
 print render(explicitError);
 print render(factoryExplicit);
-print match failure {
-  ds.Result.Ok(value) => "ok:" + str(value),
-  ds.Result.Err(error) => "error:" + error,
-};
+match failure {
+  ds.Result.Ok(value) => { print "ok:" + str(value); }
+  ds.Result.Err(error) => { print "error:" + error; }
+}

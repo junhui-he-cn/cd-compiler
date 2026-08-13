@@ -349,7 +349,6 @@ private:
     CheckedExpression checkVariantConstructor(
         const MemberCallExpr& expression,
         const TypeInfo* expectedType);
-    CheckedExpression checkMatchExpression(const MatchExpr& expression, const TypeInfo* expectedType);
     void checkMatch(const MatchStmt& statement);
     bool checkPattern(
         const Pattern& pattern,

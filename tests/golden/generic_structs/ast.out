@@ -13,4 +13,10 @@ Program
   Print (field textBox value)
   Print (field bounded value)
   Print (call typeOf explicit)
-  Print (match explicit (arm Box {value: 2} "two") (arm Box {value: _} "other"))
+  Match explicit
+    Arm Box {value: 2}
+      Block
+        Print "two"
+    Arm Box {value: _}
+      Block
+        Print "other"

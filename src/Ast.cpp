@@ -783,31 +783,6 @@ void FunctionExpr::print(std::ostream& out) const
     out << ')';
 }
 
-MatchExpr::MatchExpr(Token keyword, ExprPtr value, std::vector<MatchExprArm> arms)
-    : keyword(std::move(keyword))
-    , value(std::move(value))
-    , arms(std::move(arms))
-{
-}
-
-void MatchExpr::print(std::ostream& out) const
-{
-    out << "(match ";
-    writeExpr(out, value);
-    for (const MatchExprArm& arm : arms) {
-        out << " (arm ";
-        writePattern(out, *arm.pattern);
-        if (arm.guard) {
-            out << " if ";
-            writeExpr(out, arm.guard);
-        }
-        out << ' ';
-        writeExpr(out, arm.value);
-        out << ')';
-    }
-    out << ')';
-}
-
 WildcardPattern::WildcardPattern(Token name)
     : name(std::move(name))
 {
@@ -1590,27 +1565,6 @@ void populateExpr(Expr& expression)
                 mergeRange(result, statement->range);
             }
         }
-    } else if (auto* match = dynamic_cast<MatchExpr*>(&expression)) {
-        mergeRange(result, tokenRange(match->keyword));
-        if (match->value) {
-            populateExpr(*match->value);
-            mergeRange(result, match->value->range);
-        }
-        for (const MatchExprArm& arm : match->arms) {
-            mergeRange(result, tokenRange(arm.arrow));
-            if (arm.pattern) {
-                populatePattern(*arm.pattern);
-                mergeRange(result, arm.pattern->range);
-            }
-            if (arm.guard) {
-                populateExpr(*arm.guard);
-                mergeRange(result, arm.guard->range);
-            }
-            if (arm.value) {
-                populateExpr(*arm.value);
-                mergeRange(result, arm.value->range);
-            }
-        }
     }
 
     expression.range = result;
@@ -1991,15 +1945,6 @@ void assignExprIds(Expr& expression, std::size_t& next)
             if (statement) {
                 assignStmtIds(*statement, next);
             }
-        }
-    } else if (auto* match = dynamic_cast<MatchExpr*>(&expression)) {
-        assign(match->value);
-        for (MatchExprArm& arm : match->arms) {
-            if (arm.pattern) {
-                assignPatternIds(*arm.pattern, next);
-            }
-            assign(arm.guard);
-            assign(arm.value);
         }
     }
 }

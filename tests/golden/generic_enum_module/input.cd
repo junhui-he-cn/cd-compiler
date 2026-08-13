@@ -1,10 +1,10 @@
 import "./lib.cd" as lib;
 
 fun render(value: lib.Result<number, string>): string {
-  return match value {
-    lib.Result.Ok(value) => "ok:" + str(value),
-    lib.Result.Err(message) => "err:" + message,
-  };
+  match value {
+    lib.Result.Ok(value) => { return "ok:" + str(value); }
+    lib.Result.Err(message) => { return "err:" + message; }
+  }
 }
 
 print render(lib.make());

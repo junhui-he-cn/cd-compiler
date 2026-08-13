@@ -1,6 +1,0 @@
-Parse error at <repo>/tests/golden/parse_errors/match_expression_missing_comma.cd:5:3: expected `,` after match expression arm
-    Result.Empty => 0,
-    ^
-Parse error at <repo>/tests/golden/parse_errors/match_expression_missing_comma.cd:6:2: expected expression
-  };
-   ^

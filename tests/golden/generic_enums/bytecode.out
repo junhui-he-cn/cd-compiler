@@ -1,4 +1,4 @@
-main registers=40
+main registers=38
 0000  b0 = constant #0 nil
 0001  store_var @0 describe#0, b0
 0002  b1 = make_function $0 describe/1
@@ -34,81 +34,77 @@ main registers=40
 0032  b22 = call b16(b21)
 0033  print b22
 0034  b23 = load_var @43 maybe#9
-0035  b25 = constant #12 nil
-0036  b26 = equal b23, b25
-0037  jump_if_false b26, 0041
-0038  b27 = constant #13 "nil"
-0039  b24 = move b27
+0035  b24 = constant #12 nil
+0036  b25 = equal b23, b24
+0037  jump_if_false b25, 0041
+0038  b26 = constant #13 "nil"
+0039  print b26
 0040  jump 0053
-0041  b28 = variant_tag b23  @44 Option. @45 Some
-0042  jump_if_false b28, 0048
-0043  b29 = variant_field b23[0]
-0044  store_var @46 value#11, b29
-0045  b30 = constant #14 "some"
-0046  b24 = move b30
+0041  b27 = variant_tag b23  @44 Option. @45 Some
+0042  jump_if_false b27, 0048
+0043  b28 = variant_field b23[0]
+0044  store_var @46 value#11, b28
+0045  b29 = constant #14 "some"
+0046  print b29
 0047  jump 0053
-0048  b31 = variant_tag b23  @47 Option. @48 None
-0049  jump_if_false b31, 0053
-0050  b32 = constant #15 "none"
-0051  b24 = move b32
+0048  b30 = variant_tag b23  @47 Option. @48 None
+0049  jump_if_false b30, 0053
+0050  b31 = constant #15 "none"
+0051  print b31
 0052  jump 0053
-0053  print b24
-0054  b33 = load_var @49 inferred#10
-0055  b35 = variant_tag b33  @50 Option. @51 Some
-0056  jump_if_false b35, 0062
-0057  b36 = variant_field b33[0]
-0058  store_var @52 value#12, b36
-0059  b37 = load_var @53 value#12
-0060  b34 = move b37
-0061  jump 0067
-0062  b38 = variant_tag b33  @54 Option. @55 None
-0063  jump_if_false b38, 0067
-0064  b39 = constant #16 "none"
-0065  b34 = move b39
-0066  jump 0067
-0067  print b34
+0053  b32 = load_var @49 inferred#10
+0054  b33 = variant_tag b32  @50 Option. @51 Some
+0055  jump_if_false b33, 0061
+0056  b34 = variant_field b32[0]
+0057  store_var @52 value#12, b34
+0058  b35 = load_var @53 value#12
+0059  print b35
+0060  jump 0066
+0061  b36 = variant_tag b32  @54 Option. @55 None
+0062  jump_if_false b36, 0066
+0063  b37 = constant #16 "none"
+0064  print b37
+0065  jump 0066
 
-function $0 describe/1 registers=11
+function $0 describe/1 registers=10
 0000  b0 = load_var @1 value#1
-0001  b2 = variant_tag b0  @2 Option. @3 Some
-0002  jump_if_false b2, 0011
-0003  b3 = variant_field b0[0]
-0004  store_var @4 numberValue#2, b3
-0005  b4 = constant #1 "some:"
-0006  b5 = load_var @5 numberValue#2
-0007  b6 = native_call @6 str [b5]
-0008  b7 = add b4, b6
-0009  b1 = move b7
+0001  b1 = variant_tag b0  @2 Option. @3 Some
+0002  jump_if_false b1, 0011
+0003  b2 = variant_field b0[0]
+0004  store_var @4 numberValue#2, b2
+0005  b3 = constant #1 "some:"
+0006  b4 = load_var @5 numberValue#2
+0007  b5 = native_call @6 str [b4]
+0008  b6 = add b3, b5
+0009  return b6
 0010  jump 0016
-0011  b8 = variant_tag b0  @7 Option. @8 None
-0012  jump_if_false b8, 0016
-0013  b9 = constant #2 "none"
-0014  b1 = move b9
+0011  b7 = variant_tag b0  @7 Option. @8 None
+0012  jump_if_false b7, 0016
+0013  b8 = constant #2 "none"
+0014  return b8
 0015  jump 0016
-0016  return b1
-0017  b10 = constant #3 nil
-0018  return b10
+0016  b9 = constant #3 nil
+0017  return b9
 
-function $1 sum/1 registers=13
+function $1 sum/1 registers=12
 0000  b0 = load_var @11 list#4
-0001  b2 = variant_tag b0  @12 List. @13 Nil
-0002  jump_if_false b2, 0006
-0003  b3 = constant #5 0
-0004  b1 = move b3
+0001  b1 = variant_tag b0  @12 List. @13 Nil
+0002  jump_if_false b1, 0006
+0003  b2 = constant #5 0
+0004  return b2
 0005  jump 0019
-0006  b4 = variant_tag b0  @14 List. @15 Cons
-0007  jump_if_false b4, 0019
-0008  b5 = variant_field b0[0]
-0009  b6 = variant_field b0[1]
-0010  store_var @16 first#5, b5
-0011  store_var @17 rest#6, b6
-0012  b7 = load_var @18 first#5
-0013  b8 = load_var @19 sum#3
-0014  b9 = load_var @20 rest#6
-0015  b10 = call b8(b9)
-0016  b11 = add b7, b10
-0017  b1 = move b11
+0006  b3 = variant_tag b0  @14 List. @15 Cons
+0007  jump_if_false b3, 0019
+0008  b4 = variant_field b0[0]
+0009  b5 = variant_field b0[1]
+0010  store_var @16 first#5, b4
+0011  store_var @17 rest#6, b5
+0012  b6 = load_var @18 first#5
+0013  b7 = load_var @19 sum#3
+0014  b8 = load_var @20 rest#6
+0015  b9 = call b7(b8)
+0016  b10 = add b6, b9
+0017  return b10
 0018  jump 0019
-0019  return b1
-0020  b12 = constant #6 nil
-0021  return b12
+0019  b11 = constant #6 nil
+0020  return b11

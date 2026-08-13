@@ -1,10 +1,10 @@
 import "../../data_structures.cd" as ds;
 
 fun describe(value: optional<number>): string {
-  return match value {
-    nil => "none",
-    value => str(value),
-  };
+  match value {
+    nil => { return "none"; }
+    value => { return str(value); }
+  }
 }
 
 let median = ds.newMedianHeap();

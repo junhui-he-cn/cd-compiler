@@ -448,10 +448,10 @@ fun tail<T>(list: List<T>): optional<List<T>> {
 }
 
 fun reverseInto<T>(remaining: List<T>, result: List<T>): List<T> {
-  return match remaining {
-    List.Nil => result,
-    List.Cons(value, rest) => reverseInto(rest, List.Cons(value, result)),
-  };
+  match remaining {
+    List.Nil => { return result; }
+    List.Cons(value, rest) => { return reverseInto(rest, List.Cons(value, result)); }
+  }
 }
 
 fun reverse<T>(list: List<T>): List<T> {
@@ -511,27 +511,27 @@ fun listGet<T>(list: List<T>, index: number): optional<T> {
 }
 
 fun listAppend<T>(list: List<T>, value: T): List<T> {
-  return match list {
-    List.Nil => List.Cons(value, List.Nil<T>()),
-    List.Cons(headValue, rest) => List.Cons(headValue, listAppend(rest, value)),
-  };
+  match list {
+    List.Nil => { return List.Cons(value, List.Nil<T>()); }
+    List.Cons(headValue, rest) => { return List.Cons(headValue, listAppend(rest, value)); }
+  }
 }
 
 fun listConcat<T>(left: List<T>, right: List<T>): List<T> {
-  return match left {
-    List.Nil => right,
-    List.Cons(value, rest) => List.Cons(value, listConcat(rest, right)),
-  };
+  match left {
+    List.Nil => { return right; }
+    List.Cons(value, rest) => { return List.Cons(value, listConcat(rest, right)); }
+  }
 }
 
 fun listTake<T>(list: List<T>, count: number): List<T> {
   if (floor(count) != count || count <= 0) {
     return List.Nil<T>();
   }
-  return match list {
-    List.Nil => List.Nil<T>(),
-    List.Cons(value, rest) => List.Cons(value, listTake(rest, count - 1)),
-  };
+  match list {
+    List.Nil => { return List.Nil<T>(); }
+    List.Cons(value, rest) => { return List.Cons(value, listTake(rest, count - 1)); }
+  }
 }
 
 fun listDrop<T>(list: List<T>, count: number): List<T> {

@@ -18,5 +18,23 @@ Program
   Let none: optional<Option> = nil
   Print (call describe some)
   Print (call describe none)
-  Print (match some (arm nil "nil") (arm Option.Some(value) if (> value 10) "large") (arm Option.Some(_) "some") (arm Option.None "none"))
-  Print (match none (arm nil if true "guarded nil") (arm _ "fallback"))
+  Match some
+    Arm nil
+      Block
+        Print "nil"
+    Arm Option.Some(value) if (> value 10)
+      Block
+        Print "large"
+    Arm Option.Some(_)
+      Block
+        Print "some"
+    Arm Option.None
+      Block
+        Print "none"
+  Match none
+    Arm nil if true
+      Block
+        Print "guarded nil"
+    Arm _
+      Block
+        Print "fallback"

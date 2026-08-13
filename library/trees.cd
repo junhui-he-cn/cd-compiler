@@ -21,10 +21,10 @@ fun treeLeaf<T>(value: T): Tree<T> {
 }
 
 fun treeSize<T>(tree: Tree<T>): number {
-  return match tree {
-    Tree.Empty => 0,
-    Tree.Node(value, left, right) => 1 + treeSize(left) + treeSize(right),
-  };
+  match tree {
+    Tree.Empty => { return 0; }
+    Tree.Node(value, left, right) => { return 1 + treeSize(left) + treeSize(right); }
+  }
 }
 
 fun treeHeight<T>(tree: Tree<T>): number {

@@ -20,23 +20,22 @@ function $0 make/0 registers=3
 0003  b2 = constant #2 nil
 0004  return b2
 
-function $1 render/1 registers=10
+function $1 render/1 registers=9
 0000  b0 = load_var @5 value#2
-0001  b2 = variant_tag b0  @6 Outcome. @7 Good
-0002  jump_if_false b2, 0008
-0003  b3 = variant_field b0[0]
-0004  store_var @8 text#3, b3
-0005  b4 = load_var @9 text#3
-0006  b1 = move b4
+0001  b1 = variant_tag b0  @6 Outcome. @7 Good
+0002  jump_if_false b1, 0008
+0003  b2 = variant_field b0[0]
+0004  store_var @8 text#3, b2
+0005  b3 = load_var @9 text#3
+0006  return b3
 0007  jump 0016
-0008  b5 = variant_tag b0  @10 Outcome. @11 Bad
-0009  jump_if_false b5, 0016
-0010  b6 = variant_field b0[0]
-0011  store_var @12 numberValue#4, b6
-0012  b7 = load_var @13 numberValue#4
-0013  b8 = native_call @14 str [b7]
-0014  b1 = move b8
+0008  b4 = variant_tag b0  @10 Outcome. @11 Bad
+0009  jump_if_false b4, 0016
+0010  b5 = variant_field b0[0]
+0011  store_var @12 numberValue#4, b5
+0012  b6 = load_var @13 numberValue#4
+0013  b7 = native_call @14 str [b6]
+0014  return b7
 0015  jump 0016
-0016  return b1
-0017  b9 = constant #4 nil
-0018  return b9
+0016  b8 = constant #4 nil
+0017  return b8

@@ -1,5 +1,5 @@
 enum Result { Ok(number), Empty }
 let result = Result.Ok(1);
-let label = match result {
-  Result.Ok(value) if value > 0 => "positive",
-};
+match result {
+  Result.Ok(value) if value > 0 => { print "positive"; }
+}

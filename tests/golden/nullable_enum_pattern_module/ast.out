@@ -7,6 +7,15 @@ Program
   Module 1 entry
     Import "./lib.cd" as lib
     Fun render(value: optional<lib.Outcome>): string
-      Return (match value (arm nil "nil") (arm lib.Outcome.Good(number) (+ "good:" (call str number))) (arm lib.Outcome.Bad(message) (+ "bad:" message)))
+      Match value
+        Arm nil
+          Block
+            Return "nil"
+        Arm lib.Outcome.Good(number)
+          Block
+            Return (+ "good:" (call str number))
+        Arm lib.Outcome.Bad(message)
+          Block
+            Return (+ "bad:" message)
     Print (call render nil)
     Print (call render (member-call lib make))

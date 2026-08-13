@@ -1,5 +1,5 @@
 fun describe(value: bool): string {
-  return match value {
-    true => "yes",
-  };
+  match value {
+    true => { return "yes"; }
+  }
 }

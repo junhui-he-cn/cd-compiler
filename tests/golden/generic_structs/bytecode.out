@@ -1,4 +1,4 @@
-main registers=33
+main registers=32
 0000  b0 = constant #0 1
 0001  b1 = struct @0 Box { @1 value: b0}
 0002  store_var @2 inferred#0, b1
@@ -36,15 +36,14 @@ main registers=33
 0034  b24 = native_call @28 typeOf [b23]
 0035  print b24
 0036  b25 = load_var @29 explicit#1
-0037  b27 = field b25,  @30 value
-0038  b28 = constant #6 2
-0039  b29 = equal b27, b28
-0040  jump_if_false b29, 0044
-0041  b30 = constant #7 "two"
-0042  b26 = move b30
+0037  b26 = field b25,  @30 value
+0038  b27 = constant #6 2
+0039  b28 = equal b26, b27
+0040  jump_if_false b28, 0044
+0041  b29 = constant #7 "two"
+0042  print b29
 0043  jump 0048
-0044  b31 = field b25,  @31 value
-0045  b32 = constant #8 "other"
-0046  b26 = move b32
+0044  b30 = field b25,  @31 value
+0045  b31 = constant #8 "other"
+0046  print b31
 0047  jump 0048
-0048  print b26

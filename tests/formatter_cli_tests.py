@@ -93,17 +93,22 @@ def main() -> int:
     trailing_commas = run(
         compiler,
         "--format",
-        source="enum Choice{First,Second,}\nlet value=match 1{1=>2,_=>0,};\n",
+        source="enum Choice{First,Second,}\nlet value=1;\nmatch value{1=>{print value;}_=>{print 0;}}\n",
     )
     trailing_expected = (
         "enum Choice {\n"
         "  First,\n"
         "  Second,\n"
         "}\n"
-        "let value = match 1 {\n"
-        "  1 => 2,\n"
-        "  _ => 0,\n"
-        "};\n"
+        "let value = 1;\n"
+        "match value {\n"
+        "  1 => {\n"
+        "    print value;\n"
+        "  }\n"
+        "  _ => {\n"
+        "    print 0;\n"
+        "  }\n"
+        "}\n"
     )
     if trailing_commas.returncode != 0 or trailing_commas.stdout != trailing_expected or trailing_commas.stderr:
         print("trailing-comma formatter result mismatch", file=sys.stderr)

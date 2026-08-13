@@ -1,4 +1,4 @@
-main registers=40
+main registers=38
 0000  b0 = constant #0 nil
 0001  store_var @0 numberLabel#0, b0
 0002  b1 = make_function $0 numberLabel/1
@@ -33,94 +33,90 @@ main registers=40
 0031  b22 = call b20(b21)
 0032  print b22
 0033  b23 = load_var @32 maybe#5
-0034  b25 = constant #18 nil
-0035  b26 = equal b23, b25
-0036  jump_if_false b26, 0038
+0034  b24 = constant #18 nil
+0035  b25 = equal b23, b24
+0036  jump_if_false b25, 0038
 0037  jump 0041
-0038  b27 = constant #19 false
-0039  b28 = equal b23, b27
-0040  jump_if_false b28, 0044
-0041  b29 = constant #20 "off"
-0042  b24 = move b29
+0038  b26 = constant #19 false
+0039  b27 = equal b23, b26
+0040  jump_if_false b27, 0044
+0041  b28 = constant #20 "off"
+0042  print b28
 0043  jump 0050
-0044  b30 = constant #21 true
-0045  b31 = equal b23, b30
-0046  jump_if_false b31, 0050
-0047  b32 = constant #22 "on"
-0048  b24 = move b32
+0044  b29 = constant #21 true
+0045  b30 = equal b23, b29
+0046  jump_if_false b30, 0050
+0047  b31 = constant #22 "on"
+0048  print b31
 0049  jump 0050
-0050  print b24
-0051  b33 = constant #23 true
-0052  b35 = constant #24 true
-0053  b36 = equal b33, b35
-0054  jump_if_false b36, 0056
-0055  jump 0059
-0056  b37 = constant #25 false
-0057  b38 = equal b33, b37
-0058  jump_if_false b38, 0062
-0059  b39 = constant #26 "bool"
-0060  b34 = move b39
-0061  jump 0062
-0062  print b34
+0050  b32 = constant #23 true
+0051  b33 = constant #24 true
+0052  b34 = equal b32, b33
+0053  jump_if_false b34, 0055
+0054  jump 0058
+0055  b35 = constant #25 false
+0056  b36 = equal b32, b35
+0057  jump_if_false b36, 0061
+0058  b37 = constant #26 "bool"
+0059  print b37
+0060  jump 0061
 
-function $0 numberLabel/1 registers=9
+function $0 numberLabel/1 registers=8
 0000  b0 = load_var @1 value#1
-0001  b2 = constant #1 0
-0002  b3 = equal b0, b2
-0003  jump_if_false b3, 0005
+0001  b1 = constant #1 0
+0002  b2 = equal b0, b1
+0003  jump_if_false b2, 0005
 0004  jump 0008
-0005  b4 = constant #2 1
-0006  b5 = equal b0, b4
-0007  jump_if_false b5, 0011
-0008  b6 = constant #3 "small"
-0009  b1 = move b6
+0005  b3 = constant #2 1
+0006  b4 = equal b0, b3
+0007  jump_if_false b4, 0011
+0008  b5 = constant #3 "small"
+0009  return b5
 0010  jump 0014
-0011  b7 = constant #4 "other"
-0012  b1 = move b7
+0011  b6 = constant #4 "other"
+0012  return b6
 0013  jump 0014
-0014  return b1
-0015  b8 = constant #5 nil
-0016  return b8
+0014  b7 = constant #5 nil
+0015  return b7
 
-function $1 shapeLabel/1 registers=24
+function $1 shapeLabel/1 registers=23
 0000  b0 = load_var @4 value#3
-0001  b2 = variant_tag b0  @5 Shape. @6 Point
-0002  jump_if_false b2, 0006
-0003  b3 = variant_field b0[0]
-0004  b4 = move b3
+0001  b1 = variant_tag b0  @5 Shape. @6 Point
+0002  jump_if_false b1, 0006
+0003  b2 = variant_field b0[0]
+0004  b3 = move b2
 0005  jump 0011
-0006  b5 = variant_tag b0  @7 Shape. @8 Line
-0007  jump_if_false b5, 0022
-0008  b6 = variant_field b0[0]
-0009  b7 = variant_field b0[1]
-0010  b4 = move b6
-0011  store_var @9 x#4, b4
-0012  b8 = load_var @10 x#4
-0013  b9 = constant #7 3
-0014  b10 = greater b8, b9
-0015  jump_if_false b10, 0022
-0016  b11 = constant #8 "large:"
-0017  b12 = load_var @11 x#4
-0018  b13 = native_call @12 str [b12]
-0019  b14 = add b11, b13
-0020  b1 = move b14
+0006  b4 = variant_tag b0  @7 Shape. @8 Line
+0007  jump_if_false b4, 0022
+0008  b5 = variant_field b0[0]
+0009  b6 = variant_field b0[1]
+0010  b3 = move b5
+0011  store_var @9 x#4, b3
+0012  b7 = load_var @10 x#4
+0013  b8 = constant #7 3
+0014  b9 = greater b7, b8
+0015  jump_if_false b9, 0022
+0016  b10 = constant #8 "large:"
+0017  b11 = load_var @11 x#4
+0018  b12 = native_call @12 str [b11]
+0019  b13 = add b10, b12
+0020  return b13
 0021  jump 0038
-0022  b15 = variant_tag b0  @13 Shape. @14 Point
-0023  jump_if_false b15, 0026
-0024  b16 = variant_field b0[0]
+0022  b14 = variant_tag b0  @13 Shape. @14 Point
+0023  jump_if_false b14, 0026
+0024  b15 = variant_field b0[0]
 0025  jump 0030
-0026  b17 = variant_tag b0  @15 Shape. @16 Line
-0027  jump_if_false b17, 0033
-0028  b18 = variant_field b0[0]
-0029  b19 = variant_field b0[1]
-0030  b20 = constant #9 "small"
-0031  b1 = move b20
+0026  b16 = variant_tag b0  @15 Shape. @16 Line
+0027  jump_if_false b16, 0033
+0028  b17 = variant_field b0[0]
+0029  b18 = variant_field b0[1]
+0030  b19 = constant #9 "small"
+0031  return b19
 0032  jump 0038
-0033  b21 = variant_tag b0  @17 Shape. @18 Empty
-0034  jump_if_false b21, 0038
-0035  b22 = constant #10 "empty"
-0036  b1 = move b22
+0033  b20 = variant_tag b0  @17 Shape. @18 Empty
+0034  jump_if_false b20, 0038
+0035  b21 = constant #10 "empty"
+0036  return b21
 0037  jump 0038
-0038  return b1
-0039  b23 = constant #11 nil
-0040  return b23
+0038  b22 = constant #11 nil
+0039  return b22

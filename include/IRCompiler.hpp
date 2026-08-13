@@ -94,7 +94,6 @@ private:
     void compileFor(const ForStmt& statement);
     void compileForIn(const ForInStmt& statement);
     void compileMatch(const MatchStmt& statement);
-    IRRegister compileMatchExpression(const MatchExpr& expression);
     std::string makeSyntheticName(const std::string& prefix);
     IRRegister emitLenCall(const CallExpr& expression);
     IRRegister emitNativeStdlibCall(const CallExpr& expression);

@@ -4,14 +4,13 @@ IR
 0002  v2 = struct geo.Point {x: v0, y: v1}
 0003  store_var @3 point#0, v2
 0004  v3 = load_var @4 point#0
-0005  v5 = field v3.x
-0006  v6 = constant #2 1
-0007  v7 = equal v5, v6
-0008  jump_if_false v7, 0012
-0009  v8 = constant #3 "one"
-0010  v4 = copy v8
+0005  v4 = field v3.x
+0006  v5 = constant #2 1
+0007  v6 = equal v4, v5
+0008  jump_if_false v6, 0012
+0009  v7 = constant #3 "one"
+0010  print v7
 0011  jump 0015
-0012  v9 = constant #4 "other"
-0013  v4 = copy v9
+0012  v8 = constant #4 "other"
+0013  print v8
 0014  jump 0015
-0015  print v4

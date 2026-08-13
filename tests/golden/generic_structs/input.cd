@@ -13,7 +13,7 @@ print annotated.value;
 print textBox.value;
 print bounded.value;
 print typeOf(explicit);
-print match explicit {
-  Box { value: 2 } => "two",
-  Box { value: _ } => "other",
-};
+match explicit {
+  Box { value: 2 } => { print "two"; }
+  Box { value: _ } => { print "other"; }
+}

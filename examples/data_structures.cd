@@ -50,22 +50,22 @@ print priorities.dequeue();
 print priorities.snapshot();
 
 let maybe = ds.some<number>(42);
-print match maybe {
-  ds.Option.Some(value) => value,
-  ds.Option.None => 0,
-};
+match maybe {
+  ds.Option.Some(value) => { print value; }
+  ds.Option.None => { print 0; }
+}
 
 let absent = ds.none<string>();
-print match absent {
-  ds.Option.Some(value) => value,
-  ds.Option.None => "missing",
-};
+match absent {
+  ds.Option.Some(value) => { print value; }
+  ds.Option.None => { print "missing"; }
+}
 
 let result: ds.Result<number, string> = ds.ok<number, string>(42);
-print match result {
-  ds.Result.Ok(value) => value,
-  ds.Result.Err(error) => 0,
-};
+match result {
+  ds.Result.Ok(value) => { print value; }
+  ds.Result.Err(error) => { print 0; }
+}
 
 let list = ds.prepend(2, ds.prepend(1, ds.emptyList<number>()));
 print ds.toArray(list);

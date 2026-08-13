@@ -1,3 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/nullable_enum_pattern_guarded_nil.cd:3:7: non-exhaustive match: missing nil
-  print match value {
+  match value {
         ^

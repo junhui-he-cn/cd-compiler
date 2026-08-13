@@ -1,11 +1,11 @@
 import "../../data_structures.cd" as ds;
 
 fun describeTail(value: optional<ds.List<number>>): string {
-  return match value {
-    nil => "nil",
-    ds.List.Nil => "empty",
-    ds.List.Cons(value, rest) => "head:" + str(value),
-  };
+  match value {
+    nil => { return "nil"; }
+    ds.List.Nil => { return "empty"; }
+    ds.List.Cons(value, rest) => { return "head:" + str(value); }
+  }
 }
 
 fun ascending(left: number, right: number): bool {

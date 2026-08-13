@@ -94,7 +94,7 @@ names:
   n34 = "describeResult#4"
   n35 = "maybe#8"
 
-main registers=64:
+main registers=60:
   r0 = constant c0
   store_var n0, r0
   r1 = make_function f0
@@ -136,73 +136,69 @@ main registers=64:
   r26 = call r24 [r25]
   print r26
   r27 = constant c31
-  r29 = constant c32
-  r30 = equal r27, r29
-  jump_if_false r30, 47
-  r31 = constant c33
-  r28 = move r31
+  r28 = constant c32
+  r29 = equal r27, r28
+  jump_if_false r29, 47
+  r30 = constant c33
+  print r30
   jump 56
-  r32 = constant c34
-  r33 = equal r27, r32
-  jump_if_false r33, 53
-  r34 = constant c35
-  r28 = move r34
+  r31 = constant c34
+  r32 = equal r27, r31
+  jump_if_false r32, 53
+  r33 = constant c35
+  print r33
   jump 56
-  r35 = constant c36
-  r28 = move r35
+  r34 = constant c36
+  print r34
   jump 56
-  print r28
-  r36 = constant c37
-  r38 = constant c38
-  r39 = equal r36, r38
-  jump_if_false r39, 64
-  r40 = constant c39
-  r37 = move r40
-  jump 70
-  r41 = constant c40
-  r42 = equal r36, r41
-  jump_if_false r42, 70
-  r43 = constant c41
-  r37 = move r43
-  jump 70
-  print r37
-  r44 = constant c42
-  r46 = constant c43
-  r47 = equal r44, r46
-  jump_if_false r47, 78
-  r48 = constant c44
-  r45 = move r48
-  jump 87
-  r49 = constant c45
-  r50 = equal r44, r49
-  jump_if_false r50, 84
-  r51 = constant c46
-  r45 = move r51
-  jump 87
-  r52 = constant c47
-  r45 = move r52
-  jump 87
+  r35 = constant c37
+  r36 = constant c38
+  r37 = equal r35, r36
+  jump_if_false r37, 63
+  r38 = constant c39
+  print r38
+  jump 69
+  r39 = constant c40
+  r40 = equal r35, r39
+  jump_if_false r40, 69
+  r41 = constant c41
+  print r41
+  jump 69
+  r42 = constant c42
+  r43 = constant c43
+  r44 = equal r42, r43
+  jump_if_false r44, 76
+  r45 = constant c44
   print r45
-  r53 = load_var n35
-  r55 = constant c48
-  r56 = equal r53, r55
-  jump_if_false r56, 95
-  r57 = constant c49
-  r54 = move r57
-  jump 107
-  r58 = constant c50
-  r59 = equal r53, r58
-  jump_if_false r59, 101
-  r60 = constant c51
-  r54 = move r60
-  jump 107
-  r61 = constant c52
-  r62 = equal r53, r61
-  jump_if_false r62, 107
-  r63 = constant c53
-  r54 = move r63
-  jump 107
-  print r54
+  jump 85
+  r46 = constant c45
+  r47 = equal r42, r46
+  jump_if_false r47, 82
+  r48 = constant c46
+  print r48
+  jump 85
+  r49 = constant c47
+  print r49
+  jump 85
+  r50 = load_var n35
+  r51 = constant c48
+  r52 = equal r50, r51
+  jump_if_false r52, 92
+  r53 = constant c49
+  print r53
+  jump 104
+  r54 = constant c50
+  r55 = equal r50, r54
+  jump_if_false r55, 98
+  r56 = constant c51
+  print r56
+  jump 104
+  r57 = constant c52
+  r58 = equal r50, r57
+  jump_if_false r58, 104
+  r59 = constant c53
+  print r59
+  jump 104
 
 function f0 name="describeNumber" arity=1 registers=9:
   param 0 = "value#1"
@@ -298,7 +294,7 @@ function f2 name="describeResult" arity=1 registers=28:
   return r27
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/literal_patterns/input.cd" text="enum Result {\n  Number(value: number),\n  Text(value: string),\n  Empty,\n}\n\nfun describeNumber(value: number): string {\n  match value {\n    0 => { return \"zero\"; }\n    1 => { return \"one\"; }\n    _ => { return \"many\"; }\n  }\n}\n\nfun describeBool(value: bool): string {\n  match value {\n    true => { return \"true\"; }\n    false => { return \"false\"; }\n  }\n}\n\nfun describeResult(value: optional<Result>): string {\n  match value {\n    nil => { return \"nil\"; }\n    Result.Number(0) => { return \"zero\"; }\n    Result.Number(value) => { return \"number:\" + str(value); }\n    Result.Text(\"\") => { return \"empty-text\"; }\n    Result.Text(value) => { return \"text:\" + value; }\n    Result.Empty => { return \"empty\"; }\n  }\n}\n\nlet maybe: optional<bool> = nil;\nprint describeNumber(0);\nprint describeNumber(8);\nprint describeBool(false);\nprint describeResult(Result.Number(7));\nprint describeResult(Result.Text(\"\"));\nprint describeResult(nil);\nprint match 1 {\n  0 => \"zero\",\n  1 => \"one\",\n  _ => \"many\",\n};\nprint match true {\n  false => \"no\",\n  true => \"yes\",\n};\nprint match \"ok\" {\n  \"\" => \"empty\",\n  \"ok\" => \"ok\",\n  _ => \"other\",\n};\nprint match maybe {\n  nil => \"nil\",\n  true => \"true\",\n  false => \"false\",\n};\n"
+  s0 path="tests/bytecode_artifacts/literal_patterns/input.cd" text="enum Result {\n  Number(value: number),\n  Text(value: string),\n  Empty,\n}\n\nfun describeNumber(value: number): string {\n  match value {\n    0 => { return \"zero\"; }\n    1 => { return \"one\"; }\n    _ => { return \"many\"; }\n  }\n}\n\nfun describeBool(value: bool): string {\n  match value {\n    true => { return \"true\"; }\n    false => { return \"false\"; }\n  }\n}\n\nfun describeResult(value: optional<Result>): string {\n  match value {\n    nil => { return \"nil\"; }\n    Result.Number(0) => { return \"zero\"; }\n    Result.Number(value) => { return \"number:\" + str(value); }\n    Result.Text(\"\") => { return \"empty-text\"; }\n    Result.Text(value) => { return \"text:\" + value; }\n    Result.Empty => { return \"empty\"; }\n  }\n}\n\nlet maybe: optional<bool> = nil;\nprint describeNumber(0);\nprint describeNumber(8);\nprint describeBool(false);\nprint describeResult(Result.Number(7));\nprint describeResult(Result.Text(\"\"));\nprint describeResult(nil);\nmatch 1 {\n  0 => { print \"zero\"; }\n  1 => { print \"one\"; }\n  _ => { print \"many\"; }\n}\nmatch true {\n  false => { print \"no\"; }\n  true => { print \"yes\"; }\n}\nmatch \"ok\" {\n  \"\" => { print \"empty\"; }\n  \"ok\" => { print \"ok\"; }\n  _ => { print \"other\"; }\n}\nmatch maybe {\n  nil => { print \"nil\"; }\n  true => { print \"true\"; }\n  false => { print \"false\"; }\n}\n"
 
 debug_locations:
   main 0 = s0:7:1
@@ -341,74 +337,70 @@ debug_locations:
   main 37 = s0:39:22
   main 38 = s0:39:7
   main 39 = s0:39:1
-  main 40 = s0:40:13
-  main 41 = s0:40:7
-  main 42 = s0:40:7
-  main 43 = s0:40:7
-  main 44 = s0:41:8
-  main 45 = s0:40:7
-  main 46 = s0:40:7
-  main 47 = s0:40:7
-  main 48 = s0:40:7
-  main 49 = s0:40:7
-  main 50 = s0:42:8
-  main 51 = s0:40:7
-  main 52 = s0:40:7
-  main 53 = s0:43:8
-  main 54 = s0:40:7
-  main 55 = s0:40:7
-  main 56 = s0:40:1
-  main 57 = s0:45:13
-  main 58 = s0:45:7
-  main 59 = s0:45:7
-  main 60 = s0:45:7
-  main 61 = s0:46:12
-  main 62 = s0:45:7
-  main 63 = s0:45:7
-  main 64 = s0:45:7
-  main 65 = s0:45:7
-  main 66 = s0:45:7
-  main 67 = s0:47:11
-  main 68 = s0:45:7
-  main 69 = s0:45:7
-  main 70 = s0:45:1
-  main 71 = s0:49:13
-  main 72 = s0:49:7
-  main 73 = s0:49:7
-  main 74 = s0:49:7
-  main 75 = s0:50:9
-  main 76 = s0:49:7
-  main 77 = s0:49:7
-  main 78 = s0:49:7
-  main 79 = s0:49:7
-  main 80 = s0:49:7
-  main 81 = s0:51:11
-  main 82 = s0:49:7
-  main 83 = s0:49:7
-  main 84 = s0:52:8
-  main 85 = s0:49:7
-  main 86 = s0:49:7
-  main 87 = s0:49:1
-  main 88 = s0:54:13
-  main 89 = s0:54:7
-  main 90 = s0:54:7
-  main 91 = s0:54:7
-  main 92 = s0:55:10
-  main 93 = s0:54:7
-  main 94 = s0:54:7
-  main 95 = s0:54:7
-  main 96 = s0:54:7
-  main 97 = s0:54:7
-  main 98 = s0:56:11
-  main 99 = s0:54:7
-  main 100 = s0:54:7
-  main 101 = s0:54:7
-  main 102 = s0:54:7
-  main 103 = s0:54:7
-  main 104 = s0:57:12
-  main 105 = s0:54:7
-  main 106 = s0:54:7
-  main 107 = s0:54:1
+  main 40 = s0:40:7
+  main 41 = s0:40:1
+  main 42 = s0:40:1
+  main 43 = s0:40:1
+  main 44 = s0:41:16
+  main 45 = s0:41:10
+  main 46 = s0:40:1
+  main 47 = s0:40:1
+  main 48 = s0:40:1
+  main 49 = s0:40:1
+  main 50 = s0:42:16
+  main 51 = s0:42:10
+  main 52 = s0:40:1
+  main 53 = s0:43:16
+  main 54 = s0:43:10
+  main 55 = s0:40:1
+  main 56 = s0:45:7
+  main 57 = s0:45:1
+  main 58 = s0:45:1
+  main 59 = s0:45:1
+  main 60 = s0:46:20
+  main 61 = s0:46:14
+  main 62 = s0:45:1
+  main 63 = s0:45:1
+  main 64 = s0:45:1
+  main 65 = s0:45:1
+  main 66 = s0:47:19
+  main 67 = s0:47:13
+  main 68 = s0:45:1
+  main 69 = s0:49:7
+  main 70 = s0:49:1
+  main 71 = s0:49:1
+  main 72 = s0:49:1
+  main 73 = s0:50:17
+  main 74 = s0:50:11
+  main 75 = s0:49:1
+  main 76 = s0:49:1
+  main 77 = s0:49:1
+  main 78 = s0:49:1
+  main 79 = s0:51:19
+  main 80 = s0:51:13
+  main 81 = s0:49:1
+  main 82 = s0:52:16
+  main 83 = s0:52:10
+  main 84 = s0:49:1
+  main 85 = s0:54:7
+  main 86 = s0:54:1
+  main 87 = s0:54:1
+  main 88 = s0:54:1
+  main 89 = s0:55:18
+  main 90 = s0:55:12
+  main 91 = s0:54:1
+  main 92 = s0:54:1
+  main 93 = s0:54:1
+  main 94 = s0:54:1
+  main 95 = s0:56:19
+  main 96 = s0:56:13
+  main 97 = s0:54:1
+  main 98 = s0:54:1
+  main 99 = s0:54:1
+  main 100 = s0:54:1
+  main 101 = s0:57:20
+  main 102 = s0:57:14
+  main 103 = s0:54:1
   function f0 0 = s0:8:9
   function f0 1 = s0:8:3
   function f0 2 = s0:8:3
@@ -535,74 +527,70 @@ debug_ranges:
   main 37 = s0:915:918
   main 38 = s0:900:919
   main 39 = s0:900:919
-  main 40 = s0:933:934
-  main 41 = s0:927:979
-  main 42 = s0:927:979
-  main 43 = s0:927:979
-  main 44 = s0:944:950
-  main 45 = s0:927:979
-  main 46 = s0:927:979
-  main 47 = s0:927:979
-  main 48 = s0:927:979
-  main 49 = s0:927:979
-  main 50 = s0:959:964
-  main 51 = s0:927:979
-  main 52 = s0:927:979
-  main 53 = s0:973:979
-  main 54 = s0:927:979
-  main 55 = s0:927:979
-  main 56 = s0:927:979
-  main 57 = s0:996:1000
-  main 58 = s0:990:1035
-  main 59 = s0:990:1035
-  main 60 = s0:990:1035
-  main 61 = s0:1014:1018
-  main 62 = s0:990:1035
-  main 63 = s0:990:1035
-  main 64 = s0:990:1035
-  main 65 = s0:990:1035
-  main 66 = s0:990:1035
-  main 67 = s0:1030:1035
-  main 68 = s0:990:1035
-  main 69 = s0:990:1035
-  main 70 = s0:990:1035
-  main 71 = s0:1052:1056
-  main 72 = s0:1046:1106
-  main 73 = s0:1046:1106
-  main 74 = s0:1046:1106
-  main 75 = s0:1067:1074
-  main 76 = s0:1046:1106
-  main 77 = s0:1046:1106
-  main 78 = s0:1046:1106
-  main 79 = s0:1046:1106
-  main 80 = s0:1046:1106
-  main 81 = s0:1086:1090
-  main 82 = s0:1046:1106
-  main 83 = s0:1046:1106
-  main 84 = s0:1099:1106
-  main 85 = s0:1046:1106
-  main 86 = s0:1046:1106
-  main 87 = s0:1046:1106
-  main 88 = s0:1123:1128
-  main 89 = s0:1117:1183
-  main 90 = s0:1117:1183
-  main 91 = s0:1117:1183
-  main 92 = s0:1140:1145
-  main 93 = s0:1117:1183
-  main 94 = s0:1117:1183
-  main 95 = s0:1117:1183
-  main 96 = s0:1117:1183
-  main 97 = s0:1117:1183
-  main 98 = s0:1157:1163
-  main 99 = s0:1117:1183
-  main 100 = s0:1117:1183
-  main 101 = s0:1117:1183
-  main 102 = s0:1117:1183
-  main 103 = s0:1117:1183
-  main 104 = s0:1176:1183
-  main 105 = s0:1117:1183
-  main 106 = s0:1117:1183
-  main 107 = s0:1117:1183
+  main 40 = s0:927:928
+  main 41 = s0:927:1001
+  main 42 = s0:927:1001
+  main 43 = s0:927:1001
+  main 44 = s0:946:952
+  main 45 = s0:946:952
+  main 46 = s0:927:1001
+  main 47 = s0:927:1001
+  main 48 = s0:927:1001
+  main 49 = s0:927:1001
+  main 50 = s0:971:976
+  main 51 = s0:971:976
+  main 52 = s0:927:1001
+  main 53 = s0:995:1001
+  main 54 = s0:995:1001
+  main 55 = s0:927:1001
+  main 56 = s0:1013:1017
+  main 57 = s0:1013:1070
+  main 58 = s0:1013:1070
+  main 59 = s0:1013:1070
+  main 60 = s0:1039:1043
+  main 61 = s0:1039:1043
+  main 62 = s0:1013:1070
+  main 63 = s0:1013:1070
+  main 64 = s0:1013:1070
+  main 65 = s0:1013:1070
+  main 66 = s0:1065:1070
+  main 67 = s0:1065:1070
+  main 68 = s0:1013:1070
+  main 69 = s0:1082:1086
+  main 70 = s0:1082:1164
+  main 71 = s0:1082:1164
+  main 72 = s0:1082:1164
+  main 73 = s0:1105:1112
+  main 74 = s0:1105:1112
+  main 75 = s0:1082:1164
+  main 76 = s0:1082:1164
+  main 77 = s0:1082:1164
+  main 78 = s0:1082:1164
+  main 79 = s0:1134:1138
+  main 80 = s0:1134:1138
+  main 81 = s0:1082:1164
+  main 82 = s0:1157:1164
+  main 83 = s0:1157:1164
+  main 84 = s0:1082:1164
+  main 85 = s0:1176:1181
+  main 86 = s0:1176:1264
+  main 87 = s0:1176:1264
+  main 88 = s0:1176:1264
+  main 89 = s0:1201:1206
+  main 90 = s0:1201:1206
+  main 91 = s0:1176:1264
+  main 92 = s0:1176:1264
+  main 93 = s0:1176:1264
+  main 94 = s0:1176:1264
+  main 95 = s0:1228:1234
+  main 96 = s0:1228:1234
+  main 97 = s0:1176:1264
+  main 98 = s0:1176:1264
+  main 99 = s0:1176:1264
+  main 100 = s0:1176:1264
+  main 101 = s0:1257:1264
+  main 102 = s0:1257:1264
+  main 103 = s0:1176:1264
   function f0 0 = s0:126:131
   function f0 1 = s0:126:213
   function f0 2 = s0:126:213

@@ -1,6 +1,6 @@
-Parse error at <repo>/tests/golden/parse_errors/match_guard_missing_condition.cd:4:23: expected expression
-    Result.Ok(value) if => value,
+Parse error at <repo>/tests/golden/parse_errors/match_guard_missing_condition.cd:5:23: expected expression
+    Result.Ok(value) if => { print value; }
                         ^
-Parse error at <repo>/tests/golden/parse_errors/match_guard_missing_condition.cd:6:2: expected expression
-  };
-   ^
+Parse error at <repo>/tests/golden/parse_errors/match_guard_missing_condition.cd:6:1: expected expression
+  }
+  ^

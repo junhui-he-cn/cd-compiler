@@ -1,4 +1,4 @@
-main registers=64
+main registers=60
 0000  b0 = constant #0 nil
 0001  store_var @0 describeNumber#0, b0
 0002  b1 = make_function $0 describeNumber/1
@@ -40,73 +40,69 @@ main registers=64
 0038  b26 = call b24(b25)
 0039  print b26
 0040  b27 = constant #31 1
-0041  b29 = constant #32 0
-0042  b30 = equal b27, b29
-0043  jump_if_false b30, 0047
-0044  b31 = constant #33 "zero"
-0045  b28 = move b31
+0041  b28 = constant #32 0
+0042  b29 = equal b27, b28
+0043  jump_if_false b29, 0047
+0044  b30 = constant #33 "zero"
+0045  print b30
 0046  jump 0056
-0047  b32 = constant #34 1
-0048  b33 = equal b27, b32
-0049  jump_if_false b33, 0053
-0050  b34 = constant #35 "one"
-0051  b28 = move b34
+0047  b31 = constant #34 1
+0048  b32 = equal b27, b31
+0049  jump_if_false b32, 0053
+0050  b33 = constant #35 "one"
+0051  print b33
 0052  jump 0056
-0053  b35 = constant #36 "many"
-0054  b28 = move b35
+0053  b34 = constant #36 "many"
+0054  print b34
 0055  jump 0056
-0056  print b28
-0057  b36 = constant #37 true
-0058  b38 = constant #38 false
-0059  b39 = equal b36, b38
-0060  jump_if_false b39, 0064
-0061  b40 = constant #39 "no"
-0062  b37 = move b40
-0063  jump 0070
-0064  b41 = constant #40 true
-0065  b42 = equal b36, b41
-0066  jump_if_false b42, 0070
-0067  b43 = constant #41 "yes"
-0068  b37 = move b43
-0069  jump 0070
-0070  print b37
-0071  b44 = constant #42 "ok"
-0072  b46 = constant #43 ""
-0073  b47 = equal b44, b46
-0074  jump_if_false b47, 0078
-0075  b48 = constant #44 "empty"
-0076  b45 = move b48
-0077  jump 0087
-0078  b49 = constant #45 "ok"
-0079  b50 = equal b44, b49
-0080  jump_if_false b50, 0084
-0081  b51 = constant #46 "ok"
-0082  b45 = move b51
-0083  jump 0087
-0084  b52 = constant #47 "other"
-0085  b45 = move b52
-0086  jump 0087
-0087  print b45
-0088  b53 = load_var @35 maybe#8
-0089  b55 = constant #48 nil
-0090  b56 = equal b53, b55
-0091  jump_if_false b56, 0095
-0092  b57 = constant #49 "nil"
-0093  b54 = move b57
-0094  jump 0107
-0095  b58 = constant #50 true
-0096  b59 = equal b53, b58
-0097  jump_if_false b59, 0101
-0098  b60 = constant #51 "true"
-0099  b54 = move b60
-0100  jump 0107
-0101  b61 = constant #52 false
-0102  b62 = equal b53, b61
-0103  jump_if_false b62, 0107
-0104  b63 = constant #53 "false"
-0105  b54 = move b63
-0106  jump 0107
-0107  print b54
+0056  b35 = constant #37 true
+0057  b36 = constant #38 false
+0058  b37 = equal b35, b36
+0059  jump_if_false b37, 0063
+0060  b38 = constant #39 "no"
+0061  print b38
+0062  jump 0069
+0063  b39 = constant #40 true
+0064  b40 = equal b35, b39
+0065  jump_if_false b40, 0069
+0066  b41 = constant #41 "yes"
+0067  print b41
+0068  jump 0069
+0069  b42 = constant #42 "ok"
+0070  b43 = constant #43 ""
+0071  b44 = equal b42, b43
+0072  jump_if_false b44, 0076
+0073  b45 = constant #44 "empty"
+0074  print b45
+0075  jump 0085
+0076  b46 = constant #45 "ok"
+0077  b47 = equal b42, b46
+0078  jump_if_false b47, 0082
+0079  b48 = constant #46 "ok"
+0080  print b48
+0081  jump 0085
+0082  b49 = constant #47 "other"
+0083  print b49
+0084  jump 0085
+0085  b50 = load_var @35 maybe#8
+0086  b51 = constant #48 nil
+0087  b52 = equal b50, b51
+0088  jump_if_false b52, 0092
+0089  b53 = constant #49 "nil"
+0090  print b53
+0091  jump 0104
+0092  b54 = constant #50 true
+0093  b55 = equal b50, b54
+0094  jump_if_false b55, 0098
+0095  b56 = constant #51 "true"
+0096  print b56
+0097  jump 0104
+0098  b57 = constant #52 false
+0099  b58 = equal b50, b57
+0100  jump_if_false b58, 0104
+0101  b59 = constant #53 "false"
+0102  print b59
+0103  jump 0104
 
 function $0 describeNumber/1 registers=9
 0000  b0 = load_var @1 value#1

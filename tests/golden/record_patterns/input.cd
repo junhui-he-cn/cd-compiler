@@ -2,12 +2,12 @@ struct Address { city: string, zip: number }
 struct Person { name: string, age: number, address: Address }
 
 fun describe(value: optional<Person>): string {
-  return match value {
-    nil => "nil",
-    Person { name: "Ada" } => "ada",
-    Person { address: Address { city: "Hong Kong" }, name: name } => "city:" + name,
-    Person { age: age, name: name } => name + ":" + str(age),
-  };
+  match value {
+    nil => { return "nil"; }
+    Person { name: "Ada" } => { return "ada"; }
+    Person { address: Address { city: "Hong Kong" }, name: name } => { return "city:" + name; }
+    Person { age: age, name: name } => { return name + ":" + str(age); }
+  }
 }
 
 let ada = Person {
@@ -24,7 +24,7 @@ let nilPerson: optional<Person> = nil;
 print describe(ada);
 print describe(hongKong);
 print describe(nilPerson);
-print match ada {
-  Person { name: "Ada" } | Person { age: 0 } => "or",
-  Person {} => "fallback",
-};
+match ada {
+  Person { name: "Ada" } | Person { age: 0 } => { print "or"; }
+  Person {} => { print "fallback"; }
+}

@@ -68,7 +68,7 @@ names:
   n40 = "name"
   n41 = "age"
 
-main registers=34:
+main registers=33:
   r0 = constant c0
   store_var n0, r0
   r1 = make_function f0
@@ -102,69 +102,67 @@ main registers=34:
   r23 = call r21 [r22]
   print r23
   r24 = load_var n39
-  r26 = field r24, n40
-  r27 = constant c18
-  r28 = equal r26, r27
-  jump_if_false r28, 38
+  r25 = field r24, n40
+  r26 = constant c18
+  r27 = equal r25, r26
+  jump_if_false r27, 38
   jump 42
-  r29 = field r24, n41
-  r30 = constant c19
-  r31 = equal r29, r30
-  jump_if_false r31, 45
-  r32 = constant c20
-  r25 = move r32
+  r28 = field r24, n41
+  r29 = constant c19
+  r30 = equal r28, r29
+  jump_if_false r30, 45
+  r31 = constant c20
+  print r31
   jump 48
-  r33 = constant c21
-  r25 = move r33
+  r32 = constant c21
+  print r32
   jump 48
-  print r25
 
-function f0 name="describe" arity=1 registers=26:
+function f0 name="describe" arity=1 registers=25:
   param 0 = "value#1"
   r0 = load_var n1
-  r2 = constant c1
-  r3 = equal r0, r2
-  jump_if_false r3, 7
-  r4 = constant c2
-  r1 = move r4
+  r1 = constant c1
+  r2 = equal r0, r1
+  jump_if_false r2, 7
+  r3 = constant c2
+  return r3
   jump 38
-  r5 = field r0, n2
-  r6 = constant c3
-  r7 = equal r5, r6
-  jump_if_false r7, 14
-  r8 = constant c4
-  r1 = move r8
+  r4 = field r0, n2
+  r5 = constant c3
+  r6 = equal r4, r5
+  jump_if_false r6, 14
+  r7 = constant c4
+  return r7
   jump 38
-  r9 = field r0, n3
-  r10 = field r9, n4
-  r11 = constant c5
-  r12 = equal r10, r11
-  jump_if_false r12, 26
-  r13 = field r0, n5
-  store_var n6, r13
-  r14 = constant c6
-  r15 = load_var n7
-  r16 = add r14, r15
-  r1 = move r16
+  r8 = field r0, n3
+  r9 = field r8, n4
+  r10 = constant c5
+  r11 = equal r9, r10
+  jump_if_false r11, 26
+  r12 = field r0, n5
+  store_var n6, r12
+  r13 = constant c6
+  r14 = load_var n7
+  r15 = add r13, r14
+  return r15
   jump 38
-  r17 = field r0, n8
-  r18 = field r0, n9
-  store_var n10, r17
-  store_var n11, r18
-  r19 = load_var n12
-  r20 = constant c7
-  r21 = add r19, r20
-  r22 = load_var n13
-  r23 = native_call n14 [r22]
-  r24 = add r21, r23
-  r1 = move r24
+  r16 = field r0, n8
+  r17 = field r0, n9
+  store_var n10, r16
+  store_var n11, r17
+  r18 = load_var n12
+  r19 = constant c7
+  r20 = add r18, r19
+  r21 = load_var n13
+  r22 = native_call n14 [r21]
+  r23 = add r20, r22
+  return r23
   jump 38
-  return r1
-  r25 = constant c8
-  return r25
+  r24 = constant c8
+  return r24
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/record_patterns/input.cd" text="struct Address { city: string, zip: number }\nstruct Person { name: string, age: number, address: Address }\n\nfun describe(value: optional<Person>): string {\n  return match value {\n    nil => \"nil\",\n    Person { name: \"Ada\" } => \"ada\",\n    Person { address: Address { city: \"Hong Kong\" }, name: name } => \"city:\" + name,\n    Person { age: age, name: name } => name + \":\" + str(age),\n  };\n}\n\nlet ada = Person {\n  name: \"Ada\",\n  age: 36,\n  address: Address { city: \"Cambridge\", zip: 1 }\n};\nlet hongKong = Person {\n  name: \"Grace\",\n  age: 40,\n  address: Address { city: \"Hong Kong\", zip: 2 }\n};\nlet nilPerson: optional<Person> = nil;\nprint describe(ada);\nprint describe(hongKong);\nprint describe(nilPerson);\nprint match ada {\n  Person { name: \"Ada\" } | Person { age: 0 } => \"or\",\n  Person {} => \"fallback\",\n};\n"
+  s0 path="tests/bytecode_artifacts/record_patterns/input.cd" text="struct Address { city: string, zip: number }\nstruct Person { name: string, age: number, address: Address }\n\nfun describe(value: optional<Person>): string {\n  match value {\n    nil => { return \"nil\"; }\n    Person { name: \"Ada\" } => { return \"ada\"; }\n    Person { address: Address { city: \"Hong Kong\" }, name: name } => { return \"city:\" + name; }\n    Person { age: age, name: name } => { return name + \":\" + str(age); }\n  }\n}\n\nlet ada = Person {\n  name: \"Ada\",\n  age: 36,\n  address: Address { city: \"Cambridge\", zip: 1 }\n};\nlet hongKong = Person {\n  name: \"Grace\",\n  age: 40,\n  address: Address { city: \"Hong Kong\", zip: 2 }\n};\nlet nilPerson: optional<Person> = nil;\nprint describe(ada);\nprint describe(hongKong);\nprint describe(nilPerson);\nmatch ada {\n  Person { name: \"Ada\" } | Person { age: 0 } => { print \"or\"; }\n  Person {} => { print \"fallback\"; }\n}\n"
 
 debug_locations:
   main 0 = s0:4:1
@@ -199,153 +197,149 @@ debug_locations:
   main 29 = s0:26:16
   main 30 = s0:26:7
   main 31 = s0:26:1
-  main 32 = s0:27:13
-  main 33 = s0:27:7
-  main 34 = s0:27:7
-  main 35 = s0:27:7
-  main 36 = s0:27:7
-  main 37 = s0:27:7
-  main 38 = s0:27:7
-  main 39 = s0:27:7
-  main 40 = s0:27:7
-  main 41 = s0:27:7
-  main 42 = s0:28:49
-  main 43 = s0:27:7
-  main 44 = s0:27:7
-  main 45 = s0:29:16
-  main 46 = s0:27:7
-  main 47 = s0:27:7
-  main 48 = s0:27:1
-  function f0 0 = s0:5:16
-  function f0 1 = s0:5:10
-  function f0 2 = s0:5:10
-  function f0 3 = s0:5:10
-  function f0 4 = s0:6:12
-  function f0 5 = s0:5:10
-  function f0 6 = s0:5:10
-  function f0 7 = s0:5:10
-  function f0 8 = s0:5:10
-  function f0 9 = s0:5:10
-  function f0 10 = s0:5:10
-  function f0 11 = s0:7:31
-  function f0 12 = s0:5:10
-  function f0 13 = s0:5:10
-  function f0 14 = s0:5:10
-  function f0 15 = s0:5:10
-  function f0 16 = s0:5:10
-  function f0 17 = s0:5:10
-  function f0 18 = s0:5:10
-  function f0 19 = s0:5:10
-  function f0 20 = s0:5:10
-  function f0 21 = s0:8:70
-  function f0 22 = s0:8:80
-  function f0 23 = s0:8:70
-  function f0 24 = s0:5:10
-  function f0 25 = s0:5:10
-  function f0 26 = s0:5:10
-  function f0 27 = s0:5:10
-  function f0 28 = s0:5:10
-  function f0 29 = s0:5:10
-  function f0 30 = s0:9:40
-  function f0 31 = s0:9:47
-  function f0 32 = s0:9:40
-  function f0 33 = s0:9:57
-  function f0 34 = s0:9:53
-  function f0 35 = s0:9:40
-  function f0 36 = s0:5:10
-  function f0 37 = s0:5:10
-  function f0 38 = s0:5:3
+  main 32 = s0:27:7
+  main 33 = s0:27:1
+  main 34 = s0:27:1
+  main 35 = s0:27:1
+  main 36 = s0:27:1
+  main 37 = s0:27:1
+  main 38 = s0:27:1
+  main 39 = s0:27:1
+  main 40 = s0:27:1
+  main 41 = s0:27:1
+  main 42 = s0:28:57
+  main 43 = s0:28:51
+  main 44 = s0:27:1
+  main 45 = s0:29:24
+  main 46 = s0:29:18
+  main 47 = s0:27:1
+  function f0 0 = s0:5:9
+  function f0 1 = s0:5:3
+  function f0 2 = s0:5:3
+  function f0 3 = s0:5:3
+  function f0 4 = s0:6:21
+  function f0 5 = s0:6:14
+  function f0 6 = s0:5:3
+  function f0 7 = s0:5:3
+  function f0 8 = s0:5:3
+  function f0 9 = s0:5:3
+  function f0 10 = s0:5:3
+  function f0 11 = s0:7:40
+  function f0 12 = s0:7:33
+  function f0 13 = s0:5:3
+  function f0 14 = s0:5:3
+  function f0 15 = s0:5:3
+  function f0 16 = s0:5:3
+  function f0 17 = s0:5:3
+  function f0 18 = s0:5:3
+  function f0 19 = s0:5:3
+  function f0 20 = s0:5:3
+  function f0 21 = s0:8:79
+  function f0 22 = s0:8:89
+  function f0 23 = s0:8:79
+  function f0 24 = s0:8:72
+  function f0 25 = s0:5:3
+  function f0 26 = s0:5:3
+  function f0 27 = s0:5:3
+  function f0 28 = s0:5:3
+  function f0 29 = s0:5:3
+  function f0 30 = s0:9:49
+  function f0 31 = s0:9:56
+  function f0 32 = s0:9:49
+  function f0 33 = s0:9:66
+  function f0 34 = s0:9:62
+  function f0 35 = s0:9:49
+  function f0 36 = s0:9:42
+  function f0 37 = s0:5:3
+  function f0 38 = s0:4:1
   function f0 39 = s0:4:1
-  function f0 40 = s0:4:1
 
 debug_ranges:
-  main 0 = s0:112:379
-  main 1 = s0:112:379
-  main 2 = s0:112:379
-  main 3 = s0:112:379
-  main 4 = s0:416:421
-  main 5 = s0:430:432
-  main 6 = s0:461:472
-  main 7 = s0:479:480
-  main 8 = s0:445:480
-  main 9 = s0:399:480
-  main 10 = s0:393:480
-  main 11 = s0:518:525
-  main 12 = s0:534:536
-  main 13 = s0:565:576
-  main 14 = s0:583:584
-  main 15 = s0:549:584
-  main 16 = s0:501:584
-  main 17 = s0:490:584
-  main 18 = s0:624:627
-  main 19 = s0:594:627
-  main 20 = s0:635:643
-  main 21 = s0:644:647
-  main 22 = s0:635:648
-  main 23 = s0:635:648
-  main 24 = s0:656:664
-  main 25 = s0:665:673
-  main 26 = s0:656:674
-  main 27 = s0:656:674
-  main 28 = s0:682:690
-  main 29 = s0:691:700
-  main 30 = s0:682:701
-  main 31 = s0:682:701
-  main 32 = s0:715:718
-  main 33 = s0:709:800
-  main 34 = s0:709:800
-  main 35 = s0:709:800
-  main 36 = s0:709:800
-  main 37 = s0:709:800
-  main 38 = s0:709:800
-  main 39 = s0:709:800
-  main 40 = s0:709:800
-  main 41 = s0:709:800
-  main 42 = s0:769:773
-  main 43 = s0:709:800
-  main 44 = s0:709:800
-  main 45 = s0:790:800
-  main 46 = s0:709:800
-  main 47 = s0:709:800
-  main 48 = s0:709:800
-  function f0 0 = s0:171:176
-  function f0 1 = s0:165:379
-  function f0 2 = s0:165:379
-  function f0 3 = s0:165:379
-  function f0 4 = s0:190:195
-  function f0 5 = s0:165:379
-  function f0 6 = s0:165:379
-  function f0 7 = s0:165:379
-  function f0 8 = s0:165:379
-  function f0 9 = s0:165:379
-  function f0 10 = s0:165:379
-  function f0 11 = s0:227:232
-  function f0 12 = s0:165:379
-  function f0 13 = s0:165:379
-  function f0 14 = s0:165:379
-  function f0 15 = s0:165:379
-  function f0 16 = s0:165:379
-  function f0 17 = s0:165:379
-  function f0 18 = s0:165:379
-  function f0 19 = s0:165:379
-  function f0 20 = s0:165:379
-  function f0 21 = s0:303:310
-  function f0 22 = s0:313:317
-  function f0 23 = s0:303:317
-  function f0 24 = s0:165:379
-  function f0 25 = s0:165:379
-  function f0 26 = s0:165:379
-  function f0 27 = s0:165:379
-  function f0 28 = s0:165:379
-  function f0 29 = s0:165:379
-  function f0 30 = s0:358:362
-  function f0 31 = s0:365:368
-  function f0 32 = s0:358:368
-  function f0 33 = s0:375:378
-  function f0 34 = s0:371:379
-  function f0 35 = s0:358:379
-  function f0 36 = s0:165:379
-  function f0 37 = s0:165:379
-  function f0 38 = s0:158:379
-  function f0 39 = s0:112:379
-  function f0 40 = s0:112:379
+  main 0 = s0:112:414
+  main 1 = s0:112:414
+  main 2 = s0:112:414
+  main 3 = s0:112:414
+  main 4 = s0:452:457
+  main 5 = s0:466:468
+  main 6 = s0:497:508
+  main 7 = s0:515:516
+  main 8 = s0:481:516
+  main 9 = s0:435:516
+  main 10 = s0:429:516
+  main 11 = s0:554:561
+  main 12 = s0:570:572
+  main 13 = s0:601:612
+  main 14 = s0:619:620
+  main 15 = s0:585:620
+  main 16 = s0:537:620
+  main 17 = s0:526:620
+  main 18 = s0:660:663
+  main 19 = s0:630:663
+  main 20 = s0:671:679
+  main 21 = s0:680:683
+  main 22 = s0:671:684
+  main 23 = s0:671:684
+  main 24 = s0:692:700
+  main 25 = s0:701:709
+  main 26 = s0:692:710
+  main 27 = s0:692:710
+  main 28 = s0:718:726
+  main 29 = s0:727:736
+  main 30 = s0:718:737
+  main 31 = s0:718:737
+  main 32 = s0:745:748
+  main 33 = s0:745:848
+  main 34 = s0:745:848
+  main 35 = s0:745:848
+  main 36 = s0:745:848
+  main 37 = s0:745:848
+  main 38 = s0:745:848
+  main 39 = s0:745:848
+  main 40 = s0:745:848
+  main 41 = s0:745:848
+  main 42 = s0:807:811
+  main 43 = s0:807:811
+  main 44 = s0:745:848
+  main 45 = s0:838:848
+  main 46 = s0:838:848
+  main 47 = s0:745:848
+  function f0 0 = s0:164:169
+  function f0 1 = s0:164:414
+  function f0 2 = s0:164:414
+  function f0 3 = s0:164:414
+  function f0 4 = s0:192:197
+  function f0 5 = s0:185:197
+  function f0 6 = s0:164:414
+  function f0 7 = s0:164:414
+  function f0 8 = s0:164:414
+  function f0 9 = s0:164:414
+  function f0 10 = s0:164:414
+  function f0 11 = s0:240:245
+  function f0 12 = s0:233:245
+  function f0 13 = s0:164:414
+  function f0 14 = s0:164:414
+  function f0 15 = s0:164:414
+  function f0 16 = s0:164:414
+  function f0 17 = s0:164:414
+  function f0 18 = s0:164:414
+  function f0 19 = s0:164:414
+  function f0 20 = s0:164:414
+  function f0 21 = s0:327:334
+  function f0 22 = s0:337:341
+  function f0 23 = s0:327:341
+  function f0 24 = s0:320:341
+  function f0 25 = s0:164:414
+  function f0 26 = s0:164:414
+  function f0 27 = s0:164:414
+  function f0 28 = s0:164:414
+  function f0 29 = s0:164:414
+  function f0 30 = s0:393:397
+  function f0 31 = s0:400:403
+  function f0 32 = s0:393:403
+  function f0 33 = s0:410:413
+  function f0 34 = s0:406:414
+  function f0 35 = s0:393:414
+  function f0 36 = s0:386:414
+  function f0 37 = s0:164:414
+  function f0 38 = s0:112:414
+  function f0 39 = s0:112:414

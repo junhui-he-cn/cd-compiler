@@ -5,4 +5,10 @@ Program
   Module 1 entry
     Import "lib.cd" as geo
     Let point = (construct geo.Point x: 1 y: 2)
-    Print (match point (arm geo.Point {x: 1} "one") (arm geo.Point {} "other"))
+    Match point
+      Arm geo.Point {x: 1}
+        Block
+          Print "one"
+      Arm geo.Point {}
+        Block
+          Print "other"

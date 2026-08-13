@@ -2,9 +2,21 @@ Program
   Enum Option<T> {Some(value: T), None}
   Enum List<T> {Nil, Cons(head: T, tail: List<T>)}
   Fun describe(value: Option<number>): string
-    Return (match value (arm Option.Some(value: numberValue) (+ "some:" (call str numberValue))) (arm Option.None "none"))
+    Match value
+      Arm Option.Some(value: numberValue)
+        Block
+          Return (+ "some:" (call str numberValue))
+      Arm Option.None
+        Block
+          Return "none"
   Fun sum(list: List<number>): number
-    Return (match list (arm List.Nil 0) (arm List.Cons(head: first, tail: rest) (+ first (call sum rest))))
+    Match list
+      Arm List.Nil
+        Block
+          Return 0
+      Arm List.Cons(head: first, tail: rest)
+        Block
+          Return (+ first (call sum rest))
   Let some: Option<number> = (member-call Option Some 7)
   Let none: Option<number> = (member-call Option None<number>)
   Let maybe: optional<Option<number>> = nil
@@ -12,5 +24,20 @@ Program
   Print (call describe some)
   Print (call describe none)
   Print (call sum (member-call List Cons 1 (member-call List Cons 2 (member-call List Nil<number>))))
-  Print (match maybe (arm nil "nil") (arm Option.Some(value) "some") (arm Option.None "none"))
-  Print (match inferred (arm Option.Some(value) value) (arm Option.None "none"))
+  Match maybe
+    Arm nil
+      Block
+        Print "nil"
+    Arm Option.Some(value)
+      Block
+        Print "some"
+    Arm Option.None
+      Block
+        Print "none"
+  Match inferred
+    Arm Option.Some(value)
+      Block
+        Print value
+    Arm Option.None
+      Block
+        Print "none"

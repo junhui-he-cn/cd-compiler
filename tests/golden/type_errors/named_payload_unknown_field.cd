@@ -1,6 +1,6 @@
 enum Result { Ok(value: number), Empty }
 let result = Result.Ok(1);
-let label = match result {
-  Result.Ok(missing: value) => value,
-  Result.Empty => 0,
-};
+match result {
+  Result.Ok(missing: value) => { print value; }
+  Result.Empty => { print 0; }
+}

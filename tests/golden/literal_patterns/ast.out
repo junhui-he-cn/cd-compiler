@@ -46,7 +46,40 @@ Program
   Print (call describeResult (member-call Result Number 7))
   Print (call describeResult (member-call Result Text ""))
   Print (call describeResult nil)
-  Print (match 1 (arm 0 "zero") (arm 1 "one") (arm _ "many"))
-  Print (match true (arm false "no") (arm true "yes"))
-  Print (match "ok" (arm "" "empty") (arm "ok" "ok") (arm _ "other"))
-  Print (match maybe (arm nil "nil") (arm true "true") (arm false "false"))
+  Match 1
+    Arm 0
+      Block
+        Print "zero"
+    Arm 1
+      Block
+        Print "one"
+    Arm _
+      Block
+        Print "many"
+  Match true
+    Arm false
+      Block
+        Print "no"
+    Arm true
+      Block
+        Print "yes"
+  Match "ok"
+    Arm ""
+      Block
+        Print "empty"
+    Arm "ok"
+      Block
+        Print "ok"
+    Arm _
+      Block
+        Print "other"
+  Match maybe
+    Arm nil
+      Block
+        Print "nil"
+    Arm true
+      Block
+        Print "true"
+    Arm false
+      Block
+        Print "false"

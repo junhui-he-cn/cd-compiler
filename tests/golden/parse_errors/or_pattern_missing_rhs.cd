@@ -1,4 +1,4 @@
-print match true {
-  true | => "bad",
-  false => "false",
-};
+match true {
+  false => { print "false"; }
+  true | => { print "bad"; }
+}

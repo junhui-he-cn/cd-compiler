@@ -1,10 +1,10 @@
 import "../../data_structures.cd" as ds;
 
 fun describe(value: ds.Option<number>): string {
-  return match value {
-    ds.Option.None => "none",
-    ds.Option.Some(number) => "some:" + str(number),
-  };
+  match value {
+    ds.Option.None => { return "none"; }
+    ds.Option.Some(number) => { return "some:" + str(number); }
+  }
 }
 
 let buffer = ds.newRingBuffer<number>(3);

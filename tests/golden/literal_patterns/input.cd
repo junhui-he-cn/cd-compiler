@@ -37,22 +37,22 @@ print describeBool(false);
 print describeResult(Result.Number(7));
 print describeResult(Result.Text(""));
 print describeResult(nil);
-print match 1 {
-  0 => "zero",
-  1 => "one",
-  _ => "many",
-};
-print match true {
-  false => "no",
-  true => "yes",
-};
-print match "ok" {
-  "" => "empty",
-  "ok" => "ok",
-  _ => "other",
-};
-print match maybe {
-  nil => "nil",
-  true => "true",
-  false => "false",
-};
+match 1 {
+  0 => { print "zero"; }
+  1 => { print "one"; }
+  _ => { print "many"; }
+}
+match true {
+  false => { print "no"; }
+  true => { print "yes"; }
+}
+match "ok" {
+  "" => { print "empty"; }
+  "ok" => { print "ok"; }
+  _ => { print "other"; }
+}
+match maybe {
+  nil => { print "nil"; }
+  true => { print "true"; }
+  false => { print "false"; }
+}

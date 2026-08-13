@@ -20,83 +20,80 @@ names:
   n10 = "Pair"
   n11 = "Empty"
 
-main registers=15:
+main registers=14:
   r0 = constant c0
   r1 = constant c1
   r2 = variant n0.n1 [r0, r1]
   store_var n2, r2
   r3 = load_var n3
-  r5 = variant_tag r3 n4.n5
-  jump_if_false r5, 18
-  r6 = variant_field r3 1
-  r7 = variant_field r3 0
-  store_var n6, r6
-  store_var n7, r7
-  r8 = load_var n8
-  r9 = constant c2
-  r10 = multiply r8, r9
-  r11 = load_var n9
-  r12 = add r10, r11
-  r4 = move r12
+  r4 = variant_tag r3 n4.n5
+  jump_if_false r4, 18
+  r5 = variant_field r3 1
+  r6 = variant_field r3 0
+  store_var n6, r5
+  store_var n7, r6
+  r7 = load_var n8
+  r8 = constant c2
+  r9 = multiply r7, r8
+  r10 = load_var n9
+  r11 = add r9, r10
+  print r11
   jump 23
-  r13 = variant_tag r3 n10.n11
-  jump_if_false r13, 23
-  r14 = constant c3
-  r4 = move r14
+  r12 = variant_tag r3 n10.n11
+  jump_if_false r12, 23
+  r13 = constant c3
+  print r13
   jump 23
-  print r4
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/named_payload_fields/input.cd" text="enum Pair { Values(left: number, right: number), Empty }\nlet pair = Pair.Values(2, 4);\nprint match pair {\n  Pair.Values(right: rightValue, left: leftValue) => rightValue * 10 + leftValue,\n  Pair.Empty => 0,\n};\n"
+  s0 path="tests/bytecode_artifacts/named_payload_fields/input.cd" text="enum Pair { Values(left: number, right: number), Empty }\nlet pair = Pair.Values(2, 4);\nmatch pair {\n  Pair.Values(right: rightValue, left: leftValue) => { print rightValue * 10 + leftValue; }\n  Pair.Empty => { print 0; }\n}\n"
 
 debug_locations:
   main 0 = s0:2:24
   main 1 = s0:2:27
   main 2 = s0:2:12
   main 3 = s0:2:1
-  main 4 = s0:3:13
-  main 5 = s0:3:7
-  main 6 = s0:3:7
-  main 7 = s0:3:7
-  main 8 = s0:3:7
-  main 9 = s0:3:7
-  main 10 = s0:3:7
-  main 11 = s0:4:54
-  main 12 = s0:4:67
-  main 13 = s0:4:54
-  main 14 = s0:4:72
-  main 15 = s0:4:54
-  main 16 = s0:3:7
-  main 17 = s0:3:7
-  main 18 = s0:3:7
-  main 19 = s0:3:7
-  main 20 = s0:5:17
-  main 21 = s0:3:7
-  main 22 = s0:3:7
-  main 23 = s0:3:1
+  main 4 = s0:3:7
+  main 5 = s0:3:1
+  main 6 = s0:3:1
+  main 7 = s0:3:1
+  main 8 = s0:3:1
+  main 9 = s0:3:1
+  main 10 = s0:3:1
+  main 11 = s0:4:62
+  main 12 = s0:4:75
+  main 13 = s0:4:62
+  main 14 = s0:4:80
+  main 15 = s0:4:62
+  main 16 = s0:4:56
+  main 17 = s0:3:1
+  main 18 = s0:3:1
+  main 19 = s0:3:1
+  main 20 = s0:5:25
+  main 21 = s0:5:19
+  main 22 = s0:3:1
 
 debug_ranges:
   main 0 = s0:80:81
   main 1 = s0:83:84
   main 2 = s0:68:85
   main 3 = s0:61:85
-  main 4 = s0:99:103
-  main 5 = s0:93:205
-  main 6 = s0:93:205
-  main 7 = s0:93:205
-  main 8 = s0:93:205
-  main 9 = s0:93:205
-  main 10 = s0:93:205
-  main 11 = s0:159:169
-  main 12 = s0:172:174
-  main 13 = s0:159:174
-  main 14 = s0:177:186
-  main 15 = s0:159:186
-  main 16 = s0:93:205
-  main 17 = s0:93:205
-  main 18 = s0:93:205
-  main 19 = s0:93:205
-  main 20 = s0:204:205
-  main 21 = s0:93:205
-  main 22 = s0:93:205
-  main 23 = s0:93:205
+  main 4 = s0:93:97
+  main 5 = s0:93:217
+  main 6 = s0:93:217
+  main 7 = s0:93:217
+  main 8 = s0:93:217
+  main 9 = s0:93:217
+  main 10 = s0:93:217
+  main 11 = s0:161:171
+  main 12 = s0:174:176
+  main 13 = s0:161:176
+  main 14 = s0:179:188
+  main 15 = s0:161:188
+  main 16 = s0:161:188
+  main 17 = s0:93:217
+  main 18 = s0:93:217
+  main 19 = s0:93:217
+  main 20 = s0:216:217
+  main 21 = s0:216:217
+  main 22 = s0:93:217

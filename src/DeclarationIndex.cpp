@@ -749,21 +749,6 @@ private:
             endScope();
             return;
         }
-        if (const auto* match = dynamic_cast<const MatchExpr*>(expression)) {
-            index_.matchExpressionNodes_.insert(match);
-            collectExpression(match->value.get());
-            for (const MatchExprArm& arm : match->arms) {
-                beginScope(nullptr);
-                std::unordered_map<std::string, DeclarationId> bindings;
-                collectPattern(arm.pattern.get(), bindings);
-                if (arm.guard) {
-                    index_.patternGuardNodes_.insert(arm.guard.get());
-                }
-                collectExpression(arm.guard.get());
-                collectExpression(arm.value.get());
-                endScope();
-            }
-        }
     }
 
     const VariableExpr* directCallee(const Expr* expression) const
@@ -1186,12 +1171,6 @@ const MatchCoverageRecord* DeclarationIndex::matchCoverage(const MatchStmt& matc
     return found == matchStatementCoverage_.end() ? nullptr : &found->second;
 }
 
-const MatchCoverageRecord* DeclarationIndex::matchCoverage(const MatchExpr& match) const
-{
-    const auto found = matchExpressionCoverage_.find(&match);
-    return found == matchExpressionCoverage_.end() ? nullptr : &found->second;
-}
-
 const IndexOperationRecord* DeclarationIndex::indexOperation(const Expr& expression) const
 {
     const auto found = indexOperations_.find(&expression);
@@ -1323,11 +1302,6 @@ void DeclarationIndex::recordPatternGuard(const Expr& guard, PatternGuardRecord 
 void DeclarationIndex::recordMatchCoverage(const MatchStmt& match, MatchCoverageRecord record)
 {
     matchStatementCoverage_.insert_or_assign(&match, std::move(record));
-}
-
-void DeclarationIndex::recordMatchCoverage(const MatchExpr& match, MatchCoverageRecord record)
-{
-    matchExpressionCoverage_.insert_or_assign(&match, std::move(record));
 }
 
 void DeclarationIndex::recordIndexOperation(const Expr& expression, IndexOperationRecord record)
@@ -1792,12 +1766,6 @@ std::size_t DeclarationIndex::validateMetadata() const
             ++mismatches;
         }
     }
-    for (const MatchExpr* match : matchExpressionNodes_) {
-        if (!matchCoverage(*match)) {
-            ++mismatches;
-        }
-    }
-
     for (const FieldAccessExpr* expression : fieldAccesses_) {
         requireTypedExpression(*expression);
     }

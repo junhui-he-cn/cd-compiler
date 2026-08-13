@@ -17,48 +17,46 @@ IR
 0015  v10 = call v8(v9)
 0016  print v10
 0017  v11 = load_var @22 some#4
-0018  v13 = constant #10 nil
-0019  v14 = equal v11, v13
-0020  jump_if_false v14, 0024
-0021  v15 = constant #11 "nil"
-0022  v12 = copy v15
+0018  v12 = constant #10 nil
+0019  v13 = equal v11, v12
+0020  jump_if_false v13, 0024
+0021  v14 = constant #11 "nil"
+0022  print v14
 0023  jump 0046
-0024  v16 = variant_tag v11 Option.Some
-0025  jump_if_false v16, 0035
-0026  v17 = variant_field v11[0]
-0027  store_var @25 value#6, v17
-0028  v18 = load_var @26 value#6
-0029  v19 = constant #12 10
-0030  v20 = greater v18, v19
-0031  jump_if_false v20, 0035
-0032  v21 = constant #13 "large"
-0033  v12 = copy v21
+0024  v15 = variant_tag v11 Option.Some
+0025  jump_if_false v15, 0035
+0026  v16 = variant_field v11[0]
+0027  store_var @25 value#6, v16
+0028  v17 = load_var @26 value#6
+0029  v18 = constant #12 10
+0030  v19 = greater v17, v18
+0031  jump_if_false v19, 0035
+0032  v20 = constant #13 "large"
+0033  print v20
 0034  jump 0046
-0035  v22 = variant_tag v11 Option.Some
-0036  jump_if_false v22, 0041
-0037  v23 = variant_field v11[0]
-0038  v24 = constant #14 "some"
-0039  v12 = copy v24
+0035  v21 = variant_tag v11 Option.Some
+0036  jump_if_false v21, 0041
+0037  v22 = variant_field v11[0]
+0038  v23 = constant #14 "some"
+0039  print v23
 0040  jump 0046
-0041  v25 = variant_tag v11 Option.None
-0042  jump_if_false v25, 0046
-0043  v26 = constant #15 "none"
-0044  v12 = copy v26
+0041  v24 = variant_tag v11 Option.None
+0042  jump_if_false v24, 0046
+0043  v25 = constant #15 "none"
+0044  print v25
 0045  jump 0046
-0046  print v12
-0047  v27 = load_var @31 none#5
-0048  v29 = constant #16 nil
-0049  v30 = equal v27, v29
-0050  jump_if_false v30, 0056
-0051  v31 = constant #17 true
-0052  jump_if_false v31, 0056
-0053  v32 = constant #18 "guarded nil"
-0054  v28 = copy v32
-0055  jump 0059
-0056  v33 = constant #19 "fallback"
-0057  v28 = copy v33
-0058  jump 0059
-0059  print v28
+0046  v26 = load_var @31 none#5
+0047  v27 = constant #16 nil
+0048  v28 = equal v26, v27
+0049  jump_if_false v28, 0055
+0050  v29 = constant #17 true
+0051  jump_if_false v29, 0055
+0052  v30 = constant #18 "guarded nil"
+0053  print v30
+0054  jump 0058
+0055  v31 = constant #19 "fallback"
+0056  print v31
+0057  jump 0058
 
 function $0 describe(value#1)
 0000  v0 = load_var @1 value#1

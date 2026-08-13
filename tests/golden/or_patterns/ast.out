@@ -1,14 +1,38 @@
 Program
   Enum Shape {Point(x: number), Line(x: number, y: number), Empty}
   Fun numberLabel(value: number): string
-    Return (match value (arm (or 0 1) "small") (arm _ "other"))
+    Match value
+      Arm (or 0 1)
+        Block
+          Return "small"
+      Arm _
+        Block
+          Return "other"
   Fun shapeLabel(value: Shape): string
-    Return (match value (arm (or Shape.Point(x) Shape.Line(x, _)) if (> x 3) (+ "large:" (call str x))) (arm (or Shape.Point(_) Shape.Line(_, _)) "small") (arm Shape.Empty "empty"))
+    Match value
+      Arm (or Shape.Point(x) Shape.Line(x, _)) if (> x 3)
+        Block
+          Return (+ "large:" (call str x))
+      Arm (or Shape.Point(_) Shape.Line(_, _))
+        Block
+          Return "small"
+      Arm Shape.Empty
+        Block
+          Return "empty"
   Let maybe: optional<bool> = false
   Print (call numberLabel 1)
   Print (call numberLabel 8)
   Print (call shapeLabel (member-call Shape Point 3))
   Print (call shapeLabel (member-call Shape Line 4 10))
   Print (call shapeLabel (member-call Shape Empty))
-  Print (match maybe (arm (or nil false) "off") (arm true "on"))
-  Print (match true (arm (or true false) "bool"))
+  Match maybe
+    Arm (or nil false)
+      Block
+        Print "off"
+    Arm true
+      Block
+        Print "on"
+  Match true
+    Arm (or true false)
+      Block
+        Print "bool"

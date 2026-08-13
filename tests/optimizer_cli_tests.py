@@ -97,7 +97,7 @@ def main() -> int:
     vm = Path(sys.argv[2]).resolve()
     root = Path(__file__).resolve().parent.parent
     logical = root / "tests" / "golden" / "logical_ir" / "input.cd"
-    match = root / "tests" / "golden" / "match_expression" / "input.cd"
+    match = root / "tests" / "golden" / "match_guards" / "input.cd"
     imported = root / "tests" / "golden" / "import_struct_operator_direct" / "input.cd"
 
     baseline = run([str(compiler), "--ir", str(logical)])
@@ -213,7 +213,7 @@ def main() -> int:
 
         match_artifact = root / "match.cdbc"
         emit(compiler, match, match_artifact, "1")
-        if rust_run(vm, match_artifact) != "ok:7\n3\nok\n":
+        if rust_run(vm, match_artifact) != "positive\nzero\nempty\npositive\ntruthy\n":
             raise AssertionError("O1 exhaustive-match artifact changed runtime output")
 
         products = root / "products"

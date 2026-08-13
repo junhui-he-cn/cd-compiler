@@ -1,4 +1,4 @@
-main registers=34
+main registers=32
 0000  b0 = constant #0 nil
 0001  store_var @0 describe#0, b0
 0002  b1 = make_function $0 describe/1
@@ -17,48 +17,46 @@ main registers=34
 0015  b10 = call b8(b9)
 0016  print b10
 0017  b11 = load_var @22 some#4
-0018  b13 = constant #10 nil
-0019  b14 = equal b11, b13
-0020  jump_if_false b14, 0024
-0021  b15 = constant #11 "nil"
-0022  b12 = move b15
+0018  b12 = constant #10 nil
+0019  b13 = equal b11, b12
+0020  jump_if_false b13, 0024
+0021  b14 = constant #11 "nil"
+0022  print b14
 0023  jump 0046
-0024  b16 = variant_tag b11  @23 Option. @24 Some
-0025  jump_if_false b16, 0035
-0026  b17 = variant_field b11[0]
-0027  store_var @25 value#6, b17
-0028  b18 = load_var @26 value#6
-0029  b19 = constant #12 10
-0030  b20 = greater b18, b19
-0031  jump_if_false b20, 0035
-0032  b21 = constant #13 "large"
-0033  b12 = move b21
+0024  b15 = variant_tag b11  @23 Option. @24 Some
+0025  jump_if_false b15, 0035
+0026  b16 = variant_field b11[0]
+0027  store_var @25 value#6, b16
+0028  b17 = load_var @26 value#6
+0029  b18 = constant #12 10
+0030  b19 = greater b17, b18
+0031  jump_if_false b19, 0035
+0032  b20 = constant #13 "large"
+0033  print b20
 0034  jump 0046
-0035  b22 = variant_tag b11  @27 Option. @28 Some
-0036  jump_if_false b22, 0041
-0037  b23 = variant_field b11[0]
-0038  b24 = constant #14 "some"
-0039  b12 = move b24
+0035  b21 = variant_tag b11  @27 Option. @28 Some
+0036  jump_if_false b21, 0041
+0037  b22 = variant_field b11[0]
+0038  b23 = constant #14 "some"
+0039  print b23
 0040  jump 0046
-0041  b25 = variant_tag b11  @29 Option. @30 None
-0042  jump_if_false b25, 0046
-0043  b26 = constant #15 "none"
-0044  b12 = move b26
+0041  b24 = variant_tag b11  @29 Option. @30 None
+0042  jump_if_false b24, 0046
+0043  b25 = constant #15 "none"
+0044  print b25
 0045  jump 0046
-0046  print b12
-0047  b27 = load_var @31 none#5
-0048  b29 = constant #16 nil
-0049  b30 = equal b27, b29
-0050  jump_if_false b30, 0056
-0051  b31 = constant #17 true
-0052  jump_if_false b31, 0056
-0053  b32 = constant #18 "guarded nil"
-0054  b28 = move b32
-0055  jump 0059
-0056  b33 = constant #19 "fallback"
-0057  b28 = move b33
-0058  jump 0059
-0059  print b28
+0046  b26 = load_var @31 none#5
+0047  b27 = constant #16 nil
+0048  b28 = equal b26, b27
+0049  jump_if_false b28, 0055
+0050  b29 = constant #17 true
+0051  jump_if_false b29, 0055
+0052  b30 = constant #18 "guarded nil"
+0053  print b30
+0054  jump 0058
+0055  b31 = constant #19 "fallback"
+0056  print b31
+0057  jump 0058
 
 function $0 describe/1 registers=19
 0000  b0 = load_var @1 value#1

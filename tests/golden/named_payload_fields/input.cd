@@ -14,26 +14,26 @@ enum Box {
 }
 
 fun pairScore(pair: Pair): number {
-  return match pair {
-    Pair.Values(right: rightValue, left: leftValue) => rightValue * 10 + leftValue,
-    Pair.Empty => 0,
-  };
+  match pair {
+    Pair.Values(right: rightValue, left: leftValue) => { return rightValue * 10 + leftValue; }
+    Pair.Empty => { return 0; }
+  }
 }
 
 fun describe(result: Result): string {
-  return match result {
-    Result.Ok(value: numberValue) => "ok:" + str(numberValue),
-    Result.Err(message: text) => "err:" + text,
-    Result.Empty => "empty",
-  };
+  match result {
+    Result.Ok(value: numberValue) => { return "ok:" + str(numberValue); }
+    Result.Err(message: text) => { return "err:" + text; }
+    Result.Empty => { return "empty"; }
+  }
 }
 
 fun unwrap(box: Box): string {
-  return match box {
-    Box.Wrap(item: Result.Ok(value: numberValue)) => str(numberValue),
-    Box.Wrap(item: Result.Err(message: text)) => text,
-    Box.Wrap(item: Result.Empty) => "empty",
-  };
+  match box {
+    Box.Wrap(item: Result.Ok(value: numberValue)) => { return str(numberValue); }
+    Box.Wrap(item: Result.Err(message: text)) => { return text; }
+    Box.Wrap(item: Result.Empty) => { return "empty"; }
+  }
 }
 
 print pairScore(Pair.Values(2, 4));

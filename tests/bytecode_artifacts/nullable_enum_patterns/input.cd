@@ -16,13 +16,13 @@ let some: optional<Option> = Option.Some(7);
 let none: optional<Option> = nil;
 print describe(some);
 print describe(none);
-print match some {
-  nil => "nil",
-  Option.Some(value) if value > 10 => "large",
-  Option.Some(_) => "some",
-  Option.None => "none",
-};
-print match none {
-  nil if true => "guarded nil",
-  _ => "fallback",
-};
+match some {
+  nil => { print "nil"; }
+  Option.Some(value) if value > 10 => { print "large"; }
+  Option.Some(_) => { print "some"; }
+  Option.None => { print "none"; }
+}
+match none {
+  nil if true => { print "guarded nil"; }
+  _ => { print "fallback"; }
+}

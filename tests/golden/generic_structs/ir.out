@@ -36,15 +36,14 @@ IR
 0034  v24 = native_call @28 typeOf(v23)
 0035  print v24
 0036  v25 = load_var @29 explicit#1
-0037  v27 = field v25.value
-0038  v28 = constant #6 2
-0039  v29 = equal v27, v28
-0040  jump_if_false v29, 0044
-0041  v30 = constant #7 "two"
-0042  v26 = copy v30
+0037  v26 = field v25.value
+0038  v27 = constant #6 2
+0039  v28 = equal v26, v27
+0040  jump_if_false v28, 0044
+0041  v29 = constant #7 "two"
+0042  print v29
 0043  jump 0048
-0044  v31 = field v25.value
-0045  v32 = constant #8 "other"
-0046  v26 = copy v32
+0044  v30 = field v25.value
+0045  v31 = constant #8 "other"
+0046  print v31
 0047  jump 0048
-0048  print v26

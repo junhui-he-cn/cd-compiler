@@ -1,6 +1,0 @@
-enum Option { Some(number), None }
-let value = Option.Some(4);
-print match value {
-  Option.Some(number) => number + 1,
-  Option.None => 0,
-};

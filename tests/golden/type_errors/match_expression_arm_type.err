@@ -1,3 +1,0 @@
-Type error at <repo>/tests/golden/type_errors/match_expression_arm_type.cd:5:16: match arm result expects number, got string
-    Result.Empty => "empty",
-                 ^

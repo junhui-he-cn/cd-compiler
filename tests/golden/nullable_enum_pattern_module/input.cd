@@ -1,11 +1,11 @@
 import "./lib.cd" as lib;
 
 fun render(value: optional<lib.Outcome>): string {
-  return match value {
-    nil => "nil",
-    lib.Outcome.Good(number) => "good:" + str(number),
-    lib.Outcome.Bad(message) => "bad:" + message,
-  };
+  match value {
+    nil => { return "nil"; }
+    lib.Outcome.Good(number) => { return "good:" + str(number); }
+    lib.Outcome.Bad(message) => { return "bad:" + message; }
+  }
 }
 
 print render(nil);

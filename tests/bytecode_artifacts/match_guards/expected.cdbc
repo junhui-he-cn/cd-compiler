@@ -21,92 +21,89 @@ names:
   n11 = "Option"
   n12 = "None"
 
-main registers=15:
+main registers=14:
   r0 = constant c0
   r1 = variant n0.n1 [r0]
   store_var n2, r1
   r2 = load_var n3
-  r4 = variant_tag r2 n4.n5
-  jump_if_false r4, 15
-  r5 = variant_field r2 0
-  store_var n6, r5
-  r6 = load_var n7
-  r7 = constant c1
-  r8 = greater r6, r7
-  jump_if_false r8, 15
-  r9 = load_var n8
-  r3 = move r9
+  r3 = variant_tag r2 n4.n5
+  jump_if_false r3, 15
+  r4 = variant_field r2 0
+  store_var n6, r4
+  r5 = load_var n7
+  r6 = constant c1
+  r7 = greater r5, r6
+  jump_if_false r7, 15
+  r8 = load_var n8
+  print r8
   jump 26
-  r10 = variant_tag r2 n9.n10
-  jump_if_false r10, 21
-  r11 = variant_field r2 0
-  r12 = constant c2
-  r3 = move r12
+  r9 = variant_tag r2 n9.n10
+  jump_if_false r9, 21
+  r10 = variant_field r2 0
+  r11 = constant c2
+  print r11
   jump 26
-  r13 = variant_tag r2 n11.n12
-  jump_if_false r13, 26
-  r14 = constant c3
-  r3 = move r14
+  r12 = variant_tag r2 n11.n12
+  jump_if_false r12, 26
+  r13 = constant c3
+  print r13
   jump 26
-  print r3
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/match_guards/input.cd" text="enum Option { Some(number), None }\nlet value = Option.Some(4);\nprint match value {\n  Option.Some(number) if number > 4 => number,\n  Option.Some(_) => 0,\n  Option.None => 0,\n};\n"
+  s0 path="tests/bytecode_artifacts/match_guards/input.cd" text="enum Option { Some(number), None }\nlet value = Option.Some(4);\nmatch value {\n  Option.Some(number) if number > 4 => { print number; }\n  Option.Some(_) => { print 0; }\n  Option.None => { print 0; }\n}\n"
 
 debug_locations:
   main 0 = s0:2:25
   main 1 = s0:2:13
   main 2 = s0:2:1
-  main 3 = s0:3:13
-  main 4 = s0:3:7
-  main 5 = s0:3:7
-  main 6 = s0:3:7
-  main 7 = s0:3:7
+  main 3 = s0:3:7
+  main 4 = s0:3:1
+  main 5 = s0:3:1
+  main 6 = s0:3:1
+  main 7 = s0:3:1
   main 8 = s0:4:26
   main 9 = s0:4:35
   main 10 = s0:4:26
-  main 11 = s0:3:7
-  main 12 = s0:4:40
-  main 13 = s0:3:7
-  main 14 = s0:3:7
-  main 15 = s0:3:7
-  main 16 = s0:3:7
-  main 17 = s0:3:7
-  main 18 = s0:5:21
-  main 19 = s0:3:7
-  main 20 = s0:3:7
-  main 21 = s0:3:7
-  main 22 = s0:3:7
-  main 23 = s0:6:18
-  main 24 = s0:3:7
-  main 25 = s0:3:7
-  main 26 = s0:3:1
+  main 11 = s0:3:1
+  main 12 = s0:4:48
+  main 13 = s0:4:42
+  main 14 = s0:3:1
+  main 15 = s0:3:1
+  main 16 = s0:3:1
+  main 17 = s0:3:1
+  main 18 = s0:5:29
+  main 19 = s0:5:23
+  main 20 = s0:3:1
+  main 21 = s0:3:1
+  main 22 = s0:3:1
+  main 23 = s0:6:26
+  main 24 = s0:6:20
+  main 25 = s0:3:1
 
 debug_ranges:
   main 0 = s0:59:60
   main 1 = s0:47:61
   main 2 = s0:39:61
-  main 3 = s0:75:80
-  main 4 = s0:69:171
-  main 5 = s0:69:171
-  main 6 = s0:69:171
-  main 7 = s0:69:171
-  main 8 = s0:108:114
-  main 9 = s0:117:118
-  main 10 = s0:108:118
-  main 11 = s0:69:171
-  main 12 = s0:122:128
-  main 13 = s0:69:171
-  main 14 = s0:69:171
-  main 15 = s0:69:171
-  main 16 = s0:69:171
-  main 17 = s0:69:171
-  main 18 = s0:150:151
-  main 19 = s0:69:171
-  main 20 = s0:69:171
-  main 21 = s0:69:171
-  main 22 = s0:69:171
-  main 23 = s0:170:171
-  main 24 = s0:69:171
-  main 25 = s0:69:171
-  main 26 = s0:69:171
+  main 3 = s0:69:74
+  main 4 = s0:69:193
+  main 5 = s0:69:193
+  main 6 = s0:69:193
+  main 7 = s0:69:193
+  main 8 = s0:102:108
+  main 9 = s0:111:112
+  main 10 = s0:102:112
+  main 11 = s0:69:193
+  main 12 = s0:124:130
+  main 13 = s0:124:130
+  main 14 = s0:69:193
+  main 15 = s0:69:193
+  main 16 = s0:69:193
+  main 17 = s0:69:193
+  main 18 = s0:162:163
+  main 19 = s0:162:163
+  main 20 = s0:69:193
+  main 21 = s0:69:193
+  main 22 = s0:69:193
+  main 23 = s0:192:193
+  main 24 = s0:192:193
+  main 25 = s0:69:193

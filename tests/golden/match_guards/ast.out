@@ -17,5 +17,23 @@ Program
   Print (call describe positive)
   Print (call describe zero)
   Print (call describe empty)
-  Print (match positive (arm Result.Ok(value) if (> value 10) "large") (arm Result.Ok(value) if (> value 0) "positive") (arm Result.Ok(_) "zero") (arm Result.Empty "empty"))
-  Print (match empty (arm Result.Empty if 1 "truthy") (arm _ "fallback"))
+  Match positive
+    Arm Result.Ok(value) if (> value 10)
+      Block
+        Print "large"
+    Arm Result.Ok(value) if (> value 0)
+      Block
+        Print "positive"
+    Arm Result.Ok(_)
+      Block
+        Print "zero"
+    Arm Result.Empty
+      Block
+        Print "empty"
+  Match empty
+    Arm Result.Empty if 1
+      Block
+        Print "truthy"
+    Arm _
+      Block
+        Print "fallback"

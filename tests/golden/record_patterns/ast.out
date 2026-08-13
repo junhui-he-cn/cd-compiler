@@ -2,11 +2,29 @@ Program
   Struct Address {city: string, zip: number}
   Struct Person {name: string, age: number, address: Address}
   Fun describe(value: optional<Person>): string
-    Return (match value (arm nil "nil") (arm Person {name: "Ada"} "ada") (arm Person {address: Address {city: "Hong Kong"}, name: name} (+ "city:" name)) (arm Person {age: age, name: name} (+ (+ name ":") (call str age))))
+    Match value
+      Arm nil
+        Block
+          Return "nil"
+      Arm Person {name: "Ada"}
+        Block
+          Return "ada"
+      Arm Person {address: Address {city: "Hong Kong"}, name: name}
+        Block
+          Return (+ "city:" name)
+      Arm Person {age: age, name: name}
+        Block
+          Return (+ (+ name ":") (call str age))
   Let ada = (construct Person name: "Ada" age: 36 address: (construct Address city: "Cambridge" zip: 1))
   Let hongKong = (construct Person name: "Grace" age: 40 address: (construct Address city: "Hong Kong" zip: 2))
   Let nilPerson: optional<Person> = nil
   Print (call describe ada)
   Print (call describe hongKong)
   Print (call describe nilPerson)
-  Print (match ada (arm (or Person {name: "Ada"} Person {age: 0}) "or") (arm Person {} "fallback"))
+  Match ada
+    Arm (or Person {name: "Ada"} Person {age: 0})
+      Block
+        Print "or"
+    Arm Person {}
+      Block
+        Print "fallback"

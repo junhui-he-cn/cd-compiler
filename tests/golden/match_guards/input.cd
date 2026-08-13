@@ -14,13 +14,13 @@ let empty = Result.Empty();
 print describe(positive);
 print describe(zero);
 print describe(empty);
-print match positive {
-  Result.Ok(value) if value > 10 => "large",
-  Result.Ok(value) if value > 0 => "positive",
-  Result.Ok(_) => "zero",
-  Result.Empty => "empty",
-};
-print match empty {
-  Result.Empty if 1 => "truthy",
-  _ => "fallback",
-};
+match positive {
+  Result.Ok(value) if value > 10 => { print "large"; }
+  Result.Ok(value) if value > 0 => { print "positive"; }
+  Result.Ok(_) => { print "zero"; }
+  Result.Empty => { print "empty"; }
+}
+match empty {
+  Result.Empty if 1 => { print "truthy"; }
+  _ => { print "fallback"; }
+}

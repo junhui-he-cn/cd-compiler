@@ -272,9 +272,9 @@ void test_declaration_index()
         "  return local;\n"
         "}\n"
         "fun choose(value: Choice): number {\n"
-        "  return match value {\n"
-        "    Choice.Left(number) | Choice.Right(number) => number,\n"
-        "  };\n"
+        "  match value {\n"
+        "    Choice.Left(number) | Choice.Right(number) => { return number; }\n"
+        "  }\n"
         "}\n"
         "let x = 1;\n"
         "let result = Result.Ok(1);\n"
@@ -403,8 +403,7 @@ void test_declaration_index()
     assert(directTarget->kind == CallTargetKind::Direct);
     assert(directTarget->target.declarationId == index.declaration(*function)->declarationId);
 
-    const auto* chooseMatch = dynamic_cast<const MatchExpr*>(
-        dynamic_cast<const ReturnStmt*>(choose->body.front().get())->value.get());
+    const auto* chooseMatch = dynamic_cast<const MatchStmt*>(choose->body.front().get());
     const auto* orPattern = chooseMatch && !chooseMatch->arms.empty()
         ? dynamic_cast<const OrPattern*>(chooseMatch->arms.front().pattern.get())
         : nullptr;
@@ -967,11 +966,11 @@ void test_literal_pattern_metadata()
 {
     std::istringstream input(
         "fun choose(value: optional<bool>): number {\n"
-        "  return match value {\n"
-        "    nil => 0,\n"
-        "    true => 1,\n"
-        "    false => 2,\n"
-        "  };\n"
+        "  match value {\n"
+        "    nil => { return 0; }\n"
+        "    true => { return 1; }\n"
+        "    false => { return 2; }\n"
+        "  }\n"
         "}\n"
         "print choose(nil);\n");
     FrontendSession frontend;
@@ -979,10 +978,7 @@ void test_literal_pattern_metadata()
 
     const auto* function = dynamic_cast<const FunctionStmt*>(entryModule(program).statements[0].get());
     assert(function != nullptr && !function->body.empty());
-    const auto* returnStatement = dynamic_cast<const ReturnStmt*>(function->body.front().get());
-    const auto* match = returnStatement
-        ? dynamic_cast<const MatchExpr*>(returnStatement->value.get())
-        : nullptr;
+    const auto* match = dynamic_cast<const MatchStmt*>(function->body.front().get());
     assert(match != nullptr && match->arms.size() == 3);
     const auto* nilPattern = dynamic_cast<const LiteralPattern*>(match->arms[0].pattern.get());
     const auto* truePattern = dynamic_cast<const LiteralPattern*>(match->arms[1].pattern.get());
@@ -1019,11 +1015,11 @@ void test_variant_pattern_metadata()
         "  Empty,\n"
         "}\n"
         "fun choose(value: optional<Result<number>>): number {\n"
-        "  return match value {\n"
-        "    nil => 0,\n"
-        "    Result.Ok(tag: label, value: numberValue) => numberValue,\n"
-        "    Result.Empty => 0,\n"
-        "  };\n"
+        "  match value {\n"
+        "    nil => { return 0; }\n"
+        "    Result.Ok(tag: label, value: numberValue) => { return numberValue; }\n"
+        "    Result.Empty => { return 0; }\n"
+        "  }\n"
         "}\n"
         "print choose(nil);\n");
     FrontendSession frontend;
@@ -1031,10 +1027,7 @@ void test_variant_pattern_metadata()
 
     const auto* function = dynamic_cast<const FunctionStmt*>(entryModule(program).statements[1].get());
     assert(function != nullptr && !function->body.empty());
-    const auto* returnStatement = dynamic_cast<const ReturnStmt*>(function->body.front().get());
-    const auto* match = returnStatement
-        ? dynamic_cast<const MatchExpr*>(returnStatement->value.get())
-        : nullptr;
+    const auto* match = dynamic_cast<const MatchStmt*>(function->body.front().get());
     assert(match != nullptr && match->arms.size() == 3);
     const auto* okPattern = dynamic_cast<const VariantPattern*>(match->arms[1].pattern.get());
     const auto* emptyPattern = dynamic_cast<const VariantPattern*>(match->arms[2].pattern.get());
@@ -1079,10 +1072,10 @@ void test_record_pattern_metadata()
     std::istringstream input(
         "struct Box<T> { value: T, label: string }\n"
         "fun choose(value: optional<Box<number>>): string {\n"
-        "  return match value {\n"
-        "    nil => \"nil\",\n"
-        "    Box { label: label, value: numberValue } => label + str(numberValue),\n"
-        "  };\n"
+        "  match value {\n"
+        "    nil => { return \"nil\"; }\n"
+        "    Box { label: label, value: numberValue } => { return label + str(numberValue); }\n"
+        "  }\n"
         "}\n"
         "print choose(nil);\n");
     FrontendSession frontend;
@@ -1090,10 +1083,7 @@ void test_record_pattern_metadata()
 
     const auto* function = dynamic_cast<const FunctionStmt*>(entryModule(program).statements[1].get());
     assert(function != nullptr && !function->body.empty());
-    const auto* returnStatement = dynamic_cast<const ReturnStmt*>(function->body.front().get());
-    const auto* match = returnStatement
-        ? dynamic_cast<const MatchExpr*>(returnStatement->value.get())
-        : nullptr;
+    const auto* match = dynamic_cast<const MatchStmt*>(function->body.front().get());
     assert(match != nullptr && match->arms.size() == 2);
     const auto* pattern = dynamic_cast<const RecordPattern*>(match->arms[1].pattern.get());
     assert(pattern != nullptr);
@@ -1134,10 +1124,10 @@ void test_literal_or_pattern_metadata()
 {
     std::istringstream input(
         "fun choose(value: bool): string {\n"
-        "  return match value {\n"
-        "    false | true => \"small\",\n"
-        "    _ => \"other\",\n"
-        "  };\n"
+        "  match value {\n"
+        "    false | true => { return \"small\"; }\n"
+        "    _ => { return \"other\"; }\n"
+        "  }\n"
         "}\n"
         "print choose(false);\n");
     FrontendSession frontend;
@@ -1145,10 +1135,7 @@ void test_literal_or_pattern_metadata()
 
     const auto* function = dynamic_cast<const FunctionStmt*>(entryModule(program).statements[0].get());
     assert(function != nullptr && !function->body.empty());
-    const auto* returnStatement = dynamic_cast<const ReturnStmt*>(function->body.front().get());
-    const auto* match = returnStatement
-        ? dynamic_cast<const MatchExpr*>(returnStatement->value.get())
-        : nullptr;
+    const auto* match = dynamic_cast<const MatchStmt*>(function->body.front().get());
     const auto* pattern = match && !match->arms.empty()
         ? dynamic_cast<const OrPattern*>(match->arms.front().pattern.get())
         : nullptr;
@@ -1183,11 +1170,7 @@ void test_pattern_guard_metadata()
         "    _ => { return \"other\"; }\n"
         "  }\n"
         "}\n"
-        "print describe(1);\n"
-        "print match 1 {\n"
-        "  numberValue if numberValue > 0 => \"positive\",\n"
-        "  _ => \"other\",\n"
-        "};\n");
+        "print describe(1);\n");
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
 
@@ -1195,14 +1178,8 @@ void test_pattern_guard_metadata()
     const auto* statementMatch = function && !function->body.empty()
         ? dynamic_cast<const MatchStmt*>(function->body.front().get())
         : nullptr;
-    const auto* print = dynamic_cast<const PrintStmt*>(entryModule(program).statements[2].get());
-    const auto* expressionMatch = print
-        ? dynamic_cast<const MatchExpr*>(print->expression.get())
-        : nullptr;
     assert(function != nullptr && statementMatch != nullptr);
-    assert(expressionMatch != nullptr);
     assert(statementMatch->arms.front().guard != nullptr);
-    assert(expressionMatch->arms.front().guard != nullptr);
 
     TypeChecker checker;
     checker.check(program);
@@ -1210,18 +1187,13 @@ void test_pattern_guard_metadata()
     assert(checker.declarationIndexMismatchCount() == 0);
     const PatternGuardRecord* statementGuard
         = index.patternGuard(*statementMatch->arms.front().guard);
-    const PatternGuardRecord* expressionGuard
-        = index.patternGuard(*expressionMatch->arms.front().guard);
-    assert(statementGuard != nullptr && expressionGuard != nullptr);
+    assert(statementGuard != nullptr);
     assert(typeInfoName(statementGuard->type) == "bool");
-    assert(typeInfoName(expressionGuard->type) == "bool");
     const MatchCoverageRecord* statementCoverage
         = index.matchCoverage(*statementMatch);
-    const MatchCoverageRecord* expressionCoverage
-        = index.matchCoverage(*expressionMatch);
-    assert(statementCoverage != nullptr && expressionCoverage != nullptr);
-    assert(statementCoverage->coversAll && expressionCoverage->coversAll);
-    assert(statementCoverage->exhaustive && expressionCoverage->exhaustive);
+    assert(statementCoverage != nullptr);
+    assert(statementCoverage->coversAll);
+    assert(statementCoverage->exhaustive);
 
     IRCompiler compiler;
     compiler.compile(program, index);

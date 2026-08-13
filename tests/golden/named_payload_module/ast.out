@@ -7,5 +7,11 @@ Program
   Module 1 entry
     Import "./lib.cd" as lib
     Fun render(value: lib.Outcome): string
-      Return (match value (arm lib.Outcome.Good(message: text) text) (arm lib.Outcome.Bad(code: numberValue) (call str numberValue)))
+      Match value
+        Arm lib.Outcome.Good(message: text)
+          Block
+            Return text
+        Arm lib.Outcome.Bad(code: numberValue)
+          Block
+            Return (call str numberValue)
     Print (call render (member-call lib make))

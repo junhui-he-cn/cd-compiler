@@ -1401,9 +1401,6 @@ ExprPtr Parser::primary()
     if (match(TokenType::Fun)) {
         return functionExpression();
     }
-    if (match(TokenType::Match)) {
-        return matchExpression();
-    }
     if (match(TokenType::False)) {
         return withSpan(std::make_unique<LiteralExpr>("false"), previous());
     }
@@ -1443,35 +1440,6 @@ ExprPtr Parser::primary()
     }
 
     throw ParseError(peek(), "expected expression");
-}
-
-ExprPtr Parser::matchExpression()
-{
-    Token keyword = previous();
-    ExprPtr value = conditionExpression();
-    consume(TokenType::LeftBrace, "expected `{` after match value");
-
-    std::vector<MatchExprArm> arms;
-    while (!check(TokenType::RightBrace) && !isAtEnd()) {
-        PatternPtr armPattern = pattern();
-        ExprPtr guard;
-        if (match(TokenType::If)) {
-            guard = conditionExpression();
-        }
-        Token arrow = consume(TokenType::FatArrow, "expected `=>` after match pattern or guard");
-        ExprPtr armValue = expression();
-        arms.push_back(MatchExprArm{std::move(arrow), std::move(armPattern), std::move(guard), std::move(armValue)});
-
-        if (!match(TokenType::Comma) && !check(TokenType::RightBrace)) {
-            throw ParseError(peek(), "expected `,` after match expression arm");
-        }
-    }
-    consume(TokenType::RightBrace, "expected `}` after match expression arms");
-
-    const std::optional<SourceSpan> span = spanForToken(keyword);
-    return withSpan(
-        std::make_unique<MatchExpr>(std::move(keyword), std::move(value), std::move(arms)),
-        span);
 }
 
 PatternPtr Parser::pattern()
