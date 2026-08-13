@@ -630,7 +630,6 @@ void TypeChecker::checkModule(const ModuleStmt& module)
     }
 
     std::vector<Scope> savedScopes = std::move(scopes_);
-    std::vector<ScopeId> savedScopeIds = std::move(scopeIds_);
     std::unordered_map<std::string, StructTypeDecl> savedStructTypes = std::move(structTypes_);
     std::unordered_map<std::string, const StructDeclStmt*> savedStructDeclarations = std::move(structDeclarations_);
     std::unordered_map<std::string, StructCheckState> savedStructCheckStates = std::move(structCheckStates_);
@@ -648,7 +647,6 @@ void TypeChecker::checkModule(const ModuleStmt& module)
 
     const auto restoreTransientState = [&]() {
         scopes_ = std::move(savedScopes);
-        scopeIds_ = std::move(savedScopeIds);
         structTypes_ = std::move(savedStructTypes);
         structDeclarations_ = std::move(savedStructDeclarations);
         structCheckStates_ = std::move(savedStructCheckStates);
@@ -669,7 +667,6 @@ void TypeChecker::checkModule(const ModuleStmt& module)
     };
 
     scopes_.clear();
-    scopeIds_.clear();
     structTypes_.clear();
     structDeclarations_.clear();
     structCheckStates_.clear();

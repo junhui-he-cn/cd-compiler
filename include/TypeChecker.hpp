@@ -95,7 +95,6 @@ private:
 
     void beginScope();
     void endScope();
-    ScopeId currentScopeId() const;
     void beginTypeParameterScope(const std::vector<TypeParameter>& parameters);
     void endTypeParameterScope();
     Scope& currentScope();
@@ -372,7 +371,6 @@ private:
     bool isCurrentFunctionBinding(const Binding& binding) const;
 
     std::vector<Scope> scopes_;
-    std::vector<ScopeId> scopeIds_;
     std::vector<std::unordered_map<std::string, TypeInfo>> typeParameterScopes_;
     std::unordered_map<std::string, StructTypeDecl> structTypes_;
     std::unordered_map<std::string, const StructDeclStmt*> structDeclarations_;
@@ -394,7 +392,6 @@ private:
     const Program* currentProgram_ = nullptr;
     std::size_t nextResolvedName_ = 0;
     std::size_t nextBindingId_ = 0;
-    std::size_t nextScopeId_ = 0;
     std::size_t functionDepth_ = 0;
     std::size_t loopDepth_ = 0;
     std::vector<FunctionReturnContext> returnContexts_;

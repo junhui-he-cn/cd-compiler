@@ -18,7 +18,6 @@ struct TypeBinding {
     BindingId bindingId;
     DeclarationId declarationId;
     SymbolId symbolId;
-    ScopeId scopeId;
     std::optional<SourceRange> range;
 };
 

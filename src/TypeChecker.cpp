@@ -36,7 +36,6 @@ void TypeChecker::check(const Program& program)
     declarationIndexMismatchCount_ = 0;
     moduleInterfaceMismatchCount_ = 0;
     scopes_.clear();
-    scopeIds_.clear();
     typeParameterScopes_.clear();
     structTypes_.clear();
     structDeclarations_.clear();
@@ -90,7 +89,6 @@ void TypeChecker::check(const Program& program)
         nextResolvedName_ = std::max(nextResolvedName_, interfaceInfo.resolvedNameNext);
     }
     nextBindingId_ = 0;
-    nextScopeId_ = 0;
     functionDepth_ = 0;
     loopDepth_ = 0;
     returnContexts_.clear();
@@ -132,7 +130,6 @@ std::size_t TypeChecker::moduleInterfaceMismatchCount() const
 void TypeChecker::beginScope()
 {
     scopes_.emplace_back();
-    scopeIds_.push_back(ScopeId{nextScopeId_++});
 }
 
 void TypeChecker::endScope()
@@ -141,18 +138,6 @@ void TypeChecker::endScope()
         throw TypeError("scope stack is empty");
     }
     scopes_.pop_back();
-    if (scopeIds_.empty()) {
-        throw TypeError("scope ID stack is empty");
-    }
-    scopeIds_.pop_back();
-}
-
-ScopeId TypeChecker::currentScopeId() const
-{
-    if (scopeIds_.empty()) {
-        throw TypeError("scope ID stack is empty");
-    }
-    return scopeIds_.back();
 }
 
 void TypeChecker::beginTypeParameterScope(const std::vector<TypeParameter>& parameters)
@@ -295,11 +280,9 @@ TypeChecker::Binding TypeChecker::declareVariable(
     if (record) {
         binding.declarationId = record->declarationId;
         binding.symbolId = record->symbolId;
-        binding.scopeId = record->scopeId;
     } else {
         binding.declarationId = DeclarationId{};
         binding.symbolId = SymbolId{};
-        binding.scopeId = currentScopeId();
     }
     binding.range = name.range;
     scope.emplace(name.lexeme, binding);
