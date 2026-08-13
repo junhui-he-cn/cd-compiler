@@ -21,7 +21,9 @@ with golden/README/grammar/decision-record updates.
    Payloads become purely positional in declarations, constructors, and
    patterns. Status: complete.
 4. **Reassess the capability system (`Eq`/`Ord`/`Hash` constraints).**
-   Decision gate: delete entirely, or keep only the parts with real use.
+   Decision recorded (`m9-language-capability-001.md`): keep the constraint
+   system; the struct `Ord` witness was already removed by item 2. Status:
+   complete.
 5. **Reassess tooling surface.**
    Decision gate: formatter/lossless-source/`--tokens` merge are product
    decisions, not grammar work.

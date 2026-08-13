@@ -1,6 +1,7 @@
 # M8-LANG-CAP-ORD-001: struct ordering capability witness
 
-Status: implemented for issue #17.
+Status: implemented for issue #17; superseded by M9-LANG-CAP-001 (struct
+ordering operators and their `Ord` witness were removed on 2026-08-13).
 
 ## Decision
 
