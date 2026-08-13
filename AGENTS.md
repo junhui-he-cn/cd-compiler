@@ -90,9 +90,9 @@ This is a small C++17 Compiler Design front-end/interpreter project. It currentl
   shared type-identity predicates, semantic compatibility, aggregate
   element-type merging, generic type-parameter substitution, generic
   inference matching, and type-parameter constraint validation.
-  `SemanticTypes` owns the migrated semantic operations; the unqualified
-  functions remain compatibility forwarding APIs while callers are moved
-  incrementally.
+  `SemanticTypes` owns the migrated semantic operations; all call sites use
+  the qualified `SemanticTypes::` names, and no unqualified forwarding layer
+  remains.
 - `include/IR.hpp`, `src/IR.cpp`: IR opcodes, instructions, constants, names, registers, and IR printer output.
 - `include/IRCompiler.hpp`, `src/IRCompiler.cpp`: AST-to-IR lowering.
 - `include/Bytecode.hpp`, `src/Bytecode.cpp`: bytecode opcodes, program/function containers, and bytecode printer output.

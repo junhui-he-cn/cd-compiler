@@ -59,16 +59,6 @@ TypeInfo functionType(
 TypeInfo nullableType(TypeInfo innerType);
 TypeInfo functionWithoutSignature();
 
-bool isKnown(const TypeInfo& type);
-bool hasFunctionSignature(const TypeInfo& type);
-bool isNullable(const TypeInfo& type);
-bool isCapability(const TypeInfo& type, const std::string& name);
-bool isCapabilitySet(const TypeInfo& type);
-bool satisfiesCapability(const TypeInfo& actual, const TypeInfo& capability);
-bool compatible(const TypeInfo& expected, const TypeInfo& actual);
-std::optional<TypeInfo> mergeArrayElementTypes(const TypeInfo& left, const TypeInfo& right);
-TypeInfo substituteTypeParameters(const TypeInfo& type, const TypeSubstitutions& substitutions);
-
 namespace SemanticTypes {
 
 struct TypeInferenceConflict {
