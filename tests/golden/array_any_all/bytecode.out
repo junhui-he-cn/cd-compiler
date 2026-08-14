@@ -62,7 +62,8 @@ function $1 <lambda>/1 registers=4
 0005  return b3
 
 function $2 <lambda>/1 registers=7
-0000  b0 = load_global g3
+upvalue u0 = global g3
+0000  b0 = load_upvalue u0
 0001  b1 = constant #10 9
 0002  b2 = native_call @12 push [b0, b1]
 0003  b3 = load_local l0
@@ -73,7 +74,8 @@ function $2 <lambda>/1 registers=7
 0008  return b6
 
 function $3 <lambda>/1 registers=7
-0000  b0 = load_global g4
+upvalue u0 = global g4
+0000  b0 = load_upvalue u0
 0001  b1 = constant #16 8
 0002  b2 = native_call @19 push [b0, b1]
 0003  b3 = load_local l0

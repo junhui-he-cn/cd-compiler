@@ -178,6 +178,7 @@ function f0 name="describe" arity=1 registers=10:
 
 function f1 name="sum" arity=1 registers=12:
   param 0 = "list#4"
+  upvalue u0 = global g1
   r0 = load_local l0
   r1 = variant_tag r0 n12.n13
   jump_if_false r1, 6
@@ -191,7 +192,7 @@ function f1 name="sum" arity=1 registers=12:
   bind_local l1, r4
   bind_local l2, r5
   r6 = load_local l1
-  r7 = load_global g1
+  r7 = load_upvalue u0
   r8 = load_local l2
   r9 = call r7 [r8]
   r10 = add r6, r9

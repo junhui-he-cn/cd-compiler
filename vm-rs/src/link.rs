@@ -1,5 +1,6 @@
 use crate::bytecode::{
-    Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, Instruction, Program,
+    Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, GlobalId, Instruction,
+    Program, UpvalueDesc, UpvalueSource,
 };
 use crate::format::{verify_module_artifact, verify_program, ModuleArtifact};
 use std::collections::{HashMap, HashSet};
@@ -370,7 +371,29 @@ impl Linker {
                 name: function.name.clone(),
                 arity: function.arity,
                 local_count: function.local_count,
-                upvalues: function.upvalues.clone(),
+                upvalues: function
+                    .upvalues
+                    .iter()
+                    .map(|descriptor| match &descriptor.source {
+                        UpvalueSource::Global(global) => {
+                            let linked = *context
+                                .global_remap
+                                .get(global.0 as usize)
+                                .ok_or_else(|| {
+                                    LinkError::new(
+                                        LinkErrorKind::InvalidInstruction,
+                                        format!("global g{} out of range", global.0),
+                                    )
+                                })?;
+                            Ok(UpvalueDesc {
+                                source: UpvalueSource::Global(GlobalId(linked as u32)),
+                            })
+                        }
+                        source => Ok(UpvalueDesc {
+                            source: source.clone(),
+                        }),
+                    })
+                    .collect::<Result<Vec<_>, _>>()?,
                 params: function.params.clone(),
                 registers: function.registers,
                 instructions: function

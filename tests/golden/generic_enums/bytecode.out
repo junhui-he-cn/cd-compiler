@@ -87,6 +87,7 @@ function $0 describe/1 registers=10
 0017  return b9
 
 function $1 sum/1 registers=12
+upvalue u0 = global g1
 0000  b0 = load_local l0
 0001  b1 = variant_tag b0  @12 List. @13 Nil
 0002  jump_if_false b1, 0006
@@ -100,7 +101,7 @@ function $1 sum/1 registers=12
 0010  bind_local l1, b4
 0011  bind_local l2, b5
 0012  b6 = load_local l1
-0013  b7 = load_global g1
+0013  b7 = load_upvalue u0
 0014  b8 = load_local l2
 0015  b9 = call b7(b8)
 0016  b10 = add b6, b9

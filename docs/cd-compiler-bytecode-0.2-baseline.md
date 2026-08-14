@@ -33,7 +33,7 @@
 | 维度 | 0.1 现状（本基线锁定） | 0.2 目标 |
 | --- | --- | --- |
 | 变量 | `load_var/store_var/assign_var nN`；VM `prepare_function` 扫描 `store_var` 建名字→slot；非 main 帧先 local slot、再名字键 closure、再 globals；main 帧全走 globals + name-index cache | `load_local/bind_local/set_local/load_upvalue/set_upvalue/load_global/init_global/set_global`，slot 全部由编译器分配（Phase 2） |
-| 闭包 | `capture_environment` 复制帧内所有名字 cell；顶层闭包捕获空环境、调用时回退读会话 globals。循环内 `let x` 的三个闭包都读同一顶层 cell → **20 20 20** | 显式 `upvalues`，只捕获实际 free variable，循环每次迭代独立 binding → 0 10 20（Phase 3） |
+| 闭包 | 0.2 显式 `upvalues`：`local/upvalue/global` 三种来源，按描述符在 `make_function` 时捕获 cell；只捕获实际引用的绑定；循环每次迭代独立 binding → `0 10 20`（Phase 3 已落地） | 同左 |
 | 返回 | 执行到指令末尾隐式返回 `nil`；`jump` 目标允许等于指令数（落到末尾） | 显式 `return_nil`，无隐式 fallthrough（Phase 4） |
 | 控制流 | 线性指令表 + 绝对指令偏移 `jump/jump_if_false/jump_if_true` | `BasicBlock` + `br/br_if` + terminator（Phase 4） |
 | 寄存器 | 未验证路径寄存器初始为 `Nil`，读未初始化寄存器不报错 | verifier definite-assignment，读未定义寄存器在执行前拒绝（Phase 5） |
@@ -74,7 +74,7 @@
 | shadowing | `block_assignment_inner_shadow`、`closure_shadowing` |
 | nested closure | `closure_nested_recursion`、新增 `closure_nested_upvalue`（A→B→C + upvalue 修改） |
 | closure mutation | `closure_counter`、`closure_shared_cell`、新增 `closure_mutation`（Case A：`x=2` 后 `f()==2`） |
-| loop + closure capture | 新增 `closure_loop_capture`（锁定 0.1 的 `20 20 20`） |
+| loop + closure capture | 新增 `closure_loop_capture`（Phase 0 锁定 0.1 的 `20 20 20`；Phase 3 刷新为 `0 10 20`） |
 | global variable | `function_scope_global` |
 | array / map | `array_*`、`maps` |
 | duplicate map key | `maps`、新增 `map_duplicate_keys`、`vm-rs/tests/bytecode_0_2_baseline.rs` |
@@ -189,3 +189,28 @@ verification 1820/1820、VM 兼容矩阵 7 格、`git diff --check` 干净。
 
 下一阶段是 Phase 3（closure/upvalue 精确捕获 + 循环逐次绑定），或按计划优先级
 先做 Phase 4（BasicBlock + terminator）。
+
+## 9. Phase 3 落地记录
+
+Phase 3（计划 §7，closure/upvalue）完成：闭包捕获统一为数值 upvalue，循环逐次绑定。
+
+- `UpvalueSource` 增加 `Global(GlobalId)`：函数引用顶层绑定不再直接
+  `load_global/set_global`，而是 `upvalue uN = global gM` + `load_upvalue/set_upvalue`。
+  `make_function` 在创建点捕获当时的全局 cell；`init_global`（声明/重新绑定）替换
+  槽内的 cell，`set_global`（赋值）原地更新同一 cell。顶层前向引用本身是类型错误，
+  因此创建点捕获永远安全。
+- 语义效果（计划 §7.4/§7.5）：Case A `x=1; f; x=2; f()==2` 保持；Case B 循环捕获从
+  `20 20 20` 变为 `0 10 20`；Case C 多层 upvalue 链保持；Case D 未使用变量不进入
+  upvalue 列表（新增 `closure_unused_not_captured` fixture 锁定）。
+- 链接器对函数 upvalue 描述符中的 `global gM` 做跨模块重定位；verifier 检查
+  `global gM` 源在 `program.globals` 范围内。
+- 计划 §7.3 的 `make_closure` 更名暂缓：它与 0.1 兼容文本的
+  `make_function` round-trip 冲突，且按描述符捕获的实质已在 Phase 2 落地；更名作为
+  独立的低成本 rename 后续处理。
+
+回归：cargo test 全绿、bytecode artifact 124/124、Rust VM parity 742/742、
+golden 787/787、ctest 47/47、malformed 107/107、verification 1825/1825、
+VM 兼容矩阵 7 格。
+
+下一阶段按计划是 Phase 4（BasicBlock + terminator，取消隐式 return），之后接
+Phase 5（verifier 2.0）。

@@ -286,7 +286,10 @@ set_upvalue uN, rV
 ```
 
 `uN` 是当前函数的 upvalue 槽，按函数头中的 `upvalue uN = local lM` /
-`upvalue uN = upvalue uM` 声明在 `make_function` 时从父帧捕获对应 cell。
+`upvalue uN = upvalue uM` / `upvalue uN = global gM` 声明在 `make_function` 时
+捕获对应 cell：`local` 取父帧局部、`upvalue` 取父帧上级捕获、`global` 取创建点
+当前的全局 cell。因此循环体里每次 `bind_local`/`init_global` 产生的 cell 会被当次
+创建的闭包单独捕获（不同迭代捕获不同 cell）。
 
 #### load_global / init_global / set_global
 

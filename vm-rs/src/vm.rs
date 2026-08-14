@@ -9496,6 +9496,12 @@ impl<'a> VM<'a> {
                     .get(upvalue.0 as usize)
                     .cloned()
                     .ok_or_else(|| RuntimeError::new("missing captured upvalue slot")),
+                UpvalueSource::Global(global) => self
+                    .global_cells
+                    .get(global.0 as usize)
+                    .cloned()
+                    .flatten()
+                    .ok_or_else(|| RuntimeError::new("missing captured global slot")),
             })
             .collect::<Result<Vec<_>, _>>()?;
         self.heap

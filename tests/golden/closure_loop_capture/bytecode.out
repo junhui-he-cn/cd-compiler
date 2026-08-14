@@ -64,7 +64,8 @@ main registers=40
 0062  jump 0054
 
 function $0 <lambda>/0 registers=2
-0000  b0 = load_global g5
+upvalue u0 = global g5
+0000  b0 = load_upvalue u0
 0001  return b0
 0002  b1 = constant #5 nil
 0003  return b1

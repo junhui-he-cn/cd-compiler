@@ -107,6 +107,7 @@ pub enum Constant {
 pub enum UpvalueSource {
     Local(LocalId),
     Upvalue(UpvalueId),
+    Global(GlobalId),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -413,9 +413,11 @@ void writeBytecodeSections(
             out << "  param " << parameter << " = " << escapedString(function.parameters[parameter]) << '\n';
         }
         for (std::size_t upvalue = 0; upvalue < function.upvalues.size(); ++upvalue) {
-            out << "  upvalue u" << upvalue << " = "
-                << (function.upvalues[upvalue].sourceIsLocal ? "local l" : "upvalue u")
-                << function.upvalues[upvalue].source << '\n';
+            const BytecodeUpvalue& descriptor = function.upvalues[upvalue];
+            const char* source = descriptor.source == BytecodeUpvalueSource::Local
+                ? "local l"
+                : descriptor.source == BytecodeUpvalueSource::Upvalue ? "upvalue u" : "global g";
+            out << "  upvalue u" << upvalue << " = " << source << descriptor.index << '\n';
         }
         writeInstructions(out, function.instructions);
     }

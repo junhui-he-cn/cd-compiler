@@ -1,0 +1,10 @@
+fun make() {
+  let used = 1;
+  let unused = 99;
+  fun read() {
+    return used;
+  }
+  return read;
+}
+let f = make();
+print f();

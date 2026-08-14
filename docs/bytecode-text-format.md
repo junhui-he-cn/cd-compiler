@@ -198,8 +198,12 @@ The section names and reference prefixes are part of the canonical text format.
 The optional `globals:` section (module products and linked programs alike) maps
 each numeric global slot to its name index; the linker deduplicates globals by
 name across modules. Function `param` lines appear before instructions;
-`upvalue uN = local lM` / `upvalue uN = upvalue uM` lines follow them and drive
-closure capture.
+`upvalue uN = local lM` / `upvalue uN = upvalue uM` /
+`upvalue uN = global gM` lines follow them and drive closure capture: `local`
+takes the parent frame's local cell, `upvalue` takes a parent upvalue, and
+`global` takes the global cell current at `make_function` time. Loop bodies
+that rebind a captured binding therefore yield one independent cell per
+iteration.
 
 ## Debug metadata
 

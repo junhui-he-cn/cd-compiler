@@ -29,7 +29,8 @@ main registers=5:
   print r4
 
 function f0 name="answer" arity=0 registers=4:
-  r0 = load_global g0
+  upvalue u0 = global g0
+  r0 = load_upvalue u0
   r1 = constant c2
   r2 = add r0, r1
   return r2

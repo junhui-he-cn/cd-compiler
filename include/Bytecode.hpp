@@ -76,9 +76,15 @@ struct BytecodeInstruction {
     std::optional<SourceSpan> span = std::nullopt;
 };
 
+enum class BytecodeUpvalueSource {
+    Local,
+    Upvalue,
+    Global,
+};
+
 struct BytecodeUpvalue {
-    bool sourceIsLocal = true;
-    std::uint32_t source = 0;
+    BytecodeUpvalueSource source = BytecodeUpvalueSource::Local;
+    std::uint32_t index = 0;
 };
 
 struct BytecodeFunction {

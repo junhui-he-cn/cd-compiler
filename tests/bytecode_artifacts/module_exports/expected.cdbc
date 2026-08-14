@@ -49,8 +49,10 @@ function f0 name="add3" arity=1 registers=4:
   return r3
 
 function f1 name="answer" arity=0 registers=4:
-  r0 = load_global g1
-  r1 = load_global g0
+  upvalue u0 = global g1
+  upvalue u1 = global g0
+  r0 = load_upvalue u0
+  r1 = load_upvalue u1
   r2 = call r0 [r1]
   return r2
   r3 = constant c5

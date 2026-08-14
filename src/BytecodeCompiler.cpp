@@ -312,6 +312,13 @@ BytecodeProgram BytecodeCompiler::compile(const IRProgram& ir)
                 continue;
             }
             if (slotFor(globalSlots, bindingId)) {
+                const std::uint32_t slot
+                    = checkedU32(plan.upvalueSources.size(), "upvalue slot count out of range");
+                plan.upvalues.emplace(bindingId, slot);
+                plan.upvalueSources.push_back(BytecodeUpvalue{
+                    BytecodeUpvalueSource::Global,
+                    *slotFor(globalSlots, bindingId),
+                });
                 continue;
             }
             if (plan.upvalues.find(bindingId) != plan.upvalues.end()) {
@@ -328,11 +335,11 @@ BytecodeProgram BytecodeCompiler::compile(const IRProgram& ir)
             const FunctionPlan& parentPlan = plans[parentFound->second];
             BytecodeUpvalue source{};
             if (const auto local = slotFor(parentPlan.locals, bindingId)) {
-                source.sourceIsLocal = true;
-                source.source = *local;
+                source.source = BytecodeUpvalueSource::Local;
+                source.index = *local;
             } else if (const auto upvalue = slotFor(parentPlan.upvalues, bindingId)) {
-                source.sourceIsLocal = false;
-                source.source = *upvalue;
+                source.source = BytecodeUpvalueSource::Upvalue;
+                source.index = *upvalue;
             } else {
                 throw BytecodeCompileError(
                     "captured binding `" + ir.names()[instruction.operand]
@@ -426,6 +433,8 @@ BytecodeInstruction BytecodeCompiler::lowerInstruction(
                 target = VariableTarget{VariableKind::Upvalue, *upvalue};
                 return;
             }
+            throw BytecodeCompileError(
+                "function variable reference has no local or upvalue slot");
         }
         const auto global = slotFor(globalSlots, *instruction.bindingId);
         if (!global) {

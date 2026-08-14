@@ -1,0 +1,32 @@
+main registers=6
+0000  b0 = constant #0 nil
+0001  init_global g0, b0
+0002  b1 = make_function $1 make/0
+0003  set_global g0, b1
+0004  b2 = load_global g0
+0005  b3 = call b2()
+0006  init_global g1, b3
+0007  b4 = load_global g1
+0008  b5 = call b4()
+0009  print b5
+
+function $0 read/0 registers=2
+upvalue u0 = local l0
+0000  b0 = load_upvalue u0
+0001  return b0
+0002  b1 = constant #4 nil
+0003  return b1
+
+function $1 make/0 registers=6
+0000  b0 = constant #1 1
+0001  bind_local l0, b0
+0002  b1 = constant #2 99
+0003  bind_local l1, b1
+0004  b2 = constant #3 nil
+0005  bind_local l2, b2
+0006  b3 = make_function $0 read/0
+0007  set_local l2, b3
+0008  b4 = load_local l2
+0009  return b4
+0010  b5 = constant #5 nil
+0011  return b5

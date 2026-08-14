@@ -125,10 +125,11 @@ main registers=35:
 function f0 name="<lambda>" arity=2 registers=6:
   param 0 = "acc#2"
   param 1 = "value#3"
+  upvalue u0 = global g1
   r0 = load_local l0
   r1 = load_local l1
   r2 = add r0, r1
-  r3 = load_global g1
+  r3 = load_upvalue u0
   r4 = add r2, r3
   return r4
   r5 = constant c5
@@ -147,7 +148,8 @@ function f1 name="<lambda>" arity=2 registers=4:
 function f2 name="<lambda>" arity=2 registers=7:
   param 0 = "acc#9"
   param 1 = "value#10"
-  r0 = load_global g4
+  upvalue u0 = global g4
+  r0 = load_upvalue u0
   r1 = constant c11
   r2 = native_call n16 [r0, r1]
   r3 = load_local l0

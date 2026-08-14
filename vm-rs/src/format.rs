@@ -1,6 +1,6 @@
 use crate::bytecode::{
-    Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, Instruction, LocalId,
-    Program, UpvalueDesc, UpvalueId, UpvalueSource,
+    Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, GlobalId, Instruction,
+    LocalId, Program, UpvalueDesc, UpvalueId, UpvalueSource,
 };
 use std::fmt;
 
@@ -440,6 +440,14 @@ impl<'a> Parser<'a> {
                             source_index,
                             'u',
                             "upvalue reference",
+                        )? as u32)),
+                    }),
+                    "global" => upvalues.push(UpvalueDesc {
+                        source: UpvalueSource::Global(GlobalId(parse_prefixed(
+                            upvalue_line,
+                            source_index,
+                            'g',
+                            "global reference",
                         )? as u32)),
                     }),
                     _ => {
@@ -1023,6 +1031,21 @@ fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
                     function.params.len()
                 ),
             ));
+        }
+        for (upvalue_index, upvalue) in function.upvalues.iter().enumerate() {
+            if let UpvalueSource::Global(global) = upvalue.source {
+                if global.0 as usize >= program.globals.len() {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "function f{} upvalue u{} global g{} out of range",
+                            index.saturating_sub(1),
+                            upvalue_index,
+                            global.0
+                        ),
+                    ));
+                }
+            }
         }
         let context = if index == 0 {
             "main".to_string()
@@ -1636,6 +1659,7 @@ fn format_program_sections(out: &mut String, program: &Program) {
             let source = match upvalue.source {
                 UpvalueSource::Local(local) => format!("local l{}", local.0),
                 UpvalueSource::Upvalue(upvalue) => format!("upvalue u{}", upvalue.0),
+                UpvalueSource::Global(global) => format!("global g{}", global.0),
             };
             out.push_str(&format!("  upvalue u{} = {}\n", index, source));
         }

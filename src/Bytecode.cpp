@@ -415,9 +415,10 @@ void BytecodeProgram::print(std::ostream& out) const
             << "function $" << functionIndex << " " << function.name << "/" << function.parameters.size()
             << " registers=" << function.registerCount << '\n';
         for (std::size_t i = 0; i < function.upvalues.size(); ++i) {
-            out << "upvalue u" << i << " = "
-                << (function.upvalues[i].sourceIsLocal ? "local l" : "upvalue u")
-                << function.upvalues[i].source << '\n';
+            const char* source = function.upvalues[i].source == BytecodeUpvalueSource::Local
+                ? "local l"
+                : function.upvalues[i].source == BytecodeUpvalueSource::Upvalue ? "upvalue u" : "global g";
+            out << "upvalue u" << i << " = " << source << function.upvalues[i].index << '\n';
         }
         for (std::size_t i = 0; i < function.instructions.size(); ++i) {
             printInstruction(out, *this, function.instructions[i], i);

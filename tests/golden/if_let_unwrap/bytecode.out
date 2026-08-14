@@ -106,7 +106,8 @@ function $0 find/1 registers=8
 0011  return b7
 
 function $1 process/1 registers=10
-0000  b0 = load_global g0
+upvalue u0 = global g0
+0000  b0 = load_upvalue u0
 0001  b1 = load_local l0
 0002  b2 = call b0(b1)
 0003  b3 = constant #6 nil

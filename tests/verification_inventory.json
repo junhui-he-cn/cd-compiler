@@ -9766,6 +9766,89 @@
       "fixture": "tests/golden/closure_nested_upvalue"
     },
     {
+      "case_id": "golden.success.closure_unused_not_captured.ast",
+      "runner": "golden",
+      "result_name": "closure_unused_not_captured default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:closure_unused_not_captured"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/closure_unused_not_captured/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_unused_not_captured/ast.out"
+      ],
+      "fixture": "tests/golden/closure_unused_not_captured"
+    },
+    {
+      "case_id": "golden.success.closure_unused_not_captured.bytecode",
+      "runner": "golden",
+      "result_name": "closure_unused_not_captured --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:closure_unused_not_captured"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/closure_unused_not_captured/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_unused_not_captured/bytecode.out"
+      ],
+      "fixture": "tests/golden/closure_unused_not_captured"
+    },
+    {
+      "case_id": "golden.success.closure_unused_not_captured.ir",
+      "runner": "golden",
+      "result_name": "closure_unused_not_captured --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:closure_unused_not_captured"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/closure_unused_not_captured/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_unused_not_captured/ir.out"
+      ],
+      "fixture": "tests/golden/closure_unused_not_captured"
+    },
+    {
       "case_id": "golden.success.collection_helpers.ast",
       "runner": "golden",
       "result_name": "collection_helpers default(ast)",
@@ -36361,6 +36444,68 @@
         "tests/golden/closure_shared_cell/run.out"
       ],
       "fixture": "tests/golden/closure_shared_cell"
+    },
+    {
+      "case_id": "rust_vm.golden.closure_unused_not_captured.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "closure_unused_not_captured emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:closure_unused_not_captured"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/closure_unused_not_captured/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_unused_not_captured/run.out"
+      ],
+      "fixture": "tests/golden/closure_unused_not_captured"
+    },
+    {
+      "case_id": "rust_vm.golden.closure_unused_not_captured.run",
+      "runner": "rust_vm_golden",
+      "result_name": "closure_unused_not_captured rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:closure_unused_not_captured"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/closure_unused_not_captured/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_unused_not_captured/run.out"
+      ],
+      "fixture": "tests/golden/closure_unused_not_captured"
     },
     {
       "case_id": "rust_vm.golden.collection_helpers.emit",

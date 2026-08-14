@@ -1,0 +1,31 @@
+IR
+0000  v0 = constant #0 nil
+0001  store_var @0 make#0, v0
+0002  v1 = make_function $1 make/0
+0003  assign_var @7 make#0, v1
+0004  v2 = load_var @8 make#0
+0005  v3 = call v2()
+0006  store_var @9 f#4, v3
+0007  v4 = load_var @10 f#4
+0008  v5 = call v4()
+0009  print v5
+
+function $0 read()
+0000  v0 = load_var @4 used#1
+0001  return v0
+0002  v1 = constant #4 nil
+0003  return v1
+
+function $1 make()
+0000  v0 = constant #1 1
+0001  store_var @1 used#1, v0
+0002  v1 = constant #2 99
+0003  store_var @2 unused#2, v1
+0004  v2 = constant #3 nil
+0005  store_var @3 read#3, v2
+0006  v3 = make_function $0 read/0
+0007  assign_var @5 read#3, v3
+0008  v4 = load_var @6 read#3
+0009  return v4
+0010  v5 = constant #5 nil
+0011  return v5
