@@ -1,5 +1,5 @@
 use crate::bytecode::{
-    Constant, DebugLocation, DebugRange, DebugSource, Function, FunctionBody, Instruction, Program,
+    Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, Instruction, Program,
 };
 use std::fmt;
 
@@ -336,7 +336,7 @@ impl<'a> Parser<'a> {
         Ok(names)
     }
 
-    fn parse_main(&mut self) -> Result<FunctionBody, ParseError> {
+    fn parse_main(&mut self) -> Result<Function, ParseError> {
         let (line_number, line) = self.advance().ok_or_else(|| ParseError {
             line: self.last_line(),
             message: "expected main section".to_string(),
@@ -345,7 +345,13 @@ impl<'a> Parser<'a> {
             parse_wrapped_usize(line_number, line, "main registers=", ":", "main section")?;
         let instructions = self.parse_instructions_until_function()?;
         let instruction_count = instructions.len();
-        Ok(FunctionBody {
+        Ok(Function {
+            id: FuncId(0),
+            name: "main".to_string(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
             registers,
             instructions,
             locations: vec![None; instruction_count],
@@ -396,11 +402,13 @@ impl<'a> Parser<'a> {
             let instructions = self.parse_instructions_until_function()?;
             let instruction_count = instructions.len();
             functions.push(Function {
-                index,
+                id: FuncId((index + 1) as u32),
                 name,
                 arity,
-                registers,
+                local_count: 0,
+                upvalues: Vec::new(),
                 params,
+                registers,
                 instructions,
                 locations: vec![None; instruction_count],
             });
@@ -508,9 +516,9 @@ impl<'a> Parser<'a> {
             }
 
             let locations = match section {
-                DebugSection::Main => &mut program.main.locations,
+                DebugSection::Main => &mut program.functions[0].locations,
                 DebugSection::Function(index) => {
-                    let Some(function) = program.functions.get_mut(index) else {
+                    let Some(function) = program.functions.get_mut(index + 1) else {
                         return Err(ParseError {
                             line: line_number,
                             message: "debug location function index out of range".to_string(),
@@ -558,9 +566,9 @@ impl<'a> Parser<'a> {
             }
 
             let locations = match section {
-                DebugSection::Main => &mut program.main.locations,
+                DebugSection::Main => &mut program.functions[0].locations,
                 DebugSection::Function(index) => {
-                    let Some(function) = program.functions.get_mut(index) else {
+                    let Some(function) = program.functions.get_mut(index + 1) else {
                         return Err(ParseError {
                             line: line_number,
                             message: "debug range function index out of range".to_string(),
@@ -668,13 +676,14 @@ fn parse_program_body(parser: &mut Parser<'_>) -> Result<Program, ParseError> {
     let constants = parser.parse_constants()?;
     let names = parser.parse_names()?;
     let main = parser.parse_main()?;
-    let functions = parser.parse_functions()?;
+    let mut functions = parser.parse_functions()?;
+    functions.insert(0, main);
     let debug_sources = parser.parse_debug_sources()?;
     let mut program = Program {
         constants,
         names,
-        main,
         functions,
+        entry: FuncId(0),
         debug_sources,
     };
     parser.parse_debug_locations(&mut program)?;
@@ -741,7 +750,7 @@ fn validate_module_envelope(artifact: &ModuleArtifact, line: usize) -> Result<()
                 message: format!("module dependency d{} has an empty identity or path", index),
             });
         }
-        if dependency.instruction_offset > artifact.program.main.instructions.len() {
+        if dependency.instruction_offset > artifact.program.functions[0].instructions.len() {
             return Err(ParseError {
                 line,
                 message: format!(
@@ -876,21 +885,28 @@ fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
         }
     }
 
-    validate_body(
-        "main",
-        program.main.registers,
-        &program.main.instructions,
-        &program.main.locations,
-        program,
-        line,
-    )?;
+    if program.functions.get(program.entry.0 as usize).is_none() {
+        return Err(validation_error(
+            line,
+            format!("entry function f{} is out of range", program.entry.0),
+        ));
+    }
+    if program.entry != FuncId(0) {
+        return Err(validation_error(
+            line,
+            format!(
+                "entry must be f0 while the cdbc 0.1 text envelope is current, found f{}",
+                program.entry.0
+            ),
+        ));
+    }
     for (index, function) in program.functions.iter().enumerate() {
-        if function.index != index {
+        if function.id != FuncId(index as u32) {
             return Err(validation_error(
                 line,
                 format!(
-                    "function table entry {} has index f{}",
-                    index, function.index
+                    "function table entry {} has id f{}, expected f{}",
+                    index, function.id.0, index
                 ),
             ));
         }
@@ -905,8 +921,13 @@ fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
                 ),
             ));
         }
+        let context = if index == 0 {
+            "main".to_string()
+        } else {
+            format!("function f{}", index - 1)
+        };
         validate_body(
-            &format!("function f{}", index),
+            &context,
             function.registers,
             &function.instructions,
             &function.locations,
@@ -1049,15 +1070,15 @@ fn validate_instruction(
             Ok(())
         }
     };
-    let function = |index: usize| {
-        if index >= program.functions.len() {
+    let function = |index: FuncId| {
+        if index.0 as usize >= program.functions.len() {
             Err(validation_error(
                 line,
                 format!(
                     "{} instruction {} function f{} out of range (function count {})",
                     context,
                     instruction_index,
-                    index,
+                    index.0.saturating_sub(1),
                     program.functions.len()
                 ),
             ))
@@ -1361,12 +1382,11 @@ pub fn format_artifact(artifact: &Artifact) -> String {
 }
 
 fn format_program_capacity_hint(program: &Program) -> usize {
-    let instruction_count = program.main.instructions.len()
-        + program
-            .functions
-            .iter()
-            .map(|function| function.instructions.len())
-            .sum::<usize>();
+    let instruction_count = program
+        .functions
+        .iter()
+        .map(|function| function.instructions.len())
+        .sum::<usize>();
     let string_bytes = program
         .constants
         .iter()
@@ -1397,16 +1417,21 @@ fn format_program_sections(out: &mut String, program: &Program) {
     for (index, name) in program.names.iter().enumerate() {
         out.push_str(&format!("  n{} = {}\n", index, quote_string(name)));
     }
-    out.push_str(&format!("\nmain registers={}:\n", program.main.registers));
-    for instruction in &program.main.instructions {
+    let entry = &program.functions[program.entry.0 as usize];
+    out.push_str(&format!("\nmain registers={}:\n", entry.registers));
+    for instruction in &entry.instructions {
         out.push_str("  ");
         out.push_str(&format_instruction(instruction));
         out.push('\n');
     }
-    for function in &program.functions {
+    let mut function_index = 0usize;
+    for (position, function) in program.functions.iter().enumerate() {
+        if position as u32 == program.entry.0 {
+            continue;
+        }
         out.push_str(&format!(
             "\nfunction f{} name={} arity={} registers={}:\n",
-            function.index,
+            function_index,
             quote_string(&function.name),
             function.arity,
             function.registers
@@ -1419,6 +1444,7 @@ fn format_program_sections(out: &mut String, program: &Program) {
             out.push_str(&format_instruction(instruction));
             out.push('\n');
         }
+        function_index += 1;
     }
 
     if !program.debug_sources.is_empty() {
@@ -1436,19 +1462,23 @@ fn format_program_sections(out: &mut String, program: &Program) {
         }
     }
 
-    let has_debug_locations = program.main.locations.iter().any(Option::is_some)
-        || program
-            .functions
-            .iter()
-            .any(|function| function.locations.iter().any(Option::is_some));
+    let has_debug_locations = program
+        .functions
+        .iter()
+        .any(|function| function.locations.iter().any(Option::is_some));
     if has_debug_locations {
         out.push_str("\ndebug_locations:\n");
-        for (index, location) in program.main.locations.iter().enumerate() {
+        let entry = &program.functions[program.entry.0 as usize];
+        for (index, location) in entry.locations.iter().enumerate() {
             if let Some(location) = location {
                 out.push_str(&format_debug_location("main", index, location));
             }
         }
-        for (function_index, function) in program.functions.iter().enumerate() {
+        let mut function_index = 0usize;
+        for (position, function) in program.functions.iter().enumerate() {
+            if position as u32 == program.entry.0 {
+                continue;
+            }
             for (instruction, location) in function.locations.iter().enumerate() {
                 if let Some(location) = location {
                     out.push_str(&format_debug_location(
@@ -1458,15 +1488,11 @@ fn format_program_sections(out: &mut String, program: &Program) {
                     ));
                 }
             }
+            function_index += 1;
         }
     }
 
-    let has_debug_ranges = program.main.locations.iter().any(|location| {
-        location
-            .as_ref()
-            .and_then(|location| location.range.as_ref())
-            .is_some()
-    }) || program.functions.iter().any(|function| {
+    let has_debug_ranges = program.functions.iter().any(|function| {
         function.locations.iter().any(|location| {
             location
                 .as_ref()
@@ -1476,12 +1502,17 @@ fn format_program_sections(out: &mut String, program: &Program) {
     });
     if has_debug_ranges {
         out.push_str("\ndebug_ranges:\n");
-        for (index, location) in program.main.locations.iter().enumerate() {
+        let entry = &program.functions[program.entry.0 as usize];
+        for (index, location) in entry.locations.iter().enumerate() {
             if let Some(range) = location.as_ref().and_then(|location| location.range.as_ref()) {
                 out.push_str(&format_debug_range("main", index, range));
             }
         }
-        for (function_index, function) in program.functions.iter().enumerate() {
+        let mut function_index = 0usize;
+        for (position, function) in program.functions.iter().enumerate() {
+            if position as u32 == program.entry.0 {
+                continue;
+            }
             for (instruction, location) in function.locations.iter().enumerate() {
                 if let Some(range) = location.as_ref().and_then(|location| location.range.as_ref()) {
                     out.push_str(&format_debug_range(
@@ -1491,6 +1522,7 @@ fn format_program_sections(out: &mut String, program: &Program) {
                     ));
                 }
             }
+            function_index += 1;
         }
     }
 }
@@ -1560,7 +1592,7 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
             }),
             "make_function" => Ok(Instruction::MakeFunction {
                 dest,
-                function: parse_function_ref(line, operands)?,
+                function: FuncId((parse_function_ref(line, operands)? + 1) as u32),
             }),
             "array" => Ok(Instruction::Array {
                 dest,
@@ -1767,7 +1799,7 @@ fn format_instruction(instruction: &Instruction) -> String {
     match instruction {
         Instruction::Constant { dest, constant } => format!("r{} = constant c{}", dest, constant),
         Instruction::MakeFunction { dest, function } => {
-            format!("r{} = make_function f{}", dest, function)
+            format!("r{} = make_function f{}", dest, function.0 - 1)
         }
         Instruction::Array { dest, elements } => {
             format!("r{} = array {}", dest, format_register_list(elements))
@@ -2323,15 +2355,21 @@ mod tests {
         let artifact = Artifact::Program(Program {
             constants: vec![Constant::Nil],
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 1,
                 instructions: vec![Instruction::Constant {
                     dest: 1,
                     constant: 0,
                 }],
                 locations: vec![None],
-            },
-            functions: Vec::new(),
+            }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         });
 
@@ -2379,10 +2417,10 @@ debug_ranges:
         assert_eq!(program.debug_sources[0].module, None);
         assert_eq!(program.debug_sources[0].path, "demo.cd");
         assert_eq!(program.debug_sources[0].text, "print 1 / 0;\n");
-        assert_eq!(program.main.locations[2].as_ref().unwrap().line, 1);
-        assert_eq!(program.main.locations[2].as_ref().unwrap().column, 7);
+        assert_eq!(program.functions[0].locations[2].as_ref().unwrap().line, 1);
+        assert_eq!(program.functions[0].locations[2].as_ref().unwrap().column, 7);
         assert_eq!(
-            program.main.locations[2]
+            program.functions[0].locations[2]
                 .as_ref()
                 .and_then(|location| location.range.as_ref()),
             Some(&DebugRange {

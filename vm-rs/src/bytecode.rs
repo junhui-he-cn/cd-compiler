@@ -1,9 +1,72 @@
+//! Bytecode data model for `.cdbc` artifacts.
+//!
+//! The 0.2 refactor introduces strong index types so the VM never re-derives
+//! language-level identity (locals, upvalues, globals, types, variants, native
+//! imports, blocks) from strings. The current text envelope is still
+//! `.cdbc 0.1`, so the parser maps the legacy `main` section to `functions[0]`
+//! and legacy `fK` sections to `functions[K + 1]`; `Program::entry` names the
+//! unified entry function. Operand indexes that later phases will replace with
+//! `LocalId`/`GlobalId`/`StringId`/`ConstId` remain `usize` for now.
+
+macro_rules! id_type {
+    ($(#[$doc:meta])* $name:ident) => {
+        $(#[$doc])*
+        #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+        pub struct $name(pub u32);
+    };
+}
+
+id_type!(
+    /// Virtual-register identifier inside one function body.
+    RegId
+);
+id_type!(
+    /// Compiler-assigned local slot inside one function frame.
+    LocalId
+);
+id_type!(
+    /// Compiler-assigned upvalue slot inside one function's closure.
+    UpvalueId
+);
+id_type!(
+    /// Compiler-assigned global slot.
+    GlobalId
+);
+id_type!(
+    /// Function table index.
+    FuncId
+);
+id_type!(
+    /// Type layout table index.
+    TypeId
+);
+id_type!(
+    /// Enum variant table index.
+    VariantId
+);
+id_type!(
+    /// Native import table index.
+    NativeId
+);
+id_type!(
+    /// Basic block identifier.
+    BlockId
+);
+id_type!(
+    /// String table index (display/debug/import metadata only).
+    StringId
+);
+id_type!(
+    /// Constant table index.
+    ConstId
+);
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Program {
     pub constants: Vec<Constant>,
     pub names: Vec<String>,
-    pub main: FunctionBody,
     pub functions: Vec<Function>,
+    pub entry: FuncId,
     pub debug_sources: Vec<DebugSource>,
 }
 
@@ -37,19 +100,31 @@ pub enum Constant {
     String(String),
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct Function {
-    pub index: usize,
-    pub name: String,
-    pub arity: usize,
-    pub registers: usize,
-    pub params: Vec<String>,
-    pub instructions: Vec<Instruction>,
-    pub locations: Vec<Option<DebugLocation>>,
+/// Where a function's upvalue comes from. Populated by the closure-conversion
+/// phase; the current `.cdbc 0.1` emitter always produces an empty vector.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum UpvalueSource {
+    Local(LocalId),
+    Upvalue(UpvalueId),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct UpvalueDesc {
+    pub source: UpvalueSource,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct FunctionBody {
+pub struct Function {
+    pub id: FuncId,
+    pub name: String,
+    pub arity: usize,
+    /// Number of compiler-assigned local slots (excluding parameters).
+    /// Still zero for `.cdbc 0.1` artifacts; populated by the variable
+    /// lowering phase.
+    pub local_count: usize,
+    /// Explicit upvalue descriptors. Still empty for `.cdbc 0.1` artifacts.
+    pub upvalues: Vec<UpvalueDesc>,
+    pub params: Vec<String>,
     pub registers: usize,
     pub instructions: Vec<Instruction>,
     pub locations: Vec<Option<DebugLocation>>,
@@ -63,7 +138,7 @@ pub enum Instruction {
     },
     MakeFunction {
         dest: usize,
-        function: usize,
+        function: FuncId,
     },
     Array {
         dest: usize,

@@ -1,8 +1,10 @@
 #![allow(dead_code)]
 
 use crate::bytecode::{
-    Constant, DebugLocation, DebugRange, DebugSource, Function, FunctionBody, Instruction, Program,
+    Constant, DebugLocation, DebugRange, DebugSource, Function, Instruction, Program,
 };
+#[cfg(test)]
+use crate::bytecode::FuncId;
 use crate::jit::{
     JitCallContext, JitFrameMaterialization, JitExecutionMode, JitHelperAbi, JitSafepoint,
     JitSafepointKind, JitState, RuntimeHelper, JIT_ERROR_HANDLE,
@@ -805,11 +807,7 @@ fn prepare_function(program: &Program, function: &Function) -> PreparedFunction 
     PreparedFunction {
         name: Rc::from(function.name.as_str()),
         params: function.params.clone(),
-        body: Rc::new(FunctionBody {
-            registers: function.registers,
-            instructions: function.instructions.clone(),
-            locations: function.locations.clone(),
-        }),
+        body: Rc::new(function.clone()),
         variable_plan: Rc::new(variable_plan),
     }
 }
@@ -1220,12 +1218,18 @@ mod tests {
         Program {
             constants: Vec::new(),
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
-            },
-            functions: Vec::new(),
+            }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         }
     }
@@ -1240,7 +1244,13 @@ mod tests {
                 Constant::String("b".to_string()),
             ],
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 10,
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
@@ -1285,8 +1295,8 @@ mod tests {
                     Instruction::Print { value: 9 },
                 ],
                 locations: vec![None; 16],
-            },
-            functions: Vec::new(),
+            }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
 
@@ -1324,7 +1334,13 @@ mod tests {
         Program {
             constants: vec![Constant::Number("7".to_string())],
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 1,
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
@@ -1332,8 +1348,8 @@ mod tests {
                     Instruction::Return { value: 0 },
                 ],
                 locations: vec![None; 3],
-            },
-            functions: Vec::new(),
+            }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         }
     }
@@ -1342,10 +1358,16 @@ mod tests {
         Program {
             constants: vec![Constant::Number("42".to_string())],
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 3,
                 instructions: vec![
-                    Instruction::MakeFunction { dest: 0, function: 0 },
+                    Instruction::MakeFunction { dest: 0, function: FuncId(1) },
                     Instruction::Call {
                         dest: 1,
                         callee: 0,
@@ -1356,8 +1378,10 @@ mod tests {
                 ],
                 locations: vec![None; 4],
             },
-            functions: vec![Function {
-                index: 0,
+                Function {
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "answer".to_string(),
                 arity: 0,
                 registers: 1,
@@ -1368,6 +1392,7 @@ mod tests {
                 ],
                 locations: vec![None; 2],
             }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         }
     }
@@ -1376,12 +1401,18 @@ mod tests {
         Program {
             constants,
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 3,
                 instructions: vec![
                     Instruction::MakeFunction {
                         dest: 0,
-                        function: 0,
+                        function: FuncId(1),
                     },
                     Instruction::Call {
                         dest: 1,
@@ -1393,7 +1424,8 @@ mod tests {
                 ],
                 locations: vec![None; 4],
             },
-            functions: vec![function],
+                function],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         }
     }
@@ -1415,15 +1447,21 @@ mod tests {
         Program {
             constants: vec![Constant::Number("1".to_string())],
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 1,
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
                     Instruction::Jump { target: 0 },
                 ],
                 locations: vec![None; 2],
-            },
-            functions: Vec::new(),
+            }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         }
     }
@@ -1432,7 +1470,13 @@ mod tests {
         Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
             names: vec!["map".to_string(), "item".to_string()],
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 5,
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
@@ -1441,7 +1485,7 @@ mod tests {
                         dest: 2,
                         elements: vec![0, 1],
                     },
-                    Instruction::MakeFunction { dest: 3, function: 0 },
+                    Instruction::MakeFunction { dest: 3, function: FuncId(1) },
                     Instruction::NativeCall {
                         dest: 4,
                         name: 0,
@@ -1452,8 +1496,10 @@ mod tests {
                 ],
                 locations: vec![None; 7],
             },
-            functions: vec![Function {
-                index: 0,
+                Function {
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "identity".to_string(),
                 arity: 1,
                 registers: 1,
@@ -1464,6 +1510,7 @@ mod tests {
                 ],
                 locations: vec![None; 2],
             }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         }
     }
@@ -1472,10 +1519,16 @@ mod tests {
         Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
             names: vec!["map".to_string(), "item".to_string()],
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 2,
                 instructions: vec![
-                    Instruction::MakeFunction { dest: 0, function: 0 },
+                    Instruction::MakeFunction { dest: 0, function: FuncId(1) },
                     Instruction::Call {
                         dest: 1,
                         callee: 0,
@@ -1485,9 +1538,10 @@ mod tests {
                 ],
                 locations: vec![None; 3],
             },
-            functions: vec![
                 Function {
-                    index: 0,
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
                     name: "worker".to_string(),
                     arity: 0,
                     registers: 5,
@@ -1499,7 +1553,7 @@ mod tests {
                             dest: 2,
                             elements: vec![0, 1],
                         },
-                        Instruction::MakeFunction { dest: 3, function: 1 },
+                        Instruction::MakeFunction { dest: 3, function: FuncId(2) },
                         Instruction::NativeCall {
                             dest: 4,
                             name: 0,
@@ -1510,7 +1564,9 @@ mod tests {
                     locations: vec![None; 6],
                 },
                 Function {
-                    index: 1,
+                    id: FuncId(2),
+                    local_count: 0,
+                    upvalues: Vec::new(),
                     name: "identity".to_string(),
                     arity: 1,
                     registers: 1,
@@ -1522,6 +1578,7 @@ mod tests {
                     locations: vec![None; 2],
                 },
             ],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         }
     }
@@ -1530,7 +1587,13 @@ mod tests {
         Program {
             constants: vec![Constant::Nil, Constant::Number("0".to_string())],
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 4,
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
@@ -1548,8 +1611,8 @@ mod tests {
                     Instruction::Return { value: 2 },
                 ],
                 locations: vec![None; 5],
-            },
-            functions: Vec::new(),
+            }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         }
     }
@@ -1563,14 +1626,21 @@ mod tests {
                 Constant::Number("0".to_string()),
             ],
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
             },
-            functions: vec![
                 Function {
-                    index: 0,
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
                     name: "target".to_string(),
                     arity: 0,
                     registers: 1,
@@ -1582,7 +1652,9 @@ mod tests {
                     locations: vec![None; 2],
                 },
                 Function {
-                    index: 1,
+                    id: FuncId(2),
+                    local_count: 0,
+                    upvalues: Vec::new(),
                     name: "waiter".to_string(),
                     arity: 0,
                     registers: 1,
@@ -1594,7 +1666,9 @@ mod tests {
                     locations: vec![None; 2],
                 },
                 Function {
-                    index: 2,
+                    id: FuncId(3),
+                    local_count: 0,
+                    upvalues: Vec::new(),
                     name: "failure".to_string(),
                     arity: 0,
                     registers: 3,
@@ -1612,7 +1686,9 @@ mod tests {
                     locations: vec![None; 4],
                 },
                 Function {
-                    index: 3,
+                    id: FuncId(4),
+                    local_count: 0,
+                    upvalues: Vec::new(),
                     name: "pending".to_string(),
                     arity: 0,
                     registers: 1,
@@ -1624,6 +1700,7 @@ mod tests {
                     locations: vec![None; 2],
                 },
             ],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         }
     }
@@ -1637,14 +1714,21 @@ mod tests {
                 Constant::Number("4".to_string()),
             ],
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
             },
-            functions: vec![
                 Function {
-                    index: 0,
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
                     name: "odd".to_string(),
                     arity: 0,
                     registers: 2,
@@ -1659,7 +1743,9 @@ mod tests {
                     locations: vec![None; 5],
                 },
                 Function {
-                    index: 1,
+                    id: FuncId(2),
+                    local_count: 0,
+                    upvalues: Vec::new(),
                     name: "even".to_string(),
                     arity: 0,
                     registers: 2,
@@ -1674,6 +1760,7 @@ mod tests {
                     locations: vec![None; 5],
                 },
             ],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         }
     }
@@ -1825,10 +1912,10 @@ mod tests {
             .start_cooperative(1)
             .expect("positive quantum should start a session");
         let first = run
-            .spawn(TaskSpec::function(0, Vec::new()))
+            .spawn(TaskSpec::function(1, Vec::new()))
             .expect("first task should spawn");
         let second = run
-            .spawn(TaskSpec::function(1, Vec::new()))
+            .spawn(TaskSpec::function(2, Vec::new()))
             .expect("second task should spawn");
 
         assert_eq!(
@@ -1863,10 +1950,10 @@ mod tests {
             .start_cooperative(1)
             .expect("positive quantum should start a session");
         let odd = run
-            .spawn(TaskSpec::function(0, Vec::new()))
+            .spawn(TaskSpec::function(1, Vec::new()))
             .expect("odd task should spawn");
         let even = run
-            .spawn(TaskSpec::function(1, Vec::new()))
+            .spawn(TaskSpec::function(2, Vec::new()))
             .expect("even task should spawn");
 
         assert_eq!(
@@ -1916,10 +2003,10 @@ mod tests {
             .start_cooperative(1)
             .expect("positive quantum should start a session");
         let odd = run
-            .spawn(TaskSpec::function(0, Vec::new()))
+            .spawn(TaskSpec::function(1, Vec::new()))
             .expect("odd task should spawn");
         let even = run
-            .spawn(TaskSpec::function(1, Vec::new()))
+            .spawn(TaskSpec::function(2, Vec::new()))
             .expect("even task should spawn");
 
         assert!(matches!(
@@ -1958,12 +2045,12 @@ mod tests {
     #[test]
     fn cooperative_host_attributes_synchronous_native_callback_output() {
         let mut program = cooperative_native_callback_program();
-        program.functions[0].instructions = vec![
+        program.functions[1].instructions = vec![
             Instruction::LoadVar { dest: 0, name: 1 },
             Instruction::Print { value: 0 },
             Instruction::Return { value: 0 },
         ];
-        program.functions[0].locations = vec![None; 3];
+        program.functions[1].locations = vec![None; 3];
         let mut run = VM::new(&program)
             .start_cooperative(8)
             .expect("positive quantum should start a session");
@@ -1991,10 +2078,10 @@ mod tests {
             .start_cooperative_trace(1)
             .expect("positive quantum should start a traced session");
         let odd = run
-            .spawn(TaskSpec::function(0, Vec::new()))
+            .spawn(TaskSpec::function(1, Vec::new()))
             .expect("odd task should spawn");
         let even = run
-            .spawn(TaskSpec::function(1, Vec::new()))
+            .spawn(TaskSpec::function(2, Vec::new()))
             .expect("even task should spawn");
 
         run.step().expect("odd task should enter");
@@ -2057,7 +2144,7 @@ mod tests {
             path: "trace-task.cd".to_string(),
             text: "one\ntwo\nthree\nfour\nfive\n".to_string(),
         });
-        program.functions[0].locations = (1..=5)
+        program.functions[1].locations = (1..=5)
             .map(|line| {
                 Some(DebugLocation {
                     source: 0,
@@ -2071,7 +2158,7 @@ mod tests {
             .start_cooperative_trace(8)
             .expect("positive quantum should start a traced session");
         let task = run
-            .spawn(TaskSpec::function(0, Vec::new()))
+            .spawn(TaskSpec::function(1, Vec::new()))
             .expect("traced task should spawn");
 
         run.run_until_waiting()
@@ -2136,12 +2223,12 @@ mod tests {
     #[test]
     fn cooperative_trace_includes_synchronous_native_callback_frames_and_output() {
         let mut program = cooperative_native_callback_program();
-        program.functions[0].instructions = vec![
+        program.functions[1].instructions = vec![
             Instruction::LoadVar { dest: 0, name: 1 },
             Instruction::Print { value: 0 },
             Instruction::Return { value: 0 },
         ];
-        program.functions[0].locations = vec![None; 3];
+        program.functions[1].locations = vec![None; 3];
         let mut run = VM::new(&program)
             .start_cooperative_trace(8)
             .expect("positive quantum should start a traced session");
@@ -2197,10 +2284,10 @@ mod tests {
             .start_cooperative_trace(1)
             .expect("positive quantum should start a traced session");
         let failure = run
-            .spawn(TaskSpec::function(2, Vec::new()))
+            .spawn(TaskSpec::function(3, Vec::new()))
             .expect("failure task should spawn");
         let pending = run
-            .spawn(TaskSpec::function(3, Vec::new()))
+            .spawn(TaskSpec::function(4, Vec::new()))
             .expect("pending task should spawn");
 
         run.run_until_waiting()
@@ -2250,7 +2337,7 @@ mod tests {
             start: 4,
             end: 8,
         };
-        program.functions[0].locations = vec![
+        program.functions[1].locations = vec![
             Some(DebugLocation {
                 source: 0,
                 line: 1,
@@ -2259,7 +2346,7 @@ mod tests {
             });
             5
         ];
-        program.functions[1].locations = vec![
+        program.functions[2].locations = vec![
             Some(DebugLocation {
                 source: 0,
                 line: 2,
@@ -2278,10 +2365,10 @@ mod tests {
             .start_cooperative_profile(1)
             .expect("profiled session should start");
         let odd = run
-            .spawn(TaskSpec::function(0, Vec::new()))
+            .spawn(TaskSpec::function(1, Vec::new()))
             .expect("odd task should spawn");
         let even = run
-            .spawn(TaskSpec::function(1, Vec::new()))
+            .spawn(TaskSpec::function(2, Vec::new()))
             .expect("even task should spawn");
         let initial = run.profile_report().expect("profile should be enabled");
         assert_eq!(initial.aggregate.instruction_count, 0);
@@ -2330,12 +2417,12 @@ mod tests {
     #[test]
     fn cooperative_profile_attributes_native_callbacks_to_the_current_task() {
         let mut program = cooperative_native_callback_program();
-        program.functions[0].instructions = vec![
+        program.functions[1].instructions = vec![
             Instruction::LoadVar { dest: 0, name: 1 },
             Instruction::Print { value: 0 },
             Instruction::Return { value: 0 },
         ];
-        program.functions[0].locations = vec![None; 3];
+        program.functions[1].locations = vec![None; 3];
         let mut run = VM::new(&program)
             .start_cooperative_profile(8)
             .expect("profiled session should start");
@@ -2374,10 +2461,10 @@ mod tests {
             .start_cooperative_profile(8)
             .expect("profiled session should start");
         let failure = run
-            .spawn(TaskSpec::function(2, Vec::new()))
+            .spawn(TaskSpec::function(3, Vec::new()))
             .expect("failure task should spawn");
         let pending = run
-            .spawn(TaskSpec::function(3, Vec::new()))
+            .spawn(TaskSpec::function(4, Vec::new()))
             .expect("pending task should spawn");
 
         run.run_until_waiting()
@@ -2448,10 +2535,10 @@ mod tests {
             .start_cooperative_debug(1, hook)
             .expect("debug session should start");
         let odd = run
-            .spawn(TaskSpec::function(0, Vec::new()))
+            .spawn(TaskSpec::function(1, Vec::new()))
             .expect("odd task should spawn");
         let even = run
-            .spawn(TaskSpec::function(1, Vec::new()))
+            .spawn(TaskSpec::function(2, Vec::new()))
             .expect("even task should spawn");
 
         assert_eq!(
@@ -2557,10 +2644,10 @@ mod tests {
             .start_cooperative_debug(8, hook)
             .expect("debug session should start");
         let odd = run
-            .spawn(TaskSpec::function(0, Vec::new()))
+            .spawn(TaskSpec::function(1, Vec::new()))
             .expect("odd task should spawn");
         let even = run
-            .spawn(TaskSpec::function(1, Vec::new()))
+            .spawn(TaskSpec::function(2, Vec::new()))
             .expect("even task should spawn");
 
         assert_eq!(
@@ -2591,10 +2678,10 @@ mod tests {
             .start_cooperative_debug(8, hook)
             .expect("debug session should start");
         let failure = run
-            .spawn(TaskSpec::function(2, Vec::new()))
+            .spawn(TaskSpec::function(3, Vec::new()))
             .expect("failure task should spawn");
         let pending = run
-            .spawn(TaskSpec::function(3, Vec::new()))
+            .spawn(TaskSpec::function(4, Vec::new()))
             .expect("pending task should spawn");
 
         run.run_until_waiting()
@@ -2623,10 +2710,10 @@ mod tests {
             .start_cooperative(1)
             .expect("positive quantum should start a session");
         let waiter = run
-            .spawn(TaskSpec::function(1, Vec::new()))
+            .spawn(TaskSpec::function(2, Vec::new()))
             .expect("waiter should spawn");
         let target = run
-            .spawn(TaskSpec::function(0, Vec::new()))
+            .spawn(TaskSpec::function(1, Vec::new()))
             .expect("target should spawn");
 
         assert!(matches!(
@@ -2671,10 +2758,10 @@ mod tests {
             .start_cooperative(1)
             .expect("positive quantum should start a session");
         let failure = run
-            .spawn(TaskSpec::function(2, Vec::new()))
+            .spawn(TaskSpec::function(3, Vec::new()))
             .expect("failure task should spawn");
         let pending = run
-            .spawn(TaskSpec::function(3, Vec::new()))
+            .spawn(TaskSpec::function(4, Vec::new()))
             .expect("pending task should spawn");
 
         run.run_until_waiting()
@@ -2706,10 +2793,16 @@ mod tests {
         Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("0".to_string())],
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 2,
                 instructions: vec![
-                    Instruction::MakeFunction { dest: 0, function: 0 },
+                    Instruction::MakeFunction { dest: 0, function: FuncId(1) },
                     Instruction::Call {
                         dest: 1,
                         callee: 0,
@@ -2721,8 +2814,10 @@ mod tests {
                     Some(DebugLocation { source: 0, line: 2, column: 1, range: None }),
                 ],
             },
-            functions: vec![Function {
-                index: 0,
+                Function {
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "fail".to_string(),
                 arity: 0,
                 registers: 4,
@@ -2740,6 +2835,7 @@ mod tests {
                     Some(DebugLocation { source: 0, line: 1, column: 14, range: None }),
                 ],
             }],
+            entry: FuncId(0),
             debug_sources: vec![source],
         }
     }
@@ -2752,7 +2848,13 @@ mod tests {
                 Constant::Number("1".to_string()),
             ],
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 5,
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
@@ -2780,8 +2882,8 @@ mod tests {
                     Instruction::Return { value: 0 },
                 ],
                 locations: vec![None; 9],
-            },
-            functions: Vec::new(),
+            }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         }
     }
@@ -2790,7 +2892,13 @@ mod tests {
         Program {
             constants: Vec::new(),
             names: vec!["push".to_string()],
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 2,
                 instructions: vec![
                     Instruction::Array {
@@ -2805,8 +2913,8 @@ mod tests {
                     Instruction::Jump { target: 2 },
                 ],
                 locations: vec![None; 3],
-            },
-            functions: Vec::new(),
+            }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         }
     }
@@ -2847,10 +2955,16 @@ mod tests {
                 Constant::Number(depth.to_string()),
             ],
             names: vec!["n".to_string()],
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 3,
                 instructions: vec![
-                    Instruction::MakeFunction { dest: 0, function: 0 },
+                    Instruction::MakeFunction { dest: 0, function: FuncId(1) },
                     Instruction::Constant { dest: 1, constant: 2 },
                     Instruction::Call {
                         dest: 2,
@@ -2860,8 +2974,10 @@ mod tests {
                 ],
                 locations: vec![None; 3],
             },
-            functions: vec![Function {
-                index: 0,
+                Function {
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "recurse".to_string(),
                 arity: 1,
                 registers: 7,
@@ -2878,7 +2994,7 @@ mod tests {
                         condition: 2,
                         target: 9,
                     },
-                    Instruction::MakeFunction { dest: 3, function: 0 },
+                    Instruction::MakeFunction { dest: 3, function: FuncId(1) },
                     Instruction::Constant { dest: 4, constant: 1 },
                     Instruction::Subtract {
                         dest: 5,
@@ -2895,6 +3011,7 @@ mod tests {
                 ],
                 locations: vec![None; 10],
             }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         }
     }
@@ -2903,12 +3020,12 @@ mod tests {
     fn function_bodies_are_prepared_once_at_construction() {
         let program = recursive_closure_program(2);
         let mut vm = VM::new(&program);
-        let first_body = vm.prepared_functions[0].clone();
+        let first_body = vm.prepared_functions[1].clone();
 
         let invoke = |vm: &mut VM<'_>| {
             let function = FunctionValue {
                 name: "recurse".to_string(),
-                function_index: 0,
+                function_index: 1,
                 arity: 1,
                 identity: 0,
                 closure: vm.heap.new_environment(),
@@ -2924,7 +3041,7 @@ mod tests {
 
         let first_result = invoke(&mut vm);
         let second_result = invoke(&mut vm);
-        let second_body = vm.prepared_functions[0].clone();
+        let second_body = vm.prepared_functions[1].clone();
 
         assert_eq!(first_result.to_string(), "0");
         assert_eq!(second_result.to_string(), "0");
@@ -2936,7 +3053,20 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Number("1".to_string())],
             functions: vec![Function {
-                index: 0,
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
+                registers: 0,
+                instructions: Vec::new(),
+                locations: Vec::new(),
+            },
+            Function {
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "eligible".to_string(),
                 arity: 0,
                 registers: 1,
@@ -2951,11 +3081,7 @@ mod tests {
                 locations: vec![None; 2],
             }],
             names: Vec::new(),
-            main: FunctionBody {
-                registers: 0,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut first = VM::new(&program);
@@ -2964,28 +3090,28 @@ mod tests {
         assert_eq!(
             first
                 .jit
-                .eligibility(&program, Some(0), crate::jit::JitExecutionMode::Ordinary),
+                .eligibility(&program, Some(2), crate::jit::JitExecutionMode::Ordinary),
             crate::jit::JitEligibility::Fallback(crate::jit::JitFallbackReason::Disabled)
         );
         assert_eq!(
             second
                 .jit
-                .eligibility(&program, Some(0), crate::jit::JitExecutionMode::Ordinary),
+                .eligibility(&program, Some(2), crate::jit::JitExecutionMode::Ordinary),
             crate::jit::JitEligibility::Fallback(crate::jit::JitFallbackReason::Disabled)
         );
 
-        first.jit = JitState::enabled_for_tests([0], 1024);
+        first.jit = JitState::enabled_for_tests([1], 1024);
         assert!(matches!(
             first
                 .jit
                 .admit(
                     &program,
-                    Some(0),
+                    Some(1),
                     crate::jit::JitExecutionMode::Ordinary,
                     1024,
                 ),
             crate::jit::JitAdmission::Reserved {
-                function_index: 0,
+                function_index: 1,
                 bytes: 1024,
                 ..
             }
@@ -2993,7 +3119,7 @@ mod tests {
         assert_eq!(
             second
                 .jit
-                .eligibility(&program, Some(0), crate::jit::JitExecutionMode::Ordinary),
+                .eligibility(&program, Some(2), crate::jit::JitExecutionMode::Ordinary),
             crate::jit::JitEligibility::Fallback(crate::jit::JitFallbackReason::Disabled)
         );
     }
@@ -3030,9 +3156,9 @@ mod tests {
     fn verified_constructor_rejects_malformed_programs_and_unverified_keeps_runtime_checks() {
         let mut program = empty_program();
         program.constants = vec![Constant::Nil];
-        program.main.registers = 1;
-        program.main.instructions = vec![Instruction::Constant { dest: 3, constant: 0 }];
-        program.main.locations = vec![None];
+        program.functions[0].registers = 1;
+        program.functions[0].instructions = vec![Instruction::Constant { dest: 3, constant: 0 }];
+        program.functions[0].locations = vec![None];
 
         let verified_error = match VM::with_config_verified(&program, RunConfig::unlimited()) {
             Ok(_) => panic!("out-of-range registers must fail construction-time verification"),
@@ -3323,13 +3449,21 @@ mod tests {
         let program = Program {
             constants: Vec::new(),
             names: vec!["item".to_string()],
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
             },
-            functions: vec![Function {
-                index: 0,
+                Function {
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "identity".to_string(),
                 arity: 1,
                 registers: 1,
@@ -3340,13 +3474,14 @@ mod tests {
                 ],
                 locations: vec![None, None],
             }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut vm = VM::new(&program);
         let source = vm.make_array(vec![Value::number(1.0), Value::number(2.0)]);
         let callback = Value::function(FunctionValue {
             name: "identity".to_string(),
-            function_index: 0,
+            function_index: 1,
             arity: 1,
             identity: 1,
             closure: new_environment(),
@@ -3368,14 +3503,21 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Number("10".to_string())],
             names: vec!["item".to_string()],
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
             },
-            functions: vec![
                 Function {
-                    index: 0,
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
                     name: "expand".to_string(),
                     arity: 1,
                     registers: 5,
@@ -3401,7 +3543,9 @@ mod tests {
                     locations: vec![None; 6],
                 },
                 Function {
-                    index: 1,
+                    id: FuncId(2),
+                    local_count: 0,
+                    upvalues: Vec::new(),
                     name: "identity".to_string(),
                     arity: 1,
                     registers: 1,
@@ -3413,13 +3557,14 @@ mod tests {
                     locations: vec![None; 2],
                 },
             ],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut vm = VM::new(&program);
         let source = vm.make_array(vec![Value::number(1.0), Value::number(2.0)]);
         let callback = Value::function(FunctionValue {
             name: "expand".to_string(),
-            function_index: 0,
+            function_index: 1,
             arity: 1,
             identity: 1,
             closure: new_environment(),
@@ -3441,7 +3586,7 @@ mod tests {
 
         let invalid_callback = Value::function(FunctionValue {
             name: "identity".to_string(),
-            function_index: 1,
+            function_index: 2,
             arity: 1,
             identity: 2,
             closure: new_environment(),
@@ -3459,13 +3604,21 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Number("1".to_string())],
             names: vec!["item".to_string()],
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
             },
-            functions: vec![Function {
-                index: 0,
+                Function {
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "greater_than_one".to_string(),
                 arity: 1,
                 registers: 3,
@@ -3482,13 +3635,14 @@ mod tests {
                 ],
                 locations: vec![None, None, None, None],
             }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut vm = VM::new(&program);
         let source = vm.make_array(vec![Value::number(1.0), Value::number(2.0), Value::number(3.0)]);
         let predicate = Value::function(FunctionValue {
             name: "greater_than_one".to_string(),
-            function_index: 0,
+            function_index: 1,
             arity: 1,
             identity: 1,
             closure: new_environment(),
@@ -3510,14 +3664,21 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Nil],
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
             },
-            functions: vec![
                 Function {
-                    index: 0,
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
                     name: "no_args".to_string(),
                     arity: 0,
                     registers: 0,
@@ -3526,7 +3687,9 @@ mod tests {
                     locations: Vec::new(),
                 },
                 Function {
-                    index: 1,
+                    id: FuncId(2),
+                    local_count: 0,
+                    upvalues: Vec::new(),
                     name: "returns_nil".to_string(),
                     arity: 1,
                     registers: 1,
@@ -3538,20 +3701,21 @@ mod tests {
                     locations: vec![None, None],
                 },
             ],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut vm = VM::new(&program);
         let array = vm.make_array(vec![Value::number(1.0)]);
         let no_args = Value::function(FunctionValue {
             name: "no_args".to_string(),
-            function_index: 0,
+            function_index: 1,
             arity: 0,
             identity: 1,
             closure: new_environment(),
         });
         let returns_nil = Value::function(FunctionValue {
             name: "returns_nil".to_string(),
-            function_index: 1,
+            function_index: 2,
             arity: 1,
             identity: 2,
             closure: new_environment(),
@@ -3594,13 +3758,21 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Number("2".to_string())],
             names: vec!["item".to_string()],
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
             },
-            functions: vec![Function {
-                index: 0,
+                Function {
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "is_two".to_string(),
                 arity: 1,
                 registers: 3,
@@ -3617,12 +3789,13 @@ mod tests {
                 ],
                 locations: vec![None, None, None, None],
             }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut vm = VM::new(&program);
         let predicate = Value::function(FunctionValue {
             name: "is_two".to_string(),
-            function_index: 0,
+            function_index: 1,
             arity: 1,
             identity: 1,
             closure: new_environment(),
@@ -3689,14 +3862,21 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Nil],
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
             },
-            functions: vec![
                 Function {
-                    index: 0,
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
                     name: "no_args".to_string(),
                     arity: 0,
                     registers: 0,
@@ -3705,7 +3885,9 @@ mod tests {
                     locations: Vec::new(),
                 },
                 Function {
-                    index: 1,
+                    id: FuncId(2),
+                    local_count: 0,
+                    upvalues: Vec::new(),
                     name: "returns_nil".to_string(),
                     arity: 1,
                     registers: 1,
@@ -3717,20 +3899,21 @@ mod tests {
                     locations: vec![None, None],
                 },
             ],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut vm = VM::new(&program);
         let array = vm.make_array(vec![Value::number(1.0)]);
         let no_args = Value::function(FunctionValue {
             name: "no_args".to_string(),
-            function_index: 0,
+            function_index: 1,
             arity: 0,
             identity: 1,
             closure: new_environment(),
         });
         let returns_nil = Value::function(FunctionValue {
             name: "returns_nil".to_string(),
-            function_index: 1,
+            function_index: 2,
             arity: 1,
             identity: 2,
             closure: new_environment(),
@@ -3773,13 +3956,21 @@ mod tests {
         let program = Program {
             constants: Vec::new(),
             names: vec!["acc".to_string(), "item".to_string()],
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
             },
-            functions: vec![Function {
-                index: 0,
+                Function {
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "add".to_string(),
                 arity: 2,
                 registers: 3,
@@ -3796,6 +3987,7 @@ mod tests {
                 ],
                 locations: vec![None, None, None, None],
             }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut vm = VM::new(&program);
@@ -3803,7 +3995,7 @@ mod tests {
         let empty = vm.make_array(Vec::new());
         let callback = Value::function(FunctionValue {
             name: "add".to_string(),
-            function_index: 0,
+            function_index: 1,
             arity: 2,
             identity: 1,
             closure: new_environment(),
@@ -3829,13 +4021,21 @@ mod tests {
         let program = Program {
             constants: Vec::new(),
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
             },
-            functions: vec![Function {
-                index: 0,
+                Function {
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "one_arg".to_string(),
                 arity: 1,
                 registers: 0,
@@ -3843,13 +4043,14 @@ mod tests {
                 instructions: Vec::new(),
                 locations: Vec::new(),
             }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut vm = VM::new(&program);
         let array = vm.make_array(vec![Value::number(1.0)]);
         let callback = Value::function(FunctionValue {
             name: "one_arg".to_string(),
-            function_index: 0,
+            function_index: 1,
             arity: 1,
             identity: 1,
             closure: new_environment(),
@@ -3950,7 +4151,13 @@ mod tests {
                 Constant::Number("2".to_string()),
             ],
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 6,
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
@@ -3966,8 +4173,8 @@ mod tests {
                     Instruction::Return { value: 5 },
                 ],
                 locations: Vec::new(),
-            },
-            functions: Vec::new(),
+            }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
 
@@ -4409,7 +4616,13 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Nil],
             names: vec!["sqrt".to_string()],
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 2,
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
@@ -4423,8 +4636,8 @@ mod tests {
                     Some(DebugLocation { source: 0, line: 1, column: 7, range: None }),
                     Some(DebugLocation { source: 0, line: 1, column: 1, range: None }),
                 ],
-            },
-            functions: Vec::new(),
+            }],
+            entry: FuncId(0),
             debug_sources: vec![DebugSource {
                 module: None,
                 path: "native.cd".to_string(),
@@ -4445,7 +4658,7 @@ mod tests {
     #[test]
     fn invalid_debug_source_lookup_does_not_panic() {
         let mut program = debug_failure_program();
-        program.functions[0].locations[2] = Some(DebugLocation { source: 99, line: 1, column: 1, range: None });
+        program.functions[1].locations[2] = Some(DebugLocation { source: 99, line: 1, column: 1, range: None });
         let error = VM::new(&program).run().unwrap_err();
         assert!(error.to_string().starts_with("Runtime error: "));
     }
@@ -4518,15 +4731,21 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Number("1".to_string())],
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 1,
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
                     Instruction::Jump { target: 0 },
                 ],
                 locations: vec![None, None],
-            },
-            functions: Vec::new(),
+            }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut config = RunConfig::unlimited();
@@ -4541,15 +4760,21 @@ mod tests {
             &Program {
                 constants: vec![Constant::Number("1".to_string())],
                 names: Vec::new(),
-                main: FunctionBody {
+                functions: vec![Function {
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
                     registers: 1,
                     instructions: vec![
                         Instruction::Constant { dest: 0, constant: 0 },
                         Instruction::Return { value: 0 },
                     ],
                     locations: vec![None, None],
-                },
-                functions: Vec::new(),
+                }],
+                entry: FuncId(0),
                 debug_sources: Vec::new(),
             },
             RunConfig::unlimited(),
@@ -4561,13 +4786,15 @@ mod tests {
     #[test]
     fn call_depth_budget_excludes_main_and_covers_callbacks() {
         let function = crate::bytecode::Function {
-            index: 0,
+            id: FuncId(1),
+            local_count: 0,
+            upvalues: Vec::new(),
             name: "recurse".to_string(),
             arity: 0,
             registers: 2,
             params: Vec::new(),
             instructions: vec![
-                Instruction::MakeFunction { dest: 0, function: 0 },
+                Instruction::MakeFunction { dest: 0, function: FuncId(1) },
                 Instruction::Call {
                     dest: 1,
                     callee: 0,
@@ -4580,10 +4807,16 @@ mod tests {
         let program = Program {
             constants: Vec::new(),
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 2,
                 instructions: vec![
-                    Instruction::MakeFunction { dest: 0, function: 0 },
+                    Instruction::MakeFunction { dest: 0, function: FuncId(1) },
                     Instruction::Call {
                         dest: 1,
                         callee: 0,
@@ -4592,7 +4825,8 @@ mod tests {
                 ],
                 locations: vec![None, None],
             },
-            functions: vec![function],
+                function],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut config = RunConfig::unlimited();
@@ -4608,13 +4842,21 @@ mod tests {
         let program = Program {
             constants: Vec::new(),
             names: vec!["item".to_string()],
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
             },
-            functions: vec![crate::bytecode::Function {
-                index: 0,
+                crate::bytecode::Function {
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "identity".to_string(),
                 arity: 1,
                 registers: 0,
@@ -4622,6 +4864,7 @@ mod tests {
                 instructions: Vec::new(),
                 locations: Vec::new(),
             }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut config = RunConfig::unlimited();
@@ -4630,7 +4873,7 @@ mod tests {
         let source = vm.make_array(vec![Value::number(1.0), Value::number(2.0)]);
         let callback = Value::function(FunctionValue {
             name: "identity".to_string(),
-            function_index: 0,
+            function_index: 1,
             arity: 1,
             identity: 1,
             closure: new_environment(),
@@ -4648,7 +4891,13 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Nil],
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 2,
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
@@ -4658,8 +4907,8 @@ mod tests {
                     },
                 ],
                 locations: vec![None, None],
-            },
-            functions: Vec::new(),
+            }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut config = RunConfig::unlimited();
@@ -4675,15 +4924,21 @@ mod tests {
         let program = Program {
             constants: vec![Constant::String("é".to_string())],
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 1,
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
                     Instruction::Print { value: 0 },
                 ],
                 locations: vec![None, None],
-            },
-            functions: Vec::new(),
+            }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut config = RunConfig::unlimited();
@@ -4735,7 +4990,14 @@ mod tests {
         let program = empty_program();
         let mut vm = VM::with_config(&program, config.with_cancellation(token.clone()));
         let mut frame = Frame::callee(
-            Rc::new(FunctionBody {
+            Rc::new(Function {
+                id: FuncId(0),
+                    name: String::new(),
+                    arity: 0,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+
                 registers: 1,
                 instructions: vec![Instruction::Return { value: 0 }],
                 locations: vec![None],
@@ -4792,7 +5054,14 @@ mod tests {
         config.max_instruction_steps = Some(1);
         let mut vm = VM::with_config(&program, config);
         let frame = Frame::main(
-            Rc::new(FunctionBody {
+            Rc::new(Function {
+                id: FuncId(0),
+                    name: String::new(),
+                    arity: 0,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
@@ -4821,7 +5090,9 @@ mod tests {
     fn jit_run_matches_interpreter_and_reuses_ordinary_call_cache() {
         let program = ordinary_jit_call_program(
             Function {
-                index: 0,
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "answer".to_string(),
                 arity: 0,
                 registers: 3,
@@ -4861,7 +5132,7 @@ mod tests {
         let interpreter_second_steps = interpreter.instruction_steps;
 
         let mut jit = VM::with_config(&program, RunConfig::unlimited());
-        jit.jit = JitState::enabled_for_tests([0], 4096);
+        jit.jit = JitState::enabled_for_tests([1], 4096);
         let jit_first = jit.run_inner().expect("JIT ordinary run should succeed");
         let jit_first_steps = jit.instruction_steps;
         let first_cache = jit.jit.cache_stats();
@@ -4896,7 +5167,7 @@ mod tests {
                 dest: 3,
                 constant: 3,
             },
-            Instruction::MakeFunction { dest: 4, function: 0 },
+            Instruction::MakeFunction { dest: 4, function: FuncId(1) },
             Instruction::Less {
                 dest: 5,
                 left: 0,
@@ -4942,13 +5213,21 @@ mod tests {
                 Constant::Number("1".to_string()),
             ],
             names: vec!["value".to_string()],
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 8,
                 instructions: main_instructions,
                 locations: vec![None; 14],
             },
-            functions: vec![Function {
-                index: 0,
+                Function {
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "wide_add".to_string(),
                 arity: 1,
                 registers: 33,
@@ -4956,6 +5235,7 @@ mod tests {
                 instructions: function_instructions,
                 locations: vec![None; 34],
             }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         }
     }
@@ -4984,7 +5264,7 @@ mod tests {
             for _ in 0..repeats {
                 let mut vm = VM::with_config(program, RunConfig::unlimited());
                 if jit {
-                    vm.jit = JitState::enabled_for_tests([0], 1 << 20);
+                    vm.jit = JitState::enabled_for_tests([1], 1 << 20);
                 }
                 let before = vm.instruction_steps;
                 let start = Instant::now();
@@ -5051,7 +5331,9 @@ mod tests {
     fn jit_run_matches_interpreter_runtime_error_for_ordinary_call() {
         let program = ordinary_jit_call_program(
             Function {
-                index: 0,
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "divide".to_string(),
                 arity: 0,
                 registers: 3,
@@ -5086,7 +5368,7 @@ mod tests {
             .expect_err("interpreter ordinary run should fail");
 
         let mut jit = VM::with_config(&program, RunConfig::unlimited());
-        jit.jit = JitState::enabled_for_tests([0], 4096);
+        jit.jit = JitState::enabled_for_tests([1], 4096);
         let jit_error = jit.run_inner().expect_err("JIT ordinary run should fail");
 
         assert_eq!(jit_error.kind, interpreter_error.kind);
@@ -5110,7 +5392,7 @@ mod tests {
         let interpreter_steps = interpreter.instruction_steps;
 
         let mut jit = VM::with_config(&program, RunConfig::unlimited());
-        jit.jit = JitState::enabled_for_tests([0], 4096);
+        jit.jit = JitState::enabled_for_tests([1], 4096);
         let jit_output = jit
             .run_inner()
             .expect("JIT execution_closure should succeed");
@@ -5127,13 +5409,21 @@ mod tests {
         let program = Program {
             constants: Vec::new(),
             names: vec!["left".to_string(), "right".to_string()],
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
             },
-            functions: vec![Function {
-                index: 0,
+                Function {
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "add".to_string(),
                 arity: 2,
                 registers: 3,
@@ -5150,13 +5440,14 @@ mod tests {
                 ],
                 locations: vec![None; 4],
             }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut vm = VM::new(&program);
-        vm.jit = JitState::enabled_for_tests([0], 4096);
+        vm.jit = JitState::enabled_for_tests([1], 4096);
         let function = FunctionValue {
             name: "add".to_string(),
-            function_index: 0,
+            function_index: 1,
             arity: 2,
             identity: 0,
             closure: vm.heap.new_environment(),
@@ -5200,13 +5491,21 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
             },
-            functions: vec![Function {
-                index: 0,
+                Function {
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "protocol_failure".to_string(),
                 arity: 0,
                 registers: 3,
@@ -5214,12 +5513,20 @@ mod tests {
                 instructions: instructions.clone(),
                 locations: vec![None; instructions.len()],
             }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut vm = VM::new(&program);
-        vm.jit = JitState::enabled_for_tests([0], 4096);
+        vm.jit = JitState::enabled_for_tests([1], 4096);
         let mut frame = Frame::callee(
-            Rc::new(FunctionBody {
+            Rc::new(Function {
+                id: FuncId(0),
+                    name: String::new(),
+                    arity: 0,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+
                 registers: 3,
                 instructions,
                 locations: vec![None; 4],
@@ -5253,13 +5560,21 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("0".to_string())],
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
             },
-            functions: vec![Function {
-                index: 0,
+                Function {
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "divide".to_string(),
                 arity: 0,
                 registers: 3,
@@ -5276,11 +5591,12 @@ mod tests {
                 ],
                 locations: vec![None; 4],
             }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let function = || FunctionValue {
             name: "divide".to_string(),
-            function_index: 0,
+            function_index: 1,
             arity: 0,
             identity: 0,
             closure: new_environment(),
@@ -5288,7 +5604,7 @@ mod tests {
         let mut config = RunConfig::unlimited();
         config.max_instruction_steps = Some(2);
         let mut jit_vm = VM::with_config(&program, config.clone());
-        jit_vm.jit = JitState::enabled_for_tests([0], 4096);
+        jit_vm.jit = JitState::enabled_for_tests([1], 4096);
         let jit_function = function();
         let jit_error = jit_vm
             .call_function(&jit_function, CallArguments::Empty, "main", None)
@@ -5320,12 +5636,18 @@ mod tests {
                 Constant::String("right".to_string()),
             ],
             names: vec!["value".to_string()],
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
-            },
-            functions: Vec::new(),
+            }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         };
         let mut vm = VM::new(&program);
@@ -5334,7 +5656,14 @@ mod tests {
             vm.heap.new_cell(Value::number(4.0)),
         ));
         let mut frame = Frame::callee(
-            Rc::new(FunctionBody {
+            Rc::new(Function {
+                id: FuncId(0),
+                    name: String::new(),
+                    arity: 0,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
@@ -5422,7 +5751,14 @@ mod tests {
         let program = empty_program();
         let mut vm = VM::new(&program);
         let mut frame = Frame::main(
-            Rc::new(FunctionBody {
+            Rc::new(Function {
+                id: FuncId(0),
+                    name: String::new(),
+                    arity: 0,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
@@ -5711,7 +6047,7 @@ pub enum JoinPoll {
 struct PreparedFunction {
     name: Rc<str>,
     params: Vec<String>,
-    body: Rc<FunctionBody>,
+    body: Rc<Function>,
     variable_plan: Rc<VariablePlan>,
 }
 
@@ -5872,10 +6208,7 @@ struct ActiveTaskProfile {
 }
 
 fn profile_function_index(frame: &Frame) -> usize {
-    frame
-        .function_index
-        .map(|index| index.saturating_add(1))
-        .unwrap_or(0)
+    frame.function_index.unwrap_or(0)
 }
 
 fn empty_profile_functions(program: &Program) -> Vec<ProfileFunction> {
@@ -5885,12 +6218,19 @@ fn empty_profile_functions(program: &Program) -> Vec<ProfileFunction> {
         calls: 0,
         instructions: 0,
     })
-    .chain(program.functions.iter().map(|function| ProfileFunction {
-        index: Some(function.index),
-        name: function.name.clone(),
-        calls: 0,
-        instructions: 0,
-    }))
+    .chain(
+        program
+            .functions
+            .iter()
+            .enumerate()
+            .filter(|(position, _)| *position as u32 != program.entry.0)
+            .map(|(_, function)| ProfileFunction {
+                index: Some((function.id.0 as usize).saturating_sub(1)),
+                name: function.name.clone(),
+                calls: 0,
+                instructions: 0,
+            }),
+    )
     .collect()
 }
 
@@ -6600,18 +6940,21 @@ impl<'a> CooperativeRun<'a> {
 
     fn make_task(&mut self, spec: TaskSpec) -> Result<ScheduledVmTask, RuntimeError> {
         let frame = match spec {
-            TaskSpec::Main => Frame {
-                body: Some(Rc::new(self.vm.program.main.clone())),
-                ip: 0,
-                registers: vec![Value::Nil; self.vm.program.main.registers],
-                locals: self.vm.heap.new_local_slots(),
-                closure: self.vm.heap.new_environment(),
-                variable_plan: None,
-                is_main: true,
-                function: Rc::from("main"),
-                function_index: None,
-                return_target: None,
-            },
+            TaskSpec::Main => {
+                let entry = self.vm.program.entry.0 as usize;
+                Frame {
+                    body: Some(Rc::new(self.vm.program.functions[entry].clone())),
+                    ip: 0,
+                    registers: vec![Value::Nil; self.vm.program.functions[entry].registers],
+                    locals: self.vm.heap.new_local_slots(),
+                    closure: self.vm.heap.new_environment(),
+                    variable_plan: None,
+                    is_main: true,
+                    function: Rc::from("main"),
+                    function_index: None,
+                    return_target: None,
+                }
+            }
             TaskSpec::Function { index, arguments } => {
                 let Some(cached) = self.vm.prepared_function(index) else {
                     return Err(RuntimeError::new("function index out of range"));
@@ -6938,10 +7281,11 @@ impl<'a> VM<'a> {
     fn run_inner(&mut self) -> Result<String, RuntimeError> {
         self.check_cancellation()?;
         let execution = {
+            let entry = self.program.entry.0 as usize;
             let mut frame = Frame {
                 body: None,
                 ip: 0,
-                registers: vec![Value::Nil; self.program.main.registers],
+                registers: vec![Value::Nil; self.program.functions[entry].registers],
                 locals: self.heap.new_local_slots(),
                 closure: self.heap.new_environment(),
                 variable_plan: None,
@@ -6953,7 +7297,7 @@ impl<'a> VM<'a> {
             // The entry body is immutable after artifact verification. Borrow it
             // directly instead of cloning its instruction and debug-location
             // vectors for the one execution of this VM instance.
-            self.execute_body(&self.program.main, &mut frame)
+            self.execute_body(&self.program.functions[entry], &mut frame)
         };
         let result = match execution {
             Ok(value) => {
@@ -6981,10 +7325,11 @@ impl<'a> VM<'a> {
         self.check_cancellation()?;
         let mut scheduler = CooperativeScheduler::new(quantum)
             .map_err(|error| RuntimeError::new(error.to_string()))?;
-        let main_body = Rc::new(self.program.main.clone());
+        let entry = self.program.entry.0 as usize;
+        let main_body = Rc::new(self.program.functions[entry].clone());
         let root = Frame::main(
             main_body,
-            self.program.main.registers,
+            self.program.functions[entry].registers,
             self.heap.new_local_slots(),
             self.heap.new_environment(),
         );
@@ -7391,7 +7736,7 @@ impl<'a> VM<'a> {
         &self,
         mut error: RuntimeError,
         task: &ScheduledVmTask,
-        body: &FunctionBody,
+        body: &Function,
         instruction_index: usize,
     ) -> RuntimeError {
         let location = body.locations.get(instruction_index).cloned().flatten();
@@ -7501,7 +7846,7 @@ impl<'a> VM<'a> {
 
     fn execute_recursive_print(
         &mut self,
-        body: &FunctionBody,
+        body: &Function,
         frame: &Frame,
         instruction: usize,
         register: usize,
@@ -7539,7 +7884,7 @@ impl<'a> VM<'a> {
 
     fn trace_recursive_return(
         &mut self,
-        body: &FunctionBody,
+        body: &Function,
         frame: &Frame,
         instruction: usize,
         value: &Value,
@@ -7571,7 +7916,7 @@ impl<'a> VM<'a> {
 
     fn trace_recursive_error(
         &mut self,
-        body: &FunctionBody,
+        body: &Function,
         frame: &Frame,
         instruction: usize,
         error: &RuntimeError,
@@ -7616,7 +7961,7 @@ impl<'a> VM<'a> {
 
     fn execute_body(
         &mut self,
-        body: &FunctionBody,
+        body: &Function,
         frame: &mut Frame,
     ) -> Result<Option<Value>, RuntimeError> {
         frame.ip = 0;
@@ -7810,7 +8155,7 @@ impl<'a> VM<'a> {
     /// the callers because the two paths attribute those observably.
     fn execute_common_instruction(
         &mut self,
-        body: &FunctionBody,
+        body: &Function,
         frame: &mut Frame,
         instruction_index: usize,
         instruction: &Instruction,
@@ -7822,7 +8167,7 @@ impl<'a> VM<'a> {
                 self.write_register(frame, *dest, value)
             }
             Instruction::MakeFunction { dest, function } => {
-                let value = self.make_function(*function, frame)?;
+                let value = self.make_function(function.0 as usize, frame)?;
                 self.write_register(frame, *dest, value)
             }
             Instruction::Array { dest, elements } => {
@@ -8107,7 +8452,7 @@ impl<'a> VM<'a> {
 
     fn execute_instruction(
         &mut self,
-        body: &FunctionBody,
+        body: &Function,
         frame: &mut Frame,
         task_id: TaskId,
         instruction_index: usize,

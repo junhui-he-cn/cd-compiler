@@ -1,5 +1,5 @@
 use crate::bytecode::{
-    Constant, DebugLocation, DebugRange, DebugSource, Function, FunctionBody, Instruction, Program,
+    Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, Instruction, Program,
 };
 use crate::format::{verify_module_artifact, verify_program, ModuleArtifact};
 use std::collections::{HashMap, HashSet};
@@ -135,19 +135,17 @@ struct Linker {
     expansion_order: Vec<String>,
     constants: Vec<Constant>,
     names: Vec<String>,
-    main: FunctionBody,
+    main: Function,
     functions: Vec<Function>,
     debug_sources: Vec<DebugSource>,
 }
 
 fn program_instruction_count(program: &Program) -> usize {
-    program.main.instructions.len().saturating_add(
-        program
-            .functions
-            .iter()
-            .map(|function| function.instructions.len())
-            .fold(0usize, usize::saturating_add),
-    )
+    program
+        .functions
+        .iter()
+        .map(|function| function.instructions.len())
+        .fold(0usize, usize::saturating_add)
 }
 
 impl Linker {
@@ -224,7 +222,9 @@ impl Linker {
                         ),
                     ));
                 }
-                if dependency.instruction_offset > module.program.main.instructions.len() {
+                if dependency.instruction_offset
+                    > module.program.functions[0].instructions.len()
+                {
                     return Err(LinkError::dependency(
                         LinkErrorKind::InvalidDependency,
                         module.identity.clone(),
@@ -261,7 +261,13 @@ impl Linker {
             expansion_order: Vec::new(),
             constants: Vec::new(),
             names: Vec::new(),
-            main: FunctionBody {
+            main: Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
@@ -287,7 +293,7 @@ impl Linker {
             .extend(module.program.debug_sources.iter().cloned());
         self.main.registers = checked_add(
             self.main.registers,
-            module.program.main.registers,
+            module.program.functions[0].registers,
             "linked main register count",
         )
         .map_err(|error| {
@@ -323,13 +329,15 @@ impl Linker {
         self.contexts.insert(identity.to_string(), context.clone());
 
         let function_base = context.function_base;
-        for (index, function) in module.program.functions.iter().enumerate() {
+        for (position, function) in module.program.functions.iter().enumerate().skip(1) {
             self.functions.push(Function {
-                index: function_base + index,
+                id: FuncId((function_base + position) as u32),
                 name: function.name.clone(),
                 arity: function.arity,
-                registers: function.registers,
+                local_count: 0,
+                upvalues: Vec::new(),
                 params: function.params.clone(),
+                registers: function.registers,
                 instructions: function
                     .instructions
                     .iter()
@@ -343,7 +351,8 @@ impl Linker {
             });
         }
 
-        let mut local_to_global = vec![0; module.program.main.instructions.len() + 1];
+        let module_main = &module.program.functions[0];
+        let mut local_to_global = vec![0; module_main.instructions.len() + 1];
         let mut pending = Vec::new();
         let mut local_offset = 0;
         for dependency in &module.dependencies {
@@ -352,7 +361,7 @@ impl Linker {
                     &mut self.main,
                     &mut pending,
                     local_offset,
-                    &module.program.main,
+                    module_main,
                     context.source_base,
                 );
                 local_to_global[local_offset] = self.main.instructions.len() - 1;
@@ -361,18 +370,18 @@ impl Linker {
             self.expand(&dependency.identity)?;
             local_to_global[local_offset] = self.main.instructions.len();
         }
-        while local_offset < module.program.main.instructions.len() {
+        while local_offset < module_main.instructions.len() {
             emit_pending_main(
                 &mut self.main,
                 &mut pending,
                 local_offset,
-                &module.program.main,
+                module_main,
                 context.source_base,
             );
             local_to_global[local_offset] = self.main.instructions.len() - 1;
             local_offset += 1;
         }
-        local_to_global[module.program.main.instructions.len()] = self.main.instructions.len();
+        local_to_global[module_main.instructions.len()] = self.main.instructions.len();
 
         for (global_index, _local_index, instruction) in pending {
             self.main.instructions[global_index] =
@@ -401,11 +410,13 @@ impl Linker {
             linked_name_count: self.names.len(),
             linked_debug_source_count: self.debug_sources.len(),
         };
+        let mut functions = vec![self.main];
+        functions.extend(self.functions);
         let program = Program {
             constants: self.constants,
             names: self.names,
-            main: self.main,
-            functions: self.functions,
+            functions,
+            entry: FuncId(0),
             debug_sources: self.debug_sources,
         };
         Ok(LinkResult { program, report })
@@ -442,19 +453,25 @@ pub fn link_modules(modules: Vec<ModuleArtifact>) -> Result<Program, String> {
 #[cfg(test)]
 mod tests {
     use super::{link_modules, link_modules_with_report};
-    use crate::bytecode::{FunctionBody, Program};
+    use crate::bytecode::{FuncId, Function, Program};
     use crate::format::{ModuleArtifact, ModuleDependency, ModuleDependencyKind};
 
     fn empty_program() -> Program {
         Program {
             constants: Vec::new(),
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
-            },
-            functions: Vec::new(),
+            }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         }
     }
@@ -563,10 +580,10 @@ mod tests {
 }
 
 fn emit_pending_main(
-    main: &mut FunctionBody,
+    main: &mut Function,
     pending: &mut Vec<(usize, usize, Instruction)>,
     local_index: usize,
-    source: &FunctionBody,
+    source: &Function,
     source_base: usize,
 ) {
     let global_index = main.instructions.len();
@@ -613,8 +630,14 @@ fn map_instruction(
     let constant =
         |value: usize| checked_add(value, context.constant_base, "linked constant index");
     let name = |value: usize| checked_add(value, context.name_base, "linked name index");
-    let function =
-        |value: usize| checked_add(value, context.function_base, "linked function index");
+    let function = |value: FuncId| {
+        checked_add(
+            value.0 as usize,
+            context.function_base,
+            "linked function index",
+        )
+        .map(|index| FuncId(index as u32))
+    };
     Ok(match instruction {
         Instruction::Constant {
             dest,

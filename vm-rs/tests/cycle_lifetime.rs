@@ -1,4 +1,4 @@
-use compiler_design_vm::bytecode::{Constant, Function, FunctionBody, Instruction, Program};
+use compiler_design_vm::bytecode::{Constant, FuncId, Function, Instruction, Program};
 use compiler_design_vm::runtime::{Heap, HeapObjectKind, VariantValue};
 use compiler_design_vm::value::Value;
 use compiler_design_vm::{CancellationToken, DebugControl, DebugHook, DebugPause, RunConfig, VM};
@@ -8,7 +8,13 @@ fn self_array_program() -> Program {
     Program {
         constants: Vec::new(),
         names: vec!["push".to_string()],
-        main: FunctionBody {
+        functions: vec![Function {
+            id: FuncId(0),
+            name: "main".to_string(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
             registers: 2,
             instructions: vec![
                 Instruction::Array {
@@ -23,8 +29,8 @@ fn self_array_program() -> Program {
                 Instruction::Print { value: 0 },
             ],
             locations: vec![None; 3],
-        },
-        functions: Vec::new(),
+        }],
+        entry: FuncId(0),
         debug_sources: Vec::new(),
     }
 }
@@ -33,7 +39,13 @@ fn callback_cycle_program() -> Program {
     Program {
         constants: vec![Constant::Number("1".to_string())],
         names: vec!["map".to_string(), "push".to_string()],
-        main: FunctionBody {
+        functions: vec![Function {
+            id: FuncId(0),
+            name: "main".to_string(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
             registers: 4,
             instructions: vec![
                 Instruction::Constant {
@@ -46,7 +58,7 @@ fn callback_cycle_program() -> Program {
                 },
                 Instruction::MakeFunction {
                     dest: 2,
-                    function: 0,
+                    function: FuncId(1),
                 },
                 Instruction::NativeCall {
                     dest: 3,
@@ -57,8 +69,10 @@ fn callback_cycle_program() -> Program {
             ],
             locations: vec![None; 5],
         },
-        functions: vec![Function {
-            index: 0,
+            Function {
+            id: FuncId(1),
+            local_count: 0,
+            upvalues: Vec::new(),
             name: "make_cycle".to_string(),
             arity: 1,
             registers: 2,
@@ -77,6 +91,7 @@ fn callback_cycle_program() -> Program {
             ],
             locations: vec![None; 3],
         }],
+        entry: FuncId(0),
         debug_sources: Vec::new(),
     }
 }
@@ -85,12 +100,18 @@ fn nested_cycle_program() -> Program {
     Program {
         constants: Vec::new(),
         names: vec!["push".to_string()],
-        main: FunctionBody {
+        functions: vec![Function {
+            id: FuncId(0),
+            name: "main".to_string(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
             registers: 2,
             instructions: vec![
                 Instruction::MakeFunction {
                     dest: 0,
-                    function: 1,
+                    function: FuncId(2),
                 },
                 Instruction::Call {
                     dest: 1,
@@ -101,9 +122,10 @@ fn nested_cycle_program() -> Program {
             ],
             locations: vec![None; 3],
         },
-        functions: vec![
             Function {
-                index: 0,
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "inner".to_string(),
                 arity: 0,
                 registers: 2,
@@ -123,7 +145,9 @@ fn nested_cycle_program() -> Program {
                 locations: vec![None; 3],
             },
             Function {
-                index: 1,
+                id: FuncId(2),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "outer".to_string(),
                 arity: 0,
                 registers: 2,
@@ -131,7 +155,7 @@ fn nested_cycle_program() -> Program {
                 instructions: vec![
                     Instruction::MakeFunction {
                         dest: 0,
-                        function: 0,
+                        function: FuncId(1),
                     },
                     Instruction::Call {
                         dest: 1,
@@ -143,6 +167,7 @@ fn nested_cycle_program() -> Program {
                 locations: vec![None; 3],
             },
         ],
+        entry: FuncId(0),
         debug_sources: Vec::new(),
     }
 }
@@ -151,7 +176,13 @@ fn cycle_until_pause_program() -> Program {
     Program {
         constants: Vec::new(),
         names: vec!["push".to_string()],
-        main: FunctionBody {
+        functions: vec![Function {
+            id: FuncId(0),
+            name: "main".to_string(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
             registers: 2,
             instructions: vec![
                 Instruction::Array {
@@ -166,8 +197,8 @@ fn cycle_until_pause_program() -> Program {
                 Instruction::Jump { target: 2 },
             ],
             locations: vec![None; 3],
-        },
-        functions: Vec::new(),
+        }],
+        entry: FuncId(0),
         debug_sources: Vec::new(),
     }
 }

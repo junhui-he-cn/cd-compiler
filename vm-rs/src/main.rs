@@ -704,12 +704,11 @@ fn debug(path: &str, config: &RunConfig) -> Result<(), String> {
 
 fn program_instruction_count(program: &Program) -> usize {
     program
-        .main
-        .instructions
-        .len()
-        .saturating_add(program.functions.iter().fold(0usize, |total, function| {
+        .functions
+        .iter()
+        .fold(0usize, |total, function| {
             total.saturating_add(function.instructions.len())
-        }))
+        })
 }
 
 fn enforce_limit(kind: &str, actual: usize, limit: Option<usize>) -> Result<(), String> {

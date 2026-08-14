@@ -1,18 +1,18 @@
 #![allow(dead_code)]
 
-use crate::bytecode::{FunctionBody, Instruction, Program};
+use crate::bytecode::{FuncId, Function, Instruction, Program};
 use crate::runtime::{SharedEnvironment, SharedLocalSlots};
 use crate::scheduler::{ResumableFrame, ReturnTarget, TaskId, VariablePlan};
 use crate::value::Value as VmValue;
 use cranelift_codegen::ir::{
-    types, AbiParam, ExtFuncData, ExternalName, FuncRef, Function, InstBuilder, Signature,
-    UserExternalName, UserFuncName, Value,
+    types, AbiParam, ExtFuncData, ExternalName, FuncRef, Function as CraneliftFunction,
+    InstBuilder, Signature, UserExternalName, UserFuncName, Value,
 };
 use cranelift_codegen::isa::{CallConv, TargetFrontendConfig};
 use cranelift_codegen::{settings, verifier::verify_function};
 use cranelift_frontend::{FunctionBuilder, FunctionBuilderContext};
 use cranelift_jit::{JITBuilder, JITModule};
-use cranelift_module::{default_libcall_names, FuncId, Linkage, Module};
+use cranelift_module::{default_libcall_names, FuncId as CraneliftFuncId, Linkage, Module};
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 use target_lexicon::PointerWidth;
@@ -149,7 +149,7 @@ impl JitSafepoint {
 /// and register values instead of retaining raw pointers or `RefCell` borrows.
 #[derive(Clone, Debug)]
 pub(crate) struct JitFrameMaterialization {
-    body: Option<Rc<FunctionBody>>,
+    body: Option<Rc<Function>>,
     ip: usize,
     registers: Vec<VmValue>,
     locals: SharedLocalSlots,
@@ -198,7 +198,7 @@ impl JitFrameMaterialization {
         frame.return_target = self.return_target.clone();
     }
 
-    pub(crate) fn body(&self) -> Option<&FunctionBody> {
+    pub(crate) fn body(&self) -> Option<&Function> {
         self.body.as_deref()
     }
 
@@ -376,7 +376,7 @@ pub(crate) struct JitCacheStats {
 #[derive(Debug)]
 pub(crate) struct CraneliftIrUnit {
     pub(crate) function_index: usize,
-    pub(crate) function: Function,
+    pub(crate) function: CraneliftFunction,
 }
 
 impl CraneliftIrUnit {
@@ -388,7 +388,7 @@ impl CraneliftIrUnit {
 
 struct JitBackend {
     module: JITModule,
-    helper_ids: [FuncId; RuntimeHelper::ALL.len()],
+    helper_ids: [CraneliftFuncId; RuntimeHelper::ALL.len()],
 }
 
 impl JitBackend {
@@ -428,7 +428,10 @@ impl JitBackend {
         }
     }
 
-    fn import_helpers(&mut self, function: &mut Function) -> [FuncRef; RuntimeHelper::ALL.len()] {
+    fn import_helpers(
+        &mut self,
+        function: &mut CraneliftFunction,
+    ) -> [FuncRef; RuntimeHelper::ALL.len()] {
         std::array::from_fn(|index| {
             self.module
                 .declare_func_in_func(self.helper_ids[index], function)
@@ -706,10 +709,10 @@ impl JitState {
         let Some(function) = program.functions.get(function_index) else {
             return JitEligibility::Fallback(JitFallbackReason::MissingFunction(function_index));
         };
-        if function.index != function_index {
+        if function.id != FuncId(function_index as u32) {
             return JitEligibility::Fallback(JitFallbackReason::FunctionIndexMismatch {
                 requested: function_index,
-                declared: function.index,
+                declared: function.id.0 as usize,
             });
         }
         if !self.config.whitelist.contains(&function_index) {
@@ -1132,7 +1135,10 @@ fn lower_to_cranelift_ir(
     signature.returns.push(AbiParam::new(types::I64));
 
     let mut ir_function =
-        Function::with_name_signature(UserFuncName::user(0, function_index as u32), signature);
+        CraneliftFunction::with_name_signature(
+            UserFuncName::user(0, function_index as u32),
+            signature,
+        );
     let helper_refs = backend.map(|backend| backend.import_helpers(&mut ir_function));
     let mut builder_context = FunctionBuilderContext::new();
     {
@@ -1686,7 +1692,7 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bytecode::{Function, FunctionBody};
+    use crate::bytecode::Function;
     use crate::runtime::Heap;
     use crate::scheduler::{CooperativeScheduler, ResumableFrame};
     use crate::value::Value as VmValue;
@@ -1694,9 +1700,11 @@ mod tests {
 
     fn function(index: usize, instructions: Vec<Instruction>) -> Function {
         Function {
-            index,
+            id: FuncId(index as u32 + 1),
             name: format!("function{index}"),
             arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
             registers: 4,
             params: Vec::new(),
             locations: vec![None; instructions.len()],
@@ -1705,15 +1713,23 @@ mod tests {
     }
 
     fn program(functions: Vec<Function>) -> Program {
+        let mut all = vec![Function {
+            id: FuncId(0),
+            name: "main".to_string(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
+            registers: 1,
+            instructions: Vec::new(),
+            locations: Vec::new(),
+        }];
+        all.extend(functions);
         Program {
             constants: Vec::new(),
             names: vec!["map".to_string(), "print".to_string()],
-            main: FunctionBody {
-                registers: 1,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
-            functions,
+            functions: all,
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         }
     }
@@ -1747,7 +1763,13 @@ mod tests {
         let heap = Heap::new();
         let locals = heap.new_local_slots();
         let closure = heap.new_environment();
-        let body = Rc::new(FunctionBody {
+        let body = Rc::new(Function {
+            id: FuncId(0),
+            name: String::new(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
             registers: 2,
             instructions: vec![Instruction::Return { value: 0 }],
             locations: vec![None],
@@ -1862,13 +1884,13 @@ mod tests {
     #[test]
     fn x86_64_backend_finalizes_and_executes_opaque_helper_calls() {
         let program = program(vec![eligible_function(0)]);
-        let mut state = JitState::enabled_for_tests([0], 1024);
-        let handle = match state.admit(&program, Some(0), JitExecutionMode::Ordinary, 1024) {
+        let mut state = JitState::enabled_for_tests([1], 1024);
+        let handle = match state.admit(&program, Some(1), JitExecutionMode::Ordinary, 1024) {
             JitAdmission::Reserved { handle, .. } => handle,
             admission => panic!("unexpected admission: {admission:?}"),
         };
         assert!(state.resolve_code_pointer(&handle).is_ok());
-        assert!(state.cached_machine_code_bytes(0).unwrap_or_default() > 0);
+        assert!(state.cached_machine_code_bytes(1).unwrap_or_default() > 0);
 
         let mut test_context = ExecutableTestContext::default();
         let mut call_context = JitCallContext {
@@ -1890,8 +1912,8 @@ mod tests {
     #[test]
     fn machine_code_over_budget_is_not_published() {
         let program = program(vec![eligible_function(0)]);
-        let mut state = JitState::enabled_for_tests([0], 128);
-        let admission = state.admit(&program, Some(0), JitExecutionMode::Ordinary, 1);
+        let mut state = JitState::enabled_for_tests([1], 128);
+        let admission = state.admit(&program, Some(1), JitExecutionMode::Ordinary, 1);
 
         assert!(matches!(
             admission,
@@ -1908,11 +1930,11 @@ mod tests {
         let mut state = JitState::disabled();
 
         assert_eq!(
-            state.eligibility(&program, Some(0), JitExecutionMode::Ordinary),
+            state.eligibility(&program, Some(1), JitExecutionMode::Ordinary),
             JitEligibility::Fallback(JitFallbackReason::Disabled)
         );
         assert_eq!(
-            state.admit(&program, Some(0), JitExecutionMode::Ordinary, 4),
+            state.admit(&program, Some(1), JitExecutionMode::Ordinary, 4),
             JitAdmission::Fallback(JitFallbackReason::Disabled)
         );
     }
@@ -1920,22 +1942,22 @@ mod tests {
     #[test]
     fn eligibility_requires_an_explicit_whitelist_and_ordinary_mode() {
         let program = program(vec![eligible_function(0), eligible_function(1)]);
-        let state = JitState::enabled_for_tests([0], 64);
+        let state = JitState::enabled_for_tests([1], 64);
 
         assert_eq!(
-            state.eligibility(&program, Some(0), JitExecutionMode::Ordinary),
-            JitEligibility::Eligible { function_index: 0 }
-        );
-        assert_eq!(
             state.eligibility(&program, Some(1), JitExecutionMode::Ordinary),
-            JitEligibility::Fallback(JitFallbackReason::NotWhitelisted(1))
+            JitEligibility::Eligible { function_index: 1 }
         );
         assert_eq!(
-            state.eligibility(&program, Some(0), JitExecutionMode::Profile),
+            state.eligibility(&program, Some(2), JitExecutionMode::Ordinary),
+            JitEligibility::Fallback(JitFallbackReason::NotWhitelisted(2))
+        );
+        assert_eq!(
+            state.eligibility(&program, Some(1), JitExecutionMode::Profile),
             JitEligibility::Fallback(JitFallbackReason::ObservableMode(JitExecutionMode::Profile))
         );
         assert_eq!(
-            state.eligibility(&program, Some(0), JitExecutionMode::Cooperative),
+            state.eligibility(&program, Some(1), JitExecutionMode::Cooperative),
             JitEligibility::Fallback(JitFallbackReason::CooperativeMode)
         );
         assert_eq!(
@@ -1957,9 +1979,9 @@ mod tests {
                 Instruction::Return { value: 0 },
             ],
         )]);
-        let state = JitState::enabled_for_tests([0], 64);
+        let state = JitState::enabled_for_tests([1], 64);
         assert_eq!(
-            state.eligibility(&dynamic, Some(0), JitExecutionMode::Ordinary),
+            state.eligibility(&dynamic, Some(1), JitExecutionMode::Ordinary),
             JitEligibility::Fallback(JitFallbackReason::DynamicCall { instruction: 0 })
         );
 
@@ -1975,7 +1997,7 @@ mod tests {
             ],
         )]);
         assert_eq!(
-            state.eligibility(&callback, Some(0), JitExecutionMode::Ordinary),
+            state.eligibility(&callback, Some(1), JitExecutionMode::Ordinary),
             JitEligibility::Fallback(JitFallbackReason::CallbackBoundary {
                 instruction: 0,
                 name: "map".to_string(),
@@ -1993,7 +2015,7 @@ mod tests {
             ],
         )]);
         assert_eq!(
-            state.eligibility(&unsupported, Some(0), JitExecutionMode::Ordinary),
+            state.eligibility(&unsupported, Some(1), JitExecutionMode::Ordinary),
             JitEligibility::Fallback(JitFallbackReason::UnsupportedInstruction {
                 instruction: 0,
                 opcode: "array",
@@ -2005,28 +2027,28 @@ mod tests {
     fn cache_admission_is_bounded_reusable_and_evictable() {
         let program = program(vec![eligible_function(0), eligible_function(1)]);
         let unit_budget = 1024;
-        let mut state = JitState::enabled_for_tests([0, 1], unit_budget * 2);
+        let mut state = JitState::enabled_for_tests([1, 2], unit_budget * 2);
 
         let first_handle =
-            match state.admit(&program, Some(0), JitExecutionMode::Ordinary, unit_budget) {
+            match state.admit(&program, Some(1), JitExecutionMode::Ordinary, unit_budget) {
                 JitAdmission::Reserved {
-                    function_index: 0,
+                    function_index: 1,
                     bytes,
                     handle,
                 } if bytes == unit_budget => handle,
                 admission => panic!("unexpected first admission: {admission:?}"),
             };
-        assert_eq!(first_handle.function_index(), 0);
+        assert_eq!(first_handle.function_index(), 1);
         assert!(state.resolve_code(&first_handle).is_ok());
         let ir = state
-            .cached_ir(0)
+            .cached_ir(1)
             .expect("admission should retain verified Cranelift IR");
-        assert_eq!(ir.function_index, 0);
+        assert_eq!(ir.function_index, 1);
         assert!(ir.display().contains("call"));
         assert!(ir.display().contains("i64"));
-        let cached_handle = match state.admit(&program, Some(0), JitExecutionMode::Ordinary, 7) {
+        let cached_handle = match state.admit(&program, Some(1), JitExecutionMode::Ordinary, 7) {
             JitAdmission::Cached {
-                function_index: 0,
+                function_index: 1,
                 bytes,
                 handle,
             } if bytes == unit_budget => handle,
@@ -2036,7 +2058,7 @@ mod tests {
         assert_eq!(
             state.admit(
                 &program,
-                Some(1),
+                Some(2),
                 JitExecutionMode::Ordinary,
                 unit_budget + 1,
             ),
@@ -2055,12 +2077,12 @@ mod tests {
         );
 
         state.clear_cache();
-        assert!(state.cached_ir(0).is_none());
+        assert!(state.cached_ir(1).is_none());
         let first_generation = first_handle.generation();
         assert!(matches!(
             state.resolve_code(&first_handle),
             Err(JitFallbackReason::StaleCodeEntry {
-                function_index: 0,
+                function_index: 1,
                 generation,
             })
                 if generation == first_generation
@@ -2078,21 +2100,21 @@ mod tests {
     #[test]
     fn code_entry_handles_reject_foreign_caches_and_failed_publication_rolls_back() {
         let base_program = program(vec![eligible_function(0)]);
-        let mut state = JitState::enabled_for_tests([0], 2048);
-        let handle = match state.admit(&base_program, Some(0), JitExecutionMode::Ordinary, 1024) {
+        let mut state = JitState::enabled_for_tests([1], 2048);
+        let handle = match state.admit(&base_program, Some(1), JitExecutionMode::Ordinary, 1024) {
             JitAdmission::Reserved { handle, .. } => handle,
             admission => panic!("unexpected admission: {admission:?}"),
         };
 
-        let foreign_state = JitState::enabled_for_tests([0], 2048);
+        let foreign_state = JitState::enabled_for_tests([1], 2048);
         assert!(matches!(
             foreign_state.resolve_code(&handle),
-            Err(JitFallbackReason::ForeignCodeEntry { function_index: 0 })
+            Err(JitFallbackReason::ForeignCodeEntry { function_index: 1 })
         ));
 
         state.clear_cache();
         let replacement =
-            match state.admit(&base_program, Some(0), JitExecutionMode::Ordinary, 1024) {
+            match state.admit(&base_program, Some(1), JitExecutionMode::Ordinary, 1024) {
                 JitAdmission::Reserved { handle, .. } => handle,
                 admission => panic!("unexpected replacement admission: {admission:?}"),
             };
@@ -2103,7 +2125,7 @@ mod tests {
         assert!(matches!(
             state.resolve_code(&handle),
             Err(JitFallbackReason::StaleCodeEntry {
-                function_index: 0,
+                function_index: 1,
                 generation,
             })
                 if generation == stale_generation
@@ -2116,8 +2138,8 @@ mod tests {
                 Instruction::Return { value: 0 },
             ],
         )]);
-        let mut failed_state = JitState::enabled_for_tests([0], 16);
-        let failed = failed_state.admit(&failed_program, Some(0), JitExecutionMode::Ordinary, 4);
+        let mut failed_state = JitState::enabled_for_tests([1], 16);
+        let failed = failed_state.admit(&failed_program, Some(1), JitExecutionMode::Ordinary, 4);
         assert!(matches!(
             failed,
             JitAdmission::Fallback(JitFallbackReason::CraneliftIr { .. })

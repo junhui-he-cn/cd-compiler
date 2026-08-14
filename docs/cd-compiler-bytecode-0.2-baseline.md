@@ -1,15 +1,16 @@
 # `.cdbc 0.1 → 0.2` 重构基线（Phase 0）
 
-本文件是 `docs/cd-compiler-bytecode-0.2-execution-plan.md` 的 Phase 0 交付物：在
-修改 Bytecode ISA 之前，锁定当前 `.cdbc 0.1` 的行为，记录真实代码路径、文档与实现
-的不一致，并给出后续 Phase 的回归基线与版本协调清单。
+本文件是 `docs/cd-compiler-bytecode-0.2-execution-plan.md` 的执行记录：Phase 0
+锁定当前 `.cdbc 0.1` 的行为基线；Phase 1 重构内部数据模型（强类型 ID + 统一
+`main`），同时保持 `.cdbc 0.1` 文本与可观察行为不变。
 
 ## 状态
 
 - 基准分支：`feat/bytecode-0.2-phase0`，起点 `master` = `origin/master` = `e502b4ea`。
-- 本阶段**没有修改 Bytecode ISA**，`VERSION` 保持 `0.1.0`，`.cdbc 0.1` 契约不变。
-- 新增内容：5 个 golden fixture、1 个 C++ 发射端测试、1 个 Rust VM 集成测试、本
-  文档。后续所有 Phase 以这些测试为回归基线。
+- Phase 0 与 Phase 1 都**没有修改 Bytecode ISA**，`VERSION` 保持 `0.1.0`，
+  `.cdbc 0.1` 契约不变。
+- Phase 0 新增：5 个 golden fixture、1 个 C++ 发射端测试、1 个 Rust VM 集成测试。
+- Phase 1 完成：`vm-rs` 数据模型重构，文本/行为不变，全量回归通过。
 
 ## 1. 实际代码路径清单
 
@@ -20,7 +21,7 @@
 | `include/Bytecode.hpp` / `src/Bytecode.cpp` | `BytecodeProgram`（`constants_`/`names_`/`instructions_`/`registerCount_`/`functions_`）；`--bytecode` 调试打印（`bN` 寄存器、`#N` 常量、`@N` 名字） |
 | `src/BytecodeCompiler.cpp` | IR → `BytecodeProgram` 的 1:1 映射，不改语义 |
 | `src/BytecodeTextEmitter.cpp` | `.cdbc 0.1` 文本、module envelope、debug 三节；`numberText` 用 `std::setprecision(15)`（Phase 14 目标） |
-| `vm-rs/src/bytecode.rs` | `Program { constants, names, main, functions, debug_sources }`：`main` 仍是特殊 `FunctionBody`；`Function` 是线性指令表 + 绝对指令偏移跳转 |
+| `vm-rs/src/bytecode.rs` | Phase 1 后为 `Program { constants, names, functions, entry: FuncId, debug_sources }`：`main` 统一为 `functions[0]`；11 个强类型 ID newtype（`RegId/LocalId/UpvalueId/GlobalId/FuncId/TypeId/VariantId/NativeId/BlockId/StringId/ConstId`）；`Function` 仍是线性指令表 + 绝对指令偏移跳转 |
 | `vm-rs/src/format.rs` | 文本 parser/formatter/verifier；`ARTIFACT_HEADER = "cdbc 0.1"`；`SUPPORTED_NATIVE_FUNCTIONS` 固定 29 名单；verifier 只做结构/索引/常量有限性/名字/函数表/native 名单/debug 元数据检查 |
 | `vm-rs/src/runtime.rs` | 运行时值：`StructValue` 字段是 `Vec<(String, Value)>`、`VariantValue` 是 `enum_name`+`variant_name` 字符串；`normalize_map_entries` 是 map 去重语义的唯一实现 |
 | `vm-rs/src/vm.rs`（10516 行） | 执行主循环；`prepare_function` 在 VM 侧扫描 `store_var` 建立 `slot_by_name`；`capture_environment` 复制整个名字环境；main 帧 `is_main=true`、`variable_plan=None`、closure 为空；globals 是名字键 `SharedEnvironment` + name-index cache；Ord witness 按 `__capability_ord_{Type}_{cmp}` 全局名查找 |
@@ -125,6 +126,31 @@ artifact 版本、X1 矩阵校验器及不可变 tag 语义冲突。
 
 ## 6. 后续
 
-按计划 §25，Phase 0 完成后停止。下一阶段是 Phase 1（强类型 ID、`Program { functions,
-entry }`、`Function` 元数据骨架），不提前做变量 lowering、closure、CFG 或 typed
+## 7. Phase 1 落地记录
+
+Phase 1（计划 §5）已按“仅重构数据模型、不改 VM 执行语义”完成：
+
+- `Program { constants, names, functions: Vec<Function>, entry: FuncId,
+  debug_sources }`，不再有特殊 `main` 字段；文本 `main` 段 ↔ 统一函数 `f0`，文本
+  `fK` ↔ 统一函数 `f(K+1)`；parser/formatter 保持 `.cdbc 0.1` 文本字节级稳定。
+- `Function { id: FuncId, name, arity, local_count, upvalues, params, registers,
+  instructions, locations }`；`local_count` 与 `upvalues: Vec<UpvalueDesc>` 为 0.2
+  预留骨架（当前恒为 0/空），`UpvalueSource::{Local,Upvalue}` 已定义。
+- `Instruction::MakeFunction` 引用 `FuncId`；其余操作数仍为 `usize`，按计划的
+  Phase 2/6/7/9 在各 lowering 阶段逐步换为 `LocalId/StringId/ConstId` 等。
+- verifier 增加 `entry == FuncId(0)` 与 `function.id == 表位置` 检查。
+
+与计划 §5.3 建议形态的差异（以实际代码为准并记录）：没有引入独立的
+`body: FunctionBody` 包装——`FunctionBody` 类型整体删除，`Function` 直接持有线性
+`registers/instructions/locations`。原因：`main` 统一后不再需要第二个 body 载体，
+保留 `FunctionBody` 只会重复三个字段；Phase 4 引入 `BasicBlock` 时会再把指令表
+替换为 block 容器。同样，当前 `.cdbc 0.1` 文本 envelope 下 verifier 强制
+`entry == f0`，真正的任意入口编号留给 Phase 12 的 module 模型。
+
+回归：`cargo test` 全绿（lib 148 + bin 3 + 集成 6/2/7/13）、bytecode artifact
+124、module artifact/cache、malformed 107、Rust VM parity 740、golden 784、
+ctest 47/47、verification 1820/1820、VM 兼容矩阵 7 格，全部通过。
+
+下一阶段是 Phase 2（变量 lowering：`load_local/bind_local/set_local` 等数值
+slot 指令，编译器分配 slot，VM 不再扫描名字），不提前做 closure/CFG/typed
 opcode。
