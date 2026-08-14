@@ -3,13 +3,14 @@
 use crate::runtime::{ArrayValue, FunctionValue, MapValue, RangeValue, StructValue, VariantValue};
 use std::collections::HashSet;
 use std::fmt;
+use std::rc::Rc;
 
 #[derive(Clone, Debug)]
 pub enum Value {
     Nil,
     Number(f64),
     Bool(bool),
-    String(String),
+    String(Rc<str>),
     Function(FunctionValue),
     Array(ArrayValue),
     Map(MapValue),
@@ -27,7 +28,7 @@ impl Value {
         Self::Bool(value)
     }
 
-    pub fn string(value: impl Into<String>) -> Self {
+    pub fn string(value: impl Into<Rc<str>>) -> Self {
         Self::String(value.into())
     }
 
@@ -203,7 +204,7 @@ fn format_value(value: &Value, active_references: &mut HashSet<(u8, usize)>) -> 
         Value::Nil => "nil".to_string(),
         Value::Number(value) => format_number(*value),
         Value::Bool(value) => if *value { "true" } else { "false" }.to_string(),
-        Value::String(value) => value.clone(),
+        Value::String(value) => value.to_string(),
         Value::Function(function) => format!("<fn {}>", function.name),
         Value::Array(array) => {
             let reference = (0, array.identity);

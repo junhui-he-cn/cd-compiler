@@ -851,7 +851,7 @@ mod tests {
         let mut stack = test_frame_stack();
         assert!(matches!(
             stack.return_value(Value::string("done")),
-            Ok(Some(Value::String(value))) if value == "done"
+            Ok(Some(Value::String(value))) if value.as_ref() == "done"
         ));
         assert!(stack.is_empty());
         assert!(matches!(stack.current(), Err(FrameStackError::Empty)));

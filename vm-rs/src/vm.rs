@@ -1254,7 +1254,7 @@ mod tests {
         let value = vm
             .take_register(&mut frame, 0)
             .expect("return register should be readable");
-        assert!(matches!(value, Value::String(value) if value == "returned"));
+        assert!(matches!(value, Value::String(value) if value.as_ref() == "returned"));
         assert!(matches!(frame.registers[0], Value::Nil));
     }
 
@@ -2960,7 +2960,7 @@ mod tests {
         assert_eq!(vm.constant_value(0).unwrap().to_string(), "1.5");
 
         assert_eq!(vm.constant_value(1).unwrap().to_string(), "cached");
-        assert!(matches!(&vm.constant_cache[1], Some(Value::String(value)) if value == "cached"));
+        assert!(matches!(&vm.constant_cache[1], Some(Value::String(value)) if value.as_ref() == "cached"));
 
         let invalid = vm
             .constant_value(2)
@@ -4256,7 +4256,7 @@ mod tests {
                 vec![source.clone(), Value::number(1.0), Value::number(2.0)],
             )
             .expect("substr succeeds");
-        assert!(matches!(sliced, Value::String(value) if value == "🙂e"));
+        assert!(matches!(sliced, Value::String(value) if value.as_ref() == "🙂e"));
 
         let combined = vm
             .execute_native_call(
@@ -4264,12 +4264,12 @@ mod tests {
                 vec![source.clone(), Value::number(2.0), Value::number(2.0)],
             )
             .expect("combining scalar slice succeeds");
-        assert!(matches!(combined, Value::String(value) if value == "e\u{301}"));
+        assert!(matches!(combined, Value::String(value) if value.as_ref() == "e\u{301}"));
 
         let character = vm
             .execute_native_call("charAt", vec![source, Value::number(1.0)])
             .expect("charAt succeeds");
-        assert!(matches!(character, Value::String(value) if value == "🙂"));
+        assert!(matches!(character, Value::String(value) if value.as_ref() == "🙂"));
     }
 
     #[test]
@@ -10144,7 +10144,7 @@ impl<'a> VM<'a> {
         }
         let begin = offsets[start];
         let end = offsets[start + length];
-        Ok(Value::string(text[begin..end].to_string()))
+        Ok(Value::string(text.as_ref()[begin..end].to_string()))
     }
 
     fn execute_native_char_at(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {
@@ -10169,7 +10169,7 @@ impl<'a> VM<'a> {
         )?;
         let begin = offsets[index];
         let end = offsets[index + 1];
-        Ok(Value::string(text[begin..end].to_string()))
+        Ok(Value::string(text.as_ref()[begin..end].to_string()))
     }
 
     fn execute_native_type_of(&self, arguments: NativeArguments) -> Result<Value, RuntimeError> {

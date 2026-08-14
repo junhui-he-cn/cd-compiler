@@ -518,7 +518,7 @@ fn estimate_inline_value_dynamic_bytes(value: &Value) -> usize {
     let mut bytes = 0usize;
     match value {
         Value::String(value) => {
-            bytes = bytes.saturating_add(value.capacity());
+            bytes = bytes.saturating_add(value.len());
         }
         Value::Function(value) => {
             bytes = bytes.saturating_add(value.name.capacity());
