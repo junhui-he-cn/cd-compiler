@@ -3,50 +3,50 @@ main registers=43
 0001  b1 = constant #1 "two"
 0002  b2 = constant #2 3
 0003  b3 = array [b0, b1, b2]
-0004  store_var @0 xs#0, b3
-0005  b4 = load_var @1 xs#0
+0004  init_global g0, b3
+0005  b4 = load_global g0
 0006  b5 = constant #3 1
 0007  b6 = constant #4 42
 0008  b7 = assign_index b4, b5, b6
-0009  b8 = load_var @2 xs#0
+0009  b8 = load_global g0
 0010  b9 = constant #5 1
 0011  b10 = index b8, b9
 0012  print b10
-0013  b11 = load_var @3 xs#0
-0014  store_var @4 ys#1, b11
-0015  b12 = load_var @5 ys#1
+0013  b11 = load_global g0
+0014  init_global g1, b11
+0015  b12 = load_global g1
 0016  b13 = constant #6 0
 0017  b14 = constant #7 9
 0018  b15 = assign_index b12, b13, b14
-0019  b16 = load_var @6 xs#0
+0019  b16 = load_global g0
 0020  b17 = constant #8 0
 0021  b18 = index b16, b17
 0022  print b18
-0023  b19 = load_var @7 xs#0
+0023  b19 = load_global g0
 0024  b20 = constant #9 2
 0025  b21 = constant #10 7
 0026  b22 = assign_index b19, b20, b21
 0027  print b22
-0028  b23 = load_var @8 xs#0
+0028  b23 = load_global g0
 0029  b24 = constant #11 0
-0030  b25 = load_var @9 xs#0
+0030  b25 = load_global g0
 0031  b26 = constant #12 1
 0032  b27 = constant #13 5
 0033  b28 = assign_index b25, b26, b27
 0034  b29 = assign_index b23, b24, b28
-0035  b30 = load_var @10 xs#0
+0035  b30 = load_global g0
 0036  b31 = constant #14 0
 0037  b32 = index b30, b31
 0038  print b32
-0039  b33 = load_var @11 xs#0
+0039  b33 = load_global g0
 0040  b34 = constant #15 1
 0041  b35 = index b33, b34
 0042  print b35
-0043  b36 = load_var @12 xs#0
+0043  b36 = load_global g0
 0044  b37 = constant #16 1
 0045  b38 = constant #17 "changed"
 0046  b39 = assign_index b36, b37, b38
-0047  b40 = load_var @13 xs#0
+0047  b40 = load_global g0
 0048  b41 = constant #18 1
 0049  b42 = index b40, b41
 0050  print b42

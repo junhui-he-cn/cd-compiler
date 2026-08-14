@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = nil
@@ -94,44 +94,50 @@ names:
   n34 = "describeResult#4"
   n35 = "maybe#8"
 
+globals:
+  g0 = n0
+  g1 = n3
+  g2 = n6
+  g3 = n24
+
 main registers=60:
   r0 = constant c0
-  store_var n0, r0
+  init_global g0, r0
   r1 = make_function f0
-  assign_var n2, r1
+  set_global g0, r1
   r2 = constant c7
-  store_var n3, r2
+  init_global g1, r2
   r3 = make_function f1
-  assign_var n5, r3
+  set_global g1, r3
   r4 = constant c13
-  store_var n6, r4
+  init_global g2, r4
   r5 = make_function f2
-  assign_var n23, r5
+  set_global g2, r5
   r6 = constant c24
-  store_var n24, r6
-  r7 = load_var n25
+  init_global g3, r6
+  r7 = load_global g0
   r8 = constant c25
   r9 = call r7 [r8]
   print r9
-  r10 = load_var n26
+  r10 = load_global g0
   r11 = constant c26
   r12 = call r10 [r11]
   print r12
-  r13 = load_var n27
+  r13 = load_global g1
   r14 = constant c27
   r15 = call r13 [r14]
   print r15
-  r16 = load_var n28
+  r16 = load_global g2
   r17 = constant c28
   r18 = variant n29.n30 [r17]
   r19 = call r16 [r18]
   print r19
-  r20 = load_var n31
+  r20 = load_global g2
   r21 = constant c29
   r22 = variant n32.n33 [r21]
   r23 = call r20 [r22]
   print r23
-  r24 = load_var n34
+  r24 = load_global g2
   r25 = constant c30
   r26 = call r24 [r25]
   print r26
@@ -180,7 +186,7 @@ main registers=60:
   r49 = constant c47
   print r49
   jump 85
-  r50 = load_var n35
+  r50 = load_global g3
   r51 = constant c48
   r52 = equal r50, r51
   jump_if_false r52, 92
@@ -202,7 +208,7 @@ main registers=60:
 
 function f0 name="describeNumber" arity=1 registers=9:
   param 0 = "value#1"
-  r0 = load_var n1
+  r0 = load_local l0
   r1 = constant c1
   r2 = equal r0, r1
   jump_if_false r2, 7
@@ -223,7 +229,7 @@ function f0 name="describeNumber" arity=1 registers=9:
 
 function f1 name="describeBool" arity=1 registers=8:
   param 0 = "value#3"
-  r0 = load_var n4
+  r0 = load_local l0
   r1 = constant c8
   r2 = equal r0, r1
   jump_if_false r2, 7
@@ -241,7 +247,7 @@ function f1 name="describeBool" arity=1 registers=8:
 
 function f2 name="describeResult" arity=1 registers=28:
   param 0 = "value#5"
-  r0 = load_var n7
+  r0 = load_local l0
   r1 = constant c14
   r2 = equal r0, r1
   jump_if_false r2, 7
@@ -260,9 +266,9 @@ function f2 name="describeResult" arity=1 registers=28:
   r9 = variant_tag r0 n10.n11
   jump_if_false r9, 26
   r10 = variant_field r0 0
-  store_var n12, r10
+  bind_local l1, r10
   r11 = constant c18
-  r12 = load_var n13
+  r12 = load_local l1
   r13 = native_call n14 [r12]
   r14 = add r11, r13
   return r14
@@ -279,9 +285,9 @@ function f2 name="describeResult" arity=1 registers=28:
   r20 = variant_tag r0 n17.n18
   jump_if_false r20, 44
   r21 = variant_field r0 0
-  store_var n19, r21
+  bind_local l2, r21
   r22 = constant c21
-  r23 = load_var n20
+  r23 = load_local l2
   r24 = add r22, r23
   return r24
   jump 49

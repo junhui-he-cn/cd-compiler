@@ -362,6 +362,10 @@ TypeChecker::Binding TypeChecker::declareImportedVariable(const Token& name, con
     Binding binding = importedBinding;
     binding.imported = true;
     binding.scopeDepth = scopes_.size() - 1;
+    // Imported bindings are new bindings in the importing snapshot. Interface
+    // records intentionally drop the exporter's snapshot-local IDs, so assign
+    // a fresh local ID here for bytecode lowering.
+    binding.bindingId = BindingId{nextBindingId_++};
     scope.emplace(name.lexeme, binding);
     return binding;
 }

@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/ceil_non_number_static.cd:1:10: ceil expects number, got bool
+  ceil(true);
+           ^

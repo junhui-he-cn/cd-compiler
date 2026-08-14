@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 1
@@ -59,60 +59,71 @@ names:
   n38 = "__for_in_index#4"
   n39 = "item#2"
 
+globals:
+  g0 = n1
+  g1 = n13
+  g2 = n14
+  g3 = n15
+  g4 = n17
+  g5 = n27
+  g6 = n28
+  g7 = n29
+  g8 = n31
+
 main registers=56:
   r0 = constant c0
   r1 = constant c1
   r2 = native_call n0 [r0, r1]
-  store_var n1, r2
-  r3 = load_var n2
+  init_global g0, r2
+  r3 = load_global g0
   print r3
-  r4 = load_var n3
+  r4 = load_global g0
   r5 = len r4
   print r5
-  r6 = load_var n4
+  r6 = load_global g0
   r7 = constant c2
   r8 = index r6, r7
   print r8
-  r9 = load_var n5
+  r9 = load_global g0
   r10 = constant c3
   r11 = native_call n6 [r9, r10]
   print r11
-  r12 = load_var n7
+  r12 = load_global g0
   r13 = constant c4
   r14 = native_call n8 [r12, r13]
   print r14
-  r15 = load_var n9
+  r15 = load_global g0
   r16 = len r15
   print r16
-  r17 = load_var n10
+  r17 = load_global g0
   r18 = native_call n11 [r17]
   print r18
   r19 = constant c5
   r20 = native_call n12 [r19]
   r21 = assert_array r20
-  store_var n13, r21
+  init_global g1, r21
   r22 = constant c6
-  store_var n14, r22
+  init_global g2, r22
   r23 = constant c7
-  store_var n15, r23
-  r24 = load_var n16
+  init_global g3, r23
+  r24 = load_global g1
   r25 = len r24
-  store_var n17, r25
-  r26 = load_var n18
-  r27 = load_var n19
+  init_global g4, r25
+  r26 = load_global g2
+  r27 = load_global g4
   r28 = less r26, r27
   jump_if_false r28, 55
-  r29 = load_var n20
-  r30 = load_var n21
+  r29 = load_global g1
+  r30 = load_global g2
   r31 = index r29, r30
-  assign_var n22, r31
+  set_global g3, r31
   jump 52
-  r32 = load_var n23
+  r32 = load_global g2
   r33 = constant c8
   r34 = add r32, r33
-  assign_var n24, r34
+  set_global g2, r34
   jump 38
-  r35 = load_var n25
+  r35 = load_global g3
   print r35
   jump 47
   r36 = constant c9
@@ -121,29 +132,29 @@ main registers=56:
   r39 = negate r38
   r40 = native_call n26 [r36, r37, r39]
   r41 = assert_array r40
-  store_var n27, r41
+  init_global g5, r41
   r42 = constant c12
-  store_var n28, r42
+  init_global g6, r42
   r43 = constant c13
-  store_var n29, r43
-  r44 = load_var n30
+  init_global g7, r43
+  r44 = load_global g5
   r45 = len r44
-  store_var n31, r45
-  r46 = load_var n32
-  r47 = load_var n33
+  init_global g8, r45
+  r46 = load_global g6
+  r47 = load_global g8
   r48 = less r46, r47
   jump_if_false r48, 86
-  r49 = load_var n34
-  r50 = load_var n35
+  r49 = load_global g5
+  r50 = load_global g6
   r51 = index r49, r50
-  assign_var n36, r51
+  set_global g7, r51
   jump 83
-  r52 = load_var n37
+  r52 = load_global g6
   r53 = constant c14
   r54 = add r52, r53
-  assign_var n38, r54
+  set_global g6, r54
   jump 69
-  r55 = load_var n39
+  r55 = load_global g7
   print r55
   jump 78
 

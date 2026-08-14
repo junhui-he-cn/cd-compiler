@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = string "tea"
@@ -22,31 +22,35 @@ names:
   n7 = "prices#0"
   n8 = "contains"
 
+globals:
+  g0 = n0
+  g1 = n2
+
 main registers=21:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
   r3 = constant c3
   r4 = map [r0: r1, r2: r3]
-  store_var n0, r4
-  r5 = load_var n1
-  store_var n2, r5
-  r6 = load_var n3
+  init_global g0, r4
+  r5 = load_global g0
+  init_global g1, r5
+  r6 = load_global g1
   r7 = constant c4
   r8 = constant c5
   r9 = assign_index r6, r7, r8
-  r10 = load_var n4
+  r10 = load_global g0
   r11 = constant c6
   r12 = index r10, r11
   print r12
-  r13 = load_var n5
+  r13 = load_global g0
   r14 = constant c7
   r15 = index r13, r14
   print r15
-  r16 = load_var n6
+  r16 = load_global g0
   r17 = len r16
   print r17
-  r18 = load_var n7
+  r18 = load_global g0
   r19 = constant c8
   r20 = native_call n8 [r18, r19]
   print r20

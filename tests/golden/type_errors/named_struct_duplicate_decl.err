@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/named_struct_duplicate_decl.cd:2:8: duplicate struct `Person`
+  struct Person { age: number }
+         ^

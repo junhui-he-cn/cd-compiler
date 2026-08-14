@@ -90,6 +90,9 @@ struct IRFunction {
     std::vector<IRInstruction> instructions;
     std::size_t registerCount = 0;
     std::vector<IRBinding> bindings;
+    std::vector<BindingId> parameterBindingIds;
+    std::size_t id = 0;
+    std::size_t parentId = 0;
 };
 
 // A dependency marker emitted while lowering one module independently.  The
@@ -112,6 +115,7 @@ public:
     std::size_t addName(std::string name);
     IRRegister makeRegister();
     void beginFunction(std::string name, std::vector<std::string> parameters);
+    void setFunctionParameterBindingIds(std::vector<BindingId> bindingIds);
     std::size_t endFunction();
 
     void addModuleDependency(IRModuleDependency dependency);
@@ -199,6 +203,7 @@ private:
     std::size_t registerCount_ = 0;
     std::vector<IRFunction> functionStack_;
     std::vector<IRFunction> functions_;
+    std::size_t nextFunctionId_ = 0;
     std::vector<IRModuleDependency> moduleDependencies_;
     std::vector<IRBinding> bindings_;
     std::vector<SourceFile> sources_;

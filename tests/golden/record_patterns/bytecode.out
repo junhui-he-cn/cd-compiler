@@ -1,37 +1,37 @@
 main registers=33
 0000  b0 = constant #0 nil
-0001  store_var @0 describe#0, b0
+0001  init_global g0, b0
 0002  b1 = make_function $0 describe/1
-0003  assign_var @15 describe#0, b1
+0003  set_global g0, b1
 0004  b2 = constant #9 "Ada"
 0005  b3 = constant #10 36
 0006  b4 = constant #11 "Cambridge"
 0007  b5 = constant #12 1
 0008  b6 = struct @20 Address { @21 city: b4,  @22 zip: b5}
 0009  b7 = struct @16 Person { @17 name: b2,  @18 age: b3,  @19 address: b6}
-0010  store_var @23 ada#5, b7
+0010  init_global g1, b7
 0011  b8 = constant #13 "Grace"
 0012  b9 = constant #14 40
 0013  b10 = constant #15 "Hong Kong"
 0014  b11 = constant #16 2
 0015  b12 = struct @28 Address { @29 city: b10,  @30 zip: b11}
 0016  b13 = struct @24 Person { @25 name: b8,  @26 age: b9,  @27 address: b12}
-0017  store_var @31 hongKong#6, b13
+0017  init_global g2, b13
 0018  b14 = constant #17 nil
-0019  store_var @32 nilPerson#7, b14
-0020  b15 = load_var @33 describe#0
-0021  b16 = load_var @34 ada#5
+0019  init_global g3, b14
+0020  b15 = load_global g0
+0021  b16 = load_global g1
 0022  b17 = call b15(b16)
 0023  print b17
-0024  b18 = load_var @35 describe#0
-0025  b19 = load_var @36 hongKong#6
+0024  b18 = load_global g0
+0025  b19 = load_global g2
 0026  b20 = call b18(b19)
 0027  print b20
-0028  b21 = load_var @37 describe#0
-0029  b22 = load_var @38 nilPerson#7
+0028  b21 = load_global g0
+0029  b22 = load_global g3
 0030  b23 = call b21(b22)
 0031  print b23
-0032  b24 = load_var @39 ada#5
+0032  b24 = load_global g1
 0033  b25 = field b24,  @40 name
 0034  b26 = constant #18 "Ada"
 0035  b27 = equal b25, b26
@@ -49,7 +49,7 @@ main registers=33
 0047  jump 0048
 
 function $0 describe/1 registers=25
-0000  b0 = load_var @1 value#1
+0000  b0 = load_local l0
 0001  b1 = constant #1 nil
 0002  b2 = equal b0, b1
 0003  jump_if_false b2, 0007
@@ -69,20 +69,20 @@ function $0 describe/1 registers=25
 0017  b11 = equal b9, b10
 0018  jump_if_false b11, 0026
 0019  b12 = field b0,  @5 name
-0020  store_var @6 name#2, b12
+0020  bind_local l1, b12
 0021  b13 = constant #6 "city:"
-0022  b14 = load_var @7 name#2
+0022  b14 = load_local l1
 0023  b15 = add b13, b14
 0024  return b15
 0025  jump 0038
 0026  b16 = field b0,  @8 age
 0027  b17 = field b0,  @9 name
-0028  store_var @10 age#3, b16
-0029  store_var @11 name#4, b17
-0030  b18 = load_var @12 name#4
+0028  bind_local l2, b16
+0029  bind_local l3, b17
+0030  b18 = load_local l3
 0031  b19 = constant #7 ":"
 0032  b20 = add b18, b19
-0033  b21 = load_var @13 age#3
+0033  b21 = load_local l2
 0034  b22 = native_call @14 str [b21]
 0035  b23 = add b20, b22
 0036  return b23

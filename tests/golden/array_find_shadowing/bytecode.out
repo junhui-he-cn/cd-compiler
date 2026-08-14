@@ -1,7 +1,7 @@
 main registers=11
 0000  b0 = make_function $0 <lambda>/2
-0001  store_var @0 find#2, b0
-0002  b1 = load_var @1 find#2
+0001  init_global g0, b0
+0002  b1 = load_global g0
 0003  b2 = constant #2 1
 0004  b3 = array [b2]
 0005  b4 = make_function $1 <lambda>/1
@@ -27,7 +27,7 @@ function $1 <lambda>/1 registers=2
 0003  return b1
 
 function $2 <lambda>/1 registers=4
-0000  b0 = load_var @2 value#4
+0000  b0 = load_local l0
 0001  b1 = constant #7 2
 0002  b2 = equal b0, b1
 0003  return b2

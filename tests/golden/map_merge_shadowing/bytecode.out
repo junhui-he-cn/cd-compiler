@@ -1,18 +1,18 @@
 main registers=14
 0000  b0 = constant #0 nil
-0001  store_var @0 merge#0, b0
+0001  init_global g0, b0
 0002  b1 = make_function $0 merge/2
-0003  assign_var @1 merge#0, b1
+0003  set_global g0, b1
 0004  b2 = constant #3 "a"
 0005  b3 = constant #4 1
 0006  b4 = map [b2: b3]
-0007  store_var @2 values#3, b4
-0008  b5 = load_var @3 merge#0
-0009  b6 = load_var @4 values#3
-0010  b7 = load_var @5 values#3
+0007  init_global g1, b4
+0008  b5 = load_global g0
+0009  b6 = load_global g1
+0010  b7 = load_global g1
 0011  b8 = call b5(b6, b7)
 0012  print b8
-0013  b9 = load_var @6 values#3
+0013  b9 = load_global g1
 0014  b10 = constant #5 "b"
 0015  b11 = constant #6 2
 0016  b12 = map [b10: b11]

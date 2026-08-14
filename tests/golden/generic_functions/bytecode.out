@@ -1,51 +1,51 @@
 main registers=26
 0000  b0 = constant #0 nil
-0001  store_var @0 identity#0, b0
+0001  init_global g0, b0
 0002  b1 = make_function $0 identity/1
-0003  assign_var @2 identity#0, b1
+0003  set_global g0, b1
 0004  b2 = constant #2 nil
-0005  store_var @3 head#2, b2
+0005  init_global g1, b2
 0006  b3 = make_function $1 head/1
-0007  assign_var @5 head#2, b3
+0007  set_global g1, b3
 0008  b4 = constant #5 nil
-0009  store_var @6 same#4, b4
+0009  init_global g2, b4
 0010  b5 = make_function $2 same/2
-0011  assign_var @8 same#4, b5
-0012  b6 = load_var @9 identity#0
+0011  set_global g2, b5
+0012  b6 = load_global g0
 0013  b7 = constant #7 42
 0014  b8 = call b6(b7)
 0015  print b8
-0016  b9 = load_var @10 identity#0
+0016  b9 = load_global g0
 0017  b10 = constant #8 "hello"
 0018  b11 = call b9(b10)
 0019  print b11
-0020  b12 = load_var @11 head#2
+0020  b12 = load_global g1
 0021  b13 = constant #9 1
 0022  b14 = constant #10 2
 0023  b15 = constant #11 3
 0024  b16 = array [b13, b14, b15]
 0025  b17 = call b12(b16)
 0026  print b17
-0027  b18 = load_var @12 same#4
+0027  b18 = load_global g2
 0028  b19 = constant #12 true
 0029  b20 = constant #13 true
 0030  b21 = call b18(b19, b20)
 0031  print b21
-0032  b22 = load_var @13 identity#0
-0033  store_var @14 alias#7, b22
-0034  b23 = load_var @15 alias#7
+0032  b22 = load_global g0
+0033  init_global g3, b22
+0034  b23 = load_global g3
 0035  b24 = constant #14 "alias"
 0036  b25 = call b23(b24)
 0037  print b25
 
 function $0 identity/1 registers=2
-0000  b0 = load_var @1 value#1
+0000  b0 = load_local l0
 0001  return b0
 0002  b1 = constant #1 nil
 0003  return b1
 
 function $1 head/1 registers=4
-0000  b0 = load_var @4 values#3
+0000  b0 = load_local l0
 0001  b1 = constant #3 0
 0002  b2 = index b0, b1
 0003  return b2
@@ -53,7 +53,7 @@ function $1 head/1 registers=4
 0005  return b3
 
 function $2 same/2 registers=2
-0000  b0 = load_var @7 left#5
+0000  b0 = load_local l0
 0001  return b0
 0002  b1 = constant #6 nil
 0003  return b1

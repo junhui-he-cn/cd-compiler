@@ -4,62 +4,62 @@ main registers=48
 0002  b2 = constant #2 "b"
 0003  b3 = constant #3 2
 0004  b4 = map [b0: b1, b2: b3]
-0005  store_var @0 left#0, b4
+0005  init_global g0, b4
 0006  b5 = constant #4 "b"
 0007  b6 = constant #5 20
 0008  b7 = constant #6 "c"
 0009  b8 = constant #7 3
 0010  b9 = map [b5: b6, b7: b8]
-0011  store_var @1 right#1, b9
-0012  b10 = load_var @2 left#0
-0013  b11 = load_var @3 right#1
+0011  init_global g1, b9
+0012  b10 = load_global g0
+0013  b11 = load_global g1
 0014  b12 = native_call @4 merge [b10, b11]
-0015  store_var @5 combined#2, b12
-0016  b13 = load_var @6 combined#2
+0015  init_global g2, b12
+0016  b13 = load_global g2
 0017  print b13
-0018  b14 = load_var @7 left#0
+0018  b14 = load_global g0
 0019  print b14
-0020  b15 = load_var @8 right#1
+0020  b15 = load_global g1
 0021  b16 = constant #8 "d"
 0022  b17 = constant #9 4
 0023  b18 = assign_index b15, b16, b17
-0024  b19 = load_var @9 combined#2
+0024  b19 = load_global g2
 0025  print b19
-0026  b20 = load_var @10 left#0
-0027  b21 = load_var @11 right#1
+0026  b20 = load_global g0
+0027  b21 = load_global g1
 0028  b22 = native_call @12 merge [b20, b21]
 0029  print b22
 0030  b23 = constant #10 7
 0031  b24 = array [b23]
-0032  store_var @13 shared#3, b24
+0032  init_global g3, b24
 0033  b25 = constant #11 "left"
-0034  b26 = load_var @14 shared#3
+0034  b26 = load_global g3
 0035  b27 = map [b25: b26]
-0036  store_var @15 shallowLeft#4, b27
+0036  init_global g4, b27
 0037  b28 = constant #12 "right"
-0038  b29 = load_var @16 shared#3
+0038  b29 = load_global g3
 0039  b30 = map [b28: b29]
-0040  store_var @17 shallowRight#5, b30
-0041  b31 = load_var @18 shallowLeft#4
-0042  b32 = load_var @19 shallowRight#5
+0040  init_global g5, b30
+0041  b31 = load_global g4
+0042  b32 = load_global g5
 0043  b33 = native_call @20 merge [b31, b32]
-0044  store_var @21 shallow#6, b33
-0045  b34 = load_var @22 shared#3
+0044  init_global g6, b33
+0045  b34 = load_global g3
 0046  b35 = constant #13 8
 0047  b36 = native_call @23 push [b34, b35]
-0048  b37 = load_var @24 shallow#6
+0048  b37 = load_global g6
 0049  print b37
 0050  b38 = constant #14 "empty"
 0051  b39 = constant #15 nil
 0052  b40 = map [b38: b39]
-0053  store_var @25 optional#7, b40
+0053  init_global g7, b40
 0054  b41 = constant #16 "value"
 0055  b42 = constant #17 9
 0056  b43 = map [b41: b42]
-0057  store_var @26 required#8, b43
-0058  b44 = load_var @27 optional#7
-0059  b45 = load_var @28 required#8
+0057  init_global g8, b43
+0058  b44 = load_global g7
+0059  b45 = load_global g8
 0060  b46 = native_call @29 merge [b44, b45]
-0061  store_var @30 typed#9, b46
-0062  b47 = load_var @31 typed#9
+0061  init_global g9, b46
+0062  b47 = load_global g9
 0063  print b47

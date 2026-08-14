@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/typeof_wrong_arity.cd:1:8: expected 1 arguments but got 0
+  typeOf();
+         ^

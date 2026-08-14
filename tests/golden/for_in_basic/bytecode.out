@@ -3,31 +3,31 @@ main registers=20
 0001  b1 = constant #1 2
 0002  b2 = constant #2 3
 0003  b3 = array [b0, b1, b2]
-0004  store_var @0 xs#0, b3
-0005  b4 = load_var @1 xs#0
+0004  init_global g0, b3
+0005  b4 = load_global g0
 0006  b5 = assert_array b4
-0007  store_var @2 __for_in_iter#0, b5
+0007  init_global g1, b5
 0008  b6 = constant #3 0
-0009  store_var @3 __for_in_index#1, b6
+0009  init_global g2, b6
 0010  b7 = constant #4 nil
-0011  store_var @4 x#1, b7
-0012  b8 = load_var @5 __for_in_iter#0
+0011  init_global g3, b7
+0012  b8 = load_global g1
 0013  b9 = len b8
-0014  store_var @6 __for_in_len#2, b9
-0015  b10 = load_var @7 __for_in_index#1
-0016  b11 = load_var @8 __for_in_len#2
+0014  init_global g4, b9
+0015  b10 = load_global g2
+0016  b11 = load_global g4
 0017  b12 = less b10, b11
 0018  jump_if_false b12, 0032
-0019  b13 = load_var @9 __for_in_iter#0
-0020  b14 = load_var @10 __for_in_index#1
+0019  b13 = load_global g1
+0020  b14 = load_global g2
 0021  b15 = index b13, b14
-0022  assign_var @11 x#1, b15
+0022  set_global g3, b15
 0023  jump 0029
-0024  b16 = load_var @12 __for_in_index#1
+0024  b16 = load_global g2
 0025  b17 = constant #5 1
 0026  b18 = add b16, b17
-0027  assign_var @13 __for_in_index#1, b18
+0027  set_global g2, b18
 0028  jump 0015
-0029  b19 = load_var @14 x#1
+0029  b19 = load_global g3
 0030  print b19
 0031  jump 0024

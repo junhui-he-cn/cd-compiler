@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = string "hello"
@@ -14,18 +14,21 @@ names:
   n4 = "text#0"
   n5 = "charAt"
 
+globals:
+  g0 = n0
+
 main registers=10:
   r0 = constant c0
-  store_var n0, r0
-  r1 = load_var n1
+  init_global g0, r0
+  r1 = load_global g0
   r2 = len r1
   print r2
-  r3 = load_var n2
+  r3 = load_global g0
   r4 = constant c1
   r5 = constant c2
   r6 = native_call n3 [r3, r4, r5]
   print r6
-  r7 = load_var n4
+  r7 = load_global g0
   r8 = constant c3
   r9 = native_call n5 [r7, r8]
   print r9

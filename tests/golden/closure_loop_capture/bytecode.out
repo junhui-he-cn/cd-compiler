@@ -1,70 +1,70 @@
 main registers=40
 0000  b0 = array []
-0001  store_var @0 fns#0, b0
+0001  init_global g0, b0
 0002  b1 = constant #0 3
 0003  b2 = native_call @1 range [b1]
 0004  b3 = assert_array b2
-0005  store_var @2 __for_in_iter#0, b3
+0005  init_global g1, b3
 0006  b4 = constant #1 0
-0007  store_var @3 __for_in_index#1, b4
+0007  init_global g2, b4
 0008  b5 = constant #2 nil
-0009  store_var @4 i#1, b5
-0010  b6 = load_var @5 __for_in_iter#0
+0009  init_global g3, b5
+0010  b6 = load_global g1
 0011  b7 = len b6
-0012  store_var @6 __for_in_len#2, b7
-0013  b8 = load_var @7 __for_in_index#1
-0014  b9 = load_var @8 __for_in_len#2
+0012  init_global g4, b7
+0013  b8 = load_global g2
+0014  b9 = load_global g4
 0015  b10 = less b8, b9
 0016  jump_if_false b10, 0035
-0017  b11 = load_var @9 __for_in_iter#0
-0018  b12 = load_var @10 __for_in_index#1
+0017  b11 = load_global g1
+0018  b12 = load_global g2
 0019  b13 = index b11, b12
-0020  assign_var @11 i#1, b13
+0020  set_global g3, b13
 0021  jump 0027
-0022  b14 = load_var @12 __for_in_index#1
+0022  b14 = load_global g2
 0023  b15 = constant #3 1
 0024  b16 = add b14, b15
-0025  assign_var @13 __for_in_index#1, b16
+0025  set_global g2, b16
 0026  jump 0013
-0027  b17 = load_var @14 i#1
+0027  b17 = load_global g3
 0028  b18 = constant #4 10
 0029  b19 = multiply b17, b18
-0030  store_var @15 x#2, b19
-0031  b20 = load_var @16 fns#0
+0030  init_global g5, b19
+0031  b20 = load_global g0
 0032  b21 = make_function $0 <lambda>/0
 0033  b22 = native_call @18 push [b20, b21]
 0034  jump 0022
-0035  b23 = load_var @19 fns#0
+0035  b23 = load_global g0
 0036  b24 = assert_array b23
-0037  store_var @20 __for_in_iter#3, b24
+0037  init_global g6, b24
 0038  b25 = constant #6 0
-0039  store_var @21 __for_in_index#4, b25
+0039  init_global g7, b25
 0040  b26 = constant #7 nil
-0041  store_var @22 f#3, b26
-0042  b27 = load_var @23 __for_in_iter#3
+0041  init_global g8, b26
+0042  b27 = load_global g6
 0043  b28 = len b27
-0044  store_var @24 __for_in_len#5, b28
-0045  b29 = load_var @25 __for_in_index#4
-0046  b30 = load_var @26 __for_in_len#5
+0044  init_global g9, b28
+0045  b29 = load_global g7
+0046  b30 = load_global g9
 0047  b31 = less b29, b30
 0048  jump_if_false b31, 0063
-0049  b32 = load_var @27 __for_in_iter#3
-0050  b33 = load_var @28 __for_in_index#4
+0049  b32 = load_global g6
+0050  b33 = load_global g7
 0051  b34 = index b32, b33
-0052  assign_var @29 f#3, b34
+0052  set_global g8, b34
 0053  jump 0059
-0054  b35 = load_var @30 __for_in_index#4
+0054  b35 = load_global g7
 0055  b36 = constant #8 1
 0056  b37 = add b35, b36
-0057  assign_var @31 __for_in_index#4, b37
+0057  set_global g7, b37
 0058  jump 0045
-0059  b38 = load_var @32 f#3
+0059  b38 = load_global g8
 0060  b39 = call b38()
 0061  print b39
 0062  jump 0054
 
 function $0 <lambda>/0 registers=2
-0000  b0 = load_var @17 x#2
+0000  b0 = load_global g5
 0001  return b0
 0002  b1 = constant #5 nil
 0003  return b1

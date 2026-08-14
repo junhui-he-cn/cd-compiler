@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/typeof_shadowed_call_non_function.cd:2:11: can only call functions
+  typeOf(nil);
+            ^

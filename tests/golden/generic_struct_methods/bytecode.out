@@ -1,86 +1,86 @@
 main registers=37
 0000  b0 = constant #0 nil
-0001  store_var @0 __method_Box_get#0, b0
+0001  init_global g0, b0
 0002  b1 = make_function $0 get/1
-0003  assign_var @3 __method_Box_get#0, b1
+0003  set_global g0, b1
 0004  b2 = constant #2 nil
-0005  store_var @4 __method_Box_set#1, b2
+0005  init_global g1, b2
 0006  b3 = make_function $1 set/2
-0007  assign_var @10 __method_Box_set#1, b3
+0007  set_global g1, b3
 0008  b4 = constant #4 nil
-0009  store_var @11 __method_Box_wrap#2, b4
+0009  init_global g2, b4
 0010  b5 = make_function $2 wrap/2
-0011  assign_var @15 __method_Box_wrap#2, b5
+0011  set_global g2, b5
 0012  b6 = constant #6 nil
-0013  store_var @16 __method_NumberBox_get#8, b6
+0013  init_global g3, b6
 0014  b7 = make_function $3 get/1
-0015  assign_var @19 __method_NumberBox_get#8, b7
+0015  set_global g3, b7
 0016  b8 = constant #8 1
 0017  b9 = struct @20 Box { @21 value: b8}
-0018  store_var @22 box#10, b9
+0018  init_global g4, b9
 0019  b10 = constant #9 3
 0020  b11 = struct @23 NumberBox { @24 value: b10}
-0021  store_var @25 numberBox#11, b11
-0022  b12 = load_var @26 __method_Box_get#0
-0023  b13 = load_var @27 box#10
+0021  init_global g5, b11
+0022  b12 = load_global g0
+0023  b13 = load_global g4
 0024  b14 = call b12(b13)
 0025  print b14
-0026  b15 = load_var @28 __method_Box_set#1
-0027  b16 = load_var @29 box#10
+0026  b15 = load_global g1
+0027  b16 = load_global g4
 0028  b17 = constant #10 2
 0029  b18 = call b15(b16, b17)
 0030  print b18
-0031  b19 = load_var @30 box#10
+0031  b19 = load_global g4
 0032  b20 = field b19,  @31 value
 0033  print b20
-0034  b21 = load_var @32 __method_Box_wrap#2
-0035  b22 = load_var @33 box#10
+0034  b21 = load_global g2
+0035  b22 = load_global g4
 0036  b23 = constant #11 "text"
 0037  b24 = call b21(b22, b23)
-0038  store_var @34 textBox#12, b24
-0039  b25 = load_var @35 textBox#12
+0038  init_global g6, b24
+0039  b25 = load_global g6
 0040  b26 = field b25,  @36 value
 0041  print b26
-0042  b27 = load_var @37 __method_Box_wrap#2
-0043  b28 = load_var @38 box#10
+0042  b27 = load_global g2
+0043  b28 = load_global g4
 0044  b29 = constant #12 "inferred"
 0045  b30 = call b27(b28, b29)
 0046  b31 = field b30,  @39 value
 0047  print b31
-0048  b32 = load_var @40 __method_NumberBox_get#8
-0049  b33 = load_var @41 numberBox#11
+0048  b32 = load_global g3
+0049  b33 = load_global g5
 0050  b34 = call b32(b33)
 0051  print b34
-0052  b35 = load_var @42 textBox#12
+0052  b35 = load_global g6
 0053  b36 = native_call @43 typeOf [b35]
 0054  print b36
 
 function $0 get/1 registers=3
-0000  b0 = load_var @1 this#3
+0000  b0 = load_local l0
 0001  b1 = field b0,  @2 value
 0002  return b1
 0003  b2 = constant #1 nil
 0004  return b2
 
 function $1 set/2 registers=6
-0000  b0 = load_var @5 this#4
-0001  b1 = load_var @6 value#5
+0000  b0 = load_local l0
+0001  b1 = load_local l1
 0002  b2 = assign_field b0,  @7 value, b1
-0003  b3 = load_var @8 this#4
+0003  b3 = load_local l0
 0004  b4 = field b3,  @9 value
 0005  return b4
 0006  b5 = constant #3 nil
 0007  return b5
 
 function $2 wrap/2 registers=3
-0000  b0 = load_var @14 value#7
+0000  b0 = load_local l1
 0001  b1 = struct @12 Box { @13 value: b0}
 0002  return b1
 0003  b2 = constant #5 nil
 0004  return b2
 
 function $3 get/1 registers=3
-0000  b0 = load_var @17 this#9
+0000  b0 = load_local l0
 0001  b1 = field b0,  @18 value
 0002  return b1
 0003  b2 = constant #7 nil

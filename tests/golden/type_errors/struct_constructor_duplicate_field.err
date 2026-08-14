@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/struct_constructor_duplicate_field.cd:2:31: duplicate field `name` in struct literal
+  let p = Person { name: "Ada", name: "Grace" };
+                                ^

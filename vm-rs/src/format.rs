@@ -1,14 +1,17 @@
 use crate::bytecode::{
-    Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, Instruction, Program,
+    Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, Instruction, LocalId,
+    Program, UpvalueDesc, UpvalueId, UpvalueSource,
 };
 use std::fmt;
 
 /// Stable artifact family accepted and emitted by this VM.
 pub const ARTIFACT_FORMAT_FAMILY: &str = "cdbc";
 /// Stable artifact version accepted and emitted by this VM.
-pub const ARTIFACT_FORMAT_VERSION: &str = "0.1";
+pub const ARTIFACT_FORMAT_VERSION: &str = "0.2";
 /// Canonical header for the current artifact family and version.
-pub const ARTIFACT_HEADER: &str = "cdbc 0.1";
+pub const ARTIFACT_HEADER: &str = "cdbc 0.2";
+/// Legacy header still accepted for `.cdbc 0.1` compatibility inputs.
+pub const LEGACY_ARTIFACT_HEADER: &str = "cdbc 0.1";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParseError {
@@ -319,7 +322,7 @@ impl<'a> Parser<'a> {
         self.require_line("names:")?;
         let mut names = Vec::new();
         while let Some((line_number, line)) = self.peek() {
-            if line.starts_with("main registers=") {
+            if line.starts_with("main registers=") || line == "globals:" {
                 break;
             }
             self.advance();
@@ -399,14 +402,72 @@ impl<'a> Parser<'a> {
                     ),
                 });
             }
+            let mut upvalues = Vec::new();
+            while let Some((upvalue_line, candidate)) = self.peek() {
+                if !candidate.starts_with("upvalue ") {
+                    break;
+                }
+                self.advance();
+                let (upvalue_text, source_text) =
+                    split_once(upvalue_line, candidate, " = ")?;
+                let upvalue_index_text = upvalue_text.strip_prefix("upvalue ").ok_or_else(|| {
+                    ParseError {
+                        line: upvalue_line,
+                        message: "expected upvalue reference".to_string(),
+                    }
+                })?;
+                let upvalue_index =
+                    parse_prefixed(upvalue_line, upvalue_index_text, 'u', "upvalue reference")?;
+                if upvalue_index != upvalues.len() {
+                    return Err(ParseError {
+                        line: upvalue_line,
+                        message: format!("expected upvalue u{}", upvalues.len()),
+                    });
+                }
+                let (kind, source_index) = split_once(upvalue_line, source_text, " ")?;
+                match kind {
+                    "local" => upvalues.push(UpvalueDesc {
+                        source: UpvalueSource::Local(LocalId(parse_prefixed(
+                            upvalue_line,
+                            source_index,
+                            'l',
+                            "local reference",
+                        )? as u32)),
+                    }),
+                    "upvalue" => upvalues.push(UpvalueDesc {
+                        source: UpvalueSource::Upvalue(UpvalueId(parse_prefixed(
+                            upvalue_line,
+                            source_index,
+                            'u',
+                            "upvalue reference",
+                        )? as u32)),
+                    }),
+                    _ => {
+                        return Err(ParseError {
+                            line: upvalue_line,
+                            message: "expected upvalue source local or upvalue".to_string(),
+                        })
+                    }
+                }
+            }
             let instructions = self.parse_instructions_until_function()?;
             let instruction_count = instructions.len();
+            let max_local_slot = instructions
+                .iter()
+                .filter_map(|instruction| match instruction {
+                    Instruction::LoadLocal { slot, .. }
+                    | Instruction::BindLocal { slot, .. }
+                    | Instruction::SetLocal { slot, .. } => Some(*slot),
+                    _ => None,
+                })
+                .max()
+                .unwrap_or(0);
             functions.push(Function {
                 id: FuncId((index + 1) as u32),
                 name,
                 arity,
-                local_count: 0,
-                upvalues: Vec::new(),
+                local_count: arity.max(max_local_slot.saturating_add(1)),
+                upvalues,
                 params,
                 registers,
                 instructions,
@@ -672,9 +733,33 @@ fn parse_debug_range(line: usize, text: &str) -> Result<DebugRange, ParseError> 
     Ok(DebugRange { source, start, end })
 }
 
-fn parse_program_body(parser: &mut Parser<'_>) -> Result<Program, ParseError> {
+fn parse_program_body_with_globals(parser: &mut Parser<'_>) -> Result<Program, ParseError> {
     let constants = parser.parse_constants()?;
     let names = parser.parse_names()?;
+    let mut globals = Vec::new();
+    if parser
+        .peek()
+        .map(|(_, line)| line == "globals:")
+        .unwrap_or(false)
+    {
+        parser.advance();
+        while let Some((line_number, line)) = parser.peek() {
+            if !line.starts_with("g") || !line.contains(" = ") {
+                break;
+            }
+            parser.advance();
+            let (global_ref, name_ref) = split_once(line_number, line, " = ")?;
+            let global_index =
+                parse_prefixed(line_number, global_ref, 'g', "global reference")?;
+            if global_index != globals.len() {
+                return Err(ParseError {
+                    line: line_number,
+                    message: format!("expected global g{}", globals.len()),
+                });
+            }
+            globals.push(parse_name_ref(line_number, name_ref)?);
+        }
+    }
     let main = parser.parse_main()?;
     let mut functions = parser.parse_functions()?;
     functions.insert(0, main);
@@ -682,6 +767,7 @@ fn parse_program_body(parser: &mut Parser<'_>) -> Result<Program, ParseError> {
     let mut program = Program {
         constants,
         names,
+        globals,
         functions,
         entry: FuncId(0),
         debug_sources,
@@ -693,7 +779,16 @@ fn parse_program_body(parser: &mut Parser<'_>) -> Result<Program, ParseError> {
 
 fn parse_artifact_unverified(source: &str) -> Result<(Artifact, usize), ParseError> {
     let mut parser = Parser::new(source);
-    parser.require_line(ARTIFACT_HEADER)?;
+    let (line_number, line) = parser.advance().ok_or_else(|| ParseError {
+        line: parser.last_line(),
+        message: format!("expected `{}`", ARTIFACT_HEADER),
+    })?;
+    if line != ARTIFACT_HEADER && line != LEGACY_ARTIFACT_HEADER {
+        return Err(ParseError {
+            line: line_number,
+            message: format!("expected `{}`", ARTIFACT_HEADER),
+        });
+    }
     let module = if parser
         .peek()
         .map(|(_, line)| line == "artifact: module")
@@ -703,7 +798,7 @@ fn parse_artifact_unverified(source: &str) -> Result<(Artifact, usize), ParseErr
     } else {
         None
     };
-    let program = parse_program_body(&mut parser)?;
+    let program = parse_program_body_with_globals(&mut parser)?;
     let artifact = match module {
         Some(module) => Artifact::Module(ModuleArtifact {
             identity: module.identity,
@@ -860,6 +955,14 @@ fn verify_module_artifact_at_line(
 }
 
 fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
+    for (index, name) in program.globals.iter().enumerate() {
+        if *name >= program.names.len() {
+            return Err(validation_error(
+                line,
+                format!("global g{index} references name n{name} out of range"),
+            ));
+        }
+    }
     for (index, source) in program.debug_sources.iter().enumerate() {
         if source.module.as_ref().is_some_and(String::is_empty) {
             return Err(validation_error(
@@ -929,6 +1032,8 @@ fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
         validate_body(
             &context,
             function.registers,
+            function.local_count,
+            function.upvalues.len(),
             &function.instructions,
             &function.locations,
             program,
@@ -941,6 +1046,8 @@ fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
 fn validate_body(
     context: &str,
     registers: usize,
+    local_count: usize,
+    upvalue_count: usize,
     instructions: &[Instruction],
     locations: &[Option<DebugLocation>],
     program: &Program,
@@ -1006,6 +1113,8 @@ fn validate_body(
             context,
             instruction_index,
             registers,
+            local_count,
+            upvalue_count,
             instructions.len(),
             instruction,
             program,
@@ -1019,6 +1128,8 @@ fn validate_instruction(
     context: &str,
     instruction_index: usize,
     registers: usize,
+    local_count: usize,
+    upvalue_count: usize,
     instruction_count: usize,
     instruction: &Instruction,
     program: &Program,
@@ -1105,6 +1216,32 @@ fn validate_instruction(
         }
         Ok(())
     };
+    let local_slot = |index: usize| {
+        if index >= local_count {
+            Err(validation_error(
+                line,
+                format!(
+                    "{} instruction {} local l{} out of range (local count {})",
+                    context, instruction_index, index, local_count
+                ),
+            ))
+        } else {
+            Ok(())
+        }
+    };
+    let upvalue_slot = |index: usize| {
+        if index >= upvalue_count {
+            Err(validation_error(
+                line,
+                format!(
+                    "{} instruction {} upvalue u{} out of range (upvalue count {})",
+                    context, instruction_index, index, upvalue_count
+                ),
+            ))
+        } else {
+            Ok(())
+        }
+    };
 
     match instruction {
         Instruction::Constant {
@@ -1190,6 +1327,38 @@ fn validate_instruction(
         } => {
             name(*value, "variable")?;
             register(*source, "value")?;
+        }
+        Instruction::LoadLocal { dest, slot } => {
+            register(*dest, "destination")?;
+            local_slot(*slot)?;
+        }
+        Instruction::BindLocal { slot, value } => {
+            local_slot(*slot)?;
+            register(*value, "local value")?;
+        }
+        Instruction::SetLocal { slot, value } => {
+            local_slot(*slot)?;
+            register(*value, "local value")?;
+        }
+        Instruction::LoadUpvalue { dest, slot } => {
+            register(*dest, "destination")?;
+            upvalue_slot(*slot)?;
+        }
+        Instruction::SetUpvalue { slot, value } => {
+            upvalue_slot(*slot)?;
+            register(*value, "upvalue value")?;
+        }
+        Instruction::LoadGlobal { dest, slot } => {
+            register(*dest, "destination")?;
+            let _ = slot;
+        }
+        Instruction::InitGlobal { slot, value } => {
+            let _ = slot;
+            register(*value, "global value")?;
+        }
+        Instruction::SetGlobal { slot, value } => {
+            let _ = slot;
+            register(*value, "global value")?;
         }
         Instruction::Call {
             dest,
@@ -1314,10 +1483,28 @@ pub fn parse_program(source: &str) -> Result<Program, ParseError> {
 
 pub fn format_program(program: &Program) -> String {
     let mut out = String::with_capacity(format_program_capacity_hint(program));
-    out.push_str(ARTIFACT_HEADER);
+    out.push_str(program_header(program));
     out.push_str("\n\n");
     format_program_sections(&mut out, program);
     out
+}
+
+fn program_header(program: &Program) -> &'static str {
+    let uses_legacy_variables = program.functions.iter().any(|function| {
+        function.instructions.iter().any(|instruction| {
+            matches!(
+                instruction,
+                Instruction::LoadVar { .. }
+                    | Instruction::StoreVar { .. }
+                    | Instruction::AssignVar { .. }
+            )
+        })
+    });
+    if uses_legacy_variables {
+        LEGACY_ARTIFACT_HEADER
+    } else {
+        ARTIFACT_HEADER
+    }
 }
 
 pub fn format_artifact(artifact: &Artifact) -> String {
@@ -1339,7 +1526,7 @@ pub fn format_artifact(artifact: &Artifact) -> String {
                             .sum(),
                     ),
             );
-            out.push_str(ARTIFACT_HEADER);
+            out.push_str(program_header(&module.program));
             out.push_str("\n\n");
             out.push_str("artifact: module\n\n");
             out.push_str("module:\n");
@@ -1417,6 +1604,12 @@ fn format_program_sections(out: &mut String, program: &Program) {
     for (index, name) in program.names.iter().enumerate() {
         out.push_str(&format!("  n{} = {}\n", index, quote_string(name)));
     }
+    if !program.globals.is_empty() {
+        out.push_str("\nglobals:\n");
+        for (index, name) in program.globals.iter().enumerate() {
+            out.push_str(&format!("  g{} = n{}\n", index, name));
+        }
+    }
     let entry = &program.functions[program.entry.0 as usize];
     out.push_str(&format!("\nmain registers={}:\n", entry.registers));
     for instruction in &entry.instructions {
@@ -1438,6 +1631,13 @@ fn format_program_sections(out: &mut String, program: &Program) {
         ));
         for (index, param) in function.params.iter().enumerate() {
             out.push_str(&format!("  param {} = {}\n", index, quote_string(param)));
+        }
+        for (index, upvalue) in function.upvalues.iter().enumerate() {
+            let source = match upvalue.source {
+                UpvalueSource::Local(local) => format!("local l{}", local.0),
+                UpvalueSource::Upvalue(upvalue) => format!("upvalue u{}", upvalue.0),
+            };
+            out.push_str(&format!("  upvalue u{} = {}\n", index, source));
         }
         for instruction in &function.instructions {
             out.push_str("  ");
@@ -1646,6 +1846,18 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                 dest,
                 name: parse_name_ref(line, operands)?,
             }),
+            "load_local" => Ok(Instruction::LoadLocal {
+                dest,
+                slot: parse_prefixed(line, operands, 'l', "local reference")?,
+            }),
+            "load_upvalue" => Ok(Instruction::LoadUpvalue {
+                dest,
+                slot: parse_prefixed(line, operands, 'u', "upvalue reference")?,
+            }),
+            "load_global" => Ok(Instruction::LoadGlobal {
+                dest,
+                slot: parse_prefixed(line, operands, 'g', "global reference")?,
+            }),
             "call" => {
                 let (callee, args) = split_once(line, operands, " ")?;
                 Ok(Instruction::Call {
@@ -1764,6 +1976,41 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                     value: parse_register(line, value)?,
                 })
             }
+            "bind_local" => {
+                let (slot, value) = split_once(line, operands, ", ")?;
+                Ok(Instruction::BindLocal {
+                    slot: parse_prefixed(line, slot, 'l', "local reference")?,
+                    value: parse_register(line, value)?,
+                })
+            }
+            "set_local" => {
+                let (slot, value) = split_once(line, operands, ", ")?;
+                Ok(Instruction::SetLocal {
+                    slot: parse_prefixed(line, slot, 'l', "local reference")?,
+                    value: parse_register(line, value)?,
+                })
+            }
+            "set_upvalue" => {
+                let (slot, value) = split_once(line, operands, ", ")?;
+                Ok(Instruction::SetUpvalue {
+                    slot: parse_prefixed(line, slot, 'u', "upvalue reference")?,
+                    value: parse_register(line, value)?,
+                })
+            }
+            "init_global" => {
+                let (slot, value) = split_once(line, operands, ", ")?;
+                Ok(Instruction::InitGlobal {
+                    slot: parse_prefixed(line, slot, 'g', "global reference")?,
+                    value: parse_register(line, value)?,
+                })
+            }
+            "set_global" => {
+                let (slot, value) = split_once(line, operands, ", ")?;
+                Ok(Instruction::SetGlobal {
+                    slot: parse_prefixed(line, slot, 'g', "global reference")?,
+                    value: parse_register(line, value)?,
+                })
+            }
             "print" => Ok(Instruction::Print {
                 value: parse_register(line, operands)?,
             }),
@@ -1855,6 +2102,14 @@ fn format_instruction(instruction: &Instruction) -> String {
         Instruction::LoadVar { dest, name } => format!("r{} = load_var n{}", dest, name),
         Instruction::StoreVar { name, value } => format!("store_var n{}, r{}", name, value),
         Instruction::AssignVar { name, value } => format!("assign_var n{}, r{}", name, value),
+        Instruction::LoadLocal { dest, slot } => format!("r{} = load_local l{}", dest, slot),
+        Instruction::BindLocal { slot, value } => format!("bind_local l{}, r{}", slot, value),
+        Instruction::SetLocal { slot, value } => format!("set_local l{}, r{}", slot, value),
+        Instruction::LoadUpvalue { dest, slot } => format!("r{} = load_upvalue u{}", dest, slot),
+        Instruction::SetUpvalue { slot, value } => format!("set_upvalue u{}, r{}", slot, value),
+        Instruction::LoadGlobal { dest, slot } => format!("r{} = load_global g{}", dest, slot),
+        Instruction::InitGlobal { slot, value } => format!("init_global g{}, r{}", slot, value),
+        Instruction::SetGlobal { slot, value } => format!("set_global g{}, r{}", slot, value),
         Instruction::Call {
             dest,
             callee,
@@ -2272,14 +2527,20 @@ mod tests {
     fn round_trips_minimal_program() {
         let source = "cdbc 0.1\n\nconstants:\n\nnames:\n\nmain registers=1:\n  print r0\n";
         let program = parse_program(source).expect("parse minimal program");
-        assert_eq!(format_program(&program), source);
+        assert_eq!(
+            format_program(&program),
+            "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=1:\n  print r0\n"
+        );
     }
 
     #[test]
     fn parses_and_formats_string_escapes() {
         let source = "cdbc 0.1\n\nconstants:\n  c0 = string \"a\\\\b\\\"c\\n\\r\\t\"\n\nnames:\n  n0 = \"x\\\\y\"\n\nmain registers=1:\n  r0 = constant c0\n";
         let program = parse_program(source).expect("parse escaped strings");
-        assert_eq!(format_program(&program), source);
+        assert_eq!(
+            format_program(&program),
+            "cdbc 0.2\n\nconstants:\n  c0 = string \"a\\\\b\\\"c\\n\\r\\t\"\n\nnames:\n  n0 = \"x\\\\y\"\n\nmain registers=1:\n  r0 = constant c0\n"
+        );
     }
 
     #[test]
@@ -2355,6 +2616,7 @@ mod tests {
         let artifact = Artifact::Program(Program {
             constants: vec![Constant::Nil],
             names: Vec::new(),
+            globals: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
                 name: "main".to_string(),
@@ -2429,7 +2691,10 @@ debug_ranges:
                 end: 11,
             })
         );
-        assert_eq!(format_program(&program), source);
+        assert_eq!(
+            format_program(&program),
+            source.replace("cdbc 0.1", "cdbc 0.2")
+        );
     }
 
     #[test]
@@ -2474,7 +2739,10 @@ debug_sources:
             program.debug_sources[0].module.as_deref(),
             Some("/workspace/demo.cd")
         );
-        assert_eq!(format_program(&program), source);
+        assert_eq!(
+            format_program(&program),
+            source.replace("cdbc 0.1", "cdbc 0.2")
+        );
     }
 
     #[test]
@@ -2527,7 +2795,10 @@ main registers=1:
         assert_eq!(module.identity, "/tmp/lib.cd");
         assert!(!module.is_entry);
         assert!(module.dependencies.is_empty());
-        assert_eq!(format_artifact(&artifact), source);
+        assert_eq!(
+            format_artifact(&artifact),
+            source.replace("cdbc 0.1", "cdbc 0.2")
+        );
     }
 
     #[test]

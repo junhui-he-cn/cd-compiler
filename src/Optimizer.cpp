@@ -1404,9 +1404,13 @@ void SSADeSSAProgramResult::verify(const IRProgram& input) const
     materializeFoldedConstants(candidate, main, mainStream.foldedConstants);
     std::vector<IRFunction> candidateFunctions;
     candidateFunctions.reserve(functions.size());
-    for (const SSADeSSAIRResult& function : functions) {
+    for (std::size_t index = 0; index < functions.size(); ++index) {
+        const SSADeSSAIRResult& function = functions[index];
         IRFunction lowered = function.function;
         materializeFoldedConstants(candidate, lowered, function.foldedConstants);
+        lowered.id = input.functions()[index].id;
+        lowered.parentId = input.functions()[index].parentId;
+        lowered.parameterBindingIds = input.functions()[index].parameterBindingIds;
         candidateFunctions.push_back(std::move(lowered));
     }
     candidate.rebuildWithStreams(
@@ -1424,9 +1428,13 @@ IRProgram SSADeSSAProgramResult::rebuild(const IRProgram& input) const
     materializeFoldedConstants(rebuilt, main, mainStream.foldedConstants);
     std::vector<IRFunction> rebuiltFunctions;
     rebuiltFunctions.reserve(functions.size());
-    for (const SSADeSSAIRResult& function : functions) {
+    for (std::size_t index = 0; index < functions.size(); ++index) {
+        const SSADeSSAIRResult& function = functions[index];
         IRFunction lowered = function.function;
         materializeFoldedConstants(rebuilt, lowered, function.foldedConstants);
+        lowered.id = input.functions()[index].id;
+        lowered.parentId = input.functions()[index].parentId;
+        lowered.parameterBindingIds = input.functions()[index].parameterBindingIds;
         rebuiltFunctions.push_back(std::move(lowered));
     }
     return rebuilt.rebuildWithStreams(

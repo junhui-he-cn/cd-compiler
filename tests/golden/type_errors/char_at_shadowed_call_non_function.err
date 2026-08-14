@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/char_at_shadowed_call_non_function.cd:2:14: can only call functions
+  charAt("x", 0);
+               ^

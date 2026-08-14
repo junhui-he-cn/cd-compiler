@@ -3,24 +3,24 @@ main registers=20
 0001  b1 = constant #1 7
 0002  b2 = constant #2 9
 0003  b3 = array [b0, b1, b2]
-0004  store_var @0 values#0, b3
-0005  b4 = load_var @1 values#0
+0004  init_global g0, b3
+0005  b4 = load_global g0
 0006  b5 = make_function $0 <lambda>/1
 0007  b6 = native_call @3 findIndex [b4, b5]
 0008  print b6
-0009  b7 = load_var @4 values#0
+0009  b7 = load_global g0
 0010  b8 = make_function $1 <lambda>/1
 0011  b9 = native_call @6 findIndex [b7, b8]
 0012  print b9
 0013  b10 = constant #7 1
 0014  b11 = constant #8 2
 0015  b12 = array [b10, b11]
-0016  store_var @7 snapshot#3, b12
-0017  b13 = load_var @8 snapshot#3
+0016  init_global g1, b12
+0017  b13 = load_global g1
 0018  b14 = make_function $2 <lambda>/1
 0019  b15 = native_call @12 findIndex [b13, b14]
 0020  print b15
-0021  b16 = load_var @13 snapshot#3
+0021  b16 = load_global g1
 0022  print b16
 0023  b17 = array []
 0024  b18 = make_function $3 <lambda>/1
@@ -28,7 +28,7 @@ main registers=20
 0026  print b19
 
 function $0 <lambda>/1 registers=4
-0000  b0 = load_var @2 value#1
+0000  b0 = load_local l0
 0001  b1 = constant #3 6
 0002  b2 = greater b0, b1
 0003  return b2
@@ -36,7 +36,7 @@ function $0 <lambda>/1 registers=4
 0005  return b3
 
 function $1 <lambda>/1 registers=4
-0000  b0 = load_var @5 value#2
+0000  b0 = load_local l0
 0001  b1 = constant #5 2
 0002  b2 = equal b0, b1
 0003  return b2
@@ -44,10 +44,10 @@ function $1 <lambda>/1 registers=4
 0005  return b3
 
 function $2 <lambda>/1 registers=7
-0000  b0 = load_var @9 snapshot#3
+0000  b0 = load_global g1
 0001  b1 = constant #9 9
 0002  b2 = native_call @10 push [b0, b1]
-0003  b3 = load_var @11 value#4
+0003  b3 = load_local l0
 0004  b4 = constant #10 2
 0005  b5 = equal b3, b4
 0006  return b5

@@ -6,7 +6,7 @@
 //! APIs directly.
 
 /// Additive version of the embeddable top-level API facade.
-pub const LIBRARY_API_VERSION: &str = "0.1";
+pub const LIBRARY_API_VERSION: &str = "0.2";
 
 pub mod bytecode;
 pub mod format;

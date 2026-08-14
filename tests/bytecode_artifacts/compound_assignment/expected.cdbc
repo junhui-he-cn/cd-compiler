@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 1
@@ -12,16 +12,19 @@ names:
   n4 = "x#0"
   n5 = "x#0"
 
+globals:
+  g0 = n0
+
 main registers=7:
   r0 = constant c0
-  store_var n0, r0
-  r1 = load_var n1
+  init_global g0, r0
+  r1 = load_global g0
   r2 = assert_number r1, n2
   r3 = constant c1
   r4 = assert_number r3, n3
   r5 = add r2, r4
-  assign_var n4, r5
-  r6 = load_var n5
+  set_global g0, r5
+  r6 = load_global g0
   print r6
 
 debug_sources:

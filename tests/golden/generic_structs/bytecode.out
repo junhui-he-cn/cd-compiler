@@ -1,41 +1,41 @@
 main registers=32
 0000  b0 = constant #0 1
 0001  b1 = struct @0 Box { @1 value: b0}
-0002  store_var @2 inferred#0, b1
+0002  init_global g0, b1
 0003  b2 = constant #1 2
 0004  b3 = struct @3 Box { @4 value: b2}
-0005  store_var @5 explicit#1, b3
+0005  init_global g1, b3
 0006  b4 = constant #2 3
 0007  b5 = struct @6 Box { @7 value: b4}
-0008  store_var @8 annotated#2, b5
+0008  init_global g2, b5
 0009  b6 = constant #3 "text"
 0010  b7 = struct @9 Box { @10 value: b6}
-0011  store_var @11 textBox#3, b7
+0011  init_global g3, b7
 0012  b8 = constant #4 4
 0013  b9 = struct @12 NumberBox { @13 value: b8}
-0014  store_var @14 bounded#4, b9
-0015  b10 = load_var @15 inferred#0
+0014  init_global g4, b9
+0015  b10 = load_global g0
 0016  b11 = constant #5 5
 0017  b12 = assign_field b10,  @16 value, b11
-0018  b13 = load_var @17 inferred#0
+0018  b13 = load_global g0
 0019  b14 = field b13,  @18 value
 0020  print b14
-0021  b15 = load_var @19 explicit#1
+0021  b15 = load_global g1
 0022  b16 = field b15,  @20 value
 0023  print b16
-0024  b17 = load_var @21 annotated#2
+0024  b17 = load_global g2
 0025  b18 = field b17,  @22 value
 0026  print b18
-0027  b19 = load_var @23 textBox#3
+0027  b19 = load_global g3
 0028  b20 = field b19,  @24 value
 0029  print b20
-0030  b21 = load_var @25 bounded#4
+0030  b21 = load_global g4
 0031  b22 = field b21,  @26 value
 0032  print b22
-0033  b23 = load_var @27 explicit#1
+0033  b23 = load_global g1
 0034  b24 = native_call @28 typeOf [b23]
 0035  print b24
-0036  b25 = load_var @29 explicit#1
+0036  b25 = load_global g1
 0037  b26 = field b25,  @30 value
 0038  b27 = constant #6 2
 0039  b28 = equal b26, b27

@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/for_in_item_scope_escape.cd:3:7: undefined variable `x`
+  print x;
+        ^

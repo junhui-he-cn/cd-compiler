@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 4
@@ -18,24 +18,27 @@ names:
   n5 = "value#2"
   n6 = "findIndex"
 
+globals:
+  g0 = n0
+
 main registers=10:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
   r3 = array [r0, r1, r2]
-  store_var n0, r3
-  r4 = load_var n1
+  init_global g0, r3
+  r4 = load_global g0
   r5 = make_function f0
   r6 = native_call n3 [r4, r5]
   print r6
-  r7 = load_var n4
+  r7 = load_global g0
   r8 = make_function f1
   r9 = native_call n6 [r7, r8]
   print r9
 
 function f0 name="<lambda>" arity=1 registers=4:
   param 0 = "value#1"
-  r0 = load_var n2
+  r0 = load_local l0
   r1 = constant c3
   r2 = greater r0, r1
   return r2
@@ -44,7 +47,7 @@ function f0 name="<lambda>" arity=1 registers=4:
 
 function f1 name="<lambda>" arity=1 registers=4:
   param 0 = "value#2"
-  r0 = load_var n5
+  r0 = load_local l0
   r1 = constant c5
   r2 = equal r0, r1
   return r2

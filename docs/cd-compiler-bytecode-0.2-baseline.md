@@ -154,3 +154,38 @@ ctest 47/47、verification 1820/1820、VM 兼容矩阵 7 格，全部通过。
 下一阶段是 Phase 2（变量 lowering：`load_local/bind_local/set_local` 等数值
 slot 指令，编译器分配 slot，VM 不再扫描名字），不提前做 closure/CFG/typed
 opcode。
+
+## 8. Phase 2 落地记录
+
+Phase 2（计划 §6，变量 lowering）已完成：编译器在发射前完成
+symbol → local/upvalue/global 的数值 slot 分配，VM 热路径不再按名字解析。
+
+- C++ 侧（`src/BytecodeCompiler.cpp`）在 IR→Bytecode 之间新增 slot 分配：
+  `main` 的顶层绑定按声明序分配到 `gN`（跨模块按 resolvedName 去重），函数参数
+  `l0..l(arity-1)`、函数内局部按声明序接续，嵌套函数捕获的外层绑定分配到 `uN` 并
+  生成 `upvalue uN = local lM / upvalue uM` 描述。为支撑该 pass，`IRFunction` 新增
+  `id/parentId/parameterBindingIds`，并修复了首个人工绑定 id 恰好等于
+  `SnapshotId::invalidValue` 的既有缺陷与 O1 优化后丢失函数元数据的问题。
+- 文本契约升为 `.cdbc 0.2`：新增
+  `load_local/bind_local/set_local/load_upvalue/set_upvalue/load_global/init_global/set_global`，
+  `make_function` 按函数头 upvalue 声明精确捕获，模块与链接程序都带 `globals:`
+  区段（`gN = nK`），Rust 链接器按名字去重并重定位跨模块全局引用。
+- Rust VM：`FunctionValue`/帧携带数值 upvalue cell 向量，数值全局表 + 名字映射
+  （供 trace/debug 显示）；JIT 新增 `LoadLocal/LoadUpvalue` helper 保持 scalar 子集
+  兼容。旧 `cdbc 0.1` 文本与 `load_var/store_var/assign_var` 保留为构造期兼容路径。
+- 版本联动（VERSION 匹配）：`VERSION=0.2.0`、`Cargo.toml=0.2.0`、
+  `LIBRARY_API_VERSION="0.2"`、`ARTIFACT_FORMAT_VERSION="0.2"`、CLI HELP
+  `0.2.0`、X1 矩阵 JSON 与 `tests/vm_compatibility_matrix.py` 同步到 0.2（保留
+  cdbc-cache 0.2 schema 4 与固定 native 名单）。
+
+与计划 §6.1 的差异（记录在案）：未使用单一 `store_local`，而是
+`bind_local`（声明/新建 cell）与 `set_local`（赋值/更新 cell）区分，与计划一致；
+`load_upvalue/set_upvalue` 与 `make_function` 的按描述符捕获提前落地（计划的
+Phase 3 只做“精确 free-variable 捕获”与循环逐次绑定语义的进一步收紧）。
+
+回归：cargo test 全绿、bytecode artifact 124/124、module artifact/cache、
+malformed 107/107、Rust VM parity 740/740、golden 784/784、ctest 47/47、
+verification 1820/1820、VM 兼容矩阵 7 格、`git diff --check` 干净。
+
+下一阶段是 Phase 3（closure/upvalue 精确捕获 + 循环逐次绑定），或按计划优先级
+先做 Phase 4（BasicBlock + terminator）。

@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = string "shadowed"
@@ -18,10 +18,13 @@ names:
   n4 = "value#7"
   n5 = "reduce"
 
+globals:
+  g0 = n0
+
 main registers=12:
   r0 = make_function f0
-  store_var n0, r0
-  r1 = load_var n1
+  init_global g0, r0
+  r1 = load_global g0
   r2 = constant c2
   r3 = array [r2]
   r4 = constant c3
@@ -47,7 +50,7 @@ function f0 name="<lambda>" arity=3 registers=2:
 function f1 name="<lambda>" arity=2 registers=2:
   param 0 = "acc#4"
   param 1 = "value#5"
-  r0 = load_var n2
+  r0 = load_local l0
   return r0
   r1 = constant c4
   return r1
@@ -55,8 +58,8 @@ function f1 name="<lambda>" arity=2 registers=2:
 function f2 name="<lambda>" arity=2 registers=4:
   param 0 = "acc#6"
   param 1 = "value#7"
-  r0 = load_var n3
-  r1 = load_var n4
+  r0 = load_local l0
+  r1 = load_local l1
   r2 = add r0, r1
   return r2
   r3 = constant c7

@@ -1,5 +1,7 @@
 #include "IR.hpp"
 
+#include <limits>
+
 #include <algorithm>
 #include <iomanip>
 #include <stdexcept>
@@ -600,7 +602,28 @@ IRRegister IRProgram::makeRegister()
 
 void IRProgram::beginFunction(std::string name, std::vector<std::string> parameters)
 {
-    functionStack_.push_back(IRFunction{std::move(name), std::move(parameters), {}, 0, {}});
+    const std::size_t parentId = functionStack_.empty()
+        ? std::numeric_limits<std::size_t>::max()
+        : functionStack_.back().id;
+    functionStack_.push_back(IRFunction{
+        std::move(name),
+        std::move(parameters),
+        {},
+        0,
+        {},
+        {},
+        nextFunctionId_,
+        parentId,
+    });
+    ++nextFunctionId_;
+}
+
+void IRProgram::setFunctionParameterBindingIds(std::vector<BindingId> bindingIds)
+{
+    if (!hasActiveFunction(functionStack_)) {
+        throw std::logic_error("parameter binding metadata requires an active IR function");
+    }
+    activeFunction(functionStack_).parameterBindingIds = std::move(bindingIds);
 }
 
 std::size_t IRProgram::endFunction()

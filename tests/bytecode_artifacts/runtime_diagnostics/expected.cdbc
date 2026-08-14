@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = nil
@@ -11,12 +11,15 @@ names:
   n1 = "fail#0"
   n2 = "fail#0"
 
+globals:
+  g0 = n0
+
 main registers=4:
   r0 = constant c0
-  store_var n0, r0
+  init_global g0, r0
   r1 = make_function f0
-  assign_var n1, r1
-  r2 = load_var n2
+  set_global g0, r1
+  r2 = load_global g0
   r3 = call r2 []
 
 function f0 name="fail" arity=0 registers=4:

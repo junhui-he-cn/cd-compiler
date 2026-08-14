@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = nil
@@ -22,25 +22,29 @@ names:
   n11 = "c#2"
   n12 = "value"
 
+globals:
+  g0 = n0
+  g1 = n8
+
 main registers=9:
   r0 = constant c0
-  store_var n0, r0
+  init_global g0, r0
   r1 = make_function f0
-  assign_var n5, r1
+  set_global g0, r1
   r2 = constant c4
   r3 = struct n6 {n7: r2}
-  store_var n8, r3
-  r4 = load_var n9
-  r5 = load_var n10
+  init_global g1, r3
+  r4 = load_global g0
+  r5 = load_global g1
   r6 = call r4 [r5]
-  r7 = load_var n11
+  r7 = load_global g1
   r8 = field r7, n12
   print r8
 
 function f0 name="inc" arity=1 registers=8:
   param 0 = "this#1"
-  r0 = load_var n1
-  r1 = load_var n2
+  r0 = load_local l0
+  r1 = load_local l0
   r2 = field r1, n3
   r3 = constant c1
   r4 = add r2, r3

@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/struct_method_this_outside.cd:1:7: undefined variable `this`
+  print this;
+        ^

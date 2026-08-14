@@ -65,6 +65,7 @@ id_type!(
 pub struct Program {
     pub constants: Vec<Constant>,
     pub names: Vec<String>,
+    pub globals: Vec<usize>,
     pub functions: Vec<Function>,
     pub entry: FuncId,
     pub debug_sources: Vec<DebugSource>,
@@ -184,6 +185,38 @@ pub enum Instruction {
     },
     AssignVar {
         name: usize,
+        value: usize,
+    },
+    LoadLocal {
+        dest: usize,
+        slot: usize,
+    },
+    BindLocal {
+        slot: usize,
+        value: usize,
+    },
+    SetLocal {
+        slot: usize,
+        value: usize,
+    },
+    LoadUpvalue {
+        dest: usize,
+        slot: usize,
+    },
+    SetUpvalue {
+        slot: usize,
+        value: usize,
+    },
+    LoadGlobal {
+        dest: usize,
+        slot: usize,
+    },
+    InitGlobal {
+        slot: usize,
+        value: usize,
+    },
+    SetGlobal {
+        slot: usize,
         value: usize,
     },
     Call {

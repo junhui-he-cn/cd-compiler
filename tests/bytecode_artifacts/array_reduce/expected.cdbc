@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 1
@@ -59,65 +59,76 @@ names:
   n37 = "empty#14"
   n38 = "collected#18"
 
+globals:
+  g0 = n0
+  g1 = n1
+  g2 = n7
+  g3 = n12
+  g4 = n13
+  g5 = n20
+  g6 = n23
+  g7 = n24
+  g8 = n32
+
 main registers=35:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
   r3 = array [r0, r1, r2]
-  store_var n0, r3
+  init_global g0, r3
   r4 = constant c3
-  store_var n1, r4
-  r5 = load_var n2
+  init_global g1, r4
+  r5 = load_global g0
   r6 = constant c4
   r7 = make_function f0
   r8 = native_call n6 [r5, r6, r7]
-  store_var n7, r8
-  r9 = load_var n8
+  init_global g2, r8
+  r9 = load_global g0
   r10 = constant c6
   r11 = make_function f1
   r12 = native_call n11 [r9, r10, r11]
-  store_var n12, r12
+  init_global g3, r12
   r13 = constant c8
   r14 = constant c9
   r15 = array [r13, r14]
-  store_var n13, r15
-  r16 = load_var n14
+  init_global g4, r15
+  r16 = load_global g4
   r17 = constant c10
   r18 = make_function f2
   r19 = native_call n19 [r16, r17, r18]
-  store_var n20, r19
+  init_global g5, r19
   r20 = array []
   r21 = constant c13
   r22 = make_function f3
   r23 = native_call n22 [r20, r21, r22]
-  store_var n23, r23
+  init_global g6, r23
   r24 = array []
-  store_var n24, r24
-  r25 = load_var n25
-  r26 = load_var n26
+  init_global g7, r24
+  r25 = load_global g0
+  r26 = load_global g7
   r27 = make_function f4
   r28 = native_call n31 [r25, r26, r27]
-  store_var n32, r28
-  r29 = load_var n33
+  init_global g8, r28
+  r29 = load_global g2
   print r29
-  r30 = load_var n34
+  r30 = load_global g3
   print r30
-  r31 = load_var n35
+  r31 = load_global g5
   print r31
-  r32 = load_var n36
+  r32 = load_global g4
   print r32
-  r33 = load_var n37
+  r33 = load_global g6
   print r33
-  r34 = load_var n38
+  r34 = load_global g8
   print r34
 
 function f0 name="<lambda>" arity=2 registers=6:
   param 0 = "acc#2"
   param 1 = "value#3"
-  r0 = load_var n3
-  r1 = load_var n4
+  r0 = load_local l0
+  r1 = load_local l1
   r2 = add r0, r1
-  r3 = load_var n5
+  r3 = load_global g1
   r4 = add r2, r3
   return r4
   r5 = constant c5
@@ -126,8 +137,8 @@ function f0 name="<lambda>" arity=2 registers=6:
 function f1 name="<lambda>" arity=2 registers=4:
   param 0 = "acc#5"
   param 1 = "value#6"
-  r0 = load_var n9
-  r1 = load_var n10
+  r0 = load_local l0
+  r1 = load_local l1
   r2 = multiply r0, r1
   return r2
   r3 = constant c7
@@ -136,11 +147,11 @@ function f1 name="<lambda>" arity=2 registers=4:
 function f2 name="<lambda>" arity=2 registers=7:
   param 0 = "acc#9"
   param 1 = "value#10"
-  r0 = load_var n15
+  r0 = load_global g4
   r1 = constant c11
   r2 = native_call n16 [r0, r1]
-  r3 = load_var n17
-  r4 = load_var n18
+  r3 = load_local l0
+  r4 = load_local l1
   r5 = add r3, r4
   return r5
   r6 = constant c12
@@ -149,7 +160,7 @@ function f2 name="<lambda>" arity=2 registers=7:
 function f3 name="<lambda>" arity=2 registers=2:
   param 0 = "acc#12"
   param 1 = "value#13"
-  r0 = load_var n21
+  r0 = load_local l0
   return r0
   r1 = constant c14
   return r1
@@ -157,10 +168,10 @@ function f3 name="<lambda>" arity=2 registers=2:
 function f4 name="<lambda>" arity=2 registers=5:
   param 0 = "acc#16"
   param 1 = "value#17"
-  r0 = load_var n27
-  r1 = load_var n28
+  r0 = load_local l0
+  r1 = load_local l1
   r2 = native_call n29 [r0, r1]
-  r3 = load_var n30
+  r3 = load_local l0
   return r3
   r4 = constant c15
   return r4

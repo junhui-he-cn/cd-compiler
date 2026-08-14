@@ -1,1 +1,3 @@
 Parse error at <repo>/tests/golden/parse_errors/for_in_missing_in_or_semicolon.cd:1:7: expected `;` after for initializer, found Identifier `xs`
+  for x xs {
+        ^

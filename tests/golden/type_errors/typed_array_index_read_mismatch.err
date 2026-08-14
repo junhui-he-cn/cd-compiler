@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/typed_array_index_read_mismatch.cd:2:5: cannot initialize `s` of type string with number
+  let s: string = xs[0];
+      ^

@@ -1,28 +1,28 @@
 main registers=17
 0000  b0 = constant #0 nil
-0001  store_var @0 keys#0, b0
+0001  init_global g0, b0
 0002  b1 = make_function $0 keys/1
-0003  assign_var @1 keys#0, b1
+0003  set_global g0, b1
 0004  b2 = constant #3 nil
-0005  store_var @2 values#2, b2
+0005  init_global g1, b2
 0006  b3 = make_function $1 values/1
-0007  assign_var @3 values#2, b3
+0007  set_global g1, b3
 0008  b4 = constant #6 "tea"
 0009  b5 = constant #7 3
 0010  b6 = map [b4: b5]
-0011  store_var @4 prices#4, b6
-0012  b7 = load_var @5 keys#0
-0013  b8 = load_var @6 prices#4
+0011  init_global g2, b6
+0012  b7 = load_global g0
+0013  b8 = load_global g2
 0014  b9 = call b7(b8)
 0015  print b9
-0016  b10 = load_var @7 prices#4
+0016  b10 = load_global g2
 0017  b11 = native_call @8 keys [b10]
 0018  print b11
-0019  b12 = load_var @9 values#2
-0020  b13 = load_var @10 prices#4
+0019  b12 = load_global g1
+0020  b13 = load_global g2
 0021  b14 = call b12(b13)
 0022  print b14
-0023  b15 = load_var @11 prices#4
+0023  b15 = load_global g2
 0024  b16 = native_call @12 values [b15]
 0025  print b16
 

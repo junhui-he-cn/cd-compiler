@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use crate::bytecode::{FuncId, Function, Instruction, Program};
-use crate::runtime::{SharedEnvironment, SharedLocalSlots};
+use crate::runtime::{Cell, SharedEnvironment, SharedLocalSlots};
 use crate::scheduler::{ResumableFrame, ReturnTarget, TaskId, VariablePlan};
 use crate::value::Value as VmValue;
 use cranelift_codegen::ir::{
@@ -154,6 +154,7 @@ pub(crate) struct JitFrameMaterialization {
     registers: Vec<VmValue>,
     locals: SharedLocalSlots,
     closure: SharedEnvironment,
+    upvalues: Vec<Cell>,
     variable_plan: Option<Rc<VariablePlan>>,
     is_main: bool,
     function: Rc<str>,
@@ -175,6 +176,7 @@ impl JitFrameMaterialization {
             registers: frame.registers.clone(),
             locals: frame.locals.clone(),
             closure: frame.closure.clone(),
+            upvalues: frame.upvalues.clone(),
             variable_plan: frame.variable_plan.clone(),
             is_main: frame.is_main,
             function: frame.function.clone(),
@@ -191,6 +193,7 @@ impl JitFrameMaterialization {
         frame.registers = self.registers.clone();
         frame.locals = self.locals.clone();
         frame.closure = self.closure.clone();
+        frame.upvalues = self.upvalues.clone();
         frame.variable_plan = self.variable_plan.clone();
         frame.is_main = self.is_main;
         frame.function = self.function.clone();
@@ -730,6 +733,8 @@ impl JitState {
                 Instruction::Constant { .. }
                 | Instruction::Move { .. }
                 | Instruction::LoadVar { .. }
+                | Instruction::LoadLocal { .. }
+                | Instruction::LoadUpvalue { .. }
                 | Instruction::Negate { .. }
                 | Instruction::Not { .. }
                 | Instruction::Add { .. }
@@ -946,10 +951,12 @@ pub(crate) enum RuntimeHelper {
     LessEqual = 13,
     Checkpoint = 14,
     StoreRegister = 15,
+    LoadLocal = 16,
+    LoadUpvalue = 17,
 }
 
 impl RuntimeHelper {
-    const ALL: [Self; 16] = [
+    const ALL: [Self; 18] = [
         Self::Constant,
         Self::LoadVar,
         Self::Negate,
@@ -966,11 +973,19 @@ impl RuntimeHelper {
         Self::LessEqual,
         Self::Checkpoint,
         Self::StoreRegister,
+        Self::LoadLocal,
+        Self::LoadUpvalue,
     ];
 
     const fn value_arguments(self) -> usize {
         match self {
-            Self::Constant | Self::LoadVar | Self::Negate | Self::Not | Self::Checkpoint => 1,
+            Self::Constant
+            | Self::LoadVar
+            | Self::LoadLocal
+            | Self::LoadUpvalue
+            | Self::Negate
+            | Self::Not
+            | Self::Checkpoint => 1,
             Self::Add
             | Self::Subtract
             | Self::Multiply
@@ -1033,6 +1048,8 @@ fn helper_symbol(helper: RuntimeHelper) -> &'static str {
     match helper {
         RuntimeHelper::Constant => "cd_vm_jit_constant",
         RuntimeHelper::LoadVar => "cd_vm_jit_load_var",
+        RuntimeHelper::LoadLocal => "cd_vm_jit_load_local",
+        RuntimeHelper::LoadUpvalue => "cd_vm_jit_load_upvalue",
         RuntimeHelper::Negate => "cd_vm_jit_negate",
         RuntimeHelper::Not => "cd_vm_jit_not",
         RuntimeHelper::Add => "cd_vm_jit_add",
@@ -1054,6 +1071,8 @@ fn helper_stub(helper: RuntimeHelper) -> *const u8 {
     match helper {
         RuntimeHelper::Constant => jit_helper_constant as *const u8,
         RuntimeHelper::LoadVar => jit_helper_load_var as *const u8,
+        RuntimeHelper::LoadLocal => jit_helper_load_local as *const u8,
+        RuntimeHelper::LoadUpvalue => jit_helper_load_upvalue as *const u8,
         RuntimeHelper::Negate => jit_helper_negate as *const u8,
         RuntimeHelper::Not => jit_helper_not as *const u8,
         RuntimeHelper::Add => jit_helper_add as *const u8,
@@ -1106,6 +1125,8 @@ macro_rules! define_jit_binary_helper {
 
 define_jit_unary_helper!(jit_helper_constant, RuntimeHelper::Constant);
 define_jit_unary_helper!(jit_helper_load_var, RuntimeHelper::LoadVar);
+define_jit_unary_helper!(jit_helper_load_local, RuntimeHelper::LoadLocal);
+define_jit_unary_helper!(jit_helper_load_upvalue, RuntimeHelper::LoadUpvalue);
 define_jit_unary_helper!(jit_helper_negate, RuntimeHelper::Negate);
 define_jit_unary_helper!(jit_helper_not, RuntimeHelper::Not);
 define_jit_binary_helper!(jit_helper_add, RuntimeHelper::Add);
@@ -1224,6 +1245,48 @@ fn lower_to_cranelift_ir(
                         context,
                         RuntimeHelper::LoadVar,
                         &[name],
+                        helper_refs.as_ref(),
+                    );
+                    let value = emit_store_register(
+                        &mut builder,
+                        context,
+                        *dest,
+                        value,
+                        instruction_index,
+                        helper_refs.as_ref(),
+                    )?;
+                    write_register(&mut registers, *dest, value, instruction_index)?;
+                }
+                Instruction::LoadLocal { dest, slot } => {
+                    let slot = i64::try_from(*slot)
+                        .map_err(|_| format!("local slot {} does not fit Cranelift i64", slot))?;
+                    let slot = builder.ins().iconst(types::I64, slot);
+                    let value = emit_runtime_call(
+                        &mut builder,
+                        context,
+                        RuntimeHelper::LoadLocal,
+                        &[slot],
+                        helper_refs.as_ref(),
+                    );
+                    let value = emit_store_register(
+                        &mut builder,
+                        context,
+                        *dest,
+                        value,
+                        instruction_index,
+                        helper_refs.as_ref(),
+                    )?;
+                    write_register(&mut registers, *dest, value, instruction_index)?;
+                }
+                Instruction::LoadUpvalue { dest, slot } => {
+                    let slot = i64::try_from(*slot)
+                        .map_err(|_| format!("upvalue slot {} does not fit Cranelift i64", slot))?;
+                    let slot = builder.ins().iconst(types::I64, slot);
+                    let value = emit_runtime_call(
+                        &mut builder,
+                        context,
+                        RuntimeHelper::LoadUpvalue,
+                        &[slot],
                         helper_refs.as_ref(),
                     );
                     let value = emit_store_register(
@@ -1660,6 +1723,14 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
         Instruction::LoadVar { .. } => "load_var",
         Instruction::StoreVar { .. } => "store_var",
         Instruction::AssignVar { .. } => "assign_var",
+        Instruction::LoadLocal { .. } => "load_local",
+        Instruction::BindLocal { .. } => "bind_local",
+        Instruction::SetLocal { .. } => "set_local",
+        Instruction::LoadUpvalue { .. } => "load_upvalue",
+        Instruction::SetUpvalue { .. } => "set_upvalue",
+        Instruction::LoadGlobal { .. } => "load_global",
+        Instruction::InitGlobal { .. } => "init_global",
+        Instruction::SetGlobal { .. } => "set_global",
         Instruction::Call { .. } => "call",
         Instruction::NativeCall { .. } => "native_call",
         Instruction::Index { .. } => "index",
@@ -1727,6 +1798,7 @@ mod tests {
         all.extend(functions);
         Program {
             constants: Vec::new(),
+            globals: Vec::new(),
             names: vec!["map".to_string(), "print".to_string()],
             functions: all,
             entry: FuncId(0),

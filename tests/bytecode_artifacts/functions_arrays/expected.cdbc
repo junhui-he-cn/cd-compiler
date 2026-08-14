@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = nil
@@ -32,52 +32,58 @@ names:
   n15 = "xs#5"
   n16 = "xs#5"
 
+globals:
+  g0 = n0
+  g1 = n11
+  g2 = n13
+
 main registers=19:
   r0 = constant c0
-  store_var n0, r0
+  init_global g0, r0
   r1 = make_function f1
-  assign_var n9, r1
-  r2 = load_var n10
+  set_global g0, r1
+  r2 = load_global g0
   r3 = constant c5
   r4 = call r2 [r3]
-  store_var n11, r4
-  r5 = load_var n12
+  init_global g1, r4
+  r5 = load_global g1
   r6 = call r5 []
   print r6
   r7 = constant c6
   r8 = constant c7
   r9 = constant c8
   r10 = array [r7, r8, r9]
-  store_var n13, r10
-  r11 = load_var n14
+  init_global g2, r10
+  r11 = load_global g2
   r12 = constant c9
-  r13 = load_var n15
+  r13 = load_global g2
   r14 = len r13
   r15 = assign_index r11, r12, r14
-  r16 = load_var n16
+  r16 = load_global g2
   r17 = constant c10
   r18 = index r16, r17
   print r18
 
 function f0 name="next" arity=0 registers=5:
-  r0 = load_var n4
+  upvalue u0 = local l1
+  r0 = load_upvalue u0
   r1 = constant c2
   r2 = add r0, r1
-  assign_var n5, r2
-  r3 = load_var n6
+  set_upvalue u0, r2
+  r3 = load_upvalue u0
   return r3
   r4 = constant c3
   return r4
 
 function f1 name="makeCounter" arity=1 registers=5:
   param 0 = "start#1"
-  r0 = load_var n1
-  store_var n2, r0
+  r0 = load_local l0
+  bind_local l1, r0
   r1 = constant c1
-  store_var n3, r1
+  bind_local l2, r1
   r2 = make_function f0
-  assign_var n7, r2
-  r3 = load_var n8
+  set_local l2, r2
+  r3 = load_local l2
   return r3
   r4 = constant c4
   return r4

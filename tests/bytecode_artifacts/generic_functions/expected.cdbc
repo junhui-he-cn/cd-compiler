@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = nil
@@ -35,56 +35,62 @@ names:
   n14 = "alias#7"
   n15 = "alias#7"
 
+globals:
+  g0 = n0
+  g1 = n3
+  g2 = n6
+  g3 = n14
+
 main registers=26:
   r0 = constant c0
-  store_var n0, r0
+  init_global g0, r0
   r1 = make_function f0
-  assign_var n2, r1
+  set_global g0, r1
   r2 = constant c2
-  store_var n3, r2
+  init_global g1, r2
   r3 = make_function f1
-  assign_var n5, r3
+  set_global g1, r3
   r4 = constant c5
-  store_var n6, r4
+  init_global g2, r4
   r5 = make_function f2
-  assign_var n8, r5
-  r6 = load_var n9
+  set_global g2, r5
+  r6 = load_global g0
   r7 = constant c7
   r8 = call r6 [r7]
   print r8
-  r9 = load_var n10
+  r9 = load_global g0
   r10 = constant c8
   r11 = call r9 [r10]
   print r11
-  r12 = load_var n11
+  r12 = load_global g1
   r13 = constant c9
   r14 = constant c10
   r15 = constant c11
   r16 = array [r13, r14, r15]
   r17 = call r12 [r16]
   print r17
-  r18 = load_var n12
+  r18 = load_global g2
   r19 = constant c12
   r20 = constant c13
   r21 = call r18 [r19, r20]
   print r21
-  r22 = load_var n13
-  store_var n14, r22
-  r23 = load_var n15
+  r22 = load_global g0
+  init_global g3, r22
+  r23 = load_global g3
   r24 = constant c14
   r25 = call r23 [r24]
   print r25
 
 function f0 name="identity" arity=1 registers=2:
   param 0 = "value#1"
-  r0 = load_var n1
+  r0 = load_local l0
   return r0
   r1 = constant c1
   return r1
 
 function f1 name="head" arity=1 registers=4:
   param 0 = "values#3"
-  r0 = load_var n4
+  r0 = load_local l0
   r1 = constant c3
   r2 = index r0, r1
   return r2
@@ -94,7 +100,7 @@ function f1 name="head" arity=1 registers=4:
 function f2 name="same" arity=2 registers=2:
   param 0 = "left#5"
   param 1 = "right#6"
-  r0 = load_var n7
+  r0 = load_local l0
   return r0
   r1 = constant c6
   return r1

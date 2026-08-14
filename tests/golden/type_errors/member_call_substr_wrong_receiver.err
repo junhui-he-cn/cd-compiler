@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/member_call_substr_wrong_receiver.cd:1:16: substr expects string receiver, got [number]
+  [1].substr(0, 1);
+                 ^

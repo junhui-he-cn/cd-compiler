@@ -4,19 +4,19 @@ main registers=15
 0002  b2 = constant #2 "b"
 0003  b3 = constant #3 2
 0004  b4 = map [b0: b1, b2: b3]
-0005  store_var @0 values#0, b4
-0006  b5 = load_var @1 values#0
-0007  store_var @2 alias#1, b5
-0008  b6 = load_var @3 values#0
+0005  init_global g0, b4
+0006  b5 = load_global g0
+0007  init_global g1, b5
+0008  b6 = load_global g0
 0009  b7 = constant #4 "a"
 0010  b8 = native_call @4 remove [b6, b7]
 0011  print b8
-0012  b9 = load_var @5 alias#1
+0012  b9 = load_global g1
 0013  print b9
-0014  b10 = load_var @6 alias#1
+0014  b10 = load_global g1
 0015  b11 = constant #5 "b"
 0016  b12 = native_call @7 remove [b10, b11]
 0017  print b12
-0018  b13 = load_var @8 values#0
+0018  b13 = load_global g0
 0019  b14 = len b13
 0020  print b14

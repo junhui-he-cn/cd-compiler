@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = nil
@@ -23,16 +23,20 @@ names:
   n13 = "__method_Counter_inc#0"
   n14 = "c#3"
 
+globals:
+  g0 = n0
+  g1 = n12
+
 main registers=8:
   r0 = constant c0
-  store_var n0, r0
+  init_global g0, r0
   r1 = make_function f0
-  assign_var n9, r1
+  set_global g0, r1
   r2 = constant c2
   r3 = struct n10 {n11: r2}
-  store_var n12, r3
-  r4 = load_var n13
-  r5 = load_var n14
+  init_global g1, r3
+  r4 = load_global g0
+  r5 = load_global g1
   r6 = constant c3
   r7 = call r4 [r5, r6]
   print r7
@@ -40,14 +44,14 @@ main registers=8:
 function f0 name="inc" arity=2 registers=10:
   param 0 = "this#1"
   param 1 = "delta#2"
-  r0 = load_var n1
+  r0 = load_local l0
   r1 = field r0, n2
   r2 = assert_number r1, n3
-  r3 = load_var n4
+  r3 = load_local l1
   r4 = assert_number r3, n5
   r5 = add r2, r4
   r6 = assign_field r0, n6, r5
-  r7 = load_var n7
+  r7 = load_local l0
   r8 = field r7, n8
   return r8
   r9 = constant c1

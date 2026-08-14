@@ -1,21 +1,21 @@
 main registers=7
 0000  b0 = array []
-0001  store_var @0 calls#0, b0
+0001  init_global g0, b0
 0002  b1 = array []
 0003  b2 = constant #0 42
 0004  b3 = make_function $0 <lambda>/2
 0005  b4 = native_call @5 reduce [b1, b2, b3]
-0006  store_var @6 result#3, b4
-0007  b5 = load_var @7 result#3
+0006  init_global g1, b4
+0007  b5 = load_global g1
 0008  print b5
-0009  b6 = load_var @8 calls#0
+0009  b6 = load_global g0
 0010  print b6
 
 function $0 <lambda>/2 registers=7
-0000  b0 = load_var @1 calls#0
-0001  b1 = load_var @2 value#2
+0000  b0 = load_global g0
+0001  b1 = load_local l1
 0002  b2 = native_call @3 push [b0, b1]
-0003  b3 = load_var @4 acc#1
+0003  b3 = load_local l0
 0004  b4 = constant #1 1
 0005  b5 = add b3, b4
 0006  return b5

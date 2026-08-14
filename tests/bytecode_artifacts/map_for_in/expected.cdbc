@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = string "a"
@@ -32,6 +32,13 @@ names:
   n17 = "remove"
   n18 = "values#0"
 
+globals:
+  g0 = n0
+  g1 = n2
+  g2 = n3
+  g3 = n4
+  g4 = n6
+
 main registers=27:
   r0 = constant c0
   r1 = constant c1
@@ -40,38 +47,38 @@ main registers=27:
   r4 = constant c4
   r5 = constant c5
   r6 = map [r0: r1, r2: r3, r4: r5]
-  store_var n0, r6
-  r7 = load_var n1
+  init_global g0, r6
+  r7 = load_global g0
   r8 = assert_array r7
-  store_var n2, r8
+  init_global g1, r8
   r9 = constant c6
-  store_var n3, r9
+  init_global g2, r9
   r10 = constant c7
-  store_var n4, r10
-  r11 = load_var n5
+  init_global g3, r10
+  r11 = load_global g1
   r12 = len r11
-  store_var n6, r12
-  r13 = load_var n7
-  r14 = load_var n8
+  init_global g4, r12
+  r13 = load_global g2
+  r14 = load_global g4
   r15 = less r13, r14
   jump_if_false r15, 38
-  r16 = load_var n9
-  r17 = load_var n10
+  r16 = load_global g1
+  r17 = load_global g2
   r18 = index r16, r17
-  assign_var n11, r18
+  set_global g3, r18
   jump 32
-  r19 = load_var n12
+  r19 = load_global g2
   r20 = constant c8
   r21 = add r19, r20
-  assign_var n13, r21
+  set_global g2, r21
   jump 18
-  r22 = load_var n14
+  r22 = load_global g3
   print r22
-  r23 = load_var n15
-  r24 = load_var n16
+  r23 = load_global g0
+  r24 = load_global g3
   r25 = native_call n17 [r23, r24]
   jump 27
-  r26 = load_var n18
+  r26 = load_global g0
   print r26
 
 debug_sources:

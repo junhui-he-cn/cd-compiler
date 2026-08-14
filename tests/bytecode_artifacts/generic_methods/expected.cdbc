@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = nil
@@ -38,50 +38,56 @@ names:
   n19 = "__method_Box_make#2"
   n20 = "box#9"
 
+globals:
+  g0 = n0
+  g1 = n5
+  g2 = n8
+  g3 = n12
+
 main registers=25:
   r0 = constant c0
-  store_var n0, r0
+  init_global g0, r0
   r1 = make_function f0
-  assign_var n4, r1
+  set_global g0, r1
   r2 = constant c2
-  store_var n5, r2
+  init_global g1, r2
   r3 = make_function f1
-  assign_var n7, r3
+  set_global g1, r3
   r4 = constant c5
-  store_var n8, r4
+  init_global g2, r4
   r5 = make_function f2
-  assign_var n9, r5
+  set_global g2, r5
   r6 = constant c8
   r7 = struct n10 {n11: r6}
-  store_var n12, r7
-  r8 = load_var n13
-  r9 = load_var n14
+  init_global g3, r7
+  r8 = load_global g0
+  r9 = load_global g3
   r10 = constant c9
   r11 = call r8 [r9, r10]
   print r11
-  r12 = load_var n15
-  r13 = load_var n16
+  r12 = load_global g0
+  r13 = load_global g3
   r14 = constant c10
   r15 = call r12 [r13, r14]
   print r15
-  r16 = load_var n17
-  r17 = load_var n18
+  r16 = load_global g1
+  r17 = load_global g3
   r18 = constant c11
   r19 = constant c12
   r20 = array [r18, r19]
   r21 = call r16 [r17, r20]
   print r21
-  r22 = load_var n19
-  r23 = load_var n20
+  r22 = load_global g2
+  r23 = load_global g3
   r24 = call r22 [r23]
   print r24
 
 function f0 name="echo" arity=2 registers=3:
   param 0 = "this#3"
   param 1 = "value#4"
-  r0 = load_var n1
-  store_var n2, r0
-  r1 = load_var n3
+  r0 = load_local l1
+  bind_local l2, r0
+  r1 = load_local l2
   return r1
   r2 = constant c1
   return r2
@@ -89,7 +95,7 @@ function f0 name="echo" arity=2 registers=3:
 function f1 name="head" arity=2 registers=4:
   param 0 = "this#6"
   param 1 = "values#7"
-  r0 = load_var n6
+  r0 = load_local l1
   r1 = constant c3
   r2 = index r0, r1
   return r2

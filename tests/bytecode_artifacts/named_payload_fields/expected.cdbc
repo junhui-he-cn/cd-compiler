@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 2
@@ -20,22 +20,27 @@ names:
   n10 = "Pair"
   n11 = "Empty"
 
+globals:
+  g0 = n2
+  g1 = n6
+  g2 = n7
+
 main registers=14:
   r0 = constant c0
   r1 = constant c1
   r2 = variant n0.n1 [r0, r1]
-  store_var n2, r2
-  r3 = load_var n3
+  init_global g0, r2
+  r3 = load_global g0
   r4 = variant_tag r3 n4.n5
   jump_if_false r4, 18
   r5 = variant_field r3 0
   r6 = variant_field r3 1
-  store_var n6, r5
-  store_var n7, r6
-  r7 = load_var n8
+  init_global g1, r5
+  init_global g2, r6
+  r7 = load_global g2
   r8 = constant c2
   r9 = multiply r7, r8
-  r10 = load_var n9
+  r10 = load_global g1
   r11 = add r9, r10
   print r11
   jump 23

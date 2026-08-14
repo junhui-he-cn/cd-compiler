@@ -1,29 +1,29 @@
 main registers=17
 0000  b0 = array []
 0001  b1 = assert_array b0
-0002  store_var @0 __for_in_iter#0, b1
+0002  init_global g0, b1
 0003  b2 = constant #0 0
-0004  store_var @1 __for_in_index#1, b2
+0004  init_global g1, b2
 0005  b3 = constant #1 nil
-0006  store_var @2 x#0, b3
-0007  b4 = load_var @3 __for_in_iter#0
+0006  init_global g2, b3
+0007  b4 = load_global g0
 0008  b5 = len b4
-0009  store_var @4 __for_in_len#2, b5
-0010  b6 = load_var @5 __for_in_index#1
-0011  b7 = load_var @6 __for_in_len#2
+0009  init_global g3, b5
+0010  b6 = load_global g1
+0011  b7 = load_global g3
 0012  b8 = less b6, b7
 0013  jump_if_false b8, 0027
-0014  b9 = load_var @7 __for_in_iter#0
-0015  b10 = load_var @8 __for_in_index#1
+0014  b9 = load_global g0
+0015  b10 = load_global g1
 0016  b11 = index b9, b10
-0017  assign_var @9 x#0, b11
+0017  set_global g2, b11
 0018  jump 0024
-0019  b12 = load_var @10 __for_in_index#1
+0019  b12 = load_global g1
 0020  b13 = constant #2 1
 0021  b14 = add b12, b13
-0022  assign_var @11 __for_in_index#1, b14
+0022  set_global g1, b14
 0023  jump 0010
-0024  b15 = load_var @12 x#0
+0024  b15 = load_global g2
 0025  print b15
 0026  jump 0019
 0027  b16 = constant #3 "done"

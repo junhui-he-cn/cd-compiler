@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/compound_assignment_non_number_variable.cd:2:3: `+=` expects number variable, got string
+  s += 1;
+    ^

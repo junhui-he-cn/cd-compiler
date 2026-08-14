@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/unary_minus_non_number.cd:1:17: unary `-` expects number, got string
+  let x: number = -"hello";
+                  ^

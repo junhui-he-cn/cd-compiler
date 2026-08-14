@@ -1,43 +1,43 @@
 main registers=17
 0000  b0 = make_function $0 <lambda>/1
 0001  b1 = make_function $1 <lambda>/1
-0002  store_var @2 identity#2, b1
+0002  init_global g0, b1
 0003  b2 = make_function $2 <lambda>/1
-0004  store_var @4 head#4, b2
+0004  init_global g1, b2
 0005  b3 = make_function $3 <lambda>/0
-0006  store_var @5 maybe#5, b3
-0007  b4 = load_var @6 identity#2
+0006  init_global g2, b3
+0007  b4 = load_global g0
 0008  b5 = constant #6 41
 0009  b6 = call b4(b5)
 0010  print b6
-0011  b7 = load_var @7 identity#2
+0011  b7 = load_global g0
 0012  b8 = constant #7 "generic"
 0013  b9 = call b7(b8)
 0014  print b9
-0015  b10 = load_var @8 head#4
+0015  b10 = load_global g1
 0016  b11 = constant #8 7
 0017  b12 = constant #9 8
 0018  b13 = array [b11, b12]
 0019  b14 = call b10(b13)
 0020  print b14
-0021  b15 = load_var @9 maybe#5
+0021  b15 = load_global g2
 0022  b16 = call b15()
 0023  print b16
 
 function $0 <lambda>/1 registers=2
-0000  b0 = load_var @0 value#0
+0000  b0 = load_local l0
 0001  return b0
 0002  b1 = constant #0 nil
 0003  return b1
 
 function $1 <lambda>/1 registers=2
-0000  b0 = load_var @1 value#1
+0000  b0 = load_local l0
 0001  return b0
 0002  b1 = constant #1 nil
 0003  return b1
 
 function $2 <lambda>/1 registers=4
-0000  b0 = load_var @3 values#3
+0000  b0 = load_local l0
 0001  b1 = constant #2 0
 0002  b2 = index b0, b1
 0003  return b2

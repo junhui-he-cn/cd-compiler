@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = nil
@@ -42,74 +42,81 @@ names:
   n18 = "alias#7"
   n19 = "identity#0"
 
+globals:
+  g0 = n0
+  g1 = n3
+  g2 = n6
+  g3 = n9
+  g4 = n17
+
 main registers=33:
   r0 = constant c0
-  store_var n0, r0
+  init_global g0, r0
   r1 = make_function f0
-  assign_var n2, r1
+  set_global g0, r1
   r2 = constant c2
-  store_var n3, r2
+  init_global g1, r2
   r3 = make_function f1
-  assign_var n5, r3
+  set_global g1, r3
   r4 = constant c4
-  store_var n6, r4
+  init_global g2, r4
   r5 = make_function f2
-  assign_var n8, r5
+  set_global g2, r5
   r6 = constant c7
-  store_var n9, r6
+  init_global g3, r6
   r7 = make_function f3
-  assign_var n10, r7
-  r8 = load_var n11
+  set_global g3, r7
+  r8 = load_global g1
   r9 = constant c10
   r10 = call r8 [r9]
   print r10
-  r11 = load_var n12
+  r11 = load_global g1
   r12 = constant c11
   r13 = call r11 [r12]
   print r13
-  r14 = load_var n13
+  r14 = load_global g2
   r15 = constant c12
   r16 = constant c13
   r17 = array [r15, r16]
   r18 = call r14 [r17]
   print r18
-  r19 = load_var n14
+  r19 = load_global g1
   r20 = constant c14
   r21 = constant c15
   r22 = array [r20, r21]
   r23 = call r19 [r22]
   print r23
-  r24 = load_var n15
+  r24 = load_global g3
   r25 = call r24 []
   print r25
-  r26 = load_var n16
-  store_var n17, r26
-  r27 = load_var n18
+  r26 = load_global g1
+  init_global g4, r26
+  r27 = load_global g4
   r28 = constant c16
   r29 = call r27 [r28]
   print r29
-  r30 = load_var n19
+  r30 = load_global g0
   r31 = constant c17
   r32 = call r30 [r31]
   print r32
 
 function f0 name="identity" arity=1 registers=2:
   param 0 = "value#1"
-  r0 = load_var n1
+  r0 = load_local l0
   return r0
   r1 = constant c1
   return r1
 
 function f1 name="identity" arity=1 registers=2:
   param 0 = "value#3"
-  r0 = load_var n4
+  r0 = load_local l0
   return r0
   r1 = constant c3
   return r1
 
 function f2 name="head" arity=1 registers=4:
   param 0 = "values#5"
-  r0 = load_var n7
+  r0 = load_local l0
   r1 = constant c5
   r2 = index r0, r1
   return r2
@@ -123,8 +130,8 @@ function f3 name="make" arity=0 registers=2:
   return r1
 
 debug_sources:
-  s0 module="<repo>/tests/bytecode_artifacts/generic_explicit_type_arguments/input.cd" path="tests/bytecode_artifacts/generic_explicit_type_arguments/input.cd" text="import \"lib.cd\" as lib;\n\nfun identity<T>(value: T): T {\n  return value;\n}\nfun head<T>(values: [T]): T {\n  return values[0];\n}\nfun make<T>(): optional<T> {\n  return nil;\n}\nprint identity<number>(42);\nprint identity<string>(\"hello\");\nprint head<number>([1, 2]);\nprint identity<[number]>([3, 4]);\nprint make<number>();\nlet alias = identity;\nprint alias<bool>(true);\nprint lib.identity<number>(7);\n"
-  s1 module="<repo>/tests/bytecode_artifacts/generic_explicit_type_arguments/lib.cd" path="tests/bytecode_artifacts/generic_explicit_type_arguments/lib.cd" text="fun identity<T>(value: T): T {\n  return value;\n}\nexport identity;\n"
+  s0 module="/home/junhe/compiler/tests/bytecode_artifacts/generic_explicit_type_arguments/input.cd" path="tests/bytecode_artifacts/generic_explicit_type_arguments/input.cd" text="import \"lib.cd\" as lib;\n\nfun identity<T>(value: T): T {\n  return value;\n}\nfun head<T>(values: [T]): T {\n  return values[0];\n}\nfun make<T>(): optional<T> {\n  return nil;\n}\nprint identity<number>(42);\nprint identity<string>(\"hello\");\nprint head<number>([1, 2]);\nprint identity<[number]>([3, 4]);\nprint make<number>();\nlet alias = identity;\nprint alias<bool>(true);\nprint lib.identity<number>(7);\n"
+  s1 module="/home/junhe/compiler/tests/bytecode_artifacts/generic_explicit_type_arguments/lib.cd" path="tests/bytecode_artifacts/generic_explicit_type_arguments/lib.cd" text="fun identity<T>(value: T): T {\n  return value;\n}\nexport identity;\n"
 
 debug_locations:
   main 0 = s1:1:1

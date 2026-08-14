@@ -1,19 +1,19 @@
 main registers=8
 0000  b0 = constant #0 nil
-0001  store_var @0 identity#0, b0
+0001  init_global g0, b0
 0002  b1 = make_function $0 identity/1
-0003  assign_var @2 identity#0, b1
-0004  b2 = load_var @3 identity#0
+0003  set_global g0, b1
+0004  b2 = load_global g0
 0005  b3 = constant #2 7
 0006  b4 = call b2(b3)
 0007  print b4
-0008  b5 = load_var @4 identity#0
+0008  b5 = load_global g0
 0009  b6 = constant #3 "module"
 0010  b7 = call b5(b6)
 0011  print b7
 
 function $0 identity/1 registers=2
-0000  b0 = load_var @1 value#1
+0000  b0 = load_local l0
 0001  return b0
 0002  b1 = constant #1 nil
 0003  return b1

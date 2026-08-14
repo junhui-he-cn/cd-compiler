@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/duplicate_declaration.cd:2:5: variable `x` already declared in this scope
+  let x = 2;
+      ^

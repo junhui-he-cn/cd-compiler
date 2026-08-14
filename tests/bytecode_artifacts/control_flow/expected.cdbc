@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 0
@@ -15,14 +15,17 @@ names:
   n3 = "i#0"
   n4 = "i#0"
 
+globals:
+  g0 = n0
+
 main registers=12:
   r0 = constant c0
-  store_var n0, r0
-  r1 = load_var n1
+  init_global g0, r0
+  r1 = load_global g0
   r2 = constant c1
   r3 = less r1, r2
   jump_if_false r3, 20
-  r4 = load_var n2
+  r4 = load_global g0
   r5 = constant c2
   r6 = equal r4, r5
   jump_if_false r6, 13
@@ -31,10 +34,10 @@ main registers=12:
   jump 15
   r8 = constant c4
   print r8
-  r9 = load_var n3
+  r9 = load_global g0
   r10 = constant c5
   r11 = add r9, r10
-  assign_var n4, r11
+  set_global g0, r11
   jump 2
 
 debug_sources:

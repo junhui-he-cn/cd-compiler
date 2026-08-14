@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/char_at_non_string_static.cd:1:15: charAt expects string as first argument, got bool
+  charAt(true, 0);
+                ^

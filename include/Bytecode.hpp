@@ -27,6 +27,14 @@ enum class BytecodeOp {
     LoadVar,
     StoreVar,
     AssignVar,
+    LoadLocal,
+    BindLocal,
+    SetLocal,
+    LoadUpvalue,
+    SetUpvalue,
+    LoadGlobal,
+    InitGlobal,
+    SetGlobal,
     Call,
     NativeCall,
     Index,
@@ -68,11 +76,18 @@ struct BytecodeInstruction {
     std::optional<SourceSpan> span = std::nullopt;
 };
 
+struct BytecodeUpvalue {
+    bool sourceIsLocal = true;
+    std::uint32_t source = 0;
+};
+
 struct BytecodeFunction {
     std::string name;
     std::vector<std::string> parameters;
     std::vector<BytecodeInstruction> instructions;
     std::uint32_t registerCount = 0;
+    std::uint32_t localCount = 0;
+    std::vector<BytecodeUpvalue> upvalues;
 };
 
 struct BytecodeModuleDependency {
@@ -92,12 +107,14 @@ public:
     void setInstructions(std::vector<BytecodeInstruction> instructions);
     void setRegisterCount(std::uint32_t registerCount);
     void setFunctions(std::vector<BytecodeFunction> functions);
+    void setGlobals(std::vector<std::uint32_t> globals);
 
     const std::vector<Value>& constants() const;
     const std::vector<std::string>& names() const;
     const std::vector<BytecodeInstruction>& instructions() const;
     std::uint32_t registerCount() const;
     const std::vector<BytecodeFunction>& functions() const;
+    const std::vector<std::uint32_t>& globals() const;
 
     void print(std::ostream& out) const;
 
@@ -107,6 +124,7 @@ private:
     std::vector<BytecodeInstruction> instructions_;
     std::uint32_t registerCount_ = 0;
     std::vector<BytecodeFunction> functions_;
+    std::vector<std::uint32_t> globals_;
     std::vector<SourceFile> sources_;
 };
 

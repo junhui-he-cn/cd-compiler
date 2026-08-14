@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/function_type_missing_return.cd:1:5: function `make` may return nil but is annotated fun(number): number
+  fun make(): fun(number): number {
+      ^

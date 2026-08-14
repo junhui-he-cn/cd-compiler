@@ -23,8 +23,8 @@ main registers=20
 0021  b15 = native_call @8 typeOf [b14]
 0022  print b15
 0023  b16 = make_function $1 <lambda>/1
-0024  store_var @9 typeOf#1, b16
-0025  b17 = load_var @10 typeOf#1
+0024  init_global g0, b16
+0025  b17 = load_global g0
 0026  b18 = constant #10 123
 0027  b19 = call b17(b18)
 0028  print b19

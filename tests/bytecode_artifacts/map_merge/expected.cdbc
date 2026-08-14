@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = string "a"
@@ -20,25 +20,29 @@ names:
   n6 = "right#1"
   n7 = "merge"
 
+globals:
+  g0 = n0
+  g1 = n1
+
 main registers=16:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
   r3 = constant c3
   r4 = map [r0: r1, r2: r3]
-  store_var n0, r4
+  init_global g0, r4
   r5 = constant c4
   r6 = constant c5
   r7 = constant c6
   r8 = constant c7
   r9 = map [r5: r6, r7: r8]
-  store_var n1, r9
-  r10 = load_var n2
-  r11 = load_var n3
+  init_global g1, r9
+  r10 = load_global g0
+  r11 = load_global g1
   r12 = native_call n4 [r10, r11]
   print r12
-  r13 = load_var n5
-  r14 = load_var n6
+  r13 = load_global g0
+  r14 = load_global g1
   r15 = native_call n7 [r13, r14]
   print r15
 

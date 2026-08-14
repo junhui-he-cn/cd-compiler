@@ -1,49 +1,49 @@
 main registers=24
 0000  b0 = constant #0 nil
-0001  store_var @0 __method_Box_get#0, b0
+0001  init_global g0, b0
 0002  b1 = make_function $0 get/1
-0003  assign_var @3 __method_Box_get#0, b1
+0003  set_global g0, b1
 0004  b2 = constant #2 nil
-0005  store_var @4 __method_Box_wrap#1, b2
+0005  init_global g1, b2
 0006  b3 = make_function $1 wrap/2
-0007  assign_var @8 __method_Box_wrap#1, b3
+0007  set_global g1, b3
 0008  b4 = constant #4 1
 0009  b5 = struct @9 Box { @10 value: b4}
-0010  store_var @11 direct#5, b5
+0010  init_global g2, b5
 0011  b6 = constant #5 2
 0012  b7 = struct @12 lib.Box { @13 value: b6}
-0013  store_var @14 namespaced#6, b7
+0013  init_global g3, b7
 0014  b8 = constant #6 3
 0015  b9 = struct @15 forwarded.Box { @16 value: b8}
-0016  store_var @17 reexported#7, b9
-0017  b10 = load_var @18 __method_Box_get#0
-0018  b11 = load_var @19 direct#5
+0016  init_global g4, b9
+0017  b10 = load_global g0
+0018  b11 = load_global g2
 0019  b12 = call b10(b11)
 0020  print b12
-0021  b13 = load_var @20 __method_Box_get#0
-0022  b14 = load_var @21 namespaced#6
+0021  b13 = load_global g0
+0022  b14 = load_global g3
 0023  b15 = call b13(b14)
 0024  print b15
-0025  b16 = load_var @22 __method_Box_wrap#1
-0026  b17 = load_var @23 namespaced#6
+0025  b16 = load_global g1
+0026  b17 = load_global g3
 0027  b18 = constant #7 "two"
 0028  b19 = call b16(b17, b18)
 0029  b20 = field b19,  @24 value
 0030  print b20
-0031  b21 = load_var @25 __method_Box_get#0
-0032  b22 = load_var @26 reexported#7
+0031  b21 = load_global g0
+0032  b22 = load_global g4
 0033  b23 = call b21(b22)
 0034  print b23
 
 function $0 get/1 registers=3
-0000  b0 = load_var @1 this#2
+0000  b0 = load_local l0
 0001  b1 = field b0,  @2 value
 0002  return b1
 0003  b2 = constant #1 nil
 0004  return b2
 
 function $1 wrap/2 registers=3
-0000  b0 = load_var @7 value#4
+0000  b0 = load_local l1
 0001  b1 = struct @5 Box { @6 value: b0}
 0002  return b1
 0003  b2 = constant #3 nil

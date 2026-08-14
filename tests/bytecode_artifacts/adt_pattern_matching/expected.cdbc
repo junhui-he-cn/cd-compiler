@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 4
@@ -16,16 +16,20 @@ names:
   n8 = "Option"
   n9 = "None"
 
+globals:
+  g0 = n2
+  g1 = n6
+
 main registers=8:
   r0 = constant c0
   r1 = variant n0.n1 [r0]
-  store_var n2, r1
-  r2 = load_var n3
+  init_global g0, r1
+  r2 = load_global g0
   r3 = variant_tag r2 n4.n5
   jump_if_false r3, 11
   r4 = variant_field r2 0
-  store_var n6, r4
-  r5 = load_var n7
+  init_global g1, r4
+  r5 = load_global g1
   print r5
   jump 16
   r6 = variant_tag r2 n8.n9

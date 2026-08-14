@@ -1,8 +1,9 @@
 # Versioning and branch policy
 
-The project is currently on the `0.1` release line. The canonical machine-
-readable version is stored in `VERSION`; the current value is `0.1.0` and the
-matching annotated Git tag is `v0.1.0`.
+The project is currently on the `0.2` development line (`.cdbc 0.2` artifact
+contract). The canonical machine-readable version is stored in `VERSION`; the
+current value is `0.2.0`. The matching release tag will be created when the 0.2
+line is released; earlier immutable tags (`v0.1.0`, `v0.1.1`) remain.
 
 ## Version rules
 

@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = string "shadowed"
@@ -15,10 +15,13 @@ names:
   n1 = "filter#2"
   n2 = "filter"
 
+globals:
+  g0 = n0
+
 main registers=10:
   r0 = make_function f0
-  store_var n0, r0
-  r1 = load_var n1
+  init_global g0, r0
+  r1 = load_global g0
   r2 = constant c2
   r3 = array [r2]
   r4 = make_function f1

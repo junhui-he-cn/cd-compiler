@@ -1,38 +1,38 @@
 main registers=38
 0000  b0 = constant #0 nil
-0001  store_var @0 numberLabel#0, b0
+0001  init_global g0, b0
 0002  b1 = make_function $0 numberLabel/1
-0003  assign_var @2 numberLabel#0, b1
+0003  set_global g0, b1
 0004  b2 = constant #6 nil
-0005  store_var @3 shapeLabel#2, b2
+0005  init_global g1, b2
 0006  b3 = make_function $1 shapeLabel/1
-0007  assign_var @19 shapeLabel#2, b3
+0007  set_global g1, b3
 0008  b4 = constant #12 false
-0009  store_var @20 maybe#5, b4
-0010  b5 = load_var @21 numberLabel#0
+0009  init_global g2, b4
+0010  b5 = load_global g0
 0011  b6 = constant #13 1
 0012  b7 = call b5(b6)
 0013  print b7
-0014  b8 = load_var @22 numberLabel#0
+0014  b8 = load_global g0
 0015  b9 = constant #14 8
 0016  b10 = call b8(b9)
 0017  print b10
-0018  b11 = load_var @23 shapeLabel#2
+0018  b11 = load_global g1
 0019  b12 = constant #15 3
 0020  b13 = variant @24 Shape. @25 Point (b12)
 0021  b14 = call b11(b13)
 0022  print b14
-0023  b15 = load_var @26 shapeLabel#2
+0023  b15 = load_global g1
 0024  b16 = constant #16 4
 0025  b17 = constant #17 10
 0026  b18 = variant @27 Shape. @28 Line (b16, b17)
 0027  b19 = call b15(b18)
 0028  print b19
-0029  b20 = load_var @29 shapeLabel#2
+0029  b20 = load_global g1
 0030  b21 = variant @30 Shape. @31 Empty ()
 0031  b22 = call b20(b21)
 0032  print b22
-0033  b23 = load_var @32 maybe#5
+0033  b23 = load_global g2
 0034  b24 = constant #18 nil
 0035  b25 = equal b23, b24
 0036  jump_if_false b25, 0038
@@ -62,7 +62,7 @@ main registers=38
 0060  jump 0061
 
 function $0 numberLabel/1 registers=8
-0000  b0 = load_var @1 value#1
+0000  b0 = load_local l0
 0001  b1 = constant #1 0
 0002  b2 = equal b0, b1
 0003  jump_if_false b2, 0005
@@ -80,7 +80,7 @@ function $0 numberLabel/1 registers=8
 0015  return b7
 
 function $1 shapeLabel/1 registers=23
-0000  b0 = load_var @4 value#3
+0000  b0 = load_local l0
 0001  b1 = variant_tag b0  @5 Shape. @6 Point
 0002  jump_if_false b1, 0006
 0003  b2 = variant_field b0[0]
@@ -91,13 +91,13 @@ function $1 shapeLabel/1 registers=23
 0008  b5 = variant_field b0[0]
 0009  b6 = variant_field b0[1]
 0010  b3 = move b5
-0011  store_var @9 x#4, b3
-0012  b7 = load_var @10 x#4
+0011  bind_local l1, b3
+0012  b7 = load_local l1
 0013  b8 = constant #7 3
 0014  b9 = greater b7, b8
 0015  jump_if_false b9, 0022
 0016  b10 = constant #8 "large:"
-0017  b11 = load_var @11 x#4
+0017  b11 = load_local l1
 0018  b12 = native_call @12 str [b11]
 0019  b13 = add b10, b12
 0020  return b13

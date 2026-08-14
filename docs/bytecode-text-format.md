@@ -27,14 +27,18 @@ compiler-design-vm debug output.cdbc
 Every file starts with a format identifier and version:
 
 ```text
-cdbc 0.1
+cdbc 0.2
 ```
 
-Future format changes must either remain backward-compatible with `0.1` or use a new version number.
+The VM accepts `cdbc 0.1` inputs for read compatibility: legacy artifacts carry
+name-driven `load_var/store_var/assign_var` and are lowered to the VM's legacy
+name-resolution path at construction time. Emitted artifacts are `cdbc 0.2`.
+Future format changes must either remain backward-compatible with `0.2` or use a
+new version number.
 
 ## Artifact kinds
 
-The `cdbc 0.1` envelope has two strict artifact kinds:
+The `cdbc 0.2` envelope has two strict artifact kinds:
 
 - A linked program has no `artifact` declaration and is the existing output of
   `--emit-bytecode`. It may be passed to the VM `run` command.
@@ -146,14 +150,14 @@ an explicit assertion and is mutually exclusive with `--module-cache-fallback`.
 The cache manifest is separate from VM artifacts and uses `cdbc-cache 0.2`; its
 records include the relative `.cdi` sidecar path and a product content digest.
 The `.cdi` sidecar is not a Rust VM input and has no effect on the linked
-`cdbc 0.1` wire format.
+`cdbc 0.2` wire format.
 
 ## Sections
 
 A `.cdbc` file is organized into explicit sections:
 
 ```text
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 1
@@ -162,13 +166,18 @@ constants:
 names:
   n0 = "x"
 
+globals:
+  g0 = n0
+
 main registers=3:
   r0 = constant c0
-  store_var n0, r0
-  r1 = load_var n0
+  init_global g0, r0
+  r1 = load_global g0
   print r1
 
 function f0 name="add_one" arity=1 registers=4:
+  param 0 = "x"
+  upvalue u0 = local l0
   r1 = constant c0
   r2 = add r0, r1
   return r2
@@ -185,7 +194,12 @@ debug_ranges:
   main 1 = s0:0:8
 ```
 
-The section names and reference prefixes are part of the canonical text format. Function `param` lines, when present, appear before instructions in a function section.
+The section names and reference prefixes are part of the canonical text format.
+The optional `globals:` section (module products and linked programs alike) maps
+each numeric global slot to its name index; the linker deduplicates globals by
+name across modules. Function `param` lines appear before instructions;
+`upvalue uN = local lM` / `upvalue uN = upvalue uM` lines follow them and drive
+closure capture.
 
 ## Debug metadata
 
@@ -273,6 +287,14 @@ move
 load_var
 store_var
 assign_var
+load_local
+bind_local
+set_local
+load_upvalue
+set_upvalue
+load_global
+init_global
+set_global
 call
 native_call
 index

@@ -119,6 +119,7 @@ struct ModuleContext {
     constant_base: usize,
     name_base: usize,
     function_base: usize,
+    global_remap: Vec<usize>,
     main_register_base: usize,
     source_base: usize,
 }
@@ -138,6 +139,7 @@ struct Linker {
     main: Function,
     functions: Vec<Function>,
     debug_sources: Vec<DebugSource>,
+    global_names: HashMap<String, usize>,
 }
 
 fn program_instruction_count(program: &Program) -> usize {
@@ -274,23 +276,56 @@ impl Linker {
             },
             functions: Vec::new(),
             debug_sources: Vec::new(),
+            global_names: HashMap::new(),
         })
     }
 
     fn allocate_context(&mut self, module: &ModuleArtifact) -> Result<ModuleContext, LinkError> {
-        let context = ModuleContext {
-            constant_base: self.constants.len(),
-            name_base: self.names.len(),
-            function_base: self.functions.len(),
-            main_register_base: self.main.registers,
-            source_base: self.debug_sources.len(),
-        };
-
+        let constant_base = self.constants.len();
+        let name_base = self.names.len();
+        let source_base = self.debug_sources.len();
         self.constants
             .extend(module.program.constants.iter().cloned());
         self.names.extend(module.program.names.iter().cloned());
         self.debug_sources
             .extend(module.program.debug_sources.iter().cloned());
+
+        let mut global_remap = Vec::with_capacity(module.program.globals.len());
+        for (local, name_index) in module.program.globals.iter().enumerate() {
+            let linked_name_index = checked_add(*name_index, name_base, "linked name index")
+                .map_err(|error| {
+                    LinkError::module(
+                        LinkErrorKind::Overflow,
+                        module.identity.clone(),
+                        error.to_string(),
+                    )
+                })?;
+            let Some(name) = self.names.get(linked_name_index) else {
+                return Err(LinkError::module(
+                    LinkErrorKind::InvalidModule,
+                    module.identity.clone(),
+                    format!("global g{local} references name n{name_index} out of range"),
+                ));
+            };
+            let slot = match self.global_names.get(name) {
+                Some(slot) => *slot,
+                None => {
+                    let slot = self.global_names.len();
+                    self.global_names.insert(name.clone(), slot);
+                    slot
+                }
+            };
+            global_remap.push(slot);
+        }
+        let context = ModuleContext {
+            constant_base,
+            name_base,
+            function_base: self.functions.len(),
+            global_remap,
+            main_register_base: self.main.registers,
+            source_base,
+        };
+
         self.main.registers = checked_add(
             self.main.registers,
             module.program.functions[0].registers,
@@ -334,8 +369,8 @@ impl Linker {
                 id: FuncId((function_base + position) as u32),
                 name: function.name.clone(),
                 arity: function.arity,
-                local_count: 0,
-                upvalues: Vec::new(),
+                local_count: function.local_count,
+                upvalues: function.upvalues.clone(),
                 params: function.params.clone(),
                 registers: function.registers,
                 instructions: function
@@ -414,6 +449,7 @@ impl Linker {
         functions.extend(self.functions);
         let program = Program {
             constants: self.constants,
+            globals: Vec::new(),
             names: self.names,
             functions,
             entry: FuncId(0),
@@ -459,6 +495,7 @@ mod tests {
     fn empty_program() -> Program {
         Program {
             constants: Vec::new(),
+            globals: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -730,6 +767,47 @@ fn map_instruction(
         } => Instruction::AssignVar {
             name: name(*value)?,
             value: register(*source)?,
+        },
+        Instruction::LoadLocal { dest, slot } => Instruction::LoadLocal {
+            dest: register(*dest)?,
+            slot: *slot,
+        },
+        Instruction::BindLocal { slot, value } => Instruction::BindLocal {
+            slot: *slot,
+            value: register(*value)?,
+        },
+        Instruction::SetLocal { slot, value } => Instruction::SetLocal {
+            slot: *slot,
+            value: register(*value)?,
+        },
+        Instruction::LoadUpvalue { dest, slot } => Instruction::LoadUpvalue {
+            dest: register(*dest)?,
+            slot: *slot,
+        },
+        Instruction::SetUpvalue { slot, value } => Instruction::SetUpvalue {
+            slot: *slot,
+            value: register(*value)?,
+        },
+        Instruction::LoadGlobal { dest, slot } => Instruction::LoadGlobal {
+            dest: register(*dest)?,
+            slot: *context.global_remap.get(*slot).ok_or(LinkError::new(
+                LinkErrorKind::InvalidInstruction,
+                format!("global g{slot} out of range"),
+            ))?,
+        },
+        Instruction::InitGlobal { slot, value } => Instruction::InitGlobal {
+            slot: *context.global_remap.get(*slot).ok_or(LinkError::new(
+                LinkErrorKind::InvalidInstruction,
+                format!("global g{slot} out of range"),
+            ))?,
+            value: register(*value)?,
+        },
+        Instruction::SetGlobal { slot, value } => Instruction::SetGlobal {
+            slot: *context.global_remap.get(*slot).ok_or(LinkError::new(
+                LinkErrorKind::InvalidInstruction,
+                format!("global g{slot} out of range"),
+            ))?,
+            value: register(*value)?,
         },
         Instruction::Call {
             dest,

@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 1
@@ -33,38 +33,46 @@ names:
   n19 = "shifted#6"
   n20 = "text#8"
 
+globals:
+  g0 = n0
+  g1 = n2
+  g2 = n6
+  g3 = n7
+  g4 = n12
+  g5 = n17
+
 main registers=18:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
   r3 = array [r0, r1, r2]
-  store_var n0, r3
+  init_global g0, r3
   r4 = make_function f0
-  store_var n2, r4
-  r5 = load_var n3
-  r6 = load_var n4
+  init_global g1, r4
+  r5 = load_global g0
+  r6 = load_global g1
   r7 = native_call n5 [r5, r6]
-  store_var n6, r7
+  init_global g2, r7
   r8 = constant c5
-  store_var n7, r8
-  r9 = load_var n8
+  init_global g3, r8
+  r9 = load_global g0
   r10 = make_function f1
   r11 = native_call n11 [r9, r10]
-  store_var n12, r11
-  r12 = load_var n13
+  init_global g4, r11
+  r12 = load_global g0
   r13 = make_function f2
   r14 = native_call n16 [r12, r13]
-  store_var n17, r14
-  r15 = load_var n18
+  init_global g5, r14
+  r15 = load_global g2
   print r15
-  r16 = load_var n19
+  r16 = load_global g4
   print r16
-  r17 = load_var n20
+  r17 = load_global g5
   print r17
 
 function f0 name="<lambda>" arity=1 registers=4:
   param 0 = "value#1"
-  r0 = load_var n1
+  r0 = load_local l0
   r1 = constant c3
   r2 = multiply r0, r1
   return r2
@@ -73,8 +81,8 @@ function f0 name="<lambda>" arity=1 registers=4:
 
 function f1 name="<lambda>" arity=1 registers=4:
   param 0 = "value#5"
-  r0 = load_var n9
-  r1 = load_var n10
+  r0 = load_local l0
+  r1 = load_global g3
   r2 = add r0, r1
   return r2
   r3 = constant c6
@@ -82,7 +90,7 @@ function f1 name="<lambda>" arity=1 registers=4:
 
 function f2 name="<lambda>" arity=1 registers=3:
   param 0 = "value#7"
-  r0 = load_var n14
+  r0 = load_local l0
   r1 = native_call n15 [r0]
   return r1
   r2 = constant c7

@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/index_compound_non_number_element.cd:2:7: compound assignment target must be number, got string
+  xs[0] += 1;
+        ^

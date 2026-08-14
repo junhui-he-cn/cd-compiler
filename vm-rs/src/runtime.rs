@@ -25,6 +25,7 @@ pub struct FunctionValue {
     pub arity: usize,
     pub identity: usize,
     pub closure: SharedEnvironment,
+    pub upvalues: Vec<Cell>,
 }
 
 #[derive(Clone, Debug)]
@@ -770,6 +771,7 @@ impl Heap {
         function_index: usize,
         arity: usize,
         closure: SharedEnvironment,
+        upvalues: Vec<Cell>,
     ) -> Result<Value, HeapError> {
         let identity = Self::next_identity(&mut self.next_function_identity)?;
         Ok(Value::function(FunctionValue {
@@ -778,6 +780,7 @@ impl Heap {
             arity,
             identity,
             closure,
+            upvalues,
         }))
     }
 
@@ -1111,7 +1114,7 @@ mod tests {
             .borrow_mut()
             .insert("closure".to_string(), cell.clone());
         let function = heap
-            .allocate_function("cycle", 0, 0, environment.clone())
+            .allocate_function("cycle", 0, 0, environment.clone(), Vec::new())
             .expect("function identity should be available");
         *cell.borrow_mut() = function;
 

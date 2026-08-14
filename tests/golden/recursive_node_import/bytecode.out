@@ -2,22 +2,22 @@ main registers=17
 0000  b0 = constant #0 2
 0001  b1 = constant #1 nil
 0002  b2 = struct @0 Node { @1 value: b0,  @2 next: b1}
-0003  store_var @3 tail#0, b2
+0003  init_global g0, b2
 0004  b3 = constant #2 1
-0005  b4 = load_var @7 tail#0
+0005  b4 = load_global g0
 0006  b5 = struct @4 Node { @5 value: b3,  @6 next: b4}
-0007  store_var @8 head#1, b5
-0008  b6 = load_var @9 tail#0
-0009  store_var @10 alias#2, b6
-0010  b7 = load_var @11 head#1
+0007  init_global g1, b5
+0008  b6 = load_global g0
+0009  init_global g2, b6
+0010  b7 = load_global g1
 0011  b8 = constant #3 nil
 0012  b9 = assign_field b7,  @12 next, b8
-0013  b10 = load_var @13 alias#2
+0013  b10 = load_global g2
 0014  b11 = constant #4 20
 0015  b12 = assign_field b10,  @14 value, b11
-0016  b13 = load_var @15 head#1
+0016  b13 = load_global g1
 0017  b14 = field b13,  @16 next
 0018  print b14
-0019  b15 = load_var @17 tail#0
+0019  b15 = load_global g0
 0020  b16 = field b15,  @18 value
 0021  print b16

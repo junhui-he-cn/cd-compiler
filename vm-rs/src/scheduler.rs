@@ -3,7 +3,7 @@
 use crate::bytecode::{DebugLocation, Function};
 #[cfg(test)]
 use crate::bytecode::FuncId;
-use crate::runtime::{SharedEnvironment, SharedLocalSlots};
+use crate::runtime::{Cell, SharedEnvironment, SharedLocalSlots};
 use crate::value::Value;
 use std::collections::{BTreeMap, VecDeque};
 use std::fmt;
@@ -153,6 +153,7 @@ pub(crate) struct ResumableFrame {
     pub(crate) registers: Vec<Value>,
     pub(crate) locals: SharedLocalSlots,
     pub(crate) closure: SharedEnvironment,
+    pub(crate) upvalues: Vec<Cell>,
     pub(crate) variable_plan: Option<Rc<VariablePlan>>,
     pub(crate) is_main: bool,
     pub(crate) function: Rc<str>,
@@ -173,6 +174,7 @@ impl ResumableFrame {
             registers: vec![Value::Nil; register_count],
             locals,
             closure,
+            upvalues: Vec::new(),
             variable_plan: None,
             is_main: true,
             function: Rc::from("main"),
@@ -196,6 +198,7 @@ impl ResumableFrame {
             registers: vec![Value::Nil; register_count],
             locals,
             closure,
+            upvalues: Vec::new(),
             variable_plan: None,
             is_main: false,
             function: function.into(),
@@ -933,6 +936,7 @@ mod tests {
             registers: vec![Value::Nil],
             locals: heap.new_local_slots(),
             closure: heap.new_environment(),
+            upvalues: Vec::new(),
             variable_plan: None,
             is_main: false,
             function: Rc::from("missing"),

@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = nil
@@ -56,25 +56,31 @@ names:
   n30 = "None"
   n31 = "none#5"
 
+globals:
+  g0 = n0
+  g1 = n16
+  g2 = n17
+  g3 = n25
+
 main registers=32:
   r0 = constant c0
-  store_var n0, r0
+  init_global g0, r0
   r1 = make_function f0
-  assign_var n13, r1
+  set_global g0, r1
   r2 = constant c8
   r3 = variant n14.n15 [r2]
-  store_var n16, r3
+  init_global g1, r3
   r4 = constant c9
-  store_var n17, r4
-  r5 = load_var n18
-  r6 = load_var n19
+  init_global g2, r4
+  r5 = load_global g0
+  r6 = load_global g1
   r7 = call r5 [r6]
   print r7
-  r8 = load_var n20
-  r9 = load_var n21
+  r8 = load_global g0
+  r9 = load_global g2
   r10 = call r8 [r9]
   print r10
-  r11 = load_var n22
+  r11 = load_global g1
   r12 = constant c10
   r13 = equal r11, r12
   jump_if_false r13, 24
@@ -84,8 +90,8 @@ main registers=32:
   r15 = variant_tag r11 n23.n24
   jump_if_false r15, 35
   r16 = variant_field r11 0
-  store_var n25, r16
-  r17 = load_var n26
+  init_global g3, r16
+  r17 = load_global g3
   r18 = constant c12
   r19 = greater r17, r18
   jump_if_false r19, 35
@@ -103,7 +109,7 @@ main registers=32:
   r25 = constant c15
   print r25
   jump 46
-  r26 = load_var n31
+  r26 = load_global g2
   r27 = constant c16
   r28 = equal r26, r27
   jump_if_false r28, 55
@@ -118,7 +124,7 @@ main registers=32:
 
 function f0 name="describe" arity=1 registers=19:
   param 0 = "value#1"
-  r0 = load_var n1
+  r0 = load_local l0
   r1 = constant c1
   r2 = equal r0, r1
   jump_if_false r2, 7
@@ -128,8 +134,8 @@ function f0 name="describe" arity=1 registers=19:
   r4 = variant_tag r0 n2.n3
   jump_if_false r4, 18
   r5 = variant_field r0 0
-  store_var n4, r5
-  r6 = load_var n5
+  bind_local l1, r5
+  r6 = load_local l1
   r7 = constant c3
   r8 = greater r6, r7
   jump_if_false r8, 18
@@ -139,9 +145,9 @@ function f0 name="describe" arity=1 registers=19:
   r10 = variant_tag r0 n6.n7
   jump_if_false r10, 28
   r11 = variant_field r0 0
-  store_var n8, r11
+  bind_local l2, r11
   r12 = constant c5
-  r13 = load_var n9
+  r13 = load_local l2
   r14 = native_call n10 [r13]
   r15 = add r12, r14
   return r15

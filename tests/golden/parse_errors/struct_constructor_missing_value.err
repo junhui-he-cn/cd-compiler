@@ -1,1 +1,6 @@
 Parse error at <repo>/tests/golden/parse_errors/struct_constructor_missing_value.cd:2:24: expected expression
+  let p = Person { name: };
+                         ^
+Parse error at <repo>/tests/golden/parse_errors/struct_constructor_missing_value.cd:2:25: expected expression
+  let p = Person { name: };
+                          ^

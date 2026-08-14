@@ -203,6 +203,30 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
     case BytecodeOp::AssignVar:
         out << "assign_var " << nameRef(instruction.operand) << ", " << reg(requireLeft(instruction));
         break;
+    case BytecodeOp::LoadLocal:
+        out << reg(requireDest(instruction)) << " = load_local l" << instruction.operand;
+        break;
+    case BytecodeOp::BindLocal:
+        out << "bind_local l" << instruction.operand << ", " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::SetLocal:
+        out << "set_local l" << instruction.operand << ", " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::LoadUpvalue:
+        out << reg(requireDest(instruction)) << " = load_upvalue u" << instruction.operand;
+        break;
+    case BytecodeOp::SetUpvalue:
+        out << "set_upvalue u" << instruction.operand << ", " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::LoadGlobal:
+        out << reg(requireDest(instruction)) << " = load_global g" << instruction.operand;
+        break;
+    case BytecodeOp::InitGlobal:
+        out << "init_global g" << instruction.operand << ", " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::SetGlobal:
+        out << "set_global g" << instruction.operand << ", " << reg(requireLeft(instruction));
+        break;
     case BytecodeOp::Call:
         out << reg(requireDest(instruction)) << " = call " << reg(requireLeft(instruction)) << ' ';
         writeRegisterList(out, instruction.arguments);
@@ -354,7 +378,10 @@ const char* moduleDependencyKindName(ModuleGraphEdgeKind kind)
     return kind == ModuleGraphEdgeKind::Import ? "import" : "re_export";
 }
 
-void writeBytecodeSections(std::ostream& out, const BytecodeProgram& program)
+void writeBytecodeSections(
+    std::ostream& out,
+    const BytecodeProgram& program,
+    bool emitGlobals)
 {
     out << "constants:\n";
     for (std::size_t i = 0; i < program.constants().size(); ++i) {
@@ -364,6 +391,13 @@ void writeBytecodeSections(std::ostream& out, const BytecodeProgram& program)
     out << "\nnames:\n";
     for (std::size_t i = 0; i < program.names().size(); ++i) {
         out << "  " << nameRef(static_cast<std::uint32_t>(i)) << " = " << escapedString(program.names()[i]) << '\n';
+    }
+
+    if (emitGlobals && !program.globals().empty()) {
+        out << "\nglobals:\n";
+        for (std::size_t i = 0; i < program.globals().size(); ++i) {
+            out << "  g" << i << " = " << nameRef(program.globals()[i]) << '\n';
+        }
     }
 
     out << "\nmain registers=" << program.registerCount() << ":\n";
@@ -377,6 +411,11 @@ void writeBytecodeSections(std::ostream& out, const BytecodeProgram& program)
             << " registers=" << function.registerCount << ":\n";
         for (std::size_t parameter = 0; parameter < function.parameters.size(); ++parameter) {
             out << "  param " << parameter << " = " << escapedString(function.parameters[parameter]) << '\n';
+        }
+        for (std::size_t upvalue = 0; upvalue < function.upvalues.size(); ++upvalue) {
+            out << "  upvalue u" << upvalue << " = "
+                << (function.upvalues[upvalue].sourceIsLocal ? "local l" : "upvalue u")
+                << function.upvalues[upvalue].source << '\n';
         }
         writeInstructions(out, function.instructions);
     }
@@ -438,13 +477,13 @@ void writeBytecodeSections(std::ostream& out, const BytecodeProgram& program)
 
 void writeBytecodeText(std::ostream& out, const BytecodeProgram& program)
 {
-    out << "cdbc 0.1\n\n";
-    writeBytecodeSections(out, program);
+    out << "cdbc 0.2\n\n";
+    writeBytecodeSections(out, program, true);
 }
 
 void writeBytecodeModuleText(std::ostream& out, const BytecodeModuleArtifact& artifact)
 {
-    out << "cdbc 0.1\n\n"
+    out << "cdbc 0.2\n\n"
         << "artifact: module\n\n"
         << "module:\n"
         << "  identity = " << escapedString(artifact.identity) << '\n'
@@ -465,5 +504,5 @@ void writeBytecodeModuleText(std::ostream& out, const BytecodeModuleArtifact& ar
             << '\n';
     }
     out << '\n';
-    writeBytecodeSections(out, artifact.program);
+    writeBytecodeSections(out, artifact.program, true);
 }

@@ -1,49 +1,52 @@
 main registers=6
 0000  b0 = constant #0 nil
-0001  store_var @0 outer#0, b0
+0001  init_global g0, b0
 0002  b1 = make_function $2 outer/0
-0003  assign_var @14 outer#0, b1
-0004  b2 = load_var @15 outer#0
+0003  set_global g0, b1
+0004  b2 = load_global g0
 0005  b3 = call b2()
-0006  store_var @16 f#5, b3
-0007  b4 = load_var @17 f#5
+0006  init_global g1, b3
+0007  b4 = load_global g1
 0008  b5 = call b4()
 0009  print b5
 
 function $0 inner/0 registers=4
-0000  b0 = load_var @6 a#1
-0001  b1 = load_var @7 b#3
+upvalue u0 = upvalue u0
+upvalue u1 = local l0
+0000  b0 = load_upvalue u0
+0001  b1 = load_upvalue u1
 0002  b2 = add b0, b1
 0003  return b2
 0004  b3 = constant #5 nil
 0005  return b3
 
 function $1 middle/0 registers=10
-0000  b0 = load_var @3 a#1
+upvalue u0 = local l0
+0000  b0 = load_upvalue u0
 0001  b1 = constant #3 5
 0002  b2 = add b0, b1
-0003  store_var @4 b#3, b2
+0003  bind_local l0, b2
 0004  b3 = constant #4 nil
-0005  store_var @5 inner#4, b3
+0005  bind_local l1, b3
 0006  b4 = make_function $0 inner/0
-0007  assign_var @8 inner#4, b4
-0008  b5 = load_var @9 b#3
+0007  set_local l1, b4
+0008  b5 = load_local l0
 0009  b6 = constant #6 100
 0010  b7 = add b5, b6
-0011  assign_var @10 b#3, b7
-0012  b8 = load_var @11 inner#4
+0011  set_local l0, b7
+0012  b8 = load_local l1
 0013  return b8
 0014  b9 = constant #7 nil
 0015  return b9
 
 function $2 outer/0 registers=6
 0000  b0 = constant #1 10
-0001  store_var @1 a#1, b0
+0001  bind_local l0, b0
 0002  b1 = constant #2 nil
-0003  store_var @2 middle#2, b1
+0003  bind_local l1, b1
 0004  b2 = make_function $1 middle/0
-0005  assign_var @12 middle#2, b2
-0006  b3 = load_var @13 middle#2
+0005  set_local l1, b2
+0006  b3 = load_local l1
 0007  b4 = call b3()
 0008  return b4
 0009  b5 = constant #8 nil

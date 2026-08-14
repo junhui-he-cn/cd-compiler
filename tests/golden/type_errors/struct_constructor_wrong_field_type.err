@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/struct_constructor_wrong_field_type.cd:2:31: field `age` expects number, got string
+  let p = Person { name: "Ada", age: "old" };
+                                ^

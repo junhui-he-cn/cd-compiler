@@ -1,15 +1,15 @@
 main registers=20
 0000  b0 = make_function $0 <lambda>/2
-0001  store_var @0 any#2, b0
+0001  init_global g0, b0
 0002  b1 = make_function $1 <lambda>/2
-0003  store_var @1 all#5, b1
-0004  b2 = load_var @2 any#2
+0003  init_global g1, b1
+0004  b2 = load_global g0
 0005  b3 = constant #4 1
 0006  b4 = array [b3]
 0007  b5 = make_function $2 <lambda>/1
 0008  b6 = call b2(b4, b5)
 0009  print b6
-0010  b7 = load_var @3 all#5
+0010  b7 = load_global g1
 0011  b8 = constant #7 1
 0012  b9 = array [b8]
 0013  b10 = make_function $3 <lambda>/1

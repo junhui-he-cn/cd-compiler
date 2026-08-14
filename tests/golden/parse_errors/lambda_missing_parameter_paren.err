@@ -1,1 +1,6 @@
 Parse error at <repo>/tests/golden/parse_errors/lambda_missing_parameter_paren.cd:1:16: expected `)` after function parameters, found LeftBrace `{`
+  let f = fun (x { return x; };
+                 ^
+Parse error at <repo>/tests/golden/parse_errors/lambda_missing_parameter_paren.cd:1:29: expected expression
+  let f = fun (x { return x; };
+                              ^

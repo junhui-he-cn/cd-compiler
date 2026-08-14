@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = string "Ada"
@@ -23,20 +23,24 @@ names:
   n13 = "point"
   n14 = "x"
 
+globals:
+  g0 = n3
+  g1 = n11
+
 main registers=12:
   r0 = constant c0
   r1 = constant c1
   r2 = struct n0 {n1: r0, n2: r1}
-  store_var n3, r2
-  r3 = load_var n4
+  init_global g0, r2
+  r3 = load_global g0
   r4 = field r3, n5
   print r4
   r5 = constant c2
   r6 = struct n8 {n9: r5}
   r7 = constant c3
   r8 = struct n6 {n7: r6, n10: r7}
-  store_var n11, r8
-  r9 = load_var n12
+  init_global g1, r8
+  r9 = load_global g1
   r10 = field r9, n13
   r11 = field r10, n14
   print r11

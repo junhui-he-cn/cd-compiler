@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = nil
@@ -77,34 +77,44 @@ names:
   n54 = "Option"
   n55 = "None"
 
+globals:
+  g0 = n0
+  g1 = n10
+  g2 = n24
+  g3 = n27
+  g4 = n28
+  g5 = n31
+  g6 = n46
+  g7 = n52
+
 main registers=38:
   r0 = constant c0
-  store_var n0, r0
+  init_global g0, r0
   r1 = make_function f0
-  assign_var n9, r1
+  set_global g0, r1
   r2 = constant c4
-  store_var n10, r2
+  init_global g1, r2
   r3 = make_function f1
-  assign_var n21, r3
+  set_global g1, r3
   r4 = constant c7
   r5 = variant n22.n23 [r4]
-  store_var n24, r5
+  init_global g2, r5
   r6 = variant n25.n26 []
-  store_var n27, r6
+  init_global g3, r6
   r7 = constant c8
-  store_var n28, r7
+  init_global g4, r7
   r8 = constant c9
   r9 = variant n29.n30 [r8]
-  store_var n31, r9
-  r10 = load_var n32
-  r11 = load_var n33
+  init_global g5, r9
+  r10 = load_global g0
+  r11 = load_global g2
   r12 = call r10 [r11]
   print r12
-  r13 = load_var n34
-  r14 = load_var n35
+  r13 = load_global g0
+  r14 = load_global g3
   r15 = call r13 [r14]
   print r15
-  r16 = load_var n36
+  r16 = load_global g1
   r17 = constant c10
   r18 = constant c11
   r19 = variant n37.n38 []
@@ -112,7 +122,7 @@ main registers=38:
   r21 = variant n41.n42 [r17, r20]
   r22 = call r16 [r21]
   print r22
-  r23 = load_var n43
+  r23 = load_global g4
   r24 = constant c12
   r25 = equal r23, r24
   jump_if_false r25, 41
@@ -122,7 +132,7 @@ main registers=38:
   r27 = variant_tag r23 n44.n45
   jump_if_false r27, 48
   r28 = variant_field r23 0
-  store_var n46, r28
+  init_global g6, r28
   r29 = constant c14
   print r29
   jump 53
@@ -131,12 +141,12 @@ main registers=38:
   r31 = constant c15
   print r31
   jump 53
-  r32 = load_var n49
+  r32 = load_global g5
   r33 = variant_tag r32 n50.n51
   jump_if_false r33, 61
   r34 = variant_field r32 0
-  store_var n52, r34
-  r35 = load_var n53
+  init_global g7, r34
+  r35 = load_global g7
   print r35
   jump 66
   r36 = variant_tag r32 n54.n55
@@ -147,13 +157,13 @@ main registers=38:
 
 function f0 name="describe" arity=1 registers=10:
   param 0 = "value#1"
-  r0 = load_var n1
+  r0 = load_local l0
   r1 = variant_tag r0 n2.n3
   jump_if_false r1, 11
   r2 = variant_field r0 0
-  store_var n4, r2
+  bind_local l1, r2
   r3 = constant c1
-  r4 = load_var n5
+  r4 = load_local l1
   r5 = native_call n6 [r4]
   r6 = add r3, r5
   return r6
@@ -168,7 +178,7 @@ function f0 name="describe" arity=1 registers=10:
 
 function f1 name="sum" arity=1 registers=12:
   param 0 = "list#4"
-  r0 = load_var n11
+  r0 = load_local l0
   r1 = variant_tag r0 n12.n13
   jump_if_false r1, 6
   r2 = constant c5
@@ -178,11 +188,11 @@ function f1 name="sum" arity=1 registers=12:
   jump_if_false r3, 19
   r4 = variant_field r0 0
   r5 = variant_field r0 1
-  store_var n16, r4
-  store_var n17, r5
-  r6 = load_var n18
-  r7 = load_var n19
-  r8 = load_var n20
+  bind_local l1, r4
+  bind_local l2, r5
+  r6 = load_local l1
+  r7 = load_global g1
+  r8 = load_local l2
   r9 = call r7 [r8]
   r10 = add r6, r9
   return r10

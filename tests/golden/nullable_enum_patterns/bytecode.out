@@ -1,22 +1,22 @@
 main registers=32
 0000  b0 = constant #0 nil
-0001  store_var @0 describe#0, b0
+0001  init_global g0, b0
 0002  b1 = make_function $0 describe/1
-0003  assign_var @13 describe#0, b1
+0003  set_global g0, b1
 0004  b2 = constant #8 7
 0005  b3 = variant @14 Option. @15 Some (b2)
-0006  store_var @16 some#4, b3
+0006  init_global g1, b3
 0007  b4 = constant #9 nil
-0008  store_var @17 none#5, b4
-0009  b5 = load_var @18 describe#0
-0010  b6 = load_var @19 some#4
+0008  init_global g2, b4
+0009  b5 = load_global g0
+0010  b6 = load_global g1
 0011  b7 = call b5(b6)
 0012  print b7
-0013  b8 = load_var @20 describe#0
-0014  b9 = load_var @21 none#5
+0013  b8 = load_global g0
+0014  b9 = load_global g2
 0015  b10 = call b8(b9)
 0016  print b10
-0017  b11 = load_var @22 some#4
+0017  b11 = load_global g1
 0018  b12 = constant #10 nil
 0019  b13 = equal b11, b12
 0020  jump_if_false b13, 0024
@@ -26,8 +26,8 @@ main registers=32
 0024  b15 = variant_tag b11  @23 Option. @24 Some
 0025  jump_if_false b15, 0035
 0026  b16 = variant_field b11[0]
-0027  store_var @25 value#6, b16
-0028  b17 = load_var @26 value#6
+0027  init_global g3, b16
+0028  b17 = load_global g3
 0029  b18 = constant #12 10
 0030  b19 = greater b17, b18
 0031  jump_if_false b19, 0035
@@ -45,7 +45,7 @@ main registers=32
 0043  b25 = constant #15 "none"
 0044  print b25
 0045  jump 0046
-0046  b26 = load_var @31 none#5
+0046  b26 = load_global g2
 0047  b27 = constant #16 nil
 0048  b28 = equal b26, b27
 0049  jump_if_false b28, 0055
@@ -59,7 +59,7 @@ main registers=32
 0057  jump 0058
 
 function $0 describe/1 registers=19
-0000  b0 = load_var @1 value#1
+0000  b0 = load_local l0
 0001  b1 = constant #1 nil
 0002  b2 = equal b0, b1
 0003  jump_if_false b2, 0007
@@ -69,8 +69,8 @@ function $0 describe/1 registers=19
 0007  b4 = variant_tag b0  @2 Option. @3 Some
 0008  jump_if_false b4, 0018
 0009  b5 = variant_field b0[0]
-0010  store_var @4 value#2, b5
-0011  b6 = load_var @5 value#2
+0010  bind_local l1, b5
+0011  b6 = load_local l1
 0012  b7 = constant #3 10
 0013  b8 = greater b6, b7
 0014  jump_if_false b8, 0018
@@ -80,9 +80,9 @@ function $0 describe/1 registers=19
 0018  b10 = variant_tag b0  @6 Option. @7 Some
 0019  jump_if_false b10, 0028
 0020  b11 = variant_field b0[0]
-0021  store_var @8 value#3, b11
+0021  bind_local l2, b11
 0022  b12 = constant #5 "some:"
-0023  b13 = load_var @9 value#3
+0023  b13 = load_local l2
 0024  b14 = native_call @10 str [b13]
 0025  b15 = add b12, b14
 0026  return b15

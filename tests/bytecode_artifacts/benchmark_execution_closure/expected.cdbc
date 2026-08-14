@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = nil
@@ -31,39 +31,46 @@ names:
   n16 = "i#5"
   n17 = "total#6"
 
+globals:
+  g0 = n0
+  g1 = n8
+  g2 = n9
+  g3 = n10
+
 main registers=17:
   r0 = constant c0
-  store_var n0, r0
+  init_global g0, r0
   r1 = make_function f1
-  assign_var n6, r1
-  r2 = load_var n7
+  set_global g0, r1
+  r2 = load_global g0
   r3 = constant c4
   r4 = call r2 [r3]
-  store_var n8, r4
+  init_global g1, r4
   r5 = constant c5
-  store_var n9, r5
+  init_global g2, r5
   r6 = constant c6
-  store_var n10, r6
-  r7 = load_var n11
+  init_global g3, r6
+  r7 = load_global g2
   r8 = constant c7
   r9 = less r7, r8
   jump_if_false r9, 25
-  r10 = load_var n12
-  r11 = load_var n13
+  r10 = load_global g1
+  r11 = load_global g3
   r12 = call r10 [r11]
-  assign_var n14, r12
-  r13 = load_var n15
+  set_global g3, r12
+  r13 = load_global g2
   r14 = constant c8
   r15 = add r13, r14
-  assign_var n16, r15
+  set_global g2, r15
   jump 12
-  r16 = load_var n17
+  r16 = load_global g3
   print r16
 
 function f0 name="add" arity=1 registers=4:
   param 0 = "value#3"
-  r0 = load_var n2
-  r1 = load_var n3
+  upvalue u0 = local l0
+  r0 = load_local l0
+  r1 = load_upvalue u0
   r2 = add r0, r1
   return r2
   r3 = constant c2
@@ -72,10 +79,10 @@ function f0 name="add" arity=1 registers=4:
 function f1 name="makeAdder" arity=1 registers=4:
   param 0 = "offset#1"
   r0 = constant c1
-  store_var n1, r0
+  bind_local l1, r0
   r1 = make_function f0
-  assign_var n4, r1
-  r2 = load_var n5
+  set_local l1, r1
+  r2 = load_local l1
   return r2
   r3 = constant c3
   return r3

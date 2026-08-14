@@ -1,22 +1,22 @@
 main registers=12
 0000  b0 = constant #0 nil
-0001  store_var @0 clear#0, b0
+0001  init_global g0, b0
 0002  b1 = make_function $0 clear/1
-0003  assign_var @1 clear#0, b1
+0003  set_global g0, b1
 0004  b2 = constant #3 "a"
 0005  b3 = constant #4 1
 0006  b4 = map [b2: b3]
-0007  store_var @2 values#2, b4
-0008  b5 = load_var @3 clear#0
-0009  b6 = load_var @4 values#2
+0007  init_global g1, b4
+0008  b5 = load_global g0
+0009  b6 = load_global g1
 0010  b7 = call b5(b6)
 0011  print b7
-0012  b8 = load_var @5 values#2
+0012  b8 = load_global g1
 0013  print b8
-0014  b9 = load_var @6 values#2
+0014  b9 = load_global g1
 0015  b10 = native_call @7 clear [b9]
 0016  print b10
-0017  b11 = load_var @8 values#2
+0017  b11 = load_global g1
 0018  print b11
 
 function $0 clear/1 registers=2

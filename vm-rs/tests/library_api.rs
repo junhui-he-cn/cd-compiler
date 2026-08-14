@@ -17,6 +17,7 @@ use std::rc::Rc;
 fn print_program() -> Program {
     Program {
         constants: vec![Constant::Number("7".to_string())],
+        globals: Vec::new(),
         names: Vec::new(),
         functions: vec![Function {
             id: FuncId(0),
@@ -43,6 +44,7 @@ fn print_program() -> Program {
 fn cooperative_program() -> Program {
     Program {
         constants: vec![Constant::Number("7".to_string()), Constant::Number("8".to_string())],
+        globals: Vec::new(),
         names: Vec::new(),
         functions: vec![Function {
             id: FuncId(0),
@@ -95,6 +97,7 @@ fn cooperative_output_program() -> Program {
             Constant::Number("1".to_string()),
             Constant::Number("2".to_string()),
         ],
+        globals: Vec::new(),
         names: Vec::new(),
         functions: vec![Function {
             id: FuncId(0),
@@ -165,6 +168,7 @@ fn profile_program() -> Program {
     };
     Program {
         constants: vec![Constant::Number("7".to_string())],
+        globals: Vec::new(),
         names: vec!["value".to_string(), "str".to_string()],
         functions: vec![Function {
             id: FuncId(0),
@@ -221,6 +225,7 @@ fn profile_failure_program() -> Program {
             Constant::Number("1".to_string()),
             Constant::Number("0".to_string()),
         ],
+        globals: Vec::new(),
         names: Vec::new(),
         functions: vec![Function {
             id: FuncId(0),
@@ -259,6 +264,7 @@ fn runtime_diagnostic_program() -> Program {
     };
     Program {
         constants: vec![Constant::Number("1".to_string()), Constant::Number("0".to_string())],
+        globals: Vec::new(),
         names: Vec::new(),
         functions: vec![Function {
             id: FuncId(0),
@@ -659,18 +665,19 @@ fn library_api_links_modules_and_keeps_vm_instances_independent() {
 
 #[test]
 fn library_api_exposes_versions_and_typed_artifact_errors() {
-    assert_eq!(LIBRARY_API_VERSION, "0.1");
+    assert_eq!(LIBRARY_API_VERSION, "0.2");
     assert_eq!(ARTIFACT_FORMAT_FAMILY, "cdbc");
-    assert_eq!(ARTIFACT_FORMAT_VERSION, "0.1");
+    assert_eq!(ARTIFACT_FORMAT_VERSION, "0.2");
 
     let version_error = parse_artifact_checked("cdbc 9.9\n").expect_err("version must be rejected");
     assert_eq!(version_error.kind, ArtifactErrorKind::UnsupportedVersion);
     assert_eq!(version_error.line, 1);
-    assert!(version_error.message.contains("cdbc 0.1"));
+    assert!(version_error.message.contains("cdbc 0.2"));
 
     let invalid_program = Program {
         constants: Vec::new(),
         names: Vec::new(),
+        globals: Vec::new(),
         functions: vec![Function {
             id: FuncId(0),
             name: "main".to_string(),

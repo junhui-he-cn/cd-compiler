@@ -7,6 +7,7 @@ use std::rc::Rc;
 fn self_array_program() -> Program {
     Program {
         constants: Vec::new(),
+        globals: Vec::new(),
         names: vec!["push".to_string()],
         functions: vec![Function {
             id: FuncId(0),
@@ -38,6 +39,7 @@ fn self_array_program() -> Program {
 fn callback_cycle_program() -> Program {
     Program {
         constants: vec![Constant::Number("1".to_string())],
+        globals: Vec::new(),
         names: vec!["map".to_string(), "push".to_string()],
         functions: vec![Function {
             id: FuncId(0),
@@ -99,6 +101,7 @@ fn callback_cycle_program() -> Program {
 fn nested_cycle_program() -> Program {
     Program {
         constants: Vec::new(),
+        globals: Vec::new(),
         names: vec!["push".to_string()],
         functions: vec![Function {
             id: FuncId(0),
@@ -175,6 +178,7 @@ fn nested_cycle_program() -> Program {
 fn cycle_until_pause_program() -> Program {
     Program {
         constants: Vec::new(),
+        globals: Vec::new(),
         names: vec!["push".to_string()],
         functions: vec![Function {
             id: FuncId(0),
@@ -295,7 +299,7 @@ fn cycle_storage_is_observed_after_roots_are_dropped_and_released_after_replacem
         .borrow_mut()
         .insert("closure".to_string(), cell.clone());
     let function = heap
-        .allocate_function("cycle", 0, 0, environment.clone())
+        .allocate_function("cycle", 0, 0, environment.clone(), Vec::new())
         .expect("function identity should be available");
     *cell.borrow_mut() = function;
     let cell_weak = Rc::downgrade(&cell);

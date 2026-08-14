@@ -1,7 +1,7 @@
-# Compiler Design 字节码（.cdbc 0.1）指令参考
+# Compiler Design 字节码（.cdbc 0.2）指令参考
 
-本文档描述 Compiler Design 编译器产出的字节码文本工件 `.cdbc` 的 0.1 版定义，
-并逐一说明全部 38 条指令的语法、语义、操作数约束和运行时错误。文档面向需要阅读、
+本文档描述 Compiler Design 编译器产出的字节码文本工件 `.cdbc` 的 0.2 版定义，
+并逐一说明全部 44 条指令的语法、语义、操作数约束和运行时错误。文档面向需要阅读、
 编写或调试工件的开发者和实现第三方解析器/执行器的人。
 
 权威英文契约是 [`docs/bytecode-text-format.md`](bytecode-text-format.md)；
@@ -17,10 +17,12 @@ C++ 发射端在 `src/BytecodeTextEmitter.cpp`，Rust 解析与执行端在
 每个文件以版本头开头：
 
 ```text
-cdbc 0.1
+cdbc 0.2
 ```
 
-只接受这一版本。未来的不兼容变化必须改用新的版本号。
+VM 同时接受 `cdbc 0.1` 旧工件作为构造期兼容输入：旧工件使用名字驱动的
+`load_var/store_var/assign_var`，由 VM 在构造期映射到旧的按名解析路径；0.2 工件
+使用数值 slot（`lN/uN/gN`），VM 热路径不再按名字解析。
 
 工件有两种严格种类：
 
@@ -168,8 +170,8 @@ VM 是寄存器机。每个函数体拥有一块预分配寄存器数组和一�
 
 符号约定：`rD` 目标寄存器，`rS` / `rL` / `rR` 源寄存器，`cN` 常量索引，`nN` 名字
 索引，`fN` 函数索引，`N` 十进制整数（跳转目标或 payload 下标）。所有索引零基。
-无目标寄存器的指令（`store_var`、`assign_var`、`print`、`return` 与三条跳转）没有
-`rD`。
+无目标寄存器的指令（`bind_local`、`set_local`、`set_upvalue`、`init_global`、
+`set_global`、`print`、`return` 与三条跳转）没有 `rD`。
 
 ### 4.1 常量与构造
 
@@ -189,8 +191,8 @@ rD = constant cN
 rD = make_function fN
 ```
 
-创建指向函数表第 `fN` 项的**函数值（闭包）**，捕获创建点当前帧的可见环境
-（闭包环境 + 当前帧局部槽），不执行函数体。函数值是普通运行时值：可存入寄存器、
+创建指向函数表第 `fN` 项的**函数值（闭包）**，按该函数的 `upvalue` 声明逐项捕获
+父帧的局部 cell 或上级 upvalue cell，不执行函数体。函数值是普通运行时值：可存入寄存器、
 变量、数组元素，可作为实参或返回值，并被 `call` 调用。函数索引越界报
 `function index out of range`。
 
@@ -263,33 +265,40 @@ rD = move rS
 把 `rS` 的值复制到 `rD`。对聚合值是引用复制（两者别名同一对象），不深拷贝。对应
 IR 的 `Copy` 操作。
 
-#### load_var
+#### load_local / bind_local / set_local
 
 ```text
-rD = load_var nN
+rD = load_local lN
+bind_local lN, rV
+set_local lN, rV
 ```
 
-读取名字 `nN` 对应的绑定写入 `rD`。解析顺序：`main` 帧直接查全局；函数帧先查该函数
-的局部槽，再查闭包捕获的环境，最后查全局。未定义时报
-``undefined variable `<名字>` ``。
+`lN` 是编译器在发射前分配的**数值局部槽**：参数占 `l0..l(arity-1)`，函数体内声明
+的局部变量按首次声明顺序接续。`bind_local` 新建 cell（对应 `let` 声明），
+`set_local` 更新已有 cell（对应赋值），`load_local` 读取。遮蔽会产生不同槽。
+slot 未绑定时报 `unbound local lN`。
 
-#### store_var
+#### load_upvalue / set_upvalue
 
 ```text
-store_var nN, rV
+rD = load_upvalue uN
+set_upvalue uN, rV
 ```
 
-声明/初始化绑定 `nN`：新建一个 cell 保存 `rV` 的值（`main` 写全局，函数帧写局部槽）。
-没有目标寄存器。反复执行会新建 cell，等价于重新绑定。
+`uN` 是当前函数的 upvalue 槽，按函数头中的 `upvalue uN = local lM` /
+`upvalue uN = upvalue uM` 声明在 `make_function` 时从父帧捕获对应 cell。
 
-#### assign_var
+#### load_global / init_global / set_global
 
 ```text
-assign_var nN, rV
+rD = load_global gN
+init_global gN, rV
+set_global gN, rV
 ```
 
-更新已存在绑定 `nN` 的 cell 内容，不新建 cell。这是闭包能观察到外层变量被修改的
-机制。没有目标寄存器；未定义时报 ``undefined variable `<名字>` ``。
+`gN` 是编译器分配的**数值全局槽**。`init_global` 新建 cell（对应顶层 `let`），
+`set_global` 更新，`load_global` 读取。模块产品在 `names:` 后附带
+`globals:` 区段（`gN = nK`），链接器按名字去重并重定位跨模块引用。
 
 ### 4.3 调用
 

@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = nil
@@ -64,41 +64,46 @@ names:
   n31 = "Empty"
   n32 = "maybe#5"
 
+globals:
+  g0 = n0
+  g1 = n3
+  g2 = n20
+
 main registers=38:
   r0 = constant c0
-  store_var n0, r0
+  init_global g0, r0
   r1 = make_function f0
-  assign_var n2, r1
+  set_global g0, r1
   r2 = constant c6
-  store_var n3, r2
+  init_global g1, r2
   r3 = make_function f1
-  assign_var n19, r3
+  set_global g1, r3
   r4 = constant c12
-  store_var n20, r4
-  r5 = load_var n21
+  init_global g2, r4
+  r5 = load_global g0
   r6 = constant c13
   r7 = call r5 [r6]
   print r7
-  r8 = load_var n22
+  r8 = load_global g0
   r9 = constant c14
   r10 = call r8 [r9]
   print r10
-  r11 = load_var n23
+  r11 = load_global g1
   r12 = constant c15
   r13 = variant n24.n25 [r12]
   r14 = call r11 [r13]
   print r14
-  r15 = load_var n26
+  r15 = load_global g1
   r16 = constant c16
   r17 = constant c17
   r18 = variant n27.n28 [r16, r17]
   r19 = call r15 [r18]
   print r19
-  r20 = load_var n29
+  r20 = load_global g1
   r21 = variant n30.n31 []
   r22 = call r20 [r21]
   print r22
-  r23 = load_var n32
+  r23 = load_global g2
   r24 = constant c18
   r25 = equal r23, r24
   jump_if_false r25, 38
@@ -129,7 +134,7 @@ main registers=38:
 
 function f0 name="numberLabel" arity=1 registers=8:
   param 0 = "value#1"
-  r0 = load_var n1
+  r0 = load_local l0
   r1 = constant c1
   r2 = equal r0, r1
   jump_if_false r2, 5
@@ -148,7 +153,7 @@ function f0 name="numberLabel" arity=1 registers=8:
 
 function f1 name="shapeLabel" arity=1 registers=23:
   param 0 = "value#3"
-  r0 = load_var n4
+  r0 = load_local l0
   r1 = variant_tag r0 n5.n6
   jump_if_false r1, 6
   r2 = variant_field r0 0
@@ -159,13 +164,13 @@ function f1 name="shapeLabel" arity=1 registers=23:
   r5 = variant_field r0 0
   r6 = variant_field r0 1
   r3 = move r5
-  store_var n9, r3
-  r7 = load_var n10
+  bind_local l1, r3
+  r7 = load_local l1
   r8 = constant c7
   r9 = greater r7, r8
   jump_if_false r9, 22
   r10 = constant c8
-  r11 = load_var n11
+  r11 = load_local l1
   r12 = native_call n12 [r11]
   r13 = add r10, r12
   return r13

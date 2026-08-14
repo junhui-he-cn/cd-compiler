@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = string "a"
@@ -19,26 +19,30 @@ names:
   n7 = "remove"
   n8 = "values#0"
 
+globals:
+  g0 = n0
+  g1 = n2
+
 main registers=15:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
   r3 = constant c3
   r4 = map [r0: r1, r2: r3]
-  store_var n0, r4
-  r5 = load_var n1
-  store_var n2, r5
-  r6 = load_var n3
+  init_global g0, r4
+  r5 = load_global g0
+  init_global g1, r5
+  r6 = load_global g0
   r7 = constant c4
   r8 = native_call n4 [r6, r7]
   print r8
-  r9 = load_var n5
+  r9 = load_global g1
   print r9
-  r10 = load_var n6
+  r10 = load_global g1
   r11 = constant c5
   r12 = native_call n7 [r10, r11]
   print r12
-  r13 = load_var n8
+  r13 = load_global g0
   r14 = len r13
   print r14
 

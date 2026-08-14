@@ -10,7 +10,7 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process;
 
-const HELP: &str = "compiler-design-vm 0.1.0\n\n\
+const HELP: &str = "compiler-design-vm 0.2.0\n\n\
 Usage:\n\
   compiler-design-vm --help\n\
   compiler-design-vm verify <program.cdbc>\n\

@@ -4,45 +4,45 @@ main registers=102
 0002  b2 = constant #2 "coffee"
 0003  b3 = constant #3 5
 0004  b4 = map [b0: b1, b2: b3]
-0005  store_var @0 prices#0, b4
-0006  b5 = load_var @1 prices#0
+0005  init_global g0, b4
+0006  b5 = load_global g0
 0007  b6 = constant #4 "tea"
 0008  b7 = index b5, b6
 0009  print b7
-0010  b8 = load_var @2 prices#0
-0011  store_var @3 alias#1, b8
-0012  b9 = load_var @4 alias#1
+0010  b8 = load_global g0
+0011  init_global g1, b8
+0012  b9 = load_global g1
 0013  b10 = constant #5 "water"
 0014  b11 = constant #6 2
 0015  b12 = assign_index b9, b10, b11
-0016  b13 = load_var @5 prices#0
+0016  b13 = load_global g0
 0017  b14 = constant #7 "water"
 0018  b15 = index b13, b14
 0019  print b15
-0020  b16 = load_var @6 prices#0
+0020  b16 = load_global g0
 0021  b17 = len b16
 0022  print b17
-0023  b18 = load_var @7 prices#0
+0023  b18 = load_global g0
 0024  b19 = len b18
 0025  print b19
-0026  b20 = load_var @8 prices#0
+0026  b20 = load_global g0
 0027  b21 = constant #8 "coffee"
 0028  b22 = native_call @9 contains [b20, b21]
 0029  print b22
-0030  b23 = load_var @10 prices#0
+0030  b23 = load_global g0
 0031  b24 = constant #9 "tea"
 0032  b25 = native_call @11 contains [b23, b24]
 0033  print b25
 0034  b26 = map []
-0035  store_var @12 empty#2, b26
-0036  b27 = load_var @13 empty#2
+0035  init_global g2, b26
+0036  b27 = load_global g2
 0037  b28 = constant #10 "new"
 0038  b29 = constant #11 1
 0039  b30 = assign_index b27, b28, b29
-0040  b31 = load_var @14 empty#2
+0040  b31 = load_global g2
 0041  b32 = len b31
 0042  print b32
-0043  b33 = load_var @15 empty#2
+0043  b33 = load_global g2
 0044  b34 = constant #12 "new"
 0045  b35 = index b33, b34
 0046  print b35
@@ -55,20 +55,20 @@ main registers=102
 0053  b42 = constant #19 "text"
 0054  b43 = constant #20 "string"
 0055  b44 = map [b36: b37, b38: b39, b40: b41, b42: b43]
-0056  store_var @16 primitives#3, b44
-0057  b45 = load_var @17 primitives#3
+0056  init_global g3, b44
+0057  b45 = load_global g3
 0058  b46 = constant #21 nil
 0059  b47 = index b45, b46
 0060  print b47
-0061  b48 = load_var @18 primitives#3
+0061  b48 = load_global g3
 0062  b49 = constant #22 true
 0063  b50 = index b48, b49
 0064  print b50
-0065  b51 = load_var @19 primitives#3
+0065  b51 = load_global g3
 0066  b52 = constant #23 1
 0067  b53 = index b51, b52
 0068  print b53
-0069  b54 = load_var @20 primitives#3
+0069  b54 = load_global g3
 0070  b55 = constant #24 "text"
 0071  b56 = index b54, b55
 0072  print b56
@@ -77,25 +77,25 @@ main registers=102
 0075  b59 = constant #27 "a"
 0076  b60 = constant #28 2
 0077  b61 = map [b57: b58, b59: b60]
-0078  store_var @21 duplicates#4, b61
-0079  b62 = load_var @22 duplicates#4
+0078  init_global g4, b61
+0079  b62 = load_global g4
 0080  b63 = constant #29 "a"
 0081  b64 = index b62, b63
 0082  print b64
-0083  b65 = load_var @23 duplicates#4
+0083  b65 = load_global g4
 0084  b66 = constant #30 "b"
 0085  b67 = constant #31 3
 0086  b68 = assign_index b65, b66, b67
 0087  print b68
-0088  b69 = load_var @24 duplicates#4
+0088  b69 = load_global g4
 0089  print b69
 0090  b70 = constant #32 "inner"
 0091  b71 = constant #33 "value"
 0092  b72 = constant #34 7
 0093  b73 = map [b71: b72]
 0094  b74 = map [b70: b73]
-0095  store_var @25 nested#5, b74
-0096  b75 = load_var @26 nested#5
+0095  init_global g5, b74
+0096  b75 = load_global g5
 0097  b76 = constant #35 "inner"
 0098  b77 = index b75, b76
 0099  b78 = constant #36 "value"
@@ -106,27 +106,27 @@ main registers=102
 0104  b82 = constant #39 "missing"
 0105  b83 = constant #40 nil
 0106  b84 = map [b80: b81, b82: b83]
-0107  store_var @27 nullable#6, b84
-0108  b85 = load_var @28 nullable#6
+0107  init_global g6, b84
+0108  b85 = load_global g6
 0109  b86 = constant #41 "missing"
 0110  b87 = index b85, b86
 0111  print b87
-0112  b88 = load_var @29 duplicates#4
-0113  store_var @30 same#7, b88
+0112  b88 = load_global g4
+0113  init_global g7, b88
 0114  b89 = constant #42 "a"
 0115  b90 = constant #43 2
 0116  b91 = constant #44 "b"
 0117  b92 = constant #45 3
 0118  b93 = map [b89: b90, b91: b92]
-0119  store_var @31 other#8, b93
-0120  b94 = load_var @32 duplicates#4
-0121  b95 = load_var @33 same#7
+0119  init_global g8, b93
+0120  b94 = load_global g4
+0121  b95 = load_global g7
 0122  b96 = equal b94, b95
 0123  print b96
-0124  b97 = load_var @34 duplicates#4
-0125  b98 = load_var @35 other#8
+0124  b97 = load_global g4
+0125  b98 = load_global g8
 0126  b99 = equal b97, b98
 0127  print b99
-0128  b100 = load_var @36 duplicates#4
+0128  b100 = load_global g4
 0129  b101 = native_call @37 typeOf [b100]
 0130  print b101

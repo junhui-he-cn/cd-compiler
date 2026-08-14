@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/function_missing_return_mismatch.cd:1:5: function `bad` may return nil but is annotated number
+  fun bad(): number {
+      ^

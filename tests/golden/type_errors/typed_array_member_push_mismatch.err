@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/typed_array_member_push_mismatch.cd:2:14: push value expects number, got string
+  xs.push("bad");
+               ^

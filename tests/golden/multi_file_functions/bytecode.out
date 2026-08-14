@@ -1,21 +1,21 @@
 main registers=8
 0000  b0 = constant #0 nil
-0001  store_var @0 add#0, b0
+0001  init_global g0, b0
 0002  b1 = make_function $0 add/2
-0003  assign_var @3 add#0, b1
+0003  set_global g0, b1
 0004  b2 = constant #2 "sum"
-0005  store_var @4 banner#3, b2
-0006  b3 = load_var @5 banner#3
+0005  init_global g1, b2
+0006  b3 = load_global g1
 0007  print b3
-0008  b4 = load_var @6 add#0
+0008  b4 = load_global g0
 0009  b5 = constant #3 1
 0010  b6 = constant #4 2
 0011  b7 = call b4(b5, b6)
 0012  print b7
 
 function $0 add/2 registers=4
-0000  b0 = load_var @1 a#1
-0001  b1 = load_var @2 b#2
+0000  b0 = load_local l0
+0001  b1 = load_local l1
 0002  b2 = add b0, b1
 0003  return b2
 0004  b3 = constant #1 nil

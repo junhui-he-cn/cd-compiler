@@ -1,1 +1,1 @@
-Import error: failed to resolve import `missing`; tried: <repo>/tests/golden/import_errors/missing, <repo>/tests/golden/import_errors/missing.cd
+Import error: failed to resolve import `missing`; tried: <repo><repo>/tests/golden/import_errors/missing.cd

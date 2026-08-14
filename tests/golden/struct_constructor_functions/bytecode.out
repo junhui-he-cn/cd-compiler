@@ -1,32 +1,32 @@
 main registers=12
 0000  b0 = constant #0 nil
-0001  store_var @0 birthday#0, b0
+0001  init_global g0, b0
 0002  b1 = make_function $0 birthday/1
-0003  assign_var @6 birthday#0, b1
+0003  set_global g0, b1
 0004  b2 = constant #3 nil
-0005  store_var @7 makePerson#2, b2
+0005  init_global g1, b2
 0006  b3 = make_function $1 makePerson/0
-0007  assign_var @11 makePerson#2, b3
-0008  b4 = load_var @12 birthday#0
-0009  b5 = load_var @13 makePerson#2
+0007  set_global g1, b3
+0008  b4 = load_global g0
+0009  b5 = load_global g1
 0010  b6 = call b5()
 0011  b7 = call b4(b6)
-0012  store_var @14 p#3, b7
-0013  b8 = load_var @15 p#3
+0012  init_global g2, b7
+0013  b8 = load_global g2
 0014  b9 = field b8,  @16 name
 0015  print b9
-0016  b10 = load_var @17 p#3
+0016  b10 = load_global g2
 0017  b11 = field b10,  @18 age
 0018  print b11
 
 function $0 birthday/1 registers=8
-0000  b0 = load_var @1 person#1
-0001  b1 = load_var @2 person#1
+0000  b0 = load_local l0
+0001  b1 = load_local l0
 0002  b2 = field b1,  @3 age
 0003  b3 = constant #1 1
 0004  b4 = add b2, b3
 0005  b5 = assign_field b0,  @4 age, b4
-0006  b6 = load_var @5 person#1
+0006  b6 = load_local l0
 0007  return b6
 0008  b7 = constant #2 nil
 0009  return b7

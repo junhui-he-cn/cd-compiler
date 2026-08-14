@@ -1,1 +1,3 @@
 Parse error at <repo>/tests/golden/parse_errors/array_type_missing_bracket.cd:1:17: expected `]` after array element type, found Equal `=`
+  let xs: [number = [];
+                  ^

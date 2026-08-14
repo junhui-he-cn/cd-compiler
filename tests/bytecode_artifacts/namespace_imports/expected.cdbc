@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 39
@@ -13,19 +13,23 @@ names:
   n3 = "answer#1"
   n4 = "answer#1"
 
+globals:
+  g0 = n0
+  g1 = n1
+
 main registers=5:
   r0 = constant c0
-  store_var n0, r0
+  init_global g0, r0
   r1 = constant c1
-  store_var n1, r1
+  init_global g1, r1
   r2 = make_function f0
-  assign_var n3, r2
-  r3 = load_var n4
+  set_global g1, r2
+  r3 = load_global g1
   r4 = call r3 []
   print r4
 
 function f0 name="answer" arity=0 registers=4:
-  r0 = load_var n2
+  r0 = load_global g0
   r1 = constant c2
   r2 = add r0, r1
   return r2

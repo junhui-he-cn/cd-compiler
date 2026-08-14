@@ -2,8 +2,8 @@ main registers=4
 0000  b0 = array []
 0001  b1 = make_function $0 <lambda>/1
 0002  b2 = native_call @0 filter [b0, b1]
-0003  store_var @1 empty#1, b2
-0004  b3 = load_var @2 empty#1
+0003  init_global g0, b2
+0004  b3 = load_global g0
 0005  print b3
 
 function $0 <lambda>/1 registers=2

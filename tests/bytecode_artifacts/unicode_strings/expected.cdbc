@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = string "你🙂"
@@ -29,39 +29,43 @@ names:
   n13 = "combined#1"
   n14 = "substr"
 
+globals:
+  g0 = n0
+  g1 = n11
+
 main registers=26:
   r0 = constant c0
-  store_var n0, r0
-  r1 = load_var n1
+  init_global g0, r0
+  r1 = load_global g0
   r2 = len r1
   print r2
-  r3 = load_var n2
+  r3 = load_global g0
   r4 = len r3
   print r4
-  r5 = load_var n3
+  r5 = load_global g0
   r6 = constant c1
   r7 = constant c2
   r8 = native_call n4 [r5, r6, r7]
   print r8
-  r9 = load_var n5
+  r9 = load_global g0
   r10 = constant c3
   r11 = constant c4
   r12 = native_call n6 [r9, r10, r11]
   print r12
-  r13 = load_var n7
+  r13 = load_global g0
   r14 = constant c5
   r15 = native_call n8 [r13, r14]
   print r15
-  r16 = load_var n9
+  r16 = load_global g0
   r17 = constant c6
   r18 = native_call n10 [r16, r17]
   print r18
   r19 = constant c7
-  store_var n11, r19
-  r20 = load_var n12
+  init_global g1, r19
+  r20 = load_global g1
   r21 = len r20
   print r21
-  r22 = load_var n13
+  r22 = load_global g1
   r23 = constant c8
   r24 = constant c9
   r25 = native_call n14 [r22, r23, r24]

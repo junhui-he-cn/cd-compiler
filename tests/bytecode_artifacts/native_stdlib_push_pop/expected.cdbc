@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 1
@@ -13,17 +13,20 @@ names:
   n4 = "xs#0"
   n5 = "pop"
 
+globals:
+  g0 = n0
+
 main registers=9:
   r0 = constant c0
   r1 = constant c1
   r2 = array [r0, r1]
-  store_var n0, r2
-  r3 = load_var n1
+  init_global g0, r2
+  r3 = load_global g0
   r4 = constant c2
   r5 = native_call n2 [r3, r4]
-  r6 = load_var n3
+  r6 = load_global g0
   print r6
-  r7 = load_var n4
+  r7 = load_global g0
   r8 = native_call n5 [r7]
   print r8
 

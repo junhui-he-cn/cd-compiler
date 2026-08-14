@@ -1,30 +1,30 @@
 main registers=57
 0000  b0 = constant #0 nil
-0001  store_var @0 find#0, b0
+0001  init_global g0, b0
 0002  b1 = make_function $0 find/1
-0003  assign_var @3 find#0, b1
+0003  set_global g0, b1
 0004  b2 = constant #5 nil
-0005  store_var @4 process#2, b2
+0005  init_global g1, b2
 0006  b3 = make_function $1 process/1
-0007  assign_var @10 process#2, b3
-0008  b4 = load_var @11 find#0
+0007  set_global g1, b3
+0008  b4 = load_global g0
 0009  b5 = constant #9 5
 0010  b6 = call b4(b5)
-0011  store_var @12 maybe#5, b6
-0012  b7 = load_var @13 maybe#5
+0011  init_global g2, b6
+0012  b7 = load_global g2
 0013  b8 = constant #10 nil
 0014  b9 = not_equal b7, b8
 0015  jump_if_false b9, 0023
-0016  store_var @14 v#6, b7
+0016  init_global g3, b7
 0017  b10 = constant #11 "if-let:"
-0018  b11 = load_var @15 v#6
+0018  b11 = load_global g3
 0019  b12 = native_call @16 str [b11]
 0020  b13 = add b10, b12
 0021  print b13
 0022  jump 0025
 0023  b14 = constant #12 "if-let:none"
 0024  print b14
-0025  b15 = load_var @17 maybe#5
+0025  b15 = load_global g2
 0026  b17 = constant #13 nil
 0027  b18 = not_equal b15, b17
 0028  jump_if_false b18, 0031
@@ -33,7 +33,7 @@ main registers=57
 0031  b19 = constant #14 0
 0032  b16 = move b19
 0033  print b16
-0034  b20 = load_var @18 find#0
+0034  b20 = load_global g0
 0035  b21 = constant #15 1
 0036  b22 = negate b21
 0037  b23 = call b20(b22)
@@ -45,7 +45,7 @@ main registers=57
 0043  b27 = constant #17 99
 0044  b24 = move b27
 0045  print b24
-0046  b28 = load_var @19 process#2
+0046  b28 = load_global g1
 0047  b29 = constant #18 3
 0048  b30 = call b28(b29)
 0049  b32 = constant #19 nil
@@ -56,7 +56,7 @@ main registers=57
 0054  b34 = constant #20 "missing"
 0055  b31 = move b34
 0056  print b31
-0057  b35 = load_var @20 process#2
+0057  b35 = load_global g1
 0058  b36 = constant #21 1
 0059  b37 = negate b36
 0060  b38 = call b35(b37)
@@ -68,35 +68,35 @@ main registers=57
 0066  b42 = constant #23 "missing"
 0067  b39 = move b42
 0068  print b39
-0069  b43 = load_var @21 find#0
+0069  b43 = load_global g0
 0070  b44 = constant #24 1
 0071  b45 = call b43(b44)
-0072  store_var @22 next#7, b45
+0072  init_global g4, b45
 0073  b46 = constant #25 0
-0074  store_var @23 count#8, b46
-0075  b47 = load_var @24 next#7
+0074  init_global g5, b46
+0075  b47 = load_global g4
 0076  b48 = constant #26 nil
 0077  b49 = not_equal b47, b48
 0078  jump_if_false b49, 0089
-0079  store_var @25 current#9, b47
-0080  b50 = load_var @26 count#8
+0079  init_global g6, b47
+0080  b50 = load_global g5
 0081  b51 = assert_number b50 @27 `+=` expects number variable
 0082  b52 = constant #27 1
 0083  b53 = assert_number b52 @28 `+=` expects number value
 0084  b54 = add b51, b53
-0085  assign_var @29 count#8, b54
+0085  set_global g5, b54
 0086  b55 = constant #28 nil
-0087  assign_var @30 next#7, b55
+0087  set_global g4, b55
 0088  jump 0075
-0089  b56 = load_var @31 count#8
+0089  b56 = load_global g5
 0090  print b56
 
 function $0 find/1 registers=8
-0000  b0 = load_var @1 value#1
+0000  b0 = load_local l0
 0001  b1 = constant #1 0
 0002  b2 = greater b0, b1
 0003  jump_if_false b2, 0008
-0004  b3 = load_var @2 value#1
+0004  b3 = load_local l0
 0005  b4 = constant #2 1
 0006  b5 = add b3, b4
 0007  return b5
@@ -106,17 +106,17 @@ function $0 find/1 registers=8
 0011  return b7
 
 function $1 process/1 registers=10
-0000  b0 = load_var @5 find#0
-0001  b1 = load_var @6 value#3
+0000  b0 = load_global g0
+0001  b1 = load_local l0
 0002  b2 = call b0(b1)
 0003  b3 = constant #6 nil
 0004  b4 = not_equal b2, b3
 0005  jump_if_false b4, 0007
 0006  jump 0008
 0007  return b3
-0008  store_var @7 next#4, b2
+0008  bind_local l1, b2
 0009  b5 = constant #7 "got:"
-0010  b6 = load_var @8 next#4
+0010  b6 = load_local l1
 0011  b7 = native_call @9 str [b6]
 0012  b8 = add b5, b7
 0013  return b8

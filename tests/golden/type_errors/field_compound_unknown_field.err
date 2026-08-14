@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/field_compound_unknown_field.cd:3:3: struct `Person` has no field `age`
+  p.age += 1;
+    ^

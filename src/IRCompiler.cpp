@@ -209,9 +209,9 @@ std::optional<BindingId> IRCompiler::registerBindingMetadata(
 
 std::optional<BindingId> IRCompiler::registerSyntheticBinding(const std::string& resolvedName)
 {
-    while (nextSyntheticBindingId_ < std::numeric_limits<std::size_t>::max()) {
+    while (nextSyntheticBindingId_ < std::numeric_limits<std::size_t>::max() - 1) {
         const BindingId bindingId{
-            std::numeric_limits<std::size_t>::max() - nextSyntheticBindingId_++};
+            std::numeric_limits<std::size_t>::max() - 1 - nextSyntheticBindingId_++};
         if (registeredBindings_.find(bindingId) == registeredBindings_.end()) {
             return registerBinding(
                 bindingId,
@@ -231,6 +231,7 @@ void IRCompiler::registerFunctionParameters(
         || metadata.parameterNames.size() != declarations.size()) {
         throw IRCompileError("function parameter binding metadata mismatch");
     }
+    ir_.setFunctionParameterBindingIds(metadata.parameterBindingIds);
     for (std::size_t index = 0; index < metadata.parameterNames.size(); ++index) {
         if (!metadata.parameterBindingIds[index].valid()) {
             throw IRCompileError("function parameter binding metadata is missing");

@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = nil
@@ -17,22 +17,26 @@ names:
   n7 = "__method_Person_label#0"
   n8 = "p#2"
 
+globals:
+  g0 = n0
+  g1 = n6
+
 main registers=7:
   r0 = constant c0
-  store_var n0, r0
+  init_global g0, r0
   r1 = make_function f0
-  assign_var n3, r1
+  set_global g0, r1
   r2 = constant c3
   r3 = struct n4 {n5: r2}
-  store_var n6, r3
-  r4 = load_var n7
-  r5 = load_var n8
+  init_global g1, r3
+  r4 = load_global g0
+  r5 = load_global g1
   r6 = call r4 [r5]
   print r6
 
 function f0 name="label" arity=1 registers=5:
   param 0 = "this#1"
-  r0 = load_var n1
+  r0 = load_local l0
   r1 = field r0, n2
   r2 = constant c1
   r3 = add r1, r2

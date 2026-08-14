@@ -1,16 +1,16 @@
 main registers=10
 0000  b0 = constant #0 1
-0001  store_var @0 x#0, b0
-0002  b1 = load_var @1 x#0
+0001  init_global g0, b0
+0002  b1 = load_global g0
 0003  b2 = assert_number b1 @2 `+=` expects number variable
 0004  b3 = constant #1 4
 0005  b4 = assert_number b3 @3 `+=` expects number value
 0006  b5 = add b2, b4
-0007  assign_var @4 x#0, b5
+0007  set_global g0, b5
 0008  b6 = constant #2 2
 0009  b7 = multiply b5, b6
-0010  store_var @5 y#1, b7
-0011  b8 = load_var @6 x#0
+0010  init_global g1, b7
+0011  b8 = load_global g0
 0012  print b8
-0013  b9 = load_var @7 y#1
+0013  b9 = load_global g1
 0014  print b9

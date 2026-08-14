@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/unknown_type_annotation.cd:1:8: unknown type `int`
+  let x: int = 1;
+         ^

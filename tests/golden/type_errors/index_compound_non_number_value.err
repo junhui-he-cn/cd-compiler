@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/index_compound_non_number_value.cd:2:7: compound assignment value must be number, got string
+  xs[0] += "bad";
+        ^

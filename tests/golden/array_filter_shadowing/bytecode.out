@@ -1,7 +1,7 @@
 main registers=10
 0000  b0 = make_function $0 <lambda>/2
-0001  store_var @0 filter#2, b0
-0002  b1 = load_var @1 filter#2
+0001  init_global g0, b0
+0002  b1 = load_global g0
 0003  b2 = constant #2 1
 0004  b3 = array [b2]
 0005  b4 = make_function $1 <lambda>/1

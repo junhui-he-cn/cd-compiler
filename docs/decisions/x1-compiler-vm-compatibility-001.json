@@ -1,21 +1,21 @@
 {
   "schema_version": 1,
-  "matrix_revision": "x1-2026-08-02-r1",
+  "matrix_revision": "x1-2026-08-14-r2",
   "inventory_revision": "m0d-2026-07-22-r1",
-  "reference_commit": "61cbbc79",
+  "reference_commit": "a0aa0168",
   "decision_id": "X1-COMPILER-VM-COMPAT-001",
   "status": "resolved",
-  "question": "What compatibility surfaces must the C++ compiler and Rust VM preserve together before later runtime or optimizer work?",
-  "decision": "Keep cdbc 0.1, cdbc-cache 0.2 schema 4, the 0.1 VM library facade, optional debug metadata, and the fixed non-serialized native-name registry as the current compatibility boundary. Consolidate existing artifact, module, cache, native, and library evidence without changing bytes, versions, or execution behavior.",
+  "question": "What compatibility surfaces must the C++ compiler and Rust VM preserve together through the cdbc 0.2 variable-lowering upgrade?",
+  "decision": "Adopt cdbc 0.2 as the emitted artifact contract with numeric local/upvalue/global slots while keeping strict cdbc-cache 0.2 schema 4, the fixed non-serialized native-name registry, and optional debug metadata. The reader keeps cdbc 0.1 name-based variable inputs as a construction-time compatibility path.",
   "version_contract": {
     "compiler": {
-      "version": "0.1.0",
+      "version": "0.2.0",
       "source": "VERSION"
     },
     "artifact": {
       "family": "cdbc",
-      "version": "0.1",
-      "header": "cdbc 0.1",
+      "version": "0.2",
+      "header": "cdbc 0.2",
       "source": "vm-rs/src/format.rs"
     },
     "module_cache": {
@@ -26,8 +26,8 @@
     },
     "vm_library": {
       "package": "compiler-design-vm",
-      "crate_version": "0.1.0",
-      "api_version": "0.1",
+      "crate_version": "0.2.0",
+      "api_version": "0.2",
       "cargo": "vm-rs/Cargo.toml",
       "source": "vm-rs/src/lib.rs"
     },
@@ -80,7 +80,7 @@
   },
   "compatibility_cells": [
     {
-      "cell_id": "artifact.debug_metadata.cdbc_0_1",
+      "cell_id": "artifact.debug_metadata.cdbc_0_2",
       "domain": "artifact",
       "state": "supported-additive",
       "producer": "C++ BytecodeTextEmitter",
@@ -95,12 +95,12 @@
       ]
     },
     {
-      "cell_id": "artifact.linked.cdbc_0_1",
+      "cell_id": "artifact.linked.cdbc_0_2",
       "domain": "artifact",
       "state": "supported",
       "producer": "C++ BytecodeTextEmitter",
       "consumer": "Rust dump and run",
-      "contract": "linked cdbc 0.1 is accepted after structural and reference validation; link rejects it as a non-module product",
+      "contract": "linked cdbc 0.2 is accepted after structural and reference validation; link rejects it as a non-module product",
       "evidence": [
         "docs/decisions/m4a-artifact-validation.md",
         "tests/bytecode_artifacts/arithmetic/expected.cdbc",
@@ -109,12 +109,12 @@
       ]
     },
     {
-      "cell_id": "artifact.metadata_free.cdbc_0_1",
+      "cell_id": "artifact.metadata_free.cdbc_0_2",
       "domain": "artifact",
       "state": "supported",
       "producer": "C++ or hand-authored legacy artifact",
       "consumer": "Rust parser and VM",
-      "contract": "metadata-free cdbc 0.1 remains valid; debug sections are not required for dump, link, or run",
+      "contract": "metadata-free cdbc 0.2 remains valid; debug sections are not required for dump, link, or run; legacy cdbc 0.1 inputs remain readable",
       "evidence": [
         "docs/decisions/m4a-artifact-validation.md",
         "docs/decisions/m05b-cdbc-contract.md",
@@ -123,12 +123,12 @@
       ]
     },
     {
-      "cell_id": "artifact.module.cdbc_0_1",
+      "cell_id": "artifact.module.cdbc_0_2",
       "domain": "artifact",
       "state": "supported",
       "producer": "C++ independent module emitter",
       "consumer": "Rust dump and linker; run rejects an unlinked module",
-      "contract": "artifact: module products remain cdbc 0.1, validate module identity/dependencies before linking, and never execute as standalone programs",
+      "contract": "artifact: module products remain cdbc 0.2, validate module identity/dependencies before linking, and never execute as standalone programs",
       "evidence": [
         "docs/decisions/m3b-module-artifacts.md",
         "docs/decisions/m4a-artifact-validation.md",
@@ -137,12 +137,12 @@
       ]
     },
     {
-      "cell_id": "library.cli.version_0_1",
+      "cell_id": "library.cli.version_0_2",
       "domain": "embedding",
       "state": "supported-additive",
       "producer": "Rust library and compiler-design-vm CLI",
       "consumer": "in-process host callers and command-line workflows",
-      "contract": "the library facade is version 0.1 and the CLI preserves file IO, stdout/stderr, exit codes, dump/run/link/trace/debug/profile commands",
+      "contract": "the library facade is version 0.2 and the CLI preserves file IO, stdout/stderr, exit codes, dump/run/link/trace/debug/profile commands",
       "evidence": [
         "docs/decisions/vm-library-api-001.md",
         "docs/decisions/vm-library-error-boundary-001.md",
@@ -184,23 +184,60 @@
     }
   ],
   "rules": [
-    "X1 does not change cdbc artifact bytes, cdbc version, cache schema, native names, or VM execution semantics.",
+    "X1r2 adopts cdbc 0.2 emission with numeric local/upvalue/global slots; the VM keeps a construction-time cdbc 0.1 name-based compatibility path for legacy inputs.",
     "The compiler owns module-cache invalidation and source fallback; the VM validates and executes products but does not read .cdi or cache manifests to synthesize function bodies.",
-    "Debug metadata is additive and optional; metadata-free cdbc 0.1 remains a supported compatibility case.",
+    "Debug metadata is additive and optional; metadata-free artifacts remain supported.",
     "Native registry metadata is an internal VM contract until a future artifact version explicitly serializes a successor ABI.",
-    "A successor artifact version, persistent session, GC, JIT, or host I/O capability requires a separate decision record."
+    "A binary format, persistent session, GC, JIT publication, or host I/O capability requires a separate decision record."
   ],
   "verification": {
     "validator": "tests/vm_compatibility_matrix.py",
     "selftest": "tests/vm_compatibility_matrix_selftest.py",
     "commands": [
-      ["python3", "tests/verification_inventory.py"],
-      ["python3", "tests/cdbc_contract_audit.py", "./build/compiler_design", "vm-rs", "--report", "build/m05b-cdbc-audit-report.json"],
-      ["python3", "tests/bytecode_artifact_tests.py", "./build/compiler_design", "vm-rs"],
-      ["python3", "tests/bytecode_module_artifact_tests.py", "./build/compiler_design", "vm-rs"],
-      ["python3", "tests/bytecode_module_cache_tests.py", "./build/compiler_design", "vm-rs"],
-      ["cargo", "test", "--manifest-path", "vm-rs/Cargo.toml"],
-      ["python3", "tests/run_verification.py", "./build/compiler_design", "vm-rs", "--report", "build/verification-report.json"]
+      [
+        "python3",
+        "tests/verification_inventory.py"
+      ],
+      [
+        "python3",
+        "tests/cdbc_contract_audit.py",
+        "./build/compiler_design",
+        "vm-rs",
+        "--report",
+        "build/m05b-cdbc-audit-report.json"
+      ],
+      [
+        "python3",
+        "tests/bytecode_artifact_tests.py",
+        "./build/compiler_design",
+        "vm-rs"
+      ],
+      [
+        "python3",
+        "tests/bytecode_module_artifact_tests.py",
+        "./build/compiler_design",
+        "vm-rs"
+      ],
+      [
+        "python3",
+        "tests/bytecode_module_cache_tests.py",
+        "./build/compiler_design",
+        "vm-rs"
+      ],
+      [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "vm-rs/Cargo.toml"
+      ],
+      [
+        "python3",
+        "tests/run_verification.py",
+        "./build/compiler_design",
+        "vm-rs",
+        "--report",
+        "build/verification-report.json"
+      ]
     ],
     "required_existing_evidence": [
       "M4A artifact acceptance/rejection matrix",
@@ -212,8 +249,8 @@
     ]
   },
   "out_of_scope": [
-    "changing cdbc 0.1 or cdbc-cache 0.2 schema 4",
-    "successor artifact version or binary encoding",
+    "changing cdbc-cache 0.2 schema 4",
+    "binary artifact encoding",
     "versioned native IDs or plugin loading",
     "GC, cycle collection, relocating handles, or persistent VM sessions",
     "changing module-cache fallback or strictness policy"

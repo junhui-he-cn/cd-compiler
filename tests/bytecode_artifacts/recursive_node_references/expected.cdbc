@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 2
@@ -48,48 +48,55 @@ names:
   n34 = "first#3"
   n35 = "second#4"
 
+globals:
+  g0 = n3
+  g1 = n8
+  g2 = n10
+  g3 = n22
+  g4 = n27
+
 main registers=33:
   r0 = constant c0
   r1 = constant c1
   r2 = struct n0 {n1: r0, n2: r1}
-  store_var n3, r2
+  init_global g0, r2
   r3 = constant c2
-  r4 = load_var n7
+  r4 = load_global g0
   r5 = struct n4 {n5: r3, n6: r4}
-  store_var n8, r5
-  r6 = load_var n9
-  store_var n10, r6
-  r7 = load_var n11
+  init_global g1, r5
+  r6 = load_global g0
+  init_global g2, r6
+  r7 = load_global g1
   r8 = constant c3
   r9 = assign_field r7, n12, r8
-  r10 = load_var n13
+  r10 = load_global g2
   r11 = constant c4
   r12 = assign_field r10, n14, r11
-  r13 = load_var n15
+  r13 = load_global g1
   r14 = field r13, n16
   print r14
-  r15 = load_var n17
+  r15 = load_global g0
   r16 = field r15, n18
   print r16
   r17 = constant c5
   r18 = constant c6
   r19 = struct n19 {n20: r17, n21: r18}
-  store_var n22, r19
+  init_global g3, r19
   r20 = constant c7
-  r21 = load_var n26
+  r21 = load_global g3
   r22 = struct n23 {n24: r20, n25: r21}
-  store_var n27, r22
-  r23 = load_var n28
-  r24 = load_var n29
+  init_global g4, r22
+  r23 = load_global g3
+  r24 = load_global g4
   r25 = assign_field r23, n30, r24
-  r26 = load_var n31
+  r26 = load_global g3
   print r26
-  r27 = load_var n32
-  r28 = load_var n33
+  r27 = load_global g3
+  r28 = load_global g3
   r29 = equal r27, r28
   print r29
-  r30 = load_var n34
-  r31 = load_var n35
+  r30 = load_global g3
+  r31 = load_global g4
   r32 = equal r30, r31
   print r32
 

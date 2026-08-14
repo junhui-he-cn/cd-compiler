@@ -1,48 +1,48 @@
 main registers=22
 0000  b0 = constant #0 nil
-0001  store_var @0 __method_Boxed_echo#0, b0
+0001  init_global g0, b0
 0002  b1 = make_function $0 echo/2
-0003  assign_var @2 __method_Boxed_echo#0, b1
+0003  set_global g0, b1
 0004  b2 = constant #2 nil
-0005  store_var @3 identity#3, b2
+0005  init_global g1, b2
 0006  b3 = make_function $1 identity/1
-0007  assign_var @5 identity#3, b3
-0008  b4 = load_var @6 identity#3
+0007  set_global g1, b3
+0008  b4 = load_global g1
 0009  b5 = constant #4 1
 0010  b6 = call b4(b5)
-0011  store_var @7 direct#5, b6
-0012  b7 = load_var @8 identity#3
+0011  init_global g2, b6
+0012  b7 = load_global g1
 0013  b8 = constant #5 2
 0014  b9 = call b7(b8)
-0015  store_var @9 namespaced#6, b9
+0015  init_global g3, b9
 0016  b10 = constant #6 0
 0017  b11 = struct @10 Boxed { @11 value: b10}
-0018  store_var @12 box#7, b11
-0019  b12 = load_var @13 __method_Boxed_echo#0
-0020  b13 = load_var @14 box#7
+0018  init_global g4, b11
+0019  b12 = load_global g0
+0020  b13 = load_global g4
 0021  b14 = constant #7 3
 0022  b15 = call b12(b13, b14)
-0023  store_var @15 directMethod#8, b15
+0023  init_global g5, b15
 0024  b16 = constant #8 4
 0025  b17 = variant @16 Box. @17 Value (b16)
-0026  store_var @18 namespaceEnum#9, b17
-0027  b18 = load_var @19 direct#5
+0026  init_global g6, b17
+0027  b18 = load_global g2
 0028  print b18
-0029  b19 = load_var @20 namespaced#6
+0029  b19 = load_global g3
 0030  print b19
-0031  b20 = load_var @21 directMethod#8
+0031  b20 = load_global g5
 0032  print b20
-0033  b21 = load_var @22 namespaceEnum#9
+0033  b21 = load_global g6
 0034  print b21
 
 function $0 echo/2 registers=2
-0000  b0 = load_var @1 value#2
+0000  b0 = load_local l1
 0001  return b0
 0002  b1 = constant #1 nil
 0003  return b1
 
 function $1 identity/1 registers=2
-0000  b0 = load_var @4 value#4
+0000  b0 = load_local l0
 0001  return b0
 0002  b1 = constant #3 nil
 0003  return b1

@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = nil
@@ -13,12 +13,15 @@ names:
   n3 = "add#0"
   n4 = "add#0"
 
+globals:
+  g0 = n0
+
 main registers=6:
   r0 = constant c0
-  store_var n0, r0
+  init_global g0, r0
   r1 = make_function f0
-  assign_var n3, r1
-  r2 = load_var n4
+  set_global g0, r1
+  r2 = load_global g0
   r3 = constant c2
   r4 = constant c3
   r5 = call r2 [r3, r4]
@@ -27,8 +30,8 @@ main registers=6:
 function f0 name="add" arity=2 registers=4:
   param 0 = "a#1"
   param 1 = "b#2"
-  r0 = load_var n1
-  r1 = load_var n2
+  r0 = load_local l0
+  r1 = load_local l1
   r2 = add r0, r1
   return r2
   r3 = constant c1

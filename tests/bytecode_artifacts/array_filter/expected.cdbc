@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 1
@@ -40,44 +40,52 @@ names:
   n20 = "kept#8"
   n21 = "snapshot#6"
 
+globals:
+  g0 = n0
+  g1 = n1
+  g2 = n6
+  g3 = n11
+  g4 = n12
+  g5 = n17
+
 main registers=22:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
   r3 = constant c3
   r4 = array [r0, r1, r2, r3]
-  store_var n0, r4
+  init_global g0, r4
   r5 = constant c4
-  store_var n1, r5
-  r6 = load_var n2
+  init_global g1, r5
+  r6 = load_global g0
   r7 = make_function f0
   r8 = native_call n5 [r6, r7]
-  store_var n6, r8
-  r9 = load_var n7
+  init_global g2, r8
+  r9 = load_global g0
   r10 = make_function f1
   r11 = native_call n10 [r9, r10]
-  store_var n11, r11
+  init_global g3, r11
   r12 = constant c9
   r13 = constant c10
   r14 = array [r12, r13]
-  store_var n12, r14
-  r15 = load_var n13
+  init_global g4, r14
+  r15 = load_global g4
   r16 = make_function f2
   r17 = native_call n16 [r15, r16]
-  store_var n17, r17
-  r18 = load_var n18
+  init_global g5, r17
+  r18 = load_global g2
   print r18
-  r19 = load_var n19
+  r19 = load_global g3
   print r19
-  r20 = load_var n20
+  r20 = load_global g5
   print r20
-  r21 = load_var n21
+  r21 = load_global g4
   print r21
 
 function f0 name="<lambda>" arity=1 registers=4:
   param 0 = "value#2"
-  r0 = load_var n3
-  r1 = load_var n4
+  r0 = load_local l0
+  r1 = load_global g1
   r2 = greater r0, r1
   return r2
   r3 = constant c5
@@ -85,12 +93,12 @@ function f0 name="<lambda>" arity=1 registers=4:
 
 function f1 name="<lambda>" arity=1 registers=8:
   param 0 = "value#4"
-  r0 = load_var n8
+  r0 = load_local l0
   r1 = constant c6
   r2 = equal r0, r1
   r3 = move r2
   jump_if_true r3, 9
-  r4 = load_var n9
+  r4 = load_local l0
   r5 = constant c7
   r6 = equal r4, r5
   r3 = move r6
@@ -100,7 +108,7 @@ function f1 name="<lambda>" arity=1 registers=8:
 
 function f2 name="<lambda>" arity=1 registers=5:
   param 0 = "value#7"
-  r0 = load_var n14
+  r0 = load_global g4
   r1 = constant c11
   r2 = native_call n15 [r0, r1]
   r3 = constant c12

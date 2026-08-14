@@ -1,21 +1,21 @@
 main registers=11
 0000  b0 = constant #0 0.3
-0001  store_var @0 a#0, b0
+0001  init_global g0, b0
 0002  b1 = constant #1 1
-0003  store_var @1 b#1, b1
+0003  init_global g1, b1
 0004  b2 = constant #2 0.1
-0005  store_var @2 c#2, b2
+0005  init_global g2, b2
 0006  b3 = constant #3 1.23456789012345
-0007  store_var @3 d#3, b3
-0008  b4 = load_var @4 a#0
+0007  init_global g3, b3
+0008  b4 = load_global g0
 0009  print b4
-0010  b5 = load_var @5 b#1
+0010  b5 = load_global g1
 0011  print b5
-0012  b6 = load_var @6 c#2
+0012  b6 = load_global g2
 0013  print b6
-0014  b7 = load_var @7 d#3
+0014  b7 = load_global g3
 0015  print b7
-0016  b8 = load_var @8 a#0
-0017  b9 = load_var @9 b#1
+0016  b8 = load_global g0
+0017  b9 = load_global g1
 0018  b10 = add b8, b9
 0019  print b10

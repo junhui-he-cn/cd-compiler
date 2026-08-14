@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 1
@@ -33,6 +33,12 @@ names:
   n14 = "count#2"
   n15 = "total#3"
 
+globals:
+  g0 = n0
+  g1 = n1
+  g2 = n2
+  g3 = n3
+
 main registers=28:
   r0 = constant c0
   r1 = constant c1
@@ -40,39 +46,39 @@ main registers=28:
   r3 = constant c3
   r4 = constant c4
   r5 = array [r0, r1, r2, r3, r4]
-  store_var n0, r5
+  init_global g0, r5
   r6 = constant c5
-  store_var n1, r6
+  init_global g1, r6
   r7 = constant c6
-  store_var n2, r7
+  init_global g2, r7
   r8 = constant c7
-  store_var n3, r8
-  r9 = load_var n4
+  init_global g3, r8
+  r9 = load_global g2
   r10 = constant c8
   r11 = less r9, r10
   jump_if_false r11, 38
-  r12 = load_var n5
-  r13 = load_var n6
-  r14 = load_var n7
+  r12 = load_global g3
+  r13 = load_global g0
+  r14 = load_global g1
   r15 = index r13, r14
   r16 = add r12, r15
-  assign_var n8, r16
-  r17 = load_var n9
+  set_global g3, r16
+  r17 = load_global g1
   r18 = constant c9
   r19 = add r17, r18
-  assign_var n10, r19
-  r20 = load_var n11
+  set_global g1, r19
+  r20 = load_global g1
   r21 = constant c10
   r22 = equal r20, r21
   jump_if_false r22, 33
   r23 = constant c11
-  assign_var n12, r23
-  r24 = load_var n13
+  set_global g1, r23
+  r24 = load_global g2
   r25 = constant c12
   r26 = add r24, r25
-  assign_var n14, r26
+  set_global g2, r26
   jump 13
-  r27 = load_var n15
+  r27 = load_global g3
   print r27
 
 debug_sources:

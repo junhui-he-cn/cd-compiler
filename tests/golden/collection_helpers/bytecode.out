@@ -3,111 +3,111 @@ main registers=80
 0001  b1 = constant #1 2
 0002  b2 = constant #2 3
 0003  b3 = array [b0, b1, b2]
-0004  store_var @0 xs#0, b3
-0005  b4 = load_var @1 xs#0
+0004  init_global g0, b3
+0005  b4 = load_global g0
 0006  b5 = constant #3 2
 0007  b6 = native_call @2 contains [b4, b5]
 0008  print b6
-0009  b7 = load_var @3 xs#0
+0009  b7 = load_global g0
 0010  b8 = constant #4 4
 0011  b9 = native_call @4 contains [b7, b8]
 0012  print b9
 0013  b10 = constant #5 9
 0014  b11 = array [b10]
-0015  store_var @5 shared#1, b11
-0016  b12 = load_var @6 shared#1
+0015  init_global g1, b11
+0016  b12 = load_global g1
 0017  b13 = array [b12]
-0018  store_var @7 nested#2, b13
-0019  b14 = load_var @8 nested#2
-0020  b15 = load_var @9 shared#1
+0018  init_global g2, b13
+0019  b14 = load_global g2
+0020  b15 = load_global g1
 0021  b16 = native_call @10 contains [b14, b15]
 0022  print b16
-0023  b17 = load_var @11 nested#2
+0023  b17 = load_global g2
 0024  b18 = constant #6 9
 0025  b19 = array [b18]
 0026  b20 = native_call @12 contains [b17, b19]
 0027  print b20
 0028  b21 = constant #7 1
 0029  b22 = struct @13 Box { @14 value: b21}
-0030  store_var @15 box#3, b22
-0031  b23 = load_var @16 box#3
+0030  init_global g3, b22
+0031  b23 = load_global g3
 0032  b24 = array [b23]
-0033  b25 = load_var @17 box#3
+0033  b25 = load_global g3
 0034  b26 = native_call @18 contains [b24, b25]
 0035  print b26
-0036  b27 = load_var @19 box#3
+0036  b27 = load_global g3
 0037  b28 = array [b27]
 0038  b29 = constant #8 1
 0039  b30 = struct @20 Box { @21 value: b29}
 0040  b31 = native_call @22 contains [b28, b30]
 0041  print b31
-0042  b32 = load_var @23 xs#0
+0042  b32 = load_global g0
 0043  b33 = constant #9 1
 0044  b34 = constant #10 2
 0045  b35 = native_call @24 slice [b32, b33, b34]
-0046  store_var @25 part#4, b35
-0047  b36 = load_var @26 part#4
+0046  init_global g4, b35
+0047  b36 = load_global g4
 0048  print b36
-0049  b37 = load_var @27 part#4
+0049  b37 = load_global g4
 0050  b38 = constant #11 0
 0051  b39 = constant #12 20
 0052  b40 = assign_index b37, b38, b39
-0053  b41 = load_var @28 xs#0
+0053  b41 = load_global g0
 0054  print b41
-0055  b42 = load_var @29 xs#0
+0055  b42 = load_global g0
 0056  b43 = constant #13 3
 0057  b44 = constant #14 0
 0058  b45 = native_call @30 slice [b42, b43, b44]
 0059  print b45
-0060  b46 = load_var @31 xs#0
+0060  b46 = load_global g0
 0061  b47 = native_call @32 copy [b46]
-0062  store_var @33 cloned#5, b47
-0063  b48 = load_var @34 cloned#5
+0062  init_global g5, b47
+0063  b48 = load_global g5
 0064  b49 = constant #15 0
 0065  b50 = constant #16 10
 0066  b51 = assign_index b48, b49, b50
-0067  b52 = load_var @35 xs#0
+0067  b52 = load_global g0
 0068  print b52
-0069  b53 = load_var @36 cloned#5
+0069  b53 = load_global g5
 0070  print b53
 0071  b54 = constant #17 1
 0072  b55 = array [b54]
-0073  store_var @37 inner#6, b55
-0074  b56 = load_var @38 inner#6
+0073  init_global g6, b55
+0074  b56 = load_global g6
 0075  b57 = array [b56]
-0076  store_var @39 outer#7, b57
-0077  b58 = load_var @40 outer#7
+0076  init_global g7, b57
+0077  b58 = load_global g7
 0078  b59 = native_call @41 copy [b58]
-0079  store_var @42 outerCopy#8, b59
-0080  b60 = load_var @43 outerCopy#8
+0079  init_global g8, b59
+0080  b60 = load_global g8
 0081  b61 = constant #18 0
 0082  b62 = index b60, b61
 0083  b63 = constant #19 2
 0084  b64 = native_call @44 push [b62, b63]
-0085  b65 = load_var @45 outer#7
+0085  b65 = load_global g7
 0086  print b65
-0087  b66 = load_var @46 xs#0
+0087  b66 = load_global g0
 0088  b67 = constant #20 4
 0089  b68 = constant #21 5
 0090  b69 = array [b67, b68]
 0091  b70 = native_call @47 concat [b66, b69]
 0092  print b70
-0093  b71 = load_var @48 xs#0
+0093  b71 = load_global g0
 0094  b72 = array []
 0095  b73 = native_call @49 concat [b71, b72]
 0096  print b73
 0097  b74 = make_function $0 <lambda>/1
-0098  store_var @51 copy#10, b74
-0099  b75 = load_var @52 copy#10
+0098  init_global g9, b74
+0099  b75 = load_global g9
 0100  b76 = constant #23 7
 0101  b77 = call b75(b76)
 0102  print b77
-0103  b78 = load_var @53 xs#0
+0103  b78 = load_global g0
 0104  b79 = native_call @54 copy [b78]
 0105  print b79
 
 function $0 <lambda>/1 registers=2
-0000  b0 = load_var @50 value#9
+0000  b0 = load_local l0
 0001  return b0
 0002  b1 = constant #22 nil
 0003  return b1

@@ -1,18 +1,18 @@
 main registers=11
 0000  b0 = constant #0 nil
-0001  store_var @0 make#0, b0
+0001  init_global g0, b0
 0002  b1 = make_function $0 make/0
-0003  assign_var @3 make#0, b1
+0003  set_global g0, b1
 0004  b2 = constant #3 nil
-0005  store_var @4 render#1, b2
+0005  init_global g1, b2
 0006  b3 = make_function $1 render/1
-0007  assign_var @15 render#1, b3
-0008  b4 = load_var @16 render#1
+0007  set_global g1, b3
+0008  b4 = load_global g1
 0009  b5 = constant #9 nil
 0010  b6 = call b4(b5)
 0011  print b6
-0012  b7 = load_var @17 render#1
-0013  b8 = load_var @18 make#0
+0012  b7 = load_global g1
+0013  b8 = load_global g0
 0014  b9 = call b8()
 0015  b10 = call b7(b9)
 0016  print b10
@@ -25,7 +25,7 @@ function $0 make/0 registers=3
 0004  return b2
 
 function $1 render/1 registers=16
-0000  b0 = load_var @5 value#2
+0000  b0 = load_local l0
 0001  b1 = constant #4 nil
 0002  b2 = equal b0, b1
 0003  jump_if_false b2, 0007
@@ -35,9 +35,9 @@ function $1 render/1 registers=16
 0007  b4 = variant_tag b0  @6 Outcome. @7 Good
 0008  jump_if_false b4, 0017
 0009  b5 = variant_field b0[0]
-0010  store_var @8 number#3, b5
+0010  bind_local l1, b5
 0011  b6 = constant #6 "good:"
-0012  b7 = load_var @9 number#3
+0012  b7 = load_local l1
 0013  b8 = native_call @10 str [b7]
 0014  b9 = add b6, b8
 0015  return b9
@@ -45,9 +45,9 @@ function $1 render/1 registers=16
 0017  b10 = variant_tag b0  @11 Outcome. @12 Bad
 0018  jump_if_false b10, 0026
 0019  b11 = variant_field b0[0]
-0020  store_var @13 message#4, b11
+0020  bind_local l2, b11
 0021  b12 = constant #7 "bad:"
-0022  b13 = load_var @14 message#4
+0022  b13 = load_local l2
 0023  b14 = add b12, b13
 0024  return b14
 0025  jump 0026

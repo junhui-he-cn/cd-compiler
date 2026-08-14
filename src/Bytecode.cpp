@@ -36,6 +36,14 @@ bool isBinary(BytecodeOp op)
     case BytecodeOp::LoadVar:
     case BytecodeOp::StoreVar:
     case BytecodeOp::AssignVar:
+    case BytecodeOp::LoadLocal:
+    case BytecodeOp::BindLocal:
+    case BytecodeOp::SetLocal:
+    case BytecodeOp::LoadUpvalue:
+    case BytecodeOp::SetUpvalue:
+    case BytecodeOp::LoadGlobal:
+    case BytecodeOp::InitGlobal:
+    case BytecodeOp::SetGlobal:
     case BytecodeOp::Call:
     case BytecodeOp::NativeCall:
     case BytecodeOp::Index:
@@ -213,6 +221,27 @@ void printInstruction(
         if (instruction.left) {
             out << ", " << *instruction.left;
         }
+    } else if (instruction.op == BytecodeOp::LoadLocal) {
+        out << " l" << instruction.operand;
+    } else if (instruction.op == BytecodeOp::BindLocal || instruction.op == BytecodeOp::SetLocal) {
+        out << " l" << instruction.operand;
+        if (instruction.left) {
+            out << ", " << *instruction.left;
+        }
+    } else if (instruction.op == BytecodeOp::LoadUpvalue) {
+        out << " u" << instruction.operand;
+    } else if (instruction.op == BytecodeOp::SetUpvalue) {
+        out << " u" << instruction.operand;
+        if (instruction.left) {
+            out << ", " << *instruction.left;
+        }
+    } else if (instruction.op == BytecodeOp::LoadGlobal) {
+        out << " g" << instruction.operand;
+    } else if (instruction.op == BytecodeOp::InitGlobal || instruction.op == BytecodeOp::SetGlobal) {
+        out << " g" << instruction.operand;
+        if (instruction.left) {
+            out << ", " << *instruction.left;
+        }
     } else if (instruction.op == BytecodeOp::Call) {
         if (instruction.left) {
             out << " " << *instruction.left << "(";
@@ -338,6 +367,11 @@ void BytecodeProgram::setFunctions(std::vector<BytecodeFunction> functions)
     functions_ = std::move(functions);
 }
 
+void BytecodeProgram::setGlobals(std::vector<std::uint32_t> globals)
+{
+    globals_ = std::move(globals);
+}
+
 const std::vector<Value>& BytecodeProgram::constants() const
 {
     return constants_;
@@ -363,6 +397,11 @@ const std::vector<BytecodeFunction>& BytecodeProgram::functions() const
     return functions_;
 }
 
+const std::vector<std::uint32_t>& BytecodeProgram::globals() const
+{
+    return globals_;
+}
+
 void BytecodeProgram::print(std::ostream& out) const
 {
     out << "main registers=" << registerCount_ << '\n';
@@ -375,6 +414,11 @@ void BytecodeProgram::print(std::ostream& out) const
         out << '\n'
             << "function $" << functionIndex << " " << function.name << "/" << function.parameters.size()
             << " registers=" << function.registerCount << '\n';
+        for (std::size_t i = 0; i < function.upvalues.size(); ++i) {
+            out << "upvalue u" << i << " = "
+                << (function.upvalues[i].sourceIsLocal ? "local l" : "upvalue u")
+                << function.upvalues[i].source << '\n';
+        }
         for (std::size_t i = 0; i < function.instructions.size(); ++i) {
             printInstruction(out, *this, function.instructions[i], i);
         }
@@ -408,6 +452,22 @@ std::string bytecodeOpName(BytecodeOp op)
         return "store_var";
     case BytecodeOp::AssignVar:
         return "assign_var";
+    case BytecodeOp::LoadLocal:
+        return "load_local";
+    case BytecodeOp::BindLocal:
+        return "bind_local";
+    case BytecodeOp::SetLocal:
+        return "set_local";
+    case BytecodeOp::LoadUpvalue:
+        return "load_upvalue";
+    case BytecodeOp::SetUpvalue:
+        return "set_upvalue";
+    case BytecodeOp::LoadGlobal:
+        return "load_global";
+    case BytecodeOp::InitGlobal:
+        return "init_global";
+    case BytecodeOp::SetGlobal:
+        return "set_global";
     case BytecodeOp::Call:
         return "call";
     case BytecodeOp::NativeCall:

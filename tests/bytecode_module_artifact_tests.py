@@ -45,7 +45,7 @@ def main() -> int:
         dependency_artifact = None
         for artifact in artifacts:
             text = artifact.read_text(encoding="utf-8")
-            if not text.startswith("cdbc 0.1\n\nartifact: module\n"):
+            if not text.startswith("cdbc 0.2\n\nartifact: module\n"):
                 return fail(f"{artifact.name} is missing the module envelope")
             if "  entry = true\n" in text:
                 entry_artifact = (artifact, text)

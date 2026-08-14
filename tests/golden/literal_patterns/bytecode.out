@@ -1,41 +1,41 @@
 main registers=60
 0000  b0 = constant #0 nil
-0001  store_var @0 describeNumber#0, b0
+0001  init_global g0, b0
 0002  b1 = make_function $0 describeNumber/1
-0003  assign_var @2 describeNumber#0, b1
+0003  set_global g0, b1
 0004  b2 = constant #7 nil
-0005  store_var @3 describeBool#2, b2
+0005  init_global g1, b2
 0006  b3 = make_function $1 describeBool/1
-0007  assign_var @5 describeBool#2, b3
+0007  set_global g1, b3
 0008  b4 = constant #13 nil
-0009  store_var @6 describeResult#4, b4
+0009  init_global g2, b4
 0010  b5 = make_function $2 describeResult/1
-0011  assign_var @23 describeResult#4, b5
+0011  set_global g2, b5
 0012  b6 = constant #24 nil
-0013  store_var @24 maybe#8, b6
-0014  b7 = load_var @25 describeNumber#0
+0013  init_global g3, b6
+0014  b7 = load_global g0
 0015  b8 = constant #25 0
 0016  b9 = call b7(b8)
 0017  print b9
-0018  b10 = load_var @26 describeNumber#0
+0018  b10 = load_global g0
 0019  b11 = constant #26 8
 0020  b12 = call b10(b11)
 0021  print b12
-0022  b13 = load_var @27 describeBool#2
+0022  b13 = load_global g1
 0023  b14 = constant #27 false
 0024  b15 = call b13(b14)
 0025  print b15
-0026  b16 = load_var @28 describeResult#4
+0026  b16 = load_global g2
 0027  b17 = constant #28 7
 0028  b18 = variant @29 Result. @30 Number (b17)
 0029  b19 = call b16(b18)
 0030  print b19
-0031  b20 = load_var @31 describeResult#4
+0031  b20 = load_global g2
 0032  b21 = constant #29 ""
 0033  b22 = variant @32 Result. @33 Text (b21)
 0034  b23 = call b20(b22)
 0035  print b23
-0036  b24 = load_var @34 describeResult#4
+0036  b24 = load_global g2
 0037  b25 = constant #30 nil
 0038  b26 = call b24(b25)
 0039  print b26
@@ -84,7 +84,7 @@ main registers=60
 0082  b49 = constant #47 "other"
 0083  print b49
 0084  jump 0085
-0085  b50 = load_var @35 maybe#8
+0085  b50 = load_global g3
 0086  b51 = constant #48 nil
 0087  b52 = equal b50, b51
 0088  jump_if_false b52, 0092
@@ -105,7 +105,7 @@ main registers=60
 0103  jump 0104
 
 function $0 describeNumber/1 registers=9
-0000  b0 = load_var @1 value#1
+0000  b0 = load_local l0
 0001  b1 = constant #1 0
 0002  b2 = equal b0, b1
 0003  jump_if_false b2, 0007
@@ -125,7 +125,7 @@ function $0 describeNumber/1 registers=9
 0017  return b8
 
 function $1 describeBool/1 registers=8
-0000  b0 = load_var @4 value#3
+0000  b0 = load_local l0
 0001  b1 = constant #8 true
 0002  b2 = equal b0, b1
 0003  jump_if_false b2, 0007
@@ -142,7 +142,7 @@ function $1 describeBool/1 registers=8
 0014  return b7
 
 function $2 describeResult/1 registers=28
-0000  b0 = load_var @7 value#5
+0000  b0 = load_local l0
 0001  b1 = constant #14 nil
 0002  b2 = equal b0, b1
 0003  jump_if_false b2, 0007
@@ -161,9 +161,9 @@ function $2 describeResult/1 registers=28
 0016  b9 = variant_tag b0  @10 Result. @11 Number
 0017  jump_if_false b9, 0026
 0018  b10 = variant_field b0[0]
-0019  store_var @12 value#6, b10
+0019  bind_local l1, b10
 0020  b11 = constant #18 "number:"
-0021  b12 = load_var @13 value#6
+0021  b12 = load_local l1
 0022  b13 = native_call @14 str [b12]
 0023  b14 = add b11, b13
 0024  return b14
@@ -180,9 +180,9 @@ function $2 describeResult/1 registers=28
 0035  b20 = variant_tag b0  @17 Result. @18 Text
 0036  jump_if_false b20, 0044
 0037  b21 = variant_field b0[0]
-0038  store_var @19 value#7, b21
+0038  bind_local l2, b21
 0039  b22 = constant #21 "text:"
-0040  b23 = load_var @20 value#7
+0040  b23 = load_local l2
 0041  b24 = add b22, b23
 0042  return b24
 0043  jump 0049
