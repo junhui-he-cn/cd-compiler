@@ -12,6 +12,8 @@ use std::rc::Weak;
 pub type Cell = Rc<TrackedStorage<Value>>;
 pub type Environment = HashMap<String, Cell>;
 pub type SharedEnvironment = Rc<TrackedStorage<Environment>>;
+pub type LocalSlots = Vec<Option<Cell>>;
+pub type SharedLocalSlots = Rc<TrackedStorage<LocalSlots>>;
 pub type SharedArrayElements = Rc<TrackedStorage<Vec<Value>>>;
 pub type SharedMapEntries = Rc<TrackedStorage<Vec<(Value, Value)>>>;
 pub type SharedStructFields = Rc<TrackedStorage<Vec<(String, Value)>>>;
@@ -62,6 +64,7 @@ pub struct VariantValue {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HeapObjectKind {
     Environment,
+    Locals,
     Cell,
     Array,
     Map,
@@ -69,15 +72,16 @@ pub enum HeapObjectKind {
 }
 
 impl HeapObjectKind {
-    const COUNT: usize = 5;
+    const COUNT: usize = 6;
 
     const fn index(self) -> usize {
         match self {
             Self::Environment => 0,
-            Self::Cell => 1,
-            Self::Array => 2,
-            Self::Map => 3,
-            Self::Struct => 4,
+            Self::Locals => 1,
+            Self::Cell => 2,
+            Self::Array => 3,
+            Self::Map => 4,
+            Self::Struct => 5,
         }
     }
 }
@@ -128,6 +132,7 @@ impl HeapStats {
 #[derive(Clone, Debug)]
 enum WeakAllocation {
     Environment(Weak<TrackedStorage<Environment>>),
+    Locals(Weak<TrackedStorage<LocalSlots>>),
     Cell(Weak<TrackedStorage<Value>>),
     Array(Weak<TrackedStorage<Vec<Value>>>),
     Map(Weak<TrackedStorage<Vec<(Value, Value)>>>),
@@ -138,6 +143,7 @@ impl WeakAllocation {
     fn kind(&self) -> HeapObjectKind {
         match self {
             Self::Environment(_) => HeapObjectKind::Environment,
+            Self::Locals(_) => HeapObjectKind::Locals,
             Self::Cell(_) => HeapObjectKind::Cell,
             Self::Array(_) => HeapObjectKind::Array,
             Self::Map(_) => HeapObjectKind::Map,
@@ -148,6 +154,9 @@ impl WeakAllocation {
     fn observe_estimated_bytes(&self) -> Option<usize> {
         match self {
             Self::Environment(value) => value
+                .upgrade()
+                .map(|storage| storage.observe_estimated_bytes()),
+            Self::Locals(value) => value
                 .upgrade()
                 .map(|storage| storage.observe_estimated_bytes()),
             Self::Cell(value) => value
@@ -168,6 +177,7 @@ impl WeakAllocation {
     fn is_live(&self) -> bool {
         match self {
             Self::Environment(value) => value.upgrade().is_some(),
+            Self::Locals(value) => value.upgrade().is_some(),
             Self::Cell(value) => value.upgrade().is_some(),
             Self::Array(value) => value.upgrade().is_some(),
             Self::Map(value) => value.upgrade().is_some(),
@@ -186,6 +196,28 @@ impl WeakAllocation {
                         .map(|cell| Rc::as_ptr(cell) as usize)
                         .collect()
                 })?;
+                Some(AllocationInfo {
+                    allocation: self.clone(),
+                    pointer,
+                    strong_count,
+                    outgoing,
+                })
+            }),
+            Self::Locals(value) => value.upgrade().and_then(|storage| {
+                let pointer = Rc::as_ptr(&storage) as usize;
+                let strong_count = Rc::strong_count(&storage).saturating_sub(1);
+                let outgoing = storage
+                    .try_borrow()
+                    .ok()
+                    .map(|slots| {
+                        slots
+                            .iter()
+                            .flatten()
+                            .map(Rc::as_ptr)
+                            .map(|pointer| pointer as usize)
+                            .collect()
+                    })
+                    .unwrap_or_default();
                 Some(AllocationInfo {
                     allocation: self.clone(),
                     pointer,
@@ -270,6 +302,13 @@ impl WeakAllocation {
                     return false;
                 };
                 environment.clear();
+                true
+            }),
+            Self::Locals(value) => value.upgrade().is_some_and(|storage| {
+                let Ok(mut locals) = storage.try_borrow_mut() else {
+                    return false;
+                };
+                locals.clear();
                 true
             }),
             Self::Cell(value) => value.upgrade().is_some_and(|storage| {
@@ -545,6 +584,10 @@ fn estimate_environment_payload(value: &Environment) -> usize {
     bytes
 }
 
+fn estimate_local_slots_payload(value: &LocalSlots) -> usize {
+    value.capacity().saturating_mul(size_of::<Option<Cell>>())
+}
+
 fn estimate_cell_payload(value: &Value) -> usize {
     estimate_inline_value_dynamic_bytes(value)
 }
@@ -695,6 +738,16 @@ impl Heap {
         )
     }
 
+    pub fn new_local_slots(&self) -> SharedLocalSlots {
+        tracked_storage(
+            &self.ledger,
+            HeapObjectKind::Locals,
+            Vec::new(),
+            estimate_local_slots_payload,
+            WeakAllocation::Locals,
+        )
+    }
+
     pub fn new_cell(&self, value: Value) -> Cell {
         tracked_storage(
             &self.ledger,
@@ -819,6 +872,10 @@ pub fn new_environment() -> SharedEnvironment {
     Heap::new().new_environment()
 }
 
+pub fn new_local_slots() -> SharedLocalSlots {
+    Heap::new().new_local_slots()
+}
+
 pub fn new_cell(value: Value) -> Cell {
     Heap::new().new_cell(value)
 }
@@ -886,6 +943,7 @@ mod tests {
         let mut heap = Heap::new();
         let stats = heap.stats();
         let environment = heap.new_environment();
+        let locals = heap.new_local_slots();
         let cell = heap.new_cell(Value::number(1.0));
         let array = heap
             .allocate_array(vec![Value::number(1.0)])
@@ -898,12 +956,13 @@ mod tests {
             .expect("struct identity should be available");
 
         let live = stats.snapshot();
-        assert_eq!(live.total_allocations, 5);
-        assert_eq!(live.total_live, 5);
+        assert_eq!(live.total_allocations, 6);
+        assert_eq!(live.total_live, 6);
         assert_eq!(live.total_dead, 0);
-        assert_eq!(live.peak_live, 5);
+        assert_eq!(live.peak_live, 6);
         for kind in [
             HeapObjectKind::Environment,
+            HeapObjectKind::Locals,
             HeapObjectKind::Cell,
             HeapObjectKind::Array,
             HeapObjectKind::Map,
@@ -915,16 +974,17 @@ mod tests {
         }
 
         drop(environment);
+        drop(locals);
         drop(cell);
         drop(array);
         drop(map);
         drop(structure);
 
         let dead = stats.snapshot();
-        assert_eq!(dead.total_allocations, 5);
+        assert_eq!(dead.total_allocations, 6);
         assert_eq!(dead.total_live, 0);
-        assert_eq!(dead.total_dead, 5);
-        assert_eq!(dead.peak_live, 5);
+        assert_eq!(dead.total_dead, 6);
+        assert_eq!(dead.peak_live, 6);
         assert_eq!(
             dead.for_kind(HeapObjectKind::Array).dead,
             dead.for_kind(HeapObjectKind::Array).allocations

@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use crate::bytecode::{DebugLocation, FunctionBody};
-use crate::runtime::SharedEnvironment;
+use crate::runtime::{SharedEnvironment, SharedLocalSlots};
 use crate::value::Value;
 use std::collections::{BTreeMap, VecDeque};
 use std::fmt;
@@ -11,6 +11,17 @@ use std::rc::Rc;
 /// and must not be persisted or transferred between VM instances.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TaskId(usize);
+
+/// Runtime-only resolution table for one function body: maps artifact name
+/// indexes to the owning frame's local slots. It is computed by the VM when a
+/// function body is prepared and is never serialized into `.cdbc` artifacts.
+#[derive(Debug, Default)]
+pub(crate) struct VariablePlan {
+    /// Name-table index -> local slot index.
+    pub(crate) local_slots: BTreeMap<usize, usize>,
+    /// Local slot index -> display name used by capture and observability.
+    pub(crate) local_names: Vec<String>,
+}
 
 impl TaskId {
     pub fn index(self) -> usize {
@@ -138,8 +149,9 @@ pub(crate) struct ResumableFrame {
     pub(crate) body: Option<Rc<FunctionBody>>,
     pub(crate) ip: usize,
     pub(crate) registers: Vec<Value>,
-    pub(crate) locals: SharedEnvironment,
+    pub(crate) locals: SharedLocalSlots,
     pub(crate) closure: SharedEnvironment,
+    pub(crate) variable_plan: Option<Rc<VariablePlan>>,
     pub(crate) is_main: bool,
     pub(crate) function: Rc<str>,
     pub(crate) function_index: Option<usize>,
@@ -150,7 +162,7 @@ impl ResumableFrame {
     pub(crate) fn main(
         body: Rc<FunctionBody>,
         register_count: usize,
-        locals: SharedEnvironment,
+        locals: SharedLocalSlots,
         closure: SharedEnvironment,
     ) -> Self {
         Self {
@@ -159,6 +171,7 @@ impl ResumableFrame {
             registers: vec![Value::Nil; register_count],
             locals,
             closure,
+            variable_plan: None,
             is_main: true,
             function: Rc::from("main"),
             function_index: None,
@@ -171,7 +184,7 @@ impl ResumableFrame {
         function: impl Into<Rc<str>>,
         function_index: usize,
         register_count: usize,
-        locals: SharedEnvironment,
+        locals: SharedLocalSlots,
         closure: SharedEnvironment,
         return_target: ReturnTarget,
     ) -> Self {
@@ -181,6 +194,7 @@ impl ResumableFrame {
             registers: vec![Value::Nil; register_count],
             locals,
             closure,
+            variable_plan: None,
             is_main: false,
             function: function.into(),
             function_index: Some(function_index),
@@ -790,7 +804,7 @@ mod tests {
 
     fn test_frame_stack() -> FrameStack {
         let heap = Heap::new();
-        let locals = heap.new_environment();
+        let locals = heap.new_local_slots();
         let closure = heap.new_environment();
         FrameStack::new(ResumableFrame::main(
             Rc::new(FunctionBody {
@@ -818,7 +832,7 @@ mod tests {
             "worker",
             3,
             4,
-            heap.new_environment(),
+            heap.new_local_slots(),
             heap.new_environment(),
             ReturnTarget {
                 register: 1,
@@ -869,7 +883,7 @@ mod tests {
             "root",
             0,
             1,
-            heap.new_environment(),
+            heap.new_local_slots(),
             heap.new_environment(),
             ReturnTarget {
                 register: 0,
@@ -890,8 +904,9 @@ mod tests {
             })),
             ip: 0,
             registers: vec![Value::Nil],
-            locals: heap.new_environment(),
+            locals: heap.new_local_slots(),
             closure: heap.new_environment(),
+            variable_plan: None,
             is_main: false,
             function: Rc::from("missing"),
             function_index: Some(1),
@@ -911,7 +926,7 @@ mod tests {
             "worker",
             1,
             1,
-            heap.new_environment(),
+            heap.new_local_slots(),
             heap.new_environment(),
             ReturnTarget {
                 register: 5,

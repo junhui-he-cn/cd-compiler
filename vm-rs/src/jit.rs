@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
 use crate::bytecode::{FunctionBody, Instruction, Program};
-use crate::runtime::SharedEnvironment;
-use crate::scheduler::{ResumableFrame, ReturnTarget, TaskId};
+use crate::runtime::{SharedEnvironment, SharedLocalSlots};
+use crate::scheduler::{ResumableFrame, ReturnTarget, TaskId, VariablePlan};
 use crate::value::Value as VmValue;
 use cranelift_codegen::ir::{
     types, AbiParam, ExtFuncData, ExternalName, FuncRef, Function, InstBuilder, Signature,
@@ -152,8 +152,9 @@ pub(crate) struct JitFrameMaterialization {
     body: Option<Rc<FunctionBody>>,
     ip: usize,
     registers: Vec<VmValue>,
-    locals: SharedEnvironment,
+    locals: SharedLocalSlots,
     closure: SharedEnvironment,
+    variable_plan: Option<Rc<VariablePlan>>,
     is_main: bool,
     function: Rc<str>,
     function_index: Option<usize>,
@@ -174,6 +175,7 @@ impl JitFrameMaterialization {
             registers: frame.registers.clone(),
             locals: frame.locals.clone(),
             closure: frame.closure.clone(),
+            variable_plan: frame.variable_plan.clone(),
             is_main: frame.is_main,
             function: frame.function.clone(),
             function_index: frame.function_index,
@@ -189,6 +191,7 @@ impl JitFrameMaterialization {
         frame.registers = self.registers.clone();
         frame.locals = self.locals.clone();
         frame.closure = self.closure.clone();
+        frame.variable_plan = self.variable_plan.clone();
         frame.is_main = self.is_main;
         frame.function = self.function.clone();
         frame.function_index = self.function_index;
@@ -211,7 +214,7 @@ impl JitFrameMaterialization {
         &mut self.registers
     }
 
-    pub(crate) fn locals(&self) -> &SharedEnvironment {
+    pub(crate) fn locals(&self) -> &SharedLocalSlots {
         &self.locals
     }
 
@@ -1742,7 +1745,7 @@ mod tests {
     #[test]
     fn frame_materialization_captures_and_restores_the_existing_frame_contract() {
         let heap = Heap::new();
-        let locals = heap.new_environment();
+        let locals = heap.new_local_slots();
         let closure = heap.new_environment();
         let body = Rc::new(FunctionBody {
             registers: 2,

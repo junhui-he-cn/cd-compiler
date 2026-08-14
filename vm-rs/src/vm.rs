@@ -13,7 +13,7 @@ use crate::runtime::{Cell, FunctionValue, Heap, HeapStats, SharedEnvironment};
 pub use crate::scheduler::{TaskId, TaskState};
 use crate::scheduler::{
     CooperativeScheduler, DispatchContext, FrameStack, JoinStatus, ResumableFrame as Frame,
-    ReturnTarget, SchedulerError, TaskStep,
+    ReturnTarget, SchedulerError, TaskStep, VariablePlan,
 };
 use crate::value::Value;
 use std::collections::BTreeMap;
@@ -891,7 +891,7 @@ pub struct RuntimeError {
 mod tests {
     use super::*;
     use crate::bytecode::Function;
-    use crate::runtime::{new_cell, new_environment};
+    use crate::runtime::{new_cell, new_environment, new_local_slots};
     use std::cell::RefCell;
 
     #[test]
@@ -1255,8 +1255,9 @@ mod tests {
             body: None,
             ip: 0,
             registers: vec![Value::string("returned")],
-            locals: vm.heap.new_environment(),
+            locals: vm.heap.new_local_slots(),
             closure: vm.heap.new_environment(),
+            variable_plan: None,
             is_main: false,
             function: Rc::from("returner"),
             function_index: Some(0),
@@ -3000,8 +3001,9 @@ mod tests {
             body: None,
             ip: 0,
             registers: Vec::new(),
-            locals: new_environment(),
+            locals: new_local_slots(),
             closure: new_environment(),
+            variable_plan: None,
             is_main: true,
             function: Rc::from("main"),
             function_index: None,
@@ -3037,8 +3039,9 @@ mod tests {
             body: None,
             ip: 0,
             registers: Vec::new(),
-            locals: new_environment(),
+            locals: new_local_slots(),
             closure: new_environment(),
+            variable_plan: None,
             is_main: false,
             function: Rc::from("closure"),
             function_index: Some(0),
@@ -4676,7 +4679,7 @@ mod tests {
             "jit_target",
             3,
             1,
-            vm.heap.new_environment(),
+            vm.heap.new_local_slots(),
             vm.heap.new_environment(),
             ReturnTarget {
                 register: 0,
@@ -4731,7 +4734,7 @@ mod tests {
                 locations: Vec::new(),
             }),
             0,
-            vm.heap.new_environment(),
+            vm.heap.new_local_slots(),
             vm.heap.new_environment(),
         );
 
@@ -5160,7 +5163,7 @@ mod tests {
             "protocol_failure",
             0,
             1,
-            vm.heap.new_environment(),
+            vm.heap.new_local_slots(),
             vm.heap.new_environment(),
             ReturnTarget {
                 register: 0,
@@ -5262,6 +5265,10 @@ mod tests {
             debug_sources: Vec::new(),
         };
         let mut vm = VM::new(&program);
+        let locals = vm.heap.new_local_slots();
+        locals.borrow_mut().push(Some(
+            vm.heap.new_cell(Value::number(4.0)),
+        ));
         let mut frame = Frame::callee(
             Rc::new(FunctionBody {
                 registers: 0,
@@ -5271,17 +5278,17 @@ mod tests {
             "jit_helper",
             0,
             0,
-            vm.heap.new_environment(),
+            locals,
             vm.heap.new_environment(),
             ReturnTarget {
                 register: 0,
                 call_site: None,
             },
         );
-        frame.locals.borrow_mut().insert(
-            "value".to_string(),
-            vm.heap.new_cell(Value::number(4.0)),
-        );
+        frame.variable_plan = Some(Rc::new(VariablePlan {
+            local_slots: BTreeMap::from([(0, 0)]),
+            local_names: vec!["value".to_string()],
+        }));
 
         let mut bridge = vm.jit_helper_bridge(&mut frame, None);
         let number = bridge
@@ -5357,7 +5364,7 @@ mod tests {
                 locations: Vec::new(),
             }),
             0,
-            vm.heap.new_environment(),
+            vm.heap.new_local_slots(),
             vm.heap.new_environment(),
         );
         let array = vm.make_array(vec![Value::number(7.0)]);
@@ -5641,6 +5648,7 @@ struct CachedFunctionBody {
     name: Rc<str>,
     params: Vec<String>,
     body: Rc<FunctionBody>,
+    variable_plan: Rc<VariablePlan>,
 }
 
 #[derive(Clone, Copy)]
@@ -6531,8 +6539,9 @@ impl<'a> CooperativeRun<'a> {
                 body: Some(Rc::new(self.vm.program.main.clone())),
                 ip: 0,
                 registers: vec![Value::Nil; self.vm.program.main.registers],
-                locals: self.vm.heap.new_environment(),
+                locals: self.vm.heap.new_local_slots(),
                 closure: self.vm.heap.new_environment(),
+                variable_plan: None,
                 is_main: true,
                 function: Rc::from("main"),
                 function_index: None,
@@ -6549,23 +6558,13 @@ impl<'a> CooperativeRun<'a> {
                         arguments.len()
                     )));
                 }
-                let locals = self.vm.heap.new_environment();
-                for (name, argument) in cached.params.iter().zip(arguments) {
-                    locals
-                        .borrow_mut()
-                        .insert(name.clone(), self.vm.heap.new_cell(argument));
-                }
-                Frame {
-                    body: Some(Rc::clone(&cached.body)),
-                    ip: 0,
-                    registers: vec![Value::Nil; cached.body.registers],
-                    locals,
-                    closure: self.vm.heap.new_environment(),
-                    is_main: false,
-                    function: Rc::clone(&cached.name),
-                    function_index: Some(index),
-                    return_target: None,
-                }
+                self.vm.new_function_frame(
+                    index,
+                    &cached,
+                    arguments,
+                    self.vm.heap.new_environment(),
+                    None,
+                )
             }
         };
         let frames = FrameStack::new(frame).map_err(|error| RuntimeError::new(error.to_string()))?;
@@ -6858,8 +6857,9 @@ impl<'a> VM<'a> {
                 body: None,
                 ip: 0,
                 registers: vec![Value::Nil; self.program.main.registers],
-                locals: self.heap.new_environment(),
+                locals: self.heap.new_local_slots(),
                 closure: self.heap.new_environment(),
+                variable_plan: None,
                 is_main: true,
                 function: Rc::from("main"),
                 function_index: None,
@@ -6900,7 +6900,7 @@ impl<'a> VM<'a> {
         let root = Frame::main(
             main_body,
             self.program.main.registers,
-            self.heap.new_environment(),
+            self.heap.new_local_slots(),
             self.heap.new_environment(),
         );
         let frames = FrameStack::new(root)
@@ -7267,47 +7267,16 @@ impl<'a> VM<'a> {
         }
         self.check_call_depth_at(task.frames.len().saturating_sub(1))?;
 
-        let frame = Frame {
-            body: Some(Rc::clone(&cached.body)),
-            ip: 0,
-            registers: vec![Value::Nil; cached.body.registers],
-            locals: self.heap.new_environment(),
-            closure: request.function.closure.clone(),
-            is_main: false,
-            function: Rc::clone(&cached.name),
-            function_index: Some(request.function.function_index),
-            return_target: Some(ReturnTarget {
+        let frame = self.new_function_frame(
+            request.function.function_index,
+            &cached,
+            request.arguments.values(),
+            request.function.closure.clone(),
+            Some(ReturnTarget {
                 register: request.dest,
                 call_site: request.call_site,
             }),
-        };
-        match request.arguments {
-            CallArguments::Empty => {}
-            CallArguments::One(argument) => {
-                frame.locals.borrow_mut().insert(
-                    cached.params[0].clone(),
-                    self.heap.new_cell(argument),
-                );
-            }
-            CallArguments::Two(first, second) => {
-                frame.locals.borrow_mut().insert(
-                    cached.params[0].clone(),
-                    self.heap.new_cell(first),
-                );
-                frame.locals.borrow_mut().insert(
-                    cached.params[1].clone(),
-                    self.heap.new_cell(second),
-                );
-            }
-            CallArguments::Many(arguments) => {
-                for (index, argument) in arguments.into_iter().enumerate() {
-                    frame.locals.borrow_mut().insert(
-                        cached.params[index].clone(),
-                        self.heap.new_cell(argument),
-                    );
-                }
-            }
-        }
+        );
         if self.profile_enabled {
             self.profile_function_entry(&frame);
             task.profile.function_entry(&frame);
@@ -9106,8 +9075,12 @@ impl<'a> VM<'a> {
         for (name, cell) in frame.closure.borrow().iter() {
             locals.insert(name.clone(), cell.borrow().to_string());
         }
-        for (name, cell) in frame.locals.borrow().iter() {
-            locals.insert(name.clone(), cell.borrow().to_string());
+        if let Some(plan) = frame.variable_plan.as_ref() {
+            for (slot, cell) in frame.locals.borrow().iter().enumerate() {
+                let Some(cell) = cell else { continue };
+                let name = plan.local_names.get(slot).cloned().unwrap_or_default();
+                locals.insert(name, cell.borrow().to_string());
+            }
         }
         locals.into_iter().collect()
     }
@@ -9119,8 +9092,12 @@ impl<'a> VM<'a> {
             for (name, cell) in frame.closure.borrow().iter() {
                 target.insert(name.clone(), cell.clone());
             }
-            for (name, cell) in frame.locals.borrow().iter() {
-                target.insert(name.clone(), cell.clone());
+            if let Some(plan) = frame.variable_plan.as_ref() {
+                for (slot, cell) in frame.locals.borrow().iter().enumerate() {
+                    let Some(cell) = cell else { continue };
+                    let name = plan.local_names.get(slot).cloned().unwrap_or_default();
+                    target.insert(name, cell.clone());
+                }
             }
         }
         captured
@@ -9137,6 +9114,47 @@ impl<'a> VM<'a> {
 
         let cached = {
             let function = self.program.functions.get(function_index)?;
+            let mut variable_plan = VariablePlan::default();
+            let mut slot_by_name = BTreeMap::new();
+            for param in &function.params {
+                let slot = variable_plan.local_names.len();
+                variable_plan.local_names.push(param.clone());
+                slot_by_name.insert(param.clone(), slot);
+            }
+            for instruction in &function.instructions {
+                let Instruction::StoreVar { name, .. } = instruction else {
+                    continue;
+                };
+                let text = self
+                    .program
+                    .names
+                    .get(*name)
+                    .cloned()
+                    .unwrap_or_default();
+                if !slot_by_name.contains_key(&text) {
+                    let slot = variable_plan.local_names.len();
+                    variable_plan.local_names.push(text.clone());
+                    slot_by_name.insert(text, slot);
+                }
+            }
+            for instruction in &function.instructions {
+                let name = match instruction {
+                    Instruction::StoreVar { name, .. }
+                    | Instruction::LoadVar { name, .. }
+                    | Instruction::AssignVar { name, .. } => Some(*name),
+                    _ => None,
+                };
+                let Some(name) = name else { continue };
+                let text = self
+                    .program
+                    .names
+                    .get(name)
+                    .map(String::as_str)
+                    .unwrap_or_default();
+                if let Some(slot) = slot_by_name.get(text) {
+                    variable_plan.local_slots.insert(name, *slot);
+                }
+            }
             Rc::new(CachedFunctionBody {
                 name: Rc::from(function.name.as_str()),
                 params: function.params.clone(),
@@ -9145,11 +9163,46 @@ impl<'a> VM<'a> {
                     instructions: function.instructions.clone(),
                     locations: function.locations.clone(),
                 }),
+                variable_plan: Rc::new(variable_plan),
             })
         };
         let slot = self.function_body_cache.get_mut(function_index)?;
         *slot = Some(Rc::clone(&cached));
         Some(cached)
+    }
+
+    fn new_function_frame(
+        &mut self,
+        function_index: usize,
+        cached: &CachedFunctionBody,
+        arguments: Vec<Value>,
+        closure: SharedEnvironment,
+        return_target: Option<ReturnTarget>,
+    ) -> Frame {
+        let locals = self.heap.new_local_slots();
+        locals
+            .borrow_mut()
+            .resize(cached.variable_plan.local_names.len(), None);
+        {
+            let mut slots = locals.borrow_mut();
+            for (slot, value) in arguments.into_iter().enumerate() {
+                if let Some(target) = slots.get_mut(slot) {
+                    *target = Some(self.heap.new_cell(value));
+                }
+            }
+        }
+        Frame {
+            body: Some(Rc::clone(&cached.body)),
+            ip: 0,
+            registers: vec![Value::Nil; cached.body.registers],
+            locals,
+            closure,
+            variable_plan: Some(Rc::clone(&cached.variable_plan)),
+            is_main: false,
+            function: Rc::clone(&cached.name),
+            function_index: Some(function_index),
+            return_target,
+        }
     }
 
     fn make_function(
@@ -9328,45 +9381,13 @@ impl<'a> VM<'a> {
 
         self.check_call_depth()?;
 
-        let mut frame = Frame {
-            body: Some(Rc::clone(&cached.body)),
-            ip: 0,
-            registers: vec![Value::Nil; cached.body.registers],
-            locals: self.heap.new_environment(),
-            closure: function.closure.clone(),
-            is_main: false,
-            function: Rc::clone(&cached.name),
-            function_index: Some(function.function_index),
-            return_target: None,
-        };
-
-        match arguments {
-            CallArguments::Empty => {}
-            CallArguments::One(argument) => {
-                frame.locals.borrow_mut().insert(
-                    cached.params[0].clone(),
-                    self.heap.new_cell(argument),
-                );
-            }
-            CallArguments::Two(first, second) => {
-                frame.locals.borrow_mut().insert(
-                    cached.params[0].clone(),
-                    self.heap.new_cell(first),
-                );
-                frame.locals.borrow_mut().insert(
-                    cached.params[1].clone(),
-                    self.heap.new_cell(second),
-                );
-            }
-            CallArguments::Many(arguments) => {
-                for (index, argument) in arguments.into_iter().enumerate() {
-                    frame.locals.borrow_mut().insert(
-                        cached.params[index].clone(),
-                        self.heap.new_cell(argument),
-                    );
-                }
-            }
-        }
+        let mut frame = self.new_function_frame(
+            function.function_index,
+            &cached,
+            jit_arguments.clone(),
+            function.closure.clone(),
+            None,
+        );
 
         self.call_depth += 1;
         let result = if self.jit.is_enabled() {
@@ -10380,10 +10401,13 @@ impl<'a> VM<'a> {
         Ok(self.read_name_ref(index)?.to_string())
     }
 
-    fn find_cell(&self, frame: &Frame, name: &str) -> Option<Cell> {
-        if let Some(cell) = frame.locals.borrow().get(name) {
-            return Some(cell.clone());
-        }
+    fn find_local_cell(&self, frame: &Frame, name_index: usize) -> Option<Cell> {
+        let plan = frame.variable_plan.as_ref()?;
+        let slot = plan.local_slots.get(&name_index)?;
+        frame.locals.borrow().get(*slot)?.clone()
+    }
+
+    fn find_outer_cell(&self, frame: &Frame, name: &str) -> Option<Cell> {
         if let Some(cell) = frame.closure.borrow().get(name) {
             return Some(cell.clone());
         }
@@ -10393,6 +10417,9 @@ impl<'a> VM<'a> {
     fn load_variable(&mut self, frame: &Frame, name_index: usize) -> Result<Value, RuntimeError> {
         if frame.is_main {
             return Ok(self.global_cell_ref(name_index)?.borrow().clone());
+        }
+        if let Some(cell) = self.find_local_cell(frame, name_index) {
+            return Ok(cell.borrow().clone());
         }
         let cell = self.variable_cell(frame, name_index)?;
         let value = cell.borrow().clone();
@@ -10406,9 +10433,22 @@ impl<'a> VM<'a> {
             if let Some(cache_index) = self.global_name_slots.get(name_index).copied() {
                 self.global_cell_cache[cache_index] = Some(cell);
             }
-        } else {
-            frame.locals.borrow_mut().insert(name, cell);
+            return;
         }
+        if let Some(slot) = frame
+            .variable_plan
+            .as_ref()
+            .and_then(|plan| plan.local_slots.get(&name_index).copied())
+        {
+            let mut locals = frame.locals.borrow_mut();
+            if slot < locals.len() {
+                locals[slot] = Some(cell);
+                return;
+            }
+        }
+        // Hand-built frames without a resolved plan keep the legacy
+        // name-keyed fallback in the closure environment.
+        frame.closure.borrow_mut().insert(name, cell);
     }
 
     fn assign_variable(
@@ -10421,23 +10461,20 @@ impl<'a> VM<'a> {
             *self.global_cell_ref(name_index)?.borrow_mut() = value;
             return Ok(());
         }
+        if let Some(cell) = self.find_local_cell(frame, name_index) {
+            *cell.borrow_mut() = value;
+            return Ok(());
+        }
         let cell = self.variable_cell(frame, name_index)?;
         *cell.borrow_mut() = value;
         Ok(())
     }
 
     fn variable_cell(&mut self, frame: &Frame, name_index: usize) -> Result<Cell, RuntimeError> {
-        if frame.is_main {
-            return self.global_cell(name_index);
-        }
-
+        debug_assert!(!frame.is_main);
         let name = self.read_name_ref(name_index)?;
-        self.find_cell(frame, name)
+        self.find_outer_cell(frame, name)
             .ok_or_else(|| RuntimeError::new(format!("undefined variable `{}`", name)))
-    }
-
-    fn global_cell(&mut self, name_index: usize) -> Result<Cell, RuntimeError> {
-        Ok(self.global_cell_ref(name_index)?.clone())
     }
 
     fn global_cell_ref(&mut self, name_index: usize) -> Result<&Cell, RuntimeError> {
