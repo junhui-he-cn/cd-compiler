@@ -1,6 +1,8 @@
 # Compiler Design ByteCode Text Format
 
 This document describes the stable text artifact format for Compiler Design bytecode files.
+An instruction-by-instruction reference in Chinese is available in
+[`bytecode-instructions-zh.md`](bytecode-instructions-zh.md).
 
 The file extension is `.cdbc`, short for Compiler Design ByteCode.
 
