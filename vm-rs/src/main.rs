@@ -43,7 +43,10 @@ fn enforce_size(path: &Path, config: &RunConfig) -> Result<(), String> {
     Ok(())
 }
 
-fn read_artifact(path: impl AsRef<Path>, config: &RunConfig) -> Result<format::Artifact, String> {
+fn read_artifact_unverified(
+    path: impl AsRef<Path>,
+    config: &RunConfig,
+) -> Result<format::Artifact, String> {
     let path = path.as_ref();
     enforce_size(path, config)?;
     let source = fs::read_to_string(path)
@@ -53,13 +56,17 @@ fn read_artifact(path: impl AsRef<Path>, config: &RunConfig) -> Result<format::A
             return Err(resource_limit_error("artifact bytes", limit));
         }
     }
-    let artifact = format::parse_artifact(&source).map_err(|error| format!("error: {}", error))?;
+    format::parse_artifact(&source).map_err(|error| format!("error: {}", error))
+}
+
+fn read_artifact(path: impl AsRef<Path>, config: &RunConfig) -> Result<format::Artifact, String> {
+    let artifact = read_artifact_unverified(path, config)?;
     format::verify_artifact(&artifact).map_err(|error| format!("error: {}", error))?;
     Ok(artifact)
 }
 
 fn read_program(path: impl AsRef<Path>, config: &RunConfig) -> Result<Program, String> {
-    match read_artifact(path, config)? {
+    match read_artifact_unverified(path, config)? {
         format::Artifact::Program(program) => Ok(program),
         format::Artifact::Module(_) => {
             Err("error: cannot run an unlinked module artifact".to_string())
@@ -80,7 +87,8 @@ fn verify(path: &str, config: &RunConfig) -> Result<(), String> {
 
 fn run(path: &str, config: &RunConfig) -> Result<(), String> {
     let program = read_program(path, config)?;
-    let output = vm::VM::with_config(&program, config.clone())
+    let output = vm::VM::with_config_verified(&program, config.clone())
+        .map_err(|error| format!("error: {}", error))?
         .run()
         .map_err(|error| error.to_string())?;
     print!("{}", output);
@@ -594,7 +602,9 @@ fn format_trace_event(program: &Program, event: &vm::TraceEvent) -> String {
 
 fn trace(path: &str, config: &RunConfig) -> Result<(), String> {
     let program = read_program(path, config)?;
-    let traced = vm::VM::with_config(&program, config.clone()).trace();
+    let traced = vm::VM::with_config_verified(&program, config.clone())
+        .map_err(|error| format!("error: {}", error))?
+        .trace();
     for event in &traced.events {
         println!("{}", format_trace_event(&program, event));
     }
@@ -670,7 +680,9 @@ fn print_profile_report(program: &Program, profiled: &vm::ProfileRun) {
 
 fn profile(path: &str, config: &RunConfig) -> Result<(), String> {
     let program = read_program(path, config)?;
-    let profiled = vm::VM::with_config(&program, config.clone()).profile();
+    let profiled = vm::VM::with_config_verified(&program, config.clone())
+        .map_err(|error| format!("error: {}", error))?
+        .profile();
     print_profile_report(&program, &profiled);
     profiled.result.map(|_| ()).map_err(|error| error.to_string())
 }
@@ -678,7 +690,8 @@ fn profile(path: &str, config: &RunConfig) -> Result<(), String> {
 fn debug(path: &str, config: &RunConfig) -> Result<(), String> {
     let program = read_program(path, config)?;
     let sources = program.debug_sources.clone();
-    let session = vm::VM::with_config(&program, config.clone())
+    let session = vm::VM::with_config_verified(&program, config.clone())
+        .map_err(|error| format!("error: {}", error))?
         .debug(Box::new(InteractiveDebugger::new(sources)));
     if session.quit {
         return Ok(());

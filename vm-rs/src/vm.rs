@@ -7,6 +7,7 @@ use crate::jit::{
     JitCallContext, JitFrameMaterialization, JitExecutionMode, JitHelperAbi, JitSafepoint,
     JitSafepointKind, JitState, RuntimeHelper, JIT_ERROR_HANDLE,
 };
+use crate::format::ParseError;
 #[cfg(test)]
 use crate::runtime::HeapObjectKind;
 use crate::runtime::{Cell, FunctionValue, Heap, HeapStats, SharedEnvironment};
@@ -3026,6 +3027,28 @@ mod tests {
     }
 
     #[test]
+    fn verified_constructor_rejects_malformed_programs_and_unverified_keeps_runtime_checks() {
+        let mut program = empty_program();
+        program.constants = vec![Constant::Nil];
+        program.main.registers = 1;
+        program.main.instructions = vec![Instruction::Constant { dest: 3, constant: 0 }];
+        program.main.locations = vec![None];
+
+        let verified_error = match VM::with_config_verified(&program, RunConfig::unlimited()) {
+            Ok(_) => panic!("out-of-range registers must fail construction-time verification"),
+            Err(error) => error,
+        };
+        assert!(verified_error
+            .message
+            .contains("destination register r3 out of range"));
+
+        let runtime_error = VM::new(&program)
+            .run()
+            .expect_err("unverified construction keeps the runtime bounds check");
+        assert_eq!(runtime_error.message, "register index out of range");
+    }
+
+    #[test]
     fn profile_reports_tracked_array_allocations_and_peak() {
         let profiled = VM::with_config(&array_churn_program(4), RunConfig::unlimited()).profile();
         assert!(profiled.result.is_ok());
@@ -5961,6 +5984,7 @@ impl Index<usize> for NativeArguments {
 pub struct VM<'a> {
     program: &'a Program,
     config: RunConfig,
+    verified: bool,
     instruction_checkpoint: InstructionCheckpoint,
     heap: Heap,
     globals: SharedEnvironment,
@@ -6629,6 +6653,21 @@ impl<'a> VM<'a> {
     }
 
     pub fn with_config(program: &'a Program, config: RunConfig) -> Self {
+        Self::build(program, config, false)
+    }
+
+    /// Construct a VM that has verified the program once, up front. The
+    /// execution paths may then skip the per-operand bounds checks they keep
+    /// for hand-built, unverified programs.
+    pub fn with_config_verified(
+        program: &'a Program,
+        config: RunConfig,
+    ) -> Result<Self, ParseError> {
+        crate::format::verify_program(program)?;
+        Ok(Self::build(program, config, true))
+    }
+
+    fn build(program: &'a Program, config: RunConfig, verified: bool) -> Self {
         let instruction_checkpoint = match (&config.cancellation, config.max_instruction_steps) {
             (None, Some(limit)) => InstructionCheckpoint::Limited(limit),
             (None, None) => InstructionCheckpoint::Unlimited,
@@ -6665,6 +6704,7 @@ impl<'a> VM<'a> {
         Self {
             program,
             config,
+            verified,
             instruction_checkpoint,
             heap,
             globals,
@@ -7758,7 +7798,9 @@ impl<'a> VM<'a> {
         target: usize,
         instruction_count: usize,
     ) -> Result<(), RuntimeError> {
-        self.validate_jump_target(target, instruction_count)?;
+        if !self.verified {
+            self.validate_jump_target(target, instruction_count)?;
+        }
         frame.ip = target;
         Ok(())
     }
@@ -10110,11 +10152,16 @@ impl<'a> VM<'a> {
     }
 
     fn read_name_ref(&self, index: usize) -> Result<&'a str, RuntimeError> {
-        self.program
-            .names
-            .get(index)
-            .map(String::as_str)
-            .ok_or_else(|| RuntimeError::new("name index out of range"))
+        if self.verified {
+            debug_assert!(index < self.program.names.len());
+            Ok(&self.program.names[index])
+        } else {
+            self.program
+                .names
+                .get(index)
+                .map(String::as_str)
+                .ok_or_else(|| RuntimeError::new("name index out of range"))
+        }
     }
 
     fn read_name(&self, index: usize) -> Result<String, RuntimeError> {
@@ -10239,6 +10286,10 @@ impl<'a> VM<'a> {
     }
 
     fn constant_value(&self, index: usize) -> Result<Value, RuntimeError> {
+        if self.verified {
+            debug_assert!(index < self.decoded_constants.len());
+            return Ok(self.decoded_constants[index].clone());
+        }
         let value = self
             .decoded_constants
             .get(index)
@@ -10250,11 +10301,16 @@ impl<'a> VM<'a> {
     }
 
     fn read_register(&self, frame: &Frame, index: usize) -> Result<Value, RuntimeError> {
-        frame
-            .registers
-            .get(index)
-            .cloned()
-            .ok_or_else(|| RuntimeError::new("register index out of range"))
+        if self.verified {
+            debug_assert!(index < frame.registers.len());
+            Ok(frame.registers[index].clone())
+        } else {
+            frame
+                .registers
+                .get(index)
+                .cloned()
+                .ok_or_else(|| RuntimeError::new("register index out of range"))
+        }
     }
 
     fn read_register_ref<'frame>(
@@ -10262,10 +10318,15 @@ impl<'a> VM<'a> {
         frame: &'frame Frame,
         index: usize,
     ) -> Result<&'frame Value, RuntimeError> {
-        frame
-            .registers
-            .get(index)
-            .ok_or_else(|| RuntimeError::new("register index out of range"))
+        if self.verified {
+            debug_assert!(index < frame.registers.len());
+            Ok(&frame.registers[index])
+        } else {
+            frame
+                .registers
+                .get(index)
+                .ok_or_else(|| RuntimeError::new("register index out of range"))
+        }
     }
 
     fn write_register(
@@ -10274,20 +10335,30 @@ impl<'a> VM<'a> {
         index: usize,
         value: Value,
     ) -> Result<(), RuntimeError> {
-        let slot = frame
-            .registers
-            .get_mut(index)
-            .ok_or_else(|| RuntimeError::new("register index out of range"))?;
-        *slot = value;
+        if self.verified {
+            debug_assert!(index < frame.registers.len());
+            frame.registers[index] = value;
+        } else {
+            let slot = frame
+                .registers
+                .get_mut(index)
+                .ok_or_else(|| RuntimeError::new("register index out of range"))?;
+            *slot = value;
+        }
         Ok(())
     }
 
     fn take_register(&self, frame: &mut Frame, index: usize) -> Result<Value, RuntimeError> {
-        let slot = frame
-            .registers
-            .get_mut(index)
-            .ok_or_else(|| RuntimeError::new("register index out of range"))?;
-        Ok(std::mem::replace(slot, Value::Nil))
+        if self.verified {
+            debug_assert!(index < frame.registers.len());
+            Ok(std::mem::replace(&mut frame.registers[index], Value::Nil))
+        } else {
+            let slot = frame
+                .registers
+                .get_mut(index)
+                .ok_or_else(|| RuntimeError::new("register index out of range"))?;
+            Ok(std::mem::replace(slot, Value::Nil))
+        }
     }
 
     fn expect_number(
