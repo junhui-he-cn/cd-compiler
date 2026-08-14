@@ -244,13 +244,14 @@ BytecodeModuleArtifact compileModuleArtifact(
     return artifact;
 }
 
-void writeArtifactFile(const std::filesystem::path& path, const std::string& text)
+template <typename Writer>
+void writeArtifactFile(const std::filesystem::path& path, const Writer& writer)
 {
     std::ofstream output(path);
     if (!output) {
         throw std::runtime_error("failed to open bytecode output file: " + path.string());
     }
-    output << text;
+    writer(output);
     if (!output) {
         throw std::runtime_error("failed to write bytecode output file: " + path.string());
     }
@@ -348,12 +349,13 @@ void writeModuleArtifacts(
             entryOrders,
             declarationIndex,
             optimizationLevel);
-        std::ostringstream text;
-        writeBytecodeModuleText(text, artifact);
+        const auto writeModuleArtifact = [&artifact](std::ostream& out) {
+            writeBytecodeModuleText(out, artifact);
+        };
         if (cached != cacheDecisionsByIdentity.end()) {
-            writeArtifactFile(*cacheDirectory / cached->second->artifactPath, text.str());
+            writeArtifactFile(*cacheDirectory / cached->second->artifactPath, writeModuleArtifact);
         }
-        writeArtifactFile(outputPath, text.str());
+        writeArtifactFile(outputPath, writeModuleArtifact);
     }
 
     if (cacheDirectory) {
@@ -555,16 +557,9 @@ int main(int argc, char** argv)
             }
 
             if (config.emitBytecodePath) {
-                std::ostringstream artifact;
-                writeBytecodeText(artifact, *bytecode);
-                std::ofstream output(*config.emitBytecodePath);
-                if (!output) {
-                    throw std::runtime_error("failed to open bytecode output file: " + *config.emitBytecodePath);
-                }
-                output << artifact.str();
-                if (!output) {
-                    throw std::runtime_error("failed to write bytecode output file: " + *config.emitBytecodePath);
-                }
+                writeArtifactFile(*config.emitBytecodePath, [&bytecode](std::ostream& out) {
+                    writeBytecodeText(out, *bytecode);
+                });
                 return 0;
             }
 
