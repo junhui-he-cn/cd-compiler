@@ -1,8 +1,8 @@
 # Versioning and branch policy
 
 The project is currently on the `0.1` release line. The canonical machine-
-readable version is stored in `VERSION`; the current value is `0.1.0` and the
-matching annotated Git tag is `v0.1.0`.
+readable version is stored in `VERSION`; the `0.1.1` release branch carries
+`VERSION` value `0.1.1` and the matching annotated Git tag is `v0.1.1`.
 
 ## Version rules
 
@@ -27,6 +27,11 @@ an existing tag or move a tag after it has been pushed.
 `master` is the integration and release branch. It must remain buildable and
 green under the repository verification gate. Start each roadmap slice from
 the latest `origin/master` in a focused branch:
+
+The `0.1.1` branch freezes the 0.1.x release line. It is deletion- and
+force-push-protected on the remote; compatible maintenance work lands there
+through normal fast-forward pushes, while new development continues on
+`master`.
 
 ```sh
 git fetch origin
