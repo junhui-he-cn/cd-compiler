@@ -71,6 +71,7 @@ globals:
   g8 = n32
 
 main registers=35:
+block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
@@ -121,34 +122,44 @@ main registers=35:
   print r33
   r34 = load_global g8
   print r34
+  return_nil
 
 function f0 name="<lambda>" arity=2 registers=6:
   param 0 = "acc#2"
   param 1 = "value#3"
   upvalue u0 = global g1
+block b0:
   r0 = load_local l0
   r1 = load_local l1
   r2 = add r0, r1
   r3 = load_upvalue u0
   r4 = add r2, r3
   return r4
+block b1:
   r5 = constant c5
   return r5
+block b2:
+  return_nil
 
 function f1 name="<lambda>" arity=2 registers=4:
   param 0 = "acc#5"
   param 1 = "value#6"
+block b0:
   r0 = load_local l0
   r1 = load_local l1
   r2 = multiply r0, r1
   return r2
+block b1:
   r3 = constant c7
   return r3
+block b2:
+  return_nil
 
 function f2 name="<lambda>" arity=2 registers=7:
   param 0 = "acc#9"
   param 1 = "value#10"
   upvalue u0 = global g4
+block b0:
   r0 = load_upvalue u0
   r1 = constant c11
   r2 = native_call n16 [r0, r1]
@@ -156,199 +167,254 @@ function f2 name="<lambda>" arity=2 registers=7:
   r4 = load_local l1
   r5 = add r3, r4
   return r5
+block b1:
   r6 = constant c12
   return r6
+block b2:
+  return_nil
 
 function f3 name="<lambda>" arity=2 registers=2:
   param 0 = "acc#12"
   param 1 = "value#13"
+block b0:
   r0 = load_local l0
   return r0
+block b1:
   r1 = constant c14
   return r1
+block b2:
+  return_nil
 
 function f4 name="<lambda>" arity=2 registers=5:
   param 0 = "acc#16"
   param 1 = "value#17"
+block b0:
   r0 = load_local l0
   r1 = load_local l1
   r2 = native_call n29 [r0, r1]
   r3 = load_local l0
   return r3
+block b1:
   r4 = constant c15
   return r4
+block b2:
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/array_reduce/input.cd" text="let values: [number] = [1, 2, 3];\nlet offset: number = 10;\nlet total: number = reduce(values, 0, fun (acc, value) {\n  return acc + value + offset;\n});\nlet product: number = values.reduce(1, fun (acc: number, value: number): number {\n  return acc * value;\n});\nlet snapshot: [number] = [1, 2];\nlet snapshotTotal: number = reduce(snapshot, 0, fun (acc, value) {\n  push(snapshot, 9);\n  return acc + value;\n});\nlet empty: string = [].reduce(\"seed\", fun (acc: string, value): string {\n  return acc;\n});\nlet initial: [number] = [];\nlet collected: [number] = reduce(values, initial, fun (acc, value) {\n  push(acc, value);\n  return acc;\n});\n\nprint total;\nprint product;\nprint snapshotTotal;\nprint snapshot;\nprint empty;\nprint collected;\n"
 
 debug_locations:
   main 0 = s0:1:25
-  main 1 = s0:1:28
-  main 2 = s0:1:31
-  main 3 = s0:1:24
-  main 4 = s0:1:1
-  main 5 = s0:2:22
-  main 6 = s0:2:1
-  main 7 = s0:3:28
-  main 8 = s0:3:36
-  main 9 = s0:3:39
-  main 10 = s0:3:21
-  main 11 = s0:3:1
-  main 12 = s0:6:23
-  main 13 = s0:6:37
-  main 14 = s0:6:40
-  main 15 = s0:6:23
-  main 16 = s0:6:1
-  main 17 = s0:9:27
-  main 18 = s0:9:30
-  main 19 = s0:9:26
-  main 20 = s0:9:1
-  main 21 = s0:10:36
-  main 22 = s0:10:46
-  main 23 = s0:10:49
-  main 24 = s0:10:29
-  main 25 = s0:10:1
-  main 26 = s0:14:21
-  main 27 = s0:14:31
-  main 28 = s0:14:39
-  main 29 = s0:14:21
-  main 30 = s0:14:1
-  main 31 = s0:17:25
-  main 32 = s0:17:1
-  main 33 = s0:18:34
-  main 34 = s0:18:42
-  main 35 = s0:18:51
-  main 36 = s0:18:27
-  main 37 = s0:18:1
-  main 38 = s0:23:7
-  main 39 = s0:23:1
-  main 40 = s0:24:7
-  main 41 = s0:24:1
-  main 42 = s0:25:7
-  main 43 = s0:25:1
-  main 44 = s0:26:7
-  main 45 = s0:26:1
-  main 46 = s0:27:7
-  main 47 = s0:27:1
-  main 48 = s0:28:7
-  main 49 = s0:28:1
+  main 1 = s0:1:25
+  main 2 = s0:1:28
+  main 3 = s0:1:31
+  main 4 = s0:1:24
+  main 5 = s0:1:1
+  main 6 = s0:2:22
+  main 7 = s0:2:1
+  main 8 = s0:3:28
+  main 9 = s0:3:36
+  main 10 = s0:3:39
+  main 11 = s0:3:21
+  main 12 = s0:3:1
+  main 13 = s0:6:23
+  main 14 = s0:6:37
+  main 15 = s0:6:40
+  main 16 = s0:6:23
+  main 17 = s0:6:1
+  main 18 = s0:9:27
+  main 19 = s0:9:30
+  main 20 = s0:9:26
+  main 21 = s0:9:1
+  main 22 = s0:10:36
+  main 23 = s0:10:46
+  main 24 = s0:10:49
+  main 25 = s0:10:29
+  main 26 = s0:10:1
+  main 27 = s0:14:21
+  main 28 = s0:14:31
+  main 29 = s0:14:39
+  main 30 = s0:14:21
+  main 31 = s0:14:1
+  main 32 = s0:17:25
+  main 33 = s0:17:1
+  main 34 = s0:18:34
+  main 35 = s0:18:42
+  main 36 = s0:18:51
+  main 37 = s0:18:27
+  main 38 = s0:18:1
+  main 39 = s0:23:7
+  main 40 = s0:23:1
+  main 41 = s0:24:7
+  main 42 = s0:24:1
+  main 43 = s0:25:7
+  main 44 = s0:25:1
+  main 45 = s0:26:7
+  main 46 = s0:26:1
+  main 47 = s0:27:7
+  main 48 = s0:27:1
+  main 49 = s0:28:7
+  main 50 = s0:28:1
+  main 51 = s0:28:1
   function f0 0 = s0:4:10
-  function f0 1 = s0:4:16
-  function f0 2 = s0:4:10
-  function f0 3 = s0:4:24
-  function f0 4 = s0:4:10
-  function f0 5 = s0:4:3
-  function f0 6 = s0:3:39
+  function f0 1 = s0:4:10
+  function f0 2 = s0:4:16
+  function f0 3 = s0:4:10
+  function f0 4 = s0:4:24
+  function f0 5 = s0:4:10
+  function f0 6 = s0:4:3
   function f0 7 = s0:3:39
+  function f0 8 = s0:3:39
+  function f0 9 = s0:3:39
+  function f0 10 = s0:3:39
+  function f0 11 = s0:3:39
   function f1 0 = s0:7:10
-  function f1 1 = s0:7:16
-  function f1 2 = s0:7:10
-  function f1 3 = s0:7:3
-  function f1 4 = s0:6:40
+  function f1 1 = s0:7:10
+  function f1 2 = s0:7:16
+  function f1 3 = s0:7:10
+  function f1 4 = s0:7:3
   function f1 5 = s0:6:40
+  function f1 6 = s0:6:40
+  function f1 7 = s0:6:40
+  function f1 8 = s0:6:40
+  function f1 9 = s0:6:40
   function f2 0 = s0:11:8
-  function f2 1 = s0:11:18
-  function f2 2 = s0:11:3
-  function f2 3 = s0:12:10
-  function f2 4 = s0:12:16
-  function f2 5 = s0:12:10
-  function f2 6 = s0:12:3
-  function f2 7 = s0:10:49
+  function f2 1 = s0:11:8
+  function f2 2 = s0:11:18
+  function f2 3 = s0:11:3
+  function f2 4 = s0:12:10
+  function f2 5 = s0:12:16
+  function f2 6 = s0:12:10
+  function f2 7 = s0:12:3
   function f2 8 = s0:10:49
+  function f2 9 = s0:10:49
+  function f2 10 = s0:10:49
+  function f2 11 = s0:10:49
+  function f2 12 = s0:10:49
   function f3 0 = s0:15:10
-  function f3 1 = s0:15:3
-  function f3 2 = s0:14:39
+  function f3 1 = s0:15:10
+  function f3 2 = s0:15:3
   function f3 3 = s0:14:39
+  function f3 4 = s0:14:39
+  function f3 5 = s0:14:39
+  function f3 6 = s0:14:39
+  function f3 7 = s0:14:39
   function f4 0 = s0:19:8
-  function f4 1 = s0:19:13
-  function f4 2 = s0:19:3
-  function f4 3 = s0:20:10
-  function f4 4 = s0:20:3
-  function f4 5 = s0:18:51
+  function f4 1 = s0:19:8
+  function f4 2 = s0:19:13
+  function f4 3 = s0:19:3
+  function f4 4 = s0:20:10
+  function f4 5 = s0:20:3
   function f4 6 = s0:18:51
+  function f4 7 = s0:18:51
+  function f4 8 = s0:18:51
+  function f4 9 = s0:18:51
+  function f4 10 = s0:18:51
 
 debug_ranges:
   main 0 = s0:24:25
-  main 1 = s0:27:28
-  main 2 = s0:30:31
-  main 3 = s0:23:31
-  main 4 = s0:4:31
-  main 5 = s0:55:57
-  main 6 = s0:38:57
-  main 7 = s0:86:92
-  main 8 = s0:94:95
-  main 9 = s0:97:145
-  main 10 = s0:79:149
-  main 11 = s0:63:149
-  main 12 = s0:173:179
-  main 13 = s0:187:188
-  main 14 = s0:190:253
-  main 15 = s0:173:257
-  main 16 = s0:155:257
-  main 17 = s0:285:286
-  main 18 = s0:288:289
-  main 19 = s0:284:289
-  main 20 = s0:263:289
-  main 21 = s0:327:335
-  main 22 = s0:337:338
-  main 23 = s0:340:400
-  main 24 = s0:320:404
-  main 25 = s0:296:404
-  main 26 = s0:426:427
-  main 27 = s0:436:442
-  main 28 = s0:444:491
-  main 29 = s0:426:495
-  main 30 = s0:410:495
-  main 31 = s0:521:522
-  main 32 = s0:501:522
-  main 33 = s0:558:564
-  main 34 = s0:566:573
-  main 35 = s0:575:626
-  main 36 = s0:551:630
-  main 37 = s0:529:630
-  main 38 = s0:639:644
+  main 1 = s0:24:25
+  main 2 = s0:27:28
+  main 3 = s0:30:31
+  main 4 = s0:23:31
+  main 5 = s0:4:31
+  main 6 = s0:55:57
+  main 7 = s0:38:57
+  main 8 = s0:86:92
+  main 9 = s0:94:95
+  main 10 = s0:97:145
+  main 11 = s0:79:149
+  main 12 = s0:63:149
+  main 13 = s0:173:179
+  main 14 = s0:187:188
+  main 15 = s0:190:253
+  main 16 = s0:173:257
+  main 17 = s0:155:257
+  main 18 = s0:285:286
+  main 19 = s0:288:289
+  main 20 = s0:284:289
+  main 21 = s0:263:289
+  main 22 = s0:327:335
+  main 23 = s0:337:338
+  main 24 = s0:340:400
+  main 25 = s0:320:404
+  main 26 = s0:296:404
+  main 27 = s0:426:427
+  main 28 = s0:436:442
+  main 29 = s0:444:491
+  main 30 = s0:426:495
+  main 31 = s0:410:495
+  main 32 = s0:521:522
+  main 33 = s0:501:522
+  main 34 = s0:558:564
+  main 35 = s0:566:573
+  main 36 = s0:575:626
+  main 37 = s0:551:630
+  main 38 = s0:529:630
   main 39 = s0:639:644
-  main 40 = s0:652:659
+  main 40 = s0:639:644
   main 41 = s0:652:659
-  main 42 = s0:667:680
+  main 42 = s0:652:659
   main 43 = s0:667:680
-  main 44 = s0:688:696
+  main 44 = s0:667:680
   main 45 = s0:688:696
-  main 46 = s0:704:709
+  main 46 = s0:688:696
   main 47 = s0:704:709
-  main 48 = s0:717:726
+  main 48 = s0:704:709
   main 49 = s0:717:726
+  main 50 = s0:717:726
+  main 51 = s0:717:726
   function f0 0 = s0:125:128
-  function f0 1 = s0:131:136
-  function f0 2 = s0:125:136
-  function f0 3 = s0:139:145
-  function f0 4 = s0:125:145
-  function f0 5 = s0:118:145
-  function f0 6 = s0:97:145
+  function f0 1 = s0:125:128
+  function f0 2 = s0:131:136
+  function f0 3 = s0:125:136
+  function f0 4 = s0:139:145
+  function f0 5 = s0:125:145
+  function f0 6 = s0:118:145
   function f0 7 = s0:97:145
+  function f0 8 = s0:97:145
+  function f0 9 = s0:97:145
+  function f0 10 = s0:97:145
+  function f0 11 = s0:97:145
   function f1 0 = s0:242:245
-  function f1 1 = s0:248:253
-  function f1 2 = s0:242:253
-  function f1 3 = s0:235:253
-  function f1 4 = s0:190:253
+  function f1 1 = s0:242:245
+  function f1 2 = s0:248:253
+  function f1 3 = s0:242:253
+  function f1 4 = s0:235:253
   function f1 5 = s0:190:253
+  function f1 6 = s0:190:253
+  function f1 7 = s0:190:253
+  function f1 8 = s0:190:253
+  function f1 9 = s0:190:253
   function f2 0 = s0:366:374
-  function f2 1 = s0:376:377
-  function f2 2 = s0:361:378
-  function f2 3 = s0:389:392
-  function f2 4 = s0:395:400
-  function f2 5 = s0:389:400
-  function f2 6 = s0:382:400
-  function f2 7 = s0:340:400
+  function f2 1 = s0:366:374
+  function f2 2 = s0:376:377
+  function f2 3 = s0:361:378
+  function f2 4 = s0:389:392
+  function f2 5 = s0:395:400
+  function f2 6 = s0:389:400
+  function f2 7 = s0:382:400
   function f2 8 = s0:340:400
+  function f2 9 = s0:340:400
+  function f2 10 = s0:340:400
+  function f2 11 = s0:340:400
+  function f2 12 = s0:340:400
   function f3 0 = s0:488:491
-  function f3 1 = s0:481:491
-  function f3 2 = s0:444:491
+  function f3 1 = s0:488:491
+  function f3 2 = s0:481:491
   function f3 3 = s0:444:491
+  function f3 4 = s0:444:491
+  function f3 5 = s0:444:491
+  function f3 6 = s0:444:491
+  function f3 7 = s0:444:491
   function f4 0 = s0:601:604
-  function f4 1 = s0:606:611
-  function f4 2 = s0:596:612
-  function f4 3 = s0:623:626
-  function f4 4 = s0:616:626
-  function f4 5 = s0:575:626
+  function f4 1 = s0:601:604
+  function f4 2 = s0:606:611
+  function f4 3 = s0:596:612
+  function f4 4 = s0:623:626
+  function f4 5 = s0:616:626
   function f4 6 = s0:575:626
+  function f4 7 = s0:575:626
+  function f4 8 = s0:575:626
+  function f4 9 = s0:575:626
+  function f4 10 = s0:575:626

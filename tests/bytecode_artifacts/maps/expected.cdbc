@@ -27,6 +27,7 @@ globals:
   g1 = n2
 
 main registers=21:
+block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
@@ -54,64 +55,69 @@ main registers=21:
   r19 = constant c8
   r20 = native_call n8 [r18, r19]
   print r20
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/maps/input.cd" text="let prices: map<string, number> = {\"tea\": 3, \"coffee\": 5};\nlet alias = prices;\nalias[\"water\"] = 2;\nprint prices[\"tea\"];\nprint prices[\"water\"];\nprint len(prices);\nprint contains(prices, \"coffee\");\n"
 
 debug_locations:
   main 0 = s0:1:36
-  main 1 = s0:1:43
-  main 2 = s0:1:46
-  main 3 = s0:1:56
-  main 4 = s0:1:35
-  main 5 = s0:1:1
-  main 6 = s0:2:13
-  main 7 = s0:2:1
-  main 8 = s0:3:1
-  main 9 = s0:3:7
-  main 10 = s0:3:18
-  main 11 = s0:3:1
-  main 12 = s0:4:7
-  main 13 = s0:4:14
-  main 14 = s0:4:7
-  main 15 = s0:4:1
-  main 16 = s0:5:7
-  main 17 = s0:5:14
-  main 18 = s0:5:7
-  main 19 = s0:5:1
-  main 20 = s0:6:11
-  main 21 = s0:6:7
-  main 22 = s0:6:1
-  main 23 = s0:7:16
-  main 24 = s0:7:24
-  main 25 = s0:7:7
-  main 26 = s0:7:1
+  main 1 = s0:1:36
+  main 2 = s0:1:43
+  main 3 = s0:1:46
+  main 4 = s0:1:56
+  main 5 = s0:1:35
+  main 6 = s0:1:1
+  main 7 = s0:2:13
+  main 8 = s0:2:1
+  main 9 = s0:3:1
+  main 10 = s0:3:7
+  main 11 = s0:3:18
+  main 12 = s0:3:1
+  main 13 = s0:4:7
+  main 14 = s0:4:14
+  main 15 = s0:4:7
+  main 16 = s0:4:1
+  main 17 = s0:5:7
+  main 18 = s0:5:14
+  main 19 = s0:5:7
+  main 20 = s0:5:1
+  main 21 = s0:6:11
+  main 22 = s0:6:7
+  main 23 = s0:6:1
+  main 24 = s0:7:16
+  main 25 = s0:7:24
+  main 26 = s0:7:7
+  main 27 = s0:7:1
+  main 28 = s0:7:1
 
 debug_ranges:
   main 0 = s0:35:40
-  main 1 = s0:42:43
-  main 2 = s0:45:53
-  main 3 = s0:55:56
-  main 4 = s0:34:56
-  main 5 = s0:4:56
-  main 6 = s0:71:77
-  main 7 = s0:63:77
-  main 8 = s0:79:84
-  main 9 = s0:85:92
-  main 10 = s0:96:97
-  main 11 = s0:79:97
-  main 12 = s0:105:111
-  main 13 = s0:112:117
-  main 14 = s0:105:117
+  main 1 = s0:35:40
+  main 2 = s0:42:43
+  main 3 = s0:45:53
+  main 4 = s0:55:56
+  main 5 = s0:34:56
+  main 6 = s0:4:56
+  main 7 = s0:71:77
+  main 8 = s0:63:77
+  main 9 = s0:79:84
+  main 10 = s0:85:92
+  main 11 = s0:96:97
+  main 12 = s0:79:97
+  main 13 = s0:105:111
+  main 14 = s0:112:117
   main 15 = s0:105:117
-  main 16 = s0:126:132
-  main 17 = s0:133:140
-  main 18 = s0:126:140
+  main 16 = s0:105:117
+  main 17 = s0:126:132
+  main 18 = s0:133:140
   main 19 = s0:126:140
-  main 20 = s0:153:159
-  main 21 = s0:149:160
+  main 20 = s0:126:140
+  main 21 = s0:153:159
   main 22 = s0:149:160
-  main 23 = s0:177:183
-  main 24 = s0:185:193
-  main 25 = s0:168:194
+  main 23 = s0:149:160
+  main 24 = s0:177:183
+  main 25 = s0:185:193
   main 26 = s0:168:194
+  main 27 = s0:168:194
+  main 28 = s0:168:194

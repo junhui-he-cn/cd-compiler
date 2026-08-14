@@ -19,70 +19,100 @@ globals:
   g0 = n0
 
 main registers=12:
+block b0:
   r0 = constant c0
   init_global g0, r0
+  br b1
+block b1:
   r1 = load_global g0
   r2 = constant c1
   r3 = less r1, r2
-  jump_if_false r3, 20
+  br_if r3, b2, b6
+block b2:
   r4 = load_global g0
   r5 = constant c2
   r6 = equal r4, r5
-  jump_if_false r6, 13
+  br_if r6, b3, b4
+block b3:
   r7 = constant c3
   print r7
-  jump 15
+  br b5
+block b4:
   r8 = constant c4
   print r8
+  br b5
+block b5:
   r9 = load_global g0
   r10 = constant c5
   r11 = add r9, r10
   set_global g0, r11
-  jump 2
+  br b1
+block b6:
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/control_flow/input.cd" text="let i = 0;\nwhile i < 2 {\n  if i == 1 {\n    print \"one\";\n  } else {\n    print \"zero\";\n  }\n  i = i + 1;\n}\n"
 
 debug_locations:
   main 0 = s0:1:9
-  main 1 = s0:1:1
-  main 2 = s0:2:7
-  main 3 = s0:2:11
+  main 1 = s0:1:9
+  main 2 = s0:1:1
+  main 3 = s0:1:1
   main 4 = s0:2:7
-  main 5 = s0:2:1
-  main 6 = s0:3:6
-  main 7 = s0:3:11
-  main 8 = s0:3:6
-  main 9 = s0:3:3
-  main 10 = s0:4:11
-  main 11 = s0:4:5
-  main 12 = s0:3:3
-  main 13 = s0:6:11
-  main 14 = s0:6:5
-  main 15 = s0:8:7
-  main 16 = s0:8:11
-  main 17 = s0:8:7
-  main 18 = s0:8:3
-  main 19 = s0:2:1
+  main 5 = s0:2:7
+  main 6 = s0:2:11
+  main 7 = s0:2:7
+  main 8 = s0:2:1
+  main 9 = s0:3:6
+  main 10 = s0:3:6
+  main 11 = s0:3:11
+  main 12 = s0:3:6
+  main 13 = s0:3:3
+  main 14 = s0:4:11
+  main 15 = s0:4:11
+  main 16 = s0:4:5
+  main 17 = s0:3:3
+  main 18 = s0:6:11
+  main 19 = s0:6:11
+  main 20 = s0:6:5
+  main 21 = s0:6:5
+  main 22 = s0:8:7
+  main 23 = s0:8:7
+  main 24 = s0:8:11
+  main 25 = s0:8:7
+  main 26 = s0:8:3
+  main 27 = s0:2:1
+  main 28 = s0:2:1
+  main 29 = s0:2:1
 
 debug_ranges:
   main 0 = s0:8:9
-  main 1 = s0:4:9
-  main 2 = s0:17:18
-  main 3 = s0:21:22
-  main 4 = s0:17:22
-  main 5 = s0:17:100
-  main 6 = s0:30:31
-  main 7 = s0:35:36
-  main 8 = s0:30:36
-  main 9 = s0:30:83
-  main 10 = s0:49:54
-  main 11 = s0:49:54
-  main 12 = s0:30:83
-  main 13 = s0:77:83
-  main 14 = s0:77:83
-  main 15 = s0:95:96
-  main 16 = s0:99:100
-  main 17 = s0:95:100
-  main 18 = s0:91:100
-  main 19 = s0:17:100
+  main 1 = s0:8:9
+  main 2 = s0:4:9
+  main 3 = s0:4:9
+  main 4 = s0:17:18
+  main 5 = s0:17:18
+  main 6 = s0:21:22
+  main 7 = s0:17:22
+  main 8 = s0:17:100
+  main 9 = s0:30:31
+  main 10 = s0:30:31
+  main 11 = s0:35:36
+  main 12 = s0:30:36
+  main 13 = s0:30:83
+  main 14 = s0:49:54
+  main 15 = s0:49:54
+  main 16 = s0:49:54
+  main 17 = s0:30:83
+  main 18 = s0:77:83
+  main 19 = s0:77:83
+  main 20 = s0:77:83
+  main 21 = s0:77:83
+  main 22 = s0:95:96
+  main 23 = s0:95:96
+  main 24 = s0:99:100
+  main 25 = s0:95:100
+  main 26 = s0:91:100
+  main 27 = s0:17:100
+  main 28 = s0:17:100
+  main 29 = s0:17:100

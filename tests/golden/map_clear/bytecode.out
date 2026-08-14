@@ -1,32 +1,34 @@
 main registers=23
-0000  b0 = constant #0 "a"
-0001  b1 = constant #1 1
-0002  b2 = constant #2 "b"
-0003  b3 = constant #3 2
-0004  b4 = map [b0: b1, b2: b3]
-0005  init_global g0, b4
-0006  b5 = load_global g0
-0007  init_global g1, b5
-0008  b6 = load_global g0
-0009  b7 = native_call @4 clear [b6]
-0010  print b7
-0011  b8 = load_global g1
-0012  print b8
-0013  b9 = load_global g0
-0014  b10 = constant #4 "c"
-0015  b11 = constant #5 3
-0016  b12 = assign_index b9, b10, b11
-0017  b13 = load_global g1
-0018  print b13
-0019  b14 = load_global g1
-0020  b15 = native_call @9 clear [b14]
-0021  print b15
-0022  b16 = load_global g0
-0023  b17 = len b16
-0024  print b17
-0025  b18 = load_global g0
-0026  b19 = constant #6 "d"
-0027  b20 = constant #7 4
-0028  b21 = assign_index b18, b19, b20
-0029  b22 = load_global g0
-0030  print b22
+0000  block
+0001  b0 = constant #0 "a"
+0002  b1 = constant #1 1
+0003  b2 = constant #2 "b"
+0004  b3 = constant #3 2
+0005  b4 = map [b0: b1, b2: b3]
+0006  init_global g0, b4
+0007  b5 = load_global g0
+0008  init_global g1, b5
+0009  b6 = load_global g0
+0010  b7 = native_call @4 clear [b6]
+0011  print b7
+0012  b8 = load_global g1
+0013  print b8
+0014  b9 = load_global g0
+0015  b10 = constant #4 "c"
+0016  b11 = constant #5 3
+0017  b12 = assign_index b9, b10, b11
+0018  b13 = load_global g1
+0019  print b13
+0020  b14 = load_global g1
+0021  b15 = native_call @9 clear [b14]
+0022  print b15
+0023  b16 = load_global g0
+0024  b17 = len b16
+0025  print b17
+0026  b18 = load_global g0
+0027  b19 = constant #6 "d"
+0028  b20 = constant #7 4
+0029  b21 = assign_index b18, b19, b20
+0030  b22 = load_global g0
+0031  print b22
+0032  return_nil

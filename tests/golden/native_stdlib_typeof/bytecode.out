@@ -1,42 +1,52 @@
 main registers=20
-0000  b0 = constant #0 nil
-0001  b1 = native_call @0 typeOf [b0]
-0002  print b1
-0003  b2 = constant #1 1
-0004  b3 = native_call @1 typeOf [b2]
-0005  print b3
-0006  b4 = constant #2 true
-0007  b5 = native_call @2 typeOf [b4]
-0008  print b5
-0009  b6 = constant #3 "x"
-0010  b7 = native_call @3 typeOf [b6]
-0011  print b7
-0012  b8 = make_function $0 <lambda>/0
-0013  b9 = native_call @4 typeOf [b8]
-0014  print b9
-0015  b10 = constant #6 1
-0016  b11 = array [b10]
-0017  b12 = native_call @5 typeOf [b11]
-0018  print b12
-0019  b13 = constant #7 1
-0020  b14 = struct @6 Box { @7 value: b13}
-0021  b15 = native_call @8 typeOf [b14]
-0022  print b15
-0023  b16 = make_function $1 <lambda>/1
-0024  init_global g0, b16
-0025  b17 = load_global g0
-0026  b18 = constant #10 123
-0027  b19 = call b17(b18)
-0028  print b19
+0000  block
+0001  b0 = constant #0 nil
+0002  b1 = native_call @0 typeOf [b0]
+0003  print b1
+0004  b2 = constant #1 1
+0005  b3 = native_call @1 typeOf [b2]
+0006  print b3
+0007  b4 = constant #2 true
+0008  b5 = native_call @2 typeOf [b4]
+0009  print b5
+0010  b6 = constant #3 "x"
+0011  b7 = native_call @3 typeOf [b6]
+0012  print b7
+0013  b8 = make_function $0 <lambda>/0
+0014  b9 = native_call @4 typeOf [b8]
+0015  print b9
+0016  b10 = constant #6 1
+0017  b11 = array [b10]
+0018  b12 = native_call @5 typeOf [b11]
+0019  print b12
+0020  b13 = constant #7 1
+0021  b14 = struct @6 Box { @7 value: b13}
+0022  b15 = native_call @8 typeOf [b14]
+0023  print b15
+0024  b16 = make_function $1 <lambda>/1
+0025  init_global g0, b16
+0026  b17 = load_global g0
+0027  b18 = constant #10 123
+0028  b19 = call b17(b18)
+0029  print b19
+0030  return_nil
 
 function $0 <lambda>/0 registers=2
-0000  b0 = constant #4 nil
-0001  return b0
-0002  b1 = constant #5 nil
-0003  return b1
+0000  block
+0001  b0 = constant #4 nil
+0002  return b0
+0003  block
+0004  b1 = constant #5 nil
+0005  return b1
+0006  block
+0007  return_nil
 
 function $1 <lambda>/1 registers=2
-0000  b0 = constant #8 "shadowed"
-0001  return b0
-0002  b1 = constant #9 nil
-0003  return b1
+0000  block
+0001  b0 = constant #8 "shadowed"
+0002  return b0
+0003  block
+0004  b1 = constant #9 nil
+0005  return b1
+0006  block
+0007  return_nil

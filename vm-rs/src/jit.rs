@@ -728,13 +728,20 @@ impl JitState {
             });
         }
 
+        let mut returned = false;
         for (instruction, operation) in function.instructions.iter().enumerate() {
+            if returned {
+                // Unreachable tail after the first return does not constrain
+                // admission or lowering.
+                continue;
+            }
             match operation {
                 Instruction::Constant { .. }
                 | Instruction::Move { .. }
                 | Instruction::LoadVar { .. }
                 | Instruction::LoadLocal { .. }
                 | Instruction::LoadUpvalue { .. }
+                | Instruction::BlockStart { .. }
                 | Instruction::Negate { .. }
                 | Instruction::Not { .. }
                 | Instruction::Add { .. }
@@ -747,7 +754,9 @@ impl JitState {
                 | Instruction::GreaterEqual { .. }
                 | Instruction::Less { .. }
                 | Instruction::LessEqual { .. }
-                | Instruction::Return { .. } => {}
+                | Instruction::Return { .. } => {
+                    returned = true;
+                }
                 Instruction::Call { .. } => {
                     return JitEligibility::Fallback(JitFallbackReason::DynamicCall {
                         instruction,
@@ -1552,6 +1561,7 @@ fn lower_to_cranelift_ir(
                     builder.ins().return_(&[value]);
                     returned = true;
                 }
+                Instruction::BlockStart { .. } => {}
                 _ => {
                     return Err(format!(
                         "unsupported instruction {} reached Cranelift lowering",
@@ -1757,6 +1767,10 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
         Instruction::Jump { .. } => "jump",
         Instruction::JumpIfFalse { .. } => "jump_if_false",
         Instruction::JumpIfTrue { .. } => "jump_if_true",
+        Instruction::BlockStart { .. } => "block",
+        Instruction::Br { .. } => "br",
+        Instruction::BrIf { .. } => "br_if",
+        Instruction::ReturnNil => "return_nil",
     }
 }
 

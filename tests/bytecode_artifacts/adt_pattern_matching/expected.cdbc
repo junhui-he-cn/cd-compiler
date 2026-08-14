@@ -21,58 +21,76 @@ globals:
   g1 = n6
 
 main registers=8:
+block b0:
   r0 = constant c0
   r1 = variant n0.n1 [r0]
   init_global g0, r1
   r2 = load_global g0
   r3 = variant_tag r2 n4.n5
-  jump_if_false r3, 11
+  br_if r3, b1, b2
+block b1:
   r4 = variant_field r2 0
   init_global g1, r4
   r5 = load_global g1
   print r5
-  jump 16
+  return_nil
+block b2:
   r6 = variant_tag r2 n8.n9
-  jump_if_false r6, 16
+  br_if r6, b3, b4
+block b3:
   r7 = constant c1
   print r7
-  jump 16
+  return_nil
+block b4:
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/adt_pattern_matching/input.cd" text="enum Option { Some(number), None }\nlet value = Option.Some(4);\nmatch value {\n  Option.Some(number) => { print number; }\n  Option.None => { print 0; }\n}\n"
 
 debug_locations:
   main 0 = s0:2:25
-  main 1 = s0:2:13
-  main 2 = s0:2:1
-  main 3 = s0:3:7
-  main 4 = s0:3:1
+  main 1 = s0:2:25
+  main 2 = s0:2:13
+  main 3 = s0:2:1
+  main 4 = s0:3:7
   main 5 = s0:3:1
   main 6 = s0:3:1
   main 7 = s0:3:1
-  main 8 = s0:4:34
-  main 9 = s0:4:28
-  main 10 = s0:3:1
-  main 11 = s0:3:1
+  main 8 = s0:3:1
+  main 9 = s0:3:1
+  main 10 = s0:4:34
+  main 11 = s0:4:28
   main 12 = s0:3:1
-  main 13 = s0:5:26
-  main 14 = s0:5:20
+  main 13 = s0:3:1
+  main 14 = s0:3:1
   main 15 = s0:3:1
+  main 16 = s0:5:26
+  main 17 = s0:5:26
+  main 18 = s0:5:20
+  main 19 = s0:3:1
+  main 20 = s0:3:1
+  main 21 = s0:3:1
 
 debug_ranges:
   main 0 = s0:59:60
-  main 1 = s0:47:61
-  main 2 = s0:39:61
-  main 3 = s0:69:74
-  main 4 = s0:69:146
+  main 1 = s0:59:60
+  main 2 = s0:47:61
+  main 3 = s0:39:61
+  main 4 = s0:69:74
   main 5 = s0:69:146
   main 6 = s0:69:146
   main 7 = s0:69:146
-  main 8 = s0:110:116
-  main 9 = s0:110:116
-  main 10 = s0:69:146
-  main 11 = s0:69:146
+  main 8 = s0:69:146
+  main 9 = s0:69:146
+  main 10 = s0:110:116
+  main 11 = s0:110:116
   main 12 = s0:69:146
-  main 13 = s0:145:146
-  main 14 = s0:145:146
+  main 13 = s0:69:146
+  main 14 = s0:69:146
   main 15 = s0:69:146
+  main 16 = s0:145:146
+  main 17 = s0:145:146
+  main 18 = s0:145:146
+  main 19 = s0:69:146
+  main 20 = s0:69:146
+  main 21 = s0:69:146

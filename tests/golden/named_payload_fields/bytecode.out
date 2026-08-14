@@ -1,125 +1,163 @@
 main registers=27
-0000  b0 = constant #0 nil
-0001  init_global g0, b0
-0002  b1 = make_function $0 pairScore/1
-0003  set_global g0, b1
-0004  b2 = constant #4 nil
-0005  init_global g1, b2
-0006  b3 = make_function $1 describe/1
-0007  set_global g1, b3
-0008  b4 = constant #9 nil
-0009  init_global g2, b4
-0010  b5 = make_function $2 unwrap/1
-0011  set_global g2, b5
-0012  b6 = load_global g0
-0013  b7 = constant #12 2
-0014  b8 = constant #13 4
-0015  b9 = variant @46 Pair. @47 Values (b7, b8)
-0016  b10 = call b6(b9)
-0017  print b10
-0018  b11 = load_global g1
-0019  b12 = constant #14 7
-0020  b13 = variant @49 Result. @50 Ok (b12)
-0021  b14 = call b11(b13)
-0022  print b14
-0023  b15 = load_global g1
-0024  b16 = constant #15 "bad"
-0025  b17 = variant @52 Result. @53 Err (b16)
-0026  b18 = call b15(b17)
-0027  print b18
-0028  b19 = load_global g1
-0029  b20 = variant @55 Result. @56 Empty ()
-0030  b21 = call b19(b20)
-0031  print b21
-0032  b22 = load_global g2
-0033  b23 = constant #16 9
-0034  b24 = variant @58 Result. @59 Ok (b23)
-0035  b25 = variant @60 Box. @61 Wrap (b24)
-0036  b26 = call b22(b25)
-0037  print b26
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 pairScore/1
+0004  set_global g0, b1
+0005  b2 = constant #4 nil
+0006  init_global g1, b2
+0007  b3 = make_function $1 describe/1
+0008  set_global g1, b3
+0009  b4 = constant #9 nil
+0010  init_global g2, b4
+0011  b5 = make_function $2 unwrap/1
+0012  set_global g2, b5
+0013  b6 = load_global g0
+0014  b7 = constant #12 2
+0015  b8 = constant #13 4
+0016  b9 = variant @46 Pair. @47 Values (b7, b8)
+0017  b10 = call b6(b9)
+0018  print b10
+0019  b11 = load_global g1
+0020  b12 = constant #14 7
+0021  b13 = variant @49 Result. @50 Ok (b12)
+0022  b14 = call b11(b13)
+0023  print b14
+0024  b15 = load_global g1
+0025  b16 = constant #15 "bad"
+0026  b17 = variant @52 Result. @53 Err (b16)
+0027  b18 = call b15(b17)
+0028  print b18
+0029  b19 = load_global g1
+0030  b20 = variant @55 Result. @56 Empty ()
+0031  b21 = call b19(b20)
+0032  print b21
+0033  b22 = load_global g2
+0034  b23 = constant #16 9
+0035  b24 = variant @58 Result. @59 Ok (b23)
+0036  b25 = variant @60 Box. @61 Wrap (b24)
+0037  b26 = call b22(b25)
+0038  print b26
+0039  return_nil
 
 function $0 pairScore/1 registers=12
-0000  b0 = load_local l0
-0001  b1 = variant_tag b0  @2 Pair. @3 Values
-0002  jump_if_false b1, 0014
-0003  b2 = variant_field b0[0]
-0004  b3 = variant_field b0[1]
-0005  bind_local l1, b2
-0006  bind_local l2, b3
-0007  b4 = load_local l2
-0008  b5 = constant #1 10
-0009  b6 = multiply b4, b5
-0010  b7 = load_local l1
-0011  b8 = add b6, b7
-0012  return b8
-0013  jump 0019
-0014  b9 = variant_tag b0  @8 Pair. @9 Empty
-0015  jump_if_false b9, 0019
-0016  b10 = constant #2 0
-0017  return b10
-0018  jump 0019
-0019  b11 = constant #3 nil
-0020  return b11
+0000  block
+0001  b0 = load_local l0
+0002  b1 = variant_tag b0  @2 Pair. @3 Values
+0003  br_if b1, b1, b3
+0004  block
+0005  b2 = variant_field b0[0]
+0006  b3 = variant_field b0[1]
+0007  bind_local l1, b2
+0008  bind_local l2, b3
+0009  b4 = load_local l2
+0010  b5 = constant #1 10
+0011  b6 = multiply b4, b5
+0012  b7 = load_local l1
+0013  b8 = add b6, b7
+0014  return b8
+0015  block
+0016  br b6
+0017  block
+0018  b9 = variant_tag b0  @8 Pair. @9 Empty
+0019  br_if b9, b4, b6
+0020  block
+0021  b10 = constant #2 0
+0022  return b10
+0023  block
+0024  br b6
+0025  block
+0026  b11 = constant #3 nil
+0027  return b11
+0028  block
+0029  return_nil
 
 function $1 describe/1 registers=15
-0000  b0 = load_local l0
-0001  b1 = variant_tag b0  @13 Result. @14 Ok
-0002  jump_if_false b1, 0011
-0003  b2 = variant_field b0[0]
-0004  bind_local l1, b2
-0005  b3 = constant #5 "ok:"
-0006  b4 = load_local l1
-0007  b5 = native_call @17 str [b4]
-0008  b6 = add b3, b5
-0009  return b6
-0010  jump 0025
-0011  b7 = variant_tag b0  @18 Result. @19 Err
-0012  jump_if_false b7, 0020
-0013  b8 = variant_field b0[0]
-0014  bind_local l2, b8
-0015  b9 = constant #6 "err:"
-0016  b10 = load_local l2
-0017  b11 = add b9, b10
-0018  return b11
-0019  jump 0025
-0020  b12 = variant_tag b0  @22 Result. @23 Empty
-0021  jump_if_false b12, 0025
-0022  b13 = constant #7 "empty"
-0023  return b13
-0024  jump 0025
-0025  b14 = constant #8 nil
-0026  return b14
+0000  block
+0001  b0 = load_local l0
+0002  b1 = variant_tag b0  @13 Result. @14 Ok
+0003  br_if b1, b1, b3
+0004  block
+0005  b2 = variant_field b0[0]
+0006  bind_local l1, b2
+0007  b3 = constant #5 "ok:"
+0008  b4 = load_local l1
+0009  b5 = native_call @17 str [b4]
+0010  b6 = add b3, b5
+0011  return b6
+0012  block
+0013  br b9
+0014  block
+0015  b7 = variant_tag b0  @18 Result. @19 Err
+0016  br_if b7, b4, b6
+0017  block
+0018  b8 = variant_field b0[0]
+0019  bind_local l2, b8
+0020  b9 = constant #6 "err:"
+0021  b10 = load_local l2
+0022  b11 = add b9, b10
+0023  return b11
+0024  block
+0025  br b9
+0026  block
+0027  b12 = variant_tag b0  @22 Result. @23 Empty
+0028  br_if b12, b7, b9
+0029  block
+0030  b13 = constant #7 "empty"
+0031  return b13
+0032  block
+0033  br b9
+0034  block
+0035  b14 = constant #8 nil
+0036  return b14
+0037  block
+0038  return_nil
 
 function $2 unwrap/1 registers=17
-0000  b0 = load_local l0
-0001  b1 = variant_tag b0  @27 Box. @28 Wrap
-0002  jump_if_false b1, 0012
-0003  b2 = variant_field b0[0]
-0004  b3 = variant_tag b2  @29 Result. @30 Ok
-0005  jump_if_false b3, 0012
-0006  b4 = variant_field b2[0]
-0007  bind_local l1, b4
-0008  b5 = load_local l1
-0009  b6 = native_call @33 str [b5]
-0010  return b6
-0011  jump 0030
-0012  b7 = variant_tag b0  @34 Box. @35 Wrap
-0013  jump_if_false b7, 0022
-0014  b8 = variant_field b0[0]
-0015  b9 = variant_tag b8  @36 Result. @37 Err
-0016  jump_if_false b9, 0022
-0017  b10 = variant_field b8[0]
-0018  bind_local l2, b10
-0019  b11 = load_local l2
-0020  return b11
-0021  jump 0030
-0022  b12 = variant_tag b0  @40 Box. @41 Wrap
-0023  jump_if_false b12, 0030
-0024  b13 = variant_field b0[0]
-0025  b14 = variant_tag b13  @42 Result. @43 Empty
-0026  jump_if_false b14, 0030
-0027  b15 = constant #10 "empty"
-0028  return b15
-0029  jump 0030
-0030  b16 = constant #11 nil
-0031  return b16
+0000  block
+0001  b0 = load_local l0
+0002  b1 = variant_tag b0  @27 Box. @28 Wrap
+0003  br_if b1, b1, b4
+0004  block
+0005  b2 = variant_field b0[0]
+0006  b3 = variant_tag b2  @29 Result. @30 Ok
+0007  br_if b3, b2, b4
+0008  block
+0009  b4 = variant_field b2[0]
+0010  bind_local l1, b4
+0011  b5 = load_local l1
+0012  b6 = native_call @33 str [b5]
+0013  return b6
+0014  block
+0015  br b12
+0016  block
+0017  b7 = variant_tag b0  @34 Box. @35 Wrap
+0018  br_if b7, b5, b8
+0019  block
+0020  b8 = variant_field b0[0]
+0021  b9 = variant_tag b8  @36 Result. @37 Err
+0022  br_if b9, b6, b8
+0023  block
+0024  b10 = variant_field b8[0]
+0025  bind_local l2, b10
+0026  b11 = load_local l2
+0027  return b11
+0028  block
+0029  br b12
+0030  block
+0031  b12 = variant_tag b0  @40 Box. @41 Wrap
+0032  br_if b12, b9, b12
+0033  block
+0034  b13 = variant_field b0[0]
+0035  b14 = variant_tag b13  @42 Result. @43 Empty
+0036  br_if b14, b10, b12
+0037  block
+0038  b15 = constant #10 "empty"
+0039  return b15
+0040  block
+0041  br b12
+0042  block
+0043  b16 = constant #11 nil
+0044  return b16
+0045  block
+0046  return_nil

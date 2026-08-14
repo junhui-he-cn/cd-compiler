@@ -30,6 +30,7 @@ globals:
   g3 = n4
 
 main registers=19:
+block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
@@ -43,33 +44,40 @@ main registers=19:
   r7 = load_global g0
   r8 = len r7
   init_global g3, r8
+  br b1
+block b1:
   r9 = load_global g1
   r10 = load_global g3
   r11 = less r9, r10
-  jump_if_false r11, 30
+  br_if r11, b2, b5
+block b2:
   r12 = load_global g0
   r13 = load_global g1
   r14 = index r12, r13
   set_global g2, r14
-  jump 27
+  br b4
+block b3:
   r15 = load_global g1
   r16 = constant c5
   r17 = add r15, r16
   set_global g1, r17
-  jump 13
+  br b1
+block b4:
   r18 = load_global g2
   print r18
-  jump 22
+  br b3
+block b5:
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/for_in_loops/input.cd" text="for x in [1, 2, 3] {\n  print x;\n}\n"
 
 debug_locations:
   main 0 = s0:1:11
-  main 1 = s0:1:14
-  main 2 = s0:1:17
-  main 3 = s0:1:10
-  main 4 = s0:1:1
+  main 1 = s0:1:11
+  main 2 = s0:1:14
+  main 3 = s0:1:17
+  main 4 = s0:1:10
   main 5 = s0:1:1
   main 6 = s0:1:1
   main 7 = s0:1:1
@@ -92,16 +100,24 @@ debug_locations:
   main 24 = s0:1:1
   main 25 = s0:1:1
   main 26 = s0:1:1
-  main 27 = s0:2:9
-  main 28 = s0:2:3
+  main 27 = s0:1:1
+  main 28 = s0:1:1
   main 29 = s0:1:1
+  main 30 = s0:1:1
+  main 31 = s0:1:1
+  main 32 = s0:2:9
+  main 33 = s0:2:9
+  main 34 = s0:2:3
+  main 35 = s0:1:1
+  main 36 = s0:1:1
+  main 37 = s0:1:1
 
 debug_ranges:
   main 0 = s0:10:11
-  main 1 = s0:13:14
-  main 2 = s0:16:17
-  main 3 = s0:9:17
-  main 4 = s0:0:30
+  main 1 = s0:10:11
+  main 2 = s0:13:14
+  main 3 = s0:16:17
+  main 4 = s0:9:17
   main 5 = s0:0:30
   main 6 = s0:0:30
   main 7 = s0:0:30
@@ -124,6 +140,14 @@ debug_ranges:
   main 24 = s0:0:30
   main 25 = s0:0:30
   main 26 = s0:0:30
-  main 27 = s0:29:30
-  main 28 = s0:29:30
+  main 27 = s0:0:30
+  main 28 = s0:0:30
   main 29 = s0:0:30
+  main 30 = s0:0:30
+  main 31 = s0:0:30
+  main 32 = s0:29:30
+  main 33 = s0:29:30
+  main 34 = s0:29:30
+  main 35 = s0:0:30
+  main 36 = s0:0:30
+  main 37 = s0:0:30

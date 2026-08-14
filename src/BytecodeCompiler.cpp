@@ -61,6 +61,134 @@ std::optional<std::uint32_t> lowerOperand(std::optional<std::size_t> operand)
     return checkedU32(*operand, "operand out of range");
 }
 
+void splitControlFlow(
+    std::vector<BytecodeInstruction>& instructions,
+    std::unordered_map<std::uint32_t, std::uint32_t>* remap,
+    const std::vector<std::size_t>& forcedStarts)
+{
+    const std::size_t end = instructions.size();
+    std::vector<bool> starts(end + 1, false);
+    starts[0] = true;
+    for (std::size_t index = 0; index < instructions.size(); ++index) {
+        const BytecodeOp op = instructions[index].op;
+        if (op == BytecodeOp::Jump || op == BytecodeOp::JumpIfFalse
+            || op == BytecodeOp::JumpIfTrue) {
+            const std::size_t target = instructions[index].operand;
+            if (target <= end) {
+                starts[target] = true;
+            }
+        }
+        if (op == BytecodeOp::Jump || op == BytecodeOp::JumpIfFalse
+            || op == BytecodeOp::JumpIfTrue || op == BytecodeOp::Return) {
+            starts[index + 1] = true;
+        }
+    }
+    for (std::size_t offset : forcedStarts) {
+        if (offset <= end) {
+            starts[offset] = true;
+        }
+    }
+
+    std::unordered_map<std::size_t, std::uint32_t> blockOf;
+    std::uint32_t nextBlock = 0;
+    for (std::size_t index = 0; index <= end; ++index) {
+        if (starts[index]) {
+            blockOf.emplace(index, nextBlock++);
+        }
+    }
+
+    std::vector<BytecodeInstruction> rewritten;
+    rewritten.reserve(instructions.size() + nextBlock);
+    if (remap) {
+        remap->clear();
+    }
+    for (std::size_t index = 0; index < instructions.size(); ++index) {
+        if (starts[index]) {
+            BytecodeInstruction marker{};
+            marker.op = BytecodeOp::BlockStart;
+            marker.operand = blockOf[index];
+            marker.span = instructions[index].span;
+            rewritten.push_back(std::move(marker));
+            if (remap) {
+                remap->emplace(
+                    checkedU32(index, "instruction offset out of range"),
+                    checkedU32(rewritten.size() - 1, "instruction offset out of range"));
+            }
+        } else if (remap) {
+            remap->emplace(
+                checkedU32(index, "instruction offset out of range"),
+                checkedU32(rewritten.size(), "instruction offset out of range"));
+        }
+        BytecodeInstruction instruction = std::move(instructions[index]);
+        if (instruction.op == BytecodeOp::Jump) {
+            const std::size_t target = instruction.operand;
+            instruction.op = target == end ? BytecodeOp::ReturnNil : BytecodeOp::Br;
+            if (target != end) {
+                instruction.operand = blockOf[target];
+            }
+        } else if (instruction.op == BytecodeOp::JumpIfFalse) {
+            const std::uint32_t branchTarget = instruction.operand == end
+                ? blockOf[end]
+                : blockOf[instruction.operand];
+            instruction.op = BytecodeOp::BrIf;
+            instruction.operand = blockOf[index + 1];
+            instruction.operands = {branchTarget};
+        } else if (instruction.op == BytecodeOp::JumpIfTrue) {
+            const std::uint32_t branchTarget = instruction.operand == end
+                ? blockOf[end]
+                : blockOf[instruction.operand];
+            instruction.op = BytecodeOp::BrIf;
+            instruction.operand = branchTarget;
+            instruction.operands = {blockOf[index + 1]};
+        }
+        rewritten.push_back(std::move(instruction));
+    }
+    if (starts[end]) {
+        BytecodeInstruction marker{};
+        marker.op = BytecodeOp::BlockStart;
+        marker.operand = blockOf[end];
+        if (!instructions.empty()) {
+            marker.span = instructions.back().span;
+        }
+        rewritten.push_back(std::move(marker));
+        BytecodeInstruction nilReturn{};
+        nilReturn.op = BytecodeOp::ReturnNil;
+        nilReturn.span = marker.span;
+        rewritten.push_back(std::move(nilReturn));
+    }
+    // 0.2 forbids implicit fallthrough: a block that ends without a
+    // terminator gets an explicit branch to the next block (or a nil return
+    // when it is the function's last block).
+    std::vector<BytecodeInstruction> normalized;
+    normalized.reserve(rewritten.size() + nextBlock);
+    for (std::size_t index = 0; index < rewritten.size(); ++index) {
+        normalized.push_back(std::move(rewritten[index]));
+        const BytecodeOp op = normalized.back().op;
+        const bool isTerminator = op == BytecodeOp::Br || op == BytecodeOp::BrIf
+            || op == BytecodeOp::Return || op == BytecodeOp::ReturnNil
+            || op == BytecodeOp::BlockStart;
+        if (isTerminator) {
+            continue;
+        }
+        const bool isLast = index + 1 == rewritten.size();
+        const bool nextIsBlock = !isLast && rewritten[index + 1].op == BytecodeOp::BlockStart;
+        if (nextIsBlock) {
+            BytecodeInstruction branch{};
+            branch.op = BytecodeOp::Br;
+            branch.operand = rewritten[index + 1].operand;
+            branch.span = normalized.back().span;
+            normalized.push_back(std::move(branch));
+        } else if (isLast) {
+            BytecodeInstruction nilReturn{};
+            nilReturn.op = BytecodeOp::ReturnNil;
+            nilReturn.span = normalized.back().span;
+            normalized.push_back(std::move(nilReturn));
+        }
+    }
+    rewritten = std::move(normalized);
+    instructions = std::move(rewritten);
+}
+
 enum class VariableKind {
     Local,
     Upvalue,
@@ -357,8 +485,16 @@ BytecodeProgram BytecodeCompiler::compile(const IRProgram& ir)
     program.setConstants(ir.constants());
     program.setNames(ir.names());
     program.setRegisterCount(checkedU32(ir.registerCount(), "register index out of range"));
-    program.setInstructions(lowerInstructions(
-        ir.instructions(), globalSlots, globalSlotsByName, ir.names(), nullptr));
+    auto mainInstructions = lowerInstructions(
+        ir.instructions(), globalSlots, globalSlotsByName, ir.names(), nullptr);
+    std::unordered_map<std::uint32_t, std::uint32_t> dependencyRemap;
+    std::vector<std::size_t> forcedStarts;
+    for (const IRModuleDependency& dependency : ir.moduleDependencies()) {
+        forcedStarts.push_back(dependency.instructionOffset);
+    }
+    splitControlFlow(mainInstructions, &dependencyRemap, forcedStarts);
+    program.setInstructions(std::move(mainInstructions));
+    program.setDependencyRemap(std::move(dependencyRemap));
     program.setGlobals(std::move(globals));
 
     std::vector<BytecodeFunction> loweredFunctions;
@@ -491,11 +627,13 @@ BytecodeFunction BytecodeCompiler::lowerFunction(
     const std::vector<std::string>& names,
     const FunctionPlan& plan)
 {
+    auto instructions = lowerInstructions(
+        function.instructions, globalSlots, globalSlotsByName, names, &plan);
+    splitControlFlow(instructions, nullptr, {});
     BytecodeFunction lowered{
         function.name,
         function.parameters,
-        lowerInstructions(
-            function.instructions, globalSlots, globalSlotsByName, names, &plan),
+        std::move(instructions),
         checkedU32(function.registerCount, "register index out of range"),
         plan.localCount,
         plan.upvalueSources,

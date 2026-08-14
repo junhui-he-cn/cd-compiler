@@ -22,6 +22,7 @@ globals:
   g0 = n0
 
 main registers=12:
+block b0:
   r0 = make_function f0
   init_global g0, r0
   r1 = load_global g0
@@ -37,95 +38,136 @@ main registers=12:
   r10 = make_function f2
   r11 = native_call n5 [r8, r9, r10]
   print r11
+  return_nil
 
 function f0 name="<lambda>" arity=3 registers=2:
   param 0 = "array#0"
   param 1 = "initial#1"
   param 2 = "callback#2"
+block b0:
   r0 = constant c0
   return r0
+block b1:
   r1 = constant c1
   return r1
+block b2:
+  return_nil
 
 function f1 name="<lambda>" arity=2 registers=2:
   param 0 = "acc#4"
   param 1 = "value#5"
+block b0:
   r0 = load_local l0
   return r0
+block b1:
   r1 = constant c4
   return r1
+block b2:
+  return_nil
 
 function f2 name="<lambda>" arity=2 registers=4:
   param 0 = "acc#6"
   param 1 = "value#7"
+block b0:
   r0 = load_local l0
   r1 = load_local l1
   r2 = add r0, r1
   return r2
+block b1:
   r3 = constant c7
   return r3
+block b2:
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/array_reduce_shadowing/input.cd" text="let reduce = fun (array, initial, callback) {\n  return \"shadowed\";\n};\n\nprint reduce([1], 0, fun (acc, value) { return acc; });\nprint [1].reduce(0, fun (acc, value) { return acc + value; });\n"
 
 debug_locations:
   main 0 = s0:1:14
-  main 1 = s0:1:1
-  main 2 = s0:5:7
-  main 3 = s0:5:15
-  main 4 = s0:5:14
-  main 5 = s0:5:19
-  main 6 = s0:5:22
-  main 7 = s0:5:7
-  main 8 = s0:5:1
-  main 9 = s0:6:8
-  main 10 = s0:6:7
-  main 11 = s0:6:18
-  main 12 = s0:6:21
-  main 13 = s0:6:7
-  main 14 = s0:6:1
+  main 1 = s0:1:14
+  main 2 = s0:1:1
+  main 3 = s0:5:7
+  main 4 = s0:5:15
+  main 5 = s0:5:14
+  main 6 = s0:5:19
+  main 7 = s0:5:22
+  main 8 = s0:5:7
+  main 9 = s0:5:1
+  main 10 = s0:6:8
+  main 11 = s0:6:7
+  main 12 = s0:6:18
+  main 13 = s0:6:21
+  main 14 = s0:6:7
+  main 15 = s0:6:1
+  main 16 = s0:6:1
   function f0 0 = s0:2:10
-  function f0 1 = s0:2:3
-  function f0 2 = s0:1:14
+  function f0 1 = s0:2:10
+  function f0 2 = s0:2:3
   function f0 3 = s0:1:14
+  function f0 4 = s0:1:14
+  function f0 5 = s0:1:14
+  function f0 6 = s0:1:14
+  function f0 7 = s0:1:14
   function f1 0 = s0:5:48
-  function f1 1 = s0:5:41
-  function f1 2 = s0:5:22
+  function f1 1 = s0:5:48
+  function f1 2 = s0:5:41
   function f1 3 = s0:5:22
+  function f1 4 = s0:5:22
+  function f1 5 = s0:5:22
+  function f1 6 = s0:5:22
+  function f1 7 = s0:5:22
   function f2 0 = s0:6:47
-  function f2 1 = s0:6:53
-  function f2 2 = s0:6:47
-  function f2 3 = s0:6:40
-  function f2 4 = s0:6:21
+  function f2 1 = s0:6:47
+  function f2 2 = s0:6:53
+  function f2 3 = s0:6:47
+  function f2 4 = s0:6:40
   function f2 5 = s0:6:21
+  function f2 6 = s0:6:21
+  function f2 7 = s0:6:21
+  function f2 8 = s0:6:21
+  function f2 9 = s0:6:21
 
 debug_ranges:
   main 0 = s0:13:65
-  main 1 = s0:4:65
-  main 2 = s0:77:83
-  main 3 = s0:85:86
-  main 4 = s0:84:86
-  main 5 = s0:89:90
-  main 6 = s0:92:121
-  main 7 = s0:77:125
+  main 1 = s0:13:65
+  main 2 = s0:4:65
+  main 3 = s0:77:83
+  main 4 = s0:85:86
+  main 5 = s0:84:86
+  main 6 = s0:89:90
+  main 7 = s0:92:121
   main 8 = s0:77:125
-  main 9 = s0:134:135
-  main 10 = s0:133:135
-  main 11 = s0:144:145
-  main 12 = s0:147:184
-  main 13 = s0:133:188
+  main 9 = s0:77:125
+  main 10 = s0:134:135
+  main 11 = s0:133:135
+  main 12 = s0:144:145
+  main 13 = s0:147:184
   main 14 = s0:133:188
+  main 15 = s0:133:188
+  main 16 = s0:133:188
   function f0 0 = s0:55:65
-  function f0 1 = s0:48:65
-  function f0 2 = s0:13:65
+  function f0 1 = s0:55:65
+  function f0 2 = s0:48:65
   function f0 3 = s0:13:65
+  function f0 4 = s0:13:65
+  function f0 5 = s0:13:65
+  function f0 6 = s0:13:65
+  function f0 7 = s0:13:65
   function f1 0 = s0:118:121
-  function f1 1 = s0:111:121
-  function f1 2 = s0:92:121
+  function f1 1 = s0:118:121
+  function f1 2 = s0:111:121
   function f1 3 = s0:92:121
+  function f1 4 = s0:92:121
+  function f1 5 = s0:92:121
+  function f1 6 = s0:92:121
+  function f1 7 = s0:92:121
   function f2 0 = s0:173:176
-  function f2 1 = s0:179:184
-  function f2 2 = s0:173:184
-  function f2 3 = s0:166:184
-  function f2 4 = s0:147:184
+  function f2 1 = s0:173:176
+  function f2 2 = s0:179:184
+  function f2 3 = s0:173:184
+  function f2 4 = s0:166:184
   function f2 5 = s0:147:184
+  function f2 6 = s0:147:184
+  function f2 7 = s0:147:184
+  function f2 8 = s0:147:184
+  function f2 9 = s0:147:184

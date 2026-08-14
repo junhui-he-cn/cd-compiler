@@ -340,4 +340,16 @@ pub enum Instruction {
         condition: usize,
         target: usize,
     },
+    BlockStart {
+        id: BlockId,
+    },
+    Br {
+        target: BlockId,
+    },
+    BrIf {
+        condition: usize,
+        if_true: BlockId,
+        if_false: BlockId,
+    },
+    ReturnNil,
 }

@@ -16,6 +16,7 @@ globals:
   g0 = n0
 
 main registers=7:
+block b0:
   r0 = constant c0
   init_global g0, r0
   r1 = load_global g0
@@ -26,30 +27,35 @@ main registers=7:
   set_global g0, r5
   r6 = load_global g0
   print r6
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/compound_assignment/input.cd" text="let x = 1;\nx += 2;\nprint x;\n"
 
 debug_locations:
   main 0 = s0:1:9
-  main 1 = s0:1:1
-  main 2 = s0:2:1
+  main 1 = s0:1:9
+  main 2 = s0:1:1
   main 3 = s0:2:1
-  main 4 = s0:2:6
-  main 5 = s0:2:1
+  main 4 = s0:2:1
+  main 5 = s0:2:6
   main 6 = s0:2:1
   main 7 = s0:2:1
-  main 8 = s0:3:7
-  main 9 = s0:3:1
+  main 8 = s0:2:1
+  main 9 = s0:3:7
+  main 10 = s0:3:1
+  main 11 = s0:3:1
 
 debug_ranges:
   main 0 = s0:8:9
-  main 1 = s0:4:9
-  main 2 = s0:11:17
+  main 1 = s0:8:9
+  main 2 = s0:4:9
   main 3 = s0:11:17
-  main 4 = s0:16:17
-  main 5 = s0:11:17
+  main 4 = s0:11:17
+  main 5 = s0:16:17
   main 6 = s0:11:17
   main 7 = s0:11:17
-  main 8 = s0:25:26
+  main 8 = s0:11:17
   main 9 = s0:25:26
+  main 10 = s0:25:26
+  main 11 = s0:25:26

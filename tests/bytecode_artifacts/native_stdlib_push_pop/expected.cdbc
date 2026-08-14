@@ -17,6 +17,7 @@ globals:
   g0 = n0
 
 main registers=9:
+block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = array [r0, r1]
@@ -29,34 +30,39 @@ main registers=9:
   r7 = load_global g0
   r8 = native_call n5 [r7]
   print r8
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/native_stdlib_push_pop/input.cd" text="let xs = [1, 2];\npush(xs, 3);\nprint xs;\nprint pop(xs);\n"
 
 debug_locations:
   main 0 = s0:1:11
-  main 1 = s0:1:14
-  main 2 = s0:1:10
-  main 3 = s0:1:1
-  main 4 = s0:2:6
-  main 5 = s0:2:10
-  main 6 = s0:2:1
-  main 7 = s0:3:7
-  main 8 = s0:3:1
-  main 9 = s0:4:11
-  main 10 = s0:4:7
-  main 11 = s0:4:1
+  main 1 = s0:1:11
+  main 2 = s0:1:14
+  main 3 = s0:1:10
+  main 4 = s0:1:1
+  main 5 = s0:2:6
+  main 6 = s0:2:10
+  main 7 = s0:2:1
+  main 8 = s0:3:7
+  main 9 = s0:3:1
+  main 10 = s0:4:11
+  main 11 = s0:4:7
+  main 12 = s0:4:1
+  main 13 = s0:4:1
 
 debug_ranges:
   main 0 = s0:10:11
-  main 1 = s0:13:14
-  main 2 = s0:9:14
-  main 3 = s0:4:14
-  main 4 = s0:22:24
-  main 5 = s0:26:27
-  main 6 = s0:17:28
-  main 7 = s0:36:38
+  main 1 = s0:10:11
+  main 2 = s0:13:14
+  main 3 = s0:9:14
+  main 4 = s0:4:14
+  main 5 = s0:22:24
+  main 6 = s0:26:27
+  main 7 = s0:17:28
   main 8 = s0:36:38
-  main 9 = s0:50:52
-  main 10 = s0:46:53
+  main 9 = s0:36:38
+  main 10 = s0:50:52
   main 11 = s0:46:53
+  main 12 = s0:46:53
+  main 13 = s0:46:53

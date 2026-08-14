@@ -1,16 +1,18 @@
 main registers=10
-0000  b0 = constant #0 1
-0001  b1 = struct @0 Box { @1 value: b0}
-0002  init_global g0, b1
-0003  b2 = constant #1 2
-0004  b3 = struct @3 lib.Box { @4 value: b2}
-0005  init_global g1, b3
-0006  b4 = load_global g0
-0007  b5 = field b4,  @7 value
-0008  print b5
-0009  b6 = load_global g1
-0010  b7 = field b6,  @9 value
-0011  print b7
-0012  b8 = load_global g1
-0013  b9 = native_call @11 typeOf [b8]
-0014  print b9
+0000  block
+0001  b0 = constant #0 1
+0002  b1 = struct @0 Box { @1 value: b0}
+0003  init_global g0, b1
+0004  b2 = constant #1 2
+0005  b3 = struct @3 lib.Box { @4 value: b2}
+0006  init_global g1, b3
+0007  b4 = load_global g0
+0008  b5 = field b4,  @7 value
+0009  print b5
+0010  b6 = load_global g1
+0011  b7 = field b6,  @9 value
+0012  print b7
+0013  b8 = load_global g1
+0014  b9 = native_call @11 typeOf [b8]
+0015  print b9
+0016  return_nil

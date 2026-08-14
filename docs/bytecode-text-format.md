@@ -195,6 +195,11 @@ debug_ranges:
 ```
 
 The section names and reference prefixes are part of the canonical text format.
+`cdbc 0.2` bodies are composed of `block bN:` sections; each block ends with one
+terminator (`br bN`, `br_if rC, bT, bF`, `return rV`, or `return_nil`), and
+implicit fallthrough is forbidden. The linker splices module init bodies at the
+block boundary recorded by the `at=N` dependency offset and renumbers block IDs
+across the merged main.
 The optional `globals:` section (module products and linked programs alike) maps
 each numeric global slot to its name index; the linker deduplicates globals by
 name across modules. Function `param` lines appear before instructions;

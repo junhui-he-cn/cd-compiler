@@ -1,71 +1,89 @@
 main registers=40
-0000  b0 = array []
-0001  init_global g0, b0
-0002  b1 = constant #0 3
-0003  b2 = native_call @1 range [b1]
-0004  b3 = assert_array b2
-0005  init_global g1, b3
-0006  b4 = constant #1 0
-0007  init_global g2, b4
-0008  b5 = constant #2 nil
-0009  init_global g3, b5
-0010  b6 = load_global g1
-0011  b7 = len b6
-0012  init_global g4, b7
-0013  b8 = load_global g2
-0014  b9 = load_global g4
-0015  b10 = less b8, b9
-0016  jump_if_false b10, 0035
-0017  b11 = load_global g1
-0018  b12 = load_global g2
-0019  b13 = index b11, b12
-0020  set_global g3, b13
-0021  jump 0027
-0022  b14 = load_global g2
-0023  b15 = constant #3 1
-0024  b16 = add b14, b15
-0025  set_global g2, b16
-0026  jump 0013
-0027  b17 = load_global g3
-0028  b18 = constant #4 10
-0029  b19 = multiply b17, b18
-0030  init_global g5, b19
-0031  b20 = load_global g0
-0032  b21 = make_function $0 <lambda>/0
-0033  b22 = native_call @18 push [b20, b21]
-0034  jump 0022
-0035  b23 = load_global g0
-0036  b24 = assert_array b23
-0037  init_global g6, b24
-0038  b25 = constant #6 0
-0039  init_global g7, b25
-0040  b26 = constant #7 nil
-0041  init_global g8, b26
-0042  b27 = load_global g6
-0043  b28 = len b27
-0044  init_global g9, b28
-0045  b29 = load_global g7
-0046  b30 = load_global g9
-0047  b31 = less b29, b30
-0048  jump_if_false b31, 0063
-0049  b32 = load_global g6
-0050  b33 = load_global g7
-0051  b34 = index b32, b33
-0052  set_global g8, b34
-0053  jump 0059
-0054  b35 = load_global g7
-0055  b36 = constant #8 1
-0056  b37 = add b35, b36
-0057  set_global g7, b37
-0058  jump 0045
-0059  b38 = load_global g8
-0060  b39 = call b38()
-0061  print b39
-0062  jump 0054
+0000  block
+0001  b0 = array []
+0002  init_global g0, b0
+0003  b1 = constant #0 3
+0004  b2 = native_call @1 range [b1]
+0005  b3 = assert_array b2
+0006  init_global g1, b3
+0007  b4 = constant #1 0
+0008  init_global g2, b4
+0009  b5 = constant #2 nil
+0010  init_global g3, b5
+0011  b6 = load_global g1
+0012  b7 = len b6
+0013  init_global g4, b7
+0014  br b1
+0015  block
+0016  b8 = load_global g2
+0017  b9 = load_global g4
+0018  b10 = less b8, b9
+0019  br_if b10, b2, b5
+0020  block
+0021  b11 = load_global g1
+0022  b12 = load_global g2
+0023  b13 = index b11, b12
+0024  set_global g3, b13
+0025  br b4
+0026  block
+0027  b14 = load_global g2
+0028  b15 = constant #3 1
+0029  b16 = add b14, b15
+0030  set_global g2, b16
+0031  br b1
+0032  block
+0033  b17 = load_global g3
+0034  b18 = constant #4 10
+0035  b19 = multiply b17, b18
+0036  init_global g5, b19
+0037  b20 = load_global g0
+0038  b21 = make_function $0 <lambda>/0
+0039  b22 = native_call @18 push [b20, b21]
+0040  br b3
+0041  block
+0042  b23 = load_global g0
+0043  b24 = assert_array b23
+0044  init_global g6, b24
+0045  b25 = constant #6 0
+0046  init_global g7, b25
+0047  b26 = constant #7 nil
+0048  init_global g8, b26
+0049  b27 = load_global g6
+0050  b28 = len b27
+0051  init_global g9, b28
+0052  br b6
+0053  block
+0054  b29 = load_global g7
+0055  b30 = load_global g9
+0056  b31 = less b29, b30
+0057  br_if b31, b7, b10
+0058  block
+0059  b32 = load_global g6
+0060  b33 = load_global g7
+0061  b34 = index b32, b33
+0062  set_global g8, b34
+0063  br b9
+0064  block
+0065  b35 = load_global g7
+0066  b36 = constant #8 1
+0067  b37 = add b35, b36
+0068  set_global g7, b37
+0069  br b6
+0070  block
+0071  b38 = load_global g8
+0072  b39 = call b38()
+0073  print b39
+0074  br b8
+0075  block
+0076  return_nil
 
 function $0 <lambda>/0 registers=2
 upvalue u0 = global g5
-0000  b0 = load_upvalue u0
-0001  return b0
-0002  b1 = constant #5 nil
-0003  return b1
+0000  block
+0001  b0 = load_upvalue u0
+0002  return b0
+0003  block
+0004  b1 = constant #5 nil
+0005  return b1
+0006  block
+0007  return_nil

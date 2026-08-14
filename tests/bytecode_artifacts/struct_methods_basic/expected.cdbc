@@ -22,6 +22,7 @@ globals:
   g1 = n6
 
 main registers=7:
+block b0:
   r0 = constant c0
   init_global g0, r0
   r1 = make_function f0
@@ -33,16 +34,21 @@ main registers=7:
   r5 = load_global g1
   r6 = call r4 [r5]
   print r6
+  return_nil
 
 function f0 name="label" arity=1 registers=5:
   param 0 = "this#1"
+block b0:
   r0 = load_local l0
   r1 = field r0, n2
   r2 = constant c1
   r3 = add r1, r2
   return r3
+block b1:
   r4 = constant c2
   return r4
+block b2:
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/struct_methods_basic/input.cd" text="struct Person { name: string }\nimpl Person { fun label(): string { return this.name + \"!\"; } }\nlet p: Person = Person { name: \"Ada\" };\nprint p.label();\n"
@@ -52,37 +58,49 @@ debug_locations:
   main 1 = s0:2:1
   main 2 = s0:2:1
   main 3 = s0:2:1
-  main 4 = s0:3:32
-  main 5 = s0:3:17
-  main 6 = s0:3:1
-  main 7 = s0:4:7
+  main 4 = s0:2:1
+  main 5 = s0:3:32
+  main 6 = s0:3:17
+  main 7 = s0:3:1
   main 8 = s0:4:7
   main 9 = s0:4:7
-  main 10 = s0:4:1
+  main 10 = s0:4:7
+  main 11 = s0:4:1
+  main 12 = s0:4:1
   function f0 0 = s0:2:44
   function f0 1 = s0:2:44
-  function f0 2 = s0:2:56
-  function f0 3 = s0:2:44
-  function f0 4 = s0:2:37
-  function f0 5 = s0:2:1
+  function f0 2 = s0:2:44
+  function f0 3 = s0:2:56
+  function f0 4 = s0:2:44
+  function f0 5 = s0:2:37
   function f0 6 = s0:2:1
+  function f0 7 = s0:2:1
+  function f0 8 = s0:2:1
+  function f0 9 = s0:2:1
+  function f0 10 = s0:2:1
 
 debug_ranges:
   main 0 = s0:36:89
   main 1 = s0:36:89
   main 2 = s0:36:89
   main 3 = s0:36:89
-  main 4 = s0:126:131
-  main 5 = s0:111:131
-  main 6 = s0:99:131
-  main 7 = s0:141:150
-  main 8 = s0:141:142
-  main 9 = s0:141:150
+  main 4 = s0:36:89
+  main 5 = s0:126:131
+  main 6 = s0:111:131
+  main 7 = s0:99:131
+  main 8 = s0:141:150
+  main 9 = s0:141:142
   main 10 = s0:141:150
+  main 11 = s0:141:150
+  main 12 = s0:141:150
   function f0 0 = s0:74:78
-  function f0 1 = s0:74:83
-  function f0 2 = s0:86:89
-  function f0 3 = s0:74:89
-  function f0 4 = s0:67:89
-  function f0 5 = s0:36:89
+  function f0 1 = s0:74:78
+  function f0 2 = s0:74:83
+  function f0 3 = s0:86:89
+  function f0 4 = s0:74:89
+  function f0 5 = s0:67:89
   function f0 6 = s0:36:89
+  function f0 7 = s0:36:89
+  function f0 8 = s0:36:89
+  function f0 9 = s0:36:89
+  function f0 10 = s0:36:89

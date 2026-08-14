@@ -28,6 +28,7 @@ globals:
   g1 = n11
 
 main registers=12:
+block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = struct n0 {n1: r0, n2: r1}
@@ -44,42 +45,47 @@ main registers=12:
   r10 = field r9, n13
   r11 = field r10, n14
   print r11
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/structs/input.cd" text="struct Person { name: string, age: number }\nstruct Point { x: number }\nstruct Nested { point: Point, label: string }\nlet person = Person { name: \"Ada\", age: 36 };\nprint person.name;\nlet nested = Nested { point: Point { x: 1 }, label: \"p\" };\nprint nested.point.x;\n"
 
 debug_locations:
   main 0 = s0:4:29
-  main 1 = s0:4:41
-  main 2 = s0:4:14
-  main 3 = s0:4:1
-  main 4 = s0:5:7
+  main 1 = s0:4:29
+  main 2 = s0:4:41
+  main 3 = s0:4:14
+  main 4 = s0:4:1
   main 5 = s0:5:7
-  main 6 = s0:5:1
-  main 7 = s0:6:41
-  main 8 = s0:6:30
-  main 9 = s0:6:53
-  main 10 = s0:6:14
-  main 11 = s0:6:1
-  main 12 = s0:7:7
+  main 6 = s0:5:7
+  main 7 = s0:5:1
+  main 8 = s0:6:41
+  main 9 = s0:6:30
+  main 10 = s0:6:53
+  main 11 = s0:6:14
+  main 12 = s0:6:1
   main 13 = s0:7:7
   main 14 = s0:7:7
-  main 15 = s0:7:1
+  main 15 = s0:7:7
+  main 16 = s0:7:1
+  main 17 = s0:7:1
 
 debug_ranges:
   main 0 = s0:145:150
-  main 1 = s0:157:159
-  main 2 = s0:130:159
-  main 3 = s0:121:159
-  main 4 = s0:169:175
-  main 5 = s0:169:180
+  main 1 = s0:145:150
+  main 2 = s0:157:159
+  main 3 = s0:130:159
+  main 4 = s0:121:159
+  main 5 = s0:169:175
   main 6 = s0:169:180
-  main 7 = s0:222:223
-  main 8 = s0:211:223
-  main 9 = s0:234:237
-  main 10 = s0:195:237
-  main 11 = s0:186:237
-  main 12 = s0:247:253
-  main 13 = s0:247:259
-  main 14 = s0:247:261
+  main 7 = s0:169:180
+  main 8 = s0:222:223
+  main 9 = s0:211:223
+  main 10 = s0:234:237
+  main 11 = s0:195:237
+  main 12 = s0:186:237
+  main 13 = s0:247:253
+  main 14 = s0:247:259
   main 15 = s0:247:261
+  main 16 = s0:247:261
+  main 17 = s0:247:261

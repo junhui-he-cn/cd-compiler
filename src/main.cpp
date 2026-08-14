@@ -239,7 +239,12 @@ BytecodeModuleArtifact compileModuleArtifact(
             imported->canonicalPath,
             dependency.kind,
             dependency.requestedPath,
-            checkedModuleArtifactNumber(dependency.instructionOffset, "module dependency offset out of range")});
+            checkedModuleArtifactNumber(
+                artifact.program.remapDependencyOffset(
+                    checkedModuleArtifactNumber(
+                        dependency.instructionOffset,
+                        "module dependency offset out of range")),
+                "module dependency offset out of range")});
     }
     return artifact;
 }

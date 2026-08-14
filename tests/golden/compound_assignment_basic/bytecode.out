@@ -1,33 +1,35 @@
 main registers=22
-0000  b0 = constant #0 1
-0001  init_global g0, b0
-0002  b1 = load_global g0
-0003  b2 = assert_number b1 @2 `+=` expects number variable
-0004  b3 = constant #1 2
-0005  b4 = assert_number b3 @3 `+=` expects number value
-0006  b5 = add b2, b4
-0007  set_global g0, b5
-0008  print b5
-0009  b6 = load_global g0
-0010  b7 = assert_number b6 @6 `-=` expects number variable
-0011  b8 = constant #2 1
-0012  b9 = assert_number b8 @7 `-=` expects number value
-0013  b10 = subtract b7, b9
-0014  set_global g0, b10
-0015  print b10
-0016  b11 = load_global g0
-0017  b12 = assert_number b11 @10 `*=` expects number variable
-0018  b13 = constant #3 5
-0019  b14 = assert_number b13 @11 `*=` expects number value
-0020  b15 = multiply b12, b14
-0021  set_global g0, b15
-0022  print b15
-0023  b16 = load_global g0
-0024  b17 = assert_number b16 @14 `/=` expects number variable
-0025  b18 = constant #4 2
-0026  b19 = assert_number b18 @15 `/=` expects number value
-0027  b20 = divide b17, b19
-0028  set_global g0, b20
-0029  print b20
-0030  b21 = load_global g0
-0031  print b21
+0000  block
+0001  b0 = constant #0 1
+0002  init_global g0, b0
+0003  b1 = load_global g0
+0004  b2 = assert_number b1 @2 `+=` expects number variable
+0005  b3 = constant #1 2
+0006  b4 = assert_number b3 @3 `+=` expects number value
+0007  b5 = add b2, b4
+0008  set_global g0, b5
+0009  print b5
+0010  b6 = load_global g0
+0011  b7 = assert_number b6 @6 `-=` expects number variable
+0012  b8 = constant #2 1
+0013  b9 = assert_number b8 @7 `-=` expects number value
+0014  b10 = subtract b7, b9
+0015  set_global g0, b10
+0016  print b10
+0017  b11 = load_global g0
+0018  b12 = assert_number b11 @10 `*=` expects number variable
+0019  b13 = constant #3 5
+0020  b14 = assert_number b13 @11 `*=` expects number value
+0021  b15 = multiply b12, b14
+0022  set_global g0, b15
+0023  print b15
+0024  b16 = load_global g0
+0025  b17 = assert_number b16 @14 `/=` expects number variable
+0026  b18 = constant #4 2
+0027  b19 = assert_number b18 @15 `/=` expects number value
+0028  b20 = divide b17, b19
+0029  set_global g0, b20
+0030  print b20
+0031  b21 = load_global g0
+0032  print b21
+0033  return_nil

@@ -1,17 +1,19 @@
 main registers=13
-0000  b0 = constant #0 1
-0001  b1 = array [b0]
-0002  init_global g0, b1
-0003  b2 = load_global g0
-0004  b3 = array [b2]
-0005  init_global g1, b3
-0006  b4 = load_global g1
-0007  b5 = constant #1 0
-0008  b6 = index b4, b5
-0009  b7 = constant #2 0
-0010  b8 = constant #3 7
-0011  b9 = assign_index b6, b7, b8
-0012  b10 = load_global g0
-0013  b11 = constant #4 0
-0014  b12 = index b10, b11
-0015  print b12
+0000  block
+0001  b0 = constant #0 1
+0002  b1 = array [b0]
+0003  init_global g0, b1
+0004  b2 = load_global g0
+0005  b3 = array [b2]
+0006  init_global g1, b3
+0007  b4 = load_global g1
+0008  b5 = constant #1 0
+0009  b6 = index b4, b5
+0010  b7 = constant #2 0
+0011  b8 = constant #3 7
+0012  b9 = assign_index b6, b7, b8
+0013  b10 = load_global g0
+0014  b11 = constant #4 0
+0015  b12 = index b10, b11
+0016  print b12
+0017  return_nil

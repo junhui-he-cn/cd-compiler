@@ -1,95 +1,123 @@
 main registers=39
-0000  b0 = constant #0 nil
-0001  init_global g0, b0
-0002  b1 = make_function $0 describe/1
-0003  set_global g0, b1
-0004  b2 = constant #6 3
-0005  b3 = variant @9 Result. @10 Ok (b2)
-0006  init_global g1, b3
-0007  b4 = constant #7 0
-0008  b5 = variant @12 Result. @13 Ok (b4)
-0009  init_global g2, b5
-0010  b6 = variant @15 Result. @16 Empty ()
-0011  init_global g3, b6
-0012  b7 = load_global g0
-0013  b8 = load_global g1
-0014  b9 = call b7(b8)
-0015  print b9
-0016  b10 = load_global g0
-0017  b11 = load_global g2
-0018  b12 = call b10(b11)
-0019  print b12
-0020  b13 = load_global g0
-0021  b14 = load_global g3
-0022  b15 = call b13(b14)
-0023  print b15
-0024  b16 = load_global g1
-0025  b17 = variant_tag b16  @25 Result. @26 Ok
-0026  jump_if_false b17, 0036
-0027  b18 = variant_field b16[0]
-0028  init_global g4, b18
-0029  b19 = load_global g4
-0030  b20 = constant #8 10
-0031  b21 = greater b19, b20
-0032  jump_if_false b21, 0036
-0033  b22 = constant #9 "large"
-0034  print b22
-0035  jump 0058
-0036  b23 = variant_tag b16  @29 Result. @30 Ok
-0037  jump_if_false b23, 0047
-0038  b24 = variant_field b16[0]
-0039  init_global g5, b24
-0040  b25 = load_global g5
-0041  b26 = constant #10 0
-0042  b27 = greater b25, b26
-0043  jump_if_false b27, 0047
-0044  b28 = constant #11 "positive"
-0045  print b28
-0046  jump 0058
-0047  b29 = variant_tag b16  @33 Result. @34 Ok
-0048  jump_if_false b29, 0053
-0049  b30 = variant_field b16[0]
-0050  b31 = constant #12 "zero"
-0051  print b31
-0052  jump 0058
-0053  b32 = variant_tag b16  @35 Result. @36 Empty
-0054  jump_if_false b32, 0058
-0055  b33 = constant #13 "empty"
-0056  print b33
-0057  jump 0058
-0058  b34 = load_global g3
-0059  b35 = variant_tag b34  @38 Result. @39 Empty
-0060  jump_if_false b35, 0066
-0061  b36 = constant #14 1
-0062  jump_if_false b36, 0066
-0063  b37 = constant #15 "truthy"
-0064  print b37
-0065  jump 0069
-0066  b38 = constant #16 "fallback"
-0067  print b38
-0068  jump 0069
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 describe/1
+0004  set_global g0, b1
+0005  b2 = constant #6 3
+0006  b3 = variant @9 Result. @10 Ok (b2)
+0007  init_global g1, b3
+0008  b4 = constant #7 0
+0009  b5 = variant @12 Result. @13 Ok (b4)
+0010  init_global g2, b5
+0011  b6 = variant @15 Result. @16 Empty ()
+0012  init_global g3, b6
+0013  b7 = load_global g0
+0014  b8 = load_global g1
+0015  b9 = call b7(b8)
+0016  print b9
+0017  b10 = load_global g0
+0018  b11 = load_global g2
+0019  b12 = call b10(b11)
+0020  print b12
+0021  b13 = load_global g0
+0022  b14 = load_global g3
+0023  b15 = call b13(b14)
+0024  print b15
+0025  b16 = load_global g1
+0026  b17 = variant_tag b16  @25 Result. @26 Ok
+0027  br_if b17, b1, b3
+0028  block
+0029  b18 = variant_field b16[0]
+0030  init_global g4, b18
+0031  b19 = load_global g4
+0032  b20 = constant #8 10
+0033  b21 = greater b19, b20
+0034  br_if b21, b2, b3
+0035  block
+0036  b22 = constant #9 "large"
+0037  print b22
+0038  br b10
+0039  block
+0040  b23 = variant_tag b16  @29 Result. @30 Ok
+0041  br_if b23, b4, b6
+0042  block
+0043  b24 = variant_field b16[0]
+0044  init_global g5, b24
+0045  b25 = load_global g5
+0046  b26 = constant #10 0
+0047  b27 = greater b25, b26
+0048  br_if b27, b5, b6
+0049  block
+0050  b28 = constant #11 "positive"
+0051  print b28
+0052  br b10
+0053  block
+0054  b29 = variant_tag b16  @33 Result. @34 Ok
+0055  br_if b29, b7, b8
+0056  block
+0057  b30 = variant_field b16[0]
+0058  b31 = constant #12 "zero"
+0059  print b31
+0060  br b10
+0061  block
+0062  b32 = variant_tag b16  @35 Result. @36 Empty
+0063  br_if b32, b9, b10
+0064  block
+0065  b33 = constant #13 "empty"
+0066  print b33
+0067  br b10
+0068  block
+0069  b34 = load_global g3
+0070  b35 = variant_tag b34  @38 Result. @39 Empty
+0071  br_if b35, b11, b13
+0072  block
+0073  b36 = constant #14 1
+0074  br_if b36, b12, b13
+0075  block
+0076  b37 = constant #15 "truthy"
+0077  print b37
+0078  return_nil
+0079  block
+0080  b38 = constant #16 "fallback"
+0081  print b38
+0082  return_nil
+0083  block
+0084  return_nil
 
 function $0 describe/1 registers=12
-0000  b0 = load_local l0
-0001  b1 = variant_tag b0  @2 Result. @3 Ok
-0002  jump_if_false b1, 0012
-0003  b2 = variant_field b0[0]
-0004  bind_local l1, b2
-0005  b3 = load_local l1
-0006  b4 = constant #1 0
-0007  b5 = greater b3, b4
-0008  jump_if_false b5, 0012
-0009  b6 = constant #2 "positive"
-0010  return b6
-0011  jump 0021
-0012  b7 = variant_tag b0  @6 Result. @7 Ok
-0013  jump_if_false b7, 0018
-0014  b8 = variant_field b0[0]
-0015  b9 = constant #3 "zero"
-0016  return b9
-0017  jump 0021
-0018  b10 = constant #4 "empty"
-0019  return b10
-0020  jump 0021
-0021  b11 = constant #5 nil
-0022  return b11
+0000  block
+0001  b0 = load_local l0
+0002  b1 = variant_tag b0  @2 Result. @3 Ok
+0003  br_if b1, b1, b4
+0004  block
+0005  b2 = variant_field b0[0]
+0006  bind_local l1, b2
+0007  b3 = load_local l1
+0008  b4 = constant #1 0
+0009  b5 = greater b3, b4
+0010  br_if b5, b2, b4
+0011  block
+0012  b6 = constant #2 "positive"
+0013  return b6
+0014  block
+0015  br b9
+0016  block
+0017  b7 = variant_tag b0  @6 Result. @7 Ok
+0018  br_if b7, b5, b7
+0019  block
+0020  b8 = variant_field b0[0]
+0021  b9 = constant #3 "zero"
+0022  return b9
+0023  block
+0024  br b9
+0025  block
+0026  b10 = constant #4 "empty"
+0027  return b10
+0028  block
+0029  br b9
+0030  block
+0031  b11 = constant #5 nil
+0032  return b11
+0033  block
+0034  return_nil

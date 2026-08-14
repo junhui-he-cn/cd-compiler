@@ -20,6 +20,7 @@ globals:
   g0 = n2
 
 main registers=11:
+block b0:
   r0 = constant c0
   r1 = struct n0 {n1: r0}
   init_global g0, r1
@@ -33,36 +34,41 @@ main registers=11:
   r9 = load_global g0
   r10 = field r9, n9
   print r10
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/field_compound_assignment/input.cd" text="struct Counter { value: number }\nlet c: Counter = Counter { value: 1 };\nc.value += 2;\nprint c.value;\n"
 
 debug_locations:
   main 0 = s0:2:35
-  main 1 = s0:2:18
-  main 2 = s0:2:1
-  main 3 = s0:3:1
+  main 1 = s0:2:35
+  main 2 = s0:2:18
+  main 3 = s0:2:1
   main 4 = s0:3:1
   main 5 = s0:3:1
-  main 6 = s0:3:12
-  main 7 = s0:3:1
+  main 6 = s0:3:1
+  main 7 = s0:3:12
   main 8 = s0:3:1
   main 9 = s0:3:1
-  main 10 = s0:4:7
+  main 10 = s0:3:1
   main 11 = s0:4:7
-  main 12 = s0:4:1
+  main 12 = s0:4:7
+  main 13 = s0:4:1
+  main 14 = s0:4:1
 
 debug_ranges:
   main 0 = s0:67:68
-  main 1 = s0:50:68
-  main 2 = s0:37:68
-  main 3 = s0:72:73
-  main 4 = s0:72:84
+  main 1 = s0:67:68
+  main 2 = s0:50:68
+  main 3 = s0:37:68
+  main 4 = s0:72:73
   main 5 = s0:72:84
-  main 6 = s0:83:84
-  main 7 = s0:72:84
+  main 6 = s0:72:84
+  main 7 = s0:83:84
   main 8 = s0:72:84
   main 9 = s0:72:84
-  main 10 = s0:92:93
-  main 11 = s0:92:99
+  main 10 = s0:72:84
+  main 11 = s0:92:93
   main 12 = s0:92:99
+  main 13 = s0:92:99
+  main 14 = s0:92:99

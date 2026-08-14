@@ -88,6 +88,7 @@ globals:
   g7 = n52
 
 main registers=38:
+block b0:
   r0 = constant c0
   init_global g0, r0
   r1 = make_function f0
@@ -125,41 +126,54 @@ main registers=38:
   r23 = load_global g4
   r24 = constant c12
   r25 = equal r23, r24
-  jump_if_false r25, 41
+  br_if r25, b1, b2
+block b1:
   r26 = constant c13
   print r26
-  jump 53
+  br b6
+block b2:
   r27 = variant_tag r23 n44.n45
-  jump_if_false r27, 48
+  br_if r27, b3, b4
+block b3:
   r28 = variant_field r23 0
   init_global g6, r28
   r29 = constant c14
   print r29
-  jump 53
+  br b6
+block b4:
   r30 = variant_tag r23 n47.n48
-  jump_if_false r30, 53
+  br_if r30, b5, b6
+block b5:
   r31 = constant c15
   print r31
-  jump 53
+  br b6
+block b6:
   r32 = load_global g5
   r33 = variant_tag r32 n50.n51
-  jump_if_false r33, 61
+  br_if r33, b7, b8
+block b7:
   r34 = variant_field r32 0
   init_global g7, r34
   r35 = load_global g7
   print r35
-  jump 66
+  return_nil
+block b8:
   r36 = variant_tag r32 n54.n55
-  jump_if_false r36, 66
+  br_if r36, b9, b10
+block b9:
   r37 = constant c16
   print r37
-  jump 66
+  return_nil
+block b10:
+  return_nil
 
 function f0 name="describe" arity=1 registers=10:
   param 0 = "value#1"
+block b0:
   r0 = load_local l0
   r1 = variant_tag r0 n2.n3
-  jump_if_false r1, 11
+  br_if r1, b1, b3
+block b1:
   r2 = variant_field r0 0
   bind_local l1, r2
   r3 = constant c1
@@ -167,26 +181,38 @@ function f0 name="describe" arity=1 registers=10:
   r5 = native_call n6 [r4]
   r6 = add r3, r5
   return r6
-  jump 16
+block b2:
+  br b6
+block b3:
   r7 = variant_tag r0 n7.n8
-  jump_if_false r7, 16
+  br_if r7, b4, b6
+block b4:
   r8 = constant c2
   return r8
-  jump 16
+block b5:
+  br b6
+block b6:
   r9 = constant c3
   return r9
+block b7:
+  return_nil
 
 function f1 name="sum" arity=1 registers=12:
   param 0 = "list#4"
   upvalue u0 = global g1
+block b0:
   r0 = load_local l0
   r1 = variant_tag r0 n12.n13
-  jump_if_false r1, 6
+  br_if r1, b1, b3
+block b1:
   r2 = constant c5
   return r2
-  jump 19
+block b2:
+  br b6
+block b3:
   r3 = variant_tag r0 n14.n15
-  jump_if_false r3, 19
+  br_if r3, b4, b6
+block b4:
   r4 = variant_field r0 0
   r5 = variant_field r0 1
   bind_local l1, r4
@@ -197,9 +223,13 @@ function f1 name="sum" arity=1 registers=12:
   r9 = call r7 [r8]
   r10 = add r6, r9
   return r10
-  jump 19
+block b5:
+  br b6
+block b6:
   r11 = constant c6
   return r11
+block b7:
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/generic_enums/input.cd" text="enum Option<T> {\n  Some(T),\n  None,\n}\n\nenum List<T> {\n  Nil,\n  Cons(T, List<T>),\n}\n\nfun describe(value: Option<number>): string {\n  match value {\n    Option.Some(numberValue) => { return \"some:\" + str(numberValue); }\n    Option.None => { return \"none\"; }\n  }\n}\n\nfun sum(list: List<number>): number {\n  match list {\n    List.Nil => { return 0; }\n    List.Cons(first, rest) => { return first + sum(rest); }\n  }\n}\n\nlet some: Option<number> = Option.Some(7);\nlet none: Option<number> = Option.None<number>();\nlet maybe: optional<Option<number>> = nil;\nlet inferred = Option.Some(\"hello\");\nprint describe(some);\nprint describe(none);\nprint sum(List.Cons(1, List.Cons(2, List.Nil<number>())));\nmatch maybe {\n  nil => { print \"nil\"; }\n  Option.Some(value) => { print \"some\"; }\n  Option.None => { print \"none\"; }\n}\nmatch inferred {\n  Option.Some(value) => { print value; }\n  Option.None => { print \"none\"; }\n}\n"
@@ -209,211 +239,271 @@ debug_locations:
   main 1 = s0:11:1
   main 2 = s0:11:1
   main 3 = s0:11:1
-  main 4 = s0:18:1
+  main 4 = s0:11:1
   main 5 = s0:18:1
   main 6 = s0:18:1
   main 7 = s0:18:1
-  main 8 = s0:25:40
-  main 9 = s0:25:28
-  main 10 = s0:25:1
-  main 11 = s0:26:28
-  main 12 = s0:26:1
-  main 13 = s0:27:39
-  main 14 = s0:27:1
-  main 15 = s0:28:28
-  main 16 = s0:28:16
-  main 17 = s0:28:1
-  main 18 = s0:29:7
-  main 19 = s0:29:16
-  main 20 = s0:29:7
-  main 21 = s0:29:1
-  main 22 = s0:30:7
-  main 23 = s0:30:16
-  main 24 = s0:30:7
-  main 25 = s0:30:1
-  main 26 = s0:31:7
-  main 27 = s0:31:21
-  main 28 = s0:31:34
-  main 29 = s0:31:37
-  main 30 = s0:31:24
-  main 31 = s0:31:11
-  main 32 = s0:31:7
-  main 33 = s0:31:1
-  main 34 = s0:32:7
-  main 35 = s0:32:1
+  main 8 = s0:18:1
+  main 9 = s0:25:40
+  main 10 = s0:25:28
+  main 11 = s0:25:1
+  main 12 = s0:26:28
+  main 13 = s0:26:1
+  main 14 = s0:27:39
+  main 15 = s0:27:1
+  main 16 = s0:28:28
+  main 17 = s0:28:16
+  main 18 = s0:28:1
+  main 19 = s0:29:7
+  main 20 = s0:29:16
+  main 21 = s0:29:7
+  main 22 = s0:29:1
+  main 23 = s0:30:7
+  main 24 = s0:30:16
+  main 25 = s0:30:7
+  main 26 = s0:30:1
+  main 27 = s0:31:7
+  main 28 = s0:31:21
+  main 29 = s0:31:34
+  main 30 = s0:31:37
+  main 31 = s0:31:24
+  main 32 = s0:31:11
+  main 33 = s0:31:7
+  main 34 = s0:31:1
+  main 35 = s0:32:7
   main 36 = s0:32:1
   main 37 = s0:32:1
-  main 38 = s0:33:18
-  main 39 = s0:33:12
-  main 40 = s0:32:1
-  main 41 = s0:32:1
+  main 38 = s0:32:1
+  main 39 = s0:33:18
+  main 40 = s0:33:18
+  main 41 = s0:33:12
   main 42 = s0:32:1
   main 43 = s0:32:1
   main 44 = s0:32:1
-  main 45 = s0:34:33
-  main 46 = s0:34:27
+  main 45 = s0:32:1
+  main 46 = s0:32:1
   main 47 = s0:32:1
   main 48 = s0:32:1
-  main 49 = s0:32:1
-  main 50 = s0:35:26
-  main 51 = s0:35:20
+  main 49 = s0:34:33
+  main 50 = s0:34:27
+  main 51 = s0:32:1
   main 52 = s0:32:1
-  main 53 = s0:37:7
-  main 54 = s0:37:1
-  main 55 = s0:37:1
-  main 56 = s0:37:1
-  main 57 = s0:37:1
-  main 58 = s0:38:33
-  main 59 = s0:38:27
-  main 60 = s0:37:1
+  main 53 = s0:32:1
+  main 54 = s0:32:1
+  main 55 = s0:35:26
+  main 56 = s0:35:26
+  main 57 = s0:35:20
+  main 58 = s0:32:1
+  main 59 = s0:37:7
+  main 60 = s0:37:7
   main 61 = s0:37:1
   main 62 = s0:37:1
-  main 63 = s0:39:26
-  main 64 = s0:39:20
+  main 63 = s0:37:1
+  main 64 = s0:37:1
   main 65 = s0:37:1
+  main 66 = s0:38:33
+  main 67 = s0:38:27
+  main 68 = s0:37:1
+  main 69 = s0:37:1
+  main 70 = s0:37:1
+  main 71 = s0:37:1
+  main 72 = s0:39:26
+  main 73 = s0:39:26
+  main 74 = s0:39:20
+  main 75 = s0:37:1
+  main 76 = s0:37:1
+  main 77 = s0:37:1
   function f0 0 = s0:12:9
-  function f0 1 = s0:12:3
+  function f0 1 = s0:12:9
   function f0 2 = s0:12:3
   function f0 3 = s0:12:3
   function f0 4 = s0:12:3
-  function f0 5 = s0:13:42
-  function f0 6 = s0:13:56
-  function f0 7 = s0:13:52
-  function f0 8 = s0:13:42
-  function f0 9 = s0:13:35
-  function f0 10 = s0:12:3
-  function f0 11 = s0:12:3
+  function f0 5 = s0:12:3
+  function f0 6 = s0:12:3
+  function f0 7 = s0:13:42
+  function f0 8 = s0:13:56
+  function f0 9 = s0:13:52
+  function f0 10 = s0:13:42
+  function f0 11 = s0:13:35
   function f0 12 = s0:12:3
-  function f0 13 = s0:14:29
-  function f0 14 = s0:14:22
+  function f0 13 = s0:12:3
+  function f0 14 = s0:12:3
   function f0 15 = s0:12:3
-  function f0 16 = s0:11:1
-  function f0 17 = s0:11:1
+  function f0 16 = s0:12:3
+  function f0 17 = s0:14:29
+  function f0 18 = s0:14:29
+  function f0 19 = s0:14:22
+  function f0 20 = s0:12:3
+  function f0 21 = s0:12:3
+  function f0 22 = s0:11:1
+  function f0 23 = s0:11:1
+  function f0 24 = s0:11:1
+  function f0 25 = s0:11:1
+  function f0 26 = s0:11:1
   function f1 0 = s0:19:9
-  function f1 1 = s0:19:3
+  function f1 1 = s0:19:9
   function f1 2 = s0:19:3
-  function f1 3 = s0:20:26
-  function f1 4 = s0:20:19
-  function f1 5 = s0:19:3
-  function f1 6 = s0:19:3
+  function f1 3 = s0:19:3
+  function f1 4 = s0:20:26
+  function f1 5 = s0:20:26
+  function f1 6 = s0:20:19
   function f1 7 = s0:19:3
   function f1 8 = s0:19:3
   function f1 9 = s0:19:3
   function f1 10 = s0:19:3
   function f1 11 = s0:19:3
-  function f1 12 = s0:21:40
-  function f1 13 = s0:21:48
-  function f1 14 = s0:21:52
-  function f1 15 = s0:21:48
-  function f1 16 = s0:21:40
-  function f1 17 = s0:21:33
-  function f1 18 = s0:19:3
-  function f1 19 = s0:18:1
-  function f1 20 = s0:18:1
+  function f1 12 = s0:19:3
+  function f1 13 = s0:19:3
+  function f1 14 = s0:19:3
+  function f1 15 = s0:19:3
+  function f1 16 = s0:19:3
+  function f1 17 = s0:21:40
+  function f1 18 = s0:21:48
+  function f1 19 = s0:21:52
+  function f1 20 = s0:21:48
+  function f1 21 = s0:21:40
+  function f1 22 = s0:21:33
+  function f1 23 = s0:19:3
+  function f1 24 = s0:19:3
+  function f1 25 = s0:18:1
+  function f1 26 = s0:18:1
+  function f1 27 = s0:18:1
+  function f1 28 = s0:18:1
+  function f1 29 = s0:18:1
 
 debug_ranges:
   main 0 = s0:88:251
   main 1 = s0:88:251
   main 2 = s0:88:251
   main 3 = s0:88:251
-  main 4 = s0:266:401
+  main 4 = s0:88:251
   main 5 = s0:266:401
   main 6 = s0:266:401
   main 7 = s0:266:401
-  main 8 = s0:451:452
-  main 9 = s0:439:453
-  main 10 = s0:416:453
-  main 11 = s0:482:503
-  main 12 = s0:459:503
-  main 13 = s0:543:546
-  main 14 = s0:509:546
-  main 15 = s0:575:582
-  main 16 = s0:563:583
-  main 17 = s0:552:583
-  main 18 = s0:591:599
-  main 19 = s0:600:604
-  main 20 = s0:591:605
+  main 8 = s0:266:401
+  main 9 = s0:451:452
+  main 10 = s0:439:453
+  main 11 = s0:416:453
+  main 12 = s0:482:503
+  main 13 = s0:459:503
+  main 14 = s0:543:546
+  main 15 = s0:509:546
+  main 16 = s0:575:582
+  main 17 = s0:563:583
+  main 18 = s0:552:583
+  main 19 = s0:591:599
+  main 20 = s0:600:604
   main 21 = s0:591:605
-  main 22 = s0:613:621
-  main 23 = s0:622:626
-  main 24 = s0:613:627
+  main 22 = s0:591:605
+  main 23 = s0:613:621
+  main 24 = s0:622:626
   main 25 = s0:613:627
-  main 26 = s0:635:638
-  main 27 = s0:649:650
-  main 28 = s0:662:663
-  main 29 = s0:665:683
-  main 30 = s0:652:684
-  main 31 = s0:639:685
-  main 32 = s0:635:686
+  main 26 = s0:613:627
+  main 27 = s0:635:638
+  main 28 = s0:649:650
+  main 29 = s0:662:663
+  main 30 = s0:665:683
+  main 31 = s0:652:684
+  main 32 = s0:639:685
   main 33 = s0:635:686
-  main 34 = s0:694:699
-  main 35 = s0:694:801
+  main 34 = s0:635:686
+  main 35 = s0:694:699
   main 36 = s0:694:801
   main 37 = s0:694:801
-  main 38 = s0:719:724
+  main 38 = s0:694:801
   main 39 = s0:719:724
-  main 40 = s0:694:801
-  main 41 = s0:694:801
+  main 40 = s0:719:724
+  main 41 = s0:719:724
   main 42 = s0:694:801
   main 43 = s0:694:801
   main 44 = s0:694:801
-  main 45 = s0:760:766
-  main 46 = s0:760:766
+  main 45 = s0:694:801
+  main 46 = s0:694:801
   main 47 = s0:694:801
   main 48 = s0:694:801
-  main 49 = s0:694:801
-  main 50 = s0:795:801
-  main 51 = s0:795:801
+  main 49 = s0:760:766
+  main 50 = s0:760:766
+  main 51 = s0:694:801
   main 52 = s0:694:801
-  main 53 = s0:813:821
-  main 54 = s0:813:896
-  main 55 = s0:813:896
-  main 56 = s0:813:896
-  main 57 = s0:813:896
-  main 58 = s0:856:861
-  main 59 = s0:856:861
-  main 60 = s0:813:896
+  main 53 = s0:694:801
+  main 54 = s0:694:801
+  main 55 = s0:795:801
+  main 56 = s0:795:801
+  main 57 = s0:795:801
+  main 58 = s0:694:801
+  main 59 = s0:813:821
+  main 60 = s0:813:821
   main 61 = s0:813:896
   main 62 = s0:813:896
-  main 63 = s0:890:896
-  main 64 = s0:890:896
+  main 63 = s0:813:896
+  main 64 = s0:813:896
   main 65 = s0:813:896
+  main 66 = s0:856:861
+  main 67 = s0:856:861
+  main 68 = s0:813:896
+  main 69 = s0:813:896
+  main 70 = s0:813:896
+  main 71 = s0:813:896
+  main 72 = s0:890:896
+  main 73 = s0:890:896
+  main 74 = s0:890:896
+  main 75 = s0:813:896
+  main 76 = s0:813:896
+  main 77 = s0:813:896
   function f0 0 = s0:138:143
-  function f0 1 = s0:138:251
+  function f0 1 = s0:138:143
   function f0 2 = s0:138:251
   function f0 3 = s0:138:251
   function f0 4 = s0:138:251
-  function f0 5 = s0:187:194
-  function f0 6 = s0:201:212
-  function f0 7 = s0:197:213
-  function f0 8 = s0:187:213
-  function f0 9 = s0:180:213
-  function f0 10 = s0:138:251
-  function f0 11 = s0:138:251
+  function f0 5 = s0:138:251
+  function f0 6 = s0:138:251
+  function f0 7 = s0:187:194
+  function f0 8 = s0:201:212
+  function f0 9 = s0:197:213
+  function f0 10 = s0:187:213
+  function f0 11 = s0:180:213
   function f0 12 = s0:138:251
-  function f0 13 = s0:245:251
-  function f0 14 = s0:238:251
+  function f0 13 = s0:138:251
+  function f0 14 = s0:138:251
   function f0 15 = s0:138:251
-  function f0 16 = s0:88:251
-  function f0 17 = s0:88:251
+  function f0 16 = s0:138:251
+  function f0 17 = s0:245:251
+  function f0 18 = s0:245:251
+  function f0 19 = s0:238:251
+  function f0 20 = s0:138:251
+  function f0 21 = s0:138:251
+  function f0 22 = s0:88:251
+  function f0 23 = s0:88:251
+  function f0 24 = s0:88:251
+  function f0 25 = s0:88:251
+  function f0 26 = s0:88:251
   function f1 0 = s0:308:312
-  function f1 1 = s0:308:401
+  function f1 1 = s0:308:312
   function f1 2 = s0:308:401
-  function f1 3 = s0:340:341
-  function f1 4 = s0:333:341
-  function f1 5 = s0:308:401
-  function f1 6 = s0:308:401
+  function f1 3 = s0:308:401
+  function f1 4 = s0:340:341
+  function f1 5 = s0:340:341
+  function f1 6 = s0:333:341
   function f1 7 = s0:308:401
   function f1 8 = s0:308:401
   function f1 9 = s0:308:401
   function f1 10 = s0:308:401
   function f1 11 = s0:308:401
-  function f1 12 = s0:384:389
-  function f1 13 = s0:392:395
-  function f1 14 = s0:396:400
-  function f1 15 = s0:392:401
-  function f1 16 = s0:384:401
-  function f1 17 = s0:377:401
-  function f1 18 = s0:308:401
-  function f1 19 = s0:266:401
-  function f1 20 = s0:266:401
+  function f1 12 = s0:308:401
+  function f1 13 = s0:308:401
+  function f1 14 = s0:308:401
+  function f1 15 = s0:308:401
+  function f1 16 = s0:308:401
+  function f1 17 = s0:384:389
+  function f1 18 = s0:392:395
+  function f1 19 = s0:396:400
+  function f1 20 = s0:392:401
+  function f1 21 = s0:384:401
+  function f1 22 = s0:377:401
+  function f1 23 = s0:308:401
+  function f1 24 = s0:308:401
+  function f1 25 = s0:266:401
+  function f1 26 = s0:266:401
+  function f1 27 = s0:266:401
+  function f1 28 = s0:266:401
+  function f1 29 = s0:266:401

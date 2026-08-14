@@ -60,6 +60,10 @@ bool isBinary(BytecodeOp op)
     case BytecodeOp::Jump:
     case BytecodeOp::JumpIfFalse:
     case BytecodeOp::JumpIfTrue:
+    case BytecodeOp::BlockStart:
+    case BytecodeOp::Br:
+    case BytecodeOp::BrIf:
+    case BytecodeOp::ReturnNil:
         return false;
     }
 
@@ -325,6 +329,15 @@ void printInstruction(
             out << " ";
         }
         out << std::setw(4) << std::setfill('0') << instruction.operand << std::setfill(' ');
+    } else if (instruction.op == BytecodeOp::Br) {
+        out << " b" << instruction.operand;
+    } else if (instruction.op == BytecodeOp::BrIf) {
+        if (instruction.left) {
+            out << " " << *instruction.left << ", b" << instruction.operand
+                << ", b" << (instruction.operands.empty() ? 0 : instruction.operands.front());
+        }
+    } else if (instruction.op == BytecodeOp::BlockStart || instruction.op == BytecodeOp::ReturnNil) {
+        // no operands
     }
 
     out << '\n';
@@ -372,6 +385,12 @@ void BytecodeProgram::setGlobals(std::vector<std::uint32_t> globals)
     globals_ = std::move(globals);
 }
 
+void BytecodeProgram::setDependencyRemap(
+    std::unordered_map<std::uint32_t, std::uint32_t> remap)
+{
+    dependencyRemap_ = std::move(remap);
+}
+
 const std::vector<Value>& BytecodeProgram::constants() const
 {
     return constants_;
@@ -400,6 +419,12 @@ const std::vector<BytecodeFunction>& BytecodeProgram::functions() const
 const std::vector<std::uint32_t>& BytecodeProgram::globals() const
 {
     return globals_;
+}
+
+std::uint32_t BytecodeProgram::remapDependencyOffset(std::uint32_t irOffset) const
+{
+    const auto found = dependencyRemap_.find(irOffset);
+    return found == dependencyRemap_.end() ? irOffset : found->second;
 }
 
 void BytecodeProgram::print(std::ostream& out) const
@@ -521,6 +546,14 @@ std::string bytecodeOpName(BytecodeOp op)
         return "jump_if_false";
     case BytecodeOp::JumpIfTrue:
         return "jump_if_true";
+    case BytecodeOp::BlockStart:
+        return "block";
+    case BytecodeOp::Br:
+        return "br";
+    case BytecodeOp::BrIf:
+        return "br_if";
+    case BytecodeOp::ReturnNil:
+        return "return_nil";
     }
 
     return "unknown";

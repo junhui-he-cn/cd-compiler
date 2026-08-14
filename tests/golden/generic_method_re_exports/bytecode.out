@@ -1,19 +1,25 @@
 main registers=8
-0000  b0 = constant #0 nil
-0001  init_global g0, b0
-0002  b1 = make_function $0 echo/2
-0003  set_global g0, b1
-0004  b2 = constant #2 0
-0005  b3 = struct @3 lib.Box { @4 value: b2}
-0006  init_global g1, b3
-0007  b4 = load_global g0
-0008  b5 = load_global g1
-0009  b6 = constant #3 9
-0010  b7 = call b4(b5, b6)
-0011  print b7
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 echo/2
+0004  set_global g0, b1
+0005  b2 = constant #2 0
+0006  b3 = struct @3 lib.Box { @4 value: b2}
+0007  init_global g1, b3
+0008  b4 = load_global g0
+0009  b5 = load_global g1
+0010  b6 = constant #3 9
+0011  b7 = call b4(b5, b6)
+0012  print b7
+0013  return_nil
 
 function $0 echo/2 registers=2
-0000  b0 = load_local l1
-0001  return b0
-0002  b1 = constant #1 nil
-0003  return b1
+0000  block
+0001  b0 = load_local l1
+0002  return b0
+0003  block
+0004  b1 = constant #1 nil
+0005  return b1
+0006  block
+0007  return_nil

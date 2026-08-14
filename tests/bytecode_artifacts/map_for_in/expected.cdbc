@@ -40,6 +40,7 @@ globals:
   g4 = n6
 
 main registers=27:
+block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
@@ -58,43 +59,50 @@ main registers=27:
   r11 = load_global g1
   r12 = len r11
   init_global g4, r12
+  br b1
+block b1:
   r13 = load_global g2
   r14 = load_global g4
   r15 = less r13, r14
-  jump_if_false r15, 38
+  br_if r15, b2, b5
+block b2:
   r16 = load_global g1
   r17 = load_global g2
   r18 = index r16, r17
   set_global g3, r18
-  jump 32
+  br b4
+block b3:
   r19 = load_global g2
   r20 = constant c8
   r21 = add r19, r20
   set_global g2, r21
-  jump 18
+  br b1
+block b4:
   r22 = load_global g3
   print r22
   r23 = load_global g0
   r24 = load_global g3
   r25 = native_call n17 [r23, r24]
-  jump 27
+  br b3
+block b5:
   r26 = load_global g0
   print r26
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/map_for_in/input.cd" text="let values = {\"a\": 1, \"b\": 2, \"c\": 3};\nfor key in values {\n  print key;\n  remove(values, key);\n}\nprint values;\n"
 
 debug_locations:
   main 0 = s0:1:15
-  main 1 = s0:1:20
-  main 2 = s0:1:23
-  main 3 = s0:1:28
-  main 4 = s0:1:31
-  main 5 = s0:1:36
-  main 6 = s0:1:14
-  main 7 = s0:1:1
-  main 8 = s0:2:12
-  main 9 = s0:2:1
+  main 1 = s0:1:15
+  main 2 = s0:1:20
+  main 3 = s0:1:23
+  main 4 = s0:1:28
+  main 5 = s0:1:31
+  main 6 = s0:1:36
+  main 7 = s0:1:14
+  main 8 = s0:1:1
+  main 9 = s0:2:12
   main 10 = s0:2:1
   main 11 = s0:2:1
   main 12 = s0:2:1
@@ -117,26 +125,34 @@ debug_locations:
   main 29 = s0:2:1
   main 30 = s0:2:1
   main 31 = s0:2:1
-  main 32 = s0:3:9
-  main 33 = s0:3:3
-  main 34 = s0:4:10
-  main 35 = s0:4:18
-  main 36 = s0:4:3
-  main 37 = s0:2:1
-  main 38 = s0:6:7
-  main 39 = s0:6:1
+  main 32 = s0:2:1
+  main 33 = s0:2:1
+  main 34 = s0:2:1
+  main 35 = s0:2:1
+  main 36 = s0:2:1
+  main 37 = s0:3:9
+  main 38 = s0:3:9
+  main 39 = s0:3:3
+  main 40 = s0:4:10
+  main 41 = s0:4:18
+  main 42 = s0:4:3
+  main 43 = s0:2:1
+  main 44 = s0:6:7
+  main 45 = s0:6:7
+  main 46 = s0:6:1
+  main 47 = s0:6:1
 
 debug_ranges:
   main 0 = s0:14:17
-  main 1 = s0:19:20
-  main 2 = s0:22:25
-  main 3 = s0:27:28
-  main 4 = s0:30:33
-  main 5 = s0:35:36
-  main 6 = s0:13:36
-  main 7 = s0:4:36
-  main 8 = s0:50:56
-  main 9 = s0:39:93
+  main 1 = s0:14:17
+  main 2 = s0:19:20
+  main 3 = s0:22:25
+  main 4 = s0:27:28
+  main 5 = s0:30:33
+  main 6 = s0:35:36
+  main 7 = s0:13:36
+  main 8 = s0:4:36
+  main 9 = s0:50:56
   main 10 = s0:39:93
   main 11 = s0:39:93
   main 12 = s0:39:93
@@ -159,11 +175,19 @@ debug_ranges:
   main 29 = s0:39:93
   main 30 = s0:39:93
   main 31 = s0:39:93
-  main 32 = s0:67:70
-  main 33 = s0:67:70
-  main 34 = s0:81:87
-  main 35 = s0:89:92
-  main 36 = s0:74:93
-  main 37 = s0:39:93
-  main 38 = s0:103:109
-  main 39 = s0:103:109
+  main 32 = s0:39:93
+  main 33 = s0:39:93
+  main 34 = s0:39:93
+  main 35 = s0:39:93
+  main 36 = s0:39:93
+  main 37 = s0:67:70
+  main 38 = s0:67:70
+  main 39 = s0:67:70
+  main 40 = s0:81:87
+  main 41 = s0:89:92
+  main 42 = s0:74:93
+  main 43 = s0:39:93
+  main 44 = s0:103:109
+  main 45 = s0:103:109
+  main 46 = s0:103:109
+  main 47 = s0:103:109

@@ -15,6 +15,7 @@ names:
   n5 = "typeOf"
 
 main registers=10:
+block b0:
   r0 = constant c0
   r1 = native_call n0 [r0]
   print r1
@@ -29,38 +30,43 @@ main registers=10:
   r8 = struct n3 {n4: r7}
   r9 = native_call n5 [r8]
   print r9
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/native_stdlib_typeof/input.cd" text="print typeOf(nil);\nprint typeOf(1);\nprint typeOf([1]);\nstruct Box { value: number }\nprint typeOf(Box { value: 1 });\n"
 
 debug_locations:
   main 0 = s0:1:14
-  main 1 = s0:1:7
-  main 2 = s0:1:1
-  main 3 = s0:2:14
-  main 4 = s0:2:7
-  main 5 = s0:2:1
-  main 6 = s0:3:15
-  main 7 = s0:3:14
-  main 8 = s0:3:7
-  main 9 = s0:3:1
-  main 10 = s0:5:27
-  main 11 = s0:5:14
-  main 12 = s0:5:7
-  main 13 = s0:5:1
+  main 1 = s0:1:14
+  main 2 = s0:1:7
+  main 3 = s0:1:1
+  main 4 = s0:2:14
+  main 5 = s0:2:7
+  main 6 = s0:2:1
+  main 7 = s0:3:15
+  main 8 = s0:3:14
+  main 9 = s0:3:7
+  main 10 = s0:3:1
+  main 11 = s0:5:27
+  main 12 = s0:5:14
+  main 13 = s0:5:7
+  main 14 = s0:5:1
+  main 15 = s0:5:1
 
 debug_ranges:
   main 0 = s0:13:16
-  main 1 = s0:6:17
+  main 1 = s0:13:16
   main 2 = s0:6:17
-  main 3 = s0:32:33
-  main 4 = s0:25:34
+  main 3 = s0:6:17
+  main 4 = s0:32:33
   main 5 = s0:25:34
-  main 6 = s0:50:51
-  main 7 = s0:49:51
-  main 8 = s0:42:53
+  main 6 = s0:25:34
+  main 7 = s0:50:51
+  main 8 = s0:49:51
   main 9 = s0:42:53
-  main 10 = s0:110:111
-  main 11 = s0:97:111
-  main 12 = s0:90:114
+  main 10 = s0:42:53
+  main 11 = s0:110:111
+  main 12 = s0:97:111
   main 13 = s0:90:114
+  main 14 = s0:90:114
+  main 15 = s0:90:114

@@ -8,6 +8,7 @@
 #include <optional>
 #include <ostream>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 struct BytecodeRegister {
@@ -61,6 +62,10 @@ enum class BytecodeOp {
     Jump,
     JumpIfFalse,
     JumpIfTrue,
+    BlockStart,
+    Br,
+    BrIf,
+    ReturnNil,
 };
 
 struct BytecodeInstruction {
@@ -114,6 +119,7 @@ public:
     void setRegisterCount(std::uint32_t registerCount);
     void setFunctions(std::vector<BytecodeFunction> functions);
     void setGlobals(std::vector<std::uint32_t> globals);
+    void setDependencyRemap(std::unordered_map<std::uint32_t, std::uint32_t> remap);
 
     const std::vector<Value>& constants() const;
     const std::vector<std::string>& names() const;
@@ -121,6 +127,7 @@ public:
     std::uint32_t registerCount() const;
     const std::vector<BytecodeFunction>& functions() const;
     const std::vector<std::uint32_t>& globals() const;
+    std::uint32_t remapDependencyOffset(std::uint32_t irOffset) const;
 
     void print(std::ostream& out) const;
 
@@ -131,6 +138,7 @@ private:
     std::uint32_t registerCount_ = 0;
     std::vector<BytecodeFunction> functions_;
     std::vector<std::uint32_t> globals_;
+    std::unordered_map<std::uint32_t, std::uint32_t> dependencyRemap_;
     std::vector<SourceFile> sources_;
 };
 

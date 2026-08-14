@@ -1,37 +1,39 @@
 main registers=26
-0000  b0 = constant #0 "你🙂"
-0001  init_global g0, b0
-0002  b1 = load_global g0
-0003  b2 = len b1
-0004  print b2
-0005  b3 = load_global g0
-0006  b4 = len b3
-0007  print b4
-0008  b5 = load_global g0
-0009  b6 = constant #1 0
-0010  b7 = constant #2 1
-0011  b8 = native_call @4 substr [b5, b6, b7]
-0012  print b8
-0013  b9 = load_global g0
-0014  b10 = constant #3 1
-0015  b11 = constant #4 1
-0016  b12 = native_call @6 substr [b9, b10, b11]
-0017  print b12
-0018  b13 = load_global g0
-0019  b14 = constant #5 0
-0020  b15 = native_call @8 charAt [b13, b14]
-0021  print b15
-0022  b16 = load_global g0
-0023  b17 = constant #6 1
-0024  b18 = native_call @10 charAt [b16, b17]
-0025  print b18
-0026  b19 = constant #7 "é"
-0027  init_global g1, b19
-0028  b20 = load_global g1
-0029  b21 = len b20
-0030  print b21
-0031  b22 = load_global g1
-0032  b23 = constant #8 0
-0033  b24 = constant #9 2
-0034  b25 = native_call @14 substr [b22, b23, b24]
-0035  print b25
+0000  block
+0001  b0 = constant #0 "你🙂"
+0002  init_global g0, b0
+0003  b1 = load_global g0
+0004  b2 = len b1
+0005  print b2
+0006  b3 = load_global g0
+0007  b4 = len b3
+0008  print b4
+0009  b5 = load_global g0
+0010  b6 = constant #1 0
+0011  b7 = constant #2 1
+0012  b8 = native_call @4 substr [b5, b6, b7]
+0013  print b8
+0014  b9 = load_global g0
+0015  b10 = constant #3 1
+0016  b11 = constant #4 1
+0017  b12 = native_call @6 substr [b9, b10, b11]
+0018  print b12
+0019  b13 = load_global g0
+0020  b14 = constant #5 0
+0021  b15 = native_call @8 charAt [b13, b14]
+0022  print b15
+0023  b16 = load_global g0
+0024  b17 = constant #6 1
+0025  b18 = native_call @10 charAt [b16, b17]
+0026  print b18
+0027  b19 = constant #7 "é"
+0028  init_global g1, b19
+0029  b20 = load_global g1
+0030  b21 = len b20
+0031  print b21
+0032  b22 = load_global g1
+0033  b23 = constant #8 0
+0034  b24 = constant #9 2
+0035  b25 = native_call @14 substr [b22, b23, b24]
+0036  print b25
+0037  return_nil

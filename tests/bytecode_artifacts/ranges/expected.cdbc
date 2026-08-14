@@ -71,6 +71,7 @@ globals:
   g8 = n31
 
 main registers=56:
+block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = native_call n0 [r0, r1]
@@ -109,23 +110,29 @@ main registers=56:
   r24 = load_global g1
   r25 = len r24
   init_global g4, r25
+  br b1
+block b1:
   r26 = load_global g2
   r27 = load_global g4
   r28 = less r26, r27
-  jump_if_false r28, 55
+  br_if r28, b2, b5
+block b2:
   r29 = load_global g1
   r30 = load_global g2
   r31 = index r29, r30
   set_global g3, r31
-  jump 52
+  br b4
+block b3:
   r32 = load_global g2
   r33 = constant c8
   r34 = add r32, r33
   set_global g2, r34
-  jump 38
+  br b1
+block b4:
   r35 = load_global g3
   print r35
-  jump 47
+  br b3
+block b5:
   r36 = constant c9
   r37 = constant c10
   r38 = constant c11
@@ -140,58 +147,65 @@ main registers=56:
   r44 = load_global g5
   r45 = len r44
   init_global g8, r45
+  br b6
+block b6:
   r46 = load_global g6
   r47 = load_global g8
   r48 = less r46, r47
-  jump_if_false r48, 86
+  br_if r48, b7, b10
+block b7:
   r49 = load_global g5
   r50 = load_global g6
   r51 = index r49, r50
   set_global g7, r51
-  jump 83
+  br b9
+block b8:
   r52 = load_global g6
   r53 = constant c14
   r54 = add r52, r53
   set_global g6, r54
-  jump 69
+  br b6
+block b9:
   r55 = load_global g7
   print r55
-  jump 78
+  br b8
+block b10:
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/ranges/input.cd" text="let ascending = range(1, 6);\nprint ascending;\nprint len(ascending);\nprint ascending[2];\nprint ascending.contains(5);\nprint contains(ascending, 4);\nprint ascending.len();\nprint typeOf(ascending);\nfor item in range(5) { print item; }\nfor item in range(5, 0, -2) { print item; }\n"
 
 debug_locations:
   main 0 = s0:1:23
-  main 1 = s0:1:26
-  main 2 = s0:1:17
-  main 3 = s0:1:1
-  main 4 = s0:2:7
-  main 5 = s0:2:1
-  main 6 = s0:3:11
-  main 7 = s0:3:7
-  main 8 = s0:3:1
-  main 9 = s0:4:7
-  main 10 = s0:4:17
-  main 11 = s0:4:7
-  main 12 = s0:4:1
-  main 13 = s0:5:7
-  main 14 = s0:5:26
-  main 15 = s0:5:7
-  main 16 = s0:5:1
-  main 17 = s0:6:16
-  main 18 = s0:6:27
-  main 19 = s0:6:7
-  main 20 = s0:6:1
-  main 21 = s0:7:7
+  main 1 = s0:1:23
+  main 2 = s0:1:26
+  main 3 = s0:1:17
+  main 4 = s0:1:1
+  main 5 = s0:2:7
+  main 6 = s0:2:1
+  main 7 = s0:3:11
+  main 8 = s0:3:7
+  main 9 = s0:3:1
+  main 10 = s0:4:7
+  main 11 = s0:4:17
+  main 12 = s0:4:7
+  main 13 = s0:4:1
+  main 14 = s0:5:7
+  main 15 = s0:5:26
+  main 16 = s0:5:7
+  main 17 = s0:5:1
+  main 18 = s0:6:16
+  main 19 = s0:6:27
+  main 20 = s0:6:7
+  main 21 = s0:6:1
   main 22 = s0:7:7
-  main 23 = s0:7:1
-  main 24 = s0:8:14
-  main 25 = s0:8:7
-  main 26 = s0:8:1
-  main 27 = s0:9:19
-  main 28 = s0:9:13
-  main 29 = s0:9:1
+  main 23 = s0:7:7
+  main 24 = s0:7:1
+  main 25 = s0:8:14
+  main 26 = s0:8:7
+  main 27 = s0:8:1
+  main 28 = s0:9:19
+  main 29 = s0:9:13
   main 30 = s0:9:1
   main 31 = s0:9:1
   main 32 = s0:9:1
@@ -214,21 +228,21 @@ debug_locations:
   main 49 = s0:9:1
   main 50 = s0:9:1
   main 51 = s0:9:1
-  main 52 = s0:9:30
-  main 53 = s0:9:24
+  main 52 = s0:9:1
+  main 53 = s0:9:1
   main 54 = s0:9:1
-  main 55 = s0:10:19
-  main 56 = s0:10:22
-  main 57 = s0:10:26
-  main 58 = s0:10:25
-  main 59 = s0:10:13
-  main 60 = s0:10:1
-  main 61 = s0:10:1
-  main 62 = s0:10:1
-  main 63 = s0:10:1
-  main 64 = s0:10:1
-  main 65 = s0:10:1
-  main 66 = s0:10:1
+  main 55 = s0:9:1
+  main 56 = s0:9:1
+  main 57 = s0:9:30
+  main 58 = s0:9:30
+  main 59 = s0:9:24
+  main 60 = s0:9:1
+  main 61 = s0:10:19
+  main 62 = s0:10:19
+  main 63 = s0:10:22
+  main 64 = s0:10:26
+  main 65 = s0:10:25
+  main 66 = s0:10:13
   main 67 = s0:10:1
   main 68 = s0:10:1
   main 69 = s0:10:1
@@ -245,41 +259,55 @@ debug_locations:
   main 80 = s0:10:1
   main 81 = s0:10:1
   main 82 = s0:10:1
-  main 83 = s0:10:37
-  main 84 = s0:10:31
+  main 83 = s0:10:1
+  main 84 = s0:10:1
   main 85 = s0:10:1
+  main 86 = s0:10:1
+  main 87 = s0:10:1
+  main 88 = s0:10:1
+  main 89 = s0:10:1
+  main 90 = s0:10:1
+  main 91 = s0:10:1
+  main 92 = s0:10:1
+  main 93 = s0:10:1
+  main 94 = s0:10:37
+  main 95 = s0:10:37
+  main 96 = s0:10:31
+  main 97 = s0:10:1
+  main 98 = s0:10:1
+  main 99 = s0:10:1
 
 debug_ranges:
   main 0 = s0:22:23
-  main 1 = s0:25:26
-  main 2 = s0:16:27
-  main 3 = s0:4:27
-  main 4 = s0:35:44
+  main 1 = s0:22:23
+  main 2 = s0:25:26
+  main 3 = s0:16:27
+  main 4 = s0:4:27
   main 5 = s0:35:44
-  main 6 = s0:56:65
-  main 7 = s0:52:66
+  main 6 = s0:35:44
+  main 7 = s0:56:65
   main 8 = s0:52:66
-  main 9 = s0:74:83
-  main 10 = s0:84:85
-  main 11 = s0:74:85
+  main 9 = s0:52:66
+  main 10 = s0:74:83
+  main 11 = s0:84:85
   main 12 = s0:74:85
-  main 13 = s0:94:103
-  main 14 = s0:113:114
-  main 15 = s0:94:115
+  main 13 = s0:74:85
+  main 14 = s0:94:103
+  main 15 = s0:113:114
   main 16 = s0:94:115
-  main 17 = s0:132:141
-  main 18 = s0:143:144
-  main 19 = s0:123:145
+  main 17 = s0:94:115
+  main 18 = s0:132:141
+  main 19 = s0:143:144
   main 20 = s0:123:145
-  main 21 = s0:153:162
-  main 22 = s0:153:168
+  main 21 = s0:123:145
+  main 22 = s0:153:162
   main 23 = s0:153:168
-  main 24 = s0:183:192
-  main 25 = s0:176:193
+  main 24 = s0:153:168
+  main 25 = s0:183:192
   main 26 = s0:176:193
-  main 27 = s0:213:214
-  main 28 = s0:207:215
-  main 29 = s0:195:228
+  main 27 = s0:176:193
+  main 28 = s0:213:214
+  main 29 = s0:207:215
   main 30 = s0:195:228
   main 31 = s0:195:228
   main 32 = s0:195:228
@@ -302,21 +330,21 @@ debug_ranges:
   main 49 = s0:195:228
   main 50 = s0:195:228
   main 51 = s0:195:228
-  main 52 = s0:224:228
-  main 53 = s0:224:228
+  main 52 = s0:195:228
+  main 53 = s0:195:228
   main 54 = s0:195:228
-  main 55 = s0:250:251
-  main 56 = s0:253:254
-  main 57 = s0:257:258
-  main 58 = s0:256:258
-  main 59 = s0:244:259
-  main 60 = s0:232:272
-  main 61 = s0:232:272
-  main 62 = s0:232:272
-  main 63 = s0:232:272
-  main 64 = s0:232:272
-  main 65 = s0:232:272
-  main 66 = s0:232:272
+  main 55 = s0:195:228
+  main 56 = s0:195:228
+  main 57 = s0:224:228
+  main 58 = s0:224:228
+  main 59 = s0:224:228
+  main 60 = s0:195:228
+  main 61 = s0:250:251
+  main 62 = s0:250:251
+  main 63 = s0:253:254
+  main 64 = s0:257:258
+  main 65 = s0:256:258
+  main 66 = s0:244:259
   main 67 = s0:232:272
   main 68 = s0:232:272
   main 69 = s0:232:272
@@ -333,6 +361,20 @@ debug_ranges:
   main 80 = s0:232:272
   main 81 = s0:232:272
   main 82 = s0:232:272
-  main 83 = s0:268:272
-  main 84 = s0:268:272
+  main 83 = s0:232:272
+  main 84 = s0:232:272
   main 85 = s0:232:272
+  main 86 = s0:232:272
+  main 87 = s0:232:272
+  main 88 = s0:232:272
+  main 89 = s0:232:272
+  main 90 = s0:232:272
+  main 91 = s0:232:272
+  main 92 = s0:232:272
+  main 93 = s0:232:272
+  main 94 = s0:268:272
+  main 95 = s0:268:272
+  main 96 = s0:268:272
+  main 97 = s0:232:272
+  main 98 = s0:232:272
+  main 99 = s0:232:272

@@ -1,6 +1,6 @@
 use crate::bytecode::{
-    Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, GlobalId, Instruction,
-    Program, UpvalueDesc, UpvalueSource,
+    BlockId, Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, GlobalId,
+    Instruction, Program, UpvalueDesc, UpvalueSource,
 };
 use crate::format::{verify_module_artifact, verify_program, ModuleArtifact};
 use std::collections::{HashMap, HashSet};
@@ -120,6 +120,7 @@ struct ModuleContext {
     constant_base: usize,
     name_base: usize,
     function_base: usize,
+    block_base: usize,
     global_remap: Vec<usize>,
     main_register_base: usize,
     source_base: usize,
@@ -141,6 +142,10 @@ struct Linker {
     functions: Vec<Function>,
     debug_sources: Vec<DebugSource>,
     global_names: HashMap<String, usize>,
+    linked_block_count: usize,
+    pending_main: Vec<(usize, usize, Instruction, ModuleContext)>,
+    block_ids: HashMap<(usize, u32), u32>,
+    splice_redirects: HashMap<(usize, u32), u32>,
 }
 
 fn program_instruction_count(program: &Program) -> usize {
@@ -278,6 +283,10 @@ impl Linker {
             functions: Vec::new(),
             debug_sources: Vec::new(),
             global_names: HashMap::new(),
+            linked_block_count: 0,
+            pending_main: Vec::new(),
+            block_ids: HashMap::new(),
+            splice_redirects: HashMap::new(),
         })
     }
 
@@ -318,10 +327,29 @@ impl Linker {
             };
             global_remap.push(slot);
         }
+        let block_base = self.linked_block_count;
+        let module_blocks = module.program.functions[module.program.entry.0 as usize]
+            .instructions
+            .iter()
+            .filter(|instruction| matches!(instruction, Instruction::BlockStart { .. }))
+            .count();
+        self.linked_block_count = checked_add(
+            self.linked_block_count,
+            module_blocks,
+            "linked block count",
+        )
+        .map_err(|error| {
+            LinkError::module(
+                LinkErrorKind::Overflow,
+                module.identity.clone(),
+                error.to_string(),
+            )
+        })?;
         let context = ModuleContext {
             constant_base,
             name_base,
             function_base: self.functions.len(),
+            block_base,
             global_remap,
             main_register_base: self.main.registers,
             source_base,
@@ -411,40 +439,49 @@ impl Linker {
 
         let module_main = &module.program.functions[0];
         let mut local_to_global = vec![0; module_main.instructions.len() + 1];
-        let mut pending = Vec::new();
         let mut local_offset = 0;
         for dependency in &module.dependencies {
             while local_offset < dependency.instruction_offset {
                 emit_pending_main(
                     &mut self.main,
-                    &mut pending,
+                    &mut self.pending_main,
                     local_offset,
                     module_main,
                     context.source_base,
+                    &context,
                 );
                 local_to_global[local_offset] = self.main.instructions.len() - 1;
                 local_offset += 1;
             }
+            let dependency_start = self.main.instructions.len();
             self.expand(&dependency.identity)?;
+            if dependency_start < self.main.instructions.len() {
+                if let Instruction::BlockStart { .. } = self.main.instructions[dependency_start] {
+                    if local_offset < module_main.instructions.len() {
+                        if let Instruction::BlockStart { id: local_id } =
+                            module_main.instructions[local_offset]
+                        {
+                    self.splice_redirects
+                        .insert((context.block_base, local_id.0), dependency_start as u32);
+                        }
+                    }
+                }
+            }
             local_to_global[local_offset] = self.main.instructions.len();
         }
         while local_offset < module_main.instructions.len() {
             emit_pending_main(
                 &mut self.main,
-                &mut pending,
+                &mut self.pending_main,
                 local_offset,
                 module_main,
                 context.source_base,
+                &context,
             );
             local_to_global[local_offset] = self.main.instructions.len() - 1;
             local_offset += 1;
         }
         local_to_global[module_main.instructions.len()] = self.main.instructions.len();
-
-        for (global_index, _local_index, instruction) in pending {
-            self.main.instructions[global_index] =
-                map_main_instruction(&instruction, &context, &local_to_global)?;
-        }
 
         self.visiting.remove(identity);
         self.expanded.insert(identity.to_string());
@@ -454,6 +491,58 @@ impl Linker {
     fn finish(mut self) -> Result<LinkResult, LinkError> {
         for identity in self.entry_module_identities.clone() {
             self.expand(&identity)?;
+        }
+        self.pending_main
+            .sort_by_key(|(global_index, _, _, _)| *global_index);
+        let mut next_block = 0u32;
+        let mut linked_by_position = HashMap::new();
+        for (global_index, _, instruction, context) in &self.pending_main {
+            if let Instruction::BlockStart { id } = instruction {
+                linked_by_position.insert(*global_index, next_block);
+                self.block_ids.insert((context.block_base, id.0), next_block);
+                next_block = next_block.saturating_add(1);
+            }
+        }
+        for (_, _, instruction, context) in &self.pending_main {
+            if let Instruction::BlockStart { id } = instruction {
+                if let Some(position) = self
+                    .splice_redirects
+                    .get(&(context.block_base, id.0))
+                    .copied()
+                {
+                    if let Some(redirected) = linked_by_position.get(&(position as usize)).copied() {
+                        self.splice_redirects
+                            .insert((context.block_base, id.0), redirected);
+                    }
+                }
+            }
+        }
+        let mut branch_ids = self.block_ids.clone();
+        for (key, redirected) in &self.splice_redirects {
+            branch_ids.insert(*key, *redirected);
+        }
+        for (global_index, _, instruction, context) in &self.pending_main {
+            self.main.instructions[*global_index] =
+                map_main_instruction(instruction, context, &self.block_ids, &branch_ids)?;
+        }
+        // Module init streams are spliced back to back. A dependency module's
+        // trailing nil return must fall through into the next module instead
+        // of terminating the linked program; only the final exit keeps
+        // ReturnNil.
+        for index in 0..self.main.instructions.len() {
+            if !matches!(self.main.instructions[index], Instruction::ReturnNil) {
+                continue;
+            }
+            let next_block = self.main.instructions[index + 1..]
+                .iter()
+                .find_map(|instruction| match instruction {
+                    Instruction::BlockStart { id } => Some(*id),
+                    _ => None,
+                });
+            let Some(next_block) = next_block else {
+                continue;
+            };
+            self.main.instructions[index] = Instruction::Br { target: next_block };
         }
 
         let report = LinkReport {
@@ -641,10 +730,11 @@ mod tests {
 
 fn emit_pending_main(
     main: &mut Function,
-    pending: &mut Vec<(usize, usize, Instruction)>,
+    pending: &mut Vec<(usize, usize, Instruction, ModuleContext)>,
     local_index: usize,
     source: &Function,
     source_base: usize,
+    context: &ModuleContext,
 ) {
     let global_index = main.instructions.len();
     main.instructions
@@ -655,6 +745,7 @@ fn emit_pending_main(
         global_index,
         local_index,
         source.instructions[local_index].clone(),
+        context.clone(),
     ));
 }
 
@@ -662,21 +753,61 @@ fn map_function_instruction(
     instruction: &Instruction,
     context: &ModuleContext,
 ) -> Result<Instruction, LinkError> {
-    map_instruction(instruction, context, 0, |target| Ok(target))
+    map_instruction(
+        instruction,
+        context,
+        0,
+        |target| Ok(target),
+        |block| Ok(block),
+        |block| Ok(block),
+    )
 }
 
 fn map_main_instruction(
     instruction: &Instruction,
     context: &ModuleContext,
-    local_to_global: &[usize],
+    block_ids: &HashMap<(usize, u32), u32>,
+    branch_ids: &HashMap<(usize, u32), u32>,
 ) -> Result<Instruction, LinkError> {
     map_instruction(instruction, context, context.main_register_base, |target| {
-        local_to_global.get(target).copied().ok_or_else(|| {
+        block_ids
+            .get(&(context.block_base, target as u32))
+            .map(|linked| *linked as usize)
+            .or_else(|| {
+                // 0.2 bodies carry no legacy jumps; legacy 0.1 module products
+                // are not re-linked with offset repair.
+                if matches!(instruction, Instruction::Jump { .. } | Instruction::JumpIfFalse { .. } | Instruction::JumpIfTrue { .. }) {
+                    None
+                } else {
+                    Some(target)
+                }
+            })
+            .ok_or_else(|| {
             LinkError::new(
                 LinkErrorKind::InvalidInstruction,
                 "jump target out of range while linking",
             )
         })
+    }, |block| {
+        block_ids
+            .get(&(context.block_base, block))
+            .copied()
+            .ok_or_else(|| {
+                LinkError::new(
+                    LinkErrorKind::InvalidInstruction,
+                    "block target out of range while linking",
+                )
+            })
+    }, |block| {
+        branch_ids
+            .get(&(context.block_base, block))
+            .copied()
+            .ok_or_else(|| {
+                LinkError::new(
+                    LinkErrorKind::InvalidInstruction,
+                    "branch target out of range while linking",
+                )
+            })
     })
 }
 
@@ -685,6 +816,8 @@ fn map_instruction(
     context: &ModuleContext,
     register_base: usize,
     map_jump: impl Fn(usize) -> Result<usize, LinkError>,
+    map_block: impl Fn(u32) -> Result<u32, LinkError>,
+    map_branch: impl Fn(u32) -> Result<u32, LinkError>,
 ) -> Result<Instruction, LinkError> {
     let register = |value: usize| checked_add(value, register_base, "linked register index");
     let constant =
@@ -988,6 +1121,22 @@ fn map_instruction(
             condition: register(*condition)?,
             target: map_jump(*target)?,
         },
+        Instruction::BlockStart { id } => Instruction::BlockStart {
+            id: BlockId(map_block(id.0)?),
+        },
+        Instruction::Br { target } => Instruction::Br {
+            target: BlockId(map_branch(target.0)?),
+        },
+        Instruction::BrIf {
+            condition,
+            if_true,
+            if_false,
+        } => Instruction::BrIf {
+            condition: register(*condition)?,
+            if_true: BlockId(map_branch(if_true.0)?),
+            if_false: BlockId(map_branch(if_false.0)?),
+        },
+        Instruction::ReturnNil => Instruction::ReturnNil,
     })
 }
 

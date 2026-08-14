@@ -1,87 +1,101 @@
 main registers=56
-0000  b0 = constant #0 1
-0001  b1 = constant #1 6
-0002  b2 = native_call @0 range [b0, b1]
-0003  init_global g0, b2
-0004  b3 = load_global g0
-0005  print b3
-0006  b4 = load_global g0
-0007  b5 = len b4
-0008  print b5
-0009  b6 = load_global g0
-0010  b7 = constant #2 2
-0011  b8 = index b6, b7
-0012  print b8
-0013  b9 = load_global g0
-0014  b10 = constant #3 5
-0015  b11 = native_call @6 contains [b9, b10]
-0016  print b11
-0017  b12 = load_global g0
-0018  b13 = constant #4 4
-0019  b14 = native_call @8 contains [b12, b13]
-0020  print b14
-0021  b15 = load_global g0
-0022  b16 = len b15
-0023  print b16
-0024  b17 = load_global g0
-0025  b18 = native_call @11 typeOf [b17]
-0026  print b18
-0027  b19 = constant #5 5
-0028  b20 = native_call @12 range [b19]
-0029  b21 = assert_array b20
-0030  init_global g1, b21
-0031  b22 = constant #6 0
-0032  init_global g2, b22
-0033  b23 = constant #7 nil
-0034  init_global g3, b23
-0035  b24 = load_global g1
-0036  b25 = len b24
-0037  init_global g4, b25
-0038  b26 = load_global g2
-0039  b27 = load_global g4
-0040  b28 = less b26, b27
-0041  jump_if_false b28, 0055
-0042  b29 = load_global g1
-0043  b30 = load_global g2
-0044  b31 = index b29, b30
-0045  set_global g3, b31
-0046  jump 0052
-0047  b32 = load_global g2
-0048  b33 = constant #8 1
-0049  b34 = add b32, b33
-0050  set_global g2, b34
-0051  jump 0038
-0052  b35 = load_global g3
-0053  print b35
-0054  jump 0047
-0055  b36 = constant #9 5
-0056  b37 = constant #10 0
-0057  b38 = constant #11 2
-0058  b39 = negate b38
-0059  b40 = native_call @26 range [b36, b37, b39]
-0060  b41 = assert_array b40
-0061  init_global g5, b41
-0062  b42 = constant #12 0
-0063  init_global g6, b42
-0064  b43 = constant #13 nil
-0065  init_global g7, b43
-0066  b44 = load_global g5
-0067  b45 = len b44
-0068  init_global g8, b45
-0069  b46 = load_global g6
-0070  b47 = load_global g8
-0071  b48 = less b46, b47
-0072  jump_if_false b48, 0086
-0073  b49 = load_global g5
-0074  b50 = load_global g6
-0075  b51 = index b49, b50
-0076  set_global g7, b51
-0077  jump 0083
-0078  b52 = load_global g6
-0079  b53 = constant #14 1
-0080  b54 = add b52, b53
-0081  set_global g6, b54
-0082  jump 0069
-0083  b55 = load_global g7
-0084  print b55
-0085  jump 0078
+0000  block
+0001  b0 = constant #0 1
+0002  b1 = constant #1 6
+0003  b2 = native_call @0 range [b0, b1]
+0004  init_global g0, b2
+0005  b3 = load_global g0
+0006  print b3
+0007  b4 = load_global g0
+0008  b5 = len b4
+0009  print b5
+0010  b6 = load_global g0
+0011  b7 = constant #2 2
+0012  b8 = index b6, b7
+0013  print b8
+0014  b9 = load_global g0
+0015  b10 = constant #3 5
+0016  b11 = native_call @6 contains [b9, b10]
+0017  print b11
+0018  b12 = load_global g0
+0019  b13 = constant #4 4
+0020  b14 = native_call @8 contains [b12, b13]
+0021  print b14
+0022  b15 = load_global g0
+0023  b16 = len b15
+0024  print b16
+0025  b17 = load_global g0
+0026  b18 = native_call @11 typeOf [b17]
+0027  print b18
+0028  b19 = constant #5 5
+0029  b20 = native_call @12 range [b19]
+0030  b21 = assert_array b20
+0031  init_global g1, b21
+0032  b22 = constant #6 0
+0033  init_global g2, b22
+0034  b23 = constant #7 nil
+0035  init_global g3, b23
+0036  b24 = load_global g1
+0037  b25 = len b24
+0038  init_global g4, b25
+0039  br b1
+0040  block
+0041  b26 = load_global g2
+0042  b27 = load_global g4
+0043  b28 = less b26, b27
+0044  br_if b28, b2, b5
+0045  block
+0046  b29 = load_global g1
+0047  b30 = load_global g2
+0048  b31 = index b29, b30
+0049  set_global g3, b31
+0050  br b4
+0051  block
+0052  b32 = load_global g2
+0053  b33 = constant #8 1
+0054  b34 = add b32, b33
+0055  set_global g2, b34
+0056  br b1
+0057  block
+0058  b35 = load_global g3
+0059  print b35
+0060  br b3
+0061  block
+0062  b36 = constant #9 5
+0063  b37 = constant #10 0
+0064  b38 = constant #11 2
+0065  b39 = negate b38
+0066  b40 = native_call @26 range [b36, b37, b39]
+0067  b41 = assert_array b40
+0068  init_global g5, b41
+0069  b42 = constant #12 0
+0070  init_global g6, b42
+0071  b43 = constant #13 nil
+0072  init_global g7, b43
+0073  b44 = load_global g5
+0074  b45 = len b44
+0075  init_global g8, b45
+0076  br b6
+0077  block
+0078  b46 = load_global g6
+0079  b47 = load_global g8
+0080  b48 = less b46, b47
+0081  br_if b48, b7, b10
+0082  block
+0083  b49 = load_global g5
+0084  b50 = load_global g6
+0085  b51 = index b49, b50
+0086  set_global g7, b51
+0087  br b9
+0088  block
+0089  b52 = load_global g6
+0090  b53 = constant #14 1
+0091  b54 = add b52, b53
+0092  set_global g6, b54
+0093  br b6
+0094  block
+0095  b55 = load_global g7
+0096  print b55
+0097  br b8
+0098  block
+0099  return_nil

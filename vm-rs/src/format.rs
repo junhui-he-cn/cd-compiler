@@ -1,6 +1,6 @@
 use crate::bytecode::{
-    Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, GlobalId, Instruction,
-    LocalId, Program, UpvalueDesc, UpvalueId, UpvalueSource,
+    BlockId, Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, GlobalId,
+    Instruction, LocalId, Program, UpvalueDesc, UpvalueId, UpvalueSource,
 };
 use std::fmt;
 
@@ -487,6 +487,7 @@ impl<'a> Parser<'a> {
 
     fn parse_instructions_until_function(&mut self) -> Result<Vec<Instruction>, ParseError> {
         let mut instructions = Vec::new();
+        let mut block_count = 0usize;
         while let Some((line_number, line)) = self.peek() {
             if line.starts_with("function ")
                 || line == "debug_sources:"
@@ -494,6 +495,28 @@ impl<'a> Parser<'a> {
                 || line == "debug_ranges:"
             {
                 break;
+            }
+            if line.starts_with("block ") {
+                self.advance();
+                let header = line
+                    .strip_prefix("block ")
+                    .and_then(|rest| rest.strip_suffix(':'))
+                    .ok_or_else(|| ParseError {
+                        line: line_number,
+                        message: "expected block header".to_string(),
+                    })?;
+                let id = parse_prefixed(line_number, header, 'b', "block reference")?;
+                if id != block_count {
+                    return Err(ParseError {
+                        line: line_number,
+                        message: format!("expected block b{}", block_count),
+                    });
+                }
+                block_count += 1;
+                instructions.push(Instruction::BlockStart {
+                    id: BlockId(id as u32),
+                });
+                continue;
             }
             self.advance();
             instructions.push(parse_instruction(line_number, line)?);
@@ -1489,6 +1512,21 @@ fn validate_instruction(
             register(*condition, "jump condition")?;
             jump(*target)?;
         }
+        Instruction::BlockStart { id } => {
+            let _ = id;
+        }
+        Instruction::Br { target } => {
+            let _ = target;
+        }
+        Instruction::BrIf {
+            condition,
+            if_true,
+            if_false,
+        } => {
+            register(*condition, "branch condition")?;
+            let _ = (if_true, if_false);
+        }
+        Instruction::ReturnNil => {}
     }
     Ok(())
 }
@@ -1636,9 +1674,13 @@ fn format_program_sections(out: &mut String, program: &Program) {
     let entry = &program.functions[program.entry.0 as usize];
     out.push_str(&format!("\nmain registers={}:\n", entry.registers));
     for instruction in &entry.instructions {
-        out.push_str("  ");
-        out.push_str(&format_instruction(instruction));
-        out.push('\n');
+        if matches!(instruction, Instruction::BlockStart { .. }) {
+            out.push_str(&format_instruction(instruction));
+        } else {
+            out.push_str("  ");
+            out.push_str(&format_instruction(instruction));
+            out.push('\n');
+        }
     }
     let mut function_index = 0usize;
     for (position, function) in program.functions.iter().enumerate() {
@@ -1664,9 +1706,13 @@ fn format_program_sections(out: &mut String, program: &Program) {
             out.push_str(&format!("  upvalue u{} = {}\n", index, source));
         }
         for instruction in &function.instructions {
-            out.push_str("  ");
-            out.push_str(&format_instruction(instruction));
-            out.push('\n');
+            if matches!(instruction, Instruction::BlockStart { .. }) {
+                out.push_str(&format_instruction(instruction));
+            } else {
+                out.push_str("  ");
+                out.push_str(&format_instruction(instruction));
+                out.push('\n');
+            }
         }
         function_index += 1;
     }
@@ -2058,6 +2104,24 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                     target: parse_usize(line, target, "jump target")?,
                 })
             }
+            "br" => Ok(Instruction::Br {
+                target: BlockId(parse_prefixed(line, operands, 'b', "block reference")? as u32),
+            }),
+            "br_if" => {
+                let parts = split_comma_parts(operands);
+                if parts.len() != 3 {
+                    return Err(ParseError {
+                        line,
+                        message: "br_if expects three operands".to_string(),
+                    });
+                }
+                Ok(Instruction::BrIf {
+                    condition: parse_register(line, parts[0])?,
+                    if_true: BlockId(parse_prefixed(line, parts[1], 'b', "block reference")? as u32),
+                    if_false: BlockId(parse_prefixed(line, parts[2], 'b', "block reference")? as u32),
+                })
+            }
+            "return_nil" => Ok(Instruction::ReturnNil),
             unknown => Err(ParseError {
                 line,
                 message: format!("unknown opcode `{}`", unknown),
@@ -2228,6 +2292,14 @@ fn format_instruction(instruction: &Instruction) -> String {
         Instruction::JumpIfTrue { condition, target } => {
             format!("jump_if_true r{}, {}", condition, target)
         }
+        Instruction::BlockStart { id } => format!("block b{}:\n", id.0),
+        Instruction::Br { target } => format!("br b{}", target.0),
+        Instruction::BrIf {
+            condition,
+            if_true,
+            if_false,
+        } => format!("br_if r{}, b{}, b{}", condition, if_true.0, if_false.0),
+        Instruction::ReturnNil => "return_nil".to_string(),
     }
 }
 

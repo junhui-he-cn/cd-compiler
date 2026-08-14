@@ -1,117 +1,147 @@
 main registers=44
-0000  b0 = constant #0 nil
-0001  init_global g0, b0
-0002  b1 = make_function $0 echo/2
-0003  set_global g0, b1
-0004  b2 = constant #2 nil
-0005  init_global g1, b2
-0006  b3 = make_function $1 identity/1
-0007  set_global g1, b3
-0008  b4 = constant #4 nil
-0009  init_global g2, b4
-0010  b5 = make_function $2 pair/2
-0011  set_global g2, b5
-0012  b6 = constant #6 nil
-0013  init_global g3, b6
-0014  b7 = make_function $3 keep/1
-0015  set_global g3, b7
-0016  b8 = constant #9 nil
-0017  init_global g4, b8
-0018  b9 = make_function $5 outer/1
-0019  set_global g4, b9
-0020  b10 = constant #13 1
-0021  b11 = constant #14 2
-0022  b12 = array [b10, b11]
-0023  init_global g5, b12
-0024  b13 = load_global g5
-0025  b14 = load_global g1
-0026  b15 = native_call @21 map [b13, b14]
-0027  init_global g6, b15
-0028  b16 = load_global g5
-0029  b17 = load_global g3
-0030  b18 = native_call @25 filter [b16, b17]
-0031  init_global g7, b18
-0032  b19 = make_function $6 <lambda>/1
-0033  init_global g8, b19
-0034  b20 = constant #16 0
-0035  b21 = struct @29 Holder { @30 value: b20}
-0036  init_global g9, b21
-0037  b22 = constant #17 6
-0038  b23 = variant @32 Box. @33 Value (b22)
-0039  init_global g10, b23
-0040  b24 = load_global g6
-0041  print b24
-0042  b25 = load_global g7
-0043  print b25
-0044  b26 = load_global g8
-0045  b27 = constant #18 3
-0046  b28 = call b26(b27)
-0047  print b28
-0048  b29 = load_global g1
-0049  b30 = constant #19 4
-0050  b31 = call b29(b30)
-0051  print b31
-0052  b32 = load_global g2
-0053  b33 = constant #20 "key"
-0054  b34 = constant #21 7
-0055  b35 = call b32(b33, b34)
-0056  print b35
-0057  b36 = load_global g0
-0058  b37 = load_global g9
-0059  b38 = constant #22 5
-0060  b39 = call b36(b37, b38)
-0061  print b39
-0062  b40 = load_global g4
-0063  b41 = constant #23 6
-0064  b42 = call b40(b41)
-0065  print b42
-0066  b43 = load_global g10
-0067  print b43
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 echo/2
+0004  set_global g0, b1
+0005  b2 = constant #2 nil
+0006  init_global g1, b2
+0007  b3 = make_function $1 identity/1
+0008  set_global g1, b3
+0009  b4 = constant #4 nil
+0010  init_global g2, b4
+0011  b5 = make_function $2 pair/2
+0012  set_global g2, b5
+0013  b6 = constant #6 nil
+0014  init_global g3, b6
+0015  b7 = make_function $3 keep/1
+0016  set_global g3, b7
+0017  b8 = constant #9 nil
+0018  init_global g4, b8
+0019  b9 = make_function $5 outer/1
+0020  set_global g4, b9
+0021  b10 = constant #13 1
+0022  b11 = constant #14 2
+0023  b12 = array [b10, b11]
+0024  init_global g5, b12
+0025  b13 = load_global g5
+0026  b14 = load_global g1
+0027  b15 = native_call @21 map [b13, b14]
+0028  init_global g6, b15
+0029  b16 = load_global g5
+0030  b17 = load_global g3
+0031  b18 = native_call @25 filter [b16, b17]
+0032  init_global g7, b18
+0033  b19 = make_function $6 <lambda>/1
+0034  init_global g8, b19
+0035  b20 = constant #16 0
+0036  b21 = struct @29 Holder { @30 value: b20}
+0037  init_global g9, b21
+0038  b22 = constant #17 6
+0039  b23 = variant @32 Box. @33 Value (b22)
+0040  init_global g10, b23
+0041  b24 = load_global g6
+0042  print b24
+0043  b25 = load_global g7
+0044  print b25
+0045  b26 = load_global g8
+0046  b27 = constant #18 3
+0047  b28 = call b26(b27)
+0048  print b28
+0049  b29 = load_global g1
+0050  b30 = constant #19 4
+0051  b31 = call b29(b30)
+0052  print b31
+0053  b32 = load_global g2
+0054  b33 = constant #20 "key"
+0055  b34 = constant #21 7
+0056  b35 = call b32(b33, b34)
+0057  print b35
+0058  b36 = load_global g0
+0059  b37 = load_global g9
+0060  b38 = constant #22 5
+0061  b39 = call b36(b37, b38)
+0062  print b39
+0063  b40 = load_global g4
+0064  b41 = constant #23 6
+0065  b42 = call b40(b41)
+0066  print b42
+0067  b43 = load_global g10
+0068  print b43
+0069  return_nil
 
 function $0 echo/2 registers=2
-0000  b0 = load_local l1
-0001  return b0
-0002  b1 = constant #1 nil
-0003  return b1
+0000  block
+0001  b0 = load_local l1
+0002  return b0
+0003  block
+0004  b1 = constant #1 nil
+0005  return b1
+0006  block
+0007  return_nil
 
 function $1 identity/1 registers=2
-0000  b0 = load_local l0
-0001  return b0
-0002  b1 = constant #3 nil
-0003  return b1
+0000  block
+0001  b0 = load_local l0
+0002  return b0
+0003  block
+0004  b1 = constant #3 nil
+0005  return b1
+0006  block
+0007  return_nil
 
 function $2 pair/2 registers=2
-0000  b0 = load_local l1
-0001  return b0
-0002  b1 = constant #5 nil
-0003  return b1
+0000  block
+0001  b0 = load_local l1
+0002  return b0
+0003  block
+0004  b1 = constant #5 nil
+0005  return b1
+0006  block
+0007  return_nil
 
 function $3 keep/1 registers=2
-0000  b0 = constant #7 true
-0001  return b0
-0002  b1 = constant #8 nil
-0003  return b1
+0000  block
+0001  b0 = constant #7 true
+0002  return b0
+0003  block
+0004  b1 = constant #8 nil
+0005  return b1
+0006  block
+0007  return_nil
 
 function $4 inner/1 registers=2
-0000  b0 = load_local l0
-0001  return b0
-0002  b1 = constant #11 nil
-0003  return b1
+0000  block
+0001  b0 = load_local l0
+0002  return b0
+0003  block
+0004  b1 = constant #11 nil
+0005  return b1
+0006  block
+0007  return_nil
 
 function $5 outer/1 registers=6
-0000  b0 = constant #10 nil
-0001  bind_local l1, b0
-0002  b1 = make_function $4 inner/1
-0003  set_local l1, b1
-0004  b2 = load_local l1
-0005  b3 = load_local l0
-0006  b4 = call b2(b3)
-0007  return b4
-0008  b5 = constant #12 nil
-0009  return b5
+0000  block
+0001  b0 = constant #10 nil
+0002  bind_local l1, b0
+0003  b1 = make_function $4 inner/1
+0004  set_local l1, b1
+0005  b2 = load_local l1
+0006  b3 = load_local l0
+0007  b4 = call b2(b3)
+0008  return b4
+0009  block
+0010  b5 = constant #12 nil
+0011  return b5
+0012  block
+0013  return_nil
 
 function $6 <lambda>/1 registers=2
-0000  b0 = load_local l0
-0001  return b0
-0002  b1 = constant #15 nil
-0003  return b1
+0000  block
+0001  b0 = load_local l0
+0002  return b0
+0003  block
+0004  b1 = constant #15 nil
+0005  return b1
+0006  block
+0007  return_nil

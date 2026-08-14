@@ -1,122 +1,165 @@
 main registers=38
-0000  b0 = constant #0 nil
-0001  init_global g0, b0
-0002  b1 = make_function $0 numberLabel/1
-0003  set_global g0, b1
-0004  b2 = constant #6 nil
-0005  init_global g1, b2
-0006  b3 = make_function $1 shapeLabel/1
-0007  set_global g1, b3
-0008  b4 = constant #12 false
-0009  init_global g2, b4
-0010  b5 = load_global g0
-0011  b6 = constant #13 1
-0012  b7 = call b5(b6)
-0013  print b7
-0014  b8 = load_global g0
-0015  b9 = constant #14 8
-0016  b10 = call b8(b9)
-0017  print b10
-0018  b11 = load_global g1
-0019  b12 = constant #15 3
-0020  b13 = variant @24 Shape. @25 Point (b12)
-0021  b14 = call b11(b13)
-0022  print b14
-0023  b15 = load_global g1
-0024  b16 = constant #16 4
-0025  b17 = constant #17 10
-0026  b18 = variant @27 Shape. @28 Line (b16, b17)
-0027  b19 = call b15(b18)
-0028  print b19
-0029  b20 = load_global g1
-0030  b21 = variant @30 Shape. @31 Empty ()
-0031  b22 = call b20(b21)
-0032  print b22
-0033  b23 = load_global g2
-0034  b24 = constant #18 nil
-0035  b25 = equal b23, b24
-0036  jump_if_false b25, 0038
-0037  jump 0041
-0038  b26 = constant #19 false
-0039  b27 = equal b23, b26
-0040  jump_if_false b27, 0044
-0041  b28 = constant #20 "off"
-0042  print b28
-0043  jump 0050
-0044  b29 = constant #21 true
-0045  b30 = equal b23, b29
-0046  jump_if_false b30, 0050
-0047  b31 = constant #22 "on"
-0048  print b31
-0049  jump 0050
-0050  b32 = constant #23 true
-0051  b33 = constant #24 true
-0052  b34 = equal b32, b33
-0053  jump_if_false b34, 0055
-0054  jump 0058
-0055  b35 = constant #25 false
-0056  b36 = equal b32, b35
-0057  jump_if_false b36, 0061
-0058  b37 = constant #26 "bool"
-0059  print b37
-0060  jump 0061
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 numberLabel/1
+0004  set_global g0, b1
+0005  b2 = constant #6 nil
+0006  init_global g1, b2
+0007  b3 = make_function $1 shapeLabel/1
+0008  set_global g1, b3
+0009  b4 = constant #12 false
+0010  init_global g2, b4
+0011  b5 = load_global g0
+0012  b6 = constant #13 1
+0013  b7 = call b5(b6)
+0014  print b7
+0015  b8 = load_global g0
+0016  b9 = constant #14 8
+0017  b10 = call b8(b9)
+0018  print b10
+0019  b11 = load_global g1
+0020  b12 = constant #15 3
+0021  b13 = variant @24 Shape. @25 Point (b12)
+0022  b14 = call b11(b13)
+0023  print b14
+0024  b15 = load_global g1
+0025  b16 = constant #16 4
+0026  b17 = constant #17 10
+0027  b18 = variant @27 Shape. @28 Line (b16, b17)
+0028  b19 = call b15(b18)
+0029  print b19
+0030  b20 = load_global g1
+0031  b21 = variant @30 Shape. @31 Empty ()
+0032  b22 = call b20(b21)
+0033  print b22
+0034  b23 = load_global g2
+0035  b24 = constant #18 nil
+0036  b25 = equal b23, b24
+0037  br_if b25, b1, b2
+0038  block
+0039  br b3
+0040  block
+0041  b26 = constant #19 false
+0042  b27 = equal b23, b26
+0043  br_if b27, b3, b4
+0044  block
+0045  b28 = constant #20 "off"
+0046  print b28
+0047  br b6
+0048  block
+0049  b29 = constant #21 true
+0050  b30 = equal b23, b29
+0051  br_if b30, b5, b6
+0052  block
+0053  b31 = constant #22 "on"
+0054  print b31
+0055  br b6
+0056  block
+0057  b32 = constant #23 true
+0058  b33 = constant #24 true
+0059  b34 = equal b32, b33
+0060  br_if b34, b7, b8
+0061  block
+0062  br b9
+0063  block
+0064  b35 = constant #25 false
+0065  b36 = equal b32, b35
+0066  br_if b36, b9, b10
+0067  block
+0068  b37 = constant #26 "bool"
+0069  print b37
+0070  return_nil
+0071  block
+0072  return_nil
 
 function $0 numberLabel/1 registers=8
-0000  b0 = load_local l0
-0001  b1 = constant #1 0
-0002  b2 = equal b0, b1
-0003  jump_if_false b2, 0005
-0004  jump 0008
-0005  b3 = constant #2 1
-0006  b4 = equal b0, b3
-0007  jump_if_false b4, 0011
-0008  b5 = constant #3 "small"
-0009  return b5
-0010  jump 0014
-0011  b6 = constant #4 "other"
-0012  return b6
-0013  jump 0014
-0014  b7 = constant #5 nil
-0015  return b7
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #1 0
+0003  b2 = equal b0, b1
+0004  br_if b2, b1, b2
+0005  block
+0006  br b3
+0007  block
+0008  b3 = constant #2 1
+0009  b4 = equal b0, b3
+0010  br_if b4, b3, b5
+0011  block
+0012  b5 = constant #3 "small"
+0013  return b5
+0014  block
+0015  br b7
+0016  block
+0017  b6 = constant #4 "other"
+0018  return b6
+0019  block
+0020  br b7
+0021  block
+0022  b7 = constant #5 nil
+0023  return b7
+0024  block
+0025  return_nil
 
 function $1 shapeLabel/1 registers=23
-0000  b0 = load_local l0
-0001  b1 = variant_tag b0  @5 Shape. @6 Point
-0002  jump_if_false b1, 0006
-0003  b2 = variant_field b0[0]
-0004  b3 = move b2
-0005  jump 0011
-0006  b4 = variant_tag b0  @7 Shape. @8 Line
-0007  jump_if_false b4, 0022
-0008  b5 = variant_field b0[0]
-0009  b6 = variant_field b0[1]
-0010  b3 = move b5
-0011  bind_local l1, b3
-0012  b7 = load_local l1
-0013  b8 = constant #7 3
-0014  b9 = greater b7, b8
-0015  jump_if_false b9, 0022
-0016  b10 = constant #8 "large:"
-0017  b11 = load_local l1
-0018  b12 = native_call @12 str [b11]
-0019  b13 = add b10, b12
-0020  return b13
-0021  jump 0038
-0022  b14 = variant_tag b0  @13 Shape. @14 Point
-0023  jump_if_false b14, 0026
-0024  b15 = variant_field b0[0]
-0025  jump 0030
-0026  b16 = variant_tag b0  @15 Shape. @16 Line
-0027  jump_if_false b16, 0033
-0028  b17 = variant_field b0[0]
-0029  b18 = variant_field b0[1]
-0030  b19 = constant #9 "small"
-0031  return b19
-0032  jump 0038
-0033  b20 = variant_tag b0  @17 Shape. @18 Empty
-0034  jump_if_false b20, 0038
-0035  b21 = constant #10 "empty"
-0036  return b21
-0037  jump 0038
-0038  b22 = constant #11 nil
-0039  return b22
+0000  block
+0001  b0 = load_local l0
+0002  b1 = variant_tag b0  @5 Shape. @6 Point
+0003  br_if b1, b1, b2
+0004  block
+0005  b2 = variant_field b0[0]
+0006  b3 = move b2
+0007  br b4
+0008  block
+0009  b4 = variant_tag b0  @7 Shape. @8 Line
+0010  br_if b4, b3, b7
+0011  block
+0012  b5 = variant_field b0[0]
+0013  b6 = variant_field b0[1]
+0014  b3 = move b5
+0015  br b4
+0016  block
+0017  bind_local l1, b3
+0018  b7 = load_local l1
+0019  b8 = constant #7 3
+0020  b9 = greater b7, b8
+0021  br_if b9, b5, b7
+0022  block
+0023  b10 = constant #8 "large:"
+0024  b11 = load_local l1
+0025  b12 = native_call @12 str [b11]
+0026  b13 = add b10, b12
+0027  return b13
+0028  block
+0029  br b16
+0030  block
+0031  b14 = variant_tag b0  @13 Shape. @14 Point
+0032  br_if b14, b8, b9
+0033  block
+0034  b15 = variant_field b0[0]
+0035  br b11
+0036  block
+0037  b16 = variant_tag b0  @15 Shape. @16 Line
+0038  br_if b16, b10, b13
+0039  block
+0040  b17 = variant_field b0[0]
+0041  b18 = variant_field b0[1]
+0042  br b11
+0043  block
+0044  b19 = constant #9 "small"
+0045  return b19
+0046  block
+0047  br b16
+0048  block
+0049  b20 = variant_tag b0  @17 Shape. @18 Empty
+0050  br_if b20, b14, b16
+0051  block
+0052  b21 = constant #10 "empty"
+0053  return b21
+0054  block
+0055  br b16
+0056  block
+0057  b22 = constant #11 nil
+0058  return b22
+0059  block
+0060  return_nil

@@ -38,6 +38,7 @@ globals:
   g3 = n10
 
 main registers=17:
+block b0:
   r0 = constant c0
   init_global g0, r0
   r1 = make_function f1
@@ -50,10 +51,13 @@ main registers=17:
   init_global g2, r5
   r6 = constant c6
   init_global g3, r6
+  br b1
+block b1:
   r7 = load_global g2
   r8 = constant c7
   r9 = less r7, r8
-  jump_if_false r9, 25
+  br_if r9, b2, b3
+block b2:
   r10 = load_global g1
   r11 = load_global g3
   r12 = call r10 [r11]
@@ -62,30 +66,40 @@ main registers=17:
   r14 = constant c8
   r15 = add r13, r14
   set_global g2, r15
-  jump 12
+  br b1
+block b3:
   r16 = load_global g3
   print r16
+  return_nil
 
 function f0 name="add" arity=1 registers=4:
   param 0 = "value#3"
   upvalue u0 = local l0
+block b0:
   r0 = load_local l0
   r1 = load_upvalue u0
   r2 = add r0, r1
   return r2
+block b1:
   r3 = constant c2
   return r3
+block b2:
+  return_nil
 
 function f1 name="makeAdder" arity=1 registers=4:
   param 0 = "offset#1"
+block b0:
   r0 = constant c1
   bind_local l1, r0
   r1 = make_function f0
   set_local l1, r1
   r2 = load_local l1
   return r2
+block b1:
   r3 = constant c3
   return r3
+block b2:
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/benchmark_execution_closure/input.cd" text="fun makeAdder(offset) {\n  fun add(value) {\n    return value + offset;\n  }\n  return add;\n}\n\nlet add = makeAdder(1);\nlet i = 0;\nlet total = 0;\nwhile i < 50000 {\n  total = add(total);\n  i = i + 1;\n}\nprint total;\n"
@@ -95,83 +109,111 @@ debug_locations:
   main 1 = s0:1:1
   main 2 = s0:1:1
   main 3 = s0:1:1
-  main 4 = s0:8:11
-  main 5 = s0:8:21
-  main 6 = s0:8:11
-  main 7 = s0:8:1
-  main 8 = s0:9:9
-  main 9 = s0:9:1
-  main 10 = s0:10:13
-  main 11 = s0:10:1
-  main 12 = s0:11:7
-  main 13 = s0:11:11
+  main 4 = s0:1:1
+  main 5 = s0:8:11
+  main 6 = s0:8:21
+  main 7 = s0:8:11
+  main 8 = s0:8:1
+  main 9 = s0:9:9
+  main 10 = s0:9:1
+  main 11 = s0:10:13
+  main 12 = s0:10:1
+  main 13 = s0:10:1
   main 14 = s0:11:7
-  main 15 = s0:11:1
-  main 16 = s0:12:11
-  main 17 = s0:12:15
-  main 18 = s0:12:11
-  main 19 = s0:12:3
-  main 20 = s0:13:7
-  main 21 = s0:13:11
-  main 22 = s0:13:7
-  main 23 = s0:13:3
-  main 24 = s0:11:1
-  main 25 = s0:15:7
-  main 26 = s0:15:1
+  main 15 = s0:11:7
+  main 16 = s0:11:11
+  main 17 = s0:11:7
+  main 18 = s0:11:1
+  main 19 = s0:12:11
+  main 20 = s0:12:11
+  main 21 = s0:12:15
+  main 22 = s0:12:11
+  main 23 = s0:12:3
+  main 24 = s0:13:7
+  main 25 = s0:13:11
+  main 26 = s0:13:7
+  main 27 = s0:13:3
+  main 28 = s0:11:1
+  main 29 = s0:15:7
+  main 30 = s0:15:7
+  main 31 = s0:15:1
+  main 32 = s0:15:1
   function f0 0 = s0:3:12
-  function f0 1 = s0:3:20
-  function f0 2 = s0:3:12
-  function f0 3 = s0:3:5
-  function f0 4 = s0:2:3
+  function f0 1 = s0:3:12
+  function f0 2 = s0:3:20
+  function f0 3 = s0:3:12
+  function f0 4 = s0:3:5
   function f0 5 = s0:2:3
+  function f0 6 = s0:2:3
+  function f0 7 = s0:2:3
+  function f0 8 = s0:2:3
+  function f0 9 = s0:2:3
   function f1 0 = s0:2:3
   function f1 1 = s0:2:3
   function f1 2 = s0:2:3
   function f1 3 = s0:2:3
-  function f1 4 = s0:5:10
-  function f1 5 = s0:5:3
-  function f1 6 = s0:1:1
+  function f1 4 = s0:2:3
+  function f1 5 = s0:5:10
+  function f1 6 = s0:5:3
   function f1 7 = s0:1:1
+  function f1 8 = s0:1:1
+  function f1 9 = s0:1:1
+  function f1 10 = s0:1:1
+  function f1 11 = s0:1:1
 
 debug_ranges:
   main 0 = s0:4:86
   main 1 = s0:4:86
   main 2 = s0:4:86
   main 3 = s0:4:86
-  main 4 = s0:101:110
-  main 5 = s0:111:112
-  main 6 = s0:101:113
-  main 7 = s0:95:113
-  main 8 = s0:123:124
-  main 9 = s0:119:124
-  main 10 = s0:138:139
-  main 11 = s0:130:139
-  main 12 = s0:147:148
-  main 13 = s0:151:156
-  main 14 = s0:147:156
-  main 15 = s0:147:192
-  main 16 = s0:169:172
-  main 17 = s0:173:178
-  main 18 = s0:169:179
-  main 19 = s0:161:179
-  main 20 = s0:187:188
-  main 21 = s0:191:192
-  main 22 = s0:187:192
-  main 23 = s0:183:192
-  main 24 = s0:147:192
-  main 25 = s0:202:207
-  main 26 = s0:202:207
+  main 4 = s0:4:86
+  main 5 = s0:101:110
+  main 6 = s0:111:112
+  main 7 = s0:101:113
+  main 8 = s0:95:113
+  main 9 = s0:123:124
+  main 10 = s0:119:124
+  main 11 = s0:138:139
+  main 12 = s0:130:139
+  main 13 = s0:130:139
+  main 14 = s0:147:148
+  main 15 = s0:147:148
+  main 16 = s0:151:156
+  main 17 = s0:147:156
+  main 18 = s0:147:192
+  main 19 = s0:169:172
+  main 20 = s0:169:172
+  main 21 = s0:173:178
+  main 22 = s0:169:179
+  main 23 = s0:161:179
+  main 24 = s0:187:188
+  main 25 = s0:191:192
+  main 26 = s0:187:192
+  main 27 = s0:183:192
+  main 28 = s0:147:192
+  main 29 = s0:202:207
+  main 30 = s0:202:207
+  main 31 = s0:202:207
+  main 32 = s0:202:207
   function f0 0 = s0:54:59
-  function f0 1 = s0:62:68
-  function f0 2 = s0:54:68
-  function f0 3 = s0:47:68
-  function f0 4 = s0:30:68
+  function f0 1 = s0:54:59
+  function f0 2 = s0:62:68
+  function f0 3 = s0:54:68
+  function f0 4 = s0:47:68
   function f0 5 = s0:30:68
+  function f0 6 = s0:30:68
+  function f0 7 = s0:30:68
+  function f0 8 = s0:30:68
+  function f0 9 = s0:30:68
   function f1 0 = s0:30:68
   function f1 1 = s0:30:68
   function f1 2 = s0:30:68
   function f1 3 = s0:30:68
-  function f1 4 = s0:83:86
-  function f1 5 = s0:76:86
-  function f1 6 = s0:4:86
+  function f1 4 = s0:30:68
+  function f1 5 = s0:83:86
+  function f1 6 = s0:76:86
   function f1 7 = s0:4:86
+  function f1 8 = s0:4:86
+  function f1 9 = s0:4:86
+  function f1 10 = s0:4:86
+  function f1 11 = s0:4:86

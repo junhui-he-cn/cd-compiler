@@ -1,39 +1,47 @@
 main registers=25
-0000  b0 = constant #0 1
-0001  b1 = constant #1 2
-0002  b2 = array [b0, b1]
-0003  init_global g0, b2
-0004  b3 = load_global g0
-0005  b4 = assert_array b3
-0006  init_global g1, b4
-0007  b5 = constant #2 0
-0008  init_global g2, b5
-0009  b6 = constant #3 nil
-0010  init_global g3, b6
-0011  b7 = load_global g1
-0012  b8 = len b7
-0013  init_global g4, b8
-0014  b9 = load_global g2
-0015  b10 = load_global g4
-0016  b11 = less b9, b10
-0017  jump_if_false b11, 0036
-0018  b12 = load_global g1
-0019  b13 = load_global g2
-0020  b14 = index b12, b13
-0021  set_global g3, b14
-0022  jump 0028
-0023  b15 = load_global g2
-0024  b16 = constant #4 1
-0025  b17 = add b15, b16
-0026  set_global g2, b17
-0027  jump 0014
-0028  b18 = load_global g3
-0029  print b18
-0030  b19 = load_global g0
-0031  b20 = load_global g3
-0032  b21 = constant #5 10
-0033  b22 = add b20, b21
-0034  b23 = native_call @17 push [b19, b22]
-0035  jump 0023
-0036  b24 = load_global g0
-0037  print b24
+0000  block
+0001  b0 = constant #0 1
+0002  b1 = constant #1 2
+0003  b2 = array [b0, b1]
+0004  init_global g0, b2
+0005  b3 = load_global g0
+0006  b4 = assert_array b3
+0007  init_global g1, b4
+0008  b5 = constant #2 0
+0009  init_global g2, b5
+0010  b6 = constant #3 nil
+0011  init_global g3, b6
+0012  b7 = load_global g1
+0013  b8 = len b7
+0014  init_global g4, b8
+0015  br b1
+0016  block
+0017  b9 = load_global g2
+0018  b10 = load_global g4
+0019  b11 = less b9, b10
+0020  br_if b11, b2, b5
+0021  block
+0022  b12 = load_global g1
+0023  b13 = load_global g2
+0024  b14 = index b12, b13
+0025  set_global g3, b14
+0026  br b4
+0027  block
+0028  b15 = load_global g2
+0029  b16 = constant #4 1
+0030  b17 = add b15, b16
+0031  set_global g2, b17
+0032  br b1
+0033  block
+0034  b18 = load_global g3
+0035  print b18
+0036  b19 = load_global g0
+0037  b20 = load_global g3
+0038  b21 = constant #5 10
+0039  b22 = add b20, b21
+0040  b23 = native_call @17 push [b19, b22]
+0041  br b3
+0042  block
+0043  b24 = load_global g0
+0044  print b24
+0045  return_nil

@@ -27,6 +27,7 @@ globals:
   g1 = n8
 
 main registers=9:
+block b0:
   r0 = constant c0
   init_global g0, r0
   r1 = make_function f0
@@ -40,9 +41,11 @@ main registers=9:
   r7 = load_global g1
   r8 = field r7, n12
   print r8
+  return_nil
 
 function f0 name="inc" arity=1 registers=8:
   param 0 = "this#1"
+block b0:
   r0 = load_local l0
   r1 = load_local l0
   r2 = field r1, n3
@@ -51,8 +54,11 @@ function f0 name="inc" arity=1 registers=8:
   r5 = assign_field r0, n4, r4
   r6 = constant c2
   return r6
+block b1:
   r7 = constant c3
   return r7
+block b2:
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/struct_methods_mutation/input.cd" text="struct Counter { value: number }\nimpl Counter { fun inc() { this.value = this.value + 1; return nil; } }\nlet c: Counter = Counter { value: 1 };\nc.inc();\nprint c.value;\n"
@@ -62,47 +68,59 @@ debug_locations:
   main 1 = s0:2:1
   main 2 = s0:2:1
   main 3 = s0:2:1
-  main 4 = s0:3:35
-  main 5 = s0:3:18
-  main 6 = s0:3:1
-  main 7 = s0:4:1
+  main 4 = s0:2:1
+  main 5 = s0:3:35
+  main 6 = s0:3:18
+  main 7 = s0:3:1
   main 8 = s0:4:1
   main 9 = s0:4:1
-  main 10 = s0:5:7
+  main 10 = s0:4:1
   main 11 = s0:5:7
-  main 12 = s0:5:1
+  main 12 = s0:5:7
+  main 13 = s0:5:1
+  main 14 = s0:5:1
   function f0 0 = s0:2:28
-  function f0 1 = s0:2:41
+  function f0 1 = s0:2:28
   function f0 2 = s0:2:41
-  function f0 3 = s0:2:54
-  function f0 4 = s0:2:41
-  function f0 5 = s0:2:28
-  function f0 6 = s0:2:64
-  function f0 7 = s0:2:57
-  function f0 8 = s0:2:1
+  function f0 3 = s0:2:41
+  function f0 4 = s0:2:54
+  function f0 5 = s0:2:41
+  function f0 6 = s0:2:28
+  function f0 7 = s0:2:64
+  function f0 8 = s0:2:57
   function f0 9 = s0:2:1
+  function f0 10 = s0:2:1
+  function f0 11 = s0:2:1
+  function f0 12 = s0:2:1
+  function f0 13 = s0:2:1
 
 debug_ranges:
   main 0 = s0:38:99
   main 1 = s0:38:99
   main 2 = s0:38:99
   main 3 = s0:38:99
-  main 4 = s0:139:140
-  main 5 = s0:122:140
-  main 6 = s0:109:140
-  main 7 = s0:144:151
-  main 8 = s0:144:145
-  main 9 = s0:144:151
-  main 10 = s0:159:160
-  main 11 = s0:159:166
+  main 4 = s0:38:99
+  main 5 = s0:139:140
+  main 6 = s0:122:140
+  main 7 = s0:109:140
+  main 8 = s0:144:151
+  main 9 = s0:144:145
+  main 10 = s0:144:151
+  main 11 = s0:159:160
   main 12 = s0:159:166
+  main 13 = s0:159:166
+  main 14 = s0:159:166
   function f0 0 = s0:60:64
-  function f0 1 = s0:73:77
-  function f0 2 = s0:73:83
-  function f0 3 = s0:86:87
-  function f0 4 = s0:73:87
-  function f0 5 = s0:60:87
-  function f0 6 = s0:96:99
-  function f0 7 = s0:89:99
-  function f0 8 = s0:38:99
+  function f0 1 = s0:60:64
+  function f0 2 = s0:73:77
+  function f0 3 = s0:73:83
+  function f0 4 = s0:86:87
+  function f0 5 = s0:73:87
+  function f0 6 = s0:60:87
+  function f0 7 = s0:96:99
+  function f0 8 = s0:89:99
   function f0 9 = s0:38:99
+  function f0 10 = s0:38:99
+  function f0 11 = s0:38:99
+  function f0 12 = s0:38:99
+  function f0 13 = s0:38:99

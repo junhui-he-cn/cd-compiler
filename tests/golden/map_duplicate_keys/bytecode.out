@@ -1,74 +1,82 @@
 main registers=52
-0000  b0 = constant #0 "a"
-0001  b1 = constant #1 1
-0002  b2 = constant #2 "b"
-0003  b3 = constant #3 2
-0004  b4 = constant #4 "a"
-0005  b5 = constant #5 3
-0006  b6 = map [b0: b1, b2: b3, b4: b5]
-0007  init_global g0, b6
-0008  b7 = load_global g0
-0009  b8 = len b7
-0010  print b8
-0011  b9 = load_global g0
-0012  b10 = constant #6 "a"
-0013  b11 = index b9, b10
-0014  print b11
-0015  b12 = load_global g0
-0016  b13 = constant #7 "b"
-0017  b14 = index b12, b13
-0018  print b14
-0019  b15 = load_global g0
-0020  b16 = assert_array b15
-0021  init_global g1, b16
-0022  b17 = constant #8 0
-0023  init_global g2, b17
-0024  b18 = constant #9 nil
-0025  init_global g3, b18
-0026  b19 = load_global g1
-0027  b20 = len b19
-0028  init_global g4, b20
-0029  b21 = load_global g2
-0030  b22 = load_global g4
-0031  b23 = less b21, b22
-0032  jump_if_false b23, 0050
-0033  b24 = load_global g1
-0034  b25 = load_global g2
-0035  b26 = index b24, b25
-0036  set_global g3, b26
-0037  jump 0043
-0038  b27 = load_global g2
-0039  b28 = constant #10 1
-0040  b29 = add b27, b28
-0041  set_global g2, b29
-0042  jump 0029
-0043  b30 = load_global g3
-0044  print b30
-0045  b31 = load_global g0
-0046  b32 = load_global g3
-0047  b33 = index b31, b32
-0048  print b33
-0049  jump 0038
-0050  b34 = load_global g0
-0051  b35 = native_call @21 keys [b34]
-0052  print b35
-0053  b36 = load_global g0
-0054  b37 = native_call @23 values [b36]
-0055  print b37
-0056  b38 = load_global g0
-0057  b39 = constant #11 "a"
-0058  b40 = constant #12 30
-0059  b41 = assign_index b38, b39, b40
-0060  b42 = load_global g0
-0061  print b42
-0062  b43 = load_global g0
-0063  b44 = native_call @27 keys [b43]
-0064  print b44
-0065  b45 = load_global g0
-0066  b46 = constant #13 "b"
-0067  b47 = constant #14 20
-0068  b48 = constant #15 "c"
-0069  b49 = constant #16 4
-0070  b50 = map [b46: b47, b48: b49]
-0071  b51 = native_call @29 merge [b45, b50]
-0072  print b51
+0000  block
+0001  b0 = constant #0 "a"
+0002  b1 = constant #1 1
+0003  b2 = constant #2 "b"
+0004  b3 = constant #3 2
+0005  b4 = constant #4 "a"
+0006  b5 = constant #5 3
+0007  b6 = map [b0: b1, b2: b3, b4: b5]
+0008  init_global g0, b6
+0009  b7 = load_global g0
+0010  b8 = len b7
+0011  print b8
+0012  b9 = load_global g0
+0013  b10 = constant #6 "a"
+0014  b11 = index b9, b10
+0015  print b11
+0016  b12 = load_global g0
+0017  b13 = constant #7 "b"
+0018  b14 = index b12, b13
+0019  print b14
+0020  b15 = load_global g0
+0021  b16 = assert_array b15
+0022  init_global g1, b16
+0023  b17 = constant #8 0
+0024  init_global g2, b17
+0025  b18 = constant #9 nil
+0026  init_global g3, b18
+0027  b19 = load_global g1
+0028  b20 = len b19
+0029  init_global g4, b20
+0030  br b1
+0031  block
+0032  b21 = load_global g2
+0033  b22 = load_global g4
+0034  b23 = less b21, b22
+0035  br_if b23, b2, b5
+0036  block
+0037  b24 = load_global g1
+0038  b25 = load_global g2
+0039  b26 = index b24, b25
+0040  set_global g3, b26
+0041  br b4
+0042  block
+0043  b27 = load_global g2
+0044  b28 = constant #10 1
+0045  b29 = add b27, b28
+0046  set_global g2, b29
+0047  br b1
+0048  block
+0049  b30 = load_global g3
+0050  print b30
+0051  b31 = load_global g0
+0052  b32 = load_global g3
+0053  b33 = index b31, b32
+0054  print b33
+0055  br b3
+0056  block
+0057  b34 = load_global g0
+0058  b35 = native_call @21 keys [b34]
+0059  print b35
+0060  b36 = load_global g0
+0061  b37 = native_call @23 values [b36]
+0062  print b37
+0063  b38 = load_global g0
+0064  b39 = constant #11 "a"
+0065  b40 = constant #12 30
+0066  b41 = assign_index b38, b39, b40
+0067  b42 = load_global g0
+0068  print b42
+0069  b43 = load_global g0
+0070  b44 = native_call @27 keys [b43]
+0071  print b44
+0072  b45 = load_global g0
+0073  b46 = constant #13 "b"
+0074  b47 = constant #14 20
+0075  b48 = constant #15 "c"
+0076  b49 = constant #16 4
+0077  b50 = map [b46: b47, b48: b49]
+0078  b51 = native_call @29 merge [b45, b50]
+0079  print b51
+0080  return_nil

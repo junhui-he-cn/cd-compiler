@@ -1,53 +1,67 @@
 main registers=6
-0000  b0 = constant #0 nil
-0001  init_global g0, b0
-0002  b1 = make_function $2 outer/0
-0003  set_global g0, b1
-0004  b2 = load_global g0
-0005  b3 = call b2()
-0006  init_global g1, b3
-0007  b4 = load_global g1
-0008  b5 = call b4()
-0009  print b5
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $2 outer/0
+0004  set_global g0, b1
+0005  b2 = load_global g0
+0006  b3 = call b2()
+0007  init_global g1, b3
+0008  b4 = load_global g1
+0009  b5 = call b4()
+0010  print b5
+0011  return_nil
 
 function $0 inner/0 registers=4
 upvalue u0 = upvalue u0
 upvalue u1 = local l0
-0000  b0 = load_upvalue u0
-0001  b1 = load_upvalue u1
-0002  b2 = add b0, b1
-0003  return b2
-0004  b3 = constant #5 nil
-0005  return b3
+0000  block
+0001  b0 = load_upvalue u0
+0002  b1 = load_upvalue u1
+0003  b2 = add b0, b1
+0004  return b2
+0005  block
+0006  b3 = constant #5 nil
+0007  return b3
+0008  block
+0009  return_nil
 
 function $1 middle/0 registers=10
 upvalue u0 = local l0
-0000  b0 = load_upvalue u0
-0001  b1 = constant #3 5
-0002  b2 = add b0, b1
-0003  bind_local l0, b2
-0004  b3 = constant #4 nil
-0005  bind_local l1, b3
-0006  b4 = make_function $0 inner/0
-0007  set_local l1, b4
-0008  b5 = load_local l0
-0009  b6 = constant #6 100
-0010  b7 = add b5, b6
-0011  set_local l0, b7
-0012  b8 = load_local l1
-0013  return b8
-0014  b9 = constant #7 nil
-0015  return b9
+0000  block
+0001  b0 = load_upvalue u0
+0002  b1 = constant #3 5
+0003  b2 = add b0, b1
+0004  bind_local l0, b2
+0005  b3 = constant #4 nil
+0006  bind_local l1, b3
+0007  b4 = make_function $0 inner/0
+0008  set_local l1, b4
+0009  b5 = load_local l0
+0010  b6 = constant #6 100
+0011  b7 = add b5, b6
+0012  set_local l0, b7
+0013  b8 = load_local l1
+0014  return b8
+0015  block
+0016  b9 = constant #7 nil
+0017  return b9
+0018  block
+0019  return_nil
 
 function $2 outer/0 registers=6
-0000  b0 = constant #1 10
-0001  bind_local l0, b0
-0002  b1 = constant #2 nil
-0003  bind_local l1, b1
-0004  b2 = make_function $1 middle/0
-0005  set_local l1, b2
-0006  b3 = load_local l1
-0007  b4 = call b3()
-0008  return b4
-0009  b5 = constant #8 nil
-0010  return b5
+0000  block
+0001  b0 = constant #1 10
+0002  bind_local l0, b0
+0003  b1 = constant #2 nil
+0004  bind_local l1, b1
+0005  b2 = make_function $1 middle/0
+0006  set_local l1, b2
+0007  b3 = load_local l1
+0008  b4 = call b3()
+0009  return b4
+0010  block
+0011  b5 = constant #8 nil
+0012  return b5
+0013  block
+0014  return_nil

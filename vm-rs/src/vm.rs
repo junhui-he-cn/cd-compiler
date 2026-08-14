@@ -6392,6 +6392,7 @@ pub struct VM<'a> {
     constant_errors: BTreeMap<usize, RuntimeError>,
     native_specs: Vec<Option<&'static NativeSpec>>,
     prepared_functions: Vec<Rc<PreparedFunction>>,
+    block_maps: Vec<BTreeMap<u32, usize>>,
     jit: JitState,
     output: String,
     output_bytes: usize,
@@ -7129,6 +7130,21 @@ impl<'a> VM<'a> {
                     .unwrap_or_default()
             })
             .collect();
+        let block_maps = program
+            .functions
+            .iter()
+            .map(|function| {
+                function
+                    .instructions
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, instruction)| match instruction {
+                        Instruction::BlockStart { id } => Some((id.0, index)),
+                        _ => None,
+                    })
+                    .collect()
+            })
+            .collect();
         let mut decoded_constants = Vec::with_capacity(program.constants.len());
         let mut constant_errors = BTreeMap::new();
         for (index, constant) in program.constants.iter().enumerate() {
@@ -7151,6 +7167,7 @@ impl<'a> VM<'a> {
             global_cell_cache: vec![None; global_slots_by_name.len()],
             global_cells: vec![None; global_count],
             global_names,
+            block_maps,
             decoded_constants,
             constant_errors,
             native_specs: program
@@ -8165,6 +8182,41 @@ impl<'a> VM<'a> {
                         return Ok(None);
                     }
                 }
+                Instruction::BlockStart { .. } => {}
+                Instruction::Br { target } => {
+                    let block_map = frame
+                        .function_index
+                        .and_then(|index| self.block_maps.get(index));
+                    let block_map = block_map.unwrap_or(&self.block_maps[0]);
+                    let next = block_map
+                        .get(&target.0)
+                        .copied()
+                        .ok_or_else(|| RuntimeError::new("branch target out of range"))?;
+                    frame.ip = next;
+                    jumped = true;
+                    return Ok(None);
+                }
+                Instruction::BrIf {
+                    condition,
+                    if_true,
+                    if_false,
+                } => {
+                    let block_map = frame
+                        .function_index
+                        .and_then(|index| self.block_maps.get(index));
+                    let block_map = block_map.unwrap_or(&self.block_maps[0]);
+                    let taken = self.read_register_ref(frame, *condition)?.is_truthy();
+                    let next = block_map
+                        .get(if taken { &if_true.0 } else { &if_false.0 })
+                        .copied()
+                        .ok_or_else(|| RuntimeError::new("branch target out of range"))?;
+                    frame.ip = next;
+                    jumped = true;
+                    return Ok(None);
+                }
+                Instruction::ReturnNil => {
+                    return Ok(Some(Value::Nil))
+                }
                 Instruction::Return { value } => {
                     return Ok(Some(self.take_register(frame, *value)?))
                 }
@@ -8589,6 +8641,10 @@ impl<'a> VM<'a> {
             | Instruction::Jump { .. }
             | Instruction::JumpIfFalse { .. }
             | Instruction::JumpIfTrue { .. }
+            | Instruction::BlockStart { .. }
+            | Instruction::Br { .. }
+            | Instruction::BrIf { .. }
+            | Instruction::ReturnNil
             | Instruction::Return { .. } => {
                 Err(RuntimeError::new("instruction is specific to one dispatch path"))
             }

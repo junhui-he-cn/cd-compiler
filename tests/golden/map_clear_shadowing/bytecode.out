@@ -1,26 +1,32 @@
 main registers=12
-0000  b0 = constant #0 nil
-0001  init_global g0, b0
-0002  b1 = make_function $0 clear/1
-0003  set_global g0, b1
-0004  b2 = constant #3 "a"
-0005  b3 = constant #4 1
-0006  b4 = map [b2: b3]
-0007  init_global g1, b4
-0008  b5 = load_global g0
-0009  b6 = load_global g1
-0010  b7 = call b5(b6)
-0011  print b7
-0012  b8 = load_global g1
-0013  print b8
-0014  b9 = load_global g1
-0015  b10 = native_call @7 clear [b9]
-0016  print b10
-0017  b11 = load_global g1
-0018  print b11
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 clear/1
+0004  set_global g0, b1
+0005  b2 = constant #3 "a"
+0006  b3 = constant #4 1
+0007  b4 = map [b2: b3]
+0008  init_global g1, b4
+0009  b5 = load_global g0
+0010  b6 = load_global g1
+0011  b7 = call b5(b6)
+0012  print b7
+0013  b8 = load_global g1
+0014  print b8
+0015  b9 = load_global g1
+0016  b10 = native_call @7 clear [b9]
+0017  print b10
+0018  b11 = load_global g1
+0019  print b11
+0020  return_nil
 
 function $0 clear/1 registers=2
-0000  b0 = constant #1 "shadowed"
-0001  return b0
-0002  b1 = constant #2 nil
-0003  return b1
+0000  block
+0001  b0 = constant #1 "shadowed"
+0002  return b0
+0003  block
+0004  b1 = constant #2 nil
+0005  return b1
+0006  block
+0007  return_nil

@@ -314,6 +314,16 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
     case BytecodeOp::JumpIfTrue:
         out << "jump_if_true " << reg(requireLeft(instruction)) << ", " << instruction.operand;
         break;
+    case BytecodeOp::Br:
+        out << "br b" << instruction.operand;
+        break;
+    case BytecodeOp::BrIf:
+        out << "br_if " << reg(requireLeft(instruction)) << ", b" << instruction.operand
+            << ", b" << (instruction.operands.empty() ? 0 : instruction.operands.front());
+        break;
+    case BytecodeOp::ReturnNil:
+        out << "return_nil";
+        break;
     }
     out << '\n';
 }
@@ -321,6 +331,10 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
 void writeInstructions(std::ostream& out, const std::vector<BytecodeInstruction>& instructions)
 {
     for (const BytecodeInstruction& instruction : instructions) {
+        if (instruction.op == BytecodeOp::BlockStart) {
+            out << "block b" << instruction.operand << ":\n";
+            continue;
+        }
         writeInstruction(out, instruction);
     }
 }

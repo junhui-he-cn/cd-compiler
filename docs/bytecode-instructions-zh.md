@@ -170,8 +170,12 @@ VM 是寄存器机。每个函数体拥有一块预分配寄存器数组和一�
 
 符号约定：`rD` 目标寄存器，`rS` / `rL` / `rR` 源寄存器，`cN` 常量索引，`nN` 名字
 索引，`fN` 函数索引，`N` 十进制整数（跳转目标或 payload 下标）。所有索引零基。
-无目标寄存器的指令（`bind_local`、`set_local`、`set_upvalue`、`init_global`、
-`set_global`、`print`、`return` 与三条跳转）没有 `rD`。
+0.2 正文由 `block bN:` 区段组成，每个 block 以 terminator 结束：
+`br bN`（无条件）、`br_if rC, bT, bF`（条件）、`return rV`、`return_nil`；
+0.2 不再有隐式 fallthrough。无目标寄存器的指令（`bind_local`、`set_local`、
+`set_upvalue`、`init_global`、`set_global`、`print`、`return`、`br`、`br_if`、
+`return_nil` 与三条旧跳转）没有 `rD`。旧 `cdbc 0.1` 的线性 `jump/jump_if_*` 仍在
+兼容读取路径中保留。
 
 ### 4.1 常量与构造
 

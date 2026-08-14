@@ -214,3 +214,25 @@ VM 兼容矩阵 7 格。
 
 下一阶段按计划是 Phase 4（BasicBlock + terminator，取消隐式 return），之后接
 Phase 5（verifier 2.0）。
+
+## 10. Phase 4 落地记录
+
+Phase 4（计划 §8，BasicBlock + terminator）完成：控制流改为显式 block。
+
+- 文本为 `block bN:` 区段 + 显式 terminator（`br bN` / `br_if rC, bT, bF` /
+  `return rV` / `return_nil`）；`jump/jump_if_*` 在 0.1 兼容读取路径保留。
+- C++ 发射端把 IR 跳转偏移拆成 block、把 `jump`→`br`、`jump_if_*`→`br_if`，
+  并为 fallthrough 补显式 `br`、为落到函数末尾补 `return_nil`；无隐式 return。
+- 与计划的差异（记录在案）：内部仍是扁平指令流 + `BlockStart` 标记（VM 构造期
+  建 BlockId→偏移表），而不是 `Vec<BasicBlock>` 结构体；`make_closure` 更名继续
+  暂缓。模块产品的 `at=N` 偏移在拆块后重映射到块边界，链接器跨模块重编号 block
+  ID、把依赖模块末尾的 `return_nil` 改为落到下一模块的 `br`。
+- JIT：单 block 函数仍可编译（`BlockStart` 为 no-op，首个 `return` 之后按不可达
+  尾忽略）；含 `br/br_if/return_nil` 的函数回退解释器。
+
+回归：cargo test 全绿、bytecode artifact 124/124、module artifact/cache、
+malformed 107/107、Rust VM parity 742/742、golden 787/787、ctest 47/47、
+VM 兼容矩阵 7 格、`git diff --check` 干净。
+
+下一阶段是 Phase 5（verifier 2.0：definite-assignment / definite-binding /
+CFG 校验）。

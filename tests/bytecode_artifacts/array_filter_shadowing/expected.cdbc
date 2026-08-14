@@ -19,6 +19,7 @@ globals:
   g0 = n0
 
 main registers=10:
+block b0:
   r0 = make_function f0
   init_global g0, r0
   r1 = load_global g0
@@ -32,82 +33,123 @@ main registers=10:
   r8 = make_function f2
   r9 = native_call n2 [r7, r8]
   print r9
+  return_nil
 
 function f0 name="<lambda>" arity=2 registers=2:
   param 0 = "array#0"
   param 1 = "predicate#1"
+block b0:
   r0 = constant c0
   return r0
+block b1:
   r1 = constant c1
   return r1
+block b2:
+  return_nil
 
 function f1 name="<lambda>" arity=1 registers=2:
   param 0 = "value#3"
+block b0:
   r0 = constant c3
   return r0
+block b1:
   r1 = constant c4
   return r1
+block b2:
+  return_nil
 
 function f2 name="<lambda>" arity=1 registers=2:
   param 0 = "value#4"
+block b0:
   r0 = constant c6
   return r0
+block b1:
   r1 = constant c7
   return r1
+block b2:
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/array_filter_shadowing/input.cd" text="let filter = fun (array, predicate) {\n  return \"shadowed\";\n};\n\nprint filter([1], fun (value) { return true; });\nprint [1].filter(fun (value) { return true; });\n"
 
 debug_locations:
   main 0 = s0:1:14
-  main 1 = s0:1:1
-  main 2 = s0:5:7
-  main 3 = s0:5:15
-  main 4 = s0:5:14
-  main 5 = s0:5:19
-  main 6 = s0:5:7
-  main 7 = s0:5:1
-  main 8 = s0:6:8
-  main 9 = s0:6:7
-  main 10 = s0:6:18
-  main 11 = s0:6:7
-  main 12 = s0:6:1
+  main 1 = s0:1:14
+  main 2 = s0:1:1
+  main 3 = s0:5:7
+  main 4 = s0:5:15
+  main 5 = s0:5:14
+  main 6 = s0:5:19
+  main 7 = s0:5:7
+  main 8 = s0:5:1
+  main 9 = s0:6:8
+  main 10 = s0:6:7
+  main 11 = s0:6:18
+  main 12 = s0:6:7
+  main 13 = s0:6:1
+  main 14 = s0:6:1
   function f0 0 = s0:2:10
-  function f0 1 = s0:2:3
-  function f0 2 = s0:1:14
+  function f0 1 = s0:2:10
+  function f0 2 = s0:2:3
   function f0 3 = s0:1:14
+  function f0 4 = s0:1:14
+  function f0 5 = s0:1:14
+  function f0 6 = s0:1:14
+  function f0 7 = s0:1:14
   function f1 0 = s0:5:40
-  function f1 1 = s0:5:33
-  function f1 2 = s0:5:19
+  function f1 1 = s0:5:40
+  function f1 2 = s0:5:33
   function f1 3 = s0:5:19
+  function f1 4 = s0:5:19
+  function f1 5 = s0:5:19
+  function f1 6 = s0:5:19
+  function f1 7 = s0:5:19
   function f2 0 = s0:6:39
-  function f2 1 = s0:6:32
-  function f2 2 = s0:6:18
+  function f2 1 = s0:6:39
+  function f2 2 = s0:6:32
   function f2 3 = s0:6:18
+  function f2 4 = s0:6:18
+  function f2 5 = s0:6:18
+  function f2 6 = s0:6:18
+  function f2 7 = s0:6:18
 
 debug_ranges:
   main 0 = s0:13:57
-  main 1 = s0:4:57
-  main 2 = s0:69:75
-  main 3 = s0:77:78
-  main 4 = s0:76:78
-  main 5 = s0:81:106
-  main 6 = s0:69:110
+  main 1 = s0:13:57
+  main 2 = s0:4:57
+  main 3 = s0:69:75
+  main 4 = s0:77:78
+  main 5 = s0:76:78
+  main 6 = s0:81:106
   main 7 = s0:69:110
-  main 8 = s0:119:120
-  main 9 = s0:118:120
-  main 10 = s0:129:154
-  main 11 = s0:118:158
+  main 8 = s0:69:110
+  main 9 = s0:119:120
+  main 10 = s0:118:120
+  main 11 = s0:129:154
   main 12 = s0:118:158
+  main 13 = s0:118:158
+  main 14 = s0:118:158
   function f0 0 = s0:47:57
-  function f0 1 = s0:40:57
-  function f0 2 = s0:13:57
+  function f0 1 = s0:47:57
+  function f0 2 = s0:40:57
   function f0 3 = s0:13:57
+  function f0 4 = s0:13:57
+  function f0 5 = s0:13:57
+  function f0 6 = s0:13:57
+  function f0 7 = s0:13:57
   function f1 0 = s0:102:106
-  function f1 1 = s0:95:106
-  function f1 2 = s0:81:106
+  function f1 1 = s0:102:106
+  function f1 2 = s0:95:106
   function f1 3 = s0:81:106
+  function f1 4 = s0:81:106
+  function f1 5 = s0:81:106
+  function f1 6 = s0:81:106
+  function f1 7 = s0:81:106
   function f2 0 = s0:150:154
-  function f2 1 = s0:143:154
-  function f2 2 = s0:129:154
+  function f2 1 = s0:150:154
+  function f2 2 = s0:143:154
   function f2 3 = s0:129:154
+  function f2 4 = s0:129:154
+  function f2 5 = s0:129:154
+  function f2 6 = s0:129:154
+  function f2 7 = s0:129:154

@@ -1,63 +1,89 @@
 main registers=20
-0000  b0 = make_function $0 <lambda>/2
-0001  init_global g0, b0
-0002  b1 = make_function $1 <lambda>/2
-0003  init_global g1, b1
-0004  b2 = load_global g0
-0005  b3 = constant #4 1
-0006  b4 = array [b3]
-0007  b5 = make_function $2 <lambda>/1
-0008  b6 = call b2(b4, b5)
-0009  print b6
-0010  b7 = load_global g1
-0011  b8 = constant #7 1
-0012  b9 = array [b8]
-0013  b10 = make_function $3 <lambda>/1
-0014  b11 = call b7(b9, b10)
-0015  print b11
-0016  b12 = constant #10 1
-0017  b13 = array [b12]
-0018  b14 = make_function $4 <lambda>/1
-0019  b15 = native_call @4 any [b13, b14]
-0020  print b15
-0021  b16 = constant #13 1
-0022  b17 = array [b16]
-0023  b18 = make_function $5 <lambda>/1
-0024  b19 = native_call @5 all [b17, b18]
-0025  print b19
+0000  block
+0001  b0 = make_function $0 <lambda>/2
+0002  init_global g0, b0
+0003  b1 = make_function $1 <lambda>/2
+0004  init_global g1, b1
+0005  b2 = load_global g0
+0006  b3 = constant #4 1
+0007  b4 = array [b3]
+0008  b5 = make_function $2 <lambda>/1
+0009  b6 = call b2(b4, b5)
+0010  print b6
+0011  b7 = load_global g1
+0012  b8 = constant #7 1
+0013  b9 = array [b8]
+0014  b10 = make_function $3 <lambda>/1
+0015  b11 = call b7(b9, b10)
+0016  print b11
+0017  b12 = constant #10 1
+0018  b13 = array [b12]
+0019  b14 = make_function $4 <lambda>/1
+0020  b15 = native_call @4 any [b13, b14]
+0021  print b15
+0022  b16 = constant #13 1
+0023  b17 = array [b16]
+0024  b18 = make_function $5 <lambda>/1
+0025  b19 = native_call @5 all [b17, b18]
+0026  print b19
+0027  return_nil
 
 function $0 <lambda>/2 registers=2
-0000  b0 = constant #0 "shadowed any"
-0001  return b0
-0002  b1 = constant #1 nil
-0003  return b1
+0000  block
+0001  b0 = constant #0 "shadowed any"
+0002  return b0
+0003  block
+0004  b1 = constant #1 nil
+0005  return b1
+0006  block
+0007  return_nil
 
 function $1 <lambda>/2 registers=2
-0000  b0 = constant #2 "shadowed all"
-0001  return b0
-0002  b1 = constant #3 nil
-0003  return b1
+0000  block
+0001  b0 = constant #2 "shadowed all"
+0002  return b0
+0003  block
+0004  b1 = constant #3 nil
+0005  return b1
+0006  block
+0007  return_nil
 
 function $2 <lambda>/1 registers=2
-0000  b0 = constant #5 true
-0001  return b0
-0002  b1 = constant #6 nil
-0003  return b1
+0000  block
+0001  b0 = constant #5 true
+0002  return b0
+0003  block
+0004  b1 = constant #6 nil
+0005  return b1
+0006  block
+0007  return_nil
 
 function $3 <lambda>/1 registers=2
-0000  b0 = constant #8 true
-0001  return b0
-0002  b1 = constant #9 nil
-0003  return b1
+0000  block
+0001  b0 = constant #8 true
+0002  return b0
+0003  block
+0004  b1 = constant #9 nil
+0005  return b1
+0006  block
+0007  return_nil
 
 function $4 <lambda>/1 registers=2
-0000  b0 = constant #11 true
-0001  return b0
-0002  b1 = constant #12 nil
-0003  return b1
+0000  block
+0001  b0 = constant #11 true
+0002  return b0
+0003  block
+0004  b1 = constant #12 nil
+0005  return b1
+0006  block
+0007  return_nil
 
 function $5 <lambda>/1 registers=2
-0000  b0 = constant #14 true
-0001  return b0
-0002  b1 = constant #15 nil
-0003  return b1
+0000  block
+0001  b0 = constant #14 true
+0002  return b0
+0003  block
+0004  b1 = constant #15 nil
+0005  return b1
+0006  block
+0007  return_nil

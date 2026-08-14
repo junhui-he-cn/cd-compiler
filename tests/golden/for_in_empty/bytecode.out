@@ -1,30 +1,38 @@
 main registers=17
-0000  b0 = array []
-0001  b1 = assert_array b0
-0002  init_global g0, b1
-0003  b2 = constant #0 0
-0004  init_global g1, b2
-0005  b3 = constant #1 nil
-0006  init_global g2, b3
-0007  b4 = load_global g0
-0008  b5 = len b4
-0009  init_global g3, b5
-0010  b6 = load_global g1
-0011  b7 = load_global g3
-0012  b8 = less b6, b7
-0013  jump_if_false b8, 0027
-0014  b9 = load_global g0
-0015  b10 = load_global g1
-0016  b11 = index b9, b10
-0017  set_global g2, b11
-0018  jump 0024
-0019  b12 = load_global g1
-0020  b13 = constant #2 1
-0021  b14 = add b12, b13
-0022  set_global g1, b14
-0023  jump 0010
-0024  b15 = load_global g2
-0025  print b15
-0026  jump 0019
-0027  b16 = constant #3 "done"
-0028  print b16
+0000  block
+0001  b0 = array []
+0002  b1 = assert_array b0
+0003  init_global g0, b1
+0004  b2 = constant #0 0
+0005  init_global g1, b2
+0006  b3 = constant #1 nil
+0007  init_global g2, b3
+0008  b4 = load_global g0
+0009  b5 = len b4
+0010  init_global g3, b5
+0011  br b1
+0012  block
+0013  b6 = load_global g1
+0014  b7 = load_global g3
+0015  b8 = less b6, b7
+0016  br_if b8, b2, b5
+0017  block
+0018  b9 = load_global g0
+0019  b10 = load_global g1
+0020  b11 = index b9, b10
+0021  set_global g2, b11
+0022  br b4
+0023  block
+0024  b12 = load_global g1
+0025  b13 = constant #2 1
+0026  b14 = add b12, b13
+0027  set_global g1, b14
+0028  br b1
+0029  block
+0030  b15 = load_global g2
+0031  print b15
+0032  br b3
+0033  block
+0034  b16 = constant #3 "done"
+0035  print b16
+0036  return_nil

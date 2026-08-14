@@ -1,96 +1,127 @@
 main registers=32
-0000  b0 = constant #0 nil
-0001  init_global g0, b0
-0002  b1 = make_function $0 describe/1
-0003  set_global g0, b1
-0004  b2 = constant #8 7
-0005  b3 = variant @14 Option. @15 Some (b2)
-0006  init_global g1, b3
-0007  b4 = constant #9 nil
-0008  init_global g2, b4
-0009  b5 = load_global g0
-0010  b6 = load_global g1
-0011  b7 = call b5(b6)
-0012  print b7
-0013  b8 = load_global g0
-0014  b9 = load_global g2
-0015  b10 = call b8(b9)
-0016  print b10
-0017  b11 = load_global g1
-0018  b12 = constant #10 nil
-0019  b13 = equal b11, b12
-0020  jump_if_false b13, 0024
-0021  b14 = constant #11 "nil"
-0022  print b14
-0023  jump 0046
-0024  b15 = variant_tag b11  @23 Option. @24 Some
-0025  jump_if_false b15, 0035
-0026  b16 = variant_field b11[0]
-0027  init_global g3, b16
-0028  b17 = load_global g3
-0029  b18 = constant #12 10
-0030  b19 = greater b17, b18
-0031  jump_if_false b19, 0035
-0032  b20 = constant #13 "large"
-0033  print b20
-0034  jump 0046
-0035  b21 = variant_tag b11  @27 Option. @28 Some
-0036  jump_if_false b21, 0041
-0037  b22 = variant_field b11[0]
-0038  b23 = constant #14 "some"
-0039  print b23
-0040  jump 0046
-0041  b24 = variant_tag b11  @29 Option. @30 None
-0042  jump_if_false b24, 0046
-0043  b25 = constant #15 "none"
-0044  print b25
-0045  jump 0046
-0046  b26 = load_global g2
-0047  b27 = constant #16 nil
-0048  b28 = equal b26, b27
-0049  jump_if_false b28, 0055
-0050  b29 = constant #17 true
-0051  jump_if_false b29, 0055
-0052  b30 = constant #18 "guarded nil"
-0053  print b30
-0054  jump 0058
-0055  b31 = constant #19 "fallback"
-0056  print b31
-0057  jump 0058
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 describe/1
+0004  set_global g0, b1
+0005  b2 = constant #8 7
+0006  b3 = variant @14 Option. @15 Some (b2)
+0007  init_global g1, b3
+0008  b4 = constant #9 nil
+0009  init_global g2, b4
+0010  b5 = load_global g0
+0011  b6 = load_global g1
+0012  b7 = call b5(b6)
+0013  print b7
+0014  b8 = load_global g0
+0015  b9 = load_global g2
+0016  b10 = call b8(b9)
+0017  print b10
+0018  b11 = load_global g1
+0019  b12 = constant #10 nil
+0020  b13 = equal b11, b12
+0021  br_if b13, b1, b2
+0022  block
+0023  b14 = constant #11 "nil"
+0024  print b14
+0025  br b9
+0026  block
+0027  b15 = variant_tag b11  @23 Option. @24 Some
+0028  br_if b15, b3, b5
+0029  block
+0030  b16 = variant_field b11[0]
+0031  init_global g3, b16
+0032  b17 = load_global g3
+0033  b18 = constant #12 10
+0034  b19 = greater b17, b18
+0035  br_if b19, b4, b5
+0036  block
+0037  b20 = constant #13 "large"
+0038  print b20
+0039  br b9
+0040  block
+0041  b21 = variant_tag b11  @27 Option. @28 Some
+0042  br_if b21, b6, b7
+0043  block
+0044  b22 = variant_field b11[0]
+0045  b23 = constant #14 "some"
+0046  print b23
+0047  br b9
+0048  block
+0049  b24 = variant_tag b11  @29 Option. @30 None
+0050  br_if b24, b8, b9
+0051  block
+0052  b25 = constant #15 "none"
+0053  print b25
+0054  br b9
+0055  block
+0056  b26 = load_global g2
+0057  b27 = constant #16 nil
+0058  b28 = equal b26, b27
+0059  br_if b28, b10, b12
+0060  block
+0061  b29 = constant #17 true
+0062  br_if b29, b11, b12
+0063  block
+0064  b30 = constant #18 "guarded nil"
+0065  print b30
+0066  return_nil
+0067  block
+0068  b31 = constant #19 "fallback"
+0069  print b31
+0070  return_nil
+0071  block
+0072  return_nil
 
 function $0 describe/1 registers=19
-0000  b0 = load_local l0
-0001  b1 = constant #1 nil
-0002  b2 = equal b0, b1
-0003  jump_if_false b2, 0007
-0004  b3 = constant #2 "nil"
-0005  return b3
-0006  jump 0033
-0007  b4 = variant_tag b0  @2 Option. @3 Some
-0008  jump_if_false b4, 0018
-0009  b5 = variant_field b0[0]
-0010  bind_local l1, b5
-0011  b6 = load_local l1
-0012  b7 = constant #3 10
-0013  b8 = greater b6, b7
-0014  jump_if_false b8, 0018
-0015  b9 = constant #4 "large"
-0016  return b9
-0017  jump 0033
-0018  b10 = variant_tag b0  @6 Option. @7 Some
-0019  jump_if_false b10, 0028
-0020  b11 = variant_field b0[0]
-0021  bind_local l2, b11
-0022  b12 = constant #5 "some:"
-0023  b13 = load_local l2
-0024  b14 = native_call @10 str [b13]
-0025  b15 = add b12, b14
-0026  return b15
-0027  jump 0033
-0028  b16 = variant_tag b0  @11 Option. @12 None
-0029  jump_if_false b16, 0033
-0030  b17 = constant #6 "none"
-0031  return b17
-0032  jump 0033
-0033  b18 = constant #7 nil
-0034  return b18
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #1 nil
+0003  b2 = equal b0, b1
+0004  br_if b2, b1, b3
+0005  block
+0006  b3 = constant #2 "nil"
+0007  return b3
+0008  block
+0009  br b13
+0010  block
+0011  b4 = variant_tag b0  @2 Option. @3 Some
+0012  br_if b4, b4, b7
+0013  block
+0014  b5 = variant_field b0[0]
+0015  bind_local l1, b5
+0016  b6 = load_local l1
+0017  b7 = constant #3 10
+0018  b8 = greater b6, b7
+0019  br_if b8, b5, b7
+0020  block
+0021  b9 = constant #4 "large"
+0022  return b9
+0023  block
+0024  br b13
+0025  block
+0026  b10 = variant_tag b0  @6 Option. @7 Some
+0027  br_if b10, b8, b10
+0028  block
+0029  b11 = variant_field b0[0]
+0030  bind_local l2, b11
+0031  b12 = constant #5 "some:"
+0032  b13 = load_local l2
+0033  b14 = native_call @10 str [b13]
+0034  b15 = add b12, b14
+0035  return b15
+0036  block
+0037  br b13
+0038  block
+0039  b16 = variant_tag b0  @11 Option. @12 None
+0040  br_if b16, b11, b13
+0041  block
+0042  b17 = constant #6 "none"
+0043  return b17
+0044  block
+0045  br b13
+0046  block
+0047  b18 = constant #7 nil
+0048  return b18
+0049  block
+0050  return_nil

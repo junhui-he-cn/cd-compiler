@@ -26,13 +26,15 @@ globals:
   g2 = n7
 
 main registers=14:
+block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = variant n0.n1 [r0, r1]
   init_global g0, r2
   r3 = load_global g0
   r4 = variant_tag r3 n4.n5
-  jump_if_false r4, 18
+  br_if r4, b1, b2
+block b1:
   r5 = variant_field r3 0
   r6 = variant_field r3 1
   init_global g1, r5
@@ -43,62 +45,78 @@ main registers=14:
   r10 = load_global g1
   r11 = add r9, r10
   print r11
-  jump 23
+  return_nil
+block b2:
   r12 = variant_tag r3 n10.n11
-  jump_if_false r12, 23
+  br_if r12, b3, b4
+block b3:
   r13 = constant c3
   print r13
-  jump 23
+  return_nil
+block b4:
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/named_payload_fields/input.cd" text="enum Pair { Values(number, number), Empty }\nlet pair = Pair.Values(2, 4);\nmatch pair {\n  Pair.Values(leftValue, rightValue) => { print rightValue * 10 + leftValue; }\n  Pair.Empty => { print 0; }\n}\n"
 
 debug_locations:
   main 0 = s0:2:24
-  main 1 = s0:2:27
-  main 2 = s0:2:12
-  main 3 = s0:2:1
-  main 4 = s0:3:7
-  main 5 = s0:3:1
+  main 1 = s0:2:24
+  main 2 = s0:2:27
+  main 3 = s0:2:12
+  main 4 = s0:2:1
+  main 5 = s0:3:7
   main 6 = s0:3:1
   main 7 = s0:3:1
   main 8 = s0:3:1
   main 9 = s0:3:1
   main 10 = s0:3:1
-  main 11 = s0:4:49
-  main 12 = s0:4:62
+  main 11 = s0:3:1
+  main 12 = s0:3:1
   main 13 = s0:4:49
-  main 14 = s0:4:67
+  main 14 = s0:4:62
   main 15 = s0:4:49
-  main 16 = s0:4:43
-  main 17 = s0:3:1
-  main 18 = s0:3:1
+  main 16 = s0:4:67
+  main 17 = s0:4:49
+  main 18 = s0:4:43
   main 19 = s0:3:1
-  main 20 = s0:5:25
-  main 21 = s0:5:19
+  main 20 = s0:3:1
+  main 21 = s0:3:1
   main 22 = s0:3:1
+  main 23 = s0:5:25
+  main 24 = s0:5:25
+  main 25 = s0:5:19
+  main 26 = s0:3:1
+  main 27 = s0:3:1
+  main 28 = s0:3:1
 
 debug_ranges:
   main 0 = s0:67:68
-  main 1 = s0:70:71
-  main 2 = s0:55:72
-  main 3 = s0:48:72
-  main 4 = s0:80:84
-  main 5 = s0:80:191
+  main 1 = s0:67:68
+  main 2 = s0:70:71
+  main 3 = s0:55:72
+  main 4 = s0:48:72
+  main 5 = s0:80:84
   main 6 = s0:80:191
   main 7 = s0:80:191
   main 8 = s0:80:191
   main 9 = s0:80:191
   main 10 = s0:80:191
-  main 11 = s0:135:145
-  main 12 = s0:148:150
-  main 13 = s0:135:150
-  main 14 = s0:153:162
-  main 15 = s0:135:162
-  main 16 = s0:135:162
-  main 17 = s0:80:191
-  main 18 = s0:80:191
+  main 11 = s0:80:191
+  main 12 = s0:80:191
+  main 13 = s0:135:145
+  main 14 = s0:148:150
+  main 15 = s0:135:150
+  main 16 = s0:153:162
+  main 17 = s0:135:162
+  main 18 = s0:135:162
   main 19 = s0:80:191
-  main 20 = s0:190:191
-  main 21 = s0:190:191
+  main 20 = s0:80:191
+  main 21 = s0:80:191
   main 22 = s0:80:191
+  main 23 = s0:190:191
+  main 24 = s0:190:191
+  main 25 = s0:190:191
+  main 26 = s0:80:191
+  main 27 = s0:80:191
+  main 28 = s0:80:191

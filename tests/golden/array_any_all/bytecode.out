@@ -1,100 +1,126 @@
 main registers=34
-0000  b0 = constant #0 1
-0001  b1 = constant #1 2
-0002  b2 = constant #2 3
-0003  b3 = array [b0, b1, b2]
-0004  init_global g0, b3
-0005  b4 = load_global g0
-0006  b5 = make_function $0 <lambda>/1
-0007  b6 = native_call @3 any [b4, b5]
-0008  init_global g1, b6
-0009  b7 = load_global g0
-0010  b8 = make_function $1 <lambda>/1
-0011  b9 = native_call @7 all [b7, b8]
-0012  init_global g2, b9
-0013  b10 = constant #7 1
-0014  b11 = constant #8 2
-0015  b12 = constant #9 3
-0016  b13 = array [b10, b11, b12]
-0017  init_global g3, b13
-0018  b14 = load_global g3
-0019  b15 = make_function $2 <lambda>/1
-0020  b16 = native_call @14 any [b14, b15]
-0021  print b16
-0022  b17 = load_global g3
-0023  print b17
-0024  b18 = constant #13 1
-0025  b19 = constant #14 2
-0026  b20 = constant #15 3
-0027  b21 = array [b18, b19, b20]
-0028  init_global g4, b21
-0029  b22 = load_global g4
-0030  b23 = make_function $3 <lambda>/1
-0031  b24 = native_call @21 all [b22, b23]
-0032  print b24
-0033  b25 = load_global g4
-0034  print b25
-0035  b26 = array []
-0036  b27 = make_function $4 <lambda>/1
-0037  b28 = native_call @23 any [b26, b27]
-0038  print b28
-0039  b29 = constant #21 1
-0040  b30 = constant #22 2
-0041  b31 = array [b29, b30]
-0042  b32 = make_function $5 <lambda>/1
-0043  b33 = native_call @25 all [b31, b32]
-0044  print b33
+0000  block
+0001  b0 = constant #0 1
+0002  b1 = constant #1 2
+0003  b2 = constant #2 3
+0004  b3 = array [b0, b1, b2]
+0005  init_global g0, b3
+0006  b4 = load_global g0
+0007  b5 = make_function $0 <lambda>/1
+0008  b6 = native_call @3 any [b4, b5]
+0009  init_global g1, b6
+0010  b7 = load_global g0
+0011  b8 = make_function $1 <lambda>/1
+0012  b9 = native_call @7 all [b7, b8]
+0013  init_global g2, b9
+0014  b10 = constant #7 1
+0015  b11 = constant #8 2
+0016  b12 = constant #9 3
+0017  b13 = array [b10, b11, b12]
+0018  init_global g3, b13
+0019  b14 = load_global g3
+0020  b15 = make_function $2 <lambda>/1
+0021  b16 = native_call @14 any [b14, b15]
+0022  print b16
+0023  b17 = load_global g3
+0024  print b17
+0025  b18 = constant #13 1
+0026  b19 = constant #14 2
+0027  b20 = constant #15 3
+0028  b21 = array [b18, b19, b20]
+0029  init_global g4, b21
+0030  b22 = load_global g4
+0031  b23 = make_function $3 <lambda>/1
+0032  b24 = native_call @21 all [b22, b23]
+0033  print b24
+0034  b25 = load_global g4
+0035  print b25
+0036  b26 = array []
+0037  b27 = make_function $4 <lambda>/1
+0038  b28 = native_call @23 any [b26, b27]
+0039  print b28
+0040  b29 = constant #21 1
+0041  b30 = constant #22 2
+0042  b31 = array [b29, b30]
+0043  b32 = make_function $5 <lambda>/1
+0044  b33 = native_call @25 all [b31, b32]
+0045  print b33
+0046  return_nil
 
 function $0 <lambda>/1 registers=4
-0000  b0 = load_local l0
-0001  b1 = constant #3 2
-0002  b2 = equal b0, b1
-0003  return b2
-0004  b3 = constant #4 nil
-0005  return b3
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #3 2
+0003  b2 = equal b0, b1
+0004  return b2
+0005  block
+0006  b3 = constant #4 nil
+0007  return b3
+0008  block
+0009  return_nil
 
 function $1 <lambda>/1 registers=4
-0000  b0 = load_local l0
-0001  b1 = constant #5 4
-0002  b2 = less b0, b1
-0003  return b2
-0004  b3 = constant #6 nil
-0005  return b3
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #5 4
+0003  b2 = less b0, b1
+0004  return b2
+0005  block
+0006  b3 = constant #6 nil
+0007  return b3
+0008  block
+0009  return_nil
 
 function $2 <lambda>/1 registers=7
 upvalue u0 = global g3
-0000  b0 = load_upvalue u0
-0001  b1 = constant #10 9
-0002  b2 = native_call @12 push [b0, b1]
-0003  b3 = load_local l0
-0004  b4 = constant #11 2
-0005  b5 = equal b3, b4
-0006  return b5
-0007  b6 = constant #12 nil
-0008  return b6
+0000  block
+0001  b0 = load_upvalue u0
+0002  b1 = constant #10 9
+0003  b2 = native_call @12 push [b0, b1]
+0004  b3 = load_local l0
+0005  b4 = constant #11 2
+0006  b5 = equal b3, b4
+0007  return b5
+0008  block
+0009  b6 = constant #12 nil
+0010  return b6
+0011  block
+0012  return_nil
 
 function $3 <lambda>/1 registers=7
 upvalue u0 = global g4
-0000  b0 = load_upvalue u0
-0001  b1 = constant #16 8
-0002  b2 = native_call @19 push [b0, b1]
-0003  b3 = load_local l0
-0004  b4 = constant #17 3
-0005  b5 = less b3, b4
-0006  return b5
-0007  b6 = constant #18 nil
-0008  return b6
+0000  block
+0001  b0 = load_upvalue u0
+0002  b1 = constant #16 8
+0003  b2 = native_call @19 push [b0, b1]
+0004  b3 = load_local l0
+0005  b4 = constant #17 3
+0006  b5 = less b3, b4
+0007  return b5
+0008  block
+0009  b6 = constant #18 nil
+0010  return b6
+0011  block
+0012  return_nil
 
 function $4 <lambda>/1 registers=2
-0000  b0 = constant #19 true
-0001  return b0
-0002  b1 = constant #20 nil
-0003  return b1
+0000  block
+0001  b0 = constant #19 true
+0002  return b0
+0003  block
+0004  b1 = constant #20 nil
+0005  return b1
+0006  block
+0007  return_nil
 
 function $5 <lambda>/1 registers=4
-0000  b0 = load_local l0
-0001  b1 = constant #23 0
-0002  b2 = greater b0, b1
-0003  return b2
-0004  b3 = constant #24 nil
-0005  return b3
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #23 0
+0003  b2 = greater b0, b1
+0004  return b2
+0005  block
+0006  b3 = constant #24 nil
+0007  return b3
+0008  block
+0009  return_nil

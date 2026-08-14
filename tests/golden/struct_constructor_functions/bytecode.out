@@ -1,40 +1,50 @@
 main registers=12
-0000  b0 = constant #0 nil
-0001  init_global g0, b0
-0002  b1 = make_function $0 birthday/1
-0003  set_global g0, b1
-0004  b2 = constant #3 nil
-0005  init_global g1, b2
-0006  b3 = make_function $1 makePerson/0
-0007  set_global g1, b3
-0008  b4 = load_global g0
-0009  b5 = load_global g1
-0010  b6 = call b5()
-0011  b7 = call b4(b6)
-0012  init_global g2, b7
-0013  b8 = load_global g2
-0014  b9 = field b8,  @16 name
-0015  print b9
-0016  b10 = load_global g2
-0017  b11 = field b10,  @18 age
-0018  print b11
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 birthday/1
+0004  set_global g0, b1
+0005  b2 = constant #3 nil
+0006  init_global g1, b2
+0007  b3 = make_function $1 makePerson/0
+0008  set_global g1, b3
+0009  b4 = load_global g0
+0010  b5 = load_global g1
+0011  b6 = call b5()
+0012  b7 = call b4(b6)
+0013  init_global g2, b7
+0014  b8 = load_global g2
+0015  b9 = field b8,  @16 name
+0016  print b9
+0017  b10 = load_global g2
+0018  b11 = field b10,  @18 age
+0019  print b11
+0020  return_nil
 
 function $0 birthday/1 registers=8
-0000  b0 = load_local l0
-0001  b1 = load_local l0
-0002  b2 = field b1,  @3 age
-0003  b3 = constant #1 1
-0004  b4 = add b2, b3
-0005  b5 = assign_field b0,  @4 age, b4
-0006  b6 = load_local l0
-0007  return b6
-0008  b7 = constant #2 nil
-0009  return b7
+0000  block
+0001  b0 = load_local l0
+0002  b1 = load_local l0
+0003  b2 = field b1,  @3 age
+0004  b3 = constant #1 1
+0005  b4 = add b2, b3
+0006  b5 = assign_field b0,  @4 age, b4
+0007  b6 = load_local l0
+0008  return b6
+0009  block
+0010  b7 = constant #2 nil
+0011  return b7
+0012  block
+0013  return_nil
 
 function $1 makePerson/0 registers=4
-0000  b0 = constant #4 36
-0001  b1 = constant #5 "Ada"
-0002  b2 = struct @8 Person { @9 age: b0,  @10 name: b1}
-0003  return b2
-0004  b3 = constant #6 nil
-0005  return b3
+0000  block
+0001  b0 = constant #4 36
+0002  b1 = constant #5 "Ada"
+0003  b2 = struct @8 Person { @9 age: b0,  @10 name: b1}
+0004  return b2
+0005  block
+0006  b3 = constant #6 nil
+0007  return b3
+0008  block
+0009  return_nil

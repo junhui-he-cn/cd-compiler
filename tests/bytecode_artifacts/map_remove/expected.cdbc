@@ -24,6 +24,7 @@ globals:
   g1 = n2
 
 main registers=15:
+block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
@@ -45,52 +46,57 @@ main registers=15:
   r13 = load_global g0
   r14 = len r13
   print r14
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/map_remove/input.cd" text="let values = {\"a\": 1, \"b\": 2};\nlet alias = values;\nprint remove(values, \"a\");\nprint alias;\nprint alias.remove(\"b\");\nprint values.len();\n"
 
 debug_locations:
   main 0 = s0:1:15
-  main 1 = s0:1:20
-  main 2 = s0:1:23
-  main 3 = s0:1:28
-  main 4 = s0:1:14
-  main 5 = s0:1:1
-  main 6 = s0:2:13
-  main 7 = s0:2:1
-  main 8 = s0:3:14
-  main 9 = s0:3:22
-  main 10 = s0:3:7
-  main 11 = s0:3:1
-  main 12 = s0:4:7
-  main 13 = s0:4:1
-  main 14 = s0:5:7
-  main 15 = s0:5:20
-  main 16 = s0:5:7
-  main 17 = s0:5:1
-  main 18 = s0:6:7
+  main 1 = s0:1:15
+  main 2 = s0:1:20
+  main 3 = s0:1:23
+  main 4 = s0:1:28
+  main 5 = s0:1:14
+  main 6 = s0:1:1
+  main 7 = s0:2:13
+  main 8 = s0:2:1
+  main 9 = s0:3:14
+  main 10 = s0:3:22
+  main 11 = s0:3:7
+  main 12 = s0:3:1
+  main 13 = s0:4:7
+  main 14 = s0:4:1
+  main 15 = s0:5:7
+  main 16 = s0:5:20
+  main 17 = s0:5:7
+  main 18 = s0:5:1
   main 19 = s0:6:7
-  main 20 = s0:6:1
+  main 20 = s0:6:7
+  main 21 = s0:6:1
+  main 22 = s0:6:1
 
 debug_ranges:
   main 0 = s0:14:17
-  main 1 = s0:19:20
-  main 2 = s0:22:25
-  main 3 = s0:27:28
-  main 4 = s0:13:28
-  main 5 = s0:4:28
-  main 6 = s0:43:49
-  main 7 = s0:35:49
-  main 8 = s0:64:70
-  main 9 = s0:72:75
-  main 10 = s0:57:76
+  main 1 = s0:14:17
+  main 2 = s0:19:20
+  main 3 = s0:22:25
+  main 4 = s0:27:28
+  main 5 = s0:13:28
+  main 6 = s0:4:28
+  main 7 = s0:43:49
+  main 8 = s0:35:49
+  main 9 = s0:64:70
+  main 10 = s0:72:75
   main 11 = s0:57:76
-  main 12 = s0:84:89
+  main 12 = s0:57:76
   main 13 = s0:84:89
-  main 14 = s0:97:102
-  main 15 = s0:110:113
-  main 16 = s0:97:114
+  main 14 = s0:84:89
+  main 15 = s0:97:102
+  main 16 = s0:110:113
   main 17 = s0:97:114
-  main 18 = s0:122:128
-  main 19 = s0:122:134
+  main 18 = s0:97:114
+  main 19 = s0:122:128
   main 20 = s0:122:134
+  main 21 = s0:122:134
+  main 22 = s0:122:134

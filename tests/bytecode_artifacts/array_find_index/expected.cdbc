@@ -22,6 +22,7 @@ globals:
   g0 = n0
 
 main registers=10:
+block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
@@ -35,78 +36,107 @@ main registers=10:
   r8 = make_function f1
   r9 = native_call n6 [r7, r8]
   print r9
+  return_nil
 
 function f0 name="<lambda>" arity=1 registers=4:
   param 0 = "value#1"
+block b0:
   r0 = load_local l0
   r1 = constant c3
   r2 = greater r0, r1
   return r2
+block b1:
   r3 = constant c4
   return r3
+block b2:
+  return_nil
 
 function f1 name="<lambda>" arity=1 registers=4:
   param 0 = "value#2"
+block b0:
   r0 = load_local l0
   r1 = constant c5
   r2 = equal r0, r1
   return r2
+block b1:
   r3 = constant c6
   return r3
+block b2:
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/array_find_index/input.cd" text="let values: [number] = [4, 7, 9];\nprint findIndex(values, fun (value: number): bool { return value > 6; });\nprint values.findIndex(fun (value: number): bool { return value == 2; });\n"
 
 debug_locations:
   main 0 = s0:1:25
-  main 1 = s0:1:28
-  main 2 = s0:1:31
-  main 3 = s0:1:24
-  main 4 = s0:1:1
-  main 5 = s0:2:17
-  main 6 = s0:2:25
-  main 7 = s0:2:7
-  main 8 = s0:2:1
-  main 9 = s0:3:7
-  main 10 = s0:3:24
-  main 11 = s0:3:7
-  main 12 = s0:3:1
+  main 1 = s0:1:25
+  main 2 = s0:1:28
+  main 3 = s0:1:31
+  main 4 = s0:1:24
+  main 5 = s0:1:1
+  main 6 = s0:2:17
+  main 7 = s0:2:25
+  main 8 = s0:2:7
+  main 9 = s0:2:1
+  main 10 = s0:3:7
+  main 11 = s0:3:24
+  main 12 = s0:3:7
+  main 13 = s0:3:1
+  main 14 = s0:3:1
   function f0 0 = s0:2:60
-  function f0 1 = s0:2:68
-  function f0 2 = s0:2:60
-  function f0 3 = s0:2:53
-  function f0 4 = s0:2:25
+  function f0 1 = s0:2:60
+  function f0 2 = s0:2:68
+  function f0 3 = s0:2:60
+  function f0 4 = s0:2:53
   function f0 5 = s0:2:25
+  function f0 6 = s0:2:25
+  function f0 7 = s0:2:25
+  function f0 8 = s0:2:25
+  function f0 9 = s0:2:25
   function f1 0 = s0:3:59
-  function f1 1 = s0:3:68
-  function f1 2 = s0:3:59
-  function f1 3 = s0:3:52
-  function f1 4 = s0:3:24
+  function f1 1 = s0:3:59
+  function f1 2 = s0:3:68
+  function f1 3 = s0:3:59
+  function f1 4 = s0:3:52
   function f1 5 = s0:3:24
+  function f1 6 = s0:3:24
+  function f1 7 = s0:3:24
+  function f1 8 = s0:3:24
+  function f1 9 = s0:3:24
 
 debug_ranges:
   main 0 = s0:24:25
-  main 1 = s0:27:28
-  main 2 = s0:30:31
-  main 3 = s0:23:31
-  main 4 = s0:4:31
-  main 5 = s0:50:56
-  main 6 = s0:58:102
-  main 7 = s0:40:106
+  main 1 = s0:24:25
+  main 2 = s0:27:28
+  main 3 = s0:30:31
+  main 4 = s0:23:31
+  main 5 = s0:4:31
+  main 6 = s0:50:56
+  main 7 = s0:58:102
   main 8 = s0:40:106
-  main 9 = s0:114:120
-  main 10 = s0:131:176
-  main 11 = s0:114:180
+  main 9 = s0:40:106
+  main 10 = s0:114:120
+  main 11 = s0:131:176
   main 12 = s0:114:180
+  main 13 = s0:114:180
+  main 14 = s0:114:180
   function f0 0 = s0:93:98
-  function f0 1 = s0:101:102
-  function f0 2 = s0:93:102
-  function f0 3 = s0:86:102
-  function f0 4 = s0:58:102
+  function f0 1 = s0:93:98
+  function f0 2 = s0:101:102
+  function f0 3 = s0:93:102
+  function f0 4 = s0:86:102
   function f0 5 = s0:58:102
+  function f0 6 = s0:58:102
+  function f0 7 = s0:58:102
+  function f0 8 = s0:58:102
+  function f0 9 = s0:58:102
   function f1 0 = s0:166:171
-  function f1 1 = s0:175:176
-  function f1 2 = s0:166:176
-  function f1 3 = s0:159:176
-  function f1 4 = s0:131:176
+  function f1 1 = s0:166:171
+  function f1 2 = s0:175:176
+  function f1 3 = s0:166:176
+  function f1 4 = s0:159:176
   function f1 5 = s0:131:176
+  function f1 6 = s0:131:176
+  function f1 7 = s0:131:176
+  function f1 8 = s0:131:176
+  function f1 9 = s0:131:176

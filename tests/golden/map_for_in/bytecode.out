@@ -1,74 +1,88 @@
 main registers=48
-0000  b0 = constant #0 "a"
-0001  b1 = constant #1 1
-0002  b2 = constant #2 "b"
-0003  b3 = constant #3 2
-0004  b4 = constant #4 "c"
-0005  b5 = constant #5 3
-0006  b6 = map [b0: b1, b2: b3, b4: b5]
-0007  init_global g0, b6
-0008  b7 = load_global g0
-0009  b8 = assert_array b7
-0010  init_global g1, b8
-0011  b9 = constant #6 0
-0012  init_global g2, b9
-0013  b10 = constant #7 nil
-0014  init_global g3, b10
-0015  b11 = load_global g1
-0016  b12 = len b11
-0017  init_global g4, b12
-0018  b13 = load_global g2
-0019  b14 = load_global g4
-0020  b15 = less b13, b14
-0021  jump_if_false b15, 0038
-0022  b16 = load_global g1
-0023  b17 = load_global g2
-0024  b18 = index b16, b17
-0025  set_global g3, b18
-0026  jump 0032
-0027  b19 = load_global g2
-0028  b20 = constant #8 1
-0029  b21 = add b19, b20
-0030  set_global g2, b21
-0031  jump 0018
-0032  b22 = load_global g3
-0033  print b22
-0034  b23 = load_global g0
-0035  b24 = load_global g3
-0036  b25 = native_call @17 remove [b23, b24]
-0037  jump 0027
-0038  b26 = load_global g0
-0039  print b26
-0040  b27 = constant #9 1
-0041  b28 = constant #10 "one"
-0042  b29 = constant #11 2
-0043  b30 = constant #12 "two"
-0044  b31 = map [b27: b28, b29: b30]
-0045  init_global g5, b31
-0046  b32 = load_global g5
-0047  b33 = assert_array b32
-0048  init_global g6, b33
-0049  b34 = constant #13 0
-0050  init_global g7, b34
-0051  b35 = constant #14 nil
-0052  init_global g8, b35
-0053  b36 = load_global g6
-0054  b37 = len b36
-0055  init_global g9, b37
-0056  b38 = load_global g7
-0057  b39 = load_global g9
-0058  b40 = less b38, b39
-0059  jump_if_false b40, 0073
-0060  b41 = load_global g6
-0061  b42 = load_global g7
-0062  b43 = index b41, b42
-0063  set_global g8, b43
-0064  jump 0070
-0065  b44 = load_global g7
-0066  b45 = constant #15 1
-0067  b46 = add b44, b45
-0068  set_global g7, b46
-0069  jump 0056
-0070  b47 = load_global g8
-0071  print b47
-0072  jump 0065
+0000  block
+0001  b0 = constant #0 "a"
+0002  b1 = constant #1 1
+0003  b2 = constant #2 "b"
+0004  b3 = constant #3 2
+0005  b4 = constant #4 "c"
+0006  b5 = constant #5 3
+0007  b6 = map [b0: b1, b2: b3, b4: b5]
+0008  init_global g0, b6
+0009  b7 = load_global g0
+0010  b8 = assert_array b7
+0011  init_global g1, b8
+0012  b9 = constant #6 0
+0013  init_global g2, b9
+0014  b10 = constant #7 nil
+0015  init_global g3, b10
+0016  b11 = load_global g1
+0017  b12 = len b11
+0018  init_global g4, b12
+0019  br b1
+0020  block
+0021  b13 = load_global g2
+0022  b14 = load_global g4
+0023  b15 = less b13, b14
+0024  br_if b15, b2, b5
+0025  block
+0026  b16 = load_global g1
+0027  b17 = load_global g2
+0028  b18 = index b16, b17
+0029  set_global g3, b18
+0030  br b4
+0031  block
+0032  b19 = load_global g2
+0033  b20 = constant #8 1
+0034  b21 = add b19, b20
+0035  set_global g2, b21
+0036  br b1
+0037  block
+0038  b22 = load_global g3
+0039  print b22
+0040  b23 = load_global g0
+0041  b24 = load_global g3
+0042  b25 = native_call @17 remove [b23, b24]
+0043  br b3
+0044  block
+0045  b26 = load_global g0
+0046  print b26
+0047  b27 = constant #9 1
+0048  b28 = constant #10 "one"
+0049  b29 = constant #11 2
+0050  b30 = constant #12 "two"
+0051  b31 = map [b27: b28, b29: b30]
+0052  init_global g5, b31
+0053  b32 = load_global g5
+0054  b33 = assert_array b32
+0055  init_global g6, b33
+0056  b34 = constant #13 0
+0057  init_global g7, b34
+0058  b35 = constant #14 nil
+0059  init_global g8, b35
+0060  b36 = load_global g6
+0061  b37 = len b36
+0062  init_global g9, b37
+0063  br b6
+0064  block
+0065  b38 = load_global g7
+0066  b39 = load_global g9
+0067  b40 = less b38, b39
+0068  br_if b40, b7, b10
+0069  block
+0070  b41 = load_global g6
+0071  b42 = load_global g7
+0072  b43 = index b41, b42
+0073  set_global g8, b43
+0074  br b9
+0075  block
+0076  b44 = load_global g7
+0077  b45 = constant #15 1
+0078  b46 = add b44, b45
+0079  set_global g7, b46
+0080  br b6
+0081  block
+0082  b47 = load_global g8
+0083  print b47
+0084  br b8
+0085  block
+0086  return_nil

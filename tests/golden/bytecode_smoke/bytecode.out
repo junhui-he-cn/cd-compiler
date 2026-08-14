@@ -1,5 +1,7 @@
 main registers=3
-0000  b0 = constant #0 1
-0001  b1 = constant #1 2
-0002  b2 = add b0, b1
-0003  print b2
+0000  block
+0001  b0 = constant #0 1
+0002  b1 = constant #1 2
+0003  b2 = add b0, b1
+0004  print b2
+0005  return_nil
