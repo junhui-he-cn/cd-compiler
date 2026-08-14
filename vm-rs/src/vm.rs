@@ -753,6 +753,18 @@ const NATIVE_SPECS: &[NativeSpec] = &[
     },
 ];
 
+fn decode_constant(constant: &Constant) -> Result<Value, RuntimeError> {
+    match constant {
+        Constant::Nil => Ok(Value::Nil),
+        Constant::Number(value) => value
+            .parse::<f64>()
+            .map(Value::number)
+            .map_err(|_| RuntimeError::new("invalid number constant")),
+        Constant::Bool(value) => Ok(Value::boolean(*value)),
+        Constant::String(value) => Ok(Value::string(value.clone())),
+    }
+}
+
 fn native_spec(name: &str) -> Option<&'static NativeSpec> {
     let index = match name {
         "push" => 0,
@@ -2944,7 +2956,7 @@ mod tests {
     }
 
     #[test]
-    fn constant_values_are_cached_after_first_decode() {
+    fn constant_values_are_decoded_eagerly_at_construction() {
         let program = Program {
             constants: vec![
                 Constant::Number("1.5".to_string()),
@@ -2952,15 +2964,18 @@ mod tests {
             ],
             ..empty_program()
         };
-        let mut vm = VM::new(&program);
-        assert!(vm.constant_cache.iter().all(Option::is_none));
+        let vm = VM::new(&program);
+        assert!(matches!(
+            &vm.decoded_constants[0],
+            Value::Number(value) if *value == 1.5
+        ));
+        assert!(matches!(
+            &vm.decoded_constants[1],
+            Value::String(value) if value.as_ref() == "cached"
+        ));
 
         assert_eq!(vm.constant_value(0).unwrap().to_string(), "1.5");
-        assert!(matches!(vm.constant_cache[0], Some(Value::Number(value)) if value == 1.5));
-        assert_eq!(vm.constant_value(0).unwrap().to_string(), "1.5");
-
         assert_eq!(vm.constant_value(1).unwrap().to_string(), "cached");
-        assert!(matches!(&vm.constant_cache[1], Some(Value::String(value)) if value.as_ref() == "cached"));
 
         let invalid = vm
             .constant_value(2)
@@ -5902,7 +5917,9 @@ pub struct VM<'a> {
     globals: SharedEnvironment,
     global_name_slots: Vec<usize>,
     global_cell_cache: Vec<Option<Cell>>,
-    constant_cache: Vec<Option<Value>>,
+    decoded_constants: Vec<Value>,
+    constant_errors: BTreeMap<usize, RuntimeError>,
+    native_specs: Vec<Option<&'static NativeSpec>>,
     function_body_cache: Vec<Option<Rc<CachedFunctionBody>>>,
     jit: JitState,
     output: String,
@@ -6594,6 +6611,17 @@ impl<'a> VM<'a> {
         }
         let heap = Heap::new();
         let globals = heap.new_environment();
+        let mut decoded_constants = Vec::with_capacity(program.constants.len());
+        let mut constant_errors = BTreeMap::new();
+        for (index, constant) in program.constants.iter().enumerate() {
+            match decode_constant(constant) {
+                Ok(value) => decoded_constants.push(value),
+                Err(error) => {
+                    decoded_constants.push(Value::Nil);
+                    constant_errors.insert(index, error);
+                }
+            }
+        }
         Self {
             program,
             config,
@@ -6602,7 +6630,13 @@ impl<'a> VM<'a> {
             globals,
             global_name_slots,
             global_cell_cache: vec![None; global_slots_by_name.len()],
-            constant_cache: vec![None; program.constants.len()],
+            decoded_constants,
+            constant_errors,
+            native_specs: program
+                .names
+                .iter()
+                .map(|name| native_spec(name))
+                .collect(),
             function_body_cache: vec![None; program.functions.len()],
             jit: JitState::disabled(),
             output: String::new(),
@@ -7715,7 +7749,6 @@ impl<'a> VM<'a> {
                     name,
                     arguments,
                 } => {
-                    let name = self.read_name_ref(*name)?;
                     let values = match arguments.as_slice() {
                         [] => NativeArguments::Empty,
                         [argument] => {
@@ -7735,8 +7768,8 @@ impl<'a> VM<'a> {
                         }
                     };
                     let call_site = body.locations.get(frame.ip).and_then(Option::as_ref);
-                    let result = self.execute_native_call_at(
-                        &name,
+                    let result = self.execute_native_call_indexed(
+                        *name,
                         values,
                         frame.function.as_ref(),
                         call_site,
@@ -8165,7 +8198,6 @@ impl<'a> VM<'a> {
                 name,
                 arguments,
             } => {
-                let name = self.read_name_ref(*name)?;
                 let values = match arguments.as_slice() {
                     [] => NativeArguments::Empty,
                     [argument] => NativeArguments::One(self.read_register(frame, *argument)?),
@@ -8182,8 +8214,8 @@ impl<'a> VM<'a> {
                         NativeArguments::Many(values)
                     }
                 };
-                let result = self.execute_native_call_at(
-                    &name,
+                let result = self.execute_native_call_indexed(
+                    *name,
                     values,
                     frame.function.as_ref(),
                     call_site,
@@ -9653,8 +9685,37 @@ impl<'a> VM<'a> {
         let spec = native_spec(name).ok_or_else(|| {
             RuntimeError::new(format!("unknown native stdlib function `{}`", name))
         })?;
+        self.execute_native_call_with_spec(spec, arguments, caller, call_site)
+    }
+
+    fn execute_native_call_indexed(
+        &mut self,
+        name_index: usize,
+        arguments: NativeArguments,
+        caller: &str,
+        call_site: Option<&DebugLocation>,
+    ) -> Result<Value, RuntimeError> {
+        match self.native_specs.get(name_index).copied().flatten() {
+            Some(spec) => self.execute_native_call_with_spec(spec, arguments, caller, call_site),
+            None => {
+                let name = self.read_name_ref(name_index)?;
+                Err(RuntimeError::new(format!(
+                    "unknown native stdlib function `{}`",
+                    name
+                )))
+            }
+        }
+    }
+
+    fn execute_native_call_with_spec(
+        &mut self,
+        spec: &'static NativeSpec,
+        arguments: NativeArguments,
+        caller: &str,
+        call_site: Option<&DebugLocation>,
+    ) -> Result<Value, RuntimeError> {
         if self.profile_enabled {
-            self.profile_native_call(name);
+            self.profile_native_call(spec.name);
         }
         if arguments.len() < spec.min_arity || arguments.len() > spec.max_arity {
             return Err(RuntimeError::new(spec.arity_error));
@@ -10420,29 +10481,15 @@ impl<'a> VM<'a> {
         }
     }
 
-    fn constant_value(&mut self, index: usize) -> Result<Value, RuntimeError> {
-        if let Some(value) = self.constant_cache.get(index).and_then(Option::as_ref) {
-            return Ok(value.clone());
-        }
-
-        let constant = self
-            .program
-            .constants
+    fn constant_value(&self, index: usize) -> Result<Value, RuntimeError> {
+        let value = self
+            .decoded_constants
             .get(index)
             .ok_or_else(|| RuntimeError::new("constant index out of range"))?;
-        let value = match constant {
-            Constant::Nil => Ok(Value::Nil),
-            Constant::Number(value) => value
-                .parse::<f64>()
-                .map(Value::number)
-                .map_err(|_| RuntimeError::new("invalid number constant")),
-            Constant::Bool(value) => Ok(Value::boolean(*value)),
-            Constant::String(value) => Ok(Value::string(value.clone())),
-        }?;
-        if let Some(slot) = self.constant_cache.get_mut(index) {
-            *slot = Some(value.clone());
+        if let Some(error) = self.constant_errors.get(&index) {
+            return Err(error.clone());
         }
-        Ok(value)
+        Ok(value.clone())
     }
 
     fn read_register(&self, frame: &Frame, index: usize) -> Result<Value, RuntimeError> {
