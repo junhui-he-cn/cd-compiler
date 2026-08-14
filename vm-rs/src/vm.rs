@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use crate::bytecode::{
-    Constant, DebugLocation, DebugRange, DebugSource, FunctionBody, Instruction, Program,
+    Constant, DebugLocation, DebugRange, DebugSource, Function, FunctionBody, Instruction, Program,
 };
 use crate::jit::{
     JitCallContext, JitFrameMaterialization, JitExecutionMode, JitHelperAbi, JitSafepoint,
@@ -762,6 +762,54 @@ fn decode_constant(constant: &Constant) -> Result<Value, RuntimeError> {
             .map_err(|_| RuntimeError::new("invalid number constant")),
         Constant::Bool(value) => Ok(Value::boolean(*value)),
         Constant::String(value) => Ok(Value::string(value.clone())),
+    }
+}
+
+fn prepare_function(program: &Program, function: &Function) -> PreparedFunction {
+    let mut variable_plan = VariablePlan::default();
+    let mut slot_by_name = BTreeMap::new();
+    for param in &function.params {
+        let slot = variable_plan.local_names.len();
+        variable_plan.local_names.push(param.clone());
+        slot_by_name.insert(param.clone(), slot);
+    }
+    for instruction in &function.instructions {
+        let Instruction::StoreVar { name, .. } = instruction else {
+            continue;
+        };
+        let text = program.names.get(*name).cloned().unwrap_or_default();
+        if !slot_by_name.contains_key(&text) {
+            let slot = variable_plan.local_names.len();
+            variable_plan.local_names.push(text.clone());
+            slot_by_name.insert(text, slot);
+        }
+    }
+    for instruction in &function.instructions {
+        let name = match instruction {
+            Instruction::StoreVar { name, .. }
+            | Instruction::LoadVar { name, .. }
+            | Instruction::AssignVar { name, .. } => Some(*name),
+            _ => None,
+        };
+        let Some(name) = name else { continue };
+        let text = program
+            .names
+            .get(name)
+            .map(String::as_str)
+            .unwrap_or_default();
+        if let Some(slot) = slot_by_name.get(text) {
+            variable_plan.local_slots.insert(name, *slot);
+        }
+    }
+    PreparedFunction {
+        name: Rc::from(function.name.as_str()),
+        params: function.params.clone(),
+        body: Rc::new(FunctionBody {
+            registers: function.registers,
+            instructions: function.instructions.clone(),
+            locations: function.locations.clone(),
+        }),
+        variable_plan: Rc::new(variable_plan),
     }
 }
 
@@ -2851,10 +2899,10 @@ mod tests {
     }
 
     #[test]
-    fn function_bodies_are_lazily_cached_between_calls() {
+    fn function_bodies_are_prepared_once_at_construction() {
         let program = recursive_closure_program(2);
         let mut vm = VM::new(&program);
-        assert!(vm.function_body_cache[0].is_none());
+        let first_body = vm.prepared_functions[0].clone();
 
         let invoke = |vm: &mut VM<'_>| {
             let function = FunctionValue {
@@ -2874,15 +2922,8 @@ mod tests {
         };
 
         let first_result = invoke(&mut vm);
-        let first_body = vm.function_body_cache[0]
-            .as_ref()
-            .expect("first call should populate the function body cache")
-            .clone();
         let second_result = invoke(&mut vm);
-        let second_body = vm.function_body_cache[0]
-            .as_ref()
-            .expect("second call should retain the function body cache")
-            .clone();
+        let second_body = vm.prepared_functions[0].clone();
 
         assert_eq!(first_result.to_string(), "0");
         assert_eq!(second_result.to_string(), "0");
@@ -5644,7 +5685,7 @@ pub enum JoinPoll {
     Ready(TaskOutcome),
 }
 
-struct CachedFunctionBody {
+struct PreparedFunction {
     name: Rc<str>,
     params: Vec<String>,
     body: Rc<FunctionBody>,
@@ -5928,7 +5969,7 @@ pub struct VM<'a> {
     decoded_constants: Vec<Value>,
     constant_errors: BTreeMap<usize, RuntimeError>,
     native_specs: Vec<Option<&'static NativeSpec>>,
-    function_body_cache: Vec<Option<Rc<CachedFunctionBody>>>,
+    prepared_functions: Vec<Rc<PreparedFunction>>,
     jit: JitState,
     output: String,
     output_bytes: usize,
@@ -6548,7 +6589,7 @@ impl<'a> CooperativeRun<'a> {
                 return_target: None,
             },
             TaskSpec::Function { index, arguments } => {
-                let Some(cached) = self.vm.cached_function_body(index) else {
+                let Some(cached) = self.vm.prepared_function(index) else {
                     return Err(RuntimeError::new("function index out of range"));
                 };
                 if arguments.len() != cached.params.len() {
@@ -6636,7 +6677,11 @@ impl<'a> VM<'a> {
                 .iter()
                 .map(|name| native_spec(name))
                 .collect(),
-            function_body_cache: vec![None; program.functions.len()],
+            prepared_functions: program
+                .functions
+                .iter()
+                .map(|function| Rc::new(prepare_function(program, function)))
+                .collect(),
             jit: JitState::disabled(),
             output: String::new(),
             output_bytes: 0,
@@ -7249,7 +7294,7 @@ impl<'a> VM<'a> {
         task: &mut ScheduledVmTask,
         request: CallRequest,
     ) -> Result<(), RuntimeError> {
-        let Some(cached) = self.cached_function_body(request.function.function_index) else {
+        let Some(cached) = self.prepared_function(request.function.function_index) else {
             let mut error = RuntimeError::new("function index out of range");
             error.location = request.call_site;
             error.push_frame(request.caller, error.location.clone());
@@ -7539,15 +7584,16 @@ impl<'a> VM<'a> {
             self.profile_function_entry(frame);
         }
         self.enter_recursive_trace(frame, body.locations.first().cloned().flatten())?;
+        // The default `run` path has no observability consumer. The set of
+        // active hooks is stable for the duration of one body execution, so
+        // resolve it once instead of re-testing every instruction; diagnostics
+        // reconstruct the location on failure.
+        let needs_location = self.trace_enabled
+            || self.active_task_trace.is_some()
+            || self.debug_hook.is_some()
+            || self.profile_enabled;
         while frame.ip < body.instructions.len() {
             let instruction_index = frame.ip;
-            // The default `run` path has no observability consumer. Avoid
-            // cloning a source location and calling no-op hooks on every
-            // instruction; diagnostics reconstruct the location on failure.
-            let needs_location = self.trace_enabled
-                || self.active_task_trace.is_some()
-                || self.debug_hook.is_some()
-                || self.profile_enabled;
             let location = needs_location
                 .then(|| body.locations.get(instruction_index).cloned().flatten())
                 .flatten();
@@ -7578,106 +7624,8 @@ impl<'a> VM<'a> {
                 }
                 let call_site = body.locations.get(frame.ip).and_then(Option::as_ref);
                 match instruction {
-                Instruction::Constant { dest, constant } => {
-                    let value = self.constant_value(*constant)?;
-                    self.write_register(frame, *dest, value)?;
-                }
                 Instruction::Print { value } => {
                     self.execute_recursive_print(body, frame, instruction_index, *value)?;
-                }
-                Instruction::MakeFunction { dest, function } => {
-                    let value = self.make_function(*function, frame)?;
-                    self.write_register(frame, *dest, value)?;
-                }
-                Instruction::Array { dest, elements } => {
-                    let mut values = Vec::with_capacity(elements.len());
-                    for element in elements {
-                        values.push(self.read_register(frame, *element)?);
-                    }
-                    let value = self.allocate_array(values)?;
-                    self.write_register(frame, *dest, value)?;
-                }
-                Instruction::Map { dest, entries } => {
-                    let mut values = Vec::with_capacity(entries.len());
-                    for (key_register, value_register) in entries {
-                        let key = self.read_register(frame, *key_register)?;
-                        self.validate_map_key(&key)?;
-                        let value = self.read_register(frame, *value_register)?;
-                        values.push((key, value));
-                    }
-                    let value = self.allocate_map(values)?;
-                    self.write_register(frame, *dest, value)?;
-                }
-                Instruction::Struct {
-                    dest,
-                    type_name,
-                    fields,
-                } => {
-                    let type_name = type_name.map(|index| self.read_name(index)).transpose()?;
-                    let value = self.make_struct(frame, type_name, fields)?;
-                    self.write_register(frame, *dest, value)?;
-                }
-                Instruction::Variant {
-                    dest,
-                    enum_name,
-                    variant_name,
-                    payload,
-                } => {
-                    let enum_name = self.read_name(*enum_name)?;
-                    let variant_name = self.read_name(*variant_name)?;
-                    let mut fields = Vec::with_capacity(payload.len());
-                    for register in payload {
-                        fields.push(self.read_register(frame, *register)?);
-                    }
-                    let value = self.allocate_variant(enum_name, variant_name, fields)?;
-                    self.write_register(frame, *dest, value)?;
-                }
-                Instruction::VariantTag {
-                    dest,
-                    value,
-                    enum_name,
-                    variant_name,
-                } => {
-                    let input = self.read_register_ref(frame, *value)?;
-                    let enum_name = self.read_name_ref(*enum_name)?;
-                    let variant_name = self.read_name_ref(*variant_name)?;
-                    let matched = matches!(
-                        input,
-                        Value::Variant(variant)
-                            if variant.enum_name == enum_name
-                                && variant.variant_name == variant_name
-                    );
-                    self.write_register(frame, *dest, Value::boolean(matched))?;
-                }
-                Instruction::VariantField { dest, value, index } => {
-                    let input = self.read_register_ref(frame, *value)?;
-                    let Value::Variant(variant) = input else {
-                        return Err(RuntimeError::new("can only access fields on enum variants"));
-                    };
-                    let field = variant
-                        .fields
-                        .get(*index)
-                        .cloned()
-                        .ok_or_else(|| RuntimeError::new("enum variant field index out of bounds"))?;
-                    self.write_register(frame, *dest, field)?;
-                }
-                Instruction::Move { dest, source } => {
-                    let value = self.read_register(frame, *source)?;
-                    self.write_register(frame, *dest, value)?;
-                }
-                Instruction::LoadVar { dest, name } => {
-                    let value = self.load_variable(frame, *name)?;
-                    self.write_register(frame, *dest, value)?;
-                }
-                Instruction::StoreVar { name, value } => {
-                    let name_index = *name;
-                    let name = self.read_name(name_index)?;
-                    let value = self.read_register(frame, *value)?;
-                    self.store_variable(frame, name_index, name, value);
-                }
-                Instruction::AssignVar { name, value } => {
-                    let value = self.read_register(frame, *value)?;
-                    self.assign_variable(frame, *name, value)?;
                 }
                 Instruction::Call {
                     dest,
@@ -7713,234 +7661,35 @@ impl<'a> VM<'a> {
                     )?;
                     self.write_register(frame, *dest, result)?;
                 }
-                Instruction::NativeCall {
-                    dest,
-                    name,
-                    arguments,
-                } => {
-                    let values = match arguments.as_slice() {
-                        [] => NativeArguments::Empty,
-                        [argument] => {
-                            NativeArguments::One(self.read_register(frame, *argument)?)
-                        }
-                        [left, right] => {
-                            let left = self.read_register(frame, *left)?;
-                            let right = self.read_register(frame, *right)?;
-                            NativeArguments::Two(left, right)
-                        }
-                        arguments => {
-                            let mut values = Vec::with_capacity(arguments.len());
-                            for argument in arguments {
-                                values.push(self.read_register(frame, *argument)?);
-                            }
-                            NativeArguments::Many(values)
-                        }
-                    };
-                    let call_site = body.locations.get(frame.ip).and_then(Option::as_ref);
-                    let result = self.execute_native_call_indexed(
-                        *name,
-                        values,
-                        frame.function.as_ref(),
-                        call_site,
-                    )?;
-                    self.write_register(frame, *dest, result)?;
-                }
-                Instruction::Negate { dest, value } => {
-                    let input = self.expect_number(frame, *value, "negate")?;
-                    self.write_register(frame, *dest, Value::number(-input))?;
-                }
-                Instruction::Not { dest, value } => {
-                    let result = !self.read_register_ref(frame, *value)?.is_truthy();
-                    self.write_register(frame, *dest, Value::boolean(result))?;
-                }
-                Instruction::Add { dest, left, right } => {
-                    let left_value = self.read_register_ref(frame, *left)?;
-                    let right_value = self.read_register_ref(frame, *right)?;
-                    let result = match (left_value, right_value) {
-                        (Value::Number(left), Value::Number(right)) => Value::number(left + right),
-                        (Value::String(left), Value::String(right)) => {
-                            Value::string(format!("{}{}", left, right))
-                        }
-                        _ => {
-                            return Err(RuntimeError::new("add expects two numbers or two strings"))
-                        }
-                    };
-                    self.write_register(frame, *dest, result)?;
-                }
-                Instruction::Subtract { dest, left, right } => {
-                    let (left, right) =
-                        self.expect_two_numbers(frame, *left, *right, "subtract")?;
-                    self.write_register(frame, *dest, Value::number(left - right))?;
-                }
-                Instruction::Multiply { dest, left, right } => {
-                    let (left, right) =
-                        self.expect_two_numbers(frame, *left, *right, "multiply")?;
-                    self.write_register(frame, *dest, Value::number(left * right))?;
-                }
-                Instruction::Divide { dest, left, right } => {
-                    let (left, right) = self.expect_two_numbers(frame, *left, *right, "divide")?;
-                    if right == 0.0 {
-                        return Err(RuntimeError::new("division by zero"));
-                    }
-                    self.write_register(frame, *dest, Value::number(left / right))?;
-                }
-                Instruction::Equal { dest, left, right } => {
-                    let result = self
-                        .read_register_ref(frame, *left)?
-                        .runtime_equals(self.read_register_ref(frame, *right)?);
-                    self.write_register(frame, *dest, Value::boolean(result))?;
-                }
-                Instruction::NotEqual { dest, left, right } => {
-                    let result = !self
-                        .read_register_ref(frame, *left)?
-                        .runtime_equals(self.read_register_ref(frame, *right)?);
-                    self.write_register(frame, *dest, Value::boolean(result))?;
-                }
-                Instruction::Greater { dest, left, right } => {
-                    self.compare(
-                        frame,
-                        *dest,
-                        *left,
-                        *right,
-                        Comparison::Greater,
-                        call_site,
-                    )?
-                }
-                Instruction::GreaterEqual { dest, left, right } => {
-                    self.compare(
-                        frame,
-                        *dest,
-                        *left,
-                        *right,
-                        Comparison::GreaterEqual,
-                        call_site,
-                    )?
-                }
-                Instruction::Less { dest, left, right } => {
-                    self.compare(
-                        frame,
-                        *dest,
-                        *left,
-                        *right,
-                        Comparison::Less,
-                        call_site,
-                    )?
-                }
-                Instruction::LessEqual { dest, left, right } => {
-                    self.compare(
-                        frame,
-                        *dest,
-                        *left,
-                        *right,
-                        Comparison::LessEqual,
-                        call_site,
-                    )?
-                }
                 Instruction::Jump { target } => {
-                    self.validate_jump_target(*target, body.instructions.len())?;
-                    frame.ip = *target;
+                    self.execute_jump(frame, *target, body.instructions.len())?;
                     jumped = true;
                     return Ok(None);
                 }
                 Instruction::JumpIfFalse { condition, target } => {
-                    self.validate_jump_target(*target, body.instructions.len())?;
                     if !self.read_register_ref(frame, *condition)?.is_truthy() {
-                        frame.ip = *target;
+                        self.execute_jump(frame, *target, body.instructions.len())?;
                         jumped = true;
                         return Ok(None);
                     }
                 }
                 Instruction::JumpIfTrue { condition, target } => {
-                    self.validate_jump_target(*target, body.instructions.len())?;
                     if self.read_register_ref(frame, *condition)?.is_truthy() {
-                        frame.ip = *target;
+                        self.execute_jump(frame, *target, body.instructions.len())?;
                         jumped = true;
                         return Ok(None);
                     }
                 }
-                Instruction::Index {
-                    dest,
-                    collection,
-                    index,
-                } => {
-                    let collection = self.read_register_ref(frame, *collection)?;
-                    let index = self.read_register_ref(frame, *index)?;
-                    let value = self.execute_index(collection, index)?;
-                    self.write_register(frame, *dest, value)?;
-                }
-                Instruction::AssignIndex {
-                    dest,
-                    collection,
-                    index,
-                    value,
-                } => {
-                    let collection = self.read_register(frame, *collection)?;
-                    let index = self.read_register(frame, *index)?;
-                    let value = self.read_register(frame, *value)?;
-                    let assigned = self.execute_assign_index(collection, index, value)?;
-                    self.write_register(frame, *dest, assigned)?;
-                }
-                Instruction::Field { dest, object, name } => {
-                    let object = self.read_register_ref(frame, *object)?;
-                    let name = self.read_name_ref(*name)?;
-                    let value = self.execute_field(object, name)?;
-                    self.write_register(frame, *dest, value)?;
-                }
-                Instruction::AssignField {
-                    dest,
-                    object,
-                    name,
-                    value,
-                } => {
-                    let object = self.read_register(frame, *object)?;
-                    let name = self.read_name_ref(*name)?;
-                    let value = self.read_register(frame, *value)?;
-                    let assigned = self.execute_assign_field(object, name, value)?;
-                    self.write_register(frame, *dest, assigned)?;
-                }
-                Instruction::Len { dest, value } => {
-                    let value = self.read_register_ref(frame, *value)?;
-                    let length = self.execute_len(value)?;
-                    self.write_register(frame, *dest, length)?;
-                }
-                Instruction::AssertArray { dest, value } => {
-                    let input = self.read_register_ref(frame, *value)?;
-                    let iterable = match input {
-                        Value::Array(_) | Value::Range(_) => input.clone(),
-                        Value::Map(map) => {
-                            let keys = {
-                                map.entries
-                                    .borrow()
-                                    .iter()
-                                    .map(|(key, _)| key.clone())
-                                    .collect()
-                            };
-                            self.allocate_array(keys)?
-                        }
-                        _ => {
-                            return Err(RuntimeError::new(
-                                "for-in expects array, range, or map",
-                            ));
-                        }
-                    };
-                    self.write_register(frame, *dest, iterable)?;
-                }
-                Instruction::AssertNumber {
-                    dest,
-                    value,
-                    message,
-                } => {
-                    let number = match self.read_register_ref(frame, *value)? {
-                        Value::Number(number) => *number,
-                        _ => {
-                            let message = self.read_name(*message)?;
-                            return Err(RuntimeError::new(message));
-                        }
-                    };
-                    self.write_register(frame, *dest, Value::number(number))?;
-                }
                 Instruction::Return { value } => {
                     return Ok(Some(self.take_register(frame, *value)?))
+                }
+                _ => {
+                    self.execute_common_instruction(
+                        body,
+                        frame,
+                        instruction_index,
+                        instruction,
+                    )?;
                 }
                 }
                 Ok(None)
@@ -8003,42 +7752,36 @@ impl<'a> VM<'a> {
         Ok(None)
     }
 
-    fn execute_instruction(
+    fn execute_jump(
+        &mut self,
+        frame: &mut Frame,
+        target: usize,
+        instruction_count: usize,
+    ) -> Result<(), RuntimeError> {
+        self.validate_jump_target(target, instruction_count)?;
+        frame.ip = target;
+        Ok(())
+    }
+
+    /// Shared instruction semantics for both the ordinary and cooperative
+    /// dispatch paths. Output, calls, returns, and jump control flow stay in
+    /// the callers because the two paths attribute those observably.
+    fn execute_common_instruction(
         &mut self,
         body: &FunctionBody,
         frame: &mut Frame,
-        task_id: TaskId,
         instruction_index: usize,
         instruction: &Instruction,
-    ) -> Result<InstructionAction, RuntimeError> {
-        let call_site = body
-            .locations
-            .get(instruction_index)
-            .and_then(Option::as_ref);
+    ) -> Result<(), RuntimeError> {
+        let call_site = body.locations.get(instruction_index).and_then(Option::as_ref);
         match instruction {
             Instruction::Constant { dest, constant } => {
                 let value = self.constant_value(*constant)?;
-                self.write_register(frame, *dest, value)?;
-            }
-            Instruction::Print { value } => {
-                let value = self.read_register_ref(frame, *value)?;
-                let mut output = value.to_string();
-                output.push('\n');
-                let sequence = self.append_task_output(task_id, &output)?;
-                if self.task_trace_enabled {
-                    self.active_task_trace_event_at_sequence(
-                        sequence,
-                        TraceEventKind::Output,
-                        frame,
-                        Some(instruction_index),
-                        body.locations.get(instruction_index).cloned().flatten(),
-                        Some(value.to_string()),
-                    )?;
-                }
+                self.write_register(frame, *dest, value)
             }
             Instruction::MakeFunction { dest, function } => {
                 let value = self.make_function(*function, frame)?;
-                self.write_register(frame, *dest, value)?;
+                self.write_register(frame, *dest, value)
             }
             Instruction::Array { dest, elements } => {
                 let mut values = Vec::with_capacity(elements.len());
@@ -8046,7 +7789,7 @@ impl<'a> VM<'a> {
                     values.push(self.read_register(frame, *element)?);
                 }
                 let value = self.allocate_array(values)?;
-                self.write_register(frame, *dest, value)?;
+                self.write_register(frame, *dest, value)
             }
             Instruction::Map { dest, entries } => {
                 let mut values = Vec::with_capacity(entries.len());
@@ -8057,7 +7800,7 @@ impl<'a> VM<'a> {
                     values.push((key, value));
                 }
                 let value = self.allocate_map(values)?;
-                self.write_register(frame, *dest, value)?;
+                self.write_register(frame, *dest, value)
             }
             Instruction::Struct {
                 dest,
@@ -8066,7 +7809,7 @@ impl<'a> VM<'a> {
             } => {
                 let type_name = type_name.map(|index| self.read_name(index)).transpose()?;
                 let value = self.make_struct(frame, type_name, fields)?;
-                self.write_register(frame, *dest, value)?;
+                self.write_register(frame, *dest, value)
             }
             Instruction::Variant {
                 dest,
@@ -8081,7 +7824,7 @@ impl<'a> VM<'a> {
                     fields.push(self.read_register(frame, *register)?);
                 }
                 let value = self.allocate_variant(enum_name, variant_name, fields)?;
-                self.write_register(frame, *dest, value)?;
+                self.write_register(frame, *dest, value)
             }
             Instruction::VariantTag {
                 dest,
@@ -8098,7 +7841,7 @@ impl<'a> VM<'a> {
                         if variant.enum_name == enum_name
                             && variant.variant_name == variant_name
                 );
-                self.write_register(frame, *dest, Value::boolean(matched))?;
+                self.write_register(frame, *dest, Value::boolean(matched))
             }
             Instruction::VariantField { dest, value, index } => {
                 let input = self.read_register_ref(frame, *value)?;
@@ -8110,25 +7853,244 @@ impl<'a> VM<'a> {
                     .get(*index)
                     .cloned()
                     .ok_or_else(|| RuntimeError::new("enum variant field index out of bounds"))?;
-                self.write_register(frame, *dest, field)?;
+                self.write_register(frame, *dest, field)
             }
             Instruction::Move { dest, source } => {
                 let value = self.read_register(frame, *source)?;
-                self.write_register(frame, *dest, value)?;
+                self.write_register(frame, *dest, value)
             }
             Instruction::LoadVar { dest, name } => {
                 let value = self.load_variable(frame, *name)?;
-                self.write_register(frame, *dest, value)?;
+                self.write_register(frame, *dest, value)
             }
             Instruction::StoreVar { name, value } => {
                 let name_index = *name;
                 let name = self.read_name(name_index)?;
                 let value = self.read_register(frame, *value)?;
                 self.store_variable(frame, name_index, name, value);
+                Ok(())
             }
             Instruction::AssignVar { name, value } => {
                 let value = self.read_register(frame, *value)?;
-                self.assign_variable(frame, *name, value)?;
+                self.assign_variable(frame, *name, value)
+            }
+            Instruction::NativeCall {
+                dest,
+                name,
+                arguments,
+            } => {
+                let values = match arguments.as_slice() {
+                    [] => NativeArguments::Empty,
+                    [argument] => NativeArguments::One(self.read_register(frame, *argument)?),
+                    [left, right] => {
+                        let left = self.read_register(frame, *left)?;
+                        let right = self.read_register(frame, *right)?;
+                        NativeArguments::Two(left, right)
+                    }
+                    arguments => {
+                        let mut values = Vec::with_capacity(arguments.len());
+                        for argument in arguments {
+                            values.push(self.read_register(frame, *argument)?);
+                        }
+                        NativeArguments::Many(values)
+                    }
+                };
+                let result = self.execute_native_call_indexed(
+                    *name,
+                    values,
+                    frame.function.as_ref(),
+                    call_site,
+                )?;
+                self.write_register(frame, *dest, result)
+            }
+            Instruction::Negate { dest, value } => {
+                let input = self.expect_number(frame, *value, "negate")?;
+                self.write_register(frame, *dest, Value::number(-input))
+            }
+            Instruction::Not { dest, value } => {
+                let result = !self.read_register_ref(frame, *value)?.is_truthy();
+                self.write_register(frame, *dest, Value::boolean(result))
+            }
+            Instruction::Add { dest, left, right } => {
+                let left_value = self.read_register_ref(frame, *left)?;
+                let right_value = self.read_register_ref(frame, *right)?;
+                let result = match (left_value, right_value) {
+                    (Value::Number(left), Value::Number(right)) => Value::number(left + right),
+                    (Value::String(left), Value::String(right)) => {
+                        Value::string(format!("{}{}", left, right))
+                    }
+                    _ => return Err(RuntimeError::new("add expects two numbers or two strings")),
+                };
+                self.write_register(frame, *dest, result)
+            }
+            Instruction::Subtract { dest, left, right } => {
+                let (left, right) = self.expect_two_numbers(frame, *left, *right, "subtract")?;
+                self.write_register(frame, *dest, Value::number(left - right))
+            }
+            Instruction::Multiply { dest, left, right } => {
+                let (left, right) = self.expect_two_numbers(frame, *left, *right, "multiply")?;
+                self.write_register(frame, *dest, Value::number(left * right))
+            }
+            Instruction::Divide { dest, left, right } => {
+                let (left, right) = self.expect_two_numbers(frame, *left, *right, "divide")?;
+                if right == 0.0 {
+                    return Err(RuntimeError::new("division by zero"));
+                }
+                self.write_register(frame, *dest, Value::number(left / right))
+            }
+            Instruction::Equal { dest, left, right } => {
+                let result = self
+                    .read_register_ref(frame, *left)?
+                    .runtime_equals(self.read_register_ref(frame, *right)?);
+                self.write_register(frame, *dest, Value::boolean(result))
+            }
+            Instruction::NotEqual { dest, left, right } => {
+                let result = !self
+                    .read_register_ref(frame, *left)?
+                    .runtime_equals(self.read_register_ref(frame, *right)?);
+                self.write_register(frame, *dest, Value::boolean(result))
+            }
+            Instruction::Greater { dest, left, right } => {
+                self.compare(frame, *dest, *left, *right, Comparison::Greater, call_site)
+            }
+            Instruction::GreaterEqual { dest, left, right } => {
+                self.compare(
+                    frame,
+                    *dest,
+                    *left,
+                    *right,
+                    Comparison::GreaterEqual,
+                    call_site,
+                )
+            }
+            Instruction::Less { dest, left, right } => {
+                self.compare(frame, *dest, *left, *right, Comparison::Less, call_site)
+            }
+            Instruction::LessEqual { dest, left, right } => {
+                self.compare(
+                    frame,
+                    *dest,
+                    *left,
+                    *right,
+                    Comparison::LessEqual,
+                    call_site,
+                )
+            }
+            Instruction::Index {
+                dest,
+                collection,
+                index,
+            } => {
+                let collection = self.read_register_ref(frame, *collection)?;
+                let index = self.read_register_ref(frame, *index)?;
+                let value = self.execute_index(collection, index)?;
+                self.write_register(frame, *dest, value)
+            }
+            Instruction::AssignIndex {
+                dest,
+                collection,
+                index,
+                value,
+            } => {
+                let collection = self.read_register(frame, *collection)?;
+                let index = self.read_register(frame, *index)?;
+                let value = self.read_register(frame, *value)?;
+                let assigned = self.execute_assign_index(collection, index, value)?;
+                self.write_register(frame, *dest, assigned)
+            }
+            Instruction::Field { dest, object, name } => {
+                let object = self.read_register_ref(frame, *object)?;
+                let name = self.read_name_ref(*name)?;
+                let value = self.execute_field(object, name)?;
+                self.write_register(frame, *dest, value)
+            }
+            Instruction::AssignField {
+                dest,
+                object,
+                name,
+                value,
+            } => {
+                let object = self.read_register(frame, *object)?;
+                let name = self.read_name_ref(*name)?;
+                let value = self.read_register(frame, *value)?;
+                let assigned = self.execute_assign_field(object, name, value)?;
+                self.write_register(frame, *dest, assigned)
+            }
+            Instruction::Len { dest, value } => {
+                let value = self.read_register_ref(frame, *value)?;
+                let length = self.execute_len(value)?;
+                self.write_register(frame, *dest, length)
+            }
+            Instruction::AssertArray { dest, value } => {
+                let input = self.read_register_ref(frame, *value)?;
+                let iterable = match input {
+                    Value::Array(_) | Value::Range(_) => input.clone(),
+                    Value::Map(map) => {
+                        let keys = map
+                            .entries
+                            .borrow()
+                            .iter()
+                            .map(|(key, _)| key.clone())
+                            .collect();
+                        self.allocate_array(keys)?
+                    }
+                    _ => return Err(RuntimeError::new("for-in expects array, range, or map")),
+                };
+                self.write_register(frame, *dest, iterable)
+            }
+            Instruction::AssertNumber {
+                dest,
+                value,
+                message,
+            } => {
+                let number = match self.read_register_ref(frame, *value)? {
+                    Value::Number(number) => *number,
+                    _ => {
+                        let message = self.read_name(*message)?;
+                        return Err(RuntimeError::new(message));
+                    }
+                };
+                self.write_register(frame, *dest, Value::number(number))
+            }
+            Instruction::Print { .. }
+            | Instruction::Call { .. }
+            | Instruction::Jump { .. }
+            | Instruction::JumpIfFalse { .. }
+            | Instruction::JumpIfTrue { .. }
+            | Instruction::Return { .. } => {
+                Err(RuntimeError::new("instruction is specific to one dispatch path"))
+            }
+        }
+    }
+
+    fn execute_instruction(
+        &mut self,
+        body: &FunctionBody,
+        frame: &mut Frame,
+        task_id: TaskId,
+        instruction_index: usize,
+        instruction: &Instruction,
+    ) -> Result<InstructionAction, RuntimeError> {
+        let call_site = body
+            .locations
+            .get(instruction_index)
+            .and_then(Option::as_ref);
+        match instruction {
+            Instruction::Print { value } => {
+                let value = self.read_register_ref(frame, *value)?;
+                let mut output = value.to_string();
+                output.push('\n');
+                let sequence = self.append_task_output(task_id, &output)?;
+                if self.task_trace_enabled {
+                    self.active_task_trace_event_at_sequence(
+                        sequence,
+                        TraceEventKind::Output,
+                        frame,
+                        Some(instruction_index),
+                        body.locations.get(instruction_index).cloned().flatten(),
+                        Some(value.to_string()),
+                    )?;
+                }
             }
             Instruction::Call {
                 dest,
@@ -8162,205 +8124,27 @@ impl<'a> VM<'a> {
                     call_site: call_site.cloned(),
                 }));
             }
-            Instruction::NativeCall {
-                dest,
-                name,
-                arguments,
-            } => {
-                let values = match arguments.as_slice() {
-                    [] => NativeArguments::Empty,
-                    [argument] => NativeArguments::One(self.read_register(frame, *argument)?),
-                    [left, right] => {
-                        let left = self.read_register(frame, *left)?;
-                        let right = self.read_register(frame, *right)?;
-                        NativeArguments::Two(left, right)
-                    }
-                    arguments => {
-                        let mut values = Vec::with_capacity(arguments.len());
-                        for argument in arguments {
-                            values.push(self.read_register(frame, *argument)?);
-                        }
-                        NativeArguments::Many(values)
-                    }
-                };
-                let result = self.execute_native_call_indexed(
-                    *name,
-                    values,
-                    frame.function.as_ref(),
-                    call_site,
-                )?;
-                self.write_register(frame, *dest, result)?;
-            }
-            Instruction::Negate { dest, value } => {
-                let input = self.expect_number(frame, *value, "negate")?;
-                self.write_register(frame, *dest, Value::number(-input))?;
-            }
-            Instruction::Not { dest, value } => {
-                let result = !self.read_register_ref(frame, *value)?.is_truthy();
-                self.write_register(frame, *dest, Value::boolean(result))?;
-            }
-            Instruction::Add { dest, left, right } => {
-                let left_value = self.read_register_ref(frame, *left)?;
-                let right_value = self.read_register_ref(frame, *right)?;
-                let result = match (left_value, right_value) {
-                    (Value::Number(left), Value::Number(right)) => Value::number(left + right),
-                    (Value::String(left), Value::String(right)) => {
-                        Value::string(format!("{}{}", left, right))
-                    }
-                    _ => return Err(RuntimeError::new("add expects two numbers or two strings")),
-                };
-                self.write_register(frame, *dest, result)?;
-            }
-            Instruction::Subtract { dest, left, right } => {
-                let (left, right) = self.expect_two_numbers(frame, *left, *right, "subtract")?;
-                self.write_register(frame, *dest, Value::number(left - right))?;
-            }
-            Instruction::Multiply { dest, left, right } => {
-                let (left, right) = self.expect_two_numbers(frame, *left, *right, "multiply")?;
-                self.write_register(frame, *dest, Value::number(left * right))?;
-            }
-            Instruction::Divide { dest, left, right } => {
-                let (left, right) = self.expect_two_numbers(frame, *left, *right, "divide")?;
-                if right == 0.0 {
-                    return Err(RuntimeError::new("division by zero"));
-                }
-                self.write_register(frame, *dest, Value::number(left / right))?;
-            }
-            Instruction::Equal { dest, left, right } => {
-                let result = self
-                    .read_register_ref(frame, *left)?
-                    .runtime_equals(self.read_register_ref(frame, *right)?);
-                self.write_register(frame, *dest, Value::boolean(result))?;
-            }
-            Instruction::NotEqual { dest, left, right } => {
-                let result = !self
-                    .read_register_ref(frame, *left)?
-                    .runtime_equals(self.read_register_ref(frame, *right)?);
-                self.write_register(frame, *dest, Value::boolean(result))?;
-            }
-            Instruction::Greater { dest, left, right } => {
-                self.compare(frame, *dest, *left, *right, Comparison::Greater, call_site)?;
-            }
-            Instruction::GreaterEqual { dest, left, right } => {
-                self.compare(
-                    frame,
-                    *dest,
-                    *left,
-                    *right,
-                    Comparison::GreaterEqual,
-                    call_site,
-                )?;
-            }
-            Instruction::Less { dest, left, right } => {
-                self.compare(frame, *dest, *left, *right, Comparison::Less, call_site)?;
-            }
-            Instruction::LessEqual { dest, left, right } => {
-                self.compare(
-                    frame,
-                    *dest,
-                    *left,
-                    *right,
-                    Comparison::LessEqual,
-                    call_site,
-                )?;
-            }
             Instruction::Jump { target } => {
-                self.validate_jump_target(*target, body.instructions.len())?;
-                frame.ip = *target;
+                self.execute_jump(frame, *target, body.instructions.len())?;
                 return Ok(InstructionAction::Jumped);
             }
             Instruction::JumpIfFalse { condition, target } => {
-                self.validate_jump_target(*target, body.instructions.len())?;
                 if !self.read_register_ref(frame, *condition)?.is_truthy() {
-                    frame.ip = *target;
+                    self.execute_jump(frame, *target, body.instructions.len())?;
                     return Ok(InstructionAction::Jumped);
                 }
             }
             Instruction::JumpIfTrue { condition, target } => {
-                self.validate_jump_target(*target, body.instructions.len())?;
                 if self.read_register_ref(frame, *condition)?.is_truthy() {
-                    frame.ip = *target;
+                    self.execute_jump(frame, *target, body.instructions.len())?;
                     return Ok(InstructionAction::Jumped);
                 }
             }
-            Instruction::Index {
-                dest,
-                collection,
-                index,
-            } => {
-                let collection = self.read_register_ref(frame, *collection)?;
-                let index = self.read_register_ref(frame, *index)?;
-                let value = self.execute_index(collection, index)?;
-                self.write_register(frame, *dest, value)?;
-            }
-            Instruction::AssignIndex {
-                dest,
-                collection,
-                index,
-                value,
-            } => {
-                let collection = self.read_register(frame, *collection)?;
-                let index = self.read_register(frame, *index)?;
-                let value = self.read_register(frame, *value)?;
-                let assigned = self.execute_assign_index(collection, index, value)?;
-                self.write_register(frame, *dest, assigned)?;
-            }
-            Instruction::Field { dest, object, name } => {
-                let object = self.read_register_ref(frame, *object)?;
-                let name = self.read_name_ref(*name)?;
-                let value = self.execute_field(object, name)?;
-                self.write_register(frame, *dest, value)?;
-            }
-            Instruction::AssignField {
-                dest,
-                object,
-                name,
-                value,
-            } => {
-                let object = self.read_register(frame, *object)?;
-                let name = self.read_name_ref(*name)?;
-                let value = self.read_register(frame, *value)?;
-                let assigned = self.execute_assign_field(object, name, value)?;
-                self.write_register(frame, *dest, assigned)?;
-            }
-            Instruction::Len { dest, value } => {
-                let value = self.read_register_ref(frame, *value)?;
-                let length = self.execute_len(value)?;
-                self.write_register(frame, *dest, length)?;
-            }
-            Instruction::AssertArray { dest, value } => {
-                let input = self.read_register_ref(frame, *value)?;
-                let iterable = match input {
-                    Value::Array(_) | Value::Range(_) => input.clone(),
-                    Value::Map(map) => {
-                        let keys = map
-                            .entries
-                            .borrow()
-                            .iter()
-                            .map(|(key, _)| key.clone())
-                            .collect();
-                        self.allocate_array(keys)?
-                    }
-                    _ => return Err(RuntimeError::new("for-in expects array, range, or map")),
-                };
-                self.write_register(frame, *dest, iterable)?;
-            }
-            Instruction::AssertNumber {
-                dest,
-                value,
-                message,
-            } => {
-                let number = match self.read_register_ref(frame, *value)? {
-                    Value::Number(number) => *number,
-                    _ => {
-                        let message = self.read_name(*message)?;
-                        return Err(RuntimeError::new(message));
-                    }
-                };
-                self.write_register(frame, *dest, Value::number(number))?;
-            }
             Instruction::Return { value } => {
                 return Ok(InstructionAction::Return(self.take_register(frame, *value)?));
+            }
+            _ => {
+                self.execute_common_instruction(body, frame, instruction_index, instruction)?;
             }
         }
         Ok(InstructionAction::Continue)
@@ -9103,78 +8887,14 @@ impl<'a> VM<'a> {
         captured
     }
 
-    fn cached_function_body(&mut self, function_index: usize) -> Option<Rc<CachedFunctionBody>> {
-        if let Some(cached) = self
-            .function_body_cache
-            .get(function_index)
-            .and_then(Option::as_ref)
-        {
-            return Some(Rc::clone(cached));
-        }
-
-        let cached = {
-            let function = self.program.functions.get(function_index)?;
-            let mut variable_plan = VariablePlan::default();
-            let mut slot_by_name = BTreeMap::new();
-            for param in &function.params {
-                let slot = variable_plan.local_names.len();
-                variable_plan.local_names.push(param.clone());
-                slot_by_name.insert(param.clone(), slot);
-            }
-            for instruction in &function.instructions {
-                let Instruction::StoreVar { name, .. } = instruction else {
-                    continue;
-                };
-                let text = self
-                    .program
-                    .names
-                    .get(*name)
-                    .cloned()
-                    .unwrap_or_default();
-                if !slot_by_name.contains_key(&text) {
-                    let slot = variable_plan.local_names.len();
-                    variable_plan.local_names.push(text.clone());
-                    slot_by_name.insert(text, slot);
-                }
-            }
-            for instruction in &function.instructions {
-                let name = match instruction {
-                    Instruction::StoreVar { name, .. }
-                    | Instruction::LoadVar { name, .. }
-                    | Instruction::AssignVar { name, .. } => Some(*name),
-                    _ => None,
-                };
-                let Some(name) = name else { continue };
-                let text = self
-                    .program
-                    .names
-                    .get(name)
-                    .map(String::as_str)
-                    .unwrap_or_default();
-                if let Some(slot) = slot_by_name.get(text) {
-                    variable_plan.local_slots.insert(name, *slot);
-                }
-            }
-            Rc::new(CachedFunctionBody {
-                name: Rc::from(function.name.as_str()),
-                params: function.params.clone(),
-                body: Rc::new(FunctionBody {
-                    registers: function.registers,
-                    instructions: function.instructions.clone(),
-                    locations: function.locations.clone(),
-                }),
-                variable_plan: Rc::new(variable_plan),
-            })
-        };
-        let slot = self.function_body_cache.get_mut(function_index)?;
-        *slot = Some(Rc::clone(&cached));
-        Some(cached)
+    fn prepared_function(&self, function_index: usize) -> Option<Rc<PreparedFunction>> {
+        self.prepared_functions.get(function_index).cloned()
     }
 
     fn new_function_frame(
         &mut self,
         function_index: usize,
-        cached: &CachedFunctionBody,
+        cached: &PreparedFunction,
         arguments: Vec<Value>,
         closure: SharedEnvironment,
         return_target: Option<ReturnTarget>,
@@ -9359,7 +9079,7 @@ impl<'a> VM<'a> {
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
-        let Some(cached) = self.cached_function_body(function.function_index) else {
+        let Some(cached) = self.prepared_function(function.function_index) else {
             let mut error = RuntimeError::new("function index out of range");
             error.location = call_site.cloned();
             error.push_frame(caller.to_string(), call_site.cloned());
