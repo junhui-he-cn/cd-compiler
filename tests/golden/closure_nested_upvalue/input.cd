@@ -1,0 +1,14 @@
+fun outer() {
+  let a = 10;
+  fun middle() {
+    let b = a + 5;
+    fun inner() {
+      return a + b;
+    }
+    b = b + 100;
+    return inner;
+  }
+  return middle();
+}
+let f = outer();
+print f();

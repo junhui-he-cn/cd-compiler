@@ -1,0 +1,74 @@
+main registers=52
+0000  b0 = constant #0 "a"
+0001  b1 = constant #1 1
+0002  b2 = constant #2 "b"
+0003  b3 = constant #3 2
+0004  b4 = constant #4 "a"
+0005  b5 = constant #5 3
+0006  b6 = map [b0: b1, b2: b3, b4: b5]
+0007  store_var @0 m#0, b6
+0008  b7 = load_var @1 m#0
+0009  b8 = len b7
+0010  print b8
+0011  b9 = load_var @2 m#0
+0012  b10 = constant #6 "a"
+0013  b11 = index b9, b10
+0014  print b11
+0015  b12 = load_var @3 m#0
+0016  b13 = constant #7 "b"
+0017  b14 = index b12, b13
+0018  print b14
+0019  b15 = load_var @4 m#0
+0020  b16 = assert_array b15
+0021  store_var @5 __for_in_iter#0, b16
+0022  b17 = constant #8 0
+0023  store_var @6 __for_in_index#1, b17
+0024  b18 = constant #9 nil
+0025  store_var @7 k#1, b18
+0026  b19 = load_var @8 __for_in_iter#0
+0027  b20 = len b19
+0028  store_var @9 __for_in_len#2, b20
+0029  b21 = load_var @10 __for_in_index#1
+0030  b22 = load_var @11 __for_in_len#2
+0031  b23 = less b21, b22
+0032  jump_if_false b23, 0050
+0033  b24 = load_var @12 __for_in_iter#0
+0034  b25 = load_var @13 __for_in_index#1
+0035  b26 = index b24, b25
+0036  assign_var @14 k#1, b26
+0037  jump 0043
+0038  b27 = load_var @15 __for_in_index#1
+0039  b28 = constant #10 1
+0040  b29 = add b27, b28
+0041  assign_var @16 __for_in_index#1, b29
+0042  jump 0029
+0043  b30 = load_var @17 k#1
+0044  print b30
+0045  b31 = load_var @18 m#0
+0046  b32 = load_var @19 k#1
+0047  b33 = index b31, b32
+0048  print b33
+0049  jump 0038
+0050  b34 = load_var @20 m#0
+0051  b35 = native_call @21 keys [b34]
+0052  print b35
+0053  b36 = load_var @22 m#0
+0054  b37 = native_call @23 values [b36]
+0055  print b37
+0056  b38 = load_var @24 m#0
+0057  b39 = constant #11 "a"
+0058  b40 = constant #12 30
+0059  b41 = assign_index b38, b39, b40
+0060  b42 = load_var @25 m#0
+0061  print b42
+0062  b43 = load_var @26 m#0
+0063  b44 = native_call @27 keys [b43]
+0064  print b44
+0065  b45 = load_var @28 m#0
+0066  b46 = constant #13 "b"
+0067  b47 = constant #14 20
+0068  b48 = constant #15 "c"
+0069  b49 = constant #16 4
+0070  b50 = map [b46: b47, b48: b49]
+0071  b51 = native_call @29 merge [b45, b50]
+0072  print b51

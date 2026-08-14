@@ -1,0 +1,9 @@
+Program
+  Let fns = (array)
+  ForIn i in (call range 3)
+    Block
+      Let x = (* i 10)
+      Expr (call push fns (fun () (return x)))
+  ForIn f in fns
+    Block
+      Print (call f)

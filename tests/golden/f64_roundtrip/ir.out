@@ -1,0 +1,21 @@
+IR
+0000  v0 = constant #0 0.3
+0001  store_var @0 a#0, v0
+0002  v1 = constant #1 1
+0003  store_var @1 b#1, v1
+0004  v2 = constant #2 0.1
+0005  store_var @2 c#2, v2
+0006  v3 = constant #3 1.23456789012345
+0007  store_var @3 d#3, v3
+0008  v4 = load_var @4 a#0
+0009  print v4
+0010  v5 = load_var @5 b#1
+0011  print v5
+0012  v6 = load_var @6 c#2
+0013  print v6
+0014  v7 = load_var @7 d#3
+0015  print v7
+0016  v8 = load_var @8 a#0
+0017  v9 = load_var @9 b#1
+0018  v10 = add v8, v9
+0019  print v10

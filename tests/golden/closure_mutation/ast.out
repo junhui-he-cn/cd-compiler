@@ -1,0 +1,6 @@
+Program
+  Let x = 1
+  Let f = (fun () (return x))
+  Expr (= x 2)
+  Print (call f)
+  Print x

@@ -4013,6 +4013,26 @@
       "expected_files": []
     },
     {
+      "case_id": "ctest.bytecode_emitter_f64_roundtrip",
+      "runner": "ctest",
+      "result_name": "bytecode_emitter_f64_roundtrip",
+      "stage": "verification",
+      "capability_tags": [
+        "ctest",
+        "bytecode_emitter_f64_roundtrip"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "pass",
+      "boundary_sequence": [
+        "verification"
+      ],
+      "terminal_boundary": "verification",
+      "sources": [
+        "CMakeLists.txt"
+      ],
+      "expected_files": []
+    },
+    {
       "case_id": "ctest.bytecode_module_artifacts",
       "runner": "ctest",
       "result_name": "bytecode_module_artifacts",
@@ -9497,6 +9517,255 @@
       "fixture": "tests/golden/closure_counter"
     },
     {
+      "case_id": "golden.success.closure_loop_capture.ast",
+      "runner": "golden",
+      "result_name": "closure_loop_capture default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:closure_loop_capture"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/closure_loop_capture/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_loop_capture/ast.out"
+      ],
+      "fixture": "tests/golden/closure_loop_capture"
+    },
+    {
+      "case_id": "golden.success.closure_loop_capture.bytecode",
+      "runner": "golden",
+      "result_name": "closure_loop_capture --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:closure_loop_capture"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/closure_loop_capture/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_loop_capture/bytecode.out"
+      ],
+      "fixture": "tests/golden/closure_loop_capture"
+    },
+    {
+      "case_id": "golden.success.closure_loop_capture.ir",
+      "runner": "golden",
+      "result_name": "closure_loop_capture --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:closure_loop_capture"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/closure_loop_capture/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_loop_capture/ir.out"
+      ],
+      "fixture": "tests/golden/closure_loop_capture"
+    },
+    {
+      "case_id": "golden.success.closure_mutation.ast",
+      "runner": "golden",
+      "result_name": "closure_mutation default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:closure_mutation"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/closure_mutation/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_mutation/ast.out"
+      ],
+      "fixture": "tests/golden/closure_mutation"
+    },
+    {
+      "case_id": "golden.success.closure_mutation.bytecode",
+      "runner": "golden",
+      "result_name": "closure_mutation --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:closure_mutation"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/closure_mutation/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_mutation/bytecode.out"
+      ],
+      "fixture": "tests/golden/closure_mutation"
+    },
+    {
+      "case_id": "golden.success.closure_mutation.ir",
+      "runner": "golden",
+      "result_name": "closure_mutation --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:closure_mutation"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/closure_mutation/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_mutation/ir.out"
+      ],
+      "fixture": "tests/golden/closure_mutation"
+    },
+    {
+      "case_id": "golden.success.closure_nested_upvalue.ast",
+      "runner": "golden",
+      "result_name": "closure_nested_upvalue default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:closure_nested_upvalue"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/closure_nested_upvalue/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_nested_upvalue/ast.out"
+      ],
+      "fixture": "tests/golden/closure_nested_upvalue"
+    },
+    {
+      "case_id": "golden.success.closure_nested_upvalue.bytecode",
+      "runner": "golden",
+      "result_name": "closure_nested_upvalue --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:closure_nested_upvalue"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/closure_nested_upvalue/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_nested_upvalue/bytecode.out"
+      ],
+      "fixture": "tests/golden/closure_nested_upvalue"
+    },
+    {
+      "case_id": "golden.success.closure_nested_upvalue.ir",
+      "runner": "golden",
+      "result_name": "closure_nested_upvalue --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:closure_nested_upvalue"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/closure_nested_upvalue/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_nested_upvalue/ir.out"
+      ],
+      "fixture": "tests/golden/closure_nested_upvalue"
+    },
+    {
       "case_id": "golden.success.collection_helpers.ast",
       "runner": "golden",
       "result_name": "collection_helpers default(ast)",
@@ -10048,6 +10317,89 @@
         "tests/golden/expression_statement/ir.out"
       ],
       "fixture": "tests/golden/expression_statement"
+    },
+    {
+      "case_id": "golden.success.f64_roundtrip.ast",
+      "runner": "golden",
+      "result_name": "f64_roundtrip default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:f64_roundtrip"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/f64_roundtrip/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/f64_roundtrip/ast.out"
+      ],
+      "fixture": "tests/golden/f64_roundtrip"
+    },
+    {
+      "case_id": "golden.success.f64_roundtrip.bytecode",
+      "runner": "golden",
+      "result_name": "f64_roundtrip --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:f64_roundtrip"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/f64_roundtrip/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/f64_roundtrip/bytecode.out"
+      ],
+      "fixture": "tests/golden/f64_roundtrip"
+    },
+    {
+      "case_id": "golden.success.f64_roundtrip.ir",
+      "runner": "golden",
+      "result_name": "f64_roundtrip --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:f64_roundtrip"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/f64_roundtrip/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/f64_roundtrip/ir.out"
+      ],
+      "fixture": "tests/golden/f64_roundtrip"
     },
     {
       "case_id": "golden.success.field_compound_assignment.ast",
@@ -13488,6 +13840,89 @@
         "tests/golden/map_clear_shadowing/ir.out"
       ],
       "fixture": "tests/golden/map_clear_shadowing"
+    },
+    {
+      "case_id": "golden.success.map_duplicate_keys.ast",
+      "runner": "golden",
+      "result_name": "map_duplicate_keys default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:map_duplicate_keys"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/map_duplicate_keys/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/map_duplicate_keys/ast.out"
+      ],
+      "fixture": "tests/golden/map_duplicate_keys"
+    },
+    {
+      "case_id": "golden.success.map_duplicate_keys.bytecode",
+      "runner": "golden",
+      "result_name": "map_duplicate_keys --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:map_duplicate_keys"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/map_duplicate_keys/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/map_duplicate_keys/bytecode.out"
+      ],
+      "fixture": "tests/golden/map_duplicate_keys"
+    },
+    {
+      "case_id": "golden.success.map_duplicate_keys.ir",
+      "runner": "golden",
+      "result_name": "map_duplicate_keys --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:map_duplicate_keys"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/map_duplicate_keys/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/map_duplicate_keys/ir.out"
+      ],
+      "fixture": "tests/golden/map_duplicate_keys"
     },
     {
       "case_id": "golden.success.map_for_in.ast",
@@ -35556,6 +35991,130 @@
       "fixture": "tests/golden/closure_counter"
     },
     {
+      "case_id": "rust_vm.golden.closure_loop_capture.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "closure_loop_capture emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:closure_loop_capture"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/closure_loop_capture/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_loop_capture/run.out"
+      ],
+      "fixture": "tests/golden/closure_loop_capture"
+    },
+    {
+      "case_id": "rust_vm.golden.closure_loop_capture.run",
+      "runner": "rust_vm_golden",
+      "result_name": "closure_loop_capture rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:closure_loop_capture"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/closure_loop_capture/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_loop_capture/run.out"
+      ],
+      "fixture": "tests/golden/closure_loop_capture"
+    },
+    {
+      "case_id": "rust_vm.golden.closure_mutation.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "closure_mutation emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:closure_mutation"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/closure_mutation/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_mutation/run.out"
+      ],
+      "fixture": "tests/golden/closure_mutation"
+    },
+    {
+      "case_id": "rust_vm.golden.closure_mutation.run",
+      "runner": "rust_vm_golden",
+      "result_name": "closure_mutation rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:closure_mutation"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/closure_mutation/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_mutation/run.out"
+      ],
+      "fixture": "tests/golden/closure_mutation"
+    },
+    {
       "case_id": "rust_vm.golden.closure_nested_recursion.emit",
       "runner": "rust_vm_golden",
       "result_name": "closure_nested_recursion emit",
@@ -35616,6 +36175,68 @@
         "tests/golden/closure_nested_recursion/run.out"
       ],
       "fixture": "tests/golden/closure_nested_recursion"
+    },
+    {
+      "case_id": "rust_vm.golden.closure_nested_upvalue.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "closure_nested_upvalue emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:closure_nested_upvalue"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/closure_nested_upvalue/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_nested_upvalue/run.out"
+      ],
+      "fixture": "tests/golden/closure_nested_upvalue"
+    },
+    {
+      "case_id": "rust_vm.golden.closure_nested_upvalue.run",
+      "runner": "rust_vm_golden",
+      "result_name": "closure_nested_upvalue rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:closure_nested_upvalue"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/closure_nested_upvalue/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/closure_nested_upvalue/run.out"
+      ],
+      "fixture": "tests/golden/closure_nested_upvalue"
     },
     {
       "case_id": "rust_vm.golden.closure_shadowing.emit",
@@ -36422,6 +37043,68 @@
         "tests/golden/expression_statement/run.out"
       ],
       "fixture": "tests/golden/expression_statement"
+    },
+    {
+      "case_id": "rust_vm.golden.f64_roundtrip.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "f64_roundtrip emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:f64_roundtrip"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/f64_roundtrip/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/f64_roundtrip/run.out"
+      ],
+      "fixture": "tests/golden/f64_roundtrip"
+    },
+    {
+      "case_id": "rust_vm.golden.f64_roundtrip.run",
+      "runner": "rust_vm_golden",
+      "result_name": "f64_roundtrip rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:f64_roundtrip"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/f64_roundtrip/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/f64_roundtrip/run.out"
+      ],
+      "fixture": "tests/golden/f64_roundtrip"
     },
     {
       "case_id": "rust_vm.golden.field_compound_assignment.emit",
@@ -41320,6 +42003,68 @@
         "tests/golden/map_clear_shadowing/run.out"
       ],
       "fixture": "tests/golden/map_clear_shadowing"
+    },
+    {
+      "case_id": "rust_vm.golden.map_duplicate_keys.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "map_duplicate_keys emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:map_duplicate_keys"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/map_duplicate_keys/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/map_duplicate_keys/run.out"
+      ],
+      "fixture": "tests/golden/map_duplicate_keys"
+    },
+    {
+      "case_id": "rust_vm.golden.map_duplicate_keys.run",
+      "runner": "rust_vm_golden",
+      "result_name": "map_duplicate_keys rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:map_duplicate_keys"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/map_duplicate_keys/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/map_duplicate_keys/run.out"
+      ],
+      "fixture": "tests/golden/map_duplicate_keys"
     },
     {
       "case_id": "rust_vm.golden.map_for_in.emit",

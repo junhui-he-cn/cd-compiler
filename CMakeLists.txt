@@ -401,6 +401,15 @@ add_executable(bytecode_module_emitter_tests
 compiler_design_configure_target(bytecode_module_emitter_tests)
 add_test(NAME bytecode_module_emitter COMMAND bytecode_module_emitter_tests)
 
+add_executable(bytecode_emitter_f64_roundtrip_tests
+    tests/bytecode_emitter_f64_roundtrip_tests.cpp
+    src/Bytecode.cpp
+    src/BytecodeTextEmitter.cpp
+    src/Value.cpp
+)
+compiler_design_configure_target(bytecode_emitter_f64_roundtrip_tests)
+add_test(NAME bytecode_emitter_f64_roundtrip COMMAND bytecode_emitter_f64_roundtrip_tests)
+
 add_executable(module_cache_tests
     tests/module_cache_tests.cpp
     src/ModuleCache.cpp

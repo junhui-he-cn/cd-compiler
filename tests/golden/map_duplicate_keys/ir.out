@@ -1,0 +1,74 @@
+IR
+0000  v0 = constant #0 "a"
+0001  v1 = constant #1 1
+0002  v2 = constant #2 "b"
+0003  v3 = constant #3 2
+0004  v4 = constant #4 "a"
+0005  v5 = constant #5 3
+0006  v6 = map [v0: v1, v2: v3, v4: v5]
+0007  store_var @0 m#0, v6
+0008  v7 = load_var @1 m#0
+0009  v8 = len v7
+0010  print v8
+0011  v9 = load_var @2 m#0
+0012  v10 = constant #6 "a"
+0013  v11 = index v9, v10
+0014  print v11
+0015  v12 = load_var @3 m#0
+0016  v13 = constant #7 "b"
+0017  v14 = index v12, v13
+0018  print v14
+0019  v15 = load_var @4 m#0
+0020  v16 = assert_array v15
+0021  store_var @5 __for_in_iter#0, v16
+0022  v17 = constant #8 0
+0023  store_var @6 __for_in_index#1, v17
+0024  v18 = constant #9 nil
+0025  store_var @7 k#1, v18
+0026  v19 = load_var @8 __for_in_iter#0
+0027  v20 = len v19
+0028  store_var @9 __for_in_len#2, v20
+0029  v21 = load_var @10 __for_in_index#1
+0030  v22 = load_var @11 __for_in_len#2
+0031  v23 = less v21, v22
+0032  jump_if_false v23, 0050
+0033  v24 = load_var @12 __for_in_iter#0
+0034  v25 = load_var @13 __for_in_index#1
+0035  v26 = index v24, v25
+0036  assign_var @14 k#1, v26
+0037  jump 0043
+0038  v27 = load_var @15 __for_in_index#1
+0039  v28 = constant #10 1
+0040  v29 = add v27, v28
+0041  assign_var @16 __for_in_index#1, v29
+0042  jump 0029
+0043  v30 = load_var @17 k#1
+0044  print v30
+0045  v31 = load_var @18 m#0
+0046  v32 = load_var @19 k#1
+0047  v33 = index v31, v32
+0048  print v33
+0049  jump 0038
+0050  v34 = load_var @20 m#0
+0051  v35 = native_call @21 keys(v34)
+0052  print v35
+0053  v36 = load_var @22 m#0
+0054  v37 = native_call @23 values(v36)
+0055  print v37
+0056  v38 = load_var @24 m#0
+0057  v39 = constant #11 "a"
+0058  v40 = constant #12 30
+0059  v41 = assign_index v38, v39, v40
+0060  v42 = load_var @25 m#0
+0061  print v42
+0062  v43 = load_var @26 m#0
+0063  v44 = native_call @27 keys(v43)
+0064  print v44
+0065  v45 = load_var @28 m#0
+0066  v46 = constant #13 "b"
+0067  v47 = constant #14 20
+0068  v48 = constant #15 "c"
+0069  v49 = constant #16 4
+0070  v50 = map [v46: v47, v48: v49]
+0071  v51 = native_call @29 merge(v45, v50)
+0072  print v51
