@@ -6871,6 +6871,34 @@
       "fixture": "tests/golden/parse_errors"
     },
     {
+      "case_id": "golden.parse_errors.struct_literal_in_condition",
+      "runner": "golden",
+      "result_name": "parse_errors/struct_literal_in_condition default(ast)",
+      "stage": "parse-error",
+      "capability_tags": [
+        "golden",
+        "parse_errors",
+        "fixture:struct_literal_in_condition"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/struct_literal_in_condition.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/struct_literal_in_condition.cd",
+        "tests/golden/parse_errors/struct_literal_in_condition.err",
+        "tests/golden/parse_errors/struct_literal_in_condition.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
       "case_id": "golden.parse_errors.struct_missing_brace",
       "runner": "golden",
       "result_name": "parse_errors/struct_missing_brace default(ast)",
@@ -29411,6 +29439,35 @@
         "tests/golden/parse_errors/struct_decl_missing_right_brace.cd",
         "tests/golden/parse_errors/struct_decl_missing_right_brace.err",
         "tests/golden/parse_errors/struct_decl_missing_right_brace.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
+      "case_id": "malformed.parse_error.struct_literal_in_condition",
+      "runner": "malformed",
+      "result_name": "malformed.parse_error.struct_literal_in_condition",
+      "stage": "diagnostic-recovery",
+      "capability_tags": [
+        "malformed",
+        "parser",
+        "diagnostic-recovery",
+        "golden-corpus"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/struct_literal_in_condition.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/struct_literal_in_condition.cd",
+        "tests/golden/parse_errors/struct_literal_in_condition.err",
+        "tests/golden/parse_errors/struct_literal_in_condition.exit"
       ],
       "fixture": "tests/golden/parse_errors"
     },

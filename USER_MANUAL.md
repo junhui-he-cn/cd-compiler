@@ -123,7 +123,7 @@ printf 'print 1 + 2;\n' | ./build/compiler_design
 | `--emit-module-bytecode out-dir file.cd` | 为 import 图生成独立模块 artifact |
 | `--lsp` | 启动 stdio JSON-RPC 语言服务器 |
 
-所有普通模式都接受一个或多个输入文件；多个文件按命令行顺序拼接为一个组合程序。`--emit-module-bytecode` 是例外：它要求输入能够建立 import-aware module graph，并为图中的模块生成独立产品。
+所有普通模式都要求至少一个输入文件；每个文件（包括 stdin 与虚拟文件）都是独立模块，多个 CLI 文件按命令行顺序作为入口模块，跨文件可见性需要 `import` 加 `export`。`--emit-module-bytecode` 要求输入能建立 import-aware module graph，并为图中的每个模块生成独立产品。
 
 ### 1.5 格式化和编辑器支持
 
@@ -159,6 +159,11 @@ code --install-extension *.vsix
 词法规则的实用摘要：标识符由 ASCII 字母、数字和下划线组成，但不能以数字开头；数字字面量支持整数和带小数部分的十进制数；负数是对数字使用一元 `-` 运算符。字符串在一对双引号之间，当前不提供转义序列，反斜线会作为普通字符保留。关键字包括 `let`、`fun`、`struct`、`enum`、`impl`、`match`、`if`、`else`、`while`、`for`、`break`、`continue`、`return`、`print`、`import`、`export`、`private`、`true`、`false` 和 `nil`。
 
 表达式位置的大括号表示 map 字面量，例如 `{ "name": "Ada" }`；语句位置的大括号表示 block。匿名 struct 字面量不是独立语法，命名结构体必须使用 `Name { field: value }` 构造。
+
+当前实现有一个已知限制：`if`/`while`/`if let`/`while let` 的条件、`match` arm 的
+guard 以及 `for-in` 的迭代对象内不能直接书写 struct 字面量构造 `Name { ... }`
+（即使加了括号也不行），需要先在条件外绑定变量。该限制记录在 Language 0.2
+执行计划的 Phase 10，后续会移除。
 
 ```cd
 // 变量声明、类型注解和条件语句
@@ -637,7 +642,7 @@ print lib.answer();
 
 模块顶层默认是私有的。`private field: type` 只在定义模块内可读写和用于初始化，导出的接口只暴露公开字段；外部模块不能读取、赋值、复合赋值、record pattern 匹配或直接构造含私有字段的结构体。推荐用模块内 factory 函数创建值，再通过公开方法提供不变量安全的 API。
 
-命令行直接传入多个 `.cd` 文件时，它们会按参数顺序作为一个组合程序编译；这与通过 `import` 构建模块图是两种不同的输入方式。
+命令行直接传入多个 `.cd` 文件时，每个文件都是按参数顺序排列的入口模块；入口模块的执行体按命令行顺序运行，跨文件可见性仍然需要 `import` 加 `export`，与通过 `import` 构建模块图是同一套模块语义。
 
 ### 模块字节码、接口和缓存
 

@@ -1,0 +1,6 @@
+Parse error at <repo>/tests/golden/parse_errors/struct_literal_in_condition.cd:7:13: expected `;` after expression, found Colon `:`
+  if Point { x: 1 } == p {
+              ^
+Parse error at <repo>/tests/golden/parse_errors/struct_literal_in_condition.cd:7:19: expected expression
+  if Point { x: 1 } == p {
+                    ^

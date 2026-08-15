@@ -92,6 +92,11 @@ ifLetStmt   = "if", "let", identifier, "=", expression,
    condition is ordinary expression grouping, so `if (x)` and `if x` are
    equivalent and the formatter preserves whichever spelling was written. *)
 
+(* Known parser restriction: struct constructors (`Name { ... }`) are
+   disabled inside `if`/`while`/`if let`/`while let` conditions, `match`
+   guards, and `for-in` iterables. Bind the value before the condition.
+   This restriction is scheduled for removal in the Language 0.2 plan. *)
+
 matchStmt   = "match", expression, "{", { matchArm }, "}" ;
 
 matchArm    = pattern, [ "if", expression ], "=>", block ;

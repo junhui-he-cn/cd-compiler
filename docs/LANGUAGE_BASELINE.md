@@ -132,12 +132,12 @@ FrontendSession 模块图语义一致（直接导入暴露导出名、别名限�
 
 ## 规范漂移清单
 
-| # | 漂移 | 证据 | Phase 1 需决策方向 |
+| # | 漂移 | 证据 | Phase 1 决策 |
 | --- | --- | --- | --- |
-| 1 | 手册承诺 `match` 表达式，实现只有语句 | `USER_MANUAL.md:586`；AST 只有 `MatchStmt`；EBNF 只有 `matchStmt` | 以实现为准删文档，或以文档为准实现表达式（Phase 2 本来就要做） |
-| 2 | 手册承诺 enum 命名 payload，实现位置化 | `USER_MANUAL.md:523-555`；`EnumVariantDecl` 无字段名；EBNF `enumPayload = typeExpr` | 以文档为准实现命名 payload（Phase 3），或删除文档段 |
-| 3 | 手册 CLI 仍是组合程序模型 | `USER_MANUAL.md:126` vs 每文件一模块（`FrontendSession`/AGENTS） | 以实现为准更新手册 |
-| 4 | 条件中禁用 struct 字面量未文档化 | `src/Parser.cpp:951-958`；EBNF/手册无说明 | 以文档为准消除 hack（Phase 10），或先补文档说明 |
+| 1 | 手册承诺 `match` 表达式，实现只有语句 | `USER_MANUAL.md:586`；AST 只有 `MatchStmt`；EBNF 只有 `matchStmt` | 以文档承诺为准；实现推迟到 Phase 2，手册承诺保留 |
+| 2 | 手册承诺 enum 命名 payload，实现位置化 | `USER_MANUAL.md:523-555`；`EnumVariantDecl` 无字段名；EBNF `enumPayload = typeExpr` | 以文档承诺为准；实现推迟到 Phase 3，手册承诺保留 |
+| 3 | 手册 CLI 仍是组合程序模型 | `USER_MANUAL.md:126,640` vs 每文件一模块（`FrontendSession`/AGENTS） | 以现有实现为准；已修正手册两处 |
+| 4 | 条件中禁用 struct 字面量未文档化 | `src/Parser.cpp:951-958`；EBNF/手册无说明 | 以现有实现为准；已补充手册/EBNF 说明并新增 negative test，Phase 10 再移除 hack |
 
 ## 已知技术债（Phase 0 记录，不修复）
 
@@ -160,8 +160,24 @@ Phase 0 未修改任何源码，全部现有验证保持通过：
 - `python3 tests/run_boundary_tests.py` → 4/4
 - `python3 tests/vm_compatibility_matrix.py` → 7 cells 通过
 
+## Phase 1 处理结果
+
+Phase 1 只处理 Phase 0 确认的漂移，未引入计划外语法：
+
+- 漂移 #1、#2 明确选择「以文档承诺为准」：`USER_MANUAL.md` 的 match 表达式与命名
+  payload 承诺保留，实现分别由 Phase 2（match expression）与 Phase 3（enum named
+  payload）完成。
+- 漂移 #3 选择「以现有实现为准」：`USER_MANUAL.md:126` 与 `:640` 已从「多个文件
+  拼接为组合程序」改为「每文件一个模块、多个 CLI 文件按顺序作为入口模块」。
+- 漂移 #4 选择「以现有实现为准」：`USER_MANUAL.md` 与 `docs/language-grammar.ebnf`
+  已记录「条件/guard/for-in 迭代对象内禁用 struct 字面量构造」的限制，并新增
+  `tests/golden/parse_errors/struct_literal_in_condition.*` 锁定当前诊断。
+
+Phase 1 验证：golden 788/788（新增 1 个 parse-error 夹具），其余套件与 Phase 0
+一致全部通过。
+
 ## 结论与下一步
 
-Phase 0 完成：建立了 Feature Matrix、9 个重点核对项、4 条规范漂移和 6 条已知技术债。
-未修改任何语言语义或语法。下一步是 Phase 1：对每条漂移显式选择「以现有实现为准」或
-「以文档承诺为准」，逐项修复并补正/负测试，再同步 `USER_MANUAL.md` 与 EBNF。
+Phase 0/Phase 1 完成：四条漂移均已做出明确决策，两条文档承诺（match 表达式、命名
+payload）留待 Phase 2/3 实现，两条以实现为准的文档/测试已修正。下一步是 Phase 2：
+把 `match` 统一为表达式（保留语句式副作用用法）。
