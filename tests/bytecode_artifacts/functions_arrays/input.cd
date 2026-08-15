@@ -1,5 +1,5 @@
 fun makeCounter(start) {
-  let value = start;
+  let mut value = start;
   fun next() {
     value = value + 1;
     return value;

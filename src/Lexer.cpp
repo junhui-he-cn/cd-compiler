@@ -297,6 +297,7 @@ void Lexer::identifier()
         {"enum", TokenType::Enum},
         {"fun", TokenType::Fun},
         {"let", TokenType::Let},
+        {"mut", TokenType::Mut},
         {"match", TokenType::Match},
         {"print", TokenType::Print},
         {"private", TokenType::Private},
@@ -416,6 +417,8 @@ std::string tokenTypeName(TokenType type)
         return "Fun";
     case TokenType::Let:
         return "Let";
+    case TokenType::Mut:
+        return "Mut";
     case TokenType::Match:
         return "Match";
     case TokenType::Print:

@@ -1,7 +1,7 @@
 fun outer() {
   let a = 10;
   fun middle() {
-    let b = a + 5;
+    let mut b = a + 5;
     fun inner() {
       return a + b;
     }

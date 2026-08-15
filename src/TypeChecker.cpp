@@ -302,6 +302,7 @@ TypeChecker::Binding TypeChecker::declareVariable(
     const Token& name,
     TypeInfo type,
     bool explicitType,
+    bool mutableBinding,
     const DeclarationRecord* record)
 {
     auto& scope = currentScope();
@@ -316,6 +317,7 @@ TypeChecker::Binding TypeChecker::declareVariable(
     binding.functionDepth = functionDepth_;
     binding.explicitType = explicitType;
     binding.imported = false;
+    binding.mutableBinding = mutableBinding;
     binding.bindingId = BindingId{nextBindingId_++};
     if (record) {
         binding.declarationId = record->declarationId;
@@ -341,6 +343,7 @@ TypeChecker::Binding TypeChecker::declareVariable(
         statement.name,
         std::move(type),
         explicitType,
+        statement.isMutable,
         declarationIndex_.declaration(statement));
     declarationIndex_.recordLetBinding(
         statement,
@@ -576,6 +579,7 @@ void TypeChecker::checkStatement(const Stmt& statement)
             ifLetStmt->variable,
             bindingType,
             false,
+            false,
             declarationIndex_.declaration(*ifLetStmt));
         declarationIndex_.recordIfLetBinding(
             *ifLetStmt,
@@ -614,6 +618,7 @@ void TypeChecker::checkStatement(const Stmt& statement)
         const Binding binding = declareVariable(
             whileLetStmt->variable,
             bindingType,
+            false,
             false,
             declarationIndex_.declaration(*whileLetStmt));
         declarationIndex_.recordWhileLetBinding(
@@ -671,6 +676,7 @@ void TypeChecker::checkStatement(const Stmt& statement)
         const Binding itemBinding = declareVariable(
             forInStmt->variable,
             elementType,
+            false,
             false,
             declarationIndex_.declaration(*forInStmt));
         declarationIndex_.recordForInBinding(

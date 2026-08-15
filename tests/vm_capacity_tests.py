@@ -346,10 +346,10 @@ def main() -> int:
         )
         churn_source.write_text(
             "struct Bucket { value: number }\n"
-            "let bucket = Bucket { value: 0 };\n"
-            'let latest = {"value": 0};\n'
-            "let values = [0, 0, 0];\n"
-            "let iteration = 0;\n"
+            "let mut bucket = Bucket { value: 0 };\n"
+            'let mut latest = {"value": 0};\n'
+            "let mut values = [0, 0, 0];\n"
+            "let mut iteration = 0;\n"
             f"while (iteration < {churn_iterations}) {{\n"
             "  bucket = Bucket { value: iteration };\n"
             '  latest = {"value": iteration};\n'

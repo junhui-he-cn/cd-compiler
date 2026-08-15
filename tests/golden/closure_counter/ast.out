@@ -1,6 +1,6 @@
 Program
   Fun makeCounter()
-    Let count = 0
+    Let mut count = 0
     Fun inc()
       Expr (= count (+ count 1))
       Return count

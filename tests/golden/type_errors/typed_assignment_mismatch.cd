@@ -1,2 +1,2 @@
-let x: number = 1;
+let mut x: number = 1;
 x = "hello";

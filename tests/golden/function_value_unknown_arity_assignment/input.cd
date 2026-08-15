@@ -4,7 +4,7 @@ fun makeZero() {
   };
 }
 
-let f = fun (x) {
+let mut f = fun (x) {
   return x;
 };
 f = makeZero();

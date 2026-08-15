@@ -13652,6 +13652,89 @@
       "fixture": "tests/golden/len_builtin"
     },
     {
+      "case_id": "golden.success.let_mut_basic.ast",
+      "runner": "golden",
+      "result_name": "let_mut_basic default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:let_mut_basic"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/let_mut_basic/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/let_mut_basic/ast.out"
+      ],
+      "fixture": "tests/golden/let_mut_basic"
+    },
+    {
+      "case_id": "golden.success.let_mut_basic.bytecode",
+      "runner": "golden",
+      "result_name": "let_mut_basic --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:let_mut_basic"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/let_mut_basic/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/let_mut_basic/bytecode.out"
+      ],
+      "fixture": "tests/golden/let_mut_basic"
+    },
+    {
+      "case_id": "golden.success.let_mut_basic.ir",
+      "runner": "golden",
+      "result_name": "let_mut_basic --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:let_mut_basic"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/let_mut_basic/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/let_mut_basic/ir.out"
+      ],
+      "fixture": "tests/golden/let_mut_basic"
+    },
+    {
       "case_id": "golden.success.literal_patterns.ast",
       "runner": "golden",
       "result_name": "literal_patterns default(ast)",
@@ -22220,6 +22303,90 @@
         "tests/golden/type_errors/if_let_non_optional.cd",
         "tests/golden/type_errors/if_let_non_optional.err",
         "tests/golden/type_errors/if_let_non_optional.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.immutable_compound_assignment",
+      "runner": "golden",
+      "result_name": "type_errors/immutable_compound_assignment default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:immutable_compound_assignment"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/immutable_compound_assignment.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/immutable_compound_assignment.cd",
+        "tests/golden/type_errors/immutable_compound_assignment.err",
+        "tests/golden/type_errors/immutable_compound_assignment.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.immutable_let_assignment",
+      "runner": "golden",
+      "result_name": "type_errors/immutable_let_assignment default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:immutable_let_assignment"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/immutable_let_assignment.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/immutable_let_assignment.cd",
+        "tests/golden/type_errors/immutable_let_assignment.err",
+        "tests/golden/type_errors/immutable_let_assignment.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.immutable_parameter_assignment",
+      "runner": "golden",
+      "result_name": "type_errors/immutable_parameter_assignment default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:immutable_parameter_assignment"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/immutable_parameter_assignment.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/immutable_parameter_assignment.cd",
+        "tests/golden/type_errors/immutable_parameter_assignment.err",
+        "tests/golden/type_errors/immutable_parameter_assignment.exit"
       ],
       "fixture": "tests/golden/type_errors"
     },
@@ -41797,6 +41964,68 @@
         "tests/golden/len_builtin_shadowing/run.out"
       ],
       "fixture": "tests/golden/len_builtin_shadowing"
+    },
+    {
+      "case_id": "rust_vm.golden.let_mut_basic.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "let_mut_basic emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:let_mut_basic"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/let_mut_basic/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/let_mut_basic/run.out"
+      ],
+      "fixture": "tests/golden/let_mut_basic"
+    },
+    {
+      "case_id": "rust_vm.golden.let_mut_basic.run",
+      "runner": "rust_vm_golden",
+      "result_name": "let_mut_basic rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:let_mut_basic"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/let_mut_basic/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/let_mut_basic/run.out"
+      ],
+      "fixture": "tests/golden/let_mut_basic"
     },
     {
       "case_id": "rust_vm.golden.literal_patterns.emit",

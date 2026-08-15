@@ -1,2 +1,2 @@
-let s = "hi";
+let mut s = "hi";
 s = 2;

@@ -103,7 +103,7 @@ block b2:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/benchmark_execution_closure/input.cd" text="fun makeAdder(offset) {\n  fun add(value) {\n    return value + offset;\n  }\n  return add;\n}\n\nlet add = makeAdder(1);\nlet i = 0;\nlet total = 0;\nwhile i < 50000 {\n  total = add(total);\n  i = i + 1;\n}\nprint total;\n"
+  s0 path="tests/bytecode_artifacts/benchmark_execution_closure/input.cd" text="fun makeAdder(offset) {\n  fun add(value) {\n    return value + offset;\n  }\n  return add;\n}\n\nlet add = makeAdder(1);\nlet mut i = 0;\nlet mut total = 0;\nwhile i < 50000 {\n  total = add(total);\n  i = i + 1;\n}\nprint total;\n"
 
 debug_locations:
   main 0 = s0:1:1
@@ -114,9 +114,9 @@ debug_locations:
   main 5 = s0:8:21
   main 6 = s0:8:11
   main 7 = s0:8:1
-  main 8 = s0:9:9
+  main 8 = s0:9:13
   main 9 = s0:9:1
-  main 10 = s0:10:13
+  main 10 = s0:10:17
   main 11 = s0:10:1
   main 12 = s0:10:1
   main 13 = s0:11:7
@@ -170,30 +170,30 @@ debug_ranges:
   main 5 = s0:111:112
   main 6 = s0:101:113
   main 7 = s0:95:113
-  main 8 = s0:123:124
-  main 9 = s0:119:124
-  main 10 = s0:138:139
-  main 11 = s0:130:139
-  main 12 = s0:130:139
-  main 13 = s0:147:148
-  main 14 = s0:147:148
-  main 15 = s0:151:156
-  main 16 = s0:147:156
-  main 17 = s0:147:192
-  main 18 = s0:169:172
-  main 19 = s0:169:172
-  main 20 = s0:173:178
-  main 21 = s0:169:179
-  main 22 = s0:161:179
-  main 23 = s0:187:188
-  main 24 = s0:191:192
-  main 25 = s0:187:192
-  main 26 = s0:183:192
-  main 27 = s0:147:192
-  main 28 = s0:202:207
-  main 29 = s0:202:207
-  main 30 = s0:202:207
-  main 31 = s0:202:207
+  main 8 = s0:127:128
+  main 9 = s0:123:128
+  main 10 = s0:146:147
+  main 11 = s0:138:147
+  main 12 = s0:138:147
+  main 13 = s0:155:156
+  main 14 = s0:155:156
+  main 15 = s0:159:164
+  main 16 = s0:155:164
+  main 17 = s0:155:200
+  main 18 = s0:177:180
+  main 19 = s0:177:180
+  main 20 = s0:181:186
+  main 21 = s0:177:187
+  main 22 = s0:169:187
+  main 23 = s0:195:196
+  main 24 = s0:199:200
+  main 25 = s0:195:200
+  main 26 = s0:191:200
+  main 27 = s0:155:200
+  main 28 = s0:210:215
+  main 29 = s0:210:215
+  main 30 = s0:210:215
+  main 31 = s0:210:215
   function f0 0 = s0:54:59
   function f0 1 = s0:54:59
   function f0 2 = s0:62:68

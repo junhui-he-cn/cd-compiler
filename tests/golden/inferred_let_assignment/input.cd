@@ -1,20 +1,20 @@
-let n = 1;
+let mut n = 1;
 n = 2;
 print n;
 
-let s = "hi";
+let mut s = "hi";
 s = "bye";
 print s;
 
-let b = true;
+let mut b = true;
 b = false;
 print b;
 
-let xs = [1, "two"];
+let mut xs = [1, "two"];
 xs = [];
 print xs;
 
-let f = fun () {
+let mut f = fun () {
   return 1;
 };
 f = fun () {

@@ -16,7 +16,7 @@ impl FenwickTree {
   }
 
   fun updateTree(index: number, delta: number) {
-    let node = index + 1;
+    let mut node = index + 1;
     while (node <= this.values.len()) {
       this.tree[node] += delta;
       node += this.jumps[node];
@@ -33,8 +33,8 @@ impl FenwickTree {
   }
 
   fun prefixSumUnchecked(endExclusive: number): number {
-    let result = 0;
-    let node = endExclusive;
+    let mut result = 0;
+    let mut node = endExclusive;
     while (node > 0) {
       result += this.tree[node];
       node -= this.jumps[node];
@@ -71,10 +71,10 @@ impl FenwickTree {
 
 fun newFenwickTree(values: [number]): FenwickTree {
   let jumps: [number] = [0];
-  let index = 1;
+  let mut index = 1;
   while (index <= values.len()) {
-    let jump = 1;
-    let current = index;
+    let mut jump = 1;
+    let mut current = index;
     while (floor(current / 2) * 2 == current) {
       current = floor(current / 2);
       jump *= 2;
@@ -90,7 +90,7 @@ fun newFenwickTree(values: [number]): FenwickTree {
     index += 1;
   }
 
-  let result = FenwickTree {
+  let mut result = FenwickTree {
     tree: tree,
     values: copy(values),
     jumps: jumps
@@ -119,8 +119,8 @@ impl SegmentTree {
   }
 
   fun rebuild(node: number) {
-    let left = node * 2;
-    let right = left + 1;
+    let mut left = node * 2;
+    let mut right = left + 1;
     this.sums[node] = this.sums[left] + this.sums[right];
     if (this.active[left]) {
       if (this.active[right]) {
@@ -143,7 +143,7 @@ impl SegmentTree {
   }
 
   fun updateLeaf(index: number, value: number) {
-    let node = this.base + index;
+    let mut node = this.base + index;
     this.sums[node] = value;
     this.minimums[node] = value;
     this.active[node] = true;
@@ -180,9 +180,9 @@ impl SegmentTree {
     if (!this.validRange(start, endExclusive)) {
       return nil;
     }
-    let left = this.base + start;
-    let right = this.base + endExclusive;
-    let result = 0;
+    let mut left = this.base + start;
+    let mut right = this.base + endExclusive;
+    let mut result = 0;
     while (left < right) {
       if (floor(left / 2) * 2 != left) {
         result += this.sums[left];
@@ -202,10 +202,10 @@ impl SegmentTree {
     if (!this.validRange(start, endExclusive) || start == endExclusive) {
       return nil;
     }
-    let left = this.base + start;
-    let right = this.base + endExclusive;
-    let found = false;
-    let result = 0;
+    let mut left = this.base + start;
+    let mut right = this.base + endExclusive;
+    let mut found = false;
+    let mut result = 0;
     while (left < right) {
       if (floor(left / 2) * 2 != left) {
         if (this.active[left]) {
@@ -247,7 +247,7 @@ impl SegmentTree {
 }
 
 fun newSegmentTree(values: [number]): SegmentTree {
-  let base = 1;
+  let mut base = 1;
   while (base < values.len()) {
     base *= 2;
   }
@@ -255,7 +255,7 @@ fun newSegmentTree(values: [number]): SegmentTree {
   let sums: [number] = [];
   let minimums: [number] = [];
   let active: [bool] = [];
-  let index = 0;
+  let mut index = 0;
   while (index < capacity) {
     sums.push(0);
     minimums.push(0);
@@ -272,13 +272,13 @@ fun newSegmentTree(values: [number]): SegmentTree {
   };
   index = 0;
   while (index < values.len()) {
-    let node = base + index;
+    let mut node = base + index;
     result.sums[node] = values[index];
     result.minimums[node] = values[index];
     result.active[node] = true;
     index += 1;
   }
-  let node = base - 1;
+  let mut node = base - 1;
   while (node > 0) {
     result.rebuild(node);
     node -= 1;
@@ -311,7 +311,7 @@ impl SparseTable {
       return nil;
     }
     let length = endExclusive - start;
-    let level = this.logs[length];
+    let mut level = this.logs[length];
     let block = this.powers[level];
     let rightStart = endExclusive - block;
     let leftValue = this.minimums[level][start];
@@ -327,7 +327,7 @@ impl SparseTable {
       return nil;
     }
     let length = endExclusive - start;
-    let level = this.logs[length];
+    let mut level = this.logs[length];
     let block = this.powers[level];
     let rightStart = endExclusive - block;
     let leftValue = this.maximums[level][start];
@@ -353,9 +353,9 @@ impl SparseTable {
 fun newSparseTable(values: [number]): SparseTable {
   let logs: [number] = [0];
   let powers: [number] = [1];
-  let level = 0;
-  let power = 1;
-  let index = 1;
+  let mut level = 0;
+  let mut power = 1;
+  let mut index = 1;
   while (index <= values.len()) {
     if (index >= power * 2) {
       power *= 2;
@@ -370,12 +370,12 @@ fun newSparseTable(values: [number]): SparseTable {
   let maximums: [[number]] = [];
   minimums.push(copy(values));
   maximums.push(copy(values));
-  let segmentLength = 2;
+  let mut segmentLength = 2;
   while (segmentLength <= values.len()) {
     let half = floor(segmentLength / 2);
     let minimumRow: [number] = [];
     let maximumRow: [number] = [];
-    let start = 0;
+    let mut start = 0;
     while (start + segmentLength <= values.len()) {
       let leftMinimum = minimums[minimums.len() - 1][start];
       let rightMinimum = minimums[minimums.len() - 1][start + half];

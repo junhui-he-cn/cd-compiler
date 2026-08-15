@@ -489,12 +489,17 @@ struct ModuleStmt final : Stmt {
 };
 
 struct LetStmt final : Stmt {
-    LetStmt(Token name, std::optional<TypeAnnotation> typeName, ExprPtr initializer);
+    LetStmt(
+        Token name,
+        std::optional<TypeAnnotation> typeName,
+        ExprPtr initializer,
+        bool isMutable = false);
     void print(std::ostream& out, int indent) const override;
 
     Token name;
     std::optional<TypeAnnotation> typeName;
     ExprPtr initializer;
+    bool isMutable = false;
 };
 
 struct PrintStmt final : Stmt {

@@ -6,7 +6,7 @@ fun fib(n) {
 }
 
 fun makeCounter() {
-  let count = 0;
+  let mut count = 0;
   fun next() {
     count = count + 1;
     return count;

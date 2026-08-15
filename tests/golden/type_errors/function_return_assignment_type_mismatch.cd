@@ -1,5 +1,5 @@
 fun one() {
   return 1;
 }
-let x = one();
+let mut x = one();
 x = "bad";

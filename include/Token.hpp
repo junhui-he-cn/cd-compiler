@@ -60,6 +60,7 @@ enum class TokenType {
     Enum,
     Fun,
     Let,
+    Mut,
     Match,
     Print,
     Private,

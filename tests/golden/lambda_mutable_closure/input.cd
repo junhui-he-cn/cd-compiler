@@ -1,5 +1,5 @@
 fun counter() {
-  let n = 0;
+  let mut n = 0;
   return fun () {
     n = n + 1;
     return n;

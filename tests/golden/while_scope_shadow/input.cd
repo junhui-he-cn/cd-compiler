@@ -1,5 +1,5 @@
 let x = "outer";
-let i = 0;
+let mut i = 0;
 while i < 1 {
   let x = "inner";
   print x;

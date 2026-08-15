@@ -1,4 +1,4 @@
-let age: optional<number> = nil;
+let mut age: optional<number> = nil;
 print age;
 age = 42;
 print age;

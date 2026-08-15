@@ -511,6 +511,7 @@ bool TypeChecker::checkPattern(
             variable->name,
             bindingType,
             false,
+            false,
             declarationIndex_.declaration(*variable));
         declarationIndex_.recordPatternBinding(
             *variable,
@@ -689,6 +690,7 @@ bool TypeChecker::checkPattern(
                 const Binding binding = declareVariable(
                     entry.second.token,
                     entry.second.type,
+                    false,
                     false,
                     declarationIndex_.declaration(*entry.second.occurrences.front()));
                 for (const VariablePattern* occurrence : entry.second.occurrences) {
@@ -1256,6 +1258,12 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
             }
             throw TypeError(assign->name, "undefined variable `" + assign->name.lexeme + "`");
         }
+        if (!target->mutableBinding) {
+            throw TypeError(
+                assign->name,
+                "cannot assign to immutable binding `" + assign->name.lexeme
+                    + "` (declare it as `let mut " + assign->name.lexeme + " = ...`)");
+        }
 
         const CheckedExpression value = checkExpressionInfo(*assign->value, &target->type);
 
@@ -1312,6 +1320,12 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
                 throw TypeError(compound->name, "cannot assign to namespace alias `" + compound->name.lexeme + "`");
             }
             throw TypeError(compound->name, "undefined variable `" + compound->name.lexeme + "`");
+        }
+        if (!target->mutableBinding) {
+            throw TypeError(
+                compound->name,
+                "cannot assign to immutable binding `" + compound->name.lexeme
+                    + "` (declare it as `let mut " + compound->name.lexeme + " = ...`)");
         }
 
         const CheckedExpression value = checkExpressionInfo(*compound->value);

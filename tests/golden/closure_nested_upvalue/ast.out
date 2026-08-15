@@ -2,7 +2,7 @@ Program
   Fun outer()
     Let a = 10
     Fun middle()
-      Let b = (+ a 5)
+      Let mut b = (+ a 5)
       Fun inner()
         Return (+ a b)
       Expr (= b (+ b 100))

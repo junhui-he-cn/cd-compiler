@@ -179,6 +179,23 @@ if (age >= 18) {
 
 顶层语句会成为程序入口。变量必须先使用 `let` 声明；同一作用域不能重复声明同名变量，内层代码块可以遮蔽外层变量。代码块、函数体和循环体都会形成词法作用域。
 
+绑定默认不可变：`let x = 1;` 声明的 `x` 不能重新赋值，需要修改时用
+`let mut x = 1;` 声明。函数参数同样不可重新赋值。这条规则只限制绑定本身，
+不影响对象内部可变性——`let items = [1, 2]; items[0] = 3;` 仍然合法：
+
+```cd
+let x = 1;
+x = 2; // Type error: cannot assign to immutable binding `x`
+
+let mut count = 0;
+let inc = fun () {
+  count += 1;
+  return count;
+};
+print inc();
+print inc();
+```
+
 ## 3. 值和类型
 
 语言提供以下主要类型：
@@ -339,7 +356,7 @@ while (n < 3) {
 初始化、条件和递增子句都可以省略；初始化中的 `let` 只在循环条件、循环体和递增子句中可见：
 
 ```cd
-for let i = 0; i < 3; i += 1 {
+for let mut i = 0; i < 3; i += 1 {
   print i;
 }
 ```

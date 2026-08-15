@@ -13,7 +13,7 @@ maybe.push(nil);
 let item: optional<number> = maybe[1];
 print item;
 
-let total = 0;
+let mut total = 0;
 for value in numbers {
   total = total + value;
 }

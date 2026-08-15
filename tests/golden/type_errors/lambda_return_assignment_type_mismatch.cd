@@ -1,5 +1,5 @@
 let make = fun () {
   return 42;
 };
-let n = make();
+let mut n = make();
 n = true;

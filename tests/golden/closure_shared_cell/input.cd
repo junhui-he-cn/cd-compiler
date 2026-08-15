@@ -1,5 +1,5 @@
 fun makePair() {
-  let value = 10;
+  let mut value = 10;
   fun addOne() {
     value = value + 1;
     return value;

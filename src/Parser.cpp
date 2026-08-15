@@ -584,6 +584,7 @@ std::vector<TypeParameter> Parser::typeParameters()
 StmtPtr Parser::letDeclarationNoSemicolon(const std::string& terminatorMessage)
 {
     Token keyword = previous();
+    const bool isMutable = match(TokenType::Mut);
     Token name = consume(TokenType::Identifier, "expected variable name after `let`");
 
     std::optional<TypeAnnotation> typeName;
@@ -599,7 +600,11 @@ StmtPtr Parser::letDeclarationNoSemicolon(const std::string& terminatorMessage)
     }
     const std::optional<SourceSpan> span = spanForToken(keyword);
     return withSpan(
-        std::make_unique<LetStmt>(std::move(name), std::move(typeName), std::move(initializer)),
+        std::make_unique<LetStmt>(
+            std::move(name),
+            std::move(typeName),
+            std::move(initializer),
+            isMutable),
         span);
 }
 

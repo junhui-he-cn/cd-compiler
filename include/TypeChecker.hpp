@@ -111,6 +111,7 @@ private:
         const Token& name,
         TypeInfo type,
         bool explicitType = false,
+        bool mutableBinding = false,
         const DeclarationRecord* record = nullptr);
     Binding declareVariable(
         const LetStmt& statement,

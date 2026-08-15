@@ -24,7 +24,7 @@ fun appendCombinations<T>(values: [T], start: number, count: number, current: [T
     return;
   }
   let last = values.len() - count;
-  let index = start;
+  let mut index = start;
   while (index <= last) {
     current.push(values[index]);
     appendCombinations(values, index + 1, count - 1, current, result);
@@ -48,7 +48,7 @@ fun appendPermutations<T>(values: [T], used: [bool], current: [T], result: [[T]]
     result.push(copy(current));
     return;
   }
-  let index = 0;
+  let mut index = 0;
   while (index < values.len()) {
     if (!used[index]) {
       used[index] = true;
@@ -64,7 +64,7 @@ fun appendPermutations<T>(values: [T], used: [bool], current: [T], result: [[T]]
 fun permutations<T>(values: [T]): [[T]] {
   let result: [[T]] = [];
   let used: [bool] = [];
-  let index = 0;
+  let mut index = 0;
   while (index < values.len()) {
     used.push(false);
     index += 1;
@@ -101,7 +101,7 @@ fun appendNQueens(size: number, row: number, columns: [number], usedColumns: [bo
     result.push(copy(columns));
     return;
   }
-  let column = 0;
+  let mut column = 0;
   while (column < size) {
     let diagonal = row - column + size - 1;
     let antiDiagonal = row + column;
@@ -128,7 +128,7 @@ fun nQueens(size: number): [[number]] {
   let usedColumns: [bool] = [];
   let diagonals: [bool] = [];
   let antiDiagonals: [bool] = [];
-  let index = 0;
+  let mut index = 0;
   while (index < size) {
     usedColumns.push(false);
     index += 1;
@@ -166,7 +166,7 @@ fun mazePaths(maze: [[bool]]): [string] {
     return result;
   }
   let columns = maze[0].len();
-  let row = 0;
+  let mut row = 0;
   while (row < maze.len()) {
     if (maze[row].len() != columns) {
       return result;

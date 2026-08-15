@@ -1,6 +1,7 @@
 fun after(value: optional<number>): number {
-  for ; value != nil; value = nil {
+  let mut v = value;
+  for ; v != nil; v = nil {
     break;
   }
-  return value + 1;
+  return v + 1;
 }

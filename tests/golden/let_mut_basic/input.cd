@@ -1,0 +1,23 @@
+let mut x = 1;
+x = x + 1;
+print x;
+
+let mut counter = 0;
+let bump = fun () {
+  counter += 1;
+  return counter;
+};
+print bump();
+print bump();
+
+let items = [1, 2];
+items[0] = 9;
+print items;
+
+struct Box {
+  value: number
+}
+
+let boxed = Box { value: 1 };
+boxed.value = 5;
+print boxed.value;

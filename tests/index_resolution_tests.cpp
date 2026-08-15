@@ -77,7 +77,7 @@ void test_shadowed_scope_resolution()
     const std::string source =
         "let x = 1;\n"
         "{\n"
-        "  let x = 2;\n"
+        "  let mut x = 2;\n"
         "  print x;\n"
         "  x = 3;\n"
         "  x += 1;\n"

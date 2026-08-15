@@ -1,3 +1,3 @@
-Type error at <repo>/tests/golden/type_errors/nullable_narrowing_dynamic_index_mutation_invalidated.cd:6:24: binary `+` expects two numbers or two strings, got optional<number> and number
-    return values[index] + 1;
-                         ^
+Type error at <repo>/tests/golden/type_errors/nullable_narrowing_dynamic_index_mutation_invalidated.cd:7:20: binary `+` expects two numbers or two strings, got optional<number> and number
+    return values[i] + 1;
+                     ^

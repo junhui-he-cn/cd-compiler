@@ -1,2 +1,2 @@
-let b = true;
+let mut b = true;
 b = nil;

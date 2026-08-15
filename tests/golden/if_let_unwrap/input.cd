@@ -21,8 +21,8 @@ print find(-1) ?? 99;
 print process(3) ?? "missing";
 print process(-1) ?? "missing";
 
-let next: optional<number> = find(1);
-let count = 0;
+let mut next: optional<number> = find(1);
+let mut count = 0;
 while let current = next {
   count += 1;
   next = nil;

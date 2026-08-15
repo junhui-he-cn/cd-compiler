@@ -45,6 +45,7 @@ bool isKeyword(TokenType type)
     case TokenType::Enum:
     case TokenType::Fun:
     case TokenType::Let:
+    case TokenType::Mut:
     case TokenType::Match:
     case TokenType::Print:
     case TokenType::Private:

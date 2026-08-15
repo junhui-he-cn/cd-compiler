@@ -22,8 +22,8 @@ maybe
   Print (?? (call find (- 1)) 99)
   Print (?? (call process 3) "missing")
   Print (?? (call process (- 1)) "missing")
-  Let next: optional<number> = (call find 1)
-  Let count = 0
+  Let mut next: optional<number> = (call find 1)
+  Let mut count = 0
   WhileLet current
     Value
 next

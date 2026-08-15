@@ -1,3 +1,3 @@
 fun id(x) { return x; }
-let n = id(1);
+let mut n = id(1);
 n += id("x");

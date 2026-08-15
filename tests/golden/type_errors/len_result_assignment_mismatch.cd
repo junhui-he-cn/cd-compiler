@@ -1,2 +1,2 @@
-let n = len([1]);
+let mut n = len([1]);
 n = "bad";

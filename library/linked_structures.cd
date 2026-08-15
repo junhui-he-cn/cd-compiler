@@ -59,7 +59,7 @@ impl LinkedList<T> {
 
   fun pushBack(value: T) {
     let node = newLinkedNode<T>(value);
-    let current = this.tail;
+    let mut current = this.tail;
     match current {
       nil => {
         this.head = node;
@@ -93,8 +93,8 @@ impl LinkedList<T> {
       return nil;
     }
 
-    let current = this.head;
-    let remaining = index;
+    let mut current = this.head;
+    let mut remaining = index;
     while (remaining > 0) {
       match current {
         nil => { return nil; }
@@ -109,7 +109,7 @@ impl LinkedList<T> {
 
   fun snapshot(): [T] {
     let values: [T] = [];
-    let current = this.head;
+    let mut current = this.head;
     while let currentNode = current {
       values.push(currentNode.readValue());
       current = currentNode.nextNode();

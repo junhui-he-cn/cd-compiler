@@ -6,8 +6,8 @@ import "./sorting.cd";
 
 fun prefixSums(values: [number]): [number] {
   let result: [number] = [];
-  let sum = 0;
-  let index = 0;
+  let mut sum = 0;
+  let mut index = 0;
   while (index < values.len()) {
     sum += values[index];
     result.push(sum);
@@ -22,7 +22,7 @@ fun differenceArray(values: [number]): [number] {
     return result;
   }
   result.push(values[0]);
-  let index = 1;
+  let mut index = 1;
   while (index < values.len()) {
     result.push(values[index] - values[index - 1]);
     index += 1;
@@ -35,9 +35,9 @@ fun prefixMinimums(values: [number]): [number] {
   if (values.len() == 0) {
     return result;
   }
-  let best = values[0];
+  let mut best = values[0];
   result.push(best);
-  let index = 1;
+  let mut index = 1;
   while (index < values.len()) {
     if (values[index] < best) {
       best = values[index];
@@ -53,9 +53,9 @@ fun prefixMaximums(values: [number]): [number] {
   if (values.len() == 0) {
     return result;
   }
-  let best = values[0];
+  let mut best = values[0];
   result.push(best);
-  let index = 1;
+  let mut index = 1;
   while (index < values.len()) {
     if (values[index] > best) {
       best = values[index];
@@ -68,7 +68,7 @@ fun prefixMaximums(values: [number]): [number] {
 
 fun nextGreaterValues(values: [number]): [number] {
   let result: [number] = [];
-  let index = 0;
+  let mut index = 0;
   while (index < values.len()) {
     result.push(-1);
     index += 1;
@@ -92,7 +92,7 @@ fun nextGreaterValues(values: [number]): [number] {
 
 fun nextSmallerValues(values: [number]): [number] {
   let result: [number] = [];
-  let index = 0;
+  let mut index = 0;
   while (index < values.len()) {
     result.push(-1);
     index += 1;
@@ -115,7 +115,7 @@ fun nextSmallerValues(values: [number]): [number] {
 }
 
 fun largestHistogramArea(heights: [number]): optional<number> {
-  let validationIndex = 0;
+  let mut validationIndex = 0;
   while (validationIndex < heights.len()) {
     if (floor(heights[validationIndex]) != heights[validationIndex]
         || heights[validationIndex] < 0) {
@@ -125,16 +125,16 @@ fun largestHistogramArea(heights: [number]): optional<number> {
   }
 
   let stack: [number] = [];
-  let best = 0;
-  let index = 0;
+  let mut best = 0;
+  let mut index = 0;
   while (index <= heights.len()) {
-    let current = 0;
+    let mut current = 0;
     if (index < heights.len()) {
       current = heights[index];
     }
     while (stack.len() > 0 && current < heights[stack[stack.len() - 1]]) {
       let top = stack.pop();
-      let width = index;
+      let mut width = index;
       if (stack.len() > 0) {
         width = index - stack[stack.len() - 1] - 1;
       }
@@ -164,9 +164,9 @@ fun intervalLess(left: Interval, right: Interval): bool {
 fun mergeIntervals(intervals: [Interval]): [Interval] {
   let ordered = mergeSort(intervals, intervalLess);
   let merged: [Interval] = [];
-  let index = 0;
+  let mut index = 0;
   while (index < ordered.len()) {
-    let current = ordered[index];
+    let mut current = ordered[index];
     if (merged.len() == 0 || current.start > merged[merged.len() - 1].end) {
       merged.push(Interval { start: current.start, end: current.end });
     } else {
@@ -183,17 +183,17 @@ fun intersectIntervals(left: [Interval], right: [Interval]): [Interval] {
   let leftMerged = mergeIntervals(left);
   let rightMerged = mergeIntervals(right);
   let result: [Interval] = [];
-  let leftIndex = 0;
-  let rightIndex = 0;
+  let mut leftIndex = 0;
+  let mut rightIndex = 0;
 
   while (leftIndex < leftMerged.len() && rightIndex < rightMerged.len()) {
     let leftInterval = leftMerged[leftIndex];
     let rightInterval = rightMerged[rightIndex];
-    let start = leftInterval.start;
+    let mut start = leftInterval.start;
     if (rightInterval.start > start) {
       start = rightInterval.start;
     }
-    let end = leftInterval.end;
+    let mut end = leftInterval.end;
     if (rightInterval.end < end) {
       end = rightInterval.end;
     }
@@ -218,7 +218,7 @@ fun intervalEndLess(left: Interval, right: Interval): bool {
 }
 
 fun selectNonOverlappingIntervals(intervals: [Interval]): [Interval] {
-  let index = 0;
+  let mut index = 0;
   while (index < intervals.len()) {
     if (intervals[index].start > intervals[index].end) {
       return [];
@@ -228,11 +228,11 @@ fun selectNonOverlappingIntervals(intervals: [Interval]): [Interval] {
 
   let ordered = mergeSort(intervals, intervalEndLess);
   let result: [Interval] = [];
-  let hasLast = false;
-  let lastEnd = 0;
+  let mut hasLast = false;
+  let mut lastEnd = 0;
   index = 0;
   while (index < ordered.len()) {
-    let current = ordered[index];
+    let mut current = ordered[index];
     if (!hasLast || current.start > lastEnd) {
       result.push(Interval { start: current.start, end: current.end });
       lastEnd = current.end;
@@ -250,7 +250,7 @@ fun numberLess(left: number, right: number): bool {
 fun minimumIntervalRooms(intervals: [Interval]): optional<number> {
   let starts: [number] = [];
   let ends: [number] = [];
-  let index = 0;
+  let mut index = 0;
   while (index < intervals.len()) {
     if (intervals[index].start > intervals[index].end) {
       return nil;
@@ -262,10 +262,10 @@ fun minimumIntervalRooms(intervals: [Interval]): optional<number> {
 
   let orderedStarts = mergeSort(starts, numberLess);
   let orderedEnds = mergeSort(ends, numberLess);
-  let startIndex = 0;
-  let endIndex = 0;
-  let active = 0;
-  let best = 0;
+  let mut startIndex = 0;
+  let mut endIndex = 0;
+  let mut active = 0;
+  let mut best = 0;
   while (startIndex < orderedStarts.len()) {
     if (orderedStarts[startIndex] <= orderedEnds[endIndex]) {
       active += 1;
@@ -282,7 +282,7 @@ fun minimumIntervalRooms(intervals: [Interval]): optional<number> {
 }
 
 fun canReachEnd(values: [number]): bool {
-  let index = 0;
+  let mut index = 0;
   while (index < values.len()) {
     if (floor(values[index]) != values[index] || values[index] < 0) {
       return false;
@@ -293,7 +293,7 @@ fun canReachEnd(values: [number]): bool {
     return true;
   }
 
-  let farthest = 0;
+  let mut farthest = 0;
   index = 0;
   while (index < values.len() && index <= farthest) {
     let reach = index + values[index];
@@ -309,7 +309,7 @@ fun canReachEnd(values: [number]): bool {
 }
 
 fun minimumJumps(values: [number]): optional<number> {
-  let index = 0;
+  let mut index = 0;
   while (index < values.len()) {
     if (floor(values[index]) != values[index] || values[index] < 0) {
       return nil;
@@ -320,9 +320,9 @@ fun minimumJumps(values: [number]): optional<number> {
     return 0;
   }
 
-  let jumps = 0;
-  let currentEnd = 0;
-  let farthest = 0;
+  let mut jumps = 0;
+  let mut currentEnd = 0;
+  let mut farthest = 0;
   index = 0;
   while (index < values.len() - 1) {
     let reach = index + values[index];
@@ -343,7 +343,7 @@ fun minimumJumps(values: [number]): optional<number> {
 
 fun huffmanMergeCost(weights: [number]): optional<number> {
   let working = newBinaryHeap<number>(numberLess);
-  let index = 0;
+  let mut index = 0;
   while (index < weights.len()) {
     if (weights[index] < 0) {
       return nil;
@@ -352,7 +352,7 @@ fun huffmanMergeCost(weights: [number]): optional<number> {
     index += 1;
   }
 
-  let total = 0;
+  let mut total = 0;
   while (working.size() > 1) {
     let firstValue = working.take()?;
     let second = working.take()?;
@@ -365,8 +365,8 @@ fun huffmanMergeCost(weights: [number]): optional<number> {
 
 fun mergeSortedNumbers(left: [number], right: [number]): [number] {
   let result: [number] = [];
-  let leftIndex = 0;
-  let rightIndex = 0;
+  let mut leftIndex = 0;
+  let mut rightIndex = 0;
   while (leftIndex < left.len() && rightIndex < right.len()) {
     if (left[leftIndex] <= right[rightIndex]) {
       result.push(left[leftIndex]);
@@ -408,7 +408,7 @@ fun mergeHeadLess<T>(left: MergeHead<T>, right: MergeHead<T>): bool {
 fun mergeSortedArrays<T>(sequences: [[T]], less: fun(T, T): bool): [T] {
   let result: [T] = [];
   let heads = newBinaryHeap<MergeHead<T>>(mergeHeadLess);
-  let sequenceIndex = 0;
+  let mut sequenceIndex = 0;
   while (sequenceIndex < sequences.len()) {
     if (sequences[sequenceIndex].len() > 0) {
       heads.add(MergeHead<T> {
@@ -443,10 +443,10 @@ fun mergeSortedArrays<T>(sequences: [[T]], less: fun(T, T): bool): [T] {
 
 fun twoSumSorted(values: [number], target: number): [number] {
   let result: [number] = [];
-  let left = 0;
-  let right = values.len() - 1;
+  let mut left = 0;
+  let mut right = values.len() - 1;
   while (left < right) {
-    let sum = values[left] + values[right];
+    let mut sum = values[left] + values[right];
     if (sum == target) {
       result.push(left);
       result.push(right);
@@ -468,13 +468,13 @@ fun threeSumNumberLess(left: number, right: number): bool {
 fun threeSumZero(values: [number]): [[number]] {
   let result: [[number]] = [];
   let sorted = mergeSort(values, threeSumNumberLess);
-  let index = 0;
+  let mut index = 0;
   while (index + 2 < sorted.len()) {
     if (index > 0 && sorted[index] == sorted[index - 1]) {
       index += 1;
     } else {
-      let left = index + 1;
-      let right = sorted.len() - 1;
+      let mut left = index + 1;
+      let mut right = sorted.len() - 1;
       while (left < right) {
         let total = sorted[index] + sorted[left] + sorted[right];
         if (total == 0) {
@@ -508,16 +508,16 @@ fun threeSumClosest(values: [number], target: number): optional<number> {
   }
 
   let sorted = mergeSort(values, threeSumNumberLess);
-  let found = false;
-  let best = 0;
-  let bestDistance = 0;
-  let index = 0;
+  let mut found = false;
+  let mut best = 0;
+  let mut bestDistance = 0;
+  let mut index = 0;
   while (index + 2 < sorted.len()) {
-    let left = index + 1;
-    let right = sorted.len() - 1;
+    let mut left = index + 1;
+    let mut right = sorted.len() - 1;
     while (left < right) {
       let total = sorted[index] + sorted[left] + sorted[right];
-      let distance = total - target;
+      let mut distance = total - target;
       if (distance < 0) {
         distance = -distance;
       }
@@ -543,7 +543,7 @@ fun threeSumClosest(values: [number], target: number): optional<number> {
 
 fun uniqueValues<T: Eq>(values: [T]): [T] {
   let result: [T] = [];
-  let index = 0;
+  let mut index = 0;
   while (index < values.len()) {
     if (linearSearch(result, values[index]) < 0) {
       result.push(values[index]);
@@ -555,7 +555,7 @@ fun uniqueValues<T: Eq>(values: [T]): [T] {
 
 fun intersectionValues<T: Eq>(left: [T], right: [T]): [T] {
   let result: [T] = [];
-  let index = 0;
+  let mut index = 0;
   while (index < left.len()) {
     let value = left[index];
     if (linearSearch(right, value) >= 0 && linearSearch(result, value) < 0) {
@@ -568,7 +568,7 @@ fun intersectionValues<T: Eq>(left: [T], right: [T]): [T] {
 
 fun unionValues<T: Eq>(left: [T], right: [T]): [T] {
   let result = uniqueValues(left);
-  let index = 0;
+  let mut index = 0;
   while (index < right.len()) {
     if (linearSearch(result, right[index]) < 0) {
       result.push(right[index]);
@@ -580,7 +580,7 @@ fun unionValues<T: Eq>(left: [T], right: [T]): [T] {
 
 fun differenceValues<T: Eq>(left: [T], right: [T]): [T] {
   let result: [T] = [];
-  let index = 0;
+  let mut index = 0;
   while (index < left.len()) {
     let value = left[index];
     if (linearSearch(right, value) < 0 && linearSearch(result, value) < 0) {
@@ -593,7 +593,7 @@ fun differenceValues<T: Eq>(left: [T], right: [T]): [T] {
 
 fun frequencyEntries<T: Eq>(values: [T]): [MultiSetEntry<T>] {
   let counts = newMultiSet<T>();
-  let index = 0;
+  let mut index = 0;
   while (index < values.len()) {
     counts.add(values[index]);
     index += 1;
@@ -607,9 +607,9 @@ fun mostFrequent<T: Eq>(values: [T]): optional<T> {
     return nil;
   }
 
-  let best = entries[0].value;
-  let bestCount = entries[0].count;
-  let index = 1;
+  let mut best = entries[0].value;
+  let mut bestCount = entries[0].count;
+  let mut index = 1;
   while (index < entries.len()) {
     if (entries[index].count > bestCount) {
       best = entries[index].value;
@@ -621,12 +621,12 @@ fun mostFrequent<T: Eq>(values: [T]): optional<T> {
 }
 
 fun longestUniqueSubarrayLength<T: Eq>(values: [T]): number {
-  let best = 0;
-  let start = 0;
-  let end = 0;
+  let mut best = 0;
+  let mut start = 0;
+  let mut end = 0;
   while (end < values.len()) {
-    let duplicateIndex = -1;
-    let check = start;
+    let mut duplicateIndex = -1;
+    let mut check = start;
     while (check < end) {
       if (values[check] == values[end]) {
         duplicateIndex = check;
@@ -652,15 +652,15 @@ fun windowSums(values: [number], width: number): [number] {
     return result;
   }
 
-  let sum = 0;
-  let index = 0;
+  let mut sum = 0;
+  let mut index = 0;
   while (index < width) {
     sum += values[index];
     index += 1;
   }
   result.push(sum);
 
-  let start = width;
+  let mut start = width;
   while (start < values.len()) {
     sum += values[start];
     sum -= values[start - width];
@@ -676,8 +676,8 @@ fun maxWindowSum(values: [number], width: number): optional<number> {
     return nil;
   }
 
-  let best = sums[0];
-  let index = 1;
+  let mut best = sums[0];
+  let mut index = 1;
   while (index < sums.len()) {
     if (sums[index] > best) {
       best = sums[index];
@@ -694,8 +694,8 @@ fun maxWindowValues(values: [number], width: number): [number] {
   }
 
   let candidates: [number] = [];
-  let head = 0;
-  let index = 0;
+  let mut head = 0;
+  let mut index = 0;
   while (index < values.len()) {
     while (head < candidates.len() && candidates[head] <= index - width) {
       head += 1;
@@ -720,8 +720,8 @@ fun minWindowValues(values: [number], width: number): [number] {
   }
 
   let candidates: [number] = [];
-  let head = 0;
-  let index = 0;
+  let mut head = 0;
+  let mut index = 0;
   while (index < values.len()) {
     while (head < candidates.len() && candidates[head] <= index - width) {
       head += 1;
@@ -744,9 +744,9 @@ fun maxSubarraySum(values: [number]): optional<number> {
     return nil;
   }
 
-  let current = values[0];
-  let best = values[0];
-  let index = 1;
+  let mut current = values[0];
+  let mut best = values[0];
+  let mut index = 1;
   while (index < values.len()) {
     let extended = current + values[index];
     if (values[index] > extended) {

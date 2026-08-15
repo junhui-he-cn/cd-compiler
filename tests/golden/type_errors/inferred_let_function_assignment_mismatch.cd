@@ -1,4 +1,4 @@
-let f = fun () {
+let mut f = fun () {
   return 1;
 };
 f = 1;

@@ -224,7 +224,11 @@ void writeInlineStmt(std::ostream& out, const Stmt& stmt)
     }
 
     if (const auto* letStmt = dynamic_cast<const LetStmt*>(&stmt)) {
-        out << "(let " << letStmt->name.lexeme;
+        out << "(let ";
+        if (letStmt->isMutable) {
+            out << "mut ";
+        }
+        out << letStmt->name.lexeme;
         writeOptionalTypeAnnotation(out, letStmt->typeName);
         out << " = ";
         writeExpr(out, letStmt->initializer);
@@ -1118,17 +1122,26 @@ void ModuleStmt::print(std::ostream& out, int indent) const
     }
 }
 
-LetStmt::LetStmt(Token name, std::optional<TypeAnnotation> typeName, ExprPtr initializer)
+LetStmt::LetStmt(
+    Token name,
+    std::optional<TypeAnnotation> typeName,
+    ExprPtr initializer,
+    bool isMutable)
     : name(std::move(name))
     , typeName(std::move(typeName))
     , initializer(std::move(initializer))
+    , isMutable(isMutable)
 {
 }
 
 void LetStmt::print(std::ostream& out, int indent) const
 {
     writeIndent(out, indent);
-    out << "Let " << name.lexeme;
+    out << "Let ";
+    if (isMutable) {
+        out << "mut ";
+    }
+    out << name.lexeme;
     writeOptionalTypeAnnotation(out, typeName);
     out << " = ";
     writeExpr(out, initializer);

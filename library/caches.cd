@@ -19,7 +19,7 @@ impl LruCache<K: Eq, V> {
   // are private handles; unlinking clears their outgoing link so eviction
   // does not retain the rest of the cache through an old node.
   fun findNode(key: K): optional<LinkedNode<LruCacheEntry<K, V>>> {
-    let current = this.head;
+    let mut current = this.head;
     while let node = current {
       let entry = node.readValue();
       if (entry.key == key) {
@@ -45,8 +45,8 @@ impl LruCache<K: Eq, V> {
   }
 
   fun unlinkNode(target: LinkedNode<LruCacheEntry<K, V>>) {
-    let previous: optional<LinkedNode<LruCacheEntry<K, V>>> = nil;
-    let current = this.head;
+    let mut previous: optional<LinkedNode<LruCacheEntry<K, V>>> = nil;
+    let mut current = this.head;
     while let node = current {
       if (node == target) {
         let next = node.nextNode();
@@ -149,7 +149,7 @@ impl LruCache<K: Eq, V> {
 
   fun snapshot(): [LruCacheEntry<K, V>] {
     let result: [LruCacheEntry<K, V>] = [];
-    let current = this.head;
+    let mut current = this.head;
     while let node = current {
       let entry = node.readValue();
       result.push(LruCacheEntry<K, V> {
@@ -163,7 +163,7 @@ impl LruCache<K: Eq, V> {
 }
 
 fun newLruCache<K: Eq, V>(capacity: number): LruCache<K, V> {
-  let limit = floor(capacity);
+  let mut limit = floor(capacity);
   if (limit < 0) {
     limit = 0;
   }
@@ -198,7 +198,7 @@ impl LfuCache<K: Eq, V> {
   // Keep storage order stable for snapshot(); recency is recorded in each
   // node's lastUsed field and is used only when selecting an eviction.
   fun findNode(key: K): optional<LinkedNode<LfuCacheNode<K, V>>> {
-    let current = this.head;
+    let mut current = this.head;
     while let node = current {
       let state = node.readValue();
       if (state.entry.key == key) {
@@ -224,8 +224,8 @@ impl LfuCache<K: Eq, V> {
   }
 
   fun unlinkNode(target: LinkedNode<LfuCacheNode<K, V>>) {
-    let previous: optional<LinkedNode<LfuCacheNode<K, V>>> = nil;
-    let current = this.head;
+    let mut previous: optional<LinkedNode<LfuCacheNode<K, V>>> = nil;
+    let mut current = this.head;
     while let node = current {
       if (node == target) {
         let next = node.nextNode();
@@ -260,8 +260,8 @@ impl LfuCache<K: Eq, V> {
   }
 
   fun evictionNode(): optional<LinkedNode<LfuCacheNode<K, V>>> {
-    let candidate = this.head?;
-    let current = candidate.nextNode();
+    let mut candidate = this.head?;
+    let mut current = candidate.nextNode();
     while let node = current {
       let state = node.readValue();
       let candidateState = candidate.readValue();
@@ -354,7 +354,7 @@ impl LfuCache<K: Eq, V> {
 
   fun snapshot(): [LfuCacheEntry<K, V>] {
     let result: [LfuCacheEntry<K, V>] = [];
-    let current = this.head;
+    let mut current = this.head;
     while let node = current {
       let state = node.readValue();
       result.push(LfuCacheEntry<K, V> {
@@ -369,7 +369,7 @@ impl LfuCache<K: Eq, V> {
 }
 
 fun newLfuCache<K: Eq, V>(capacity: number): LfuCache<K, V> {
-  let limit = floor(capacity);
+  let mut limit = floor(capacity);
   if (limit < 0) {
     limit = 0;
   }

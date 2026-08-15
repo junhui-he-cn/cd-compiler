@@ -1,4 +1,4 @@
-for let i = 0; i < 4; i = i + 1 {
+for let mut i = 0; i < 4; i = i + 1 {
   if i < 2 {
     continue;
   }

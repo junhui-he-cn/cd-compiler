@@ -1,5 +1,5 @@
 Program
-  Let i = 0
+  Let mut i = 0
   While true
     Body
       Block

@@ -3,7 +3,7 @@ import "./sets.cd";
 
 fun reverseArray<T>(values: [T]): [T] {
   let result: [T] = [];
-  let index = values.len();
+  let mut index = values.len();
   while (index > 0) {
     index -= 1;
     result.push(values[index]);
@@ -18,16 +18,16 @@ fun rotateArray<T>(values: [T], shift: number): [T] {
     return result;
   }
 
-  let offset = floor(shift);
+  let mut offset = floor(shift);
   let turns = floor(offset / length);
   offset -= turns * length;
   if (offset < 0) {
     offset += length;
   }
 
-  let index = 0;
+  let mut index = 0;
   while (index < length) {
-    let source = index - offset;
+    let mut source = index - offset;
     if (source < 0) {
       source += length;
     }
@@ -38,7 +38,7 @@ fun rotateArray<T>(values: [T], shift: number): [T] {
 }
 
 fun linearSearch<T: Eq>(values: [T], target: T): number {
-  let index = 0;
+  let mut index = 0;
   while (index < values.len()) {
     if (values[index] == target) {
       return index;
@@ -50,7 +50,7 @@ fun linearSearch<T: Eq>(values: [T], target: T): number {
 
 fun asciiCharacterRank(character: string): number {
   let alphabet = " !#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
-  let index = 0;
+  let mut index = 0;
   while (index < alphabet.len()) {
     if (alphabet.charAt(index) == character) {
       return index;
@@ -63,12 +63,12 @@ fun asciiCharacterRank(character: string): number {
 fun compareStrings(left: string, right: string): optional<number> {
   let leftLength = left.len();
   let rightLength = right.len();
-  let limit = leftLength;
+  let mut limit = leftLength;
   if (rightLength < limit) {
     limit = rightLength;
   }
 
-  let index = 0;
+  let mut index = 0;
   while (index < limit) {
     let leftCharacter = left.charAt(index);
     let rightCharacter = right.charAt(index);
@@ -106,9 +106,9 @@ fun findSubstring(text: string, pattern: string): number {
   if (pattern.len() > text.len()) {
     return -1;
   }
-  let start = 0;
+  let mut start = 0;
   while (start <= text.len() - pattern.len()) {
-    let offset = 0;
+    let mut offset = 0;
     while (offset < pattern.len()
         && text.charAt(start + offset) == pattern.charAt(offset)) {
       offset += 1;
@@ -123,12 +123,12 @@ fun findSubstring(text: string, pattern: string): number {
 
 fun prefixFunction(pattern: string): [number] {
   let prefix: [number] = [];
-  let index = 0;
+  let mut index = 0;
   while (index < pattern.len()) {
     prefix.push(0);
     index += 1;
   }
-  let matched = 0;
+  let mut matched = 0;
   index = 1;
   while (index < pattern.len()) {
     while (matched > 0 && pattern.charAt(index) != pattern.charAt(matched)) {
@@ -145,7 +145,7 @@ fun prefixFunction(pattern: string): [number] {
 
 fun zFunction(text: string): [number] {
   let z: [number] = [];
-  let index = 0;
+  let mut index = 0;
   while (index < text.len()) {
     z.push(0);
     index += 1;
@@ -154,8 +154,8 @@ fun zFunction(text: string): [number] {
     return z;
   }
   z[0] = text.len();
-  let left = 0;
-  let right = 0;
+  let mut left = 0;
+  let mut right = 0;
   index = 1;
   while (index < text.len()) {
     if (index <= right) {
@@ -183,8 +183,8 @@ fun kmpSearch(text: string, pattern: string): number {
     return 0;
   }
   let prefix = prefixFunction(pattern);
-  let textIndex = 0;
-  let patternIndex = 0;
+  let mut textIndex = 0;
+  let mut patternIndex = 0;
   while (textIndex < text.len()) {
     if (text.charAt(textIndex) == pattern.charAt(patternIndex)) {
       textIndex += 1;
@@ -204,8 +204,8 @@ fun kmpSearch(text: string, pattern: string): number {
 }
 
 fun isPalindrome(text: string): bool {
-  let left = 0;
-  let right = text.len() - 1;
+  let mut left = 0;
+  let mut right = text.len() - 1;
   while (left < right) {
     if (text.charAt(left) != text.charAt(right)) {
       return false;
@@ -218,7 +218,7 @@ fun isPalindrome(text: string): bool {
 
 fun characterFrequency(text: string): [MultiSetEntry<string>] {
   let counts: map<string, number> = {};
-  let index = 0;
+  let mut index = 0;
   while (index < text.len()) {
     let character = text.charAt(index);
     if (counts.contains(character)) {
@@ -250,7 +250,7 @@ fun areAnagrams(left: string, right: string): bool {
 
   let leftCounts: map<string, number> = {};
   let rightCounts: map<string, number> = {};
-  let index = 0;
+  let mut index = 0;
   while (index < left.len()) {
     let leftCharacter = left.charAt(index);
     if (leftCounts.contains(leftCharacter)) {
@@ -289,7 +289,7 @@ fun minimumWindowSubstring(text: string, pattern: string): string {
   }
 
   let required: map<string, number> = {};
-  let patternIndex = 0;
+  let mut patternIndex = 0;
   while (patternIndex < pattern.len()) {
     let character = pattern.charAt(patternIndex);
     if (required.contains(character)) {
@@ -301,15 +301,15 @@ fun minimumWindowSubstring(text: string, pattern: string): string {
   }
 
   let window: map<string, number> = {};
-  let missing = pattern.len();
-  let left = 0;
-  let right = 0;
-  let bestStart = 0;
-  let bestLength = text.len() + 1;
+  let mut missing = pattern.len();
+  let mut left = 0;
+  let mut right = 0;
+  let mut bestStart = 0;
+  let mut bestLength = text.len() + 1;
   while (right < text.len()) {
     let entering = text.charAt(right);
     if (required.contains(entering)) {
-      let before = 0;
+      let mut before = 0;
       if (window.contains(entering)) {
         before = window[entering];
       }
@@ -347,7 +347,7 @@ fun minimumWindowSubstring(text: string, pattern: string): string {
 
 fun isBalancedBrackets(text: string): bool {
   let stack: [string] = [];
-  let index = 0;
+  let mut index = 0;
   while (index < text.len()) {
     let character = text.charAt(index);
     let opening = character == "(" || character == "[" || character == "{";
@@ -375,9 +375,9 @@ fun isBalancedBrackets(text: string): bool {
 
 fun longestUniqueSubstringLength(text: string): number {
   let lastSeen: map<string, number> = {};
-  let best = 0;
-  let start = 0;
-  let index = 0;
+  let mut best = 0;
+  let mut start = 0;
+  let mut index = 0;
   while (index < text.len()) {
     let character = text.charAt(index);
     if (lastSeen.contains(character)) {
@@ -404,7 +404,7 @@ fun longestPalindromicSubstring(text: string): string {
   // Empty separators distinguish even and odd centers without assuming that
   // any particular Unicode scalar value is unavailable in the input.
   let transformed: [string] = [""];
-  let index = 0;
+  let mut index = 0;
   while (index < text.len()) {
     transformed.push(text.charAt(index));
     transformed.push("");
@@ -418,13 +418,13 @@ fun longestPalindromicSubstring(text: string): string {
     index += 1;
   }
 
-  let center = 0;
-  let right = 0;
-  let bestCenter = 0;
-  let bestRadius = 0;
+  let mut center = 0;
+  let mut right = 0;
+  let mut bestCenter = 0;
+  let mut bestRadius = 0;
   index = 0;
   while (index < transformed.len()) {
-    let radius = 0;
+    let mut radius = 0;
     if (index < right) {
       let mirror = center * 2 - index;
       radius = radii[mirror];
@@ -463,7 +463,7 @@ struct Trie {
 
 impl Trie {
   fun findChild(node: number, character: string): number {
-    let index = 0;
+    let mut index = 0;
     while (index < this.edgeCharacters[node].len()) {
       if (this.edgeCharacters[node][index] == character) {
         return this.edgeChildren[node][index];
@@ -474,7 +474,7 @@ impl Trie {
   }
 
   fun addNode(): number {
-    let node = this.terminal.len();
+    let mut node = this.terminal.len();
     this.edgeCharacters.push([]);
     this.edgeChildren.push([]);
     this.terminal.push(false);
@@ -482,10 +482,10 @@ impl Trie {
   }
 
   fun locate(text: string): number {
-    let node = 0;
-    let index = 0;
+    let mut node = 0;
+    let mut index = 0;
     while (index < text.len()) {
-      let child = this.findChild(node, text.charAt(index));
+      let mut child = this.findChild(node, text.charAt(index));
       if (child < 0) {
         return -1;
       }
@@ -496,11 +496,11 @@ impl Trie {
   }
 
   fun insert(word: string): bool {
-    let node = 0;
-    let index = 0;
+    let mut node = 0;
+    let mut index = 0;
     while (index < word.len()) {
       let character = word.charAt(index);
-      let child = this.findChild(node, character);
+      let mut child = this.findChild(node, character);
       if (child < 0) {
         child = this.addNode();
         this.edgeCharacters[node].push(character);
@@ -519,11 +519,11 @@ impl Trie {
   fun discard(word: string): bool {
     let nodes: [number] = [0];
     let edgePositions: [number] = [];
-    let node = 0;
-    let index = 0;
+    let mut node = 0;
+    let mut index = 0;
     while (index < word.len()) {
       let character = word.charAt(index);
-      let edge = 0;
+      let mut edge = 0;
       while (edge < this.edgeCharacters[node].len()
              && this.edgeCharacters[node][edge] != character) {
         edge += 1;
@@ -548,7 +548,7 @@ impl Trie {
         break;
       }
       let parent = nodes[nodes.len() - 2];
-      let edge = edgePositions[edgePositions.len() - 1];
+      let mut edge = edgePositions[edgePositions.len() - 1];
       while (edge + 1 < this.edgeCharacters[parent].len()) {
         this.edgeCharacters[parent][edge] = this.edgeCharacters[parent][edge + 1];
         this.edgeChildren[parent][edge] = this.edgeChildren[parent][edge + 1];
@@ -563,7 +563,7 @@ impl Trie {
   }
 
   fun has(word: string): bool {
-    let node = this.locate(word);
+    let mut node = this.locate(word);
     return node >= 0 && this.terminal[node];
   }
 
@@ -582,7 +582,7 @@ impl Trie {
     let words: [string] = [prefix];
     while (nodes.len() > 0) {
       let top = nodes.len() - 1;
-      let node = nodes[top];
+      let mut node = nodes[top];
       if (positions[top] == 0 && this.terminal[node]) {
         result.push(words[top]);
       }
@@ -617,7 +617,7 @@ fun newTrie(): Trie {
 
 fun canSegmentString(text: string, dictionary: [string]): bool {
   let trie = newTrie();
-  let dictionaryIndex = 0;
+  let mut dictionaryIndex = 0;
   while (dictionaryIndex < dictionary.len()) {
     let word = dictionary[dictionaryIndex];
     if (word.len() > 0) {
@@ -627,18 +627,18 @@ fun canSegmentString(text: string, dictionary: [string]): bool {
   }
 
   let reachable: [bool] = [];
-  let index = 0;
+  let mut index = 0;
   while (index <= text.len()) {
     reachable.push(false);
     index += 1;
   }
   reachable[0] = true;
 
-  let start = 0;
+  let mut start = 0;
   while (start < text.len()) {
     if (reachable[start]) {
-      let node = 0;
-      let end = start;
+      let mut node = 0;
+      let mut end = start;
       while (end < text.len()) {
         let child = trie.findChild(node, text.charAt(end));
         if (child < 0) {

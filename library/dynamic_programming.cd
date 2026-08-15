@@ -7,9 +7,9 @@ fun climbStairs(steps: number): optional<number> {
   if (steps <= 1) {
     return 1;
   }
-  let previous = 1;
-  let current = 1;
-  let index = 2;
+  let mut previous = 1;
+  let mut current = 1;
+  let mut index = 2;
   while (index <= steps) {
     let next = previous + current;
     previous = current;
@@ -20,12 +20,12 @@ fun climbStairs(steps: number): optional<number> {
 }
 
 fun maxNonAdjacentSum(values: [number]): number {
-  let included = 0;
-  let excluded = 0;
-  let index = 0;
+  let mut included = 0;
+  let mut excluded = 0;
+  let mut index = 0;
   while (index < values.len()) {
     let nextIncluded = excluded + values[index];
-    let nextExcluded = included;
+    let mut nextExcluded = included;
     if (excluded > nextExcluded) {
       nextExcluded = excluded;
     }
@@ -46,21 +46,21 @@ fun minCoinCount(amount: number, coins: [number]): optional<number> {
   let target = floor(amount);
   let impossible = target + 1;
   let counts: [number] = [];
-  let index = 0;
+  let mut index = 0;
   while (index <= target) {
     counts.push(impossible);
     index += 1;
   }
   counts[0] = 0;
 
-  let current = 1;
+  let mut current = 1;
   while (current <= target) {
-    let best = impossible;
-    let coinIndex = 0;
+    let mut best = impossible;
+    let mut coinIndex = 0;
     while (coinIndex < coins.len()) {
       let coin = coins[coinIndex];
       if (floor(coin) == coin && coin > 0 && coin <= current) {
-        let candidate = counts[current - coin] + 1;
+        let mut candidate = counts[current - coin] + 1;
         if (candidate < best) {
           best = candidate;
         }
@@ -84,12 +84,12 @@ fun uniqueGridPaths(rows: number, columns: number): optional<number> {
     return 0;
   }
   let ways: [number] = [];
-  let column = 0;
+  let mut column = 0;
   while (column < columns) {
     ways.push(1);
     column += 1;
   }
-  let row = 1;
+  let mut row = 1;
   while (row < rows) {
     column = 1;
     while (column < columns) {
@@ -106,7 +106,7 @@ fun uniqueGridPathsWithObstacles(grid: [[bool]]): optional<number> {
     return 0;
   }
   let columns = grid[0].len();
-  let row = 0;
+  let mut row = 0;
   while (row < grid.len()) {
     if (grid[row].len() != columns) {
       return nil;
@@ -115,7 +115,7 @@ fun uniqueGridPathsWithObstacles(grid: [[bool]]): optional<number> {
   }
 
   let ways: [number] = [];
-  let column = 0;
+  let mut column = 0;
   while (column < columns) {
     ways.push(0);
     column += 1;
@@ -148,7 +148,7 @@ fun minGridPathSum(grid: [[number]]): optional<number> {
     return nil;
   }
   let columns = grid[0].len();
-  let row = 0;
+  let mut row = 0;
   while (row < grid.len()) {
     if (grid[row].len() != columns) {
       return nil;
@@ -157,7 +157,7 @@ fun minGridPathSum(grid: [[number]]): optional<number> {
   }
 
   let costs: [number] = [];
-  let column = 0;
+  let mut column = 0;
   costs.push(grid[0][0]);
   column = 1;
   while (column < columns) {
@@ -185,26 +185,26 @@ fun minGridPathSum(grid: [[number]]): optional<number> {
 }
 
 fun editDistance(left: string, right: string): number {
-  let previous: [number] = [];
-  let index = 0;
+  let mut previous: [number] = [];
+  let mut index = 0;
   while (index <= right.len()) {
     previous.push(index);
     index += 1;
   }
 
-  let leftIndex = 1;
+  let mut leftIndex = 1;
   while (leftIndex <= left.len()) {
-    let current: [number] = [leftIndex];
-    let rightIndex = 1;
+    let mut current: [number] = [leftIndex];
+    let mut rightIndex = 1;
     while (rightIndex <= right.len()) {
-      let substitutionCost = 0;
+      let mut substitutionCost = 0;
       if (left.charAt(leftIndex - 1) != right.charAt(rightIndex - 1)) {
         substitutionCost = 1;
       }
       let deletion = previous[rightIndex] + 1;
       let insertion = current[rightIndex - 1] + 1;
       let substitution = previous[rightIndex - 1] + substitutionCost;
-      let best = deletion;
+      let mut best = deletion;
       if (insertion < best) {
         best = insertion;
       }
@@ -221,8 +221,8 @@ fun editDistance(left: string, right: string): number {
 }
 
 fun lisLowerBound(values: [number], target: number): number {
-  let low = 0;
-  let high = values.len();
+  let mut low = 0;
+  let mut high = values.len();
   while (low < high) {
     let middle = floor((low + high) / 2);
     if (values[middle] < target) {
@@ -236,7 +236,7 @@ fun lisLowerBound(values: [number], target: number): number {
 
 fun longestIncreasingSubsequenceLength(values: [number]): number {
   let tails: [number] = [];
-  let index = 0;
+  let mut index = 0;
   while (index < values.len()) {
     let position = lisLowerBound(tails, values[index]);
     if (position == tails.len()) {
@@ -250,7 +250,7 @@ fun longestIncreasingSubsequenceLength(values: [number]): number {
 }
 
 fun longestIncreasingSubsequence(values: [number]): [number] {
-  let result: [number] = [];
+  let mut result: [number] = [];
   if (values.len() == 0) {
     return result;
   }
@@ -258,7 +258,7 @@ fun longestIncreasingSubsequence(values: [number]): [number] {
   let tails: [number] = [];
   let tailIndices: [number] = [];
   let predecessors: [number] = [];
-  let index = 0;
+  let mut index = 0;
   while (index < values.len()) {
     predecessors.push(-1);
     let position = lisLowerBound(tails, values[index]);
@@ -277,7 +277,7 @@ fun longestIncreasingSubsequence(values: [number]): [number] {
   }
 
   let reversed: [number] = [];
-  let current = tailIndices[tailIndices.len() - 1];
+  let mut current = tailIndices[tailIndices.len() - 1];
   while (current >= 0) {
     reversed.push(values[current]);
     current = predecessors[current];
@@ -292,17 +292,17 @@ fun longestIncreasingSubsequence(values: [number]): [number] {
 }
 
 fun longestCommonSubsequenceLength(left: string, right: string): number {
-  let previous: [number] = [];
-  let index = 0;
+  let mut previous: [number] = [];
+  let mut index = 0;
   while (index <= right.len()) {
     previous.push(0);
     index += 1;
   }
 
-  let leftIndex = 1;
+  let mut leftIndex = 1;
   while (leftIndex <= left.len()) {
     let current: [number] = [0];
-    let rightIndex = 1;
+    let mut rightIndex = 1;
     while (rightIndex <= right.len()) {
       if (left.charAt(leftIndex - 1) == right.charAt(rightIndex - 1)) {
         current.push(previous[rightIndex - 1] + 1);
@@ -323,10 +323,10 @@ fun longestCommonSubsequenceLength(left: string, right: string): number {
 
 fun longestCommonSubsequence(left: string, right: string): string {
   let table: [[number]] = [];
-  let leftRow = 0;
+  let mut leftRow = 0;
   while (leftRow <= left.len()) {
     let row: [number] = [];
-    let rightColumn = 0;
+    let mut rightColumn = 0;
     while (rightColumn <= right.len()) {
       row.push(0);
       rightColumn += 1;
@@ -337,7 +337,7 @@ fun longestCommonSubsequence(left: string, right: string): string {
 
   leftRow = 1;
   while (leftRow <= left.len()) {
-    let rightColumn = 1;
+    let mut rightColumn = 1;
     while (rightColumn <= right.len()) {
       if (left.charAt(leftRow - 1) == right.charAt(rightColumn - 1)) {
         table[leftRow][rightColumn] = table[leftRow - 1][rightColumn - 1] + 1;
@@ -355,7 +355,7 @@ fun longestCommonSubsequence(left: string, right: string): string {
 
   let pieces: [string] = [];
   leftRow = left.len();
-  let rightColumn = right.len();
+  let mut rightColumn = right.len();
   while (leftRow > 0 && rightColumn > 0) {
     if (left.charAt(leftRow - 1) == right.charAt(rightColumn - 1)) {
       pieces.push(left.charAt(leftRow - 1));
@@ -370,8 +370,8 @@ fun longestCommonSubsequence(left: string, right: string): string {
     }
   }
 
-  let result = "";
-  let pieceIndex = pieces.len();
+  let mut result = "";
+  let mut pieceIndex = pieces.len();
   while (pieceIndex > 0) {
     pieceIndex -= 1;
     result = result + pieces[pieceIndex];
@@ -380,21 +380,21 @@ fun longestCommonSubsequence(left: string, right: string): string {
 }
 
 fun longestCommonSubstringLength(left: string, right: string): number {
-  let previous: [number] = [];
-  let index = 0;
+  let mut previous: [number] = [];
+  let mut index = 0;
   while (index <= right.len()) {
     previous.push(0);
     index += 1;
   }
 
-  let best = 0;
-  let leftIndex = 1;
+  let mut best = 0;
+  let mut leftIndex = 1;
   while (leftIndex <= left.len()) {
     let current: [number] = [0];
-    let rightIndex = 1;
+    let mut rightIndex = 1;
     while (rightIndex <= right.len()) {
       if (left.charAt(leftIndex - 1) == right.charAt(rightIndex - 1)) {
-        let length = previous[rightIndex - 1] + 1;
+        let mut length = previous[rightIndex - 1] + 1;
         current.push(length);
         if (length > best) {
           best = length;
@@ -411,22 +411,22 @@ fun longestCommonSubstringLength(left: string, right: string): number {
 }
 
 fun longestCommonSubstring(left: string, right: string): string {
-  let previous: [number] = [];
-  let index = 0;
+  let mut previous: [number] = [];
+  let mut index = 0;
   while (index <= right.len()) {
     previous.push(0);
     index += 1;
   }
 
-  let best = 0;
-  let bestEnd = 0;
-  let leftIndex = 1;
+  let mut best = 0;
+  let mut bestEnd = 0;
+  let mut leftIndex = 1;
   while (leftIndex <= left.len()) {
     let current: [number] = [0];
-    let rightIndex = 1;
+    let mut rightIndex = 1;
     while (rightIndex <= right.len()) {
       if (left.charAt(leftIndex - 1) == right.charAt(rightIndex - 1)) {
-        let length = previous[rightIndex - 1] + 1;
+        let mut length = previous[rightIndex - 1] + 1;
         current.push(length);
         if (length > best) {
           best = length;
@@ -441,8 +441,8 @@ fun longestCommonSubstring(left: string, right: string): string {
     leftIndex += 1;
   }
 
-  let result = "";
-  let start = bestEnd - best;
+  let mut result = "";
+  let mut start = bestEnd - best;
   while (start < bestEnd) {
     result = result + left.charAt(start);
     start += 1;
@@ -451,7 +451,7 @@ fun longestCommonSubstring(left: string, right: string): string {
 }
 
 fun matrixChainCost(dimensions: [number]): optional<number> {
-  let index = 0;
+  let mut index = 0;
   while (index < dimensions.len()) {
     if (floor(dimensions[index]) != dimensions[index] || dimensions[index] <= 0) {
       return nil;
@@ -467,7 +467,7 @@ fun matrixChainCost(dimensions: [number]): optional<number> {
   index = 0;
   while (index < matrixCount) {
     let row: [number] = [];
-    let column = 0;
+    let mut column = 0;
     while (column < matrixCount) {
       row.push(0);
       column += 1;
@@ -476,15 +476,15 @@ fun matrixChainCost(dimensions: [number]): optional<number> {
     index += 1;
   }
 
-  let chainLength = 2;
+  let mut chainLength = 2;
   while (chainLength <= matrixCount) {
     index = 0;
     while (index + chainLength <= matrixCount) {
       let end = index + chainLength - 1;
-      let best = -1;
-      let split = index;
+      let mut best = -1;
+      let mut split = index;
       while (split < end) {
-        let candidate = costs[index][split] + costs[split + 1][end];
+        let mut candidate = costs[index][split] + costs[split + 1][end];
         candidate += dimensions[index] * dimensions[split + 1] * dimensions[end + 1];
         if (best < 0 || candidate < best) {
           best = candidate;
@@ -516,9 +516,9 @@ fun matrixPower2x2(matrix: [[number]], exponent: number): optional<[[number]]> {
   if (floor(exponent) != exponent || exponent < 0 || matrix.len() != 2 || matrix[0].len() != 2 || matrix[1].len() != 2) {
     return nil;
   }
-  let result: [[number]] = [[1, 0], [0, 1]];
-  let factor = matrix;
-  let remaining = exponent;
+  let mut result: [[number]] = [[1, 0], [0, 1]];
+  let mut factor = matrix;
+  let mut remaining = exponent;
   while (remaining > 0) {
     if (floor(remaining / 2) * 2 != remaining) {
       result = multiplyMatrix2x2(result, factor);
@@ -530,7 +530,7 @@ fun matrixPower2x2(matrix: [[number]], exponent: number): optional<[[number]]> {
 }
 
 fun mergeStonesCost(values: [number]): optional<number> {
-  let index = 0;
+  let mut index = 0;
   while (index < values.len()) {
     if (floor(values[index]) != values[index] || values[index] < 0) {
       return nil;
@@ -552,7 +552,7 @@ fun mergeStonesCost(values: [number]): optional<number> {
   index = 0;
   while (index < values.len()) {
     let row: [number] = [];
-    let column = 0;
+    let mut column = 0;
     while (column < values.len()) {
       row.push(0);
       column += 1;
@@ -561,14 +561,14 @@ fun mergeStonesCost(values: [number]): optional<number> {
     index += 1;
   }
 
-  let length = 2;
+  let mut length = 2;
   while (length <= values.len()) {
     index = 0;
     while (index + length <= values.len()) {
       let end = index + length - 1;
       let total = prefix[end + 1] - prefix[index];
-      let best = -1;
-      let split = index;
+      let mut best = -1;
+      let mut split = index;
       while (split < end) {
         let candidate = costs[index][split] + costs[split + 1][end] + total;
         if (best < 0 || candidate < best) {
@@ -590,19 +590,19 @@ fun knapsack01(weights: [number], values: [number], capacity: number): optional<
   }
   let limit = floor(capacity);
   let best: [number] = [];
-  let index = 0;
+  let mut index = 0;
   while (index <= limit) {
     best.push(0);
     index += 1;
   }
 
-  let item = 0;
+  let mut item = 0;
   while (item < weights.len()) {
     let weight = weights[item];
     if (floor(weight) != weight || weight < 0) {
       return nil;
     }
-    let remaining = limit;
+    let mut remaining = limit;
     while (remaining >= weight) {
       let candidate = best[remaining - weight] + values[item];
       if (candidate > best[remaining]) {
@@ -621,19 +621,19 @@ fun completeKnapsack(weights: [number], values: [number], capacity: number): opt
   }
   let limit = floor(capacity);
   let best: [number] = [];
-  let index = 0;
+  let mut index = 0;
   while (index <= limit) {
     best.push(0);
     index += 1;
   }
 
-  let item = 0;
+  let mut item = 0;
   while (item < weights.len()) {
     let weight = weights[item];
     if (floor(weight) != weight || weight <= 0) {
       return nil;
     }
-    let remaining = weight;
+    let mut remaining = weight;
     while (remaining <= limit) {
       let candidate = best[remaining - weight] + values[item];
       if (candidate > best[remaining]) {
@@ -652,22 +652,22 @@ fun boundedKnapsack(weights: [number], values: [number], counts: [number], capac
   }
   let limit = floor(capacity);
   let best: [number] = [];
-  let index = 0;
+  let mut index = 0;
   while (index <= limit) {
     best.push(0);
     index += 1;
   }
 
-  let item = 0;
+  let mut item = 0;
   while (item < weights.len()) {
     let weight = weights[item];
     let count = counts[item];
     if (floor(weight) != weight || weight <= 0 || floor(count) != count || count < 0) {
       return nil;
     }
-    let copy = 0;
+    let mut copy = 0;
     while (copy < count) {
-      let remaining = limit;
+      let mut remaining = limit;
       while (remaining >= weight) {
         let candidate = best[remaining - weight] + values[item];
         if (candidate > best[remaining]) {

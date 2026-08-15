@@ -1,4 +1,4 @@
-let i: number = 0;
+let mut i: number = 0;
 while i < 3 {
   print i;
   i = i + 1;

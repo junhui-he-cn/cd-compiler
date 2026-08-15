@@ -29,7 +29,7 @@ impl Matrix {
 
   fun snapshot(): [[number]] {
     let result: [[number]] = [];
-    let row = 0;
+    let mut row = 0;
     while (row < this.rowCountValue) {
       result.push(copy(this.rows[row]));
       row += 1;
@@ -39,10 +39,10 @@ impl Matrix {
 
   fun transpose(): Matrix {
     let result: [[number]] = [];
-    let column = 0;
+    let mut column = 0;
     while (column < this.columnCountValue) {
       let rowValues: [number] = [];
-      let row = 0;
+      let mut row = 0;
       while (row < this.rowCountValue) {
         rowValues.push(this.rows[row][column]);
         row += 1;
@@ -63,13 +63,13 @@ impl Matrix {
     }
 
     let result: [[number]] = [];
-    let row = 0;
+    let mut row = 0;
     while (row < this.rowCountValue) {
       let rowValues: [number] = [];
-      let column = 0;
+      let mut column = 0;
       while (column < other.columnCountValue) {
-        let value = 0;
-        let inner = 0;
+        let mut value = 0;
+        let mut inner = 0;
         while (inner < this.columnCountValue) {
           value += this.rows[row][inner] * other.rows[inner][column];
           inner += 1;
@@ -95,7 +95,7 @@ fun newMatrix(rows: [[number]]): optional<Matrix> {
 
   let columns = rows[0].len();
   let copied: [[number]] = [];
-  let row = 0;
+  let mut row = 0;
   while (row < rows.len()) {
     if (rows[row].len() != columns) {
       return nil;

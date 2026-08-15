@@ -178,7 +178,7 @@ Phase 1 验证：golden 788/788（新增 1 个 parse-error 夹具），其余套
 
 ## 结论与下一步
 
-Phase 0/1/2/3 完成：match 表达式已统一为 `MatchExpr`；enum 命名 payload 已实现
-（同一 variant 内命名/位置化二选一、禁止重名，构造与 pattern 保持按位置传参/
-绑定，AST/类型元数据保留字段名）。两条以实现为准的漂移已修正。下一步是
-Phase 4：默认不可变 + `let mut`。
+Phase 0/1/2/3/4 完成：match 表达式已统一为 `MatchExpr`；enum 命名 payload 已实现；
+绑定默认不可变，`let mut` 声明可变绑定，函数参数同样不可变，对不可变绑定的赋值与
+复合赋值是类型错误，数组元素/结构体字段等对象内部可变性不受影响（含闭包捕获用例）。
+两条以实现为准的漂移已修正。下一步是 Phase 5：严格 bool 条件。

@@ -3,7 +3,7 @@ fun takesNumber(value: number): number {
 }
 
 fun outer() {
-  let maybe: optional<number> = 1;
+  let mut maybe: optional<number> = 1;
   fun clear() {
     maybe = nil;
   }

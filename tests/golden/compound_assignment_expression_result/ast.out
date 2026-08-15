@@ -1,5 +1,5 @@
 Program
-  Let x = 1
+  Let mut x = 1
   Let y = (* (group (+= x 4)) 2)
   Print x
   Print y

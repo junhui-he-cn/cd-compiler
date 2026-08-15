@@ -2,6 +2,6 @@ fun id(x) {
   return x;
 }
 
-let value = id(1);
+let mut value = id(1);
 value = "later";
 print value;

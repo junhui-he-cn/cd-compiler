@@ -36,8 +36,8 @@ const ModuleStmt& entryModule(const Program& program)
 void test_snapshot_identity_metadata()
 {
     const std::string source =
-        "let x = 1;\n"
-        "{ let x = 2; print x; x = 3; }\n"
+        "let mut x = 1;\n"
+        "{ let mut x = 2; print x; x = 3; }\n"
         "x = 4;\n";
     std::istringstream input(source);
     FrontendSession frontend;
@@ -205,14 +205,14 @@ void test_declaration_index()
         "enum Choice { Left(number), Right(number) }\n"
         "impl Box {\n"
         "  fun bump(delta: number): number {\n"
-        "    let local = delta;\n"
+        "    let mut local = delta;\n"
         "    local += 1;\n"
         "    local = local + 1;\n"
         "    return local;\n"
         "  }\n"
         "}\n"
         "fun use(value: number): number {\n"
-        "  let local = value;\n"
+        "  let mut local = value;\n"
         "  local += 1;\n"
         "  local = local + 1;\n"
         "  return local;\n"
@@ -227,7 +227,7 @@ void test_declaration_index()
         "let box = Box { value: 1 };\n"
         "print box.bump(1);\n"
         "{\n"
-        "  let x = 2;\n"
+        "  let mut x = 2;\n"
         "  print x;\n"
         "  x = 3;\n"
         "  x += 1;\n"
@@ -418,7 +418,7 @@ void test_declaration_index_for_in_binding()
         "let outer = 0;\n"
         "for item in [1, 2] {\n"
         "  print item;\n"
-        "  item += 1;\n"
+        "  print item;\n"
         "}\n"
         "print outer;\n");
     FrontendSession frontend;
@@ -557,7 +557,7 @@ void test_typed_expression_metadata()
     std::istringstream input(
         "struct Box { value: number }\n"
         "fun add(value: number): number { return value; }\n"
-        "let x = 1;\n"
+        "let mut x = 1;\n"
         "print x;\n"
         "x = add(2);\n"
         "x += 1;\n"
@@ -614,14 +614,14 @@ void test_variable_lowering_metadata()
         "fun id(value) { return value; }\n"
         "let outer = 1;\n"
         "{\n"
-        "  let outer = id(2);\n"
+        "  let mut outer = id(2);\n"
         "  print outer;\n"
         "  outer = 3;\n"
         "  outer += 1;\n"
         "  print outer;\n"
         "}\n"
         "print outer;\n"
-        "let dynamic = id(4);\n"
+        "let mut dynamic = id(4);\n"
         "dynamic = 5;\n"
         "dynamic += 1;\n"
         "print dynamic;\n");
@@ -1295,7 +1295,7 @@ void test_function_capture_metadata()
         "let global = 9;\n"
         "fun readGlobal() { return global; }\n"
         "fun makeCounter() {\n"
-        "  let count = 0;\n"
+        "  let mut count = 0;\n"
         "  fun increment(delta: number): number {\n"
         "    count += delta;\n"
         "    return count;\n"
@@ -1374,7 +1374,7 @@ void test_loop_target_metadata()
 {
     std::istringstream input(
         "while (true) { break; continue; }\n"
-        "for let i = 0; i < 1; i += 1 { break; continue; }\n"
+        "for let mut i = 0; i < 1; i += 1 { break; continue; }\n"
         "for item in [1] { break; continue; }\n"
         "while (true) {\n"
         "  fun nested() { while (true) { break; } }\n"
@@ -1672,7 +1672,7 @@ void test_ir_binding_metadata_integration()
         "let exportedValue = 2;\n"
         "export exportedValue;\n"
         "fun outer(seed: number): number {\n"
-        "  let captured = seed;\n"
+        "  let mut captured = seed;\n"
         "  fun inner(): number {\n"
         "    captured = captured + 1;\n"
         "    return captured;\n"

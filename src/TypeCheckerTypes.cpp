@@ -662,7 +662,7 @@ void TypeChecker::checkMethodBody(const std::string& structName, const MethodInf
     if (!methodParameterIds.empty()) {
         thisRecord = declarationIndex_.declaration(methodParameterIds.front());
     }
-    Binding thisBinding = declareVariable(thisToken, method.receiverType, true, thisRecord);
+    Binding thisBinding = declareVariable(thisToken, method.receiverType, true, false, thisRecord);
     parameterNames.push_back(thisBinding.resolvedName);
     parameterBindingIds.push_back(thisBinding.bindingId);
 
@@ -672,6 +672,7 @@ void TypeChecker::checkMethodBody(const std::string& structName, const MethodInf
             parameter.name,
             method.parameterTypes[i],
             parameter.typeName.has_value(),
+            false,
             declarationIndex_.declaration(parameter));
         parameterNames.push_back(parameterBinding.resolvedName);
         parameterBindingIds.push_back(parameterBinding.bindingId);

@@ -15,6 +15,7 @@ struct TypeBinding {
     std::size_t functionDepth = 0;
     bool explicitType = false;
     bool imported = false;
+    bool mutableBinding = false;
     BindingId bindingId;
     DeclarationId declarationId;
     SymbolId symbolId;

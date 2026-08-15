@@ -1,7 +1,7 @@
 Program
-  Let x = 1
+  Let mut x = 1
   Block
-    Let x = 10
+    Let mut x = 10
     Expr (= x 20)
     Print x
   Print x

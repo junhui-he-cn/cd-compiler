@@ -1,0 +1,3 @@
+Type error at <repo>/tests/golden/type_errors/immutable_compound_assignment.cd:2:1: cannot assign to immutable binding `x` (declare it as `let mut x = ...`)
+  x += 2;
+  ^

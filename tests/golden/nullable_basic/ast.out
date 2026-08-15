@@ -1,5 +1,5 @@
 Program
-  Let age: optional<number> = nil
+  Let mut age: optional<number> = nil
   Print age
   Expr (= age 42)
   Print age

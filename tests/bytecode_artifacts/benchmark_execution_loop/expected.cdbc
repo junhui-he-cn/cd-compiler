@@ -52,13 +52,13 @@ block b3:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/benchmark_execution_loop/input.cd" text="let i = 0;\nlet total = 0;\nwhile i < 200000 {\n  total = total + i;\n  i = i + 1;\n}\nprint total;\n"
+  s0 path="tests/bytecode_artifacts/benchmark_execution_loop/input.cd" text="let mut i = 0;\nlet mut total = 0;\nwhile i < 200000 {\n  total = total + i;\n  i = i + 1;\n}\nprint total;\n"
 
 debug_locations:
-  main 0 = s0:1:9
-  main 1 = s0:1:9
+  main 0 = s0:1:13
+  main 1 = s0:1:13
   main 2 = s0:1:1
-  main 3 = s0:2:13
+  main 3 = s0:2:17
   main 4 = s0:2:1
   main 5 = s0:2:1
   main 6 = s0:3:7
@@ -82,28 +82,28 @@ debug_locations:
   main 24 = s0:7:1
 
 debug_ranges:
-  main 0 = s0:8:9
-  main 1 = s0:8:9
-  main 2 = s0:4:9
-  main 3 = s0:23:24
-  main 4 = s0:15:24
-  main 5 = s0:15:24
-  main 6 = s0:32:33
-  main 7 = s0:32:33
-  main 8 = s0:36:42
-  main 9 = s0:32:42
-  main 10 = s0:32:77
-  main 11 = s0:55:60
-  main 12 = s0:55:60
-  main 13 = s0:63:64
-  main 14 = s0:55:64
-  main 15 = s0:47:64
-  main 16 = s0:72:73
-  main 17 = s0:76:77
-  main 18 = s0:72:77
-  main 19 = s0:68:77
-  main 20 = s0:32:77
-  main 21 = s0:87:92
-  main 22 = s0:87:92
-  main 23 = s0:87:92
-  main 24 = s0:87:92
+  main 0 = s0:12:13
+  main 1 = s0:12:13
+  main 2 = s0:8:13
+  main 3 = s0:31:32
+  main 4 = s0:23:32
+  main 5 = s0:23:32
+  main 6 = s0:40:41
+  main 7 = s0:40:41
+  main 8 = s0:44:50
+  main 9 = s0:40:50
+  main 10 = s0:40:85
+  main 11 = s0:63:68
+  main 12 = s0:63:68
+  main 13 = s0:71:72
+  main 14 = s0:63:72
+  main 15 = s0:55:72
+  main 16 = s0:80:81
+  main 17 = s0:84:85
+  main 18 = s0:80:85
+  main 19 = s0:76:85
+  main 20 = s0:40:85
+  main 21 = s0:95:100
+  main 22 = s0:95:100
+  main 23 = s0:95:100
+  main 24 = s0:95:100

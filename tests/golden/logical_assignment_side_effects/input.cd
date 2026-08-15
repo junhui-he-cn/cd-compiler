@@ -1,4 +1,4 @@
-let x = "start";
+let mut x = "start";
 true || (x = "or-right");
 print x;
 false && (x = "and-right");

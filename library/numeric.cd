@@ -3,17 +3,17 @@ import "./collections.cd";
 import "./strings.cd";
 
 fun gcd(left: number, right: number): number {
-  let a = left;
+  let mut a = left;
   if (a < 0) {
     a = -a;
   }
-  let b = right;
+  let mut b = right;
   if (b < 0) {
     b = -b;
   }
   while (b != 0) {
     let quotient = floor(a / b);
-    let remainder = a - quotient * b;
+    let mut remainder = a - quotient * b;
     a = b;
     b = remainder;
   }
@@ -24,11 +24,11 @@ fun lcm(left: number, right: number): number {
   if (left == 0 || right == 0) {
     return 0;
   }
-  let leftMagnitude = left;
+  let mut leftMagnitude = left;
   if (leftMagnitude < 0) {
     leftMagnitude = -leftMagnitude;
   }
-  let rightMagnitude = right;
+  let mut rightMagnitude = right;
   if (rightMagnitude < 0) {
     rightMagnitude = -rightMagnitude;
   }
@@ -45,21 +45,21 @@ fun extendedGcd(left: number, right: number): ExtendedGcdResult {
   if (left == 0 && right == 0) {
     return ExtendedGcdResult { gcd: 0, leftCoefficient: 0, rightCoefficient: 0 };
   }
-  let oldR = left;
+  let mut oldR = left;
   if (oldR < 0) {
     oldR = -oldR;
   }
-  let remainder = right;
+  let mut remainder = right;
   if (remainder < 0) {
     remainder = -remainder;
   }
-  let oldS = 1;
-  let coefficientS = 0;
-  let oldT = 0;
-  let coefficientT = 1;
+  let mut oldS = 1;
+  let mut coefficientS = 0;
+  let mut oldT = 0;
+  let mut coefficientT = 1;
   while (remainder != 0) {
     let quotient = floor(oldR / remainder);
-    let next = oldR - quotient * remainder;
+    let mut next = oldR - quotient * remainder;
     oldR = remainder;
     remainder = next;
 
@@ -94,7 +94,7 @@ fun isPrime(value: number): bool {
   if (floor(value / 2) * 2 == value) {
     return false;
   }
-  let divisor = 3;
+  let mut divisor = 3;
   while (divisor <= value / divisor) {
     if (floor(value / divisor) * divisor == value) {
       return false;
@@ -111,16 +111,16 @@ fun sievePrimes(limit: number): [number] {
     return primes;
   }
   let composite: [bool] = [];
-  let index = 0;
+  let mut index = 0;
   while (index <= bound) {
     composite.push(false);
     index += 1;
   }
 
-  let candidate = 2;
+  let mut candidate = 2;
   while (candidate <= bound / candidate) {
     if (!composite[candidate]) {
-      let multiple = candidate * candidate;
+      let mut multiple = candidate * candidate;
       while (multiple <= bound) {
         composite[multiple] = true;
         multiple += candidate;
@@ -143,9 +143,9 @@ fun fastPower(base: number, exponent: number): optional<number> {
   if (exponent < 0 || floor(exponent) != exponent) {
     return nil;
   }
-  let result = 1;
-  let factor = base;
-  let remaining = exponent;
+  let mut result = 1;
+  let mut factor = base;
+  let mut remaining = exponent;
   while (remaining > 0) {
     if (floor(remaining / 2) * 2 != remaining) {
       result *= factor;
@@ -160,8 +160,8 @@ fun factorial(value: number): optional<number> {
   if (value < 0 || floor(value) != value) {
     return nil;
   }
-  let result = 1;
-  let current = 2;
+  let mut result = 1;
+  let mut current = 2;
   while (current <= value) {
     result *= current;
     current += 1;
@@ -313,8 +313,8 @@ fun gcdArray(values: [number]): optional<number> {
   if (values.len() == 0) {
     return nil;
   }
-  let result = 0;
-  let index = 0;
+  let mut result = 0;
+  let mut index = 0;
   while (index < values.len()) {
     if (floor(values[index]) != values[index]) {
       return nil;
@@ -326,9 +326,9 @@ fun gcdArray(values: [number]): optional<number> {
 }
 
 fun prefixProducts(values: [number]): [number] {
-  let result: [number] = [];
-  let product = 1;
-  let index = 0;
+  let mut result: [number] = [];
+  let mut product = 1;
+  let mut index = 0;
   while (index < values.len()) {
     product *= values[index];
     result.push(product);
@@ -345,9 +345,9 @@ fun minimumLargestPartitionSum(values: [number], parts: number): optional<number
     return 0;
   }
 
-  let low = 0;
-  let high = 0;
-  let index = 0;
+  let mut low = 0;
+  let mut high = 0;
+  let mut index = 0;
   while (index < values.len()) {
     let value = values[index];
     if (floor(value) != value || value < 0) {
@@ -362,8 +362,8 @@ fun minimumLargestPartitionSum(values: [number], parts: number): optional<number
 
   while (low < high) {
     let capacity = floor((low + high) / 2);
-    let required = 1;
-    let current = 0;
+    let mut required = 1;
+    let mut current = 0;
     index = 0;
     while (index < values.len()) {
       if (current + values[index] <= capacity) {
@@ -387,17 +387,17 @@ fun binomialCoefficient(n: number, k: number): optional<number> {
   if (floor(n) != n || floor(k) != k || n < 0 || k < 0 || k > n) {
     return nil;
   }
-  let effective = k;
+  let mut effective = k;
   if (effective > n - effective) {
     effective = n - effective;
   }
   let coefficients: [number] = [1];
-  let index = 1;
+  let mut index = 1;
   while (index <= effective) {
     coefficients.push(0);
     index += 1;
   }
-  let row = 1;
+  let mut row = 1;
   while (row <= n) {
     index = row;
     if (index > effective) {
@@ -416,8 +416,8 @@ fun permutationCount(n: number, k: number): optional<number> {
   if (floor(n) != n || floor(k) != k || n < 0 || k < 0 || k > n) {
     return nil;
   }
-  let result = 1;
-  let step = 0;
+  let mut result = 1;
+  let mut step = 0;
   while (step < k) {
     result *= n - step;
     step += 1;
@@ -430,11 +430,11 @@ fun pascalTriangle(rows: number): [[number]] {
   if (floor(rows) != rows || rows < 0) {
     return result;
   }
-  let previous: [number] = [];
-  let rowIndex = 0;
+  let mut previous: [number] = [];
+  let mut rowIndex = 0;
   while (rowIndex < rows) {
     let current: [number] = [];
-    let column = 0;
+    let mut column = 0;
     while (column <= rowIndex) {
       if (column == 0 || column == rowIndex) {
         current.push(1);
@@ -455,8 +455,8 @@ fun primeFactors(value: number): [number] {
   if (value < 2 || floor(value) != value) {
     return result;
   }
-  let remaining = value;
-  let factor = 2;
+  let mut remaining = value;
+  let mut factor = 2;
   while (factor <= remaining / factor) {
     while (floor(remaining / factor) * factor == remaining) {
       result.push(factor);
@@ -480,7 +480,7 @@ fun divisors(value: number): [number] {
     return result;
   }
   let large: [number] = [];
-  let divisor = 1;
+  let mut divisor = 1;
   while (divisor <= value / divisor) {
     if (floor(value / divisor) * divisor == value) {
       result.push(divisor);
@@ -492,7 +492,7 @@ fun divisors(value: number): [number] {
     divisor += 1;
   }
   let reversed = reverseArray(large);
-  let index = 0;
+  let mut index = 0;
   while (index < reversed.len()) {
     result.push(reversed[index]);
     index += 1;

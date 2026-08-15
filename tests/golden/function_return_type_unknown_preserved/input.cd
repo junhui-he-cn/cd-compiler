@@ -6,6 +6,6 @@ fun maybe(flag) {
   }
 }
 
-let v = maybe(true);
+let mut v = maybe(true);
 v = false;
 print v;

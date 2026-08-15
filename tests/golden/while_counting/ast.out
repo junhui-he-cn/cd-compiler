@@ -1,5 +1,5 @@
 Program
-  Let i: number = 0
+  Let mut i: number = 0
   While (< i 3)
     Body
       Block

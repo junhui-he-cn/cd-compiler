@@ -56,27 +56,27 @@ block b5:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/for_loops/input.cd" text="let total = 0;\nfor let i = 0; i < 4; i = i + 1 {\n  total = total + i;\n}\nprint total;\n"
+  s0 path="tests/bytecode_artifacts/for_loops/input.cd" text="let mut total = 0;\nfor let mut i = 0; i < 4; i = i + 1 {\n  total = total + i;\n}\nprint total;\n"
 
 debug_locations:
-  main 0 = s0:1:13
-  main 1 = s0:1:13
+  main 0 = s0:1:17
+  main 1 = s0:1:17
   main 2 = s0:1:1
-  main 3 = s0:2:13
+  main 3 = s0:2:17
   main 4 = s0:2:5
   main 5 = s0:2:5
-  main 6 = s0:2:16
-  main 7 = s0:2:16
-  main 8 = s0:2:20
-  main 9 = s0:2:16
+  main 6 = s0:2:20
+  main 7 = s0:2:20
+  main 8 = s0:2:24
+  main 9 = s0:2:20
   main 10 = s0:2:1
   main 11 = s0:2:1
   main 12 = s0:2:1
-  main 13 = s0:2:27
-  main 14 = s0:2:27
-  main 15 = s0:2:31
-  main 16 = s0:2:27
-  main 17 = s0:2:23
+  main 13 = s0:2:31
+  main 14 = s0:2:31
+  main 15 = s0:2:35
+  main 16 = s0:2:31
+  main 17 = s0:2:27
   main 18 = s0:2:1
   main 19 = s0:3:11
   main 20 = s0:3:11
@@ -90,32 +90,32 @@ debug_locations:
   main 28 = s0:5:1
 
 debug_ranges:
-  main 0 = s0:12:13
-  main 1 = s0:12:13
-  main 2 = s0:4:13
-  main 3 = s0:27:28
-  main 4 = s0:23:28
-  main 5 = s0:23:28
-  main 6 = s0:30:31
-  main 7 = s0:30:31
-  main 8 = s0:34:35
-  main 9 = s0:30:35
-  main 10 = s0:15:68
-  main 11 = s0:15:68
-  main 12 = s0:15:68
-  main 13 = s0:41:42
-  main 14 = s0:41:42
-  main 15 = s0:45:46
-  main 16 = s0:41:46
-  main 17 = s0:37:46
-  main 18 = s0:15:68
-  main 19 = s0:59:64
-  main 20 = s0:59:64
-  main 21 = s0:67:68
-  main 22 = s0:59:68
-  main 23 = s0:51:68
-  main 24 = s0:15:68
-  main 25 = s0:78:83
-  main 26 = s0:78:83
-  main 27 = s0:78:83
-  main 28 = s0:78:83
+  main 0 = s0:16:17
+  main 1 = s0:16:17
+  main 2 = s0:8:17
+  main 3 = s0:35:36
+  main 4 = s0:31:36
+  main 5 = s0:31:36
+  main 6 = s0:38:39
+  main 7 = s0:38:39
+  main 8 = s0:42:43
+  main 9 = s0:38:43
+  main 10 = s0:19:76
+  main 11 = s0:19:76
+  main 12 = s0:19:76
+  main 13 = s0:49:50
+  main 14 = s0:49:50
+  main 15 = s0:53:54
+  main 16 = s0:49:54
+  main 17 = s0:45:54
+  main 18 = s0:19:76
+  main 19 = s0:67:72
+  main 20 = s0:67:72
+  main 21 = s0:75:76
+  main 22 = s0:67:76
+  main 23 = s0:59:76
+  main 24 = s0:19:76
+  main 25 = s0:86:91
+  main 26 = s0:86:91
+  main 27 = s0:86:91
+  main 28 = s0:86:91

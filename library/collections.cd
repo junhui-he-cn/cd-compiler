@@ -180,13 +180,13 @@ impl Deque<T> {
 
   fun snapshot(): [T] {
     let values: [T] = [];
-    let frontIndex = this.frontItems.len();
+    let mut frontIndex = this.frontItems.len();
     while (frontIndex > 0) {
       frontIndex -= 1;
       values.push(this.frontItems[frontIndex]);
     }
 
-    let backIndex = 0;
+    let mut backIndex = 0;
     while (backIndex < this.backItems.len()) {
       values.push(this.backItems[backIndex]);
       backIndex += 1;
@@ -217,7 +217,7 @@ impl BinaryHeap<T> {
   }
 
   fun siftUp() {
-    let child = this.items.len() - 1;
+    let mut child = this.items.len() - 1;
     while (child > 0) {
       let parent = floor((child - 1) / 2);
       if (!this.comesBefore(this.items[child], this.items[parent])) {
@@ -229,16 +229,16 @@ impl BinaryHeap<T> {
   }
 
   fun siftDown() {
-    let index = 0;
-    let length = this.items.len();
+    let mut index = 0;
+    let mut length = this.items.len();
     while (true) {
-      let left = index * 2 + 1;
+      let mut left = index * 2 + 1;
       if (left >= length) {
         break;
       }
 
-      let right = left + 1;
-      let candidate = left;
+      let mut right = left + 1;
+      let mut candidate = left;
       if (right < length && this.comesBefore(this.items[right], this.items[left])) {
         candidate = right;
       }
@@ -349,7 +349,7 @@ impl RingBuffer<T> {
     if (this.isFull()) {
       return false;
     }
-    let index = this.head + this.count;
+    let mut index = this.head + this.count;
     if (index >= this.limit) {
       index -= this.limit;
     }
@@ -389,10 +389,10 @@ impl RingBuffer<T> {
   }
 
   fun snapshot(): [T] {
-    let result: [T] = [];
-    let offset = 0;
+    let mut result: [T] = [];
+    let mut offset = 0;
     while (offset < this.count) {
-      let index = this.head + offset;
+      let mut index = this.head + offset;
       if (index >= this.limit) {
         index -= this.limit;
       }
@@ -407,12 +407,12 @@ impl RingBuffer<T> {
 }
 
 fun newRingBuffer<T>(capacity: number): RingBuffer<T> {
-  let limit = floor(capacity);
+  let mut limit = floor(capacity);
   if (limit < 0) {
     limit = 0;
   }
   let slots: [Option<T>] = [];
-  let index = 0;
+  let mut index = 0;
   while (index < limit) {
     slots.push(Option.None<T>());
     index += 1;
@@ -475,8 +475,8 @@ fun toArray<T>(list: List<T>): [T] {
 }
 
 fun listLength<T>(list: List<T>): number {
-  let current = list;
-  let length = 0;
+  let mut current = list;
+  let mut length = 0;
   while (true) {
     match current {
       List.Nil => { return length; }
@@ -493,8 +493,8 @@ fun listGet<T>(list: List<T>, index: number): optional<T> {
   if (floor(index) != index || index < 0) {
     return nil;
   }
-  let current = list;
-  let remaining = index;
+  let mut current = list;
+  let mut remaining = index;
   while (true) {
     match current {
       List.Nil => { return nil; }
@@ -538,8 +538,8 @@ fun listDrop<T>(list: List<T>, count: number): List<T> {
   if (floor(count) != count || count <= 0) {
     return list;
   }
-  let current = list;
-  let remaining = count;
+  let mut current = list;
+  let mut remaining = count;
   while (remaining > 0) {
     match current {
       List.Nil => { return current; }
@@ -553,8 +553,8 @@ fun listDrop<T>(list: List<T>, count: number): List<T> {
 }
 
 fun listMiddle<T>(list: List<T>): optional<T> {
-  let slow = list;
-  let fast = list;
+  let mut slow = list;
+  let mut fast = list;
   while (true) {
     match fast {
       List.Nil => { return head(slow); }
@@ -588,8 +588,8 @@ fun listMiddle<T>(list: List<T>): optional<T> {
 
 fun listIsPalindrome<T: Eq>(list: List<T>): bool {
   let values = toArray(list);
-  let left = 0;
-  let right = values.len() - 1;
+  let mut left = 0;
+  let mut right = values.len() - 1;
   while (left < right) {
     if (values[left] != values[right]) {
       return false;
@@ -609,8 +609,8 @@ fun listRemoveFromEnd<T>(list: List<T>, count: number): List<T> {
     return list;
   }
   let removeIndex = values.len() - count;
-  let result: List<T> = emptyList<T>();
-  let index = values.len();
+  let mut result: List<T> = emptyList<T>();
+  let mut index = values.len();
   while (index > 0) {
     index -= 1;
     if (index != removeIndex) {

@@ -138,6 +138,7 @@ void TypeChecker::checkFunction(const FunctionStmt& statement)
             typeParameterNames(statement.typeParameters),
             genericParameterConstraints),
         statement.returnTypeName.has_value(),
+        false,
         declarationIndex_.declaration(statement));
 
     beginScope();
@@ -154,6 +155,7 @@ void TypeChecker::checkFunction(const FunctionStmt& statement)
             parameter.name,
             declaredParameterTypes[i],
             parameter.typeName.has_value(),
+            false,
             declarationIndex_.declaration(parameter));
         parameterNames.push_back(parameterBinding.resolvedName);
         parameterBindingIds.push_back(parameterBinding.bindingId);
@@ -485,6 +487,7 @@ TypeChecker::CheckedExpression TypeChecker::checkFunctionExpression(const Functi
             parameter.name,
             declaredParameterTypes[i],
             parameter.typeName.has_value() || contextualSignature != nullptr,
+            false,
             declarationIndex_.declaration(parameter));
         parameterNames.push_back(parameterBinding.resolvedName);
         parameterBindingIds.push_back(parameterBinding.bindingId);

@@ -32,7 +32,7 @@ fun hashBucketIndex(hashValue: number, bucketCount: number): number {
 
 fun newHashSetBuckets<T>(capacity: number): [[HashSetBucket<T>]] {
   let buckets: [[HashSetBucket<T>]] = [];
-  let index = 0;
+  let mut index = 0;
   while (index < capacity) {
     buckets.push([]);
     index += 1;
@@ -42,7 +42,7 @@ fun newHashSetBuckets<T>(capacity: number): [[HashSetBucket<T>]] {
 
 fun newHashMapBuckets<K, V>(capacity: number): [[HashMapBucket<K, V>]] {
   let buckets: [[HashMapBucket<K, V>]] = [];
-  let index = 0;
+  let mut index = 0;
   while (index < capacity) {
     buckets.push([]);
     index += 1;
@@ -52,7 +52,7 @@ fun newHashMapBuckets<K, V>(capacity: number): [[HashMapBucket<K, V>]] {
 
 impl HashSet<T: Eq + Hash> {
   fun indexOf(value: T): number {
-    let index = 0;
+    let mut index = 0;
     while (index < this.values.len()) {
       if (this.values[index] == value) {
         return index;
@@ -64,7 +64,7 @@ impl HashSet<T: Eq + Hash> {
 
   fun rehash() {
     let buckets = newHashSetBuckets<T>(this.buckets.len() * 2);
-    let index = 0;
+    let mut index = 0;
     while (index < this.values.len()) {
       let value = this.values[index];
       let hashValue = hash(value);
@@ -84,7 +84,7 @@ impl HashSet<T: Eq + Hash> {
     }
     let hashValue = hash(value);
     let bucketIndex = hashBucketIndex(hashValue, this.buckets.len());
-    let bucketIndexInBucket = 0;
+    let mut bucketIndexInBucket = 0;
     while (bucketIndexInBucket < this.buckets[bucketIndex].len()) {
       let entry = this.buckets[bucketIndex][bucketIndexInBucket];
       if (entry.hash == hashValue && entry.value == value) {
@@ -109,7 +109,7 @@ impl HashSet<T: Eq + Hash> {
     }
     let hashValue = hash(value);
     let bucketIndex = hashBucketIndex(hashValue, this.buckets.len());
-    let index = 0;
+    let mut index = 0;
     while (index < this.buckets[bucketIndex].len()) {
       let entry = this.buckets[bucketIndex][index];
       if (entry.hash == hashValue && entry.value == value) {
@@ -126,7 +126,7 @@ impl HashSet<T: Eq + Hash> {
     }
     let hashValue = hash(value);
     let bucketIndex = hashBucketIndex(hashValue, this.buckets.len());
-    let bucketEntryIndex = 0;
+    let mut bucketEntryIndex = 0;
     while (bucketEntryIndex < this.buckets[bucketIndex].len()) {
       let entry = this.buckets[bucketIndex][bucketEntryIndex];
       if (entry.hash == hashValue && entry.value == value) {
@@ -137,7 +137,7 @@ impl HashSet<T: Eq + Hash> {
         }
         this.buckets[bucketIndex].pop();
 
-        let valueIndex = this.indexOf(value);
+        let mut valueIndex = this.indexOf(value);
         while (valueIndex + 1 < this.values.len()) {
           this.values[valueIndex] = this.values[valueIndex + 1];
           valueIndex += 1;
@@ -177,7 +177,7 @@ fun newHashSet<T: Eq + Hash>(): HashSet<T> {
 
 impl HashMap<K: Eq + Hash, V> {
   fun indexOf(key: K): number {
-    let index = 0;
+    let mut index = 0;
     while (index < this.entries.len()) {
       if (this.entries[index].key == key) {
         return index;
@@ -189,7 +189,7 @@ impl HashMap<K: Eq + Hash, V> {
 
   fun rehash() {
     let buckets = newHashMapBuckets<K, V>(this.buckets.len() * 2);
-    let index = 0;
+    let mut index = 0;
     while (index < this.entries.len()) {
       let entry = this.entries[index];
       let hashValue = hash(entry.key);
@@ -210,12 +210,12 @@ impl HashMap<K: Eq + Hash, V> {
     }
     let hashValue = hash(key);
     let bucketIndex = hashBucketIndex(hashValue, this.buckets.len());
-    let bucketEntryIndex = 0;
+    let mut bucketEntryIndex = 0;
     while (bucketEntryIndex < this.buckets[bucketIndex].len()) {
       let entry = this.buckets[bucketIndex][bucketEntryIndex];
       if (entry.hash == hashValue && entry.key == key) {
         this.buckets[bucketIndex][bucketEntryIndex].value = value;
-        let entryIndex = this.indexOf(key);
+        let mut entryIndex = this.indexOf(key);
         this.entries[entryIndex].value = value;
         return false;
       }
@@ -239,7 +239,7 @@ impl HashMap<K: Eq + Hash, V> {
     }
     let hashValue = hash(key);
     let bucketIndex = hashBucketIndex(hashValue, this.buckets.len());
-    let index = 0;
+    let mut index = 0;
     while (index < this.buckets[bucketIndex].len()) {
       let entry = this.buckets[bucketIndex][index];
       if (entry.hash == hashValue && entry.key == key) {
@@ -256,7 +256,7 @@ impl HashMap<K: Eq + Hash, V> {
     }
     let hashValue = hash(key);
     let bucketIndex = hashBucketIndex(hashValue, this.buckets.len());
-    let index = 0;
+    let mut index = 0;
     while (index < this.buckets[bucketIndex].len()) {
       let entry = this.buckets[bucketIndex][index];
       if (entry.hash == hashValue && entry.key == key) {
@@ -273,7 +273,7 @@ impl HashMap<K: Eq + Hash, V> {
     }
     let hashValue = hash(key);
     let bucketIndex = hashBucketIndex(hashValue, this.buckets.len());
-    let bucketEntryIndex = 0;
+    let mut bucketEntryIndex = 0;
     while (bucketEntryIndex < this.buckets[bucketIndex].len()) {
       let entry = this.buckets[bucketIndex][bucketEntryIndex];
       if (entry.hash == hashValue && entry.key == key) {
@@ -284,7 +284,7 @@ impl HashMap<K: Eq + Hash, V> {
         }
         this.buckets[bucketIndex].pop();
 
-        let entryIndex = this.indexOf(key);
+        let mut entryIndex = this.indexOf(key);
         while (entryIndex + 1 < this.entries.len()) {
           this.entries[entryIndex] = this.entries[entryIndex + 1];
           entryIndex += 1;

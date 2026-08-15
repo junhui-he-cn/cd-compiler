@@ -12,6 +12,6 @@ print n + 1;
 
 fun noReturn() {
 }
-let z = noReturn();
+let mut z = noReturn();
 z = nil;
 print z;

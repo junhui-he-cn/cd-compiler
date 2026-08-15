@@ -1,0 +1,3 @@
+Type error at <repo>/tests/golden/type_errors/immutable_parameter_assignment.cd:2:3: cannot assign to immutable binding `x` (declare it as `let mut x = ...`)
+    x = x + 1;
+    ^

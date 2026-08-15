@@ -2,10 +2,10 @@
 import "./graphs.cd";
 
 fun lowerBound<T>(values: [T], target: T, less: fun(T, T): bool): number {
-  let low = 0;
-  let high = values.len();
+  let mut low = 0;
+  let mut high = values.len();
   while (low < high) {
-    let middle = floor((low + high) / 2);
+    let mut middle = floor((low + high) / 2);
     if (less(values[middle], target)) {
       low = middle + 1;
     } else {
@@ -16,10 +16,10 @@ fun lowerBound<T>(values: [T], target: T, less: fun(T, T): bool): number {
 }
 
 fun upperBound<T>(values: [T], target: T, less: fun(T, T): bool): number {
-  let low = 0;
-  let high = values.len();
+  let mut low = 0;
+  let mut high = values.len();
   while (low < high) {
-    let middle = floor((low + high) / 2);
+    let mut middle = floor((low + high) / 2);
     if (less(target, values[middle])) {
       high = middle;
     } else {
@@ -30,7 +30,7 @@ fun upperBound<T>(values: [T], target: T, less: fun(T, T): bool): number {
 }
 
 fun binarySearch<T>(values: [T], target: T, less: fun(T, T): bool): number {
-  let index = lowerBound(values, target, less);
+  let mut index = lowerBound(values, target, less);
   if (index < values.len()
       && !less(values[index], target)
       && !less(target, values[index])) {
@@ -40,10 +40,10 @@ fun binarySearch<T>(values: [T], target: T, less: fun(T, T): bool): number {
 }
 
 fun rotatedBinarySearch<T>(values: [T], target: T, less: fun(T, T): bool): number {
-  let low = 0;
-  let high = values.len() - 1;
+  let mut low = 0;
+  let mut high = values.len() - 1;
   while (low <= high) {
-    let middle = floor((low + high) / 2);
+    let mut middle = floor((low + high) / 2);
     let middleValue = values[middle];
     if (!less(middleValue, target) && !less(target, middleValue)) {
       return middle;
@@ -81,10 +81,10 @@ fun peakIndex(values: [number]): optional<number> {
   if (values.len() == 0) {
     return nil;
   }
-  let low = 0;
-  let high = values.len() - 1;
+  let mut low = 0;
+  let mut high = values.len() - 1;
   while (low < high) {
-    let middle = floor((low + high) / 2);
+    let mut middle = floor((low + high) / 2);
     if (values[middle] < values[middle + 1]) {
       low = middle + 1;
     } else {
@@ -98,7 +98,7 @@ fun isMountainArray(values: [number]): bool {
   if (values.len() < 3) {
     return false;
   }
-  let index = 1;
+  let mut index = 1;
   while (index < values.len() && values[index] > values[index - 1]) {
     index += 1;
   }
@@ -115,10 +115,10 @@ fun mountainPeakIndex(values: [number]): optional<number> {
   if (!isMountainArray(values)) {
     return nil;
   }
-  let low = 1;
-  let high = values.len() - 2;
+  let mut low = 1;
+  let mut high = values.len() - 2;
   while (low < high) {
-    let middle = floor((low + high) / 2);
+    let mut middle = floor((low + high) / 2);
     if (values[middle] < values[middle + 1]) {
       low = middle + 1;
     } else {
@@ -129,8 +129,8 @@ fun mountainPeakIndex(values: [number]): optional<number> {
 }
 
 fun countValue<T: Eq>(values: [T], target: T): number {
-  let count = 0;
-  let index = 0;
+  let mut count = 0;
+  let mut index = 0;
   while (index < values.len()) {
     if (values[index] == target) {
       count += 1;
@@ -141,7 +141,7 @@ fun countValue<T: Eq>(values: [T], target: T): number {
 }
 
 fun isSorted<T>(values: [T], less: fun(T, T): bool): bool {
-  let index = 1;
+  let mut index = 1;
   while (index < values.len()) {
     if (less(values[index], values[index - 1])) {
       return false;
@@ -152,10 +152,10 @@ fun isSorted<T>(values: [T], less: fun(T, T): bool): bool {
 }
 
 fun sortArrayInPlace<T>(values: [T], less: fun(T, T): bool) {
-  let index = 1;
+  let mut index = 1;
   while (index < values.len()) {
     let value = values[index];
-    let position = index;
+    let mut position = index;
     while (position > 0 && less(value, values[position - 1])) {
       values[position] = values[position - 1];
       position -= 1;
@@ -173,12 +173,12 @@ fun sortArray<T>(values: [T], less: fun(T, T): bool): [T] {
 
 fun shellSort<T>(values: [T], less: fun(T, T): bool): [T] {
   let result = copy(values);
-  let gap = floor(result.len() / 2);
+  let mut gap = floor(result.len() / 2);
   while (gap > 0) {
-    let index = gap;
+    let mut index = gap;
     while (index < result.len()) {
       let value = result[index];
-      let position = index;
+      let mut position = index;
       while (position >= gap && less(value, result[position - gap])) {
         result[position] = result[position - gap];
         position -= gap;
@@ -192,10 +192,10 @@ fun shellSort<T>(values: [T], less: fun(T, T): bool): [T] {
 }
 
 fun selectionSortInPlace<T>(values: [T], less: fun(T, T): bool) {
-  let start = 0;
+  let mut start = 0;
   while (start < values.len()) {
-    let smallest = start;
-    let index = start + 1;
+    let mut smallest = start;
+    let mut index = start + 1;
     while (index < values.len()) {
       if (less(values[index], values[smallest])) {
         smallest = index;
@@ -218,10 +218,10 @@ fun selectionSort<T>(values: [T], less: fun(T, T): bool): [T] {
 }
 
 fun bubbleSortInPlace<T>(values: [T], less: fun(T, T): bool) {
-  let end = values.len() - 1;
+  let mut end = values.len() - 1;
   while (end > 0) {
-    let index = 0;
-    let swapped = false;
+    let mut index = 0;
+    let mut swapped = false;
     while (index < end) {
       if (less(values[index + 1], values[index])) {
         let value = values[index];
@@ -262,21 +262,21 @@ fun kruskalEdgeLess(left: KruskalEdge, right: KruskalEdge): bool {
 
 fun mergeSort<T>(values: [T], less: fun(T, T): bool): [T] {
   let result = copy(values);
-  let width = 1;
+  let mut width = 1;
   while (width < result.len()) {
-    let start = 0;
+    let mut start = 0;
     while (start < result.len()) {
-      let middle = start + width;
+      let mut middle = start + width;
       if (middle > result.len()) {
         middle = result.len();
       }
-      let end = middle + width;
+      let mut end = middle + width;
       if (end > result.len()) {
         end = result.len();
       }
 
-      let leftIndex = start;
-      let rightIndex = middle;
+      let mut leftIndex = start;
+      let mut rightIndex = middle;
       let merged: [T] = [];
       while (leftIndex < middle && rightIndex < end) {
         if (less(result[rightIndex], result[leftIndex])) {
@@ -296,7 +296,7 @@ fun mergeSort<T>(values: [T], less: fun(T, T): bool): [T] {
         rightIndex += 1;
       }
 
-      let mergedIndex = 0;
+      let mut mergedIndex = 0;
       while (mergedIndex < merged.len()) {
         result[start + mergedIndex] = merged[mergedIndex];
         mergedIndex += 1;
@@ -318,9 +318,9 @@ fun countingSort(values: [number]): [number] {
     return result;
   }
 
-  let minimum = values[0];
-  let maximum = values[0];
-  let index = 0;
+  let mut minimum = values[0];
+  let mut maximum = values[0];
+  let mut index = 0;
   while (index < values.len()) {
     let value = values[index];
     if (floor(value) != value) {
@@ -353,9 +353,9 @@ fun countingSort(values: [number]): [number] {
     index += 1;
   }
 
-  let offset = 0;
+  let mut offset = 0;
   while (offset < counts.len()) {
-    let remaining = counts[offset];
+    let mut remaining = counts[offset];
     while (remaining > 0) {
       result.push(minimum + offset);
       remaining -= 1;
@@ -373,10 +373,10 @@ fun minimumSpanningForestKruskal(graph: WeightedGraph): WeightedGraph {
   }
 
   let edges: [KruskalEdge] = [];
-  let from = 0;
+  let mut from = 0;
   while (from < count) {
     let neighbors = graph.adjacency[from];
-    let neighborIndex = 0;
+    let mut neighborIndex = 0;
     while (neighborIndex < neighbors.len()) {
       let edge = neighbors[neighborIndex];
       if (from < edge.to) {
@@ -389,7 +389,7 @@ fun minimumSpanningForestKruskal(graph: WeightedGraph): WeightedGraph {
 
   let ordered = mergeSort(edges, kruskalEdgeLess);
   let components = newDisjointSet(count);
-  let index = 0;
+  let mut index = 0;
   while (index < ordered.len()) {
     let edge = ordered[index];
     if (components.union(edge.from, edge.to)) {
@@ -413,9 +413,9 @@ fun partitionThreeWay<T>(
     less: fun(T, T): bool
 ): ThreeWayPartition {
   let pivot = values[pivotIndex];
-  let lessEnd = low;
-  let greaterStart = high;
-  let index = low;
+  let mut lessEnd = low;
+  let mut greaterStart = high;
+  let mut index = low;
   while (index <= greaterStart) {
     if (less(values[index], pivot)) {
       let value = values[lessEnd];
@@ -438,8 +438,8 @@ fun partitionThreeWay<T>(
 }
 
 fun selectNthInPlace<T>(values: [T], target: number, less: fun(T, T): bool) {
-  let low = 0;
-  let high = values.len() - 1;
+  let mut low = 0;
+  let mut high = values.len() - 1;
   while (low < high) {
     let pivotIndex = floor((low + high) / 2);
     let partition = partitionThreeWay(values, low, high, pivotIndex, less);
@@ -462,12 +462,12 @@ fun topKSmallest<T>(values: [T], count: number, less: fun(T, T): bool): [T] {
   }
 
   let work = copy(values);
-  let limit = count;
+  let mut limit = count;
   if (limit > work.len()) {
     limit = work.len();
   }
   selectNthInPlace(work, limit - 1, less);
-  let index = 0;
+  let mut index = 0;
   while (index < limit) {
     result.push(work[index]);
     index += 1;
@@ -482,11 +482,11 @@ fun topKLargest<T>(values: [T], count: number, less: fun(T, T): bool): [T] {
   }
 
   let work = copy(values);
-  let limit = count;
+  let mut limit = count;
   if (limit > work.len()) {
     limit = work.len();
   }
-  let start = work.len() - limit;
+  let mut start = work.len() - limit;
   selectNthInPlace(work, start, less);
   while (start < work.len()) {
     result.push(work[start]);
@@ -516,22 +516,22 @@ fun kthLargest<T>(values: [T], rank: number, less: fun(T, T): bool): optional<T>
 
 fun countInversions(values: [number]): number {
   let result = copy(values);
-  let inversions = 0;
-  let width = 1;
+  let mut inversions = 0;
+  let mut width = 1;
   while (width < result.len()) {
-    let start = 0;
+    let mut start = 0;
     while (start < result.len()) {
-      let middle = start + width;
+      let mut middle = start + width;
       if (middle > result.len()) {
         middle = result.len();
       }
-      let end = middle + width;
+      let mut end = middle + width;
       if (end > result.len()) {
         end = result.len();
       }
 
-      let leftIndex = start;
-      let rightIndex = middle;
+      let mut leftIndex = start;
+      let mut rightIndex = middle;
       let merged: [number] = [];
       while (leftIndex < middle && rightIndex < end) {
         if (result[rightIndex] < result[leftIndex]) {
@@ -552,7 +552,7 @@ fun countInversions(values: [number]): number {
         rightIndex += 1;
       }
 
-      let mergedIndex = 0;
+      let mut mergedIndex = 0;
       while (mergedIndex < merged.len()) {
         result[start + mergedIndex] = merged[mergedIndex];
         mergedIndex += 1;
@@ -567,7 +567,7 @@ fun countInversions(values: [number]): number {
 fun stablePartition<T>(values: [T], predicate: fun(T): bool): [T] {
   let selected: [T] = [];
   let rejected: [T] = [];
-  let index = 0;
+  let mut index = 0;
   while (index < values.len()) {
     if (predicate(values[index])) {
       selected.push(values[index]);
@@ -592,8 +592,8 @@ fun stablePartition<T>(values: [T], predicate: fun(T): bool): [T] {
 }
 
 fun quickSortRange<T>(values: [T], start: number, end: number, less: fun(T, T): bool) {
-  let low = start;
-  let high = end;
+  let mut low = start;
+  let mut high = end;
   while (low < high) {
     let pivotIndex = floor((low + high) / 2);
     let partition = partitionThreeWay(values, low, high, pivotIndex, less);
@@ -629,9 +629,9 @@ fun quickSort<T>(values: [T], less: fun(T, T): bool): [T] {
 }
 
 fun heapSortSiftDown<T>(values: [T], root: number, heapSize: number, less: fun(T, T): bool) {
-  let index = root;
+  let mut index = root;
   while (true) {
-    let candidate = index;
+    let mut candidate = index;
     let left = index * 2 + 1;
     if (left < heapSize && less(values[candidate], values[left])) {
       candidate = left;
@@ -651,13 +651,13 @@ fun heapSortSiftDown<T>(values: [T], root: number, heapSize: number, less: fun(T
 }
 
 fun heapSortInPlace<T>(values: [T], less: fun(T, T): bool) {
-  let start = floor(values.len() / 2) - 1;
+  let mut start = floor(values.len() / 2) - 1;
   while (start >= 0) {
     heapSortSiftDown(values, start, values.len(), less);
     start -= 1;
   }
 
-  let heapSize = values.len();
+  let mut heapSize = values.len();
   while (heapSize > 1) {
     let value = values[0];
     values[0] = values[heapSize - 1];
@@ -679,14 +679,14 @@ fun chunkArray<T>(values: [T], size: number): [[T]] {
     return result;
   }
 
-  let start = 0;
+  let mut start = 0;
   while (start < values.len()) {
-    let end = start + size;
+    let mut end = start + size;
     if (end > values.len()) {
       end = values.len();
     }
     let chunk: [T] = [];
-    let index = start;
+    let mut index = start;
     while (index < end) {
       chunk.push(values[index]);
       index += 1;
@@ -703,10 +703,10 @@ fun slidingWindows<T>(values: [T], width: number): [[T]] {
     return result;
   }
 
-  let start = 0;
+  let mut start = 0;
   while (start + width <= values.len()) {
     let window: [T] = [];
-    let index = start;
+    let mut index = start;
     while (index < start + width) {
       window.push(values[index]);
       index += 1;

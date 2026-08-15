@@ -109,9 +109,9 @@ fun treePostorder<T>(tree: Tree<T>): [T] {
 fun treeLevelOrder<T>(tree: Tree<T>): [T] {
   let result: [T] = [];
   let queue: [Tree<T>] = [tree];
-  let headIndex = 0;
+  let mut headIndex = 0;
   while (headIndex < queue.len()) {
-    let current = queue[headIndex];
+    let mut current = queue[headIndex];
     headIndex += 1;
     match current {
       Tree.Empty => { }
@@ -155,13 +155,13 @@ fun treeIsBalanced<T>(tree: Tree<T>): bool {
 
 fun treeMaxWidth<T>(tree: Tree<T>): number {
   let queue: [Tree<T>] = [tree];
-  let headIndex = 0;
-  let best = 0;
+  let mut headIndex = 0;
+  let mut best = 0;
   while (headIndex < queue.len()) {
     let levelEnd = queue.len();
-    let width = 0;
+    let mut width = 0;
     while (headIndex < levelEnd) {
-      let current = queue[headIndex];
+      let mut current = queue[headIndex];
       headIndex += 1;
       match current {
         Tree.Empty => { }
@@ -184,12 +184,12 @@ fun appendTreePaths<T>(tree: Tree<T>, path: [T], result: [[T]]) {
     Tree.Empty => { }
     Tree.Node(value, left, right) => {
       path.push(value);
-      let hasLeft = false;
+      let mut hasLeft = false;
       match left {
         Tree.Empty => { }
         Tree.Node(leftValue, leftLeft, leftRight) => { hasLeft = true; }
       }
-      let hasRight = false;
+      let mut hasRight = false;
       match right {
         Tree.Empty => { }
         Tree.Node(rightValue, rightLeft, rightRight) => { hasRight = true; }
@@ -217,12 +217,12 @@ fun appendTreePathSums(tree: Tree<number>, running: number, result: [number]) {
     Tree.Empty => { }
     Tree.Node(value, left, right) => {
       let next = running + value;
-      let hasLeft = false;
+      let mut hasLeft = false;
       match left {
         Tree.Empty => { }
         Tree.Node(leftValue, leftLeft, leftRight) => { hasLeft = true; }
       }
-      let hasRight = false;
+      let mut hasRight = false;
       match right {
         Tree.Empty => { }
         Tree.Node(rightValue, rightLeft, rightRight) => { hasRight = true; }
@@ -280,7 +280,7 @@ impl NumericTreeParser {
 
   fun parseNumber(): optional<number> {
     let start = this.position;
-    let sign = 1;
+    let mut sign = 1;
     if (!this.atEnd() && this.text.charAt(this.position) == "-") {
       sign = -1;
       this.position += 1;
@@ -290,8 +290,8 @@ impl NumericTreeParser {
       }
     }
 
-    let value = 0;
-    let integerDigits = 0;
+    let mut value = 0;
+    let mut integerDigits = 0;
     while (!this.atEnd()) {
       let digit = treeDigitValue(this.text.charAt(this.position));
       if (digit < 0) {
@@ -308,8 +308,8 @@ impl NumericTreeParser {
 
     if (!this.atEnd() && this.text.charAt(this.position) == ".") {
       this.position += 1;
-      let fractionDigits = 0;
-      let divisor = 10;
+      let mut fractionDigits = 0;
+      let mut divisor = 10;
       while (!this.atEnd()) {
         let digit = treeDigitValue(this.text.charAt(this.position));
         if (digit < 0) {
@@ -326,8 +326,8 @@ impl NumericTreeParser {
       }
     }
 
-    let exponentSign = 1;
-    let exponent = 0;
+    let mut exponentSign = 1;
+    let mut exponent = 0;
     if (!this.atEnd()
         && (this.text.charAt(this.position) == "e"
             || this.text.charAt(this.position) == "E")) {
@@ -341,8 +341,8 @@ impl NumericTreeParser {
         }
       }
 
-      let exponentDigits = 0;
-      let exponentTooLarge = false;
+      let mut exponentDigits = 0;
+      let mut exponentTooLarge = false;
       while (!this.atEnd()) {
         let digit = treeDigitValue(this.text.charAt(this.position));
         if (digit < 0) {
@@ -370,7 +370,7 @@ impl NumericTreeParser {
           return nil;
         }
       } else {
-        let scaleIndex = 0;
+        let mut scaleIndex = 0;
         while (scaleIndex < exponent) {
           if (exponentSign < 0) {
             value /= 10;
@@ -438,8 +438,8 @@ fun deserializeNumericTree(text: string): optional<Tree<number>> {
 }
 
 fun treePathExists<T>(tree: Tree<T>, path: [number]): bool {
-  let current = tree;
-  let index = 0;
+  let mut current = tree;
+  let mut index = 0;
   while (index < path.len()) {
     match current {
       Tree.Empty => { return false; }
@@ -474,8 +474,8 @@ fun treeLowestCommonAncestor<T>(
     return nil;
   }
 
-  let current = tree;
-  let index = 0;
+  let mut current = tree;
+  let mut index = 0;
   while (index < firstPath.len() && index < secondPath.len()
       && firstPath[index] == secondPath[index]) {
     match current {
@@ -546,7 +546,7 @@ fun bstRemoveMaximum<T>(tree: Tree<T>): optional<TreeRemoval<T>> {
 }
 
 fun bstContains<T>(tree: Tree<T>, target: T, less: fun(T, T): bool): bool {
-  let current = tree;
+  let mut current = tree;
   while (true) {
     match current {
       Tree.Empty => { return false; }
@@ -624,8 +624,8 @@ fun bstMaximum<T>(tree: Tree<T>): optional<T> {
 }
 
 fun bstPredecessor<T>(tree: Tree<T>, target: T, less: fun(T, T): bool): optional<T> {
-  let current = tree;
-  let candidate: optional<T> = nil;
+  let mut current = tree;
+  let mut candidate: optional<T> = nil;
   while (true) {
     match current {
       Tree.Empty => { return candidate; }
@@ -643,8 +643,8 @@ fun bstPredecessor<T>(tree: Tree<T>, target: T, less: fun(T, T): bool): optional
 }
 
 fun bstSuccessor<T>(tree: Tree<T>, target: T, less: fun(T, T): bool): optional<T> {
-  let current = tree;
-  let candidate: optional<T> = nil;
+  let mut current = tree;
+  let mut candidate: optional<T> = nil;
   while (true) {
     match current {
       Tree.Empty => { return candidate; }
@@ -709,7 +709,7 @@ impl AvlTree<T> {
   }
 
   fun allocate(value: T): number {
-    let index = 0;
+    let mut index = 0;
     if (this.free.len() > 0) {
       index = this.free.pop();
       this.values[index] = value;
@@ -783,7 +783,7 @@ impl AvlTree<T> {
   }
 
   fun minimumIndex(index: number): number {
-    let current = index;
+    let mut current = index;
     while (this.left[current] >= 0) {
       current = this.left[current];
     }
@@ -828,7 +828,7 @@ impl AvlTree<T> {
   }
 
   fun has(value: T): bool {
-    let current = this.root;
+    let mut current = this.root;
     while (current >= 0) {
       if (this.comesBefore(value, this.values[current])) {
         current = this.left[current];
@@ -870,7 +870,7 @@ impl AvlTree<T> {
     if (this.root < 0) {
       return nil;
     }
-    let current = this.root;
+    let mut current = this.root;
     while (this.right[current] >= 0) {
       current = this.right[current];
     }
@@ -878,8 +878,8 @@ impl AvlTree<T> {
   }
 
   fun predecessor(value: T): optional<T> {
-    let current = this.root;
-    let candidate = -1;
+    let mut current = this.root;
+    let mut candidate = -1;
     while (current >= 0) {
       if (this.comesBefore(this.values[current], value)) {
         candidate = current;
@@ -895,8 +895,8 @@ impl AvlTree<T> {
   }
 
   fun successor(value: T): optional<T> {
-    let current = this.root;
-    let candidate = -1;
+    let mut current = this.root;
+    let mut candidate = -1;
     while (current >= 0) {
       if (this.comesBefore(value, this.values[current])) {
         candidate = current;
@@ -1011,7 +1011,7 @@ impl RedBlackTree<T> {
   }
 
   fun allocate(value: T): number {
-    let index = 0;
+    let mut index = 0;
     if (this.free.len() > 0) {
       index = this.free.pop();
       this.values[index] = value;
@@ -1051,7 +1051,7 @@ impl RedBlackTree<T> {
     if (this.parents[index] < 0) {
       this.root = pivot;
     } else {
-      let parent = this.parents[index];
+      let mut parent = this.parents[index];
       if (index == this.left[parent]) {
         this.left[parent] = pivot;
       } else {
@@ -1073,7 +1073,7 @@ impl RedBlackTree<T> {
     if (this.parents[index] < 0) {
       this.root = pivot;
     } else {
-      let parent = this.parents[index];
+      let mut parent = this.parents[index];
       if (index == this.left[parent]) {
         this.left[parent] = pivot;
       } else {
@@ -1085,10 +1085,10 @@ impl RedBlackTree<T> {
   }
 
   fun insertFixup(node: number) {
-    let current = node;
+    let mut current = node;
     while (current != this.root && this.colorAt(this.parentAt(current))) {
-      let parent = this.parentAt(current);
-      let grand = this.parentAt(parent);
+      let mut parent = this.parentAt(current);
+      let mut grand = this.parentAt(parent);
       if (parent == this.leftAt(grand)) {
         let uncle = this.rightAt(grand);
         if (this.colorAt(uncle)) {
@@ -1131,7 +1131,7 @@ impl RedBlackTree<T> {
   }
 
   fun indexOf(value: T): number {
-    let current = this.root;
+    let mut current = this.root;
     while (current >= 0) {
       if (this.comesBefore(value, this.values[current])) {
         current = this.left[current];
@@ -1147,7 +1147,7 @@ impl RedBlackTree<T> {
   }
 
   fun transplant(oldIndex: number, newIndex: number) {
-    let parent = this.parents[oldIndex];
+    let mut parent = this.parents[oldIndex];
     if (parent < 0) {
       this.root = newIndex;
     } else {
@@ -1163,7 +1163,7 @@ impl RedBlackTree<T> {
   }
 
   fun minimumIndex(index: number): number {
-    let current = index;
+    let mut current = index;
     while (this.left[current] >= 0) {
       current = this.left[current];
     }
@@ -1171,9 +1171,9 @@ impl RedBlackTree<T> {
   }
 
   fun deleteFixup(node: number, nodeParent: number, nodeIsLeft: bool) {
-    let current = node;
-    let parent = nodeParent;
-    let isLeft = nodeIsLeft;
+    let mut current = node;
+    let mut parent = nodeParent;
+    let mut isLeft = nodeIsLeft;
     while (current != this.root && !this.colorAt(current)) {
       if (parent < 0) {
         break;
@@ -1182,7 +1182,7 @@ impl RedBlackTree<T> {
         isLeft = current == this.left[parent];
       }
       if (isLeft) {
-        let sibling = this.rightAt(parent);
+        let mut sibling = this.rightAt(parent);
         if (this.colorAt(sibling)) {
           this.setColor(sibling, false);
           this.setColor(parent, true);
@@ -1214,7 +1214,7 @@ impl RedBlackTree<T> {
           parent = -1;
         }
       } else {
-        let sibling = this.leftAt(parent);
+        let mut sibling = this.leftAt(parent);
         if (this.colorAt(sibling)) {
           this.setColor(sibling, false);
           this.setColor(parent, true);
@@ -1252,11 +1252,11 @@ impl RedBlackTree<T> {
   }
 
   fun deleteIndex(index: number) {
-    let removed = index;
-    let removedRed = this.colorAt(removed);
-    let replacement = -1;
-    let replacementParent = -1;
-    let replacementIsLeft = false;
+    let mut removed = index;
+    let mut removedRed = this.colorAt(removed);
+    let mut replacement = -1;
+    let mut replacementParent = -1;
+    let mut replacementIsLeft = false;
     if (this.left[index] < 0) {
       replacement = this.right[index];
       replacementParent = this.parents[index];
@@ -1314,8 +1314,8 @@ impl RedBlackTree<T> {
       return false;
     }
     let node = this.allocate(value);
-    let parent = -1;
-    let current = this.root;
+    let mut parent = -1;
+    let mut current = this.root;
     while (current >= 0) {
       parent = current;
       if (this.comesBefore(value, this.values[current])) {
@@ -1358,7 +1358,7 @@ impl RedBlackTree<T> {
     if (this.root < 0) {
       return nil;
     }
-    let current = this.root;
+    let mut current = this.root;
     while (this.right[current] >= 0) {
       current = this.right[current];
     }
@@ -1366,8 +1366,8 @@ impl RedBlackTree<T> {
   }
 
   fun predecessor(value: T): optional<T> {
-    let current = this.root;
-    let candidate = -1;
+    let mut current = this.root;
+    let mut candidate = -1;
     while (current >= 0) {
       if (this.comesBefore(this.values[current], value)) {
         candidate = current;
@@ -1383,8 +1383,8 @@ impl RedBlackTree<T> {
   }
 
   fun successor(value: T): optional<T> {
-    let current = this.root;
-    let candidate = -1;
+    let mut current = this.root;
+    let mut candidate = -1;
     while (current >= 0) {
       if (this.comesBefore(value, this.values[current])) {
         candidate = current;

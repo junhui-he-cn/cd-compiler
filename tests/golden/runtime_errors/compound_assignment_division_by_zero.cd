@@ -1,2 +1,2 @@
-let n = 1;
+let mut n = 1;
 n /= 0;

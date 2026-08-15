@@ -1,5 +1,5 @@
 Program
-  Let x = 1
+  Let mut x = 1
   Expr (= x (+ x 2))
   Print x
   Print (= x 5)

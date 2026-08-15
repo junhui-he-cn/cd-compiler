@@ -6,7 +6,7 @@ struct Set<T: Eq> {
 
 impl Set<T: Eq> {
   fun indexOf(value: T): number {
-    let index = 0;
+    let mut index = 0;
     while (index < this.items.len()) {
       if (this.items[index] == value) {
         return index;
@@ -28,7 +28,7 @@ impl Set<T: Eq> {
   }
 
   fun discard(value: T): bool {
-    let index = this.indexOf(value);
+    let mut index = this.indexOf(value);
     if (index < 0) {
       return false;
     }
@@ -74,8 +74,8 @@ impl OrderedSet<T> {
   }
 
   fun lowerBound(value: T): number {
-    let low = 0;
-    let high = this.items.len();
+    let mut low = 0;
+    let mut high = this.items.len();
     while (low < high) {
       let middle = floor((low + high) / 2);
       if (this.comesBefore(this.items[middle], value)) {
@@ -88,13 +88,13 @@ impl OrderedSet<T> {
   }
 
   fun add(value: T): bool {
-    let index = this.lowerBound(value);
+    let mut index = this.lowerBound(value);
     if (index < this.items.len() && this.equivalent(this.items[index], value)) {
       return false;
     }
 
     this.items.push(value);
-    let move = this.items.len() - 1;
+    let mut move = this.items.len() - 1;
     while (move > index) {
       this.items[move] = this.items[move - 1];
       move -= 1;
@@ -104,12 +104,12 @@ impl OrderedSet<T> {
   }
 
   fun has(value: T): bool {
-    let index = this.lowerBound(value);
+    let mut index = this.lowerBound(value);
     return index < this.items.len() && this.equivalent(this.items[index], value);
   }
 
   fun discard(value: T): bool {
-    let index = this.lowerBound(value);
+    let mut index = this.lowerBound(value);
     if (index >= this.items.len() || !this.equivalent(this.items[index], value)) {
       return false;
     }
@@ -136,7 +136,7 @@ impl OrderedSet<T> {
   }
 
   fun predecessor(value: T): optional<T> {
-    let index = this.lowerBound(value);
+    let mut index = this.lowerBound(value);
     if (index == 0) {
       return nil;
     }
@@ -144,7 +144,7 @@ impl OrderedSet<T> {
   }
 
   fun successor(value: T): optional<T> {
-    let index = this.lowerBound(value);
+    let mut index = this.lowerBound(value);
     if (index < this.items.len() && this.equivalent(this.items[index], value)) {
       index += 1;
     }
@@ -159,7 +159,7 @@ impl OrderedSet<T> {
     if (this.comesBefore(upper, lower)) {
       return result;
     }
-    let index = this.lowerBound(lower);
+    let mut index = this.lowerBound(lower);
     while (index < this.items.len() && !this.comesBefore(upper, this.items[index])) {
       result.push(this.items[index]);
       index += 1;
@@ -206,8 +206,8 @@ impl OrderedMap<K, V> {
   }
 
   fun lowerBound(key: K): number {
-    let low = 0;
-    let high = this.keys.len();
+    let mut low = 0;
+    let mut high = this.keys.len();
     while (low < high) {
       let middle = floor((low + high) / 2);
       if (this.comesBefore(this.keys[middle], key)) {
@@ -220,7 +220,7 @@ impl OrderedMap<K, V> {
   }
 
   fun put(key: K, value: V): bool {
-    let index = this.lowerBound(key);
+    let mut index = this.lowerBound(key);
     if (index < this.keys.len() && this.equivalent(this.keys[index], key)) {
       this.values[index] = value;
       return false;
@@ -228,7 +228,7 @@ impl OrderedMap<K, V> {
 
     this.keys.push(key);
     this.values.push(value);
-    let move = this.keys.len() - 1;
+    let mut move = this.keys.len() - 1;
     while (move > index) {
       this.keys[move] = this.keys[move - 1];
       this.values[move] = this.values[move - 1];
@@ -240,7 +240,7 @@ impl OrderedMap<K, V> {
   }
 
   fun get(key: K): optional<V> {
-    let index = this.lowerBound(key);
+    let mut index = this.lowerBound(key);
     if (index >= this.keys.len() || !this.equivalent(this.keys[index], key)) {
       return nil;
     }
@@ -248,12 +248,12 @@ impl OrderedMap<K, V> {
   }
 
   fun has(key: K): bool {
-    let index = this.lowerBound(key);
+    let mut index = this.lowerBound(key);
     return index < this.keys.len() && this.equivalent(this.keys[index], key);
   }
 
   fun discard(key: K): bool {
-    let index = this.lowerBound(key);
+    let mut index = this.lowerBound(key);
     if (index >= this.keys.len() || !this.equivalent(this.keys[index], key)) {
       return false;
     }
@@ -277,7 +277,7 @@ impl OrderedMap<K, V> {
 
   fun snapshot(): [OrderedMapEntry<K, V>] {
     let result: [OrderedMapEntry<K, V>] = [];
-    let index = 0;
+    let mut index = 0;
     while (index < this.keys.len()) {
       result.push(OrderedMapEntry<K, V> {
         key: this.keys[index],
@@ -305,7 +305,7 @@ struct BiMap<K: Eq, V: Eq> {
 
 impl BiMap<K: Eq, V: Eq> {
   fun indexOfKey(key: K): number {
-    let index = 0;
+    let mut index = 0;
     while (index < this.keys.len()) {
       if (this.keys[index] == key) {
         return index;
@@ -316,7 +316,7 @@ impl BiMap<K: Eq, V: Eq> {
   }
 
   fun indexOfValue(value: V): number {
-    let index = 0;
+    let mut index = 0;
     while (index < this.values.len()) {
       if (this.values[index] == value) {
         return index;
@@ -336,7 +336,7 @@ impl BiMap<K: Eq, V: Eq> {
   }
 
   fun get(key: K): optional<V> {
-    let index = this.indexOfKey(key);
+    let mut index = this.indexOfKey(key);
     if (index < 0) {
       return nil;
     }
@@ -344,7 +344,7 @@ impl BiMap<K: Eq, V: Eq> {
   }
 
   fun getKey(value: V): optional<K> {
-    let index = this.indexOfValue(value);
+    let mut index = this.indexOfValue(value);
     if (index < 0) {
       return nil;
     }
@@ -360,17 +360,18 @@ impl BiMap<K: Eq, V: Eq> {
   }
 
   fun removeAt(index: number) {
-    while (index + 1 < this.keys.len()) {
-      this.keys[index] = this.keys[index + 1];
-      this.values[index] = this.values[index + 1];
-      index += 1;
+    let mut cursor = index;
+    while (cursor + 1 < this.keys.len()) {
+      this.keys[cursor] = this.keys[cursor + 1];
+      this.values[cursor] = this.values[cursor + 1];
+      cursor += 1;
     }
     this.keys.pop();
     this.values.pop();
   }
 
   fun discardKey(key: K): bool {
-    let index = this.indexOfKey(key);
+    let mut index = this.indexOfKey(key);
     if (index < 0) {
       return false;
     }
@@ -379,7 +380,7 @@ impl BiMap<K: Eq, V: Eq> {
   }
 
   fun discardValue(value: V): bool {
-    let index = this.indexOfValue(value);
+    let mut index = this.indexOfValue(value);
     if (index < 0) {
       return false;
     }
@@ -397,7 +398,7 @@ impl BiMap<K: Eq, V: Eq> {
 
   fun snapshot(): [BiMapEntry<K, V>] {
     let result: [BiMapEntry<K, V>] = [];
-    let index = 0;
+    let mut index = 0;
     while (index < this.keys.len()) {
       result.push(BiMapEntry<K, V> {
         key: this.keys[index],
@@ -425,7 +426,7 @@ struct MultiSet<T: Eq> {
 
 impl MultiSet<T: Eq> {
   fun indexOf(value: T): number {
-    let index = 0;
+    let mut index = 0;
     while (index < this.values.len()) {
       if (this.values[index] == value) {
         return index;
@@ -436,7 +437,7 @@ impl MultiSet<T: Eq> {
   }
 
   fun add(value: T) {
-    let index = this.indexOf(value);
+    let mut index = this.indexOf(value);
     if (index >= 0) {
       this.counts[index] += 1;
       return;
@@ -446,7 +447,7 @@ impl MultiSet<T: Eq> {
   }
 
   fun countOf(value: T): number {
-    let index = this.indexOf(value);
+    let mut index = this.indexOf(value);
     if (index < 0) {
       return 0;
     }
@@ -468,7 +469,7 @@ impl MultiSet<T: Eq> {
   }
 
   fun takeOne(value: T): bool {
-    let index = this.indexOf(value);
+    let mut index = this.indexOf(value);
     if (index < 0) {
       return false;
     }
@@ -482,7 +483,7 @@ impl MultiSet<T: Eq> {
 
   fun entries(): [MultiSetEntry<T>] {
     let result: [MultiSetEntry<T>] = [];
-    let index = 0;
+    let mut index = 0;
     while (index < this.values.len()) {
       result.push(MultiSetEntry<T> { value: this.values[index], count: this.counts[index] });
       index += 1;
@@ -502,7 +503,7 @@ struct MultiMap<K: Eq, V: Eq> {
 
 impl MultiMap<K: Eq, V: Eq> {
   fun indexOfKey(key: K): number {
-    let index = 0;
+    let mut index = 0;
     while (index < this.keys.len()) {
       if (this.keys[index] == key) {
         return index;
@@ -513,7 +514,7 @@ impl MultiMap<K: Eq, V: Eq> {
   }
 
   fun indexOfValue(values: [V], value: V): number {
-    let index = 0;
+    let mut index = 0;
     while (index < values.len()) {
       if (values[index] == value) {
         return index;
@@ -558,7 +559,7 @@ impl MultiMap<K: Eq, V: Eq> {
     if (keyIndex < 0) {
       return false;
     }
-    let valueIndex = this.indexOfValue(this.values[keyIndex], value);
+    let mut valueIndex = this.indexOfValue(this.values[keyIndex], value);
     if (valueIndex < 0) {
       return false;
     }
