@@ -200,6 +200,10 @@ terminator (`br bN`, `br_if rC, bT, bF`, `return rV`, or `return_nil`), and
 implicit fallthrough is forbidden. The linker splices module init bodies at the
 block boundary recorded by the `at=N` dependency offset and renumbers block IDs
 across the merged main.
+
+Pre-execution validation rejects block bodies with undefined registers, unbound
+locals, invalid block IDs, missing terminators, out-of-range global upvalue
+sources, invalid native arity, or legacy jumps mixed into block bodies.
 The optional `globals:` section (module products and linked programs alike) maps
 each numeric global slot to its name index; the linker deduplicates globals by
 name across modules. Function `param` lines appear before instructions;

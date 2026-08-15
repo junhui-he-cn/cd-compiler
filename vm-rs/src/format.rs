@@ -2,6 +2,8 @@ use crate::bytecode::{
     BlockId, Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, GlobalId,
     Instruction, LocalId, Program, UpvalueDesc, UpvalueId, UpvalueSource,
 };
+use crate::vm::native_arity_bounds;
+use std::collections::BTreeSet;
 use std::fmt;
 
 /// Stable artifact family accepted and emitted by this VM.
@@ -1078,6 +1080,7 @@ fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
         validate_body(
             &context,
             function.registers,
+            function.arity,
             function.local_count,
             function.upvalues.len(),
             &function.instructions,
@@ -1092,6 +1095,7 @@ fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
 fn validate_body(
     context: &str,
     registers: usize,
+    arity: usize,
     local_count: usize,
     upvalue_count: usize,
     instructions: &[Instruction],
@@ -1167,6 +1171,453 @@ fn validate_body(
             line,
         )?;
     }
+    if instructions
+        .iter()
+        .any(|instruction| matches!(instruction, Instruction::BlockStart { .. }))
+    {
+        validate_block_body(
+            context,
+            registers,
+            arity,
+            local_count,
+            upvalue_count,
+            instructions,
+            program,
+            line,
+        )?;
+    }
+    Ok(())
+}
+
+fn is_block_terminator(instruction: &Instruction) -> bool {
+    matches!(
+        instruction,
+        Instruction::Br { .. }
+            | Instruction::BrIf { .. }
+            | Instruction::Return { .. }
+            | Instruction::ReturnNil
+    )
+}
+
+fn instruction_register_def(instruction: &Instruction) -> Option<usize> {
+    match instruction {
+        Instruction::Constant { dest, .. }
+        | Instruction::MakeFunction { dest, .. }
+        | Instruction::Array { dest, .. }
+        | Instruction::Map { dest, .. }
+        | Instruction::Struct { dest, .. }
+        | Instruction::Variant { dest, .. }
+        | Instruction::VariantTag { dest, .. }
+        | Instruction::VariantField { dest, .. }
+        | Instruction::Move { dest, .. }
+        | Instruction::LoadVar { dest, .. }
+        | Instruction::LoadLocal { dest, .. }
+        | Instruction::LoadUpvalue { dest, .. }
+        | Instruction::LoadGlobal { dest, .. }
+        | Instruction::Call { dest, .. }
+        | Instruction::NativeCall { dest, .. }
+        | Instruction::Index { dest, .. }
+        | Instruction::AssignIndex { dest, .. }
+        | Instruction::Field { dest, .. }
+        | Instruction::AssignField { dest, .. }
+        | Instruction::Len { dest, .. }
+        | Instruction::AssertArray { dest, .. }
+        | Instruction::AssertNumber { dest, .. }
+        | Instruction::Negate { dest, .. }
+        | Instruction::Not { dest, .. }
+        | Instruction::Add { dest, .. }
+        | Instruction::Subtract { dest, .. }
+        | Instruction::Multiply { dest, .. }
+        | Instruction::Divide { dest, .. }
+        | Instruction::Equal { dest, .. }
+        | Instruction::NotEqual { dest, .. }
+        | Instruction::Greater { dest, .. }
+        | Instruction::GreaterEqual { dest, .. }
+        | Instruction::Less { dest, .. }
+        | Instruction::LessEqual { dest, .. } => Some(*dest),
+        _ => None,
+    }
+}
+
+fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
+    match instruction {
+        Instruction::Array { elements, .. } => elements.clone(),
+        Instruction::Map { entries, .. } => entries.iter().flat_map(|(k, v)| [*k, *v]).collect(),
+        Instruction::Struct { fields, .. } => fields.iter().map(|(_, v)| *v).collect(),
+        Instruction::Variant { payload, .. } => payload.clone(),
+        Instruction::VariantTag { value, .. } | Instruction::VariantField { value, .. } => vec![*value],
+        Instruction::Move { source, .. } => vec![*source],
+        Instruction::StoreVar { value, .. }
+        | Instruction::AssignVar { value, .. }
+        | Instruction::BindLocal { value, .. }
+        | Instruction::SetLocal { value, .. }
+        | Instruction::SetUpvalue { value, .. }
+        | Instruction::InitGlobal { value, .. }
+        | Instruction::SetGlobal { value, .. }
+        | Instruction::Print { value }
+        | Instruction::Return { value }
+        | Instruction::Negate { value, .. }
+        | Instruction::Not { value, .. }
+        | Instruction::Len { value, .. }
+        | Instruction::AssertArray { value, .. }
+        | Instruction::AssertNumber { value, .. } => vec![*value],
+        Instruction::Call {
+            callee, arguments, ..
+        } => {
+            let mut reads = vec![*callee];
+            reads.extend(arguments.iter().copied());
+            reads
+        }
+        Instruction::NativeCall { arguments, .. } => arguments.clone(),
+        Instruction::Index {
+            collection, index, ..
+        } => vec![*collection, *index],
+        Instruction::AssignIndex {
+            collection,
+            index,
+            value,
+            ..
+        } => vec![*collection, *index, *value],
+        Instruction::Field { object, .. } => vec![*object],
+        Instruction::AssignField { object, value, .. } => vec![*object, *value],
+        Instruction::JumpIfFalse { condition, .. }
+        | Instruction::JumpIfTrue { condition, .. }
+        | Instruction::BrIf { condition, .. } => vec![*condition],
+        Instruction::Add {
+            left, right, ..
+        }
+        | Instruction::Subtract {
+            left, right, ..
+        }
+        | Instruction::Multiply {
+            left, right, ..
+        }
+        | Instruction::Divide {
+            left, right, ..
+        }
+        | Instruction::Equal {
+            left, right, ..
+        }
+        | Instruction::NotEqual {
+            left, right, ..
+        }
+        | Instruction::Greater {
+            left, right, ..
+        }
+        | Instruction::GreaterEqual {
+            left, right, ..
+        }
+        | Instruction::Less {
+            left, right, ..
+        }
+        | Instruction::LessEqual {
+            left, right, ..
+        } => vec![*left, *right],
+        _ => Vec::new(),
+    }
+}
+
+fn validate_block_body(
+    context: &str,
+    registers: usize,
+    arity: usize,
+    local_count: usize,
+    upvalue_count: usize,
+    instructions: &[Instruction],
+    program: &Program,
+    line: usize,
+) -> Result<(), ParseError> {
+    let mut blocks: Vec<(usize, usize)> = Vec::new();
+    for (index, instruction) in instructions.iter().enumerate() {
+        match instruction {
+            Instruction::BlockStart { id } => {
+                if id.0 as usize != blocks.len() {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "{} block b{} is not sequential (expected b{})",
+                            context,
+                            id.0,
+                            blocks.len()
+                        ),
+                    ));
+                }
+                blocks.push((index, index + 1));
+            }
+            _ => {
+                if let Some(last) = blocks.last_mut() {
+                    last.1 = index + 1;
+                }
+            }
+        }
+    }
+    if blocks.is_empty() || blocks[0].0 != 0 {
+        return Err(validation_error(
+            line,
+            format!("{} block body must begin with block b0", context),
+        ));
+    }
+
+    let mut successors: Vec<Vec<usize>> = vec![Vec::new(); blocks.len()];
+    for (index, (_start, end)) in blocks.iter().enumerate() {
+        let terminator = &instructions[end - 1];
+        if !is_block_terminator(terminator) {
+            return Err(validation_error(
+                line,
+                format!("{} block b{} is missing a terminator", context, index),
+            ));
+        }
+        match terminator {
+            Instruction::Br { target } => successors[index].push(target.0 as usize),
+            Instruction::BrIf {
+                if_true, if_false, ..
+            } => {
+                successors[index].push(if_true.0 as usize);
+                successors[index].push(if_false.0 as usize);
+            }
+            _ => {}
+        }
+    }
+    for (index, targets) in successors.iter().enumerate() {
+        for target in targets {
+            if *target >= blocks.len() {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "{} block b{} branches to invalid block b{}",
+                        context, index, target
+                    ),
+                ));
+            }
+        }
+    }
+
+    let mut predecessors: Vec<Vec<usize>> = vec![Vec::new(); blocks.len()];
+    for (index, targets) in successors.iter().enumerate() {
+        for target in targets {
+            predecessors[*target].push(index);
+        }
+    }
+
+    let universe: BTreeSet<usize> = (0..registers).collect();
+    let mut defs: Vec<BTreeSet<usize>> = Vec::with_capacity(blocks.len());
+    let mut exposed: Vec<BTreeSet<usize>> = Vec::with_capacity(blocks.len());
+    for (start, end) in &blocks {
+        let mut block_defs = BTreeSet::new();
+        let mut block_exposed = BTreeSet::new();
+        let mut defined = BTreeSet::new();
+        for instruction in &instructions[*start..end - 1] {
+            if matches!(instruction, Instruction::BlockStart { .. }) {
+                continue;
+            }
+            for read in instruction_register_reads(instruction) {
+                if read < registers && !defined.contains(&read) {
+                    block_exposed.insert(read);
+                }
+            }
+            if let Some(def) = instruction_register_def(instruction) {
+                if def < registers {
+                    defined.insert(def);
+                    block_defs.insert(def);
+                }
+            }
+        }
+        let terminator = &instructions[end - 1];
+        for read in instruction_register_reads(terminator) {
+            if read < registers && !defined.contains(&read) {
+                block_exposed.insert(read);
+            }
+        }
+        defs.push(block_defs);
+        exposed.push(block_exposed);
+    }
+
+    let mut ins: Vec<BTreeSet<usize>> = Vec::with_capacity(blocks.len());
+    ins.push(BTreeSet::new());
+    for _ in 1..blocks.len() {
+        ins.push(universe.clone());
+    }
+    loop {
+        let mut changed = false;
+        let outs: Vec<BTreeSet<usize>> = ins
+            .iter()
+            .zip(defs.iter())
+            .map(|(input, def)| input.union(def).copied().collect())
+            .collect();
+        for block in 1..blocks.len() {
+            let next: BTreeSet<usize> = if predecessors[block].is_empty() {
+                universe.clone()
+            } else {
+                predecessors[block]
+                    .iter()
+                    .map(|pred| &outs[*pred])
+                    .fold(universe.clone(), |acc, out| {
+                        acc.intersection(out).copied().collect()
+                    })
+            };
+            if next != ins[block] {
+                ins[block] = next;
+                changed = true;
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+    for (block, (start, end)) in blocks.iter().enumerate() {
+        let mut defined = ins[block].clone();
+        for instruction in &instructions[*start..end - 1] {
+            for read in instruction_register_reads(instruction) {
+                if read < registers && !defined.contains(&read) {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "{} block b{} reads undefined register r{}",
+                            context, block, read
+                        ),
+                    ));
+                }
+            }
+            if let Some(def) = instruction_register_def(instruction) {
+                if def < registers {
+                    defined.insert(def);
+                }
+            }
+        }
+        let terminator = &instructions[end - 1];
+        for read in instruction_register_reads(terminator) {
+            if read < registers && !defined.contains(&read) {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "{} block b{} reads undefined register r{}",
+                        context, block, read
+                    ),
+                ));
+            }
+        }
+    }
+
+    // Local definite-binding mirrors the register analysis; parameters are
+    // bound on entry.
+    if local_count > 0 {
+        let local_universe: BTreeSet<usize> = (0..local_count).collect();
+        let initial_params: BTreeSet<usize> = (0..arity.min(local_count)).collect();
+        let mut local_defs: Vec<BTreeSet<usize>> = Vec::with_capacity(blocks.len());
+        let mut local_exposed: Vec<BTreeSet<usize>> = Vec::with_capacity(blocks.len());
+        for (start, end) in &blocks {
+            let mut block_defs = BTreeSet::new();
+            let mut block_exposed = BTreeSet::new();
+            let mut bound = BTreeSet::new();
+            for instruction in &instructions[*start..end - 1] {
+                if let Instruction::BindLocal { slot, .. } = instruction {
+                    if *slot < local_count {
+                        bound.insert(*slot);
+                        block_defs.insert(*slot);
+                    }
+                } else if let Instruction::LoadLocal { slot, .. }
+                | Instruction::SetLocal { slot, .. } = instruction
+                {
+                    if *slot < local_count && !bound.contains(slot) {
+                        block_exposed.insert(*slot);
+                    }
+                }
+            }
+            local_defs.push(block_defs);
+            local_exposed.push(block_exposed);
+        }
+        let mut local_ins: Vec<BTreeSet<usize>> = Vec::with_capacity(blocks.len());
+        local_ins.push(initial_params);
+        for _ in 1..blocks.len() {
+            local_ins.push(local_universe.clone());
+        }
+        loop {
+            let mut changed = false;
+            let outs: Vec<BTreeSet<usize>> = local_ins
+                .iter()
+                .zip(local_defs.iter())
+                .map(|(input, def)| input.union(def).copied().collect())
+                .collect();
+            for block in 1..blocks.len() {
+                let next: BTreeSet<usize> = if predecessors[block].is_empty() {
+                    local_universe.clone()
+                } else {
+                    predecessors[block]
+                        .iter()
+                        .map(|pred| &outs[*pred])
+                        .fold(local_universe.clone(), |acc, out| {
+                            acc.intersection(out).copied().collect()
+                        })
+                };
+                if next != local_ins[block] {
+                    local_ins[block] = next;
+                    changed = true;
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+        for (block, (start, end)) in blocks.iter().enumerate() {
+            let mut bound = local_ins[block].clone();
+            for instruction in &instructions[*start..*end] {
+                if let Instruction::BindLocal { slot, .. } = instruction {
+                    if *slot < local_count {
+                        bound.insert(*slot);
+                    }
+                } else if let Instruction::LoadLocal { slot, .. }
+                | Instruction::SetLocal { slot, .. } = instruction
+                {
+                    if *slot < local_count && !bound.contains(slot) {
+                        return Err(validation_error(
+                            line,
+                            format!(
+                                "{} block b{} reads unbound local l{}",
+                                context, block, slot
+                            ),
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
+    for instruction in instructions {
+        if let Instruction::NativeCall {
+            name, arguments, ..
+        } = instruction
+        {
+            if let Some(native_name) = program.names.get(*name) {
+                if let Some((min_arity, max_arity)) = native_arity_bounds(native_name) {
+                    if arguments.len() < min_arity || arguments.len() > max_arity {
+                        return Err(validation_error(
+                            line,
+                            format!(
+                                "{} native `{}` expects {} to {} arguments, got {}",
+                                context,
+                                native_name,
+                                min_arity,
+                                max_arity,
+                                arguments.len()
+                            ),
+                        ));
+                    }
+                }
+            }
+        }
+        if matches!(
+            instruction,
+            Instruction::Jump { .. }
+                | Instruction::JumpIfFalse { .. }
+                | Instruction::JumpIfTrue { .. }
+        ) {
+            return Err(validation_error(
+                line,
+                format!("{} block body contains a legacy jump", context),
+            ));
+        }
+    }
+    let _ = upvalue_count;
     Ok(())
 }
 
@@ -2702,6 +3153,62 @@ mod tests {
                 error.message.contains(expected),
                 "{}: {}",
                 name,
+                error.message
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_malformed_block_bodies_before_execution() {
+        let cases = [
+            (
+                "undefined register",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=2:\nblock b0:\n  print r1\n  return_nil\n",
+                "reads undefined register r1",
+            ),
+            (
+                "unbound local",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=0:\nblock b0:\n  return_nil\n\nfunction f0 name=\"f\" arity=0 registers=1:\nblock b0:\n  r0 = load_local l0\n  return r0\n",
+                "reads unbound local l0",
+            ),
+            (
+                "invalid block target",
+                "cdbc 0.2\n\nconstants:\n  c0 = number 1\n\nnames:\n\nmain registers=1:\nblock b0:\n  r0 = constant c0\n  br b3\n",
+                "branches to invalid block b3",
+            ),
+            (
+                "missing terminator",
+                "cdbc 0.2\n\nconstants:\n  c0 = number 1\n\nnames:\n\nmain registers=1:\nblock b0:\n  r0 = constant c0\n",
+                "block b0 is missing a terminator",
+            ),
+            (
+                "invalid global upvalue source",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=0:\nblock b0:\n  return_nil\n\nfunction f0 name=\"f\" arity=0 registers=0:\n  upvalue u0 = global g9\nblock b0:\n  return_nil\n",
+                "upvalue u0 global g9 out of range",
+            ),
+            (
+                "invalid native arity",
+                "cdbc 0.2\n\nconstants:\n  c0 = number 1\n\nnames:\n  n0 = \"push\"\n\nmain registers=2:\nblock b0:\n  r0 = constant c0\n  r1 = native_call n0 [r0]\n  return_nil\n",
+                "native `push` expects 2 to 2 arguments, got 1",
+            ),
+            (
+                "invalid function id",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=1:\nblock b0:\n  r0 = make_function f1\n  return_nil\n",
+                "function f1 out of range",
+            ),
+            (
+                "legacy jump in block body",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=0:\nblock b0:\n  jump 0\n  return_nil\n",
+                "block body contains a legacy jump",
+            ),
+        ];
+        for (name, source, expected) in cases {
+            let error = parse_program(source).expect_err(name);
+            assert!(
+                error.message.contains(expected),
+                "{}: expected `{}`, got: {}",
+                name,
+                expected,
                 error.message
             );
         }

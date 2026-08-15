@@ -236,3 +236,31 @@ VM 兼容矩阵 7 格、`git diff --check` 干净。
 
 下一阶段是 Phase 5（verifier 2.0：definite-assignment / definite-binding /
 CFG 校验）。
+
+## 11. Phase 5 落地记录
+
+Phase 5（计划 §9，verifier 2.0）完成：0.2 块体在执行前做完整静态校验。
+
+- CFG 校验：block ID 顺序、每个 block 以 terminator 结束、`br/br_if` 目标合法。
+- 寄存器 definite-assignment：以块为单位的 IN/OUT 前向数据流（入口块 IN 为空、
+  不可达块 IN 为全量），读取未定义寄存器直接拒绝。
+- local definite-binding：参数默认绑定，`load_local/set_local` 要求所有前驱
+  路径都有 `bind_local`。
+- 闭包/native：`upvalue uN = global gM` 来源越界拒绝；native 调用按
+  `NATIVE_SPECS` 的 min/max arity 在验证期检查；block 体内出现旧
+  `jump/jump_if_*` 拒绝。
+- 兼容边界：只有含 `BlockStart` 的 0.2 块体走新校验；0.1 线性体保持原有宽松
+  校验（Phase 0 基线行为不受影响）。8 类 negative 用例作为 Rust 单测新增
+  （undefined register / unbound local / invalid block / missing terminator /
+  invalid global upvalue source / invalid native arity / invalid function id /
+  legacy jump in block body）。
+- 顺手修复 Phase 4 遗留：拆块后 `at=N` 依赖偏移的重映射在 terminator 插入之前
+  计算导致指向错误位置，以及 `rewrittenIr` 与 `rewritten` 长度不一致引发的
+  堆越界（re-export 模块发射段错误）。
+
+回归：cargo test 全绿（含 8 个新 negative 用例）、bytecode artifact 124/124、
+module artifact/cache、malformed 107/107、Rust VM parity 742/742、
+golden 787/787、ctest 47/47、VM 兼容矩阵 7 格。
+
+Milestone B（Phase 4 + 5，真正 CFG + verifier）完成。下一阶段是 Phase 6
+（Type/Layout 表：`TypeId`/`VariantId` + 字段槽/payload 下标）。

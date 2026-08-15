@@ -177,6 +177,12 @@ VM 是寄存器机。每个函数体拥有一块预分配寄存器数组和一�
 `return_nil` 与三条旧跳转）没有 `rD`。旧 `cdbc 0.1` 的线性 `jump/jump_if_*` 仍在
 兼容读取路径中保留。
 
+执行前验证（0.2 块体）包括：block ID 顺序且分支目标合法、每个 block 以
+terminator 结束、寄存器 definite-assignment（未定义读取直接拒绝）、local
+definite-binding（参数默认已绑定，`load_local/set_local` 需要前置
+`bind_local`）、`upvalue uN = global gM` 来源越界、native 调用 arity、以及
+block 体内出现旧 `jump/jump_if_*` 的混用。
+
 ### 4.1 常量与构造
 
 #### constant

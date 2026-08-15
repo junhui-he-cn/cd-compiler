@@ -98,7 +98,7 @@ def main() -> int:
                     "module products did not retain canonical source-to-module identity\n"
                     f"missing={identity}"
                 )
-        if 'kind=import at=3 requested="./lib.cd"' not in entry_text:
+        if 'kind=import at=4 requested="./lib.cd"' not in entry_text:
             return fail("entry artifact did not preserve the import insertion marker")
         if 'string "before"' not in entry_text or 'string "after"' not in entry_text:
             return fail("entry artifact lost local statements")
@@ -128,7 +128,7 @@ def main() -> int:
             return None
 
         malformed_offset = entry_text.replace(
-            ' at=3 requested="./lib.cd"',
+            ' at=4 requested="./lib.cd"',
             ' at=999 requested="./lib.cd"',
             1,
         )

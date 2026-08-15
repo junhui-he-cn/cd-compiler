@@ -98,10 +98,8 @@ void splitControlFlow(
     }
 
     std::vector<BytecodeInstruction> rewritten;
+    std::vector<std::optional<std::uint32_t>> rewrittenIr;
     rewritten.reserve(instructions.size() + nextBlock);
-    if (remap) {
-        remap->clear();
-    }
     for (std::size_t index = 0; index < instructions.size(); ++index) {
         if (starts[index]) {
             BytecodeInstruction marker{};
@@ -109,15 +107,7 @@ void splitControlFlow(
             marker.operand = blockOf[index];
             marker.span = instructions[index].span;
             rewritten.push_back(std::move(marker));
-            if (remap) {
-                remap->emplace(
-                    checkedU32(index, "instruction offset out of range"),
-                    checkedU32(rewritten.size() - 1, "instruction offset out of range"));
-            }
-        } else if (remap) {
-            remap->emplace(
-                checkedU32(index, "instruction offset out of range"),
-                checkedU32(rewritten.size(), "instruction offset out of range"));
+            rewrittenIr.push_back(std::nullopt);
         }
         BytecodeInstruction instruction = std::move(instructions[index]);
         if (instruction.op == BytecodeOp::Jump) {
@@ -142,6 +132,7 @@ void splitControlFlow(
             instruction.operands = {blockOf[index + 1]};
         }
         rewritten.push_back(std::move(instruction));
+        rewrittenIr.push_back(checkedU32(index, "instruction offset out of range"));
     }
     if (starts[end]) {
         BytecodeInstruction marker{};
@@ -151,18 +142,22 @@ void splitControlFlow(
             marker.span = instructions.back().span;
         }
         rewritten.push_back(std::move(marker));
+        rewrittenIr.push_back(std::nullopt);
         BytecodeInstruction nilReturn{};
         nilReturn.op = BytecodeOp::ReturnNil;
         nilReturn.span = marker.span;
         rewritten.push_back(std::move(nilReturn));
+        rewrittenIr.push_back(std::nullopt);
     }
     // 0.2 forbids implicit fallthrough: a block that ends without a
     // terminator gets an explicit branch to the next block (or a nil return
     // when it is the function's last block).
     std::vector<BytecodeInstruction> normalized;
+    std::vector<std::optional<std::uint32_t>> normalizedIr;
     normalized.reserve(rewritten.size() + nextBlock);
     for (std::size_t index = 0; index < rewritten.size(); ++index) {
         normalized.push_back(std::move(rewritten[index]));
+        normalizedIr.push_back(rewrittenIr[index]);
         const BytecodeOp op = normalized.back().op;
         const bool isTerminator = op == BytecodeOp::Br || op == BytecodeOp::BrIf
             || op == BytecodeOp::Return || op == BytecodeOp::ReturnNil
@@ -178,14 +173,33 @@ void splitControlFlow(
             branch.operand = rewritten[index + 1].operand;
             branch.span = normalized.back().span;
             normalized.push_back(std::move(branch));
+            normalizedIr.push_back(std::nullopt);
         } else if (isLast) {
             BytecodeInstruction nilReturn{};
             nilReturn.op = BytecodeOp::ReturnNil;
             nilReturn.span = normalized.back().span;
             normalized.push_back(std::move(nilReturn));
+            normalizedIr.push_back(std::nullopt);
         }
     }
     rewritten = std::move(normalized);
+    if (remap) {
+        remap->clear();
+        for (std::size_t index = 0; index < normalizedIr.size(); ++index) {
+            if (normalizedIr[index]) {
+                std::size_t position = index;
+                const bool forcedStart = std::find(
+                    forcedStarts.begin(), forcedStarts.end(), *normalizedIr[index])
+                    != forcedStarts.end();
+                if (forcedStart && index > 0) {
+                    position = index - 1;
+                }
+                remap->emplace(
+                    *normalizedIr[index],
+                    checkedU32(position, "instruction offset out of range"));
+            }
+        }
+    }
     instructions = std::move(rewritten);
 }
 

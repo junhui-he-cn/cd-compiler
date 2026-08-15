@@ -849,6 +849,11 @@ fn native_spec(name: &str) -> Option<&'static NativeSpec> {
     Some(&NATIVE_SPECS[index])
 }
 
+/// Verification-time arity bounds for a registered native name.
+pub(crate) fn native_arity_bounds(name: &str) -> Option<(usize, usize)> {
+    native_spec(name).map(|spec| (spec.min_arity, spec.max_arity))
+}
+
 #[derive(Clone, Debug)]
 pub struct CancellationToken {
     cancelled: Arc<AtomicBool>,
