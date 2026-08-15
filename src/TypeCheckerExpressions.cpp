@@ -1162,16 +1162,19 @@ TypeChecker::CheckedExpression TypeChecker::checkMapLiteral(
 TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expression, const TypeInfo* expectedType)
 {
     if (const auto* literal = dynamic_cast<const LiteralExpr*>(&expression)) {
+        CheckedExpression result;
         if (literal->value == "nil") {
-            return CheckedExpression{simpleType(StaticType::Nil)};
+            result = CheckedExpression{simpleType(StaticType::Nil)};
+        } else if (literal->value == "true" || literal->value == "false") {
+            result = CheckedExpression{simpleType(StaticType::Bool)};
+        } else if (literal->value.size() >= 2 && literal->value.front() == '"'
+            && literal->value.back() == '"') {
+            result = CheckedExpression{simpleType(StaticType::String)};
+        } else {
+            result = CheckedExpression{simpleType(StaticType::Number)};
         }
-        if (literal->value == "true" || literal->value == "false") {
-            return CheckedExpression{simpleType(StaticType::Bool)};
-        }
-        if (literal->value.size() >= 2 && literal->value.front() == '"' && literal->value.back() == '"') {
-            return CheckedExpression{simpleType(StaticType::String)};
-        }
-        return CheckedExpression{simpleType(StaticType::Number)};
+        declarationIndex_.recordTypedExpression(*literal, result.type);
+        return result;
     }
 
     if (const auto* function = dynamic_cast<const FunctionExpr*>(&expression)) {
@@ -1288,11 +1291,15 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
     }
 
     if (const auto* grouping = dynamic_cast<const GroupingExpr*>(&expression)) {
-        return checkExpressionInfo(*grouping->expression);
+        CheckedExpression result = checkExpressionInfo(*grouping->expression);
+        declarationIndex_.recordTypedExpression(*grouping, result.type);
+        return result;
     }
 
     if (const auto* unary = dynamic_cast<const UnaryExpr*>(&expression)) {
-        return CheckedExpression{checkUnary(*unary)};
+        CheckedExpression result{checkUnary(*unary)};
+        declarationIndex_.recordTypedExpression(*unary, result.type);
+        return result;
     }
 
     if (const auto* binary = dynamic_cast<const BinaryExpr*>(&expression)) {

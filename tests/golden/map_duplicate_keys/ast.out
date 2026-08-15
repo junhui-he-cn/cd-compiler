@@ -1,0 +1,15 @@
+Program
+  Let m = (map (entry "a" 1) (entry "b" 2) (entry "a" 3))
+  Print (call len m)
+  Print (index m "a")
+  Print (index m "b")
+  ForIn k in m
+    Block
+      Print k
+      Print (index m k)
+  Print (call keys m)
+  Print (call values m)
+  Expr (= (index m "a") 30)
+  Print m
+  Print (call keys m)
+  Print (call merge m (map (entry "b" 20) (entry "c" 4)))

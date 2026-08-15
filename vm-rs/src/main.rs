@@ -10,7 +10,7 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process;
 
-const HELP: &str = "compiler-design-vm 0.1.0\n\n\
+const HELP: &str = "compiler-design-vm 0.2.0\n\n\
 Usage:\n\
   compiler-design-vm --help\n\
   compiler-design-vm verify <program.cdbc>\n\
@@ -704,12 +704,11 @@ fn debug(path: &str, config: &RunConfig) -> Result<(), String> {
 
 fn program_instruction_count(program: &Program) -> usize {
     program
-        .main
-        .instructions
-        .len()
-        .saturating_add(program.functions.iter().fold(0usize, |total, function| {
+        .functions
+        .iter()
+        .fold(0usize, |total, function| {
             total.saturating_add(function.instructions.len())
-        }))
+        })
 }
 
 fn enforce_limit(kind: &str, actual: usize, limit: Option<usize>) -> Result<(), String> {

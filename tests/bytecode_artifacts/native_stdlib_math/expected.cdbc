@@ -1,8 +1,8 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
-  c0 = number 4.8
-  c1 = number 4.2
+  c0 = number 4.7999999999999998
+  c1 = number 4.2000000000000002
   c2 = number 25
 
 names:
@@ -10,38 +10,50 @@ names:
   n1 = "ceil"
   n2 = "sqrt"
 
-main registers=6:
+native_imports:
+  i0 = "floor" abi=1
+  i1 = "print" abi=1
+  i2 = "ceil" abi=1
+  i3 = "sqrt" abi=1
+
+main registers=7:
+block b0:
   r0 = constant c0
-  r1 = native_call n0 [r0]
-  print r1
+  r1 = call_native i0 [r0]
+  r6 = call_native i1 [r1]
   r2 = constant c1
-  r3 = native_call n1 [r2]
-  print r3
+  r3 = call_native i2 [r2]
+  r6 = call_native i1 [r3]
   r4 = constant c2
-  r5 = native_call n2 [r4]
-  print r5
+  r5 = call_native i3 [r4]
+  r6 = call_native i1 [r5]
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/native_stdlib_math/input.cd" text="print floor(4.8);\nprint ceil(4.2);\nprint sqrt(25);\n"
 
 debug_locations:
   main 0 = s0:1:13
-  main 1 = s0:1:7
-  main 2 = s0:1:1
-  main 3 = s0:2:12
-  main 4 = s0:2:7
-  main 5 = s0:2:1
-  main 6 = s0:3:12
-  main 7 = s0:3:7
-  main 8 = s0:3:1
+  main 1 = s0:1:13
+  main 2 = s0:1:7
+  main 3 = s0:1:1
+  main 4 = s0:2:12
+  main 5 = s0:2:7
+  main 6 = s0:2:1
+  main 7 = s0:3:12
+  main 8 = s0:3:7
+  main 9 = s0:3:1
+  main 10 = s0:3:1
 
 debug_ranges:
   main 0 = s0:12:15
-  main 1 = s0:6:16
+  main 1 = s0:12:15
   main 2 = s0:6:16
-  main 3 = s0:29:32
-  main 4 = s0:24:33
+  main 3 = s0:6:16
+  main 4 = s0:29:32
   main 5 = s0:24:33
-  main 6 = s0:46:48
-  main 7 = s0:41:49
+  main 6 = s0:24:33
+  main 7 = s0:46:48
   main 8 = s0:41:49
+  main 9 = s0:41:49
+  main 10 = s0:41:49

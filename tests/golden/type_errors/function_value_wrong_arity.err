@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/function_value_wrong_arity.cd:5:10: expected 2 arguments but got 1
+  print f(1);
+           ^

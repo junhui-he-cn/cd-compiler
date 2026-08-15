@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = string "Ada"
@@ -12,55 +12,73 @@ names:
   n3 = "p#0"
   n4 = "p#0"
   n5 = "age"
-  n6 = "p#0"
-  n7 = "name"
-  n8 = "p#0"
-  n9 = "age"
+  n6 = "Person"
+  n7 = "p#0"
+  n8 = "name"
+  n9 = "Person"
+  n10 = "p#0"
+  n11 = "age"
+  n12 = "Person"
 
-main registers=10:
+globals:
+  g0 = n3
+
+types:
+  t0 = struct "Person" field0="name" field1="age"
+
+native_imports:
+  i0 = "print" abi=1
+
+main registers=11:
+block b0:
   r0 = constant c0
   r1 = constant c1
-  r2 = struct n0 {n1: r0, n2: r1}
-  store_var n3, r2
-  r3 = load_var n4
+  r2 = make_struct t0 [r0, r1]
+  init_global g0, r2
+  r3 = load_global g0
   r4 = constant c2
-  r5 = assign_field r3, n5, r4
-  r6 = load_var n6
-  r7 = field r6, n7
-  print r7
-  r8 = load_var n8
-  r9 = field r8, n9
-  print r9
+  r5 = struct_set r3, t0, 1, r4
+  r6 = load_global g0
+  r7 = struct_get r6, t0, 0
+  r10 = call_native i0 [r7]
+  r8 = load_global g0
+  r9 = struct_get r8, t0, 1
+  r10 = call_native i0 [r9]
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/named_struct_types/input.cd" text="struct Person { name: string, age: number }\nlet p: Person = Person { name: \"Ada\", age: 36 };\np.age = 37;\nprint p.name;\nprint p.age;\n"
 
 debug_locations:
   main 0 = s0:2:32
-  main 1 = s0:2:44
-  main 2 = s0:2:17
-  main 3 = s0:2:1
-  main 4 = s0:3:1
-  main 5 = s0:3:9
-  main 6 = s0:3:1
-  main 7 = s0:4:7
+  main 1 = s0:2:32
+  main 2 = s0:2:44
+  main 3 = s0:2:17
+  main 4 = s0:2:1
+  main 5 = s0:3:1
+  main 6 = s0:3:9
+  main 7 = s0:3:1
   main 8 = s0:4:7
-  main 9 = s0:4:1
-  main 10 = s0:5:7
+  main 9 = s0:4:7
+  main 10 = s0:4:1
   main 11 = s0:5:7
-  main 12 = s0:5:1
+  main 12 = s0:5:7
+  main 13 = s0:5:1
+  main 14 = s0:5:1
 
 debug_ranges:
   main 0 = s0:75:80
-  main 1 = s0:87:89
-  main 2 = s0:60:89
-  main 3 = s0:48:89
-  main 4 = s0:93:94
-  main 5 = s0:101:103
-  main 6 = s0:93:103
-  main 7 = s0:111:112
-  main 8 = s0:111:117
+  main 1 = s0:75:80
+  main 2 = s0:87:89
+  main 3 = s0:60:89
+  main 4 = s0:48:89
+  main 5 = s0:93:94
+  main 6 = s0:101:103
+  main 7 = s0:93:103
+  main 8 = s0:111:112
   main 9 = s0:111:117
-  main 10 = s0:125:126
-  main 11 = s0:125:130
+  main 10 = s0:111:117
+  main 11 = s0:125:126
   main 12 = s0:125:130
+  main 13 = s0:125:130
+  main 14 = s0:125:130

@@ -6,7 +6,7 @@ IR
 0004  v3 = load_var @4 person#0
 0005  v4 = field v3.name
 0006  print v4
-0007  v5 = load_var @6 person#0
+0007  v5 = load_var @7 person#0
 0008  v6 = field v5.age
 0009  print v6
 0010  v7 = constant #2 1
@@ -14,8 +14,8 @@ IR
 0012  v9 = struct Point {x: v7, y: v8}
 0013  v10 = constant #4 "p"
 0014  v11 = struct Nested {point: v9, label: v10}
-0015  store_var @14 nested#1, v11
-0016  v12 = load_var @15 nested#1
+0015  store_var @16 nested#1, v11
+0016  v12 = load_var @17 nested#1
 0017  v13 = field v12.point
 0018  v14 = field v13.x
 0019  print v14

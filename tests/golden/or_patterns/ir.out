@@ -6,60 +6,55 @@ IR
 0004  v2 = constant #6 nil
 0005  store_var @3 shapeLabel#2, v2
 0006  v3 = make_function $1 shapeLabel/1
-0007  assign_var @19 shapeLabel#2, v3
+0007  assign_var @31 shapeLabel#2, v3
 0008  v4 = constant #12 false
-0009  store_var @20 maybe#5, v4
-0010  v5 = load_var @21 numberLabel#0
-0011  v6 = constant #13 1
-0012  v7 = call v5(v6)
-0013  print v7
-0014  v8 = load_var @22 numberLabel#0
-0015  v9 = constant #14 8
-0016  v10 = call v8(v9)
-0017  print v10
-0018  v11 = load_var @23 shapeLabel#2
-0019  v12 = constant #15 3
-0020  v13 = variant Shape.Point (v12)
-0021  v14 = call v11(v13)
-0022  print v14
-0023  v15 = load_var @26 shapeLabel#2
-0024  v16 = constant #16 4
-0025  v17 = constant #17 10
-0026  v18 = variant Shape.Line (v16, v17)
-0027  v19 = call v15(v18)
-0028  print v19
-0029  v20 = load_var @29 shapeLabel#2
-0030  v21 = variant Shape.Empty ()
-0031  v22 = call v20(v21)
-0032  print v22
-0033  v23 = load_var @32 maybe#5
-0034  v24 = constant #18 nil
-0035  v25 = equal v23, v24
-0036  jump_if_false v25, 0038
-0037  jump 0041
-0038  v26 = constant #19 false
-0039  v27 = equal v23, v26
-0040  jump_if_false v27, 0044
-0041  v28 = constant #20 "off"
-0042  print v28
-0043  jump 0050
-0044  v29 = constant #21 true
-0045  v30 = equal v23, v29
-0046  jump_if_false v30, 0050
-0047  v31 = constant #22 "on"
-0048  print v31
-0049  jump 0050
-0050  v32 = constant #23 true
-0051  v33 = constant #24 true
-0052  v34 = equal v32, v33
-0053  jump_if_false v34, 0055
-0054  jump 0058
-0055  v35 = constant #25 false
-0056  v36 = equal v32, v35
-0057  jump_if_false v36, 0061
-0058  v37 = constant #26 "bool"
-0059  print v37
-0060  jump 0061
+0009  store_var @32 maybe#5, v4
+0010  v5 = constant #13 1
+0011  v6 = call_direct $0 numberLabel/1(v5)
+0012  print v6
+0013  v7 = constant #14 8
+0014  v8 = call_direct $0 numberLabel/1(v7)
+0015  print v8
+0016  v9 = constant #15 3
+0017  v10 = variant Shape.Point (v9)
+0018  v11 = call_direct $1 shapeLabel/1(v10)
+0019  print v11
+0020  v12 = constant #16 4
+0021  v13 = constant #17 10
+0022  v14 = variant Shape.Line (v12, v13)
+0023  v15 = call_direct $1 shapeLabel/1(v14)
+0024  print v15
+0025  v16 = variant Shape.Empty ()
+0026  v17 = call_direct $1 shapeLabel/1(v16)
+0027  print v17
+0028  v18 = load_var @39 maybe#5
+0029  v19 = constant #18 nil
+0030  v20 = equal v18, v19
+0031  jump_if_false v20, 0033
+0032  jump 0036
+0033  v21 = constant #19 false
+0034  v22 = equal v18, v21
+0035  jump_if_false v22, 0039
+0036  v23 = constant #20 "off"
+0037  print v23
+0038  jump 0045
+0039  v24 = constant #21 true
+0040  v25 = equal v18, v24
+0041  jump_if_false v25, 0045
+0042  v26 = constant #22 "on"
+0043  print v26
+0044  jump 0045
+0045  v27 = constant #23 true
+0046  v28 = constant #24 true
+0047  v29 = equal v27, v28
+0048  jump_if_false v29, 0050
+0049  jump 0053
+0050  v30 = constant #25 false
+0051  v31 = equal v27, v30
+0052  jump_if_false v31, 0056
+0053  v32 = constant #26 "bool"
+0054  print v32
+0055  jump 0056
 
 function $0 numberLabel(value#1)
 0000  v0 = load_var @1 value#1
@@ -91,15 +86,15 @@ function $1 shapeLabel(value#3)
 0008  v5 = variant_field v0[0]
 0009  v6 = variant_field v0[1]
 0010  v3 = copy v5
-0011  store_var @9 x#4, v3
-0012  v7 = load_var @10 x#4
+0011  store_var @15 x#4, v3
+0012  v7 = load_var @16 x#4
 0013  v8 = constant #7 3
-0014  v9 = greater v7, v8
+0014  v9 = gt_num v7, v8
 0015  jump_if_false v9, 0022
 0016  v10 = constant #8 "large:"
-0017  v11 = load_var @11 x#4
-0018  v12 = native_call @12 str(v11)
-0019  v13 = add v10, v12
+0017  v11 = load_var @17 x#4
+0018  v12 = native_call @18 str(v11)
+0019  v13 = concat_str v10, v12
 0020  return v13
 0021  jump 0038
 0022  v14 = variant_tag v0 Shape.Point

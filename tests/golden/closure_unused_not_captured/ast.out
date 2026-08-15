@@ -1,0 +1,9 @@
+Program
+  Fun make()
+    Let used = 1
+    Let unused = 99
+    Fun read()
+      Return used
+    Return read
+  Let f = (call make)
+  Print (call f)

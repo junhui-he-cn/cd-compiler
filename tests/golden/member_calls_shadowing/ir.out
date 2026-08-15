@@ -15,7 +15,7 @@ IR
 0013  v7 = constant #11 10
 0014  v8 = native_call @7 push(v6, v7)
 0015  v9 = load_var @8 xs#14
-0016  v10 = len v9
+0016  v10 = len_array v9
 0017  print v10
 0018  v11 = load_var @9 xs#14
 0019  v12 = native_call @10 pop(v11)
@@ -23,7 +23,7 @@ IR
 0021  v13 = constant #12 "hello"
 0022  store_var @11 text#15, v13
 0023  v14 = load_var @12 text#15
-0024  v15 = len v14
+0024  v15 = len_str v14
 0025  print v15
 0026  v16 = load_var @13 text#15
 0027  v17 = constant #13 1

@@ -1,7 +1,7 @@
-# Compiler Design 字节码（.cdbc 0.1）指令参考
+# Compiler Design 字节码（.cdbc 0.2）指令参考
 
-本文档描述 Compiler Design 编译器产出的字节码文本工件 `.cdbc` 的 0.1 版定义，
-并逐一说明全部 38 条指令的语法、语义、操作数约束和运行时错误。文档面向需要阅读、
+本文档描述 Compiler Design 编译器产出的字节码文本工件 `.cdbc` 的 0.2 版定义，
+并逐一说明全部指令的语法、语义、操作数约束和运行时错误。文档面向需要阅读、
 编写或调试工件的开发者和实现第三方解析器/执行器的人。
 
 权威英文契约是 [`docs/bytecode-text-format.md`](bytecode-text-format.md)；
@@ -17,10 +17,13 @@ C++ 发射端在 `src/BytecodeTextEmitter.cpp`，Rust 解析与执行端在
 每个文件以版本头开头：
 
 ```text
-cdbc 0.1
+cdbc 0.2
 ```
 
-只接受这一版本。未来的不兼容变化必须改用新的版本号。
+VM 同时接受 `cdbc 0.1` 旧工件作为构造期兼容输入：旧工件使用名字驱动的
+`load_var/store_var/assign_var`、`native_call` 与 `print`，由 VM 在构造期映射到
+旧的按名解析路径；0.2 工件使用数值 slot（`lN/uN/gN`）与 native 导入索引
+（`iN`），VM 热路径不再按名字解析或按名字查找 native。
 
 工件有两种严格种类：
 
@@ -41,21 +44,24 @@ module:
   path = "lib.cd"
   canonical_path = "/workspace/lib.cd"
   entry = false
+  init = f0
   dependencies:
-    d0 target="/workspace/shared.cd" kind=import at=2 requested="./shared.cd"
+    d0 target="/workspace/shared.cd" kind=import requested="./shared.cd"
 ```
 
 - `identity` 是图的规范化路径，也是产品集合的键。
 - `path` 是源文件显示路径；入口模块额外带零基的 `entry_order`。
-- `dependencies` 按源中出现顺序排列；`kind` 为 `import` 或 `re_export`；`at` 是本地
-  `main` 指令流中在该偏移**之前**展开该依赖的位置，可以等于本地指令总数。
+- `init = fN` 指向模块初始化函数；模块 `main` 为空，顶层语句全部进入初始化函数，
+  并在每个依赖的源位置发射一条 `init_module mN`。
+- `dependencies` 按源中出现顺序排列，`kind` 为 `import` 或 `re_export`，不再携带
+  指令偏移。
 
 ## 2. 文件结构
 
 一个 `.cdbc` 文件由显式区段组成，顺序固定：
 
 ```text
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 1
@@ -64,11 +70,19 @@ constants:
 names:
   n0 = "x"
 
-main registers=3:
+globals:
+  g0 = n0
+
+native_imports:
+  i0 = "print" abi=1
+
+main registers=4:
+block b0:
   r0 = constant c0
-  store_var n0, r0
-  r1 = load_var n0
-  print r1
+  init_global g0, r0
+  r1 = load_global g0
+  r3 = call_native i0 [r1]
+  return_nil
 
 function f0 name="add_one" arity=1 registers=4:
   param 0 = "value"
@@ -96,6 +110,7 @@ debug_ranges:
 | `nN` | 名字表索引 |
 | `rN` | 当前函数体的寄存器索引 |
 | `fN` | 函数表索引 |
+| `iN` | native 导入表索引 |
 
 ### 2.2 常量编码
 
@@ -105,16 +120,20 @@ debug_ranges:
 等聚合值都在运行时由构造指令创建，不能进常量池。
 
 `number` 是 IEEE 754 双精度浮点数。验证期拒绝无法解析或非有限的数字文本。
-实现备注：C++ 发射端目前以 15 位有效数字输出 `number` 文本（
-`BytecodeTextEmitter::numberText`），低于双精度精确往返所需的 17 位；极端值存在
-静默漂移风险。
+C++ 发射端以 `std::numeric_limits<double>::max_digits10`（17 位有效数字）输出
+`number` 文本（`BytecodeTextEmitter::numberText`），保证
+`double → 文本 → double` 逐位往返。
 
 ### 2.3 名字表
 
 `names` 区段是字符串表，用于变量名、结构体字段名、结构体类型名、枚举与变体名、
-native 函数名。注意名字表**不去重**：多个索引可以保存相同文本（例如
+断言消息等。注意名字表**不去重**：多个索引可以保存相同文本（例如
 `n1`、`n4`、`n5` 都等于 `"add#2"`），它们是不同的名字索引，运行时语义依赖这种
 索引级别名，第三方实现不得按字符串合并。
+
+`native_imports` 区段（位于 `types:` 之后、`main` 之前）单独保存 native 导入：
+`i0 = "print" abi=1`。名字必须来自固定的注册集合，`abi` 当前固定为 1；指令用
+`call_native iN` 按索引调用，模块链接时按名字去重并重映射导入索引。
 
 ### 2.4 函数区段
 
@@ -133,9 +152,10 @@ native 函数名。注意名字表**不去重**：多个索引可以保存相同
 
 ### 2.6 执行前验证
 
-Rust 解析器只接受 `cdbc 0.1` 头。执行前验证：数字常量有限；常量/名字/函数/寄存器
-引用不越界；跳转目标合法；调试位置表形状正确；native 能力在支持集合内；模块封套的
-身份、入口元数据、依赖目标与插入偏移合法。无效工件在执行前被拒绝，错误分类为
+Rust 解析器接受 `cdbc 0.1` 与 `cdbc 0.2` 头。执行前验证：数字常量有限；
+常量/名字/函数/寄存器/native 导入引用不越界；跳转目标合法；调试位置表形状正确；
+native 名字在支持集合内、`abi=1`、导入名不重复、调用元数在范围内；模块封套的身份、
+入口元数据、依赖目标与插入偏移合法。无效工件在执行前被拒绝，错误分类为
 `parse` / `unsupported_version` / `verification`。
 
 ## 3. 执行模型与通用语义
@@ -168,8 +188,27 @@ VM 是寄存器机。每个函数体拥有一块预分配寄存器数组和一�
 
 符号约定：`rD` 目标寄存器，`rS` / `rL` / `rR` 源寄存器，`cN` 常量索引，`nN` 名字
 索引，`fN` 函数索引，`N` 十进制整数（跳转目标或 payload 下标）。所有索引零基。
-无目标寄存器的指令（`store_var`、`assign_var`、`print`、`return` 与三条跳转）没有
-`rD`。
+0.2 正文由 `block bN:` 区段组成，每个 block 以 terminator 结束：
+`br bN`（无条件）、`br_if rC, bT, bF`（条件）、`return rV`、`return_nil`；
+0.2 不再有隐式 fallthrough。无目标寄存器的指令（`bind_local`、`set_local`、
+`set_upvalue`、`init_global`、`set_global`、`return`、`br`、`br_if`、
+`return_nil` 与三条旧跳转）没有 `rD`。旧 `cdbc 0.1` 的线性 `jump/jump_if_*` 仍在
+兼容读取路径中保留；旧 `print rV` 同样只在兼容读取路径中保留，0.2 把它降为
+`call_native` 到 `print` 导入。
+
+执行前验证（0.2 块体）包括：block ID 顺序且分支目标合法、每个 block 以
+terminator 结束、寄存器 definite-assignment（未定义读取直接拒绝）、local
+definite-binding（参数默认已绑定，`load_local/set_local` 需要前置
+`bind_local`）、`upvalue uN = global gM` 来源越界、native 调用 arity、以及
+block 体内出现旧 `jump/jump_if_*` 的混用。
+
+`types:` 区段（在 `names:`/`globals:` 之后、`main` 之前）给出运行时类型布局：
+`tN = struct "Name" field0="f" field1="g"` 或
+`tN = enum "Name" v0="A" payload=1 v1="B" payload=0`。字段/变体名仅用于 debug、
+dump 与值显示；身份与访问全部使用数值 slot：
+`make_struct tN` / `struct_get rO, tN, slot` / `struct_set rO, tN, slot, rV` /
+`make_variant tN, vN` / `is_variant rV, tN, vN` / `variant_get rV, tN, vN, idx`。
+verifier 校验 type/variant id、field slot 与 payload 下标范围。
 
 ### 4.1 常量与构造
 
@@ -189,8 +228,8 @@ rD = constant cN
 rD = make_function fN
 ```
 
-创建指向函数表第 `fN` 项的**函数值（闭包）**，捕获创建点当前帧的可见环境
-（闭包环境 + 当前帧局部槽），不执行函数体。函数值是普通运行时值：可存入寄存器、
+创建指向函数表第 `fN` 项的**函数值（闭包）**，按该函数的 `upvalue` 声明逐项捕获
+父帧的局部 cell 或上级 upvalue cell，不执行函数体。函数值是普通运行时值：可存入寄存器、
 变量、数组元素，可作为实参或返回值，并被 `call` 调用。函数索引越界报
 `function index out of range`。
 
@@ -263,33 +302,43 @@ rD = move rS
 把 `rS` 的值复制到 `rD`。对聚合值是引用复制（两者别名同一对象），不深拷贝。对应
 IR 的 `Copy` 操作。
 
-#### load_var
+#### load_local / bind_local / set_local
 
 ```text
-rD = load_var nN
+rD = load_local lN
+bind_local lN, rV
+set_local lN, rV
 ```
 
-读取名字 `nN` 对应的绑定写入 `rD`。解析顺序：`main` 帧直接查全局；函数帧先查该函数
-的局部槽，再查闭包捕获的环境，最后查全局。未定义时报
-``undefined variable `<名字>` ``。
+`lN` 是编译器在发射前分配的**数值局部槽**：参数占 `l0..l(arity-1)`，函数体内声明
+的局部变量按首次声明顺序接续。`bind_local` 新建 cell（对应 `let` 声明），
+`set_local` 更新已有 cell（对应赋值），`load_local` 读取。遮蔽会产生不同槽。
+slot 未绑定时报 `unbound local lN`。
 
-#### store_var
+#### load_upvalue / set_upvalue
 
 ```text
-store_var nN, rV
+rD = load_upvalue uN
+set_upvalue uN, rV
 ```
 
-声明/初始化绑定 `nN`：新建一个 cell 保存 `rV` 的值（`main` 写全局，函数帧写局部槽）。
-没有目标寄存器。反复执行会新建 cell，等价于重新绑定。
+`uN` 是当前函数的 upvalue 槽，按函数头中的 `upvalue uN = local lM` /
+`upvalue uN = upvalue uM` / `upvalue uN = global gM` 声明在 `make_function` 时
+捕获对应 cell：`local` 取父帧局部、`upvalue` 取父帧上级捕获、`global` 取创建点
+当前的全局 cell。因此循环体里每次 `bind_local`/`init_global` 产生的 cell 会被当次
+创建的闭包单独捕获（不同迭代捕获不同 cell）。
 
-#### assign_var
+#### load_global / init_global / set_global
 
 ```text
-assign_var nN, rV
+rD = load_global gN
+init_global gN, rV
+set_global gN, rV
 ```
 
-更新已存在绑定 `nN` 的 cell 内容，不新建 cell。这是闭包能观察到外层变量被修改的
-机制。没有目标寄存器；未定义时报 ``undefined variable `<名字>` ``。
+`gN` 是编译器分配的**数值全局槽**。`init_global` 新建 cell（对应顶层 `let`），
+`set_global` 更新，`load_global` 读取。模块产品在 `names:` 后附带
+`globals:` 区段（`gN = nK`），链接器按名字去重并重定位跨模块引用。
 
 ### 4.3 调用
 
@@ -304,45 +353,96 @@ rD = call rF [rA0, rA1, ...]
 的值写入 `rD`，函数体正常结束而无 `return` 时 `rD` 为 `nil`。递归经由闭包环境支持。
 调用受调用深度预算约束；启用 JIT 时该调用可能被编译路径接管（默认禁用，语义不变）。
 
-#### native_call
+#### call_direct
 
 ```text
-rD = native_call nN [rA0, rA1, ...]
+rD = call_direct fN [rA0, rA1, ...]
 ```
 
-按名字表 `nN` 调用注册的 VM 原生标准库函数。名字在验证期必须属于支持集合，否则
-工件被拒；未验证工件运行时报 ``unknown native stdlib function `<名字>` ``。实参个数
-不满足该函数的元数时报其固定错误；各函数自身再做类型/取值校验。完整注册表见第 5 节。
+按函数表 `fN` 直接调用编译器证明**无捕获自由变量**的函数，跳过 `make_function`/
+`call` 的函数值间接层：直接调用不构造函数值、不复制调用者名字环境，也不计函数值
+运行时元素预算；global 来源的 upvalue 仍经全局 cell 解析。验证期拒绝越界目标、
+元数不匹配以及带 local/upvalue 捕获的目标；递归直接调用正确。普通闭包调用继续走
+`call`。
+
+#### init_module
+
+```text
+init_module mN
+```
+
+按链接程序的 `modules:` 表索引 `mN` 调用模块初始化函数，并用
+`Uninitialized`/`Initializing`/`Initialized` 状态机保证每个模块只初始化一次：
+已初始化则 no-op，初始化中再入报 `cyclic module initialization`。模块初始化函数
+在依赖的源位置先 `init_module` 各依赖，因此依赖只初始化一次且顺序与原 `at=` 插入
+一致；链接器只做表合并、符号解析与 ID 重定位，不再拼接 `main` 指令流或修复偏移。
+
+#### call_native
+
+```text
+rD = call_native iN [rA0, rA1, ...]
+```
+
+按 `native_imports` 表的 `iN` 调用注册的 VM 原生标准库函数。VM 在构造期把导入索引
+解析为内部 native ID，执行热路径不再做字符串查找。导入名在验证期必须属于支持集合、
+`abi=1` 且不重复，索引必须不越界；未验证工件运行时报
+``unknown native stdlib function `<名字>` ``。实参个数不满足该函数的元数时报其固定
+错误；各函数自身再做类型/取值校验。完整注册表见第 5 节。
+
+旧 `cdbc 0.1` 的 `native_call nN [rA0, ...]` 按名字表调用，仍在兼容读取路径中
+保留，但 0.2 工件永不发射该形式。
 
 ### 4.4 集合与字段
 
-#### index
+当编译器静态知道集合类型时，索引、赋值与长度使用集合专用指令，解释器热路径不再按
+运行时值标签分派：
 
 ```text
-rD = index rC, rI
+rD = array_get rC, rI    rD = array_set rC, rI, rV
+rD = map_get rC, rI      rD = map_set rC, rI, rV
+rD = range_get rC, rI
+
+rD = len_array rV        rD = len_map rV
+rD = len_range rV        rD = len_str rV
 ```
 
-按 `rI` 索引 `rC`：
+#### array_get / array_set
 
-- 数组：下标必须是整数 number 且不越界，否则 `array index must be number` /
-  `array index must be integer` / `array index out of range`。
-- map：键限 nil/number/bool/string，按运行时相等查找；缺失报 `map key not found`。
-- range：下标必须是整数 number 且不越界，按 start + step * 下标 计算；空 range 或
-  越界报 `range index out of bounds`。
-- 字符串**不可**索引；其他类型报 `can only index arrays, maps, or ranges`。
+数组读取/更新：下标必须是整数 number 且不越界（`array index must be number` /
+`array index must be integer` / `array index out of range`），`array_set` 替换既有
+元素并返回赋入值，不扩容。
 
-#### assign_index
+#### map_get / map_set
 
-```text
-rD = assign_index rC, rI, rV
-```
+map 读取/更新：键限 nil/number/bool/string 并按运行时相等查找，缺失读报
+`map key not found`；`map_set` 更新或插入（新增条目计入元素预算）并返回赋入值。
 
-原地更新集合元素，`rD` 得到赋入值 `rV`：
+map 在构造、`map_set`、`map_get`、`remove`、`keys`、`values`、迭代、`merge`、
+相等与打印之间遵循同一条形式契约：
 
-- 数组：替换既有元素（下标越界报错，不扩容）。
-- map：键已存在则更新其值，否则插入新键值对（新增条目计入元素预算）。
-- range：不可写，报 `cannot assign range elements`；其他类型报
-  `can only assign array elements, map entries, or range elements`。
+- 键按运行时相等唯一；
+- 迭代保持插入顺序；
+- 最后一次写入生效；
+- 更新既有键不改变其迭代位置。
+
+字面量去重时保留首次出现的位置，`map_set` 原地更新或追加，`remove` 删除条目，
+`keys`/`values`/for-in 按插入顺序，`merge` 先追加右侧条目再做同样的去重（重叠键
+原地更新）。map 按引用身份相等，不按内容比较。
+
+#### range_get
+
+range 读取：下标必须是整数 number 且不越界，按 `start + step * 下标` 计算；空 range
+或越界报 `range index out of bounds`。range 不可写，不存在 `range_set`。
+
+#### len_array / len_map / len_range / len_str
+
+`len_array`/`len_map` 为元素数，`len_range` 为区间长度，`len_str` 为 Unicode 标量数
+（不是 UTF-8 字节数）。
+
+#### 旧式动态 index / assign_index / len（兼容读取）
+
+旧 `cdbc 0.1` 的 `index`、`assign_index` 与 `len` 仍在兼容读取路径中保留，按运行时
+类型在数组/map/range/string 之间分派；0.2 工件对静态已知集合类型永远发射专用指令。
 
 #### field
 
@@ -363,24 +463,25 @@ rD = assign_field rO, nN, rV
 更新结构体 `rO` 的既有字段 `nN` 为 `rV`，`rD` 得到赋入值。字段必须已存在，否则报
 ``undefined field `<名字>` ``；非结构体报 `can only assign fields on structs`。
 
-#### len
+#### iter_init / iter_has / iter_next
 
 ```text
-rD = len rV
+rIter = iter_init rCollection
+rHas = iter_has rIter
+rValue = iter_next rIter
 ```
 
-计算长度：数组/map 为元素数，range 为其长度，字符串为 Unicode 标量数（不是 UTF-8
-字节数）。其他类型报 `len expects array, string, map, or range`。
+for-in 通过 VM 内部迭代器协议降级（迭代器是 VM 内部值，不暴露为源语言值）：
 
-#### assert_array
+- `iter_init`：数组在进入时快照**长度**（迭代期间读活数组元素）、map 快照成按插入序
+  排列的键数组、range 保持不可变；非数组/map/range 报
+  `for-in expects array, range, or map`。
+- `iter_has`：纯查询，返回是否还有元素，不推进位置。
+- `iter_next`：返回当前元素并推进一位；越界报 `iterator exhausted`。
 
-```text
-rD = assert_array rV
-```
-
-为 for-in 准备可迭代对象：数组/range 原样写入 `rD`；map 则按键的插入序快照成一个
-新数组写入 `rD`；其他类型报 `for-in expects array, range, or map`。该指令由编译器
-在 for-in 降级时插入，把后续 `len` + `index` 循环统一在数组表示上。
+编译器把 `iter_has`/`iter_next` 排进循环块，`break`/`continue` 与迭代期间的变更
+语义和旧 `assert_array` + `len` + `index` 降级完全一致。旧 `cdbc 0.1` 的
+`assert_array` 仍在兼容读取路径中保留。
 
 #### assert_number
 
@@ -393,13 +494,38 @@ rD = assert_number rV, nN
 
 ### 4.5 算术、逻辑与比较
 
-#### negate
+当编译器静态知道操作数类型时，算术与有序比较使用单一类型的专用指令，解释器热路径
+不再按运行时值标签分支：
 
 ```text
-rD = negate rV
+rD = add_num rL, rR     rD = concat_str rL, rR
+rD = sub_num rL, rR     rD = mul_num rL, rR
+rD = div_num rL, rR     rD = neg_num rV
+
+rD = lt_num rL, rR      rD = lt_str rL, rR
+rD = le_num rL, rR      rD = le_str rL, rR
+rD = gt_num rL, rR      rD = gt_str rL, rR
+rD = ge_num rL, rR      rD = ge_str rL, rR
 ```
 
-数值取负。非 number 报 `negate expects number, got <类型>`。
+#### add_num / sub_num / mul_num / div_num / neg_num
+
+仅接受 number：`add_num`/`sub_num`/`mul_num`/`div_num` 做 IEEE 754 浮点运算，
+非 number 报 ``<op> expects numbers``；`div_num` 除数为零报 `division by zero`；
+`neg_num` 取负，非 number 报 `neg_num expects number, got <类型>`。
+
+#### concat_str
+
+把两个 string 按原文拼接；非 string 报 `concat_str expects two strings`。
+
+#### lt_num / le_num / gt_num / ge_num
+
+两个 number 的数值有序比较，结果 bool；非 number 报 ``<op> expects numbers``。
+
+#### lt_str / le_str / gt_str / ge_str
+
+两个 string 按 Unicode 标量序列的字典序比较，结果 bool；非 string 报
+``<op> expects two strings``。
 
 #### not
 
@@ -408,26 +534,6 @@ rD = not rV
 ```
 
 真值取反：只有 `nil` 与 `false` 得到 `true`；`0`、`""` 等得到 `false`。
-
-#### add
-
-```text
-rD = add rL, rR
-```
-
-两个 number 做浮点加法；两个 string 做拼接；其余组合报
-`add expects two numbers or two strings`。
-
-#### subtract / multiply / divide
-
-```text
-rD = subtract rL, rR
-rD = multiply rL, rR
-rD = divide rL, rR
-```
-
-仅限两个 number（`<op> expects numbers`）。`divide` 的除数为零时报
-`division by zero`。均为 IEEE 754 浮点语义。
 
 #### equal / not_equal
 
@@ -439,23 +545,14 @@ rD = not_equal rL, rR
 运行时相等比较，`not_equal` 是其取反。聚合引用值按身份相等（见第 3 节），variant
 按枚举名/变体名/payload 递归比较，range 按分量比较。
 
-#### greater / greater_equal / less / less_equal
+#### 旧式动态算术/比较（兼容读取）
 
-```text
-rD = greater rL, rR
-rD = greater_equal rL, rR
-rD = less rL, rR
-rD = less_equal rL, rR
-```
-
-- 两个 number：按数值比较。
-- 两个 string：按 Unicode 标量序列的字典序比较。
-- 两个同名具名结构体：查找全局绑定
-  `__capability_ord_<类型名>_<greater|greater_equal|less|less_equal>`（带命名空间时
-  还尝试去命名空间的局部名回退）作为运行时 Ord 见证函数，以 `(left, right)` 调用，
-  结果必须是 bool；缺少见证报 ``<op> has no runtime Ord witness for struct `<类型>` ``。
-- 其他组合报
-  `<op> expects two numbers, two strings, or two values of a witnessed struct`。
+旧 `cdbc 0.1` 的 `negate`、`add`、`subtract`、`multiply`、`divide`、
+`greater`、`greater_equal`、`less`、`less_equal` 仍在兼容读取路径中保留：`add`
+同时支持 number 加法与 string 拼接，其余有序比较在运行时区分 number/string。
+0.2 工件对已知类型永远发射专用指令；只有泛型 `T: Ord` 函数体（形参类型未实例化）
+仍使用动态有序比较。VM 不再按全局名字查找结构体 Ord 见证——结构体不可有序比较，
+编译器在类型检查阶段已拒绝这类表达式。
 
 ### 4.6 控制流
 
@@ -486,8 +583,10 @@ jump_if_true rC, N
 print rV
 ```
 
-把 `rV` 的运行时文本表示加一个换行写入程序输出。`print` 是程序输出的唯一来源；
-`main` 的返回值不会被打印。
+旧式兼容读取指令：把 `rV` 的运行时文本表示加一个换行写入程序输出。0.2 工件不发射
+该形式；编译器把 `print` 语句降为 ``rD = call_native i_print [rV]``，由 native
+框架统一管理输出字节预算、取消、副作用与 trace 归因，行为与旧指令完全一致。
+`print` 是程序输出的唯一来源；`main` 的返回值不会被打印。
 
 #### return
 
@@ -498,9 +597,9 @@ return rV
 结束当前函数体（或 `main`），返回 `rV`。函数调用者通过 `call` 的目标寄存器取得该值；
 `main` 的返回值只表示程序结束，不产生输出。
 
-## 5. native_call 注册表
+## 5. native 导入注册表
 
-`native_call` 的名字必须是下表之一（验证期强制）。元数列为固定的最小/最大实参个数；
+`native_imports` 的名字必须是下表之一（验证期强制）。元数列为固定的最小/最大实参个数；
 标「回调」的会通过 VM 的普通函数调用机制回调传入的函数值，因此遵守同样的预算、取消与
 错误栈规则。
 
@@ -533,9 +632,10 @@ return rV
 | `findIndex` | 2 | 是 | 第一个谓词为真的零基下标或 -1 |
 | `reduce` | 3 | 是 | `(累加器, 元素)` 二参回调左折叠，须显式初值 |
 | `range` | 1..3 | 否 | `range(start[, stop[, step]])`，生成不可变整数区间 |
+| `print` | 1 | 否 | 输出一个值并换行，返回 nil（由 native 框架管理预算） |
 
 这些函数同时以可遮蔽的普通函数形式和不可遮蔽的成员调用糖暴露给语言层；字节码层面
-只关心 `native_call` 的名字与元数契约。
+只关心 `call_native` 的导入名字与元数契约。
 
 ## 6. 兼容性与非目标
 

@@ -1,5 +1,7 @@
 #include "IR.hpp"
 
+#include <limits>
+
 #include <algorithm>
 #include <iomanip>
 #include <stdexcept>
@@ -9,7 +11,7 @@ namespace {
 
 bool isUnary(IROp op)
 {
-    return op == IROp::Negate || op == IROp::Not;
+    return op == IROp::Negate || op == IROp::NegNum || op == IROp::Not;
 }
 
 bool isBinary(IROp op)
@@ -25,6 +27,19 @@ bool isBinary(IROp op)
     case IROp::GreaterEqual:
     case IROp::Less:
     case IROp::LessEqual:
+    case IROp::AddNum:
+    case IROp::SubNum:
+    case IROp::MulNum:
+    case IROp::DivNum:
+    case IROp::ConcatStr:
+    case IROp::LessNum:
+    case IROp::LessEqualNum:
+    case IROp::GreaterNum:
+    case IROp::GreaterEqualNum:
+    case IROp::LessStr:
+    case IROp::LessEqualStr:
+    case IROp::GreaterStr:
+    case IROp::GreaterEqualStr:
         return true;
     case IROp::Constant:
     case IROp::MakeFunction:
@@ -39,17 +54,18 @@ bool isBinary(IROp op)
     case IROp::StoreVar:
     case IROp::AssignVar:
     case IROp::Call:
+    case IROp::CallDirect:
     case IROp::NativeCall:
     case IROp::Index:
     case IROp::AssignIndex:
     case IROp::Field:
     case IROp::AssignField:
     case IROp::Len:
-    case IROp::AssertArray:
     case IROp::AssertNumber:
     case IROp::Print:
     case IROp::Return:
     case IROp::Negate:
+    case IROp::NegNum:
     case IROp::Not:
     case IROp::Jump:
     case IROp::JumpIfFalse:
@@ -248,6 +264,20 @@ void printInstruction(std::ostream& out, const IRProgram& program, const IRInstr
             }
             out << ")";
         }
+    } else if (instruction.op == IROp::CallDirect) {
+        out << " $" << instruction.operand;
+        if (instruction.operand < program.functions().size()) {
+            const IRFunction& function = program.functions()[instruction.operand];
+            out << " " << function.name << "/" << function.parameters.size();
+        }
+        out << "(";
+        for (std::size_t arg = 0; arg < instruction.arguments.size(); ++arg) {
+            if (arg != 0) {
+                out << ", ";
+            }
+            out << instruction.arguments[arg];
+        }
+        out << ")";
     } else if (instruction.op == IROp::NativeCall) {
         printNameOperand(out, program, instruction.operand);
         out << "(";
@@ -258,14 +288,23 @@ void printInstruction(std::ostream& out, const IRProgram& program, const IRInstr
             out << instruction.arguments[arg];
         }
         out << ")";
-    } else if (instruction.op == IROp::Index || instruction.op == IROp::AssignIndex) {
+    } else if (instruction.op == IROp::Index
+        || instruction.op == IROp::AssignIndex
+        || instruction.op == IROp::ArrayGet
+        || instruction.op == IROp::ArraySet
+        || instruction.op == IROp::MapGet
+        || instruction.op == IROp::MapSet
+        || instruction.op == IROp::RangeGet) {
         if (instruction.left) {
             out << " " << *instruction.left;
         }
         if (instruction.right) {
             out << ", " << *instruction.right;
         }
-        if (instruction.op == IROp::AssignIndex && !instruction.arguments.empty()) {
+        if ((instruction.op == IROp::AssignIndex
+                || instruction.op == IROp::ArraySet
+                || instruction.op == IROp::MapSet)
+            && !instruction.arguments.empty()) {
             out << ", " << instruction.arguments.front();
         }
     } else if (instruction.op == IROp::Field) {
@@ -289,10 +328,19 @@ void printInstruction(std::ostream& out, const IRProgram& program, const IRInstr
         if (!instruction.arguments.empty()) {
             out << ", " << instruction.arguments.front();
         }
-    } else if (instruction.op == IROp::Len || instruction.op == IROp::AssertArray) {
+    } else if (instruction.op == IROp::Len
+        || instruction.op == IROp::LenArray
+        || instruction.op == IROp::LenMap
+        || instruction.op == IROp::LenRange
+        || instruction.op == IROp::LenStr
+        || instruction.op == IROp::IterInit
+        || instruction.op == IROp::IterHas
+        || instruction.op == IROp::IterNext) {
         if (instruction.left) {
             out << " " << *instruction.left;
         }
+    } else if (instruction.op == IROp::InitModule) {
+        out << " m" << instruction.operand;
     } else if (instruction.op == IROp::AssertNumber) {
         if (instruction.left) {
             out << " " << *instruction.left;
@@ -515,6 +563,7 @@ IREffectSummary irEffectSummary(IROp op)
         result.writesMemory = true;
         return result;
     case IROp::Call:
+    case IROp::CallDirect:
     case IROp::NativeCall:
         result.readsMemory = true;
         result.writesMemory = true;
@@ -522,14 +571,38 @@ IREffectSummary irEffectSummary(IROp op)
         result.calls = true;
         return result;
     case IROp::Index:
+    case IROp::ArrayGet:
+    case IROp::MapGet:
+    case IROp::RangeGet:
     case IROp::Field:
     case IROp::Len:
-    case IROp::AssertArray:
+    case IROp::LenArray:
+    case IROp::LenMap:
+    case IROp::LenRange:
+    case IROp::LenStr:
     case IROp::AssertNumber:
         result.readsMemory = true;
         result.mayTrap = true;
         return result;
+    case IROp::IterInit:
+        result.readsMemory = true;
+        result.allocates = true;
+        result.mayTrap = true;
+        return result;
+    case IROp::IterHas:
+    case IROp::IterNext:
+        result.readsMemory = true;
+        result.mayTrap = true;
+        return result;
+    case IROp::InitModule:
+        result.readsMemory = true;
+        result.writesMemory = true;
+        result.mayTrap = true;
+        result.calls = true;
+        return result;
     case IROp::AssignIndex:
+    case IROp::ArraySet:
+    case IROp::MapSet:
     case IROp::AssignField:
         result.readsMemory = true;
         result.writesMemory = true;
@@ -545,6 +618,7 @@ IREffectSummary irEffectSummary(IROp op)
         result.controlFlow = true;
         return result;
     case IROp::Negate:
+    case IROp::NegNum:
     case IROp::Not:
     case IROp::Add:
     case IROp::Subtract:
@@ -556,6 +630,19 @@ IREffectSummary irEffectSummary(IROp op)
     case IROp::GreaterEqual:
     case IROp::Less:
     case IROp::LessEqual:
+    case IROp::AddNum:
+    case IROp::SubNum:
+    case IROp::MulNum:
+    case IROp::DivNum:
+    case IROp::ConcatStr:
+    case IROp::LessNum:
+    case IROp::LessEqualNum:
+    case IROp::GreaterNum:
+    case IROp::GreaterEqualNum:
+    case IROp::LessStr:
+    case IROp::LessEqualStr:
+    case IROp::GreaterStr:
+    case IROp::GreaterEqualStr:
         result.mayTrap = true;
         return result;
     }
@@ -598,9 +685,34 @@ IRRegister IRProgram::makeRegister()
     return IRRegister{registerCount_++};
 }
 
-void IRProgram::beginFunction(std::string name, std::vector<std::string> parameters)
+void IRProgram::beginFunction(
+    std::string name,
+    std::vector<std::string> parameters,
+    bool moduleInit)
 {
-    functionStack_.push_back(IRFunction{std::move(name), std::move(parameters), {}, 0, {}});
+    const std::size_t parentId = functionStack_.empty()
+        ? std::numeric_limits<std::size_t>::max()
+        : functionStack_.back().id;
+    functionStack_.push_back(IRFunction{
+        std::move(name),
+        std::move(parameters),
+        {},
+        0,
+        {},
+        {},
+        nextFunctionId_,
+        parentId,
+        moduleInit,
+    });
+    ++nextFunctionId_;
+}
+
+void IRProgram::setFunctionParameterBindingIds(std::vector<BindingId> bindingIds)
+{
+    if (!hasActiveFunction(functionStack_)) {
+        throw std::logic_error("parameter binding metadata requires an active IR function");
+    }
+    activeFunction(functionStack_).parameterBindingIds = std::move(bindingIds);
 }
 
 std::size_t IRProgram::endFunction()
@@ -617,6 +729,26 @@ std::size_t IRProgram::endFunction()
 void IRProgram::addModuleDependency(IRModuleDependency dependency)
 {
     moduleDependencies_.push_back(std::move(dependency));
+}
+
+void IRProgram::addStructLayout(IRStructLayout layout)
+{
+    structLayouts_.push_back(std::move(layout));
+}
+
+void IRProgram::addEnumLayout(IREnumLayout layout)
+{
+    enumLayouts_.push_back(std::move(layout));
+}
+
+const std::vector<IRStructLayout>& IRProgram::structLayouts() const
+{
+    return structLayouts_;
+}
+
+const std::vector<IREnumLayout>& IRProgram::enumLayouts() const
+{
+    return enumLayouts_;
 }
 
 void IRProgram::addBinding(IRBinding binding)
@@ -749,10 +881,18 @@ IRRegister IRProgram::emitVariantTag(IRRegister value, std::string enumName, std
     return dest;
 }
 
-IRRegister IRProgram::emitVariantField(IRRegister value, std::size_t index)
+IRRegister IRProgram::emitVariantField(
+    IRRegister value,
+    std::size_t index,
+    std::string enumName,
+    std::string variantName)
 {
     IRRegister dest = makeRegister();
-    emit(IRInstruction{IROp::VariantField, dest, value, std::nullopt, {}, index});
+    IRInstruction instruction{
+        IROp::VariantField, dest, value, std::nullopt, {}, index};
+    instruction.typeNameOperand = addName(std::move(enumName));
+    instruction.variantNameOperand = addName(std::move(variantName));
+    emit(std::move(instruction));
     return dest;
 }
 
@@ -824,6 +964,17 @@ IRRegister IRProgram::emitCall(IRRegister callee, std::vector<IRRegister> argume
     return dest;
 }
 
+IRRegister IRProgram::emitCallDirect(
+    std::size_t functionIndex,
+    std::vector<IRRegister> arguments)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{
+        IROp::CallDirect, dest, std::nullopt, std::nullopt, std::move(arguments),
+        functionIndex});
+    return dest;
+}
+
 IRRegister IRProgram::emitNativeCall(std::string name, std::vector<IRRegister> arguments)
 {
     IRRegister dest = makeRegister();
@@ -845,17 +996,69 @@ IRRegister IRProgram::emitAssignIndex(IRRegister collection, IRRegister index, I
     return dest;
 }
 
-IRRegister IRProgram::emitField(IRRegister object, std::string fieldName)
+IRRegister IRProgram::emitArrayGet(IRRegister collection, IRRegister index)
 {
     IRRegister dest = makeRegister();
-    emit(IRInstruction{IROp::Field, dest, object, std::nullopt, {}, addName(std::move(fieldName))});
+    emit(IRInstruction{IROp::ArrayGet, dest, collection, index, {}, 0});
     return dest;
 }
 
-IRRegister IRProgram::emitAssignField(IRRegister object, std::string fieldName, IRRegister value)
+IRRegister IRProgram::emitArraySet(IRRegister collection, IRRegister index, IRRegister value)
 {
     IRRegister dest = makeRegister();
-    emit(IRInstruction{IROp::AssignField, dest, object, std::nullopt, {value}, addName(std::move(fieldName))});
+    emit(IRInstruction{IROp::ArraySet, dest, collection, index, {value}, 0});
+    return dest;
+}
+
+IRRegister IRProgram::emitMapGet(IRRegister collection, IRRegister index)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::MapGet, dest, collection, index, {}, 0});
+    return dest;
+}
+
+IRRegister IRProgram::emitMapSet(IRRegister collection, IRRegister index, IRRegister value)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::MapSet, dest, collection, index, {value}, 0});
+    return dest;
+}
+
+IRRegister IRProgram::emitRangeGet(IRRegister collection, IRRegister index)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::RangeGet, dest, collection, index, {}, 0});
+    return dest;
+}
+
+IRRegister IRProgram::emitField(
+    IRRegister object,
+    std::string fieldName,
+    std::optional<std::string> structTypeName)
+{
+    IRRegister dest = makeRegister();
+    IRInstruction instruction{
+        IROp::Field, dest, object, std::nullopt, {}, addName(std::move(fieldName))};
+    if (structTypeName) {
+        instruction.typeNameOperand = addName(std::move(*structTypeName));
+    }
+    emit(std::move(instruction));
+    return dest;
+}
+
+IRRegister IRProgram::emitAssignField(
+    IRRegister object,
+    std::string fieldName,
+    std::optional<std::string> structTypeName,
+    IRRegister value)
+{
+    IRRegister dest = makeRegister();
+    IRInstruction instruction{
+        IROp::AssignField, dest, object, std::nullopt, {value}, addName(std::move(fieldName))};
+    if (structTypeName) {
+        instruction.typeNameOperand = addName(std::move(*structTypeName));
+    }
+    emit(std::move(instruction));
     return dest;
 }
 
@@ -866,11 +1069,58 @@ IRRegister IRProgram::emitLen(IRRegister value)
     return dest;
 }
 
-IRRegister IRProgram::emitAssertArray(IRRegister value)
+IRRegister IRProgram::emitLenArray(IRRegister value)
 {
     IRRegister dest = makeRegister();
-    emit(IRInstruction{IROp::AssertArray, dest, value, std::nullopt, {}, 0});
+    emit(IRInstruction{IROp::LenArray, dest, value, std::nullopt, {}, 0});
     return dest;
+}
+
+IRRegister IRProgram::emitLenMap(IRRegister value)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::LenMap, dest, value, std::nullopt, {}, 0});
+    return dest;
+}
+
+IRRegister IRProgram::emitLenRange(IRRegister value)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::LenRange, dest, value, std::nullopt, {}, 0});
+    return dest;
+}
+
+IRRegister IRProgram::emitLenStr(IRRegister value)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::LenStr, dest, value, std::nullopt, {}, 0});
+    return dest;
+}
+
+IRRegister IRProgram::emitIterInit(IRRegister collection)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::IterInit, dest, collection, std::nullopt, {}, 0});
+    return dest;
+}
+
+IRRegister IRProgram::emitIterHas(IRRegister iterator)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::IterHas, dest, iterator, std::nullopt, {}, 0});
+    return dest;
+}
+
+IRRegister IRProgram::emitIterNext(IRRegister iterator)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::IterNext, dest, iterator, std::nullopt, {}, 0});
+    return dest;
+}
+
+void IRProgram::emitInitModule(std::size_t dependencyIndex)
+{
+    emit(IRInstruction{IROp::InitModule, std::nullopt, std::nullopt, std::nullopt, {}, dependencyIndex});
 }
 
 IRRegister IRProgram::emitAssertNumber(IRRegister value, std::string message)
@@ -991,6 +1241,43 @@ std::size_t IRProgram::instructionCount() const
     return instructions_.size();
 }
 
+std::size_t IRProgram::functionCount() const
+{
+    return functions_.size();
+}
+
+std::size_t IRProgram::activeFunctionId() const
+{
+    return hasActiveFunction(functionStack_)
+        ? functionStack_.back().id
+        : std::numeric_limits<std::size_t>::max();
+}
+
+void IRProgram::patchMainCallDirect(std::size_t instructionIndex, std::size_t functionIndex)
+{
+    if (instructionIndex >= instructions_.size()
+        || instructions_[instructionIndex].op != IROp::CallDirect) {
+        throw std::logic_error("call_direct patch target is invalid");
+    }
+    instructions_[instructionIndex].operand = functionIndex;
+}
+
+void IRProgram::patchFunctionCallDirectById(
+    std::size_t functionId,
+    std::size_t instructionIndex,
+    std::size_t targetFunctionIndex)
+{
+    const auto found = std::find_if(
+        functions_.begin(), functions_.end(),
+        [functionId](const IRFunction& function) { return function.id == functionId; });
+    if (found == functions_.end()
+        || instructionIndex >= found->instructions.size()
+        || found->instructions[instructionIndex].op != IROp::CallDirect) {
+        throw std::logic_error("function call_direct patch target is invalid");
+    }
+    found->instructions[instructionIndex].operand = targetFunctionIndex;
+}
+
 IRProgram IRProgram::rebuildWithStreams(
     std::vector<IRInstruction> instructions,
     std::size_t registerCount,
@@ -1022,11 +1309,6 @@ IRProgram IRProgram::rebuildWithStreams(
             "IR function " + std::to_string(index));
     }
     validateFunctionBindings(functions, bindings_);
-    for (const IRModuleDependency& dependency : moduleDependencies) {
-        if (dependency.instructionOffset > instructions.size()) {
-            throw std::logic_error("IR module dependency offset is outside the main stream");
-        }
-    }
 
     IRProgram rebuilt = *this;
     rebuilt.instructions_ = std::move(instructions);
@@ -1098,20 +1380,46 @@ std::string irOpName(IROp op)
         return "assign_var";
     case IROp::Call:
         return "call";
+    case IROp::CallDirect:
+        return "call_direct";
     case IROp::NativeCall:
         return "native_call";
     case IROp::Index:
         return "index";
     case IROp::AssignIndex:
         return "assign_index";
+    case IROp::ArrayGet:
+        return "array_get";
+    case IROp::ArraySet:
+        return "array_set";
+    case IROp::MapGet:
+        return "map_get";
+    case IROp::MapSet:
+        return "map_set";
+    case IROp::RangeGet:
+        return "range_get";
     case IROp::Field:
         return "field";
     case IROp::AssignField:
         return "assign_field";
     case IROp::Len:
         return "len";
-    case IROp::AssertArray:
-        return "assert_array";
+    case IROp::LenArray:
+        return "len_array";
+    case IROp::LenMap:
+        return "len_map";
+    case IROp::LenRange:
+        return "len_range";
+    case IROp::LenStr:
+        return "len_str";
+    case IROp::IterInit:
+        return "iter_init";
+    case IROp::IterHas:
+        return "iter_has";
+    case IROp::IterNext:
+        return "iter_next";
+    case IROp::InitModule:
+        return "init_module";
     case IROp::AssertNumber:
         return "assert_number";
     case IROp::Print:
@@ -1120,6 +1428,8 @@ std::string irOpName(IROp op)
         return "return";
     case IROp::Negate:
         return "negate";
+    case IROp::NegNum:
+        return "neg_num";
     case IROp::Not:
         return "not";
     case IROp::Add:
@@ -1142,6 +1452,32 @@ std::string irOpName(IROp op)
         return "less";
     case IROp::LessEqual:
         return "less_equal";
+    case IROp::AddNum:
+        return "add_num";
+    case IROp::SubNum:
+        return "sub_num";
+    case IROp::MulNum:
+        return "mul_num";
+    case IROp::DivNum:
+        return "div_num";
+    case IROp::ConcatStr:
+        return "concat_str";
+    case IROp::LessNum:
+        return "lt_num";
+    case IROp::LessEqualNum:
+        return "le_num";
+    case IROp::GreaterNum:
+        return "gt_num";
+    case IROp::GreaterEqualNum:
+        return "ge_num";
+    case IROp::LessStr:
+        return "lt_str";
+    case IROp::LessEqualStr:
+        return "le_str";
+    case IROp::GreaterStr:
+        return "gt_str";
+    case IROp::GreaterEqualStr:
+        return "ge_str";
     case IROp::Jump:
         return "jump";
     case IROp::JumpIfFalse:

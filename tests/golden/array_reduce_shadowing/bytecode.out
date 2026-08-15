@@ -1,36 +1,52 @@
-main registers=12
-0000  b0 = make_function $0 <lambda>/3
-0001  store_var @0 reduce#3, b0
-0002  b1 = load_var @1 reduce#3
-0003  b2 = constant #2 1
-0004  b3 = array [b2]
-0005  b4 = constant #3 0
-0006  b5 = make_function $1 <lambda>/2
-0007  b6 = call b1(b3, b4, b5)
-0008  print b6
-0009  b7 = constant #5 1
-0010  b8 = array [b7]
-0011  b9 = constant #6 0
-0012  b10 = make_function $2 <lambda>/2
-0013  b11 = native_call @5 reduce [b8, b9, b10]
-0014  print b11
+native_import i0 = print abi=1
+native_import i1 = reduce abi=1
+main registers=13
+0000  block
+0001  b0 = make_function $0 <lambda>/3
+0002  init_global g0, b0
+0003  b1 = load_global g0
+0004  b2 = constant #2 1
+0005  b3 = array [b2]
+0006  b4 = constant #3 0
+0007  b5 = make_function $1 <lambda>/2
+0008  b6 = call b1(b3, b4, b5)
+0009  b12 = call_native i0 [b6]
+0010  b7 = constant #5 1
+0011  b8 = array [b7]
+0012  b9 = constant #6 0
+0013  b10 = make_function $2 <lambda>/2
+0014  b11 = call_native i1 [b8, b9, b10]
+0015  b12 = call_native i0 [b11]
+0016  return_nil
 
 function $0 <lambda>/3 registers=2
-0000  b0 = constant #0 "shadowed"
-0001  return b0
-0002  b1 = constant #1 nil
-0003  return b1
+0000  block
+0001  b0 = constant #0 "shadowed"
+0002  return b0
+0003  block
+0004  b1 = constant #1 nil
+0005  return b1
+0006  block
+0007  return_nil
 
 function $1 <lambda>/2 registers=2
-0000  b0 = load_var @2 acc#4
-0001  return b0
-0002  b1 = constant #4 nil
-0003  return b1
+0000  block
+0001  b0 = load_local l0
+0002  return b0
+0003  block
+0004  b1 = constant #4 nil
+0005  return b1
+0006  block
+0007  return_nil
 
 function $2 <lambda>/2 registers=4
-0000  b0 = load_var @3 acc#6
-0001  b1 = load_var @4 value#7
-0002  b2 = add b0, b1
-0003  return b2
-0004  b3 = constant #7 nil
-0005  return b3
+0000  block
+0001  b0 = load_local l0
+0002  b1 = load_local l1
+0003  b2 = add_num b0, b1
+0004  return b2
+0005  block
+0006  b3 = constant #7 nil
+0007  return b3
+0008  block
+0009  return_nil

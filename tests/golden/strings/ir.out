@@ -1,7 +1,7 @@
 IR
 0000  v0 = constant #0 "a"
 0001  v1 = constant #1 "b"
-0002  v2 = add v0, v1
+0002  v2 = concat_str v0, v1
 0003  print v2
 0004  v3 = constant #2 "hello"
 0005  print v3

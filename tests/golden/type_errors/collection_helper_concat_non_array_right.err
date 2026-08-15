@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/collection_helper_concat_non_array_right.cd:1:14: concat expects array as second argument, got number
+  concat([1], 2);
+               ^

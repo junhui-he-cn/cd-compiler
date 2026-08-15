@@ -1,17 +1,26 @@
-main registers=9
-0000  b0 = constant #0 0
-0001  store_var @0 i#0, b0
-0002  b1 = constant #1 true
-0003  jump_if_false b1, 0014
-0004  b2 = load_var @1 i#0
-0005  b3 = constant #2 1
-0006  b4 = add b2, b3
-0007  assign_var @2 i#0, b4
-0008  b5 = load_var @3 i#0
-0009  b6 = constant #3 3
-0010  b7 = equal b5, b6
-0011  jump_if_false b7, 0013
-0012  jump 0014
-0013  jump 0002
-0014  b8 = load_var @4 i#0
-0015  print b8
+native_import i0 = print abi=1
+main registers=10
+0000  block
+0001  b0 = constant #0 0
+0002  init_global g0, b0
+0003  br b1
+0004  block
+0005  b1 = constant #1 true
+0006  br_if b1, b2, b5
+0007  block
+0008  b2 = load_global g0
+0009  b3 = constant #2 1
+0010  b4 = add_num b2, b3
+0011  set_global g0, b4
+0012  b5 = load_global g0
+0013  b6 = constant #3 3
+0014  b7 = equal b5, b6
+0015  br_if b7, b3, b4
+0016  block
+0017  br b5
+0018  block
+0019  br b1
+0020  block
+0021  b8 = load_global g0
+0022  b9 = call_native i0 [b8]
+0023  return_nil

@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/typed_assignment_mismatch.cd:2:1: cannot assign string to `x` of type number
+  x = "hello";
+  ^

@@ -1,55 +1,73 @@
-main registers=11
-0000  b0 = constant #0 nil
-0001  store_var @0 make#0, b0
-0002  b1 = make_function $0 make/0
-0003  assign_var @3 make#0, b1
-0004  b2 = constant #3 nil
-0005  store_var @4 render#1, b2
-0006  b3 = make_function $1 render/1
-0007  assign_var @15 render#1, b3
-0008  b4 = load_var @16 render#1
-0009  b5 = constant #9 nil
-0010  b6 = call b4(b5)
-0011  print b6
-0012  b7 = load_var @17 render#1
-0013  b8 = load_var @18 make#0
-0014  b9 = call b8()
-0015  b10 = call b7(b9)
-0016  print b10
+native_import i0 = print abi=1
+native_import i1 = str abi=1
+main registers=10
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 make/0
+0004  set_global g0, b1
+0005  b2 = constant #3 nil
+0006  init_global g1, b2
+0007  b3 = make_function $1 render/1
+0008  set_global g1, b3
+0009  b4 = constant #9 nil
+0010  b5 = call_direct $1 [b4]
+0011  b9 = call_native i0 [b5]
+0012  b6 = load_global g0
+0013  b7 = call b6()
+0014  b8 = call_direct $1 [b7]
+0015  b9 = call_native i0 [b8]
+0016  return_nil
 
 function $0 make/0 registers=3
-0000  b0 = constant #1 9
-0001  b1 = variant @1 Outcome. @2 Good (b0)
-0002  return b1
-0003  b2 = constant #2 nil
-0004  return b2
+0000  block
+0001  b0 = constant #1 9
+0002  b1 = make_variant t0, v0 (b0)
+0003  return b1
+0004  block
+0005  b2 = constant #2 nil
+0006  return b2
+0007  block
+0008  return_nil
 
 function $1 render/1 registers=16
-0000  b0 = load_var @5 value#2
-0001  b1 = constant #4 nil
-0002  b2 = equal b0, b1
-0003  jump_if_false b2, 0007
-0004  b3 = constant #5 "nil"
-0005  return b3
-0006  jump 0026
-0007  b4 = variant_tag b0  @6 Outcome. @7 Good
-0008  jump_if_false b4, 0017
-0009  b5 = variant_field b0[0]
-0010  store_var @8 number#3, b5
-0011  b6 = constant #6 "good:"
-0012  b7 = load_var @9 number#3
-0013  b8 = native_call @10 str [b7]
-0014  b9 = add b6, b8
-0015  return b9
-0016  jump 0026
-0017  b10 = variant_tag b0  @11 Outcome. @12 Bad
-0018  jump_if_false b10, 0026
-0019  b11 = variant_field b0[0]
-0020  store_var @13 message#4, b11
-0021  b12 = constant #7 "bad:"
-0022  b13 = load_var @14 message#4
-0023  b14 = add b12, b13
-0024  return b14
-0025  jump 0026
-0026  b15 = constant #8 nil
-0027  return b15
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #4 nil
+0003  b2 = equal b0, b1
+0004  br_if b2, b1, b3
+0005  block
+0006  b3 = constant #5 "nil"
+0007  return b3
+0008  block
+0009  br b9
+0010  block
+0011  b4 = is_variant b0, t0, v0
+0012  br_if b4, b4, b6
+0013  block
+0014  b5 = variant_get b0, t0, v0, 0
+0015  bind_local l1, b5
+0016  b6 = constant #6 "good:"
+0017  b7 = load_local l1
+0018  b8 = call_native i1 [b7]
+0019  b9 = concat_str b6, b8
+0020  return b9
+0021  block
+0022  br b9
+0023  block
+0024  b10 = is_variant b0, t0, v1
+0025  br_if b10, b7, b9
+0026  block
+0027  b11 = variant_get b0, t0, v1, 0
+0028  bind_local l2, b11
+0029  b12 = constant #7 "bad:"
+0030  b13 = load_local l2
+0031  b14 = concat_str b12, b13
+0032  return b14
+0033  block
+0034  br b9
+0035  block
+0036  b15 = constant #8 nil
+0037  return b15
+0038  block
+0039  return_nil

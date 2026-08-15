@@ -1,5 +1,5 @@
 use compiler_design_vm::bytecode::{
-    Constant, DebugLocation, DebugRange, DebugSource, Function, FunctionBody, Instruction,
+    Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, Instruction,
 };
 use compiler_design_vm::{
     format_artifact, link_modules_checked, link_modules_with_report, parse_artifact,
@@ -17,8 +17,18 @@ use std::rc::Rc;
 fn print_program() -> Program {
     Program {
         constants: vec![Constant::Number("7".to_string())],
+        globals: Vec::new(),
+        types: Vec::new(),
+        native_imports: Vec::new(),
+        modules: Vec::new(),
         names: Vec::new(),
-        main: FunctionBody {
+        functions: vec![Function {
+            id: FuncId(0),
+            name: "main".to_string(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
             registers: 1,
             instructions: vec![
                 Instruction::Constant {
@@ -28,8 +38,8 @@ fn print_program() -> Program {
                 Instruction::Print { value: 0 },
             ],
             locations: vec![None, None],
-        },
-        functions: Vec::new(),
+        }],
+        entry: FuncId(0),
         debug_sources: Vec::new(),
     }
 }
@@ -37,15 +47,26 @@ fn print_program() -> Program {
 fn cooperative_program() -> Program {
     Program {
         constants: vec![Constant::Number("7".to_string()), Constant::Number("8".to_string())],
+        globals: Vec::new(),
+        types: Vec::new(),
+        native_imports: Vec::new(),
+        modules: Vec::new(),
         names: Vec::new(),
-        main: FunctionBody {
+        functions: vec![Function {
+            id: FuncId(0),
+            name: "main".to_string(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
             registers: 0,
             instructions: Vec::new(),
             locations: Vec::new(),
         },
-        functions: vec![
             Function {
-                index: 0,
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "target".to_string(),
                 arity: 0,
                 registers: 1,
@@ -57,7 +78,9 @@ fn cooperative_program() -> Program {
                 locations: vec![None; 2],
             },
             Function {
-                index: 1,
+                id: FuncId(2),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "waiter".to_string(),
                 arity: 0,
                 registers: 1,
@@ -69,6 +92,7 @@ fn cooperative_program() -> Program {
                 locations: vec![None; 2],
             },
         ],
+        entry: FuncId(0),
         debug_sources: Vec::new(),
     }
 }
@@ -79,15 +103,26 @@ fn cooperative_output_program() -> Program {
             Constant::Number("1".to_string()),
             Constant::Number("2".to_string()),
         ],
+        globals: Vec::new(),
+        types: Vec::new(),
+        native_imports: Vec::new(),
+        modules: Vec::new(),
         names: Vec::new(),
-        main: FunctionBody {
+        functions: vec![Function {
+            id: FuncId(0),
+            name: "main".to_string(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
             registers: 0,
             instructions: Vec::new(),
             locations: Vec::new(),
         },
-        functions: vec![
             Function {
-                index: 0,
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "first".to_string(),
                 arity: 0,
                 registers: 1,
@@ -103,7 +138,9 @@ fn cooperative_output_program() -> Program {
                 locations: vec![None; 3],
             },
             Function {
-                index: 1,
+                id: FuncId(2),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "second".to_string(),
                 arity: 0,
                 registers: 1,
@@ -119,6 +156,7 @@ fn cooperative_output_program() -> Program {
                 locations: vec![None; 3],
             },
         ],
+        entry: FuncId(0),
         debug_sources: Vec::new(),
     }
 }
@@ -139,11 +177,21 @@ fn profile_program() -> Program {
     };
     Program {
         constants: vec![Constant::Number("7".to_string())],
+        globals: Vec::new(),
+        types: Vec::new(),
+        native_imports: Vec::new(),
+        modules: Vec::new(),
         names: vec!["value".to_string(), "str".to_string()],
-        main: FunctionBody {
+        functions: vec![Function {
+            id: FuncId(0),
+            name: "main".to_string(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
             registers: 4,
             instructions: vec![
-                Instruction::MakeFunction { dest: 0, function: 0 },
+                Instruction::MakeFunction { dest: 0, function: FuncId(1) },
                 Instruction::Constant { dest: 1, constant: 0 },
                 Instruction::Call {
                     dest: 2,
@@ -159,8 +207,10 @@ fn profile_program() -> Program {
             ],
             locations: (0..5).map(|_| location()).collect(),
         },
-        functions: vec![Function {
-            index: 0,
+            Function {
+            id: FuncId(1),
+            local_count: 0,
+            upvalues: Vec::new(),
             name: "identity".to_string(),
             arity: 1,
             registers: 1,
@@ -171,6 +221,7 @@ fn profile_program() -> Program {
             ],
             locations: (0..2).map(|_| location()).collect(),
         }],
+        entry: FuncId(0),
         debug_sources: vec![DebugSource {
             module: None,
             path: "profile.cd".to_string(),
@@ -186,8 +237,18 @@ fn profile_failure_program() -> Program {
             Constant::Number("1".to_string()),
             Constant::Number("0".to_string()),
         ],
+        globals: Vec::new(),
+        types: Vec::new(),
+        native_imports: Vec::new(),
+        modules: Vec::new(),
         names: Vec::new(),
-        main: FunctionBody {
+        functions: vec![Function {
+            id: FuncId(0),
+            name: "main".to_string(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
             registers: 3,
             instructions: vec![
                 Instruction::Constant { dest: 0, constant: 0 },
@@ -201,8 +262,8 @@ fn profile_failure_program() -> Program {
                 },
             ],
             locations: vec![None; 5],
-        },
-        functions: Vec::new(),
+        }],
+        entry: FuncId(0),
         debug_sources: Vec::new(),
     }
 }
@@ -218,11 +279,21 @@ fn runtime_diagnostic_program() -> Program {
     };
     Program {
         constants: vec![Constant::Number("1".to_string()), Constant::Number("0".to_string())],
+        globals: Vec::new(),
+        types: Vec::new(),
+        native_imports: Vec::new(),
+        modules: Vec::new(),
         names: Vec::new(),
-        main: FunctionBody {
+        functions: vec![Function {
+            id: FuncId(0),
+            name: "main".to_string(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
             registers: 2,
             instructions: vec![
-                Instruction::MakeFunction { dest: 0, function: 0 },
+                Instruction::MakeFunction { dest: 0, function: FuncId(1) },
                 Instruction::Call {
                     dest: 1,
                     callee: 0,
@@ -231,8 +302,10 @@ fn runtime_diagnostic_program() -> Program {
             ],
             locations: vec![location(2, 1), location(2, 1)],
         },
-        functions: vec![Function {
-            index: 0,
+            Function {
+            id: FuncId(1),
+            local_count: 0,
+            upvalues: Vec::new(),
             name: "fail".to_string(),
             arity: 0,
             registers: 3,
@@ -249,6 +322,7 @@ fn runtime_diagnostic_program() -> Program {
             ],
             locations: vec![location(1, 21), location(1, 25), location(1, 21), location(1, 14)],
         }],
+        entry: FuncId(0),
         debug_sources: vec![DebugSource {
             module: None,
             path: "diagnostic.cd".to_string(),
@@ -287,10 +361,10 @@ fn library_api_exposes_typed_cooperative_task_results_and_join() {
         .start_cooperative(1)
         .expect("cooperative session should start");
     let waiter = session
-        .spawn(TaskSpec::function(1, Vec::new()))
+        .spawn(TaskSpec::function(2, Vec::new()))
         .expect("waiter should spawn");
     let target = session
-        .spawn(TaskSpec::function(0, Vec::new()))
+        .spawn(TaskSpec::function(1, Vec::new()))
         .expect("target should spawn");
 
     assert!(matches!(
@@ -323,10 +397,10 @@ fn library_api_exposes_task_attributed_cooperative_output() {
         .start_cooperative(1)
         .expect("cooperative session should start");
     let first = session
-        .spawn(TaskSpec::function(0, Vec::new()))
+        .spawn(TaskSpec::function(1, Vec::new()))
         .expect("first task should spawn");
     let second = session
-        .spawn(TaskSpec::function(1, Vec::new()))
+        .spawn(TaskSpec::function(2, Vec::new()))
         .expect("second task should spawn");
 
     assert_eq!(
@@ -360,10 +434,10 @@ fn library_api_exposes_task_attributed_cooperative_trace() {
         .start_cooperative_trace(1)
         .expect("cooperative trace session should start");
     let first = session
-        .spawn(TaskSpec::function(0, Vec::new()))
+        .spawn(TaskSpec::function(1, Vec::new()))
         .expect("first task should spawn");
     let second = session
-        .spawn(TaskSpec::function(1, Vec::new()))
+        .spawn(TaskSpec::function(2, Vec::new()))
         .expect("second task should spawn");
 
     session
@@ -403,10 +477,10 @@ fn library_api_exposes_task_attributed_cooperative_profile() {
         .start_cooperative_profile(1)
         .expect("cooperative profile session should start");
     let first = session
-        .spawn(TaskSpec::function(0, Vec::new()))
+        .spawn(TaskSpec::function(1, Vec::new()))
         .expect("first task should spawn");
     let second = session
-        .spawn(TaskSpec::function(1, Vec::new()))
+        .spawn(TaskSpec::function(2, Vec::new()))
         .expect("second task should spawn");
 
     session
@@ -451,10 +525,10 @@ fn library_api_exposes_task_attributed_cooperative_debug_pauses() {
         )
         .expect("cooperative debug session should start");
     let first = session
-        .spawn(TaskSpec::function(0, Vec::new()))
+        .spawn(TaskSpec::function(1, Vec::new()))
         .expect("first task should spawn");
     let second = session
-        .spawn(TaskSpec::function(1, Vec::new()))
+        .spawn(TaskSpec::function(2, Vec::new()))
         .expect("second task should spawn");
 
     assert!(matches!(
@@ -586,6 +660,7 @@ fn library_api_links_modules_and_keeps_vm_instances_independent() {
         canonical_path: "entry.cdbc".to_string(),
         is_entry: true,
         entry_order: Some(0),
+        init: 0,
         dependencies: Vec::new(),
         program: print_program(),
     };
@@ -594,7 +669,7 @@ fn library_api_links_modules_and_keeps_vm_instances_independent() {
         link_modules_with_report(vec![module]).expect("library linker should link one entry");
     assert_eq!(linked.report.entry_module_identities, vec!["entry"]);
     assert_eq!(linked.report.input_instruction_count, 2);
-    assert_eq!(linked.report.linked_instruction_count, 2);
+    assert_eq!(linked.report.linked_instruction_count, 4);
     let linked = linked.program;
 
     let first = VM::with_config(&linked, RunConfig::unlimited())
@@ -609,27 +684,37 @@ fn library_api_links_modules_and_keeps_vm_instances_independent() {
 
 #[test]
 fn library_api_exposes_versions_and_typed_artifact_errors() {
-    assert_eq!(LIBRARY_API_VERSION, "0.1");
+    assert_eq!(LIBRARY_API_VERSION, "0.2");
     assert_eq!(ARTIFACT_FORMAT_FAMILY, "cdbc");
-    assert_eq!(ARTIFACT_FORMAT_VERSION, "0.1");
+    assert_eq!(ARTIFACT_FORMAT_VERSION, "0.2");
 
     let version_error = parse_artifact_checked("cdbc 9.9\n").expect_err("version must be rejected");
     assert_eq!(version_error.kind, ArtifactErrorKind::UnsupportedVersion);
     assert_eq!(version_error.line, 1);
-    assert!(version_error.message.contains("cdbc 0.1"));
+    assert!(version_error.message.contains("cdbc 0.2"));
 
     let invalid_program = Program {
         constants: Vec::new(),
         names: Vec::new(),
-        main: FunctionBody {
+        globals: Vec::new(),
+        types: Vec::new(),
+        native_imports: Vec::new(),
+        modules: Vec::new(),
+        functions: vec![Function {
+            id: FuncId(0),
+            name: "main".to_string(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
             registers: 1,
             instructions: vec![Instruction::Constant {
                 dest: 0,
                 constant: 0,
             }],
             locations: vec![None],
-        },
-        functions: Vec::new(),
+        }],
+        entry: FuncId(0),
         debug_sources: Vec::new(),
     };
     let verification_error = verify_program_checked(&invalid_program)
@@ -646,10 +731,10 @@ fn library_api_exposes_typed_link_errors_without_changing_display_text() {
         canonical_path: "entry.cdbc".to_string(),
         is_entry: true,
         entry_order: Some(0),
+        init: 0,
         dependencies: vec![ModuleDependency {
             identity: "missing".to_string(),
             kind: ModuleDependencyKind::Import,
-            instruction_offset: 0,
             requested_path: "./missing.cd".to_string(),
         }],
         program: print_program(),
@@ -670,10 +755,10 @@ fn library_api_exposes_typed_link_errors_without_changing_display_text() {
         canonical_path: "entry.cdbc".to_string(),
         is_entry: true,
         entry_order: Some(0),
+        init: 0,
         dependencies: vec![ModuleDependency {
             identity: "missing".to_string(),
             kind: ModuleDependencyKind::Import,
-            instruction_offset: 0,
             requested_path: "./missing.cd".to_string(),
         }],
         program: print_program(),

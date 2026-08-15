@@ -18,11 +18,11 @@ MATRIX_PATH = REPO_ROOT / "docs" / "decisions" / "x1-compiler-vm-compatibility-0
 INVENTORY_PATH = TESTS_DIR / "verification_inventory.json"
 SCHEMA_VERSION = 1
 REQUIRED_CELL_IDS = {
-    "artifact.debug_metadata.cdbc_0_1",
-    "artifact.linked.cdbc_0_1",
-    "artifact.metadata_free.cdbc_0_1",
-    "artifact.module.cdbc_0_1",
-    "library.cli.version_0_1",
+    "artifact.debug_metadata.cdbc_0_2",
+    "artifact.linked.cdbc_0_2",
+    "artifact.metadata_free.cdbc_0_2",
+    "artifact.module.cdbc_0_2",
+    "library.cli.version_0_2",
     "module_cache.cdbc_cache_0_2_schema4",
     "native.fixed_registry",
 }
@@ -120,16 +120,16 @@ def validate_matrix(matrix: dict[str, Any], repo_root: Path = REPO_ROOT) -> list
     artifact_source = _check_source_path(repo_root, _field(artifact, "source"), "artifact", errors)
     if _field(artifact, "family") != "cdbc":
         errors.append("artifact family must remain cdbc")
-    if _field(artifact, "version") != "0.1":
-        errors.append("artifact version must remain 0.1")
-    if _field(artifact, "header") != "cdbc 0.1":
-        errors.append("artifact header must remain cdbc 0.1")
+    if _field(artifact, "version") != "0.2":
+        errors.append("artifact version must remain 0.2")
+    if _field(artifact, "header") != "cdbc 0.2":
+        errors.append("artifact header must remain cdbc 0.2")
     if artifact_source is not None:
         source = artifact_source.read_text(encoding="utf-8")
         if 'ARTIFACT_FORMAT_FAMILY: &str = "cdbc"' not in source:
             errors.append("artifact source does not declare cdbc family")
-        if 'ARTIFACT_FORMAT_VERSION: &str = "0.1"' not in source:
-            errors.append("artifact source does not declare version 0.1")
+        if 'ARTIFACT_FORMAT_VERSION: &str = "0.2"' not in source:
+            errors.append("artifact source does not declare version 0.2")
 
     module_cache = _field(contract, "module_cache")
     module_cache_source = _check_source_path(
@@ -156,15 +156,17 @@ def validate_matrix(matrix: dict[str, Any], repo_root: Path = REPO_ROOT) -> list
         errors.append("VM crate version does not match Cargo.toml")
     if vm_source is not None and _field(vm_library, "api_version") != _constant(vm_source, "LIBRARY_API_VERSION"):
         errors.append("VM library API version does not match lib.rs")
-    if _field(vm_library, "api_version") != "0.1":
-        errors.append("VM library API version must remain 0.1")
+    if _field(vm_library, "api_version") != "0.2":
+        errors.append("VM library API version must remain 0.2")
 
     native_abi = _field(contract, "native_abi")
     native_source = _check_source_path(repo_root, _field(native_abi, "source"), "native ABI", errors)
     if _field(native_abi, "mode") != "fixed-registered-names":
         errors.append("native ABI mode must remain fixed-registered-names")
-    if _field(native_abi, "serialized") is not False:
-        errors.append("native ABI names must remain non-serialized")
+    if _field(native_abi, "serialized") is not True:
+        errors.append("native ABI names must be serialized through native_imports")
+    if _field(native_abi, "abi") != 1:
+        errors.append("native ABI import version must remain 1")
     if native_source is not None and _field(native_abi, "names") != _native_names(native_source):
         errors.append("native ABI names do not match vm.rs registry")
 

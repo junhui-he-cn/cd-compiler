@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/struct_method_duplicate.cd:5:7: duplicate method `greet` for struct `Person`
+    fun greet(): string { return this.name; }
+        ^

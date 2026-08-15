@@ -1,45 +1,61 @@
+native_import i0 = print abi=1
+native_import i1 = str abi=1
 main registers=8
-0000  b0 = constant #0 nil
-0001  store_var @0 make#0, b0
-0002  b1 = make_function $0 make/0
-0003  assign_var @3 make#0, b1
-0004  b2 = constant #3 nil
-0005  store_var @4 render#1, b2
-0006  b3 = make_function $1 render/1
-0007  assign_var @15 render#1, b3
-0008  b4 = load_var @16 render#1
-0009  b5 = load_var @17 make#0
-0010  b6 = call b5()
-0011  b7 = call b4(b6)
-0012  print b7
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 make/0
+0004  set_global g0, b1
+0005  b2 = constant #3 nil
+0006  init_global g1, b2
+0007  b3 = make_function $1 render/1
+0008  set_global g1, b3
+0009  b4 = load_global g0
+0010  b5 = call b4()
+0011  b6 = call_direct $1 [b5]
+0012  b7 = call_native i0 [b6]
+0013  return_nil
 
 function $0 make/0 registers=3
-0000  b0 = constant #1 9
-0001  b1 = variant @1 Result. @2 Ok (b0)
-0002  return b1
-0003  b2 = constant #2 nil
-0004  return b2
+0000  block
+0001  b0 = constant #1 9
+0002  b1 = make_variant t0, v0 (b0)
+0003  return b1
+0004  block
+0005  b2 = constant #2 nil
+0006  return b2
+0007  block
+0008  return_nil
 
 function $1 render/1 registers=13
-0000  b0 = load_var @5 value#2
-0001  b1 = variant_tag b0  @6 Result. @7 Ok
-0002  jump_if_false b1, 0011
-0003  b2 = variant_field b0[0]
-0004  store_var @8 value#3, b2
-0005  b3 = constant #4 "ok:"
-0006  b4 = load_var @9 value#3
-0007  b5 = native_call @10 str [b4]
-0008  b6 = add b3, b5
-0009  return b6
-0010  jump 0020
-0011  b7 = variant_tag b0  @11 Result. @12 Err
-0012  jump_if_false b7, 0020
-0013  b8 = variant_field b0[0]
-0014  store_var @13 message#4, b8
-0015  b9 = constant #5 "err:"
-0016  b10 = load_var @14 message#4
-0017  b11 = add b9, b10
-0018  return b11
-0019  jump 0020
-0020  b12 = constant #6 nil
-0021  return b12
+0000  block
+0001  b0 = load_local l0
+0002  b1 = is_variant b0, t0, v0
+0003  br_if b1, b1, b3
+0004  block
+0005  b2 = variant_get b0, t0, v0, 0
+0006  bind_local l1, b2
+0007  b3 = constant #4 "ok:"
+0008  b4 = load_local l1
+0009  b5 = call_native i1 [b4]
+0010  b6 = concat_str b3, b5
+0011  return b6
+0012  block
+0013  br b6
+0014  block
+0015  b7 = is_variant b0, t0, v1
+0016  br_if b7, b4, b6
+0017  block
+0018  b8 = variant_get b0, t0, v1, 0
+0019  bind_local l2, b8
+0020  b9 = constant #5 "err:"
+0021  b10 = load_local l2
+0022  b11 = concat_str b9, b10
+0023  return b11
+0024  block
+0025  br b6
+0026  block
+0027  b12 = constant #6 nil
+0028  return b12
+0029  block
+0030  return_nil

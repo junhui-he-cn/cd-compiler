@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 
-use crate::runtime::{ArrayValue, FunctionValue, MapValue, RangeValue, StructValue, VariantValue};
+use crate::runtime::{
+    ArrayValue, FunctionValue, IteratorValue, MapValue, RangeValue, StructValue, VariantValue,
+};
 use std::collections::HashSet;
 use std::fmt;
 use std::rc::Rc;
@@ -17,6 +19,7 @@ pub enum Value {
     Range(RangeValue),
     Struct(StructValue),
     Variant(VariantValue),
+    Iterator(IteratorValue),
 }
 
 impl Value {
@@ -56,6 +59,10 @@ impl Value {
         Self::Variant(value)
     }
 
+    pub fn iterator(value: IteratorValue) -> Self {
+        Self::Iterator(value)
+    }
+
     pub fn type_name(&self) -> &str {
         match self {
             Self::Nil => "nil",
@@ -68,6 +75,7 @@ impl Value {
             Self::Range(_) => "range",
             Self::Struct(value) => value.type_name.as_deref().unwrap_or("struct"),
             Self::Variant(value) => &value.enum_name,
+            Self::Iterator(_) => "iterator",
         }
     }
 
@@ -96,7 +104,10 @@ impl Value {
                         .fields
                         .iter()
                         .zip(right.fields.iter())
-                        .all(|(left, right)| left.runtime_equals(right))
+                    .all(|(left, right)| left.runtime_equals(right))
+            }
+            (Self::Iterator(left), Self::Iterator(right)) => {
+                Rc::as_ptr(&left.position) == Rc::as_ptr(&right.position)
             }
             _ => false,
         }
@@ -155,6 +166,7 @@ fn hash_value_into(hash: &mut Fnv1a32, value: &Value) {
         Value::Range(_) => 7,
         Value::Struct(_) => 8,
         Value::Variant(_) => 9,
+        Value::Iterator(_) => 10,
     });
 
     match value {
@@ -188,6 +200,7 @@ fn hash_value_into(hash: &mut Fnv1a32, value: &Value) {
                 hash_value_into(hash, field);
             }
         }
+        Value::Iterator(value) => hash.number(Rc::as_ptr(&value.position) as usize as u64),
     }
 }
 
@@ -276,6 +289,7 @@ fn format_value(value: &Value, active_references: &mut HashSet<(u8, usize)>) -> 
             }
             output
         }
+        Value::Iterator(_) => "<iterator>".to_string(),
     }
 }
 
@@ -289,7 +303,8 @@ impl fmt::Display for Value {
 #[cfg(test)]
 mod tests {
     use super::Value;
-    use crate::runtime::{Heap, VariantValue};
+use crate::bytecode::{TypeId, VariantId};
+use crate::runtime::{Heap, VariantValue};
 
     #[test]
     fn formats_primitives_like_cpp_runtime() {
@@ -305,7 +320,7 @@ mod tests {
     fn formats_recursive_structs_with_a_cycle_marker() {
         let mut heap = Heap::new();
         let node = heap
-            .allocate_struct(Some("Node".to_string()), Vec::new())
+            .allocate_struct(None, Some("Node".to_string()), Vec::new())
             .expect("node identity should be available");
         let Value::Struct(struct_value) = &node else {
             panic!("expected struct value");
@@ -323,10 +338,10 @@ mod tests {
     fn formats_repeated_struct_aliases_without_false_cycle_markers() {
         let mut heap = Heap::new();
         let child = heap
-            .allocate_struct(Some("Node".to_string()), vec![("value".to_string(), Value::number(1.0))])
+            .allocate_struct(None, Some("Node".to_string()), vec![("value".to_string(), Value::number(1.0))])
             .expect("child identity should be available");
         let parent = heap
-            .allocate_struct(
+            .allocate_struct(None,
                 Some("Pair".to_string()),
                 vec![
                     ("left".to_string(), child.clone()),
@@ -376,16 +391,22 @@ mod tests {
     #[test]
     fn enum_variants_format_and_compare_structurally() {
         let left = Value::variant(VariantValue {
+            type_id: TypeId(0),
+            variant_id: VariantId(0),
             enum_name: "Result".to_string(),
             variant_name: "Ok".to_string(),
             fields: vec![Value::number(7.0)],
         });
         let right = Value::variant(VariantValue {
+            type_id: TypeId(0),
+            variant_id: VariantId(0),
             enum_name: "Result".to_string(),
             variant_name: "Ok".to_string(),
             fields: vec![Value::number(7.0)],
         });
         let other = Value::variant(VariantValue {
+            type_id: TypeId(0),
+            variant_id: VariantId(0),
             enum_name: "Result".to_string(),
             variant_name: "Err".to_string(),
             fields: vec![Value::string("bad")],

@@ -1,91 +1,111 @@
-main registers=33
-0000  b0 = constant #0 nil
-0001  store_var @0 describe#0, b0
-0002  b1 = make_function $0 describe/1
-0003  assign_var @15 describe#0, b1
-0004  b2 = constant #9 "Ada"
-0005  b3 = constant #10 36
-0006  b4 = constant #11 "Cambridge"
-0007  b5 = constant #12 1
-0008  b6 = struct @20 Address { @21 city: b4,  @22 zip: b5}
-0009  b7 = struct @16 Person { @17 name: b2,  @18 age: b3,  @19 address: b6}
-0010  store_var @23 ada#5, b7
-0011  b8 = constant #13 "Grace"
-0012  b9 = constant #14 40
-0013  b10 = constant #15 "Hong Kong"
-0014  b11 = constant #16 2
-0015  b12 = struct @28 Address { @29 city: b10,  @30 zip: b11}
-0016  b13 = struct @24 Person { @25 name: b8,  @26 age: b9,  @27 address: b12}
-0017  store_var @31 hongKong#6, b13
-0018  b14 = constant #17 nil
-0019  store_var @32 nilPerson#7, b14
-0020  b15 = load_var @33 describe#0
-0021  b16 = load_var @34 ada#5
-0022  b17 = call b15(b16)
-0023  print b17
-0024  b18 = load_var @35 describe#0
-0025  b19 = load_var @36 hongKong#6
-0026  b20 = call b18(b19)
-0027  print b20
-0028  b21 = load_var @37 describe#0
-0029  b22 = load_var @38 nilPerson#7
-0030  b23 = call b21(b22)
-0031  print b23
-0032  b24 = load_var @39 ada#5
-0033  b25 = field b24,  @40 name
-0034  b26 = constant #18 "Ada"
-0035  b27 = equal b25, b26
-0036  jump_if_false b27, 0038
-0037  jump 0042
-0038  b28 = field b24,  @41 age
-0039  b29 = constant #19 0
-0040  b30 = equal b28, b29
-0041  jump_if_false b30, 0045
-0042  b31 = constant #20 "or"
-0043  print b31
-0044  jump 0048
-0045  b32 = constant #21 "fallback"
-0046  print b32
-0047  jump 0048
+native_import i0 = print abi=1
+native_import i1 = str abi=1
+main registers=31
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 describe/1
+0004  set_global g0, b1
+0005  b2 = constant #9 "Ada"
+0006  b3 = constant #10 36
+0007  b4 = constant #11 "Cambridge"
+0008  b5 = constant #12 1
+0009  b6 = make_struct t0 [b4, b5]
+0010  b7 = make_struct t1 [b2, b3, b6]
+0011  init_global g1, b7
+0012  b8 = constant #13 "Grace"
+0013  b9 = constant #14 40
+0014  b10 = constant #15 "Hong Kong"
+0015  b11 = constant #16 2
+0016  b12 = make_struct t0 [b10, b11]
+0017  b13 = make_struct t1 [b8, b9, b12]
+0018  init_global g2, b13
+0019  b14 = constant #17 nil
+0020  init_global g3, b14
+0021  b15 = load_global g1
+0022  b16 = call_direct $0 [b15]
+0023  b30 = call_native i0 [b16]
+0024  b17 = load_global g2
+0025  b18 = call_direct $0 [b17]
+0026  b30 = call_native i0 [b18]
+0027  b19 = load_global g3
+0028  b20 = call_direct $0 [b19]
+0029  b30 = call_native i0 [b20]
+0030  b21 = load_global g1
+0031  b22 = struct_get b21, t1, 0
+0032  b23 = constant #18 "Ada"
+0033  b24 = equal b22, b23
+0034  br_if b24, b1, b2
+0035  block
+0036  br b3
+0037  block
+0038  b25 = struct_get b21, t1, 1
+0039  b26 = constant #19 0
+0040  b27 = equal b25, b26
+0041  br_if b27, b3, b4
+0042  block
+0043  b28 = constant #20 "or"
+0044  b30 = call_native i0 [b28]
+0045  return_nil
+0046  block
+0047  b29 = constant #21 "fallback"
+0048  b30 = call_native i0 [b29]
+0049  return_nil
+0050  block
+0051  return_nil
 
 function $0 describe/1 registers=25
-0000  b0 = load_var @1 value#1
-0001  b1 = constant #1 nil
-0002  b2 = equal b0, b1
-0003  jump_if_false b2, 0007
-0004  b3 = constant #2 "nil"
-0005  return b3
-0006  jump 0038
-0007  b4 = field b0,  @2 name
-0008  b5 = constant #3 "Ada"
-0009  b6 = equal b4, b5
-0010  jump_if_false b6, 0014
-0011  b7 = constant #4 "ada"
-0012  return b7
-0013  jump 0038
-0014  b8 = field b0,  @3 address
-0015  b9 = field b8,  @4 city
-0016  b10 = constant #5 "Hong Kong"
-0017  b11 = equal b9, b10
-0018  jump_if_false b11, 0026
-0019  b12 = field b0,  @5 name
-0020  store_var @6 name#2, b12
-0021  b13 = constant #6 "city:"
-0022  b14 = load_var @7 name#2
-0023  b15 = add b13, b14
-0024  return b15
-0025  jump 0038
-0026  b16 = field b0,  @8 age
-0027  b17 = field b0,  @9 name
-0028  store_var @10 age#3, b16
-0029  store_var @11 name#4, b17
-0030  b18 = load_var @12 name#4
-0031  b19 = constant #7 ":"
-0032  b20 = add b18, b19
-0033  b21 = load_var @13 age#3
-0034  b22 = native_call @14 str [b21]
-0035  b23 = add b20, b22
-0036  return b23
-0037  jump 0038
-0038  b24 = constant #8 nil
-0039  return b24
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #1 nil
+0003  b2 = equal b0, b1
+0004  br_if b2, b1, b3
+0005  block
+0006  b3 = constant #2 "nil"
+0007  return b3
+0008  block
+0009  br b11
+0010  block
+0011  b4 = struct_get b0, t1, 0
+0012  b5 = constant #3 "Ada"
+0013  b6 = equal b4, b5
+0014  br_if b6, b4, b6
+0015  block
+0016  b7 = constant #4 "ada"
+0017  return b7
+0018  block
+0019  br b11
+0020  block
+0021  b8 = struct_get b0, t1, 2
+0022  b9 = struct_get b8, t0, 0
+0023  b10 = constant #5 "Hong Kong"
+0024  b11 = equal b9, b10
+0025  br_if b11, b7, b9
+0026  block
+0027  b12 = struct_get b0, t1, 0
+0028  bind_local l1, b12
+0029  b13 = constant #6 "city:"
+0030  b14 = load_local l1
+0031  b15 = concat_str b13, b14
+0032  return b15
+0033  block
+0034  br b11
+0035  block
+0036  b16 = struct_get b0, t1, 1
+0037  b17 = struct_get b0, t1, 0
+0038  bind_local l2, b16
+0039  bind_local l3, b17
+0040  b18 = load_local l3
+0041  b19 = constant #7 ":"
+0042  b20 = concat_str b18, b19
+0043  b21 = load_local l2
+0044  b22 = call_native i1 [b21]
+0045  b23 = concat_str b20, b22
+0046  return b23
+0047  block
+0048  br b11
+0049  block
+0050  b24 = constant #8 nil
+0051  return b24
+0052  block
+0053  return_nil

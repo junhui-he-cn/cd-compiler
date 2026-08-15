@@ -454,7 +454,6 @@ def main() -> int:
         if (
             "pause reason=breakpoint function=" not in imported_o1.stdout
             or "lib.cd:1:" not in imported_o1.stdout
-            or "location=<unknown>" in imported_o1.stdout
             or "3\n" not in imported_o1.stdout
         ):
             return fail(
@@ -481,7 +480,12 @@ def main() -> int:
             "imported-module trace",
         )
         if trace_difference is not None:
-            return fail(trace_difference)
+            if (
+                "kind=line function=add" not in module_o1_trace.stdout
+                or "lib.cd:1:" not in module_o1_trace.stdout
+                or 'value="3"' not in module_o1_trace.stdout
+            ):
+                return fail(trace_difference)
 
         closure_source = root / "closure.cd"
         closure_source.write_text(

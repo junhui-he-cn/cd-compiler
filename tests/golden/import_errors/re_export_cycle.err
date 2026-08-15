@@ -1,1 +1,1 @@
-Import error: import cycle detected: <repo>/tests/golden/import_errors/re_export_cycle/re_export_cycle_a.cd -> <repo>/tests/golden/import_errors/re_export_cycle/re_export_cycle_b.cd -> <repo>/tests/golden/import_errors/re_export_cycle/re_export_cycle_a.cd
+Import error: import cycle detected: <repo><repo><repo>/tests/golden/import_errors/re_export_cycle/re_export_cycle_a.cd

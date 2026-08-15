@@ -45,7 +45,7 @@ def main() -> int:
         dependency_artifact = None
         for artifact in artifacts:
             text = artifact.read_text(encoding="utf-8")
-            if not text.startswith("cdbc 0.1\n\nartifact: module\n"):
+            if not text.startswith("cdbc 0.2\n\nartifact: module\n"):
                 return fail(f"{artifact.name} is missing the module envelope")
             if "  entry = true\n" in text:
                 entry_artifact = (artifact, text)
@@ -98,8 +98,10 @@ def main() -> int:
                     "module products did not retain canonical source-to-module identity\n"
                     f"missing={identity}"
                 )
-        if 'kind=import at=2 requested="./lib.cd"' not in entry_text:
-            return fail("entry artifact did not preserve the import insertion marker")
+        if 'kind=import requested="./lib.cd"' not in entry_text:
+            return fail("entry artifact did not preserve the import marker")
+        if "init = f0\n" not in entry_text or "init = f0\n" not in dependency_text:
+            return fail("module artifact did not record its init function")
         if 'string "before"' not in entry_text or 'string "after"' not in entry_text:
             return fail("entry artifact lost local statements")
         if 'string "lib"' in entry_text:
@@ -127,12 +129,8 @@ def main() -> int:
                 )
             return None
 
-        malformed_offset = entry_text.replace(
-            ' at=2 requested="./lib.cd"',
-            ' at=999 requested="./lib.cd"',
-            1,
-        )
-        rejected = expect_dump_rejection("invalid-module-offset", malformed_offset)
+        malformed_init = entry_text.replace("  init = f0\n", "  init = f999\n", 1)
+        rejected = expect_dump_rejection("invalid-module-init", malformed_init)
         if rejected is not None:
             return rejected
         malformed_entry_order = entry_text.replace("  entry_order = 0\n", "", 1)
@@ -288,7 +286,7 @@ def main() -> int:
         if method_entry_text is None or method_owner_text is None:
             return fail("did not identify method entry and owner artifacts")
 
-        if 'kind=import at=0 requested="./lib.cd"' not in method_entry_text:
+        if 'kind=import requested="./lib.cd"' not in method_entry_text:
             return fail("method entry artifact did not preserve its dependency marker")
         linkage_names = ("__method_Point_sum#0",)
         for linkage_name in linkage_names:
@@ -298,7 +296,7 @@ def main() -> int:
                 return fail(f"method entry artifact lost linkage name {linkage_name}")
         if 'name="sum"' not in method_owner_text:
             return fail("method owner artifact lost function sum")
-        if "function f0 name=" in method_entry_text:
+        if 'name="sum"' in method_entry_text:
             return fail("method entry artifact unexpectedly contained owner functions")
 
         method_linked_path = Path(temporary) / "method-linked.cdbc"
@@ -385,9 +383,9 @@ def main() -> int:
 
         if recursive_entry_text is None or recursive_dependency_text is None:
             return fail("did not identify recursive entry and dependency artifacts")
-        if 'kind=import at=0 requested="./lib.cd"' not in recursive_entry_text:
+        if 'kind=import requested="./lib.cd"' not in recursive_entry_text:
             return fail("recursive entry artifact did not preserve its dependency marker")
-        if "struct " not in recursive_entry_text or "assign_field" not in recursive_entry_text:
+        if "make_struct " not in recursive_entry_text or "struct_set " not in recursive_entry_text:
             return fail("recursive entry artifact did not use existing struct field operations")
         if "new_ref" in recursive_entry_text or "new_ref" in recursive_dependency_text:
             return fail("recursive artifact introduced an unsupported reference opcode")

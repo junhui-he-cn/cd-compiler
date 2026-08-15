@@ -11,32 +11,28 @@ IR
 0009  store_var @6 same#4, v4
 0010  v5 = make_function $2 same/2
 0011  assign_var @8 same#4, v5
-0012  v6 = load_var @9 identity#0
-0013  v7 = constant #7 42
-0014  v8 = call v6(v7)
-0015  print v8
-0016  v9 = load_var @10 identity#0
-0017  v10 = constant #8 "hello"
-0018  v11 = call v9(v10)
-0019  print v11
-0020  v12 = load_var @11 head#2
-0021  v13 = constant #9 1
-0022  v14 = constant #10 2
-0023  v15 = constant #11 3
-0024  v16 = array [v13, v14, v15]
-0025  v17 = call v12(v16)
-0026  print v17
-0027  v18 = load_var @12 same#4
-0028  v19 = constant #12 true
-0029  v20 = constant #13 true
-0030  v21 = call v18(v19, v20)
-0031  print v21
-0032  v22 = load_var @13 identity#0
-0033  store_var @14 alias#7, v22
-0034  v23 = load_var @15 alias#7
-0035  v24 = constant #14 "alias"
-0036  v25 = call v23(v24)
-0037  print v25
+0012  v6 = constant #7 42
+0013  v7 = call_direct $0 identity/1(v6)
+0014  print v7
+0015  v8 = constant #8 "hello"
+0016  v9 = call_direct $0 identity/1(v8)
+0017  print v9
+0018  v10 = constant #9 1
+0019  v11 = constant #10 2
+0020  v12 = constant #11 3
+0021  v13 = array [v10, v11, v12]
+0022  v14 = call_direct $1 head/1(v13)
+0023  print v14
+0024  v15 = constant #12 true
+0025  v16 = constant #13 true
+0026  v17 = call_direct $2 same/2(v15, v16)
+0027  print v17
+0028  v18 = load_var @9 identity#0
+0029  store_var @10 alias#7, v18
+0030  v19 = load_var @11 alias#7
+0031  v20 = constant #14 "alias"
+0032  v21 = call v19(v20)
+0033  print v21
 
 function $0 identity(value#1)
 0000  v0 = load_var @1 value#1
@@ -47,7 +43,7 @@ function $0 identity(value#1)
 function $1 head(values#3)
 0000  v0 = load_var @4 values#3
 0001  v1 = constant #3 0
-0002  v2 = index v0, v1
+0002  v2 = array_get v0, v1
 0003  return v2
 0004  v3 = constant #4 nil
 0005  return v3

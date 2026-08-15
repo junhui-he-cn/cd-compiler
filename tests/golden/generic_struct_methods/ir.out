@@ -2,57 +2,57 @@ IR
 0000  v0 = constant #0 nil
 0001  store_var @0 __method_Box_get#0, v0
 0002  v1 = make_function $0 get/1
-0003  assign_var @3 __method_Box_get#0, v1
+0003  assign_var @4 __method_Box_get#0, v1
 0004  v2 = constant #2 nil
-0005  store_var @4 __method_Box_set#1, v2
+0005  store_var @5 __method_Box_set#1, v2
 0006  v3 = make_function $1 set/2
-0007  assign_var @10 __method_Box_set#1, v3
+0007  assign_var @13 __method_Box_set#1, v3
 0008  v4 = constant #4 nil
-0009  store_var @11 __method_Box_wrap#2, v4
+0009  store_var @14 __method_Box_wrap#2, v4
 0010  v5 = make_function $2 wrap/2
-0011  assign_var @15 __method_Box_wrap#2, v5
+0011  assign_var @18 __method_Box_wrap#2, v5
 0012  v6 = constant #6 nil
-0013  store_var @16 __method_NumberBox_get#8, v6
+0013  store_var @19 __method_NumberBox_get#8, v6
 0014  v7 = make_function $3 get/1
-0015  assign_var @19 __method_NumberBox_get#8, v7
+0015  assign_var @23 __method_NumberBox_get#8, v7
 0016  v8 = constant #8 1
 0017  v9 = struct Box {value: v8}
-0018  store_var @22 box#10, v9
+0018  store_var @26 box#10, v9
 0019  v10 = constant #9 3
 0020  v11 = struct NumberBox {value: v10}
-0021  store_var @25 numberBox#11, v11
-0022  v12 = load_var @26 __method_Box_get#0
-0023  v13 = load_var @27 box#10
+0021  store_var @29 numberBox#11, v11
+0022  v12 = load_var @30 __method_Box_get#0
+0023  v13 = load_var @31 box#10
 0024  v14 = call v12(v13)
 0025  print v14
-0026  v15 = load_var @28 __method_Box_set#1
-0027  v16 = load_var @29 box#10
+0026  v15 = load_var @32 __method_Box_set#1
+0027  v16 = load_var @33 box#10
 0028  v17 = constant #10 2
 0029  v18 = call v15(v16, v17)
 0030  print v18
-0031  v19 = load_var @30 box#10
+0031  v19 = load_var @34 box#10
 0032  v20 = field v19.value
 0033  print v20
-0034  v21 = load_var @32 __method_Box_wrap#2
-0035  v22 = load_var @33 box#10
+0034  v21 = load_var @37 __method_Box_wrap#2
+0035  v22 = load_var @38 box#10
 0036  v23 = constant #11 "text"
 0037  v24 = call v21(v22, v23)
-0038  store_var @34 textBox#12, v24
-0039  v25 = load_var @35 textBox#12
+0038  store_var @39 textBox#12, v24
+0039  v25 = load_var @40 textBox#12
 0040  v26 = field v25.value
 0041  print v26
-0042  v27 = load_var @37 __method_Box_wrap#2
-0043  v28 = load_var @38 box#10
+0042  v27 = load_var @43 __method_Box_wrap#2
+0043  v28 = load_var @44 box#10
 0044  v29 = constant #12 "inferred"
 0045  v30 = call v27(v28, v29)
 0046  v31 = field v30.value
 0047  print v31
-0048  v32 = load_var @40 __method_NumberBox_get#8
-0049  v33 = load_var @41 numberBox#11
+0048  v32 = load_var @47 __method_NumberBox_get#8
+0049  v33 = load_var @48 numberBox#11
 0050  v34 = call v32(v33)
 0051  print v34
-0052  v35 = load_var @42 textBox#12
-0053  v36 = native_call @43 typeOf(v35)
+0052  v35 = load_var @49 textBox#12
+0053  v36 = native_call @50 typeOf(v35)
 0054  print v36
 
 function $0 get(this#3)
@@ -63,24 +63,24 @@ function $0 get(this#3)
 0004  return v2
 
 function $1 set(this#4, value#5)
-0000  v0 = load_var @5 this#4
-0001  v1 = load_var @6 value#5
+0000  v0 = load_var @6 this#4
+0001  v1 = load_var @7 value#5
 0002  v2 = assign_field v0.value, v1
-0003  v3 = load_var @8 this#4
+0003  v3 = load_var @10 this#4
 0004  v4 = field v3.value
 0005  return v4
 0006  v5 = constant #3 nil
 0007  return v5
 
 function $2 wrap(this#6, value#7)
-0000  v0 = load_var @14 value#7
+0000  v0 = load_var @17 value#7
 0001  v1 = struct Box {value: v0}
 0002  return v1
 0003  v2 = constant #5 nil
 0004  return v2
 
 function $3 get(this#9)
-0000  v0 = load_var @17 this#9
+0000  v0 = load_var @20 this#9
 0001  v1 = field v0.value
 0002  return v1
 0003  v2 = constant #7 nil

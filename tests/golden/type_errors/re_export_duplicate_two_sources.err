@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/re_export_duplicate_two_sources.cd:2:8: duplicate export `value`
+  export value from "../re_export_duplicate_source/lib.cd";
+         ^

@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = string "a"
@@ -20,77 +20,91 @@ names:
   n8 = "clear"
   n9 = "values#0"
 
-main registers=17:
+globals:
+  g0 = n0
+  g1 = n2
+
+native_imports:
+  i0 = "clear" abi=1
+  i1 = "print" abi=1
+
+main registers=18:
+block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
   r3 = constant c3
   r4 = map [r0: r1, r2: r3]
-  store_var n0, r4
-  r5 = load_var n1
-  store_var n2, r5
-  r6 = load_var n3
-  r7 = native_call n4 [r6]
-  r8 = load_var n5
-  print r8
-  r9 = load_var n6
+  init_global g0, r4
+  r5 = load_global g0
+  init_global g1, r5
+  r6 = load_global g0
+  r7 = call_native i0 [r6]
+  r8 = load_global g1
+  r17 = call_native i1 [r8]
+  r9 = load_global g0
   r10 = constant c4
   r11 = constant c5
-  r12 = assign_index r9, r10, r11
-  r13 = load_var n7
-  r14 = native_call n8 [r13]
-  print r14
-  r15 = load_var n9
-  r16 = len r15
-  print r16
+  r12 = map_set r9, r10, r11
+  r13 = load_global g0
+  r14 = call_native i0 [r13]
+  r17 = call_native i1 [r14]
+  r15 = load_global g0
+  r16 = len_map r15
+  r17 = call_native i1 [r16]
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/map_clear/input.cd" text="let values = {\"a\": 1, \"b\": 2};\nlet alias = values;\nclear(values);\nprint alias;\nvalues[\"c\"] = 3;\nprint values.clear();\nprint values.len();\n"
 
 debug_locations:
   main 0 = s0:1:15
-  main 1 = s0:1:20
-  main 2 = s0:1:23
-  main 3 = s0:1:28
-  main 4 = s0:1:14
-  main 5 = s0:1:1
-  main 6 = s0:2:13
-  main 7 = s0:2:1
-  main 8 = s0:3:7
-  main 9 = s0:3:1
-  main 10 = s0:4:7
-  main 11 = s0:4:1
-  main 12 = s0:5:1
-  main 13 = s0:5:8
-  main 14 = s0:5:15
-  main 15 = s0:5:1
-  main 16 = s0:6:7
+  main 1 = s0:1:15
+  main 2 = s0:1:20
+  main 3 = s0:1:23
+  main 4 = s0:1:28
+  main 5 = s0:1:14
+  main 6 = s0:1:1
+  main 7 = s0:2:13
+  main 8 = s0:2:1
+  main 9 = s0:3:7
+  main 10 = s0:3:1
+  main 11 = s0:4:7
+  main 12 = s0:4:1
+  main 13 = s0:5:1
+  main 14 = s0:5:8
+  main 15 = s0:5:15
+  main 16 = s0:5:1
   main 17 = s0:6:7
-  main 18 = s0:6:1
-  main 19 = s0:7:7
+  main 18 = s0:6:7
+  main 19 = s0:6:1
   main 20 = s0:7:7
-  main 21 = s0:7:1
+  main 21 = s0:7:7
+  main 22 = s0:7:1
+  main 23 = s0:7:1
 
 debug_ranges:
   main 0 = s0:14:17
-  main 1 = s0:19:20
-  main 2 = s0:22:25
-  main 3 = s0:27:28
-  main 4 = s0:13:28
-  main 5 = s0:4:28
-  main 6 = s0:43:49
-  main 7 = s0:35:49
-  main 8 = s0:57:63
-  main 9 = s0:51:64
-  main 10 = s0:72:77
+  main 1 = s0:14:17
+  main 2 = s0:19:20
+  main 3 = s0:22:25
+  main 4 = s0:27:28
+  main 5 = s0:13:28
+  main 6 = s0:4:28
+  main 7 = s0:43:49
+  main 8 = s0:35:49
+  main 9 = s0:57:63
+  main 10 = s0:51:64
   main 11 = s0:72:77
-  main 12 = s0:79:85
-  main 13 = s0:86:89
-  main 14 = s0:93:94
-  main 15 = s0:79:94
-  main 16 = s0:102:108
-  main 17 = s0:102:116
+  main 12 = s0:72:77
+  main 13 = s0:79:85
+  main 14 = s0:86:89
+  main 15 = s0:93:94
+  main 16 = s0:79:94
+  main 17 = s0:102:108
   main 18 = s0:102:116
-  main 19 = s0:124:130
-  main 20 = s0:124:136
+  main 19 = s0:102:116
+  main 20 = s0:124:130
   main 21 = s0:124:136
+  main 22 = s0:124:136
+  main 23 = s0:124:136

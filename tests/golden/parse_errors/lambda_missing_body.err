@@ -1,1 +1,3 @@
 Parse error at <repo>/tests/golden/parse_errors/lambda_missing_body.cd:1:17: expected `{` before function body, found Return `return`
+  let f = fun (x) return x;
+                  ^

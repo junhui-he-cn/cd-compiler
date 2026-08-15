@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/inferred_let_string_assignment_mismatch.cd:2:1: cannot assign number to `s` of type string
+  s = 2;
+  ^

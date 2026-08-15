@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 1
@@ -8,23 +8,36 @@ names:
   n1 = "value"
   n2 = "typeOf"
 
-main registers=3:
+types:
+  t0 = struct "Box" field0="value"
+
+native_imports:
+  i0 = "typeOf" abi=1
+  i1 = "print" abi=1
+
+main registers=4:
+block b0:
   r0 = constant c0
-  r1 = struct n0 {n1: r0}
-  r2 = native_call n2 [r1]
-  print r2
+  r1 = make_struct t0 [r0]
+  r2 = call_native i0 [r1]
+  r3 = call_native i1 [r2]
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/named_struct_runtime_type_name/input.cd" text="struct Box { value: number }\nprint typeOf(Box { value: 1 });\n"
 
 debug_locations:
   main 0 = s0:2:27
-  main 1 = s0:2:14
-  main 2 = s0:2:7
-  main 3 = s0:2:1
+  main 1 = s0:2:27
+  main 2 = s0:2:14
+  main 3 = s0:2:7
+  main 4 = s0:2:1
+  main 5 = s0:2:1
 
 debug_ranges:
   main 0 = s0:55:56
-  main 1 = s0:42:56
-  main 2 = s0:35:59
+  main 1 = s0:55:56
+  main 2 = s0:42:56
   main 3 = s0:35:59
+  main 4 = s0:35:59
+  main 5 = s0:35:59

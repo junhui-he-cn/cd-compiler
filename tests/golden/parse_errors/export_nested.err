@@ -1,1 +1,3 @@
 Parse error at <repo>/tests/golden/parse_errors/export_nested.cd:2:3: `export` is only allowed at top level
+    export value;
+    ^

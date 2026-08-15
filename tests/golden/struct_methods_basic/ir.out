@@ -2,21 +2,21 @@ IR
 0000  v0 = constant #0 nil
 0001  store_var @0 __method_Person_label#0, v0
 0002  v1 = make_function $0 label/1
-0003  assign_var @3 __method_Person_label#0, v1
+0003  assign_var @4 __method_Person_label#0, v1
 0004  v2 = constant #3 nil
-0005  store_var @4 __method_Person_nextAge#1, v2
+0005  store_var @5 __method_Person_nextAge#1, v2
 0006  v3 = make_function $1 nextAge/1
-0007  assign_var @7 __method_Person_nextAge#1, v3
+0007  assign_var @9 __method_Person_nextAge#1, v3
 0008  v4 = constant #6 "Ada"
 0009  v5 = constant #7 36
 0010  v6 = struct Person {name: v4, age: v5}
-0011  store_var @11 p#4, v6
-0012  v7 = load_var @12 __method_Person_label#0
-0013  v8 = load_var @13 p#4
+0011  store_var @13 p#4, v6
+0012  v7 = load_var @14 __method_Person_label#0
+0013  v8 = load_var @15 p#4
 0014  v9 = call v7(v8)
 0015  print v9
-0016  v10 = load_var @14 __method_Person_nextAge#1
-0017  v11 = load_var @15 p#4
+0016  v10 = load_var @16 __method_Person_nextAge#1
+0017  v11 = load_var @17 p#4
 0018  v12 = call v10(v11)
 0019  print v12
 
@@ -24,16 +24,16 @@ function $0 label(this#2)
 0000  v0 = load_var @1 this#2
 0001  v1 = field v0.name
 0002  v2 = constant #1 "!"
-0003  v3 = add v1, v2
+0003  v3 = concat_str v1, v2
 0004  return v3
 0005  v4 = constant #2 nil
 0006  return v4
 
 function $1 nextAge(this#3)
-0000  v0 = load_var @5 this#3
+0000  v0 = load_var @6 this#3
 0001  v1 = field v0.age
 0002  v2 = constant #4 1
-0003  v3 = add v1, v2
+0003  v3 = add_num v1, v2
 0004  return v3
 0005  v4 = constant #5 nil
 0006  return v4

@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 1
@@ -19,74 +19,90 @@ names:
   n7 = "xs#0"
   n8 = "concat"
 
-main registers=16:
+globals:
+  g0 = n0
+
+native_imports:
+  i0 = "contains" abi=1
+  i1 = "print" abi=1
+  i2 = "slice" abi=1
+  i3 = "copy" abi=1
+  i4 = "concat" abi=1
+
+main registers=17:
+block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = array [r0, r1]
-  store_var n0, r2
-  r3 = load_var n1
+  init_global g0, r2
+  r3 = load_global g0
   r4 = constant c2
-  r5 = native_call n2 [r3, r4]
-  print r5
-  r6 = load_var n3
+  r5 = call_native i0 [r3, r4]
+  r16 = call_native i1 [r5]
+  r6 = load_global g0
   r7 = constant c3
   r8 = constant c4
-  r9 = native_call n4 [r6, r7, r8]
-  print r9
-  r10 = load_var n5
-  r11 = native_call n6 [r10]
-  print r11
-  r12 = load_var n7
+  r9 = call_native i2 [r6, r7, r8]
+  r16 = call_native i1 [r9]
+  r10 = load_global g0
+  r11 = call_native i3 [r10]
+  r16 = call_native i1 [r11]
+  r12 = load_global g0
   r13 = constant c5
   r14 = array [r13]
-  r15 = native_call n8 [r12, r14]
-  print r15
+  r15 = call_native i4 [r12, r14]
+  r16 = call_native i1 [r15]
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/collection_helpers/input.cd" text="let xs = [1, 2];\nprint contains(xs, 2);\nprint slice(xs, 0, 1);\nprint copy(xs);\nprint concat(xs, [3]);\n"
 
 debug_locations:
   main 0 = s0:1:11
-  main 1 = s0:1:14
-  main 2 = s0:1:10
-  main 3 = s0:1:1
-  main 4 = s0:2:16
-  main 5 = s0:2:20
-  main 6 = s0:2:7
-  main 7 = s0:2:1
-  main 8 = s0:3:13
-  main 9 = s0:3:17
-  main 10 = s0:3:20
-  main 11 = s0:3:7
-  main 12 = s0:3:1
-  main 13 = s0:4:12
-  main 14 = s0:4:7
-  main 15 = s0:4:1
-  main 16 = s0:5:14
-  main 17 = s0:5:19
-  main 18 = s0:5:18
-  main 19 = s0:5:7
-  main 20 = s0:5:1
+  main 1 = s0:1:11
+  main 2 = s0:1:14
+  main 3 = s0:1:10
+  main 4 = s0:1:1
+  main 5 = s0:2:16
+  main 6 = s0:2:20
+  main 7 = s0:2:7
+  main 8 = s0:2:1
+  main 9 = s0:3:13
+  main 10 = s0:3:17
+  main 11 = s0:3:20
+  main 12 = s0:3:7
+  main 13 = s0:3:1
+  main 14 = s0:4:12
+  main 15 = s0:4:7
+  main 16 = s0:4:1
+  main 17 = s0:5:14
+  main 18 = s0:5:19
+  main 19 = s0:5:18
+  main 20 = s0:5:7
+  main 21 = s0:5:1
+  main 22 = s0:5:1
 
 debug_ranges:
   main 0 = s0:10:11
-  main 1 = s0:13:14
-  main 2 = s0:9:14
-  main 3 = s0:4:14
-  main 4 = s0:32:34
-  main 5 = s0:36:37
-  main 6 = s0:23:38
+  main 1 = s0:10:11
+  main 2 = s0:13:14
+  main 3 = s0:9:14
+  main 4 = s0:4:14
+  main 5 = s0:32:34
+  main 6 = s0:36:37
   main 7 = s0:23:38
-  main 8 = s0:52:54
-  main 9 = s0:56:57
-  main 10 = s0:59:60
-  main 11 = s0:46:61
+  main 8 = s0:23:38
+  main 9 = s0:52:54
+  main 10 = s0:56:57
+  main 11 = s0:59:60
   main 12 = s0:46:61
-  main 13 = s0:74:76
-  main 14 = s0:69:77
+  main 13 = s0:46:61
+  main 14 = s0:74:76
   main 15 = s0:69:77
-  main 16 = s0:92:94
-  main 17 = s0:97:98
-  main 18 = s0:96:98
-  main 19 = s0:85:100
+  main 16 = s0:69:77
+  main 17 = s0:92:94
+  main 18 = s0:97:98
+  main 19 = s0:96:98
   main 20 = s0:85:100
+  main 21 = s0:85:100
+  main 22 = s0:85:100

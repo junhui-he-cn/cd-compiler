@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = string "Ada"
@@ -12,44 +12,61 @@ names:
   n3 = "person#0"
   n4 = "person#0"
   n5 = "age"
-  n6 = "person#0"
-  n7 = "age"
+  n6 = "Person"
+  n7 = "person#0"
+  n8 = "age"
+  n9 = "Person"
 
-main registers=8:
+globals:
+  g0 = n3
+
+types:
+  t0 = struct "Person" field0="name" field1="age"
+
+native_imports:
+  i0 = "print" abi=1
+
+main registers=9:
+block b0:
   r0 = constant c0
   r1 = constant c1
-  r2 = struct n0 {n1: r0, n2: r1}
-  store_var n3, r2
-  r3 = load_var n4
+  r2 = make_struct t0 [r0, r1]
+  init_global g0, r2
+  r3 = load_global g0
   r4 = constant c2
-  r5 = assign_field r3, n5, r4
-  r6 = load_var n6
-  r7 = field r6, n7
-  print r7
+  r5 = struct_set r3, t0, 1, r4
+  r6 = load_global g0
+  r7 = struct_get r6, t0, 1
+  r8 = call_native i0 [r7]
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/struct_field_assignment/input.cd" text="struct Person { name: string, age: number }\nlet person = Person { name: \"Ada\", age: 36 };\nperson.age = 37;\nprint person.age;\n"
 
 debug_locations:
   main 0 = s0:2:29
-  main 1 = s0:2:41
-  main 2 = s0:2:14
-  main 3 = s0:2:1
-  main 4 = s0:3:1
-  main 5 = s0:3:14
-  main 6 = s0:3:1
-  main 7 = s0:4:7
+  main 1 = s0:2:29
+  main 2 = s0:2:41
+  main 3 = s0:2:14
+  main 4 = s0:2:1
+  main 5 = s0:3:1
+  main 6 = s0:3:14
+  main 7 = s0:3:1
   main 8 = s0:4:7
-  main 9 = s0:4:1
+  main 9 = s0:4:7
+  main 10 = s0:4:1
+  main 11 = s0:4:1
 
 debug_ranges:
   main 0 = s0:72:77
-  main 1 = s0:84:86
-  main 2 = s0:57:86
-  main 3 = s0:48:86
-  main 4 = s0:90:96
-  main 5 = s0:103:105
-  main 6 = s0:90:105
-  main 7 = s0:113:119
-  main 8 = s0:113:123
+  main 1 = s0:72:77
+  main 2 = s0:84:86
+  main 3 = s0:57:86
+  main 4 = s0:48:86
+  main 5 = s0:90:96
+  main 6 = s0:103:105
+  main 7 = s0:90:105
+  main 8 = s0:113:119
   main 9 = s0:113:123
+  main 10 = s0:113:123
+  main 11 = s0:113:123

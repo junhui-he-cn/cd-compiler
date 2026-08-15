@@ -1,13 +1,21 @@
-main registers=4
-0000  b0 = array []
-0001  b1 = make_function $0 <lambda>/1
-0002  b2 = native_call @0 filter [b0, b1]
-0003  store_var @1 empty#1, b2
-0004  b3 = load_var @2 empty#1
-0005  print b3
+native_import i0 = filter abi=1
+native_import i1 = print abi=1
+main registers=5
+0000  block
+0001  b0 = array []
+0002  b1 = make_function $0 <lambda>/1
+0003  b2 = call_native i0 [b0, b1]
+0004  init_global g0, b2
+0005  b3 = load_global g0
+0006  b4 = call_native i1 [b3]
+0007  return_nil
 
 function $0 <lambda>/1 registers=2
-0000  b0 = constant #0 false
-0001  return b0
-0002  b1 = constant #1 nil
-0003  return b1
+0000  block
+0001  b0 = constant #0 false
+0002  return b0
+0003  block
+0004  b1 = constant #1 nil
+0005  return b1
+0006  block
+0007  return_nil

@@ -1,65 +1,70 @@
-main registers=48
-0000  b0 = constant #0 "a"
-0001  b1 = constant #1 1
-0002  b2 = constant #2 "b"
-0003  b3 = constant #3 2
-0004  b4 = map [b0: b1, b2: b3]
-0005  store_var @0 left#0, b4
-0006  b5 = constant #4 "b"
-0007  b6 = constant #5 20
-0008  b7 = constant #6 "c"
-0009  b8 = constant #7 3
-0010  b9 = map [b5: b6, b7: b8]
-0011  store_var @1 right#1, b9
-0012  b10 = load_var @2 left#0
-0013  b11 = load_var @3 right#1
-0014  b12 = native_call @4 merge [b10, b11]
-0015  store_var @5 combined#2, b12
-0016  b13 = load_var @6 combined#2
-0017  print b13
-0018  b14 = load_var @7 left#0
-0019  print b14
-0020  b15 = load_var @8 right#1
-0021  b16 = constant #8 "d"
-0022  b17 = constant #9 4
-0023  b18 = assign_index b15, b16, b17
-0024  b19 = load_var @9 combined#2
-0025  print b19
-0026  b20 = load_var @10 left#0
-0027  b21 = load_var @11 right#1
-0028  b22 = native_call @12 merge [b20, b21]
-0029  print b22
-0030  b23 = constant #10 7
-0031  b24 = array [b23]
-0032  store_var @13 shared#3, b24
-0033  b25 = constant #11 "left"
-0034  b26 = load_var @14 shared#3
-0035  b27 = map [b25: b26]
-0036  store_var @15 shallowLeft#4, b27
-0037  b28 = constant #12 "right"
-0038  b29 = load_var @16 shared#3
-0039  b30 = map [b28: b29]
-0040  store_var @17 shallowRight#5, b30
-0041  b31 = load_var @18 shallowLeft#4
-0042  b32 = load_var @19 shallowRight#5
-0043  b33 = native_call @20 merge [b31, b32]
-0044  store_var @21 shallow#6, b33
-0045  b34 = load_var @22 shared#3
-0046  b35 = constant #13 8
-0047  b36 = native_call @23 push [b34, b35]
-0048  b37 = load_var @24 shallow#6
-0049  print b37
-0050  b38 = constant #14 "empty"
-0051  b39 = constant #15 nil
-0052  b40 = map [b38: b39]
-0053  store_var @25 optional#7, b40
-0054  b41 = constant #16 "value"
-0055  b42 = constant #17 9
-0056  b43 = map [b41: b42]
-0057  store_var @26 required#8, b43
-0058  b44 = load_var @27 optional#7
-0059  b45 = load_var @28 required#8
-0060  b46 = native_call @29 merge [b44, b45]
-0061  store_var @30 typed#9, b46
-0062  b47 = load_var @31 typed#9
-0063  print b47
+native_import i0 = merge abi=1
+native_import i1 = print abi=1
+native_import i2 = push abi=1
+main registers=49
+0000  block
+0001  b0 = constant #0 "a"
+0002  b1 = constant #1 1
+0003  b2 = constant #2 "b"
+0004  b3 = constant #3 2
+0005  b4 = map [b0: b1, b2: b3]
+0006  init_global g0, b4
+0007  b5 = constant #4 "b"
+0008  b6 = constant #5 20
+0009  b7 = constant #6 "c"
+0010  b8 = constant #7 3
+0011  b9 = map [b5: b6, b7: b8]
+0012  init_global g1, b9
+0013  b10 = load_global g0
+0014  b11 = load_global g1
+0015  b12 = call_native i0 [b10, b11]
+0016  init_global g2, b12
+0017  b13 = load_global g2
+0018  b48 = call_native i1 [b13]
+0019  b14 = load_global g0
+0020  b48 = call_native i1 [b14]
+0021  b15 = load_global g1
+0022  b16 = constant #8 "d"
+0023  b17 = constant #9 4
+0024  b18 = map_set b15, b16, b17
+0025  b19 = load_global g2
+0026  b48 = call_native i1 [b19]
+0027  b20 = load_global g0
+0028  b21 = load_global g1
+0029  b22 = call_native i0 [b20, b21]
+0030  b48 = call_native i1 [b22]
+0031  b23 = constant #10 7
+0032  b24 = array [b23]
+0033  init_global g3, b24
+0034  b25 = constant #11 "left"
+0035  b26 = load_global g3
+0036  b27 = map [b25: b26]
+0037  init_global g4, b27
+0038  b28 = constant #12 "right"
+0039  b29 = load_global g3
+0040  b30 = map [b28: b29]
+0041  init_global g5, b30
+0042  b31 = load_global g4
+0043  b32 = load_global g5
+0044  b33 = call_native i0 [b31, b32]
+0045  init_global g6, b33
+0046  b34 = load_global g3
+0047  b35 = constant #13 8
+0048  b36 = call_native i2 [b34, b35]
+0049  b37 = load_global g6
+0050  b48 = call_native i1 [b37]
+0051  b38 = constant #14 "empty"
+0052  b39 = constant #15 nil
+0053  b40 = map [b38: b39]
+0054  init_global g7, b40
+0055  b41 = constant #16 "value"
+0056  b42 = constant #17 9
+0057  b43 = map [b41: b42]
+0058  init_global g8, b43
+0059  b44 = load_global g7
+0060  b45 = load_global g8
+0061  b46 = call_native i0 [b44, b45]
+0062  init_global g9, b46
+0063  b47 = load_global g9
+0064  b48 = call_native i1 [b47]
+0065  return_nil

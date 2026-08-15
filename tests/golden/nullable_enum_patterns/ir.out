@@ -2,61 +2,59 @@ IR
 0000  v0 = constant #0 nil
 0001  store_var @0 describe#0, v0
 0002  v1 = make_function $0 describe/1
-0003  assign_var @13 describe#0, v1
+0003  assign_var @17 describe#0, v1
 0004  v2 = constant #8 7
 0005  v3 = variant Option.Some (v2)
-0006  store_var @16 some#4, v3
+0006  store_var @20 some#4, v3
 0007  v4 = constant #9 nil
-0008  store_var @17 none#5, v4
-0009  v5 = load_var @18 describe#0
-0010  v6 = load_var @19 some#4
-0011  v7 = call v5(v6)
-0012  print v7
-0013  v8 = load_var @20 describe#0
-0014  v9 = load_var @21 none#5
-0015  v10 = call v8(v9)
-0016  print v10
-0017  v11 = load_var @22 some#4
-0018  v12 = constant #10 nil
-0019  v13 = equal v11, v12
-0020  jump_if_false v13, 0024
-0021  v14 = constant #11 "nil"
-0022  print v14
-0023  jump 0046
-0024  v15 = variant_tag v11 Option.Some
-0025  jump_if_false v15, 0035
-0026  v16 = variant_field v11[0]
-0027  store_var @25 value#6, v16
-0028  v17 = load_var @26 value#6
-0029  v18 = constant #12 10
-0030  v19 = greater v17, v18
-0031  jump_if_false v19, 0035
-0032  v20 = constant #13 "large"
-0033  print v20
-0034  jump 0046
-0035  v21 = variant_tag v11 Option.Some
-0036  jump_if_false v21, 0041
-0037  v22 = variant_field v11[0]
-0038  v23 = constant #14 "some"
-0039  print v23
-0040  jump 0046
-0041  v24 = variant_tag v11 Option.None
-0042  jump_if_false v24, 0046
-0043  v25 = constant #15 "none"
-0044  print v25
-0045  jump 0046
-0046  v26 = load_var @31 none#5
-0047  v27 = constant #16 nil
-0048  v28 = equal v26, v27
-0049  jump_if_false v28, 0055
-0050  v29 = constant #17 true
-0051  jump_if_false v29, 0055
-0052  v30 = constant #18 "guarded nil"
-0053  print v30
-0054  jump 0058
-0055  v31 = constant #19 "fallback"
-0056  print v31
-0057  jump 0058
+0008  store_var @21 none#5, v4
+0009  v5 = load_var @22 some#4
+0010  v6 = call_direct $0 describe/1(v5)
+0011  print v6
+0012  v7 = load_var @23 none#5
+0013  v8 = call_direct $0 describe/1(v7)
+0014  print v8
+0015  v9 = load_var @24 some#4
+0016  v10 = constant #10 nil
+0017  v11 = equal v9, v10
+0018  jump_if_false v11, 0022
+0019  v12 = constant #11 "nil"
+0020  print v12
+0021  jump 0044
+0022  v13 = variant_tag v9 Option.Some
+0023  jump_if_false v13, 0033
+0024  v14 = variant_field v9[0]
+0025  store_var @29 value#6, v14
+0026  v15 = load_var @30 value#6
+0027  v16 = constant #12 10
+0028  v17 = gt_num v15, v16
+0029  jump_if_false v17, 0033
+0030  v18 = constant #13 "large"
+0031  print v18
+0032  jump 0044
+0033  v19 = variant_tag v9 Option.Some
+0034  jump_if_false v19, 0039
+0035  v20 = variant_field v9[0]
+0036  v21 = constant #14 "some"
+0037  print v21
+0038  jump 0044
+0039  v22 = variant_tag v9 Option.None
+0040  jump_if_false v22, 0044
+0041  v23 = constant #15 "none"
+0042  print v23
+0043  jump 0044
+0044  v24 = load_var @37 none#5
+0045  v25 = constant #16 nil
+0046  v26 = equal v24, v25
+0047  jump_if_false v26, 0053
+0048  v27 = constant #17 true
+0049  jump_if_false v27, 0053
+0050  v28 = constant #18 "guarded nil"
+0051  print v28
+0052  jump 0056
+0053  v29 = constant #19 "fallback"
+0054  print v29
+0055  jump 0056
 
 function $0 describe(value#1)
 0000  v0 = load_var @1 value#1
@@ -69,10 +67,10 @@ function $0 describe(value#1)
 0007  v4 = variant_tag v0 Option.Some
 0008  jump_if_false v4, 0018
 0009  v5 = variant_field v0[0]
-0010  store_var @4 value#2, v5
-0011  v6 = load_var @5 value#2
+0010  store_var @6 value#2, v5
+0011  v6 = load_var @7 value#2
 0012  v7 = constant #3 10
-0013  v8 = greater v6, v7
+0013  v8 = gt_num v6, v7
 0014  jump_if_false v8, 0018
 0015  v9 = constant #4 "large"
 0016  return v9
@@ -80,11 +78,11 @@ function $0 describe(value#1)
 0018  v10 = variant_tag v0 Option.Some
 0019  jump_if_false v10, 0028
 0020  v11 = variant_field v0[0]
-0021  store_var @8 value#3, v11
+0021  store_var @12 value#3, v11
 0022  v12 = constant #5 "some:"
-0023  v13 = load_var @9 value#3
-0024  v14 = native_call @10 str(v13)
-0025  v15 = add v12, v14
+0023  v13 = load_var @13 value#3
+0024  v14 = native_call @14 str(v13)
+0025  v15 = concat_str v12, v14
 0026  return v15
 0027  jump 0033
 0028  v16 = variant_tag v0 Option.None

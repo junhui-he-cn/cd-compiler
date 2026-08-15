@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/substr_wrong_arity.cd:1:16: expected 3 arguments but got 2
+  substr("abc", 1);
+                 ^

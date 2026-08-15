@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 1
@@ -40,191 +40,257 @@ names:
   n20 = "kept#8"
   n21 = "snapshot#6"
 
-main registers=22:
+globals:
+  g0 = n0
+  g1 = n1
+  g2 = n6
+  g3 = n11
+  g4 = n12
+  g5 = n17
+
+native_imports:
+  i0 = "filter" abi=1
+  i1 = "print" abi=1
+  i2 = "push" abi=1
+
+main registers=23:
+block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
   r3 = constant c3
   r4 = array [r0, r1, r2, r3]
-  store_var n0, r4
+  init_global g0, r4
   r5 = constant c4
-  store_var n1, r5
-  r6 = load_var n2
+  init_global g1, r5
+  r6 = load_global g0
   r7 = make_function f0
-  r8 = native_call n5 [r6, r7]
-  store_var n6, r8
-  r9 = load_var n7
+  r8 = call_native i0 [r6, r7]
+  init_global g2, r8
+  r9 = load_global g0
   r10 = make_function f1
-  r11 = native_call n10 [r9, r10]
-  store_var n11, r11
+  r11 = call_native i0 [r9, r10]
+  init_global g3, r11
   r12 = constant c9
   r13 = constant c10
   r14 = array [r12, r13]
-  store_var n12, r14
-  r15 = load_var n13
+  init_global g4, r14
+  r15 = load_global g4
   r16 = make_function f2
-  r17 = native_call n16 [r15, r16]
-  store_var n17, r17
-  r18 = load_var n18
-  print r18
-  r19 = load_var n19
-  print r19
-  r20 = load_var n20
-  print r20
-  r21 = load_var n21
-  print r21
+  r17 = call_native i0 [r15, r16]
+  init_global g5, r17
+  r18 = load_global g2
+  r22 = call_native i1 [r18]
+  r19 = load_global g3
+  r22 = call_native i1 [r19]
+  r20 = load_global g5
+  r22 = call_native i1 [r20]
+  r21 = load_global g4
+  r22 = call_native i1 [r21]
+  return_nil
 
 function f0 name="<lambda>" arity=1 registers=4:
   param 0 = "value#2"
-  r0 = load_var n3
-  r1 = load_var n4
-  r2 = greater r0, r1
+  upvalue u0 = global g1
+block b0:
+  r0 = load_local l0
+  r1 = load_upvalue u0
+  r2 = gt_num r0, r1
   return r2
+block b1:
   r3 = constant c5
   return r3
+block b2:
+  return_nil
 
 function f1 name="<lambda>" arity=1 registers=8:
   param 0 = "value#4"
-  r0 = load_var n8
+block b0:
+  r0 = load_local l0
   r1 = constant c6
   r2 = equal r0, r1
   r3 = move r2
-  jump_if_true r3, 9
-  r4 = load_var n9
+  br_if r3, b2, b1
+block b1:
+  r4 = load_local l0
   r5 = constant c7
   r6 = equal r4, r5
   r3 = move r6
+  br b2
+block b2:
   return r3
+block b3:
   r7 = constant c8
   return r7
+block b4:
+  return_nil
 
 function f2 name="<lambda>" arity=1 registers=5:
   param 0 = "value#7"
-  r0 = load_var n14
+  upvalue u0 = global g4
+block b0:
+  r0 = load_upvalue u0
   r1 = constant c11
-  r2 = native_call n15 [r0, r1]
+  r2 = call_native i2 [r0, r1]
   r3 = constant c12
   return r3
+block b1:
   r4 = constant c13
   return r4
+block b2:
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/array_filter/input.cd" text="let values: [number] = [1, 2, 3, 4];\nlet threshold: number = 2;\nlet selected: [number] = filter(values, fun (value) {\n  return value > threshold;\n});\nlet evens: [number] = values.filter(fun (value: number): bool {\n  return value == 2 || value == 4;\n});\nlet snapshot: [number] = [1, 2];\nlet kept: [number] = snapshot.filter(fun (value) {\n  push(snapshot, 9);\n  return true;\n});\n\nprint selected;\nprint evens;\nprint kept;\nprint snapshot;\n"
 
 debug_locations:
   main 0 = s0:1:25
-  main 1 = s0:1:28
-  main 2 = s0:1:31
-  main 3 = s0:1:34
-  main 4 = s0:1:24
-  main 5 = s0:1:1
-  main 6 = s0:2:25
-  main 7 = s0:2:1
-  main 8 = s0:3:33
-  main 9 = s0:3:41
-  main 10 = s0:3:26
-  main 11 = s0:3:1
-  main 12 = s0:6:23
-  main 13 = s0:6:37
-  main 14 = s0:6:23
-  main 15 = s0:6:1
-  main 16 = s0:9:27
-  main 17 = s0:9:30
-  main 18 = s0:9:26
-  main 19 = s0:9:1
-  main 20 = s0:10:22
-  main 21 = s0:10:38
-  main 22 = s0:10:22
-  main 23 = s0:10:1
-  main 24 = s0:15:7
-  main 25 = s0:15:1
-  main 26 = s0:16:7
-  main 27 = s0:16:1
-  main 28 = s0:17:7
-  main 29 = s0:17:1
-  main 30 = s0:18:7
-  main 31 = s0:18:1
+  main 1 = s0:1:25
+  main 2 = s0:1:28
+  main 3 = s0:1:31
+  main 4 = s0:1:34
+  main 5 = s0:1:24
+  main 6 = s0:1:1
+  main 7 = s0:2:25
+  main 8 = s0:2:1
+  main 9 = s0:3:33
+  main 10 = s0:3:41
+  main 11 = s0:3:26
+  main 12 = s0:3:1
+  main 13 = s0:6:23
+  main 14 = s0:6:37
+  main 15 = s0:6:23
+  main 16 = s0:6:1
+  main 17 = s0:9:27
+  main 18 = s0:9:30
+  main 19 = s0:9:26
+  main 20 = s0:9:1
+  main 21 = s0:10:22
+  main 22 = s0:10:38
+  main 23 = s0:10:22
+  main 24 = s0:10:1
+  main 25 = s0:15:7
+  main 26 = s0:15:1
+  main 27 = s0:16:7
+  main 28 = s0:16:1
+  main 29 = s0:17:7
+  main 30 = s0:17:1
+  main 31 = s0:18:7
+  main 32 = s0:18:1
+  main 33 = s0:18:1
   function f0 0 = s0:4:10
-  function f0 1 = s0:4:18
-  function f0 2 = s0:4:10
-  function f0 3 = s0:4:3
-  function f0 4 = s0:3:41
+  function f0 1 = s0:4:10
+  function f0 2 = s0:4:18
+  function f0 3 = s0:4:10
+  function f0 4 = s0:4:3
   function f0 5 = s0:3:41
+  function f0 6 = s0:3:41
+  function f0 7 = s0:3:41
+  function f0 8 = s0:3:41
+  function f0 9 = s0:3:41
   function f1 0 = s0:7:10
-  function f1 1 = s0:7:19
-  function f1 2 = s0:7:10
+  function f1 1 = s0:7:10
+  function f1 2 = s0:7:19
   function f1 3 = s0:7:10
   function f1 4 = s0:7:10
-  function f1 5 = s0:7:24
-  function f1 6 = s0:7:33
+  function f1 5 = s0:7:10
+  function f1 6 = s0:7:24
   function f1 7 = s0:7:24
-  function f1 8 = s0:7:10
-  function f1 9 = s0:7:3
-  function f1 10 = s0:6:37
-  function f1 11 = s0:6:37
+  function f1 8 = s0:7:33
+  function f1 9 = s0:7:24
+  function f1 10 = s0:7:10
+  function f1 11 = s0:7:10
+  function f1 12 = s0:7:3
+  function f1 13 = s0:7:3
+  function f1 14 = s0:6:37
+  function f1 15 = s0:6:37
+  function f1 16 = s0:6:37
+  function f1 17 = s0:6:37
+  function f1 18 = s0:6:37
   function f2 0 = s0:11:8
-  function f2 1 = s0:11:18
-  function f2 2 = s0:11:3
-  function f2 3 = s0:12:10
-  function f2 4 = s0:12:3
-  function f2 5 = s0:10:38
+  function f2 1 = s0:11:8
+  function f2 2 = s0:11:18
+  function f2 3 = s0:11:3
+  function f2 4 = s0:12:10
+  function f2 5 = s0:12:3
   function f2 6 = s0:10:38
+  function f2 7 = s0:10:38
+  function f2 8 = s0:10:38
+  function f2 9 = s0:10:38
+  function f2 10 = s0:10:38
 
 debug_ranges:
   main 0 = s0:24:25
-  main 1 = s0:27:28
-  main 2 = s0:30:31
-  main 3 = s0:33:34
-  main 4 = s0:23:34
-  main 5 = s0:4:34
-  main 6 = s0:61:62
-  main 7 = s0:41:62
-  main 8 = s0:96:102
-  main 9 = s0:104:144
-  main 10 = s0:89:148
-  main 11 = s0:68:148
-  main 12 = s0:172:178
-  main 13 = s0:186:247
-  main 14 = s0:172:251
-  main 15 = s0:154:251
-  main 16 = s0:279:280
-  main 17 = s0:282:283
-  main 18 = s0:278:283
-  main 19 = s0:257:283
-  main 20 = s0:307:315
-  main 21 = s0:323:371
-  main 22 = s0:307:375
-  main 23 = s0:290:375
-  main 24 = s0:384:392
+  main 1 = s0:24:25
+  main 2 = s0:27:28
+  main 3 = s0:30:31
+  main 4 = s0:33:34
+  main 5 = s0:23:34
+  main 6 = s0:4:34
+  main 7 = s0:61:62
+  main 8 = s0:41:62
+  main 9 = s0:96:102
+  main 10 = s0:104:144
+  main 11 = s0:89:148
+  main 12 = s0:68:148
+  main 13 = s0:172:178
+  main 14 = s0:186:247
+  main 15 = s0:172:251
+  main 16 = s0:154:251
+  main 17 = s0:279:280
+  main 18 = s0:282:283
+  main 19 = s0:278:283
+  main 20 = s0:257:283
+  main 21 = s0:307:315
+  main 22 = s0:323:371
+  main 23 = s0:307:375
+  main 24 = s0:290:375
   main 25 = s0:384:392
-  main 26 = s0:400:405
+  main 26 = s0:384:392
   main 27 = s0:400:405
-  main 28 = s0:413:417
+  main 28 = s0:400:405
   main 29 = s0:413:417
-  main 30 = s0:425:433
+  main 30 = s0:413:417
   main 31 = s0:425:433
+  main 32 = s0:425:433
+  main 33 = s0:425:433
   function f0 0 = s0:127:132
-  function f0 1 = s0:135:144
-  function f0 2 = s0:127:144
-  function f0 3 = s0:120:144
-  function f0 4 = s0:104:144
+  function f0 1 = s0:127:132
+  function f0 2 = s0:135:144
+  function f0 3 = s0:127:144
+  function f0 4 = s0:120:144
   function f0 5 = s0:104:144
+  function f0 6 = s0:104:144
+  function f0 7 = s0:104:144
+  function f0 8 = s0:104:144
+  function f0 9 = s0:104:144
   function f1 0 = s0:223:228
-  function f1 1 = s0:232:233
-  function f1 2 = s0:223:233
-  function f1 3 = s0:223:247
+  function f1 1 = s0:223:228
+  function f1 2 = s0:232:233
+  function f1 3 = s0:223:233
   function f1 4 = s0:223:247
-  function f1 5 = s0:237:242
-  function f1 6 = s0:246:247
-  function f1 7 = s0:237:247
-  function f1 8 = s0:223:247
-  function f1 9 = s0:216:247
-  function f1 10 = s0:186:247
-  function f1 11 = s0:186:247
+  function f1 5 = s0:223:247
+  function f1 6 = s0:237:242
+  function f1 7 = s0:237:242
+  function f1 8 = s0:246:247
+  function f1 9 = s0:237:247
+  function f1 10 = s0:223:247
+  function f1 11 = s0:223:247
+  function f1 12 = s0:216:247
+  function f1 13 = s0:216:247
+  function f1 14 = s0:186:247
+  function f1 15 = s0:186:247
+  function f1 16 = s0:186:247
+  function f1 17 = s0:186:247
+  function f1 18 = s0:186:247
   function f2 0 = s0:344:352
-  function f2 1 = s0:354:355
-  function f2 2 = s0:339:356
-  function f2 3 = s0:367:371
-  function f2 4 = s0:360:371
-  function f2 5 = s0:323:371
+  function f2 1 = s0:344:352
+  function f2 2 = s0:354:355
+  function f2 3 = s0:339:356
+  function f2 4 = s0:367:371
+  function f2 5 = s0:360:371
   function f2 6 = s0:323:371
+  function f2 7 = s0:323:371
+  function f2 8 = s0:323:371
+  function f2 9 = s0:323:371
+  function f2 10 = s0:323:371

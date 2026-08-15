@@ -27,14 +27,19 @@ compiler-design-vm debug output.cdbc
 Every file starts with a format identifier and version:
 
 ```text
-cdbc 0.1
+cdbc 0.2
 ```
 
-Future format changes must either remain backward-compatible with `0.1` or use a new version number.
+The VM accepts `cdbc 0.1` inputs for read compatibility: legacy artifacts carry
+name-driven `load_var/store_var/assign_var`, `native_call`, and `print`
+instructions and are lowered to the VM's legacy name-resolution path at
+construction time. Emitted artifacts are `cdbc 0.2`.
+Future format changes must either remain backward-compatible with `0.2` or use a
+new version number.
 
 ## Artifact kinds
 
-The `cdbc 0.1` envelope has two strict artifact kinds:
+The `cdbc 0.2` envelope has two strict artifact kinds:
 
 - A linked program has no `artifact` declaration and is the existing output of
   `--emit-bytecode`. It may be passed to the VM `run` command.
@@ -55,27 +60,31 @@ module:
   path = "lib.cd"
   canonical_path = "/workspace/lib.cd"
   entry = false
+  init = f0
   dependencies:
-    d0 target="/workspace/shared.cd" kind=import at=2 requested="./shared.cd"
+    d0 target="/workspace/shared.cd" kind=import requested="./shared.cd"
 ```
 
 `identity` is the graph canonical path and is the product-set key. `path` is
 the source display path. Entry modules additionally carry a zero-based
-`entry_order`; non-entry modules omit it. Dependency records are ordered by
-source occurrence. `kind` is `import` or `re_export`, and `at` is the local
-`main` instruction offset before which a linker expands that dependency. The
-offset may equal the local instruction count. The module `main` and function
-sections contain only the module's own statements; import and re-export bodies
-are represented by these markers rather than recursively lowered into the
-product.
+`entry_order`; non-entry modules omit it. `init = fN` names the module's
+initializer function. Dependency records are ordered by source occurrence and
+carry no instruction offset; `kind` is `import` or `re_export`. The module's
+`main` stream is empty, and its top-level statements live inside the
+initializer function, which emits one `init_module mN` call per dependency at
+its source position.
 
 The link/load rule is deterministic: `compiler-design-vm link <directory>
 <output.cdbc>` selects entry products by `entry_order`, walks dependency
-markers in their recorded order, expands each module identity at most once,
-and preserves each marker's local insertion offset while rebasing register,
-constant, name, function, jump, and debug references into the final linked
-program. Missing identities, duplicate identities, non-contiguous entry order,
-cycles, and invalid offsets are rejected before writing the linked artifact.
+markers in their recorded order, assigns each module identity one index, and
+merges module tables while rebasing register, constant, name, function, type,
+native-import, global, module, and debug-source references. The synthesized
+linked `main` calls `init_module mN` for each entry; a module initializer calls
+its dependencies first, and the VM initializes each module once with an
+`Uninitialized`/`Initializing`/`Initialized` state machine, rejecting a
+re-entrant cycle with a runtime error. Missing identities, duplicate
+identities, non-contiguous entry order, and invalid init references are
+rejected before writing the linked artifact.
 The linker does not introduce a new artifact version. The optional module
 product cache is separate from VM artifacts: `--module-cache <directory>`
 stores a `cdbc-cache 0.2` manifest (internal schema 4) and content-addressed product files, while
@@ -94,26 +103,20 @@ import-aware graph additionally records each source's canonical module identity
 in its optional debug-source entry.
 
 Module products keep `debug_sources` and `debug_locations` local to the module
-before linking. The Rust linker appends each expanded module's source table in
-deterministic expansion order and rebases every main/function location through
-that table, so runtime diagnostics from an imported function retain the
+before linking. The Rust linker appends each module's source table in
+deterministic order and rebases every function location through that table
+without shifting instruction offsets, so runtime diagnostics from an imported function retain the
 original module path and call-stack order in the final linked program. The
 source table also carries the optional canonical module identity described
 below; the linker preserves it while rebasing only artifact-local source
 indexes.
 
-### Erased generic struct ordering
+### Struct ordering
 
-A named struct with valid `<`, `<=`, `>`, and `>=` implementations can satisfy a
-generic `Ord` bound. Generic comparison continues to use the existing four
-comparison instructions. The owning module product also stores each operator
-function under an implementation-private global binding named
-`__capability_ord_<Struct>_<less|less_equal|greater|greater_equal>`; the Rust VM
-uses that binding only when a comparison receives two values of the same
-witnessed struct type. This is not a source-visible global or capability
-dictionary, and it adds no opcode, section, or `cdbc` version. A malformed or
-missing binding is reported as a runtime error after normal artifact
-validation.
+Struct values are not order-comparable with the built-in comparison operators;
+the type checker rejects struct operands before emission, so the VM performs no
+string-named capability-witness lookup. `Ord` remains satisfiable only by
+`number` and `string`.
 
 ## Module interface sidecars
 
@@ -146,14 +149,14 @@ an explicit assertion and is mutually exclusive with `--module-cache-fallback`.
 The cache manifest is separate from VM artifacts and uses `cdbc-cache 0.2`; its
 records include the relative `.cdi` sidecar path and a product content digest.
 The `.cdi` sidecar is not a Rust VM input and has no effect on the linked
-`cdbc 0.1` wire format.
+`cdbc 0.2` wire format.
 
 ## Sections
 
 A `.cdbc` file is organized into explicit sections:
 
 ```text
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 1
@@ -162,13 +165,21 @@ constants:
 names:
   n0 = "x"
 
-main registers=3:
+globals:
+  g0 = n0
+
+native_imports:
+  i0 = "print" abi=1
+
+main registers=4:
   r0 = constant c0
-  store_var n0, r0
-  r1 = load_var n0
-  print r1
+  init_global g0, r0
+  r1 = load_global g0
+  r3 = call_native i0 [r1]
 
 function f0 name="add_one" arity=1 registers=4:
+  param 0 = "x"
+  upvalue u0 = local l0
   r1 = constant c0
   r2 = add r0, r1
   return r2
@@ -185,7 +196,46 @@ debug_ranges:
   main 1 = s0:0:8
 ```
 
-The section names and reference prefixes are part of the canonical text format. Function `param` lines, when present, appear before instructions in a function section.
+The section names and reference prefixes are part of the canonical text format.
+`cdbc 0.2` bodies are composed of `block bN:` sections; each block ends with one
+terminator (`br bN`, `br_if rC, bT, bF`, `return rV`, or `return_nil`), and
+implicit fallthrough is forbidden. The linker splices module init bodies at the
+block boundary recorded by the `at=N` dependency offset and renumbers block IDs
+across the merged main.
+
+The optional `types:` section (between `globals:` and `main`) records runtime
+type layouts: struct field names/counts and enum variant names/payload counts.
+Names are display/debug metadata only; identity and access use numeric
+`TypeId`/`VariantId` and field slots via `make_struct`/`struct_get`/
+`struct_set` and `make_variant`/`is_variant`/`variant_get`.
+
+The optional `native_imports:` section (between `types:` and `main`) serializes
+the fixed registered native names used by the artifact:
+
+```text
+native_imports:
+  i0 = "print" abi=1
+  i1 = "str" abi=1
+```
+
+Each import declares its display name and `abi=1`. Instructions address
+imports by numeric `iN` index via `call_native`; the VM dispatches by index
+without a string lookup on the hot path. Imports are deduplicated by name
+during module linking and remapped to the merged import table.
+
+Pre-execution validation rejects block bodies with undefined registers, unbound
+locals, invalid block IDs, missing terminators, out-of-range global upvalue
+sources, out-of-range native imports, invalid native arity, or legacy jumps
+mixed into block bodies.
+The optional `globals:` section (module products and linked programs alike) maps
+each numeric global slot to its name index; the linker deduplicates globals by
+name across modules. Function `param` lines appear before instructions;
+`upvalue uN = local lM` / `upvalue uN = upvalue uM` /
+`upvalue uN = global gM` lines follow them and drive closure capture: `local`
+takes the parent frame's local cell, `upvalue` takes a parent upvalue, and
+`global` takes the global cell current at `make_function` time. Loop bodies
+that rebind a captured binding therefore yield one independent cell per
+iteration.
 
 ## Debug metadata
 
@@ -240,6 +290,11 @@ c3 = string "escaped string"
 
 Strings use double quotes and backslash escapes for at least `\\`, `\"`, `\n`, `\r`, and `\t`.
 
+`number` constants are IEEE 754 doubles. The C++ emitter prints them with
+`std::numeric_limits<double>::max_digits10` significant digits so every finite
+double round-trips bitwise through the text artifact; the Rust verifier rejects
+unparseable or non-finite literals.
+
 String constants are UTF-8 text. The Rust VM's `len`, `substr`, and `charAt`
 operations interpret string offsets as Unicode scalar-value positions and
 never split a scalar's UTF-8 encoding. Grapheme segmentation and normalization
@@ -253,6 +308,7 @@ References use stable prefixes:
 - `nN`: name index.
 - `rN`: register index.
 - `fN`: function index.
+- `iN`: native import index.
 
 Indexes are zero-based decimal integers.
 
@@ -265,39 +321,91 @@ constant
 make_function
 array
 map
-struct
-variant
-variant_tag
-variant_field
+make_struct
+struct_get
+struct_set
+make_variant
+is_variant
+variant_get
 move
-load_var
-store_var
-assign_var
+load_local
+bind_local
+set_local
+load_upvalue
+set_upvalue
+load_global
+init_global
+set_global
 call
-native_call
-index
-assign_index
+call_direct
+call_native
+array_get
+array_set
+map_get
+map_set
+range_get
 field
 assign_field
-len
-print
-return
-negate
+len_array
+len_map
+len_range
+len_str
+iter_init
+iter_has
+iter_next
+init_module
+assert_number
+neg_num
 not
-add
-subtract
-multiply
-divide
+add_num
+sub_num
+mul_num
+div_num
+concat_str
 equal
 not_equal
-greater
-greater_equal
-less
-less_equal
-jump
-jump_if_false
-jump_if_true
+lt_num
+le_num
+gt_num
+ge_num
+lt_str
+le_str
+gt_str
+ge_str
+br
+br_if
+return
+return_nil
 ```
+
+The legacy `cdbc 0.1` read path additionally accepts `load_var/store_var/
+assign_var`, `struct`, `variant`, `variant_tag`, `variant_field`,
+`native_call nName`, `print rV`, the dynamically typed `negate`, `add`,
+`subtract`, `multiply`, `divide`, `greater`, `greater_equal`, `less`,
+`less_equal`, the dynamically typed `index`, `assign_index`, and `len`, the
+`assert_array` for-in adapter, and the linear `jump`, `jump_if_false`, and
+`jump_if_true` instructions. These legacy forms are never emitted.
+
+`call_direct fN [rArg0, ...]` targets a function by its `fN` table index when
+the compiler proves the target has no captured free variables; it bypasses
+`make_function`/`call` value indirection, still resolves global-source
+upvalues through the global cells, and keeps ordinary closure calls on
+`call`. The verifier rejects out-of-range targets, arity mismatches, and
+targets with local/upvalue captures before execution.
+
+Linked programs carry an optional `modules:` table mapping `mN` to the merged
+`fK` initializer of each module:
+
+```text
+modules:
+  m0 = f3
+  m1 = f5
+```
+
+`init_module mN` guards the named module's initializer with the runtime state
+machine and is emitted both by the synthesized linked `main` and at dependency
+positions inside module initializers. The verifier rejects out-of-range module
+or initializer references; legacy `assert_array` remains read-compatible only.
 
 Map construction preserves source order and uses explicit key/value register
 pairs:
@@ -307,8 +415,23 @@ rD = map [rKey0: rValue0, rKey1: rValue1, ...]
 ```
 
 The Rust parser rejects malformed entries that do not contain a `: ` pair
-separator. Map lookup and assignment reuse the existing `index` and
-`assign_index` instructions.
+separator. Map lookup and assignment use `map_get`/`map_set`.
+
+Map values follow one formal contract across construction, `map_set`,
+`map_get`, `remove`, `keys`, `values`, iteration, `merge`, equality, and
+printing:
+
+- keys are unique under runtime equality;
+- iteration preserves insertion order;
+- the last write wins;
+- updating an existing key keeps its original iteration position.
+
+Construction deduplicates literal entries with the first occurrence keeping
+its position, `map_set` mutates an existing entry in place or appends a new
+one, `remove` deletes an entry, `keys`/`values`/`for-in` follow insertion
+order, and `merge` appends the right map's entries before the same
+deduplication, so overlapping keys update in place. Maps compare by identity,
+not by contents.
 
 Struct and field instructions use name-table references for field names:
 
@@ -339,28 +462,107 @@ Generic enum type arguments are compile-time metadata and are erased from
 these runtime instructions; the emitted enum name and payload layout remain
 the same as for non-generic enums.
 
-Native stdlib calls use a name-table reference for the function name:
+Native stdlib calls address the serialized import table:
 
 ```text
-rD = native_call nName [rArg0, rArg1, ...]
+rD = call_native iImport [rArg0, rArg1, ...]
 ```
 
-`native_call` invokes a registered VM native stdlib function by name-table reference; in this version `push`, `pop`, `remove`, `clear`, `merge`, `keys`, `values`, `floor`, `ceil`, `sqrt`, `str`, `substr`, `charAt`, `typeOf`, `hash`, `contains`, `slice`, `copy`, `concat`, `map`, `filter`, `flatMap`, `any`, `all`, `count`, `find`, `findIndex`, and `reduce` are supported.
+`call_native` indexes the `native_imports` section directly; the VM resolves
+each import once at construction time and dispatches by numeric ID without a
+string lookup on the hot path. The legacy `native_call nName` form remains
+read-compatible only and is never emitted. In this version `push`, `pop`,
+`remove`, `clear`, `merge`, `keys`, `values`, `floor`, `ceil`, `sqrt`, `str`,
+`substr`, `charAt`, `typeOf`, `hash`, `contains`, `slice`, `copy`, `concat`,
+`map`, `filter`, `flatMap`, `any`, `all`, `count`, `find`, `findIndex`,
+`reduce`, and `print` are supported.
+
+`print` statements are lowered to a `call_native` of the `print` import with
+one argument register and a scratch destination. Output budgeting,
+cancellation, trace attribution, and side-effect handling stay inside the
+native framework, so printing behaves exactly like the former dedicated
+opcode.
+
+## Typed arithmetic and comparison
+
+When the compiler knows both operand types, arithmetic and ordered comparison
+use single-type opcodes so the interpreter hot path does not branch on runtime
+value tags:
+
+```text
+rD = add_num rL, rR        rD = concat_str rL, rR
+rD = sub_num rL, rR        rD = mul_num rL, rR
+rD = div_num rL, rR        rD = neg_num rV
+
+rD = lt_num rL, rR         rD = lt_str rL, rR
+rD = le_num rL, rR         rD = le_str rL, rR
+rD = gt_num rL, rR         rD = gt_str rL, rR
+rD = ge_num rL, rR         rD = ge_str rL, rR
+```
+
+`equal` and `not_equal` keep the existing runtime equality semantics for all
+value kinds. The dynamically typed `add`, `negate`, `subtract`, `multiply`,
+`divide`, and ordered comparison opcodes remain on the legacy read path and
+for generic `T: Ord` bodies whose parameter type is not statically known.
+Ordered comparisons no longer resolve struct capability witnesses by global
+name; struct values are not order-comparable and the compiler rejects such
+comparisons before bytecode emission.
+
+## Typed collection access
+
+When the compiler knows the indexed collection's type it emits collection-
+specific access instructions instead of the dynamically typed `index` /
+`assign_index` / `len`:
+
+```text
+rD = array_get rC, rI      rD = array_set rC, rI, rV
+rD = map_get rC, rI        rD = map_set rC, rI, rV
+rD = range_get rC, rI
+
+rD = len_array rV          rD = len_map rV
+rD = len_range rV          rD = len_str rV
+```
+
+The typed instructions keep the established runtime diagnostics and budgets:
+array/range indexing validates numeric integer bounds, map access validates
+keys and charges runtime elements on insertion, `len_str` counts Unicode
+scalars, and `range_set` does not exist. The generic `index`, `assign_index`,
+and `len` remain on the legacy read path and for collection types that are
+not statically known.
+
+## Iterator protocol
+
+`for-in` lowers through an internal iterator protocol instead of the legacy
+`assert_array` adapter:
+
+```text
+rIter = iter_init rCollection
+rHas = iter_has rIter
+rValue = iter_next rIter
+```
+
+Iterators are VM-internal values and are never exposed to the source
+language. `iter_init` snapshots array length at entry while reading live
+elements during iteration, snapshots map keys into an insertion-ordered
+array, and keeps ranges immutable; `iter_has` is pure and `iter_next`
+advances one position. The compiler arranges `iter_has` + `iter_next` into
+the loop blocks, so `break`/`continue` and mutation-during-iteration behavior
+match the previous lowering exactly. The legacy `assert_array` instruction
+remains read-compatible only.
 
 The `range` native is also supported with one to three numeric arguments. Its
-result is consumed by the existing `len`, `index`, and `assert_array`
-instructions. `assert_array` accepts arrays and ranges unchanged; when given a
-map for `for-in`, it produces an array snapshot of the map's insertion-ordered
-keys before the existing length/index loop lowering runs.
+result is consumed by the existing `len_range` and `range_get` instructions
+and by the iterator protocol.
 
 New opcodes must be added by updating this document, the C++ bytecode artifact emitter, and the Rust VM parser/formatter and executor together.
 
 ## Compatibility validation
 
-The Rust parser accepts exactly the `cdbc 0.1` header. Before `dump`, `link`, or
+The Rust parser accepts `cdbc 0.1` and `cdbc 0.2` headers. Before `dump`, `link`, or
 `run` receives an artifact, it validates finite number constants, constant/name/
 function/register references, jump targets, debug-location table shape, and
-the supported native-call capability set. Module identities, entry metadata,
+the native import metadata plus the supported native-call capability set and
+native arity bounds. Module identities, entry metadata,
 dependency targets, and insertion offsets are validated by the module envelope
 and linker path. Invalid artifacts are rejected before VM execution; valid
 linked programs and module products retain the canonical text described above.

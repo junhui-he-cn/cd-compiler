@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/substr_non_string_static.cd:1:17: substr expects string as first argument, got number
+  substr(123, 0, 1);
+                  ^

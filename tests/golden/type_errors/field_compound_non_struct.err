@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/field_compound_non_struct.cd:2:3: can only assign fields on structs
+  x.value += 1;
+    ^

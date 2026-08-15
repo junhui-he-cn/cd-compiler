@@ -1,16 +1,19 @@
-main registers=10
-0000  b0 = constant #0 1
-0001  store_var @0 x#0, b0
-0002  b1 = load_var @1 x#0
-0003  b2 = assert_number b1 @2 `+=` expects number variable
-0004  b3 = constant #1 4
-0005  b4 = assert_number b3 @3 `+=` expects number value
-0006  b5 = add b2, b4
-0007  assign_var @4 x#0, b5
-0008  b6 = constant #2 2
-0009  b7 = multiply b5, b6
-0010  store_var @5 y#1, b7
-0011  b8 = load_var @6 x#0
-0012  print b8
-0013  b9 = load_var @7 y#1
-0014  print b9
+native_import i0 = print abi=1
+main registers=11
+0000  block
+0001  b0 = constant #0 1
+0002  init_global g0, b0
+0003  b1 = load_global g0
+0004  b2 = assert_number b1 @2 `+=` expects number variable
+0005  b3 = constant #1 4
+0006  b4 = assert_number b3 @3 `+=` expects number value
+0007  b5 = add_num b2, b4
+0008  set_global g0, b5
+0009  b6 = constant #2 2
+0010  b7 = mul_num b5, b6
+0011  init_global g1, b7
+0012  b8 = load_global g0
+0013  b10 = call_native i0 [b8]
+0014  b9 = load_global g1
+0015  b10 = call_native i0 [b9]
+0016  return_nil

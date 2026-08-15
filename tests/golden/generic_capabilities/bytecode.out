@@ -1,105 +1,129 @@
-main registers=37
-0000  b0 = constant #0 nil
-0001  store_var @0 same#0, b0
-0002  b1 = make_function $0 same/2
-0003  assign_var @3 same#0, b1
-0004  b2 = constant #2 nil
-0005  store_var @4 before#3, b2
-0006  b3 = make_function $1 before/2
-0007  assign_var @7 before#3, b3
-0008  b4 = constant #4 nil
-0009  store_var @8 applyLess#6, b4
-0010  b5 = make_function $2 applyLess/3
-0011  assign_var @12 applyLess#6, b5
-0012  b6 = constant #6 nil
-0013  store_var @13 same#10, b6
-0014  b7 = make_function $3 same/2
-0015  assign_var @16 same#10, b7
-0016  b8 = constant #8 nil
-0017  store_var @17 before#13, b8
-0018  b9 = make_function $4 before/2
-0019  assign_var @20 before#13, b9
-0020  b10 = constant #10 nil
-0021  store_var @21 numericLess#16, b10
-0022  b11 = make_function $5 numericLess/2
-0023  assign_var @24 numericLess#16, b11
-0024  b12 = load_var @25 same#10
-0025  b13 = constant #12 "same"
-0026  b14 = constant #13 "same"
-0027  b15 = call b12(b13, b14)
-0028  print b15
-0029  b16 = load_var @26 before#13
-0030  b17 = constant #14 1
-0031  b18 = constant #15 2
-0032  b19 = call b16(b17, b18)
-0033  print b19
-0034  b20 = load_var @27 before#13
-0035  b21 = constant #16 "a"
-0036  b22 = constant #17 "b"
-0037  b23 = call b20(b21, b22)
-0038  print b23
-0039  b24 = load_var @28 same#0
-0040  b25 = constant #18 3
-0041  b26 = constant #19 3
-0042  b27 = call b24(b25, b26)
-0043  print b27
-0044  b28 = load_var @29 before#3
-0045  b29 = constant #20 3
-0046  b30 = constant #21 4
-0047  b31 = call b28(b29, b30)
-0048  print b31
-0049  b32 = load_var @30 applyLess#6
-0050  b33 = constant #22 4
-0051  b34 = constant #23 5
-0052  b35 = load_var @31 numericLess#16
-0053  b36 = call b32(b33, b34, b35)
-0054  print b36
+native_import i0 = print abi=1
+main registers=35
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 same/2
+0004  set_global g0, b1
+0005  b2 = constant #2 nil
+0006  init_global g1, b2
+0007  b3 = make_function $1 before/2
+0008  set_global g1, b3
+0009  b4 = constant #4 nil
+0010  init_global g2, b4
+0011  b5 = make_function $2 applyLess/3
+0012  set_global g2, b5
+0013  b6 = constant #6 nil
+0014  init_global g3, b6
+0015  b7 = make_function $3 same/2
+0016  set_global g3, b7
+0017  b8 = constant #8 nil
+0018  init_global g4, b8
+0019  b9 = make_function $4 before/2
+0020  set_global g4, b9
+0021  b10 = constant #10 nil
+0022  init_global g5, b10
+0023  b11 = make_function $5 numericLess/2
+0024  set_global g5, b11
+0025  b12 = constant #12 "same"
+0026  b13 = constant #13 "same"
+0027  b14 = call_direct $3 [b12, b13]
+0028  b34 = call_native i0 [b14]
+0029  b15 = constant #14 1
+0030  b16 = constant #15 2
+0031  b17 = call_direct $4 [b15, b16]
+0032  b34 = call_native i0 [b17]
+0033  b18 = constant #16 "a"
+0034  b19 = constant #17 "b"
+0035  b20 = call_direct $4 [b18, b19]
+0036  b34 = call_native i0 [b20]
+0037  b21 = load_global g0
+0038  b22 = constant #18 3
+0039  b23 = constant #19 3
+0040  b24 = call b21(b22, b23)
+0041  b34 = call_native i0 [b24]
+0042  b25 = load_global g1
+0043  b26 = constant #20 3
+0044  b27 = constant #21 4
+0045  b28 = call b25(b26, b27)
+0046  b34 = call_native i0 [b28]
+0047  b29 = load_global g2
+0048  b30 = constant #22 4
+0049  b31 = constant #23 5
+0050  b32 = load_global g5
+0051  b33 = call b29(b30, b31, b32)
+0052  b34 = call_native i0 [b33]
+0053  return_nil
 
 function $0 same/2 registers=4
-0000  b0 = load_var @1 left#1
-0001  b1 = load_var @2 right#2
-0002  b2 = equal b0, b1
-0003  return b2
-0004  b3 = constant #1 nil
-0005  return b3
+0000  block
+0001  b0 = load_local l0
+0002  b1 = load_local l1
+0003  b2 = equal b0, b1
+0004  return b2
+0005  block
+0006  b3 = constant #1 nil
+0007  return b3
+0008  block
+0009  return_nil
 
 function $1 before/2 registers=4
-0000  b0 = load_var @5 left#4
-0001  b1 = load_var @6 right#5
-0002  b2 = less b0, b1
-0003  return b2
-0004  b3 = constant #3 nil
-0005  return b3
+0000  block
+0001  b0 = load_local l0
+0002  b1 = load_local l1
+0003  b2 = less b0, b1
+0004  return b2
+0005  block
+0006  b3 = constant #3 nil
+0007  return b3
+0008  block
+0009  return_nil
 
 function $2 applyLess/3 registers=5
-0000  b0 = load_var @9 less#9
-0001  b1 = load_var @10 left#7
-0002  b2 = load_var @11 right#8
-0003  b3 = call b0(b1, b2)
-0004  return b3
-0005  b4 = constant #5 nil
-0006  return b4
+0000  block
+0001  b0 = load_local l2
+0002  b1 = load_local l0
+0003  b2 = load_local l1
+0004  b3 = call b0(b1, b2)
+0005  return b3
+0006  block
+0007  b4 = constant #5 nil
+0008  return b4
+0009  block
+0010  return_nil
 
 function $3 same/2 registers=4
-0000  b0 = load_var @14 left#11
-0001  b1 = load_var @15 right#12
-0002  b2 = equal b0, b1
-0003  return b2
-0004  b3 = constant #7 nil
-0005  return b3
+0000  block
+0001  b0 = load_local l0
+0002  b1 = load_local l1
+0003  b2 = equal b0, b1
+0004  return b2
+0005  block
+0006  b3 = constant #7 nil
+0007  return b3
+0008  block
+0009  return_nil
 
 function $4 before/2 registers=4
-0000  b0 = load_var @18 left#14
-0001  b1 = load_var @19 right#15
-0002  b2 = less b0, b1
-0003  return b2
-0004  b3 = constant #9 nil
-0005  return b3
+0000  block
+0001  b0 = load_local l0
+0002  b1 = load_local l1
+0003  b2 = less b0, b1
+0004  return b2
+0005  block
+0006  b3 = constant #9 nil
+0007  return b3
+0008  block
+0009  return_nil
 
 function $5 numericLess/2 registers=4
-0000  b0 = load_var @22 left#17
-0001  b1 = load_var @23 right#18
-0002  b2 = less b0, b1
-0003  return b2
-0004  b3 = constant #11 nil
-0005  return b3
+0000  block
+0001  b0 = load_local l0
+0002  b1 = load_local l1
+0003  b2 = lt_num b0, b1
+0004  return b2
+0005  block
+0006  b3 = constant #11 nil
+0007  return b3
+0008  block
+0009  return_nil

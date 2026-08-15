@@ -29,13 +29,26 @@ enum class IROp {
     StoreVar,
     AssignVar,
     Call,
+    CallDirect,
     NativeCall,
     Index,
     AssignIndex,
+    ArrayGet,
+    ArraySet,
+    MapGet,
+    MapSet,
+    RangeGet,
+    LenArray,
+    LenMap,
+    LenRange,
+    LenStr,
     Field,
     AssignField,
     Len,
-    AssertArray,
+    IterInit,
+    IterHas,
+    IterNext,
+    InitModule,
     AssertNumber,
     Print,
     Return,
@@ -51,6 +64,20 @@ enum class IROp {
     GreaterEqual,
     Less,
     LessEqual,
+    AddNum,
+    SubNum,
+    MulNum,
+    DivNum,
+    NegNum,
+    ConcatStr,
+    LessNum,
+    LessEqualNum,
+    GreaterNum,
+    GreaterEqualNum,
+    LessStr,
+    LessEqualStr,
+    GreaterStr,
+    GreaterEqualStr,
     Jump,
     JumpIfFalse,
     JumpIfTrue,
@@ -90,6 +117,10 @@ struct IRFunction {
     std::vector<IRInstruction> instructions;
     std::size_t registerCount = 0;
     std::vector<IRBinding> bindings;
+    std::vector<BindingId> parameterBindingIds;
+    std::size_t id = 0;
+    std::size_t parentId = 0;
+    bool moduleInit = false;
 };
 
 // A dependency marker emitted while lowering one module independently.  The
@@ -99,7 +130,24 @@ struct IRModuleDependency {
     std::size_t importedModuleId = 0;
     ModuleGraphEdgeKind kind = ModuleGraphEdgeKind::Import;
     std::string requestedPath;
+    // Retained for CFG dependency-anchor compatibility. Module init lowering
+    // no longer splices dependency streams, so this offset stays zero.
     std::size_t instructionOffset = 0;
+};
+
+struct IRVariantLayout {
+    std::string name;
+    std::size_t payloadCount = 0;
+};
+
+struct IRStructLayout {
+    std::string name;
+    std::vector<std::string> fieldNames;
+};
+
+struct IREnumLayout {
+    std::string name;
+    std::vector<IRVariantLayout> variants;
 };
 
 class IRProgram {
@@ -111,10 +159,16 @@ public:
     std::size_t addConstant(Value value);
     std::size_t addName(std::string name);
     IRRegister makeRegister();
-    void beginFunction(std::string name, std::vector<std::string> parameters);
+    void beginFunction(
+        std::string name,
+        std::vector<std::string> parameters,
+        bool moduleInit = false);
+    void setFunctionParameterBindingIds(std::vector<BindingId> bindingIds);
     std::size_t endFunction();
 
     void addModuleDependency(IRModuleDependency dependency);
+    void addStructLayout(IRStructLayout layout);
+    void addEnumLayout(IREnumLayout layout);
     // Register one canonical snapshot binding.  The program table owns each
     // BindingId exactly once; function tables contain only visibility
     // references added through addFunctionBinding().
@@ -134,7 +188,11 @@ public:
         std::string variantName,
         std::vector<IRRegister> payload);
     IRRegister emitVariantTag(IRRegister value, std::string enumName, std::string variantName);
-    IRRegister emitVariantField(IRRegister value, std::size_t index);
+    IRRegister emitVariantField(
+        IRRegister value,
+        std::size_t index,
+        std::string enumName,
+        std::string variantName);
     IRRegister emitCopy(IRRegister value);
     void emitCopyTo(IRRegister dest, IRRegister value);
     IRRegister emitLoadVar(
@@ -149,13 +207,33 @@ public:
         IRRegister value,
         std::optional<BindingId> bindingId = std::nullopt);
     IRRegister emitCall(IRRegister callee, std::vector<IRRegister> arguments);
+    IRRegister emitCallDirect(std::size_t functionIndex, std::vector<IRRegister> arguments);
     IRRegister emitNativeCall(std::string name, std::vector<IRRegister> arguments);
     IRRegister emitIndex(IRRegister collection, IRRegister index);
     IRRegister emitAssignIndex(IRRegister collection, IRRegister index, IRRegister value);
-    IRRegister emitField(IRRegister object, std::string fieldName);
-    IRRegister emitAssignField(IRRegister object, std::string fieldName, IRRegister value);
+    IRRegister emitArrayGet(IRRegister collection, IRRegister index);
+    IRRegister emitArraySet(IRRegister collection, IRRegister index, IRRegister value);
+    IRRegister emitMapGet(IRRegister collection, IRRegister index);
+    IRRegister emitMapSet(IRRegister collection, IRRegister index, IRRegister value);
+    IRRegister emitRangeGet(IRRegister collection, IRRegister index);
+    IRRegister emitField(
+        IRRegister object,
+        std::string fieldName,
+        std::optional<std::string> structTypeName);
+    IRRegister emitAssignField(
+        IRRegister object,
+        std::string fieldName,
+        std::optional<std::string> structTypeName,
+        IRRegister value);
     IRRegister emitLen(IRRegister value);
-    IRRegister emitAssertArray(IRRegister value);
+    IRRegister emitLenArray(IRRegister value);
+    IRRegister emitLenMap(IRRegister value);
+    IRRegister emitLenRange(IRRegister value);
+    IRRegister emitLenStr(IRRegister value);
+    IRRegister emitIterInit(IRRegister collection);
+    IRRegister emitIterHas(IRRegister iterator);
+    IRRegister emitIterNext(IRRegister iterator);
+    void emitInitModule(std::size_t dependencyIndex);
     IRRegister emitAssertNumber(IRRegister value, std::string message);
     void emitPrint(IRRegister value);
     void emitReturn(IRRegister value);
@@ -167,6 +245,13 @@ public:
     std::size_t emitJumpIfTrue(IRRegister condition);
     void patchJump(std::size_t jumpInstruction);
     std::size_t instructionCount() const;
+    std::size_t functionCount() const;
+    std::size_t activeFunctionId() const;
+    void patchMainCallDirect(std::size_t instructionIndex, std::size_t functionIndex);
+    void patchFunctionCallDirectById(
+        std::size_t functionId,
+        std::size_t instructionIndex,
+        std::size_t targetFunctionIndex);
 
     // Rebuild a completed program with replacement main/function streams.
     // Program-level compiler tables (constants, names, sources, and the
@@ -184,6 +269,8 @@ public:
     const std::vector<IRInstruction>& instructions() const;
     const std::vector<IRFunction>& functions() const;
     const std::vector<IRModuleDependency>& moduleDependencies() const;
+    const std::vector<IRStructLayout>& structLayouts() const;
+    const std::vector<IREnumLayout>& enumLayouts() const;
     const std::vector<IRBinding>& bindings() const;
     std::size_t registerCount() const;
 
@@ -199,7 +286,10 @@ private:
     std::size_t registerCount_ = 0;
     std::vector<IRFunction> functionStack_;
     std::vector<IRFunction> functions_;
+    std::size_t nextFunctionId_ = 0;
     std::vector<IRModuleDependency> moduleDependencies_;
+    std::vector<IRStructLayout> structLayouts_;
+    std::vector<IREnumLayout> enumLayouts_;
     std::vector<IRBinding> bindings_;
     std::vector<SourceFile> sources_;
     std::optional<SourceSpan> currentSpan_;

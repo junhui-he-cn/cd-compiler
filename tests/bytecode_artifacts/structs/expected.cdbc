@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = string "Ada"
@@ -13,69 +13,90 @@ names:
   n3 = "person#0"
   n4 = "person#0"
   n5 = "name"
-  n6 = "Nested"
-  n7 = "point"
-  n8 = "Point"
-  n9 = "x"
-  n10 = "label"
-  n11 = "nested#1"
+  n6 = "Person"
+  n7 = "Nested"
+  n8 = "point"
+  n9 = "Point"
+  n10 = "x"
+  n11 = "label"
   n12 = "nested#1"
-  n13 = "point"
-  n14 = "x"
+  n13 = "nested#1"
+  n14 = "point"
+  n15 = "Nested"
+  n16 = "x"
+  n17 = "Point"
 
-main registers=12:
+globals:
+  g0 = n3
+  g1 = n12
+
+types:
+  t0 = struct "Person" field0="name" field1="age"
+  t1 = struct "Point" field0="x"
+  t2 = struct "Nested" field0="point" field1="label"
+
+native_imports:
+  i0 = "print" abi=1
+
+main registers=13:
+block b0:
   r0 = constant c0
   r1 = constant c1
-  r2 = struct n0 {n1: r0, n2: r1}
-  store_var n3, r2
-  r3 = load_var n4
-  r4 = field r3, n5
-  print r4
+  r2 = make_struct t0 [r0, r1]
+  init_global g0, r2
+  r3 = load_global g0
+  r4 = struct_get r3, t0, 0
+  r12 = call_native i0 [r4]
   r5 = constant c2
-  r6 = struct n8 {n9: r5}
+  r6 = make_struct t1 [r5]
   r7 = constant c3
-  r8 = struct n6 {n7: r6, n10: r7}
-  store_var n11, r8
-  r9 = load_var n12
-  r10 = field r9, n13
-  r11 = field r10, n14
-  print r11
+  r8 = make_struct t2 [r6, r7]
+  init_global g1, r8
+  r9 = load_global g1
+  r10 = struct_get r9, t2, 0
+  r11 = struct_get r10, t1, 0
+  r12 = call_native i0 [r11]
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/structs/input.cd" text="struct Person { name: string, age: number }\nstruct Point { x: number }\nstruct Nested { point: Point, label: string }\nlet person = Person { name: \"Ada\", age: 36 };\nprint person.name;\nlet nested = Nested { point: Point { x: 1 }, label: \"p\" };\nprint nested.point.x;\n"
 
 debug_locations:
   main 0 = s0:4:29
-  main 1 = s0:4:41
-  main 2 = s0:4:14
-  main 3 = s0:4:1
-  main 4 = s0:5:7
+  main 1 = s0:4:29
+  main 2 = s0:4:41
+  main 3 = s0:4:14
+  main 4 = s0:4:1
   main 5 = s0:5:7
-  main 6 = s0:5:1
-  main 7 = s0:6:41
-  main 8 = s0:6:30
-  main 9 = s0:6:53
-  main 10 = s0:6:14
-  main 11 = s0:6:1
-  main 12 = s0:7:7
+  main 6 = s0:5:7
+  main 7 = s0:5:1
+  main 8 = s0:6:41
+  main 9 = s0:6:30
+  main 10 = s0:6:53
+  main 11 = s0:6:14
+  main 12 = s0:6:1
   main 13 = s0:7:7
   main 14 = s0:7:7
-  main 15 = s0:7:1
+  main 15 = s0:7:7
+  main 16 = s0:7:1
+  main 17 = s0:7:1
 
 debug_ranges:
   main 0 = s0:145:150
-  main 1 = s0:157:159
-  main 2 = s0:130:159
-  main 3 = s0:121:159
-  main 4 = s0:169:175
-  main 5 = s0:169:180
+  main 1 = s0:145:150
+  main 2 = s0:157:159
+  main 3 = s0:130:159
+  main 4 = s0:121:159
+  main 5 = s0:169:175
   main 6 = s0:169:180
-  main 7 = s0:222:223
-  main 8 = s0:211:223
-  main 9 = s0:234:237
-  main 10 = s0:195:237
-  main 11 = s0:186:237
-  main 12 = s0:247:253
-  main 13 = s0:247:259
-  main 14 = s0:247:261
+  main 7 = s0:169:180
+  main 8 = s0:222:223
+  main 9 = s0:211:223
+  main 10 = s0:234:237
+  main 11 = s0:195:237
+  main 12 = s0:186:237
+  main 13 = s0:247:253
+  main 14 = s0:247:259
   main 15 = s0:247:261
+  main 16 = s0:247:261
+  main 17 = s0:247:261

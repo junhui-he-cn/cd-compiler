@@ -1,14 +1,20 @@
 use crate::bytecode::{
-    Constant, DebugLocation, DebugRange, DebugSource, Function, FunctionBody, Instruction, Program,
+    BlockId, Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, GlobalId,
+    Instruction, LocalId, ModuleInit, NativeId, NativeImport, Program, TypeId, TypeLayout,
+    UpvalueDesc, UpvalueId, UpvalueSource, VariantId, VariantLayout,
 };
+use crate::vm::native_arity_bounds;
+use std::collections::BTreeSet;
 use std::fmt;
 
 /// Stable artifact family accepted and emitted by this VM.
 pub const ARTIFACT_FORMAT_FAMILY: &str = "cdbc";
 /// Stable artifact version accepted and emitted by this VM.
-pub const ARTIFACT_FORMAT_VERSION: &str = "0.1";
+pub const ARTIFACT_FORMAT_VERSION: &str = "0.2";
 /// Canonical header for the current artifact family and version.
-pub const ARTIFACT_HEADER: &str = "cdbc 0.1";
+pub const ARTIFACT_HEADER: &str = "cdbc 0.2";
+/// Legacy header still accepted for `.cdbc 0.1` compatibility inputs.
+pub const LEGACY_ARTIFACT_HEADER: &str = "cdbc 0.1";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParseError {
@@ -91,7 +97,6 @@ impl fmt::Display for ArtifactError {
 pub struct ModuleDependency {
     pub identity: String,
     pub kind: ModuleDependencyKind,
-    pub instruction_offset: usize,
     pub requested_path: String,
 }
 
@@ -108,6 +113,7 @@ pub struct ModuleArtifact {
     pub canonical_path: String,
     pub is_entry: bool,
     pub entry_order: Option<usize>,
+    pub init: usize,
     pub dependencies: Vec<ModuleDependency>,
     pub program: Program,
 }
@@ -124,6 +130,7 @@ struct ParsedModuleHeader {
     canonical_path: String,
     is_entry: bool,
     entry_order: Option<usize>,
+    init: usize,
     dependencies: Vec<ModuleDependency>,
 }
 
@@ -194,6 +201,15 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
+        let (line_number, line) = self.advance().ok_or_else(|| ParseError {
+            line: self.last_line(),
+            message: "expected module init function".to_string(),
+        })?;
+        let init_text = line.strip_prefix("init = ").ok_or_else(|| ParseError {
+            line: line_number,
+            message: "expected module init function".to_string(),
+        })?;
+        let init = parse_function_ref(line_number, init_text)? + 1;
         self.require_line("dependencies:")?;
 
         let mut dependencies = Vec::new();
@@ -215,7 +231,7 @@ impl<'a> Parser<'a> {
                 line: line_number,
                 message: "expected dependency kind".to_string(),
             })?;
-            let (kind_text, rest) = split_once(line_number, rest, " at=")?;
+            let (kind_text, rest) = split_once(line_number, rest, " requested=")?;
             let kind = match kind_text {
                 "import" => ModuleDependencyKind::Import,
                 "re_export" => ModuleDependencyKind::ReExport,
@@ -226,14 +242,10 @@ impl<'a> Parser<'a> {
                     })
                 }
             };
-            let (offset_text, rest) = split_once(line_number, rest, " requested=")?;
-            let instruction_offset =
-                parse_usize(line_number, offset_text, "dependency instruction offset")?;
             let requested_path = parse_string_full(line_number, rest)?;
             dependencies.push(ModuleDependency {
                 identity,
                 kind,
-                instruction_offset,
                 requested_path,
             });
         }
@@ -244,6 +256,7 @@ impl<'a> Parser<'a> {
             canonical_path,
             is_entry,
             entry_order,
+            init,
             dependencies,
         })
     }
@@ -319,7 +332,12 @@ impl<'a> Parser<'a> {
         self.require_line("names:")?;
         let mut names = Vec::new();
         while let Some((line_number, line)) = self.peek() {
-            if line.starts_with("main registers=") {
+            if line.starts_with("main registers=")
+                || line == "globals:"
+                || line == "types:"
+                || line == "native_imports:"
+                || line == "modules:"
+            {
                 break;
             }
             self.advance();
@@ -336,7 +354,7 @@ impl<'a> Parser<'a> {
         Ok(names)
     }
 
-    fn parse_main(&mut self) -> Result<FunctionBody, ParseError> {
+    fn parse_main(&mut self) -> Result<Function, ParseError> {
         let (line_number, line) = self.advance().ok_or_else(|| ParseError {
             line: self.last_line(),
             message: "expected main section".to_string(),
@@ -345,7 +363,13 @@ impl<'a> Parser<'a> {
             parse_wrapped_usize(line_number, line, "main registers=", ":", "main section")?;
         let instructions = self.parse_instructions_until_function()?;
         let instruction_count = instructions.len();
-        Ok(FunctionBody {
+        Ok(Function {
+            id: FuncId(0),
+            name: "main".to_string(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
             registers,
             instructions,
             locations: vec![None; instruction_count],
@@ -393,14 +417,82 @@ impl<'a> Parser<'a> {
                     ),
                 });
             }
+            let mut upvalues = Vec::new();
+            while let Some((upvalue_line, candidate)) = self.peek() {
+                if !candidate.starts_with("upvalue ") {
+                    break;
+                }
+                self.advance();
+                let (upvalue_text, source_text) =
+                    split_once(upvalue_line, candidate, " = ")?;
+                let upvalue_index_text = upvalue_text.strip_prefix("upvalue ").ok_or_else(|| {
+                    ParseError {
+                        line: upvalue_line,
+                        message: "expected upvalue reference".to_string(),
+                    }
+                })?;
+                let upvalue_index =
+                    parse_prefixed(upvalue_line, upvalue_index_text, 'u', "upvalue reference")?;
+                if upvalue_index != upvalues.len() {
+                    return Err(ParseError {
+                        line: upvalue_line,
+                        message: format!("expected upvalue u{}", upvalues.len()),
+                    });
+                }
+                let (kind, source_index) = split_once(upvalue_line, source_text, " ")?;
+                match kind {
+                    "local" => upvalues.push(UpvalueDesc {
+                        source: UpvalueSource::Local(LocalId(parse_prefixed(
+                            upvalue_line,
+                            source_index,
+                            'l',
+                            "local reference",
+                        )? as u32)),
+                    }),
+                    "upvalue" => upvalues.push(UpvalueDesc {
+                        source: UpvalueSource::Upvalue(UpvalueId(parse_prefixed(
+                            upvalue_line,
+                            source_index,
+                            'u',
+                            "upvalue reference",
+                        )? as u32)),
+                    }),
+                    "global" => upvalues.push(UpvalueDesc {
+                        source: UpvalueSource::Global(GlobalId(parse_prefixed(
+                            upvalue_line,
+                            source_index,
+                            'g',
+                            "global reference",
+                        )? as u32)),
+                    }),
+                    _ => {
+                        return Err(ParseError {
+                            line: upvalue_line,
+                            message: "expected upvalue source local or upvalue".to_string(),
+                        })
+                    }
+                }
+            }
             let instructions = self.parse_instructions_until_function()?;
             let instruction_count = instructions.len();
+            let max_local_slot = instructions
+                .iter()
+                .filter_map(|instruction| match instruction {
+                    Instruction::LoadLocal { slot, .. }
+                    | Instruction::BindLocal { slot, .. }
+                    | Instruction::SetLocal { slot, .. } => Some(*slot),
+                    _ => None,
+                })
+                .max()
+                .unwrap_or(0);
             functions.push(Function {
-                index,
+                id: FuncId((index + 1) as u32),
                 name,
                 arity,
-                registers,
+                local_count: arity.max(max_local_slot.saturating_add(1)),
+                upvalues,
                 params,
+                registers,
                 instructions,
                 locations: vec![None; instruction_count],
             });
@@ -410,6 +502,7 @@ impl<'a> Parser<'a> {
 
     fn parse_instructions_until_function(&mut self) -> Result<Vec<Instruction>, ParseError> {
         let mut instructions = Vec::new();
+        let mut block_count = 0usize;
         while let Some((line_number, line)) = self.peek() {
             if line.starts_with("function ")
                 || line == "debug_sources:"
@@ -417,6 +510,28 @@ impl<'a> Parser<'a> {
                 || line == "debug_ranges:"
             {
                 break;
+            }
+            if line.starts_with("block ") {
+                self.advance();
+                let header = line
+                    .strip_prefix("block ")
+                    .and_then(|rest| rest.strip_suffix(':'))
+                    .ok_or_else(|| ParseError {
+                        line: line_number,
+                        message: "expected block header".to_string(),
+                    })?;
+                let id = parse_prefixed(line_number, header, 'b', "block reference")?;
+                if id != block_count {
+                    return Err(ParseError {
+                        line: line_number,
+                        message: format!("expected block b{}", block_count),
+                    });
+                }
+                block_count += 1;
+                instructions.push(Instruction::BlockStart {
+                    id: BlockId(id as u32),
+                });
+                continue;
             }
             self.advance();
             instructions.push(parse_instruction(line_number, line)?);
@@ -508,9 +623,9 @@ impl<'a> Parser<'a> {
             }
 
             let locations = match section {
-                DebugSection::Main => &mut program.main.locations,
+                DebugSection::Main => &mut program.functions[0].locations,
                 DebugSection::Function(index) => {
-                    let Some(function) = program.functions.get_mut(index) else {
+                    let Some(function) = program.functions.get_mut(index + 1) else {
                         return Err(ParseError {
                             line: line_number,
                             message: "debug location function index out of range".to_string(),
@@ -558,9 +673,9 @@ impl<'a> Parser<'a> {
             }
 
             let locations = match section {
-                DebugSection::Main => &mut program.main.locations,
+                DebugSection::Main => &mut program.functions[0].locations,
                 DebugSection::Function(index) => {
-                    let Some(function) = program.functions.get_mut(index) else {
+                    let Some(function) = program.functions.get_mut(index + 1) else {
                         return Err(ParseError {
                             line: line_number,
                             message: "debug range function index out of range".to_string(),
@@ -664,17 +779,204 @@ fn parse_debug_range(line: usize, text: &str) -> Result<DebugRange, ParseError> 
     Ok(DebugRange { source, start, end })
 }
 
-fn parse_program_body(parser: &mut Parser<'_>) -> Result<Program, ParseError> {
+fn parse_program_body_with_globals(parser: &mut Parser<'_>) -> Result<Program, ParseError> {
     let constants = parser.parse_constants()?;
     let names = parser.parse_names()?;
+    let mut globals = Vec::new();
+    if parser
+        .peek()
+        .map(|(_, line)| line == "globals:")
+        .unwrap_or(false)
+    {
+        parser.advance();
+        while let Some((line_number, line)) = parser.peek() {
+            if !line.starts_with("g") || !line.contains(" = ") {
+                break;
+            }
+            parser.advance();
+            let (global_ref, name_ref) = split_once(line_number, line, " = ")?;
+            let global_index =
+                parse_prefixed(line_number, global_ref, 'g', "global reference")?;
+            if global_index != globals.len() {
+                return Err(ParseError {
+                    line: line_number,
+                    message: format!("expected global g{}", globals.len()),
+                });
+            }
+            globals.push(parse_name_ref(line_number, name_ref)?);
+        }
+    }
+    let mut types = Vec::new();
+    if parser
+        .peek()
+        .map(|(_, line)| line == "types:")
+        .unwrap_or(false)
+    {
+        parser.advance();
+        while let Some((line_number, line)) = parser.peek() {
+            if !line.starts_with("t") || !line.contains(" = ") {
+                break;
+            }
+            parser.advance();
+            let (type_ref, rest) = split_once(line_number, line, " = ")?;
+            let type_index = parse_prefixed(line_number, type_ref, 't', "type reference")?;
+            if type_index != types.len() {
+                return Err(ParseError {
+                    line: line_number,
+                    message: format!("expected type t{}", types.len()),
+                });
+            }
+            let mut layout = TypeLayout {
+                is_enum: false,
+                name: String::new(),
+                field_names: Vec::new(),
+                variants: Vec::new(),
+            };
+            let parts: Vec<&str> = rest.split_whitespace().collect();
+            if parts.is_empty() || (parts[0] != "struct" && parts[0] != "enum") {
+                return Err(ParseError {
+                    line: line_number,
+                    message: "expected struct or enum type declaration".to_string(),
+                });
+            }
+            layout.is_enum = parts[0] == "enum";
+            layout.name = parse_string_full(line_number, parts[1])?;
+            if layout.is_enum {
+                let mut index = 2;
+                while index < parts.len() {
+                    let (variant_ref, variant_name) =
+                        split_once(line_number, parts[index], "=")?;
+                    let variant_index = parse_prefixed(
+                        line_number,
+                        variant_ref,
+                        'v',
+                        "variant reference",
+                    )?;
+                    if variant_index != layout.variants.len() {
+                        return Err(ParseError {
+                            line: line_number,
+                            message: format!("expected variant v{}", layout.variants.len()),
+                        });
+                    }
+                    index += 1;
+                    if index >= parts.len() {
+                        return Err(ParseError {
+                            line: line_number,
+                            message: "expected variant payload count".to_string(),
+                        });
+                    }
+                    let (payload_label, count) =
+                        split_once(line_number, parts[index], "=")?;
+                    if payload_label != "payload" {
+                        return Err(ParseError {
+                            line: line_number,
+                            message: "expected `payload=`".to_string(),
+                        });
+                    }
+                    layout.variants.push(VariantLayout {
+                        name: parse_string_full(line_number, variant_name)?,
+                        payload_count: parse_usize(line_number, count, "variant payload count")?,
+                    });
+                    index += 1;
+                }
+            } else {
+                for part in &parts[2..] {
+                    let (field_ref, field_name) = split_once(line_number, part, "=")?;
+                    let field_number = field_ref.strip_prefix("field").ok_or_else(|| {
+                        ParseError {
+                            line: line_number,
+                            message: "expected field reference".to_string(),
+                        }
+                    })?;
+                    let field_index =
+                        parse_usize(line_number, field_number, "field index")?;
+                    if field_index != layout.field_names.len() {
+                        return Err(ParseError {
+                            line: line_number,
+                            message: format!("expected field f{}", layout.field_names.len()),
+                        });
+                    }
+                    layout
+                        .field_names
+                        .push(parse_string_full(line_number, field_name)?);
+                }
+            }
+            types.push(layout);
+        }
+    }
+    let mut native_imports = Vec::new();
+    if parser
+        .peek()
+        .map(|(_, line)| line == "native_imports:")
+        .unwrap_or(false)
+    {
+        parser.advance();
+        while let Some((line_number, line)) = parser.peek() {
+            if !line.starts_with("i") || !line.contains(" = ") {
+                break;
+            }
+            parser.advance();
+            let (import_ref, rest) = split_once(line_number, line, " = ")?;
+            let import_index =
+                parse_prefixed(line_number, import_ref, 'i', "native import reference")?;
+            if import_index != native_imports.len() {
+                return Err(ParseError {
+                    line: line_number,
+                    message: format!("expected native import i{}", native_imports.len()),
+                });
+            }
+            let (name, rest) = parse_string_prefix(line_number, rest)?;
+            let abi_text = rest.strip_prefix(" abi=").ok_or_else(|| ParseError {
+                line: line_number,
+                message: "expected native import abi version".to_string(),
+            })?;
+            let abi = parse_usize(line_number, abi_text, "native import abi version")?;
+            native_imports.push(NativeImport {
+                name,
+                abi: abi as u32,
+            });
+        }
+    }
+    let mut modules = Vec::new();
+    if parser
+        .peek()
+        .map(|(_, line)| line == "modules:")
+        .unwrap_or(false)
+    {
+        parser.advance();
+        while let Some((line_number, line)) = parser.peek() {
+            if !line.starts_with("m") || !line.contains(" = ") {
+                break;
+            }
+            parser.advance();
+            let (module_ref, init_ref) = split_once(line_number, line, " = ")?;
+            let module_index =
+                parse_prefixed(line_number, module_ref, 'm', "module reference")?;
+            if module_index != modules.len() {
+                return Err(ParseError {
+                    line: line_number,
+                    message: format!("expected module m{}", modules.len()),
+                });
+            }
+            let init = parse_function_ref(line_number, init_ref)? + 1;
+            modules.push(ModuleInit {
+                init: FuncId(init as u32),
+            });
+        }
+    }
     let main = parser.parse_main()?;
-    let functions = parser.parse_functions()?;
+    let mut functions = parser.parse_functions()?;
+    functions.insert(0, main);
     let debug_sources = parser.parse_debug_sources()?;
     let mut program = Program {
         constants,
         names,
-        main,
+        globals,
+        types,
+        native_imports,
+        modules,
         functions,
+        entry: FuncId(0),
         debug_sources,
     };
     parser.parse_debug_locations(&mut program)?;
@@ -684,7 +986,16 @@ fn parse_program_body(parser: &mut Parser<'_>) -> Result<Program, ParseError> {
 
 fn parse_artifact_unverified(source: &str) -> Result<(Artifact, usize), ParseError> {
     let mut parser = Parser::new(source);
-    parser.require_line(ARTIFACT_HEADER)?;
+    let (line_number, line) = parser.advance().ok_or_else(|| ParseError {
+        line: parser.last_line(),
+        message: format!("expected `{}`", ARTIFACT_HEADER),
+    })?;
+    if line != ARTIFACT_HEADER && line != LEGACY_ARTIFACT_HEADER {
+        return Err(ParseError {
+            line: line_number,
+            message: format!("expected `{}`", ARTIFACT_HEADER),
+        });
+    }
     let module = if parser
         .peek()
         .map(|(_, line)| line == "artifact: module")
@@ -694,7 +1005,7 @@ fn parse_artifact_unverified(source: &str) -> Result<(Artifact, usize), ParseErr
     } else {
         None
     };
-    let program = parse_program_body(&mut parser)?;
+    let program = parse_program_body_with_globals(&mut parser)?;
     let artifact = match module {
         Some(module) => Artifact::Module(ModuleArtifact {
             identity: module.identity,
@@ -702,6 +1013,7 @@ fn parse_artifact_unverified(source: &str) -> Result<(Artifact, usize), ParseErr
             canonical_path: module.canonical_path,
             is_entry: module.is_entry,
             entry_order: module.entry_order,
+            init: module.init,
             dependencies: module.dependencies,
             program,
         }),
@@ -733,7 +1045,15 @@ fn validate_module_envelope(artifact: &ModuleArtifact, line: usize) -> Result<()
         });
     }
 
-    let mut previous_offset = 0;
+    if artifact.init >= artifact.program.functions.len() {
+        return Err(ParseError {
+            line,
+            message: format!(
+                "module init function f{} out of range",
+                artifact.init.saturating_sub(1)
+            ),
+        });
+    }
     for (index, dependency) in artifact.dependencies.iter().enumerate() {
         if dependency.identity.is_empty() || dependency.requested_path.is_empty() {
             return Err(ParseError {
@@ -741,22 +1061,21 @@ fn validate_module_envelope(artifact: &ModuleArtifact, line: usize) -> Result<()
                 message: format!("module dependency d{} has an empty identity or path", index),
             });
         }
-        if dependency.instruction_offset > artifact.program.main.instructions.len() {
-            return Err(ParseError {
-                line,
-                message: format!(
-                    "module dependency d{} instruction offset out of range",
-                    index
-                ),
-            });
+    }
+    for (function_index, function) in artifact.program.functions.iter().enumerate() {
+        for (instruction_index, instruction) in function.instructions.iter().enumerate() {
+            if let Instruction::InitModule { module } = instruction {
+                if *module >= artifact.dependencies.len() {
+                    return Err(ParseError {
+                        line,
+                        message: format!(
+                            "function {} instruction {} module m{} out of range",
+                            function_index, instruction_index, module
+                        ),
+                    });
+                }
+            }
         }
-        if index != 0 && dependency.instruction_offset < previous_offset {
-            return Err(ParseError {
-                line,
-                message: "module dependency offsets must be nondecreasing".to_string(),
-            });
-        }
-        previous_offset = dependency.instruction_offset;
     }
     Ok(())
 }
@@ -791,6 +1110,7 @@ const SUPPORTED_NATIVE_FUNCTIONS: &[&str] = &[
     "findIndex",
     "reduce",
     "range",
+    "print",
 ];
 
 fn validation_error(line: usize, message: impl Into<String>) -> ParseError {
@@ -851,6 +1171,14 @@ fn verify_module_artifact_at_line(
 }
 
 fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
+    for (index, name) in program.globals.iter().enumerate() {
+        if *name >= program.names.len() {
+            return Err(validation_error(
+                line,
+                format!("global g{index} references name n{name} out of range"),
+            ));
+        }
+    }
     for (index, source) in program.debug_sources.iter().enumerate() {
         if source.module.as_ref().is_some_and(String::is_empty) {
             return Err(validation_error(
@@ -875,22 +1203,71 @@ fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
             }
         }
     }
-
-    validate_body(
-        "main",
-        program.main.registers,
-        &program.main.instructions,
-        &program.main.locations,
-        program,
-        line,
-    )?;
-    for (index, function) in program.functions.iter().enumerate() {
-        if function.index != index {
+    let mut native_names = BTreeSet::new();
+    for (index, import) in program.native_imports.iter().enumerate() {
+        if import.name.is_empty() {
+            return Err(validation_error(
+                line,
+                format!("native import i{} has an empty name", index),
+            ));
+        }
+        if import.abi != 1 {
+            return Err(validation_error(
+                line,
+                format!("native import i{} must declare abi=1", index),
+            ));
+        }
+        if !SUPPORTED_NATIVE_FUNCTIONS.contains(&import.name.as_str()) {
             return Err(validation_error(
                 line,
                 format!(
-                    "function table entry {} has index f{}",
-                    index, function.index
+                    "native import i{} references unsupported native function `{}`",
+                    index, import.name
+                ),
+            ));
+        }
+        if !native_names.insert(import.name.as_str()) {
+            return Err(validation_error(
+                line,
+                format!("native import i{} duplicates native function `{}`", index, import.name),
+            ));
+        }
+    }
+    for (index, module) in program.modules.iter().enumerate() {
+        if program.functions.get(module.init.0 as usize).is_none() {
+            return Err(validation_error(
+                line,
+                format!(
+                    "module m{} init function f{} out of range",
+                    index,
+                    module.init.0.saturating_sub(1)
+                ),
+            ));
+        }
+    }
+
+    if program.functions.get(program.entry.0 as usize).is_none() {
+        return Err(validation_error(
+            line,
+            format!("entry function f{} is out of range", program.entry.0),
+        ));
+    }
+    if program.entry != FuncId(0) {
+        return Err(validation_error(
+            line,
+            format!(
+                "entry must be f0, found f{}",
+                program.entry.0
+            ),
+        ));
+    }
+    for (index, function) in program.functions.iter().enumerate() {
+        if function.id != FuncId(index as u32) {
+            return Err(validation_error(
+                line,
+                format!(
+                    "function table entry {} has id f{}, expected f{}",
+                    index, function.id.0, index
                 ),
             ));
         }
@@ -905,9 +1282,32 @@ fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
                 ),
             ));
         }
+        for (upvalue_index, upvalue) in function.upvalues.iter().enumerate() {
+            if let UpvalueSource::Global(global) = upvalue.source {
+                if global.0 as usize >= program.globals.len() {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "function f{} upvalue u{} global g{} out of range",
+                            index.saturating_sub(1),
+                            upvalue_index,
+                            global.0
+                        ),
+                    ));
+                }
+            }
+        }
+        let context = if index == 0 {
+            "main".to_string()
+        } else {
+            format!("function f{}", index - 1)
+        };
         validate_body(
-            &format!("function f{}", index),
+            &context,
             function.registers,
+            function.arity,
+            function.local_count,
+            function.upvalues.len(),
             &function.instructions,
             &function.locations,
             program,
@@ -920,6 +1320,9 @@ fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
 fn validate_body(
     context: &str,
     registers: usize,
+    arity: usize,
+    local_count: usize,
+    upvalue_count: usize,
     instructions: &[Instruction],
     locations: &[Option<DebugLocation>],
     program: &Program,
@@ -985,8 +1388,25 @@ fn validate_body(
             context,
             instruction_index,
             registers,
+            local_count,
+            upvalue_count,
             instructions.len(),
             instruction,
+            program,
+            line,
+        )?;
+    }
+    if instructions
+        .iter()
+        .any(|instruction| matches!(instruction, Instruction::BlockStart { .. }))
+    {
+        validate_block_body(
+            context,
+            registers,
+            arity,
+            local_count,
+            upvalue_count,
+            instructions,
             program,
             line,
         )?;
@@ -994,10 +1414,578 @@ fn validate_body(
     Ok(())
 }
 
+fn is_block_terminator(instruction: &Instruction) -> bool {
+    matches!(
+        instruction,
+        Instruction::Br { .. }
+            | Instruction::BrIf { .. }
+            | Instruction::Return { .. }
+            | Instruction::ReturnNil
+    )
+}
+
+fn instruction_register_def(instruction: &Instruction) -> Option<usize> {
+    match instruction {
+        Instruction::Constant { dest, .. }
+        | Instruction::MakeFunction { dest, .. }
+        | Instruction::Array { dest, .. }
+        | Instruction::Map { dest, .. }
+        | Instruction::Struct { dest, .. }
+        | Instruction::Variant { dest, .. }
+        | Instruction::VariantTag { dest, .. }
+        | Instruction::VariantField { dest, .. }
+        | Instruction::Move { dest, .. }
+        | Instruction::LoadVar { dest, .. }
+        | Instruction::LoadLocal { dest, .. }
+        | Instruction::LoadUpvalue { dest, .. }
+        | Instruction::LoadGlobal { dest, .. }
+        | Instruction::Call { dest, .. }
+        | Instruction::CallDirect { dest, .. }
+        | Instruction::NativeCall { dest, .. }
+        | Instruction::CallNative { dest, .. }
+        | Instruction::Index { dest, .. }
+        | Instruction::AssignIndex { dest, .. }
+        | Instruction::ArrayGet { dest, .. }
+        | Instruction::ArraySet { dest, .. }
+        | Instruction::MapGet { dest, .. }
+        | Instruction::MapSet { dest, .. }
+        | Instruction::RangeGet { dest, .. }
+        | Instruction::Field { dest, .. }
+        | Instruction::AssignField { dest, .. }
+        | Instruction::Len { dest, .. }
+        | Instruction::LenArray { dest, .. }
+        | Instruction::LenMap { dest, .. }
+        | Instruction::LenRange { dest, .. }
+        | Instruction::LenStr { dest, .. }
+        | Instruction::AssertArray { dest, .. }
+        | Instruction::IterInit { dest, .. }
+        | Instruction::IterHas { dest, .. }
+        | Instruction::IterNext { dest, .. }
+        | Instruction::AssertNumber { dest, .. }
+        | Instruction::MakeStruct { dest, .. }
+        | Instruction::StructGet { dest, .. }
+        | Instruction::StructSet { dest, .. }
+        | Instruction::MakeVariant { dest, .. }
+        | Instruction::IsVariant { dest, .. }
+        | Instruction::VariantGet { dest, .. }
+        | Instruction::Negate { dest, .. }
+        | Instruction::NegNum { dest, .. }
+        | Instruction::Not { dest, .. }
+        | Instruction::Add { dest, .. }
+        | Instruction::AddNum { dest, .. }
+        | Instruction::ConcatStr { dest, .. }
+        | Instruction::Subtract { dest, .. }
+        | Instruction::SubNum { dest, .. }
+        | Instruction::Multiply { dest, .. }
+        | Instruction::MulNum { dest, .. }
+        | Instruction::Divide { dest, .. }
+        | Instruction::DivNum { dest, .. }
+        | Instruction::Equal { dest, .. }
+        | Instruction::NotEqual { dest, .. }
+        | Instruction::Greater { dest, .. }
+        | Instruction::GreaterNum { dest, .. }
+        | Instruction::GreaterStr { dest, .. }
+        | Instruction::GreaterEqual { dest, .. }
+        | Instruction::GreaterEqualNum { dest, .. }
+        | Instruction::GreaterEqualStr { dest, .. }
+        | Instruction::Less { dest, .. }
+        | Instruction::LessNum { dest, .. }
+        | Instruction::LessStr { dest, .. }
+        | Instruction::LessEqual { dest, .. }
+        | Instruction::LessEqualNum { dest, .. }
+        | Instruction::LessEqualStr { dest, .. } => Some(*dest),
+        _ => None,
+    }
+}
+
+fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
+    match instruction {
+        Instruction::Array { elements, .. } => elements.clone(),
+        Instruction::Map { entries, .. } => entries.iter().flat_map(|(k, v)| [*k, *v]).collect(),
+        Instruction::Struct { fields, .. } => fields.iter().map(|(_, v)| *v).collect(),
+        Instruction::Variant { payload, .. } => payload.clone(),
+        Instruction::VariantTag { value, .. } | Instruction::VariantField { value, .. } => vec![*value],
+        Instruction::Move { source, .. } => vec![*source],
+        Instruction::StoreVar { value, .. }
+        | Instruction::AssignVar { value, .. }
+        | Instruction::BindLocal { value, .. }
+        | Instruction::SetLocal { value, .. }
+        | Instruction::SetUpvalue { value, .. }
+        | Instruction::InitGlobal { value, .. }
+        | Instruction::SetGlobal { value, .. }
+        | Instruction::Print { value }
+        | Instruction::Return { value }
+        | Instruction::Negate { value, .. }
+        | Instruction::NegNum { value, .. }
+        | Instruction::Not { value, .. }
+        | Instruction::Len { value, .. }
+        | Instruction::LenArray { value, .. }
+        | Instruction::LenMap { value, .. }
+        | Instruction::LenRange { value, .. }
+        | Instruction::LenStr { value, .. }
+        | Instruction::AssertArray { value, .. }
+        | Instruction::IterInit { value, .. }
+        | Instruction::IterHas { value, .. }
+        | Instruction::IterNext { value, .. }
+        | Instruction::AssertNumber { value, .. } => vec![*value],
+        Instruction::Call {
+            callee, arguments, ..
+        } => {
+            let mut reads = vec![*callee];
+            reads.extend(arguments.iter().copied());
+            reads
+        }
+        Instruction::CallDirect { arguments, .. } => arguments.clone(),
+        Instruction::NativeCall { arguments, .. } => arguments.clone(),
+        Instruction::CallNative { arguments, .. } => arguments.clone(),
+        Instruction::MakeStruct { elements, .. } => elements.clone(),
+        Instruction::StructGet { object, .. } => vec![*object],
+        Instruction::StructSet {
+            object, value, ..
+        } => vec![*object, *value],
+        Instruction::MakeVariant { payload, .. } => payload.clone(),
+        Instruction::IsVariant { value, .. } => vec![*value],
+        Instruction::VariantGet { value, .. } => vec![*value],
+        Instruction::Index {
+            collection, index, ..
+        }
+        | Instruction::ArrayGet {
+            collection, index, ..
+        }
+        | Instruction::MapGet {
+            collection, index, ..
+        }
+        | Instruction::RangeGet {
+            collection, index, ..
+        } => vec![*collection, *index],
+        Instruction::AssignIndex {
+            collection,
+            index,
+            value,
+            ..
+        }
+        | Instruction::ArraySet {
+            collection,
+            index,
+            value,
+            ..
+        }
+        | Instruction::MapSet {
+            collection,
+            index,
+            value,
+            ..
+        } => vec![*collection, *index, *value],
+        Instruction::Field { object, .. } => vec![*object],
+        Instruction::AssignField { object, value, .. } => vec![*object, *value],
+        Instruction::JumpIfFalse { condition, .. }
+        | Instruction::JumpIfTrue { condition, .. }
+        | Instruction::BrIf { condition, .. } => vec![*condition],
+        Instruction::Add {
+            left, right, ..
+        }
+        | Instruction::AddNum {
+            left, right, ..
+        }
+        | Instruction::ConcatStr {
+            left, right, ..
+        }
+        | Instruction::Subtract {
+            left, right, ..
+        }
+        | Instruction::SubNum {
+            left, right, ..
+        }
+        | Instruction::Multiply {
+            left, right, ..
+        }
+        | Instruction::MulNum {
+            left, right, ..
+        }
+        | Instruction::Divide {
+            left, right, ..
+        }
+        | Instruction::DivNum {
+            left, right, ..
+        }
+        | Instruction::Equal {
+            left, right, ..
+        }
+        | Instruction::NotEqual {
+            left, right, ..
+        }
+        | Instruction::Greater {
+            left, right, ..
+        }
+        | Instruction::GreaterNum {
+            left, right, ..
+        }
+        | Instruction::GreaterStr {
+            left, right, ..
+        }
+        | Instruction::GreaterEqual {
+            left, right, ..
+        }
+        | Instruction::GreaterEqualNum {
+            left, right, ..
+        }
+        | Instruction::GreaterEqualStr {
+            left, right, ..
+        }
+        | Instruction::Less {
+            left, right, ..
+        }
+        | Instruction::LessNum {
+            left, right, ..
+        }
+        | Instruction::LessStr {
+            left, right, ..
+        }
+        | Instruction::LessEqual {
+            left, right, ..
+        }
+        | Instruction::LessEqualNum {
+            left, right, ..
+        }
+        | Instruction::LessEqualStr {
+            left, right, ..
+        } => vec![*left, *right],
+        _ => Vec::new(),
+    }
+}
+
+fn validate_block_body(
+    context: &str,
+    registers: usize,
+    arity: usize,
+    local_count: usize,
+    upvalue_count: usize,
+    instructions: &[Instruction],
+    program: &Program,
+    line: usize,
+) -> Result<(), ParseError> {
+    let mut blocks: Vec<(usize, usize)> = Vec::new();
+    for (index, instruction) in instructions.iter().enumerate() {
+        match instruction {
+            Instruction::BlockStart { id } => {
+                if id.0 as usize != blocks.len() {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "{} block b{} is not sequential (expected b{})",
+                            context,
+                            id.0,
+                            blocks.len()
+                        ),
+                    ));
+                }
+                blocks.push((index, index + 1));
+            }
+            _ => {
+                if let Some(last) = blocks.last_mut() {
+                    last.1 = index + 1;
+                }
+            }
+        }
+    }
+    if blocks.is_empty() || blocks[0].0 != 0 {
+        return Err(validation_error(
+            line,
+            format!("{} block body must begin with block b0", context),
+        ));
+    }
+
+    let mut successors: Vec<Vec<usize>> = vec![Vec::new(); blocks.len()];
+    for (index, (_start, end)) in blocks.iter().enumerate() {
+        let terminator = &instructions[end - 1];
+        if !is_block_terminator(terminator) {
+            return Err(validation_error(
+                line,
+                format!("{} block b{} is missing a terminator", context, index),
+            ));
+        }
+        match terminator {
+            Instruction::Br { target } => successors[index].push(target.0 as usize),
+            Instruction::BrIf {
+                if_true, if_false, ..
+            } => {
+                successors[index].push(if_true.0 as usize);
+                successors[index].push(if_false.0 as usize);
+            }
+            _ => {}
+        }
+    }
+    for (index, targets) in successors.iter().enumerate() {
+        for target in targets {
+            if *target >= blocks.len() {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "{} block b{} branches to invalid block b{}",
+                        context, index, target
+                    ),
+                ));
+            }
+        }
+    }
+
+    let mut predecessors: Vec<Vec<usize>> = vec![Vec::new(); blocks.len()];
+    for (index, targets) in successors.iter().enumerate() {
+        for target in targets {
+            predecessors[*target].push(index);
+        }
+    }
+
+    let universe: BTreeSet<usize> = (0..registers).collect();
+    let mut defs: Vec<BTreeSet<usize>> = Vec::with_capacity(blocks.len());
+    let mut exposed: Vec<BTreeSet<usize>> = Vec::with_capacity(blocks.len());
+    for (start, end) in &blocks {
+        let mut block_defs = BTreeSet::new();
+        let mut block_exposed = BTreeSet::new();
+        let mut defined = BTreeSet::new();
+        for instruction in &instructions[*start..end - 1] {
+            if matches!(instruction, Instruction::BlockStart { .. }) {
+                continue;
+            }
+            for read in instruction_register_reads(instruction) {
+                if read < registers && !defined.contains(&read) {
+                    block_exposed.insert(read);
+                }
+            }
+            if let Some(def) = instruction_register_def(instruction) {
+                if def < registers {
+                    defined.insert(def);
+                    block_defs.insert(def);
+                }
+            }
+        }
+        let terminator = &instructions[end - 1];
+        for read in instruction_register_reads(terminator) {
+            if read < registers && !defined.contains(&read) {
+                block_exposed.insert(read);
+            }
+        }
+        defs.push(block_defs);
+        exposed.push(block_exposed);
+    }
+
+    let mut ins: Vec<BTreeSet<usize>> = Vec::with_capacity(blocks.len());
+    ins.push(BTreeSet::new());
+    for _ in 1..blocks.len() {
+        ins.push(universe.clone());
+    }
+    loop {
+        let mut changed = false;
+        let outs: Vec<BTreeSet<usize>> = ins
+            .iter()
+            .zip(defs.iter())
+            .map(|(input, def)| input.union(def).copied().collect())
+            .collect();
+        for block in 1..blocks.len() {
+            let next: BTreeSet<usize> = if predecessors[block].is_empty() {
+                universe.clone()
+            } else {
+                predecessors[block]
+                    .iter()
+                    .map(|pred| &outs[*pred])
+                    .fold(universe.clone(), |acc, out| {
+                        acc.intersection(out).copied().collect()
+                    })
+            };
+            if next != ins[block] {
+                ins[block] = next;
+                changed = true;
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+    for (block, (start, end)) in blocks.iter().enumerate() {
+        let mut defined = ins[block].clone();
+        for instruction in &instructions[*start..end - 1] {
+            for read in instruction_register_reads(instruction) {
+                if read < registers && !defined.contains(&read) {
+                    return Err(validation_error(
+                        line,
+                        format!(
+                            "{} block b{} reads undefined register r{}",
+                            context, block, read
+                        ),
+                    ));
+                }
+            }
+            if let Some(def) = instruction_register_def(instruction) {
+                if def < registers {
+                    defined.insert(def);
+                }
+            }
+        }
+        let terminator = &instructions[end - 1];
+        for read in instruction_register_reads(terminator) {
+            if read < registers && !defined.contains(&read) {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "{} block b{} reads undefined register r{}",
+                        context, block, read
+                    ),
+                ));
+            }
+        }
+    }
+
+    // Local definite-binding mirrors the register analysis; parameters are
+    // bound on entry.
+    if local_count > 0 {
+        let local_universe: BTreeSet<usize> = (0..local_count).collect();
+        let initial_params: BTreeSet<usize> = (0..arity.min(local_count)).collect();
+        let mut local_defs: Vec<BTreeSet<usize>> = Vec::with_capacity(blocks.len());
+        let mut local_exposed: Vec<BTreeSet<usize>> = Vec::with_capacity(blocks.len());
+        for (start, end) in &blocks {
+            let mut block_defs = BTreeSet::new();
+            let mut block_exposed = BTreeSet::new();
+            let mut bound = BTreeSet::new();
+            for instruction in &instructions[*start..end - 1] {
+                if let Instruction::BindLocal { slot, .. } = instruction {
+                    if *slot < local_count {
+                        bound.insert(*slot);
+                        block_defs.insert(*slot);
+                    }
+                } else if let Instruction::LoadLocal { slot, .. }
+                | Instruction::SetLocal { slot, .. } = instruction
+                {
+                    if *slot < local_count && !bound.contains(slot) {
+                        block_exposed.insert(*slot);
+                    }
+                }
+            }
+            local_defs.push(block_defs);
+            local_exposed.push(block_exposed);
+        }
+        let mut local_ins: Vec<BTreeSet<usize>> = Vec::with_capacity(blocks.len());
+        local_ins.push(initial_params);
+        for _ in 1..blocks.len() {
+            local_ins.push(local_universe.clone());
+        }
+        loop {
+            let mut changed = false;
+            let outs: Vec<BTreeSet<usize>> = local_ins
+                .iter()
+                .zip(local_defs.iter())
+                .map(|(input, def)| input.union(def).copied().collect())
+                .collect();
+            for block in 1..blocks.len() {
+                let next: BTreeSet<usize> = if predecessors[block].is_empty() {
+                    local_universe.clone()
+                } else {
+                    predecessors[block]
+                        .iter()
+                        .map(|pred| &outs[*pred])
+                        .fold(local_universe.clone(), |acc, out| {
+                            acc.intersection(out).copied().collect()
+                        })
+                };
+                if next != local_ins[block] {
+                    local_ins[block] = next;
+                    changed = true;
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+        for (block, (start, end)) in blocks.iter().enumerate() {
+            let mut bound = local_ins[block].clone();
+            for instruction in &instructions[*start..*end] {
+                if let Instruction::BindLocal { slot, .. } = instruction {
+                    if *slot < local_count {
+                        bound.insert(*slot);
+                    }
+                } else if let Instruction::LoadLocal { slot, .. }
+                | Instruction::SetLocal { slot, .. } = instruction
+                {
+                    if *slot < local_count && !bound.contains(slot) {
+                        return Err(validation_error(
+                            line,
+                            format!(
+                                "{} block b{} reads unbound local l{}",
+                                context, block, slot
+                            ),
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
+    for instruction in instructions {
+        if let Instruction::NativeCall {
+            name, arguments, ..
+        } = instruction
+        {
+            if let Some(native_name) = program.names.get(*name) {
+                if let Some((min_arity, max_arity)) = native_arity_bounds(native_name) {
+                    if arguments.len() < min_arity || arguments.len() > max_arity {
+                        return Err(validation_error(
+                            line,
+                            format!(
+                                "{} native `{}` expects {} to {} arguments, got {}",
+                                context,
+                                native_name,
+                                min_arity,
+                                max_arity,
+                                arguments.len()
+                            ),
+                        ));
+                    }
+                }
+            }
+        }
+        if let Instruction::CallNative {
+            native, arguments, ..
+        } = instruction
+        {
+            if let Some(import) = program.native_imports.get(native.0 as usize) {
+                if let Some((min_arity, max_arity)) = native_arity_bounds(&import.name) {
+                    if arguments.len() < min_arity || arguments.len() > max_arity {
+                        return Err(validation_error(
+                            line,
+                            format!(
+                                "{} native `{}` expects {} to {} arguments, got {}",
+                                context,
+                                import.name,
+                                min_arity,
+                                max_arity,
+                                arguments.len()
+                            ),
+                        ));
+                    }
+                }
+            }
+        }
+        if matches!(
+            instruction,
+            Instruction::Jump { .. }
+                | Instruction::JumpIfFalse { .. }
+                | Instruction::JumpIfTrue { .. }
+        ) {
+            return Err(validation_error(
+                line,
+                format!("{} block body contains a legacy jump", context),
+            ));
+        }
+    }
+    let _ = upvalue_count;
+    Ok(())
+}
+
 fn validate_instruction(
     context: &str,
     instruction_index: usize,
     registers: usize,
+    local_count: usize,
+    upvalue_count: usize,
     instruction_count: usize,
     instruction: &Instruction,
     program: &Program,
@@ -1049,15 +2037,15 @@ fn validate_instruction(
             Ok(())
         }
     };
-    let function = |index: usize| {
-        if index >= program.functions.len() {
+    let function = |index: FuncId| {
+        if index.0 as usize >= program.functions.len() {
             Err(validation_error(
                 line,
                 format!(
                     "{} instruction {} function f{} out of range (function count {})",
                     context,
                     instruction_index,
-                    index,
+                    index.0.saturating_sub(1),
                     program.functions.len()
                 ),
             ))
@@ -1083,6 +2071,32 @@ fn validate_instruction(
             register(*value, &format!("{} {}", role, index))?;
         }
         Ok(())
+    };
+    let local_slot = |index: usize| {
+        if index >= local_count {
+            Err(validation_error(
+                line,
+                format!(
+                    "{} instruction {} local l{} out of range (local count {})",
+                    context, instruction_index, index, local_count
+                ),
+            ))
+        } else {
+            Ok(())
+        }
+    };
+    let upvalue_slot = |index: usize| {
+        if index >= upvalue_count {
+            Err(validation_error(
+                line,
+                format!(
+                    "{} instruction {} upvalue u{} out of range (upvalue count {})",
+                    context, instruction_index, index, upvalue_count
+                ),
+            ))
+        } else {
+            Ok(())
+        }
     };
 
     match instruction {
@@ -1125,6 +2139,72 @@ fn validate_instruction(
                 register(*value, &format!("struct field {} value", index))?;
             }
         }
+        Instruction::MakeStruct {
+            dest,
+            type_id,
+            elements,
+        } => {
+            register(*dest, "destination")?;
+            let layout = program.types.get(type_id.0 as usize).ok_or_else(|| {
+                validation_error(line, format!("type t{} out of range", type_id.0))
+            })?;
+            if layout.is_enum || elements.len() != layout.field_names.len() {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "make_struct t{} expects {} fields, got {}",
+                        type_id.0,
+                        layout.field_names.len(),
+                        elements.len()
+                    ),
+                ));
+            }
+            registers(elements, "struct element")?;
+        }
+        Instruction::StructGet {
+            dest,
+            object,
+            type_id,
+            slot,
+        } => {
+            register(*dest, "destination")?;
+            register(*object, "struct object")?;
+            let layout = program.types.get(type_id.0 as usize).ok_or_else(|| {
+                validation_error(line, format!("type t{} out of range", type_id.0))
+            })?;
+            if layout.is_enum || *slot >= layout.field_names.len() {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "struct_get t{} field slot {} out of range",
+                        type_id.0, slot
+                    ),
+                ));
+            }
+        }
+        Instruction::StructSet {
+            dest,
+            object,
+            type_id,
+            slot,
+            value,
+        } => {
+            register(*dest, "destination")?;
+            register(*object, "struct object")?;
+            register(*value, "field value")?;
+            let layout = program.types.get(type_id.0 as usize).ok_or_else(|| {
+                validation_error(line, format!("type t{} out of range", type_id.0))
+            })?;
+            if layout.is_enum || *slot >= layout.field_names.len() {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "struct_set t{} field slot {} out of range",
+                        type_id.0, slot
+                    ),
+                ));
+            }
+        }
         Instruction::Variant {
             dest,
             enum_name,
@@ -1135,6 +2215,73 @@ fn validate_instruction(
             name(*enum_name, "variant enum")?;
             name(*variant_name, "variant name")?;
             registers(payload, "variant payload")?;
+        }
+        Instruction::MakeVariant {
+            dest,
+            type_id,
+            variant_id,
+            payload,
+        } => {
+            register(*dest, "destination")?;
+            registers(payload, "variant payload")?;
+            let layout = program.types.get(type_id.0 as usize).ok_or_else(|| {
+                validation_error(line, format!("type t{} out of range", type_id.0))
+            })?;
+            if !layout.is_enum || variant_id.0 as usize >= layout.variants.len() {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "make_variant t{} variant v{} out of range",
+                        type_id.0, variant_id.0
+                    ),
+                ));
+            }
+        }
+        Instruction::IsVariant {
+            dest,
+            value,
+            type_id,
+            variant_id,
+        } => {
+            register(*dest, "destination")?;
+            register(*value, "variant value")?;
+            let layout = program.types.get(type_id.0 as usize).ok_or_else(|| {
+                validation_error(line, format!("type t{} out of range", type_id.0))
+            })?;
+            if !layout.is_enum || variant_id.0 as usize >= layout.variants.len() {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "is_variant t{} variant v{} out of range",
+                        type_id.0, variant_id.0
+                    ),
+                ));
+            }
+        }
+        Instruction::VariantGet {
+            dest,
+            value,
+            type_id,
+            variant_id,
+            index,
+        } => {
+            register(*dest, "destination")?;
+            register(*value, "variant value")?;
+            let layout = program.types.get(type_id.0 as usize).ok_or_else(|| {
+                validation_error(line, format!("type t{} out of range", type_id.0))
+            })?;
+            let variant = layout.variants.get(variant_id.0 as usize).ok_or_else(|| {
+                validation_error(line, format!("variant v{} out of range", variant_id.0))
+            })?;
+            if *index >= variant.payload_count {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "variant_get t{} v{} payload index {} out of range",
+                        type_id.0, variant_id.0, index
+                    ),
+                ));
+            }
         }
         Instruction::VariantTag {
             dest,
@@ -1170,6 +2317,38 @@ fn validate_instruction(
             name(*value, "variable")?;
             register(*source, "value")?;
         }
+        Instruction::LoadLocal { dest, slot } => {
+            register(*dest, "destination")?;
+            local_slot(*slot)?;
+        }
+        Instruction::BindLocal { slot, value } => {
+            local_slot(*slot)?;
+            register(*value, "local value")?;
+        }
+        Instruction::SetLocal { slot, value } => {
+            local_slot(*slot)?;
+            register(*value, "local value")?;
+        }
+        Instruction::LoadUpvalue { dest, slot } => {
+            register(*dest, "destination")?;
+            upvalue_slot(*slot)?;
+        }
+        Instruction::SetUpvalue { slot, value } => {
+            upvalue_slot(*slot)?;
+            register(*value, "upvalue value")?;
+        }
+        Instruction::LoadGlobal { dest, slot } => {
+            register(*dest, "destination")?;
+            let _ = slot;
+        }
+        Instruction::InitGlobal { slot, value } => {
+            let _ = slot;
+            register(*value, "global value")?;
+        }
+        Instruction::SetGlobal { slot, value } => {
+            let _ = slot;
+            register(*value, "global value")?;
+        }
         Instruction::Call {
             dest,
             callee,
@@ -1178,6 +2357,42 @@ fn validate_instruction(
             register(*dest, "destination")?;
             register(*callee, "callee")?;
             registers(arguments, "call argument")?;
+        }
+        Instruction::CallDirect {
+            dest,
+            function: target,
+            arguments,
+        } => {
+            register(*dest, "destination")?;
+            function(*target)?;
+            registers(arguments, "direct call argument")?;
+            let target_function = &program.functions[target.0 as usize];
+            if arguments.len() != target_function.arity {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "{} instruction {} call_direct f{} expects {} arguments, got {}",
+                        context,
+                        instruction_index,
+                        target.0.saturating_sub(1),
+                        target_function.arity,
+                        arguments.len()
+                    ),
+                ));
+            }
+            if target_function.upvalues.iter().any(|descriptor| {
+                !matches!(descriptor.source, UpvalueSource::Global(_))
+            }) {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "{} instruction {} call_direct f{} targets a capturing function",
+                        context,
+                        instruction_index,
+                        target.0.saturating_sub(1)
+                    ),
+                ));
+            }
         }
         Instruction::NativeCall {
             dest,
@@ -1197,7 +2412,42 @@ fn validate_instruction(
             }
             registers(arguments, "native argument")?;
         }
+        Instruction::CallNative {
+            dest,
+            native,
+            arguments,
+        } => {
+            register(*dest, "destination")?;
+            if native.0 as usize >= program.native_imports.len() {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "{} instruction {} native import i{} out of range (import count {})",
+                        context,
+                        instruction_index,
+                        native.0,
+                        program.native_imports.len()
+                    ),
+                ));
+            }
+            registers(arguments, "native argument")?;
+        }
         Instruction::Index {
+            dest,
+            collection,
+            index,
+        }
+        | Instruction::ArrayGet {
+            dest,
+            collection,
+            index,
+        }
+        | Instruction::MapGet {
+            dest,
+            collection,
+            index,
+        }
+        | Instruction::RangeGet {
             dest,
             collection,
             index,
@@ -1207,6 +2457,18 @@ fn validate_instruction(
             register(*index, "index value")?;
         }
         Instruction::AssignIndex {
+            dest,
+            collection,
+            index,
+            value,
+        }
+        | Instruction::ArraySet {
+            dest,
+            collection,
+            index,
+            value,
+        }
+        | Instruction::MapSet {
             dest,
             collection,
             index,
@@ -1238,8 +2500,16 @@ fn validate_instruction(
             register(*value, "assigned value")?;
         }
         Instruction::Len { dest, value }
+        | Instruction::LenArray { dest, value }
+        | Instruction::LenMap { dest, value }
+        | Instruction::LenRange { dest, value }
+        | Instruction::LenStr { dest, value }
         | Instruction::AssertArray { dest, value }
+        | Instruction::IterInit { dest, value }
+        | Instruction::IterHas { dest, value }
+        | Instruction::IterNext { dest, value }
         | Instruction::Negate { dest, value }
+        | Instruction::NegNum { dest, value }
         | Instruction::Not { dest, value } => {
             register(*dest, "destination")?;
             register(*value, "value")?;
@@ -1257,15 +2527,28 @@ fn validate_instruction(
             register(*value, "value")?;
         }
         Instruction::Add { dest, left, right }
+        | Instruction::AddNum { dest, left, right }
+        | Instruction::ConcatStr { dest, left, right }
         | Instruction::Subtract { dest, left, right }
+        | Instruction::SubNum { dest, left, right }
         | Instruction::Multiply { dest, left, right }
+        | Instruction::MulNum { dest, left, right }
         | Instruction::Divide { dest, left, right }
+        | Instruction::DivNum { dest, left, right }
         | Instruction::Equal { dest, left, right }
         | Instruction::NotEqual { dest, left, right }
         | Instruction::Greater { dest, left, right }
+        | Instruction::GreaterNum { dest, left, right }
+        | Instruction::GreaterStr { dest, left, right }
         | Instruction::GreaterEqual { dest, left, right }
+        | Instruction::GreaterEqualNum { dest, left, right }
+        | Instruction::GreaterEqualStr { dest, left, right }
         | Instruction::Less { dest, left, right }
-        | Instruction::LessEqual { dest, left, right } => {
+        | Instruction::LessNum { dest, left, right }
+        | Instruction::LessStr { dest, left, right }
+        | Instruction::LessEqual { dest, left, right }
+        | Instruction::LessEqualNum { dest, left, right }
+        | Instruction::LessEqualStr { dest, left, right } => {
             register(*dest, "destination")?;
             register(*left, "left operand")?;
             register(*right, "right operand")?;
@@ -1275,6 +2558,32 @@ fn validate_instruction(
         | Instruction::JumpIfTrue { condition, target } => {
             register(*condition, "jump condition")?;
             jump(*target)?;
+        }
+        Instruction::BlockStart { id } => {
+            let _ = id;
+        }
+        Instruction::Br { target } => {
+            let _ = target;
+        }
+        Instruction::BrIf {
+            condition,
+            if_true,
+            if_false,
+        } => {
+            register(*condition, "branch condition")?;
+            let _ = (if_true, if_false);
+        }
+        Instruction::ReturnNil => {}
+        Instruction::InitModule { module } => {
+            if !program.modules.is_empty() && *module >= program.modules.len() {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "{} instruction {} module m{} out of range",
+                        context, instruction_index, module
+                    ),
+                ));
+            }
         }
     }
     Ok(())
@@ -1293,10 +2602,28 @@ pub fn parse_program(source: &str) -> Result<Program, ParseError> {
 
 pub fn format_program(program: &Program) -> String {
     let mut out = String::with_capacity(format_program_capacity_hint(program));
-    out.push_str(ARTIFACT_HEADER);
+    out.push_str(program_header(program));
     out.push_str("\n\n");
     format_program_sections(&mut out, program);
     out
+}
+
+fn program_header(program: &Program) -> &'static str {
+    let uses_legacy_variables = program.functions.iter().any(|function| {
+        function.instructions.iter().any(|instruction| {
+            matches!(
+                instruction,
+                Instruction::LoadVar { .. }
+                    | Instruction::StoreVar { .. }
+                    | Instruction::AssignVar { .. }
+            )
+        })
+    });
+    if uses_legacy_variables {
+        LEGACY_ARTIFACT_HEADER
+    } else {
+        ARTIFACT_HEADER
+    }
 }
 
 pub fn format_artifact(artifact: &Artifact) -> String {
@@ -1318,7 +2645,7 @@ pub fn format_artifact(artifact: &Artifact) -> String {
                             .sum(),
                     ),
             );
-            out.push_str(ARTIFACT_HEADER);
+            out.push_str(program_header(&module.program));
             out.push_str("\n\n");
             out.push_str("artifact: module\n\n");
             out.push_str("module:\n");
@@ -1338,6 +2665,7 @@ pub fn format_artifact(artifact: &Artifact) -> String {
             if let Some(entry_order) = module.entry_order {
                 out.push_str(&format!("  entry_order = {}\n", entry_order));
             }
+            out.push_str(&format!("  init = f{}\n", module.init.saturating_sub(1)));
             out.push_str("  dependencies:\n");
             for (index, dependency) in module.dependencies.iter().enumerate() {
                 let kind = match dependency.kind {
@@ -1345,11 +2673,10 @@ pub fn format_artifact(artifact: &Artifact) -> String {
                     ModuleDependencyKind::ReExport => "re_export",
                 };
                 out.push_str(&format!(
-                    "    d{} target={} kind={} at={} requested={}\n",
+                    "    d{} target={} kind={} requested={}\n",
                     index,
                     quote_string(&dependency.identity),
                     kind,
-                    dependency.instruction_offset,
                     quote_string(&dependency.requested_path)
                 ));
             }
@@ -1361,12 +2688,11 @@ pub fn format_artifact(artifact: &Artifact) -> String {
 }
 
 fn format_program_capacity_hint(program: &Program) -> usize {
-    let instruction_count = program.main.instructions.len()
-        + program
-            .functions
-            .iter()
-            .map(|function| function.instructions.len())
-            .sum::<usize>();
+    let instruction_count = program
+        .functions
+        .iter()
+        .map(|function| function.instructions.len())
+        .sum::<usize>();
     let string_bytes = program
         .constants
         .iter()
@@ -1377,6 +2703,11 @@ fn format_program_capacity_hint(program: &Program) -> usize {
         .sum::<usize>()
         + program.names.iter().map(String::len).sum::<usize>()
         + program
+            .native_imports
+            .iter()
+            .map(|import| import.name.len())
+            .sum::<usize>()
+        + program
             .debug_sources
             .iter()
             .map(|source| source.path.len() + source.text.len())
@@ -1385,6 +2716,7 @@ fn format_program_capacity_hint(program: &Program) -> usize {
         .saturating_add(instruction_count.saturating_mul(128))
         .saturating_add(program.constants.len().saturating_mul(32))
         .saturating_add(program.names.len().saturating_mul(32))
+        .saturating_add(program.native_imports.len().saturating_mul(32))
         .saturating_add(string_bytes)
 }
 
@@ -1397,16 +2729,83 @@ fn format_program_sections(out: &mut String, program: &Program) {
     for (index, name) in program.names.iter().enumerate() {
         out.push_str(&format!("  n{} = {}\n", index, quote_string(name)));
     }
-    out.push_str(&format!("\nmain registers={}:\n", program.main.registers));
-    for instruction in &program.main.instructions {
-        out.push_str("  ");
-        out.push_str(&format_instruction(instruction));
-        out.push('\n');
+    if !program.globals.is_empty() {
+        out.push_str("\nglobals:\n");
+        for (index, name) in program.globals.iter().enumerate() {
+            out.push_str(&format!("  g{} = n{}\n", index, name));
+        }
     }
-    for function in &program.functions {
+    if !program.types.is_empty() {
+        out.push_str("\ntypes:\n");
+        for (index, layout) in program.types.iter().enumerate() {
+            if layout.is_enum {
+                out.push_str(&format!(
+                    "  t{} = enum {}",
+                    index,
+                    quote_string(&layout.name)
+                ));
+                for (variant, item) in layout.variants.iter().enumerate() {
+                    out.push_str(&format!(
+                        " v{}={} payload={}",
+                        variant,
+                        quote_string(&item.name),
+                        item.payload_count
+                    ));
+                }
+                out.push('\n');
+            } else {
+                out.push_str(&format!(
+                    "  t{} = struct {}",
+                    index,
+                    quote_string(&layout.name)
+                ));
+                for (field, name) in layout.field_names.iter().enumerate() {
+                    out.push_str(&format!(" field{}={}", field, quote_string(name)));
+                }
+                out.push('\n');
+            }
+        }
+    }
+    if !program.native_imports.is_empty() {
+        out.push_str("\nnative_imports:\n");
+        for (index, import) in program.native_imports.iter().enumerate() {
+            out.push_str(&format!(
+                "  i{} = {} abi={}\n",
+                index,
+                quote_string(&import.name),
+                import.abi
+            ));
+        }
+    }
+    if !program.modules.is_empty() {
+        out.push_str("\nmodules:\n");
+        for (index, module) in program.modules.iter().enumerate() {
+            out.push_str(&format!(
+                "  m{} = f{}\n",
+                index,
+                module.init.0.saturating_sub(1)
+            ));
+        }
+    }
+    let entry = &program.functions[program.entry.0 as usize];
+    out.push_str(&format!("\nmain registers={}:\n", entry.registers));
+    for instruction in &entry.instructions {
+        if matches!(instruction, Instruction::BlockStart { .. }) {
+            out.push_str(&format_instruction(instruction));
+        } else {
+            out.push_str("  ");
+            out.push_str(&format_instruction(instruction));
+            out.push('\n');
+        }
+    }
+    let mut function_index = 0usize;
+    for (position, function) in program.functions.iter().enumerate() {
+        if position as u32 == program.entry.0 {
+            continue;
+        }
         out.push_str(&format!(
             "\nfunction f{} name={} arity={} registers={}:\n",
-            function.index,
+            function_index,
             quote_string(&function.name),
             function.arity,
             function.registers
@@ -1414,11 +2813,24 @@ fn format_program_sections(out: &mut String, program: &Program) {
         for (index, param) in function.params.iter().enumerate() {
             out.push_str(&format!("  param {} = {}\n", index, quote_string(param)));
         }
-        for instruction in &function.instructions {
-            out.push_str("  ");
-            out.push_str(&format_instruction(instruction));
-            out.push('\n');
+        for (index, upvalue) in function.upvalues.iter().enumerate() {
+            let source = match upvalue.source {
+                UpvalueSource::Local(local) => format!("local l{}", local.0),
+                UpvalueSource::Upvalue(upvalue) => format!("upvalue u{}", upvalue.0),
+                UpvalueSource::Global(global) => format!("global g{}", global.0),
+            };
+            out.push_str(&format!("  upvalue u{} = {}\n", index, source));
         }
+        for instruction in &function.instructions {
+            if matches!(instruction, Instruction::BlockStart { .. }) {
+                out.push_str(&format_instruction(instruction));
+            } else {
+                out.push_str("  ");
+                out.push_str(&format_instruction(instruction));
+                out.push('\n');
+            }
+        }
+        function_index += 1;
     }
 
     if !program.debug_sources.is_empty() {
@@ -1436,19 +2848,23 @@ fn format_program_sections(out: &mut String, program: &Program) {
         }
     }
 
-    let has_debug_locations = program.main.locations.iter().any(Option::is_some)
-        || program
-            .functions
-            .iter()
-            .any(|function| function.locations.iter().any(Option::is_some));
+    let has_debug_locations = program
+        .functions
+        .iter()
+        .any(|function| function.locations.iter().any(Option::is_some));
     if has_debug_locations {
         out.push_str("\ndebug_locations:\n");
-        for (index, location) in program.main.locations.iter().enumerate() {
+        let entry = &program.functions[program.entry.0 as usize];
+        for (index, location) in entry.locations.iter().enumerate() {
             if let Some(location) = location {
                 out.push_str(&format_debug_location("main", index, location));
             }
         }
-        for (function_index, function) in program.functions.iter().enumerate() {
+        let mut function_index = 0usize;
+        for (position, function) in program.functions.iter().enumerate() {
+            if position as u32 == program.entry.0 {
+                continue;
+            }
             for (instruction, location) in function.locations.iter().enumerate() {
                 if let Some(location) = location {
                     out.push_str(&format_debug_location(
@@ -1458,15 +2874,11 @@ fn format_program_sections(out: &mut String, program: &Program) {
                     ));
                 }
             }
+            function_index += 1;
         }
     }
 
-    let has_debug_ranges = program.main.locations.iter().any(|location| {
-        location
-            .as_ref()
-            .and_then(|location| location.range.as_ref())
-            .is_some()
-    }) || program.functions.iter().any(|function| {
+    let has_debug_ranges = program.functions.iter().any(|function| {
         function.locations.iter().any(|location| {
             location
                 .as_ref()
@@ -1476,12 +2888,17 @@ fn format_program_sections(out: &mut String, program: &Program) {
     });
     if has_debug_ranges {
         out.push_str("\ndebug_ranges:\n");
-        for (index, location) in program.main.locations.iter().enumerate() {
+        let entry = &program.functions[program.entry.0 as usize];
+        for (index, location) in entry.locations.iter().enumerate() {
             if let Some(range) = location.as_ref().and_then(|location| location.range.as_ref()) {
                 out.push_str(&format_debug_range("main", index, range));
             }
         }
-        for (function_index, function) in program.functions.iter().enumerate() {
+        let mut function_index = 0usize;
+        for (position, function) in program.functions.iter().enumerate() {
+            if position as u32 == program.entry.0 {
+                continue;
+            }
             for (instruction, location) in function.locations.iter().enumerate() {
                 if let Some(range) = location.as_ref().and_then(|location| location.range.as_ref()) {
                     out.push_str(&format_debug_range(
@@ -1491,6 +2908,7 @@ fn format_program_sections(out: &mut String, program: &Program) {
                     ));
                 }
             }
+            function_index += 1;
         }
     }
 }
@@ -1560,7 +2978,7 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
             }),
             "make_function" => Ok(Instruction::MakeFunction {
                 dest,
-                function: parse_function_ref(line, operands)?,
+                function: FuncId((parse_function_ref(line, operands)? + 1) as u32),
             }),
             "array" => Ok(Instruction::Array {
                 dest,
@@ -1578,6 +2996,45 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                     fields: parse_struct_fields(line, field_text)?,
                 })
             }
+            "make_struct" => {
+                let (type_text, elements) = split_once(line, operands, " ")?;
+                Ok(Instruction::MakeStruct {
+                    dest,
+                    type_id: TypeId(parse_prefixed(line, type_text, 't', "type reference")? as u32),
+                    elements: parse_register_list(line, elements)?,
+                })
+            }
+            "struct_get" => {
+                let parts = split_comma_parts(operands);
+                if parts.len() != 3 {
+                    return Err(ParseError {
+                        line,
+                        message: "struct_get expects three operands".to_string(),
+                    });
+                }
+                Ok(Instruction::StructGet {
+                    dest,
+                    object: parse_register(line, parts[0])?,
+                    type_id: TypeId(parse_prefixed(line, parts[1], 't', "type reference")? as u32),
+                    slot: parse_usize(line, parts[2], "field slot")?,
+                })
+            }
+            "struct_set" => {
+                let parts = split_comma_parts(operands);
+                if parts.len() != 4 {
+                    return Err(ParseError {
+                        line,
+                        message: "struct_set expects four operands".to_string(),
+                    });
+                }
+                Ok(Instruction::StructSet {
+                    dest,
+                    object: parse_register(line, parts[0])?,
+                    type_id: TypeId(parse_prefixed(line, parts[1], 't', "type reference")? as u32),
+                    slot: parse_usize(line, parts[2], "field slot")?,
+                    value: parse_register(line, parts[3])?,
+                })
+            }
             "variant" => {
                 let (variant_text, payload_text) = split_once(line, operands, " ")?;
                 let (enum_name, variant_name) = split_once(line, variant_text, ".")?;
@@ -1585,7 +3042,33 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                     dest,
                     enum_name: parse_name_ref(line, enum_name)?,
                     variant_name: parse_name_ref(line, variant_name)?,
-                    payload: parse_register_list(line, payload_text)?,
+                    payload: parse_register_list(line, &payload_text)?,
+                })
+            }
+            "make_variant" => {
+                let (header, payload_text) = split_once(line, operands, " [")?;
+                let (type_text, variant_text) = split_once(line, header, ", ")?;
+                let payload_text = format!("[{}", payload_text);
+                Ok(Instruction::MakeVariant {
+                    dest,
+                    type_id: TypeId(parse_prefixed(line, type_text, 't', "type reference")? as u32),
+                    variant_id: VariantId(parse_prefixed(line, variant_text, 'v', "variant reference")? as u32),
+                    payload: parse_register_list(line, &payload_text)?,
+                })
+            }
+            "is_variant" => {
+                let parts = split_comma_parts(operands);
+                if parts.len() != 3 {
+                    return Err(ParseError {
+                        line,
+                        message: "is_variant expects three operands".to_string(),
+                    });
+                }
+                Ok(Instruction::IsVariant {
+                    dest,
+                    value: parse_register(line, parts[0])?,
+                    type_id: TypeId(parse_prefixed(line, parts[1], 't', "type reference")? as u32),
+                    variant_id: VariantId(parse_prefixed(line, parts[2], 'v', "variant reference")? as u32),
                 })
             }
             "variant_tag" => {
@@ -1606,6 +3089,22 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                     index: parse_usize(line, index, "variant field index")?,
                 })
             }
+            "variant_get" => {
+                let parts = split_comma_parts(operands);
+                if parts.len() != 4 {
+                    return Err(ParseError {
+                        line,
+                        message: "variant_get expects four operands".to_string(),
+                    });
+                }
+                Ok(Instruction::VariantGet {
+                    dest,
+                    value: parse_register(line, parts[0])?,
+                    type_id: TypeId(parse_prefixed(line, parts[1], 't', "type reference")? as u32),
+                    variant_id: VariantId(parse_prefixed(line, parts[2], 'v', "variant reference")? as u32),
+                    index: parse_usize(line, parts[3], "payload index")?,
+                })
+            }
             "move" => Ok(Instruction::Move {
                 dest,
                 source: parse_register(line, operands)?,
@@ -1614,11 +3113,31 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                 dest,
                 name: parse_name_ref(line, operands)?,
             }),
+            "load_local" => Ok(Instruction::LoadLocal {
+                dest,
+                slot: parse_prefixed(line, operands, 'l', "local reference")?,
+            }),
+            "load_upvalue" => Ok(Instruction::LoadUpvalue {
+                dest,
+                slot: parse_prefixed(line, operands, 'u', "upvalue reference")?,
+            }),
+            "load_global" => Ok(Instruction::LoadGlobal {
+                dest,
+                slot: parse_prefixed(line, operands, 'g', "global reference")?,
+            }),
             "call" => {
                 let (callee, args) = split_once(line, operands, " ")?;
                 Ok(Instruction::Call {
                     dest,
                     callee: parse_register(line, callee)?,
+                    arguments: parse_register_list(line, args)?,
+                })
+            }
+            "call_direct" => {
+                let (function, args) = split_once(line, operands, " ")?;
+                Ok(Instruction::CallDirect {
+                    dest,
+                    function: FuncId((parse_function_ref(line, function)? + 1) as u32),
                     arguments: parse_register_list(line, args)?,
                 })
             }
@@ -1630,6 +3149,19 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                     arguments: parse_register_list(line, args)?,
                 })
             }
+            "call_native" => {
+                let (native, args) = split_once(line, operands, " ")?;
+                Ok(Instruction::CallNative {
+                    dest,
+                    native: NativeId(parse_prefixed(
+                        line,
+                        native,
+                        'i',
+                        "native import reference",
+                    )? as u32),
+                    arguments: parse_register_list(line, args)?,
+                })
+            }
             "index" => {
                 let (collection, index) = parse_two_registers(line, operands)?;
                 Ok(Instruction::Index {
@@ -1637,6 +3169,26 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                     collection,
                     index,
                 })
+            }
+            "array_get" | "map_get" | "range_get" => {
+                let (collection, index) = parse_two_registers(line, operands)?;
+                match opcode {
+                    "array_get" => Ok(Instruction::ArrayGet {
+                        dest,
+                        collection,
+                        index,
+                    }),
+                    "map_get" => Ok(Instruction::MapGet {
+                        dest,
+                        collection,
+                        index,
+                    }),
+                    _ => Ok(Instruction::RangeGet {
+                        dest,
+                        collection,
+                        index,
+                    }),
+                }
             }
             "assign_index" => {
                 let parts = split_comma_parts(operands);
@@ -1652,6 +3204,33 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                     index: parse_register(line, parts[1])?,
                     value: parse_register(line, parts[2])?,
                 })
+            }
+            "array_set" | "map_set" => {
+                let parts = split_comma_parts(operands);
+                if parts.len() != 3 {
+                    return Err(ParseError {
+                        line,
+                        message: format!("{} expects three operands", opcode),
+                    });
+                }
+                let collection = parse_register(line, parts[0])?;
+                let index = parse_register(line, parts[1])?;
+                let value = parse_register(line, parts[2])?;
+                if opcode == "array_set" {
+                    Ok(Instruction::ArraySet {
+                        dest,
+                        collection,
+                        index,
+                        value,
+                    })
+                } else {
+                    Ok(Instruction::MapSet {
+                        dest,
+                        collection,
+                        index,
+                        value,
+                    })
+                }
             }
             "field" => {
                 let (object, name) = split_once(line, operands, ", ")?;
@@ -1680,7 +3259,35 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                 dest,
                 value: parse_register(line, operands)?,
             }),
+            "len_array" => Ok(Instruction::LenArray {
+                dest,
+                value: parse_register(line, operands)?,
+            }),
+            "len_map" => Ok(Instruction::LenMap {
+                dest,
+                value: parse_register(line, operands)?,
+            }),
+            "len_range" => Ok(Instruction::LenRange {
+                dest,
+                value: parse_register(line, operands)?,
+            }),
+            "len_str" => Ok(Instruction::LenStr {
+                dest,
+                value: parse_register(line, operands)?,
+            }),
             "assert_array" => Ok(Instruction::AssertArray {
+                dest,
+                value: parse_register(line, operands)?,
+            }),
+            "iter_init" => Ok(Instruction::IterInit {
+                dest,
+                value: parse_register(line, operands)?,
+            }),
+            "iter_has" => Ok(Instruction::IterHas {
+                dest,
+                value: parse_register(line, operands)?,
+            }),
+            "iter_next" => Ok(Instruction::IterNext {
                 dest,
                 value: parse_register(line, operands)?,
             }),
@@ -1700,16 +3307,33 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                 dest,
                 value: parse_register(line, operands)?,
             }),
+            "neg_num" => Ok(Instruction::NegNum {
+                dest,
+                value: parse_register(line, operands)?,
+            }),
             "add" => parse_binary(line, dest, operands, "add"),
+            "add_num" => parse_binary(line, dest, operands, "add_num"),
+            "concat_str" => parse_binary(line, dest, operands, "concat_str"),
             "subtract" => parse_binary(line, dest, operands, "subtract"),
+            "sub_num" => parse_binary(line, dest, operands, "sub_num"),
             "multiply" => parse_binary(line, dest, operands, "multiply"),
+            "mul_num" => parse_binary(line, dest, operands, "mul_num"),
             "divide" => parse_binary(line, dest, operands, "divide"),
+            "div_num" => parse_binary(line, dest, operands, "div_num"),
             "equal" => parse_binary(line, dest, operands, "equal"),
             "not_equal" => parse_binary(line, dest, operands, "not_equal"),
             "greater" => parse_binary(line, dest, operands, "greater"),
+            "gt_num" => parse_binary(line, dest, operands, "gt_num"),
+            "gt_str" => parse_binary(line, dest, operands, "gt_str"),
             "greater_equal" => parse_binary(line, dest, operands, "greater_equal"),
+            "ge_num" => parse_binary(line, dest, operands, "ge_num"),
+            "ge_str" => parse_binary(line, dest, operands, "ge_str"),
             "less" => parse_binary(line, dest, operands, "less"),
+            "lt_num" => parse_binary(line, dest, operands, "lt_num"),
+            "lt_str" => parse_binary(line, dest, operands, "lt_str"),
             "less_equal" => parse_binary(line, dest, operands, "less_equal"),
+            "le_num" => parse_binary(line, dest, operands, "le_num"),
+            "le_str" => parse_binary(line, dest, operands, "le_str"),
             unknown => Err(ParseError {
                 line,
                 message: format!("unknown opcode `{}`", unknown),
@@ -1729,6 +3353,41 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                 let (name, value) = split_once(line, operands, ", ")?;
                 Ok(Instruction::AssignVar {
                     name: parse_name_ref(line, name)?,
+                    value: parse_register(line, value)?,
+                })
+            }
+            "bind_local" => {
+                let (slot, value) = split_once(line, operands, ", ")?;
+                Ok(Instruction::BindLocal {
+                    slot: parse_prefixed(line, slot, 'l', "local reference")?,
+                    value: parse_register(line, value)?,
+                })
+            }
+            "set_local" => {
+                let (slot, value) = split_once(line, operands, ", ")?;
+                Ok(Instruction::SetLocal {
+                    slot: parse_prefixed(line, slot, 'l', "local reference")?,
+                    value: parse_register(line, value)?,
+                })
+            }
+            "set_upvalue" => {
+                let (slot, value) = split_once(line, operands, ", ")?;
+                Ok(Instruction::SetUpvalue {
+                    slot: parse_prefixed(line, slot, 'u', "upvalue reference")?,
+                    value: parse_register(line, value)?,
+                })
+            }
+            "init_global" => {
+                let (slot, value) = split_once(line, operands, ", ")?;
+                Ok(Instruction::InitGlobal {
+                    slot: parse_prefixed(line, slot, 'g', "global reference")?,
+                    value: parse_register(line, value)?,
+                })
+            }
+            "set_global" => {
+                let (slot, value) = split_once(line, operands, ", ")?;
+                Ok(Instruction::SetGlobal {
+                    slot: parse_prefixed(line, slot, 'g', "global reference")?,
                     value: parse_register(line, value)?,
                 })
             }
@@ -1755,6 +3414,27 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                     target: parse_usize(line, target, "jump target")?,
                 })
             }
+            "br" => Ok(Instruction::Br {
+                target: BlockId(parse_prefixed(line, operands, 'b', "block reference")? as u32),
+            }),
+            "br_if" => {
+                let parts = split_comma_parts(operands);
+                if parts.len() != 3 {
+                    return Err(ParseError {
+                        line,
+                        message: "br_if expects three operands".to_string(),
+                    });
+                }
+                Ok(Instruction::BrIf {
+                    condition: parse_register(line, parts[0])?,
+                    if_true: BlockId(parse_prefixed(line, parts[1], 'b', "block reference")? as u32),
+                    if_false: BlockId(parse_prefixed(line, parts[2], 'b', "block reference")? as u32),
+                })
+            }
+            "return_nil" => Ok(Instruction::ReturnNil),
+            "init_module" => Ok(Instruction::InitModule {
+                module: parse_prefixed(line, operands, 'm', "module reference")?,
+            }),
             unknown => Err(ParseError {
                 line,
                 message: format!("unknown opcode `{}`", unknown),
@@ -1767,7 +3447,7 @@ fn format_instruction(instruction: &Instruction) -> String {
     match instruction {
         Instruction::Constant { dest, constant } => format!("r{} = constant c{}", dest, constant),
         Instruction::MakeFunction { dest, function } => {
-            format!("r{} = make_function f{}", dest, function)
+            format!("r{} = make_function f{}", dest, function.0 - 1)
         }
         Instruction::Array { dest, elements } => {
             format!("r{} = array {}", dest, format_register_list(elements))
@@ -1795,6 +3475,32 @@ fn format_instruction(instruction: &Instruction) -> String {
                 None => format!("r{} = struct {{{}}}", dest, parts),
             }
         }
+        Instruction::MakeStruct {
+            dest,
+            type_id,
+            elements,
+        } => format!(
+            "r{} = make_struct t{} {}",
+            dest,
+            type_id.0,
+            format_register_list(elements)
+        ),
+        Instruction::StructGet {
+            dest,
+            object,
+            type_id,
+            slot,
+        } => format!("r{} = struct_get r{}, t{}, {}", dest, object, type_id.0, slot),
+        Instruction::StructSet {
+            dest,
+            object,
+            type_id,
+            slot,
+            value,
+        } => format!(
+            "r{} = struct_set r{}, t{}, {}, r{}",
+            dest, object, type_id.0, slot, value
+        ),
         Instruction::Variant {
             dest,
             enum_name,
@@ -1806,6 +3512,37 @@ fn format_instruction(instruction: &Instruction) -> String {
             enum_name,
             variant_name,
             format_register_list(payload)
+        ),
+        Instruction::MakeVariant {
+            dest,
+            type_id,
+            variant_id,
+            payload,
+        } => format!(
+            "r{} = make_variant t{}, v{} {}",
+            dest,
+            type_id.0,
+            variant_id.0,
+            format_register_list(payload)
+        ),
+        Instruction::IsVariant {
+            dest,
+            value,
+            type_id,
+            variant_id,
+        } => format!(
+            "r{} = is_variant r{}, t{}, v{}",
+            dest, value, type_id.0, variant_id.0
+        ),
+        Instruction::VariantGet {
+            dest,
+            value,
+            type_id,
+            variant_id,
+            index,
+        } => format!(
+            "r{} = variant_get r{}, t{}, v{}, {}",
+            dest, value, type_id.0, variant_id.0, index
         ),
         Instruction::VariantTag {
             dest,
@@ -1823,6 +3560,14 @@ fn format_instruction(instruction: &Instruction) -> String {
         Instruction::LoadVar { dest, name } => format!("r{} = load_var n{}", dest, name),
         Instruction::StoreVar { name, value } => format!("store_var n{}, r{}", name, value),
         Instruction::AssignVar { name, value } => format!("assign_var n{}, r{}", name, value),
+        Instruction::LoadLocal { dest, slot } => format!("r{} = load_local l{}", dest, slot),
+        Instruction::BindLocal { slot, value } => format!("bind_local l{}, r{}", slot, value),
+        Instruction::SetLocal { slot, value } => format!("set_local l{}, r{}", slot, value),
+        Instruction::LoadUpvalue { dest, slot } => format!("r{} = load_upvalue u{}", dest, slot),
+        Instruction::SetUpvalue { slot, value } => format!("set_upvalue u{}, r{}", slot, value),
+        Instruction::LoadGlobal { dest, slot } => format!("r{} = load_global g{}", dest, slot),
+        Instruction::InitGlobal { slot, value } => format!("init_global g{}, r{}", slot, value),
+        Instruction::SetGlobal { slot, value } => format!("set_global g{}, r{}", slot, value),
         Instruction::Call {
             dest,
             callee,
@@ -1831,6 +3576,16 @@ fn format_instruction(instruction: &Instruction) -> String {
             "r{} = call r{} {}",
             dest,
             callee,
+            format_register_list(arguments)
+        ),
+        Instruction::CallDirect {
+            dest,
+            function,
+            arguments,
+        } => format!(
+            "r{} = call_direct f{} {}",
+            dest,
+            function.0.saturating_sub(1),
             format_register_list(arguments)
         ),
         Instruction::NativeCall {
@@ -1843,11 +3598,36 @@ fn format_instruction(instruction: &Instruction) -> String {
             name,
             format_register_list(arguments)
         ),
+        Instruction::CallNative {
+            dest,
+            native,
+            arguments,
+        } => format!(
+            "r{} = call_native i{} {}",
+            dest,
+            native.0,
+            format_register_list(arguments)
+        ),
         Instruction::Index {
             dest,
             collection,
             index,
         } => format!("r{} = index r{}, r{}", dest, collection, index),
+        Instruction::ArrayGet {
+            dest,
+            collection,
+            index,
+        } => format!("r{} = array_get r{}, r{}", dest, collection, index),
+        Instruction::MapGet {
+            dest,
+            collection,
+            index,
+        } => format!("r{} = map_get r{}, r{}", dest, collection, index),
+        Instruction::RangeGet {
+            dest,
+            collection,
+            index,
+        } => format!("r{} = range_get r{}, r{}", dest, collection, index),
         Instruction::AssignIndex {
             dest,
             collection,
@@ -1855,6 +3635,24 @@ fn format_instruction(instruction: &Instruction) -> String {
             value,
         } => format!(
             "r{} = assign_index r{}, r{}, r{}",
+            dest, collection, index, value
+        ),
+        Instruction::ArraySet {
+            dest,
+            collection,
+            index,
+            value,
+        } => format!(
+            "r{} = array_set r{}, r{}, r{}",
+            dest, collection, index, value
+        ),
+        Instruction::MapSet {
+            dest,
+            collection,
+            index,
+            value,
+        } => format!(
+            "r{} = map_set r{}, r{}, r{}",
             dest, collection, index, value
         ),
         Instruction::Field { dest, object, name } => {
@@ -1870,7 +3668,14 @@ fn format_instruction(instruction: &Instruction) -> String {
             dest, object, name, value
         ),
         Instruction::Len { dest, value } => format!("r{} = len r{}", dest, value),
+        Instruction::LenArray { dest, value } => format!("r{} = len_array r{}", dest, value),
+        Instruction::LenMap { dest, value } => format!("r{} = len_map r{}", dest, value),
+        Instruction::LenRange { dest, value } => format!("r{} = len_range r{}", dest, value),
+        Instruction::LenStr { dest, value } => format!("r{} = len_str r{}", dest, value),
         Instruction::AssertArray { dest, value } => format!("r{} = assert_array r{}", dest, value),
+        Instruction::IterInit { dest, value } => format!("r{} = iter_init r{}", dest, value),
+        Instruction::IterHas { dest, value } => format!("r{} = iter_has r{}", dest, value),
+        Instruction::IterNext { dest, value } => format!("r{} = iter_next r{}", dest, value),
         Instruction::AssertNumber {
             dest,
             value,
@@ -1882,15 +3687,31 @@ fn format_instruction(instruction: &Instruction) -> String {
         Instruction::Return { value } => format!("return r{}", value),
         Instruction::Negate { dest, value } => format!("r{} = negate r{}", dest, value),
         Instruction::Not { dest, value } => format!("r{} = not r{}", dest, value),
+        Instruction::NegNum { dest, value } => format!("r{} = neg_num r{}", dest, value),
         Instruction::Add { dest, left, right } => format!("r{} = add r{}, r{}", dest, left, right),
+        Instruction::AddNum { dest, left, right } => {
+            format!("r{} = add_num r{}, r{}", dest, left, right)
+        }
+        Instruction::ConcatStr { dest, left, right } => {
+            format!("r{} = concat_str r{}, r{}", dest, left, right)
+        }
         Instruction::Subtract { dest, left, right } => {
             format!("r{} = subtract r{}, r{}", dest, left, right)
+        }
+        Instruction::SubNum { dest, left, right } => {
+            format!("r{} = sub_num r{}, r{}", dest, left, right)
         }
         Instruction::Multiply { dest, left, right } => {
             format!("r{} = multiply r{}, r{}", dest, left, right)
         }
+        Instruction::MulNum { dest, left, right } => {
+            format!("r{} = mul_num r{}, r{}", dest, left, right)
+        }
         Instruction::Divide { dest, left, right } => {
             format!("r{} = divide r{}, r{}", dest, left, right)
+        }
+        Instruction::DivNum { dest, left, right } => {
+            format!("r{} = div_num r{}, r{}", dest, left, right)
         }
         Instruction::Equal { dest, left, right } => {
             format!("r{} = equal r{}, r{}", dest, left, right)
@@ -1901,14 +3722,38 @@ fn format_instruction(instruction: &Instruction) -> String {
         Instruction::Greater { dest, left, right } => {
             format!("r{} = greater r{}, r{}", dest, left, right)
         }
+        Instruction::GreaterNum { dest, left, right } => {
+            format!("r{} = gt_num r{}, r{}", dest, left, right)
+        }
+        Instruction::GreaterStr { dest, left, right } => {
+            format!("r{} = gt_str r{}, r{}", dest, left, right)
+        }
         Instruction::GreaterEqual { dest, left, right } => {
             format!("r{} = greater_equal r{}, r{}", dest, left, right)
+        }
+        Instruction::GreaterEqualNum { dest, left, right } => {
+            format!("r{} = ge_num r{}, r{}", dest, left, right)
+        }
+        Instruction::GreaterEqualStr { dest, left, right } => {
+            format!("r{} = ge_str r{}, r{}", dest, left, right)
         }
         Instruction::Less { dest, left, right } => {
             format!("r{} = less r{}, r{}", dest, left, right)
         }
+        Instruction::LessNum { dest, left, right } => {
+            format!("r{} = lt_num r{}, r{}", dest, left, right)
+        }
+        Instruction::LessStr { dest, left, right } => {
+            format!("r{} = lt_str r{}, r{}", dest, left, right)
+        }
         Instruction::LessEqual { dest, left, right } => {
             format!("r{} = less_equal r{}, r{}", dest, left, right)
+        }
+        Instruction::LessEqualNum { dest, left, right } => {
+            format!("r{} = le_num r{}, r{}", dest, left, right)
+        }
+        Instruction::LessEqualStr { dest, left, right } => {
+            format!("r{} = le_str r{}, r{}", dest, left, right)
         }
         Instruction::Jump { target } => format!("jump {}", target),
         Instruction::JumpIfFalse { condition, target } => {
@@ -1917,6 +3762,15 @@ fn format_instruction(instruction: &Instruction) -> String {
         Instruction::JumpIfTrue { condition, target } => {
             format!("jump_if_true r{}, {}", condition, target)
         }
+        Instruction::BlockStart { id } => format!("block b{}:\n", id.0),
+        Instruction::Br { target } => format!("br b{}", target.0),
+        Instruction::BrIf {
+            condition,
+            if_true,
+            if_false,
+        } => format!("br_if r{}, b{}, b{}", condition, if_true.0, if_false.0),
+        Instruction::ReturnNil => "return_nil".to_string(),
+        Instruction::InitModule { module } => format!("init_module m{}", module),
     }
 }
 
@@ -1929,15 +3783,28 @@ fn parse_binary(
     let (left, right) = parse_two_registers(line, operands)?;
     match opcode {
         "add" => Ok(Instruction::Add { dest, left, right }),
+        "add_num" => Ok(Instruction::AddNum { dest, left, right }),
+        "concat_str" => Ok(Instruction::ConcatStr { dest, left, right }),
         "subtract" => Ok(Instruction::Subtract { dest, left, right }),
+        "sub_num" => Ok(Instruction::SubNum { dest, left, right }),
         "multiply" => Ok(Instruction::Multiply { dest, left, right }),
+        "mul_num" => Ok(Instruction::MulNum { dest, left, right }),
         "divide" => Ok(Instruction::Divide { dest, left, right }),
+        "div_num" => Ok(Instruction::DivNum { dest, left, right }),
         "equal" => Ok(Instruction::Equal { dest, left, right }),
         "not_equal" => Ok(Instruction::NotEqual { dest, left, right }),
         "greater" => Ok(Instruction::Greater { dest, left, right }),
+        "gt_num" => Ok(Instruction::GreaterNum { dest, left, right }),
+        "gt_str" => Ok(Instruction::GreaterStr { dest, left, right }),
         "greater_equal" => Ok(Instruction::GreaterEqual { dest, left, right }),
+        "ge_num" => Ok(Instruction::GreaterEqualNum { dest, left, right }),
+        "ge_str" => Ok(Instruction::GreaterEqualStr { dest, left, right }),
         "less" => Ok(Instruction::Less { dest, left, right }),
+        "lt_num" => Ok(Instruction::LessNum { dest, left, right }),
+        "lt_str" => Ok(Instruction::LessStr { dest, left, right }),
         "less_equal" => Ok(Instruction::LessEqual { dest, left, right }),
+        "le_num" => Ok(Instruction::LessEqualNum { dest, left, right }),
+        "le_str" => Ok(Instruction::LessEqualStr { dest, left, right }),
         _ => unreachable!("validated binary opcode"),
     }
 }
@@ -2240,14 +4107,20 @@ mod tests {
     fn round_trips_minimal_program() {
         let source = "cdbc 0.1\n\nconstants:\n\nnames:\n\nmain registers=1:\n  print r0\n";
         let program = parse_program(source).expect("parse minimal program");
-        assert_eq!(format_program(&program), source);
+        assert_eq!(
+            format_program(&program),
+            "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=1:\n  print r0\n"
+        );
     }
 
     #[test]
     fn parses_and_formats_string_escapes() {
         let source = "cdbc 0.1\n\nconstants:\n  c0 = string \"a\\\\b\\\"c\\n\\r\\t\"\n\nnames:\n  n0 = \"x\\\\y\"\n\nmain registers=1:\n  r0 = constant c0\n";
         let program = parse_program(source).expect("parse escaped strings");
-        assert_eq!(format_program(&program), source);
+        assert_eq!(
+            format_program(&program),
+            "cdbc 0.2\n\nconstants:\n  c0 = string \"a\\\\b\\\"c\\n\\r\\t\"\n\nnames:\n  n0 = \"x\\\\y\"\n\nmain registers=1:\n  r0 = constant c0\n"
+        );
     }
 
     #[test]
@@ -2319,19 +4192,85 @@ mod tests {
     }
 
     #[test]
+    fn rejects_malformed_block_bodies_before_execution() {
+        let cases = [
+            (
+                "undefined register",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=2:\nblock b0:\n  print r1\n  return_nil\n",
+                "reads undefined register r1",
+            ),
+            (
+                "unbound local",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=0:\nblock b0:\n  return_nil\n\nfunction f0 name=\"f\" arity=0 registers=1:\nblock b0:\n  r0 = load_local l0\n  return r0\n",
+                "reads unbound local l0",
+            ),
+            (
+                "invalid block target",
+                "cdbc 0.2\n\nconstants:\n  c0 = number 1\n\nnames:\n\nmain registers=1:\nblock b0:\n  r0 = constant c0\n  br b3\n",
+                "branches to invalid block b3",
+            ),
+            (
+                "missing terminator",
+                "cdbc 0.2\n\nconstants:\n  c0 = number 1\n\nnames:\n\nmain registers=1:\nblock b0:\n  r0 = constant c0\n",
+                "block b0 is missing a terminator",
+            ),
+            (
+                "invalid global upvalue source",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=0:\nblock b0:\n  return_nil\n\nfunction f0 name=\"f\" arity=0 registers=0:\n  upvalue u0 = global g9\nblock b0:\n  return_nil\n",
+                "upvalue u0 global g9 out of range",
+            ),
+            (
+                "invalid native arity",
+                "cdbc 0.2\n\nconstants:\n  c0 = number 1\n\nnames:\n  n0 = \"push\"\n\nmain registers=2:\nblock b0:\n  r0 = constant c0\n  r1 = native_call n0 [r0]\n  return_nil\n",
+                "native `push` expects 2 to 2 arguments, got 1",
+            ),
+            (
+                "invalid function id",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=1:\nblock b0:\n  r0 = make_function f1\n  return_nil\n",
+                "function f1 out of range",
+            ),
+            (
+                "legacy jump in block body",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=0:\nblock b0:\n  jump 0\n  return_nil\n",
+                "block body contains a legacy jump",
+            ),
+        ];
+        for (name, source, expected) in cases {
+            let error = parse_program(source).expect_err(name);
+            assert!(
+                error.message.contains(expected),
+                "{}: expected `{}`, got: {}",
+                name,
+                expected,
+                error.message
+            );
+        }
+    }
+
+    #[test]
     fn public_verifier_rejects_invalid_in_memory_program() {
         let artifact = Artifact::Program(Program {
             constants: vec![Constant::Nil],
             names: Vec::new(),
-            main: FunctionBody {
+            globals: Vec::new(),
+            types: Vec::new(),
+            native_imports: Vec::new(),
+            modules: Vec::new(),
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 1,
                 instructions: vec![Instruction::Constant {
                     dest: 1,
                     constant: 0,
                 }],
                 locations: vec![None],
-            },
-            functions: Vec::new(),
+            }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         });
 
@@ -2379,10 +4318,10 @@ debug_ranges:
         assert_eq!(program.debug_sources[0].module, None);
         assert_eq!(program.debug_sources[0].path, "demo.cd");
         assert_eq!(program.debug_sources[0].text, "print 1 / 0;\n");
-        assert_eq!(program.main.locations[2].as_ref().unwrap().line, 1);
-        assert_eq!(program.main.locations[2].as_ref().unwrap().column, 7);
+        assert_eq!(program.functions[0].locations[2].as_ref().unwrap().line, 1);
+        assert_eq!(program.functions[0].locations[2].as_ref().unwrap().column, 7);
         assert_eq!(
-            program.main.locations[2]
+            program.functions[0].locations[2]
                 .as_ref()
                 .and_then(|location| location.range.as_ref()),
             Some(&DebugRange {
@@ -2391,7 +4330,10 @@ debug_ranges:
                 end: 11,
             })
         );
-        assert_eq!(format_program(&program), source);
+        assert_eq!(
+            format_program(&program),
+            source.replace("cdbc 0.1", "cdbc 0.2")
+        );
     }
 
     #[test]
@@ -2436,7 +4378,10 @@ debug_sources:
             program.debug_sources[0].module.as_deref(),
             Some("/workspace/demo.cd")
         );
-        assert_eq!(format_program(&program), source);
+        assert_eq!(
+            format_program(&program),
+            source.replace("cdbc 0.1", "cdbc 0.2")
+        );
     }
 
     #[test]
@@ -2471,6 +4416,7 @@ module:
   path = "/tmp/lib.cd"
   canonical_path = "/tmp/lib.cd"
   entry = false
+  init = f0
   dependencies:
 
 constants:
@@ -2481,6 +4427,9 @@ names:
 main registers=1:
   r0 = constant c0
   print r0
+
+function f0 name="init" arity=0 registers=0:
+  return_nil
 "#;
         let artifact = parse_artifact(source).expect("valid module artifact");
         let Artifact::Module(module) = &artifact else {
@@ -2488,8 +4437,12 @@ main registers=1:
         };
         assert_eq!(module.identity, "/tmp/lib.cd");
         assert!(!module.is_entry);
+        assert_eq!(module.init, 1);
         assert!(module.dependencies.is_empty());
-        assert_eq!(format_artifact(&artifact), source);
+        assert_eq!(
+            format_artifact(&artifact),
+            source.replace("cdbc 0.1", "cdbc 0.2")
+        );
     }
 
     #[test]
@@ -2504,9 +4457,10 @@ module:
   canonical_path = "entry"
   entry = true
   entry_order = 0
+  init = f0
   dependencies:
-    d0 target="lib" kind=import at=2 requested="./lib.cd"
-    d1 target="api" kind=re_export at=4 requested="./api.cd"
+    d0 target="lib" kind=import requested="./lib.cd"
+    d1 target="api" kind=re_export requested="./api.cd"
 
 constants:
 
@@ -2517,6 +4471,9 @@ main registers=0:
   print r0
   print r0
   print r0
+
+function f0 name="init" arity=0 registers=0:
+  return_nil
 "#;
         let source = source.replace("main registers=0:", "main registers=1:");
         let artifact = parse_artifact(&source).expect("valid dependency markers");
@@ -2524,15 +4481,15 @@ main registers=0:
             panic!("expected module artifact");
         };
         assert_eq!(module.entry_order, Some(0));
+        assert_eq!(module.init, 1);
         assert_eq!(module.dependencies.len(), 2);
         assert_eq!(module.dependencies[0].kind, ModuleDependencyKind::Import);
-        assert_eq!(module.dependencies[0].instruction_offset, 2);
         assert_eq!(module.dependencies[1].kind, ModuleDependencyKind::ReExport);
         assert_eq!(module.dependencies[1].requested_path, "./api.cd");
     }
 
     #[test]
-    fn rejects_module_dependency_offset_out_of_range() {
+    fn rejects_module_init_function_out_of_range() {
         let source = r#"cdbc 0.1
 
 artifact: module
@@ -2543,8 +4500,9 @@ module:
   canonical_path = "entry"
   entry = true
   entry_order = 0
+  init = f3
   dependencies:
-    d0 target="lib" kind=import at=1 requested="./lib.cd"
+    d0 target="lib" kind=import requested="./lib.cd"
 
 constants:
 
@@ -2552,7 +4510,196 @@ names:
 
 main registers=0:
 "#;
-        let error = parse_artifact(source).expect_err("offset should be rejected");
-        assert!(error.message.contains("offset out of range"));
+        let error = parse_artifact(source).expect_err("init should be rejected");
+        assert!(error.message.contains("init function f3 out of range"));
+    }
+
+    #[test]
+    fn parses_and_formats_native_import_table() {
+        let source = r#"cdbc 0.2
+
+constants:
+
+names:
+
+native_imports:
+  i0 = "print" abi=1
+  i1 = "str" abi=1
+
+main registers=2:
+  r0 = call_native i0 [r1]
+"#;
+        let program = parse_program(source).expect("parse native import table");
+        assert_eq!(program.native_imports.len(), 2);
+        assert_eq!(program.native_imports[0].name, "print");
+        assert_eq!(program.native_imports[0].abi, 1);
+        assert_eq!(format_program(&program), source);
+    }
+
+    #[test]
+    fn parses_and_formats_typed_arithmetic_and_comparison_ops() {
+        let source = r#"cdbc 0.2
+
+constants:
+
+names:
+
+main registers=16:
+  r0 = neg_num r1
+  r2 = add_num r0, r1
+  r3 = sub_num r0, r1
+  r4 = mul_num r0, r1
+  r5 = div_num r0, r1
+  r6 = concat_str r1, r2
+  r7 = lt_num r0, r1
+  r8 = le_num r0, r1
+  r9 = gt_num r0, r1
+  r10 = ge_num r0, r1
+  r11 = lt_str r1, r2
+  r12 = le_str r1, r2
+  r13 = gt_str r1, r2
+  r14 = ge_str r1, r2
+"#;
+        let program = parse_program(source).expect("parse typed opcodes");
+        assert_eq!(format_program(&program), source);
+    }
+
+    #[test]
+    fn parses_and_formats_typed_collection_ops() {
+        let source = r#"cdbc 0.2
+
+constants:
+
+names:
+
+main registers=12:
+  r0 = array_get r1, r2
+  r3 = array_set r1, r2, r4
+  r5 = map_get r1, r2
+  r6 = map_set r1, r2, r4
+  r7 = range_get r1, r2
+  r8 = len_array r1
+  r9 = len_map r1
+  r10 = len_range r1
+  r11 = len_str r1
+"#;
+        let program = parse_program(source).expect("parse typed collection opcodes");
+        assert_eq!(format_program(&program), source);
+    }
+
+    #[test]
+    fn parses_and_formats_iterator_protocol_ops() {
+        let source = r#"cdbc 0.2
+
+constants:
+
+names:
+
+main registers=3:
+  r0 = iter_init r1
+  r2 = iter_has r0
+  r2 = iter_next r0
+"#;
+        let program = parse_program(source).expect("parse iterator opcodes");
+        assert_eq!(format_program(&program), source);
+    }
+
+    #[test]
+    fn parses_and_verifies_direct_calls() {
+        let source = r#"cdbc 0.2
+
+constants:
+
+names:
+
+main registers=2:
+  r0 = call_direct f0 [r1]
+
+function f0 name="target" arity=1 registers=1:
+  param 0 = "value"
+  return r0
+"#;
+        let program = parse_program(source).expect("parse direct call");
+        assert_eq!(format_program(&program), source);
+
+        let wrong_arity = r#"cdbc 0.2
+
+constants:
+
+names:
+
+main registers=2:
+  r0 = call_direct f0 [r0, r1]
+
+function f0 name="target" arity=1 registers=1:
+  param 0 = "value"
+  return r0
+"#;
+        let error = parse_program(wrong_arity).expect_err("arity must be verified");
+        assert!(
+            error.message.contains("call_direct f0 expects 1 arguments, got 2"),
+            "{}",
+            error.message
+        );
+
+        let capturing = r#"cdbc 0.2
+
+constants:
+
+names:
+
+main registers=1:
+  r0 = call_direct f0 []
+
+function f0 name="target" arity=0 registers=0:
+  upvalue u0 = local l0
+  return_nil
+"#;
+        let error = parse_program(capturing).expect_err("capturing target must be rejected");
+        assert!(
+            error.message.contains("targets a capturing function"),
+            "{}",
+            error.message
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_native_import_metadata() {
+        let cases = [
+            (
+                "out of range index",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nnative_imports:\n  i0 = \"print\" abi=1\n\nmain registers=1:\n  r0 = call_native i1 []\n",
+                "native import i1 out of range",
+            ),
+            (
+                "unsupported name",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nnative_imports:\n  i0 = \"not_native\" abi=1\n\nmain registers=0:\n",
+                "unsupported native function `not_native`",
+            ),
+            (
+                "wrong abi version",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nnative_imports:\n  i0 = \"print\" abi=2\n\nmain registers=0:\n",
+                "must declare abi=1",
+            ),
+            (
+                "duplicate name",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nnative_imports:\n  i0 = \"print\" abi=1\n  i1 = \"print\" abi=1\n\nmain registers=0:\n",
+                "duplicates native function `print`",
+            ),
+            (
+                "arity violation",
+                "cdbc 0.2\n\nconstants:\n  c0 = nil\n\nnames:\n\nnative_imports:\n  i0 = \"print\" abi=1\n\nmain registers=3:\nblock b0:\n  r0 = constant c0\n  r1 = constant c0\n  r2 = call_native i0 [r0, r1]\n  return_nil\n",
+                "native `print` expects 1 to 1 arguments, got 2",
+            ),
+        ];
+        for (name, source, expected) in cases {
+            let error = parse_program(source).expect_err(name);
+            assert!(
+                error.message.contains(expected),
+                "{}: {}",
+                name,
+                error.message
+            );
+        }
     }
 }

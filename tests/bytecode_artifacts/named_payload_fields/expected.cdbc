@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 2
@@ -13,87 +13,120 @@ names:
   n3 = "pair#0"
   n4 = "Pair"
   n5 = "Values"
-  n6 = "leftValue#1"
-  n7 = "rightValue#2"
-  n8 = "rightValue#2"
-  n9 = "leftValue#1"
-  n10 = "Pair"
-  n11 = "Empty"
+  n6 = "Pair"
+  n7 = "Values"
+  n8 = "Pair"
+  n9 = "Values"
+  n10 = "leftValue#1"
+  n11 = "rightValue#2"
+  n12 = "rightValue#2"
+  n13 = "leftValue#1"
+  n14 = "Pair"
+  n15 = "Empty"
 
-main registers=14:
+globals:
+  g0 = n2
+  g1 = n10
+  g2 = n11
+
+types:
+  t0 = enum "Pair" v0="Values" payload=2 v1="Empty" payload=0
+
+native_imports:
+  i0 = "print" abi=1
+
+main registers=15:
+block b0:
   r0 = constant c0
   r1 = constant c1
-  r2 = variant n0.n1 [r0, r1]
-  store_var n2, r2
-  r3 = load_var n3
-  r4 = variant_tag r3 n4.n5
-  jump_if_false r4, 18
-  r5 = variant_field r3 0
-  r6 = variant_field r3 1
-  store_var n6, r5
-  store_var n7, r6
-  r7 = load_var n8
+  r2 = make_variant t0, v0 [r0, r1]
+  init_global g0, r2
+  r3 = load_global g0
+  r4 = is_variant r3, t0, v0
+  br_if r4, b1, b2
+block b1:
+  r5 = variant_get r3, t0, v0, 0
+  r6 = variant_get r3, t0, v0, 1
+  init_global g1, r5
+  init_global g2, r6
+  r7 = load_global g2
   r8 = constant c2
-  r9 = multiply r7, r8
-  r10 = load_var n9
-  r11 = add r9, r10
-  print r11
-  jump 23
-  r12 = variant_tag r3 n10.n11
-  jump_if_false r12, 23
+  r9 = mul_num r7, r8
+  r10 = load_global g1
+  r11 = add_num r9, r10
+  r14 = call_native i0 [r11]
+  return_nil
+block b2:
+  r12 = is_variant r3, t0, v1
+  br_if r12, b3, b4
+block b3:
   r13 = constant c3
-  print r13
-  jump 23
+  r14 = call_native i0 [r13]
+  return_nil
+block b4:
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/named_payload_fields/input.cd" text="enum Pair { Values(number, number), Empty }\nlet pair = Pair.Values(2, 4);\nmatch pair {\n  Pair.Values(leftValue, rightValue) => { print rightValue * 10 + leftValue; }\n  Pair.Empty => { print 0; }\n}\n"
 
 debug_locations:
   main 0 = s0:2:24
-  main 1 = s0:2:27
-  main 2 = s0:2:12
-  main 3 = s0:2:1
-  main 4 = s0:3:7
-  main 5 = s0:3:1
+  main 1 = s0:2:24
+  main 2 = s0:2:27
+  main 3 = s0:2:12
+  main 4 = s0:2:1
+  main 5 = s0:3:7
   main 6 = s0:3:1
   main 7 = s0:3:1
   main 8 = s0:3:1
   main 9 = s0:3:1
   main 10 = s0:3:1
-  main 11 = s0:4:49
-  main 12 = s0:4:62
+  main 11 = s0:3:1
+  main 12 = s0:3:1
   main 13 = s0:4:49
-  main 14 = s0:4:67
+  main 14 = s0:4:62
   main 15 = s0:4:49
-  main 16 = s0:4:43
-  main 17 = s0:3:1
-  main 18 = s0:3:1
+  main 16 = s0:4:67
+  main 17 = s0:4:49
+  main 18 = s0:4:43
   main 19 = s0:3:1
-  main 20 = s0:5:25
-  main 21 = s0:5:19
+  main 20 = s0:3:1
+  main 21 = s0:3:1
   main 22 = s0:3:1
+  main 23 = s0:5:25
+  main 24 = s0:5:25
+  main 25 = s0:5:19
+  main 26 = s0:3:1
+  main 27 = s0:3:1
+  main 28 = s0:3:1
 
 debug_ranges:
   main 0 = s0:67:68
-  main 1 = s0:70:71
-  main 2 = s0:55:72
-  main 3 = s0:48:72
-  main 4 = s0:80:84
-  main 5 = s0:80:191
+  main 1 = s0:67:68
+  main 2 = s0:70:71
+  main 3 = s0:55:72
+  main 4 = s0:48:72
+  main 5 = s0:80:84
   main 6 = s0:80:191
   main 7 = s0:80:191
   main 8 = s0:80:191
   main 9 = s0:80:191
   main 10 = s0:80:191
-  main 11 = s0:135:145
-  main 12 = s0:148:150
-  main 13 = s0:135:150
-  main 14 = s0:153:162
-  main 15 = s0:135:162
-  main 16 = s0:135:162
-  main 17 = s0:80:191
-  main 18 = s0:80:191
+  main 11 = s0:80:191
+  main 12 = s0:80:191
+  main 13 = s0:135:145
+  main 14 = s0:148:150
+  main 15 = s0:135:150
+  main 16 = s0:153:162
+  main 17 = s0:135:162
+  main 18 = s0:135:162
   main 19 = s0:80:191
-  main 20 = s0:190:191
-  main 21 = s0:190:191
+  main 20 = s0:80:191
+  main 21 = s0:80:191
   main 22 = s0:80:191
+  main 23 = s0:190:191
+  main 24 = s0:190:191
+  main 25 = s0:190:191
+  main 26 = s0:80:191
+  main 27 = s0:80:191
+  main 28 = s0:80:191

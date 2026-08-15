@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = string "a"
@@ -7,32 +7,29 @@ constants:
   c3 = number 2
   c4 = string "c"
   c5 = number 3
-  c6 = number 0
-  c7 = nil
-  c8 = number 1
+  c6 = nil
 
 names:
   n0 = "values#0"
   n1 = "values#0"
-  n2 = "__for_in_iter#0"
-  n3 = "__for_in_index#1"
+  n2 = "key#1"
+  n3 = "key#1"
   n4 = "key#1"
-  n5 = "__for_in_iter#0"
-  n6 = "__for_in_len#2"
-  n7 = "__for_in_index#1"
-  n8 = "__for_in_len#2"
-  n9 = "__for_in_iter#0"
-  n10 = "__for_in_index#1"
-  n11 = "key#1"
-  n12 = "__for_in_index#1"
-  n13 = "__for_in_index#1"
-  n14 = "key#1"
-  n15 = "values#0"
-  n16 = "key#1"
-  n17 = "remove"
-  n18 = "values#0"
+  n5 = "values#0"
+  n6 = "key#1"
+  n7 = "remove"
+  n8 = "values#0"
 
-main registers=27:
+globals:
+  g0 = n0
+  g1 = n2
+
+native_imports:
+  i0 = "print" abi=1
+  i1 = "remove" abi=1
+
+main registers=18:
+block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
@@ -40,54 +37,43 @@ main registers=27:
   r4 = constant c4
   r5 = constant c5
   r6 = map [r0: r1, r2: r3, r4: r5]
-  store_var n0, r6
-  r7 = load_var n1
-  r8 = assert_array r7
-  store_var n2, r8
+  init_global g0, r6
+  r7 = load_global g0
+  r8 = iter_init r7
   r9 = constant c6
-  store_var n3, r9
-  r10 = constant c7
-  store_var n4, r10
-  r11 = load_var n5
-  r12 = len r11
-  store_var n6, r12
-  r13 = load_var n7
-  r14 = load_var n8
-  r15 = less r13, r14
-  jump_if_false r15, 38
-  r16 = load_var n9
-  r17 = load_var n10
-  r18 = index r16, r17
-  assign_var n11, r18
-  jump 32
-  r19 = load_var n12
-  r20 = constant c8
-  r21 = add r19, r20
-  assign_var n13, r21
-  jump 18
-  r22 = load_var n14
-  print r22
-  r23 = load_var n15
-  r24 = load_var n16
-  r25 = native_call n17 [r23, r24]
-  jump 27
-  r26 = load_var n18
-  print r26
+  init_global g1, r9
+  br b1
+block b1:
+  r10 = iter_has r8
+  br_if r10, b2, b3
+block b2:
+  r11 = iter_next r8
+  set_global g1, r11
+  r12 = load_global g1
+  r17 = call_native i0 [r12]
+  r13 = load_global g0
+  r14 = load_global g1
+  r15 = call_native i1 [r13, r14]
+  br b1
+block b3:
+  r16 = load_global g0
+  r17 = call_native i0 [r16]
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/map_for_in/input.cd" text="let values = {\"a\": 1, \"b\": 2, \"c\": 3};\nfor key in values {\n  print key;\n  remove(values, key);\n}\nprint values;\n"
 
 debug_locations:
   main 0 = s0:1:15
-  main 1 = s0:1:20
-  main 2 = s0:1:23
-  main 3 = s0:1:28
-  main 4 = s0:1:31
-  main 5 = s0:1:36
-  main 6 = s0:1:14
-  main 7 = s0:1:1
-  main 8 = s0:2:12
-  main 9 = s0:2:1
+  main 1 = s0:1:15
+  main 2 = s0:1:20
+  main 3 = s0:1:23
+  main 4 = s0:1:28
+  main 5 = s0:1:31
+  main 6 = s0:1:36
+  main 7 = s0:1:14
+  main 8 = s0:1:1
+  main 9 = s0:2:12
   main 10 = s0:2:1
   main 11 = s0:2:1
   main 12 = s0:2:1
@@ -98,38 +84,28 @@ debug_locations:
   main 17 = s0:2:1
   main 18 = s0:2:1
   main 19 = s0:2:1
-  main 20 = s0:2:1
-  main 21 = s0:2:1
-  main 22 = s0:2:1
-  main 23 = s0:2:1
-  main 24 = s0:2:1
+  main 20 = s0:3:9
+  main 21 = s0:3:3
+  main 22 = s0:4:10
+  main 23 = s0:4:18
+  main 24 = s0:4:3
   main 25 = s0:2:1
-  main 26 = s0:2:1
-  main 27 = s0:2:1
-  main 28 = s0:2:1
-  main 29 = s0:2:1
-  main 30 = s0:2:1
-  main 31 = s0:2:1
-  main 32 = s0:3:9
-  main 33 = s0:3:3
-  main 34 = s0:4:10
-  main 35 = s0:4:18
-  main 36 = s0:4:3
-  main 37 = s0:2:1
-  main 38 = s0:6:7
-  main 39 = s0:6:1
+  main 26 = s0:6:7
+  main 27 = s0:6:7
+  main 28 = s0:6:1
+  main 29 = s0:6:1
 
 debug_ranges:
   main 0 = s0:14:17
-  main 1 = s0:19:20
-  main 2 = s0:22:25
-  main 3 = s0:27:28
-  main 4 = s0:30:33
-  main 5 = s0:35:36
-  main 6 = s0:13:36
-  main 7 = s0:4:36
-  main 8 = s0:50:56
-  main 9 = s0:39:93
+  main 1 = s0:14:17
+  main 2 = s0:19:20
+  main 3 = s0:22:25
+  main 4 = s0:27:28
+  main 5 = s0:30:33
+  main 6 = s0:35:36
+  main 7 = s0:13:36
+  main 8 = s0:4:36
+  main 9 = s0:50:56
   main 10 = s0:39:93
   main 11 = s0:39:93
   main 12 = s0:39:93
@@ -140,23 +116,13 @@ debug_ranges:
   main 17 = s0:39:93
   main 18 = s0:39:93
   main 19 = s0:39:93
-  main 20 = s0:39:93
-  main 21 = s0:39:93
-  main 22 = s0:39:93
-  main 23 = s0:39:93
-  main 24 = s0:39:93
+  main 20 = s0:67:70
+  main 21 = s0:67:70
+  main 22 = s0:81:87
+  main 23 = s0:89:92
+  main 24 = s0:74:93
   main 25 = s0:39:93
-  main 26 = s0:39:93
-  main 27 = s0:39:93
-  main 28 = s0:39:93
-  main 29 = s0:39:93
-  main 30 = s0:39:93
-  main 31 = s0:39:93
-  main 32 = s0:67:70
-  main 33 = s0:67:70
-  main 34 = s0:81:87
-  main 35 = s0:89:92
-  main 36 = s0:74:93
-  main 37 = s0:39:93
-  main 38 = s0:103:109
-  main 39 = s0:103:109
+  main 26 = s0:103:109
+  main 27 = s0:103:109
+  main 28 = s0:103:109
+  main 29 = s0:103:109

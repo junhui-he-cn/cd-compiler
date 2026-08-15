@@ -15,39 +15,34 @@ IR
 0013  store_var @9 make#6, v6
 0014  v7 = make_function $3 make/0
 0015  assign_var @10 make#6, v7
-0016  v8 = load_var @11 identity#2
-0017  v9 = constant #10 42
-0018  v10 = call v8(v9)
-0019  print v10
-0020  v11 = load_var @12 identity#2
-0021  v12 = constant #11 "hello"
-0022  v13 = call v11(v12)
-0023  print v13
-0024  v14 = load_var @13 head#4
-0025  v15 = constant #12 1
-0026  v16 = constant #13 2
-0027  v17 = array [v15, v16]
-0028  v18 = call v14(v17)
-0029  print v18
-0030  v19 = load_var @14 identity#2
-0031  v20 = constant #14 3
-0032  v21 = constant #15 4
-0033  v22 = array [v20, v21]
-0034  v23 = call v19(v22)
-0035  print v23
-0036  v24 = load_var @15 make#6
-0037  v25 = call v24()
-0038  print v25
-0039  v26 = load_var @16 identity#2
-0040  store_var @17 alias#7, v26
-0041  v27 = load_var @18 alias#7
-0042  v28 = constant #16 true
-0043  v29 = call v27(v28)
-0044  print v29
-0045  v30 = load_var @19 identity#0
-0046  v31 = constant #17 7
-0047  v32 = call v30(v31)
-0048  print v32
+0016  v8 = constant #10 42
+0017  v9 = call_direct $1 identity/1(v8)
+0018  print v9
+0019  v10 = constant #11 "hello"
+0020  v11 = call_direct $1 identity/1(v10)
+0021  print v11
+0022  v12 = constant #12 1
+0023  v13 = constant #13 2
+0024  v14 = array [v12, v13]
+0025  v15 = call_direct $2 head/1(v14)
+0026  print v15
+0027  v16 = constant #14 3
+0028  v17 = constant #15 4
+0029  v18 = array [v16, v17]
+0030  v19 = call_direct $1 identity/1(v18)
+0031  print v19
+0032  v20 = call_direct $3 make/0()
+0033  print v20
+0034  v21 = load_var @11 identity#2
+0035  store_var @12 alias#7, v21
+0036  v22 = load_var @13 alias#7
+0037  v23 = constant #16 true
+0038  v24 = call v22(v23)
+0039  print v24
+0040  v25 = load_var @14 identity#0
+0041  v26 = constant #17 7
+0042  v27 = call v25(v26)
+0043  print v27
 
 function $0 identity(value#1)
 0000  v0 = load_var @1 value#1
@@ -64,7 +59,7 @@ function $1 identity(value#3)
 function $2 head(values#5)
 0000  v0 = load_var @7 values#5
 0001  v1 = constant #5 0
-0002  v2 = index v0, v1
+0002  v2 = array_get v0, v1
 0003  return v2
 0004  v3 = constant #6 nil
 0005  return v3

@@ -1,22 +1,29 @@
-main registers=8
-0000  b0 = constant #0 nil
-0001  store_var @0 add#0, b0
-0002  b1 = make_function $0 add/2
-0003  assign_var @3 add#0, b1
-0004  b2 = constant #2 "sum"
-0005  store_var @4 banner#3, b2
-0006  b3 = load_var @5 banner#3
-0007  print b3
-0008  b4 = load_var @6 add#0
-0009  b5 = constant #3 1
-0010  b6 = constant #4 2
-0011  b7 = call b4(b5, b6)
-0012  print b7
+native_import i0 = print abi=1
+main registers=9
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 add/2
+0004  set_global g0, b1
+0005  b2 = constant #2 "sum"
+0006  init_global g1, b2
+0007  b3 = load_global g1
+0008  b8 = call_native i0 [b3]
+0009  b4 = load_global g0
+0010  b5 = constant #3 1
+0011  b6 = constant #4 2
+0012  b7 = call b4(b5, b6)
+0013  b8 = call_native i0 [b7]
+0014  return_nil
 
 function $0 add/2 registers=4
-0000  b0 = load_var @1 a#1
-0001  b1 = load_var @2 b#2
-0002  b2 = add b0, b1
-0003  return b2
-0004  b3 = constant #1 nil
-0005  return b3
+0000  block
+0001  b0 = load_local l0
+0002  b1 = load_local l1
+0003  b2 = add b0, b1
+0004  return b2
+0005  block
+0006  b3 = constant #1 nil
+0007  return b3
+0008  block
+0009  return_nil

@@ -1,124 +1,159 @@
-main registers=57
-0000  b0 = constant #0 nil
-0001  store_var @0 find#0, b0
-0002  b1 = make_function $0 find/1
-0003  assign_var @3 find#0, b1
-0004  b2 = constant #5 nil
-0005  store_var @4 process#2, b2
-0006  b3 = make_function $1 process/1
-0007  assign_var @10 process#2, b3
-0008  b4 = load_var @11 find#0
-0009  b5 = constant #9 5
-0010  b6 = call b4(b5)
-0011  store_var @12 maybe#5, b6
-0012  b7 = load_var @13 maybe#5
-0013  b8 = constant #10 nil
-0014  b9 = not_equal b7, b8
-0015  jump_if_false b9, 0023
-0016  store_var @14 v#6, b7
-0017  b10 = constant #11 "if-let:"
-0018  b11 = load_var @15 v#6
-0019  b12 = native_call @16 str [b11]
-0020  b13 = add b10, b12
-0021  print b13
-0022  jump 0025
-0023  b14 = constant #12 "if-let:none"
-0024  print b14
-0025  b15 = load_var @17 maybe#5
-0026  b17 = constant #13 nil
-0027  b18 = not_equal b15, b17
-0028  jump_if_false b18, 0031
-0029  b16 = move b15
-0030  jump 0033
-0031  b19 = constant #14 0
-0032  b16 = move b19
-0033  print b16
-0034  b20 = load_var @18 find#0
-0035  b21 = constant #15 1
-0036  b22 = negate b21
-0037  b23 = call b20(b22)
-0038  b25 = constant #16 nil
-0039  b26 = not_equal b23, b25
-0040  jump_if_false b26, 0043
-0041  b24 = move b23
-0042  jump 0045
-0043  b27 = constant #17 99
-0044  b24 = move b27
-0045  print b24
-0046  b28 = load_var @19 process#2
-0047  b29 = constant #18 3
-0048  b30 = call b28(b29)
-0049  b32 = constant #19 nil
-0050  b33 = not_equal b30, b32
-0051  jump_if_false b33, 0054
-0052  b31 = move b30
-0053  jump 0056
-0054  b34 = constant #20 "missing"
-0055  b31 = move b34
-0056  print b31
-0057  b35 = load_var @20 process#2
-0058  b36 = constant #21 1
-0059  b37 = negate b36
-0060  b38 = call b35(b37)
-0061  b40 = constant #22 nil
-0062  b41 = not_equal b38, b40
-0063  jump_if_false b41, 0066
-0064  b39 = move b38
-0065  jump 0068
-0066  b42 = constant #23 "missing"
-0067  b39 = move b42
-0068  print b39
-0069  b43 = load_var @21 find#0
-0070  b44 = constant #24 1
-0071  b45 = call b43(b44)
-0072  store_var @22 next#7, b45
-0073  b46 = constant #25 0
-0074  store_var @23 count#8, b46
-0075  b47 = load_var @24 next#7
-0076  b48 = constant #26 nil
-0077  b49 = not_equal b47, b48
-0078  jump_if_false b49, 0089
-0079  store_var @25 current#9, b47
-0080  b50 = load_var @26 count#8
-0081  b51 = assert_number b50 @27 `+=` expects number variable
-0082  b52 = constant #27 1
-0083  b53 = assert_number b52 @28 `+=` expects number value
-0084  b54 = add b51, b53
-0085  assign_var @29 count#8, b54
-0086  b55 = constant #28 nil
-0087  assign_var @30 next#7, b55
-0088  jump 0075
-0089  b56 = load_var @31 count#8
-0090  print b56
+native_import i0 = str abi=1
+native_import i1 = print abi=1
+main registers=53
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 find/1
+0004  set_global g0, b1
+0005  b2 = constant #5 nil
+0006  init_global g1, b2
+0007  b3 = make_function $1 process/1
+0008  set_global g1, b3
+0009  b4 = constant #9 5
+0010  b5 = call_direct $0 [b4]
+0011  init_global g2, b5
+0012  b6 = load_global g2
+0013  b7 = constant #10 nil
+0014  b8 = not_equal b6, b7
+0015  br_if b8, b1, b2
+0016  block
+0017  init_global g3, b6
+0018  b9 = constant #11 "if-let:"
+0019  b10 = load_global g3
+0020  b11 = call_native i0 [b10]
+0021  b12 = concat_str b9, b11
+0022  b52 = call_native i1 [b12]
+0023  br b3
+0024  block
+0025  b13 = constant #12 "if-let:none"
+0026  b52 = call_native i1 [b13]
+0027  br b3
+0028  block
+0029  b14 = load_global g2
+0030  b16 = constant #13 nil
+0031  b17 = not_equal b14, b16
+0032  br_if b17, b4, b5
+0033  block
+0034  b15 = move b14
+0035  br b6
+0036  block
+0037  b18 = constant #14 0
+0038  b15 = move b18
+0039  br b6
+0040  block
+0041  b52 = call_native i1 [b15]
+0042  b19 = constant #15 1
+0043  b20 = neg_num b19
+0044  b21 = call_direct $0 [b20]
+0045  b23 = constant #16 nil
+0046  b24 = not_equal b21, b23
+0047  br_if b24, b7, b8
+0048  block
+0049  b22 = move b21
+0050  br b9
+0051  block
+0052  b25 = constant #17 99
+0053  b22 = move b25
+0054  br b9
+0055  block
+0056  b52 = call_native i1 [b22]
+0057  b26 = constant #18 3
+0058  b27 = call_direct $1 [b26]
+0059  b29 = constant #19 nil
+0060  b30 = not_equal b27, b29
+0061  br_if b30, b10, b11
+0062  block
+0063  b28 = move b27
+0064  br b12
+0065  block
+0066  b31 = constant #20 "missing"
+0067  b28 = move b31
+0068  br b12
+0069  block
+0070  b52 = call_native i1 [b28]
+0071  b32 = constant #21 1
+0072  b33 = neg_num b32
+0073  b34 = call_direct $1 [b33]
+0074  b36 = constant #22 nil
+0075  b37 = not_equal b34, b36
+0076  br_if b37, b13, b14
+0077  block
+0078  b35 = move b34
+0079  br b15
+0080  block
+0081  b38 = constant #23 "missing"
+0082  b35 = move b38
+0083  br b15
+0084  block
+0085  b52 = call_native i1 [b35]
+0086  b39 = constant #24 1
+0087  b40 = call_direct $0 [b39]
+0088  init_global g4, b40
+0089  b41 = constant #25 0
+0090  init_global g5, b41
+0091  br b16
+0092  block
+0093  b42 = load_global g4
+0094  b43 = constant #26 nil
+0095  b44 = not_equal b42, b43
+0096  br_if b44, b17, b18
+0097  block
+0098  init_global g6, b42
+0099  b45 = load_global g5
+0100  b46 = assert_number b45 @21 `+=` expects number variable
+0101  b47 = constant #27 1
+0102  b48 = assert_number b47 @22 `+=` expects number value
+0103  b49 = add_num b46, b48
+0104  set_global g5, b49
+0105  b50 = constant #28 nil
+0106  set_global g4, b50
+0107  br b16
+0108  block
+0109  b51 = load_global g5
+0110  b52 = call_native i1 [b51]
+0111  return_nil
 
 function $0 find/1 registers=8
-0000  b0 = load_var @1 value#1
-0001  b1 = constant #1 0
-0002  b2 = greater b0, b1
-0003  jump_if_false b2, 0008
-0004  b3 = load_var @2 value#1
-0005  b4 = constant #2 1
-0006  b5 = add b3, b4
-0007  return b5
-0008  b6 = constant #3 nil
-0009  return b6
-0010  b7 = constant #4 nil
-0011  return b7
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #1 0
+0003  b2 = gt_num b0, b1
+0004  br_if b2, b1, b2
+0005  block
+0006  b3 = load_local l0
+0007  b4 = constant #2 1
+0008  b5 = add_num b3, b4
+0009  return b5
+0010  block
+0011  b6 = constant #3 nil
+0012  return b6
+0013  block
+0014  b7 = constant #4 nil
+0015  return b7
+0016  block
+0017  return_nil
 
-function $1 process/1 registers=10
-0000  b0 = load_var @5 find#0
-0001  b1 = load_var @6 value#3
-0002  b2 = call b0(b1)
-0003  b3 = constant #6 nil
-0004  b4 = not_equal b2, b3
-0005  jump_if_false b4, 0007
-0006  jump 0008
-0007  return b3
-0008  store_var @7 next#4, b2
-0009  b5 = constant #7 "got:"
-0010  b6 = load_var @8 next#4
-0011  b7 = native_call @9 str [b6]
-0012  b8 = add b5, b7
-0013  return b8
-0014  b9 = constant #8 nil
-0015  return b9
+function $1 process/1 registers=9
+0000  block
+0001  b0 = load_local l0
+0002  b1 = call_direct $0 [b0]
+0003  b2 = constant #6 nil
+0004  b3 = not_equal b1, b2
+0005  br_if b3, b1, b2
+0006  block
+0007  br b3
+0008  block
+0009  return b2
+0010  block
+0011  bind_local l1, b1
+0012  b4 = constant #7 "got:"
+0013  b5 = load_local l1
+0014  b6 = call_native i0 [b5]
+0015  b7 = concat_str b4, b6
+0016  return b7
+0017  block
+0018  b8 = constant #8 nil
+0019  return b8
+0020  block
+0021  return_nil

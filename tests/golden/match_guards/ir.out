@@ -2,82 +2,79 @@ IR
 0000  v0 = constant #0 nil
 0001  store_var @0 describe#0, v0
 0002  v1 = make_function $0 describe/1
-0003  assign_var @8 describe#0, v1
+0003  assign_var @12 describe#0, v1
 0004  v2 = constant #6 3
 0005  v3 = variant Result.Ok (v2)
-0006  store_var @11 positive#3, v3
+0006  store_var @15 positive#3, v3
 0007  v4 = constant #7 0
 0008  v5 = variant Result.Ok (v4)
-0009  store_var @14 zero#4, v5
+0009  store_var @18 zero#4, v5
 0010  v6 = variant Result.Empty ()
-0011  store_var @17 empty#5, v6
-0012  v7 = load_var @18 describe#0
-0013  v8 = load_var @19 positive#3
-0014  v9 = call v7(v8)
-0015  print v9
-0016  v10 = load_var @20 describe#0
-0017  v11 = load_var @21 zero#4
-0018  v12 = call v10(v11)
-0019  print v12
-0020  v13 = load_var @22 describe#0
-0021  v14 = load_var @23 empty#5
-0022  v15 = call v13(v14)
-0023  print v15
-0024  v16 = load_var @24 positive#3
-0025  v17 = variant_tag v16 Result.Ok
-0026  jump_if_false v17, 0036
-0027  v18 = variant_field v16[0]
-0028  store_var @27 value#6, v18
-0029  v19 = load_var @28 value#6
-0030  v20 = constant #8 10
-0031  v21 = greater v19, v20
-0032  jump_if_false v21, 0036
-0033  v22 = constant #9 "large"
-0034  print v22
-0035  jump 0058
-0036  v23 = variant_tag v16 Result.Ok
-0037  jump_if_false v23, 0047
-0038  v24 = variant_field v16[0]
-0039  store_var @31 value#7, v24
-0040  v25 = load_var @32 value#7
-0041  v26 = constant #10 0
-0042  v27 = greater v25, v26
-0043  jump_if_false v27, 0047
-0044  v28 = constant #11 "positive"
-0045  print v28
-0046  jump 0058
-0047  v29 = variant_tag v16 Result.Ok
-0048  jump_if_false v29, 0053
-0049  v30 = variant_field v16[0]
-0050  v31 = constant #12 "zero"
-0051  print v31
-0052  jump 0058
-0053  v32 = variant_tag v16 Result.Empty
-0054  jump_if_false v32, 0058
-0055  v33 = constant #13 "empty"
-0056  print v33
-0057  jump 0058
-0058  v34 = load_var @37 empty#5
-0059  v35 = variant_tag v34 Result.Empty
-0060  jump_if_false v35, 0066
-0061  v36 = constant #14 1
-0062  jump_if_false v36, 0066
-0063  v37 = constant #15 "truthy"
-0064  print v37
-0065  jump 0069
-0066  v38 = constant #16 "fallback"
-0067  print v38
-0068  jump 0069
+0011  store_var @21 empty#5, v6
+0012  v7 = load_var @22 positive#3
+0013  v8 = call_direct $0 describe/1(v7)
+0014  print v8
+0015  v9 = load_var @23 zero#4
+0016  v10 = call_direct $0 describe/1(v9)
+0017  print v10
+0018  v11 = load_var @24 empty#5
+0019  v12 = call_direct $0 describe/1(v11)
+0020  print v12
+0021  v13 = load_var @25 positive#3
+0022  v14 = variant_tag v13 Result.Ok
+0023  jump_if_false v14, 0033
+0024  v15 = variant_field v13[0]
+0025  store_var @30 value#6, v15
+0026  v16 = load_var @31 value#6
+0027  v17 = constant #8 10
+0028  v18 = gt_num v16, v17
+0029  jump_if_false v18, 0033
+0030  v19 = constant #9 "large"
+0031  print v19
+0032  jump 0055
+0033  v20 = variant_tag v13 Result.Ok
+0034  jump_if_false v20, 0044
+0035  v21 = variant_field v13[0]
+0036  store_var @36 value#7, v21
+0037  v22 = load_var @37 value#7
+0038  v23 = constant #10 0
+0039  v24 = gt_num v22, v23
+0040  jump_if_false v24, 0044
+0041  v25 = constant #11 "positive"
+0042  print v25
+0043  jump 0055
+0044  v26 = variant_tag v13 Result.Ok
+0045  jump_if_false v26, 0050
+0046  v27 = variant_field v13[0]
+0047  v28 = constant #12 "zero"
+0048  print v28
+0049  jump 0055
+0050  v29 = variant_tag v13 Result.Empty
+0051  jump_if_false v29, 0055
+0052  v30 = constant #13 "empty"
+0053  print v30
+0054  jump 0055
+0055  v31 = load_var @44 empty#5
+0056  v32 = variant_tag v31 Result.Empty
+0057  jump_if_false v32, 0063
+0058  v33 = constant #14 1
+0059  jump_if_false v33, 0063
+0060  v34 = constant #15 "truthy"
+0061  print v34
+0062  jump 0066
+0063  v35 = constant #16 "fallback"
+0064  print v35
+0065  jump 0066
 
 function $0 describe(result#1)
 0000  v0 = load_var @1 result#1
 0001  v1 = variant_tag v0 Result.Ok
 0002  jump_if_false v1, 0012
 0003  v2 = variant_field v0[0]
-0004  store_var @4 value#2, v2
-0005  v3 = load_var @5 value#2
+0004  store_var @6 value#2, v2
+0005  v3 = load_var @7 value#2
 0006  v4 = constant #1 0
-0007  v5 = greater v3, v4
+0007  v5 = gt_num v3, v4
 0008  jump_if_false v5, 0012
 0009  v6 = constant #2 "positive"
 0010  return v6

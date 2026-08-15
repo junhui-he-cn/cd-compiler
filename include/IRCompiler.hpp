@@ -26,6 +26,7 @@ public:
         const Program& program,
         std::size_t moduleId,
         const DeclarationIndex& declarationIndex);
+    std::optional<std::size_t> moduleInitFunction() const;
 
 private:
     class SpanScope {
@@ -53,6 +54,9 @@ private:
         const BindingMetadataRecord& metadata,
         std::optional<DeclarationId> declarationId);
     std::optional<BindingId> registerSyntheticBinding(const std::string& resolvedName);
+    std::optional<BindingId> registerSyntheticBinding(
+        const std::string& resolvedName,
+        BindingStorageClass storage);
     void registerFunctionParameters(
         const FunctionMetadataRecord& metadata,
         const std::vector<DeclarationId>& declarations);
@@ -135,13 +139,27 @@ private:
     IRRegister emitFieldAssign(const FieldAssignExpr& expression);
     IRRegister emitFieldCompoundAssign(const FieldCompoundAssignExpr& expression);
     IRRegister emitUnary(TokenType op, IRRegister value);
-    IRRegister emitBinary(TokenType op, IRRegister left, IRRegister right);
+    IRRegister emitBinary(
+        TokenType op,
+        IRRegister left,
+        IRRegister right,
+        const TypeInfo* operandType = nullptr,
+        const TypeInfo* resultType = nullptr);
+    const TypedExpressionRecord* typedExpressionRecord(const Expr& expression) const;
+    IRRegister emitLenTyped(IRRegister value, const Expr& operand);
     IRRegister emitLogical(const LogicalExpr& expression);
+    void patchPendingDirectCalls();
 
     struct LoopContext {
         const Stmt* statement = nullptr;
         std::size_t continueTarget = 0;
         std::vector<std::size_t> breakJumps;
+    };
+
+    struct PendingDirectCall {
+        std::optional<std::size_t> functionId;
+        std::size_t instructionIndex = 0;
+        DeclarationId target;
     };
 
     IRProgram ir_;
@@ -150,6 +168,9 @@ private:
     std::unordered_set<std::size_t> compiledModules_;
     std::optional<std::size_t> independentModuleId_;
     std::vector<LoopContext> loopContexts_;
+    std::unordered_map<DeclarationId, std::size_t, SnapshotIdHash<DeclarationIdTag>> functionIndices_;
+    std::vector<PendingDirectCall> pendingDirectCalls_;
+    std::optional<std::size_t> moduleInitFunction_;
     std::size_t nextSyntheticName_ = 0;
     std::size_t nextSyntheticBindingId_ = 0;
     std::size_t activeFunctionDepth_ = 0;

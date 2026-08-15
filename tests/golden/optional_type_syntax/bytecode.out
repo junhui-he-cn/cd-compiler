@@ -1,57 +1,65 @@
+native_import i0 = print abi=1
 main registers=26
-0000  b0 = constant #0 nil
-0001  store_var @0 unwrap#0, b0
-0002  b1 = make_function $0 unwrap/1
-0003  assign_var @3 unwrap#0, b1
-0004  b2 = constant #4 nil
-0005  store_var @4 age#2, b2
-0006  b3 = constant #5 1
-0007  b4 = constant #6 nil
-0008  b5 = array [b3, b4]
-0009  store_var @5 values#3, b5
-0010  b6 = constant #7 nil
-0011  store_var @6 maybeValues#4, b6
-0012  b7 = constant #8 2
-0013  b8 = struct @7 Box { @8 value: b7}
-0014  store_var @9 box#5, b8
-0015  b9 = load_var @10 unwrap#0
-0016  b10 = load_var @11 age#2
-0017  b11 = call b9(b10)
-0018  print b11
-0019  b12 = load_var @12 values#3
-0020  b13 = constant #9 0
-0021  b14 = index b12, b13
-0022  print b14
-0023  b15 = load_var @13 maybeValues#4
-0024  print b15
-0025  b16 = load_var @14 box#5
-0026  b17 = field b16,  @15 value
-0027  print b17
-0028  b18 = constant #10 7
-0029  store_var @16 optional#6, b18
-0030  b19 = constant #11 nil
-0031  store_var @17 maybe#7, b19
-0032  b20 = constant #12 nil
-0033  store_var @18 nested#8, b20
-0034  b21 = constant #13 nil
-0035  store_var @19 callback#9, b21
-0036  b22 = load_var @20 optional#6
-0037  print b22
-0038  b23 = load_var @21 maybe#7
-0039  print b23
-0040  b24 = load_var @22 nested#8
-0041  print b24
-0042  b25 = load_var @23 callback#9
-0043  print b25
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 unwrap/1
+0004  set_global g0, b1
+0005  b2 = constant #4 nil
+0006  init_global g1, b2
+0007  b3 = constant #5 1
+0008  b4 = constant #6 nil
+0009  b5 = array [b3, b4]
+0010  init_global g2, b5
+0011  b6 = constant #7 nil
+0012  init_global g3, b6
+0013  b7 = constant #8 2
+0014  b8 = make_struct t0 [b7]
+0015  init_global g4, b8
+0016  b9 = load_global g1
+0017  b10 = call_direct $0 [b9]
+0018  b25 = call_native i0 [b10]
+0019  b11 = load_global g2
+0020  b12 = constant #9 0
+0021  b13 = array_get b11, b12
+0022  b25 = call_native i0 [b13]
+0023  b14 = load_global g3
+0024  b25 = call_native i0 [b14]
+0025  b15 = load_global g4
+0026  b16 = struct_get b15, t0, 0
+0027  b25 = call_native i0 [b16]
+0028  b17 = constant #10 7
+0029  init_global g5, b17
+0030  b18 = constant #11 nil
+0031  init_global g6, b18
+0032  b19 = constant #12 nil
+0033  init_global g7, b19
+0034  b20 = constant #13 nil
+0035  init_global g8, b20
+0036  b21 = load_global g5
+0037  b25 = call_native i0 [b21]
+0038  b22 = load_global g6
+0039  b25 = call_native i0 [b22]
+0040  b23 = load_global g7
+0041  b25 = call_native i0 [b23]
+0042  b24 = load_global g8
+0043  b25 = call_native i0 [b24]
+0044  return_nil
 
 function $0 unwrap/1 registers=6
-0000  b0 = load_var @1 value#1
-0001  b1 = constant #1 nil
-0002  b2 = not_equal b0, b1
-0003  jump_if_false b2, 0006
-0004  b3 = load_var @2 value#1
-0005  return b3
-0006  b4 = constant #2 0
-0007  return b4
-0008  b5 = constant #3 nil
-0009  return b5
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #1 nil
+0003  b2 = not_equal b0, b1
+0004  br_if b2, b1, b2
+0005  block
+0006  b3 = load_local l0
+0007  return b3
+0008  block
+0009  b4 = constant #2 0
+0010  return b4
+0011  block
+0012  b5 = constant #3 nil
+0013  return b5
+0014  block
+0015  return_nil

@@ -1,0 +1,12 @@
+Program
+  Fun outer()
+    Let a = 10
+    Fun middle()
+      Let b = (+ a 5)
+      Fun inner()
+        Return (+ a b)
+      Expr (= b (+ b 100))
+      Return inner
+    Return (call middle)
+  Let f = (call outer)
+  Print (call f)

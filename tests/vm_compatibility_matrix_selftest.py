@@ -25,9 +25,11 @@ class VmCompatibilityMatrixTests(unittest.TestCase):
 
     def test_validation_detects_artifact_version_drift(self) -> None:
         changed = copy.deepcopy(self.matrix)
-        changed["version_contract"]["artifact"]["version"] = "0.2"
+        changed["version_contract"]["artifact"]["version"] = "0.1"
+        changed["version_contract"]["artifact"]["header"] = "cdbc 0.1"
         errors = vm_compatibility_matrix.validate_matrix(changed, self.repo_root)
-        self.assertIn("artifact version must remain 0.1", errors)
+        self.assertIn("artifact version must remain 0.2", errors)
+        self.assertIn("artifact header must remain cdbc 0.2", errors)
 
     def test_validation_detects_missing_compatibility_cell(self) -> None:
         changed = copy.deepcopy(self.matrix)
@@ -47,7 +49,7 @@ class VmCompatibilityMatrixTests(unittest.TestCase):
         errors = vm_compatibility_matrix.validate_matrix(changed, self.repo_root)
         self.assertTrue(
             any(
-                error.startswith("artifact.debug_metadata.cdbc_0_1 missing evidence")
+                error.startswith("artifact.debug_metadata.cdbc_0_2 missing evidence")
                 for error in errors
             )
         )

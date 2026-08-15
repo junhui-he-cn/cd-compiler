@@ -56,7 +56,7 @@ function $0 <lambda>(value#1)
 function $1 <lambda>(value#3)
 0000  v0 = load_var @6 value#3
 0001  v1 = constant #5 4
-0002  v2 = less v0, v1
+0002  v2 = lt_num v0, v1
 0003  return v2
 0004  v3 = constant #6 nil
 0005  return v3
@@ -78,7 +78,7 @@ function $3 <lambda>(value#8)
 0002  v2 = native_call @19 push(v0, v1)
 0003  v3 = load_var @20 value#8
 0004  v4 = constant #17 3
-0005  v5 = less v3, v4
+0005  v5 = lt_num v3, v4
 0006  return v5
 0007  v6 = constant #18 nil
 0008  return v6
@@ -92,7 +92,7 @@ function $4 <lambda>(value#9)
 function $5 <lambda>(value#10)
 0000  v0 = load_var @24 value#10
 0001  v1 = constant #23 0
-0002  v2 = greater v0, v1
+0002  v2 = gt_num v0, v1
 0003  return v2
 0004  v3 = constant #24 nil
 0005  return v3

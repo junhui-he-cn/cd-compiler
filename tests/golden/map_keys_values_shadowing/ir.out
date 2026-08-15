@@ -11,20 +11,18 @@ IR
 0009  v5 = constant #7 3
 0010  v6 = map [v4: v5]
 0011  store_var @4 prices#4, v6
-0012  v7 = load_var @5 keys#0
-0013  v8 = load_var @6 prices#4
-0014  v9 = call v7(v8)
-0015  print v9
-0016  v10 = load_var @7 prices#4
-0017  v11 = native_call @8 keys(v10)
-0018  print v11
-0019  v12 = load_var @9 values#2
-0020  v13 = load_var @10 prices#4
-0021  v14 = call v12(v13)
-0022  print v14
-0023  v15 = load_var @11 prices#4
-0024  v16 = native_call @12 values(v15)
-0025  print v16
+0012  v7 = load_var @5 prices#4
+0013  v8 = call_direct $0 keys/1(v7)
+0014  print v8
+0015  v9 = load_var @6 prices#4
+0016  v10 = native_call @7 keys(v9)
+0017  print v10
+0018  v11 = load_var @8 prices#4
+0019  v12 = call_direct $1 values/1(v11)
+0020  print v12
+0021  v13 = load_var @9 prices#4
+0022  v14 = native_call @10 values(v13)
+0023  print v14
 
 function $0 keys(value#1)
 0000  v0 = constant #1 "shadowed-keys"

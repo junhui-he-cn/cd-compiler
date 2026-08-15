@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = string "tea"
@@ -13,47 +13,61 @@ names:
   n3 = "prices#0"
   n4 = "values"
 
-main registers=9:
+globals:
+  g0 = n0
+
+native_imports:
+  i0 = "keys" abi=1
+  i1 = "print" abi=1
+  i2 = "values" abi=1
+
+main registers=10:
+block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
   r3 = constant c3
   r4 = map [r0: r1, r2: r3]
-  store_var n0, r4
-  r5 = load_var n1
-  r6 = native_call n2 [r5]
-  print r6
-  r7 = load_var n3
-  r8 = native_call n4 [r7]
-  print r8
+  init_global g0, r4
+  r5 = load_global g0
+  r6 = call_native i0 [r5]
+  r9 = call_native i1 [r6]
+  r7 = load_global g0
+  r8 = call_native i2 [r7]
+  r9 = call_native i1 [r8]
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/map_keys_values/input.cd" text="let prices = {\"tea\": 3, \"coffee\": 5};\nprint keys(prices);\nprint prices.values();\n"
 
 debug_locations:
   main 0 = s0:1:15
-  main 1 = s0:1:22
-  main 2 = s0:1:25
-  main 3 = s0:1:35
-  main 4 = s0:1:14
-  main 5 = s0:1:1
-  main 6 = s0:2:12
-  main 7 = s0:2:7
-  main 8 = s0:2:1
-  main 9 = s0:3:7
+  main 1 = s0:1:15
+  main 2 = s0:1:22
+  main 3 = s0:1:25
+  main 4 = s0:1:35
+  main 5 = s0:1:14
+  main 6 = s0:1:1
+  main 7 = s0:2:12
+  main 8 = s0:2:7
+  main 9 = s0:2:1
   main 10 = s0:3:7
-  main 11 = s0:3:1
+  main 11 = s0:3:7
+  main 12 = s0:3:1
+  main 13 = s0:3:1
 
 debug_ranges:
   main 0 = s0:14:19
-  main 1 = s0:21:22
-  main 2 = s0:24:32
-  main 3 = s0:34:35
-  main 4 = s0:13:35
-  main 5 = s0:4:35
-  main 6 = s0:49:55
-  main 7 = s0:44:56
+  main 1 = s0:14:19
+  main 2 = s0:21:22
+  main 3 = s0:24:32
+  main 4 = s0:34:35
+  main 5 = s0:13:35
+  main 6 = s0:4:35
+  main 7 = s0:49:55
   main 8 = s0:44:56
-  main 9 = s0:64:70
-  main 10 = s0:64:79
+  main 9 = s0:44:56
+  main 10 = s0:64:70
   main 11 = s0:64:79
+  main 12 = s0:64:79
+  main 13 = s0:64:79

@@ -1,7 +1,9 @@
 #![allow(dead_code)]
 
-use crate::bytecode::{DebugLocation, FunctionBody};
-use crate::runtime::{SharedEnvironment, SharedLocalSlots};
+use crate::bytecode::{DebugLocation, Function};
+#[cfg(test)]
+use crate::bytecode::FuncId;
+use crate::runtime::{Cell, SharedEnvironment, SharedLocalSlots};
 use crate::value::Value;
 use std::collections::{BTreeMap, VecDeque};
 use std::fmt;
@@ -146,11 +148,12 @@ impl fmt::Display for FrameStackError {
 /// field also lets the legacy recursive VM frame share this state container
 /// without forcing ordinary single-task runs to clone the entry body.
 pub(crate) struct ResumableFrame {
-    pub(crate) body: Option<Rc<FunctionBody>>,
+    pub(crate) body: Option<Rc<Function>>,
     pub(crate) ip: usize,
     pub(crate) registers: Vec<Value>,
     pub(crate) locals: SharedLocalSlots,
     pub(crate) closure: SharedEnvironment,
+    pub(crate) upvalues: Vec<Cell>,
     pub(crate) variable_plan: Option<Rc<VariablePlan>>,
     pub(crate) is_main: bool,
     pub(crate) function: Rc<str>,
@@ -160,7 +163,7 @@ pub(crate) struct ResumableFrame {
 
 impl ResumableFrame {
     pub(crate) fn main(
-        body: Rc<FunctionBody>,
+        body: Rc<Function>,
         register_count: usize,
         locals: SharedLocalSlots,
         closure: SharedEnvironment,
@@ -171,6 +174,7 @@ impl ResumableFrame {
             registers: vec![Value::Nil; register_count],
             locals,
             closure,
+            upvalues: Vec::new(),
             variable_plan: None,
             is_main: true,
             function: Rc::from("main"),
@@ -180,7 +184,7 @@ impl ResumableFrame {
     }
 
     pub(crate) fn callee(
-        body: Rc<FunctionBody>,
+        body: Rc<Function>,
         function: impl Into<Rc<str>>,
         function_index: usize,
         register_count: usize,
@@ -194,6 +198,7 @@ impl ResumableFrame {
             registers: vec![Value::Nil; register_count],
             locals,
             closure,
+            upvalues: Vec::new(),
             variable_plan: None,
             is_main: false,
             function: function.into(),
@@ -807,7 +812,13 @@ mod tests {
         let locals = heap.new_local_slots();
         let closure = heap.new_environment();
         FrameStack::new(ResumableFrame::main(
-            Rc::new(FunctionBody {
+            Rc::new(Function {
+                id: FuncId(0),
+                name: String::new(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 2,
                 instructions: Vec::new(),
                 locations: Vec::new(),
@@ -824,7 +835,13 @@ mod tests {
         let heap = Heap::new();
         let mut stack = test_frame_stack();
         let callee = ResumableFrame::callee(
-            Rc::new(FunctionBody {
+            Rc::new(Function {
+                id: FuncId(0),
+                name: String::new(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 4,
                 instructions: Vec::new(),
                 locations: Vec::new(),
@@ -875,7 +892,13 @@ mod tests {
     fn frame_stack_rejects_invalid_root_and_return_targets() {
         let heap = Heap::new();
         let invalid_root = ResumableFrame::callee(
-            Rc::new(FunctionBody {
+            Rc::new(Function {
+                id: FuncId(0),
+                name: String::new(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 1,
                 instructions: Vec::new(),
                 locations: Vec::new(),
@@ -897,7 +920,14 @@ mod tests {
 
         let mut stack = test_frame_stack();
         let missing_target = ResumableFrame {
-            body: Some(Rc::new(FunctionBody {
+            body: Some(Rc::new(Function {
+                id: FuncId(0),
+                    name: String::new(),
+                    arity: 0,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+
                 registers: 1,
                 instructions: Vec::new(),
                 locations: Vec::new(),
@@ -906,6 +936,7 @@ mod tests {
             registers: vec![Value::Nil],
             locals: heap.new_local_slots(),
             closure: heap.new_environment(),
+            upvalues: Vec::new(),
             variable_plan: None,
             is_main: false,
             function: Rc::from("missing"),
@@ -918,7 +949,13 @@ mod tests {
         );
 
         let invalid_destination = ResumableFrame::callee(
-            Rc::new(FunctionBody {
+            Rc::new(Function {
+                id: FuncId(0),
+                name: String::new(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 1,
                 instructions: Vec::new(),
                 locations: Vec::new(),

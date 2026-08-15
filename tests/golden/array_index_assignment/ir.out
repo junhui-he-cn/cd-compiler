@@ -7,46 +7,46 @@ IR
 0005  v4 = load_var @1 xs#0
 0006  v5 = constant #3 1
 0007  v6 = constant #4 42
-0008  v7 = assign_index v4, v5, v6
+0008  v7 = array_set v4, v5, v6
 0009  v8 = load_var @2 xs#0
 0010  v9 = constant #5 1
-0011  v10 = index v8, v9
+0011  v10 = array_get v8, v9
 0012  print v10
 0013  v11 = load_var @3 xs#0
 0014  store_var @4 ys#1, v11
 0015  v12 = load_var @5 ys#1
 0016  v13 = constant #6 0
 0017  v14 = constant #7 9
-0018  v15 = assign_index v12, v13, v14
+0018  v15 = array_set v12, v13, v14
 0019  v16 = load_var @6 xs#0
 0020  v17 = constant #8 0
-0021  v18 = index v16, v17
+0021  v18 = array_get v16, v17
 0022  print v18
 0023  v19 = load_var @7 xs#0
 0024  v20 = constant #9 2
 0025  v21 = constant #10 7
-0026  v22 = assign_index v19, v20, v21
+0026  v22 = array_set v19, v20, v21
 0027  print v22
 0028  v23 = load_var @8 xs#0
 0029  v24 = constant #11 0
 0030  v25 = load_var @9 xs#0
 0031  v26 = constant #12 1
 0032  v27 = constant #13 5
-0033  v28 = assign_index v25, v26, v27
-0034  v29 = assign_index v23, v24, v28
+0033  v28 = array_set v25, v26, v27
+0034  v29 = array_set v23, v24, v28
 0035  v30 = load_var @10 xs#0
 0036  v31 = constant #14 0
-0037  v32 = index v30, v31
+0037  v32 = array_get v30, v31
 0038  print v32
 0039  v33 = load_var @11 xs#0
 0040  v34 = constant #15 1
-0041  v35 = index v33, v34
+0041  v35 = array_get v33, v34
 0042  print v35
 0043  v36 = load_var @12 xs#0
 0044  v37 = constant #16 1
 0045  v38 = constant #17 "changed"
-0046  v39 = assign_index v36, v37, v38
+0046  v39 = array_set v36, v37, v38
 0047  v40 = load_var @13 xs#0
 0048  v41 = constant #18 1
-0049  v42 = index v40, v41
+0049  v42 = array_get v40, v41
 0050  print v42

@@ -2,28 +2,28 @@ IR
 0000  v0 = constant #0 nil
 0001  store_var @0 __method_Counter_inc#0, v0
 0002  v1 = make_function $0 inc/2
-0003  assign_var @9 __method_Counter_inc#0, v1
+0003  assign_var @12 __method_Counter_inc#0, v1
 0004  v2 = constant #2 1
 0005  v3 = struct Counter {value: v2}
-0006  store_var @12 c#3, v3
-0007  v4 = load_var @13 __method_Counter_inc#0
-0008  v5 = load_var @14 c#3
+0006  store_var @15 c#3, v3
+0007  v4 = load_var @16 __method_Counter_inc#0
+0008  v5 = load_var @17 c#3
 0009  v6 = constant #3 4
 0010  v7 = call v4(v5, v6)
 0011  print v7
-0012  v8 = load_var @15 c#3
+0012  v8 = load_var @18 c#3
 0013  v9 = field v8.value
 0014  print v9
 
 function $0 inc(this#1, delta#2)
 0000  v0 = load_var @1 this#1
 0001  v1 = field v0.value
-0002  v2 = assert_number v1 @3 `+=` expects number target
-0003  v3 = load_var @4 delta#2
-0004  v4 = assert_number v3 @5 `+=` expects number value
-0005  v5 = add v2, v4
+0002  v2 = assert_number v1 @4 `+=` expects number target
+0003  v3 = load_var @5 delta#2
+0004  v4 = assert_number v3 @6 `+=` expects number value
+0005  v5 = add_num v2, v4
 0006  v6 = assign_field v0.value, v5
-0007  v7 = load_var @7 this#1
+0007  v7 = load_var @9 this#1
 0008  v8 = field v7.value
 0009  return v8
 0010  v9 = constant #1 nil

@@ -14,7 +14,7 @@ void testLinkedArtifactRemainsUnchanged()
     std::ostringstream output;
     writeBytecodeText(output, program);
     assert(output.str() ==
-        "cdbc 0.1\n\n"
+        "cdbc 0.2\n\n"
         "constants:\n"
         "\n"
         "names:\n"
@@ -30,17 +30,17 @@ void testModuleEnvelopeAndDependencyMarker()
     artifact.canonicalPath = "/workspace/lib.cd";
     artifact.isEntry = true;
     artifact.entryOrder = 0;
+    artifact.initFunction = 0;
     artifact.dependencies.push_back(BytecodeModuleDependency{
         "/workspace/shared.cd",
         ModuleGraphEdgeKind::Import,
-        "./shared.cd",
-        2});
+        "./shared.cd"});
     artifact.program.setRegisterCount(0);
 
     std::ostringstream output;
     writeBytecodeModuleText(output, artifact);
     assert(output.str() ==
-        "cdbc 0.1\n\n"
+        "cdbc 0.2\n\n"
         "artifact: module\n\n"
         "module:\n"
         "  identity = \"/workspace/lib.cd\"\n"
@@ -48,8 +48,9 @@ void testModuleEnvelopeAndDependencyMarker()
         "  canonical_path = \"/workspace/lib.cd\"\n"
         "  entry = true\n"
         "  entry_order = 0\n"
+        "  init = f0\n"
         "  dependencies:\n"
-        "    d0 target=\"/workspace/shared.cd\" kind=import at=2 requested=\"./shared.cd\"\n"
+        "    d0 target=\"/workspace/shared.cd\" kind=import requested=\"./shared.cd\"\n"
         "\n"
         "constants:\n"
         "\n"
@@ -71,7 +72,7 @@ void testDebugSourceModuleIdentity()
     std::ostringstream output;
     writeBytecodeText(output, program);
     assert(output.str() ==
-        "cdbc 0.1\n\n"
+        "cdbc 0.2\n\n"
         "constants:\n"
         "\n"
         "names:\n"
@@ -90,24 +91,30 @@ void testDebugSourceRange()
     source.text = "print 1;\n";
     source.id = SourceFileId{0};
     program.setSources({source});
-    program.setRegisterCount(1);
+    program.setNativeImports({BytecodeNativeImport{"print", 1}});
 
     BytecodeInstruction instruction;
-    instruction.op = BytecodeOp::Print;
-    instruction.left = BytecodeRegister{0};
+    instruction.op = BytecodeOp::CallNative;
+    instruction.dest = BytecodeRegister{1};
+    instruction.arguments = {BytecodeRegister{0}};
+    instruction.operand = 0;
     instruction.span = SourceSpan{0, 1, 1, SourceSpanRange{0, 7}};
     program.setInstructions({instruction});
+    program.setRegisterCount(2);
 
     std::ostringstream output;
     writeBytecodeText(output, program);
     assert(output.str() ==
-        "cdbc 0.1\n\n"
+        "cdbc 0.2\n\n"
         "constants:\n"
         "\n"
         "names:\n"
         "\n"
-        "main registers=1:\n"
-        "  print r0\n"
+        "native_imports:\n"
+        "  i0 = \"print\" abi=1\n"
+        "\n"
+        "main registers=2:\n"
+        "  r1 = call_native i0 [r0]\n"
         "\n"
         "debug_sources:\n"
         "  s0 path=\"lib.cd\" text=\"print 1;\\n\"\n"

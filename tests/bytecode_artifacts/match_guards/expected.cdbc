@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 4
@@ -13,97 +13,138 @@ names:
   n3 = "value#0"
   n4 = "Option"
   n5 = "Some"
-  n6 = "number#1"
-  n7 = "number#1"
+  n6 = "Option"
+  n7 = "Some"
   n8 = "number#1"
-  n9 = "Option"
-  n10 = "Some"
+  n9 = "number#1"
+  n10 = "number#1"
   n11 = "Option"
-  n12 = "None"
+  n12 = "Some"
+  n13 = "Option"
+  n14 = "Some"
+  n15 = "Option"
+  n16 = "None"
 
-main registers=14:
+globals:
+  g0 = n2
+  g1 = n8
+
+types:
+  t0 = enum "Option" v0="Some" payload=1 v1="None" payload=0
+
+native_imports:
+  i0 = "print" abi=1
+
+main registers=15:
+block b0:
   r0 = constant c0
-  r1 = variant n0.n1 [r0]
-  store_var n2, r1
-  r2 = load_var n3
-  r3 = variant_tag r2 n4.n5
-  jump_if_false r3, 15
-  r4 = variant_field r2 0
-  store_var n6, r4
-  r5 = load_var n7
+  r1 = make_variant t0, v0 [r0]
+  init_global g0, r1
+  r2 = load_global g0
+  r3 = is_variant r2, t0, v0
+  br_if r3, b1, b3
+block b1:
+  r4 = variant_get r2, t0, v0, 0
+  init_global g1, r4
+  r5 = load_global g1
   r6 = constant c1
-  r7 = greater r5, r6
-  jump_if_false r7, 15
-  r8 = load_var n8
-  print r8
-  jump 26
-  r9 = variant_tag r2 n9.n10
-  jump_if_false r9, 21
-  r10 = variant_field r2 0
+  r7 = gt_num r5, r6
+  br_if r7, b2, b3
+block b2:
+  r8 = load_global g1
+  r14 = call_native i0 [r8]
+  return_nil
+block b3:
+  r9 = is_variant r2, t0, v0
+  br_if r9, b4, b5
+block b4:
+  r10 = variant_get r2, t0, v0, 0
   r11 = constant c2
-  print r11
-  jump 26
-  r12 = variant_tag r2 n11.n12
-  jump_if_false r12, 26
+  r14 = call_native i0 [r11]
+  return_nil
+block b5:
+  r12 = is_variant r2, t0, v1
+  br_if r12, b6, b7
+block b6:
   r13 = constant c3
-  print r13
-  jump 26
+  r14 = call_native i0 [r13]
+  return_nil
+block b7:
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/match_guards/input.cd" text="enum Option { Some(number), None }\nlet value = Option.Some(4);\nmatch value {\n  Option.Some(number) if number > 4 => { print number; }\n  Option.Some(_) => { print 0; }\n  Option.None => { print 0; }\n}\n"
 
 debug_locations:
   main 0 = s0:2:25
-  main 1 = s0:2:13
-  main 2 = s0:2:1
-  main 3 = s0:3:7
-  main 4 = s0:3:1
+  main 1 = s0:2:25
+  main 2 = s0:2:13
+  main 3 = s0:2:1
+  main 4 = s0:3:7
   main 5 = s0:3:1
   main 6 = s0:3:1
   main 7 = s0:3:1
-  main 8 = s0:4:26
-  main 9 = s0:4:35
+  main 8 = s0:3:1
+  main 9 = s0:3:1
   main 10 = s0:4:26
-  main 11 = s0:3:1
-  main 12 = s0:4:48
-  main 13 = s0:4:42
-  main 14 = s0:3:1
-  main 15 = s0:3:1
-  main 16 = s0:3:1
+  main 11 = s0:4:35
+  main 12 = s0:4:26
+  main 13 = s0:3:1
+  main 14 = s0:4:48
+  main 15 = s0:4:48
+  main 16 = s0:4:42
   main 17 = s0:3:1
-  main 18 = s0:5:29
-  main 19 = s0:5:23
+  main 18 = s0:3:1
+  main 19 = s0:3:1
   main 20 = s0:3:1
   main 21 = s0:3:1
   main 22 = s0:3:1
-  main 23 = s0:6:26
-  main 24 = s0:6:20
+  main 23 = s0:5:29
+  main 24 = s0:5:23
   main 25 = s0:3:1
+  main 26 = s0:3:1
+  main 27 = s0:3:1
+  main 28 = s0:3:1
+  main 29 = s0:6:26
+  main 30 = s0:6:26
+  main 31 = s0:6:20
+  main 32 = s0:3:1
+  main 33 = s0:3:1
+  main 34 = s0:3:1
 
 debug_ranges:
   main 0 = s0:59:60
-  main 1 = s0:47:61
-  main 2 = s0:39:61
-  main 3 = s0:69:74
-  main 4 = s0:69:193
+  main 1 = s0:59:60
+  main 2 = s0:47:61
+  main 3 = s0:39:61
+  main 4 = s0:69:74
   main 5 = s0:69:193
   main 6 = s0:69:193
   main 7 = s0:69:193
-  main 8 = s0:102:108
-  main 9 = s0:111:112
-  main 10 = s0:102:112
-  main 11 = s0:69:193
-  main 12 = s0:124:130
-  main 13 = s0:124:130
-  main 14 = s0:69:193
-  main 15 = s0:69:193
-  main 16 = s0:69:193
+  main 8 = s0:69:193
+  main 9 = s0:69:193
+  main 10 = s0:102:108
+  main 11 = s0:111:112
+  main 12 = s0:102:112
+  main 13 = s0:69:193
+  main 14 = s0:124:130
+  main 15 = s0:124:130
+  main 16 = s0:124:130
   main 17 = s0:69:193
-  main 18 = s0:162:163
-  main 19 = s0:162:163
+  main 18 = s0:69:193
+  main 19 = s0:69:193
   main 20 = s0:69:193
   main 21 = s0:69:193
   main 22 = s0:69:193
-  main 23 = s0:192:193
-  main 24 = s0:192:193
+  main 23 = s0:162:163
+  main 24 = s0:162:163
   main 25 = s0:69:193
+  main 26 = s0:69:193
+  main 27 = s0:69:193
+  main 28 = s0:69:193
+  main 29 = s0:192:193
+  main 30 = s0:192:193
+  main 31 = s0:192:193
+  main 32 = s0:69:193
+  main 33 = s0:69:193
+  main 34 = s0:69:193

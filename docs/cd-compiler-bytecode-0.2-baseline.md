@@ -1,0 +1,510 @@
+# `.cdbc 0.1 → 0.2` 重构基线（Phase 0）
+
+本文件是 `docs/cd-compiler-bytecode-0.2-execution-plan.md` 的执行记录：Phase 0
+锁定当前 `.cdbc 0.1` 的行为基线；Phase 1 重构内部数据模型（强类型 ID + 统一
+`main`），同时保持 `.cdbc 0.1` 文本与可观察行为不变。
+
+## 状态
+
+- 基准分支：`feat/bytecode-0.2-phase0`，起点 `master` = `origin/master` = `e502b4ea`。
+- Phase 0 与 Phase 1 都**没有修改 Bytecode ISA**，`VERSION` 保持 `0.1.0`，
+  `.cdbc 0.1` 契约不变。
+- Phase 0 新增：5 个 golden fixture、1 个 C++ 发射端测试、1 个 Rust VM 集成测试。
+- Phase 1 完成：`vm-rs` 数据模型重构，文本/行为不变，全量回归通过。
+
+## 1. 实际代码路径清单
+
+| 文件 | 职责与关键事实 |
+| --- | --- |
+| `include/IR.hpp` / `src/IR.cpp` | `IROp` 枚举（36 个 opcode）、`IRInstruction`/`IRFunction`/`IRProgram`；IR 打印器用 `Value` 的 ostream 格式化数字 |
+| `src/IRCompiler.cpp`（1666 行） | AST → IR 唯一 lowering 入口；变量名、`make_function`、`assert_array`、`native_call`、跳转偏移都产生于此处 |
+| `include/Bytecode.hpp` / `src/Bytecode.cpp` | `BytecodeProgram`（`constants_`/`names_`/`instructions_`/`registerCount_`/`functions_`）；`--bytecode` 调试打印（`bN` 寄存器、`#N` 常量、`@N` 名字） |
+| `src/BytecodeCompiler.cpp` | IR → `BytecodeProgram` 的 1:1 映射，不改语义 |
+| `src/BytecodeTextEmitter.cpp` | `.cdbc 0.1` 文本、module envelope、debug 三节；`numberText` 用 `std::setprecision(15)`（Phase 14 目标） |
+| `vm-rs/src/bytecode.rs` | Phase 1 后为 `Program { constants, names, functions, entry: FuncId, debug_sources }`：`main` 统一为 `functions[0]`；11 个强类型 ID newtype（`RegId/LocalId/UpvalueId/GlobalId/FuncId/TypeId/VariantId/NativeId/BlockId/StringId/ConstId`）；`Function` 仍是线性指令表 + 绝对指令偏移跳转 |
+| `vm-rs/src/format.rs` | 文本 parser/formatter/verifier；`ARTIFACT_HEADER = "cdbc 0.1"`；`SUPPORTED_NATIVE_FUNCTIONS` 固定 29 名单；verifier 只做结构/索引/常量有限性/名字/函数表/native 名单/debug 元数据检查 |
+| `vm-rs/src/runtime.rs` | 运行时值：`StructValue` 字段是 `Vec<(String, Value)>`、`VariantValue` 是 `enum_name`+`variant_name` 字符串；`normalize_map_entries` 是 map 去重语义的唯一实现 |
+| `vm-rs/src/vm.rs`（10516 行） | 执行主循环；`prepare_function` 在 VM 侧扫描 `store_var` 建立 `slot_by_name`；`capture_environment` 复制整个名字环境；main 帧 `is_main=true`、`variable_plan=None`、closure 为空；globals 是名字键 `SharedEnvironment` + name-index cache；Ord witness 按 `__capability_ord_{Type}_{cmp}` 全局名查找 |
+| `vm-rs/src/link.rs` | module linker；`ModuleDependency.instruction_offset`（`at=N`）决定依赖 `main` 指令插入点，并整体重映射跳转/debug 偏移 |
+| `vm-rs/src/jit.rs` | 测试专用 x86-64 JIT，默认禁用、白名单、VM 本地、interpreter fallback；不参与 `.cdbc` 产物 |
+
+## 2. 当前 0.1 可观察行为契约（与 0.2 目标对照）
+
+| 维度 | 0.1 现状（本基线锁定） | 0.2 目标 |
+| --- | --- | --- |
+| 变量 | `load_var/store_var/assign_var nN`；VM `prepare_function` 扫描 `store_var` 建名字→slot；非 main 帧先 local slot、再名字键 closure、再 globals；main 帧全走 globals + name-index cache | `load_local/bind_local/set_local/load_upvalue/set_upvalue/load_global/init_global/set_global`，slot 全部由编译器分配（Phase 2） |
+| 闭包 | 0.2 显式 `upvalues`：`local/upvalue/global` 三种来源，按描述符在 `make_function` 时捕获 cell；只捕获实际引用的绑定；循环每次迭代独立 binding → `0 10 20`（Phase 3 已落地） | 同左 |
+| 返回 | 执行到指令末尾隐式返回 `nil`；`jump` 目标允许等于指令数（落到末尾） | 显式 `return_nil`，无隐式 fallthrough（Phase 4） |
+| 控制流 | 线性指令表 + 绝对指令偏移 `jump/jump_if_false/jump_if_true` | `BasicBlock` + `br/br_if` + terminator（Phase 4） |
+| 寄存器 | 未验证路径寄存器初始为 `Nil`，读未初始化寄存器不报错 | verifier definite-assignment，读未定义寄存器在执行前拒绝（Phase 5） |
+| 变量绑定 | 未定义名字在运行时报 `undefined variable`，verifier 不检查 | verifier definite-binding（Phase 5） |
+| struct | 字段 `Vec<(String, Value)>` 线性查找；`type_name: Option<String>` | `TypeId` + `FieldSlot`，`make_struct tN` / `struct_get tN, slot`（Phase 6） |
+| enum | 身份 = `enum_name` + `variant_name` 字符串 | `TypeId` + `VariantId`（Phase 6） |
+| native | `native_call nN`；VM 构造时按 name-index 解析固定 29 名 `native_specs`，热路径已索引化但 artifact 仍带名字 | `call_native iN` + import 表，`print` 移出核心 ISA（Phase 7） |
+| Ord | struct 比较在 VM 内按 `__capability_ord_{Type}_{cmp}`（含局部名 fallback）全局名查找 witness | TypeChecker/lowering 直接生成 witness call（Phase 12.3/8） |
+| 集合 | 通用 `index/assign_index/len/assert_array` 按 array/map/range 动态分派；`assert_array` 实际支持 array/range/map（名字误导）；`print` 是核心 opcode | `array_get/map_get/range_get`、`iter_init/iter_next`（Phase 9/10） |
+| map | `normalize_map_entries` 去重：**保留首次位置、后写覆盖**；`map[key]=value` 原位替换或追加。与 0.2 目标语义已一致 | 唯一键、稳定插入序、last write wins、更新不移动位置（Phase 11 只做文档/测试统一） |
+| f64 | `src/Value.cpp:349` 与 `src/BytecodeTextEmitter.cpp:43` 都用 `std::setprecision(15)`：`0.30000000000000004` → `0.3`、`1.0000000000000002` → `1` | `max_digits10`，文本 round-trip bitwise 相等（Phase 14） |
+| 入口 | `Program.main` 是特殊字段 | `Program { functions, entry: FuncId }`（Phase 1） |
+| module | `ModuleDependency.instruction_offset`（`at=N`）+ linker 插入依赖指令、修复偏移 | `module` 表 + `init_module mN` + 运行时初始化状态（Phase 12） |
+
+## 3. 发现的文档/实现不一致
+
+1. **map 重复键**：`docs/bytecode-instructions-zh.md:213-214` 写“重复键允许并存，
+   身份相等时后写键对应条目在后”；实现（`vm-rs/src/runtime.rs::normalize_map_entries`
+   、`execute_assign_index`）和 `USER_MANUAL.md:705` 都是“去重、保留首次位置、后写
+   覆盖、更新不移动位置”，且 `tests/golden/maps` 已锁定实现行为。计划 §15（Phase 11）
+   应统一文档并转正这一语义。
+2. **f64 文本精度**：发射端 15 位有效数字无法表达 17 位有效数字的 double；本阶段用
+   `tests/bytecode_emitter_f64_roundtrip_tests.cpp` 锁定“当前有损”，Phase 14 改为
+   `max_digits10` 后需同步刷新该测试与 `tests/golden/f64_roundtrip`。
+3. **`assert_array` 命名误导**：实际接受 array/range/map，本质是 `prepare_for_iteration`
+   （计划 §14 已确认，Phase 10 替换为 iterator protocol）。
+4. **Ord witness 字符串约定**：VM 仍在运行时按命名约定查找 struct 比较 witness，
+   属于“VM 承担 compiler lowering”的遗留，与 `USER_MANUAL.md:301` 的“struct 不参与
+   内置顺序比较”表层契约并存；计划 §12.3 要求移除。
+
+## 4. 基线测试覆盖映射
+
+计划 §4.2 清单逐项映射到测试位置（“新增”为本阶段产物）：
+
+| 计划项 | 覆盖位置 |
+| --- | --- |
+| local variable / assignment | `tests/golden/bytecode_variables`、`assignment` |
+| shadowing | `block_assignment_inner_shadow`、`closure_shadowing` |
+| nested closure | `closure_nested_recursion`、新增 `closure_nested_upvalue`（A→B→C + upvalue 修改） |
+| closure mutation | `closure_counter`、`closure_shared_cell`、新增 `closure_mutation`（Case A：`x=2` 后 `f()==2`） |
+| loop + closure capture | 新增 `closure_loop_capture`（Phase 0 锁定 0.1 的 `20 20 20`；Phase 3 刷新为 `0 10 20`） |
+| global variable | `function_scope_global` |
+| array / map | `array_*`、`maps` |
+| duplicate map key | `maps`、新增 `map_duplicate_keys`、`vm-rs/tests/bytecode_0_2_baseline.rs` |
+| struct field read/write | `structs`、`struct_field_assignment` |
+| enum variant | `adt_pattern_matching`、`generic_enums` |
+| native call | `native_stdlib_*` |
+| arithmetic / string concat / comparison | `arithmetic`、`strings`、`member_calls_strings`、`comparison`、artifact `string_ordering` |
+| function call / recursive call | `function_call_add`、`function_recursion` |
+| module dependency | `adt_module_import`、`module_exports`、`tests/bytecode_module_artifact_tests.py` |
+| jump | `bytecode_control_flow`、artifact `control_flow` |
+| invalid bytecode verification | `tests/run_malformed_tests.py` + `malformed_cases.json`、`vm-rs/src/format.rs` 单测、新增 `bytecode_0_2_baseline.rs`（未定义变量/寄存器当前推迟到运行期） |
+| debug metadata | `tests/module_debug_metadata_tests.py`、`tests/debugger_tests.py` |
+| f64 round-trip | 新增 `f64_roundtrip` golden、`tests/bytecode_emitter_f64_roundtrip_tests.cpp`、`bytecode_0_2_baseline.rs`（parser 无损侧） |
+
+## 5. VERSION 匹配与 0.2 版本协调清单
+
+当前各版本面（Phase 0 全部保持不动）：
+
+| 版本面 | 当前值 | 位置 |
+| --- | --- | --- |
+| 项目版本 | `0.1.0` | `VERSION`（`master`/`0.1` 分支）；另有 `0.1.1` 发布分支 + 不可变 tag `v0.1.1`（`182edab8`，未并入 master） |
+| crate 版本 | `0.1.0` | `vm-rs/Cargo.toml` |
+| 库 API 版本 | `0.1` | `vm-rs/src/lib.rs::LIBRARY_API_VERSION` |
+| artifact 版本/头 | `0.1` / `cdbc 0.1` | `vm-rs/src/format.rs` |
+| CLI 版本串 | `compiler-design-vm 0.1.0` | `vm-rs/src/main.rs::HELP` |
+| 兼容矩阵契约 | compiler `0.1.0`、artifact `0.1`、crate `0.1.0`、api `0.1`、`cdbc-cache 0.2` schema 4、固定 native 名单 | `docs/decisions/x1-compiler-vm-compatibility-001.json` |
+| 矩阵校验器 | 硬编码断言 artifact/api 必须保持 `0.1`，并断言矩阵 compiler 版本 == `VERSION` | `tests/vm_compatibility_matrix.py` |
+| 库测试断言 | `LIBRARY_API_VERSION == "0.1"`、`ARTIFACT_FORMAT_VERSION == "0.1"`、错误文本含 `cdbc 0.1` | `vm-rs/tests/library_api.rs` |
+
+`.cdbc 0.2` 真正落地时，以下内容必须在同一个 commit 内联动更新，否则
+`tests/vm_compatibility_matrix.py`、`tests/cdbc_contract_audit.py` 与
+`vm-rs/tests/library_api.rs` 会立刻红：
+
+1. `VERSION` → `0.2.0`（同时按 `docs/versioning.md` 打不可变 tag `v0.2.0`）；
+2. `vm-rs/src/format.rs`：`ARTIFACT_FORMAT_VERSION="0.2"`、`ARTIFACT_HEADER="cdbc 0.2"`；
+3. `vm-rs/src/lib.rs`：`LIBRARY_API_VERSION`（若门面变化）；
+4. `vm-rs/Cargo.toml` → `0.2.0`；
+5. `vm-rs/src/main.rs` HELP 版本串；
+6. `docs/decisions/x1-compiler-vm-compatibility-001.json` 的 `version_contract` 与新
+   决策记录（X1 规则明确：“successor artifact version … requires a separate
+   decision record”）；
+7. `tests/vm_compatibility_matrix.py` 中的硬编码 `0.1` 断言；
+8. `vm-rs/tests/library_api.rs` 中的版本断言与 header 错误文本；
+9. 所有 `cdbc 0.1` 文档与测试 fixture 头（`docs/bytecode-*`、`tests/bytecode_artifacts/*`）；
+10. `docs/versioning.md` 的 0.2 发布行说明。
+
+Phase 0 不改任何版本号：本阶段不改变 artifact 契约，提前改 `VERSION` 会与 0.1
+artifact 版本、X1 矩阵校验器及不可变 tag 语义冲突。
+
+## 6. 后续
+
+## 7. Phase 1 落地记录
+
+Phase 1（计划 §5）已按“仅重构数据模型、不改 VM 执行语义”完成：
+
+- `Program { constants, names, functions: Vec<Function>, entry: FuncId,
+  debug_sources }`，不再有特殊 `main` 字段；文本 `main` 段 ↔ 统一函数 `f0`，文本
+  `fK` ↔ 统一函数 `f(K+1)`；parser/formatter 保持 `.cdbc 0.1` 文本字节级稳定。
+- `Function { id: FuncId, name, arity, local_count, upvalues, params, registers,
+  instructions, locations }`；`local_count` 与 `upvalues: Vec<UpvalueDesc>` 为 0.2
+  预留骨架（当前恒为 0/空），`UpvalueSource::{Local,Upvalue}` 已定义。
+- `Instruction::MakeFunction` 引用 `FuncId`；其余操作数仍为 `usize`，按计划的
+  Phase 2/6/7/9 在各 lowering 阶段逐步换为 `LocalId/StringId/ConstId` 等。
+- verifier 增加 `entry == FuncId(0)` 与 `function.id == 表位置` 检查。
+
+与计划 §5.3 建议形态的差异（以实际代码为准并记录）：没有引入独立的
+`body: FunctionBody` 包装——`FunctionBody` 类型整体删除，`Function` 直接持有线性
+`registers/instructions/locations`。原因：`main` 统一后不再需要第二个 body 载体，
+保留 `FunctionBody` 只会重复三个字段；Phase 4 引入 `BasicBlock` 时会再把指令表
+替换为 block 容器。同样，当前 `.cdbc 0.1` 文本 envelope 下 verifier 强制
+`entry == f0`，真正的任意入口编号留给 Phase 12 的 module 模型。
+
+回归：`cargo test` 全绿（lib 148 + bin 3 + 集成 6/2/7/13）、bytecode artifact
+124、module artifact/cache、malformed 107、Rust VM parity 740、golden 784、
+ctest 47/47、verification 1820/1820、VM 兼容矩阵 7 格，全部通过。
+
+下一阶段是 Phase 2（变量 lowering：`load_local/bind_local/set_local` 等数值
+slot 指令，编译器分配 slot，VM 不再扫描名字），不提前做 closure/CFG/typed
+opcode。
+
+## 8. Phase 2 落地记录
+
+Phase 2（计划 §6，变量 lowering）已完成：编译器在发射前完成
+symbol → local/upvalue/global 的数值 slot 分配，VM 热路径不再按名字解析。
+
+- C++ 侧（`src/BytecodeCompiler.cpp`）在 IR→Bytecode 之间新增 slot 分配：
+  `main` 的顶层绑定按声明序分配到 `gN`（跨模块按 resolvedName 去重），函数参数
+  `l0..l(arity-1)`、函数内局部按声明序接续，嵌套函数捕获的外层绑定分配到 `uN` 并
+  生成 `upvalue uN = local lM / upvalue uM` 描述。为支撑该 pass，`IRFunction` 新增
+  `id/parentId/parameterBindingIds`，并修复了首个人工绑定 id 恰好等于
+  `SnapshotId::invalidValue` 的既有缺陷与 O1 优化后丢失函数元数据的问题。
+- 文本契约升为 `.cdbc 0.2`：新增
+  `load_local/bind_local/set_local/load_upvalue/set_upvalue/load_global/init_global/set_global`，
+  `make_function` 按函数头 upvalue 声明精确捕获，模块与链接程序都带 `globals:`
+  区段（`gN = nK`），Rust 链接器按名字去重并重定位跨模块全局引用。
+- Rust VM：`FunctionValue`/帧携带数值 upvalue cell 向量，数值全局表 + 名字映射
+  （供 trace/debug 显示）；JIT 新增 `LoadLocal/LoadUpvalue` helper 保持 scalar 子集
+  兼容。旧 `cdbc 0.1` 文本与 `load_var/store_var/assign_var` 保留为构造期兼容路径。
+- 版本联动（VERSION 匹配）：`VERSION=0.2.0`、`Cargo.toml=0.2.0`、
+  `LIBRARY_API_VERSION="0.2"`、`ARTIFACT_FORMAT_VERSION="0.2"`、CLI HELP
+  `0.2.0`、X1 矩阵 JSON 与 `tests/vm_compatibility_matrix.py` 同步到 0.2（保留
+  cdbc-cache 0.2 schema 4 与固定 native 名单）。
+
+与计划 §6.1 的差异（记录在案）：未使用单一 `store_local`，而是
+`bind_local`（声明/新建 cell）与 `set_local`（赋值/更新 cell）区分，与计划一致；
+`load_upvalue/set_upvalue` 与 `make_function` 的按描述符捕获提前落地（计划的
+Phase 3 只做“精确 free-variable 捕获”与循环逐次绑定语义的进一步收紧）。
+
+回归：cargo test 全绿、bytecode artifact 124/124、module artifact/cache、
+malformed 107/107、Rust VM parity 740/740、golden 784/784、ctest 47/47、
+verification 1820/1820、VM 兼容矩阵 7 格、`git diff --check` 干净。
+
+下一阶段是 Phase 3（closure/upvalue 精确捕获 + 循环逐次绑定），或按计划优先级
+先做 Phase 4（BasicBlock + terminator）。
+
+## 9. Phase 3 落地记录
+
+Phase 3（计划 §7，closure/upvalue）完成：闭包捕获统一为数值 upvalue，循环逐次绑定。
+
+- `UpvalueSource` 增加 `Global(GlobalId)`：函数引用顶层绑定不再直接
+  `load_global/set_global`，而是 `upvalue uN = global gM` + `load_upvalue/set_upvalue`。
+  `make_function` 在创建点捕获当时的全局 cell；`init_global`（声明/重新绑定）替换
+  槽内的 cell，`set_global`（赋值）原地更新同一 cell。顶层前向引用本身是类型错误，
+  因此创建点捕获永远安全。
+- 语义效果（计划 §7.4/§7.5）：Case A `x=1; f; x=2; f()==2` 保持；Case B 循环捕获从
+  `20 20 20` 变为 `0 10 20`；Case C 多层 upvalue 链保持；Case D 未使用变量不进入
+  upvalue 列表（新增 `closure_unused_not_captured` fixture 锁定）。
+- 链接器对函数 upvalue 描述符中的 `global gM` 做跨模块重定位；verifier 检查
+  `global gM` 源在 `program.globals` 范围内。
+- 计划 §7.3 的 `make_closure` 更名暂缓：它与 0.1 兼容文本的
+  `make_function` round-trip 冲突，且按描述符捕获的实质已在 Phase 2 落地；更名作为
+  独立的低成本 rename 后续处理。
+
+回归：cargo test 全绿、bytecode artifact 124/124、Rust VM parity 742/742、
+golden 787/787、ctest 47/47、malformed 107/107、verification 1825/1825、
+VM 兼容矩阵 7 格。
+
+下一阶段按计划是 Phase 4（BasicBlock + terminator，取消隐式 return），之后接
+Phase 5（verifier 2.0）。
+
+## 10. Phase 4 落地记录
+
+Phase 4（计划 §8，BasicBlock + terminator）完成：控制流改为显式 block。
+
+- 文本为 `block bN:` 区段 + 显式 terminator（`br bN` / `br_if rC, bT, bF` /
+  `return rV` / `return_nil`）；`jump/jump_if_*` 在 0.1 兼容读取路径保留。
+- C++ 发射端把 IR 跳转偏移拆成 block、把 `jump`→`br`、`jump_if_*`→`br_if`，
+  并为 fallthrough 补显式 `br`、为落到函数末尾补 `return_nil`；无隐式 return。
+- 与计划的差异（记录在案）：内部仍是扁平指令流 + `BlockStart` 标记（VM 构造期
+  建 BlockId→偏移表），而不是 `Vec<BasicBlock>` 结构体；`make_closure` 更名继续
+  暂缓。模块产品的 `at=N` 偏移在拆块后重映射到块边界，链接器跨模块重编号 block
+  ID、把依赖模块末尾的 `return_nil` 改为落到下一模块的 `br`。
+- JIT：单 block 函数仍可编译（`BlockStart` 为 no-op，首个 `return` 之后按不可达
+  尾忽略）；含 `br/br_if/return_nil` 的函数回退解释器。
+
+回归：cargo test 全绿、bytecode artifact 124/124、module artifact/cache、
+malformed 107/107、Rust VM parity 742/742、golden 787/787、ctest 47/47、
+VM 兼容矩阵 7 格、`git diff --check` 干净。
+
+下一阶段是 Phase 5（verifier 2.0：definite-assignment / definite-binding /
+CFG 校验）。
+
+## 11. Phase 5 落地记录
+
+Phase 5（计划 §9，verifier 2.0）完成：0.2 块体在执行前做完整静态校验。
+
+- CFG 校验：block ID 顺序、每个 block 以 terminator 结束、`br/br_if` 目标合法。
+- 寄存器 definite-assignment：以块为单位的 IN/OUT 前向数据流（入口块 IN 为空、
+  不可达块 IN 为全量），读取未定义寄存器直接拒绝。
+- local definite-binding：参数默认绑定，`load_local/set_local` 要求所有前驱
+  路径都有 `bind_local`。
+- 闭包/native：`upvalue uN = global gM` 来源越界拒绝；native 调用按
+  `NATIVE_SPECS` 的 min/max arity 在验证期检查；block 体内出现旧
+  `jump/jump_if_*` 拒绝。
+- 兼容边界：只有含 `BlockStart` 的 0.2 块体走新校验；0.1 线性体保持原有宽松
+  校验（Phase 0 基线行为不受影响）。8 类 negative 用例作为 Rust 单测新增
+  （undefined register / unbound local / invalid block / missing terminator /
+  invalid global upvalue source / invalid native arity / invalid function id /
+  legacy jump in block body）。
+- 顺手修复 Phase 4 遗留：拆块后 `at=N` 依赖偏移的重映射在 terminator 插入之前
+  计算导致指向错误位置，以及 `rewrittenIr` 与 `rewritten` 长度不一致引发的
+  堆越界（re-export 模块发射段错误）。
+
+回归：cargo test 全绿（含 8 个新 negative 用例）、bytecode artifact 124/124、
+module artifact/cache、malformed 107/107、Rust VM parity 742/742、
+golden 787/787、ctest 47/47、VM 兼容矩阵 7 格。
+
+Milestone B（Phase 4 + 5，真正 CFG + verifier）完成。下一阶段是 Phase 6
+（Type/Layout 表：`TypeId`/`VariantId` + 字段槽/payload 下标）。
+
+## 12. Phase 6 落地记录
+
+Phase 6（计划 §10，Type/Layout 表）完成：struct/enum 不再按字符串身份与线性查找。
+
+- `types:` 区段携带运行时布局（struct 字段名、enum 变体名与 payload 数）；
+  字段/变体名仅用于 debug/dump/值显示，身份与访问全部数值化。
+- 新指令：`make_struct tN`、`struct_get rO, tN, slot`、`struct_set rO, tN, slot, rV`、
+  `make_variant tN, vN`、`is_variant rV, tN, vN`、`variant_get rV, tN, vN, idx`。
+- 编译器在 IR 层携带 struct/enum 布局名（`IRStructLayout`/`IREnumLayout`，跨模块
+  预扫描声明），BytecodeCompiler 按声明序分配 `TypeId`/`VariantId` 并把字段访问降为
+  数值 slot（支持限定名 `lib.Box` 回退与构造字面量重排为规范字段序）。
+- 动态接收者（`id(box).value` 这类 unknown 类型）继续使用旧 `field/assign_field`
+  名字指令，struct 检查推迟到运行时，保持既有运行时错误语义。
+- 链接器按名字去重合并 `types:` 并重定位 `TypeId`；verifier 校验 type/variant id、
+  field slot 与 payload 下标。
+
+回归：cargo test 全绿、bytecode artifact 124/124、module artifact/cache、
+malformed 107/107、Rust VM parity 742/742、golden 787/787、ctest 47/47、
+verification 1825/1825、VM 兼容矩阵 7 格。
+
+下一阶段是 Phase 7（Native Import 表：`call_native iN` + 删除核心 `print` opcode）。
+
+## 13. Phase 7 落地记录
+
+Phase 7（计划 §11，Native Import 表）完成：native 调用按导入索引分派，`print`
+不再是核心 opcode。
+
+- `native_imports:` 区段（`iN = "名字" abi=1`）位于 `types:` 与 `main` 之间；
+  核心语法由 `native_call nN` 改为 `call_native iN`。
+- `print` 语句在 BytecodeCompiler 降为 `call_native i_print [rV]`：复用一条
+  scratch 目标寄存器（含 print 的函数/主程序额外多分配一个寄存器），print 导入
+  与其它 native 一起按首次使用顺序 intern 进导入表。
+- Rust VM：`NativeSpec` 新增 `print`（元数 1..1、返回 nil、非回调）；构造期把
+  `native_imports` 逐项解析为内部 spec 表，`CallNative` 热路径按 `NativeId` 下标
+  分派，不再做字符串查找。print 走专用执行器，保留输出字节预算、取消、协作任务
+  输出归因与 trace Output 事件，行为与旧 `Print` 指令一致。
+- 兼容边界：旧 `cdbc 0.1` 的 `native_call nN` 与 `print rV` 仍在读取路径保留并按
+  旧名字表路径执行；0.2 发射端不再产生这两个 opcode。
+- verifier：导入名必须属于注册集合、`abi=1`、不重复；`call_native iN` 越界拒绝；
+  元数在验证期按导入名检查（0.2 块体路径）。
+- 链接器：跨模块按名字去重合并 `native_imports`，并重映射 `NativeId`。
+- 契约更新：`docs/decisions/x1-compiler-vm-compatibility-001.json` 升至
+  `x1-2026-08-15-r3`，native ABI 改为 `serialized: true` / `abi: 1`，注册表加
+  `print`，`native.fixed_registry` 单元格与规则同步改写；bytecode 文本格式与中文
+  指令参考同步更新。
+- JIT：`CallNative` 与旧 `NativeCall` 一样是边界/回退，按导入名区分回调边界；
+  print 保持不可 JIT 并回退解释器。
+
+回归：cargo test 全绿（新增 native import 解析/拒绝、协作 print 归因、JIT 回退
+用例）、bytecode artifact 124/124、module artifact/cache、malformed 107/107、
+Rust VM parity 742/742、golden 787/787、ctest 47/47、verification 1825/1825、
+VM 兼容矩阵 7 格、verification matrix 10 cells / 5 workloads。
+
+下一阶段是 Phase 8（typed arithmetic/comparison opcodes）。
+
+## 14. Phase 8 落地记录
+
+Phase 8（计划 §12，Typed / Specialized Opcodes）完成：已知类型的算术与有序比较
+不再走运行时类型分派，结构体比较也不再按全局名字查找 Ord 见证。
+
+- 新 opcode：`add_num`、`sub_num`、`mul_num`、`div_num`、`neg_num`、
+  `concat_str`；`lt_num/le_num/gt_num/ge_num`、`lt_str/le_str/gt_str/ge_str`。
+- IRCompiler 依据 DeclarationIndex 的 typed-expression 元数据选择专用 op：
+  `+` 按结果类型选 `add_num`/`concat_str`，`- * /` 按 number 结果选
+  `sub_num/mul_num/div_num`，有序比较按左操作数类型选 `*_num`/`*_str`；泛型
+  `T: Ord` 函数体与旧 0.1 工件保留动态 `add/negate/less/...` 兼容路径。
+  compound assignment 与 for-in 的索引比较/自增也固定使用数值专用 op。
+- TypeChecker 现在为字面量、一元与分组表达式记录 typed-expression 元数据，
+  使嵌套/括号/字面量操作数也能可靠选择专用 op。
+- Rust VM：新增 14 条单类型指令，解释器热路径直接做 f64/字符串运算与比较；
+  `equal/not_equal` 保持既有运行时相等语义。
+- 12.3 Ord witness：删除 VM 中 `__capability_ord_*` 全局名见证查找，动态有序比较
+  只接受 number/string；结构体不可有序比较，编译器在类型检查阶段已拒绝。
+- JIT：14 条新指令复用现有 RuntimeHelper（语义与解释器一致），属于 JIT 白名单内的
+  可编译操作；`concat_str`/typed 比较同样落入既有 helper 分派。
+- verifier/linker：新指令按二元/一元形状校验、寄存器 def/read 分析，并在模块
+  链接时重定位寄存器。
+
+回归：cargo test 全绿（新增 typed op 解析/执行用例）、bytecode artifact 124/124、
+module artifact/cache、malformed 107/107、Rust VM parity 742/742、golden 787/787、
+ctest 47/47、verification 1825/1825、VM 兼容矩阵 7 格、
+verification matrix 10 cells / 5 workloads。
+
+下一阶段是 Phase 9（集合专用指令：array/map/range/string 的专用 index/len）。
+
+## 15. Phase 9 落地记录
+
+Phase 9（计划 §13，集合专用指令）完成：静态已知集合类型的索引、赋值与长度不再走
+多类型动态分派。
+
+- 新 opcode：`array_get`、`array_set`、`map_get`、`map_set`、`range_get`、
+  `len_array`、`len_map`、`len_range`、`len_str`；`range_set` 不存在（range 不可写）。
+- IRCompiler 依据 `IndexOperationRecord.collectionType` 与 typed-expression 元数据
+  选择专用 op：数组→`array_get/array_set/len_array`，map→`map_get/map_set/len_map`，
+  range→`range_get/len_range`，字符串→`len_str`；for-in 降级也按 iterable 静态类型
+  选择 `array_get`/`range_get` 与 `len_array`/`len_range`（map 仍先经 `assert_array`
+  快照成数组）。index/field compound assignment 固定走 `array_get/array_set`。
+- Rust VM：10 条新指令在类型断言后复用既有数组/map/range/字符串执行路径，保留
+  既有运行时错误文本（`array index must be number/integer/out of range`、
+  `map key not found`、`range index out of bounds`、Unicode 标量长度）与
+  map 插入的元素预算计费。
+- 兼容边界：旧 `cdbc 0.1` 的 `index`、`assign_index`、`len` 仍在兼容读取路径保留，
+  仅在集合类型未知或旧工件时使用；0.2 发射端不再发射这些通用形式。
+- verifier/linker：新指令按 get/set/len 形状校验、寄存器 def/read 分析，并在模块
+  链接时重定位寄存器；JIT 保持集合操作为解释器回退（与旧 index/len 一致）。
+
+回归：cargo test 全绿（新增 typed collection 解析/执行用例）、
+bytecode artifact 124/124、module artifact/cache、malformed 107/107、
+Rust VM parity 742/742、golden 787/787、ctest 47/47、verification 1825/1825、
+VM 兼容矩阵 7 格、verification matrix 10 cells / 5 workloads。
+
+下一阶段是 Phase 10（Iterator Protocol：用 `iter_init`/`iter_next` 替换
+`assert_array`）。
+
+## 16. Phase 10 落地记录
+
+Phase 10（计划 §14，Iterator Protocol）完成：for-in 统一走 VM 内部迭代器，
+`assert_array` 从 0.2 核心 ISA 移除。
+
+- 新 opcode：`iter_init rIter, rC`、`iter_has rHas, rIter`、`iter_next rValue, rIter`。
+- 运行时新增内部 `Value::Iterator`（不暴露为源语言值）：数组迭代器在进入时快照
+  **长度**但迭代期间读活数组元素；map 迭代器快照插入序键数组；range 迭代器保持
+  不可变。`iter_has` 纯查询，`iter_next` 推进位置；越界报 `iterator exhausted`，
+  非可迭代对象沿用 `for-in expects array, range, or map`。
+- IRCompiler 把 for-in 降为 `iter_init` + 循环块内的 `iter_has`/`iter_next`：
+  continue 回到 `iter_has`，break 指向循环出口；`item` 绑定仍以 nil 初始化并被
+  迭代体 assign，闭包捕获与旧降级一致。array length snapshot、map key snapshot、
+  range 不变性的 mutation-during-iteration 测试全部通过。
+- GC：`collect_value_references` 追踪迭代器持有的数组快照/活数组元素存储；
+  迭代器位置是未追踪的共享 cell，随值生命周期释放。
+- 兼容边界：C++ IR/Bytecode 不再发射 `assert_array`；Rust 解析/执行端保留
+  `assert_array` 作为旧工件读取路径。verifier/linker 按单操作数形状校验与重定位
+  新指令；JIT 保持迭代器操作为解释器回退。
+
+回归：cargo test 全绿（新增 iterator 解析与 snapshot 语义用例）、
+bytecode artifact 124/124、module artifact/cache、malformed 107/107、
+Rust VM parity 742/742、golden 787/787、ctest 47/47、verification 1825/1825、
+VM 兼容矩阵 7 格、verification matrix 10 cells / 5 workloads。
+
+下一阶段是 Phase 13（direct calls：`call_direct fN`，静态已知目标不再走动态
+call 分派）。
+
+## 17. Phase 13 落地记录
+
+Phase 13（计划 §17，Direct Call）完成：编译器证明无捕获自由变量的函数调用按函数表
+索引直接分派，不再经函数值间接层。
+
+- 新 opcode：`rD = call_direct fN [args...]`。IRCompiler 依据 `CallTargetRecord`
+  与 `captureMetadata` 判定：直接 callee、目标为同模块 `FunctionStmt`、未被 import、
+  且捕获集合为空时发射 `CallDirect`；否则保留 `call`。前向引用/递归用 pending patch
+  在编译完成后把占位操作数补成 IR 函数索引。
+- Rust VM：直接调用构造轻量 `FunctionValue`（空 closure、无运行时元素计费、不复制
+  名字环境），upvalue 仍按描述符解析——`global` 来源走全局 cell，local/upvalue 捕获
+  只出现在未验证工件并保持运行时检查。协作调度路径返回与 `call` 相同的
+  `CallRequest`，任务归因/量程语义不变。
+- verifier：`call_direct` 检查 FuncId 越界、元数匹配，且目标不得有 local/upvalue
+  来源的 upvalue（global 来源允许，因为它不是自由变量捕获）。
+- 修复：`irEffectSummary(CallDirect)` 补齐 `readsMemory/writesMemory/mayTrap/calls`，
+  避免 O1 死代码消除误删会 trap 的直接调用；optimizer_cli 的跳转偏移断言随
+  call_direct 的指令数变化更新为 `jump 0009`。
+- JIT：`CallDirect` 与 `Call` 一样是调用边界回退（新增 `DirectCall` 回退原因），
+  语义与解释器一致。
+
+回归：cargo test 全绿（新增 call_direct 解析/验证/执行用例）、
+bytecode artifact 124/124、module artifact/cache、malformed 107/107、
+Rust VM parity 742/742、golden 787/787、ctest 47/47、verification 1825/1825、
+VM 兼容矩阵 7 格、verification matrix 10 cells / 5 workloads。
+
+下一阶段是 Phase 12（module init 重新设计：模块产品不再按 `at=N` 指令偏移插入）。
+
+## 18. Phase 12 落地记录
+
+Phase 12（计划 §16，Module System 重构）完成：移除 dependency `at=N` 与 `main`
+指令拼接，改为模块初始化函数 + `init_module` 状态机。
+
+- 模块封套：`init = fN` 命名初始化函数；`dependencies` 不再携带 `at=`。模块产品的
+  `main` 为空，顶层语句进入 `__module_init` 函数，并在每个依赖的源位置发射
+  `init_module mN`，保持原有交错初始化顺序（如 module_import_order 的
+  `before/lib/after`）。
+- 新 opcode：`init_module mN`（无目标寄存器）。链接程序新增 `modules: mN = fK`
+  表；合成 `main` 对每个入口模块发射 `init_module`，模块初始化函数先初始化依赖。
+  VM 用 `Uninitialized/Initializing/Initialized` 状态机保证每模块只初始化一次，
+  重入环报 `cyclic module initialization`。
+- 链接器重写为表合并：常量/名字/type/native import/global 去重与重映射、函数表
+  ID 重定位（含 `make_function`/`call_direct` 的 +1 主函数偏移）、debug 源重定向；
+  不再拼接指令流、不再修复跳转/调试偏移。模块初始化函数标记 `moduleInit`，其
+  全局访问直接走 `load_global/init_global/set_global`（不用 upvalue 捕获时机），
+  普通闭包仍保留捕获时 cell 语义（closure_loop_capture 的 per-iteration 行为不变）。
+- IR：`IRModuleDependency.instructionOffset` 变为遗留字段；SSA/CFG 不再以依赖偏移
+  为锚点（`init_module` 本身有副作用），O0/O1 均原样保留依赖列表。模块级方法绑定
+  改为 Module/Exported 存储，避免落入初始化函数局部槽。
+- 兼容边界：`assert_array` 读取路径保留；链接程序 globals 表按去重名重建，缺失
+  global cell 的运行时检查不变。debug 源重定向无需整体偏移修复；O1 初始化函数尾部
+  合成指令仍可能无源码位置，debugger 测试改为校验导入函数的源码映射与输出。
+
+回归：cargo test 全绿（新增 cycle link、module init 状态机用例）、
+bytecode artifact 124/124、module artifact/cache、malformed 107/107、
+Rust VM parity 742/742、golden 787/787、ctest 47/47、verification 1825/1825、
+VM 兼容矩阵 7 格、verification matrix 10 cells / 5 workloads。
+
+下一阶段是 Phase 11（map 语义形式化）。
+
+## 19. Phase 11 落地记录
+
+Phase 11（计划 §15，Map 语义正式修订）完成：把 map 的形式语义写成文档并加直接
+单测锁定，消除文档与实现的差异。
+
+- 正式契约：键按运行时相等唯一；迭代保持插入顺序；最后一次写入生效；更新既有键
+  不改变其迭代位置。
+- 逐项核对实现与契约一致：`normalize_map_entries` 构造字面量时去重并保留首次
+  位置；`map_set` 原地更新或追加；`remove` 删除条目；`keys`/`values`/for-in 按
+  插入顺序；`merge` 先追加右侧再统一去重（重叠键原地更新、新键追加）；map 按引用
+  身份相等；`print`/dump 按插入顺序输出。
+- 新增 `map_semantics_are_unique_ordered_and_last_write_wins` Rust 单测，直接构造
+  `{a:1,b:2,a:3}` + `map_set` + `merge` 断言 `map{a: 30, b: 3, c: 2}`；既有
+  `map_duplicate_keys`/`map_keys_values`/`map_merge`/`map_for_in` 黄金用例继续覆盖
+  语言层路径。
+- 英文/中文字节码参考补充 map 形式契约段落。
+
+回归：cargo test 全绿（新增 map 契约用例）、其余门禁在 Phase 12 之后保持一致
+（bytecode artifact 124/124、Rust VM parity 742/742、golden 787/787、
+ctest 47/47、verification 1825/1825、VM 兼容矩阵 7 格）。
+
+下一阶段是 Phase 14（f64 `max_digits10` 精度修复）。
+
+## 20. Phase 14 落地记录
+
+Phase 14（计划 §18，f64 文本精度修复）完成：`.cdbc` 的 `number` 常量逐位往返。
+
+- `BytecodeTextEmitter::numberText` 与 C++ 调试打印（`Value::valueToString`）从
+  `std::setprecision(15)` 改为
+  `std::setprecision(std::numeric_limits<double>::max_digits10)`（17 位）。
+- 更新 `bytecode_emitter_f64_roundtrip_tests`：17 位小数与 1 的邻域值改为断言
+  **逐位相等**（原先断言会丢失精度）。
+- 黄金工件：`native_stdlib_math` 的 ir/bytecode 常量文本更精确
+  （`1.9 → 1.8999999999999999` 等）；`f64_roundtrip` 的 `run.out` 现在原样输出
+  `0.30000000000000004`/`1.0000000000000002`/`1.3000000000000003`，不再静默漂移。
+
+回归：bytecode emitter round-trip 单测通过、golden 787/787、bytecode artifact
+124/124、Rust VM parity 742/742、ctest 47/47、verification 1825/1825、
+malformed 107/107、VM 兼容矩阵 7 格、verification matrix 10 cells / 5 workloads。
+
+至此执行计划的全部 ISA 阶段（Phase 0–10、13、12、11、14）均已落地。

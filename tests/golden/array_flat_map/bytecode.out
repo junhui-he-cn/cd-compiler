@@ -1,63 +1,85 @@
-main registers=19
-0000  b0 = constant #0 1
-0001  b1 = constant #1 2
-0002  b2 = array [b0, b1]
-0003  store_var @0 values#0, b2
-0004  b3 = load_var @1 values#0
-0005  b4 = make_function $0 <lambda>/1
-0006  b5 = native_call @4 flatMap [b3, b4]
-0007  print b5
-0008  b6 = load_var @5 values#0
-0009  b7 = make_function $1 <lambda>/1
-0010  b8 = native_call @7 flatMap [b6, b7]
-0011  print b8
-0012  b9 = constant #6 3
-0013  b10 = constant #7 4
-0014  b11 = array [b9, b10]
-0015  store_var @8 snapshot#3, b11
-0016  b12 = load_var @9 snapshot#3
-0017  b13 = make_function $2 <lambda>/1
-0018  b14 = native_call @13 flatMap [b12, b13]
-0019  print b14
-0020  b15 = load_var @14 snapshot#3
-0021  print b15
-0022  b16 = array []
-0023  b17 = make_function $3 <lambda>/1
-0024  b18 = native_call @16 flatMap [b16, b17]
-0025  print b18
+native_import i0 = flatMap abi=1
+native_import i1 = print abi=1
+native_import i2 = push abi=1
+main registers=20
+0000  block
+0001  b0 = constant #0 1
+0002  b1 = constant #1 2
+0003  b2 = array [b0, b1]
+0004  init_global g0, b2
+0005  b3 = load_global g0
+0006  b4 = make_function $0 <lambda>/1
+0007  b5 = call_native i0 [b3, b4]
+0008  b19 = call_native i1 [b5]
+0009  b6 = load_global g0
+0010  b7 = make_function $1 <lambda>/1
+0011  b8 = call_native i0 [b6, b7]
+0012  b19 = call_native i1 [b8]
+0013  b9 = constant #6 3
+0014  b10 = constant #7 4
+0015  b11 = array [b9, b10]
+0016  init_global g1, b11
+0017  b12 = load_global g1
+0018  b13 = make_function $2 <lambda>/1
+0019  b14 = call_native i0 [b12, b13]
+0020  b19 = call_native i1 [b14]
+0021  b15 = load_global g1
+0022  b19 = call_native i1 [b15]
+0023  b16 = array []
+0024  b17 = make_function $3 <lambda>/1
+0025  b18 = call_native i0 [b16, b17]
+0026  b19 = call_native i1 [b18]
+0027  return_nil
 
 function $0 <lambda>/1 registers=6
-0000  b0 = load_var @2 value#1
-0001  b1 = load_var @3 value#1
-0002  b2 = constant #2 10
-0003  b3 = multiply b1, b2
-0004  b4 = array [b0, b3]
-0005  return b4
-0006  b5 = constant #3 nil
-0007  return b5
+0000  block
+0001  b0 = load_local l0
+0002  b1 = load_local l0
+0003  b2 = constant #2 10
+0004  b3 = mul_num b1, b2
+0005  b4 = array [b0, b3]
+0006  return b4
+0007  block
+0008  b5 = constant #3 nil
+0009  return b5
+0010  block
+0011  return_nil
 
 function $1 <lambda>/1 registers=5
-0000  b0 = load_var @6 value#2
-0001  b1 = constant #4 1
-0002  b2 = add b0, b1
-0003  b3 = array [b2]
-0004  return b3
-0005  b4 = constant #5 nil
-0006  return b4
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #4 1
+0003  b2 = add_num b0, b1
+0004  b3 = array [b2]
+0005  return b3
+0006  block
+0007  b4 = constant #5 nil
+0008  return b4
+0009  block
+0010  return_nil
 
 function $2 <lambda>/1 registers=6
-0000  b0 = load_var @10 snapshot#3
-0001  b1 = constant #8 9
-0002  b2 = native_call @11 push [b0, b1]
-0003  b3 = load_var @12 value#4
-0004  b4 = array [b3]
-0005  return b4
-0006  b5 = constant #9 nil
-0007  return b5
+upvalue u0 = global g1
+0000  block
+0001  b0 = load_upvalue u0
+0002  b1 = constant #8 9
+0003  b2 = call_native i2 [b0, b1]
+0004  b3 = load_local l0
+0005  b4 = array [b3]
+0006  return b4
+0007  block
+0008  b5 = constant #9 nil
+0009  return b5
+0010  block
+0011  return_nil
 
 function $3 <lambda>/1 registers=3
-0000  b0 = load_var @15 value#5
-0001  b1 = array [b0]
-0002  return b1
-0003  b2 = constant #10 nil
-0004  return b2
+0000  block
+0001  b0 = load_local l0
+0002  b1 = array [b0]
+0003  return b1
+0004  block
+0005  b2 = constant #10 nil
+0006  return b2
+0007  block
+0008  return_nil

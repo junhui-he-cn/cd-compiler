@@ -17,7 +17,7 @@ function $0 <lambda>(acc#1, value#2)
 0002  v2 = native_call @3 push(v0, v1)
 0003  v3 = load_var @4 acc#1
 0004  v4 = constant #1 1
-0005  v5 = add v3, v4
+0005  v5 = add_num v3, v4
 0006  return v5
 0007  v6 = constant #2 nil
 0008  return v6

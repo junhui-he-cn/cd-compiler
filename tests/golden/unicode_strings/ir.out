@@ -2,10 +2,10 @@ IR
 0000  v0 = constant #0 "你🙂"
 0001  store_var @0 text#0, v0
 0002  v1 = load_var @1 text#0
-0003  v2 = len v1
+0003  v2 = len_str v1
 0004  print v2
 0005  v3 = load_var @2 text#0
-0006  v4 = len v3
+0006  v4 = len_str v3
 0007  print v4
 0008  v5 = load_var @3 text#0
 0009  v6 = constant #1 0
@@ -28,7 +28,7 @@ IR
 0026  v19 = constant #7 "é"
 0027  store_var @11 combined#1, v19
 0028  v20 = load_var @12 combined#1
-0029  v21 = len v20
+0029  v21 = len_str v20
 0030  print v21
 0031  v22 = load_var @13 combined#1
 0032  v23 = constant #8 0

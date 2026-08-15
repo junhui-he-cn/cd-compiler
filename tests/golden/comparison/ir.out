@@ -1,19 +1,19 @@
 IR
 0000  v0 = constant #0 1
 0001  v1 = constant #1 2
-0002  v2 = less v0, v1
+0002  v2 = lt_num v0, v1
 0003  print v2
 0004  v3 = constant #2 2
 0005  v4 = constant #3 2
-0006  v5 = less_equal v3, v4
+0006  v5 = le_num v3, v4
 0007  print v5
 0008  v6 = constant #4 3
 0009  v7 = constant #5 4
-0010  v8 = greater v6, v7
+0010  v8 = gt_num v6, v7
 0011  print v8
 0012  v9 = constant #6 4
 0013  v10 = constant #7 4
-0014  v11 = greater_equal v9, v10
+0014  v11 = ge_num v9, v10
 0015  print v11
 0016  v12 = constant #8 1
 0017  v13 = constant #9 1

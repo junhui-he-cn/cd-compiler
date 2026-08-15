@@ -1,38 +1,44 @@
-main registers=28
-0000  b0 = constant #0 123
-0001  b1 = native_call @0 str [b0]
-0002  print b1
-0003  b2 = constant #1 true
-0004  b3 = native_call @1 str [b2]
-0005  print b3
-0006  b4 = constant #2 nil
-0007  b5 = native_call @2 str [b4]
-0008  print b5
-0009  b6 = constant #3 1
-0010  b7 = constant #4 "x"
-0011  b8 = array [b6, b7]
-0012  b9 = native_call @3 str [b8]
-0013  print b9
-0014  b10 = constant #5 "hello"
-0015  b11 = constant #6 1
-0016  b12 = constant #7 3
-0017  b13 = native_call @4 substr [b10, b11, b12]
-0018  print b13
-0019  b14 = constant #8 "hello"
-0020  b15 = constant #9 0
-0021  b16 = constant #10 5
-0022  b17 = native_call @5 substr [b14, b15, b16]
-0023  print b17
-0024  b18 = constant #11 "hello"
-0025  b19 = constant #12 5
-0026  b20 = constant #13 0
-0027  b21 = native_call @6 substr [b18, b19, b20]
-0028  print b21
-0029  b22 = constant #14 "hello"
-0030  b23 = constant #15 0
-0031  b24 = native_call @7 charAt [b22, b23]
-0032  print b24
-0033  b25 = constant #16 "hello"
-0034  b26 = constant #17 4
-0035  b27 = native_call @8 charAt [b25, b26]
-0036  print b27
+native_import i0 = str abi=1
+native_import i1 = print abi=1
+native_import i2 = substr abi=1
+native_import i3 = charAt abi=1
+main registers=29
+0000  block
+0001  b0 = constant #0 123
+0002  b1 = call_native i0 [b0]
+0003  b28 = call_native i1 [b1]
+0004  b2 = constant #1 true
+0005  b3 = call_native i0 [b2]
+0006  b28 = call_native i1 [b3]
+0007  b4 = constant #2 nil
+0008  b5 = call_native i0 [b4]
+0009  b28 = call_native i1 [b5]
+0010  b6 = constant #3 1
+0011  b7 = constant #4 "x"
+0012  b8 = array [b6, b7]
+0013  b9 = call_native i0 [b8]
+0014  b28 = call_native i1 [b9]
+0015  b10 = constant #5 "hello"
+0016  b11 = constant #6 1
+0017  b12 = constant #7 3
+0018  b13 = call_native i2 [b10, b11, b12]
+0019  b28 = call_native i1 [b13]
+0020  b14 = constant #8 "hello"
+0021  b15 = constant #9 0
+0022  b16 = constant #10 5
+0023  b17 = call_native i2 [b14, b15, b16]
+0024  b28 = call_native i1 [b17]
+0025  b18 = constant #11 "hello"
+0026  b19 = constant #12 5
+0027  b20 = constant #13 0
+0028  b21 = call_native i2 [b18, b19, b20]
+0029  b28 = call_native i1 [b21]
+0030  b22 = constant #14 "hello"
+0031  b23 = constant #15 0
+0032  b24 = call_native i3 [b22, b23]
+0033  b28 = call_native i1 [b24]
+0034  b25 = constant #16 "hello"
+0035  b26 = constant #17 4
+0036  b27 = call_native i3 [b25, b26]
+0037  b28 = call_native i1 [b27]
+0038  return_nil

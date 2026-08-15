@@ -1,18 +1,18 @@
 #![allow(dead_code)]
 
-use crate::bytecode::{FunctionBody, Instruction, Program};
-use crate::runtime::{SharedEnvironment, SharedLocalSlots};
+use crate::bytecode::{FuncId, Function, Instruction, Program};
+use crate::runtime::{Cell, SharedEnvironment, SharedLocalSlots};
 use crate::scheduler::{ResumableFrame, ReturnTarget, TaskId, VariablePlan};
 use crate::value::Value as VmValue;
 use cranelift_codegen::ir::{
-    types, AbiParam, ExtFuncData, ExternalName, FuncRef, Function, InstBuilder, Signature,
-    UserExternalName, UserFuncName, Value,
+    types, AbiParam, ExtFuncData, ExternalName, FuncRef, Function as CraneliftFunction,
+    InstBuilder, Signature, UserExternalName, UserFuncName, Value,
 };
 use cranelift_codegen::isa::{CallConv, TargetFrontendConfig};
 use cranelift_codegen::{settings, verifier::verify_function};
 use cranelift_frontend::{FunctionBuilder, FunctionBuilderContext};
 use cranelift_jit::{JITBuilder, JITModule};
-use cranelift_module::{default_libcall_names, FuncId, Linkage, Module};
+use cranelift_module::{default_libcall_names, FuncId as CraneliftFuncId, Linkage, Module};
 use std::collections::{BTreeMap, BTreeSet};
 use std::rc::Rc;
 use target_lexicon::PointerWidth;
@@ -149,11 +149,12 @@ impl JitSafepoint {
 /// and register values instead of retaining raw pointers or `RefCell` borrows.
 #[derive(Clone, Debug)]
 pub(crate) struct JitFrameMaterialization {
-    body: Option<Rc<FunctionBody>>,
+    body: Option<Rc<Function>>,
     ip: usize,
     registers: Vec<VmValue>,
     locals: SharedLocalSlots,
     closure: SharedEnvironment,
+    upvalues: Vec<Cell>,
     variable_plan: Option<Rc<VariablePlan>>,
     is_main: bool,
     function: Rc<str>,
@@ -175,6 +176,7 @@ impl JitFrameMaterialization {
             registers: frame.registers.clone(),
             locals: frame.locals.clone(),
             closure: frame.closure.clone(),
+            upvalues: frame.upvalues.clone(),
             variable_plan: frame.variable_plan.clone(),
             is_main: frame.is_main,
             function: frame.function.clone(),
@@ -191,6 +193,7 @@ impl JitFrameMaterialization {
         frame.registers = self.registers.clone();
         frame.locals = self.locals.clone();
         frame.closure = self.closure.clone();
+        frame.upvalues = self.upvalues.clone();
         frame.variable_plan = self.variable_plan.clone();
         frame.is_main = self.is_main;
         frame.function = self.function.clone();
@@ -198,7 +201,7 @@ impl JitFrameMaterialization {
         frame.return_target = self.return_target.clone();
     }
 
-    pub(crate) fn body(&self) -> Option<&FunctionBody> {
+    pub(crate) fn body(&self) -> Option<&Function> {
         self.body.as_deref()
     }
 
@@ -306,6 +309,9 @@ pub(crate) enum JitFallbackReason {
     DynamicCall {
         instruction: usize,
     },
+    DirectCall {
+        instruction: usize,
+    },
     NativeBoundary {
         instruction: usize,
         name: String,
@@ -376,7 +382,7 @@ pub(crate) struct JitCacheStats {
 #[derive(Debug)]
 pub(crate) struct CraneliftIrUnit {
     pub(crate) function_index: usize,
-    pub(crate) function: Function,
+    pub(crate) function: CraneliftFunction,
 }
 
 impl CraneliftIrUnit {
@@ -388,7 +394,7 @@ impl CraneliftIrUnit {
 
 struct JitBackend {
     module: JITModule,
-    helper_ids: [FuncId; RuntimeHelper::ALL.len()],
+    helper_ids: [CraneliftFuncId; RuntimeHelper::ALL.len()],
 }
 
 impl JitBackend {
@@ -428,7 +434,10 @@ impl JitBackend {
         }
     }
 
-    fn import_helpers(&mut self, function: &mut Function) -> [FuncRef; RuntimeHelper::ALL.len()] {
+    fn import_helpers(
+        &mut self,
+        function: &mut CraneliftFunction,
+    ) -> [FuncRef; RuntimeHelper::ALL.len()] {
         std::array::from_fn(|index| {
             self.module
                 .declare_func_in_func(self.helper_ids[index], function)
@@ -706,10 +715,10 @@ impl JitState {
         let Some(function) = program.functions.get(function_index) else {
             return JitEligibility::Fallback(JitFallbackReason::MissingFunction(function_index));
         };
-        if function.index != function_index {
+        if function.id != FuncId(function_index as u32) {
             return JitEligibility::Fallback(JitFallbackReason::FunctionIndexMismatch {
                 requested: function_index,
-                declared: function.index,
+                declared: function.id.0 as usize,
             });
         }
         if !self.config.whitelist.contains(&function_index) {
@@ -722,26 +731,56 @@ impl JitState {
             });
         }
 
+        let mut returned = false;
         for (instruction, operation) in function.instructions.iter().enumerate() {
+            if returned {
+                // Unreachable tail after the first return does not constrain
+                // admission or lowering.
+                continue;
+            }
             match operation {
                 Instruction::Constant { .. }
                 | Instruction::Move { .. }
                 | Instruction::LoadVar { .. }
+                | Instruction::LoadLocal { .. }
+                | Instruction::LoadUpvalue { .. }
+                | Instruction::BlockStart { .. }
                 | Instruction::Negate { .. }
+                | Instruction::NegNum { .. }
                 | Instruction::Not { .. }
                 | Instruction::Add { .. }
+                | Instruction::AddNum { .. }
+                | Instruction::ConcatStr { .. }
                 | Instruction::Subtract { .. }
+                | Instruction::SubNum { .. }
                 | Instruction::Multiply { .. }
+                | Instruction::MulNum { .. }
                 | Instruction::Divide { .. }
+                | Instruction::DivNum { .. }
                 | Instruction::Equal { .. }
                 | Instruction::NotEqual { .. }
                 | Instruction::Greater { .. }
+                | Instruction::GreaterNum { .. }
+                | Instruction::GreaterStr { .. }
                 | Instruction::GreaterEqual { .. }
+                | Instruction::GreaterEqualNum { .. }
+                | Instruction::GreaterEqualStr { .. }
                 | Instruction::Less { .. }
+                | Instruction::LessNum { .. }
+                | Instruction::LessStr { .. }
                 | Instruction::LessEqual { .. }
-                | Instruction::Return { .. } => {}
+                | Instruction::LessEqualNum { .. }
+                | Instruction::LessEqualStr { .. }
+                | Instruction::Return { .. } => {
+                    returned = true;
+                }
                 Instruction::Call { .. } => {
                     return JitEligibility::Fallback(JitFallbackReason::DynamicCall {
+                        instruction,
+                    });
+                }
+                Instruction::CallDirect { .. } => {
+                    return JitEligibility::Fallback(JitFallbackReason::DirectCall {
                         instruction,
                     });
                 }
@@ -751,6 +790,23 @@ impl JitState {
                         .get(*name)
                         .cloned()
                         .unwrap_or_else(|| format!("name#{}", name));
+                    if is_callback_native(&name) {
+                        return JitEligibility::Fallback(JitFallbackReason::CallbackBoundary {
+                            instruction,
+                            name,
+                        });
+                    }
+                    return JitEligibility::Fallback(JitFallbackReason::NativeBoundary {
+                        instruction,
+                        name,
+                    });
+                }
+                Instruction::CallNative { native, .. } => {
+                    let name = program
+                        .native_imports
+                        .get(native.0 as usize)
+                        .map(|import| import.name.clone())
+                        .unwrap_or_else(|| format!("native#{}", native.0));
                     if is_callback_native(&name) {
                         return JitEligibility::Fallback(JitFallbackReason::CallbackBoundary {
                             instruction,
@@ -943,10 +999,12 @@ pub(crate) enum RuntimeHelper {
     LessEqual = 13,
     Checkpoint = 14,
     StoreRegister = 15,
+    LoadLocal = 16,
+    LoadUpvalue = 17,
 }
 
 impl RuntimeHelper {
-    const ALL: [Self; 16] = [
+    const ALL: [Self; 18] = [
         Self::Constant,
         Self::LoadVar,
         Self::Negate,
@@ -963,11 +1021,19 @@ impl RuntimeHelper {
         Self::LessEqual,
         Self::Checkpoint,
         Self::StoreRegister,
+        Self::LoadLocal,
+        Self::LoadUpvalue,
     ];
 
     const fn value_arguments(self) -> usize {
         match self {
-            Self::Constant | Self::LoadVar | Self::Negate | Self::Not | Self::Checkpoint => 1,
+            Self::Constant
+            | Self::LoadVar
+            | Self::LoadLocal
+            | Self::LoadUpvalue
+            | Self::Negate
+            | Self::Not
+            | Self::Checkpoint => 1,
             Self::Add
             | Self::Subtract
             | Self::Multiply
@@ -1030,6 +1096,8 @@ fn helper_symbol(helper: RuntimeHelper) -> &'static str {
     match helper {
         RuntimeHelper::Constant => "cd_vm_jit_constant",
         RuntimeHelper::LoadVar => "cd_vm_jit_load_var",
+        RuntimeHelper::LoadLocal => "cd_vm_jit_load_local",
+        RuntimeHelper::LoadUpvalue => "cd_vm_jit_load_upvalue",
         RuntimeHelper::Negate => "cd_vm_jit_negate",
         RuntimeHelper::Not => "cd_vm_jit_not",
         RuntimeHelper::Add => "cd_vm_jit_add",
@@ -1051,6 +1119,8 @@ fn helper_stub(helper: RuntimeHelper) -> *const u8 {
     match helper {
         RuntimeHelper::Constant => jit_helper_constant as *const u8,
         RuntimeHelper::LoadVar => jit_helper_load_var as *const u8,
+        RuntimeHelper::LoadLocal => jit_helper_load_local as *const u8,
+        RuntimeHelper::LoadUpvalue => jit_helper_load_upvalue as *const u8,
         RuntimeHelper::Negate => jit_helper_negate as *const u8,
         RuntimeHelper::Not => jit_helper_not as *const u8,
         RuntimeHelper::Add => jit_helper_add as *const u8,
@@ -1103,6 +1173,8 @@ macro_rules! define_jit_binary_helper {
 
 define_jit_unary_helper!(jit_helper_constant, RuntimeHelper::Constant);
 define_jit_unary_helper!(jit_helper_load_var, RuntimeHelper::LoadVar);
+define_jit_unary_helper!(jit_helper_load_local, RuntimeHelper::LoadLocal);
+define_jit_unary_helper!(jit_helper_load_upvalue, RuntimeHelper::LoadUpvalue);
 define_jit_unary_helper!(jit_helper_negate, RuntimeHelper::Negate);
 define_jit_unary_helper!(jit_helper_not, RuntimeHelper::Not);
 define_jit_binary_helper!(jit_helper_add, RuntimeHelper::Add);
@@ -1132,7 +1204,10 @@ fn lower_to_cranelift_ir(
     signature.returns.push(AbiParam::new(types::I64));
 
     let mut ir_function =
-        Function::with_name_signature(UserFuncName::user(0, function_index as u32), signature);
+        CraneliftFunction::with_name_signature(
+            UserFuncName::user(0, function_index as u32),
+            signature,
+        );
     let helper_refs = backend.map(|backend| backend.import_helpers(&mut ir_function));
     let mut builder_context = FunctionBuilderContext::new();
     {
@@ -1230,7 +1305,49 @@ fn lower_to_cranelift_ir(
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
-                Instruction::Negate { dest, value } => {
+                Instruction::LoadLocal { dest, slot } => {
+                    let slot = i64::try_from(*slot)
+                        .map_err(|_| format!("local slot {} does not fit Cranelift i64", slot))?;
+                    let slot = builder.ins().iconst(types::I64, slot);
+                    let value = emit_runtime_call(
+                        &mut builder,
+                        context,
+                        RuntimeHelper::LoadLocal,
+                        &[slot],
+                        helper_refs.as_ref(),
+                    );
+                    let value = emit_store_register(
+                        &mut builder,
+                        context,
+                        *dest,
+                        value,
+                        instruction_index,
+                        helper_refs.as_ref(),
+                    )?;
+                    write_register(&mut registers, *dest, value, instruction_index)?;
+                }
+                Instruction::LoadUpvalue { dest, slot } => {
+                    let slot = i64::try_from(*slot)
+                        .map_err(|_| format!("upvalue slot {} does not fit Cranelift i64", slot))?;
+                    let slot = builder.ins().iconst(types::I64, slot);
+                    let value = emit_runtime_call(
+                        &mut builder,
+                        context,
+                        RuntimeHelper::LoadUpvalue,
+                        &[slot],
+                        helper_refs.as_ref(),
+                    );
+                    let value = emit_store_register(
+                        &mut builder,
+                        context,
+                        *dest,
+                        value,
+                        instruction_index,
+                        helper_refs.as_ref(),
+                    )?;
+                    write_register(&mut registers, *dest, value, instruction_index)?;
+                }
+                Instruction::Negate { dest, value } | Instruction::NegNum { dest, value } => {
                     let value = read_register(&registers, *value, instruction_index)?;
                     let value = emit_runtime_call(
                         &mut builder,
@@ -1268,7 +1385,9 @@ fn lower_to_cranelift_ir(
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
-                Instruction::Add { dest, left, right } => {
+                Instruction::Add { dest, left, right }
+                | Instruction::AddNum { dest, left, right }
+                | Instruction::ConcatStr { dest, left, right } => {
                     let value = emit_binary_runtime_call(
                         &mut builder,
                         context,
@@ -1289,7 +1408,8 @@ fn lower_to_cranelift_ir(
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
-                Instruction::Subtract { dest, left, right } => {
+                Instruction::Subtract { dest, left, right }
+                | Instruction::SubNum { dest, left, right } => {
                     let value = emit_binary_runtime_call(
                         &mut builder,
                         context,
@@ -1310,7 +1430,8 @@ fn lower_to_cranelift_ir(
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
-                Instruction::Multiply { dest, left, right } => {
+                Instruction::Multiply { dest, left, right }
+                | Instruction::MulNum { dest, left, right } => {
                     let value = emit_binary_runtime_call(
                         &mut builder,
                         context,
@@ -1331,7 +1452,8 @@ fn lower_to_cranelift_ir(
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
-                Instruction::Divide { dest, left, right } => {
+                Instruction::Divide { dest, left, right }
+                | Instruction::DivNum { dest, left, right } => {
                     let value = emit_binary_runtime_call(
                         &mut builder,
                         context,
@@ -1394,7 +1516,9 @@ fn lower_to_cranelift_ir(
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
-                Instruction::Greater { dest, left, right } => {
+                Instruction::Greater { dest, left, right }
+                | Instruction::GreaterNum { dest, left, right }
+                | Instruction::GreaterStr { dest, left, right } => {
                     let value = emit_binary_runtime_call(
                         &mut builder,
                         context,
@@ -1415,7 +1539,9 @@ fn lower_to_cranelift_ir(
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
-                Instruction::GreaterEqual { dest, left, right } => {
+                Instruction::GreaterEqual { dest, left, right }
+                | Instruction::GreaterEqualNum { dest, left, right }
+                | Instruction::GreaterEqualStr { dest, left, right } => {
                     let value = emit_binary_runtime_call(
                         &mut builder,
                         context,
@@ -1436,7 +1562,9 @@ fn lower_to_cranelift_ir(
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
-                Instruction::Less { dest, left, right } => {
+                Instruction::Less { dest, left, right }
+                | Instruction::LessNum { dest, left, right }
+                | Instruction::LessStr { dest, left, right } => {
                     let value = emit_binary_runtime_call(
                         &mut builder,
                         context,
@@ -1457,7 +1585,9 @@ fn lower_to_cranelift_ir(
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
-                Instruction::LessEqual { dest, left, right } => {
+                Instruction::LessEqual { dest, left, right }
+                | Instruction::LessEqualNum { dest, left, right }
+                | Instruction::LessEqualStr { dest, left, right } => {
                     let value = emit_binary_runtime_call(
                         &mut builder,
                         context,
@@ -1483,6 +1613,7 @@ fn lower_to_cranelift_ir(
                     builder.ins().return_(&[value]);
                     returned = true;
                 }
+                Instruction::BlockStart { .. } => {}
                 _ => {
                     return Err(format!(
                         "unsupported instruction {} reached Cranelift lowering",
@@ -1647,46 +1778,93 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
         Instruction::Array { .. } => "array",
         Instruction::Map { .. } => "map",
         Instruction::Struct { .. } => "struct",
+        Instruction::MakeStruct { .. } => "make_struct",
+        Instruction::StructGet { .. } => "struct_get",
+        Instruction::StructSet { .. } => "struct_set",
         Instruction::Variant { .. } => "variant",
+        Instruction::MakeVariant { .. } => "make_variant",
+        Instruction::IsVariant { .. } => "is_variant",
+        Instruction::VariantGet { .. } => "variant_get",
         Instruction::VariantTag { .. } => "variant_tag",
         Instruction::VariantField { .. } => "variant_field",
         Instruction::Move { .. } => "move",
         Instruction::LoadVar { .. } => "load_var",
         Instruction::StoreVar { .. } => "store_var",
         Instruction::AssignVar { .. } => "assign_var",
+        Instruction::LoadLocal { .. } => "load_local",
+        Instruction::BindLocal { .. } => "bind_local",
+        Instruction::SetLocal { .. } => "set_local",
+        Instruction::LoadUpvalue { .. } => "load_upvalue",
+        Instruction::SetUpvalue { .. } => "set_upvalue",
+        Instruction::LoadGlobal { .. } => "load_global",
+        Instruction::InitGlobal { .. } => "init_global",
+        Instruction::SetGlobal { .. } => "set_global",
         Instruction::Call { .. } => "call",
+        Instruction::CallDirect { .. } => "call_direct",
         Instruction::NativeCall { .. } => "native_call",
+        Instruction::CallNative { .. } => "call_native",
         Instruction::Index { .. } => "index",
         Instruction::AssignIndex { .. } => "assign_index",
+        Instruction::ArrayGet { .. } => "array_get",
+        Instruction::ArraySet { .. } => "array_set",
+        Instruction::MapGet { .. } => "map_get",
+        Instruction::MapSet { .. } => "map_set",
+        Instruction::RangeGet { .. } => "range_get",
         Instruction::Field { .. } => "field",
         Instruction::AssignField { .. } => "assign_field",
         Instruction::Len { .. } => "len",
+        Instruction::LenArray { .. } => "len_array",
+        Instruction::LenMap { .. } => "len_map",
+        Instruction::LenRange { .. } => "len_range",
+        Instruction::LenStr { .. } => "len_str",
         Instruction::AssertArray { .. } => "assert_array",
+        Instruction::IterInit { .. } => "iter_init",
+        Instruction::IterHas { .. } => "iter_has",
+        Instruction::IterNext { .. } => "iter_next",
+        Instruction::InitModule { .. } => "init_module",
         Instruction::AssertNumber { .. } => "assert_number",
         Instruction::Print { .. } => "print",
         Instruction::Return { .. } => "return",
         Instruction::Negate { .. } => "negate",
+        Instruction::NegNum { .. } => "neg_num",
         Instruction::Not { .. } => "not",
         Instruction::Add { .. } => "add",
+        Instruction::AddNum { .. } => "add_num",
+        Instruction::ConcatStr { .. } => "concat_str",
         Instruction::Subtract { .. } => "subtract",
+        Instruction::SubNum { .. } => "sub_num",
         Instruction::Multiply { .. } => "multiply",
+        Instruction::MulNum { .. } => "mul_num",
         Instruction::Divide { .. } => "divide",
+        Instruction::DivNum { .. } => "div_num",
         Instruction::Equal { .. } => "equal",
         Instruction::NotEqual { .. } => "not_equal",
         Instruction::Greater { .. } => "greater",
+        Instruction::GreaterNum { .. } => "gt_num",
+        Instruction::GreaterStr { .. } => "gt_str",
         Instruction::GreaterEqual { .. } => "greater_equal",
+        Instruction::GreaterEqualNum { .. } => "ge_num",
+        Instruction::GreaterEqualStr { .. } => "ge_str",
         Instruction::Less { .. } => "less",
+        Instruction::LessNum { .. } => "lt_num",
+        Instruction::LessStr { .. } => "lt_str",
         Instruction::LessEqual { .. } => "less_equal",
+        Instruction::LessEqualNum { .. } => "le_num",
+        Instruction::LessEqualStr { .. } => "le_str",
         Instruction::Jump { .. } => "jump",
         Instruction::JumpIfFalse { .. } => "jump_if_false",
         Instruction::JumpIfTrue { .. } => "jump_if_true",
+        Instruction::BlockStart { .. } => "block",
+        Instruction::Br { .. } => "br",
+        Instruction::BrIf { .. } => "br_if",
+        Instruction::ReturnNil => "return_nil",
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bytecode::{Function, FunctionBody};
+    use crate::bytecode::{Function, NativeId, NativeImport};
     use crate::runtime::Heap;
     use crate::scheduler::{CooperativeScheduler, ResumableFrame};
     use crate::value::Value as VmValue;
@@ -1694,9 +1872,11 @@ mod tests {
 
     fn function(index: usize, instructions: Vec<Instruction>) -> Function {
         Function {
-            index,
+            id: FuncId(index as u32 + 1),
             name: format!("function{index}"),
             arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
             registers: 4,
             params: Vec::new(),
             locations: vec![None; instructions.len()],
@@ -1705,15 +1885,27 @@ mod tests {
     }
 
     fn program(functions: Vec<Function>) -> Program {
+        let mut all = vec![Function {
+            id: FuncId(0),
+            name: "main".to_string(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
+            registers: 1,
+            instructions: Vec::new(),
+            locations: Vec::new(),
+        }];
+        all.extend(functions);
         Program {
             constants: Vec::new(),
+            globals: Vec::new(),
+            types: Vec::new(),
+            native_imports: Vec::new(),
+            modules: Vec::new(),
             names: vec!["map".to_string(), "print".to_string()],
-            main: FunctionBody {
-                registers: 1,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
-            functions,
+            functions: all,
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         }
     }
@@ -1747,7 +1939,13 @@ mod tests {
         let heap = Heap::new();
         let locals = heap.new_local_slots();
         let closure = heap.new_environment();
-        let body = Rc::new(FunctionBody {
+        let body = Rc::new(Function {
+            id: FuncId(0),
+            name: String::new(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
             registers: 2,
             instructions: vec![Instruction::Return { value: 0 }],
             locations: vec![None],
@@ -1862,13 +2060,13 @@ mod tests {
     #[test]
     fn x86_64_backend_finalizes_and_executes_opaque_helper_calls() {
         let program = program(vec![eligible_function(0)]);
-        let mut state = JitState::enabled_for_tests([0], 1024);
-        let handle = match state.admit(&program, Some(0), JitExecutionMode::Ordinary, 1024) {
+        let mut state = JitState::enabled_for_tests([1], 1024);
+        let handle = match state.admit(&program, Some(1), JitExecutionMode::Ordinary, 1024) {
             JitAdmission::Reserved { handle, .. } => handle,
             admission => panic!("unexpected admission: {admission:?}"),
         };
         assert!(state.resolve_code_pointer(&handle).is_ok());
-        assert!(state.cached_machine_code_bytes(0).unwrap_or_default() > 0);
+        assert!(state.cached_machine_code_bytes(1).unwrap_or_default() > 0);
 
         let mut test_context = ExecutableTestContext::default();
         let mut call_context = JitCallContext {
@@ -1890,8 +2088,8 @@ mod tests {
     #[test]
     fn machine_code_over_budget_is_not_published() {
         let program = program(vec![eligible_function(0)]);
-        let mut state = JitState::enabled_for_tests([0], 128);
-        let admission = state.admit(&program, Some(0), JitExecutionMode::Ordinary, 1);
+        let mut state = JitState::enabled_for_tests([1], 128);
+        let admission = state.admit(&program, Some(1), JitExecutionMode::Ordinary, 1);
 
         assert!(matches!(
             admission,
@@ -1908,11 +2106,11 @@ mod tests {
         let mut state = JitState::disabled();
 
         assert_eq!(
-            state.eligibility(&program, Some(0), JitExecutionMode::Ordinary),
+            state.eligibility(&program, Some(1), JitExecutionMode::Ordinary),
             JitEligibility::Fallback(JitFallbackReason::Disabled)
         );
         assert_eq!(
-            state.admit(&program, Some(0), JitExecutionMode::Ordinary, 4),
+            state.admit(&program, Some(1), JitExecutionMode::Ordinary, 4),
             JitAdmission::Fallback(JitFallbackReason::Disabled)
         );
     }
@@ -1920,22 +2118,22 @@ mod tests {
     #[test]
     fn eligibility_requires_an_explicit_whitelist_and_ordinary_mode() {
         let program = program(vec![eligible_function(0), eligible_function(1)]);
-        let state = JitState::enabled_for_tests([0], 64);
+        let state = JitState::enabled_for_tests([1], 64);
 
         assert_eq!(
-            state.eligibility(&program, Some(0), JitExecutionMode::Ordinary),
-            JitEligibility::Eligible { function_index: 0 }
-        );
-        assert_eq!(
             state.eligibility(&program, Some(1), JitExecutionMode::Ordinary),
-            JitEligibility::Fallback(JitFallbackReason::NotWhitelisted(1))
+            JitEligibility::Eligible { function_index: 1 }
         );
         assert_eq!(
-            state.eligibility(&program, Some(0), JitExecutionMode::Profile),
+            state.eligibility(&program, Some(2), JitExecutionMode::Ordinary),
+            JitEligibility::Fallback(JitFallbackReason::NotWhitelisted(2))
+        );
+        assert_eq!(
+            state.eligibility(&program, Some(1), JitExecutionMode::Profile),
             JitEligibility::Fallback(JitFallbackReason::ObservableMode(JitExecutionMode::Profile))
         );
         assert_eq!(
-            state.eligibility(&program, Some(0), JitExecutionMode::Cooperative),
+            state.eligibility(&program, Some(1), JitExecutionMode::Cooperative),
             JitEligibility::Fallback(JitFallbackReason::CooperativeMode)
         );
         assert_eq!(
@@ -1957,9 +2155,9 @@ mod tests {
                 Instruction::Return { value: 0 },
             ],
         )]);
-        let state = JitState::enabled_for_tests([0], 64);
+        let state = JitState::enabled_for_tests([1], 64);
         assert_eq!(
-            state.eligibility(&dynamic, Some(0), JitExecutionMode::Ordinary),
+            state.eligibility(&dynamic, Some(1), JitExecutionMode::Ordinary),
             JitEligibility::Fallback(JitFallbackReason::DynamicCall { instruction: 0 })
         );
 
@@ -1975,7 +2173,30 @@ mod tests {
             ],
         )]);
         assert_eq!(
-            state.eligibility(&callback, Some(0), JitExecutionMode::Ordinary),
+            state.eligibility(&callback, Some(1), JitExecutionMode::Ordinary),
+            JitEligibility::Fallback(JitFallbackReason::CallbackBoundary {
+                instruction: 0,
+                name: "map".to_string(),
+            })
+        );
+
+        let mut indexed = program(vec![function(
+            0,
+            vec![
+                Instruction::CallNative {
+                    dest: 0,
+                    native: NativeId(0),
+                    arguments: Vec::new(),
+                },
+                Instruction::Return { value: 0 },
+            ],
+        )]);
+        indexed.native_imports = vec![NativeImport {
+            name: "map".to_string(),
+            abi: 1,
+        }];
+        assert_eq!(
+            state.eligibility(&indexed, Some(1), JitExecutionMode::Ordinary),
             JitEligibility::Fallback(JitFallbackReason::CallbackBoundary {
                 instruction: 0,
                 name: "map".to_string(),
@@ -1993,7 +2214,7 @@ mod tests {
             ],
         )]);
         assert_eq!(
-            state.eligibility(&unsupported, Some(0), JitExecutionMode::Ordinary),
+            state.eligibility(&unsupported, Some(1), JitExecutionMode::Ordinary),
             JitEligibility::Fallback(JitFallbackReason::UnsupportedInstruction {
                 instruction: 0,
                 opcode: "array",
@@ -2005,28 +2226,28 @@ mod tests {
     fn cache_admission_is_bounded_reusable_and_evictable() {
         let program = program(vec![eligible_function(0), eligible_function(1)]);
         let unit_budget = 1024;
-        let mut state = JitState::enabled_for_tests([0, 1], unit_budget * 2);
+        let mut state = JitState::enabled_for_tests([1, 2], unit_budget * 2);
 
         let first_handle =
-            match state.admit(&program, Some(0), JitExecutionMode::Ordinary, unit_budget) {
+            match state.admit(&program, Some(1), JitExecutionMode::Ordinary, unit_budget) {
                 JitAdmission::Reserved {
-                    function_index: 0,
+                    function_index: 1,
                     bytes,
                     handle,
                 } if bytes == unit_budget => handle,
                 admission => panic!("unexpected first admission: {admission:?}"),
             };
-        assert_eq!(first_handle.function_index(), 0);
+        assert_eq!(first_handle.function_index(), 1);
         assert!(state.resolve_code(&first_handle).is_ok());
         let ir = state
-            .cached_ir(0)
+            .cached_ir(1)
             .expect("admission should retain verified Cranelift IR");
-        assert_eq!(ir.function_index, 0);
+        assert_eq!(ir.function_index, 1);
         assert!(ir.display().contains("call"));
         assert!(ir.display().contains("i64"));
-        let cached_handle = match state.admit(&program, Some(0), JitExecutionMode::Ordinary, 7) {
+        let cached_handle = match state.admit(&program, Some(1), JitExecutionMode::Ordinary, 7) {
             JitAdmission::Cached {
-                function_index: 0,
+                function_index: 1,
                 bytes,
                 handle,
             } if bytes == unit_budget => handle,
@@ -2036,7 +2257,7 @@ mod tests {
         assert_eq!(
             state.admit(
                 &program,
-                Some(1),
+                Some(2),
                 JitExecutionMode::Ordinary,
                 unit_budget + 1,
             ),
@@ -2055,12 +2276,12 @@ mod tests {
         );
 
         state.clear_cache();
-        assert!(state.cached_ir(0).is_none());
+        assert!(state.cached_ir(1).is_none());
         let first_generation = first_handle.generation();
         assert!(matches!(
             state.resolve_code(&first_handle),
             Err(JitFallbackReason::StaleCodeEntry {
-                function_index: 0,
+                function_index: 1,
                 generation,
             })
                 if generation == first_generation
@@ -2078,21 +2299,21 @@ mod tests {
     #[test]
     fn code_entry_handles_reject_foreign_caches_and_failed_publication_rolls_back() {
         let base_program = program(vec![eligible_function(0)]);
-        let mut state = JitState::enabled_for_tests([0], 2048);
-        let handle = match state.admit(&base_program, Some(0), JitExecutionMode::Ordinary, 1024) {
+        let mut state = JitState::enabled_for_tests([1], 2048);
+        let handle = match state.admit(&base_program, Some(1), JitExecutionMode::Ordinary, 1024) {
             JitAdmission::Reserved { handle, .. } => handle,
             admission => panic!("unexpected admission: {admission:?}"),
         };
 
-        let foreign_state = JitState::enabled_for_tests([0], 2048);
+        let foreign_state = JitState::enabled_for_tests([1], 2048);
         assert!(matches!(
             foreign_state.resolve_code(&handle),
-            Err(JitFallbackReason::ForeignCodeEntry { function_index: 0 })
+            Err(JitFallbackReason::ForeignCodeEntry { function_index: 1 })
         ));
 
         state.clear_cache();
         let replacement =
-            match state.admit(&base_program, Some(0), JitExecutionMode::Ordinary, 1024) {
+            match state.admit(&base_program, Some(1), JitExecutionMode::Ordinary, 1024) {
                 JitAdmission::Reserved { handle, .. } => handle,
                 admission => panic!("unexpected replacement admission: {admission:?}"),
             };
@@ -2103,7 +2324,7 @@ mod tests {
         assert!(matches!(
             state.resolve_code(&handle),
             Err(JitFallbackReason::StaleCodeEntry {
-                function_index: 0,
+                function_index: 1,
                 generation,
             })
                 if generation == stale_generation
@@ -2116,8 +2337,8 @@ mod tests {
                 Instruction::Return { value: 0 },
             ],
         )]);
-        let mut failed_state = JitState::enabled_for_tests([0], 16);
-        let failed = failed_state.admit(&failed_program, Some(0), JitExecutionMode::Ordinary, 4);
+        let mut failed_state = JitState::enabled_for_tests([1], 16);
+        let failed = failed_state.admit(&failed_program, Some(1), JitExecutionMode::Ordinary, 4);
         assert!(matches!(
             failed,
             JitAdmission::Fallback(JitFallbackReason::CraneliftIr { .. })

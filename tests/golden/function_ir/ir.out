@@ -3,11 +3,10 @@ IR
 0001  store_var @0 add#0, v0
 0002  v1 = make_function $0 add/2
 0003  assign_var @3 add#0, v1
-0004  v2 = load_var @4 add#0
-0005  v3 = constant #2 1
-0006  v4 = constant #3 2
-0007  v5 = call v2(v3, v4)
-0008  print v5
+0004  v2 = constant #2 1
+0005  v3 = constant #3 2
+0006  v4 = call_direct $0 add/2(v2, v3)
+0007  print v4
 
 function $0 add(a#1, b#2)
 0000  v0 = load_var @1 a#1

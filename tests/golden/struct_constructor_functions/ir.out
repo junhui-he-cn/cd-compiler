@@ -2,31 +2,29 @@ IR
 0000  v0 = constant #0 nil
 0001  store_var @0 birthday#0, v0
 0002  v1 = make_function $0 birthday/1
-0003  assign_var @6 birthday#0, v1
+0003  assign_var @8 birthday#0, v1
 0004  v2 = constant #3 nil
-0005  store_var @7 makePerson#2, v2
+0005  store_var @9 makePerson#2, v2
 0006  v3 = make_function $1 makePerson/0
-0007  assign_var @11 makePerson#2, v3
-0008  v4 = load_var @12 birthday#0
-0009  v5 = load_var @13 makePerson#2
-0010  v6 = call v5()
-0011  v7 = call v4(v6)
-0012  store_var @14 p#3, v7
-0013  v8 = load_var @15 p#3
-0014  v9 = field v8.name
-0015  print v9
-0016  v10 = load_var @17 p#3
-0017  v11 = field v10.age
-0018  print v11
+0007  assign_var @13 makePerson#2, v3
+0008  v4 = call_direct $1 makePerson/0()
+0009  v5 = call_direct $0 birthday/1(v4)
+0010  store_var @14 p#3, v5
+0011  v6 = load_var @15 p#3
+0012  v7 = field v6.name
+0013  print v7
+0014  v8 = load_var @18 p#3
+0015  v9 = field v8.age
+0016  print v9
 
 function $0 birthday(person#1)
 0000  v0 = load_var @1 person#1
 0001  v1 = load_var @2 person#1
 0002  v2 = field v1.age
 0003  v3 = constant #1 1
-0004  v4 = add v2, v3
+0004  v4 = add_num v2, v3
 0005  v5 = assign_field v0.age, v4
-0006  v6 = load_var @5 person#1
+0006  v6 = load_var @7 person#1
 0007  return v6
 0008  v7 = constant #2 nil
 0009  return v7

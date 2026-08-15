@@ -37,7 +37,7 @@ IR
 0035  v24 = native_call @19 pop(v23)
 0036  print v24
 0037  v25 = load_var @20 values#8
-0038  v26 = len v25
+0038  v26 = len_array v25
 0039  print v26
 
 function $0 pop(this#3)

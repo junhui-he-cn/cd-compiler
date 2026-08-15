@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/function_duplicate.cd:2:5: variable `f` already declared in this scope
+  fun f() {}
+      ^

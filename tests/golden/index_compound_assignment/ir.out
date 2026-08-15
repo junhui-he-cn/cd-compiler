@@ -5,44 +5,44 @@ IR
 0003  store_var @0 xs#0, v2
 0004  v3 = load_var @1 xs#0
 0005  v4 = constant #2 0
-0006  v5 = index v3, v4
+0006  v5 = array_get v3, v4
 0007  v6 = assert_number v5 @2 `+=` expects number target
 0008  v7 = constant #3 5
 0009  v8 = assert_number v7 @3 `+=` expects number value
-0010  v9 = add v6, v8
-0011  v10 = assign_index v3, v4, v9
+0010  v9 = add_num v6, v8
+0011  v10 = array_set v3, v4, v9
 0012  v11 = load_var @4 xs#0
 0013  v12 = constant #4 0
-0014  v13 = index v11, v12
+0014  v13 = array_get v11, v12
 0015  print v13
 0016  v14 = load_var @5 xs#0
 0017  v15 = constant #5 0
-0018  v16 = index v14, v15
+0018  v16 = array_get v14, v15
 0019  v17 = assert_number v16 @6 `-=` expects number target
 0020  v18 = constant #6 3
 0021  v19 = assert_number v18 @7 `-=` expects number value
-0022  v20 = subtract v17, v19
-0023  v21 = assign_index v14, v15, v20
+0022  v20 = sub_num v17, v19
+0023  v21 = array_set v14, v15, v20
 0024  print v20
 0025  v22 = load_var @8 xs#0
 0026  v23 = constant #7 0
-0027  v24 = index v22, v23
+0027  v24 = array_get v22, v23
 0028  v25 = assert_number v24 @9 `*=` expects number target
 0029  v26 = constant #8 2
 0030  v27 = assert_number v26 @10 `*=` expects number value
-0031  v28 = multiply v25, v27
-0032  v29 = assign_index v22, v23, v28
+0031  v28 = mul_num v25, v27
+0032  v29 = array_set v22, v23, v28
 0033  print v28
 0034  v30 = load_var @11 xs#0
 0035  v31 = constant #9 0
-0036  v32 = index v30, v31
+0036  v32 = array_get v30, v31
 0037  v33 = assert_number v32 @12 `/=` expects number target
 0038  v34 = constant #10 4
 0039  v35 = assert_number v34 @13 `/=` expects number value
-0040  v36 = divide v33, v35
-0041  v37 = assign_index v30, v31, v36
+0040  v36 = div_num v33, v35
+0041  v37 = array_set v30, v31, v36
 0042  print v36
 0043  v38 = load_var @14 xs#0
 0044  v39 = constant #11 1
-0045  v40 = index v38, v39
+0045  v40 = array_get v38, v39
 0046  print v40

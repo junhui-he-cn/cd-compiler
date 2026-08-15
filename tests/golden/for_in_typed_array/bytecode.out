@@ -1,34 +1,25 @@
-main registers=20
-0000  b0 = constant #0 1
-0001  b1 = constant #1 2
-0002  b2 = array [b0, b1]
-0003  store_var @0 xs#0, b2
-0004  b3 = load_var @1 xs#0
-0005  b4 = assert_array b3
-0006  store_var @2 __for_in_iter#0, b4
-0007  b5 = constant #2 0
-0008  store_var @3 __for_in_index#1, b5
-0009  b6 = constant #3 nil
-0010  store_var @4 x#1, b6
-0011  b7 = load_var @5 __for_in_iter#0
-0012  b8 = len b7
-0013  store_var @6 __for_in_len#2, b8
-0014  b9 = load_var @7 __for_in_index#1
-0015  b10 = load_var @8 __for_in_len#2
-0016  b11 = less b9, b10
-0017  jump_if_false b11, 0033
-0018  b12 = load_var @9 __for_in_iter#0
-0019  b13 = load_var @10 __for_in_index#1
-0020  b14 = index b12, b13
-0021  assign_var @11 x#1, b14
-0022  jump 0028
-0023  b15 = load_var @12 __for_in_index#1
-0024  b16 = constant #4 1
-0025  b17 = add b15, b16
-0026  assign_var @13 __for_in_index#1, b17
-0027  jump 0014
-0028  b18 = load_var @14 x#1
-0029  store_var @15 y#2, b18
-0030  b19 = load_var @16 y#2
-0031  print b19
-0032  jump 0023
+native_import i0 = print abi=1
+main registers=11
+0000  block
+0001  b0 = constant #0 1
+0002  b1 = constant #1 2
+0003  b2 = array [b0, b1]
+0004  init_global g0, b2
+0005  b3 = load_global g0
+0006  b4 = iter_init b3
+0007  b5 = constant #2 nil
+0008  init_global g1, b5
+0009  br b1
+0010  block
+0011  b6 = iter_has b4
+0012  br_if b6, b2, b3
+0013  block
+0014  b7 = iter_next b4
+0015  set_global g1, b7
+0016  b8 = load_global g1
+0017  init_global g2, b8
+0018  b9 = load_global g2
+0019  b10 = call_native i0 [b9]
+0020  br b1
+0021  block
+0022  return_nil

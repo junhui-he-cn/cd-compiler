@@ -1,0 +1,56 @@
+native_import i0 = range abi=1
+native_import i1 = push abi=1
+native_import i2 = print abi=1
+main registers=21
+0000  block
+0001  b0 = array []
+0002  init_global g0, b0
+0003  b1 = constant #0 3
+0004  b2 = call_native i0 [b1]
+0005  b3 = iter_init b2
+0006  b4 = constant #1 nil
+0007  init_global g1, b4
+0008  br b1
+0009  block
+0010  b5 = iter_has b3
+0011  br_if b5, b2, b3
+0012  block
+0013  b6 = iter_next b3
+0014  set_global g1, b6
+0015  b7 = load_global g1
+0016  b8 = constant #2 10
+0017  b9 = mul_num b7, b8
+0018  init_global g2, b9
+0019  b10 = load_global g0
+0020  b11 = make_function $0 <lambda>/0
+0021  b12 = call_native i1 [b10, b11]
+0022  br b1
+0023  block
+0024  b13 = load_global g0
+0025  b14 = iter_init b13
+0026  b15 = constant #4 nil
+0027  init_global g3, b15
+0028  br b4
+0029  block
+0030  b16 = iter_has b14
+0031  br_if b16, b5, b6
+0032  block
+0033  b17 = iter_next b14
+0034  set_global g3, b17
+0035  b18 = load_global g3
+0036  b19 = call b18()
+0037  b20 = call_native i2 [b19]
+0038  br b4
+0039  block
+0040  return_nil
+
+function $0 <lambda>/0 registers=2
+upvalue u0 = global g2
+0000  block
+0001  b0 = load_upvalue u0
+0002  return b0
+0003  block
+0004  b1 = constant #3 nil
+0005  return b1
+0006  block
+0007  return_nil

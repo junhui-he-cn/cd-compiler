@@ -1,37 +1,42 @@
-main registers=26
-0000  b0 = constant #0 1
-0001  b1 = constant #1 2
-0002  b2 = array [b0, b1]
-0003  store_var @0 xs#0, b2
-0004  b3 = load_var @1 xs#0
-0005  b4 = constant #2 3
-0006  b5 = native_call @2 push [b3, b4]
-0007  print b5
-0008  b6 = load_var @3 xs#0
-0009  print b6
-0010  b7 = load_var @4 xs#0
-0011  b8 = native_call @5 pop [b7]
-0012  print b8
-0013  b9 = load_var @6 xs#0
-0014  print b9
-0015  b10 = load_var @7 xs#0
-0016  store_var @8 alias#1, b10
-0017  b11 = load_var @9 alias#1
-0018  b12 = constant #3 4
-0019  b13 = native_call @10 push [b11, b12]
-0020  b14 = load_var @11 xs#0
-0021  print b14
-0022  b15 = array []
-0023  store_var @12 mixed#2, b15
-0024  b16 = load_var @13 mixed#2
-0025  b17 = constant #4 "hi"
-0026  b18 = native_call @14 push [b16, b17]
-0027  b19 = load_var @15 mixed#2
-0028  b20 = constant #5 true
-0029  b21 = native_call @16 push [b19, b20]
-0030  b22 = load_var @17 mixed#2
-0031  b23 = native_call @18 pop [b22]
-0032  print b23
-0033  b24 = load_var @19 mixed#2
-0034  b25 = native_call @20 pop [b24]
-0035  print b25
+native_import i0 = push abi=1
+native_import i1 = print abi=1
+native_import i2 = pop abi=1
+main registers=27
+0000  block
+0001  b0 = constant #0 1
+0002  b1 = constant #1 2
+0003  b2 = array [b0, b1]
+0004  init_global g0, b2
+0005  b3 = load_global g0
+0006  b4 = constant #2 3
+0007  b5 = call_native i0 [b3, b4]
+0008  b26 = call_native i1 [b5]
+0009  b6 = load_global g0
+0010  b26 = call_native i1 [b6]
+0011  b7 = load_global g0
+0012  b8 = call_native i2 [b7]
+0013  b26 = call_native i1 [b8]
+0014  b9 = load_global g0
+0015  b26 = call_native i1 [b9]
+0016  b10 = load_global g0
+0017  init_global g1, b10
+0018  b11 = load_global g1
+0019  b12 = constant #3 4
+0020  b13 = call_native i0 [b11, b12]
+0021  b14 = load_global g0
+0022  b26 = call_native i1 [b14]
+0023  b15 = array []
+0024  init_global g2, b15
+0025  b16 = load_global g2
+0026  b17 = constant #4 "hi"
+0027  b18 = call_native i0 [b16, b17]
+0028  b19 = load_global g2
+0029  b20 = constant #5 true
+0030  b21 = call_native i0 [b19, b20]
+0031  b22 = load_global g2
+0032  b23 = call_native i2 [b22]
+0033  b26 = call_native i1 [b23]
+0034  b24 = load_global g2
+0035  b25 = call_native i2 [b24]
+0036  b26 = call_native i1 [b25]
+0037  return_nil

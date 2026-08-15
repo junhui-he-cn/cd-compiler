@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = string "a"
@@ -20,71 +20,85 @@ names:
   n6 = "right#1"
   n7 = "merge"
 
-main registers=16:
+globals:
+  g0 = n0
+  g1 = n1
+
+native_imports:
+  i0 = "merge" abi=1
+  i1 = "print" abi=1
+
+main registers=17:
+block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
   r3 = constant c3
   r4 = map [r0: r1, r2: r3]
-  store_var n0, r4
+  init_global g0, r4
   r5 = constant c4
   r6 = constant c5
   r7 = constant c6
   r8 = constant c7
   r9 = map [r5: r6, r7: r8]
-  store_var n1, r9
-  r10 = load_var n2
-  r11 = load_var n3
-  r12 = native_call n4 [r10, r11]
-  print r12
-  r13 = load_var n5
-  r14 = load_var n6
-  r15 = native_call n7 [r13, r14]
-  print r15
+  init_global g1, r9
+  r10 = load_global g0
+  r11 = load_global g1
+  r12 = call_native i0 [r10, r11]
+  r16 = call_native i1 [r12]
+  r13 = load_global g0
+  r14 = load_global g1
+  r15 = call_native i0 [r13, r14]
+  r16 = call_native i1 [r15]
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/map_merge/input.cd" text="let left: map<string, number> = {\"a\": 1, \"b\": 2};\nlet right: map<string, number> = {\"b\": 20, \"c\": 3};\nprint merge(left, right);\nprint left.merge(right);\n"
 
 debug_locations:
   main 0 = s0:1:34
-  main 1 = s0:1:39
-  main 2 = s0:1:42
-  main 3 = s0:1:47
-  main 4 = s0:1:33
-  main 5 = s0:1:1
-  main 6 = s0:2:35
-  main 7 = s0:2:40
-  main 8 = s0:2:44
-  main 9 = s0:2:49
-  main 10 = s0:2:34
-  main 11 = s0:2:1
-  main 12 = s0:3:13
-  main 13 = s0:3:19
-  main 14 = s0:3:7
-  main 15 = s0:3:1
-  main 16 = s0:4:7
-  main 17 = s0:4:18
-  main 18 = s0:4:7
-  main 19 = s0:4:1
+  main 1 = s0:1:34
+  main 2 = s0:1:39
+  main 3 = s0:1:42
+  main 4 = s0:1:47
+  main 5 = s0:1:33
+  main 6 = s0:1:1
+  main 7 = s0:2:35
+  main 8 = s0:2:40
+  main 9 = s0:2:44
+  main 10 = s0:2:49
+  main 11 = s0:2:34
+  main 12 = s0:2:1
+  main 13 = s0:3:13
+  main 14 = s0:3:19
+  main 15 = s0:3:7
+  main 16 = s0:3:1
+  main 17 = s0:4:7
+  main 18 = s0:4:18
+  main 19 = s0:4:7
+  main 20 = s0:4:1
+  main 21 = s0:4:1
 
 debug_ranges:
   main 0 = s0:33:36
-  main 1 = s0:38:39
-  main 2 = s0:41:44
-  main 3 = s0:46:47
-  main 4 = s0:32:47
-  main 5 = s0:4:47
-  main 6 = s0:84:87
-  main 7 = s0:89:91
-  main 8 = s0:93:96
-  main 9 = s0:98:99
-  main 10 = s0:83:99
-  main 11 = s0:54:99
-  main 12 = s0:114:118
-  main 13 = s0:120:125
-  main 14 = s0:108:126
+  main 1 = s0:33:36
+  main 2 = s0:38:39
+  main 3 = s0:41:44
+  main 4 = s0:46:47
+  main 5 = s0:32:47
+  main 6 = s0:4:47
+  main 7 = s0:84:87
+  main 8 = s0:89:91
+  main 9 = s0:93:96
+  main 10 = s0:98:99
+  main 11 = s0:83:99
+  main 12 = s0:54:99
+  main 13 = s0:114:118
+  main 14 = s0:120:125
   main 15 = s0:108:126
-  main 16 = s0:134:138
-  main 17 = s0:145:150
-  main 18 = s0:134:151
+  main 16 = s0:108:126
+  main 17 = s0:134:138
+  main 18 = s0:145:150
   main 19 = s0:134:151
+  main 20 = s0:134:151
+  main 21 = s0:134:151

@@ -228,6 +228,12 @@ BytecodeModuleArtifact compileModuleArtifact(
     if (entryOrder != entryOrders.end()) {
         artifact.entryOrder = entryOrder->second;
     }
+    const std::optional<std::size_t> initFunction = compiler.moduleInitFunction();
+    if (!initFunction) {
+        throw std::runtime_error("internal error: module init function was not compiled");
+    }
+    artifact.initFunction = checkedModuleArtifactNumber(
+        *initFunction, "module init function index out of range");
     artifact.program = bytecodeCompiler.compile(ir);
 
     for (const IRModuleDependency& dependency : ir.moduleDependencies()) {
@@ -238,8 +244,7 @@ BytecodeModuleArtifact compileModuleArtifact(
         artifact.dependencies.push_back(BytecodeModuleDependency{
             imported->canonicalPath,
             dependency.kind,
-            dependency.requestedPath,
-            checkedModuleArtifactNumber(dependency.instructionOffset, "module dependency offset out of range")});
+            dependency.requestedPath});
     }
     return artifact;
 }

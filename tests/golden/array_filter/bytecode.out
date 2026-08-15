@@ -1,64 +1,86 @@
-main registers=22
-0000  b0 = constant #0 1
-0001  b1 = constant #1 2
-0002  b2 = constant #2 3
-0003  b3 = constant #3 4
-0004  b4 = array [b0, b1, b2, b3]
-0005  store_var @0 values#0, b4
-0006  b5 = constant #4 2
-0007  store_var @1 threshold#1, b5
-0008  b6 = load_var @2 values#0
-0009  b7 = make_function $0 <lambda>/1
-0010  b8 = native_call @5 filter [b6, b7]
-0011  store_var @6 selected#3, b8
-0012  b9 = load_var @7 values#0
-0013  b10 = make_function $1 <lambda>/1
-0014  b11 = native_call @10 filter [b9, b10]
-0015  store_var @11 evens#5, b11
-0016  b12 = constant #9 1
-0017  b13 = constant #10 2
-0018  b14 = array [b12, b13]
-0019  store_var @12 snapshot#6, b14
-0020  b15 = load_var @13 snapshot#6
-0021  b16 = make_function $2 <lambda>/1
-0022  b17 = native_call @16 filter [b15, b16]
-0023  store_var @17 kept#8, b17
-0024  b18 = load_var @18 selected#3
-0025  print b18
-0026  b19 = load_var @19 evens#5
-0027  print b19
-0028  b20 = load_var @20 kept#8
-0029  print b20
-0030  b21 = load_var @21 snapshot#6
-0031  print b21
+native_import i0 = filter abi=1
+native_import i1 = print abi=1
+native_import i2 = push abi=1
+main registers=23
+0000  block
+0001  b0 = constant #0 1
+0002  b1 = constant #1 2
+0003  b2 = constant #2 3
+0004  b3 = constant #3 4
+0005  b4 = array [b0, b1, b2, b3]
+0006  init_global g0, b4
+0007  b5 = constant #4 2
+0008  init_global g1, b5
+0009  b6 = load_global g0
+0010  b7 = make_function $0 <lambda>/1
+0011  b8 = call_native i0 [b6, b7]
+0012  init_global g2, b8
+0013  b9 = load_global g0
+0014  b10 = make_function $1 <lambda>/1
+0015  b11 = call_native i0 [b9, b10]
+0016  init_global g3, b11
+0017  b12 = constant #9 1
+0018  b13 = constant #10 2
+0019  b14 = array [b12, b13]
+0020  init_global g4, b14
+0021  b15 = load_global g4
+0022  b16 = make_function $2 <lambda>/1
+0023  b17 = call_native i0 [b15, b16]
+0024  init_global g5, b17
+0025  b18 = load_global g2
+0026  b22 = call_native i1 [b18]
+0027  b19 = load_global g3
+0028  b22 = call_native i1 [b19]
+0029  b20 = load_global g5
+0030  b22 = call_native i1 [b20]
+0031  b21 = load_global g4
+0032  b22 = call_native i1 [b21]
+0033  return_nil
 
 function $0 <lambda>/1 registers=4
-0000  b0 = load_var @3 value#2
-0001  b1 = load_var @4 threshold#1
-0002  b2 = greater b0, b1
-0003  return b2
-0004  b3 = constant #5 nil
-0005  return b3
+upvalue u0 = global g1
+0000  block
+0001  b0 = load_local l0
+0002  b1 = load_upvalue u0
+0003  b2 = gt_num b0, b1
+0004  return b2
+0005  block
+0006  b3 = constant #5 nil
+0007  return b3
+0008  block
+0009  return_nil
 
 function $1 <lambda>/1 registers=8
-0000  b0 = load_var @8 value#4
-0001  b1 = constant #6 2
-0002  b2 = equal b0, b1
-0003  b3 = move b2
-0004  jump_if_true b3, 0009
-0005  b4 = load_var @9 value#4
-0006  b5 = constant #7 4
-0007  b6 = equal b4, b5
-0008  b3 = move b6
-0009  return b3
-0010  b7 = constant #8 nil
-0011  return b7
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #6 2
+0003  b2 = equal b0, b1
+0004  b3 = move b2
+0005  br_if b3, b2, b1
+0006  block
+0007  b4 = load_local l0
+0008  b5 = constant #7 4
+0009  b6 = equal b4, b5
+0010  b3 = move b6
+0011  br b2
+0012  block
+0013  return b3
+0014  block
+0015  b7 = constant #8 nil
+0016  return b7
+0017  block
+0018  return_nil
 
 function $2 <lambda>/1 registers=5
-0000  b0 = load_var @14 snapshot#6
-0001  b1 = constant #11 9
-0002  b2 = native_call @15 push [b0, b1]
-0003  b3 = constant #12 true
-0004  return b3
-0005  b4 = constant #13 nil
-0006  return b4
+upvalue u0 = global g4
+0000  block
+0001  b0 = load_upvalue u0
+0002  b1 = constant #11 9
+0003  b2 = call_native i2 [b0, b1]
+0004  b3 = constant #12 true
+0005  return b3
+0006  block
+0007  b4 = constant #13 nil
+0008  return b4
+0009  block
+0010  return_nil

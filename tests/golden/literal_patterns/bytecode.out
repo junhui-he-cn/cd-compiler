@@ -1,195 +1,256 @@
-main registers=60
-0000  b0 = constant #0 nil
-0001  store_var @0 describeNumber#0, b0
-0002  b1 = make_function $0 describeNumber/1
-0003  assign_var @2 describeNumber#0, b1
-0004  b2 = constant #7 nil
-0005  store_var @3 describeBool#2, b2
-0006  b3 = make_function $1 describeBool/1
-0007  assign_var @5 describeBool#2, b3
-0008  b4 = constant #13 nil
-0009  store_var @6 describeResult#4, b4
-0010  b5 = make_function $2 describeResult/1
-0011  assign_var @23 describeResult#4, b5
-0012  b6 = constant #24 nil
-0013  store_var @24 maybe#8, b6
-0014  b7 = load_var @25 describeNumber#0
-0015  b8 = constant #25 0
-0016  b9 = call b7(b8)
-0017  print b9
-0018  b10 = load_var @26 describeNumber#0
-0019  b11 = constant #26 8
-0020  b12 = call b10(b11)
-0021  print b12
-0022  b13 = load_var @27 describeBool#2
-0023  b14 = constant #27 false
-0024  b15 = call b13(b14)
-0025  print b15
-0026  b16 = load_var @28 describeResult#4
-0027  b17 = constant #28 7
-0028  b18 = variant @29 Result. @30 Number (b17)
-0029  b19 = call b16(b18)
-0030  print b19
-0031  b20 = load_var @31 describeResult#4
-0032  b21 = constant #29 ""
-0033  b22 = variant @32 Result. @33 Text (b21)
-0034  b23 = call b20(b22)
-0035  print b23
-0036  b24 = load_var @34 describeResult#4
-0037  b25 = constant #30 nil
-0038  b26 = call b24(b25)
-0039  print b26
-0040  b27 = constant #31 1
-0041  b28 = constant #32 0
-0042  b29 = equal b27, b28
-0043  jump_if_false b29, 0047
-0044  b30 = constant #33 "zero"
-0045  print b30
-0046  jump 0056
-0047  b31 = constant #34 1
-0048  b32 = equal b27, b31
-0049  jump_if_false b32, 0053
-0050  b33 = constant #35 "one"
-0051  print b33
-0052  jump 0056
-0053  b34 = constant #36 "many"
-0054  print b34
-0055  jump 0056
-0056  b35 = constant #37 true
-0057  b36 = constant #38 false
-0058  b37 = equal b35, b36
-0059  jump_if_false b37, 0063
-0060  b38 = constant #39 "no"
-0061  print b38
-0062  jump 0069
-0063  b39 = constant #40 true
-0064  b40 = equal b35, b39
-0065  jump_if_false b40, 0069
-0066  b41 = constant #41 "yes"
-0067  print b41
-0068  jump 0069
-0069  b42 = constant #42 "ok"
-0070  b43 = constant #43 ""
-0071  b44 = equal b42, b43
-0072  jump_if_false b44, 0076
-0073  b45 = constant #44 "empty"
-0074  print b45
-0075  jump 0085
-0076  b46 = constant #45 "ok"
-0077  b47 = equal b42, b46
-0078  jump_if_false b47, 0082
-0079  b48 = constant #46 "ok"
-0080  print b48
-0081  jump 0085
-0082  b49 = constant #47 "other"
-0083  print b49
-0084  jump 0085
-0085  b50 = load_var @35 maybe#8
-0086  b51 = constant #48 nil
-0087  b52 = equal b50, b51
-0088  jump_if_false b52, 0092
-0089  b53 = constant #49 "nil"
-0090  print b53
-0091  jump 0104
-0092  b54 = constant #50 true
-0093  b55 = equal b50, b54
-0094  jump_if_false b55, 0098
-0095  b56 = constant #51 "true"
-0096  print b56
-0097  jump 0104
-0098  b57 = constant #52 false
-0099  b58 = equal b50, b57
-0100  jump_if_false b58, 0104
-0101  b59 = constant #53 "false"
-0102  print b59
-0103  jump 0104
+native_import i0 = print abi=1
+native_import i1 = str abi=1
+main registers=55
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 describeNumber/1
+0004  set_global g0, b1
+0005  b2 = constant #7 nil
+0006  init_global g1, b2
+0007  b3 = make_function $1 describeBool/1
+0008  set_global g1, b3
+0009  b4 = constant #13 nil
+0010  init_global g2, b4
+0011  b5 = make_function $2 describeResult/1
+0012  set_global g2, b5
+0013  b6 = constant #24 nil
+0014  init_global g3, b6
+0015  b7 = constant #25 0
+0016  b8 = call_direct $0 [b7]
+0017  b54 = call_native i0 [b8]
+0018  b9 = constant #26 8
+0019  b10 = call_direct $0 [b9]
+0020  b54 = call_native i0 [b10]
+0021  b11 = constant #27 false
+0022  b12 = call_direct $1 [b11]
+0023  b54 = call_native i0 [b12]
+0024  b13 = constant #28 7
+0025  b14 = make_variant t0, v0 (b13)
+0026  b15 = call_direct $2 [b14]
+0027  b54 = call_native i0 [b15]
+0028  b16 = constant #29 ""
+0029  b17 = make_variant t0, v1 (b16)
+0030  b18 = call_direct $2 [b17]
+0031  b54 = call_native i0 [b18]
+0032  b19 = constant #30 nil
+0033  b20 = call_direct $2 [b19]
+0034  b54 = call_native i0 [b20]
+0035  b21 = constant #31 1
+0036  b22 = constant #32 0
+0037  b23 = equal b21, b22
+0038  br_if b23, b1, b2
+0039  block
+0040  b24 = constant #33 "zero"
+0041  b54 = call_native i0 [b24]
+0042  br b5
+0043  block
+0044  b25 = constant #34 1
+0045  b26 = equal b21, b25
+0046  br_if b26, b3, b4
+0047  block
+0048  b27 = constant #35 "one"
+0049  b54 = call_native i0 [b27]
+0050  br b5
+0051  block
+0052  b28 = constant #36 "many"
+0053  b54 = call_native i0 [b28]
+0054  br b5
+0055  block
+0056  b29 = constant #37 true
+0057  b30 = constant #38 false
+0058  b31 = equal b29, b30
+0059  br_if b31, b6, b7
+0060  block
+0061  b32 = constant #39 "no"
+0062  b54 = call_native i0 [b32]
+0063  br b9
+0064  block
+0065  b33 = constant #40 true
+0066  b34 = equal b29, b33
+0067  br_if b34, b8, b9
+0068  block
+0069  b35 = constant #41 "yes"
+0070  b54 = call_native i0 [b35]
+0071  br b9
+0072  block
+0073  b36 = constant #42 "ok"
+0074  b37 = constant #43 ""
+0075  b38 = equal b36, b37
+0076  br_if b38, b10, b11
+0077  block
+0078  b39 = constant #44 "empty"
+0079  b54 = call_native i0 [b39]
+0080  br b14
+0081  block
+0082  b40 = constant #45 "ok"
+0083  b41 = equal b36, b40
+0084  br_if b41, b12, b13
+0085  block
+0086  b42 = constant #46 "ok"
+0087  b54 = call_native i0 [b42]
+0088  br b14
+0089  block
+0090  b43 = constant #47 "other"
+0091  b54 = call_native i0 [b43]
+0092  br b14
+0093  block
+0094  b44 = load_global g3
+0095  b45 = constant #48 nil
+0096  b46 = equal b44, b45
+0097  br_if b46, b15, b16
+0098  block
+0099  b47 = constant #49 "nil"
+0100  b54 = call_native i0 [b47]
+0101  return_nil
+0102  block
+0103  b48 = constant #50 true
+0104  b49 = equal b44, b48
+0105  br_if b49, b17, b18
+0106  block
+0107  b50 = constant #51 "true"
+0108  b54 = call_native i0 [b50]
+0109  return_nil
+0110  block
+0111  b51 = constant #52 false
+0112  b52 = equal b44, b51
+0113  br_if b52, b19, b20
+0114  block
+0115  b53 = constant #53 "false"
+0116  b54 = call_native i0 [b53]
+0117  return_nil
+0118  block
+0119  return_nil
 
 function $0 describeNumber/1 registers=9
-0000  b0 = load_var @1 value#1
-0001  b1 = constant #1 0
-0002  b2 = equal b0, b1
-0003  jump_if_false b2, 0007
-0004  b3 = constant #2 "zero"
-0005  return b3
-0006  jump 0016
-0007  b4 = constant #3 1
-0008  b5 = equal b0, b4
-0009  jump_if_false b5, 0013
-0010  b6 = constant #4 "one"
-0011  return b6
-0012  jump 0016
-0013  b7 = constant #5 "many"
-0014  return b7
-0015  jump 0016
-0016  b8 = constant #6 nil
-0017  return b8
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #1 0
+0003  b2 = equal b0, b1
+0004  br_if b2, b1, b3
+0005  block
+0006  b3 = constant #2 "zero"
+0007  return b3
+0008  block
+0009  br b8
+0010  block
+0011  b4 = constant #3 1
+0012  b5 = equal b0, b4
+0013  br_if b5, b4, b6
+0014  block
+0015  b6 = constant #4 "one"
+0016  return b6
+0017  block
+0018  br b8
+0019  block
+0020  b7 = constant #5 "many"
+0021  return b7
+0022  block
+0023  br b8
+0024  block
+0025  b8 = constant #6 nil
+0026  return b8
+0027  block
+0028  return_nil
 
 function $1 describeBool/1 registers=8
-0000  b0 = load_var @4 value#3
-0001  b1 = constant #8 true
-0002  b2 = equal b0, b1
-0003  jump_if_false b2, 0007
-0004  b3 = constant #9 "true"
-0005  return b3
-0006  jump 0013
-0007  b4 = constant #10 false
-0008  b5 = equal b0, b4
-0009  jump_if_false b5, 0013
-0010  b6 = constant #11 "false"
-0011  return b6
-0012  jump 0013
-0013  b7 = constant #12 nil
-0014  return b7
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #8 true
+0003  b2 = equal b0, b1
+0004  br_if b2, b1, b3
+0005  block
+0006  b3 = constant #9 "true"
+0007  return b3
+0008  block
+0009  br b6
+0010  block
+0011  b4 = constant #10 false
+0012  b5 = equal b0, b4
+0013  br_if b5, b4, b6
+0014  block
+0015  b6 = constant #11 "false"
+0016  return b6
+0017  block
+0018  br b6
+0019  block
+0020  b7 = constant #12 nil
+0021  return b7
+0022  block
+0023  return_nil
 
 function $2 describeResult/1 registers=28
-0000  b0 = load_var @7 value#5
-0001  b1 = constant #14 nil
-0002  b2 = equal b0, b1
-0003  jump_if_false b2, 0007
-0004  b3 = constant #15 "nil"
-0005  return b3
-0006  jump 0049
-0007  b4 = variant_tag b0  @8 Result. @9 Number
-0008  jump_if_false b4, 0016
-0009  b5 = variant_field b0[0]
-0010  b6 = constant #16 0
-0011  b7 = equal b5, b6
-0012  jump_if_false b7, 0016
-0013  b8 = constant #17 "zero"
-0014  return b8
-0015  jump 0049
-0016  b9 = variant_tag b0  @10 Result. @11 Number
-0017  jump_if_false b9, 0026
-0018  b10 = variant_field b0[0]
-0019  store_var @12 value#6, b10
-0020  b11 = constant #18 "number:"
-0021  b12 = load_var @13 value#6
-0022  b13 = native_call @14 str [b12]
-0023  b14 = add b11, b13
-0024  return b14
-0025  jump 0049
-0026  b15 = variant_tag b0  @15 Result. @16 Text
-0027  jump_if_false b15, 0035
-0028  b16 = variant_field b0[0]
-0029  b17 = constant #19 ""
-0030  b18 = equal b16, b17
-0031  jump_if_false b18, 0035
-0032  b19 = constant #20 "empty-text"
-0033  return b19
-0034  jump 0049
-0035  b20 = variant_tag b0  @17 Result. @18 Text
-0036  jump_if_false b20, 0044
-0037  b21 = variant_field b0[0]
-0038  store_var @19 value#7, b21
-0039  b22 = constant #21 "text:"
-0040  b23 = load_var @20 value#7
-0041  b24 = add b22, b23
-0042  return b24
-0043  jump 0049
-0044  b25 = variant_tag b0  @21 Result. @22 Empty
-0045  jump_if_false b25, 0049
-0046  b26 = constant #22 "empty"
-0047  return b26
-0048  jump 0049
-0049  b27 = constant #23 nil
-0050  return b27
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #14 nil
+0003  b2 = equal b0, b1
+0004  br_if b2, b1, b3
+0005  block
+0006  b3 = constant #15 "nil"
+0007  return b3
+0008  block
+0009  br b20
+0010  block
+0011  b4 = is_variant b0, t0, v0
+0012  br_if b4, b4, b7
+0013  block
+0014  b5 = variant_get b0, t0, v0, 0
+0015  b6 = constant #16 0
+0016  b7 = equal b5, b6
+0017  br_if b7, b5, b7
+0018  block
+0019  b8 = constant #17 "zero"
+0020  return b8
+0021  block
+0022  br b20
+0023  block
+0024  b9 = is_variant b0, t0, v0
+0025  br_if b9, b8, b10
+0026  block
+0027  b10 = variant_get b0, t0, v0, 0
+0028  bind_local l1, b10
+0029  b11 = constant #18 "number:"
+0030  b12 = load_local l1
+0031  b13 = call_native i1 [b12]
+0032  b14 = concat_str b11, b13
+0033  return b14
+0034  block
+0035  br b20
+0036  block
+0037  b15 = is_variant b0, t0, v1
+0038  br_if b15, b11, b14
+0039  block
+0040  b16 = variant_get b0, t0, v1, 0
+0041  b17 = constant #19 ""
+0042  b18 = equal b16, b17
+0043  br_if b18, b12, b14
+0044  block
+0045  b19 = constant #20 "empty-text"
+0046  return b19
+0047  block
+0048  br b20
+0049  block
+0050  b20 = is_variant b0, t0, v1
+0051  br_if b20, b15, b17
+0052  block
+0053  b21 = variant_get b0, t0, v1, 0
+0054  bind_local l2, b21
+0055  b22 = constant #21 "text:"
+0056  b23 = load_local l2
+0057  b24 = concat_str b22, b23
+0058  return b24
+0059  block
+0060  br b20
+0061  block
+0062  b25 = is_variant b0, t0, v2
+0063  br_if b25, b18, b20
+0064  block
+0065  b26 = constant #22 "empty"
+0066  return b26
+0067  block
+0068  br b20
+0069  block
+0070  b27 = constant #23 nil
+0071  return b27
+0072  block
+0073  return_nil

@@ -1,6 +1,7 @@
 #include "BytecodeTextEmitter.hpp"
 
 #include <iomanip>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -40,7 +41,7 @@ std::string escapedString(const std::string& value)
 std::string numberText(double value)
 {
     std::ostringstream out;
-    out << std::setprecision(15) << value;
+    out << std::setprecision(std::numeric_limits<double>::max_digits10) << value;
     return out.str();
 }
 
@@ -154,42 +155,45 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
         }
         out << "]";
         break;
-    case BytecodeOp::Struct:
-        if (instruction.arguments.size() != instruction.operands.size()) {
-            throw std::runtime_error("struct expects matching field names and values");
-        }
-        out << reg(requireDest(instruction)) << " = struct";
-        if (instruction.typeNameOperand) {
-            out << ' ' << nameRef(*instruction.typeNameOperand);
-        }
-        out << " {";
-        for (std::size_t i = 0; i < instruction.arguments.size(); ++i) {
-            if (i != 0) {
-                out << ", ";
-            }
-            out << nameRef(instruction.operands[i]) << ": " << reg(instruction.arguments[i]);
-        }
-        out << "}";
-        break;
-    case BytecodeOp::Variant:
-        out << reg(requireDest(instruction)) << " = variant ";
-        if (!instruction.typeNameOperand || !instruction.variantNameOperand) {
-            throw std::runtime_error("variant missing enum or variant name");
-        }
-        out << nameRef(*instruction.typeNameOperand) << "." << nameRef(*instruction.variantNameOperand) << " ";
+    case BytecodeOp::MakeStruct:
+        out << reg(requireDest(instruction)) << " = make_struct t" << instruction.operand << " ";
         writeRegisterList(out, instruction.arguments);
         break;
-    case BytecodeOp::VariantTag:
-        out << reg(requireDest(instruction)) << " = variant_tag "
-            << reg(requireLeft(instruction)) << " ";
-        if (!instruction.typeNameOperand || !instruction.variantNameOperand) {
-            throw std::runtime_error("variant_tag missing enum or variant name");
-        }
-        out << nameRef(*instruction.typeNameOperand) << "." << nameRef(*instruction.variantNameOperand);
+    case BytecodeOp::Field:
+        out << reg(requireDest(instruction)) << " = field "
+            << reg(requireLeft(instruction)) << ", " << nameRef(instruction.operand);
         break;
-    case BytecodeOp::VariantField:
-        out << reg(requireDest(instruction)) << " = variant_field "
-            << reg(requireLeft(instruction)) << " " << instruction.operand;
+    case BytecodeOp::AssignField:
+        out << reg(requireDest(instruction)) << " = assign_field "
+            << reg(requireLeft(instruction)) << ", " << nameRef(instruction.operand)
+            << ", " << reg(instruction.arguments.empty() ? BytecodeRegister{0} : instruction.arguments.front());
+        break;
+    case BytecodeOp::StructGet:
+        out << reg(requireDest(instruction)) << " = struct_get "
+            << reg(requireLeft(instruction)) << ", t" << instruction.operand
+            << ", " << (instruction.operands.empty() ? 0 : instruction.operands.front());
+        break;
+    case BytecodeOp::StructSet:
+        out << reg(requireDest(instruction)) << " = struct_set "
+            << reg(requireLeft(instruction)) << ", t" << instruction.operand
+            << ", " << (instruction.operands.empty() ? 0 : instruction.operands.front())
+            << ", " << reg(instruction.arguments.empty() ? BytecodeRegister{0} : instruction.arguments.front());
+        break;
+    case BytecodeOp::MakeVariant:
+        out << reg(requireDest(instruction)) << " = make_variant t" << instruction.operand
+            << ", v" << instruction.variantNameOperand.value_or(0) << " ";
+        writeRegisterList(out, instruction.arguments);
+        break;
+    case BytecodeOp::IsVariant:
+        out << reg(requireDest(instruction)) << " = is_variant "
+            << reg(requireLeft(instruction)) << ", t" << instruction.operand
+            << ", v" << instruction.variantNameOperand.value_or(0);
+        break;
+    case BytecodeOp::VariantGet:
+        out << reg(requireDest(instruction)) << " = variant_get "
+            << reg(requireLeft(instruction)) << ", t" << instruction.typeNameOperand.value_or(0)
+            << ", v" << instruction.variantNameOperand.value_or(0)
+            << ", " << instruction.operand;
         break;
     case BytecodeOp::Move:
         out << reg(requireDest(instruction)) << " = move " << reg(requireLeft(instruction));
@@ -203,16 +207,53 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
     case BytecodeOp::AssignVar:
         out << "assign_var " << nameRef(instruction.operand) << ", " << reg(requireLeft(instruction));
         break;
+    case BytecodeOp::LoadLocal:
+        out << reg(requireDest(instruction)) << " = load_local l" << instruction.operand;
+        break;
+    case BytecodeOp::BindLocal:
+        out << "bind_local l" << instruction.operand << ", " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::SetLocal:
+        out << "set_local l" << instruction.operand << ", " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::LoadUpvalue:
+        out << reg(requireDest(instruction)) << " = load_upvalue u" << instruction.operand;
+        break;
+    case BytecodeOp::SetUpvalue:
+        out << "set_upvalue u" << instruction.operand << ", " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::LoadGlobal:
+        out << reg(requireDest(instruction)) << " = load_global g" << instruction.operand;
+        break;
+    case BytecodeOp::InitGlobal:
+        out << "init_global g" << instruction.operand << ", " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::SetGlobal:
+        out << "set_global g" << instruction.operand << ", " << reg(requireLeft(instruction));
+        break;
     case BytecodeOp::Call:
         out << reg(requireDest(instruction)) << " = call " << reg(requireLeft(instruction)) << ' ';
         writeRegisterList(out, instruction.arguments);
         break;
-    case BytecodeOp::NativeCall:
-        out << reg(requireDest(instruction)) << " = native_call " << nameRef(instruction.operand) << ' ';
+    case BytecodeOp::CallDirect:
+        out << reg(requireDest(instruction)) << " = call_direct " << functionRef(instruction.operand) << ' ';
+        writeRegisterList(out, instruction.arguments);
+        break;
+    case BytecodeOp::CallNative:
+        out << reg(requireDest(instruction)) << " = call_native i" << instruction.operand << ' ';
         writeRegisterList(out, instruction.arguments);
         break;
     case BytecodeOp::Index:
         out << reg(requireDest(instruction)) << " = index " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::ArrayGet:
+        out << reg(requireDest(instruction)) << " = array_get " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::MapGet:
+        out << reg(requireDest(instruction)) << " = map_get " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::RangeGet:
+        out << reg(requireDest(instruction)) << " = range_get " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
         break;
     case BytecodeOp::AssignIndex:
         if (instruction.arguments.size() != 1) {
@@ -220,27 +261,44 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
         }
         out << reg(requireDest(instruction)) << " = assign_index " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction)) << ", " << reg(instruction.arguments.front());
         break;
-    case BytecodeOp::Field:
-        out << reg(requireDest(instruction)) << " = field " << reg(requireLeft(instruction)) << ", " << nameRef(instruction.operand);
-        break;
-    case BytecodeOp::AssignField:
+    case BytecodeOp::ArraySet:
         if (instruction.arguments.size() != 1) {
-            throw std::runtime_error("assign_field expects one value operand");
+            throw std::runtime_error("array_set expects one value operand");
         }
-        out << reg(requireDest(instruction)) << " = assign_field " << reg(requireLeft(instruction)) << ", "
-            << nameRef(instruction.operand) << ", " << reg(instruction.arguments.front());
+        out << reg(requireDest(instruction)) << " = array_set " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction)) << ", " << reg(instruction.arguments.front());
+        break;
+    case BytecodeOp::MapSet:
+        if (instruction.arguments.size() != 1) {
+            throw std::runtime_error("map_set expects one value operand");
+        }
+        out << reg(requireDest(instruction)) << " = map_set " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction)) << ", " << reg(instruction.arguments.front());
         break;
     case BytecodeOp::Len:
         out << reg(requireDest(instruction)) << " = len " << reg(requireLeft(instruction));
         break;
-    case BytecodeOp::AssertArray:
-        out << reg(requireDest(instruction)) << " = assert_array " << reg(requireLeft(instruction));
+    case BytecodeOp::LenArray:
+        out << reg(requireDest(instruction)) << " = len_array " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::LenMap:
+        out << reg(requireDest(instruction)) << " = len_map " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::LenRange:
+        out << reg(requireDest(instruction)) << " = len_range " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::LenStr:
+        out << reg(requireDest(instruction)) << " = len_str " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::IterInit:
+        out << reg(requireDest(instruction)) << " = iter_init " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::IterHas:
+        out << reg(requireDest(instruction)) << " = iter_has " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::IterNext:
+        out << reg(requireDest(instruction)) << " = iter_next " << reg(requireLeft(instruction));
         break;
     case BytecodeOp::AssertNumber:
         out << reg(requireDest(instruction)) << " = assert_number " << reg(requireLeft(instruction)) << ", " << nameRef(instruction.operand);
-        break;
-    case BytecodeOp::Print:
-        out << "print " << reg(requireLeft(instruction));
         break;
     case BytecodeOp::Return:
         out << "return " << reg(requireLeft(instruction));
@@ -248,20 +306,38 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
     case BytecodeOp::Negate:
         out << reg(requireDest(instruction)) << " = negate " << reg(requireLeft(instruction));
         break;
+    case BytecodeOp::NegNum:
+        out << reg(requireDest(instruction)) << " = neg_num " << reg(requireLeft(instruction));
+        break;
     case BytecodeOp::Not:
         out << reg(requireDest(instruction)) << " = not " << reg(requireLeft(instruction));
         break;
     case BytecodeOp::Add:
         out << reg(requireDest(instruction)) << " = add " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
         break;
+    case BytecodeOp::AddNum:
+        out << reg(requireDest(instruction)) << " = add_num " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::ConcatStr:
+        out << reg(requireDest(instruction)) << " = concat_str " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
     case BytecodeOp::Subtract:
         out << reg(requireDest(instruction)) << " = subtract " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::SubNum:
+        out << reg(requireDest(instruction)) << " = sub_num " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
         break;
     case BytecodeOp::Multiply:
         out << reg(requireDest(instruction)) << " = multiply " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
         break;
+    case BytecodeOp::MulNum:
+        out << reg(requireDest(instruction)) << " = mul_num " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
     case BytecodeOp::Divide:
         out << reg(requireDest(instruction)) << " = divide " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::DivNum:
+        out << reg(requireDest(instruction)) << " = div_num " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
         break;
     case BytecodeOp::Equal:
         out << reg(requireDest(instruction)) << " = equal " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
@@ -272,14 +348,38 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
     case BytecodeOp::Greater:
         out << reg(requireDest(instruction)) << " = greater " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
         break;
+    case BytecodeOp::GreaterNum:
+        out << reg(requireDest(instruction)) << " = gt_num " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::GreaterStr:
+        out << reg(requireDest(instruction)) << " = gt_str " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
     case BytecodeOp::GreaterEqual:
         out << reg(requireDest(instruction)) << " = greater_equal " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::GreaterEqualNum:
+        out << reg(requireDest(instruction)) << " = ge_num " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::GreaterEqualStr:
+        out << reg(requireDest(instruction)) << " = ge_str " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
         break;
     case BytecodeOp::Less:
         out << reg(requireDest(instruction)) << " = less " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
         break;
+    case BytecodeOp::LessNum:
+        out << reg(requireDest(instruction)) << " = lt_num " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::LessStr:
+        out << reg(requireDest(instruction)) << " = lt_str " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
     case BytecodeOp::LessEqual:
         out << reg(requireDest(instruction)) << " = less_equal " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::LessEqualNum:
+        out << reg(requireDest(instruction)) << " = le_num " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::LessEqualStr:
+        out << reg(requireDest(instruction)) << " = le_str " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
         break;
     case BytecodeOp::Jump:
         out << "jump " << instruction.operand;
@@ -290,6 +390,19 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
     case BytecodeOp::JumpIfTrue:
         out << "jump_if_true " << reg(requireLeft(instruction)) << ", " << instruction.operand;
         break;
+    case BytecodeOp::Br:
+        out << "br b" << instruction.operand;
+        break;
+    case BytecodeOp::BrIf:
+        out << "br_if " << reg(requireLeft(instruction)) << ", b" << instruction.operand
+            << ", b" << (instruction.operands.empty() ? 0 : instruction.operands.front());
+        break;
+    case BytecodeOp::ReturnNil:
+        out << "return_nil";
+        break;
+    case BytecodeOp::InitModule:
+        out << "init_module m" << instruction.operand;
+        break;
     }
     out << '\n';
 }
@@ -297,6 +410,10 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
 void writeInstructions(std::ostream& out, const std::vector<BytecodeInstruction>& instructions)
 {
     for (const BytecodeInstruction& instruction : instructions) {
+        if (instruction.op == BytecodeOp::BlockStart) {
+            out << "block b" << instruction.operand << ":\n";
+            continue;
+        }
         writeInstruction(out, instruction);
     }
 }
@@ -354,7 +471,10 @@ const char* moduleDependencyKindName(ModuleGraphEdgeKind kind)
     return kind == ModuleGraphEdgeKind::Import ? "import" : "re_export";
 }
 
-void writeBytecodeSections(std::ostream& out, const BytecodeProgram& program)
+void writeBytecodeSections(
+    std::ostream& out,
+    const BytecodeProgram& program,
+    bool emitGlobals)
 {
     out << "constants:\n";
     for (std::size_t i = 0; i < program.constants().size(); ++i) {
@@ -364,6 +484,42 @@ void writeBytecodeSections(std::ostream& out, const BytecodeProgram& program)
     out << "\nnames:\n";
     for (std::size_t i = 0; i < program.names().size(); ++i) {
         out << "  " << nameRef(static_cast<std::uint32_t>(i)) << " = " << escapedString(program.names()[i]) << '\n';
+    }
+
+    if (emitGlobals && !program.globals().empty()) {
+        out << "\nglobals:\n";
+        for (std::size_t i = 0; i < program.globals().size(); ++i) {
+            out << "  g" << i << " = " << nameRef(program.globals()[i]) << '\n';
+        }
+    }
+
+    if (!program.types().empty()) {
+        out << "\ntypes:\n";
+        for (std::size_t index = 0; index < program.types().size(); ++index) {
+            const BytecodeType& type = program.types()[index];
+            out << "  t" << index << " = " << (type.isEnum ? "enum " : "struct ")
+                << escapedString(type.name);
+            if (type.isEnum) {
+                for (std::size_t variant = 0; variant < type.variants.size(); ++variant) {
+                    out << " v" << variant << "=" << escapedString(type.variants[variant].name)
+                        << " payload=" << type.variants[variant].payloadCount;
+                }
+            } else {
+                for (std::size_t field = 0; field < type.fieldNames.size(); ++field) {
+                    out << " field" << field << "=" << escapedString(type.fieldNames[field]);
+                }
+            }
+            out << '\n';
+        }
+    }
+
+    if (!program.nativeImports().empty()) {
+        out << "\nnative_imports:\n";
+        for (std::size_t index = 0; index < program.nativeImports().size(); ++index) {
+            const BytecodeNativeImport& import = program.nativeImports()[index];
+            out << "  i" << index << " = " << escapedString(import.name)
+                << " abi=" << import.abiVersion << '\n';
+        }
     }
 
     out << "\nmain registers=" << program.registerCount() << ":\n";
@@ -377,6 +533,13 @@ void writeBytecodeSections(std::ostream& out, const BytecodeProgram& program)
             << " registers=" << function.registerCount << ":\n";
         for (std::size_t parameter = 0; parameter < function.parameters.size(); ++parameter) {
             out << "  param " << parameter << " = " << escapedString(function.parameters[parameter]) << '\n';
+        }
+        for (std::size_t upvalue = 0; upvalue < function.upvalues.size(); ++upvalue) {
+            const BytecodeUpvalue& descriptor = function.upvalues[upvalue];
+            const char* source = descriptor.source == BytecodeUpvalueSource::Local
+                ? "local l"
+                : descriptor.source == BytecodeUpvalueSource::Upvalue ? "upvalue u" : "global g";
+            out << "  upvalue u" << upvalue << " = " << source << descriptor.index << '\n';
         }
         writeInstructions(out, function.instructions);
     }
@@ -438,13 +601,13 @@ void writeBytecodeSections(std::ostream& out, const BytecodeProgram& program)
 
 void writeBytecodeText(std::ostream& out, const BytecodeProgram& program)
 {
-    out << "cdbc 0.1\n\n";
-    writeBytecodeSections(out, program);
+    out << "cdbc 0.2\n\n";
+    writeBytecodeSections(out, program, true);
 }
 
 void writeBytecodeModuleText(std::ostream& out, const BytecodeModuleArtifact& artifact)
 {
-    out << "cdbc 0.1\n\n"
+    out << "cdbc 0.2\n\n"
         << "artifact: module\n\n"
         << "module:\n"
         << "  identity = " << escapedString(artifact.identity) << '\n'
@@ -454,16 +617,16 @@ void writeBytecodeModuleText(std::ostream& out, const BytecodeModuleArtifact& ar
     if (artifact.entryOrder) {
         out << "  entry_order = " << *artifact.entryOrder << '\n';
     }
+    out << "  init = f" << artifact.initFunction << '\n';
     out << "  dependencies:\n";
     for (std::size_t index = 0; index < artifact.dependencies.size(); ++index) {
         const BytecodeModuleDependency& dependency = artifact.dependencies[index];
         out << "    d" << index
             << " target=" << escapedString(dependency.moduleIdentity)
             << " kind=" << moduleDependencyKindName(dependency.kind)
-            << " at=" << dependency.instructionOffset
             << " requested=" << escapedString(dependency.requestedPath)
             << '\n';
     }
     out << '\n';
-    writeBytecodeSections(out, artifact.program);
+    writeBytecodeSections(out, artifact.program, true);
 }

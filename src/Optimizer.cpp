@@ -532,7 +532,8 @@ SSAConstantEvaluation evaluateSSAConstantUnary(IROp op, const Value& operand)
     }
 
     switch (op) {
-    case IROp::Negate: {
+    case IROp::Negate:
+    case IROp::NegNum: {
         SSAConstantEvaluation failure;
         const std::optional<double> number = finiteNumber(operand, failure);
         if (!number) {
@@ -566,9 +567,22 @@ SSAConstantEvaluation evaluateSSAConstantBinary(
             return foldedConstant(Value::string(left.asString() + right.asString()));
         }
         return constantStatus(SSAConstantEvaluationKind::RuntimeTrap);
+    case IROp::AddNum:
+        if (left.type() == Value::Type::Number && right.type() == Value::Type::Number) {
+            return finiteNumberResult(left.asNumber() + right.asNumber());
+        }
+        return constantStatus(SSAConstantEvaluationKind::RuntimeTrap);
+    case IROp::ConcatStr:
+        if (left.type() == Value::Type::String && right.type() == Value::Type::String) {
+            return foldedConstant(Value::string(left.asString() + right.asString()));
+        }
+        return constantStatus(SSAConstantEvaluationKind::RuntimeTrap);
     case IROp::Subtract:
     case IROp::Multiply:
-    case IROp::Divide: {
+    case IROp::Divide:
+    case IROp::SubNum:
+    case IROp::MulNum:
+    case IROp::DivNum: {
         SSAConstantEvaluation failure;
         const std::optional<double> leftNumber = finiteNumber(left, failure);
         if (!leftNumber) {
@@ -578,13 +592,13 @@ SSAConstantEvaluation evaluateSSAConstantBinary(
         if (!rightNumber) {
             return failure;
         }
-        if (op == IROp::Divide && *rightNumber == 0.0) {
+        if ((op == IROp::Divide || op == IROp::DivNum) && *rightNumber == 0.0) {
             return constantStatus(SSAConstantEvaluationKind::RuntimeTrap);
         }
-        if (op == IROp::Subtract) {
+        if (op == IROp::Subtract || op == IROp::SubNum) {
             return finiteNumberResult(*leftNumber - *rightNumber);
         }
-        if (op == IROp::Multiply) {
+        if (op == IROp::Multiply || op == IROp::MulNum) {
             return finiteNumberResult(*leftNumber * *rightNumber);
         }
         return finiteNumberResult(*leftNumber / *rightNumber);
@@ -597,7 +611,11 @@ SSAConstantEvaluation evaluateSSAConstantBinary(
     case IROp::Greater:
     case IROp::GreaterEqual:
     case IROp::Less:
-    case IROp::LessEqual: {
+    case IROp::LessEqual:
+    case IROp::GreaterNum:
+    case IROp::GreaterEqualNum:
+    case IROp::LessNum:
+    case IROp::LessEqualNum: {
         SSAConstantEvaluation failure;
         const std::optional<double> leftNumber = finiteNumber(left, failure);
         if (!leftNumber) {
@@ -608,11 +626,11 @@ SSAConstantEvaluation evaluateSSAConstantBinary(
             return failure;
         }
         bool result = false;
-        if (op == IROp::Greater) {
+        if (op == IROp::Greater || op == IROp::GreaterNum) {
             result = *leftNumber > *rightNumber;
-        } else if (op == IROp::GreaterEqual) {
+        } else if (op == IROp::GreaterEqual || op == IROp::GreaterEqualNum) {
             result = *leftNumber >= *rightNumber;
-        } else if (op == IROp::Less) {
+        } else if (op == IROp::Less || op == IROp::LessNum) {
             result = *leftNumber < *rightNumber;
         } else {
             result = *leftNumber <= *rightNumber;
@@ -728,7 +746,7 @@ SSADeSSAIRResult optimizeIRFunctionWithStats(
     try {
         const ControlFlowGraph cfg = buildControlFlowGraph(
             input.instructions,
-            moduleDependencies);
+            {});
         const SSAFunction lifted = liftIRToSSA(cfg, input);
         const SSAOptimizationResult optimized = optimizeSSA(
             cfg,
@@ -775,6 +793,7 @@ SSADeSSAIRResult optimizeIRFunctionWithStats(
         if (stats) {
             *stats = resultStats;
         }
+        result.moduleDependencies = moduleDependencies;
         result.verify();
         return result;
     } catch (const SSAError& error) {
@@ -987,7 +1006,7 @@ void pruneUnreachableIRInstructions(
 {
     const ControlFlowGraph cfg = buildControlFlowGraph(
         result.function.instructions,
-        result.moduleDependencies);
+        {});
     std::size_t unreachableBlocks = 0;
     std::vector<bool> retained(result.function.instructions.size(), false);
     for (const CFGBlock& block : cfg.blocks) {
@@ -1404,9 +1423,14 @@ void SSADeSSAProgramResult::verify(const IRProgram& input) const
     materializeFoldedConstants(candidate, main, mainStream.foldedConstants);
     std::vector<IRFunction> candidateFunctions;
     candidateFunctions.reserve(functions.size());
-    for (const SSADeSSAIRResult& function : functions) {
+    for (std::size_t index = 0; index < functions.size(); ++index) {
+        const SSADeSSAIRResult& function = functions[index];
         IRFunction lowered = function.function;
         materializeFoldedConstants(candidate, lowered, function.foldedConstants);
+        lowered.id = input.functions()[index].id;
+        lowered.parentId = input.functions()[index].parentId;
+        lowered.parameterBindingIds = input.functions()[index].parameterBindingIds;
+        lowered.moduleInit = input.functions()[index].moduleInit;
         candidateFunctions.push_back(std::move(lowered));
     }
     candidate.rebuildWithStreams(
@@ -1424,9 +1448,14 @@ IRProgram SSADeSSAProgramResult::rebuild(const IRProgram& input) const
     materializeFoldedConstants(rebuilt, main, mainStream.foldedConstants);
     std::vector<IRFunction> rebuiltFunctions;
     rebuiltFunctions.reserve(functions.size());
-    for (const SSADeSSAIRResult& function : functions) {
+    for (std::size_t index = 0; index < functions.size(); ++index) {
+        const SSADeSSAIRResult& function = functions[index];
         IRFunction lowered = function.function;
         materializeFoldedConstants(rebuilt, lowered, function.foldedConstants);
+        lowered.id = input.functions()[index].id;
+        lowered.parentId = input.functions()[index].parentId;
+        lowered.parameterBindingIds = input.functions()[index].parameterBindingIds;
+        lowered.moduleInit = input.functions()[index].moduleInit;
         rebuiltFunctions.push_back(std::move(lowered));
     }
     return rebuilt.rebuildWithStreams(

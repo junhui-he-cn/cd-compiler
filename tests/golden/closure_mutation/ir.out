@@ -1,0 +1,18 @@
+IR
+0000  v0 = constant #0 1
+0001  store_var @0 x#0, v0
+0002  v1 = make_function $0 <lambda>/0
+0003  store_var @2 f#1, v1
+0004  v2 = constant #2 2
+0005  assign_var @3 x#0, v2
+0006  v3 = load_var @4 f#1
+0007  v4 = call v3()
+0008  print v4
+0009  v5 = load_var @5 x#0
+0010  print v5
+
+function $0 <lambda>()
+0000  v0 = load_var @1 x#0
+0001  return v0
+0002  v1 = constant #1 nil
+0003  return v1

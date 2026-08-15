@@ -209,15 +209,22 @@ std::optional<BindingId> IRCompiler::registerBindingMetadata(
 
 std::optional<BindingId> IRCompiler::registerSyntheticBinding(const std::string& resolvedName)
 {
-    while (nextSyntheticBindingId_ < std::numeric_limits<std::size_t>::max()) {
+    return registerSyntheticBinding(resolvedName, BindingStorageClass::Synthetic);
+}
+
+std::optional<BindingId> IRCompiler::registerSyntheticBinding(
+    const std::string& resolvedName,
+    BindingStorageClass storage)
+{
+    while (nextSyntheticBindingId_ < std::numeric_limits<std::size_t>::max() - 1) {
         const BindingId bindingId{
-            std::numeric_limits<std::size_t>::max() - nextSyntheticBindingId_++};
+            std::numeric_limits<std::size_t>::max() - 1 - nextSyntheticBindingId_++};
         if (registeredBindings_.find(bindingId) == registeredBindings_.end()) {
             return registerBinding(
                 bindingId,
                 resolvedName,
                 std::nullopt,
-                BindingStorageClass::Synthetic);
+                storage);
         }
     }
     throw IRCompileError("exhausted synthetic binding IDs");
@@ -231,6 +238,7 @@ void IRCompiler::registerFunctionParameters(
         || metadata.parameterNames.size() != declarations.size()) {
         throw IRCompileError("function parameter binding metadata mismatch");
     }
+    ir_.setFunctionParameterBindingIds(metadata.parameterBindingIds);
     for (std::size_t index = 0; index < metadata.parameterNames.size(); ++index) {
         if (!metadata.parameterBindingIds[index].valid()) {
             throw IRCompileError("function parameter binding metadata is missing");
@@ -265,6 +273,19 @@ const TypeInfo& IRCompiler::typedExpressionType(
         throw IRCompileError(std::string("missing typed metadata for ") + context);
     }
     return type;
+}
+
+const TypedExpressionRecord* IRCompiler::typedExpressionRecord(const Expr& expression) const
+{
+    const Expr* current = &expression;
+    while (current) {
+        if (const auto* grouping = dynamic_cast<const GroupingExpr*>(current)) {
+            current = grouping->expression.get();
+            continue;
+        }
+        break;
+    }
+    return declarationIndex_ ? declarationIndex_->typedExpression(*current) : nullptr;
 }
 
 const IndexOperationRecord& IRCompiler::indexOperation(
@@ -310,6 +331,11 @@ IRProgram IRCompiler::compileModule(
     return compileInternal(program, declarationIndex, moduleId);
 }
 
+std::optional<std::size_t> IRCompiler::moduleInitFunction() const
+{
+    return moduleInitFunction_;
+}
+
 IRProgram IRCompiler::compileInternal(
     const Program& program,
     const DeclarationIndex& declarationIndex,
@@ -324,6 +350,9 @@ IRProgram IRCompiler::compileInternal(
     modules_.clear();
     compiledModules_.clear();
     loopContexts_.clear();
+    functionIndices_.clear();
+    pendingDirectCalls_.clear();
+    moduleInitFunction_.reset();
     registeredBindings_.clear();
     bindingIdsByResolvedName_.clear();
     exportedDeclarations_.clear();
@@ -334,6 +363,37 @@ IRProgram IRCompiler::compileInternal(
     for (const auto& statement : program.statements) {
         if (const auto* module = dynamic_cast<const ModuleStmt*>(statement.get())) {
             modules_.emplace(module->moduleId, module);
+        }
+    }
+    const auto recordLayouts = [this](const Stmt& statement) {
+        if (const auto* structDecl = dynamic_cast<const StructDeclStmt*>(&statement)) {
+            IRStructLayout layout;
+            layout.name = structDecl->name.lexeme;
+            for (const StructFieldDecl& field : structDecl->fields) {
+                layout.fieldNames.push_back(field.name.lexeme);
+            }
+            ir_.addStructLayout(std::move(layout));
+        } else if (const auto* enumDecl = dynamic_cast<const EnumDeclStmt*>(&statement)) {
+            IREnumLayout layout;
+            layout.name = enumDecl->name.lexeme;
+            for (const EnumVariantDecl& variant : enumDecl->variants) {
+                layout.variants.push_back(IRVariantLayout{
+                    variant.name.lexeme,
+                    variant.payloadTypes.size(),
+                });
+            }
+            ir_.addEnumLayout(std::move(layout));
+        }
+    };
+    for (const auto& [moduleId, module] : modules_) {
+        (void)moduleId;
+        for (const StmtPtr& statement : module->statements) {
+            recordLayouts(*statement);
+        }
+    }
+    for (const auto& statement : program.statements) {
+        if (!dynamic_cast<const ModuleStmt*>(statement.get())) {
+            recordLayouts(*statement);
         }
     }
     if (independentModuleId_) {
@@ -347,6 +407,7 @@ IRProgram IRCompiler::compileInternal(
             compileStatement(*statement);
         }
     }
+    patchPendingDirectCalls();
     modules_.clear();
     compiledModules_.clear();
     loopContexts_.clear();
@@ -357,6 +418,23 @@ IRProgram IRCompiler::compileInternal(
     independentModuleId_.reset();
     declarationIndex_ = nullptr;
     return std::move(ir_);
+}
+
+void IRCompiler::patchPendingDirectCalls()
+{
+    for (const PendingDirectCall& pending : pendingDirectCalls_) {
+        const auto found = functionIndices_.find(pending.target);
+        if (found == functionIndices_.end()) {
+            throw IRCompileError("direct call target has no compiled function");
+        }
+        if (pending.functionId) {
+            ir_.patchFunctionCallDirectById(
+                *pending.functionId, pending.instructionIndex, found->second);
+        } else {
+            ir_.patchMainCallDirect(pending.instructionIndex, found->second);
+        }
+    }
+    pendingDirectCalls_.clear();
 }
 
 void IRCompiler::compileStatement(const Stmt& statement)
@@ -374,8 +452,7 @@ void IRCompiler::compileStatement(const Stmt& statement)
             ir_.addModuleDependency(IRModuleDependency{
                 import->resolvedModuleId,
                 ModuleGraphEdgeKind::Import,
-                importPathForIR(import->path),
-                ir_.instructionCount()});
+                importPathForIR(import->path)});
             return;
         }
         const auto found = modules_.find(import->resolvedModuleId);
@@ -392,8 +469,7 @@ void IRCompiler::compileStatement(const Stmt& statement)
                 ir_.addModuleDependency(IRModuleDependency{
                     exportStmt->resolvedModuleId,
                     ModuleGraphEdgeKind::ReExport,
-                    importPathForIR(*exportStmt->sourcePath),
-                    ir_.instructionCount()});
+                    importPathForIR(*exportStmt->sourcePath)});
                 return;
             }
             const auto found = modules_.find(exportStmt->resolvedModuleId);
@@ -545,6 +621,43 @@ void IRCompiler::compileModule(const ModuleStmt& module)
         return;
     }
     compiledModules_.insert(module.moduleId);
+    if (independentModuleId_) {
+        // Independent module products no longer splice their init stream into
+        // the linker's main. The module init statements live in a dedicated
+        // function and emit init_module calls at each dependency's source
+        // position, preserving the former interleaved init order.
+        ir_.beginFunction("__module_init", {}, true);
+        for (const auto& child : module.statements) {
+            if (const auto* import = dynamic_cast<const ImportStmt*>(child.get())) {
+                const std::size_t index = ir_.moduleDependencies().size();
+                ir_.addModuleDependency(IRModuleDependency{
+                    import->resolvedModuleId,
+                    ModuleGraphEdgeKind::Import,
+                    importPathForIR(import->path)});
+                ir_.emitInitModule(index);
+                continue;
+            }
+            if (const auto* exportStmt
+                = dynamic_cast<const ExportStmt*>(child.get())) {
+                if (exportStmt->sourcePath) {
+                    const std::size_t index = ir_.moduleDependencies().size();
+                    ir_.addModuleDependency(IRModuleDependency{
+                        exportStmt->resolvedModuleId,
+                        ModuleGraphEdgeKind::ReExport,
+                        importPathForIR(*exportStmt->sourcePath)});
+                    ir_.emitInitModule(index);
+                }
+                continue;
+            }
+            {
+                compileStatement(*child);
+            }
+        }
+        ir_.emitReturn(ir_.emitConstant(Value::nil()));
+        const std::size_t initFunction = ir_.endFunction();
+        moduleInitFunction_ = initFunction;
+        return;
+    }
     for (const auto& child : module.statements) {
         compileStatement(*child);
     }
@@ -581,6 +694,7 @@ void IRCompiler::compileFunctionStatement(const FunctionStmt& function)
     --activeFunctionDepth_;
 
     const std::size_t functionIndex = ir_.endFunction();
+    functionIndices_.emplace(declaration->declarationId, functionIndex);
     IRRegister value = ir_.emitMakeFunction(functionIndex);
     ir_.emitAssignVar(functionName, value, functionBinding);
 }
@@ -597,7 +711,14 @@ void IRCompiler::compileMethod(const MethodDecl& method)
     requireMethodMetadata(method);
     const FunctionMetadataRecord& metadata = *declarationIndex_->functionMetadata(method);
     const std::string& methodName = metadata.resolvedName;
-    const std::optional<BindingId> methodBinding = registerSyntheticBinding(methodName);
+    const DeclarationRecord* methodDeclaration = declarationIndex_->declaration(method);
+    const BindingStorageClass methodStorage = activeFunctionDepth_ != 0
+        ? BindingStorageClass::Synthetic
+        : (methodDeclaration
+                ? storageClassFor(methodDeclaration->declarationId)
+                : BindingStorageClass::Module);
+    const std::optional<BindingId> methodBinding
+        = registerSyntheticBinding(methodName, methodStorage);
     IRRegister placeholder = ir_.emitConstant(Value::nil());
     ir_.emitStoreVar(methodName, placeholder, methodBinding);
 
@@ -619,6 +740,10 @@ void IRCompiler::compileMethod(const MethodDecl& method)
     --activeFunctionDepth_;
 
     const std::size_t functionIndex = ir_.endFunction();
+    const DeclarationRecord* declaration = declarationIndex_->declaration(method);
+    if (declaration) {
+        functionIndices_.emplace(declaration->declarationId, functionIndex);
+    }
     IRRegister value = ir_.emitMakeFunction(functionIndex);
     ir_.emitAssignVar(methodName, value, methodBinding);
 }
@@ -740,12 +865,6 @@ std::string IRCompiler::makeSyntheticName(const std::string& prefix)
 
 void IRCompiler::compileForIn(const ForInStmt& statement)
 {
-    const std::string iterableName = makeSyntheticName("for_in_iter");
-    const std::string indexName = makeSyntheticName("for_in_index");
-    const std::string lengthName = makeSyntheticName("for_in_len");
-    const std::optional<BindingId> iterableBinding = registerSyntheticBinding(iterableName);
-    const std::optional<BindingId> indexBinding = registerSyntheticBinding(indexName);
-    const std::optional<BindingId> lengthBinding = registerSyntheticBinding(lengthName);
     const BindingMetadataRecord* itemBinding = declarationIndex_
         ? declarationIndex_->forInBindingMetadata(statement)
         : nullptr;
@@ -761,46 +880,24 @@ void IRCompiler::compileForIn(const ForInStmt& statement)
             : std::nullopt);
 
     const IRRegister iterableValue = compileExpression(*statement.iterable);
-    const IRRegister arrayValue = ir_.emitAssertArray(iterableValue);
-    ir_.emitStoreVar(iterableName, arrayValue, iterableBinding);
-
-    const IRRegister zero = ir_.emitConstant(Value::number(0));
-    ir_.emitStoreVar(indexName, zero, indexBinding);
+    const IRRegister iterator = ir_.emitIterInit(iterableValue);
 
     const IRRegister initialItem = ir_.emitConstant(Value::nil());
     ir_.emitStoreVar(itemName, initialItem, itemBindingId);
 
-    const IRRegister loadedArrayForLen = ir_.emitLoadVar(iterableName, iterableBinding);
-    const IRRegister length = ir_.emitLen(loadedArrayForLen);
-    ir_.emitStoreVar(lengthName, length, lengthBinding);
-
     const std::size_t loopStart = ir_.instructionCount();
-    const IRRegister currentIndex = ir_.emitLoadVar(indexName, indexBinding);
-    const IRRegister currentLength = ir_.emitLoadVar(lengthName, lengthBinding);
-    const IRRegister condition = ir_.emitBinary(IROp::Less, currentIndex, currentLength);
-    const std::size_t exitJump = ir_.emitJumpIfFalse(condition);
+    const IRRegister hasNext = ir_.emitIterHas(iterator);
+    const std::size_t exitJump = ir_.emitJumpIfFalse(hasNext);
 
-    const IRRegister arrayForElement = ir_.emitLoadVar(iterableName, iterableBinding);
-    const IRRegister indexForElement = ir_.emitLoadVar(indexName, indexBinding);
-    const IRRegister item = ir_.emitIndex(arrayForElement, indexForElement);
+    const IRRegister item = ir_.emitIterNext(iterator);
     ir_.emitAssignVar(itemName, item, itemBindingId);
 
-    const std::size_t jumpOverIncrement = ir_.emitJump();
-    const std::size_t incrementStart = ir_.instructionCount();
-    const IRRegister indexBeforeIncrement = ir_.emitLoadVar(indexName, indexBinding);
-    const IRRegister one = ir_.emitConstant(Value::number(1));
-    const IRRegister nextIndex = ir_.emitBinary(IROp::Add, indexBeforeIncrement, one);
-    ir_.emitAssignVar(indexName, nextIndex, indexBinding);
-    ir_.emitJumpTo(loopStart);
-
-    ir_.patchJump(jumpOverIncrement);
-
-    loopContexts_.push_back(LoopContext{&statement, incrementStart, {}});
+    loopContexts_.push_back(LoopContext{&statement, loopStart, {}});
     compileStatement(*statement.body);
     LoopContext loop = std::move(loopContexts_.back());
     loopContexts_.pop_back();
 
-    ir_.emitJumpTo(incrementStart);
+    ir_.emitJumpTo(loopStart);
     ir_.patchJump(exitJump);
     for (const std::size_t breakJump : loop.breakJumps) {
         ir_.patchJump(breakJump);
@@ -985,7 +1082,8 @@ void IRCompiler::compilePattern(
             throw IRCompileError("missing record pattern metadata");
         }
         for (std::size_t i = 0; i < recordPattern->fields.size(); ++i) {
-            const IRRegister fieldValue = ir_.emitField(value, record->fieldNames[i]);
+            const IRRegister fieldValue = ir_.emitField(
+                value, record->fieldNames[i], record->structType.structName);
             compilePattern(*recordPattern->fields[i].pattern, fieldValue, failJumps, bindings);
         }
         return;
@@ -1108,7 +1206,8 @@ void IRCompiler::compilePattern(
         value, record->enumName, record->variantName);
     failJumps.push_back(ir_.emitJumpIfFalse(tag));
     for (std::size_t i = 0; i < variant->arguments.size(); ++i) {
-        const IRRegister field = ir_.emitVariantField(value, i);
+        const IRRegister field = ir_.emitVariantField(
+            value, i, record->enumName, record->variantName);
         compilePattern(*variant->arguments[i], field, failJumps, bindings);
     }
 }
@@ -1184,13 +1283,25 @@ IRRegister IRCompiler::compileExpression(const Expr& expression)
 
     if (const auto* unary = dynamic_cast<const UnaryExpr*>(&expression)) {
         const IRRegister value = compileExpression(*unary->right);
+        if (unary->op.type == TokenType::Minus) {
+            const TypedExpressionRecord* record = typedExpressionRecord(*unary);
+            if (record && record->type.kind == StaticType::Number) {
+                return ir_.emitUnary(IROp::NegNum, value);
+            }
+        }
         return emitUnary(unary->op.type, value);
     }
 
     if (const auto* binary = dynamic_cast<const BinaryExpr*>(&expression)) {
         const IRRegister left = compileExpression(*binary->left);
         const IRRegister right = compileExpression(*binary->right);
-        return emitBinary(binary->op.type, left, right);
+        const TypedExpressionRecord* binaryRecord = declarationIndex_
+            ? declarationIndex_->typedExpression(*binary)
+            : nullptr;
+        const TypeInfo* resultType = binaryRecord ? &binaryRecord->type : nullptr;
+        const TypedExpressionRecord* leftOperand = typedExpressionRecord(*binary->left);
+        const TypeInfo* operandType = leftOperand ? &leftOperand->type : nullptr;
+        return emitBinary(binary->op.type, left, right, operandType, resultType);
     }
 
     if (const auto* logical = dynamic_cast<const LogicalExpr*>(&expression)) {
@@ -1290,7 +1401,27 @@ IRRegister IRCompiler::emitLenCall(const CallExpr& expression)
         throw IRCompileError("len expects exactly one argument");
     }
     const IRRegister value = compileExpression(*expression.arguments.front());
-    return ir_.emitLen(value);
+    return emitLenTyped(value, *expression.arguments.front());
+}
+
+IRRegister IRCompiler::emitLenTyped(IRRegister value, const Expr& operand)
+{
+    const TypedExpressionRecord* record = typedExpressionRecord(operand);
+    if (!record) {
+        return ir_.emitLen(value);
+    }
+    switch (record->type.kind) {
+    case StaticType::Array:
+        return ir_.emitLenArray(value);
+    case StaticType::Map:
+        return ir_.emitLenMap(value);
+    case StaticType::Range:
+        return ir_.emitLenRange(value);
+    case StaticType::String:
+        return ir_.emitLenStr(value);
+    default:
+        return ir_.emitLen(value);
+    }
 }
 
 IRRegister IRCompiler::emitNativeStdlibCall(const CallExpr& expression)
@@ -1347,7 +1478,7 @@ IRRegister IRCompiler::emitMemberCall(const MemberCallExpr& expression)
         if (!expression.arguments.empty()) {
             throw IRCompileError("len member call expects no arguments");
         }
-        return ir_.emitLen(receiver);
+        return emitLenTyped(receiver, *expression.receiver);
     }
 
     const NativeCallRecord* nativeCall = declarationIndex_
@@ -1407,6 +1538,37 @@ IRRegister IRCompiler::emitCall(const CallExpr& expression)
             const CallTargetRecord* target = declarationIndex_->callTarget(expression);
             if (!target || target->kind != CallTargetKind::Direct) {
                 throw IRCompileError("missing direct call target metadata");
+            }
+            const DeclarationRecord* declaration
+                = declarationIndex_->declaration(target->target.declarationId);
+            const BindingMetadataRecord* binding
+                = declarationIndex_->variableBindingMetadata(*callee);
+            const bool imported = binding && binding->imported;
+            const CaptureRecord* captures = nullptr;
+            if (declaration && declaration->statement) {
+                if (const auto* function
+                    = dynamic_cast<const FunctionStmt*>(declaration->statement)) {
+                    captures = declarationIndex_->captureMetadata(*function);
+                }
+            }
+            if (!imported && declaration && captures && captures->symbols.empty()) {
+                std::vector<IRRegister> directArguments;
+                directArguments.reserve(expression.arguments.size());
+                for (const auto& argument : expression.arguments) {
+                    directArguments.push_back(compileExpression(*argument));
+                }
+                const std::size_t instructionIndex = ir_.instructionCount();
+                const IRRegister result = ir_.emitCallDirect(0, std::move(directArguments));
+                const std::size_t activeFunction = ir_.activeFunctionId();
+                const bool insideFunction
+                    = activeFunction != std::numeric_limits<std::size_t>::max();
+                pendingDirectCalls_.push_back(PendingDirectCall{
+                    insideFunction
+                        ? std::optional<std::size_t>(activeFunction)
+                        : std::nullopt,
+                    instructionIndex,
+                    target->target.declarationId});
+                return result;
             }
         }
     }
@@ -1483,9 +1645,20 @@ IRRegister IRCompiler::emitStructConstructor(const StructConstructExpr& expressi
 
 IRRegister IRCompiler::emitIndex(const IndexExpr& expression)
 {
-    indexOperation(expression, IndexOperationKind::Read, "index expression");
+    const IndexOperationRecord& operation
+        = indexOperation(expression, IndexOperationKind::Read, "index expression");
     IRRegister collection = compileExpression(*expression.collection);
     IRRegister index = compileExpression(*expression.index);
+    switch (operation.collectionType.kind) {
+    case StaticType::Array:
+        return ir_.emitArrayGet(collection, index);
+    case StaticType::Map:
+        return ir_.emitMapGet(collection, index);
+    case StaticType::Range:
+        return ir_.emitRangeGet(collection, index);
+    default:
+        break;
+    }
     return ir_.emitIndex(collection, index);
 }
 
@@ -1493,13 +1666,13 @@ IROp IRCompiler::compoundAssignmentOp(TokenType op) const
 {
     switch (op) {
     case TokenType::PlusEqual:
-        return IROp::Add;
+        return IROp::AddNum;
     case TokenType::MinusEqual:
-        return IROp::Subtract;
+        return IROp::SubNum;
     case TokenType::StarEqual:
-        return IROp::Multiply;
+        return IROp::MulNum;
     case TokenType::SlashEqual:
-        return IROp::Divide;
+        return IROp::DivNum;
     default:
         throw IRCompileError("unsupported compound assignment operator: " + tokenTypeName(op));
     }
@@ -1544,10 +1717,17 @@ IRRegister IRCompiler::emitCompoundAssignmentResult(
 
 IRRegister IRCompiler::emitIndexAssign(const IndexAssignExpr& expression)
 {
-    indexOperation(expression, IndexOperationKind::Assign, "index assignment");
+    const IndexOperationRecord& operation
+        = indexOperation(expression, IndexOperationKind::Assign, "index assignment");
     IRRegister collection = compileExpression(*expression.collection);
     IRRegister index = compileExpression(*expression.index);
     IRRegister value = compileExpression(*expression.value);
+    if (operation.collectionType.kind == StaticType::Array) {
+        return ir_.emitArraySet(collection, index, value);
+    }
+    if (operation.collectionType.kind == StaticType::Map) {
+        return ir_.emitMapSet(collection, index, value);
+    }
     return ir_.emitAssignIndex(collection, index, value);
 }
 
@@ -1560,10 +1740,10 @@ IRRegister IRCompiler::emitIndexCompoundAssign(const IndexCompoundAssignExpr& ex
     }
     IRRegister collection = compileExpression(*expression.collection);
     IRRegister index = compileExpression(*expression.index);
-    IRRegister oldValue = ir_.emitIndex(collection, index);
+    IRRegister oldValue = ir_.emitArrayGet(collection, index);
     IRRegister result = emitCompoundAssignmentResult(
         expression.op, oldValue, *expression.value, "`" + expression.op.lexeme + "` expects number target");
-    ir_.emitAssignIndex(collection, index, result);
+    ir_.emitArraySet(collection, index, result);
     return result;
 }
 
@@ -1574,17 +1754,31 @@ IRRegister IRCompiler::emitFieldAccess(const FieldAccessExpr& expression)
     if (operation.resolvedName) {
         return ir_.emitLoadVar(*operation.resolvedName);
     }
+    const TypedExpressionRecord* objectRecord = declarationIndex_
+        ? declarationIndex_->typedExpression(*expression.object)
+        : nullptr;
+    const std::optional<std::string> objectStructName = objectRecord
+        ? objectRecord->type.structName
+        : std::nullopt;
     IRRegister object = compileExpression(*expression.object);
-    return ir_.emitField(object, operation.fieldName);
+    return ir_.emitField(
+        object, operation.fieldName, objectStructName);
 }
 
 IRRegister IRCompiler::emitFieldAssign(const FieldAssignExpr& expression)
 {
     const FieldOperationRecord& operation = fieldOperation(
         expression, FieldOperationKind::Assign, "field assignment");
+    const TypedExpressionRecord* objectRecord = declarationIndex_
+        ? declarationIndex_->typedExpression(*expression.object)
+        : nullptr;
+    const std::optional<std::string> objectStructName = objectRecord
+        ? objectRecord->type.structName
+        : std::nullopt;
     IRRegister object = compileExpression(*expression.object);
     IRRegister value = compileExpression(*expression.value);
-    return ir_.emitAssignField(object, operation.fieldName, value);
+    return ir_.emitAssignField(
+        object, operation.fieldName, objectStructName, value);
 }
 
 IRRegister IRCompiler::emitFieldCompoundAssign(const FieldCompoundAssignExpr& expression)
@@ -1594,11 +1788,17 @@ IRRegister IRCompiler::emitFieldCompoundAssign(const FieldCompoundAssignExpr& ex
     if (operation.resultType.kind != StaticType::Number) {
         throw IRCompileError("missing aggregate field metadata for field compound assignment");
     }
+    const TypedExpressionRecord* objectRecord = declarationIndex_
+        ? declarationIndex_->typedExpression(*expression.object)
+        : nullptr;
+    const std::optional<std::string> objectStructName = objectRecord
+        ? objectRecord->type.structName
+        : std::nullopt;
     IRRegister object = compileExpression(*expression.object);
-    IRRegister oldValue = ir_.emitField(object, operation.fieldName);
+    IRRegister oldValue = ir_.emitField(object, operation.fieldName, objectStructName);
     IRRegister result = emitCompoundAssignmentResult(
         expression.op, oldValue, *expression.value, "`" + expression.op.lexeme + "` expects number target");
-    ir_.emitAssignField(object, operation.fieldName, result);
+    ir_.emitAssignField(object, operation.fieldName, objectStructName, result);
     return result;
 }
 
@@ -1614,29 +1814,54 @@ IRRegister IRCompiler::emitUnary(TokenType op, IRRegister value)
     }
 }
 
-IRRegister IRCompiler::emitBinary(TokenType op, IRRegister left, IRRegister right)
+IRRegister IRCompiler::emitBinary(
+    TokenType op,
+    IRRegister left,
+    IRRegister right,
+    const TypeInfo* operandType,
+    const TypeInfo* resultType)
 {
+    const bool knownNumber = operandType && operandType->kind == StaticType::Number;
+    const bool knownString = operandType && operandType->kind == StaticType::String;
+    const bool numericResult = resultType && resultType->kind == StaticType::Number;
+    const bool stringResult = resultType && resultType->kind == StaticType::String;
     switch (op) {
     case TokenType::Plus:
+        if (numericResult) {
+            return ir_.emitBinary(IROp::AddNum, left, right);
+        }
+        if (stringResult) {
+            return ir_.emitBinary(IROp::ConcatStr, left, right);
+        }
         return ir_.emitBinary(IROp::Add, left, right);
     case TokenType::Minus:
-        return ir_.emitBinary(IROp::Subtract, left, right);
+        return ir_.emitBinary(numericResult ? IROp::SubNum : IROp::Subtract, left, right);
     case TokenType::Star:
-        return ir_.emitBinary(IROp::Multiply, left, right);
+        return ir_.emitBinary(numericResult ? IROp::MulNum : IROp::Multiply, left, right);
     case TokenType::Slash:
-        return ir_.emitBinary(IROp::Divide, left, right);
+        return ir_.emitBinary(numericResult ? IROp::DivNum : IROp::Divide, left, right);
     case TokenType::EqualEqual:
         return ir_.emitBinary(IROp::Equal, left, right);
     case TokenType::BangEqual:
         return ir_.emitBinary(IROp::NotEqual, left, right);
     case TokenType::Greater:
-        return ir_.emitBinary(IROp::Greater, left, right);
+        return ir_.emitBinary(
+            knownNumber ? IROp::GreaterNum : knownString ? IROp::GreaterStr : IROp::Greater,
+            left, right);
     case TokenType::GreaterEqual:
-        return ir_.emitBinary(IROp::GreaterEqual, left, right);
+        return ir_.emitBinary(
+            knownNumber ? IROp::GreaterEqualNum
+                        : knownString ? IROp::GreaterEqualStr : IROp::GreaterEqual,
+            left, right);
     case TokenType::Less:
-        return ir_.emitBinary(IROp::Less, left, right);
+        return ir_.emitBinary(
+            knownNumber ? IROp::LessNum : knownString ? IROp::LessStr : IROp::Less,
+            left, right);
     case TokenType::LessEqual:
-        return ir_.emitBinary(IROp::LessEqual, left, right);
+        return ir_.emitBinary(
+            knownNumber ? IROp::LessEqualNum
+                        : knownString ? IROp::LessEqualStr : IROp::LessEqual,
+            left, right);
     default:
         throw IRCompileError("unsupported binary operator: " + tokenTypeName(op));
     }

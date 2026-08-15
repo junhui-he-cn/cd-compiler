@@ -1,8 +1,10 @@
 use crate::bytecode::{
-    Constant, DebugLocation, DebugRange, DebugSource, Function, FunctionBody, Instruction, Program,
+    BlockId, Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, GlobalId,
+    Instruction, ModuleInit, NativeId, NativeImport, Program, TypeId, TypeLayout, UpvalueDesc,
+    UpvalueSource,
 };
 use crate::format::{verify_module_artifact, verify_program, ModuleArtifact};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt;
 
 /// Machine-readable class for a module-linking failure.
@@ -119,15 +121,17 @@ struct ModuleContext {
     constant_base: usize,
     name_base: usize,
     function_base: usize,
-    main_register_base: usize,
+    type_remap: Vec<u32>,
+    native_remap: Vec<u32>,
+    global_remap: Vec<usize>,
+    module_remap: Vec<u32>,
+    init: FuncId,
     source_base: usize,
 }
 
 struct Linker {
     modules: HashMap<String, ModuleArtifact>,
     contexts: HashMap<String, ModuleContext>,
-    visiting: HashSet<String>,
-    expanded: HashSet<String>,
     input_module_identities: Vec<String>,
     entry_module_identities: Vec<String>,
     input_instruction_count: usize,
@@ -135,19 +139,23 @@ struct Linker {
     expansion_order: Vec<String>,
     constants: Vec<Constant>,
     names: Vec<String>,
-    main: FunctionBody,
     functions: Vec<Function>,
     debug_sources: Vec<DebugSource>,
+    global_names: HashMap<String, usize>,
+    linked_types: Vec<TypeLayout>,
+    type_names: HashMap<String, u32>,
+    linked_native_imports: Vec<NativeImport>,
+    native_names: HashMap<String, u32>,
+    linked_modules: Vec<ModuleInit>,
+    module_indices: HashMap<String, u32>,
 }
 
 fn program_instruction_count(program: &Program) -> usize {
-    program.main.instructions.len().saturating_add(
-        program
-            .functions
-            .iter()
-            .map(|function| function.instructions.len())
-            .fold(0usize, usize::saturating_add),
-    )
+    program
+        .functions
+        .iter()
+        .map(|function| function.instructions.len())
+        .fold(0usize, usize::saturating_add)
 }
 
 impl Linker {
@@ -211,7 +219,6 @@ impl Linker {
             .collect();
 
         for module in by_identity.values() {
-            let mut previous_offset = 0;
             for (index, dependency) in module.dependencies.iter().enumerate() {
                 if !by_identity.contains_key(&dependency.identity) {
                     return Err(LinkError::dependency(
@@ -224,36 +231,12 @@ impl Linker {
                         ),
                     ));
                 }
-                if dependency.instruction_offset > module.program.main.instructions.len() {
-                    return Err(LinkError::dependency(
-                        LinkErrorKind::InvalidDependency,
-                        module.identity.clone(),
-                        index,
-                        format!(
-                            "module `{}` dependency d{} instruction offset out of range",
-                            module.identity, index
-                        ),
-                    ));
-                }
-                if index != 0 && dependency.instruction_offset < previous_offset {
-                    return Err(LinkError::module(
-                        LinkErrorKind::InvalidDependency,
-                        module.identity.clone(),
-                        format!(
-                            "module `{}` dependency offsets are not ordered",
-                            module.identity
-                        ),
-                    ));
-                }
-                previous_offset = dependency.instruction_offset;
             }
         }
 
         Ok(Self {
             modules: by_identity,
             contexts: HashMap::new(),
-            visiting: HashSet::new(),
-            expanded: HashSet::new(),
             input_module_identities,
             entry_module_identities,
             input_instruction_count,
@@ -261,57 +244,140 @@ impl Linker {
             expansion_order: Vec::new(),
             constants: Vec::new(),
             names: Vec::new(),
-            main: FunctionBody {
-                registers: 0,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
             functions: Vec::new(),
             debug_sources: Vec::new(),
+            global_names: HashMap::new(),
+            linked_types: Vec::new(),
+            type_names: HashMap::new(),
+            linked_native_imports: Vec::new(),
+            native_names: HashMap::new(),
+            linked_modules: Vec::new(),
+            module_indices: HashMap::new(),
         })
     }
 
     fn allocate_context(&mut self, module: &ModuleArtifact) -> Result<ModuleContext, LinkError> {
-        let context = ModuleContext {
-            constant_base: self.constants.len(),
-            name_base: self.names.len(),
-            function_base: self.functions.len(),
-            main_register_base: self.main.registers,
-            source_base: self.debug_sources.len(),
-        };
-
+        let constant_base = self.constants.len();
+        let name_base = self.names.len();
+        let source_base = self.debug_sources.len();
         self.constants
             .extend(module.program.constants.iter().cloned());
         self.names.extend(module.program.names.iter().cloned());
         self.debug_sources
             .extend(module.program.debug_sources.iter().cloned());
-        self.main.registers = checked_add(
-            self.main.registers,
-            module.program.main.registers,
-            "linked main register count",
-        )
-        .map_err(|error| {
-            LinkError::module(
-                LinkErrorKind::Overflow,
-                module.identity.clone(),
-                error.to_string(),
+
+        let mut global_remap = Vec::with_capacity(module.program.globals.len());
+        for (local, name_index) in module.program.globals.iter().enumerate() {
+            let linked_name_index = checked_add(*name_index, name_base, "linked name index")
+                .map_err(|error| {
+                    LinkError::module(
+                        LinkErrorKind::Overflow,
+                        module.identity.clone(),
+                        error.to_string(),
+                    )
+                })?;
+            let Some(name) = self.names.get(linked_name_index) else {
+                return Err(LinkError::module(
+                    LinkErrorKind::InvalidModule,
+                    module.identity.clone(),
+                    format!("global g{local} references name n{name_index} out of range"),
+                ));
+            };
+            let slot = match self.global_names.get(name) {
+                Some(slot) => *slot,
+                None => {
+                    let slot = self.global_names.len();
+                    self.global_names.insert(name.clone(), slot);
+                    slot
+                }
+            };
+            global_remap.push(slot);
+        }
+        let mut type_remap = Vec::with_capacity(module.program.types.len());
+        for layout in &module.program.types {
+            let linked = match self.type_names.get(&layout.name) {
+                Some(id) => *id,
+                None => {
+                    let id = self.linked_types.len() as u32;
+                    self.type_names.insert(layout.name.clone(), id);
+                    self.linked_types.push(layout.clone());
+                    id
+                }
+            };
+            type_remap.push(linked);
+        }
+        let mut native_remap = Vec::with_capacity(module.program.native_imports.len());
+        for import in &module.program.native_imports {
+            let linked = match self.native_names.get(&import.name) {
+                Some(id) => *id,
+                None => {
+                    let id = self.linked_native_imports.len() as u32;
+                    self.native_names.insert(import.name.clone(), id);
+                    self.linked_native_imports.push(import.clone());
+                    id
+                }
+            };
+            native_remap.push(linked);
+        }
+        let mut module_remap = Vec::with_capacity(module.dependencies.len());
+        for (index, dependency) in module.dependencies.iter().enumerate() {
+            let linked = *self.module_indices.get(&dependency.identity).ok_or_else(|| {
+                LinkError::dependency(
+                    LinkErrorKind::MissingDependency,
+                    module.identity.clone(),
+                    index,
+                    format!(
+                        "module `{}` dependency d{} has no merged module index",
+                        module.identity, index
+                    ),
+                )
+            })?;
+            module_remap.push(linked);
+        }
+        let function_base = self.functions.len();
+        let init = FuncId(
+            checked_add(
+                checked_add(function_base, module.init, "linked module init index")
+                    .map_err(|error| {
+                        LinkError::module(
+                            LinkErrorKind::Overflow,
+                            module.identity.clone(),
+                            error.to_string(),
+                        )
+                    })?,
+                1,
+                "linked module init function",
             )
-        })?;
+            .map_err(|error| {
+                LinkError::module(
+                    LinkErrorKind::Overflow,
+                    module.identity.clone(),
+                    error.to_string(),
+                )
+            })? as u32,
+        );
+        let context = ModuleContext {
+            constant_base,
+            name_base,
+            function_base,
+            type_remap,
+            native_remap,
+            global_remap,
+            module_remap,
+            init,
+            source_base,
+        };
         Ok(context)
     }
 
     fn expand(&mut self, identity: &str) -> Result<(), LinkError> {
-        if self.expanded.contains(identity) {
+        if self.module_indices.contains_key(identity) {
             return Ok(());
         }
-        if !self.visiting.insert(identity.to_string()) {
-            return Err(LinkError::module(
-                LinkErrorKind::DependencyCycle,
-                identity,
-                format!("module dependency cycle at `{}`", identity),
-            ));
-        }
+        let module_index = self.linked_modules.len() as u32;
+        self.module_indices.insert(identity.to_string(), module_index);
         self.expansion_order.push(identity.to_string());
+        self.linked_modules.push(ModuleInit { init: FuncId(0) });
 
         let module = self.modules.get(identity).cloned().ok_or_else(|| {
             LinkError::new(
@@ -319,17 +385,46 @@ impl Linker {
                 format!("missing module `{}`", identity),
             )
         })?;
+        for dependency in &module.dependencies {
+            self.expand(&dependency.identity)?;
+        }
+
         let context = self.allocate_context(&module)?;
         self.contexts.insert(identity.to_string(), context.clone());
+        self.linked_modules[module_index as usize] = ModuleInit { init: context.init };
 
         let function_base = context.function_base;
-        for (index, function) in module.program.functions.iter().enumerate() {
+        for (position, function) in module.program.functions.iter().enumerate() {
             self.functions.push(Function {
-                index: function_base + index,
+                id: FuncId((function_base + position + 1) as u32),
                 name: function.name.clone(),
                 arity: function.arity,
-                registers: function.registers,
+                local_count: function.local_count,
+                upvalues: function
+                    .upvalues
+                    .iter()
+                    .map(|descriptor| match &descriptor.source {
+                        UpvalueSource::Global(global) => {
+                            let linked = *context
+                                .global_remap
+                                .get(global.0 as usize)
+                                .ok_or_else(|| {
+                                    LinkError::new(
+                                        LinkErrorKind::InvalidInstruction,
+                                        format!("global g{} out of range", global.0),
+                                    )
+                                })?;
+                            Ok(UpvalueDesc {
+                                source: UpvalueSource::Global(GlobalId(linked as u32)),
+                            })
+                        }
+                        source => Ok(UpvalueDesc {
+                            source: source.clone(),
+                        }),
+                    })
+                    .collect::<Result<Vec<_>, _>>()?,
                 params: function.params.clone(),
+                registers: function.registers,
                 instructions: function
                     .instructions
                     .iter()
@@ -342,45 +437,6 @@ impl Linker {
                     .collect(),
             });
         }
-
-        let mut local_to_global = vec![0; module.program.main.instructions.len() + 1];
-        let mut pending = Vec::new();
-        let mut local_offset = 0;
-        for dependency in &module.dependencies {
-            while local_offset < dependency.instruction_offset {
-                emit_pending_main(
-                    &mut self.main,
-                    &mut pending,
-                    local_offset,
-                    &module.program.main,
-                    context.source_base,
-                );
-                local_to_global[local_offset] = self.main.instructions.len() - 1;
-                local_offset += 1;
-            }
-            self.expand(&dependency.identity)?;
-            local_to_global[local_offset] = self.main.instructions.len();
-        }
-        while local_offset < module.program.main.instructions.len() {
-            emit_pending_main(
-                &mut self.main,
-                &mut pending,
-                local_offset,
-                &module.program.main,
-                context.source_base,
-            );
-            local_to_global[local_offset] = self.main.instructions.len() - 1;
-            local_offset += 1;
-        }
-        local_to_global[module.program.main.instructions.len()] = self.main.instructions.len();
-
-        for (global_index, _local_index, instruction) in pending {
-            self.main.instructions[global_index] =
-                map_main_instruction(&instruction, &context, &local_to_global)?;
-        }
-
-        self.visiting.remove(identity);
-        self.expanded.insert(identity.to_string());
         Ok(())
     }
 
@@ -388,6 +444,56 @@ impl Linker {
         for identity in self.entry_module_identities.clone() {
             self.expand(&identity)?;
         }
+        let mut main = Function {
+            id: FuncId(0),
+            name: "main".to_string(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
+            registers: 0,
+            instructions: Vec::new(),
+            locations: Vec::new(),
+        };
+        for identity in &self.entry_module_identities {
+            let module = *self.module_indices.get(identity).ok_or_else(|| {
+                LinkError::new(
+                    LinkErrorKind::MissingDependency,
+                    format!("entry module `{}` has no merged module index", identity),
+                )
+            })?;
+            main.instructions.push(Instruction::InitModule {
+                module: module as usize,
+            });
+            let entry_location = self
+                .modules
+                .get(identity)
+                .and_then(|artifact| {
+                    artifact
+                        .program
+                        .functions
+                        .get(artifact.init)
+                        .and_then(|function| function.locations.first().cloned().flatten())
+                })
+                .and_then(|location| {
+                    self.contexts
+                        .get(identity)
+                        .map(|context| remap_location(&Some(location), context.source_base))
+                })
+                .flatten();
+            main.locations.push(entry_location);
+        }
+        main.instructions.push(Instruction::ReturnNil);
+        main.locations.push(None);
+        let linked_instruction_count = main
+            .instructions
+            .len()
+            .saturating_add(
+                self.functions
+                    .iter()
+                    .map(|function| function.instructions.len())
+                    .fold(0usize, usize::saturating_add),
+            );
 
         let report = LinkReport {
             input_module_identities: self.input_module_identities.clone(),
@@ -395,17 +501,37 @@ impl Linker {
             expanded_module_order: self.expansion_order.clone(),
             input_instruction_count: self.input_instruction_count,
             input_dependency_count: self.input_dependency_count,
-            linked_instruction_count: self.main.instructions.len(),
+            linked_instruction_count,
             linked_function_count: self.functions.len(),
             linked_constant_count: self.constants.len(),
             linked_name_count: self.names.len(),
             linked_debug_source_count: self.debug_sources.len(),
         };
+        let mut functions = vec![main];
+        functions.extend(self.functions);
+        let mut linked_globals = vec![0usize; self.global_names.len()];
+        for (name, slot) in &self.global_names {
+            let name_index = self
+                .names
+                .iter()
+                .position(|candidate| candidate == name)
+                .ok_or_else(|| {
+                    LinkError::new(
+                        LinkErrorKind::InvalidLinkedProgram,
+                        format!("linked global `{}` has no name index", name),
+                    )
+                })?;
+            linked_globals[*slot] = name_index;
+        }
         let program = Program {
             constants: self.constants,
+            globals: linked_globals,
+            types: self.linked_types,
+            native_imports: self.linked_native_imports,
+            modules: self.linked_modules,
             names: self.names,
-            main: self.main,
-            functions: self.functions,
+            functions,
+            entry: FuncId(0),
             debug_sources: self.debug_sources,
         };
         Ok(LinkResult { program, report })
@@ -442,19 +568,29 @@ pub fn link_modules(modules: Vec<ModuleArtifact>) -> Result<Program, String> {
 #[cfg(test)]
 mod tests {
     use super::{link_modules, link_modules_with_report};
-    use crate::bytecode::{FunctionBody, Program};
+    use crate::bytecode::{FuncId, Function, Program};
     use crate::format::{ModuleArtifact, ModuleDependency, ModuleDependencyKind};
 
     fn empty_program() -> Program {
         Program {
             constants: Vec::new(),
+            globals: Vec::new(),
+            types: Vec::new(),
+            native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
-            main: FunctionBody {
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
                 registers: 0,
                 instructions: Vec::new(),
                 locations: Vec::new(),
-            },
-            functions: Vec::new(),
+            }],
+            entry: FuncId(0),
             debug_sources: Vec::new(),
         }
     }
@@ -463,7 +599,6 @@ mod tests {
         ModuleDependency {
             identity: identity.to_string(),
             kind: ModuleDependencyKind::Import,
-            instruction_offset: 0,
             requested_path: format!("./{}.cd", identity),
         }
     }
@@ -480,6 +615,7 @@ mod tests {
             canonical_path: format!("{}.cd", identity),
             is_entry,
             entry_order,
+            init: 0,
             dependencies,
             program: empty_program(),
         }
@@ -493,6 +629,7 @@ mod tests {
             canonical_path: "entry.cd".to_string(),
             is_entry: true,
             entry_order: Some(0),
+            init: 0,
             dependencies: Vec::new(),
             program: empty_program(),
         };
@@ -529,21 +666,22 @@ mod tests {
         );
         assert_eq!(result.report.input_instruction_count, 0);
         assert_eq!(result.report.input_dependency_count, 4);
-        assert_eq!(result.report.linked_instruction_count, 0);
-        assert_eq!(result.report.linked_function_count, 0);
+        assert_eq!(result.report.linked_instruction_count, 2);
+        assert_eq!(result.report.linked_function_count, 4);
         assert_eq!(result.report.linked_constant_count, 0);
         assert_eq!(result.report.linked_name_count, 0);
         assert_eq!(result.report.linked_debug_source_count, 0);
     }
 
     #[test]
-    fn rejects_module_dependency_cycle_deterministically() {
+    fn links_module_dependency_cycles_without_stream_splicing() {
         let entry = ModuleArtifact {
             identity: "entry".to_string(),
             path: "entry.cd".to_string(),
             canonical_path: "entry.cd".to_string(),
             is_entry: true,
             entry_order: Some(0),
+            init: 0,
             dependencies: vec![dependency("library")],
             program: empty_program(),
         };
@@ -553,54 +691,34 @@ mod tests {
             canonical_path: "library.cd".to_string(),
             is_entry: false,
             entry_order: None,
+            init: 0,
             dependencies: vec![dependency("entry")],
             program: empty_program(),
         };
 
-        let error = link_modules(vec![entry, library]).expect_err("cycle must be rejected");
-        assert_eq!(error, "module dependency cycle at `entry`");
+        let linked = link_modules(vec![entry, library]).expect("cycle must link");
+        assert_eq!(linked.modules.len(), 2);
+        assert_eq!(linked.entry, FuncId(0));
+        assert_eq!(
+            linked.functions[0].instructions.len(),
+            2,
+            "entry main should init one module and return"
+        );
     }
-}
-
-fn emit_pending_main(
-    main: &mut FunctionBody,
-    pending: &mut Vec<(usize, usize, Instruction)>,
-    local_index: usize,
-    source: &FunctionBody,
-    source_base: usize,
-) {
-    let global_index = main.instructions.len();
-    main.instructions
-        .push(source.instructions[local_index].clone());
-    main.locations
-        .push(remap_location(&source.locations[local_index], source_base));
-    pending.push((
-        global_index,
-        local_index,
-        source.instructions[local_index].clone(),
-    ));
 }
 
 fn map_function_instruction(
     instruction: &Instruction,
     context: &ModuleContext,
 ) -> Result<Instruction, LinkError> {
-    map_instruction(instruction, context, 0, |target| Ok(target))
-}
-
-fn map_main_instruction(
-    instruction: &Instruction,
-    context: &ModuleContext,
-    local_to_global: &[usize],
-) -> Result<Instruction, LinkError> {
-    map_instruction(instruction, context, context.main_register_base, |target| {
-        local_to_global.get(target).copied().ok_or_else(|| {
-            LinkError::new(
-                LinkErrorKind::InvalidInstruction,
-                "jump target out of range while linking",
-            )
-        })
-    })
+    map_instruction(
+        instruction,
+        context,
+        0,
+        |target| Ok(target),
+        |block| Ok(block),
+        |block| Ok(block),
+    )
 }
 
 fn map_instruction(
@@ -608,13 +726,38 @@ fn map_instruction(
     context: &ModuleContext,
     register_base: usize,
     map_jump: impl Fn(usize) -> Result<usize, LinkError>,
+    map_block: impl Fn(u32) -> Result<u32, LinkError>,
+    map_branch: impl Fn(u32) -> Result<u32, LinkError>,
 ) -> Result<Instruction, LinkError> {
     let register = |value: usize| checked_add(value, register_base, "linked register index");
     let constant =
         |value: usize| checked_add(value, context.constant_base, "linked constant index");
     let name = |value: usize| checked_add(value, context.name_base, "linked name index");
-    let function =
-        |value: usize| checked_add(value, context.function_base, "linked function index");
+    let function = |value: FuncId| {
+        checked_add(
+            checked_add(
+                value.0 as usize,
+                context.function_base,
+                "linked function index",
+            )?,
+            1,
+            "linked function index",
+        )
+        .map(|index| FuncId(index as u32))
+    };
+    let map_type = |value: TypeId| {
+        context
+            .type_remap
+            .get(value.0 as usize)
+            .copied()
+            .map(TypeId)
+            .ok_or_else(|| {
+                LinkError::new(
+                    LinkErrorKind::InvalidInstruction,
+                    format!("type t{} out of range", value.0),
+                )
+            })
+    };
     Ok(match instruction {
         Instruction::Constant {
             dest,
@@ -656,6 +799,42 @@ fn map_instruction(
                 .map(|(field, value)| Ok((name(*field)?, register(*value)?)))
                 .collect::<Result<Vec<_>, LinkError>>()?,
         },
+        Instruction::MakeStruct {
+            dest,
+            type_id,
+            elements,
+        } => Instruction::MakeStruct {
+            dest: register(*dest)?,
+            type_id: map_type(*type_id)?,
+            elements: elements
+                .iter()
+                .map(|value| register(*value))
+                .collect::<Result<Vec<_>, _>>()?,
+        },
+        Instruction::StructGet {
+            dest,
+            object,
+            type_id,
+            slot,
+        } => Instruction::StructGet {
+            dest: register(*dest)?,
+            object: register(*object)?,
+            type_id: map_type(*type_id)?,
+            slot: *slot,
+        },
+        Instruction::StructSet {
+            dest,
+            object,
+            type_id,
+            slot,
+            value,
+        } => Instruction::StructSet {
+            dest: register(*dest)?,
+            object: register(*object)?,
+            type_id: map_type(*type_id)?,
+            slot: *slot,
+            value: register(*value)?,
+        },
         Instruction::Variant {
             dest,
             enum_name,
@@ -669,6 +848,44 @@ fn map_instruction(
                 .iter()
                 .map(|value| register(*value))
                 .collect::<Result<Vec<_>, _>>()?,
+        },
+        Instruction::MakeVariant {
+            dest,
+            type_id,
+            variant_id,
+            payload,
+        } => Instruction::MakeVariant {
+            dest: register(*dest)?,
+            type_id: map_type(*type_id)?,
+            variant_id: *variant_id,
+            payload: payload
+                .iter()
+                .map(|value| register(*value))
+                .collect::<Result<Vec<_>, _>>()?,
+        },
+        Instruction::IsVariant {
+            dest,
+            value,
+            type_id,
+            variant_id,
+        } => Instruction::IsVariant {
+            dest: register(*dest)?,
+            value: register(*value)?,
+            type_id: map_type(*type_id)?,
+            variant_id: *variant_id,
+        },
+        Instruction::VariantGet {
+            dest,
+            value,
+            type_id,
+            variant_id,
+            index,
+        } => Instruction::VariantGet {
+            dest: register(*dest)?,
+            value: register(*value)?,
+            type_id: map_type(*type_id)?,
+            variant_id: *variant_id,
+            index: *index,
         },
         Instruction::VariantTag {
             dest,
@@ -708,6 +925,47 @@ fn map_instruction(
             name: name(*value)?,
             value: register(*source)?,
         },
+        Instruction::LoadLocal { dest, slot } => Instruction::LoadLocal {
+            dest: register(*dest)?,
+            slot: *slot,
+        },
+        Instruction::BindLocal { slot, value } => Instruction::BindLocal {
+            slot: *slot,
+            value: register(*value)?,
+        },
+        Instruction::SetLocal { slot, value } => Instruction::SetLocal {
+            slot: *slot,
+            value: register(*value)?,
+        },
+        Instruction::LoadUpvalue { dest, slot } => Instruction::LoadUpvalue {
+            dest: register(*dest)?,
+            slot: *slot,
+        },
+        Instruction::SetUpvalue { slot, value } => Instruction::SetUpvalue {
+            slot: *slot,
+            value: register(*value)?,
+        },
+        Instruction::LoadGlobal { dest, slot } => Instruction::LoadGlobal {
+            dest: register(*dest)?,
+            slot: *context.global_remap.get(*slot).ok_or(LinkError::new(
+                LinkErrorKind::InvalidInstruction,
+                format!("global g{slot} out of range"),
+            ))?,
+        },
+        Instruction::InitGlobal { slot, value } => Instruction::InitGlobal {
+            slot: *context.global_remap.get(*slot).ok_or(LinkError::new(
+                LinkErrorKind::InvalidInstruction,
+                format!("global g{slot} out of range"),
+            ))?,
+            value: register(*value)?,
+        },
+        Instruction::SetGlobal { slot, value } => Instruction::SetGlobal {
+            slot: *context.global_remap.get(*slot).ok_or(LinkError::new(
+                LinkErrorKind::InvalidInstruction,
+                format!("global g{slot} out of range"),
+            ))?,
+            value: register(*value)?,
+        },
         Instruction::Call {
             dest,
             callee,
@@ -720,6 +978,26 @@ fn map_instruction(
                 .map(|value| register(*value))
                 .collect::<Result<Vec<_>, _>>()?,
         },
+        Instruction::CallDirect {
+            dest,
+            function: target,
+            arguments,
+        } => Instruction::CallDirect {
+            dest: register(*dest)?,
+            function: function(*target)?,
+            arguments: arguments
+                .iter()
+                .map(|argument| register(*argument))
+                .collect::<Result<Vec<_>, _>>()?,
+        },
+        Instruction::InitModule { module } => Instruction::InitModule {
+            module: *context.module_remap.get(*module).ok_or_else(|| {
+                LinkError::new(
+                    LinkErrorKind::InvalidInstruction,
+                    format!("module m{} out of range", module),
+                )
+            })? as usize,
+        },
         Instruction::NativeCall {
             dest,
             name: value,
@@ -727,6 +1005,28 @@ fn map_instruction(
         } => Instruction::NativeCall {
             dest: register(*dest)?,
             name: name(*value)?,
+            arguments: arguments
+                .iter()
+                .map(|argument| register(*argument))
+                .collect::<Result<Vec<_>, _>>()?,
+        },
+        Instruction::CallNative {
+            dest,
+            native,
+            arguments,
+        } => Instruction::CallNative {
+            dest: register(*dest)?,
+            native: NativeId(
+                *context
+                    .native_remap
+                    .get(native.0 as usize)
+                    .ok_or_else(|| {
+                        LinkError::new(
+                            LinkErrorKind::InvalidInstruction,
+                            format!("native import i{} out of range", native.0),
+                        )
+                    })?,
+            ),
             arguments: arguments
                 .iter()
                 .map(|argument| register(*argument))
@@ -741,12 +1041,61 @@ fn map_instruction(
             collection: register(*collection)?,
             index: register(*index)?,
         },
+        Instruction::ArrayGet {
+            dest,
+            collection,
+            index,
+        } => Instruction::ArrayGet {
+            dest: register(*dest)?,
+            collection: register(*collection)?,
+            index: register(*index)?,
+        },
+        Instruction::MapGet {
+            dest,
+            collection,
+            index,
+        } => Instruction::MapGet {
+            dest: register(*dest)?,
+            collection: register(*collection)?,
+            index: register(*index)?,
+        },
+        Instruction::RangeGet {
+            dest,
+            collection,
+            index,
+        } => Instruction::RangeGet {
+            dest: register(*dest)?,
+            collection: register(*collection)?,
+            index: register(*index)?,
+        },
         Instruction::AssignIndex {
             dest,
             collection,
             index,
             value,
         } => Instruction::AssignIndex {
+            dest: register(*dest)?,
+            collection: register(*collection)?,
+            index: register(*index)?,
+            value: register(*value)?,
+        },
+        Instruction::ArraySet {
+            dest,
+            collection,
+            index,
+            value,
+        } => Instruction::ArraySet {
+            dest: register(*dest)?,
+            collection: register(*collection)?,
+            index: register(*index)?,
+            value: register(*value)?,
+        },
+        Instruction::MapSet {
+            dest,
+            collection,
+            index,
+            value,
+        } => Instruction::MapSet {
             dest: register(*dest)?,
             collection: register(*collection)?,
             index: register(*index)?,
@@ -776,7 +1125,35 @@ fn map_instruction(
             dest: register(*dest)?,
             value: register(*value)?,
         },
+        Instruction::LenArray { dest, value } => Instruction::LenArray {
+            dest: register(*dest)?,
+            value: register(*value)?,
+        },
+        Instruction::LenMap { dest, value } => Instruction::LenMap {
+            dest: register(*dest)?,
+            value: register(*value)?,
+        },
+        Instruction::LenRange { dest, value } => Instruction::LenRange {
+            dest: register(*dest)?,
+            value: register(*value)?,
+        },
+        Instruction::LenStr { dest, value } => Instruction::LenStr {
+            dest: register(*dest)?,
+            value: register(*value)?,
+        },
         Instruction::AssertArray { dest, value } => Instruction::AssertArray {
+            dest: register(*dest)?,
+            value: register(*value)?,
+        },
+        Instruction::IterInit { dest, value } => Instruction::IterInit {
+            dest: register(*dest)?,
+            value: register(*value)?,
+        },
+        Instruction::IterHas { dest, value } => Instruction::IterHas {
+            dest: register(*dest)?,
+            value: register(*value)?,
+        },
+        Instruction::IterNext { dest, value } => Instruction::IterNext {
             dest: register(*dest)?,
             value: register(*value)?,
         },
@@ -799,6 +1176,10 @@ fn map_instruction(
             dest: register(*dest)?,
             value: register(*value)?,
         },
+        Instruction::NegNum { dest, value } => Instruction::NegNum {
+            dest: register(*dest)?,
+            value: register(*value)?,
+        },
         Instruction::Not { dest, value } => Instruction::Not {
             dest: register(*dest)?,
             value: register(*value)?,
@@ -808,7 +1189,22 @@ fn map_instruction(
             left: register(*left)?,
             right: register(*right)?,
         },
+        Instruction::AddNum { dest, left, right } => Instruction::AddNum {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
+        Instruction::ConcatStr { dest, left, right } => Instruction::ConcatStr {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
         Instruction::Subtract { dest, left, right } => Instruction::Subtract {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
+        Instruction::SubNum { dest, left, right } => Instruction::SubNum {
             dest: register(*dest)?,
             left: register(*left)?,
             right: register(*right)?,
@@ -818,7 +1214,17 @@ fn map_instruction(
             left: register(*left)?,
             right: register(*right)?,
         },
+        Instruction::MulNum { dest, left, right } => Instruction::MulNum {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
         Instruction::Divide { dest, left, right } => Instruction::Divide {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
+        Instruction::DivNum { dest, left, right } => Instruction::DivNum {
             dest: register(*dest)?,
             left: register(*left)?,
             right: register(*right)?,
@@ -838,7 +1244,27 @@ fn map_instruction(
             left: register(*left)?,
             right: register(*right)?,
         },
+        Instruction::GreaterNum { dest, left, right } => Instruction::GreaterNum {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
+        Instruction::GreaterStr { dest, left, right } => Instruction::GreaterStr {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
         Instruction::GreaterEqual { dest, left, right } => Instruction::GreaterEqual {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
+        Instruction::GreaterEqualNum { dest, left, right } => Instruction::GreaterEqualNum {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
+        Instruction::GreaterEqualStr { dest, left, right } => Instruction::GreaterEqualStr {
             dest: register(*dest)?,
             left: register(*left)?,
             right: register(*right)?,
@@ -848,7 +1274,27 @@ fn map_instruction(
             left: register(*left)?,
             right: register(*right)?,
         },
+        Instruction::LessNum { dest, left, right } => Instruction::LessNum {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
+        Instruction::LessStr { dest, left, right } => Instruction::LessStr {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
         Instruction::LessEqual { dest, left, right } => Instruction::LessEqual {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
+        Instruction::LessEqualNum { dest, left, right } => Instruction::LessEqualNum {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
+        Instruction::LessEqualStr { dest, left, right } => Instruction::LessEqualStr {
             dest: register(*dest)?,
             left: register(*left)?,
             right: register(*right)?,
@@ -864,6 +1310,22 @@ fn map_instruction(
             condition: register(*condition)?,
             target: map_jump(*target)?,
         },
+        Instruction::BlockStart { id } => Instruction::BlockStart {
+            id: BlockId(map_block(id.0)?),
+        },
+        Instruction::Br { target } => Instruction::Br {
+            target: BlockId(map_branch(target.0)?),
+        },
+        Instruction::BrIf {
+            condition,
+            if_true,
+            if_false,
+        } => Instruction::BrIf {
+            condition: register(*condition)?,
+            if_true: BlockId(map_branch(if_true.0)?),
+            if_false: BlockId(map_branch(if_false.0)?),
+        },
+        Instruction::ReturnNil => Instruction::ReturnNil,
     })
 }
 

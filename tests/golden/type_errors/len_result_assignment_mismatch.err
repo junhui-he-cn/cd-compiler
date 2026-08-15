@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/len_result_assignment_mismatch.cd:2:1: cannot assign string to `n` of type number
+  n = "bad";
+  ^

@@ -1,0 +1,10 @@
+Program
+  Let a = 0.30000000000000004
+  Let b = 1.0000000000000002
+  Let c = 0.1
+  Let d = 1.23456789012345
+  Print a
+  Print b
+  Print c
+  Print d
+  Print (+ a b)

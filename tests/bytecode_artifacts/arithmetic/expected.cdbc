@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 1
@@ -9,41 +9,50 @@ constants:
 
 names:
 
-main registers=8:
+native_imports:
+  i0 = "print" abi=1
+
+main registers=9:
+block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
-  r3 = multiply r1, r2
-  r4 = add r0, r3
-  print r4
+  r3 = mul_num r1, r2
+  r4 = add_num r0, r3
+  r8 = call_native i0 [r4]
   r5 = constant c3
   r6 = constant c4
   r7 = equal r5, r6
-  print r7
+  r8 = call_native i0 [r7]
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/arithmetic/input.cd" text="print 1 + 2 * 3;\nprint 4 == 4;\n"
 
 debug_locations:
   main 0 = s0:1:7
-  main 1 = s0:1:11
-  main 2 = s0:1:15
-  main 3 = s0:1:11
-  main 4 = s0:1:7
-  main 5 = s0:1:1
-  main 6 = s0:2:7
-  main 7 = s0:2:12
-  main 8 = s0:2:7
-  main 9 = s0:2:1
+  main 1 = s0:1:7
+  main 2 = s0:1:11
+  main 3 = s0:1:15
+  main 4 = s0:1:11
+  main 5 = s0:1:7
+  main 6 = s0:1:1
+  main 7 = s0:2:7
+  main 8 = s0:2:12
+  main 9 = s0:2:7
+  main 10 = s0:2:1
+  main 11 = s0:2:1
 
 debug_ranges:
   main 0 = s0:6:7
-  main 1 = s0:10:11
-  main 2 = s0:14:15
-  main 3 = s0:10:15
-  main 4 = s0:6:15
+  main 1 = s0:6:7
+  main 2 = s0:10:11
+  main 3 = s0:14:15
+  main 4 = s0:10:15
   main 5 = s0:6:15
-  main 6 = s0:23:24
-  main 7 = s0:28:29
-  main 8 = s0:23:29
+  main 6 = s0:6:15
+  main 7 = s0:23:24
+  main 8 = s0:28:29
   main 9 = s0:23:29
+  main 10 = s0:23:29
+  main 11 = s0:23:29

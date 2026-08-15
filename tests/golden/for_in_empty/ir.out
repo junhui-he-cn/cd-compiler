@@ -1,30 +1,14 @@
 IR
 0000  v0 = array []
-0001  v1 = assert_array v0
-0002  store_var @0 __for_in_iter#0, v1
-0003  v2 = constant #0 0
-0004  store_var @1 __for_in_index#1, v2
-0005  v3 = constant #1 nil
-0006  store_var @2 x#0, v3
-0007  v4 = load_var @3 __for_in_iter#0
-0008  v5 = len v4
-0009  store_var @4 __for_in_len#2, v5
-0010  v6 = load_var @5 __for_in_index#1
-0011  v7 = load_var @6 __for_in_len#2
-0012  v8 = less v6, v7
-0013  jump_if_false v8, 0027
-0014  v9 = load_var @7 __for_in_iter#0
-0015  v10 = load_var @8 __for_in_index#1
-0016  v11 = index v9, v10
-0017  assign_var @9 x#0, v11
-0018  jump 0024
-0019  v12 = load_var @10 __for_in_index#1
-0020  v13 = constant #2 1
-0021  v14 = add v12, v13
-0022  assign_var @11 __for_in_index#1, v14
-0023  jump 0010
-0024  v15 = load_var @12 x#0
-0025  print v15
-0026  jump 0019
-0027  v16 = constant #3 "done"
-0028  print v16
+0001  v1 = iter_init v0
+0002  v2 = constant #0 nil
+0003  store_var @0 x#0, v2
+0004  v3 = iter_has v1
+0005  jump_if_false v3, 0011
+0006  v4 = iter_next v1
+0007  assign_var @1 x#0, v4
+0008  v5 = load_var @2 x#0
+0009  print v5
+0010  jump 0004
+0011  v6 = constant #1 "done"
+0012  print v6

@@ -1,37 +1,43 @@
+native_import i0 = print abi=1
 main registers=17
-0000  b0 = constant #0 36
-0001  b1 = constant #1 "Ada"
-0002  b2 = struct @0 Person { @1 age: b0,  @2 name: b1}
-0003  store_var @3 p#0, b2
-0004  b3 = load_var @4 p#0
-0005  b4 = field b3,  @5 name
-0006  print b4
-0007  b5 = load_var @6 p#0
-0008  b6 = constant #2 37
-0009  b7 = assign_field b5,  @7 age, b6
-0010  b8 = load_var @8 p#0
-0011  b9 = field b8,  @9 age
-0012  print b9
-0013  b10 = constant #3 nil
-0014  store_var @10 birthday#1, b10
-0015  b11 = make_function $0 birthday/1
-0016  assign_var @16 birthday#1, b11
-0017  b12 = load_var @17 birthday#1
-0018  b13 = load_var @18 p#0
-0019  b14 = call b12(b13)
-0020  store_var @19 older#3, b14
-0021  b15 = load_var @20 older#3
-0022  b16 = field b15,  @21 age
-0023  print b16
+0000  block
+0001  b0 = constant #0 36
+0002  b1 = constant #1 "Ada"
+0003  b2 = make_struct t0 [b1, b0]
+0004  init_global g0, b2
+0005  b3 = load_global g0
+0006  b4 = struct_get b3, t0, 0
+0007  b16 = call_native i0 [b4]
+0008  b5 = load_global g0
+0009  b6 = constant #2 37
+0010  b7 = struct_set b5, t0, 1, b6
+0011  b8 = load_global g0
+0012  b9 = struct_get b8, t0, 1
+0013  b16 = call_native i0 [b9]
+0014  b10 = constant #3 nil
+0015  init_global g1, b10
+0016  b11 = make_function $0 birthday/1
+0017  set_global g1, b11
+0018  b12 = load_global g0
+0019  b13 = call_direct $0 [b12]
+0020  init_global g2, b13
+0021  b14 = load_global g2
+0022  b15 = struct_get b14, t0, 1
+0023  b16 = call_native i0 [b15]
+0024  return_nil
 
 function $0 birthday/1 registers=8
-0000  b0 = load_var @11 person#2
-0001  b1 = load_var @12 person#2
-0002  b2 = field b1,  @13 age
-0003  b3 = constant #4 1
-0004  b4 = add b2, b3
-0005  b5 = assign_field b0,  @14 age, b4
-0006  b6 = load_var @15 person#2
-0007  return b6
-0008  b7 = constant #5 nil
-0009  return b7
+0000  block
+0001  b0 = load_local l0
+0002  b1 = load_local l0
+0003  b2 = struct_get b1, t0, 1
+0004  b3 = constant #4 1
+0005  b4 = add_num b2, b3
+0006  b5 = struct_set b0, t0, 1, b4
+0007  b6 = load_local l0
+0008  return b6
+0009  block
+0010  b7 = constant #5 nil
+0011  return b7
+0012  block
+0013  return_nil

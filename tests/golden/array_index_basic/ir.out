@@ -6,11 +6,11 @@ IR
 0004  store_var @0 xs#0, v3
 0005  v4 = load_var @1 xs#0
 0006  v5 = constant #3 0
-0007  v6 = index v4, v5
+0007  v6 = array_get v4, v5
 0008  print v6
 0009  v7 = load_var @2 xs#0
 0010  v8 = constant #4 1
 0011  v9 = constant #5 1
-0012  v10 = add v8, v9
-0013  v11 = index v7, v10
+0012  v10 = add_num v8, v9
+0013  v11 = array_get v7, v10
 0014  print v11

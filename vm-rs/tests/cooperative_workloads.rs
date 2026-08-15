@@ -1,4 +1,4 @@
-use compiler_design_vm::bytecode::{Constant, Function, FunctionBody, Instruction, Program};
+use compiler_design_vm::bytecode::{Constant, FuncId, Function, Instruction, Program};
 use compiler_design_vm::value::Value;
 use compiler_design_vm::{
     CooperativeDebugHook, CooperativeDebugPause, CooperativeProfileReport, CooperativeRun,
@@ -52,14 +52,26 @@ fn arithmetic_workload() -> Program {
             Constant::Number("0".to_string()),
             Constant::Number("1".to_string()),
         ],
+        globals: Vec::new(),
+        types: Vec::new(),
+        native_imports: Vec::new(),
+        modules: Vec::new(),
         names: vec!["limit".to_string()],
-        main: FunctionBody {
+        functions: vec![Function {
+            id: FuncId(0),
+            name: "main".to_string(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
             registers: 0,
             instructions: Vec::new(),
             locations: Vec::new(),
         },
-        functions: vec![Function {
-            index: 0,
+            Function {
+            id: FuncId(1),
+            local_count: 0,
+            upvalues: Vec::new(),
             name: "arithmetic_worker".to_string(),
             arity: 1,
             registers: 6,
@@ -103,6 +115,7 @@ fn arithmetic_workload() -> Program {
             ],
             locations: vec![None; 11],
         }],
+        entry: FuncId(0),
         debug_sources: Vec::new(),
     }
 }
@@ -113,15 +126,26 @@ fn callback_workload() -> Program {
             Constant::Number("1".to_string()),
             Constant::Number("2".to_string()),
         ],
+        globals: Vec::new(),
+        types: Vec::new(),
+        native_imports: Vec::new(),
+        modules: Vec::new(),
         names: vec!["map".to_string(), "item".to_string()],
-        main: FunctionBody {
+        functions: vec![Function {
+            id: FuncId(0),
+            name: "main".to_string(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
             registers: 0,
             instructions: Vec::new(),
             locations: Vec::new(),
         },
-        functions: vec![
             Function {
-                index: 0,
+                id: FuncId(1),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "callback_worker".to_string(),
                 arity: 0,
                 registers: 5,
@@ -141,7 +165,7 @@ fn callback_workload() -> Program {
                     },
                     Instruction::MakeFunction {
                         dest: 3,
-                        function: 1,
+                        function: FuncId(2),
                     },
                     Instruction::NativeCall {
                         dest: 4,
@@ -154,7 +178,9 @@ fn callback_workload() -> Program {
                 locations: vec![None; 7],
             },
             Function {
-                index: 1,
+                id: FuncId(2),
+                local_count: 0,
+                upvalues: Vec::new(),
                 name: "identity_callback".to_string(),
                 arity: 1,
                 registers: 1,
@@ -166,6 +192,7 @@ fn callback_workload() -> Program {
                 locations: vec![None; 2],
             },
         ],
+        entry: FuncId(0),
         debug_sources: Vec::new(),
     }
 }
@@ -173,14 +200,14 @@ fn callback_workload() -> Program {
 fn arithmetic_specs() -> Vec<TaskSpec> {
     [4.0, 5.0, 6.0, 7.0]
         .into_iter()
-        .map(|limit| TaskSpec::function(0, vec![Value::number(limit)]))
+        .map(|limit| TaskSpec::function(1, vec![Value::number(limit)]))
         .collect()
 }
 
 fn callback_specs() -> Vec<TaskSpec> {
     vec![
-        TaskSpec::function(0, Vec::new()),
-        TaskSpec::function(0, Vec::new()),
+        TaskSpec::function(1, Vec::new()),
+        TaskSpec::function(1, Vec::new()),
     ]
 }
 

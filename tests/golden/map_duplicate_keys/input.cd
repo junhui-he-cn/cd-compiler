@@ -1,0 +1,14 @@
+let m = {"a": 1, "b": 2, "a": 3};
+print len(m);
+print m["a"];
+print m["b"];
+for k in m {
+  print k;
+  print m[k];
+}
+print keys(m);
+print values(m);
+m["a"] = 30;
+print m;
+print keys(m);
+print merge(m, {"b": 20, "c": 4});

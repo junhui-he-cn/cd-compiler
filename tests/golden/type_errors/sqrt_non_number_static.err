@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/sqrt_non_number_static.cd:1:8: sqrt expects number, got array
+  sqrt([]);
+         ^

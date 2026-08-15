@@ -1,0 +1,24 @@
+native_import i0 = print abi=1
+main registers=12
+0000  block
+0001  b0 = constant #0 0.30000000000000004
+0002  init_global g0, b0
+0003  b1 = constant #1 1.0000000000000002
+0004  init_global g1, b1
+0005  b2 = constant #2 0.10000000000000001
+0006  init_global g2, b2
+0007  b3 = constant #3 1.23456789012345
+0008  init_global g3, b3
+0009  b4 = load_global g0
+0010  b11 = call_native i0 [b4]
+0011  b5 = load_global g1
+0012  b11 = call_native i0 [b5]
+0013  b6 = load_global g2
+0014  b11 = call_native i0 [b6]
+0015  b7 = load_global g3
+0016  b11 = call_native i0 [b7]
+0017  b8 = load_global g0
+0018  b9 = load_global g1
+0019  b10 = add_num b8, b9
+0020  b11 = call_native i0 [b10]
+0021  return_nil

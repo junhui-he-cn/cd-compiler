@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/namespace_import_unknown_alias.cd:1:7: undefined variable `missing`
+  print missing.value;
+        ^

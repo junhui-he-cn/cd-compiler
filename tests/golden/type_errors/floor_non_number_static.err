@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/floor_non_number_static.cd:1:10: floor expects number, got string
+  floor("x");
+           ^

@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 1
@@ -10,56 +10,74 @@ names:
   n2 = "c#0"
   n3 = "c#0"
   n4 = "value"
-  n5 = "`+=` expects number target"
-  n6 = "`+=` expects number value"
-  n7 = "value"
-  n8 = "c#0"
-  n9 = "value"
+  n5 = "Counter"
+  n6 = "`+=` expects number target"
+  n7 = "`+=` expects number value"
+  n8 = "value"
+  n9 = "Counter"
+  n10 = "c#0"
+  n11 = "value"
+  n12 = "Counter"
 
-main registers=11:
+globals:
+  g0 = n2
+
+types:
+  t0 = struct "Counter" field0="value"
+
+native_imports:
+  i0 = "print" abi=1
+
+main registers=12:
+block b0:
   r0 = constant c0
-  r1 = struct n0 {n1: r0}
-  store_var n2, r1
-  r2 = load_var n3
-  r3 = field r2, n4
-  r4 = assert_number r3, n5
+  r1 = make_struct t0 [r0]
+  init_global g0, r1
+  r2 = load_global g0
+  r3 = struct_get r2, t0, 0
+  r4 = assert_number r3, n6
   r5 = constant c1
-  r6 = assert_number r5, n6
-  r7 = add r4, r6
-  r8 = assign_field r2, n7, r7
-  r9 = load_var n8
-  r10 = field r9, n9
-  print r10
+  r6 = assert_number r5, n7
+  r7 = add_num r4, r6
+  r8 = struct_set r2, t0, 0, r7
+  r9 = load_global g0
+  r10 = struct_get r9, t0, 0
+  r11 = call_native i0 [r10]
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/field_compound_assignment/input.cd" text="struct Counter { value: number }\nlet c: Counter = Counter { value: 1 };\nc.value += 2;\nprint c.value;\n"
 
 debug_locations:
   main 0 = s0:2:35
-  main 1 = s0:2:18
-  main 2 = s0:2:1
-  main 3 = s0:3:1
+  main 1 = s0:2:35
+  main 2 = s0:2:18
+  main 3 = s0:2:1
   main 4 = s0:3:1
   main 5 = s0:3:1
-  main 6 = s0:3:12
-  main 7 = s0:3:1
+  main 6 = s0:3:1
+  main 7 = s0:3:12
   main 8 = s0:3:1
   main 9 = s0:3:1
-  main 10 = s0:4:7
+  main 10 = s0:3:1
   main 11 = s0:4:7
-  main 12 = s0:4:1
+  main 12 = s0:4:7
+  main 13 = s0:4:1
+  main 14 = s0:4:1
 
 debug_ranges:
   main 0 = s0:67:68
-  main 1 = s0:50:68
-  main 2 = s0:37:68
-  main 3 = s0:72:73
-  main 4 = s0:72:84
+  main 1 = s0:67:68
+  main 2 = s0:50:68
+  main 3 = s0:37:68
+  main 4 = s0:72:73
   main 5 = s0:72:84
-  main 6 = s0:83:84
-  main 7 = s0:72:84
+  main 6 = s0:72:84
+  main 7 = s0:83:84
   main 8 = s0:72:84
   main 9 = s0:72:84
-  main 10 = s0:92:93
-  main 11 = s0:92:99
+  main 10 = s0:72:84
+  main 11 = s0:92:93
   main 12 = s0:92:99
+  main 13 = s0:92:99
+  main 14 = s0:92:99

@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 39
@@ -13,24 +13,38 @@ names:
   n3 = "answer#1"
   n4 = "answer#1"
 
-main registers=5:
+globals:
+  g0 = n0
+  g1 = n1
+
+native_imports:
+  i0 = "print" abi=1
+
+main registers=6:
+block b0:
   r0 = constant c0
-  store_var n0, r0
+  init_global g0, r0
   r1 = constant c1
-  store_var n1, r1
+  init_global g1, r1
   r2 = make_function f0
-  assign_var n3, r2
-  r3 = load_var n4
+  set_global g1, r2
+  r3 = load_global g1
   r4 = call r3 []
-  print r4
+  r5 = call_native i0 [r4]
+  return_nil
 
 function f0 name="answer" arity=0 registers=4:
-  r0 = load_var n2
+  upvalue u0 = global g0
+block b0:
+  r0 = load_upvalue u0
   r1 = constant c2
-  r2 = add r0, r1
+  r2 = add_num r0, r1
   return r2
+block b1:
   r3 = constant c3
   return r3
+block b2:
+  return_nil
 
 debug_sources:
   s0 module="/home/junhe/compiler/tests/bytecode_artifacts/namespace_imports/input.cd" path="tests/bytecode_artifacts/namespace_imports/input.cd" text="import \"./lib.cd\" as lib;\nprint lib.answer();\n"
@@ -38,34 +52,46 @@ debug_sources:
 
 debug_locations:
   main 0 = s1:1:12
-  main 1 = s1:1:1
-  main 2 = s1:2:1
+  main 1 = s1:1:12
+  main 2 = s1:1:1
   main 3 = s1:2:1
   main 4 = s1:2:1
   main 5 = s1:2:1
-  main 6 = s0:2:7
+  main 6 = s1:2:1
   main 7 = s0:2:7
-  main 8 = s0:2:1
+  main 8 = s0:2:7
+  main 9 = s0:2:1
+  main 10 = s0:2:1
   function f0 0 = s1:2:23
-  function f0 1 = s1:2:30
-  function f0 2 = s1:2:23
-  function f0 3 = s1:2:16
-  function f0 4 = s1:2:1
+  function f0 1 = s1:2:23
+  function f0 2 = s1:2:30
+  function f0 3 = s1:2:23
+  function f0 4 = s1:2:16
   function f0 5 = s1:2:1
+  function f0 6 = s1:2:1
+  function f0 7 = s1:2:1
+  function f0 8 = s1:2:1
+  function f0 9 = s1:2:1
 
 debug_ranges:
   main 0 = s1:11:13
-  main 1 = s1:4:13
-  main 2 = s1:19:45
+  main 1 = s1:11:13
+  main 2 = s1:4:13
   main 3 = s1:19:45
   main 4 = s1:19:45
   main 5 = s1:19:45
-  main 6 = s0:32:44
+  main 6 = s1:19:45
   main 7 = s0:32:44
   main 8 = s0:32:44
+  main 9 = s0:32:44
+  main 10 = s0:32:44
   function f0 0 = s1:37:41
-  function f0 1 = s1:44:45
-  function f0 2 = s1:37:45
-  function f0 3 = s1:30:45
-  function f0 4 = s1:19:45
+  function f0 1 = s1:37:41
+  function f0 2 = s1:44:45
+  function f0 3 = s1:37:45
+  function f0 4 = s1:30:45
   function f0 5 = s1:19:45
+  function f0 6 = s1:19:45
+  function f0 7 = s1:19:45
+  function f0 8 = s1:19:45
+  function f0 9 = s1:19:45

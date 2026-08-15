@@ -1,16 +1,22 @@
-main registers=9
-0000  b0 = constant #0 1
-0001  b1 = constant #1 2
-0002  b2 = struct @0 geo.Point { @1 x: b0,  @2 y: b1}
-0003  store_var @3 point#0, b2
-0004  b3 = load_var @4 point#0
-0005  b4 = field b3,  @5 x
-0006  b5 = constant #2 1
-0007  b6 = equal b4, b5
-0008  jump_if_false b6, 0012
-0009  b7 = constant #3 "one"
-0010  print b7
-0011  jump 0015
-0012  b8 = constant #4 "other"
-0013  print b8
-0014  jump 0015
+native_import i0 = print abi=1
+main registers=10
+0000  block
+0001  b0 = constant #0 1
+0002  b1 = constant #1 2
+0003  b2 = make_struct t0 [b0, b1]
+0004  init_global g0, b2
+0005  b3 = load_global g0
+0006  b4 = struct_get b3, t0, 0
+0007  b5 = constant #2 1
+0008  b6 = equal b4, b5
+0009  br_if b6, b1, b2
+0010  block
+0011  b7 = constant #3 "one"
+0012  b9 = call_native i0 [b7]
+0013  return_nil
+0014  block
+0015  b8 = constant #4 "other"
+0016  b9 = call_native i0 [b8]
+0017  return_nil
+0018  block
+0019  return_nil

@@ -1,1 +1,6 @@
 Parse error at <repo>/tests/golden/parse_errors/struct_decl_missing_name.cd:1:8: expected struct name after `struct`, found LeftBrace `{`
+  struct { name: string }
+         ^
+Parse error at <repo>/tests/golden/parse_errors/struct_decl_missing_name.cd:1:14: expected `;` after expression, found Colon `:`
+  struct { name: string }
+               ^

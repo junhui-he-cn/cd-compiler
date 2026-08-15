@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/compound_assignment_undefined.cd:1:1: undefined variable `x`
+  x += 1;
+  ^

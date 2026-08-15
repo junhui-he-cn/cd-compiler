@@ -1,0 +1,38 @@
+IR
+0000  v0 = array []
+0001  store_var @0 fns#0, v0
+0002  v1 = constant #0 3
+0003  v2 = native_call @1 range(v1)
+0004  v3 = iter_init v2
+0005  v4 = constant #1 nil
+0006  store_var @2 i#1, v4
+0007  v5 = iter_has v3
+0008  jump_if_false v5, 0019
+0009  v6 = iter_next v3
+0010  assign_var @3 i#1, v6
+0011  v7 = load_var @4 i#1
+0012  v8 = constant #2 10
+0013  v9 = mul_num v7, v8
+0014  store_var @5 x#2, v9
+0015  v10 = load_var @6 fns#0
+0016  v11 = make_function $0 <lambda>/0
+0017  v12 = native_call @8 push(v10, v11)
+0018  jump 0007
+0019  v13 = load_var @9 fns#0
+0020  v14 = iter_init v13
+0021  v15 = constant #4 nil
+0022  store_var @10 f#3, v15
+0023  v16 = iter_has v14
+0024  jump_if_false v16, 0031
+0025  v17 = iter_next v14
+0026  assign_var @11 f#3, v17
+0027  v18 = load_var @12 f#3
+0028  v19 = call v18()
+0029  print v19
+0030  jump 0023
+
+function $0 <lambda>()
+0000  v0 = load_var @7 x#2
+0001  return v0
+0002  v1 = constant #3 nil
+0003  return v1

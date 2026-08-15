@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = string "你🙂"
@@ -29,119 +29,134 @@ names:
   n13 = "combined#1"
   n14 = "substr"
 
-main registers=26:
+globals:
+  g0 = n0
+  g1 = n11
+
+native_imports:
+  i0 = "print" abi=1
+  i1 = "substr" abi=1
+  i2 = "charAt" abi=1
+
+main registers=27:
+block b0:
   r0 = constant c0
-  store_var n0, r0
-  r1 = load_var n1
-  r2 = len r1
-  print r2
-  r3 = load_var n2
-  r4 = len r3
-  print r4
-  r5 = load_var n3
+  init_global g0, r0
+  r1 = load_global g0
+  r2 = len_str r1
+  r26 = call_native i0 [r2]
+  r3 = load_global g0
+  r4 = len_str r3
+  r26 = call_native i0 [r4]
+  r5 = load_global g0
   r6 = constant c1
   r7 = constant c2
-  r8 = native_call n4 [r5, r6, r7]
-  print r8
-  r9 = load_var n5
+  r8 = call_native i1 [r5, r6, r7]
+  r26 = call_native i0 [r8]
+  r9 = load_global g0
   r10 = constant c3
   r11 = constant c4
-  r12 = native_call n6 [r9, r10, r11]
-  print r12
-  r13 = load_var n7
+  r12 = call_native i1 [r9, r10, r11]
+  r26 = call_native i0 [r12]
+  r13 = load_global g0
   r14 = constant c5
-  r15 = native_call n8 [r13, r14]
-  print r15
-  r16 = load_var n9
+  r15 = call_native i2 [r13, r14]
+  r26 = call_native i0 [r15]
+  r16 = load_global g0
   r17 = constant c6
-  r18 = native_call n10 [r16, r17]
-  print r18
+  r18 = call_native i2 [r16, r17]
+  r26 = call_native i0 [r18]
   r19 = constant c7
-  store_var n11, r19
-  r20 = load_var n12
-  r21 = len r20
-  print r21
-  r22 = load_var n13
+  init_global g1, r19
+  r20 = load_global g1
+  r21 = len_str r20
+  r26 = call_native i0 [r21]
+  r22 = load_global g1
   r23 = constant c8
   r24 = constant c9
-  r25 = native_call n14 [r22, r23, r24]
-  print r25
+  r25 = call_native i1 [r22, r23, r24]
+  r26 = call_native i0 [r25]
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/unicode_strings/input.cd" text="let text = \"你🙂\";\nprint len(text);\nprint text.len();\nprint substr(text, 0, 1);\nprint text.substr(1, 1);\nprint charAt(text, 0);\nprint text.charAt(1);\nlet combined = \"é\";\nprint len(combined);\nprint combined.substr(0, 2);\n"
 
 debug_locations:
   main 0 = s0:1:12
-  main 1 = s0:1:1
-  main 2 = s0:2:11
-  main 3 = s0:2:7
-  main 4 = s0:2:1
-  main 5 = s0:3:7
+  main 1 = s0:1:12
+  main 2 = s0:1:1
+  main 3 = s0:2:11
+  main 4 = s0:2:7
+  main 5 = s0:2:1
   main 6 = s0:3:7
-  main 7 = s0:3:1
-  main 8 = s0:4:14
-  main 9 = s0:4:20
-  main 10 = s0:4:23
-  main 11 = s0:4:7
-  main 12 = s0:4:1
-  main 13 = s0:5:7
-  main 14 = s0:5:19
-  main 15 = s0:5:22
-  main 16 = s0:5:7
-  main 17 = s0:5:1
-  main 18 = s0:6:14
-  main 19 = s0:6:20
-  main 20 = s0:6:7
-  main 21 = s0:6:1
-  main 22 = s0:7:7
-  main 23 = s0:7:19
-  main 24 = s0:7:7
-  main 25 = s0:7:1
-  main 26 = s0:8:16
-  main 27 = s0:8:1
-  main 28 = s0:9:11
-  main 29 = s0:9:7
-  main 30 = s0:9:1
-  main 31 = s0:10:7
-  main 32 = s0:10:23
-  main 33 = s0:10:26
-  main 34 = s0:10:7
-  main 35 = s0:10:1
+  main 7 = s0:3:7
+  main 8 = s0:3:1
+  main 9 = s0:4:14
+  main 10 = s0:4:20
+  main 11 = s0:4:23
+  main 12 = s0:4:7
+  main 13 = s0:4:1
+  main 14 = s0:5:7
+  main 15 = s0:5:19
+  main 16 = s0:5:22
+  main 17 = s0:5:7
+  main 18 = s0:5:1
+  main 19 = s0:6:14
+  main 20 = s0:6:20
+  main 21 = s0:6:7
+  main 22 = s0:6:1
+  main 23 = s0:7:7
+  main 24 = s0:7:19
+  main 25 = s0:7:7
+  main 26 = s0:7:1
+  main 27 = s0:8:16
+  main 28 = s0:8:1
+  main 29 = s0:9:11
+  main 30 = s0:9:7
+  main 31 = s0:9:1
+  main 32 = s0:10:7
+  main 33 = s0:10:23
+  main 34 = s0:10:26
+  main 35 = s0:10:7
+  main 36 = s0:10:1
+  main 37 = s0:10:1
 
 debug_ranges:
   main 0 = s0:11:20
-  main 1 = s0:4:20
-  main 2 = s0:32:36
-  main 3 = s0:28:37
+  main 1 = s0:11:20
+  main 2 = s0:4:20
+  main 3 = s0:32:36
   main 4 = s0:28:37
-  main 5 = s0:45:49
-  main 6 = s0:45:55
+  main 5 = s0:28:37
+  main 6 = s0:45:49
   main 7 = s0:45:55
-  main 8 = s0:70:74
-  main 9 = s0:76:77
-  main 10 = s0:79:80
-  main 11 = s0:63:81
+  main 8 = s0:45:55
+  main 9 = s0:70:74
+  main 10 = s0:76:77
+  main 11 = s0:79:80
   main 12 = s0:63:81
-  main 13 = s0:89:93
-  main 14 = s0:101:102
-  main 15 = s0:104:105
-  main 16 = s0:89:106
+  main 13 = s0:63:81
+  main 14 = s0:89:93
+  main 15 = s0:101:102
+  main 16 = s0:104:105
   main 17 = s0:89:106
-  main 18 = s0:121:125
-  main 19 = s0:127:128
-  main 20 = s0:114:129
+  main 18 = s0:89:106
+  main 19 = s0:121:125
+  main 20 = s0:127:128
   main 21 = s0:114:129
-  main 22 = s0:137:141
-  main 23 = s0:149:150
-  main 24 = s0:137:151
+  main 22 = s0:114:129
+  main 23 = s0:137:141
+  main 24 = s0:149:150
   main 25 = s0:137:151
-  main 26 = s0:168:173
-  main 27 = s0:157:173
-  main 28 = s0:185:193
-  main 29 = s0:181:194
+  main 26 = s0:137:151
+  main 27 = s0:168:173
+  main 28 = s0:157:173
+  main 29 = s0:185:193
   main 30 = s0:181:194
-  main 31 = s0:202:210
-  main 32 = s0:218:219
-  main 33 = s0:221:222
-  main 34 = s0:202:223
+  main 31 = s0:181:194
+  main 32 = s0:202:210
+  main 33 = s0:218:219
+  main 34 = s0:221:222
   main 35 = s0:202:223
+  main 36 = s0:202:223
+  main 37 = s0:202:223

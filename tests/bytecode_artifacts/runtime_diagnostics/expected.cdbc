@@ -1,4 +1,4 @@
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = nil
@@ -9,23 +9,30 @@ constants:
 names:
   n0 = "fail#0"
   n1 = "fail#0"
-  n2 = "fail#0"
 
-main registers=4:
+globals:
+  g0 = n0
+
+main registers=3:
+block b0:
   r0 = constant c0
-  store_var n0, r0
+  init_global g0, r0
   r1 = make_function f0
-  assign_var n1, r1
-  r2 = load_var n2
-  r3 = call r2 []
+  set_global g0, r1
+  r2 = call_direct f0 []
+  return_nil
 
 function f0 name="fail" arity=0 registers=4:
+block b0:
   r0 = constant c1
   r1 = constant c2
-  r2 = divide r0, r1
+  r2 = div_num r0, r1
   return r2
+block b1:
   r3 = constant c3
   return r3
+block b2:
+  return_nil
 
 debug_sources:
   s0 path="tests/bytecode_artifacts/runtime_diagnostics/input.cd" text="fun fail() { return 1 / 0; }\nfail();\n"
@@ -35,25 +42,35 @@ debug_locations:
   main 1 = s0:1:1
   main 2 = s0:1:1
   main 3 = s0:1:1
-  main 4 = s0:2:1
+  main 4 = s0:1:1
   main 5 = s0:2:1
+  main 6 = s0:2:1
   function f0 0 = s0:1:21
-  function f0 1 = s0:1:25
-  function f0 2 = s0:1:21
-  function f0 3 = s0:1:14
-  function f0 4 = s0:1:1
+  function f0 1 = s0:1:21
+  function f0 2 = s0:1:25
+  function f0 3 = s0:1:21
+  function f0 4 = s0:1:14
   function f0 5 = s0:1:1
+  function f0 6 = s0:1:1
+  function f0 7 = s0:1:1
+  function f0 8 = s0:1:1
+  function f0 9 = s0:1:1
 
 debug_ranges:
   main 0 = s0:4:25
   main 1 = s0:4:25
   main 2 = s0:4:25
   main 3 = s0:4:25
-  main 4 = s0:29:33
+  main 4 = s0:4:25
   main 5 = s0:29:35
+  main 6 = s0:29:35
   function f0 0 = s0:20:21
-  function f0 1 = s0:24:25
-  function f0 2 = s0:20:25
-  function f0 3 = s0:13:25
-  function f0 4 = s0:4:25
+  function f0 1 = s0:20:21
+  function f0 2 = s0:24:25
+  function f0 3 = s0:20:25
+  function f0 4 = s0:13:25
   function f0 5 = s0:4:25
+  function f0 6 = s0:4:25
+  function f0 7 = s0:4:25
+  function f0 8 = s0:4:25
+  function f0 9 = s0:4:25

@@ -1,1 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/function_unknown_parameter_type.cd:1:12: unknown type `nope`
+  fun bad(x: nope) {
+             ^

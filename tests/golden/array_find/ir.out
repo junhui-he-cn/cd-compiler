@@ -32,7 +32,7 @@ IR
 function $0 <lambda>(value#1)
 0000  v0 = load_var @2 value#1
 0001  v1 = constant #3 1
-0002  v2 = greater v0, v1
+0002  v2 = gt_num v0, v1
 0003  return v2
 0004  v3 = constant #4 nil
 0005  return v3

@@ -96,6 +96,19 @@ bool isBinaryOperation(IROp op)
     case IROp::GreaterEqual:
     case IROp::Less:
     case IROp::LessEqual:
+    case IROp::AddNum:
+    case IROp::SubNum:
+    case IROp::MulNum:
+    case IROp::DivNum:
+    case IROp::ConcatStr:
+    case IROp::LessNum:
+    case IROp::LessEqualNum:
+    case IROp::GreaterNum:
+    case IROp::GreaterEqualNum:
+    case IROp::LessStr:
+    case IROp::LessEqualStr:
+    case IROp::GreaterStr:
+    case IROp::GreaterEqualStr:
         return true;
     default:
         return false;
@@ -172,9 +185,16 @@ void validateInstructionShape(const SSAInstruction& instruction)
     case IROp::Copy:
     case IROp::Field:
     case IROp::Len:
-    case IROp::AssertArray:
+    case IROp::LenArray:
+    case IROp::LenMap:
+    case IROp::LenRange:
+    case IROp::LenStr:
+    case IROp::IterInit:
+    case IROp::IterHas:
+    case IROp::IterNext:
     case IROp::AssertNumber:
     case IROp::Negate:
+    case IROp::NegNum:
     case IROp::Not:
         requireInstructionShape(
             instruction,
@@ -197,16 +217,27 @@ void validateInstructionShape(const SSAInstruction& instruction)
     case IROp::Call:
         requireInstructionShape(instruction, hasResult() && hasLeft() && noRight(), "operand shape");
         return;
+    case IROp::CallDirect:
+        requireInstructionShape(
+            instruction,
+            hasResult() && noLeft() && noRight(),
+            "operand shape");
+        return;
     case IROp::NativeCall:
         requireInstructionShape(instruction, hasResult() && noLeft() && noRight(), "operand shape");
         return;
     case IROp::Index:
+    case IROp::ArrayGet:
+    case IROp::MapGet:
+    case IROp::RangeGet:
         requireInstructionShape(
             instruction,
             hasResult() && hasLeft() && hasRight() && noArguments(),
             "operand shape");
         return;
     case IROp::AssignIndex:
+    case IROp::ArraySet:
+    case IROp::MapSet:
         requireInstructionShape(
             instruction,
             hasResult() && hasLeft() && hasRight() && instruction.arguments.size() == 1,
@@ -236,6 +267,12 @@ void validateInstructionShape(const SSAInstruction& instruction)
         requireInstructionShape(
             instruction,
             noResult() && hasLeft() && noRight() && noArguments(),
+            "operand shape");
+        return;
+    case IROp::InitModule:
+        requireInstructionShape(
+            instruction,
+            noResult() && noLeft() && noRight() && noArguments(),
             "operand shape");
         return;
     default:
@@ -2067,7 +2104,7 @@ void SSADeSSAIRResult::verify() const
         throw SSAError("SSA de-SSA IR synthetic-instruction map has the wrong size");
     }
     if (originalInstructionOffsets.empty()) {
-        if (!originalInsertionOffsets.empty()) {
+        if (originalInsertionOffsets.size() != 1 || originalInsertionOffsets[0] != 0) {
             throw SSAError("SSA de-SSA IR insertion map has no instruction map");
         }
     } else if (originalInsertionOffsets.size() != originalInstructionOffsets.size() + 1) {
@@ -2087,12 +2124,6 @@ void SSADeSSAIRResult::verify() const
         && originalInsertionOffsets.back() != function.instructions.size()) {
         throw SSAError("SSA de-SSA IR end insertion offset is stale");
     }
-    for (const IRModuleDependency& dependency : moduleDependencies) {
-        if (dependency.instructionOffset > function.instructions.size()) {
-            throw SSAError("SSA de-SSA IR dependency offset is out of range");
-        }
-    }
-
     const auto verifyRegister = [this](const std::optional<IRRegister>& value) {
         if (value && value->index >= function.registerCount) {
             throw SSAError("SSA de-SSA IR register is outside registerCount");
