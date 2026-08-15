@@ -2,7 +2,7 @@
   "schema_version": 1,
   "matrix_revision": "x1-2026-08-15-r3",
   "inventory_revision": "m0d-2026-07-22-r1",
-  "reference_commit": "a0aa0168",
+  "reference_commit": "b4adde7b",
   "decision_id": "X1-COMPILER-VM-COMPAT-001",
   "status": "resolved",
   "question": "What compatibility surfaces must the C++ compiler and Rust VM preserve together through the cdbc 0.2 variable-lowering upgrade?",
