@@ -8,15 +8,15 @@ main registers=33
 0006  b3 = constant #10 36
 0007  b4 = constant #11 "Cambridge"
 0008  b5 = constant #12 1
-0009  b6 = struct @20 Address { @21 city: b4,  @22 zip: b5}
-0010  b7 = struct @16 Person { @17 name: b2,  @18 age: b3,  @19 address: b6}
+0009  b6 = make_struct t0 [b4, b5]
+0010  b7 = make_struct t1 [b2, b3, b6]
 0011  init_global g1, b7
 0012  b8 = constant #13 "Grace"
 0013  b9 = constant #14 40
 0014  b10 = constant #15 "Hong Kong"
 0015  b11 = constant #16 2
-0016  b12 = struct @28 Address { @29 city: b10,  @30 zip: b11}
-0017  b13 = struct @24 Person { @25 name: b8,  @26 age: b9,  @27 address: b12}
+0016  b12 = make_struct t0 [b10, b11]
+0017  b13 = make_struct t1 [b8, b9, b12]
 0018  init_global g2, b13
 0019  b14 = constant #17 nil
 0020  init_global g3, b14
@@ -33,14 +33,14 @@ main registers=33
 0031  b23 = call b21(b22)
 0032  print b23
 0033  b24 = load_global g1
-0034  b25 = field b24,  @40 name
+0034  b25 = struct_get b24, t1, 0
 0035  b26 = constant #18 "Ada"
 0036  b27 = equal b25, b26
 0037  br_if b27, b1, b2
 0038  block
 0039  br b3
 0040  block
-0041  b28 = field b24,  @41 age
+0041  b28 = struct_get b24, t1, 1
 0042  b29 = constant #19 0
 0043  b30 = equal b28, b29
 0044  br_if b30, b3, b4
@@ -67,7 +67,7 @@ function $0 describe/1 registers=25
 0008  block
 0009  br b11
 0010  block
-0011  b4 = field b0,  @2 name
+0011  b4 = struct_get b0, t1, 0
 0012  b5 = constant #3 "Ada"
 0013  b6 = equal b4, b5
 0014  br_if b6, b4, b6
@@ -77,13 +77,13 @@ function $0 describe/1 registers=25
 0018  block
 0019  br b11
 0020  block
-0021  b8 = field b0,  @3 address
-0022  b9 = field b8,  @4 city
+0021  b8 = struct_get b0, t1, 2
+0022  b9 = struct_get b8, t0, 0
 0023  b10 = constant #5 "Hong Kong"
 0024  b11 = equal b9, b10
 0025  br_if b11, b7, b9
 0026  block
-0027  b12 = field b0,  @5 name
+0027  b12 = struct_get b0, t1, 0
 0028  bind_local l1, b12
 0029  b13 = constant #6 "city:"
 0030  b14 = load_local l1
@@ -92,15 +92,15 @@ function $0 describe/1 registers=25
 0033  block
 0034  br b11
 0035  block
-0036  b16 = field b0,  @8 age
-0037  b17 = field b0,  @9 name
+0036  b16 = struct_get b0, t1, 1
+0037  b17 = struct_get b0, t1, 0
 0038  bind_local l2, b16
 0039  bind_local l3, b17
 0040  b18 = load_local l3
 0041  b19 = constant #7 ":"
 0042  b20 = add b18, b19
 0043  b21 = load_local l2
-0044  b22 = native_call @14 str [b21]
+0044  b22 = native_call @20 str [b21]
 0045  b23 = add b20, b22
 0046  return b23
 0047  block

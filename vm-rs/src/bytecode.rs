@@ -66,9 +66,24 @@ pub struct Program {
     pub constants: Vec<Constant>,
     pub names: Vec<String>,
     pub globals: Vec<usize>,
+    pub types: Vec<TypeLayout>,
     pub functions: Vec<Function>,
     pub entry: FuncId,
     pub debug_sources: Vec<DebugSource>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct VariantLayout {
+    pub name: String,
+    pub payload_count: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TypeLayout {
+    pub is_enum: bool,
+    pub name: String,
+    pub field_names: Vec<String>,
+    pub variants: Vec<VariantLayout>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -155,10 +170,34 @@ pub enum Instruction {
         type_name: Option<usize>,
         fields: Vec<(usize, usize)>,
     },
+    MakeStruct {
+        dest: usize,
+        type_id: TypeId,
+        elements: Vec<usize>,
+    },
+    StructGet {
+        dest: usize,
+        object: usize,
+        type_id: TypeId,
+        slot: usize,
+    },
+    StructSet {
+        dest: usize,
+        object: usize,
+        type_id: TypeId,
+        slot: usize,
+        value: usize,
+    },
     Variant {
         dest: usize,
         enum_name: usize,
         variant_name: usize,
+        payload: Vec<usize>,
+    },
+    MakeVariant {
+        dest: usize,
+        type_id: TypeId,
+        variant_id: VariantId,
         payload: Vec<usize>,
     },
     VariantTag {
@@ -167,9 +206,22 @@ pub enum Instruction {
         enum_name: usize,
         variant_name: usize,
     },
+    IsVariant {
+        dest: usize,
+        value: usize,
+        type_id: TypeId,
+        variant_id: VariantId,
+    },
     VariantField {
         dest: usize,
         value: usize,
+        index: usize,
+    },
+    VariantGet {
+        dest: usize,
+        value: usize,
+        type_id: TypeId,
+        variant_id: VariantId,
         index: usize,
     },
     Move {

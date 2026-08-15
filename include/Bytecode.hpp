@@ -20,10 +20,14 @@ enum class BytecodeOp {
     MakeFunction,
     Array,
     Map,
-    Struct,
-    Variant,
-    VariantTag,
-    VariantField,
+    MakeStruct,
+    Field,
+    AssignField,
+    StructGet,
+    StructSet,
+    MakeVariant,
+    IsVariant,
+    VariantGet,
     Move,
     LoadVar,
     StoreVar,
@@ -40,8 +44,6 @@ enum class BytecodeOp {
     NativeCall,
     Index,
     AssignIndex,
-    Field,
-    AssignField,
     Len,
     AssertArray,
     AssertNumber,
@@ -92,6 +94,19 @@ struct BytecodeUpvalue {
     std::uint32_t index = 0;
 };
 
+struct BytecodeVariantLayout {
+    std::string name;
+    std::uint32_t payloadCount = 0;
+};
+
+struct BytecodeType {
+    bool isEnum = false;
+    std::string name;
+    std::uint32_t fieldCount = 0;
+    std::vector<std::string> fieldNames;
+    std::vector<BytecodeVariantLayout> variants;
+};
+
 struct BytecodeFunction {
     std::string name;
     std::vector<std::string> parameters;
@@ -119,6 +134,7 @@ public:
     void setRegisterCount(std::uint32_t registerCount);
     void setFunctions(std::vector<BytecodeFunction> functions);
     void setGlobals(std::vector<std::uint32_t> globals);
+    void setTypes(std::vector<BytecodeType> types);
     void setDependencyRemap(std::unordered_map<std::uint32_t, std::uint32_t> remap);
 
     const std::vector<Value>& constants() const;
@@ -127,6 +143,7 @@ public:
     std::uint32_t registerCount() const;
     const std::vector<BytecodeFunction>& functions() const;
     const std::vector<std::uint32_t>& globals() const;
+    const std::vector<BytecodeType>& types() const;
     std::uint32_t remapDependencyOffset(std::uint32_t irOffset) const;
 
     void print(std::ostream& out) const;
@@ -138,6 +155,7 @@ private:
     std::uint32_t registerCount_ = 0;
     std::vector<BytecodeFunction> functions_;
     std::vector<std::uint32_t> globals_;
+    std::vector<BytecodeType> types_;
     std::unordered_map<std::uint32_t, std::uint32_t> dependencyRemap_;
     std::vector<SourceFile> sources_;
 };

@@ -28,10 +28,14 @@ bool isBinary(BytecodeOp op)
     case BytecodeOp::MakeFunction:
     case BytecodeOp::Array:
     case BytecodeOp::Map:
-    case BytecodeOp::Struct:
-    case BytecodeOp::Variant:
-    case BytecodeOp::VariantTag:
-    case BytecodeOp::VariantField:
+    case BytecodeOp::MakeStruct:
+    case BytecodeOp::StructGet:
+    case BytecodeOp::StructSet:
+    case BytecodeOp::MakeVariant:
+    case BytecodeOp::IsVariant:
+    case BytecodeOp::VariantGet:
+    case BytecodeOp::Field:
+    case BytecodeOp::AssignField:
     case BytecodeOp::Move:
     case BytecodeOp::LoadVar:
     case BytecodeOp::StoreVar:
@@ -48,8 +52,6 @@ bool isBinary(BytecodeOp op)
     case BytecodeOp::NativeCall:
     case BytecodeOp::Index:
     case BytecodeOp::AssignIndex:
-    case BytecodeOp::Field:
-    case BytecodeOp::AssignField:
     case BytecodeOp::Len:
     case BytecodeOp::AssertArray:
     case BytecodeOp::AssertNumber:
@@ -165,32 +167,41 @@ void printInstruction(
             out << instruction.arguments[arg] << ": " << instruction.arguments[arg + 1];
         }
         out << "]";
-    } else if (instruction.op == BytecodeOp::Struct) {
-        if (instruction.typeNameOperand) {
-            printNameOperand(out, program, *instruction.typeNameOperand);
-        }
-        out << " {";
+    } else if (instruction.op == BytecodeOp::MakeStruct) {
+        out << " t" << instruction.operand << " [";
         for (std::size_t arg = 0; arg < instruction.arguments.size(); ++arg) {
             if (arg != 0) {
                 out << ", ";
             }
-            if (arg < instruction.operands.size()) {
-                printNameOperand(out, program, instruction.operands[arg]);
-            } else {
-                out << " @" << arg;
-            }
-            out << ": " << instruction.arguments[arg];
+            out << instruction.arguments[arg];
         }
-        out << "}";
-    } else if (instruction.op == BytecodeOp::Variant) {
-        if (instruction.typeNameOperand) {
-            printNameOperand(out, program, *instruction.typeNameOperand);
+        out << "]";
+    } else if (instruction.op == BytecodeOp::Field) {
+        if (instruction.left) {
+            out << " " << *instruction.left;
         }
-        if (instruction.variantNameOperand) {
-            out << ".";
-            printNameOperand(out, program, *instruction.variantNameOperand);
+        out << ", ";
+        printNameOperand(out, program, instruction.operand);
+    } else if (instruction.op == BytecodeOp::AssignField) {
+        if (instruction.left) {
+            out << " " << *instruction.left;
         }
-        out << " (";
+        out << ", ";
+        printNameOperand(out, program, instruction.operand);
+        if (!instruction.arguments.empty()) {
+            out << ", " << instruction.arguments.front();
+        }
+    } else if (instruction.op == BytecodeOp::StructGet || instruction.op == BytecodeOp::StructSet) {
+        if (instruction.left) {
+            out << " " << *instruction.left;
+        }
+        out << ", t" << instruction.operand << ", "
+            << (instruction.operands.empty() ? 0 : instruction.operands.front());
+        if (instruction.op == BytecodeOp::StructSet && !instruction.arguments.empty()) {
+            out << ", " << instruction.arguments.front();
+        }
+    } else if (instruction.op == BytecodeOp::MakeVariant) {
+        out << " t" << instruction.operand << ", v" << instruction.variantNameOperand.value_or(0) << " (";
         for (std::size_t arg = 0; arg < instruction.arguments.size(); ++arg) {
             if (arg != 0) {
                 out << ", ";
@@ -198,22 +209,18 @@ void printInstruction(
             out << instruction.arguments[arg];
         }
         out << ")";
-    } else if (instruction.op == BytecodeOp::VariantTag) {
+    } else if (instruction.op == BytecodeOp::IsVariant) {
         if (instruction.left) {
             out << " " << *instruction.left;
         }
-        if (instruction.typeNameOperand) {
-            out << " ";
-            printNameOperand(out, program, *instruction.typeNameOperand);
-        }
-        if (instruction.variantNameOperand) {
-            out << ".";
-            printNameOperand(out, program, *instruction.variantNameOperand);
-        }
-    } else if (instruction.op == BytecodeOp::VariantField) {
+        out << ", t" << instruction.operand << ", v" << instruction.variantNameOperand.value_or(0);
+    } else if (instruction.op == BytecodeOp::VariantGet) {
         if (instruction.left) {
-            out << " " << *instruction.left << "[" << instruction.operand << "]";
+            out << " " << *instruction.left;
         }
+        out << ", t" << instruction.typeNameOperand.value_or(0)
+            << ", v" << instruction.variantNameOperand.value_or(0)
+            << ", " << instruction.operand;
     } else if (instruction.op == BytecodeOp::Move) {
         if (instruction.left) {
             out << " " << *instruction.left;
@@ -275,21 +282,6 @@ void printInstruction(
             out << ", " << *instruction.right;
         }
         if (instruction.op == BytecodeOp::AssignIndex && !instruction.arguments.empty()) {
-            out << ", " << instruction.arguments.front();
-        }
-    } else if (instruction.op == BytecodeOp::Field) {
-        if (instruction.left) {
-            out << " " << *instruction.left;
-        }
-        out << ", ";
-        printNameOperand(out, program, instruction.operand);
-    } else if (instruction.op == BytecodeOp::AssignField) {
-        if (instruction.left) {
-            out << " " << *instruction.left;
-        }
-        out << ", ";
-        printNameOperand(out, program, instruction.operand);
-        if (!instruction.arguments.empty()) {
             out << ", " << instruction.arguments.front();
         }
     } else if (instruction.op == BytecodeOp::Len || instruction.op == BytecodeOp::AssertArray) {
@@ -385,6 +377,11 @@ void BytecodeProgram::setGlobals(std::vector<std::uint32_t> globals)
     globals_ = std::move(globals);
 }
 
+void BytecodeProgram::setTypes(std::vector<BytecodeType> types)
+{
+    types_ = std::move(types);
+}
+
 void BytecodeProgram::setDependencyRemap(
     std::unordered_map<std::uint32_t, std::uint32_t> remap)
 {
@@ -419,6 +416,11 @@ const std::vector<BytecodeFunction>& BytecodeProgram::functions() const
 const std::vector<std::uint32_t>& BytecodeProgram::globals() const
 {
     return globals_;
+}
+
+const std::vector<BytecodeType>& BytecodeProgram::types() const
+{
+    return types_;
 }
 
 std::uint32_t BytecodeProgram::remapDependencyOffset(std::uint32_t irOffset) const
@@ -462,14 +464,22 @@ std::string bytecodeOpName(BytecodeOp op)
         return "array";
     case BytecodeOp::Map:
         return "map";
-    case BytecodeOp::Struct:
-        return "struct";
-    case BytecodeOp::Variant:
-        return "variant";
-    case BytecodeOp::VariantTag:
-        return "variant_tag";
-    case BytecodeOp::VariantField:
-        return "variant_field";
+    case BytecodeOp::MakeStruct:
+        return "make_struct";
+    case BytecodeOp::Field:
+        return "field";
+    case BytecodeOp::AssignField:
+        return "assign_field";
+    case BytecodeOp::StructGet:
+        return "struct_get";
+    case BytecodeOp::StructSet:
+        return "struct_set";
+    case BytecodeOp::MakeVariant:
+        return "make_variant";
+    case BytecodeOp::IsVariant:
+        return "is_variant";
+    case BytecodeOp::VariantGet:
+        return "variant_get";
     case BytecodeOp::Move:
         return "move";
     case BytecodeOp::LoadVar:
@@ -502,10 +512,6 @@ std::string bytecodeOpName(BytecodeOp op)
         return "index";
     case BytecodeOp::AssignIndex:
         return "assign_index";
-    case BytecodeOp::Field:
-        return "field";
-    case BytecodeOp::AssignField:
-        return "assign_field";
     case BytecodeOp::Len:
         return "len";
     case BytecodeOp::AssertArray:

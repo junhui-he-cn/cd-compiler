@@ -13,30 +13,37 @@ names:
   n3 = "pair#0"
   n4 = "Pair"
   n5 = "Values"
-  n6 = "leftValue#1"
-  n7 = "rightValue#2"
-  n8 = "rightValue#2"
-  n9 = "leftValue#1"
-  n10 = "Pair"
-  n11 = "Empty"
+  n6 = "Pair"
+  n7 = "Values"
+  n8 = "Pair"
+  n9 = "Values"
+  n10 = "leftValue#1"
+  n11 = "rightValue#2"
+  n12 = "rightValue#2"
+  n13 = "leftValue#1"
+  n14 = "Pair"
+  n15 = "Empty"
 
 globals:
   g0 = n2
-  g1 = n6
-  g2 = n7
+  g1 = n10
+  g2 = n11
+
+types:
+  t0 = enum "Pair" v0="Values" payload=2 v1="Empty" payload=0
 
 main registers=14:
 block b0:
   r0 = constant c0
   r1 = constant c1
-  r2 = variant n0.n1 [r0, r1]
+  r2 = make_variant t0, v0 [r0, r1]
   init_global g0, r2
   r3 = load_global g0
-  r4 = variant_tag r3 n4.n5
+  r4 = is_variant r3, t0, v0
   br_if r4, b1, b2
 block b1:
-  r5 = variant_field r3 0
-  r6 = variant_field r3 1
+  r5 = variant_get r3, t0, v0, 0
+  r6 = variant_get r3, t0, v0, 1
   init_global g1, r5
   init_global g2, r6
   r7 = load_global g2
@@ -47,7 +54,7 @@ block b1:
   print r11
   return_nil
 block b2:
-  r12 = variant_tag r3 n10.n11
+  r12 = is_variant r3, t0, v1
   br_if r12, b3, b4
 block b3:
   r13 = constant c3

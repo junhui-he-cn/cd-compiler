@@ -13,7 +13,7 @@ main registers=27
 0011  b5 = make_function $2 len/1
 0012  set_global g2, b5
 0013  b6 = array []
-0014  b7 = struct @6 Stack { @7 items: b6}
+0014  b7 = make_struct t0 [b6]
 0015  init_global g3, b7
 0016  b8 = load_global g0
 0017  b9 = load_global g3

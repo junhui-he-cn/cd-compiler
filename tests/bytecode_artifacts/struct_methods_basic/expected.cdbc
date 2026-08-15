@@ -10,16 +10,20 @@ names:
   n0 = "__method_Person_label#0"
   n1 = "this#1"
   n2 = "name"
-  n3 = "__method_Person_label#0"
-  n4 = "Person"
-  n5 = "name"
-  n6 = "p#2"
-  n7 = "__method_Person_label#0"
-  n8 = "p#2"
+  n3 = "Person"
+  n4 = "__method_Person_label#0"
+  n5 = "Person"
+  n6 = "name"
+  n7 = "p#2"
+  n8 = "__method_Person_label#0"
+  n9 = "p#2"
 
 globals:
   g0 = n0
-  g1 = n6
+  g1 = n7
+
+types:
+  t0 = struct "Person" field0="name"
 
 main registers=7:
 block b0:
@@ -28,7 +32,7 @@ block b0:
   r1 = make_function f0
   set_global g0, r1
   r2 = constant c3
-  r3 = struct n4 {n5: r2}
+  r3 = make_struct t0 [r2]
   init_global g1, r3
   r4 = load_global g0
   r5 = load_global g1
@@ -40,7 +44,7 @@ function f0 name="label" arity=1 registers=5:
   param 0 = "this#1"
 block b0:
   r0 = load_local l0
-  r1 = field r0, n2
+  r1 = struct_get r0, t0, 0
   r2 = constant c1
   r3 = add r1, r2
   return r3

@@ -105,6 +105,21 @@ struct IRModuleDependency {
     std::size_t instructionOffset = 0;
 };
 
+struct IRVariantLayout {
+    std::string name;
+    std::size_t payloadCount = 0;
+};
+
+struct IRStructLayout {
+    std::string name;
+    std::vector<std::string> fieldNames;
+};
+
+struct IREnumLayout {
+    std::string name;
+    std::vector<IRVariantLayout> variants;
+};
+
 class IRProgram {
 public:
     void setSources(std::vector<SourceFile> sources);
@@ -119,6 +134,8 @@ public:
     std::size_t endFunction();
 
     void addModuleDependency(IRModuleDependency dependency);
+    void addStructLayout(IRStructLayout layout);
+    void addEnumLayout(IREnumLayout layout);
     // Register one canonical snapshot binding.  The program table owns each
     // BindingId exactly once; function tables contain only visibility
     // references added through addFunctionBinding().
@@ -138,7 +155,11 @@ public:
         std::string variantName,
         std::vector<IRRegister> payload);
     IRRegister emitVariantTag(IRRegister value, std::string enumName, std::string variantName);
-    IRRegister emitVariantField(IRRegister value, std::size_t index);
+    IRRegister emitVariantField(
+        IRRegister value,
+        std::size_t index,
+        std::string enumName,
+        std::string variantName);
     IRRegister emitCopy(IRRegister value);
     void emitCopyTo(IRRegister dest, IRRegister value);
     IRRegister emitLoadVar(
@@ -156,8 +177,15 @@ public:
     IRRegister emitNativeCall(std::string name, std::vector<IRRegister> arguments);
     IRRegister emitIndex(IRRegister collection, IRRegister index);
     IRRegister emitAssignIndex(IRRegister collection, IRRegister index, IRRegister value);
-    IRRegister emitField(IRRegister object, std::string fieldName);
-    IRRegister emitAssignField(IRRegister object, std::string fieldName, IRRegister value);
+    IRRegister emitField(
+        IRRegister object,
+        std::string fieldName,
+        std::optional<std::string> structTypeName);
+    IRRegister emitAssignField(
+        IRRegister object,
+        std::string fieldName,
+        std::optional<std::string> structTypeName,
+        IRRegister value);
     IRRegister emitLen(IRRegister value);
     IRRegister emitAssertArray(IRRegister value);
     IRRegister emitAssertNumber(IRRegister value, std::string message);
@@ -188,6 +216,8 @@ public:
     const std::vector<IRInstruction>& instructions() const;
     const std::vector<IRFunction>& functions() const;
     const std::vector<IRModuleDependency>& moduleDependencies() const;
+    const std::vector<IRStructLayout>& structLayouts() const;
+    const std::vector<IREnumLayout>& enumLayouts() const;
     const std::vector<IRBinding>& bindings() const;
     std::size_t registerCount() const;
 
@@ -205,6 +235,8 @@ private:
     std::vector<IRFunction> functions_;
     std::size_t nextFunctionId_ = 0;
     std::vector<IRModuleDependency> moduleDependencies_;
+    std::vector<IRStructLayout> structLayouts_;
+    std::vector<IREnumLayout> enumLayouts_;
     std::vector<IRBinding> bindings_;
     std::vector<SourceFile> sources_;
     std::optional<SourceSpan> currentSpan_;

@@ -12,28 +12,34 @@ names:
   n3 = "p#0"
   n4 = "p#0"
   n5 = "age"
-  n6 = "p#0"
-  n7 = "name"
-  n8 = "p#0"
-  n9 = "age"
+  n6 = "Person"
+  n7 = "p#0"
+  n8 = "name"
+  n9 = "Person"
+  n10 = "p#0"
+  n11 = "age"
+  n12 = "Person"
 
 globals:
   g0 = n3
+
+types:
+  t0 = struct "Person" field0="name" field1="age"
 
 main registers=10:
 block b0:
   r0 = constant c0
   r1 = constant c1
-  r2 = struct n0 {n1: r0, n2: r1}
+  r2 = make_struct t0 [r0, r1]
   init_global g0, r2
   r3 = load_global g0
   r4 = constant c2
-  r5 = assign_field r3, n5, r4
+  r5 = struct_set r3, t0, 1, r4
   r6 = load_global g0
-  r7 = field r6, n7
+  r7 = struct_get r6, t0, 0
   print r7
   r8 = load_global g0
-  r9 = field r8, n9
+  r9 = struct_get r8, t0, 1
   print r9
   return_nil
 

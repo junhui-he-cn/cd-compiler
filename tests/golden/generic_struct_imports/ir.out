@@ -8,9 +8,9 @@ IR
 0006  v4 = load_var @6 direct#0
 0007  v5 = field v4.value
 0008  print v5
-0009  v6 = load_var @8 namespaced#1
+0009  v6 = load_var @9 namespaced#1
 0010  v7 = field v6.value
 0011  print v7
-0012  v8 = load_var @10 namespaced#1
-0013  v9 = native_call @11 typeOf(v8)
+0012  v8 = load_var @12 namespaced#1
+0013  v9 = native_call @13 typeOf(v8)
 0014  print v9

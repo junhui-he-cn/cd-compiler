@@ -12,12 +12,12 @@ IR
 0010  v7 = load_var @11 head#1
 0011  v8 = constant #3 nil
 0012  v9 = assign_field v7.next, v8
-0013  v10 = load_var @13 alias#2
+0013  v10 = load_var @14 alias#2
 0014  v11 = constant #4 20
 0015  v12 = assign_field v10.value, v11
-0016  v13 = load_var @15 head#1
+0016  v13 = load_var @17 head#1
 0017  v14 = field v13.next
 0018  print v14
-0019  v15 = load_var @17 tail#0
+0019  v15 = load_var @20 tail#0
 0020  v16 = field v15.value
 0021  print v16

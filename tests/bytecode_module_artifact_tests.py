@@ -387,7 +387,7 @@ def main() -> int:
             return fail("did not identify recursive entry and dependency artifacts")
         if 'kind=import at=0 requested="./lib.cd"' not in recursive_entry_text:
             return fail("recursive entry artifact did not preserve its dependency marker")
-        if "struct " not in recursive_entry_text or "assign_field" not in recursive_entry_text:
+        if "make_struct " not in recursive_entry_text or "struct_set " not in recursive_entry_text:
             return fail("recursive entry artifact did not use existing struct field operations")
         if "new_ref" in recursive_entry_text or "new_ref" in recursive_dependency_text:
             return fail("recursive artifact introduced an unsupported reference opcode")

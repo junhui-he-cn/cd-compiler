@@ -22,7 +22,7 @@ main registers=11
 function $0 make/0 registers=3
 0000  block
 0001  b0 = constant #1 9
-0002  b1 = variant @1 Outcome. @2 Good (b0)
+0002  b1 = make_variant t0, v0 (b0)
 0003  return b1
 0004  block
 0005  b2 = constant #2 nil
@@ -42,23 +42,23 @@ function $1 render/1 registers=16
 0008  block
 0009  br b9
 0010  block
-0011  b4 = variant_tag b0  @6 Outcome. @7 Good
+0011  b4 = is_variant b0, t0, v0
 0012  br_if b4, b4, b6
 0013  block
-0014  b5 = variant_field b0[0]
+0014  b5 = variant_get b0, t0, v0, 0
 0015  bind_local l1, b5
 0016  b6 = constant #6 "good:"
 0017  b7 = load_local l1
-0018  b8 = native_call @10 str [b7]
+0018  b8 = native_call @12 str [b7]
 0019  b9 = add b6, b8
 0020  return b9
 0021  block
 0022  br b9
 0023  block
-0024  b10 = variant_tag b0  @11 Outcome. @12 Bad
+0024  b10 = is_variant b0, t0, v1
 0025  br_if b10, b7, b9
 0026  block
-0027  b11 = variant_field b0[0]
+0027  b11 = variant_get b0, t0, v1, 0
 0028  bind_local l2, b11
 0029  b12 = constant #7 "bad:"
 0030  b13 = load_local l2

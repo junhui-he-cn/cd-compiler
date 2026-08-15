@@ -5,7 +5,7 @@ main registers=32
 0003  b1 = make_function $0 describe/1
 0004  set_global g0, b1
 0005  b2 = constant #8 7
-0006  b3 = variant @14 Option. @15 Some (b2)
+0006  b3 = make_variant t0, v0 (b2)
 0007  init_global g1, b3
 0008  b4 = constant #9 nil
 0009  init_global g2, b4
@@ -26,10 +26,10 @@ main registers=32
 0024  print b14
 0025  br b9
 0026  block
-0027  b15 = variant_tag b11  @23 Option. @24 Some
+0027  b15 = is_variant b11, t0, v0
 0028  br_if b15, b3, b5
 0029  block
-0030  b16 = variant_field b11[0]
+0030  b16 = variant_get b11, t0, v0, 0
 0031  init_global g3, b16
 0032  b17 = load_global g3
 0033  b18 = constant #12 10
@@ -40,15 +40,15 @@ main registers=32
 0038  print b20
 0039  br b9
 0040  block
-0041  b21 = variant_tag b11  @27 Option. @28 Some
+0041  b21 = is_variant b11, t0, v0
 0042  br_if b21, b6, b7
 0043  block
-0044  b22 = variant_field b11[0]
+0044  b22 = variant_get b11, t0, v0, 0
 0045  b23 = constant #14 "some"
 0046  print b23
 0047  br b9
 0048  block
-0049  b24 = variant_tag b11  @29 Option. @30 None
+0049  b24 = is_variant b11, t0, v1
 0050  br_if b24, b8, b9
 0051  block
 0052  b25 = constant #15 "none"
@@ -85,10 +85,10 @@ function $0 describe/1 registers=19
 0008  block
 0009  br b13
 0010  block
-0011  b4 = variant_tag b0  @2 Option. @3 Some
+0011  b4 = is_variant b0, t0, v0
 0012  br_if b4, b4, b7
 0013  block
-0014  b5 = variant_field b0[0]
+0014  b5 = variant_get b0, t0, v0, 0
 0015  bind_local l1, b5
 0016  b6 = load_local l1
 0017  b7 = constant #3 10
@@ -100,20 +100,20 @@ function $0 describe/1 registers=19
 0023  block
 0024  br b13
 0025  block
-0026  b10 = variant_tag b0  @6 Option. @7 Some
+0026  b10 = is_variant b0, t0, v0
 0027  br_if b10, b8, b10
 0028  block
-0029  b11 = variant_field b0[0]
+0029  b11 = variant_get b0, t0, v0, 0
 0030  bind_local l2, b11
 0031  b12 = constant #5 "some:"
 0032  b13 = load_local l2
-0033  b14 = native_call @10 str [b13]
+0033  b14 = native_call @14 str [b13]
 0034  b15 = add b12, b14
 0035  return b15
 0036  block
 0037  br b13
 0038  block
-0039  b16 = variant_tag b0  @11 Option. @12 None
+0039  b16 = is_variant b0, t0, v1
 0040  br_if b16, b11, b13
 0041  block
 0042  b17 = constant #6 "none"

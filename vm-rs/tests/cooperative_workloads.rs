@@ -53,6 +53,7 @@ fn arithmetic_workload() -> Program {
             Constant::Number("1".to_string()),
         ],
         globals: Vec::new(),
+        types: Vec::new(),
         names: vec!["limit".to_string()],
         functions: vec![Function {
             id: FuncId(0),
@@ -124,6 +125,7 @@ fn callback_workload() -> Program {
             Constant::Number("2".to_string()),
         ],
         globals: Vec::new(),
+        types: Vec::new(),
         names: vec!["map".to_string(), "item".to_string()],
         functions: vec![Function {
             id: FuncId(0),

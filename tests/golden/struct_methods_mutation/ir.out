@@ -2,25 +2,25 @@ IR
 0000  v0 = constant #0 nil
 0001  store_var @0 __method_Counter_incBy#0, v0
 0002  v1 = make_function $0 incBy/2
-0003  assign_var @6 __method_Counter_incBy#0, v1
+0003  assign_var @8 __method_Counter_incBy#0, v1
 0004  v2 = constant #3 nil
-0005  store_var @7 __method_Counter_valueNow#1, v2
+0005  store_var @9 __method_Counter_valueNow#1, v2
 0006  v3 = make_function $1 valueNow/1
-0007  assign_var @10 __method_Counter_valueNow#1, v3
+0007  assign_var @13 __method_Counter_valueNow#1, v3
 0008  v4 = constant #5 1
 0009  v5 = struct Counter {value: v4}
-0010  store_var @13 c#5, v5
-0011  v6 = load_var @14 c#5
-0012  store_var @15 alias#6, v6
-0013  v7 = load_var @16 __method_Counter_incBy#0
-0014  v8 = load_var @17 c#5
+0010  store_var @16 c#5, v5
+0011  v6 = load_var @17 c#5
+0012  store_var @18 alias#6, v6
+0013  v7 = load_var @19 __method_Counter_incBy#0
+0014  v8 = load_var @20 c#5
 0015  v9 = constant #6 4
 0016  v10 = call v7(v8, v9)
-0017  v11 = load_var @18 __method_Counter_valueNow#1
-0018  v12 = load_var @19 c#5
+0017  v11 = load_var @21 __method_Counter_valueNow#1
+0018  v12 = load_var @22 c#5
 0019  v13 = call v11(v12)
 0020  print v13
-0021  v14 = load_var @20 alias#6
+0021  v14 = load_var @23 alias#6
 0022  v15 = field v14.value
 0023  print v15
 
@@ -28,7 +28,7 @@ function $0 incBy(this#2, delta#3)
 0000  v0 = load_var @1 this#2
 0001  v1 = load_var @2 this#2
 0002  v2 = field v1.value
-0003  v3 = load_var @4 delta#3
+0003  v3 = load_var @5 delta#3
 0004  v4 = add v2, v3
 0005  v5 = assign_field v0.value, v4
 0006  v6 = constant #1 nil
@@ -37,7 +37,7 @@ function $0 incBy(this#2, delta#3)
 0009  return v7
 
 function $1 valueNow(this#4)
-0000  v0 = load_var @8 this#4
+0000  v0 = load_var @10 this#4
 0001  v1 = field v0.value
 0002  return v1
 0003  v2 = constant #4 nil

@@ -12,6 +12,28 @@ namespace {
 
 constexpr std::size_t NO_PARENT = std::numeric_limits<std::size_t>::max();
 
+std::string unqualifiedTypeName(const std::string& name)
+{
+    const std::size_t dot = name.rfind('.');
+    return dot == std::string::npos ? name : name.substr(dot + 1);
+}
+
+template <typename Table>
+const typename Table::mapped_type* findTypeIn(
+    const Table& table,
+    const std::string& name)
+{
+    const auto exact = table.find(name);
+    if (exact != table.end()) {
+        return &exact->second;
+    }
+    const auto unqualified = table.find(unqualifiedTypeName(name));
+    if (unqualified != table.end()) {
+        return &unqualified->second;
+    }
+    return nullptr;
+}
+
 std::uint32_t checkedU32(std::size_t value, const char* message)
 {
     if (value > std::numeric_limits<std::uint32_t>::max()) {
@@ -237,13 +259,13 @@ BytecodeOp lowerOp(IROp op)
     case IROp::Map:
         return BytecodeOp::Map;
     case IROp::Struct:
-        return BytecodeOp::Struct;
+        return BytecodeOp::MakeStruct;
     case IROp::Variant:
-        return BytecodeOp::Variant;
+        return BytecodeOp::MakeVariant;
     case IROp::VariantTag:
-        return BytecodeOp::VariantTag;
+        return BytecodeOp::IsVariant;
     case IROp::VariantField:
-        return BytecodeOp::VariantField;
+        return BytecodeOp::VariantGet;
     case IROp::Copy:
         return BytecodeOp::Move;
     case IROp::LoadVar:
@@ -411,6 +433,36 @@ BytecodeProgram BytecodeCompiler::compile(const IRProgram& ir)
             "name index out of range");
     }
 
+    TypeTables types;
+    for (const IRStructLayout& layout : ir.structLayouts()) {
+        BytecodeType type{};
+        type.isEnum = false;
+        type.name = layout.name;
+        type.fieldCount = checkedU32(layout.fieldNames.size(), "struct field count out of range");
+        type.fieldNames = layout.fieldNames;
+        const std::uint32_t typeId = checkedU32(types.types.size(), "type count out of range");
+        types.structTypeIds.emplace(layout.name, typeId);
+        types.structFields.emplace(layout.name, layout.fieldNames);
+        types.types.push_back(std::move(type));
+    }
+    for (const IREnumLayout& layout : ir.enumLayouts()) {
+        BytecodeType type{};
+        type.isEnum = true;
+        type.name = layout.name;
+        std::vector<std::pair<std::string, std::uint32_t>> variants;
+        for (const IRVariantLayout& variant : layout.variants) {
+            type.variants.push_back(BytecodeVariantLayout{
+                variant.name,
+                checkedU32(variant.payloadCount, "variant payload count out of range"),
+            });
+            variants.emplace_back(variant.name, checkedU32(variant.payloadCount, "variant payload count out of range"));
+        }
+        const std::uint32_t typeId = checkedU32(types.types.size(), "type count out of range");
+        types.enumTypeIds.emplace(layout.name, typeId);
+        types.enumVariants.emplace(layout.name, std::move(variants));
+        types.types.push_back(std::move(type));
+    }
+
     std::vector<FunctionPlan> plans(functions.size());
     for (std::size_t index = 0; index < functions.size(); ++index) {
         FunctionPlan& plan = plans[index];
@@ -500,7 +552,7 @@ BytecodeProgram BytecodeCompiler::compile(const IRProgram& ir)
     program.setNames(ir.names());
     program.setRegisterCount(checkedU32(ir.registerCount(), "register index out of range"));
     auto mainInstructions = lowerInstructions(
-        ir.instructions(), globalSlots, globalSlotsByName, ir.names(), nullptr);
+        ir.instructions(), globalSlots, globalSlotsByName, ir.names(), types, nullptr);
     std::unordered_map<std::uint32_t, std::uint32_t> dependencyRemap;
     std::vector<std::size_t> forcedStarts;
     for (const IRModuleDependency& dependency : ir.moduleDependencies()) {
@@ -515,9 +567,10 @@ BytecodeProgram BytecodeCompiler::compile(const IRProgram& ir)
     loweredFunctions.reserve(functions.size());
     for (std::size_t index = 0; index < functions.size(); ++index) {
         loweredFunctions.push_back(lowerFunction(
-            functions[index], globalSlots, globalSlotsByName, ir.names(), plans[index]));
+            functions[index], globalSlots, globalSlotsByName, ir.names(), types, plans[index]));
     }
     program.setFunctions(std::move(loweredFunctions));
+    program.setTypes(std::move(types.types));
 
     return program;
 }
@@ -527,13 +580,14 @@ std::vector<BytecodeInstruction> BytecodeCompiler::lowerInstructions(
     const std::unordered_map<BindingId, std::uint32_t, SnapshotIdHash<BindingIdTag>>& globalSlots,
     const std::unordered_map<std::string, std::uint32_t>& globalSlotsByName,
     const std::vector<std::string>& names,
+    TypeTables& types,
     const FunctionPlan* plan)
 {
     std::vector<BytecodeInstruction> lowered;
     lowered.reserve(instructions.size());
     for (const IRInstruction& instruction : instructions) {
         lowered.push_back(lowerInstruction(
-            instruction, globalSlots, globalSlotsByName, names, plan));
+            instruction, globalSlots, globalSlotsByName, names, types, plan));
     }
     return lowered;
 }
@@ -543,6 +597,7 @@ BytecodeInstruction BytecodeCompiler::lowerInstruction(
     const std::unordered_map<BindingId, std::uint32_t, SnapshotIdHash<BindingIdTag>>& globalSlots,
     const std::unordered_map<std::string, std::uint32_t>& globalSlotsByName,
     const std::vector<std::string>& names,
+    TypeTables& types,
     const FunctionPlan* plan)
 {
     BytecodeInstruction lowered{
@@ -631,6 +686,158 @@ BytecodeInstruction BytecodeCompiler::lowerInstruction(
         lowered.operand = target.slot;
     }
 
+    const auto structTypeId = [&](const IRInstruction& source, const char* role) {
+        if (!source.typeNameOperand || *source.typeNameOperand >= names.size()) {
+            throw BytecodeCompileError(std::string("struct ") + role + " is missing a type name");
+        }
+        const std::string& name = names[*source.typeNameOperand];
+        const auto* found = findTypeIn(types.structTypeIds, name);
+        if (!found) {
+            throw BytecodeCompileError("unknown struct type `" + name + "`");
+        }
+        if (name.find('.') != std::string::npos) {
+            types.types[*found].name = name;
+        }
+        return *found;
+    };
+    const auto enumTypeId = [&](const IRInstruction& source) {
+        if (!source.typeNameOperand || *source.typeNameOperand >= names.size()) {
+            throw BytecodeCompileError("enum instruction is missing an enum name");
+        }
+        const std::string& name = names[*source.typeNameOperand];
+        const auto* found = findTypeIn(types.enumTypeIds, name);
+        if (!found) {
+            throw BytecodeCompileError("unknown enum type `" + name + "`");
+        }
+        if (name.find('.') != std::string::npos) {
+            types.types[*found].name = name;
+        }
+        return *found;
+    };
+
+    if (instruction.op == IROp::Struct) {
+        lowered.op = BytecodeOp::MakeStruct;
+        lowered.operand = structTypeId(instruction, "constructor");
+        lowered.typeNameOperand = std::nullopt;
+        const std::string& typeName = names[*instruction.typeNameOperand];
+        const auto* layout = findTypeIn(types.structFields, typeName);
+        if (!layout) {
+            throw BytecodeCompileError("missing field layout for struct `" + typeName + "`");
+        }
+        // instruction.operands = literal field name indexes; instruction.arguments = values
+        std::vector<BytecodeRegister> ordered;
+        for (const std::string& canonical : *layout) {
+            std::size_t literal = 0;
+            for (; literal < instruction.operands.size(); ++literal) {
+                if (names[instruction.operands[literal]] == canonical) {
+                    break;
+                }
+            }
+            if (literal >= instruction.operands.size() || literal >= instruction.arguments.size()) {
+                throw BytecodeCompileError("struct constructor is missing field `" + canonical + "`");
+            }
+            ordered.push_back(lowered.arguments[literal]);
+        }
+        lowered.arguments = std::move(ordered);
+        lowered.operands.clear();
+    } else if (instruction.op == IROp::Field || instruction.op == IROp::AssignField) {
+        const bool assign = instruction.op == IROp::AssignField;
+        if (!instruction.typeNameOperand) {
+            // Dynamic receivers keep the legacy name-driven field op; the VM
+            // performs the struct check at runtime.
+            lowered.op = assign ? BytecodeOp::AssignField : BytecodeOp::Field;
+            lowered.operand = instruction.operand;
+            return lowered;
+        }
+        lowered.op = assign ? BytecodeOp::StructSet : BytecodeOp::StructGet;
+        const std::uint32_t typeId = structTypeId(instruction, assign ? "assignment" : "access");
+        lowered.typeNameOperand = std::nullopt;
+        const std::string& typeName = names[*instruction.typeNameOperand];
+        const std::string& fieldName = names[instruction.operand];
+        const auto* layout = findTypeIn(types.structFields, typeName);
+        if (!layout) {
+            throw BytecodeCompileError("missing field layout for struct `" + typeName + "`");
+        }
+        const auto slot = std::find(layout->begin(), layout->end(), fieldName);
+        if (slot == layout->end()) {
+            throw BytecodeCompileError("unknown field `" + fieldName + "` for struct `" + typeName + "`");
+        }
+        lowered.operand = typeId;
+        lowered.operands = {checkedU32(
+            static_cast<std::size_t>(std::distance(layout->begin(), slot)),
+            "field slot out of range")};
+    } else if (instruction.op == IROp::Variant) {
+        lowered.op = BytecodeOp::MakeVariant;
+        lowered.operand = enumTypeId(instruction);
+        lowered.typeNameOperand = std::nullopt;
+        const std::string& enumName = names[*instruction.typeNameOperand];
+        const std::string& variantName = names[*instruction.variantNameOperand];
+        const auto* layout = findTypeIn(types.enumVariants, enumName);
+        if (!layout) {
+            throw BytecodeCompileError("missing variant layout for enum `" + enumName + "`");
+        }
+        const auto slot = std::find_if(layout->begin(), layout->end(),
+            [&](const std::pair<std::string, std::uint32_t>& variant) {
+                return variant.first == variantName;
+            });
+        if (slot == layout->end()) {
+            throw BytecodeCompileError("unknown variant `" + variantName + "` for enum `" + enumName + "`");
+        }
+        lowered.variantNameOperand = checkedU32(
+            static_cast<std::size_t>(std::distance(layout->begin(), slot)),
+            "variant id out of range");
+    } else if (instruction.op == IROp::VariantTag) {
+        lowered.op = BytecodeOp::IsVariant;
+        lowered.operand = enumTypeId(instruction);
+        lowered.typeNameOperand = std::nullopt;
+        const std::string& enumName = names[*instruction.typeNameOperand];
+        const std::string& variantName = names[*instruction.variantNameOperand];
+        const auto* layout = findTypeIn(types.enumVariants, enumName);
+        if (!layout) {
+            throw BytecodeCompileError("missing variant layout for enum `" + enumName + "`");
+        }
+        const auto slot = std::find_if(layout->begin(), layout->end(),
+            [&](const std::pair<std::string, std::uint32_t>& variant) {
+                return variant.first == variantName;
+            });
+        if (slot == layout->end()) {
+            throw BytecodeCompileError("unknown variant `" + variantName + "` for enum `" + enumName + "`");
+        }
+        lowered.variantNameOperand = checkedU32(
+            static_cast<std::size_t>(std::distance(layout->begin(), slot)),
+            "variant id out of range");
+    } else if (instruction.op == IROp::VariantField) {
+        lowered.op = BytecodeOp::VariantGet;
+        lowered.operand = instruction.operand; // payload index
+        lowered.typeNameOperand = lowerOperand(instruction.typeNameOperand);
+        lowered.variantNameOperand = lowerOperand(instruction.variantNameOperand);
+        // Rewrite the enum name to its TypeId and variant name to its VariantId.
+        if (!instruction.typeNameOperand || !instruction.variantNameOperand) {
+            throw BytecodeCompileError("variant_field is missing enum or variant metadata");
+        }
+        const std::string& enumName = names[*instruction.typeNameOperand];
+        const std::string& variantName = names[*instruction.variantNameOperand];
+        const std::uint32_t* typeFound = findTypeIn(types.enumTypeIds, enumName);
+        if (!typeFound) {
+            throw BytecodeCompileError("unknown enum type `" + enumName + "`");
+        }
+        const auto* layout = findTypeIn(types.enumVariants, enumName);
+        if (!layout) {
+            throw BytecodeCompileError("missing variant layout for enum `" + enumName + "`");
+        }
+        const auto slot = std::find_if(layout->begin(), layout->end(),
+            [&](const std::pair<std::string, std::uint32_t>& variant) {
+                return variant.first == variantName;
+            });
+        if (slot == layout->end()) {
+            throw BytecodeCompileError("unknown variant `" + variantName + "` for enum `" + enumName + "`");
+        }
+        lowered.typeNameOperand = *typeFound;
+        lowered.variantNameOperand = checkedU32(
+            static_cast<std::size_t>(std::distance(layout->begin(), slot)),
+            "variant id out of range");
+    }
+
     return lowered;
 }
 
@@ -639,10 +846,11 @@ BytecodeFunction BytecodeCompiler::lowerFunction(
     const std::unordered_map<BindingId, std::uint32_t, SnapshotIdHash<BindingIdTag>>& globalSlots,
     const std::unordered_map<std::string, std::uint32_t>& globalSlotsByName,
     const std::vector<std::string>& names,
+    TypeTables& types,
     const FunctionPlan& plan)
 {
     auto instructions = lowerInstructions(
-        function.instructions, globalSlots, globalSlotsByName, names, &plan);
+        function.instructions, globalSlots, globalSlotsByName, names, types, &plan);
     splitControlFlow(instructions, nullptr, {});
     BytecodeFunction lowered{
         function.name,

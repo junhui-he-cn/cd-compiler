@@ -264,3 +264,25 @@ golden 787/787、ctest 47/47、VM 兼容矩阵 7 格。
 
 Milestone B（Phase 4 + 5，真正 CFG + verifier）完成。下一阶段是 Phase 6
 （Type/Layout 表：`TypeId`/`VariantId` + 字段槽/payload 下标）。
+
+## 12. Phase 6 落地记录
+
+Phase 6（计划 §10，Type/Layout 表）完成：struct/enum 不再按字符串身份与线性查找。
+
+- `types:` 区段携带运行时布局（struct 字段名、enum 变体名与 payload 数）；
+  字段/变体名仅用于 debug/dump/值显示，身份与访问全部数值化。
+- 新指令：`make_struct tN`、`struct_get rO, tN, slot`、`struct_set rO, tN, slot, rV`、
+  `make_variant tN, vN`、`is_variant rV, tN, vN`、`variant_get rV, tN, vN, idx`。
+- 编译器在 IR 层携带 struct/enum 布局名（`IRStructLayout`/`IREnumLayout`，跨模块
+  预扫描声明），BytecodeCompiler 按声明序分配 `TypeId`/`VariantId` 并把字段访问降为
+  数值 slot（支持限定名 `lib.Box` 回退与构造字面量重排为规范字段序）。
+- 动态接收者（`id(box).value` 这类 unknown 类型）继续使用旧 `field/assign_field`
+  名字指令，struct 检查推迟到运行时，保持既有运行时错误语义。
+- 链接器按名字去重合并 `types:` 并重定位 `TypeId`；verifier 校验 type/variant id、
+  field slot 与 payload 下标。
+
+回归：cargo test 全绿、bytecode artifact 124/124、module artifact/cache、
+malformed 107/107、Rust VM parity 742/742、golden 787/787、ctest 47/47、
+verification 1825/1825、VM 兼容矩阵 7 格。
+
+下一阶段是 Phase 7（Native Import 表：`call_native iN` + 删除核心 `print` opcode）。

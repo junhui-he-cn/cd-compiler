@@ -5,38 +5,38 @@ IR
 0003  store_var @3 c#0, v2
 0004  v3 = load_var @4 c#0
 0005  v4 = field v3.value
-0006  v5 = assert_number v4 @6 `+=` expects number target
+0006  v5 = assert_number v4 @7 `+=` expects number target
 0007  v6 = constant #2 5
-0008  v7 = assert_number v6 @7 `+=` expects number value
+0008  v7 = assert_number v6 @8 `+=` expects number value
 0009  v8 = add v5, v7
 0010  v9 = assign_field v3.value, v8
-0011  v10 = load_var @9 c#0
+0011  v10 = load_var @11 c#0
 0012  v11 = field v10.value
 0013  print v11
-0014  v12 = load_var @11 c#0
+0014  v12 = load_var @14 c#0
 0015  v13 = field v12.value
-0016  v14 = assert_number v13 @13 `-=` expects number target
+0016  v14 = assert_number v13 @17 `-=` expects number target
 0017  v15 = constant #3 3
-0018  v16 = assert_number v15 @14 `-=` expects number value
+0018  v16 = assert_number v15 @18 `-=` expects number value
 0019  v17 = subtract v14, v16
 0020  v18 = assign_field v12.value, v17
 0021  print v17
-0022  v19 = load_var @16 c#0
+0022  v19 = load_var @21 c#0
 0023  v20 = field v19.value
-0024  v21 = assert_number v20 @18 `*=` expects number target
+0024  v21 = assert_number v20 @24 `*=` expects number target
 0025  v22 = constant #4 2
-0026  v23 = assert_number v22 @19 `*=` expects number value
+0026  v23 = assert_number v22 @25 `*=` expects number value
 0027  v24 = multiply v21, v23
 0028  v25 = assign_field v19.value, v24
 0029  print v24
-0030  v26 = load_var @21 c#0
+0030  v26 = load_var @28 c#0
 0031  v27 = field v26.value
-0032  v28 = assert_number v27 @23 `/=` expects number target
+0032  v28 = assert_number v27 @31 `/=` expects number target
 0033  v29 = constant #5 4
-0034  v30 = assert_number v29 @24 `/=` expects number value
+0034  v30 = assert_number v29 @32 `/=` expects number value
 0035  v31 = divide v28, v30
 0036  v32 = assign_field v26.value, v31
 0037  print v31
-0038  v33 = load_var @26 c#0
+0038  v33 = load_var @35 c#0
 0039  v34 = field v33.other
 0040  print v34

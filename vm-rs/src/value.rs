@@ -289,7 +289,8 @@ impl fmt::Display for Value {
 #[cfg(test)]
 mod tests {
     use super::Value;
-    use crate::runtime::{Heap, VariantValue};
+use crate::bytecode::{TypeId, VariantId};
+use crate::runtime::{Heap, VariantValue};
 
     #[test]
     fn formats_primitives_like_cpp_runtime() {
@@ -305,7 +306,7 @@ mod tests {
     fn formats_recursive_structs_with_a_cycle_marker() {
         let mut heap = Heap::new();
         let node = heap
-            .allocate_struct(Some("Node".to_string()), Vec::new())
+            .allocate_struct(None, Some("Node".to_string()), Vec::new())
             .expect("node identity should be available");
         let Value::Struct(struct_value) = &node else {
             panic!("expected struct value");
@@ -323,10 +324,10 @@ mod tests {
     fn formats_repeated_struct_aliases_without_false_cycle_markers() {
         let mut heap = Heap::new();
         let child = heap
-            .allocate_struct(Some("Node".to_string()), vec![("value".to_string(), Value::number(1.0))])
+            .allocate_struct(None, Some("Node".to_string()), vec![("value".to_string(), Value::number(1.0))])
             .expect("child identity should be available");
         let parent = heap
-            .allocate_struct(
+            .allocate_struct(None, 
                 Some("Pair".to_string()),
                 vec![
                     ("left".to_string(), child.clone()),
@@ -376,16 +377,22 @@ mod tests {
     #[test]
     fn enum_variants_format_and_compare_structurally() {
         let left = Value::variant(VariantValue {
+            type_id: TypeId(0),
+            variant_id: VariantId(0),
             enum_name: "Result".to_string(),
             variant_name: "Ok".to_string(),
             fields: vec![Value::number(7.0)],
         });
         let right = Value::variant(VariantValue {
+            type_id: TypeId(0),
+            variant_id: VariantId(0),
             enum_name: "Result".to_string(),
             variant_name: "Ok".to_string(),
             fields: vec![Value::number(7.0)],
         });
         let other = Value::variant(VariantValue {
+            type_id: TypeId(0),
+            variant_id: VariantId(0),
             enum_name: "Result".to_string(),
             variant_name: "Err".to_string(),
             fields: vec![Value::string("bad")],

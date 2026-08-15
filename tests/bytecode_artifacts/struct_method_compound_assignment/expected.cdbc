@@ -10,22 +10,28 @@ names:
   n0 = "__method_Counter_inc#0"
   n1 = "this#1"
   n2 = "value"
-  n3 = "`+=` expects number target"
-  n4 = "delta#2"
-  n5 = "`+=` expects number value"
-  n6 = "value"
-  n7 = "this#1"
-  n8 = "value"
-  n9 = "__method_Counter_inc#0"
-  n10 = "Counter"
-  n11 = "value"
-  n12 = "c#3"
-  n13 = "__method_Counter_inc#0"
-  n14 = "c#3"
+  n3 = "Counter"
+  n4 = "`+=` expects number target"
+  n5 = "delta#2"
+  n6 = "`+=` expects number value"
+  n7 = "value"
+  n8 = "Counter"
+  n9 = "this#1"
+  n10 = "value"
+  n11 = "Counter"
+  n12 = "__method_Counter_inc#0"
+  n13 = "Counter"
+  n14 = "value"
+  n15 = "c#3"
+  n16 = "__method_Counter_inc#0"
+  n17 = "c#3"
 
 globals:
   g0 = n0
-  g1 = n12
+  g1 = n15
+
+types:
+  t0 = struct "Counter" field0="value"
 
 main registers=8:
 block b0:
@@ -34,7 +40,7 @@ block b0:
   r1 = make_function f0
   set_global g0, r1
   r2 = constant c2
-  r3 = struct n10 {n11: r2}
+  r3 = make_struct t0 [r2]
   init_global g1, r3
   r4 = load_global g0
   r5 = load_global g1
@@ -48,14 +54,14 @@ function f0 name="inc" arity=2 registers=10:
   param 1 = "delta#2"
 block b0:
   r0 = load_local l0
-  r1 = field r0, n2
-  r2 = assert_number r1, n3
+  r1 = struct_get r0, t0, 0
+  r2 = assert_number r1, n4
   r3 = load_local l1
-  r4 = assert_number r3, n5
+  r4 = assert_number r3, n6
   r5 = add r2, r4
-  r6 = assign_field r0, n6, r5
+  r6 = struct_set r0, t0, 0, r5
   r7 = load_local l0
-  r8 = field r7, n8
+  r8 = struct_get r7, t0, 0
   return r8
 block b1:
   r9 = constant c1

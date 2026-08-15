@@ -13,7 +13,7 @@ main registers=26
 0011  b6 = constant #7 nil
 0012  init_global g3, b6
 0013  b7 = constant #8 2
-0014  b8 = struct @7 Box { @8 value: b7}
+0014  b8 = make_struct t0 [b7]
 0015  init_global g4, b8
 0016  b9 = load_global g0
 0017  b10 = load_global g1
@@ -26,7 +26,7 @@ main registers=26
 0024  b15 = load_global g3
 0025  print b15
 0026  b16 = load_global g4
-0027  b17 = field b16,  @15 value
+0027  b17 = struct_get b16, t0, 0
 0028  print b17
 0029  b18 = constant #10 7
 0030  init_global g5, b18

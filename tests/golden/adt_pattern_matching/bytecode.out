@@ -14,40 +14,40 @@ main registers=36
 0012  set_global g2, b5
 0013  b6 = load_global g0
 0014  b7 = constant #12 7
-0015  b8 = variant @42 Result. @43 Ok (b7)
+0015  b8 = make_variant t0, v0 (b7)
 0016  b9 = call b6(b8)
 0017  print b9
 0018  b10 = load_global g0
 0019  b11 = constant #13 "bad"
-0020  b12 = variant @45 Result. @46 Err (b11)
+0020  b12 = make_variant t0, v1 (b11)
 0021  b13 = call b10(b12)
 0022  print b13
 0023  b14 = load_global g0
-0024  b15 = variant @48 Result. @49 Empty ()
+0024  b15 = make_variant t0, v2 ()
 0025  b16 = call b14(b15)
 0026  print b16
 0027  b17 = load_global g1
 0028  b18 = constant #14 1
 0029  b19 = constant #15 2
-0030  b20 = variant @51 List. @52 Nil ()
-0031  b21 = variant @53 List. @54 Cons (b19, b20)
-0032  b22 = variant @55 List. @56 Cons (b18, b21)
+0030  b20 = make_variant t1, v0 ()
+0031  b21 = make_variant t1, v1 (b19, b20)
+0032  b22 = make_variant t1, v1 (b18, b21)
 0033  b23 = call b17(b22)
 0034  print b23
 0035  b24 = constant #16 7
-0036  b25 = variant @57 Result. @58 Ok (b24)
+0036  b25 = make_variant t0, v0 (b24)
 0037  print b25
-0038  b26 = variant @59 Result. @60 Empty ()
-0039  b27 = native_call @61 typeOf [b26]
+0038  b26 = make_variant t0, v2 ()
+0039  b27 = native_call @79 typeOf [b26]
 0040  print b27
 0041  b28 = constant #17 7
-0042  b29 = variant @62 Result. @63 Ok (b28)
+0042  b29 = make_variant t0, v0 (b28)
 0043  b30 = constant #18 7
-0044  b31 = variant @64 Result. @65 Ok (b30)
+0044  b31 = make_variant t0, v0 (b30)
 0045  b32 = equal b29, b31
 0046  print b32
 0047  b33 = load_global g2
-0048  b34 = variant @67 Result. @68 Empty ()
+0048  b34 = make_variant t0, v2 ()
 0049  b35 = call b33(b34)
 0050  print b35
 0051  return_nil
@@ -55,23 +55,23 @@ main registers=36
 function $0 describe/1 registers=15
 0000  block
 0001  b0 = load_local l0
-0002  b1 = variant_tag b0  @2 Result. @3 Ok
+0002  b1 = is_variant b0, t0, v0
 0003  br_if b1, b1, b3
 0004  block
-0005  b2 = variant_field b0[0]
+0005  b2 = variant_get b0, t0, v0, 0
 0006  bind_local l1, b2
 0007  b3 = constant #1 "ok:"
 0008  b4 = load_local l1
-0009  b5 = native_call @6 str [b4]
+0009  b5 = native_call @8 str [b4]
 0010  b6 = add b3, b5
 0011  return b6
 0012  block
 0013  br b9
 0014  block
-0015  b7 = variant_tag b0  @7 Result. @8 Err
+0015  b7 = is_variant b0, t0, v1
 0016  br_if b7, b4, b6
 0017  block
-0018  b8 = variant_field b0[0]
+0018  b8 = variant_get b0, t0, v1, 0
 0019  bind_local l2, b8
 0020  b9 = constant #2 "err:"
 0021  b10 = load_local l2
@@ -80,7 +80,7 @@ function $0 describe/1 registers=15
 0024  block
 0025  br b9
 0026  block
-0027  b12 = variant_tag b0  @11 Result. @12 Empty
+0027  b12 = is_variant b0, t0, v2
 0028  br_if b12, b7, b9
 0029  block
 0030  b13 = constant #3 "empty"
@@ -97,7 +97,7 @@ function $1 sum/1 registers=22
 upvalue u0 = global g1
 0000  block
 0001  b0 = load_local l0
-0002  b1 = variant_tag b0  @16 List. @17 Nil
+0002  b1 = is_variant b0, t1, v0
 0003  br_if b1, b1, b3
 0004  block
 0005  b2 = constant #6 0
@@ -105,16 +105,16 @@ upvalue u0 = global g1
 0007  block
 0008  br b11
 0009  block
-0010  b3 = variant_tag b0  @18 List. @19 Cons
+0010  b3 = is_variant b0, t1, v1
 0011  br_if b3, b4, b7
 0012  block
-0013  b4 = variant_field b0[0]
-0014  b5 = variant_field b0[1]
-0015  b6 = variant_tag b5  @20 List. @21 Cons
+0013  b4 = variant_get b0, t1, v1, 0
+0014  b5 = variant_get b0, t1, v1, 1
+0015  b6 = is_variant b5, t1, v1
 0016  br_if b6, b5, b7
 0017  block
-0018  b7 = variant_field b5[0]
-0019  b8 = variant_field b5[1]
+0018  b7 = variant_get b5, t1, v1, 0
+0019  b8 = variant_get b5, t1, v1, 1
 0020  bind_local l1, b4
 0021  bind_local l2, b7
 0022  bind_local l3, b8
@@ -129,12 +129,12 @@ upvalue u0 = global g1
 0031  block
 0032  br b11
 0033  block
-0034  b16 = variant_tag b0  @29 List. @30 Cons
+0034  b16 = is_variant b0, t1, v1
 0035  br_if b16, b8, b11
 0036  block
-0037  b17 = variant_field b0[0]
-0038  b18 = variant_field b0[1]
-0039  b19 = variant_tag b18  @31 List. @32 Nil
+0037  b17 = variant_get b0, t1, v1, 0
+0038  b18 = variant_get b0, t1, v1, 1
+0039  b19 = is_variant b18, t1, v0
 0040  br_if b19, b9, b11
 0041  block
 0042  bind_local l4, b17
@@ -151,10 +151,10 @@ upvalue u0 = global g1
 function $2 coarse/1 registers=6
 0000  block
 0001  b0 = load_local l0
-0002  b1 = variant_tag b0  @38 Result. @39 Ok
+0002  b1 = is_variant b0, t0, v0
 0003  br_if b1, b1, b3
 0004  block
-0005  b2 = variant_field b0[0]
+0005  b2 = variant_get b0, t0, v0, 0
 0006  b3 = constant #9 "ok"
 0007  return b3
 0008  block

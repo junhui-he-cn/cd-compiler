@@ -14,7 +14,7 @@ void testLinkedArtifactRemainsUnchanged()
     std::ostringstream output;
     writeBytecodeText(output, program);
     assert(output.str() ==
-        "cdbc 0.1\n\n"
+        "cdbc 0.2\n\n"
         "constants:\n"
         "\n"
         "names:\n"
@@ -40,7 +40,7 @@ void testModuleEnvelopeAndDependencyMarker()
     std::ostringstream output;
     writeBytecodeModuleText(output, artifact);
     assert(output.str() ==
-        "cdbc 0.1\n\n"
+        "cdbc 0.2\n\n"
         "artifact: module\n\n"
         "module:\n"
         "  identity = \"/workspace/lib.cd\"\n"
@@ -71,7 +71,7 @@ void testDebugSourceModuleIdentity()
     std::ostringstream output;
     writeBytecodeText(output, program);
     assert(output.str() ==
-        "cdbc 0.1\n\n"
+        "cdbc 0.2\n\n"
         "constants:\n"
         "\n"
         "names:\n"
@@ -101,7 +101,7 @@ void testDebugSourceRange()
     std::ostringstream output;
     writeBytecodeText(output, program);
     assert(output.str() ==
-        "cdbc 0.1\n\n"
+        "cdbc 0.2\n\n"
         "constants:\n"
         "\n"
         "names:\n"

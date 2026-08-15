@@ -2,24 +2,24 @@ IR
 0000  v0 = constant #0 nil
 0001  store_var @0 __method_Box_add#0, v0
 0002  v1 = make_function $0 add/2
-0003  assign_var @4 __method_Box_add#0, v1
+0003  assign_var @5 __method_Box_add#0, v1
 0004  v2 = constant #2 10
 0005  v3 = struct Box {value: v2}
-0006  store_var @7 b#3, v3
-0007  v4 = load_var @8 __method_Box_add#0
-0008  v5 = load_var @9 b#3
+0006  store_var @8 b#3, v3
+0007  v4 = load_var @9 __method_Box_add#0
+0008  v5 = load_var @10 b#3
 0009  v6 = constant #3 5
 0010  v7 = call v4(v5, v6)
 0011  v8 = constant #4 1
 0012  v9 = add v7, v8
-0013  store_var @10 result#4, v9
-0014  v10 = load_var @11 result#4
+0013  store_var @11 result#4, v9
+0014  v10 = load_var @12 result#4
 0015  print v10
 
 function $0 add(this#1, amount#2)
 0000  v0 = load_var @1 this#1
 0001  v1 = field v0.value
-0002  v2 = load_var @3 amount#2
+0002  v2 = load_var @4 amount#2
 0003  v3 = add v1, v2
 0004  return v3
 0005  v4 = constant #1 nil

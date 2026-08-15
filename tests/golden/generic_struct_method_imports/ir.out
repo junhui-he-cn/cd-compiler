@@ -2,36 +2,36 @@ IR
 0000  v0 = constant #0 nil
 0001  store_var @0 __method_Box_get#0, v0
 0002  v1 = make_function $0 get/1
-0003  assign_var @3 __method_Box_get#0, v1
+0003  assign_var @4 __method_Box_get#0, v1
 0004  v2 = constant #2 nil
-0005  store_var @4 __method_Box_wrap#1, v2
+0005  store_var @5 __method_Box_wrap#1, v2
 0006  v3 = make_function $1 wrap/2
-0007  assign_var @8 __method_Box_wrap#1, v3
+0007  assign_var @9 __method_Box_wrap#1, v3
 0008  v4 = constant #4 1
 0009  v5 = struct Box {value: v4}
-0010  store_var @11 direct#5, v5
+0010  store_var @12 direct#5, v5
 0011  v6 = constant #5 2
 0012  v7 = struct lib.Box {value: v6}
-0013  store_var @14 namespaced#6, v7
+0013  store_var @15 namespaced#6, v7
 0014  v8 = constant #6 3
 0015  v9 = struct forwarded.Box {value: v8}
-0016  store_var @17 reexported#7, v9
-0017  v10 = load_var @18 __method_Box_get#0
-0018  v11 = load_var @19 direct#5
+0016  store_var @18 reexported#7, v9
+0017  v10 = load_var @19 __method_Box_get#0
+0018  v11 = load_var @20 direct#5
 0019  v12 = call v10(v11)
 0020  print v12
-0021  v13 = load_var @20 __method_Box_get#0
-0022  v14 = load_var @21 namespaced#6
+0021  v13 = load_var @21 __method_Box_get#0
+0022  v14 = load_var @22 namespaced#6
 0023  v15 = call v13(v14)
 0024  print v15
-0025  v16 = load_var @22 __method_Box_wrap#1
-0026  v17 = load_var @23 namespaced#6
+0025  v16 = load_var @23 __method_Box_wrap#1
+0026  v17 = load_var @24 namespaced#6
 0027  v18 = constant #7 "two"
 0028  v19 = call v16(v17, v18)
 0029  v20 = field v19.value
 0030  print v20
-0031  v21 = load_var @25 __method_Box_get#0
-0032  v22 = load_var @26 reexported#7
+0031  v21 = load_var @27 __method_Box_get#0
+0032  v22 = load_var @28 reexported#7
 0033  v23 = call v21(v22)
 0034  print v23
 
@@ -43,7 +43,7 @@ function $0 get(this#2)
 0004  return v2
 
 function $1 wrap(this#3, value#4)
-0000  v0 = load_var @7 value#4
+0000  v0 = load_var @8 value#4
 0001  v1 = struct Box {value: v0}
 0002  return v1
 0003  v2 = constant #3 nil

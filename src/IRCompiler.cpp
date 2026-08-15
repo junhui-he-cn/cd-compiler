@@ -337,6 +337,37 @@ IRProgram IRCompiler::compileInternal(
             modules_.emplace(module->moduleId, module);
         }
     }
+    const auto recordLayouts = [this](const Stmt& statement) {
+        if (const auto* structDecl = dynamic_cast<const StructDeclStmt*>(&statement)) {
+            IRStructLayout layout;
+            layout.name = structDecl->name.lexeme;
+            for (const StructFieldDecl& field : structDecl->fields) {
+                layout.fieldNames.push_back(field.name.lexeme);
+            }
+            ir_.addStructLayout(std::move(layout));
+        } else if (const auto* enumDecl = dynamic_cast<const EnumDeclStmt*>(&statement)) {
+            IREnumLayout layout;
+            layout.name = enumDecl->name.lexeme;
+            for (const EnumVariantDecl& variant : enumDecl->variants) {
+                layout.variants.push_back(IRVariantLayout{
+                    variant.name.lexeme,
+                    variant.payloadTypes.size(),
+                });
+            }
+            ir_.addEnumLayout(std::move(layout));
+        }
+    };
+    for (const auto& [moduleId, module] : modules_) {
+        (void)moduleId;
+        for (const StmtPtr& statement : module->statements) {
+            recordLayouts(*statement);
+        }
+    }
+    for (const auto& statement : program.statements) {
+        if (!dynamic_cast<const ModuleStmt*>(statement.get())) {
+            recordLayouts(*statement);
+        }
+    }
     if (independentModuleId_) {
         const auto found = modules_.find(*independentModuleId_);
         if (found == modules_.end()) {
@@ -986,7 +1017,8 @@ void IRCompiler::compilePattern(
             throw IRCompileError("missing record pattern metadata");
         }
         for (std::size_t i = 0; i < recordPattern->fields.size(); ++i) {
-            const IRRegister fieldValue = ir_.emitField(value, record->fieldNames[i]);
+            const IRRegister fieldValue = ir_.emitField(
+                value, record->fieldNames[i], record->structType.structName);
             compilePattern(*recordPattern->fields[i].pattern, fieldValue, failJumps, bindings);
         }
         return;
@@ -1109,7 +1141,8 @@ void IRCompiler::compilePattern(
         value, record->enumName, record->variantName);
     failJumps.push_back(ir_.emitJumpIfFalse(tag));
     for (std::size_t i = 0; i < variant->arguments.size(); ++i) {
-        const IRRegister field = ir_.emitVariantField(value, i);
+        const IRRegister field = ir_.emitVariantField(
+            value, i, record->enumName, record->variantName);
         compilePattern(*variant->arguments[i], field, failJumps, bindings);
     }
 }
@@ -1575,17 +1608,31 @@ IRRegister IRCompiler::emitFieldAccess(const FieldAccessExpr& expression)
     if (operation.resolvedName) {
         return ir_.emitLoadVar(*operation.resolvedName);
     }
+    const TypedExpressionRecord* objectRecord = declarationIndex_
+        ? declarationIndex_->typedExpression(*expression.object)
+        : nullptr;
+    const std::optional<std::string> objectStructName = objectRecord
+        ? objectRecord->type.structName
+        : std::nullopt;
     IRRegister object = compileExpression(*expression.object);
-    return ir_.emitField(object, operation.fieldName);
+    return ir_.emitField(
+        object, operation.fieldName, objectStructName);
 }
 
 IRRegister IRCompiler::emitFieldAssign(const FieldAssignExpr& expression)
 {
     const FieldOperationRecord& operation = fieldOperation(
         expression, FieldOperationKind::Assign, "field assignment");
+    const TypedExpressionRecord* objectRecord = declarationIndex_
+        ? declarationIndex_->typedExpression(*expression.object)
+        : nullptr;
+    const std::optional<std::string> objectStructName = objectRecord
+        ? objectRecord->type.structName
+        : std::nullopt;
     IRRegister object = compileExpression(*expression.object);
     IRRegister value = compileExpression(*expression.value);
-    return ir_.emitAssignField(object, operation.fieldName, value);
+    return ir_.emitAssignField(
+        object, operation.fieldName, objectStructName, value);
 }
 
 IRRegister IRCompiler::emitFieldCompoundAssign(const FieldCompoundAssignExpr& expression)
@@ -1595,11 +1642,17 @@ IRRegister IRCompiler::emitFieldCompoundAssign(const FieldCompoundAssignExpr& ex
     if (operation.resultType.kind != StaticType::Number) {
         throw IRCompileError("missing aggregate field metadata for field compound assignment");
     }
+    const TypedExpressionRecord* objectRecord = declarationIndex_
+        ? declarationIndex_->typedExpression(*expression.object)
+        : nullptr;
+    const std::optional<std::string> objectStructName = objectRecord
+        ? objectRecord->type.structName
+        : std::nullopt;
     IRRegister object = compileExpression(*expression.object);
-    IRRegister oldValue = ir_.emitField(object, operation.fieldName);
+    IRRegister oldValue = ir_.emitField(object, operation.fieldName, objectStructName);
     IRRegister result = emitCompoundAssignmentResult(
         expression.op, oldValue, *expression.value, "`" + expression.op.lexeme + "` expects number target");
-    ir_.emitAssignField(object, operation.fieldName, result);
+    ir_.emitAssignField(object, operation.fieldName, objectStructName, result);
     return result;
 }
 

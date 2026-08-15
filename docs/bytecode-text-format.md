@@ -201,6 +201,12 @@ implicit fallthrough is forbidden. The linker splices module init bodies at the
 block boundary recorded by the `at=N` dependency offset and renumbers block IDs
 across the merged main.
 
+The optional `types:` section (between `globals:` and `main`) records runtime
+type layouts: struct field names/counts and enum variant names/payload counts.
+Names are display/debug metadata only; identity and access use numeric
+`TypeId`/`VariantId` and field slots via `make_struct`/`struct_get`/
+`struct_set` and `make_variant`/`is_variant`/`variant_get`.
+
 Pre-execution validation rejects block bodies with undefined registers, unbound
 locals, invalid block IDs, missing terminators, out-of-range global upvalue
 sources, invalid native arity, or legacy jumps mixed into block bodies.

@@ -1,43 +1,43 @@
 main registers=32
 0000  block
 0001  b0 = constant #0 1
-0002  b1 = struct @0 Box { @1 value: b0}
+0002  b1 = make_struct t0 [b0]
 0003  init_global g0, b1
 0004  b2 = constant #1 2
-0005  b3 = struct @3 Box { @4 value: b2}
+0005  b3 = make_struct t0 [b2]
 0006  init_global g1, b3
 0007  b4 = constant #2 3
-0008  b5 = struct @6 Box { @7 value: b4}
+0008  b5 = make_struct t0 [b4]
 0009  init_global g2, b5
 0010  b6 = constant #3 "text"
-0011  b7 = struct @9 Box { @10 value: b6}
+0011  b7 = make_struct t0 [b6]
 0012  init_global g3, b7
 0013  b8 = constant #4 4
-0014  b9 = struct @12 NumberBox { @13 value: b8}
+0014  b9 = make_struct t1 [b8]
 0015  init_global g4, b9
 0016  b10 = load_global g0
 0017  b11 = constant #5 5
-0018  b12 = assign_field b10,  @16 value, b11
+0018  b12 = struct_set b10, t0, 0, b11
 0019  b13 = load_global g0
-0020  b14 = field b13,  @18 value
+0020  b14 = struct_get b13, t0, 0
 0021  print b14
 0022  b15 = load_global g1
-0023  b16 = field b15,  @20 value
+0023  b16 = struct_get b15, t0, 0
 0024  print b16
 0025  b17 = load_global g2
-0026  b18 = field b17,  @22 value
+0026  b18 = struct_get b17, t0, 0
 0027  print b18
 0028  b19 = load_global g3
-0029  b20 = field b19,  @24 value
+0029  b20 = struct_get b19, t0, 0
 0030  print b20
 0031  b21 = load_global g4
-0032  b22 = field b21,  @26 value
+0032  b22 = struct_get b21, t1, 0
 0033  print b22
 0034  b23 = load_global g1
-0035  b24 = native_call @28 typeOf [b23]
+0035  b24 = native_call @34 typeOf [b23]
 0036  print b24
 0037  b25 = load_global g1
-0038  b26 = field b25,  @30 value
+0038  b26 = struct_get b25, t0, 0
 0039  b27 = constant #6 2
 0040  b28 = equal b26, b27
 0041  br_if b28, b1, b2
@@ -46,7 +46,7 @@ main registers=32
 0044  print b29
 0045  return_nil
 0046  block
-0047  b30 = field b25,  @31 value
+0047  b30 = struct_get b25, t0, 0
 0048  b31 = constant #8 "other"
 0049  print b31
 0050  return_nil

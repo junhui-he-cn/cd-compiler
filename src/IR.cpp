@@ -642,6 +642,26 @@ void IRProgram::addModuleDependency(IRModuleDependency dependency)
     moduleDependencies_.push_back(std::move(dependency));
 }
 
+void IRProgram::addStructLayout(IRStructLayout layout)
+{
+    structLayouts_.push_back(std::move(layout));
+}
+
+void IRProgram::addEnumLayout(IREnumLayout layout)
+{
+    enumLayouts_.push_back(std::move(layout));
+}
+
+const std::vector<IRStructLayout>& IRProgram::structLayouts() const
+{
+    return structLayouts_;
+}
+
+const std::vector<IREnumLayout>& IRProgram::enumLayouts() const
+{
+    return enumLayouts_;
+}
+
 void IRProgram::addBinding(IRBinding binding)
 {
     if (!binding.bindingId.valid()) {
@@ -772,10 +792,18 @@ IRRegister IRProgram::emitVariantTag(IRRegister value, std::string enumName, std
     return dest;
 }
 
-IRRegister IRProgram::emitVariantField(IRRegister value, std::size_t index)
+IRRegister IRProgram::emitVariantField(
+    IRRegister value,
+    std::size_t index,
+    std::string enumName,
+    std::string variantName)
 {
     IRRegister dest = makeRegister();
-    emit(IRInstruction{IROp::VariantField, dest, value, std::nullopt, {}, index});
+    IRInstruction instruction{
+        IROp::VariantField, dest, value, std::nullopt, {}, index};
+    instruction.typeNameOperand = addName(std::move(enumName));
+    instruction.variantNameOperand = addName(std::move(variantName));
+    emit(std::move(instruction));
     return dest;
 }
 
@@ -868,17 +896,34 @@ IRRegister IRProgram::emitAssignIndex(IRRegister collection, IRRegister index, I
     return dest;
 }
 
-IRRegister IRProgram::emitField(IRRegister object, std::string fieldName)
+IRRegister IRProgram::emitField(
+    IRRegister object,
+    std::string fieldName,
+    std::optional<std::string> structTypeName)
 {
     IRRegister dest = makeRegister();
-    emit(IRInstruction{IROp::Field, dest, object, std::nullopt, {}, addName(std::move(fieldName))});
+    IRInstruction instruction{
+        IROp::Field, dest, object, std::nullopt, {}, addName(std::move(fieldName))};
+    if (structTypeName) {
+        instruction.typeNameOperand = addName(std::move(*structTypeName));
+    }
+    emit(std::move(instruction));
     return dest;
 }
 
-IRRegister IRProgram::emitAssignField(IRRegister object, std::string fieldName, IRRegister value)
+IRRegister IRProgram::emitAssignField(
+    IRRegister object,
+    std::string fieldName,
+    std::optional<std::string> structTypeName,
+    IRRegister value)
 {
     IRRegister dest = makeRegister();
-    emit(IRInstruction{IROp::AssignField, dest, object, std::nullopt, {value}, addName(std::move(fieldName))});
+    IRInstruction instruction{
+        IROp::AssignField, dest, object, std::nullopt, {value}, addName(std::move(fieldName))};
+    if (structTypeName) {
+        instruction.typeNameOperand = addName(std::move(*structTypeName));
+    }
+    emit(std::move(instruction));
     return dest;
 }
 

@@ -35,10 +35,10 @@ main registers=44
 0033  b19 = make_function $6 <lambda>/1
 0034  init_global g8, b19
 0035  b20 = constant #16 0
-0036  b21 = struct @29 Holder { @30 value: b20}
+0036  b21 = make_struct t0 [b20]
 0037  init_global g9, b21
 0038  b22 = constant #17 6
-0039  b23 = variant @32 Box. @33 Value (b22)
+0039  b23 = make_variant t1, v0 (b22)
 0040  init_global g10, b23
 0041  b24 = load_global g6
 0042  print b24

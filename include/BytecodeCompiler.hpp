@@ -16,6 +16,14 @@ struct FunctionPlan {
     std::uint32_t localCount = 0;
 };
 
+struct TypeTables {
+    std::unordered_map<std::string, std::uint32_t> structTypeIds;
+    std::unordered_map<std::string, std::vector<std::string>> structFields;
+    std::unordered_map<std::string, std::uint32_t> enumTypeIds;
+    std::unordered_map<std::string, std::vector<std::pair<std::string, std::uint32_t>>> enumVariants;
+    std::vector<BytecodeType> types;
+};
+
 class BytecodeCompileError final : public DiagnosticError {
 public:
     explicit BytecodeCompileError(std::string message);
@@ -31,17 +39,20 @@ private:
         const std::unordered_map<BindingId, std::uint32_t, SnapshotIdHash<BindingIdTag>>& globalSlots,
         const std::unordered_map<std::string, std::uint32_t>& globalSlotsByName,
         const std::vector<std::string>& names,
+        TypeTables& types,
         const FunctionPlan* plan);
     BytecodeInstruction lowerInstruction(
         const IRInstruction& instruction,
         const std::unordered_map<BindingId, std::uint32_t, SnapshotIdHash<BindingIdTag>>& globalSlots,
         const std::unordered_map<std::string, std::uint32_t>& globalSlotsByName,
         const std::vector<std::string>& names,
+        TypeTables& types,
         const FunctionPlan* plan);
     BytecodeFunction lowerFunction(
         const IRFunction& function,
         const std::unordered_map<BindingId, std::uint32_t, SnapshotIdHash<BindingIdTag>>& globalSlots,
         const std::unordered_map<std::string, std::uint32_t>& globalSlotsByName,
         const std::vector<std::string>& names,
+        TypeTables& types,
         const FunctionPlan& plan);
 };

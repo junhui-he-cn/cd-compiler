@@ -12,19 +12,25 @@ names:
   n1 = "this#1"
   n2 = "this#1"
   n3 = "value"
-  n4 = "value"
-  n5 = "__method_Counter_inc#0"
+  n4 = "Counter"
+  n5 = "value"
   n6 = "Counter"
-  n7 = "value"
-  n8 = "c#2"
-  n9 = "__method_Counter_inc#0"
+  n7 = "__method_Counter_inc#0"
+  n8 = "Counter"
+  n9 = "value"
   n10 = "c#2"
-  n11 = "c#2"
-  n12 = "value"
+  n11 = "__method_Counter_inc#0"
+  n12 = "c#2"
+  n13 = "c#2"
+  n14 = "value"
+  n15 = "Counter"
 
 globals:
   g0 = n0
-  g1 = n8
+  g1 = n10
+
+types:
+  t0 = struct "Counter" field0="value"
 
 main registers=9:
 block b0:
@@ -33,13 +39,13 @@ block b0:
   r1 = make_function f0
   set_global g0, r1
   r2 = constant c4
-  r3 = struct n6 {n7: r2}
+  r3 = make_struct t0 [r2]
   init_global g1, r3
   r4 = load_global g0
   r5 = load_global g1
   r6 = call r4 [r5]
   r7 = load_global g1
-  r8 = field r7, n12
+  r8 = struct_get r7, t0, 0
   print r8
   return_nil
 
@@ -48,10 +54,10 @@ function f0 name="inc" arity=1 registers=8:
 block b0:
   r0 = load_local l0
   r1 = load_local l0
-  r2 = field r1, n3
+  r2 = struct_get r1, t0, 0
   r3 = constant c1
   r4 = add r2, r3
-  r5 = assign_field r0, n4, r4
+  r5 = struct_set r0, t0, 0, r4
   r6 = constant c2
   return r6
 block b1:

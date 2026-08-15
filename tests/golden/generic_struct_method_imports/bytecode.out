@@ -9,13 +9,13 @@ main registers=24
 0007  b3 = make_function $1 wrap/2
 0008  set_global g1, b3
 0009  b4 = constant #4 1
-0010  b5 = struct @9 Box { @10 value: b4}
+0010  b5 = make_struct t0 [b4]
 0011  init_global g2, b5
 0012  b6 = constant #5 2
-0013  b7 = struct @12 lib.Box { @13 value: b6}
+0013  b7 = make_struct t0 [b6]
 0014  init_global g3, b7
 0015  b8 = constant #6 3
-0016  b9 = struct @15 forwarded.Box { @16 value: b8}
+0016  b9 = make_struct t0 [b8]
 0017  init_global g4, b9
 0018  b10 = load_global g0
 0019  b11 = load_global g2
@@ -29,7 +29,7 @@ main registers=24
 0027  b17 = load_global g3
 0028  b18 = constant #7 "two"
 0029  b19 = call b16(b17, b18)
-0030  b20 = field b19,  @24 value
+0030  b20 = struct_get b19, t0, 0
 0031  print b20
 0032  b21 = load_global g0
 0033  b22 = load_global g4
@@ -40,7 +40,7 @@ main registers=24
 function $0 get/1 registers=3
 0000  block
 0001  b0 = load_local l0
-0002  b1 = field b0,  @2 value
+0002  b1 = struct_get b0, t0, 0
 0003  return b1
 0004  block
 0005  b2 = constant #1 nil
@@ -51,7 +51,7 @@ function $0 get/1 registers=3
 function $1 wrap/2 registers=3
 0000  block
 0001  b0 = load_local l1
-0002  b1 = struct @5 Box { @6 value: b0}
+0002  b1 = make_struct t0 [b0]
 0003  return b1
 0004  block
 0005  b2 = constant #3 nil

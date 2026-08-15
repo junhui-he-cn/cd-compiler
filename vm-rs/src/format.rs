@@ -1,6 +1,7 @@
 use crate::bytecode::{
     BlockId, Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, GlobalId,
-    Instruction, LocalId, Program, UpvalueDesc, UpvalueId, UpvalueSource,
+    Instruction, LocalId, Program, TypeId, TypeLayout, UpvalueDesc, UpvalueId, UpvalueSource,
+    VariantId, VariantLayout,
 };
 use crate::vm::native_arity_bounds;
 use std::collections::BTreeSet;
@@ -324,7 +325,7 @@ impl<'a> Parser<'a> {
         self.require_line("names:")?;
         let mut names = Vec::new();
         while let Some((line_number, line)) = self.peek() {
-            if line.starts_with("main registers=") || line == "globals:" {
+            if line.starts_with("main registers=") || line == "globals:" || line == "types:" {
                 break;
             }
             self.advance();
@@ -793,6 +794,104 @@ fn parse_program_body_with_globals(parser: &mut Parser<'_>) -> Result<Program, P
             globals.push(parse_name_ref(line_number, name_ref)?);
         }
     }
+    let mut types = Vec::new();
+    if parser
+        .peek()
+        .map(|(_, line)| line == "types:")
+        .unwrap_or(false)
+    {
+        parser.advance();
+        while let Some((line_number, line)) = parser.peek() {
+            if !line.starts_with("t") || !line.contains(" = ") {
+                break;
+            }
+            parser.advance();
+            let (type_ref, rest) = split_once(line_number, line, " = ")?;
+            let type_index = parse_prefixed(line_number, type_ref, 't', "type reference")?;
+            if type_index != types.len() {
+                return Err(ParseError {
+                    line: line_number,
+                    message: format!("expected type t{}", types.len()),
+                });
+            }
+            let mut layout = TypeLayout {
+                is_enum: false,
+                name: String::new(),
+                field_names: Vec::new(),
+                variants: Vec::new(),
+            };
+            let parts: Vec<&str> = rest.split_whitespace().collect();
+            if parts.is_empty() || (parts[0] != "struct" && parts[0] != "enum") {
+                return Err(ParseError {
+                    line: line_number,
+                    message: "expected struct or enum type declaration".to_string(),
+                });
+            }
+            layout.is_enum = parts[0] == "enum";
+            layout.name = parse_string_full(line_number, parts[1])?;
+            if layout.is_enum {
+                let mut index = 2;
+                while index < parts.len() {
+                    let (variant_ref, variant_name) =
+                        split_once(line_number, parts[index], "=")?;
+                    let variant_index = parse_prefixed(
+                        line_number,
+                        variant_ref,
+                        'v',
+                        "variant reference",
+                    )?;
+                    if variant_index != layout.variants.len() {
+                        return Err(ParseError {
+                            line: line_number,
+                            message: format!("expected variant v{}", layout.variants.len()),
+                        });
+                    }
+                    index += 1;
+                    if index >= parts.len() {
+                        return Err(ParseError {
+                            line: line_number,
+                            message: "expected variant payload count".to_string(),
+                        });
+                    }
+                    let (payload_label, count) =
+                        split_once(line_number, parts[index], "=")?;
+                    if payload_label != "payload" {
+                        return Err(ParseError {
+                            line: line_number,
+                            message: "expected `payload=`".to_string(),
+                        });
+                    }
+                    layout.variants.push(VariantLayout {
+                        name: parse_string_full(line_number, variant_name)?,
+                        payload_count: parse_usize(line_number, count, "variant payload count")?,
+                    });
+                    index += 1;
+                }
+            } else {
+                for part in &parts[2..] {
+                    let (field_ref, field_name) = split_once(line_number, part, "=")?;
+                    let field_number = field_ref.strip_prefix("field").ok_or_else(|| {
+                        ParseError {
+                            line: line_number,
+                            message: "expected field reference".to_string(),
+                        }
+                    })?;
+                    let field_index =
+                        parse_usize(line_number, field_number, "field index")?;
+                    if field_index != layout.field_names.len() {
+                        return Err(ParseError {
+                            line: line_number,
+                            message: format!("expected field f{}", layout.field_names.len()),
+                        });
+                    }
+                    layout
+                        .field_names
+                        .push(parse_string_full(line_number, field_name)?);
+                }
+            }
+            types.push(layout);
+        }
+    }
     let main = parser.parse_main()?;
     let mut functions = parser.parse_functions()?;
     functions.insert(0, main);
@@ -801,6 +900,7 @@ fn parse_program_body_with_globals(parser: &mut Parser<'_>) -> Result<Program, P
         constants,
         names,
         globals,
+        types,
         functions,
         entry: FuncId(0),
         debug_sources,
@@ -1223,6 +1323,12 @@ fn instruction_register_def(instruction: &Instruction) -> Option<usize> {
         | Instruction::Len { dest, .. }
         | Instruction::AssertArray { dest, .. }
         | Instruction::AssertNumber { dest, .. }
+        | Instruction::MakeStruct { dest, .. }
+        | Instruction::StructGet { dest, .. }
+        | Instruction::StructSet { dest, .. }
+        | Instruction::MakeVariant { dest, .. }
+        | Instruction::IsVariant { dest, .. }
+        | Instruction::VariantGet { dest, .. }
         | Instruction::Negate { dest, .. }
         | Instruction::Not { dest, .. }
         | Instruction::Add { dest, .. }
@@ -1269,6 +1375,14 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
             reads
         }
         Instruction::NativeCall { arguments, .. } => arguments.clone(),
+        Instruction::MakeStruct { elements, .. } => elements.clone(),
+        Instruction::StructGet { object, .. } => vec![*object],
+        Instruction::StructSet {
+            object, value, ..
+        } => vec![*object, *value],
+        Instruction::MakeVariant { payload, .. } => payload.clone(),
+        Instruction::IsVariant { value, .. } => vec![*value],
+        Instruction::VariantGet { value, .. } => vec![*value],
         Instruction::Index {
             collection, index, ..
         } => vec![*collection, *index],
@@ -1780,6 +1894,72 @@ fn validate_instruction(
                 register(*value, &format!("struct field {} value", index))?;
             }
         }
+        Instruction::MakeStruct {
+            dest,
+            type_id,
+            elements,
+        } => {
+            register(*dest, "destination")?;
+            let layout = program.types.get(type_id.0 as usize).ok_or_else(|| {
+                validation_error(line, format!("type t{} out of range", type_id.0))
+            })?;
+            if layout.is_enum || elements.len() != layout.field_names.len() {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "make_struct t{} expects {} fields, got {}",
+                        type_id.0,
+                        layout.field_names.len(),
+                        elements.len()
+                    ),
+                ));
+            }
+            registers(elements, "struct element")?;
+        }
+        Instruction::StructGet {
+            dest,
+            object,
+            type_id,
+            slot,
+        } => {
+            register(*dest, "destination")?;
+            register(*object, "struct object")?;
+            let layout = program.types.get(type_id.0 as usize).ok_or_else(|| {
+                validation_error(line, format!("type t{} out of range", type_id.0))
+            })?;
+            if layout.is_enum || *slot >= layout.field_names.len() {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "struct_get t{} field slot {} out of range",
+                        type_id.0, slot
+                    ),
+                ));
+            }
+        }
+        Instruction::StructSet {
+            dest,
+            object,
+            type_id,
+            slot,
+            value,
+        } => {
+            register(*dest, "destination")?;
+            register(*object, "struct object")?;
+            register(*value, "field value")?;
+            let layout = program.types.get(type_id.0 as usize).ok_or_else(|| {
+                validation_error(line, format!("type t{} out of range", type_id.0))
+            })?;
+            if layout.is_enum || *slot >= layout.field_names.len() {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "struct_set t{} field slot {} out of range",
+                        type_id.0, slot
+                    ),
+                ));
+            }
+        }
         Instruction::Variant {
             dest,
             enum_name,
@@ -1790,6 +1970,73 @@ fn validate_instruction(
             name(*enum_name, "variant enum")?;
             name(*variant_name, "variant name")?;
             registers(payload, "variant payload")?;
+        }
+        Instruction::MakeVariant {
+            dest,
+            type_id,
+            variant_id,
+            payload,
+        } => {
+            register(*dest, "destination")?;
+            registers(payload, "variant payload")?;
+            let layout = program.types.get(type_id.0 as usize).ok_or_else(|| {
+                validation_error(line, format!("type t{} out of range", type_id.0))
+            })?;
+            if !layout.is_enum || variant_id.0 as usize >= layout.variants.len() {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "make_variant t{} variant v{} out of range",
+                        type_id.0, variant_id.0
+                    ),
+                ));
+            }
+        }
+        Instruction::IsVariant {
+            dest,
+            value,
+            type_id,
+            variant_id,
+        } => {
+            register(*dest, "destination")?;
+            register(*value, "variant value")?;
+            let layout = program.types.get(type_id.0 as usize).ok_or_else(|| {
+                validation_error(line, format!("type t{} out of range", type_id.0))
+            })?;
+            if !layout.is_enum || variant_id.0 as usize >= layout.variants.len() {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "is_variant t{} variant v{} out of range",
+                        type_id.0, variant_id.0
+                    ),
+                ));
+            }
+        }
+        Instruction::VariantGet {
+            dest,
+            value,
+            type_id,
+            variant_id,
+            index,
+        } => {
+            register(*dest, "destination")?;
+            register(*value, "variant value")?;
+            let layout = program.types.get(type_id.0 as usize).ok_or_else(|| {
+                validation_error(line, format!("type t{} out of range", type_id.0))
+            })?;
+            let variant = layout.variants.get(variant_id.0 as usize).ok_or_else(|| {
+                validation_error(line, format!("variant v{} out of range", variant_id.0))
+            })?;
+            if *index >= variant.payload_count {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "variant_get t{} v{} payload index {} out of range",
+                        type_id.0, variant_id.0, index
+                    ),
+                ));
+            }
         }
         Instruction::VariantTag {
             dest,
@@ -2122,6 +2369,37 @@ fn format_program_sections(out: &mut String, program: &Program) {
             out.push_str(&format!("  g{} = n{}\n", index, name));
         }
     }
+    if !program.types.is_empty() {
+        out.push_str("\ntypes:\n");
+        for (index, layout) in program.types.iter().enumerate() {
+            if layout.is_enum {
+                out.push_str(&format!(
+                    "  t{} = enum {}",
+                    index,
+                    quote_string(&layout.name)
+                ));
+                for (variant, item) in layout.variants.iter().enumerate() {
+                    out.push_str(&format!(
+                        " v{}={} payload={}",
+                        variant,
+                        quote_string(&item.name),
+                        item.payload_count
+                    ));
+                }
+                out.push('\n');
+            } else {
+                out.push_str(&format!(
+                    "  t{} = struct {}",
+                    index,
+                    quote_string(&layout.name)
+                ));
+                for (field, name) in layout.field_names.iter().enumerate() {
+                    out.push_str(&format!(" field{}={}", field, quote_string(name)));
+                }
+                out.push('\n');
+            }
+        }
+    }
     let entry = &program.functions[program.entry.0 as usize];
     out.push_str(&format!("\nmain registers={}:\n", entry.registers));
     for instruction in &entry.instructions {
@@ -2331,6 +2609,45 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                     fields: parse_struct_fields(line, field_text)?,
                 })
             }
+            "make_struct" => {
+                let (type_text, elements) = split_once(line, operands, " ")?;
+                Ok(Instruction::MakeStruct {
+                    dest,
+                    type_id: TypeId(parse_prefixed(line, type_text, 't', "type reference")? as u32),
+                    elements: parse_register_list(line, elements)?,
+                })
+            }
+            "struct_get" => {
+                let parts = split_comma_parts(operands);
+                if parts.len() != 3 {
+                    return Err(ParseError {
+                        line,
+                        message: "struct_get expects three operands".to_string(),
+                    });
+                }
+                Ok(Instruction::StructGet {
+                    dest,
+                    object: parse_register(line, parts[0])?,
+                    type_id: TypeId(parse_prefixed(line, parts[1], 't', "type reference")? as u32),
+                    slot: parse_usize(line, parts[2], "field slot")?,
+                })
+            }
+            "struct_set" => {
+                let parts = split_comma_parts(operands);
+                if parts.len() != 4 {
+                    return Err(ParseError {
+                        line,
+                        message: "struct_set expects four operands".to_string(),
+                    });
+                }
+                Ok(Instruction::StructSet {
+                    dest,
+                    object: parse_register(line, parts[0])?,
+                    type_id: TypeId(parse_prefixed(line, parts[1], 't', "type reference")? as u32),
+                    slot: parse_usize(line, parts[2], "field slot")?,
+                    value: parse_register(line, parts[3])?,
+                })
+            }
             "variant" => {
                 let (variant_text, payload_text) = split_once(line, operands, " ")?;
                 let (enum_name, variant_name) = split_once(line, variant_text, ".")?;
@@ -2338,7 +2655,33 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                     dest,
                     enum_name: parse_name_ref(line, enum_name)?,
                     variant_name: parse_name_ref(line, variant_name)?,
-                    payload: parse_register_list(line, payload_text)?,
+                    payload: parse_register_list(line, &payload_text)?,
+                })
+            }
+            "make_variant" => {
+                let (header, payload_text) = split_once(line, operands, " [")?;
+                let (type_text, variant_text) = split_once(line, header, ", ")?;
+                let payload_text = format!("[{}", payload_text);
+                Ok(Instruction::MakeVariant {
+                    dest,
+                    type_id: TypeId(parse_prefixed(line, type_text, 't', "type reference")? as u32),
+                    variant_id: VariantId(parse_prefixed(line, variant_text, 'v', "variant reference")? as u32),
+                    payload: parse_register_list(line, &payload_text)?,
+                })
+            }
+            "is_variant" => {
+                let parts = split_comma_parts(operands);
+                if parts.len() != 3 {
+                    return Err(ParseError {
+                        line,
+                        message: "is_variant expects three operands".to_string(),
+                    });
+                }
+                Ok(Instruction::IsVariant {
+                    dest,
+                    value: parse_register(line, parts[0])?,
+                    type_id: TypeId(parse_prefixed(line, parts[1], 't', "type reference")? as u32),
+                    variant_id: VariantId(parse_prefixed(line, parts[2], 'v', "variant reference")? as u32),
                 })
             }
             "variant_tag" => {
@@ -2357,6 +2700,22 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                     dest,
                     value: parse_register(line, value)?,
                     index: parse_usize(line, index, "variant field index")?,
+                })
+            }
+            "variant_get" => {
+                let parts = split_comma_parts(operands);
+                if parts.len() != 4 {
+                    return Err(ParseError {
+                        line,
+                        message: "variant_get expects four operands".to_string(),
+                    });
+                }
+                Ok(Instruction::VariantGet {
+                    dest,
+                    value: parse_register(line, parts[0])?,
+                    type_id: TypeId(parse_prefixed(line, parts[1], 't', "type reference")? as u32),
+                    variant_id: VariantId(parse_prefixed(line, parts[2], 'v', "variant reference")? as u32),
+                    index: parse_usize(line, parts[3], "payload index")?,
                 })
             }
             "move" => Ok(Instruction::Move {
@@ -2613,6 +2972,32 @@ fn format_instruction(instruction: &Instruction) -> String {
                 None => format!("r{} = struct {{{}}}", dest, parts),
             }
         }
+        Instruction::MakeStruct {
+            dest,
+            type_id,
+            elements,
+        } => format!(
+            "r{} = make_struct t{} {}",
+            dest,
+            type_id.0,
+            format_register_list(elements)
+        ),
+        Instruction::StructGet {
+            dest,
+            object,
+            type_id,
+            slot,
+        } => format!("r{} = struct_get r{}, t{}, {}", dest, object, type_id.0, slot),
+        Instruction::StructSet {
+            dest,
+            object,
+            type_id,
+            slot,
+            value,
+        } => format!(
+            "r{} = struct_set r{}, t{}, {}, r{}",
+            dest, object, type_id.0, slot, value
+        ),
         Instruction::Variant {
             dest,
             enum_name,
@@ -2624,6 +3009,37 @@ fn format_instruction(instruction: &Instruction) -> String {
             enum_name,
             variant_name,
             format_register_list(payload)
+        ),
+        Instruction::MakeVariant {
+            dest,
+            type_id,
+            variant_id,
+            payload,
+        } => format!(
+            "r{} = make_variant t{}, v{} {}",
+            dest,
+            type_id.0,
+            variant_id.0,
+            format_register_list(payload)
+        ),
+        Instruction::IsVariant {
+            dest,
+            value,
+            type_id,
+            variant_id,
+        } => format!(
+            "r{} = is_variant r{}, t{}, v{}",
+            dest, value, type_id.0, variant_id.0
+        ),
+        Instruction::VariantGet {
+            dest,
+            value,
+            type_id,
+            variant_id,
+            index,
+        } => format!(
+            "r{} = variant_get r{}, t{}, v{}, {}",
+            dest, value, type_id.0, variant_id.0, index
         ),
         Instruction::VariantTag {
             dest,
@@ -3220,6 +3636,7 @@ mod tests {
             constants: vec![Constant::Nil],
             names: Vec::new(),
             globals: Vec::new(),
+            types: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
                 name: "main".to_string(),

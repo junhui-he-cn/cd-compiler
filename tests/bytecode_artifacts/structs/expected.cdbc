@@ -13,37 +13,45 @@ names:
   n3 = "person#0"
   n4 = "person#0"
   n5 = "name"
-  n6 = "Nested"
-  n7 = "point"
-  n8 = "Point"
-  n9 = "x"
-  n10 = "label"
-  n11 = "nested#1"
+  n6 = "Person"
+  n7 = "Nested"
+  n8 = "point"
+  n9 = "Point"
+  n10 = "x"
+  n11 = "label"
   n12 = "nested#1"
-  n13 = "point"
-  n14 = "x"
+  n13 = "nested#1"
+  n14 = "point"
+  n15 = "Nested"
+  n16 = "x"
+  n17 = "Point"
 
 globals:
   g0 = n3
-  g1 = n11
+  g1 = n12
+
+types:
+  t0 = struct "Person" field0="name" field1="age"
+  t1 = struct "Point" field0="x"
+  t2 = struct "Nested" field0="point" field1="label"
 
 main registers=12:
 block b0:
   r0 = constant c0
   r1 = constant c1
-  r2 = struct n0 {n1: r0, n2: r1}
+  r2 = make_struct t0 [r0, r1]
   init_global g0, r2
   r3 = load_global g0
-  r4 = field r3, n5
+  r4 = struct_get r3, t0, 0
   print r4
   r5 = constant c2
-  r6 = struct n8 {n9: r5}
+  r6 = make_struct t1 [r5]
   r7 = constant c3
-  r8 = struct n6 {n7: r6, n10: r7}
+  r8 = make_struct t2 [r6, r7]
   init_global g1, r8
   r9 = load_global g1
-  r10 = field r9, n13
-  r11 = field r10, n14
+  r10 = struct_get r9, t2, 0
+  r11 = struct_get r10, t1, 0
   print r11
   return_nil
 

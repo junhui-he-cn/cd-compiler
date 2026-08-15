@@ -10,32 +10,32 @@ IR
 0008  v4 = constant #13 nil
 0009  store_var @6 describeResult#4, v4
 0010  v5 = make_function $2 describeResult/1
-0011  assign_var @23 describeResult#4, v5
+0011  assign_var @31 describeResult#4, v5
 0012  v6 = constant #24 nil
-0013  store_var @24 maybe#8, v6
-0014  v7 = load_var @25 describeNumber#0
+0013  store_var @32 maybe#8, v6
+0014  v7 = load_var @33 describeNumber#0
 0015  v8 = constant #25 0
 0016  v9 = call v7(v8)
 0017  print v9
-0018  v10 = load_var @26 describeNumber#0
+0018  v10 = load_var @34 describeNumber#0
 0019  v11 = constant #26 8
 0020  v12 = call v10(v11)
 0021  print v12
-0022  v13 = load_var @27 describeBool#2
+0022  v13 = load_var @35 describeBool#2
 0023  v14 = constant #27 false
 0024  v15 = call v13(v14)
 0025  print v15
-0026  v16 = load_var @28 describeResult#4
+0026  v16 = load_var @36 describeResult#4
 0027  v17 = constant #28 7
 0028  v18 = variant Result.Number (v17)
 0029  v19 = call v16(v18)
 0030  print v19
-0031  v20 = load_var @31 describeResult#4
+0031  v20 = load_var @39 describeResult#4
 0032  v21 = constant #29 ""
 0033  v22 = variant Result.Text (v21)
 0034  v23 = call v20(v22)
 0035  print v23
-0036  v24 = load_var @34 describeResult#4
+0036  v24 = load_var @42 describeResult#4
 0037  v25 = constant #30 nil
 0038  v26 = call v24(v25)
 0039  print v26
@@ -84,7 +84,7 @@ IR
 0082  v49 = constant #47 "other"
 0083  print v49
 0084  jump 0085
-0085  v50 = load_var @35 maybe#8
+0085  v50 = load_var @43 maybe#8
 0086  v51 = constant #48 nil
 0087  v52 = equal v50, v51
 0088  jump_if_false v52, 0092
@@ -161,10 +161,10 @@ function $2 describeResult(value#5)
 0016  v9 = variant_tag v0 Result.Number
 0017  jump_if_false v9, 0026
 0018  v10 = variant_field v0[0]
-0019  store_var @12 value#6, v10
+0019  store_var @16 value#6, v10
 0020  v11 = constant #18 "number:"
-0021  v12 = load_var @13 value#6
-0022  v13 = native_call @14 str(v12)
+0021  v12 = load_var @17 value#6
+0022  v13 = native_call @18 str(v12)
 0023  v14 = add v11, v13
 0024  return v14
 0025  jump 0049
@@ -180,9 +180,9 @@ function $2 describeResult(value#5)
 0035  v20 = variant_tag v0 Result.Text
 0036  jump_if_false v20, 0044
 0037  v21 = variant_field v0[0]
-0038  store_var @19 value#7, v21
+0038  store_var @27 value#7, v21
 0039  v22 = constant #21 "text:"
-0040  v23 = load_var @20 value#7
+0040  v23 = load_var @28 value#7
 0041  v24 = add v22, v23
 0042  return v24
 0043  jump 0049

@@ -6,32 +6,32 @@ IR
 0004  v3 = load_var @4 p#0
 0005  v4 = field v3.name
 0006  print v4
-0007  v5 = load_var @6 p#0
+0007  v5 = load_var @7 p#0
 0008  v6 = constant #2 37
 0009  v7 = assign_field v5.age, v6
-0010  v8 = load_var @8 p#0
+0010  v8 = load_var @10 p#0
 0011  v9 = field v8.age
 0012  print v9
 0013  v10 = constant #3 nil
-0014  store_var @10 birthday#1, v10
+0014  store_var @13 birthday#1, v10
 0015  v11 = make_function $0 birthday/1
-0016  assign_var @16 birthday#1, v11
-0017  v12 = load_var @17 birthday#1
-0018  v13 = load_var @18 p#0
+0016  assign_var @21 birthday#1, v11
+0017  v12 = load_var @22 birthday#1
+0018  v13 = load_var @23 p#0
 0019  v14 = call v12(v13)
-0020  store_var @19 older#3, v14
-0021  v15 = load_var @20 older#3
+0020  store_var @24 older#3, v14
+0021  v15 = load_var @25 older#3
 0022  v16 = field v15.age
 0023  print v16
 
 function $0 birthday(person#2)
-0000  v0 = load_var @11 person#2
-0001  v1 = load_var @12 person#2
+0000  v0 = load_var @14 person#2
+0001  v1 = load_var @15 person#2
 0002  v2 = field v1.age
 0003  v3 = constant #4 1
 0004  v4 = add v2, v3
 0005  v5 = assign_field v0.age, v4
-0006  v6 = load_var @15 person#2
+0006  v6 = load_var @20 person#2
 0007  return v6
 0008  v7 = constant #5 nil
 0009  return v7

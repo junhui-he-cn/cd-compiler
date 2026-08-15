@@ -6,9 +6,9 @@ IR
 0004  v2 = constant #3 nil
 0005  store_var @4 render#1, v2
 0006  v3 = make_function $1 render/1
-0007  assign_var @15 render#1, v3
-0008  v4 = load_var @16 render#1
-0009  v5 = load_var @17 make#0
+0007  assign_var @19 render#1, v3
+0008  v4 = load_var @20 render#1
+0009  v5 = load_var @21 make#0
 0010  v6 = call v5()
 0011  v7 = call v4(v6)
 0012  print v7
@@ -25,19 +25,19 @@ function $1 render(value#2)
 0001  v1 = variant_tag v0 Result.Ok
 0002  jump_if_false v1, 0011
 0003  v2 = variant_field v0[0]
-0004  store_var @8 value#3, v2
+0004  store_var @10 value#3, v2
 0005  v3 = constant #4 "ok:"
-0006  v4 = load_var @9 value#3
-0007  v5 = native_call @10 str(v4)
+0006  v4 = load_var @11 value#3
+0007  v5 = native_call @12 str(v4)
 0008  v6 = add v3, v5
 0009  return v6
 0010  jump 0020
 0011  v7 = variant_tag v0 Result.Err
 0012  jump_if_false v7, 0020
 0013  v8 = variant_field v0[0]
-0014  store_var @13 message#4, v8
+0014  store_var @17 message#4, v8
 0015  v9 = constant #5 "err:"
-0016  v10 = load_var @14 message#4
+0016  v10 = load_var @18 message#4
 0017  v11 = add v9, v10
 0018  return v11
 0019  jump 0020

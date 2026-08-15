@@ -24,68 +24,82 @@ names:
   n1 = "value#1"
   n2 = "Option"
   n3 = "Some"
-  n4 = "numberValue#2"
-  n5 = "numberValue#2"
-  n6 = "str"
-  n7 = "Option"
-  n8 = "None"
-  n9 = "describe#0"
-  n10 = "sum#3"
-  n11 = "list#4"
-  n12 = "List"
-  n13 = "Nil"
+  n4 = "Option"
+  n5 = "Some"
+  n6 = "numberValue#2"
+  n7 = "numberValue#2"
+  n8 = "str"
+  n9 = "Option"
+  n10 = "None"
+  n11 = "describe#0"
+  n12 = "sum#3"
+  n13 = "list#4"
   n14 = "List"
-  n15 = "Cons"
-  n16 = "first#5"
-  n17 = "rest#6"
-  n18 = "first#5"
-  n19 = "sum#3"
-  n20 = "rest#6"
-  n21 = "sum#3"
-  n22 = "Option"
-  n23 = "Some"
-  n24 = "some#7"
-  n25 = "Option"
-  n26 = "None"
-  n27 = "none#8"
-  n28 = "maybe#9"
-  n29 = "Option"
-  n30 = "Some"
-  n31 = "inferred#10"
-  n32 = "describe#0"
-  n33 = "some#7"
-  n34 = "describe#0"
-  n35 = "none#8"
-  n36 = "sum#3"
-  n37 = "List"
-  n38 = "Nil"
-  n39 = "List"
-  n40 = "Cons"
-  n41 = "List"
-  n42 = "Cons"
-  n43 = "maybe#9"
-  n44 = "Option"
-  n45 = "Some"
-  n46 = "value#11"
-  n47 = "Option"
-  n48 = "None"
-  n49 = "inferred#10"
+  n15 = "Nil"
+  n16 = "List"
+  n17 = "Cons"
+  n18 = "List"
+  n19 = "Cons"
+  n20 = "List"
+  n21 = "Cons"
+  n22 = "first#5"
+  n23 = "rest#6"
+  n24 = "first#5"
+  n25 = "sum#3"
+  n26 = "rest#6"
+  n27 = "sum#3"
+  n28 = "Option"
+  n29 = "Some"
+  n30 = "some#7"
+  n31 = "Option"
+  n32 = "None"
+  n33 = "none#8"
+  n34 = "maybe#9"
+  n35 = "Option"
+  n36 = "Some"
+  n37 = "inferred#10"
+  n38 = "describe#0"
+  n39 = "some#7"
+  n40 = "describe#0"
+  n41 = "none#8"
+  n42 = "sum#3"
+  n43 = "List"
+  n44 = "Nil"
+  n45 = "List"
+  n46 = "Cons"
+  n47 = "List"
+  n48 = "Cons"
+  n49 = "maybe#9"
   n50 = "Option"
   n51 = "Some"
-  n52 = "value#12"
-  n53 = "value#12"
-  n54 = "Option"
-  n55 = "None"
+  n52 = "Option"
+  n53 = "Some"
+  n54 = "value#11"
+  n55 = "Option"
+  n56 = "None"
+  n57 = "inferred#10"
+  n58 = "Option"
+  n59 = "Some"
+  n60 = "Option"
+  n61 = "Some"
+  n62 = "value#12"
+  n63 = "value#12"
+  n64 = "Option"
+  n65 = "None"
 
 globals:
   g0 = n0
-  g1 = n10
-  g2 = n24
-  g3 = n27
-  g4 = n28
-  g5 = n31
-  g6 = n46
-  g7 = n52
+  g1 = n12
+  g2 = n30
+  g3 = n33
+  g4 = n34
+  g5 = n37
+  g6 = n54
+  g7 = n62
+
+types:
+  t0 = enum "Option" v0="Some" payload=1 v1="None" payload=0
+  t1 = enum "List" v0="Nil" payload=0 v1="Cons" payload=2
 
 main registers=38:
 block b0:
@@ -98,14 +112,14 @@ block b0:
   r3 = make_function f1
   set_global g1, r3
   r4 = constant c7
-  r5 = variant n22.n23 [r4]
+  r5 = make_variant t0, v0 [r4]
   init_global g2, r5
-  r6 = variant n25.n26 []
+  r6 = make_variant t0, v1 []
   init_global g3, r6
   r7 = constant c8
   init_global g4, r7
   r8 = constant c9
-  r9 = variant n29.n30 [r8]
+  r9 = make_variant t0, v0 [r8]
   init_global g5, r9
   r10 = load_global g0
   r11 = load_global g2
@@ -118,9 +132,9 @@ block b0:
   r16 = load_global g1
   r17 = constant c10
   r18 = constant c11
-  r19 = variant n37.n38 []
-  r20 = variant n39.n40 [r18, r19]
-  r21 = variant n41.n42 [r17, r20]
+  r19 = make_variant t1, v0 []
+  r20 = make_variant t1, v1 [r18, r19]
+  r21 = make_variant t1, v1 [r17, r20]
   r22 = call r16 [r21]
   print r22
   r23 = load_global g4
@@ -132,16 +146,16 @@ block b1:
   print r26
   br b6
 block b2:
-  r27 = variant_tag r23 n44.n45
+  r27 = is_variant r23, t0, v0
   br_if r27, b3, b4
 block b3:
-  r28 = variant_field r23 0
+  r28 = variant_get r23, t0, v0, 0
   init_global g6, r28
   r29 = constant c14
   print r29
   br b6
 block b4:
-  r30 = variant_tag r23 n47.n48
+  r30 = is_variant r23, t0, v1
   br_if r30, b5, b6
 block b5:
   r31 = constant c15
@@ -149,16 +163,16 @@ block b5:
   br b6
 block b6:
   r32 = load_global g5
-  r33 = variant_tag r32 n50.n51
+  r33 = is_variant r32, t0, v0
   br_if r33, b7, b8
 block b7:
-  r34 = variant_field r32 0
+  r34 = variant_get r32, t0, v0, 0
   init_global g7, r34
   r35 = load_global g7
   print r35
   return_nil
 block b8:
-  r36 = variant_tag r32 n54.n55
+  r36 = is_variant r32, t0, v1
   br_if r36, b9, b10
 block b9:
   r37 = constant c16
@@ -171,20 +185,20 @@ function f0 name="describe" arity=1 registers=10:
   param 0 = "value#1"
 block b0:
   r0 = load_local l0
-  r1 = variant_tag r0 n2.n3
+  r1 = is_variant r0, t0, v0
   br_if r1, b1, b3
 block b1:
-  r2 = variant_field r0 0
+  r2 = variant_get r0, t0, v0, 0
   bind_local l1, r2
   r3 = constant c1
   r4 = load_local l1
-  r5 = native_call n6 [r4]
+  r5 = native_call n8 [r4]
   r6 = add r3, r5
   return r6
 block b2:
   br b6
 block b3:
-  r7 = variant_tag r0 n7.n8
+  r7 = is_variant r0, t0, v1
   br_if r7, b4, b6
 block b4:
   r8 = constant c2
@@ -202,7 +216,7 @@ function f1 name="sum" arity=1 registers=12:
   upvalue u0 = global g1
 block b0:
   r0 = load_local l0
-  r1 = variant_tag r0 n12.n13
+  r1 = is_variant r0, t1, v0
   br_if r1, b1, b3
 block b1:
   r2 = constant c5
@@ -210,11 +224,11 @@ block b1:
 block b2:
   br b6
 block b3:
-  r3 = variant_tag r0 n14.n15
+  r3 = is_variant r0, t1, v1
   br_if r3, b4, b6
 block b4:
-  r4 = variant_field r0 0
-  r5 = variant_field r0 1
+  r4 = variant_get r0, t1, v1, 0
+  r5 = variant_get r0, t1, v1, 1
   bind_local l1, r4
   bind_local l2, r5
   r6 = load_local l1

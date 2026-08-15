@@ -27,40 +27,51 @@ names:
   n1 = "value#1"
   n2 = "Option"
   n3 = "Some"
-  n4 = "value#2"
-  n5 = "value#2"
-  n6 = "Option"
-  n7 = "Some"
-  n8 = "value#3"
-  n9 = "value#3"
-  n10 = "str"
-  n11 = "Option"
-  n12 = "None"
-  n13 = "describe#0"
-  n14 = "Option"
-  n15 = "Some"
-  n16 = "some#4"
-  n17 = "none#5"
-  n18 = "describe#0"
-  n19 = "some#4"
-  n20 = "describe#0"
+  n4 = "Option"
+  n5 = "Some"
+  n6 = "value#2"
+  n7 = "value#2"
+  n8 = "Option"
+  n9 = "Some"
+  n10 = "Option"
+  n11 = "Some"
+  n12 = "value#3"
+  n13 = "value#3"
+  n14 = "str"
+  n15 = "Option"
+  n16 = "None"
+  n17 = "describe#0"
+  n18 = "Option"
+  n19 = "Some"
+  n20 = "some#4"
   n21 = "none#5"
-  n22 = "some#4"
-  n23 = "Option"
-  n24 = "Some"
-  n25 = "value#6"
-  n26 = "value#6"
+  n22 = "describe#0"
+  n23 = "some#4"
+  n24 = "describe#0"
+  n25 = "none#5"
+  n26 = "some#4"
   n27 = "Option"
   n28 = "Some"
   n29 = "Option"
-  n30 = "None"
-  n31 = "none#5"
+  n30 = "Some"
+  n31 = "value#6"
+  n32 = "value#6"
+  n33 = "Option"
+  n34 = "Some"
+  n35 = "Option"
+  n36 = "Some"
+  n37 = "Option"
+  n38 = "None"
+  n39 = "none#5"
 
 globals:
   g0 = n0
-  g1 = n16
-  g2 = n17
-  g3 = n25
+  g1 = n20
+  g2 = n21
+  g3 = n31
+
+types:
+  t0 = enum "Option" v0="Some" payload=1 v1="None" payload=0
 
 main registers=32:
 block b0:
@@ -69,7 +80,7 @@ block b0:
   r1 = make_function f0
   set_global g0, r1
   r2 = constant c8
-  r3 = variant n14.n15 [r2]
+  r3 = make_variant t0, v0 [r2]
   init_global g1, r3
   r4 = constant c9
   init_global g2, r4
@@ -90,10 +101,10 @@ block b1:
   print r14
   br b9
 block b2:
-  r15 = variant_tag r11 n23.n24
+  r15 = is_variant r11, t0, v0
   br_if r15, b3, b5
 block b3:
-  r16 = variant_field r11 0
+  r16 = variant_get r11, t0, v0, 0
   init_global g3, r16
   r17 = load_global g3
   r18 = constant c12
@@ -104,15 +115,15 @@ block b4:
   print r20
   br b9
 block b5:
-  r21 = variant_tag r11 n27.n28
+  r21 = is_variant r11, t0, v0
   br_if r21, b6, b7
 block b6:
-  r22 = variant_field r11 0
+  r22 = variant_get r11, t0, v0, 0
   r23 = constant c14
   print r23
   br b9
 block b7:
-  r24 = variant_tag r11 n29.n30
+  r24 = is_variant r11, t0, v1
   br_if r24, b8, b9
 block b8:
   r25 = constant c15
@@ -150,10 +161,10 @@ block b1:
 block b2:
   br b13
 block b3:
-  r4 = variant_tag r0 n2.n3
+  r4 = is_variant r0, t0, v0
   br_if r4, b4, b7
 block b4:
-  r5 = variant_field r0 0
+  r5 = variant_get r0, t0, v0, 0
   bind_local l1, r5
   r6 = load_local l1
   r7 = constant c3
@@ -165,20 +176,20 @@ block b5:
 block b6:
   br b13
 block b7:
-  r10 = variant_tag r0 n6.n7
+  r10 = is_variant r0, t0, v0
   br_if r10, b8, b10
 block b8:
-  r11 = variant_field r0 0
+  r11 = variant_get r0, t0, v0, 0
   bind_local l2, r11
   r12 = constant c5
   r13 = load_local l2
-  r14 = native_call n10 [r13]
+  r14 = native_call n14 [r13]
   r15 = add r12, r14
   return r15
 block b9:
   br b13
 block b10:
-  r16 = variant_tag r0 n11.n12
+  r16 = is_variant r0, t0, v1
   br_if r16, b11, b13
 block b11:
   r17 = constant c6

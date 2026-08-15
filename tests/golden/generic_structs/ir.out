@@ -17,25 +17,25 @@ IR
 0015  v10 = load_var @15 inferred#0
 0016  v11 = constant #5 5
 0017  v12 = assign_field v10.value, v11
-0018  v13 = load_var @17 inferred#0
+0018  v13 = load_var @18 inferred#0
 0019  v14 = field v13.value
 0020  print v14
-0021  v15 = load_var @19 explicit#1
+0021  v15 = load_var @21 explicit#1
 0022  v16 = field v15.value
 0023  print v16
-0024  v17 = load_var @21 annotated#2
+0024  v17 = load_var @24 annotated#2
 0025  v18 = field v17.value
 0026  print v18
-0027  v19 = load_var @23 textBox#3
+0027  v19 = load_var @27 textBox#3
 0028  v20 = field v19.value
 0029  print v20
-0030  v21 = load_var @25 bounded#4
+0030  v21 = load_var @30 bounded#4
 0031  v22 = field v21.value
 0032  print v22
-0033  v23 = load_var @27 explicit#1
-0034  v24 = native_call @28 typeOf(v23)
+0033  v23 = load_var @33 explicit#1
+0034  v24 = native_call @34 typeOf(v23)
 0035  print v24
-0036  v25 = load_var @29 explicit#1
+0036  v25 = load_var @35 explicit#1
 0037  v26 = field v25.value
 0038  v27 = constant #6 2
 0039  v28 = equal v26, v27

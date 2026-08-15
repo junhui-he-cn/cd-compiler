@@ -2,36 +2,36 @@ IR
 0000  v0 = constant #0 nil
 0001  store_var @0 describe#0, v0
 0002  v1 = make_function $0 describe/1
-0003  assign_var @15 describe#0, v1
+0003  assign_var @21 describe#0, v1
 0004  v2 = constant #9 "Ada"
 0005  v3 = constant #10 36
 0006  v4 = constant #11 "Cambridge"
 0007  v5 = constant #12 1
 0008  v6 = struct Address {city: v4, zip: v5}
 0009  v7 = struct Person {name: v2, age: v3, address: v6}
-0010  store_var @23 ada#5, v7
+0010  store_var @29 ada#5, v7
 0011  v8 = constant #13 "Grace"
 0012  v9 = constant #14 40
 0013  v10 = constant #15 "Hong Kong"
 0014  v11 = constant #16 2
 0015  v12 = struct Address {city: v10, zip: v11}
 0016  v13 = struct Person {name: v8, age: v9, address: v12}
-0017  store_var @31 hongKong#6, v13
+0017  store_var @37 hongKong#6, v13
 0018  v14 = constant #17 nil
-0019  store_var @32 nilPerson#7, v14
-0020  v15 = load_var @33 describe#0
-0021  v16 = load_var @34 ada#5
+0019  store_var @38 nilPerson#7, v14
+0020  v15 = load_var @39 describe#0
+0021  v16 = load_var @40 ada#5
 0022  v17 = call v15(v16)
 0023  print v17
-0024  v18 = load_var @35 describe#0
-0025  v19 = load_var @36 hongKong#6
+0024  v18 = load_var @41 describe#0
+0025  v19 = load_var @42 hongKong#6
 0026  v20 = call v18(v19)
 0027  print v20
-0028  v21 = load_var @37 describe#0
-0029  v22 = load_var @38 nilPerson#7
+0028  v21 = load_var @43 describe#0
+0029  v22 = load_var @44 nilPerson#7
 0030  v23 = call v21(v22)
 0031  print v23
-0032  v24 = load_var @39 ada#5
+0032  v24 = load_var @45 ada#5
 0033  v25 = field v24.name
 0034  v26 = constant #18 "Ada"
 0035  v27 = equal v25, v26
@@ -69,21 +69,21 @@ function $0 describe(value#1)
 0017  v11 = equal v9, v10
 0018  jump_if_false v11, 0026
 0019  v12 = field v0.name
-0020  store_var @6 name#2, v12
+0020  store_var @10 name#2, v12
 0021  v13 = constant #6 "city:"
-0022  v14 = load_var @7 name#2
+0022  v14 = load_var @11 name#2
 0023  v15 = add v13, v14
 0024  return v15
 0025  jump 0038
 0026  v16 = field v0.age
 0027  v17 = field v0.name
-0028  store_var @10 age#3, v16
-0029  store_var @11 name#4, v17
-0030  v18 = load_var @12 name#4
+0028  store_var @16 age#3, v16
+0029  store_var @17 name#4, v17
+0030  v18 = load_var @18 name#4
 0031  v19 = constant #7 ":"
 0032  v20 = add v18, v19
-0033  v21 = load_var @13 age#3
-0034  v22 = native_call @14 str(v21)
+0033  v21 = load_var @19 age#3
+0034  v22 = native_call @20 str(v21)
 0035  v23 = add v20, v22
 0036  return v23
 0037  jump 0038

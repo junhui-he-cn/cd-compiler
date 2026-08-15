@@ -1,6 +1,6 @@
 use crate::bytecode::{
     BlockId, Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, GlobalId,
-    Instruction, Program, UpvalueDesc, UpvalueSource,
+    Instruction, Program, TypeId, TypeLayout, UpvalueDesc, UpvalueSource,
 };
 use crate::format::{verify_module_artifact, verify_program, ModuleArtifact};
 use std::collections::{HashMap, HashSet};
@@ -121,6 +121,7 @@ struct ModuleContext {
     name_base: usize,
     function_base: usize,
     block_base: usize,
+    type_remap: Vec<u32>,
     global_remap: Vec<usize>,
     main_register_base: usize,
     source_base: usize,
@@ -143,6 +144,8 @@ struct Linker {
     debug_sources: Vec<DebugSource>,
     global_names: HashMap<String, usize>,
     linked_block_count: usize,
+    linked_types: Vec<TypeLayout>,
+    type_names: HashMap<String, u32>,
     pending_main: Vec<(usize, usize, Instruction, ModuleContext)>,
     block_ids: HashMap<(usize, u32), u32>,
     splice_redirects: HashMap<(usize, u32), u32>,
@@ -284,6 +287,8 @@ impl Linker {
             debug_sources: Vec::new(),
             global_names: HashMap::new(),
             linked_block_count: 0,
+            linked_types: Vec::new(),
+            type_names: HashMap::new(),
             pending_main: Vec::new(),
             block_ids: HashMap::new(),
             splice_redirects: HashMap::new(),
@@ -345,11 +350,25 @@ impl Linker {
                 error.to_string(),
             )
         })?;
+        let mut type_remap = Vec::with_capacity(module.program.types.len());
+        for layout in &module.program.types {
+            let linked = match self.type_names.get(&layout.name) {
+                Some(id) => *id,
+                None => {
+                    let id = self.linked_types.len() as u32;
+                    self.type_names.insert(layout.name.clone(), id);
+                    self.linked_types.push(layout.clone());
+                    id
+                }
+            };
+            type_remap.push(linked);
+        }
         let context = ModuleContext {
             constant_base,
             name_base,
             function_base: self.functions.len(),
             block_base,
+            type_remap,
             global_remap,
             main_register_base: self.main.registers,
             source_base,
@@ -562,6 +581,7 @@ impl Linker {
         let program = Program {
             constants: self.constants,
             globals: Vec::new(),
+            types: self.linked_types,
             names: self.names,
             functions,
             entry: FuncId(0),
@@ -608,6 +628,7 @@ mod tests {
         Program {
             constants: Vec::new(),
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -831,6 +852,19 @@ fn map_instruction(
         )
         .map(|index| FuncId(index as u32))
     };
+    let map_type = |value: TypeId| {
+        context
+            .type_remap
+            .get(value.0 as usize)
+            .copied()
+            .map(TypeId)
+            .ok_or_else(|| {
+                LinkError::new(
+                    LinkErrorKind::InvalidInstruction,
+                    format!("type t{} out of range", value.0),
+                )
+            })
+    };
     Ok(match instruction {
         Instruction::Constant {
             dest,
@@ -872,6 +906,42 @@ fn map_instruction(
                 .map(|(field, value)| Ok((name(*field)?, register(*value)?)))
                 .collect::<Result<Vec<_>, LinkError>>()?,
         },
+        Instruction::MakeStruct {
+            dest,
+            type_id,
+            elements,
+        } => Instruction::MakeStruct {
+            dest: register(*dest)?,
+            type_id: map_type(*type_id)?,
+            elements: elements
+                .iter()
+                .map(|value| register(*value))
+                .collect::<Result<Vec<_>, _>>()?,
+        },
+        Instruction::StructGet {
+            dest,
+            object,
+            type_id,
+            slot,
+        } => Instruction::StructGet {
+            dest: register(*dest)?,
+            object: register(*object)?,
+            type_id: map_type(*type_id)?,
+            slot: *slot,
+        },
+        Instruction::StructSet {
+            dest,
+            object,
+            type_id,
+            slot,
+            value,
+        } => Instruction::StructSet {
+            dest: register(*dest)?,
+            object: register(*object)?,
+            type_id: map_type(*type_id)?,
+            slot: *slot,
+            value: register(*value)?,
+        },
         Instruction::Variant {
             dest,
             enum_name,
@@ -885,6 +955,44 @@ fn map_instruction(
                 .iter()
                 .map(|value| register(*value))
                 .collect::<Result<Vec<_>, _>>()?,
+        },
+        Instruction::MakeVariant {
+            dest,
+            type_id,
+            variant_id,
+            payload,
+        } => Instruction::MakeVariant {
+            dest: register(*dest)?,
+            type_id: map_type(*type_id)?,
+            variant_id: *variant_id,
+            payload: payload
+                .iter()
+                .map(|value| register(*value))
+                .collect::<Result<Vec<_>, _>>()?,
+        },
+        Instruction::IsVariant {
+            dest,
+            value,
+            type_id,
+            variant_id,
+        } => Instruction::IsVariant {
+            dest: register(*dest)?,
+            value: register(*value)?,
+            type_id: map_type(*type_id)?,
+            variant_id: *variant_id,
+        },
+        Instruction::VariantGet {
+            dest,
+            value,
+            type_id,
+            variant_id,
+            index,
+        } => Instruction::VariantGet {
+            dest: register(*dest)?,
+            value: register(*value)?,
+            type_id: map_type(*type_id)?,
+            variant_id: *variant_id,
+            index: *index,
         },
         Instruction::VariantTag {
             dest,

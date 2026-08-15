@@ -29,7 +29,7 @@ main registers=80
 0027  b20 = native_call @12 contains [b17, b19]
 0028  print b20
 0029  b21 = constant #7 1
-0030  b22 = struct @13 Box { @14 value: b21}
+0030  b22 = make_struct t0 [b21]
 0031  init_global g3, b22
 0032  b23 = load_global g3
 0033  b24 = array [b23]
@@ -39,7 +39,7 @@ main registers=80
 0037  b27 = load_global g3
 0038  b28 = array [b27]
 0039  b29 = constant #8 1
-0040  b30 = struct @20 Box { @21 value: b29}
+0040  b30 = make_struct t0 [b29]
 0041  b31 = native_call @22 contains [b28, b30]
 0042  print b31
 0043  b32 = load_global g0

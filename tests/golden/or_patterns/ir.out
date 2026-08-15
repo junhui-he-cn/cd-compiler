@@ -6,33 +6,33 @@ IR
 0004  v2 = constant #6 nil
 0005  store_var @3 shapeLabel#2, v2
 0006  v3 = make_function $1 shapeLabel/1
-0007  assign_var @19 shapeLabel#2, v3
+0007  assign_var @31 shapeLabel#2, v3
 0008  v4 = constant #12 false
-0009  store_var @20 maybe#5, v4
-0010  v5 = load_var @21 numberLabel#0
+0009  store_var @32 maybe#5, v4
+0010  v5 = load_var @33 numberLabel#0
 0011  v6 = constant #13 1
 0012  v7 = call v5(v6)
 0013  print v7
-0014  v8 = load_var @22 numberLabel#0
+0014  v8 = load_var @34 numberLabel#0
 0015  v9 = constant #14 8
 0016  v10 = call v8(v9)
 0017  print v10
-0018  v11 = load_var @23 shapeLabel#2
+0018  v11 = load_var @35 shapeLabel#2
 0019  v12 = constant #15 3
 0020  v13 = variant Shape.Point (v12)
 0021  v14 = call v11(v13)
 0022  print v14
-0023  v15 = load_var @26 shapeLabel#2
+0023  v15 = load_var @38 shapeLabel#2
 0024  v16 = constant #16 4
 0025  v17 = constant #17 10
 0026  v18 = variant Shape.Line (v16, v17)
 0027  v19 = call v15(v18)
 0028  print v19
-0029  v20 = load_var @29 shapeLabel#2
+0029  v20 = load_var @41 shapeLabel#2
 0030  v21 = variant Shape.Empty ()
 0031  v22 = call v20(v21)
 0032  print v22
-0033  v23 = load_var @32 maybe#5
+0033  v23 = load_var @44 maybe#5
 0034  v24 = constant #18 nil
 0035  v25 = equal v23, v24
 0036  jump_if_false v25, 0038
@@ -91,14 +91,14 @@ function $1 shapeLabel(value#3)
 0008  v5 = variant_field v0[0]
 0009  v6 = variant_field v0[1]
 0010  v3 = copy v5
-0011  store_var @9 x#4, v3
-0012  v7 = load_var @10 x#4
+0011  store_var @15 x#4, v3
+0012  v7 = load_var @16 x#4
 0013  v8 = constant #7 3
 0014  v9 = greater v7, v8
 0015  jump_if_false v9, 0022
 0016  v10 = constant #8 "large:"
-0017  v11 = load_var @11 x#4
-0018  v12 = native_call @12 str(v11)
+0017  v11 = load_var @17 x#4
+0018  v12 = native_call @18 str(v11)
 0019  v13 = add v10, v12
 0020  return v13
 0021  jump 0038

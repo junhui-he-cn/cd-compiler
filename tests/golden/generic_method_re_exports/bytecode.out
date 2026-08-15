@@ -5,7 +5,7 @@ main registers=8
 0003  b1 = make_function $0 echo/2
 0004  set_global g0, b1
 0005  b2 = constant #2 0
-0006  b3 = struct @3 lib.Box { @4 value: b2}
+0006  b3 = make_struct t0 [b2]
 0007  init_global g1, b3
 0008  b4 = load_global g0
 0009  b5 = load_global g1

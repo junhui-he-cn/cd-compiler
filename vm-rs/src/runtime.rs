@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use crate::bytecode::{TypeId, VariantId};
 use crate::value::Value;
 use std::cell::{Cell as ScalarCell, RefCell};
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -51,12 +52,15 @@ pub struct RangeValue {
 #[derive(Clone, Debug)]
 pub struct StructValue {
     pub identity: usize,
+    pub type_id: Option<TypeId>,
     pub type_name: Option<String>,
     pub fields: SharedStructFields,
 }
 
 #[derive(Clone, Debug)]
 pub struct VariantValue {
+    pub type_id: TypeId,
+    pub variant_id: VariantId,
     pub enum_name: String,
     pub variant_name: String,
     pub fields: Vec<Value>,
@@ -839,6 +843,7 @@ impl Heap {
 
     pub fn allocate_struct(
         &mut self,
+        type_id: Option<TypeId>,
         type_name: Option<String>,
         fields: Vec<(String, Value)>,
     ) -> Result<Value, HeapError> {
@@ -852,6 +857,7 @@ impl Heap {
         );
         Ok(Value::structure(StructValue {
             identity,
+            type_id,
             type_name,
             fields,
         }))
@@ -859,11 +865,15 @@ impl Heap {
 
     pub fn allocate_variant(
         &self,
+        type_id: TypeId,
+        variant_id: VariantId,
         enum_name: String,
         variant_name: String,
         fields: Vec<Value>,
     ) -> Value {
         Value::variant(VariantValue {
+            type_id,
+            variant_id,
             enum_name,
             variant_name,
             fields,
@@ -955,7 +965,7 @@ mod tests {
             .allocate_map(vec![(Value::string("key"), Value::number(1.0))])
             .expect("map identity should be available");
         let structure = heap
-            .allocate_struct(None, vec![("value".to_string(), Value::number(1.0))])
+            .allocate_struct(None, None, vec![("value".to_string(), Value::number(1.0))])
             .expect("struct identity should be available");
 
         let live = stats.snapshot();

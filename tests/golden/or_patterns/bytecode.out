@@ -20,17 +20,17 @@ main registers=38
 0018  print b10
 0019  b11 = load_global g1
 0020  b12 = constant #15 3
-0021  b13 = variant @24 Shape. @25 Point (b12)
+0021  b13 = make_variant t0, v0 (b12)
 0022  b14 = call b11(b13)
 0023  print b14
 0024  b15 = load_global g1
 0025  b16 = constant #16 4
 0026  b17 = constant #17 10
-0027  b18 = variant @27 Shape. @28 Line (b16, b17)
+0027  b18 = make_variant t0, v1 (b16, b17)
 0028  b19 = call b15(b18)
 0029  print b19
 0030  b20 = load_global g1
-0031  b21 = variant @30 Shape. @31 Empty ()
+0031  b21 = make_variant t0, v2 ()
 0032  b22 = call b20(b21)
 0033  print b22
 0034  b23 = load_global g2
@@ -104,18 +104,18 @@ function $0 numberLabel/1 registers=8
 function $1 shapeLabel/1 registers=23
 0000  block
 0001  b0 = load_local l0
-0002  b1 = variant_tag b0  @5 Shape. @6 Point
+0002  b1 = is_variant b0, t0, v0
 0003  br_if b1, b1, b2
 0004  block
-0005  b2 = variant_field b0[0]
+0005  b2 = variant_get b0, t0, v0, 0
 0006  b3 = move b2
 0007  br b4
 0008  block
-0009  b4 = variant_tag b0  @7 Shape. @8 Line
+0009  b4 = is_variant b0, t0, v1
 0010  br_if b4, b3, b7
 0011  block
-0012  b5 = variant_field b0[0]
-0013  b6 = variant_field b0[1]
+0012  b5 = variant_get b0, t0, v1, 0
+0013  b6 = variant_get b0, t0, v1, 1
 0014  b3 = move b5
 0015  br b4
 0016  block
@@ -127,23 +127,23 @@ function $1 shapeLabel/1 registers=23
 0022  block
 0023  b10 = constant #8 "large:"
 0024  b11 = load_local l1
-0025  b12 = native_call @12 str [b11]
+0025  b12 = native_call @18 str [b11]
 0026  b13 = add b10, b12
 0027  return b13
 0028  block
 0029  br b16
 0030  block
-0031  b14 = variant_tag b0  @13 Shape. @14 Point
+0031  b14 = is_variant b0, t0, v0
 0032  br_if b14, b8, b9
 0033  block
-0034  b15 = variant_field b0[0]
+0034  b15 = variant_get b0, t0, v0, 0
 0035  br b11
 0036  block
-0037  b16 = variant_tag b0  @15 Shape. @16 Line
+0037  b16 = is_variant b0, t0, v1
 0038  br_if b16, b10, b13
 0039  block
-0040  b17 = variant_field b0[0]
-0041  b18 = variant_field b0[1]
+0040  b17 = variant_get b0, t0, v1, 0
+0041  b18 = variant_get b0, t0, v1, 1
 0042  br b11
 0043  block
 0044  b19 = constant #9 "small"
@@ -151,7 +151,7 @@ function $1 shapeLabel/1 registers=23
 0046  block
 0047  br b16
 0048  block
-0049  b20 = variant_tag b0  @17 Shape. @18 Empty
+0049  b20 = is_variant b0, t0, v2
 0050  br_if b20, b14, b16
 0051  block
 0052  b21 = constant #10 "empty"

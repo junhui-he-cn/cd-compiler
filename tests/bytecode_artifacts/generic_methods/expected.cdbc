@@ -44,6 +44,9 @@ globals:
   g2 = n8
   g3 = n12
 
+types:
+  t0 = struct "Box" field0="value"
+
 main registers=25:
 block b0:
   r0 = constant c0
@@ -59,7 +62,7 @@ block b0:
   r5 = make_function f2
   set_global g2, r5
   r6 = constant c8
-  r7 = struct n10 {n11: r6}
+  r7 = make_struct t0 [r6]
   init_global g3, r7
   r8 = load_global g0
   r9 = load_global g3

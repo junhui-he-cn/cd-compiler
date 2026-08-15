@@ -8,10 +8,13 @@ names:
   n1 = "value"
   n2 = "typeOf"
 
+types:
+  t0 = struct "Box" field0="value"
+
 main registers=3:
 block b0:
   r0 = constant c0
-  r1 = struct n0 {n1: r0}
+  r1 = make_struct t0 [r0]
   r2 = native_call n2 [r1]
   print r2
   return_nil

@@ -38,36 +38,51 @@ names:
   n5 = "Shape"
   n6 = "Point"
   n7 = "Shape"
-  n8 = "Line"
-  n9 = "x#4"
-  n10 = "x#4"
-  n11 = "x#4"
-  n12 = "str"
+  n8 = "Point"
+  n9 = "Shape"
+  n10 = "Line"
+  n11 = "Shape"
+  n12 = "Line"
   n13 = "Shape"
-  n14 = "Point"
-  n15 = "Shape"
-  n16 = "Line"
-  n17 = "Shape"
-  n18 = "Empty"
-  n19 = "shapeLabel#2"
-  n20 = "maybe#5"
-  n21 = "numberLabel#0"
-  n22 = "numberLabel#0"
-  n23 = "shapeLabel#2"
-  n24 = "Shape"
-  n25 = "Point"
-  n26 = "shapeLabel#2"
+  n14 = "Line"
+  n15 = "x#4"
+  n16 = "x#4"
+  n17 = "x#4"
+  n18 = "str"
+  n19 = "Shape"
+  n20 = "Point"
+  n21 = "Shape"
+  n22 = "Point"
+  n23 = "Shape"
+  n24 = "Line"
+  n25 = "Shape"
+  n26 = "Line"
   n27 = "Shape"
   n28 = "Line"
-  n29 = "shapeLabel#2"
-  n30 = "Shape"
-  n31 = "Empty"
+  n29 = "Shape"
+  n30 = "Empty"
+  n31 = "shapeLabel#2"
   n32 = "maybe#5"
+  n33 = "numberLabel#0"
+  n34 = "numberLabel#0"
+  n35 = "shapeLabel#2"
+  n36 = "Shape"
+  n37 = "Point"
+  n38 = "shapeLabel#2"
+  n39 = "Shape"
+  n40 = "Line"
+  n41 = "shapeLabel#2"
+  n42 = "Shape"
+  n43 = "Empty"
+  n44 = "maybe#5"
 
 globals:
   g0 = n0
   g1 = n3
-  g2 = n20
+  g2 = n32
+
+types:
+  t0 = enum "Shape" v0="Point" payload=1 v1="Line" payload=2 v2="Empty" payload=0
 
 main registers=38:
 block b0:
@@ -91,17 +106,17 @@ block b0:
   print r10
   r11 = load_global g1
   r12 = constant c15
-  r13 = variant n24.n25 [r12]
+  r13 = make_variant t0, v0 [r12]
   r14 = call r11 [r13]
   print r14
   r15 = load_global g1
   r16 = constant c16
   r17 = constant c17
-  r18 = variant n27.n28 [r16, r17]
+  r18 = make_variant t0, v1 [r16, r17]
   r19 = call r15 [r18]
   print r19
   r20 = load_global g1
-  r21 = variant n30.n31 []
+  r21 = make_variant t0, v2 []
   r22 = call r20 [r21]
   print r22
   r23 = load_global g2
@@ -177,18 +192,18 @@ function f1 name="shapeLabel" arity=1 registers=23:
   param 0 = "value#3"
 block b0:
   r0 = load_local l0
-  r1 = variant_tag r0 n5.n6
+  r1 = is_variant r0, t0, v0
   br_if r1, b1, b2
 block b1:
-  r2 = variant_field r0 0
+  r2 = variant_get r0, t0, v0, 0
   r3 = move r2
   br b4
 block b2:
-  r4 = variant_tag r0 n7.n8
+  r4 = is_variant r0, t0, v1
   br_if r4, b3, b7
 block b3:
-  r5 = variant_field r0 0
-  r6 = variant_field r0 1
+  r5 = variant_get r0, t0, v1, 0
+  r6 = variant_get r0, t0, v1, 1
   r3 = move r5
   br b4
 block b4:
@@ -200,23 +215,23 @@ block b4:
 block b5:
   r10 = constant c8
   r11 = load_local l1
-  r12 = native_call n12 [r11]
+  r12 = native_call n18 [r11]
   r13 = add r10, r12
   return r13
 block b6:
   br b16
 block b7:
-  r14 = variant_tag r0 n13.n14
+  r14 = is_variant r0, t0, v0
   br_if r14, b8, b9
 block b8:
-  r15 = variant_field r0 0
+  r15 = variant_get r0, t0, v0, 0
   br b11
 block b9:
-  r16 = variant_tag r0 n15.n16
+  r16 = is_variant r0, t0, v1
   br_if r16, b10, b13
 block b10:
-  r17 = variant_field r0 0
-  r18 = variant_field r0 1
+  r17 = variant_get r0, t0, v1, 0
+  r18 = variant_get r0, t0, v1, 1
   br b11
 block b11:
   r19 = constant c9
@@ -224,7 +239,7 @@ block b11:
 block b12:
   br b16
 block b13:
-  r20 = variant_tag r0 n17.n18
+  r20 = is_variant r0, t0, v2
   br_if r20, b14, b16
 block b14:
   r21 = constant c10

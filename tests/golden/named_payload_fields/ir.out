@@ -2,36 +2,36 @@ IR
 0000  v0 = constant #0 nil
 0001  store_var @0 pairScore#0, v0
 0002  v1 = make_function $0 pairScore/1
-0003  assign_var @10 pairScore#0, v1
+0003  assign_var @14 pairScore#0, v1
 0004  v2 = constant #4 nil
-0005  store_var @11 describe#4, v2
+0005  store_var @15 describe#4, v2
 0006  v3 = make_function $1 describe/1
-0007  assign_var @24 describe#4, v3
+0007  assign_var @32 describe#4, v3
 0008  v4 = constant #9 nil
-0009  store_var @25 unwrap#8, v4
+0009  store_var @33 unwrap#8, v4
 0010  v5 = make_function $2 unwrap/1
-0011  assign_var @44 unwrap#8, v5
-0012  v6 = load_var @45 pairScore#0
+0011  assign_var @62 unwrap#8, v5
+0012  v6 = load_var @63 pairScore#0
 0013  v7 = constant #12 2
 0014  v8 = constant #13 4
 0015  v9 = variant Pair.Values (v7, v8)
 0016  v10 = call v6(v9)
 0017  print v10
-0018  v11 = load_var @48 describe#4
+0018  v11 = load_var @66 describe#4
 0019  v12 = constant #14 7
 0020  v13 = variant Result.Ok (v12)
 0021  v14 = call v11(v13)
 0022  print v14
-0023  v15 = load_var @51 describe#4
+0023  v15 = load_var @69 describe#4
 0024  v16 = constant #15 "bad"
 0025  v17 = variant Result.Err (v16)
 0026  v18 = call v15(v17)
 0027  print v18
-0028  v19 = load_var @54 describe#4
+0028  v19 = load_var @72 describe#4
 0029  v20 = variant Result.Empty ()
 0030  v21 = call v19(v20)
 0031  print v21
-0032  v22 = load_var @57 unwrap#8
+0032  v22 = load_var @75 unwrap#8
 0033  v23 = constant #16 9
 0034  v24 = variant Result.Ok (v23)
 0035  v25 = variant Box.Wrap (v24)
@@ -44,12 +44,12 @@ function $0 pairScore(pair#1)
 0002  jump_if_false v1, 0014
 0003  v2 = variant_field v0[0]
 0004  v3 = variant_field v0[1]
-0005  store_var @4 leftValue#2, v2
-0006  store_var @5 rightValue#3, v3
-0007  v4 = load_var @6 rightValue#3
+0005  store_var @8 leftValue#2, v2
+0006  store_var @9 rightValue#3, v3
+0007  v4 = load_var @10 rightValue#3
 0008  v5 = constant #1 10
 0009  v6 = multiply v4, v5
-0010  v7 = load_var @7 leftValue#2
+0010  v7 = load_var @11 leftValue#2
 0011  v8 = add v6, v7
 0012  return v8
 0013  jump 0019
@@ -62,23 +62,23 @@ function $0 pairScore(pair#1)
 0020  return v11
 
 function $1 describe(result#5)
-0000  v0 = load_var @12 result#5
+0000  v0 = load_var @16 result#5
 0001  v1 = variant_tag v0 Result.Ok
 0002  jump_if_false v1, 0011
 0003  v2 = variant_field v0[0]
-0004  store_var @15 numberValue#6, v2
+0004  store_var @21 numberValue#6, v2
 0005  v3 = constant #5 "ok:"
-0006  v4 = load_var @16 numberValue#6
-0007  v5 = native_call @17 str(v4)
+0006  v4 = load_var @22 numberValue#6
+0007  v5 = native_call @23 str(v4)
 0008  v6 = add v3, v5
 0009  return v6
 0010  jump 0025
 0011  v7 = variant_tag v0 Result.Err
 0012  jump_if_false v7, 0020
 0013  v8 = variant_field v0[0]
-0014  store_var @20 text#7, v8
+0014  store_var @28 text#7, v8
 0015  v9 = constant #6 "err:"
-0016  v10 = load_var @21 text#7
+0016  v10 = load_var @29 text#7
 0017  v11 = add v9, v10
 0018  return v11
 0019  jump 0025
@@ -91,16 +91,16 @@ function $1 describe(result#5)
 0026  return v14
 
 function $2 unwrap(box#9)
-0000  v0 = load_var @26 box#9
+0000  v0 = load_var @34 box#9
 0001  v1 = variant_tag v0 Box.Wrap
 0002  jump_if_false v1, 0012
 0003  v2 = variant_field v0[0]
 0004  v3 = variant_tag v2 Result.Ok
 0005  jump_if_false v3, 0012
 0006  v4 = variant_field v2[0]
-0007  store_var @31 numberValue#10, v4
-0008  v5 = load_var @32 numberValue#10
-0009  v6 = native_call @33 str(v5)
+0007  store_var @43 numberValue#10, v4
+0008  v5 = load_var @44 numberValue#10
+0009  v6 = native_call @45 str(v5)
 0010  return v6
 0011  jump 0030
 0012  v7 = variant_tag v0 Box.Wrap
@@ -109,8 +109,8 @@ function $2 unwrap(box#9)
 0015  v9 = variant_tag v8 Result.Err
 0016  jump_if_false v9, 0022
 0017  v10 = variant_field v8[0]
-0018  store_var @38 text#11, v10
-0019  v11 = load_var @39 text#11
+0018  store_var @54 text#11, v10
+0019  v11 = load_var @55 text#11
 0020  return v11
 0021  jump 0030
 0022  v12 = variant_tag v0 Box.Wrap

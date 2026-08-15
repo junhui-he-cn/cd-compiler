@@ -154,42 +154,45 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
         }
         out << "]";
         break;
-    case BytecodeOp::Struct:
-        if (instruction.arguments.size() != instruction.operands.size()) {
-            throw std::runtime_error("struct expects matching field names and values");
-        }
-        out << reg(requireDest(instruction)) << " = struct";
-        if (instruction.typeNameOperand) {
-            out << ' ' << nameRef(*instruction.typeNameOperand);
-        }
-        out << " {";
-        for (std::size_t i = 0; i < instruction.arguments.size(); ++i) {
-            if (i != 0) {
-                out << ", ";
-            }
-            out << nameRef(instruction.operands[i]) << ": " << reg(instruction.arguments[i]);
-        }
-        out << "}";
-        break;
-    case BytecodeOp::Variant:
-        out << reg(requireDest(instruction)) << " = variant ";
-        if (!instruction.typeNameOperand || !instruction.variantNameOperand) {
-            throw std::runtime_error("variant missing enum or variant name");
-        }
-        out << nameRef(*instruction.typeNameOperand) << "." << nameRef(*instruction.variantNameOperand) << " ";
+    case BytecodeOp::MakeStruct:
+        out << reg(requireDest(instruction)) << " = make_struct t" << instruction.operand << " ";
         writeRegisterList(out, instruction.arguments);
         break;
-    case BytecodeOp::VariantTag:
-        out << reg(requireDest(instruction)) << " = variant_tag "
-            << reg(requireLeft(instruction)) << " ";
-        if (!instruction.typeNameOperand || !instruction.variantNameOperand) {
-            throw std::runtime_error("variant_tag missing enum or variant name");
-        }
-        out << nameRef(*instruction.typeNameOperand) << "." << nameRef(*instruction.variantNameOperand);
+    case BytecodeOp::Field:
+        out << reg(requireDest(instruction)) << " = field "
+            << reg(requireLeft(instruction)) << ", " << nameRef(instruction.operand);
         break;
-    case BytecodeOp::VariantField:
-        out << reg(requireDest(instruction)) << " = variant_field "
-            << reg(requireLeft(instruction)) << " " << instruction.operand;
+    case BytecodeOp::AssignField:
+        out << reg(requireDest(instruction)) << " = assign_field "
+            << reg(requireLeft(instruction)) << ", " << nameRef(instruction.operand)
+            << ", " << reg(instruction.arguments.empty() ? BytecodeRegister{0} : instruction.arguments.front());
+        break;
+    case BytecodeOp::StructGet:
+        out << reg(requireDest(instruction)) << " = struct_get "
+            << reg(requireLeft(instruction)) << ", t" << instruction.operand
+            << ", " << (instruction.operands.empty() ? 0 : instruction.operands.front());
+        break;
+    case BytecodeOp::StructSet:
+        out << reg(requireDest(instruction)) << " = struct_set "
+            << reg(requireLeft(instruction)) << ", t" << instruction.operand
+            << ", " << (instruction.operands.empty() ? 0 : instruction.operands.front())
+            << ", " << reg(instruction.arguments.empty() ? BytecodeRegister{0} : instruction.arguments.front());
+        break;
+    case BytecodeOp::MakeVariant:
+        out << reg(requireDest(instruction)) << " = make_variant t" << instruction.operand
+            << ", v" << instruction.variantNameOperand.value_or(0) << " ";
+        writeRegisterList(out, instruction.arguments);
+        break;
+    case BytecodeOp::IsVariant:
+        out << reg(requireDest(instruction)) << " = is_variant "
+            << reg(requireLeft(instruction)) << ", t" << instruction.operand
+            << ", v" << instruction.variantNameOperand.value_or(0);
+        break;
+    case BytecodeOp::VariantGet:
+        out << reg(requireDest(instruction)) << " = variant_get "
+            << reg(requireLeft(instruction)) << ", t" << instruction.typeNameOperand.value_or(0)
+            << ", v" << instruction.variantNameOperand.value_or(0)
+            << ", " << instruction.operand;
         break;
     case BytecodeOp::Move:
         out << reg(requireDest(instruction)) << " = move " << reg(requireLeft(instruction));
@@ -243,16 +246,6 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
             throw std::runtime_error("assign_index expects one value operand");
         }
         out << reg(requireDest(instruction)) << " = assign_index " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction)) << ", " << reg(instruction.arguments.front());
-        break;
-    case BytecodeOp::Field:
-        out << reg(requireDest(instruction)) << " = field " << reg(requireLeft(instruction)) << ", " << nameRef(instruction.operand);
-        break;
-    case BytecodeOp::AssignField:
-        if (instruction.arguments.size() != 1) {
-            throw std::runtime_error("assign_field expects one value operand");
-        }
-        out << reg(requireDest(instruction)) << " = assign_field " << reg(requireLeft(instruction)) << ", "
-            << nameRef(instruction.operand) << ", " << reg(instruction.arguments.front());
         break;
     case BytecodeOp::Len:
         out << reg(requireDest(instruction)) << " = len " << reg(requireLeft(instruction));
@@ -411,6 +404,26 @@ void writeBytecodeSections(
         out << "\nglobals:\n";
         for (std::size_t i = 0; i < program.globals().size(); ++i) {
             out << "  g" << i << " = " << nameRef(program.globals()[i]) << '\n';
+        }
+    }
+
+    if (!program.types().empty()) {
+        out << "\ntypes:\n";
+        for (std::size_t index = 0; index < program.types().size(); ++index) {
+            const BytecodeType& type = program.types()[index];
+            out << "  t" << index << " = " << (type.isEnum ? "enum " : "struct ")
+                << escapedString(type.name);
+            if (type.isEnum) {
+                for (std::size_t variant = 0; variant < type.variants.size(); ++variant) {
+                    out << " v" << variant << "=" << escapedString(type.variants[variant].name)
+                        << " payload=" << type.variants[variant].payloadCount;
+                }
+            } else {
+                for (std::size_t field = 0; field < type.fieldNames.size(); ++field) {
+                    out << " field" << field << "=" << escapedString(type.fieldNames[field]);
+                }
+            }
+            out << '\n';
         }
     }
 

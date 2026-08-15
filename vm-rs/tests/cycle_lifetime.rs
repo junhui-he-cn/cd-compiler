@@ -1,4 +1,6 @@
-use compiler_design_vm::bytecode::{Constant, FuncId, Function, Instruction, Program};
+use compiler_design_vm::bytecode::{
+    Constant, FuncId, Function, Instruction, Program, TypeId, VariantId,
+};
 use compiler_design_vm::runtime::{Heap, HeapObjectKind, VariantValue};
 use compiler_design_vm::value::Value;
 use compiler_design_vm::{CancellationToken, DebugControl, DebugHook, DebugPause, RunConfig, VM};
@@ -8,6 +10,7 @@ fn self_array_program() -> Program {
     Program {
         constants: Vec::new(),
         globals: Vec::new(),
+        types: Vec::new(),
         names: vec!["push".to_string()],
         functions: vec![Function {
             id: FuncId(0),
@@ -40,6 +43,7 @@ fn callback_cycle_program() -> Program {
     Program {
         constants: vec![Constant::Number("1".to_string())],
         globals: Vec::new(),
+        types: Vec::new(),
         names: vec!["map".to_string(), "push".to_string()],
         functions: vec![Function {
             id: FuncId(0),
@@ -102,6 +106,7 @@ fn nested_cycle_program() -> Program {
     Program {
         constants: Vec::new(),
         globals: Vec::new(),
+        types: Vec::new(),
         names: vec!["push".to_string()],
         functions: vec![Function {
             id: FuncId(0),
@@ -179,6 +184,7 @@ fn cycle_until_pause_program() -> Program {
     Program {
         constants: Vec::new(),
         globals: Vec::new(),
+        types: Vec::new(),
         names: vec!["push".to_string()],
         functions: vec![Function {
             id: FuncId(0),
@@ -266,7 +272,7 @@ fn cycle_storage_is_observed_after_roots_are_dropped_and_released_after_replacem
     };
 
     let self_struct = heap
-        .allocate_struct(Some("SelfNode".to_string()), vec![("next".to_string(), Value::Nil)])
+        .allocate_struct(None, Some("SelfNode".to_string()), vec![("next".to_string(), Value::Nil)])
         .expect("self struct identity should be available");
     let self_struct_weak = match &self_struct {
         Value::Struct(value) => {
@@ -277,10 +283,10 @@ fn cycle_storage_is_observed_after_roots_are_dropped_and_released_after_replacem
     };
 
     let first = heap
-        .allocate_struct(Some("Node".to_string()), vec![("next".to_string(), Value::Nil)])
+        .allocate_struct(None, Some("Node".to_string()), vec![("next".to_string(), Value::Nil)])
         .expect("first mutual struct identity should be available");
     let second = heap
-        .allocate_struct(
+        .allocate_struct(None, 
             Some("Node".to_string()),
             vec![("next".to_string(), first.clone())],
         )
@@ -380,6 +386,8 @@ fn recursive_variant_payload_edges_are_traced_without_moving_the_array() {
     let array_weak = match &array {
         Value::Array(value) => {
             let variant = Value::variant(VariantValue {
+                type_id: TypeId(0),
+                variant_id: VariantId(0),
                 enum_name: "Loop".to_string(),
                 variant_name: "Node".to_string(),
                 fields: vec![array.clone()],

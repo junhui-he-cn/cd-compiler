@@ -2,7 +2,7 @@
 
 use crate::bytecode::{
     Constant, DebugLocation, DebugRange, DebugSource, Function, Instruction, Program,
-    UpvalueSource,
+    TypeId, UpvalueSource, VariantId,
 };
 #[cfg(test)]
 use crate::bytecode::FuncId;
@@ -1224,6 +1224,7 @@ mod tests {
         Program {
             constants: Vec::new(),
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1251,6 +1252,7 @@ mod tests {
                 Constant::String("b".to_string()),
             ],
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1343,6 +1345,7 @@ mod tests {
         Program {
             constants: vec![Constant::Number("7".to_string())],
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1368,6 +1371,7 @@ mod tests {
         Program {
             constants: vec![Constant::Number("42".to_string())],
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1412,6 +1416,7 @@ mod tests {
         Program {
             constants,
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1459,6 +1464,7 @@ mod tests {
         Program {
             constants: vec![Constant::Number("1".to_string())],
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1483,6 +1489,7 @@ mod tests {
         Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
             globals: Vec::new(),
+            types: Vec::new(),
             names: vec!["map".to_string(), "item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -1533,6 +1540,7 @@ mod tests {
         Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
             globals: Vec::new(),
+            types: Vec::new(),
             names: vec!["map".to_string(), "item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -1602,6 +1610,7 @@ mod tests {
         Program {
             constants: vec![Constant::Nil, Constant::Number("0".to_string())],
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1642,6 +1651,7 @@ mod tests {
                 Constant::Number("0".to_string()),
             ],
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1731,6 +1741,7 @@ mod tests {
                 Constant::Number("4".to_string()),
             ],
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -2811,6 +2822,7 @@ mod tests {
         Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("0".to_string())],
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -2867,6 +2879,7 @@ mod tests {
                 Constant::Number("1".to_string()),
             ],
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -2912,6 +2925,7 @@ mod tests {
         Program {
             constants: Vec::new(),
             globals: Vec::new(),
+            types: Vec::new(),
             names: vec!["push".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -2976,6 +2990,7 @@ mod tests {
                 Constant::Number(depth.to_string()),
             ],
             globals: Vec::new(),
+            types: Vec::new(),
             names: vec!["n".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -3077,6 +3092,7 @@ mod tests {
             constants: vec![Constant::Number("1".to_string())],
             names: Vec::new(),
             globals: Vec::new(),
+            types: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
                 name: "main".to_string(),
@@ -3352,6 +3368,7 @@ mod tests {
         let structure = vm
             .heap
             .allocate_struct(
+                None,
                 Some("Workload".to_string()),
                 vec![
                     ("array".to_string(), array.clone()),
@@ -3475,6 +3492,7 @@ mod tests {
         let program = Program {
             constants: Vec::new(),
             globals: Vec::new(),
+            types: Vec::new(),
             names: vec!["item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -3531,6 +3549,7 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Number("10".to_string())],
             globals: Vec::new(),
+            types: Vec::new(),
             names: vec!["item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -3635,6 +3654,7 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Number("1".to_string())],
             globals: Vec::new(),
+            types: Vec::new(),
             names: vec!["item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -3697,6 +3717,7 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Nil],
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -3794,6 +3815,7 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Number("2".to_string())],
             globals: Vec::new(),
+            types: Vec::new(),
             names: vec!["item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -3900,6 +3922,7 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Nil],
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -3997,6 +4020,7 @@ mod tests {
         let program = Program {
             constants: Vec::new(),
             globals: Vec::new(),
+            types: Vec::new(),
             names: vec!["acc".to_string(), "item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -4064,6 +4088,7 @@ mod tests {
         let program = Program {
             constants: Vec::new(),
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -4196,6 +4221,7 @@ mod tests {
                 Constant::Number("2".to_string()),
             ],
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -4662,6 +4688,7 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Nil],
             globals: Vec::new(),
+            types: Vec::new(),
             names: vec!["sqrt".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -4778,6 +4805,7 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Number("1".to_string())],
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -4809,6 +4837,7 @@ mod tests {
                 constants: vec![Constant::Number("1".to_string())],
                 names: Vec::new(),
                 globals: Vec::new(),
+                types: Vec::new(),
                 functions: vec![Function {
                     id: FuncId(0),
                     name: "main".to_string(),
@@ -4856,6 +4885,7 @@ mod tests {
         let program = Program {
             constants: Vec::new(),
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -4892,6 +4922,7 @@ mod tests {
         let program = Program {
             constants: Vec::new(),
             globals: Vec::new(),
+            types: Vec::new(),
             names: vec!["item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -4943,6 +4974,7 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Nil],
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -4977,6 +5009,7 @@ mod tests {
         let program = Program {
             constants: vec![Constant::String("é".to_string())],
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -5267,6 +5300,7 @@ mod tests {
                 Constant::Number("1".to_string()),
             ],
             globals: Vec::new(),
+            types: Vec::new(),
             names: vec!["value".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -5464,6 +5498,7 @@ mod tests {
         let program = Program {
             constants: Vec::new(),
             globals: Vec::new(),
+            types: Vec::new(),
             names: vec!["left".to_string(), "right".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -5548,6 +5583,7 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -5618,6 +5654,7 @@ mod tests {
         let program = Program {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("0".to_string())],
             globals: Vec::new(),
+            types: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -5696,6 +5733,7 @@ mod tests {
                 Constant::String("right".to_string()),
             ],
             globals: Vec::new(),
+            types: Vec::new(),
             names: vec!["value".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -8352,7 +8390,69 @@ impl<'a> VM<'a> {
                 fields,
             } => {
                 let type_name = type_name.map(|index| self.read_name(index)).transpose()?;
-                let value = self.make_struct(frame, type_name, fields)?;
+                let value = self.make_struct(frame, None, type_name, fields)?;
+                self.write_register(frame, *dest, value)
+            }
+            Instruction::MakeStruct {
+                dest,
+                type_id,
+                elements,
+            } => {
+                let layout = self.program.types.get(type_id.0 as usize).ok_or_else(|| {
+                    RuntimeError::new(format!("type t{} out of range", type_id.0))
+                })?;
+                let type_name = Some(layout.name.clone());
+                let mut fields = Vec::with_capacity(elements.len());
+                for (slot, register) in elements.iter().enumerate() {
+                    let name = layout
+                        .field_names
+                        .get(slot)
+                        .cloned()
+                        .unwrap_or_else(|| format!("f{slot}"));
+                    fields.push((name, self.read_register(frame, *register)?));
+                }
+                self.charge_runtime_elements(1usize.saturating_add(fields.len()))?;
+                let value = self
+                    .heap
+                    .allocate_struct(Some(*type_id), type_name, fields)
+                    .map_err(|error| RuntimeError::new(error.to_string()))?;
+                self.write_register(frame, *dest, value)
+            }
+            Instruction::StructGet {
+                dest,
+                object,
+                type_id,
+                slot,
+            } => {
+                let object = self.read_register(frame, *object)?;
+                let Value::Struct(struct_value) = object else {
+                    return Err(RuntimeError::new("can only access fields on structs"));
+                };
+                let fields = struct_value.fields.borrow();
+                let (_, value) = fields.get(*slot).ok_or_else(|| {
+                    RuntimeError::new(format!("struct field slot {} out of range", slot))
+                })?;
+                let _ = type_id;
+                self.write_register(frame, *dest, value.clone())
+            }
+            Instruction::StructSet {
+                dest,
+                object,
+                type_id,
+                slot,
+                value,
+            } => {
+                let object = self.read_register(frame, *object)?;
+                let value = self.read_register(frame, *value)?;
+                let Value::Struct(struct_value) = object else {
+                    return Err(RuntimeError::new("can only assign fields on structs"));
+                };
+                let mut fields = struct_value.fields.borrow_mut();
+                let (_, existing) = fields.get_mut(*slot).ok_or_else(|| {
+                    RuntimeError::new(format!("struct field slot {} out of range", slot))
+                })?;
+                let _ = type_id;
+                *existing = value.clone();
                 self.write_register(frame, *dest, value)
             }
             Instruction::Variant {
@@ -8367,8 +8467,69 @@ impl<'a> VM<'a> {
                 for register in payload {
                     fields.push(self.read_register(frame, *register)?);
                 }
-                let value = self.allocate_variant(enum_name, variant_name, fields)?;
+                let value = self.allocate_variant(
+                    TypeId(0), VariantId(0), enum_name, variant_name, fields)?;
                 self.write_register(frame, *dest, value)
+            }
+            Instruction::MakeVariant {
+                dest,
+                type_id,
+                variant_id,
+                payload,
+            } => {
+                let layout = self.program.types.get(type_id.0 as usize).ok_or_else(|| {
+                    RuntimeError::new(format!("type t{} out of range", type_id.0))
+                })?;
+                let variant = layout.variants.get(variant_id.0 as usize).ok_or_else(|| {
+                    RuntimeError::new(format!("variant v{} out of range", variant_id.0))
+                })?;
+                let mut fields = Vec::with_capacity(payload.len());
+                for register in payload {
+                    fields.push(self.read_register(frame, *register)?);
+                }
+                let value = self.allocate_variant(
+                    *type_id,
+                    *variant_id,
+                    layout.name.clone(),
+                    variant.name.clone(),
+                    fields,
+                )?;
+                self.write_register(frame, *dest, value)
+            }
+            Instruction::IsVariant {
+                dest,
+                value,
+                type_id,
+                variant_id,
+            } => {
+                let input = self.read_register_ref(frame, *value)?;
+                let matched = matches!(
+                    input,
+                    Value::Variant(variant)
+                        if variant.type_id == *type_id && variant.variant_id == *variant_id
+                );
+                self.write_register(frame, *dest, Value::boolean(matched))
+            }
+            Instruction::VariantGet {
+                dest,
+                value,
+                type_id,
+                variant_id,
+                index,
+            } => {
+                let input = self.read_register_ref(frame, *value)?;
+                let Value::Variant(variant) = input else {
+                    return Err(RuntimeError::new("can only access fields on enum variants"));
+                };
+                if variant.type_id != *type_id || variant.variant_id != *variant_id {
+                    return Err(RuntimeError::new("enum variant identity mismatch"));
+                }
+                let field = variant
+                    .fields
+                    .get(*index)
+                    .cloned()
+                    .ok_or_else(|| RuntimeError::new("enum variant field index out of bounds"))?;
+                self.write_register(frame, *dest, field)
             }
             Instruction::VariantTag {
                 dest,
@@ -9870,17 +10031,20 @@ impl<'a> VM<'a> {
 
     fn allocate_variant(
         &mut self,
+        type_id: TypeId,
+        variant_id: VariantId,
         enum_name: String,
         variant_name: String,
         fields: Vec<Value>,
     ) -> Result<Value, RuntimeError> {
         self.charge_runtime_elements(1usize.saturating_add(fields.len()))?;
-        Ok(self.heap.allocate_variant(enum_name, variant_name, fields))
+        Ok(self.heap.allocate_variant(type_id, variant_id, enum_name, variant_name, fields))
     }
 
     fn make_struct(
         &mut self,
         frame: &Frame,
+        type_id: Option<TypeId>,
         type_name: Option<String>,
         fields: &[(usize, usize)],
     ) -> Result<Value, RuntimeError> {
@@ -9893,7 +10057,7 @@ impl<'a> VM<'a> {
         }
         self.charge_runtime_elements(1usize.saturating_add(values.len()))?;
         self.heap
-            .allocate_struct(type_name, values)
+            .allocate_struct(type_id, type_name, values)
             .map_err(|error| RuntimeError::new(error.to_string()))
     }
 

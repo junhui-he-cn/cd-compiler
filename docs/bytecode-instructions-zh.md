@@ -183,6 +183,14 @@ definite-binding（参数默认已绑定，`load_local/set_local` 需要前置
 `bind_local`）、`upvalue uN = global gM` 来源越界、native 调用 arity、以及
 block 体内出现旧 `jump/jump_if_*` 的混用。
 
+`types:` 区段（在 `names:`/`globals:` 之后、`main` 之前）给出运行时类型布局：
+`tN = struct "Name" field0="f" field1="g"` 或
+`tN = enum "Name" v0="A" payload=1 v1="B" payload=0`。字段/变体名仅用于 debug、
+dump 与值显示；身份与访问全部使用数值 slot：
+`make_struct tN` / `struct_get rO, tN, slot` / `struct_set rO, tN, slot, rV` /
+`make_variant tN, vN` / `is_variant rV, tN, vN` / `variant_get rV, tN, vN, idx`。
+verifier 校验 type/variant id、field slot 与 payload 下标范围。
+
 ### 4.1 常量与构造
 
 #### constant
