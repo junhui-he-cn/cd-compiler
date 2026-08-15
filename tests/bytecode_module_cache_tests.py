@@ -580,7 +580,7 @@ def run_strict_cache_matrix(compiler: Path) -> None:
             raise AssertionError("strict dependency-hash case has no dependency interface field")
         key_input = (
             "module-cache-key-v1"
-            + f"artifact:{len('cdbc 0.1')}:cdbc 0.1"
+            + f"artifact:{len('cdbc 0.2')}:cdbc 0.2"
             + f"identity:{len(middle_identity)}:{middle_identity}"
             + f"source:{len(middle_source_hash)}:{middle_source_hash}"
             + f"interface:{len(middle_interface_hash)}:{middle_interface_hash}"

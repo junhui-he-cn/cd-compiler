@@ -1,5 +1,5 @@
 use compiler_design_vm::bytecode::{
-    Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, Instruction,
+    Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, Instruction, NativeId,
 };
 use compiler_design_vm::{
     format_artifact, link_modules_checked, link_modules_with_report, parse_artifact,
@@ -19,7 +19,10 @@ fn print_program() -> Program {
         constants: vec![Constant::Number("7".to_string())],
         globals: Vec::new(),
         types: Vec::new(),
-        native_imports: Vec::new(),
+        native_imports: vec![compiler_design_vm::bytecode::NativeImport {
+            name: "print".to_string(),
+            abi: 1,
+        }],
         modules: Vec::new(),
         names: Vec::new(),
         functions: vec![Function {
@@ -29,15 +32,23 @@ fn print_program() -> Program {
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),
-            registers: 1,
+            registers: 2,
             instructions: vec![
+                Instruction::BlockStart {
+                    id: compiler_design_vm::bytecode::BlockId(0),
+                },
                 Instruction::Constant {
                     dest: 0,
                     constant: 0,
                 },
-                Instruction::Print { value: 0 },
+                Instruction::CallNative {
+                    dest: 1,
+                    native: NativeId(0),
+                    arguments: vec![0],
+                },
+                Instruction::ReturnNil,
             ],
-            locations: vec![None, None],
+            locations: vec![None; 4],
         }],
         entry: FuncId(0),
         debug_sources: Vec::new(),
@@ -49,7 +60,10 @@ fn cooperative_program() -> Program {
         constants: vec![Constant::Number("7".to_string()), Constant::Number("8".to_string())],
         globals: Vec::new(),
         types: Vec::new(),
-        native_imports: Vec::new(),
+        native_imports: vec![compiler_design_vm::bytecode::NativeImport {
+            name: "print".to_string(),
+            abi: 1,
+        }],
         modules: Vec::new(),
         names: Vec::new(),
         functions: vec![Function {
@@ -69,7 +83,7 @@ fn cooperative_program() -> Program {
                 upvalues: Vec::new(),
                 name: "target".to_string(),
                 arity: 0,
-                registers: 1,
+                registers: 2,
                 params: Vec::new(),
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
@@ -105,7 +119,10 @@ fn cooperative_output_program() -> Program {
         ],
         globals: Vec::new(),
         types: Vec::new(),
-        native_imports: Vec::new(),
+        native_imports: vec![compiler_design_vm::bytecode::NativeImport {
+            name: "print".to_string(),
+            abi: 1,
+        }],
         modules: Vec::new(),
         names: Vec::new(),
         functions: vec![Function {
@@ -125,14 +142,18 @@ fn cooperative_output_program() -> Program {
                 upvalues: Vec::new(),
                 name: "first".to_string(),
                 arity: 0,
-                registers: 1,
+                registers: 2,
                 params: Vec::new(),
                 instructions: vec![
                     Instruction::Constant {
                         dest: 0,
                         constant: 0,
                     },
-                    Instruction::Print { value: 0 },
+                    Instruction::CallNative {
+                        dest: 1,
+                        native: NativeId(0),
+                        arguments: vec![0],
+                    },
                     Instruction::Return { value: 0 },
                 ],
                 locations: vec![None; 3],
@@ -143,14 +164,18 @@ fn cooperative_output_program() -> Program {
                 upvalues: Vec::new(),
                 name: "second".to_string(),
                 arity: 0,
-                registers: 1,
+                registers: 2,
                 params: Vec::new(),
                 instructions: vec![
                     Instruction::Constant {
                         dest: 0,
                         constant: 1,
                     },
-                    Instruction::Print { value: 0 },
+                    Instruction::CallNative {
+                        dest: 1,
+                        native: NativeId(0),
+                        arguments: vec![0],
+                    },
                     Instruction::Return { value: 0 },
                 ],
                 locations: vec![None; 3],
@@ -179,7 +204,16 @@ fn profile_program() -> Program {
         constants: vec![Constant::Number("7".to_string())],
         globals: Vec::new(),
         types: Vec::new(),
-        native_imports: Vec::new(),
+        native_imports: vec![
+            compiler_design_vm::bytecode::NativeImport {
+                name: "str".to_string(),
+                abi: 1,
+            },
+            compiler_design_vm::bytecode::NativeImport {
+                name: "print".to_string(),
+                abi: 1,
+            },
+        ],
         modules: Vec::new(),
         names: vec!["value".to_string(), "str".to_string()],
         functions: vec![Function {
@@ -189,7 +223,7 @@ fn profile_program() -> Program {
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),
-            registers: 4,
+            registers: 5,
             instructions: vec![
                 Instruction::MakeFunction { dest: 0, function: FuncId(1) },
                 Instruction::Constant { dest: 1, constant: 0 },
@@ -198,12 +232,16 @@ fn profile_program() -> Program {
                     callee: 0,
                     arguments: vec![1],
                 },
-                Instruction::NativeCall {
+                Instruction::CallNative {
                     dest: 3,
-                    name: 1,
+                    native: NativeId(0),
                     arguments: vec![2],
                 },
-                Instruction::Print { value: 3 },
+                Instruction::CallNative {
+                    dest: 4,
+                    native: NativeId(1),
+                    arguments: vec![3],
+                },
             ],
             locations: (0..5).map(|_| location()).collect(),
         },
@@ -216,7 +254,7 @@ fn profile_program() -> Program {
             registers: 1,
             params: vec!["value".to_string()],
             instructions: vec![
-                Instruction::LoadVar { dest: 0, name: 0 },
+                Instruction::LoadLocal { dest: 0, slot: 0 },
                 Instruction::Return { value: 0 },
             ],
             locations: (0..2).map(|_| location()).collect(),
@@ -239,7 +277,10 @@ fn profile_failure_program() -> Program {
         ],
         globals: Vec::new(),
         types: Vec::new(),
-        native_imports: Vec::new(),
+        native_imports: vec![compiler_design_vm::bytecode::NativeImport {
+            name: "print".to_string(),
+            abi: 1,
+        }],
         modules: Vec::new(),
         names: Vec::new(),
         functions: vec![Function {
@@ -249,10 +290,14 @@ fn profile_failure_program() -> Program {
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),
-            registers: 3,
+            registers: 4,
             instructions: vec![
                 Instruction::Constant { dest: 0, constant: 0 },
-                Instruction::Print { value: 0 },
+                Instruction::CallNative {
+                    dest: 3,
+                    native: NativeId(0),
+                    arguments: vec![0],
+                },
                 Instruction::Constant { dest: 1, constant: 1 },
                 Instruction::Constant { dest: 2, constant: 2 },
                 Instruction::Divide {
@@ -553,9 +598,9 @@ fn library_api_profiles_functions_natives_ranges_and_output() {
     assert_eq!(profiled.result.expect("profiled program should run"), "7\n");
     assert_eq!(profiled.report.instruction_count, 7);
     assert_eq!(profiled.report.output_bytes, 2);
-    assert_eq!(profiled.report.tracked_heap_allocations, 6);
-    assert_eq!(profiled.report.tracked_heap_peak_live, 6);
-    assert!(profiled.report.tracked_heap_estimated_live_bytes > 0);
+    assert_eq!(profiled.report.tracked_heap_allocations, 5);
+    assert_eq!(profiled.report.tracked_heap_peak_live, 5);
+    assert_eq!(profiled.report.tracked_heap_estimated_live_bytes, 0);
     assert!(
         profiled.report.tracked_heap_estimated_peak_live_bytes
             >= profiled.report.tracked_heap_estimated_live_bytes
@@ -593,9 +638,9 @@ fn library_api_returns_partial_profile_on_runtime_failure() {
     assert_eq!(error.kind, compiler_design_vm::RuntimeErrorKind::Runtime);
     assert_eq!(profiled.report.instruction_count, 5);
     assert_eq!(profiled.report.output_bytes, 3);
-    assert_eq!(profiled.report.tracked_heap_allocations, 3);
-    assert_eq!(profiled.report.tracked_heap_peak_live, 3);
-    assert!(profiled.report.tracked_heap_estimated_live_bytes > 0);
+    assert_eq!(profiled.report.tracked_heap_allocations, 2);
+    assert_eq!(profiled.report.tracked_heap_peak_live, 2);
+    assert_eq!(profiled.report.tracked_heap_estimated_live_bytes, 0);
     assert!(
         profiled.report.tracked_heap_estimated_peak_live_bytes
             >= profiled.report.tracked_heap_estimated_live_bytes
@@ -668,8 +713,8 @@ fn library_api_links_modules_and_keeps_vm_instances_independent() {
     let linked =
         link_modules_with_report(vec![module]).expect("library linker should link one entry");
     assert_eq!(linked.report.entry_module_identities, vec!["entry"]);
-    assert_eq!(linked.report.input_instruction_count, 2);
-    assert_eq!(linked.report.linked_instruction_count, 4);
+    assert_eq!(linked.report.input_instruction_count, 4);
+    assert_eq!(linked.report.linked_instruction_count, 7);
     let linked = linked.program;
 
     let first = VM::with_config(&linked, RunConfig::unlimited())

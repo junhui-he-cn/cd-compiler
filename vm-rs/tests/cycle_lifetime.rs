@@ -1,5 +1,5 @@
 use compiler_design_vm::bytecode::{
-    Constant, FuncId, Function, Instruction, Program, TypeId, VariantId,
+    BlockId, Constant, FuncId, Function, Instruction, NativeId, Program, TypeId, VariantId,
 };
 use compiler_design_vm::runtime::{Heap, HeapObjectKind, VariantValue};
 use compiler_design_vm::value::Value;
@@ -11,7 +11,16 @@ fn self_array_program() -> Program {
         constants: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
-        native_imports: Vec::new(),
+        native_imports: vec![
+            compiler_design_vm::bytecode::NativeImport {
+                name: "push".to_string(),
+                abi: 1,
+            },
+            compiler_design_vm::bytecode::NativeImport {
+                name: "print".to_string(),
+                abi: 1,
+            },
+        ],
         modules: Vec::new(),
         names: vec!["push".to_string()],
         functions: vec![Function {
@@ -21,18 +30,22 @@ fn self_array_program() -> Program {
             local_count: 0,
             upvalues: Vec::new(),
             params: Vec::new(),
-            registers: 2,
+            registers: 3,
             instructions: vec![
                 Instruction::Array {
                     dest: 0,
                     elements: Vec::new(),
                 },
-                Instruction::NativeCall {
+                Instruction::CallNative {
                     dest: 1,
-                    name: 0,
+                    native: NativeId(0),
                     arguments: vec![0, 0],
                 },
-                Instruction::Print { value: 0 },
+                Instruction::CallNative {
+                    dest: 2,
+                    native: NativeId(1),
+                    arguments: vec![0],
+                },
             ],
             locations: vec![None; 3],
         }],
@@ -46,7 +59,16 @@ fn callback_cycle_program() -> Program {
         constants: vec![Constant::Number("1".to_string())],
         globals: Vec::new(),
         types: Vec::new(),
-        native_imports: Vec::new(),
+        native_imports: vec![
+            compiler_design_vm::bytecode::NativeImport {
+                name: "map".to_string(),
+                abi: 1,
+            },
+            compiler_design_vm::bytecode::NativeImport {
+                name: "push".to_string(),
+                abi: 1,
+            },
+        ],
         modules: Vec::new(),
         names: vec!["map".to_string(), "push".to_string()],
         functions: vec![Function {
@@ -70,9 +92,9 @@ fn callback_cycle_program() -> Program {
                     dest: 2,
                     function: FuncId(1),
                 },
-                Instruction::NativeCall {
+                Instruction::CallNative {
                     dest: 3,
-                    name: 0,
+                    native: NativeId(0),
                     arguments: vec![1, 2],
                 },
                 Instruction::Return { value: 3 },
@@ -92,9 +114,9 @@ fn callback_cycle_program() -> Program {
                     dest: 0,
                     elements: Vec::new(),
                 },
-                Instruction::NativeCall {
+                Instruction::CallNative {
                     dest: 1,
-                    name: 1,
+                    native: NativeId(1),
                     arguments: vec![0, 0],
                 },
                 Instruction::Return { value: 0 },
@@ -111,7 +133,10 @@ fn nested_cycle_program() -> Program {
         constants: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
-        native_imports: Vec::new(),
+        native_imports: vec![compiler_design_vm::bytecode::NativeImport {
+            name: "push".to_string(),
+            abi: 1,
+        }],
         modules: Vec::new(),
         names: vec!["push".to_string()],
         functions: vec![Function {
@@ -149,9 +174,9 @@ fn nested_cycle_program() -> Program {
                         dest: 0,
                         elements: Vec::new(),
                     },
-                    Instruction::NativeCall {
+                    Instruction::CallNative {
                         dest: 1,
-                        name: 0,
+                        native: NativeId(0),
                         arguments: vec![0, 0],
                     },
                     Instruction::Return { value: 0 },
@@ -191,7 +216,10 @@ fn cycle_until_pause_program() -> Program {
         constants: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
-        native_imports: Vec::new(),
+        native_imports: vec![compiler_design_vm::bytecode::NativeImport {
+            name: "push".to_string(),
+            abi: 1,
+        }],
         modules: Vec::new(),
         names: vec!["push".to_string()],
         functions: vec![Function {
@@ -207,14 +235,15 @@ fn cycle_until_pause_program() -> Program {
                     dest: 0,
                     elements: Vec::new(),
                 },
-                Instruction::NativeCall {
+                Instruction::CallNative {
                     dest: 1,
-                    name: 0,
+                    native: NativeId(0),
                     arguments: vec![0, 0],
                 },
-                Instruction::Jump { target: 2 },
+                Instruction::BlockStart { id: BlockId(0) },
+                Instruction::Br { target: BlockId(0) },
             ],
-            locations: vec![None; 3],
+            locations: vec![None; 4],
         }],
         entry: FuncId(0),
         debug_sources: Vec::new(),
@@ -452,7 +481,7 @@ fn cancellation_and_debugger_quit_collect_after_the_cycle_frame_ends() {
     );
     let debug = vm.debug(Box::new(CancelAtInstruction {
         token,
-        instruction: 2,
+        instruction: 3,
     }));
     let error = debug
         .result
@@ -462,7 +491,7 @@ fn cancellation_and_debugger_quit_collect_after_the_cycle_frame_ends() {
 
     let program = cycle_until_pause_program();
     let vm = VM::with_config(&program, RunConfig::unlimited());
-    let debug = vm.debug(Box::new(QuitAtInstruction { instruction: 2 }));
+    let debug = vm.debug(Box::new(QuitAtInstruction { instruction: 3 }));
     assert!(debug.quit);
     assert_eq!(
         debug.result.expect("debugger quit is a successful stop"),

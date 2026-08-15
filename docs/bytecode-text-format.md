@@ -30,10 +30,8 @@ Every file starts with a format identifier and version:
 cdbc 0.2
 ```
 
-The VM accepts `cdbc 0.1` inputs for read compatibility: legacy artifacts carry
-name-driven `load_var/store_var/assign_var`, `native_call`, and `print`
-instructions and are lowered to the VM's legacy name-resolution path at
-construction time. Emitted artifacts are `cdbc 0.2`.
+The VM accepts only `cdbc 0.2`; legacy `cdbc 0.1` headers are rejected as
+unsupported versions before body parsing. Emitted artifacts are `cdbc 0.2`.
 Future format changes must either remain backward-compatible with `0.2` or use a
 new version number.
 
@@ -225,8 +223,8 @@ during module linking and remapped to the merged import table.
 
 Pre-execution validation rejects block bodies with undefined registers, unbound
 locals, invalid block IDs, missing terminators, out-of-range global upvalue
-sources, out-of-range native imports, invalid native arity, or legacy jumps
-mixed into block bodies.
+sources, out-of-range native imports, invalid native arity, or unknown
+opcodes.
 The optional `globals:` section (module products and linked programs alike) maps
 each numeric global slot to its name index; the linker deduplicates globals by
 name across modules. Function `param` lines appear before instructions;
@@ -274,8 +272,8 @@ source-local half-open byte interval `[start, end)`, encoded as `sN:start:end`.
 Each range must have a matching debug location, use the same source index, and
 fit within the UTF-8 source text. Duplicate mappings, reversed ranges, and
 out-of-range references are Rust parser/validation errors. A metadata-free
-`cdbc 0.1` artifact remains valid and executes with
-legacy one-line runtime errors.
+`cdbc 0.2` artifact remains valid and executes with locationless one-line
+runtime errors.
 
 ## Value Encoding
 
@@ -378,14 +376,6 @@ return
 return_nil
 ```
 
-The legacy `cdbc 0.1` read path additionally accepts `load_var/store_var/
-assign_var`, `struct`, `variant`, `variant_tag`, `variant_field`,
-`native_call nName`, `print rV`, the dynamically typed `negate`, `add`,
-`subtract`, `multiply`, `divide`, `greater`, `greater_equal`, `less`,
-`less_equal`, the dynamically typed `index`, `assign_index`, and `len`, the
-`assert_array` for-in adapter, and the linear `jump`, `jump_if_false`, and
-`jump_if_true` instructions. These legacy forms are never emitted.
-
 `call_direct fN [rArg0, ...]` targets a function by its `fN` table index when
 the compiler proves the target has no captured free variables; it bypasses
 `make_function`/`call` value indirection, still resolves global-source
@@ -405,7 +395,7 @@ modules:
 `init_module mN` guards the named module's initializer with the runtime state
 machine and is emitted both by the synthesized linked `main` and at dependency
 positions inside module initializers. The verifier rejects out-of-range module
-or initializer references; legacy `assert_array` remains read-compatible only.
+or initializer references.
 
 Map construction preserves source order and uses explicit key/value register
 pairs:
@@ -433,30 +423,34 @@ order, and `merge` appends the right map's entries before the same
 deduplication, so overlapping keys update in place. Maps compare by identity,
 not by contents.
 
-Struct and field instructions use name-table references for field names:
+Struct values use the `types:` layout tables:
 
 ```text
-rD = struct {nName: rValue, ...}
-rD = struct nType {nName: rValue, ...}
+rD = make_struct tType [rField0, rField1, ...]
+rD = struct_get rObject, tType, slot
+rD = struct_set rObject, tType, slot, rValue
 rD = field rObject, nName
 rD = assign_field rObject, nName, rValue
 ```
 
-The optional `nType` name-table reference records a named struct runtime type name for `typeOf`. Anonymous bytecode struct instructions omit it and continue to report `"struct"` when executed by the VM.
+`make_struct` constructs a struct from a numeric type-table entry; `struct_get`
+and `struct_set` access fields by numeric slot. The dynamic `field` and
+`assign_field` forms remain for receivers whose static struct type is unknown
+and resolve the field by name at runtime. Assigning to a missing field is a
+runtime error, and the assigned value is stored in `rD`.
 
-`assign_field` mutates an existing struct field and stores the assigned value in `rD`; assigning to a missing field is a runtime error.
-
-Enum variants use two name-table references and an ordered payload register list:
+Enum variants use numeric type and variant tables plus an ordered payload
+register list:
 
 ```text
-rD = variant nEnum.nVariant [rPayload0, rPayload1, ...]
-rD = variant_tag rValue nEnum.nVariant
-rD = variant_field rValue payloadIndex
+rD = make_variant tType, vVariant [rPayload0, rPayload1, ...]
+rD = is_variant rValue, tType, vVariant
+rD = variant_get rValue, tType, vVariant, payloadIndex
 ```
 
-`variant_tag` returns a boolean and is false for non-matching values.
-`variant_field` reads a positional payload and raises a runtime error for
-non-variant values or an out-of-range payload index.
+`is_variant` returns a boolean and is false for non-matching values.
+`variant_get` reads a positional payload and raises a runtime error for
+non-variant values, identity mismatches, or an out-of-range payload index.
 
 Generic enum type arguments are compile-time metadata and are erased from
 these runtime instructions; the emitted enum name and payload layout remain
@@ -470,8 +464,7 @@ rD = call_native iImport [rArg0, rArg1, ...]
 
 `call_native` indexes the `native_imports` section directly; the VM resolves
 each import once at construction time and dispatches by numeric ID without a
-string lookup on the hot path. The legacy `native_call nName` form remains
-read-compatible only and is never emitted. In this version `push`, `pop`,
+string lookup on the hot path. In this version `push`, `pop`,
 `remove`, `clear`, `merge`, `keys`, `values`, `floor`, `ceil`, `sqrt`, `str`,
 `substr`, `charAt`, `typeOf`, `hash`, `contains`, `slice`, `copy`, `concat`,
 `map`, `filter`, `flatMap`, `any`, `all`, `count`, `find`, `findIndex`,
@@ -502,8 +495,8 @@ rD = ge_num rL, rR         rD = ge_str rL, rR
 
 `equal` and `not_equal` keep the existing runtime equality semantics for all
 value kinds. The dynamically typed `add`, `negate`, `subtract`, `multiply`,
-`divide`, and ordered comparison opcodes remain on the legacy read path and
-for generic `T: Ord` bodies whose parameter type is not statically known.
+`divide`, and ordered comparison opcodes remain for imported values, generic
+bodies, and `T: Ord` parameters whose type is not statically known.
 Ordered comparisons no longer resolve struct capability witnesses by global
 name; struct values are not order-comparable and the compiler rejects such
 comparisons before bytecode emission.
@@ -527,13 +520,11 @@ The typed instructions keep the established runtime diagnostics and budgets:
 array/range indexing validates numeric integer bounds, map access validates
 keys and charges runtime elements on insertion, `len_str` counts Unicode
 scalars, and `range_set` does not exist. The generic `index`, `assign_index`,
-and `len` remain on the legacy read path and for collection types that are
-not statically known.
+and `len` remain for collection types that are not statically known.
 
 ## Iterator protocol
 
-`for-in` lowers through an internal iterator protocol instead of the legacy
-`assert_array` adapter:
+`for-in` lowers through an internal iterator protocol:
 
 ```text
 rIter = iter_init rCollection
@@ -547,8 +538,7 @@ elements during iteration, snapshots map keys into an insertion-ordered
 array, and keeps ranges immutable; `iter_has` is pure and `iter_next`
 advances one position. The compiler arranges `iter_has` + `iter_next` into
 the loop blocks, so `break`/`continue` and mutation-during-iteration behavior
-match the previous lowering exactly. The legacy `assert_array` instruction
-remains read-compatible only.
+match the previous lowering exactly.
 
 The `range` native is also supported with one to three numeric arguments. Its
 result is consumed by the existing `len_range` and `range_get` instructions
@@ -558,9 +548,9 @@ New opcodes must be added by updating this document, the C++ bytecode artifact e
 
 ## Compatibility validation
 
-The Rust parser accepts `cdbc 0.1` and `cdbc 0.2` headers. Before `dump`, `link`, or
+The Rust parser accepts only the `cdbc 0.2` header. Before `dump`, `link`, or
 `run` receives an artifact, it validates finite number constants, constant/name/
-function/register references, jump targets, debug-location table shape, and
+function/register references, branch targets, debug-location table shape, and
 the native import metadata plus the supported native-call capability set and
 native arity bounds. Module identities, entry metadata,
 dependency targets, and insertion offsets are validated by the module envelope

@@ -25,15 +25,15 @@ cache invalidation, async semantics, or compiler optimization policy.
 
 ## Compatibility constraints
 
-`cdbc 0.2` emission with `cdbc 0.1` read compatibility, CLI text/exit
-behavior, deterministic execution, current resource accounting, and C++/Rust
-parity remain compatibility constraints.
+`cdbc 0.2` emission and execution only, CLI text/exit behavior, deterministic
+execution, current resource accounting, and C++/Rust parity remain
+compatibility constraints.
 
 ## Current shipped baseline
 
 | Area | Shipped baseline |
 | --- | --- |
-| Artifact safety | Shared `cdbc 0.2` parser/formatter/verifier with `cdbc 0.1` read compatibility, malformed corpus, resource limits, cancellation |
+| Artifact safety | Shared `cdbc 0.2` parser/formatter/verifier, malformed corpus, resource limits, cancellation |
 | Execution | Register VM for the complete emitted instruction set and native surface |
 | Runtime values | Stable identity-bearing storage, non-moving tracing collection at VM safepoints, recursive values, cycle-safe formatting |
 | Modules | Deterministic module validation/linking, debug rebasing, typed errors, optional link report |

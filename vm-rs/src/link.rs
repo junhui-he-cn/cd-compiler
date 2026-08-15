@@ -455,6 +455,10 @@ impl Linker {
             instructions: Vec::new(),
             locations: Vec::new(),
         };
+        main.instructions.push(Instruction::BlockStart {
+            id: crate::bytecode::BlockId(0),
+        });
+        main.locations.push(None);
         for identity in &self.entry_module_identities {
             let module = *self.module_indices.get(identity).ok_or_else(|| {
                 LinkError::new(
@@ -568,7 +572,7 @@ pub fn link_modules(modules: Vec<ModuleArtifact>) -> Result<Program, String> {
 #[cfg(test)]
 mod tests {
     use super::{link_modules, link_modules_with_report};
-    use crate::bytecode::{FuncId, Function, Program};
+    use crate::bytecode::{BlockId, FuncId, Function, Instruction, Program};
     use crate::format::{ModuleArtifact, ModuleDependency, ModuleDependencyKind};
 
     fn empty_program() -> Program {
@@ -587,8 +591,11 @@ mod tests {
                 upvalues: Vec::new(),
                 params: Vec::new(),
                 registers: 0,
-                instructions: Vec::new(),
-                locations: Vec::new(),
+                instructions: vec![
+                    Instruction::BlockStart { id: BlockId(0) },
+                    Instruction::ReturnNil,
+                ],
+                locations: vec![None; 2],
             }],
             entry: FuncId(0),
             debug_sources: Vec::new(),
@@ -664,9 +671,9 @@ mod tests {
             result.report.expanded_module_order,
             vec!["entry", "left", "shared", "right"]
         );
-        assert_eq!(result.report.input_instruction_count, 0);
+        assert_eq!(result.report.input_instruction_count, 8);
         assert_eq!(result.report.input_dependency_count, 4);
-        assert_eq!(result.report.linked_instruction_count, 2);
+        assert_eq!(result.report.linked_instruction_count, 11);
         assert_eq!(result.report.linked_function_count, 4);
         assert_eq!(result.report.linked_constant_count, 0);
         assert_eq!(result.report.linked_name_count, 0);
@@ -701,8 +708,8 @@ mod tests {
         assert_eq!(linked.entry, FuncId(0));
         assert_eq!(
             linked.functions[0].instructions.len(),
-            2,
-            "entry main should init one module and return"
+            3,
+            "entry main should open a block, init one module, and return"
         );
     }
 }
@@ -715,7 +722,6 @@ fn map_function_instruction(
         instruction,
         context,
         0,
-        |target| Ok(target),
         |block| Ok(block),
         |block| Ok(block),
     )
@@ -725,7 +731,6 @@ fn map_instruction(
     instruction: &Instruction,
     context: &ModuleContext,
     register_base: usize,
-    map_jump: impl Fn(usize) -> Result<usize, LinkError>,
     map_block: impl Fn(u32) -> Result<u32, LinkError>,
     map_branch: impl Fn(u32) -> Result<u32, LinkError>,
 ) -> Result<Instruction, LinkError> {
@@ -787,18 +792,6 @@ fn map_instruction(
                 .map(|(key, value)| Ok((register(*key)?, register(*value)?)))
                 .collect::<Result<Vec<_>, LinkError>>()?,
         },
-        Instruction::Struct {
-            dest,
-            type_name,
-            fields,
-        } => Instruction::Struct {
-            dest: register(*dest)?,
-            type_name: type_name.map(name).transpose()?,
-            fields: fields
-                .iter()
-                .map(|(field, value)| Ok((name(*field)?, register(*value)?)))
-                .collect::<Result<Vec<_>, LinkError>>()?,
-        },
         Instruction::MakeStruct {
             dest,
             type_id,
@@ -834,20 +827,6 @@ fn map_instruction(
             type_id: map_type(*type_id)?,
             slot: *slot,
             value: register(*value)?,
-        },
-        Instruction::Variant {
-            dest,
-            enum_name,
-            variant_name,
-            payload,
-        } => Instruction::Variant {
-            dest: register(*dest)?,
-            enum_name: name(*enum_name)?,
-            variant_name: name(*variant_name)?,
-            payload: payload
-                .iter()
-                .map(|value| register(*value))
-                .collect::<Result<Vec<_>, _>>()?,
         },
         Instruction::MakeVariant {
             dest,
@@ -887,43 +866,9 @@ fn map_instruction(
             variant_id: *variant_id,
             index: *index,
         },
-        Instruction::VariantTag {
-            dest,
-            value,
-            enum_name,
-            variant_name,
-        } => Instruction::VariantTag {
-            dest: register(*dest)?,
-            value: register(*value)?,
-            enum_name: name(*enum_name)?,
-            variant_name: name(*variant_name)?,
-        },
-        Instruction::VariantField { dest, value, index } => Instruction::VariantField {
-            dest: register(*dest)?,
-            value: register(*value)?,
-            index: *index,
-        },
         Instruction::Move { dest, source } => Instruction::Move {
             dest: register(*dest)?,
             source: register(*source)?,
-        },
-        Instruction::LoadVar { dest, name: value } => Instruction::LoadVar {
-            dest: register(*dest)?,
-            name: name(*value)?,
-        },
-        Instruction::StoreVar {
-            name: value,
-            value: source,
-        } => Instruction::StoreVar {
-            name: name(*value)?,
-            value: register(*source)?,
-        },
-        Instruction::AssignVar {
-            name: value,
-            value: source,
-        } => Instruction::AssignVar {
-            name: name(*value)?,
-            value: register(*source)?,
         },
         Instruction::LoadLocal { dest, slot } => Instruction::LoadLocal {
             dest: register(*dest)?,
@@ -997,18 +942,6 @@ fn map_instruction(
                     format!("module m{} out of range", module),
                 )
             })? as usize,
-        },
-        Instruction::NativeCall {
-            dest,
-            name: value,
-            arguments,
-        } => Instruction::NativeCall {
-            dest: register(*dest)?,
-            name: name(*value)?,
-            arguments: arguments
-                .iter()
-                .map(|argument| register(*argument))
-                .collect::<Result<Vec<_>, _>>()?,
         },
         Instruction::CallNative {
             dest,
@@ -1141,10 +1074,6 @@ fn map_instruction(
             dest: register(*dest)?,
             value: register(*value)?,
         },
-        Instruction::AssertArray { dest, value } => Instruction::AssertArray {
-            dest: register(*dest)?,
-            value: register(*value)?,
-        },
         Instruction::IterInit { dest, value } => Instruction::IterInit {
             dest: register(*dest)?,
             value: register(*value)?,
@@ -1165,9 +1094,6 @@ fn map_instruction(
             dest: register(*dest)?,
             value: register(*value)?,
             message: name(*message)?,
-        },
-        Instruction::Print { value } => Instruction::Print {
-            value: register(*value)?,
         },
         Instruction::Return { value } => Instruction::Return {
             value: register(*value)?,
@@ -1298,17 +1224,6 @@ fn map_instruction(
             dest: register(*dest)?,
             left: register(*left)?,
             right: register(*right)?,
-        },
-        Instruction::Jump { target } => Instruction::Jump {
-            target: map_jump(*target)?,
-        },
-        Instruction::JumpIfFalse { condition, target } => Instruction::JumpIfFalse {
-            condition: register(*condition)?,
-            target: map_jump(*target)?,
-        },
-        Instruction::JumpIfTrue { condition, target } => Instruction::JumpIfTrue {
-            condition: register(*condition)?,
-            target: map_jump(*target)?,
         },
         Instruction::BlockStart { id } => Instruction::BlockStart {
             id: BlockId(map_block(id.0)?),

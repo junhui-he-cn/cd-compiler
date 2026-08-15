@@ -14,7 +14,7 @@ Use Semantic Versioning for release tags:
   change.
 - Before `1.0.0`, increment `MINOR` for a roadmap milestone or an intentional
   user-visible language/tooling contract change. The current baseline is
-  `0.1.0`.
+  `0.2.0`.
 - Increment `PATCH` for a compatible bug fix, diagnostic/test correction,
   documentation-only release, or build/reproducibility fix that does not
   change the supported language or artifact contract.

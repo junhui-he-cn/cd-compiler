@@ -28,7 +28,6 @@ REQUIRED_CELL_IDS = {
 }
 REQUIRED_COMMAND_MARKERS = {
     "tests/verification_inventory.py",
-    "tests/cdbc_contract_audit.py",
     "tests/bytecode_artifact_tests.py",
     "tests/bytecode_module_artifact_tests.py",
     "tests/bytecode_module_cache_tests.py",
@@ -180,7 +179,7 @@ def validate_matrix(matrix: dict[str, Any], repo_root: Path = REPO_ROOT) -> list
     if _field(debug_metadata, "optional") is not True:
         errors.append("debug metadata must remain optional")
     if _field(debug_metadata, "sections") != ["debug_sources", "debug_locations", "debug_ranges"]:
-        errors.append("debug metadata sections do not match cdbc 0.1")
+        errors.append("debug metadata sections do not match cdbc 0.2")
     if _field(debug_metadata, "range_unit") != "source-local half-open byte interval":
         errors.append("debug range unit must remain source-local half-open byte interval")
     if debug_source is not None:

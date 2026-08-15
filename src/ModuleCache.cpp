@@ -313,7 +313,7 @@ std::string moduleCacheKey(const ModuleCacheModule& module)
 {
     std::ostringstream input;
     input << "module-cache-key-v1\0";
-    appendField(input, "artifact", "cdbc 0.1");
+    appendField(input, "artifact", "cdbc 0.2");
     appendField(input, "identity", module.identity);
     appendField(input, "source", module.sourceHash);
     appendField(input, "interface", module.interfaceHash);

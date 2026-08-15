@@ -14,13 +14,11 @@ use std::rc::Rc;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TaskId(usize);
 
-/// Runtime-only resolution table for one function body: maps artifact name
-/// indexes to the owning frame's local slots. It is computed by the VM when a
-/// function body is prepared and is never serialized into `.cdbc` artifacts.
+/// Runtime-only display table for one function body. It is computed by the VM
+/// when a function body is prepared and is never serialized into `.cdbc`
+/// artifacts.
 #[derive(Debug, Default)]
 pub(crate) struct VariablePlan {
-    /// Name-table index -> local slot index.
-    pub(crate) local_slots: BTreeMap<usize, usize>,
     /// Local slot index -> display name used by capture and observability.
     pub(crate) local_names: Vec<String>,
 }
@@ -145,8 +143,8 @@ impl fmt::Display for FrameStackError {
 /// Explicit execution state for one resumable bytecode frame.
 ///
 /// Scheduler-owned frames always carry a verified function body. The optional
-/// field also lets the legacy recursive VM frame share this state container
-/// without forcing ordinary single-task runs to clone the entry body.
+/// field also lets the ordinary recursive VM frame share this state container
+/// without forcing single-task runs to clone the entry body.
 pub(crate) struct ResumableFrame {
     pub(crate) body: Option<Rc<Function>>,
     pub(crate) ip: usize,

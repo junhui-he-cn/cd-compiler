@@ -50,9 +50,6 @@ bool isBinary(BytecodeOp op)
     case BytecodeOp::Field:
     case BytecodeOp::AssignField:
     case BytecodeOp::Move:
-    case BytecodeOp::LoadVar:
-    case BytecodeOp::StoreVar:
-    case BytecodeOp::AssignVar:
     case BytecodeOp::LoadLocal:
     case BytecodeOp::BindLocal:
     case BytecodeOp::SetLocal:
@@ -236,13 +233,6 @@ void printInstruction(
     } else if (instruction.op == BytecodeOp::Move) {
         if (instruction.left) {
             out << " " << *instruction.left;
-        }
-    } else if (instruction.op == BytecodeOp::LoadVar) {
-        printNameOperand(out, program, instruction.operand);
-    } else if (instruction.op == BytecodeOp::StoreVar || instruction.op == BytecodeOp::AssignVar) {
-        printNameOperand(out, program, instruction.operand);
-        if (instruction.left) {
-            out << ", " << *instruction.left;
         }
     } else if (instruction.op == BytecodeOp::LoadLocal) {
         out << " l" << instruction.operand;
@@ -531,12 +521,6 @@ std::string bytecodeOpName(BytecodeOp op)
         return "variant_get";
     case BytecodeOp::Move:
         return "move";
-    case BytecodeOp::LoadVar:
-        return "load_var";
-    case BytecodeOp::StoreVar:
-        return "store_var";
-    case BytecodeOp::AssignVar:
-        return "assign_var";
     case BytecodeOp::LoadLocal:
         return "load_local";
     case BytecodeOp::BindLocal:

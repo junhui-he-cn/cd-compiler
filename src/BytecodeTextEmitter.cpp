@@ -198,15 +198,6 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
     case BytecodeOp::Move:
         out << reg(requireDest(instruction)) << " = move " << reg(requireLeft(instruction));
         break;
-    case BytecodeOp::LoadVar:
-        out << reg(requireDest(instruction)) << " = load_var " << nameRef(instruction.operand);
-        break;
-    case BytecodeOp::StoreVar:
-        out << "store_var " << nameRef(instruction.operand) << ", " << reg(requireLeft(instruction));
-        break;
-    case BytecodeOp::AssignVar:
-        out << "assign_var " << nameRef(instruction.operand) << ", " << reg(requireLeft(instruction));
-        break;
     case BytecodeOp::LoadLocal:
         out << reg(requireDest(instruction)) << " = load_local l" << instruction.operand;
         break;

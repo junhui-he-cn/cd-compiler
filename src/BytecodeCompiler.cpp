@@ -268,12 +268,6 @@ BytecodeOp lowerOp(IROp op)
         return BytecodeOp::VariantGet;
     case IROp::Copy:
         return BytecodeOp::Move;
-    case IROp::LoadVar:
-        return BytecodeOp::LoadVar;
-    case IROp::StoreVar:
-        return BytecodeOp::StoreVar;
-    case IROp::AssignVar:
-        return BytecodeOp::AssignVar;
     case IROp::Call:
         return BytecodeOp::Call;
     case IROp::CallDirect:

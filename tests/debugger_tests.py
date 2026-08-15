@@ -638,13 +638,17 @@ def main() -> int:
 
         metadata_free = root / "metadata-free.cdbc"
         metadata_free.write_text(
-            "cdbc 0.1\n\n"
+            "cdbc 0.2\n\n"
             "constants:\n"
             "  c0 = number 1\n\n"
             "names:\n\n"
-            "main registers=1:\n"
+            "native_imports:\n"
+            "  i0 = \"print\" abi=1\n\n"
+            "main registers=2:\n"
+            "block b0:\n"
             "  r0 = constant c0\n"
-            "  print r0\n",
+            "  r1 = call_native i0 [r0]\n"
+            "  return_nil\n",
             encoding="utf-8",
         )
         metadata_free_debug = debug_command(manifest, metadata_free, ["continue"])

@@ -792,41 +792,10 @@ fn decode_constant(constant: &Constant) -> Result<Value, RuntimeError> {
     }
 }
 
-fn prepare_function(program: &Program, function: &Function) -> PreparedFunction {
+fn prepare_function(function: &Function) -> PreparedFunction {
     let mut variable_plan = VariablePlan::default();
-    let mut slot_by_name = BTreeMap::new();
     for param in &function.params {
-        let slot = variable_plan.local_names.len();
         variable_plan.local_names.push(param.clone());
-        slot_by_name.insert(param.clone(), slot);
-    }
-    for instruction in &function.instructions {
-        let Instruction::StoreVar { name, .. } = instruction else {
-            continue;
-        };
-        let text = program.names.get(*name).cloned().unwrap_or_default();
-        if !slot_by_name.contains_key(&text) {
-            let slot = variable_plan.local_names.len();
-            variable_plan.local_names.push(text.clone());
-            slot_by_name.insert(text, slot);
-        }
-    }
-    for instruction in &function.instructions {
-        let name = match instruction {
-            Instruction::StoreVar { name, .. }
-            | Instruction::LoadVar { name, .. }
-            | Instruction::AssignVar { name, .. } => Some(*name),
-            _ => None,
-        };
-        let Some(name) = name else { continue };
-        let text = program
-            .names
-            .get(name)
-            .map(String::as_str)
-            .unwrap_or_default();
-        if let Some(slot) = slot_by_name.get(text) {
-            variable_plan.local_slots.insert(name, *slot);
-        }
     }
     PreparedFunction {
         name: Rc::from(function.name.as_str()),
@@ -967,8 +936,8 @@ pub struct RuntimeError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bytecode::{Function, NativeId, NativeImport};
-    use crate::runtime::{new_cell, new_environment, new_local_slots};
+    use crate::bytecode::{BlockId, Function, NativeId, NativeImport};
+    use crate::runtime::{new_cell, new_environment};
     use std::cell::RefCell;
 
     #[test]
@@ -1280,7 +1249,10 @@ mod tests {
             ],
             globals: Vec::new(),
             types: Vec::new(),
-            native_imports: Vec::new(),
+            native_imports: vec![NativeImport {
+                name: "print".to_string(),
+                abi: 1,
+            }],
             modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
@@ -1290,7 +1262,7 @@ mod tests {
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
-                registers: 10,
+                registers: 11,
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
                     Instruction::Constant { dest: 1, constant: 1 },
@@ -1326,12 +1298,36 @@ mod tests {
                         left: 3,
                         right: 2,
                     },
-                    Instruction::Print { value: 4 },
-                    Instruction::Print { value: 5 },
-                    Instruction::Print { value: 6 },
-                    Instruction::Print { value: 7 },
-                    Instruction::Print { value: 8 },
-                    Instruction::Print { value: 9 },
+                    Instruction::CallNative {
+                        dest: 10,
+                        native: NativeId(0),
+                        arguments: vec![4],
+                    },
+                    Instruction::CallNative {
+                        dest: 10,
+                        native: NativeId(0),
+                        arguments: vec![5],
+                    },
+                    Instruction::CallNative {
+                        dest: 10,
+                        native: NativeId(0),
+                        arguments: vec![6],
+                    },
+                    Instruction::CallNative {
+                        dest: 10,
+                        native: NativeId(0),
+                        arguments: vec![7],
+                    },
+                    Instruction::CallNative {
+                        dest: 10,
+                        native: NativeId(0),
+                        arguments: vec![8],
+                    },
+                    Instruction::CallNative {
+                        dest: 10,
+                        native: NativeId(0),
+                        arguments: vec![9],
+                    },
                 ],
                 locations: vec![None; 16],
             }],
@@ -1510,10 +1506,16 @@ mod tests {
             ],
             globals: Vec::new(),
             types: Vec::new(),
-            native_imports: vec![NativeImport {
-                name: "print".to_string(),
-                abi: 1,
-            }],
+            native_imports: vec![
+                NativeImport {
+                    name: "push".to_string(),
+                    abi: 1,
+                },
+                NativeImport {
+                    name: "print".to_string(),
+                    abi: 1,
+                },
+            ],
             modules: Vec::new(),
             names: vec!["push".to_string()],
             functions: vec![Function {
@@ -1533,9 +1535,9 @@ mod tests {
                         elements: vec![0, 1],
                     },
                     Instruction::IterInit { dest: 4, value: 3 },
-                    Instruction::NativeCall {
+                    Instruction::CallNative {
                         dest: 5,
-                        name: 0,
+                        native: NativeId(0),
                         arguments: vec![3, 2],
                     },
                     Instruction::IterHas { dest: 6, value: 4 },
@@ -1556,12 +1558,12 @@ mod tests {
                     },
                     Instruction::IterNext { dest: 14, value: 12 },
                     Instruction::IterHas { dest: 15, value: 12 },
-                    Instruction::CallNative { dest: 16, native: NativeId(0), arguments: vec![7] },
-                    Instruction::CallNative { dest: 16, native: NativeId(0), arguments: vec![8] },
-                    Instruction::CallNative { dest: 16, native: NativeId(0), arguments: vec![9] },
-                    Instruction::CallNative { dest: 16, native: NativeId(0), arguments: vec![10] },
-                    Instruction::CallNative { dest: 16, native: NativeId(0), arguments: vec![14] },
-                    Instruction::CallNative { dest: 16, native: NativeId(0), arguments: vec![15] },
+                    Instruction::CallNative { dest: 16, native: NativeId(1), arguments: vec![7] },
+                    Instruction::CallNative { dest: 16, native: NativeId(1), arguments: vec![8] },
+                    Instruction::CallNative { dest: 16, native: NativeId(1), arguments: vec![9] },
+                    Instruction::CallNative { dest: 16, native: NativeId(1), arguments: vec![10] },
+                    Instruction::CallNative { dest: 16, native: NativeId(1), arguments: vec![14] },
+                    Instruction::CallNative { dest: 16, native: NativeId(1), arguments: vec![15] },
                     Instruction::ReturnNil,
                 ],
                 locations: vec![None; 23],
@@ -1651,10 +1653,16 @@ mod tests {
             ],
             globals: Vec::new(),
             types: Vec::new(),
-            native_imports: vec![NativeImport {
-                name: "print".to_string(),
-                abi: 1,
-            }],
+            native_imports: vec![
+                NativeImport {
+                    name: "merge".to_string(),
+                    abi: 1,
+                },
+                NativeImport {
+                    name: "print".to_string(),
+                    abi: 1,
+                },
+            ],
             modules: Vec::new(),
             names: vec!["merge".to_string()],
             functions: vec![Function {
@@ -1687,12 +1695,12 @@ mod tests {
                         dest: 9,
                         entries: vec![(1, 5), (2, 4)],
                     },
-                    Instruction::NativeCall {
+                    Instruction::CallNative {
                         dest: 10,
-                        name: 0,
+                        native: NativeId(0),
                         arguments: vec![7, 9],
                     },
-                    Instruction::CallNative { dest: 11, native: NativeId(0), arguments: vec![10] },
+                    Instruction::CallNative { dest: 11, native: NativeId(1), arguments: vec![10] },
                     Instruction::ReturnNil,
                 ],
                 locations: vec![None; 13],
@@ -1737,7 +1745,10 @@ mod tests {
             constants: vec![Constant::Number("7".to_string())],
             globals: Vec::new(),
             types: Vec::new(),
-            native_imports: Vec::new(),
+            native_imports: vec![NativeImport {
+                name: "print".to_string(),
+                abi: 1,
+            }],
             modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
@@ -1747,10 +1758,14 @@ mod tests {
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
-                registers: 1,
+                registers: 2,
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
-                    Instruction::Print { value: 0 },
+                    Instruction::CallNative {
+                        dest: 1,
+                        native: NativeId(0),
+                        arguments: vec![0],
+                    },
                     Instruction::Return { value: 0 },
                 ],
                 locations: vec![None; 3],
@@ -1765,7 +1780,10 @@ mod tests {
             constants: vec![Constant::Number("42".to_string())],
             globals: Vec::new(),
             types: Vec::new(),
-            native_imports: Vec::new(),
+            native_imports: vec![NativeImport {
+                name: "print".to_string(),
+                abi: 1,
+            }],
             modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
@@ -1775,7 +1793,7 @@ mod tests {
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
-                registers: 3,
+                registers: 4,
                 instructions: vec![
                     Instruction::MakeFunction { dest: 0, function: FuncId(1) },
                     Instruction::Call {
@@ -1783,7 +1801,11 @@ mod tests {
                         callee: 0,
                         arguments: Vec::new(),
                     },
-                    Instruction::Print { value: 1 },
+                    Instruction::CallNative {
+                        dest: 3,
+                        native: NativeId(0),
+                        arguments: vec![1],
+                    },
                     Instruction::Return { value: 1 },
                 ],
                 locations: vec![None; 4],
@@ -1812,7 +1834,10 @@ mod tests {
             constants,
             globals: Vec::new(),
             types: Vec::new(),
-            native_imports: Vec::new(),
+            native_imports: vec![NativeImport {
+                name: "print".to_string(),
+                abi: 1,
+            }],
             modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
@@ -1822,7 +1847,7 @@ mod tests {
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
-                registers: 3,
+                registers: 4,
                 instructions: vec![
                     Instruction::MakeFunction {
                         dest: 0,
@@ -1833,7 +1858,11 @@ mod tests {
                         callee: 0,
                         arguments: Vec::new(),
                     },
-                    Instruction::Print { value: 1 },
+                    Instruction::CallNative {
+                        dest: 3,
+                        native: NativeId(0),
+                        arguments: vec![1],
+                    },
                     Instruction::Return { value: 1 },
                 ],
                 locations: vec![None; 4],
@@ -1875,9 +1904,10 @@ mod tests {
                 registers: 1,
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
-                    Instruction::Jump { target: 0 },
+                    Instruction::BlockStart { id: BlockId(0) },
+                    Instruction::Br { target: BlockId(0) },
                 ],
-                locations: vec![None; 2],
+                locations: vec![None; 3],
             }],
             entry: FuncId(0),
             debug_sources: Vec::new(),
@@ -1889,7 +1919,16 @@ mod tests {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
             globals: Vec::new(),
             types: Vec::new(),
-            native_imports: Vec::new(),
+            native_imports: vec![
+                NativeImport {
+                    name: "map".to_string(),
+                    abi: 1,
+                },
+                NativeImport {
+                    name: "print".to_string(),
+                    abi: 1,
+                },
+            ],
             modules: Vec::new(),
             names: vec!["map".to_string(), "item".to_string()],
             functions: vec![Function {
@@ -1899,7 +1938,7 @@ mod tests {
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
-                registers: 5,
+                registers: 6,
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
                     Instruction::Constant { dest: 1, constant: 1 },
@@ -1908,12 +1947,16 @@ mod tests {
                         elements: vec![0, 1],
                     },
                     Instruction::MakeFunction { dest: 3, function: FuncId(1) },
-                    Instruction::NativeCall {
+                    Instruction::CallNative {
                         dest: 4,
-                        name: 0,
+                        native: NativeId(0),
                         arguments: vec![2, 3],
                     },
-                    Instruction::Print { value: 4 },
+                    Instruction::CallNative {
+                        dest: 5,
+                        native: NativeId(1),
+                        arguments: vec![4],
+                    },
                     Instruction::Return { value: 4 },
                 ],
                 locations: vec![None; 7],
@@ -1927,7 +1970,7 @@ mod tests {
                 registers: 1,
                 params: vec!["item".to_string()],
                 instructions: vec![
-                    Instruction::LoadVar { dest: 0, name: 1 },
+                    Instruction::LoadLocal { dest: 0, slot: 0 },
                     Instruction::Return { value: 0 },
                 ],
                 locations: vec![None; 2],
@@ -1942,7 +1985,10 @@ mod tests {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
             globals: Vec::new(),
             types: Vec::new(),
-            native_imports: Vec::new(),
+            native_imports: vec![NativeImport {
+                name: "map".to_string(),
+                abi: 1,
+            }],
             modules: Vec::new(),
             names: vec!["map".to_string(), "item".to_string()],
             functions: vec![Function {
@@ -1980,9 +2026,9 @@ mod tests {
                             elements: vec![0, 1],
                         },
                         Instruction::MakeFunction { dest: 3, function: FuncId(2) },
-                        Instruction::NativeCall {
+                        Instruction::CallNative {
                             dest: 4,
-                            name: 0,
+                            native: NativeId(0),
                             arguments: vec![2, 3],
                         },
                         Instruction::Return { value: 4 },
@@ -1998,7 +2044,7 @@ mod tests {
                     registers: 1,
                     params: vec!["item".to_string()],
                     instructions: vec![
-                        Instruction::LoadVar { dest: 0, name: 1 },
+                        Instruction::LoadLocal { dest: 0, slot: 0 },
                         Instruction::Return { value: 0 },
                     ],
                     locations: vec![None; 2],
@@ -2129,9 +2175,10 @@ mod tests {
                     params: Vec::new(),
                     instructions: vec![
                         Instruction::Constant { dest: 0, constant: 0 },
-                        Instruction::Jump { target: 1 },
+                        Instruction::BlockStart { id: BlockId(0) },
+                        Instruction::Br { target: BlockId(0) },
                     ],
-                    locations: vec![None; 2],
+                    locations: vec![None; 3],
                 },
             ],
             entry: FuncId(0),
@@ -2149,7 +2196,10 @@ mod tests {
             ],
             globals: Vec::new(),
             types: Vec::new(),
-            native_imports: Vec::new(),
+            native_imports: vec![NativeImport {
+                name: "print".to_string(),
+                abi: 1,
+            }],
             modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
@@ -2169,13 +2219,21 @@ mod tests {
                     upvalues: Vec::new(),
                     name: "odd".to_string(),
                     arity: 0,
-                    registers: 2,
+                    registers: 3,
                     params: Vec::new(),
                     instructions: vec![
                         Instruction::Constant { dest: 0, constant: 0 },
-                        Instruction::Print { value: 0 },
+                        Instruction::CallNative {
+                            dest: 2,
+                            native: NativeId(0),
+                            arguments: vec![0],
+                        },
                         Instruction::Constant { dest: 1, constant: 2 },
-                        Instruction::Print { value: 1 },
+                        Instruction::CallNative {
+                            dest: 2,
+                            native: NativeId(0),
+                            arguments: vec![1],
+                        },
                         Instruction::Return { value: 1 },
                     ],
                     locations: vec![None; 5],
@@ -2186,13 +2244,21 @@ mod tests {
                     upvalues: Vec::new(),
                     name: "even".to_string(),
                     arity: 0,
-                    registers: 2,
+                    registers: 3,
                     params: Vec::new(),
                     instructions: vec![
                         Instruction::Constant { dest: 0, constant: 1 },
-                        Instruction::Print { value: 0 },
+                        Instruction::CallNative {
+                            dest: 2,
+                            native: NativeId(0),
+                            arguments: vec![0],
+                        },
                         Instruction::Constant { dest: 1, constant: 3 },
-                        Instruction::Print { value: 1 },
+                        Instruction::CallNative {
+                            dest: 2,
+                            native: NativeId(0),
+                            arguments: vec![1],
+                        },
                         Instruction::Return { value: 1 },
                     ],
                     locations: vec![None; 5],
@@ -2613,9 +2679,14 @@ mod tests {
     #[test]
     fn cooperative_host_attributes_synchronous_native_callback_output() {
         let mut program = cooperative_native_callback_program();
+        program.functions[1].registers = 2;
         program.functions[1].instructions = vec![
-            Instruction::LoadVar { dest: 0, name: 1 },
-            Instruction::Print { value: 0 },
+            Instruction::LoadLocal { dest: 0, slot: 0 },
+            Instruction::CallNative {
+                dest: 1,
+                native: NativeId(1),
+                arguments: vec![0],
+            },
             Instruction::Return { value: 0 },
         ];
         program.functions[1].locations = vec![None; 3];
@@ -2791,9 +2862,14 @@ mod tests {
     #[test]
     fn cooperative_trace_includes_synchronous_native_callback_frames_and_output() {
         let mut program = cooperative_native_callback_program();
+        program.functions[1].registers = 2;
         program.functions[1].instructions = vec![
-            Instruction::LoadVar { dest: 0, name: 1 },
-            Instruction::Print { value: 0 },
+            Instruction::LoadLocal { dest: 0, slot: 0 },
+            Instruction::CallNative {
+                dest: 1,
+                native: NativeId(1),
+                arguments: vec![0],
+            },
             Instruction::Return { value: 0 },
         ];
         program.functions[1].locations = vec![None; 3];
@@ -2985,9 +3061,14 @@ mod tests {
     #[test]
     fn cooperative_profile_attributes_native_callbacks_to_the_current_task() {
         let mut program = cooperative_native_callback_program();
+        program.functions[1].registers = 2;
         program.functions[1].instructions = vec![
-            Instruction::LoadVar { dest: 0, name: 1 },
-            Instruction::Print { value: 0 },
+            Instruction::LoadLocal { dest: 0, slot: 0 },
+            Instruction::CallNative {
+                dest: 1,
+                native: NativeId(1),
+                arguments: vec![0],
+            },
             Instruction::Return { value: 0 },
         ];
         program.functions[1].locations = vec![None; 3];
@@ -3433,18 +3514,23 @@ mod tests {
                 params: Vec::new(),
                 registers: 5,
                 instructions: vec![
+                    Instruction::BlockStart { id: BlockId(0) },
                     Instruction::Constant { dest: 0, constant: 0 },
                     Instruction::Constant { dest: 1, constant: 1 },
                     Instruction::Constant { dest: 2, constant: 2 },
+                    Instruction::Br { target: BlockId(1) },
+                    Instruction::BlockStart { id: BlockId(1) },
                     Instruction::Less {
                         dest: 3,
                         left: 0,
                         right: 1,
                     },
-                    Instruction::JumpIfFalse {
+                    Instruction::BrIf {
                         condition: 3,
-                        target: 8,
+                        if_true: BlockId(2),
+                        if_false: BlockId(3),
                     },
+                    Instruction::BlockStart { id: BlockId(2) },
                     Instruction::Array {
                         dest: 4,
                         elements: vec![0],
@@ -3454,10 +3540,11 @@ mod tests {
                         left: 0,
                         right: 2,
                     },
-                    Instruction::Jump { target: 3 },
+                    Instruction::Br { target: BlockId(1) },
+                    Instruction::BlockStart { id: BlockId(3) },
                     Instruction::Return { value: 0 },
                 ],
-                locations: vec![None; 9],
+                locations: vec![None; 14],
             }],
             entry: FuncId(0),
             debug_sources: Vec::new(),
@@ -3469,7 +3556,10 @@ mod tests {
             constants: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
-            native_imports: Vec::new(),
+            native_imports: vec![NativeImport {
+                name: "push".to_string(),
+                abi: 1,
+            }],
             modules: Vec::new(),
             names: vec!["push".to_string()],
             functions: vec![Function {
@@ -3485,14 +3575,15 @@ mod tests {
                         dest: 0,
                         elements: Vec::new(),
                     },
-                    Instruction::NativeCall {
+                    Instruction::CallNative {
                         dest: 1,
-                        name: 0,
+                        native: NativeId(0),
                         arguments: vec![0, 0],
                     },
-                    Instruction::Jump { target: 2 },
+                    Instruction::BlockStart { id: BlockId(0) },
+                    Instruction::Br { target: BlockId(0) },
                 ],
-                locations: vec![None; 3],
+                locations: vec![None; 4],
             }],
             entry: FuncId(0),
             debug_sources: Vec::new(),
@@ -3567,17 +3658,22 @@ mod tests {
                 registers: 7,
                 params: vec!["n".to_string()],
                 instructions: vec![
-                    Instruction::LoadVar { dest: 0, name: 0 },
+                    Instruction::BlockStart { id: BlockId(0) },
+                    Instruction::LoadLocal { dest: 0, slot: 0 },
                     Instruction::Constant { dest: 1, constant: 0 },
                     Instruction::LessEqual {
                         dest: 2,
                         left: 0,
                         right: 1,
                     },
-                    Instruction::JumpIfTrue {
+                    Instruction::BrIf {
                         condition: 2,
-                        target: 9,
+                        if_true: BlockId(1),
+                        if_false: BlockId(2),
                     },
+                    Instruction::BlockStart { id: BlockId(1) },
+                    Instruction::Return { value: 0 },
+                    Instruction::BlockStart { id: BlockId(2) },
                     Instruction::MakeFunction { dest: 3, function: FuncId(1) },
                     Instruction::Constant { dest: 4, constant: 1 },
                     Instruction::Subtract {
@@ -3591,9 +3687,8 @@ mod tests {
                         arguments: vec![5],
                     },
                     Instruction::Return { value: 6 },
-                    Instruction::Return { value: 0 },
                 ],
-                locations: vec![None; 10],
+                locations: vec![None; 13],
             }],
             entry: FuncId(0),
             debug_sources: Vec::new(),
@@ -3767,80 +3862,8 @@ mod tests {
     fn profile_reports_tracked_array_allocations_and_peak() {
         let profiled = VM::with_config(&array_churn_program(4), RunConfig::unlimited()).profile();
         assert!(profiled.result.is_ok());
-        assert_eq!(profiled.report.tracked_heap_allocations, 7);
-        assert_eq!(profiled.report.tracked_heap_peak_live, 5);
-    }
-
-    #[test]
-    fn main_global_cell_cache_reuses_and_replaces_binding_cells() {
-        let mut program = empty_program();
-        program.names = vec!["value".to_string(), "value".to_string()];
-        let mut vm = VM::new(&program);
-        let mut main = Frame {
-            body: None,
-            ip: 0,
-            registers: Vec::new(),
-            locals: new_local_slots(),
-            closure: new_environment(),
-            upvalues: Vec::new(),
-            variable_plan: None,
-            is_main: true,
-            function: Rc::from("main"),
-            function_index: None,
-            return_target: None,
-        };
-
-        let missing = vm
-            .load_variable(&main, 1)
-            .expect_err("missing global should still be rejected");
-        assert_eq!(missing.message, "undefined variable `value`");
-        assert!(vm.global_cell_cache[0].is_none());
-
-        vm.store_variable(&mut main, 0, "value".to_string(), Value::number(1.0));
-        let first_cell = vm.global_cell_cache[0]
-            .as_ref()
-            .expect("store should seed the global cache")
-            .clone();
-        assert_eq!(vm.load_variable(&main, 0).unwrap().to_string(), "1");
-        assert!(Rc::ptr_eq(
-            &first_cell,
-            vm.global_cell_cache[0].as_ref().expect("cached cell")
-        ));
-
-        vm.assign_variable(&main, 1, Value::number(2.0))
-            .expect("assignment should reuse the cached cell");
-        assert_eq!(first_cell.borrow().to_string(), "2");
-        assert!(Rc::ptr_eq(
-            &first_cell,
-            vm.global_cell_cache[0].as_ref().expect("cached cell")
-        ));
-
-        let closure = Frame {
-            body: None,
-            ip: 0,
-            registers: Vec::new(),
-            locals: new_local_slots(),
-            closure: new_environment(),
-            upvalues: Vec::new(),
-            variable_plan: None,
-            is_main: false,
-            function: Rc::from("closure"),
-            function_index: Some(0),
-            return_target: None,
-        };
-        closure
-            .closure
-            .borrow_mut()
-            .insert("value".to_string(), first_cell.clone());
-
-        vm.store_variable(&mut main, 0, "value".to_string(), Value::number(3.0));
-        let second_cell = vm.global_cell_cache[0]
-            .as_ref()
-            .expect("replacement should refresh the global cache")
-            .clone();
-        assert!(!Rc::ptr_eq(&first_cell, &second_cell));
-        assert_eq!(vm.load_variable(&main, 1).unwrap().to_string(), "3");
-        assert_eq!(vm.load_variable(&closure, 1).unwrap().to_string(), "2");
+        assert_eq!(profiled.report.tracked_heap_allocations, 6);
+        assert_eq!(profiled.report.tracked_heap_peak_live, 4);
     }
 
     #[test]
@@ -3898,7 +3921,7 @@ mod tests {
         let in_flight = stats.snapshot();
         assert_eq!(in_flight.for_kind(HeapObjectKind::Array).allocations, 2);
         assert_eq!(in_flight.for_kind(HeapObjectKind::Array).live, 2);
-        assert_eq!(in_flight.peak_live, 3);
+        assert_eq!(in_flight.peak_live, 2);
 
         drop(temporary);
         assert_eq!(stats.snapshot().for_kind(HeapObjectKind::Array).live, 1);
@@ -3930,8 +3953,8 @@ mod tests {
             .expect("native copy should succeed");
 
         let snapshot = stats.snapshot();
-        assert_eq!(snapshot.total_live, 5);
-        assert_eq!(snapshot.peak_live, 5);
+        assert_eq!(snapshot.total_live, 4);
+        assert_eq!(snapshot.peak_live, 4);
         assert_eq!(snapshot.for_kind(HeapObjectKind::Array).live, 2);
         assert_eq!(snapshot.for_kind(HeapObjectKind::Map).live, 1);
         assert_eq!(snapshot.for_kind(HeapObjectKind::Struct).live, 1);
@@ -3943,7 +3966,7 @@ mod tests {
         drop(vm);
         let released = stats.snapshot();
         assert_eq!(released.total_live, 0);
-        assert_eq!(released.peak_live, 5);
+        assert_eq!(released.peak_live, 4);
     }
 
     #[test]
@@ -3961,7 +3984,7 @@ mod tests {
         );
         assert_eq!(snapshot.for_kind(HeapObjectKind::Array).live, 0);
         assert_eq!(snapshot.for_kind(HeapObjectKind::Array).dead, ITERATIONS);
-        assert_eq!(snapshot.peak_live, 5);
+        assert_eq!(snapshot.peak_live, 4);
         assert!(snapshot.for_kind(HeapObjectKind::Array).peak_estimated_bytes > 0);
         assert!(snapshot.estimated_peak_live_bytes > 0);
         assert_eq!(snapshot.total_live, 0);
@@ -4021,7 +4044,7 @@ mod tests {
         assert_eq!(snapshot.for_kind(HeapObjectKind::Map).allocations, 1);
         assert!(snapshot.for_kind(HeapObjectKind::Array).estimated_bytes > ARRAY_LENGTH);
         assert!(snapshot.for_kind(HeapObjectKind::Map).estimated_bytes > MAP_LENGTH);
-        assert_eq!(snapshot.peak_live, 3);
+        assert_eq!(snapshot.peak_live, 2);
         assert!(snapshot.estimated_peak_live_bytes >= snapshot.estimated_live_bytes);
 
         drop(array);
@@ -4065,7 +4088,7 @@ mod tests {
                 registers: 1,
                 params: vec!["item".to_string()],
                 instructions: vec![
-                    Instruction::LoadVar { dest: 0, name: 0 },
+                    Instruction::LoadLocal { dest: 0, slot: 0 },
                     Instruction::Return { value: 0 },
                 ],
                 locations: vec![None, None],
@@ -4124,7 +4147,7 @@ mod tests {
                     registers: 5,
                     params: vec!["item".to_string()],
                     instructions: vec![
-                        Instruction::LoadVar { dest: 0, name: 0 },
+                        Instruction::LoadLocal { dest: 0, slot: 0 },
                         Instruction::Constant { dest: 1, constant: 0 },
                         Instruction::Add {
                             dest: 2,
@@ -4152,7 +4175,7 @@ mod tests {
                     registers: 1,
                     params: vec!["item".to_string()],
                     instructions: vec![
-                        Instruction::LoadVar { dest: 0, name: 0 },
+                        Instruction::LoadLocal { dest: 0, slot: 0 },
                         Instruction::Return { value: 0 },
                     ],
                     locations: vec![None; 2],
@@ -4231,7 +4254,7 @@ mod tests {
                 registers: 3,
                 params: vec!["item".to_string()],
                 instructions: vec![
-                    Instruction::LoadVar { dest: 0, name: 0 },
+                    Instruction::LoadLocal { dest: 0, slot: 0 },
                     Instruction::Constant { dest: 1, constant: 0 },
                     Instruction::Greater {
                         dest: 2,
@@ -4396,7 +4419,7 @@ mod tests {
                 registers: 3,
                 params: vec!["item".to_string()],
                 instructions: vec![
-                    Instruction::LoadVar { dest: 0, name: 0 },
+                    Instruction::LoadLocal { dest: 0, slot: 0 },
                     Instruction::Constant { dest: 1, constant: 0 },
                     Instruction::Equal {
                         dest: 2,
@@ -4605,8 +4628,8 @@ mod tests {
                 registers: 3,
                 params: vec!["acc".to_string(), "item".to_string()],
                 instructions: vec![
-                    Instruction::LoadVar { dest: 0, name: 0 },
-                    Instruction::LoadVar { dest: 1, name: 1 },
+                    Instruction::LoadLocal { dest: 0, slot: 0 },
+                    Instruction::LoadLocal { dest: 1, slot: 1 },
                     Instruction::Add {
                         dest: 2,
                         left: 0,
@@ -4787,7 +4810,10 @@ mod tests {
             ],
             globals: Vec::new(),
             types: Vec::new(),
-            native_imports: Vec::new(),
+            native_imports: vec![NativeImport {
+                name: "print".to_string(),
+                abi: 1,
+            }],
             modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
@@ -4797,7 +4823,7 @@ mod tests {
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
-                registers: 6,
+                registers: 10,
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
                     Instruction::Constant { dest: 1, constant: 1 },
@@ -4807,9 +4833,19 @@ mod tests {
                         dest: 4,
                         entries: vec![(0, 1), (2, 3)],
                     },
-                    Instruction::AssertArray { dest: 5, value: 4 },
-                    Instruction::Print { value: 5 },
-                    Instruction::Return { value: 5 },
+                    Instruction::IterInit { dest: 5, value: 4 },
+                    Instruction::IterNext { dest: 6, value: 5 },
+                    Instruction::IterNext { dest: 7, value: 5 },
+                    Instruction::Array {
+                        dest: 8,
+                        elements: vec![6, 7],
+                    },
+                    Instruction::CallNative {
+                        dest: 9,
+                        native: NativeId(0),
+                        arguments: vec![8],
+                    },
+                    Instruction::Return { value: 8 },
                 ],
                 locations: Vec::new(),
             }],
@@ -5256,7 +5292,10 @@ mod tests {
             constants: vec![Constant::Nil],
             globals: Vec::new(),
             types: Vec::new(),
-            native_imports: Vec::new(),
+            native_imports: vec![NativeImport {
+                name: "sqrt".to_string(),
+                abi: 1,
+            }],
             modules: Vec::new(),
             names: vec!["sqrt".to_string()],
             functions: vec![Function {
@@ -5269,9 +5308,9 @@ mod tests {
                 registers: 2,
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
-                    Instruction::NativeCall {
+                    Instruction::CallNative {
                         dest: 1,
-                        name: 0,
+                        native: NativeId(0),
                         arguments: vec![0],
                     },
                 ],
@@ -5388,9 +5427,10 @@ mod tests {
                 registers: 1,
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
-                    Instruction::Jump { target: 0 },
+                    Instruction::BlockStart { id: BlockId(0) },
+                    Instruction::Br { target: BlockId(0) },
                 ],
-                locations: vec![None, None],
+                locations: vec![None; 3],
             }],
             entry: FuncId(0),
             debug_sources: Vec::new(),
@@ -5589,7 +5629,10 @@ mod tests {
             constants: vec![Constant::String("é".to_string())],
             globals: Vec::new(),
             types: Vec::new(),
-            native_imports: Vec::new(),
+            native_imports: vec![NativeImport {
+                name: "print".to_string(),
+                abi: 1,
+            }],
             modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
@@ -5599,10 +5642,14 @@ mod tests {
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
-                registers: 1,
+                registers: 2,
                 instructions: vec![
                     Instruction::Constant { dest: 0, constant: 0 },
-                    Instruction::Print { value: 0 },
+                    Instruction::CallNative {
+                        dest: 1,
+                        native: NativeId(0),
+                        arguments: vec![0],
+                    },
                 ],
                 locations: vec![None, None],
             }],
@@ -5819,6 +5866,7 @@ mod tests {
 
     fn wide_scalar_call_program() -> Program {
         let main_instructions = vec![
+            Instruction::BlockStart { id: BlockId(0) },
             Instruction::Constant {
                 dest: 0,
                 constant: 0,
@@ -5836,15 +5884,19 @@ mod tests {
                 constant: 3,
             },
             Instruction::MakeFunction { dest: 4, function: FuncId(1) },
+            Instruction::Br { target: BlockId(1) },
+            Instruction::BlockStart { id: BlockId(1) },
             Instruction::Less {
                 dest: 5,
                 left: 0,
                 right: 1,
             },
-            Instruction::JumpIfFalse {
+            Instruction::BrIf {
                 condition: 5,
-                target: 12,
+                if_true: BlockId(2),
+                if_false: BlockId(3),
             },
+            Instruction::BlockStart { id: BlockId(2) },
             Instruction::Call {
                 dest: 6,
                 callee: 4,
@@ -5857,13 +5909,18 @@ mod tests {
                 right: 3,
             },
             Instruction::Move { dest: 0, source: 7 },
-            Instruction::Jump { target: 5 },
-            Instruction::Print { value: 2 },
+            Instruction::Br { target: BlockId(1) },
+            Instruction::BlockStart { id: BlockId(3) },
+            Instruction::CallNative {
+                dest: 8,
+                native: NativeId(0),
+                arguments: vec![2],
+            },
             Instruction::Return { value: 2 },
         ];
 
         let mut function_instructions =
-            vec![Instruction::LoadVar { dest: 0, name: 0 }];
+            vec![Instruction::LoadLocal { dest: 0, slot: 0 }];
         for index in 1..=32 {
             function_instructions.push(Instruction::Add {
                 dest: index,
@@ -5882,7 +5939,10 @@ mod tests {
             ],
             globals: Vec::new(),
             types: Vec::new(),
-            native_imports: Vec::new(),
+            native_imports: vec![NativeImport {
+                name: "print".to_string(),
+                abi: 1,
+            }],
             modules: Vec::new(),
             names: vec!["value".to_string()],
             functions: vec![Function {
@@ -5892,9 +5952,9 @@ mod tests {
                 local_count: 0,
                 upvalues: Vec::new(),
                 params: Vec::new(),
-                registers: 8,
+                registers: 9,
                 instructions: main_instructions,
-                locations: vec![None; 14],
+                locations: vec![None; 19],
             },
                 Function {
                 id: FuncId(1),
@@ -6105,8 +6165,8 @@ mod tests {
                 registers: 3,
                 params: vec!["left".to_string(), "right".to_string()],
                 instructions: vec![
-                    Instruction::LoadVar { dest: 0, name: 0 },
-                    Instruction::LoadVar { dest: 1, name: 1 },
+                    Instruction::LoadLocal { dest: 0, slot: 0 },
+                    Instruction::LoadLocal { dest: 1, slot: 1 },
                     Instruction::Add {
                         dest: 2,
                         left: 0,
@@ -6369,7 +6429,6 @@ mod tests {
             },
         );
         frame.variable_plan = Some(Rc::new(VariablePlan {
-            local_slots: BTreeMap::from([(0, 0)]),
             local_names: vec!["value".to_string()],
         }));
 
@@ -6378,8 +6437,8 @@ mod tests {
             .dispatch(RuntimeHelper::Constant, &[0])
             .expect("constant helper should return a handle");
         let loaded = bridge
-            .dispatch(RuntimeHelper::LoadVar, &[0])
-            .expect("load helper should return a handle");
+            .dispatch(RuntimeHelper::LoadLocal, &[0])
+            .expect("load local helper should return a handle");
         let sum = bridge
             .dispatch(RuntimeHelper::Add, &[number, loaded])
             .expect("add helper should return a handle");
@@ -6470,7 +6529,7 @@ mod tests {
             .expect_err("wrong helper arity should be rejected");
         assert_eq!(
             wrong_arity.message,
-            "JIT helper 4 expects 2 operands, got 1"
+            "JIT helper 3 expects 2 operands, got 1"
         );
         let invalid_handle = bridge
             .dispatch(RuntimeHelper::Not, &[99])
@@ -7017,14 +7076,10 @@ pub struct VM<'a> {
     verified: bool,
     instruction_checkpoint: InstructionCheckpoint,
     heap: Heap,
-    globals: SharedEnvironment,
-    global_name_slots: Vec<usize>,
-    global_cell_cache: Vec<Option<Cell>>,
     global_cells: Vec<Option<Cell>>,
     global_names: Vec<String>,
     decoded_constants: Vec<Value>,
     constant_errors: BTreeMap<usize, RuntimeError>,
-    legacy_native_specs: Vec<Option<&'static NativeSpec>>,
     native_specs: Vec<Option<&'static NativeSpec>>,
     module_states: Vec<ModuleState>,
     prepared_functions: Vec<Rc<PreparedFunction>>,
@@ -7222,10 +7277,6 @@ impl<'vm, 'frame, 'program> JitHelperBridge<'vm, 'frame, 'program> {
         let result = match helper {
             RuntimeHelper::Constant => {
                 self.vm.constant_value(Self::operand_index(operands[0])?)?
-            }
-            RuntimeHelper::LoadVar => {
-                self.vm
-                    .load_variable(self.frame, Self::operand_index(operands[0])?)?
             }
             RuntimeHelper::LoadLocal => {
                 self.vm
@@ -7733,17 +7784,7 @@ impl<'a> VM<'a> {
                 token: token.clone(),
             },
         };
-        let mut global_name_slots = Vec::with_capacity(program.names.len());
-        let mut global_slots_by_name = BTreeMap::new();
-        for name in &program.names {
-            let next_slot = global_slots_by_name.len();
-            let slot = *global_slots_by_name
-                .entry(name.as_str())
-                .or_insert(next_slot);
-            global_name_slots.push(slot);
-        }
         let heap = Heap::new();
-        let globals = heap.new_environment();
         let mut global_count = 0usize;
         for function in &program.functions {
             for instruction in &function.instructions {
@@ -7798,19 +7839,11 @@ impl<'a> VM<'a> {
             verified,
             instruction_checkpoint,
             heap,
-            globals,
-            global_name_slots,
-            global_cell_cache: vec![None; global_slots_by_name.len()],
             global_cells: vec![None; global_count],
             global_names,
             block_maps,
             decoded_constants,
             constant_errors,
-            legacy_native_specs: program
-                .names
-                .iter()
-                .map(|name| native_spec(name))
-                .collect(),
             native_specs: program
                 .native_imports
                 .iter()
@@ -7820,7 +7853,7 @@ impl<'a> VM<'a> {
             prepared_functions: program
                 .functions
                 .iter()
-                .map(|function| Rc::new(prepare_function(program, function)))
+                .map(|function| Rc::new(prepare_function(function)))
                 .collect(),
             jit: JitState::disabled(),
             output: String::new(),
@@ -8768,9 +8801,6 @@ impl<'a> VM<'a> {
                 }
                 let call_site = body.locations.get(frame.ip).and_then(Option::as_ref);
                 match instruction {
-                Instruction::Print { value } => {
-                    self.execute_recursive_print(body, frame, instruction_index, *value)?;
-                }
                 Instruction::Call {
                     dest,
                     callee,
@@ -8836,25 +8866,6 @@ impl<'a> VM<'a> {
                         call_site,
                     )?;
                     self.write_register(frame, *dest, result)?;
-                }
-                Instruction::Jump { target } => {
-                    self.execute_jump(frame, *target, body.instructions.len())?;
-                    jumped = true;
-                    return Ok(None);
-                }
-                Instruction::JumpIfFalse { condition, target } => {
-                    if !self.read_register_ref(frame, *condition)?.is_truthy() {
-                        self.execute_jump(frame, *target, body.instructions.len())?;
-                        jumped = true;
-                        return Ok(None);
-                    }
-                }
-                Instruction::JumpIfTrue { condition, target } => {
-                    if self.read_register_ref(frame, *condition)?.is_truthy() {
-                        self.execute_jump(frame, *target, body.instructions.len())?;
-                        jumped = true;
-                        return Ok(None);
-                    }
                 }
                 Instruction::BlockStart { .. } => {}
                 Instruction::Br { target } => {
@@ -8963,19 +8974,6 @@ impl<'a> VM<'a> {
         Ok(None)
     }
 
-    fn execute_jump(
-        &mut self,
-        frame: &mut Frame,
-        target: usize,
-        instruction_count: usize,
-    ) -> Result<(), RuntimeError> {
-        if !self.verified {
-            self.validate_jump_target(target, instruction_count)?;
-        }
-        frame.ip = target;
-        Ok(())
-    }
-
     /// Shared instruction semantics for both the ordinary and cooperative
     /// dispatch paths. Output, calls, returns, and jump control flow stay in
     /// the callers because the two paths attribute those observably.
@@ -9013,15 +9011,6 @@ impl<'a> VM<'a> {
                     values.push((key, value));
                 }
                 let value = self.allocate_map(values)?;
-                self.write_register(frame, *dest, value)
-            }
-            Instruction::Struct {
-                dest,
-                type_name,
-                fields,
-            } => {
-                let type_name = type_name.map(|index| self.read_name(index)).transpose()?;
-                let value = self.make_struct(frame, None, type_name, fields)?;
                 self.write_register(frame, *dest, value)
             }
             Instruction::MakeStruct {
@@ -9086,22 +9075,6 @@ impl<'a> VM<'a> {
                 *existing = value.clone();
                 self.write_register(frame, *dest, value)
             }
-            Instruction::Variant {
-                dest,
-                enum_name,
-                variant_name,
-                payload,
-            } => {
-                let enum_name = self.read_name(*enum_name)?;
-                let variant_name = self.read_name(*variant_name)?;
-                let mut fields = Vec::with_capacity(payload.len());
-                for register in payload {
-                    fields.push(self.read_register(frame, *register)?);
-                }
-                let value = self.allocate_variant(
-                    TypeId(0), VariantId(0), enum_name, variant_name, fields)?;
-                self.write_register(frame, *dest, value)
-            }
             Instruction::MakeVariant {
                 dest,
                 type_id,
@@ -9162,53 +9135,9 @@ impl<'a> VM<'a> {
                     .ok_or_else(|| RuntimeError::new("enum variant field index out of bounds"))?;
                 self.write_register(frame, *dest, field)
             }
-            Instruction::VariantTag {
-                dest,
-                value,
-                enum_name,
-                variant_name,
-            } => {
-                let input = self.read_register_ref(frame, *value)?;
-                let enum_name = self.read_name_ref(*enum_name)?;
-                let variant_name = self.read_name_ref(*variant_name)?;
-                let matched = matches!(
-                    input,
-                    Value::Variant(variant)
-                        if variant.enum_name == enum_name
-                            && variant.variant_name == variant_name
-                );
-                self.write_register(frame, *dest, Value::boolean(matched))
-            }
-            Instruction::VariantField { dest, value, index } => {
-                let input = self.read_register_ref(frame, *value)?;
-                let Value::Variant(variant) = input else {
-                    return Err(RuntimeError::new("can only access fields on enum variants"));
-                };
-                let field = variant
-                    .fields
-                    .get(*index)
-                    .cloned()
-                    .ok_or_else(|| RuntimeError::new("enum variant field index out of bounds"))?;
-                self.write_register(frame, *dest, field)
-            }
             Instruction::Move { dest, source } => {
                 let value = self.read_register(frame, *source)?;
                 self.write_register(frame, *dest, value)
-            }
-            Instruction::LoadVar { dest, name } => {
-                let value = self.load_variable(frame, *name)?;
-                self.write_register(frame, *dest, value)
-            }
-            Instruction::StoreVar { name, value } => {
-                let name_index = *name;
-                let name = self.read_name(name_index)?;
-                let value = self.read_register(frame, *value)?;
-                self.store_variable(frame, name_index, name, value);
-                Ok(())
-            }
-            Instruction::AssignVar { name, value } => {
-                let value = self.read_register(frame, *value)?;
-                self.assign_variable(frame, *name, value)
             }
             Instruction::LoadLocal { dest, slot } => {
                 let value = self.read_local(frame, *slot)?;
@@ -9254,35 +9183,6 @@ impl<'a> VM<'a> {
             Instruction::SetGlobal { slot, value } => {
                 let value = self.read_register(frame, *value)?;
                 self.set_global(*slot, value)
-            }
-            Instruction::NativeCall {
-                dest,
-                name,
-                arguments,
-            } => {
-                let values = match arguments.as_slice() {
-                    [] => NativeArguments::Empty,
-                    [argument] => NativeArguments::One(self.read_register(frame, *argument)?),
-                    [left, right] => {
-                        let left = self.read_register(frame, *left)?;
-                        let right = self.read_register(frame, *right)?;
-                        NativeArguments::Two(left, right)
-                    }
-                    arguments => {
-                        let mut values = Vec::with_capacity(arguments.len());
-                        for argument in arguments {
-                            values.push(self.read_register(frame, *argument)?);
-                        }
-                        NativeArguments::Many(values)
-                    }
-                };
-                let result = self.execute_legacy_native_call(
-                    *name,
-                    values,
-                    frame.function.as_ref(),
-                    call_site,
-                )?;
-                self.write_register(frame, *dest, result)
             }
             Instruction::CallNative {
                 dest,
@@ -9637,23 +9537,6 @@ impl<'a> VM<'a> {
                 let length = self.execute_len(value)?;
                 self.write_register(frame, *dest, length)
             }
-            Instruction::AssertArray { dest, value } => {
-                let input = self.read_register_ref(frame, *value)?;
-                let iterable = match input {
-                    Value::Array(_) | Value::Range(_) => input.clone(),
-                    Value::Map(map) => {
-                        let keys = map
-                            .entries
-                            .borrow()
-                            .iter()
-                            .map(|(key, _)| key.clone())
-                            .collect();
-                        self.allocate_array(keys)?
-                    }
-                    _ => return Err(RuntimeError::new("for-in expects array, range, or map")),
-                };
-                self.write_register(frame, *dest, iterable)
-            }
             Instruction::IterInit { dest, value } => {
                 let input = self.read_register_ref(frame, *value)?;
                 let iterator = match input {
@@ -9757,12 +9640,8 @@ impl<'a> VM<'a> {
                 };
                 self.write_register(frame, *dest, Value::number(number))
             }
-            Instruction::Print { .. }
-            | Instruction::Call { .. }
+            Instruction::Call { .. }
             | Instruction::CallDirect { .. }
-            | Instruction::Jump { .. }
-            | Instruction::JumpIfFalse { .. }
-            | Instruction::JumpIfTrue { .. }
             | Instruction::BlockStart { .. }
             | Instruction::Br { .. }
             | Instruction::BrIf { .. }
@@ -9777,7 +9656,7 @@ impl<'a> VM<'a> {
         &mut self,
         body: &Function,
         frame: &mut Frame,
-        task_id: TaskId,
+        _task_id: TaskId,
         instruction_index: usize,
         instruction: &Instruction,
     ) -> Result<InstructionAction, RuntimeError> {
@@ -9786,21 +9665,35 @@ impl<'a> VM<'a> {
             .get(instruction_index)
             .and_then(Option::as_ref);
         match instruction {
-            Instruction::Print { value } => {
-                let value = self.read_register_ref(frame, *value)?;
-                let mut output = value.to_string();
-                output.push('\n');
-                let sequence = self.append_task_output(task_id, &output)?;
-                if self.task_trace_enabled {
-                    self.active_task_trace_event_at_sequence(
-                        sequence,
-                        TraceEventKind::Output,
-                        frame,
-                        Some(instruction_index),
-                        body.locations.get(instruction_index).cloned().flatten(),
-                        Some(value.to_string()),
-                    )?;
-                }
+            Instruction::BlockStart { .. } => {}
+            Instruction::Br { target } => {
+                let block_map = frame
+                    .function_index
+                    .and_then(|index| self.block_maps.get(index));
+                let block_map = block_map.unwrap_or(&self.block_maps[0]);
+                let next = block_map
+                    .get(&target.0)
+                    .copied()
+                    .ok_or_else(|| RuntimeError::new("branch target out of range"))?;
+                frame.ip = next;
+                return Ok(InstructionAction::Jumped);
+            }
+            Instruction::BrIf {
+                condition,
+                if_true,
+                if_false,
+            } => {
+                let block_map = frame
+                    .function_index
+                    .and_then(|index| self.block_maps.get(index));
+                let block_map = block_map.unwrap_or(&self.block_maps[0]);
+                let taken = self.read_register_ref(frame, *condition)?.is_truthy();
+                let next = block_map
+                    .get(if taken { &if_true.0 } else { &if_false.0 })
+                    .copied()
+                    .ok_or_else(|| RuntimeError::new("branch target out of range"))?;
+                frame.ip = next;
+                return Ok(InstructionAction::Jumped);
             }
             Instruction::Call {
                 dest,
@@ -9864,24 +9757,11 @@ impl<'a> VM<'a> {
                     call_site: call_site.cloned(),
                 }));
             }
-            Instruction::Jump { target } => {
-                self.execute_jump(frame, *target, body.instructions.len())?;
-                return Ok(InstructionAction::Jumped);
-            }
-            Instruction::JumpIfFalse { condition, target } => {
-                if !self.read_register_ref(frame, *condition)?.is_truthy() {
-                    self.execute_jump(frame, *target, body.instructions.len())?;
-                    return Ok(InstructionAction::Jumped);
-                }
-            }
-            Instruction::JumpIfTrue { condition, target } => {
-                if self.read_register_ref(frame, *condition)?.is_truthy() {
-                    self.execute_jump(frame, *target, body.instructions.len())?;
-                    return Ok(InstructionAction::Jumped);
-                }
-            }
             Instruction::Return { value } => {
                 return Ok(InstructionAction::Return(self.take_register(frame, *value)?));
+            }
+            Instruction::ReturnNil => {
+                return Ok(InstructionAction::Return(Value::Nil));
             }
             _ => {
                 self.execute_common_instruction(body, frame, instruction_index, instruction)?;
@@ -10601,9 +10481,6 @@ impl<'a> VM<'a> {
                     .unwrap_or_else(|| format!("g{slot}"));
                 locals.insert(name, cell.borrow().to_string());
             }
-            for (name, cell) in self.globals.borrow().iter() {
-                locals.insert(name.clone(), cell.borrow().to_string());
-            }
         }
         for (name, cell) in frame.closure.borrow().iter() {
             locals.insert(name.clone(), cell.borrow().to_string());
@@ -11114,26 +10991,6 @@ impl<'a> VM<'a> {
         Ok(self.heap.allocate_variant(type_id, variant_id, enum_name, variant_name, fields))
     }
 
-    fn make_struct(
-        &mut self,
-        frame: &Frame,
-        type_id: Option<TypeId>,
-        type_name: Option<String>,
-        fields: &[(usize, usize)],
-    ) -> Result<Value, RuntimeError> {
-        let mut values = Vec::with_capacity(fields.len());
-        for (name_index, register) in fields {
-            values.push((
-                self.read_name(*name_index)?,
-                self.read_register(frame, *register)?,
-            ));
-        }
-        self.charge_runtime_elements(1usize.saturating_add(values.len()))?;
-        self.heap
-            .allocate_struct(type_id, type_name, values)
-            .map_err(|error| RuntimeError::new(error.to_string()))
-    }
-
     fn checked_array_index(&self, index_value: &Value) -> Result<usize, RuntimeError> {
         let Value::Number(number) = index_value else {
             return Err(RuntimeError::new("array index must be number"));
@@ -11312,25 +11169,6 @@ impl<'a> VM<'a> {
                     .get(import_index)
                     .map(|import| import.name.as_str())
                     .unwrap_or("?");
-                Err(RuntimeError::new(format!(
-                    "unknown native stdlib function `{}`",
-                    name
-                )))
-            }
-        }
-    }
-
-    fn execute_legacy_native_call(
-        &mut self,
-        name_index: usize,
-        arguments: NativeArguments,
-        caller: &str,
-        call_site: Option<&DebugLocation>,
-    ) -> Result<Value, RuntimeError> {
-        match self.legacy_native_specs.get(name_index).copied().flatten() {
-            Some(spec) => self.execute_native_call_with_spec(spec, arguments, caller, call_site),
-            None => {
-                let name = self.read_name_ref(name_index)?;
                 Err(RuntimeError::new(format!(
                     "unknown native stdlib function `{}`",
                     name
@@ -12018,111 +11856,6 @@ impl<'a> VM<'a> {
         Ok(self.read_name_ref(index)?.to_string())
     }
 
-    fn find_local_cell(&self, frame: &Frame, name_index: usize) -> Option<Cell> {
-        let plan = frame.variable_plan.as_ref()?;
-        let slot = plan.local_slots.get(&name_index)?;
-        frame.locals.borrow().get(*slot)?.clone()
-    }
-
-    fn find_outer_cell(&self, frame: &Frame, name: &str) -> Option<Cell> {
-        if let Some(cell) = frame.closure.borrow().get(name) {
-            return Some(cell.clone());
-        }
-        self.globals.borrow().get(name).cloned()
-    }
-
-    fn load_variable(&mut self, frame: &Frame, name_index: usize) -> Result<Value, RuntimeError> {
-        if frame.is_main {
-            return Ok(self.global_cell_ref(name_index)?.borrow().clone());
-        }
-        if let Some(cell) = self.find_local_cell(frame, name_index) {
-            return Ok(cell.borrow().clone());
-        }
-        let cell = self.variable_cell(frame, name_index)?;
-        let value = cell.borrow().clone();
-        Ok(value)
-    }
-
-    fn store_variable(&mut self, frame: &mut Frame, name_index: usize, name: String, value: Value) {
-        let cell = self.heap.new_cell(value);
-        if frame.is_main {
-            self.globals.borrow_mut().insert(name, cell.clone());
-            if let Some(cache_index) = self.global_name_slots.get(name_index).copied() {
-                self.global_cell_cache[cache_index] = Some(cell);
-            }
-            return;
-        }
-        if let Some(slot) = frame
-            .variable_plan
-            .as_ref()
-            .and_then(|plan| plan.local_slots.get(&name_index).copied())
-        {
-            let mut locals = frame.locals.borrow_mut();
-            if slot < locals.len() {
-                locals[slot] = Some(cell);
-                return;
-            }
-        }
-        // Hand-built frames without a resolved plan keep the legacy
-        // name-keyed fallback in the closure environment.
-        frame.closure.borrow_mut().insert(name, cell);
-    }
-
-    fn assign_variable(
-        &mut self,
-        frame: &Frame,
-        name_index: usize,
-        value: Value,
-    ) -> Result<(), RuntimeError> {
-        if frame.is_main {
-            *self.global_cell_ref(name_index)?.borrow_mut() = value;
-            return Ok(());
-        }
-        if let Some(cell) = self.find_local_cell(frame, name_index) {
-            *cell.borrow_mut() = value;
-            return Ok(());
-        }
-        let cell = self.variable_cell(frame, name_index)?;
-        *cell.borrow_mut() = value;
-        Ok(())
-    }
-
-    fn variable_cell(&mut self, frame: &Frame, name_index: usize) -> Result<Cell, RuntimeError> {
-        debug_assert!(!frame.is_main);
-        let name = self.read_name_ref(name_index)?;
-        self.find_outer_cell(frame, name)
-            .ok_or_else(|| RuntimeError::new(format!("undefined variable `{}`", name)))
-    }
-
-    fn global_cell_ref(&mut self, name_index: usize) -> Result<&Cell, RuntimeError> {
-        let cache_index = self
-            .global_name_slots
-            .get(name_index)
-            .copied()
-            .ok_or_else(|| RuntimeError::new("name index out of range"))?;
-        if self
-            .global_cell_cache
-            .get(cache_index)
-            .and_then(Option::as_ref)
-            .is_none()
-        {
-            let name = self.read_name_ref(name_index)?;
-            let cell = self
-                .globals
-                .borrow()
-                .get(name)
-                .cloned()
-                .ok_or_else(|| RuntimeError::new(format!("undefined variable `{}`", name)))?;
-            if let Some(slot) = self.global_cell_cache.get_mut(cache_index) {
-                *slot = Some(cell);
-            }
-        }
-        self.global_cell_cache
-            .get(cache_index)
-            .and_then(Option::as_ref)
-            .ok_or_else(|| RuntimeError::new("global cache index out of range"))
-    }
-
     fn read_local(&self, frame: &Frame, slot: usize) -> Result<Value, RuntimeError> {
         let value = {
             let locals = frame.locals.borrow();
@@ -12181,18 +11914,6 @@ impl<'a> VM<'a> {
             .ok_or_else(|| RuntimeError::new(format!("unbound global g{slot}")))?;
         *cell.borrow_mut() = value;
         Ok(())
-    }
-
-    fn validate_jump_target(
-        &self,
-        target: usize,
-        instruction_count: usize,
-    ) -> Result<(), RuntimeError> {
-        if target > instruction_count {
-            Err(RuntimeError::new("jump target out of range"))
-        } else {
-            Ok(())
-        }
     }
 
     fn constant_value(&self, index: usize) -> Result<Value, RuntimeError> {

@@ -13,9 +13,8 @@ ordered-comparison opcodes, numeric struct/enum type and layout tables, native
 imports lowered to index-based `call_native`, module init functions instead of
 module stream splicing, an iterator protocol for `for-in`, and `max_digits10`
 `f64` constants. The Rust VM parser, formatter, and verifier accept and
-validate `cdbc 0.2` and keep a read-compatibility path for `cdbc 0.1`. The
-C++ compiler emits only `cdbc 0.2`; `dump` round-trips a legacy artifact with
-its `cdbc 0.1` header when legacy instructions remain.
+validate `cdbc 0.2` only; `cdbc 0.1` headers are rejected as unsupported
+versions before any body parsing. The C++ compiler emits only `cdbc 0.2`.
 
 This supersedes the "selected no successor version" conclusion of
 `m05b-cdbc-contract.md`: the breaking opcode/value-layout changes could not be
@@ -25,9 +24,11 @@ condition that record named.
 ## Compatibility and read path
 
 - The C++ compiler emits only `cdbc 0.2`.
-- The Rust VM reads both `cdbc 0.1` and `cdbc 0.2` headers; the 0.1 path keeps
-  the legacy name-driven `load_var`/`store_var`/`jump*`/`print`/`index`/
-  `assign_index`/`len` and generic arithmetic/comparison instructions.
+- The Rust VM accepts only the `cdbc 0.2` header; legacy name-driven
+  `load_var`/`store_var`/`jump*`/`print` opcodes and `cdbc 0.1` inputs are
+  rejected. Dynamic fallbacks (`field`, `assign_field`, generic `index`/
+  `assign_index`/`len`, and generic arithmetic/comparison) remain part of the
+  0.2 instruction set for untyped or generic bodies.
 - Debug source/location/range sections and the separate `cdbc-cache 0.2`
   manifest are unchanged by the format upgrade.
 - The X1 compatibility matrix is pinned to the Phase 7 native-import delivery
@@ -43,16 +44,14 @@ condition that record named.
 
 ## Migration and deletion rules
 
-No `cdbc 0.1` reader or fixture path is deleted. Legacy artifacts continue to
-execute through the compatibility path, and malformed-version handling remains
-strict before VM execution. Removing the 0.1 read path later requires a
-separate deprecation decision with an updated compatibility matrix and support
-lifecycle.
+The former `cdbc 0.1` read path and its fixtures were removed on 2026-08-15:
+the VM now rejects legacy headers as unsupported versions before execution.
+Malformed-version handling remains strict for unknown `cdbc` versions.
 
 ## Evidence
 
 The upgrade carries its own golden, artifact, module, malformed, compatibility,
 and Rust VM coverage, including the `vm-rs/tests/bytecode_0_2_baseline.rs`
-0.1/0.2 behavior baseline, together with the refreshed
+0.2 boundary and legacy-rejection tests, together with the refreshed
 `docs/bytecode-text-format.md` and `docs/bytecode-instructions-zh.md`
 specifications.

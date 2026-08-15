@@ -1,4 +1,6 @@
-use compiler_design_vm::bytecode::{Constant, FuncId, Function, Instruction, Program};
+use compiler_design_vm::bytecode::{
+    BlockId, Constant, FuncId, Function, Instruction, NativeId, Program,
+};
 use compiler_design_vm::value::Value;
 use compiler_design_vm::{
     CooperativeDebugHook, CooperativeDebugPause, CooperativeProfileReport, CooperativeRun,
@@ -54,7 +56,10 @@ fn arithmetic_workload() -> Program {
         ],
         globals: Vec::new(),
         types: Vec::new(),
-        native_imports: Vec::new(),
+        native_imports: vec![compiler_design_vm::bytecode::NativeImport {
+            name: "print".to_string(),
+            abi: 1,
+        }],
         modules: Vec::new(),
         names: vec!["limit".to_string()],
         functions: vec![Function {
@@ -74,9 +79,10 @@ fn arithmetic_workload() -> Program {
             upvalues: Vec::new(),
             name: "arithmetic_worker".to_string(),
             arity: 1,
-            registers: 6,
+            registers: 7,
             params: vec!["limit".to_string()],
             instructions: vec![
+                Instruction::BlockStart { id: BlockId(0) },
                 Instruction::Constant {
                     dest: 1,
                     constant: 0,
@@ -89,16 +95,20 @@ fn arithmetic_workload() -> Program {
                     dest: 5,
                     constant: 1,
                 },
-                Instruction::LoadVar { dest: 3, name: 0 },
+                Instruction::Br { target: BlockId(1) },
+                Instruction::BlockStart { id: BlockId(1) },
+                Instruction::LoadLocal { dest: 3, slot: 0 },
                 Instruction::Less {
                     dest: 4,
                     left: 1,
                     right: 3,
                 },
-                Instruction::JumpIfFalse {
+                Instruction::BrIf {
                     condition: 4,
-                    target: 9,
+                    if_true: BlockId(2),
+                    if_false: BlockId(3),
                 },
+                Instruction::BlockStart { id: BlockId(2) },
                 Instruction::Add {
                     dest: 2,
                     left: 2,
@@ -109,11 +119,16 @@ fn arithmetic_workload() -> Program {
                     left: 1,
                     right: 5,
                 },
-                Instruction::Jump { target: 3 },
-                Instruction::Print { value: 2 },
+                Instruction::Br { target: BlockId(1) },
+                Instruction::BlockStart { id: BlockId(3) },
+                Instruction::CallNative {
+                    dest: 6,
+                    native: NativeId(0),
+                    arguments: vec![2],
+                },
                 Instruction::Return { value: 2 },
             ],
-            locations: vec![None; 11],
+            locations: vec![None; 16],
         }],
         entry: FuncId(0),
         debug_sources: Vec::new(),
@@ -128,7 +143,16 @@ fn callback_workload() -> Program {
         ],
         globals: Vec::new(),
         types: Vec::new(),
-        native_imports: Vec::new(),
+        native_imports: vec![
+            compiler_design_vm::bytecode::NativeImport {
+                name: "map".to_string(),
+                abi: 1,
+            },
+            compiler_design_vm::bytecode::NativeImport {
+                name: "print".to_string(),
+                abi: 1,
+            },
+        ],
         modules: Vec::new(),
         names: vec!["map".to_string(), "item".to_string()],
         functions: vec![Function {
@@ -148,7 +172,7 @@ fn callback_workload() -> Program {
                 upvalues: Vec::new(),
                 name: "callback_worker".to_string(),
                 arity: 0,
-                registers: 5,
+                registers: 6,
                 params: Vec::new(),
                 instructions: vec![
                     Instruction::Constant {
@@ -167,12 +191,16 @@ fn callback_workload() -> Program {
                         dest: 3,
                         function: FuncId(2),
                     },
-                    Instruction::NativeCall {
+                    Instruction::CallNative {
                         dest: 4,
-                        name: 0,
+                        native: NativeId(0),
                         arguments: vec![2, 3],
                     },
-                    Instruction::Print { value: 4 },
+                    Instruction::CallNative {
+                        dest: 5,
+                        native: NativeId(1),
+                        arguments: vec![4],
+                    },
                     Instruction::Return { value: 4 },
                 ],
                 locations: vec![None; 7],
@@ -186,7 +214,7 @@ fn callback_workload() -> Program {
                 registers: 1,
                 params: vec!["item".to_string()],
                 instructions: vec![
-                    Instruction::LoadVar { dest: 0, name: 1 },
+                    Instruction::LoadLocal { dest: 0, slot: 0 },
                     Instruction::Return { value: 0 },
                 ],
                 locations: vec![None; 2],

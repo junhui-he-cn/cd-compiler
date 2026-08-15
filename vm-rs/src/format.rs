@@ -9,12 +9,10 @@ use std::fmt;
 
 /// Stable artifact family accepted and emitted by this VM.
 pub const ARTIFACT_FORMAT_FAMILY: &str = "cdbc";
-/// Stable artifact version accepted and emitted by this VM.
+/// Stable artifact version emitted by this VM.
 pub const ARTIFACT_FORMAT_VERSION: &str = "0.2";
 /// Canonical header for the current artifact family and version.
 pub const ARTIFACT_HEADER: &str = "cdbc 0.2";
-/// Legacy header still accepted for `.cdbc 0.1` compatibility inputs.
-pub const LEGACY_ARTIFACT_HEADER: &str = "cdbc 0.1";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParseError {
@@ -990,7 +988,7 @@ fn parse_artifact_unverified(source: &str) -> Result<(Artifact, usize), ParseErr
         line: parser.last_line(),
         message: format!("expected `{}`", ARTIFACT_HEADER),
     })?;
-    if line != ARTIFACT_HEADER && line != LEGACY_ARTIFACT_HEADER {
+    if line != ARTIFACT_HEADER {
         return Err(ParseError {
             line: line_number,
             message: format!("expected `{}`", ARTIFACT_HEADER),
@@ -1390,27 +1388,21 @@ fn validate_body(
             registers,
             local_count,
             upvalue_count,
-            instructions.len(),
             instruction,
             program,
             line,
         )?;
     }
-    if instructions
-        .iter()
-        .any(|instruction| matches!(instruction, Instruction::BlockStart { .. }))
-    {
-        validate_block_body(
-            context,
-            registers,
-            arity,
-            local_count,
-            upvalue_count,
-            instructions,
-            program,
-            line,
-        )?;
-    }
+    validate_block_body(
+        context,
+        registers,
+        arity,
+        local_count,
+        upvalue_count,
+        instructions,
+        program,
+        line,
+    )?;
     Ok(())
 }
 
@@ -1430,18 +1422,12 @@ fn instruction_register_def(instruction: &Instruction) -> Option<usize> {
         | Instruction::MakeFunction { dest, .. }
         | Instruction::Array { dest, .. }
         | Instruction::Map { dest, .. }
-        | Instruction::Struct { dest, .. }
-        | Instruction::Variant { dest, .. }
-        | Instruction::VariantTag { dest, .. }
-        | Instruction::VariantField { dest, .. }
         | Instruction::Move { dest, .. }
-        | Instruction::LoadVar { dest, .. }
         | Instruction::LoadLocal { dest, .. }
         | Instruction::LoadUpvalue { dest, .. }
         | Instruction::LoadGlobal { dest, .. }
         | Instruction::Call { dest, .. }
         | Instruction::CallDirect { dest, .. }
-        | Instruction::NativeCall { dest, .. }
         | Instruction::CallNative { dest, .. }
         | Instruction::Index { dest, .. }
         | Instruction::AssignIndex { dest, .. }
@@ -1457,7 +1443,6 @@ fn instruction_register_def(instruction: &Instruction) -> Option<usize> {
         | Instruction::LenMap { dest, .. }
         | Instruction::LenRange { dest, .. }
         | Instruction::LenStr { dest, .. }
-        | Instruction::AssertArray { dest, .. }
         | Instruction::IterInit { dest, .. }
         | Instruction::IterHas { dest, .. }
         | Instruction::IterNext { dest, .. }
@@ -1502,18 +1487,12 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
     match instruction {
         Instruction::Array { elements, .. } => elements.clone(),
         Instruction::Map { entries, .. } => entries.iter().flat_map(|(k, v)| [*k, *v]).collect(),
-        Instruction::Struct { fields, .. } => fields.iter().map(|(_, v)| *v).collect(),
-        Instruction::Variant { payload, .. } => payload.clone(),
-        Instruction::VariantTag { value, .. } | Instruction::VariantField { value, .. } => vec![*value],
         Instruction::Move { source, .. } => vec![*source],
-        Instruction::StoreVar { value, .. }
-        | Instruction::AssignVar { value, .. }
-        | Instruction::BindLocal { value, .. }
+        Instruction::BindLocal { value, .. }
         | Instruction::SetLocal { value, .. }
         | Instruction::SetUpvalue { value, .. }
         | Instruction::InitGlobal { value, .. }
         | Instruction::SetGlobal { value, .. }
-        | Instruction::Print { value }
         | Instruction::Return { value }
         | Instruction::Negate { value, .. }
         | Instruction::NegNum { value, .. }
@@ -1523,7 +1502,6 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
         | Instruction::LenMap { value, .. }
         | Instruction::LenRange { value, .. }
         | Instruction::LenStr { value, .. }
-        | Instruction::AssertArray { value, .. }
         | Instruction::IterInit { value, .. }
         | Instruction::IterHas { value, .. }
         | Instruction::IterNext { value, .. }
@@ -1536,7 +1514,6 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
             reads
         }
         Instruction::CallDirect { arguments, .. } => arguments.clone(),
-        Instruction::NativeCall { arguments, .. } => arguments.clone(),
         Instruction::CallNative { arguments, .. } => arguments.clone(),
         Instruction::MakeStruct { elements, .. } => elements.clone(),
         Instruction::StructGet { object, .. } => vec![*object],
@@ -1578,9 +1555,7 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
         } => vec![*collection, *index, *value],
         Instruction::Field { object, .. } => vec![*object],
         Instruction::AssignField { object, value, .. } => vec![*object, *value],
-        Instruction::JumpIfFalse { condition, .. }
-        | Instruction::JumpIfTrue { condition, .. }
-        | Instruction::BrIf { condition, .. } => vec![*condition],
+        Instruction::BrIf { condition, .. } => vec![*condition],
         Instruction::Add {
             left, right, ..
         }
@@ -1920,28 +1895,6 @@ fn validate_block_body(
     }
 
     for instruction in instructions {
-        if let Instruction::NativeCall {
-            name, arguments, ..
-        } = instruction
-        {
-            if let Some(native_name) = program.names.get(*name) {
-                if let Some((min_arity, max_arity)) = native_arity_bounds(native_name) {
-                    if arguments.len() < min_arity || arguments.len() > max_arity {
-                        return Err(validation_error(
-                            line,
-                            format!(
-                                "{} native `{}` expects {} to {} arguments, got {}",
-                                context,
-                                native_name,
-                                min_arity,
-                                max_arity,
-                                arguments.len()
-                            ),
-                        ));
-                    }
-                }
-            }
-        }
         if let Instruction::CallNative {
             native, arguments, ..
         } = instruction
@@ -1964,17 +1917,6 @@ fn validate_block_body(
                 }
             }
         }
-        if matches!(
-            instruction,
-            Instruction::Jump { .. }
-                | Instruction::JumpIfFalse { .. }
-                | Instruction::JumpIfTrue { .. }
-        ) {
-            return Err(validation_error(
-                line,
-                format!("{} block body contains a legacy jump", context),
-            ));
-        }
     }
     let _ = upvalue_count;
     Ok(())
@@ -1986,7 +1928,6 @@ fn validate_instruction(
     registers: usize,
     local_count: usize,
     upvalue_count: usize,
-    instruction_count: usize,
     instruction: &Instruction,
     program: &Program,
     line: usize,
@@ -2053,19 +1994,6 @@ fn validate_instruction(
             Ok(())
         }
     };
-    let jump = |target: usize| {
-        if target > instruction_count {
-            Err(validation_error(
-                line,
-                format!(
-                    "{} instruction {} jump target {} out of range (instruction count {})",
-                    context, instruction_index, target, instruction_count
-                ),
-            ))
-        } else {
-            Ok(())
-        }
-    };
     let registers = |values: &[usize], role: &str| {
         for (index, value) in values.iter().enumerate() {
             register(*value, &format!("{} {}", role, index))?;
@@ -2123,20 +2051,6 @@ fn validate_instruction(
             for (index, (key, value)) in entries.iter().enumerate() {
                 register(*key, &format!("map entry {} key", index))?;
                 register(*value, &format!("map entry {} value", index))?;
-            }
-        }
-        Instruction::Struct {
-            dest,
-            type_name,
-            fields,
-        } => {
-            register(*dest, "destination")?;
-            if let Some(type_name) = type_name {
-                name(*type_name, "struct type")?;
-            }
-            for (index, (field, value)) in fields.iter().enumerate() {
-                name(*field, &format!("struct field {}", index))?;
-                register(*value, &format!("struct field {} value", index))?;
             }
         }
         Instruction::MakeStruct {
@@ -2205,17 +2119,6 @@ fn validate_instruction(
                 ));
             }
         }
-        Instruction::Variant {
-            dest,
-            enum_name,
-            variant_name,
-            payload,
-        } => {
-            register(*dest, "destination")?;
-            name(*enum_name, "variant enum")?;
-            name(*variant_name, "variant name")?;
-            registers(payload, "variant payload")?;
-        }
         Instruction::MakeVariant {
             dest,
             type_id,
@@ -2283,39 +2186,9 @@ fn validate_instruction(
                 ));
             }
         }
-        Instruction::VariantTag {
-            dest,
-            value,
-            enum_name,
-            variant_name,
-        } => {
-            register(*dest, "destination")?;
-            register(*value, "variant tag value")?;
-            name(*enum_name, "variant enum")?;
-            name(*variant_name, "variant name")?;
-        }
-        Instruction::VariantField { dest, value, .. } => {
-            register(*dest, "destination")?;
-            register(*value, "variant field value")?;
-        }
         Instruction::Move { dest, source } => {
             register(*dest, "destination")?;
             register(*source, "source")?;
-        }
-        Instruction::LoadVar { dest, name: value } => {
-            register(*dest, "destination")?;
-            name(*value, "variable")?;
-        }
-        Instruction::StoreVar {
-            name: value,
-            value: source,
-        }
-        | Instruction::AssignVar {
-            name: value,
-            value: source,
-        } => {
-            name(*value, "variable")?;
-            register(*source, "value")?;
         }
         Instruction::LoadLocal { dest, slot } => {
             register(*dest, "destination")?;
@@ -2393,24 +2266,6 @@ fn validate_instruction(
                     ),
                 ));
             }
-        }
-        Instruction::NativeCall {
-            dest,
-            name: value,
-            arguments,
-        } => {
-            register(*dest, "destination")?;
-            name(*value, "native function")?;
-            if !SUPPORTED_NATIVE_FUNCTIONS.contains(&program.names[*value].as_str()) {
-                return Err(validation_error(
-                    line,
-                    format!(
-                        "{} instruction {} unsupported native function `{}`",
-                        context, instruction_index, program.names[*value]
-                    ),
-                ));
-            }
-            registers(arguments, "native argument")?;
         }
         Instruction::CallNative {
             dest,
@@ -2504,7 +2359,6 @@ fn validate_instruction(
         | Instruction::LenMap { dest, value }
         | Instruction::LenRange { dest, value }
         | Instruction::LenStr { dest, value }
-        | Instruction::AssertArray { dest, value }
         | Instruction::IterInit { dest, value }
         | Instruction::IterHas { dest, value }
         | Instruction::IterNext { dest, value }
@@ -2523,9 +2377,7 @@ fn validate_instruction(
             register(*value, "value")?;
             name(*message, "assertion message")?;
         }
-        Instruction::Print { value } | Instruction::Return { value } => {
-            register(*value, "value")?;
-        }
+        Instruction::Return { value } => register(*value, "value")?,
         Instruction::Add { dest, left, right }
         | Instruction::AddNum { dest, left, right }
         | Instruction::ConcatStr { dest, left, right }
@@ -2552,12 +2404,6 @@ fn validate_instruction(
             register(*dest, "destination")?;
             register(*left, "left operand")?;
             register(*right, "right operand")?;
-        }
-        Instruction::Jump { target } => jump(*target)?,
-        Instruction::JumpIfFalse { condition, target }
-        | Instruction::JumpIfTrue { condition, target } => {
-            register(*condition, "jump condition")?;
-            jump(*target)?;
         }
         Instruction::BlockStart { id } => {
             let _ = id;
@@ -2602,28 +2448,10 @@ pub fn parse_program(source: &str) -> Result<Program, ParseError> {
 
 pub fn format_program(program: &Program) -> String {
     let mut out = String::with_capacity(format_program_capacity_hint(program));
-    out.push_str(program_header(program));
+    out.push_str(ARTIFACT_HEADER);
     out.push_str("\n\n");
     format_program_sections(&mut out, program);
     out
-}
-
-fn program_header(program: &Program) -> &'static str {
-    let uses_legacy_variables = program.functions.iter().any(|function| {
-        function.instructions.iter().any(|instruction| {
-            matches!(
-                instruction,
-                Instruction::LoadVar { .. }
-                    | Instruction::StoreVar { .. }
-                    | Instruction::AssignVar { .. }
-            )
-        })
-    });
-    if uses_legacy_variables {
-        LEGACY_ARTIFACT_HEADER
-    } else {
-        ARTIFACT_HEADER
-    }
 }
 
 pub fn format_artifact(artifact: &Artifact) -> String {
@@ -2645,7 +2473,7 @@ pub fn format_artifact(artifact: &Artifact) -> String {
                             .sum(),
                     ),
             );
-            out.push_str(program_header(&module.program));
+            out.push_str(ARTIFACT_HEADER);
             out.push_str("\n\n");
             out.push_str("artifact: module\n\n");
             out.push_str("module:\n");
@@ -2988,14 +2816,6 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                 let entries = parse_map_entries(line, operands)?;
                 Ok(Instruction::Map { dest, entries })
             }
-            "struct" => {
-                let (type_name, field_text) = parse_optional_struct_type_name(line, operands)?;
-                Ok(Instruction::Struct {
-                    dest,
-                    type_name,
-                    fields: parse_struct_fields(line, field_text)?,
-                })
-            }
             "make_struct" => {
                 let (type_text, elements) = split_once(line, operands, " ")?;
                 Ok(Instruction::MakeStruct {
@@ -3035,16 +2855,6 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                     value: parse_register(line, parts[3])?,
                 })
             }
-            "variant" => {
-                let (variant_text, payload_text) = split_once(line, operands, " ")?;
-                let (enum_name, variant_name) = split_once(line, variant_text, ".")?;
-                Ok(Instruction::Variant {
-                    dest,
-                    enum_name: parse_name_ref(line, enum_name)?,
-                    variant_name: parse_name_ref(line, variant_name)?,
-                    payload: parse_register_list(line, &payload_text)?,
-                })
-            }
             "make_variant" => {
                 let (header, payload_text) = split_once(line, operands, " [")?;
                 let (type_text, variant_text) = split_once(line, header, ", ")?;
@@ -3071,24 +2881,6 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                     variant_id: VariantId(parse_prefixed(line, parts[2], 'v', "variant reference")? as u32),
                 })
             }
-            "variant_tag" => {
-                let (value, variant_text) = split_once(line, operands, " ")?;
-                let (enum_name, variant_name) = split_once(line, variant_text, ".")?;
-                Ok(Instruction::VariantTag {
-                    dest,
-                    value: parse_register(line, value)?,
-                    enum_name: parse_name_ref(line, enum_name)?,
-                    variant_name: parse_name_ref(line, variant_name)?,
-                })
-            }
-            "variant_field" => {
-                let (value, index) = split_once(line, operands, " ")?;
-                Ok(Instruction::VariantField {
-                    dest,
-                    value: parse_register(line, value)?,
-                    index: parse_usize(line, index, "variant field index")?,
-                })
-            }
             "variant_get" => {
                 let parts = split_comma_parts(operands);
                 if parts.len() != 4 {
@@ -3108,10 +2900,6 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
             "move" => Ok(Instruction::Move {
                 dest,
                 source: parse_register(line, operands)?,
-            }),
-            "load_var" => Ok(Instruction::LoadVar {
-                dest,
-                name: parse_name_ref(line, operands)?,
             }),
             "load_local" => Ok(Instruction::LoadLocal {
                 dest,
@@ -3138,14 +2926,6 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                 Ok(Instruction::CallDirect {
                     dest,
                     function: FuncId((parse_function_ref(line, function)? + 1) as u32),
-                    arguments: parse_register_list(line, args)?,
-                })
-            }
-            "native_call" => {
-                let (name, args) = split_once(line, operands, " ")?;
-                Ok(Instruction::NativeCall {
-                    dest,
-                    name: parse_name_ref(line, name)?,
                     arguments: parse_register_list(line, args)?,
                 })
             }
@@ -3275,10 +3055,6 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                 dest,
                 value: parse_register(line, operands)?,
             }),
-            "assert_array" => Ok(Instruction::AssertArray {
-                dest,
-                value: parse_register(line, operands)?,
-            }),
             "iter_init" => Ok(Instruction::IterInit {
                 dest,
                 value: parse_register(line, operands)?,
@@ -3342,20 +3118,6 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
     } else {
         let (opcode, operands) = split_opcode(text);
         match opcode {
-            "store_var" => {
-                let (name, value) = split_once(line, operands, ", ")?;
-                Ok(Instruction::StoreVar {
-                    name: parse_name_ref(line, name)?,
-                    value: parse_register(line, value)?,
-                })
-            }
-            "assign_var" => {
-                let (name, value) = split_once(line, operands, ", ")?;
-                Ok(Instruction::AssignVar {
-                    name: parse_name_ref(line, name)?,
-                    value: parse_register(line, value)?,
-                })
-            }
             "bind_local" => {
                 let (slot, value) = split_once(line, operands, ", ")?;
                 Ok(Instruction::BindLocal {
@@ -3391,29 +3153,9 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                     value: parse_register(line, value)?,
                 })
             }
-            "print" => Ok(Instruction::Print {
-                value: parse_register(line, operands)?,
-            }),
             "return" => Ok(Instruction::Return {
                 value: parse_register(line, operands)?,
             }),
-            "jump" => Ok(Instruction::Jump {
-                target: parse_usize(line, operands, "jump target")?,
-            }),
-            "jump_if_false" => {
-                let (condition, target) = split_once(line, operands, ", ")?;
-                Ok(Instruction::JumpIfFalse {
-                    condition: parse_register(line, condition)?,
-                    target: parse_usize(line, target, "jump target")?,
-                })
-            }
-            "jump_if_true" => {
-                let (condition, target) = split_once(line, operands, ", ")?;
-                Ok(Instruction::JumpIfTrue {
-                    condition: parse_register(line, condition)?,
-                    target: parse_usize(line, target, "jump target")?,
-                })
-            }
             "br" => Ok(Instruction::Br {
                 target: BlockId(parse_prefixed(line, operands, 'b', "block reference")? as u32),
             }),
@@ -3460,21 +3202,6 @@ fn format_instruction(instruction: &Instruction) -> String {
                 .join(", ");
             format!("r{} = map [{}]", dest, parts)
         }
-        Instruction::Struct {
-            dest,
-            type_name,
-            fields,
-        } => {
-            let parts = fields
-                .iter()
-                .map(|(name, value)| format!("n{}: r{}", name, value))
-                .collect::<Vec<_>>()
-                .join(", ");
-            match type_name {
-                Some(type_name) => format!("r{} = struct n{} {{{}}}", dest, type_name, parts),
-                None => format!("r{} = struct {{{}}}", dest, parts),
-            }
-        }
         Instruction::MakeStruct {
             dest,
             type_id,
@@ -3500,18 +3227,6 @@ fn format_instruction(instruction: &Instruction) -> String {
         } => format!(
             "r{} = struct_set r{}, t{}, {}, r{}",
             dest, object, type_id.0, slot, value
-        ),
-        Instruction::Variant {
-            dest,
-            enum_name,
-            variant_name,
-            payload,
-        } => format!(
-            "r{} = variant n{}.n{} {}",
-            dest,
-            enum_name,
-            variant_name,
-            format_register_list(payload)
         ),
         Instruction::MakeVariant {
             dest,
@@ -3544,22 +3259,7 @@ fn format_instruction(instruction: &Instruction) -> String {
             "r{} = variant_get r{}, t{}, v{}, {}",
             dest, value, type_id.0, variant_id.0, index
         ),
-        Instruction::VariantTag {
-            dest,
-            value,
-            enum_name,
-            variant_name,
-        } => format!(
-            "r{} = variant_tag r{} n{}.n{}",
-            dest, value, enum_name, variant_name
-        ),
-        Instruction::VariantField { dest, value, index } => {
-            format!("r{} = variant_field r{} {}", dest, value, index)
-        }
         Instruction::Move { dest, source } => format!("r{} = move r{}", dest, source),
-        Instruction::LoadVar { dest, name } => format!("r{} = load_var n{}", dest, name),
-        Instruction::StoreVar { name, value } => format!("store_var n{}, r{}", name, value),
-        Instruction::AssignVar { name, value } => format!("assign_var n{}, r{}", name, value),
         Instruction::LoadLocal { dest, slot } => format!("r{} = load_local l{}", dest, slot),
         Instruction::BindLocal { slot, value } => format!("bind_local l{}, r{}", slot, value),
         Instruction::SetLocal { slot, value } => format!("set_local l{}, r{}", slot, value),
@@ -3586,16 +3286,6 @@ fn format_instruction(instruction: &Instruction) -> String {
             "r{} = call_direct f{} {}",
             dest,
             function.0.saturating_sub(1),
-            format_register_list(arguments)
-        ),
-        Instruction::NativeCall {
-            dest,
-            name,
-            arguments,
-        } => format!(
-            "r{} = native_call n{} {}",
-            dest,
-            name,
             format_register_list(arguments)
         ),
         Instruction::CallNative {
@@ -3672,7 +3362,6 @@ fn format_instruction(instruction: &Instruction) -> String {
         Instruction::LenMap { dest, value } => format!("r{} = len_map r{}", dest, value),
         Instruction::LenRange { dest, value } => format!("r{} = len_range r{}", dest, value),
         Instruction::LenStr { dest, value } => format!("r{} = len_str r{}", dest, value),
-        Instruction::AssertArray { dest, value } => format!("r{} = assert_array r{}", dest, value),
         Instruction::IterInit { dest, value } => format!("r{} = iter_init r{}", dest, value),
         Instruction::IterHas { dest, value } => format!("r{} = iter_has r{}", dest, value),
         Instruction::IterNext { dest, value } => format!("r{} = iter_next r{}", dest, value),
@@ -3683,7 +3372,6 @@ fn format_instruction(instruction: &Instruction) -> String {
         } => {
             format!("r{} = assert_number r{}, n{}", dest, value, message)
         }
-        Instruction::Print { value } => format!("print r{}", value),
         Instruction::Return { value } => format!("return r{}", value),
         Instruction::Negate { dest, value } => format!("r{} = negate r{}", dest, value),
         Instruction::Not { dest, value } => format!("r{} = not r{}", dest, value),
@@ -3754,13 +3442,6 @@ fn format_instruction(instruction: &Instruction) -> String {
         }
         Instruction::LessEqualStr { dest, left, right } => {
             format!("r{} = le_str r{}, r{}", dest, left, right)
-        }
-        Instruction::Jump { target } => format!("jump {}", target),
-        Instruction::JumpIfFalse { condition, target } => {
-            format!("jump_if_false r{}, {}", condition, target)
-        }
-        Instruction::JumpIfTrue { condition, target } => {
-            format!("jump_if_true r{}, {}", condition, target)
         }
         Instruction::BlockStart { id } => format!("block b{}:\n", id.0),
         Instruction::Br { target } => format!("br b{}", target.0),
@@ -3892,48 +3573,6 @@ fn parse_map_entries(line: usize, text: &str) -> Result<Vec<(usize, usize)>, Par
         entries.push((parse_register(line, key)?, parse_register(line, value)?));
     }
     Ok(entries)
-}
-
-fn parse_struct_fields(line: usize, text: &str) -> Result<Vec<(usize, usize)>, ParseError> {
-    if !text.starts_with('{') || !text.ends_with('}') {
-        return Err(ParseError {
-            line,
-            message: "struct fields must be wrapped in braces".to_string(),
-        });
-    }
-    let inner = &text[1..text.len() - 1];
-    if inner.is_empty() {
-        return Ok(Vec::new());
-    }
-    let mut fields = Vec::new();
-    for part in split_comma_parts(inner) {
-        let (name, value) = split_once(line, part, ": ")?;
-        fields.push((parse_name_ref(line, name)?, parse_register(line, value)?));
-    }
-    Ok(fields)
-}
-
-fn parse_optional_struct_type_name<'a>(
-    line: usize,
-    text: &'a str,
-) -> Result<(Option<usize>, &'a str), ParseError> {
-    let trimmed = text.trim();
-    if trimmed.starts_with('{') {
-        return Ok((None, trimmed));
-    }
-    let Some((name_text, rest)) = trimmed.split_once(' ') else {
-        return Err(ParseError {
-            line,
-            message: "struct expects fields".to_string(),
-        });
-    };
-    if !rest.trim_start().starts_with('{') {
-        return Err(ParseError {
-            line,
-            message: "struct type name must be followed by fields".to_string(),
-        });
-    }
-    Ok((Some(parse_name_ref(line, name_text)?), rest.trim_start()))
 }
 
 fn format_register_list(registers: &[usize]) -> String {
@@ -4105,22 +3744,17 @@ mod tests {
 
     #[test]
     fn round_trips_minimal_program() {
-        let source = "cdbc 0.1\n\nconstants:\n\nnames:\n\nmain registers=1:\n  print r0\n";
+        let source =
+            "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=0:\nblock b0:\n  return_nil\n";
         let program = parse_program(source).expect("parse minimal program");
-        assert_eq!(
-            format_program(&program),
-            "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=1:\n  print r0\n"
-        );
+        assert_eq!(format_program(&program), source);
     }
 
     #[test]
     fn parses_and_formats_string_escapes() {
-        let source = "cdbc 0.1\n\nconstants:\n  c0 = string \"a\\\\b\\\"c\\n\\r\\t\"\n\nnames:\n  n0 = \"x\\\\y\"\n\nmain registers=1:\n  r0 = constant c0\n";
+        let source = "cdbc 0.2\n\nconstants:\n  c0 = string \"a\\\\b\\\"c\\n\\r\\t\"\n\nnames:\n  n0 = \"x\\\\y\"\n\nmain registers=1:\nblock b0:\n  r0 = constant c0\n  return r0\n";
         let program = parse_program(source).expect("parse escaped strings");
-        assert_eq!(
-            format_program(&program),
-            "cdbc 0.2\n\nconstants:\n  c0 = string \"a\\\\b\\\"c\\n\\r\\t\"\n\nnames:\n  n0 = \"x\\\\y\"\n\nmain registers=1:\n  r0 = constant c0\n"
-        );
+        assert_eq!(format_program(&program), source);
     }
 
     #[test]
@@ -4130,8 +3764,18 @@ mod tests {
     }
 
     #[test]
+    fn rejects_legacy_0_1_header() {
+        let error = parse_program(
+            "cdbc 0.1\n\nconstants:\n\nnames:\n\nmain registers=0:\nblock b0:\n  return_nil\n",
+        )
+        .expect_err("legacy header should fail");
+        assert_eq!(error.line, 1);
+        assert!(error.message.contains("expected `cdbc 0.2`"));
+    }
+
+    #[test]
     fn rejects_unknown_opcode() {
-        let source = "cdbc 0.1\n\nconstants:\n\nnames:\n\nmain registers=2:\n  r0 = mystery r1\n";
+        let source = "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=2:\nblock b0:\n  r0 = mystery r1\n  return_nil\n";
         let error = parse_program(source).expect_err("unknown opcode should fail");
         assert!(error.message.contains("unknown opcode `mystery`"));
     }
@@ -4141,42 +3785,32 @@ mod tests {
         let cases = [
             (
                 "destination register",
-                "cdbc 0.1\n\nconstants:\n  c0 = nil\n\nnames:\n\nmain registers=1:\n  r1 = constant c0\n",
+                "cdbc 0.2\n\nconstants:\n  c0 = nil\n\nnames:\n\nmain registers=1:\nblock b0:\n  r1 = constant c0\n  return_nil\n",
                 "destination register r1 out of range",
             ),
             (
                 "constant reference",
-                "cdbc 0.1\n\nconstants:\n  c0 = nil\n\nnames:\n\nmain registers=1:\n  r0 = constant c1\n",
+                "cdbc 0.2\n\nconstants:\n  c0 = nil\n\nnames:\n\nmain registers=1:\nblock b0:\n  r0 = constant c1\n  return_nil\n",
                 "constant c1 out of range",
             ),
             (
                 "name reference",
-                "cdbc 0.1\n\nconstants:\n\nnames:\n\nmain registers=1:\n  r0 = load_var n0\n",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=1:\nblock b0:\n  r0 = field r0, n0\n  return_nil\n",
                 "name n0 out of range",
             ),
             (
                 "function reference",
-                "cdbc 0.1\n\nconstants:\n\nnames:\n\nmain registers=1:\n  r0 = make_function f0\n",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=1:\nblock b0:\n  r0 = make_function f0\n  return_nil\n",
                 "function f0 out of range",
             ),
             (
-                "jump target",
-                "cdbc 0.1\n\nconstants:\n\nnames:\n\nmain registers=1:\n  jump 2\n",
-                "jump target 2 out of range",
-            ),
-            (
-                "native capability",
-                "cdbc 0.1\n\nconstants:\n\nnames:\n  n0 = \"not_native\"\n\nmain registers=1:\n  r0 = native_call n0 []\n",
-                "unsupported native function `not_native`",
-            ),
-            (
                 "number constant",
-                "cdbc 0.1\n\nconstants:\n  c0 = number not-a-number\n\nnames:\n\nmain registers=0:\n",
+                "cdbc 0.2\n\nconstants:\n  c0 = number not-a-number\n\nnames:\n\nmain registers=0:\nblock b0:\n  return_nil\n",
                 "constant c0 is not a valid number literal",
             ),
             (
                 "empty debug module identity",
-                "cdbc 0.1\n\nconstants:\n\nnames:\n\nmain registers=0:\n\ndebug_sources:\n  s0 module=\"\" path=\"demo.cd\" text=\"\"\n",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=0:\nblock b0:\n  return_nil\n\ndebug_sources:\n  s0 module=\"\" path=\"demo.cd\" text=\"\"\n",
                 "debug source s0 has an empty module identity",
             ),
         ];
@@ -4196,7 +3830,7 @@ mod tests {
         let cases = [
             (
                 "undefined register",
-                "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=2:\nblock b0:\n  print r1\n  return_nil\n",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=2:\nblock b0:\n  return r1\n",
                 "reads undefined register r1",
             ),
             (
@@ -4221,7 +3855,7 @@ mod tests {
             ),
             (
                 "invalid native arity",
-                "cdbc 0.2\n\nconstants:\n  c0 = number 1\n\nnames:\n  n0 = \"push\"\n\nmain registers=2:\nblock b0:\n  r0 = constant c0\n  r1 = native_call n0 [r0]\n  return_nil\n",
+                "cdbc 0.2\n\nconstants:\n  c0 = number 1\n\nnames:\n\nnative_imports:\n  i0 = \"push\" abi=1\n\nmain registers=2:\nblock b0:\n  r0 = constant c0\n  r1 = call_native i0 [r0]\n  return_nil\n",
                 "native `push` expects 2 to 2 arguments, got 1",
             ),
             (
@@ -4230,9 +3864,9 @@ mod tests {
                 "function f1 out of range",
             ),
             (
-                "legacy jump in block body",
-                "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=0:\nblock b0:\n  jump 0\n  return_nil\n",
-                "block body contains a legacy jump",
+                "block-less body",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nmain registers=0:\n  return_nil\n",
+                "block body must begin with block b0",
             ),
         ];
         for (name, source, expected) in cases {
@@ -4283,15 +3917,114 @@ mod tests {
 
     #[test]
     fn parses_all_opcode_shapes() {
-        let source = "cdbc 0.1\n\nconstants:\n  c0 = nil\n  c1 = number 1.5\n  c2 = bool true\n  c3 = string \"hello\"\n\nnames:\n  n0 = \"x#0\"\n  n1 = \"Box\"\n\nmain registers=38:\n  r0 = constant c0\n  r1 = make_function f0\n  r2 = array [r0, r1]\n  r3 = map [r0: r1, r1: r2]\n  r4 = struct {n0: r1}\n  r5 = struct n1 {n0: r1}\n  r6 = move r2\n  r7 = load_var n0\n  store_var n0, r6\n  assign_var n0, r6\n  r8 = call r1 [r0, r2]\n  r9 = index r2, r0\n  r10 = assign_index r2, r0, r1\n  r11 = len r2\n  print r11\n  return r11\n  r12 = negate r11\n  r13 = not r11\n  r14 = add r11, r12\n  r15 = subtract r11, r12\n  r16 = multiply r11, r12\n  r17 = divide r11, r12\n  r18 = equal r11, r12\n  r19 = not_equal r11, r12\n  r20 = greater r11, r12\n  r21 = greater_equal r11, r12\n  r22 = less r11, r12\n  r23 = less_equal r11, r12\n  jump 30\n  jump_if_false r23, 31\n  jump_if_true r23, 32\n\nfunction f0 name=\"id\" arity=1 registers=1:\n  param 0 = \"arg#0\"\n  return r0\n";
-        let source = source.replace("jump_if_true r23, 32", "jump_if_true r23, 31");
-        let program = parse_program(&source).expect("parse all opcode shapes");
+        let source = r#"cdbc 0.2
+
+constants:
+  c0 = nil
+  c1 = number 1.5
+  c2 = bool true
+  c3 = string "hello"
+
+names:
+  n0 = "x#0"
+  n1 = "Box"
+  n2 = "Option"
+  n3 = "Some"
+  n4 = "f#0"
+  n5 = "value#1"
+
+globals:
+  g0 = n0
+  g1 = n0
+
+types:
+  t0 = struct "Box" field0="value"
+  t1 = enum "Option" v0="None" payload=0 v1="Some" payload=1
+
+native_imports:
+  i0 = "print" abi=1
+
+main registers=20:
+block b0:
+  r0 = constant c0
+  r1 = make_function f0
+  r2 = array [r0, r1]
+  r3 = map [r0: r1, r1: r2]
+  r4 = make_struct t0 [r1]
+  r5 = struct_get r4, t0, 0
+  r6 = struct_set r4, t0, 0, r1
+  r7 = make_variant t1, v1 [r1]
+  r8 = is_variant r7, t1, v1
+  r9 = variant_get r7, t1, v1, 0
+  r10 = move r2
+  r11 = load_global g0
+  init_global g1, r11
+  set_global g1, r11
+  r12 = call r1 [r0, r2]
+  r13 = call_direct f1 [r11]
+  r14 = call_native i0 [r11]
+  r15 = index r2, r0
+  r16 = assign_index r2, r0, r1
+  r17 = len r2
+  r18 = field r4, n1
+  r19 = assign_field r4, n1, r1
+  r0 = not r11
+  r1 = negate r11
+  r2 = add r11, r11
+  r3 = subtract r11, r11
+  r4 = multiply r11, r11
+  r5 = divide r11, r11
+  r6 = equal r11, r11
+  r7 = not_equal r11, r11
+  r8 = greater r11, r11
+  r9 = greater_equal r11, r11
+  r10 = less r11, r11
+  r11 = less_equal r11, r11
+  return r11
+
+function f0 name="id" arity=1 registers=4:
+  param 0 = "arg#0"
+  upvalue u0 = global g0
+block b0:
+  r1 = constant c0
+  r2 = load_local l0
+  r3 = load_upvalue u0
+  set_upvalue u0, r2
+  return r2
+
+function f1 name="target" arity=1 registers=1:
+  param 0 = "arg#0"
+block b0:
+  r0 = load_local l0
+  return r0
+"#;
+        let program = parse_program(source).expect("parse all opcode shapes");
+        assert_eq!(format_program(&program), source);
+    }
+
+    #[test]
+    fn parses_and_formats_assert_number() {
+        let source = r#"cdbc 0.2
+
+constants:
+  c0 = number 1
+
+names:
+  n0 = "number#0"
+
+main registers=2:
+block b0:
+  r1 = constant c0
+  r0 = assert_number r1, n0
+  return r0
+"#;
+        let program = parse_program(source).expect("parse assert_number");
         assert_eq!(format_program(&program), source);
     }
 
     #[test]
     fn parses_debug_sources_and_locations() {
-        let source = r#"cdbc 0.1
+        let source = r#"cdbc 0.2
 
 constants:
   c0 = number 1
@@ -4300,10 +4033,11 @@ constants:
 names:
 
 main registers=3:
+block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = divide r0, r1
-  print r2
+  return r2
 
 debug_sources:
   s0 path="demo.cd" text="print 1 / 0;\n"
@@ -4330,22 +4064,20 @@ debug_ranges:
                 end: 11,
             })
         );
-        assert_eq!(
-            format_program(&program),
-            source.replace("cdbc 0.1", "cdbc 0.2")
-        );
+        assert_eq!(format_program(&program), source);
     }
 
     #[test]
     fn rejects_debug_range_outside_source() {
-        let source = r#"cdbc 0.1
+        let source = r#"cdbc 0.2
 
 constants:
 
 names:
 
-main registers=1:
-  print r0
+main registers=0:
+block b0:
+  return_nil
 
 debug_sources:
   s0 path="demo.cd" text="print 1;\n"
@@ -4362,13 +4094,15 @@ debug_ranges:
 
     #[test]
     fn parses_and_formats_debug_source_module_identity() {
-        let source = r#"cdbc 0.1
+        let source = r#"cdbc 0.2
 
 constants:
 
 names:
 
 main registers=0:
+block b0:
+  return_nil
 
 debug_sources:
   s0 module="/workspace/demo.cd" path="demo.cd" text="print 1;\n"
@@ -4378,22 +4112,20 @@ debug_sources:
             program.debug_sources[0].module.as_deref(),
             Some("/workspace/demo.cd")
         );
-        assert_eq!(
-            format_program(&program),
-            source.replace("cdbc 0.1", "cdbc 0.2")
-        );
+        assert_eq!(format_program(&program), source);
     }
 
     #[test]
     fn rejects_location_for_unknown_instruction() {
-        let source = r#"cdbc 0.1
+        let source = r#"cdbc 0.2
 
 constants:
 
 names:
 
-main registers=1:
-  print r0
+main registers=0:
+block b0:
+  return_nil
 
 debug_sources:
   s0 path="demo.cd" text="print 1;\n"
@@ -4407,7 +4139,7 @@ debug_locations:
 
     #[test]
     fn round_trips_module_artifact_envelope() {
-        let source = r#"cdbc 0.1
+        let source = r#"cdbc 0.2
 
 artifact: module
 
@@ -4425,10 +4157,12 @@ constants:
 names:
 
 main registers=1:
+block b0:
   r0 = constant c0
-  print r0
+  return r0
 
 function f0 name="init" arity=0 registers=0:
+block b0:
   return_nil
 "#;
         let artifact = parse_artifact(source).expect("valid module artifact");
@@ -4439,15 +4173,12 @@ function f0 name="init" arity=0 registers=0:
         assert!(!module.is_entry);
         assert_eq!(module.init, 1);
         assert!(module.dependencies.is_empty());
-        assert_eq!(
-            format_artifact(&artifact),
-            source.replace("cdbc 0.1", "cdbc 0.2")
-        );
+        assert_eq!(format_artifact(&artifact), source);
     }
 
     #[test]
     fn parses_module_dependency_markers() {
-        let source = r#"cdbc 0.1
+        let source = r#"cdbc 0.2
 
 artifact: module
 
@@ -4467,16 +4198,14 @@ constants:
 names:
 
 main registers=0:
-  print r0
-  print r0
-  print r0
-  print r0
+block b0:
+  return_nil
 
 function f0 name="init" arity=0 registers=0:
+block b0:
   return_nil
 "#;
-        let source = source.replace("main registers=0:", "main registers=1:");
-        let artifact = parse_artifact(&source).expect("valid dependency markers");
+        let artifact = parse_artifact(source).expect("valid dependency markers");
         let Artifact::Module(module) = artifact else {
             panic!("expected module artifact");
         };
@@ -4490,7 +4219,7 @@ function f0 name="init" arity=0 registers=0:
 
     #[test]
     fn rejects_module_init_function_out_of_range() {
-        let source = r#"cdbc 0.1
+        let source = r#"cdbc 0.2
 
 artifact: module
 
@@ -4509,6 +4238,8 @@ constants:
 names:
 
 main registers=0:
+block b0:
+  return_nil
 "#;
         let error = parse_artifact(source).expect_err("init should be rejected");
         assert!(error.message.contains("init function f3 out of range"));
@@ -4519,6 +4250,7 @@ main registers=0:
         let source = r#"cdbc 0.2
 
 constants:
+  c0 = nil
 
 names:
 
@@ -4527,7 +4259,10 @@ native_imports:
   i1 = "str" abi=1
 
 main registers=2:
-  r0 = call_native i0 [r1]
+block b0:
+  r0 = constant c0
+  r1 = call_native i0 [r0]
+  return_nil
 "#;
         let program = parse_program(source).expect("parse native import table");
         assert_eq!(program.native_imports.len(), 2);
@@ -4541,10 +4276,13 @@ main registers=2:
         let source = r#"cdbc 0.2
 
 constants:
+  c0 = number 1
 
 names:
 
-main registers=16:
+main registers=15:
+block b0:
+  r1 = constant c0
   r0 = neg_num r1
   r2 = add_num r0, r1
   r3 = sub_num r0, r1
@@ -4559,6 +4297,7 @@ main registers=16:
   r12 = le_str r1, r2
   r13 = gt_str r1, r2
   r14 = ge_str r1, r2
+  return r14
 "#;
         let program = parse_program(source).expect("parse typed opcodes");
         assert_eq!(format_program(&program), source);
@@ -4569,10 +4308,15 @@ main registers=16:
         let source = r#"cdbc 0.2
 
 constants:
+  c0 = nil
 
 names:
 
 main registers=12:
+block b0:
+  r1 = constant c0
+  r2 = constant c0
+  r4 = constant c0
   r0 = array_get r1, r2
   r3 = array_set r1, r2, r4
   r5 = map_get r1, r2
@@ -4582,6 +4326,7 @@ main registers=12:
   r9 = len_map r1
   r10 = len_range r1
   r11 = len_str r1
+  return r11
 "#;
         let program = parse_program(source).expect("parse typed collection opcodes");
         assert_eq!(format_program(&program), source);
@@ -4592,13 +4337,17 @@ main registers=12:
         let source = r#"cdbc 0.2
 
 constants:
+  c0 = nil
 
 names:
 
 main registers=3:
+block b0:
+  r1 = constant c0
   r0 = iter_init r1
   r2 = iter_has r0
   r2 = iter_next r0
+  return r2
 "#;
         let program = parse_program(source).expect("parse iterator opcodes");
         assert_eq!(format_program(&program), source);
@@ -4609,14 +4358,20 @@ main registers=3:
         let source = r#"cdbc 0.2
 
 constants:
+  c0 = nil
 
 names:
 
 main registers=2:
+block b0:
+  r1 = constant c0
   r0 = call_direct f0 [r1]
+  return r0
 
 function f0 name="target" arity=1 registers=1:
   param 0 = "value"
+block b0:
+  r0 = load_local l0
   return r0
 "#;
         let program = parse_program(source).expect("parse direct call");
@@ -4625,14 +4380,21 @@ function f0 name="target" arity=1 registers=1:
         let wrong_arity = r#"cdbc 0.2
 
 constants:
+  c0 = nil
 
 names:
 
 main registers=2:
+block b0:
+  r0 = constant c0
+  r1 = constant c0
   r0 = call_direct f0 [r0, r1]
+  return_nil
 
 function f0 name="target" arity=1 registers=1:
   param 0 = "value"
+block b0:
+  r0 = load_local l0
   return r0
 "#;
         let error = parse_program(wrong_arity).expect_err("arity must be verified");
@@ -4649,10 +4411,13 @@ constants:
 names:
 
 main registers=1:
+block b0:
   r0 = call_direct f0 []
+  return_nil
 
 function f0 name="target" arity=0 registers=0:
   upvalue u0 = local l0
+block b0:
   return_nil
 "#;
         let error = parse_program(capturing).expect_err("capturing target must be rejected");
@@ -4668,22 +4433,22 @@ function f0 name="target" arity=0 registers=0:
         let cases = [
             (
                 "out of range index",
-                "cdbc 0.2\n\nconstants:\n\nnames:\n\nnative_imports:\n  i0 = \"print\" abi=1\n\nmain registers=1:\n  r0 = call_native i1 []\n",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nnative_imports:\n  i0 = \"print\" abi=1\n\nmain registers=1:\nblock b0:\n  r0 = call_native i1 []\n  return_nil\n",
                 "native import i1 out of range",
             ),
             (
                 "unsupported name",
-                "cdbc 0.2\n\nconstants:\n\nnames:\n\nnative_imports:\n  i0 = \"not_native\" abi=1\n\nmain registers=0:\n",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nnative_imports:\n  i0 = \"not_native\" abi=1\n\nmain registers=0:\nblock b0:\n  return_nil\n",
                 "unsupported native function `not_native`",
             ),
             (
                 "wrong abi version",
-                "cdbc 0.2\n\nconstants:\n\nnames:\n\nnative_imports:\n  i0 = \"print\" abi=2\n\nmain registers=0:\n",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nnative_imports:\n  i0 = \"print\" abi=2\n\nmain registers=0:\nblock b0:\n  return_nil\n",
                 "must declare abi=1",
             ),
             (
                 "duplicate name",
-                "cdbc 0.2\n\nconstants:\n\nnames:\n\nnative_imports:\n  i0 = \"print\" abi=1\n  i1 = \"print\" abi=1\n\nmain registers=0:\n",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nnative_imports:\n  i0 = \"print\" abi=1\n  i1 = \"print\" abi=1\n\nmain registers=0:\nblock b0:\n  return_nil\n",
                 "duplicates native function `print`",
             ),
             (

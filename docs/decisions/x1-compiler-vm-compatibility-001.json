@@ -6,7 +6,7 @@
   "decision_id": "X1-COMPILER-VM-COMPAT-001",
   "status": "resolved",
   "question": "What compatibility surfaces must the C++ compiler and Rust VM preserve together through the cdbc 0.2 variable-lowering upgrade?",
-  "decision": "Adopt cdbc 0.2 as the emitted artifact contract with numeric local/upvalue/global slots and a serialized native import table while keeping strict cdbc-cache 0.2 schema 4, the fixed registered native-name set, and optional debug metadata. The reader keeps cdbc 0.1 name-based variable and native_call inputs as a construction-time compatibility path.",
+  "decision": "Adopt cdbc 0.2 as the emitted artifact contract with numeric local/upvalue/global slots and a serialized native import table while keeping strict cdbc-cache 0.2 schema 4, the fixed registered native-name set, and optional debug metadata. The reader accepts only cdbc 0.2; the former cdbc 0.1 name-based read path was removed on 2026-08-15.",
   "version_contract": {
     "compiler": {
       "version": "0.2.0",
@@ -114,9 +114,9 @@
       "cell_id": "artifact.metadata_free.cdbc_0_2",
       "domain": "artifact",
       "state": "supported",
-      "producer": "C++ or hand-authored legacy artifact",
+      "producer": "C++ or hand-authored artifact",
       "consumer": "Rust parser and VM",
-      "contract": "metadata-free cdbc 0.2 remains valid; debug sections are not required for dump, link, or run; legacy cdbc 0.1 inputs remain readable",
+      "contract": "metadata-free cdbc 0.2 remains valid; debug sections are not required for dump, link, or run",
       "evidence": [
         "docs/decisions/m4a-artifact-validation.md",
         "docs/decisions/m05b-cdbc-contract.md",
@@ -179,7 +179,6 @@
       "evidence": [
         "docs/decisions/vm-native-registry-001.md",
         "docs/decisions/vm-native-registry-004-signature-shapes.md",
-        "tests/cdbc_contract_audit.py",
         "vm-rs/src/format.rs",
         "vm-rs/src/link.rs",
         "vm-rs/src/vm.rs"
@@ -187,7 +186,7 @@
     }
   ],
   "rules": [
-    "X1r2 adopts cdbc 0.2 emission with numeric local/upvalue/global slots; the VM keeps a construction-time cdbc 0.1 name-based compatibility path for legacy inputs.",
+    "X1r2 adopts cdbc 0.2 emission with numeric local/upvalue/global slots; cdbc 0.1 inputs are rejected as unsupported versions.",
     "The compiler owns module-cache invalidation and source fallback; the VM validates and executes products but does not read .cdi or cache manifests to synthesize function bodies.",
     "Debug metadata is additive and optional; metadata-free artifacts remain supported.",
     "Native import names are drawn from the fixed registered set and serialized as abi=1 entries; arity, callback, resource, and signature metadata remain VM-internal.",
@@ -200,14 +199,6 @@
       [
         "python3",
         "tests/verification_inventory.py"
-      ],
-      [
-        "python3",
-        "tests/cdbc_contract_audit.py",
-        "./build/compiler_design",
-        "vm-rs",
-        "--report",
-        "build/m05b-cdbc-audit-report.json"
       ],
       [
         "python3",

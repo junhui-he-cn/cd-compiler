@@ -1,5 +1,10 @@
 # cd-compiler Bytecode 0.2 重构执行计划
 
+> 历史记录：本计划中的“保留 `cdbc 0.1` 读取兼容”目标已于 2026-08-15 作废——VM
+> 现在只接受 `cdbc 0.2`，旧 `cdbc 0.1` 头与名字驱动指令在执行前被拒绝。现行权威
+> 规范见 `docs/bytecode-text-format.md` 与
+> `docs/decisions/cdbc-0.2-successor-format.md`。
+
 > 目标仓库：`junhui-he-cn/cd-compiler`  
 > 目标：将当前 `.cdbc 0.1` 的“高层、名字驱动、类型擦除 Bytecode”逐步重构为更适合解释器、Verifier、JIT 和长期演进的 `.cdbc 0.2`。  
 > 执行方式：本文件按阶段交给 AI Agent 执行。每个阶段必须独立完成、独立测试、独立提交，不允许一次性跨阶段大改。

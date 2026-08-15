@@ -1,5 +1,8 @@
 # `.cdbc 0.1 → 0.2` 重构基线（Phase 0）
 
+> 历史记录：本文档锁定的 `cdbc 0.1` 行为基线仅作为重构历史保留；其“0.1 读取兼容”
+> 目标已于 2026-08-15 作废，VM 现在只接受 `cdbc 0.2`。
+
 本文件是 `docs/cd-compiler-bytecode-0.2-execution-plan.md` 的执行记录：Phase 0
 锁定当前 `.cdbc 0.1` 的行为基线；Phase 1 重构内部数据模型（强类型 ID + 统一
 `main`），同时保持 `.cdbc 0.1` 文本与可观察行为不变。

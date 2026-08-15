@@ -1,9 +1,9 @@
 //! Bytecode data model for `.cdbc` artifacts.
 //!
-//! The 0.2 refactor introduces strong index types so the VM never re-derives
+//! The 0.2 format introduces strong index types so the VM never re-derives
 //! language-level identity (locals, upvalues, globals, types, variants, native
-//! imports, blocks) from strings. The parser maps the legacy `main` section to
-//! `functions[0]` and legacy `fK` sections to `functions[K + 1]`;
+//! imports, blocks) from strings. The parser maps the `main` section to
+//! `functions[0]` and `function fN` sections to `functions[N + 1]`;
 //! `Program::entry` names the unified entry function.
 
 macro_rules! id_type {
@@ -128,7 +128,7 @@ pub enum Constant {
 }
 
 /// Where a function's upvalue comes from. Populated by the closure-conversion
-/// phase; the current `.cdbc 0.1` emitter always produces an empty vector.
+/// phase from explicit `upvalue` descriptors in the artifact.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum UpvalueSource {
     Local(LocalId),
@@ -147,10 +147,8 @@ pub struct Function {
     pub name: String,
     pub arity: usize,
     /// Number of compiler-assigned local slots (excluding parameters).
-    /// Still zero for `.cdbc 0.1` artifacts; populated by the variable
-    /// lowering phase.
     pub local_count: usize,
-    /// Explicit upvalue descriptors. Still empty for `.cdbc 0.1` artifacts.
+    /// Explicit upvalue descriptors.
     pub upvalues: Vec<UpvalueDesc>,
     pub params: Vec<String>,
     pub registers: usize,
@@ -176,11 +174,6 @@ pub enum Instruction {
         dest: usize,
         entries: Vec<(usize, usize)>,
     },
-    Struct {
-        dest: usize,
-        type_name: Option<usize>,
-        fields: Vec<(usize, usize)>,
-    },
     MakeStruct {
         dest: usize,
         type_id: TypeId,
@@ -199,34 +192,17 @@ pub enum Instruction {
         slot: usize,
         value: usize,
     },
-    Variant {
-        dest: usize,
-        enum_name: usize,
-        variant_name: usize,
-        payload: Vec<usize>,
-    },
     MakeVariant {
         dest: usize,
         type_id: TypeId,
         variant_id: VariantId,
         payload: Vec<usize>,
     },
-    VariantTag {
-        dest: usize,
-        value: usize,
-        enum_name: usize,
-        variant_name: usize,
-    },
     IsVariant {
         dest: usize,
         value: usize,
         type_id: TypeId,
         variant_id: VariantId,
-    },
-    VariantField {
-        dest: usize,
-        value: usize,
-        index: usize,
     },
     VariantGet {
         dest: usize,
@@ -238,18 +214,6 @@ pub enum Instruction {
     Move {
         dest: usize,
         source: usize,
-    },
-    LoadVar {
-        dest: usize,
-        name: usize,
-    },
-    StoreVar {
-        name: usize,
-        value: usize,
-    },
-    AssignVar {
-        name: usize,
-        value: usize,
     },
     LoadLocal {
         dest: usize,
@@ -291,11 +255,6 @@ pub enum Instruction {
     CallDirect {
         dest: usize,
         function: FuncId,
-        arguments: Vec<usize>,
-    },
-    NativeCall {
-        dest: usize,
-        name: usize,
         arguments: Vec<usize>,
     },
     CallNative {
@@ -352,10 +311,6 @@ pub enum Instruction {
         name: usize,
         value: usize,
     },
-    Len {
-        dest: usize,
-        value: usize,
-    },
     LenArray {
         dest: usize,
         value: usize,
@@ -372,7 +327,7 @@ pub enum Instruction {
         dest: usize,
         value: usize,
     },
-    AssertArray {
+    Len {
         dest: usize,
         value: usize,
     },
@@ -395,9 +350,6 @@ pub enum Instruction {
         dest: usize,
         value: usize,
         message: usize,
-    },
-    Print {
-        value: usize,
     },
     Return {
         value: usize,
@@ -528,17 +480,6 @@ pub enum Instruction {
         dest: usize,
         left: usize,
         right: usize,
-    },
-    Jump {
-        target: usize,
-    },
-    JumpIfFalse {
-        condition: usize,
-        target: usize,
-    },
-    JumpIfTrue {
-        condition: usize,
-        target: usize,
     },
     BlockStart {
         id: BlockId,

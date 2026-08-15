@@ -741,7 +741,6 @@ impl JitState {
             match operation {
                 Instruction::Constant { .. }
                 | Instruction::Move { .. }
-                | Instruction::LoadVar { .. }
                 | Instruction::LoadLocal { .. }
                 | Instruction::LoadUpvalue { .. }
                 | Instruction::BlockStart { .. }
@@ -782,23 +781,6 @@ impl JitState {
                 Instruction::CallDirect { .. } => {
                     return JitEligibility::Fallback(JitFallbackReason::DirectCall {
                         instruction,
-                    });
-                }
-                Instruction::NativeCall { name, .. } => {
-                    let name = program
-                        .names
-                        .get(*name)
-                        .cloned()
-                        .unwrap_or_else(|| format!("name#{}", name));
-                    if is_callback_native(&name) {
-                        return JitEligibility::Fallback(JitFallbackReason::CallbackBoundary {
-                            instruction,
-                            name,
-                        });
-                    }
-                    return JitEligibility::Fallback(JitFallbackReason::NativeBoundary {
-                        instruction,
-                        name,
                     });
                 }
                 Instruction::CallNative { native, .. } => {
@@ -984,29 +966,27 @@ pub(crate) const JIT_VALUE_HANDLE_BITS: u32 = 64;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum RuntimeHelper {
     Constant = 0,
-    LoadVar = 1,
-    Negate = 2,
-    Not = 3,
-    Add = 4,
-    Subtract = 5,
-    Multiply = 6,
-    Divide = 7,
-    Equal = 8,
-    NotEqual = 9,
-    Greater = 10,
-    GreaterEqual = 11,
-    Less = 12,
-    LessEqual = 13,
-    Checkpoint = 14,
-    StoreRegister = 15,
-    LoadLocal = 16,
-    LoadUpvalue = 17,
+    Negate = 1,
+    Not = 2,
+    Add = 3,
+    Subtract = 4,
+    Multiply = 5,
+    Divide = 6,
+    Equal = 7,
+    NotEqual = 8,
+    Greater = 9,
+    GreaterEqual = 10,
+    Less = 11,
+    LessEqual = 12,
+    Checkpoint = 13,
+    StoreRegister = 14,
+    LoadLocal = 15,
+    LoadUpvalue = 16,
 }
 
 impl RuntimeHelper {
-    const ALL: [Self; 18] = [
+    const ALL: [Self; 17] = [
         Self::Constant,
-        Self::LoadVar,
         Self::Negate,
         Self::Not,
         Self::Add,
@@ -1028,7 +1008,6 @@ impl RuntimeHelper {
     const fn value_arguments(self) -> usize {
         match self {
             Self::Constant
-            | Self::LoadVar
             | Self::LoadLocal
             | Self::LoadUpvalue
             | Self::Negate
@@ -1095,7 +1074,6 @@ fn helper_signature(helper: RuntimeHelper) -> Signature {
 fn helper_symbol(helper: RuntimeHelper) -> &'static str {
     match helper {
         RuntimeHelper::Constant => "cd_vm_jit_constant",
-        RuntimeHelper::LoadVar => "cd_vm_jit_load_var",
         RuntimeHelper::LoadLocal => "cd_vm_jit_load_local",
         RuntimeHelper::LoadUpvalue => "cd_vm_jit_load_upvalue",
         RuntimeHelper::Negate => "cd_vm_jit_negate",
@@ -1118,7 +1096,6 @@ fn helper_symbol(helper: RuntimeHelper) -> &'static str {
 fn helper_stub(helper: RuntimeHelper) -> *const u8 {
     match helper {
         RuntimeHelper::Constant => jit_helper_constant as *const u8,
-        RuntimeHelper::LoadVar => jit_helper_load_var as *const u8,
         RuntimeHelper::LoadLocal => jit_helper_load_local as *const u8,
         RuntimeHelper::LoadUpvalue => jit_helper_load_upvalue as *const u8,
         RuntimeHelper::Negate => jit_helper_negate as *const u8,
@@ -1172,7 +1149,6 @@ macro_rules! define_jit_binary_helper {
 }
 
 define_jit_unary_helper!(jit_helper_constant, RuntimeHelper::Constant);
-define_jit_unary_helper!(jit_helper_load_var, RuntimeHelper::LoadVar);
 define_jit_unary_helper!(jit_helper_load_local, RuntimeHelper::LoadLocal);
 define_jit_unary_helper!(jit_helper_load_upvalue, RuntimeHelper::LoadUpvalue);
 define_jit_unary_helper!(jit_helper_negate, RuntimeHelper::Negate);
@@ -1274,27 +1250,6 @@ fn lower_to_cranelift_ir(
                 }
                 Instruction::Move { dest, source } => {
                     let value = read_register(&registers, *source, instruction_index)?;
-                    let value = emit_store_register(
-                        &mut builder,
-                        context,
-                        *dest,
-                        value,
-                        instruction_index,
-                        helper_refs.as_ref(),
-                    )?;
-                    write_register(&mut registers, *dest, value, instruction_index)?;
-                }
-                Instruction::LoadVar { dest, name } => {
-                    let name = i64::try_from(*name)
-                        .map_err(|_| format!("name index {} does not fit Cranelift i64", name))?;
-                    let name = builder.ins().iconst(types::I64, name);
-                    let value = emit_runtime_call(
-                        &mut builder,
-                        context,
-                        RuntimeHelper::LoadVar,
-                        &[name],
-                        helper_refs.as_ref(),
-                    );
                     let value = emit_store_register(
                         &mut builder,
                         context,
@@ -1777,20 +1732,13 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
         Instruction::MakeFunction { .. } => "make_function",
         Instruction::Array { .. } => "array",
         Instruction::Map { .. } => "map",
-        Instruction::Struct { .. } => "struct",
         Instruction::MakeStruct { .. } => "make_struct",
         Instruction::StructGet { .. } => "struct_get",
         Instruction::StructSet { .. } => "struct_set",
-        Instruction::Variant { .. } => "variant",
         Instruction::MakeVariant { .. } => "make_variant",
         Instruction::IsVariant { .. } => "is_variant",
         Instruction::VariantGet { .. } => "variant_get",
-        Instruction::VariantTag { .. } => "variant_tag",
-        Instruction::VariantField { .. } => "variant_field",
         Instruction::Move { .. } => "move",
-        Instruction::LoadVar { .. } => "load_var",
-        Instruction::StoreVar { .. } => "store_var",
-        Instruction::AssignVar { .. } => "assign_var",
         Instruction::LoadLocal { .. } => "load_local",
         Instruction::BindLocal { .. } => "bind_local",
         Instruction::SetLocal { .. } => "set_local",
@@ -1801,7 +1749,6 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
         Instruction::SetGlobal { .. } => "set_global",
         Instruction::Call { .. } => "call",
         Instruction::CallDirect { .. } => "call_direct",
-        Instruction::NativeCall { .. } => "native_call",
         Instruction::CallNative { .. } => "call_native",
         Instruction::Index { .. } => "index",
         Instruction::AssignIndex { .. } => "assign_index",
@@ -1817,13 +1764,11 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
         Instruction::LenMap { .. } => "len_map",
         Instruction::LenRange { .. } => "len_range",
         Instruction::LenStr { .. } => "len_str",
-        Instruction::AssertArray { .. } => "assert_array",
         Instruction::IterInit { .. } => "iter_init",
         Instruction::IterHas { .. } => "iter_has",
         Instruction::IterNext { .. } => "iter_next",
         Instruction::InitModule { .. } => "init_module",
         Instruction::AssertNumber { .. } => "assert_number",
-        Instruction::Print { .. } => "print",
         Instruction::Return { .. } => "return",
         Instruction::Negate { .. } => "negate",
         Instruction::NegNum { .. } => "neg_num",
@@ -1851,9 +1796,6 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
         Instruction::LessEqual { .. } => "less_equal",
         Instruction::LessEqualNum { .. } => "le_num",
         Instruction::LessEqualStr { .. } => "le_str",
-        Instruction::Jump { .. } => "jump",
-        Instruction::JumpIfFalse { .. } => "jump_if_false",
-        Instruction::JumpIfTrue { .. } => "jump_if_true",
         Instruction::BlockStart { .. } => "block",
         Instruction::Br { .. } => "br",
         Instruction::BrIf { .. } => "br_if",
@@ -2020,7 +1962,7 @@ mod tests {
         function(
             index,
             vec![
-                Instruction::LoadVar { dest: 0, name: 0 },
+                Instruction::LoadLocal { dest: 0, slot: 0 },
                 Instruction::Add {
                     dest: 1,
                     left: 0,
@@ -2048,7 +1990,7 @@ mod tests {
         context.calls += 1;
         let operands = unsafe { std::slice::from_raw_parts(operands, operand_count) };
         match helper_id {
-            id if id == RuntimeHelper::LoadVar as u32 => 7,
+            id if id == RuntimeHelper::LoadLocal as u32 => 7,
             id if id == RuntimeHelper::Checkpoint as u32 => 0,
             id if id == RuntimeHelper::StoreRegister as u32 => operands[1],
             id if id == RuntimeHelper::Add as u32 => operands[0] + operands[1],
@@ -2161,17 +2103,21 @@ mod tests {
             JitEligibility::Fallback(JitFallbackReason::DynamicCall { instruction: 0 })
         );
 
-        let callback = program(vec![function(
+        let mut callback = program(vec![function(
             0,
             vec![
-                Instruction::NativeCall {
+                Instruction::CallNative {
                     dest: 0,
-                    name: 0,
+                    native: NativeId(0),
                     arguments: Vec::new(),
                 },
                 Instruction::Return { value: 0 },
             ],
         )]);
+        callback.native_imports = vec![NativeImport {
+            name: "map".to_string(),
+            abi: 1,
+        }];
         assert_eq!(
             state.eligibility(&callback, Some(1), JitExecutionMode::Ordinary),
             JitEligibility::Fallback(JitFallbackReason::CallbackBoundary {

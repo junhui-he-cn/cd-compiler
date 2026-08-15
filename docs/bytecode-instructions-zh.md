@@ -20,10 +20,9 @@ C++ 发射端在 `src/BytecodeTextEmitter.cpp`，Rust 解析与执行端在
 cdbc 0.2
 ```
 
-VM 同时接受 `cdbc 0.1` 旧工件作为构造期兼容输入：旧工件使用名字驱动的
-`load_var/store_var/assign_var`、`native_call` 与 `print`，由 VM 在构造期映射到
-旧的按名解析路径；0.2 工件使用数值 slot（`lN/uN/gN`）与 native 导入索引
-（`iN`），VM 热路径不再按名字解析或按名字查找 native。
+VM 只接受 `cdbc 0.2`；`cdbc 0.1` 旧头在执行前被拒绝为不支持的版本。工件使用数值
+slot（`lN/uN/gN`）与 native 导入索引（`iN`），VM 热路径不再按名字解析或按名字查找
+native。
 
 工件有两种严格种类：
 
@@ -152,7 +151,7 @@ C++ 发射端以 `std::numeric_limits<double>::max_digits10`（17 位有效数�
 
 ### 2.6 执行前验证
 
-Rust 解析器接受 `cdbc 0.1` 与 `cdbc 0.2` 头。执行前验证：数字常量有限；
+Rust 解析器只接受 `cdbc 0.2` 头。执行前验证：数字常量有限；
 常量/名字/函数/寄存器/native 导入引用不越界；跳转目标合法；调试位置表形状正确；
 native 名字在支持集合内、`abi=1`、导入名不重复、调用元数在范围内；模块封套的身份、
 入口元数据、依赖目标与插入偏移合法。无效工件在执行前被拒绝，错误分类为
@@ -192,15 +191,15 @@ VM 是寄存器机。每个函数体拥有一块预分配寄存器数组和一�
 `br bN`（无条件）、`br_if rC, bT, bF`（条件）、`return rV`、`return_nil`；
 0.2 不再有隐式 fallthrough。无目标寄存器的指令（`bind_local`、`set_local`、
 `set_upvalue`、`init_global`、`set_global`、`return`、`br`、`br_if`、
-`return_nil` 与三条旧跳转）没有 `rD`。旧 `cdbc 0.1` 的线性 `jump/jump_if_*` 仍在
-兼容读取路径中保留；旧 `print rV` 同样只在兼容读取路径中保留，0.2 把它降为
-`call_native` 到 `print` 导入。
+`return_nil`）没有 `rD`。线性 `jump/jump_if_*`、名字驱动的
+`load_var/store_var/assign_var`、`print rV` 与 `native_call nN` 均不属于 0.2
+指令集。
 
 执行前验证（0.2 块体）包括：block ID 顺序且分支目标合法、每个 block 以
 terminator 结束、寄存器 definite-assignment（未定义读取直接拒绝）、local
 definite-binding（参数默认已绑定，`load_local/set_local` 需要前置
 `bind_local`）、`upvalue uN = global gM` 来源越界、native 调用 arity、以及
-block 体内出现旧 `jump/jump_if_*` 的混用。
+未知助记符的解析拒绝。
 
 `types:` 区段（在 `names:`/`globals:` 之后、`main` 之前）给出运行时类型布局：
 `tN = struct "Name" field0="f" field1="g"` 或
@@ -252,44 +251,33 @@ rD = map [rK0: rV0, rK1: rV1, ...]
 否则运行时错误 `map key must be nil, number, bool, or string`。插入顺序即迭代顺序；
 重复键允许并存，身份相等时后写键对应条目在后。map 是引用值，按身份相等。
 
-#### struct
+#### make_struct / struct_get / struct_set
 
 ```text
-rD = struct {nF: rV, ...}
-rD = struct nT {nF: rV, ...}
+rD = make_struct tN [rV0, rV1, ...]
+rD = struct_get rO, tN, slot
+rD = struct_set rO, tN, slot, rV
 ```
 
-创建结构体。字段名来自名字表（`nF`），字段值取自各寄存器。可选的 `nT` 记录该结构体
-的运行时类型名（供 `typeOf` 与 Ord 见证使用）；省略时是匿名结构体，`typeOf` 返回
-`"struct"`。字段顺序按书写顺序保留。字段名或寄存器越界、超出元素预算时失败。
+`make_struct` 按 `types:` 区段的数值类型表创建结构体，`struct_get`/`struct_set`
+按数值 slot 读取/更新字段。动态接收者（静态结构体类型未知）仍用名字驱动的
+`field`/`assign_field` 在运行时按名字解析。字段 slot 越界、非结构体、超出元素预算
+时失败。
 
-#### variant
+#### make_variant / is_variant / variant_get
 
 ```text
-rD = variant nEnum.nVariant [rP0, rP1, ...]
+rD = make_variant tN, vN [rP0, rP1, ...]
+rD = is_variant rV, tN, vN
+rD = variant_get rV, tN, vN, idx
 ```
 
-创建枚举变体值。`nEnum` 是枚举名，`nVariant` 是变体名，方括号内是位置化的 payload
-寄存器列表（可空）。泛型枚举的类型参数是编译期元数据，在运行时指令中擦除。
-
-#### variant_tag
-
-```text
-rD = variant_tag rV nEnum.nVariant
-```
-
-测试 `rV` 是否属于枚举 `nEnum` 的变体 `nVariant`，把布尔结果写入 `rD`。非变体值
-返回 `false` 而不是报错；不读取 payload。
-
-#### variant_field
-
-```text
-rD = variant_field rV N
-```
-
-读取 `rV` 的第 `N` 个位置 payload 写入 `rD`。对非变体值报
-`can only access fields on enum variants`；payload 下标越界报
-`enum variant field index out of bounds`。
+创建枚举变体值：`tN` 是数值类型表，`vN` 是数值变体表，方括号内是位置化的 payload
+寄存器列表（可空）。`is_variant` 测试 `rV` 是否匹配 `tN`/`vN`，把布尔结果写入
+`rD`，非变体或身份不匹配返回 `false`。`variant_get` 读取第 `idx` 个位置 payload；
+对非变体值报 `can only access fields on enum variants`，身份不匹配报
+`enum variant identity mismatch`，下标越界报 `enum variant field index out of
+bounds`。泛型枚举的类型参数是编译期元数据，在运行时指令中擦除。
 
 ### 4.2 数据移动与变量
 
@@ -389,9 +377,6 @@ rD = call_native iN [rA0, rA1, ...]
 ``unknown native stdlib function `<名字>` ``。实参个数不满足该函数的元数时报其固定
 错误；各函数自身再做类型/取值校验。完整注册表见第 5 节。
 
-旧 `cdbc 0.1` 的 `native_call nN [rA0, ...]` 按名字表调用，仍在兼容读取路径中
-保留，但 0.2 工件永不发射该形式。
-
 ### 4.4 集合与字段
 
 当编译器静态知道集合类型时，索引、赋值与长度使用集合专用指令，解释器热路径不再按
@@ -439,10 +424,11 @@ range 读取：下标必须是整数 number 且不越界，按 `start + step * �
 `len_array`/`len_map` 为元素数，`len_range` 为区间长度，`len_str` 为 Unicode 标量数
 （不是 UTF-8 字节数）。
 
-#### 旧式动态 index / assign_index / len（兼容读取）
+#### 动态 index / assign_index / len
 
-旧 `cdbc 0.1` 的 `index`、`assign_index` 与 `len` 仍在兼容读取路径中保留，按运行时
-类型在数组/map/range/string 之间分派；0.2 工件对静态已知集合类型永远发射专用指令。
+当编译器无法静态确定集合类型（例如泛型体或缺少类型记录）时，仍发射动态
+`index`、`assign_index` 与 `len`，由 VM 按运行时类型在数组/map/range/string 之间
+分派；静态已知集合类型永远发射专用指令。
 
 #### field
 
@@ -480,8 +466,7 @@ for-in 通过 VM 内部迭代器协议降级（迭代器是 VM 内部值，不�
 - `iter_next`：返回当前元素并推进一位；越界报 `iterator exhausted`。
 
 编译器把 `iter_has`/`iter_next` 排进循环块，`break`/`continue` 与迭代期间的变更
-语义和旧 `assert_array` + `len` + `index` 降级完全一致。旧 `cdbc 0.1` 的
-`assert_array` 仍在兼容读取路径中保留。
+语义与 `len` 加专用索引指令的组合完全一致；`assert_array` 不属于 0.2 指令集。
 
 #### assert_number
 
@@ -545,48 +530,21 @@ rD = not_equal rL, rR
 运行时相等比较，`not_equal` 是其取反。聚合引用值按身份相等（见第 3 节），variant
 按枚举名/变体名/payload 递归比较，range 按分量比较。
 
-#### 旧式动态算术/比较（兼容读取）
+#### 动态算术/比较
 
-旧 `cdbc 0.1` 的 `negate`、`add`、`subtract`、`multiply`、`divide`、
-`greater`、`greater_equal`、`less`、`less_equal` 仍在兼容读取路径中保留：`add`
-同时支持 number 加法与 string 拼接，其余有序比较在运行时区分 number/string。
-0.2 工件对已知类型永远发射专用指令；只有泛型 `T: Ord` 函数体（形参类型未实例化）
-仍使用动态有序比较。VM 不再按全局名字查找结构体 Ord 见证——结构体不可有序比较，
-编译器在类型检查阶段已拒绝这类表达式。
+当操作数类型未知（导入值、泛型体或缺少类型记录）时，仍发射动态 `negate`、`add`、
+`subtract`、`multiply`、`divide`、`equal`、`not_equal`、`greater`、
+`greater_equal`、`less`、`less_equal`：`add` 同时支持 number 加法与 string 拼接，
+有序比较在运行时区分 number/string。已知类型永远发射专用指令。VM 不按全局名字查找
+结构体 Ord 见证——结构体不可有序比较，编译器在类型检查阶段已拒绝这类表达式。
 
 ### 4.6 控制流
 
-#### jump
-
-```text
-jump N
-```
-
-无条件把 `ip` 设为 `N`。`N` 合法范围是 `0..=指令数`；等于指令数时函数体直接结束
-（相当于无返回值返回）。
-
-#### jump_if_false / jump_if_true
-
-```text
-jump_if_false rC, N
-jump_if_true rC, N
-```
-
-按 `rC` 的真值（见第 3 节）条件跳转：`jump_if_false` 在假时跳转，
-`jump_if_true` 在真时跳转；不满足条件时顺序执行下一条。目标范围与 `jump` 相同。
-
 ### 4.7 输出与返回
 
-#### print
-
-```text
-print rV
-```
-
-旧式兼容读取指令：把 `rV` 的运行时文本表示加一个换行写入程序输出。0.2 工件不发射
-该形式；编译器把 `print` 语句降为 ``rD = call_native i_print [rV]``，由 native
-框架统一管理输出字节预算、取消、副作用与 trace 归因，行为与旧指令完全一致。
-`print` 是程序输出的唯一来源；`main` 的返回值不会被打印。
+源语言 `print` 语句由编译器降为 ``rD = call_native i_print [rV]``：把 `rV` 的
+运行时文本表示加一个换行写入程序输出，由 native 框架统一管理输出字节预算、取消、
+副作用与 trace 归因。`print` 是程序输出的唯一来源；`main` 的返回值不会被打印。
 
 #### return
 
@@ -639,7 +597,7 @@ return rV
 
 ## 6. 兼容性与非目标
 
-- `cdbc 0.1` 是强兼容契约：新 opcode、新 section、语义变化都必须同步更新 C++ 发射端、
+- `cdbc 0.2` 是强兼容契约：新 opcode、新 section、语义变化都必须同步更新 C++ 发射端、
   Rust 解析/格式化/执行端、本参考、英文契约与黄金工件。
 - 本格式当前**不是**二进制编码，不定义二进制布局、压缩、校验器内部结构、GC 布局、
   任务调度器协议或 JIT 元数据格式。这些是后续阶段或决策门的范围。
