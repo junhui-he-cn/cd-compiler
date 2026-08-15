@@ -2170,29 +2170,29 @@ Phase 0 完成后，再给 Agent：
 
 Bytecode 0.2 只有满足以下条件才视为完成：
 
-- [ ] 新 Bytecode 不以变量名执行 local/upvalue/global；
-- [ ] closure 只捕获实际 free variables；
-- [ ] closure mutation / rebinding / loop capture 语义正确；
-- [ ] main 与普通 Function 模型统一；
-- [ ] CFG 使用 BasicBlock；
-- [ ] control flow 不依赖裸 instruction offset；
-- [ ] verifier 检查 register definite-assignment；
-- [ ] verifier 检查 local definite-binding；
-- [ ] struct field 使用 numeric slot；
-- [ ] enum 使用 TypeId + VariantId；
-- [ ] native call 使用 NativeId/import table；
-- [ ] Ord witness 不通过字符串命名约定查询；
-- [ ] map duplicate-key 语义唯一且文档/实现一致；
-- [ ] `assert_array` 被 iterator protocol 替代；
-- [ ] arithmetic / collection hot path 明显减少动态字符串或类型分派；
-- [ ] module 不再通过 `at=N` 插入 main 指令；
-- [ ] f64 文本 round-trip 可保证；
-- [ ] `.cdbc 0.2` 文档与实现同步；
-- [ ] interpreter tests 通过；
-- [ ] JIT（如当前支持）与 interpreter 保持语义一致；
-- [ ] malformed bytecode tests 通过；
-- [ ] golden tests 通过；
-- [ ] 原有源语言程序可观察行为无非预期变化。
+- [x] 新 Bytecode 不以变量名执行 local/upvalue/global；
+- [x] closure 只捕获实际 free variables；
+- [x] closure mutation / rebinding / loop capture 语义正确；
+- [x] main 与普通 Function 模型统一；
+- [x] CFG 使用 BasicBlock；
+- [x] control flow 不依赖裸 instruction offset；
+- [x] verifier 检查 register definite-assignment；
+- [x] verifier 检查 local definite-binding；
+- [x] struct field 使用 numeric slot；
+- [x] enum 使用 TypeId + VariantId；
+- [x] native call 使用 NativeId/import table；
+- [x] Ord witness 不通过字符串命名约定查询；
+- [x] map duplicate-key 语义唯一且文档/实现一致；
+- [x] `assert_array` 被 iterator protocol 替代；
+- [x] arithmetic / collection hot path 明显减少动态字符串或类型分派；
+- [x] module 不再通过 `at=N` 插入 main 指令；
+- [x] f64 文本 round-trip 可保证；
+- [x] `.cdbc 0.2` 文档与实现同步；
+- [x] interpreter tests 通过；
+- [x] JIT（如当前支持）与 interpreter 保持语义一致；
+- [x] malformed bytecode tests 通过；
+- [x] golden tests 通过；
+- [x] 原有源语言程序可观察行为无非预期变化。
 
 ---
 
@@ -2279,4 +2279,3 @@ Interpreter       JIT
 核心原则：
 
 > Compiler 负责理解语言，Bytecode 负责表达已 lower 的程序，VM 负责高效执行，而不是再次解释源语言名字和语义。
-
