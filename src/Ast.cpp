@@ -367,6 +367,9 @@ void writeInlineStmt(std::ostream& out, const Stmt& stmt)
             out << " (variant " << variant.name.lexeme;
             for (std::size_t i = 0; i < variant.payloadTypes.size(); ++i) {
                 out << ' ';
+                if (i < variant.payloadNames.size() && variant.payloadNames[i]) {
+                    out << variant.payloadNames[i]->lexeme << ": ";
+                }
                 writeTypeAnnotation(out, variant.payloadTypes[i]);
             }
             out << ')';
@@ -955,6 +958,9 @@ void EnumDeclStmt::print(std::ostream& out, int indent) const
             for (std::size_t j = 0; j < variants[i].payloadTypes.size(); ++j) {
                 if (j != 0) {
                     out << ", ";
+                }
+                if (j < variants[i].payloadNames.size() && variants[i].payloadNames[j]) {
+                    out << variants[i].payloadNames[j]->lexeme << ": ";
                 }
                 writeTypeAnnotation(out, variants[i].payloadTypes[j]);
             }
@@ -1827,6 +1833,11 @@ void populateStmt(Stmt& statement)
             mergeRange(result, tokenRange(variant.name));
             for (const TypeAnnotation& type : variant.payloadTypes) {
                 mergeRange(result, typeAnnotationRange(type));
+            }
+            for (const std::optional<Token>& payloadName : variant.payloadNames) {
+                if (payloadName) {
+                    mergeRange(result, tokenRange(*payloadName));
+                }
             }
         }
     } else if (auto* structDecl = dynamic_cast<StructDeclStmt*>(&statement)) {

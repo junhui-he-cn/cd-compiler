@@ -1,0 +1,94 @@
+native_import i0 = print abi=1
+native_import i1 = str abi=1
+main registers=17
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 describe/1
+0004  set_global g0, b1
+0005  b2 = constant #5 nil
+0006  init_global g1, b2
+0007  b3 = make_function $1 norm/1
+0008  set_global g1, b3
+0009  b4 = constant #9 7
+0010  b5 = make_variant t1, v0 (b4)
+0011  b6 = call_direct $0 [b5]
+0012  b16 = call_native i0 [b6]
+0013  b7 = constant #10 "bad"
+0014  b8 = make_variant t1, v1 (b7)
+0015  b9 = call_direct $0 [b8]
+0016  b16 = call_native i0 [b9]
+0017  b10 = make_variant t0, v0 ()
+0018  b11 = call_direct $1 [b10]
+0019  b16 = call_native i0 [b11]
+0020  b12 = constant #11 3
+0021  b13 = constant #12 4
+0022  b14 = make_variant t0, v1 (b12, b13)
+0023  b15 = call_direct $1 [b14]
+0024  b16 = call_native i0 [b15]
+0025  return_nil
+
+function $0 describe/1 registers=14
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #1 nil
+0003  b2 = is_variant b0, t1, v0
+0004  br_if b2, b1, b2
+0005  block
+0006  b3 = variant_get b0, t1, v0, 0
+0007  bind_local l1, b3
+0008  b4 = constant #2 "ok:"
+0009  b5 = load_local l1
+0010  b6 = call_native i1 [b5]
+0011  b7 = concat_str b4, b6
+0012  b1 = move b7
+0013  br b4
+0014  block
+0015  b8 = is_variant b0, t1, v1
+0016  br_if b8, b3, b4
+0017  block
+0018  b9 = variant_get b0, t1, v1, 0
+0019  bind_local l2, b9
+0020  b10 = constant #3 "err:"
+0021  b11 = load_local l2
+0022  b12 = concat_str b10, b11
+0023  b1 = move b12
+0024  br b4
+0025  block
+0026  return b1
+0027  block
+0028  b13 = constant #4 nil
+0029  return b13
+0030  block
+0031  return_nil
+
+function $1 norm/1 registers=11
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #6 nil
+0003  b2 = is_variant b0, t0, v0
+0004  br_if b2, b1, b2
+0005  block
+0006  b3 = constant #7 0
+0007  b1 = move b3
+0008  br b4
+0009  block
+0010  b4 = is_variant b0, t0, v1
+0011  br_if b4, b3, b4
+0012  block
+0013  b5 = variant_get b0, t0, v1, 0
+0014  b6 = variant_get b0, t0, v1, 1
+0015  bind_local l1, b5
+0016  bind_local l2, b6
+0017  b7 = load_local l1
+0018  b8 = load_local l2
+0019  b9 = add_num b7, b8
+0020  b1 = move b9
+0021  br b4
+0022  block
+0023  return b1
+0024  block
+0025  b10 = constant #8 nil
+0026  return b10
+0027  block
+0028  return_nil

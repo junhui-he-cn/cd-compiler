@@ -1,0 +1,11 @@
+Program
+  Enum Point2 {Origin, Coord(x: number, y: number)}
+  Enum NamedResult {Ok(value: number), Err(message: string)}
+  Fun describe(result: NamedResult): string
+    Return (match result (arm NamedResult.Ok(value) (+ "ok:" (call str value))) (arm NamedResult.Err(message) (+ "err:" message)))
+  Fun norm(point: Point2): number
+    Return (match point (arm Point2.Origin 0) (arm Point2.Coord(x, y) (+ x y)))
+  Print (call describe (member-call NamedResult Ok 7))
+  Print (call describe (member-call NamedResult Err "bad"))
+  Print (call norm (member-call Point2 Origin))
+  Print (call norm (member-call Point2 Coord 3 4))

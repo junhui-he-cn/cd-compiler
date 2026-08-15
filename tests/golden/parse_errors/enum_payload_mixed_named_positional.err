@@ -1,0 +1,3 @@
+Parse error at <repo>/tests/golden/parse_errors/enum_payload_mixed_named_positional.cd:2:16: enum variant payload fields must be either all named or all positional
+    A(x: number, number),
+                 ^

@@ -536,6 +536,21 @@ enum NamedResult {
 let result = NamedResult.Ok(42);
 ```
 
+命名与位置化两种形式不能混在同一个 variant 里，同一个 variant 内字段名不能重复；
+无论哪种形式，构造函数与 pattern 都仍然按位置传参与绑定：
+
+```cd
+enum NamedResult {
+  Ok(value: number),
+  Err(message: string),
+}
+
+let label = match NamedResult.Ok(42) {
+  NamedResult.Ok(value) => "ok:" + str(value),
+  NamedResult.Err(message) => "err:" + message,
+};
+```
+
 ### `match`
 
 `match` 是表达式：选中 arm 的表达式值成为整个 `match` 的值，所有 arm 的结果类型

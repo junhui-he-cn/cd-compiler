@@ -49,7 +49,12 @@ enumVariant = identifier,
 enumPayloads = enumPayload,
                { ",", enumPayload } ;
 
-enumPayload  = typeExpr ;
+enumPayload  = [ identifier, ":" ], typeExpr ;
+
+(* Enum variant payload fields are either all named or all positional;
+   mixing the two forms and duplicate field names are parse errors.
+   Constructors and patterns remain positional regardless of the
+   declaration form. *)
 
 implDecl    = "impl", identifier, [ typeParameters ],
               "{", { methodDecl }, "}" ;

@@ -1,0 +1,28 @@
+enum Point2 {
+  Origin,
+  Coord(x: number, y: number),
+}
+
+enum NamedResult {
+  Ok(value: number),
+  Err(message: string),
+}
+
+fun describe(result: NamedResult): string {
+  return match result {
+    NamedResult.Ok(value) => "ok:" + str(value),
+    NamedResult.Err(message) => "err:" + message,
+  };
+}
+
+fun norm(point: Point2): number {
+  return match point {
+    Point2.Origin => 0,
+    Point2.Coord(x, y) => x + y,
+  };
+}
+
+print describe(NamedResult.Ok(7));
+print describe(NamedResult.Err("bad"));
+print norm(Point2.Origin());
+print norm(Point2.Coord(3, 4));

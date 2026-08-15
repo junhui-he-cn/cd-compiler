@@ -325,7 +325,7 @@ void TypeChecker::checkEnumDeclaration(const EnumDeclStmt& statement)
         }
         variantNames.emplace(variant.name.lexeme, variant.name);
 
-        EnumVariantType checkedVariant{variant.name, {}};
+        EnumVariantType checkedVariant{variant.name, {}, variant.payloadNames};
         for (const TypeAnnotation& payloadType : variant.payloadTypes) {
             checkedVariant.payloadTypes.push_back(resolveAnnotation(payloadType));
         }

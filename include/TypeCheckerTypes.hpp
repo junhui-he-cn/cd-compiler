@@ -42,6 +42,7 @@ struct StructTypeDecl {
 struct EnumVariantType {
     Token name;
     std::vector<TypeInfo> payloadTypes;
+    std::vector<std::optional<Token>> payloadNames;
 };
 
 struct EnumTypeDecl {

@@ -135,7 +135,7 @@ FrontendSession 模块图语义一致（直接导入暴露导出名、别名限�
 | # | 漂移 | 证据 | Phase 1 决策 |
 | --- | --- | --- | --- |
 | 1 | 手册承诺 `match` 表达式，实现只有语句 | `USER_MANUAL.md:586`；AST 只有 `MatchStmt`；EBNF 只有 `matchStmt` | 以文档承诺为准；已在 Phase 2 实现（`MatchExpr` 统一，语句位置为表达式语句） |
-| 2 | 手册承诺 enum 命名 payload，实现位置化 | `USER_MANUAL.md:523-555`；`EnumVariantDecl` 无字段名；EBNF `enumPayload = typeExpr` | 以文档承诺为准；实现推迟到 Phase 3，手册承诺保留 |
+| 2 | 手册承诺 enum 命名 payload，实现位置化 | `USER_MANUAL.md:523-555`；`EnumVariantDecl` 无字段名；EBNF `enumPayload = typeExpr` | 以文档承诺为准；已在 Phase 3 实现（命名/位置化二选一，构造与 pattern 仍按位置） |
 | 3 | 手册 CLI 仍是组合程序模型 | `USER_MANUAL.md:126,640` vs 每文件一模块（`FrontendSession`/AGENTS） | 以现有实现为准；已修正手册两处 |
 | 4 | 条件中禁用 struct 字面量未文档化 | `src/Parser.cpp:951-958`；EBNF/手册无说明 | 以现有实现为准；已补充手册/EBNF 说明并新增 negative test，Phase 10 再移除 hack |
 
@@ -178,7 +178,7 @@ Phase 1 验证：golden 788/788（新增 1 个 parse-error 夹具），其余套
 
 ## 结论与下一步
 
-Phase 0/1/2 完成：四条漂移中，match 表达式已在 Phase 2 落地（AST 统一为
-`MatchExpr`，块体 arm 与表达式体 arm 并存、不可混用，语句位置为可省略分号的
-表达式语句），命名 payload 留待 Phase 3 实现，两条以实现为准的文档/测试已修正。
-下一步是 Phase 3：实现 enum 命名 payload。
+Phase 0/1/2/3 完成：match 表达式已统一为 `MatchExpr`；enum 命名 payload 已实现
+（同一 variant 内命名/位置化二选一、禁止重名，构造与 pattern 保持按位置传参/
+绑定，AST/类型元数据保留字段名）。两条以实现为准的漂移已修正。下一步是
+Phase 4：默认不可变 + `let mut`。

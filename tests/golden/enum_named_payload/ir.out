@@ -1,0 +1,74 @@
+IR
+0000  v0 = constant #0 nil
+0001  store_var @0 describe#0, v0
+0002  v1 = make_function $0 describe/1
+0003  assign_var @15 describe#0, v1
+0004  v2 = constant #5 nil
+0005  store_var @16 norm#4, v2
+0006  v3 = make_function $1 norm/1
+0007  assign_var @30 norm#4, v3
+0008  v4 = constant #9 7
+0009  v5 = variant NamedResult.Ok (v4)
+0010  v6 = call_direct $0 describe/1(v5)
+0011  print v6
+0012  v7 = constant #10 "bad"
+0013  v8 = variant NamedResult.Err (v7)
+0014  v9 = call_direct $0 describe/1(v8)
+0015  print v9
+0016  v10 = variant Point2.Origin ()
+0017  v11 = call_direct $1 norm/1(v10)
+0018  print v11
+0019  v12 = constant #11 3
+0020  v13 = constant #12 4
+0021  v14 = variant Point2.Coord (v12, v13)
+0022  v15 = call_direct $1 norm/1(v14)
+0023  print v15
+
+function $0 describe(result#1)
+0000  v0 = load_var @1 result#1
+0001  v1 = constant #1 nil
+0002  v2 = variant_tag v0 NamedResult.Ok
+0003  jump_if_false v2, 0012
+0004  v3 = variant_field v0[0]
+0005  store_var @6 value#2, v3
+0006  v4 = constant #2 "ok:"
+0007  v5 = load_var @7 value#2
+0008  v6 = native_call @8 str(v5)
+0009  v7 = concat_str v4, v6
+0010  v1 = copy v7
+0011  jump 0021
+0012  v8 = variant_tag v0 NamedResult.Err
+0013  jump_if_false v8, 0021
+0014  v9 = variant_field v0[0]
+0015  store_var @13 message#3, v9
+0016  v10 = constant #3 "err:"
+0017  v11 = load_var @14 message#3
+0018  v12 = concat_str v10, v11
+0019  v1 = copy v12
+0020  jump 0021
+0021  return v1
+0022  v13 = constant #4 nil
+0023  return v13
+
+function $1 norm(point#5)
+0000  v0 = load_var @17 point#5
+0001  v1 = constant #6 nil
+0002  v2 = variant_tag v0 Point2.Origin
+0003  jump_if_false v2, 0007
+0004  v3 = constant #7 0
+0005  v1 = copy v3
+0006  jump 0018
+0007  v4 = variant_tag v0 Point2.Coord
+0008  jump_if_false v4, 0018
+0009  v5 = variant_field v0[0]
+0010  v6 = variant_field v0[1]
+0011  store_var @26 x#6, v5
+0012  store_var @27 y#7, v6
+0013  v7 = load_var @28 x#6
+0014  v8 = load_var @29 y#7
+0015  v9 = add_num v7, v8
+0016  v1 = copy v9
+0017  jump 0018
+0018  return v1
+0019  v10 = constant #8 nil
+0020  return v10

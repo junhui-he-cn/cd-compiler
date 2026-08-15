@@ -5359,6 +5359,62 @@
       "fixture": "tests/golden/parse_errors"
     },
     {
+      "case_id": "golden.parse_errors.enum_payload_duplicate_field",
+      "runner": "golden",
+      "result_name": "parse_errors/enum_payload_duplicate_field default(ast)",
+      "stage": "parse-error",
+      "capability_tags": [
+        "golden",
+        "parse_errors",
+        "fixture:enum_payload_duplicate_field"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/enum_payload_duplicate_field.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/enum_payload_duplicate_field.cd",
+        "tests/golden/parse_errors/enum_payload_duplicate_field.err",
+        "tests/golden/parse_errors/enum_payload_duplicate_field.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
+      "case_id": "golden.parse_errors.enum_payload_mixed_named_positional",
+      "runner": "golden",
+      "result_name": "parse_errors/enum_payload_mixed_named_positional default(ast)",
+      "stage": "parse-error",
+      "capability_tags": [
+        "golden",
+        "parse_errors",
+        "fixture:enum_payload_mixed_named_positional"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/enum_payload_mixed_named_positional.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/enum_payload_mixed_named_positional.cd",
+        "tests/golden/parse_errors/enum_payload_mixed_named_positional.err",
+        "tests/golden/parse_errors/enum_payload_mixed_named_positional.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
       "case_id": "golden.parse_errors.export_invalid_fun",
       "runner": "golden",
       "result_name": "parse_errors/export_invalid_fun default(ast)",
@@ -10374,6 +10430,89 @@
         "tests/golden/compound_assignment_expression_result/ir.out"
       ],
       "fixture": "tests/golden/compound_assignment_expression_result"
+    },
+    {
+      "case_id": "golden.success.enum_named_payload.ast",
+      "runner": "golden",
+      "result_name": "enum_named_payload default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:enum_named_payload"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/enum_named_payload/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/enum_named_payload/ast.out"
+      ],
+      "fixture": "tests/golden/enum_named_payload"
+    },
+    {
+      "case_id": "golden.success.enum_named_payload.bytecode",
+      "runner": "golden",
+      "result_name": "enum_named_payload --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:enum_named_payload"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/enum_named_payload/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/enum_named_payload/bytecode.out"
+      ],
+      "fixture": "tests/golden/enum_named_payload"
+    },
+    {
+      "case_id": "golden.success.enum_named_payload.ir",
+      "runner": "golden",
+      "result_name": "enum_named_payload --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:enum_named_payload"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/enum_named_payload/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/enum_named_payload/ir.out"
+      ],
+      "fixture": "tests/golden/enum_named_payload"
     },
     {
       "case_id": "golden.success.expression_statement.ast",
@@ -28016,6 +28155,64 @@
       "fixture": "tests/golden/parse_errors"
     },
     {
+      "case_id": "malformed.parse_error.enum_payload_duplicate_field",
+      "runner": "malformed",
+      "result_name": "malformed.parse_error.enum_payload_duplicate_field",
+      "stage": "diagnostic-recovery",
+      "capability_tags": [
+        "malformed",
+        "parser",
+        "diagnostic-recovery",
+        "golden-corpus"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/enum_payload_duplicate_field.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/enum_payload_duplicate_field.cd",
+        "tests/golden/parse_errors/enum_payload_duplicate_field.err",
+        "tests/golden/parse_errors/enum_payload_duplicate_field.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
+      "case_id": "malformed.parse_error.enum_payload_mixed_named_positional",
+      "runner": "malformed",
+      "result_name": "malformed.parse_error.enum_payload_mixed_named_positional",
+      "stage": "diagnostic-recovery",
+      "capability_tags": [
+        "malformed",
+        "parser",
+        "diagnostic-recovery",
+        "golden-corpus"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/enum_payload_mixed_named_positional.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/enum_payload_mixed_named_positional.cd",
+        "tests/golden/parse_errors/enum_payload_mixed_named_positional.err",
+        "tests/golden/parse_errors/enum_payload_mixed_named_positional.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
       "case_id": "malformed.parse_error.export_invalid_fun",
       "runner": "malformed",
       "result_name": "malformed.parse_error.export_invalid_fun",
@@ -37322,6 +37519,68 @@
         "tests/golden/contextual_lambda_return_function/run.out"
       ],
       "fixture": "tests/golden/contextual_lambda_return_function"
+    },
+    {
+      "case_id": "rust_vm.golden.enum_named_payload.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "enum_named_payload emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:enum_named_payload"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/enum_named_payload/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/enum_named_payload/run.out"
+      ],
+      "fixture": "tests/golden/enum_named_payload"
+    },
+    {
+      "case_id": "rust_vm.golden.enum_named_payload.run",
+      "runner": "rust_vm_golden",
+      "result_name": "enum_named_payload rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:enum_named_payload"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/enum_named_payload/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/enum_named_payload/run.out"
+      ],
+      "fixture": "tests/golden/enum_named_payload"
     },
     {
       "case_id": "rust_vm.golden.expression_statement.emit",

@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <sstream>
+#include <unordered_set>
 #include <utility>
 
 namespace {
@@ -414,15 +415,49 @@ EnumVariantDecl Parser::enumVariant()
 {
     Token name = consume(TokenType::Identifier, "expected enum variant name");
     std::vector<TypeAnnotation> payloadTypes;
+    std::vector<std::optional<Token>> payloadNames;
     if (match(TokenType::LeftParen)) {
         if (!check(TokenType::RightParen)) {
+            bool sawNamed = false;
+            bool sawPositional = false;
+            std::unordered_set<std::string> payloadFieldNames;
             do {
-                payloadTypes.push_back(typeAnnotation("expected enum variant payload type"));
+                if (check(TokenType::Identifier) && checkNext(TokenType::Colon)) {
+                    Token field = advance();
+                    advance();
+                    sawNamed = true;
+                    if (sawPositional) {
+                        throw ParseError(
+                            field,
+                            "enum variant payload fields must be either all named or all positional");
+                    }
+                    if (!payloadFieldNames.insert(field.lexeme).second) {
+                        throw ParseError(
+                            field,
+                            "duplicate enum payload field " + field.lexeme);
+                    }
+                    payloadNames.push_back(field);
+                    payloadTypes.push_back(
+                        typeAnnotation("expected named payload type"));
+                } else {
+                    sawPositional = true;
+                    if (sawNamed) {
+                        throw ParseError(
+                            peek(),
+                            "enum variant payload fields must be either all named or all positional");
+                    }
+                    payloadNames.push_back(std::nullopt);
+                    payloadTypes.push_back(
+                        typeAnnotation("expected enum variant payload type"));
+                }
             } while (match(TokenType::Comma));
         }
         consume(TokenType::RightParen, "expected `)` after enum variant payload types");
     }
-    return EnumVariantDecl{std::move(name), std::move(payloadTypes)};
+    return EnumVariantDecl{
+        std::move(name),
+        std::move(payloadTypes),
+        std::move(payloadNames)};
 }
 
 std::vector<StructFieldDecl> Parser::structFields()

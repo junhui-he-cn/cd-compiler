@@ -267,6 +267,7 @@ struct StructFieldDecl {
 struct EnumVariantDecl {
     Token name;
     std::vector<TypeAnnotation> payloadTypes;
+    std::vector<std::optional<Token>> payloadNames;
 };
 
 struct IndexExpr final : Expr {
