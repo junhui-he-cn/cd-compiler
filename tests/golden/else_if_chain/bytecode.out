@@ -1,0 +1,78 @@
+native_import i0 = print abi=1
+main registers=39
+0000  block
+0001  b0 = constant #0 85
+0002  init_global g0, b0
+0003  b1 = load_global g0
+0004  b2 = constant #1 90
+0005  b3 = ge_num b1, b2
+0006  br_if b3, b1, b2
+0007  block
+0008  b4 = constant #2 "A"
+0009  b5 = call_native i0 [b4]
+0010  br b5
+0011  block
+0012  b6 = load_global g0
+0013  b7 = constant #3 60
+0014  b8 = ge_num b6, b7
+0015  br_if b8, b3, b4
+0016  block
+0017  b9 = constant #4 "B"
+0018  b10 = call_native i0 [b9]
+0019  br b5
+0020  block
+0021  b11 = constant #5 "C"
+0022  b12 = call_native i0 [b11]
+0023  br b5
+0024  block
+0025  b13 = constant #6 40
+0026  init_global g1, b13
+0027  b14 = load_global g1
+0028  b15 = constant #7 90
+0029  b16 = ge_num b14, b15
+0030  br_if b16, b6, b7
+0031  block
+0032  b17 = constant #8 "A"
+0033  b18 = call_native i0 [b17]
+0034  br b10
+0035  block
+0036  b19 = load_global g1
+0037  b20 = constant #9 60
+0038  b21 = ge_num b19, b20
+0039  br_if b21, b8, b9
+0040  block
+0041  b22 = constant #10 "B"
+0042  b23 = call_native i0 [b22]
+0043  br b10
+0044  block
+0045  b24 = constant #11 "C"
+0046  b25 = call_native i0 [b24]
+0047  br b10
+0048  block
+0049  b26 = constant #12 5
+0050  init_global g2, b26
+0051  b27 = load_global g2
+0052  b28 = constant #13 0
+0053  b29 = gt_num b27, b28
+0054  br_if b29, b11, b15
+0055  block
+0056  b30 = load_global g2
+0057  b31 = constant #14 3
+0058  b32 = gt_num b30, b31
+0059  br_if b32, b12, b13
+0060  block
+0061  b33 = constant #15 "big"
+0062  b34 = call_native i0 [b33]
+0063  br b14
+0064  block
+0065  b35 = constant #16 "small"
+0066  b36 = call_native i0 [b35]
+0067  br b14
+0068  block
+0069  return_nil
+0070  block
+0071  b37 = constant #17 "non-positive"
+0072  b38 = call_native i0 [b37]
+0073  br b16
+0074  block
+0075  return_nil

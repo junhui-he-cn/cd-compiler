@@ -1,0 +1,55 @@
+IR
+0000  v0 = constant #0 85
+0001  store_var @0 score#0, v0
+0002  v1 = load_var @1 score#0
+0003  v2 = constant #1 90
+0004  v3 = ge_num v1, v2
+0005  jump_if_false v3, 0009
+0006  v4 = constant #2 "A"
+0007  v5 = native_call @2 print(v4)
+0008  jump 0018
+0009  v6 = load_var @3 score#0
+0010  v7 = constant #3 60
+0011  v8 = ge_num v6, v7
+0012  jump_if_false v8, 0016
+0013  v9 = constant #4 "B"
+0014  v10 = native_call @4 print(v9)
+0015  jump 0018
+0016  v11 = constant #5 "C"
+0017  v12 = native_call @5 print(v11)
+0018  v13 = constant #6 40
+0019  store_var @6 low#1, v13
+0020  v14 = load_var @7 low#1
+0021  v15 = constant #7 90
+0022  v16 = ge_num v14, v15
+0023  jump_if_false v16, 0027
+0024  v17 = constant #8 "A"
+0025  v18 = native_call @8 print(v17)
+0026  jump 0036
+0027  v19 = load_var @9 low#1
+0028  v20 = constant #9 60
+0029  v21 = ge_num v19, v20
+0030  jump_if_false v21, 0034
+0031  v22 = constant #10 "B"
+0032  v23 = native_call @10 print(v22)
+0033  jump 0036
+0034  v24 = constant #11 "C"
+0035  v25 = native_call @11 print(v24)
+0036  v26 = constant #12 5
+0037  store_var @12 x#2, v26
+0038  v27 = load_var @13 x#2
+0039  v28 = constant #13 0
+0040  v29 = gt_num v27, v28
+0041  jump_if_false v29, 0052
+0042  v30 = load_var @14 x#2
+0043  v31 = constant #14 3
+0044  v32 = gt_num v30, v31
+0045  jump_if_false v32, 0049
+0046  v33 = constant #15 "big"
+0047  v34 = native_call @15 print(v33)
+0048  jump 0051
+0049  v35 = constant #16 "small"
+0050  v36 = native_call @16 print(v35)
+0051  jump 0054
+0052  v37 = constant #17 "non-positive"
+0053  v38 = native_call @17 print(v37)

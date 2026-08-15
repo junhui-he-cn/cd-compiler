@@ -792,8 +792,13 @@ StmtPtr Parser::ifStatement()
 
     StmtPtr elseBranch;
     if (match(TokenType::Else)) {
-        consume(TokenType::LeftBrace, "expected `{` after `else`");
-        elseBranch = blockStatement();
+        if (check(TokenType::If)) {
+            advance();
+            elseBranch = ifStatement();
+        } else {
+            consume(TokenType::LeftBrace, "expected `{` after `else`");
+            elseBranch = blockStatement();
+        }
     }
 
     const std::optional<SourceSpan> span = spanForToken(keyword);

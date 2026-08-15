@@ -86,7 +86,7 @@ exportDecl  = "export", identifier,
               [ "from", string ], ";" ;
 
 ifStmt      = "if", expression, block,
-              [ "else", block ] ;
+              [ "else", ( ifStmt | block ) ] ;
 
 ifLetStmt   = "if", "let", identifier, "=", expression,
               block, [ "else", block ] ;

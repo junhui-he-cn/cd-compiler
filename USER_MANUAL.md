@@ -337,6 +337,20 @@ if (condition) {
 
 `if`/`while`/`for` 的条件必须是 `bool`，可选值不能直接作为条件，请用 `if let` 或 `??`。
 
+`else` 后面可以直接跟 `if`，形成 `else if` 链；`else` 总是绑定到最近一个尚未配对
+的 `if`：
+
+```cd
+let score = 85;
+if score >= 90 {
+  print("A");
+} else if score >= 60 {
+  print("B");
+} else {
+  print("C");
+}
+```
+
 `if` 和 `while` 条件两边的括号是可选的：`if (x)` 与 `if x` 等价，`while (n < 3)`
 与 `while n < 3` 等价。括号只是普通的分组表达式，多余的分组括号会被 formatter
 原样保留，不会在两种写法之间互相转换。

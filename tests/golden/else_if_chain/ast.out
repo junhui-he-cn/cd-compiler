@@ -1,0 +1,41 @@
+Program
+  Let score = 85
+  If (>= score 90)
+    Then
+      Block
+        Expr (call print "A")
+    Else
+      If (>= score 60)
+        Then
+          Block
+            Expr (call print "B")
+        Else
+          Block
+            Expr (call print "C")
+  Let low = 40
+  If (>= low 90)
+    Then
+      Block
+        Expr (call print "A")
+    Else
+      If (>= low 60)
+        Then
+          Block
+            Expr (call print "B")
+        Else
+          Block
+            Expr (call print "C")
+  Let x = 5
+  If (> x 0)
+    Then
+      Block
+        If (> x 3)
+          Then
+            Block
+              Expr (call print "big")
+          Else
+            Block
+              Expr (call print "small")
+    Else
+      Block
+        Expr (call print "non-positive")

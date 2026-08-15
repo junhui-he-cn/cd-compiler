@@ -1,0 +1,28 @@
+let score = 85;
+if score >= 90 {
+  print("A");
+} else if score >= 60 {
+  print("B");
+} else {
+  print("C");
+}
+
+let low = 40;
+if low >= 90 {
+  print("A");
+} else if low >= 60 {
+  print("B");
+} else {
+  print("C");
+}
+
+let x = 5;
+if x > 0 {
+  if x > 3 {
+    print("big");
+  } else {
+    print("small");
+  }
+} else {
+  print("non-positive");
+}
