@@ -18,55 +18,52 @@ IR
 0016  v8 = constant #9 nil
 0017  store_var @11 outer#10, v8
 0018  v9 = make_function $5 outer/1
-0019  assign_var @17 outer#10, v9
+0019  assign_var @16 outer#10, v9
 0020  v10 = constant #13 1
 0021  v11 = constant #14 2
 0022  v12 = array [v10, v11]
-0023  store_var @18 values#14, v12
-0024  v13 = load_var @19 values#14
-0025  v14 = load_var @20 identity#3
-0026  v15 = native_call @21 map(v13, v14)
-0027  store_var @22 copied#15, v15
-0028  v16 = load_var @23 values#14
-0029  v17 = load_var @24 keep#8
-0030  v18 = native_call @25 filter(v16, v17)
-0031  store_var @26 kept#16, v18
+0023  store_var @17 values#14, v12
+0024  v13 = load_var @18 values#14
+0025  v14 = load_var @19 identity#3
+0026  v15 = native_call @20 map(v13, v14)
+0027  store_var @21 copied#15, v15
+0028  v16 = load_var @22 values#14
+0029  v17 = load_var @23 keep#8
+0030  v18 = native_call @24 filter(v16, v17)
+0031  store_var @25 kept#16, v18
 0032  v19 = make_function $6 <lambda>/1
-0033  store_var @28 lambda#18, v19
+0033  store_var @27 lambda#18, v19
 0034  v20 = constant #16 0
 0035  v21 = struct Holder {value: v20}
-0036  store_var @31 box#19, v21
+0036  store_var @30 box#19, v21
 0037  v22 = constant #17 6
 0038  v23 = variant Box.Value (v22)
-0039  store_var @34 enumValue#20, v23
-0040  v24 = load_var @35 copied#15
+0039  store_var @33 enumValue#20, v23
+0040  v24 = load_var @34 copied#15
 0041  print v24
-0042  v25 = load_var @36 kept#16
+0042  v25 = load_var @35 kept#16
 0043  print v25
-0044  v26 = load_var @37 lambda#18
+0044  v26 = load_var @36 lambda#18
 0045  v27 = constant #18 3
 0046  v28 = call v26(v27)
 0047  print v28
-0048  v29 = load_var @38 identity#3
-0049  v30 = constant #19 4
-0050  v31 = call v29(v30)
-0051  print v31
-0052  v32 = load_var @39 pair#5
-0053  v33 = constant #20 "key"
-0054  v34 = constant #21 7
-0055  v35 = call v32(v33, v34)
-0056  print v35
-0057  v36 = load_var @40 __method_Holder_echo#0
-0058  v37 = load_var @41 box#19
-0059  v38 = constant #22 5
-0060  v39 = call v36(v37, v38)
-0061  print v39
-0062  v40 = load_var @42 outer#10
-0063  v41 = constant #23 6
-0064  v42 = call v40(v41)
-0065  print v42
-0066  v43 = load_var @43 enumValue#20
-0067  print v43
+0048  v29 = constant #19 4
+0049  v30 = call_direct $1 identity/1(v29)
+0050  print v30
+0051  v31 = constant #20 "key"
+0052  v32 = constant #21 7
+0053  v33 = call_direct $2 pair/2(v31, v32)
+0054  print v33
+0055  v34 = load_var @37 __method_Holder_echo#0
+0056  v35 = load_var @38 box#19
+0057  v36 = constant #22 5
+0058  v37 = call v34(v35, v36)
+0059  print v37
+0060  v38 = constant #23 6
+0061  v39 = call_direct $5 outer/1(v38)
+0062  print v39
+0063  v40 = load_var @39 enumValue#20
+0064  print v40
 
 function $0 echo(this#1, value#2)
 0000  v0 = load_var @1 value#2
@@ -103,15 +100,14 @@ function $5 outer(value#11)
 0001  store_var @12 inner#12, v0
 0002  v1 = make_function $4 inner/1
 0003  assign_var @14 inner#12, v1
-0004  v2 = load_var @15 inner#12
-0005  v3 = load_var @16 value#11
-0006  v4 = call v2(v3)
-0007  return v4
-0008  v5 = constant #12 nil
-0009  return v5
+0004  v2 = load_var @15 value#11
+0005  v3 = call_direct $4 inner/1(v2)
+0006  return v3
+0007  v4 = constant #12 nil
+0008  return v4
 
 function $6 <lambda>(value#17)
-0000  v0 = load_var @27 value#17
+0000  v0 = load_var @26 value#17
 0001  return v0
 0002  v1 = constant #15 nil
 0003  return v1

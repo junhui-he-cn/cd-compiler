@@ -6,90 +6,85 @@ IR
 0004  v2 = constant #5 nil
 0005  store_var @4 process#2, v2
 0006  v3 = make_function $1 process/1
-0007  assign_var @10 process#2, v3
-0008  v4 = load_var @11 find#0
-0009  v5 = constant #9 5
-0010  v6 = call v4(v5)
-0011  store_var @12 maybe#5, v6
-0012  v7 = load_var @13 maybe#5
-0013  v8 = constant #10 nil
-0014  v9 = not_equal v7, v8
-0015  jump_if_false v9, 0023
-0016  store_var @14 v#6, v7
-0017  v10 = constant #11 "if-let:"
-0018  v11 = load_var @15 v#6
-0019  v12 = native_call @16 str(v11)
-0020  v13 = concat_str v10, v12
-0021  print v13
-0022  jump 0025
-0023  v14 = constant #12 "if-let:none"
-0024  print v14
-0025  v15 = load_var @17 maybe#5
-0026  v17 = constant #13 nil
-0027  v18 = not_equal v15, v17
-0028  jump_if_false v18, 0031
-0029  v16 = copy v15
-0030  jump 0033
-0031  v19 = constant #14 0
-0032  v16 = copy v19
-0033  print v16
-0034  v20 = load_var @18 find#0
-0035  v21 = constant #15 1
-0036  v22 = neg_num v21
-0037  v23 = call v20(v22)
-0038  v25 = constant #16 nil
-0039  v26 = not_equal v23, v25
-0040  jump_if_false v26, 0043
-0041  v24 = copy v23
-0042  jump 0045
-0043  v27 = constant #17 99
-0044  v24 = copy v27
-0045  print v24
-0046  v28 = load_var @19 process#2
-0047  v29 = constant #18 3
-0048  v30 = call v28(v29)
-0049  v32 = constant #19 nil
-0050  v33 = not_equal v30, v32
-0051  jump_if_false v33, 0054
-0052  v31 = copy v30
-0053  jump 0056
-0054  v34 = constant #20 "missing"
-0055  v31 = copy v34
-0056  print v31
-0057  v35 = load_var @20 process#2
-0058  v36 = constant #21 1
-0059  v37 = neg_num v36
-0060  v38 = call v35(v37)
-0061  v40 = constant #22 nil
-0062  v41 = not_equal v38, v40
-0063  jump_if_false v41, 0066
-0064  v39 = copy v38
-0065  jump 0068
-0066  v42 = constant #23 "missing"
-0067  v39 = copy v42
-0068  print v39
-0069  v43 = load_var @21 find#0
-0070  v44 = constant #24 1
-0071  v45 = call v43(v44)
-0072  store_var @22 next#7, v45
-0073  v46 = constant #25 0
-0074  store_var @23 count#8, v46
-0075  v47 = load_var @24 next#7
-0076  v48 = constant #26 nil
-0077  v49 = not_equal v47, v48
-0078  jump_if_false v49, 0089
-0079  store_var @25 current#9, v47
-0080  v50 = load_var @26 count#8
-0081  v51 = assert_number v50 @27 `+=` expects number variable
-0082  v52 = constant #27 1
-0083  v53 = assert_number v52 @28 `+=` expects number value
-0084  v54 = add_num v51, v53
-0085  assign_var @29 count#8, v54
-0086  v55 = constant #28 nil
-0087  assign_var @30 next#7, v55
-0088  jump 0075
-0089  v56 = load_var @31 count#8
-0090  print v56
+0007  assign_var @9 process#2, v3
+0008  v4 = constant #9 5
+0009  v5 = call_direct $0 find/1(v4)
+0010  store_var @10 maybe#5, v5
+0011  v6 = load_var @11 maybe#5
+0012  v7 = constant #10 nil
+0013  v8 = not_equal v6, v7
+0014  jump_if_false v8, 0022
+0015  store_var @12 v#6, v6
+0016  v9 = constant #11 "if-let:"
+0017  v10 = load_var @13 v#6
+0018  v11 = native_call @14 str(v10)
+0019  v12 = concat_str v9, v11
+0020  print v12
+0021  jump 0024
+0022  v13 = constant #12 "if-let:none"
+0023  print v13
+0024  v14 = load_var @15 maybe#5
+0025  v16 = constant #13 nil
+0026  v17 = not_equal v14, v16
+0027  jump_if_false v17, 0030
+0028  v15 = copy v14
+0029  jump 0032
+0030  v18 = constant #14 0
+0031  v15 = copy v18
+0032  print v15
+0033  v19 = constant #15 1
+0034  v20 = neg_num v19
+0035  v21 = call_direct $0 find/1(v20)
+0036  v23 = constant #16 nil
+0037  v24 = not_equal v21, v23
+0038  jump_if_false v24, 0041
+0039  v22 = copy v21
+0040  jump 0043
+0041  v25 = constant #17 99
+0042  v22 = copy v25
+0043  print v22
+0044  v26 = constant #18 3
+0045  v27 = call_direct $1 process/1(v26)
+0046  v29 = constant #19 nil
+0047  v30 = not_equal v27, v29
+0048  jump_if_false v30, 0051
+0049  v28 = copy v27
+0050  jump 0053
+0051  v31 = constant #20 "missing"
+0052  v28 = copy v31
+0053  print v28
+0054  v32 = constant #21 1
+0055  v33 = neg_num v32
+0056  v34 = call_direct $1 process/1(v33)
+0057  v36 = constant #22 nil
+0058  v37 = not_equal v34, v36
+0059  jump_if_false v37, 0062
+0060  v35 = copy v34
+0061  jump 0064
+0062  v38 = constant #23 "missing"
+0063  v35 = copy v38
+0064  print v35
+0065  v39 = constant #24 1
+0066  v40 = call_direct $0 find/1(v39)
+0067  store_var @16 next#7, v40
+0068  v41 = constant #25 0
+0069  store_var @17 count#8, v41
+0070  v42 = load_var @18 next#7
+0071  v43 = constant #26 nil
+0072  v44 = not_equal v42, v43
+0073  jump_if_false v44, 0084
+0074  store_var @19 current#9, v42
+0075  v45 = load_var @20 count#8
+0076  v46 = assert_number v45 @21 `+=` expects number variable
+0077  v47 = constant #27 1
+0078  v48 = assert_number v47 @22 `+=` expects number value
+0079  v49 = add_num v46, v48
+0080  assign_var @23 count#8, v49
+0081  v50 = constant #28 nil
+0082  assign_var @24 next#7, v50
+0083  jump 0070
+0084  v51 = load_var @25 count#8
+0085  print v51
 
 function $0 find(value#1)
 0000  v0 = load_var @1 value#1
@@ -106,19 +101,18 @@ function $0 find(value#1)
 0011  return v7
 
 function $1 process(value#3)
-0000  v0 = load_var @5 find#0
-0001  v1 = load_var @6 value#3
-0002  v2 = call v0(v1)
-0003  v3 = constant #6 nil
-0004  v4 = not_equal v2, v3
-0005  jump_if_false v4, 0007
-0006  jump 0008
-0007  return v3
-0008  store_var @7 next#4, v2
-0009  v5 = constant #7 "got:"
-0010  v6 = load_var @8 next#4
-0011  v7 = native_call @9 str(v6)
-0012  v8 = concat_str v5, v7
-0013  return v8
-0014  v9 = constant #8 nil
-0015  return v9
+0000  v0 = load_var @5 value#3
+0001  v1 = call_direct $0 find/1(v0)
+0002  v2 = constant #6 nil
+0003  v3 = not_equal v1, v2
+0004  jump_if_false v3, 0006
+0005  jump 0007
+0006  return v2
+0007  store_var @6 next#4, v1
+0008  v4 = constant #7 "got:"
+0009  v5 = load_var @7 next#4
+0010  v6 = native_call @8 str(v5)
+0011  v7 = concat_str v4, v6
+0012  return v7
+0013  v8 = constant #8 nil
+0014  return v8

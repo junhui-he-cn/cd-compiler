@@ -16,13 +16,12 @@ IR
 0014  store_var @13 birthday#1, v10
 0015  v11 = make_function $0 birthday/1
 0016  assign_var @21 birthday#1, v11
-0017  v12 = load_var @22 birthday#1
-0018  v13 = load_var @23 p#0
-0019  v14 = call v12(v13)
-0020  store_var @24 older#3, v14
-0021  v15 = load_var @25 older#3
-0022  v16 = field v15.age
-0023  print v16
+0017  v12 = load_var @22 p#0
+0018  v13 = call_direct $0 birthday/1(v12)
+0019  store_var @23 older#3, v13
+0020  v14 = load_var @24 older#3
+0021  v15 = field v14.age
+0022  print v15
 
 function $0 birthday(person#2)
 0000  v0 = load_var @14 person#2

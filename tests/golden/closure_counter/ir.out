@@ -3,18 +3,17 @@ IR
 0001  store_var @0 makeCounter#0, v0
 0002  v1 = make_function $1 makeCounter/0
 0003  assign_var @8 makeCounter#0, v1
-0004  v2 = load_var @9 makeCounter#0
-0005  v3 = call v2()
-0006  store_var @10 c#3, v3
-0007  v4 = load_var @11 c#3
-0008  v5 = call v4()
-0009  print v5
-0010  v6 = load_var @12 c#3
-0011  v7 = call v6()
-0012  print v7
-0013  v8 = load_var @13 c#3
-0014  v9 = call v8()
-0015  print v9
+0004  v2 = call_direct $1 makeCounter/0()
+0005  store_var @9 c#3, v2
+0006  v3 = load_var @10 c#3
+0007  v4 = call v3()
+0008  print v4
+0009  v5 = load_var @11 c#3
+0010  v6 = call v5()
+0011  print v6
+0012  v7 = load_var @12 c#3
+0013  v8 = call v7()
+0014  print v8
 
 function $0 inc()
 0000  v0 = load_var @3 count#1

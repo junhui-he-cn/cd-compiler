@@ -1,6 +1,6 @@
 native_import i0 = print abi=1
 native_import i1 = merge abi=1
-main registers=15
+main registers=14
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -10,18 +10,17 @@ main registers=15
 0006  b3 = constant #4 1
 0007  b4 = map [b2: b3]
 0008  init_global g1, b4
-0009  b5 = load_global g0
+0009  b5 = load_global g1
 0010  b6 = load_global g1
-0011  b7 = load_global g1
-0012  b8 = call b5(b6, b7)
-0013  b14 = call_native i0 [b8]
-0014  b9 = load_global g1
-0015  b10 = constant #5 "b"
-0016  b11 = constant #6 2
-0017  b12 = map [b10: b11]
-0018  b13 = call_native i1 [b9, b12]
-0019  b14 = call_native i0 [b13]
-0020  return_nil
+0011  b7 = call_direct $0 [b5, b6]
+0012  b13 = call_native i0 [b7]
+0013  b8 = load_global g1
+0014  b9 = constant #5 "b"
+0015  b10 = constant #6 2
+0016  b11 = map [b9: b10]
+0017  b12 = call_native i1 [b8, b11]
+0018  b13 = call_native i0 [b12]
+0019  return_nil
 
 function $0 merge/2 registers=2
 0000  block

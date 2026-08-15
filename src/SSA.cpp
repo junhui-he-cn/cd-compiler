@@ -217,6 +217,12 @@ void validateInstructionShape(const SSAInstruction& instruction)
     case IROp::Call:
         requireInstructionShape(instruction, hasResult() && hasLeft() && noRight(), "operand shape");
         return;
+    case IROp::CallDirect:
+        requireInstructionShape(
+            instruction,
+            hasResult() && noLeft() && noRight(),
+            "operand shape");
+        return;
     case IROp::NativeCall:
         requireInstructionShape(instruction, hasResult() && noLeft() && noRight(), "operand shape");
         return;

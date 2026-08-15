@@ -63,18 +63,13 @@ names:
   n30 = "Empty"
   n31 = "shapeLabel#2"
   n32 = "maybe#5"
-  n33 = "numberLabel#0"
-  n34 = "numberLabel#0"
-  n35 = "shapeLabel#2"
-  n36 = "Shape"
-  n37 = "Point"
-  n38 = "shapeLabel#2"
-  n39 = "Shape"
-  n40 = "Line"
-  n41 = "shapeLabel#2"
-  n42 = "Shape"
-  n43 = "Empty"
-  n44 = "maybe#5"
+  n33 = "Shape"
+  n34 = "Point"
+  n35 = "Shape"
+  n36 = "Line"
+  n37 = "Shape"
+  n38 = "Empty"
+  n39 = "maybe#5"
 
 globals:
   g0 = n0
@@ -88,7 +83,7 @@ native_imports:
   i0 = "print" abi=1
   i1 = "str" abi=1
 
-main registers=39:
+main registers=34:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -100,65 +95,60 @@ block b0:
   set_global g1, r3
   r4 = constant c12
   init_global g2, r4
-  r5 = load_global g0
-  r6 = constant c13
-  r7 = call r5 [r6]
-  r38 = call_native i0 [r7]
-  r8 = load_global g0
-  r9 = constant c14
-  r10 = call r8 [r9]
-  r38 = call_native i0 [r10]
-  r11 = load_global g1
-  r12 = constant c15
-  r13 = make_variant t0, v0 [r12]
-  r14 = call r11 [r13]
-  r38 = call_native i0 [r14]
-  r15 = load_global g1
-  r16 = constant c16
-  r17 = constant c17
-  r18 = make_variant t0, v1 [r16, r17]
-  r19 = call r15 [r18]
-  r38 = call_native i0 [r19]
-  r20 = load_global g1
-  r21 = make_variant t0, v2 []
-  r22 = call r20 [r21]
-  r38 = call_native i0 [r22]
-  r23 = load_global g2
-  r24 = constant c18
-  r25 = equal r23, r24
-  br_if r25, b1, b2
+  r5 = constant c13
+  r6 = call_direct f0 [r5]
+  r33 = call_native i0 [r6]
+  r7 = constant c14
+  r8 = call_direct f0 [r7]
+  r33 = call_native i0 [r8]
+  r9 = constant c15
+  r10 = make_variant t0, v0 [r9]
+  r11 = call_direct f1 [r10]
+  r33 = call_native i0 [r11]
+  r12 = constant c16
+  r13 = constant c17
+  r14 = make_variant t0, v1 [r12, r13]
+  r15 = call_direct f1 [r14]
+  r33 = call_native i0 [r15]
+  r16 = make_variant t0, v2 []
+  r17 = call_direct f1 [r16]
+  r33 = call_native i0 [r17]
+  r18 = load_global g2
+  r19 = constant c18
+  r20 = equal r18, r19
+  br_if r20, b1, b2
 block b1:
   br b3
 block b2:
-  r26 = constant c19
-  r27 = equal r23, r26
-  br_if r27, b3, b4
+  r21 = constant c19
+  r22 = equal r18, r21
+  br_if r22, b3, b4
 block b3:
-  r28 = constant c20
-  r38 = call_native i0 [r28]
+  r23 = constant c20
+  r33 = call_native i0 [r23]
   br b6
 block b4:
-  r29 = constant c21
-  r30 = equal r23, r29
-  br_if r30, b5, b6
+  r24 = constant c21
+  r25 = equal r18, r24
+  br_if r25, b5, b6
 block b5:
-  r31 = constant c22
-  r38 = call_native i0 [r31]
+  r26 = constant c22
+  r33 = call_native i0 [r26]
   br b6
 block b6:
-  r32 = constant c23
-  r33 = constant c24
-  r34 = equal r32, r33
-  br_if r34, b7, b8
+  r27 = constant c23
+  r28 = constant c24
+  r29 = equal r27, r28
+  br_if r29, b7, b8
 block b7:
   br b9
 block b8:
-  r35 = constant c25
-  r36 = equal r32, r35
-  br_if r36, b9, b10
+  r30 = constant c25
+  r31 = equal r27, r30
+  br_if r31, b9, b10
 block b9:
-  r37 = constant c26
-  r38 = call_native i0 [r37]
+  r32 = constant c26
+  r33 = call_native i0 [r32]
   return_nil
 block b10:
   return_nil
@@ -271,68 +261,63 @@ debug_locations:
   main 8 = s0:14:1
   main 9 = s0:22:29
   main 10 = s0:22:1
-  main 11 = s0:23:7
-  main 12 = s0:23:19
-  main 13 = s0:23:7
-  main 14 = s0:23:1
+  main 11 = s0:23:19
+  main 12 = s0:23:7
+  main 13 = s0:23:1
+  main 14 = s0:24:19
   main 15 = s0:24:7
-  main 16 = s0:24:19
-  main 17 = s0:24:7
-  main 18 = s0:24:1
+  main 16 = s0:24:1
+  main 17 = s0:25:30
+  main 18 = s0:25:18
   main 19 = s0:25:7
-  main 20 = s0:25:30
-  main 21 = s0:25:18
-  main 22 = s0:25:7
-  main 23 = s0:25:1
+  main 20 = s0:25:1
+  main 21 = s0:26:29
+  main 22 = s0:26:32
+  main 23 = s0:26:18
   main 24 = s0:26:7
-  main 25 = s0:26:29
-  main 26 = s0:26:32
-  main 27 = s0:26:18
-  main 28 = s0:26:7
-  main 29 = s0:26:1
-  main 30 = s0:27:7
-  main 31 = s0:27:18
-  main 32 = s0:27:7
-  main 33 = s0:27:1
-  main 34 = s0:28:7
+  main 25 = s0:26:1
+  main 26 = s0:27:18
+  main 27 = s0:27:7
+  main 28 = s0:27:1
+  main 29 = s0:28:7
+  main 30 = s0:28:1
+  main 31 = s0:28:1
+  main 32 = s0:28:1
+  main 33 = s0:28:1
+  main 34 = s0:28:1
   main 35 = s0:28:1
   main 36 = s0:28:1
   main 37 = s0:28:1
   main 38 = s0:28:1
-  main 39 = s0:28:1
-  main 40 = s0:28:1
-  main 41 = s0:28:1
+  main 39 = s0:29:26
+  main 40 = s0:29:26
+  main 41 = s0:29:20
   main 42 = s0:28:1
   main 43 = s0:28:1
-  main 44 = s0:29:26
-  main 45 = s0:29:26
-  main 46 = s0:29:20
-  main 47 = s0:28:1
-  main 48 = s0:28:1
-  main 49 = s0:28:1
+  main 44 = s0:28:1
+  main 45 = s0:28:1
+  main 46 = s0:28:1
+  main 47 = s0:30:19
+  main 48 = s0:30:19
+  main 49 = s0:30:13
   main 50 = s0:28:1
-  main 51 = s0:28:1
-  main 52 = s0:30:19
-  main 53 = s0:30:19
-  main 54 = s0:30:13
-  main 55 = s0:28:1
-  main 56 = s0:32:7
-  main 57 = s0:32:7
+  main 51 = s0:32:7
+  main 52 = s0:32:7
+  main 53 = s0:32:1
+  main 54 = s0:32:1
+  main 55 = s0:32:1
+  main 56 = s0:32:1
+  main 57 = s0:32:1
   main 58 = s0:32:1
   main 59 = s0:32:1
   main 60 = s0:32:1
   main 61 = s0:32:1
-  main 62 = s0:32:1
-  main 63 = s0:32:1
-  main 64 = s0:32:1
+  main 62 = s0:33:27
+  main 63 = s0:33:27
+  main 64 = s0:33:21
   main 65 = s0:32:1
   main 66 = s0:32:1
-  main 67 = s0:33:27
-  main 68 = s0:33:27
-  main 69 = s0:33:21
-  main 70 = s0:32:1
-  main 71 = s0:32:1
-  main 72 = s0:32:1
+  main 67 = s0:32:1
   function f0 0 = s0:8:9
   function f0 1 = s0:8:9
   function f0 2 = s0:8:3
@@ -433,68 +418,63 @@ debug_ranges:
   main 8 = s0:196:423
   main 9 = s0:462:467
   main 10 = s0:438:467
-  main 11 = s0:475:486
-  main 12 = s0:487:488
+  main 11 = s0:487:488
+  main 12 = s0:475:489
   main 13 = s0:475:489
-  main 14 = s0:475:489
-  main 15 = s0:497:508
-  main 16 = s0:509:510
-  main 17 = s0:497:511
-  main 18 = s0:497:511
-  main 19 = s0:519:529
-  main 20 = s0:542:543
-  main 21 = s0:530:544
-  main 22 = s0:519:545
-  main 23 = s0:519:545
-  main 24 = s0:553:563
-  main 25 = s0:575:576
-  main 26 = s0:578:580
-  main 27 = s0:564:581
-  main 28 = s0:553:582
-  main 29 = s0:553:582
-  main 30 = s0:590:600
-  main 31 = s0:601:614
-  main 32 = s0:590:615
-  main 33 = s0:590:615
-  main 34 = s0:623:628
+  main 14 = s0:509:510
+  main 15 = s0:497:511
+  main 16 = s0:497:511
+  main 17 = s0:542:543
+  main 18 = s0:530:544
+  main 19 = s0:519:545
+  main 20 = s0:519:545
+  main 21 = s0:575:576
+  main 22 = s0:578:580
+  main 23 = s0:564:581
+  main 24 = s0:553:582
+  main 25 = s0:553:582
+  main 26 = s0:601:614
+  main 27 = s0:590:615
+  main 28 = s0:590:615
+  main 29 = s0:623:628
+  main 30 = s0:623:687
+  main 31 = s0:623:687
+  main 32 = s0:623:687
+  main 33 = s0:623:687
+  main 34 = s0:623:687
   main 35 = s0:623:687
   main 36 = s0:623:687
   main 37 = s0:623:687
   main 38 = s0:623:687
-  main 39 = s0:623:687
-  main 40 = s0:623:687
-  main 41 = s0:623:687
+  main 39 = s0:656:661
+  main 40 = s0:656:661
+  main 41 = s0:656:661
   main 42 = s0:623:687
   main 43 = s0:623:687
-  main 44 = s0:656:661
-  main 45 = s0:656:661
-  main 46 = s0:656:661
-  main 47 = s0:623:687
-  main 48 = s0:623:687
-  main 49 = s0:623:687
+  main 44 = s0:623:687
+  main 45 = s0:623:687
+  main 46 = s0:623:687
+  main 47 = s0:683:687
+  main 48 = s0:683:687
+  main 49 = s0:683:687
   main 50 = s0:623:687
-  main 51 = s0:623:687
-  main 52 = s0:683:687
-  main 53 = s0:683:687
-  main 54 = s0:683:687
-  main 55 = s0:623:687
-  main 56 = s0:699:703
-  main 57 = s0:699:703
+  main 51 = s0:699:703
+  main 52 = s0:699:703
+  main 53 = s0:699:738
+  main 54 = s0:699:738
+  main 55 = s0:699:738
+  main 56 = s0:699:738
+  main 57 = s0:699:738
   main 58 = s0:699:738
   main 59 = s0:699:738
   main 60 = s0:699:738
   main 61 = s0:699:738
-  main 62 = s0:699:738
-  main 63 = s0:699:738
-  main 64 = s0:699:738
+  main 62 = s0:732:738
+  main 63 = s0:732:738
+  main 64 = s0:732:738
   main 65 = s0:699:738
   main 66 = s0:699:738
-  main 67 = s0:732:738
-  main 68 = s0:732:738
-  main 69 = s0:732:738
-  main 70 = s0:699:738
-  main 71 = s0:699:738
-  main 72 = s0:699:738
+  main 67 = s0:699:738
   function f0 0 = s0:115:120
   function f0 1 = s0:115:120
   function f0 2 = s0:115:181

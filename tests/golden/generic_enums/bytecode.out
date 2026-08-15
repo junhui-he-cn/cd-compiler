@@ -1,6 +1,6 @@
 native_import i0 = print abi=1
 native_import i1 = str abi=1
-main registers=39
+main registers=36
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -20,65 +20,62 @@ main registers=39
 0016  b8 = constant #9 "hello"
 0017  b9 = make_variant t0, v0 (b8)
 0018  init_global g5, b9
-0019  b10 = load_global g0
-0020  b11 = load_global g2
-0021  b12 = call b10(b11)
-0022  b38 = call_native i0 [b12]
-0023  b13 = load_global g0
-0024  b14 = load_global g3
-0025  b15 = call b13(b14)
-0026  b38 = call_native i0 [b15]
-0027  b16 = load_global g1
-0028  b17 = constant #10 1
-0029  b18 = constant #11 2
-0030  b19 = make_variant t1, v0 ()
-0031  b20 = make_variant t1, v1 (b18, b19)
-0032  b21 = make_variant t1, v1 (b17, b20)
-0033  b22 = call b16(b21)
-0034  b38 = call_native i0 [b22]
-0035  b23 = load_global g4
-0036  b24 = constant #12 nil
-0037  b25 = equal b23, b24
-0038  br_if b25, b1, b2
-0039  block
-0040  b26 = constant #13 "nil"
-0041  b38 = call_native i0 [b26]
-0042  br b6
+0019  b10 = load_global g2
+0020  b11 = call_direct $0 [b10]
+0021  b35 = call_native i0 [b11]
+0022  b12 = load_global g3
+0023  b13 = call_direct $0 [b12]
+0024  b35 = call_native i0 [b13]
+0025  b14 = constant #10 1
+0026  b15 = constant #11 2
+0027  b16 = make_variant t1, v0 ()
+0028  b17 = make_variant t1, v1 (b15, b16)
+0029  b18 = make_variant t1, v1 (b14, b17)
+0030  b19 = call_direct $1 [b18]
+0031  b35 = call_native i0 [b19]
+0032  b20 = load_global g4
+0033  b21 = constant #12 nil
+0034  b22 = equal b20, b21
+0035  br_if b22, b1, b2
+0036  block
+0037  b23 = constant #13 "nil"
+0038  b35 = call_native i0 [b23]
+0039  br b6
+0040  block
+0041  b24 = is_variant b20, t0, v0
+0042  br_if b24, b3, b4
 0043  block
-0044  b27 = is_variant b23, t0, v0
-0045  br_if b27, b3, b4
-0046  block
-0047  b28 = variant_get b23, t0, v0, 0
-0048  init_global g6, b28
-0049  b29 = constant #14 "some"
-0050  b38 = call_native i0 [b29]
-0051  br b6
+0044  b25 = variant_get b20, t0, v0, 0
+0045  init_global g6, b25
+0046  b26 = constant #14 "some"
+0047  b35 = call_native i0 [b26]
+0048  br b6
+0049  block
+0050  b27 = is_variant b20, t0, v1
+0051  br_if b27, b5, b6
 0052  block
-0053  b30 = is_variant b23, t0, v1
-0054  br_if b30, b5, b6
-0055  block
-0056  b31 = constant #15 "none"
-0057  b38 = call_native i0 [b31]
-0058  br b6
-0059  block
-0060  b32 = load_global g5
-0061  b33 = is_variant b32, t0, v0
-0062  br_if b33, b7, b8
-0063  block
-0064  b34 = variant_get b32, t0, v0, 0
-0065  init_global g7, b34
-0066  b35 = load_global g7
-0067  b38 = call_native i0 [b35]
-0068  return_nil
+0053  b28 = constant #15 "none"
+0054  b35 = call_native i0 [b28]
+0055  br b6
+0056  block
+0057  b29 = load_global g5
+0058  b30 = is_variant b29, t0, v0
+0059  br_if b30, b7, b8
+0060  block
+0061  b31 = variant_get b29, t0, v0, 0
+0062  init_global g7, b31
+0063  b32 = load_global g7
+0064  b35 = call_native i0 [b32]
+0065  return_nil
+0066  block
+0067  b33 = is_variant b29, t0, v1
+0068  br_if b33, b9, b10
 0069  block
-0070  b36 = is_variant b32, t0, v1
-0071  br_if b36, b9, b10
-0072  block
-0073  b37 = constant #16 "none"
-0074  b38 = call_native i0 [b37]
-0075  return_nil
-0076  block
-0077  return_nil
+0070  b34 = constant #16 "none"
+0071  b35 = call_native i0 [b34]
+0072  return_nil
+0073  block
+0074  return_nil
 
 function $0 describe/1 registers=10
 0000  block
@@ -109,8 +106,7 @@ function $0 describe/1 registers=10
 0025  block
 0026  return_nil
 
-function $1 sum/1 registers=12
-upvalue u0 = global g1
+function $1 sum/1 registers=11
 0000  block
 0001  b0 = load_local l0
 0002  b1 = is_variant b0, t1, v0
@@ -129,15 +125,14 @@ upvalue u0 = global g1
 0015  bind_local l1, b4
 0016  bind_local l2, b5
 0017  b6 = load_local l1
-0018  b7 = load_upvalue u0
-0019  b8 = load_local l2
-0020  b9 = call b7(b8)
-0021  b10 = add_num b6, b9
-0022  return b10
-0023  block
-0024  br b6
-0025  block
-0026  b11 = constant #6 nil
-0027  return b11
-0028  block
-0029  return_nil
+0018  b7 = load_local l2
+0019  b8 = call_direct $1 [b7]
+0020  b9 = add_num b6, b8
+0021  return b9
+0022  block
+0023  br b6
+0024  block
+0025  b10 = constant #6 nil
+0026  return b10
+0027  block
+0028  return_nil

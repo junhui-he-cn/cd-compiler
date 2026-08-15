@@ -1,7 +1,7 @@
 native_import i0 = print abi=1
 native_import i1 = typeOf abi=1
 native_import i2 = str abi=1
-main registers=37
+main registers=32
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -15,45 +15,40 @@ main registers=37
 0010  init_global g2, b4
 0011  b5 = make_function $2 coarse/1
 0012  set_global g2, b5
-0013  b6 = load_global g0
-0014  b7 = constant #12 7
-0015  b8 = make_variant t0, v0 (b7)
-0016  b9 = call b6(b8)
-0017  b36 = call_native i0 [b9]
-0018  b10 = load_global g0
-0019  b11 = constant #13 "bad"
-0020  b12 = make_variant t0, v1 (b11)
-0021  b13 = call b10(b12)
-0022  b36 = call_native i0 [b13]
-0023  b14 = load_global g0
-0024  b15 = make_variant t0, v2 ()
-0025  b16 = call b14(b15)
-0026  b36 = call_native i0 [b16]
-0027  b17 = load_global g1
-0028  b18 = constant #14 1
-0029  b19 = constant #15 2
-0030  b20 = make_variant t1, v0 ()
-0031  b21 = make_variant t1, v1 (b19, b20)
-0032  b22 = make_variant t1, v1 (b18, b21)
-0033  b23 = call b17(b22)
-0034  b36 = call_native i0 [b23]
-0035  b24 = constant #16 7
-0036  b25 = make_variant t0, v0 (b24)
-0037  b36 = call_native i0 [b25]
-0038  b26 = make_variant t0, v2 ()
-0039  b27 = call_native i1 [b26]
-0040  b36 = call_native i0 [b27]
-0041  b28 = constant #17 7
-0042  b29 = make_variant t0, v0 (b28)
-0043  b30 = constant #18 7
-0044  b31 = make_variant t0, v0 (b30)
-0045  b32 = equal b29, b31
-0046  b36 = call_native i0 [b32]
-0047  b33 = load_global g2
-0048  b34 = make_variant t0, v2 ()
-0049  b35 = call b33(b34)
-0050  b36 = call_native i0 [b35]
-0051  return_nil
+0013  b6 = constant #12 7
+0014  b7 = make_variant t0, v0 (b6)
+0015  b8 = call_direct $0 [b7]
+0016  b31 = call_native i0 [b8]
+0017  b9 = constant #13 "bad"
+0018  b10 = make_variant t0, v1 (b9)
+0019  b11 = call_direct $0 [b10]
+0020  b31 = call_native i0 [b11]
+0021  b12 = make_variant t0, v2 ()
+0022  b13 = call_direct $0 [b12]
+0023  b31 = call_native i0 [b13]
+0024  b14 = constant #14 1
+0025  b15 = constant #15 2
+0026  b16 = make_variant t1, v0 ()
+0027  b17 = make_variant t1, v1 (b15, b16)
+0028  b18 = make_variant t1, v1 (b14, b17)
+0029  b19 = call_direct $1 [b18]
+0030  b31 = call_native i0 [b19]
+0031  b20 = constant #16 7
+0032  b21 = make_variant t0, v0 (b20)
+0033  b31 = call_native i0 [b21]
+0034  b22 = make_variant t0, v2 ()
+0035  b23 = call_native i1 [b22]
+0036  b31 = call_native i0 [b23]
+0037  b24 = constant #17 7
+0038  b25 = make_variant t0, v0 (b24)
+0039  b26 = constant #18 7
+0040  b27 = make_variant t0, v0 (b26)
+0041  b28 = equal b25, b27
+0042  b31 = call_native i0 [b28]
+0043  b29 = make_variant t0, v2 ()
+0044  b30 = call_direct $2 [b29]
+0045  b31 = call_native i0 [b30]
+0046  return_nil
 
 function $0 describe/1 registers=15
 0000  block
@@ -96,8 +91,7 @@ function $0 describe/1 registers=15
 0037  block
 0038  return_nil
 
-function $1 sum/1 registers=22
-upvalue u0 = global g1
+function $1 sum/1 registers=21
 0000  block
 0001  b0 = load_local l0
 0002  b1 = is_variant b0, t1, v0
@@ -124,32 +118,31 @@ upvalue u0 = global g1
 0023  b9 = load_local l1
 0024  b10 = load_local l2
 0025  b11 = add_num b9, b10
-0026  b12 = load_upvalue u0
-0027  b13 = load_local l3
-0028  b14 = call b12(b13)
-0029  b15 = add_num b11, b14
-0030  return b15
-0031  block
-0032  br b11
-0033  block
-0034  b16 = is_variant b0, t1, v1
-0035  br_if b16, b8, b11
-0036  block
-0037  b17 = variant_get b0, t1, v1, 0
-0038  b18 = variant_get b0, t1, v1, 1
-0039  b19 = is_variant b18, t1, v0
-0040  br_if b19, b9, b11
-0041  block
-0042  bind_local l4, b17
-0043  b20 = load_local l4
-0044  return b20
-0045  block
-0046  br b11
-0047  block
-0048  b21 = constant #7 nil
-0049  return b21
-0050  block
-0051  return_nil
+0026  b12 = load_local l3
+0027  b13 = call_direct $1 [b12]
+0028  b14 = add_num b11, b13
+0029  return b14
+0030  block
+0031  br b11
+0032  block
+0033  b15 = is_variant b0, t1, v1
+0034  br_if b15, b8, b11
+0035  block
+0036  b16 = variant_get b0, t1, v1, 0
+0037  b17 = variant_get b0, t1, v1, 1
+0038  b18 = is_variant b17, t1, v0
+0039  br_if b18, b9, b11
+0040  block
+0041  bind_local l4, b16
+0042  b19 = load_local l4
+0043  return b19
+0044  block
+0045  br b11
+0046  block
+0047  b20 = constant #7 nil
+0048  return b20
+0049  block
+0050  return_nil
 
 function $2 coarse/1 registers=6
 0000  block

@@ -14,35 +14,34 @@ IR
 0012  v7 = constant #8 2
 0013  v8 = struct Box {value: v7}
 0014  store_var @9 box#5, v8
-0015  v9 = load_var @10 unwrap#0
-0016  v10 = load_var @11 age#2
-0017  v11 = call v9(v10)
-0018  print v11
-0019  v12 = load_var @12 values#3
-0020  v13 = constant #9 0
-0021  v14 = array_get v12, v13
-0022  print v14
-0023  v15 = load_var @13 maybeValues#4
-0024  print v15
-0025  v16 = load_var @14 box#5
-0026  v17 = field v16.value
-0027  print v17
-0028  v18 = constant #10 7
-0029  store_var @17 optional#6, v18
-0030  v19 = constant #11 nil
-0031  store_var @18 maybe#7, v19
-0032  v20 = constant #12 nil
-0033  store_var @19 nested#8, v20
-0034  v21 = constant #13 nil
-0035  store_var @20 callback#9, v21
-0036  v22 = load_var @21 optional#6
-0037  print v22
-0038  v23 = load_var @22 maybe#7
-0039  print v23
-0040  v24 = load_var @23 nested#8
-0041  print v24
-0042  v25 = load_var @24 callback#9
-0043  print v25
+0015  v9 = load_var @10 age#2
+0016  v10 = call_direct $0 unwrap/1(v9)
+0017  print v10
+0018  v11 = load_var @11 values#3
+0019  v12 = constant #9 0
+0020  v13 = array_get v11, v12
+0021  print v13
+0022  v14 = load_var @12 maybeValues#4
+0023  print v14
+0024  v15 = load_var @13 box#5
+0025  v16 = field v15.value
+0026  print v16
+0027  v17 = constant #10 7
+0028  store_var @16 optional#6, v17
+0029  v18 = constant #11 nil
+0030  store_var @17 maybe#7, v18
+0031  v19 = constant #12 nil
+0032  store_var @18 nested#8, v19
+0033  v20 = constant #13 nil
+0034  store_var @19 callback#9, v20
+0035  v21 = load_var @20 optional#6
+0036  print v21
+0037  v22 = load_var @21 maybe#7
+0038  print v22
+0039  v23 = load_var @22 nested#8
+0040  print v23
+0041  v24 = load_var @23 callback#9
+0042  print v24
 
 function $0 unwrap(value#1)
 0000  v0 = load_var @1 value#1

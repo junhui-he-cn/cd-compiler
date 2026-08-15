@@ -350,6 +350,18 @@ rD = call rF [rA0, rA1, ...]
 的值写入 `rD`，函数体正常结束而无 `return` 时 `rD` 为 `nil`。递归经由闭包环境支持。
 调用受调用深度预算约束；启用 JIT 时该调用可能被编译路径接管（默认禁用，语义不变）。
 
+#### call_direct
+
+```text
+rD = call_direct fN [rA0, rA1, ...]
+```
+
+按函数表 `fN` 直接调用编译器证明**无捕获自由变量**的函数，跳过 `make_function`/
+`call` 的函数值间接层：直接调用不构造函数值、不复制调用者名字环境，也不计函数值
+运行时元素预算；global 来源的 upvalue 仍经全局 cell 解析。验证期拒绝越界目标、
+元数不匹配以及带 local/upvalue 捕获的目标；递归直接调用正确。普通闭包调用继续走
+`call`。
+
 #### call_native
 
 ```text

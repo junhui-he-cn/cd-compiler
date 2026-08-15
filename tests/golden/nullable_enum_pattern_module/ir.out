@@ -7,15 +7,13 @@ IR
 0005  store_var @4 render#1, v2
 0006  v3 = make_function $1 render/1
 0007  assign_var @19 render#1, v3
-0008  v4 = load_var @20 render#1
-0009  v5 = constant #9 nil
-0010  v6 = call v4(v5)
-0011  print v6
-0012  v7 = load_var @21 render#1
-0013  v8 = load_var @22 make#0
-0014  v9 = call v8()
-0015  v10 = call v7(v9)
-0016  print v10
+0008  v4 = constant #9 nil
+0009  v5 = call_direct $1 render/1(v4)
+0010  print v5
+0011  v6 = load_var @20 make#0
+0012  v7 = call v6()
+0013  v8 = call_direct $1 render/1(v7)
+0014  print v8
 
 function $0 make()
 0000  v0 = constant #1 9

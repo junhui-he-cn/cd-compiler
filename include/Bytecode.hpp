@@ -41,6 +41,7 @@ enum class BytecodeOp {
     InitGlobal,
     SetGlobal,
     Call,
+    CallDirect,
     CallNative,
     Index,
     AssignIndex,

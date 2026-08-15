@@ -1,5 +1,5 @@
 native_import i0 = print abi=1
-main registers=13
+main registers=11
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -9,18 +9,16 @@ main registers=13
 0006  init_global g1, b2
 0007  b3 = make_function $1 makePerson/0
 0008  set_global g1, b3
-0009  b4 = load_global g0
-0010  b5 = load_global g1
-0011  b6 = call b5()
-0012  b7 = call b4(b6)
-0013  init_global g2, b7
-0014  b8 = load_global g2
-0015  b9 = struct_get b8, t0, 0
-0016  b12 = call_native i0 [b9]
-0017  b10 = load_global g2
-0018  b11 = struct_get b10, t0, 1
-0019  b12 = call_native i0 [b11]
-0020  return_nil
+0009  b4 = call_direct $1 []
+0010  b5 = call_direct $0 [b4]
+0011  init_global g2, b5
+0012  b6 = load_global g2
+0013  b7 = struct_get b6, t0, 0
+0014  b10 = call_native i0 [b7]
+0015  b8 = load_global g2
+0016  b9 = struct_get b8, t0, 1
+0017  b10 = call_native i0 [b9]
+0018  return_nil
 
 function $0 birthday/1 registers=8
 0000  block

@@ -282,6 +282,11 @@ pub enum Instruction {
         callee: usize,
         arguments: Vec<usize>,
     },
+    CallDirect {
+        dest: usize,
+        function: FuncId,
+        arguments: Vec<usize>,
+    },
     NativeCall {
         dest: usize,
         name: usize,

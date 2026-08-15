@@ -334,6 +334,7 @@ load_global
 init_global
 set_global
 call
+call_direct
 call_native
 array_get
 array_set
@@ -380,6 +381,13 @@ assign_var`, `struct`, `variant`, `variant_tag`, `variant_field`,
 `less_equal`, the dynamically typed `index`, `assign_index`, and `len`, the
 `assert_array` for-in adapter, and the linear `jump`, `jump_if_false`, and
 `jump_if_true` instructions. These legacy forms are never emitted.
+
+`call_direct fN [rArg0, ...]` targets a function by its `fN` table index when
+the compiler proves the target has no captured free variables; it bypasses
+`make_function`/`call` value indirection, still resolves global-source
+upvalues through the global cells, and keeps ordinary closure calls on
+`call`. The verifier rejects out-of-range targets, arity mismatches, and
+targets with local/upvalue captures before execution.
 
 Map construction preserves source order and uses explicit key/value register
 pairs:

@@ -19,34 +19,31 @@ IR
 0017  store_var @37 hongKong#6, v13
 0018  v14 = constant #17 nil
 0019  store_var @38 nilPerson#7, v14
-0020  v15 = load_var @39 describe#0
-0021  v16 = load_var @40 ada#5
-0022  v17 = call v15(v16)
-0023  print v17
-0024  v18 = load_var @41 describe#0
-0025  v19 = load_var @42 hongKong#6
-0026  v20 = call v18(v19)
-0027  print v20
-0028  v21 = load_var @43 describe#0
-0029  v22 = load_var @44 nilPerson#7
-0030  v23 = call v21(v22)
-0031  print v23
-0032  v24 = load_var @45 ada#5
-0033  v25 = field v24.name
-0034  v26 = constant #18 "Ada"
-0035  v27 = equal v25, v26
-0036  jump_if_false v27, 0038
-0037  jump 0042
-0038  v28 = field v24.age
-0039  v29 = constant #19 0
-0040  v30 = equal v28, v29
-0041  jump_if_false v30, 0045
-0042  v31 = constant #20 "or"
-0043  print v31
-0044  jump 0048
-0045  v32 = constant #21 "fallback"
-0046  print v32
-0047  jump 0048
+0020  v15 = load_var @39 ada#5
+0021  v16 = call_direct $0 describe/1(v15)
+0022  print v16
+0023  v17 = load_var @40 hongKong#6
+0024  v18 = call_direct $0 describe/1(v17)
+0025  print v18
+0026  v19 = load_var @41 nilPerson#7
+0027  v20 = call_direct $0 describe/1(v19)
+0028  print v20
+0029  v21 = load_var @42 ada#5
+0030  v22 = field v21.name
+0031  v23 = constant #18 "Ada"
+0032  v24 = equal v22, v23
+0033  jump_if_false v24, 0035
+0034  jump 0039
+0035  v25 = field v21.age
+0036  v26 = constant #19 0
+0037  v27 = equal v25, v26
+0038  jump_if_false v27, 0042
+0039  v28 = constant #20 "or"
+0040  print v28
+0041  jump 0045
+0042  v29 = constant #21 "fallback"
+0043  print v29
+0044  jump 0045
 
 function $0 describe(value#1)
 0000  v0 = load_var @1 value#1

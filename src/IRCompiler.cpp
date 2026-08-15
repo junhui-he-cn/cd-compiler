@@ -338,6 +338,8 @@ IRProgram IRCompiler::compileInternal(
     modules_.clear();
     compiledModules_.clear();
     loopContexts_.clear();
+    functionIndices_.clear();
+    pendingDirectCalls_.clear();
     registeredBindings_.clear();
     bindingIdsByResolvedName_.clear();
     exportedDeclarations_.clear();
@@ -392,6 +394,7 @@ IRProgram IRCompiler::compileInternal(
             compileStatement(*statement);
         }
     }
+    patchPendingDirectCalls();
     modules_.clear();
     compiledModules_.clear();
     loopContexts_.clear();
@@ -402,6 +405,23 @@ IRProgram IRCompiler::compileInternal(
     independentModuleId_.reset();
     declarationIndex_ = nullptr;
     return std::move(ir_);
+}
+
+void IRCompiler::patchPendingDirectCalls()
+{
+    for (const PendingDirectCall& pending : pendingDirectCalls_) {
+        const auto found = functionIndices_.find(pending.target);
+        if (found == functionIndices_.end()) {
+            throw IRCompileError("direct call target has no compiled function");
+        }
+        if (pending.functionIndex) {
+            ir_.patchFunctionCallDirect(
+                *pending.functionIndex, pending.instructionIndex, found->second);
+        } else {
+            ir_.patchMainCallDirect(pending.instructionIndex, found->second);
+        }
+    }
+    pendingDirectCalls_.clear();
 }
 
 void IRCompiler::compileStatement(const Stmt& statement)
@@ -626,6 +646,7 @@ void IRCompiler::compileFunctionStatement(const FunctionStmt& function)
     --activeFunctionDepth_;
 
     const std::size_t functionIndex = ir_.endFunction();
+    functionIndices_.emplace(declaration->declarationId, functionIndex);
     IRRegister value = ir_.emitMakeFunction(functionIndex);
     ir_.emitAssignVar(functionName, value, functionBinding);
 }
@@ -664,6 +685,10 @@ void IRCompiler::compileMethod(const MethodDecl& method)
     --activeFunctionDepth_;
 
     const std::size_t functionIndex = ir_.endFunction();
+    const DeclarationRecord* declaration = declarationIndex_->declaration(method);
+    if (declaration) {
+        functionIndices_.emplace(declaration->declarationId, functionIndex);
+    }
     IRRegister value = ir_.emitMakeFunction(functionIndex);
     ir_.emitAssignVar(methodName, value, methodBinding);
 }
@@ -1458,6 +1483,34 @@ IRRegister IRCompiler::emitCall(const CallExpr& expression)
             const CallTargetRecord* target = declarationIndex_->callTarget(expression);
             if (!target || target->kind != CallTargetKind::Direct) {
                 throw IRCompileError("missing direct call target metadata");
+            }
+            const DeclarationRecord* declaration
+                = declarationIndex_->declaration(target->target.declarationId);
+            const BindingMetadataRecord* binding
+                = declarationIndex_->variableBindingMetadata(*callee);
+            const bool imported = binding && binding->imported;
+            const CaptureRecord* captures = nullptr;
+            if (declaration && declaration->statement) {
+                if (const auto* function
+                    = dynamic_cast<const FunctionStmt*>(declaration->statement)) {
+                    captures = declarationIndex_->captureMetadata(*function);
+                }
+            }
+            if (!imported && declaration && captures && captures->symbols.empty()) {
+                std::vector<IRRegister> directArguments;
+                directArguments.reserve(expression.arguments.size());
+                for (const auto& argument : expression.arguments) {
+                    directArguments.push_back(compileExpression(*argument));
+                }
+                const std::size_t instructionIndex = ir_.instructionCount();
+                const IRRegister result = ir_.emitCallDirect(0, std::move(directArguments));
+                pendingDirectCalls_.push_back(PendingDirectCall{
+                    activeFunctionDepth_ != 0
+                        ? std::optional<std::size_t>(ir_.functionCount())
+                        : std::nullopt,
+                    instructionIndex,
+                    target->target.declarationId});
+                return result;
             }
         }
     }

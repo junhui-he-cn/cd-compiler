@@ -1106,6 +1106,18 @@ fn map_instruction(
                 .map(|value| register(*value))
                 .collect::<Result<Vec<_>, _>>()?,
         },
+        Instruction::CallDirect {
+            dest,
+            function: target,
+            arguments,
+        } => Instruction::CallDirect {
+            dest: register(*dest)?,
+            function: function(*target)?,
+            arguments: arguments
+                .iter()
+                .map(|argument| register(*argument))
+                .collect::<Result<Vec<_>, _>>()?,
+        },
         Instruction::NativeCall {
             dest,
             name: value,

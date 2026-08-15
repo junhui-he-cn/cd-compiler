@@ -1,6 +1,6 @@
 native_import i0 = print abi=1
 native_import i1 = str abi=1
-main registers=39
+main registers=34
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -12,68 +12,63 @@ main registers=39
 0008  set_global g1, b3
 0009  b4 = constant #12 false
 0010  init_global g2, b4
-0011  b5 = load_global g0
-0012  b6 = constant #13 1
-0013  b7 = call b5(b6)
-0014  b38 = call_native i0 [b7]
-0015  b8 = load_global g0
-0016  b9 = constant #14 8
-0017  b10 = call b8(b9)
-0018  b38 = call_native i0 [b10]
-0019  b11 = load_global g1
-0020  b12 = constant #15 3
-0021  b13 = make_variant t0, v0 (b12)
-0022  b14 = call b11(b13)
-0023  b38 = call_native i0 [b14]
-0024  b15 = load_global g1
-0025  b16 = constant #16 4
-0026  b17 = constant #17 10
-0027  b18 = make_variant t0, v1 (b16, b17)
-0028  b19 = call b15(b18)
-0029  b38 = call_native i0 [b19]
-0030  b20 = load_global g1
-0031  b21 = make_variant t0, v2 ()
-0032  b22 = call b20(b21)
-0033  b38 = call_native i0 [b22]
-0034  b23 = load_global g2
-0035  b24 = constant #18 nil
-0036  b25 = equal b23, b24
-0037  br_if b25, b1, b2
-0038  block
-0039  br b3
-0040  block
-0041  b26 = constant #19 false
-0042  b27 = equal b23, b26
-0043  br_if b27, b3, b4
-0044  block
-0045  b28 = constant #20 "off"
-0046  b38 = call_native i0 [b28]
-0047  br b6
-0048  block
-0049  b29 = constant #21 true
-0050  b30 = equal b23, b29
-0051  br_if b30, b5, b6
-0052  block
-0053  b31 = constant #22 "on"
-0054  b38 = call_native i0 [b31]
-0055  br b6
+0011  b5 = constant #13 1
+0012  b6 = call_direct $0 [b5]
+0013  b33 = call_native i0 [b6]
+0014  b7 = constant #14 8
+0015  b8 = call_direct $0 [b7]
+0016  b33 = call_native i0 [b8]
+0017  b9 = constant #15 3
+0018  b10 = make_variant t0, v0 (b9)
+0019  b11 = call_direct $1 [b10]
+0020  b33 = call_native i0 [b11]
+0021  b12 = constant #16 4
+0022  b13 = constant #17 10
+0023  b14 = make_variant t0, v1 (b12, b13)
+0024  b15 = call_direct $1 [b14]
+0025  b33 = call_native i0 [b15]
+0026  b16 = make_variant t0, v2 ()
+0027  b17 = call_direct $1 [b16]
+0028  b33 = call_native i0 [b17]
+0029  b18 = load_global g2
+0030  b19 = constant #18 nil
+0031  b20 = equal b18, b19
+0032  br_if b20, b1, b2
+0033  block
+0034  br b3
+0035  block
+0036  b21 = constant #19 false
+0037  b22 = equal b18, b21
+0038  br_if b22, b3, b4
+0039  block
+0040  b23 = constant #20 "off"
+0041  b33 = call_native i0 [b23]
+0042  br b6
+0043  block
+0044  b24 = constant #21 true
+0045  b25 = equal b18, b24
+0046  br_if b25, b5, b6
+0047  block
+0048  b26 = constant #22 "on"
+0049  b33 = call_native i0 [b26]
+0050  br b6
+0051  block
+0052  b27 = constant #23 true
+0053  b28 = constant #24 true
+0054  b29 = equal b27, b28
+0055  br_if b29, b7, b8
 0056  block
-0057  b32 = constant #23 true
-0058  b33 = constant #24 true
-0059  b34 = equal b32, b33
-0060  br_if b34, b7, b8
-0061  block
-0062  br b9
-0063  block
-0064  b35 = constant #25 false
-0065  b36 = equal b32, b35
-0066  br_if b36, b9, b10
-0067  block
-0068  b37 = constant #26 "bool"
-0069  b38 = call_native i0 [b37]
-0070  return_nil
-0071  block
-0072  return_nil
+0057  br b9
+0058  block
+0059  b30 = constant #25 false
+0060  b31 = equal b27, b30
+0061  br_if b31, b9, b10
+0062  block
+0063  b32 = constant #26 "bool"
+0064  b33 = call_native i0 [b32]
+0065  return_nil
+0066  block
+0067  return_nil
 
 function $0 numberLabel/1 registers=8
 0000  block

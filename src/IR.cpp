@@ -54,6 +54,7 @@ bool isBinary(IROp op)
     case IROp::StoreVar:
     case IROp::AssignVar:
     case IROp::Call:
+    case IROp::CallDirect:
     case IROp::NativeCall:
     case IROp::Index:
     case IROp::AssignIndex:
@@ -263,6 +264,20 @@ void printInstruction(std::ostream& out, const IRProgram& program, const IRInstr
             }
             out << ")";
         }
+    } else if (instruction.op == IROp::CallDirect) {
+        out << " $" << instruction.operand;
+        if (instruction.operand < program.functions().size()) {
+            const IRFunction& function = program.functions()[instruction.operand];
+            out << " " << function.name << "/" << function.parameters.size();
+        }
+        out << "(";
+        for (std::size_t arg = 0; arg < instruction.arguments.size(); ++arg) {
+            if (arg != 0) {
+                out << ", ";
+            }
+            out << instruction.arguments[arg];
+        }
+        out << ")";
     } else if (instruction.op == IROp::NativeCall) {
         printNameOperand(out, program, instruction.operand);
         out << "(";
@@ -546,6 +561,7 @@ IREffectSummary irEffectSummary(IROp op)
         result.writesMemory = true;
         return result;
     case IROp::Call:
+    case IROp::CallDirect:
     case IROp::NativeCall:
         result.readsMemory = true;
         result.writesMemory = true;
@@ -936,6 +952,17 @@ IRRegister IRProgram::emitCall(IRRegister callee, std::vector<IRRegister> argume
     return dest;
 }
 
+IRRegister IRProgram::emitCallDirect(
+    std::size_t functionIndex,
+    std::vector<IRRegister> arguments)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{
+        IROp::CallDirect, dest, std::nullopt, std::nullopt, std::move(arguments),
+        functionIndex});
+    return dest;
+}
+
 IRRegister IRProgram::emitNativeCall(std::string name, std::vector<IRRegister> arguments)
 {
     IRRegister dest = makeRegister();
@@ -1197,6 +1224,33 @@ std::size_t IRProgram::instructionCount() const
     return instructions_.size();
 }
 
+std::size_t IRProgram::functionCount() const
+{
+    return functions_.size();
+}
+
+void IRProgram::patchMainCallDirect(std::size_t instructionIndex, std::size_t functionIndex)
+{
+    if (instructionIndex >= instructions_.size()
+        || instructions_[instructionIndex].op != IROp::CallDirect) {
+        throw std::logic_error("call_direct patch target is invalid");
+    }
+    instructions_[instructionIndex].operand = functionIndex;
+}
+
+void IRProgram::patchFunctionCallDirect(
+    std::size_t functionIndex,
+    std::size_t instructionIndex,
+    std::size_t targetFunctionIndex)
+{
+    if (functionIndex >= functions_.size()
+        || instructionIndex >= functions_[functionIndex].instructions.size()
+        || functions_[functionIndex].instructions[instructionIndex].op != IROp::CallDirect) {
+        throw std::logic_error("function call_direct patch target is invalid");
+    }
+    functions_[functionIndex].instructions[instructionIndex].operand = targetFunctionIndex;
+}
+
 IRProgram IRProgram::rebuildWithStreams(
     std::vector<IRInstruction> instructions,
     std::size_t registerCount,
@@ -1304,6 +1358,8 @@ std::string irOpName(IROp op)
         return "assign_var";
     case IROp::Call:
         return "call";
+    case IROp::CallDirect:
+        return "call_direct";
     case IROp::NativeCall:
         return "native_call";
     case IROp::Index:

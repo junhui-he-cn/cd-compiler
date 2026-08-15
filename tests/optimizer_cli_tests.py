@@ -195,9 +195,9 @@ def main() -> int:
             [str(compiler), "--ir", "--opt-level", "1", str(merge_source)]
         )
         require_clean(merge_optimized, "linear block merge O1 IR")
-        if "jump 0010" not in merge_baseline.stdout:
+        if "jump 0009" not in merge_baseline.stdout:
             raise AssertionError("baseline did not retain the merge candidate jump")
-        if "jump 0010" in merge_optimized.stdout:
+        if "jump 0009" in merge_optimized.stdout:
             raise AssertionError("O1 did not merge the non-empty linear block")
 
         merge_baseline_artifact = root / "linear-block-merge-baseline.cdbc"

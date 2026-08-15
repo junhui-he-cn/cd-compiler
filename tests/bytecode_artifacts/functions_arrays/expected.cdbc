@@ -24,49 +24,47 @@ names:
   n7 = "next#3"
   n8 = "next#3"
   n9 = "makeCounter#0"
-  n10 = "makeCounter#0"
+  n10 = "counter#4"
   n11 = "counter#4"
-  n12 = "counter#4"
+  n12 = "xs#5"
   n13 = "xs#5"
   n14 = "xs#5"
   n15 = "xs#5"
-  n16 = "xs#5"
 
 globals:
   g0 = n0
-  g1 = n11
-  g2 = n13
+  g1 = n10
+  g2 = n12
 
 native_imports:
   i0 = "print" abi=1
 
-main registers=20:
+main registers=19:
 block b0:
   r0 = constant c0
   init_global g0, r0
   r1 = make_function f1
   set_global g0, r1
-  r2 = load_global g0
-  r3 = constant c5
-  r4 = call r2 [r3]
-  init_global g1, r4
-  r5 = load_global g1
-  r6 = call r5 []
-  r19 = call_native i0 [r6]
-  r7 = constant c6
-  r8 = constant c7
-  r9 = constant c8
-  r10 = array [r7, r8, r9]
-  init_global g2, r10
-  r11 = load_global g2
-  r12 = constant c9
-  r13 = load_global g2
-  r14 = len_array r13
-  r15 = array_set r11, r12, r14
-  r16 = load_global g2
-  r17 = constant c10
-  r18 = array_get r16, r17
-  r19 = call_native i0 [r18]
+  r2 = constant c5
+  r3 = call_direct f1 [r2]
+  init_global g1, r3
+  r4 = load_global g1
+  r5 = call r4 []
+  r18 = call_native i0 [r5]
+  r6 = constant c6
+  r7 = constant c7
+  r8 = constant c8
+  r9 = array [r6, r7, r8]
+  init_global g2, r9
+  r10 = load_global g2
+  r11 = constant c9
+  r12 = load_global g2
+  r13 = len_array r12
+  r14 = array_set r10, r11, r13
+  r15 = load_global g2
+  r16 = constant c10
+  r17 = array_get r15, r16
+  r18 = call_native i0 [r17]
   return_nil
 
 function f0 name="next" arity=0 registers=5:
@@ -110,28 +108,27 @@ debug_locations:
   main 2 = s0:1:1
   main 3 = s0:1:1
   main 4 = s0:1:1
-  main 5 = s0:9:15
-  main 6 = s0:9:27
-  main 7 = s0:9:15
-  main 8 = s0:9:1
+  main 5 = s0:9:27
+  main 6 = s0:9:15
+  main 7 = s0:9:1
+  main 8 = s0:10:7
   main 9 = s0:10:7
-  main 10 = s0:10:7
-  main 11 = s0:10:1
-  main 12 = s0:11:11
-  main 13 = s0:11:14
-  main 14 = s0:11:17
-  main 15 = s0:11:10
-  main 16 = s0:11:1
-  main 17 = s0:12:1
-  main 18 = s0:12:4
-  main 19 = s0:12:13
-  main 20 = s0:12:9
-  main 21 = s0:12:1
-  main 22 = s0:13:7
-  main 23 = s0:13:10
-  main 24 = s0:13:7
+  main 10 = s0:10:1
+  main 11 = s0:11:11
+  main 12 = s0:11:14
+  main 13 = s0:11:17
+  main 14 = s0:11:10
+  main 15 = s0:11:1
+  main 16 = s0:12:1
+  main 17 = s0:12:4
+  main 18 = s0:12:13
+  main 19 = s0:12:9
+  main 20 = s0:12:1
+  main 21 = s0:13:7
+  main 22 = s0:13:10
+  main 23 = s0:13:7
+  main 24 = s0:13:1
   main 25 = s0:13:1
-  main 26 = s0:13:1
   function f0 0 = s0:4:13
   function f0 1 = s0:4:13
   function f0 2 = s0:4:21
@@ -165,28 +162,27 @@ debug_ranges:
   main 2 = s0:4:119
   main 3 = s0:4:119
   main 4 = s0:4:119
-  main 5 = s0:137:148
-  main 6 = s0:149:150
-  main 7 = s0:137:151
-  main 8 = s0:127:151
-  main 9 = s0:159:166
+  main 5 = s0:149:150
+  main 6 = s0:137:151
+  main 7 = s0:127:151
+  main 8 = s0:159:166
+  main 9 = s0:159:168
   main 10 = s0:159:168
-  main 11 = s0:159:168
-  main 12 = s0:180:181
-  main 13 = s0:183:184
-  main 14 = s0:186:187
-  main 15 = s0:179:187
-  main 16 = s0:174:187
-  main 17 = s0:190:192
-  main 18 = s0:193:194
-  main 19 = s0:202:204
-  main 20 = s0:198:205
-  main 21 = s0:190:205
-  main 22 = s0:213:215
-  main 23 = s0:216:217
+  main 11 = s0:180:181
+  main 12 = s0:183:184
+  main 13 = s0:186:187
+  main 14 = s0:179:187
+  main 15 = s0:174:187
+  main 16 = s0:190:192
+  main 17 = s0:193:194
+  main 18 = s0:202:204
+  main 19 = s0:198:205
+  main 20 = s0:190:205
+  main 21 = s0:213:215
+  main 22 = s0:216:217
+  main 23 = s0:213:217
   main 24 = s0:213:217
   main 25 = s0:213:217
-  main 26 = s0:213:217
   function f0 0 = s0:73:78
   function f0 1 = s0:73:78
   function f0 2 = s0:81:82

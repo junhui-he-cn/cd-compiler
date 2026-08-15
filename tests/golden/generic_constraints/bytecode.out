@@ -1,7 +1,7 @@
 native_import i0 = map abi=1
 native_import i1 = filter abi=1
 native_import i2 = print abi=1
-main registers=45
+main registers=42
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -44,34 +44,31 @@ main registers=45
 0039  b23 = make_variant t1, v0 (b22)
 0040  init_global g10, b23
 0041  b24 = load_global g6
-0042  b44 = call_native i2 [b24]
+0042  b41 = call_native i2 [b24]
 0043  b25 = load_global g7
-0044  b44 = call_native i2 [b25]
+0044  b41 = call_native i2 [b25]
 0045  b26 = load_global g8
 0046  b27 = constant #18 3
 0047  b28 = call b26(b27)
-0048  b44 = call_native i2 [b28]
-0049  b29 = load_global g1
-0050  b30 = constant #19 4
-0051  b31 = call b29(b30)
-0052  b44 = call_native i2 [b31]
-0053  b32 = load_global g2
-0054  b33 = constant #20 "key"
-0055  b34 = constant #21 7
-0056  b35 = call b32(b33, b34)
-0057  b44 = call_native i2 [b35]
-0058  b36 = load_global g0
-0059  b37 = load_global g9
-0060  b38 = constant #22 5
-0061  b39 = call b36(b37, b38)
-0062  b44 = call_native i2 [b39]
-0063  b40 = load_global g4
-0064  b41 = constant #23 6
-0065  b42 = call b40(b41)
-0066  b44 = call_native i2 [b42]
-0067  b43 = load_global g10
-0068  b44 = call_native i2 [b43]
-0069  return_nil
+0048  b41 = call_native i2 [b28]
+0049  b29 = constant #19 4
+0050  b30 = call_direct $1 [b29]
+0051  b41 = call_native i2 [b30]
+0052  b31 = constant #20 "key"
+0053  b32 = constant #21 7
+0054  b33 = call_direct $2 [b31, b32]
+0055  b41 = call_native i2 [b33]
+0056  b34 = load_global g0
+0057  b35 = load_global g9
+0058  b36 = constant #22 5
+0059  b37 = call b34(b35, b36)
+0060  b41 = call_native i2 [b37]
+0061  b38 = constant #23 6
+0062  b39 = call_direct $5 [b38]
+0063  b41 = call_native i2 [b39]
+0064  b40 = load_global g10
+0065  b41 = call_native i2 [b40]
+0066  return_nil
 
 function $0 echo/2 registers=2
 0000  block
@@ -123,21 +120,20 @@ function $4 inner/1 registers=2
 0006  block
 0007  return_nil
 
-function $5 outer/1 registers=6
+function $5 outer/1 registers=5
 0000  block
 0001  b0 = constant #10 nil
 0002  bind_local l1, b0
 0003  b1 = make_function $4 inner/1
 0004  set_local l1, b1
-0005  b2 = load_local l1
-0006  b3 = load_local l0
-0007  b4 = call b2(b3)
-0008  return b4
-0009  block
-0010  b5 = constant #12 nil
-0011  return b5
-0012  block
-0013  return_nil
+0005  b2 = load_local l0
+0006  b3 = call_direct $4 [b2]
+0007  return b3
+0008  block
+0009  b4 = constant #12 nil
+0010  return b4
+0011  block
+0012  return_nil
 
 function $6 <lambda>/1 registers=2
 0000  block

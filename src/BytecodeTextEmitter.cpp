@@ -234,6 +234,10 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
         out << reg(requireDest(instruction)) << " = call " << reg(requireLeft(instruction)) << ' ';
         writeRegisterList(out, instruction.arguments);
         break;
+    case BytecodeOp::CallDirect:
+        out << reg(requireDest(instruction)) << " = call_direct " << functionRef(instruction.operand) << ' ';
+        writeRegisterList(out, instruction.arguments);
+        break;
     case BytecodeOp::CallNative:
         out << reg(requireDest(instruction)) << " = call_native i" << instruction.operand << ' ';
         writeRegisterList(out, instruction.arguments);

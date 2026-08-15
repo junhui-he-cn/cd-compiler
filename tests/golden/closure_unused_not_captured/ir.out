@@ -3,12 +3,11 @@ IR
 0001  store_var @0 make#0, v0
 0002  v1 = make_function $1 make/0
 0003  assign_var @7 make#0, v1
-0004  v2 = load_var @8 make#0
-0005  v3 = call v2()
-0006  store_var @9 f#4, v3
-0007  v4 = load_var @10 f#4
-0008  v5 = call v4()
-0009  print v5
+0004  v2 = call_direct $1 make/0()
+0005  store_var @8 f#4, v2
+0006  v3 = load_var @9 f#4
+0007  v4 = call v3()
+0008  print v4
 
 function $0 read()
 0000  v0 = load_var @4 used#1

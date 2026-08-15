@@ -276,6 +276,15 @@ void printInstruction(
             }
             out << ")";
         }
+    } else if (instruction.op == BytecodeOp::CallDirect) {
+        out << " $" << instruction.operand << " [";
+        for (std::size_t arg = 0; arg < instruction.arguments.size(); ++arg) {
+            if (arg != 0) {
+                out << ", ";
+            }
+            out << instruction.arguments[arg];
+        }
+        out << "]";
     } else if (instruction.op == BytecodeOp::CallNative) {
         out << " i" << instruction.operand;
         out << " [";
@@ -544,6 +553,8 @@ std::string bytecodeOpName(BytecodeOp op)
         return "set_global";
     case BytecodeOp::Call:
         return "call";
+    case BytecodeOp::CallDirect:
+        return "call_direct";
     case BytecodeOp::CallNative:
         return "call_native";
     case BytecodeOp::Index:

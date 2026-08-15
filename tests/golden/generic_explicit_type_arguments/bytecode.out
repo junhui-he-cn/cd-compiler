@@ -1,5 +1,5 @@
 native_import i0 = print abi=1
-main registers=34
+main registers=29
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -17,40 +17,35 @@ main registers=34
 0014  init_global g3, b6
 0015  b7 = make_function $3 make/0
 0016  set_global g3, b7
-0017  b8 = load_global g1
-0018  b9 = constant #10 42
-0019  b10 = call b8(b9)
-0020  b33 = call_native i0 [b10]
-0021  b11 = load_global g1
-0022  b12 = constant #11 "hello"
-0023  b13 = call b11(b12)
-0024  b33 = call_native i0 [b13]
-0025  b14 = load_global g2
-0026  b15 = constant #12 1
-0027  b16 = constant #13 2
-0028  b17 = array [b15, b16]
-0029  b18 = call b14(b17)
-0030  b33 = call_native i0 [b18]
-0031  b19 = load_global g1
-0032  b20 = constant #14 3
-0033  b21 = constant #15 4
-0034  b22 = array [b20, b21]
-0035  b23 = call b19(b22)
-0036  b33 = call_native i0 [b23]
-0037  b24 = load_global g3
-0038  b25 = call b24()
-0039  b33 = call_native i0 [b25]
-0040  b26 = load_global g1
-0041  init_global g4, b26
-0042  b27 = load_global g4
-0043  b28 = constant #16 true
-0044  b29 = call b27(b28)
-0045  b33 = call_native i0 [b29]
-0046  b30 = load_global g0
-0047  b31 = constant #17 7
-0048  b32 = call b30(b31)
-0049  b33 = call_native i0 [b32]
-0050  return_nil
+0017  b8 = constant #10 42
+0018  b9 = call_direct $1 [b8]
+0019  b28 = call_native i0 [b9]
+0020  b10 = constant #11 "hello"
+0021  b11 = call_direct $1 [b10]
+0022  b28 = call_native i0 [b11]
+0023  b12 = constant #12 1
+0024  b13 = constant #13 2
+0025  b14 = array [b12, b13]
+0026  b15 = call_direct $2 [b14]
+0027  b28 = call_native i0 [b15]
+0028  b16 = constant #14 3
+0029  b17 = constant #15 4
+0030  b18 = array [b16, b17]
+0031  b19 = call_direct $1 [b18]
+0032  b28 = call_native i0 [b19]
+0033  b20 = call_direct $3 []
+0034  b28 = call_native i0 [b20]
+0035  b21 = load_global g1
+0036  init_global g4, b21
+0037  b22 = load_global g4
+0038  b23 = constant #16 true
+0039  b24 = call b22(b23)
+0040  b28 = call_native i0 [b24]
+0041  b25 = load_global g0
+0042  b26 = constant #17 7
+0043  b27 = call b25(b26)
+0044  b28 = call_native i0 [b27]
+0045  return_nil
 
 function $0 identity/1 registers=2
 0000  block

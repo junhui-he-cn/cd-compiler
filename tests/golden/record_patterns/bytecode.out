@@ -1,6 +1,6 @@
 native_import i0 = print abi=1
 native_import i1 = str abi=1
-main registers=34
+main registers=31
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -22,40 +22,37 @@ main registers=34
 0018  init_global g2, b13
 0019  b14 = constant #17 nil
 0020  init_global g3, b14
-0021  b15 = load_global g0
-0022  b16 = load_global g1
-0023  b17 = call b15(b16)
-0024  b33 = call_native i0 [b17]
-0025  b18 = load_global g0
-0026  b19 = load_global g2
-0027  b20 = call b18(b19)
-0028  b33 = call_native i0 [b20]
-0029  b21 = load_global g0
-0030  b22 = load_global g3
-0031  b23 = call b21(b22)
-0032  b33 = call_native i0 [b23]
-0033  b24 = load_global g1
-0034  b25 = struct_get b24, t1, 0
-0035  b26 = constant #18 "Ada"
-0036  b27 = equal b25, b26
-0037  br_if b27, b1, b2
-0038  block
-0039  br b3
-0040  block
-0041  b28 = struct_get b24, t1, 1
-0042  b29 = constant #19 0
-0043  b30 = equal b28, b29
-0044  br_if b30, b3, b4
-0045  block
-0046  b31 = constant #20 "or"
-0047  b33 = call_native i0 [b31]
-0048  return_nil
-0049  block
-0050  b32 = constant #21 "fallback"
-0051  b33 = call_native i0 [b32]
-0052  return_nil
-0053  block
-0054  return_nil
+0021  b15 = load_global g1
+0022  b16 = call_direct $0 [b15]
+0023  b30 = call_native i0 [b16]
+0024  b17 = load_global g2
+0025  b18 = call_direct $0 [b17]
+0026  b30 = call_native i0 [b18]
+0027  b19 = load_global g3
+0028  b20 = call_direct $0 [b19]
+0029  b30 = call_native i0 [b20]
+0030  b21 = load_global g1
+0031  b22 = struct_get b21, t1, 0
+0032  b23 = constant #18 "Ada"
+0033  b24 = equal b22, b23
+0034  br_if b24, b1, b2
+0035  block
+0036  br b3
+0037  block
+0038  b25 = struct_get b21, t1, 1
+0039  b26 = constant #19 0
+0040  b27 = equal b25, b26
+0041  br_if b27, b3, b4
+0042  block
+0043  b28 = constant #20 "or"
+0044  b30 = call_native i0 [b28]
+0045  return_nil
+0046  block
+0047  b29 = constant #21 "fallback"
+0048  b30 = call_native i0 [b29]
+0049  return_nil
+0050  block
+0051  return_nil
 
 function $0 describe/1 registers=25
 0000  block

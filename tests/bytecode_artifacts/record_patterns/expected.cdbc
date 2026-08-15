@@ -64,17 +64,14 @@ names:
   n36 = "zip"
   n37 = "hongKong#6"
   n38 = "nilPerson#7"
-  n39 = "describe#0"
-  n40 = "ada#5"
-  n41 = "describe#0"
-  n42 = "hongKong#6"
-  n43 = "describe#0"
-  n44 = "nilPerson#7"
-  n45 = "ada#5"
-  n46 = "name"
-  n47 = "Person"
-  n48 = "age"
-  n49 = "Person"
+  n39 = "ada#5"
+  n40 = "hongKong#6"
+  n41 = "nilPerson#7"
+  n42 = "ada#5"
+  n43 = "name"
+  n44 = "Person"
+  n45 = "age"
+  n46 = "Person"
 
 globals:
   g0 = n0
@@ -90,7 +87,7 @@ native_imports:
   i0 = "print" abi=1
   i1 = "str" abi=1
 
-main registers=34:
+main registers=31:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -112,37 +109,34 @@ block b0:
   init_global g2, r13
   r14 = constant c17
   init_global g3, r14
-  r15 = load_global g0
-  r16 = load_global g1
-  r17 = call r15 [r16]
-  r33 = call_native i0 [r17]
-  r18 = load_global g0
-  r19 = load_global g2
-  r20 = call r18 [r19]
-  r33 = call_native i0 [r20]
-  r21 = load_global g0
-  r22 = load_global g3
-  r23 = call r21 [r22]
-  r33 = call_native i0 [r23]
-  r24 = load_global g1
-  r25 = struct_get r24, t1, 0
-  r26 = constant c18
-  r27 = equal r25, r26
-  br_if r27, b1, b2
+  r15 = load_global g1
+  r16 = call_direct f0 [r15]
+  r30 = call_native i0 [r16]
+  r17 = load_global g2
+  r18 = call_direct f0 [r17]
+  r30 = call_native i0 [r18]
+  r19 = load_global g3
+  r20 = call_direct f0 [r19]
+  r30 = call_native i0 [r20]
+  r21 = load_global g1
+  r22 = struct_get r21, t1, 0
+  r23 = constant c18
+  r24 = equal r22, r23
+  br_if r24, b1, b2
 block b1:
   br b3
 block b2:
-  r28 = struct_get r24, t1, 1
-  r29 = constant c19
-  r30 = equal r28, r29
-  br_if r30, b3, b4
+  r25 = struct_get r21, t1, 1
+  r26 = constant c19
+  r27 = equal r25, r26
+  br_if r27, b3, b4
 block b3:
-  r31 = constant c20
-  r33 = call_native i0 [r31]
+  r28 = constant c20
+  r30 = call_native i0 [r28]
   return_nil
 block b4:
-  r32 = constant c21
-  r33 = call_native i0 [r32]
+  r29 = constant c21
+  r30 = call_native i0 [r29]
   return_nil
 block b5:
   return_nil
@@ -229,19 +223,19 @@ debug_locations:
   main 18 = s0:18:1
   main 19 = s0:23:35
   main 20 = s0:23:1
-  main 21 = s0:24:7
-  main 22 = s0:24:16
-  main 23 = s0:24:7
-  main 24 = s0:24:1
+  main 21 = s0:24:16
+  main 22 = s0:24:7
+  main 23 = s0:24:1
+  main 24 = s0:25:16
   main 25 = s0:25:7
-  main 26 = s0:25:16
-  main 27 = s0:25:7
-  main 28 = s0:25:1
-  main 29 = s0:26:7
-  main 30 = s0:26:16
-  main 31 = s0:26:7
-  main 32 = s0:26:1
-  main 33 = s0:27:7
+  main 26 = s0:25:1
+  main 27 = s0:26:16
+  main 28 = s0:26:7
+  main 29 = s0:26:1
+  main 30 = s0:27:7
+  main 31 = s0:27:1
+  main 32 = s0:27:1
+  main 33 = s0:27:1
   main 34 = s0:27:1
   main 35 = s0:27:1
   main 36 = s0:27:1
@@ -250,19 +244,16 @@ debug_locations:
   main 39 = s0:27:1
   main 40 = s0:27:1
   main 41 = s0:27:1
-  main 42 = s0:27:1
-  main 43 = s0:27:1
-  main 44 = s0:27:1
-  main 45 = s0:28:57
-  main 46 = s0:28:57
-  main 47 = s0:28:51
-  main 48 = s0:27:1
-  main 49 = s0:29:24
-  main 50 = s0:29:24
-  main 51 = s0:29:18
-  main 52 = s0:27:1
-  main 53 = s0:27:1
-  main 54 = s0:27:1
+  main 42 = s0:28:57
+  main 43 = s0:28:57
+  main 44 = s0:28:51
+  main 45 = s0:27:1
+  main 46 = s0:29:24
+  main 47 = s0:29:24
+  main 48 = s0:29:18
+  main 49 = s0:27:1
+  main 50 = s0:27:1
+  main 51 = s0:27:1
   function f0 0 = s0:5:9
   function f0 1 = s0:5:9
   function f0 2 = s0:5:3
@@ -340,19 +331,19 @@ debug_ranges:
   main 18 = s0:526:620
   main 19 = s0:660:663
   main 20 = s0:630:663
-  main 21 = s0:671:679
-  main 22 = s0:680:683
+  main 21 = s0:680:683
+  main 22 = s0:671:684
   main 23 = s0:671:684
-  main 24 = s0:671:684
-  main 25 = s0:692:700
-  main 26 = s0:701:709
-  main 27 = s0:692:710
-  main 28 = s0:692:710
-  main 29 = s0:718:726
-  main 30 = s0:727:736
-  main 31 = s0:718:737
-  main 32 = s0:718:737
-  main 33 = s0:745:748
+  main 24 = s0:701:709
+  main 25 = s0:692:710
+  main 26 = s0:692:710
+  main 27 = s0:727:736
+  main 28 = s0:718:737
+  main 29 = s0:718:737
+  main 30 = s0:745:748
+  main 31 = s0:745:848
+  main 32 = s0:745:848
+  main 33 = s0:745:848
   main 34 = s0:745:848
   main 35 = s0:745:848
   main 36 = s0:745:848
@@ -361,19 +352,16 @@ debug_ranges:
   main 39 = s0:745:848
   main 40 = s0:745:848
   main 41 = s0:745:848
-  main 42 = s0:745:848
-  main 43 = s0:745:848
-  main 44 = s0:745:848
-  main 45 = s0:807:811
-  main 46 = s0:807:811
-  main 47 = s0:807:811
-  main 48 = s0:745:848
-  main 49 = s0:838:848
-  main 50 = s0:838:848
-  main 51 = s0:838:848
-  main 52 = s0:745:848
-  main 53 = s0:745:848
-  main 54 = s0:745:848
+  main 42 = s0:807:811
+  main 43 = s0:807:811
+  main 44 = s0:807:811
+  main 45 = s0:745:848
+  main 46 = s0:838:848
+  main 47 = s0:838:848
+  main 48 = s0:838:848
+  main 49 = s0:745:848
+  main 50 = s0:745:848
+  main 51 = s0:745:848
   function f0 0 = s0:164:169
   function f0 1 = s0:164:169
   function f0 2 = s0:164:414

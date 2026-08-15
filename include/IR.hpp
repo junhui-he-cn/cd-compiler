@@ -29,6 +29,7 @@ enum class IROp {
     StoreVar,
     AssignVar,
     Call,
+    CallDirect,
     NativeCall,
     Index,
     AssignIndex,
@@ -199,6 +200,7 @@ public:
         IRRegister value,
         std::optional<BindingId> bindingId = std::nullopt);
     IRRegister emitCall(IRRegister callee, std::vector<IRRegister> arguments);
+    IRRegister emitCallDirect(std::size_t functionIndex, std::vector<IRRegister> arguments);
     IRRegister emitNativeCall(std::string name, std::vector<IRRegister> arguments);
     IRRegister emitIndex(IRRegister collection, IRRegister index);
     IRRegister emitAssignIndex(IRRegister collection, IRRegister index, IRRegister value);
@@ -235,6 +237,12 @@ public:
     std::size_t emitJumpIfTrue(IRRegister condition);
     void patchJump(std::size_t jumpInstruction);
     std::size_t instructionCount() const;
+    std::size_t functionCount() const;
+    void patchMainCallDirect(std::size_t instructionIndex, std::size_t functionIndex);
+    void patchFunctionCallDirect(
+        std::size_t functionIndex,
+        std::size_t instructionIndex,
+        std::size_t targetFunctionIndex);
 
     // Rebuild a completed program with replacement main/function streams.
     // Program-level compiler tables (constants, names, sources, and the

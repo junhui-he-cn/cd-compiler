@@ -1565,6 +1565,66 @@ mod tests {
     }
 
     #[test]
+    fn direct_calls_skip_function_value_construction_and_charge() {
+        let program = Program {
+            constants: vec![Constant::Number("7".to_string())],
+            globals: Vec::new(),
+            types: Vec::new(),
+            native_imports: vec![NativeImport {
+                name: "print".to_string(),
+                abi: 1,
+            }],
+            names: Vec::new(),
+            functions: vec![
+                Function {
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 2,
+                    instructions: vec![
+                        Instruction::CallDirect {
+                            dest: 0,
+                            function: FuncId(1),
+                            arguments: Vec::new(),
+                        },
+                        Instruction::CallNative {
+                            dest: 1,
+                            native: NativeId(0),
+                            arguments: vec![0],
+                        },
+                        Instruction::ReturnNil,
+                    ],
+                    locations: vec![None; 3],
+                },
+                Function {
+                    id: FuncId(1),
+                    name: "seven".to_string(),
+                    arity: 0,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 1,
+                    instructions: vec![
+                        Instruction::Constant { dest: 0, constant: 0 },
+                        Instruction::Return { value: 0 },
+                    ],
+                    locations: vec![None; 2],
+                },
+            ],
+            entry: FuncId(0),
+            debug_sources: Vec::new(),
+        };
+
+        assert_eq!(
+            VM::new(&program).run().expect("direct call should run"),
+            "7\n"
+        );
+    }
+
+    #[test]
     fn return_transfer_moves_value_out_of_the_dead_frame_register() {
         let program = empty_program();
         let vm = VM::new(&program);
@@ -8624,6 +8684,38 @@ impl<'a> VM<'a> {
                     )?;
                     self.write_register(frame, *dest, result)?;
                 }
+                Instruction::CallDirect {
+                    dest,
+                    function,
+                    arguments,
+                } => {
+                    let function = self.direct_call_function_value(function.0 as usize, frame)?;
+                    let values = match arguments.as_slice() {
+                        [] => CallArguments::Empty,
+                        [argument] => {
+                            CallArguments::One(self.read_register(frame, *argument)?)
+                        }
+                        [left, right] => {
+                            let left = self.read_register(frame, *left)?;
+                            let right = self.read_register(frame, *right)?;
+                            CallArguments::Two(left, right)
+                        }
+                        arguments => {
+                            let mut values = Vec::with_capacity(arguments.len());
+                            for argument in arguments {
+                                values.push(self.read_register(frame, *argument)?);
+                            }
+                            CallArguments::Many(values)
+                        }
+                    };
+                    let result = self.call_function(
+                        &function,
+                        values,
+                        frame.function.as_ref(),
+                        call_site,
+                    )?;
+                    self.write_register(frame, *dest, result)?;
+                }
                 Instruction::Jump { target } => {
                     self.execute_jump(frame, *target, body.instructions.len())?;
                     jumped = true;
@@ -9542,6 +9634,7 @@ impl<'a> VM<'a> {
             }
             Instruction::Print { .. }
             | Instruction::Call { .. }
+            | Instruction::CallDirect { .. }
             | Instruction::Jump { .. }
             | Instruction::JumpIfFalse { .. }
             | Instruction::JumpIfTrue { .. }
@@ -9611,6 +9704,36 @@ impl<'a> VM<'a> {
                 return Ok(InstructionAction::Call(CallRequest {
                     dest: *dest,
                     function: function.clone(),
+                    arguments: values,
+                    caller: frame.function.to_string(),
+                    call_site: call_site.cloned(),
+                }));
+            }
+            Instruction::CallDirect {
+                dest,
+                function,
+                arguments,
+            } => {
+                let function = self.direct_call_function_value(function.0 as usize, frame)?;
+                let values = match arguments.as_slice() {
+                    [] => CallArguments::Empty,
+                    [argument] => CallArguments::One(self.read_register(frame, *argument)?),
+                    [left, right] => {
+                        let left = self.read_register(frame, *left)?;
+                        let right = self.read_register(frame, *right)?;
+                        CallArguments::Two(left, right)
+                    }
+                    arguments => {
+                        let mut values = Vec::with_capacity(arguments.len());
+                        for argument in arguments {
+                            values.push(self.read_register(frame, *argument)?);
+                        }
+                        CallArguments::Many(values)
+                    }
+                };
+                return Ok(InstructionAction::Call(CallRequest {
+                    dest: *dest,
+                    function,
                     arguments: values,
                     caller: frame.function.to_string(),
                     call_site: call_site.cloned(),
@@ -10473,6 +10596,54 @@ impl<'a> VM<'a> {
                 upvalues,
             )
             .map_err(|error| RuntimeError::new(error.to_string()))
+    }
+
+    /// Build the lightweight callable value for a verified non-capturing
+    /// direct call without charging runtime elements or copying the caller's
+    /// name environment. Global-source upvalues still resolve through the
+    /// global cells, matching the ordinary closure path.
+    fn direct_call_function_value(
+        &self,
+        function_index: usize,
+        frame: &Frame,
+    ) -> Result<FunctionValue, RuntimeError> {
+        let function = self
+            .program
+            .functions
+            .get(function_index)
+            .ok_or_else(|| RuntimeError::new("function index out of range"))?;
+        let upvalues = function
+            .upvalues
+            .iter()
+            .map(|descriptor| match descriptor.source {
+                UpvalueSource::Local(local) => frame
+                    .locals
+                    .borrow()
+                    .get(local.0 as usize)
+                    .cloned()
+                    .flatten()
+                    .ok_or_else(|| RuntimeError::new("missing captured local slot")),
+                UpvalueSource::Upvalue(upvalue) => frame
+                    .upvalues
+                    .get(upvalue.0 as usize)
+                    .cloned()
+                    .ok_or_else(|| RuntimeError::new("missing captured upvalue slot")),
+                UpvalueSource::Global(global) => self
+                    .global_cells
+                    .get(global.0 as usize)
+                    .cloned()
+                    .flatten()
+                    .ok_or_else(|| RuntimeError::new("missing captured global slot")),
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(FunctionValue {
+            name: function.name.clone(),
+            function_index,
+            arity: function.params.len(),
+            identity: 0,
+            closure: self.heap.new_environment(),
+            upvalues,
+        })
     }
 
     fn jit_execution_mode(&self) -> JitExecutionMode {

@@ -309,6 +309,9 @@ pub(crate) enum JitFallbackReason {
     DynamicCall {
         instruction: usize,
     },
+    DirectCall {
+        instruction: usize,
+    },
     NativeBoundary {
         instruction: usize,
         name: String,
@@ -773,6 +776,11 @@ impl JitState {
                 }
                 Instruction::Call { .. } => {
                     return JitEligibility::Fallback(JitFallbackReason::DynamicCall {
+                        instruction,
+                    });
+                }
+                Instruction::CallDirect { .. } => {
+                    return JitEligibility::Fallback(JitFallbackReason::DirectCall {
                         instruction,
                     });
                 }
@@ -1792,6 +1800,7 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
         Instruction::InitGlobal { .. } => "init_global",
         Instruction::SetGlobal { .. } => "set_global",
         Instruction::Call { .. } => "call",
+        Instruction::CallDirect { .. } => "call_direct",
         Instruction::NativeCall { .. } => "native_call",
         Instruction::CallNative { .. } => "call_native",
         Instruction::Index { .. } => "index",

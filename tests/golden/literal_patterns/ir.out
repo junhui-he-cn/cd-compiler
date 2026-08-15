@@ -13,96 +13,90 @@ IR
 0011  assign_var @31 describeResult#4, v5
 0012  v6 = constant #24 nil
 0013  store_var @32 maybe#8, v6
-0014  v7 = load_var @33 describeNumber#0
-0015  v8 = constant #25 0
-0016  v9 = call v7(v8)
-0017  print v9
-0018  v10 = load_var @34 describeNumber#0
-0019  v11 = constant #26 8
-0020  v12 = call v10(v11)
-0021  print v12
-0022  v13 = load_var @35 describeBool#2
-0023  v14 = constant #27 false
-0024  v15 = call v13(v14)
-0025  print v15
-0026  v16 = load_var @36 describeResult#4
-0027  v17 = constant #28 7
-0028  v18 = variant Result.Number (v17)
-0029  v19 = call v16(v18)
-0030  print v19
-0031  v20 = load_var @39 describeResult#4
-0032  v21 = constant #29 ""
-0033  v22 = variant Result.Text (v21)
-0034  v23 = call v20(v22)
-0035  print v23
-0036  v24 = load_var @42 describeResult#4
-0037  v25 = constant #30 nil
-0038  v26 = call v24(v25)
-0039  print v26
-0040  v27 = constant #31 1
-0041  v28 = constant #32 0
-0042  v29 = equal v27, v28
-0043  jump_if_false v29, 0047
-0044  v30 = constant #33 "zero"
-0045  print v30
-0046  jump 0056
-0047  v31 = constant #34 1
-0048  v32 = equal v27, v31
-0049  jump_if_false v32, 0053
-0050  v33 = constant #35 "one"
-0051  print v33
-0052  jump 0056
-0053  v34 = constant #36 "many"
-0054  print v34
-0055  jump 0056
-0056  v35 = constant #37 true
-0057  v36 = constant #38 false
-0058  v37 = equal v35, v36
-0059  jump_if_false v37, 0063
-0060  v38 = constant #39 "no"
-0061  print v38
-0062  jump 0069
-0063  v39 = constant #40 true
-0064  v40 = equal v35, v39
-0065  jump_if_false v40, 0069
-0066  v41 = constant #41 "yes"
-0067  print v41
-0068  jump 0069
-0069  v42 = constant #42 "ok"
-0070  v43 = constant #43 ""
-0071  v44 = equal v42, v43
-0072  jump_if_false v44, 0076
-0073  v45 = constant #44 "empty"
-0074  print v45
-0075  jump 0085
-0076  v46 = constant #45 "ok"
-0077  v47 = equal v42, v46
-0078  jump_if_false v47, 0082
-0079  v48 = constant #46 "ok"
-0080  print v48
-0081  jump 0085
-0082  v49 = constant #47 "other"
-0083  print v49
-0084  jump 0085
-0085  v50 = load_var @43 maybe#8
-0086  v51 = constant #48 nil
-0087  v52 = equal v50, v51
-0088  jump_if_false v52, 0092
-0089  v53 = constant #49 "nil"
-0090  print v53
-0091  jump 0104
-0092  v54 = constant #50 true
-0093  v55 = equal v50, v54
-0094  jump_if_false v55, 0098
-0095  v56 = constant #51 "true"
-0096  print v56
-0097  jump 0104
-0098  v57 = constant #52 false
-0099  v58 = equal v50, v57
-0100  jump_if_false v58, 0104
-0101  v59 = constant #53 "false"
-0102  print v59
-0103  jump 0104
+0014  v7 = constant #25 0
+0015  v8 = call_direct $0 describeNumber/1(v7)
+0016  print v8
+0017  v9 = constant #26 8
+0018  v10 = call_direct $0 describeNumber/1(v9)
+0019  print v10
+0020  v11 = constant #27 false
+0021  v12 = call_direct $1 describeBool/1(v11)
+0022  print v12
+0023  v13 = constant #28 7
+0024  v14 = variant Result.Number (v13)
+0025  v15 = call_direct $2 describeResult/1(v14)
+0026  print v15
+0027  v16 = constant #29 ""
+0028  v17 = variant Result.Text (v16)
+0029  v18 = call_direct $2 describeResult/1(v17)
+0030  print v18
+0031  v19 = constant #30 nil
+0032  v20 = call_direct $2 describeResult/1(v19)
+0033  print v20
+0034  v21 = constant #31 1
+0035  v22 = constant #32 0
+0036  v23 = equal v21, v22
+0037  jump_if_false v23, 0041
+0038  v24 = constant #33 "zero"
+0039  print v24
+0040  jump 0050
+0041  v25 = constant #34 1
+0042  v26 = equal v21, v25
+0043  jump_if_false v26, 0047
+0044  v27 = constant #35 "one"
+0045  print v27
+0046  jump 0050
+0047  v28 = constant #36 "many"
+0048  print v28
+0049  jump 0050
+0050  v29 = constant #37 true
+0051  v30 = constant #38 false
+0052  v31 = equal v29, v30
+0053  jump_if_false v31, 0057
+0054  v32 = constant #39 "no"
+0055  print v32
+0056  jump 0063
+0057  v33 = constant #40 true
+0058  v34 = equal v29, v33
+0059  jump_if_false v34, 0063
+0060  v35 = constant #41 "yes"
+0061  print v35
+0062  jump 0063
+0063  v36 = constant #42 "ok"
+0064  v37 = constant #43 ""
+0065  v38 = equal v36, v37
+0066  jump_if_false v38, 0070
+0067  v39 = constant #44 "empty"
+0068  print v39
+0069  jump 0079
+0070  v40 = constant #45 "ok"
+0071  v41 = equal v36, v40
+0072  jump_if_false v41, 0076
+0073  v42 = constant #46 "ok"
+0074  print v42
+0075  jump 0079
+0076  v43 = constant #47 "other"
+0077  print v43
+0078  jump 0079
+0079  v44 = load_var @37 maybe#8
+0080  v45 = constant #48 nil
+0081  v46 = equal v44, v45
+0082  jump_if_false v46, 0086
+0083  v47 = constant #49 "nil"
+0084  print v47
+0085  jump 0098
+0086  v48 = constant #50 true
+0087  v49 = equal v44, v48
+0088  jump_if_false v49, 0092
+0089  v50 = constant #51 "true"
+0090  print v50
+0091  jump 0098
+0092  v51 = constant #52 false
+0093  v52 = equal v44, v51
+0094  jump_if_false v52, 0098
+0095  v53 = constant #53 "false"
+0096  print v53
+0097  jump 0098
 
 function $0 describeNumber(value#1)
 0000  v0 = load_var @1 value#1

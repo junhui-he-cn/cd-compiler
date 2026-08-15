@@ -23,37 +23,34 @@ IR
 0021  store_var @21 numericLess#16, v10
 0022  v11 = make_function $5 numericLess/2
 0023  assign_var @24 numericLess#16, v11
-0024  v12 = load_var @25 same#10
-0025  v13 = constant #12 "same"
-0026  v14 = constant #13 "same"
-0027  v15 = call v12(v13, v14)
-0028  print v15
-0029  v16 = load_var @26 before#13
-0030  v17 = constant #14 1
-0031  v18 = constant #15 2
-0032  v19 = call v16(v17, v18)
-0033  print v19
-0034  v20 = load_var @27 before#13
-0035  v21 = constant #16 "a"
-0036  v22 = constant #17 "b"
-0037  v23 = call v20(v21, v22)
-0038  print v23
-0039  v24 = load_var @28 same#0
-0040  v25 = constant #18 3
-0041  v26 = constant #19 3
-0042  v27 = call v24(v25, v26)
-0043  print v27
-0044  v28 = load_var @29 before#3
-0045  v29 = constant #20 3
-0046  v30 = constant #21 4
-0047  v31 = call v28(v29, v30)
-0048  print v31
-0049  v32 = load_var @30 applyLess#6
-0050  v33 = constant #22 4
-0051  v34 = constant #23 5
-0052  v35 = load_var @31 numericLess#16
-0053  v36 = call v32(v33, v34, v35)
-0054  print v36
+0024  v12 = constant #12 "same"
+0025  v13 = constant #13 "same"
+0026  v14 = call_direct $3 same/2(v12, v13)
+0027  print v14
+0028  v15 = constant #14 1
+0029  v16 = constant #15 2
+0030  v17 = call_direct $4 before/2(v15, v16)
+0031  print v17
+0032  v18 = constant #16 "a"
+0033  v19 = constant #17 "b"
+0034  v20 = call_direct $4 before/2(v18, v19)
+0035  print v20
+0036  v21 = load_var @25 same#0
+0037  v22 = constant #18 3
+0038  v23 = constant #19 3
+0039  v24 = call v21(v22, v23)
+0040  print v24
+0041  v25 = load_var @26 before#3
+0042  v26 = constant #20 3
+0043  v27 = constant #21 4
+0044  v28 = call v25(v26, v27)
+0045  print v28
+0046  v29 = load_var @27 applyLess#6
+0047  v30 = constant #22 4
+0048  v31 = constant #23 5
+0049  v32 = load_var @28 numericLess#16
+0050  v33 = call v29(v30, v31, v32)
+0051  print v33
 
 function $0 same(left#1, right#2)
 0000  v0 = load_var @1 left#1

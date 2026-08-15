@@ -406,3 +406,31 @@ VM 兼容矩阵 7 格、verification matrix 10 cells / 5 workloads。
 
 下一阶段是 Phase 13（direct calls：`call_direct fN`，静态已知目标不再走动态
 call 分派）。
+
+## 17. Phase 13 落地记录
+
+Phase 13（计划 §17，Direct Call）完成：编译器证明无捕获自由变量的函数调用按函数表
+索引直接分派，不再经函数值间接层。
+
+- 新 opcode：`rD = call_direct fN [args...]`。IRCompiler 依据 `CallTargetRecord`
+  与 `captureMetadata` 判定：直接 callee、目标为同模块 `FunctionStmt`、未被 import、
+  且捕获集合为空时发射 `CallDirect`；否则保留 `call`。前向引用/递归用 pending patch
+  在编译完成后把占位操作数补成 IR 函数索引。
+- Rust VM：直接调用构造轻量 `FunctionValue`（空 closure、无运行时元素计费、不复制
+  名字环境），upvalue 仍按描述符解析——`global` 来源走全局 cell，local/upvalue 捕获
+  只出现在未验证工件并保持运行时检查。协作调度路径返回与 `call` 相同的
+  `CallRequest`，任务归因/量程语义不变。
+- verifier：`call_direct` 检查 FuncId 越界、元数匹配，且目标不得有 local/upvalue
+  来源的 upvalue（global 来源允许，因为它不是自由变量捕获）。
+- 修复：`irEffectSummary(CallDirect)` 补齐 `readsMemory/writesMemory/mayTrap/calls`，
+  避免 O1 死代码消除误删会 trap 的直接调用；optimizer_cli 的跳转偏移断言随
+  call_direct 的指令数变化更新为 `jump 0009`。
+- JIT：`CallDirect` 与 `Call` 一样是调用边界回退（新增 `DirectCall` 回退原因），
+  语义与解释器一致。
+
+回归：cargo test 全绿（新增 call_direct 解析/验证/执行用例）、
+bytecode artifact 124/124、module artifact/cache、malformed 107/107、
+Rust VM parity 742/742、golden 787/787、ctest 47/47、verification 1825/1825、
+VM 兼容矩阵 7 格、verification matrix 10 cells / 5 workloads。
+
+下一阶段是 Phase 12（module init 重新设计：模块产品不再按 `at=N` 指令偏移插入）。

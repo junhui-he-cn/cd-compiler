@@ -276,6 +276,8 @@ BytecodeOp lowerOp(IROp op)
         return BytecodeOp::AssignVar;
     case IROp::Call:
         return BytecodeOp::Call;
+    case IROp::CallDirect:
+        return BytecodeOp::CallDirect;
     case IROp::NativeCall:
         return BytecodeOp::CallNative;
     case IROp::Index:

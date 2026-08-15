@@ -1,6 +1,6 @@
 native_import i0 = print abi=1
 native_import i1 = hash abi=1
-main registers=17
+main registers=16
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -14,20 +14,19 @@ main registers=17
 0010  init_global g2, b4
 0011  b5 = make_function $2 localHash/1
 0012  set_global g2, b5
-0013  b6 = load_global g2
-0014  b7 = constant #6 true
-0015  b8 = call b6(b7)
-0016  b16 = call_native i0 [b8]
-0017  b9 = load_global g0
-0018  b10 = constant #7 "hello"
-0019  b11 = call b9(b10)
-0020  b16 = call_native i0 [b11]
-0021  b12 = load_global g1
-0022  b13 = constant #8 "same"
-0023  b14 = constant #9 "same"
-0024  b15 = call b12(b13, b14)
-0025  b16 = call_native i0 [b15]
-0026  return_nil
+0013  b6 = constant #6 true
+0014  b7 = call_direct $2 [b6]
+0015  b15 = call_native i0 [b7]
+0016  b8 = load_global g0
+0017  b9 = constant #7 "hello"
+0018  b10 = call b8(b9)
+0019  b15 = call_native i0 [b10]
+0020  b11 = load_global g1
+0021  b12 = constant #8 "same"
+0022  b13 = constant #9 "same"
+0023  b14 = call b11(b12, b13)
+0024  b15 = call_native i0 [b14]
+0025  return_nil
 
 function $0 hashValue/1 registers=3
 0000  block

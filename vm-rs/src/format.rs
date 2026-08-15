@@ -1384,6 +1384,7 @@ fn instruction_register_def(instruction: &Instruction) -> Option<usize> {
         | Instruction::LoadUpvalue { dest, .. }
         | Instruction::LoadGlobal { dest, .. }
         | Instruction::Call { dest, .. }
+        | Instruction::CallDirect { dest, .. }
         | Instruction::NativeCall { dest, .. }
         | Instruction::CallNative { dest, .. }
         | Instruction::Index { dest, .. }
@@ -1478,6 +1479,7 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
             reads.extend(arguments.iter().copied());
             reads
         }
+        Instruction::CallDirect { arguments, .. } => arguments.clone(),
         Instruction::NativeCall { arguments, .. } => arguments.clone(),
         Instruction::CallNative { arguments, .. } => arguments.clone(),
         Instruction::MakeStruct { elements, .. } => elements.clone(),
@@ -2300,6 +2302,42 @@ fn validate_instruction(
             register(*callee, "callee")?;
             registers(arguments, "call argument")?;
         }
+        Instruction::CallDirect {
+            dest,
+            function: target,
+            arguments,
+        } => {
+            register(*dest, "destination")?;
+            function(*target)?;
+            registers(arguments, "direct call argument")?;
+            let target_function = &program.functions[target.0 as usize];
+            if arguments.len() != target_function.arity {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "{} instruction {} call_direct f{} expects {} arguments, got {}",
+                        context,
+                        instruction_index,
+                        target.0.saturating_sub(1),
+                        target_function.arity,
+                        arguments.len()
+                    ),
+                ));
+            }
+            if target_function.upvalues.iter().any(|descriptor| {
+                !matches!(descriptor.source, UpvalueSource::Global(_))
+            }) {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "{} instruction {} call_direct f{} targets a capturing function",
+                        context,
+                        instruction_index,
+                        target.0.saturating_sub(1)
+                    ),
+                ));
+            }
+        }
         Instruction::NativeCall {
             dest,
             name: value,
@@ -3018,6 +3056,14 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                     arguments: parse_register_list(line, args)?,
                 })
             }
+            "call_direct" => {
+                let (function, args) = split_once(line, operands, " ")?;
+                Ok(Instruction::CallDirect {
+                    dest,
+                    function: FuncId((parse_function_ref(line, function)? + 1) as u32),
+                    arguments: parse_register_list(line, args)?,
+                })
+            }
             "native_call" => {
                 let (name, args) = split_once(line, operands, " ")?;
                 Ok(Instruction::NativeCall {
@@ -3450,6 +3496,16 @@ fn format_instruction(instruction: &Instruction) -> String {
             "r{} = call r{} {}",
             dest,
             callee,
+            format_register_list(arguments)
+        ),
+        Instruction::CallDirect {
+            dest,
+            function,
+            arguments,
+        } => format!(
+            "r{} = call_direct f{} {}",
+            dest,
+            function.0.saturating_sub(1),
             format_register_list(arguments)
         ),
         Instruction::NativeCall {
@@ -4454,6 +4510,65 @@ main registers=3:
 "#;
         let program = parse_program(source).expect("parse iterator opcodes");
         assert_eq!(format_program(&program), source);
+    }
+
+    #[test]
+    fn parses_and_verifies_direct_calls() {
+        let source = r#"cdbc 0.2
+
+constants:
+
+names:
+
+main registers=2:
+  r0 = call_direct f0 [r1]
+
+function f0 name="target" arity=1 registers=1:
+  param 0 = "value"
+  return r0
+"#;
+        let program = parse_program(source).expect("parse direct call");
+        assert_eq!(format_program(&program), source);
+
+        let wrong_arity = r#"cdbc 0.2
+
+constants:
+
+names:
+
+main registers=2:
+  r0 = call_direct f0 [r0, r1]
+
+function f0 name="target" arity=1 registers=1:
+  param 0 = "value"
+  return r0
+"#;
+        let error = parse_program(wrong_arity).expect_err("arity must be verified");
+        assert!(
+            error.message.contains("call_direct f0 expects 1 arguments, got 2"),
+            "{}",
+            error.message
+        );
+
+        let capturing = r#"cdbc 0.2
+
+constants:
+
+names:
+
+main registers=1:
+  r0 = call_direct f0 []
+
+function f0 name="target" arity=0 registers=0:
+  upvalue u0 = local l0
+  return_nil
+"#;
+        let error = parse_program(capturing).expect_err("capturing target must be rejected");
+        assert!(
+            error.message.contains("targets a capturing function"),
+            "{}",
+            error.message
+        );
     }
 
     #[test]
