@@ -746,7 +746,7 @@ SSADeSSAIRResult optimizeIRFunctionWithStats(
     try {
         const ControlFlowGraph cfg = buildControlFlowGraph(
             input.instructions,
-            moduleDependencies);
+            {});
         const SSAFunction lifted = liftIRToSSA(cfg, input);
         const SSAOptimizationResult optimized = optimizeSSA(
             cfg,
@@ -793,6 +793,7 @@ SSADeSSAIRResult optimizeIRFunctionWithStats(
         if (stats) {
             *stats = resultStats;
         }
+        result.moduleDependencies = moduleDependencies;
         result.verify();
         return result;
     } catch (const SSAError& error) {
@@ -1005,7 +1006,7 @@ void pruneUnreachableIRInstructions(
 {
     const ControlFlowGraph cfg = buildControlFlowGraph(
         result.function.instructions,
-        result.moduleDependencies);
+        {});
     std::size_t unreachableBlocks = 0;
     std::vector<bool> retained(result.function.instructions.size(), false);
     for (const CFGBlock& block : cfg.blocks) {
@@ -1429,6 +1430,7 @@ void SSADeSSAProgramResult::verify(const IRProgram& input) const
         lowered.id = input.functions()[index].id;
         lowered.parentId = input.functions()[index].parentId;
         lowered.parameterBindingIds = input.functions()[index].parameterBindingIds;
+        lowered.moduleInit = input.functions()[index].moduleInit;
         candidateFunctions.push_back(std::move(lowered));
     }
     candidate.rebuildWithStreams(
@@ -1453,6 +1455,7 @@ IRProgram SSADeSSAProgramResult::rebuild(const IRProgram& input) const
         lowered.id = input.functions()[index].id;
         lowered.parentId = input.functions()[index].parentId;
         lowered.parameterBindingIds = input.functions()[index].parameterBindingIds;
+        lowered.moduleInit = input.functions()[index].moduleInit;
         rebuiltFunctions.push_back(std::move(lowered));
     }
     return rebuilt.rebuildWithStreams(

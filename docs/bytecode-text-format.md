@@ -60,27 +60,31 @@ module:
   path = "lib.cd"
   canonical_path = "/workspace/lib.cd"
   entry = false
+  init = f0
   dependencies:
-    d0 target="/workspace/shared.cd" kind=import at=2 requested="./shared.cd"
+    d0 target="/workspace/shared.cd" kind=import requested="./shared.cd"
 ```
 
 `identity` is the graph canonical path and is the product-set key. `path` is
 the source display path. Entry modules additionally carry a zero-based
-`entry_order`; non-entry modules omit it. Dependency records are ordered by
-source occurrence. `kind` is `import` or `re_export`, and `at` is the local
-`main` instruction offset before which a linker expands that dependency. The
-offset may equal the local instruction count. The module `main` and function
-sections contain only the module's own statements; import and re-export bodies
-are represented by these markers rather than recursively lowered into the
-product.
+`entry_order`; non-entry modules omit it. `init = fN` names the module's
+initializer function. Dependency records are ordered by source occurrence and
+carry no instruction offset; `kind` is `import` or `re_export`. The module's
+`main` stream is empty, and its top-level statements live inside the
+initializer function, which emits one `init_module mN` call per dependency at
+its source position.
 
 The link/load rule is deterministic: `compiler-design-vm link <directory>
 <output.cdbc>` selects entry products by `entry_order`, walks dependency
-markers in their recorded order, expands each module identity at most once,
-and preserves each marker's local insertion offset while rebasing register,
-constant, name, function, jump, and debug references into the final linked
-program. Missing identities, duplicate identities, non-contiguous entry order,
-cycles, and invalid offsets are rejected before writing the linked artifact.
+markers in their recorded order, assigns each module identity one index, and
+merges module tables while rebasing register, constant, name, function, type,
+native-import, global, module, and debug-source references. The synthesized
+linked `main` calls `init_module mN` for each entry; a module initializer calls
+its dependencies first, and the VM initializes each module once with an
+`Uninitialized`/`Initializing`/`Initialized` state machine, rejecting a
+re-entrant cycle with a runtime error. Missing identities, duplicate
+identities, non-contiguous entry order, and invalid init references are
+rejected before writing the linked artifact.
 The linker does not introduce a new artifact version. The optional module
 product cache is separate from VM artifacts: `--module-cache <directory>`
 stores a `cdbc-cache 0.2` manifest (internal schema 4) and content-addressed product files, while
@@ -99,26 +103,20 @@ import-aware graph additionally records each source's canonical module identity
 in its optional debug-source entry.
 
 Module products keep `debug_sources` and `debug_locations` local to the module
-before linking. The Rust linker appends each expanded module's source table in
-deterministic expansion order and rebases every main/function location through
-that table, so runtime diagnostics from an imported function retain the
+before linking. The Rust linker appends each module's source table in
+deterministic order and rebases every function location through that table
+without shifting instruction offsets, so runtime diagnostics from an imported function retain the
 original module path and call-stack order in the final linked program. The
 source table also carries the optional canonical module identity described
 below; the linker preserves it while rebasing only artifact-local source
 indexes.
 
-### Erased generic struct ordering
+### Struct ordering
 
-A named struct with valid `<`, `<=`, `>`, and `>=` implementations can satisfy a
-generic `Ord` bound. Generic comparison continues to use the existing four
-comparison instructions. The owning module product also stores each operator
-function under an implementation-private global binding named
-`__capability_ord_<Struct>_<less|less_equal|greater|greater_equal>`; the Rust VM
-uses that binding only when a comparison receives two values of the same
-witnessed struct type. This is not a source-visible global or capability
-dictionary, and it adds no opcode, section, or `cdbc` version. A malformed or
-missing binding is reported as a runtime error after normal artifact
-validation.
+Struct values are not order-comparable with the built-in comparison operators;
+the type checker rejects struct operands before emission, so the VM performs no
+string-named capability-witness lookup. `Ord` remains satisfiable only by
+`number` and `string`.
 
 ## Module interface sidecars
 
@@ -350,6 +348,7 @@ len_str
 iter_init
 iter_has
 iter_next
+init_module
 assert_number
 neg_num
 not
@@ -388,6 +387,20 @@ the compiler proves the target has no captured free variables; it bypasses
 upvalues through the global cells, and keeps ordinary closure calls on
 `call`. The verifier rejects out-of-range targets, arity mismatches, and
 targets with local/upvalue captures before execution.
+
+Linked programs carry an optional `modules:` table mapping `mN` to the merged
+`fK` initializer of each module:
+
+```text
+modules:
+  m0 = f3
+  m1 = f5
+```
+
+`init_module mN` guards the named module's initializer with the runtime state
+machine and is emitted both by the synthesized linked `main` and at dependency
+positions inside module initializers. The verifier rejects out-of-range module
+or initializer references; legacy `assert_array` remains read-compatible only.
 
 Map construction preserves source order and uses explicit key/value register
 pairs:

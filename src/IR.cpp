@@ -339,6 +339,8 @@ void printInstruction(std::ostream& out, const IRProgram& program, const IRInstr
         if (instruction.left) {
             out << " " << *instruction.left;
         }
+    } else if (instruction.op == IROp::InitModule) {
+        out << " m" << instruction.operand;
     } else if (instruction.op == IROp::AssertNumber) {
         if (instruction.left) {
             out << " " << *instruction.left;
@@ -592,6 +594,12 @@ IREffectSummary irEffectSummary(IROp op)
         result.readsMemory = true;
         result.mayTrap = true;
         return result;
+    case IROp::InitModule:
+        result.readsMemory = true;
+        result.writesMemory = true;
+        result.mayTrap = true;
+        result.calls = true;
+        return result;
     case IROp::AssignIndex:
     case IROp::ArraySet:
     case IROp::MapSet:
@@ -677,7 +685,10 @@ IRRegister IRProgram::makeRegister()
     return IRRegister{registerCount_++};
 }
 
-void IRProgram::beginFunction(std::string name, std::vector<std::string> parameters)
+void IRProgram::beginFunction(
+    std::string name,
+    std::vector<std::string> parameters,
+    bool moduleInit)
 {
     const std::size_t parentId = functionStack_.empty()
         ? std::numeric_limits<std::size_t>::max()
@@ -691,6 +702,7 @@ void IRProgram::beginFunction(std::string name, std::vector<std::string> paramet
         {},
         nextFunctionId_,
         parentId,
+        moduleInit,
     });
     ++nextFunctionId_;
 }
@@ -1106,6 +1118,11 @@ IRRegister IRProgram::emitIterNext(IRRegister iterator)
     return dest;
 }
 
+void IRProgram::emitInitModule(std::size_t dependencyIndex)
+{
+    emit(IRInstruction{IROp::InitModule, std::nullopt, std::nullopt, std::nullopt, {}, dependencyIndex});
+}
+
 IRRegister IRProgram::emitAssertNumber(IRRegister value, std::string message)
 {
     IRRegister dest = makeRegister();
@@ -1229,6 +1246,13 @@ std::size_t IRProgram::functionCount() const
     return functions_.size();
 }
 
+std::size_t IRProgram::activeFunctionId() const
+{
+    return hasActiveFunction(functionStack_)
+        ? functionStack_.back().id
+        : std::numeric_limits<std::size_t>::max();
+}
+
 void IRProgram::patchMainCallDirect(std::size_t instructionIndex, std::size_t functionIndex)
 {
     if (instructionIndex >= instructions_.size()
@@ -1238,17 +1262,20 @@ void IRProgram::patchMainCallDirect(std::size_t instructionIndex, std::size_t fu
     instructions_[instructionIndex].operand = functionIndex;
 }
 
-void IRProgram::patchFunctionCallDirect(
-    std::size_t functionIndex,
+void IRProgram::patchFunctionCallDirectById(
+    std::size_t functionId,
     std::size_t instructionIndex,
     std::size_t targetFunctionIndex)
 {
-    if (functionIndex >= functions_.size()
-        || instructionIndex >= functions_[functionIndex].instructions.size()
-        || functions_[functionIndex].instructions[instructionIndex].op != IROp::CallDirect) {
+    const auto found = std::find_if(
+        functions_.begin(), functions_.end(),
+        [functionId](const IRFunction& function) { return function.id == functionId; });
+    if (found == functions_.end()
+        || instructionIndex >= found->instructions.size()
+        || found->instructions[instructionIndex].op != IROp::CallDirect) {
         throw std::logic_error("function call_direct patch target is invalid");
     }
-    functions_[functionIndex].instructions[instructionIndex].operand = targetFunctionIndex;
+    found->instructions[instructionIndex].operand = targetFunctionIndex;
 }
 
 IRProgram IRProgram::rebuildWithStreams(
@@ -1282,11 +1309,6 @@ IRProgram IRProgram::rebuildWithStreams(
             "IR function " + std::to_string(index));
     }
     validateFunctionBindings(functions, bindings_);
-    for (const IRModuleDependency& dependency : moduleDependencies) {
-        if (dependency.instructionOffset > instructions.size()) {
-            throw std::logic_error("IR module dependency offset is outside the main stream");
-        }
-    }
 
     IRProgram rebuilt = *this;
     rebuilt.instructions_ = std::move(instructions);
@@ -1396,6 +1418,8 @@ std::string irOpName(IROp op)
         return "iter_has";
     case IROp::IterNext:
         return "iter_next";
+    case IROp::InitModule:
+        return "init_module";
     case IROp::AssertNumber:
         return "assert_number";
     case IROp::Print:

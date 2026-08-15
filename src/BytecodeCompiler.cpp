@@ -314,6 +314,8 @@ BytecodeOp lowerOp(IROp op)
         return BytecodeOp::IterHas;
     case IROp::IterNext:
         return BytecodeOp::IterNext;
+    case IROp::InitModule:
+        return BytecodeOp::InitModule;
     case IROp::AssertNumber:
         return BytecodeOp::AssertNumber;
     case IROp::Return:
@@ -393,8 +395,13 @@ BytecodeProgram BytecodeCompiler::compile(const IRProgram& ir)
     const auto& functions = ir.functions();
 
     std::unordered_map<BindingId, std::string, SnapshotIdHash<BindingIdTag>> bindingNames;
+    std::unordered_set<BindingId, SnapshotIdHash<BindingIdTag>> moduleBindingIds;
     for (const IRBinding& binding : ir.bindings()) {
         bindingNames.emplace(binding.bindingId, binding.resolvedName);
+        if (binding.storage == BindingStorageClass::Module
+            || binding.storage == BindingStorageClass::Exported) {
+            moduleBindingIds.insert(binding.bindingId);
+        }
     }
 
     // Imported bindings copy the exporter's resolvedName, so global slots are
@@ -435,6 +442,10 @@ BytecodeProgram BytecodeCompiler::compile(const IRProgram& ir)
         }
         for (const IRInstruction& instruction : function.instructions) {
             if (instruction.op == IROp::StoreVar && instruction.bindingId) {
+                if (moduleBindingIds.find(*instruction.bindingId)
+                    != moduleBindingIds.end()) {
+                    continue;
+                }
                 functionDeclared.insert(*instruction.bindingId);
             }
         }
@@ -525,6 +536,11 @@ BytecodeProgram BytecodeCompiler::compile(const IRProgram& ir)
             if (instruction.op != IROp::StoreVar || !instruction.bindingId) {
                 continue;
             }
+            if (moduleBindingIds.find(*instruction.bindingId)
+                    != moduleBindingIds.end()
+                && functions[index].moduleInit) {
+                continue;
+            }
             const auto found = plan.locals.find(*instruction.bindingId);
             if (found == plan.locals.end()) {
                 plan.locals.emplace(
@@ -545,6 +561,9 @@ BytecodeProgram BytecodeCompiler::compile(const IRProgram& ir)
     for (std::size_t reverse = 0; reverse < functions.size(); ++reverse) {
         const std::size_t index = functions.size() - 1 - reverse;
         FunctionPlan& plan = plans[index];
+        if (functions[index].moduleInit) {
+            continue;
+        }
         for (const IRInstruction& instruction : functions[index].instructions) {
             if ((instruction.op != IROp::LoadVar
                     && instruction.op != IROp::AssignVar)
@@ -645,15 +664,10 @@ BytecodeProgram BytecodeCompiler::compile(const IRProgram& ir)
     program.setNativeImports(std::move(nativeImports));
     auto mainInstructions = lowerInstructions(
         ir.instructions(), globalSlots, globalSlotsByName, ir.names(), types,
-        nativeImportIds, mainPrintScratch, nullptr);
-    std::unordered_map<std::uint32_t, std::uint32_t> dependencyRemap;
-    std::vector<std::size_t> forcedStarts;
-    for (const IRModuleDependency& dependency : ir.moduleDependencies()) {
-        forcedStarts.push_back(dependency.instructionOffset);
-    }
-    splitControlFlow(mainInstructions, &dependencyRemap, forcedStarts);
+        nativeImportIds, mainPrintScratch, moduleBindingIds, false, nullptr);
+    splitControlFlow(mainInstructions, nullptr, {});
     program.setInstructions(std::move(mainInstructions));
-    program.setDependencyRemap(std::move(dependencyRemap));
+    program.setDependencyRemap({});
     program.setGlobals(std::move(globals));
 
     std::vector<BytecodeFunction> loweredFunctions;
@@ -661,7 +675,7 @@ BytecodeProgram BytecodeCompiler::compile(const IRProgram& ir)
     for (std::size_t index = 0; index < functions.size(); ++index) {
         loweredFunctions.push_back(lowerFunction(
             functions[index], globalSlots, globalSlotsByName, ir.names(), types,
-            nativeImportIds, plans[index]));
+            nativeImportIds, moduleBindingIds, functions[index].moduleInit, plans[index]));
     }
     program.setFunctions(std::move(loweredFunctions));
     program.setTypes(std::move(types.types));
@@ -677,6 +691,8 @@ std::vector<BytecodeInstruction> BytecodeCompiler::lowerInstructions(
     TypeTables& types,
     const std::unordered_map<std::string, std::uint32_t>& nativeImports,
     std::uint32_t printScratch,
+    const std::unordered_set<BindingId, SnapshotIdHash<BindingIdTag>>& moduleBindings,
+    bool moduleInit,
     const FunctionPlan* plan)
 {
     std::vector<BytecodeInstruction> lowered;
@@ -684,7 +700,7 @@ std::vector<BytecodeInstruction> BytecodeCompiler::lowerInstructions(
     for (const IRInstruction& instruction : instructions) {
         lowered.push_back(lowerInstruction(
             instruction, globalSlots, globalSlotsByName, names, types,
-            nativeImports, printScratch, plan));
+            nativeImports, printScratch, moduleBindings, moduleInit, plan));
     }
     return lowered;
 }
@@ -697,6 +713,8 @@ BytecodeInstruction BytecodeCompiler::lowerInstruction(
     TypeTables& types,
     const std::unordered_map<std::string, std::uint32_t>& nativeImports,
     std::uint32_t printScratch,
+    const std::unordered_set<BindingId, SnapshotIdHash<BindingIdTag>>& moduleBindings,
+    bool moduleInit,
     const FunctionPlan* plan)
 {
     BytecodeInstruction lowered{
@@ -755,6 +773,15 @@ BytecodeInstruction BytecodeCompiler::lowerInstruction(
             target = VariableTarget{VariableKind::Global, global->second};
             return;
         }
+        if (moduleInit) {
+            const auto global = slotFor(globalSlots, *instruction.bindingId);
+            if (!global) {
+                throw BytecodeCompileError(
+                    "module binding references an unknown global slot");
+            }
+            target = VariableTarget{VariableKind::Global, *global};
+            return;
+        }
         if (plan) {
             if (const auto local = slotFor(plan->locals, *instruction.bindingId)) {
                 target = VariableTarget{VariableKind::Local, *local};
@@ -765,7 +792,8 @@ BytecodeInstruction BytecodeCompiler::lowerInstruction(
                 return;
             }
             throw BytecodeCompileError(
-                "function variable reference has no local or upvalue slot");
+                "function variable reference `" + names[instruction.operand]
+                    + "` has no local or upvalue slot");
         }
         const auto global = slotFor(globalSlots, *instruction.bindingId);
         if (!global) {
@@ -793,7 +821,9 @@ BytecodeInstruction BytecodeCompiler::lowerInstruction(
     } else if (instruction.op == IROp::StoreVar) {
         VariableTarget target{};
         requireTarget(target);
-        lowered.op = plan ? BytecodeOp::BindLocal : BytecodeOp::InitGlobal;
+        lowered.op = target.kind == VariableKind::Global
+            ? BytecodeOp::InitGlobal
+            : BytecodeOp::BindLocal;
         lowered.operand = target.slot;
     } else if (instruction.op == IROp::AssignVar) {
         VariableTarget target{};
@@ -974,6 +1004,8 @@ BytecodeFunction BytecodeCompiler::lowerFunction(
     const std::vector<std::string>& names,
     TypeTables& types,
     const std::unordered_map<std::string, std::uint32_t>& nativeImports,
+    const std::unordered_set<BindingId, SnapshotIdHash<BindingIdTag>>& moduleBindings,
+    bool moduleInit,
     const FunctionPlan& plan)
 {
     const bool hasPrint = std::any_of(
@@ -983,7 +1015,7 @@ BytecodeFunction BytecodeCompiler::lowerFunction(
         = checkedU32(function.registerCount, "print scratch register out of range");
     auto instructions = lowerInstructions(
         function.instructions, globalSlots, globalSlotsByName, names, types,
-        nativeImports, printScratch, &plan);
+        nativeImports, printScratch, moduleBindings, moduleInit, &plan);
     splitControlFlow(instructions, nullptr, {});
     BytecodeFunction lowered{
         function.name,

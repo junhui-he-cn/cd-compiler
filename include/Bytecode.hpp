@@ -58,6 +58,7 @@ enum class BytecodeOp {
     IterInit,
     IterHas,
     IterNext,
+    InitModule,
     AssertNumber,
     Return,
     Negate,
@@ -150,7 +151,6 @@ struct BytecodeModuleDependency {
     std::string moduleIdentity;
     ModuleGraphEdgeKind kind = ModuleGraphEdgeKind::Import;
     std::string requestedPath;
-    std::uint32_t instructionOffset = 0;
 };
 
 class BytecodeProgram {
@@ -203,6 +203,7 @@ struct BytecodeModuleArtifact {
     std::string canonicalPath;
     bool isEntry = false;
     std::optional<std::uint32_t> entryOrder = std::nullopt;
+    std::uint32_t initFunction = 0;
     std::vector<BytecodeModuleDependency> dependencies;
     BytecodeProgram program;
 };

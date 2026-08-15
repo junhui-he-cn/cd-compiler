@@ -325,6 +325,8 @@ void printInstruction(
         if (instruction.left) {
             out << " " << *instruction.left;
         }
+    } else if (instruction.op == BytecodeOp::InitModule) {
+        out << " m" << instruction.operand;
     } else if (instruction.op == BytecodeOp::AssertNumber) {
         if (instruction.left) {
             out << " " << *instruction.left;
@@ -587,6 +589,8 @@ std::string bytecodeOpName(BytecodeOp op)
         return "iter_has";
     case BytecodeOp::IterNext:
         return "iter_next";
+    case BytecodeOp::InitModule:
+        return "init_module";
     case BytecodeOp::AssertNumber:
         return "assert_number";
     case BytecodeOp::Return:

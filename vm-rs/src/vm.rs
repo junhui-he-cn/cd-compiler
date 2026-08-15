@@ -290,6 +290,13 @@ enum NativeId {
     Print,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ModuleState {
+    Uninitialized,
+    Initializing,
+    Initialized,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum NativeResourceProfile {
     None,
@@ -1244,6 +1251,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1273,6 +1281,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1351,6 +1360,7 @@ mod tests {
                 name: "print".to_string(),
                 abi: 1,
             }],
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1413,6 +1423,7 @@ mod tests {
                 name: "print".to_string(),
                 abi: 1,
             }],
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1503,6 +1514,7 @@ mod tests {
                 name: "print".to_string(),
                 abi: 1,
             }],
+            modules: Vec::new(),
             names: vec!["push".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -1574,6 +1586,7 @@ mod tests {
                 name: "print".to_string(),
                 abi: 1,
             }],
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![
                 Function {
@@ -1655,6 +1668,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1682,6 +1696,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1728,6 +1743,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1777,6 +1793,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1803,6 +1820,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: vec!["map".to_string(), "item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -1855,6 +1873,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: vec!["map".to_string(), "item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -1926,6 +1945,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1968,6 +1988,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -2059,6 +2080,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -2125,6 +2147,7 @@ mod tests {
                 name: "print".to_string(),
                 abi: 1,
             }],
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![
                 Function {
@@ -3270,6 +3293,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -3328,6 +3352,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -3375,6 +3400,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: vec!["push".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -3441,6 +3467,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: vec!["n".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -3544,6 +3571,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
                 name: "main".to_string(),
@@ -3945,6 +3973,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: vec!["item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -4003,6 +4032,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: vec!["item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -4109,6 +4139,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: vec!["item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -4173,6 +4204,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -4272,6 +4304,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: vec!["item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -4380,6 +4413,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -4479,6 +4513,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: vec!["acc".to_string(), "item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -4548,6 +4583,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -4682,6 +4718,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -5150,6 +5187,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: vec!["sqrt".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -5268,6 +5306,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -5301,6 +5340,7 @@ mod tests {
                 globals: Vec::new(),
                 types: Vec::new(),
                 native_imports: Vec::new(),
+                modules: Vec::new(),
                 functions: vec![Function {
                     id: FuncId(0),
                     name: "main".to_string(),
@@ -5350,6 +5390,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -5388,6 +5429,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: vec!["item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -5441,6 +5483,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -5477,6 +5520,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -5769,6 +5813,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: vec!["value".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -5968,6 +6013,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: vec!["left".to_string(), "right".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -6054,6 +6100,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -6126,6 +6173,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -6206,6 +6254,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: vec!["value".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -6907,6 +6956,7 @@ pub struct VM<'a> {
     constant_errors: BTreeMap<usize, RuntimeError>,
     legacy_native_specs: Vec<Option<&'static NativeSpec>>,
     native_specs: Vec<Option<&'static NativeSpec>>,
+    module_states: Vec<ModuleState>,
     prepared_functions: Vec<Rc<PreparedFunction>>,
     block_maps: Vec<BTreeMap<u32, usize>>,
     jit: JitState,
@@ -7696,6 +7746,7 @@ impl<'a> VM<'a> {
                 .iter()
                 .map(|import| native_spec(&import.name))
                 .collect(),
+            module_states: vec![ModuleState::Uninitialized; program.modules.len()],
             prepared_functions: program
                 .functions
                 .iter()
@@ -9618,6 +9669,10 @@ impl<'a> VM<'a> {
                 iterator.position.set(position + 1);
                 self.write_register(frame, *dest, element)
             }
+            Instruction::InitModule { module } => {
+                self.execute_module_init(*module, frame)?;
+                Ok(())
+            }
             Instruction::AssertNumber {
                 dest,
                 value,
@@ -10644,6 +10699,45 @@ impl<'a> VM<'a> {
             closure: self.heap.new_environment(),
             upvalues,
         })
+    }
+
+    fn execute_module_init(
+        &mut self,
+        module: usize,
+        frame: &mut Frame,
+    ) -> Result<(), RuntimeError> {
+        let Some(&state) = self.module_states.get(module) else {
+            return Err(RuntimeError::new("module index out of range"));
+        };
+        match state {
+            ModuleState::Initialized => Ok(()),
+            ModuleState::Initializing => Err(RuntimeError::new("cyclic module initialization")),
+            ModuleState::Uninitialized => {
+                let Some(record) = self.program.modules.get(module) else {
+                    return Err(RuntimeError::new("module index out of range"));
+                };
+                let init = record.init.0 as usize;
+                self.module_states[module] = ModuleState::Initializing;
+                let function = self.direct_call_function_value(init, frame)?;
+                let caller = frame.function.to_string();
+                let result = self.call_function(
+                    &function,
+                    CallArguments::Empty,
+                    &caller,
+                    None,
+                );
+                match result {
+                    Ok(_) => {
+                        self.module_states[module] = ModuleState::Initialized;
+                        Ok(())
+                    }
+                    Err(error) => {
+                        self.module_states[module] = ModuleState::Uninitialized;
+                        Err(error)
+                    }
+                }
+            }
+        }
     }
 
     fn jit_execution_mode(&self) -> JitExecutionMode {

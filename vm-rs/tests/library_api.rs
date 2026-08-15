@@ -20,6 +20,7 @@ fn print_program() -> Program {
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: Vec::new(),
+        modules: Vec::new(),
         names: Vec::new(),
         functions: vec![Function {
             id: FuncId(0),
@@ -49,6 +50,7 @@ fn cooperative_program() -> Program {
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: Vec::new(),
+        modules: Vec::new(),
         names: Vec::new(),
         functions: vec![Function {
             id: FuncId(0),
@@ -104,6 +106,7 @@ fn cooperative_output_program() -> Program {
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: Vec::new(),
+        modules: Vec::new(),
         names: Vec::new(),
         functions: vec![Function {
             id: FuncId(0),
@@ -177,6 +180,7 @@ fn profile_program() -> Program {
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: Vec::new(),
+        modules: Vec::new(),
         names: vec!["value".to_string(), "str".to_string()],
         functions: vec![Function {
             id: FuncId(0),
@@ -236,6 +240,7 @@ fn profile_failure_program() -> Program {
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: Vec::new(),
+        modules: Vec::new(),
         names: Vec::new(),
         functions: vec![Function {
             id: FuncId(0),
@@ -277,6 +282,7 @@ fn runtime_diagnostic_program() -> Program {
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: Vec::new(),
+        modules: Vec::new(),
         names: Vec::new(),
         functions: vec![Function {
             id: FuncId(0),
@@ -654,6 +660,7 @@ fn library_api_links_modules_and_keeps_vm_instances_independent() {
         canonical_path: "entry.cdbc".to_string(),
         is_entry: true,
         entry_order: Some(0),
+        init: 0,
         dependencies: Vec::new(),
         program: print_program(),
     };
@@ -662,7 +669,7 @@ fn library_api_links_modules_and_keeps_vm_instances_independent() {
         link_modules_with_report(vec![module]).expect("library linker should link one entry");
     assert_eq!(linked.report.entry_module_identities, vec!["entry"]);
     assert_eq!(linked.report.input_instruction_count, 2);
-    assert_eq!(linked.report.linked_instruction_count, 2);
+    assert_eq!(linked.report.linked_instruction_count, 4);
     let linked = linked.program;
 
     let first = VM::with_config(&linked, RunConfig::unlimited())
@@ -692,6 +699,7 @@ fn library_api_exposes_versions_and_typed_artifact_errors() {
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: Vec::new(),
+        modules: Vec::new(),
         functions: vec![Function {
             id: FuncId(0),
             name: "main".to_string(),
@@ -723,10 +731,10 @@ fn library_api_exposes_typed_link_errors_without_changing_display_text() {
         canonical_path: "entry.cdbc".to_string(),
         is_entry: true,
         entry_order: Some(0),
+        init: 0,
         dependencies: vec![ModuleDependency {
             identity: "missing".to_string(),
             kind: ModuleDependencyKind::Import,
-            instruction_offset: 0,
             requested_path: "./missing.cd".to_string(),
         }],
         program: print_program(),
@@ -747,10 +755,10 @@ fn library_api_exposes_typed_link_errors_without_changing_display_text() {
         canonical_path: "entry.cdbc".to_string(),
         is_entry: true,
         entry_order: Some(0),
+        init: 0,
         dependencies: vec![ModuleDependency {
             identity: "missing".to_string(),
             kind: ModuleDependencyKind::Import,
-            instruction_offset: 0,
             requested_path: "./missing.cd".to_string(),
         }],
         program: print_program(),

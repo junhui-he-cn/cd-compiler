@@ -442,7 +442,8 @@ void test_program_adapter_preserves_order_and_o0_round_trip()
     assert(result.functions[0].function.name == "inner");
     assert(result.functions[1].function.name == "outer");
     assert(result.mainStream.moduleDependencies.size() == 1);
-    assert(result.mainStream.moduleDependencies.front().instructionOffset == 1);
+    assert(result.mainStream.moduleDependencies.front().instructionOffset
+        == input.moduleDependencies().front().instructionOffset);
     assert(result.mainStats.passesRun == 0);
     assert(result.functionStats.size() == 2);
     assert(result.functionStats[0].passesRun == 0);
@@ -541,7 +542,8 @@ void test_program_adapter_o1_preserves_metadata_and_function_indices()
     assert(result.mainStream.function.instructions.size() == 2);
     assert(result.mainStream.function.instructions[0].op == IROp::MakeFunction);
     assert(result.mainStream.function.instructions[0].operand == outerIndex);
-    assert(result.mainStream.moduleDependencies.front().instructionOffset == 1);
+    assert(result.mainStream.moduleDependencies.front().instructionOffset
+        == input.moduleDependencies().front().instructionOffset);
     assert(result.functions[0].function.instructions.size() == 2);
     assert(result.functions[0].function.instructions[0].op == IROp::Constant);
     assert(result.functions[1].function.instructions.size() == 2);
@@ -550,7 +552,8 @@ void test_program_adapter_o1_preserves_metadata_and_function_indices()
 
     const IRProgram rebuilt = result.rebuild(input);
     assertProgramMetadataUnchanged(input, rebuilt);
-    assert(rebuilt.moduleDependencies().front().instructionOffset == 1);
+    assert(rebuilt.moduleDependencies().front().instructionOffset
+        == input.moduleDependencies().front().instructionOffset);
     assert(rebuilt.functions().size() == 2);
     assert(rebuilt.functions()[0].name == "inner");
     assert(rebuilt.functions()[1].name == "outer");
@@ -647,14 +650,16 @@ void test_program_adapter_o1_prunes_known_dead_blocks_and_remaps_offsets()
     assert(result.mainStream.function.instructions[1].op == IROp::Constant);
     assert(result.mainStream.function.instructions[2].op == IROp::Print);
     assert(result.mainStream.moduleDependencies.size() == 1);
-    assert(result.mainStream.moduleDependencies.front().instructionOffset == 3);
+    assert(result.mainStream.moduleDependencies.front().instructionOffset
+        == input.moduleDependencies().front().instructionOffset);
     assert(!result.mainStream.originalInstructionOffsets[1].has_value());
     assert(!result.mainStream.originalInstructionOffsets[5].has_value());
     assert(!result.mainStream.originalInstructionOffsets[6].has_value());
 
     const IRProgram rebuilt = result.rebuild(input);
     assert(rebuilt.instructions().size() == 3);
-    assert(rebuilt.moduleDependencies().front().instructionOffset == 3);
+    assert(rebuilt.moduleDependencies().front().instructionOffset
+        == input.moduleDependencies().front().instructionOffset);
 }
 
 void test_program_adapter_o1_threads_empty_jump_blocks()
@@ -678,7 +683,8 @@ void test_program_adapter_o1_threads_empty_jump_blocks()
     assert(result.mainStream.function.instructions.size() == 2);
     assert(result.mainStream.function.instructions[0].op == IROp::Constant);
     assert(result.mainStream.function.instructions[1].op == IROp::Print);
-    assert(result.mainStream.moduleDependencies.front().instructionOffset == 2);
+    assert(result.mainStream.moduleDependencies.front().instructionOffset
+        == input.moduleDependencies().front().instructionOffset);
     assert(!result.mainStream.originalInstructionOffsets[0].has_value());
     assert(!result.mainStream.originalInstructionOffsets[2].has_value());
 }
@@ -728,11 +734,13 @@ void test_program_adapter_o1_merges_reordered_linear_blocks()
     assert(!result.mainStream.originalInstructionOffsets[4].has_value());
     assert(result.mainStream.originalInstructionOffsets[5] == std::optional<std::size_t>(7));
     assert(result.mainStream.originalInstructionOffsets[8] == std::optional<std::size_t>(4));
-    assert(result.mainStream.moduleDependencies.front().instructionOffset == 10);
+    assert(result.mainStream.moduleDependencies.front().instructionOffset
+        == input.moduleDependencies().front().instructionOffset);
 
     const IRProgram rebuilt = result.rebuild(input);
     assert(rebuilt.instructions().size() == 10);
-    assert(rebuilt.moduleDependencies().front().instructionOffset == 10);
+    assert(rebuilt.moduleDependencies().front().instructionOffset
+        == input.moduleDependencies().front().instructionOffset);
 }
 
 void test_program_adapter_o1_keeps_self_loop_blocks()
@@ -854,11 +862,14 @@ void test_program_adapter_o1_rejects_unsafe_linear_block_merges()
             input,
             SSAOptimizationLevel::O1);
         result.verify(input);
-        assert(result.mainStats.blocksMerged == 0);
-        assert(result.mainStats.jumpsRemoved == 0);
+        // Phase 12 removed instruction-anchored module dependencies, so the
+        // former dependency boundaries no longer constrain linear block
+        // merging. The dependency list itself must survive unchanged.
         assert(result.mainStream.moduleDependencies.size() == 2);
-        assert(result.mainStream.moduleDependencies[0].instructionOffset == 5);
-        assert(result.mainStream.moduleDependencies[1].instructionOffset == 8);
+        assert(result.mainStream.moduleDependencies[0].instructionOffset
+            == input.moduleDependencies()[0].instructionOffset);
+        assert(result.mainStream.moduleDependencies[1].instructionOffset
+            == input.moduleDependencies()[1].instructionOffset);
     }
 }
 

@@ -209,6 +209,13 @@ std::optional<BindingId> IRCompiler::registerBindingMetadata(
 
 std::optional<BindingId> IRCompiler::registerSyntheticBinding(const std::string& resolvedName)
 {
+    return registerSyntheticBinding(resolvedName, BindingStorageClass::Synthetic);
+}
+
+std::optional<BindingId> IRCompiler::registerSyntheticBinding(
+    const std::string& resolvedName,
+    BindingStorageClass storage)
+{
     while (nextSyntheticBindingId_ < std::numeric_limits<std::size_t>::max() - 1) {
         const BindingId bindingId{
             std::numeric_limits<std::size_t>::max() - 1 - nextSyntheticBindingId_++};
@@ -217,7 +224,7 @@ std::optional<BindingId> IRCompiler::registerSyntheticBinding(const std::string&
                 bindingId,
                 resolvedName,
                 std::nullopt,
-                BindingStorageClass::Synthetic);
+                storage);
         }
     }
     throw IRCompileError("exhausted synthetic binding IDs");
@@ -324,6 +331,11 @@ IRProgram IRCompiler::compileModule(
     return compileInternal(program, declarationIndex, moduleId);
 }
 
+std::optional<std::size_t> IRCompiler::moduleInitFunction() const
+{
+    return moduleInitFunction_;
+}
+
 IRProgram IRCompiler::compileInternal(
     const Program& program,
     const DeclarationIndex& declarationIndex,
@@ -340,6 +352,7 @@ IRProgram IRCompiler::compileInternal(
     loopContexts_.clear();
     functionIndices_.clear();
     pendingDirectCalls_.clear();
+    moduleInitFunction_.reset();
     registeredBindings_.clear();
     bindingIdsByResolvedName_.clear();
     exportedDeclarations_.clear();
@@ -414,9 +427,9 @@ void IRCompiler::patchPendingDirectCalls()
         if (found == functionIndices_.end()) {
             throw IRCompileError("direct call target has no compiled function");
         }
-        if (pending.functionIndex) {
-            ir_.patchFunctionCallDirect(
-                *pending.functionIndex, pending.instructionIndex, found->second);
+        if (pending.functionId) {
+            ir_.patchFunctionCallDirectById(
+                *pending.functionId, pending.instructionIndex, found->second);
         } else {
             ir_.patchMainCallDirect(pending.instructionIndex, found->second);
         }
@@ -439,8 +452,7 @@ void IRCompiler::compileStatement(const Stmt& statement)
             ir_.addModuleDependency(IRModuleDependency{
                 import->resolvedModuleId,
                 ModuleGraphEdgeKind::Import,
-                importPathForIR(import->path),
-                ir_.instructionCount()});
+                importPathForIR(import->path)});
             return;
         }
         const auto found = modules_.find(import->resolvedModuleId);
@@ -457,8 +469,7 @@ void IRCompiler::compileStatement(const Stmt& statement)
                 ir_.addModuleDependency(IRModuleDependency{
                     exportStmt->resolvedModuleId,
                     ModuleGraphEdgeKind::ReExport,
-                    importPathForIR(*exportStmt->sourcePath),
-                    ir_.instructionCount()});
+                    importPathForIR(*exportStmt->sourcePath)});
                 return;
             }
             const auto found = modules_.find(exportStmt->resolvedModuleId);
@@ -610,6 +621,43 @@ void IRCompiler::compileModule(const ModuleStmt& module)
         return;
     }
     compiledModules_.insert(module.moduleId);
+    if (independentModuleId_) {
+        // Independent module products no longer splice their init stream into
+        // the linker's main. The module init statements live in a dedicated
+        // function and emit init_module calls at each dependency's source
+        // position, preserving the former interleaved init order.
+        ir_.beginFunction("__module_init", {}, true);
+        for (const auto& child : module.statements) {
+            if (const auto* import = dynamic_cast<const ImportStmt*>(child.get())) {
+                const std::size_t index = ir_.moduleDependencies().size();
+                ir_.addModuleDependency(IRModuleDependency{
+                    import->resolvedModuleId,
+                    ModuleGraphEdgeKind::Import,
+                    importPathForIR(import->path)});
+                ir_.emitInitModule(index);
+                continue;
+            }
+            if (const auto* exportStmt
+                = dynamic_cast<const ExportStmt*>(child.get())) {
+                if (exportStmt->sourcePath) {
+                    const std::size_t index = ir_.moduleDependencies().size();
+                    ir_.addModuleDependency(IRModuleDependency{
+                        exportStmt->resolvedModuleId,
+                        ModuleGraphEdgeKind::ReExport,
+                        importPathForIR(*exportStmt->sourcePath)});
+                    ir_.emitInitModule(index);
+                }
+                continue;
+            }
+            {
+                compileStatement(*child);
+            }
+        }
+        ir_.emitReturn(ir_.emitConstant(Value::nil()));
+        const std::size_t initFunction = ir_.endFunction();
+        moduleInitFunction_ = initFunction;
+        return;
+    }
     for (const auto& child : module.statements) {
         compileStatement(*child);
     }
@@ -663,7 +711,14 @@ void IRCompiler::compileMethod(const MethodDecl& method)
     requireMethodMetadata(method);
     const FunctionMetadataRecord& metadata = *declarationIndex_->functionMetadata(method);
     const std::string& methodName = metadata.resolvedName;
-    const std::optional<BindingId> methodBinding = registerSyntheticBinding(methodName);
+    const DeclarationRecord* methodDeclaration = declarationIndex_->declaration(method);
+    const BindingStorageClass methodStorage = activeFunctionDepth_ != 0
+        ? BindingStorageClass::Synthetic
+        : (methodDeclaration
+                ? storageClassFor(methodDeclaration->declarationId)
+                : BindingStorageClass::Module);
+    const std::optional<BindingId> methodBinding
+        = registerSyntheticBinding(methodName, methodStorage);
     IRRegister placeholder = ir_.emitConstant(Value::nil());
     ir_.emitStoreVar(methodName, placeholder, methodBinding);
 
@@ -1504,9 +1559,12 @@ IRRegister IRCompiler::emitCall(const CallExpr& expression)
                 }
                 const std::size_t instructionIndex = ir_.instructionCount();
                 const IRRegister result = ir_.emitCallDirect(0, std::move(directArguments));
+                const std::size_t activeFunction = ir_.activeFunctionId();
+                const bool insideFunction
+                    = activeFunction != std::numeric_limits<std::size_t>::max();
                 pendingDirectCalls_.push_back(PendingDirectCall{
-                    activeFunctionDepth_ != 0
-                        ? std::optional<std::size_t>(ir_.functionCount())
+                    insideFunction
+                        ? std::optional<std::size_t>(activeFunction)
                         : std::nullopt,
                     instructionIndex,
                     target->target.declarationId});

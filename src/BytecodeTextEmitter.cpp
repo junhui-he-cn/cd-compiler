@@ -399,6 +399,9 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
     case BytecodeOp::ReturnNil:
         out << "return_nil";
         break;
+    case BytecodeOp::InitModule:
+        out << "init_module m" << instruction.operand;
+        break;
     }
     out << '\n';
 }
@@ -613,13 +616,13 @@ void writeBytecodeModuleText(std::ostream& out, const BytecodeModuleArtifact& ar
     if (artifact.entryOrder) {
         out << "  entry_order = " << *artifact.entryOrder << '\n';
     }
+    out << "  init = f" << artifact.initFunction << '\n';
     out << "  dependencies:\n";
     for (std::size_t index = 0; index < artifact.dependencies.size(); ++index) {
         const BytecodeModuleDependency& dependency = artifact.dependencies[index];
         out << "    d" << index
             << " target=" << escapedString(dependency.moduleIdentity)
             << " kind=" << moduleDependencyKindName(dependency.kind)
-            << " at=" << dependency.instructionOffset
             << " requested=" << escapedString(dependency.requestedPath)
             << '\n';
     }

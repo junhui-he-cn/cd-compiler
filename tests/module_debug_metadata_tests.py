@@ -153,7 +153,7 @@ def main() -> int:
             "entry.cd:2:",
             "Call stack:",
             "at fail (",
-            "at main (",
+            "at __module_init (",
         )
         missing = [fragment for fragment in required if fragment not in first.stderr]
         if missing:
@@ -161,7 +161,7 @@ def main() -> int:
                 "linked module runtime diagnostic lost source/frame metadata\n"
                 f"missing={missing}\nstderr={first.stderr}"
             )
-        if first.stderr.index("at fail (") > first.stderr.index("at main ("):
+        if first.stderr.index("at fail (") > first.stderr.index("at __module_init ("):
             return fail("linked module runtime call-stack order changed")
 
     print("module debug metadata tests: linked source paths and runtime frames validated")

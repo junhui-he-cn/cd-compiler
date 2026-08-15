@@ -66,9 +66,15 @@ pub struct Program {
     pub globals: Vec<usize>,
     pub types: Vec<TypeLayout>,
     pub native_imports: Vec<NativeImport>,
+    pub modules: Vec<ModuleInit>,
     pub functions: Vec<Function>,
     pub entry: FuncId,
     pub debug_sources: Vec<DebugSource>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ModuleInit {
+    pub init: FuncId,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -381,6 +387,9 @@ pub enum Instruction {
     IterNext {
         dest: usize,
         value: usize,
+    },
+    InitModule {
+        module: usize,
     },
     AssertNumber {
         dest: usize,

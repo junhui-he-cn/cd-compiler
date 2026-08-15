@@ -1,9 +1,10 @@
 use crate::bytecode::{
     BlockId, Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, GlobalId,
-    Instruction, NativeId, NativeImport, Program, TypeId, TypeLayout, UpvalueDesc, UpvalueSource,
+    Instruction, ModuleInit, NativeId, NativeImport, Program, TypeId, TypeLayout, UpvalueDesc,
+    UpvalueSource,
 };
 use crate::format::{verify_module_artifact, verify_program, ModuleArtifact};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt;
 
 /// Machine-readable class for a module-linking failure.
@@ -120,19 +121,17 @@ struct ModuleContext {
     constant_base: usize,
     name_base: usize,
     function_base: usize,
-    block_base: usize,
     type_remap: Vec<u32>,
     native_remap: Vec<u32>,
     global_remap: Vec<usize>,
-    main_register_base: usize,
+    module_remap: Vec<u32>,
+    init: FuncId,
     source_base: usize,
 }
 
 struct Linker {
     modules: HashMap<String, ModuleArtifact>,
     contexts: HashMap<String, ModuleContext>,
-    visiting: HashSet<String>,
-    expanded: HashSet<String>,
     input_module_identities: Vec<String>,
     entry_module_identities: Vec<String>,
     input_instruction_count: usize,
@@ -140,18 +139,15 @@ struct Linker {
     expansion_order: Vec<String>,
     constants: Vec<Constant>,
     names: Vec<String>,
-    main: Function,
     functions: Vec<Function>,
     debug_sources: Vec<DebugSource>,
     global_names: HashMap<String, usize>,
-    linked_block_count: usize,
     linked_types: Vec<TypeLayout>,
     type_names: HashMap<String, u32>,
     linked_native_imports: Vec<NativeImport>,
     native_names: HashMap<String, u32>,
-    pending_main: Vec<(usize, usize, Instruction, ModuleContext)>,
-    block_ids: HashMap<(usize, u32), u32>,
-    splice_redirects: HashMap<(usize, u32), u32>,
+    linked_modules: Vec<ModuleInit>,
+    module_indices: HashMap<String, u32>,
 }
 
 fn program_instruction_count(program: &Program) -> usize {
@@ -223,7 +219,6 @@ impl Linker {
             .collect();
 
         for module in by_identity.values() {
-            let mut previous_offset = 0;
             for (index, dependency) in module.dependencies.iter().enumerate() {
                 if !by_identity.contains_key(&dependency.identity) {
                     return Err(LinkError::dependency(
@@ -236,38 +231,12 @@ impl Linker {
                         ),
                     ));
                 }
-                if dependency.instruction_offset
-                    > module.program.functions[0].instructions.len()
-                {
-                    return Err(LinkError::dependency(
-                        LinkErrorKind::InvalidDependency,
-                        module.identity.clone(),
-                        index,
-                        format!(
-                            "module `{}` dependency d{} instruction offset out of range",
-                            module.identity, index
-                        ),
-                    ));
-                }
-                if index != 0 && dependency.instruction_offset < previous_offset {
-                    return Err(LinkError::module(
-                        LinkErrorKind::InvalidDependency,
-                        module.identity.clone(),
-                        format!(
-                            "module `{}` dependency offsets are not ordered",
-                            module.identity
-                        ),
-                    ));
-                }
-                previous_offset = dependency.instruction_offset;
             }
         }
 
         Ok(Self {
             modules: by_identity,
             contexts: HashMap::new(),
-            visiting: HashSet::new(),
-            expanded: HashSet::new(),
             input_module_identities,
             entry_module_identities,
             input_instruction_count,
@@ -275,28 +244,15 @@ impl Linker {
             expansion_order: Vec::new(),
             constants: Vec::new(),
             names: Vec::new(),
-            main: Function {
-                id: FuncId(0),
-                name: "main".to_string(),
-                arity: 0,
-                local_count: 0,
-                upvalues: Vec::new(),
-                params: Vec::new(),
-                registers: 0,
-                instructions: Vec::new(),
-                locations: Vec::new(),
-            },
             functions: Vec::new(),
             debug_sources: Vec::new(),
             global_names: HashMap::new(),
-            linked_block_count: 0,
             linked_types: Vec::new(),
             type_names: HashMap::new(),
             linked_native_imports: Vec::new(),
             native_names: HashMap::new(),
-            pending_main: Vec::new(),
-            block_ids: HashMap::new(),
-            splice_redirects: HashMap::new(),
+            linked_modules: Vec::new(),
+            module_indices: HashMap::new(),
         })
     }
 
@@ -337,24 +293,6 @@ impl Linker {
             };
             global_remap.push(slot);
         }
-        let block_base = self.linked_block_count;
-        let module_blocks = module.program.functions[module.program.entry.0 as usize]
-            .instructions
-            .iter()
-            .filter(|instruction| matches!(instruction, Instruction::BlockStart { .. }))
-            .count();
-        self.linked_block_count = checked_add(
-            self.linked_block_count,
-            module_blocks,
-            "linked block count",
-        )
-        .map_err(|error| {
-            LinkError::module(
-                LinkErrorKind::Overflow,
-                module.identity.clone(),
-                error.to_string(),
-            )
-        })?;
         let mut type_remap = Vec::with_capacity(module.program.types.len());
         for layout in &module.program.types {
             let linked = match self.type_names.get(&layout.name) {
@@ -381,45 +319,65 @@ impl Linker {
             };
             native_remap.push(linked);
         }
+        let mut module_remap = Vec::with_capacity(module.dependencies.len());
+        for (index, dependency) in module.dependencies.iter().enumerate() {
+            let linked = *self.module_indices.get(&dependency.identity).ok_or_else(|| {
+                LinkError::dependency(
+                    LinkErrorKind::MissingDependency,
+                    module.identity.clone(),
+                    index,
+                    format!(
+                        "module `{}` dependency d{} has no merged module index",
+                        module.identity, index
+                    ),
+                )
+            })?;
+            module_remap.push(linked);
+        }
+        let function_base = self.functions.len();
+        let init = FuncId(
+            checked_add(
+                checked_add(function_base, module.init, "linked module init index")
+                    .map_err(|error| {
+                        LinkError::module(
+                            LinkErrorKind::Overflow,
+                            module.identity.clone(),
+                            error.to_string(),
+                        )
+                    })?,
+                1,
+                "linked module init function",
+            )
+            .map_err(|error| {
+                LinkError::module(
+                    LinkErrorKind::Overflow,
+                    module.identity.clone(),
+                    error.to_string(),
+                )
+            })? as u32,
+        );
         let context = ModuleContext {
             constant_base,
             name_base,
-            function_base: self.functions.len(),
-            block_base,
+            function_base,
             type_remap,
             native_remap,
             global_remap,
-            main_register_base: self.main.registers,
+            module_remap,
+            init,
             source_base,
         };
-
-        self.main.registers = checked_add(
-            self.main.registers,
-            module.program.functions[0].registers,
-            "linked main register count",
-        )
-        .map_err(|error| {
-            LinkError::module(
-                LinkErrorKind::Overflow,
-                module.identity.clone(),
-                error.to_string(),
-            )
-        })?;
         Ok(context)
     }
 
     fn expand(&mut self, identity: &str) -> Result<(), LinkError> {
-        if self.expanded.contains(identity) {
+        if self.module_indices.contains_key(identity) {
             return Ok(());
         }
-        if !self.visiting.insert(identity.to_string()) {
-            return Err(LinkError::module(
-                LinkErrorKind::DependencyCycle,
-                identity,
-                format!("module dependency cycle at `{}`", identity),
-            ));
-        }
+        let module_index = self.linked_modules.len() as u32;
+        self.module_indices.insert(identity.to_string(), module_index);
         self.expansion_order.push(identity.to_string());
+        self.linked_modules.push(ModuleInit { init: FuncId(0) });
 
         let module = self.modules.get(identity).cloned().ok_or_else(|| {
             LinkError::new(
@@ -427,13 +385,18 @@ impl Linker {
                 format!("missing module `{}`", identity),
             )
         })?;
+        for dependency in &module.dependencies {
+            self.expand(&dependency.identity)?;
+        }
+
         let context = self.allocate_context(&module)?;
         self.contexts.insert(identity.to_string(), context.clone());
+        self.linked_modules[module_index as usize] = ModuleInit { init: context.init };
 
         let function_base = context.function_base;
-        for (position, function) in module.program.functions.iter().enumerate().skip(1) {
+        for (position, function) in module.program.functions.iter().enumerate() {
             self.functions.push(Function {
-                id: FuncId((function_base + position) as u32),
+                id: FuncId((function_base + position + 1) as u32),
                 name: function.name.clone(),
                 arity: function.arity,
                 local_count: function.local_count,
@@ -474,55 +437,6 @@ impl Linker {
                     .collect(),
             });
         }
-
-        let module_main = &module.program.functions[0];
-        let mut local_to_global = vec![0; module_main.instructions.len() + 1];
-        let mut local_offset = 0;
-        for dependency in &module.dependencies {
-            while local_offset < dependency.instruction_offset {
-                emit_pending_main(
-                    &mut self.main,
-                    &mut self.pending_main,
-                    local_offset,
-                    module_main,
-                    context.source_base,
-                    &context,
-                );
-                local_to_global[local_offset] = self.main.instructions.len() - 1;
-                local_offset += 1;
-            }
-            let dependency_start = self.main.instructions.len();
-            self.expand(&dependency.identity)?;
-            if dependency_start < self.main.instructions.len() {
-                if let Instruction::BlockStart { .. } = self.main.instructions[dependency_start] {
-                    if local_offset < module_main.instructions.len() {
-                        if let Instruction::BlockStart { id: local_id } =
-                            module_main.instructions[local_offset]
-                        {
-                    self.splice_redirects
-                        .insert((context.block_base, local_id.0), dependency_start as u32);
-                        }
-                    }
-                }
-            }
-            local_to_global[local_offset] = self.main.instructions.len();
-        }
-        while local_offset < module_main.instructions.len() {
-            emit_pending_main(
-                &mut self.main,
-                &mut self.pending_main,
-                local_offset,
-                module_main,
-                context.source_base,
-                &context,
-            );
-            local_to_global[local_offset] = self.main.instructions.len() - 1;
-            local_offset += 1;
-        }
-        local_to_global[module_main.instructions.len()] = self.main.instructions.len();
-
-        self.visiting.remove(identity);
-        self.expanded.insert(identity.to_string());
         Ok(())
     }
 
@@ -530,58 +444,56 @@ impl Linker {
         for identity in self.entry_module_identities.clone() {
             self.expand(&identity)?;
         }
-        self.pending_main
-            .sort_by_key(|(global_index, _, _, _)| *global_index);
-        let mut next_block = 0u32;
-        let mut linked_by_position = HashMap::new();
-        for (global_index, _, instruction, context) in &self.pending_main {
-            if let Instruction::BlockStart { id } = instruction {
-                linked_by_position.insert(*global_index, next_block);
-                self.block_ids.insert((context.block_base, id.0), next_block);
-                next_block = next_block.saturating_add(1);
-            }
+        let mut main = Function {
+            id: FuncId(0),
+            name: "main".to_string(),
+            arity: 0,
+            local_count: 0,
+            upvalues: Vec::new(),
+            params: Vec::new(),
+            registers: 0,
+            instructions: Vec::new(),
+            locations: Vec::new(),
+        };
+        for identity in &self.entry_module_identities {
+            let module = *self.module_indices.get(identity).ok_or_else(|| {
+                LinkError::new(
+                    LinkErrorKind::MissingDependency,
+                    format!("entry module `{}` has no merged module index", identity),
+                )
+            })?;
+            main.instructions.push(Instruction::InitModule {
+                module: module as usize,
+            });
+            let entry_location = self
+                .modules
+                .get(identity)
+                .and_then(|artifact| {
+                    artifact
+                        .program
+                        .functions
+                        .get(artifact.init)
+                        .and_then(|function| function.locations.first().cloned().flatten())
+                })
+                .and_then(|location| {
+                    self.contexts
+                        .get(identity)
+                        .map(|context| remap_location(&Some(location), context.source_base))
+                })
+                .flatten();
+            main.locations.push(entry_location);
         }
-        for (_, _, instruction, context) in &self.pending_main {
-            if let Instruction::BlockStart { id } = instruction {
-                if let Some(position) = self
-                    .splice_redirects
-                    .get(&(context.block_base, id.0))
-                    .copied()
-                {
-                    if let Some(redirected) = linked_by_position.get(&(position as usize)).copied() {
-                        self.splice_redirects
-                            .insert((context.block_base, id.0), redirected);
-                    }
-                }
-            }
-        }
-        let mut branch_ids = self.block_ids.clone();
-        for (key, redirected) in &self.splice_redirects {
-            branch_ids.insert(*key, *redirected);
-        }
-        for (global_index, _, instruction, context) in &self.pending_main {
-            self.main.instructions[*global_index] =
-                map_main_instruction(instruction, context, &self.block_ids, &branch_ids)?;
-        }
-        // Module init streams are spliced back to back. A dependency module's
-        // trailing nil return must fall through into the next module instead
-        // of terminating the linked program; only the final exit keeps
-        // ReturnNil.
-        for index in 0..self.main.instructions.len() {
-            if !matches!(self.main.instructions[index], Instruction::ReturnNil) {
-                continue;
-            }
-            let next_block = self.main.instructions[index + 1..]
-                .iter()
-                .find_map(|instruction| match instruction {
-                    Instruction::BlockStart { id } => Some(*id),
-                    _ => None,
-                });
-            let Some(next_block) = next_block else {
-                continue;
-            };
-            self.main.instructions[index] = Instruction::Br { target: next_block };
-        }
+        main.instructions.push(Instruction::ReturnNil);
+        main.locations.push(None);
+        let linked_instruction_count = main
+            .instructions
+            .len()
+            .saturating_add(
+                self.functions
+                    .iter()
+                    .map(|function| function.instructions.len())
+                    .fold(0usize, usize::saturating_add),
+            );
 
         let report = LinkReport {
             input_module_identities: self.input_module_identities.clone(),
@@ -589,19 +501,34 @@ impl Linker {
             expanded_module_order: self.expansion_order.clone(),
             input_instruction_count: self.input_instruction_count,
             input_dependency_count: self.input_dependency_count,
-            linked_instruction_count: self.main.instructions.len(),
+            linked_instruction_count,
             linked_function_count: self.functions.len(),
             linked_constant_count: self.constants.len(),
             linked_name_count: self.names.len(),
             linked_debug_source_count: self.debug_sources.len(),
         };
-        let mut functions = vec![self.main];
+        let mut functions = vec![main];
         functions.extend(self.functions);
+        let mut linked_globals = vec![0usize; self.global_names.len()];
+        for (name, slot) in &self.global_names {
+            let name_index = self
+                .names
+                .iter()
+                .position(|candidate| candidate == name)
+                .ok_or_else(|| {
+                    LinkError::new(
+                        LinkErrorKind::InvalidLinkedProgram,
+                        format!("linked global `{}` has no name index", name),
+                    )
+                })?;
+            linked_globals[*slot] = name_index;
+        }
         let program = Program {
             constants: self.constants,
-            globals: Vec::new(),
+            globals: linked_globals,
             types: self.linked_types,
             native_imports: self.linked_native_imports,
+            modules: self.linked_modules,
             names: self.names,
             functions,
             entry: FuncId(0),
@@ -650,6 +577,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -671,7 +599,6 @@ mod tests {
         ModuleDependency {
             identity: identity.to_string(),
             kind: ModuleDependencyKind::Import,
-            instruction_offset: 0,
             requested_path: format!("./{}.cd", identity),
         }
     }
@@ -688,6 +615,7 @@ mod tests {
             canonical_path: format!("{}.cd", identity),
             is_entry,
             entry_order,
+            init: 0,
             dependencies,
             program: empty_program(),
         }
@@ -701,6 +629,7 @@ mod tests {
             canonical_path: "entry.cd".to_string(),
             is_entry: true,
             entry_order: Some(0),
+            init: 0,
             dependencies: Vec::new(),
             program: empty_program(),
         };
@@ -737,21 +666,22 @@ mod tests {
         );
         assert_eq!(result.report.input_instruction_count, 0);
         assert_eq!(result.report.input_dependency_count, 4);
-        assert_eq!(result.report.linked_instruction_count, 0);
-        assert_eq!(result.report.linked_function_count, 0);
+        assert_eq!(result.report.linked_instruction_count, 2);
+        assert_eq!(result.report.linked_function_count, 4);
         assert_eq!(result.report.linked_constant_count, 0);
         assert_eq!(result.report.linked_name_count, 0);
         assert_eq!(result.report.linked_debug_source_count, 0);
     }
 
     #[test]
-    fn rejects_module_dependency_cycle_deterministically() {
+    fn links_module_dependency_cycles_without_stream_splicing() {
         let entry = ModuleArtifact {
             identity: "entry".to_string(),
             path: "entry.cd".to_string(),
             canonical_path: "entry.cd".to_string(),
             is_entry: true,
             entry_order: Some(0),
+            init: 0,
             dependencies: vec![dependency("library")],
             program: empty_program(),
         };
@@ -761,34 +691,20 @@ mod tests {
             canonical_path: "library.cd".to_string(),
             is_entry: false,
             entry_order: None,
+            init: 0,
             dependencies: vec![dependency("entry")],
             program: empty_program(),
         };
 
-        let error = link_modules(vec![entry, library]).expect_err("cycle must be rejected");
-        assert_eq!(error, "module dependency cycle at `entry`");
+        let linked = link_modules(vec![entry, library]).expect("cycle must link");
+        assert_eq!(linked.modules.len(), 2);
+        assert_eq!(linked.entry, FuncId(0));
+        assert_eq!(
+            linked.functions[0].instructions.len(),
+            2,
+            "entry main should init one module and return"
+        );
     }
-}
-
-fn emit_pending_main(
-    main: &mut Function,
-    pending: &mut Vec<(usize, usize, Instruction, ModuleContext)>,
-    local_index: usize,
-    source: &Function,
-    source_base: usize,
-    context: &ModuleContext,
-) {
-    let global_index = main.instructions.len();
-    main.instructions
-        .push(source.instructions[local_index].clone());
-    main.locations
-        .push(remap_location(&source.locations[local_index], source_base));
-    pending.push((
-        global_index,
-        local_index,
-        source.instructions[local_index].clone(),
-        context.clone(),
-    ));
 }
 
 fn map_function_instruction(
@@ -805,54 +721,6 @@ fn map_function_instruction(
     )
 }
 
-fn map_main_instruction(
-    instruction: &Instruction,
-    context: &ModuleContext,
-    block_ids: &HashMap<(usize, u32), u32>,
-    branch_ids: &HashMap<(usize, u32), u32>,
-) -> Result<Instruction, LinkError> {
-    map_instruction(instruction, context, context.main_register_base, |target| {
-        block_ids
-            .get(&(context.block_base, target as u32))
-            .map(|linked| *linked as usize)
-            .or_else(|| {
-                // 0.2 bodies carry no legacy jumps; legacy 0.1 module products
-                // are not re-linked with offset repair.
-                if matches!(instruction, Instruction::Jump { .. } | Instruction::JumpIfFalse { .. } | Instruction::JumpIfTrue { .. }) {
-                    None
-                } else {
-                    Some(target)
-                }
-            })
-            .ok_or_else(|| {
-            LinkError::new(
-                LinkErrorKind::InvalidInstruction,
-                "jump target out of range while linking",
-            )
-        })
-    }, |block| {
-        block_ids
-            .get(&(context.block_base, block))
-            .copied()
-            .ok_or_else(|| {
-                LinkError::new(
-                    LinkErrorKind::InvalidInstruction,
-                    "block target out of range while linking",
-                )
-            })
-    }, |block| {
-        branch_ids
-            .get(&(context.block_base, block))
-            .copied()
-            .ok_or_else(|| {
-                LinkError::new(
-                    LinkErrorKind::InvalidInstruction,
-                    "branch target out of range while linking",
-                )
-            })
-    })
-}
-
 fn map_instruction(
     instruction: &Instruction,
     context: &ModuleContext,
@@ -867,8 +735,12 @@ fn map_instruction(
     let name = |value: usize| checked_add(value, context.name_base, "linked name index");
     let function = |value: FuncId| {
         checked_add(
-            value.0 as usize,
-            context.function_base,
+            checked_add(
+                value.0 as usize,
+                context.function_base,
+                "linked function index",
+            )?,
+            1,
             "linked function index",
         )
         .map(|index| FuncId(index as u32))
@@ -1117,6 +989,14 @@ fn map_instruction(
                 .iter()
                 .map(|argument| register(*argument))
                 .collect::<Result<Vec<_>, _>>()?,
+        },
+        Instruction::InitModule { module } => Instruction::InitModule {
+            module: *context.module_remap.get(*module).ok_or_else(|| {
+                LinkError::new(
+                    LinkErrorKind::InvalidInstruction,
+                    format!("module m{} out of range", module),
+                )
+            })? as usize,
         },
         Instruction::NativeCall {
             dest,

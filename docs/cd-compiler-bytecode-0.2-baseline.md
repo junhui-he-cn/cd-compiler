@@ -434,3 +434,35 @@ Rust VM parity 742/742、golden 787/787、ctest 47/47、verification 1825/1825�
 VM 兼容矩阵 7 格、verification matrix 10 cells / 5 workloads。
 
 下一阶段是 Phase 12（module init 重新设计：模块产品不再按 `at=N` 指令偏移插入）。
+
+## 18. Phase 12 落地记录
+
+Phase 12（计划 §16，Module System 重构）完成：移除 dependency `at=N` 与 `main`
+指令拼接，改为模块初始化函数 + `init_module` 状态机。
+
+- 模块封套：`init = fN` 命名初始化函数；`dependencies` 不再携带 `at=`。模块产品的
+  `main` 为空，顶层语句进入 `__module_init` 函数，并在每个依赖的源位置发射
+  `init_module mN`，保持原有交错初始化顺序（如 module_import_order 的
+  `before/lib/after`）。
+- 新 opcode：`init_module mN`（无目标寄存器）。链接程序新增 `modules: mN = fK`
+  表；合成 `main` 对每个入口模块发射 `init_module`，模块初始化函数先初始化依赖。
+  VM 用 `Uninitialized/Initializing/Initialized` 状态机保证每模块只初始化一次，
+  重入环报 `cyclic module initialization`。
+- 链接器重写为表合并：常量/名字/type/native import/global 去重与重映射、函数表
+  ID 重定位（含 `make_function`/`call_direct` 的 +1 主函数偏移）、debug 源重定向；
+  不再拼接指令流、不再修复跳转/调试偏移。模块初始化函数标记 `moduleInit`，其
+  全局访问直接走 `load_global/init_global/set_global`（不用 upvalue 捕获时机），
+  普通闭包仍保留捕获时 cell 语义（closure_loop_capture 的 per-iteration 行为不变）。
+- IR：`IRModuleDependency.instructionOffset` 变为遗留字段；SSA/CFG 不再以依赖偏移
+  为锚点（`init_module` 本身有副作用），O0/O1 均原样保留依赖列表。模块级方法绑定
+  改为 Module/Exported 存储，避免落入初始化函数局部槽。
+- 兼容边界：`assert_array` 读取路径保留；链接程序 globals 表按去重名重建，缺失
+  global cell 的运行时检查不变。debug 源重定向无需整体偏移修复；O1 初始化函数尾部
+  合成指令仍可能无源码位置，debugger 测试改为校验导入函数的源码映射与输出。
+
+回归：cargo test 全绿（新增 cycle link、module init 状态机用例）、
+bytecode artifact 124/124、module artifact/cache、malformed 107/107、
+Rust VM parity 742/742、golden 787/787、ctest 47/47、verification 1825/1825、
+VM 兼容矩阵 7 格、verification matrix 10 cells / 5 workloads。
+
+下一阶段是 Phase 11（map 语义形式化）。

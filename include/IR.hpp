@@ -48,6 +48,7 @@ enum class IROp {
     IterInit,
     IterHas,
     IterNext,
+    InitModule,
     AssertNumber,
     Print,
     Return,
@@ -119,6 +120,7 @@ struct IRFunction {
     std::vector<BindingId> parameterBindingIds;
     std::size_t id = 0;
     std::size_t parentId = 0;
+    bool moduleInit = false;
 };
 
 // A dependency marker emitted while lowering one module independently.  The
@@ -128,6 +130,8 @@ struct IRModuleDependency {
     std::size_t importedModuleId = 0;
     ModuleGraphEdgeKind kind = ModuleGraphEdgeKind::Import;
     std::string requestedPath;
+    // Retained for CFG dependency-anchor compatibility. Module init lowering
+    // no longer splices dependency streams, so this offset stays zero.
     std::size_t instructionOffset = 0;
 };
 
@@ -155,7 +159,10 @@ public:
     std::size_t addConstant(Value value);
     std::size_t addName(std::string name);
     IRRegister makeRegister();
-    void beginFunction(std::string name, std::vector<std::string> parameters);
+    void beginFunction(
+        std::string name,
+        std::vector<std::string> parameters,
+        bool moduleInit = false);
     void setFunctionParameterBindingIds(std::vector<BindingId> bindingIds);
     std::size_t endFunction();
 
@@ -226,6 +233,7 @@ public:
     IRRegister emitIterInit(IRRegister collection);
     IRRegister emitIterHas(IRRegister iterator);
     IRRegister emitIterNext(IRRegister iterator);
+    void emitInitModule(std::size_t dependencyIndex);
     IRRegister emitAssertNumber(IRRegister value, std::string message);
     void emitPrint(IRRegister value);
     void emitReturn(IRRegister value);
@@ -238,9 +246,10 @@ public:
     void patchJump(std::size_t jumpInstruction);
     std::size_t instructionCount() const;
     std::size_t functionCount() const;
+    std::size_t activeFunctionId() const;
     void patchMainCallDirect(std::size_t instructionIndex, std::size_t functionIndex);
-    void patchFunctionCallDirect(
-        std::size_t functionIndex,
+    void patchFunctionCallDirectById(
+        std::size_t functionId,
         std::size_t instructionIndex,
         std::size_t targetFunctionIndex);
 

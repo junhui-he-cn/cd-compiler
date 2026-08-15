@@ -44,14 +44,17 @@ module:
   path = "lib.cd"
   canonical_path = "/workspace/lib.cd"
   entry = false
+  init = f0
   dependencies:
-    d0 target="/workspace/shared.cd" kind=import at=2 requested="./shared.cd"
+    d0 target="/workspace/shared.cd" kind=import requested="./shared.cd"
 ```
 
 - `identity` 是图的规范化路径，也是产品集合的键。
 - `path` 是源文件显示路径；入口模块额外带零基的 `entry_order`。
-- `dependencies` 按源中出现顺序排列；`kind` 为 `import` 或 `re_export`；`at` 是本地
-  `main` 指令流中在该偏移**之前**展开该依赖的位置，可以等于本地指令总数。
+- `init = fN` 指向模块初始化函数；模块 `main` 为空，顶层语句全部进入初始化函数，
+  并在每个依赖的源位置发射一条 `init_module mN`。
+- `dependencies` 按源中出现顺序排列，`kind` 为 `import` 或 `re_export`，不再携带
+  指令偏移。
 
 ## 2. 文件结构
 
@@ -361,6 +364,18 @@ rD = call_direct fN [rA0, rA1, ...]
 运行时元素预算；global 来源的 upvalue 仍经全局 cell 解析。验证期拒绝越界目标、
 元数不匹配以及带 local/upvalue 捕获的目标；递归直接调用正确。普通闭包调用继续走
 `call`。
+
+#### init_module
+
+```text
+init_module mN
+```
+
+按链接程序的 `modules:` 表索引 `mN` 调用模块初始化函数，并用
+`Uninitialized`/`Initializing`/`Initialized` 状态机保证每个模块只初始化一次：
+已初始化则 no-op，初始化中再入报 `cyclic module initialization`。模块初始化函数
+在依赖的源位置先 `init_module` 各依赖，因此依赖只初始化一次且顺序与原 `at=` 插入
+一致；链接器只做表合并、符号解析与 ID 重定位，不再拼接 `main` 指令流或修复偏移。
 
 #### call_native
 

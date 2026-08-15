@@ -269,6 +269,12 @@ void validateInstructionShape(const SSAInstruction& instruction)
             noResult() && hasLeft() && noRight() && noArguments(),
             "operand shape");
         return;
+    case IROp::InitModule:
+        requireInstructionShape(
+            instruction,
+            noResult() && noLeft() && noRight() && noArguments(),
+            "operand shape");
+        return;
     default:
         throw SSAError("SSA instruction has an unknown opcode");
     }
@@ -2098,7 +2104,7 @@ void SSADeSSAIRResult::verify() const
         throw SSAError("SSA de-SSA IR synthetic-instruction map has the wrong size");
     }
     if (originalInstructionOffsets.empty()) {
-        if (!originalInsertionOffsets.empty()) {
+        if (originalInsertionOffsets.size() != 1 || originalInsertionOffsets[0] != 0) {
             throw SSAError("SSA de-SSA IR insertion map has no instruction map");
         }
     } else if (originalInsertionOffsets.size() != originalInstructionOffsets.size() + 1) {
@@ -2118,12 +2124,6 @@ void SSADeSSAIRResult::verify() const
         && originalInsertionOffsets.back() != function.instructions.size()) {
         throw SSAError("SSA de-SSA IR end insertion offset is stale");
     }
-    for (const IRModuleDependency& dependency : moduleDependencies) {
-        if (dependency.instructionOffset > function.instructions.size()) {
-            throw SSAError("SSA de-SSA IR dependency offset is out of range");
-        }
-    }
-
     const auto verifyRegister = [this](const std::optional<IRRegister>& value) {
         if (value && value->index >= function.registerCount) {
             throw SSAError("SSA de-SSA IR register is outside registerCount");

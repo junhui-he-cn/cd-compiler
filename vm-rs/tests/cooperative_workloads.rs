@@ -55,6 +55,7 @@ fn arithmetic_workload() -> Program {
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: Vec::new(),
+        modules: Vec::new(),
         names: vec!["limit".to_string()],
         functions: vec![Function {
             id: FuncId(0),
@@ -128,6 +129,7 @@ fn callback_workload() -> Program {
         globals: Vec::new(),
         types: Vec::new(),
         native_imports: Vec::new(),
+        modules: Vec::new(),
         names: vec!["map".to_string(), "item".to_string()],
         functions: vec![Function {
             id: FuncId(0),

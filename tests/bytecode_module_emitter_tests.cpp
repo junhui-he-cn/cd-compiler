@@ -30,11 +30,11 @@ void testModuleEnvelopeAndDependencyMarker()
     artifact.canonicalPath = "/workspace/lib.cd";
     artifact.isEntry = true;
     artifact.entryOrder = 0;
+    artifact.initFunction = 0;
     artifact.dependencies.push_back(BytecodeModuleDependency{
         "/workspace/shared.cd",
         ModuleGraphEdgeKind::Import,
-        "./shared.cd",
-        2});
+        "./shared.cd"});
     artifact.program.setRegisterCount(0);
 
     std::ostringstream output;
@@ -48,8 +48,9 @@ void testModuleEnvelopeAndDependencyMarker()
         "  canonical_path = \"/workspace/lib.cd\"\n"
         "  entry = true\n"
         "  entry_order = 0\n"
+        "  init = f0\n"
         "  dependencies:\n"
-        "    d0 target=\"/workspace/shared.cd\" kind=import at=2 requested=\"./shared.cd\"\n"
+        "    d0 target=\"/workspace/shared.cd\" kind=import requested=\"./shared.cd\"\n"
         "\n"
         "constants:\n"
         "\n"

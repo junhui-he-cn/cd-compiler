@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 struct FunctionPlan {
@@ -42,6 +43,8 @@ private:
         TypeTables& types,
         const std::unordered_map<std::string, std::uint32_t>& nativeImports,
         std::uint32_t printScratch,
+        const std::unordered_set<BindingId, SnapshotIdHash<BindingIdTag>>& moduleBindings,
+        bool moduleInit,
         const FunctionPlan* plan);
     BytecodeInstruction lowerInstruction(
         const IRInstruction& instruction,
@@ -51,6 +54,8 @@ private:
         TypeTables& types,
         const std::unordered_map<std::string, std::uint32_t>& nativeImports,
         std::uint32_t printScratch,
+        const std::unordered_set<BindingId, SnapshotIdHash<BindingIdTag>>& moduleBindings,
+        bool moduleInit,
         const FunctionPlan* plan);
     BytecodeFunction lowerFunction(
         const IRFunction& function,
@@ -59,5 +64,7 @@ private:
         const std::vector<std::string>& names,
         TypeTables& types,
         const std::unordered_map<std::string, std::uint32_t>& nativeImports,
+        const std::unordered_set<BindingId, SnapshotIdHash<BindingIdTag>>& moduleBindings,
+        bool moduleInit,
         const FunctionPlan& plan);
 };

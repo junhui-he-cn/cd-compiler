@@ -1,7 +1,7 @@
 use crate::bytecode::{
     BlockId, Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, GlobalId,
-    Instruction, LocalId, NativeId, NativeImport, Program, TypeId, TypeLayout, UpvalueDesc,
-    UpvalueId, UpvalueSource, VariantId, VariantLayout,
+    Instruction, LocalId, ModuleInit, NativeId, NativeImport, Program, TypeId, TypeLayout,
+    UpvalueDesc, UpvalueId, UpvalueSource, VariantId, VariantLayout,
 };
 use crate::vm::native_arity_bounds;
 use std::collections::BTreeSet;
@@ -97,7 +97,6 @@ impl fmt::Display for ArtifactError {
 pub struct ModuleDependency {
     pub identity: String,
     pub kind: ModuleDependencyKind,
-    pub instruction_offset: usize,
     pub requested_path: String,
 }
 
@@ -114,6 +113,7 @@ pub struct ModuleArtifact {
     pub canonical_path: String,
     pub is_entry: bool,
     pub entry_order: Option<usize>,
+    pub init: usize,
     pub dependencies: Vec<ModuleDependency>,
     pub program: Program,
 }
@@ -130,6 +130,7 @@ struct ParsedModuleHeader {
     canonical_path: String,
     is_entry: bool,
     entry_order: Option<usize>,
+    init: usize,
     dependencies: Vec<ModuleDependency>,
 }
 
@@ -200,6 +201,15 @@ impl<'a> Parser<'a> {
         } else {
             None
         };
+        let (line_number, line) = self.advance().ok_or_else(|| ParseError {
+            line: self.last_line(),
+            message: "expected module init function".to_string(),
+        })?;
+        let init_text = line.strip_prefix("init = ").ok_or_else(|| ParseError {
+            line: line_number,
+            message: "expected module init function".to_string(),
+        })?;
+        let init = parse_function_ref(line_number, init_text)? + 1;
         self.require_line("dependencies:")?;
 
         let mut dependencies = Vec::new();
@@ -221,7 +231,7 @@ impl<'a> Parser<'a> {
                 line: line_number,
                 message: "expected dependency kind".to_string(),
             })?;
-            let (kind_text, rest) = split_once(line_number, rest, " at=")?;
+            let (kind_text, rest) = split_once(line_number, rest, " requested=")?;
             let kind = match kind_text {
                 "import" => ModuleDependencyKind::Import,
                 "re_export" => ModuleDependencyKind::ReExport,
@@ -232,14 +242,10 @@ impl<'a> Parser<'a> {
                     })
                 }
             };
-            let (offset_text, rest) = split_once(line_number, rest, " requested=")?;
-            let instruction_offset =
-                parse_usize(line_number, offset_text, "dependency instruction offset")?;
             let requested_path = parse_string_full(line_number, rest)?;
             dependencies.push(ModuleDependency {
                 identity,
                 kind,
-                instruction_offset,
                 requested_path,
             });
         }
@@ -250,6 +256,7 @@ impl<'a> Parser<'a> {
             canonical_path,
             is_entry,
             entry_order,
+            init,
             dependencies,
         })
     }
@@ -329,6 +336,7 @@ impl<'a> Parser<'a> {
                 || line == "globals:"
                 || line == "types:"
                 || line == "native_imports:"
+                || line == "modules:"
             {
                 break;
             }
@@ -929,6 +937,33 @@ fn parse_program_body_with_globals(parser: &mut Parser<'_>) -> Result<Program, P
             });
         }
     }
+    let mut modules = Vec::new();
+    if parser
+        .peek()
+        .map(|(_, line)| line == "modules:")
+        .unwrap_or(false)
+    {
+        parser.advance();
+        while let Some((line_number, line)) = parser.peek() {
+            if !line.starts_with("m") || !line.contains(" = ") {
+                break;
+            }
+            parser.advance();
+            let (module_ref, init_ref) = split_once(line_number, line, " = ")?;
+            let module_index =
+                parse_prefixed(line_number, module_ref, 'm', "module reference")?;
+            if module_index != modules.len() {
+                return Err(ParseError {
+                    line: line_number,
+                    message: format!("expected module m{}", modules.len()),
+                });
+            }
+            let init = parse_function_ref(line_number, init_ref)? + 1;
+            modules.push(ModuleInit {
+                init: FuncId(init as u32),
+            });
+        }
+    }
     let main = parser.parse_main()?;
     let mut functions = parser.parse_functions()?;
     functions.insert(0, main);
@@ -939,6 +974,7 @@ fn parse_program_body_with_globals(parser: &mut Parser<'_>) -> Result<Program, P
         globals,
         types,
         native_imports,
+        modules,
         functions,
         entry: FuncId(0),
         debug_sources,
@@ -977,6 +1013,7 @@ fn parse_artifact_unverified(source: &str) -> Result<(Artifact, usize), ParseErr
             canonical_path: module.canonical_path,
             is_entry: module.is_entry,
             entry_order: module.entry_order,
+            init: module.init,
             dependencies: module.dependencies,
             program,
         }),
@@ -1008,7 +1045,15 @@ fn validate_module_envelope(artifact: &ModuleArtifact, line: usize) -> Result<()
         });
     }
 
-    let mut previous_offset = 0;
+    if artifact.init >= artifact.program.functions.len() {
+        return Err(ParseError {
+            line,
+            message: format!(
+                "module init function f{} out of range",
+                artifact.init.saturating_sub(1)
+            ),
+        });
+    }
     for (index, dependency) in artifact.dependencies.iter().enumerate() {
         if dependency.identity.is_empty() || dependency.requested_path.is_empty() {
             return Err(ParseError {
@@ -1016,22 +1061,21 @@ fn validate_module_envelope(artifact: &ModuleArtifact, line: usize) -> Result<()
                 message: format!("module dependency d{} has an empty identity or path", index),
             });
         }
-        if dependency.instruction_offset > artifact.program.functions[0].instructions.len() {
-            return Err(ParseError {
-                line,
-                message: format!(
-                    "module dependency d{} instruction offset out of range",
-                    index
-                ),
-            });
+    }
+    for (function_index, function) in artifact.program.functions.iter().enumerate() {
+        for (instruction_index, instruction) in function.instructions.iter().enumerate() {
+            if let Instruction::InitModule { module } = instruction {
+                if *module >= artifact.dependencies.len() {
+                    return Err(ParseError {
+                        line,
+                        message: format!(
+                            "function {} instruction {} module m{} out of range",
+                            function_index, instruction_index, module
+                        ),
+                    });
+                }
+            }
         }
-        if index != 0 && dependency.instruction_offset < previous_offset {
-            return Err(ParseError {
-                line,
-                message: "module dependency offsets must be nondecreasing".to_string(),
-            });
-        }
-        previous_offset = dependency.instruction_offset;
     }
     Ok(())
 }
@@ -1186,6 +1230,18 @@ fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
             return Err(validation_error(
                 line,
                 format!("native import i{} duplicates native function `{}`", index, import.name),
+            ));
+        }
+    }
+    for (index, module) in program.modules.iter().enumerate() {
+        if program.functions.get(module.init.0 as usize).is_none() {
+            return Err(validation_error(
+                line,
+                format!(
+                    "module m{} init function f{} out of range",
+                    index,
+                    module.init.0.saturating_sub(1)
+                ),
             ));
         }
     }
@@ -2518,6 +2574,17 @@ fn validate_instruction(
             let _ = (if_true, if_false);
         }
         Instruction::ReturnNil => {}
+        Instruction::InitModule { module } => {
+            if !program.modules.is_empty() && *module >= program.modules.len() {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "{} instruction {} module m{} out of range",
+                        context, instruction_index, module
+                    ),
+                ));
+            }
+        }
     }
     Ok(())
 }
@@ -2598,6 +2665,7 @@ pub fn format_artifact(artifact: &Artifact) -> String {
             if let Some(entry_order) = module.entry_order {
                 out.push_str(&format!("  entry_order = {}\n", entry_order));
             }
+            out.push_str(&format!("  init = f{}\n", module.init.saturating_sub(1)));
             out.push_str("  dependencies:\n");
             for (index, dependency) in module.dependencies.iter().enumerate() {
                 let kind = match dependency.kind {
@@ -2605,11 +2673,10 @@ pub fn format_artifact(artifact: &Artifact) -> String {
                     ModuleDependencyKind::ReExport => "re_export",
                 };
                 out.push_str(&format!(
-                    "    d{} target={} kind={} at={} requested={}\n",
+                    "    d{} target={} kind={} requested={}\n",
                     index,
                     quote_string(&dependency.identity),
                     kind,
-                    dependency.instruction_offset,
                     quote_string(&dependency.requested_path)
                 ));
             }
@@ -2707,6 +2774,16 @@ fn format_program_sections(out: &mut String, program: &Program) {
                 index,
                 quote_string(&import.name),
                 import.abi
+            ));
+        }
+    }
+    if !program.modules.is_empty() {
+        out.push_str("\nmodules:\n");
+        for (index, module) in program.modules.iter().enumerate() {
+            out.push_str(&format!(
+                "  m{} = f{}\n",
+                index,
+                module.init.0.saturating_sub(1)
             ));
         }
     }
@@ -3355,6 +3432,9 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                 })
             }
             "return_nil" => Ok(Instruction::ReturnNil),
+            "init_module" => Ok(Instruction::InitModule {
+                module: parse_prefixed(line, operands, 'm', "module reference")?,
+            }),
             unknown => Err(ParseError {
                 line,
                 message: format!("unknown opcode `{}`", unknown),
@@ -3690,6 +3770,7 @@ fn format_instruction(instruction: &Instruction) -> String {
             if_false,
         } => format!("br_if r{}, b{}, b{}", condition, if_true.0, if_false.0),
         Instruction::ReturnNil => "return_nil".to_string(),
+        Instruction::InitModule { module } => format!("init_module m{}", module),
     }
 }
 
@@ -4174,6 +4255,7 @@ mod tests {
             globals: Vec::new(),
             types: Vec::new(),
             native_imports: Vec::new(),
+            modules: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
                 name: "main".to_string(),
@@ -4334,6 +4416,7 @@ module:
   path = "/tmp/lib.cd"
   canonical_path = "/tmp/lib.cd"
   entry = false
+  init = f0
   dependencies:
 
 constants:
@@ -4344,6 +4427,9 @@ names:
 main registers=1:
   r0 = constant c0
   print r0
+
+function f0 name="init" arity=0 registers=0:
+  return_nil
 "#;
         let artifact = parse_artifact(source).expect("valid module artifact");
         let Artifact::Module(module) = &artifact else {
@@ -4351,6 +4437,7 @@ main registers=1:
         };
         assert_eq!(module.identity, "/tmp/lib.cd");
         assert!(!module.is_entry);
+        assert_eq!(module.init, 1);
         assert!(module.dependencies.is_empty());
         assert_eq!(
             format_artifact(&artifact),
@@ -4370,9 +4457,10 @@ module:
   canonical_path = "entry"
   entry = true
   entry_order = 0
+  init = f0
   dependencies:
-    d0 target="lib" kind=import at=2 requested="./lib.cd"
-    d1 target="api" kind=re_export at=4 requested="./api.cd"
+    d0 target="lib" kind=import requested="./lib.cd"
+    d1 target="api" kind=re_export requested="./api.cd"
 
 constants:
 
@@ -4383,6 +4471,9 @@ main registers=0:
   print r0
   print r0
   print r0
+
+function f0 name="init" arity=0 registers=0:
+  return_nil
 "#;
         let source = source.replace("main registers=0:", "main registers=1:");
         let artifact = parse_artifact(&source).expect("valid dependency markers");
@@ -4390,15 +4481,15 @@ main registers=0:
             panic!("expected module artifact");
         };
         assert_eq!(module.entry_order, Some(0));
+        assert_eq!(module.init, 1);
         assert_eq!(module.dependencies.len(), 2);
         assert_eq!(module.dependencies[0].kind, ModuleDependencyKind::Import);
-        assert_eq!(module.dependencies[0].instruction_offset, 2);
         assert_eq!(module.dependencies[1].kind, ModuleDependencyKind::ReExport);
         assert_eq!(module.dependencies[1].requested_path, "./api.cd");
     }
 
     #[test]
-    fn rejects_module_dependency_offset_out_of_range() {
+    fn rejects_module_init_function_out_of_range() {
         let source = r#"cdbc 0.1
 
 artifact: module
@@ -4409,8 +4500,9 @@ module:
   canonical_path = "entry"
   entry = true
   entry_order = 0
+  init = f3
   dependencies:
-    d0 target="lib" kind=import at=1 requested="./lib.cd"
+    d0 target="lib" kind=import requested="./lib.cd"
 
 constants:
 
@@ -4418,8 +4510,8 @@ names:
 
 main registers=0:
 "#;
-        let error = parse_artifact(source).expect_err("offset should be rejected");
-        assert!(error.message.contains("offset out of range"));
+        let error = parse_artifact(source).expect_err("init should be rejected");
+        assert!(error.message.contains("init function f3 out of range"));
     }
 
     #[test]

@@ -26,6 +26,7 @@ public:
         const Program& program,
         std::size_t moduleId,
         const DeclarationIndex& declarationIndex);
+    std::optional<std::size_t> moduleInitFunction() const;
 
 private:
     class SpanScope {
@@ -53,6 +54,9 @@ private:
         const BindingMetadataRecord& metadata,
         std::optional<DeclarationId> declarationId);
     std::optional<BindingId> registerSyntheticBinding(const std::string& resolvedName);
+    std::optional<BindingId> registerSyntheticBinding(
+        const std::string& resolvedName,
+        BindingStorageClass storage);
     void registerFunctionParameters(
         const FunctionMetadataRecord& metadata,
         const std::vector<DeclarationId>& declarations);
@@ -153,7 +157,7 @@ private:
     };
 
     struct PendingDirectCall {
-        std::optional<std::size_t> functionIndex;
+        std::optional<std::size_t> functionId;
         std::size_t instructionIndex = 0;
         DeclarationId target;
     };
@@ -166,6 +170,7 @@ private:
     std::vector<LoopContext> loopContexts_;
     std::unordered_map<DeclarationId, std::size_t, SnapshotIdHash<DeclarationIdTag>> functionIndices_;
     std::vector<PendingDirectCall> pendingDirectCalls_;
+    std::optional<std::size_t> moduleInitFunction_;
     std::size_t nextSyntheticName_ = 0;
     std::size_t nextSyntheticBindingId_ = 0;
     std::size_t activeFunctionDepth_ = 0;
