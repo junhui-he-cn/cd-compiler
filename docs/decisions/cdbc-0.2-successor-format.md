@@ -38,8 +38,8 @@ condition that record named.
 
 - Format spec: `docs/bytecode-text-format.md`.
 - Chinese instruction reference: `docs/bytecode-instructions-zh.md`.
-- Design plan and baseline: `docs/cd-compiler-bytecode-0.2-execution-plan.md`
-  and `docs/cd-compiler-bytecode-0.2-baseline.md`.
+- Design history: the Phases 0-14 execution plan and baseline were satisfied
+  during the upgrade and retired; their content remains in Git history.
 - Version policy: `docs/versioning.md` (`VERSION` is now `0.2.0`).
 
 ## Migration and deletion rules
