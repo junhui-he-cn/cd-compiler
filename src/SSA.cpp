@@ -189,7 +189,9 @@ void validateInstructionShape(const SSAInstruction& instruction)
     case IROp::LenMap:
     case IROp::LenRange:
     case IROp::LenStr:
-    case IROp::AssertArray:
+    case IROp::IterInit:
+    case IROp::IterHas:
+    case IROp::IterNext:
     case IROp::AssertNumber:
     case IROp::Negate:
     case IROp::NegNum:

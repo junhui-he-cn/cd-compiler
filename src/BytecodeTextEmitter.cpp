@@ -283,8 +283,14 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
     case BytecodeOp::LenStr:
         out << reg(requireDest(instruction)) << " = len_str " << reg(requireLeft(instruction));
         break;
-    case BytecodeOp::AssertArray:
-        out << reg(requireDest(instruction)) << " = assert_array " << reg(requireLeft(instruction));
+    case BytecodeOp::IterInit:
+        out << reg(requireDest(instruction)) << " = iter_init " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::IterHas:
+        out << reg(requireDest(instruction)) << " = iter_has " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::IterNext:
+        out << reg(requireDest(instruction)) << " = iter_next " << reg(requireLeft(instruction));
         break;
     case BytecodeOp::AssertNumber:
         out << reg(requireDest(instruction)) << " = assert_number " << reg(requireLeft(instruction)) << ", " << nameRef(instruction.operand);

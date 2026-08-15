@@ -1,92 +1,56 @@
 native_import i0 = range abi=1
 native_import i1 = push abi=1
 native_import i2 = print abi=1
-main registers=41
+main registers=21
 0000  block
 0001  b0 = array []
 0002  init_global g0, b0
 0003  b1 = constant #0 3
 0004  b2 = call_native i0 [b1]
-0005  b3 = assert_array b2
-0006  init_global g1, b3
-0007  b4 = constant #1 0
-0008  init_global g2, b4
-0009  b5 = constant #2 nil
-0010  init_global g3, b5
-0011  b6 = load_global g1
-0012  b7 = len_range b6
-0013  init_global g4, b7
-0014  br b1
-0015  block
-0016  b8 = load_global g2
-0017  b9 = load_global g4
-0018  b10 = lt_num b8, b9
-0019  br_if b10, b2, b5
-0020  block
-0021  b11 = load_global g1
-0022  b12 = load_global g2
-0023  b13 = range_get b11, b12
-0024  set_global g3, b13
-0025  br b4
-0026  block
-0027  b14 = load_global g2
-0028  b15 = constant #3 1
-0029  b16 = add_num b14, b15
-0030  set_global g2, b16
-0031  br b1
+0005  b3 = iter_init b2
+0006  b4 = constant #1 nil
+0007  init_global g1, b4
+0008  br b1
+0009  block
+0010  b5 = iter_has b3
+0011  br_if b5, b2, b3
+0012  block
+0013  b6 = iter_next b3
+0014  set_global g1, b6
+0015  b7 = load_global g1
+0016  b8 = constant #2 10
+0017  b9 = mul_num b7, b8
+0018  init_global g2, b9
+0019  b10 = load_global g0
+0020  b11 = make_function $0 <lambda>/0
+0021  b12 = call_native i1 [b10, b11]
+0022  br b1
+0023  block
+0024  b13 = load_global g0
+0025  b14 = iter_init b13
+0026  b15 = constant #4 nil
+0027  init_global g3, b15
+0028  br b4
+0029  block
+0030  b16 = iter_has b14
+0031  br_if b16, b5, b6
 0032  block
-0033  b17 = load_global g3
-0034  b18 = constant #4 10
-0035  b19 = mul_num b17, b18
-0036  init_global g5, b19
-0037  b20 = load_global g0
-0038  b21 = make_function $0 <lambda>/0
-0039  b22 = call_native i1 [b20, b21]
-0040  br b3
-0041  block
-0042  b23 = load_global g0
-0043  b24 = assert_array b23
-0044  init_global g6, b24
-0045  b25 = constant #6 0
-0046  init_global g7, b25
-0047  b26 = constant #7 nil
-0048  init_global g8, b26
-0049  b27 = load_global g6
-0050  b28 = len_array b27
-0051  init_global g9, b28
-0052  br b6
-0053  block
-0054  b29 = load_global g7
-0055  b30 = load_global g9
-0056  b31 = lt_num b29, b30
-0057  br_if b31, b7, b10
-0058  block
-0059  b32 = load_global g6
-0060  b33 = load_global g7
-0061  b34 = array_get b32, b33
-0062  set_global g8, b34
-0063  br b9
-0064  block
-0065  b35 = load_global g7
-0066  b36 = constant #8 1
-0067  b37 = add_num b35, b36
-0068  set_global g7, b37
-0069  br b6
-0070  block
-0071  b38 = load_global g8
-0072  b39 = call b38()
-0073  b40 = call_native i2 [b39]
-0074  br b8
-0075  block
-0076  return_nil
+0033  b17 = iter_next b14
+0034  set_global g3, b17
+0035  b18 = load_global g3
+0036  b19 = call b18()
+0037  b20 = call_native i2 [b19]
+0038  br b4
+0039  block
+0040  return_nil
 
 function $0 <lambda>/0 registers=2
-upvalue u0 = global g5
+upvalue u0 = global g2
 0000  block
 0001  b0 = load_upvalue u0
 0002  return b0
 0003  block
-0004  b1 = constant #5 nil
+0004  b1 = constant #3 nil
 0005  return b1
 0006  block
 0007  return_nil

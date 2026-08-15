@@ -1401,6 +1401,9 @@ fn instruction_register_def(instruction: &Instruction) -> Option<usize> {
         | Instruction::LenRange { dest, .. }
         | Instruction::LenStr { dest, .. }
         | Instruction::AssertArray { dest, .. }
+        | Instruction::IterInit { dest, .. }
+        | Instruction::IterHas { dest, .. }
+        | Instruction::IterNext { dest, .. }
         | Instruction::AssertNumber { dest, .. }
         | Instruction::MakeStruct { dest, .. }
         | Instruction::StructGet { dest, .. }
@@ -1464,6 +1467,9 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
         | Instruction::LenRange { value, .. }
         | Instruction::LenStr { value, .. }
         | Instruction::AssertArray { value, .. }
+        | Instruction::IterInit { value, .. }
+        | Instruction::IterHas { value, .. }
+        | Instruction::IterNext { value, .. }
         | Instruction::AssertNumber { value, .. } => vec![*value],
         Instruction::Call {
             callee, arguments, ..
@@ -2405,6 +2411,9 @@ fn validate_instruction(
         | Instruction::LenRange { dest, value }
         | Instruction::LenStr { dest, value }
         | Instruction::AssertArray { dest, value }
+        | Instruction::IterInit { dest, value }
+        | Instruction::IterHas { dest, value }
+        | Instruction::IterNext { dest, value }
         | Instruction::Negate { dest, value }
         | Instruction::NegNum { dest, value }
         | Instruction::Not { dest, value } => {
@@ -3147,6 +3156,18 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                 dest,
                 value: parse_register(line, operands)?,
             }),
+            "iter_init" => Ok(Instruction::IterInit {
+                dest,
+                value: parse_register(line, operands)?,
+            }),
+            "iter_has" => Ok(Instruction::IterHas {
+                dest,
+                value: parse_register(line, operands)?,
+            }),
+            "iter_next" => Ok(Instruction::IterNext {
+                dest,
+                value: parse_register(line, operands)?,
+            }),
             "assert_number" => {
                 let (value, message) = split_once(line, operands, ", ")?;
                 Ok(Instruction::AssertNumber {
@@ -3516,6 +3537,9 @@ fn format_instruction(instruction: &Instruction) -> String {
         Instruction::LenRange { dest, value } => format!("r{} = len_range r{}", dest, value),
         Instruction::LenStr { dest, value } => format!("r{} = len_str r{}", dest, value),
         Instruction::AssertArray { dest, value } => format!("r{} = assert_array r{}", dest, value),
+        Instruction::IterInit { dest, value } => format!("r{} = iter_init r{}", dest, value),
+        Instruction::IterHas { dest, value } => format!("r{} = iter_has r{}", dest, value),
+        Instruction::IterNext { dest, value } => format!("r{} = iter_next r{}", dest, value),
         Instruction::AssertNumber {
             dest,
             value,
@@ -4412,6 +4436,23 @@ main registers=12:
   r11 = len_str r1
 "#;
         let program = parse_program(source).expect("parse typed collection opcodes");
+        assert_eq!(format_program(&program), source);
+    }
+
+    #[test]
+    fn parses_and_formats_iterator_protocol_ops() {
+        let source = r#"cdbc 0.2
+
+constants:
+
+names:
+
+main registers=3:
+  r0 = iter_init r1
+  r2 = iter_has r0
+  r2 = iter_next r0
+"#;
+        let program = parse_program(source).expect("parse iterator opcodes");
         assert_eq!(format_program(&program), source);
     }
 

@@ -365,6 +365,18 @@ pub enum Instruction {
         dest: usize,
         value: usize,
     },
+    IterInit {
+        dest: usize,
+        value: usize,
+    },
+    IterHas {
+        dest: usize,
+        value: usize,
+    },
+    IterNext {
+        dest: usize,
+        value: usize,
+    },
     AssertNumber {
         dest: usize,
         value: usize,

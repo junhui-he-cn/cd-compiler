@@ -4,72 +4,39 @@ constants:
   c0 = number 1
   c1 = number 2
   c2 = number 3
-  c3 = number 0
-  c4 = nil
-  c5 = number 1
+  c3 = nil
 
 names:
-  n0 = "__for_in_iter#0"
-  n1 = "__for_in_index#1"
+  n0 = "x#0"
+  n1 = "x#0"
   n2 = "x#0"
-  n3 = "__for_in_iter#0"
-  n4 = "__for_in_len#2"
-  n5 = "__for_in_index#1"
-  n6 = "__for_in_len#2"
-  n7 = "__for_in_iter#0"
-  n8 = "__for_in_index#1"
-  n9 = "x#0"
-  n10 = "__for_in_index#1"
-  n11 = "__for_in_index#1"
-  n12 = "x#0"
 
 globals:
   g0 = n0
-  g1 = n1
-  g2 = n2
-  g3 = n4
 
 native_imports:
   i0 = "print" abi=1
 
-main registers=20:
+main registers=10:
 block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
   r3 = array [r0, r1, r2]
-  r4 = assert_array r3
-  init_global g0, r4
+  r4 = iter_init r3
   r5 = constant c3
-  init_global g1, r5
-  r6 = constant c4
-  init_global g2, r6
-  r7 = load_global g0
-  r8 = len_array r7
-  init_global g3, r8
+  init_global g0, r5
   br b1
 block b1:
-  r9 = load_global g1
-  r10 = load_global g3
-  r11 = lt_num r9, r10
-  br_if r11, b2, b5
+  r6 = iter_has r4
+  br_if r6, b2, b3
 block b2:
-  r12 = load_global g0
-  r13 = load_global g1
-  r14 = array_get r12, r13
-  set_global g2, r14
-  br b4
-block b3:
-  r15 = load_global g1
-  r16 = constant c5
-  r17 = add_num r15, r16
-  set_global g1, r17
+  r7 = iter_next r4
+  set_global g0, r7
+  r8 = load_global g0
+  r9 = call_native i0 [r8]
   br b1
-block b4:
-  r18 = load_global g2
-  r19 = call_native i0 [r18]
-  br b3
-block b5:
+block b3:
   return_nil
 
 debug_sources:
@@ -91,29 +58,11 @@ debug_locations:
   main 12 = s0:1:1
   main 13 = s0:1:1
   main 14 = s0:1:1
-  main 15 = s0:1:1
-  main 16 = s0:1:1
+  main 15 = s0:2:9
+  main 16 = s0:2:3
   main 17 = s0:1:1
   main 18 = s0:1:1
   main 19 = s0:1:1
-  main 20 = s0:1:1
-  main 21 = s0:1:1
-  main 22 = s0:1:1
-  main 23 = s0:1:1
-  main 24 = s0:1:1
-  main 25 = s0:1:1
-  main 26 = s0:1:1
-  main 27 = s0:1:1
-  main 28 = s0:1:1
-  main 29 = s0:1:1
-  main 30 = s0:1:1
-  main 31 = s0:1:1
-  main 32 = s0:2:9
-  main 33 = s0:2:9
-  main 34 = s0:2:3
-  main 35 = s0:1:1
-  main 36 = s0:1:1
-  main 37 = s0:1:1
 
 debug_ranges:
   main 0 = s0:10:11
@@ -131,26 +80,8 @@ debug_ranges:
   main 12 = s0:0:30
   main 13 = s0:0:30
   main 14 = s0:0:30
-  main 15 = s0:0:30
-  main 16 = s0:0:30
+  main 15 = s0:29:30
+  main 16 = s0:29:30
   main 17 = s0:0:30
   main 18 = s0:0:30
   main 19 = s0:0:30
-  main 20 = s0:0:30
-  main 21 = s0:0:30
-  main 22 = s0:0:30
-  main 23 = s0:0:30
-  main 24 = s0:0:30
-  main 25 = s0:0:30
-  main 26 = s0:0:30
-  main 27 = s0:0:30
-  main 28 = s0:0:30
-  main 29 = s0:0:30
-  main 30 = s0:0:30
-  main 31 = s0:0:30
-  main 32 = s0:29:30
-  main 33 = s0:29:30
-  main 34 = s0:29:30
-  main 35 = s0:0:30
-  main 36 = s0:0:30
-  main 37 = s0:0:30

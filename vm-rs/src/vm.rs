@@ -13,7 +13,9 @@ use crate::jit::{
 use crate::format::ParseError;
 #[cfg(test)]
 use crate::runtime::HeapObjectKind;
-use crate::runtime::{Cell, FunctionValue, Heap, HeapStats, SharedEnvironment};
+use crate::runtime::{
+    Cell, FunctionValue, Heap, HeapStats, IteratorSource, IteratorValue, SharedEnvironment,
+};
 pub use crate::scheduler::{TaskId, TaskState};
 use crate::scheduler::{
     CooperativeScheduler, DispatchContext, FrameStack, JoinStatus, ResumableFrame as Frame,
@@ -1484,6 +1486,81 @@ mod tests {
         assert_eq!(
             VM::new(&program).run().expect("typed collection ops should run"),
             "2\n2\n2\n2\n1\n2\n5\n"
+        );
+    }
+
+    #[test]
+    fn iterator_protocol_snapshots_array_length_and_map_keys() {
+        let program = Program {
+            constants: vec![
+                Constant::Number("1".to_string()),
+                Constant::Number("2".to_string()),
+                Constant::Number("3".to_string()),
+            ],
+            globals: Vec::new(),
+            types: Vec::new(),
+            native_imports: vec![NativeImport {
+                name: "print".to_string(),
+                abi: 1,
+            }],
+            names: vec!["push".to_string()],
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
+                registers: 17,
+                instructions: vec![
+                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Constant { dest: 1, constant: 1 },
+                    Instruction::Constant { dest: 2, constant: 2 },
+                    Instruction::Array {
+                        dest: 3,
+                        elements: vec![0, 1],
+                    },
+                    Instruction::IterInit { dest: 4, value: 3 },
+                    Instruction::NativeCall {
+                        dest: 5,
+                        name: 0,
+                        arguments: vec![3, 2],
+                    },
+                    Instruction::IterHas { dest: 6, value: 4 },
+                    Instruction::IterNext { dest: 7, value: 4 },
+                    Instruction::IterNext { dest: 8, value: 4 },
+                    Instruction::IterHas { dest: 9, value: 4 },
+                    Instruction::LenArray { dest: 10, value: 3 },
+                    Instruction::Map {
+                        dest: 11,
+                        entries: vec![(0, 1)],
+                    },
+                    Instruction::IterInit { dest: 12, value: 11 },
+                    Instruction::MapSet {
+                        dest: 13,
+                        collection: 11,
+                        index: 2,
+                        value: 0,
+                    },
+                    Instruction::IterNext { dest: 14, value: 12 },
+                    Instruction::IterHas { dest: 15, value: 12 },
+                    Instruction::CallNative { dest: 16, native: NativeId(0), arguments: vec![7] },
+                    Instruction::CallNative { dest: 16, native: NativeId(0), arguments: vec![8] },
+                    Instruction::CallNative { dest: 16, native: NativeId(0), arguments: vec![9] },
+                    Instruction::CallNative { dest: 16, native: NativeId(0), arguments: vec![10] },
+                    Instruction::CallNative { dest: 16, native: NativeId(0), arguments: vec![14] },
+                    Instruction::CallNative { dest: 16, native: NativeId(0), arguments: vec![15] },
+                    Instruction::ReturnNil,
+                ],
+                locations: vec![None; 23],
+            }],
+            entry: FuncId(0),
+            debug_sources: Vec::new(),
+        };
+
+        assert_eq!(
+            VM::new(&program).run().expect("iterator snapshots should run"),
+            "1\n2\nfalse\n3\n1\nfalse\n"
         );
     }
 
@@ -9363,6 +9440,91 @@ impl<'a> VM<'a> {
                     _ => return Err(RuntimeError::new("for-in expects array, range, or map")),
                 };
                 self.write_register(frame, *dest, iterable)
+            }
+            Instruction::IterInit { dest, value } => {
+                let input = self.read_register_ref(frame, *value)?;
+                let iterator = match input {
+                    Value::Array(array) => IteratorValue {
+                        source: IteratorSource::Array(
+                            array.clone(),
+                            array.elements.borrow().len(),
+                        ),
+                        position: Rc::new(std::cell::Cell::new(0)),
+                    },
+                    Value::Map(map) => {
+                        let keys = map
+                            .entries
+                            .borrow()
+                            .iter()
+                            .map(|(key, _)| key.clone())
+                            .collect();
+                        let snapshot = self.allocate_array(keys)?;
+                        let Value::Array(snapshot) = snapshot else {
+                            return Err(RuntimeError::new("iter_init failed to snapshot map keys"));
+                        };
+                        IteratorValue {
+                            source: IteratorSource::MapKeys(snapshot),
+                            position: Rc::new(std::cell::Cell::new(0)),
+                        }
+                    }
+                    Value::Range(range) => IteratorValue {
+                        source: IteratorSource::Range(range.clone()),
+                        position: Rc::new(std::cell::Cell::new(0)),
+                    },
+                    _ => return Err(RuntimeError::new("for-in expects array, range, or map")),
+                };
+                self.write_register(frame, *dest, Value::iterator(iterator))
+            }
+            Instruction::IterHas { dest, value } => {
+                let input = self.read_register_ref(frame, *value)?;
+                let Value::Iterator(iterator) = input else {
+                    return Err(RuntimeError::new("iter_has expects iterator"));
+                };
+                let position = iterator.position.get();
+                let has = match &iterator.source {
+                    IteratorSource::Array(_, length) => position < *length,
+                    IteratorSource::MapKeys(array) => {
+                        position < array.elements.borrow().len()
+                    }
+                    IteratorSource::Range(range) => position < range.length,
+                };
+                self.write_register(frame, *dest, Value::boolean(has))
+            }
+            Instruction::IterNext { dest, value } => {
+                let input = self.read_register_ref(frame, *value)?;
+                let Value::Iterator(iterator) = input else {
+                    return Err(RuntimeError::new("iter_next expects iterator"));
+                };
+                let position = iterator.position.get();
+                let element = match &iterator.source {
+                    IteratorSource::Array(array, length) => {
+                        if position >= *length {
+                            return Err(RuntimeError::new("iterator exhausted"));
+                        }
+                        array
+                            .elements
+                            .borrow()
+                            .get(position)
+                            .cloned()
+                            .ok_or_else(|| RuntimeError::new("array index out of range"))?
+                    }
+                    IteratorSource::MapKeys(array) => {
+                        let elements = array.elements.borrow();
+                        if position >= elements.len() {
+                            return Err(RuntimeError::new("iterator exhausted"));
+                        }
+                        elements[position].clone()
+                    }
+                    IteratorSource::Range(range) => {
+                        if position >= range.length {
+                            return Err(RuntimeError::new("iterator exhausted"));
+                        }
+                        let value = range.start as i128 + range.step as i128 * position as i128;
+                        Value::number(value as i64 as f64)
+                    }
+                };
+                iterator.position.set(position + 1);
+                self.write_register(frame, *dest, element)
             }
             Instruction::AssertNumber {
                 dest,

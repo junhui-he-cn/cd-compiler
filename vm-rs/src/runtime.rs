@@ -50,6 +50,21 @@ pub struct RangeValue {
 }
 
 #[derive(Clone, Debug)]
+pub enum IteratorSource {
+    /// Live array plus the length snapshotted when iteration started.
+    Array(ArrayValue, usize),
+    /// Insertion-ordered key snapshot produced when iteration started.
+    MapKeys(ArrayValue),
+    Range(RangeValue),
+}
+
+#[derive(Clone, Debug)]
+pub struct IteratorValue {
+    pub source: IteratorSource,
+    pub position: Rc<ScalarCell<usize>>,
+}
+
+#[derive(Clone, Debug)]
 pub struct StructValue {
     pub identity: usize,
     pub type_id: Option<TypeId>,
@@ -367,6 +382,12 @@ fn collect_value_references(value: &Value, outgoing: &mut Vec<usize>) {
                 collect_value_references(field, outgoing);
             }
         }
+        Value::Iterator(value) => match &value.source {
+            IteratorSource::Array(array, _) | IteratorSource::MapKeys(array) => {
+                outgoing.push(Rc::as_ptr(&array.elements) as usize)
+            }
+            IteratorSource::Range(_) => {}
+        },
         Value::Nil | Value::Number(_) | Value::Bool(_) | Value::String(_) | Value::Range(_) => {}
     }
 }

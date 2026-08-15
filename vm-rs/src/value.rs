@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 
-use crate::runtime::{ArrayValue, FunctionValue, MapValue, RangeValue, StructValue, VariantValue};
+use crate::runtime::{
+    ArrayValue, FunctionValue, IteratorValue, MapValue, RangeValue, StructValue, VariantValue,
+};
 use std::collections::HashSet;
 use std::fmt;
 use std::rc::Rc;
@@ -17,6 +19,7 @@ pub enum Value {
     Range(RangeValue),
     Struct(StructValue),
     Variant(VariantValue),
+    Iterator(IteratorValue),
 }
 
 impl Value {
@@ -56,6 +59,10 @@ impl Value {
         Self::Variant(value)
     }
 
+    pub fn iterator(value: IteratorValue) -> Self {
+        Self::Iterator(value)
+    }
+
     pub fn type_name(&self) -> &str {
         match self {
             Self::Nil => "nil",
@@ -68,6 +75,7 @@ impl Value {
             Self::Range(_) => "range",
             Self::Struct(value) => value.type_name.as_deref().unwrap_or("struct"),
             Self::Variant(value) => &value.enum_name,
+            Self::Iterator(_) => "iterator",
         }
     }
 
@@ -96,7 +104,10 @@ impl Value {
                         .fields
                         .iter()
                         .zip(right.fields.iter())
-                        .all(|(left, right)| left.runtime_equals(right))
+                    .all(|(left, right)| left.runtime_equals(right))
+            }
+            (Self::Iterator(left), Self::Iterator(right)) => {
+                Rc::as_ptr(&left.position) == Rc::as_ptr(&right.position)
             }
             _ => false,
         }
@@ -155,6 +166,7 @@ fn hash_value_into(hash: &mut Fnv1a32, value: &Value) {
         Value::Range(_) => 7,
         Value::Struct(_) => 8,
         Value::Variant(_) => 9,
+        Value::Iterator(_) => 10,
     });
 
     match value {
@@ -188,6 +200,7 @@ fn hash_value_into(hash: &mut Fnv1a32, value: &Value) {
                 hash_value_into(hash, field);
             }
         }
+        Value::Iterator(value) => hash.number(Rc::as_ptr(&value.position) as usize as u64),
     }
 }
 
@@ -276,6 +289,7 @@ fn format_value(value: &Value, active_references: &mut HashSet<(u8, usize)>) -> 
             }
             output
         }
+        Value::Iterator(_) => "<iterator>".to_string(),
     }
 }
 

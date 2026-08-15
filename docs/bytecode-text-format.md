@@ -346,7 +346,9 @@ len_array
 len_map
 len_range
 len_str
-assert_array
+iter_init
+iter_has
+iter_next
 assert_number
 neg_num
 not
@@ -375,9 +377,9 @@ The legacy `cdbc 0.1` read path additionally accepts `load_var/store_var/
 assign_var`, `struct`, `variant`, `variant_tag`, `variant_field`,
 `native_call nName`, `print rV`, the dynamically typed `negate`, `add`,
 `subtract`, `multiply`, `divide`, `greater`, `greater_equal`, `less`,
-`less_equal`, the dynamically typed `index`, `assign_index`, and `len`, and
-the linear `jump`, `jump_if_false`, and `jump_if_true` instructions. These
-legacy forms are never emitted.
+`less_equal`, the dynamically typed `index`, `assign_index`, and `len`, the
+`assert_array` for-in adapter, and the linear `jump`, `jump_if_false`, and
+`jump_if_true` instructions. These legacy forms are never emitted.
 
 Map construction preserves source order and uses explicit key/value register
 pairs:
@@ -487,11 +489,29 @@ scalars, and `range_set` does not exist. The generic `index`, `assign_index`,
 and `len` remain on the legacy read path and for collection types that are
 not statically known.
 
+## Iterator protocol
+
+`for-in` lowers through an internal iterator protocol instead of the legacy
+`assert_array` adapter:
+
+```text
+rIter = iter_init rCollection
+rHas = iter_has rIter
+rValue = iter_next rIter
+```
+
+Iterators are VM-internal values and are never exposed to the source
+language. `iter_init` snapshots array length at entry while reading live
+elements during iteration, snapshots map keys into an insertion-ordered
+array, and keeps ranges immutable; `iter_has` is pure and `iter_next`
+advances one position. The compiler arranges `iter_has` + `iter_next` into
+the loop blocks, so `break`/`continue` and mutation-during-iteration behavior
+match the previous lowering exactly. The legacy `assert_array` instruction
+remains read-compatible only.
+
 The `range` native is also supported with one to three numeric arguments. Its
-result is consumed by the existing `len`, `index`, and `assert_array`
-instructions. `assert_array` accepts arrays and ranges unchanged; when given a
-map for `for-in`, it produces an array snapshot of the map's insertion-ordered
-keys before the existing length/index loop lowering runs.
+result is consumed by the existing `len_range` and `range_get` instructions
+and by the iterator protocol.
 
 New opcodes must be added by updating this document, the C++ bytecode artifact emitter, and the Rust VM parser/formatter and executor together.
 

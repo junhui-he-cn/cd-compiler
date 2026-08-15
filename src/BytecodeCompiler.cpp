@@ -306,8 +306,12 @@ BytecodeOp lowerOp(IROp op)
         return BytecodeOp::LenRange;
     case IROp::LenStr:
         return BytecodeOp::LenStr;
-    case IROp::AssertArray:
-        return BytecodeOp::AssertArray;
+    case IROp::IterInit:
+        return BytecodeOp::IterInit;
+    case IROp::IterHas:
+        return BytecodeOp::IterHas;
+    case IROp::IterNext:
+        return BytecodeOp::IterNext;
     case IROp::AssertNumber:
         return BytecodeOp::AssertNumber;
     case IROp::Return:

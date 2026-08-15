@@ -4,31 +4,15 @@ IR
 0002  v1 = constant #1 1
 0003  v2 = constant #2 2
 0004  v3 = array [v1, v2]
-0005  v4 = assert_array v3
-0006  store_var @1 __for_in_iter#0, v4
-0007  v5 = constant #3 0
-0008  store_var @2 __for_in_index#1, v5
-0009  v6 = constant #4 nil
-0010  store_var @3 x#1, v6
-0011  v7 = load_var @4 __for_in_iter#0
-0012  v8 = len_array v7
-0013  store_var @5 __for_in_len#2, v8
-0014  v9 = load_var @6 __for_in_index#1
-0015  v10 = load_var @7 __for_in_len#2
-0016  v11 = lt_num v9, v10
-0017  jump_if_false v11, 0031
-0018  v12 = load_var @8 __for_in_iter#0
-0019  v13 = load_var @9 __for_in_index#1
-0020  v14 = array_get v12, v13
-0021  assign_var @10 x#1, v14
-0022  jump 0028
-0023  v15 = load_var @11 __for_in_index#1
-0024  v16 = constant #5 1
-0025  v17 = add_num v15, v16
-0026  assign_var @12 __for_in_index#1, v17
-0027  jump 0014
-0028  v18 = load_var @13 x#1
-0029  print v18
-0030  jump 0023
-0031  v19 = load_var @14 x#0
-0032  print v19
+0005  v4 = iter_init v3
+0006  v5 = constant #3 nil
+0007  store_var @1 x#1, v5
+0008  v6 = iter_has v4
+0009  jump_if_false v6, 0015
+0010  v7 = iter_next v4
+0011  assign_var @2 x#1, v7
+0012  v8 = load_var @3 x#1
+0013  print v8
+0014  jump 0008
+0015  v9 = load_var @4 x#0
+0016  print v9

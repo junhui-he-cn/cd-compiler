@@ -1253,6 +1253,18 @@ fn map_instruction(
             dest: register(*dest)?,
             value: register(*value)?,
         },
+        Instruction::IterInit { dest, value } => Instruction::IterInit {
+            dest: register(*dest)?,
+            value: register(*value)?,
+        },
+        Instruction::IterHas { dest, value } => Instruction::IterHas {
+            dest: register(*dest)?,
+            value: register(*value)?,
+        },
+        Instruction::IterNext { dest, value } => Instruction::IterNext {
+            dest: register(*dest)?,
+            value: register(*value)?,
+        },
         Instruction::AssertNumber {
             dest,
             value,

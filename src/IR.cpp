@@ -60,7 +60,6 @@ bool isBinary(IROp op)
     case IROp::Field:
     case IROp::AssignField:
     case IROp::Len:
-    case IROp::AssertArray:
     case IROp::AssertNumber:
     case IROp::Print:
     case IROp::Return:
@@ -319,7 +318,9 @@ void printInstruction(std::ostream& out, const IRProgram& program, const IRInstr
         || instruction.op == IROp::LenMap
         || instruction.op == IROp::LenRange
         || instruction.op == IROp::LenStr
-        || instruction.op == IROp::AssertArray) {
+        || instruction.op == IROp::IterInit
+        || instruction.op == IROp::IterHas
+        || instruction.op == IROp::IterNext) {
         if (instruction.left) {
             out << " " << *instruction.left;
         }
@@ -561,8 +562,17 @@ IREffectSummary irEffectSummary(IROp op)
     case IROp::LenMap:
     case IROp::LenRange:
     case IROp::LenStr:
-    case IROp::AssertArray:
     case IROp::AssertNumber:
+        result.readsMemory = true;
+        result.mayTrap = true;
+        return result;
+    case IROp::IterInit:
+        result.readsMemory = true;
+        result.allocates = true;
+        result.mayTrap = true;
+        return result;
+    case IROp::IterHas:
+    case IROp::IterNext:
         result.readsMemory = true;
         result.mayTrap = true;
         return result;
@@ -1048,10 +1058,24 @@ IRRegister IRProgram::emitLenStr(IRRegister value)
     return dest;
 }
 
-IRRegister IRProgram::emitAssertArray(IRRegister value)
+IRRegister IRProgram::emitIterInit(IRRegister collection)
 {
     IRRegister dest = makeRegister();
-    emit(IRInstruction{IROp::AssertArray, dest, value, std::nullopt, {}, 0});
+    emit(IRInstruction{IROp::IterInit, dest, collection, std::nullopt, {}, 0});
+    return dest;
+}
+
+IRRegister IRProgram::emitIterHas(IRRegister iterator)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::IterHas, dest, iterator, std::nullopt, {}, 0});
+    return dest;
+}
+
+IRRegister IRProgram::emitIterNext(IRRegister iterator)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::IterNext, dest, iterator, std::nullopt, {}, 0});
     return dest;
 }
 
@@ -1310,8 +1334,12 @@ std::string irOpName(IROp op)
         return "len_range";
     case IROp::LenStr:
         return "len_str";
-    case IROp::AssertArray:
-        return "assert_array";
+    case IROp::IterInit:
+        return "iter_init";
+    case IROp::IterHas:
+        return "iter_has";
+    case IROp::IterNext:
+        return "iter_next";
     case IROp::AssertNumber:
         return "assert_number";
     case IROp::Print:

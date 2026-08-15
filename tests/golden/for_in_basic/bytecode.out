@@ -1,5 +1,5 @@
 native_import i0 = print abi=1
-main registers=21
+main registers=11
 0000  block
 0001  b0 = constant #0 1
 0002  b1 = constant #1 2
@@ -7,36 +7,18 @@ main registers=21
 0004  b3 = array [b0, b1, b2]
 0005  init_global g0, b3
 0006  b4 = load_global g0
-0007  b5 = assert_array b4
-0008  init_global g1, b5
-0009  b6 = constant #3 0
-0010  init_global g2, b6
-0011  b7 = constant #4 nil
-0012  init_global g3, b7
-0013  b8 = load_global g1
-0014  b9 = len_array b8
-0015  init_global g4, b9
-0016  br b1
-0017  block
-0018  b10 = load_global g2
-0019  b11 = load_global g4
-0020  b12 = lt_num b10, b11
-0021  br_if b12, b2, b5
-0022  block
-0023  b13 = load_global g1
-0024  b14 = load_global g2
-0025  b15 = array_get b13, b14
-0026  set_global g3, b15
-0027  br b4
-0028  block
-0029  b16 = load_global g2
-0030  b17 = constant #5 1
-0031  b18 = add_num b16, b17
-0032  set_global g2, b18
-0033  br b1
-0034  block
-0035  b19 = load_global g3
-0036  b20 = call_native i0 [b19]
-0037  br b3
-0038  block
-0039  return_nil
+0007  b5 = iter_init b4
+0008  b6 = constant #3 nil
+0009  init_global g1, b6
+0010  br b1
+0011  block
+0012  b7 = iter_has b5
+0013  br_if b7, b2, b3
+0014  block
+0015  b8 = iter_next b5
+0016  set_global g1, b8
+0017  b9 = load_global g1
+0018  b10 = call_native i0 [b9]
+0019  br b1
+0020  block
+0021  return_nil

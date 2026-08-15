@@ -785,12 +785,6 @@ std::string IRCompiler::makeSyntheticName(const std::string& prefix)
 
 void IRCompiler::compileForIn(const ForInStmt& statement)
 {
-    const std::string iterableName = makeSyntheticName("for_in_iter");
-    const std::string indexName = makeSyntheticName("for_in_index");
-    const std::string lengthName = makeSyntheticName("for_in_len");
-    const std::optional<BindingId> iterableBinding = registerSyntheticBinding(iterableName);
-    const std::optional<BindingId> indexBinding = registerSyntheticBinding(indexName);
-    const std::optional<BindingId> lengthBinding = registerSyntheticBinding(lengthName);
     const BindingMetadataRecord* itemBinding = declarationIndex_
         ? declarationIndex_->forInBindingMetadata(statement)
         : nullptr;
@@ -806,53 +800,24 @@ void IRCompiler::compileForIn(const ForInStmt& statement)
             : std::nullopt);
 
     const IRRegister iterableValue = compileExpression(*statement.iterable);
-    const IRRegister arrayValue = ir_.emitAssertArray(iterableValue);
-    ir_.emitStoreVar(iterableName, arrayValue, iterableBinding);
-
-    const IRRegister zero = ir_.emitConstant(Value::number(0));
-    ir_.emitStoreVar(indexName, zero, indexBinding);
+    const IRRegister iterator = ir_.emitIterInit(iterableValue);
 
     const IRRegister initialItem = ir_.emitConstant(Value::nil());
     ir_.emitStoreVar(itemName, initialItem, itemBindingId);
 
-    const IRRegister loadedArrayForLen = ir_.emitLoadVar(iterableName, iterableBinding);
-    const TypedExpressionRecord* iterableRecord = typedExpressionRecord(*statement.iterable);
-    const bool rangeIteration = iterableRecord
-        && iterableRecord->type.kind == StaticType::Range;
-    const IRRegister length = rangeIteration
-        ? ir_.emitLenRange(loadedArrayForLen)
-        : ir_.emitLenArray(loadedArrayForLen);
-    ir_.emitStoreVar(lengthName, length, lengthBinding);
-
     const std::size_t loopStart = ir_.instructionCount();
-    const IRRegister currentIndex = ir_.emitLoadVar(indexName, indexBinding);
-    const IRRegister currentLength = ir_.emitLoadVar(lengthName, lengthBinding);
-    const IRRegister condition = ir_.emitBinary(IROp::LessNum, currentIndex, currentLength);
-    const std::size_t exitJump = ir_.emitJumpIfFalse(condition);
+    const IRRegister hasNext = ir_.emitIterHas(iterator);
+    const std::size_t exitJump = ir_.emitJumpIfFalse(hasNext);
 
-    const IRRegister arrayForElement = ir_.emitLoadVar(iterableName, iterableBinding);
-    const IRRegister indexForElement = ir_.emitLoadVar(indexName, indexBinding);
-    const IRRegister item = rangeIteration
-        ? ir_.emitRangeGet(arrayForElement, indexForElement)
-        : ir_.emitArrayGet(arrayForElement, indexForElement);
+    const IRRegister item = ir_.emitIterNext(iterator);
     ir_.emitAssignVar(itemName, item, itemBindingId);
 
-    const std::size_t jumpOverIncrement = ir_.emitJump();
-    const std::size_t incrementStart = ir_.instructionCount();
-    const IRRegister indexBeforeIncrement = ir_.emitLoadVar(indexName, indexBinding);
-    const IRRegister one = ir_.emitConstant(Value::number(1));
-    const IRRegister nextIndex = ir_.emitBinary(IROp::AddNum, indexBeforeIncrement, one);
-    ir_.emitAssignVar(indexName, nextIndex, indexBinding);
-    ir_.emitJumpTo(loopStart);
-
-    ir_.patchJump(jumpOverIncrement);
-
-    loopContexts_.push_back(LoopContext{&statement, incrementStart, {}});
+    loopContexts_.push_back(LoopContext{&statement, loopStart, {}});
     compileStatement(*statement.body);
     LoopContext loop = std::move(loopContexts_.back());
     loopContexts_.pop_back();
 
-    ir_.emitJumpTo(incrementStart);
+    ir_.emitJumpTo(loopStart);
     ir_.patchJump(exitJump);
     for (const std::size_t breakJump : loop.breakJumps) {
         ir_.patchJump(breakJump);

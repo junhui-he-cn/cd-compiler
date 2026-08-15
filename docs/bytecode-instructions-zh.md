@@ -424,16 +424,25 @@ rD = assign_field rO, nN, rV
 更新结构体 `rO` 的既有字段 `nN` 为 `rV`，`rD` 得到赋入值。字段必须已存在，否则报
 ``undefined field `<名字>` ``；非结构体报 `can only assign fields on structs`。
 
-#### assert_array
+#### iter_init / iter_has / iter_next
 
 ```text
-rD = assert_array rV
+rIter = iter_init rCollection
+rHas = iter_has rIter
+rValue = iter_next rIter
 ```
 
-为 for-in 准备可迭代对象：数组/range 原样写入 `rD`；map 则按键的插入序快照成一个
-新数组写入 `rD`；其他类型报 `for-in expects array, range, or map`。该指令由编译器
-在 for-in 降级时插入，把后续 `len_array`/`len_range` + `array_get`/`range_get`
-循环统一在数组/range 表示上。
+for-in 通过 VM 内部迭代器协议降级（迭代器是 VM 内部值，不暴露为源语言值）：
+
+- `iter_init`：数组在进入时快照**长度**（迭代期间读活数组元素）、map 快照成按插入序
+  排列的键数组、range 保持不可变；非数组/map/range 报
+  `for-in expects array, range, or map`。
+- `iter_has`：纯查询，返回是否还有元素，不推进位置。
+- `iter_next`：返回当前元素并推进一位；越界报 `iterator exhausted`。
+
+编译器把 `iter_has`/`iter_next` 排进循环块，`break`/`continue` 与迭代期间的变更
+语义和旧 `assert_array` + `len` + `index` 降级完全一致。旧 `cdbc 0.1` 的
+`assert_array` 仍在兼容读取路径中保留。
 
 #### assert_number
 

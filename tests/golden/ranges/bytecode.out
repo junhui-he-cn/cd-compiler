@@ -2,104 +2,68 @@ native_import i0 = range abi=1
 native_import i1 = print abi=1
 native_import i2 = contains abi=1
 native_import i3 = typeOf abi=1
-main registers=57
+main registers=37
 0000  block
 0001  b0 = constant #0 1
 0002  b1 = constant #1 6
 0003  b2 = call_native i0 [b0, b1]
 0004  init_global g0, b2
 0005  b3 = load_global g0
-0006  b56 = call_native i1 [b3]
+0006  b36 = call_native i1 [b3]
 0007  b4 = load_global g0
 0008  b5 = len_range b4
-0009  b56 = call_native i1 [b5]
+0009  b36 = call_native i1 [b5]
 0010  b6 = load_global g0
 0011  b7 = constant #2 2
 0012  b8 = range_get b6, b7
-0013  b56 = call_native i1 [b8]
+0013  b36 = call_native i1 [b8]
 0014  b9 = load_global g0
 0015  b10 = constant #3 5
 0016  b11 = call_native i2 [b9, b10]
-0017  b56 = call_native i1 [b11]
+0017  b36 = call_native i1 [b11]
 0018  b12 = load_global g0
 0019  b13 = constant #4 4
 0020  b14 = call_native i2 [b12, b13]
-0021  b56 = call_native i1 [b14]
+0021  b36 = call_native i1 [b14]
 0022  b15 = load_global g0
 0023  b16 = len_range b15
-0024  b56 = call_native i1 [b16]
+0024  b36 = call_native i1 [b16]
 0025  b17 = load_global g0
 0026  b18 = call_native i3 [b17]
-0027  b56 = call_native i1 [b18]
+0027  b36 = call_native i1 [b18]
 0028  b19 = constant #5 5
 0029  b20 = call_native i0 [b19]
-0030  b21 = assert_array b20
-0031  init_global g1, b21
-0032  b22 = constant #6 0
-0033  init_global g2, b22
-0034  b23 = constant #7 nil
-0035  init_global g3, b23
-0036  b24 = load_global g1
-0037  b25 = len_range b24
-0038  init_global g4, b25
-0039  br b1
-0040  block
-0041  b26 = load_global g2
-0042  b27 = load_global g4
-0043  b28 = lt_num b26, b27
-0044  br_if b28, b2, b5
-0045  block
-0046  b29 = load_global g1
-0047  b30 = load_global g2
-0048  b31 = range_get b29, b30
-0049  set_global g3, b31
-0050  br b4
-0051  block
-0052  b32 = load_global g2
-0053  b33 = constant #8 1
-0054  b34 = add_num b32, b33
-0055  set_global g2, b34
-0056  br b1
-0057  block
-0058  b35 = load_global g3
-0059  b56 = call_native i1 [b35]
-0060  br b3
-0061  block
-0062  b36 = constant #9 5
-0063  b37 = constant #10 0
-0064  b38 = constant #11 2
-0065  b39 = neg_num b38
-0066  b40 = call_native i0 [b36, b37, b39]
-0067  b41 = assert_array b40
-0068  init_global g5, b41
-0069  b42 = constant #12 0
-0070  init_global g6, b42
-0071  b43 = constant #13 nil
-0072  init_global g7, b43
-0073  b44 = load_global g5
-0074  b45 = len_range b44
-0075  init_global g8, b45
-0076  br b6
-0077  block
-0078  b46 = load_global g6
-0079  b47 = load_global g8
-0080  b48 = lt_num b46, b47
-0081  br_if b48, b7, b10
-0082  block
-0083  b49 = load_global g5
-0084  b50 = load_global g6
-0085  b51 = range_get b49, b50
-0086  set_global g7, b51
-0087  br b9
-0088  block
-0089  b52 = load_global g6
-0090  b53 = constant #14 1
-0091  b54 = add_num b52, b53
-0092  set_global g6, b54
-0093  br b6
-0094  block
-0095  b55 = load_global g7
-0096  b56 = call_native i1 [b55]
-0097  br b8
-0098  block
-0099  return_nil
+0030  b21 = iter_init b20
+0031  b22 = constant #6 nil
+0032  init_global g1, b22
+0033  br b1
+0034  block
+0035  b23 = iter_has b21
+0036  br_if b23, b2, b3
+0037  block
+0038  b24 = iter_next b21
+0039  set_global g1, b24
+0040  b25 = load_global g1
+0041  b36 = call_native i1 [b25]
+0042  br b1
+0043  block
+0044  b26 = constant #7 5
+0045  b27 = constant #8 0
+0046  b28 = constant #9 2
+0047  b29 = neg_num b28
+0048  b30 = call_native i0 [b26, b27, b29]
+0049  b31 = iter_init b30
+0050  b32 = constant #10 nil
+0051  init_global g2, b32
+0052  br b4
+0053  block
+0054  b33 = iter_has b31
+0055  br_if b33, b5, b6
+0056  block
+0057  b34 = iter_next b31
+0058  set_global g2, b34
+0059  b35 = load_global g2
+0060  b36 = call_native i1 [b35]
+0061  br b4
+0062  block
+0063  return_nil

@@ -378,3 +378,31 @@ VM 兼容矩阵 7 格、verification matrix 10 cells / 5 workloads。
 
 下一阶段是 Phase 10（Iterator Protocol：用 `iter_init`/`iter_next` 替换
 `assert_array`）。
+
+## 16. Phase 10 落地记录
+
+Phase 10（计划 §14，Iterator Protocol）完成：for-in 统一走 VM 内部迭代器，
+`assert_array` 从 0.2 核心 ISA 移除。
+
+- 新 opcode：`iter_init rIter, rC`、`iter_has rHas, rIter`、`iter_next rValue, rIter`。
+- 运行时新增内部 `Value::Iterator`（不暴露为源语言值）：数组迭代器在进入时快照
+  **长度**但迭代期间读活数组元素；map 迭代器快照插入序键数组；range 迭代器保持
+  不可变。`iter_has` 纯查询，`iter_next` 推进位置；越界报 `iterator exhausted`，
+  非可迭代对象沿用 `for-in expects array, range, or map`。
+- IRCompiler 把 for-in 降为 `iter_init` + 循环块内的 `iter_has`/`iter_next`：
+  continue 回到 `iter_has`，break 指向循环出口；`item` 绑定仍以 nil 初始化并被
+  迭代体 assign，闭包捕获与旧降级一致。array length snapshot、map key snapshot、
+  range 不变性的 mutation-during-iteration 测试全部通过。
+- GC：`collect_value_references` 追踪迭代器持有的数组快照/活数组元素存储；
+  迭代器位置是未追踪的共享 cell，随值生命周期释放。
+- 兼容边界：C++ IR/Bytecode 不再发射 `assert_array`；Rust 解析/执行端保留
+  `assert_array` 作为旧工件读取路径。verifier/linker 按单操作数形状校验与重定位
+  新指令；JIT 保持迭代器操作为解释器回退。
+
+回归：cargo test 全绿（新增 iterator 解析与 snapshot 语义用例）、
+bytecode artifact 124/124、module artifact/cache、malformed 107/107、
+Rust VM parity 742/742、golden 787/787、ctest 47/47、verification 1825/1825、
+VM 兼容矩阵 7 格、verification matrix 10 cells / 5 workloads。
+
+下一阶段是 Phase 13（direct calls：`call_direct fN`，静态已知目标不再走动态
+call 分派）。
