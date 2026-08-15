@@ -25,7 +25,10 @@ globals:
 types:
   t0 = enum "Option" v0="Some" payload=1 v1="None" payload=0
 
-main registers=8:
+native_imports:
+  i0 = "print" abi=1
+
+main registers=9:
 block b0:
   r0 = constant c0
   r1 = make_variant t0, v0 [r0]
@@ -37,14 +40,14 @@ block b1:
   r4 = variant_get r2, t0, v0, 0
   init_global g1, r4
   r5 = load_global g1
-  print r5
+  r8 = call_native i0 [r5]
   return_nil
 block b2:
   r6 = is_variant r2, t0, v1
   br_if r6, b3, b4
 block b3:
   r7 = constant c1
-  print r7
+  r8 = call_native i0 [r7]
   return_nil
 block b4:
   return_nil

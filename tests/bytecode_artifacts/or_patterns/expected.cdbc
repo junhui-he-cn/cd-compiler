@@ -84,7 +84,11 @@ globals:
 types:
   t0 = enum "Shape" v0="Point" payload=1 v1="Line" payload=2 v2="Empty" payload=0
 
-main registers=38:
+native_imports:
+  i0 = "print" abi=1
+  i1 = "str" abi=1
+
+main registers=39:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -99,26 +103,26 @@ block b0:
   r5 = load_global g0
   r6 = constant c13
   r7 = call r5 [r6]
-  print r7
+  r38 = call_native i0 [r7]
   r8 = load_global g0
   r9 = constant c14
   r10 = call r8 [r9]
-  print r10
+  r38 = call_native i0 [r10]
   r11 = load_global g1
   r12 = constant c15
   r13 = make_variant t0, v0 [r12]
   r14 = call r11 [r13]
-  print r14
+  r38 = call_native i0 [r14]
   r15 = load_global g1
   r16 = constant c16
   r17 = constant c17
   r18 = make_variant t0, v1 [r16, r17]
   r19 = call r15 [r18]
-  print r19
+  r38 = call_native i0 [r19]
   r20 = load_global g1
   r21 = make_variant t0, v2 []
   r22 = call r20 [r21]
-  print r22
+  r38 = call_native i0 [r22]
   r23 = load_global g2
   r24 = constant c18
   r25 = equal r23, r24
@@ -131,7 +135,7 @@ block b2:
   br_if r27, b3, b4
 block b3:
   r28 = constant c20
-  print r28
+  r38 = call_native i0 [r28]
   br b6
 block b4:
   r29 = constant c21
@@ -139,7 +143,7 @@ block b4:
   br_if r30, b5, b6
 block b5:
   r31 = constant c22
-  print r31
+  r38 = call_native i0 [r31]
   br b6
 block b6:
   r32 = constant c23
@@ -154,7 +158,7 @@ block b8:
   br_if r36, b9, b10
 block b9:
   r37 = constant c26
-  print r37
+  r38 = call_native i0 [r37]
   return_nil
 block b10:
   return_nil
@@ -215,7 +219,7 @@ block b4:
 block b5:
   r10 = constant c8
   r11 = load_local l1
-  r12 = native_call n18 [r11]
+  r12 = call_native i1 [r11]
   r13 = add r10, r12
   return r13
 block b6:

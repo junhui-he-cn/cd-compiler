@@ -286,3 +286,36 @@ malformed 107/107、Rust VM parity 742/742、golden 787/787、ctest 47/47、
 verification 1825/1825、VM 兼容矩阵 7 格。
 
 下一阶段是 Phase 7（Native Import 表：`call_native iN` + 删除核心 `print` opcode）。
+
+## 13. Phase 7 落地记录
+
+Phase 7（计划 §11，Native Import 表）完成：native 调用按导入索引分派，`print`
+不再是核心 opcode。
+
+- `native_imports:` 区段（`iN = "名字" abi=1`）位于 `types:` 与 `main` 之间；
+  核心语法由 `native_call nN` 改为 `call_native iN`。
+- `print` 语句在 BytecodeCompiler 降为 `call_native i_print [rV]`：复用一条
+  scratch 目标寄存器（含 print 的函数/主程序额外多分配一个寄存器），print 导入
+  与其它 native 一起按首次使用顺序 intern 进导入表。
+- Rust VM：`NativeSpec` 新增 `print`（元数 1..1、返回 nil、非回调）；构造期把
+  `native_imports` 逐项解析为内部 spec 表，`CallNative` 热路径按 `NativeId` 下标
+  分派，不再做字符串查找。print 走专用执行器，保留输出字节预算、取消、协作任务
+  输出归因与 trace Output 事件，行为与旧 `Print` 指令一致。
+- 兼容边界：旧 `cdbc 0.1` 的 `native_call nN` 与 `print rV` 仍在读取路径保留并按
+  旧名字表路径执行；0.2 发射端不再产生这两个 opcode。
+- verifier：导入名必须属于注册集合、`abi=1`、不重复；`call_native iN` 越界拒绝；
+  元数在验证期按导入名检查（0.2 块体路径）。
+- 链接器：跨模块按名字去重合并 `native_imports`，并重映射 `NativeId`。
+- 契约更新：`docs/decisions/x1-compiler-vm-compatibility-001.json` 升至
+  `x1-2026-08-15-r3`，native ABI 改为 `serialized: true` / `abi: 1`，注册表加
+  `print`，`native.fixed_registry` 单元格与规则同步改写；bytecode 文本格式与中文
+  指令参考同步更新。
+- JIT：`CallNative` 与旧 `NativeCall` 一样是边界/回退，按导入名区分回调边界；
+  print 保持不可 JIT 并回退解释器。
+
+回归：cargo test 全绿（新增 native import 解析/拒绝、协作 print 归因、JIT 回退
+用例）、bytecode artifact 124/124、module artifact/cache、malformed 107/107、
+Rust VM parity 742/742、golden 787/787、ctest 47/47、verification 1825/1825、
+VM 兼容矩阵 7 格、verification matrix 10 cells / 5 workloads。
+
+下一阶段是 Phase 8（typed arithmetic/comparison opcodes）。

@@ -28,56 +28,59 @@ constants:
 
 names:
 
-main registers=36:
+native_imports:
+  i0 = "print" abi=1
+
+main registers=37:
 block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = less r0, r1
-  print r2
+  r36 = call_native i0 [r2]
   r3 = constant c2
   r4 = constant c3
   r5 = less_equal r3, r4
-  print r5
+  r36 = call_native i0 [r5]
   r6 = constant c4
   r7 = constant c5
   r8 = greater r6, r7
-  print r8
+  r36 = call_native i0 [r8]
   r9 = constant c6
   r10 = constant c7
   r11 = greater_equal r9, r10
-  print r11
+  r36 = call_native i0 [r11]
   r12 = constant c8
   r13 = constant c9
   r14 = greater r12, r13
-  print r14
+  r36 = call_native i0 [r14]
   r15 = constant c10
   r16 = constant c11
   r17 = greater r15, r16
-  print r17
+  r36 = call_native i0 [r17]
   r18 = constant c12
   r19 = constant c13
   r20 = less r18, r19
-  print r20
+  r36 = call_native i0 [r20]
   r21 = constant c14
   r22 = constant c15
   r23 = less r21, r22
-  print r23
+  r36 = call_native i0 [r23]
   r24 = constant c16
   r25 = constant c17
   r26 = less r24, r25
-  print r26
+  r36 = call_native i0 [r26]
   r27 = constant c18
   r28 = constant c19
   r29 = less_equal r27, r28
-  print r29
+  r36 = call_native i0 [r29]
   r30 = constant c20
   r31 = constant c21
   r32 = greater r30, r31
-  print r32
+  r36 = call_native i0 [r32]
   r33 = constant c22
   r34 = constant c23
   r35 = greater_equal r33, r34
-  print r35
+  r36 = call_native i0 [r35]
   return_nil
 
 debug_sources:

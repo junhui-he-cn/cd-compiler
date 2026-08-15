@@ -1,4 +1,5 @@
-main registers=26
+native_import i0 = print abi=1
+main registers=27
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -18,16 +19,16 @@ main registers=26
 0016  b9 = load_global g0
 0017  b10 = load_global g1
 0018  b11 = call b9(b10)
-0019  print b11
+0019  b26 = call_native i0 [b11]
 0020  b12 = load_global g2
 0021  b13 = constant #9 0
 0022  b14 = index b12, b13
-0023  print b14
+0023  b26 = call_native i0 [b14]
 0024  b15 = load_global g3
-0025  print b15
+0025  b26 = call_native i0 [b15]
 0026  b16 = load_global g4
 0027  b17 = struct_get b16, t0, 0
-0028  print b17
+0028  b26 = call_native i0 [b17]
 0029  b18 = constant #10 7
 0030  init_global g5, b18
 0031  b19 = constant #11 nil
@@ -37,13 +38,13 @@ main registers=26
 0035  b21 = constant #13 nil
 0036  init_global g8, b21
 0037  b22 = load_global g5
-0038  print b22
+0038  b26 = call_native i0 [b22]
 0039  b23 = load_global g6
-0040  print b23
+0040  b26 = call_native i0 [b23]
 0041  b24 = load_global g7
-0042  print b24
+0042  b26 = call_native i0 [b24]
 0043  b25 = load_global g8
-0044  print b25
+0044  b26 = call_native i0 [b25]
 0045  return_nil
 
 function $0 unwrap/1 registers=6

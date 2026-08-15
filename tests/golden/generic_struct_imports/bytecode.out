@@ -1,4 +1,6 @@
-main registers=10
+native_import i0 = print abi=1
+native_import i1 = typeOf abi=1
+main registers=11
 0000  block
 0001  b0 = constant #0 1
 0002  b1 = make_struct t0 [b0]
@@ -8,11 +10,11 @@ main registers=10
 0006  init_global g1, b3
 0007  b4 = load_global g0
 0008  b5 = struct_get b4, t0, 0
-0009  print b5
+0009  b10 = call_native i0 [b5]
 0010  b6 = load_global g1
 0011  b7 = struct_get b6, t0, 0
-0012  print b7
+0012  b10 = call_native i0 [b7]
 0013  b8 = load_global g1
-0014  b9 = native_call @13 typeOf [b8]
-0015  print b9
+0014  b9 = call_native i1 [b8]
+0015  b10 = call_native i0 [b9]
 0016  return_nil

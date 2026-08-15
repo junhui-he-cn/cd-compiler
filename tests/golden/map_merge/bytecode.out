@@ -1,4 +1,7 @@
-main registers=48
+native_import i0 = merge abi=1
+native_import i1 = print abi=1
+native_import i2 = push abi=1
+main registers=49
 0000  block
 0001  b0 = constant #0 "a"
 0002  b1 = constant #1 1
@@ -14,22 +17,22 @@ main registers=48
 0012  init_global g1, b9
 0013  b10 = load_global g0
 0014  b11 = load_global g1
-0015  b12 = native_call @4 merge [b10, b11]
+0015  b12 = call_native i0 [b10, b11]
 0016  init_global g2, b12
 0017  b13 = load_global g2
-0018  print b13
+0018  b48 = call_native i1 [b13]
 0019  b14 = load_global g0
-0020  print b14
+0020  b48 = call_native i1 [b14]
 0021  b15 = load_global g1
 0022  b16 = constant #8 "d"
 0023  b17 = constant #9 4
 0024  b18 = assign_index b15, b16, b17
 0025  b19 = load_global g2
-0026  print b19
+0026  b48 = call_native i1 [b19]
 0027  b20 = load_global g0
 0028  b21 = load_global g1
-0029  b22 = native_call @12 merge [b20, b21]
-0030  print b22
+0029  b22 = call_native i0 [b20, b21]
+0030  b48 = call_native i1 [b22]
 0031  b23 = constant #10 7
 0032  b24 = array [b23]
 0033  init_global g3, b24
@@ -43,13 +46,13 @@ main registers=48
 0041  init_global g5, b30
 0042  b31 = load_global g4
 0043  b32 = load_global g5
-0044  b33 = native_call @20 merge [b31, b32]
+0044  b33 = call_native i0 [b31, b32]
 0045  init_global g6, b33
 0046  b34 = load_global g3
 0047  b35 = constant #13 8
-0048  b36 = native_call @23 push [b34, b35]
+0048  b36 = call_native i2 [b34, b35]
 0049  b37 = load_global g6
-0050  print b37
+0050  b48 = call_native i1 [b37]
 0051  b38 = constant #14 "empty"
 0052  b39 = constant #15 nil
 0053  b40 = map [b38: b39]
@@ -60,8 +63,8 @@ main registers=48
 0058  init_global g8, b43
 0059  b44 = load_global g7
 0060  b45 = load_global g8
-0061  b46 = native_call @29 merge [b44, b45]
+0061  b46 = call_native i0 [b44, b45]
 0062  init_global g9, b46
 0063  b47 = load_global g9
-0064  print b47
+0064  b48 = call_native i1 [b47]
 0065  return_nil

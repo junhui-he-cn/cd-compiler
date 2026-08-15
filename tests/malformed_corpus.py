@@ -169,10 +169,10 @@ def mutate_cdbc(source: str, mutation: str) -> str:
         prefix = source[match.start() :].split(" = number ", 1)[0]
         return source[: match.start()] + prefix + " = number not-a-number" + source[match.end() :]
     if mutation == "invalid_native":
-        match = re.search(r"native_call n\d+", source)
+        match = re.search(r"call_native i\d+", source)
         if match is None:
             raise ValueError("cdbc seed has no native call to mutate")
-        return source[: match.start()] + "native_call n0" + source[match.end() :]
+        return source[: match.start()] + "call_native i999" + source[match.end() :]
     raise ValueError(f"unknown cdbc mutation: {mutation}")
 
 

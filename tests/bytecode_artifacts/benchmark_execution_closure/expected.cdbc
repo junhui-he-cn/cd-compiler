@@ -37,7 +37,10 @@ globals:
   g2 = n9
   g3 = n10
 
-main registers=17:
+native_imports:
+  i0 = "print" abi=1
+
+main registers=18:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -69,7 +72,7 @@ block b2:
   br b1
 block b3:
   r16 = load_global g3
-  print r16
+  r17 = call_native i0 [r16]
   return_nil
 
 function f0 name="add" arity=1 registers=4:

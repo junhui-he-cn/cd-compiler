@@ -40,6 +40,8 @@ private:
         const std::unordered_map<std::string, std::uint32_t>& globalSlotsByName,
         const std::vector<std::string>& names,
         TypeTables& types,
+        const std::unordered_map<std::string, std::uint32_t>& nativeImports,
+        std::uint32_t printScratch,
         const FunctionPlan* plan);
     BytecodeInstruction lowerInstruction(
         const IRInstruction& instruction,
@@ -47,6 +49,8 @@ private:
         const std::unordered_map<std::string, std::uint32_t>& globalSlotsByName,
         const std::vector<std::string>& names,
         TypeTables& types,
+        const std::unordered_map<std::string, std::uint32_t>& nativeImports,
+        std::uint32_t printScratch,
         const FunctionPlan* plan);
     BytecodeFunction lowerFunction(
         const IRFunction& function,
@@ -54,5 +58,6 @@ private:
         const std::unordered_map<std::string, std::uint32_t>& globalSlotsByName,
         const std::vector<std::string>& names,
         TypeTables& types,
+        const std::unordered_map<std::string, std::uint32_t>& nativeImports,
         const FunctionPlan& plan);
 };

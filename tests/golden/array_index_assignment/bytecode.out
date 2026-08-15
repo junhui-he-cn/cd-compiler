@@ -1,4 +1,5 @@
-main registers=43
+native_import i0 = print abi=1
+main registers=44
 0000  block
 0001  b0 = constant #0 1
 0002  b1 = constant #1 "two"
@@ -12,7 +13,7 @@ main registers=43
 0010  b8 = load_global g0
 0011  b9 = constant #5 1
 0012  b10 = index b8, b9
-0013  print b10
+0013  b43 = call_native i0 [b10]
 0014  b11 = load_global g0
 0015  init_global g1, b11
 0016  b12 = load_global g1
@@ -22,12 +23,12 @@ main registers=43
 0020  b16 = load_global g0
 0021  b17 = constant #8 0
 0022  b18 = index b16, b17
-0023  print b18
+0023  b43 = call_native i0 [b18]
 0024  b19 = load_global g0
 0025  b20 = constant #9 2
 0026  b21 = constant #10 7
 0027  b22 = assign_index b19, b20, b21
-0028  print b22
+0028  b43 = call_native i0 [b22]
 0029  b23 = load_global g0
 0030  b24 = constant #11 0
 0031  b25 = load_global g0
@@ -38,11 +39,11 @@ main registers=43
 0036  b30 = load_global g0
 0037  b31 = constant #14 0
 0038  b32 = index b30, b31
-0039  print b32
+0039  b43 = call_native i0 [b32]
 0040  b33 = load_global g0
 0041  b34 = constant #15 1
 0042  b35 = index b33, b34
-0043  print b35
+0043  b43 = call_native i0 [b35]
 0044  b36 = load_global g0
 0045  b37 = constant #16 1
 0046  b38 = constant #17 "changed"
@@ -50,5 +51,5 @@ main registers=43
 0048  b40 = load_global g0
 0049  b41 = constant #18 1
 0050  b42 = index b40, b41
-0051  print b42
+0051  b43 = call_native i0 [b42]
 0052  return_nil

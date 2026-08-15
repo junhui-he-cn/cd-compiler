@@ -285,6 +285,7 @@ enum NativeId {
     FindIndex,
     Reduce,
     Range,
+    Print,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -755,6 +756,19 @@ const NATIVE_SPECS: &[NativeSpec] = &[
             result: NativeReturnShape::Range,
         },
     },
+    NativeSpec {
+        id: NativeId::Print,
+        name: "print",
+        min_arity: 1,
+        max_arity: 1,
+        callback: false,
+        arity_error: "print expects 1 argument",
+        resource: NativeResourceProfile::None,
+        signature: NativeSignature {
+            arguments: &[NativeArgumentShape::Any],
+            result: NativeReturnShape::Nil,
+        },
+    },
 ];
 
 fn decode_constant(constant: &Constant) -> Result<Value, RuntimeError> {
@@ -844,6 +858,7 @@ fn native_spec(name: &str) -> Option<&'static NativeSpec> {
         "findIndex" => 26,
         "reduce" => 27,
         "range" => 28,
+        "print" => 29,
         _ => return None,
     };
     Some(&NATIVE_SPECS[index])
@@ -943,7 +958,7 @@ pub struct RuntimeError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bytecode::Function;
+    use crate::bytecode::{Function, NativeId, NativeImport};
     use crate::runtime::{new_cell, new_environment, new_local_slots};
     use std::cell::RefCell;
 
@@ -955,7 +970,7 @@ mod tests {
             names.push(spec.name);
             assert_eq!(native_spec(spec.name), Some(spec));
         }
-        assert_eq!(NATIVE_SPECS.len(), 29);
+        assert_eq!(NATIVE_SPECS.len(), 30);
         assert_eq!(native_spec("range").unwrap().min_arity, 1);
         assert_eq!(native_spec("range").unwrap().max_arity, 3);
         assert!(native_spec("map").unwrap().callback);
@@ -1009,6 +1024,7 @@ mod tests {
             ("find", NativeResourceProfile::Both),
             ("findIndex", NativeResourceProfile::Both),
             ("reduce", NativeResourceProfile::Both),
+            ("print", NativeResourceProfile::None),
         ] {
             assert_eq!(
                 native_spec(name).unwrap().resource,
@@ -1225,6 +1241,7 @@ mod tests {
             constants: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1253,6 +1270,7 @@ mod tests {
             ],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1346,6 +1364,7 @@ mod tests {
             constants: vec![Constant::Number("7".to_string())],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1372,6 +1391,7 @@ mod tests {
             constants: vec![Constant::Number("42".to_string())],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1417,6 +1437,7 @@ mod tests {
             constants,
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1465,6 +1486,7 @@ mod tests {
             constants: vec![Constant::Number("1".to_string())],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1490,6 +1512,7 @@ mod tests {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: vec!["map".to_string(), "item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -1541,6 +1564,7 @@ mod tests {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: vec!["map".to_string(), "item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -1611,6 +1635,7 @@ mod tests {
             constants: vec![Constant::Nil, Constant::Number("0".to_string())],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1652,6 +1677,7 @@ mod tests {
             ],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1742,6 +1768,7 @@ mod tests {
             ],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1784,6 +1811,89 @@ mod tests {
                         Instruction::Print { value: 0 },
                         Instruction::Constant { dest: 1, constant: 3 },
                         Instruction::Print { value: 1 },
+                        Instruction::Return { value: 1 },
+                    ],
+                    locations: vec![None; 5],
+                },
+            ],
+            entry: FuncId(0),
+            debug_sources: Vec::new(),
+        }
+    }
+
+    fn cooperative_native_print_program() -> Program {
+        Program {
+            constants: vec![
+                Constant::Number("1".to_string()),
+                Constant::Number("2".to_string()),
+                Constant::Number("3".to_string()),
+                Constant::Number("4".to_string()),
+            ],
+            globals: Vec::new(),
+            types: Vec::new(),
+            native_imports: vec![NativeImport {
+                name: "print".to_string(),
+                abi: 1,
+            }],
+            names: Vec::new(),
+            functions: vec![
+                Function {
+                    id: FuncId(0),
+                    name: "main".to_string(),
+                    arity: 0,
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    params: Vec::new(),
+                    registers: 0,
+                    instructions: Vec::new(),
+                    locations: Vec::new(),
+                },
+                Function {
+                    id: FuncId(1),
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    name: "odd".to_string(),
+                    arity: 0,
+                    registers: 2,
+                    params: Vec::new(),
+                    instructions: vec![
+                        Instruction::Constant { dest: 0, constant: 0 },
+                        Instruction::CallNative {
+                            dest: 1,
+                            native: NativeId(0),
+                            arguments: vec![0],
+                        },
+                        Instruction::Constant { dest: 0, constant: 2 },
+                        Instruction::CallNative {
+                            dest: 1,
+                            native: NativeId(0),
+                            arguments: vec![0],
+                        },
+                        Instruction::Return { value: 1 },
+                    ],
+                    locations: vec![None; 5],
+                },
+                Function {
+                    id: FuncId(2),
+                    local_count: 0,
+                    upvalues: Vec::new(),
+                    name: "even".to_string(),
+                    arity: 0,
+                    registers: 2,
+                    params: Vec::new(),
+                    instructions: vec![
+                        Instruction::Constant { dest: 0, constant: 1 },
+                        Instruction::CallNative {
+                            dest: 1,
+                            native: NativeId(0),
+                            arguments: vec![0],
+                        },
+                        Instruction::Constant { dest: 0, constant: 3 },
+                        Instruction::CallNative {
+                            dest: 1,
+                            native: NativeId(0),
+                            arguments: vec![0],
+                        },
                         Instruction::Return { value: 1 },
                     ],
                     locations: vec![None; 5],
@@ -2021,6 +2131,52 @@ mod tests {
         assert_eq!(drained.len(), 4);
         assert!(run.output_events().is_empty());
         assert!(run.trace_events().is_empty());
+    }
+
+    #[test]
+    fn cooperative_host_attributes_native_print_in_dispatch_order() {
+        let program = cooperative_native_print_program();
+        let mut run = VM::new(&program)
+            .start_cooperative(1)
+            .expect("positive quantum should start a session");
+        let odd = run
+            .spawn(TaskSpec::function(1, Vec::new()))
+            .expect("odd task should spawn");
+        let even = run
+            .spawn(TaskSpec::function(2, Vec::new()))
+            .expect("even task should spawn");
+
+        assert_eq!(
+            run.run_until_waiting()
+                .expect("native print tasks should complete"),
+            CooperativeStep::Complete
+        );
+        assert_eq!(run.take_output(), "1\n2\n3\n4\n");
+        assert_eq!(
+            run.output_events(),
+            [
+                TaskOutputEvent {
+                    sequence: 0,
+                    task_id: odd,
+                    text: "1\n".to_string(),
+                },
+                TaskOutputEvent {
+                    sequence: 1,
+                    task_id: even,
+                    text: "2\n".to_string(),
+                },
+                TaskOutputEvent {
+                    sequence: 2,
+                    task_id: odd,
+                    text: "3\n".to_string(),
+                },
+                TaskOutputEvent {
+                    sequence: 3,
+                    task_id: even,
+                    text: "4\n".to_string(),
+                },
+            ]
+        );
     }
 
     #[test]
@@ -2823,6 +2979,7 @@ mod tests {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("0".to_string())],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -2880,6 +3037,7 @@ mod tests {
             ],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -2926,6 +3084,7 @@ mod tests {
             constants: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: vec!["push".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -2991,6 +3150,7 @@ mod tests {
             ],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: vec!["n".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -3093,6 +3253,7 @@ mod tests {
             names: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
                 name: "main".to_string(),
@@ -3493,6 +3654,7 @@ mod tests {
             constants: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: vec!["item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -3550,6 +3712,7 @@ mod tests {
             constants: vec![Constant::Number("10".to_string())],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: vec!["item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -3655,6 +3818,7 @@ mod tests {
             constants: vec![Constant::Number("1".to_string())],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: vec!["item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -3718,6 +3882,7 @@ mod tests {
             constants: vec![Constant::Nil],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -3816,6 +3981,7 @@ mod tests {
             constants: vec![Constant::Number("2".to_string())],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: vec!["item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -3923,6 +4089,7 @@ mod tests {
             constants: vec![Constant::Nil],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -4021,6 +4188,7 @@ mod tests {
             constants: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: vec!["acc".to_string(), "item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -4089,6 +4257,7 @@ mod tests {
             constants: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -4222,6 +4391,7 @@ mod tests {
             ],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -4689,6 +4859,7 @@ mod tests {
             constants: vec![Constant::Nil],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: vec!["sqrt".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -4806,6 +4977,7 @@ mod tests {
             constants: vec![Constant::Number("1".to_string())],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -4838,6 +5010,7 @@ mod tests {
                 names: Vec::new(),
                 globals: Vec::new(),
                 types: Vec::new(),
+                native_imports: Vec::new(),
                 functions: vec![Function {
                     id: FuncId(0),
                     name: "main".to_string(),
@@ -4886,6 +5059,7 @@ mod tests {
             constants: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -4923,6 +5097,7 @@ mod tests {
             constants: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: vec!["item".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -4975,6 +5150,7 @@ mod tests {
             constants: vec![Constant::Nil],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -5010,6 +5186,7 @@ mod tests {
             constants: vec![Constant::String("é".to_string())],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -5301,6 +5478,7 @@ mod tests {
             ],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: vec!["value".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -5499,6 +5677,7 @@ mod tests {
             constants: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: vec!["left".to_string(), "right".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -5584,6 +5763,7 @@ mod tests {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("2".to_string())],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -5655,6 +5835,7 @@ mod tests {
             constants: vec![Constant::Number("1".to_string()), Constant::Number("0".to_string())],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -5734,6 +5915,7 @@ mod tests {
             ],
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: vec!["value".to_string()],
             functions: vec![Function {
                 id: FuncId(0),
@@ -6433,6 +6615,7 @@ pub struct VM<'a> {
     global_names: Vec<String>,
     decoded_constants: Vec<Value>,
     constant_errors: BTreeMap<usize, RuntimeError>,
+    legacy_native_specs: Vec<Option<&'static NativeSpec>>,
     native_specs: Vec<Option<&'static NativeSpec>>,
     prepared_functions: Vec<Rc<PreparedFunction>>,
     block_maps: Vec<BTreeMap<u32, usize>>,
@@ -7213,10 +7396,15 @@ impl<'a> VM<'a> {
             block_maps,
             decoded_constants,
             constant_errors,
-            native_specs: program
+            legacy_native_specs: program
                 .names
                 .iter()
                 .map(|name| native_spec(name))
+                .collect(),
+            native_specs: program
+                .native_imports
+                .iter()
+                .map(|import| native_spec(&import.name))
                 .collect(),
             prepared_functions: program
                 .functions
@@ -8645,8 +8833,67 @@ impl<'a> VM<'a> {
                         NativeArguments::Many(values)
                     }
                 };
-                let result = self.execute_native_call_indexed(
+                let result = self.execute_legacy_native_call(
                     *name,
+                    values,
+                    frame.function.as_ref(),
+                    call_site,
+                )?;
+                self.write_register(frame, *dest, result)
+            }
+            Instruction::CallNative {
+                dest,
+                native,
+                arguments,
+            } => {
+                let spec = self
+                    .native_specs
+                    .get(native.0 as usize)
+                    .copied()
+                    .flatten()
+                    .ok_or_else(|| {
+                        let name = self
+                            .program
+                            .native_imports
+                            .get(native.0 as usize)
+                            .map(|import| import.name.as_str())
+                            .unwrap_or("?");
+                        RuntimeError::new(format!("unknown native stdlib function `{}`", name))
+                    })?;
+                if spec.id == NativeId::Print {
+                    let Some(value_register) = arguments.first() else {
+                        return Err(RuntimeError::new(spec.arity_error));
+                    };
+                    if arguments.len() != 1 {
+                        return Err(RuntimeError::new(spec.arity_error));
+                    }
+                    self.write_register(frame, *dest, Value::Nil)?;
+                    self.execute_recursive_print(
+                        body,
+                        frame,
+                        instruction_index,
+                        *value_register,
+                    )?;
+                    return Ok(());
+                }
+                let values = match arguments.as_slice() {
+                    [] => NativeArguments::Empty,
+                    [argument] => NativeArguments::One(self.read_register(frame, *argument)?),
+                    [left, right] => {
+                        let left = self.read_register(frame, *left)?;
+                        let right = self.read_register(frame, *right)?;
+                        NativeArguments::Two(left, right)
+                    }
+                    arguments => {
+                        let mut values = Vec::with_capacity(arguments.len());
+                        for argument in arguments {
+                            values.push(self.read_register(frame, *argument)?);
+                        }
+                        NativeArguments::Many(values)
+                    }
+                };
+                let result = self.execute_native_call_indexed(
+                    native.0 as usize,
                     values,
                     frame.function.as_ref(),
                     call_site,
@@ -10225,12 +10472,36 @@ impl<'a> VM<'a> {
 
     fn execute_native_call_indexed(
         &mut self,
+        import_index: usize,
+        arguments: NativeArguments,
+        caller: &str,
+        call_site: Option<&DebugLocation>,
+    ) -> Result<Value, RuntimeError> {
+        match self.native_specs.get(import_index).copied().flatten() {
+            Some(spec) => self.execute_native_call_with_spec(spec, arguments, caller, call_site),
+            None => {
+                let name = self
+                    .program
+                    .native_imports
+                    .get(import_index)
+                    .map(|import| import.name.as_str())
+                    .unwrap_or("?");
+                Err(RuntimeError::new(format!(
+                    "unknown native stdlib function `{}`",
+                    name
+                )))
+            }
+        }
+    }
+
+    fn execute_legacy_native_call(
+        &mut self,
         name_index: usize,
         arguments: NativeArguments,
         caller: &str,
         call_site: Option<&DebugLocation>,
     ) -> Result<Value, RuntimeError> {
-        match self.native_specs.get(name_index).copied().flatten() {
+        match self.legacy_native_specs.get(name_index).copied().flatten() {
             Some(spec) => self.execute_native_call_with_spec(spec, arguments, caller, call_site),
             None => {
                 let name = self.read_name_ref(name_index)?;
@@ -10285,6 +10556,7 @@ impl<'a> VM<'a> {
             NativeId::FindIndex => self.execute_native_find_index(arguments, caller, call_site),
             NativeId::Reduce => self.execute_native_reduce(arguments, caller, call_site),
             NativeId::Range => self.execute_native_range(arguments),
+            NativeId::Print => Err(RuntimeError::new("print requires an execution frame")),
         }
     }
 

@@ -90,13 +90,16 @@ void testDebugSourceRange()
     source.text = "print 1;\n";
     source.id = SourceFileId{0};
     program.setSources({source});
-    program.setRegisterCount(1);
+    program.setNativeImports({BytecodeNativeImport{"print", 1}});
 
     BytecodeInstruction instruction;
-    instruction.op = BytecodeOp::Print;
-    instruction.left = BytecodeRegister{0};
+    instruction.op = BytecodeOp::CallNative;
+    instruction.dest = BytecodeRegister{1};
+    instruction.arguments = {BytecodeRegister{0}};
+    instruction.operand = 0;
     instruction.span = SourceSpan{0, 1, 1, SourceSpanRange{0, 7}};
     program.setInstructions({instruction});
+    program.setRegisterCount(2);
 
     std::ostringstream output;
     writeBytecodeText(output, program);
@@ -106,8 +109,11 @@ void testDebugSourceRange()
         "\n"
         "names:\n"
         "\n"
-        "main registers=1:\n"
-        "  print r0\n"
+        "native_imports:\n"
+        "  i0 = \"print\" abi=1\n"
+        "\n"
+        "main registers=2:\n"
+        "  r1 = call_native i0 [r0]\n"
         "\n"
         "debug_sources:\n"
         "  s0 path=\"lib.cd\" text=\"print 1;\\n\"\n"

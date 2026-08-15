@@ -1,4 +1,6 @@
-main registers=27
+native_import i0 = print abi=1
+native_import i1 = str abi=1
+main registers=28
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -17,27 +19,27 @@ main registers=27
 0015  b8 = constant #13 4
 0016  b9 = make_variant t0, v0 (b7, b8)
 0017  b10 = call b6(b9)
-0018  print b10
+0018  b27 = call_native i0 [b10]
 0019  b11 = load_global g1
 0020  b12 = constant #14 7
 0021  b13 = make_variant t1, v0 (b12)
 0022  b14 = call b11(b13)
-0023  print b14
+0023  b27 = call_native i0 [b14]
 0024  b15 = load_global g1
 0025  b16 = constant #15 "bad"
 0026  b17 = make_variant t1, v1 (b16)
 0027  b18 = call b15(b17)
-0028  print b18
+0028  b27 = call_native i0 [b18]
 0029  b19 = load_global g1
 0030  b20 = make_variant t1, v2 ()
 0031  b21 = call b19(b20)
-0032  print b21
+0032  b27 = call_native i0 [b21]
 0033  b22 = load_global g2
 0034  b23 = constant #16 9
 0035  b24 = make_variant t1, v0 (b23)
 0036  b25 = make_variant t2, v0 (b24)
 0037  b26 = call b22(b25)
-0038  print b26
+0038  b27 = call_native i0 [b26]
 0039  return_nil
 
 function $0 pairScore/1 registers=12
@@ -82,7 +84,7 @@ function $1 describe/1 registers=15
 0006  bind_local l1, b2
 0007  b3 = constant #5 "ok:"
 0008  b4 = load_local l1
-0009  b5 = native_call @23 str [b4]
+0009  b5 = call_native i1 [b4]
 0010  b6 = add b3, b5
 0011  return b6
 0012  block
@@ -126,7 +128,7 @@ function $2 unwrap/1 registers=17
 0009  b4 = variant_get b2, t1, v0, 0
 0010  bind_local l1, b4
 0011  b5 = load_local l1
-0012  b6 = native_call @45 str [b5]
+0012  b6 = call_native i1 [b5]
 0013  return b6
 0014  block
 0015  br b12

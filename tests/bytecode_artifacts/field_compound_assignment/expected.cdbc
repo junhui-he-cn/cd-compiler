@@ -25,7 +25,10 @@ globals:
 types:
   t0 = struct "Counter" field0="value"
 
-main registers=11:
+native_imports:
+  i0 = "print" abi=1
+
+main registers=12:
 block b0:
   r0 = constant c0
   r1 = make_struct t0 [r0]
@@ -39,7 +42,7 @@ block b0:
   r8 = struct_set r2, t0, 0, r7
   r9 = load_global g0
   r10 = struct_get r9, t0, 0
-  print r10
+  r11 = call_native i0 [r10]
   return_nil
 
 debug_sources:

@@ -47,7 +47,10 @@ globals:
 types:
   t0 = struct "Box" field0="value"
 
-main registers=25:
+native_imports:
+  i0 = "print" abi=1
+
+main registers=26:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -68,23 +71,23 @@ block b0:
   r9 = load_global g3
   r10 = constant c9
   r11 = call r8 [r9, r10]
-  print r11
+  r25 = call_native i0 [r11]
   r12 = load_global g0
   r13 = load_global g3
   r14 = constant c10
   r15 = call r12 [r13, r14]
-  print r15
+  r25 = call_native i0 [r15]
   r16 = load_global g1
   r17 = load_global g3
   r18 = constant c11
   r19 = constant c12
   r20 = array [r18, r19]
   r21 = call r16 [r17, r20]
-  print r21
+  r25 = call_native i0 [r21]
   r22 = load_global g2
   r23 = load_global g3
   r24 = call r22 [r23]
-  print r24
+  r25 = call_native i0 [r24]
   return_nil
 
 function f0 name="echo" arity=2 registers=3:

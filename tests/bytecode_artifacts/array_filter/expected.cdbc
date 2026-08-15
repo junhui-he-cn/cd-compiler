@@ -48,7 +48,12 @@ globals:
   g4 = n12
   g5 = n17
 
-main registers=22:
+native_imports:
+  i0 = "filter" abi=1
+  i1 = "print" abi=1
+  i2 = "push" abi=1
+
+main registers=23:
 block b0:
   r0 = constant c0
   r1 = constant c1
@@ -60,11 +65,11 @@ block b0:
   init_global g1, r5
   r6 = load_global g0
   r7 = make_function f0
-  r8 = native_call n5 [r6, r7]
+  r8 = call_native i0 [r6, r7]
   init_global g2, r8
   r9 = load_global g0
   r10 = make_function f1
-  r11 = native_call n10 [r9, r10]
+  r11 = call_native i0 [r9, r10]
   init_global g3, r11
   r12 = constant c9
   r13 = constant c10
@@ -72,16 +77,16 @@ block b0:
   init_global g4, r14
   r15 = load_global g4
   r16 = make_function f2
-  r17 = native_call n16 [r15, r16]
+  r17 = call_native i0 [r15, r16]
   init_global g5, r17
   r18 = load_global g2
-  print r18
+  r22 = call_native i1 [r18]
   r19 = load_global g3
-  print r19
+  r22 = call_native i1 [r19]
   r20 = load_global g5
-  print r20
+  r22 = call_native i1 [r20]
   r21 = load_global g4
-  print r21
+  r22 = call_native i1 [r21]
   return_nil
 
 function f0 name="<lambda>" arity=1 registers=4:
@@ -126,7 +131,7 @@ function f2 name="<lambda>" arity=1 registers=5:
 block b0:
   r0 = load_upvalue u0
   r1 = constant c11
-  r2 = native_call n15 [r0, r1]
+  r2 = call_native i2 [r0, r1]
   r3 = constant c12
   return r3
 block b1:

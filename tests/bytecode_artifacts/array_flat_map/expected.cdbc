@@ -21,7 +21,11 @@ names:
 globals:
   g0 = n0
 
-main registers=9:
+native_imports:
+  i0 = "flatMap" abi=1
+  i1 = "print" abi=1
+
+main registers=10:
 block b0:
   r0 = constant c0
   r1 = constant c1
@@ -29,12 +33,12 @@ block b0:
   init_global g0, r2
   r3 = load_global g0
   r4 = make_function f0
-  r5 = native_call n4 [r3, r4]
-  print r5
+  r5 = call_native i0 [r3, r4]
+  r9 = call_native i1 [r5]
   r6 = load_global g0
   r7 = make_function f1
-  r8 = native_call n7 [r6, r7]
-  print r8
+  r8 = call_native i0 [r6, r7]
+  r9 = call_native i1 [r8]
   return_nil
 
 function f0 name="<lambda>" arity=1 registers=6:

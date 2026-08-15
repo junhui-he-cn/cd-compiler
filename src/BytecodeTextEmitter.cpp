@@ -234,8 +234,8 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
         out << reg(requireDest(instruction)) << " = call " << reg(requireLeft(instruction)) << ' ';
         writeRegisterList(out, instruction.arguments);
         break;
-    case BytecodeOp::NativeCall:
-        out << reg(requireDest(instruction)) << " = native_call " << nameRef(instruction.operand) << ' ';
+    case BytecodeOp::CallNative:
+        out << reg(requireDest(instruction)) << " = call_native i" << instruction.operand << ' ';
         writeRegisterList(out, instruction.arguments);
         break;
     case BytecodeOp::Index:
@@ -255,9 +255,6 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
         break;
     case BytecodeOp::AssertNumber:
         out << reg(requireDest(instruction)) << " = assert_number " << reg(requireLeft(instruction)) << ", " << nameRef(instruction.operand);
-        break;
-    case BytecodeOp::Print:
-        out << "print " << reg(requireLeft(instruction));
         break;
     case BytecodeOp::Return:
         out << "return " << reg(requireLeft(instruction));
@@ -424,6 +421,15 @@ void writeBytecodeSections(
                 }
             }
             out << '\n';
+        }
+    }
+
+    if (!program.nativeImports().empty()) {
+        out << "\nnative_imports:\n";
+        for (std::size_t index = 0; index < program.nativeImports().size(); ++index) {
+            const BytecodeNativeImport& import = program.nativeImports()[index];
+            out << "  i" << index << " = " << escapedString(import.name)
+                << " abi=" << import.abiVersion << '\n';
         }
     }
 

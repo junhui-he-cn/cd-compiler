@@ -1,4 +1,7 @@
-main registers=17
+native_import i0 = print abi=1
+native_import i1 = keys abi=1
+native_import i2 = values abi=1
+main registers=18
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -15,17 +18,17 @@ main registers=17
 0013  b7 = load_global g0
 0014  b8 = load_global g2
 0015  b9 = call b7(b8)
-0016  print b9
+0016  b17 = call_native i0 [b9]
 0017  b10 = load_global g2
-0018  b11 = native_call @8 keys [b10]
-0019  print b11
+0018  b11 = call_native i1 [b10]
+0019  b17 = call_native i0 [b11]
 0020  b12 = load_global g1
 0021  b13 = load_global g2
 0022  b14 = call b12(b13)
-0023  print b14
+0023  b17 = call_native i0 [b14]
 0024  b15 = load_global g2
-0025  b16 = native_call @12 values [b15]
-0026  print b16
+0025  b16 = call_native i2 [b15]
+0026  b17 = call_native i0 [b16]
 0027  return_nil
 
 function $0 keys/1 registers=3

@@ -31,8 +31,9 @@ cdbc 0.2
 ```
 
 The VM accepts `cdbc 0.1` inputs for read compatibility: legacy artifacts carry
-name-driven `load_var/store_var/assign_var` and are lowered to the VM's legacy
-name-resolution path at construction time. Emitted artifacts are `cdbc 0.2`.
+name-driven `load_var/store_var/assign_var`, `native_call`, and `print`
+instructions and are lowered to the VM's legacy name-resolution path at
+construction time. Emitted artifacts are `cdbc 0.2`.
 Future format changes must either remain backward-compatible with `0.2` or use a
 new version number.
 
@@ -169,11 +170,14 @@ names:
 globals:
   g0 = n0
 
-main registers=3:
+native_imports:
+  i0 = "print" abi=1
+
+main registers=4:
   r0 = constant c0
   init_global g0, r0
   r1 = load_global g0
-  print r1
+  r3 = call_native i0 [r1]
 
 function f0 name="add_one" arity=1 registers=4:
   param 0 = "x"
@@ -207,9 +211,24 @@ Names are display/debug metadata only; identity and access use numeric
 `TypeId`/`VariantId` and field slots via `make_struct`/`struct_get`/
 `struct_set` and `make_variant`/`is_variant`/`variant_get`.
 
+The optional `native_imports:` section (between `types:` and `main`) serializes
+the fixed registered native names used by the artifact:
+
+```text
+native_imports:
+  i0 = "print" abi=1
+  i1 = "str" abi=1
+```
+
+Each import declares its display name and `abi=1`. Instructions address
+imports by numeric `iN` index via `call_native`; the VM dispatches by index
+without a string lookup on the hot path. Imports are deduplicated by name
+during module linking and remapped to the merged import table.
+
 Pre-execution validation rejects block bodies with undefined registers, unbound
 locals, invalid block IDs, missing terminators, out-of-range global upvalue
-sources, invalid native arity, or legacy jumps mixed into block bodies.
+sources, out-of-range native imports, invalid native arity, or legacy jumps
+mixed into block bodies.
 The optional `globals:` section (module products and linked programs alike) maps
 each numeric global slot to its name index; the linker deduplicates globals by
 name across modules. Function `param` lines appear before instructions;
@@ -286,6 +305,7 @@ References use stable prefixes:
 - `nN`: name index.
 - `rN`: register index.
 - `fN`: function index.
+- `iN`: native import index.
 
 Indexes are zero-based decimal integers.
 
@@ -315,13 +335,12 @@ load_global
 init_global
 set_global
 call
-native_call
+call_native
 index
 assign_index
 field
 assign_field
 len
-print
 return
 negate
 not
@@ -380,13 +399,26 @@ Generic enum type arguments are compile-time metadata and are erased from
 these runtime instructions; the emitted enum name and payload layout remain
 the same as for non-generic enums.
 
-Native stdlib calls use a name-table reference for the function name:
+Native stdlib calls address the serialized import table:
 
 ```text
-rD = native_call nName [rArg0, rArg1, ...]
+rD = call_native iImport [rArg0, rArg1, ...]
 ```
 
-`native_call` invokes a registered VM native stdlib function by name-table reference; in this version `push`, `pop`, `remove`, `clear`, `merge`, `keys`, `values`, `floor`, `ceil`, `sqrt`, `str`, `substr`, `charAt`, `typeOf`, `hash`, `contains`, `slice`, `copy`, `concat`, `map`, `filter`, `flatMap`, `any`, `all`, `count`, `find`, `findIndex`, and `reduce` are supported.
+`call_native` indexes the `native_imports` section directly; the VM resolves
+each import once at construction time and dispatches by numeric ID without a
+string lookup on the hot path. The legacy `native_call nName` form remains
+read-compatible only and is never emitted. In this version `push`, `pop`,
+`remove`, `clear`, `merge`, `keys`, `values`, `floor`, `ceil`, `sqrt`, `str`,
+`substr`, `charAt`, `typeOf`, `hash`, `contains`, `slice`, `copy`, `concat`,
+`map`, `filter`, `flatMap`, `any`, `all`, `count`, `find`, `findIndex`,
+`reduce`, and `print` are supported.
+
+`print` statements are lowered to a `call_native` of the `print` import with
+one argument register and a scratch destination. Output budgeting,
+cancellation, trace attribution, and side-effect handling stay inside the
+native framework, so printing behaves exactly like the former dedicated
+opcode.
 
 The `range` native is also supported with one to three numeric arguments. Its
 result is consumed by the existing `len`, `index`, and `assert_array`
@@ -398,10 +430,11 @@ New opcodes must be added by updating this document, the C++ bytecode artifact e
 
 ## Compatibility validation
 
-The Rust parser accepts exactly the `cdbc 0.1` header. Before `dump`, `link`, or
+The Rust parser accepts `cdbc 0.1` and `cdbc 0.2` headers. Before `dump`, `link`, or
 `run` receives an artifact, it validates finite number constants, constant/name/
 function/register references, jump targets, debug-location table shape, and
-the supported native-call capability set. Module identities, entry metadata,
+the native import metadata plus the supported native-call capability set and
+native arity bounds. Module identities, entry metadata,
 dependency targets, and insertion offsets are validated by the module envelope
 and linker path. Invalid artifacts are rejected before VM execution; valid
 linked programs and module products retain the canonical text described above.

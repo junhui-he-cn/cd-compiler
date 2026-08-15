@@ -1,4 +1,6 @@
-main registers=15
+native_import i0 = remove abi=1
+native_import i1 = print abi=1
+main registers=16
 0000  block
 0001  b0 = constant #0 "a"
 0002  b1 = constant #1 1
@@ -10,15 +12,15 @@ main registers=15
 0008  init_global g1, b5
 0009  b6 = load_global g0
 0010  b7 = constant #4 "a"
-0011  b8 = native_call @4 remove [b6, b7]
-0012  print b8
+0011  b8 = call_native i0 [b6, b7]
+0012  b15 = call_native i1 [b8]
 0013  b9 = load_global g1
-0014  print b9
+0014  b15 = call_native i1 [b9]
 0015  b10 = load_global g1
 0016  b11 = constant #5 "b"
-0017  b12 = native_call @7 remove [b10, b11]
-0018  print b12
+0017  b12 = call_native i0 [b10, b11]
+0018  b15 = call_native i1 [b12]
 0019  b13 = load_global g0
 0020  b14 = len b13
-0021  print b14
+0021  b15 = call_native i1 [b14]
 0022  return_nil

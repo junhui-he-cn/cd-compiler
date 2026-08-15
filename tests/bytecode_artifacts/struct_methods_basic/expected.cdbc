@@ -25,7 +25,10 @@ globals:
 types:
   t0 = struct "Person" field0="name"
 
-main registers=7:
+native_imports:
+  i0 = "print" abi=1
+
+main registers=8:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -37,7 +40,7 @@ block b0:
   r4 = load_global g0
   r5 = load_global g1
   r6 = call r4 [r5]
-  print r6
+  r7 = call_native i0 [r6]
   return_nil
 
 function f0 name="label" arity=1 registers=5:

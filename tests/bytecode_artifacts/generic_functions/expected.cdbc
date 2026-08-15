@@ -41,7 +41,10 @@ globals:
   g2 = n6
   g3 = n14
 
-main registers=26:
+native_imports:
+  i0 = "print" abi=1
+
+main registers=27:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -58,29 +61,29 @@ block b0:
   r6 = load_global g0
   r7 = constant c7
   r8 = call r6 [r7]
-  print r8
+  r26 = call_native i0 [r8]
   r9 = load_global g0
   r10 = constant c8
   r11 = call r9 [r10]
-  print r11
+  r26 = call_native i0 [r11]
   r12 = load_global g1
   r13 = constant c9
   r14 = constant c10
   r15 = constant c11
   r16 = array [r13, r14, r15]
   r17 = call r12 [r16]
-  print r17
+  r26 = call_native i0 [r17]
   r18 = load_global g2
   r19 = constant c12
   r20 = constant c13
   r21 = call r18 [r19, r20]
-  print r21
+  r26 = call_native i0 [r21]
   r22 = load_global g0
   init_global g3, r22
   r23 = load_global g3
   r24 = constant c14
   r25 = call r23 [r24]
-  print r25
+  r26 = call_native i0 [r25]
   return_nil
 
 function f0 name="identity" arity=1 registers=2:

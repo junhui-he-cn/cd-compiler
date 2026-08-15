@@ -1,4 +1,8 @@
-main registers=34
+native_import i0 = any abi=1
+native_import i1 = all abi=1
+native_import i2 = print abi=1
+native_import i3 = push abi=1
+main registers=35
 0000  block
 0001  b0 = constant #0 1
 0002  b1 = constant #1 2
@@ -7,11 +11,11 @@ main registers=34
 0005  init_global g0, b3
 0006  b4 = load_global g0
 0007  b5 = make_function $0 <lambda>/1
-0008  b6 = native_call @3 any [b4, b5]
+0008  b6 = call_native i0 [b4, b5]
 0009  init_global g1, b6
 0010  b7 = load_global g0
 0011  b8 = make_function $1 <lambda>/1
-0012  b9 = native_call @7 all [b7, b8]
+0012  b9 = call_native i1 [b7, b8]
 0013  init_global g2, b9
 0014  b10 = constant #7 1
 0015  b11 = constant #8 2
@@ -20,10 +24,10 @@ main registers=34
 0018  init_global g3, b13
 0019  b14 = load_global g3
 0020  b15 = make_function $2 <lambda>/1
-0021  b16 = native_call @14 any [b14, b15]
-0022  print b16
+0021  b16 = call_native i0 [b14, b15]
+0022  b34 = call_native i2 [b16]
 0023  b17 = load_global g3
-0024  print b17
+0024  b34 = call_native i2 [b17]
 0025  b18 = constant #13 1
 0026  b19 = constant #14 2
 0027  b20 = constant #15 3
@@ -31,20 +35,20 @@ main registers=34
 0029  init_global g4, b21
 0030  b22 = load_global g4
 0031  b23 = make_function $3 <lambda>/1
-0032  b24 = native_call @21 all [b22, b23]
-0033  print b24
+0032  b24 = call_native i1 [b22, b23]
+0033  b34 = call_native i2 [b24]
 0034  b25 = load_global g4
-0035  print b25
+0035  b34 = call_native i2 [b25]
 0036  b26 = array []
 0037  b27 = make_function $4 <lambda>/1
-0038  b28 = native_call @23 any [b26, b27]
-0039  print b28
+0038  b28 = call_native i0 [b26, b27]
+0039  b34 = call_native i2 [b28]
 0040  b29 = constant #21 1
 0041  b30 = constant #22 2
 0042  b31 = array [b29, b30]
 0043  b32 = make_function $5 <lambda>/1
-0044  b33 = native_call @25 all [b31, b32]
-0045  print b33
+0044  b33 = call_native i1 [b31, b32]
+0045  b34 = call_native i2 [b33]
 0046  return_nil
 
 function $0 <lambda>/1 registers=4
@@ -76,7 +80,7 @@ upvalue u0 = global g3
 0000  block
 0001  b0 = load_upvalue u0
 0002  b1 = constant #10 9
-0003  b2 = native_call @12 push [b0, b1]
+0003  b2 = call_native i3 [b0, b1]
 0004  b3 = load_local l0
 0005  b4 = constant #11 2
 0006  b5 = equal b3, b4
@@ -92,7 +96,7 @@ upvalue u0 = global g4
 0000  block
 0001  b0 = load_upvalue u0
 0002  b1 = constant #16 8
-0003  b2 = native_call @19 push [b0, b1]
+0003  b2 = call_native i3 [b0, b1]
 0004  b3 = load_local l0
 0005  b4 = constant #17 3
 0006  b5 = less b3, b4

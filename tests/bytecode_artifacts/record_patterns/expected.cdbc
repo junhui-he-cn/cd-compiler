@@ -86,7 +86,11 @@ types:
   t0 = struct "Address" field0="city" field1="zip"
   t1 = struct "Person" field0="name" field1="age" field2="address"
 
-main registers=33:
+native_imports:
+  i0 = "print" abi=1
+  i1 = "str" abi=1
+
+main registers=34:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -111,15 +115,15 @@ block b0:
   r15 = load_global g0
   r16 = load_global g1
   r17 = call r15 [r16]
-  print r17
+  r33 = call_native i0 [r17]
   r18 = load_global g0
   r19 = load_global g2
   r20 = call r18 [r19]
-  print r20
+  r33 = call_native i0 [r20]
   r21 = load_global g0
   r22 = load_global g3
   r23 = call r21 [r22]
-  print r23
+  r33 = call_native i0 [r23]
   r24 = load_global g1
   r25 = struct_get r24, t1, 0
   r26 = constant c18
@@ -134,11 +138,11 @@ block b2:
   br_if r30, b3, b4
 block b3:
   r31 = constant c20
-  print r31
+  r33 = call_native i0 [r31]
   return_nil
 block b4:
   r32 = constant c21
-  print r32
+  r33 = call_native i0 [r32]
   return_nil
 block b5:
   return_nil
@@ -189,7 +193,7 @@ block b9:
   r19 = constant c7
   r20 = add r18, r19
   r21 = load_local l2
-  r22 = native_call n20 [r21]
+  r22 = call_native i1 [r21]
   r23 = add r20, r22
   return r23
 block b10:

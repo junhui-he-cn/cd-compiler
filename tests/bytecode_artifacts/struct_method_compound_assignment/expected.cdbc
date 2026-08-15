@@ -33,7 +33,10 @@ globals:
 types:
   t0 = struct "Counter" field0="value"
 
-main registers=8:
+native_imports:
+  i0 = "print" abi=1
+
+main registers=9:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -46,7 +49,7 @@ block b0:
   r5 = load_global g1
   r6 = constant c3
   r7 = call r4 [r5, r6]
-  print r7
+  r8 = call_native i0 [r7]
   return_nil
 
 function f0 name="inc" arity=2 registers=10:

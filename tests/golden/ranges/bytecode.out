@@ -1,34 +1,38 @@
-main registers=56
+native_import i0 = range abi=1
+native_import i1 = print abi=1
+native_import i2 = contains abi=1
+native_import i3 = typeOf abi=1
+main registers=57
 0000  block
 0001  b0 = constant #0 1
 0002  b1 = constant #1 6
-0003  b2 = native_call @0 range [b0, b1]
+0003  b2 = call_native i0 [b0, b1]
 0004  init_global g0, b2
 0005  b3 = load_global g0
-0006  print b3
+0006  b56 = call_native i1 [b3]
 0007  b4 = load_global g0
 0008  b5 = len b4
-0009  print b5
+0009  b56 = call_native i1 [b5]
 0010  b6 = load_global g0
 0011  b7 = constant #2 2
 0012  b8 = index b6, b7
-0013  print b8
+0013  b56 = call_native i1 [b8]
 0014  b9 = load_global g0
 0015  b10 = constant #3 5
-0016  b11 = native_call @6 contains [b9, b10]
-0017  print b11
+0016  b11 = call_native i2 [b9, b10]
+0017  b56 = call_native i1 [b11]
 0018  b12 = load_global g0
 0019  b13 = constant #4 4
-0020  b14 = native_call @8 contains [b12, b13]
-0021  print b14
+0020  b14 = call_native i2 [b12, b13]
+0021  b56 = call_native i1 [b14]
 0022  b15 = load_global g0
 0023  b16 = len b15
-0024  print b16
+0024  b56 = call_native i1 [b16]
 0025  b17 = load_global g0
-0026  b18 = native_call @11 typeOf [b17]
-0027  print b18
+0026  b18 = call_native i3 [b17]
+0027  b56 = call_native i1 [b18]
 0028  b19 = constant #5 5
-0029  b20 = native_call @12 range [b19]
+0029  b20 = call_native i0 [b19]
 0030  b21 = assert_array b20
 0031  init_global g1, b21
 0032  b22 = constant #6 0
@@ -58,14 +62,14 @@ main registers=56
 0056  br b1
 0057  block
 0058  b35 = load_global g3
-0059  print b35
+0059  b56 = call_native i1 [b35]
 0060  br b3
 0061  block
 0062  b36 = constant #9 5
 0063  b37 = constant #10 0
 0064  b38 = constant #11 2
 0065  b39 = negate b38
-0066  b40 = native_call @26 range [b36, b37, b39]
+0066  b40 = call_native i0 [b36, b37, b39]
 0067  b41 = assert_array b40
 0068  init_global g5, b41
 0069  b42 = constant #12 0
@@ -95,7 +99,7 @@ main registers=56
 0093  br b6
 0094  block
 0095  b55 = load_global g7
-0096  print b55
+0096  b56 = call_native i1 [b55]
 0097  br b8
 0098  block
 0099  return_nil

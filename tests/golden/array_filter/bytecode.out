@@ -1,4 +1,7 @@
-main registers=22
+native_import i0 = filter abi=1
+native_import i1 = print abi=1
+native_import i2 = push abi=1
+main registers=23
 0000  block
 0001  b0 = constant #0 1
 0002  b1 = constant #1 2
@@ -10,11 +13,11 @@ main registers=22
 0008  init_global g1, b5
 0009  b6 = load_global g0
 0010  b7 = make_function $0 <lambda>/1
-0011  b8 = native_call @5 filter [b6, b7]
+0011  b8 = call_native i0 [b6, b7]
 0012  init_global g2, b8
 0013  b9 = load_global g0
 0014  b10 = make_function $1 <lambda>/1
-0015  b11 = native_call @10 filter [b9, b10]
+0015  b11 = call_native i0 [b9, b10]
 0016  init_global g3, b11
 0017  b12 = constant #9 1
 0018  b13 = constant #10 2
@@ -22,16 +25,16 @@ main registers=22
 0020  init_global g4, b14
 0021  b15 = load_global g4
 0022  b16 = make_function $2 <lambda>/1
-0023  b17 = native_call @16 filter [b15, b16]
+0023  b17 = call_native i0 [b15, b16]
 0024  init_global g5, b17
 0025  b18 = load_global g2
-0026  print b18
+0026  b22 = call_native i1 [b18]
 0027  b19 = load_global g3
-0028  print b19
+0028  b22 = call_native i1 [b19]
 0029  b20 = load_global g5
-0030  print b20
+0030  b22 = call_native i1 [b20]
 0031  b21 = load_global g4
-0032  print b21
+0032  b22 = call_native i1 [b21]
 0033  return_nil
 
 function $0 <lambda>/1 registers=4
@@ -73,7 +76,7 @@ upvalue u0 = global g4
 0000  block
 0001  b0 = load_upvalue u0
 0002  b1 = constant #11 9
-0003  b2 = native_call @15 push [b0, b1]
+0003  b2 = call_native i2 [b0, b1]
 0004  b3 = constant #12 true
 0005  return b3
 0006  block

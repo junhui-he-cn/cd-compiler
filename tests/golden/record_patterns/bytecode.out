@@ -1,4 +1,6 @@
-main registers=33
+native_import i0 = print abi=1
+native_import i1 = str abi=1
+main registers=34
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -23,15 +25,15 @@ main registers=33
 0021  b15 = load_global g0
 0022  b16 = load_global g1
 0023  b17 = call b15(b16)
-0024  print b17
+0024  b33 = call_native i0 [b17]
 0025  b18 = load_global g0
 0026  b19 = load_global g2
 0027  b20 = call b18(b19)
-0028  print b20
+0028  b33 = call_native i0 [b20]
 0029  b21 = load_global g0
 0030  b22 = load_global g3
 0031  b23 = call b21(b22)
-0032  print b23
+0032  b33 = call_native i0 [b23]
 0033  b24 = load_global g1
 0034  b25 = struct_get b24, t1, 0
 0035  b26 = constant #18 "Ada"
@@ -46,11 +48,11 @@ main registers=33
 0044  br_if b30, b3, b4
 0045  block
 0046  b31 = constant #20 "or"
-0047  print b31
+0047  b33 = call_native i0 [b31]
 0048  return_nil
 0049  block
 0050  b32 = constant #21 "fallback"
-0051  print b32
+0051  b33 = call_native i0 [b32]
 0052  return_nil
 0053  block
 0054  return_nil
@@ -100,7 +102,7 @@ function $0 describe/1 registers=25
 0041  b19 = constant #7 ":"
 0042  b20 = add b18, b19
 0043  b21 = load_local l2
-0044  b22 = native_call @20 str [b21]
+0044  b22 = call_native i1 [b21]
 0045  b23 = add b20, b22
 0046  return b23
 0047  block

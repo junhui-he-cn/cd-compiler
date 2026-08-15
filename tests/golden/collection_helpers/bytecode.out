@@ -1,4 +1,10 @@
-main registers=80
+native_import i0 = contains abi=1
+native_import i1 = print abi=1
+native_import i2 = slice abi=1
+native_import i3 = copy abi=1
+native_import i4 = push abi=1
+native_import i5 = concat abi=1
+main registers=81
 0000  block
 0001  b0 = constant #0 1
 0002  b1 = constant #1 2
@@ -7,12 +13,12 @@ main registers=80
 0005  init_global g0, b3
 0006  b4 = load_global g0
 0007  b5 = constant #3 2
-0008  b6 = native_call @2 contains [b4, b5]
-0009  print b6
+0008  b6 = call_native i0 [b4, b5]
+0009  b80 = call_native i1 [b6]
 0010  b7 = load_global g0
 0011  b8 = constant #4 4
-0012  b9 = native_call @4 contains [b7, b8]
-0013  print b9
+0012  b9 = call_native i0 [b7, b8]
+0013  b80 = call_native i1 [b9]
 0014  b10 = constant #5 9
 0015  b11 = array [b10]
 0016  init_global g1, b11
@@ -21,56 +27,56 @@ main registers=80
 0019  init_global g2, b13
 0020  b14 = load_global g2
 0021  b15 = load_global g1
-0022  b16 = native_call @10 contains [b14, b15]
-0023  print b16
+0022  b16 = call_native i0 [b14, b15]
+0023  b80 = call_native i1 [b16]
 0024  b17 = load_global g2
 0025  b18 = constant #6 9
 0026  b19 = array [b18]
-0027  b20 = native_call @12 contains [b17, b19]
-0028  print b20
+0027  b20 = call_native i0 [b17, b19]
+0028  b80 = call_native i1 [b20]
 0029  b21 = constant #7 1
 0030  b22 = make_struct t0 [b21]
 0031  init_global g3, b22
 0032  b23 = load_global g3
 0033  b24 = array [b23]
 0034  b25 = load_global g3
-0035  b26 = native_call @18 contains [b24, b25]
-0036  print b26
+0035  b26 = call_native i0 [b24, b25]
+0036  b80 = call_native i1 [b26]
 0037  b27 = load_global g3
 0038  b28 = array [b27]
 0039  b29 = constant #8 1
 0040  b30 = make_struct t0 [b29]
-0041  b31 = native_call @22 contains [b28, b30]
-0042  print b31
+0041  b31 = call_native i0 [b28, b30]
+0042  b80 = call_native i1 [b31]
 0043  b32 = load_global g0
 0044  b33 = constant #9 1
 0045  b34 = constant #10 2
-0046  b35 = native_call @24 slice [b32, b33, b34]
+0046  b35 = call_native i2 [b32, b33, b34]
 0047  init_global g4, b35
 0048  b36 = load_global g4
-0049  print b36
+0049  b80 = call_native i1 [b36]
 0050  b37 = load_global g4
 0051  b38 = constant #11 0
 0052  b39 = constant #12 20
 0053  b40 = assign_index b37, b38, b39
 0054  b41 = load_global g0
-0055  print b41
+0055  b80 = call_native i1 [b41]
 0056  b42 = load_global g0
 0057  b43 = constant #13 3
 0058  b44 = constant #14 0
-0059  b45 = native_call @30 slice [b42, b43, b44]
-0060  print b45
+0059  b45 = call_native i2 [b42, b43, b44]
+0060  b80 = call_native i1 [b45]
 0061  b46 = load_global g0
-0062  b47 = native_call @32 copy [b46]
+0062  b47 = call_native i3 [b46]
 0063  init_global g5, b47
 0064  b48 = load_global g5
 0065  b49 = constant #15 0
 0066  b50 = constant #16 10
 0067  b51 = assign_index b48, b49, b50
 0068  b52 = load_global g0
-0069  print b52
+0069  b80 = call_native i1 [b52]
 0070  b53 = load_global g5
-0071  print b53
+0071  b80 = call_native i1 [b53]
 0072  b54 = constant #17 1
 0073  b55 = array [b54]
 0074  init_global g6, b55
@@ -78,34 +84,34 @@ main registers=80
 0076  b57 = array [b56]
 0077  init_global g7, b57
 0078  b58 = load_global g7
-0079  b59 = native_call @41 copy [b58]
+0079  b59 = call_native i3 [b58]
 0080  init_global g8, b59
 0081  b60 = load_global g8
 0082  b61 = constant #18 0
 0083  b62 = index b60, b61
 0084  b63 = constant #19 2
-0085  b64 = native_call @44 push [b62, b63]
+0085  b64 = call_native i4 [b62, b63]
 0086  b65 = load_global g7
-0087  print b65
+0087  b80 = call_native i1 [b65]
 0088  b66 = load_global g0
 0089  b67 = constant #20 4
 0090  b68 = constant #21 5
 0091  b69 = array [b67, b68]
-0092  b70 = native_call @47 concat [b66, b69]
-0093  print b70
+0092  b70 = call_native i5 [b66, b69]
+0093  b80 = call_native i1 [b70]
 0094  b71 = load_global g0
 0095  b72 = array []
-0096  b73 = native_call @49 concat [b71, b72]
-0097  print b73
+0096  b73 = call_native i5 [b71, b72]
+0097  b80 = call_native i1 [b73]
 0098  b74 = make_function $0 <lambda>/1
 0099  init_global g9, b74
 0100  b75 = load_global g9
 0101  b76 = constant #23 7
 0102  b77 = call b75(b76)
-0103  print b77
+0103  b80 = call_native i1 [b77]
 0104  b78 = load_global g0
-0105  b79 = native_call @54 copy [b78]
-0106  print b79
+0105  b79 = call_native i3 [b78]
+0106  b80 = call_native i1 [b79]
 0107  return_nil
 
 function $0 <lambda>/1 registers=2

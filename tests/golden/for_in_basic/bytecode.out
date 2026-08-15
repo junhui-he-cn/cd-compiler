@@ -1,4 +1,5 @@
-main registers=20
+native_import i0 = print abi=1
+main registers=21
 0000  block
 0001  b0 = constant #0 1
 0002  b1 = constant #1 2
@@ -35,7 +36,7 @@ main registers=20
 0033  br b1
 0034  block
 0035  b19 = load_global g3
-0036  print b19
+0036  b20 = call_native i0 [b19]
 0037  br b3
 0038  block
 0039  return_nil

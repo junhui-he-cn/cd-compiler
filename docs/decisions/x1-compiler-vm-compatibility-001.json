@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
-  "matrix_revision": "x1-2026-08-14-r2",
+  "matrix_revision": "x1-2026-08-15-r3",
   "inventory_revision": "m0d-2026-07-22-r1",
   "reference_commit": "a0aa0168",
   "decision_id": "X1-COMPILER-VM-COMPAT-001",
   "status": "resolved",
   "question": "What compatibility surfaces must the C++ compiler and Rust VM preserve together through the cdbc 0.2 variable-lowering upgrade?",
-  "decision": "Adopt cdbc 0.2 as the emitted artifact contract with numeric local/upvalue/global slots while keeping strict cdbc-cache 0.2 schema 4, the fixed non-serialized native-name registry, and optional debug metadata. The reader keeps cdbc 0.1 name-based variable inputs as a construction-time compatibility path.",
+  "decision": "Adopt cdbc 0.2 as the emitted artifact contract with numeric local/upvalue/global slots and a serialized native import table while keeping strict cdbc-cache 0.2 schema 4, the fixed registered native-name set, and optional debug metadata. The reader keeps cdbc 0.1 name-based variable and native_call inputs as a construction-time compatibility path.",
   "version_contract": {
     "compiler": {
       "version": "0.2.0",
@@ -33,7 +33,8 @@
     },
     "native_abi": {
       "mode": "fixed-registered-names",
-      "serialized": false,
+      "serialized": true,
+      "abi": 1,
       "source": "vm-rs/src/vm.rs",
       "names": [
         "push",
@@ -64,7 +65,8 @@
         "find",
         "findIndex",
         "reduce",
-        "range"
+        "range",
+        "print"
       ]
     },
     "debug_metadata": {
@@ -170,15 +172,16 @@
     {
       "cell_id": "native.fixed_registry",
       "domain": "native-abi",
-      "state": "fixed-nonserialized",
+      "state": "registered-serialized-names",
       "producer": "C++ native lowering and Rust NativeSpec registry",
       "consumer": "Rust artifact verifier and VM dispatch",
-      "contract": "native_call names use the fixed registered set; arity, callback, resource, and signature metadata remain VM-internal and are not serialized by cdbc 0.1",
+      "contract": "native_imports serializes the fixed registered names with abi=1; call_native addresses imports by index; arity, callback, resource, and signature metadata remain VM-internal",
       "evidence": [
         "docs/decisions/vm-native-registry-001.md",
         "docs/decisions/vm-native-registry-004-signature-shapes.md",
         "tests/cdbc_contract_audit.py",
         "vm-rs/src/format.rs",
+        "vm-rs/src/link.rs",
         "vm-rs/src/vm.rs"
       ]
     }
@@ -187,7 +190,7 @@
     "X1r2 adopts cdbc 0.2 emission with numeric local/upvalue/global slots; the VM keeps a construction-time cdbc 0.1 name-based compatibility path for legacy inputs.",
     "The compiler owns module-cache invalidation and source fallback; the VM validates and executes products but does not read .cdi or cache manifests to synthesize function bodies.",
     "Debug metadata is additive and optional; metadata-free artifacts remain supported.",
-    "Native registry metadata is an internal VM contract until a future artifact version explicitly serializes a successor ABI.",
+    "Native import names are drawn from the fixed registered set and serialized as abi=1 entries; arity, callback, resource, and signature metadata remain VM-internal.",
     "A binary format, persistent session, GC, JIT publication, or host I/O capability requires a separate decision record."
   ],
   "verification": {
@@ -251,7 +254,7 @@
   "out_of_scope": [
     "changing cdbc-cache 0.2 schema 4",
     "binary artifact encoding",
-    "versioned native IDs or plugin loading",
+    "dynamic native plugins or host capability injection",
     "GC, cycle collection, relocating handles, or persistent VM sessions",
     "changing module-cache fallback or strictness policy"
   ]

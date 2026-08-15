@@ -779,6 +779,23 @@ impl JitState {
                         name,
                     });
                 }
+                Instruction::CallNative { native, .. } => {
+                    let name = program
+                        .native_imports
+                        .get(native.0 as usize)
+                        .map(|import| import.name.clone())
+                        .unwrap_or_else(|| format!("native#{}", native.0));
+                    if is_callback_native(&name) {
+                        return JitEligibility::Fallback(JitFallbackReason::CallbackBoundary {
+                            instruction,
+                            name,
+                        });
+                    }
+                    return JitEligibility::Fallback(JitFallbackReason::NativeBoundary {
+                        instruction,
+                        name,
+                    });
+                }
                 unsupported => {
                     return JitEligibility::Fallback(JitFallbackReason::UnsupportedInstruction {
                         instruction,
@@ -1749,6 +1766,7 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
         Instruction::SetGlobal { .. } => "set_global",
         Instruction::Call { .. } => "call",
         Instruction::NativeCall { .. } => "native_call",
+        Instruction::CallNative { .. } => "call_native",
         Instruction::Index { .. } => "index",
         Instruction::AssignIndex { .. } => "assign_index",
         Instruction::Field { .. } => "field",
@@ -1783,7 +1801,7 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bytecode::Function;
+    use crate::bytecode::{Function, NativeId, NativeImport};
     use crate::runtime::Heap;
     use crate::scheduler::{CooperativeScheduler, ResumableFrame};
     use crate::value::Value as VmValue;
@@ -1820,6 +1838,7 @@ mod tests {
             constants: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: vec!["map".to_string(), "print".to_string()],
             functions: all,
             entry: FuncId(0),
@@ -2091,6 +2110,29 @@ mod tests {
         )]);
         assert_eq!(
             state.eligibility(&callback, Some(1), JitExecutionMode::Ordinary),
+            JitEligibility::Fallback(JitFallbackReason::CallbackBoundary {
+                instruction: 0,
+                name: "map".to_string(),
+            })
+        );
+
+        let mut indexed = program(vec![function(
+            0,
+            vec![
+                Instruction::CallNative {
+                    dest: 0,
+                    native: NativeId(0),
+                    arguments: Vec::new(),
+                },
+                Instruction::Return { value: 0 },
+            ],
+        )]);
+        indexed.native_imports = vec![NativeImport {
+            name: "map".to_string(),
+            abi: 1,
+        }];
+        assert_eq!(
+            state.eligibility(&indexed, Some(1), JitExecutionMode::Ordinary),
             JitEligibility::Fallback(JitFallbackReason::CallbackBoundary {
                 instruction: 0,
                 name: "map".to_string(),

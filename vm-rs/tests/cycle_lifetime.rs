@@ -11,6 +11,7 @@ fn self_array_program() -> Program {
         constants: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
+        native_imports: Vec::new(),
         names: vec!["push".to_string()],
         functions: vec![Function {
             id: FuncId(0),
@@ -44,6 +45,7 @@ fn callback_cycle_program() -> Program {
         constants: vec![Constant::Number("1".to_string())],
         globals: Vec::new(),
         types: Vec::new(),
+        native_imports: Vec::new(),
         names: vec!["map".to_string(), "push".to_string()],
         functions: vec![Function {
             id: FuncId(0),
@@ -107,6 +109,7 @@ fn nested_cycle_program() -> Program {
         constants: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
+        native_imports: Vec::new(),
         names: vec!["push".to_string()],
         functions: vec![Function {
             id: FuncId(0),
@@ -185,6 +188,7 @@ fn cycle_until_pause_program() -> Program {
         constants: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
+        native_imports: Vec::new(),
         names: vec!["push".to_string()],
         functions: vec![Function {
             id: FuncId(0),

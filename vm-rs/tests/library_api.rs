@@ -19,6 +19,7 @@ fn print_program() -> Program {
         constants: vec![Constant::Number("7".to_string())],
         globals: Vec::new(),
         types: Vec::new(),
+        native_imports: Vec::new(),
         names: Vec::new(),
         functions: vec![Function {
             id: FuncId(0),
@@ -47,6 +48,7 @@ fn cooperative_program() -> Program {
         constants: vec![Constant::Number("7".to_string()), Constant::Number("8".to_string())],
         globals: Vec::new(),
         types: Vec::new(),
+        native_imports: Vec::new(),
         names: Vec::new(),
         functions: vec![Function {
             id: FuncId(0),
@@ -101,6 +103,7 @@ fn cooperative_output_program() -> Program {
         ],
         globals: Vec::new(),
         types: Vec::new(),
+        native_imports: Vec::new(),
         names: Vec::new(),
         functions: vec![Function {
             id: FuncId(0),
@@ -173,6 +176,7 @@ fn profile_program() -> Program {
         constants: vec![Constant::Number("7".to_string())],
         globals: Vec::new(),
         types: Vec::new(),
+        native_imports: Vec::new(),
         names: vec!["value".to_string(), "str".to_string()],
         functions: vec![Function {
             id: FuncId(0),
@@ -231,6 +235,7 @@ fn profile_failure_program() -> Program {
         ],
         globals: Vec::new(),
         types: Vec::new(),
+        native_imports: Vec::new(),
         names: Vec::new(),
         functions: vec![Function {
             id: FuncId(0),
@@ -271,6 +276,7 @@ fn runtime_diagnostic_program() -> Program {
         constants: vec![Constant::Number("1".to_string()), Constant::Number("0".to_string())],
         globals: Vec::new(),
         types: Vec::new(),
+        native_imports: Vec::new(),
         names: Vec::new(),
         functions: vec![Function {
             id: FuncId(0),
@@ -685,6 +691,7 @@ fn library_api_exposes_versions_and_typed_artifact_errors() {
         names: Vec::new(),
         globals: Vec::new(),
         types: Vec::new(),
+        native_imports: Vec::new(),
         functions: vec![Function {
             id: FuncId(0),
             name: "main".to_string(),

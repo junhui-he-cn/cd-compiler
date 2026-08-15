@@ -1,4 +1,7 @@
-main registers=35
+native_import i0 = reduce abi=1
+native_import i1 = print abi=1
+native_import i2 = push abi=1
+main registers=36
 0000  block
 0001  b0 = constant #0 1
 0002  b1 = constant #1 2
@@ -10,12 +13,12 @@ main registers=35
 0008  b5 = load_global g0
 0009  b6 = constant #4 0
 0010  b7 = make_function $0 <lambda>/2
-0011  b8 = native_call @6 reduce [b5, b6, b7]
+0011  b8 = call_native i0 [b5, b6, b7]
 0012  init_global g2, b8
 0013  b9 = load_global g0
 0014  b10 = constant #6 1
 0015  b11 = make_function $1 <lambda>/2
-0016  b12 = native_call @11 reduce [b9, b10, b11]
+0016  b12 = call_native i0 [b9, b10, b11]
 0017  init_global g3, b12
 0018  b13 = constant #8 1
 0019  b14 = constant #9 2
@@ -24,32 +27,32 @@ main registers=35
 0022  b16 = load_global g4
 0023  b17 = constant #10 0
 0024  b18 = make_function $2 <lambda>/2
-0025  b19 = native_call @19 reduce [b16, b17, b18]
+0025  b19 = call_native i0 [b16, b17, b18]
 0026  init_global g5, b19
 0027  b20 = array []
 0028  b21 = constant #13 "seed"
 0029  b22 = make_function $3 <lambda>/2
-0030  b23 = native_call @22 reduce [b20, b21, b22]
+0030  b23 = call_native i0 [b20, b21, b22]
 0031  init_global g6, b23
 0032  b24 = array []
 0033  init_global g7, b24
 0034  b25 = load_global g0
 0035  b26 = load_global g7
 0036  b27 = make_function $4 <lambda>/2
-0037  b28 = native_call @31 reduce [b25, b26, b27]
+0037  b28 = call_native i0 [b25, b26, b27]
 0038  init_global g8, b28
 0039  b29 = load_global g2
-0040  print b29
+0040  b35 = call_native i1 [b29]
 0041  b30 = load_global g3
-0042  print b30
+0042  b35 = call_native i1 [b30]
 0043  b31 = load_global g5
-0044  print b31
+0044  b35 = call_native i1 [b31]
 0045  b32 = load_global g4
-0046  print b32
+0046  b35 = call_native i1 [b32]
 0047  b33 = load_global g6
-0048  print b33
+0048  b35 = call_native i1 [b33]
 0049  b34 = load_global g8
-0050  print b34
+0050  b35 = call_native i1 [b34]
 0051  return_nil
 
 function $0 <lambda>/2 registers=6
@@ -84,7 +87,7 @@ upvalue u0 = global g4
 0000  block
 0001  b0 = load_upvalue u0
 0002  b1 = constant #11 9
-0003  b2 = native_call @16 push [b0, b1]
+0003  b2 = call_native i2 [b0, b1]
 0004  b3 = load_local l0
 0005  b4 = load_local l1
 0006  b5 = add b3, b4
@@ -109,7 +112,7 @@ function $4 <lambda>/2 registers=5
 0000  block
 0001  b0 = load_local l0
 0002  b1 = load_local l1
-0003  b2 = native_call @29 push [b0, b1]
+0003  b2 = call_native i2 [b0, b1]
 0004  b3 = load_local l0
 0005  return b3
 0006  block

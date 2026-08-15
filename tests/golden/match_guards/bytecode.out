@@ -1,4 +1,5 @@
-main registers=39
+native_import i0 = print abi=1
+main registers=40
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -15,15 +16,15 @@ main registers=39
 0013  b7 = load_global g0
 0014  b8 = load_global g1
 0015  b9 = call b7(b8)
-0016  print b9
+0016  b39 = call_native i0 [b9]
 0017  b10 = load_global g0
 0018  b11 = load_global g2
 0019  b12 = call b10(b11)
-0020  print b12
+0020  b39 = call_native i0 [b12]
 0021  b13 = load_global g0
 0022  b14 = load_global g3
 0023  b15 = call b13(b14)
-0024  print b15
+0024  b39 = call_native i0 [b15]
 0025  b16 = load_global g1
 0026  b17 = is_variant b16, t0, v0
 0027  br_if b17, b1, b3
@@ -36,7 +37,7 @@ main registers=39
 0034  br_if b21, b2, b3
 0035  block
 0036  b22 = constant #9 "large"
-0037  print b22
+0037  b39 = call_native i0 [b22]
 0038  br b10
 0039  block
 0040  b23 = is_variant b16, t0, v0
@@ -50,7 +51,7 @@ main registers=39
 0048  br_if b27, b5, b6
 0049  block
 0050  b28 = constant #11 "positive"
-0051  print b28
+0051  b39 = call_native i0 [b28]
 0052  br b10
 0053  block
 0054  b29 = is_variant b16, t0, v0
@@ -58,14 +59,14 @@ main registers=39
 0056  block
 0057  b30 = variant_get b16, t0, v0, 0
 0058  b31 = constant #12 "zero"
-0059  print b31
+0059  b39 = call_native i0 [b31]
 0060  br b10
 0061  block
 0062  b32 = is_variant b16, t0, v1
 0063  br_if b32, b9, b10
 0064  block
 0065  b33 = constant #13 "empty"
-0066  print b33
+0066  b39 = call_native i0 [b33]
 0067  br b10
 0068  block
 0069  b34 = load_global g3
@@ -76,11 +77,11 @@ main registers=39
 0074  br_if b36, b12, b13
 0075  block
 0076  b37 = constant #15 "truthy"
-0077  print b37
+0077  b39 = call_native i0 [b37]
 0078  return_nil
 0079  block
 0080  b38 = constant #16 "fallback"
-0081  print b38
+0081  b39 = call_native i0 [b38]
 0082  return_nil
 0083  block
 0084  return_nil

@@ -101,7 +101,11 @@ types:
   t0 = enum "Option" v0="Some" payload=1 v1="None" payload=0
   t1 = enum "List" v0="Nil" payload=0 v1="Cons" payload=2
 
-main registers=38:
+native_imports:
+  i0 = "print" abi=1
+  i1 = "str" abi=1
+
+main registers=39:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -124,11 +128,11 @@ block b0:
   r10 = load_global g0
   r11 = load_global g2
   r12 = call r10 [r11]
-  print r12
+  r38 = call_native i0 [r12]
   r13 = load_global g0
   r14 = load_global g3
   r15 = call r13 [r14]
-  print r15
+  r38 = call_native i0 [r15]
   r16 = load_global g1
   r17 = constant c10
   r18 = constant c11
@@ -136,14 +140,14 @@ block b0:
   r20 = make_variant t1, v1 [r18, r19]
   r21 = make_variant t1, v1 [r17, r20]
   r22 = call r16 [r21]
-  print r22
+  r38 = call_native i0 [r22]
   r23 = load_global g4
   r24 = constant c12
   r25 = equal r23, r24
   br_if r25, b1, b2
 block b1:
   r26 = constant c13
-  print r26
+  r38 = call_native i0 [r26]
   br b6
 block b2:
   r27 = is_variant r23, t0, v0
@@ -152,14 +156,14 @@ block b3:
   r28 = variant_get r23, t0, v0, 0
   init_global g6, r28
   r29 = constant c14
-  print r29
+  r38 = call_native i0 [r29]
   br b6
 block b4:
   r30 = is_variant r23, t0, v1
   br_if r30, b5, b6
 block b5:
   r31 = constant c15
-  print r31
+  r38 = call_native i0 [r31]
   br b6
 block b6:
   r32 = load_global g5
@@ -169,14 +173,14 @@ block b7:
   r34 = variant_get r32, t0, v0, 0
   init_global g7, r34
   r35 = load_global g7
-  print r35
+  r38 = call_native i0 [r35]
   return_nil
 block b8:
   r36 = is_variant r32, t0, v1
   br_if r36, b9, b10
 block b9:
   r37 = constant c16
-  print r37
+  r38 = call_native i0 [r37]
   return_nil
 block b10:
   return_nil
@@ -192,7 +196,7 @@ block b1:
   bind_local l1, r2
   r3 = constant c1
   r4 = load_local l1
-  r5 = native_call n8 [r4]
+  r5 = call_native i1 [r4]
   r6 = add r3, r5
   return r6
 block b2:

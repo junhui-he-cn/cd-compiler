@@ -35,7 +35,10 @@ types:
   t1 = struct "Point" field0="x"
   t2 = struct "Nested" field0="point" field1="label"
 
-main registers=12:
+native_imports:
+  i0 = "print" abi=1
+
+main registers=13:
 block b0:
   r0 = constant c0
   r1 = constant c1
@@ -43,7 +46,7 @@ block b0:
   init_global g0, r2
   r3 = load_global g0
   r4 = struct_get r3, t0, 0
-  print r4
+  r12 = call_native i0 [r4]
   r5 = constant c2
   r6 = make_struct t1 [r5]
   r7 = constant c3
@@ -52,7 +55,7 @@ block b0:
   r9 = load_global g1
   r10 = struct_get r9, t2, 0
   r11 = struct_get r10, t1, 0
-  print r11
+  r12 = call_native i0 [r11]
   return_nil
 
 debug_sources:

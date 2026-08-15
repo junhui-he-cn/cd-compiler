@@ -1,4 +1,14 @@
-main registers=64
+native_import i0 = map abi=1
+native_import i1 = print abi=1
+native_import i2 = filter abi=1
+native_import i3 = any abi=1
+native_import i4 = all abi=1
+native_import i5 = count abi=1
+native_import i6 = find abi=1
+native_import i7 = findIndex abi=1
+native_import i8 = flatMap abi=1
+native_import i9 = reduce abi=1
+main registers=65
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -22,51 +32,51 @@ main registers=64
 0020  init_global g4, b10
 0021  b11 = load_global g4
 0022  b12 = load_global g0
-0023  b13 = native_call @14 map [b11, b12]
+0023  b13 = call_native i0 [b11, b12]
 0024  init_global g5, b13
 0025  b14 = load_global g5
-0026  print b14
+0026  b64 = call_native i1 [b14]
 0027  b15 = load_global g4
 0028  b16 = load_global g0
-0029  b17 = native_call @19 map [b15, b16]
-0030  print b17
+0029  b17 = call_native i0 [b15, b16]
+0030  b64 = call_native i1 [b17]
 0031  b18 = load_global g4
 0032  b19 = load_global g1
-0033  b20 = native_call @22 filter [b18, b19]
-0034  print b20
+0033  b20 = call_native i2 [b18, b19]
+0034  b64 = call_native i1 [b20]
 0035  b21 = load_global g4
 0036  b22 = load_global g1
-0037  b23 = native_call @25 any [b21, b22]
-0038  print b23
+0037  b23 = call_native i3 [b21, b22]
+0038  b64 = call_native i1 [b23]
 0039  b24 = load_global g4
 0040  b25 = load_global g1
-0041  b26 = native_call @28 all [b24, b25]
-0042  print b26
+0041  b26 = call_native i4 [b24, b25]
+0042  b64 = call_native i1 [b26]
 0043  b27 = load_global g4
 0044  b28 = load_global g1
-0045  b29 = native_call @31 count [b27, b28]
-0046  print b29
+0045  b29 = call_native i5 [b27, b28]
+0046  b64 = call_native i1 [b29]
 0047  b30 = load_global g4
 0048  b31 = load_global g1
-0049  b32 = native_call @34 find [b30, b31]
-0050  print b32
+0049  b32 = call_native i6 [b30, b31]
+0050  b64 = call_native i1 [b32]
 0051  b33 = load_global g4
 0052  b34 = load_global g1
-0053  b35 = native_call @37 findIndex [b33, b34]
-0054  print b35
+0053  b35 = call_native i7 [b33, b34]
+0054  b64 = call_native i1 [b35]
 0055  b36 = load_global g4
 0056  b37 = load_global g2
-0057  b38 = native_call @40 flatMap [b36, b37]
-0058  print b38
+0057  b38 = call_native i8 [b36, b37]
+0058  b64 = call_native i1 [b38]
 0059  b39 = load_global g4
 0060  b40 = constant #11 0
 0061  b41 = load_global g3
-0062  b42 = native_call @43 reduce [b39, b40, b41]
-0063  print b42
+0062  b42 = call_native i9 [b39, b40, b41]
+0063  b64 = call_native i1 [b42]
 0064  b43 = load_global g4
 0065  b44 = make_function $4 <lambda>/1
-0066  b45 = native_call @46 map [b43, b44]
-0067  print b45
+0066  b45 = call_native i0 [b43, b44]
+0067  b64 = call_native i1 [b45]
 0068  b46 = constant #13 nil
 0069  init_global g6, b46
 0070  b47 = make_function $5 acceptsNullable/1
@@ -77,8 +87,8 @@ main registers=64
 0075  init_global g7, b50
 0076  b51 = load_global g7
 0077  b52 = load_global g6
-0078  b53 = native_call @52 all [b51, b52]
-0079  print b53
+0078  b53 = call_native i4 [b51, b52]
+0079  b64 = call_native i1 [b53]
 0080  b54 = constant #18 nil
 0081  init_global g8, b54
 0082  b55 = make_function $6 identityArray/1
@@ -91,8 +101,8 @@ main registers=64
 0089  init_global g9, b60
 0090  b61 = load_global g9
 0091  b62 = load_global g8
-0092  b63 = native_call @59 map [b61, b62]
-0093  print b63
+0092  b63 = call_native i0 [b61, b62]
+0093  b64 = call_native i1 [b63]
 0094  return_nil
 
 function $0 identity/1 registers=2

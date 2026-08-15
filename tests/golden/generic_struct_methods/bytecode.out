@@ -1,4 +1,6 @@
-main registers=37
+native_import i0 = print abi=1
+native_import i1 = typeOf abi=1
+main registers=38
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -25,15 +27,15 @@ main registers=37
 0023  b12 = load_global g0
 0024  b13 = load_global g4
 0025  b14 = call b12(b13)
-0026  print b14
+0026  b37 = call_native i0 [b14]
 0027  b15 = load_global g1
 0028  b16 = load_global g4
 0029  b17 = constant #10 2
 0030  b18 = call b15(b16, b17)
-0031  print b18
+0031  b37 = call_native i0 [b18]
 0032  b19 = load_global g4
 0033  b20 = struct_get b19, t0, 0
-0034  print b20
+0034  b37 = call_native i0 [b20]
 0035  b21 = load_global g2
 0036  b22 = load_global g4
 0037  b23 = constant #11 "text"
@@ -41,20 +43,20 @@ main registers=37
 0039  init_global g6, b24
 0040  b25 = load_global g6
 0041  b26 = struct_get b25, t0, 0
-0042  print b26
+0042  b37 = call_native i0 [b26]
 0043  b27 = load_global g2
 0044  b28 = load_global g4
 0045  b29 = constant #12 "inferred"
 0046  b30 = call b27(b28, b29)
 0047  b31 = struct_get b30, t0, 0
-0048  print b31
+0048  b37 = call_native i0 [b31]
 0049  b32 = load_global g3
 0050  b33 = load_global g5
 0051  b34 = call b32(b33)
-0052  print b34
+0052  b37 = call_native i0 [b34]
 0053  b35 = load_global g6
-0054  b36 = native_call @50 typeOf [b35]
-0055  print b36
+0054  b36 = call_native i1 [b35]
+0055  b37 = call_native i0 [b36]
 0056  return_nil
 
 function $0 get/1 registers=3

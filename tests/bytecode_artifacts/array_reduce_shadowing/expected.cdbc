@@ -21,7 +21,11 @@ names:
 globals:
   g0 = n0
 
-main registers=12:
+native_imports:
+  i0 = "print" abi=1
+  i1 = "reduce" abi=1
+
+main registers=13:
 block b0:
   r0 = make_function f0
   init_global g0, r0
@@ -31,13 +35,13 @@ block b0:
   r4 = constant c3
   r5 = make_function f1
   r6 = call r1 [r3, r4, r5]
-  print r6
+  r12 = call_native i0 [r6]
   r7 = constant c5
   r8 = array [r7]
   r9 = constant c6
   r10 = make_function f2
-  r11 = native_call n5 [r8, r9, r10]
-  print r11
+  r11 = call_native i1 [r8, r9, r10]
+  r12 = call_native i0 [r11]
   return_nil
 
 function f0 name="<lambda>" arity=3 registers=2:

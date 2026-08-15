@@ -1,7 +1,7 @@
 # Compiler Design 字节码（.cdbc 0.2）指令参考
 
 本文档描述 Compiler Design 编译器产出的字节码文本工件 `.cdbc` 的 0.2 版定义，
-并逐一说明全部 44 条指令的语法、语义、操作数约束和运行时错误。文档面向需要阅读、
+并逐一说明全部指令的语法、语义、操作数约束和运行时错误。文档面向需要阅读、
 编写或调试工件的开发者和实现第三方解析器/执行器的人。
 
 权威英文契约是 [`docs/bytecode-text-format.md`](bytecode-text-format.md)；
@@ -21,8 +21,9 @@ cdbc 0.2
 ```
 
 VM 同时接受 `cdbc 0.1` 旧工件作为构造期兼容输入：旧工件使用名字驱动的
-`load_var/store_var/assign_var`，由 VM 在构造期映射到旧的按名解析路径；0.2 工件
-使用数值 slot（`lN/uN/gN`），VM 热路径不再按名字解析。
+`load_var/store_var/assign_var`、`native_call` 与 `print`，由 VM 在构造期映射到
+旧的按名解析路径；0.2 工件使用数值 slot（`lN/uN/gN`）与 native 导入索引
+（`iN`），VM 热路径不再按名字解析或按名字查找 native。
 
 工件有两种严格种类：
 
@@ -57,7 +58,7 @@ module:
 一个 `.cdbc` 文件由显式区段组成，顺序固定：
 
 ```text
-cdbc 0.1
+cdbc 0.2
 
 constants:
   c0 = number 1
@@ -66,11 +67,19 @@ constants:
 names:
   n0 = "x"
 
-main registers=3:
+globals:
+  g0 = n0
+
+native_imports:
+  i0 = "print" abi=1
+
+main registers=4:
+block b0:
   r0 = constant c0
-  store_var n0, r0
-  r1 = load_var n0
-  print r1
+  init_global g0, r0
+  r1 = load_global g0
+  r3 = call_native i0 [r1]
+  return_nil
 
 function f0 name="add_one" arity=1 registers=4:
   param 0 = "value"
@@ -98,6 +107,7 @@ debug_ranges:
 | `nN` | 名字表索引 |
 | `rN` | 当前函数体的寄存器索引 |
 | `fN` | 函数表索引 |
+| `iN` | native 导入表索引 |
 
 ### 2.2 常量编码
 
@@ -114,9 +124,13 @@ debug_ranges:
 ### 2.3 名字表
 
 `names` 区段是字符串表，用于变量名、结构体字段名、结构体类型名、枚举与变体名、
-native 函数名。注意名字表**不去重**：多个索引可以保存相同文本（例如
+断言消息等。注意名字表**不去重**：多个索引可以保存相同文本（例如
 `n1`、`n4`、`n5` 都等于 `"add#2"`），它们是不同的名字索引，运行时语义依赖这种
 索引级别名，第三方实现不得按字符串合并。
+
+`native_imports` 区段（位于 `types:` 之后、`main` 之前）单独保存 native 导入：
+`i0 = "print" abi=1`。名字必须来自固定的注册集合，`abi` 当前固定为 1；指令用
+`call_native iN` 按索引调用，模块链接时按名字去重并重映射导入索引。
 
 ### 2.4 函数区段
 
@@ -135,9 +149,10 @@ native 函数名。注意名字表**不去重**：多个索引可以保存相同
 
 ### 2.6 执行前验证
 
-Rust 解析器只接受 `cdbc 0.1` 头。执行前验证：数字常量有限；常量/名字/函数/寄存器
-引用不越界；跳转目标合法；调试位置表形状正确；native 能力在支持集合内；模块封套的
-身份、入口元数据、依赖目标与插入偏移合法。无效工件在执行前被拒绝，错误分类为
+Rust 解析器接受 `cdbc 0.1` 与 `cdbc 0.2` 头。执行前验证：数字常量有限；
+常量/名字/函数/寄存器/native 导入引用不越界；跳转目标合法；调试位置表形状正确；
+native 名字在支持集合内、`abi=1`、导入名不重复、调用元数在范围内；模块封套的身份、
+入口元数据、依赖目标与插入偏移合法。无效工件在执行前被拒绝，错误分类为
 `parse` / `unsupported_version` / `verification`。
 
 ## 3. 执行模型与通用语义
@@ -173,9 +188,10 @@ VM 是寄存器机。每个函数体拥有一块预分配寄存器数组和一�
 0.2 正文由 `block bN:` 区段组成，每个 block 以 terminator 结束：
 `br bN`（无条件）、`br_if rC, bT, bF`（条件）、`return rV`、`return_nil`；
 0.2 不再有隐式 fallthrough。无目标寄存器的指令（`bind_local`、`set_local`、
-`set_upvalue`、`init_global`、`set_global`、`print`、`return`、`br`、`br_if`、
+`set_upvalue`、`init_global`、`set_global`、`return`、`br`、`br_if`、
 `return_nil` 与三条旧跳转）没有 `rD`。旧 `cdbc 0.1` 的线性 `jump/jump_if_*` 仍在
-兼容读取路径中保留。
+兼容读取路径中保留；旧 `print rV` 同样只在兼容读取路径中保留，0.2 把它降为
+`call_native` 到 `print` 导入。
 
 执行前验证（0.2 块体）包括：block ID 顺序且分支目标合法、每个 block 以
 terminator 结束、寄存器 definite-assignment（未定义读取直接拒绝）、local
@@ -334,15 +350,20 @@ rD = call rF [rA0, rA1, ...]
 的值写入 `rD`，函数体正常结束而无 `return` 时 `rD` 为 `nil`。递归经由闭包环境支持。
 调用受调用深度预算约束；启用 JIT 时该调用可能被编译路径接管（默认禁用，语义不变）。
 
-#### native_call
+#### call_native
 
 ```text
-rD = native_call nN [rA0, rA1, ...]
+rD = call_native iN [rA0, rA1, ...]
 ```
 
-按名字表 `nN` 调用注册的 VM 原生标准库函数。名字在验证期必须属于支持集合，否则
-工件被拒；未验证工件运行时报 ``unknown native stdlib function `<名字>` ``。实参个数
-不满足该函数的元数时报其固定错误；各函数自身再做类型/取值校验。完整注册表见第 5 节。
+按 `native_imports` 表的 `iN` 调用注册的 VM 原生标准库函数。VM 在构造期把导入索引
+解析为内部 native ID，执行热路径不再做字符串查找。导入名在验证期必须属于支持集合、
+`abi=1` 且不重复，索引必须不越界；未验证工件运行时报
+``unknown native stdlib function `<名字>` ``。实参个数不满足该函数的元数时报其固定
+错误；各函数自身再做类型/取值校验。完整注册表见第 5 节。
+
+旧 `cdbc 0.1` 的 `native_call nN [rA0, ...]` 按名字表调用，仍在兼容读取路径中
+保留，但 0.2 工件永不发射该形式。
 
 ### 4.4 集合与字段
 
@@ -516,8 +537,10 @@ jump_if_true rC, N
 print rV
 ```
 
-把 `rV` 的运行时文本表示加一个换行写入程序输出。`print` 是程序输出的唯一来源；
-`main` 的返回值不会被打印。
+旧式兼容读取指令：把 `rV` 的运行时文本表示加一个换行写入程序输出。0.2 工件不发射
+该形式；编译器把 `print` 语句降为 ``rD = call_native i_print [rV]``，由 native
+框架统一管理输出字节预算、取消、副作用与 trace 归因，行为与旧指令完全一致。
+`print` 是程序输出的唯一来源；`main` 的返回值不会被打印。
 
 #### return
 
@@ -528,9 +551,9 @@ return rV
 结束当前函数体（或 `main`），返回 `rV`。函数调用者通过 `call` 的目标寄存器取得该值；
 `main` 的返回值只表示程序结束，不产生输出。
 
-## 5. native_call 注册表
+## 5. native 导入注册表
 
-`native_call` 的名字必须是下表之一（验证期强制）。元数列为固定的最小/最大实参个数；
+`native_imports` 的名字必须是下表之一（验证期强制）。元数列为固定的最小/最大实参个数；
 标「回调」的会通过 VM 的普通函数调用机制回调传入的函数值，因此遵守同样的预算、取消与
 错误栈规则。
 
@@ -563,9 +586,10 @@ return rV
 | `findIndex` | 2 | 是 | 第一个谓词为真的零基下标或 -1 |
 | `reduce` | 3 | 是 | `(累加器, 元素)` 二参回调左折叠，须显式初值 |
 | `range` | 1..3 | 否 | `range(start[, stop[, step]])`，生成不可变整数区间 |
+| `print` | 1 | 否 | 输出一个值并换行，返回 nil（由 native 框架管理预算） |
 
 这些函数同时以可遮蔽的普通函数形式和不可遮蔽的成员调用糖暴露给语言层；字节码层面
-只关心 `native_call` 的名字与元数契约。
+只关心 `call_native` 的导入名字与元数契约。
 
 ## 6. 兼容性与非目标
 

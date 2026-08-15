@@ -18,7 +18,10 @@ names:
 globals:
   g0 = n0
 
-main registers=12:
+native_imports:
+  i0 = "print" abi=1
+
+main registers=13:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -35,11 +38,11 @@ block b2:
   br_if r6, b3, b4
 block b3:
   r7 = constant c3
-  print r7
+  r12 = call_native i0 [r7]
   br b5
 block b4:
   r8 = constant c4
-  print r8
+  r12 = call_native i0 [r8]
   br b5
 block b5:
   r9 = load_global g0

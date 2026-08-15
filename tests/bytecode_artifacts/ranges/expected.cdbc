@@ -70,37 +70,43 @@ globals:
   g7 = n29
   g8 = n31
 
-main registers=56:
+native_imports:
+  i0 = "range" abi=1
+  i1 = "print" abi=1
+  i2 = "contains" abi=1
+  i3 = "typeOf" abi=1
+
+main registers=57:
 block b0:
   r0 = constant c0
   r1 = constant c1
-  r2 = native_call n0 [r0, r1]
+  r2 = call_native i0 [r0, r1]
   init_global g0, r2
   r3 = load_global g0
-  print r3
+  r56 = call_native i1 [r3]
   r4 = load_global g0
   r5 = len r4
-  print r5
+  r56 = call_native i1 [r5]
   r6 = load_global g0
   r7 = constant c2
   r8 = index r6, r7
-  print r8
+  r56 = call_native i1 [r8]
   r9 = load_global g0
   r10 = constant c3
-  r11 = native_call n6 [r9, r10]
-  print r11
+  r11 = call_native i2 [r9, r10]
+  r56 = call_native i1 [r11]
   r12 = load_global g0
   r13 = constant c4
-  r14 = native_call n8 [r12, r13]
-  print r14
+  r14 = call_native i2 [r12, r13]
+  r56 = call_native i1 [r14]
   r15 = load_global g0
   r16 = len r15
-  print r16
+  r56 = call_native i1 [r16]
   r17 = load_global g0
-  r18 = native_call n11 [r17]
-  print r18
+  r18 = call_native i3 [r17]
+  r56 = call_native i1 [r18]
   r19 = constant c5
-  r20 = native_call n12 [r19]
+  r20 = call_native i0 [r19]
   r21 = assert_array r20
   init_global g1, r21
   r22 = constant c6
@@ -130,14 +136,14 @@ block b3:
   br b1
 block b4:
   r35 = load_global g3
-  print r35
+  r56 = call_native i1 [r35]
   br b3
 block b5:
   r36 = constant c9
   r37 = constant c10
   r38 = constant c11
   r39 = negate r38
-  r40 = native_call n26 [r36, r37, r39]
+  r40 = call_native i0 [r36, r37, r39]
   r41 = assert_array r40
   init_global g5, r41
   r42 = constant c12
@@ -167,7 +173,7 @@ block b8:
   br b6
 block b9:
   r55 = load_global g7
-  print r55
+  r56 = call_native i1 [r55]
   br b8
 block b10:
   return_nil

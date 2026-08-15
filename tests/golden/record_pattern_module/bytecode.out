@@ -1,4 +1,5 @@
-main registers=9
+native_import i0 = print abi=1
+main registers=10
 0000  block
 0001  b0 = constant #0 1
 0002  b1 = constant #1 2
@@ -11,11 +12,11 @@ main registers=9
 0009  br_if b6, b1, b2
 0010  block
 0011  b7 = constant #3 "one"
-0012  print b7
+0012  b9 = call_native i0 [b7]
 0013  return_nil
 0014  block
 0015  b8 = constant #4 "other"
-0016  print b8
+0016  b9 = call_native i0 [b8]
 0017  return_nil
 0018  block
 0019  return_nil

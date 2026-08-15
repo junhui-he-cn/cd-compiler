@@ -11,12 +11,16 @@ names:
 types:
   t0 = struct "Box" field0="value"
 
-main registers=3:
+native_imports:
+  i0 = "typeOf" abi=1
+  i1 = "print" abi=1
+
+main registers=4:
 block b0:
   r0 = constant c0
   r1 = make_struct t0 [r0]
-  r2 = native_call n2 [r1]
-  print r2
+  r2 = call_native i0 [r1]
+  r3 = call_native i1 [r2]
   return_nil
 
 debug_sources:

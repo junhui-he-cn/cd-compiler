@@ -1,9 +1,12 @@
-main registers=40
+native_import i0 = range abi=1
+native_import i1 = push abi=1
+native_import i2 = print abi=1
+main registers=41
 0000  block
 0001  b0 = array []
 0002  init_global g0, b0
 0003  b1 = constant #0 3
-0004  b2 = native_call @1 range [b1]
+0004  b2 = call_native i0 [b1]
 0005  b3 = assert_array b2
 0006  init_global g1, b3
 0007  b4 = constant #1 0
@@ -38,7 +41,7 @@ main registers=40
 0036  init_global g5, b19
 0037  b20 = load_global g0
 0038  b21 = make_function $0 <lambda>/0
-0039  b22 = native_call @18 push [b20, b21]
+0039  b22 = call_native i1 [b20, b21]
 0040  br b3
 0041  block
 0042  b23 = load_global g0
@@ -72,7 +75,7 @@ main registers=40
 0070  block
 0071  b38 = load_global g8
 0072  b39 = call b38()
-0073  print b39
+0073  b40 = call_native i2 [b39]
 0074  br b8
 0075  block
 0076  return_nil

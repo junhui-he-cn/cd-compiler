@@ -1,4 +1,5 @@
-main registers=8
+native_import i0 = print abi=1
+main registers=9
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -7,11 +8,11 @@ main registers=8
 0005  b2 = load_global g0
 0006  b3 = constant #2 7
 0007  b4 = call b2(b3)
-0008  print b4
+0008  b8 = call_native i0 [b4]
 0009  b5 = load_global g0
 0010  b6 = constant #3 "module"
 0011  b7 = call b5(b6)
-0012  print b7
+0012  b8 = call_native i0 [b7]
 0013  return_nil
 
 function $0 identity/1 registers=2

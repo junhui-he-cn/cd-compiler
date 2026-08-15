@@ -1,4 +1,6 @@
-main registers=57
+native_import i0 = str abi=1
+native_import i1 = print abi=1
+main registers=58
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -20,13 +22,13 @@ main registers=57
 0018  init_global g3, b7
 0019  b10 = constant #11 "if-let:"
 0020  b11 = load_global g3
-0021  b12 = native_call @16 str [b11]
+0021  b12 = call_native i0 [b11]
 0022  b13 = add b10, b12
-0023  print b13
+0023  b57 = call_native i1 [b13]
 0024  br b3
 0025  block
 0026  b14 = constant #12 "if-let:none"
-0027  print b14
+0027  b57 = call_native i1 [b14]
 0028  br b3
 0029  block
 0030  b15 = load_global g2
@@ -41,7 +43,7 @@ main registers=57
 0039  b16 = move b19
 0040  br b6
 0041  block
-0042  print b16
+0042  b57 = call_native i1 [b16]
 0043  b20 = load_global g0
 0044  b21 = constant #15 1
 0045  b22 = negate b21
@@ -57,7 +59,7 @@ main registers=57
 0055  b24 = move b27
 0056  br b9
 0057  block
-0058  print b24
+0058  b57 = call_native i1 [b24]
 0059  b28 = load_global g1
 0060  b29 = constant #18 3
 0061  b30 = call b28(b29)
@@ -72,7 +74,7 @@ main registers=57
 0070  b31 = move b34
 0071  br b12
 0072  block
-0073  print b31
+0073  b57 = call_native i1 [b31]
 0074  b35 = load_global g1
 0075  b36 = constant #21 1
 0076  b37 = negate b36
@@ -88,7 +90,7 @@ main registers=57
 0086  b39 = move b42
 0087  br b15
 0088  block
-0089  print b39
+0089  b57 = call_native i1 [b39]
 0090  b43 = load_global g0
 0091  b44 = constant #24 1
 0092  b45 = call b43(b44)
@@ -114,7 +116,7 @@ main registers=57
 0112  br b16
 0113  block
 0114  b56 = load_global g5
-0115  print b56
+0115  b57 = call_native i1 [b56]
 0116  return_nil
 
 function $0 find/1 registers=8
@@ -154,7 +156,7 @@ upvalue u0 = global g0
 0012  bind_local l1, b2
 0013  b5 = constant #7 "got:"
 0014  b6 = load_local l1
-0015  b7 = native_call @9 str [b6]
+0015  b7 = call_native i0 [b6]
 0016  b8 = add b5, b7
 0017  return b8
 0018  block

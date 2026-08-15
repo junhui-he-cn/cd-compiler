@@ -1,7 +1,7 @@
 use crate::bytecode::{
     BlockId, Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, GlobalId,
-    Instruction, LocalId, Program, TypeId, TypeLayout, UpvalueDesc, UpvalueId, UpvalueSource,
-    VariantId, VariantLayout,
+    Instruction, LocalId, NativeId, NativeImport, Program, TypeId, TypeLayout, UpvalueDesc,
+    UpvalueId, UpvalueSource, VariantId, VariantLayout,
 };
 use crate::vm::native_arity_bounds;
 use std::collections::BTreeSet;
@@ -325,7 +325,11 @@ impl<'a> Parser<'a> {
         self.require_line("names:")?;
         let mut names = Vec::new();
         while let Some((line_number, line)) = self.peek() {
-            if line.starts_with("main registers=") || line == "globals:" || line == "types:" {
+            if line.starts_with("main registers=")
+                || line == "globals:"
+                || line == "types:"
+                || line == "native_imports:"
+            {
                 break;
             }
             self.advance();
@@ -892,6 +896,39 @@ fn parse_program_body_with_globals(parser: &mut Parser<'_>) -> Result<Program, P
             types.push(layout);
         }
     }
+    let mut native_imports = Vec::new();
+    if parser
+        .peek()
+        .map(|(_, line)| line == "native_imports:")
+        .unwrap_or(false)
+    {
+        parser.advance();
+        while let Some((line_number, line)) = parser.peek() {
+            if !line.starts_with("i") || !line.contains(" = ") {
+                break;
+            }
+            parser.advance();
+            let (import_ref, rest) = split_once(line_number, line, " = ")?;
+            let import_index =
+                parse_prefixed(line_number, import_ref, 'i', "native import reference")?;
+            if import_index != native_imports.len() {
+                return Err(ParseError {
+                    line: line_number,
+                    message: format!("expected native import i{}", native_imports.len()),
+                });
+            }
+            let (name, rest) = parse_string_prefix(line_number, rest)?;
+            let abi_text = rest.strip_prefix(" abi=").ok_or_else(|| ParseError {
+                line: line_number,
+                message: "expected native import abi version".to_string(),
+            })?;
+            let abi = parse_usize(line_number, abi_text, "native import abi version")?;
+            native_imports.push(NativeImport {
+                name,
+                abi: abi as u32,
+            });
+        }
+    }
     let main = parser.parse_main()?;
     let mut functions = parser.parse_functions()?;
     functions.insert(0, main);
@@ -901,6 +938,7 @@ fn parse_program_body_with_globals(parser: &mut Parser<'_>) -> Result<Program, P
         names,
         globals,
         types,
+        native_imports,
         functions,
         entry: FuncId(0),
         debug_sources,
@@ -1028,6 +1066,7 @@ const SUPPORTED_NATIVE_FUNCTIONS: &[&str] = &[
     "findIndex",
     "reduce",
     "range",
+    "print",
 ];
 
 fn validation_error(line: usize, message: impl Into<String>) -> ParseError {
@@ -1120,6 +1159,36 @@ fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
             }
         }
     }
+    let mut native_names = BTreeSet::new();
+    for (index, import) in program.native_imports.iter().enumerate() {
+        if import.name.is_empty() {
+            return Err(validation_error(
+                line,
+                format!("native import i{} has an empty name", index),
+            ));
+        }
+        if import.abi != 1 {
+            return Err(validation_error(
+                line,
+                format!("native import i{} must declare abi=1", index),
+            ));
+        }
+        if !SUPPORTED_NATIVE_FUNCTIONS.contains(&import.name.as_str()) {
+            return Err(validation_error(
+                line,
+                format!(
+                    "native import i{} references unsupported native function `{}`",
+                    index, import.name
+                ),
+            ));
+        }
+        if !native_names.insert(import.name.as_str()) {
+            return Err(validation_error(
+                line,
+                format!("native import i{} duplicates native function `{}`", index, import.name),
+            ));
+        }
+    }
 
     if program.functions.get(program.entry.0 as usize).is_none() {
         return Err(validation_error(
@@ -1131,7 +1200,7 @@ fn validate_program(program: &Program, line: usize) -> Result<(), ParseError> {
         return Err(validation_error(
             line,
             format!(
-                "entry must be f0 while the cdbc 0.1 text envelope is current, found f{}",
+                "entry must be f0, found f{}",
                 program.entry.0
             ),
         ));
@@ -1316,6 +1385,7 @@ fn instruction_register_def(instruction: &Instruction) -> Option<usize> {
         | Instruction::LoadGlobal { dest, .. }
         | Instruction::Call { dest, .. }
         | Instruction::NativeCall { dest, .. }
+        | Instruction::CallNative { dest, .. }
         | Instruction::Index { dest, .. }
         | Instruction::AssignIndex { dest, .. }
         | Instruction::Field { dest, .. }
@@ -1375,6 +1445,7 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
             reads
         }
         Instruction::NativeCall { arguments, .. } => arguments.clone(),
+        Instruction::CallNative { arguments, .. } => arguments.clone(),
         Instruction::MakeStruct { elements, .. } => elements.clone(),
         Instruction::StructGet { object, .. } => vec![*object],
         Instruction::StructSet {
@@ -1710,6 +1781,28 @@ fn validate_block_body(
                                 "{} native `{}` expects {} to {} arguments, got {}",
                                 context,
                                 native_name,
+                                min_arity,
+                                max_arity,
+                                arguments.len()
+                            ),
+                        ));
+                    }
+                }
+            }
+        }
+        if let Instruction::CallNative {
+            native, arguments, ..
+        } = instruction
+        {
+            if let Some(import) = program.native_imports.get(native.0 as usize) {
+                if let Some((min_arity, max_arity)) = native_arity_bounds(&import.name) {
+                    if arguments.len() < min_arity || arguments.len() > max_arity {
+                        return Err(validation_error(
+                            line,
+                            format!(
+                                "{} native `{}` expects {} to {} arguments, got {}",
+                                context,
+                                import.name,
                                 min_arity,
                                 max_arity,
                                 arguments.len()
@@ -2131,6 +2224,26 @@ fn validate_instruction(
             }
             registers(arguments, "native argument")?;
         }
+        Instruction::CallNative {
+            dest,
+            native,
+            arguments,
+        } => {
+            register(*dest, "destination")?;
+            if native.0 as usize >= program.native_imports.len() {
+                return Err(validation_error(
+                    line,
+                    format!(
+                        "{} instruction {} native import i{} out of range (import count {})",
+                        context,
+                        instruction_index,
+                        native.0,
+                        program.native_imports.len()
+                    ),
+                ));
+            }
+            registers(arguments, "native argument")?;
+        }
         Instruction::Index {
             dest,
             collection,
@@ -2343,6 +2456,11 @@ fn format_program_capacity_hint(program: &Program) -> usize {
         .sum::<usize>()
         + program.names.iter().map(String::len).sum::<usize>()
         + program
+            .native_imports
+            .iter()
+            .map(|import| import.name.len())
+            .sum::<usize>()
+        + program
             .debug_sources
             .iter()
             .map(|source| source.path.len() + source.text.len())
@@ -2351,6 +2469,7 @@ fn format_program_capacity_hint(program: &Program) -> usize {
         .saturating_add(instruction_count.saturating_mul(128))
         .saturating_add(program.constants.len().saturating_mul(32))
         .saturating_add(program.names.len().saturating_mul(32))
+        .saturating_add(program.native_imports.len().saturating_mul(32))
         .saturating_add(string_bytes)
 }
 
@@ -2398,6 +2517,17 @@ fn format_program_sections(out: &mut String, program: &Program) {
                 }
                 out.push('\n');
             }
+        }
+    }
+    if !program.native_imports.is_empty() {
+        out.push_str("\nnative_imports:\n");
+        for (index, import) in program.native_imports.iter().enumerate() {
+            out.push_str(&format!(
+                "  i{} = {} abi={}\n",
+                index,
+                quote_string(&import.name),
+                import.abi
+            ));
         }
     }
     let entry = &program.functions[program.entry.0 as usize];
@@ -2754,6 +2884,19 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                     arguments: parse_register_list(line, args)?,
                 })
             }
+            "call_native" => {
+                let (native, args) = split_once(line, operands, " ")?;
+                Ok(Instruction::CallNative {
+                    dest,
+                    native: NativeId(parse_prefixed(
+                        line,
+                        native,
+                        'i',
+                        "native import reference",
+                    )? as u32),
+                    arguments: parse_register_list(line, args)?,
+                })
+            }
             "index" => {
                 let (collection, index) = parse_two_registers(line, operands)?;
                 Ok(Instruction::Index {
@@ -3083,6 +3226,16 @@ fn format_instruction(instruction: &Instruction) -> String {
             "r{} = native_call n{} {}",
             dest,
             name,
+            format_register_list(arguments)
+        ),
+        Instruction::CallNative {
+            dest,
+            native,
+            arguments,
+        } => format!(
+            "r{} = call_native i{} {}",
+            dest,
+            native.0,
             format_register_list(arguments)
         ),
         Instruction::Index {
@@ -3637,6 +3790,7 @@ mod tests {
             names: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
                 name: "main".to_string(),
@@ -3883,5 +4037,67 @@ main registers=0:
 "#;
         let error = parse_artifact(source).expect_err("offset should be rejected");
         assert!(error.message.contains("offset out of range"));
+    }
+
+    #[test]
+    fn parses_and_formats_native_import_table() {
+        let source = r#"cdbc 0.2
+
+constants:
+
+names:
+
+native_imports:
+  i0 = "print" abi=1
+  i1 = "str" abi=1
+
+main registers=2:
+  r0 = call_native i0 [r1]
+"#;
+        let program = parse_program(source).expect("parse native import table");
+        assert_eq!(program.native_imports.len(), 2);
+        assert_eq!(program.native_imports[0].name, "print");
+        assert_eq!(program.native_imports[0].abi, 1);
+        assert_eq!(format_program(&program), source);
+    }
+
+    #[test]
+    fn rejects_invalid_native_import_metadata() {
+        let cases = [
+            (
+                "out of range index",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nnative_imports:\n  i0 = \"print\" abi=1\n\nmain registers=1:\n  r0 = call_native i1 []\n",
+                "native import i1 out of range",
+            ),
+            (
+                "unsupported name",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nnative_imports:\n  i0 = \"not_native\" abi=1\n\nmain registers=0:\n",
+                "unsupported native function `not_native`",
+            ),
+            (
+                "wrong abi version",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nnative_imports:\n  i0 = \"print\" abi=2\n\nmain registers=0:\n",
+                "must declare abi=1",
+            ),
+            (
+                "duplicate name",
+                "cdbc 0.2\n\nconstants:\n\nnames:\n\nnative_imports:\n  i0 = \"print\" abi=1\n  i1 = \"print\" abi=1\n\nmain registers=0:\n",
+                "duplicates native function `print`",
+            ),
+            (
+                "arity violation",
+                "cdbc 0.2\n\nconstants:\n  c0 = nil\n\nnames:\n\nnative_imports:\n  i0 = \"print\" abi=1\n\nmain registers=3:\nblock b0:\n  r0 = constant c0\n  r1 = constant c0\n  r2 = call_native i0 [r0, r1]\n  return_nil\n",
+                "native `print` expects 1 to 1 arguments, got 2",
+            ),
+        ];
+        for (name, source, expected) in cases {
+            let error = parse_program(source).expect_err(name);
+            assert!(
+                error.message.contains(expected),
+                "{}: {}",
+                name,
+                error.message
+            );
+        }
     }
 }

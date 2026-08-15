@@ -277,7 +277,7 @@ BytecodeOp lowerOp(IROp op)
     case IROp::Call:
         return BytecodeOp::Call;
     case IROp::NativeCall:
-        return BytecodeOp::NativeCall;
+        return BytecodeOp::CallNative;
     case IROp::Index:
         return BytecodeOp::Index;
     case IROp::AssignIndex:
@@ -292,8 +292,6 @@ BytecodeOp lowerOp(IROp op)
         return BytecodeOp::AssertArray;
     case IROp::AssertNumber:
         return BytecodeOp::AssertNumber;
-    case IROp::Print:
-        return BytecodeOp::Print;
     case IROp::Return:
         return BytecodeOp::Return;
     case IROp::Negate:
@@ -546,13 +544,56 @@ BytecodeProgram BytecodeCompiler::compile(const IRProgram& ir)
         }
     }
 
+    // Phase 7: native calls address a serialized import table instead of the
+    // name table. Print statements lower to a call of the native `print`
+    // import. Imports follow first-use order across main and then functions.
+    std::vector<BytecodeNativeImport> nativeImports;
+    std::unordered_map<std::string, std::uint32_t> nativeImportIds;
+    const auto internNative = [&](const std::string& name) {
+        const auto existing = nativeImportIds.find(name);
+        if (existing != nativeImportIds.end()) {
+            return existing->second;
+        }
+        const std::uint32_t id
+            = checkedU32(nativeImports.size(), "native import count out of range");
+        nativeImportIds.emplace(name, id);
+        nativeImports.push_back(BytecodeNativeImport{name, 1});
+        return id;
+    };
+    const auto scanNativeUses = [&](const std::vector<IRInstruction>& instructions) {
+        for (const IRInstruction& instruction : instructions) {
+            if (instruction.op == IROp::Print) {
+                internNative("print");
+            } else if (instruction.op == IROp::NativeCall) {
+                if (instruction.operand >= ir.names().size()) {
+                    throw BytecodeCompileError(
+                        "native call has an out-of-range name operand");
+                }
+                internNative(ir.names()[instruction.operand]);
+            }
+        }
+    };
+    scanNativeUses(ir.instructions());
+    for (const IRFunction& function : functions) {
+        scanNativeUses(function.instructions);
+    }
+    const bool mainHasPrint = std::any_of(
+        ir.instructions().begin(), ir.instructions().end(),
+        [](const IRInstruction& instruction) { return instruction.op == IROp::Print; });
+    const std::uint32_t mainPrintScratch
+        = checkedU32(ir.registerCount(), "print scratch register out of range");
+
     BytecodeProgram program;
     program.setSources(ir.sources());
     program.setConstants(ir.constants());
     program.setNames(ir.names());
-    program.setRegisterCount(checkedU32(ir.registerCount(), "register index out of range"));
+    program.setRegisterCount(mainHasPrint
+            ? checkedU32(ir.registerCount() + 1, "register index out of range")
+            : checkedU32(ir.registerCount(), "register index out of range"));
+    program.setNativeImports(std::move(nativeImports));
     auto mainInstructions = lowerInstructions(
-        ir.instructions(), globalSlots, globalSlotsByName, ir.names(), types, nullptr);
+        ir.instructions(), globalSlots, globalSlotsByName, ir.names(), types,
+        nativeImportIds, mainPrintScratch, nullptr);
     std::unordered_map<std::uint32_t, std::uint32_t> dependencyRemap;
     std::vector<std::size_t> forcedStarts;
     for (const IRModuleDependency& dependency : ir.moduleDependencies()) {
@@ -567,7 +608,8 @@ BytecodeProgram BytecodeCompiler::compile(const IRProgram& ir)
     loweredFunctions.reserve(functions.size());
     for (std::size_t index = 0; index < functions.size(); ++index) {
         loweredFunctions.push_back(lowerFunction(
-            functions[index], globalSlots, globalSlotsByName, ir.names(), types, plans[index]));
+            functions[index], globalSlots, globalSlotsByName, ir.names(), types,
+            nativeImportIds, plans[index]));
     }
     program.setFunctions(std::move(loweredFunctions));
     program.setTypes(std::move(types.types));
@@ -581,13 +623,16 @@ std::vector<BytecodeInstruction> BytecodeCompiler::lowerInstructions(
     const std::unordered_map<std::string, std::uint32_t>& globalSlotsByName,
     const std::vector<std::string>& names,
     TypeTables& types,
+    const std::unordered_map<std::string, std::uint32_t>& nativeImports,
+    std::uint32_t printScratch,
     const FunctionPlan* plan)
 {
     std::vector<BytecodeInstruction> lowered;
     lowered.reserve(instructions.size());
     for (const IRInstruction& instruction : instructions) {
         lowered.push_back(lowerInstruction(
-            instruction, globalSlots, globalSlotsByName, names, types, plan));
+            instruction, globalSlots, globalSlotsByName, names, types,
+            nativeImports, printScratch, plan));
     }
     return lowered;
 }
@@ -598,6 +643,8 @@ BytecodeInstruction BytecodeCompiler::lowerInstruction(
     const std::unordered_map<std::string, std::uint32_t>& globalSlotsByName,
     const std::vector<std::string>& names,
     TypeTables& types,
+    const std::unordered_map<std::string, std::uint32_t>& nativeImports,
+    std::uint32_t printScratch,
     const FunctionPlan* plan)
 {
     BytecodeInstruction lowered{
@@ -611,6 +658,33 @@ BytecodeInstruction BytecodeCompiler::lowerInstruction(
         lowerOperand(instruction.typeNameOperand),
         lowerOperand(instruction.variantNameOperand),
         instruction.span};
+
+    if (instruction.op == IROp::Print) {
+        const auto printImport = nativeImports.find("print");
+        if (printImport == nativeImports.end()) {
+            throw BytecodeCompileError("missing native import for print");
+        }
+        if (!instruction.left) {
+            throw BytecodeCompileError("print statement is missing a value operand");
+        }
+        lowered.op = BytecodeOp::CallNative;
+        lowered.dest = BytecodeRegister{printScratch};
+        lowered.arguments = {*lowered.left};
+        lowered.left = std::nullopt;
+        lowered.operand = printImport->second;
+        return lowered;
+    }
+    if (instruction.op == IROp::NativeCall) {
+        if (instruction.operand >= names.size()) {
+            throw BytecodeCompileError("native call has an out-of-range name operand");
+        }
+        const auto nativeImport = nativeImports.find(names[instruction.operand]);
+        if (nativeImport == nativeImports.end()) {
+            throw BytecodeCompileError(
+                "missing native import for `" + names[instruction.operand] + "`");
+        }
+        lowered.operand = nativeImport->second;
+    }
 
     const auto requireTarget = [&](VariableTarget& target) {
         if (!instruction.bindingId) {
@@ -847,16 +921,25 @@ BytecodeFunction BytecodeCompiler::lowerFunction(
     const std::unordered_map<std::string, std::uint32_t>& globalSlotsByName,
     const std::vector<std::string>& names,
     TypeTables& types,
+    const std::unordered_map<std::string, std::uint32_t>& nativeImports,
     const FunctionPlan& plan)
 {
+    const bool hasPrint = std::any_of(
+        function.instructions.begin(), function.instructions.end(),
+        [](const IRInstruction& instruction) { return instruction.op == IROp::Print; });
+    const std::uint32_t printScratch
+        = checkedU32(function.registerCount, "print scratch register out of range");
     auto instructions = lowerInstructions(
-        function.instructions, globalSlots, globalSlotsByName, names, types, &plan);
+        function.instructions, globalSlots, globalSlotsByName, names, types,
+        nativeImports, printScratch, &plan);
     splitControlFlow(instructions, nullptr, {});
     BytecodeFunction lowered{
         function.name,
         function.parameters,
         std::move(instructions),
-        checkedU32(function.registerCount, "register index out of range"),
+        hasPrint
+            ? checkedU32(function.registerCount + 1, "register index out of range")
+            : checkedU32(function.registerCount, "register index out of range"),
         plan.localCount,
         plan.upvalueSources,
     };

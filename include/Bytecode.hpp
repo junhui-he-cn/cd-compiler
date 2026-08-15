@@ -41,13 +41,12 @@ enum class BytecodeOp {
     InitGlobal,
     SetGlobal,
     Call,
-    NativeCall,
+    CallNative,
     Index,
     AssignIndex,
     Len,
     AssertArray,
     AssertNumber,
-    Print,
     Return,
     Negate,
     Not,
@@ -107,6 +106,11 @@ struct BytecodeType {
     std::vector<BytecodeVariantLayout> variants;
 };
 
+struct BytecodeNativeImport {
+    std::string name;
+    std::uint32_t abiVersion = 0;
+};
+
 struct BytecodeFunction {
     std::string name;
     std::vector<std::string> parameters;
@@ -135,6 +139,7 @@ public:
     void setFunctions(std::vector<BytecodeFunction> functions);
     void setGlobals(std::vector<std::uint32_t> globals);
     void setTypes(std::vector<BytecodeType> types);
+    void setNativeImports(std::vector<BytecodeNativeImport> nativeImports);
     void setDependencyRemap(std::unordered_map<std::uint32_t, std::uint32_t> remap);
 
     const std::vector<Value>& constants() const;
@@ -144,6 +149,7 @@ public:
     const std::vector<BytecodeFunction>& functions() const;
     const std::vector<std::uint32_t>& globals() const;
     const std::vector<BytecodeType>& types() const;
+    const std::vector<BytecodeNativeImport>& nativeImports() const;
     std::uint32_t remapDependencyOffset(std::uint32_t irOffset) const;
 
     void print(std::ostream& out) const;
@@ -156,6 +162,7 @@ private:
     std::vector<BytecodeFunction> functions_;
     std::vector<std::uint32_t> globals_;
     std::vector<BytecodeType> types_;
+    std::vector<BytecodeNativeImport> nativeImports_;
     std::unordered_map<std::uint32_t, std::uint32_t> dependencyRemap_;
     std::vector<SourceFile> sources_;
 };

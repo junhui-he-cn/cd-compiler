@@ -37,7 +37,10 @@ globals:
   g1 = n11
   g2 = n13
 
-main registers=19:
+native_imports:
+  i0 = "print" abi=1
+
+main registers=20:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -49,7 +52,7 @@ block b0:
   init_global g1, r4
   r5 = load_global g1
   r6 = call r5 []
-  print r6
+  r19 = call_native i0 [r6]
   r7 = constant c6
   r8 = constant c7
   r9 = constant c8
@@ -63,7 +66,7 @@ block b0:
   r16 = load_global g2
   r17 = constant c10
   r18 = index r16, r17
-  print r18
+  r19 = call_native i0 [r18]
   return_nil
 
 function f0 name="next" arity=0 registers=5:

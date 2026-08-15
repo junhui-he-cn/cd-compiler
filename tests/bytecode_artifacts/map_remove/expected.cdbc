@@ -23,7 +23,11 @@ globals:
   g0 = n0
   g1 = n2
 
-main registers=15:
+native_imports:
+  i0 = "remove" abi=1
+  i1 = "print" abi=1
+
+main registers=16:
 block b0:
   r0 = constant c0
   r1 = constant c1
@@ -35,17 +39,17 @@ block b0:
   init_global g1, r5
   r6 = load_global g0
   r7 = constant c4
-  r8 = native_call n4 [r6, r7]
-  print r8
+  r8 = call_native i0 [r6, r7]
+  r15 = call_native i1 [r8]
   r9 = load_global g1
-  print r9
+  r15 = call_native i1 [r9]
   r10 = load_global g1
   r11 = constant c5
-  r12 = native_call n7 [r10, r11]
-  print r12
+  r12 = call_native i0 [r10, r11]
+  r15 = call_native i1 [r12]
   r13 = load_global g0
   r14 = len r13
-  print r14
+  r15 = call_native i1 [r14]
   return_nil
 
 debug_sources:

@@ -1,4 +1,5 @@
-main registers=37
+native_import i0 = print abi=1
+main registers=38
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -28,33 +29,33 @@ main registers=37
 0026  b13 = constant #12 "same"
 0027  b14 = constant #13 "same"
 0028  b15 = call b12(b13, b14)
-0029  print b15
+0029  b37 = call_native i0 [b15]
 0030  b16 = load_global g4
 0031  b17 = constant #14 1
 0032  b18 = constant #15 2
 0033  b19 = call b16(b17, b18)
-0034  print b19
+0034  b37 = call_native i0 [b19]
 0035  b20 = load_global g4
 0036  b21 = constant #16 "a"
 0037  b22 = constant #17 "b"
 0038  b23 = call b20(b21, b22)
-0039  print b23
+0039  b37 = call_native i0 [b23]
 0040  b24 = load_global g0
 0041  b25 = constant #18 3
 0042  b26 = constant #19 3
 0043  b27 = call b24(b25, b26)
-0044  print b27
+0044  b37 = call_native i0 [b27]
 0045  b28 = load_global g1
 0046  b29 = constant #20 3
 0047  b30 = constant #21 4
 0048  b31 = call b28(b29, b30)
-0049  print b31
+0049  b37 = call_native i0 [b31]
 0050  b32 = load_global g2
 0051  b33 = constant #22 4
 0052  b34 = constant #23 5
 0053  b35 = load_global g5
 0054  b36 = call b32(b33, b34, b35)
-0055  print b36
+0055  b37 = call_native i0 [b36]
 0056  return_nil
 
 function $0 same/2 registers=4

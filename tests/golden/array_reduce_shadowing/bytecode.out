@@ -1,4 +1,6 @@
-main registers=12
+native_import i0 = print abi=1
+native_import i1 = reduce abi=1
+main registers=13
 0000  block
 0001  b0 = make_function $0 <lambda>/3
 0002  init_global g0, b0
@@ -8,13 +10,13 @@ main registers=12
 0006  b4 = constant #3 0
 0007  b5 = make_function $1 <lambda>/2
 0008  b6 = call b1(b3, b4, b5)
-0009  print b6
+0009  b12 = call_native i0 [b6]
 0010  b7 = constant #5 1
 0011  b8 = array [b7]
 0012  b9 = constant #6 0
 0013  b10 = make_function $2 <lambda>/2
-0014  b11 = native_call @5 reduce [b8, b9, b10]
-0015  print b11
+0014  b11 = call_native i1 [b8, b9, b10]
+0015  b12 = call_native i0 [b11]
 0016  return_nil
 
 function $0 <lambda>/3 registers=2

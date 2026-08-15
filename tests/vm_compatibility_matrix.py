@@ -163,8 +163,10 @@ def validate_matrix(matrix: dict[str, Any], repo_root: Path = REPO_ROOT) -> list
     native_source = _check_source_path(repo_root, _field(native_abi, "source"), "native ABI", errors)
     if _field(native_abi, "mode") != "fixed-registered-names":
         errors.append("native ABI mode must remain fixed-registered-names")
-    if _field(native_abi, "serialized") is not False:
-        errors.append("native ABI names must remain non-serialized")
+    if _field(native_abi, "serialized") is not True:
+        errors.append("native ABI names must be serialized through native_imports")
+    if _field(native_abi, "abi") != 1:
+        errors.append("native ABI import version must remain 1")
     if native_source is not None and _field(native_abi, "names") != _native_names(native_source):
         errors.append("native ABI names do not match vm.rs registry")
 

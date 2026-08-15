@@ -23,7 +23,10 @@ globals:
 types:
   t0 = struct "Person" field0="name" field1="age"
 
-main registers=8:
+native_imports:
+  i0 = "print" abi=1
+
+main registers=9:
 block b0:
   r0 = constant c0
   r1 = constant c1
@@ -34,7 +37,7 @@ block b0:
   r5 = struct_set r3, t0, 1, r4
   r6 = load_global g0
   r7 = struct_get r6, t0, 1
-  print r7
+  r8 = call_native i0 [r7]
   return_nil
 
 debug_sources:

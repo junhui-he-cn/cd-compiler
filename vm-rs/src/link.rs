@@ -1,6 +1,6 @@
 use crate::bytecode::{
     BlockId, Constant, DebugLocation, DebugRange, DebugSource, FuncId, Function, GlobalId,
-    Instruction, Program, TypeId, TypeLayout, UpvalueDesc, UpvalueSource,
+    Instruction, NativeId, NativeImport, Program, TypeId, TypeLayout, UpvalueDesc, UpvalueSource,
 };
 use crate::format::{verify_module_artifact, verify_program, ModuleArtifact};
 use std::collections::{HashMap, HashSet};
@@ -122,6 +122,7 @@ struct ModuleContext {
     function_base: usize,
     block_base: usize,
     type_remap: Vec<u32>,
+    native_remap: Vec<u32>,
     global_remap: Vec<usize>,
     main_register_base: usize,
     source_base: usize,
@@ -146,6 +147,8 @@ struct Linker {
     linked_block_count: usize,
     linked_types: Vec<TypeLayout>,
     type_names: HashMap<String, u32>,
+    linked_native_imports: Vec<NativeImport>,
+    native_names: HashMap<String, u32>,
     pending_main: Vec<(usize, usize, Instruction, ModuleContext)>,
     block_ids: HashMap<(usize, u32), u32>,
     splice_redirects: HashMap<(usize, u32), u32>,
@@ -289,6 +292,8 @@ impl Linker {
             linked_block_count: 0,
             linked_types: Vec::new(),
             type_names: HashMap::new(),
+            linked_native_imports: Vec::new(),
+            native_names: HashMap::new(),
             pending_main: Vec::new(),
             block_ids: HashMap::new(),
             splice_redirects: HashMap::new(),
@@ -363,12 +368,26 @@ impl Linker {
             };
             type_remap.push(linked);
         }
+        let mut native_remap = Vec::with_capacity(module.program.native_imports.len());
+        for import in &module.program.native_imports {
+            let linked = match self.native_names.get(&import.name) {
+                Some(id) => *id,
+                None => {
+                    let id = self.linked_native_imports.len() as u32;
+                    self.native_names.insert(import.name.clone(), id);
+                    self.linked_native_imports.push(import.clone());
+                    id
+                }
+            };
+            native_remap.push(linked);
+        }
         let context = ModuleContext {
             constant_base,
             name_base,
             function_base: self.functions.len(),
             block_base,
             type_remap,
+            native_remap,
             global_remap,
             main_register_base: self.main.registers,
             source_base,
@@ -582,6 +601,7 @@ impl Linker {
             constants: self.constants,
             globals: Vec::new(),
             types: self.linked_types,
+            native_imports: self.linked_native_imports,
             names: self.names,
             functions,
             entry: FuncId(0),
@@ -629,6 +649,7 @@ mod tests {
             constants: Vec::new(),
             globals: Vec::new(),
             types: Vec::new(),
+            native_imports: Vec::new(),
             names: Vec::new(),
             functions: vec![Function {
                 id: FuncId(0),
@@ -1092,6 +1113,28 @@ fn map_instruction(
         } => Instruction::NativeCall {
             dest: register(*dest)?,
             name: name(*value)?,
+            arguments: arguments
+                .iter()
+                .map(|argument| register(*argument))
+                .collect::<Result<Vec<_>, _>>()?,
+        },
+        Instruction::CallNative {
+            dest,
+            native,
+            arguments,
+        } => Instruction::CallNative {
+            dest: register(*dest)?,
+            native: NativeId(
+                *context
+                    .native_remap
+                    .get(native.0 as usize)
+                    .ok_or_else(|| {
+                        LinkError::new(
+                            LinkErrorKind::InvalidInstruction,
+                            format!("native import i{} out of range", native.0),
+                        )
+                    })?,
+            ),
             arguments: arguments
                 .iter()
                 .map(|argument| register(*argument))

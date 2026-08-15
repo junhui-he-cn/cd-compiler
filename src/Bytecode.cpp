@@ -49,13 +49,12 @@ bool isBinary(BytecodeOp op)
     case BytecodeOp::InitGlobal:
     case BytecodeOp::SetGlobal:
     case BytecodeOp::Call:
-    case BytecodeOp::NativeCall:
+    case BytecodeOp::CallNative:
     case BytecodeOp::Index:
     case BytecodeOp::AssignIndex:
     case BytecodeOp::Len:
     case BytecodeOp::AssertArray:
     case BytecodeOp::AssertNumber:
-    case BytecodeOp::Print:
     case BytecodeOp::Return:
     case BytecodeOp::Negate:
     case BytecodeOp::Not:
@@ -264,8 +263,8 @@ void printInstruction(
             }
             out << ")";
         }
-    } else if (instruction.op == BytecodeOp::NativeCall) {
-        printNameOperand(out, program, instruction.operand);
+    } else if (instruction.op == BytecodeOp::CallNative) {
+        out << " i" << instruction.operand;
         out << " [";
         for (std::size_t arg = 0; arg < instruction.arguments.size(); ++arg) {
             if (arg != 0) {
@@ -293,10 +292,6 @@ void printInstruction(
             out << " " << *instruction.left;
         }
         printNameOperand(out, program, instruction.operand);
-    } else if (instruction.op == BytecodeOp::Print) {
-        if (instruction.left) {
-            out << " " << *instruction.left;
-        }
     } else if (instruction.op == BytecodeOp::Return) {
         if (instruction.left) {
             out << " " << *instruction.left;
@@ -382,6 +377,11 @@ void BytecodeProgram::setTypes(std::vector<BytecodeType> types)
     types_ = std::move(types);
 }
 
+void BytecodeProgram::setNativeImports(std::vector<BytecodeNativeImport> nativeImports)
+{
+    nativeImports_ = std::move(nativeImports);
+}
+
 void BytecodeProgram::setDependencyRemap(
     std::unordered_map<std::uint32_t, std::uint32_t> remap)
 {
@@ -423,6 +423,11 @@ const std::vector<BytecodeType>& BytecodeProgram::types() const
     return types_;
 }
 
+const std::vector<BytecodeNativeImport>& BytecodeProgram::nativeImports() const
+{
+    return nativeImports_;
+}
+
 std::uint32_t BytecodeProgram::remapDependencyOffset(std::uint32_t irOffset) const
 {
     const auto found = dependencyRemap_.find(irOffset);
@@ -431,6 +436,10 @@ std::uint32_t BytecodeProgram::remapDependencyOffset(std::uint32_t irOffset) con
 
 void BytecodeProgram::print(std::ostream& out) const
 {
+    for (std::size_t i = 0; i < nativeImports_.size(); ++i) {
+        out << "native_import i" << i << " = " << nativeImports_[i].name
+            << " abi=" << nativeImports_[i].abiVersion << '\n';
+    }
     out << "main registers=" << registerCount_ << '\n';
     for (std::size_t i = 0; i < instructions_.size(); ++i) {
         printInstruction(out, *this, instructions_[i], i);
@@ -506,8 +515,8 @@ std::string bytecodeOpName(BytecodeOp op)
         return "set_global";
     case BytecodeOp::Call:
         return "call";
-    case BytecodeOp::NativeCall:
-        return "native_call";
+    case BytecodeOp::CallNative:
+        return "call_native";
     case BytecodeOp::Index:
         return "index";
     case BytecodeOp::AssignIndex:
@@ -518,8 +527,6 @@ std::string bytecodeOpName(BytecodeOp op)
         return "assert_array";
     case BytecodeOp::AssertNumber:
         return "assert_number";
-    case BytecodeOp::Print:
-        return "print";
     case BytecodeOp::Return:
         return "return";
     case BytecodeOp::Negate:

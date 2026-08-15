@@ -1,4 +1,6 @@
-main registers=38
+native_import i0 = print abi=1
+native_import i1 = str abi=1
+main registers=39
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -13,26 +15,26 @@ main registers=38
 0011  b5 = load_global g0
 0012  b6 = constant #13 1
 0013  b7 = call b5(b6)
-0014  print b7
+0014  b38 = call_native i0 [b7]
 0015  b8 = load_global g0
 0016  b9 = constant #14 8
 0017  b10 = call b8(b9)
-0018  print b10
+0018  b38 = call_native i0 [b10]
 0019  b11 = load_global g1
 0020  b12 = constant #15 3
 0021  b13 = make_variant t0, v0 (b12)
 0022  b14 = call b11(b13)
-0023  print b14
+0023  b38 = call_native i0 [b14]
 0024  b15 = load_global g1
 0025  b16 = constant #16 4
 0026  b17 = constant #17 10
 0027  b18 = make_variant t0, v1 (b16, b17)
 0028  b19 = call b15(b18)
-0029  print b19
+0029  b38 = call_native i0 [b19]
 0030  b20 = load_global g1
 0031  b21 = make_variant t0, v2 ()
 0032  b22 = call b20(b21)
-0033  print b22
+0033  b38 = call_native i0 [b22]
 0034  b23 = load_global g2
 0035  b24 = constant #18 nil
 0036  b25 = equal b23, b24
@@ -45,7 +47,7 @@ main registers=38
 0043  br_if b27, b3, b4
 0044  block
 0045  b28 = constant #20 "off"
-0046  print b28
+0046  b38 = call_native i0 [b28]
 0047  br b6
 0048  block
 0049  b29 = constant #21 true
@@ -53,7 +55,7 @@ main registers=38
 0051  br_if b30, b5, b6
 0052  block
 0053  b31 = constant #22 "on"
-0054  print b31
+0054  b38 = call_native i0 [b31]
 0055  br b6
 0056  block
 0057  b32 = constant #23 true
@@ -68,7 +70,7 @@ main registers=38
 0066  br_if b36, b9, b10
 0067  block
 0068  b37 = constant #26 "bool"
-0069  print b37
+0069  b38 = call_native i0 [b37]
 0070  return_nil
 0071  block
 0072  return_nil
@@ -127,7 +129,7 @@ function $1 shapeLabel/1 registers=23
 0022  block
 0023  b10 = constant #8 "large:"
 0024  b11 = load_local l1
-0025  b12 = native_call @18 str [b11]
+0025  b12 = call_native i1 [b11]
 0026  b13 = add b10, b12
 0027  return b13
 0028  block

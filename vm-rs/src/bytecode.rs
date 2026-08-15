@@ -2,11 +2,9 @@
 //!
 //! The 0.2 refactor introduces strong index types so the VM never re-derives
 //! language-level identity (locals, upvalues, globals, types, variants, native
-//! imports, blocks) from strings. The current text envelope is still
-//! `.cdbc 0.1`, so the parser maps the legacy `main` section to `functions[0]`
-//! and legacy `fK` sections to `functions[K + 1]`; `Program::entry` names the
-//! unified entry function. Operand indexes that later phases will replace with
-//! `LocalId`/`GlobalId`/`StringId`/`ConstId` remain `usize` for now.
+//! imports, blocks) from strings. The parser maps the legacy `main` section to
+//! `functions[0]` and legacy `fK` sections to `functions[K + 1]`;
+//! `Program::entry` names the unified entry function.
 
 macro_rules! id_type {
     ($(#[$doc:meta])* $name:ident) => {
@@ -67,9 +65,16 @@ pub struct Program {
     pub names: Vec<String>,
     pub globals: Vec<usize>,
     pub types: Vec<TypeLayout>,
+    pub native_imports: Vec<NativeImport>,
     pub functions: Vec<Function>,
     pub entry: FuncId,
     pub debug_sources: Vec<DebugSource>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NativeImport {
+    pub name: String,
+    pub abi: u32,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -280,6 +285,11 @@ pub enum Instruction {
     NativeCall {
         dest: usize,
         name: usize,
+        arguments: Vec<usize>,
+    },
+    CallNative {
+        dest: usize,
+        native: NativeId,
         arguments: Vec<usize>,
     },
     Index {

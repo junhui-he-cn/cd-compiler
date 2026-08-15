@@ -1,4 +1,6 @@
-main registers=8
+native_import i0 = print abi=1
+native_import i1 = str abi=1
+main registers=9
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -12,7 +14,7 @@ main registers=8
 0010  b5 = load_global g0
 0011  b6 = call b5()
 0012  b7 = call b4(b6)
-0013  print b7
+0013  b8 = call_native i0 [b7]
 0014  return_nil
 
 function $0 make/0 registers=3
@@ -36,7 +38,7 @@ function $1 render/1 registers=13
 0006  bind_local l1, b2
 0007  b3 = constant #4 "good:"
 0008  b4 = load_local l1
-0009  b5 = native_call @12 str [b4]
+0009  b5 = call_native i1 [b4]
 0010  b6 = add b3, b5
 0011  return b6
 0012  block

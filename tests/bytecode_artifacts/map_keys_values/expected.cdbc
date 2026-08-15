@@ -16,7 +16,12 @@ names:
 globals:
   g0 = n0
 
-main registers=9:
+native_imports:
+  i0 = "keys" abi=1
+  i1 = "print" abi=1
+  i2 = "values" abi=1
+
+main registers=10:
 block b0:
   r0 = constant c0
   r1 = constant c1
@@ -25,11 +30,11 @@ block b0:
   r4 = map [r0: r1, r2: r3]
   init_global g0, r4
   r5 = load_global g0
-  r6 = native_call n2 [r5]
-  print r6
+  r6 = call_native i0 [r5]
+  r9 = call_native i1 [r6]
   r7 = load_global g0
-  r8 = native_call n4 [r7]
-  print r8
+  r8 = call_native i2 [r7]
+  r9 = call_native i1 [r8]
   return_nil
 
 debug_sources:

@@ -1,4 +1,7 @@
-main registers=18
+native_import i0 = map abi=1
+native_import i1 = print abi=1
+native_import i2 = str abi=1
+main registers=19
 0000  block
 0001  b0 = constant #0 1
 0002  b1 = constant #1 2
@@ -9,24 +12,24 @@ main registers=18
 0007  init_global g1, b4
 0008  b5 = load_global g0
 0009  b6 = load_global g1
-0010  b7 = native_call @5 map [b5, b6]
+0010  b7 = call_native i0 [b5, b6]
 0011  init_global g2, b7
 0012  b8 = constant #5 5
 0013  init_global g3, b8
 0014  b9 = load_global g0
 0015  b10 = make_function $1 <lambda>/1
-0016  b11 = native_call @11 map [b9, b10]
+0016  b11 = call_native i0 [b9, b10]
 0017  init_global g4, b11
 0018  b12 = load_global g0
 0019  b13 = make_function $2 <lambda>/1
-0020  b14 = native_call @16 map [b12, b13]
+0020  b14 = call_native i0 [b12, b13]
 0021  init_global g5, b14
 0022  b15 = load_global g2
-0023  print b15
+0023  b18 = call_native i1 [b15]
 0024  b16 = load_global g4
-0025  print b16
+0025  b18 = call_native i1 [b16]
 0026  b17 = load_global g5
-0027  print b17
+0027  b18 = call_native i1 [b17]
 0028  return_nil
 
 function $0 <lambda>/1 registers=4
@@ -57,7 +60,7 @@ upvalue u0 = global g3
 function $2 <lambda>/1 registers=3
 0000  block
 0001  b0 = load_local l0
-0002  b1 = native_call @15 str [b0]
+0002  b1 = call_native i2 [b0]
 0003  return b1
 0004  block
 0005  b2 = constant #7 nil

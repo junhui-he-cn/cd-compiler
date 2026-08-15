@@ -1,4 +1,5 @@
-main registers=13
+native_import i0 = print abi=1
+main registers=14
 0000  block
 0001  b0 = constant #0 1
 0002  b1 = array [b0]
@@ -15,5 +16,5 @@ main registers=13
 0013  b10 = load_global g0
 0014  b11 = constant #4 0
 0015  b12 = index b10, b11
-0016  print b12
+0016  b13 = call_native i0 [b12]
 0017  return_nil

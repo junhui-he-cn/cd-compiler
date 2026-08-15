@@ -111,7 +111,11 @@ globals:
 types:
   t0 = enum "Result" v0="Number" payload=1 v1="Text" payload=1 v2="Empty" payload=0
 
-main registers=60:
+native_imports:
+  i0 = "print" abi=1
+  i1 = "str" abi=1
+
+main registers=61:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -130,36 +134,36 @@ block b0:
   r7 = load_global g0
   r8 = constant c25
   r9 = call r7 [r8]
-  print r9
+  r60 = call_native i0 [r9]
   r10 = load_global g0
   r11 = constant c26
   r12 = call r10 [r11]
-  print r12
+  r60 = call_native i0 [r12]
   r13 = load_global g1
   r14 = constant c27
   r15 = call r13 [r14]
-  print r15
+  r60 = call_native i0 [r15]
   r16 = load_global g2
   r17 = constant c28
   r18 = make_variant t0, v0 [r17]
   r19 = call r16 [r18]
-  print r19
+  r60 = call_native i0 [r19]
   r20 = load_global g2
   r21 = constant c29
   r22 = make_variant t0, v1 [r21]
   r23 = call r20 [r22]
-  print r23
+  r60 = call_native i0 [r23]
   r24 = load_global g2
   r25 = constant c30
   r26 = call r24 [r25]
-  print r26
+  r60 = call_native i0 [r26]
   r27 = constant c31
   r28 = constant c32
   r29 = equal r27, r28
   br_if r29, b1, b2
 block b1:
   r30 = constant c33
-  print r30
+  r60 = call_native i0 [r30]
   br b5
 block b2:
   r31 = constant c34
@@ -167,11 +171,11 @@ block b2:
   br_if r32, b3, b4
 block b3:
   r33 = constant c35
-  print r33
+  r60 = call_native i0 [r33]
   br b5
 block b4:
   r34 = constant c36
-  print r34
+  r60 = call_native i0 [r34]
   br b5
 block b5:
   r35 = constant c37
@@ -180,7 +184,7 @@ block b5:
   br_if r37, b6, b7
 block b6:
   r38 = constant c39
-  print r38
+  r60 = call_native i0 [r38]
   br b9
 block b7:
   r39 = constant c40
@@ -188,7 +192,7 @@ block b7:
   br_if r40, b8, b9
 block b8:
   r41 = constant c41
-  print r41
+  r60 = call_native i0 [r41]
   br b9
 block b9:
   r42 = constant c42
@@ -197,7 +201,7 @@ block b9:
   br_if r44, b10, b11
 block b10:
   r45 = constant c44
-  print r45
+  r60 = call_native i0 [r45]
   br b14
 block b11:
   r46 = constant c45
@@ -205,11 +209,11 @@ block b11:
   br_if r47, b12, b13
 block b12:
   r48 = constant c46
-  print r48
+  r60 = call_native i0 [r48]
   br b14
 block b13:
   r49 = constant c47
-  print r49
+  r60 = call_native i0 [r49]
   br b14
 block b14:
   r50 = load_global g3
@@ -218,7 +222,7 @@ block b14:
   br_if r52, b15, b16
 block b15:
   r53 = constant c49
-  print r53
+  r60 = call_native i0 [r53]
   return_nil
 block b16:
   r54 = constant c50
@@ -226,7 +230,7 @@ block b16:
   br_if r55, b17, b18
 block b17:
   r56 = constant c51
-  print r56
+  r60 = call_native i0 [r56]
   return_nil
 block b18:
   r57 = constant c52
@@ -234,7 +238,7 @@ block b18:
   br_if r58, b19, b20
 block b19:
   r59 = constant c53
-  print r59
+  r60 = call_native i0 [r59]
   return_nil
 block b20:
   return_nil
@@ -331,7 +335,7 @@ block b8:
   bind_local l1, r10
   r11 = constant c18
   r12 = load_local l1
-  r13 = native_call n18 [r12]
+  r13 = call_native i1 [r12]
   r14 = add r11, r13
   return r14
 block b9:

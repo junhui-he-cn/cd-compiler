@@ -1,4 +1,6 @@
-main registers=11
+native_import i0 = print abi=1
+native_import i1 = str abi=1
+main registers=12
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -11,12 +13,12 @@ main registers=11
 0009  b4 = load_global g1
 0010  b5 = constant #9 nil
 0011  b6 = call b4(b5)
-0012  print b6
+0012  b11 = call_native i0 [b6]
 0013  b7 = load_global g1
 0014  b8 = load_global g0
 0015  b9 = call b8()
 0016  b10 = call b7(b9)
-0017  print b10
+0017  b11 = call_native i0 [b10]
 0018  return_nil
 
 function $0 make/0 registers=3
@@ -49,7 +51,7 @@ function $1 render/1 registers=16
 0015  bind_local l1, b5
 0016  b6 = constant #6 "good:"
 0017  b7 = load_local l1
-0018  b8 = native_call @12 str [b7]
+0018  b8 = call_native i1 [b7]
 0019  b9 = add b6, b8
 0020  return b9
 0021  block

@@ -1,4 +1,5 @@
-main registers=16
+native_import i0 = print abi=1
+main registers=17
 0000  block
 0001  b0 = constant #0 "Ada"
 0002  b1 = constant #1 36
@@ -6,10 +7,10 @@ main registers=16
 0004  init_global g0, b2
 0005  b3 = load_global g0
 0006  b4 = struct_get b3, t0, 0
-0007  print b4
+0007  b16 = call_native i0 [b4]
 0008  b5 = load_global g0
 0009  b6 = struct_get b5, t0, 1
-0010  print b6
+0010  b16 = call_native i0 [b6]
 0011  b7 = constant #2 1
 0012  b8 = constant #3 2
 0013  b9 = make_struct t1 [b7, b8]
@@ -19,7 +20,7 @@ main registers=16
 0017  b12 = load_global g1
 0018  b13 = struct_get b12, t2, 0
 0019  b14 = struct_get b13, t1, 0
-0020  print b14
+0020  b16 = call_native i0 [b14]
 0021  b15 = make_struct t3 []
-0022  print b15
+0022  b16 = call_native i0 [b15]
 0023  return_nil

@@ -1,25 +1,29 @@
-main registers=16
+native_import i0 = floor abi=1
+native_import i1 = print abi=1
+native_import i2 = ceil abi=1
+native_import i3 = sqrt abi=1
+main registers=17
 0000  block
 0001  b0 = constant #0 1.9
-0002  b1 = native_call @0 floor [b0]
-0003  print b1
+0002  b1 = call_native i0 [b0]
+0003  b16 = call_native i1 [b1]
 0004  b2 = constant #1 1.1
 0005  b3 = negate b2
-0006  b4 = native_call @1 floor [b3]
-0007  print b4
+0006  b4 = call_native i0 [b3]
+0007  b16 = call_native i1 [b4]
 0008  b5 = constant #2 1.1
-0009  b6 = native_call @2 ceil [b5]
-0010  print b6
+0009  b6 = call_native i2 [b5]
+0010  b16 = call_native i1 [b6]
 0011  b7 = constant #3 1.9
 0012  b8 = negate b7
-0013  b9 = native_call @3 ceil [b8]
-0014  print b9
+0013  b9 = call_native i2 [b8]
+0014  b16 = call_native i1 [b9]
 0015  b10 = constant #4 9
-0016  b11 = native_call @4 sqrt [b10]
-0017  print b11
+0016  b11 = call_native i3 [b10]
+0017  b16 = call_native i1 [b11]
 0018  b12 = constant #5 2
 0019  b13 = constant #6 8
 0020  b14 = multiply b12, b13
-0021  b15 = native_call @5 sqrt [b14]
-0022  print b15
+0021  b15 = call_native i3 [b14]
+0022  b16 = call_native i1 [b15]
 0023  return_nil

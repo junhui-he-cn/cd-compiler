@@ -32,7 +32,10 @@ globals:
 types:
   t0 = enum "Pair" v0="Values" payload=2 v1="Empty" payload=0
 
-main registers=14:
+native_imports:
+  i0 = "print" abi=1
+
+main registers=15:
 block b0:
   r0 = constant c0
   r1 = constant c1
@@ -51,14 +54,14 @@ block b1:
   r9 = multiply r7, r8
   r10 = load_global g1
   r11 = add r9, r10
-  print r11
+  r14 = call_native i0 [r11]
   return_nil
 block b2:
   r12 = is_variant r3, t0, v1
   br_if r12, b3, b4
 block b3:
   r13 = constant c3
-  print r13
+  r14 = call_native i0 [r13]
   return_nil
 block b4:
   return_nil

@@ -1,4 +1,5 @@
-main registers=33
+native_import i0 = print abi=1
+main registers=34
 0000  block
 0001  b0 = constant #0 2
 0002  b1 = constant #1 nil
@@ -18,10 +19,10 @@ main registers=33
 0016  b12 = struct_set b10, t0, 0, b11
 0017  b13 = load_global g1
 0018  b14 = struct_get b13, t0, 1
-0019  print b14
+0019  b33 = call_native i0 [b14]
 0020  b15 = load_global g0
 0021  b16 = struct_get b15, t0, 0
-0022  print b16
+0022  b33 = call_native i0 [b16]
 0023  b17 = constant #5 3
 0024  b18 = constant #6 nil
 0025  b19 = make_struct t0 [b17, b18]
@@ -34,13 +35,13 @@ main registers=33
 0032  b24 = load_global g4
 0033  b25 = struct_set b23, t0, 1, b24
 0034  b26 = load_global g3
-0035  print b26
+0035  b33 = call_native i0 [b26]
 0036  b27 = load_global g3
 0037  b28 = load_global g3
 0038  b29 = equal b27, b28
-0039  print b29
+0039  b33 = call_native i0 [b29]
 0040  b30 = load_global g3
 0041  b31 = load_global g4
 0042  b32 = equal b30, b31
-0043  print b32
+0043  b33 = call_native i0 [b32]
 0044  return_nil
