@@ -9,7 +9,7 @@ IR
 function $0 <lambda>(x#0)
 0000  v0 = load_var @0 x#0
 0001  v1 = constant #0 1
-0002  v2 = add v0, v1
+0002  v2 = add_num v0, v1
 0003  return v2
 0004  v3 = constant #1 nil
 0005  return v3

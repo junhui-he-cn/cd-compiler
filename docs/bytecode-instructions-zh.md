@@ -444,13 +444,38 @@ rD = assert_number rV, nN
 
 ### 4.5 算术、逻辑与比较
 
-#### negate
+当编译器静态知道操作数类型时，算术与有序比较使用单一类型的专用指令，解释器热路径
+不再按运行时值标签分支：
 
 ```text
-rD = negate rV
+rD = add_num rL, rR     rD = concat_str rL, rR
+rD = sub_num rL, rR     rD = mul_num rL, rR
+rD = div_num rL, rR     rD = neg_num rV
+
+rD = lt_num rL, rR      rD = lt_str rL, rR
+rD = le_num rL, rR      rD = le_str rL, rR
+rD = gt_num rL, rR      rD = gt_str rL, rR
+rD = ge_num rL, rR      rD = ge_str rL, rR
 ```
 
-数值取负。非 number 报 `negate expects number, got <类型>`。
+#### add_num / sub_num / mul_num / div_num / neg_num
+
+仅接受 number：`add_num`/`sub_num`/`mul_num`/`div_num` 做 IEEE 754 浮点运算，
+非 number 报 ``<op> expects numbers``；`div_num` 除数为零报 `division by zero`；
+`neg_num` 取负，非 number 报 `neg_num expects number, got <类型>`。
+
+#### concat_str
+
+把两个 string 按原文拼接；非 string 报 `concat_str expects two strings`。
+
+#### lt_num / le_num / gt_num / ge_num
+
+两个 number 的数值有序比较，结果 bool；非 number 报 ``<op> expects numbers``。
+
+#### lt_str / le_str / gt_str / ge_str
+
+两个 string 按 Unicode 标量序列的字典序比较，结果 bool；非 string 报
+``<op> expects two strings``。
 
 #### not
 
@@ -459,26 +484,6 @@ rD = not rV
 ```
 
 真值取反：只有 `nil` 与 `false` 得到 `true`；`0`、`""` 等得到 `false`。
-
-#### add
-
-```text
-rD = add rL, rR
-```
-
-两个 number 做浮点加法；两个 string 做拼接；其余组合报
-`add expects two numbers or two strings`。
-
-#### subtract / multiply / divide
-
-```text
-rD = subtract rL, rR
-rD = multiply rL, rR
-rD = divide rL, rR
-```
-
-仅限两个 number（`<op> expects numbers`）。`divide` 的除数为零时报
-`division by zero`。均为 IEEE 754 浮点语义。
 
 #### equal / not_equal
 
@@ -490,23 +495,14 @@ rD = not_equal rL, rR
 运行时相等比较，`not_equal` 是其取反。聚合引用值按身份相等（见第 3 节），variant
 按枚举名/变体名/payload 递归比较，range 按分量比较。
 
-#### greater / greater_equal / less / less_equal
+#### 旧式动态算术/比较（兼容读取）
 
-```text
-rD = greater rL, rR
-rD = greater_equal rL, rR
-rD = less rL, rR
-rD = less_equal rL, rR
-```
-
-- 两个 number：按数值比较。
-- 两个 string：按 Unicode 标量序列的字典序比较。
-- 两个同名具名结构体：查找全局绑定
-  `__capability_ord_<类型名>_<greater|greater_equal|less|less_equal>`（带命名空间时
-  还尝试去命名空间的局部名回退）作为运行时 Ord 见证函数，以 `(left, right)` 调用，
-  结果必须是 bool；缺少见证报 ``<op> has no runtime Ord witness for struct `<类型>` ``。
-- 其他组合报
-  `<op> expects two numbers, two strings, or two values of a witnessed struct`。
+旧 `cdbc 0.1` 的 `negate`、`add`、`subtract`、`multiply`、`divide`、
+`greater`、`greater_equal`、`less`、`less_equal` 仍在兼容读取路径中保留：`add`
+同时支持 number 加法与 string 拼接，其余有序比较在运行时区分 number/string。
+0.2 工件对已知类型永远发射专用指令；只有泛型 `T: Ord` 函数体（形参类型未实例化）
+仍使用动态有序比较。VM 不再按全局名字查找结构体 Ord 见证——结构体不可有序比较，
+编译器在类型检查阶段已拒绝这类表达式。
 
 ### 4.6 控制流
 

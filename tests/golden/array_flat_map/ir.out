@@ -30,7 +30,7 @@ function $0 <lambda>(value#1)
 0000  v0 = load_var @2 value#1
 0001  v1 = load_var @3 value#1
 0002  v2 = constant #2 10
-0003  v3 = multiply v1, v2
+0003  v3 = mul_num v1, v2
 0004  v4 = array [v0, v3]
 0005  return v4
 0006  v5 = constant #3 nil
@@ -39,7 +39,7 @@ function $0 <lambda>(value#1)
 function $1 <lambda>(value#2)
 0000  v0 = load_var @6 value#2
 0001  v1 = constant #4 1
-0002  v2 = add v0, v1
+0002  v2 = add_num v0, v1
 0003  v3 = array [v2]
 0004  return v3
 0005  v4 = constant #5 nil

@@ -19,5 +19,5 @@ IR
 0017  store_var @0 n#0, v13
 0018  v14 = load_var @1 n#0
 0019  v15 = constant #7 1
-0020  v16 = add v14, v15
+0020  v16 = add_num v14, v15
 0021  print v16

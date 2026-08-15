@@ -135,7 +135,13 @@ private:
     IRRegister emitFieldAssign(const FieldAssignExpr& expression);
     IRRegister emitFieldCompoundAssign(const FieldCompoundAssignExpr& expression);
     IRRegister emitUnary(TokenType op, IRRegister value);
-    IRRegister emitBinary(TokenType op, IRRegister left, IRRegister right);
+    IRRegister emitBinary(
+        TokenType op,
+        IRRegister left,
+        IRRegister right,
+        const TypeInfo* operandType = nullptr,
+        const TypeInfo* resultType = nullptr);
+    const TypedExpressionRecord* typedExpressionRecord(const Expr& expression) const;
     IRRegister emitLogical(const LogicalExpr& expression);
 
     struct LoopContext {

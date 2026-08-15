@@ -60,9 +60,9 @@ upvalue u0 = global g1
 0000  block
 0001  b0 = load_local l0
 0002  b1 = load_local l1
-0003  b2 = add b0, b1
+0003  b2 = add_num b0, b1
 0004  b3 = load_upvalue u0
-0005  b4 = add b2, b3
+0005  b4 = add_num b2, b3
 0006  return b4
 0007  block
 0008  b5 = constant #5 nil
@@ -74,7 +74,7 @@ function $1 <lambda>/2 registers=4
 0000  block
 0001  b0 = load_local l0
 0002  b1 = load_local l1
-0003  b2 = multiply b0, b1
+0003  b2 = mul_num b0, b1
 0004  return b2
 0005  block
 0006  b3 = constant #7 nil
@@ -90,7 +90,7 @@ upvalue u0 = global g4
 0003  b2 = call_native i2 [b0, b1]
 0004  b3 = load_local l0
 0005  b4 = load_local l1
-0006  b5 = add b3, b4
+0006  b5 = add_num b3, b4
 0007  return b5
 0008  block
 0009  b6 = constant #12 nil

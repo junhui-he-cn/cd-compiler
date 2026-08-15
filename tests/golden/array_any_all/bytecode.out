@@ -67,7 +67,7 @@ function $1 <lambda>/1 registers=4
 0000  block
 0001  b0 = load_local l0
 0002  b1 = constant #5 4
-0003  b2 = less b0, b1
+0003  b2 = lt_num b0, b1
 0004  return b2
 0005  block
 0006  b3 = constant #6 nil
@@ -99,7 +99,7 @@ upvalue u0 = global g4
 0003  b2 = call_native i3 [b0, b1]
 0004  b3 = load_local l0
 0005  b4 = constant #17 3
-0006  b5 = less b3, b4
+0006  b5 = lt_num b3, b4
 0007  return b5
 0008  block
 0009  b6 = constant #18 nil
@@ -121,7 +121,7 @@ function $5 <lambda>/1 registers=4
 0000  block
 0001  b0 = load_local l0
 0002  b1 = constant #23 0
-0003  b2 = greater b0, b1
+0003  b2 = gt_num b0, b1
 0004  return b2
 0005  block
 0006  b3 = constant #24 nil

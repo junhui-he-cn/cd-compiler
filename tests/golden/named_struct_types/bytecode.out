@@ -33,7 +33,7 @@ function $0 birthday/1 registers=8
 0002  b1 = load_local l0
 0003  b2 = struct_get b1, t0, 1
 0004  b3 = constant #4 1
-0005  b4 = add b2, b3
+0005  b4 = add_num b2, b3
 0006  b5 = struct_set b0, t0, 1, b4
 0007  b6 = load_local l0
 0008  return b6

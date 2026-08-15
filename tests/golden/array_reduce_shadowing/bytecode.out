@@ -43,7 +43,7 @@ function $2 <lambda>/2 registers=4
 0000  block
 0001  b0 = load_local l0
 0002  b1 = load_local l1
-0003  b2 = add b0, b1
+0003  b2 = add_num b0, b1
 0004  return b2
 0005  block
 0006  b3 = constant #7 nil

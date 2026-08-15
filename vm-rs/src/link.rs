@@ -1207,6 +1207,10 @@ fn map_instruction(
             dest: register(*dest)?,
             value: register(*value)?,
         },
+        Instruction::NegNum { dest, value } => Instruction::NegNum {
+            dest: register(*dest)?,
+            value: register(*value)?,
+        },
         Instruction::Not { dest, value } => Instruction::Not {
             dest: register(*dest)?,
             value: register(*value)?,
@@ -1216,7 +1220,22 @@ fn map_instruction(
             left: register(*left)?,
             right: register(*right)?,
         },
+        Instruction::AddNum { dest, left, right } => Instruction::AddNum {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
+        Instruction::ConcatStr { dest, left, right } => Instruction::ConcatStr {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
         Instruction::Subtract { dest, left, right } => Instruction::Subtract {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
+        Instruction::SubNum { dest, left, right } => Instruction::SubNum {
             dest: register(*dest)?,
             left: register(*left)?,
             right: register(*right)?,
@@ -1226,7 +1245,17 @@ fn map_instruction(
             left: register(*left)?,
             right: register(*right)?,
         },
+        Instruction::MulNum { dest, left, right } => Instruction::MulNum {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
         Instruction::Divide { dest, left, right } => Instruction::Divide {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
+        Instruction::DivNum { dest, left, right } => Instruction::DivNum {
             dest: register(*dest)?,
             left: register(*left)?,
             right: register(*right)?,
@@ -1246,7 +1275,27 @@ fn map_instruction(
             left: register(*left)?,
             right: register(*right)?,
         },
+        Instruction::GreaterNum { dest, left, right } => Instruction::GreaterNum {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
+        Instruction::GreaterStr { dest, left, right } => Instruction::GreaterStr {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
         Instruction::GreaterEqual { dest, left, right } => Instruction::GreaterEqual {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
+        Instruction::GreaterEqualNum { dest, left, right } => Instruction::GreaterEqualNum {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
+        Instruction::GreaterEqualStr { dest, left, right } => Instruction::GreaterEqualStr {
             dest: register(*dest)?,
             left: register(*left)?,
             right: register(*right)?,
@@ -1256,7 +1305,27 @@ fn map_instruction(
             left: register(*left)?,
             right: register(*right)?,
         },
+        Instruction::LessNum { dest, left, right } => Instruction::LessNum {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
+        Instruction::LessStr { dest, left, right } => Instruction::LessStr {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
         Instruction::LessEqual { dest, left, right } => Instruction::LessEqual {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
+        Instruction::LessEqualNum { dest, left, right } => Instruction::LessEqualNum {
+            dest: register(*dest)?,
+            left: register(*left)?,
+            right: register(*right)?,
+        },
+        Instruction::LessEqualStr { dest, left, right } => Instruction::LessEqualStr {
             dest: register(*dest)?,
             left: register(*left)?,
             right: register(*right)?,

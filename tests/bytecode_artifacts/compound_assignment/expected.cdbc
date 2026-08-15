@@ -26,7 +26,7 @@ block b0:
   r2 = assert_number r1, n2
   r3 = constant c1
   r4 = assert_number r3, n3
-  r5 = add r2, r4
+  r5 = add_num r2, r4
   set_global g0, r5
   r6 = load_global g0
   r7 = call_native i0 [r6]

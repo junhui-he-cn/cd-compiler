@@ -48,7 +48,7 @@ block b1:
   init_global g1, r4
   r5 = load_global g1
   r6 = constant c1
-  r7 = greater r5, r6
+  r7 = gt_num r5, r6
   br_if r7, b2, b3
 block b2:
   r8 = load_global g1

@@ -94,12 +94,12 @@ function $1 shapeLabel(value#3)
 0011  store_var @15 x#4, v3
 0012  v7 = load_var @16 x#4
 0013  v8 = constant #7 3
-0014  v9 = greater v7, v8
+0014  v9 = gt_num v7, v8
 0015  jump_if_false v9, 0022
 0016  v10 = constant #8 "large:"
 0017  v11 = load_var @17 x#4
 0018  v12 = native_call @18 str(v11)
-0019  v13 = add v10, v12
+0019  v13 = concat_str v10, v12
 0020  return v13
 0021  jump 0038
 0022  v14 = variant_tag v0 Shape.Point

@@ -49,7 +49,7 @@ block b0:
   r0 = load_local l0
   r1 = struct_get r0, t0, 0
   r2 = constant c1
-  r3 = add r1, r2
+  r3 = concat_str r1, r2
   return r3
 block b1:
   r4 = constant c2

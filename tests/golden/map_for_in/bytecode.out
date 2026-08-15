@@ -24,7 +24,7 @@ main registers=49
 0020  block
 0021  b13 = load_global g2
 0022  b14 = load_global g4
-0023  b15 = less b13, b14
+0023  b15 = lt_num b13, b14
 0024  br_if b15, b2, b5
 0025  block
 0026  b16 = load_global g1
@@ -35,7 +35,7 @@ main registers=49
 0031  block
 0032  b19 = load_global g2
 0033  b20 = constant #8 1
-0034  b21 = add b19, b20
+0034  b21 = add_num b19, b20
 0035  set_global g2, b21
 0036  br b1
 0037  block
@@ -68,7 +68,7 @@ main registers=49
 0064  block
 0065  b38 = load_global g7
 0066  b39 = load_global g9
-0067  b40 = less b38, b39
+0067  b40 = lt_num b38, b39
 0068  br_if b40, b7, b10
 0069  block
 0070  b41 = load_global g6
@@ -79,7 +79,7 @@ main registers=49
 0075  block
 0076  b44 = load_global g7
 0077  b45 = constant #15 1
-0078  b46 = add b44, b45
+0078  b46 = add_num b44, b45
 0079  set_global g7, b46
 0080  br b6
 0081  block

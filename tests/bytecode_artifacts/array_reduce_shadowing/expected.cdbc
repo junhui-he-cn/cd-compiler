@@ -75,7 +75,7 @@ function f2 name="<lambda>" arity=2 registers=4:
 block b0:
   r0 = load_local l0
   r1 = load_local l1
-  r2 = add r0, r1
+  r2 = add_num r0, r1
   return r2
 block b1:
   r3 = constant c7

@@ -91,7 +91,7 @@ function $0 describe/1 registers=10
 0007  b3 = constant #1 "some:"
 0008  b4 = load_local l1
 0009  b5 = call_native i1 [b4]
-0010  b6 = add b3, b5
+0010  b6 = concat_str b3, b5
 0011  return b6
 0012  block
 0013  br b6
@@ -132,7 +132,7 @@ upvalue u0 = global g1
 0018  b7 = load_upvalue u0
 0019  b8 = load_local l2
 0020  b9 = call b7(b8)
-0021  b10 = add b6, b9
+0021  b10 = add_num b6, b9
 0022  return b10
 0023  block
 0024  br b6

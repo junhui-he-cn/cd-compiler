@@ -16,7 +16,7 @@ IR
 0014  store_var @6 __for_in_len#2, v9
 0015  v10 = load_var @7 __for_in_index#1
 0016  v11 = load_var @8 __for_in_len#2
-0017  v12 = less v10, v11
+0017  v12 = lt_num v10, v11
 0018  jump_if_false v12, 0032
 0019  v13 = load_var @9 __for_in_iter#0
 0020  v14 = load_var @10 __for_in_index#1
@@ -25,7 +25,7 @@ IR
 0023  jump 0029
 0024  v16 = load_var @12 __for_in_index#1
 0025  v17 = constant #5 1
-0026  v18 = add v16, v17
+0026  v18 = add_num v16, v17
 0027  assign_var @13 __for_in_index#1, v18
 0028  jump 0015
 0029  v19 = load_var @14 x#1

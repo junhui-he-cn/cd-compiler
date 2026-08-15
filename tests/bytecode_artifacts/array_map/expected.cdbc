@@ -82,7 +82,7 @@ function f0 name="<lambda>" arity=1 registers=4:
 block b0:
   r0 = load_local l0
   r1 = constant c3
-  r2 = multiply r0, r1
+  r2 = mul_num r0, r1
   return r2
 block b1:
   r3 = constant c4
@@ -96,7 +96,7 @@ function f1 name="<lambda>" arity=1 registers=4:
 block b0:
   r0 = load_local l0
   r1 = load_upvalue u0
-  r2 = add r0, r1
+  r2 = add_num r0, r1
   return r2
 block b1:
   r3 = constant c6

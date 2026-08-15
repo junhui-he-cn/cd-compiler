@@ -99,7 +99,7 @@ function $4 before(left#14, right#15)
 function $5 numericLess(left#17, right#18)
 0000  v0 = load_var @22 left#17
 0001  v1 = load_var @23 right#18
-0002  v2 = less v0, v1
+0002  v2 = lt_num v0, v1
 0003  return v2
 0004  v3 = constant #11 nil
 0005  return v3

@@ -11,7 +11,7 @@ IR
 0009  v6 = constant #3 5
 0010  v7 = call v4(v5, v6)
 0011  v8 = constant #4 1
-0012  v9 = add v7, v8
+0012  v9 = add_num v7, v8
 0013  store_var @11 result#4, v9
 0014  v10 = load_var @12 result#4
 0015  print v10
@@ -20,7 +20,7 @@ function $0 add(this#1, amount#2)
 0000  v0 = load_var @1 this#1
 0001  v1 = field v0.value
 0002  v2 = load_var @4 amount#2
-0003  v3 = add v1, v2
+0003  v3 = add_num v1, v2
 0004  return v3
 0005  v4 = constant #1 nil
 0006  return v4

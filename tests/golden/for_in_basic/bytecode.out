@@ -20,7 +20,7 @@ main registers=21
 0017  block
 0018  b10 = load_global g2
 0019  b11 = load_global g4
-0020  b12 = less b10, b11
+0020  b12 = lt_num b10, b11
 0021  br_if b12, b2, b5
 0022  block
 0023  b13 = load_global g1
@@ -31,7 +31,7 @@ main registers=21
 0028  block
 0029  b16 = load_global g2
 0030  b17 = constant #5 1
-0031  b18 = add b16, b17
+0031  b18 = add_num b16, b17
 0032  set_global g2, b18
 0033  br b1
 0034  block

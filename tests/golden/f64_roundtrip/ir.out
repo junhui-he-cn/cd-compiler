@@ -17,5 +17,5 @@ IR
 0015  print v7
 0016  v8 = load_var @8 a#0
 0017  v9 = load_var @9 b#1
-0018  v10 = add v8, v9
+0018  v10 = add_num v8, v9
 0019  print v10

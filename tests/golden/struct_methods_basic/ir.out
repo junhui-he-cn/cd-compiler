@@ -24,7 +24,7 @@ function $0 label(this#2)
 0000  v0 = load_var @1 this#2
 0001  v1 = field v0.name
 0002  v2 = constant #1 "!"
-0003  v3 = add v1, v2
+0003  v3 = concat_str v1, v2
 0004  return v3
 0005  v4 = constant #2 nil
 0006  return v4
@@ -33,7 +33,7 @@ function $1 nextAge(this#3)
 0000  v0 = load_var @6 this#3
 0001  v1 = field v0.age
 0002  v2 = constant #4 1
-0003  v3 = add v1, v2
+0003  v3 = add_num v1, v2
 0004  return v3
 0005  v4 = constant #5 nil
 0006  return v4

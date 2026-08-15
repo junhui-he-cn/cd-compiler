@@ -5,28 +5,28 @@ IR
 0003  v2 = assert_number v1 @2 `+=` expects number variable
 0004  v3 = constant #1 2
 0005  v4 = assert_number v3 @3 `+=` expects number value
-0006  v5 = add v2, v4
+0006  v5 = add_num v2, v4
 0007  assign_var @4 x#0, v5
 0008  print v5
 0009  v6 = load_var @5 x#0
 0010  v7 = assert_number v6 @6 `-=` expects number variable
 0011  v8 = constant #2 1
 0012  v9 = assert_number v8 @7 `-=` expects number value
-0013  v10 = subtract v7, v9
+0013  v10 = sub_num v7, v9
 0014  assign_var @8 x#0, v10
 0015  print v10
 0016  v11 = load_var @9 x#0
 0017  v12 = assert_number v11 @10 `*=` expects number variable
 0018  v13 = constant #3 5
 0019  v14 = assert_number v13 @11 `*=` expects number value
-0020  v15 = multiply v12, v14
+0020  v15 = mul_num v12, v14
 0021  assign_var @12 x#0, v15
 0022  print v15
 0023  v16 = load_var @13 x#0
 0024  v17 = assert_number v16 @14 `/=` expects number variable
 0025  v18 = constant #4 2
 0026  v19 = assert_number v18 @15 `/=` expects number value
-0027  v20 = divide v17, v19
+0027  v20 = div_num v17, v19
 0028  assign_var @16 x#0, v20
 0029  print v20
 0030  v21 = load_var @17 x#0

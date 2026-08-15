@@ -1335,6 +1335,69 @@ mod tests {
     }
 
     #[test]
+    fn typed_arithmetic_and_comparison_opcodes_dispatch_without_type_branching() {
+        let program = Program {
+            constants: vec![
+                Constant::Number("6".to_string()),
+                Constant::Number("2".to_string()),
+                Constant::String("ab".to_string()),
+                Constant::String("cd".to_string()),
+            ],
+            globals: Vec::new(),
+            types: Vec::new(),
+            native_imports: vec![NativeImport {
+                name: "print".to_string(),
+                abi: 1,
+            }],
+            names: Vec::new(),
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
+                registers: 16,
+                instructions: vec![
+                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Constant { dest: 1, constant: 1 },
+                    Instruction::AddNum { dest: 2, left: 0, right: 1 },
+                    Instruction::SubNum { dest: 3, left: 0, right: 1 },
+                    Instruction::MulNum { dest: 4, left: 0, right: 1 },
+                    Instruction::DivNum { dest: 5, left: 0, right: 1 },
+                    Instruction::NegNum { dest: 6, value: 0 },
+                    Instruction::Constant { dest: 7, constant: 2 },
+                    Instruction::Constant { dest: 8, constant: 3 },
+                    Instruction::ConcatStr { dest: 9, left: 7, right: 8 },
+                    Instruction::LessNum { dest: 10, left: 1, right: 0 },
+                    Instruction::GreaterEqualNum { dest: 11, left: 0, right: 1 },
+                    Instruction::LessStr { dest: 12, left: 7, right: 8 },
+                    Instruction::GreaterEqualStr { dest: 13, left: 8, right: 7 },
+                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![2] },
+                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![3] },
+                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![4] },
+                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![5] },
+                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![6] },
+                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![9] },
+                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![10] },
+                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![11] },
+                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![12] },
+                    Instruction::CallNative { dest: 14, native: NativeId(0), arguments: vec![13] },
+                    Instruction::ReturnNil,
+                ],
+                locations: vec![None; 25],
+            }],
+            entry: FuncId(0),
+            debug_sources: Vec::new(),
+        };
+
+        assert_eq!(
+            VM::new(&program).run().expect("typed opcodes should run"),
+            "8\n4\n12\n3\n-6\nabcd\ntrue\ntrue\ntrue\ntrue\n"
+        );
+    }
+
+    #[test]
     fn return_transfer_moves_value_out_of_the_dead_frame_register() {
         let program = empty_program();
         let vm = VM::new(&program);
@@ -8904,6 +8967,10 @@ impl<'a> VM<'a> {
                 let input = self.expect_number(frame, *value, "negate")?;
                 self.write_register(frame, *dest, Value::number(-input))
             }
+            Instruction::NegNum { dest, value } => {
+                let input = self.expect_number(frame, *value, "neg_num")?;
+                self.write_register(frame, *dest, Value::number(-input))
+            }
             Instruction::Not { dest, value } => {
                 let result = !self.read_register_ref(frame, *value)?.is_truthy();
                 self.write_register(frame, *dest, Value::boolean(result))
@@ -8920,16 +8987,47 @@ impl<'a> VM<'a> {
                 };
                 self.write_register(frame, *dest, result)
             }
+            Instruction::AddNum { dest, left, right } => {
+                let (left, right) = self.expect_two_numbers(frame, *left, *right, "add_num")?;
+                self.write_register(frame, *dest, Value::number(left + right))
+            }
+            Instruction::ConcatStr { dest, left, right } => {
+                let result = match (
+                    self.read_register_ref(frame, *left)?,
+                    self.read_register_ref(frame, *right)?,
+                ) {
+                    (Value::String(left), Value::String(right)) => {
+                        Value::string(format!("{}{}", left, right))
+                    }
+                    _ => return Err(RuntimeError::new("concat_str expects two strings")),
+                };
+                self.write_register(frame, *dest, result)
+            }
             Instruction::Subtract { dest, left, right } => {
                 let (left, right) = self.expect_two_numbers(frame, *left, *right, "subtract")?;
+                self.write_register(frame, *dest, Value::number(left - right))
+            }
+            Instruction::SubNum { dest, left, right } => {
+                let (left, right) = self.expect_two_numbers(frame, *left, *right, "sub_num")?;
                 self.write_register(frame, *dest, Value::number(left - right))
             }
             Instruction::Multiply { dest, left, right } => {
                 let (left, right) = self.expect_two_numbers(frame, *left, *right, "multiply")?;
                 self.write_register(frame, *dest, Value::number(left * right))
             }
+            Instruction::MulNum { dest, left, right } => {
+                let (left, right) = self.expect_two_numbers(frame, *left, *right, "mul_num")?;
+                self.write_register(frame, *dest, Value::number(left * right))
+            }
             Instruction::Divide { dest, left, right } => {
                 let (left, right) = self.expect_two_numbers(frame, *left, *right, "divide")?;
+                if right == 0.0 {
+                    return Err(RuntimeError::new("division by zero"));
+                }
+                self.write_register(frame, *dest, Value::number(left / right))
+            }
+            Instruction::DivNum { dest, left, right } => {
+                let (left, right) = self.expect_two_numbers(frame, *left, *right, "div_num")?;
                 if right == 0.0 {
                     return Err(RuntimeError::new("division by zero"));
                 }
@@ -8950,6 +9048,16 @@ impl<'a> VM<'a> {
             Instruction::Greater { dest, left, right } => {
                 self.compare(frame, *dest, *left, *right, Comparison::Greater, call_site)
             }
+            Instruction::GreaterNum { dest, left, right } => {
+                self.compare_numbers(frame, *dest, *left, *right, "gt_num", |left, right| {
+                    left > right
+                })
+            }
+            Instruction::GreaterStr { dest, left, right } => {
+                self.compare_strings(frame, *dest, *left, *right, "gt_str", |ordering| {
+                    ordering.is_gt()
+                })
+            }
             Instruction::GreaterEqual { dest, left, right } => {
                 self.compare(
                     frame,
@@ -8960,8 +9068,28 @@ impl<'a> VM<'a> {
                     call_site,
                 )
             }
+            Instruction::GreaterEqualNum { dest, left, right } => {
+                self.compare_numbers(frame, *dest, *left, *right, "ge_num", |left, right| {
+                    left >= right
+                })
+            }
+            Instruction::GreaterEqualStr { dest, left, right } => {
+                self.compare_strings(frame, *dest, *left, *right, "ge_str", |ordering| {
+                    ordering.is_ge()
+                })
+            }
             Instruction::Less { dest, left, right } => {
                 self.compare(frame, *dest, *left, *right, Comparison::Less, call_site)
+            }
+            Instruction::LessNum { dest, left, right } => {
+                self.compare_numbers(frame, *dest, *left, *right, "lt_num", |left, right| {
+                    left < right
+                })
+            }
+            Instruction::LessStr { dest, left, right } => {
+                self.compare_strings(frame, *dest, *left, *right, "lt_str", |ordering| {
+                    ordering.is_lt()
+                })
             }
             Instruction::LessEqual { dest, left, right } => {
                 self.compare(
@@ -8972,6 +9100,16 @@ impl<'a> VM<'a> {
                     Comparison::LessEqual,
                     call_site,
                 )
+            }
+            Instruction::LessEqualNum { dest, left, right } => {
+                self.compare_numbers(frame, *dest, *left, *right, "le_num", |left, right| {
+                    left <= right
+                })
+            }
+            Instruction::LessEqualStr { dest, left, right } => {
+                self.compare_strings(frame, *dest, *left, *right, "le_str", |ordering| {
+                    ordering.is_le()
+                })
             }
             Instruction::Index {
                 dest,
@@ -11477,6 +11615,40 @@ impl<'a> VM<'a> {
         }
     }
 
+    fn compare_numbers(
+        &mut self,
+        frame: &mut Frame,
+        dest: usize,
+        left: usize,
+        right: usize,
+        op_name: &str,
+        predicate: fn(f64, f64) -> bool,
+    ) -> Result<(), RuntimeError> {
+        let (left, right) = self.expect_two_numbers(frame, left, right, op_name)?;
+        self.write_register(frame, dest, Value::boolean(predicate(left, right)))
+    }
+
+    fn compare_strings(
+        &mut self,
+        frame: &mut Frame,
+        dest: usize,
+        left: usize,
+        right: usize,
+        op_name: &str,
+        predicate: fn(std::cmp::Ordering) -> bool,
+    ) -> Result<(), RuntimeError> {
+        let result = match (
+            self.read_register_ref(frame, left)?,
+            self.read_register_ref(frame, right)?,
+        ) {
+            (Value::String(left), Value::String(right)) => {
+                predicate(left.chars().cmp(right.chars()))
+            }
+            _ => return Err(RuntimeError::new(format!("{} expects two strings", op_name))),
+        };
+        self.write_register(frame, dest, Value::boolean(result))
+    }
+
     fn compare(
         &mut self,
         frame: &mut Frame,
@@ -11500,11 +11672,11 @@ impl<'a> VM<'a> {
 
     fn compare_values(
         &mut self,
-        frame: &Frame,
+        _frame: &Frame,
         left_value: &Value,
         right_value: &Value,
         comparison: Comparison,
-        call_site: Option<&DebugLocation>,
+        _call_site: Option<&DebugLocation>,
     ) -> Result<bool, RuntimeError> {
         Ok(match (left_value, right_value) {
             (Value::Number(left), Value::Number(right)) => comparison.apply_numbers(*left, *right),
@@ -11517,81 +11689,9 @@ impl<'a> VM<'a> {
                     Comparison::LessEqual => ordering.is_le(),
                 }
             }
-            (Value::Struct(left), Value::Struct(right)) => {
-                let Some(type_name) = left.type_name.clone() else {
-                    return Err(RuntimeError::new(format!(
-                        "{} expects a named struct witness",
-                        comparison.as_str()
-                    )));
-                };
-                if right.type_name.as_deref() != Some(type_name.as_str()) {
-                    return Err(RuntimeError::new(format!(
-                        "{} expects two values of the same struct type",
-                        comparison.as_str()
-                    )));
-                }
-                let function = {
-                    let binding_name = format!(
-                        "__capability_ord_{}_{}",
-                        type_name,
-                        comparison.as_str()
-                    );
-                    let fallback_name = type_name
-                        .rsplit_once('.')
-                        .map(|(_, local_name)| {
-                            format!(
-                                "__capability_ord_{}_{}",
-                                local_name,
-                                comparison.as_str()
-                            )
-                        });
-                    let cell = {
-                        let globals = self.globals.borrow();
-                        globals
-                            .get(&binding_name)
-                            .cloned()
-                            .or_else(|| fallback_name.as_ref().and_then(|name| globals.get(name).cloned()))
-                    }
-                    .ok_or_else(|| {
-                        RuntimeError::new(format!(
-                            "{} has no runtime Ord witness for struct `{}`",
-                            comparison.as_str(),
-                            type_name
-                        ))
-                    })?;
-                    let value = cell.borrow().clone();
-                    match value {
-                        Value::Function(function) => function,
-                        _ => {
-                            return Err(RuntimeError::new(format!(
-                                "{} runtime Ord witness for struct `{}` is not callable",
-                                comparison.as_str(),
-                                type_name
-                            )))
-                        }
-                    }
-                };
-                let result = self.call_function(
-                    &function,
-                    CallArguments::Two(
-                        Value::Struct(left.clone()),
-                        Value::Struct(right.clone()),
-                    ),
-                    frame.function.as_ref(),
-                    call_site,
-                )?;
-                let Value::Bool(result) = result else {
-                    return Err(RuntimeError::new(format!(
-                        "{} runtime Ord witness for struct `{}` must return bool",
-                        comparison.as_str(),
-                        type_name
-                    )));
-                };
-                result
-            }
             _ => {
                 return Err(RuntimeError::new(format!(
-                    "{} expects two numbers, two strings, or two values of a witnessed struct",
+                    "{} expects two numbers or two strings",
                     comparison.as_str()
                 )))
             }

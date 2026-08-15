@@ -29,7 +29,7 @@ function $0 birthday(person#2)
 0001  v1 = load_var @15 person#2
 0002  v2 = field v1.age
 0003  v3 = constant #4 1
-0004  v4 = add v2, v3
+0004  v4 = add_num v2, v3
 0005  v5 = assign_field v0.age, v4
 0006  v6 = load_var @20 person#2
 0007  return v6

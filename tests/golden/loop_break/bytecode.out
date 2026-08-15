@@ -10,7 +10,7 @@ main registers=10
 0007  block
 0008  b2 = load_global g0
 0009  b3 = constant #2 1
-0010  b4 = add b2, b3
+0010  b4 = add_num b2, b3
 0011  set_global g0, b4
 0012  b5 = load_global g0
 0013  b6 = constant #3 3

@@ -1,7 +1,7 @@
 IR
 0000  v0 = constant #0 40
 0001  v1 = constant #1 2
-0002  v2 = add v0, v1
+0002  v2 = add_num v0, v1
 0003  store_var @0 answer#0, v2
 0004  v3 = load_var @1 answer#0
 0005  v4 = constant #2 42

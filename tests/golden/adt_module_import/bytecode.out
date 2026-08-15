@@ -39,7 +39,7 @@ function $1 render/1 registers=13
 0007  b3 = constant #4 "good:"
 0008  b4 = load_local l1
 0009  b5 = call_native i1 [b4]
-0010  b6 = add b3, b5
+0010  b6 = concat_str b3, b5
 0011  return b6
 0012  block
 0013  br b6
@@ -51,7 +51,7 @@ function $1 render/1 registers=13
 0019  bind_local l2, b8
 0020  b9 = constant #5 "bad:"
 0021  b10 = load_local l2
-0022  b11 = add b9, b10
+0022  b11 = concat_str b9, b10
 0023  return b11
 0024  block
 0025  br b6

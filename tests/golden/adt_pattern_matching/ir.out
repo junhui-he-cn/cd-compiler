@@ -59,7 +59,7 @@ function $0 describe(result#1)
 0005  v3 = constant #1 "ok:"
 0006  v4 = load_var @7 value#2
 0007  v5 = native_call @8 str(v4)
-0008  v6 = add v3, v5
+0008  v6 = concat_str v3, v5
 0009  return v6
 0010  jump 0025
 0011  v7 = variant_tag v0 Result.Err
@@ -68,7 +68,7 @@ function $0 describe(result#1)
 0014  store_var @13 message#3, v8
 0015  v9 = constant #2 "err:"
 0016  v10 = load_var @14 message#3
-0017  v11 = add v9, v10
+0017  v11 = concat_str v9, v10
 0018  return v11
 0019  jump 0025
 0020  v12 = variant_tag v0 Result.Empty
@@ -99,11 +99,11 @@ function $1 sum(list#5)
 0016  store_var @36 tail#8, v8
 0017  v9 = load_var @37 head#6
 0018  v10 = load_var @38 next#7
-0019  v11 = add v9, v10
+0019  v11 = add_num v9, v10
 0020  v12 = load_var @39 sum#4
 0021  v13 = load_var @40 tail#8
 0022  v14 = call v12(v13)
-0023  v15 = add v11, v14
+0023  v15 = add_num v11, v14
 0024  return v15
 0025  jump 0036
 0026  v16 = variant_tag v0 List.Cons

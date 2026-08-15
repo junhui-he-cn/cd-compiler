@@ -296,28 +296,56 @@ BytecodeOp lowerOp(IROp op)
         return BytecodeOp::Return;
     case IROp::Negate:
         return BytecodeOp::Negate;
+    case IROp::NegNum:
+        return BytecodeOp::NegNum;
     case IROp::Not:
         return BytecodeOp::Not;
     case IROp::Add:
         return BytecodeOp::Add;
+    case IROp::AddNum:
+        return BytecodeOp::AddNum;
     case IROp::Subtract:
         return BytecodeOp::Subtract;
+    case IROp::SubNum:
+        return BytecodeOp::SubNum;
     case IROp::Multiply:
         return BytecodeOp::Multiply;
+    case IROp::MulNum:
+        return BytecodeOp::MulNum;
     case IROp::Divide:
         return BytecodeOp::Divide;
+    case IROp::DivNum:
+        return BytecodeOp::DivNum;
+    case IROp::ConcatStr:
+        return BytecodeOp::ConcatStr;
     case IROp::Equal:
         return BytecodeOp::Equal;
     case IROp::NotEqual:
         return BytecodeOp::NotEqual;
     case IROp::Greater:
         return BytecodeOp::Greater;
+    case IROp::GreaterNum:
+        return BytecodeOp::GreaterNum;
+    case IROp::GreaterStr:
+        return BytecodeOp::GreaterStr;
     case IROp::GreaterEqual:
         return BytecodeOp::GreaterEqual;
+    case IROp::GreaterEqualNum:
+        return BytecodeOp::GreaterEqualNum;
+    case IROp::GreaterEqualStr:
+        return BytecodeOp::GreaterEqualStr;
     case IROp::Less:
         return BytecodeOp::Less;
+    case IROp::LessNum:
+        return BytecodeOp::LessNum;
+    case IROp::LessStr:
+        return BytecodeOp::LessStr;
     case IROp::LessEqual:
         return BytecodeOp::LessEqual;
+    case IROp::LessEqualNum:
+        return BytecodeOp::LessEqualNum;
+    case IROp::LessEqualStr:
+        return BytecodeOp::LessEqualStr;
     case IROp::Jump:
         return BytecodeOp::Jump;
     case IROp::JumpIfFalse:

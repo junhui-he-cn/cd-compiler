@@ -3,7 +3,7 @@ IR
 0001  store_var @0 x#0, v0
 0002  v1 = load_var @1 x#0
 0003  v2 = constant #1 2
-0004  v3 = add v1, v2
+0004  v3 = add_num v1, v2
 0005  assign_var @2 x#0, v3
 0006  v4 = load_var @3 x#0
 0007  print v4

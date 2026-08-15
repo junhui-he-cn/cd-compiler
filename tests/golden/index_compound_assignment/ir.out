@@ -9,7 +9,7 @@ IR
 0007  v6 = assert_number v5 @2 `+=` expects number target
 0008  v7 = constant #3 5
 0009  v8 = assert_number v7 @3 `+=` expects number value
-0010  v9 = add v6, v8
+0010  v9 = add_num v6, v8
 0011  v10 = assign_index v3, v4, v9
 0012  v11 = load_var @4 xs#0
 0013  v12 = constant #4 0
@@ -21,7 +21,7 @@ IR
 0019  v17 = assert_number v16 @6 `-=` expects number target
 0020  v18 = constant #6 3
 0021  v19 = assert_number v18 @7 `-=` expects number value
-0022  v20 = subtract v17, v19
+0022  v20 = sub_num v17, v19
 0023  v21 = assign_index v14, v15, v20
 0024  print v20
 0025  v22 = load_var @8 xs#0
@@ -30,7 +30,7 @@ IR
 0028  v25 = assert_number v24 @9 `*=` expects number target
 0029  v26 = constant #8 2
 0030  v27 = assert_number v26 @10 `*=` expects number value
-0031  v28 = multiply v25, v27
+0031  v28 = mul_num v25, v27
 0032  v29 = assign_index v22, v23, v28
 0033  print v28
 0034  v30 = load_var @11 xs#0
@@ -39,7 +39,7 @@ IR
 0037  v33 = assert_number v32 @12 `/=` expects number target
 0038  v34 = constant #10 4
 0039  v35 = assert_number v34 @13 `/=` expects number value
-0040  v36 = divide v33, v35
+0040  v36 = div_num v33, v35
 0041  v37 = assign_index v30, v31, v36
 0042  print v36
 0043  v38 = load_var @14 xs#0

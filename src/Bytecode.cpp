@@ -7,7 +7,7 @@ namespace {
 
 bool isUnary(BytecodeOp op)
 {
-    return op == BytecodeOp::Negate || op == BytecodeOp::Not;
+    return op == BytecodeOp::Negate || op == BytecodeOp::NegNum || op == BytecodeOp::Not;
 }
 
 bool isBinary(BytecodeOp op)
@@ -23,6 +23,19 @@ bool isBinary(BytecodeOp op)
     case BytecodeOp::GreaterEqual:
     case BytecodeOp::Less:
     case BytecodeOp::LessEqual:
+    case BytecodeOp::AddNum:
+    case BytecodeOp::SubNum:
+    case BytecodeOp::MulNum:
+    case BytecodeOp::DivNum:
+    case BytecodeOp::ConcatStr:
+    case BytecodeOp::LessNum:
+    case BytecodeOp::LessEqualNum:
+    case BytecodeOp::GreaterNum:
+    case BytecodeOp::GreaterEqualNum:
+    case BytecodeOp::LessStr:
+    case BytecodeOp::LessEqualStr:
+    case BytecodeOp::GreaterStr:
+    case BytecodeOp::GreaterEqualStr:
         return true;
     case BytecodeOp::Constant:
     case BytecodeOp::MakeFunction:
@@ -57,6 +70,7 @@ bool isBinary(BytecodeOp op)
     case BytecodeOp::AssertNumber:
     case BytecodeOp::Return:
     case BytecodeOp::Negate:
+    case BytecodeOp::NegNum:
     case BytecodeOp::Not:
     case BytecodeOp::Jump:
     case BytecodeOp::JumpIfFalse:
@@ -531,6 +545,8 @@ std::string bytecodeOpName(BytecodeOp op)
         return "return";
     case BytecodeOp::Negate:
         return "negate";
+    case BytecodeOp::NegNum:
+        return "neg_num";
     case BytecodeOp::Not:
         return "not";
     case BytecodeOp::Add:
@@ -553,6 +569,32 @@ std::string bytecodeOpName(BytecodeOp op)
         return "less";
     case BytecodeOp::LessEqual:
         return "less_equal";
+    case BytecodeOp::AddNum:
+        return "add_num";
+    case BytecodeOp::SubNum:
+        return "sub_num";
+    case BytecodeOp::MulNum:
+        return "mul_num";
+    case BytecodeOp::DivNum:
+        return "div_num";
+    case BytecodeOp::ConcatStr:
+        return "concat_str";
+    case BytecodeOp::LessNum:
+        return "lt_num";
+    case BytecodeOp::LessEqualNum:
+        return "le_num";
+    case BytecodeOp::GreaterNum:
+        return "gt_num";
+    case BytecodeOp::GreaterEqualNum:
+        return "ge_num";
+    case BytecodeOp::LessStr:
+        return "lt_str";
+    case BytecodeOp::LessEqualStr:
+        return "le_str";
+    case BytecodeOp::GreaterStr:
+        return "gt_str";
+    case BytecodeOp::GreaterEqualStr:
+        return "ge_str";
     case BytecodeOp::Jump:
         return "jump";
     case BytecodeOp::JumpIfFalse:

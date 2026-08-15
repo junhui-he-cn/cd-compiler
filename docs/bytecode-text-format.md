@@ -318,14 +318,13 @@ constant
 make_function
 array
 map
-struct
-variant
-variant_tag
-variant_field
+make_struct
+struct_get
+struct_set
+make_variant
+is_variant
+variant_get
 move
-load_var
-store_var
-assign_var
 load_local
 bind_local
 set_local
@@ -341,23 +340,37 @@ assign_index
 field
 assign_field
 len
-return
-negate
+assert_array
+assert_number
+neg_num
 not
-add
-subtract
-multiply
-divide
+add_num
+sub_num
+mul_num
+div_num
+concat_str
 equal
 not_equal
-greater
-greater_equal
-less
-less_equal
-jump
-jump_if_false
-jump_if_true
+lt_num
+le_num
+gt_num
+ge_num
+lt_str
+le_str
+gt_str
+ge_str
+br
+br_if
+return
+return_nil
 ```
+
+The legacy `cdbc 0.1` read path additionally accepts `load_var/store_var/
+assign_var`, `struct`, `variant`, `variant_tag`, `variant_field`,
+`native_call nName`, `print rV`, the dynamically typed `negate`, `add`,
+`subtract`, `multiply`, `divide`, `greater`, `greater_equal`, `less`,
+`less_equal`, and the linear `jump`, `jump_if_false`, and `jump_if_true`
+instructions. These legacy forms are never emitted.
 
 Map construction preserves source order and uses explicit key/value register
 pairs:
@@ -419,6 +432,31 @@ one argument register and a scratch destination. Output budgeting,
 cancellation, trace attribution, and side-effect handling stay inside the
 native framework, so printing behaves exactly like the former dedicated
 opcode.
+
+## Typed arithmetic and comparison
+
+When the compiler knows both operand types, arithmetic and ordered comparison
+use single-type opcodes so the interpreter hot path does not branch on runtime
+value tags:
+
+```text
+rD = add_num rL, rR        rD = concat_str rL, rR
+rD = sub_num rL, rR        rD = mul_num rL, rR
+rD = div_num rL, rR        rD = neg_num rV
+
+rD = lt_num rL, rR         rD = lt_str rL, rR
+rD = le_num rL, rR         rD = le_str rL, rR
+rD = gt_num rL, rR         rD = gt_str rL, rR
+rD = ge_num rL, rR         rD = ge_str rL, rR
+```
+
+`equal` and `not_equal` keep the existing runtime equality semantics for all
+value kinds. The dynamically typed `add`, `negate`, `subtract`, `multiply`,
+`divide`, and ordered comparison opcodes remain on the legacy read path and
+for generic `T: Ord` bodies whose parameter type is not statically known.
+Ordered comparisons no longer resolve struct capability witnesses by global
+name; struct values are not order-comparable and the compiler rejects such
+comparisons before bytecode emission.
 
 The `range` native is also supported with one to three numeric arguments. Its
 result is consumed by the existing `len`, `index`, and `assert_array`

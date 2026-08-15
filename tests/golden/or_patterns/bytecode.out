@@ -124,13 +124,13 @@ function $1 shapeLabel/1 registers=23
 0017  bind_local l1, b3
 0018  b7 = load_local l1
 0019  b8 = constant #7 3
-0020  b9 = greater b7, b8
+0020  b9 = gt_num b7, b8
 0021  br_if b9, b5, b7
 0022  block
 0023  b10 = constant #8 "large:"
 0024  b11 = load_local l1
 0025  b12 = call_native i1 [b11]
-0026  b13 = add b10, b12
+0026  b13 = concat_str b10, b12
 0027  return b13
 0028  block
 0029  br b16

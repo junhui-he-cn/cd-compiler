@@ -29,7 +29,7 @@ IR
 0027  store_var @31 value#6, v16
 0028  v17 = load_var @32 value#6
 0029  v18 = constant #12 10
-0030  v19 = greater v17, v18
+0030  v19 = gt_num v17, v18
 0031  jump_if_false v19, 0035
 0032  v20 = constant #13 "large"
 0033  print v20
@@ -72,7 +72,7 @@ function $0 describe(value#1)
 0010  store_var @6 value#2, v5
 0011  v6 = load_var @7 value#2
 0012  v7 = constant #3 10
-0013  v8 = greater v6, v7
+0013  v8 = gt_num v6, v7
 0014  jump_if_false v8, 0018
 0015  v9 = constant #4 "large"
 0016  return v9
@@ -84,7 +84,7 @@ function $0 describe(value#1)
 0022  v12 = constant #5 "some:"
 0023  v13 = load_var @13 value#3
 0024  v14 = native_call @14 str(v13)
-0025  v15 = add v12, v14
+0025  v15 = concat_str v12, v14
 0026  return v15
 0027  jump 0033
 0028  v16 = variant_tag v0 Option.None

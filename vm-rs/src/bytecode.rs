@@ -391,6 +391,75 @@ pub enum Instruction {
         left: usize,
         right: usize,
     },
+    AddNum {
+        dest: usize,
+        left: usize,
+        right: usize,
+    },
+    SubNum {
+        dest: usize,
+        left: usize,
+        right: usize,
+    },
+    MulNum {
+        dest: usize,
+        left: usize,
+        right: usize,
+    },
+    DivNum {
+        dest: usize,
+        left: usize,
+        right: usize,
+    },
+    NegNum {
+        dest: usize,
+        value: usize,
+    },
+    ConcatStr {
+        dest: usize,
+        left: usize,
+        right: usize,
+    },
+    LessNum {
+        dest: usize,
+        left: usize,
+        right: usize,
+    },
+    LessEqualNum {
+        dest: usize,
+        left: usize,
+        right: usize,
+    },
+    GreaterNum {
+        dest: usize,
+        left: usize,
+        right: usize,
+    },
+    GreaterEqualNum {
+        dest: usize,
+        left: usize,
+        right: usize,
+    },
+    LessStr {
+        dest: usize,
+        left: usize,
+        right: usize,
+    },
+    LessEqualStr {
+        dest: usize,
+        left: usize,
+        right: usize,
+    },
+    GreaterStr {
+        dest: usize,
+        left: usize,
+        right: usize,
+    },
+    GreaterEqualStr {
+        dest: usize,
+        left: usize,
+        right: usize,
+    },
     Jump {
         target: usize,
     },

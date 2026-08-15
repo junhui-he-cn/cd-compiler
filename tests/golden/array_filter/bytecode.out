@@ -42,7 +42,7 @@ upvalue u0 = global g1
 0000  block
 0001  b0 = load_local l0
 0002  b1 = load_upvalue u0
-0003  b2 = greater b0, b1
+0003  b2 = gt_num b0, b1
 0004  return b2
 0005  block
 0006  b3 = constant #5 nil

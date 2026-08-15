@@ -59,7 +59,7 @@ block b0:
   r1 = load_local l0
   r2 = struct_get r1, t0, 0
   r3 = constant c1
-  r4 = add r2, r3
+  r4 = add_num r2, r3
   r5 = struct_set r0, t0, 0, r4
   r6 = constant c2
   return r6

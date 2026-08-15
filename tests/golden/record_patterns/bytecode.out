@@ -89,7 +89,7 @@ function $0 describe/1 registers=25
 0028  bind_local l1, b12
 0029  b13 = constant #6 "city:"
 0030  b14 = load_local l1
-0031  b15 = add b13, b14
+0031  b15 = concat_str b13, b14
 0032  return b15
 0033  block
 0034  br b11
@@ -100,10 +100,10 @@ function $0 describe/1 registers=25
 0039  bind_local l3, b17
 0040  b18 = load_local l3
 0041  b19 = constant #7 ":"
-0042  b20 = add b18, b19
+0042  b20 = concat_str b18, b19
 0043  b21 = load_local l2
 0044  b22 = call_native i1 [b21]
-0045  b23 = add b20, b22
+0045  b23 = concat_str b20, b22
 0046  return b23
 0047  block
 0048  br b11

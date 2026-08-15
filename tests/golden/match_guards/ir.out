@@ -30,7 +30,7 @@ IR
 0028  store_var @33 value#6, v18
 0029  v19 = load_var @34 value#6
 0030  v20 = constant #8 10
-0031  v21 = greater v19, v20
+0031  v21 = gt_num v19, v20
 0032  jump_if_false v21, 0036
 0033  v22 = constant #9 "large"
 0034  print v22
@@ -41,7 +41,7 @@ IR
 0039  store_var @39 value#7, v24
 0040  v25 = load_var @40 value#7
 0041  v26 = constant #10 0
-0042  v27 = greater v25, v26
+0042  v27 = gt_num v25, v26
 0043  jump_if_false v27, 0047
 0044  v28 = constant #11 "positive"
 0045  print v28
@@ -77,7 +77,7 @@ function $0 describe(result#1)
 0004  store_var @6 value#2, v2
 0005  v3 = load_var @7 value#2
 0006  v4 = constant #1 0
-0007  v5 = greater v3, v4
+0007  v5 = gt_num v3, v4
 0008  jump_if_false v5, 0012
 0009  v6 = constant #2 "positive"
 0010  return v6

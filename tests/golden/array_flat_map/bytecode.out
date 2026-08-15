@@ -36,7 +36,7 @@ function $0 <lambda>/1 registers=6
 0001  b0 = load_local l0
 0002  b1 = load_local l0
 0003  b2 = constant #2 10
-0004  b3 = multiply b1, b2
+0004  b3 = mul_num b1, b2
 0005  b4 = array [b0, b3]
 0006  return b4
 0007  block
@@ -49,7 +49,7 @@ function $1 <lambda>/1 registers=5
 0000  block
 0001  b0 = load_local l0
 0002  b1 = constant #4 1
-0003  b2 = add b0, b1
+0003  b2 = add_num b0, b1
 0004  b3 = array [b2]
 0005  return b3
 0006  block

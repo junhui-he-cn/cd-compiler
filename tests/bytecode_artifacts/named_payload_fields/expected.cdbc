@@ -51,9 +51,9 @@ block b1:
   init_global g2, r6
   r7 = load_global g2
   r8 = constant c2
-  r9 = multiply r7, r8
+  r9 = mul_num r7, r8
   r10 = load_global g1
-  r11 = add r9, r10
+  r11 = add_num r9, r10
   r14 = call_native i0 [r11]
   return_nil
 block b2:

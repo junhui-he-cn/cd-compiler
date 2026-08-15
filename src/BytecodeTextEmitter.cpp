@@ -262,20 +262,38 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
     case BytecodeOp::Negate:
         out << reg(requireDest(instruction)) << " = negate " << reg(requireLeft(instruction));
         break;
+    case BytecodeOp::NegNum:
+        out << reg(requireDest(instruction)) << " = neg_num " << reg(requireLeft(instruction));
+        break;
     case BytecodeOp::Not:
         out << reg(requireDest(instruction)) << " = not " << reg(requireLeft(instruction));
         break;
     case BytecodeOp::Add:
         out << reg(requireDest(instruction)) << " = add " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
         break;
+    case BytecodeOp::AddNum:
+        out << reg(requireDest(instruction)) << " = add_num " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::ConcatStr:
+        out << reg(requireDest(instruction)) << " = concat_str " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
     case BytecodeOp::Subtract:
         out << reg(requireDest(instruction)) << " = subtract " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::SubNum:
+        out << reg(requireDest(instruction)) << " = sub_num " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
         break;
     case BytecodeOp::Multiply:
         out << reg(requireDest(instruction)) << " = multiply " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
         break;
+    case BytecodeOp::MulNum:
+        out << reg(requireDest(instruction)) << " = mul_num " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
     case BytecodeOp::Divide:
         out << reg(requireDest(instruction)) << " = divide " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::DivNum:
+        out << reg(requireDest(instruction)) << " = div_num " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
         break;
     case BytecodeOp::Equal:
         out << reg(requireDest(instruction)) << " = equal " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
@@ -286,14 +304,38 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
     case BytecodeOp::Greater:
         out << reg(requireDest(instruction)) << " = greater " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
         break;
+    case BytecodeOp::GreaterNum:
+        out << reg(requireDest(instruction)) << " = gt_num " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::GreaterStr:
+        out << reg(requireDest(instruction)) << " = gt_str " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
     case BytecodeOp::GreaterEqual:
         out << reg(requireDest(instruction)) << " = greater_equal " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::GreaterEqualNum:
+        out << reg(requireDest(instruction)) << " = ge_num " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::GreaterEqualStr:
+        out << reg(requireDest(instruction)) << " = ge_str " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
         break;
     case BytecodeOp::Less:
         out << reg(requireDest(instruction)) << " = less " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
         break;
+    case BytecodeOp::LessNum:
+        out << reg(requireDest(instruction)) << " = lt_num " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::LessStr:
+        out << reg(requireDest(instruction)) << " = lt_str " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
     case BytecodeOp::LessEqual:
         out << reg(requireDest(instruction)) << " = less_equal " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::LessEqualNum:
+        out << reg(requireDest(instruction)) << " = le_num " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::LessEqualStr:
+        out << reg(requireDest(instruction)) << " = le_str " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
         break;
     case BytecodeOp::Jump:
         out << "jump " << instruction.operand;

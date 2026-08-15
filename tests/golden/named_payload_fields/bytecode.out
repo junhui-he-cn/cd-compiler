@@ -54,9 +54,9 @@ function $0 pairScore/1 registers=12
 0008  bind_local l2, b3
 0009  b4 = load_local l2
 0010  b5 = constant #1 10
-0011  b6 = multiply b4, b5
+0011  b6 = mul_num b4, b5
 0012  b7 = load_local l1
-0013  b8 = add b6, b7
+0013  b8 = add_num b6, b7
 0014  return b8
 0015  block
 0016  br b6
@@ -85,7 +85,7 @@ function $1 describe/1 registers=15
 0007  b3 = constant #5 "ok:"
 0008  b4 = load_local l1
 0009  b5 = call_native i1 [b4]
-0010  b6 = add b3, b5
+0010  b6 = concat_str b3, b5
 0011  return b6
 0012  block
 0013  br b9
@@ -97,7 +97,7 @@ function $1 describe/1 registers=15
 0019  bind_local l2, b8
 0020  b9 = constant #6 "err:"
 0021  b10 = load_local l2
-0022  b11 = add b9, b10
+0022  b11 = concat_str b9, b10
 0023  return b11
 0024  block
 0025  br b9

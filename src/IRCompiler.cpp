@@ -268,6 +268,19 @@ const TypeInfo& IRCompiler::typedExpressionType(
     return type;
 }
 
+const TypedExpressionRecord* IRCompiler::typedExpressionRecord(const Expr& expression) const
+{
+    const Expr* current = &expression;
+    while (current) {
+        if (const auto* grouping = dynamic_cast<const GroupingExpr*>(current)) {
+            current = grouping->expression.get();
+            continue;
+        }
+        break;
+    }
+    return declarationIndex_ ? declarationIndex_->typedExpression(*current) : nullptr;
+}
+
 const IndexOperationRecord& IRCompiler::indexOperation(
     const Expr& expression,
     IndexOperationKind kind,
@@ -809,7 +822,7 @@ void IRCompiler::compileForIn(const ForInStmt& statement)
     const std::size_t loopStart = ir_.instructionCount();
     const IRRegister currentIndex = ir_.emitLoadVar(indexName, indexBinding);
     const IRRegister currentLength = ir_.emitLoadVar(lengthName, lengthBinding);
-    const IRRegister condition = ir_.emitBinary(IROp::Less, currentIndex, currentLength);
+    const IRRegister condition = ir_.emitBinary(IROp::LessNum, currentIndex, currentLength);
     const std::size_t exitJump = ir_.emitJumpIfFalse(condition);
 
     const IRRegister arrayForElement = ir_.emitLoadVar(iterableName, iterableBinding);
@@ -821,7 +834,7 @@ void IRCompiler::compileForIn(const ForInStmt& statement)
     const std::size_t incrementStart = ir_.instructionCount();
     const IRRegister indexBeforeIncrement = ir_.emitLoadVar(indexName, indexBinding);
     const IRRegister one = ir_.emitConstant(Value::number(1));
-    const IRRegister nextIndex = ir_.emitBinary(IROp::Add, indexBeforeIncrement, one);
+    const IRRegister nextIndex = ir_.emitBinary(IROp::AddNum, indexBeforeIncrement, one);
     ir_.emitAssignVar(indexName, nextIndex, indexBinding);
     ir_.emitJumpTo(loopStart);
 
@@ -1218,13 +1231,25 @@ IRRegister IRCompiler::compileExpression(const Expr& expression)
 
     if (const auto* unary = dynamic_cast<const UnaryExpr*>(&expression)) {
         const IRRegister value = compileExpression(*unary->right);
+        if (unary->op.type == TokenType::Minus) {
+            const TypedExpressionRecord* record = typedExpressionRecord(*unary);
+            if (record && record->type.kind == StaticType::Number) {
+                return ir_.emitUnary(IROp::NegNum, value);
+            }
+        }
         return emitUnary(unary->op.type, value);
     }
 
     if (const auto* binary = dynamic_cast<const BinaryExpr*>(&expression)) {
         const IRRegister left = compileExpression(*binary->left);
         const IRRegister right = compileExpression(*binary->right);
-        return emitBinary(binary->op.type, left, right);
+        const TypedExpressionRecord* binaryRecord = declarationIndex_
+            ? declarationIndex_->typedExpression(*binary)
+            : nullptr;
+        const TypeInfo* resultType = binaryRecord ? &binaryRecord->type : nullptr;
+        const TypedExpressionRecord* leftOperand = typedExpressionRecord(*binary->left);
+        const TypeInfo* operandType = leftOperand ? &leftOperand->type : nullptr;
+        return emitBinary(binary->op.type, left, right, operandType, resultType);
     }
 
     if (const auto* logical = dynamic_cast<const LogicalExpr*>(&expression)) {
@@ -1527,13 +1552,13 @@ IROp IRCompiler::compoundAssignmentOp(TokenType op) const
 {
     switch (op) {
     case TokenType::PlusEqual:
-        return IROp::Add;
+        return IROp::AddNum;
     case TokenType::MinusEqual:
-        return IROp::Subtract;
+        return IROp::SubNum;
     case TokenType::StarEqual:
-        return IROp::Multiply;
+        return IROp::MulNum;
     case TokenType::SlashEqual:
-        return IROp::Divide;
+        return IROp::DivNum;
     default:
         throw IRCompileError("unsupported compound assignment operator: " + tokenTypeName(op));
     }
@@ -1668,29 +1693,54 @@ IRRegister IRCompiler::emitUnary(TokenType op, IRRegister value)
     }
 }
 
-IRRegister IRCompiler::emitBinary(TokenType op, IRRegister left, IRRegister right)
+IRRegister IRCompiler::emitBinary(
+    TokenType op,
+    IRRegister left,
+    IRRegister right,
+    const TypeInfo* operandType,
+    const TypeInfo* resultType)
 {
+    const bool knownNumber = operandType && operandType->kind == StaticType::Number;
+    const bool knownString = operandType && operandType->kind == StaticType::String;
+    const bool numericResult = resultType && resultType->kind == StaticType::Number;
+    const bool stringResult = resultType && resultType->kind == StaticType::String;
     switch (op) {
     case TokenType::Plus:
+        if (numericResult) {
+            return ir_.emitBinary(IROp::AddNum, left, right);
+        }
+        if (stringResult) {
+            return ir_.emitBinary(IROp::ConcatStr, left, right);
+        }
         return ir_.emitBinary(IROp::Add, left, right);
     case TokenType::Minus:
-        return ir_.emitBinary(IROp::Subtract, left, right);
+        return ir_.emitBinary(numericResult ? IROp::SubNum : IROp::Subtract, left, right);
     case TokenType::Star:
-        return ir_.emitBinary(IROp::Multiply, left, right);
+        return ir_.emitBinary(numericResult ? IROp::MulNum : IROp::Multiply, left, right);
     case TokenType::Slash:
-        return ir_.emitBinary(IROp::Divide, left, right);
+        return ir_.emitBinary(numericResult ? IROp::DivNum : IROp::Divide, left, right);
     case TokenType::EqualEqual:
         return ir_.emitBinary(IROp::Equal, left, right);
     case TokenType::BangEqual:
         return ir_.emitBinary(IROp::NotEqual, left, right);
     case TokenType::Greater:
-        return ir_.emitBinary(IROp::Greater, left, right);
+        return ir_.emitBinary(
+            knownNumber ? IROp::GreaterNum : knownString ? IROp::GreaterStr : IROp::Greater,
+            left, right);
     case TokenType::GreaterEqual:
-        return ir_.emitBinary(IROp::GreaterEqual, left, right);
+        return ir_.emitBinary(
+            knownNumber ? IROp::GreaterEqualNum
+                        : knownString ? IROp::GreaterEqualStr : IROp::GreaterEqual,
+            left, right);
     case TokenType::Less:
-        return ir_.emitBinary(IROp::Less, left, right);
+        return ir_.emitBinary(
+            knownNumber ? IROp::LessNum : knownString ? IROp::LessStr : IROp::Less,
+            left, right);
     case TokenType::LessEqual:
-        return ir_.emitBinary(IROp::LessEqual, left, right);
+        return ir_.emitBinary(
+            knownNumber ? IROp::LessEqualNum
+                        : knownString ? IROp::LessEqualStr : IROp::LessEqual,
+            left, right);
     default:
         throw IRCompileError("unsupported binary operator: " + tokenTypeName(op));
     }

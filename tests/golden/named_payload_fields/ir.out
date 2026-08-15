@@ -48,9 +48,9 @@ function $0 pairScore(pair#1)
 0006  store_var @9 rightValue#3, v3
 0007  v4 = load_var @10 rightValue#3
 0008  v5 = constant #1 10
-0009  v6 = multiply v4, v5
+0009  v6 = mul_num v4, v5
 0010  v7 = load_var @11 leftValue#2
-0011  v8 = add v6, v7
+0011  v8 = add_num v6, v7
 0012  return v8
 0013  jump 0019
 0014  v9 = variant_tag v0 Pair.Empty
@@ -70,7 +70,7 @@ function $1 describe(result#5)
 0005  v3 = constant #5 "ok:"
 0006  v4 = load_var @22 numberValue#6
 0007  v5 = native_call @23 str(v4)
-0008  v6 = add v3, v5
+0008  v6 = concat_str v3, v5
 0009  return v6
 0010  jump 0025
 0011  v7 = variant_tag v0 Result.Err
@@ -79,7 +79,7 @@ function $1 describe(result#5)
 0014  store_var @28 text#7, v8
 0015  v9 = constant #6 "err:"
 0016  v10 = load_var @29 text#7
-0017  v11 = add v9, v10
+0017  v11 = concat_str v9, v10
 0018  return v11
 0019  jump 0025
 0020  v12 = variant_tag v0 Result.Empty

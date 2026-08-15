@@ -743,17 +743,31 @@ impl JitState {
                 | Instruction::LoadUpvalue { .. }
                 | Instruction::BlockStart { .. }
                 | Instruction::Negate { .. }
+                | Instruction::NegNum { .. }
                 | Instruction::Not { .. }
                 | Instruction::Add { .. }
+                | Instruction::AddNum { .. }
+                | Instruction::ConcatStr { .. }
                 | Instruction::Subtract { .. }
+                | Instruction::SubNum { .. }
                 | Instruction::Multiply { .. }
+                | Instruction::MulNum { .. }
                 | Instruction::Divide { .. }
+                | Instruction::DivNum { .. }
                 | Instruction::Equal { .. }
                 | Instruction::NotEqual { .. }
                 | Instruction::Greater { .. }
+                | Instruction::GreaterNum { .. }
+                | Instruction::GreaterStr { .. }
                 | Instruction::GreaterEqual { .. }
+                | Instruction::GreaterEqualNum { .. }
+                | Instruction::GreaterEqualStr { .. }
                 | Instruction::Less { .. }
+                | Instruction::LessNum { .. }
+                | Instruction::LessStr { .. }
                 | Instruction::LessEqual { .. }
+                | Instruction::LessEqualNum { .. }
+                | Instruction::LessEqualStr { .. }
                 | Instruction::Return { .. } => {
                     returned = true;
                 }
@@ -1325,7 +1339,7 @@ fn lower_to_cranelift_ir(
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
-                Instruction::Negate { dest, value } => {
+                Instruction::Negate { dest, value } | Instruction::NegNum { dest, value } => {
                     let value = read_register(&registers, *value, instruction_index)?;
                     let value = emit_runtime_call(
                         &mut builder,
@@ -1363,7 +1377,9 @@ fn lower_to_cranelift_ir(
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
-                Instruction::Add { dest, left, right } => {
+                Instruction::Add { dest, left, right }
+                | Instruction::AddNum { dest, left, right }
+                | Instruction::ConcatStr { dest, left, right } => {
                     let value = emit_binary_runtime_call(
                         &mut builder,
                         context,
@@ -1384,7 +1400,8 @@ fn lower_to_cranelift_ir(
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
-                Instruction::Subtract { dest, left, right } => {
+                Instruction::Subtract { dest, left, right }
+                | Instruction::SubNum { dest, left, right } => {
                     let value = emit_binary_runtime_call(
                         &mut builder,
                         context,
@@ -1405,7 +1422,8 @@ fn lower_to_cranelift_ir(
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
-                Instruction::Multiply { dest, left, right } => {
+                Instruction::Multiply { dest, left, right }
+                | Instruction::MulNum { dest, left, right } => {
                     let value = emit_binary_runtime_call(
                         &mut builder,
                         context,
@@ -1426,7 +1444,8 @@ fn lower_to_cranelift_ir(
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
-                Instruction::Divide { dest, left, right } => {
+                Instruction::Divide { dest, left, right }
+                | Instruction::DivNum { dest, left, right } => {
                     let value = emit_binary_runtime_call(
                         &mut builder,
                         context,
@@ -1489,7 +1508,9 @@ fn lower_to_cranelift_ir(
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
-                Instruction::Greater { dest, left, right } => {
+                Instruction::Greater { dest, left, right }
+                | Instruction::GreaterNum { dest, left, right }
+                | Instruction::GreaterStr { dest, left, right } => {
                     let value = emit_binary_runtime_call(
                         &mut builder,
                         context,
@@ -1510,7 +1531,9 @@ fn lower_to_cranelift_ir(
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
-                Instruction::GreaterEqual { dest, left, right } => {
+                Instruction::GreaterEqual { dest, left, right }
+                | Instruction::GreaterEqualNum { dest, left, right }
+                | Instruction::GreaterEqualStr { dest, left, right } => {
                     let value = emit_binary_runtime_call(
                         &mut builder,
                         context,
@@ -1531,7 +1554,9 @@ fn lower_to_cranelift_ir(
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
-                Instruction::Less { dest, left, right } => {
+                Instruction::Less { dest, left, right }
+                | Instruction::LessNum { dest, left, right }
+                | Instruction::LessStr { dest, left, right } => {
                     let value = emit_binary_runtime_call(
                         &mut builder,
                         context,
@@ -1552,7 +1577,9 @@ fn lower_to_cranelift_ir(
                     )?;
                     write_register(&mut registers, *dest, value, instruction_index)?;
                 }
-                Instruction::LessEqual { dest, left, right } => {
+                Instruction::LessEqual { dest, left, right }
+                | Instruction::LessEqualNum { dest, left, right }
+                | Instruction::LessEqualStr { dest, left, right } => {
                     let value = emit_binary_runtime_call(
                         &mut builder,
                         context,
@@ -1777,17 +1804,31 @@ fn opcode_name(instruction: &Instruction) -> &'static str {
         Instruction::Print { .. } => "print",
         Instruction::Return { .. } => "return",
         Instruction::Negate { .. } => "negate",
+        Instruction::NegNum { .. } => "neg_num",
         Instruction::Not { .. } => "not",
         Instruction::Add { .. } => "add",
+        Instruction::AddNum { .. } => "add_num",
+        Instruction::ConcatStr { .. } => "concat_str",
         Instruction::Subtract { .. } => "subtract",
+        Instruction::SubNum { .. } => "sub_num",
         Instruction::Multiply { .. } => "multiply",
+        Instruction::MulNum { .. } => "mul_num",
         Instruction::Divide { .. } => "divide",
+        Instruction::DivNum { .. } => "div_num",
         Instruction::Equal { .. } => "equal",
         Instruction::NotEqual { .. } => "not_equal",
         Instruction::Greater { .. } => "greater",
+        Instruction::GreaterNum { .. } => "gt_num",
+        Instruction::GreaterStr { .. } => "gt_str",
         Instruction::GreaterEqual { .. } => "greater_equal",
+        Instruction::GreaterEqualNum { .. } => "ge_num",
+        Instruction::GreaterEqualStr { .. } => "ge_str",
         Instruction::Less { .. } => "less",
+        Instruction::LessNum { .. } => "lt_num",
+        Instruction::LessStr { .. } => "lt_str",
         Instruction::LessEqual { .. } => "less_equal",
+        Instruction::LessEqualNum { .. } => "le_num",
+        Instruction::LessEqualStr { .. } => "le_str",
         Instruction::Jump { .. } => "jump",
         Instruction::JumpIfFalse { .. } => "jump_if_false",
         Instruction::JumpIfTrue { .. } => "jump_if_true",

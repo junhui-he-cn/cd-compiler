@@ -96,6 +96,19 @@ bool isBinaryOperation(IROp op)
     case IROp::GreaterEqual:
     case IROp::Less:
     case IROp::LessEqual:
+    case IROp::AddNum:
+    case IROp::SubNum:
+    case IROp::MulNum:
+    case IROp::DivNum:
+    case IROp::ConcatStr:
+    case IROp::LessNum:
+    case IROp::LessEqualNum:
+    case IROp::GreaterNum:
+    case IROp::GreaterEqualNum:
+    case IROp::LessStr:
+    case IROp::LessEqualStr:
+    case IROp::GreaterStr:
+    case IROp::GreaterEqualStr:
         return true;
     default:
         return false;
@@ -175,6 +188,7 @@ void validateInstructionShape(const SSAInstruction& instruction)
     case IROp::AssertArray:
     case IROp::AssertNumber:
     case IROp::Negate:
+    case IROp::NegNum:
     case IROp::Not:
         requireInstructionShape(
             instruction,

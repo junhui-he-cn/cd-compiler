@@ -33,7 +33,7 @@ main registers=40
 0030  init_global g4, b18
 0031  b19 = load_global g4
 0032  b20 = constant #8 10
-0033  b21 = greater b19, b20
+0033  b21 = gt_num b19, b20
 0034  br_if b21, b2, b3
 0035  block
 0036  b22 = constant #9 "large"
@@ -47,7 +47,7 @@ main registers=40
 0044  init_global g5, b24
 0045  b25 = load_global g5
 0046  b26 = constant #10 0
-0047  b27 = greater b25, b26
+0047  b27 = gt_num b25, b26
 0048  br_if b27, b5, b6
 0049  block
 0050  b28 = constant #11 "positive"
@@ -96,7 +96,7 @@ function $0 describe/1 registers=12
 0006  bind_local l1, b2
 0007  b3 = load_local l1
 0008  b4 = constant #1 0
-0009  b5 = greater b3, b4
+0009  b5 = gt_num b3, b4
 0010  br_if b5, b2, b4
 0011  block
 0012  b6 = constant #2 "positive"

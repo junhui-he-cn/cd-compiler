@@ -39,7 +39,7 @@ function $1 render(value#2)
 0011  v6 = constant #6 "good:"
 0012  v7 = load_var @11 number#3
 0013  v8 = native_call @12 str(v7)
-0014  v9 = add v6, v8
+0014  v9 = concat_str v6, v8
 0015  return v9
 0016  jump 0026
 0017  v10 = variant_tag v0 Outcome.Bad
@@ -48,7 +48,7 @@ function $1 render(value#2)
 0020  store_var @17 message#4, v11
 0021  v12 = constant #7 "bad:"
 0022  v13 = load_var @18 message#4
-0023  v14 = add v12, v13
+0023  v14 = concat_str v12, v13
 0024  return v14
 0025  jump 0026
 0026  v15 = constant #8 nil

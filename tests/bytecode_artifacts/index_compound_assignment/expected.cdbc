@@ -30,7 +30,7 @@ block b0:
   r5 = assert_number r4, n2
   r6 = constant c2
   r7 = assert_number r6, n3
-  r8 = add r5, r7
+  r8 = add_num r5, r7
   r9 = assign_index r2, r3, r8
   r10 = load_global g0
   r11 = constant c3

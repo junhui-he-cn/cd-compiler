@@ -39,7 +39,7 @@ IR
 0037  store_var @17 __for_in_len#2, v25
 0038  v26 = load_var @18 __for_in_index#1
 0039  v27 = load_var @19 __for_in_len#2
-0040  v28 = less v26, v27
+0040  v28 = lt_num v26, v27
 0041  jump_if_false v28, 0055
 0042  v29 = load_var @20 __for_in_iter#0
 0043  v30 = load_var @21 __for_in_index#1
@@ -48,7 +48,7 @@ IR
 0046  jump 0052
 0047  v32 = load_var @23 __for_in_index#1
 0048  v33 = constant #8 1
-0049  v34 = add v32, v33
+0049  v34 = add_num v32, v33
 0050  assign_var @24 __for_in_index#1, v34
 0051  jump 0038
 0052  v35 = load_var @25 item#1
@@ -57,7 +57,7 @@ IR
 0055  v36 = constant #9 5
 0056  v37 = constant #10 0
 0057  v38 = constant #11 2
-0058  v39 = negate v38
+0058  v39 = neg_num v38
 0059  v40 = native_call @26 range(v36, v37, v39)
 0060  v41 = assert_array v40
 0061  store_var @27 __for_in_iter#3, v41
@@ -70,7 +70,7 @@ IR
 0068  store_var @31 __for_in_len#5, v45
 0069  v46 = load_var @32 __for_in_index#4
 0070  v47 = load_var @33 __for_in_len#5
-0071  v48 = less v46, v47
+0071  v48 = lt_num v46, v47
 0072  jump_if_false v48, 0086
 0073  v49 = load_var @34 __for_in_iter#3
 0074  v50 = load_var @35 __for_in_index#4
@@ -79,7 +79,7 @@ IR
 0077  jump 0083
 0078  v52 = load_var @37 __for_in_index#4
 0079  v53 = constant #14 1
-0080  v54 = add v52, v53
+0080  v54 = add_num v52, v53
 0081  assign_var @38 __for_in_index#4, v54
 0082  jump 0069
 0083  v55 = load_var @39 item#2

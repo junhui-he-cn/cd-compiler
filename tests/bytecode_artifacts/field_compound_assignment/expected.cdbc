@@ -38,7 +38,7 @@ block b0:
   r4 = assert_number r3, n6
   r5 = constant c1
   r6 = assert_number r5, n7
-  r7 = add r4, r6
+  r7 = add_num r4, r6
   r8 = struct_set r2, t0, 0, r7
   r9 = load_global g0
   r10 = struct_get r9, t0, 0

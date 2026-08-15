@@ -112,7 +112,7 @@ block b3:
   init_global g3, r16
   r17 = load_global g3
   r18 = constant c12
-  r19 = greater r17, r18
+  r19 = gt_num r17, r18
   br_if r19, b4, b5
 block b4:
   r20 = constant c13
@@ -172,7 +172,7 @@ block b4:
   bind_local l1, r5
   r6 = load_local l1
   r7 = constant c3
-  r8 = greater r6, r7
+  r8 = gt_num r6, r7
   br_if r8, b5, b7
 block b5:
   r9 = constant c4
@@ -188,7 +188,7 @@ block b8:
   r12 = constant c5
   r13 = load_local l2
   r14 = call_native i1 [r13]
-  r15 = add r12, r14
+  r15 = concat_str r12, r14
   return r15
 block b9:
   br b13

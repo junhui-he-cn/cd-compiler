@@ -7,28 +7,28 @@ main registers=23
 0004  b2 = assert_number b1 @2 `+=` expects number variable
 0005  b3 = constant #1 2
 0006  b4 = assert_number b3 @3 `+=` expects number value
-0007  b5 = add b2, b4
+0007  b5 = add_num b2, b4
 0008  set_global g0, b5
 0009  b22 = call_native i0 [b5]
 0010  b6 = load_global g0
 0011  b7 = assert_number b6 @6 `-=` expects number variable
 0012  b8 = constant #2 1
 0013  b9 = assert_number b8 @7 `-=` expects number value
-0014  b10 = subtract b7, b9
+0014  b10 = sub_num b7, b9
 0015  set_global g0, b10
 0016  b22 = call_native i0 [b10]
 0017  b11 = load_global g0
 0018  b12 = assert_number b11 @10 `*=` expects number variable
 0019  b13 = constant #3 5
 0020  b14 = assert_number b13 @11 `*=` expects number value
-0021  b15 = multiply b12, b14
+0021  b15 = mul_num b12, b14
 0022  set_global g0, b15
 0023  b22 = call_native i0 [b15]
 0024  b16 = load_global g0
 0025  b17 = assert_number b16 @14 `/=` expects number variable
 0026  b18 = constant #4 2
 0027  b19 = assert_number b18 @15 `/=` expects number value
-0028  b20 = divide b17, b19
+0028  b20 = div_num b17, b19
 0029  set_global g0, b20
 0030  b22 = call_native i0 [b20]
 0031  b21 = load_global g0

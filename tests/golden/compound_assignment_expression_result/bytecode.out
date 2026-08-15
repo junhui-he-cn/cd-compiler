@@ -7,10 +7,10 @@ main registers=11
 0004  b2 = assert_number b1 @2 `+=` expects number variable
 0005  b3 = constant #1 4
 0006  b4 = assert_number b3 @3 `+=` expects number value
-0007  b5 = add b2, b4
+0007  b5 = add_num b2, b4
 0008  set_global g0, b5
 0009  b6 = constant #2 2
-0010  b7 = multiply b5, b6
+0010  b7 = mul_num b5, b6
 0011  init_global g1, b7
 0012  b8 = load_global g0
 0013  b10 = call_native i0 [b8]

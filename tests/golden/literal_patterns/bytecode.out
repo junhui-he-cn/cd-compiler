@@ -218,7 +218,7 @@ function $2 describeResult/1 registers=28
 0029  b11 = constant #18 "number:"
 0030  b12 = load_local l1
 0031  b13 = call_native i1 [b12]
-0032  b14 = add b11, b13
+0032  b14 = concat_str b11, b13
 0033  return b14
 0034  block
 0035  br b20
@@ -243,7 +243,7 @@ function $2 describeResult/1 registers=28
 0054  bind_local l2, b21
 0055  b22 = constant #21 "text:"
 0056  b23 = load_local l2
-0057  b24 = add b22, b23
+0057  b24 = concat_str b22, b23
 0058  return b24
 0059  block
 0060  br b20

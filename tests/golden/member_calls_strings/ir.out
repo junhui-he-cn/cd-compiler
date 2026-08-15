@@ -15,14 +15,14 @@ IR
 0013  print v9
 0014  v10 = constant #4 "abc"
 0015  v11 = constant #5 "def"
-0016  v12 = add v10, v11
+0016  v12 = concat_str v10, v11
 0017  v13 = constant #6 2
 0018  v14 = constant #7 3
 0019  v15 = native_call @6 substr(v12, v13, v14)
 0020  print v15
 0021  v16 = constant #8 "xy"
 0022  v17 = constant #9 "z"
-0023  v18 = add v16, v17
+0023  v18 = concat_str v16, v17
 0024  v19 = constant #10 1
 0025  v20 = native_call @7 charAt(v18, v19)
 0026  print v20

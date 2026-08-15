@@ -75,7 +75,7 @@ function $0 describe(value#1)
 0005  v3 = constant #1 "some:"
 0006  v4 = load_var @7 numberValue#2
 0007  v5 = native_call @8 str(v4)
-0008  v6 = add v3, v5
+0008  v6 = concat_str v3, v5
 0009  return v6
 0010  jump 0016
 0011  v7 = variant_tag v0 Option.None
@@ -103,7 +103,7 @@ function $1 sum(list#4)
 0013  v7 = load_var @25 sum#3
 0014  v8 = load_var @26 rest#6
 0015  v9 = call v7(v8)
-0016  v10 = add v6, v9
+0016  v10 = add_num v6, v9
 0017  return v10
 0018  jump 0019
 0019  v11 = constant #6 nil

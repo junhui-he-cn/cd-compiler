@@ -20,7 +20,7 @@ main registers=41
 0015  block
 0016  b8 = load_global g2
 0017  b9 = load_global g4
-0018  b10 = less b8, b9
+0018  b10 = lt_num b8, b9
 0019  br_if b10, b2, b5
 0020  block
 0021  b11 = load_global g1
@@ -31,13 +31,13 @@ main registers=41
 0026  block
 0027  b14 = load_global g2
 0028  b15 = constant #3 1
-0029  b16 = add b14, b15
+0029  b16 = add_num b14, b15
 0030  set_global g2, b16
 0031  br b1
 0032  block
 0033  b17 = load_global g3
 0034  b18 = constant #4 10
-0035  b19 = multiply b17, b18
+0035  b19 = mul_num b17, b18
 0036  init_global g5, b19
 0037  b20 = load_global g0
 0038  b21 = make_function $0 <lambda>/0
@@ -58,7 +58,7 @@ main registers=41
 0053  block
 0054  b29 = load_global g7
 0055  b30 = load_global g9
-0056  b31 = less b29, b30
+0056  b31 = lt_num b29, b30
 0057  br_if b31, b7, b10
 0058  block
 0059  b32 = load_global g6
@@ -69,7 +69,7 @@ main registers=41
 0064  block
 0065  b35 = load_global g7
 0066  b36 = constant #8 1
-0067  b37 = add b35, b36
+0067  b37 = add_num b35, b36
 0068  set_global g7, b37
 0069  br b6
 0070  block

@@ -197,7 +197,7 @@ block b1:
   r3 = constant c1
   r4 = load_local l1
   r5 = call_native i1 [r4]
-  r6 = add r3, r5
+  r6 = concat_str r3, r5
   return r6
 block b2:
   br b6
@@ -239,7 +239,7 @@ block b4:
   r7 = load_upvalue u0
   r8 = load_local l2
   r9 = call r7 [r8]
-  r10 = add r6, r9
+  r10 = add_num r6, r9
   return r10
 block b5:
   br b6

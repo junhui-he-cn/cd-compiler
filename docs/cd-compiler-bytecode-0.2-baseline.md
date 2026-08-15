@@ -319,3 +319,33 @@ Rust VM parity 742/742、golden 787/787、ctest 47/47、verification 1825/1825�
 VM 兼容矩阵 7 格、verification matrix 10 cells / 5 workloads。
 
 下一阶段是 Phase 8（typed arithmetic/comparison opcodes）。
+
+## 14. Phase 8 落地记录
+
+Phase 8（计划 §12，Typed / Specialized Opcodes）完成：已知类型的算术与有序比较
+不再走运行时类型分派，结构体比较也不再按全局名字查找 Ord 见证。
+
+- 新 opcode：`add_num`、`sub_num`、`mul_num`、`div_num`、`neg_num`、
+  `concat_str`；`lt_num/le_num/gt_num/ge_num`、`lt_str/le_str/gt_str/ge_str`。
+- IRCompiler 依据 DeclarationIndex 的 typed-expression 元数据选择专用 op：
+  `+` 按结果类型选 `add_num`/`concat_str`，`- * /` 按 number 结果选
+  `sub_num/mul_num/div_num`，有序比较按左操作数类型选 `*_num`/`*_str`；泛型
+  `T: Ord` 函数体与旧 0.1 工件保留动态 `add/negate/less/...` 兼容路径。
+  compound assignment 与 for-in 的索引比较/自增也固定使用数值专用 op。
+- TypeChecker 现在为字面量、一元与分组表达式记录 typed-expression 元数据，
+  使嵌套/括号/字面量操作数也能可靠选择专用 op。
+- Rust VM：新增 14 条单类型指令，解释器热路径直接做 f64/字符串运算与比较；
+  `equal/not_equal` 保持既有运行时相等语义。
+- 12.3 Ord witness：删除 VM 中 `__capability_ord_*` 全局名见证查找，动态有序比较
+  只接受 number/string；结构体不可有序比较，编译器在类型检查阶段已拒绝。
+- JIT：14 条新指令复用现有 RuntimeHelper（语义与解释器一致），属于 JIT 白名单内的
+  可编译操作；`concat_str`/typed 比较同样落入既有 helper 分派。
+- verifier/linker：新指令按二元/一元形状校验、寄存器 def/read 分析，并在模块
+  链接时重定位寄存器。
+
+回归：cargo test 全绿（新增 typed op 解析/执行用例）、bytecode artifact 124/124、
+module artifact/cache、malformed 107/107、Rust VM parity 742/742、golden 787/787、
+ctest 47/47、verification 1825/1825、VM 兼容矩阵 7 格、
+verification matrix 10 cells / 5 workloads。
+
+下一阶段是 Phase 9（集合专用指令：array/map/range/string 的专用 index/len）。

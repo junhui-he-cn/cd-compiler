@@ -19,7 +19,7 @@ IR
 0017  v10 = constant #11 "if-let:"
 0018  v11 = load_var @15 v#6
 0019  v12 = native_call @16 str(v11)
-0020  v13 = add v10, v12
+0020  v13 = concat_str v10, v12
 0021  print v13
 0022  jump 0025
 0023  v14 = constant #12 "if-let:none"
@@ -35,7 +35,7 @@ IR
 0033  print v16
 0034  v20 = load_var @18 find#0
 0035  v21 = constant #15 1
-0036  v22 = negate v21
+0036  v22 = neg_num v21
 0037  v23 = call v20(v22)
 0038  v25 = constant #16 nil
 0039  v26 = not_equal v23, v25
@@ -58,7 +58,7 @@ IR
 0056  print v31
 0057  v35 = load_var @20 process#2
 0058  v36 = constant #21 1
-0059  v37 = negate v36
+0059  v37 = neg_num v36
 0060  v38 = call v35(v37)
 0061  v40 = constant #22 nil
 0062  v41 = not_equal v38, v40
@@ -83,7 +83,7 @@ IR
 0081  v51 = assert_number v50 @27 `+=` expects number variable
 0082  v52 = constant #27 1
 0083  v53 = assert_number v52 @28 `+=` expects number value
-0084  v54 = add v51, v53
+0084  v54 = add_num v51, v53
 0085  assign_var @29 count#8, v54
 0086  v55 = constant #28 nil
 0087  assign_var @30 next#7, v55
@@ -94,11 +94,11 @@ IR
 function $0 find(value#1)
 0000  v0 = load_var @1 value#1
 0001  v1 = constant #1 0
-0002  v2 = greater v0, v1
+0002  v2 = gt_num v0, v1
 0003  jump_if_false v2, 0008
 0004  v3 = load_var @2 value#1
 0005  v4 = constant #2 1
-0006  v5 = add v3, v4
+0006  v5 = add_num v3, v4
 0007  return v5
 0008  v6 = constant #3 nil
 0009  return v6
@@ -118,7 +118,7 @@ function $1 process(value#3)
 0009  v5 = constant #7 "got:"
 0010  v6 = load_var @8 next#4
 0011  v7 = native_call @9 str(v6)
-0012  v8 = add v5, v7
+0012  v8 = concat_str v5, v7
 0013  return v8
 0014  v9 = constant #8 nil
 0015  return v9

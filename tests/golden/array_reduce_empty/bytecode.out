@@ -24,7 +24,7 @@ upvalue u0 = global g0
 0003  b2 = call_native i2 [b0, b1]
 0004  b3 = load_local l0
 0005  b4 = constant #1 1
-0006  b5 = add b3, b4
+0006  b5 = add_num b3, b4
 0007  return b5
 0008  block
 0009  b6 = constant #2 nil

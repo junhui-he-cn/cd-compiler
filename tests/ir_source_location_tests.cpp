@@ -1759,7 +1759,7 @@ int main()
 
     assert(ir.sources().size() == 1);
     const auto& divide = ir.instructions().at(2);
-    assert(divide.op == IROp::Divide);
+    assert(divide.op == IROp::DivNum);
     assert(divide.span.has_value());
     assert(divide.span->source == 0);
     assert(divide.span->line == 1);

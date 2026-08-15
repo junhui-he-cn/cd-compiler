@@ -34,16 +34,16 @@ block b0:
 block b1:
   r2 = load_global g0
   r3 = constant c2
-  r4 = less r2, r3
+  r4 = lt_num r2, r3
   br_if r4, b2, b3
 block b2:
   r5 = load_global g1
   r6 = load_global g0
-  r7 = add r5, r6
+  r7 = add_num r5, r6
   set_global g1, r7
   r8 = load_global g0
   r9 = constant c3
-  r10 = add r8, r9
+  r10 = add_num r8, r9
   set_global g0, r10
   br b1
 block b3:

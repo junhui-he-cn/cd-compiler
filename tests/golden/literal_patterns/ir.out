@@ -165,7 +165,7 @@ function $2 describeResult(value#5)
 0020  v11 = constant #18 "number:"
 0021  v12 = load_var @17 value#6
 0022  v13 = native_call @18 str(v12)
-0023  v14 = add v11, v13
+0023  v14 = concat_str v11, v13
 0024  return v14
 0025  jump 0049
 0026  v15 = variant_tag v0 Result.Text
@@ -183,7 +183,7 @@ function $2 describeResult(value#5)
 0038  store_var @27 value#7, v21
 0039  v22 = constant #21 "text:"
 0040  v23 = load_var @28 value#7
-0041  v24 = add v22, v23
+0041  v24 = concat_str v22, v23
 0042  return v24
 0043  jump 0049
 0044  v25 = variant_tag v0 Result.Empty

@@ -1400,17 +1400,31 @@ fn instruction_register_def(instruction: &Instruction) -> Option<usize> {
         | Instruction::IsVariant { dest, .. }
         | Instruction::VariantGet { dest, .. }
         | Instruction::Negate { dest, .. }
+        | Instruction::NegNum { dest, .. }
         | Instruction::Not { dest, .. }
         | Instruction::Add { dest, .. }
+        | Instruction::AddNum { dest, .. }
+        | Instruction::ConcatStr { dest, .. }
         | Instruction::Subtract { dest, .. }
+        | Instruction::SubNum { dest, .. }
         | Instruction::Multiply { dest, .. }
+        | Instruction::MulNum { dest, .. }
         | Instruction::Divide { dest, .. }
+        | Instruction::DivNum { dest, .. }
         | Instruction::Equal { dest, .. }
         | Instruction::NotEqual { dest, .. }
         | Instruction::Greater { dest, .. }
+        | Instruction::GreaterNum { dest, .. }
+        | Instruction::GreaterStr { dest, .. }
         | Instruction::GreaterEqual { dest, .. }
+        | Instruction::GreaterEqualNum { dest, .. }
+        | Instruction::GreaterEqualStr { dest, .. }
         | Instruction::Less { dest, .. }
-        | Instruction::LessEqual { dest, .. } => Some(*dest),
+        | Instruction::LessNum { dest, .. }
+        | Instruction::LessStr { dest, .. }
+        | Instruction::LessEqual { dest, .. }
+        | Instruction::LessEqualNum { dest, .. }
+        | Instruction::LessEqualStr { dest, .. } => Some(*dest),
         _ => None,
     }
 }
@@ -1433,6 +1447,7 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
         | Instruction::Print { value }
         | Instruction::Return { value }
         | Instruction::Negate { value, .. }
+        | Instruction::NegNum { value, .. }
         | Instruction::Not { value, .. }
         | Instruction::Len { value, .. }
         | Instruction::AssertArray { value, .. }
@@ -1471,13 +1486,28 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
         Instruction::Add {
             left, right, ..
         }
+        | Instruction::AddNum {
+            left, right, ..
+        }
+        | Instruction::ConcatStr {
+            left, right, ..
+        }
         | Instruction::Subtract {
+            left, right, ..
+        }
+        | Instruction::SubNum {
             left, right, ..
         }
         | Instruction::Multiply {
             left, right, ..
         }
+        | Instruction::MulNum {
+            left, right, ..
+        }
         | Instruction::Divide {
+            left, right, ..
+        }
+        | Instruction::DivNum {
             left, right, ..
         }
         | Instruction::Equal {
@@ -1489,13 +1519,37 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
         | Instruction::Greater {
             left, right, ..
         }
+        | Instruction::GreaterNum {
+            left, right, ..
+        }
+        | Instruction::GreaterStr {
+            left, right, ..
+        }
         | Instruction::GreaterEqual {
+            left, right, ..
+        }
+        | Instruction::GreaterEqualNum {
+            left, right, ..
+        }
+        | Instruction::GreaterEqualStr {
             left, right, ..
         }
         | Instruction::Less {
             left, right, ..
         }
+        | Instruction::LessNum {
+            left, right, ..
+        }
+        | Instruction::LessStr {
+            left, right, ..
+        }
         | Instruction::LessEqual {
+            left, right, ..
+        }
+        | Instruction::LessEqualNum {
+            left, right, ..
+        }
+        | Instruction::LessEqualStr {
             left, right, ..
         } => vec![*left, *right],
         _ => Vec::new(),
@@ -2287,6 +2341,7 @@ fn validate_instruction(
         Instruction::Len { dest, value }
         | Instruction::AssertArray { dest, value }
         | Instruction::Negate { dest, value }
+        | Instruction::NegNum { dest, value }
         | Instruction::Not { dest, value } => {
             register(*dest, "destination")?;
             register(*value, "value")?;
@@ -2304,15 +2359,28 @@ fn validate_instruction(
             register(*value, "value")?;
         }
         Instruction::Add { dest, left, right }
+        | Instruction::AddNum { dest, left, right }
+        | Instruction::ConcatStr { dest, left, right }
         | Instruction::Subtract { dest, left, right }
+        | Instruction::SubNum { dest, left, right }
         | Instruction::Multiply { dest, left, right }
+        | Instruction::MulNum { dest, left, right }
         | Instruction::Divide { dest, left, right }
+        | Instruction::DivNum { dest, left, right }
         | Instruction::Equal { dest, left, right }
         | Instruction::NotEqual { dest, left, right }
         | Instruction::Greater { dest, left, right }
+        | Instruction::GreaterNum { dest, left, right }
+        | Instruction::GreaterStr { dest, left, right }
         | Instruction::GreaterEqual { dest, left, right }
+        | Instruction::GreaterEqualNum { dest, left, right }
+        | Instruction::GreaterEqualStr { dest, left, right }
         | Instruction::Less { dest, left, right }
-        | Instruction::LessEqual { dest, left, right } => {
+        | Instruction::LessNum { dest, left, right }
+        | Instruction::LessStr { dest, left, right }
+        | Instruction::LessEqual { dest, left, right }
+        | Instruction::LessEqualNum { dest, left, right }
+        | Instruction::LessEqualStr { dest, left, right } => {
             register(*dest, "destination")?;
             register(*left, "left operand")?;
             register(*right, "right operand")?;
@@ -2967,16 +3035,33 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                 dest,
                 value: parse_register(line, operands)?,
             }),
+            "neg_num" => Ok(Instruction::NegNum {
+                dest,
+                value: parse_register(line, operands)?,
+            }),
             "add" => parse_binary(line, dest, operands, "add"),
+            "add_num" => parse_binary(line, dest, operands, "add_num"),
+            "concat_str" => parse_binary(line, dest, operands, "concat_str"),
             "subtract" => parse_binary(line, dest, operands, "subtract"),
+            "sub_num" => parse_binary(line, dest, operands, "sub_num"),
             "multiply" => parse_binary(line, dest, operands, "multiply"),
+            "mul_num" => parse_binary(line, dest, operands, "mul_num"),
             "divide" => parse_binary(line, dest, operands, "divide"),
+            "div_num" => parse_binary(line, dest, operands, "div_num"),
             "equal" => parse_binary(line, dest, operands, "equal"),
             "not_equal" => parse_binary(line, dest, operands, "not_equal"),
             "greater" => parse_binary(line, dest, operands, "greater"),
+            "gt_num" => parse_binary(line, dest, operands, "gt_num"),
+            "gt_str" => parse_binary(line, dest, operands, "gt_str"),
             "greater_equal" => parse_binary(line, dest, operands, "greater_equal"),
+            "ge_num" => parse_binary(line, dest, operands, "ge_num"),
+            "ge_str" => parse_binary(line, dest, operands, "ge_str"),
             "less" => parse_binary(line, dest, operands, "less"),
+            "lt_num" => parse_binary(line, dest, operands, "lt_num"),
+            "lt_str" => parse_binary(line, dest, operands, "lt_str"),
             "less_equal" => parse_binary(line, dest, operands, "less_equal"),
+            "le_num" => parse_binary(line, dest, operands, "le_num"),
+            "le_str" => parse_binary(line, dest, operands, "le_str"),
             unknown => Err(ParseError {
                 line,
                 message: format!("unknown opcode `{}`", unknown),
@@ -3277,15 +3362,31 @@ fn format_instruction(instruction: &Instruction) -> String {
         Instruction::Return { value } => format!("return r{}", value),
         Instruction::Negate { dest, value } => format!("r{} = negate r{}", dest, value),
         Instruction::Not { dest, value } => format!("r{} = not r{}", dest, value),
+        Instruction::NegNum { dest, value } => format!("r{} = neg_num r{}", dest, value),
         Instruction::Add { dest, left, right } => format!("r{} = add r{}, r{}", dest, left, right),
+        Instruction::AddNum { dest, left, right } => {
+            format!("r{} = add_num r{}, r{}", dest, left, right)
+        }
+        Instruction::ConcatStr { dest, left, right } => {
+            format!("r{} = concat_str r{}, r{}", dest, left, right)
+        }
         Instruction::Subtract { dest, left, right } => {
             format!("r{} = subtract r{}, r{}", dest, left, right)
+        }
+        Instruction::SubNum { dest, left, right } => {
+            format!("r{} = sub_num r{}, r{}", dest, left, right)
         }
         Instruction::Multiply { dest, left, right } => {
             format!("r{} = multiply r{}, r{}", dest, left, right)
         }
+        Instruction::MulNum { dest, left, right } => {
+            format!("r{} = mul_num r{}, r{}", dest, left, right)
+        }
         Instruction::Divide { dest, left, right } => {
             format!("r{} = divide r{}, r{}", dest, left, right)
+        }
+        Instruction::DivNum { dest, left, right } => {
+            format!("r{} = div_num r{}, r{}", dest, left, right)
         }
         Instruction::Equal { dest, left, right } => {
             format!("r{} = equal r{}, r{}", dest, left, right)
@@ -3296,14 +3397,38 @@ fn format_instruction(instruction: &Instruction) -> String {
         Instruction::Greater { dest, left, right } => {
             format!("r{} = greater r{}, r{}", dest, left, right)
         }
+        Instruction::GreaterNum { dest, left, right } => {
+            format!("r{} = gt_num r{}, r{}", dest, left, right)
+        }
+        Instruction::GreaterStr { dest, left, right } => {
+            format!("r{} = gt_str r{}, r{}", dest, left, right)
+        }
         Instruction::GreaterEqual { dest, left, right } => {
             format!("r{} = greater_equal r{}, r{}", dest, left, right)
+        }
+        Instruction::GreaterEqualNum { dest, left, right } => {
+            format!("r{} = ge_num r{}, r{}", dest, left, right)
+        }
+        Instruction::GreaterEqualStr { dest, left, right } => {
+            format!("r{} = ge_str r{}, r{}", dest, left, right)
         }
         Instruction::Less { dest, left, right } => {
             format!("r{} = less r{}, r{}", dest, left, right)
         }
+        Instruction::LessNum { dest, left, right } => {
+            format!("r{} = lt_num r{}, r{}", dest, left, right)
+        }
+        Instruction::LessStr { dest, left, right } => {
+            format!("r{} = lt_str r{}, r{}", dest, left, right)
+        }
         Instruction::LessEqual { dest, left, right } => {
             format!("r{} = less_equal r{}, r{}", dest, left, right)
+        }
+        Instruction::LessEqualNum { dest, left, right } => {
+            format!("r{} = le_num r{}, r{}", dest, left, right)
+        }
+        Instruction::LessEqualStr { dest, left, right } => {
+            format!("r{} = le_str r{}, r{}", dest, left, right)
         }
         Instruction::Jump { target } => format!("jump {}", target),
         Instruction::JumpIfFalse { condition, target } => {
@@ -3332,15 +3457,28 @@ fn parse_binary(
     let (left, right) = parse_two_registers(line, operands)?;
     match opcode {
         "add" => Ok(Instruction::Add { dest, left, right }),
+        "add_num" => Ok(Instruction::AddNum { dest, left, right }),
+        "concat_str" => Ok(Instruction::ConcatStr { dest, left, right }),
         "subtract" => Ok(Instruction::Subtract { dest, left, right }),
+        "sub_num" => Ok(Instruction::SubNum { dest, left, right }),
         "multiply" => Ok(Instruction::Multiply { dest, left, right }),
+        "mul_num" => Ok(Instruction::MulNum { dest, left, right }),
         "divide" => Ok(Instruction::Divide { dest, left, right }),
+        "div_num" => Ok(Instruction::DivNum { dest, left, right }),
         "equal" => Ok(Instruction::Equal { dest, left, right }),
         "not_equal" => Ok(Instruction::NotEqual { dest, left, right }),
         "greater" => Ok(Instruction::Greater { dest, left, right }),
+        "gt_num" => Ok(Instruction::GreaterNum { dest, left, right }),
+        "gt_str" => Ok(Instruction::GreaterStr { dest, left, right }),
         "greater_equal" => Ok(Instruction::GreaterEqual { dest, left, right }),
+        "ge_num" => Ok(Instruction::GreaterEqualNum { dest, left, right }),
+        "ge_str" => Ok(Instruction::GreaterEqualStr { dest, left, right }),
         "less" => Ok(Instruction::Less { dest, left, right }),
+        "lt_num" => Ok(Instruction::LessNum { dest, left, right }),
+        "lt_str" => Ok(Instruction::LessStr { dest, left, right }),
         "less_equal" => Ok(Instruction::LessEqual { dest, left, right }),
+        "le_num" => Ok(Instruction::LessEqualNum { dest, left, right }),
+        "le_str" => Ok(Instruction::LessEqualStr { dest, left, right }),
         _ => unreachable!("validated binary opcode"),
     }
 }
@@ -4058,6 +4196,34 @@ main registers=2:
         assert_eq!(program.native_imports.len(), 2);
         assert_eq!(program.native_imports[0].name, "print");
         assert_eq!(program.native_imports[0].abi, 1);
+        assert_eq!(format_program(&program), source);
+    }
+
+    #[test]
+    fn parses_and_formats_typed_arithmetic_and_comparison_ops() {
+        let source = r#"cdbc 0.2
+
+constants:
+
+names:
+
+main registers=16:
+  r0 = neg_num r1
+  r2 = add_num r0, r1
+  r3 = sub_num r0, r1
+  r4 = mul_num r0, r1
+  r5 = div_num r0, r1
+  r6 = concat_str r1, r2
+  r7 = lt_num r0, r1
+  r8 = le_num r0, r1
+  r9 = gt_num r0, r1
+  r10 = ge_num r0, r1
+  r11 = lt_str r1, r2
+  r12 = le_str r1, r2
+  r13 = gt_str r1, r2
+  r14 = ge_str r1, r2
+"#;
+        let program = parse_program(source).expect("parse typed opcodes");
         assert_eq!(format_program(&program), source);
     }
 

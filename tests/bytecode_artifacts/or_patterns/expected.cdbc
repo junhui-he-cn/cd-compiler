@@ -214,13 +214,13 @@ block b4:
   bind_local l1, r3
   r7 = load_local l1
   r8 = constant c7
-  r9 = greater r7, r8
+  r9 = gt_num r7, r8
   br_if r9, b5, b7
 block b5:
   r10 = constant c8
   r11 = load_local l1
   r12 = call_native i1 [r11]
-  r13 = add r10, r12
+  r13 = concat_str r10, r12
   return r13
 block b6:
   br b16

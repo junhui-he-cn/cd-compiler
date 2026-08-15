@@ -21,7 +21,7 @@ function $0 inc(this#1, delta#2)
 0002  v2 = assert_number v1 @4 `+=` expects number target
 0003  v3 = load_var @5 delta#2
 0004  v4 = assert_number v3 @6 `+=` expects number value
-0005  v5 = add v2, v4
+0005  v5 = add_num v2, v4
 0006  v6 = assign_field v0.value, v5
 0007  v7 = load_var @9 this#1
 0008  v8 = field v7.value

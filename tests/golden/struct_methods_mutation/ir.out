@@ -29,7 +29,7 @@ function $0 incBy(this#2, delta#3)
 0001  v1 = load_var @2 this#2
 0002  v2 = field v1.value
 0003  v3 = load_var @5 delta#3
-0004  v4 = add v2, v3
+0004  v4 = add_num v2, v3
 0005  v5 = assign_field v0.value, v4
 0006  v6 = constant #1 nil
 0007  return v6

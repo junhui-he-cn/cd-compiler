@@ -72,7 +72,7 @@ function $0 describe(value#1)
 0020  store_var @10 name#2, v12
 0021  v13 = constant #6 "city:"
 0022  v14 = load_var @11 name#2
-0023  v15 = add v13, v14
+0023  v15 = concat_str v13, v14
 0024  return v15
 0025  jump 0038
 0026  v16 = field v0.age
@@ -81,10 +81,10 @@ function $0 describe(value#1)
 0029  store_var @17 name#4, v17
 0030  v18 = load_var @18 name#4
 0031  v19 = constant #7 ":"
-0032  v20 = add v18, v19
+0032  v20 = concat_str v18, v19
 0033  v21 = load_var @19 age#3
 0034  v22 = native_call @20 str(v21)
-0035  v23 = add v20, v22
+0035  v23 = concat_str v20, v22
 0036  return v23
 0037  jump 0038
 0038  v24 = constant #8 nil

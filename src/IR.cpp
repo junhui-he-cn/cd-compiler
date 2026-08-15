@@ -11,7 +11,7 @@ namespace {
 
 bool isUnary(IROp op)
 {
-    return op == IROp::Negate || op == IROp::Not;
+    return op == IROp::Negate || op == IROp::NegNum || op == IROp::Not;
 }
 
 bool isBinary(IROp op)
@@ -27,6 +27,19 @@ bool isBinary(IROp op)
     case IROp::GreaterEqual:
     case IROp::Less:
     case IROp::LessEqual:
+    case IROp::AddNum:
+    case IROp::SubNum:
+    case IROp::MulNum:
+    case IROp::DivNum:
+    case IROp::ConcatStr:
+    case IROp::LessNum:
+    case IROp::LessEqualNum:
+    case IROp::GreaterNum:
+    case IROp::GreaterEqualNum:
+    case IROp::LessStr:
+    case IROp::LessEqualStr:
+    case IROp::GreaterStr:
+    case IROp::GreaterEqualStr:
         return true;
     case IROp::Constant:
     case IROp::MakeFunction:
@@ -52,6 +65,7 @@ bool isBinary(IROp op)
     case IROp::Print:
     case IROp::Return:
     case IROp::Negate:
+    case IROp::NegNum:
     case IROp::Not:
     case IROp::Jump:
     case IROp::JumpIfFalse:
@@ -547,6 +561,7 @@ IREffectSummary irEffectSummary(IROp op)
         result.controlFlow = true;
         return result;
     case IROp::Negate:
+    case IROp::NegNum:
     case IROp::Not:
     case IROp::Add:
     case IROp::Subtract:
@@ -558,6 +573,19 @@ IREffectSummary irEffectSummary(IROp op)
     case IROp::GreaterEqual:
     case IROp::Less:
     case IROp::LessEqual:
+    case IROp::AddNum:
+    case IROp::SubNum:
+    case IROp::MulNum:
+    case IROp::DivNum:
+    case IROp::ConcatStr:
+    case IROp::LessNum:
+    case IROp::LessEqualNum:
+    case IROp::GreaterNum:
+    case IROp::GreaterEqualNum:
+    case IROp::LessStr:
+    case IROp::LessEqualStr:
+    case IROp::GreaterStr:
+    case IROp::GreaterEqualStr:
         result.mayTrap = true;
         return result;
     }
@@ -1188,6 +1216,8 @@ std::string irOpName(IROp op)
         return "return";
     case IROp::Negate:
         return "negate";
+    case IROp::NegNum:
+        return "neg_num";
     case IROp::Not:
         return "not";
     case IROp::Add:
@@ -1210,6 +1240,32 @@ std::string irOpName(IROp op)
         return "less";
     case IROp::LessEqual:
         return "less_equal";
+    case IROp::AddNum:
+        return "add_num";
+    case IROp::SubNum:
+        return "sub_num";
+    case IROp::MulNum:
+        return "mul_num";
+    case IROp::DivNum:
+        return "div_num";
+    case IROp::ConcatStr:
+        return "concat_str";
+    case IROp::LessNum:
+        return "lt_num";
+    case IROp::LessEqualNum:
+        return "le_num";
+    case IROp::GreaterNum:
+        return "gt_num";
+    case IROp::GreaterEqualNum:
+        return "ge_num";
+    case IROp::LessStr:
+        return "lt_str";
+    case IROp::LessEqualStr:
+        return "le_str";
+    case IROp::GreaterStr:
+        return "gt_str";
+    case IROp::GreaterEqualStr:
+        return "ge_str";
     case IROp::Jump:
         return "jump";
     case IROp::JumpIfFalse:
