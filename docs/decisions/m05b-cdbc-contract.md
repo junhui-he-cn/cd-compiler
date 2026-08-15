@@ -2,6 +2,10 @@
 
 Status: implemented against reference commit `42b9da1`.
 
+Superseded for the successor-version decision by
+`cdbc-0.2-successor-format.md` on 2026-08-15; the 0.1 audit baseline below
+remains historical evidence.
+
 ## Current contract
 
 The existing line-oriented UTF-8 `.cdbc` artifact is the current versioned
