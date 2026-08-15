@@ -1,0 +1,3 @@
+Type error at <repo>/tests/golden/type_errors/non_bool_while_condition.cd:1:7: `while` condition must be bool, got number
+  while 1 {
+        ^

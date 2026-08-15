@@ -556,7 +556,11 @@ void TypeChecker::checkStatement(const Stmt& statement)
     }
 
     if (const auto* ifStmt = dynamic_cast<const IfStmt*>(&statement)) {
-        checkExpression(*ifStmt->condition);
+        checkCondition(
+            *ifStmt->condition,
+            Token{TokenType::If, "if",
+                ifStmt->condition->span ? ifStmt->condition->span->line : 0,
+                ifStmt->condition->span ? ifStmt->condition->span->column : 0});
         checkStatement(*ifStmt->thenBranch);
         if (ifStmt->elseBranch) {
             checkStatement(*ifStmt->elseBranch);
@@ -597,7 +601,11 @@ void TypeChecker::checkStatement(const Stmt& statement)
     }
 
     if (const auto* whileStmt = dynamic_cast<const WhileStmt*>(&statement)) {
-        checkExpression(*whileStmt->condition);
+        checkCondition(
+            *whileStmt->condition,
+            Token{TokenType::While, "while",
+                whileStmt->condition->span ? whileStmt->condition->span->line : 0,
+                whileStmt->condition->span ? whileStmt->condition->span->column : 0});
         ++loopDepth_;
         checkStatement(*whileStmt->body);
         --loopDepth_;
@@ -641,7 +649,7 @@ void TypeChecker::checkStatement(const Stmt& statement)
             checkStatement(*forStmt->initializer);
         }
         if (forStmt->condition) {
-            checkExpression(*forStmt->condition);
+            checkCondition(*forStmt->condition, forStmt->keyword);
         }
         ++loopDepth_;
         checkStatement(*forStmt->body);
@@ -716,4 +724,15 @@ void TypeChecker::checkStatement(const Stmt& statement)
     }
 
     throw TypeError("unsupported statement node");
+}
+
+TypeInfo TypeChecker::checkCondition(const Expr& expression, const Token& keyword)
+{
+    const TypeInfo type = checkExpression(expression);
+    if (SemanticTypes::isKnown(type) && type.kind != StaticType::Bool) {
+        throw TypeError(
+            keyword,
+            "`" + keyword.lexeme + "` condition must be bool, got " + typeInfoName(type));
+    }
+    return type;
 }

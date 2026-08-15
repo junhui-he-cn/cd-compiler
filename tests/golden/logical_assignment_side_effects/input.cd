@@ -1,9 +1,9 @@
-let mut x = "start";
-true || (x = "or-right");
+let mut x = false;
+true || (x = true);
 print x;
-false && (x = "and-right");
+false && (x = true);
 print x;
-false || (x = "or-ran");
+false || (x = true);
 print x;
-true && (x = "and-ran");
+true && (x = true);
 print x;

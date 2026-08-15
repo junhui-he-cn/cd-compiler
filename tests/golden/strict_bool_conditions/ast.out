@@ -1,0 +1,25 @@
+Program
+  Let ready = true
+  If ready
+    Then
+      Block
+        Print "yes"
+    Else
+      Block
+        Print "no"
+  Let mut i = 0
+  While (< i 3)
+    Body
+      Block
+        Expr (+= i 1)
+  Print i
+  Let maybe: optional<number> = 4
+  IfLet value
+    Value
+maybe
+    Then
+      Block
+        Print value
+  Print (?? maybe 0)
+  Print (|| false true)
+  Print (&& true false)

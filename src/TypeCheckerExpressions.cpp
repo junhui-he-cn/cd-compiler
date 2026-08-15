@@ -14,17 +14,6 @@
 
 namespace {
 
-TypeInfo logicalResultType(const TypeInfo& left, const TypeInfo& right)
-{
-    if (!SemanticTypes::isKnown(left) || !SemanticTypes::isKnown(right)) {
-        return unknownType();
-    }
-    if (left.kind == right.kind) {
-        return left;
-    }
-    return unknownType();
-}
-
 TypeInfo copiedArrayType(const TypeInfo& source)
 {
     if (source.kind == StaticType::Array && source.elementType) {
@@ -1369,7 +1358,17 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
     if (const auto* logical = dynamic_cast<const LogicalExpr*>(&expression)) {
         const TypeInfo left = checkExpression(*logical->left);
         const TypeInfo right = checkExpression(*logical->right);
-        return CheckedExpression{logicalResultType(left, right)};
+        if (SemanticTypes::isKnown(left) && left.kind != StaticType::Bool) {
+            throw TypeError(
+                logical->op,
+                "`" + logical->op.lexeme + "` expects bool operands, got " + typeInfoName(left));
+        }
+        if (SemanticTypes::isKnown(right) && right.kind != StaticType::Bool) {
+            throw TypeError(
+                logical->op,
+                "`" + logical->op.lexeme + "` expects bool operands, got " + typeInfoName(right));
+        }
+        return CheckedExpression{simpleType(StaticType::Bool)};
     }
 
     if (const auto* coalesce = dynamic_cast<const CoalesceExpr*>(&expression)) {

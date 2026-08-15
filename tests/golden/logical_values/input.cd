@@ -1,3 +1,4 @@
-print "fallback" || "x";
-print nil || "x";
-print "x" && 42;
+print false || true;
+print false || false;
+print true && false;
+print true && true;

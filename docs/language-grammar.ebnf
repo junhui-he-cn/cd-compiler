@@ -311,7 +311,9 @@ functionType = "fun", "(", [ typeArguments ], ")", ":", typeExpr ;
    expression operator. `optional<T>` means `T` or `nil`. Nil checks do not
    narrow: `if let v = expr` / `while let v = expr` bind a fresh non-nil
    value, `expr?` unwraps with an early nil return, `left ?? right` provides a
-   fallback, and `match` binding arms bind the non-nil type. Generic enum declarations use `enum Box<T>`, and
+   fallback, and `match` binding arms bind the non-nil type. `if`/`while`/
+   `for` conditions and `&&`/`||` operands must be `bool`; truthiness does not
+   convert non-bool values. Generic enum declarations use `enum Box<T>`, and
    generic enum values use `Box<number>` type annotations. Literal patterns
    match primitive values directly or nested inside enum payloads; nullable
    primitive and enum matches may use `nil`. Named struct values may use

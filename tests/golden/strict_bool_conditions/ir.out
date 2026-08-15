@@ -1,0 +1,55 @@
+IR
+0000  v0 = constant #0 true
+0001  store_var @0 ready#0, v0
+0002  v1 = load_var @1 ready#0
+0003  jump_if_false v1, 0007
+0004  v2 = constant #1 "yes"
+0005  print v2
+0006  jump 0009
+0007  v3 = constant #2 "no"
+0008  print v3
+0009  v4 = constant #3 0
+0010  store_var @2 i#1, v4
+0011  v5 = load_var @3 i#1
+0012  v6 = constant #4 3
+0013  v7 = lt_num v5, v6
+0014  jump_if_false v7, 0022
+0015  v8 = load_var @4 i#1
+0016  v9 = assert_number v8 @5 `+=` expects number variable
+0017  v10 = constant #5 1
+0018  v11 = assert_number v10 @6 `+=` expects number value
+0019  v12 = add_num v9, v11
+0020  assign_var @7 i#1, v12
+0021  jump 0011
+0022  v13 = load_var @8 i#1
+0023  print v13
+0024  v14 = constant #6 4
+0025  store_var @9 maybe#2, v14
+0026  v15 = load_var @10 maybe#2
+0027  v16 = constant #7 nil
+0028  v17 = not_equal v15, v16
+0029  jump_if_false v17, 0033
+0030  store_var @11 value#3, v15
+0031  v18 = load_var @12 value#3
+0032  print v18
+0033  v19 = load_var @13 maybe#2
+0034  v21 = constant #8 nil
+0035  v22 = not_equal v19, v21
+0036  jump_if_false v22, 0039
+0037  v20 = copy v19
+0038  jump 0041
+0039  v23 = constant #9 0
+0040  v20 = copy v23
+0041  print v20
+0042  v24 = constant #10 false
+0043  v25 = copy v24
+0044  jump_if_true v25, 0047
+0045  v26 = constant #11 true
+0046  v25 = copy v26
+0047  print v25
+0048  v27 = constant #12 true
+0049  v28 = copy v27
+0050  jump_if_false v28, 0053
+0051  v29 = constant #13 false
+0052  v28 = copy v29
+0053  print v28
