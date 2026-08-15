@@ -1,0 +1,13 @@
+enum Result {
+  Ok(number),
+  Err(string),
+}
+
+fun describe(result: Result): string {
+  return match result {
+    Result.Ok(value) => "ok:" + str(value),
+    Result.Err(message) => { print message; },
+  };
+}
+
+print describe(Result.Ok(1));

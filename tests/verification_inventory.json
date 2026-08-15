@@ -14617,6 +14617,89 @@
       "fixture": "tests/golden/maps"
     },
     {
+      "case_id": "golden.success.match_expression.ast",
+      "runner": "golden",
+      "result_name": "match_expression default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:match_expression"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/match_expression/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/match_expression/ast.out"
+      ],
+      "fixture": "tests/golden/match_expression"
+    },
+    {
+      "case_id": "golden.success.match_expression.bytecode",
+      "runner": "golden",
+      "result_name": "match_expression --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:match_expression"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/match_expression/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/match_expression/bytecode.out"
+      ],
+      "fixture": "tests/golden/match_expression"
+    },
+    {
+      "case_id": "golden.success.match_expression.ir",
+      "runner": "golden",
+      "result_name": "match_expression --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:match_expression"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/match_expression/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/match_expression/ir.out"
+      ],
+      "fixture": "tests/golden/match_expression"
+    },
+    {
       "case_id": "golden.success.match_guards.ast",
       "runner": "golden",
       "result_name": "match_guards default(ast)",
@@ -23118,6 +23201,62 @@
         "tests/golden/type_errors/map_values_member_non_map.cd",
         "tests/golden/type_errors/map_values_member_non_map.err",
         "tests/golden/type_errors/map_values_member_non_map.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.match_expression_incompatible_types",
+      "runner": "golden",
+      "result_name": "type_errors/match_expression_incompatible_types default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:match_expression_incompatible_types"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/match_expression_incompatible_types.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/match_expression_incompatible_types.cd",
+        "tests/golden/type_errors/match_expression_incompatible_types.err",
+        "tests/golden/type_errors/match_expression_incompatible_types.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
+      "case_id": "golden.type_errors.match_expression_mixed_arms",
+      "runner": "golden",
+      "result_name": "type_errors/match_expression_mixed_arms default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:match_expression_mixed_arms"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/match_expression_mixed_arms.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/match_expression_mixed_arms.cd",
+        "tests/golden/type_errors/match_expression_mixed_arms.err",
+        "tests/golden/type_errors/match_expression_mixed_arms.exit"
       ],
       "fixture": "tests/golden/type_errors"
     },
@@ -42887,6 +43026,68 @@
         "tests/golden/maps/run.out"
       ],
       "fixture": "tests/golden/maps"
+    },
+    {
+      "case_id": "rust_vm.golden.match_expression.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "match_expression emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:match_expression"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/match_expression/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/match_expression/run.out"
+      ],
+      "fixture": "tests/golden/match_expression"
+    },
+    {
+      "case_id": "rust_vm.golden.match_expression.run",
+      "runner": "rust_vm_golden",
+      "result_name": "match_expression rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:match_expression"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/match_expression/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/match_expression/run.out"
+      ],
+      "fixture": "tests/golden/match_expression"
     },
     {
       "case_id": "rust_vm.golden.match_guards.emit",

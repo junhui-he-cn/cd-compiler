@@ -3,26 +3,28 @@ cdbc 0.2
 constants:
   c0 = nil
   c1 = nil
-  c2 = string "nil"
-  c3 = string "Ada"
-  c4 = string "ada"
-  c5 = string "Hong Kong"
-  c6 = string "city:"
-  c7 = string ":"
-  c8 = nil
-  c9 = string "Ada"
-  c10 = number 36
-  c11 = string "Cambridge"
-  c12 = number 1
-  c13 = string "Grace"
-  c14 = number 40
-  c15 = string "Hong Kong"
-  c16 = number 2
-  c17 = nil
-  c18 = string "Ada"
-  c19 = number 0
-  c20 = string "or"
-  c21 = string "fallback"
+  c2 = nil
+  c3 = string "nil"
+  c4 = string "Ada"
+  c5 = string "ada"
+  c6 = string "Hong Kong"
+  c7 = string "city:"
+  c8 = string ":"
+  c9 = nil
+  c10 = string "Ada"
+  c11 = number 36
+  c12 = string "Cambridge"
+  c13 = number 1
+  c14 = string "Grace"
+  c15 = number 40
+  c16 = string "Hong Kong"
+  c17 = number 2
+  c18 = nil
+  c19 = nil
+  c20 = string "Ada"
+  c21 = number 0
+  c22 = string "or"
+  c23 = string "fallback"
 
 names:
   n0 = "describe#0"
@@ -87,114 +89,116 @@ native_imports:
   i0 = "print" abi=1
   i1 = "str" abi=1
 
-main registers=31:
+main registers=32:
 block b0:
   r0 = constant c0
   init_global g0, r0
   r1 = make_function f0
   set_global g0, r1
-  r2 = constant c9
-  r3 = constant c10
-  r4 = constant c11
-  r5 = constant c12
+  r2 = constant c10
+  r3 = constant c11
+  r4 = constant c12
+  r5 = constant c13
   r6 = make_struct t0 [r4, r5]
   r7 = make_struct t1 [r2, r3, r6]
   init_global g1, r7
-  r8 = constant c13
-  r9 = constant c14
-  r10 = constant c15
-  r11 = constant c16
+  r8 = constant c14
+  r9 = constant c15
+  r10 = constant c16
+  r11 = constant c17
   r12 = make_struct t0 [r10, r11]
   r13 = make_struct t1 [r8, r9, r12]
   init_global g2, r13
-  r14 = constant c17
+  r14 = constant c18
   init_global g3, r14
   r15 = load_global g1
   r16 = call_direct f0 [r15]
-  r30 = call_native i0 [r16]
+  r31 = call_native i0 [r16]
   r17 = load_global g2
   r18 = call_direct f0 [r17]
-  r30 = call_native i0 [r18]
+  r31 = call_native i0 [r18]
   r19 = load_global g3
   r20 = call_direct f0 [r19]
-  r30 = call_native i0 [r20]
+  r31 = call_native i0 [r20]
   r21 = load_global g1
-  r22 = struct_get r21, t1, 0
-  r23 = constant c18
-  r24 = equal r22, r23
-  br_if r24, b1, b2
+  r22 = constant c19
+  r23 = struct_get r21, t1, 0
+  r24 = constant c20
+  r25 = equal r23, r24
+  br_if r25, b1, b2
 block b1:
   br b3
 block b2:
-  r25 = struct_get r21, t1, 1
-  r26 = constant c19
-  r27 = equal r25, r26
-  br_if r27, b3, b4
+  r26 = struct_get r21, t1, 1
+  r27 = constant c21
+  r28 = equal r26, r27
+  br_if r28, b3, b4
 block b3:
-  r28 = constant c20
-  r30 = call_native i0 [r28]
+  r29 = constant c22
+  r31 = call_native i0 [r29]
   return_nil
 block b4:
-  r29 = constant c21
-  r30 = call_native i0 [r29]
+  r30 = constant c23
+  r31 = call_native i0 [r30]
   return_nil
 block b5:
   return_nil
 
-function f0 name="describe" arity=1 registers=25:
+function f0 name="describe" arity=1 registers=26:
   param 0 = "value#1"
 block b0:
   r0 = load_local l0
   r1 = constant c1
-  r2 = equal r0, r1
-  br_if r2, b1, b3
+  r2 = constant c2
+  r3 = equal r0, r2
+  br_if r3, b1, b3
 block b1:
-  r3 = constant c2
-  return r3
+  r4 = constant c3
+  return r4
 block b2:
   br b11
 block b3:
-  r4 = struct_get r0, t1, 0
-  r5 = constant c3
-  r6 = equal r4, r5
-  br_if r6, b4, b6
+  r5 = struct_get r0, t1, 0
+  r6 = constant c4
+  r7 = equal r5, r6
+  br_if r7, b4, b6
 block b4:
-  r7 = constant c4
-  return r7
+  r8 = constant c5
+  return r8
 block b5:
   br b11
 block b6:
-  r8 = struct_get r0, t1, 2
-  r9 = struct_get r8, t0, 0
-  r10 = constant c5
-  r11 = equal r9, r10
-  br_if r11, b7, b9
+  r9 = struct_get r0, t1, 2
+  r10 = struct_get r9, t0, 0
+  r11 = constant c6
+  r12 = equal r10, r11
+  br_if r12, b7, b9
 block b7:
-  r12 = struct_get r0, t1, 0
-  bind_local l1, r12
-  r13 = constant c6
-  r14 = load_local l1
-  r15 = concat_str r13, r14
-  return r15
+  r13 = struct_get r0, t1, 0
+  bind_local l1, r13
+  r14 = constant c7
+  r15 = load_local l1
+  r16 = concat_str r14, r15
+  return r16
 block b8:
   br b11
 block b9:
-  r16 = struct_get r0, t1, 1
-  r17 = struct_get r0, t1, 0
-  bind_local l2, r16
-  bind_local l3, r17
-  r18 = load_local l3
-  r19 = constant c7
-  r20 = concat_str r18, r19
-  r21 = load_local l2
-  r22 = call_native i1 [r21]
-  r23 = concat_str r20, r22
-  return r23
+  r17 = struct_get r0, t1, 1
+  r18 = struct_get r0, t1, 0
+  bind_local l2, r17
+  bind_local l3, r18
+  r19 = load_local l3
+  r20 = constant c8
+  r21 = concat_str r19, r20
+  r22 = load_local l2
+  r23 = call_native i1 [r22]
+  r24 = concat_str r21, r23
+  return r24
 block b10:
   br b11
 block b11:
-  r24 = constant c8
-  return r24
+  r25 = constant c9
+  return r25
 block b12:
   return_nil
 
@@ -244,35 +248,36 @@ debug_locations:
   main 39 = s0:27:1
   main 40 = s0:27:1
   main 41 = s0:27:1
-  main 42 = s0:28:57
+  main 42 = s0:27:1
   main 43 = s0:28:57
-  main 44 = s0:28:51
-  main 45 = s0:27:1
-  main 46 = s0:29:24
+  main 44 = s0:28:57
+  main 45 = s0:28:51
+  main 46 = s0:27:1
   main 47 = s0:29:24
-  main 48 = s0:29:18
-  main 49 = s0:27:1
+  main 48 = s0:29:24
+  main 49 = s0:29:18
   main 50 = s0:27:1
   main 51 = s0:27:1
+  main 52 = s0:27:1
   function f0 0 = s0:5:9
   function f0 1 = s0:5:9
   function f0 2 = s0:5:3
   function f0 3 = s0:5:3
   function f0 4 = s0:5:3
-  function f0 5 = s0:6:21
+  function f0 5 = s0:5:3
   function f0 6 = s0:6:21
-  function f0 7 = s0:6:14
-  function f0 8 = s0:5:3
+  function f0 7 = s0:6:21
+  function f0 8 = s0:6:14
   function f0 9 = s0:5:3
   function f0 10 = s0:5:3
   function f0 11 = s0:5:3
   function f0 12 = s0:5:3
   function f0 13 = s0:5:3
   function f0 14 = s0:5:3
-  function f0 15 = s0:7:40
+  function f0 15 = s0:5:3
   function f0 16 = s0:7:40
-  function f0 17 = s0:7:33
-  function f0 18 = s0:5:3
+  function f0 17 = s0:7:40
+  function f0 18 = s0:7:33
   function f0 19 = s0:5:3
   function f0 20 = s0:5:3
   function f0 21 = s0:5:3
@@ -283,31 +288,32 @@ debug_locations:
   function f0 26 = s0:5:3
   function f0 27 = s0:5:3
   function f0 28 = s0:5:3
-  function f0 29 = s0:8:79
-  function f0 30 = s0:8:89
-  function f0 31 = s0:8:79
-  function f0 32 = s0:8:72
-  function f0 33 = s0:5:3
+  function f0 29 = s0:5:3
+  function f0 30 = s0:8:79
+  function f0 31 = s0:8:89
+  function f0 32 = s0:8:79
+  function f0 33 = s0:8:72
   function f0 34 = s0:5:3
   function f0 35 = s0:5:3
   function f0 36 = s0:5:3
   function f0 37 = s0:5:3
   function f0 38 = s0:5:3
   function f0 39 = s0:5:3
-  function f0 40 = s0:9:49
-  function f0 41 = s0:9:56
-  function f0 42 = s0:9:49
-  function f0 43 = s0:9:66
-  function f0 44 = s0:9:62
-  function f0 45 = s0:9:49
-  function f0 46 = s0:9:42
-  function f0 47 = s0:5:3
+  function f0 40 = s0:5:3
+  function f0 41 = s0:9:49
+  function f0 42 = s0:9:56
+  function f0 43 = s0:9:49
+  function f0 44 = s0:9:66
+  function f0 45 = s0:9:62
+  function f0 46 = s0:9:49
+  function f0 47 = s0:9:42
   function f0 48 = s0:5:3
-  function f0 49 = s0:4:1
+  function f0 49 = s0:5:3
   function f0 50 = s0:4:1
   function f0 51 = s0:4:1
   function f0 52 = s0:4:1
   function f0 53 = s0:4:1
+  function f0 54 = s0:4:1
 
 debug_ranges:
   main 0 = s0:112:414
@@ -341,78 +347,80 @@ debug_ranges:
   main 28 = s0:718:737
   main 29 = s0:718:737
   main 30 = s0:745:748
-  main 31 = s0:745:848
-  main 32 = s0:745:848
-  main 33 = s0:745:848
-  main 34 = s0:745:848
-  main 35 = s0:745:848
-  main 36 = s0:745:848
-  main 37 = s0:745:848
-  main 38 = s0:745:848
-  main 39 = s0:745:848
-  main 40 = s0:745:848
-  main 41 = s0:745:848
-  main 42 = s0:807:811
+  main 31 = s0:739:848
+  main 32 = s0:739:848
+  main 33 = s0:739:848
+  main 34 = s0:739:848
+  main 35 = s0:739:848
+  main 36 = s0:739:848
+  main 37 = s0:739:848
+  main 38 = s0:739:848
+  main 39 = s0:739:848
+  main 40 = s0:739:848
+  main 41 = s0:739:848
+  main 42 = s0:739:848
   main 43 = s0:807:811
   main 44 = s0:807:811
-  main 45 = s0:745:848
-  main 46 = s0:838:848
+  main 45 = s0:807:811
+  main 46 = s0:739:848
   main 47 = s0:838:848
   main 48 = s0:838:848
-  main 49 = s0:745:848
-  main 50 = s0:745:848
-  main 51 = s0:745:848
+  main 49 = s0:838:848
+  main 50 = s0:739:848
+  main 51 = s0:739:848
+  main 52 = s0:739:848
   function f0 0 = s0:164:169
   function f0 1 = s0:164:169
-  function f0 2 = s0:164:414
-  function f0 3 = s0:164:414
-  function f0 4 = s0:164:414
-  function f0 5 = s0:192:197
+  function f0 2 = s0:158:414
+  function f0 3 = s0:158:414
+  function f0 4 = s0:158:414
+  function f0 5 = s0:158:414
   function f0 6 = s0:192:197
-  function f0 7 = s0:185:197
-  function f0 8 = s0:164:414
-  function f0 9 = s0:164:414
-  function f0 10 = s0:164:414
-  function f0 11 = s0:164:414
-  function f0 12 = s0:164:414
-  function f0 13 = s0:164:414
-  function f0 14 = s0:164:414
-  function f0 15 = s0:240:245
+  function f0 7 = s0:192:197
+  function f0 8 = s0:185:197
+  function f0 9 = s0:158:414
+  function f0 10 = s0:158:414
+  function f0 11 = s0:158:414
+  function f0 12 = s0:158:414
+  function f0 13 = s0:158:414
+  function f0 14 = s0:158:414
+  function f0 15 = s0:158:414
   function f0 16 = s0:240:245
-  function f0 17 = s0:233:245
-  function f0 18 = s0:164:414
-  function f0 19 = s0:164:414
-  function f0 20 = s0:164:414
-  function f0 21 = s0:164:414
-  function f0 22 = s0:164:414
-  function f0 23 = s0:164:414
-  function f0 24 = s0:164:414
-  function f0 25 = s0:164:414
-  function f0 26 = s0:164:414
-  function f0 27 = s0:164:414
-  function f0 28 = s0:164:414
-  function f0 29 = s0:327:334
-  function f0 30 = s0:337:341
-  function f0 31 = s0:327:341
-  function f0 32 = s0:320:341
-  function f0 33 = s0:164:414
-  function f0 34 = s0:164:414
-  function f0 35 = s0:164:414
-  function f0 36 = s0:164:414
-  function f0 37 = s0:164:414
-  function f0 38 = s0:164:414
-  function f0 39 = s0:164:414
-  function f0 40 = s0:393:397
-  function f0 41 = s0:400:403
-  function f0 42 = s0:393:403
-  function f0 43 = s0:410:413
-  function f0 44 = s0:406:414
-  function f0 45 = s0:393:414
-  function f0 46 = s0:386:414
-  function f0 47 = s0:164:414
-  function f0 48 = s0:164:414
-  function f0 49 = s0:112:414
+  function f0 17 = s0:240:245
+  function f0 18 = s0:233:245
+  function f0 19 = s0:158:414
+  function f0 20 = s0:158:414
+  function f0 21 = s0:158:414
+  function f0 22 = s0:158:414
+  function f0 23 = s0:158:414
+  function f0 24 = s0:158:414
+  function f0 25 = s0:158:414
+  function f0 26 = s0:158:414
+  function f0 27 = s0:158:414
+  function f0 28 = s0:158:414
+  function f0 29 = s0:158:414
+  function f0 30 = s0:327:334
+  function f0 31 = s0:337:341
+  function f0 32 = s0:327:341
+  function f0 33 = s0:320:341
+  function f0 34 = s0:158:414
+  function f0 35 = s0:158:414
+  function f0 36 = s0:158:414
+  function f0 37 = s0:158:414
+  function f0 38 = s0:158:414
+  function f0 39 = s0:158:414
+  function f0 40 = s0:158:414
+  function f0 41 = s0:393:397
+  function f0 42 = s0:400:403
+  function f0 43 = s0:393:403
+  function f0 44 = s0:410:413
+  function f0 45 = s0:406:414
+  function f0 46 = s0:393:414
+  function f0 47 = s0:386:414
+  function f0 48 = s0:158:414
+  function f0 49 = s0:158:414
   function f0 50 = s0:112:414
   function f0 51 = s0:112:414
   function f0 52 = s0:112:414
   function f0 53 = s0:112:414
+  function f0 54 = s0:112:414

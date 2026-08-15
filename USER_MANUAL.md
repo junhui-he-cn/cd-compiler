@@ -538,7 +538,10 @@ let result = NamedResult.Ok(42);
 
 ### `match`
 
-match 语句的每个 arm 都是代码块，并且必须穷尽覆盖 scrutinee：
+`match` 是表达式：选中 arm 的表达式值成为整个 `match` 的值，所有 arm 的结果类型
+必须兼容。`match` 作为独立语句使用时就是一条表达式语句（分号可省略）。arm 用
+逗号分隔、允许尾逗号；块体 arm 之间的逗号可以省略（旧语句形式），表达式体 arm
+之间的逗号必须写出。不能把块体 arm 和表达式体 arm 混在同一个 `match` 里。
 
 ```cd
 enum NamedResult {
@@ -555,6 +558,20 @@ match result {
     print message;
   }
 }
+```
+
+表达式形式返回选中 arm 的值：
+
+```cd
+let label = match result {
+  NamedResult.Ok(value) => "ok:" + str(value),
+  NamedResult.Err(message) => "err:" + message,
+};
+
+return match result {
+  NamedResult.Ok(value) => value,
+  NamedResult.Err(message) => 0,
+};
 ```
 
 支持 `_`、绑定模式、`nil`、布尔/数字/字符串字面量、variant 模式、嵌套模式、命名 payload、命名结构体 record 模式和 OR 模式：
@@ -586,21 +603,6 @@ match result {
   NamedResult.Ok(_) => { print 0; }
   NamedResult.Err(message) => { print message; }
 }
-```
-
-match 表达式返回所选 arm 的表达式值；arm 使用逗号分隔，可以有尾逗号：
-
-```cd
-enum NamedResult {
-  Ok(value: number),
-  Err(message: string),
-}
-
-let result = NamedResult.Ok(42);
-let label = match result {
-  NamedResult.Ok(value) => "ok:" + str(value),
-  NamedResult.Err(message) => "err:" + message,
-};
 ```
 
 布尔值在覆盖 `true` 和 `false` 后穷尽；数字和字符串的取值域开放，通常需要 `_` 或绑定模式。可空枚举或结构体还必须覆盖 `nil`。

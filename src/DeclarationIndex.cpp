@@ -470,22 +470,6 @@ private:
             endScope();
             return;
         }
-        if (const auto* match = dynamic_cast<const MatchStmt*>(&statement)) {
-            index_.matchStatementNodes_.insert(match);
-            collectExpression(match->value.get());
-            for (const MatchArm& arm : match->arms) {
-                beginScope(nullptr);
-                std::unordered_map<std::string, DeclarationId> bindings;
-                collectPattern(arm.pattern.get(), bindings);
-                if (arm.guard) {
-                    index_.patternGuardNodes_.insert(arm.guard.get());
-                }
-                collectExpression(arm.guard.get());
-                collectStatement(arm.body.get());
-                endScope();
-            }
-            return;
-        }
         if (const auto* returnStmt = dynamic_cast<const ReturnStmt*>(&statement)) {
             collectExpression(returnStmt->value.get());
             index_.returnStatements_.insert(returnStmt);
@@ -678,6 +662,23 @@ private:
         }
         if (const auto* grouping = dynamic_cast<const GroupingExpr*>(expression)) {
             collectExpression(grouping->expression.get());
+            return;
+        }
+        if (const auto* match = dynamic_cast<const MatchExpr*>(expression)) {
+            index_.matchStatementNodes_.insert(match);
+            collectExpression(match->value.get());
+            for (const MatchArm& arm : match->arms) {
+                beginScope(nullptr);
+                std::unordered_map<std::string, DeclarationId> bindings;
+                collectPattern(arm.pattern.get(), bindings);
+                if (arm.guard) {
+                    index_.patternGuardNodes_.insert(arm.guard.get());
+                }
+                collectExpression(arm.guard.get());
+                collectStatement(arm.body.get());
+                collectExpression(arm.expression.get());
+                endScope();
+            }
             return;
         }
         if (const auto* call = dynamic_cast<const CallExpr*>(expression)) {
@@ -1205,7 +1206,7 @@ const PatternGuardRecord* DeclarationIndex::patternGuard(const Expr& guard) cons
     return found == patternGuards_.end() ? nullptr : &found->second;
 }
 
-const MatchCoverageRecord* DeclarationIndex::matchCoverage(const MatchStmt& match) const
+const MatchCoverageRecord* DeclarationIndex::matchCoverage(const MatchExpr& match) const
 {
     const auto found = matchStatementCoverage_.find(&match);
     return found == matchStatementCoverage_.end() ? nullptr : &found->second;
@@ -1339,7 +1340,7 @@ void DeclarationIndex::recordPatternGuard(const Expr& guard, PatternGuardRecord 
     patternGuards_.insert_or_assign(&guard, std::move(record));
 }
 
-void DeclarationIndex::recordMatchCoverage(const MatchStmt& match, MatchCoverageRecord record)
+void DeclarationIndex::recordMatchCoverage(const MatchExpr& match, MatchCoverageRecord record)
 {
     matchStatementCoverage_.insert_or_assign(&match, std::move(record));
 }
@@ -1797,7 +1798,7 @@ std::size_t DeclarationIndex::validateMetadata() const
             ++mismatches;
         }
     }
-    for (const MatchStmt* match : matchStatementNodes_) {
+    for (const MatchExpr* match : matchStatementNodes_) {
         if (!matchCoverage(*match)) {
             ++mismatches;
         }

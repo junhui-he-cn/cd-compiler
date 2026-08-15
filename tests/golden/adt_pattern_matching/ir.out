@@ -3,41 +3,41 @@ IR
 0001  store_var @0 describe#0, v0
 0002  v1 = make_function $0 describe/1
 0003  assign_var @17 describe#0, v1
-0004  v2 = constant #5 nil
+0004  v2 = constant #6 nil
 0005  store_var @18 sum#4, v2
 0006  v3 = make_function $1 sum/1
 0007  assign_var @50 sum#4, v3
-0008  v4 = constant #8 nil
+0008  v4 = constant #10 nil
 0009  store_var @51 coarse#10, v4
 0010  v5 = make_function $2 coarse/1
 0011  assign_var @57 coarse#10, v5
-0012  v6 = constant #12 7
+0012  v6 = constant #15 7
 0013  v7 = variant Result.Ok (v6)
 0014  v8 = call_direct $0 describe/1(v7)
 0015  print v8
-0016  v9 = constant #13 "bad"
+0016  v9 = constant #16 "bad"
 0017  v10 = variant Result.Err (v9)
 0018  v11 = call_direct $0 describe/1(v10)
 0019  print v11
 0020  v12 = variant Result.Empty ()
 0021  v13 = call_direct $0 describe/1(v12)
 0022  print v13
-0023  v14 = constant #14 1
-0024  v15 = constant #15 2
+0023  v14 = constant #17 1
+0024  v15 = constant #18 2
 0025  v16 = variant List.Nil ()
 0026  v17 = variant List.Cons (v15, v16)
 0027  v18 = variant List.Cons (v14, v17)
 0028  v19 = call_direct $1 sum/1(v18)
 0029  print v19
-0030  v20 = constant #16 7
+0030  v20 = constant #19 7
 0031  v21 = variant Result.Ok (v20)
 0032  print v21
 0033  v22 = variant Result.Empty ()
 0034  v23 = native_call @74 typeOf(v22)
 0035  print v23
-0036  v24 = constant #17 7
+0036  v24 = constant #20 7
 0037  v25 = variant Result.Ok (v24)
-0038  v26 = constant #18 7
+0038  v26 = constant #21 7
 0039  v27 = variant Result.Ok (v26)
 0040  v28 = equal v25, v27
 0041  print v28
@@ -47,82 +47,85 @@ IR
 
 function $0 describe(result#1)
 0000  v0 = load_var @1 result#1
-0001  v1 = variant_tag v0 Result.Ok
-0002  jump_if_false v1, 0011
-0003  v2 = variant_field v0[0]
-0004  store_var @6 value#2, v2
-0005  v3 = constant #1 "ok:"
-0006  v4 = load_var @7 value#2
-0007  v5 = native_call @8 str(v4)
-0008  v6 = concat_str v3, v5
-0009  return v6
-0010  jump 0025
-0011  v7 = variant_tag v0 Result.Err
-0012  jump_if_false v7, 0020
-0013  v8 = variant_field v0[0]
-0014  store_var @13 message#3, v8
-0015  v9 = constant #2 "err:"
-0016  v10 = load_var @14 message#3
-0017  v11 = concat_str v9, v10
-0018  return v11
-0019  jump 0025
-0020  v12 = variant_tag v0 Result.Empty
-0021  jump_if_false v12, 0025
-0022  v13 = constant #3 "empty"
-0023  return v13
-0024  jump 0025
-0025  v14 = constant #4 nil
-0026  return v14
+0001  v1 = constant #1 nil
+0002  v2 = variant_tag v0 Result.Ok
+0003  jump_if_false v2, 0012
+0004  v3 = variant_field v0[0]
+0005  store_var @6 value#2, v3
+0006  v4 = constant #2 "ok:"
+0007  v5 = load_var @7 value#2
+0008  v6 = native_call @8 str(v5)
+0009  v7 = concat_str v4, v6
+0010  return v7
+0011  jump 0026
+0012  v8 = variant_tag v0 Result.Err
+0013  jump_if_false v8, 0021
+0014  v9 = variant_field v0[0]
+0015  store_var @13 message#3, v9
+0016  v10 = constant #3 "err:"
+0017  v11 = load_var @14 message#3
+0018  v12 = concat_str v10, v11
+0019  return v12
+0020  jump 0026
+0021  v13 = variant_tag v0 Result.Empty
+0022  jump_if_false v13, 0026
+0023  v14 = constant #4 "empty"
+0024  return v14
+0025  jump 0026
+0026  v15 = constant #5 nil
+0027  return v15
 
 function $1 sum(list#5)
 0000  v0 = load_var @19 list#5
-0001  v1 = variant_tag v0 List.Nil
-0002  jump_if_false v1, 0006
-0003  v2 = constant #6 0
-0004  return v2
-0005  jump 0035
-0006  v3 = variant_tag v0 List.Cons
-0007  jump_if_false v3, 0025
-0008  v4 = variant_field v0[0]
-0009  v5 = variant_field v0[1]
-0010  v6 = variant_tag v5 List.Cons
-0011  jump_if_false v6, 0025
-0012  v7 = variant_field v5[0]
-0013  v8 = variant_field v5[1]
-0014  store_var @34 head#6, v4
-0015  store_var @35 next#7, v7
-0016  store_var @36 tail#8, v8
-0017  v9 = load_var @37 head#6
-0018  v10 = load_var @38 next#7
-0019  v11 = add_num v9, v10
-0020  v12 = load_var @39 tail#8
-0021  v13 = call_direct $1 sum/1(v12)
-0022  v14 = add_num v11, v13
-0023  return v14
-0024  jump 0035
-0025  v15 = variant_tag v0 List.Cons
-0026  jump_if_false v15, 0035
-0027  v16 = variant_field v0[0]
-0028  v17 = variant_field v0[1]
-0029  v18 = variant_tag v17 List.Nil
-0030  jump_if_false v18, 0035
-0031  store_var @48 head#9, v16
-0032  v19 = load_var @49 head#9
-0033  return v19
-0034  jump 0035
-0035  v20 = constant #7 nil
-0036  return v20
+0001  v1 = constant #7 nil
+0002  v2 = variant_tag v0 List.Nil
+0003  jump_if_false v2, 0007
+0004  v3 = constant #8 0
+0005  return v3
+0006  jump 0036
+0007  v4 = variant_tag v0 List.Cons
+0008  jump_if_false v4, 0026
+0009  v5 = variant_field v0[0]
+0010  v6 = variant_field v0[1]
+0011  v7 = variant_tag v6 List.Cons
+0012  jump_if_false v7, 0026
+0013  v8 = variant_field v6[0]
+0014  v9 = variant_field v6[1]
+0015  store_var @34 head#6, v5
+0016  store_var @35 next#7, v8
+0017  store_var @36 tail#8, v9
+0018  v10 = load_var @37 head#6
+0019  v11 = load_var @38 next#7
+0020  v12 = add_num v10, v11
+0021  v13 = load_var @39 tail#8
+0022  v14 = call_direct $1 sum/1(v13)
+0023  v15 = add_num v12, v14
+0024  return v15
+0025  jump 0036
+0026  v16 = variant_tag v0 List.Cons
+0027  jump_if_false v16, 0036
+0028  v17 = variant_field v0[0]
+0029  v18 = variant_field v0[1]
+0030  v19 = variant_tag v18 List.Nil
+0031  jump_if_false v19, 0036
+0032  store_var @48 head#9, v17
+0033  v20 = load_var @49 head#9
+0034  return v20
+0035  jump 0036
+0036  v21 = constant #9 nil
+0037  return v21
 
 function $2 coarse(result#11)
 0000  v0 = load_var @52 result#11
-0001  v1 = variant_tag v0 Result.Ok
-0002  jump_if_false v1, 0007
-0003  v2 = variant_field v0[0]
-0004  v3 = constant #9 "ok"
-0005  return v3
-0006  jump 0010
-0007  v4 = constant #10 "other"
-0008  return v4
-0009  jump 0010
-0010  v5 = constant #11 nil
-0011  return v5
+0001  v1 = constant #11 nil
+0002  v2 = variant_tag v0 Result.Ok
+0003  jump_if_false v2, 0008
+0004  v3 = variant_field v0[0]
+0005  v4 = constant #12 "ok"
+0006  return v4
+0007  jump 0011
+0008  v5 = constant #13 "other"
+0009  return v5
+0010  jump 0011
+0011  v6 = constant #14 nil
+0012  return v6

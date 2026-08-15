@@ -189,6 +189,27 @@ void writeInlineStmt(std::ostream& out, const Stmt& stmt)
     }
 
     if (const auto* expressionStmt = dynamic_cast<const ExpressionStmt*>(&stmt)) {
+        if (const auto* match = dynamic_cast<const MatchExpr*>(expressionStmt->expression.get())) {
+            out << "(match ";
+            writeExpr(out, match->value);
+            for (const MatchArm& arm : match->arms) {
+                out << " (arm ";
+                writePattern(out, *arm.pattern);
+                if (arm.guard) {
+                    out << " if ";
+                    writeExpr(out, arm.guard);
+                }
+                out << ' ';
+                if (arm.expression) {
+                    writeExpr(out, arm.expression);
+                } else if (arm.body) {
+                    writeInlineStmt(out, *arm.body);
+                }
+                out << ')';
+            }
+            out << ')';
+            return;
+        }
         out << "(expr ";
         writeExpr(out, expressionStmt->expression);
         out << ')';
@@ -348,24 +369,6 @@ void writeInlineStmt(std::ostream& out, const Stmt& stmt)
                 out << ' ';
                 writeTypeAnnotation(out, variant.payloadTypes[i]);
             }
-            out << ')';
-        }
-        out << ')';
-        return;
-    }
-
-    if (const auto* match = dynamic_cast<const MatchStmt*>(&stmt)) {
-        out << "(match ";
-        writeExpr(out, match->value);
-        for (const MatchArm& arm : match->arms) {
-            out << " (arm ";
-            writePattern(out, *arm.pattern);
-            if (arm.guard) {
-                out << " if ";
-                writeExpr(out, arm.guard);
-            }
-            out << ' ';
-            writeInlineStmt(out, *arm.body);
             out << ')';
         }
         out << ')';
@@ -961,31 +964,32 @@ void EnumDeclStmt::print(std::ostream& out, int indent) const
     out << "}\n";
 }
 
-MatchStmt::MatchStmt(ExprPtr value, std::vector<MatchArm> arms)
+MatchExpr::MatchExpr(ExprPtr value, std::vector<MatchArm> arms)
     : value(std::move(value))
     , arms(std::move(arms))
 {
 }
 
-void MatchStmt::print(std::ostream& out, int indent) const
+void MatchExpr::print(std::ostream& out) const
 {
-    writeIndent(out, indent);
-    out << "Match ";
+    out << "(match ";
     writeExpr(out, value);
-    out << '\n';
     for (const MatchArm& arm : arms) {
-        writeIndent(out, indent + 1);
-        out << "Arm ";
+        out << " (arm ";
         writePattern(out, *arm.pattern);
         if (arm.guard) {
             out << " if ";
             writeExpr(out, arm.guard);
         }
-        out << "\n";
-        if (arm.body) {
-            arm.body->print(out, indent + 2);
+        out << ' ';
+        if (arm.expression) {
+            writeExpr(out, arm.expression);
+        } else if (arm.body) {
+            writeInlineStmt(out, *arm.body);
         }
+        out << ')';
     }
+    out << ')';
 }
 
 StructDeclStmt::StructDeclStmt(
@@ -1146,6 +1150,29 @@ ExpressionStmt::ExpressionStmt(ExprPtr expression)
 void ExpressionStmt::print(std::ostream& out, int indent) const
 {
     writeIndent(out, indent);
+    if (const auto* match = dynamic_cast<const MatchExpr*>(expression.get())) {
+        out << "Match ";
+        writeExpr(out, match->value);
+        out << '\n';
+        for (const MatchArm& arm : match->arms) {
+            writeIndent(out, indent + 1);
+            out << "Arm ";
+            writePattern(out, *arm.pattern);
+            if (arm.guard) {
+                out << " if ";
+                writeExpr(out, arm.guard);
+            }
+            out << '\n';
+            if (arm.expression) {
+                writeIndent(out, indent + 2);
+                writeExpr(out, arm.expression);
+                out << '\n';
+            } else if (arm.body) {
+                arm.body->print(out, indent + 2);
+            }
+        }
+        return;
+    }
     out << "Expr ";
     writeExpr(out, expression);
     out << '\n';
@@ -1685,6 +1712,29 @@ void populateExpr(Expr& expression)
                 mergeRange(result, statement->range);
             }
         }
+    } else if (auto* match = dynamic_cast<MatchExpr*>(&expression)) {
+        if (match->value) {
+            populateExpr(*match->value);
+            mergeRange(result, match->value->range);
+        }
+        for (const MatchArm& arm : match->arms) {
+            if (arm.pattern) {
+                populatePattern(*arm.pattern);
+                mergeRange(result, arm.pattern->range);
+            }
+            if (arm.guard) {
+                populateExpr(*arm.guard);
+                mergeRange(result, arm.guard->range);
+            }
+            if (arm.body) {
+                populateStmt(*arm.body);
+                mergeRange(result, arm.body->range);
+            }
+            if (arm.expression) {
+                populateExpr(*arm.expression);
+                mergeRange(result, arm.expression->range);
+            }
+        }
     }
 
     expression.range = result;
@@ -1777,25 +1827,6 @@ void populateStmt(Stmt& statement)
             mergeRange(result, tokenRange(variant.name));
             for (const TypeAnnotation& type : variant.payloadTypes) {
                 mergeRange(result, typeAnnotationRange(type));
-            }
-        }
-    } else if (auto* match = dynamic_cast<MatchStmt*>(&statement)) {
-        if (match->value) {
-            populateExpr(*match->value);
-            mergeRange(result, match->value->range);
-        }
-        for (const MatchArm& arm : match->arms) {
-            if (arm.pattern) {
-                populatePattern(*arm.pattern);
-                mergeRange(result, arm.pattern->range);
-            }
-            if (arm.guard) {
-                populateExpr(*arm.guard);
-                mergeRange(result, arm.guard->range);
-            }
-            if (arm.body) {
-                populateStmt(*arm.body);
-                mergeRange(result, arm.body->range);
             }
         }
     } else if (auto* structDecl = dynamic_cast<StructDeclStmt*>(&statement)) {
@@ -2085,6 +2116,22 @@ void assignExprIds(Expr& expression, std::size_t& next)
                 assignStmtIds(*statement, next);
             }
         }
+    } else if (auto* match = dynamic_cast<MatchExpr*>(&expression)) {
+        assign(match->value);
+        for (MatchArm& arm : match->arms) {
+            if (arm.pattern) {
+                assignPatternIds(*arm.pattern, next);
+            }
+            if (arm.guard) {
+                assign(arm.guard);
+            }
+            if (arm.body) {
+                assignStmtIds(*arm.body, next);
+            }
+            if (arm.expression) {
+                assign(arm.expression);
+            }
+        }
     }
 }
 
@@ -2105,21 +2152,6 @@ void assignStmtIds(Stmt& statement, std::size_t& next)
         for (StmtPtr& child : module->statements) {
             if (child) {
                 assignStmtIds(*child, next);
-            }
-        }
-    } else if (auto* match = dynamic_cast<MatchStmt*>(&statement)) {
-        if (match->value) {
-            assignExprIds(*match->value, next);
-        }
-        for (MatchArm& arm : match->arms) {
-            if (arm.pattern) {
-                assignPatternIds(*arm.pattern, next);
-            }
-            if (arm.guard) {
-                assignExprIds(*arm.guard, next);
-            }
-            if (arm.body) {
-                assignStmtIds(*arm.body, next);
             }
         }
     } else if (auto* impl = dynamic_cast<ImplStmt*>(&statement)) {

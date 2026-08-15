@@ -1,0 +1,205 @@
+native_import i0 = print abi=1
+native_import i1 = str abi=1
+main registers=34
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 describe/1
+0004  set_global g0, b1
+0005  b2 = constant #5 nil
+0006  init_global g1, b2
+0007  b3 = make_function $1 score/1
+0008  set_global g1, b3
+0009  b4 = constant #10 nil
+0010  init_global g2, b4
+0011  b5 = make_function $2 nested/1
+0012  set_global g2, b5
+0013  b6 = constant #15 nil
+0014  init_global g3, b6
+0015  b7 = make_function $3 guarded/1
+0016  set_global g3, b7
+0017  b8 = constant #23 7
+0018  b9 = make_variant t0, v0 (b8)
+0019  b10 = call_direct $0 [b9]
+0020  b33 = call_native i0 [b10]
+0021  b11 = constant #24 "bad"
+0022  b12 = make_variant t0, v1 (b11)
+0023  b13 = call_direct $0 [b12]
+0024  b33 = call_native i0 [b13]
+0025  b14 = constant #25 4
+0026  b15 = make_variant t0, v0 (b14)
+0027  b16 = call_direct $1 [b15]
+0028  b33 = call_native i0 [b16]
+0029  b17 = constant #26 "x"
+0030  b18 = make_variant t0, v1 (b17)
+0031  b19 = call_direct $1 [b18]
+0032  b33 = call_native i0 [b19]
+0033  b20 = constant #27 3
+0034  b21 = make_variant t0, v0 (b20)
+0035  b22 = call_direct $2 [b21]
+0036  b33 = call_native i0 [b22]
+0037  b23 = constant #28 "x"
+0038  b24 = make_variant t0, v1 (b23)
+0039  b25 = call_direct $2 [b24]
+0040  b33 = call_native i0 [b25]
+0041  b26 = constant #29 5
+0042  b27 = call_direct $3 [b26]
+0043  b33 = call_native i0 [b27]
+0044  b28 = constant #30 2
+0045  b29 = neg_num b28
+0046  b30 = call_direct $3 [b29]
+0047  b33 = call_native i0 [b30]
+0048  b31 = constant #31 0
+0049  b32 = call_direct $3 [b31]
+0050  b33 = call_native i0 [b32]
+0051  return_nil
+
+function $0 describe/1 registers=14
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #1 nil
+0003  b2 = is_variant b0, t0, v0
+0004  br_if b2, b1, b2
+0005  block
+0006  b3 = variant_get b0, t0, v0, 0
+0007  bind_local l1, b3
+0008  b4 = constant #2 "ok:"
+0009  b5 = load_local l1
+0010  b6 = call_native i1 [b5]
+0011  b7 = concat_str b4, b6
+0012  b1 = move b7
+0013  br b4
+0014  block
+0015  b8 = is_variant b0, t0, v1
+0016  br_if b8, b3, b4
+0017  block
+0018  b9 = variant_get b0, t0, v1, 0
+0019  bind_local l2, b9
+0020  b10 = constant #3 "err:"
+0021  b11 = load_local l2
+0022  b12 = concat_str b10, b11
+0023  b1 = move b12
+0024  br b4
+0025  block
+0026  return b1
+0027  block
+0028  b13 = constant #4 nil
+0029  return b13
+0030  block
+0031  return_nil
+
+function $1 score/1 registers=12
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #6 nil
+0003  b2 = is_variant b0, t0, v0
+0004  br_if b2, b1, b2
+0005  block
+0006  b3 = variant_get b0, t0, v0, 0
+0007  bind_local l1, b3
+0008  b4 = load_local l1
+0009  b5 = constant #7 2
+0010  b6 = mul_num b4, b5
+0011  b1 = move b6
+0012  br b4
+0013  block
+0014  b7 = is_variant b0, t0, v1
+0015  br_if b7, b3, b4
+0016  block
+0017  b8 = variant_get b0, t0, v1, 0
+0018  b9 = constant #8 0
+0019  b1 = move b9
+0020  br b4
+0021  block
+0022  bind_local l2, b1
+0023  b10 = load_local l2
+0024  return b10
+0025  block
+0026  b11 = constant #9 nil
+0027  return b11
+0028  block
+0029  return_nil
+
+function $2 nested/1 registers=19
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #11 nil
+0003  b2 = is_variant b0, t0, v0
+0004  br_if b2, b1, b6
+0005  block
+0006  b3 = variant_get b0, t0, v0, 0
+0007  bind_local l1, b3
+0008  b4 = load_local l0
+0009  b5 = constant #12 nil
+0010  b6 = is_variant b4, t0, v0
+0011  br_if b6, b2, b3
+0012  block
+0013  b7 = variant_get b4, t0, v0, 0
+0014  bind_local l2, b7
+0015  b8 = load_local l2
+0016  b9 = load_local l1
+0017  b10 = add_num b8, b9
+0018  b5 = move b10
+0019  br b5
+0020  block
+0021  b11 = is_variant b4, t0, v1
+0022  br_if b11, b4, b5
+0023  block
+0024  b12 = variant_get b4, t0, v1, 0
+0025  b13 = load_local l1
+0026  b5 = move b13
+0027  br b5
+0028  block
+0029  b1 = move b5
+0030  br b8
+0031  block
+0032  b14 = is_variant b0, t0, v1
+0033  br_if b14, b7, b8
+0034  block
+0035  b15 = variant_get b0, t0, v1, 0
+0036  b16 = constant #13 1
+0037  b17 = neg_num b16
+0038  b1 = move b17
+0039  br b8
+0040  block
+0041  return b1
+0042  block
+0043  b18 = constant #14 nil
+0044  return b18
+0045  block
+0046  return_nil
+
+function $3 guarded/1 registers=12
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #16 nil
+0003  bind_local l1, b0
+0004  b2 = load_local l1
+0005  b3 = constant #17 0
+0006  b4 = gt_num b2, b3
+0007  br_if b4, b1, b2
+0008  block
+0009  b5 = constant #18 "positive"
+0010  b1 = move b5
+0011  br b5
+0012  block
+0013  bind_local l2, b0
+0014  b6 = load_local l2
+0015  b7 = constant #19 0
+0016  b8 = lt_num b6, b7
+0017  br_if b8, b3, b4
+0018  block
+0019  b9 = constant #20 "negative"
+0020  b1 = move b9
+0021  br b5
+0022  block
+0023  b10 = constant #21 "zero"
+0024  b1 = move b10
+0025  br b5
+0026  block
+0027  return b1
+0028  block
+0029  b11 = constant #22 nil
+0030  return b11
+0031  block
+0032  return_nil

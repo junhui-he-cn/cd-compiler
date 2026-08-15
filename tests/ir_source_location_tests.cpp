@@ -349,7 +349,10 @@ void test_declaration_index()
     assert(directTarget->kind == CallTargetKind::Direct);
     assert(directTarget->target.declarationId == index.declaration(*function)->declarationId);
 
-    const auto* chooseMatch = dynamic_cast<const MatchStmt*>(choose->body.front().get());
+    const auto* chooseStatement = dynamic_cast<const ExpressionStmt*>(choose->body.front().get());
+    const auto* chooseMatch = chooseStatement
+        ? dynamic_cast<const MatchExpr*>(chooseStatement->expression.get())
+        : nullptr;
     const auto* orPattern = chooseMatch && !chooseMatch->arms.empty()
         ? dynamic_cast<const OrPattern*>(chooseMatch->arms.front().pattern.get())
         : nullptr;
@@ -923,7 +926,10 @@ void test_literal_pattern_metadata()
 
     const auto* function = dynamic_cast<const FunctionStmt*>(entryModule(program).statements[0].get());
     assert(function != nullptr && !function->body.empty());
-    const auto* match = dynamic_cast<const MatchStmt*>(function->body.front().get());
+    const auto* matchStatement = dynamic_cast<const ExpressionStmt*>(function->body.front().get());
+    const auto* match = matchStatement
+        ? dynamic_cast<const MatchExpr*>(matchStatement->expression.get())
+        : nullptr;
     assert(match != nullptr && match->arms.size() == 3);
     const auto* nilPattern = dynamic_cast<const LiteralPattern*>(match->arms[0].pattern.get());
     const auto* truePattern = dynamic_cast<const LiteralPattern*>(match->arms[1].pattern.get());
@@ -972,7 +978,10 @@ void test_variant_pattern_metadata()
 
     const auto* function = dynamic_cast<const FunctionStmt*>(entryModule(program).statements[1].get());
     assert(function != nullptr && !function->body.empty());
-    const auto* match = dynamic_cast<const MatchStmt*>(function->body.front().get());
+    const auto* matchStatement = dynamic_cast<const ExpressionStmt*>(function->body.front().get());
+    const auto* match = matchStatement
+        ? dynamic_cast<const MatchExpr*>(matchStatement->expression.get())
+        : nullptr;
     assert(match != nullptr && match->arms.size() == 3);
     const auto* okPattern = dynamic_cast<const VariantPattern*>(match->arms[1].pattern.get());
     const auto* emptyPattern = dynamic_cast<const VariantPattern*>(match->arms[2].pattern.get());
@@ -1026,7 +1035,10 @@ void test_record_pattern_metadata()
 
     const auto* function = dynamic_cast<const FunctionStmt*>(entryModule(program).statements[1].get());
     assert(function != nullptr && !function->body.empty());
-    const auto* match = dynamic_cast<const MatchStmt*>(function->body.front().get());
+    const auto* matchStatement = dynamic_cast<const ExpressionStmt*>(function->body.front().get());
+    const auto* match = matchStatement
+        ? dynamic_cast<const MatchExpr*>(matchStatement->expression.get())
+        : nullptr;
     assert(match != nullptr && match->arms.size() == 2);
     const auto* pattern = dynamic_cast<const RecordPattern*>(match->arms[1].pattern.get());
     assert(pattern != nullptr);
@@ -1078,7 +1090,10 @@ void test_literal_or_pattern_metadata()
 
     const auto* function = dynamic_cast<const FunctionStmt*>(entryModule(program).statements[0].get());
     assert(function != nullptr && !function->body.empty());
-    const auto* match = dynamic_cast<const MatchStmt*>(function->body.front().get());
+    const auto* matchStatement = dynamic_cast<const ExpressionStmt*>(function->body.front().get());
+    const auto* match = matchStatement
+        ? dynamic_cast<const MatchExpr*>(matchStatement->expression.get())
+        : nullptr;
     const auto* pattern = match && !match->arms.empty()
         ? dynamic_cast<const OrPattern*>(match->arms.front().pattern.get())
         : nullptr;
@@ -1118,8 +1133,11 @@ void test_pattern_guard_metadata()
     Program program = loadStdinProgram(frontend, input);
 
     const auto* function = dynamic_cast<const FunctionStmt*>(entryModule(program).statements[0].get());
-    const auto* statementMatch = function && !function->body.empty()
-        ? dynamic_cast<const MatchStmt*>(function->body.front().get())
+    const auto* statement = function && !function->body.empty()
+        ? dynamic_cast<const ExpressionStmt*>(function->body.front().get())
+        : nullptr;
+    const auto* statementMatch = statement
+        ? dynamic_cast<const MatchExpr*>(statement->expression.get())
         : nullptr;
     assert(function != nullptr && statementMatch != nullptr);
     assert(statementMatch->arms.front().guard != nullptr);

@@ -3,21 +3,21 @@ IR
 0001  store_var @0 describe#0, v0
 0002  v1 = make_function $0 describe/1
 0003  assign_var @21 describe#0, v1
-0004  v2 = constant #9 "Ada"
-0005  v3 = constant #10 36
-0006  v4 = constant #11 "Cambridge"
-0007  v5 = constant #12 1
+0004  v2 = constant #10 "Ada"
+0005  v3 = constant #11 36
+0006  v4 = constant #12 "Cambridge"
+0007  v5 = constant #13 1
 0008  v6 = struct Address {city: v4, zip: v5}
 0009  v7 = struct Person {name: v2, age: v3, address: v6}
 0010  store_var @29 ada#5, v7
-0011  v8 = constant #13 "Grace"
-0012  v9 = constant #14 40
-0013  v10 = constant #15 "Hong Kong"
-0014  v11 = constant #16 2
+0011  v8 = constant #14 "Grace"
+0012  v9 = constant #15 40
+0013  v10 = constant #16 "Hong Kong"
+0014  v11 = constant #17 2
 0015  v12 = struct Address {city: v10, zip: v11}
 0016  v13 = struct Person {name: v8, age: v9, address: v12}
 0017  store_var @37 hongKong#6, v13
-0018  v14 = constant #17 nil
+0018  v14 = constant #18 nil
 0019  store_var @38 nilPerson#7, v14
 0020  v15 = load_var @39 ada#5
 0021  v16 = call_direct $0 describe/1(v15)
@@ -29,60 +29,62 @@ IR
 0027  v20 = call_direct $0 describe/1(v19)
 0028  print v20
 0029  v21 = load_var @42 ada#5
-0030  v22 = field v21.name
-0031  v23 = constant #18 "Ada"
-0032  v24 = equal v22, v23
-0033  jump_if_false v24, 0035
-0034  jump 0039
-0035  v25 = field v21.age
-0036  v26 = constant #19 0
-0037  v27 = equal v25, v26
-0038  jump_if_false v27, 0042
-0039  v28 = constant #20 "or"
-0040  print v28
-0041  jump 0045
-0042  v29 = constant #21 "fallback"
-0043  print v29
-0044  jump 0045
+0030  v22 = constant #19 nil
+0031  v23 = field v21.name
+0032  v24 = constant #20 "Ada"
+0033  v25 = equal v23, v24
+0034  jump_if_false v25, 0036
+0035  jump 0040
+0036  v26 = field v21.age
+0037  v27 = constant #21 0
+0038  v28 = equal v26, v27
+0039  jump_if_false v28, 0043
+0040  v29 = constant #22 "or"
+0041  print v29
+0042  jump 0046
+0043  v30 = constant #23 "fallback"
+0044  print v30
+0045  jump 0046
 
 function $0 describe(value#1)
 0000  v0 = load_var @1 value#1
 0001  v1 = constant #1 nil
-0002  v2 = equal v0, v1
-0003  jump_if_false v2, 0007
-0004  v3 = constant #2 "nil"
-0005  return v3
-0006  jump 0038
-0007  v4 = field v0.name
-0008  v5 = constant #3 "Ada"
-0009  v6 = equal v4, v5
-0010  jump_if_false v6, 0014
-0011  v7 = constant #4 "ada"
-0012  return v7
-0013  jump 0038
-0014  v8 = field v0.address
-0015  v9 = field v8.city
-0016  v10 = constant #5 "Hong Kong"
-0017  v11 = equal v9, v10
-0018  jump_if_false v11, 0026
-0019  v12 = field v0.name
-0020  store_var @10 name#2, v12
-0021  v13 = constant #6 "city:"
-0022  v14 = load_var @11 name#2
-0023  v15 = concat_str v13, v14
-0024  return v15
-0025  jump 0038
-0026  v16 = field v0.age
-0027  v17 = field v0.name
-0028  store_var @16 age#3, v16
-0029  store_var @17 name#4, v17
-0030  v18 = load_var @18 name#4
-0031  v19 = constant #7 ":"
-0032  v20 = concat_str v18, v19
-0033  v21 = load_var @19 age#3
-0034  v22 = native_call @20 str(v21)
-0035  v23 = concat_str v20, v22
-0036  return v23
-0037  jump 0038
-0038  v24 = constant #8 nil
-0039  return v24
+0002  v2 = constant #2 nil
+0003  v3 = equal v0, v2
+0004  jump_if_false v3, 0008
+0005  v4 = constant #3 "nil"
+0006  return v4
+0007  jump 0039
+0008  v5 = field v0.name
+0009  v6 = constant #4 "Ada"
+0010  v7 = equal v5, v6
+0011  jump_if_false v7, 0015
+0012  v8 = constant #5 "ada"
+0013  return v8
+0014  jump 0039
+0015  v9 = field v0.address
+0016  v10 = field v9.city
+0017  v11 = constant #6 "Hong Kong"
+0018  v12 = equal v10, v11
+0019  jump_if_false v12, 0027
+0020  v13 = field v0.name
+0021  store_var @10 name#2, v13
+0022  v14 = constant #7 "city:"
+0023  v15 = load_var @11 name#2
+0024  v16 = concat_str v14, v15
+0025  return v16
+0026  jump 0039
+0027  v17 = field v0.age
+0028  v18 = field v0.name
+0029  store_var @16 age#3, v17
+0030  store_var @17 name#4, v18
+0031  v19 = load_var @18 name#4
+0032  v20 = constant #8 ":"
+0033  v21 = concat_str v19, v20
+0034  v22 = load_var @19 age#3
+0035  v23 = native_call @20 str(v22)
+0036  v24 = concat_str v21, v23
+0037  return v24
+0038  jump 0039
+0039  v25 = constant #9 nil
+0040  return v25

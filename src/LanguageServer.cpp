@@ -673,14 +673,6 @@ private:
             visitStatement(forIn->body.get());
             return;
         }
-        if (const auto* match = dynamic_cast<const MatchStmt*>(statement)) {
-            visitExpression(match->value.get());
-            for (const MatchArm& arm : match->arms) {
-                visitExpression(arm.guard.get());
-                visitStatement(arm.body.get());
-            }
-            return;
-        }
         if (const auto* returnStatement = dynamic_cast<const ReturnStmt*>(statement)) {
             visitExpression(returnStatement->value.get());
         }
@@ -743,6 +735,15 @@ private:
         if (const auto* logical = dynamic_cast<const LogicalExpr*>(expression)) {
             visitExpression(logical->left.get());
             visitExpression(logical->right.get());
+            return;
+        }
+        if (const auto* match = dynamic_cast<const MatchExpr*>(expression)) {
+            visitExpression(match->value.get());
+            for (const MatchArm& arm : match->arms) {
+                visitExpression(arm.guard.get());
+                visitStatement(arm.body.get());
+                visitExpression(arm.expression.get());
+            }
             return;
         }
         if (const auto* coalesce = dynamic_cast<const CoalesceExpr*>(expression)) {
@@ -1082,15 +1083,6 @@ private:
             visitStatement(forIn->body.get());
             return;
         }
-        if (const auto* match = dynamic_cast<const MatchStmt*>(statement)) {
-            visitExpression(match->value.get());
-            for (const MatchArm& arm : match->arms) {
-                visitPattern(arm.pattern.get());
-                visitExpression(arm.guard.get());
-                visitStatement(arm.body.get());
-            }
-            return;
-        }
         if (const auto* returnStatement = dynamic_cast<const ReturnStmt*>(statement)) {
             visitExpression(returnStatement->value.get());
         }
@@ -1133,6 +1125,16 @@ private:
         if (const auto* logical = dynamic_cast<const LogicalExpr*>(expression)) {
             visitExpression(logical->left.get());
             visitExpression(logical->right.get());
+            return;
+        }
+        if (const auto* match = dynamic_cast<const MatchExpr*>(expression)) {
+            visitExpression(match->value.get());
+            for (const MatchArm& arm : match->arms) {
+                visitPattern(arm.pattern.get());
+                visitExpression(arm.guard.get());
+                visitStatement(arm.body.get());
+                visitExpression(arm.expression.get());
+            }
             return;
         }
         if (const auto* coalesce = dynamic_cast<const CoalesceExpr*>(expression)) {

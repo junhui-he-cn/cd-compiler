@@ -21,20 +21,21 @@ function $0 make()
 
 function $1 render(value#2)
 0000  v0 = load_var @5 value#2
-0001  v1 = variant_tag v0 Outcome.Good
-0002  jump_if_false v1, 0008
-0003  v2 = variant_field v0[0]
-0004  store_var @10 text#3, v2
-0005  v3 = load_var @11 text#3
-0006  return v3
-0007  jump 0016
-0008  v4 = variant_tag v0 Outcome.Bad
-0009  jump_if_false v4, 0016
-0010  v5 = variant_field v0[0]
-0011  store_var @16 numberValue#4, v5
-0012  v6 = load_var @17 numberValue#4
-0013  v7 = native_call @18 str(v6)
-0014  return v7
-0015  jump 0016
-0016  v8 = constant #4 nil
-0017  return v8
+0001  v1 = constant #4 nil
+0002  v2 = variant_tag v0 Outcome.Good
+0003  jump_if_false v2, 0009
+0004  v3 = variant_field v0[0]
+0005  store_var @10 text#3, v3
+0006  v4 = load_var @11 text#3
+0007  return v4
+0008  jump 0017
+0009  v5 = variant_tag v0 Outcome.Bad
+0010  jump_if_false v5, 0017
+0011  v6 = variant_field v0[0]
+0012  store_var @16 numberValue#4, v6
+0013  v7 = load_var @17 numberValue#4
+0014  v8 = native_call @18 str(v7)
+0015  return v8
+0016  jump 0017
+0017  v9 = constant #5 nil
+0018  return v9

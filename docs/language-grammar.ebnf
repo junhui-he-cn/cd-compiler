@@ -14,7 +14,6 @@ declaration = importDecl
 statement   = printStmt
             | ifStmt
             | ifLetStmt
-            | matchStmt
             | whileStmt
             | whileLetStmt
             | forStmt
@@ -97,9 +96,15 @@ ifLetStmt   = "if", "let", identifier, "=", expression,
    guards, and `for-in` iterables. Bind the value before the condition.
    This restriction is scheduled for removal in the Language 0.2 plan. *)
 
-matchStmt   = "match", expression, "{", { matchArm }, "}" ;
+matchExpr   = "match", expression, "{", matchArm,
+              { ",", matchArm }, [ "," ], "}" ;
 
-matchArm    = pattern, [ "if", expression ], "=>", block ;
+matchArm    = pattern, [ "if", expression ], "=>",
+              ( block | expression ) ;
+
+(* Commas separate match arms. After a block-bodied arm the comma is
+   optional, preserving the legacy statement form; after an
+   expression-bodied arm the comma is required. *)
 
 pattern     = patternAtom,
               { "|", patternAtom } ;
@@ -260,6 +265,7 @@ functionExpr = "fun", [ typeParameters ], "(", [ parameters ], ")",
                block ;
 
 primary     = functionExpr
+            | matchExpr
             | "false"
             | "true"
             | "nil"

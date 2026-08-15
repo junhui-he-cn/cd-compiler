@@ -592,11 +592,6 @@ void TypeChecker::checkStatement(const Stmt& statement)
         return;
     }
 
-    if (const auto* match = dynamic_cast<const MatchStmt*>(&statement)) {
-        checkMatch(*match);
-        return;
-    }
-
     if (const auto* whileStmt = dynamic_cast<const WhileStmt*>(&statement)) {
         checkExpression(*whileStmt->condition);
         ++loopDepth_;

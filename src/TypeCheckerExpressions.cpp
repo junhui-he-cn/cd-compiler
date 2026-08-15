@@ -849,7 +849,7 @@ bool TypeChecker::checkPattern(
     return false;
 }
 
-void TypeChecker::checkMatch(const MatchStmt& statement)
+TypeInfo TypeChecker::checkMatch(const MatchExpr& statement)
 {
     const TypeInfo scrutineeType = checkExpression(*statement.value);
     const bool nullableEnum = SemanticTypes::isNullable(scrutineeType)
@@ -898,6 +898,9 @@ void TypeChecker::checkMatch(const MatchStmt& statement)
     bool coveredNil = false;
     bool coveredStruct = false;
     bool coversAll = false;
+    bool hasExpressionArm = false;
+    bool hasBlockArm = false;
+    std::optional<TypeInfo> resultType;
     for (const MatchArm& arm : statement.arms) {
         beginScope();
         std::unordered_set<std::string> armCoveredVariants;
@@ -924,8 +927,42 @@ void TypeChecker::checkMatch(const MatchStmt& statement)
                 *arm.guard,
                 PatternGuardRecord{guardType});
         }
-        checkStatement(*arm.body);
+        if (arm.expression) {
+            hasExpressionArm = true;
+            const TypeInfo armType = checkExpression(*arm.expression);
+            if (!resultType) {
+                resultType = armType;
+            } else {
+                const std::optional<TypeInfo> merged
+                    = SemanticTypes::mergeArrayElementTypes(*resultType, armType);
+                if (!merged) {
+                    throw TypeError(
+                        Token{TokenType::Match, "match",
+                            statement.value->span ? statement.value->span->line : 0,
+                            statement.value->span ? statement.value->span->column : 0},
+                        "match arms have incompatible result types: "
+                            + typeInfoName(*resultType) + " and " + typeInfoName(armType));
+                }
+                resultType = *merged;
+            }
+        } else if (arm.body) {
+            hasBlockArm = true;
+            checkStatement(*arm.body);
+        } else {
+            throw TypeError(
+                Token{TokenType::Match, "match",
+                    statement.value->span ? statement.value->span->line : 0,
+                    statement.value->span ? statement.value->span->column : 0},
+                "match arm is missing a body");
+        }
         endScope();
+    }
+    if (hasExpressionArm && hasBlockArm) {
+        throw TypeError(
+            Token{TokenType::Match, "match",
+                statement.value->span ? statement.value->span->line : 0,
+                statement.value->span ? statement.value->span->column : 0},
+            "match arms mix expressions and blocks");
     }
 
     if (!coversAll) {
@@ -990,6 +1027,7 @@ void TypeChecker::checkMatch(const MatchStmt& statement)
     std::sort(coverage.coveredVariants.begin(), coverage.coveredVariants.end());
     std::sort(coverage.coveredLiterals.begin(), coverage.coveredLiterals.end());
     declarationIndex_.recordMatchCoverage(statement, std::move(coverage));
+    return resultType.value_or(simpleType(StaticType::Nil));
 }
 
 TypeInfo TypeChecker::checkExpression(const Expr& expression)
@@ -1180,6 +1218,12 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
     if (const auto* function = dynamic_cast<const FunctionExpr*>(&expression)) {
         CheckedExpression result = checkFunctionExpression(*function, expectedType);
         declarationIndex_.recordTypedExpression(*function, result.type);
+        return result;
+    }
+
+    if (const auto* match = dynamic_cast<const MatchExpr*>(&expression)) {
+        CheckedExpression result{checkMatch(*match)};
+        declarationIndex_.recordTypedExpression(*match, result.type);
         return result;
     }
 

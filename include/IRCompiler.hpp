@@ -101,7 +101,7 @@ private:
     void compileContinue(const ContinueStmt& statement);
     void compileFor(const ForStmt& statement);
     void compileForIn(const ForInStmt& statement);
-    void compileMatch(const MatchStmt& statement);
+    IRRegister compileMatch(const MatchExpr& statement);
     std::string makeSyntheticName(const std::string& prefix);
     IRRegister emitLenCall(const CallExpr& expression);
     IRRegister emitNativeStdlibCall(const CallExpr& expression);

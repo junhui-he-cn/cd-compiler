@@ -27,31 +27,32 @@ function $0 make/0 registers=3
 0007  block
 0008  return_nil
 
-function $1 render/1 registers=9
+function $1 render/1 registers=10
 0000  block
 0001  b0 = load_local l0
-0002  b1 = is_variant b0, t0, v0
-0003  br_if b1, b1, b3
-0004  block
-0005  b2 = variant_get b0, t0, v0, 0
-0006  bind_local l1, b2
-0007  b3 = load_local l1
-0008  return b3
-0009  block
-0010  br b6
-0011  block
-0012  b4 = is_variant b0, t0, v1
-0013  br_if b4, b4, b6
-0014  block
-0015  b5 = variant_get b0, t0, v1, 0
-0016  bind_local l2, b5
-0017  b6 = load_local l2
-0018  b7 = call_native i1 [b6]
-0019  return b7
-0020  block
-0021  br b6
-0022  block
-0023  b8 = constant #4 nil
-0024  return b8
-0025  block
-0026  return_nil
+0002  b1 = constant #4 nil
+0003  b2 = is_variant b0, t0, v0
+0004  br_if b2, b1, b3
+0005  block
+0006  b3 = variant_get b0, t0, v0, 0
+0007  bind_local l1, b3
+0008  b4 = load_local l1
+0009  return b4
+0010  block
+0011  br b6
+0012  block
+0013  b5 = is_variant b0, t0, v1
+0014  br_if b5, b4, b6
+0015  block
+0016  b6 = variant_get b0, t0, v1, 0
+0017  bind_local l2, b6
+0018  b7 = load_local l2
+0019  b8 = call_native i1 [b7]
+0020  return b8
+0021  block
+0022  br b6
+0023  block
+0024  b9 = constant #5 nil
+0025  return b9
+0026  block
+0027  return_nil

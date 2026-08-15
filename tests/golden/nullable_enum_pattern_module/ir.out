@@ -7,7 +7,7 @@ IR
 0005  store_var @4 render#1, v2
 0006  v3 = make_function $1 render/1
 0007  assign_var @19 render#1, v3
-0008  v4 = constant #9 nil
+0008  v4 = constant #10 nil
 0009  v5 = call_direct $1 render/1(v4)
 0010  print v5
 0011  v6 = load_var @20 make#0
@@ -25,29 +25,30 @@ function $0 make()
 function $1 render(value#2)
 0000  v0 = load_var @5 value#2
 0001  v1 = constant #4 nil
-0002  v2 = equal v0, v1
-0003  jump_if_false v2, 0007
-0004  v3 = constant #5 "nil"
-0005  return v3
-0006  jump 0026
-0007  v4 = variant_tag v0 Outcome.Good
-0008  jump_if_false v4, 0017
-0009  v5 = variant_field v0[0]
-0010  store_var @10 number#3, v5
-0011  v6 = constant #6 "good:"
-0012  v7 = load_var @11 number#3
-0013  v8 = native_call @12 str(v7)
-0014  v9 = concat_str v6, v8
-0015  return v9
-0016  jump 0026
-0017  v10 = variant_tag v0 Outcome.Bad
-0018  jump_if_false v10, 0026
-0019  v11 = variant_field v0[0]
-0020  store_var @17 message#4, v11
-0021  v12 = constant #7 "bad:"
-0022  v13 = load_var @18 message#4
-0023  v14 = concat_str v12, v13
-0024  return v14
-0025  jump 0026
-0026  v15 = constant #8 nil
-0027  return v15
+0002  v2 = constant #5 nil
+0003  v3 = equal v0, v2
+0004  jump_if_false v3, 0008
+0005  v4 = constant #6 "nil"
+0006  return v4
+0007  jump 0027
+0008  v5 = variant_tag v0 Outcome.Good
+0009  jump_if_false v5, 0018
+0010  v6 = variant_field v0[0]
+0011  store_var @10 number#3, v6
+0012  v7 = constant #7 "good:"
+0013  v8 = load_var @11 number#3
+0014  v9 = native_call @12 str(v8)
+0015  v10 = concat_str v7, v9
+0016  return v10
+0017  jump 0027
+0018  v11 = variant_tag v0 Outcome.Bad
+0019  jump_if_false v11, 0027
+0020  v12 = variant_field v0[0]
+0021  store_var @17 message#4, v12
+0022  v13 = constant #8 "bad:"
+0023  v14 = load_var @18 message#4
+0024  v15 = concat_str v13, v14
+0025  return v15
+0026  jump 0027
+0027  v16 = constant #9 nil
+0028  return v16

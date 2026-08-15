@@ -1,0 +1,20 @@
+Program
+  Enum Result {Ok(number), Err(string)}
+  Fun describe(result: Result): string
+    Return (match result (arm Result.Ok(value) (+ "ok:" (call str value))) (arm Result.Err(message) (+ "err:" message)))
+  Fun score(result: Result): number
+    Let doubled = (match result (arm Result.Ok(value) (* value 2)) (arm Result.Err(_) 0))
+    Return doubled
+  Fun nested(result: Result): number
+    Return (match result (arm Result.Ok(value) (match result (arm Result.Ok(inner) (+ inner value)) (arm Result.Err(_) value))) (arm Result.Err(_) (- 1)))
+  Fun guarded(value: number): string
+    Return (match value (arm n if (> n 0) "positive") (arm n if (< n 0) "negative") (arm _ "zero"))
+  Print (call describe (member-call Result Ok 7))
+  Print (call describe (member-call Result Err "bad"))
+  Print (call score (member-call Result Ok 4))
+  Print (call score (member-call Result Err "x"))
+  Print (call nested (member-call Result Ok 3))
+  Print (call nested (member-call Result Err "x"))
+  Print (call guarded 5)
+  Print (call guarded (- 2))
+  Print (call guarded 0)

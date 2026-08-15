@@ -543,11 +543,6 @@ void IRCompiler::compileStatement(const Stmt& statement)
         return;
     }
 
-    if (const auto* match = dynamic_cast<const MatchStmt*>(&statement)) {
-        compileMatch(*match);
-        return;
-    }
-
     if (const auto* whileStmt = dynamic_cast<const WhileStmt*>(&statement)) {
         const std::size_t loopStart = ir_.instructionCount();
         const IRRegister condition = compileExpression(*whileStmt->condition);
@@ -1005,7 +1000,7 @@ IRRegister IRCompiler::compileUnwrapOrReturn(const UnwrapOrReturnExpr& expressio
     return value;
 }
 
-void IRCompiler::compileMatch(const MatchStmt& statement)
+IRRegister IRCompiler::compileMatch(const MatchExpr& statement)
 {
     const MatchCoverageRecord* coverage = declarationIndex_
         ? declarationIndex_->matchCoverage(statement)
@@ -1014,6 +1009,7 @@ void IRCompiler::compileMatch(const MatchStmt& statement)
         throw IRCompileError("missing match coverage metadata");
     }
     const IRRegister value = compileExpression(*statement.value);
+    const IRRegister result = ir_.emitConstant(Value::nil());
     std::vector<std::size_t> endJumps;
 
     for (const MatchArm& arm : statement.arms) {
@@ -1033,7 +1029,12 @@ void IRCompiler::compileMatch(const MatchStmt& statement)
             const IRRegister guard = compileExpression(*arm.guard);
             failJumps.push_back(ir_.emitJumpIfFalse(guard));
         }
-        compileStatement(*arm.body);
+        if (arm.expression) {
+            const IRRegister armValue = compileExpression(*arm.expression);
+            ir_.emitCopyTo(result, armValue);
+        } else if (arm.body) {
+            compileStatement(*arm.body);
+        }
         endJumps.push_back(ir_.emitJump());
         for (const std::size_t jump : failJumps) {
             ir_.patchJump(jump);
@@ -1043,6 +1044,7 @@ void IRCompiler::compileMatch(const MatchStmt& statement)
     for (const std::size_t jump : endJumps) {
         ir_.patchJump(jump);
     }
+    return result;
 }
 
 void IRCompiler::compilePattern(
@@ -1318,6 +1320,10 @@ IRRegister IRCompiler::compileExpression(const Expr& expression)
 
     if (const auto* function = dynamic_cast<const FunctionExpr*>(&expression)) {
         return emitFunctionExpr(*function);
+    }
+
+    if (const auto* match = dynamic_cast<const MatchExpr*>(&expression)) {
+        return compileMatch(*match);
     }
 
     if (const auto* call = dynamic_cast<const CallExpr*>(&expression)) {

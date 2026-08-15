@@ -258,7 +258,10 @@ void test_match_pattern_binding_resolution()
     const Program program = loadProgram(source);
     const ModuleStmt& module = entryModule(program);
     const auto* value = dynamic_cast<const LetStmt*>(module.statements[1].get());
-    const auto* match = dynamic_cast<const MatchStmt*>(module.statements[2].get());
+    const auto* matchStatement = dynamic_cast<const ExpressionStmt*>(module.statements[2].get());
+    const auto* match = matchStatement
+        ? dynamic_cast<const MatchExpr*>(matchStatement->expression.get())
+        : nullptr;
     const auto* trailingPrint = dynamic_cast<const PrintStmt*>(module.statements[3].get());
     assert(value && match && trailingPrint && match->arms.size() == 2);
 
@@ -306,7 +309,10 @@ void test_or_pattern_shared_binding_resolution()
         "}\n";
     const Program program = loadProgram(source);
     const ModuleStmt& module = entryModule(program);
-    const auto* match = dynamic_cast<const MatchStmt*>(module.statements[2].get());
+    const auto* matchStatement = dynamic_cast<const ExpressionStmt*>(module.statements[2].get());
+    const auto* match = matchStatement
+        ? dynamic_cast<const MatchExpr*>(matchStatement->expression.get())
+        : nullptr;
     assert(match && match->arms.size() == 1);
     const auto* orPattern = dynamic_cast<const OrPattern*>(match->arms[0].pattern.get());
     const auto* armBlock = dynamic_cast<const BlockStmt*>(match->arms[0].body.get());

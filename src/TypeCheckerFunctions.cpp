@@ -51,21 +51,23 @@ bool TypeChecker::statementMayFallThrough(const Stmt& statement) const
     if (const auto* block = dynamic_cast<const BlockStmt*>(&last)) {
         return bodyMayFallThrough(block->statements);
     }
-    if (const auto* match = dynamic_cast<const MatchStmt*>(&last)) {
-        if (match->arms.empty()) {
-            return true;
-        }
-        for (const MatchArm& arm : match->arms) {
-            const auto* armBlock = dynamic_cast<const BlockStmt*>(arm.body.get());
-            if (!armBlock || bodyMayFallThrough(armBlock->statements)) {
+    if (const auto* expression = dynamic_cast<const ExpressionStmt*>(&last)) {
+        if (const auto* match = dynamic_cast<const MatchExpr*>(expression->expression.get())) {
+            if (match->arms.empty()) {
                 return true;
             }
+            for (const MatchArm& arm : match->arms) {
+                const auto* armBlock = dynamic_cast<const BlockStmt*>(arm.body.get());
+                if (!armBlock || bodyMayFallThrough(armBlock->statements)) {
+                    return true;
+                }
+            }
+            // checkMatch has already enforced exhaustive coverage before function
+            // return analysis reaches this helper. Once every arm body returns,
+            // guards only affect which arm runs, not whether the match can fall
+            // through to the following statement.
+            return false;
         }
-        // checkMatch has already enforced exhaustive coverage before function
-        // return analysis reaches this helper. Once every arm body returns,
-        // guards only affect which arm runs, not whether the match can fall
-        // through to the following statement.
-        return false;
     }
     return true;
 }

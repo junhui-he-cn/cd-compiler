@@ -317,7 +317,7 @@ private:
     CheckedExpression checkVariantConstructor(
         const MemberCallExpr& expression,
         const TypeInfo* expectedType);
-    void checkMatch(const MatchStmt& statement);
+    TypeInfo checkMatch(const MatchExpr& statement);
     bool checkPattern(
         const Pattern& pattern,
         const TypeInfo& expectedType,

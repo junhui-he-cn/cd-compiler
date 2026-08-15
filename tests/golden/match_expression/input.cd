@@ -1,0 +1,47 @@
+enum Result {
+  Ok(number),
+  Err(string),
+}
+
+fun describe(result: Result): string {
+  return match result {
+    Result.Ok(value) => "ok:" + str(value),
+    Result.Err(message) => "err:" + message,
+  };
+}
+
+fun score(result: Result): number {
+  let doubled = match result {
+    Result.Ok(value) => value * 2,
+    Result.Err(_) => 0,
+  };
+  return doubled;
+}
+
+fun nested(result: Result): number {
+  return match result {
+    Result.Ok(value) => match result {
+      Result.Ok(inner) => inner + value,
+      Result.Err(_) => value,
+    },
+    Result.Err(_) => -1,
+  };
+}
+
+fun guarded(value: number): string {
+  return match value {
+    n if n > 0 => "positive",
+    n if n < 0 => "negative",
+    _ => "zero",
+  };
+}
+
+print describe(Result.Ok(7));
+print describe(Result.Err("bad"));
+print score(Result.Ok(4));
+print score(Result.Err("x"));
+print nested(Result.Ok(3));
+print nested(Result.Err("x"));
+print guarded(5);
+print guarded(-2);
+print guarded(0);

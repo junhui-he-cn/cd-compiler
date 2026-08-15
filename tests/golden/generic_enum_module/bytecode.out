@@ -27,35 +27,36 @@ function $0 make/0 registers=3
 0007  block
 0008  return_nil
 
-function $1 render/1 registers=13
+function $1 render/1 registers=14
 0000  block
 0001  b0 = load_local l0
-0002  b1 = is_variant b0, t0, v0
-0003  br_if b1, b1, b3
-0004  block
-0005  b2 = variant_get b0, t0, v0, 0
-0006  bind_local l1, b2
-0007  b3 = constant #4 "ok:"
-0008  b4 = load_local l1
-0009  b5 = call_native i1 [b4]
-0010  b6 = concat_str b3, b5
-0011  return b6
-0012  block
-0013  br b6
-0014  block
-0015  b7 = is_variant b0, t0, v1
-0016  br_if b7, b4, b6
-0017  block
-0018  b8 = variant_get b0, t0, v1, 0
-0019  bind_local l2, b8
-0020  b9 = constant #5 "err:"
-0021  b10 = load_local l2
-0022  b11 = concat_str b9, b10
-0023  return b11
-0024  block
-0025  br b6
-0026  block
-0027  b12 = constant #6 nil
-0028  return b12
-0029  block
-0030  return_nil
+0002  b1 = constant #4 nil
+0003  b2 = is_variant b0, t0, v0
+0004  br_if b2, b1, b3
+0005  block
+0006  b3 = variant_get b0, t0, v0, 0
+0007  bind_local l1, b3
+0008  b4 = constant #5 "ok:"
+0009  b5 = load_local l1
+0010  b6 = call_native i1 [b5]
+0011  b7 = concat_str b4, b6
+0012  return b7
+0013  block
+0014  br b6
+0015  block
+0016  b8 = is_variant b0, t0, v1
+0017  br_if b8, b4, b6
+0018  block
+0019  b9 = variant_get b0, t0, v1, 0
+0020  bind_local l2, b9
+0021  b10 = constant #6 "err:"
+0022  b11 = load_local l2
+0023  b12 = concat_str b10, b11
+0024  return b12
+0025  block
+0026  br b6
+0027  block
+0028  b13 = constant #7 nil
+0029  return b13
+0030  block
+0031  return_nil

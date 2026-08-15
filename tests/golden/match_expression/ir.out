@@ -1,0 +1,164 @@
+IR
+0000  v0 = constant #0 nil
+0001  store_var @0 describe#0, v0
+0002  v1 = make_function $0 describe/1
+0003  assign_var @15 describe#0, v1
+0004  v2 = constant #5 nil
+0005  store_var @16 score#4, v2
+0006  v3 = make_function $1 score/1
+0007  assign_var @30 score#4, v3
+0008  v4 = constant #10 nil
+0009  store_var @31 nested#8, v4
+0010  v5 = make_function $2 nested/1
+0011  assign_var @55 nested#8, v5
+0012  v6 = constant #15 nil
+0013  store_var @56 guarded#12, v6
+0014  v7 = make_function $3 guarded/1
+0015  assign_var @62 guarded#12, v7
+0016  v8 = constant #23 7
+0017  v9 = variant Result.Ok (v8)
+0018  v10 = call_direct $0 describe/1(v9)
+0019  print v10
+0020  v11 = constant #24 "bad"
+0021  v12 = variant Result.Err (v11)
+0022  v13 = call_direct $0 describe/1(v12)
+0023  print v13
+0024  v14 = constant #25 4
+0025  v15 = variant Result.Ok (v14)
+0026  v16 = call_direct $1 score/1(v15)
+0027  print v16
+0028  v17 = constant #26 "x"
+0029  v18 = variant Result.Err (v17)
+0030  v19 = call_direct $1 score/1(v18)
+0031  print v19
+0032  v20 = constant #27 3
+0033  v21 = variant Result.Ok (v20)
+0034  v22 = call_direct $2 nested/1(v21)
+0035  print v22
+0036  v23 = constant #28 "x"
+0037  v24 = variant Result.Err (v23)
+0038  v25 = call_direct $2 nested/1(v24)
+0039  print v25
+0040  v26 = constant #29 5
+0041  v27 = call_direct $3 guarded/1(v26)
+0042  print v27
+0043  v28 = constant #30 2
+0044  v29 = neg_num v28
+0045  v30 = call_direct $3 guarded/1(v29)
+0046  print v30
+0047  v31 = constant #31 0
+0048  v32 = call_direct $3 guarded/1(v31)
+0049  print v32
+
+function $0 describe(result#1)
+0000  v0 = load_var @1 result#1
+0001  v1 = constant #1 nil
+0002  v2 = variant_tag v0 Result.Ok
+0003  jump_if_false v2, 0012
+0004  v3 = variant_field v0[0]
+0005  store_var @6 value#2, v3
+0006  v4 = constant #2 "ok:"
+0007  v5 = load_var @7 value#2
+0008  v6 = native_call @8 str(v5)
+0009  v7 = concat_str v4, v6
+0010  v1 = copy v7
+0011  jump 0021
+0012  v8 = variant_tag v0 Result.Err
+0013  jump_if_false v8, 0021
+0014  v9 = variant_field v0[0]
+0015  store_var @13 message#3, v9
+0016  v10 = constant #3 "err:"
+0017  v11 = load_var @14 message#3
+0018  v12 = concat_str v10, v11
+0019  v1 = copy v12
+0020  jump 0021
+0021  return v1
+0022  v13 = constant #4 nil
+0023  return v13
+
+function $1 score(result#5)
+0000  v0 = load_var @17 result#5
+0001  v1 = constant #6 nil
+0002  v2 = variant_tag v0 Result.Ok
+0003  jump_if_false v2, 0011
+0004  v3 = variant_field v0[0]
+0005  store_var @22 value#6, v3
+0006  v4 = load_var @23 value#6
+0007  v5 = constant #7 2
+0008  v6 = mul_num v4, v5
+0009  v1 = copy v6
+0010  jump 0017
+0011  v7 = variant_tag v0 Result.Err
+0012  jump_if_false v7, 0017
+0013  v8 = variant_field v0[0]
+0014  v9 = constant #8 0
+0015  v1 = copy v9
+0016  jump 0017
+0017  store_var @28 doubled#7, v1
+0018  v10 = load_var @29 doubled#7
+0019  return v10
+0020  v11 = constant #9 nil
+0021  return v11
+
+function $2 nested(result#9)
+0000  v0 = load_var @32 result#9
+0001  v1 = constant #11 nil
+0002  v2 = variant_tag v0 Result.Ok
+0003  jump_if_false v2, 0025
+0004  v3 = variant_field v0[0]
+0005  store_var @37 value#10, v3
+0006  v4 = load_var @38 result#9
+0007  v5 = constant #12 nil
+0008  v6 = variant_tag v4 Result.Ok
+0009  jump_if_false v6, 0017
+0010  v7 = variant_field v4[0]
+0011  store_var @43 inner#11, v7
+0012  v8 = load_var @44 inner#11
+0013  v9 = load_var @45 value#10
+0014  v10 = add_num v8, v9
+0015  v5 = copy v10
+0016  jump 0023
+0017  v11 = variant_tag v4 Result.Err
+0018  jump_if_false v11, 0023
+0019  v12 = variant_field v4[0]
+0020  v13 = load_var @50 value#10
+0021  v5 = copy v13
+0022  jump 0023
+0023  v1 = copy v5
+0024  jump 0032
+0025  v14 = variant_tag v0 Result.Err
+0026  jump_if_false v14, 0032
+0027  v15 = variant_field v0[0]
+0028  v16 = constant #13 1
+0029  v17 = neg_num v16
+0030  v1 = copy v17
+0031  jump 0032
+0032  return v1
+0033  v18 = constant #14 nil
+0034  return v18
+
+function $3 guarded(value#13)
+0000  v0 = load_var @57 value#13
+0001  v1 = constant #16 nil
+0002  store_var @58 n#14, v0
+0003  v2 = load_var @59 n#14
+0004  v3 = constant #17 0
+0005  v4 = gt_num v2, v3
+0006  jump_if_false v4, 0010
+0007  v5 = constant #18 "positive"
+0008  v1 = copy v5
+0009  jump 0021
+0010  store_var @60 n#15, v0
+0011  v6 = load_var @61 n#15
+0012  v7 = constant #19 0
+0013  v8 = lt_num v6, v7
+0014  jump_if_false v8, 0018
+0015  v9 = constant #20 "negative"
+0016  v1 = copy v9
+0017  jump 0021
+0018  v10 = constant #21 "zero"
+0019  v1 = copy v10
+0020  jump 0021
+0021  return v1
+0022  v11 = constant #22 nil
+0023  return v11

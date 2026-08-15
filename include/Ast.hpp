@@ -412,11 +412,12 @@ struct MatchArm {
     PatternPtr pattern;
     ExprPtr guard;
     StmtPtr body;
+    ExprPtr expression;
 };
 
-struct MatchStmt final : Stmt {
-    MatchStmt(ExprPtr value, std::vector<MatchArm> arms);
-    void print(std::ostream& out, int indent) const override;
+struct MatchExpr final : Expr {
+    MatchExpr(ExprPtr value, std::vector<MatchArm> arms);
+    void print(std::ostream& out) const override;
 
     ExprPtr value;
     std::vector<MatchArm> arms;

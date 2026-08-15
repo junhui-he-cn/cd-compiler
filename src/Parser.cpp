@@ -769,6 +769,16 @@ StmtPtr Parser::ifStatement()
 StmtPtr Parser::matchStatement()
 {
     Token keyword = previous();
+    ExprPtr expression = parseMatchExpression();
+    match(TokenType::Semicolon);
+    return withSpan(
+        std::make_unique<ExpressionStmt>(std::move(expression)),
+        keyword);
+}
+
+ExprPtr Parser::parseMatchExpression()
+{
+    Token keyword = previous();
     ExprPtr value = conditionExpression();
     consume(TokenType::LeftBrace, "expected `{` after match value");
 
@@ -780,14 +790,30 @@ StmtPtr Parser::matchStatement()
             guard = conditionExpression();
         }
         consume(TokenType::FatArrow, "expected `=>` after match pattern");
-        consume(TokenType::LeftBrace, "expected `{` after match arm");
-        StmtPtr body = blockStatement();
-        arms.push_back(MatchArm{std::move(armPattern), std::move(guard), std::move(body)});
+        StmtPtr body;
+        ExprPtr armExpression;
+        if (match(TokenType::LeftBrace)) {
+            body = blockStatement();
+        } else {
+            armExpression = expression();
+        }
+        arms.push_back(MatchArm{
+            std::move(armPattern),
+            std::move(guard),
+            std::move(body),
+            std::move(armExpression)});
+        if (match(TokenType::Comma)) {
+            continue;
+        }
+        if (!arms.back().body && !check(TokenType::RightBrace)) {
+            throw ParseError(peek(), "expected `,` after match arm");
+        }
     }
     consume(TokenType::RightBrace, "expected `}` after match arms");
 
-    const std::optional<SourceSpan> span = spanForToken(keyword);
-    return withSpan(std::make_unique<MatchStmt>(std::move(value), std::move(arms)), span);
+    return withSpan(
+        std::make_unique<MatchExpr>(std::move(value), std::move(arms)),
+        keyword);
 }
 
 StmtPtr Parser::forInitializer()
@@ -1434,6 +1460,9 @@ ExprPtr Parser::primary()
 {
     if (match(TokenType::Fun)) {
         return functionExpression();
+    }
+    if (match(TokenType::Match)) {
+        return parseMatchExpression();
     }
     if (match(TokenType::False)) {
         return withSpan(std::make_unique<LiteralExpr>("false"), previous());

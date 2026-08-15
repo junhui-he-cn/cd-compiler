@@ -62,6 +62,7 @@ private:
     StmtPtr statement();
     StmtPtr ifStatement();
     StmtPtr matchStatement();
+    ExprPtr parseMatchExpression();
     StmtPtr forStatement();
     StmtPtr forInStatement(Token keyword, Token variable);
     StmtPtr forInitializer();

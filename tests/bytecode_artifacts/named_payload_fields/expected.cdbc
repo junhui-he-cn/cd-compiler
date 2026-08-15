@@ -3,8 +3,9 @@ cdbc 0.2
 constants:
   c0 = number 2
   c1 = number 4
-  c2 = number 10
-  c3 = number 0
+  c2 = nil
+  c3 = number 10
+  c4 = number 0
 
 names:
   n0 = "Pair"
@@ -35,33 +36,34 @@ types:
 native_imports:
   i0 = "print" abi=1
 
-main registers=15:
+main registers=16:
 block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = make_variant t0, v0 [r0, r1]
   init_global g0, r2
   r3 = load_global g0
-  r4 = is_variant r3, t0, v0
-  br_if r4, b1, b2
+  r4 = constant c2
+  r5 = is_variant r3, t0, v0
+  br_if r5, b1, b2
 block b1:
-  r5 = variant_get r3, t0, v0, 0
-  r6 = variant_get r3, t0, v0, 1
-  init_global g1, r5
-  init_global g2, r6
-  r7 = load_global g2
-  r8 = constant c2
-  r9 = mul_num r7, r8
-  r10 = load_global g1
-  r11 = add_num r9, r10
-  r14 = call_native i0 [r11]
+  r6 = variant_get r3, t0, v0, 0
+  r7 = variant_get r3, t0, v0, 1
+  init_global g1, r6
+  init_global g2, r7
+  r8 = load_global g2
+  r9 = constant c3
+  r10 = mul_num r8, r9
+  r11 = load_global g1
+  r12 = add_num r10, r11
+  r15 = call_native i0 [r12]
   return_nil
 block b2:
-  r12 = is_variant r3, t0, v1
-  br_if r12, b3, b4
+  r13 = is_variant r3, t0, v1
+  br_if r13, b3, b4
 block b3:
-  r13 = constant c3
-  r14 = call_native i0 [r13]
+  r14 = constant c4
+  r15 = call_native i0 [r14]
   return_nil
 block b4:
   return_nil
@@ -83,22 +85,23 @@ debug_locations:
   main 10 = s0:3:1
   main 11 = s0:3:1
   main 12 = s0:3:1
-  main 13 = s0:4:49
-  main 14 = s0:4:62
-  main 15 = s0:4:49
-  main 16 = s0:4:67
-  main 17 = s0:4:49
-  main 18 = s0:4:43
-  main 19 = s0:3:1
+  main 13 = s0:3:1
+  main 14 = s0:4:49
+  main 15 = s0:4:62
+  main 16 = s0:4:49
+  main 17 = s0:4:67
+  main 18 = s0:4:49
+  main 19 = s0:4:43
   main 20 = s0:3:1
   main 21 = s0:3:1
   main 22 = s0:3:1
-  main 23 = s0:5:25
+  main 23 = s0:3:1
   main 24 = s0:5:25
-  main 25 = s0:5:19
-  main 26 = s0:3:1
+  main 25 = s0:5:25
+  main 26 = s0:5:19
   main 27 = s0:3:1
   main 28 = s0:3:1
+  main 29 = s0:3:1
 
 debug_ranges:
   main 0 = s0:67:68
@@ -107,26 +110,27 @@ debug_ranges:
   main 3 = s0:55:72
   main 4 = s0:48:72
   main 5 = s0:80:84
-  main 6 = s0:80:191
-  main 7 = s0:80:191
-  main 8 = s0:80:191
-  main 9 = s0:80:191
-  main 10 = s0:80:191
-  main 11 = s0:80:191
-  main 12 = s0:80:191
-  main 13 = s0:135:145
-  main 14 = s0:148:150
-  main 15 = s0:135:150
-  main 16 = s0:153:162
-  main 17 = s0:135:162
+  main 6 = s0:74:191
+  main 7 = s0:74:191
+  main 8 = s0:74:191
+  main 9 = s0:74:191
+  main 10 = s0:74:191
+  main 11 = s0:74:191
+  main 12 = s0:74:191
+  main 13 = s0:74:191
+  main 14 = s0:135:145
+  main 15 = s0:148:150
+  main 16 = s0:135:150
+  main 17 = s0:153:162
   main 18 = s0:135:162
-  main 19 = s0:80:191
-  main 20 = s0:80:191
-  main 21 = s0:80:191
-  main 22 = s0:80:191
-  main 23 = s0:190:191
+  main 19 = s0:135:162
+  main 20 = s0:74:191
+  main 21 = s0:74:191
+  main 22 = s0:74:191
+  main 23 = s0:74:191
   main 24 = s0:190:191
   main 25 = s0:190:191
-  main 26 = s0:80:191
-  main 27 = s0:80:191
-  main 28 = s0:80:191
+  main 26 = s0:190:191
+  main 27 = s0:74:191
+  main 28 = s0:74:191
+  main 29 = s0:74:191

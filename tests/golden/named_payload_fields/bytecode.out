@@ -6,155 +6,158 @@ main registers=23
 0002  init_global g0, b0
 0003  b1 = make_function $0 pairScore/1
 0004  set_global g0, b1
-0005  b2 = constant #4 nil
+0005  b2 = constant #5 nil
 0006  init_global g1, b2
 0007  b3 = make_function $1 describe/1
 0008  set_global g1, b3
-0009  b4 = constant #9 nil
+0009  b4 = constant #11 nil
 0010  init_global g2, b4
 0011  b5 = make_function $2 unwrap/1
 0012  set_global g2, b5
-0013  b6 = constant #12 2
-0014  b7 = constant #13 4
+0013  b6 = constant #15 2
+0014  b7 = constant #16 4
 0015  b8 = make_variant t0, v0 (b6, b7)
 0016  b9 = call_direct $0 [b8]
 0017  b22 = call_native i0 [b9]
-0018  b10 = constant #14 7
+0018  b10 = constant #17 7
 0019  b11 = make_variant t1, v0 (b10)
 0020  b12 = call_direct $1 [b11]
 0021  b22 = call_native i0 [b12]
-0022  b13 = constant #15 "bad"
+0022  b13 = constant #18 "bad"
 0023  b14 = make_variant t1, v1 (b13)
 0024  b15 = call_direct $1 [b14]
 0025  b22 = call_native i0 [b15]
 0026  b16 = make_variant t1, v2 ()
 0027  b17 = call_direct $1 [b16]
 0028  b22 = call_native i0 [b17]
-0029  b18 = constant #16 9
+0029  b18 = constant #19 9
 0030  b19 = make_variant t1, v0 (b18)
 0031  b20 = make_variant t2, v0 (b19)
 0032  b21 = call_direct $2 [b20]
 0033  b22 = call_native i0 [b21]
 0034  return_nil
 
-function $0 pairScore/1 registers=12
+function $0 pairScore/1 registers=13
 0000  block
 0001  b0 = load_local l0
-0002  b1 = is_variant b0, t0, v0
-0003  br_if b1, b1, b3
-0004  block
-0005  b2 = variant_get b0, t0, v0, 0
-0006  b3 = variant_get b0, t0, v0, 1
-0007  bind_local l1, b2
-0008  bind_local l2, b3
-0009  b4 = load_local l2
-0010  b5 = constant #1 10
-0011  b6 = mul_num b4, b5
-0012  b7 = load_local l1
-0013  b8 = add_num b6, b7
-0014  return b8
-0015  block
-0016  br b6
-0017  block
-0018  b9 = is_variant b0, t0, v1
-0019  br_if b9, b4, b6
-0020  block
-0021  b10 = constant #2 0
-0022  return b10
-0023  block
-0024  br b6
-0025  block
-0026  b11 = constant #3 nil
-0027  return b11
-0028  block
-0029  return_nil
-
-function $1 describe/1 registers=15
-0000  block
-0001  b0 = load_local l0
-0002  b1 = is_variant b0, t1, v0
-0003  br_if b1, b1, b3
-0004  block
-0005  b2 = variant_get b0, t1, v0, 0
-0006  bind_local l1, b2
-0007  b3 = constant #5 "ok:"
-0008  b4 = load_local l1
-0009  b5 = call_native i1 [b4]
-0010  b6 = concat_str b3, b5
-0011  return b6
-0012  block
-0013  br b9
-0014  block
-0015  b7 = is_variant b0, t1, v1
-0016  br_if b7, b4, b6
-0017  block
-0018  b8 = variant_get b0, t1, v1, 0
-0019  bind_local l2, b8
-0020  b9 = constant #6 "err:"
-0021  b10 = load_local l2
-0022  b11 = concat_str b9, b10
+0002  b1 = constant #1 nil
+0003  b2 = is_variant b0, t0, v0
+0004  br_if b2, b1, b3
+0005  block
+0006  b3 = variant_get b0, t0, v0, 0
+0007  b4 = variant_get b0, t0, v0, 1
+0008  bind_local l1, b3
+0009  bind_local l2, b4
+0010  b5 = load_local l2
+0011  b6 = constant #2 10
+0012  b7 = mul_num b5, b6
+0013  b8 = load_local l1
+0014  b9 = add_num b7, b8
+0015  return b9
+0016  block
+0017  br b6
+0018  block
+0019  b10 = is_variant b0, t0, v1
+0020  br_if b10, b4, b6
+0021  block
+0022  b11 = constant #3 0
 0023  return b11
 0024  block
-0025  br b9
+0025  br b6
 0026  block
-0027  b12 = is_variant b0, t1, v2
-0028  br_if b12, b7, b9
+0027  b12 = constant #4 nil
+0028  return b12
 0029  block
-0030  b13 = constant #7 "empty"
-0031  return b13
-0032  block
-0033  br b9
-0034  block
-0035  b14 = constant #8 nil
-0036  return b14
-0037  block
-0038  return_nil
+0030  return_nil
 
-function $2 unwrap/1 registers=17
+function $1 describe/1 registers=16
 0000  block
 0001  b0 = load_local l0
-0002  b1 = is_variant b0, t2, v0
-0003  br_if b1, b1, b4
-0004  block
-0005  b2 = variant_get b0, t2, v0, 0
-0006  b3 = is_variant b2, t1, v0
-0007  br_if b3, b2, b4
-0008  block
-0009  b4 = variant_get b2, t1, v0, 0
-0010  bind_local l1, b4
-0011  b5 = load_local l1
-0012  b6 = call_native i1 [b5]
-0013  return b6
-0014  block
-0015  br b12
-0016  block
-0017  b7 = is_variant b0, t2, v0
-0018  br_if b7, b5, b8
-0019  block
-0020  b8 = variant_get b0, t2, v0, 0
-0021  b9 = is_variant b8, t1, v1
-0022  br_if b9, b6, b8
-0023  block
-0024  b10 = variant_get b8, t1, v1, 0
-0025  bind_local l2, b10
-0026  b11 = load_local l2
-0027  return b11
-0028  block
-0029  br b12
+0002  b1 = constant #6 nil
+0003  b2 = is_variant b0, t1, v0
+0004  br_if b2, b1, b3
+0005  block
+0006  b3 = variant_get b0, t1, v0, 0
+0007  bind_local l1, b3
+0008  b4 = constant #7 "ok:"
+0009  b5 = load_local l1
+0010  b6 = call_native i1 [b5]
+0011  b7 = concat_str b4, b6
+0012  return b7
+0013  block
+0014  br b9
+0015  block
+0016  b8 = is_variant b0, t1, v1
+0017  br_if b8, b4, b6
+0018  block
+0019  b9 = variant_get b0, t1, v1, 0
+0020  bind_local l2, b9
+0021  b10 = constant #8 "err:"
+0022  b11 = load_local l2
+0023  b12 = concat_str b10, b11
+0024  return b12
+0025  block
+0026  br b9
+0027  block
+0028  b13 = is_variant b0, t1, v2
+0029  br_if b13, b7, b9
 0030  block
-0031  b12 = is_variant b0, t2, v0
-0032  br_if b12, b9, b12
+0031  b14 = constant #9 "empty"
+0032  return b14
 0033  block
-0034  b13 = variant_get b0, t2, v0, 0
-0035  b14 = is_variant b13, t1, v2
-0036  br_if b14, b10, b12
-0037  block
-0038  b15 = constant #10 "empty"
-0039  return b15
-0040  block
-0041  br b12
-0042  block
-0043  b16 = constant #11 nil
-0044  return b16
-0045  block
-0046  return_nil
+0034  br b9
+0035  block
+0036  b15 = constant #10 nil
+0037  return b15
+0038  block
+0039  return_nil
+
+function $2 unwrap/1 registers=18
+0000  block
+0001  b0 = load_local l0
+0002  b1 = constant #12 nil
+0003  b2 = is_variant b0, t2, v0
+0004  br_if b2, b1, b4
+0005  block
+0006  b3 = variant_get b0, t2, v0, 0
+0007  b4 = is_variant b3, t1, v0
+0008  br_if b4, b2, b4
+0009  block
+0010  b5 = variant_get b3, t1, v0, 0
+0011  bind_local l1, b5
+0012  b6 = load_local l1
+0013  b7 = call_native i1 [b6]
+0014  return b7
+0015  block
+0016  br b12
+0017  block
+0018  b8 = is_variant b0, t2, v0
+0019  br_if b8, b5, b8
+0020  block
+0021  b9 = variant_get b0, t2, v0, 0
+0022  b10 = is_variant b9, t1, v1
+0023  br_if b10, b6, b8
+0024  block
+0025  b11 = variant_get b9, t1, v1, 0
+0026  bind_local l2, b11
+0027  b12 = load_local l2
+0028  return b12
+0029  block
+0030  br b12
+0031  block
+0032  b13 = is_variant b0, t2, v0
+0033  br_if b13, b9, b12
+0034  block
+0035  b14 = variant_get b0, t2, v0, 0
+0036  b15 = is_variant b14, t1, v2
+0037  br_if b15, b10, b12
+0038  block
+0039  b16 = constant #13 "empty"
+0040  return b16
+0041  block
+0042  br b12
+0043  block
+0044  b17 = constant #14 nil
+0045  return b17
+0046  block
+0047  return_nil
