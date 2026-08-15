@@ -286,7 +286,7 @@ fn cycle_storage_is_observed_after_roots_are_dropped_and_released_after_replacem
         .allocate_struct(None, Some("Node".to_string()), vec![("next".to_string(), Value::Nil)])
         .expect("first mutual struct identity should be available");
     let second = heap
-        .allocate_struct(None, 
+        .allocate_struct(None,
             Some("Node".to_string()),
             vec![("next".to_string(), first.clone())],
         )

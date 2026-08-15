@@ -327,7 +327,7 @@ use crate::runtime::{Heap, VariantValue};
             .allocate_struct(None, Some("Node".to_string()), vec![("value".to_string(), Value::number(1.0))])
             .expect("child identity should be available");
         let parent = heap
-            .allocate_struct(None, 
+            .allocate_struct(None,
                 Some("Pair".to_string()),
                 vec![
                     ("left".to_string(), child.clone()),
