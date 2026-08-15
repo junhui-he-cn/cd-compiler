@@ -132,7 +132,7 @@ function f2 name="head" arity=1 registers=4:
 block b0:
   r0 = load_local l0
   r1 = constant c5
-  r2 = index r0, r1
+  r2 = array_get r0, r1
   return r2
 block b1:
   r3 = constant c6

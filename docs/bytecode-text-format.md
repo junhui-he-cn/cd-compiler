@@ -335,11 +335,17 @@ init_global
 set_global
 call
 call_native
-index
-assign_index
+array_get
+array_set
+map_get
+map_set
+range_get
 field
 assign_field
-len
+len_array
+len_map
+len_range
+len_str
 assert_array
 assert_number
 neg_num
@@ -369,8 +375,9 @@ The legacy `cdbc 0.1` read path additionally accepts `load_var/store_var/
 assign_var`, `struct`, `variant`, `variant_tag`, `variant_field`,
 `native_call nName`, `print rV`, the dynamically typed `negate`, `add`,
 `subtract`, `multiply`, `divide`, `greater`, `greater_equal`, `less`,
-`less_equal`, and the linear `jump`, `jump_if_false`, and `jump_if_true`
-instructions. These legacy forms are never emitted.
+`less_equal`, the dynamically typed `index`, `assign_index`, and `len`, and
+the linear `jump`, `jump_if_false`, and `jump_if_true` instructions. These
+legacy forms are never emitted.
 
 Map construction preserves source order and uses explicit key/value register
 pairs:
@@ -457,6 +464,28 @@ for generic `T: Ord` bodies whose parameter type is not statically known.
 Ordered comparisons no longer resolve struct capability witnesses by global
 name; struct values are not order-comparable and the compiler rejects such
 comparisons before bytecode emission.
+
+## Typed collection access
+
+When the compiler knows the indexed collection's type it emits collection-
+specific access instructions instead of the dynamically typed `index` /
+`assign_index` / `len`:
+
+```text
+rD = array_get rC, rI      rD = array_set rC, rI, rV
+rD = map_get rC, rI        rD = map_set rC, rI, rV
+rD = range_get rC, rI
+
+rD = len_array rV          rD = len_map rV
+rD = len_range rV          rD = len_str rV
+```
+
+The typed instructions keep the established runtime diagnostics and budgets:
+array/range indexing validates numeric integer bounds, map access validates
+keys and charges runtime elements on insertion, `len_str` counts Unicode
+scalars, and `range_set` does not exist. The generic `index`, `assign_index`,
+and `len` remain on the legacy read path and for collection types that are
+not statically known.
 
 The `range` native is also supported with one to three numeric arguments. Its
 result is consumed by the existing `len`, `index`, and `assert_array`

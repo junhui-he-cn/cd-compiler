@@ -20,7 +20,7 @@ IR
 0018  print v11
 0019  v12 = load_var @12 values#3
 0020  v13 = constant #9 0
-0021  v14 = index v12, v13
+0021  v14 = array_get v12, v13
 0022  print v14
 0023  v15 = load_var @13 maybeValues#4
 0024  print v15

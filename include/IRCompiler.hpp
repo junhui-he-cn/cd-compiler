@@ -142,6 +142,7 @@ private:
         const TypeInfo* operandType = nullptr,
         const TypeInfo* resultType = nullptr);
     const TypedExpressionRecord* typedExpressionRecord(const Expr& expression) const;
+    IRRegister emitLenTyped(IRRegister value, const Expr& operand);
     IRRegister emitLogical(const LogicalExpr& expression);
 
     struct LoopContext {

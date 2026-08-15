@@ -303,6 +303,33 @@ pub enum Instruction {
         index: usize,
         value: usize,
     },
+    ArrayGet {
+        dest: usize,
+        collection: usize,
+        index: usize,
+    },
+    ArraySet {
+        dest: usize,
+        collection: usize,
+        index: usize,
+        value: usize,
+    },
+    MapGet {
+        dest: usize,
+        collection: usize,
+        index: usize,
+    },
+    MapSet {
+        dest: usize,
+        collection: usize,
+        index: usize,
+        value: usize,
+    },
+    RangeGet {
+        dest: usize,
+        collection: usize,
+        index: usize,
+    },
     Field {
         dest: usize,
         object: usize,
@@ -315,6 +342,22 @@ pub enum Instruction {
         value: usize,
     },
     Len {
+        dest: usize,
+        value: usize,
+    },
+    LenArray {
+        dest: usize,
+        value: usize,
+    },
+    LenMap {
+        dest: usize,
+        value: usize,
+    },
+    LenRange {
+        dest: usize,
+        value: usize,
+    },
+    LenStr {
         dest: usize,
         value: usize,
     },

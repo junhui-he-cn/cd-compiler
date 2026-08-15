@@ -1398,6 +1398,96 @@ mod tests {
     }
 
     #[test]
+    fn typed_collection_opcodes_dispatch_with_legacy_runtime_errors() {
+        let program = Program {
+            constants: vec![
+                Constant::Number("1".to_string()),
+                Constant::Number("2".to_string()),
+                Constant::String("hello".to_string()),
+            ],
+            globals: Vec::new(),
+            types: Vec::new(),
+            native_imports: vec![NativeImport {
+                name: "print".to_string(),
+                abi: 1,
+            }],
+            names: Vec::new(),
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
+                registers: 13,
+                instructions: vec![
+                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Constant { dest: 1, constant: 1 },
+                    Instruction::Array {
+                        dest: 2,
+                        elements: vec![0, 1],
+                    },
+                    Instruction::ArrayGet {
+                        dest: 3,
+                        collection: 2,
+                        index: 0,
+                    },
+                    Instruction::ArraySet {
+                        dest: 4,
+                        collection: 2,
+                        index: 0,
+                        value: 1,
+                    },
+                    Instruction::LenArray {
+                        dest: 5,
+                        value: 2,
+                    },
+                    Instruction::Map {
+                        dest: 6,
+                        entries: vec![(0, 1)],
+                    },
+                    Instruction::MapGet {
+                        dest: 7,
+                        collection: 6,
+                        index: 0,
+                    },
+                    Instruction::MapSet {
+                        dest: 8,
+                        collection: 6,
+                        index: 1,
+                        value: 0,
+                    },
+                    Instruction::LenMap {
+                        dest: 9,
+                        value: 6,
+                    },
+                    Instruction::Constant { dest: 10, constant: 2 },
+                    Instruction::LenStr {
+                        dest: 11,
+                        value: 10,
+                    },
+                    Instruction::CallNative { dest: 12, native: NativeId(0), arguments: vec![3] },
+                    Instruction::CallNative { dest: 12, native: NativeId(0), arguments: vec![4] },
+                    Instruction::CallNative { dest: 12, native: NativeId(0), arguments: vec![5] },
+                    Instruction::CallNative { dest: 12, native: NativeId(0), arguments: vec![7] },
+                    Instruction::CallNative { dest: 12, native: NativeId(0), arguments: vec![8] },
+                    Instruction::CallNative { dest: 12, native: NativeId(0), arguments: vec![9] },
+                    Instruction::CallNative { dest: 12, native: NativeId(0), arguments: vec![11] },
+                    Instruction::ReturnNil,
+                ],
+                locations: vec![None; 20],
+            }],
+            entry: FuncId(0),
+            debug_sources: Vec::new(),
+        };
+
+        assert_eq!(
+            VM::new(&program).run().expect("typed collection ops should run"),
+            "2\n2\n2\n2\n1\n2\n5\n"
+        );
+    }
+
+    #[test]
     fn return_transfer_moves_value_out_of_the_dead_frame_register() {
         let program = empty_program();
         let vm = VM::new(&program);
@@ -9121,6 +9211,45 @@ impl<'a> VM<'a> {
                 let value = self.execute_index(collection, index)?;
                 self.write_register(frame, *dest, value)
             }
+            Instruction::ArrayGet {
+                dest,
+                collection,
+                index,
+            } => {
+                let collection = self.read_register_ref(frame, *collection)?;
+                let index = self.read_register_ref(frame, *index)?;
+                if !matches!(collection, Value::Array(_)) {
+                    return Err(RuntimeError::new("array_get expects array"));
+                }
+                let value = self.execute_index(collection, index)?;
+                self.write_register(frame, *dest, value)
+            }
+            Instruction::MapGet {
+                dest,
+                collection,
+                index,
+            } => {
+                let collection = self.read_register_ref(frame, *collection)?;
+                let index = self.read_register_ref(frame, *index)?;
+                if !matches!(collection, Value::Map(_)) {
+                    return Err(RuntimeError::new("map_get expects map"));
+                }
+                let value = self.execute_index(collection, index)?;
+                self.write_register(frame, *dest, value)
+            }
+            Instruction::RangeGet {
+                dest,
+                collection,
+                index,
+            } => {
+                let collection = self.read_register_ref(frame, *collection)?;
+                let index = self.read_register_ref(frame, *index)?;
+                if !matches!(collection, Value::Range(_)) {
+                    return Err(RuntimeError::new("range_get expects range"));
+                }
+                let value = self.execute_index(collection, index)?;
+                self.write_register(frame, *dest, value)
+            }
             Instruction::AssignIndex {
                 dest,
                 collection,
@@ -9130,6 +9259,36 @@ impl<'a> VM<'a> {
                 let collection = self.read_register(frame, *collection)?;
                 let index = self.read_register(frame, *index)?;
                 let value = self.read_register(frame, *value)?;
+                let assigned = self.execute_assign_index(collection, index, value)?;
+                self.write_register(frame, *dest, assigned)
+            }
+            Instruction::ArraySet {
+                dest,
+                collection,
+                index,
+                value,
+            } => {
+                let collection = self.read_register(frame, *collection)?;
+                let index = self.read_register(frame, *index)?;
+                let value = self.read_register(frame, *value)?;
+                if !matches!(collection, Value::Array(_)) {
+                    return Err(RuntimeError::new("array_set expects array"));
+                }
+                let assigned = self.execute_assign_index(collection, index, value)?;
+                self.write_register(frame, *dest, assigned)
+            }
+            Instruction::MapSet {
+                dest,
+                collection,
+                index,
+                value,
+            } => {
+                let collection = self.read_register(frame, *collection)?;
+                let index = self.read_register(frame, *index)?;
+                let value = self.read_register(frame, *value)?;
+                if !matches!(collection, Value::Map(_)) {
+                    return Err(RuntimeError::new("map_set expects map"));
+                }
                 let assigned = self.execute_assign_index(collection, index, value)?;
                 self.write_register(frame, *dest, assigned)
             }
@@ -9153,6 +9312,38 @@ impl<'a> VM<'a> {
             }
             Instruction::Len { dest, value } => {
                 let value = self.read_register_ref(frame, *value)?;
+                let length = self.execute_len(value)?;
+                self.write_register(frame, *dest, length)
+            }
+            Instruction::LenArray { dest, value } => {
+                let value = self.read_register_ref(frame, *value)?;
+                if !matches!(value, Value::Array(_)) {
+                    return Err(RuntimeError::new("len_array expects array"));
+                }
+                let length = self.execute_len(value)?;
+                self.write_register(frame, *dest, length)
+            }
+            Instruction::LenMap { dest, value } => {
+                let value = self.read_register_ref(frame, *value)?;
+                if !matches!(value, Value::Map(_)) {
+                    return Err(RuntimeError::new("len_map expects map"));
+                }
+                let length = self.execute_len(value)?;
+                self.write_register(frame, *dest, length)
+            }
+            Instruction::LenRange { dest, value } => {
+                let value = self.read_register_ref(frame, *value)?;
+                if !matches!(value, Value::Range(_)) {
+                    return Err(RuntimeError::new("len_range expects range"));
+                }
+                let length = self.execute_len(value)?;
+                self.write_register(frame, *dest, length)
+            }
+            Instruction::LenStr { dest, value } => {
+                let value = self.read_register_ref(frame, *value)?;
+                if !matches!(value, Value::String(_)) {
+                    return Err(RuntimeError::new("len_str expects string"));
+                }
                 let length = self.execute_len(value)?;
                 self.write_register(frame, *dest, length)
             }

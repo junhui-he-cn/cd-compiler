@@ -18,7 +18,7 @@ IR
 0016  v11 = load_var @9 prices#0
 0017  v12 = constant #4 "water"
 0018  v13 = constant #5 2
-0019  v14 = assign_index v11, v12, v13
+0019  v14 = map_set v11, v12, v13
 0020  v15 = load_var @10 prices#0
 0021  v16 = constant #6 "tea"
 0022  v17 = native_call @11 remove(v15, v16)

@@ -3,19 +3,19 @@ IR
 0001  v1 = array [v0]
 0002  store_var @0 xs#0, v1
 0003  v2 = load_var @1 xs#0
-0004  v3 = len v2
+0004  v3 = len_array v2
 0005  print v3
 0006  v4 = load_var @2 xs#0
 0007  v5 = constant #1 2
 0008  v6 = native_call @3 push(v4, v5)
 0009  v7 = load_var @4 xs#0
-0010  v8 = len v7
+0010  v8 = len_array v7
 0011  print v8
 0012  v9 = load_var @5 xs#0
 0013  v10 = native_call @6 pop(v9)
 0014  print v10
 0015  v11 = load_var @7 xs#0
-0016  v12 = len v11
+0016  v12 = len_array v11
 0017  print v12
 0018  v13 = load_var @8 xs#0
 0019  v14 = native_call @9 pop(v13)

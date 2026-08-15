@@ -32,6 +32,15 @@ enum class IROp {
     NativeCall,
     Index,
     AssignIndex,
+    ArrayGet,
+    ArraySet,
+    MapGet,
+    MapSet,
+    RangeGet,
+    LenArray,
+    LenMap,
+    LenRange,
+    LenStr,
     Field,
     AssignField,
     Len,
@@ -191,6 +200,11 @@ public:
     IRRegister emitNativeCall(std::string name, std::vector<IRRegister> arguments);
     IRRegister emitIndex(IRRegister collection, IRRegister index);
     IRRegister emitAssignIndex(IRRegister collection, IRRegister index, IRRegister value);
+    IRRegister emitArrayGet(IRRegister collection, IRRegister index);
+    IRRegister emitArraySet(IRRegister collection, IRRegister index, IRRegister value);
+    IRRegister emitMapGet(IRRegister collection, IRRegister index);
+    IRRegister emitMapSet(IRRegister collection, IRRegister index, IRRegister value);
+    IRRegister emitRangeGet(IRRegister collection, IRRegister index);
     IRRegister emitField(
         IRRegister object,
         std::string fieldName,
@@ -201,6 +215,10 @@ public:
         std::optional<std::string> structTypeName,
         IRRegister value);
     IRRegister emitLen(IRRegister value);
+    IRRegister emitLenArray(IRRegister value);
+    IRRegister emitLenMap(IRRegister value);
+    IRRegister emitLenRange(IRRegister value);
+    IRRegister emitLenStr(IRRegister value);
     IRRegister emitAssertArray(IRRegister value);
     IRRegister emitAssertNumber(IRRegister value, std::string message);
     void emitPrint(IRRegister value);

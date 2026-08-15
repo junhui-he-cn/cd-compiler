@@ -241,14 +241,47 @@ void writeInstruction(std::ostream& out, const BytecodeInstruction& instruction)
     case BytecodeOp::Index:
         out << reg(requireDest(instruction)) << " = index " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
         break;
+    case BytecodeOp::ArrayGet:
+        out << reg(requireDest(instruction)) << " = array_get " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::MapGet:
+        out << reg(requireDest(instruction)) << " = map_get " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
+    case BytecodeOp::RangeGet:
+        out << reg(requireDest(instruction)) << " = range_get " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction));
+        break;
     case BytecodeOp::AssignIndex:
         if (instruction.arguments.size() != 1) {
             throw std::runtime_error("assign_index expects one value operand");
         }
         out << reg(requireDest(instruction)) << " = assign_index " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction)) << ", " << reg(instruction.arguments.front());
         break;
+    case BytecodeOp::ArraySet:
+        if (instruction.arguments.size() != 1) {
+            throw std::runtime_error("array_set expects one value operand");
+        }
+        out << reg(requireDest(instruction)) << " = array_set " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction)) << ", " << reg(instruction.arguments.front());
+        break;
+    case BytecodeOp::MapSet:
+        if (instruction.arguments.size() != 1) {
+            throw std::runtime_error("map_set expects one value operand");
+        }
+        out << reg(requireDest(instruction)) << " = map_set " << reg(requireLeft(instruction)) << ", " << reg(requireRight(instruction)) << ", " << reg(instruction.arguments.front());
+        break;
     case BytecodeOp::Len:
         out << reg(requireDest(instruction)) << " = len " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::LenArray:
+        out << reg(requireDest(instruction)) << " = len_array " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::LenMap:
+        out << reg(requireDest(instruction)) << " = len_map " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::LenRange:
+        out << reg(requireDest(instruction)) << " = len_range " << reg(requireLeft(instruction));
+        break;
+    case BytecodeOp::LenStr:
+        out << reg(requireDest(instruction)) << " = len_str " << reg(requireLeft(instruction));
         break;
     case BytecodeOp::AssertArray:
         out << reg(requireDest(instruction)) << " = assert_array " << reg(requireLeft(instruction));

@@ -41,7 +41,7 @@ main registers=28
 0036  b24 = call_native i2 [b23]
 0037  b27 = call_native i0 [b24]
 0038  b25 = load_global g4
-0039  b26 = len b25
+0039  b26 = len_array b25
 0040  b27 = call_native i0 [b26]
 0041  return_nil
 

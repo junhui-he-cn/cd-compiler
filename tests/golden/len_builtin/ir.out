@@ -1,21 +1,21 @@
 IR
 0000  v0 = array []
-0001  v1 = len v0
+0001  v1 = len_array v0
 0002  print v1
 0003  v2 = constant #0 1
 0004  v3 = constant #1 2
 0005  v4 = constant #2 3
 0006  v5 = array [v2, v3, v4]
-0007  v6 = len v5
+0007  v6 = len_array v5
 0008  print v6
 0009  v7 = constant #3 "hello"
-0010  v8 = len v7
+0010  v8 = len_str v7
 0011  print v8
 0012  v9 = constant #4 true
 0013  v10 = constant #5 "x"
 0014  v11 = constant #6 nil
 0015  v12 = array [v9, v10, v11]
-0016  v13 = len v12
+0016  v13 = len_array v12
 0017  store_var @0 n#0, v13
 0018  v14 = load_var @1 n#0
 0019  v15 = constant #7 1

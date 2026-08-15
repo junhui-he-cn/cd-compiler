@@ -2,7 +2,7 @@ IR
 0000  v0 = constant #0 "hello"
 0001  store_var @0 text#0, v0
 0002  v1 = load_var @1 text#0
-0003  v2 = len v1
+0003  v2 = len_str v1
 0004  print v2
 0005  v3 = load_var @2 text#0
 0006  v4 = constant #1 1

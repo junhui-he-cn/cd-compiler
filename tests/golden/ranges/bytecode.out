@@ -11,11 +11,11 @@ main registers=57
 0005  b3 = load_global g0
 0006  b56 = call_native i1 [b3]
 0007  b4 = load_global g0
-0008  b5 = len b4
+0008  b5 = len_range b4
 0009  b56 = call_native i1 [b5]
 0010  b6 = load_global g0
 0011  b7 = constant #2 2
-0012  b8 = index b6, b7
+0012  b8 = range_get b6, b7
 0013  b56 = call_native i1 [b8]
 0014  b9 = load_global g0
 0015  b10 = constant #3 5
@@ -26,7 +26,7 @@ main registers=57
 0020  b14 = call_native i2 [b12, b13]
 0021  b56 = call_native i1 [b14]
 0022  b15 = load_global g0
-0023  b16 = len b15
+0023  b16 = len_range b15
 0024  b56 = call_native i1 [b16]
 0025  b17 = load_global g0
 0026  b18 = call_native i3 [b17]
@@ -40,7 +40,7 @@ main registers=57
 0034  b23 = constant #7 nil
 0035  init_global g3, b23
 0036  b24 = load_global g1
-0037  b25 = len b24
+0037  b25 = len_range b24
 0038  init_global g4, b25
 0039  br b1
 0040  block
@@ -51,7 +51,7 @@ main registers=57
 0045  block
 0046  b29 = load_global g1
 0047  b30 = load_global g2
-0048  b31 = index b29, b30
+0048  b31 = range_get b29, b30
 0049  set_global g3, b31
 0050  br b4
 0051  block
@@ -77,7 +77,7 @@ main registers=57
 0071  b43 = constant #13 nil
 0072  init_global g7, b43
 0073  b44 = load_global g5
-0074  b45 = len b44
+0074  b45 = len_range b44
 0075  init_global g8, b45
 0076  br b6
 0077  block
@@ -88,7 +88,7 @@ main registers=57
 0082  block
 0083  b49 = load_global g5
 0084  b50 = load_global g6
-0085  b51 = index b49, b50
+0085  b51 = range_get b49, b50
 0086  set_global g7, b51
 0087  br b9
 0088  block

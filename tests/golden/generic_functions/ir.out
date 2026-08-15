@@ -47,7 +47,7 @@ function $0 identity(value#1)
 function $1 head(values#3)
 0000  v0 = load_var @4 values#3
 0001  v1 = constant #3 0
-0002  v2 = index v0, v1
+0002  v2 = array_get v0, v1
 0003  return v2
 0004  v3 = constant #4 nil
 0005  return v3

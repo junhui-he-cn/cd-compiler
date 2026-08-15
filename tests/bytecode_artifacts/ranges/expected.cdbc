@@ -85,11 +85,11 @@ block b0:
   r3 = load_global g0
   r56 = call_native i1 [r3]
   r4 = load_global g0
-  r5 = len r4
+  r5 = len_range r4
   r56 = call_native i1 [r5]
   r6 = load_global g0
   r7 = constant c2
-  r8 = index r6, r7
+  r8 = range_get r6, r7
   r56 = call_native i1 [r8]
   r9 = load_global g0
   r10 = constant c3
@@ -100,7 +100,7 @@ block b0:
   r14 = call_native i2 [r12, r13]
   r56 = call_native i1 [r14]
   r15 = load_global g0
-  r16 = len r15
+  r16 = len_range r15
   r56 = call_native i1 [r16]
   r17 = load_global g0
   r18 = call_native i3 [r17]
@@ -114,7 +114,7 @@ block b0:
   r23 = constant c7
   init_global g3, r23
   r24 = load_global g1
-  r25 = len r24
+  r25 = len_range r24
   init_global g4, r25
   br b1
 block b1:
@@ -125,7 +125,7 @@ block b1:
 block b2:
   r29 = load_global g1
   r30 = load_global g2
-  r31 = index r29, r30
+  r31 = range_get r29, r30
   set_global g3, r31
   br b4
 block b3:
@@ -151,7 +151,7 @@ block b5:
   r43 = constant c13
   init_global g7, r43
   r44 = load_global g5
-  r45 = len r44
+  r45 = len_range r44
   init_global g8, r45
   br b6
 block b6:
@@ -162,7 +162,7 @@ block b6:
 block b7:
   r49 = load_global g5
   r50 = load_global g6
-  r51 = index r49, r50
+  r51 = range_get r49, r50
   set_global g7, r51
   br b9
 block b8:

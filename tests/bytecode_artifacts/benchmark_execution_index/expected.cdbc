@@ -67,7 +67,7 @@ block b2:
   r12 = load_global g3
   r13 = load_global g0
   r14 = load_global g1
-  r15 = index r13, r14
+  r15 = array_get r13, r14
   r16 = add_num r12, r15
   set_global g3, r16
   r17 = load_global g1

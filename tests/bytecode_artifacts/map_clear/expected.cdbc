@@ -45,12 +45,12 @@ block b0:
   r9 = load_global g0
   r10 = constant c4
   r11 = constant c5
-  r12 = assign_index r9, r10, r11
+  r12 = map_set r9, r10, r11
   r13 = load_global g0
   r14 = call_native i0 [r13]
   r17 = call_native i1 [r14]
   r15 = load_global g0
-  r16 = len r15
+  r16 = len_map r15
   r17 = call_native i1 [r16]
   return_nil
 

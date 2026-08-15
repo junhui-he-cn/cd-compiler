@@ -11,7 +11,7 @@ IR
 0009  v6 = constant #4 nil
 0010  store_var @3 x#1, v6
 0011  v7 = load_var @4 __for_in_iter#0
-0012  v8 = len v7
+0012  v8 = len_array v7
 0013  store_var @5 __for_in_len#2, v8
 0014  v9 = load_var @6 __for_in_index#1
 0015  v10 = load_var @7 __for_in_len#2
@@ -19,7 +19,7 @@ IR
 0017  jump_if_false v11, 0031
 0018  v12 = load_var @8 __for_in_iter#0
 0019  v13 = load_var @9 __for_in_index#1
-0020  v14 = index v12, v13
+0020  v14 = array_get v12, v13
 0021  assign_var @10 x#1, v14
 0022  jump 0028
 0023  v15 = load_var @11 __for_in_index#1

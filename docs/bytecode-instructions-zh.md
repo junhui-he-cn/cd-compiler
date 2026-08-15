@@ -367,33 +367,43 @@ rD = call_native iN [rA0, rA1, ...]
 
 ### 4.4 集合与字段
 
-#### index
+当编译器静态知道集合类型时，索引、赋值与长度使用集合专用指令，解释器热路径不再按
+运行时值标签分派：
 
 ```text
-rD = index rC, rI
+rD = array_get rC, rI    rD = array_set rC, rI, rV
+rD = map_get rC, rI      rD = map_set rC, rI, rV
+rD = range_get rC, rI
+
+rD = len_array rV        rD = len_map rV
+rD = len_range rV        rD = len_str rV
 ```
 
-按 `rI` 索引 `rC`：
+#### array_get / array_set
 
-- 数组：下标必须是整数 number 且不越界，否则 `array index must be number` /
-  `array index must be integer` / `array index out of range`。
-- map：键限 nil/number/bool/string，按运行时相等查找；缺失报 `map key not found`。
-- range：下标必须是整数 number 且不越界，按 start + step * 下标 计算；空 range 或
-  越界报 `range index out of bounds`。
-- 字符串**不可**索引；其他类型报 `can only index arrays, maps, or ranges`。
+数组读取/更新：下标必须是整数 number 且不越界（`array index must be number` /
+`array index must be integer` / `array index out of range`），`array_set` 替换既有
+元素并返回赋入值，不扩容。
 
-#### assign_index
+#### map_get / map_set
 
-```text
-rD = assign_index rC, rI, rV
-```
+map 读取/更新：键限 nil/number/bool/string 并按运行时相等查找，缺失读报
+`map key not found`；`map_set` 更新或插入（新增条目计入元素预算）并返回赋入值。
 
-原地更新集合元素，`rD` 得到赋入值 `rV`：
+#### range_get
 
-- 数组：替换既有元素（下标越界报错，不扩容）。
-- map：键已存在则更新其值，否则插入新键值对（新增条目计入元素预算）。
-- range：不可写，报 `cannot assign range elements`；其他类型报
-  `can only assign array elements, map entries, or range elements`。
+range 读取：下标必须是整数 number 且不越界，按 `start + step * 下标` 计算；空 range
+或越界报 `range index out of bounds`。range 不可写，不存在 `range_set`。
+
+#### len_array / len_map / len_range / len_str
+
+`len_array`/`len_map` 为元素数，`len_range` 为区间长度，`len_str` 为 Unicode 标量数
+（不是 UTF-8 字节数）。
+
+#### 旧式动态 index / assign_index / len（兼容读取）
+
+旧 `cdbc 0.1` 的 `index`、`assign_index` 与 `len` 仍在兼容读取路径中保留，按运行时
+类型在数组/map/range/string 之间分派；0.2 工件对静态已知集合类型永远发射专用指令。
 
 #### field
 
@@ -414,15 +424,6 @@ rD = assign_field rO, nN, rV
 更新结构体 `rO` 的既有字段 `nN` 为 `rV`，`rD` 得到赋入值。字段必须已存在，否则报
 ``undefined field `<名字>` ``；非结构体报 `can only assign fields on structs`。
 
-#### len
-
-```text
-rD = len rV
-```
-
-计算长度：数组/map 为元素数，range 为其长度，字符串为 Unicode 标量数（不是 UTF-8
-字节数）。其他类型报 `len expects array, string, map, or range`。
-
 #### assert_array
 
 ```text
@@ -431,7 +432,8 @@ rD = assert_array rV
 
 为 for-in 准备可迭代对象：数组/range 原样写入 `rD`；map 则按键的插入序快照成一个
 新数组写入 `rD`；其他类型报 `for-in expects array, range, or map`。该指令由编译器
-在 for-in 降级时插入，把后续 `len` + `index` 循环统一在数组表示上。
+在 for-in 降级时插入，把后续 `len_array`/`len_range` + `array_get`/`range_get`
+循环统一在数组/range 表示上。
 
 #### assert_number
 

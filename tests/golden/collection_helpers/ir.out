@@ -51,7 +51,7 @@ IR
 0049  v37 = load_var @27 part#4
 0050  v38 = constant #11 0
 0051  v39 = constant #12 20
-0052  v40 = assign_index v37, v38, v39
+0052  v40 = array_set v37, v38, v39
 0053  v41 = load_var @28 xs#0
 0054  print v41
 0055  v42 = load_var @29 xs#0
@@ -65,7 +65,7 @@ IR
 0063  v48 = load_var @34 cloned#5
 0064  v49 = constant #15 0
 0065  v50 = constant #16 10
-0066  v51 = assign_index v48, v49, v50
+0066  v51 = array_set v48, v49, v50
 0067  v52 = load_var @35 xs#0
 0068  print v52
 0069  v53 = load_var @36 cloned#5
@@ -81,7 +81,7 @@ IR
 0079  store_var @42 outerCopy#8, v59
 0080  v60 = load_var @43 outerCopy#8
 0081  v61 = constant #18 0
-0082  v62 = index v60, v61
+0082  v62 = array_get v60, v61
 0083  v63 = constant #19 2
 0084  v64 = native_call @44 push(v62, v63)
 0085  v65 = load_var @45 outer#7

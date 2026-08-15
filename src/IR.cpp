@@ -274,14 +274,23 @@ void printInstruction(std::ostream& out, const IRProgram& program, const IRInstr
             out << instruction.arguments[arg];
         }
         out << ")";
-    } else if (instruction.op == IROp::Index || instruction.op == IROp::AssignIndex) {
+    } else if (instruction.op == IROp::Index
+        || instruction.op == IROp::AssignIndex
+        || instruction.op == IROp::ArrayGet
+        || instruction.op == IROp::ArraySet
+        || instruction.op == IROp::MapGet
+        || instruction.op == IROp::MapSet
+        || instruction.op == IROp::RangeGet) {
         if (instruction.left) {
             out << " " << *instruction.left;
         }
         if (instruction.right) {
             out << ", " << *instruction.right;
         }
-        if (instruction.op == IROp::AssignIndex && !instruction.arguments.empty()) {
+        if ((instruction.op == IROp::AssignIndex
+                || instruction.op == IROp::ArraySet
+                || instruction.op == IROp::MapSet)
+            && !instruction.arguments.empty()) {
             out << ", " << instruction.arguments.front();
         }
     } else if (instruction.op == IROp::Field) {
@@ -305,7 +314,12 @@ void printInstruction(std::ostream& out, const IRProgram& program, const IRInstr
         if (!instruction.arguments.empty()) {
             out << ", " << instruction.arguments.front();
         }
-    } else if (instruction.op == IROp::Len || instruction.op == IROp::AssertArray) {
+    } else if (instruction.op == IROp::Len
+        || instruction.op == IROp::LenArray
+        || instruction.op == IROp::LenMap
+        || instruction.op == IROp::LenRange
+        || instruction.op == IROp::LenStr
+        || instruction.op == IROp::AssertArray) {
         if (instruction.left) {
             out << " " << *instruction.left;
         }
@@ -538,14 +552,23 @@ IREffectSummary irEffectSummary(IROp op)
         result.calls = true;
         return result;
     case IROp::Index:
+    case IROp::ArrayGet:
+    case IROp::MapGet:
+    case IROp::RangeGet:
     case IROp::Field:
     case IROp::Len:
+    case IROp::LenArray:
+    case IROp::LenMap:
+    case IROp::LenRange:
+    case IROp::LenStr:
     case IROp::AssertArray:
     case IROp::AssertNumber:
         result.readsMemory = true;
         result.mayTrap = true;
         return result;
     case IROp::AssignIndex:
+    case IROp::ArraySet:
+    case IROp::MapSet:
     case IROp::AssignField:
         result.readsMemory = true;
         result.writesMemory = true;
@@ -924,6 +947,41 @@ IRRegister IRProgram::emitAssignIndex(IRRegister collection, IRRegister index, I
     return dest;
 }
 
+IRRegister IRProgram::emitArrayGet(IRRegister collection, IRRegister index)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::ArrayGet, dest, collection, index, {}, 0});
+    return dest;
+}
+
+IRRegister IRProgram::emitArraySet(IRRegister collection, IRRegister index, IRRegister value)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::ArraySet, dest, collection, index, {value}, 0});
+    return dest;
+}
+
+IRRegister IRProgram::emitMapGet(IRRegister collection, IRRegister index)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::MapGet, dest, collection, index, {}, 0});
+    return dest;
+}
+
+IRRegister IRProgram::emitMapSet(IRRegister collection, IRRegister index, IRRegister value)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::MapSet, dest, collection, index, {value}, 0});
+    return dest;
+}
+
+IRRegister IRProgram::emitRangeGet(IRRegister collection, IRRegister index)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::RangeGet, dest, collection, index, {}, 0});
+    return dest;
+}
+
 IRRegister IRProgram::emitField(
     IRRegister object,
     std::string fieldName,
@@ -959,6 +1017,34 @@ IRRegister IRProgram::emitLen(IRRegister value)
 {
     IRRegister dest = makeRegister();
     emit(IRInstruction{IROp::Len, dest, value, std::nullopt, {}, 0});
+    return dest;
+}
+
+IRRegister IRProgram::emitLenArray(IRRegister value)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::LenArray, dest, value, std::nullopt, {}, 0});
+    return dest;
+}
+
+IRRegister IRProgram::emitLenMap(IRRegister value)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::LenMap, dest, value, std::nullopt, {}, 0});
+    return dest;
+}
+
+IRRegister IRProgram::emitLenRange(IRRegister value)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::LenRange, dest, value, std::nullopt, {}, 0});
+    return dest;
+}
+
+IRRegister IRProgram::emitLenStr(IRRegister value)
+{
+    IRRegister dest = makeRegister();
+    emit(IRInstruction{IROp::LenStr, dest, value, std::nullopt, {}, 0});
     return dest;
 }
 
@@ -1200,12 +1286,30 @@ std::string irOpName(IROp op)
         return "index";
     case IROp::AssignIndex:
         return "assign_index";
+    case IROp::ArrayGet:
+        return "array_get";
+    case IROp::ArraySet:
+        return "array_set";
+    case IROp::MapGet:
+        return "map_get";
+    case IROp::MapSet:
+        return "map_set";
+    case IROp::RangeGet:
+        return "range_get";
     case IROp::Field:
         return "field";
     case IROp::AssignField:
         return "assign_field";
     case IROp::Len:
         return "len";
+    case IROp::LenArray:
+        return "len_array";
+    case IROp::LenMap:
+        return "len_map";
+    case IROp::LenRange:
+        return "len_range";
+    case IROp::LenStr:
+        return "len_str";
     case IROp::AssertArray:
         return "assert_array";
     case IROp::AssertNumber:

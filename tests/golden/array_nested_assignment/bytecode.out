@@ -9,12 +9,12 @@ main registers=14
 0006  init_global g1, b3
 0007  b4 = load_global g1
 0008  b5 = constant #1 0
-0009  b6 = index b4, b5
+0009  b6 = array_get b4, b5
 0010  b7 = constant #2 0
 0011  b8 = constant #3 7
-0012  b9 = assign_index b6, b7, b8
+0012  b9 = array_set b6, b7, b8
 0013  b10 = load_global g0
 0014  b11 = constant #4 0
-0015  b12 = index b10, b11
+0015  b12 = array_get b10, b11
 0016  b13 = call_native i0 [b12]
 0017  return_nil

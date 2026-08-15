@@ -27,7 +27,7 @@ block b0:
   r0 = constant c0
   init_global g0, r0
   r1 = load_global g0
-  r2 = len r1
+  r2 = len_str r1
   r10 = call_native i0 [r2]
   r3 = load_global g0
   r4 = constant c1

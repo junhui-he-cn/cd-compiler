@@ -6,11 +6,11 @@ IR
 0004  v3 = load_var @2 ascending#0
 0005  print v3
 0006  v4 = load_var @3 ascending#0
-0007  v5 = len v4
+0007  v5 = len_range v4
 0008  print v5
 0009  v6 = load_var @4 ascending#0
 0010  v7 = constant #2 2
-0011  v8 = index v6, v7
+0011  v8 = range_get v6, v7
 0012  print v8
 0013  v9 = load_var @5 ascending#0
 0014  v10 = constant #3 5
@@ -21,7 +21,7 @@ IR
 0019  v14 = native_call @8 contains(v12, v13)
 0020  print v14
 0021  v15 = load_var @9 ascending#0
-0022  v16 = len v15
+0022  v16 = len_range v15
 0023  print v16
 0024  v17 = load_var @10 ascending#0
 0025  v18 = native_call @11 typeOf(v17)
@@ -35,7 +35,7 @@ IR
 0033  v23 = constant #7 nil
 0034  store_var @15 item#1, v23
 0035  v24 = load_var @16 __for_in_iter#0
-0036  v25 = len v24
+0036  v25 = len_range v24
 0037  store_var @17 __for_in_len#2, v25
 0038  v26 = load_var @18 __for_in_index#1
 0039  v27 = load_var @19 __for_in_len#2
@@ -43,7 +43,7 @@ IR
 0041  jump_if_false v28, 0055
 0042  v29 = load_var @20 __for_in_iter#0
 0043  v30 = load_var @21 __for_in_index#1
-0044  v31 = index v29, v30
+0044  v31 = range_get v29, v30
 0045  assign_var @22 item#1, v31
 0046  jump 0052
 0047  v32 = load_var @23 __for_in_index#1
@@ -66,7 +66,7 @@ IR
 0064  v43 = constant #13 nil
 0065  store_var @29 item#2, v43
 0066  v44 = load_var @30 __for_in_iter#3
-0067  v45 = len v44
+0067  v45 = len_range v44
 0068  store_var @31 __for_in_len#5, v45
 0069  v46 = load_var @32 __for_in_index#4
 0070  v47 = load_var @33 __for_in_len#5
@@ -74,7 +74,7 @@ IR
 0072  jump_if_false v48, 0086
 0073  v49 = load_var @34 __for_in_iter#3
 0074  v50 = load_var @35 __for_in_index#4
-0075  v51 = index v49, v50
+0075  v51 = range_get v49, v50
 0076  assign_var @36 item#2, v51
 0077  jump 0083
 0078  v52 = load_var @37 __for_in_index#4

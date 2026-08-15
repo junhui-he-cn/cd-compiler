@@ -14,7 +14,7 @@ main registers=26
 0010  b6 = constant #3 nil
 0011  init_global g3, b6
 0012  b7 = load_global g1
-0013  b8 = len b7
+0013  b8 = len_array b7
 0014  init_global g4, b8
 0015  br b1
 0016  block
@@ -25,7 +25,7 @@ main registers=26
 0021  block
 0022  b12 = load_global g1
 0023  b13 = load_global g2
-0024  b14 = index b12, b13
+0024  b14 = array_get b12, b13
 0025  set_global g3, b14
 0026  br b4
 0027  block

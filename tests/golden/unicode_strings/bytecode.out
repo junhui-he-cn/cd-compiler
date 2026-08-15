@@ -6,10 +6,10 @@ main registers=27
 0001  b0 = constant #0 "你🙂"
 0002  init_global g0, b0
 0003  b1 = load_global g0
-0004  b2 = len b1
+0004  b2 = len_str b1
 0005  b26 = call_native i0 [b2]
 0006  b3 = load_global g0
-0007  b4 = len b3
+0007  b4 = len_str b3
 0008  b26 = call_native i0 [b4]
 0009  b5 = load_global g0
 0010  b6 = constant #1 0
@@ -32,7 +32,7 @@ main registers=27
 0027  b19 = constant #7 "é"
 0028  init_global g1, b19
 0029  b20 = load_global g1
-0030  b21 = len b20
+0030  b21 = len_str b20
 0031  b26 = call_native i0 [b21]
 0032  b22 = load_global g1
 0033  b23 = constant #8 0

@@ -349,3 +349,32 @@ ctest 47/47、verification 1825/1825、VM 兼容矩阵 7 格、
 verification matrix 10 cells / 5 workloads。
 
 下一阶段是 Phase 9（集合专用指令：array/map/range/string 的专用 index/len）。
+
+## 15. Phase 9 落地记录
+
+Phase 9（计划 §13，集合专用指令）完成：静态已知集合类型的索引、赋值与长度不再走
+多类型动态分派。
+
+- 新 opcode：`array_get`、`array_set`、`map_get`、`map_set`、`range_get`、
+  `len_array`、`len_map`、`len_range`、`len_str`；`range_set` 不存在（range 不可写）。
+- IRCompiler 依据 `IndexOperationRecord.collectionType` 与 typed-expression 元数据
+  选择专用 op：数组→`array_get/array_set/len_array`，map→`map_get/map_set/len_map`，
+  range→`range_get/len_range`，字符串→`len_str`；for-in 降级也按 iterable 静态类型
+  选择 `array_get`/`range_get` 与 `len_array`/`len_range`（map 仍先经 `assert_array`
+  快照成数组）。index/field compound assignment 固定走 `array_get/array_set`。
+- Rust VM：10 条新指令在类型断言后复用既有数组/map/range/字符串执行路径，保留
+  既有运行时错误文本（`array index must be number/integer/out of range`、
+  `map key not found`、`range index out of bounds`、Unicode 标量长度）与
+  map 插入的元素预算计费。
+- 兼容边界：旧 `cdbc 0.1` 的 `index`、`assign_index`、`len` 仍在兼容读取路径保留，
+  仅在集合类型未知或旧工件时使用；0.2 发射端不再发射这些通用形式。
+- verifier/linker：新指令按 get/set/len 形状校验、寄存器 def/read 分析，并在模块
+  链接时重定位寄存器；JIT 保持集合操作为解释器回退（与旧 index/len 一致）。
+
+回归：cargo test 全绿（新增 typed collection 解析/执行用例）、
+bytecode artifact 124/124、module artifact/cache、malformed 107/107、
+Rust VM parity 742/742、golden 787/787、ctest 47/47、verification 1825/1825、
+VM 兼容矩阵 7 格、verification matrix 10 cells / 5 workloads。
+
+下一阶段是 Phase 10（Iterator Protocol：用 `iter_init`/`iter_next` 替换
+`assert_array`）。

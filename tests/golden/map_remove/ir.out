@@ -18,5 +18,5 @@ IR
 0016  v12 = native_call @7 remove(v10, v11)
 0017  print v12
 0018  v13 = load_var @8 values#0
-0019  v14 = len v13
+0019  v14 = len_map v13
 0020  print v14

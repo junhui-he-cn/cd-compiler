@@ -61,11 +61,11 @@ block b0:
   r11 = load_global g2
   r12 = constant c9
   r13 = load_global g2
-  r14 = len r13
-  r15 = assign_index r11, r12, r14
+  r14 = len_array r13
+  r15 = array_set r11, r12, r14
   r16 = load_global g2
   r17 = constant c10
-  r18 = index r16, r17
+  r18 = array_get r16, r17
   r19 = call_native i0 [r18]
   return_nil
 

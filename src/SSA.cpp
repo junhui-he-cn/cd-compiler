@@ -185,6 +185,10 @@ void validateInstructionShape(const SSAInstruction& instruction)
     case IROp::Copy:
     case IROp::Field:
     case IROp::Len:
+    case IROp::LenArray:
+    case IROp::LenMap:
+    case IROp::LenRange:
+    case IROp::LenStr:
     case IROp::AssertArray:
     case IROp::AssertNumber:
     case IROp::Negate:
@@ -215,12 +219,17 @@ void validateInstructionShape(const SSAInstruction& instruction)
         requireInstructionShape(instruction, hasResult() && noLeft() && noRight(), "operand shape");
         return;
     case IROp::Index:
+    case IROp::ArrayGet:
+    case IROp::MapGet:
+    case IROp::RangeGet:
         requireInstructionShape(
             instruction,
             hasResult() && hasLeft() && hasRight() && noArguments(),
             "operand shape");
         return;
     case IROp::AssignIndex:
+    case IROp::ArraySet:
+    case IROp::MapSet:
         requireInstructionShape(
             instruction,
             hasResult() && hasLeft() && hasRight() && instruction.arguments.size() == 1,

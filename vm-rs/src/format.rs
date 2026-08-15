@@ -1388,9 +1388,18 @@ fn instruction_register_def(instruction: &Instruction) -> Option<usize> {
         | Instruction::CallNative { dest, .. }
         | Instruction::Index { dest, .. }
         | Instruction::AssignIndex { dest, .. }
+        | Instruction::ArrayGet { dest, .. }
+        | Instruction::ArraySet { dest, .. }
+        | Instruction::MapGet { dest, .. }
+        | Instruction::MapSet { dest, .. }
+        | Instruction::RangeGet { dest, .. }
         | Instruction::Field { dest, .. }
         | Instruction::AssignField { dest, .. }
         | Instruction::Len { dest, .. }
+        | Instruction::LenArray { dest, .. }
+        | Instruction::LenMap { dest, .. }
+        | Instruction::LenRange { dest, .. }
+        | Instruction::LenStr { dest, .. }
         | Instruction::AssertArray { dest, .. }
         | Instruction::AssertNumber { dest, .. }
         | Instruction::MakeStruct { dest, .. }
@@ -1450,6 +1459,10 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
         | Instruction::NegNum { value, .. }
         | Instruction::Not { value, .. }
         | Instruction::Len { value, .. }
+        | Instruction::LenArray { value, .. }
+        | Instruction::LenMap { value, .. }
+        | Instruction::LenRange { value, .. }
+        | Instruction::LenStr { value, .. }
         | Instruction::AssertArray { value, .. }
         | Instruction::AssertNumber { value, .. } => vec![*value],
         Instruction::Call {
@@ -1471,8 +1484,29 @@ fn instruction_register_reads(instruction: &Instruction) -> Vec<usize> {
         Instruction::VariantGet { value, .. } => vec![*value],
         Instruction::Index {
             collection, index, ..
+        }
+        | Instruction::ArrayGet {
+            collection, index, ..
+        }
+        | Instruction::MapGet {
+            collection, index, ..
+        }
+        | Instruction::RangeGet {
+            collection, index, ..
         } => vec![*collection, *index],
         Instruction::AssignIndex {
+            collection,
+            index,
+            value,
+            ..
+        }
+        | Instruction::ArraySet {
+            collection,
+            index,
+            value,
+            ..
+        }
+        | Instruction::MapSet {
             collection,
             index,
             value,
@@ -2302,12 +2336,39 @@ fn validate_instruction(
             dest,
             collection,
             index,
+        }
+        | Instruction::ArrayGet {
+            dest,
+            collection,
+            index,
+        }
+        | Instruction::MapGet {
+            dest,
+            collection,
+            index,
+        }
+        | Instruction::RangeGet {
+            dest,
+            collection,
+            index,
         } => {
             register(*dest, "destination")?;
             register(*collection, "index collection")?;
             register(*index, "index value")?;
         }
         Instruction::AssignIndex {
+            dest,
+            collection,
+            index,
+            value,
+        }
+        | Instruction::ArraySet {
+            dest,
+            collection,
+            index,
+            value,
+        }
+        | Instruction::MapSet {
             dest,
             collection,
             index,
@@ -2339,6 +2400,10 @@ fn validate_instruction(
             register(*value, "assigned value")?;
         }
         Instruction::Len { dest, value }
+        | Instruction::LenArray { dest, value }
+        | Instruction::LenMap { dest, value }
+        | Instruction::LenRange { dest, value }
+        | Instruction::LenStr { dest, value }
         | Instruction::AssertArray { dest, value }
         | Instruction::Negate { dest, value }
         | Instruction::NegNum { dest, value }
@@ -2973,6 +3038,26 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                     index,
                 })
             }
+            "array_get" | "map_get" | "range_get" => {
+                let (collection, index) = parse_two_registers(line, operands)?;
+                match opcode {
+                    "array_get" => Ok(Instruction::ArrayGet {
+                        dest,
+                        collection,
+                        index,
+                    }),
+                    "map_get" => Ok(Instruction::MapGet {
+                        dest,
+                        collection,
+                        index,
+                    }),
+                    _ => Ok(Instruction::RangeGet {
+                        dest,
+                        collection,
+                        index,
+                    }),
+                }
+            }
             "assign_index" => {
                 let parts = split_comma_parts(operands);
                 if parts.len() != 3 {
@@ -2987,6 +3072,33 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                     index: parse_register(line, parts[1])?,
                     value: parse_register(line, parts[2])?,
                 })
+            }
+            "array_set" | "map_set" => {
+                let parts = split_comma_parts(operands);
+                if parts.len() != 3 {
+                    return Err(ParseError {
+                        line,
+                        message: format!("{} expects three operands", opcode),
+                    });
+                }
+                let collection = parse_register(line, parts[0])?;
+                let index = parse_register(line, parts[1])?;
+                let value = parse_register(line, parts[2])?;
+                if opcode == "array_set" {
+                    Ok(Instruction::ArraySet {
+                        dest,
+                        collection,
+                        index,
+                        value,
+                    })
+                } else {
+                    Ok(Instruction::MapSet {
+                        dest,
+                        collection,
+                        index,
+                        value,
+                    })
+                }
             }
             "field" => {
                 let (object, name) = split_once(line, operands, ", ")?;
@@ -3012,6 +3124,22 @@ fn parse_instruction(line: usize, text: &str) -> Result<Instruction, ParseError>
                 })
             }
             "len" => Ok(Instruction::Len {
+                dest,
+                value: parse_register(line, operands)?,
+            }),
+            "len_array" => Ok(Instruction::LenArray {
+                dest,
+                value: parse_register(line, operands)?,
+            }),
+            "len_map" => Ok(Instruction::LenMap {
+                dest,
+                value: parse_register(line, operands)?,
+            }),
+            "len_range" => Ok(Instruction::LenRange {
+                dest,
+                value: parse_register(line, operands)?,
+            }),
+            "len_str" => Ok(Instruction::LenStr {
                 dest,
                 value: parse_register(line, operands)?,
             }),
@@ -3328,6 +3456,21 @@ fn format_instruction(instruction: &Instruction) -> String {
             collection,
             index,
         } => format!("r{} = index r{}, r{}", dest, collection, index),
+        Instruction::ArrayGet {
+            dest,
+            collection,
+            index,
+        } => format!("r{} = array_get r{}, r{}", dest, collection, index),
+        Instruction::MapGet {
+            dest,
+            collection,
+            index,
+        } => format!("r{} = map_get r{}, r{}", dest, collection, index),
+        Instruction::RangeGet {
+            dest,
+            collection,
+            index,
+        } => format!("r{} = range_get r{}, r{}", dest, collection, index),
         Instruction::AssignIndex {
             dest,
             collection,
@@ -3335,6 +3478,24 @@ fn format_instruction(instruction: &Instruction) -> String {
             value,
         } => format!(
             "r{} = assign_index r{}, r{}, r{}",
+            dest, collection, index, value
+        ),
+        Instruction::ArraySet {
+            dest,
+            collection,
+            index,
+            value,
+        } => format!(
+            "r{} = array_set r{}, r{}, r{}",
+            dest, collection, index, value
+        ),
+        Instruction::MapSet {
+            dest,
+            collection,
+            index,
+            value,
+        } => format!(
+            "r{} = map_set r{}, r{}, r{}",
             dest, collection, index, value
         ),
         Instruction::Field { dest, object, name } => {
@@ -3350,6 +3511,10 @@ fn format_instruction(instruction: &Instruction) -> String {
             dest, object, name, value
         ),
         Instruction::Len { dest, value } => format!("r{} = len r{}", dest, value),
+        Instruction::LenArray { dest, value } => format!("r{} = len_array r{}", dest, value),
+        Instruction::LenMap { dest, value } => format!("r{} = len_map r{}", dest, value),
+        Instruction::LenRange { dest, value } => format!("r{} = len_range r{}", dest, value),
+        Instruction::LenStr { dest, value } => format!("r{} = len_str r{}", dest, value),
         Instruction::AssertArray { dest, value } => format!("r{} = assert_array r{}", dest, value),
         Instruction::AssertNumber {
             dest,
@@ -4224,6 +4389,29 @@ main registers=16:
   r14 = ge_str r1, r2
 "#;
         let program = parse_program(source).expect("parse typed opcodes");
+        assert_eq!(format_program(&program), source);
+    }
+
+    #[test]
+    fn parses_and_formats_typed_collection_ops() {
+        let source = r#"cdbc 0.2
+
+constants:
+
+names:
+
+main registers=12:
+  r0 = array_get r1, r2
+  r3 = array_set r1, r2, r4
+  r5 = map_get r1, r2
+  r6 = map_set r1, r2, r4
+  r7 = range_get r1, r2
+  r8 = len_array r1
+  r9 = len_map r1
+  r10 = len_range r1
+  r11 = len_str r1
+"#;
+        let program = parse_program(source).expect("parse typed collection opcodes");
         assert_eq!(format_program(&program), source);
     }
 

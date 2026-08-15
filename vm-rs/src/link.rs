@@ -1149,12 +1149,61 @@ fn map_instruction(
             collection: register(*collection)?,
             index: register(*index)?,
         },
+        Instruction::ArrayGet {
+            dest,
+            collection,
+            index,
+        } => Instruction::ArrayGet {
+            dest: register(*dest)?,
+            collection: register(*collection)?,
+            index: register(*index)?,
+        },
+        Instruction::MapGet {
+            dest,
+            collection,
+            index,
+        } => Instruction::MapGet {
+            dest: register(*dest)?,
+            collection: register(*collection)?,
+            index: register(*index)?,
+        },
+        Instruction::RangeGet {
+            dest,
+            collection,
+            index,
+        } => Instruction::RangeGet {
+            dest: register(*dest)?,
+            collection: register(*collection)?,
+            index: register(*index)?,
+        },
         Instruction::AssignIndex {
             dest,
             collection,
             index,
             value,
         } => Instruction::AssignIndex {
+            dest: register(*dest)?,
+            collection: register(*collection)?,
+            index: register(*index)?,
+            value: register(*value)?,
+        },
+        Instruction::ArraySet {
+            dest,
+            collection,
+            index,
+            value,
+        } => Instruction::ArraySet {
+            dest: register(*dest)?,
+            collection: register(*collection)?,
+            index: register(*index)?,
+            value: register(*value)?,
+        },
+        Instruction::MapSet {
+            dest,
+            collection,
+            index,
+            value,
+        } => Instruction::MapSet {
             dest: register(*dest)?,
             collection: register(*collection)?,
             index: register(*index)?,
@@ -1181,6 +1230,22 @@ fn map_instruction(
             value: register(*source)?,
         },
         Instruction::Len { dest, value } => Instruction::Len {
+            dest: register(*dest)?,
+            value: register(*value)?,
+        },
+        Instruction::LenArray { dest, value } => Instruction::LenArray {
+            dest: register(*dest)?,
+            value: register(*value)?,
+        },
+        Instruction::LenMap { dest, value } => Instruction::LenMap {
+            dest: register(*dest)?,
+            value: register(*value)?,
+        },
+        Instruction::LenRange { dest, value } => Instruction::LenRange {
+            dest: register(*dest)?,
+            value: register(*value)?,
+        },
+        Instruction::LenStr { dest, value } => Instruction::LenStr {
             dest: register(*dest)?,
             value: register(*value)?,
         },

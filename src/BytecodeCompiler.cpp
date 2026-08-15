@@ -282,12 +282,30 @@ BytecodeOp lowerOp(IROp op)
         return BytecodeOp::Index;
     case IROp::AssignIndex:
         return BytecodeOp::AssignIndex;
+    case IROp::ArrayGet:
+        return BytecodeOp::ArrayGet;
+    case IROp::ArraySet:
+        return BytecodeOp::ArraySet;
+    case IROp::MapGet:
+        return BytecodeOp::MapGet;
+    case IROp::MapSet:
+        return BytecodeOp::MapSet;
+    case IROp::RangeGet:
+        return BytecodeOp::RangeGet;
     case IROp::Field:
         return BytecodeOp::Field;
     case IROp::AssignField:
         return BytecodeOp::AssignField;
     case IROp::Len:
         return BytecodeOp::Len;
+    case IROp::LenArray:
+        return BytecodeOp::LenArray;
+    case IROp::LenMap:
+        return BytecodeOp::LenMap;
+    case IROp::LenRange:
+        return BytecodeOp::LenRange;
+    case IROp::LenStr:
+        return BytecodeOp::LenStr;
     case IROp::AssertArray:
         return BytecodeOp::AssertArray;
     case IROp::AssertNumber:

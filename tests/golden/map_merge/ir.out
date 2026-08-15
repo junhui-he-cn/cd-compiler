@@ -22,7 +22,7 @@ IR
 0020  v15 = load_var @8 right#1
 0021  v16 = constant #8 "d"
 0022  v17 = constant #9 4
-0023  v18 = assign_index v15, v16, v17
+0023  v18 = map_set v15, v16, v17
 0024  v19 = load_var @9 combined#2
 0025  print v19
 0026  v20 = load_var @10 left#0

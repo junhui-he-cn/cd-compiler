@@ -287,17 +287,31 @@ void printInstruction(
             out << instruction.arguments[arg];
         }
         out << "]";
-    } else if (instruction.op == BytecodeOp::Index || instruction.op == BytecodeOp::AssignIndex) {
+    } else if (instruction.op == BytecodeOp::Index
+        || instruction.op == BytecodeOp::AssignIndex
+        || instruction.op == BytecodeOp::ArrayGet
+        || instruction.op == BytecodeOp::ArraySet
+        || instruction.op == BytecodeOp::MapGet
+        || instruction.op == BytecodeOp::MapSet
+        || instruction.op == BytecodeOp::RangeGet) {
         if (instruction.left) {
             out << " " << *instruction.left;
         }
         if (instruction.right) {
             out << ", " << *instruction.right;
         }
-        if (instruction.op == BytecodeOp::AssignIndex && !instruction.arguments.empty()) {
+        if ((instruction.op == BytecodeOp::AssignIndex
+                || instruction.op == BytecodeOp::ArraySet
+                || instruction.op == BytecodeOp::MapSet)
+            && !instruction.arguments.empty()) {
             out << ", " << instruction.arguments.front();
         }
-    } else if (instruction.op == BytecodeOp::Len || instruction.op == BytecodeOp::AssertArray) {
+    } else if (instruction.op == BytecodeOp::Len
+        || instruction.op == BytecodeOp::LenArray
+        || instruction.op == BytecodeOp::LenMap
+        || instruction.op == BytecodeOp::LenRange
+        || instruction.op == BytecodeOp::LenStr
+        || instruction.op == BytecodeOp::AssertArray) {
         if (instruction.left) {
             out << " " << *instruction.left;
         }
@@ -535,8 +549,26 @@ std::string bytecodeOpName(BytecodeOp op)
         return "index";
     case BytecodeOp::AssignIndex:
         return "assign_index";
+    case BytecodeOp::ArrayGet:
+        return "array_get";
+    case BytecodeOp::ArraySet:
+        return "array_set";
+    case BytecodeOp::MapGet:
+        return "map_get";
+    case BytecodeOp::MapSet:
+        return "map_set";
+    case BytecodeOp::RangeGet:
+        return "range_get";
     case BytecodeOp::Len:
         return "len";
+    case BytecodeOp::LenArray:
+        return "len_array";
+    case BytecodeOp::LenMap:
+        return "len_map";
+    case BytecodeOp::LenRange:
+        return "len_range";
+    case BytecodeOp::LenStr:
+        return "len_str";
     case BytecodeOp::AssertArray:
         return "assert_array";
     case BytecodeOp::AssertNumber:

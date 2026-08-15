@@ -55,7 +55,7 @@ function $1 head/1 registers=4
 0000  block
 0001  b0 = load_local l0
 0002  b1 = constant #3 0
-0003  b2 = index b0, b1
+0003  b2 = array_get b0, b1
 0004  return b2
 0005  block
 0006  b3 = constant #4 nil

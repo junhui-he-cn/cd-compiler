@@ -61,7 +61,7 @@ block b0:
   r10 = constant c7
   init_global g3, r10
   r11 = load_global g1
-  r12 = len r11
+  r12 = len_array r11
   init_global g4, r12
   br b1
 block b1:
@@ -72,7 +72,7 @@ block b1:
 block b2:
   r16 = load_global g1
   r17 = load_global g2
-  r18 = index r16, r17
+  r18 = array_get r16, r17
   set_global g3, r18
   br b4
 block b3:

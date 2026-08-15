@@ -13,15 +13,15 @@ main registers=53
 0007  b6 = map [b0: b1, b2: b3, b4: b5]
 0008  init_global g0, b6
 0009  b7 = load_global g0
-0010  b8 = len b7
+0010  b8 = len_map b7
 0011  b52 = call_native i0 [b8]
 0012  b9 = load_global g0
 0013  b10 = constant #6 "a"
-0014  b11 = index b9, b10
+0014  b11 = map_get b9, b10
 0015  b52 = call_native i0 [b11]
 0016  b12 = load_global g0
 0017  b13 = constant #7 "b"
-0018  b14 = index b12, b13
+0018  b14 = map_get b12, b13
 0019  b52 = call_native i0 [b14]
 0020  b15 = load_global g0
 0021  b16 = assert_array b15
@@ -31,7 +31,7 @@ main registers=53
 0025  b18 = constant #9 nil
 0026  init_global g3, b18
 0027  b19 = load_global g1
-0028  b20 = len b19
+0028  b20 = len_array b19
 0029  init_global g4, b20
 0030  br b1
 0031  block
@@ -42,7 +42,7 @@ main registers=53
 0036  block
 0037  b24 = load_global g1
 0038  b25 = load_global g2
-0039  b26 = index b24, b25
+0039  b26 = array_get b24, b25
 0040  set_global g3, b26
 0041  br b4
 0042  block
@@ -56,7 +56,7 @@ main registers=53
 0050  b52 = call_native i0 [b30]
 0051  b31 = load_global g0
 0052  b32 = load_global g3
-0053  b33 = index b31, b32
+0053  b33 = map_get b31, b32
 0054  b52 = call_native i0 [b33]
 0055  br b3
 0056  block
@@ -69,7 +69,7 @@ main registers=53
 0063  b38 = load_global g0
 0064  b39 = constant #11 "a"
 0065  b40 = constant #12 30
-0066  b41 = assign_index b38, b39, b40
+0066  b41 = map_set b38, b39, b40
 0067  b42 = load_global g0
 0068  b52 = call_native i0 [b42]
 0069  b43 = load_global g0

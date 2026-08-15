@@ -816,7 +816,12 @@ void IRCompiler::compileForIn(const ForInStmt& statement)
     ir_.emitStoreVar(itemName, initialItem, itemBindingId);
 
     const IRRegister loadedArrayForLen = ir_.emitLoadVar(iterableName, iterableBinding);
-    const IRRegister length = ir_.emitLen(loadedArrayForLen);
+    const TypedExpressionRecord* iterableRecord = typedExpressionRecord(*statement.iterable);
+    const bool rangeIteration = iterableRecord
+        && iterableRecord->type.kind == StaticType::Range;
+    const IRRegister length = rangeIteration
+        ? ir_.emitLenRange(loadedArrayForLen)
+        : ir_.emitLenArray(loadedArrayForLen);
     ir_.emitStoreVar(lengthName, length, lengthBinding);
 
     const std::size_t loopStart = ir_.instructionCount();
@@ -827,7 +832,9 @@ void IRCompiler::compileForIn(const ForInStmt& statement)
 
     const IRRegister arrayForElement = ir_.emitLoadVar(iterableName, iterableBinding);
     const IRRegister indexForElement = ir_.emitLoadVar(indexName, indexBinding);
-    const IRRegister item = ir_.emitIndex(arrayForElement, indexForElement);
+    const IRRegister item = rangeIteration
+        ? ir_.emitRangeGet(arrayForElement, indexForElement)
+        : ir_.emitArrayGet(arrayForElement, indexForElement);
     ir_.emitAssignVar(itemName, item, itemBindingId);
 
     const std::size_t jumpOverIncrement = ir_.emitJump();
@@ -1349,7 +1356,27 @@ IRRegister IRCompiler::emitLenCall(const CallExpr& expression)
         throw IRCompileError("len expects exactly one argument");
     }
     const IRRegister value = compileExpression(*expression.arguments.front());
-    return ir_.emitLen(value);
+    return emitLenTyped(value, *expression.arguments.front());
+}
+
+IRRegister IRCompiler::emitLenTyped(IRRegister value, const Expr& operand)
+{
+    const TypedExpressionRecord* record = typedExpressionRecord(operand);
+    if (!record) {
+        return ir_.emitLen(value);
+    }
+    switch (record->type.kind) {
+    case StaticType::Array:
+        return ir_.emitLenArray(value);
+    case StaticType::Map:
+        return ir_.emitLenMap(value);
+    case StaticType::Range:
+        return ir_.emitLenRange(value);
+    case StaticType::String:
+        return ir_.emitLenStr(value);
+    default:
+        return ir_.emitLen(value);
+    }
 }
 
 IRRegister IRCompiler::emitNativeStdlibCall(const CallExpr& expression)
@@ -1406,7 +1433,7 @@ IRRegister IRCompiler::emitMemberCall(const MemberCallExpr& expression)
         if (!expression.arguments.empty()) {
             throw IRCompileError("len member call expects no arguments");
         }
-        return ir_.emitLen(receiver);
+        return emitLenTyped(receiver, *expression.receiver);
     }
 
     const NativeCallRecord* nativeCall = declarationIndex_
@@ -1542,9 +1569,20 @@ IRRegister IRCompiler::emitStructConstructor(const StructConstructExpr& expressi
 
 IRRegister IRCompiler::emitIndex(const IndexExpr& expression)
 {
-    indexOperation(expression, IndexOperationKind::Read, "index expression");
+    const IndexOperationRecord& operation
+        = indexOperation(expression, IndexOperationKind::Read, "index expression");
     IRRegister collection = compileExpression(*expression.collection);
     IRRegister index = compileExpression(*expression.index);
+    switch (operation.collectionType.kind) {
+    case StaticType::Array:
+        return ir_.emitArrayGet(collection, index);
+    case StaticType::Map:
+        return ir_.emitMapGet(collection, index);
+    case StaticType::Range:
+        return ir_.emitRangeGet(collection, index);
+    default:
+        break;
+    }
     return ir_.emitIndex(collection, index);
 }
 
@@ -1603,10 +1641,17 @@ IRRegister IRCompiler::emitCompoundAssignmentResult(
 
 IRRegister IRCompiler::emitIndexAssign(const IndexAssignExpr& expression)
 {
-    indexOperation(expression, IndexOperationKind::Assign, "index assignment");
+    const IndexOperationRecord& operation
+        = indexOperation(expression, IndexOperationKind::Assign, "index assignment");
     IRRegister collection = compileExpression(*expression.collection);
     IRRegister index = compileExpression(*expression.index);
     IRRegister value = compileExpression(*expression.value);
+    if (operation.collectionType.kind == StaticType::Array) {
+        return ir_.emitArraySet(collection, index, value);
+    }
+    if (operation.collectionType.kind == StaticType::Map) {
+        return ir_.emitMapSet(collection, index, value);
+    }
     return ir_.emitAssignIndex(collection, index, value);
 }
 
@@ -1619,10 +1664,10 @@ IRRegister IRCompiler::emitIndexCompoundAssign(const IndexCompoundAssignExpr& ex
     }
     IRRegister collection = compileExpression(*expression.collection);
     IRRegister index = compileExpression(*expression.index);
-    IRRegister oldValue = ir_.emitIndex(collection, index);
+    IRRegister oldValue = ir_.emitArrayGet(collection, index);
     IRRegister result = emitCompoundAssignmentResult(
         expression.op, oldValue, *expression.value, "`" + expression.op.lexeme + "` expects number target");
-    ir_.emitAssignIndex(collection, index, result);
+    ir_.emitArraySet(collection, index, result);
     return result;
 }
 

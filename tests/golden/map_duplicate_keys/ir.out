@@ -8,15 +8,15 @@ IR
 0006  v6 = map [v0: v1, v2: v3, v4: v5]
 0007  store_var @0 m#0, v6
 0008  v7 = load_var @1 m#0
-0009  v8 = len v7
+0009  v8 = len_map v7
 0010  print v8
 0011  v9 = load_var @2 m#0
 0012  v10 = constant #6 "a"
-0013  v11 = index v9, v10
+0013  v11 = map_get v9, v10
 0014  print v11
 0015  v12 = load_var @3 m#0
 0016  v13 = constant #7 "b"
-0017  v14 = index v12, v13
+0017  v14 = map_get v12, v13
 0018  print v14
 0019  v15 = load_var @4 m#0
 0020  v16 = assert_array v15
@@ -26,7 +26,7 @@ IR
 0024  v18 = constant #9 nil
 0025  store_var @7 k#1, v18
 0026  v19 = load_var @8 __for_in_iter#0
-0027  v20 = len v19
+0027  v20 = len_array v19
 0028  store_var @9 __for_in_len#2, v20
 0029  v21 = load_var @10 __for_in_index#1
 0030  v22 = load_var @11 __for_in_len#2
@@ -34,7 +34,7 @@ IR
 0032  jump_if_false v23, 0050
 0033  v24 = load_var @12 __for_in_iter#0
 0034  v25 = load_var @13 __for_in_index#1
-0035  v26 = index v24, v25
+0035  v26 = array_get v24, v25
 0036  assign_var @14 k#1, v26
 0037  jump 0043
 0038  v27 = load_var @15 __for_in_index#1
@@ -46,7 +46,7 @@ IR
 0044  print v30
 0045  v31 = load_var @18 m#0
 0046  v32 = load_var @19 k#1
-0047  v33 = index v31, v32
+0047  v33 = map_get v31, v32
 0048  print v33
 0049  jump 0038
 0050  v34 = load_var @20 m#0
@@ -58,7 +58,7 @@ IR
 0056  v38 = load_var @24 m#0
 0057  v39 = constant #11 "a"
 0058  v40 = constant #12 30
-0059  v41 = assign_index v38, v39, v40
+0059  v41 = map_set v38, v39, v40
 0060  v42 = load_var @25 m#0
 0061  print v42
 0062  v43 = load_var @26 m#0
