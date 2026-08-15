@@ -68,7 +68,7 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory(prefix="compiler-lexer-recovery-unterminated-") as directory:
         source_path = Path(directory) / "input.cd"
-        source_path.write_text('print "unterminated;\n', encoding="utf-8")
+        source_path.write_text('print "unterminated;', encoding="utf-8")
         result = run(compiler, [str(source_path)])
         require(result.returncode == 1, f"unexpected unterminated-string exit: {result.returncode}")
         require(result.stdout == "", f"unexpected unterminated-string stdout: {result.stdout!r}")

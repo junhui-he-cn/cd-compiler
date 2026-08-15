@@ -1,0 +1,6 @@
+Program
+  Print "a\nb"
+  Print "q\"q"
+  Print "back\\slash"
+  Print "tab\tend"
+  Print (call len "\0")

@@ -156,7 +156,7 @@ code --install-extension *.vsix
 
 字符串是原始字符串：没有转义序列，反斜杠就是普通字符，可以包含换行，但不能包含双引号。`.cdbc` 字节码产物文本层使用的转义是独立格式，不属于源语言语法。
 
-词法规则的实用摘要：标识符由 ASCII 字母、数字和下划线组成，但不能以数字开头；数字字面量支持整数和带小数部分的十进制数；负数是对数字使用一元 `-` 运算符。字符串在一对双引号之间，当前不提供转义序列，反斜线会作为普通字符保留。关键字包括 `let`、`fun`、`struct`、`enum`、`impl`、`match`、`if`、`else`、`while`、`for`、`break`、`continue`、`return`、`print`、`import`、`export`、`private`、`true`、`false` 和 `nil`。
+词法规则的实用摘要：标识符由 ASCII 字母、数字和下划线组成，但不能以数字开头；数字字面量支持整数和带小数部分的十进制数；负数是对数字使用一元 `-` 运算符。字符串在一对双引号之间，支持 `\n`、`\r`、`\t`、`\0`、`\\` 和 `\"` 转义；字符串内不允许裸换行，未知转义会在词法阶段报错。关键字包括 `let`、`fun`、`struct`、`enum`、`impl`、`match`、`if`、`else`、`while`、`for`、`break`、`continue`、`return`、`print`、`import`、`export`、`private`、`true`、`false` 和 `nil`。
 
 表达式位置的大括号表示 map 字面量，例如 `{ "name": "Ada" }`；语句位置的大括号表示 block。匿名 struct 字面量不是独立语法，命名结构体必须使用 `Name { field: value }` 构造。
 

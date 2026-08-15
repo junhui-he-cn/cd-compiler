@@ -9,6 +9,45 @@
 
 namespace {
 
+std::string decodeStringEscapes(const std::string& raw)
+{
+    std::string decoded;
+    decoded.reserve(raw.size());
+    for (std::size_t index = 0; index < raw.size(); ++index) {
+        if (raw[index] != '\\') {
+            decoded.push_back(raw[index]);
+            continue;
+        }
+        ++index;
+        if (index >= raw.size()) {
+            throw IRCompileError("incomplete string escape");
+        }
+        switch (raw[index]) {
+        case 'n':
+            decoded.push_back('\n');
+            break;
+        case 'r':
+            decoded.push_back('\r');
+            break;
+        case 't':
+            decoded.push_back('\t');
+            break;
+        case '0':
+            decoded.push_back('\0');
+            break;
+        case '\\':
+            decoded.push_back('\\');
+            break;
+        case '"':
+            decoded.push_back('"');
+            break;
+        default:
+            throw IRCompileError("invalid string escape");
+        }
+    }
+    return decoded;
+}
+
 Value literalValue(const std::string& text)
 {
     if (text == "nil") {
@@ -21,7 +60,7 @@ Value literalValue(const std::string& text)
         return Value::boolean(false);
     }
     if (text.size() >= 2 && text.front() == '"' && text.back() == '"') {
-        return Value::string(text.substr(1, text.size() - 2));
+        return Value::string(decodeStringEscapes(text.substr(1, text.size() - 2)));
     }
 
     std::size_t parsed = 0;

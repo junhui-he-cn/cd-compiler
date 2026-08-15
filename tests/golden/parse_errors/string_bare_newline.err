@@ -1,0 +1,3 @@
+Lex error at <repo>/tests/golden/parse_errors/string_bare_newline.cd:1:12: strings cannot contain bare newlines; use `\n`
+  let text = "hello
+             ^

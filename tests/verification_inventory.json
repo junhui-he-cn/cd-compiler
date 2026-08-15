@@ -6787,6 +6787,90 @@
       "fixture": "tests/golden/parse_errors"
     },
     {
+      "case_id": "golden.parse_errors.string_bare_newline",
+      "runner": "golden",
+      "result_name": "parse_errors/string_bare_newline default(ast)",
+      "stage": "parse-error",
+      "capability_tags": [
+        "golden",
+        "parse_errors",
+        "fixture:string_bare_newline"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/string_bare_newline.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/string_bare_newline.cd",
+        "tests/golden/parse_errors/string_bare_newline.err",
+        "tests/golden/parse_errors/string_bare_newline.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
+      "case_id": "golden.parse_errors.string_incomplete_escape",
+      "runner": "golden",
+      "result_name": "parse_errors/string_incomplete_escape default(ast)",
+      "stage": "parse-error",
+      "capability_tags": [
+        "golden",
+        "parse_errors",
+        "fixture:string_incomplete_escape"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/string_incomplete_escape.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/string_incomplete_escape.cd",
+        "tests/golden/parse_errors/string_incomplete_escape.err",
+        "tests/golden/parse_errors/string_incomplete_escape.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
+      "case_id": "golden.parse_errors.string_invalid_escape",
+      "runner": "golden",
+      "result_name": "parse_errors/string_invalid_escape default(ast)",
+      "stage": "parse-error",
+      "capability_tags": [
+        "golden",
+        "parse_errors",
+        "fixture:string_invalid_escape"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/string_invalid_escape.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/string_invalid_escape.cd",
+        "tests/golden/parse_errors/string_invalid_escape.err",
+        "tests/golden/parse_errors/string_invalid_escape.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
       "case_id": "golden.parse_errors.struct_constructor_missing_value",
       "runner": "golden",
       "result_name": "parse_errors/struct_constructor_missing_value default(ast)",
@@ -17070,6 +17154,117 @@
         "tests/golden/strict_bool_conditions/module-interface.out"
       ],
       "fixture": "tests/golden/strict_bool_conditions"
+    },
+    {
+      "case_id": "golden.success.string_escapes.ast",
+      "runner": "golden",
+      "result_name": "string_escapes default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:string_escapes"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/string_escapes/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/string_escapes/ast.out"
+      ],
+      "fixture": "tests/golden/string_escapes"
+    },
+    {
+      "case_id": "golden.success.string_escapes.bytecode",
+      "runner": "golden",
+      "result_name": "string_escapes --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:string_escapes"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/string_escapes/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/string_escapes/bytecode.out"
+      ],
+      "fixture": "tests/golden/string_escapes"
+    },
+    {
+      "case_id": "golden.success.string_escapes.ir",
+      "runner": "golden",
+      "result_name": "string_escapes --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:string_escapes"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/string_escapes/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/string_escapes/ir.out"
+      ],
+      "fixture": "tests/golden/string_escapes"
+    },
+    {
+      "case_id": "golden.success.string_escapes.module_interface",
+      "runner": "golden",
+      "result_name": "string_escapes --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:string_escapes"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/string_escapes/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/string_escapes/module-interface.out"
+      ],
+      "fixture": "tests/golden/string_escapes"
     },
     {
       "case_id": "golden.success.strings.ast",
@@ -29992,6 +30187,93 @@
         "tests/golden/parse_errors/record_pattern_missing_colon.cd",
         "tests/golden/parse_errors/record_pattern_missing_colon.err",
         "tests/golden/parse_errors/record_pattern_missing_colon.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
+      "case_id": "malformed.parse_error.string_bare_newline",
+      "runner": "malformed",
+      "result_name": "malformed.parse_error.string_bare_newline",
+      "stage": "diagnostic-recovery",
+      "capability_tags": [
+        "malformed",
+        "parser",
+        "diagnostic-recovery",
+        "golden-corpus"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/string_bare_newline.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/string_bare_newline.cd",
+        "tests/golden/parse_errors/string_bare_newline.err",
+        "tests/golden/parse_errors/string_bare_newline.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
+      "case_id": "malformed.parse_error.string_incomplete_escape",
+      "runner": "malformed",
+      "result_name": "malformed.parse_error.string_incomplete_escape",
+      "stage": "diagnostic-recovery",
+      "capability_tags": [
+        "malformed",
+        "parser",
+        "diagnostic-recovery",
+        "golden-corpus"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/string_incomplete_escape.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/string_incomplete_escape.cd",
+        "tests/golden/parse_errors/string_incomplete_escape.err",
+        "tests/golden/parse_errors/string_incomplete_escape.exit"
+      ],
+      "fixture": "tests/golden/parse_errors"
+    },
+    {
+      "case_id": "malformed.parse_error.string_invalid_escape",
+      "runner": "malformed",
+      "result_name": "malformed.parse_error.string_invalid_escape",
+      "stage": "diagnostic-recovery",
+      "capability_tags": [
+        "malformed",
+        "parser",
+        "diagnostic-recovery",
+        "golden-corpus"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "reject",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "parse_diagnostic"
+      ],
+      "terminal_boundary": "parse_diagnostic",
+      "sources": [
+        "tests/golden/parse_errors/string_invalid_escape.cd"
+      ],
+      "expected_files": [
+        "tests/golden/parse_errors/string_invalid_escape.cd",
+        "tests/golden/parse_errors/string_invalid_escape.err",
+        "tests/golden/parse_errors/string_invalid_escape.exit"
       ],
       "fixture": "tests/golden/parse_errors"
     },
@@ -46255,6 +46537,68 @@
         "tests/golden/strict_bool_conditions/run.out"
       ],
       "fixture": "tests/golden/strict_bool_conditions"
+    },
+    {
+      "case_id": "rust_vm.golden.string_escapes.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "string_escapes emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:string_escapes"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/string_escapes/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/string_escapes/run.out"
+      ],
+      "fixture": "tests/golden/string_escapes"
+    },
+    {
+      "case_id": "rust_vm.golden.string_escapes.run",
+      "runner": "rust_vm_golden",
+      "result_name": "string_escapes rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:string_escapes"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/string_escapes/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/string_escapes/run.out"
+      ],
+      "fixture": "tests/golden/string_escapes"
     },
     {
       "case_id": "rust_vm.golden.strings.emit",

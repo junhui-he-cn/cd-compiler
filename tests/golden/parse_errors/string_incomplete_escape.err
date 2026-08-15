@@ -1,0 +1,6 @@
+Lex error at <repo>/tests/golden/parse_errors/string_incomplete_escape.cd:1:12: incomplete string escape
+  let text = "abc\
+             ^
+Lex error at <repo>/tests/golden/parse_errors/string_incomplete_escape.cd:2:12: unterminated string
+  
+             ^

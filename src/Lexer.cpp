@@ -246,6 +246,43 @@ void Lexer::throwIfErrors()
 void Lexer::stringLiteral()
 {
     while (peek() != '"' && !isAtEnd()) {
+        const char c = peek();
+        if (c == '\n') {
+            recordError(DiagnosticError(
+                DiagnosticKind::Lex,
+                SourceLocation{line_, tokenColumn_},
+                "strings cannot contain bare newlines; use `\\n`"));
+            advance();
+            continue;
+        }
+        if (c == '\\') {
+            advance();
+            if (isAtEnd()) {
+                recordError(DiagnosticError(
+                    DiagnosticKind::Lex,
+                    SourceLocation{line_, tokenColumn_},
+                    "unterminated string"));
+                return;
+            }
+            const char escaped = peek();
+            if (escaped == '\n') {
+                recordError(DiagnosticError(
+                    DiagnosticKind::Lex,
+                    SourceLocation{line_, tokenColumn_},
+                    "incomplete string escape"));
+                advance();
+                continue;
+            }
+            if (escaped != 'n' && escaped != 'r' && escaped != 't'
+                && escaped != '0' && escaped != '\\' && escaped != '"') {
+                recordError(DiagnosticError(
+                    DiagnosticKind::Lex,
+                    SourceLocation{line_, tokenColumn_},
+                    "invalid escape sequence `\\" + std::string(1, escaped) + "`"));
+            }
+            advance();
+            continue;
+        }
         advance();
     }
 

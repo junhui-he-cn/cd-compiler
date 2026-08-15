@@ -1,0 +1,5 @@
+print "a\nb";
+print "q\"q";
+print "back\\slash";
+print "tab\tend";
+print len("\0");
