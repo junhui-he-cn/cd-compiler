@@ -466,3 +466,26 @@ Rust VM parity 742/742、golden 787/787、ctest 47/47、verification 1825/1825�
 VM 兼容矩阵 7 格、verification matrix 10 cells / 5 workloads。
 
 下一阶段是 Phase 11（map 语义形式化）。
+
+## 19. Phase 11 落地记录
+
+Phase 11（计划 §15，Map 语义正式修订）完成：把 map 的形式语义写成文档并加直接
+单测锁定，消除文档与实现的差异。
+
+- 正式契约：键按运行时相等唯一；迭代保持插入顺序；最后一次写入生效；更新既有键
+  不改变其迭代位置。
+- 逐项核对实现与契约一致：`normalize_map_entries` 构造字面量时去重并保留首次
+  位置；`map_set` 原地更新或追加；`remove` 删除条目；`keys`/`values`/for-in 按
+  插入顺序；`merge` 先追加右侧再统一去重（重叠键原地更新、新键追加）；map 按引用
+  身份相等；`print`/dump 按插入顺序输出。
+- 新增 `map_semantics_are_unique_ordered_and_last_write_wins` Rust 单测，直接构造
+  `{a:1,b:2,a:3}` + `map_set` + `merge` 断言 `map{a: 30, b: 3, c: 2}`；既有
+  `map_duplicate_keys`/`map_keys_values`/`map_merge`/`map_for_in` 黄金用例继续覆盖
+  语言层路径。
+- 英文/中文字节码参考补充 map 形式契约段落。
+
+回归：cargo test 全绿（新增 map 契约用例）、其余门禁在 Phase 12 之后保持一致
+（bytecode artifact 124/124、Rust VM parity 742/742、golden 787/787、
+ctest 47/47、verification 1825/1825、VM 兼容矩阵 7 格）。
+
+下一阶段是 Phase 14（f64 `max_digits10` 精度修复）。

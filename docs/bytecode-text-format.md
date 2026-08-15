@@ -410,8 +410,23 @@ rD = map [rKey0: rValue0, rKey1: rValue1, ...]
 ```
 
 The Rust parser rejects malformed entries that do not contain a `: ` pair
-separator. Map lookup and assignment reuse the existing `index` and
-`assign_index` instructions.
+separator. Map lookup and assignment use `map_get`/`map_set`.
+
+Map values follow one formal contract across construction, `map_set`,
+`map_get`, `remove`, `keys`, `values`, iteration, `merge`, equality, and
+printing:
+
+- keys are unique under runtime equality;
+- iteration preserves insertion order;
+- the last write wins;
+- updating an existing key keeps its original iteration position.
+
+Construction deduplicates literal entries with the first occurrence keeping
+its position, `map_set` mutates an existing entry in place or appends a new
+one, `remove` deletes an entry, `keys`/`values`/`for-in` follow insertion
+order, and `merge` appends the right map's entries before the same
+deduplication, so overlapping keys update in place. Maps compare by identity,
+not by contents.
 
 Struct and field instructions use name-table references for field names:
 

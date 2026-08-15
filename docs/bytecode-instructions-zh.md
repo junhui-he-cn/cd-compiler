@@ -417,6 +417,18 @@ rD = len_range rV        rD = len_str rV
 map 读取/更新：键限 nil/number/bool/string 并按运行时相等查找，缺失读报
 `map key not found`；`map_set` 更新或插入（新增条目计入元素预算）并返回赋入值。
 
+map 在构造、`map_set`、`map_get`、`remove`、`keys`、`values`、迭代、`merge`、
+相等与打印之间遵循同一条形式契约：
+
+- 键按运行时相等唯一；
+- 迭代保持插入顺序；
+- 最后一次写入生效；
+- 更新既有键不改变其迭代位置。
+
+字面量去重时保留首次出现的位置，`map_set` 原地更新或追加，`remove` 删除条目，
+`keys`/`values`/for-in 按插入顺序，`merge` 先追加右侧条目再做同样的去重（重叠键
+原地更新）。map 按引用身份相等，不按内容比较。
+
 #### range_get
 
 range 读取：下标必须是整数 number 且不越界，按 `start + step * 下标` 计算；空 range

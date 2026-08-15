@@ -1638,6 +1638,76 @@ mod tests {
     }
 
     #[test]
+    fn map_semantics_are_unique_ordered_and_last_write_wins() {
+        let program = Program {
+            constants: vec![
+                Constant::String("a".to_string()),
+                Constant::String("b".to_string()),
+                Constant::String("c".to_string()),
+                Constant::Number("1".to_string()),
+                Constant::Number("2".to_string()),
+                Constant::Number("3".to_string()),
+                Constant::Number("30".to_string()),
+            ],
+            globals: Vec::new(),
+            types: Vec::new(),
+            native_imports: vec![NativeImport {
+                name: "print".to_string(),
+                abi: 1,
+            }],
+            modules: Vec::new(),
+            names: vec!["merge".to_string()],
+            functions: vec![Function {
+                id: FuncId(0),
+                name: "main".to_string(),
+                arity: 0,
+                local_count: 0,
+                upvalues: Vec::new(),
+                params: Vec::new(),
+                registers: 12,
+                instructions: vec![
+                    Instruction::Constant { dest: 0, constant: 0 },
+                    Instruction::Constant { dest: 1, constant: 1 },
+                    Instruction::Constant { dest: 2, constant: 2 },
+                    Instruction::Constant { dest: 3, constant: 3 },
+                    Instruction::Constant { dest: 4, constant: 4 },
+                    Instruction::Constant { dest: 5, constant: 5 },
+                    Instruction::Constant { dest: 6, constant: 6 },
+                    Instruction::Map {
+                        dest: 7,
+                        entries: vec![(0, 3), (1, 4), (0, 5)],
+                    },
+                    Instruction::MapSet {
+                        dest: 8,
+                        collection: 7,
+                        index: 0,
+                        value: 6,
+                    },
+                    Instruction::Map {
+                        dest: 9,
+                        entries: vec![(1, 5), (2, 4)],
+                    },
+                    Instruction::NativeCall {
+                        dest: 10,
+                        name: 0,
+                        arguments: vec![7, 9],
+                    },
+                    Instruction::CallNative { dest: 11, native: NativeId(0), arguments: vec![10] },
+                    Instruction::ReturnNil,
+                ],
+                locations: vec![None; 13],
+            }],
+            entry: FuncId(0),
+            debug_sources: Vec::new(),
+        };
+
+        assert_eq!(
+            VM::new(&program).run().expect("map semantics should run"),
+            "map{a: 30, b: 3, c: 2}\n"
+        );
+    }
+
+    #[test]
     fn return_transfer_moves_value_out_of_the_dead_frame_register() {
         let program = empty_program();
         let vm = VM::new(&program);
