@@ -1,15 +1,15 @@
 IR
-0000  v0 = constant #0 1.9
+0000  v0 = constant #0 1.8999999999999999
 0001  v1 = native_call @0 floor(v0)
 0002  print v1
-0003  v2 = constant #1 1.1
+0003  v2 = constant #1 1.1000000000000001
 0004  v3 = neg_num v2
 0005  v4 = native_call @1 floor(v3)
 0006  print v4
-0007  v5 = constant #2 1.1
+0007  v5 = constant #2 1.1000000000000001
 0008  v6 = native_call @2 ceil(v5)
 0009  print v6
-0010  v7 = constant #3 1.9
+0010  v7 = constant #3 1.8999999999999999
 0011  v8 = neg_num v7
 0012  v9 = native_call @3 ceil(v8)
 0013  print v9

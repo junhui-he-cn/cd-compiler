@@ -346,7 +346,7 @@ std::string valueToString(const Value& value, ActiveReferences& activeReferences
         return "nil";
     case Value::Type::Number: {
         std::ostringstream out;
-        out << std::setprecision(15) << value.asNumber();
+        out << std::setprecision(std::numeric_limits<double>::max_digits10) << value.asNumber();
         return out.str();
     }
     case Value::Type::Bool:

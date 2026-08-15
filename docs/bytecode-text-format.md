@@ -290,6 +290,11 @@ c3 = string "escaped string"
 
 Strings use double quotes and backslash escapes for at least `\\`, `\"`, `\n`, `\r`, and `\t`.
 
+`number` constants are IEEE 754 doubles. The C++ emitter prints them with
+`std::numeric_limits<double>::max_digits10` significant digits so every finite
+double round-trips bitwise through the text artifact; the Rust verifier rejects
+unparseable or non-finite literals.
+
 String constants are UTF-8 text. The Rust VM's `len`, `substr`, and `charAt`
 operations interpret string offsets as Unicode scalar-value positions and
 never split a scalar's UTF-8 encoding. Grapheme segmentation and normalization

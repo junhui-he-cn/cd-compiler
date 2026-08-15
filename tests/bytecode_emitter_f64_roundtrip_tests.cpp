@@ -44,23 +44,20 @@ double reparsedValue(const std::string& text)
     return std::stod(text);
 }
 
-// Phase 0 baseline: the C++ bytecode text emitter formats f64 constants with
-// std::setprecision(15), so values that need 16 or 17 significant digits lose
-// precision across "double -> text bytecode -> parser -> double". Phase 14 of
-// docs/cd-compiler-bytecode-0.2-execution-plan.md replaces 15 with
-// std::numeric_limits<double>::max_digits10 and must then update these tests
-// to require bitwise equality for every case.
+// Phase 14: the C++ bytecode text emitter formats f64 constants with
+// std::numeric_limits<double>::max_digits10, so every finite double round-trips
+// bitwise across "double -> text bytecode -> parser -> double".
 
-void testSeventeenDigitFractionIsCurrentlyLossy()
+void testSeventeenDigitFractionRoundTripsExactly()
 {
     const double source = 0.30000000000000004;
-    assert(!sameBits(source, reparsedValue(emittedNumberText(source))));
+    assert(sameBits(source, reparsedValue(emittedNumberText(source))));
 }
 
-void testSeventeenDigitNeighborOfOneIsCurrentlyLossy()
+void testSeventeenDigitNeighborOfOneRoundTripsExactly()
 {
     const double source = 1.0000000000000002;
-    assert(!sameBits(source, reparsedValue(emittedNumberText(source))));
+    assert(sameBits(source, reparsedValue(emittedNumberText(source))));
 }
 
 void testFifteenDigitValueRoundTripsExactly()
@@ -79,8 +76,8 @@ void testSmallIntegerRoundTripsExactly()
 
 int main()
 {
-    testSeventeenDigitFractionIsCurrentlyLossy();
-    testSeventeenDigitNeighborOfOneIsCurrentlyLossy();
+    testSeventeenDigitFractionRoundTripsExactly();
+    testSeventeenDigitNeighborOfOneRoundTripsExactly();
     testFifteenDigitValueRoundTripsExactly();
     testSmallIntegerRoundTripsExactly();
     return 0;

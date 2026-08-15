@@ -1,9 +1,9 @@
 IR
-0000  v0 = constant #0 0.3
+0000  v0 = constant #0 0.30000000000000004
 0001  store_var @0 a#0, v0
-0002  v1 = constant #1 1
+0002  v1 = constant #1 1.0000000000000002
 0003  store_var @1 b#1, v1
-0004  v2 = constant #2 0.1
+0004  v2 = constant #2 0.10000000000000001
 0005  store_var @2 c#2, v2
 0006  v3 = constant #3 1.23456789012345
 0007  store_var @3 d#3, v3

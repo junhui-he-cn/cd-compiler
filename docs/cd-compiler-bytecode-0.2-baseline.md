@@ -489,3 +489,22 @@ Phase 11（计划 §15，Map 语义正式修订）完成：把 map 的形式语�
 ctest 47/47、verification 1825/1825、VM 兼容矩阵 7 格）。
 
 下一阶段是 Phase 14（f64 `max_digits10` 精度修复）。
+
+## 20. Phase 14 落地记录
+
+Phase 14（计划 §18，f64 文本精度修复）完成：`.cdbc` 的 `number` 常量逐位往返。
+
+- `BytecodeTextEmitter::numberText` 与 C++ 调试打印（`Value::valueToString`）从
+  `std::setprecision(15)` 改为
+  `std::setprecision(std::numeric_limits<double>::max_digits10)`（17 位）。
+- 更新 `bytecode_emitter_f64_roundtrip_tests`：17 位小数与 1 的邻域值改为断言
+  **逐位相等**（原先断言会丢失精度）。
+- 黄金工件：`native_stdlib_math` 的 ir/bytecode 常量文本更精确
+  （`1.9 → 1.8999999999999999` 等）；`f64_roundtrip` 的 `run.out` 现在原样输出
+  `0.30000000000000004`/`1.0000000000000002`/`1.3000000000000003`，不再静默漂移。
+
+回归：bytecode emitter round-trip 单测通过、golden 787/787、bytecode artifact
+124/124、Rust VM parity 742/742、ctest 47/47、verification 1825/1825、
+malformed 107/107、VM 兼容矩阵 7 格、verification matrix 10 cells / 5 workloads。
+
+至此执行计划的全部 ISA 阶段（Phase 0–10、13、12、11、14）均已落地。

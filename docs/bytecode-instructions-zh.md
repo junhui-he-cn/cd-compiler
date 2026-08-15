@@ -120,9 +120,9 @@ debug_ranges:
 等聚合值都在运行时由构造指令创建，不能进常量池。
 
 `number` 是 IEEE 754 双精度浮点数。验证期拒绝无法解析或非有限的数字文本。
-实现备注：C++ 发射端目前以 15 位有效数字输出 `number` 文本（
-`BytecodeTextEmitter::numberText`），低于双精度精确往返所需的 17 位；极端值存在
-静默漂移风险。
+C++ 发射端以 `std::numeric_limits<double>::max_digits10`（17 位有效数字）输出
+`number` 文本（`BytecodeTextEmitter::numberText`），保证
+`double → 文本 → double` 逐位往返。
 
 ### 2.3 名字表
 

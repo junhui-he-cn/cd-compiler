@@ -1,6 +1,7 @@
 #include "BytecodeTextEmitter.hpp"
 
 #include <iomanip>
+#include <limits>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -40,7 +41,7 @@ std::string escapedString(const std::string& value)
 std::string numberText(double value)
 {
     std::ostringstream out;
-    out << std::setprecision(15) << value;
+    out << std::setprecision(std::numeric_limits<double>::max_digits10) << value;
     return out.str();
 }
 

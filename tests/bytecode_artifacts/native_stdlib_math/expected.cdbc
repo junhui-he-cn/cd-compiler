@@ -1,8 +1,8 @@
 cdbc 0.2
 
 constants:
-  c0 = number 4.8
-  c1 = number 4.2
+  c0 = number 4.7999999999999998
+  c1 = number 4.2000000000000002
   c2 = number 25
 
 names:

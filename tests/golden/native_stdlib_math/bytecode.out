@@ -4,17 +4,17 @@ native_import i2 = ceil abi=1
 native_import i3 = sqrt abi=1
 main registers=17
 0000  block
-0001  b0 = constant #0 1.9
+0001  b0 = constant #0 1.8999999999999999
 0002  b1 = call_native i0 [b0]
 0003  b16 = call_native i1 [b1]
-0004  b2 = constant #1 1.1
+0004  b2 = constant #1 1.1000000000000001
 0005  b3 = neg_num b2
 0006  b4 = call_native i0 [b3]
 0007  b16 = call_native i1 [b4]
-0008  b5 = constant #2 1.1
+0008  b5 = constant #2 1.1000000000000001
 0009  b6 = call_native i2 [b5]
 0010  b16 = call_native i1 [b6]
-0011  b7 = constant #3 1.9
+0011  b7 = constant #3 1.8999999999999999
 0012  b8 = neg_num b7
 0013  b9 = call_native i2 [b8]
 0014  b16 = call_native i1 [b9]
