@@ -1,5 +1,5 @@
 Runtime error at tests/golden/runtime_errors/range_dynamic_index.cd:3:7: range index out of bounds
-  print values[3];
+  print(values[3]);
         ^
 Call stack:
   at main (tests/golden/runtime_errors/range_dynamic_index.cd:3:7)

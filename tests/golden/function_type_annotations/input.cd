@@ -12,7 +12,7 @@ fun makeAdder(): fun(number): number {
   };
 }
 
-print pred(1);
-print apply(fun (n: number): number { return n + 1; }, 41);
+print(pred(1));
+print(apply(fun (n: number): number { return n + 1; }, 41));
 let addOne: fun(number): number = makeAdder();
-print addOne(5);
+print(addOne(5));

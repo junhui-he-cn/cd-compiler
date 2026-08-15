@@ -2,18 +2,18 @@ Program
   Let left: map<string, number> = (map (entry "a" 1) (entry "b" 2))
   Let right: map<string, number> = (map (entry "b" 20) (entry "c" 3))
   Let combined: map<string, number> = (call merge left right)
-  Print combined
-  Print left
+  Expr (call print combined)
+  Expr (call print left)
   Expr (= (index right "d") 4)
-  Print combined
-  Print (member-call left merge right)
+  Expr (call print combined)
+  Expr (call print (member-call left merge right))
   Let shared = (array 7)
   Let shallowLeft = (map (entry "left" shared))
   Let shallowRight = (map (entry "right" shared))
   Let shallow = (member-call shallowLeft merge shallowRight)
   Expr (call push shared 8)
-  Print shallow
+  Expr (call print shallow)
   Let optional: map<string, optional<number>> = (map (entry "empty" nil))
   Let required: map<string, number> = (map (entry "value" 9))
   Let typed: map<string, optional<number>> = (call merge optional required)
-  Print typed
+  Expr (call print typed)

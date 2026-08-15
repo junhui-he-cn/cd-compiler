@@ -1,8 +1,8 @@
 Parse error at <repo>/tests/golden/parse_errors/record_pattern_missing_colon.cd:5:17: expected `:` after record pattern field name, found RightBrace `}`
-    Person { name } => { print "bad"; }
+    Person { name } => { print("bad"); }
                   ^
 Parse error at <repo>/tests/golden/parse_errors/record_pattern_missing_colon.cd:5:19: expected expression
-    Person { name } => { print "bad"; }
+    Person { name } => { print("bad"); }
                     ^
 Parse error at <repo>/tests/golden/parse_errors/record_pattern_missing_colon.cd:6:1: expected expression
   }

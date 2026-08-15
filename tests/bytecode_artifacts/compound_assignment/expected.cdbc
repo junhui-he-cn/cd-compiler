@@ -11,6 +11,7 @@ names:
   n3 = "`+=` expects number value"
   n4 = "x#0"
   n5 = "x#0"
+  n6 = "print"
 
 globals:
   g0 = n0
@@ -33,7 +34,7 @@ block b0:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/compound_assignment/input.cd" text="let mut x = 1;\nx += 2;\nprint x;\n"
+  s0 path="tests/bytecode_artifacts/compound_assignment/input.cd" text="let mut x = 1;\nx += 2;\nprint(x);\n"
 
 debug_locations:
   main 0 = s0:1:13
@@ -60,5 +61,5 @@ debug_ranges:
   main 7 = s0:15:21
   main 8 = s0:15:21
   main 9 = s0:29:30
-  main 10 = s0:29:30
-  main 11 = s0:29:30
+  main 10 = s0:23:31
+  main 11 = s0:23:31

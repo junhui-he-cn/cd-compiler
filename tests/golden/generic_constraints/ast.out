@@ -20,11 +20,11 @@ Program
   Let lambda = (fun <T: number>(value: T): T (return value))
   Let box: Holder = (construct Holder value: 0)
   Let enumValue = (member-call Box Value 6)
-  Print copied
-  Print kept
-  Print (call lambda 3)
-  Print (call identity<number> 4)
-  Print (call pair "key" 7)
-  Print (member-call box echo 5)
-  Print (call outer 6)
-  Print enumValue
+  Expr (call print copied)
+  Expr (call print kept)
+  Expr (call print (call lambda 3))
+  Expr (call print (call identity<number> 4))
+  Expr (call print (call pair "key" 7))
+  Expr (call print (member-call box echo 5))
+  Expr (call print (call outer 6))
+  Expr (call print enumValue)

@@ -1,5 +1,5 @@
 Runtime error at tests/golden/runtime_errors/map_missing_key.cd:2:7: map key not found
-  print values["missing"];
+  print(values["missing"]);
         ^
 Call stack:
   at main (tests/golden/runtime_errors/map_missing_key.cd:2:7)

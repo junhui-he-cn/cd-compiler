@@ -1,2 +1,2 @@
 Program
-  Print (array 1 "two" true nil)
+  Expr (call print (array 1 "two" true nil))

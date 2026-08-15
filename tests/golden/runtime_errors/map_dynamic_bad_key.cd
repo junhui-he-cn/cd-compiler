@@ -2,4 +2,4 @@ fun id(value) {
   return value;
 }
 let values = {"a": 1};
-print values[id([1])];
+print(values[id([1])]);

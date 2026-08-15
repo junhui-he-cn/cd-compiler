@@ -13,12 +13,12 @@ let explicit = ds.Result.Ok<number, string>(9);
 let explicitError = ds.Result.Err<number, string>("worse");
 let factoryExplicit = ds.ok<number, string>(11);
 
-print render(success);
-print render(failure);
-print render(explicit);
-print render(explicitError);
-print render(factoryExplicit);
+print(render(success));
+print(render(failure));
+print(render(explicit));
+print(render(explicitError));
+print(render(factoryExplicit));
 match failure {
-  ds.Result.Ok(value) => { print "ok:" + str(value); }
-  ds.Result.Err(error) => { print "error:" + error; }
+  ds.Result.Ok(value) => { print("ok:" + str(value)); }
+  ds.Result.Err(error) => { print("error:" + error); }
 }

@@ -1,4 +1,4 @@
 while false {
-  print "skipped";
+  print("skipped");
 }
-print "done";
+print("done");

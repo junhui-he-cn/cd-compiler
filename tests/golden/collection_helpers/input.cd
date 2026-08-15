@@ -1,38 +1,38 @@
 struct Box { value: number }
 
 let xs: [number] = [1, 2, 3];
-print contains(xs, 2);
-print xs.contains(4);
+print(contains(xs, 2));
+print(xs.contains(4));
 
 let shared = [9];
 let nested = [shared];
-print nested.contains(shared);
-print nested.contains([9]);
+print(nested.contains(shared));
+print(nested.contains([9]));
 
 let box = Box { value: 1 };
-print [box].contains(box);
-print [box].contains(Box { value: 1 });
+print([box].contains(box));
+print([box].contains(Box { value: 1 }));
 
 let part = slice(xs, 1, 2);
-print part;
+print(part);
 part[0] = 20;
-print xs;
-print xs.slice(3, 0);
+print(xs);
+print(xs.slice(3, 0));
 
 let cloned = copy(xs);
 cloned[0] = 10;
-print xs;
-print cloned;
+print(xs);
+print(cloned);
 
 let inner = [1];
 let outer = [inner];
 let outerCopy = outer.copy();
 outerCopy[0].push(2);
-print outer;
+print(outer);
 
-print concat(xs, [4, 5]);
-print xs.concat([]);
+print(concat(xs, [4, 5]));
+print(xs.concat([]));
 
 let copy = fun (value) { return value; };
-print copy(7);
-print xs.copy();
+print(copy(7));
+print(xs.copy());

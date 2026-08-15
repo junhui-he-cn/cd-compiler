@@ -1,3 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/nil_pattern_nonnullable_enum.cd:4:3: literal patterns are not valid for enum values
-    nil => { print "nil"; }
+    nil => { print("nil"); }
     ^

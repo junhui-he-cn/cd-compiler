@@ -1,2 +1,2 @@
 Program
-  Print (|| true (&& false false))
+  Expr (call print (|| true (&& false false)))

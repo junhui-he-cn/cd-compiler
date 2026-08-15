@@ -6,5 +6,5 @@ Program
   Fun makePerson(): Person
     Return (construct Person age: 36 name: "Ada")
   Let p = (call birthday (call makePerson))
-  Print (field p name)
-  Print (field p age)
+  Expr (call print (field p name))
+  Expr (call print (field p age))

@@ -7,25 +7,25 @@ IR
 0005  v4 = load_var @1 values#0
 0006  v5 = make_function $0 <lambda>/1
 0007  v6 = native_call @3 findIndex(v4, v5)
-0008  print v6
-0009  v7 = load_var @4 values#0
-0010  v8 = make_function $1 <lambda>/1
-0011  v9 = native_call @6 findIndex(v7, v8)
-0012  print v9
-0013  v10 = constant #7 1
-0014  v11 = constant #8 2
-0015  v12 = array [v10, v11]
-0016  store_var @7 snapshot#3, v12
-0017  v13 = load_var @8 snapshot#3
-0018  v14 = make_function $2 <lambda>/1
-0019  v15 = native_call @12 findIndex(v13, v14)
-0020  print v15
-0021  v16 = load_var @13 snapshot#3
-0022  print v16
-0023  v17 = array []
-0024  v18 = make_function $3 <lambda>/1
-0025  v19 = native_call @14 findIndex(v17, v18)
-0026  print v19
+0008  v7 = native_call @4 print(v6)
+0009  v8 = load_var @5 values#0
+0010  v9 = make_function $1 <lambda>/1
+0011  v10 = native_call @7 findIndex(v8, v9)
+0012  v11 = native_call @8 print(v10)
+0013  v12 = constant #7 1
+0014  v13 = constant #8 2
+0015  v14 = array [v12, v13]
+0016  store_var @9 snapshot#3, v14
+0017  v15 = load_var @10 snapshot#3
+0018  v16 = make_function $2 <lambda>/1
+0019  v17 = native_call @14 findIndex(v15, v16)
+0020  v18 = native_call @15 print(v17)
+0021  v19 = load_var @16 snapshot#3
+0022  v20 = native_call @17 print(v19)
+0023  v21 = array []
+0024  v22 = make_function $3 <lambda>/1
+0025  v23 = native_call @18 findIndex(v21, v22)
+0026  v24 = native_call @19 print(v23)
 
 function $0 <lambda>(value#1)
 0000  v0 = load_var @2 value#1
@@ -36,7 +36,7 @@ function $0 <lambda>(value#1)
 0005  return v3
 
 function $1 <lambda>(value#2)
-0000  v0 = load_var @5 value#2
+0000  v0 = load_var @6 value#2
 0001  v1 = constant #5 2
 0002  v2 = equal v0, v1
 0003  return v2
@@ -44,10 +44,10 @@ function $1 <lambda>(value#2)
 0005  return v3
 
 function $2 <lambda>(value#4)
-0000  v0 = load_var @9 snapshot#3
+0000  v0 = load_var @11 snapshot#3
 0001  v1 = constant #9 9
-0002  v2 = native_call @10 push(v0, v1)
-0003  v3 = load_var @11 value#4
+0002  v2 = native_call @12 push(v0, v1)
+0003  v3 = load_var @13 value#4
 0004  v4 = constant #10 2
 0005  v5 = equal v3, v4
 0006  return v5

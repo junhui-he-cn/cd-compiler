@@ -20,30 +20,30 @@ IR
 0018  v14 = load_var @10 snapshot#5
 0019  v15 = make_function $2 <lambda>/1
 0020  v16 = native_call @14 any(v14, v15)
-0021  print v16
-0022  v17 = load_var @15 snapshot#5
-0023  print v17
-0024  v18 = constant #13 1
-0025  v19 = constant #14 2
-0026  v20 = constant #15 3
-0027  v21 = array [v18, v19, v20]
-0028  store_var @16 allSnapshot#7, v21
-0029  v22 = load_var @17 allSnapshot#7
-0030  v23 = make_function $3 <lambda>/1
-0031  v24 = native_call @21 all(v22, v23)
-0032  print v24
-0033  v25 = load_var @22 allSnapshot#7
-0034  print v25
-0035  v26 = array []
-0036  v27 = make_function $4 <lambda>/1
-0037  v28 = native_call @23 any(v26, v27)
-0038  print v28
-0039  v29 = constant #21 1
-0040  v30 = constant #22 2
-0041  v31 = array [v29, v30]
-0042  v32 = make_function $5 <lambda>/1
-0043  v33 = native_call @25 all(v31, v32)
-0044  print v33
+0021  v17 = native_call @15 print(v16)
+0022  v18 = load_var @16 snapshot#5
+0023  v19 = native_call @17 print(v18)
+0024  v20 = constant #13 1
+0025  v21 = constant #14 2
+0026  v22 = constant #15 3
+0027  v23 = array [v20, v21, v22]
+0028  store_var @18 allSnapshot#7, v23
+0029  v24 = load_var @19 allSnapshot#7
+0030  v25 = make_function $3 <lambda>/1
+0031  v26 = native_call @23 all(v24, v25)
+0032  v27 = native_call @24 print(v26)
+0033  v28 = load_var @25 allSnapshot#7
+0034  v29 = native_call @26 print(v28)
+0035  v30 = array []
+0036  v31 = make_function $4 <lambda>/1
+0037  v32 = native_call @27 any(v30, v31)
+0038  v33 = native_call @28 print(v32)
+0039  v34 = constant #21 1
+0040  v35 = constant #22 2
+0041  v36 = array [v34, v35]
+0042  v37 = make_function $5 <lambda>/1
+0043  v38 = native_call @30 all(v36, v37)
+0044  v39 = native_call @31 print(v38)
 
 function $0 <lambda>(value#1)
 0000  v0 = load_var @2 value#1
@@ -73,10 +73,10 @@ function $2 <lambda>(value#6)
 0008  return v6
 
 function $3 <lambda>(value#8)
-0000  v0 = load_var @18 allSnapshot#7
+0000  v0 = load_var @20 allSnapshot#7
 0001  v1 = constant #16 8
-0002  v2 = native_call @19 push(v0, v1)
-0003  v3 = load_var @20 value#8
+0002  v2 = native_call @21 push(v0, v1)
+0003  v3 = load_var @22 value#8
 0004  v4 = constant #17 3
 0005  v5 = lt_num v3, v4
 0006  return v5
@@ -90,7 +90,7 @@ function $4 <lambda>(value#9)
 0003  return v1
 
 function $5 <lambda>(value#10)
-0000  v0 = load_var @24 value#10
+0000  v0 = load_var @29 value#10
 0001  v1 = constant #23 0
 0002  v2 = gt_num v0, v1
 0003  return v2

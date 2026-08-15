@@ -1,6 +1,6 @@
 Program
   Struct Person {name: string, age: number}
   Let p = (construct Person name: "Ada" age: 36)
-  Print (field p name)
+  Expr (call print (field p name))
   Expr (= (field p age) 37)
-  Print (field p age)
+  Expr (call print (field p age))

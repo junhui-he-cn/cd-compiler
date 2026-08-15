@@ -1,5 +1,5 @@
 fun identity(value) {
   return value;
 }
-print keys(identity({"a": 1, "b": 2}));
-print values(identity({"a": 1, "b": 2}));
+print(keys(identity({"a": 1, "b": 2})));
+print(values(identity({"a": 1, "b": 2})));

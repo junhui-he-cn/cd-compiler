@@ -1,15 +1,15 @@
 import "../../data_structures.cd" as ds;
 
 let values = [4, -1, 3, -1, 2, 0];
-print ds.countingSort(values);
-print values;
+print(ds.countingSort(values));
+print(values);
 
-print ds.countingSort([3, 1, 2, 1, 0, 2]);
+print(ds.countingSort([3, 1, 2, 1, 0, 2]));
 
 let empty: [number] = [];
-print ds.countingSort(empty);
-print ds.countingSort([1, 2.5]);
+print(ds.countingSort(empty));
+print(ds.countingSort([1, 2.5]));
 
 let sparse = [0, 1000000, -1000000];
-print ds.countingSort(sparse);
-print sparse;
+print(ds.countingSort(sparse));
+print(sparse);

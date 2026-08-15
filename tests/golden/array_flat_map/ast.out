@@ -1,8 +1,8 @@
 Program
   Let values: [number] = (array 1 2)
-  Print (call flatMap values (fun (value: number): [number] (return (array value (* value 10)))))
-  Print (member-call values flatMap (fun (value: number): [number] (return (array (+ value 1)))))
+  Expr (call print (call flatMap values (fun (value: number): [number] (return (array value (* value 10))))))
+  Expr (call print (member-call values flatMap (fun (value: number): [number] (return (array (+ value 1))))))
   Let snapshot: [number] = (array 3 4)
-  Print (member-call snapshot flatMap (fun (value: number): [number] (expr (call push snapshot 9)) (return (array value))))
-  Print snapshot
-  Print (member-call (array) flatMap (fun (value: number): [number] (return (array value))))
+  Expr (call print (member-call snapshot flatMap (fun (value: number): [number] (expr (call push snapshot 9)) (return (array value)))))
+  Expr (call print snapshot)
+  Expr (call print (member-call (array) flatMap (fun (value: number): [number] (return (array value)))))

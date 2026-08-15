@@ -1,15 +1,15 @@
 let prices = {"tea": 3, "coffee": 5};
 let keyList = keys(prices);
 let valueList = prices.values();
-print keyList;
-print valueList;
+print(keyList);
+print(valueList);
 prices["water"] = 2;
 remove(prices, "tea");
-print keyList;
-print valueList;
+print(keyList);
+print(valueList);
 
 let typed: map<number, string> = {1: "one", 2: "two"};
 let typedKeys: [number] = typed.keys();
 let typedValues: [string] = values(typed);
-print typedKeys;
-print typedValues;
+print(typedKeys);
+print(typedValues);

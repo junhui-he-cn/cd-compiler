@@ -20,19 +20,19 @@ Program
         Block
           Return "empty"
   Let maybe: optional<bool> = false
-  Print (call numberLabel 1)
-  Print (call numberLabel 8)
-  Print (call shapeLabel (member-call Shape Point 3))
-  Print (call shapeLabel (member-call Shape Line 4 10))
-  Print (call shapeLabel (member-call Shape Empty))
+  Expr (call print (call numberLabel 1))
+  Expr (call print (call numberLabel 8))
+  Expr (call print (call shapeLabel (member-call Shape Point 3)))
+  Expr (call print (call shapeLabel (member-call Shape Line 4 10)))
+  Expr (call print (call shapeLabel (member-call Shape Empty)))
   Match maybe
     Arm (or nil false)
       Block
-        Print "off"
+        Expr (call print "off")
     Arm true
       Block
-        Print "on"
+        Expr (call print "on")
   Match true
     Arm (or true false)
       Block
-        Print "bool"
+        Expr (call print "bool")

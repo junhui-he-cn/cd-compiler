@@ -36,8 +36,8 @@ fun unwrap(box: Box): string {
   }
 }
 
-print pairScore(Pair.Values(2, 4));
-print describe(Result.Ok(7));
-print describe(Result.Err("bad"));
-print describe(Result.Empty());
-print unwrap(Box.Wrap(Result.Ok(9)));
+print(pairScore(Pair.Values(2, 4)));
+print(describe(Result.Ok(7)));
+print(describe(Result.Err("bad")));
+print(describe(Result.Empty()));
+print(unwrap(Box.Wrap(Result.Ok(9))));

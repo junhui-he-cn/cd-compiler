@@ -9,20 +9,20 @@ IR
 0007  v4 = load_var @6 identity#2
 0008  v5 = constant #6 41
 0009  v6 = call v4(v5)
-0010  print v6
-0011  v7 = load_var @7 identity#2
-0012  v8 = constant #7 "generic"
-0013  v9 = call v7(v8)
-0014  print v9
-0015  v10 = load_var @8 head#4
-0016  v11 = constant #8 7
-0017  v12 = constant #9 8
-0018  v13 = array [v11, v12]
-0019  v14 = call v10(v13)
-0020  print v14
-0021  v15 = load_var @9 maybe#5
-0022  v16 = call v15()
-0023  print v16
+0010  v7 = native_call @7 print(v6)
+0011  v8 = load_var @8 identity#2
+0012  v9 = constant #7 "generic"
+0013  v10 = call v8(v9)
+0014  v11 = native_call @9 print(v10)
+0015  v12 = load_var @10 head#4
+0016  v13 = constant #8 7
+0017  v14 = constant #9 8
+0018  v15 = array [v13, v14]
+0019  v16 = call v12(v15)
+0020  v17 = native_call @11 print(v16)
+0021  v18 = load_var @12 maybe#5
+0022  v19 = call v18()
+0023  v20 = native_call @13 print(v19)
 
 function $0 <lambda>(value#0)
 0000  v0 = load_var @0 value#0

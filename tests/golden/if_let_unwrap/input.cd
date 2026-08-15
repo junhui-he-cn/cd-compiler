@@ -12,14 +12,14 @@ fun process(value: number): optional<string> {
 
 let maybe: optional<number> = find(5);
 if let v = maybe {
-  print "if-let:" + str(v);
+  print("if-let:" + str(v));
 } else {
-  print "if-let:none";
+  print("if-let:none");
 }
-print maybe ?? 0;
-print find(-1) ?? 99;
-print process(3) ?? "missing";
-print process(-1) ?? "missing";
+print(maybe ?? 0);
+print(find(-1) ?? 99);
+print(process(3) ?? "missing");
+print(process(-1) ?? "missing");
 
 let mut next: optional<number> = find(1);
 let mut count = 0;
@@ -27,4 +27,4 @@ while let current = next {
   count += 1;
   next = nil;
 }
-print count;
+print(count);

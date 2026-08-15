@@ -1,2 +1,2 @@
 let values: map<string, number> = {"one": 1};
-print values[1];
+print(values[1]);

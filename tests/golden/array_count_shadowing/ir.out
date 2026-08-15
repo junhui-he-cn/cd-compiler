@@ -6,13 +6,13 @@ IR
 0004  v3 = array [v2]
 0005  v4 = make_function $1 <lambda>/1
 0006  v5 = call v1(v3, v4)
-0007  print v5
-0008  v6 = constant #5 1
-0009  v7 = constant #6 2
-0010  v8 = array [v6, v7]
-0011  v9 = make_function $2 <lambda>/1
-0012  v10 = native_call @3 count(v8, v9)
-0013  print v10
+0007  v6 = native_call @2 print(v5)
+0008  v7 = constant #5 1
+0009  v8 = constant #6 2
+0010  v9 = array [v7, v8]
+0011  v10 = make_function $2 <lambda>/1
+0012  v11 = native_call @4 count(v9, v10)
+0013  v12 = native_call @5 print(v11)
 
 function $0 <lambda>(array#0, predicate#1)
 0000  v0 = constant #0 "shadowed count"
@@ -27,7 +27,7 @@ function $1 <lambda>(value#3)
 0003  return v1
 
 function $2 <lambda>(value#4)
-0000  v0 = load_var @2 value#4
+0000  v0 = load_var @3 value#4
 0001  v1 = constant #7 2
 0002  v2 = equal v0, v1
 0003  return v2

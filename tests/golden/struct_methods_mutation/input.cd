@@ -14,5 +14,5 @@ impl Counter {
 let c: Counter = Counter { value: 1 };
 let alias = c;
 c.incBy(4);
-print c.valueNow();
-print alias.value;
+print(c.valueNow());
+print(alias.value);

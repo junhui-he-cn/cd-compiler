@@ -2,5 +2,5 @@ Program
   Let x = "global"
   Block
     Let x = "inner"
-    Print x
-  Print x
+    Expr (call print x)
+  Expr (call print x)

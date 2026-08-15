@@ -6,9 +6,9 @@ IR
 0004  v3 = lt_num v1, v2
 0005  jump_if_false v3, 0013
 0006  v4 = load_var @2 i#0
-0007  print v4
-0008  v5 = load_var @3 i#0
-0009  v6 = constant #2 1
-0010  v7 = add_num v5, v6
-0011  assign_var @4 i#0, v7
+0007  v5 = native_call @3 print(v4)
+0008  v6 = load_var @4 i#0
+0009  v7 = constant #2 1
+0010  v8 = add_num v6, v7
+0011  assign_var @5 i#0, v8
 0012  jump 0002

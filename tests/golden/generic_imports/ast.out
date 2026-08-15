@@ -6,5 +6,5 @@ Program
   Module 1 entry
     Import "lib.cd"
     Import "lib.cd" as lib
-    Print (call identity 7)
-    Print (member-call lib identity "module")
+    Expr (call print (call identity 7))
+    Expr (call print (member-call lib identity "module"))

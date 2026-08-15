@@ -1,7 +1,7 @@
 Program
-  Print (call floor 1.9)
-  Print (call floor (- 1.1))
-  Print (call ceil 1.1)
-  Print (call ceil (- 1.9))
-  Print (call sqrt 9)
-  Print (call sqrt (* 2 8))
+  Expr (call print (call floor 1.9))
+  Expr (call print (call floor (- 1.1)))
+  Expr (call print (call ceil 1.1))
+  Expr (call print (call ceil (- 1.9)))
+  Expr (call print (call sqrt 9))
+  Expr (call print (call sqrt (* 2 8)))

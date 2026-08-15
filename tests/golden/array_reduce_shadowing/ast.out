@@ -1,4 +1,4 @@
 Program
   Let reduce = (fun (array, initial, callback) (return "shadowed"))
-  Print (call reduce (array 1) 0 (fun (acc, value) (return acc)))
-  Print (member-call (array 1) reduce 0 (fun (acc, value) (return (+ acc value))))
+  Expr (call print (call reduce (array 1) 0 (fun (acc, value) (return acc))))
+  Expr (call print (member-call (array 1) reduce 0 (fun (acc, value) (return (+ acc value)))))

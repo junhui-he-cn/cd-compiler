@@ -40,46 +40,46 @@ Program
         Block
           Return "empty"
   Let maybe: optional<bool> = nil
-  Print (call describeNumber 0)
-  Print (call describeNumber 8)
-  Print (call describeBool false)
-  Print (call describeResult (member-call Result Number 7))
-  Print (call describeResult (member-call Result Text ""))
-  Print (call describeResult nil)
+  Expr (call print (call describeNumber 0))
+  Expr (call print (call describeNumber 8))
+  Expr (call print (call describeBool false))
+  Expr (call print (call describeResult (member-call Result Number 7)))
+  Expr (call print (call describeResult (member-call Result Text "")))
+  Expr (call print (call describeResult nil))
   Match 1
     Arm 0
       Block
-        Print "zero"
+        Expr (call print "zero")
     Arm 1
       Block
-        Print "one"
+        Expr (call print "one")
     Arm _
       Block
-        Print "many"
+        Expr (call print "many")
   Match true
     Arm false
       Block
-        Print "no"
+        Expr (call print "no")
     Arm true
       Block
-        Print "yes"
+        Expr (call print "yes")
   Match "ok"
     Arm ""
       Block
-        Print "empty"
+        Expr (call print "empty")
     Arm "ok"
       Block
-        Print "ok"
+        Expr (call print "ok")
     Arm _
       Block
-        Print "other"
+        Expr (call print "other")
   Match maybe
     Arm nil
       Block
-        Print "nil"
+        Expr (call print "nil")
     Arm true
       Block
-        Print "true"
+        Expr (call print "true")
     Arm false
       Block
-        Print "false"
+        Expr (call print "false")

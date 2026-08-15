@@ -1,5 +1,5 @@
-print len([]);
-print len([1, 2, 3]);
-print len("hello");
+print(len([]));
+print(len([1, 2, 3]));
+print(len("hello"));
 let n = len([true, "x", nil]);
-print n + 1;
+print(n + 1);

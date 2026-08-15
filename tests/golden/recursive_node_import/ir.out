@@ -17,7 +17,7 @@ IR
 0015  v12 = assign_field v10.value, v11
 0016  v13 = load_var @17 head#1
 0017  v14 = field v13.next
-0018  print v14
-0019  v15 = load_var @20 tail#0
-0020  v16 = field v15.value
-0021  print v16
+0018  v15 = native_call @20 print(v14)
+0019  v16 = load_var @21 tail#0
+0020  v17 = field v16.value
+0021  v18 = native_call @24 print(v17)

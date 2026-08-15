@@ -502,13 +502,6 @@ struct LetStmt final : Stmt {
     bool isMutable = false;
 };
 
-struct PrintStmt final : Stmt {
-    explicit PrintStmt(ExprPtr expression);
-    void print(std::ostream& out, int indent) const override;
-
-    ExprPtr expression;
-};
-
 struct ExpressionStmt final : Stmt {
     explicit ExpressionStmt(ExprPtr expression);
     void print(std::ostream& out, int indent) const override;

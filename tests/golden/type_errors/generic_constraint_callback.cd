@@ -3,4 +3,4 @@ fun numericPredicate<T: number>(value: T): bool {
 }
 
 let texts: [string] = ["text"];
-print filter(texts, numericPredicate);
+print(filter(texts, numericPredicate));

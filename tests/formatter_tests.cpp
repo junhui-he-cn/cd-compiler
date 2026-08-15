@@ -42,8 +42,8 @@ void test_formats_lossless_source_and_preserves_semantics()
         "}\n"
         "let data={\"a\":1,\"b\":[2,3]}; // data\n"
         "if(data[\"a\"]>0){// branch\n"
-        "print data[\"a\"];\n"
-        "}else{print 0;}\n";
+        "print(data[\"a\"]);\n"
+        "}else{print(0);}\n";
 
     const LosslessSourceFileView view = losslessViewFor(source);
     assert(view.roundTrips(source));
@@ -58,9 +58,9 @@ void test_formats_lossless_source_and_preserves_semantics()
         "  \"b\": [2, 3]\n"
         "}; // data\n"
         "if (data[\"a\"] > 0) { // branch\n"
-        "  print data[\"a\"];\n"
+        "  print(data[\"a\"]);\n"
         "} else {\n"
-        "  print 0;\n"
+        "  print(0);\n"
         "}\n";
     assert(formatted == expected);
     assert(formatLosslessSource(losslessViewFor(formatted)) == formatted);
@@ -68,7 +68,7 @@ void test_formats_lossless_source_and_preserves_semantics()
 
     const std::string wide = formatLosslessSource(view, FormatterOptions{4});
     assert(wide.find("    return x;") != std::string::npos);
-    assert(wide.find("    print data[\"a\"];") != std::string::npos);
+    assert(wide.find("    print(data[\"a\"]);") != std::string::npos);
 
     const std::size_t first = formatted.find("// header");
     const std::size_t second = formatted.find("// body");
@@ -82,7 +82,7 @@ void test_formats_generic_calls_and_for_headers()
     const std::string source =
         "fun id<T>(value:T):T{return value;}\n"
         "let x=id<number>(1);\n"
-        "for let i=0;i<2;i+=1{print id<number>(i);}\n";
+        "for let i=0;i<2;i+=1{print(id<number>(i));}\n";
     const std::string formatted = formatLosslessSource(losslessViewFor(source));
     const std::string expected =
         "fun id<T>(value: T): T {\n"
@@ -90,7 +90,7 @@ void test_formats_generic_calls_and_for_headers()
         "}\n"
         "let x = id<number>(1);\n"
         "for let i = 0; i < 2; i += 1 {\n"
-        "  print id<number>(i);\n"
+        "  print(id<number>(i));\n"
         "}\n";
     assert(formatted == expected);
     assert(astFor(source) == astFor(formatted));
@@ -100,15 +100,15 @@ void test_formats_optional_types_and_postfix_question()
 {
     const std::string source =
         "let maybe:optional<[optional<number>]> = nil;\n"
-        "if let v = maybe { print v; }\n"
-        "print maybe??0;\n";
+        "if let v = maybe { print(v); }\n"
+        "print(maybe??0);\n";
     const std::string formatted = formatLosslessSource(losslessViewFor(source));
     const std::string expected =
         "let maybe: optional<[optional<number>]> = nil;\n"
         "if let v = maybe {\n"
-        "  print v;\n"
+        "  print(v);\n"
         "}\n"
-        "print maybe ?? 0;\n";
+        "print(maybe ?? 0);\n";
     assert(formatted == expected);
     assert(astFor(source) == astFor(formatted));
 }
@@ -121,8 +121,8 @@ void test_preserves_top_level_blank_lines_only()
         "// between\n\n\n"
         "let second=2;\n"
         "if(true){\n"
-        "print 1;\n\n"
-        "print 2;\n"
+        "print(1);\n\n"
+        "print(2);\n"
         "}\n\n\n"
         "let third=3;\n\n";
     const std::string formatted = formatLosslessSource(losslessViewFor(source));
@@ -131,8 +131,8 @@ void test_preserves_top_level_blank_lines_only()
         "// between\n\n"
         "let second = 2;\n"
         "if (true) {\n"
-        "  print 1;\n"
-        "  print 2;\n"
+        "  print(1);\n"
+        "  print(2);\n"
         "}\n\n"
         "let third = 3;\n";
     assert(formatted == expected);
@@ -145,7 +145,7 @@ void test_preserves_supported_trailing_commas()
     const std::string source =
         "enum Choice{First,Second,}\n"
         "let value=1;\n"
-        "match value{1=>{print value;}_=>{print 0;}}\n";
+        "match value{1=>{print(value);}_=>{print(0);}}\n";
     const std::string formatted = formatLosslessSource(losslessViewFor(source));
     const std::string expected =
         "enum Choice {\n"
@@ -155,10 +155,10 @@ void test_preserves_supported_trailing_commas()
         "let value = 1;\n"
         "match value {\n"
         "  1 => {\n"
-        "    print value;\n"
+        "    print(value);\n"
         "  }\n"
         "  _ => {\n"
-        "    print 0;\n"
+        "    print(0);\n"
         "  }\n"
         "}\n";
     assert(formatted == expected);

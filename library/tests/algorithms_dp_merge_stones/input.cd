@@ -1,9 +1,9 @@
 import "../../data_structures.cd" as ds;
 
-print ds.mergeStonesCost([]);
-print ds.mergeStonesCost([5]);
-print ds.mergeStonesCost([1, 2, 3]);
-print ds.mergeStonesCost([4, 1, 1, 4]);
-print ds.mergeStonesCost([3, 2, 4, 1]);
-print ds.mergeStonesCost([-1, 2]);
-print ds.mergeStonesCost([1.5, 2]);
+print(ds.mergeStonesCost([]));
+print(ds.mergeStonesCost([5]));
+print(ds.mergeStonesCost([1, 2, 3]));
+print(ds.mergeStonesCost([4, 1, 1, 4]));
+print(ds.mergeStonesCost([3, 2, 4, 1]));
+print(ds.mergeStonesCost([-1, 2]));
+print(ds.mergeStonesCost([1.5, 2]));

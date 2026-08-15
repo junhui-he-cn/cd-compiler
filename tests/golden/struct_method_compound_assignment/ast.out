@@ -5,5 +5,5 @@ Program
       Expr (+= (field this value) delta)
       Return (field this value)
   Let c: Counter = (construct Counter value: 1)
-  Print (member-call c inc 4)
-  Print (field c value)
+  Expr (call print (member-call c inc 4))
+  Expr (call print (field c value))

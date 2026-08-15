@@ -8,4 +8,4 @@ let mut f = fun (x) {
   return x;
 };
 f = makeZero();
-print f();
+print(f());

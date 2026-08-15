@@ -1,5 +1,5 @@
 Program
   Let calls: [number] = (array)
   Let result: number = (member-call (array) reduce 42 (fun (acc: number, value: number): number (expr (call push calls value)) (return (+ acc 1))))
-  Print result
-  Print calls
+  Expr (call print result)
+  Expr (call print calls)

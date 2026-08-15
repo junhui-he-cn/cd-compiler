@@ -1,1 +1,1 @@
-print missing_b;
+print(missing_b);

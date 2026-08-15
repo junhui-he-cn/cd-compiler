@@ -1,7 +1,7 @@
 native_import i0 = map abi=1
 native_import i1 = print abi=1
 native_import i2 = str abi=1
-main registers=19
+main registers=21
 0000  block
 0001  b0 = constant #0 1
 0002  b1 = constant #1 2
@@ -25,11 +25,11 @@ main registers=19
 0020  b14 = call_native i0 [b12, b13]
 0021  init_global g5, b14
 0022  b15 = load_global g2
-0023  b18 = call_native i1 [b15]
-0024  b16 = load_global g4
-0025  b18 = call_native i1 [b16]
-0026  b17 = load_global g5
-0027  b18 = call_native i1 [b17]
+0023  b16 = call_native i1 [b15]
+0024  b17 = load_global g4
+0025  b18 = call_native i1 [b17]
+0026  b19 = load_global g5
+0027  b20 = call_native i1 [b19]
 0028  return_nil
 
 function $0 <lambda>/1 registers=4

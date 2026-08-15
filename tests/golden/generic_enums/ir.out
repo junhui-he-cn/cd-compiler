@@ -19,50 +19,50 @@ IR
 0017  store_var @36 inferred#10, v9
 0018  v10 = load_var @37 some#7
 0019  v11 = call_direct $0 describe/1(v10)
-0020  print v11
-0021  v12 = load_var @38 none#8
-0022  v13 = call_direct $0 describe/1(v12)
-0023  print v13
-0024  v14 = constant #12 1
-0025  v15 = constant #13 2
-0026  v16 = variant List.Nil ()
-0027  v17 = variant List.Cons (v15, v16)
-0028  v18 = variant List.Cons (v14, v17)
-0029  v19 = call_direct $1 sum/1(v18)
-0030  print v19
-0031  v20 = load_var @45 maybe#9
-0032  v21 = constant #14 nil
-0033  v22 = constant #15 nil
-0034  v23 = equal v20, v22
-0035  jump_if_false v23, 0039
-0036  v24 = constant #16 "nil"
-0037  print v24
+0020  v12 = native_call @38 print(v11)
+0021  v13 = load_var @39 none#8
+0022  v14 = call_direct $0 describe/1(v13)
+0023  v15 = native_call @40 print(v14)
+0024  v16 = constant #12 1
+0025  v17 = constant #13 2
+0026  v18 = variant List.Nil ()
+0027  v19 = variant List.Cons (v17, v18)
+0028  v20 = variant List.Cons (v16, v19)
+0029  v21 = call_direct $1 sum/1(v20)
+0030  v22 = native_call @47 print(v21)
+0031  v23 = load_var @48 maybe#9
+0032  v24 = constant #14 nil
+0033  v25 = constant #15 nil
+0034  v26 = equal v23, v25
+0035  jump_if_false v26, 0039
+0036  v27 = constant #16 "nil"
+0037  v28 = native_call @49 print(v27)
 0038  jump 0051
-0039  v25 = variant_tag v20 Option.Some
-0040  jump_if_false v25, 0046
-0041  v26 = variant_field v20[0]
-0042  store_var @50 value#11, v26
-0043  v27 = constant #17 "some"
-0044  print v27
+0039  v29 = variant_tag v23 Option.Some
+0040  jump_if_false v29, 0046
+0041  v30 = variant_field v23[0]
+0042  store_var @54 value#11, v30
+0043  v31 = constant #17 "some"
+0044  v32 = native_call @55 print(v31)
 0045  jump 0051
-0046  v28 = variant_tag v20 Option.None
-0047  jump_if_false v28, 0051
-0048  v29 = constant #18 "none"
-0049  print v29
+0046  v33 = variant_tag v23 Option.None
+0047  jump_if_false v33, 0051
+0048  v34 = constant #18 "none"
+0049  v35 = native_call @58 print(v34)
 0050  jump 0051
-0051  v30 = load_var @53 inferred#10
-0052  v31 = constant #19 nil
-0053  v32 = variant_tag v30 Option.Some
-0054  jump_if_false v32, 0060
-0055  v33 = variant_field v30[0]
-0056  store_var @58 value#12, v33
-0057  v34 = load_var @59 value#12
-0058  print v34
+0051  v36 = load_var @59 inferred#10
+0052  v37 = constant #19 nil
+0053  v38 = variant_tag v36 Option.Some
+0054  jump_if_false v38, 0060
+0055  v39 = variant_field v36[0]
+0056  store_var @64 value#12, v39
+0057  v40 = load_var @65 value#12
+0058  v41 = native_call @66 print(v40)
 0059  jump 0065
-0060  v35 = variant_tag v30 Option.None
-0061  jump_if_false v35, 0065
-0062  v36 = constant #20 "none"
-0063  print v36
+0060  v42 = variant_tag v36 Option.None
+0061  jump_if_false v42, 0065
+0062  v43 = constant #20 "none"
+0063  v44 = native_call @69 print(v43)
 0064  jump 0065
 
 function $0 describe(value#1)

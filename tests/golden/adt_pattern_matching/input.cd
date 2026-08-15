@@ -32,11 +32,11 @@ fun coarse(result: Result): string {
   }
 }
 
-print describe(Result.Ok(7));
-print describe(Result.Err("bad"));
-print describe(Result.Empty());
-print sum(List.Cons(1, List.Cons(2, List.Nil())));
-print Result.Ok(7);
-print typeOf(Result.Empty());
-print Result.Ok(7) == Result.Ok(7);
-print coarse(Result.Empty());
+print(describe(Result.Ok(7)));
+print(describe(Result.Err("bad")));
+print(describe(Result.Empty()));
+print(sum(List.Cons(1, List.Cons(2, List.Nil()))));
+print(Result.Ok(7));
+print(typeOf(Result.Empty()));
+print(Result.Ok(7) == Result.Ok(7));
+print(coarse(Result.Empty()));

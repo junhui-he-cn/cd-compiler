@@ -24,74 +24,74 @@ IR
 0022  v13 = native_call @14 map(v11, v12)
 0023  store_var @15 copied#10, v13
 0024  v14 = load_var @16 copied#10
-0025  print v14
-0026  v15 = load_var @17 values#9
-0027  v16 = load_var @18 identity#0
-0028  v17 = native_call @19 map(v15, v16)
-0029  print v17
-0030  v18 = load_var @20 values#9
-0031  v19 = load_var @21 keep#2
-0032  v20 = native_call @22 filter(v18, v19)
-0033  print v20
-0034  v21 = load_var @23 values#9
-0035  v22 = load_var @24 keep#2
-0036  v23 = native_call @25 any(v21, v22)
-0037  print v23
-0038  v24 = load_var @26 values#9
-0039  v25 = load_var @27 keep#2
-0040  v26 = native_call @28 all(v24, v25)
-0041  print v26
-0042  v27 = load_var @29 values#9
-0043  v28 = load_var @30 keep#2
-0044  v29 = native_call @31 count(v27, v28)
-0045  print v29
-0046  v30 = load_var @32 values#9
-0047  v31 = load_var @33 keep#2
-0048  v32 = native_call @34 find(v30, v31)
-0049  print v32
-0050  v33 = load_var @35 values#9
-0051  v34 = load_var @36 keep#2
-0052  v35 = native_call @37 findIndex(v33, v34)
-0053  print v35
-0054  v36 = load_var @38 values#9
-0055  v37 = load_var @39 singleton#4
-0056  v38 = native_call @40 flatMap(v36, v37)
-0057  print v38
-0058  v39 = load_var @41 values#9
-0059  v40 = constant #11 0
-0060  v41 = load_var @42 keepAccumulator#6
-0061  v42 = native_call @43 reduce(v39, v40, v41)
-0062  print v42
-0063  v43 = load_var @44 values#9
-0064  v44 = make_function $4 <lambda>/1
-0065  v45 = native_call @46 map(v43, v44)
-0066  print v45
-0067  v46 = constant #13 nil
-0068  store_var @47 acceptsNullable#12, v46
-0069  v47 = make_function $5 acceptsNullable/1
-0070  assign_var @48 acceptsNullable#12, v47
-0071  v48 = constant #16 1
-0072  v49 = constant #17 nil
-0073  v50 = array [v48, v49]
-0074  store_var @49 nullableValues#14, v50
-0075  v51 = load_var @50 nullableValues#14
-0076  v52 = load_var @51 acceptsNullable#12
-0077  v53 = native_call @52 all(v51, v52)
-0078  print v53
-0079  v54 = constant #18 nil
-0080  store_var @53 identityArray#15, v54
-0081  v55 = make_function $6 identityArray/1
-0082  assign_var @55 identityArray#15, v55
-0083  v56 = constant #20 1
-0084  v57 = array [v56]
-0085  v58 = constant #21 2
-0086  v59 = array [v58]
-0087  v60 = array [v57, v59]
-0088  store_var @56 nestedValues#17, v60
-0089  v61 = load_var @57 nestedValues#17
-0090  v62 = load_var @58 identityArray#15
-0091  v63 = native_call @59 map(v61, v62)
-0092  print v63
+0025  v15 = native_call @17 print(v14)
+0026  v16 = load_var @18 values#9
+0027  v17 = load_var @19 identity#0
+0028  v18 = native_call @20 map(v16, v17)
+0029  v19 = native_call @21 print(v18)
+0030  v20 = load_var @22 values#9
+0031  v21 = load_var @23 keep#2
+0032  v22 = native_call @24 filter(v20, v21)
+0033  v23 = native_call @25 print(v22)
+0034  v24 = load_var @26 values#9
+0035  v25 = load_var @27 keep#2
+0036  v26 = native_call @28 any(v24, v25)
+0037  v27 = native_call @29 print(v26)
+0038  v28 = load_var @30 values#9
+0039  v29 = load_var @31 keep#2
+0040  v30 = native_call @32 all(v28, v29)
+0041  v31 = native_call @33 print(v30)
+0042  v32 = load_var @34 values#9
+0043  v33 = load_var @35 keep#2
+0044  v34 = native_call @36 count(v32, v33)
+0045  v35 = native_call @37 print(v34)
+0046  v36 = load_var @38 values#9
+0047  v37 = load_var @39 keep#2
+0048  v38 = native_call @40 find(v36, v37)
+0049  v39 = native_call @41 print(v38)
+0050  v40 = load_var @42 values#9
+0051  v41 = load_var @43 keep#2
+0052  v42 = native_call @44 findIndex(v40, v41)
+0053  v43 = native_call @45 print(v42)
+0054  v44 = load_var @46 values#9
+0055  v45 = load_var @47 singleton#4
+0056  v46 = native_call @48 flatMap(v44, v45)
+0057  v47 = native_call @49 print(v46)
+0058  v48 = load_var @50 values#9
+0059  v49 = constant #11 0
+0060  v50 = load_var @51 keepAccumulator#6
+0061  v51 = native_call @52 reduce(v48, v49, v50)
+0062  v52 = native_call @53 print(v51)
+0063  v53 = load_var @54 values#9
+0064  v54 = make_function $4 <lambda>/1
+0065  v55 = native_call @56 map(v53, v54)
+0066  v56 = native_call @57 print(v55)
+0067  v57 = constant #13 nil
+0068  store_var @58 acceptsNullable#12, v57
+0069  v58 = make_function $5 acceptsNullable/1
+0070  assign_var @59 acceptsNullable#12, v58
+0071  v59 = constant #16 1
+0072  v60 = constant #17 nil
+0073  v61 = array [v59, v60]
+0074  store_var @60 nullableValues#14, v61
+0075  v62 = load_var @61 nullableValues#14
+0076  v63 = load_var @62 acceptsNullable#12
+0077  v64 = native_call @63 all(v62, v63)
+0078  v65 = native_call @64 print(v64)
+0079  v66 = constant #18 nil
+0080  store_var @65 identityArray#15, v66
+0081  v67 = make_function $6 identityArray/1
+0082  assign_var @67 identityArray#15, v67
+0083  v68 = constant #20 1
+0084  v69 = array [v68]
+0085  v70 = constant #21 2
+0086  v71 = array [v70]
+0087  v72 = array [v69, v71]
+0088  store_var @68 nestedValues#17, v72
+0089  v73 = load_var @69 nestedValues#17
+0090  v74 = load_var @70 identityArray#15
+0091  v75 = native_call @71 map(v73, v74)
+0092  v76 = native_call @72 print(v75)
 
 function $0 identity(value#1)
 0000  v0 = load_var @1 value#1
@@ -119,7 +119,7 @@ function $3 keepAccumulator(acc#7, value#8)
 0003  return v1
 
 function $4 <lambda>(value#11)
-0000  v0 = load_var @45 value#11
+0000  v0 = load_var @55 value#11
 0001  return v0
 0002  v1 = constant #12 nil
 0003  return v1
@@ -131,7 +131,7 @@ function $5 acceptsNullable(value#13)
 0003  return v1
 
 function $6 identityArray(value#16)
-0000  v0 = load_var @54 value#16
+0000  v0 = load_var @66 value#16
 0001  return v0
 0002  v1 = constant #19 nil
 0003  return v1

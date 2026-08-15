@@ -2,4 +2,4 @@ let mut total = 0;
 for let mut i = 0; i < 4; i = i + 1 {
   total = total + i;
 }
-print total;
+print(total);

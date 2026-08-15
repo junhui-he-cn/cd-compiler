@@ -1,4 +1,4 @@
 Program
   Let xs = (array 10 20 30)
-  Print (index xs 0)
-  Print (index xs (+ 1 1))
+  Expr (call print (index xs 0))
+  Expr (call print (index xs (+ 1 1)))

@@ -1,5 +1,5 @@
 Parse error at <repo>/tests/golden/parse_errors/or_pattern_missing_rhs.cd:3:10: expected match pattern, found FatArrow `=>`
-    true | => { print "bad"; }
+    true | => { print("bad"); }
            ^
 Parse error at <repo>/tests/golden/parse_errors/or_pattern_missing_rhs.cd:4:1: expected expression
   }

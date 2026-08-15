@@ -1,6 +1,6 @@
 Program
-  Print "a\nb"
-  Print "q\"q"
-  Print "back\\slash"
-  Print "tab\tend"
-  Print (call len "\0")
+  Expr (call print "a\nb")
+  Expr (call print "q\"q")
+  Expr (call print "back\\slash")
+  Expr (call print "tab\tend")
+  Expr (call print (call len "\0"))

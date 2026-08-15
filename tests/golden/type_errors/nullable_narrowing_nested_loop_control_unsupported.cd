@@ -10,4 +10,4 @@ fun nested(value: optional<number>): number {
   return 0;
 }
 
-print nested(nil);
+print(nested(nil));

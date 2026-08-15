@@ -69,7 +69,7 @@ class GoldenRunnerQualityTests(unittest.TestCase):
             golden_dir = root / "golden"
             case_dir = golden_dir / "safe_update_case"
             case_dir.mkdir(parents=True)
-            (case_dir / "input.cd").write_text("print 1;\n", encoding="utf-8")
+            (case_dir / "input.cd").write_text("print(1);\n", encoding="utf-8")
             (case_dir / "ast.out").write_text("old ast\n", encoding="utf-8")
             compiler = self.make_fake_compiler(root, stdout="new ast\n")
 
@@ -93,7 +93,7 @@ class GoldenRunnerQualityTests(unittest.TestCase):
             golden_dir = root / "golden"
             case_dir = golden_dir / "update_missing_case"
             case_dir.mkdir(parents=True)
-            (case_dir / "input.cd").write_text("print 1;\n", encoding="utf-8")
+            (case_dir / "input.cd").write_text("print(1);\n", encoding="utf-8")
             (case_dir / "ast.out").write_text("old ast\n", encoding="utf-8")
             compiler = self.make_fake_compiler(root, stdout="new output\n")
 
@@ -121,9 +121,9 @@ class GoldenRunnerQualityTests(unittest.TestCase):
             skipped_dir = golden_dir / "skipped_case"
             wanted_dir.mkdir(parents=True)
             skipped_dir.mkdir(parents=True)
-            (wanted_dir / "input.cd").write_text("print 1;\n", encoding="utf-8")
+            (wanted_dir / "input.cd").write_text("print(1);\n", encoding="utf-8")
             (wanted_dir / "ast.out").write_text("ok\n", encoding="utf-8")
-            (skipped_dir / "input.cd").write_text("print 2;\n", encoding="utf-8")
+            (skipped_dir / "input.cd").write_text("print(2);\n", encoding="utf-8")
             (skipped_dir / "ast.out").write_text("ok\n", encoding="utf-8")
             compiler = self.make_fake_compiler(root, stdout="ok\n")
 
@@ -161,7 +161,7 @@ class GoldenRunnerQualityTests(unittest.TestCase):
             golden_dir = root / "golden"
             case_dir = golden_dir / "run_only_case"
             case_dir.mkdir(parents=True)
-            (case_dir / "input.cd").write_text("print 1;\n", encoding="utf-8")
+            (case_dir / "input.cd").write_text("print(1);\n", encoding="utf-8")
             (case_dir / "run.out").write_text("1\n", encoding="utf-8")
             compiler = self.make_fake_compiler(root, stdout="unexpected compiler output\n")
 
@@ -303,7 +303,7 @@ class GoldenRunnerQualityTests(unittest.TestCase):
             golden_dir = root / "golden"
             case_dir = golden_dir / "bytecode_case"
             case_dir.mkdir(parents=True)
-            (case_dir / "input.cd").write_text("print 1;\n", encoding="utf-8")
+            (case_dir / "input.cd").write_text("print(1);\n", encoding="utf-8")
             (case_dir / "bytecode.out").write_text("bytecode output\n", encoding="utf-8")
             compiler = root / "fake_compiler.py"
             compiler.write_text(
@@ -334,7 +334,7 @@ class GoldenRunnerQualityTests(unittest.TestCase):
             golden_dir = root / "golden"
             case_dir = golden_dir / "module_interface_case"
             case_dir.mkdir(parents=True)
-            (case_dir / "input.cd").write_text("print 1;\n", encoding="utf-8")
+            (case_dir / "input.cd").write_text("print(1);\n", encoding="utf-8")
             (case_dir / "module-interface.out").write_text("module interface output\n", encoding="utf-8")
             compiler = root / "fake_compiler.py"
             compiler.write_text(
@@ -365,7 +365,7 @@ class GoldenRunnerQualityTests(unittest.TestCase):
             golden_dir = root / "golden"
             case_dir = golden_dir / "module_interface_path_case"
             case_dir.mkdir(parents=True)
-            (case_dir / "input.cd").write_text("print 1;\n", encoding="utf-8")
+            (case_dir / "input.cd").write_text("print(1);\n", encoding="utf-8")
             (case_dir / "module-interface.out").write_text(
                 'module 0 entry "/old checkout/tests/golden/module_interface_path_case/input.cd"\n',
                 encoding="utf-8",
@@ -386,8 +386,8 @@ class GoldenRunnerQualityTests(unittest.TestCase):
             root = Path(temp_dir)
             case_dir = root / "multi_file"
             case_dir.mkdir()
-            (case_dir / "lib.cd").write_text("print 1;\n", encoding="utf-8")
-            (case_dir / "main.cd").write_text("print 2;\n", encoding="utf-8")
+            (case_dir / "lib.cd").write_text("print(1);\n", encoding="utf-8")
+            (case_dir / "main.cd").write_text("print(2);\n", encoding="utf-8")
             (case_dir / "args.txt").write_text("lib.cd main.cd\n", encoding="utf-8")
             (case_dir / "ir.out").write_text("ir\n", encoding="utf-8")
 
@@ -456,12 +456,12 @@ class GoldenRunnerQualityTests(unittest.TestCase):
             golden_dir = root / "golden"
             parse_dir = golden_dir / "parse_errors"
             parse_dir.mkdir(parents=True)
-            (parse_dir / "snippet.cd").write_text("print ;\n", encoding="utf-8")
-            (parse_dir / "snippet.err").write_text("Parse error at 1:7: expected expression\n", encoding="utf-8")
+            (parse_dir / "snippet.cd").write_text("let ;\n", encoding="utf-8")
+            (parse_dir / "snippet.err").write_text("Parse error at 1:5: expected variable name after `let`, found Semicolon `;`\n", encoding="utf-8")
             (parse_dir / "snippet.exit").write_text("1\n", encoding="utf-8")
             compiler = self.make_fake_compiler(
                 root,
-                stderr="Parse error at 1:7: expected expression\n  print ;\n        ^\n",
+                stderr="Parse error at 1:5: expected variable name after `let`, found Semicolon `;`\n  let ;\n      ^\n",
                 returncode=1,
             )
 
@@ -476,17 +476,17 @@ class GoldenRunnerQualityTests(unittest.TestCase):
             golden_dir = root / "golden"
             parse_dir = golden_dir / "parse_errors"
             parse_dir.mkdir(parents=True)
-            (parse_dir / "snippet.cd").write_text("print ;\n", encoding="utf-8")
+            (parse_dir / "snippet.cd").write_text("let ;\n", encoding="utf-8")
             (parse_dir / "snippet.err").write_text(
-                "Parse error at 1:7: expected expression\n"
-                "  print ;\n"
-                "        ^\n",
+                "Parse error at 1:5: expected variable name after `let`, found Semicolon `;`\n"
+                "  let ;\n"
+                "      ^\n",
                 encoding="utf-8",
             )
             (parse_dir / "snippet.exit").write_text("1\n", encoding="utf-8")
             compiler = self.make_fake_compiler(
                 root,
-                stderr="Parse error at 1:7: expected expression\n  print ;\n       ^\n",
+                stderr="Parse error at 1:5: expected variable name after `let`, found Semicolon `;`\n  let ;\n     ^\n",
                 returncode=1,
             )
 

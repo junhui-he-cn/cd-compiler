@@ -1,8 +1,8 @@
 import "../../data_structures.cd" as ds;
 
-print ds.huffmanMergeCost([]);
-print ds.huffmanMergeCost([7]);
-print ds.huffmanMergeCost([1, 1, 1, 1]);
-print ds.huffmanMergeCost([5, 9, 12, 13, 16, 45]);
-print ds.huffmanMergeCost([1.5, 2.5]);
-print ds.huffmanMergeCost([-1, 2]);
+print(ds.huffmanMergeCost([]));
+print(ds.huffmanMergeCost([7]));
+print(ds.huffmanMergeCost([1, 1, 1, 1]));
+print(ds.huffmanMergeCost([5, 9, 12, 13, 16, 45]));
+print(ds.huffmanMergeCost([1.5, 2.5]));
+print(ds.huffmanMergeCost([-1, 2]));

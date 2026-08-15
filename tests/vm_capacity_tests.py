@@ -225,7 +225,7 @@ def main() -> int:
         array_length = 4096
         values = ", ".join(str(index % 97) for index in range(array_length))
         large_array_source.write_text(
-            f"let values = [{values}];\nprint len(values);\n",
+            f"let values = [{values}];\nprint(len(values));\n",
             encoding="utf-8",
         )
         error = emit_bytecode(
@@ -281,8 +281,8 @@ def main() -> int:
         )
         large_map_source.write_text(
             f'let values = {{{map_entries}}};\n'
-            "print len(values);\n"
-            f'print values["key{map_entry_count - 1}"];\n',
+            "print(len(values));\n"
+            f'print(values["key{map_entry_count - 1}"]);\n',
             encoding="utf-8",
         )
         error = emit_bytecode(
@@ -356,9 +356,9 @@ def main() -> int:
             "  values = [iteration, iteration + 1, iteration + 2];\n"
             "  iteration += 1;\n"
             "}\n"
-            "print bucket.value;\n"
-            'print latest["value"];\n'
-            "print len(values);\n",
+            "print(bucket.value);\n"
+            'print(latest["value"]);\n'
+            "print(len(values));\n",
             encoding="utf-8",
         )
         error = emit_bytecode(
@@ -438,8 +438,8 @@ def main() -> int:
             "struct Payload { label: string, value: number }\n"
             "struct Entry { index: number, payload: Payload }\n"
             f"let values = [{struct_entries}];\n"
-            "print len(values);\n"
-            f"print values[{struct_entry_count - 1}].payload.value;\n",
+            "print(len(values));\n"
+            f"print(values[{struct_entry_count - 1}].payload.value);\n",
             encoding="utf-8",
         )
         error = emit_bytecode(
@@ -526,7 +526,7 @@ def main() -> int:
         scalar_count = 32768
         long_string = "é" * scalar_count
         long_string_source.write_text(
-            f'let text = "{long_string}";\nprint len(text);\n',
+            f'let text = "{long_string}";\nprint(len(text));\n',
             encoding="utf-8",
         )
         error = emit_bytecode(
@@ -574,7 +574,7 @@ def main() -> int:
         expected_long_string_output = f"{long_string}\n"
         output_bytes = len(expected_long_string_output.encode("utf-8"))
         long_string_output_source.write_text(
-            f'let text = "{long_string}";\nprint text;\n',
+            f'let text = "{long_string}";\nprint(text);\n',
             encoding="utf-8",
         )
         error = emit_bytecode(
@@ -700,7 +700,7 @@ def main() -> int:
             "  if (value <= 0) { return 0; }\n"
             "  return descend(value - 1);\n"
             "}\n"
-            "print descend(64);\n",
+            "print(descend(64));\n",
             encoding="utf-8",
         )
         error = emit_bytecode(
@@ -751,7 +751,7 @@ def main() -> int:
                 f"let value{index}: number = {index};\n"
                 for index in range(debug_statement_count)
             )
-            + f"print value{debug_statement_count - 1};\n",
+            + f"print(value{debug_statement_count - 1});\n",
             encoding="utf-8",
         )
         error = emit_bytecode(
@@ -805,7 +805,7 @@ def main() -> int:
                 f'import "./chain{index - 1}.cd";\n' if index > 0 else ""
             )
             (chain_directory / f"chain{index}.cd").write_text(
-                dependency + f'print "chain{index}";\n',
+                dependency + f'print("chain{index}");\n',
                 encoding="utf-8",
             )
         chain_entry = chain_directory / f"chain{chain_count - 1}.cd"
@@ -865,22 +865,22 @@ def main() -> int:
         diamond_output = root / "diamond-products"
         diamond_directory.mkdir()
         (diamond_directory / "diamond-base.cd").write_text(
-            'print "base";\n',
+            'print("base");\n',
             encoding="utf-8",
         )
         (diamond_directory / "diamond-left.cd").write_text(
-            'import "./diamond-base.cd";\nprint "left";\n',
+            'import "./diamond-base.cd";\nprint("left");\n',
             encoding="utf-8",
         )
         (diamond_directory / "diamond-right.cd").write_text(
-            'import "./diamond-base.cd";\nprint "right";\n',
+            'import "./diamond-base.cd";\nprint("right");\n',
             encoding="utf-8",
         )
         diamond_entry = diamond_directory / "diamond-entry.cd"
         diamond_entry.write_text(
             'import "./diamond-left.cd";\n'
             'import "./diamond-right.cd";\n'
-            'print "entry";\n',
+            'print("entry");\n',
             encoding="utf-8",
         )
         error = emit_modules(

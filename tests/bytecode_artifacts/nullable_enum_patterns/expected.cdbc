@@ -49,27 +49,35 @@ names:
   n20 = "some#4"
   n21 = "none#5"
   n22 = "some#4"
-  n23 = "none#5"
-  n24 = "some#4"
-  n25 = "Option"
-  n26 = "Some"
-  n27 = "Option"
-  n28 = "Some"
-  n29 = "value#6"
-  n30 = "value#6"
-  n31 = "Option"
-  n32 = "Some"
-  n33 = "Option"
-  n34 = "Some"
+  n23 = "print"
+  n24 = "none#5"
+  n25 = "print"
+  n26 = "some#4"
+  n27 = "print"
+  n28 = "Option"
+  n29 = "Some"
+  n30 = "Option"
+  n31 = "Some"
+  n32 = "value#6"
+  n33 = "value#6"
+  n34 = "print"
   n35 = "Option"
-  n36 = "None"
-  n37 = "none#5"
+  n36 = "Some"
+  n37 = "Option"
+  n38 = "Some"
+  n39 = "print"
+  n40 = "Option"
+  n41 = "None"
+  n42 = "print"
+  n43 = "none#5"
+  n44 = "print"
+  n45 = "print"
 
 globals:
   g0 = n0
   g1 = n20
   g2 = n21
-  g3 = n29
+  g3 = n32
 
 types:
   t0 = enum "Option" v0="Some" payload=1 v1="None" payload=0
@@ -78,7 +86,7 @@ native_imports:
   i0 = "print" abi=1
   i1 = "str" abi=1
 
-main registers=33:
+main registers=40:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -91,64 +99,64 @@ block b0:
   init_global g2, r4
   r5 = load_global g1
   r6 = call_direct f0 [r5]
-  r32 = call_native i0 [r6]
-  r7 = load_global g2
-  r8 = call_direct f0 [r7]
-  r32 = call_native i0 [r8]
-  r9 = load_global g1
-  r10 = constant c11
-  r11 = constant c12
-  r12 = equal r9, r11
-  br_if r12, b1, b2
+  r7 = call_native i0 [r6]
+  r8 = load_global g2
+  r9 = call_direct f0 [r8]
+  r10 = call_native i0 [r9]
+  r11 = load_global g1
+  r12 = constant c11
+  r13 = constant c12
+  r14 = equal r11, r13
+  br_if r14, b1, b2
 block b1:
-  r13 = constant c13
-  r32 = call_native i0 [r13]
+  r15 = constant c13
+  r16 = call_native i0 [r15]
   br b9
 block b2:
-  r14 = is_variant r9, t0, v0
-  br_if r14, b3, b5
+  r17 = is_variant r11, t0, v0
+  br_if r17, b3, b5
 block b3:
-  r15 = variant_get r9, t0, v0, 0
-  init_global g3, r15
-  r16 = load_global g3
-  r17 = constant c14
-  r18 = gt_num r16, r17
-  br_if r18, b4, b5
+  r18 = variant_get r11, t0, v0, 0
+  init_global g3, r18
+  r19 = load_global g3
+  r20 = constant c14
+  r21 = gt_num r19, r20
+  br_if r21, b4, b5
 block b4:
-  r19 = constant c15
-  r32 = call_native i0 [r19]
+  r22 = constant c15
+  r23 = call_native i0 [r22]
   br b9
 block b5:
-  r20 = is_variant r9, t0, v0
-  br_if r20, b6, b7
+  r24 = is_variant r11, t0, v0
+  br_if r24, b6, b7
 block b6:
-  r21 = variant_get r9, t0, v0, 0
-  r22 = constant c16
-  r32 = call_native i0 [r22]
+  r25 = variant_get r11, t0, v0, 0
+  r26 = constant c16
+  r27 = call_native i0 [r26]
   br b9
 block b7:
-  r23 = is_variant r9, t0, v1
-  br_if r23, b8, b9
+  r28 = is_variant r11, t0, v1
+  br_if r28, b8, b9
 block b8:
-  r24 = constant c17
-  r32 = call_native i0 [r24]
+  r29 = constant c17
+  r30 = call_native i0 [r29]
   br b9
 block b9:
-  r25 = load_global g2
-  r26 = constant c18
-  r27 = constant c19
-  r28 = equal r25, r27
-  br_if r28, b10, b12
+  r31 = load_global g2
+  r32 = constant c18
+  r33 = constant c19
+  r34 = equal r31, r33
+  br_if r34, b10, b12
 block b10:
-  r29 = constant c20
-  br_if r29, b11, b12
+  r35 = constant c20
+  br_if r35, b11, b12
 block b11:
-  r30 = constant c21
-  r32 = call_native i0 [r30]
+  r36 = constant c21
+  r37 = call_native i0 [r36]
   return_nil
 block b12:
-  r31 = constant c22
-  r32 = call_native i0 [r31]
+  r38 = constant c22
+  r39 = call_native i0 [r38]
   return_nil
 block b13:
   return_nil
@@ -209,7 +217,7 @@ block b14:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/nullable_enum_patterns/input.cd" text="enum Option {\n  Some(number),\n  None,\n}\n\nfun describe(value: optional<Option>): string {\n  match value {\n    nil => { return \"nil\"; }\n    Option.Some(value) if value > 10 => { return \"large\"; }\n    Option.Some(value) => { return \"some:\" + str(value); }\n    Option.None => { return \"none\"; }\n  }\n}\n\nlet some: optional<Option> = Option.Some(7);\nlet none: optional<Option> = nil;\nprint describe(some);\nprint describe(none);\nmatch some {\n  nil => { print \"nil\"; }\n  Option.Some(value) if value > 10 => { print \"large\"; }\n  Option.Some(_) => { print \"some\"; }\n  Option.None => { print \"none\"; }\n}\nmatch none {\n  nil if true => { print \"guarded nil\"; }\n  _ => { print \"fallback\"; }\n}\n"
+  s0 path="tests/bytecode_artifacts/nullable_enum_patterns/input.cd" text="enum Option {\n  Some(number),\n  None,\n}\n\nfun describe(value: optional<Option>): string {\n  match value {\n    nil => { return \"nil\"; }\n    Option.Some(value) if value > 10 => { return \"large\"; }\n    Option.Some(value) => { return \"some:\" + str(value); }\n    Option.None => { return \"none\"; }\n  }\n}\n\nlet some: optional<Option> = Option.Some(7);\nlet none: optional<Option> = nil;\nprint(describe(some));\nprint(describe(none));\nmatch some {\n  nil => { print(\"nil\"); }\n  Option.Some(value) if value > 10 => { print(\"large\"); }\n  Option.Some(_) => { print(\"some\"); }\n  Option.None => { print(\"none\"); }\n}\nmatch none {\n  nil if true => { print(\"guarded nil\"); }\n  _ => { print(\"fallback\"); }\n}\n"
 
 debug_locations:
   main 0 = s0:6:1
@@ -351,67 +359,67 @@ debug_ranges:
   main 9 = s0:347:375
   main 10 = s0:392:396
   main 11 = s0:383:397
-  main 12 = s0:383:397
-  main 13 = s0:414:418
-  main 14 = s0:405:419
-  main 15 = s0:405:419
-  main 16 = s0:427:431
-  main 17 = s0:421:586
-  main 18 = s0:421:586
-  main 19 = s0:421:586
-  main 20 = s0:421:586
-  main 21 = s0:451:456
-  main 22 = s0:451:456
-  main 23 = s0:451:456
-  main 24 = s0:421:586
-  main 25 = s0:421:586
-  main 26 = s0:421:586
-  main 27 = s0:421:586
-  main 28 = s0:421:586
-  main 29 = s0:421:586
-  main 30 = s0:421:586
-  main 31 = s0:484:489
-  main 32 = s0:492:494
-  main 33 = s0:484:494
-  main 34 = s0:421:586
-  main 35 = s0:506:513
-  main 36 = s0:506:513
-  main 37 = s0:506:513
-  main 38 = s0:421:586
-  main 39 = s0:421:586
-  main 40 = s0:421:586
-  main 41 = s0:421:586
-  main 42 = s0:421:586
-  main 43 = s0:421:586
-  main 44 = s0:545:551
-  main 45 = s0:545:551
-  main 46 = s0:421:586
-  main 47 = s0:421:586
-  main 48 = s0:421:586
-  main 49 = s0:421:586
-  main 50 = s0:580:586
-  main 51 = s0:580:586
-  main 52 = s0:580:586
-  main 53 = s0:421:586
-  main 54 = s0:598:602
-  main 55 = s0:598:602
-  main 56 = s0:592:672
-  main 57 = s0:592:672
-  main 58 = s0:592:672
-  main 59 = s0:592:672
-  main 60 = s0:614:618
-  main 61 = s0:614:618
-  main 62 = s0:592:672
-  main 63 = s0:630:643
-  main 64 = s0:630:643
-  main 65 = s0:630:643
-  main 66 = s0:592:672
-  main 67 = s0:662:672
-  main 68 = s0:662:672
-  main 69 = s0:662:672
-  main 70 = s0:592:672
-  main 71 = s0:592:672
-  main 72 = s0:592:672
+  main 12 = s0:377:398
+  main 13 = s0:415:419
+  main 14 = s0:406:420
+  main 15 = s0:400:421
+  main 16 = s0:429:433
+  main 17 = s0:423:592
+  main 18 = s0:423:592
+  main 19 = s0:423:592
+  main 20 = s0:423:592
+  main 21 = s0:453:458
+  main 22 = s0:453:458
+  main 23 = s0:447:459
+  main 24 = s0:423:592
+  main 25 = s0:423:592
+  main 26 = s0:423:592
+  main 27 = s0:423:592
+  main 28 = s0:423:592
+  main 29 = s0:423:592
+  main 30 = s0:423:592
+  main 31 = s0:487:492
+  main 32 = s0:495:497
+  main 33 = s0:487:497
+  main 34 = s0:423:592
+  main 35 = s0:509:516
+  main 36 = s0:509:516
+  main 37 = s0:503:517
+  main 38 = s0:423:592
+  main 39 = s0:423:592
+  main 40 = s0:423:592
+  main 41 = s0:423:592
+  main 42 = s0:423:592
+  main 43 = s0:423:592
+  main 44 = s0:549:555
+  main 45 = s0:543:556
+  main 46 = s0:423:592
+  main 47 = s0:423:592
+  main 48 = s0:423:592
+  main 49 = s0:423:592
+  main 50 = s0:585:591
+  main 51 = s0:585:591
+  main 52 = s0:579:592
+  main 53 = s0:423:592
+  main 54 = s0:604:608
+  main 55 = s0:604:608
+  main 56 = s0:598:680
+  main 57 = s0:598:680
+  main 58 = s0:598:680
+  main 59 = s0:598:680
+  main 60 = s0:620:624
+  main 61 = s0:620:624
+  main 62 = s0:598:680
+  main 63 = s0:636:649
+  main 64 = s0:636:649
+  main 65 = s0:630:650
+  main 66 = s0:598:680
+  main 67 = s0:669:679
+  main 68 = s0:669:679
+  main 69 = s0:663:680
+  main 70 = s0:598:680
+  main 71 = s0:598:680
+  main 72 = s0:598:680
   function f0 0 = s0:97:102
   function f0 1 = s0:97:102
   function f0 2 = s0:91:287

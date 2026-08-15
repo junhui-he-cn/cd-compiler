@@ -2,25 +2,25 @@ import "../../data_structures.cd" as ds;
 
 let list = ds.newLinkedList<number>();
 list.pushBack(1);
-print list.popFront();
+print(list.popFront());
 list.pushBack(2);
 list.pushFront(1);
 list.pushBack(3);
-print list.snapshot();
-print list.popFront();
-print list.popFront();
-print list.popFront();
-print list.popFront();
+print(list.snapshot());
+print(list.popFront());
+print(list.popFront());
+print(list.popFront());
+print(list.popFront());
 
 let afterFrontRemoval = ds.newLinkedList<number>();
 afterFrontRemoval.pushBack(10);
 afterFrontRemoval.pushBack(20);
 afterFrontRemoval.popFront();
 afterFrontRemoval.pushBack(30);
-print afterFrontRemoval.snapshot();
+print(afterFrontRemoval.snapshot());
 
 let afterEmptyRemoval = ds.newLinkedList<number>();
 afterEmptyRemoval.pushBack(40);
 afterEmptyRemoval.popFront();
 afterEmptyRemoval.pushBack(50);
-print afterEmptyRemoval.snapshot();
+print(afterEmptyRemoval.snapshot());

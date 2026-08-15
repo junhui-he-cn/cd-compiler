@@ -9,4 +9,4 @@ impl Point {
 let score: fun(Point): number = fun (p) {
   return p.sum();
 };
-print score(Point { x: 2, y: 5 });
+print(score(Point { x: 2, y: 5 }));

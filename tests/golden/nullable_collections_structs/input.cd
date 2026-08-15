@@ -1,13 +1,13 @@
 struct Box { value: optional<number> }
 let box: Box = Box { value: nil };
-print box.value;
+print(box.value);
 box.value = 5;
-print box.value;
+print(box.value);
 let maybeBox: optional<Box> = nil;
-print maybeBox;
+print(maybeBox);
 let values: [optional<number>] = [1, nil, 3];
-print values;
+print(values);
 push(values, nil);
-print values;
+print(values);
 let maybeValues: optional<[number]> = nil;
-print maybeValues;
+print(maybeValues);

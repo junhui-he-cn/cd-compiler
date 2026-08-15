@@ -1,2 +1,2 @@
 import "./geometry.cd" as geo;
-print typeOf(geo.Point { x: 1, y: 2 });
+print(typeOf(geo.Point { x: 1, y: 2 }));

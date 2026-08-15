@@ -68,14 +68,14 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="compiler-design-vm-budget-") as temporary:
         root = Path(temporary)
         source = root / "budget.cd"
-        source.write_text('print "é";\n', encoding="utf-8")
+        source.write_text('print("é");\n', encoding="utf-8")
         artifact = root / "budget.cdbc"
         emitted = compile_source(compiler, source, artifact)
         if emitted is not None:
             return emitted
 
         elements_source = root / "elements.cd"
-        elements_source.write_text("print [1];\n", encoding="utf-8")
+        elements_source.write_text("print([1]);\n", encoding="utf-8")
         elements_artifact = root / "elements.cdbc"
         emitted = compile_source(compiler, elements_source, elements_artifact)
         if emitted is not None:
@@ -129,7 +129,7 @@ def main() -> int:
             encoding="utf-8",
         )
         module_source.write_text(
-            'import "./lib.cd";\nprint 1;\n',
+            'import "./lib.cd";\nprint(1);\n',
             encoding="utf-8",
         )
         module_directory = root / "modules"

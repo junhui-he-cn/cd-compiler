@@ -6,4 +6,4 @@ Program
       Expr (call push fns (fun () (return x)))
   ForIn f in fns
     Block
-      Print (call f)
+      Expr (call print (call f))

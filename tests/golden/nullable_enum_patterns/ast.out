@@ -16,25 +16,25 @@ Program
           Return "none"
   Let some: optional<Option> = (member-call Option Some 7)
   Let none: optional<Option> = nil
-  Print (call describe some)
-  Print (call describe none)
+  Expr (call print (call describe some))
+  Expr (call print (call describe none))
   Match some
     Arm nil
       Block
-        Print "nil"
+        Expr (call print "nil")
     Arm Option.Some(value) if (> value 10)
       Block
-        Print "large"
+        Expr (call print "large")
     Arm Option.Some(_)
       Block
-        Print "some"
+        Expr (call print "some")
     Arm Option.None
       Block
-        Print "none"
+        Expr (call print "none")
   Match none
     Arm nil if true
       Block
-        Print "guarded nil"
+        Expr (call print "guarded nil")
     Arm _
       Block
-        Print "fallback"
+        Expr (call print "fallback")

@@ -17,32 +17,32 @@ IR
 0015  assign_var @10 make#6, v7
 0016  v8 = constant #10 42
 0017  v9 = call_direct $1 identity/1(v8)
-0018  print v9
-0019  v10 = constant #11 "hello"
-0020  v11 = call_direct $1 identity/1(v10)
-0021  print v11
-0022  v12 = constant #12 1
-0023  v13 = constant #13 2
-0024  v14 = array [v12, v13]
-0025  v15 = call_direct $2 head/1(v14)
-0026  print v15
-0027  v16 = constant #14 3
-0028  v17 = constant #15 4
-0029  v18 = array [v16, v17]
-0030  v19 = call_direct $1 identity/1(v18)
-0031  print v19
-0032  v20 = call_direct $3 make/0()
-0033  print v20
-0034  v21 = load_var @11 identity#2
-0035  store_var @12 alias#7, v21
-0036  v22 = load_var @13 alias#7
-0037  v23 = constant #16 true
-0038  v24 = call v22(v23)
-0039  print v24
-0040  v25 = load_var @14 identity#0
-0041  v26 = constant #17 7
-0042  v27 = call v25(v26)
-0043  print v27
+0018  v10 = native_call @11 print(v9)
+0019  v11 = constant #11 "hello"
+0020  v12 = call_direct $1 identity/1(v11)
+0021  v13 = native_call @12 print(v12)
+0022  v14 = constant #12 1
+0023  v15 = constant #13 2
+0024  v16 = array [v14, v15]
+0025  v17 = call_direct $2 head/1(v16)
+0026  v18 = native_call @13 print(v17)
+0027  v19 = constant #14 3
+0028  v20 = constant #15 4
+0029  v21 = array [v19, v20]
+0030  v22 = call_direct $1 identity/1(v21)
+0031  v23 = native_call @14 print(v22)
+0032  v24 = call_direct $3 make/0()
+0033  v25 = native_call @15 print(v24)
+0034  v26 = load_var @16 identity#2
+0035  store_var @17 alias#7, v26
+0036  v27 = load_var @18 alias#7
+0037  v28 = constant #16 true
+0038  v29 = call v27(v28)
+0039  v30 = native_call @19 print(v29)
+0040  v31 = load_var @20 identity#0
+0041  v32 = constant #17 7
+0042  v33 = call v31(v32)
+0043  v34 = native_call @21 print(v33)
 
 function $0 identity(value#1)
 0000  v0 = load_var @1 value#1

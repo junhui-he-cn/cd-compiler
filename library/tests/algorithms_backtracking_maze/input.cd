@@ -1,27 +1,27 @@
 import "../../data_structures.cd" as ds;
 
-print ds.mazePaths([
+print(ds.mazePaths([
   [true, true],
   [true, true]
-]);
-print ds.mazePaths([
+]));
+print(ds.mazePaths([
   [true, true, true],
   [false, true, true],
   [false, false, true]
-]);
-print ds.mazePaths([
+]));
+print(ds.mazePaths([
   [true, false],
   [true, true]
-]);
-print ds.mazePaths([
+]));
+print(ds.mazePaths([
   [false, true],
   [true, true]
-]);
-print ds.mazePaths([
+]));
+print(ds.mazePaths([
   [true, true],
   [true, false]
-]);
+]));
 let empty: [[bool]] = [];
-print ds.mazePaths(empty);
+print(ds.mazePaths(empty));
 let ragged: [[bool]] = [[true], [true, false]];
-print ds.mazePaths(ragged);
+print(ds.mazePaths(ragged));

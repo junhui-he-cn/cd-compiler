@@ -1,2 +1,2 @@
 import "./lib.cd" as math;
-print math.add(2, 3);
+print(math.add(2, 3));

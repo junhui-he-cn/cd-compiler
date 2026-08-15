@@ -1,23 +1,23 @@
 IR
 0000  v0 = constant #0 1.8999999999999999
 0001  v1 = native_call @0 floor(v0)
-0002  print v1
-0003  v2 = constant #1 1.1000000000000001
-0004  v3 = neg_num v2
-0005  v4 = native_call @1 floor(v3)
-0006  print v4
-0007  v5 = constant #2 1.1000000000000001
-0008  v6 = native_call @2 ceil(v5)
-0009  print v6
-0010  v7 = constant #3 1.8999999999999999
-0011  v8 = neg_num v7
-0012  v9 = native_call @3 ceil(v8)
-0013  print v9
-0014  v10 = constant #4 9
-0015  v11 = native_call @4 sqrt(v10)
-0016  print v11
-0017  v12 = constant #5 2
-0018  v13 = constant #6 8
-0019  v14 = mul_num v12, v13
-0020  v15 = native_call @5 sqrt(v14)
-0021  print v15
+0002  v2 = native_call @1 print(v1)
+0003  v3 = constant #1 1.1000000000000001
+0004  v4 = neg_num v3
+0005  v5 = native_call @2 floor(v4)
+0006  v6 = native_call @3 print(v5)
+0007  v7 = constant #2 1.1000000000000001
+0008  v8 = native_call @4 ceil(v7)
+0009  v9 = native_call @5 print(v8)
+0010  v10 = constant #3 1.8999999999999999
+0011  v11 = neg_num v10
+0012  v12 = native_call @6 ceil(v11)
+0013  v13 = native_call @7 print(v12)
+0014  v14 = constant #4 9
+0015  v15 = native_call @8 sqrt(v14)
+0016  v16 = native_call @9 print(v15)
+0017  v17 = constant #5 2
+0018  v18 = constant #6 8
+0019  v19 = mul_num v17, v18
+0020  v20 = native_call @10 sqrt(v19)
+0021  v21 = native_call @11 print(v20)

@@ -10,7 +10,7 @@ IR
 0008  v4 = load_var @20 make#0
 0009  v5 = call v4()
 0010  v6 = call_direct $1 render/1(v5)
-0011  print v6
+0011  v7 = native_call @21 print(v6)
 
 function $0 make()
 0000  v0 = constant #1 9

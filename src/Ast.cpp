@@ -159,7 +159,6 @@ void writeInlineStmt(std::ostream& out, const Stmt& stmt)
             out << ' ';
             writeInlineStmt(out, *child);
         }
-        out << ')';
         return;
     }
 
@@ -212,13 +211,6 @@ void writeInlineStmt(std::ostream& out, const Stmt& stmt)
         }
         out << "(expr ";
         writeExpr(out, expressionStmt->expression);
-        out << ')';
-        return;
-    }
-
-    if (const auto* printStmt = dynamic_cast<const PrintStmt*>(&stmt)) {
-        out << "(print ";
-        writeExpr(out, printStmt->expression);
         out << ')';
         return;
     }
@@ -1148,19 +1140,6 @@ void LetStmt::print(std::ostream& out, int indent) const
     out << '\n';
 }
 
-PrintStmt::PrintStmt(ExprPtr expression)
-    : expression(std::move(expression))
-{
-}
-
-void PrintStmt::print(std::ostream& out, int indent) const
-{
-    writeIndent(out, indent);
-    out << "Print ";
-    writeExpr(out, expression);
-    out << '\n';
-}
-
 ExpressionStmt::ExpressionStmt(ExprPtr expression)
     : expression(std::move(expression))
 {
@@ -1910,11 +1889,6 @@ void populateStmt(Stmt& statement)
             populateExpr(*let->initializer);
             mergeRange(result, let->initializer->range);
         }
-    } else if (auto* print = dynamic_cast<PrintStmt*>(&statement)) {
-        if (print->expression) {
-            populateExpr(*print->expression);
-            mergeRange(result, print->expression->range);
-        }
     } else if (auto* expression = dynamic_cast<ExpressionStmt*>(&statement)) {
         if (expression->expression) {
             populateExpr(*expression->expression);
@@ -2185,10 +2159,6 @@ void assignStmtIds(Stmt& statement, std::size_t& next)
     } else if (auto* let = dynamic_cast<LetStmt*>(&statement)) {
         if (let->initializer) {
             assignExprIds(*let->initializer, next);
-        }
-    } else if (auto* print = dynamic_cast<PrintStmt*>(&statement)) {
-        if (print->expression) {
-            assignExprIds(*print->expression, next);
         }
     } else if (auto* expression = dynamic_cast<ExpressionStmt*>(&statement)) {
         if (expression->expression) {

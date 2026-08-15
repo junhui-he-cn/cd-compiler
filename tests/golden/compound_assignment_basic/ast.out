@@ -1,7 +1,7 @@
 Program
   Let mut x = 1
-  Print (+= x 2)
-  Print (-= x 1)
-  Print (*= x 5)
-  Print (/= x 2)
-  Print x
+  Expr (call print (+= x 2))
+  Expr (call print (-= x 1))
+  Expr (call print (*= x 5))
+  Expr (call print (/= x 2))
+  Expr (call print x)

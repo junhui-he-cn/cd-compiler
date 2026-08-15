@@ -11,11 +11,11 @@ Program
       Return (index values 0)
     Fun make<T>(): optional<T>
       Return nil
-    Print (call identity<number> 42)
-    Print (call identity<string> "hello")
-    Print (call head<number> (array 1 2))
-    Print (call identity<[number]> (array 3 4))
-    Print (call make<number>)
+    Expr (call print (call identity<number> 42))
+    Expr (call print (call identity<string> "hello"))
+    Expr (call print (call head<number> (array 1 2)))
+    Expr (call print (call identity<[number]> (array 3 4)))
+    Expr (call print (call make<number>))
     Let alias = identity
-    Print (call alias<bool> true)
-    Print (member-call lib identity<number> 7)
+    Expr (call print (call alias<bool> true))
+    Expr (call print (member-call lib identity<number> 7))

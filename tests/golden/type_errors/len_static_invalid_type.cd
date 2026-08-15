@@ -1,1 +1,1 @@
-print len(123);
+print(len(123));

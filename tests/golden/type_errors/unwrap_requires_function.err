@@ -1,3 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/unwrap_requires_function.cd:2:8: `?` requires an enclosing function
-  print x?;
+  print(x?);
          ^

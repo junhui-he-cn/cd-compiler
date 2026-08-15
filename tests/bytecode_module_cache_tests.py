@@ -463,7 +463,7 @@ def populate_strict_case(
     output = root / "module-products"
     cache = root / "cache"
     library.write_text(library_source, encoding="utf-8")
-    entry.write_text('import "./lib.cd";\nprint value;\n', encoding="utf-8")
+    entry.write_text('import "./lib.cd";\nprint(value);\n', encoding="utf-8")
     populate_interface_cache(compiler, entry, output, cache)
     return library, entry, cache
 
@@ -493,7 +493,7 @@ def run_strict_cache_matrix(compiler: Path) -> None:
         missing_entry = missing / "entry.cd"
         missing_library.parent.mkdir(parents=True)
         missing_library.write_text("let value = 7;\nexport value;\n", encoding="utf-8")
-        missing_entry.write_text('import "./lib.cd";\nprint value;\n', encoding="utf-8")
+        missing_entry.write_text('import "./lib.cd";\nprint(value);\n', encoding="utf-8")
         (missing / "cache").mkdir()
         assert_strict_rejection(compiler, missing_entry, missing / "cache", "missing sidecar")
 
@@ -555,7 +555,7 @@ def run_strict_cache_matrix(compiler: Path) -> None:
             'import "./base.cd";\nlet value = 7;\nexport value;\n',
             encoding="utf-8",
         )
-        dependency_entry.write_text('import "./mid.cd";\nprint value;\n', encoding="utf-8")
+        dependency_entry.write_text('import "./mid.cd";\nprint(value);\n', encoding="utf-8")
         dependency_cache = dependency / "cache"
         populate_interface_cache(compiler, dependency_entry, dependency / "module-products", dependency_cache)
         middle_sidecar = sidecar_for_identity(dependency_cache, middle)
@@ -1018,7 +1018,7 @@ def run_fallback_case(compiler: Path, case: str) -> None:
             )
             entry = directory / "entry.cd"
             entry.write_text(
-                'import "./lib.cd";\nprint value;\n',
+                'import "./lib.cd";\nprint(value);\n',
                 encoding="utf-8",
             )
             assert_invalid_sidecar_parity(compiler, directory, entry)
@@ -1033,7 +1033,7 @@ def run_fallback_case(compiler: Path, case: str) -> None:
             )
             entry = directory / "entry.cd"
             entry.write_text(
-                'import "./lib.cd" as ns;\nprint ns.value;\n',
+                'import "./lib.cd" as ns;\nprint(ns.value);\n',
                 encoding="utf-8",
             )
             assert_invalid_sidecar_parity(compiler, directory, entry)
@@ -1052,7 +1052,7 @@ def run_fallback_case(compiler: Path, case: str) -> None:
             )
             entry = directory / "entry.cd"
             entry.write_text(
-                'import "./api.cd";\nprint value;\n',
+                'import "./api.cd";\nprint(value);\n',
                 encoding="utf-8",
             )
             assert_invalid_sidecar_parity(compiler, directory, entry)
@@ -1070,7 +1070,7 @@ def run_fallback_case(compiler: Path, case: str) -> None:
             )
             entry = app / "entry.cd"
             entry.write_text(
-                'import "lib";\nprint value;\n',
+                'import "lib";\nprint(value);\n',
                 encoding="utf-8",
             )
             assert_invalid_sidecar_parity(compiler, directory, entry, [modules])
@@ -1086,7 +1086,7 @@ def run_fallback_diagnostic_case(compiler: Path) -> None:
         entry = root / "entry.cd"
         valid_source = "let value = 7;\nexport value;\n"
         library.write_text(valid_source, encoding="utf-8")
-        entry.write_text('import "./lib.cd";\nprint value;\n', encoding="utf-8")
+        entry.write_text('import "./lib.cd";\nprint(value);\n', encoding="utf-8")
         cache = root / "cache"
         populate_interface_cache(compiler, entry, root / "module-products", cache)
 
@@ -1120,7 +1120,7 @@ def run_partial_dependency_fallback_case(compiler: Path) -> None:
             'import "./base.cd";\nlet value = 7;\nexport value;\n',
             encoding="utf-8",
         )
-        entry.write_text('import "./middle.cd";\nprint value;\n', encoding="utf-8")
+        entry.write_text('import "./middle.cd";\nprint(value);\n', encoding="utf-8")
         cache = root / "cache"
         populate_interface_cache(compiler, entry, root / "module-products", cache)
         sidecar_for_identity(cache, middle).write_text("cdi 9.9\n", encoding="utf-8")

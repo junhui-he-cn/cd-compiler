@@ -7,9 +7,9 @@ fun head<T>(values: [T]): T {
 fun same<T>(left: T, right: T): T {
   return left;
 }
-print identity(42);
-print identity("hello");
-print head([1, 2, 3]);
-print same(true, true);
+print(identity(42));
+print(identity("hello"));
+print(head([1, 2, 3]));
+print(same(true, true));
 let alias = identity;
-print alias("alias");
+print(alias("alias"));

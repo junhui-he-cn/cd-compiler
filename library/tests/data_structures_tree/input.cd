@@ -1,43 +1,43 @@
 import "../../data_structures.cd" as ds;
 
 let empty = ds.emptyTree<number>();
-print ds.treeSize(empty);
-print ds.treeHeight(empty);
-print ds.treeLeafCount(empty);
-print ds.treePreorder(empty);
-print ds.treeLevelOrder(empty);
+print(ds.treeSize(empty));
+print(ds.treeHeight(empty));
+print(ds.treeLeafCount(empty));
+print(ds.treePreorder(empty));
+print(ds.treeLevelOrder(empty));
 
 let left = ds.treeNode(2, ds.treeLeaf(1), ds.treeLeaf(3));
 let root = ds.treeNode(4, left, ds.treeNode(6, empty, ds.treeLeaf(7)));
-print ds.treeSize(root);
-print ds.treeHeight(root);
-print ds.treeLeafCount(root);
-print ds.treePreorder(root);
-print ds.treeInorder(root);
-print ds.treePostorder(root);
-print ds.treeLevelOrder(root);
-print ds.treeIsBalanced(root);
-print ds.treeMaxWidth(root);
-print ds.treeRootToLeafPaths(root);
-print ds.treeRootToLeafSums(root);
+print(ds.treeSize(root));
+print(ds.treeHeight(root));
+print(ds.treeLeafCount(root));
+print(ds.treePreorder(root));
+print(ds.treeInorder(root));
+print(ds.treePostorder(root));
+print(ds.treeLevelOrder(root));
+print(ds.treeIsBalanced(root));
+print(ds.treeMaxWidth(root));
+print(ds.treeRootToLeafPaths(root));
+print(ds.treeRootToLeafSums(root));
 
 let skewed = ds.treeNode(
   1,
   empty,
   ds.treeNode(2, empty, ds.treeLeaf(3))
 );
-print ds.treeIsBalanced(skewed);
-print ds.treeMaxWidth(empty);
-print ds.treeRootToLeafPaths(empty);
+print(ds.treeIsBalanced(skewed));
+print(ds.treeMaxWidth(empty));
+print(ds.treeRootToLeafPaths(empty));
 
 let snapshot = ds.treeInorder(left);
 snapshot.push(99);
-print ds.treeInorder(left);
-print snapshot;
+print(ds.treeInorder(left));
+print(snapshot);
 
 let words = ds.treeNode(
   "root",
   ds.treeLeaf("left"),
   ds.emptyTree<string>()
 );
-print ds.treePreorder(words);
+print(ds.treePreorder(words));

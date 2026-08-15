@@ -1,3 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/match_guard_undefined_binding.cd:4:23: undefined variable `missing`
-    Result.Ok(value) if missing > 0 => { print "positive"; }
+    Result.Ok(value) if missing > 0 => { print("positive"); }
                         ^

@@ -21,29 +21,29 @@ IR
 0019  store_var @38 nilPerson#7, v14
 0020  v15 = load_var @39 ada#5
 0021  v16 = call_direct $0 describe/1(v15)
-0022  print v16
-0023  v17 = load_var @40 hongKong#6
-0024  v18 = call_direct $0 describe/1(v17)
-0025  print v18
-0026  v19 = load_var @41 nilPerson#7
-0027  v20 = call_direct $0 describe/1(v19)
-0028  print v20
-0029  v21 = load_var @42 ada#5
-0030  v22 = constant #19 nil
-0031  v23 = field v21.name
-0032  v24 = constant #20 "Ada"
-0033  v25 = equal v23, v24
-0034  jump_if_false v25, 0036
+0022  v17 = native_call @40 print(v16)
+0023  v18 = load_var @41 hongKong#6
+0024  v19 = call_direct $0 describe/1(v18)
+0025  v20 = native_call @42 print(v19)
+0026  v21 = load_var @43 nilPerson#7
+0027  v22 = call_direct $0 describe/1(v21)
+0028  v23 = native_call @44 print(v22)
+0029  v24 = load_var @45 ada#5
+0030  v25 = constant #19 nil
+0031  v26 = field v24.name
+0032  v27 = constant #20 "Ada"
+0033  v28 = equal v26, v27
+0034  jump_if_false v28, 0036
 0035  jump 0040
-0036  v26 = field v21.age
-0037  v27 = constant #21 0
-0038  v28 = equal v26, v27
-0039  jump_if_false v28, 0043
-0040  v29 = constant #22 "or"
-0041  print v29
+0036  v29 = field v24.age
+0037  v30 = constant #21 0
+0038  v31 = equal v29, v30
+0039  jump_if_false v31, 0043
+0040  v32 = constant #22 "or"
+0041  v33 = native_call @50 print(v32)
 0042  jump 0046
-0043  v30 = constant #23 "fallback"
-0044  print v30
+0043  v34 = constant #23 "fallback"
+0044  v35 = native_call @51 print(v34)
 0045  jump 0046
 
 function $0 describe(value#1)

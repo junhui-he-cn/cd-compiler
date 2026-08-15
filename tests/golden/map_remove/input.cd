@@ -1,6 +1,6 @@
 let values = {"a": 1, "b": 2};
 let alias = values;
-print remove(values, "a");
-print alias;
-print alias.remove("b");
-print values.len();
+print(remove(values, "a"));
+print(alias);
+print(alias.remove("b"));
+print(values.len());

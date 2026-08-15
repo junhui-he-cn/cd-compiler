@@ -31,11 +31,11 @@ Program
       Arm _
         Block
           Return "other"
-  Print (call describe (member-call Result Ok 7))
-  Print (call describe (member-call Result Err "bad"))
-  Print (call describe (member-call Result Empty))
-  Print (call sum (member-call List Cons 1 (member-call List Cons 2 (member-call List Nil))))
-  Print (member-call Result Ok 7)
-  Print (call typeOf (member-call Result Empty))
-  Print (== (member-call Result Ok 7) (member-call Result Ok 7))
-  Print (call coarse (member-call Result Empty))
+  Expr (call print (call describe (member-call Result Ok 7)))
+  Expr (call print (call describe (member-call Result Err "bad")))
+  Expr (call print (call describe (member-call Result Empty)))
+  Expr (call print (call sum (member-call List Cons 1 (member-call List Cons 2 (member-call List Nil)))))
+  Expr (call print (member-call Result Ok 7))
+  Expr (call print (call typeOf (member-call Result Empty)))
+  Expr (call print (== (member-call Result Ok 7) (member-call Result Ok 7)))
+  Expr (call print (call coarse (member-call Result Empty)))

@@ -10,7 +10,7 @@ let maybe = fun<T>(): optional<T> {
   return nil;
 };
 
-print identity<number>(41);
-print identity("generic");
-print head([7, 8]);
-print maybe<string>();
+print(identity<number>(41));
+print(identity("generic"));
+print(head([7, 8]));
+print(maybe<string>());

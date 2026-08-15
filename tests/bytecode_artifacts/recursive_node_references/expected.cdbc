@@ -31,34 +31,39 @@ names:
   n17 = "head#1"
   n18 = "next"
   n19 = "Node"
-  n20 = "tail#0"
-  n21 = "value"
-  n22 = "Node"
+  n20 = "print"
+  n21 = "tail#0"
+  n22 = "value"
   n23 = "Node"
-  n24 = "value"
-  n25 = "next"
-  n26 = "first#3"
-  n27 = "Node"
-  n28 = "value"
-  n29 = "next"
-  n30 = "first#3"
-  n31 = "second#4"
+  n24 = "print"
+  n25 = "Node"
+  n26 = "value"
+  n27 = "next"
+  n28 = "first#3"
+  n29 = "Node"
+  n30 = "value"
+  n31 = "next"
   n32 = "first#3"
   n33 = "second#4"
-  n34 = "next"
-  n35 = "Node"
-  n36 = "first#3"
-  n37 = "first#3"
+  n34 = "first#3"
+  n35 = "second#4"
+  n36 = "next"
+  n37 = "Node"
   n38 = "first#3"
-  n39 = "first#3"
-  n40 = "second#4"
+  n39 = "print"
+  n40 = "first#3"
+  n41 = "first#3"
+  n42 = "print"
+  n43 = "first#3"
+  n44 = "second#4"
+  n45 = "print"
 
 globals:
   g0 = n3
   g1 = n8
   g2 = n10
-  g3 = n26
-  g4 = n31
+  g3 = n28
+  g4 = n33
 
 types:
   t0 = struct "Node" field0="value" field1="next"
@@ -66,7 +71,7 @@ types:
 native_imports:
   i0 = "print" abi=1
 
-main registers=34:
+main registers=38:
 block b0:
   r0 = constant c0
   r1 = constant c1
@@ -86,35 +91,35 @@ block b0:
   r12 = struct_set r10, t0, 0, r11
   r13 = load_global g1
   r14 = struct_get r13, t0, 1
-  r33 = call_native i0 [r14]
-  r15 = load_global g0
-  r16 = struct_get r15, t0, 0
-  r33 = call_native i0 [r16]
-  r17 = constant c5
-  r18 = constant c6
-  r19 = make_struct t0 [r17, r18]
-  init_global g3, r19
-  r20 = constant c7
-  r21 = load_global g3
-  r22 = make_struct t0 [r20, r21]
-  init_global g4, r22
+  r15 = call_native i0 [r14]
+  r16 = load_global g0
+  r17 = struct_get r16, t0, 0
+  r18 = call_native i0 [r17]
+  r19 = constant c5
+  r20 = constant c6
+  r21 = make_struct t0 [r19, r20]
+  init_global g3, r21
+  r22 = constant c7
   r23 = load_global g3
-  r24 = load_global g4
-  r25 = struct_set r23, t0, 1, r24
-  r26 = load_global g3
-  r33 = call_native i0 [r26]
-  r27 = load_global g3
+  r24 = make_struct t0 [r22, r23]
+  init_global g4, r24
+  r25 = load_global g3
+  r26 = load_global g4
+  r27 = struct_set r25, t0, 1, r26
   r28 = load_global g3
-  r29 = equal r27, r28
-  r33 = call_native i0 [r29]
+  r29 = call_native i0 [r28]
   r30 = load_global g3
-  r31 = load_global g4
+  r31 = load_global g3
   r32 = equal r30, r31
   r33 = call_native i0 [r32]
+  r34 = load_global g3
+  r35 = load_global g4
+  r36 = equal r34, r35
+  r37 = call_native i0 [r36]
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/recursive_node_references/input.cd" text="struct Node<T> {\n  value: T,\n  next: optional<Node<T>>\n}\n\nlet tail = Node<number> { value: 2, next: nil };\nlet head = Node<number> { value: 1, next: tail };\nlet alias = tail;\nhead.next = nil;\nalias.value = 20;\nprint head.next;\nprint tail.value;\n\nlet first = Node<number> { value: 3, next: nil };\nlet second = Node<number> { value: 4, next: first };\nfirst.next = second;\nprint first;\nprint first == first;\nprint first == second;\n"
+  s0 path="tests/bytecode_artifacts/recursive_node_references/input.cd" text="struct Node<T> {\n  value: T,\n  next: optional<Node<T>>\n}\n\nlet tail = Node<number> { value: 2, next: nil };\nlet head = Node<number> { value: 1, next: tail };\nlet alias = tail;\nhead.next = nil;\nalias.value = 20;\nprint(head.next);\nprint(tail.value);\n\nlet first = Node<number> { value: 3, next: nil };\nlet second = Node<number> { value: 4, next: first };\nfirst.next = second;\nprint(first);\nprint(first == first);\nprint(first == second);\n"
 
 debug_locations:
   main 0 = s0:6:34
@@ -183,29 +188,29 @@ debug_ranges:
   main 16 = s0:192:208
   main 17 = s0:216:220
   main 18 = s0:216:225
-  main 19 = s0:216:225
-  main 20 = s0:233:237
-  main 21 = s0:233:243
-  main 22 = s0:233:243
-  main 23 = s0:280:281
-  main 24 = s0:289:292
-  main 25 = s0:258:292
-  main 26 = s0:250:292
-  main 27 = s0:331:332
-  main 28 = s0:340:345
-  main 29 = s0:309:345
-  main 30 = s0:300:345
-  main 31 = s0:349:354
-  main 32 = s0:362:368
-  main 33 = s0:349:368
-  main 34 = s0:376:381
-  main 35 = s0:376:381
-  main 36 = s0:389:394
-  main 37 = s0:398:403
-  main 38 = s0:389:403
-  main 39 = s0:389:403
-  main 40 = s0:411:416
-  main 41 = s0:420:426
-  main 42 = s0:411:426
-  main 43 = s0:411:426
-  main 44 = s0:411:426
+  main 19 = s0:210:226
+  main 20 = s0:234:238
+  main 21 = s0:234:244
+  main 22 = s0:228:245
+  main 23 = s0:282:283
+  main 24 = s0:291:294
+  main 25 = s0:260:294
+  main 26 = s0:252:294
+  main 27 = s0:333:334
+  main 28 = s0:342:347
+  main 29 = s0:311:347
+  main 30 = s0:302:347
+  main 31 = s0:351:356
+  main 32 = s0:364:370
+  main 33 = s0:351:370
+  main 34 = s0:378:383
+  main 35 = s0:372:384
+  main 36 = s0:392:397
+  main 37 = s0:401:406
+  main 38 = s0:392:406
+  main 39 = s0:386:407
+  main 40 = s0:415:420
+  main 41 = s0:424:430
+  main 42 = s0:415:430
+  main 43 = s0:409:431
+  main 44 = s0:409:431

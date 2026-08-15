@@ -1,5 +1,5 @@
 native_import i0 = print abi=1
-main registers=23
+main registers=26
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -29,13 +29,13 @@ main registers=23
 0026  b17 = make_variant t1, v0 (b16)
 0027  init_global g6, b17
 0028  b18 = load_global g2
-0029  b22 = call_native i0 [b18]
-0030  b19 = load_global g3
-0031  b22 = call_native i0 [b19]
-0032  b20 = load_global g5
-0033  b22 = call_native i0 [b20]
-0034  b21 = load_global g6
-0035  b22 = call_native i0 [b21]
+0029  b19 = call_native i0 [b18]
+0030  b20 = load_global g3
+0031  b21 = call_native i0 [b20]
+0032  b22 = load_global g5
+0033  b23 = call_native i0 [b22]
+0034  b24 = load_global g6
+0035  b25 = call_native i0 [b24]
 0036  return_nil
 
 function $0 echo/2 registers=2

@@ -97,11 +97,28 @@ names:
   n30 = "Empty"
   n31 = "describeResult#4"
   n32 = "maybe#8"
-  n33 = "Result"
-  n34 = "Number"
-  n35 = "Result"
-  n36 = "Text"
-  n37 = "maybe#8"
+  n33 = "print"
+  n34 = "print"
+  n35 = "print"
+  n36 = "Result"
+  n37 = "Number"
+  n38 = "print"
+  n39 = "Result"
+  n40 = "Text"
+  n41 = "print"
+  n42 = "print"
+  n43 = "print"
+  n44 = "print"
+  n45 = "print"
+  n46 = "print"
+  n47 = "print"
+  n48 = "print"
+  n49 = "print"
+  n50 = "print"
+  n51 = "maybe#8"
+  n52 = "print"
+  n53 = "print"
+  n54 = "print"
 
 globals:
   g0 = n0
@@ -116,7 +133,7 @@ native_imports:
   i0 = "print" abi=1
   i1 = "str" abi=1
 
-main registers=59:
+main registers=75:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -134,110 +151,110 @@ block b0:
   init_global g3, r6
   r7 = constant c28
   r8 = call_direct f0 [r7]
-  r58 = call_native i0 [r8]
-  r9 = constant c29
-  r10 = call_direct f0 [r9]
-  r58 = call_native i0 [r10]
-  r11 = constant c30
-  r12 = call_direct f1 [r11]
-  r58 = call_native i0 [r12]
-  r13 = constant c31
-  r14 = make_variant t0, v0 [r13]
-  r15 = call_direct f2 [r14]
-  r58 = call_native i0 [r15]
-  r16 = constant c32
-  r17 = make_variant t0, v1 [r16]
+  r9 = call_native i0 [r8]
+  r10 = constant c29
+  r11 = call_direct f0 [r10]
+  r12 = call_native i0 [r11]
+  r13 = constant c30
+  r14 = call_direct f1 [r13]
+  r15 = call_native i0 [r14]
+  r16 = constant c31
+  r17 = make_variant t0, v0 [r16]
   r18 = call_direct f2 [r17]
-  r58 = call_native i0 [r18]
-  r19 = constant c33
-  r20 = call_direct f2 [r19]
-  r58 = call_native i0 [r20]
-  r21 = constant c34
-  r22 = constant c35
-  r23 = constant c36
-  r24 = equal r21, r23
-  br_if r24, b1, b2
+  r19 = call_native i0 [r18]
+  r20 = constant c32
+  r21 = make_variant t0, v1 [r20]
+  r22 = call_direct f2 [r21]
+  r23 = call_native i0 [r22]
+  r24 = constant c33
+  r25 = call_direct f2 [r24]
+  r26 = call_native i0 [r25]
+  r27 = constant c34
+  r28 = constant c35
+  r29 = constant c36
+  r30 = equal r27, r29
+  br_if r30, b1, b2
 block b1:
-  r25 = constant c37
-  r58 = call_native i0 [r25]
+  r31 = constant c37
+  r32 = call_native i0 [r31]
   br b5
 block b2:
-  r26 = constant c38
-  r27 = equal r21, r26
-  br_if r27, b3, b4
+  r33 = constant c38
+  r34 = equal r27, r33
+  br_if r34, b3, b4
 block b3:
-  r28 = constant c39
-  r58 = call_native i0 [r28]
+  r35 = constant c39
+  r36 = call_native i0 [r35]
   br b5
 block b4:
-  r29 = constant c40
-  r58 = call_native i0 [r29]
+  r37 = constant c40
+  r38 = call_native i0 [r37]
   br b5
 block b5:
-  r30 = constant c41
-  r31 = constant c42
-  r32 = constant c43
-  r33 = equal r30, r32
-  br_if r33, b6, b7
+  r39 = constant c41
+  r40 = constant c42
+  r41 = constant c43
+  r42 = equal r39, r41
+  br_if r42, b6, b7
 block b6:
-  r34 = constant c44
-  r58 = call_native i0 [r34]
+  r43 = constant c44
+  r44 = call_native i0 [r43]
   br b9
 block b7:
-  r35 = constant c45
-  r36 = equal r30, r35
-  br_if r36, b8, b9
+  r45 = constant c45
+  r46 = equal r39, r45
+  br_if r46, b8, b9
 block b8:
-  r37 = constant c46
-  r58 = call_native i0 [r37]
+  r47 = constant c46
+  r48 = call_native i0 [r47]
   br b9
 block b9:
-  r38 = constant c47
-  r39 = constant c48
-  r40 = constant c49
-  r41 = equal r38, r40
-  br_if r41, b10, b11
+  r49 = constant c47
+  r50 = constant c48
+  r51 = constant c49
+  r52 = equal r49, r51
+  br_if r52, b10, b11
 block b10:
-  r42 = constant c50
-  r58 = call_native i0 [r42]
+  r53 = constant c50
+  r54 = call_native i0 [r53]
   br b14
 block b11:
-  r43 = constant c51
-  r44 = equal r38, r43
-  br_if r44, b12, b13
+  r55 = constant c51
+  r56 = equal r49, r55
+  br_if r56, b12, b13
 block b12:
-  r45 = constant c52
-  r58 = call_native i0 [r45]
+  r57 = constant c52
+  r58 = call_native i0 [r57]
   br b14
 block b13:
-  r46 = constant c53
-  r58 = call_native i0 [r46]
+  r59 = constant c53
+  r60 = call_native i0 [r59]
   br b14
 block b14:
-  r47 = load_global g3
-  r48 = constant c54
-  r49 = constant c55
-  r50 = equal r47, r49
-  br_if r50, b15, b16
+  r61 = load_global g3
+  r62 = constant c54
+  r63 = constant c55
+  r64 = equal r61, r63
+  br_if r64, b15, b16
 block b15:
-  r51 = constant c56
-  r58 = call_native i0 [r51]
+  r65 = constant c56
+  r66 = call_native i0 [r65]
   return_nil
 block b16:
-  r52 = constant c57
-  r53 = equal r47, r52
-  br_if r53, b17, b18
+  r67 = constant c57
+  r68 = equal r61, r67
+  br_if r68, b17, b18
 block b17:
-  r54 = constant c58
-  r58 = call_native i0 [r54]
+  r69 = constant c58
+  r70 = call_native i0 [r69]
   return_nil
 block b18:
-  r55 = constant c59
-  r56 = equal r47, r55
-  br_if r56, b19, b20
+  r71 = constant c59
+  r72 = equal r61, r71
+  br_if r72, b19, b20
 block b19:
-  r57 = constant c60
-  r58 = call_native i0 [r57]
+  r73 = constant c60
+  r74 = call_native i0 [r73]
   return_nil
 block b20:
   return_nil
@@ -382,7 +399,7 @@ block b21:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/literal_patterns/input.cd" text="enum Result {\n  Number(number),\n  Text(string),\n  Empty,\n}\n\nfun describeNumber(value: number): string {\n  match value {\n    0 => { return \"zero\"; }\n    1 => { return \"one\"; }\n    _ => { return \"many\"; }\n  }\n}\n\nfun describeBool(value: bool): string {\n  match value {\n    true => { return \"true\"; }\n    false => { return \"false\"; }\n  }\n}\n\nfun describeResult(value: optional<Result>): string {\n  match value {\n    nil => { return \"nil\"; }\n    Result.Number(0) => { return \"zero\"; }\n    Result.Number(value) => { return \"number:\" + str(value); }\n    Result.Text(\"\") => { return \"empty-text\"; }\n    Result.Text(value) => { return \"text:\" + value; }\n    Result.Empty => { return \"empty\"; }\n  }\n}\n\nlet maybe: optional<bool> = nil;\nprint describeNumber(0);\nprint describeNumber(8);\nprint describeBool(false);\nprint describeResult(Result.Number(7));\nprint describeResult(Result.Text(\"\"));\nprint describeResult(nil);\nmatch 1 {\n  0 => { print \"zero\"; }\n  1 => { print \"one\"; }\n  _ => { print \"many\"; }\n}\nmatch true {\n  false => { print \"no\"; }\n  true => { print \"yes\"; }\n}\nmatch \"ok\" {\n  \"\" => { print \"empty\"; }\n  \"ok\" => { print \"ok\"; }\n  _ => { print \"other\"; }\n}\nmatch maybe {\n  nil => { print \"nil\"; }\n  true => { print \"true\"; }\n  false => { print \"false\"; }\n}\n"
+  s0 path="tests/bytecode_artifacts/literal_patterns/input.cd" text="enum Result {\n  Number(number),\n  Text(string),\n  Empty,\n}\n\nfun describeNumber(value: number): string {\n  match value {\n    0 => { return \"zero\"; }\n    1 => { return \"one\"; }\n    _ => { return \"many\"; }\n  }\n}\n\nfun describeBool(value: bool): string {\n  match value {\n    true => { return \"true\"; }\n    false => { return \"false\"; }\n  }\n}\n\nfun describeResult(value: optional<Result>): string {\n  match value {\n    nil => { return \"nil\"; }\n    Result.Number(0) => { return \"zero\"; }\n    Result.Number(value) => { return \"number:\" + str(value); }\n    Result.Text(\"\") => { return \"empty-text\"; }\n    Result.Text(value) => { return \"text:\" + value; }\n    Result.Empty => { return \"empty\"; }\n  }\n}\n\nlet maybe: optional<bool> = nil;\nprint(describeNumber(0));\nprint(describeNumber(8));\nprint(describeBool(false));\nprint(describeResult(Result.Number(7)));\nprint(describeResult(Result.Text(\"\")));\nprint(describeResult(nil));\nmatch 1 {\n  0 => { print(\"zero\"); }\n  1 => { print(\"one\"); }\n  _ => { print(\"many\"); }\n}\nmatch true {\n  false => { print(\"no\"); }\n  true => { print(\"yes\"); }\n}\nmatch \"ok\" {\n  \"\" => { print(\"empty\"); }\n  \"ok\" => { print(\"ok\"); }\n  _ => { print(\"other\"); }\n}\nmatch maybe {\n  nil => { print(\"nil\"); }\n  true => { print(\"true\"); }\n  false => { print(\"false\"); }\n}\n"
 
 debug_locations:
   main 0 = s0:7:1
@@ -658,113 +675,113 @@ debug_ranges:
   main 14 = s0:695:722
   main 15 = s0:745:746
   main 16 = s0:730:747
-  main 17 = s0:730:747
-  main 18 = s0:770:771
-  main 19 = s0:755:772
-  main 20 = s0:755:772
-  main 21 = s0:793:798
-  main 22 = s0:780:799
-  main 23 = s0:780:799
-  main 24 = s0:836:837
-  main 25 = s0:822:838
-  main 26 = s0:807:839
-  main 27 = s0:807:839
-  main 28 = s0:874:876
-  main 29 = s0:862:877
-  main 30 = s0:847:878
-  main 31 = s0:847:878
-  main 32 = s0:901:904
-  main 33 = s0:886:905
-  main 34 = s0:886:905
-  main 35 = s0:913:914
-  main 36 = s0:907:987
-  main 37 = s0:907:987
-  main 38 = s0:907:987
-  main 39 = s0:907:987
-  main 40 = s0:932:938
-  main 41 = s0:932:938
-  main 42 = s0:932:938
-  main 43 = s0:907:987
-  main 44 = s0:907:987
-  main 45 = s0:907:987
-  main 46 = s0:907:987
-  main 47 = s0:907:987
-  main 48 = s0:957:962
-  main 49 = s0:957:962
-  main 50 = s0:957:962
-  main 51 = s0:907:987
-  main 52 = s0:981:987
-  main 53 = s0:981:987
-  main 54 = s0:981:987
-  main 55 = s0:907:987
-  main 56 = s0:999:1003
-  main 57 = s0:999:1003
-  main 58 = s0:993:1056
-  main 59 = s0:993:1056
-  main 60 = s0:993:1056
-  main 61 = s0:993:1056
-  main 62 = s0:1025:1029
-  main 63 = s0:1025:1029
-  main 64 = s0:1025:1029
-  main 65 = s0:993:1056
-  main 66 = s0:993:1056
-  main 67 = s0:993:1056
-  main 68 = s0:993:1056
-  main 69 = s0:993:1056
-  main 70 = s0:1051:1056
-  main 71 = s0:1051:1056
-  main 72 = s0:1051:1056
-  main 73 = s0:993:1056
-  main 74 = s0:1068:1072
-  main 75 = s0:1068:1072
-  main 76 = s0:1062:1150
-  main 77 = s0:1062:1150
-  main 78 = s0:1062:1150
-  main 79 = s0:1062:1150
-  main 80 = s0:1091:1098
-  main 81 = s0:1091:1098
-  main 82 = s0:1091:1098
-  main 83 = s0:1062:1150
-  main 84 = s0:1062:1150
-  main 85 = s0:1062:1150
-  main 86 = s0:1062:1150
-  main 87 = s0:1062:1150
-  main 88 = s0:1120:1124
-  main 89 = s0:1120:1124
-  main 90 = s0:1120:1124
-  main 91 = s0:1062:1150
-  main 92 = s0:1143:1150
-  main 93 = s0:1143:1150
-  main 94 = s0:1143:1150
-  main 95 = s0:1062:1150
-  main 96 = s0:1162:1167
-  main 97 = s0:1162:1167
-  main 98 = s0:1156:1250
-  main 99 = s0:1156:1250
-  main 100 = s0:1156:1250
-  main 101 = s0:1156:1250
-  main 102 = s0:1187:1192
-  main 103 = s0:1187:1192
-  main 104 = s0:1187:1192
-  main 105 = s0:1156:1250
-  main 106 = s0:1156:1250
-  main 107 = s0:1156:1250
-  main 108 = s0:1156:1250
-  main 109 = s0:1156:1250
-  main 110 = s0:1214:1220
-  main 111 = s0:1214:1220
-  main 112 = s0:1214:1220
-  main 113 = s0:1156:1250
-  main 114 = s0:1156:1250
-  main 115 = s0:1156:1250
-  main 116 = s0:1156:1250
-  main 117 = s0:1156:1250
-  main 118 = s0:1243:1250
-  main 119 = s0:1243:1250
-  main 120 = s0:1243:1250
-  main 121 = s0:1156:1250
-  main 122 = s0:1156:1250
-  main 123 = s0:1156:1250
+  main 17 = s0:724:748
+  main 18 = s0:771:772
+  main 19 = s0:756:773
+  main 20 = s0:750:774
+  main 21 = s0:795:800
+  main 22 = s0:782:801
+  main 23 = s0:776:802
+  main 24 = s0:839:840
+  main 25 = s0:825:841
+  main 26 = s0:810:842
+  main 27 = s0:804:843
+  main 28 = s0:878:880
+  main 29 = s0:866:881
+  main 30 = s0:851:882
+  main 31 = s0:845:883
+  main 32 = s0:906:909
+  main 33 = s0:891:910
+  main 34 = s0:885:911
+  main 35 = s0:919:920
+  main 36 = s0:913:996
+  main 37 = s0:913:996
+  main 38 = s0:913:996
+  main 39 = s0:913:996
+  main 40 = s0:938:944
+  main 41 = s0:938:944
+  main 42 = s0:932:945
+  main 43 = s0:913:996
+  main 44 = s0:913:996
+  main 45 = s0:913:996
+  main 46 = s0:913:996
+  main 47 = s0:913:996
+  main 48 = s0:964:969
+  main 49 = s0:964:969
+  main 50 = s0:958:970
+  main 51 = s0:913:996
+  main 52 = s0:989:995
+  main 53 = s0:989:995
+  main 54 = s0:983:996
+  main 55 = s0:913:996
+  main 56 = s0:1008:1012
+  main 57 = s0:1008:1012
+  main 58 = s0:1002:1067
+  main 59 = s0:1002:1067
+  main 60 = s0:1002:1067
+  main 61 = s0:1002:1067
+  main 62 = s0:1034:1038
+  main 63 = s0:1034:1038
+  main 64 = s0:1028:1039
+  main 65 = s0:1002:1067
+  main 66 = s0:1002:1067
+  main 67 = s0:1002:1067
+  main 68 = s0:1002:1067
+  main 69 = s0:1002:1067
+  main 70 = s0:1061:1066
+  main 71 = s0:1061:1066
+  main 72 = s0:1055:1067
+  main 73 = s0:1002:1067
+  main 74 = s0:1079:1083
+  main 75 = s0:1079:1083
+  main 76 = s0:1073:1164
+  main 77 = s0:1073:1164
+  main 78 = s0:1073:1164
+  main 79 = s0:1073:1164
+  main 80 = s0:1102:1109
+  main 81 = s0:1102:1109
+  main 82 = s0:1096:1110
+  main 83 = s0:1073:1164
+  main 84 = s0:1073:1164
+  main 85 = s0:1073:1164
+  main 86 = s0:1073:1164
+  main 87 = s0:1073:1164
+  main 88 = s0:1132:1136
+  main 89 = s0:1132:1136
+  main 90 = s0:1126:1137
+  main 91 = s0:1073:1164
+  main 92 = s0:1156:1163
+  main 93 = s0:1156:1163
+  main 94 = s0:1150:1164
+  main 95 = s0:1073:1164
+  main 96 = s0:1176:1181
+  main 97 = s0:1176:1181
+  main 98 = s0:1170:1267
+  main 99 = s0:1170:1267
+  main 100 = s0:1170:1267
+  main 101 = s0:1170:1267
+  main 102 = s0:1201:1206
+  main 103 = s0:1201:1206
+  main 104 = s0:1195:1207
+  main 105 = s0:1170:1267
+  main 106 = s0:1170:1267
+  main 107 = s0:1170:1267
+  main 108 = s0:1170:1267
+  main 109 = s0:1170:1267
+  main 110 = s0:1229:1235
+  main 111 = s0:1229:1235
+  main 112 = s0:1223:1236
+  main 113 = s0:1170:1267
+  main 114 = s0:1170:1267
+  main 115 = s0:1170:1267
+  main 116 = s0:1170:1267
+  main 117 = s0:1170:1267
+  main 118 = s0:1259:1266
+  main 119 = s0:1259:1266
+  main 120 = s0:1253:1267
+  main 121 = s0:1170:1267
+  main 122 = s0:1170:1267
+  main 123 = s0:1170:1267
   function f0 0 = s0:112:117
   function f0 1 = s0:112:117
   function f0 2 = s0:106:199

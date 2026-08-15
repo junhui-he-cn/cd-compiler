@@ -8,4 +8,4 @@ Program
           Then
             Block
               Break
-  Print i
+  Expr (call print i)

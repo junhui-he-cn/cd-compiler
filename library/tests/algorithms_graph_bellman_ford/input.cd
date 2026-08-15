@@ -25,16 +25,16 @@ graph.addEdge(2, 4, 9);
 graph.addEdge(3, 1, -2);
 graph.addEdge(4, 0, 2);
 graph.addEdge(4, 3, 7);
-print graph.edgeCount();
-print describe(ds.bellmanFord(graph, 0));
-print describe(ds.bellmanFord(graph, -1));
+print(graph.edgeCount());
+print(describe(ds.bellmanFord(graph, 0)));
+print(describe(ds.bellmanFord(graph, -1)));
 
 let cycle = ds.newSignedWeightedGraph(3, true);
 cycle.addEdge(0, 1, 1);
 cycle.addEdge(1, 2, -2);
 cycle.addEdge(2, 1, -2);
-print describe(ds.bellmanFord(cycle, 0));
+print(describe(ds.bellmanFord(cycle, 0)));
 
 let undirected = ds.newSignedWeightedGraph(2, false);
-print undirected.addEdge(0, 1, -3);
-print describe(ds.bellmanFord(undirected, 0));
+print(undirected.addEdge(0, 1, -3));
+print(describe(ds.bellmanFord(undirected, 0)));

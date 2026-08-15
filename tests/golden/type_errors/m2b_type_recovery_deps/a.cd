@@ -1,2 +1,2 @@
-print missing_a_first;
-print missing_a_second;
+print(missing_a_first);
+print(missing_a_second);

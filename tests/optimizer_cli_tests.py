@@ -147,8 +147,8 @@ def main() -> int:
 
         constant_source = root / "constant-folding.cd"
         constant_source.write_text(
-            'print 2 + 3;\nprint "a" + "b";\n'
-            'if (true) { print 1; } else { print 2; }\n',
+            'print(2 + 3);\nprint("a" + "b");\n'
+            'if (true) { print(1); } else { print(2); }\n',
             encoding="utf-8",
         )
         constant_baseline = run([str(compiler), "--ir", str(constant_source)])
@@ -179,14 +179,14 @@ def main() -> int:
             "fun flow(): number {\n"
             "  let condition = choose();\n"
             "  if (condition) {\n"
-            "    print 1;\n"
+            "    print(1);\n"
             "  } else {\n"
             "    return 2;\n"
             "  }\n"
-            "  print 3;\n"
+            "  print(3);\n"
             "  return 4;\n"
             "}\n"
-            "print flow();\n",
+            "print(flow());\n",
             encoding="utf-8",
         )
         merge_baseline = run([str(compiler), "--ir", str(merge_source)])

@@ -6,32 +6,32 @@ IR
 0004  v3 = load_var @1 xs#0
 0005  v4 = constant #2 3
 0006  v5 = native_call @2 push(v3, v4)
-0007  print v5
-0008  v6 = load_var @3 xs#0
-0009  print v6
-0010  v7 = load_var @4 xs#0
-0011  v8 = native_call @5 pop(v7)
-0012  print v8
-0013  v9 = load_var @6 xs#0
-0014  print v9
-0015  v10 = load_var @7 xs#0
-0016  store_var @8 alias#1, v10
-0017  v11 = load_var @9 alias#1
-0018  v12 = constant #3 4
-0019  v13 = native_call @10 push(v11, v12)
-0020  v14 = load_var @11 xs#0
-0021  print v14
-0022  v15 = array []
-0023  store_var @12 mixed#2, v15
-0024  v16 = load_var @13 mixed#2
-0025  v17 = constant #4 "hi"
-0026  v18 = native_call @14 push(v16, v17)
-0027  v19 = load_var @15 mixed#2
-0028  v20 = constant #5 true
-0029  v21 = native_call @16 push(v19, v20)
-0030  v22 = load_var @17 mixed#2
-0031  v23 = native_call @18 pop(v22)
-0032  print v23
-0033  v24 = load_var @19 mixed#2
-0034  v25 = native_call @20 pop(v24)
-0035  print v25
+0007  v6 = native_call @3 print(v5)
+0008  v7 = load_var @4 xs#0
+0009  v8 = native_call @5 print(v7)
+0010  v9 = load_var @6 xs#0
+0011  v10 = native_call @7 pop(v9)
+0012  v11 = native_call @8 print(v10)
+0013  v12 = load_var @9 xs#0
+0014  v13 = native_call @10 print(v12)
+0015  v14 = load_var @11 xs#0
+0016  store_var @12 alias#1, v14
+0017  v15 = load_var @13 alias#1
+0018  v16 = constant #3 4
+0019  v17 = native_call @14 push(v15, v16)
+0020  v18 = load_var @15 xs#0
+0021  v19 = native_call @16 print(v18)
+0022  v20 = array []
+0023  store_var @17 mixed#2, v20
+0024  v21 = load_var @18 mixed#2
+0025  v22 = constant #4 "hi"
+0026  v23 = native_call @19 push(v21, v22)
+0027  v24 = load_var @20 mixed#2
+0028  v25 = constant #5 true
+0029  v26 = native_call @21 push(v24, v25)
+0030  v27 = load_var @22 mixed#2
+0031  v28 = native_call @23 pop(v27)
+0032  v29 = native_call @24 print(v28)
+0033  v30 = load_var @25 mixed#2
+0034  v31 = native_call @26 pop(v30)
+0035  v32 = native_call @27 print(v31)

@@ -18,37 +18,37 @@ IR
 0016  v8 = constant #23 7
 0017  v9 = variant Result.Ok (v8)
 0018  v10 = call_direct $0 describe/1(v9)
-0019  print v10
-0020  v11 = constant #24 "bad"
-0021  v12 = variant Result.Err (v11)
-0022  v13 = call_direct $0 describe/1(v12)
-0023  print v13
-0024  v14 = constant #25 4
-0025  v15 = variant Result.Ok (v14)
-0026  v16 = call_direct $1 score/1(v15)
-0027  print v16
-0028  v17 = constant #26 "x"
-0029  v18 = variant Result.Err (v17)
-0030  v19 = call_direct $1 score/1(v18)
-0031  print v19
-0032  v20 = constant #27 3
-0033  v21 = variant Result.Ok (v20)
-0034  v22 = call_direct $2 nested/1(v21)
-0035  print v22
-0036  v23 = constant #28 "x"
-0037  v24 = variant Result.Err (v23)
-0038  v25 = call_direct $2 nested/1(v24)
-0039  print v25
-0040  v26 = constant #29 5
-0041  v27 = call_direct $3 guarded/1(v26)
-0042  print v27
-0043  v28 = constant #30 2
-0044  v29 = neg_num v28
-0045  v30 = call_direct $3 guarded/1(v29)
-0046  print v30
-0047  v31 = constant #31 0
-0048  v32 = call_direct $3 guarded/1(v31)
-0049  print v32
+0019  v11 = native_call @65 print(v10)
+0020  v12 = constant #24 "bad"
+0021  v13 = variant Result.Err (v12)
+0022  v14 = call_direct $0 describe/1(v13)
+0023  v15 = native_call @68 print(v14)
+0024  v16 = constant #25 4
+0025  v17 = variant Result.Ok (v16)
+0026  v18 = call_direct $1 score/1(v17)
+0027  v19 = native_call @71 print(v18)
+0028  v20 = constant #26 "x"
+0029  v21 = variant Result.Err (v20)
+0030  v22 = call_direct $1 score/1(v21)
+0031  v23 = native_call @74 print(v22)
+0032  v24 = constant #27 3
+0033  v25 = variant Result.Ok (v24)
+0034  v26 = call_direct $2 nested/1(v25)
+0035  v27 = native_call @77 print(v26)
+0036  v28 = constant #28 "x"
+0037  v29 = variant Result.Err (v28)
+0038  v30 = call_direct $2 nested/1(v29)
+0039  v31 = native_call @80 print(v30)
+0040  v32 = constant #29 5
+0041  v33 = call_direct $3 guarded/1(v32)
+0042  v34 = native_call @81 print(v33)
+0043  v35 = constant #30 2
+0044  v36 = neg_num v35
+0045  v37 = call_direct $3 guarded/1(v36)
+0046  v38 = native_call @82 print(v37)
+0047  v39 = constant #31 0
+0048  v40 = call_direct $3 guarded/1(v39)
+0049  v41 = native_call @83 print(v40)
 
 function $0 describe(result#1)
 0000  v0 = load_var @1 result#1

@@ -7,6 +7,6 @@ fun makeCounter() {
   return inc;
 }
 let c = makeCounter();
-print c();
-print c();
-print c();
+print(c());
+print(c());
+print(c());

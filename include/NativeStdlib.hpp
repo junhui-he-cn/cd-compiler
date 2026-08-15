@@ -34,6 +34,7 @@ enum class NativeFunctionKind {
     FindIndex,
     Reduce,
     Range,
+    Print,
 };
 
 struct NativeFunctionSignature {

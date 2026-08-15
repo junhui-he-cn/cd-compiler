@@ -13,59 +13,59 @@ IR
 0011  store_var @21 empty#5, v6
 0012  v7 = load_var @22 positive#3
 0013  v8 = call_direct $0 describe/1(v7)
-0014  print v8
-0015  v9 = load_var @23 zero#4
-0016  v10 = call_direct $0 describe/1(v9)
-0017  print v10
-0018  v11 = load_var @24 empty#5
-0019  v12 = call_direct $0 describe/1(v11)
-0020  print v12
-0021  v13 = load_var @25 positive#3
-0022  v14 = constant #9 nil
-0023  v15 = variant_tag v13 Result.Ok
-0024  jump_if_false v15, 0034
-0025  v16 = variant_field v13[0]
-0026  store_var @30 value#6, v16
-0027  v17 = load_var @31 value#6
-0028  v18 = constant #10 10
-0029  v19 = gt_num v17, v18
-0030  jump_if_false v19, 0034
-0031  v20 = constant #11 "large"
-0032  print v20
+0014  v9 = native_call @23 print(v8)
+0015  v10 = load_var @24 zero#4
+0016  v11 = call_direct $0 describe/1(v10)
+0017  v12 = native_call @25 print(v11)
+0018  v13 = load_var @26 empty#5
+0019  v14 = call_direct $0 describe/1(v13)
+0020  v15 = native_call @27 print(v14)
+0021  v16 = load_var @28 positive#3
+0022  v17 = constant #9 nil
+0023  v18 = variant_tag v16 Result.Ok
+0024  jump_if_false v18, 0034
+0025  v19 = variant_field v16[0]
+0026  store_var @33 value#6, v19
+0027  v20 = load_var @34 value#6
+0028  v21 = constant #10 10
+0029  v22 = gt_num v20, v21
+0030  jump_if_false v22, 0034
+0031  v23 = constant #11 "large"
+0032  v24 = native_call @35 print(v23)
 0033  jump 0056
-0034  v21 = variant_tag v13 Result.Ok
-0035  jump_if_false v21, 0045
-0036  v22 = variant_field v13[0]
-0037  store_var @36 value#7, v22
-0038  v23 = load_var @37 value#7
-0039  v24 = constant #12 0
-0040  v25 = gt_num v23, v24
-0041  jump_if_false v25, 0045
-0042  v26 = constant #13 "positive"
-0043  print v26
+0034  v25 = variant_tag v16 Result.Ok
+0035  jump_if_false v25, 0045
+0036  v26 = variant_field v16[0]
+0037  store_var @40 value#7, v26
+0038  v27 = load_var @41 value#7
+0039  v28 = constant #12 0
+0040  v29 = gt_num v27, v28
+0041  jump_if_false v29, 0045
+0042  v30 = constant #13 "positive"
+0043  v31 = native_call @42 print(v30)
 0044  jump 0056
-0045  v27 = variant_tag v13 Result.Ok
-0046  jump_if_false v27, 0051
-0047  v28 = variant_field v13[0]
-0048  v29 = constant #14 "zero"
-0049  print v29
+0045  v32 = variant_tag v16 Result.Ok
+0046  jump_if_false v32, 0051
+0047  v33 = variant_field v16[0]
+0048  v34 = constant #14 "zero"
+0049  v35 = native_call @47 print(v34)
 0050  jump 0056
-0051  v30 = variant_tag v13 Result.Empty
-0052  jump_if_false v30, 0056
-0053  v31 = constant #15 "empty"
-0054  print v31
+0051  v36 = variant_tag v16 Result.Empty
+0052  jump_if_false v36, 0056
+0053  v37 = constant #15 "empty"
+0054  v38 = native_call @50 print(v37)
 0055  jump 0056
-0056  v32 = load_var @44 empty#5
-0057  v33 = constant #16 nil
-0058  v34 = variant_tag v32 Result.Empty
-0059  jump_if_false v34, 0065
-0060  v35 = constant #17 1
-0061  jump_if_false v35, 0065
-0062  v36 = constant #18 "truthy"
-0063  print v36
+0056  v39 = load_var @51 empty#5
+0057  v40 = constant #16 nil
+0058  v41 = variant_tag v39 Result.Empty
+0059  jump_if_false v41, 0065
+0060  v42 = constant #17 1
+0061  jump_if_false v42, 0065
+0062  v43 = constant #18 "truthy"
+0063  v44 = native_call @54 print(v43)
 0064  jump 0068
-0065  v37 = constant #19 "fallback"
-0066  print v37
+0065  v45 = constant #19 "fallback"
+0066  v46 = native_call @55 print(v45)
 0067  jump 0068
 
 function $0 describe(result#1)

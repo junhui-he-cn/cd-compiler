@@ -4,4 +4,4 @@ fun id(x) {
 
 let mut value = id(1);
 value = "later";
-print value;
+print(value);

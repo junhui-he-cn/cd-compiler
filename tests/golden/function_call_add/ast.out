@@ -1,4 +1,4 @@
 Program
   Fun add(a, b)
     Return (+ a b)
-  Print (call add 1 2)
+  Expr (call print (call add 1 2))

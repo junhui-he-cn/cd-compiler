@@ -53,11 +53,17 @@ names:
   n31 = "reduce"
   n32 = "collected#18"
   n33 = "total#4"
-  n34 = "product#7"
-  n35 = "snapshotTotal#11"
-  n36 = "snapshot#8"
-  n37 = "empty#14"
-  n38 = "collected#18"
+  n34 = "print"
+  n35 = "product#7"
+  n36 = "print"
+  n37 = "snapshotTotal#11"
+  n38 = "print"
+  n39 = "snapshot#8"
+  n40 = "print"
+  n41 = "empty#14"
+  n42 = "print"
+  n43 = "collected#18"
+  n44 = "print"
 
 globals:
   g0 = n0
@@ -75,7 +81,7 @@ native_imports:
   i1 = "print" abi=1
   i2 = "push" abi=1
 
-main registers=36:
+main registers=41:
 block b0:
   r0 = constant c0
   r1 = constant c1
@@ -116,17 +122,17 @@ block b0:
   r28 = call_native i0 [r25, r26, r27]
   init_global g8, r28
   r29 = load_global g2
-  r35 = call_native i1 [r29]
-  r30 = load_global g3
-  r35 = call_native i1 [r30]
-  r31 = load_global g5
-  r35 = call_native i1 [r31]
-  r32 = load_global g4
-  r35 = call_native i1 [r32]
-  r33 = load_global g6
-  r35 = call_native i1 [r33]
-  r34 = load_global g8
-  r35 = call_native i1 [r34]
+  r30 = call_native i1 [r29]
+  r31 = load_global g3
+  r32 = call_native i1 [r31]
+  r33 = load_global g5
+  r34 = call_native i1 [r33]
+  r35 = load_global g4
+  r36 = call_native i1 [r35]
+  r37 = load_global g6
+  r38 = call_native i1 [r37]
+  r39 = load_global g8
+  r40 = call_native i1 [r39]
   return_nil
 
 function f0 name="<lambda>" arity=2 registers=6:
@@ -206,7 +212,7 @@ block b2:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/array_reduce/input.cd" text="let values: [number] = [1, 2, 3];\nlet offset: number = 10;\nlet total: number = reduce(values, 0, fun (acc, value) {\n  return acc + value + offset;\n});\nlet product: number = values.reduce(1, fun (acc: number, value: number): number {\n  return acc * value;\n});\nlet snapshot: [number] = [1, 2];\nlet snapshotTotal: number = reduce(snapshot, 0, fun (acc, value) {\n  push(snapshot, 9);\n  return acc + value;\n});\nlet empty: string = [].reduce(\"seed\", fun (acc: string, value): string {\n  return acc;\n});\nlet initial: [number] = [];\nlet collected: [number] = reduce(values, initial, fun (acc, value) {\n  push(acc, value);\n  return acc;\n});\n\nprint total;\nprint product;\nprint snapshotTotal;\nprint snapshot;\nprint empty;\nprint collected;\n"
+  s0 path="tests/bytecode_artifacts/array_reduce/input.cd" text="let values: [number] = [1, 2, 3];\nlet offset: number = 10;\nlet total: number = reduce(values, 0, fun (acc, value) {\n  return acc + value + offset;\n});\nlet product: number = values.reduce(1, fun (acc: number, value: number): number {\n  return acc * value;\n});\nlet snapshot: [number] = [1, 2];\nlet snapshotTotal: number = reduce(snapshot, 0, fun (acc, value) {\n  push(snapshot, 9);\n  return acc + value;\n});\nlet empty: string = [].reduce(\"seed\", fun (acc: string, value): string {\n  return acc;\n});\nlet initial: [number] = [];\nlet collected: [number] = reduce(values, initial, fun (acc, value) {\n  push(acc, value);\n  return acc;\n});\n\nprint(total);\nprint(product);\nprint(snapshotTotal);\nprint(snapshot);\nprint(empty);\nprint(collected);\n"
 
 debug_locations:
   main 0 = s0:1:25
@@ -357,18 +363,18 @@ debug_ranges:
   main 37 = s0:551:630
   main 38 = s0:529:630
   main 39 = s0:639:644
-  main 40 = s0:639:644
-  main 41 = s0:652:659
-  main 42 = s0:652:659
-  main 43 = s0:667:680
-  main 44 = s0:667:680
-  main 45 = s0:688:696
-  main 46 = s0:688:696
-  main 47 = s0:704:709
-  main 48 = s0:704:709
-  main 49 = s0:717:726
-  main 50 = s0:717:726
-  main 51 = s0:717:726
+  main 40 = s0:633:645
+  main 41 = s0:653:660
+  main 42 = s0:647:661
+  main 43 = s0:669:682
+  main 44 = s0:663:683
+  main 45 = s0:691:699
+  main 46 = s0:685:700
+  main 47 = s0:708:713
+  main 48 = s0:702:714
+  main 49 = s0:722:731
+  main 50 = s0:716:732
+  main 51 = s0:716:732
   function f0 0 = s0:125:128
   function f0 1 = s0:125:128
   function f0 2 = s0:131:136

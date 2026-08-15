@@ -1,5 +1,5 @@
 let xs: [number] = [1, 2, 3];
-print xs[1];
+print(xs[1]);
 let empty: [string] = [];
 push(empty, "ok");
-print pop(empty);
+print(pop(empty));

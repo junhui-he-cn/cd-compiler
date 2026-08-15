@@ -1,2 +1,2 @@
 export value from "../re_export_direct/lib.cd";
-print value;
+print(value);

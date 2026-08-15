@@ -6,7 +6,7 @@ while i < 4 {
 }
 
 if total == 6 && false || true {
-  print total;
+  print(total);
 } else {
-  print 999;
+  print(999);
 }

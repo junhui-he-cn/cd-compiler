@@ -1,35 +1,35 @@
 import "../../data_structures.cd" as ds;
 
 let tree = ds.newFenwickTree([1, 2, 3, 4, 5]);
-print tree.size();
-print tree.snapshot();
-print tree.prefixSum(0);
-print tree.prefixSum(3);
-print tree.prefixSum(5);
-print tree.rangeSum(1, 4);
-print tree.valueAt(2);
+print(tree.size());
+print(tree.snapshot());
+print(tree.prefixSum(0));
+print(tree.prefixSum(3));
+print(tree.prefixSum(5));
+print(tree.rangeSum(1, 4));
+print(tree.valueAt(2));
 
-print tree.add(2, 7);
-print tree.valueAt(2);
-print tree.prefixSum(3);
-print tree.rangeSum(2, 5);
-print tree.snapshot();
+print(tree.add(2, 7));
+print(tree.valueAt(2));
+print(tree.prefixSum(3));
+print(tree.rangeSum(2, 5));
+print(tree.snapshot());
 
-print tree.add(-1, 1);
-print tree.add(5, 1);
-print tree.prefixSum(6);
-print tree.rangeSum(4, 2);
-print tree.add(1.5, 1);
-print tree.prefixSum(2.5);
-print tree.rangeSum(1, 2.5);
+print(tree.add(-1, 1));
+print(tree.add(5, 1));
+print(tree.prefixSum(6));
+print(tree.rangeSum(4, 2));
+print(tree.add(1.5, 1));
+print(tree.prefixSum(2.5));
+print(tree.rangeSum(1, 2.5));
 
 let empty = ds.newFenwickTree([]);
-print empty.size();
-print empty.prefixSum(0);
-print empty.rangeSum(0, 0);
-print empty.add(0, 1);
-print empty.valueAt(0);
+print(empty.size());
+print(empty.prefixSum(0));
+print(empty.rangeSum(0, 0));
+print(empty.add(0, 1));
+print(empty.valueAt(0));
 
 let single = ds.newFenwickTree([9]);
-print single.prefixSum(1);
-print single.rangeSum(0, 1);
+print(single.prefixSum(1));
+print(single.rangeSum(0, 1));

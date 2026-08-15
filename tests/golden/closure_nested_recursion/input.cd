@@ -8,4 +8,4 @@ fun makeCountdown() {
   return count;
 }
 let c = makeCountdown();
-print c(4);
+print(c(4));

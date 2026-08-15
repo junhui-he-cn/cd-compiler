@@ -15,16 +15,16 @@ fun renderEntries(values: [ds.MultiSetEntry<string>]): string {
 }
 
 let words = ["cat", "dog", "cat", "bird", "dog", "cat"];
-print renderEntries(ds.frequencyEntries(words));
-print ds.mostFrequent(words);
+print(renderEntries(ds.frequencyEntries(words)));
+print(ds.mostFrequent(words));
 
 let tie = ["a", "b", "a", "b"];
-print renderEntries(ds.frequencyEntries(tie));
-print ds.mostFrequent(tie);
+print(renderEntries(ds.frequencyEntries(tie)));
+print(ds.mostFrequent(tie));
 
-print ds.frequencyEntries([2, 2, 3, 2]);
-print ds.mostFrequent([2, 2, 3, 2]);
+print(ds.frequencyEntries([2, 2, 3, 2]));
+print(ds.mostFrequent([2, 2, 3, 2]));
 
 let empty: [number] = [];
-print ds.frequencyEntries<number>(empty);
-print ds.mostFrequent<number>(empty);
+print(ds.frequencyEntries<number>(empty));
+print(ds.mostFrequent<number>(empty));

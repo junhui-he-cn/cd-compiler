@@ -1,6 +1,6 @@
 enum Box { Value(number), Empty }
 let value = Box.Value(1);
 match value {
-  Box.Value("wrong") => { print 1; }
-  Box.Empty => { print 0; }
+  Box.Value("wrong") => { print(1); }
+  Box.Empty => { print(0); }
 }

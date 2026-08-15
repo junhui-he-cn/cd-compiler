@@ -15,28 +15,28 @@ fun renderEntries(values: [ds.MultiSetEntry<number>]): string {
 }
 
 let numbers = ds.newMultiSet<number>();
-print numbers.countOf(4);
-print numbers.has(4);
+print(numbers.countOf(4));
+print(numbers.has(4));
 numbers.add(4);
 numbers.add(4);
 numbers.add(2);
-print numbers.countOf(4);
-print renderEntries(numbers.entries());
+print(numbers.countOf(4));
+print(renderEntries(numbers.entries()));
 
 let alias = numbers;
 alias.add(2);
-print renderEntries(numbers.entries());
-print numbers.takeOne(4);
-print renderEntries(numbers.entries());
-print numbers.takeOne(4);
-print renderEntries(numbers.entries());
-print numbers.takeOne(4);
-print numbers.has(2);
+print(renderEntries(numbers.entries()));
+print(numbers.takeOne(4));
+print(renderEntries(numbers.entries()));
+print(numbers.takeOne(4));
+print(renderEntries(numbers.entries()));
+print(numbers.takeOne(4));
+print(numbers.has(2));
 
 let words = ds.newMultiSet<string>();
 words.add("alpha");
 words.add("alpha");
 words.add("beta");
-print words.countOf("alpha");
-print words.takeOne("alpha");
-print words.countOf("alpha");
+print(words.countOf("alpha"));
+print(words.takeOne("alpha"));
+print(words.countOf("alpha"));

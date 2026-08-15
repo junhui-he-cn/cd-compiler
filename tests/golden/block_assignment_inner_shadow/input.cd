@@ -2,6 +2,6 @@ let mut x = 1;
 {
   let mut x = 10;
   x = 20;
-  print x;
+  print(x);
 }
-print x;
+print(x);

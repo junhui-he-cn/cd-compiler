@@ -5,4 +5,4 @@ Program
       Return (+ (field this value) amount)
   Let b: Box = (construct Box value: 10)
   Let result: number = (+ (member-call b add 5) 1)
-  Print result
+  Expr (call print result)

@@ -1,4 +1,4 @@
 let inc = fun (x: number): number {
   return x + 1;
 };
-print inc(4);
+print(inc(4));

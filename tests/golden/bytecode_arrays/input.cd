@@ -3,6 +3,6 @@ fun makeNested() {
 }
 
 let xs = [10, "twenty", true, nil];
-print xs[0];
-print xs[1];
-print makeNested()[1][0];
+print(xs[0]);
+print(xs[1]);
+print(makeNested()[1][0]);

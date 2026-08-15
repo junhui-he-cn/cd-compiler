@@ -17,28 +17,28 @@ IR
 0015  v12 = assign_field v10.value, v11
 0016  v13 = load_var @17 head#1
 0017  v14 = field v13.next
-0018  print v14
-0019  v15 = load_var @20 tail#0
-0020  v16 = field v15.value
-0021  print v16
-0022  v17 = constant #5 3
-0023  v18 = constant #6 nil
-0024  v19 = struct Node {value: v17, next: v18}
-0025  store_var @26 first#3, v19
-0026  v20 = constant #7 4
-0027  v21 = load_var @30 first#3
-0028  v22 = struct Node {value: v20, next: v21}
-0029  store_var @31 second#4, v22
-0030  v23 = load_var @32 first#3
-0031  v24 = load_var @33 second#4
-0032  v25 = assign_field v23.next, v24
-0033  v26 = load_var @36 first#3
-0034  print v26
-0035  v27 = load_var @37 first#3
-0036  v28 = load_var @38 first#3
-0037  v29 = equal v27, v28
-0038  print v29
-0039  v30 = load_var @39 first#3
-0040  v31 = load_var @40 second#4
-0041  v32 = equal v30, v31
-0042  print v32
+0018  v15 = native_call @20 print(v14)
+0019  v16 = load_var @21 tail#0
+0020  v17 = field v16.value
+0021  v18 = native_call @24 print(v17)
+0022  v19 = constant #5 3
+0023  v20 = constant #6 nil
+0024  v21 = struct Node {value: v19, next: v20}
+0025  store_var @28 first#3, v21
+0026  v22 = constant #7 4
+0027  v23 = load_var @32 first#3
+0028  v24 = struct Node {value: v22, next: v23}
+0029  store_var @33 second#4, v24
+0030  v25 = load_var @34 first#3
+0031  v26 = load_var @35 second#4
+0032  v27 = assign_field v25.next, v26
+0033  v28 = load_var @38 first#3
+0034  v29 = native_call @39 print(v28)
+0035  v30 = load_var @40 first#3
+0036  v31 = load_var @41 first#3
+0037  v32 = equal v30, v31
+0038  v33 = native_call @42 print(v32)
+0039  v34 = load_var @43 first#3
+0040  v35 = load_var @44 second#4
+0041  v36 = equal v34, v35
+0042  v37 = native_call @45 print(v36)

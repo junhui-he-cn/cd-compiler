@@ -5,5 +5,5 @@ fun takesNumber(value: number): number {
 let mut maybe: optional<number> = 1;
 if (maybe != nil) {
   maybe = nil;
-  print takesNumber(maybe);
+  print(takesNumber(maybe));
 }

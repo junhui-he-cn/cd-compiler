@@ -3,8 +3,8 @@ Program
   Let b = 1.0000000000000002
   Let c = 0.1
   Let d = 1.23456789012345
-  Print a
-  Print b
-  Print c
-  Print d
-  Print (+ a b)
+  Expr (call print a)
+  Expr (call print b)
+  Expr (call print c)
+  Expr (call print d)
+  Expr (call print (+ a b))

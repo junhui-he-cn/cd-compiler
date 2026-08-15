@@ -5,12 +5,12 @@ directed.addEdge(0, 1, 2);
 directed.addEdge(1, 2, 3);
 directed.addEdge(0, 2, 10);
 directed.addEdge(2, 3, 1);
-print ds.allPairsWeightedDistances(directed);
+print(ds.allPairsWeightedDistances(directed));
 
 let undirected = ds.newWeightedGraph(3, false);
 undirected.addEdge(0, 1, 4);
 undirected.addEdge(1, 2, 1);
-print ds.allPairsWeightedDistances(undirected);
+print(ds.allPairsWeightedDistances(undirected));
 
 let empty = ds.newWeightedGraph(0, false);
-print ds.allPairsWeightedDistances(empty);
+print(ds.allPairsWeightedDistances(empty));

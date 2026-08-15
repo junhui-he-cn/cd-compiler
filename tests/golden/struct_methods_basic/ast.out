@@ -6,5 +6,5 @@ Program
     Method nextAge(): number
       Return (+ (field this age) 1)
   Let p: Person = (construct Person name: "Ada" age: 36)
-  Print (member-call p label)
-  Print (member-call p nextAge)
+  Expr (call print (member-call p label))
+  Expr (call print (member-call p nextAge))

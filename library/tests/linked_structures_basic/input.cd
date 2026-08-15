@@ -1,32 +1,32 @@
 import "../../data_structures.cd" as ds;
 
 let list = ds.newLinkedList<number>();
-print list.isEmpty();
-print list.popFront();
+print(list.isEmpty());
+print(list.popFront());
 list.pushBack(1);
 list.pushBack(2);
 list.pushFront(0);
-print list.snapshot();
+print(list.snapshot());
 
 let held = list.nodeAt(1);
 if let heldNode = held {
   heldNode.setValue(20);
-  print heldNode.readValue();
-  print heldNode.nextNode();
-  print list.snapshot();
+  print(heldNode.readValue());
+  print(heldNode.nextNode());
+  print(list.snapshot());
 }
 
 let removed = list.nodeAt(0);
-print list.popFront();
+print(list.popFront());
 if let removedValue = removed {
-  print removedValue.readValue();
+  print(removedValue.readValue());
 }
-print list.snapshot();
+print(list.snapshot());
 
 let first = ds.newLinkedNode<number>(3);
 let second = ds.newLinkedNode<number>(4);
 first.setNext(second);
 second.setNext(first);
-print first;
-print first == first;
-print first == second;
+print(first);
+print(first == first);
+print(first == second);

@@ -2,9 +2,9 @@ struct Box { x: number }
 let a = Box { x: 1 };
 let b = a;
 let c = Box { x: 1 };
-print a == b;
-print a == c;
+print(a == b);
+print(a == c);
 fun id(value) {
   return value;
 }
-print id(a).x;
+print(id(a).x);

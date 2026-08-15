@@ -4,9 +4,9 @@ struct Nested { point: Point, label: string }
 struct Empty {}
 
 let person = Person { name: "Ada", age: 36 };
-print person.name;
-print person.age;
+print(person.name);
+print(person.age);
 
 let nested = Nested { point: Point { x: 1, y: 2 }, label: "p" };
-print nested.point.x;
-print Empty {};
+print(nested.point.x);
+print(Empty {});

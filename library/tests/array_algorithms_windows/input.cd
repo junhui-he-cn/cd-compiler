@@ -1,22 +1,22 @@
 import "../../data_structures.cd" as ds;
 
 let values = [1, 2, 3, 4, 5];
-print ds.chunkArray(values, 2);
-print values;
-print ds.chunkArray(values, 0);
-print ds.chunkArray(values, -1);
+print(ds.chunkArray(values, 2));
+print(values);
+print(ds.chunkArray(values, 0));
+print(ds.chunkArray(values, -1));
 
 let chunks = ds.chunkArray(values, 3);
 chunks[0].push(99);
-print values;
-print chunks;
+print(values);
+print(chunks);
 
-print ds.slidingWindows(values, 3);
-print ds.slidingWindows(values, 6);
-print ds.slidingWindows(values, 0);
-print ds.prefixSums(values);
+print(ds.slidingWindows(values, 3));
+print(ds.slidingWindows(values, 6));
+print(ds.slidingWindows(values, 0));
+print(ds.prefixSums(values));
 let emptyNumbers: [number] = [];
-print ds.prefixSums(emptyNumbers);
+print(ds.prefixSums(emptyNumbers));
 
 let words = ["a", "b", "c"];
-print ds.slidingWindows(words, 2);
+print(ds.slidingWindows(words, 2));

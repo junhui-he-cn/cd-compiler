@@ -5,5 +5,5 @@ struct Point {
 
 let p = Point { x: 1, y: 2 };
 if Point { x: 1 } == p {
-  print p;
+  print(p);
 }

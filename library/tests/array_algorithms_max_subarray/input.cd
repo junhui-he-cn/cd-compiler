@@ -1,12 +1,12 @@
 import "../../data_structures.cd" as ds;
 
-print ds.maxSubarraySum([-2, 1, -3, 4, -1, 2, 1, -5, 4]);
-print ds.maxSubarraySum([-8, -3, -6]);
-print ds.maxSubarraySum([7]);
+print(ds.maxSubarraySum([-2, 1, -3, 4, -1, 2, 1, -5, 4]));
+print(ds.maxSubarraySum([-8, -3, -6]));
+print(ds.maxSubarraySum([7]));
 
 let values = [3, -2, 5, -1];
-print ds.maxSubarraySum(values);
-print values;
+print(ds.maxSubarraySum(values));
+print(values);
 
 let empty: [number] = [];
-print ds.maxSubarraySum(empty);
+print(ds.maxSubarraySum(empty));

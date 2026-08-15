@@ -30,14 +30,14 @@ def main() -> int:
     compiler = Path(sys.argv[1])
     with tempfile.TemporaryDirectory(prefix="compiler-lexer-recovery-single-") as directory:
         source_path = Path(directory) / "input.cd"
-        source_path.write_text("print 1 @ 2 & 3;\n", encoding="utf-8")
+        source_path.write_text("print(1 @ 2 & 3);\n", encoding="utf-8")
         result = run(compiler, [str(source_path)])
         expected = (
             f"Lex error at {source_path}:1:9: unexpected character `@`\n"
-            "  print 1 @ 2 & 3;\n"
+            "  print(1 @ 2 & 3);\n"
             "          ^\n"
             f"Lex error at {source_path}:1:13: unexpected character `&`\n"
-            "  print 1 @ 2 & 3;\n"
+            "  print(1 @ 2 & 3);\n"
             "              ^\n"
         )
         require(result.returncode == 1, f"unexpected single-file exit: {result.returncode}")
@@ -48,8 +48,8 @@ def main() -> int:
         root = Path(directory)
         first = root / "first.cd"
         second = root / "second.cd"
-        first.write_text("print 1 @ 2;\n", encoding="utf-8")
-        second.write_text("print 3 # 4;\n", encoding="utf-8")
+        first.write_text("print(1 @ 2);\n", encoding="utf-8")
+        second.write_text("print(3 # 4);\n", encoding="utf-8")
         result = run(compiler, [str(first), str(second)])
         require(result.returncode == 1, f"unexpected multi-file exit: {result.returncode}")
         require(result.stdout == "", f"unexpected multi-file stdout: {result.stdout!r}")
@@ -57,10 +57,10 @@ def main() -> int:
             result.stderr
             == (
                 f"Lex error at {first}:1:9: unexpected character `@`\n"
-                "  print 1 @ 2;\n"
+                "  print(1 @ 2);\n"
                 "          ^\n"
                 f"Lex error at {second}:1:9: unexpected character `#`\n"
-                "  print 3 # 4;\n"
+                "  print(3 # 4);\n"
                 "          ^\n"
             ),
             f"unexpected multi-file stderr:\n{result.stderr}",
@@ -68,7 +68,7 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory(prefix="compiler-lexer-recovery-unterminated-") as directory:
         source_path = Path(directory) / "input.cd"
-        source_path.write_text('print "unterminated;', encoding="utf-8")
+        source_path.write_text('print("unterminated);', encoding="utf-8")
         result = run(compiler, [str(source_path)])
         require(result.returncode == 1, f"unexpected unterminated-string exit: {result.returncode}")
         require(result.stdout == "", f"unexpected unterminated-string stdout: {result.stdout!r}")

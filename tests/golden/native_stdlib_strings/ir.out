@@ -1,38 +1,38 @@
 IR
 0000  v0 = constant #0 123
 0001  v1 = native_call @0 str(v0)
-0002  print v1
-0003  v2 = constant #1 true
-0004  v3 = native_call @1 str(v2)
-0005  print v3
-0006  v4 = constant #2 nil
-0007  v5 = native_call @2 str(v4)
-0008  print v5
-0009  v6 = constant #3 1
-0010  v7 = constant #4 "x"
-0011  v8 = array [v6, v7]
-0012  v9 = native_call @3 str(v8)
-0013  print v9
-0014  v10 = constant #5 "hello"
-0015  v11 = constant #6 1
-0016  v12 = constant #7 3
-0017  v13 = native_call @4 substr(v10, v11, v12)
-0018  print v13
-0019  v14 = constant #8 "hello"
-0020  v15 = constant #9 0
-0021  v16 = constant #10 5
-0022  v17 = native_call @5 substr(v14, v15, v16)
-0023  print v17
-0024  v18 = constant #11 "hello"
-0025  v19 = constant #12 5
-0026  v20 = constant #13 0
-0027  v21 = native_call @6 substr(v18, v19, v20)
-0028  print v21
-0029  v22 = constant #14 "hello"
-0030  v23 = constant #15 0
-0031  v24 = native_call @7 charAt(v22, v23)
-0032  print v24
-0033  v25 = constant #16 "hello"
-0034  v26 = constant #17 4
-0035  v27 = native_call @8 charAt(v25, v26)
-0036  print v27
+0002  v2 = native_call @1 print(v1)
+0003  v3 = constant #1 true
+0004  v4 = native_call @2 str(v3)
+0005  v5 = native_call @3 print(v4)
+0006  v6 = constant #2 nil
+0007  v7 = native_call @4 str(v6)
+0008  v8 = native_call @5 print(v7)
+0009  v9 = constant #3 1
+0010  v10 = constant #4 "x"
+0011  v11 = array [v9, v10]
+0012  v12 = native_call @6 str(v11)
+0013  v13 = native_call @7 print(v12)
+0014  v14 = constant #5 "hello"
+0015  v15 = constant #6 1
+0016  v16 = constant #7 3
+0017  v17 = native_call @8 substr(v14, v15, v16)
+0018  v18 = native_call @9 print(v17)
+0019  v19 = constant #8 "hello"
+0020  v20 = constant #9 0
+0021  v21 = constant #10 5
+0022  v22 = native_call @10 substr(v19, v20, v21)
+0023  v23 = native_call @11 print(v22)
+0024  v24 = constant #11 "hello"
+0025  v25 = constant #12 5
+0026  v26 = constant #13 0
+0027  v27 = native_call @12 substr(v24, v25, v26)
+0028  v28 = native_call @13 print(v27)
+0029  v29 = constant #14 "hello"
+0030  v30 = constant #15 0
+0031  v31 = native_call @14 charAt(v29, v30)
+0032  v32 = native_call @15 print(v31)
+0033  v33 = constant #16 "hello"
+0034  v34 = constant #17 4
+0035  v35 = native_call @16 charAt(v33, v34)
+0036  v36 = native_call @17 print(v35)

@@ -1,5 +1,5 @@
 Runtime error at tests/golden/runtime_errors/bytecode_array_index_out_of_range.cd:2:7: array index out of range
-  print xs[1];
+  print(xs[1]);
         ^
 Call stack:
   at main (tests/golden/runtime_errors/bytecode_array_index_out_of_range.cd:2:7)

@@ -16,7 +16,7 @@ Program
     Let box: Boxed = (construct Boxed value: 0)
     Let directMethod = (member-call box echo 3)
     Let namespaceEnum = (member-call (field lib Box) Value 4)
-    Print direct
-    Print namespaced
-    Print directMethod
-    Print namespaceEnum
+    Expr (call print direct)
+    Expr (call print namespaced)
+    Expr (call print directMethod)
+    Expr (call print namespaceEnum)

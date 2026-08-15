@@ -14,14 +14,14 @@ Program
 maybe
     Then
       Block
-        Print (+ "if-let:" (call str v))
+        Expr (call print (+ "if-let:" (call str v)))
     Else
       Block
-        Print "if-let:none"
-  Print (?? maybe 0)
-  Print (?? (call find (- 1)) 99)
-  Print (?? (call process 3) "missing")
-  Print (?? (call process (- 1)) "missing")
+        Expr (call print "if-let:none")
+  Expr (call print (?? maybe 0))
+  Expr (call print (?? (call find (- 1)) 99))
+  Expr (call print (?? (call process 3) "missing"))
+  Expr (call print (?? (call process (- 1)) "missing"))
   Let mut next: optional<number> = (call find 1)
   Let mut count = 0
   WhileLet current
@@ -31,4 +31,4 @@ next
       Block
         Expr (+= count 1)
         Expr (= next nil)
-  Print count
+  Expr (call print count)

@@ -1,17 +1,17 @@
 import "../../data_structures.cd" as ds;
 
 let values = [3, 1, 4, 4, 2, 5, -1];
-print ds.differenceArray(values);
-print ds.prefixMinimums(values);
-print ds.prefixMaximums(values);
-print ds.nextGreaterValues(values);
+print(ds.differenceArray(values));
+print(ds.prefixMinimums(values));
+print(ds.prefixMaximums(values));
+print(ds.nextGreaterValues(values));
 
 let descending = [5, 4, 3];
-print ds.differenceArray(descending);
-print ds.nextGreaterValues(descending);
+print(ds.differenceArray(descending));
+print(ds.nextGreaterValues(descending));
 
 let empty: [number] = [];
-print ds.differenceArray(empty);
-print ds.prefixMinimums(empty);
-print ds.prefixMaximums(empty);
-print ds.nextGreaterValues(empty);
+print(ds.differenceArray(empty));
+print(ds.prefixMinimums(empty));
+print(ds.prefixMaximums(empty));
+print(ds.nextGreaterValues(empty));

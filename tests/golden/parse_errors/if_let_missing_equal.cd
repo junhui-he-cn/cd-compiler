@@ -1,4 +1,4 @@
 let x: optional<number> = nil;
 if let v x {
-  print v;
+  print(v);
 }

@@ -1,5 +1,5 @@
 Program
   Let answer: number = 42
   Let label: string = "answer"
-  Print label
-  Print answer
+  Expr (call print label)
+  Expr (call print answer)

@@ -1,6 +1,6 @@
 native_import i0 = print abi=1
 native_import i1 = flatMap abi=1
-main registers=12
+main registers=13
 0000  block
 0001  b0 = make_function $0 <lambda>/2
 0002  init_global g0, b0
@@ -9,13 +9,13 @@ main registers=12
 0005  b3 = array [b2]
 0006  b4 = make_function $1 <lambda>/1
 0007  b5 = call b1(b3, b4)
-0008  b11 = call_native i0 [b5]
-0009  b6 = constant #4 1
-0010  b7 = constant #5 2
-0011  b8 = array [b6, b7]
-0012  b9 = make_function $2 <lambda>/1
-0013  b10 = call_native i1 [b8, b9]
-0014  b11 = call_native i0 [b10]
+0008  b6 = call_native i0 [b5]
+0009  b7 = constant #4 1
+0010  b8 = constant #5 2
+0011  b9 = array [b7, b8]
+0012  b10 = make_function $2 <lambda>/1
+0013  b11 = call_native i1 [b9, b10]
+0014  b12 = call_native i0 [b11]
 0015  return_nil
 
 function $0 <lambda>/2 registers=2

@@ -8,18 +8,18 @@ fun describe(value: optional<number>): string {
 }
 
 let median = ds.newMedianHeap();
-print describe(median.median());
+print(describe(median.median()));
 median.add(5);
-print describe(median.median());
+print(describe(median.median()));
 median.add(1);
-print describe(median.median());
+print(describe(median.median()));
 median.add(9);
-print describe(median.median());
+print(describe(median.median()));
 median.add(3);
-print describe(median.median());
+print(describe(median.median()));
 median.add(3);
-print describe(median.median());
+print(describe(median.median()));
 median.add(-7);
-print describe(median.median());
-print median.size();
-print median.isEmpty();
+print(describe(median.median()));
+print(median.size());
+print(median.isEmpty());

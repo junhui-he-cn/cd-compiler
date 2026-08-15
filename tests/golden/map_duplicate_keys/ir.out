@@ -9,50 +9,50 @@ IR
 0007  store_var @0 m#0, v6
 0008  v7 = load_var @1 m#0
 0009  v8 = len_map v7
-0010  print v8
-0011  v9 = load_var @2 m#0
-0012  v10 = constant #6 "a"
-0013  v11 = map_get v9, v10
-0014  print v11
-0015  v12 = load_var @3 m#0
-0016  v13 = constant #7 "b"
-0017  v14 = map_get v12, v13
-0018  print v14
-0019  v15 = load_var @4 m#0
-0020  v16 = iter_init v15
-0021  v17 = constant #8 nil
-0022  store_var @5 k#1, v17
-0023  v18 = iter_has v16
-0024  jump_if_false v18, 0034
-0025  v19 = iter_next v16
-0026  assign_var @6 k#1, v19
-0027  v20 = load_var @7 k#1
-0028  print v20
-0029  v21 = load_var @8 m#0
-0030  v22 = load_var @9 k#1
-0031  v23 = map_get v21, v22
-0032  print v23
+0010  v9 = native_call @2 print(v8)
+0011  v10 = load_var @3 m#0
+0012  v11 = constant #6 "a"
+0013  v12 = map_get v10, v11
+0014  v13 = native_call @4 print(v12)
+0015  v14 = load_var @5 m#0
+0016  v15 = constant #7 "b"
+0017  v16 = map_get v14, v15
+0018  v17 = native_call @6 print(v16)
+0019  v18 = load_var @7 m#0
+0020  v19 = iter_init v18
+0021  v20 = constant #8 nil
+0022  store_var @8 k#1, v20
+0023  v21 = iter_has v19
+0024  jump_if_false v21, 0034
+0025  v22 = iter_next v19
+0026  assign_var @9 k#1, v22
+0027  v23 = load_var @10 k#1
+0028  v24 = native_call @11 print(v23)
+0029  v25 = load_var @12 m#0
+0030  v26 = load_var @13 k#1
+0031  v27 = map_get v25, v26
+0032  v28 = native_call @14 print(v27)
 0033  jump 0023
-0034  v24 = load_var @10 m#0
-0035  v25 = native_call @11 keys(v24)
-0036  print v25
-0037  v26 = load_var @12 m#0
-0038  v27 = native_call @13 values(v26)
-0039  print v27
-0040  v28 = load_var @14 m#0
-0041  v29 = constant #9 "a"
-0042  v30 = constant #10 30
-0043  v31 = map_set v28, v29, v30
-0044  v32 = load_var @15 m#0
-0045  print v32
-0046  v33 = load_var @16 m#0
-0047  v34 = native_call @17 keys(v33)
-0048  print v34
-0049  v35 = load_var @18 m#0
-0050  v36 = constant #11 "b"
-0051  v37 = constant #12 20
-0052  v38 = constant #13 "c"
-0053  v39 = constant #14 4
-0054  v40 = map [v36: v37, v38: v39]
-0055  v41 = native_call @19 merge(v35, v40)
-0056  print v41
+0034  v29 = load_var @15 m#0
+0035  v30 = native_call @16 keys(v29)
+0036  v31 = native_call @17 print(v30)
+0037  v32 = load_var @18 m#0
+0038  v33 = native_call @19 values(v32)
+0039  v34 = native_call @20 print(v33)
+0040  v35 = load_var @21 m#0
+0041  v36 = constant #9 "a"
+0042  v37 = constant #10 30
+0043  v38 = map_set v35, v36, v37
+0044  v39 = load_var @22 m#0
+0045  v40 = native_call @23 print(v39)
+0046  v41 = load_var @24 m#0
+0047  v42 = native_call @25 keys(v41)
+0048  v43 = native_call @26 print(v42)
+0049  v44 = load_var @27 m#0
+0050  v45 = constant #11 "b"
+0051  v46 = constant #12 20
+0052  v47 = constant #13 "c"
+0053  v48 = constant #14 4
+0054  v49 = map [v45: v46, v47: v48]
+0055  v50 = native_call @28 merge(v44, v49)
+0056  v51 = native_call @29 print(v50)

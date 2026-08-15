@@ -31,17 +31,17 @@ let right: [ds.Interval] = [
   ds.Interval { start: 3, end: 5 }
 ];
 
-print renderIntervals(ds.intersectIntervals(left, right));
-print renderIntervals(left);
-print renderIntervals(right);
+print(renderIntervals(ds.intersectIntervals(left, right)));
+print(renderIntervals(left));
+print(renderIntervals(right));
 
 let touching: [ds.Interval] = [ds.Interval { start: 1, end: 2 }];
 let touchingRight: [ds.Interval] = [ds.Interval { start: 2, end: 4 }];
-print renderIntervals(ds.intersectIntervals(touching, touchingRight));
+print(renderIntervals(ds.intersectIntervals(touching, touchingRight)));
 
 let disjoint: [ds.Interval] = [ds.Interval { start: 10, end: 12 }];
-print renderIntervals(ds.intersectIntervals(touching, disjoint));
+print(renderIntervals(ds.intersectIntervals(touching, disjoint)));
 
 let empty: [ds.Interval] = [];
-print renderIntervals(ds.intersectIntervals(empty, right));
-print renderIntervals(ds.intersectIntervals(left, empty));
+print(renderIntervals(ds.intersectIntervals(empty, right)));
+print(renderIntervals(ds.intersectIntervals(left, empty)));

@@ -13,6 +13,15 @@ namespace fs = std::filesystem;
 
 namespace {
 
+const Expr* printedArgument(const ExpressionStmt& statement)
+{
+    const auto* call = dynamic_cast<const CallExpr*>(statement.expression.get());
+    if (!call || call->arguments.size() != 1) {
+        return nullptr;
+    }
+    return call->arguments[0].get();
+}
+
 void writeModuleSource(const fs::path& path, const std::string& source)
 {
     fs::create_directories(path.parent_path());
@@ -37,7 +46,7 @@ void test_snapshot_identity_metadata()
 {
     const std::string source =
         "let mut x = 1;\n"
-        "{ let mut x = 2; print x; x = 3; }\n"
+        "{ let mut x = 2; print(x); x = 3; }\n"
         "x = 4;\n";
     std::istringstream input(source);
     FrontendSession frontend;
@@ -65,10 +74,10 @@ void test_snapshot_identity_metadata()
     assert(outer->syntaxNodeId != block->syntaxNodeId);
 
     const auto* inner = dynamic_cast<const LetStmt*>(block->statements[0].get());
-    const auto* print = dynamic_cast<const PrintStmt*>(block->statements[1].get());
+    const auto* print = dynamic_cast<const ExpressionStmt*>(block->statements[1].get());
     const auto* assignmentStatement = dynamic_cast<const ExpressionStmt*>(block->statements[2].get());
     assert(inner != nullptr && print != nullptr && assignmentStatement != nullptr);
-    const auto* read = dynamic_cast<const VariableExpr*>(print->expression.get());
+    const auto* read = dynamic_cast<const VariableExpr*>(printedArgument(*print));
     const auto* assignment = dynamic_cast<const AssignExpr*>(assignmentStatement->expression.get());
     assert(read != nullptr && assignment != nullptr);
 
@@ -115,7 +124,7 @@ void test_module_interface_graph_identity(const fs::path& root)
         "let alpha = 1;\n"
         "export zeta, alpha;\n");
     writeModuleSource(reExport, "export alpha from \"./lib.cd\";\n");
-    writeModuleSource(entry, "import \"./api.cd\";\nprint alpha;\n");
+    writeModuleSource(entry, "import \"./api.cd\";\nprint(alpha);\n");
 
     FrontendSession frontend;
     Program program = frontend.loadFiles({entry.string()});
@@ -225,14 +234,14 @@ void test_declaration_index()
         "let x = 1;\n"
         "let result = Result.Ok(1);\n"
         "let box = Box { value: 1 };\n"
-        "print box.bump(1);\n"
+        "print(box.bump(1));\n"
         "{\n"
         "  let mut x = 2;\n"
-        "  print x;\n"
+        "  print(x);\n"
         "  x = 3;\n"
         "  x += 1;\n"
         "}\n"
-        "print use(x);\n";
+        "print(use(x));\n";
     std::istringstream input(source);
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
@@ -303,8 +312,10 @@ void test_declaration_index()
     const DeclarationId innerId = innerRecord->declarationId;
     assert(index.lookup(*blockScope, "x") == innerId);
 
-    const auto* read = dynamic_cast<const VariableExpr*>(
-        dynamic_cast<const PrintStmt*>(block->statements[1].get())->expression.get());
+    const auto* readStatement = dynamic_cast<const ExpressionStmt*>(block->statements[1].get());
+    const auto* read = readStatement
+        ? dynamic_cast<const VariableExpr*>(printedArgument(*readStatement))
+        : nullptr;
     const auto* assignment = dynamic_cast<const AssignExpr*>(
         dynamic_cast<const ExpressionStmt*>(block->statements[2].get())->expression.get());
     const auto* compound = dynamic_cast<const CompoundAssignExpr*>(
@@ -321,9 +332,9 @@ void test_declaration_index()
     assert(resultConstructor != nullptr && enumQualifier != nullptr);
     assert(!index.variableReference(*enumQualifier).has_value());
 
-    const auto* callStatement = dynamic_cast<const PrintStmt*>(entryModule(program).statements[9].get());
+    const auto* callStatement = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[9].get());
     const auto* methodCall = callStatement
-        ? dynamic_cast<const MemberCallExpr*>(callStatement->expression.get())
+        ? dynamic_cast<const MemberCallExpr*>(printedArgument(*callStatement))
         : nullptr;
     const auto* methodReceiver = methodCall
         ? dynamic_cast<const VariableExpr*>(methodCall->receiver.get())
@@ -336,9 +347,9 @@ void test_declaration_index()
     assert(methodTarget->target.declarationId == methodRecord->declarationId);
     assert(index.callTarget(*resultConstructor) == nullptr);
 
-    const auto* directCallStatement = dynamic_cast<const PrintStmt*>(entryModule(program).statements[11].get());
+    const auto* directCallStatement = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[11].get());
     const auto* directCall = directCallStatement
-        ? dynamic_cast<const CallExpr*>(directCallStatement->expression.get())
+        ? dynamic_cast<const CallExpr*>(printedArgument(*directCallStatement))
         : nullptr;
     const auto* directCallee = directCall
         ? dynamic_cast<const VariableExpr*>(directCall->callee.get())
@@ -417,10 +428,10 @@ void test_declaration_index_for_in_binding()
     std::istringstream input(
         "let outer = 0;\n"
         "for item in [1, 2] {\n"
-        "  print item;\n"
-        "  print item;\n"
+        "  print(item);\n"
+        "  print(item);\n"
         "}\n"
-        "print outer;\n");
+        "print(outer);\n");
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
     const auto* loop = dynamic_cast<const ForInStmt*>(entryModule(program).statements[1].get());
@@ -448,8 +459,8 @@ void test_declaration_index_for_in_binding()
     assert(loopScope == bodyScope);
     assert(index.lookup(*loopScope, "item") == loopRecord->declarationId);
 
-    const auto* print = dynamic_cast<const PrintStmt*>(body->statements[0].get());
-    const auto* read = print ? dynamic_cast<const VariableExpr*>(print->expression.get()) : nullptr;
+    const auto* print = dynamic_cast<const ExpressionStmt*>(body->statements[0].get());
+    const auto* read = print ? dynamic_cast<const VariableExpr*>(printedArgument(*print)) : nullptr;
     assert(read != nullptr);
     assert(index.variableReference(*read)->declarationId == loopRecord->declarationId);
 }
@@ -462,7 +473,7 @@ void test_declaration_index_signature_shapes()
         "fun identity<T>(value: T): T { return value; }\n"
         "let box: Box<number> = Box { value: 1 };\n"
         "let result: Result<number> = Result.Ok(1);\n"
-        "print identity<number>(1);\n");
+        "print(identity<number>(1));\n");
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
     const auto* structDecl = dynamic_cast<const StructDeclStmt*>(entryModule(program).statements[0].get());
@@ -558,18 +569,18 @@ void test_typed_expression_metadata()
         "struct Box { value: number }\n"
         "fun add(value: number): number { return value; }\n"
         "let mut x = 1;\n"
-        "print x;\n"
+        "print(x);\n"
         "x = add(2);\n"
         "x += 1;\n"
         "let box = Box { value: 3 };\n"
-        "print box.value;\n");
+        "print(box.value);\n");
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
 
-    const auto* printVariable = dynamic_cast<const PrintStmt*>(entryModule(program).statements[3].get());
+    const auto* printVariable = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[3].get());
     const auto* assignmentStatement = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[4].get());
     const auto* compoundStatement = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[5].get());
-    const auto* printField = dynamic_cast<const PrintStmt*>(entryModule(program).statements[7].get());
+    const auto* printField = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[7].get());
     const auto* assignment = assignmentStatement
         ? dynamic_cast<const AssignExpr*>(assignmentStatement->expression.get())
         : nullptr;
@@ -580,10 +591,10 @@ void test_typed_expression_metadata()
         ? dynamic_cast<const CallExpr*>(assignment->value.get())
         : nullptr;
     const auto* field = printField
-        ? dynamic_cast<const FieldAccessExpr*>(printField->expression.get())
+        ? dynamic_cast<const FieldAccessExpr*>(printedArgument(*printField))
         : nullptr;
     const auto* variable = printVariable
-        ? dynamic_cast<const VariableExpr*>(printVariable->expression.get())
+        ? dynamic_cast<const VariableExpr*>(printedArgument(*printVariable))
         : nullptr;
     assert(variable != nullptr && assignment != nullptr && compound != nullptr);
     assert(directCall != nullptr && field != nullptr);
@@ -615,22 +626,22 @@ void test_variable_lowering_metadata()
         "let outer = 1;\n"
         "{\n"
         "  let mut outer = id(2);\n"
-        "  print outer;\n"
+        "  print(outer);\n"
         "  outer = 3;\n"
         "  outer += 1;\n"
-        "  print outer;\n"
+        "  print(outer);\n"
         "}\n"
-        "print outer;\n"
+        "print(outer);\n"
         "let mut dynamic = id(4);\n"
         "dynamic = 5;\n"
         "dynamic += 1;\n"
-        "print dynamic;\n");
+        "print(dynamic);\n");
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
 
     const auto* outerLet = dynamic_cast<const LetStmt*>(entryModule(program).statements[1].get());
     const auto* block = dynamic_cast<const BlockStmt*>(entryModule(program).statements[2].get());
-    const auto* outerPrint = dynamic_cast<const PrintStmt*>(entryModule(program).statements[3].get());
+    const auto* outerPrint = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[3].get());
     const auto* dynamicLet = dynamic_cast<const LetStmt*>(entryModule(program).statements[4].get());
     const auto* dynamicAssignStatement = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[5].get());
     const auto* dynamicCompoundStatement = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[6].get());
@@ -639,16 +650,16 @@ void test_variable_lowering_metadata()
     assert(block->statements.size() == 5);
 
     const auto* innerLet = dynamic_cast<const LetStmt*>(block->statements[0].get());
-    const auto* innerPrint = dynamic_cast<const PrintStmt*>(block->statements[1].get());
+    const auto* innerPrint = dynamic_cast<const ExpressionStmt*>(block->statements[1].get());
     const auto* innerAssignStatement = dynamic_cast<const ExpressionStmt*>(block->statements[2].get());
     const auto* innerCompoundStatement = dynamic_cast<const ExpressionStmt*>(block->statements[3].get());
     assert(innerLet != nullptr && innerPrint != nullptr);
     assert(innerAssignStatement != nullptr && innerCompoundStatement != nullptr);
 
-    const auto* innerRead = dynamic_cast<const VariableExpr*>(innerPrint->expression.get());
+    const auto* innerRead = dynamic_cast<const VariableExpr*>(printedArgument(*innerPrint));
     const auto* innerAssign = dynamic_cast<const AssignExpr*>(innerAssignStatement->expression.get());
     const auto* innerCompound = dynamic_cast<const CompoundAssignExpr*>(innerCompoundStatement->expression.get());
-    const auto* afterBlockRead = dynamic_cast<const VariableExpr*>(outerPrint->expression.get());
+    const auto* afterBlockRead = dynamic_cast<const VariableExpr*>(printedArgument(*outerPrint));
     const auto* dynamicAssign = dynamic_cast<const AssignExpr*>(dynamicAssignStatement->expression.get());
     const auto* dynamicCompound = dynamic_cast<const CompoundAssignExpr*>(dynamicCompoundStatement->expression.get());
     assert(innerRead != nullptr && innerAssign != nullptr && innerCompound != nullptr);
@@ -719,29 +730,29 @@ void test_typed_index_expression_metadata()
         "let xs: [number] = [1, 2];\n"
         "let table: map<string, number> = {\"a\": 1};\n"
         "let values = range(3);\n"
-        "print xs[0];\n"
+        "print(xs[0]);\n"
         "xs[0] = 2;\n"
         "xs[0] += 3;\n"
-        "print table[\"a\"];\n"
+        "print(table[\"a\"]);\n"
         "table[\"a\"] = 4;\n"
-        "print values[0];\n"
-        "print id(xs)[0];\n"
+        "print(values[0]);\n"
+        "print(id(xs)[0]);\n"
         "id(xs)[0] = 5;\n"
         "id(xs)[0] += 1;\n");
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
 
-    const auto* arrayReadStatement = dynamic_cast<const PrintStmt*>(entryModule(program).statements[4].get());
+    const auto* arrayReadStatement = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[4].get());
     const auto* arrayAssignStatement = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[5].get());
     const auto* arrayCompoundStatement = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[6].get());
-    const auto* mapReadStatement = dynamic_cast<const PrintStmt*>(entryModule(program).statements[7].get());
+    const auto* mapReadStatement = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[7].get());
     const auto* mapAssignStatement = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[8].get());
-    const auto* rangeReadStatement = dynamic_cast<const PrintStmt*>(entryModule(program).statements[9].get());
-    const auto* dynamicReadStatement = dynamic_cast<const PrintStmt*>(entryModule(program).statements[10].get());
+    const auto* rangeReadStatement = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[9].get());
+    const auto* dynamicReadStatement = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[10].get());
     const auto* dynamicAssignStatement = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[11].get());
     const auto* dynamicCompoundStatement = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[12].get());
     const auto* arrayRead = arrayReadStatement
-        ? dynamic_cast<const IndexExpr*>(arrayReadStatement->expression.get())
+        ? dynamic_cast<const IndexExpr*>(printedArgument(*arrayReadStatement))
         : nullptr;
     const auto* arrayAssign = arrayAssignStatement
         ? dynamic_cast<const IndexAssignExpr*>(arrayAssignStatement->expression.get())
@@ -750,16 +761,16 @@ void test_typed_index_expression_metadata()
         ? dynamic_cast<const IndexCompoundAssignExpr*>(arrayCompoundStatement->expression.get())
         : nullptr;
     const auto* mapRead = mapReadStatement
-        ? dynamic_cast<const IndexExpr*>(mapReadStatement->expression.get())
+        ? dynamic_cast<const IndexExpr*>(printedArgument(*mapReadStatement))
         : nullptr;
     const auto* mapAssign = mapAssignStatement
         ? dynamic_cast<const IndexAssignExpr*>(mapAssignStatement->expression.get())
         : nullptr;
     const auto* rangeRead = rangeReadStatement
-        ? dynamic_cast<const IndexExpr*>(rangeReadStatement->expression.get())
+        ? dynamic_cast<const IndexExpr*>(printedArgument(*rangeReadStatement))
         : nullptr;
     const auto* dynamicRead = dynamicReadStatement
-        ? dynamic_cast<const IndexExpr*>(dynamicReadStatement->expression.get())
+        ? dynamic_cast<const IndexExpr*>(printedArgument(*dynamicReadStatement))
         : nullptr;
     const auto* dynamicAssign = dynamicAssignStatement
         ? dynamic_cast<const IndexAssignExpr*>(dynamicAssignStatement->expression.get())
@@ -823,24 +834,24 @@ void test_call_lowering_metadata()
     std::istringstream input(
         "fun add(value: number): number { return value + 1; }\n"
         "let alias = add;\n"
-        "print add(1);\n"
-        "print alias(2);\n"
+        "print(add(1));\n"
+        "print(alias(2));\n"
         "fun floor(value) { return value; }\n"
-        "print floor(3);\n");
+        "print(floor(3));\n");
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
 
-    const auto* directPrint = dynamic_cast<const PrintStmt*>(entryModule(program).statements[2].get());
-    const auto* aliasPrint = dynamic_cast<const PrintStmt*>(entryModule(program).statements[3].get());
-    const auto* shadowedPrint = dynamic_cast<const PrintStmt*>(entryModule(program).statements[5].get());
+    const auto* directPrint = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[2].get());
+    const auto* aliasPrint = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[3].get());
+    const auto* shadowedPrint = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[5].get());
     const auto* directCall = directPrint
-        ? dynamic_cast<const CallExpr*>(directPrint->expression.get())
+        ? dynamic_cast<const CallExpr*>(printedArgument(*directPrint))
         : nullptr;
     const auto* aliasCall = aliasPrint
-        ? dynamic_cast<const CallExpr*>(aliasPrint->expression.get())
+        ? dynamic_cast<const CallExpr*>(printedArgument(*aliasPrint))
         : nullptr;
     const auto* shadowedCall = shadowedPrint
-        ? dynamic_cast<const CallExpr*>(shadowedPrint->expression.get())
+        ? dynamic_cast<const CallExpr*>(printedArgument(*shadowedPrint))
         : nullptr;
     assert(directCall != nullptr && aliasCall != nullptr && shadowedCall != nullptr);
 
@@ -873,13 +884,13 @@ void test_method_call_lowering_metadata()
         "  fun add(delta: number): number { return this.value + delta; }\n"
         "}\n"
         "let box = Box { value: 1 };\n"
-        "print box.add(2);\n");
+        "print(box.add(2));\n");
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
 
-    const auto* print = dynamic_cast<const PrintStmt*>(entryModule(program).statements[3].get());
+    const auto* print = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[3].get());
     const auto* methodCall = print
-        ? dynamic_cast<const MemberCallExpr*>(print->expression.get())
+        ? dynamic_cast<const MemberCallExpr*>(printedArgument(*print))
         : nullptr;
     assert(methodCall != nullptr);
 
@@ -920,7 +931,7 @@ void test_literal_pattern_metadata()
         "    false => { return 2; }\n"
         "  }\n"
         "}\n"
-        "print choose(nil);\n");
+        "print(choose(nil));\n");
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
 
@@ -972,7 +983,7 @@ void test_variant_pattern_metadata()
         "    Result.Empty => { return 0; }\n"
         "  }\n"
         "}\n"
-        "print choose(nil);\n");
+        "print(choose(nil));\n");
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
 
@@ -1029,7 +1040,7 @@ void test_record_pattern_metadata()
         "    Box { label: label, value: numberValue } => { return label + str(numberValue); }\n"
         "  }\n"
         "}\n"
-        "print choose(nil);\n");
+        "print(choose(nil));\n");
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
 
@@ -1084,7 +1095,7 @@ void test_literal_or_pattern_metadata()
         "    _ => { return \"other\"; }\n"
         "  }\n"
         "}\n"
-        "print choose(false);\n");
+        "print(choose(false));\n");
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
 
@@ -1128,7 +1139,7 @@ void test_pattern_guard_metadata()
         "    _ => { return \"other\"; }\n"
         "  }\n"
         "}\n"
-        "print describe(1);\n");
+        "print(describe(1));\n");
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
 
@@ -1167,8 +1178,8 @@ void test_variant_constructor_lowering_metadata()
         "enum Option<T> { Some(T), None }\n"
         "let ok = Result.Ok(1);\n"
         "let none: Option<number> = Option.None<number>();\n"
-        "print ok;\n"
-        "print none;\n");
+        "print(ok);\n"
+        "print(none);\n");
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
 
@@ -1221,13 +1232,13 @@ void test_function_return_lowering_metadata()
         "  return fun () { return captured; };\n"
         "}\n"
         "let reader = makeReader();\n"
-        "print reader();\n");
+        "print(reader());\n");
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
 
     const auto* factorial = dynamic_cast<const FunctionStmt*>(entryModule(program).statements[0].get());
     const auto* makeReader = dynamic_cast<const FunctionStmt*>(entryModule(program).statements[1].get());
-    const auto* readerPrint = dynamic_cast<const PrintStmt*>(entryModule(program).statements[3].get());
+    const auto* readerPrint = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[3].get());
     assert(factorial != nullptr && makeReader != nullptr && readerPrint != nullptr);
     assert(factorial->body.size() == 2 && makeReader->body.size() == 2);
 
@@ -1246,7 +1257,7 @@ void test_function_return_lowering_metadata()
     const auto* closureBodyReturn = closure && !closure->body.empty()
         ? dynamic_cast<const ReturnStmt*>(closure->body.front().get())
         : nullptr;
-    const auto* readerCall = dynamic_cast<const CallExpr*>(readerPrint->expression.get());
+    const auto* readerCall = dynamic_cast<const CallExpr*>(printedArgument(*readerPrint));
     assert(branchReturn != nullptr && recursiveReturn != nullptr);
     assert(closureReturn != nullptr && closure != nullptr && closureBodyReturn != nullptr);
     assert(readerCall != nullptr);
@@ -1473,7 +1484,7 @@ void test_typed_field_assignment_metadata()
         "box.value += 3;\n"
         "id(box).value = 4;\n"
         "id(box).value += 5;\n"
-        "print id(box).value;\n");
+        "print(id(box).value);\n");
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
 
@@ -1481,7 +1492,7 @@ void test_typed_field_assignment_metadata()
     const auto* staticCompoundStatement = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[4].get());
     const auto* dynamicAssignStatement = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[5].get());
     const auto* dynamicCompoundStatement = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[6].get());
-    const auto* dynamicReadStatement = dynamic_cast<const PrintStmt*>(entryModule(program).statements[7].get());
+    const auto* dynamicReadStatement = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[7].get());
     const auto* staticAssign = staticAssignStatement
         ? dynamic_cast<const FieldAssignExpr*>(staticAssignStatement->expression.get())
         : nullptr;
@@ -1495,7 +1506,7 @@ void test_typed_field_assignment_metadata()
         ? dynamic_cast<const FieldCompoundAssignExpr*>(dynamicCompoundStatement->expression.get())
         : nullptr;
     const auto* dynamicRead = dynamicReadStatement
-        ? dynamic_cast<const FieldAccessExpr*>(dynamicReadStatement->expression.get())
+        ? dynamic_cast<const FieldAccessExpr*>(printedArgument(*dynamicReadStatement))
         : nullptr;
     assert(staticAssign != nullptr && staticCompound != nullptr);
     assert(dynamicAssign != nullptr && dynamicCompound != nullptr && dynamicRead != nullptr);
@@ -1546,19 +1557,19 @@ void test_native_call_metadata()
         "let xs: [number] = [1, 2];\n"
         "let shadowed = floor(1);\n"
         "let rounded = ceil(1.5);\n"
-        "print xs.contains(1);\n"
+        "print(xs.contains(1));\n"
         "let doubled = xs.map(fun (value: number): number { return value + 1; });\n"
-        "print str(rounded);\n"
-        "print xs.len();\n");
+        "print(str(rounded));\n"
+        "print(xs.len());\n");
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
 
     const auto* shadowed = dynamic_cast<const LetStmt*>(entryModule(program).statements[2].get());
     const auto* rounded = dynamic_cast<const LetStmt*>(entryModule(program).statements[3].get());
-    const auto* containsPrint = dynamic_cast<const PrintStmt*>(entryModule(program).statements[4].get());
+    const auto* containsPrint = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[4].get());
     const auto* doubled = dynamic_cast<const LetStmt*>(entryModule(program).statements[5].get());
-    const auto* strPrint = dynamic_cast<const PrintStmt*>(entryModule(program).statements[6].get());
-    const auto* lenPrint = dynamic_cast<const PrintStmt*>(entryModule(program).statements[7].get());
+    const auto* strPrint = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[6].get());
+    const auto* lenPrint = dynamic_cast<const ExpressionStmt*>(entryModule(program).statements[7].get());
     const auto* shadowedCall = shadowed
         ? dynamic_cast<const CallExpr*>(shadowed->initializer.get())
         : nullptr;
@@ -1566,16 +1577,16 @@ void test_native_call_metadata()
         ? dynamic_cast<const CallExpr*>(rounded->initializer.get())
         : nullptr;
     const auto* containsCall = containsPrint
-        ? dynamic_cast<const MemberCallExpr*>(containsPrint->expression.get())
+        ? dynamic_cast<const MemberCallExpr*>(printedArgument(*containsPrint))
         : nullptr;
     const auto* mapCall = doubled
         ? dynamic_cast<const MemberCallExpr*>(doubled->initializer.get())
         : nullptr;
     const auto* strCall = strPrint
-        ? dynamic_cast<const CallExpr*>(strPrint->expression.get())
+        ? dynamic_cast<const CallExpr*>(printedArgument(*strPrint))
         : nullptr;
     const auto* lenCall = lenPrint
-        ? dynamic_cast<const MemberCallExpr*>(lenPrint->expression.get())
+        ? dynamic_cast<const MemberCallExpr*>(printedArgument(*lenPrint))
         : nullptr;
     assert(shadowedCall != nullptr && roundedCall != nullptr);
     assert(containsCall != nullptr && mapCall != nullptr && strCall != nullptr);
@@ -1679,8 +1690,8 @@ void test_ir_binding_metadata_integration()
         "  }\n"
         "  return inner();\n"
         "}\n"
-        "print moduleValue;\n"
-        "print exportedValue;\n";
+        "print(moduleValue);\n"
+        "print(exportedValue);\n";
     std::istringstream input(source);
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
@@ -1767,7 +1778,7 @@ void test_ir_binding_metadata_integration()
 
 int main()
 {
-    std::istringstream input("print 1 / 0;\n");
+    std::istringstream input("print(1 / 0);\n");
     FrontendSession frontend;
     Program program = loadStdinProgram(frontend, input);
     TypeChecker checker;

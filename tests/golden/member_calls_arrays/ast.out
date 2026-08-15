@@ -1,8 +1,8 @@
 Program
   Let xs: [number] = (array 1)
-  Print (member-call xs len)
+  Expr (call print (member-call xs len))
   Expr (member-call xs push 2)
-  Print (member-call xs len)
-  Print (member-call xs pop)
-  Print (member-call xs len)
-  Print (member-call xs pop)
+  Expr (call print (member-call xs len))
+  Expr (call print (member-call xs pop))
+  Expr (call print (member-call xs len))
+  Expr (call print (member-call xs pop))

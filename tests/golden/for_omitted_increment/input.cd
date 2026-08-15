@@ -1,4 +1,4 @@
 for let mut i = 0; i < 3; {
-  print i;
+  print(i);
   i = i + 1;
 }

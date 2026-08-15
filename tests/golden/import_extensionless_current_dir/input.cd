@@ -1,2 +1,2 @@
 import "lib";
-print value;
+print(value);

@@ -1,16 +1,16 @@
 import "../../data_structures.cd" as ds;
 
-print ds.canReachEnd([2, 3, 1, 1, 4]);
-print ds.canReachEnd([3, 2, 1, 0, 4]);
-print ds.canReachEnd([]);
-print ds.canReachEnd([0]);
-print ds.canReachEnd([-1]);
-print ds.canReachEnd([1.5]);
+print(ds.canReachEnd([2, 3, 1, 1, 4]));
+print(ds.canReachEnd([3, 2, 1, 0, 4]));
+print(ds.canReachEnd([]));
+print(ds.canReachEnd([0]));
+print(ds.canReachEnd([-1]));
+print(ds.canReachEnd([1.5]));
 
-print ds.minimumJumps([2, 3, 1, 1, 4]);
-print ds.minimumJumps([3, 2, 1, 0, 4]);
-print ds.minimumJumps([]);
-print ds.minimumJumps([0]);
-print ds.minimumJumps([1, 0, 1]);
-print ds.minimumJumps([-1]);
-print ds.minimumJumps([1.5]);
+print(ds.minimumJumps([2, 3, 1, 1, 4]));
+print(ds.minimumJumps([3, 2, 1, 0, 4]));
+print(ds.minimumJumps([]));
+print(ds.minimumJumps([0]));
+print(ds.minimumJumps([1, 0, 1]));
+print(ds.minimumJumps([-1]));
+print(ds.minimumJumps([1.5]));

@@ -2,4 +2,4 @@ Program
   Let inner = (array 1)
   Let outer = (array inner)
   Expr (= (index (index outer 0) 0) 7)
-  Print (index inner 0)
+  Expr (call print (index inner 0))

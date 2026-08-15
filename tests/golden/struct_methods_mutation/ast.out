@@ -9,5 +9,5 @@ Program
   Let c: Counter = (construct Counter value: 1)
   Let alias = c
   Expr (member-call c incBy 4)
-  Print (member-call c valueNow)
-  Print (field alias value)
+  Expr (call print (member-call c valueNow))
+  Expr (call print (field alias value))

@@ -1,3 +1,3 @@
-Parse error at <repo>/tests/golden/parse_errors/struct_missing_brace.cd:2:23: expected `}` after struct fields, found Semicolon `;`
-  print Person { name: 1;
+Parse error at <repo>/tests/golden/parse_errors/struct_missing_brace.cd:2:23: expected `}` after struct fields, found RightParen `)`
+  print(Person { name: 1);
                         ^

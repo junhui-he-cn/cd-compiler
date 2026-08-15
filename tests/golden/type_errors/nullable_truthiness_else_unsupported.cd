@@ -1,8 +1,8 @@
 fun increment(value: optional<number>): number {
   if (value) {
-    print "truthy";
+    print("truthy");
   } else {
-    print "falsy";
+    print("falsy");
   }
   return value + 1;
 }

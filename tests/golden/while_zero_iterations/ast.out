@@ -2,5 +2,5 @@ Program
   While false
     Body
       Block
-        Print "skipped"
-  Print "done"
+        Expr (call print "skipped")
+  Expr (call print "done")

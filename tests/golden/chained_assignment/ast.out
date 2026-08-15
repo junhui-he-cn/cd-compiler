@@ -2,5 +2,5 @@ Program
   Let mut a = 0
   Let mut b = 0
   Expr (= a (= b 7))
-  Print a
-  Print b
+  Expr (call print a)
+  Expr (call print b)

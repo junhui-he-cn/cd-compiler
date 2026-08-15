@@ -9,5 +9,5 @@ Program
     Let alias = tail
     Expr (= (field head next) nil)
     Expr (= (field alias value) 20)
-    Print (field head next)
-    Print (field tail value)
+    Expr (call print (field head next))
+    Expr (call print (field tail value))

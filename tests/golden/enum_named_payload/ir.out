@@ -10,19 +10,19 @@ IR
 0008  v4 = constant #9 7
 0009  v5 = variant NamedResult.Ok (v4)
 0010  v6 = call_direct $0 describe/1(v5)
-0011  print v6
-0012  v7 = constant #10 "bad"
-0013  v8 = variant NamedResult.Err (v7)
-0014  v9 = call_direct $0 describe/1(v8)
-0015  print v9
-0016  v10 = variant Point2.Origin ()
-0017  v11 = call_direct $1 norm/1(v10)
-0018  print v11
-0019  v12 = constant #11 3
-0020  v13 = constant #12 4
-0021  v14 = variant Point2.Coord (v12, v13)
-0022  v15 = call_direct $1 norm/1(v14)
-0023  print v15
+0011  v7 = native_call @33 print(v6)
+0012  v8 = constant #10 "bad"
+0013  v9 = variant NamedResult.Err (v8)
+0014  v10 = call_direct $0 describe/1(v9)
+0015  v11 = native_call @36 print(v10)
+0016  v12 = variant Point2.Origin ()
+0017  v13 = call_direct $1 norm/1(v12)
+0018  v14 = native_call @39 print(v13)
+0019  v15 = constant #11 3
+0020  v16 = constant #12 4
+0021  v17 = variant Point2.Coord (v15, v16)
+0022  v18 = call_direct $1 norm/1(v17)
+0023  v19 = native_call @42 print(v18)
 
 function $0 describe(result#1)
 0000  v0 = load_var @1 result#1

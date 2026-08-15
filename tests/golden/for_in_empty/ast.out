@@ -1,5 +1,5 @@
 Program
   ForIn x in (array)
     Block
-      Print x
-  Print "done"
+      Expr (call print x)
+  Expr (call print "done")

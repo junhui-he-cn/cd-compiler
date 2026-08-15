@@ -40,30 +40,30 @@ IR
 0038  v23 = variant Box.Value (v22)
 0039  store_var @33 enumValue#20, v23
 0040  v24 = load_var @34 copied#15
-0041  print v24
-0042  v25 = load_var @35 kept#16
-0043  print v25
-0044  v26 = load_var @36 lambda#18
-0045  v27 = constant #18 3
-0046  v28 = call v26(v27)
-0047  print v28
-0048  v29 = constant #19 4
-0049  v30 = call_direct $1 identity/1(v29)
-0050  print v30
-0051  v31 = constant #20 "key"
-0052  v32 = constant #21 7
-0053  v33 = call_direct $2 pair/2(v31, v32)
-0054  print v33
-0055  v34 = load_var @37 __method_Holder_echo#0
-0056  v35 = load_var @38 box#19
-0057  v36 = constant #22 5
-0058  v37 = call v34(v35, v36)
-0059  print v37
-0060  v38 = constant #23 6
-0061  v39 = call_direct $5 outer/1(v38)
-0062  print v39
-0063  v40 = load_var @39 enumValue#20
-0064  print v40
+0041  v25 = native_call @35 print(v24)
+0042  v26 = load_var @36 kept#16
+0043  v27 = native_call @37 print(v26)
+0044  v28 = load_var @38 lambda#18
+0045  v29 = constant #18 3
+0046  v30 = call v28(v29)
+0047  v31 = native_call @39 print(v30)
+0048  v32 = constant #19 4
+0049  v33 = call_direct $1 identity/1(v32)
+0050  v34 = native_call @40 print(v33)
+0051  v35 = constant #20 "key"
+0052  v36 = constant #21 7
+0053  v37 = call_direct $2 pair/2(v35, v36)
+0054  v38 = native_call @41 print(v37)
+0055  v39 = load_var @42 __method_Holder_echo#0
+0056  v40 = load_var @43 box#19
+0057  v41 = constant #22 5
+0058  v42 = call v39(v40, v41)
+0059  v43 = native_call @44 print(v42)
+0060  v44 = constant #23 6
+0061  v45 = call_direct $5 outer/1(v44)
+0062  v46 = native_call @45 print(v45)
+0063  v47 = load_var @46 enumValue#20
+0064  v48 = native_call @47 print(v47)
 
 function $0 echo(this#1, value#2)
 0000  v0 = load_var @1 value#2

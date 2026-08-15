@@ -1,7 +1,7 @@
 native_import i0 = reduce abi=1
 native_import i1 = print abi=1
 native_import i2 = push abi=1
-main registers=36
+main registers=41
 0000  block
 0001  b0 = constant #0 1
 0002  b1 = constant #1 2
@@ -42,17 +42,17 @@ main registers=36
 0037  b28 = call_native i0 [b25, b26, b27]
 0038  init_global g8, b28
 0039  b29 = load_global g2
-0040  b35 = call_native i1 [b29]
-0041  b30 = load_global g3
-0042  b35 = call_native i1 [b30]
-0043  b31 = load_global g5
-0044  b35 = call_native i1 [b31]
-0045  b32 = load_global g4
-0046  b35 = call_native i1 [b32]
-0047  b33 = load_global g6
-0048  b35 = call_native i1 [b33]
-0049  b34 = load_global g8
-0050  b35 = call_native i1 [b34]
+0040  b30 = call_native i1 [b29]
+0041  b31 = load_global g3
+0042  b32 = call_native i1 [b31]
+0043  b33 = load_global g5
+0044  b34 = call_native i1 [b33]
+0045  b35 = load_global g4
+0046  b36 = call_native i1 [b35]
+0047  b37 = load_global g6
+0048  b38 = call_native i1 [b37]
+0049  b39 = load_global g8
+0050  b40 = call_native i1 [b39]
 0051  return_nil
 
 function $0 <lambda>/2 registers=6

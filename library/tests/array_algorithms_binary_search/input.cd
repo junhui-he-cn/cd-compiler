@@ -5,27 +5,27 @@ fun ascendingNumber(left: number, right: number): bool {
 }
 
 let numbers = [1, 2, 2, 2, 4, 7];
-print ds.lowerBound(numbers, 2, ascendingNumber);
-print ds.upperBound(numbers, 2, ascendingNumber);
-print ds.binarySearch(numbers, 2, ascendingNumber);
-print ds.lowerBound(numbers, 3, ascendingNumber);
-print ds.upperBound(numbers, 3, ascendingNumber);
-print ds.binarySearch(numbers, 3, ascendingNumber);
-print ds.lowerBound(numbers, 0, ascendingNumber);
-print ds.upperBound(numbers, 9, ascendingNumber);
+print(ds.lowerBound(numbers, 2, ascendingNumber));
+print(ds.upperBound(numbers, 2, ascendingNumber));
+print(ds.binarySearch(numbers, 2, ascendingNumber));
+print(ds.lowerBound(numbers, 3, ascendingNumber));
+print(ds.upperBound(numbers, 3, ascendingNumber));
+print(ds.binarySearch(numbers, 3, ascendingNumber));
+print(ds.lowerBound(numbers, 0, ascendingNumber));
+print(ds.upperBound(numbers, 9, ascendingNumber));
 
-print ds.compareStrings("ant", "apple");
-print ds.compareStrings("same", "same");
-print ds.compareStrings("dog", "cat");
-print ds.compareStrings("cat", "cater");
-print ds.compareStrings("a", "你");
+print(ds.compareStrings("ant", "apple"));
+print(ds.compareStrings("same", "same"));
+print(ds.compareStrings("dog", "cat"));
+print(ds.compareStrings("cat", "cater"));
+print(ds.compareStrings("a", "你"));
 
 let words = ["ant", "cat", "cat", "fox"];
-print ds.lowerBound(words, "cat", ds.stringLess);
-print ds.upperBound(words, "cat", ds.stringLess);
-print ds.binarySearch(words, "dog", ds.stringLess);
+print(ds.lowerBound(words, "cat", ds.stringLess));
+print(ds.upperBound(words, "cat", ds.stringLess));
+print(ds.binarySearch(words, "dog", ds.stringLess));
 
 let empty: [number] = [];
-print ds.lowerBound<number>(empty, 4, ascendingNumber);
-print ds.upperBound<number>(empty, 4, ascendingNumber);
-print ds.binarySearch<number>(empty, 4, ascendingNumber);
+print(ds.lowerBound<number>(empty, 4, ascendingNumber));
+print(ds.upperBound<number>(empty, 4, ascendingNumber));
+print(ds.binarySearch<number>(empty, 4, ascendingNumber));

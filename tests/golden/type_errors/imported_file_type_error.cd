@@ -1,2 +1,2 @@
 import "./imported_file_type_error_deps/lib.cd";
-print value;
+print(value);

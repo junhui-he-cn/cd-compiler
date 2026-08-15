@@ -1,5 +1,5 @@
 struct Person { name: string, age: number }
 let p: Person = Person { name: "Ada", age: 36 };
 p.age = 37;
-print p.name;
-print p.age;
+print(p.name);
+print(p.age);

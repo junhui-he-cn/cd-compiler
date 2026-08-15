@@ -7,7 +7,7 @@ IR
 0005  store_var @8 f#4, v2
 0006  v3 = load_var @9 f#4
 0007  v4 = call v3()
-0008  print v4
+0008  v5 = native_call @10 print(v4)
 
 function $0 read()
 0000  v0 = load_var @4 used#1

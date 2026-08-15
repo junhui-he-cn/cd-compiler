@@ -1,4 +1,4 @@
 Program
   Let flatMap = (fun (array, callback) (return "shadowed flatMap"))
-  Print (call flatMap (array 1) (fun (value) (return (array value))))
-  Print (member-call (array 1 2) flatMap (fun (value) (return (array value value))))
+  Expr (call print (call flatMap (array 1) (fun (value) (return (array value)))))
+  Expr (call print (member-call (array 1 2) flatMap (fun (value) (return (array value value)))))

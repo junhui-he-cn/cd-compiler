@@ -24,13 +24,13 @@ IR
 0022  v17 = native_call @16 filter(v15, v16)
 0023  store_var @17 kept#8, v17
 0024  v18 = load_var @18 selected#3
-0025  print v18
-0026  v19 = load_var @19 evens#5
-0027  print v19
-0028  v20 = load_var @20 kept#8
-0029  print v20
-0030  v21 = load_var @21 snapshot#6
-0031  print v21
+0025  v19 = native_call @19 print(v18)
+0026  v20 = load_var @20 evens#5
+0027  v21 = native_call @21 print(v20)
+0028  v22 = load_var @22 kept#8
+0029  v23 = native_call @23 print(v22)
+0030  v24 = load_var @24 snapshot#6
+0031  v25 = native_call @25 print(v24)
 
 function $0 <lambda>(value#2)
 0000  v0 = load_var @3 value#2

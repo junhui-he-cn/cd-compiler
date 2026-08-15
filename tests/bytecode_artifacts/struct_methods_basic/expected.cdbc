@@ -17,6 +17,7 @@ names:
   n7 = "p#2"
   n8 = "__method_Person_label#0"
   n9 = "p#2"
+  n10 = "print"
 
 globals:
   g0 = n0
@@ -58,7 +59,7 @@ block b2:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/struct_methods_basic/input.cd" text="struct Person { name: string }\nimpl Person { fun label(): string { return this.name + \"!\"; } }\nlet p: Person = Person { name: \"Ada\" };\nprint p.label();\n"
+  s0 path="tests/bytecode_artifacts/struct_methods_basic/input.cd" text="struct Person { name: string }\nimpl Person { fun label(): string { return this.name + \"!\"; } }\nlet p: Person = Person { name: \"Ada\" };\nprint(p.label());\n"
 
 debug_locations:
   main 0 = s0:2:1
@@ -98,8 +99,8 @@ debug_ranges:
   main 8 = s0:141:150
   main 9 = s0:141:142
   main 10 = s0:141:150
-  main 11 = s0:141:150
-  main 12 = s0:141:150
+  main 11 = s0:135:151
+  main 12 = s0:135:151
   function f0 0 = s0:74:78
   function f0 1 = s0:74:78
   function f0 2 = s0:74:83

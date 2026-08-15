@@ -6,6 +6,6 @@ IR
 0004  v2 = constant #2 20
 0005  assign_var @2 x#1, v2
 0006  v3 = load_var @3 x#1
-0007  print v3
-0008  v4 = load_var @4 x#0
-0009  print v4
+0007  v4 = native_call @4 print(v3)
+0008  v5 = load_var @5 x#0
+0009  v6 = native_call @6 print(v5)

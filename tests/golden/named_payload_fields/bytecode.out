@@ -1,6 +1,6 @@
 native_import i0 = print abi=1
 native_import i1 = str abi=1
-main registers=23
+main registers=27
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -18,23 +18,23 @@ main registers=23
 0014  b7 = constant #16 4
 0015  b8 = make_variant t0, v0 (b6, b7)
 0016  b9 = call_direct $0 [b8]
-0017  b22 = call_native i0 [b9]
-0018  b10 = constant #17 7
-0019  b11 = make_variant t1, v0 (b10)
-0020  b12 = call_direct $1 [b11]
-0021  b22 = call_native i0 [b12]
-0022  b13 = constant #18 "bad"
-0023  b14 = make_variant t1, v1 (b13)
-0024  b15 = call_direct $1 [b14]
-0025  b22 = call_native i0 [b15]
-0026  b16 = make_variant t1, v2 ()
-0027  b17 = call_direct $1 [b16]
-0028  b22 = call_native i0 [b17]
-0029  b18 = constant #19 9
-0030  b19 = make_variant t1, v0 (b18)
-0031  b20 = make_variant t2, v0 (b19)
-0032  b21 = call_direct $2 [b20]
-0033  b22 = call_native i0 [b21]
+0017  b10 = call_native i0 [b9]
+0018  b11 = constant #17 7
+0019  b12 = make_variant t1, v0 (b11)
+0020  b13 = call_direct $1 [b12]
+0021  b14 = call_native i0 [b13]
+0022  b15 = constant #18 "bad"
+0023  b16 = make_variant t1, v1 (b15)
+0024  b17 = call_direct $1 [b16]
+0025  b18 = call_native i0 [b17]
+0026  b19 = make_variant t1, v2 ()
+0027  b20 = call_direct $1 [b19]
+0028  b21 = call_native i0 [b20]
+0029  b22 = constant #19 9
+0030  b23 = make_variant t1, v0 (b22)
+0031  b24 = make_variant t2, v0 (b23)
+0032  b25 = call_direct $2 [b24]
+0033  b26 = call_native i0 [b25]
 0034  return_nil
 
 function $0 pairScore/1 registers=13

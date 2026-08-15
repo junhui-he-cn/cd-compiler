@@ -23,5 +23,5 @@ IR
 0021  jump_if_false v15, 0023
 0022  jump 0026
 0023  v16 = load_var @4 x#0
-0024  print v16
+0024  v17 = native_call @5 print(v16)
 0025  jump 0009

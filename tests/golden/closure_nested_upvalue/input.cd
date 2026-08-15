@@ -11,4 +11,4 @@ fun outer() {
   return middle();
 }
 let f = outer();
-print f();
+print(f());

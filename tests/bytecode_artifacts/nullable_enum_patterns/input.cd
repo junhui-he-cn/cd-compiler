@@ -14,15 +14,15 @@ fun describe(value: optional<Option>): string {
 
 let some: optional<Option> = Option.Some(7);
 let none: optional<Option> = nil;
-print describe(some);
-print describe(none);
+print(describe(some));
+print(describe(none));
 match some {
-  nil => { print "nil"; }
-  Option.Some(value) if value > 10 => { print "large"; }
-  Option.Some(_) => { print "some"; }
-  Option.None => { print "none"; }
+  nil => { print("nil"); }
+  Option.Some(value) if value > 10 => { print("large"); }
+  Option.Some(_) => { print("some"); }
+  Option.None => { print("none"); }
 }
 match none {
-  nil if true => { print "guarded nil"; }
-  _ => { print "fallback"; }
+  nil if true => { print("guarded nil"); }
+  _ => { print("fallback"); }
 }

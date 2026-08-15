@@ -4,19 +4,19 @@ IR
 0002  v2 = constant #2 3
 0003  v3 = mul_num v1, v2
 0004  v4 = add_num v0, v3
-0005  print v4
-0006  v5 = constant #3 1
-0007  v6 = constant #4 2
-0008  v7 = add_num v5, v6
-0009  v8 = constant #5 3
-0010  v9 = mul_num v7, v8
-0011  print v9
-0012  v10 = constant #6 5
-0013  v11 = neg_num v10
-0014  v12 = constant #7 10
-0015  v13 = add_num v11, v12
-0016  print v13
-0017  v14 = constant #8 8
-0018  v15 = constant #9 2
-0019  v16 = div_num v14, v15
-0020  print v16
+0005  v5 = native_call @0 print(v4)
+0006  v6 = constant #3 1
+0007  v7 = constant #4 2
+0008  v8 = add_num v6, v7
+0009  v9 = constant #5 3
+0010  v10 = mul_num v8, v9
+0011  v11 = native_call @1 print(v10)
+0012  v12 = constant #6 5
+0013  v13 = neg_num v12
+0014  v14 = constant #7 10
+0015  v15 = add_num v13, v14
+0016  v16 = native_call @2 print(v15)
+0017  v17 = constant #8 8
+0018  v18 = constant #9 2
+0019  v19 = div_num v17, v18
+0020  v20 = native_call @3 print(v19)

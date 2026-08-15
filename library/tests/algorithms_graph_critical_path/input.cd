@@ -25,16 +25,16 @@ dag.addEdge(2, 3, 1);
 dag.addEdge(2, 4, 5);
 dag.addEdge(3, 5, 2);
 dag.addEdge(4, 5, 1);
-print describe(ds.criticalPath(dag, 0));
-print describe(ds.criticalPath(dag, 2));
-print describe(ds.criticalPath(dag, -1));
+print(describe(ds.criticalPath(dag, 0)));
+print(describe(ds.criticalPath(dag, 2)));
+print(describe(ds.criticalPath(dag, -1)));
 
 let cycle = ds.newWeightedGraph(3, true);
 cycle.addEdge(0, 1, 1);
 cycle.addEdge(1, 2, 1);
 cycle.addEdge(2, 0, 1);
-print describe(ds.criticalPath(cycle, 0));
+print(describe(ds.criticalPath(cycle, 0)));
 
 let undirected = ds.newWeightedGraph(2, false);
 undirected.addEdge(0, 1, 1);
-print describe(ds.criticalPath(undirected, 0));
+print(describe(ds.criticalPath(undirected, 0)));

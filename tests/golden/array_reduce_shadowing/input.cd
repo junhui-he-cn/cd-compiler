@@ -2,5 +2,5 @@ let reduce = fun (array, initial, callback) {
   return "shadowed";
 };
 
-print reduce([1], 0, fun (acc, value) { return acc; });
-print [1].reduce(0, fun (acc, value) { return acc + value; });
+print(reduce([1], 0, fun (acc, value) { return acc; }));
+print([1].reduce(0, fun (acc, value) { return acc + value; }));

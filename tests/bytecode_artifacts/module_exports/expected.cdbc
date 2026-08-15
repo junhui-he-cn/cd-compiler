@@ -17,6 +17,7 @@ names:
   n5 = "base#0"
   n6 = "answer#3"
   n7 = "answer#3"
+  n8 = "print"
 
 globals:
   g0 = n0
@@ -69,7 +70,7 @@ block b2:
   return_nil
 
 debug_sources:
-  s0 module="/home/junhe/compiler/tests/bytecode_artifacts/module_exports/input.cd" path="tests/bytecode_artifacts/module_exports/input.cd" text="import \"./lib.cd\";\nprint answer();\n"
+  s0 module="/home/junhe/compiler/tests/bytecode_artifacts/module_exports/input.cd" path="tests/bytecode_artifacts/module_exports/input.cd" text="import \"./lib.cd\";\nprint(answer());\n"
   s1 module="/home/junhe/compiler/tests/bytecode_artifacts/module_exports/lib.cd" path="tests/bytecode_artifacts/module_exports/lib.cd" text="let base = 39;\nfun add3(x) { return x + 3; }\nfun answer() { return add3(base); }\nexport answer;\n"
 
 debug_locations:
@@ -122,8 +123,8 @@ debug_ranges:
   main 10 = s1:49:77
   main 11 = s0:25:31
   main 12 = s0:25:33
-  main 13 = s0:25:33
-  main 14 = s0:25:33
+  main 13 = s0:19:34
+  main 14 = s0:19:34
   function f0 0 = s1:36:37
   function f0 1 = s1:36:37
   function f0 2 = s1:40:41

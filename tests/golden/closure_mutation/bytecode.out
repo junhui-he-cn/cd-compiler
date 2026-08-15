@@ -1,5 +1,5 @@
 native_import i0 = print abi=1
-main registers=7
+main registers=8
 0000  block
 0001  b0 = constant #0 1
 0002  init_global g0, b0
@@ -9,9 +9,9 @@ main registers=7
 0006  set_global g0, b2
 0007  b3 = load_global g1
 0008  b4 = call b3()
-0009  b6 = call_native i0 [b4]
-0010  b5 = load_global g0
-0011  b6 = call_native i0 [b5]
+0009  b5 = call_native i0 [b4]
+0010  b6 = load_global g0
+0011  b7 = call_native i0 [b6]
 0012  return_nil
 
 function $0 <lambda>/0 registers=2

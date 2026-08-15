@@ -14,13 +14,13 @@ let tree = ds.treeNode(
 );
 let rootPath: [number] = [];
 
-print describe(ds.treeLowestCommonAncestor(tree, [0, 0], [0, 1]));
-print describe(ds.treeLowestCommonAncestor(tree, [0, 0], [1, 1]));
-print describe(ds.treeLowestCommonAncestor(tree, [1, 0], [1, 1]));
-print describe(ds.treeLowestCommonAncestor(tree, rootPath, [1, 0]));
-print describe(ds.treeLowestCommonAncestor(tree, [0, 0], [0, 0]));
-print describe(ds.treeLowestCommonAncestor(tree, [2], [0, 0]));
-print describe(ds.treeLowestCommonAncestor(tree, [1, 1, 0], [1, 1]));
+print(describe(ds.treeLowestCommonAncestor(tree, [0, 0], [0, 1])));
+print(describe(ds.treeLowestCommonAncestor(tree, [0, 0], [1, 1])));
+print(describe(ds.treeLowestCommonAncestor(tree, [1, 0], [1, 1])));
+print(describe(ds.treeLowestCommonAncestor(tree, rootPath, [1, 0])));
+print(describe(ds.treeLowestCommonAncestor(tree, [0, 0], [0, 0])));
+print(describe(ds.treeLowestCommonAncestor(tree, [2], [0, 0])));
+print(describe(ds.treeLowestCommonAncestor(tree, [1, 1, 0], [1, 1])));
 
 let empty = ds.emptyTree<number>();
-print describe(ds.treeLowestCommonAncestor(empty, rootPath, rootPath));
+print(describe(ds.treeLowestCommonAncestor(empty, rootPath, rootPath)));

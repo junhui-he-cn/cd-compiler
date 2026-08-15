@@ -1,12 +1,12 @@
 import "../../data_structures.cd" as ds;
 
-print ds.gcdArray([]);
-print ds.gcdArray([12, 18, 24]);
-print ds.gcdArray([-12, 18]);
-print ds.gcdArray([0, 0]);
-print ds.gcdArray([1.5, 3]);
+print(ds.gcdArray([]));
+print(ds.gcdArray([12, 18, 24]));
+print(ds.gcdArray([-12, 18]));
+print(ds.gcdArray([0, 0]));
+print(ds.gcdArray([1.5, 3]));
 
-print ds.prefixProducts([]);
-print ds.prefixProducts([2, 3, 4]);
-print ds.prefixProducts([-1, 2, -3]);
-print ds.prefixProducts([0, 5]);
+print(ds.prefixProducts([]));
+print(ds.prefixProducts([2, 3, 4]));
+print(ds.prefixProducts([-1, 2, -3]));
+print(ds.prefixProducts([0, 5]));

@@ -14,4 +14,4 @@ holder.score = fun (p) {
   return p.sum();
 };
 let score = holder.score;
-print score(Point { x: 3, y: 4 });
+print(score(Point { x: 3, y: 4 }));

@@ -1,5 +1,5 @@
 Runtime error at tests/golden/runtime_errors/array_index_non_integer.cd:2:7: array index must be integer
-  print xs[1.5];
+  print(xs[1.5]);
         ^
 Call stack:
   at main (tests/golden/runtime_errors/array_index_non_integer.cd:2:7)

@@ -1,3 +1,3 @@
 Program
   Let inc = (fun (x) (return (+ x 1)))
-  Print (call inc 41)
+  Expr (call print (call inc 41))

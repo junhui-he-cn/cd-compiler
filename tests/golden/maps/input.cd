@@ -1,36 +1,36 @@
 let prices: map<string, number> = {"tea": 3, "coffee": 5};
-print prices["tea"];
+print(prices["tea"]);
 let alias = prices;
 alias["water"] = 2;
-print prices["water"];
-print len(prices);
-print prices.len();
-print contains(prices, "coffee");
-print prices.contains("tea");
+print(prices["water"]);
+print(len(prices));
+print(prices.len());
+print(contains(prices, "coffee"));
+print(prices.contains("tea"));
 
 let empty = {};
 empty["new"] = 1;
-print empty.len();
-print empty["new"];
+print(empty.len());
+print(empty["new"]);
 
 let primitives = {nil: "nil", true: "bool", 1: "number", "text": "string"};
-print primitives[nil];
-print primitives[true];
-print primitives[1];
-print primitives["text"];
+print(primitives[nil]);
+print(primitives[true]);
+print(primitives[1]);
+print(primitives["text"]);
 
 let duplicates = {"a": 1, "a": 2};
-print duplicates["a"];
-print (duplicates["b"] = 3);
-print duplicates;
+print(duplicates["a"]);
+print((duplicates["b"] = 3));
+print(duplicates);
 
 let nested: map<string, map<string, number>> = {"inner": {"value": 7}};
-print nested["inner"]["value"];
+print(nested["inner"]["value"]);
 let nullable: map<string, optional<number>> = {"present": 1, "missing": nil};
-print nullable["missing"];
+print(nullable["missing"]);
 
 let same = duplicates;
 let other = {"a": 2, "b": 3};
-print duplicates == same;
-print duplicates == other;
-print typeOf(duplicates);
+print(duplicates == same);
+print(duplicates == other);
+print(typeOf(duplicates));

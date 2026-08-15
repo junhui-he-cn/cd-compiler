@@ -3,4 +3,4 @@ Program
   ForIn x in xs
     Block
       Let y: number = x
-      Print y
+      Expr (call print y)

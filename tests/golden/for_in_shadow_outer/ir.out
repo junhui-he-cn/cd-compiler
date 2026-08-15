@@ -12,7 +12,7 @@ IR
 0010  v7 = iter_next v4
 0011  assign_var @2 x#1, v7
 0012  v8 = load_var @3 x#1
-0013  print v8
+0013  v9 = native_call @4 print(v8)
 0014  jump 0008
-0015  v9 = load_var @4 x#0
-0016  print v9
+0015  v10 = load_var @5 x#0
+0016  v11 = native_call @6 print(v10)

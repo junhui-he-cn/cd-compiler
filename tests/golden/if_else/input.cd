@@ -1,21 +1,21 @@
 let ok = true;
 if ok {
-  print "then";
+  print("then");
 } else {
-  print "else";
+  print("else");
 }
 
 if false {
-  print "bad";
+  print("bad");
 } else {
-  print "fallback";
+  print("fallback");
 }
 
 if true {
-  print "no else";
+  print("no else");
 }
 
 if false {
-  print "bad no else";
+  print("bad no else");
 }
-print "after no else";
+print("after no else");

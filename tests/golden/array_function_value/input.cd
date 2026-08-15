@@ -6,4 +6,4 @@ fun makeAdder(base) {
 }
 let add10 = makeAdder(10);
 let functions = [add10];
-print functions[0](5);
+print(functions[0](5));

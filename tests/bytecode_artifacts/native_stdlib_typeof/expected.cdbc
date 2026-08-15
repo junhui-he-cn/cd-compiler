@@ -8,11 +8,15 @@ constants:
 
 names:
   n0 = "typeOf"
-  n1 = "typeOf"
+  n1 = "print"
   n2 = "typeOf"
-  n3 = "Box"
-  n4 = "value"
-  n5 = "typeOf"
+  n3 = "print"
+  n4 = "typeOf"
+  n5 = "print"
+  n6 = "Box"
+  n7 = "value"
+  n8 = "typeOf"
+  n9 = "print"
 
 types:
   t0 = struct "Box" field0="value"
@@ -21,26 +25,26 @@ native_imports:
   i0 = "typeOf" abi=1
   i1 = "print" abi=1
 
-main registers=11:
+main registers=14:
 block b0:
   r0 = constant c0
   r1 = call_native i0 [r0]
-  r10 = call_native i1 [r1]
-  r2 = constant c1
-  r3 = call_native i0 [r2]
-  r10 = call_native i1 [r3]
-  r4 = constant c2
-  r5 = array [r4]
-  r6 = call_native i0 [r5]
-  r10 = call_native i1 [r6]
-  r7 = constant c3
-  r8 = make_struct t0 [r7]
-  r9 = call_native i0 [r8]
-  r10 = call_native i1 [r9]
+  r2 = call_native i1 [r1]
+  r3 = constant c1
+  r4 = call_native i0 [r3]
+  r5 = call_native i1 [r4]
+  r6 = constant c2
+  r7 = array [r6]
+  r8 = call_native i0 [r7]
+  r9 = call_native i1 [r8]
+  r10 = constant c3
+  r11 = make_struct t0 [r10]
+  r12 = call_native i0 [r11]
+  r13 = call_native i1 [r12]
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/native_stdlib_typeof/input.cd" text="print typeOf(nil);\nprint typeOf(1);\nprint typeOf([1]);\nstruct Box { value: number }\nprint typeOf(Box { value: 1 });\n"
+  s0 path="tests/bytecode_artifacts/native_stdlib_typeof/input.cd" text="print(typeOf(nil));\nprint(typeOf(1));\nprint(typeOf([1]));\nstruct Box { value: number }\nprint(typeOf(Box { value: 1 }));\n"
 
 debug_locations:
   main 0 = s0:1:14
@@ -64,16 +68,16 @@ debug_ranges:
   main 0 = s0:13:16
   main 1 = s0:13:16
   main 2 = s0:6:17
-  main 3 = s0:6:17
-  main 4 = s0:32:33
-  main 5 = s0:25:34
-  main 6 = s0:25:34
-  main 7 = s0:50:51
-  main 8 = s0:49:51
-  main 9 = s0:42:53
-  main 10 = s0:42:53
-  main 11 = s0:110:111
-  main 12 = s0:97:111
-  main 13 = s0:90:114
-  main 14 = s0:90:114
-  main 15 = s0:90:114
+  main 3 = s0:0:18
+  main 4 = s0:33:34
+  main 5 = s0:26:35
+  main 6 = s0:20:36
+  main 7 = s0:52:53
+  main 8 = s0:51:53
+  main 9 = s0:44:55
+  main 10 = s0:38:56
+  main 11 = s0:113:114
+  main 12 = s0:100:114
+  main 13 = s0:93:117
+  main 14 = s0:87:118
+  main 15 = s0:87:118

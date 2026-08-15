@@ -30,8 +30,11 @@ names:
   n16 = "map"
   n17 = "text#8"
   n18 = "doubled#3"
-  n19 = "shifted#6"
-  n20 = "text#8"
+  n19 = "print"
+  n20 = "shifted#6"
+  n21 = "print"
+  n22 = "text#8"
+  n23 = "print"
 
 globals:
   g0 = n0
@@ -46,7 +49,7 @@ native_imports:
   i1 = "print" abi=1
   i2 = "str" abi=1
 
-main registers=19:
+main registers=21:
 block b0:
   r0 = constant c0
   r1 = constant c1
@@ -70,11 +73,11 @@ block b0:
   r14 = call_native i0 [r12, r13]
   init_global g5, r14
   r15 = load_global g2
-  r18 = call_native i1 [r15]
-  r16 = load_global g4
-  r18 = call_native i1 [r16]
-  r17 = load_global g5
+  r16 = call_native i1 [r15]
+  r17 = load_global g4
   r18 = call_native i1 [r17]
+  r19 = load_global g5
+  r20 = call_native i1 [r19]
   return_nil
 
 function f0 name="<lambda>" arity=1 registers=4:
@@ -117,7 +120,7 @@ block b2:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/array_map/input.cd" text="let values: [number] = [1, 2, 3];\nlet double = fun (value: number): number { return value * 2; };\nlet doubled = map(values, double);\nlet offset: number = 5;\nlet shifted = values.map(fun (value: number): number { return value + offset; });\nlet text = map(values, fun (value: number): string { return str(value); });\n\nprint doubled;\nprint shifted;\nprint text;\n"
+  s0 path="tests/bytecode_artifacts/array_map/input.cd" text="let values: [number] = [1, 2, 3];\nlet double = fun (value: number): number { return value * 2; };\nlet doubled = map(values, double);\nlet offset: number = 5;\nlet shifted = values.map(fun (value: number): number { return value + offset; });\nlet text = map(values, fun (value: number): string { return str(value); });\n\nprint(doubled);\nprint(shifted);\nprint(text);\n"
 
 debug_locations:
   main 0 = s0:1:25
@@ -203,12 +206,12 @@ debug_ranges:
   main 20 = s0:250:313
   main 21 = s0:243:313
   main 22 = s0:322:329
-  main 23 = s0:322:329
-  main 24 = s0:337:344
-  main 25 = s0:337:344
-  main 26 = s0:352:356
-  main 27 = s0:352:356
-  main 28 = s0:352:356
+  main 23 = s0:316:330
+  main 24 = s0:338:345
+  main 25 = s0:332:346
+  main 26 = s0:354:358
+  main 27 = s0:348:359
+  main 28 = s0:348:359
   function f0 0 = s0:84:89
   function f0 1 = s0:84:89
   function f0 2 = s0:92:93

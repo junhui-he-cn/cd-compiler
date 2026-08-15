@@ -1,5 +1,5 @@
 Program
-  Print (+ 1 (* 2 3))
-  Print (* (group (+ 1 2)) 3)
-  Print (+ (- 5) 10)
-  Print (/ 8 2)
+  Expr (call print (+ 1 (* 2 3)))
+  Expr (call print (* (group (+ 1 2)) 3))
+  Expr (call print (+ (- 5) 10))
+  Expr (call print (/ 8 2))

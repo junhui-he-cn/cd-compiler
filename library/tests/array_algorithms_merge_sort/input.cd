@@ -28,12 +28,12 @@ fun renderEntries(values: [Entry]): string {
 }
 
 let numbers = [4, 1, 3, 1, 2];
-print ds.mergeSort(numbers, ascending);
-print numbers;
+print(ds.mergeSort(numbers, ascending));
+print(numbers);
 
 let words = ["fox", "ant", "dog", "cat"];
-print ds.mergeSort(words, ds.stringLess);
-print words;
+print(ds.mergeSort(words, ds.stringLess));
+print(words);
 
 let entries: [Entry] = [
   Entry { key: 2, label: "first" },
@@ -41,9 +41,9 @@ let entries: [Entry] = [
   Entry { key: 2, label: "second" },
   Entry { key: 3, label: "last" }
 ];
-print renderEntries(ds.mergeSort(entries, entryLess));
-print renderEntries(entries);
+print(renderEntries(ds.mergeSort(entries, entryLess)));
+print(renderEntries(entries));
 
 let empty: [number] = [];
-print ds.mergeSort<number>(empty, ascending);
-print ds.mergeSort([42], ascending);
+print(ds.mergeSort<number>(empty, ascending));
+print(ds.mergeSort([42], ascending));

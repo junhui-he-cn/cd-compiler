@@ -1,2 +1,2 @@
 let values = [1];
-print values.len<number>();
+print(values.len<number>());

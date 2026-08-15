@@ -10,15 +10,15 @@ Program
   Let values: [optional<number>] = (array 1 nil)
   Let maybeValues: optional<[number]> = nil
   Let box: Box = (construct Box value: 2)
-  Print (call unwrap age)
-  Print (index values 0)
-  Print maybeValues
-  Print (field box value)
+  Expr (call print (call unwrap age))
+  Expr (call print (index values 0))
+  Expr (call print maybeValues)
+  Expr (call print (field box value))
   Let optional = 7
   Let maybe: optional<number> = nil
   Let nested: optional<[optional<number>]> = nil
   Let callback: optional<fun(number): string> = nil
-  Print optional
-  Print maybe
-  Print nested
-  Print callback
+  Expr (call print optional)
+  Expr (call print maybe)
+  Expr (call print nested)
+  Expr (call print callback)

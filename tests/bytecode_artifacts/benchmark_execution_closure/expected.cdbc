@@ -29,6 +29,7 @@ names:
   n14 = "i#5"
   n15 = "i#5"
   n16 = "total#6"
+  n17 = "print"
 
 globals:
   g0 = n0
@@ -103,7 +104,7 @@ block b2:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/benchmark_execution_closure/input.cd" text="fun makeAdder(offset) {\n  fun add(value) {\n    return value + offset;\n  }\n  return add;\n}\n\nlet add = makeAdder(1);\nlet mut i = 0;\nlet mut total = 0;\nwhile i < 50000 {\n  total = add(total);\n  i = i + 1;\n}\nprint total;\n"
+  s0 path="tests/bytecode_artifacts/benchmark_execution_closure/input.cd" text="fun makeAdder(offset) {\n  fun add(value) {\n    return value + offset;\n  }\n  return add;\n}\n\nlet add = makeAdder(1);\nlet mut i = 0;\nlet mut total = 0;\nwhile i < 50000 {\n  total = add(total);\n  i = i + 1;\n}\nprint(total);\n"
 
 debug_locations:
   main 0 = s0:1:1
@@ -192,8 +193,8 @@ debug_ranges:
   main 27 = s0:155:200
   main 28 = s0:210:215
   main 29 = s0:210:215
-  main 30 = s0:210:215
-  main 31 = s0:210:215
+  main 30 = s0:204:216
+  main 31 = s0:204:216
   function f0 0 = s0:54:59
   function f0 1 = s0:54:59
   function f0 2 = s0:62:68

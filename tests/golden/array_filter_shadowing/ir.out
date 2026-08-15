@@ -6,12 +6,12 @@ IR
 0004  v3 = array [v2]
 0005  v4 = make_function $1 <lambda>/1
 0006  v5 = call v1(v3, v4)
-0007  print v5
-0008  v6 = constant #5 1
-0009  v7 = array [v6]
-0010  v8 = make_function $2 <lambda>/1
-0011  v9 = native_call @2 filter(v7, v8)
-0012  print v9
+0007  v6 = native_call @2 print(v5)
+0008  v7 = constant #5 1
+0009  v8 = array [v7]
+0010  v9 = make_function $2 <lambda>/1
+0011  v10 = native_call @3 filter(v8, v9)
+0012  v11 = native_call @4 print(v10)
 
 function $0 <lambda>(array#0, predicate#1)
 0000  v0 = constant #0 "shadowed"

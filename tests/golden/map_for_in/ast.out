@@ -2,10 +2,10 @@ Program
   Let values = (map (entry "a" 1) (entry "b" 2) (entry "c" 3))
   ForIn key in values
     Block
-      Print key
+      Expr (call print key)
       Expr (call remove values key)
-  Print values
+  Expr (call print values)
   Let numbers: map<number, string> = (map (entry 1 "one") (entry 2 "two"))
   ForIn key in numbers
     Block
-      Print key
+      Expr (call print key)

@@ -55,8 +55,8 @@ cargo build --manifest-path vm-rs/Cargo.toml
 
 ```cd
 let answer = 40 + 2;
-print "answer:";
-print answer;
+print("answer:");
+print(answer);
 ```
 
 编译器默认模式输出 AST：
@@ -103,7 +103,7 @@ stderr 并返回非零状态。wall-clock 时间和 allocation/peak 统计尚未
 没有输入文件时，普通模式从标准输入读取源代码：
 
 ```sh
-printf 'print 1 + 2;\n' | ./build/compiler_design
+printf 'print(1 + 2);\n' | ./build/compiler_design
 ```
 
 字节码和模块产物模式必须提供至少一个输入文件。
@@ -171,9 +171,9 @@ let name: string = "Ada";
 let age = 36;
 
 if (age >= 18) {
-  print name;
+  print(name);
 } else {
-  print "minor";
+  print("minor");
 }
 ```
 
@@ -192,8 +192,8 @@ let inc = fun () {
   count += 1;
   return count;
 };
-print inc();
-print inc();
+print(inc());
+print(inc());
 ```
 
 ## 3. 值和类型
@@ -237,7 +237,7 @@ let addOne: fun(number): number = fun (value: number): number {
 fun printName(name: optional<string>) {
   if let n = name {
     // 这里 n 是 string
-    print n;
+    print(n);
   }
 }
 ```
@@ -285,7 +285,7 @@ enum Result<T> {
   Err(string),
 }
 
-print identity<number>(42);
+print(identity<number>(42));
 let box: Box<number> = Box { value: 42 };
 let result: Result<number> = Result.Ok(42);
 ```
@@ -314,8 +314,8 @@ let result: Result<number> = Result.Ok(42);
 let a = 0;
 let b = 0;
 a = b = 7;
-print a;
-print b;
+print(a);
+print(b);
 ```
 
 普通赋值支持变量、数组元素、map 元素和结构体字段。数值复合赋值支持变量、数组元素和结构体字段；map 元素不支持复合赋值。
@@ -329,9 +329,9 @@ print b;
 ```cd
 let condition = true;
 if (condition) {
-  print "yes";
+  print("yes");
 } else {
-  print "no";
+  print("no");
 }
 ```
 
@@ -346,7 +346,7 @@ if (condition) {
 ```cd
 let n = 0;
 while (n < 3) {
-  print n;
+  print(n);
   n += 1;
 }
 ```
@@ -357,7 +357,7 @@ while (n < 3) {
 
 ```cd
 for let mut i = 0; i < 3; i += 1 {
-  print i;
+  print(i);
 }
 ```
 
@@ -369,16 +369,16 @@ for let mut i = 0; i < 3; i += 1 {
 
 ```cd
 for item in [1, 2, 3] {
-  print item;
+  print(item);
 }
 
 for value in range(1, 4) {
-  print value;
+  print(value);
 }
 
 let prices = { "tea": 8, "coffee": 12 };
 for key in prices {
-  print key;
+  print(key);
 }
 ```
 
@@ -393,7 +393,7 @@ fun add(left: number, right: number): number {
   return left + right;
 }
 
-print add(2, 3);
+print(add(2, 3));
 ```
 
 匿名函数是表达式，可以保存到变量或作为回调传入：
@@ -403,7 +403,7 @@ let double = fun (value: number): number {
   return value * 2;
 };
 
-print double(4);
+print(double(4));
 ```
 
 命名函数、方法和匿名函数表达式都可以声明泛型参数。类型参数通常从调用实参推断，也可以显式提供；带约束的参数必须满足每个约束：
@@ -417,7 +417,7 @@ let text = identity<string>("hello");
 let keepNumber = fun<T: number>(value: T): T {
   return value;
 };
-print keepNumber<number>(41);
+print(keepNumber<number>(41));
 ```
 
 函数类型写作 `fun(parameterType, ...): returnType`，可以用于 `let`、函数参数和函数返回值。未注解的函数参数、返回值和回调在缺少上下文时不能完全推断，遇到兼容性诊断时应补充注解。泛型函数值不会自动转换成单态函数类型；传给 `map`、`filter` 等回调 helper 时，所有泛型参数都必须能从已知输入和签名推断。
@@ -436,8 +436,8 @@ fun counter(): fun(): number {
 }
 
 let next = counter();
-print next();
-print next();
+print(next());
+print(next());
 ```
 
 结构体方法在 `impl` 块中定义，接收者通过 `this` 访问：
@@ -454,7 +454,7 @@ impl Person {
 }
 
 let person = Person { name: "Ada" };
-print person.greeting();
+print(person.greeting());
 ```
 
 结构体字段也可以声明为 `private`。私有字段在定义它的源模块内可读写和初始化，
@@ -475,9 +475,9 @@ pattern 或直接构造带有私有表示的结构体。库通常通过模块内
 ```cd
 let numbers = [10, 20, 30];
 numbers[1] = 25;
-print numbers[1];
+print(numbers[1]);
 push(numbers, 40);
-print pop(numbers);
+print(pop(numbers));
 ```
 
 数组是引用值，别名会观察到同一数组的修改。索引必须是有限整数且不能越界；`pop([])` 是运行时错误。`[]` 的元素类型未知时，后续直接 `push` 或索引赋值可以在部分场景中完善类型；需要稳定接口时建议显式写 `[T]`。
@@ -493,7 +493,7 @@ let scores: map<string, number> = {
 };
 
 scores["Ada"] = 11;
-print scores["Ada"];
+print(scores["Ada"]);
 ```
 
 map 的键只能是 `nil`、`number`、`bool` 或 `string`。读取不存在的键会产生运行时错误；赋值会更新已有键或按插入顺序新增键。map 是引用值，`==` 比较的是身份而不是内容。
@@ -523,7 +523,7 @@ struct User {
 
 let user = User { age: 36, name: "Ada" };
 user.age = 37;
-print user.name;
+print(user.name);
 ```
 
 结构体是引用值，字段修改会对所有别名可见。匿名的 `{ name: "Ada" }` 在表达式位置是 map，不是匿名结构体；必须写成 `User { name: "Ada" }`。
@@ -584,10 +584,10 @@ enum NamedResult {
 let result = NamedResult.Ok(42);
 match result {
   NamedResult.Ok(value) => {
-    print value;
+    print(value);
   }
   NamedResult.Err(message) => {
-    print message;
+    print(message);
   }
 }
 ```
@@ -616,8 +616,8 @@ struct Point {
 
 let point = Point { x: 1, y: 2 };
 match point {
-  Point { x: 1 } => { print "on x=1"; }
-  Point { x: x, y: y } => { print x + y; }
+  Point { x: 1 } => { print("on x=1"); }
+  Point { x: x, y: y } => { print(x + y); }
 }
 ```
 
@@ -631,9 +631,9 @@ enum NamedResult {
 
 let result = NamedResult.Ok(42);
 match result {
-  NamedResult.Ok(value) if value > 0 => { print value; }
-  NamedResult.Ok(_) => { print 0; }
-  NamedResult.Err(message) => { print message; }
+  NamedResult.Ok(value) if value > 0 => { print(value); }
+  NamedResult.Ok(_) => { print(0); }
+  NamedResult.Err(message) => { print(message); }
 }
 ```
 
@@ -660,14 +660,14 @@ export answer;
 ```cd
 import "./lib.cd";
 
-print answer();
+print(answer());
 ```
 
 未导出的顶层声明只在模块内部可见。使用别名导入时，通过限定名访问：
 
 ```cd
 import "./lib.cd" as lib;
-print lib.answer();
+print(lib.answer());
 ```
 
 导出多个名称可以写成 `export answer, User;`。转导出可以写成 `export answer from "./lib.cd";`，但转导出的名字不会自动成为当前模块的本地名字；如果转导出模块也需要使用该名称，应另外写 `import`。相同规范路径的重复导入会被去重；不能从 stdin 导入。
@@ -754,10 +754,10 @@ let numbers = [1, 2, 3];
 let scores = { "Ada": 10 };
 numbers.push(4);
 let doubled = numbers.map(fun (x: number): number { return x * 2; });
-print numbers.len();
-print scores.contains("Ada");
-print scores.keys();
-print "你好".charAt(1);
+print(numbers.len());
+print(scores.contains("Ada"));
+print(scores.keys());
+print("你好".charAt(1));
 ```
 
 可用的成员形式包括 `array.push`、`array.pop`、`array.len`、`array.contains`、`array.slice`、`array.copy`、`array.concat`、`array.map`、`array.filter`、`array.flatMap`、`array.any`、`array.all`、`array.count`、`array.find`、`array.findIndex`、`array.reduce`，map 的 `len`、`contains`、`remove`、`clear`、`merge`、`keys`、`values`，字符串的 `len`、`substr`、`charAt`，以及 range 的 `contains`。这些成员名不受词法绑定遮蔽；命名结构体方法仍按静态接收者优先规则解析。
@@ -773,7 +773,7 @@ print "你好".charAt(1);
 
 ```text
 Type error at 1:7: undefined variable `missing`
-  print missing;
+  print(missing);
         ^
 ```
 
@@ -816,12 +816,12 @@ import "../library/data_structures.cd" as ds;
 let stack = ds.newStack<number>();
 stack.push(10);
 stack.push(20);
-print stack.top();
-print stack.pop();
+print(stack.top());
+print(stack.pop());
 
 let queue = ds.newQueue<string>();
 queue.enqueue("first");
-print queue.dequeue();
+print(queue.dequeue());
 ```
 
 栈提供 `push`、`pop`、`top`、`size`、`isEmpty` 和 `snapshot`；队列提供

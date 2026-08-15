@@ -9,7 +9,7 @@ Program
     Method make<T>(): optional<T>
       Return nil
   Let box: Box = (construct Box value: 0)
-  Print (member-call box echo<number> 42)
-  Print (member-call box echo "hello")
-  Print (member-call box head<number> (array 3 4))
-  Print (member-call box make<string>)
+  Expr (call print (member-call box echo<number> 42))
+  Expr (call print (member-call box echo "hello"))
+  Expr (call print (member-call box head<number> (array 3 4)))
+  Expr (call print (member-call box make<string>))

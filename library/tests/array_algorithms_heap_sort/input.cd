@@ -10,18 +10,18 @@ fun descending(left: number, right: number): bool {
 
 let numbers = [4, 1, 3, 1, 2];
 let sorted = ds.heapSort(numbers, ascending);
-print sorted;
-print numbers;
+print(sorted);
+print(numbers);
 
 ds.heapSortInPlace(numbers, descending);
-print numbers;
+print(numbers);
 
 let words = ["fox", "ant", "dog", "cat"];
-print ds.heapSort(words, ds.stringLess);
-print words;
+print(ds.heapSort(words, ds.stringLess));
+print(words);
 
 let empty: [number] = [];
-print ds.heapSort<number>(empty, ascending);
+print(ds.heapSort<number>(empty, ascending));
 ds.heapSortInPlace(empty, descending);
-print empty;
-print ds.heapSort([42], ascending);
+print(empty);
+print(ds.heapSort([42], ascending));

@@ -7,5 +7,5 @@ fun counter() {
 }
 
 let next = counter();
-print next();
-print next();
+print(next());
+print(next());

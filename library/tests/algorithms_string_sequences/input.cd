@@ -1,18 +1,18 @@
 import "../../data_structures.cd" as ds;
 
-print ds.longestUniqueSubstringLength("abcabcbb");
-print ds.longestUniqueSubstringLength("bbbbb");
-print ds.longestUniqueSubstringLength("pwwkew");
-print ds.longestUniqueSubstringLength("dvdf");
-print ds.longestUniqueSubstringLength("abba");
-print ds.longestUniqueSubstringLength("");
-print ds.longestUniqueSubstringLength("你我你🙂");
+print(ds.longestUniqueSubstringLength("abcabcbb"));
+print(ds.longestUniqueSubstringLength("bbbbb"));
+print(ds.longestUniqueSubstringLength("pwwkew"));
+print(ds.longestUniqueSubstringLength("dvdf"));
+print(ds.longestUniqueSubstringLength("abba"));
+print(ds.longestUniqueSubstringLength(""));
+print(ds.longestUniqueSubstringLength("你我你🙂"));
 
-print ds.longestPalindromicSubstring("babad");
-print ds.longestPalindromicSubstring("cbbd");
-print ds.longestPalindromicSubstring("forgeeksskeegfor");
-print ds.longestPalindromicSubstring("你我你");
-print ds.longestPalindromicSubstring("") == "";
+print(ds.longestPalindromicSubstring("babad"));
+print(ds.longestPalindromicSubstring("cbbd"));
+print(ds.longestPalindromicSubstring("forgeeksskeegfor"));
+print(ds.longestPalindromicSubstring("你我你"));
+print(ds.longestPalindromicSubstring("") == "");
 
 let palindromeStress = "";
 let palindromeIndex = 0;
@@ -21,7 +21,7 @@ while (palindromeIndex < 4096) {
   palindromeIndex += 1;
 }
 let palindromeResult = ds.longestPalindromicSubstring(palindromeStress);
-print palindromeResult.len();
-print palindromeResult == palindromeStress;
-print palindromeResult.charAt(0);
-print palindromeResult.charAt(palindromeResult.len() - 1);
+print(palindromeResult.len());
+print(palindromeResult == palindromeStress);
+print(palindromeResult.charAt(0));
+print(palindromeResult.charAt(palindromeResult.len() - 1));

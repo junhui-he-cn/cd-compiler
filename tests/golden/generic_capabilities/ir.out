@@ -26,31 +26,31 @@ IR
 0024  v12 = constant #12 "same"
 0025  v13 = constant #13 "same"
 0026  v14 = call_direct $3 same/2(v12, v13)
-0027  print v14
-0028  v15 = constant #14 1
-0029  v16 = constant #15 2
-0030  v17 = call_direct $4 before/2(v15, v16)
-0031  print v17
-0032  v18 = constant #16 "a"
-0033  v19 = constant #17 "b"
-0034  v20 = call_direct $4 before/2(v18, v19)
-0035  print v20
-0036  v21 = load_var @25 same#0
-0037  v22 = constant #18 3
-0038  v23 = constant #19 3
-0039  v24 = call v21(v22, v23)
-0040  print v24
-0041  v25 = load_var @26 before#3
-0042  v26 = constant #20 3
-0043  v27 = constant #21 4
-0044  v28 = call v25(v26, v27)
-0045  print v28
-0046  v29 = load_var @27 applyLess#6
-0047  v30 = constant #22 4
-0048  v31 = constant #23 5
-0049  v32 = load_var @28 numericLess#16
-0050  v33 = call v29(v30, v31, v32)
-0051  print v33
+0027  v15 = native_call @25 print(v14)
+0028  v16 = constant #14 1
+0029  v17 = constant #15 2
+0030  v18 = call_direct $4 before/2(v16, v17)
+0031  v19 = native_call @26 print(v18)
+0032  v20 = constant #16 "a"
+0033  v21 = constant #17 "b"
+0034  v22 = call_direct $4 before/2(v20, v21)
+0035  v23 = native_call @27 print(v22)
+0036  v24 = load_var @28 same#0
+0037  v25 = constant #18 3
+0038  v26 = constant #19 3
+0039  v27 = call v24(v25, v26)
+0040  v28 = native_call @29 print(v27)
+0041  v29 = load_var @30 before#3
+0042  v30 = constant #20 3
+0043  v31 = constant #21 4
+0044  v32 = call v29(v30, v31)
+0045  v33 = native_call @31 print(v32)
+0046  v34 = load_var @32 applyLess#6
+0047  v35 = constant #22 4
+0048  v36 = constant #23 5
+0049  v37 = load_var @33 numericLess#16
+0050  v38 = call v34(v35, v36, v37)
+0051  v39 = native_call @34 print(v38)
 
 function $0 same(left#1, right#2)
 0000  v0 = load_var @1 left#1

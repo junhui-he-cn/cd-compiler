@@ -4,19 +4,19 @@ IR
 0002  store_var @0 xs#0, v1
 0003  v2 = load_var @1 xs#0
 0004  v3 = len_array v2
-0005  print v3
-0006  v4 = load_var @2 xs#0
-0007  v5 = constant #1 2
-0008  v6 = native_call @3 push(v4, v5)
-0009  v7 = load_var @4 xs#0
-0010  v8 = len_array v7
-0011  print v8
-0012  v9 = load_var @5 xs#0
-0013  v10 = native_call @6 pop(v9)
-0014  print v10
-0015  v11 = load_var @7 xs#0
-0016  v12 = len_array v11
-0017  print v12
-0018  v13 = load_var @8 xs#0
-0019  v14 = native_call @9 pop(v13)
-0020  print v14
+0005  v4 = native_call @2 print(v3)
+0006  v5 = load_var @3 xs#0
+0007  v6 = constant #1 2
+0008  v7 = native_call @4 push(v5, v6)
+0009  v8 = load_var @5 xs#0
+0010  v9 = len_array v8
+0011  v10 = native_call @6 print(v9)
+0012  v11 = load_var @7 xs#0
+0013  v12 = native_call @8 pop(v11)
+0014  v13 = native_call @9 print(v12)
+0015  v14 = load_var @10 xs#0
+0016  v15 = len_array v14
+0017  v16 = native_call @11 print(v15)
+0018  v17 = load_var @12 xs#0
+0019  v18 = native_call @13 pop(v17)
+0020  v19 = native_call @14 print(v18)

@@ -12,13 +12,13 @@ let missing = ds.none<number>();
 let explicit = ds.Option.None<number>();
 let inferred = ds.some("hello");
 
-print render(present);
-print render(missing);
+print(render(present));
+print(render(missing));
 match explicit {
-  ds.Option.Some(value) => { print "some:" + str(value); }
-  ds.Option.None => { print "none"; }
+  ds.Option.Some(value) => { print("some:" + str(value)); }
+  ds.Option.None => { print("none"); }
 }
 match inferred {
-  ds.Option.Some(value) => { print value; }
-  ds.Option.None => { print "none"; }
+  ds.Option.Some(value) => { print(value); }
+  ds.Option.None => { print("none"); }
 }

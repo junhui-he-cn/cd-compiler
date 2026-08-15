@@ -1,6 +1,6 @@
 native_import i0 = print abi=1
 native_import i1 = str abi=1
-main registers=32
+main registers=36
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -24,33 +24,33 @@ main registers=32
 0020  init_global g3, b14
 0021  b15 = load_global g1
 0022  b16 = call_direct $0 [b15]
-0023  b31 = call_native i0 [b16]
-0024  b17 = load_global g2
-0025  b18 = call_direct $0 [b17]
-0026  b31 = call_native i0 [b18]
-0027  b19 = load_global g3
-0028  b20 = call_direct $0 [b19]
-0029  b31 = call_native i0 [b20]
-0030  b21 = load_global g1
-0031  b22 = constant #19 nil
-0032  b23 = struct_get b21, t1, 0
-0033  b24 = constant #20 "Ada"
-0034  b25 = equal b23, b24
-0035  br_if b25, b1, b2
+0023  b17 = call_native i0 [b16]
+0024  b18 = load_global g2
+0025  b19 = call_direct $0 [b18]
+0026  b20 = call_native i0 [b19]
+0027  b21 = load_global g3
+0028  b22 = call_direct $0 [b21]
+0029  b23 = call_native i0 [b22]
+0030  b24 = load_global g1
+0031  b25 = constant #19 nil
+0032  b26 = struct_get b24, t1, 0
+0033  b27 = constant #20 "Ada"
+0034  b28 = equal b26, b27
+0035  br_if b28, b1, b2
 0036  block
 0037  br b3
 0038  block
-0039  b26 = struct_get b21, t1, 1
-0040  b27 = constant #21 0
-0041  b28 = equal b26, b27
-0042  br_if b28, b3, b4
+0039  b29 = struct_get b24, t1, 1
+0040  b30 = constant #21 0
+0041  b31 = equal b29, b30
+0042  br_if b31, b3, b4
 0043  block
-0044  b29 = constant #22 "or"
-0045  b31 = call_native i0 [b29]
+0044  b32 = constant #22 "or"
+0045  b33 = call_native i0 [b32]
 0046  return_nil
 0047  block
-0048  b30 = constant #23 "fallback"
-0049  b31 = call_native i0 [b30]
+0048  b34 = constant #23 "fallback"
+0049  b35 = call_native i0 [b34]
 0050  return_nil
 0051  block
 0052  return_nil

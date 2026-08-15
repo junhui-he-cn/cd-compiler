@@ -15,33 +15,33 @@ fun ascending(left: number, right: number): bool {
 let empty = ds.emptyList<number>();
 let numbers = ds.prepend(3, ds.prepend(2, ds.prepend(1, empty)));
 
-print ds.head(empty);
-print ds.head(numbers);
-print describeTail(ds.tail(empty));
-print describeTail(ds.tail(numbers));
-print ds.toArray(numbers);
-print ds.toArray(ds.reverse(numbers));
-print ds.toArray(ds.reverse(empty));
+print(ds.head(empty));
+print(ds.head(numbers));
+print(describeTail(ds.tail(empty)));
+print(describeTail(ds.tail(numbers)));
+print(ds.toArray(numbers));
+print(ds.toArray(ds.reverse(numbers)));
+print(ds.toArray(ds.reverse(empty)));
 
 let snapshot = ds.toArray(numbers);
 snapshot.push(99);
-print ds.toArray(numbers);
-print snapshot;
+print(ds.toArray(numbers));
+print(snapshot);
 
 let words = ds.prepend("second", ds.prepend("first", ds.emptyList<string>()));
-print ds.toArray(words);
+print(ds.toArray(words));
 
-print ds.listLength(numbers);
-print ds.listGet(numbers, 1);
-print ds.listGet(numbers, 3);
-print ds.listGet(numbers, 1.5);
-print ds.toArray(ds.listAppend(numbers, 0));
-print ds.toArray(ds.listConcat(numbers, ds.prepend(0, empty)));
-print ds.toArray(ds.listTake(numbers, 2));
-print ds.toArray(ds.listTake(numbers, 5));
-print ds.toArray(ds.listDrop(numbers, 1));
-print ds.toArray(ds.listDrop(numbers, 5));
+print(ds.listLength(numbers));
+print(ds.listGet(numbers, 1));
+print(ds.listGet(numbers, 3));
+print(ds.listGet(numbers, 1.5));
+print(ds.toArray(ds.listAppend(numbers, 0)));
+print(ds.toArray(ds.listConcat(numbers, ds.prepend(0, empty))));
+print(ds.toArray(ds.listTake(numbers, 2)));
+print(ds.toArray(ds.listTake(numbers, 5)));
+print(ds.toArray(ds.listDrop(numbers, 1)));
+print(ds.toArray(ds.listDrop(numbers, 5)));
 
 let sortedLeft = ds.prepend(1, ds.prepend(3, ds.prepend(5, ds.emptyList<number>())));
 let sortedRight = ds.prepend(2, ds.prepend(4, ds.prepend(6, ds.emptyList<number>())));
-print ds.toArray(ds.mergeSortedLists(sortedLeft, sortedRight, ascending));
+print(ds.toArray(ds.mergeSortedLists(sortedLeft, sortedRight, ascending)));

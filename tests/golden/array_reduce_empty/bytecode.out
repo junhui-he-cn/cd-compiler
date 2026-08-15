@@ -1,7 +1,7 @@
 native_import i0 = reduce abi=1
 native_import i1 = print abi=1
 native_import i2 = push abi=1
-main registers=8
+main registers=9
 0000  block
 0001  b0 = array []
 0002  init_global g0, b0
@@ -11,9 +11,9 @@ main registers=8
 0006  b4 = call_native i0 [b1, b2, b3]
 0007  init_global g1, b4
 0008  b5 = load_global g1
-0009  b7 = call_native i1 [b5]
-0010  b6 = load_global g0
-0011  b7 = call_native i1 [b6]
+0009  b6 = call_native i1 [b5]
+0010  b7 = load_global g0
+0011  b8 = call_native i1 [b7]
 0012  return_nil
 
 function $0 <lambda>/2 registers=7

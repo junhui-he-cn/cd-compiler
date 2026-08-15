@@ -1,11 +1,11 @@
 import "../../data_structures.cd" as ds;
 
-print ds.matrixPower2x2([[1, 1], [1, 0]], 0);
-print ds.matrixPower2x2([[1, 1], [1, 0]], 1);
-print ds.matrixPower2x2([[1, 1], [1, 0]], 5);
-print ds.matrixPower2x2([[2, 0], [0, 3]], 3);
-print ds.matrixPower2x2([[1, 2, 3], [4, 5, 6]], 2);
-print ds.matrixPower2x2([[1, 0], [0, 1]], -1);
-print ds.matrixPower2x2([[1, 0], [0, 1]], 1.5);
+print(ds.matrixPower2x2([[1, 1], [1, 0]], 0));
+print(ds.matrixPower2x2([[1, 1], [1, 0]], 1));
+print(ds.matrixPower2x2([[1, 1], [1, 0]], 5));
+print(ds.matrixPower2x2([[2, 0], [0, 3]], 3));
+print(ds.matrixPower2x2([[1, 2, 3], [4, 5, 6]], 2));
+print(ds.matrixPower2x2([[1, 0], [0, 1]], -1));
+print(ds.matrixPower2x2([[1, 0], [0, 1]], 1.5));
 let empty: [[number]] = [];
-print ds.matrixPower2x2(empty, 2);
+print(ds.matrixPower2x2(empty, 2));

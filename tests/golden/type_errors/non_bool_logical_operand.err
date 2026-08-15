@@ -1,3 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/non_bool_logical_operand.cd:1:9: `&&` expects bool operands, got number
-  print 1 && true;
+  print(1 && true);
           ^

@@ -6,4 +6,4 @@ fun invalid(values: [[optional<number>]]): number {
   return values[0][1] + 1;
 }
 
-print invalid([[nil, 4]]);
+print(invalid([[nil, 4]]));

@@ -126,7 +126,7 @@ class BenchmarkRunnerTests(unittest.TestCase):
             root = Path(temp_dir)
             source = root / "input.cd"
             expected = root / "run.out"
-            source.write_text("print 1;\n", encoding="utf-8")
+            source.write_text("print(1);\n", encoding="utf-8")
             expected.write_text("ok\n", encoding="utf-8")
 
             compiler = root / "fake-compiler.py"
@@ -252,7 +252,7 @@ class BenchmarkRunnerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             source = root / "input.cd"
-            source.write_text("print 1;\n", encoding="utf-8")
+            source.write_text("print(1);\n", encoding="utf-8")
             expected = root / "run.out"
             expected.write_text("ok\n", encoding="utf-8")
             expected_stderr = root / "runtime.err"

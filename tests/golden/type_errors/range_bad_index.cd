@@ -1,2 +1,2 @@
 let values = range(3);
-print values[true];
+print(values[true]);

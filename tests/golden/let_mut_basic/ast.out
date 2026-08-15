@@ -1,15 +1,15 @@
 Program
   Let mut x = 1
   Expr (= x (+ x 1))
-  Print x
+  Expr (call print x)
   Let mut counter = 0
   Let bump = (fun () (expr (+= counter 1)) (return counter))
-  Print (call bump)
-  Print (call bump)
+  Expr (call print (call bump))
+  Expr (call print (call bump))
   Let items = (array 1 2)
   Expr (= (index items 0) 9)
-  Print items
+  Expr (call print items)
   Struct Box {value: number}
   Let boxed = (construct Box value: 1)
   Expr (= (field boxed value) 5)
-  Print (field boxed value)
+  Expr (call print (field boxed value))

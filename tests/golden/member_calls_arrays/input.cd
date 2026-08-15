@@ -1,7 +1,7 @@
 let xs: [number] = [1];
-print xs.len();
+print(xs.len());
 xs.push(2);
-print xs.len();
-print xs.pop();
-print xs.len();
-print xs.pop();
+print(xs.len());
+print(xs.pop());
+print(xs.len());
+print(xs.pop());

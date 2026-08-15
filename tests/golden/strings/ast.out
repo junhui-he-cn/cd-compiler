@@ -1,5 +1,5 @@
 Program
-  Print (+ "a" "b")
-  Print "hello"
-  Print (== "hello" "hello")
-  Print (!= "hello" "world")
+  Expr (call print (+ "a" "b"))
+  Expr (call print "hello")
+  Expr (call print (== "hello" "hello"))
+  Expr (call print (!= "hello" "world"))

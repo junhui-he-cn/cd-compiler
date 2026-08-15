@@ -5,22 +5,22 @@ fun keepAccumulator<T>(acc: T, value: number): T { return acc; }
 
 let values: [number] = [1, 2];
 let copied: [number] = map(values, identity);
-print copied;
-print values.map(identity);
-print filter(values, keep);
-print values.any(keep);
-print values.all(keep);
-print values.count(keep);
-print values.find(keep);
-print values.findIndex(keep);
-print flatMap(values, singleton);
-print values.reduce(0, keepAccumulator);
-print map(values, fun<T>(value: T): T { return value; });
+print(copied);
+print(values.map(identity));
+print(filter(values, keep));
+print(values.any(keep));
+print(values.all(keep));
+print(values.count(keep));
+print(values.find(keep));
+print(values.findIndex(keep));
+print(flatMap(values, singleton));
+print(values.reduce(0, keepAccumulator));
+print(map(values, fun<T>(value: T): T { return value; }));
 
 fun acceptsNullable<T>(value: optional<T>): bool { return true; }
 let nullableValues: [optional<number>] = [1, nil];
-print nullableValues.all(acceptsNullable);
+print(nullableValues.all(acceptsNullable));
 
 fun identityArray<T>(value: [T]): [T] { return value; }
 let nestedValues: [[number]] = [[1], [2]];
-print map(nestedValues, identityArray);
+print(map(nestedValues, identityArray));

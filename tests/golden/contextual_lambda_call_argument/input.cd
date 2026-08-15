@@ -10,6 +10,6 @@ fun apply(callback: fun(Point): number, point: Point): number {
   return callback(point);
 }
 
-print apply(fun (p) {
+print(apply(fun (p) {
   return p.sum();
-}, Point { x: 3, y: 4 });
+}, Point { x: 3, y: 4 }));

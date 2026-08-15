@@ -1,4 +1,4 @@
 let inner = [1];
 let outer = [inner];
 outer[0][0] = 7;
-print inner[0];
+print(inner[0]);

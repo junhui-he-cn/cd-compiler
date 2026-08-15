@@ -1,2 +1,2 @@
 let xs = [1];
-print xs[0;
+print(xs[0);

@@ -14,21 +14,23 @@ names:
   n4 = "person#0"
   n5 = "name"
   n6 = "Person"
-  n7 = "Nested"
-  n8 = "point"
-  n9 = "Point"
-  n10 = "x"
-  n11 = "label"
-  n12 = "nested#1"
+  n7 = "print"
+  n8 = "Nested"
+  n9 = "point"
+  n10 = "Point"
+  n11 = "x"
+  n12 = "label"
   n13 = "nested#1"
-  n14 = "point"
-  n15 = "Nested"
-  n16 = "x"
-  n17 = "Point"
+  n14 = "nested#1"
+  n15 = "point"
+  n16 = "Nested"
+  n17 = "x"
+  n18 = "Point"
+  n19 = "print"
 
 globals:
   g0 = n3
-  g1 = n12
+  g1 = n13
 
 types:
   t0 = struct "Person" field0="name" field1="age"
@@ -38,7 +40,7 @@ types:
 native_imports:
   i0 = "print" abi=1
 
-main registers=13:
+main registers=14:
 block b0:
   r0 = constant c0
   r1 = constant c1
@@ -46,20 +48,20 @@ block b0:
   init_global g0, r2
   r3 = load_global g0
   r4 = struct_get r3, t0, 0
-  r12 = call_native i0 [r4]
-  r5 = constant c2
-  r6 = make_struct t1 [r5]
-  r7 = constant c3
-  r8 = make_struct t2 [r6, r7]
-  init_global g1, r8
-  r9 = load_global g1
-  r10 = struct_get r9, t2, 0
-  r11 = struct_get r10, t1, 0
-  r12 = call_native i0 [r11]
+  r5 = call_native i0 [r4]
+  r6 = constant c2
+  r7 = make_struct t1 [r6]
+  r8 = constant c3
+  r9 = make_struct t2 [r7, r8]
+  init_global g1, r9
+  r10 = load_global g1
+  r11 = struct_get r10, t2, 0
+  r12 = struct_get r11, t1, 0
+  r13 = call_native i0 [r12]
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/structs/input.cd" text="struct Person { name: string, age: number }\nstruct Point { x: number }\nstruct Nested { point: Point, label: string }\nlet person = Person { name: \"Ada\", age: 36 };\nprint person.name;\nlet nested = Nested { point: Point { x: 1 }, label: \"p\" };\nprint nested.point.x;\n"
+  s0 path="tests/bytecode_artifacts/structs/input.cd" text="struct Person { name: string, age: number }\nstruct Point { x: number }\nstruct Nested { point: Point, label: string }\nlet person = Person { name: \"Ada\", age: 36 };\nprint(person.name);\nlet nested = Nested { point: Point { x: 1 }, label: \"p\" };\nprint(nested.point.x);\n"
 
 debug_locations:
   main 0 = s0:4:29
@@ -89,14 +91,14 @@ debug_ranges:
   main 4 = s0:121:159
   main 5 = s0:169:175
   main 6 = s0:169:180
-  main 7 = s0:169:180
-  main 8 = s0:222:223
-  main 9 = s0:211:223
-  main 10 = s0:234:237
-  main 11 = s0:195:237
-  main 12 = s0:186:237
-  main 13 = s0:247:253
-  main 14 = s0:247:259
-  main 15 = s0:247:261
-  main 16 = s0:247:261
-  main 17 = s0:247:261
+  main 7 = s0:163:181
+  main 8 = s0:223:224
+  main 9 = s0:212:224
+  main 10 = s0:235:238
+  main 11 = s0:196:238
+  main 12 = s0:187:238
+  main 13 = s0:248:254
+  main 14 = s0:248:260
+  main 15 = s0:248:262
+  main 16 = s0:242:263
+  main 17 = s0:242:263

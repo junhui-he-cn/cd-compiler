@@ -5,7 +5,7 @@ fun takesNumber(value: number): number {
 let maybe: optional<number> = 1;
 if (maybe != nil) {
   fun read() {
-    print takesNumber(maybe);
+    print(takesNumber(maybe));
   }
   read();
 }

@@ -1,14 +1,14 @@
 import "../../data_structures.cd" as ds;
 
-print ds.isPrime(-3);
-print ds.isPrime(0);
-print ds.isPrime(1);
-print ds.isPrime(2);
-print ds.isPrime(3);
-print ds.isPrime(4);
-print ds.isPrime(25);
-print ds.isPrime(29);
-print ds.isPrime(2.5);
-print ds.sievePrimes(30);
-print ds.sievePrimes(1);
-print ds.sievePrimes(-5);
+print(ds.isPrime(-3));
+print(ds.isPrime(0));
+print(ds.isPrime(1));
+print(ds.isPrime(2));
+print(ds.isPrime(3));
+print(ds.isPrime(4));
+print(ds.isPrime(25));
+print(ds.isPrime(29));
+print(ds.isPrime(2.5));
+print(ds.sievePrimes(30));
+print(ds.sievePrimes(1));
+print(ds.sievePrimes(-5));

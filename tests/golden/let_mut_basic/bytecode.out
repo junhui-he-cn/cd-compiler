@@ -1,5 +1,5 @@
 native_import i0 = print abi=1
-main registers=27
+main registers=31
 0000  block
 0001  b0 = constant #0 1
 0002  init_global g0, b0
@@ -8,36 +8,36 @@ main registers=27
 0005  b3 = add_num b1, b2
 0006  set_global g0, b3
 0007  b4 = load_global g0
-0008  b26 = call_native i0 [b4]
-0009  b5 = constant #2 0
-0010  init_global g1, b5
-0011  b6 = make_function $0 <lambda>/0
-0012  init_global g2, b6
-0013  b7 = load_global g2
-0014  b8 = call b7()
-0015  b26 = call_native i0 [b8]
-0016  b9 = load_global g2
-0017  b10 = call b9()
-0018  b26 = call_native i0 [b10]
-0019  b11 = constant #5 1
-0020  b12 = constant #6 2
-0021  b13 = array [b11, b12]
-0022  init_global g3, b13
-0023  b14 = load_global g3
-0024  b15 = constant #7 0
-0025  b16 = constant #8 9
-0026  b17 = array_set b14, b15, b16
-0027  b18 = load_global g3
-0028  b26 = call_native i0 [b18]
-0029  b19 = constant #9 1
-0030  b20 = make_struct t0 [b19]
-0031  init_global g4, b20
-0032  b21 = load_global g4
-0033  b22 = constant #10 5
-0034  b23 = struct_set b21, t0, 0, b22
-0035  b24 = load_global g4
-0036  b25 = struct_get b24, t0, 0
-0037  b26 = call_native i0 [b25]
+0008  b5 = call_native i0 [b4]
+0009  b6 = constant #2 0
+0010  init_global g1, b6
+0011  b7 = make_function $0 <lambda>/0
+0012  init_global g2, b7
+0013  b8 = load_global g2
+0014  b9 = call b8()
+0015  b10 = call_native i0 [b9]
+0016  b11 = load_global g2
+0017  b12 = call b11()
+0018  b13 = call_native i0 [b12]
+0019  b14 = constant #5 1
+0020  b15 = constant #6 2
+0021  b16 = array [b14, b15]
+0022  init_global g3, b16
+0023  b17 = load_global g3
+0024  b18 = constant #7 0
+0025  b19 = constant #8 9
+0026  b20 = array_set b17, b18, b19
+0027  b21 = load_global g3
+0028  b22 = call_native i0 [b21]
+0029  b23 = constant #9 1
+0030  b24 = make_struct t0 [b23]
+0031  init_global g4, b24
+0032  b25 = load_global g4
+0033  b26 = constant #10 5
+0034  b27 = struct_set b25, t0, 0, b26
+0035  b28 = load_global g4
+0036  b29 = struct_get b28, t0, 0
+0037  b30 = call_native i0 [b29]
 0038  return_nil
 
 function $0 <lambda>/0 registers=7
@@ -46,9 +46,9 @@ upvalue u1 = global g1
 upvalue u2 = global g1
 0000  block
 0001  b0 = load_upvalue u0
-0002  b1 = assert_number b0 @6 `+=` expects number variable
+0002  b1 = assert_number b0 @7 `+=` expects number variable
 0003  b2 = constant #3 1
-0004  b3 = assert_number b2 @7 `+=` expects number value
+0004  b3 = assert_number b2 @8 `+=` expects number value
 0005  b4 = add_num b1, b3
 0006  set_upvalue u0, b4
 0007  b5 = load_upvalue u0

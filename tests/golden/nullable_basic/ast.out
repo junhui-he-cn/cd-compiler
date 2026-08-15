@@ -1,9 +1,9 @@
 Program
   Let mut age: optional<number> = nil
-  Print age
+  Expr (call print age)
   Expr (= age 42)
-  Print age
+  Expr (call print age)
   Expr (= age nil)
-  Print age
+  Expr (call print age)
   Let label: optional<string> = "ok"
-  Print label
+  Expr (call print label)

@@ -11,8 +11,7 @@ declaration = importDecl
             | letDecl
             | statement ;
 
-statement   = printStmt
-            | ifStmt
+statement   = ifStmt
             | ifLetStmt
             | whileStmt
             | whileLetStmt
@@ -168,8 +167,6 @@ breakStmt   = "break", ";" ;
 continueStmt = "continue", ";" ;
 
 block       = "{", { declaration }, "}" ;
-
-printStmt   = "print", expression, ";" ;
 
 returnStmt  = "return", [ expression ], ";" ;
 

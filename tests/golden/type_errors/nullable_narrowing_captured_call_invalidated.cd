@@ -9,7 +9,7 @@ fun outer() {
   }
   if (maybe != nil) {
     clear();
-    print takesNumber(maybe);
+    print(takesNumber(maybe));
   }
 }
 

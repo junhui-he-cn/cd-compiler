@@ -10,8 +10,10 @@ names:
   n1 = "xs#0"
   n2 = "push"
   n3 = "xs#0"
-  n4 = "xs#0"
-  n5 = "pop"
+  n4 = "print"
+  n5 = "xs#0"
+  n6 = "pop"
+  n7 = "print"
 
 globals:
   g0 = n0
@@ -21,7 +23,7 @@ native_imports:
   i1 = "print" abi=1
   i2 = "pop" abi=1
 
-main registers=10:
+main registers=11:
 block b0:
   r0 = constant c0
   r1 = constant c1
@@ -31,14 +33,14 @@ block b0:
   r4 = constant c2
   r5 = call_native i0 [r3, r4]
   r6 = load_global g0
-  r9 = call_native i1 [r6]
-  r7 = load_global g0
-  r8 = call_native i2 [r7]
-  r9 = call_native i1 [r8]
+  r7 = call_native i1 [r6]
+  r8 = load_global g0
+  r9 = call_native i2 [r8]
+  r10 = call_native i1 [r9]
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/native_stdlib_push_pop/input.cd" text="let xs = [1, 2];\npush(xs, 3);\nprint xs;\nprint pop(xs);\n"
+  s0 path="tests/bytecode_artifacts/native_stdlib_push_pop/input.cd" text="let xs = [1, 2];\npush(xs, 3);\nprint(xs);\nprint(pop(xs));\n"
 
 debug_locations:
   main 0 = s0:1:11
@@ -66,8 +68,8 @@ debug_ranges:
   main 6 = s0:26:27
   main 7 = s0:17:28
   main 8 = s0:36:38
-  main 9 = s0:36:38
-  main 10 = s0:50:52
-  main 11 = s0:46:53
-  main 12 = s0:46:53
-  main 13 = s0:46:53
+  main 9 = s0:30:39
+  main 10 = s0:51:53
+  main 11 = s0:47:54
+  main 12 = s0:41:55
+  main 13 = s0:41:55

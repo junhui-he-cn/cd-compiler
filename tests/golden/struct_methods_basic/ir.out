@@ -14,11 +14,11 @@ IR
 0012  v7 = load_var @14 __method_Person_label#0
 0013  v8 = load_var @15 p#4
 0014  v9 = call v7(v8)
-0015  print v9
-0016  v10 = load_var @16 __method_Person_nextAge#1
-0017  v11 = load_var @17 p#4
-0018  v12 = call v10(v11)
-0019  print v12
+0015  v10 = native_call @16 print(v9)
+0016  v11 = load_var @17 __method_Person_nextAge#1
+0017  v12 = load_var @18 p#4
+0018  v13 = call v11(v12)
+0019  v14 = native_call @19 print(v13)
 
 function $0 label(this#2)
 0000  v0 = load_var @1 this#2

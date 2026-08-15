@@ -1,3 +1,3 @@
-Parse error at <repo>/tests/golden/parse_errors/while_missing_block.cd:1:12: expected `{` after while condition, found Print `print`
-  while true print 1;
+Parse error at <repo>/tests/golden/parse_errors/while_missing_block.cd:1:12: expected `{` after while condition, found Identifier `print`
+  while true print(1);
              ^

@@ -1,7 +1,7 @@
 fun makePrinter() {
   let x = "captured";
   fun printX() {
-    print x;
+    print(x);
   }
   return printX;
 }

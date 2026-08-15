@@ -7,10 +7,10 @@ IR
 0005  store_var @5 namespaced#1, v3
 0006  v4 = load_var @6 direct#0
 0007  v5 = field v4.value
-0008  print v5
-0009  v6 = load_var @9 namespaced#1
-0010  v7 = field v6.value
-0011  print v7
-0012  v8 = load_var @12 namespaced#1
-0013  v9 = native_call @13 typeOf(v8)
-0014  print v9
+0008  v6 = native_call @9 print(v5)
+0009  v7 = load_var @10 namespaced#1
+0010  v8 = field v7.value
+0011  v9 = native_call @13 print(v8)
+0012  v10 = load_var @14 namespaced#1
+0013  v11 = native_call @15 typeOf(v10)
+0014  v12 = native_call @16 print(v11)

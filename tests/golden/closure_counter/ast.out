@@ -6,6 +6,6 @@ Program
       Return count
     Return inc
   Let c = (call makeCounter)
-  Print (call c)
-  Print (call c)
-  Print (call c)
+  Expr (call print (call c))
+  Expr (call print (call c))
+  Expr (call print (call c))

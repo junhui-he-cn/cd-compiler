@@ -13,16 +13,16 @@ IR
 0011  assign_var @15 localHash#5, v5
 0012  v6 = constant #6 true
 0013  v7 = call_direct $2 localHash/1(v6)
-0014  print v7
-0015  v8 = load_var @16 hashValue#0
-0016  v9 = constant #7 "hello"
-0017  v10 = call v8(v9)
-0018  print v10
-0019  v11 = load_var @17 sameHash#2
-0020  v12 = constant #8 "same"
-0021  v13 = constant #9 "same"
-0022  v14 = call v11(v12, v13)
-0023  print v14
+0014  v8 = native_call @16 print(v7)
+0015  v9 = load_var @17 hashValue#0
+0016  v10 = constant #7 "hello"
+0017  v11 = call v9(v10)
+0018  v12 = native_call @18 print(v11)
+0019  v13 = load_var @19 sameHash#2
+0020  v14 = constant #8 "same"
+0021  v15 = constant #9 "same"
+0022  v16 = call v13(v14, v15)
+0023  v17 = native_call @20 print(v16)
 
 function $0 hashValue(value#1)
 0000  v0 = load_var @1 value#1

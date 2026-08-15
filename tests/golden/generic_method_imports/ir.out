@@ -13,12 +13,12 @@ IR
 0011  v7 = load_var @10 direct#3
 0012  v8 = constant #4 7
 0013  v9 = call v6(v7, v8)
-0014  print v9
-0015  v10 = load_var @11 __method_Box_echo#0
-0016  v11 = load_var @12 namespaced#4
-0017  v12 = constant #5 "module"
-0018  v13 = call v10(v11, v12)
-0019  print v13
+0014  v10 = native_call @11 print(v9)
+0015  v11 = load_var @12 __method_Box_echo#0
+0016  v12 = load_var @13 namespaced#4
+0017  v13 = constant #5 "module"
+0018  v14 = call v11(v12, v13)
+0019  v15 = native_call @14 print(v14)
 
 function $0 echo(this#1, value#2)
 0000  v0 = load_var @1 value#2

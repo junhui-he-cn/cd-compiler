@@ -14,9 +14,11 @@ names:
   n0 = "reduce#3"
   n1 = "reduce#3"
   n2 = "acc#4"
-  n3 = "acc#6"
-  n4 = "value#7"
-  n5 = "reduce"
+  n3 = "print"
+  n4 = "acc#6"
+  n5 = "value#7"
+  n6 = "reduce"
+  n7 = "print"
 
 globals:
   g0 = n0
@@ -25,7 +27,7 @@ native_imports:
   i0 = "print" abi=1
   i1 = "reduce" abi=1
 
-main registers=13:
+main registers=14:
 block b0:
   r0 = make_function f0
   init_global g0, r0
@@ -35,13 +37,13 @@ block b0:
   r4 = constant c3
   r5 = make_function f1
   r6 = call r1 [r3, r4, r5]
-  r12 = call_native i0 [r6]
-  r7 = constant c5
-  r8 = array [r7]
-  r9 = constant c6
-  r10 = make_function f2
-  r11 = call_native i1 [r8, r9, r10]
-  r12 = call_native i0 [r11]
+  r7 = call_native i0 [r6]
+  r8 = constant c5
+  r9 = array [r8]
+  r10 = constant c6
+  r11 = make_function f2
+  r12 = call_native i1 [r9, r10, r11]
+  r13 = call_native i0 [r12]
   return_nil
 
 function f0 name="<lambda>" arity=3 registers=2:
@@ -84,7 +86,7 @@ block b2:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/array_reduce_shadowing/input.cd" text="let reduce = fun (array, initial, callback) {\n  return \"shadowed\";\n};\n\nprint reduce([1], 0, fun (acc, value) { return acc; });\nprint [1].reduce(0, fun (acc, value) { return acc + value; });\n"
+  s0 path="tests/bytecode_artifacts/array_reduce_shadowing/input.cd" text="let reduce = fun (array, initial, callback) {\n  return \"shadowed\";\n};\n\nprint(reduce([1], 0, fun (acc, value) { return acc; }));\nprint([1].reduce(0, fun (acc, value) { return acc + value; }));\n"
 
 debug_locations:
   main 0 = s0:1:14
@@ -141,14 +143,14 @@ debug_ranges:
   main 6 = s0:89:90
   main 7 = s0:92:121
   main 8 = s0:77:125
-  main 9 = s0:77:125
-  main 10 = s0:134:135
-  main 11 = s0:133:135
-  main 12 = s0:144:145
-  main 13 = s0:147:184
-  main 14 = s0:133:188
-  main 15 = s0:133:188
-  main 16 = s0:133:188
+  main 9 = s0:71:126
+  main 10 = s0:135:136
+  main 11 = s0:134:136
+  main 12 = s0:145:146
+  main 13 = s0:148:185
+  main 14 = s0:134:189
+  main 15 = s0:128:190
+  main 16 = s0:128:190
   function f0 0 = s0:55:65
   function f0 1 = s0:55:65
   function f0 2 = s0:48:65
@@ -165,13 +167,13 @@ debug_ranges:
   function f1 5 = s0:92:121
   function f1 6 = s0:92:121
   function f1 7 = s0:92:121
-  function f2 0 = s0:173:176
-  function f2 1 = s0:173:176
-  function f2 2 = s0:179:184
-  function f2 3 = s0:173:184
-  function f2 4 = s0:166:184
-  function f2 5 = s0:147:184
-  function f2 6 = s0:147:184
-  function f2 7 = s0:147:184
-  function f2 8 = s0:147:184
-  function f2 9 = s0:147:184
+  function f2 0 = s0:174:177
+  function f2 1 = s0:174:177
+  function f2 2 = s0:180:185
+  function f2 3 = s0:174:185
+  function f2 4 = s0:167:185
+  function f2 5 = s0:148:185
+  function f2 6 = s0:148:185
+  function f2 7 = s0:148:185
+  function f2 8 = s0:148:185
+  function f2 9 = s0:148:185

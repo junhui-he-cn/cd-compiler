@@ -3,35 +3,35 @@ IR
 0001  store_var @0 text#0, v0
 0002  v1 = load_var @1 text#0
 0003  v2 = len_str v1
-0004  print v2
-0005  v3 = load_var @2 text#0
-0006  v4 = len_str v3
-0007  print v4
-0008  v5 = load_var @3 text#0
-0009  v6 = constant #1 0
-0010  v7 = constant #2 1
-0011  v8 = native_call @4 substr(v5, v6, v7)
-0012  print v8
-0013  v9 = load_var @5 text#0
-0014  v10 = constant #3 1
-0015  v11 = constant #4 1
-0016  v12 = native_call @6 substr(v9, v10, v11)
-0017  print v12
-0018  v13 = load_var @7 text#0
-0019  v14 = constant #5 0
-0020  v15 = native_call @8 charAt(v13, v14)
-0021  print v15
-0022  v16 = load_var @9 text#0
-0023  v17 = constant #6 1
-0024  v18 = native_call @10 charAt(v16, v17)
-0025  print v18
-0026  v19 = constant #7 "é"
-0027  store_var @11 combined#1, v19
-0028  v20 = load_var @12 combined#1
-0029  v21 = len_str v20
-0030  print v21
-0031  v22 = load_var @13 combined#1
-0032  v23 = constant #8 0
-0033  v24 = constant #9 2
-0034  v25 = native_call @14 substr(v22, v23, v24)
-0035  print v25
+0004  v3 = native_call @2 print(v2)
+0005  v4 = load_var @3 text#0
+0006  v5 = len_str v4
+0007  v6 = native_call @4 print(v5)
+0008  v7 = load_var @5 text#0
+0009  v8 = constant #1 0
+0010  v9 = constant #2 1
+0011  v10 = native_call @6 substr(v7, v8, v9)
+0012  v11 = native_call @7 print(v10)
+0013  v12 = load_var @8 text#0
+0014  v13 = constant #3 1
+0015  v14 = constant #4 1
+0016  v15 = native_call @9 substr(v12, v13, v14)
+0017  v16 = native_call @10 print(v15)
+0018  v17 = load_var @11 text#0
+0019  v18 = constant #5 0
+0020  v19 = native_call @12 charAt(v17, v18)
+0021  v20 = native_call @13 print(v19)
+0022  v21 = load_var @14 text#0
+0023  v22 = constant #6 1
+0024  v23 = native_call @15 charAt(v21, v22)
+0025  v24 = native_call @16 print(v23)
+0026  v25 = constant #7 "é"
+0027  store_var @17 combined#1, v25
+0028  v26 = load_var @18 combined#1
+0029  v27 = len_str v26
+0030  v28 = native_call @19 print(v27)
+0031  v29 = load_var @20 combined#1
+0032  v30 = constant #8 0
+0033  v31 = constant #9 2
+0034  v32 = native_call @21 substr(v29, v30, v31)
+0035  v33 = native_call @22 print(v32)

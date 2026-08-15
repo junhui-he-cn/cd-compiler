@@ -1,2 +1,2 @@
 struct Box { value: number }
-print typeOf(Box { value: 1 });
+print(typeOf(Box { value: 1 }));

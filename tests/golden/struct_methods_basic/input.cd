@@ -11,5 +11,5 @@ impl Person {
 }
 
 let p: Person = Person { name: "Ada", age: 36 };
-print p.label();
-print p.nextAge();
+print(p.label());
+print(p.nextAge());

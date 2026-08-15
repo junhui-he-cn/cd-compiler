@@ -11,7 +11,7 @@ Program
         Block
           Return nil
     Return "number"
-  Print (call maybe true)
-  Print (call maybe false)
-  Print (call describe 3)
-  Print (call describe nil)
+  Expr (call print (call maybe true))
+  Expr (call print (call maybe false))
+  Expr (call print (call describe 3))
+  Expr (call print (call describe nil))

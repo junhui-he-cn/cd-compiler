@@ -4,8 +4,8 @@ Program
   Struct Nested {point: Point, label: string}
   Struct Empty {}
   Let person = (construct Person name: "Ada" age: 36)
-  Print (field person name)
-  Print (field person age)
+  Expr (call print (field person name))
+  Expr (call print (field person age))
   Let nested = (construct Nested point: (construct Point x: 1 y: 2) label: "p")
-  Print (field (field nested point) x)
-  Print (construct Empty)
+  Expr (call print (field (field nested point) x))
+  Expr (call print (construct Empty))

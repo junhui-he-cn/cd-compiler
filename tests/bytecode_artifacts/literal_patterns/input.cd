@@ -31,28 +31,28 @@ fun describeResult(value: optional<Result>): string {
 }
 
 let maybe: optional<bool> = nil;
-print describeNumber(0);
-print describeNumber(8);
-print describeBool(false);
-print describeResult(Result.Number(7));
-print describeResult(Result.Text(""));
-print describeResult(nil);
+print(describeNumber(0));
+print(describeNumber(8));
+print(describeBool(false));
+print(describeResult(Result.Number(7)));
+print(describeResult(Result.Text("")));
+print(describeResult(nil));
 match 1 {
-  0 => { print "zero"; }
-  1 => { print "one"; }
-  _ => { print "many"; }
+  0 => { print("zero"); }
+  1 => { print("one"); }
+  _ => { print("many"); }
 }
 match true {
-  false => { print "no"; }
-  true => { print "yes"; }
+  false => { print("no"); }
+  true => { print("yes"); }
 }
 match "ok" {
-  "" => { print "empty"; }
-  "ok" => { print "ok"; }
-  _ => { print "other"; }
+  "" => { print("empty"); }
+  "ok" => { print("ok"); }
+  _ => { print("other"); }
 }
 match maybe {
-  nil => { print "nil"; }
-  true => { print "true"; }
-  false => { print "false"; }
+  nil => { print("nil"); }
+  true => { print("true"); }
+  false => { print("false"); }
 }

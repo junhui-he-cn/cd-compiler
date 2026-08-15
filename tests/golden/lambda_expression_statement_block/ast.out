@@ -1,4 +1,4 @@
 Program
   Block
     Expr (fun () (return 1))
-  Print "done"
+  Expr (call print "done")

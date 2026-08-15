@@ -8,5 +8,5 @@ impl Counter {
 }
 
 let c: Counter = Counter { value: 1 };
-print c.inc(4);
-print c.value;
+print(c.inc(4));
+print(c.value);

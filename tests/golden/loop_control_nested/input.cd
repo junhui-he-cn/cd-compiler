@@ -7,6 +7,6 @@ while outer < 3 {
     if inner == 2 {
       break;
     }
-    print outer * 10 + inner;
+    print(outer * 10 + inner);
   }
 }

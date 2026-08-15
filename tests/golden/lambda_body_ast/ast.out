@@ -1,2 +1,2 @@
 Program
-  Let f = (fun (x) (fun inner () (return x)) (if x (block (print x)) (block (print 0))) (while false (block (print 1))) (block (let y = x) (expr y)))
+  Let f = (fun (x) (fun inner () (return x)) (if x (block (expr (call print x))) (block (expr (call print 0)))) (while false (block (expr (call print 1)))) (block (let y = x) (expr y)))

@@ -9,10 +9,13 @@ constants:
 names:
   n0 = "text#0"
   n1 = "text#0"
-  n2 = "text#0"
-  n3 = "substr"
-  n4 = "text#0"
-  n5 = "charAt"
+  n2 = "print"
+  n3 = "text#0"
+  n4 = "substr"
+  n5 = "print"
+  n6 = "text#0"
+  n7 = "charAt"
+  n8 = "print"
 
 globals:
   g0 = n0
@@ -22,26 +25,26 @@ native_imports:
   i1 = "substr" abi=1
   i2 = "charAt" abi=1
 
-main registers=11:
+main registers=13:
 block b0:
   r0 = constant c0
   init_global g0, r0
   r1 = load_global g0
   r2 = len_str r1
-  r10 = call_native i0 [r2]
-  r3 = load_global g0
-  r4 = constant c1
-  r5 = constant c2
-  r6 = call_native i1 [r3, r4, r5]
-  r10 = call_native i0 [r6]
-  r7 = load_global g0
-  r8 = constant c3
-  r9 = call_native i2 [r7, r8]
-  r10 = call_native i0 [r9]
+  r3 = call_native i0 [r2]
+  r4 = load_global g0
+  r5 = constant c1
+  r6 = constant c2
+  r7 = call_native i1 [r4, r5, r6]
+  r8 = call_native i0 [r7]
+  r9 = load_global g0
+  r10 = constant c3
+  r11 = call_native i2 [r9, r10]
+  r12 = call_native i0 [r11]
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/member_calls_strings/input.cd" text="let text = \"hello\";\nprint text.len();\nprint text.substr(1, 3);\nprint text.charAt(4);\n"
+  s0 path="tests/bytecode_artifacts/member_calls_strings/input.cd" text="let text = \"hello\";\nprint(text.len());\nprint(text.substr(1, 3));\nprint(text.charAt(4));\n"
 
 debug_locations:
   main 0 = s0:1:12
@@ -67,14 +70,14 @@ debug_ranges:
   main 2 = s0:4:18
   main 3 = s0:26:30
   main 4 = s0:26:36
-  main 5 = s0:26:36
-  main 6 = s0:44:48
-  main 7 = s0:56:57
-  main 8 = s0:59:60
-  main 9 = s0:44:61
-  main 10 = s0:44:61
-  main 11 = s0:69:73
-  main 12 = s0:81:82
-  main 13 = s0:69:83
-  main 14 = s0:69:83
-  main 15 = s0:69:83
+  main 5 = s0:20:37
+  main 6 = s0:45:49
+  main 7 = s0:57:58
+  main 8 = s0:60:61
+  main 9 = s0:45:62
+  main 10 = s0:39:63
+  main 11 = s0:71:75
+  main 12 = s0:83:84
+  main 13 = s0:71:85
+  main 14 = s0:65:86
+  main 15 = s0:65:86

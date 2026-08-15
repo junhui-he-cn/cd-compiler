@@ -15,71 +15,79 @@ constants:
 names:
   n0 = "text#0"
   n1 = "text#0"
-  n2 = "text#0"
+  n2 = "print"
   n3 = "text#0"
-  n4 = "substr"
+  n4 = "print"
   n5 = "text#0"
   n6 = "substr"
-  n7 = "text#0"
-  n8 = "charAt"
-  n9 = "text#0"
-  n10 = "charAt"
-  n11 = "combined#1"
-  n12 = "combined#1"
-  n13 = "combined#1"
-  n14 = "substr"
+  n7 = "print"
+  n8 = "text#0"
+  n9 = "substr"
+  n10 = "print"
+  n11 = "text#0"
+  n12 = "charAt"
+  n13 = "print"
+  n14 = "text#0"
+  n15 = "charAt"
+  n16 = "print"
+  n17 = "combined#1"
+  n18 = "combined#1"
+  n19 = "print"
+  n20 = "combined#1"
+  n21 = "substr"
+  n22 = "print"
 
 globals:
   g0 = n0
-  g1 = n11
+  g1 = n17
 
 native_imports:
   i0 = "print" abi=1
   i1 = "substr" abi=1
   i2 = "charAt" abi=1
 
-main registers=27:
+main registers=34:
 block b0:
   r0 = constant c0
   init_global g0, r0
   r1 = load_global g0
   r2 = len_str r1
-  r26 = call_native i0 [r2]
-  r3 = load_global g0
-  r4 = len_str r3
-  r26 = call_native i0 [r4]
-  r5 = load_global g0
-  r6 = constant c1
-  r7 = constant c2
-  r8 = call_native i1 [r5, r6, r7]
-  r26 = call_native i0 [r8]
-  r9 = load_global g0
-  r10 = constant c3
-  r11 = constant c4
-  r12 = call_native i1 [r9, r10, r11]
-  r26 = call_native i0 [r12]
-  r13 = load_global g0
-  r14 = constant c5
-  r15 = call_native i2 [r13, r14]
-  r26 = call_native i0 [r15]
-  r16 = load_global g0
-  r17 = constant c6
-  r18 = call_native i2 [r16, r17]
-  r26 = call_native i0 [r18]
-  r19 = constant c7
-  init_global g1, r19
-  r20 = load_global g1
-  r21 = len_str r20
-  r26 = call_native i0 [r21]
-  r22 = load_global g1
-  r23 = constant c8
-  r24 = constant c9
-  r25 = call_native i1 [r22, r23, r24]
-  r26 = call_native i0 [r25]
+  r3 = call_native i0 [r2]
+  r4 = load_global g0
+  r5 = len_str r4
+  r6 = call_native i0 [r5]
+  r7 = load_global g0
+  r8 = constant c1
+  r9 = constant c2
+  r10 = call_native i1 [r7, r8, r9]
+  r11 = call_native i0 [r10]
+  r12 = load_global g0
+  r13 = constant c3
+  r14 = constant c4
+  r15 = call_native i1 [r12, r13, r14]
+  r16 = call_native i0 [r15]
+  r17 = load_global g0
+  r18 = constant c5
+  r19 = call_native i2 [r17, r18]
+  r20 = call_native i0 [r19]
+  r21 = load_global g0
+  r22 = constant c6
+  r23 = call_native i2 [r21, r22]
+  r24 = call_native i0 [r23]
+  r25 = constant c7
+  init_global g1, r25
+  r26 = load_global g1
+  r27 = len_str r26
+  r28 = call_native i0 [r27]
+  r29 = load_global g1
+  r30 = constant c8
+  r31 = constant c9
+  r32 = call_native i1 [r29, r30, r31]
+  r33 = call_native i0 [r32]
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/unicode_strings/input.cd" text="let text = \"你🙂\";\nprint len(text);\nprint text.len();\nprint substr(text, 0, 1);\nprint text.substr(1, 1);\nprint charAt(text, 0);\nprint text.charAt(1);\nlet combined = \"é\";\nprint len(combined);\nprint combined.substr(0, 2);\n"
+  s0 path="tests/bytecode_artifacts/unicode_strings/input.cd" text="let text = \"你🙂\";\nprint(len(text));\nprint(text.len());\nprint(substr(text, 0, 1));\nprint(text.substr(1, 1));\nprint(charAt(text, 0));\nprint(text.charAt(1));\nlet combined = \"é\";\nprint(len(combined));\nprint(combined.substr(0, 2));\n"
 
 debug_locations:
   main 0 = s0:1:12
@@ -127,36 +135,36 @@ debug_ranges:
   main 2 = s0:4:20
   main 3 = s0:32:36
   main 4 = s0:28:37
-  main 5 = s0:28:37
-  main 6 = s0:45:49
-  main 7 = s0:45:55
-  main 8 = s0:45:55
-  main 9 = s0:70:74
-  main 10 = s0:76:77
-  main 11 = s0:79:80
-  main 12 = s0:63:81
-  main 13 = s0:63:81
-  main 14 = s0:89:93
-  main 15 = s0:101:102
-  main 16 = s0:104:105
-  main 17 = s0:89:106
-  main 18 = s0:89:106
-  main 19 = s0:121:125
-  main 20 = s0:127:128
-  main 21 = s0:114:129
-  main 22 = s0:114:129
-  main 23 = s0:137:141
-  main 24 = s0:149:150
-  main 25 = s0:137:151
-  main 26 = s0:137:151
-  main 27 = s0:168:173
-  main 28 = s0:157:173
-  main 29 = s0:185:193
-  main 30 = s0:181:194
-  main 31 = s0:181:194
-  main 32 = s0:202:210
-  main 33 = s0:218:219
-  main 34 = s0:221:222
-  main 35 = s0:202:223
-  main 36 = s0:202:223
-  main 37 = s0:202:223
+  main 5 = s0:22:38
+  main 6 = s0:46:50
+  main 7 = s0:46:56
+  main 8 = s0:40:57
+  main 9 = s0:72:76
+  main 10 = s0:78:79
+  main 11 = s0:81:82
+  main 12 = s0:65:83
+  main 13 = s0:59:84
+  main 14 = s0:92:96
+  main 15 = s0:104:105
+  main 16 = s0:107:108
+  main 17 = s0:92:109
+  main 18 = s0:86:110
+  main 19 = s0:125:129
+  main 20 = s0:131:132
+  main 21 = s0:118:133
+  main 22 = s0:112:134
+  main 23 = s0:142:146
+  main 24 = s0:154:155
+  main 25 = s0:142:156
+  main 26 = s0:136:157
+  main 27 = s0:174:179
+  main 28 = s0:163:179
+  main 29 = s0:191:199
+  main 30 = s0:187:200
+  main 31 = s0:181:201
+  main 32 = s0:209:217
+  main 33 = s0:225:226
+  main 34 = s0:228:229
+  main 35 = s0:209:230
+  main 36 = s0:203:231
+  main 37 = s0:203:231

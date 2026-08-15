@@ -11,8 +11,11 @@ constants:
 
 names:
   n0 = "str"
-  n1 = "substr"
-  n2 = "charAt"
+  n1 = "print"
+  n2 = "substr"
+  n3 = "print"
+  n4 = "charAt"
+  n5 = "print"
 
 native_imports:
   i0 = "str" abi=1
@@ -20,26 +23,26 @@ native_imports:
   i2 = "substr" abi=1
   i3 = "charAt" abi=1
 
-main registers=12:
+main registers=14:
 block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = array [r0, r1]
   r3 = call_native i0 [r2]
-  r11 = call_native i1 [r3]
-  r4 = constant c2
-  r5 = constant c3
-  r6 = constant c4
-  r7 = call_native i2 [r4, r5, r6]
-  r11 = call_native i1 [r7]
-  r8 = constant c5
-  r9 = constant c6
-  r10 = call_native i3 [r8, r9]
-  r11 = call_native i1 [r10]
+  r4 = call_native i1 [r3]
+  r5 = constant c2
+  r6 = constant c3
+  r7 = constant c4
+  r8 = call_native i2 [r5, r6, r7]
+  r9 = call_native i1 [r8]
+  r10 = constant c5
+  r11 = constant c6
+  r12 = call_native i3 [r10, r11]
+  r13 = call_native i1 [r12]
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/native_stdlib_strings/input.cd" text="print str([1, \"x\"]);\nprint substr(\"hello\", 1, 3);\nprint charAt(\"hello\", 4);\n"
+  s0 path="tests/bytecode_artifacts/native_stdlib_strings/input.cd" text="print(str([1, \"x\"]));\nprint(substr(\"hello\", 1, 3));\nprint(charAt(\"hello\", 4));\n"
 
 debug_locations:
   main 0 = s0:1:12
@@ -65,14 +68,14 @@ debug_ranges:
   main 2 = s0:14:17
   main 3 = s0:10:17
   main 4 = s0:6:19
-  main 5 = s0:6:19
-  main 6 = s0:34:41
-  main 7 = s0:43:44
-  main 8 = s0:46:47
-  main 9 = s0:27:48
-  main 10 = s0:27:48
-  main 11 = s0:63:70
-  main 12 = s0:72:73
-  main 13 = s0:56:74
-  main 14 = s0:56:74
-  main 15 = s0:56:74
+  main 5 = s0:0:20
+  main 6 = s0:35:42
+  main 7 = s0:44:45
+  main 8 = s0:47:48
+  main 9 = s0:28:49
+  main 10 = s0:22:50
+  main 11 = s0:65:72
+  main 12 = s0:74:75
+  main 13 = s0:58:76
+  main 14 = s0:52:77
+  main 15 = s0:52:77

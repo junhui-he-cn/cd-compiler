@@ -1,12 +1,12 @@
 struct Person { name: string, age: number }
 let p: Person = Person { age: 36, name: "Ada" };
-print p.name;
+print(p.name);
 p.age = 37;
-print p.age;
+print(p.age);
 
 fun birthday(person: Person): Person {
   person.age = person.age + 1;
   return person;
 }
 let older: Person = birthday(p);
-print older.age;
+print(older.age);

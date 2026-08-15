@@ -1,15 +1,15 @@
 let values: [number] = [1, 2, 3, 4];
-print count(values, fun (value) {
+print(count(values, fun (value) {
   return value > 2;
-});
-print values.count(fun (value: number): bool {
+}));
+print(values.count(fun (value: number): bool {
   return value == 2 || value == 4;
-});
+}));
 
 let snapshot: [number] = [1, 2];
-print snapshot.count(fun (value) {
+print(snapshot.count(fun (value) {
   push(snapshot, 9);
   return true;
-});
-print snapshot;
-print [].count(fun (value: number): bool { return true; });
+}));
+print(snapshot);
+print([].count(fun (value: number): bool { return true; }));

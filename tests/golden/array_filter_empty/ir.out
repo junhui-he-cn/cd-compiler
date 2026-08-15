@@ -4,7 +4,7 @@ IR
 0002  v2 = native_call @0 filter(v0, v1)
 0003  store_var @1 empty#1, v2
 0004  v3 = load_var @2 empty#1
-0005  print v3
+0005  v4 = native_call @3 print(v3)
 
 function $0 <lambda>(value#0)
 0000  v0 = constant #0 false

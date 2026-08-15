@@ -4,5 +4,5 @@ enum Mixed {
 }
 let value = Mixed.Number(1);
 match value {
-  Mixed.Number(value) | Mixed.Text(value) => { print "value"; }
+  Mixed.Number(value) | Mixed.Text(value) => { print("value"); }
 }

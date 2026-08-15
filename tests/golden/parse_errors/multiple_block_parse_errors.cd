@@ -1,5 +1,5 @@
 fun bad() {
-  print ;
+  let ;
   let x = ;
   return 1;
 }

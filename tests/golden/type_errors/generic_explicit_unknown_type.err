@@ -1,3 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/generic_explicit_unknown_type.cd:2:16: unknown type `Missing`
-  print identity<Missing>(1);
+  print(identity<Missing>(1));
                  ^

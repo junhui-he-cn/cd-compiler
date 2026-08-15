@@ -2,4 +2,4 @@ struct Counter { value: number }
 impl Counter { fun inc() { this.value = this.value + 1; return nil; } }
 let c: Counter = Counter { value: 1 };
 c.inc();
-print c.value;
+print(c.value);

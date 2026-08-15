@@ -69,8 +69,8 @@ class CliMultiSourceTests(unittest.TestCase):
             root = Path(temp_dir)
             first = root / "first.cd"
             second = root / "second.cd"
-            first.write_text("print 1;\n", encoding="utf-8")
-            second.write_text("print 2;\n", encoding="utf-8")
+            first.write_text("print(1);\n", encoding="utf-8")
+            second.write_text("print(2);\n", encoding="utf-8")
 
             completed = self.emit_and_run_vm(root, first, second)
 
@@ -84,7 +84,7 @@ class CliMultiSourceTests(unittest.TestCase):
             lib = root / "lib.cd"
             main = root / "main.cd"
             lib.write_text("fun add(a, b) { return a + b; }\nexport add;\n", encoding="utf-8")
-            main.write_text('import "./lib.cd";\nprint add(1, 2);\n', encoding="utf-8")
+            main.write_text('import "./lib.cd";\nprint(add(1, 2));\n', encoding="utf-8")
 
             completed = self.emit_and_run_vm(root, lib, main)
 
@@ -98,7 +98,7 @@ class CliMultiSourceTests(unittest.TestCase):
             first = root / "first.cd"
             second = root / "second.cd"
             first.write_text("let value =\n", encoding="utf-8")
-            second.write_text("41;\nprint value;\n", encoding="utf-8")
+            second.write_text("41;\nprint(value);\n", encoding="utf-8")
 
             completed = self.run_compiler(str(first), str(second))
 
@@ -127,7 +127,7 @@ class CliMultiSourceTests(unittest.TestCase):
             main = root / "main.cd"
             artifact = root / "program.cdbc"
             lib.write_text("fun add(a, b) { return a + b; }\nexport add;\n", encoding="utf-8")
-            main.write_text('import "./lib.cd";\nprint add(2, 3);\n', encoding="utf-8")
+            main.write_text('import "./lib.cd";\nprint(add(2, 3));\n', encoding="utf-8")
 
             completed = self.run_compiler("--emit-bytecode", str(artifact), str(lib), str(main))
 
@@ -142,7 +142,7 @@ class CliMultiSourceTests(unittest.TestCase):
             root = Path(temp_dir)
             existing = root / "existing.cd"
             missing = root / "missing.cd"
-            existing.write_text("print 1;\n", encoding="utf-8")
+            existing.write_text("print(1);\n", encoding="utf-8")
 
             artifact = root / "program.cdbc"
             completed = self.run_compiler("--emit-bytecode", str(artifact), str(existing), str(missing))
@@ -159,7 +159,7 @@ class CliMultiSourceTests(unittest.TestCase):
             second = root / "second.cd"
             missing = root / "missing.cd"
             first.write_text('import "./missing.cd";\n', encoding="utf-8")
-            second.write_text("print @;\n", encoding="utf-8")
+            second.write_text("print(@);\n", encoding="utf-8")
 
             completed = self.run_compiler(str(first), str(second))
 
@@ -171,7 +171,7 @@ class CliMultiSourceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             source = root / "input.cd"
-            source.write_text('import "./missing.cd";\nprint @;\n', encoding="utf-8")
+            source.write_text('import "./missing.cd";\nprint(@);\n', encoding="utf-8")
 
             completed = self.run_compiler(str(source))
 
@@ -180,7 +180,7 @@ class CliMultiSourceTests(unittest.TestCase):
             self.assertEqual(
                 completed.stderr,
                 f"Lex error at {source}:2:7: unexpected character `@`\n"
-                "  print @;\n"
+                "  print(@);\n"
                 "        ^\n",
             )
 
@@ -188,7 +188,7 @@ class CliMultiSourceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             source = root / "input.cd"
-            source.write_text('print @;\nimport "./missing.cd";\n', encoding="utf-8")
+            source.write_text('print(@);\nimport "./missing.cd";\n', encoding="utf-8")
 
             completed = self.run_compiler(str(source))
 
@@ -197,7 +197,7 @@ class CliMultiSourceTests(unittest.TestCase):
             self.assertEqual(
                 completed.stderr,
                 f"Lex error at {source}:1:7: unexpected character `@`\n"
-                "  print @;\n"
+                "  print(@);\n"
                 "        ^\n",
             )
 
@@ -221,7 +221,7 @@ class CliMultiSourceTests(unittest.TestCase):
     def test_no_input_files_are_rejected(self) -> None:
         completed = subprocess.run(
             [str(self.compiler)],
-            input="print 7;\n",
+            input="print(7);\n",
             text=True,
             capture_output=True,
             check=False,
@@ -254,7 +254,7 @@ class CliMultiSourceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             (root / "lib.cd").write_text('let value = "direct";\nexport value;\n', encoding="utf-8")
-            (root / "main.cd").write_text('print value;\n', encoding="utf-8")
+            (root / "main.cd").write_text('print(value);\n', encoding="utf-8")
 
             completed = self.run_compiler(str(root / "lib.cd"), str(root / "main.cd"))
 
@@ -270,7 +270,7 @@ class CliMultiSourceTests(unittest.TestCase):
             root = Path(temp_dir)
             nested = root / "nested"
             nested.mkdir()
-            (root / "input.cd").write_text('import "./nested/lib.cd";\nprint getValue();\n', encoding="utf-8")
+            (root / "input.cd").write_text('import "./nested/lib.cd";\nprint(getValue());\n', encoding="utf-8")
             (nested / "lib.cd").write_text(
                 'import "./inner.cd";\n'
                 'fun getValue() { return value; }\n'
@@ -293,7 +293,7 @@ class CliMultiSourceTests(unittest.TestCase):
             (root / "input.cd").write_text(
                 'import "./shared.cd";\n'
                 'import "./nested/../shared.cd";\n'
-                'print value;\n',
+                'print(value);\n',
                 encoding="utf-8",
             )
 
@@ -307,7 +307,7 @@ class CliMultiSourceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             lib = root / "lib.cd"
-            (root / "input.cd").write_text('import "./lib.cd";\nprint 1;\n', encoding="utf-8")
+            (root / "input.cd").write_text('import "./lib.cd";\nprint(1);\n', encoding="utf-8")
             lib.write_text('let value = ;\nexport value;\n', encoding="utf-8")
 
             completed = self.run_compiler(str(root / "input.cd"))
@@ -325,8 +325,8 @@ class CliMultiSourceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             lib = root / "lib.cd"
-            (root / "input.cd").write_text('import "./lib.cd";\nprint 1;\n', encoding="utf-8")
-            lib.write_text("print @;\n", encoding="utf-8")
+            (root / "input.cd").write_text('import "./lib.cd";\nprint(1);\n', encoding="utf-8")
+            lib.write_text("print(@);\n", encoding="utf-8")
 
             completed = self.run_compiler(str(root / "input.cd"))
 
@@ -335,7 +335,7 @@ class CliMultiSourceTests(unittest.TestCase):
             self.assertEqual(
                 completed.stderr,
                 f"Lex error at {lib}:1:7: unexpected character `@`\n"
-                "  print @;\n"
+                "  print(@);\n"
                 "        ^\n",
             )
 
@@ -343,7 +343,7 @@ class CliMultiSourceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             lib = root / "lib.cd"
-            (root / "input.cd").write_text('import "./lib.cd";\nprint value;\n', encoding="utf-8")
+            (root / "input.cd").write_text('import "./lib.cd";\nprint(value);\n', encoding="utf-8")
             lib.write_text('let value = missing;\nexport value;\n', encoding="utf-8")
 
             completed = self.run_compiler(str(root / "input.cd"))
@@ -363,7 +363,7 @@ class CliMultiSourceTests(unittest.TestCase):
             first = root / "first.cd"
             second = root / "second.cd"
             first.write_text('let ok = 1;\n', encoding="utf-8")
-            second.write_text('print ;\n', encoding="utf-8")
+            second.write_text('let ;\n', encoding="utf-8")
 
             completed = self.run_compiler(str(first), str(second))
 
@@ -371,9 +371,9 @@ class CliMultiSourceTests(unittest.TestCase):
             self.assertEqual(completed.stdout, "")
             self.assertEqual(
                 completed.stderr,
-                f"Parse error at {second}:1:7: expected expression\n"
-                "  print ;\n"
-                "        ^\n",
+                f"Parse error at {second}:1:5: expected variable name after `let`, found Semicolon `;`\n"
+                "  let ;\n"
+                "      ^\n",
             )
 
     def test_direct_multi_file_type_error_reports_own_file_path(self) -> None:
@@ -382,7 +382,7 @@ class CliMultiSourceTests(unittest.TestCase):
             first = root / "first.cd"
             second = root / "second.cd"
             first.write_text('let ok = 1;\n', encoding="utf-8")
-            second.write_text('print missing;\n', encoding="utf-8")
+            second.write_text('print(missing);\n', encoding="utf-8")
 
             completed = self.run_compiler(str(first), str(second))
 
@@ -391,7 +391,7 @@ class CliMultiSourceTests(unittest.TestCase):
             self.assertEqual(
                 completed.stderr,
                 f"Type error at {second}:1:7: undefined variable `missing`\n"
-                "  print missing;\n"
+                "  print(missing);\n"
                 "        ^\n",
             )
 
@@ -400,7 +400,7 @@ class CliMultiSourceTests(unittest.TestCase):
             root = Path(temp_dir)
             (root / "input.cd").write_text(
                 '// import "./missing_from_comment.cd";\n'
-                'print "import ./missing_from_string.cd;";\n',
+                'print("import ./missing_from_string.cd;");\n',
                 encoding="utf-8",
             )
 
@@ -417,7 +417,7 @@ class CliMultiSourceTests(unittest.TestCase):
             stdlib = root / "stdlib"
             app.mkdir()
             stdlib.mkdir()
-            (app / "input.cd").write_text('import "math";\nprint value;\n', encoding="utf-8")
+            (app / "input.cd").write_text('import "math";\nprint(value);\n', encoding="utf-8")
             (stdlib / "math.cd").write_text('let value = "short";\nexport value;\n', encoding="utf-8")
 
             completed = self.emit_and_run_vm_with_compiler_args(root, ("-I", str(stdlib)), app / "input.cd")
@@ -433,7 +433,7 @@ class CliMultiSourceTests(unittest.TestCase):
             stdlib = root / "stdlib"
             (stdlib / "pkg").mkdir(parents=True)
             app.mkdir()
-            (app / "input.cd").write_text('import "pkg/math";\nprint value;\n', encoding="utf-8")
+            (app / "input.cd").write_text('import "pkg/math";\nprint(value);\n', encoding="utf-8")
             (stdlib / "pkg" / "math.cd").write_text('let value = "subdir";\nexport value;\n', encoding="utf-8")
 
             completed = self.emit_and_run_vm_with_compiler_args(
@@ -455,7 +455,7 @@ class CliMultiSourceTests(unittest.TestCase):
             app.mkdir()
             first.mkdir()
             second.mkdir()
-            (app / "input.cd").write_text('import "lib";\nprint value;\n', encoding="utf-8")
+            (app / "input.cd").write_text('import "lib";\nprint(value);\n', encoding="utf-8")
             (first / "lib.cd").write_text('let value = "first";\nexport value;\n', encoding="utf-8")
             (second / "lib.cd").write_text('let value = "second";\nexport value;\n', encoding="utf-8")
 
@@ -476,7 +476,7 @@ class CliMultiSourceTests(unittest.TestCase):
             stdlib = root / "stdlib"
             app.mkdir()
             stdlib.mkdir()
-            (app / "input.cd").write_text('import "lib";\nprint value;\n', encoding="utf-8")
+            (app / "input.cd").write_text('import "lib";\nprint(value);\n', encoding="utf-8")
             (app / "lib.cd").write_text('let value = "local";\nexport value;\n', encoding="utf-8")
             (stdlib / "lib.cd").write_text('let value = "search";\nexport value;\n', encoding="utf-8")
 
@@ -493,7 +493,7 @@ class CliMultiSourceTests(unittest.TestCase):
             stdlib = root / "stdlib"
             app.mkdir()
             stdlib.mkdir()
-            (app / "input.cd").write_text('import "./missing";\nprint value;\n', encoding="utf-8")
+            (app / "input.cd").write_text('import "./missing";\nprint(value);\n', encoding="utf-8")
             (stdlib / "missing.cd").write_text('let value = "search";\nexport value;\n', encoding="utf-8")
 
             completed = self.run_compiler("-I", str(stdlib), str(app / "input.cd"))
@@ -555,7 +555,7 @@ class CliMultiSourceTests(unittest.TestCase):
             root = Path(temp_dir)
             first = root / "first.cd"
             second = root / "second.cd"
-            first.write_text("print ;\n", encoding="utf-8")
+            first.write_text("let ;\n", encoding="utf-8")
             second.write_text("let x = ;\n", encoding="utf-8")
 
             completed = self.run_compiler(str(first), str(second))
@@ -564,9 +564,9 @@ class CliMultiSourceTests(unittest.TestCase):
             self.assertEqual(completed.stdout, "")
             self.assertEqual(
                 completed.stderr,
-                f"Parse error at {first}:1:7: expected expression\n"
-                "  print ;\n"
-                "        ^\n"
+                f"Parse error at {first}:1:5: expected variable name after `let`, found Semicolon `;`\n"
+                "  let ;\n"
+                "      ^\n"
                 f"Parse error at {second}:1:9: expected expression\n"
                 "  let x = ;\n"
                 "          ^\n",
@@ -577,8 +577,8 @@ class CliMultiSourceTests(unittest.TestCase):
             root = Path(temp_dir)
             input_file = root / "input.cd"
             lib = root / "lib.cd"
-            input_file.write_text('import "./lib.cd";\nprint 1;\n', encoding="utf-8")
-            lib.write_text("print ;\nlet x = ;\n", encoding="utf-8")
+            input_file.write_text('import "./lib.cd";\nprint(1);\n', encoding="utf-8")
+            lib.write_text("let ;\nlet x = ;\n", encoding="utf-8")
 
             completed = self.run_compiler(str(input_file))
 
@@ -586,9 +586,9 @@ class CliMultiSourceTests(unittest.TestCase):
             self.assertEqual(completed.stdout, "")
             self.assertEqual(
                 completed.stderr,
-                f"Parse error at {lib}:1:7: expected expression\n"
-                "  print ;\n"
-                "        ^\n"
+                f"Parse error at {lib}:1:5: expected variable name after `let`, found Semicolon `;`\n"
+                "  let ;\n"
+                "      ^\n"
                 f"Parse error at {lib}:2:9: expected expression\n"
                 "  let x = ;\n"
                 "          ^\n",

@@ -20,9 +20,13 @@ names:
   n4 = "head#4"
   n5 = "maybe#5"
   n6 = "identity#2"
-  n7 = "identity#2"
-  n8 = "head#4"
-  n9 = "maybe#5"
+  n7 = "print"
+  n8 = "identity#2"
+  n9 = "print"
+  n10 = "head#4"
+  n11 = "print"
+  n12 = "maybe#5"
+  n13 = "print"
 
 globals:
   g0 = n2
@@ -32,7 +36,7 @@ globals:
 native_imports:
   i0 = "print" abi=1
 
-main registers=18:
+main registers=21:
 block b0:
   r0 = make_function f0
   r1 = make_function f1
@@ -44,20 +48,20 @@ block b0:
   r4 = load_global g0
   r5 = constant c6
   r6 = call r4 [r5]
-  r17 = call_native i0 [r6]
-  r7 = load_global g0
-  r8 = constant c7
-  r9 = call r7 [r8]
-  r17 = call_native i0 [r9]
-  r10 = load_global g1
-  r11 = constant c8
-  r12 = constant c9
-  r13 = array [r11, r12]
-  r14 = call r10 [r13]
-  r17 = call_native i0 [r14]
-  r15 = load_global g2
-  r16 = call r15 []
+  r7 = call_native i0 [r6]
+  r8 = load_global g0
+  r9 = constant c7
+  r10 = call r8 [r9]
+  r11 = call_native i0 [r10]
+  r12 = load_global g1
+  r13 = constant c8
+  r14 = constant c9
+  r15 = array [r13, r14]
+  r16 = call r12 [r15]
   r17 = call_native i0 [r16]
+  r18 = load_global g2
+  r19 = call r18 []
+  r20 = call_native i0 [r19]
   return_nil
 
 function f0 name="<lambda>" arity=1 registers=2:
@@ -106,7 +110,7 @@ block b2:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/generic_lambdas/input.cd" text="fun<T>(value: T): T { return value; };\n\nlet identity = fun<T>(value: T): T {\n  return value;\n};\nlet head = fun<T>(values: [T]): T {\n  return values[0];\n};\nlet maybe = fun<T>(): optional<T> {\n  return nil;\n};\n\nprint identity<number>(41);\nprint identity(\"generic\");\nprint head([7, 8]);\nprint maybe<string>();\n"
+  s0 path="tests/bytecode_artifacts/generic_lambdas/input.cd" text="fun<T>(value: T): T { return value; };\n\nlet identity = fun<T>(value: T): T {\n  return value;\n};\nlet head = fun<T>(values: [T]): T {\n  return values[0];\n};\nlet maybe = fun<T>(): optional<T> {\n  return nil;\n};\n\nprint(identity<number>(41));\nprint(identity(\"generic\"));\nprint(head([7, 8]));\nprint(maybe<string>());\n"
 
 debug_locations:
   main 0 = s0:1:1
@@ -182,21 +186,21 @@ debug_ranges:
   main 8 = s0:215:223
   main 9 = s0:232:234
   main 10 = s0:215:235
-  main 11 = s0:215:235
-  main 12 = s0:243:251
-  main 13 = s0:252:261
-  main 14 = s0:243:262
-  main 15 = s0:243:262
-  main 16 = s0:270:274
-  main 17 = s0:276:277
-  main 18 = s0:279:280
-  main 19 = s0:275:280
-  main 20 = s0:270:282
-  main 21 = s0:270:282
-  main 22 = s0:290:295
-  main 23 = s0:290:305
-  main 24 = s0:290:305
-  main 25 = s0:290:305
+  main 11 = s0:209:236
+  main 12 = s0:244:252
+  main 13 = s0:253:262
+  main 14 = s0:244:263
+  main 15 = s0:238:264
+  main 16 = s0:272:276
+  main 17 = s0:278:279
+  main 18 = s0:281:282
+  main 19 = s0:277:282
+  main 20 = s0:272:284
+  main 21 = s0:266:285
+  main 22 = s0:293:298
+  main 23 = s0:293:308
+  main 24 = s0:287:309
+  main 25 = s0:287:309
   function f0 0 = s0:29:34
   function f0 1 = s0:29:34
   function f0 2 = s0:22:34

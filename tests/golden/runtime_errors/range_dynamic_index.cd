@@ -1,3 +1,3 @@
 fun identity(value) { return value; }
 let values = identity(range(3));
-print values[3];
+print(values[3]);

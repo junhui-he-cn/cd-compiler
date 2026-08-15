@@ -1,2 +1,2 @@
 struct Person { name: string }
-print Person { name: { value: "Ada" } };
+print(Person { name: { value: "Ada" } });

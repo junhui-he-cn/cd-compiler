@@ -4,24 +4,24 @@ IR
 0002  v1 = load_var @1 ok#0
 0003  jump_if_false v1, 0007
 0004  v2 = constant #1 "then"
-0005  print v2
+0005  v3 = native_call @2 print(v2)
 0006  jump 0009
-0007  v3 = constant #2 "else"
-0008  print v3
-0009  v4 = constant #3 false
-0010  jump_if_false v4, 0014
-0011  v5 = constant #4 "bad"
-0012  print v5
+0007  v4 = constant #2 "else"
+0008  v5 = native_call @3 print(v4)
+0009  v6 = constant #3 false
+0010  jump_if_false v6, 0014
+0011  v7 = constant #4 "bad"
+0012  v8 = native_call @4 print(v7)
 0013  jump 0016
-0014  v6 = constant #5 "fallback"
-0015  print v6
-0016  v7 = constant #6 true
-0017  jump_if_false v7, 0020
-0018  v8 = constant #7 "no else"
-0019  print v8
-0020  v9 = constant #8 false
-0021  jump_if_false v9, 0024
-0022  v10 = constant #9 "bad no else"
-0023  print v10
-0024  v11 = constant #10 "after no else"
-0025  print v11
+0014  v9 = constant #5 "fallback"
+0015  v10 = native_call @5 print(v9)
+0016  v11 = constant #6 true
+0017  jump_if_false v11, 0020
+0018  v12 = constant #7 "no else"
+0019  v13 = native_call @6 print(v12)
+0020  v14 = constant #8 false
+0021  jump_if_false v14, 0024
+0022  v15 = constant #9 "bad no else"
+0023  v16 = native_call @7 print(v15)
+0024  v17 = constant #10 "after no else"
+0025  v18 = native_call @8 print(v17)

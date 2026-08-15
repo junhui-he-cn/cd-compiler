@@ -21,11 +21,11 @@ IR
 0019  v14 = native_call @16 map(v12, v13)
 0020  store_var @17 text#8, v14
 0021  v15 = load_var @18 doubled#3
-0022  print v15
-0023  v16 = load_var @19 shifted#6
-0024  print v16
-0025  v17 = load_var @20 text#8
-0026  print v17
+0022  v16 = native_call @19 print(v15)
+0023  v17 = load_var @20 shifted#6
+0024  v18 = native_call @21 print(v17)
+0025  v19 = load_var @22 text#8
+0026  v20 = native_call @23 print(v19)
 
 function $0 <lambda>(value#1)
 0000  v0 = load_var @1 value#1

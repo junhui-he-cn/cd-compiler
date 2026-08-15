@@ -1,9 +1,9 @@
 let mut x = false;
 true || (x = true);
-print x;
+print(x);
 false && (x = true);
-print x;
+print(x);
 false || (x = true);
-print x;
+print(x);
 true && (x = true);
-print x;
+print(x);

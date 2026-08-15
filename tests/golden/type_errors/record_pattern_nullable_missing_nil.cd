@@ -1,5 +1,5 @@
 struct Person { name: string }
 let person: optional<Person> = nil;
 match person {
-  Person { name: _ } => { print "person"; }
+  Person { name: _ } => { print("person"); }
 }

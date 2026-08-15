@@ -2,5 +2,5 @@ let find = fun (array, predicate) {
   return "shadowed find";
 };
 
-print find([1], fun (value) { return true; });
-print [1, 2].find(fun (value) { return value == 2; });
+print(find([1], fun (value) { return true; }));
+print([1, 2].find(fun (value) { return value == 2; }));

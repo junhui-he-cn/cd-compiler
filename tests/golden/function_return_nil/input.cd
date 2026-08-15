@@ -1,4 +1,4 @@
 fun noop() {
-  print "hi";
+  print("hi");
 }
-print noop();
+print(noop());

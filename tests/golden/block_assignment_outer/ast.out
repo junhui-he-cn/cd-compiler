@@ -2,4 +2,4 @@ Program
   Let mut x = 1
   Block
     Expr (= x 2)
-  Print x
+  Expr (call print x)

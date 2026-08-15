@@ -1,3 +1,3 @@
 struct Person { name: string, age: number }
 let p: Person = Person { name: "Ada", age: 36 };
-print p.title;
+print(p.title);

@@ -36,9 +36,13 @@ names:
   n16 = "filter"
   n17 = "kept#8"
   n18 = "selected#3"
-  n19 = "evens#5"
-  n20 = "kept#8"
-  n21 = "snapshot#6"
+  n19 = "print"
+  n20 = "evens#5"
+  n21 = "print"
+  n22 = "kept#8"
+  n23 = "print"
+  n24 = "snapshot#6"
+  n25 = "print"
 
 globals:
   g0 = n0
@@ -53,7 +57,7 @@ native_imports:
   i1 = "print" abi=1
   i2 = "push" abi=1
 
-main registers=23:
+main registers=26:
 block b0:
   r0 = constant c0
   r1 = constant c1
@@ -80,13 +84,13 @@ block b0:
   r17 = call_native i0 [r15, r16]
   init_global g5, r17
   r18 = load_global g2
-  r22 = call_native i1 [r18]
-  r19 = load_global g3
-  r22 = call_native i1 [r19]
-  r20 = load_global g5
-  r22 = call_native i1 [r20]
-  r21 = load_global g4
-  r22 = call_native i1 [r21]
+  r19 = call_native i1 [r18]
+  r20 = load_global g3
+  r21 = call_native i1 [r20]
+  r22 = load_global g5
+  r23 = call_native i1 [r22]
+  r24 = load_global g4
+  r25 = call_native i1 [r24]
   return_nil
 
 function f0 name="<lambda>" arity=1 registers=4:
@@ -141,7 +145,7 @@ block b2:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/array_filter/input.cd" text="let values: [number] = [1, 2, 3, 4];\nlet threshold: number = 2;\nlet selected: [number] = filter(values, fun (value) {\n  return value > threshold;\n});\nlet evens: [number] = values.filter(fun (value: number): bool {\n  return value == 2 || value == 4;\n});\nlet snapshot: [number] = [1, 2];\nlet kept: [number] = snapshot.filter(fun (value) {\n  push(snapshot, 9);\n  return true;\n});\n\nprint selected;\nprint evens;\nprint kept;\nprint snapshot;\n"
+  s0 path="tests/bytecode_artifacts/array_filter/input.cd" text="let values: [number] = [1, 2, 3, 4];\nlet threshold: number = 2;\nlet selected: [number] = filter(values, fun (value) {\n  return value > threshold;\n});\nlet evens: [number] = values.filter(fun (value: number): bool {\n  return value == 2 || value == 4;\n});\nlet snapshot: [number] = [1, 2];\nlet kept: [number] = snapshot.filter(fun (value) {\n  push(snapshot, 9);\n  return true;\n});\n\nprint(selected);\nprint(evens);\nprint(kept);\nprint(snapshot);\n"
 
 debug_locations:
   main 0 = s0:1:25
@@ -246,14 +250,14 @@ debug_ranges:
   main 23 = s0:307:375
   main 24 = s0:290:375
   main 25 = s0:384:392
-  main 26 = s0:384:392
-  main 27 = s0:400:405
-  main 28 = s0:400:405
-  main 29 = s0:413:417
-  main 30 = s0:413:417
-  main 31 = s0:425:433
-  main 32 = s0:425:433
-  main 33 = s0:425:433
+  main 26 = s0:378:393
+  main 27 = s0:401:406
+  main 28 = s0:395:407
+  main 29 = s0:415:419
+  main 30 = s0:409:420
+  main 31 = s0:428:436
+  main 32 = s0:422:437
+  main 33 = s0:422:437
   function f0 0 = s0:127:132
   function f0 1 = s0:127:132
   function f0 2 = s0:135:144

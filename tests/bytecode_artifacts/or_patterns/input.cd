@@ -20,15 +20,15 @@ fun shapeLabel(value: Shape): string {
 }
 
 let maybe: optional<bool> = false;
-print numberLabel(1);
-print numberLabel(8);
-print shapeLabel(Shape.Point(3));
-print shapeLabel(Shape.Line(4, 10));
-print shapeLabel(Shape.Empty());
+print(numberLabel(1));
+print(numberLabel(8));
+print(shapeLabel(Shape.Point(3)));
+print(shapeLabel(Shape.Line(4, 10)));
+print(shapeLabel(Shape.Empty()));
 match maybe {
-  nil | false => { print "off"; }
-  true => { print "on"; }
+  nil | false => { print("off"); }
+  true => { print("on"); }
 }
 match true {
-  true | false => { print "bool"; }
+  true | false => { print("bool"); }
 }

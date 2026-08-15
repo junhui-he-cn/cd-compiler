@@ -3,12 +3,12 @@ let f = fun (x) {
     return x;
   }
   if x {
-    print x;
+    print(x);
   } else {
-    print 0;
+    print(0);
   }
   while false {
-    print 1;
+    print(1);
   }
   {
     let y = x;

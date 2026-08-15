@@ -14,36 +14,36 @@ IR
 0012  v6 = constant #15 7
 0013  v7 = variant Result.Ok (v6)
 0014  v8 = call_direct $0 describe/1(v7)
-0015  print v8
-0016  v9 = constant #16 "bad"
-0017  v10 = variant Result.Err (v9)
-0018  v11 = call_direct $0 describe/1(v10)
-0019  print v11
-0020  v12 = variant Result.Empty ()
-0021  v13 = call_direct $0 describe/1(v12)
-0022  print v13
-0023  v14 = constant #17 1
-0024  v15 = constant #18 2
-0025  v16 = variant List.Nil ()
-0026  v17 = variant List.Cons (v15, v16)
-0027  v18 = variant List.Cons (v14, v17)
-0028  v19 = call_direct $1 sum/1(v18)
-0029  print v19
-0030  v20 = constant #19 7
-0031  v21 = variant Result.Ok (v20)
-0032  print v21
-0033  v22 = variant Result.Empty ()
-0034  v23 = native_call @74 typeOf(v22)
-0035  print v23
-0036  v24 = constant #20 7
-0037  v25 = variant Result.Ok (v24)
-0038  v26 = constant #21 7
-0039  v27 = variant Result.Ok (v26)
-0040  v28 = equal v25, v27
-0041  print v28
-0042  v29 = variant Result.Empty ()
-0043  v30 = call_direct $2 coarse/1(v29)
-0044  print v30
+0015  v9 = native_call @60 print(v8)
+0016  v10 = constant #16 "bad"
+0017  v11 = variant Result.Err (v10)
+0018  v12 = call_direct $0 describe/1(v11)
+0019  v13 = native_call @63 print(v12)
+0020  v14 = variant Result.Empty ()
+0021  v15 = call_direct $0 describe/1(v14)
+0022  v16 = native_call @66 print(v15)
+0023  v17 = constant #17 1
+0024  v18 = constant #18 2
+0025  v19 = variant List.Nil ()
+0026  v20 = variant List.Cons (v18, v19)
+0027  v21 = variant List.Cons (v17, v20)
+0028  v22 = call_direct $1 sum/1(v21)
+0029  v23 = native_call @73 print(v22)
+0030  v24 = constant #19 7
+0031  v25 = variant Result.Ok (v24)
+0032  v26 = native_call @76 print(v25)
+0033  v27 = variant Result.Empty ()
+0034  v28 = native_call @79 typeOf(v27)
+0035  v29 = native_call @80 print(v28)
+0036  v30 = constant #20 7
+0037  v31 = variant Result.Ok (v30)
+0038  v32 = constant #21 7
+0039  v33 = variant Result.Ok (v32)
+0040  v34 = equal v31, v33
+0041  v35 = native_call @85 print(v34)
+0042  v36 = variant Result.Empty ()
+0043  v37 = call_direct $2 coarse/1(v36)
+0044  v38 = native_call @88 print(v37)
 
 function $0 describe(result#1)
 0000  v0 = load_var @1 result#1

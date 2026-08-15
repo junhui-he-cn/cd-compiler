@@ -12,5 +12,5 @@ fun makePair() {
   return addTen;
 }
 let f = makePair();
-print f();
-print f();
+print(f());
+print(f());

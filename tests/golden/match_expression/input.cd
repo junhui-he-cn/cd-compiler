@@ -36,12 +36,12 @@ fun guarded(value: number): string {
   };
 }
 
-print describe(Result.Ok(7));
-print describe(Result.Err("bad"));
-print score(Result.Ok(4));
-print score(Result.Err("x"));
-print nested(Result.Ok(3));
-print nested(Result.Err("x"));
-print guarded(5);
-print guarded(-2);
-print guarded(0);
+print(describe(Result.Ok(7)));
+print(describe(Result.Err("bad")));
+print(score(Result.Ok(4)));
+print(score(Result.Err("x")));
+print(nested(Result.Ok(3)));
+print(nested(Result.Err("x")));
+print(guarded(5));
+print(guarded(-2));
+print(guarded(0));

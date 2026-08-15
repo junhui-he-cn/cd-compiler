@@ -16,27 +16,27 @@ IR
 0014  v11 = iter_next v8
 0015  assign_var @3 key#1, v11
 0016  v12 = load_var @4 key#1
-0017  print v12
-0018  v13 = load_var @5 values#0
-0019  v14 = load_var @6 key#1
-0020  v15 = native_call @7 remove(v13, v14)
+0017  v13 = native_call @5 print(v12)
+0018  v14 = load_var @6 values#0
+0019  v15 = load_var @7 key#1
+0020  v16 = native_call @8 remove(v14, v15)
 0021  jump 0012
-0022  v16 = load_var @8 values#0
-0023  print v16
-0024  v17 = constant #7 1
-0025  v18 = constant #8 "one"
-0026  v19 = constant #9 2
-0027  v20 = constant #10 "two"
-0028  v21 = map [v17: v18, v19: v20]
-0029  store_var @9 numbers#2, v21
-0030  v22 = load_var @10 numbers#2
-0031  v23 = iter_init v22
-0032  v24 = constant #11 nil
-0033  store_var @11 key#3, v24
-0034  v25 = iter_has v23
-0035  jump_if_false v25, 0041
-0036  v26 = iter_next v23
-0037  assign_var @12 key#3, v26
-0038  v27 = load_var @13 key#3
-0039  print v27
+0022  v17 = load_var @9 values#0
+0023  v18 = native_call @10 print(v17)
+0024  v19 = constant #7 1
+0025  v20 = constant #8 "one"
+0026  v21 = constant #9 2
+0027  v22 = constant #10 "two"
+0028  v23 = map [v19: v20, v21: v22]
+0029  store_var @11 numbers#2, v23
+0030  v24 = load_var @12 numbers#2
+0031  v25 = iter_init v24
+0032  v26 = constant #11 nil
+0033  store_var @13 key#3, v26
+0034  v27 = iter_has v25
+0035  jump_if_false v27, 0041
+0036  v28 = iter_next v25
+0037  assign_var @14 key#3, v28
+0038  v29 = load_var @15 key#3
+0039  v30 = native_call @16 print(v29)
 0040  jump 0034

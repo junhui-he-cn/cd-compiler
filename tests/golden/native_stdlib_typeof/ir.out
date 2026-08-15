@@ -1,33 +1,33 @@
 IR
 0000  v0 = constant #0 nil
 0001  v1 = native_call @0 typeOf(v0)
-0002  print v1
-0003  v2 = constant #1 1
-0004  v3 = native_call @1 typeOf(v2)
-0005  print v3
-0006  v4 = constant #2 true
-0007  v5 = native_call @2 typeOf(v4)
-0008  print v5
-0009  v6 = constant #3 "x"
-0010  v7 = native_call @3 typeOf(v6)
-0011  print v7
-0012  v8 = make_function $0 <lambda>/0
-0013  v9 = native_call @4 typeOf(v8)
-0014  print v9
-0015  v10 = constant #6 1
-0016  v11 = array [v10]
-0017  v12 = native_call @5 typeOf(v11)
-0018  print v12
-0019  v13 = constant #7 1
-0020  v14 = struct Box {value: v13}
-0021  v15 = native_call @8 typeOf(v14)
-0022  print v15
-0023  v16 = make_function $1 <lambda>/1
-0024  store_var @9 typeOf#1, v16
-0025  v17 = load_var @10 typeOf#1
-0026  v18 = constant #10 123
-0027  v19 = call v17(v18)
-0028  print v19
+0002  v2 = native_call @1 print(v1)
+0003  v3 = constant #1 1
+0004  v4 = native_call @2 typeOf(v3)
+0005  v5 = native_call @3 print(v4)
+0006  v6 = constant #2 true
+0007  v7 = native_call @4 typeOf(v6)
+0008  v8 = native_call @5 print(v7)
+0009  v9 = constant #3 "x"
+0010  v10 = native_call @6 typeOf(v9)
+0011  v11 = native_call @7 print(v10)
+0012  v12 = make_function $0 <lambda>/0
+0013  v13 = native_call @8 typeOf(v12)
+0014  v14 = native_call @9 print(v13)
+0015  v15 = constant #6 1
+0016  v16 = array [v15]
+0017  v17 = native_call @10 typeOf(v16)
+0018  v18 = native_call @11 print(v17)
+0019  v19 = constant #7 1
+0020  v20 = struct Box {value: v19}
+0021  v21 = native_call @14 typeOf(v20)
+0022  v22 = native_call @15 print(v21)
+0023  v23 = make_function $1 <lambda>/1
+0024  store_var @16 typeOf#1, v23
+0025  v24 = load_var @17 typeOf#1
+0026  v25 = constant #10 123
+0027  v26 = call v24(v25)
+0028  v27 = native_call @18 print(v26)
 
 function $0 <lambda>()
 0000  v0 = constant #4 nil

@@ -19,12 +19,15 @@ names:
   n8 = "number#1"
   n9 = "number#1"
   n10 = "number#1"
-  n11 = "Option"
-  n12 = "Some"
-  n13 = "Option"
-  n14 = "Some"
-  n15 = "Option"
-  n16 = "None"
+  n11 = "print"
+  n12 = "Option"
+  n13 = "Some"
+  n14 = "Option"
+  n15 = "Some"
+  n16 = "print"
+  n17 = "Option"
+  n18 = "None"
+  n19 = "print"
 
 globals:
   g0 = n2
@@ -36,7 +39,7 @@ types:
 native_imports:
   i0 = "print" abi=1
 
-main registers=16:
+main registers=18:
 block b0:
   r0 = constant c0
   r1 = make_variant t0, v0 [r0]
@@ -54,28 +57,28 @@ block b1:
   br_if r8, b2, b3
 block b2:
   r9 = load_global g1
-  r15 = call_native i0 [r9]
+  r10 = call_native i0 [r9]
   return_nil
 block b3:
-  r10 = is_variant r2, t0, v0
-  br_if r10, b4, b5
+  r11 = is_variant r2, t0, v0
+  br_if r11, b4, b5
 block b4:
-  r11 = variant_get r2, t0, v0, 0
-  r12 = constant c3
-  r15 = call_native i0 [r12]
+  r12 = variant_get r2, t0, v0, 0
+  r13 = constant c3
+  r14 = call_native i0 [r13]
   return_nil
 block b5:
-  r13 = is_variant r2, t0, v1
-  br_if r13, b6, b7
+  r15 = is_variant r2, t0, v1
+  br_if r15, b6, b7
 block b6:
-  r14 = constant c4
-  r15 = call_native i0 [r14]
+  r16 = constant c4
+  r17 = call_native i0 [r16]
   return_nil
 block b7:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/match_guards/input.cd" text="enum Option { Some(number), None }\nlet value = Option.Some(4);\nmatch value {\n  Option.Some(number) if number > 4 => { print number; }\n  Option.Some(_) => { print 0; }\n  Option.None => { print 0; }\n}\n"
+  s0 path="tests/bytecode_artifacts/match_guards/input.cd" text="enum Option { Some(number), None }\nlet value = Option.Some(4);\nmatch value {\n  Option.Some(number) if number > 4 => { print(number); }\n  Option.Some(_) => { print(0); }\n  Option.None => { print(0); }\n}\n"
 
 debug_locations:
   main 0 = s0:2:25
@@ -121,34 +124,34 @@ debug_ranges:
   main 2 = s0:47:61
   main 3 = s0:39:61
   main 4 = s0:69:74
-  main 5 = s0:63:193
-  main 6 = s0:63:193
-  main 7 = s0:63:193
-  main 8 = s0:63:193
-  main 9 = s0:63:193
-  main 10 = s0:63:193
+  main 5 = s0:63:196
+  main 6 = s0:63:196
+  main 7 = s0:63:196
+  main 8 = s0:63:196
+  main 9 = s0:63:196
+  main 10 = s0:63:196
   main 11 = s0:102:108
   main 12 = s0:111:112
   main 13 = s0:102:112
-  main 14 = s0:63:193
+  main 14 = s0:63:196
   main 15 = s0:124:130
   main 16 = s0:124:130
-  main 17 = s0:124:130
-  main 18 = s0:63:193
-  main 19 = s0:63:193
-  main 20 = s0:63:193
-  main 21 = s0:63:193
-  main 22 = s0:63:193
-  main 23 = s0:63:193
-  main 24 = s0:162:163
-  main 25 = s0:162:163
-  main 26 = s0:63:193
-  main 27 = s0:63:193
-  main 28 = s0:63:193
-  main 29 = s0:63:193
-  main 30 = s0:192:193
-  main 31 = s0:192:193
-  main 32 = s0:192:193
-  main 33 = s0:63:193
-  main 34 = s0:63:193
-  main 35 = s0:63:193
+  main 17 = s0:118:131
+  main 18 = s0:63:196
+  main 19 = s0:63:196
+  main 20 = s0:63:196
+  main 21 = s0:63:196
+  main 22 = s0:63:196
+  main 23 = s0:63:196
+  main 24 = s0:163:164
+  main 25 = s0:157:165
+  main 26 = s0:63:196
+  main 27 = s0:63:196
+  main 28 = s0:63:196
+  main 29 = s0:63:196
+  main 30 = s0:194:195
+  main 31 = s0:194:195
+  main 32 = s0:188:196
+  main 33 = s0:63:196
+  main 34 = s0:63:196
+  main 35 = s0:63:196

@@ -22,8 +22,10 @@ names:
   n11 = "rightValue#2"
   n12 = "rightValue#2"
   n13 = "leftValue#1"
-  n14 = "Pair"
-  n15 = "Empty"
+  n14 = "print"
+  n15 = "Pair"
+  n16 = "Empty"
+  n17 = "print"
 
 globals:
   g0 = n2
@@ -36,7 +38,7 @@ types:
 native_imports:
   i0 = "print" abi=1
 
-main registers=16:
+main registers=17:
 block b0:
   r0 = constant c0
   r1 = constant c1
@@ -56,20 +58,20 @@ block b1:
   r10 = mul_num r8, r9
   r11 = load_global g1
   r12 = add_num r10, r11
-  r15 = call_native i0 [r12]
+  r13 = call_native i0 [r12]
   return_nil
 block b2:
-  r13 = is_variant r3, t0, v1
-  br_if r13, b3, b4
+  r14 = is_variant r3, t0, v1
+  br_if r14, b3, b4
 block b3:
-  r14 = constant c4
-  r15 = call_native i0 [r14]
+  r15 = constant c4
+  r16 = call_native i0 [r15]
   return_nil
 block b4:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/named_payload_fields/input.cd" text="enum Pair { Values(number, number), Empty }\nlet pair = Pair.Values(2, 4);\nmatch pair {\n  Pair.Values(leftValue, rightValue) => { print rightValue * 10 + leftValue; }\n  Pair.Empty => { print 0; }\n}\n"
+  s0 path="tests/bytecode_artifacts/named_payload_fields/input.cd" text="enum Pair { Values(number, number), Empty }\nlet pair = Pair.Values(2, 4);\nmatch pair {\n  Pair.Values(leftValue, rightValue) => { print(rightValue * 10 + leftValue); }\n  Pair.Empty => { print(0); }\n}\n"
 
 debug_locations:
   main 0 = s0:2:24
@@ -110,27 +112,27 @@ debug_ranges:
   main 3 = s0:55:72
   main 4 = s0:48:72
   main 5 = s0:80:84
-  main 6 = s0:74:191
-  main 7 = s0:74:191
-  main 8 = s0:74:191
-  main 9 = s0:74:191
-  main 10 = s0:74:191
-  main 11 = s0:74:191
-  main 12 = s0:74:191
-  main 13 = s0:74:191
+  main 6 = s0:74:193
+  main 7 = s0:74:193
+  main 8 = s0:74:193
+  main 9 = s0:74:193
+  main 10 = s0:74:193
+  main 11 = s0:74:193
+  main 12 = s0:74:193
+  main 13 = s0:74:193
   main 14 = s0:135:145
   main 15 = s0:148:150
   main 16 = s0:135:150
   main 17 = s0:153:162
   main 18 = s0:135:162
-  main 19 = s0:135:162
-  main 20 = s0:74:191
-  main 21 = s0:74:191
-  main 22 = s0:74:191
-  main 23 = s0:74:191
-  main 24 = s0:190:191
-  main 25 = s0:190:191
-  main 26 = s0:190:191
-  main 27 = s0:74:191
-  main 28 = s0:74:191
-  main 29 = s0:74:191
+  main 19 = s0:129:163
+  main 20 = s0:74:193
+  main 21 = s0:74:193
+  main 22 = s0:74:193
+  main 23 = s0:74:193
+  main 24 = s0:191:192
+  main 25 = s0:191:192
+  main 26 = s0:185:193
+  main 27 = s0:74:193
+  main 28 = s0:74:193
+  main 29 = s0:74:193

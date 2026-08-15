@@ -4,5 +4,5 @@ for i in range(3) {
   push(fns, fun () { return x; });
 }
 for f in fns {
-  print f();
+  print(f());
 }

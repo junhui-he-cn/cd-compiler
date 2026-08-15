@@ -8,9 +8,9 @@ Program
   Let empty: string = (member-call (array) reduce "seed" (fun (acc: string, value): string (return acc)))
   Let initial: [number] = (array)
   Let collected: [number] = (call reduce values initial (fun (acc, value) (expr (call push acc value)) (return acc)))
-  Print total
-  Print product
-  Print snapshotTotal
-  Print snapshot
-  Print empty
-  Print collected
+  Expr (call print total)
+  Expr (call print product)
+  Expr (call print snapshotTotal)
+  Expr (call print snapshot)
+  Expr (call print empty)
+  Expr (call print collected)

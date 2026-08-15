@@ -9,24 +9,24 @@ IR
 0007  store_var @2 alias#1, v5
 0008  v6 = load_var @3 values#0
 0009  v7 = native_call @4 clear(v6)
-0010  print v7
-0011  v8 = load_var @5 alias#1
-0012  print v8
-0013  v9 = load_var @6 values#0
-0014  v10 = constant #4 "c"
-0015  v11 = constant #5 3
-0016  v12 = map_set v9, v10, v11
-0017  v13 = load_var @7 alias#1
-0018  print v13
-0019  v14 = load_var @8 alias#1
-0020  v15 = native_call @9 clear(v14)
-0021  print v15
-0022  v16 = load_var @10 values#0
-0023  v17 = len_map v16
-0024  print v17
-0025  v18 = load_var @11 values#0
-0026  v19 = constant #6 "d"
-0027  v20 = constant #7 4
-0028  v21 = map_set v18, v19, v20
-0029  v22 = load_var @12 values#0
-0030  print v22
+0010  v8 = native_call @5 print(v7)
+0011  v9 = load_var @6 alias#1
+0012  v10 = native_call @7 print(v9)
+0013  v11 = load_var @8 values#0
+0014  v12 = constant #4 "c"
+0015  v13 = constant #5 3
+0016  v14 = map_set v11, v12, v13
+0017  v15 = load_var @9 alias#1
+0018  v16 = native_call @10 print(v15)
+0019  v17 = load_var @11 alias#1
+0020  v18 = native_call @12 clear(v17)
+0021  v19 = native_call @13 print(v18)
+0022  v20 = load_var @14 values#0
+0023  v21 = len_map v20
+0024  v22 = native_call @15 print(v21)
+0025  v23 = load_var @16 values#0
+0026  v24 = constant #6 "d"
+0027  v25 = constant #7 4
+0028  v26 = map_set v23, v24, v25
+0029  v27 = load_var @17 values#0
+0030  v28 = native_call @18 print(v27)

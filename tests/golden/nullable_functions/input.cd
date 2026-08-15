@@ -12,7 +12,7 @@ fun describe(value: optional<number>): optional<string> {
   return "number";
 }
 
-print maybe(true);
-print maybe(false);
-print describe(3);
-print describe(nil);
+print(maybe(true));
+print(maybe(false));
+print(describe(3));
+print(describe(nil));

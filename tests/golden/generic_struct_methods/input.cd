@@ -24,11 +24,11 @@ impl NumberBox<T> {
 
 let box: Box<number> = Box { value: 1 };
 let numberBox: NumberBox<number> = NumberBox { value: 3 };
-print box.get();
-print box.set(2);
-print box.value;
+print(box.get());
+print(box.set(2));
+print(box.value);
 let textBox = box.wrap<string>("text");
-print textBox.value;
-print box.wrap("inferred").value;
-print numberBox.get();
-print typeOf(textBox);
+print(textBox.value);
+print(box.wrap("inferred").value);
+print(numberBox.get());
+print(typeOf(textBox));

@@ -10,8 +10,10 @@ names:
   n0 = "prices#0"
   n1 = "prices#0"
   n2 = "keys"
-  n3 = "prices#0"
-  n4 = "values"
+  n3 = "print"
+  n4 = "prices#0"
+  n5 = "values"
+  n6 = "print"
 
 globals:
   g0 = n0
@@ -21,7 +23,7 @@ native_imports:
   i1 = "print" abi=1
   i2 = "values" abi=1
 
-main registers=10:
+main registers=11:
 block b0:
   r0 = constant c0
   r1 = constant c1
@@ -31,14 +33,14 @@ block b0:
   init_global g0, r4
   r5 = load_global g0
   r6 = call_native i0 [r5]
-  r9 = call_native i1 [r6]
-  r7 = load_global g0
-  r8 = call_native i2 [r7]
-  r9 = call_native i1 [r8]
+  r7 = call_native i1 [r6]
+  r8 = load_global g0
+  r9 = call_native i2 [r8]
+  r10 = call_native i1 [r9]
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/map_keys_values/input.cd" text="let prices = {\"tea\": 3, \"coffee\": 5};\nprint keys(prices);\nprint prices.values();\n"
+  s0 path="tests/bytecode_artifacts/map_keys_values/input.cd" text="let prices = {\"tea\": 3, \"coffee\": 5};\nprint(keys(prices));\nprint(prices.values());\n"
 
 debug_locations:
   main 0 = s0:1:15
@@ -66,8 +68,8 @@ debug_ranges:
   main 6 = s0:4:35
   main 7 = s0:49:55
   main 8 = s0:44:56
-  main 9 = s0:44:56
-  main 10 = s0:64:70
-  main 11 = s0:64:79
-  main 12 = s0:64:79
-  main 13 = s0:64:79
+  main 9 = s0:38:57
+  main 10 = s0:65:71
+  main 11 = s0:65:80
+  main 12 = s0:59:81
+  main 13 = s0:59:81

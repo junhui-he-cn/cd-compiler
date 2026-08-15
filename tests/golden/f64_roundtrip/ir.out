@@ -8,14 +8,14 @@ IR
 0006  v3 = constant #3 1.23456789012345
 0007  store_var @3 d#3, v3
 0008  v4 = load_var @4 a#0
-0009  print v4
-0010  v5 = load_var @5 b#1
-0011  print v5
-0012  v6 = load_var @6 c#2
-0013  print v6
-0014  v7 = load_var @7 d#3
-0015  print v7
-0016  v8 = load_var @8 a#0
-0017  v9 = load_var @9 b#1
-0018  v10 = add_num v8, v9
-0019  print v10
+0009  v5 = native_call @5 print(v4)
+0010  v6 = load_var @6 b#1
+0011  v7 = native_call @7 print(v6)
+0012  v8 = load_var @8 c#2
+0013  v9 = native_call @9 print(v8)
+0014  v10 = load_var @10 d#3
+0015  v11 = native_call @11 print(v10)
+0016  v12 = load_var @12 a#0
+0017  v13 = load_var @13 b#1
+0018  v14 = add_num v12, v13
+0019  v15 = native_call @14 print(v14)

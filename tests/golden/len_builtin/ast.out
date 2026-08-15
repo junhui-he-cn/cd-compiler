@@ -1,6 +1,6 @@
 Program
-  Print (call len (array))
-  Print (call len (array 1 2 3))
-  Print (call len "hello")
+  Expr (call print (call len (array)))
+  Expr (call print (call len (array 1 2 3)))
+  Expr (call print (call len "hello"))
   Let n = (call len (array true "x" nil))
-  Print (+ n 1)
+  Expr (call print (+ n 1))

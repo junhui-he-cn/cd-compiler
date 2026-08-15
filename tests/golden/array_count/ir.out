@@ -8,25 +8,25 @@ IR
 0006  v5 = load_var @1 values#0
 0007  v6 = make_function $0 <lambda>/1
 0008  v7 = native_call @3 count(v5, v6)
-0009  print v7
-0010  v8 = load_var @4 values#0
-0011  v9 = make_function $1 <lambda>/1
-0012  v10 = native_call @7 count(v8, v9)
-0013  print v10
-0014  v11 = constant #9 1
-0015  v12 = constant #10 2
-0016  v13 = array [v11, v12]
-0017  store_var @8 snapshot#3, v13
-0018  v14 = load_var @9 snapshot#3
-0019  v15 = make_function $2 <lambda>/1
-0020  v16 = native_call @12 count(v14, v15)
-0021  print v16
-0022  v17 = load_var @13 snapshot#3
-0023  print v17
-0024  v18 = array []
-0025  v19 = make_function $3 <lambda>/1
-0026  v20 = native_call @14 count(v18, v19)
-0027  print v20
+0009  v8 = native_call @4 print(v7)
+0010  v9 = load_var @5 values#0
+0011  v10 = make_function $1 <lambda>/1
+0012  v11 = native_call @8 count(v9, v10)
+0013  v12 = native_call @9 print(v11)
+0014  v13 = constant #9 1
+0015  v14 = constant #10 2
+0016  v15 = array [v13, v14]
+0017  store_var @10 snapshot#3, v15
+0018  v16 = load_var @11 snapshot#3
+0019  v17 = make_function $2 <lambda>/1
+0020  v18 = native_call @14 count(v16, v17)
+0021  v19 = native_call @15 print(v18)
+0022  v20 = load_var @16 snapshot#3
+0023  v21 = native_call @17 print(v20)
+0024  v22 = array []
+0025  v23 = make_function $3 <lambda>/1
+0026  v24 = native_call @18 count(v22, v23)
+0027  v25 = native_call @19 print(v24)
 
 function $0 <lambda>(value#1)
 0000  v0 = load_var @2 value#1
@@ -37,12 +37,12 @@ function $0 <lambda>(value#1)
 0005  return v3
 
 function $1 <lambda>(value#2)
-0000  v0 = load_var @5 value#2
+0000  v0 = load_var @6 value#2
 0001  v1 = constant #6 2
 0002  v2 = equal v0, v1
 0003  v3 = copy v2
 0004  jump_if_true v3, 0009
-0005  v4 = load_var @6 value#2
+0005  v4 = load_var @7 value#2
 0006  v5 = constant #7 4
 0007  v6 = equal v4, v5
 0008  v3 = copy v6
@@ -51,9 +51,9 @@ function $1 <lambda>(value#2)
 0011  return v7
 
 function $2 <lambda>(value#4)
-0000  v0 = load_var @10 snapshot#3
+0000  v0 = load_var @12 snapshot#3
 0001  v1 = constant #11 9
-0002  v2 = native_call @11 push(v0, v1)
+0002  v2 = native_call @13 push(v0, v1)
 0003  v3 = constant #12 true
 0004  return v3
 0005  v4 = constant #13 nil

@@ -1,5 +1,5 @@
 native_import i0 = print abi=1
-main registers=9
+main registers=10
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -8,12 +8,12 @@ main registers=9
 0005  b2 = constant #2 "sum"
 0006  init_global g1, b2
 0007  b3 = load_global g1
-0008  b8 = call_native i0 [b3]
-0009  b4 = load_global g0
-0010  b5 = constant #3 1
-0011  b6 = constant #4 2
-0012  b7 = call b4(b5, b6)
-0013  b8 = call_native i0 [b7]
+0008  b4 = call_native i0 [b3]
+0009  b5 = load_global g0
+0010  b6 = constant #3 1
+0011  b7 = constant #4 2
+0012  b8 = call b5(b6, b7)
+0013  b9 = call_native i0 [b8]
 0014  return_nil
 
 function $0 add/2 registers=4

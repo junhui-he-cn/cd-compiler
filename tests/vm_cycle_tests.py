@@ -144,13 +144,13 @@ def check_debug(vm_binary: Path, source: Path, artifact: Path, label: str) -> st
 CASES: tuple[tuple[str, str, str, str | None], ...] = (
     (
         "self_array",
-        "let xs = [];\npush(xs, xs);\nprint xs;\n",
+        "let xs = [];\npush(xs, xs);\nprint(xs);\n",
         "[<cycle>]\n",
         None,
     ),
     (
         "self_map",
-        'let values = {};\nvalues["self"] = values;\nprint values;\n',
+        'let values = {};\nvalues["self"] = values;\nprint(values);\n',
         "map{self: <cycle>}\n",
         None,
     ),
@@ -159,7 +159,7 @@ CASES: tuple[tuple[str, str, str, str | None], ...] = (
         "struct Node { next: optional<Node> }\n"
         "let node = Node { next: nil };\n"
         "node.next = node;\n"
-        "print node;\n",
+        "print(node);\n",
         "{next: <cycle>}\n",
         None,
     ),
@@ -169,7 +169,7 @@ CASES: tuple[tuple[str, str, str, str | None], ...] = (
         "let first = Node { value: 1, next: nil };\n"
         "let second = Node { value: 2, next: first };\n"
         "first.next = second;\n"
-        "print first;\n",
+        "print(first);\n",
         "{value: 1, next: {value: 2, next: <cycle>}}\n",
         None,
     ),
@@ -183,7 +183,7 @@ CASES: tuple[tuple[str, str, str, str | None], ...] = (
         "  return count;\n"
         "}\n"
         "let c = makeCountdown();\n"
-        "print c(4);\n",
+        "print(c(4));\n",
         "4\n",
         None,
     ),
@@ -192,7 +192,7 @@ CASES: tuple[tuple[str, str, str, str | None], ...] = (
         "fun make() {\n"
         "  let xs = [];\n"
         "  push(xs, xs);\n"
-        "  print xs;\n"
+        "  print(xs);\n"
         "}\n"
         "make();\n",
         "[<cycle>]\n",
@@ -207,19 +207,19 @@ CASES: tuple[tuple[str, str, str, str | None], ...] = (
         "}\n"
         "let values = [1];\n"
         "let mapped = map(values, make);\n"
-        "print mapped;\n",
+        "print(mapped);\n",
         "[[<cycle>]]\n",
         None,
     ),
     (
         "replace_array",
-        "let xs = [];\npush(xs, xs);\nxs[0] = nil;\nprint xs;\n",
+        "let xs = [];\npush(xs, xs);\nxs[0] = nil;\nprint(xs);\n",
         "[nil]\n",
         None,
     ),
     (
         "replace_map",
-        'let values = {};\nvalues["self"] = values;\nvalues["self"] = nil;\nprint values;\n',
+        'let values = {};\nvalues["self"] = values;\nvalues["self"] = nil;\nprint(values);\n',
         "map{self: nil}\n",
         None,
     ),
@@ -229,7 +229,7 @@ CASES: tuple[tuple[str, str, str, str | None], ...] = (
         "let node = Node { next: nil };\n"
         "node.next = node;\n"
         "node.next = nil;\n"
-        "print node;\n",
+        "print(node);\n",
         "{next: nil}\n",
         None,
     ),
@@ -237,9 +237,9 @@ CASES: tuple[tuple[str, str, str, str | None], ...] = (
         "runtime_error",
         "let xs = [];\n"
         "push(xs, xs);\n"
-        "print xs;\n"
+        "print(xs);\n"
         "let zero: number = 0;\n"
-        "print 1 / zero;\n",
+        "print(1 / zero);\n",
         "",
         "division by zero",
     ),

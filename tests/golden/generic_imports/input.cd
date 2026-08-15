@@ -1,4 +1,4 @@
 import "lib.cd";
 import "lib.cd" as lib;
-print identity(7);
-print lib.identity("module");
+print(identity(7));
+print(lib.identity("module"));

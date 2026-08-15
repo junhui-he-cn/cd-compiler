@@ -10,4 +10,4 @@ fun score(result: Result): number {
   };
 }
 
-print score(Result.Ok(1));
+print(score(Result.Ok(1)));

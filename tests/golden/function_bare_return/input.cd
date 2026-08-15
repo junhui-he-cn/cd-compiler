@@ -1,5 +1,5 @@
 fun f() {
   return;
-  print "no";
+  print("no");
 }
-print f();
+print(f());

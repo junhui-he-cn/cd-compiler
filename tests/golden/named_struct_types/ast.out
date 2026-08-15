@@ -1,11 +1,11 @@
 Program
   Struct Person {name: string, age: number}
   Let p: Person = (construct Person age: 36 name: "Ada")
-  Print (field p name)
+  Expr (call print (field p name))
   Expr (= (field p age) 37)
-  Print (field p age)
+  Expr (call print (field p age))
   Fun birthday(person: Person): Person
     Expr (= (field person age) (+ (field person age) 1))
     Return person
   Let older: Person = (call birthday p)
-  Print (field older age)
+  Expr (call print (field older age))

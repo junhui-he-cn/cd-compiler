@@ -9,25 +9,25 @@ graph.addEdge(2, 3, 8);
 graph.addEdge(3, 4, 3);
 
 let forest = ds.minimumSpanningForest(graph);
-print forest.edgeCount();
-print forest.hasEdge(0, 2);
-print forest.hasEdge(0, 1);
-print forest.hasEdge(2, 1);
-print forest.hasEdge(1, 3);
-print forest.hasEdge(2, 3);
-print forest.hasEdge(3, 4);
-print ds.shortestWeightedDistances(forest, 0);
-print ds.shortestWeightedPath(forest, 0, 4);
+print(forest.edgeCount());
+print(forest.hasEdge(0, 2));
+print(forest.hasEdge(0, 1));
+print(forest.hasEdge(2, 1));
+print(forest.hasEdge(1, 3));
+print(forest.hasEdge(2, 3));
+print(forest.hasEdge(3, 4));
+print(ds.shortestWeightedDistances(forest, 0));
+print(ds.shortestWeightedPath(forest, 0, 4));
 
 let disconnected = ds.newWeightedGraph(5, false);
 disconnected.addEdge(0, 1, 2);
 disconnected.addEdge(2, 3, 1);
 let disconnectedForest = ds.minimumSpanningForest(disconnected);
-print disconnectedForest.edgeCount();
-print ds.shortestWeightedDistances(disconnectedForest, 0);
+print(disconnectedForest.edgeCount());
+print(ds.shortestWeightedDistances(disconnectedForest, 0));
 
 let directed = ds.newWeightedGraph(3, true);
 directed.addEdge(0, 1, 1);
 let invalid = ds.minimumSpanningForest(directed);
-print invalid.vertexCount();
-print invalid.edgeCount();
+print(invalid.vertexCount());
+print(invalid.edgeCount());

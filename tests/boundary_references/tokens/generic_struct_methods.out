@@ -140,26 +140,32 @@
 26:55 Number `3`
 26:57 RightBrace `}`
 26:58 Semicolon `;`
-27:1 Print `print`
+27:1 Identifier `print`
+27:6 LeftParen `(`
 27:7 Identifier `box`
 27:10 Dot `.`
 27:11 Identifier `get`
 27:14 LeftParen `(`
 27:15 RightParen `)`
-27:16 Semicolon `;`
-28:1 Print `print`
+27:16 RightParen `)`
+27:17 Semicolon `;`
+28:1 Identifier `print`
+28:6 LeftParen `(`
 28:7 Identifier `box`
 28:10 Dot `.`
 28:11 Identifier `set`
 28:14 LeftParen `(`
 28:15 Number `2`
 28:16 RightParen `)`
-28:17 Semicolon `;`
-29:1 Print `print`
+28:17 RightParen `)`
+28:18 Semicolon `;`
+29:1 Identifier `print`
+29:6 LeftParen `(`
 29:7 Identifier `box`
 29:10 Dot `.`
 29:11 Identifier `value`
-29:16 Semicolon `;`
+29:16 RightParen `)`
+29:17 Semicolon `;`
 30:1 Let `let`
 30:5 Identifier `textBox`
 30:13 Equal `=`
@@ -173,12 +179,15 @@
 30:32 String `"text"`
 30:38 RightParen `)`
 30:39 Semicolon `;`
-31:1 Print `print`
+31:1 Identifier `print`
+31:6 LeftParen `(`
 31:7 Identifier `textBox`
 31:14 Dot `.`
 31:15 Identifier `value`
-31:20 Semicolon `;`
-32:1 Print `print`
+31:20 RightParen `)`
+31:21 Semicolon `;`
+32:1 Identifier `print`
+32:6 LeftParen `(`
 32:7 Identifier `box`
 32:10 Dot `.`
 32:11 Identifier `wrap`
@@ -187,20 +196,25 @@
 32:26 RightParen `)`
 32:27 Dot `.`
 32:28 Identifier `value`
-32:33 Semicolon `;`
-33:1 Print `print`
+32:33 RightParen `)`
+32:34 Semicolon `;`
+33:1 Identifier `print`
+33:6 LeftParen `(`
 33:7 Identifier `numberBox`
 33:16 Dot `.`
 33:17 Identifier `get`
 33:20 LeftParen `(`
 33:21 RightParen `)`
-33:22 Semicolon `;`
-34:1 Print `print`
+33:22 RightParen `)`
+33:23 Semicolon `;`
+34:1 Identifier `print`
+34:6 LeftParen `(`
 34:7 Identifier `typeOf`
 34:13 LeftParen `(`
 34:14 Identifier `textBox`
 34:21 RightParen `)`
-34:22 Semicolon `;`
+34:22 RightParen `)`
+34:23 Semicolon `;`
 35:1 EndOfFile
 
 Program
@@ -219,11 +233,11 @@ Program
       Return (field this value)
   Let box: Box<number> = (construct Box value: 1)
   Let numberBox: NumberBox<number> = (construct NumberBox value: 3)
-  Print (member-call box get)
-  Print (member-call box set 2)
-  Print (field box value)
+  Expr (call print (member-call box get))
+  Expr (call print (member-call box set 2))
+  Expr (call print (field box value))
   Let textBox = (member-call box wrap<string> "text")
-  Print (field textBox value)
-  Print (field (member-call box wrap "inferred") value)
-  Print (member-call numberBox get)
-  Print (call typeOf textBox)
+  Expr (call print (field textBox value))
+  Expr (call print (field (member-call box wrap "inferred") value))
+  Expr (call print (member-call numberBox get))
+  Expr (call print (call typeOf textBox))

@@ -1,3 +1,3 @@
 import "./module_duplicate_export_deps/a.cd";
 import "./module_duplicate_export_deps/b.cd";
-print value;
+print(value);

@@ -7,18 +7,18 @@ let allResult: bool = all(values, fun (value: number): bool {
 });
 
 let snapshot: [number] = [1, 2, 3];
-print any(snapshot, fun (value) {
+print(any(snapshot, fun (value) {
   push(snapshot, 9);
   return value == 2;
-});
-print snapshot;
+}));
+print(snapshot);
 
 let allSnapshot: [number] = [1, 2, 3];
-print allSnapshot.all(fun (value) {
+print(allSnapshot.all(fun (value) {
   push(allSnapshot, 8);
   return value < 3;
-});
-print allSnapshot;
+}));
+print(allSnapshot);
 
-print [].any(fun (value: number): bool { return true; });
-print [1, 2].all(fun (value: number): bool { return value > 0; });
+print([].any(fun (value: number): bool { return true; }));
+print([1, 2].all(fun (value: number): bool { return value > 0; }));

@@ -11,16 +11,16 @@ network.addEdge(2, 4, 14);
 network.addEdge(4, 3, 7);
 network.addEdge(3, 5, 20);
 network.addEdge(4, 5, 4);
-print ds.minCut(network, 0, 5);
-print ds.minCut(network, 5, 0);
+print(ds.minCut(network, 0, 5));
+print(ds.minCut(network, 5, 0));
 
 let disconnected = ds.newWeightedGraph(3, true);
 disconnected.addEdge(0, 1, 5);
-print ds.minCut(disconnected, 0, 2);
+print(ds.minCut(disconnected, 0, 2));
 
 let undirected = ds.newWeightedGraph(2, false);
 undirected.addEdge(0, 1, 5);
-print ds.minCut(undirected, 0, 1);
+print(ds.minCut(undirected, 0, 1));
 
-print ds.minCut(network, 0, 0);
-print ds.minCut(network, -1, 5);
+print(ds.minCut(network, 0, 0));
+print(ds.minCut(network, -1, 5));

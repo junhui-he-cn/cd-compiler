@@ -1,6 +1,6 @@
-Parse error at <repo>/tests/golden/parse_errors/multiple_top_level_parse_errors.cd:1:7: expected expression
-  print ;
-        ^
+Parse error at <repo>/tests/golden/parse_errors/multiple_top_level_parse_errors.cd:1:5: expected variable name after `let`, found Semicolon `;`
+  let ;
+      ^
 Parse error at <repo>/tests/golden/parse_errors/multiple_top_level_parse_errors.cd:2:9: expected expression
   let x = ;
           ^

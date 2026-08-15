@@ -14,26 +14,26 @@ Program
   Let positive = (member-call Result Ok 3)
   Let zero = (member-call Result Ok 0)
   Let empty = (member-call Result Empty)
-  Print (call describe positive)
-  Print (call describe zero)
-  Print (call describe empty)
+  Expr (call print (call describe positive))
+  Expr (call print (call describe zero))
+  Expr (call print (call describe empty))
   Match positive
     Arm Result.Ok(value) if (> value 10)
       Block
-        Print "large"
+        Expr (call print "large")
     Arm Result.Ok(value) if (> value 0)
       Block
-        Print "positive"
+        Expr (call print "positive")
     Arm Result.Ok(_)
       Block
-        Print "zero"
+        Expr (call print "zero")
     Arm Result.Empty
       Block
-        Print "empty"
+        Expr (call print "empty")
   Match empty
     Arm Result.Empty if 1
       Block
-        Print "truthy"
+        Expr (call print "truthy")
     Arm _
       Block
-        Print "fallback"
+        Expr (call print "fallback")

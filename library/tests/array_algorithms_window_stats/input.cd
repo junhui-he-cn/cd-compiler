@@ -1,19 +1,19 @@
 import "../../data_structures.cd" as ds;
 
 let values = [2, -1, 3, 4, -2, 1];
-print ds.windowSums(values, 3);
-print ds.maxWindowSum(values, 3);
-print ds.windowSums(values, 1);
-print ds.maxWindowSum(values, 1);
-print ds.windowSums(values, 0);
-print ds.maxWindowSum(values, 0);
-print ds.windowSums(values, 10);
-print ds.maxWindowSum(values, 10);
+print(ds.windowSums(values, 3));
+print(ds.maxWindowSum(values, 3));
+print(ds.windowSums(values, 1));
+print(ds.maxWindowSum(values, 1));
+print(ds.windowSums(values, 0));
+print(ds.maxWindowSum(values, 0));
+print(ds.windowSums(values, 10));
+print(ds.maxWindowSum(values, 10));
 
 let negative = [-5, -2, -4];
-print ds.windowSums(negative, 2);
-print ds.maxWindowSum(negative, 2);
+print(ds.windowSums(negative, 2));
+print(ds.maxWindowSum(negative, 2));
 
 let empty: [number] = [];
-print ds.windowSums(empty, 1);
-print ds.maxWindowSum(empty, 1);
+print(ds.windowSums(empty, 1));
+print(ds.maxWindowSum(empty, 1));

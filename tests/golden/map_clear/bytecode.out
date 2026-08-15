@@ -1,6 +1,6 @@
 native_import i0 = clear abi=1
 native_import i1 = print abi=1
-main registers=24
+main registers=29
 0000  block
 0001  b0 = constant #0 "a"
 0002  b1 = constant #1 1
@@ -12,25 +12,25 @@ main registers=24
 0008  init_global g1, b5
 0009  b6 = load_global g0
 0010  b7 = call_native i0 [b6]
-0011  b23 = call_native i1 [b7]
-0012  b8 = load_global g1
-0013  b23 = call_native i1 [b8]
-0014  b9 = load_global g0
-0015  b10 = constant #4 "c"
-0016  b11 = constant #5 3
-0017  b12 = map_set b9, b10, b11
-0018  b13 = load_global g1
-0019  b23 = call_native i1 [b13]
-0020  b14 = load_global g1
-0021  b15 = call_native i0 [b14]
-0022  b23 = call_native i1 [b15]
-0023  b16 = load_global g0
-0024  b17 = len_map b16
-0025  b23 = call_native i1 [b17]
-0026  b18 = load_global g0
-0027  b19 = constant #6 "d"
-0028  b20 = constant #7 4
-0029  b21 = map_set b18, b19, b20
-0030  b22 = load_global g0
-0031  b23 = call_native i1 [b22]
+0011  b8 = call_native i1 [b7]
+0012  b9 = load_global g1
+0013  b10 = call_native i1 [b9]
+0014  b11 = load_global g0
+0015  b12 = constant #4 "c"
+0016  b13 = constant #5 3
+0017  b14 = map_set b11, b12, b13
+0018  b15 = load_global g1
+0019  b16 = call_native i1 [b15]
+0020  b17 = load_global g1
+0021  b18 = call_native i0 [b17]
+0022  b19 = call_native i1 [b18]
+0023  b20 = load_global g0
+0024  b21 = len_map b20
+0025  b22 = call_native i1 [b21]
+0026  b23 = load_global g0
+0027  b24 = constant #6 "d"
+0028  b25 = constant #7 4
+0029  b26 = map_set b23, b24, b25
+0030  b27 = load_global g0
+0031  b28 = call_native i1 [b27]
 0032  return_nil

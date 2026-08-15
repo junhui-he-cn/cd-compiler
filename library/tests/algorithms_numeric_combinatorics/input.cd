@@ -1,14 +1,14 @@
 import "../../data_structures.cd" as ds;
 
-print ds.binomialCoefficient(5, 0);
-print ds.binomialCoefficient(5, 2);
-print ds.binomialCoefficient(10, 5);
-print ds.binomialCoefficient(4, 5);
-print ds.binomialCoefficient(-1, 0);
-print ds.binomialCoefficient(2.5, 1);
+print(ds.binomialCoefficient(5, 0));
+print(ds.binomialCoefficient(5, 2));
+print(ds.binomialCoefficient(10, 5));
+print(ds.binomialCoefficient(4, 5));
+print(ds.binomialCoefficient(-1, 0));
+print(ds.binomialCoefficient(2.5, 1));
 
-print ds.pascalTriangle(0);
-print ds.pascalTriangle(1);
-print ds.pascalTriangle(5);
-print ds.pascalTriangle(-1);
-print ds.pascalTriangle(2.5);
+print(ds.pascalTriangle(0));
+print(ds.pascalTriangle(1));
+print(ds.pascalTriangle(5));
+print(ds.pascalTriangle(-1));
+print(ds.pascalTriangle(2.5));

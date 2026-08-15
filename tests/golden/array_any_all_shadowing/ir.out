@@ -8,23 +8,23 @@ IR
 0006  v4 = array [v3]
 0007  v5 = make_function $2 <lambda>/1
 0008  v6 = call v2(v4, v5)
-0009  print v6
-0010  v7 = load_var @3 all#5
-0011  v8 = constant #7 1
-0012  v9 = array [v8]
-0013  v10 = make_function $3 <lambda>/1
-0014  v11 = call v7(v9, v10)
-0015  print v11
-0016  v12 = constant #10 1
-0017  v13 = array [v12]
-0018  v14 = make_function $4 <lambda>/1
-0019  v15 = native_call @4 any(v13, v14)
-0020  print v15
-0021  v16 = constant #13 1
-0022  v17 = array [v16]
-0023  v18 = make_function $5 <lambda>/1
-0024  v19 = native_call @5 all(v17, v18)
-0025  print v19
+0009  v7 = native_call @3 print(v6)
+0010  v8 = load_var @4 all#5
+0011  v9 = constant #7 1
+0012  v10 = array [v9]
+0013  v11 = make_function $3 <lambda>/1
+0014  v12 = call v8(v10, v11)
+0015  v13 = native_call @5 print(v12)
+0016  v14 = constant #10 1
+0017  v15 = array [v14]
+0018  v16 = make_function $4 <lambda>/1
+0019  v17 = native_call @6 any(v15, v16)
+0020  v18 = native_call @7 print(v17)
+0021  v19 = constant #13 1
+0022  v20 = array [v19]
+0023  v21 = make_function $5 <lambda>/1
+0024  v22 = native_call @8 all(v20, v21)
+0025  v23 = native_call @9 print(v22)
 
 function $0 <lambda>(array#0, predicate#1)
 0000  v0 = constant #0 "shadowed any"

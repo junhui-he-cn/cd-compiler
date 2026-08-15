@@ -12,7 +12,7 @@ let kept: [number] = snapshot.filter(fun (value) {
   return true;
 });
 
-print selected;
-print evens;
-print kept;
-print snapshot;
+print(selected);
+print(evens);
+print(kept);
+print(snapshot);

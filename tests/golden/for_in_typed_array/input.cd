@@ -1,5 +1,5 @@
 let xs: [number] = [1, 2];
 for x in xs {
   let y: number = x;
-  print y;
+  print(y);
 }

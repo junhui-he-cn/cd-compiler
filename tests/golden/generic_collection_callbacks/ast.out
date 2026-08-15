@@ -9,22 +9,22 @@ Program
     Return acc
   Let values: [number] = (array 1 2)
   Let copied: [number] = (call map values identity)
-  Print copied
-  Print (member-call values map identity)
-  Print (call filter values keep)
-  Print (member-call values any keep)
-  Print (member-call values all keep)
-  Print (member-call values count keep)
-  Print (member-call values find keep)
-  Print (member-call values findIndex keep)
-  Print (call flatMap values singleton)
-  Print (member-call values reduce 0 keepAccumulator)
-  Print (call map values (fun <T>(value: T): T (return value)))
+  Expr (call print copied)
+  Expr (call print (member-call values map identity))
+  Expr (call print (call filter values keep))
+  Expr (call print (member-call values any keep))
+  Expr (call print (member-call values all keep))
+  Expr (call print (member-call values count keep))
+  Expr (call print (member-call values find keep))
+  Expr (call print (member-call values findIndex keep))
+  Expr (call print (call flatMap values singleton))
+  Expr (call print (member-call values reduce 0 keepAccumulator))
+  Expr (call print (call map values (fun <T>(value: T): T (return value))))
   Fun acceptsNullable<T>(value: optional<T>): bool
     Return true
   Let nullableValues: [optional<number>] = (array 1 nil)
-  Print (member-call nullableValues all acceptsNullable)
+  Expr (call print (member-call nullableValues all acceptsNullable))
   Fun identityArray<T>(value: [T]): [T]
     Return value
   Let nestedValues: [[number]] = (array (array 1) (array 2))
-  Print (call map nestedValues identityArray)
+  Expr (call print (call map nestedValues identityArray))

@@ -1,6 +1,6 @@
 native_import i0 = print abi=1
 native_import i1 = str abi=1
-main registers=59
+main registers=75
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -18,110 +18,110 @@ main registers=59
 0014  init_global g3, b6
 0015  b7 = constant #28 0
 0016  b8 = call_direct $0 [b7]
-0017  b58 = call_native i0 [b8]
-0018  b9 = constant #29 8
-0019  b10 = call_direct $0 [b9]
-0020  b58 = call_native i0 [b10]
-0021  b11 = constant #30 false
-0022  b12 = call_direct $1 [b11]
-0023  b58 = call_native i0 [b12]
-0024  b13 = constant #31 7
-0025  b14 = make_variant t0, v0 (b13)
-0026  b15 = call_direct $2 [b14]
-0027  b58 = call_native i0 [b15]
-0028  b16 = constant #32 ""
-0029  b17 = make_variant t0, v1 (b16)
-0030  b18 = call_direct $2 [b17]
-0031  b58 = call_native i0 [b18]
-0032  b19 = constant #33 nil
-0033  b20 = call_direct $2 [b19]
-0034  b58 = call_native i0 [b20]
-0035  b21 = constant #34 1
-0036  b22 = constant #35 nil
-0037  b23 = constant #36 0
-0038  b24 = equal b21, b23
-0039  br_if b24, b1, b2
+0017  b9 = call_native i0 [b8]
+0018  b10 = constant #29 8
+0019  b11 = call_direct $0 [b10]
+0020  b12 = call_native i0 [b11]
+0021  b13 = constant #30 false
+0022  b14 = call_direct $1 [b13]
+0023  b15 = call_native i0 [b14]
+0024  b16 = constant #31 7
+0025  b17 = make_variant t0, v0 (b16)
+0026  b18 = call_direct $2 [b17]
+0027  b19 = call_native i0 [b18]
+0028  b20 = constant #32 ""
+0029  b21 = make_variant t0, v1 (b20)
+0030  b22 = call_direct $2 [b21]
+0031  b23 = call_native i0 [b22]
+0032  b24 = constant #33 nil
+0033  b25 = call_direct $2 [b24]
+0034  b26 = call_native i0 [b25]
+0035  b27 = constant #34 1
+0036  b28 = constant #35 nil
+0037  b29 = constant #36 0
+0038  b30 = equal b27, b29
+0039  br_if b30, b1, b2
 0040  block
-0041  b25 = constant #37 "zero"
-0042  b58 = call_native i0 [b25]
+0041  b31 = constant #37 "zero"
+0042  b32 = call_native i0 [b31]
 0043  br b5
 0044  block
-0045  b26 = constant #38 1
-0046  b27 = equal b21, b26
-0047  br_if b27, b3, b4
+0045  b33 = constant #38 1
+0046  b34 = equal b27, b33
+0047  br_if b34, b3, b4
 0048  block
-0049  b28 = constant #39 "one"
-0050  b58 = call_native i0 [b28]
+0049  b35 = constant #39 "one"
+0050  b36 = call_native i0 [b35]
 0051  br b5
 0052  block
-0053  b29 = constant #40 "many"
-0054  b58 = call_native i0 [b29]
+0053  b37 = constant #40 "many"
+0054  b38 = call_native i0 [b37]
 0055  br b5
 0056  block
-0057  b30 = constant #41 true
-0058  b31 = constant #42 nil
-0059  b32 = constant #43 false
-0060  b33 = equal b30, b32
-0061  br_if b33, b6, b7
+0057  b39 = constant #41 true
+0058  b40 = constant #42 nil
+0059  b41 = constant #43 false
+0060  b42 = equal b39, b41
+0061  br_if b42, b6, b7
 0062  block
-0063  b34 = constant #44 "no"
-0064  b58 = call_native i0 [b34]
+0063  b43 = constant #44 "no"
+0064  b44 = call_native i0 [b43]
 0065  br b9
 0066  block
-0067  b35 = constant #45 true
-0068  b36 = equal b30, b35
-0069  br_if b36, b8, b9
+0067  b45 = constant #45 true
+0068  b46 = equal b39, b45
+0069  br_if b46, b8, b9
 0070  block
-0071  b37 = constant #46 "yes"
-0072  b58 = call_native i0 [b37]
+0071  b47 = constant #46 "yes"
+0072  b48 = call_native i0 [b47]
 0073  br b9
 0074  block
-0075  b38 = constant #47 "ok"
-0076  b39 = constant #48 nil
-0077  b40 = constant #49 ""
-0078  b41 = equal b38, b40
-0079  br_if b41, b10, b11
+0075  b49 = constant #47 "ok"
+0076  b50 = constant #48 nil
+0077  b51 = constant #49 ""
+0078  b52 = equal b49, b51
+0079  br_if b52, b10, b11
 0080  block
-0081  b42 = constant #50 "empty"
-0082  b58 = call_native i0 [b42]
+0081  b53 = constant #50 "empty"
+0082  b54 = call_native i0 [b53]
 0083  br b14
 0084  block
-0085  b43 = constant #51 "ok"
-0086  b44 = equal b38, b43
-0087  br_if b44, b12, b13
+0085  b55 = constant #51 "ok"
+0086  b56 = equal b49, b55
+0087  br_if b56, b12, b13
 0088  block
-0089  b45 = constant #52 "ok"
-0090  b58 = call_native i0 [b45]
+0089  b57 = constant #52 "ok"
+0090  b58 = call_native i0 [b57]
 0091  br b14
 0092  block
-0093  b46 = constant #53 "other"
-0094  b58 = call_native i0 [b46]
+0093  b59 = constant #53 "other"
+0094  b60 = call_native i0 [b59]
 0095  br b14
 0096  block
-0097  b47 = load_global g3
-0098  b48 = constant #54 nil
-0099  b49 = constant #55 nil
-0100  b50 = equal b47, b49
-0101  br_if b50, b15, b16
+0097  b61 = load_global g3
+0098  b62 = constant #54 nil
+0099  b63 = constant #55 nil
+0100  b64 = equal b61, b63
+0101  br_if b64, b15, b16
 0102  block
-0103  b51 = constant #56 "nil"
-0104  b58 = call_native i0 [b51]
+0103  b65 = constant #56 "nil"
+0104  b66 = call_native i0 [b65]
 0105  return_nil
 0106  block
-0107  b52 = constant #57 true
-0108  b53 = equal b47, b52
-0109  br_if b53, b17, b18
+0107  b67 = constant #57 true
+0108  b68 = equal b61, b67
+0109  br_if b68, b17, b18
 0110  block
-0111  b54 = constant #58 "true"
-0112  b58 = call_native i0 [b54]
+0111  b69 = constant #58 "true"
+0112  b70 = call_native i0 [b69]
 0113  return_nil
 0114  block
-0115  b55 = constant #59 false
-0116  b56 = equal b47, b55
-0117  br_if b56, b19, b20
+0115  b71 = constant #59 false
+0116  b72 = equal b61, b71
+0117  br_if b72, b19, b20
 0118  block
-0119  b57 = constant #60 "false"
-0120  b58 = call_native i0 [b57]
+0119  b73 = constant #60 "false"
+0120  b74 = call_native i0 [b73]
 0121  return_nil
 0122  block
 0123  return_nil

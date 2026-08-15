@@ -14,4 +14,4 @@ Program
         Arm lib.Result.Err(message)
           Block
             Return (+ "err:" message)
-    Print (call render (member-call lib make))
+    Expr (call print (call render (member-call lib make)))

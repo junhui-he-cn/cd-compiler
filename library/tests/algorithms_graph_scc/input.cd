@@ -12,12 +12,12 @@ graph.addEdge(5, 6);
 graph.addEdge(6, 5);
 graph.addEdge(6, 7);
 let components = ds.stronglyConnectedComponents(graph);
-print components;
-print components.len();
+print(components);
+print(components.len());
 
 let undirected = ds.newGraph(2, false);
 undirected.addEdge(0, 1);
-print ds.stronglyConnectedComponents(undirected);
+print(ds.stronglyConnectedComponents(undirected));
 
 let empty = ds.newGraph(0, true);
-print ds.stronglyConnectedComponents(empty);
+print(ds.stronglyConnectedComponents(empty));

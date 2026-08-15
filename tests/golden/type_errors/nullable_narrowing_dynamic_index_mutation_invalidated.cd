@@ -7,4 +7,4 @@ fun invalid(values: [optional<number>], index: number): number {
   return values[i] + 1;
 }
 
-print invalid([41, 42], 0);
+print(invalid([41, 42], 0));

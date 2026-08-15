@@ -26,20 +26,22 @@ names:
   n9 = "makeCounter#0"
   n10 = "counter#4"
   n11 = "counter#4"
-  n12 = "xs#5"
+  n12 = "print"
   n13 = "xs#5"
   n14 = "xs#5"
   n15 = "xs#5"
+  n16 = "xs#5"
+  n17 = "print"
 
 globals:
   g0 = n0
   g1 = n10
-  g2 = n12
+  g2 = n13
 
 native_imports:
   i0 = "print" abi=1
 
-main registers=19:
+main registers=20:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -50,21 +52,21 @@ block b0:
   init_global g1, r3
   r4 = load_global g1
   r5 = call r4 []
-  r18 = call_native i0 [r5]
-  r6 = constant c6
-  r7 = constant c7
-  r8 = constant c8
-  r9 = array [r6, r7, r8]
-  init_global g2, r9
-  r10 = load_global g2
-  r11 = constant c9
-  r12 = load_global g2
-  r13 = len_array r12
-  r14 = array_set r10, r11, r13
-  r15 = load_global g2
-  r16 = constant c10
-  r17 = array_get r15, r16
-  r18 = call_native i0 [r17]
+  r6 = call_native i0 [r5]
+  r7 = constant c6
+  r8 = constant c7
+  r9 = constant c8
+  r10 = array [r7, r8, r9]
+  init_global g2, r10
+  r11 = load_global g2
+  r12 = constant c9
+  r13 = load_global g2
+  r14 = len_array r13
+  r15 = array_set r11, r12, r14
+  r16 = load_global g2
+  r17 = constant c10
+  r18 = array_get r16, r17
+  r19 = call_native i0 [r18]
   return_nil
 
 function f0 name="next" arity=0 registers=5:
@@ -100,7 +102,7 @@ block b2:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/functions_arrays/input.cd" text="fun makeCounter(start) {\n  let mut value = start;\n  fun next() {\n    value = value + 1;\n    return value;\n  }\n  return next;\n}\nlet counter = makeCounter(1);\nprint counter();\nlet xs = [1, 2, 3];\nxs[1] = len(xs);\nprint xs[1];\n"
+  s0 path="tests/bytecode_artifacts/functions_arrays/input.cd" text="fun makeCounter(start) {\n  let mut value = start;\n  fun next() {\n    value = value + 1;\n    return value;\n  }\n  return next;\n}\nlet counter = makeCounter(1);\nprint(counter());\nlet xs = [1, 2, 3];\nxs[1] = len(xs);\nprint(xs[1]);\n"
 
 debug_locations:
   main 0 = s0:1:1
@@ -167,22 +169,22 @@ debug_ranges:
   main 7 = s0:131:155
   main 8 = s0:163:170
   main 9 = s0:163:172
-  main 10 = s0:163:172
-  main 11 = s0:184:185
-  main 12 = s0:187:188
-  main 13 = s0:190:191
-  main 14 = s0:183:191
-  main 15 = s0:178:191
-  main 16 = s0:194:196
-  main 17 = s0:197:198
-  main 18 = s0:206:208
-  main 19 = s0:202:209
-  main 20 = s0:194:209
-  main 21 = s0:217:219
-  main 22 = s0:220:221
-  main 23 = s0:217:221
-  main 24 = s0:217:221
-  main 25 = s0:217:221
+  main 10 = s0:157:173
+  main 11 = s0:185:186
+  main 12 = s0:188:189
+  main 13 = s0:191:192
+  main 14 = s0:184:192
+  main 15 = s0:179:192
+  main 16 = s0:195:197
+  main 17 = s0:198:199
+  main 18 = s0:207:209
+  main 19 = s0:203:210
+  main 20 = s0:195:210
+  main 21 = s0:218:220
+  main 22 = s0:221:222
+  main 23 = s0:218:222
+  main 24 = s0:212:224
+  main 25 = s0:212:224
   function f0 0 = s0:77:82
   function f0 1 = s0:77:82
   function f0 2 = s0:85:86

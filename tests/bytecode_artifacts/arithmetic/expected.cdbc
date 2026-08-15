@@ -8,26 +8,28 @@ constants:
   c4 = number 4
 
 names:
+  n0 = "print"
+  n1 = "print"
 
 native_imports:
   i0 = "print" abi=1
 
-main registers=9:
+main registers=10:
 block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = constant c2
   r3 = mul_num r1, r2
   r4 = add_num r0, r3
-  r8 = call_native i0 [r4]
-  r5 = constant c3
-  r6 = constant c4
-  r7 = equal r5, r6
-  r8 = call_native i0 [r7]
+  r5 = call_native i0 [r4]
+  r6 = constant c3
+  r7 = constant c4
+  r8 = equal r6, r7
+  r9 = call_native i0 [r8]
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/arithmetic/input.cd" text="print 1 + 2 * 3;\nprint 4 == 4;\n"
+  s0 path="tests/bytecode_artifacts/arithmetic/input.cd" text="print(1 + 2 * 3);\nprint(4 == 4);\n"
 
 debug_locations:
   main 0 = s0:1:7
@@ -50,9 +52,9 @@ debug_ranges:
   main 3 = s0:14:15
   main 4 = s0:10:15
   main 5 = s0:6:15
-  main 6 = s0:6:15
-  main 7 = s0:23:24
-  main 8 = s0:28:29
-  main 9 = s0:23:29
-  main 10 = s0:23:29
-  main 11 = s0:23:29
+  main 6 = s0:0:16
+  main 7 = s0:24:25
+  main 8 = s0:29:30
+  main 9 = s0:24:30
+  main 10 = s0:18:31
+  main 11 = s0:18:31

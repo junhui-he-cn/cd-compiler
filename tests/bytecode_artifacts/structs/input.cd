@@ -2,6 +2,6 @@ struct Person { name: string, age: number }
 struct Point { x: number }
 struct Nested { point: Point, label: string }
 let person = Person { name: "Ada", age: 36 };
-print person.name;
+print(person.name);
 let nested = Nested { point: Point { x: 1 }, label: "p" };
-print nested.point.x;
+print(nested.point.x);

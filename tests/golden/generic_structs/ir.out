@@ -19,32 +19,32 @@ IR
 0017  v12 = assign_field v10.value, v11
 0018  v13 = load_var @18 inferred#0
 0019  v14 = field v13.value
-0020  print v14
-0021  v15 = load_var @21 explicit#1
-0022  v16 = field v15.value
-0023  print v16
-0024  v17 = load_var @24 annotated#2
-0025  v18 = field v17.value
-0026  print v18
-0027  v19 = load_var @27 textBox#3
-0028  v20 = field v19.value
-0029  print v20
-0030  v21 = load_var @30 bounded#4
-0031  v22 = field v21.value
-0032  print v22
-0033  v23 = load_var @33 explicit#1
-0034  v24 = native_call @34 typeOf(v23)
-0035  print v24
-0036  v25 = load_var @35 explicit#1
-0037  v26 = constant #6 nil
-0038  v27 = field v25.value
-0039  v28 = constant #7 2
-0040  v29 = equal v27, v28
-0041  jump_if_false v29, 0045
-0042  v30 = constant #8 "two"
-0043  print v30
+0020  v15 = native_call @21 print(v14)
+0021  v16 = load_var @22 explicit#1
+0022  v17 = field v16.value
+0023  v18 = native_call @25 print(v17)
+0024  v19 = load_var @26 annotated#2
+0025  v20 = field v19.value
+0026  v21 = native_call @29 print(v20)
+0027  v22 = load_var @30 textBox#3
+0028  v23 = field v22.value
+0029  v24 = native_call @33 print(v23)
+0030  v25 = load_var @34 bounded#4
+0031  v26 = field v25.value
+0032  v27 = native_call @37 print(v26)
+0033  v28 = load_var @38 explicit#1
+0034  v29 = native_call @39 typeOf(v28)
+0035  v30 = native_call @40 print(v29)
+0036  v31 = load_var @41 explicit#1
+0037  v32 = constant #6 nil
+0038  v33 = field v31.value
+0039  v34 = constant #7 2
+0040  v35 = equal v33, v34
+0041  jump_if_false v35, 0045
+0042  v36 = constant #8 "two"
+0043  v37 = native_call @44 print(v36)
 0044  jump 0049
-0045  v31 = field v25.value
-0046  v32 = constant #9 "other"
-0047  print v32
+0045  v38 = field v31.value
+0046  v39 = constant #9 "other"
+0047  v40 = native_call @47 print(v39)
 0048  jump 0049

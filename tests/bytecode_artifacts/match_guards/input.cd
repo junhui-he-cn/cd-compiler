@@ -1,7 +1,7 @@
 enum Option { Some(number), None }
 let value = Option.Some(4);
 match value {
-  Option.Some(number) if number > 4 => { print number; }
-  Option.Some(_) => { print 0; }
-  Option.None => { print 0; }
+  Option.Some(number) if number > 4 => { print(number); }
+  Option.Some(_) => { print(0); }
+  Option.None => { print(0); }
 }

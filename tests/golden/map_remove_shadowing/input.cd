@@ -2,7 +2,7 @@ fun remove(map, key) {
   return 99;
 }
 let values = {"a": 1};
-print remove(values, "a");
-print values;
-print values.remove("a");
-print values.len();
+print(remove(values, "a"));
+print(values);
+print(values.remove("a"));
+print(values.len());

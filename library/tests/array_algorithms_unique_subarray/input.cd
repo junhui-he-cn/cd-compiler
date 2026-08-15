@@ -1,10 +1,10 @@
 import "../../data_structures.cd" as ds;
 
 let values = [1, 2, 3, 1, 2, 3, 4];
-print ds.longestUniqueSubarrayLength(values);
-print values;
-print ds.longestUniqueSubarrayLength([4, 4, 4]);
+print(ds.longestUniqueSubarrayLength(values));
+print(values);
+print(ds.longestUniqueSubarrayLength([4, 4, 4]));
 
 let words = ["red", "blue", "red", "green", "blue"];
-print ds.longestUniqueSubarrayLength(words);
-print ds.longestUniqueSubarrayLength<number>([]);
+print(ds.longestUniqueSubarrayLength(words));
+print(ds.longestUniqueSubarrayLength<number>([]));

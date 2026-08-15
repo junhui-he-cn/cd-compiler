@@ -16,6 +16,7 @@ names:
   n7 = "person#0"
   n8 = "age"
   n9 = "Person"
+  n10 = "print"
 
 globals:
   g0 = n3
@@ -41,7 +42,7 @@ block b0:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/struct_field_assignment/input.cd" text="struct Person { name: string, age: number }\nlet person = Person { name: \"Ada\", age: 36 };\nperson.age = 37;\nprint person.age;\n"
+  s0 path="tests/bytecode_artifacts/struct_field_assignment/input.cd" text="struct Person { name: string, age: number }\nlet person = Person { name: \"Ada\", age: 36 };\nperson.age = 37;\nprint(person.age);\n"
 
 debug_locations:
   main 0 = s0:2:29
@@ -68,5 +69,5 @@ debug_ranges:
   main 7 = s0:90:105
   main 8 = s0:113:119
   main 9 = s0:113:123
-  main 10 = s0:113:123
-  main 11 = s0:113:123
+  main 10 = s0:107:124
+  main 11 = s0:107:124

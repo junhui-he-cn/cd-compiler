@@ -3,4 +3,4 @@ Program
   Fun newBox(): Box
     Return (construct Box value: 7)
   Let box = (call newBox)
-  Print (field box value)
+  Expr (call print (field box value))

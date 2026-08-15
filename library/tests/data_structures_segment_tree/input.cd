@@ -1,36 +1,36 @@
 import "../../data_structures.cd" as ds;
 
 let tree = ds.newSegmentTree([5, 1, 4, 2, 8]);
-print tree.size();
-print tree.snapshot();
-print tree.rangeSum(0, 5);
-print tree.rangeSum(1, 4);
-print tree.rangeMinimum(0, 5);
-print tree.rangeMinimum(2, 5);
-print tree.valueAt(1);
+print(tree.size());
+print(tree.snapshot());
+print(tree.rangeSum(0, 5));
+print(tree.rangeSum(1, 4));
+print(tree.rangeMinimum(0, 5));
+print(tree.rangeMinimum(2, 5));
+print(tree.valueAt(1));
 
-print tree.setValue(1, 6);
-print tree.snapshot();
-print tree.rangeSum(0, 5);
-print tree.rangeMinimum(1, 4);
-print tree.add(2, -10);
-print tree.snapshot();
-print tree.rangeSum(0, 3);
-print tree.rangeMinimum(0, 5);
+print(tree.setValue(1, 6));
+print(tree.snapshot());
+print(tree.rangeSum(0, 5));
+print(tree.rangeMinimum(1, 4));
+print(tree.add(2, -10));
+print(tree.snapshot());
+print(tree.rangeSum(0, 3));
+print(tree.rangeMinimum(0, 5));
 
-print tree.setValue(-1, 9);
-print tree.add(5, 1);
-print tree.rangeSum(0, 6);
-print tree.rangeMinimum(3, 2);
-print tree.rangeMinimum(2, 2);
+print(tree.setValue(-1, 9));
+print(tree.add(5, 1));
+print(tree.rangeSum(0, 6));
+print(tree.rangeMinimum(3, 2));
+print(tree.rangeMinimum(2, 2));
 
 let empty = ds.newSegmentTree([]);
-print empty.size();
-print empty.rangeSum(0, 0);
-print empty.rangeMinimum(0, 0);
-print empty.setValue(0, 1);
+print(empty.size());
+print(empty.rangeSum(0, 0));
+print(empty.rangeMinimum(0, 0));
+print(empty.setValue(0, 1));
 
 let single = ds.newSegmentTree([-3]);
-print single.rangeSum(0, 1);
-print single.rangeMinimum(0, 1);
-print single.snapshot();
+print(single.rangeSum(0, 1));
+print(single.rangeMinimum(0, 1));
+print(single.snapshot());

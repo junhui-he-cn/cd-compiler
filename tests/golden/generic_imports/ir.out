@@ -6,11 +6,11 @@ IR
 0004  v2 = load_var @3 identity#0
 0005  v3 = constant #2 7
 0006  v4 = call v2(v3)
-0007  print v4
-0008  v5 = load_var @4 identity#0
-0009  v6 = constant #3 "module"
-0010  v7 = call v5(v6)
-0011  print v7
+0007  v5 = native_call @4 print(v4)
+0008  v6 = load_var @5 identity#0
+0009  v7 = constant #3 "module"
+0010  v8 = call v6(v7)
+0011  v9 = native_call @6 print(v8)
 
 function $0 identity(value#1)
 0000  v0 = load_var @1 value#1

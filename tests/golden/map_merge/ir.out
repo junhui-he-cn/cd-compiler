@@ -16,50 +16,50 @@ IR
 0014  v12 = native_call @4 merge(v10, v11)
 0015  store_var @5 combined#2, v12
 0016  v13 = load_var @6 combined#2
-0017  print v13
-0018  v14 = load_var @7 left#0
-0019  print v14
-0020  v15 = load_var @8 right#1
-0021  v16 = constant #8 "d"
-0022  v17 = constant #9 4
-0023  v18 = map_set v15, v16, v17
-0024  v19 = load_var @9 combined#2
-0025  print v19
-0026  v20 = load_var @10 left#0
-0027  v21 = load_var @11 right#1
-0028  v22 = native_call @12 merge(v20, v21)
-0029  print v22
-0030  v23 = constant #10 7
-0031  v24 = array [v23]
-0032  store_var @13 shared#3, v24
-0033  v25 = constant #11 "left"
-0034  v26 = load_var @14 shared#3
-0035  v27 = map [v25: v26]
-0036  store_var @15 shallowLeft#4, v27
-0037  v28 = constant #12 "right"
-0038  v29 = load_var @16 shared#3
-0039  v30 = map [v28: v29]
-0040  store_var @17 shallowRight#5, v30
-0041  v31 = load_var @18 shallowLeft#4
-0042  v32 = load_var @19 shallowRight#5
-0043  v33 = native_call @20 merge(v31, v32)
-0044  store_var @21 shallow#6, v33
-0045  v34 = load_var @22 shared#3
-0046  v35 = constant #13 8
-0047  v36 = native_call @23 push(v34, v35)
-0048  v37 = load_var @24 shallow#6
-0049  print v37
-0050  v38 = constant #14 "empty"
-0051  v39 = constant #15 nil
-0052  v40 = map [v38: v39]
-0053  store_var @25 optional#7, v40
-0054  v41 = constant #16 "value"
-0055  v42 = constant #17 9
-0056  v43 = map [v41: v42]
-0057  store_var @26 required#8, v43
-0058  v44 = load_var @27 optional#7
-0059  v45 = load_var @28 required#8
-0060  v46 = native_call @29 merge(v44, v45)
-0061  store_var @30 typed#9, v46
-0062  v47 = load_var @31 typed#9
-0063  print v47
+0017  v14 = native_call @7 print(v13)
+0018  v15 = load_var @8 left#0
+0019  v16 = native_call @9 print(v15)
+0020  v17 = load_var @10 right#1
+0021  v18 = constant #8 "d"
+0022  v19 = constant #9 4
+0023  v20 = map_set v17, v18, v19
+0024  v21 = load_var @11 combined#2
+0025  v22 = native_call @12 print(v21)
+0026  v23 = load_var @13 left#0
+0027  v24 = load_var @14 right#1
+0028  v25 = native_call @15 merge(v23, v24)
+0029  v26 = native_call @16 print(v25)
+0030  v27 = constant #10 7
+0031  v28 = array [v27]
+0032  store_var @17 shared#3, v28
+0033  v29 = constant #11 "left"
+0034  v30 = load_var @18 shared#3
+0035  v31 = map [v29: v30]
+0036  store_var @19 shallowLeft#4, v31
+0037  v32 = constant #12 "right"
+0038  v33 = load_var @20 shared#3
+0039  v34 = map [v32: v33]
+0040  store_var @21 shallowRight#5, v34
+0041  v35 = load_var @22 shallowLeft#4
+0042  v36 = load_var @23 shallowRight#5
+0043  v37 = native_call @24 merge(v35, v36)
+0044  store_var @25 shallow#6, v37
+0045  v38 = load_var @26 shared#3
+0046  v39 = constant #13 8
+0047  v40 = native_call @27 push(v38, v39)
+0048  v41 = load_var @28 shallow#6
+0049  v42 = native_call @29 print(v41)
+0050  v43 = constant #14 "empty"
+0051  v44 = constant #15 nil
+0052  v45 = map [v43: v44]
+0053  store_var @30 optional#7, v45
+0054  v46 = constant #16 "value"
+0055  v47 = constant #17 9
+0056  v48 = map [v46: v47]
+0057  store_var @31 required#8, v48
+0058  v49 = load_var @32 optional#7
+0059  v50 = load_var @33 required#8
+0060  v51 = native_call @34 merge(v49, v50)
+0061  store_var @35 typed#9, v51
+0062  v52 = load_var @36 typed#9
+0063  v53 = native_call @37 print(v52)

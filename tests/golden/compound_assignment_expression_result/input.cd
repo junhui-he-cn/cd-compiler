@@ -1,4 +1,4 @@
 let mut x = 1;
 let y = (x += 4) * 2;
-print x;
-print y;
+print(x);
+print(y);

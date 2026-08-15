@@ -1,5 +1,5 @@
 enum Result { Ok(number), Empty }
 match Result.Ok(1) {
-  Result.Ok(value) { print value; }
-  Result.Empty => { print 0; }
+  Result.Ok(value) { print(value); }
+  Result.Empty => { print(0); }
 }

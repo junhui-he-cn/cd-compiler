@@ -6,25 +6,25 @@ IR
 0004  v3 = load_var @1 values#0
 0005  v4 = make_function $0 <lambda>/1
 0006  v5 = native_call @4 flatMap(v3, v4)
-0007  print v5
-0008  v6 = load_var @5 values#0
-0009  v7 = make_function $1 <lambda>/1
-0010  v8 = native_call @7 flatMap(v6, v7)
-0011  print v8
-0012  v9 = constant #6 3
-0013  v10 = constant #7 4
-0014  v11 = array [v9, v10]
-0015  store_var @8 snapshot#3, v11
-0016  v12 = load_var @9 snapshot#3
-0017  v13 = make_function $2 <lambda>/1
-0018  v14 = native_call @13 flatMap(v12, v13)
-0019  print v14
-0020  v15 = load_var @14 snapshot#3
-0021  print v15
-0022  v16 = array []
-0023  v17 = make_function $3 <lambda>/1
-0024  v18 = native_call @16 flatMap(v16, v17)
-0025  print v18
+0007  v6 = native_call @5 print(v5)
+0008  v7 = load_var @6 values#0
+0009  v8 = make_function $1 <lambda>/1
+0010  v9 = native_call @8 flatMap(v7, v8)
+0011  v10 = native_call @9 print(v9)
+0012  v11 = constant #6 3
+0013  v12 = constant #7 4
+0014  v13 = array [v11, v12]
+0015  store_var @10 snapshot#3, v13
+0016  v14 = load_var @11 snapshot#3
+0017  v15 = make_function $2 <lambda>/1
+0018  v16 = native_call @15 flatMap(v14, v15)
+0019  v17 = native_call @16 print(v16)
+0020  v18 = load_var @17 snapshot#3
+0021  v19 = native_call @18 print(v18)
+0022  v20 = array []
+0023  v21 = make_function $3 <lambda>/1
+0024  v22 = native_call @20 flatMap(v20, v21)
+0025  v23 = native_call @21 print(v22)
 
 function $0 <lambda>(value#1)
 0000  v0 = load_var @2 value#1
@@ -37,7 +37,7 @@ function $0 <lambda>(value#1)
 0007  return v5
 
 function $1 <lambda>(value#2)
-0000  v0 = load_var @6 value#2
+0000  v0 = load_var @7 value#2
 0001  v1 = constant #4 1
 0002  v2 = add_num v0, v1
 0003  v3 = array [v2]
@@ -46,17 +46,17 @@ function $1 <lambda>(value#2)
 0006  return v4
 
 function $2 <lambda>(value#4)
-0000  v0 = load_var @10 snapshot#3
+0000  v0 = load_var @12 snapshot#3
 0001  v1 = constant #8 9
-0002  v2 = native_call @11 push(v0, v1)
-0003  v3 = load_var @12 value#4
+0002  v2 = native_call @13 push(v0, v1)
+0003  v3 = load_var @14 value#4
 0004  v4 = array [v3]
 0005  return v4
 0006  v5 = constant #9 nil
 0007  return v5
 
 function $3 <lambda>(value#5)
-0000  v0 = load_var @15 value#5
+0000  v0 = load_var @19 value#5
 0001  v1 = array [v0]
 0002  return v1
 0003  v2 = constant #10 nil

@@ -14,10 +14,14 @@ names:
   n2 = "alias#1"
   n3 = "values#0"
   n4 = "remove"
-  n5 = "alias#1"
+  n5 = "print"
   n6 = "alias#1"
-  n7 = "remove"
-  n8 = "values#0"
+  n7 = "print"
+  n8 = "alias#1"
+  n9 = "remove"
+  n10 = "print"
+  n11 = "values#0"
+  n12 = "print"
 
 globals:
   g0 = n0
@@ -27,7 +31,7 @@ native_imports:
   i0 = "remove" abi=1
   i1 = "print" abi=1
 
-main registers=16:
+main registers=19:
 block b0:
   r0 = constant c0
   r1 = constant c1
@@ -40,20 +44,20 @@ block b0:
   r6 = load_global g0
   r7 = constant c4
   r8 = call_native i0 [r6, r7]
-  r15 = call_native i1 [r8]
-  r9 = load_global g1
-  r15 = call_native i1 [r9]
+  r9 = call_native i1 [r8]
   r10 = load_global g1
-  r11 = constant c5
-  r12 = call_native i0 [r10, r11]
-  r15 = call_native i1 [r12]
-  r13 = load_global g0
-  r14 = len_map r13
+  r11 = call_native i1 [r10]
+  r12 = load_global g1
+  r13 = constant c5
+  r14 = call_native i0 [r12, r13]
   r15 = call_native i1 [r14]
+  r16 = load_global g0
+  r17 = len_map r16
+  r18 = call_native i1 [r17]
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/map_remove/input.cd" text="let values = {\"a\": 1, \"b\": 2};\nlet alias = values;\nprint remove(values, \"a\");\nprint alias;\nprint alias.remove(\"b\");\nprint values.len();\n"
+  s0 path="tests/bytecode_artifacts/map_remove/input.cd" text="let values = {\"a\": 1, \"b\": 2};\nlet alias = values;\nprint(remove(values, \"a\"));\nprint(alias);\nprint(alias.remove(\"b\"));\nprint(values.len());\n"
 
 debug_locations:
   main 0 = s0:1:15
@@ -93,14 +97,14 @@ debug_ranges:
   main 9 = s0:64:70
   main 10 = s0:72:75
   main 11 = s0:57:76
-  main 12 = s0:57:76
-  main 13 = s0:84:89
-  main 14 = s0:84:89
-  main 15 = s0:97:102
-  main 16 = s0:110:113
-  main 17 = s0:97:114
-  main 18 = s0:97:114
-  main 19 = s0:122:128
-  main 20 = s0:122:134
-  main 21 = s0:122:134
-  main 22 = s0:122:134
+  main 12 = s0:51:77
+  main 13 = s0:85:90
+  main 14 = s0:79:91
+  main 15 = s0:99:104
+  main 16 = s0:112:115
+  main 17 = s0:99:116
+  main 18 = s0:93:117
+  main 19 = s0:125:131
+  main 20 = s0:125:137
+  main 21 = s0:119:138
+  main 22 = s0:119:138

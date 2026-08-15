@@ -1,6 +1,6 @@
-print floor(1.9);
-print floor(-1.1);
-print ceil(1.1);
-print ceil(-1.9);
-print sqrt(9);
-print sqrt(2 * 8);
+print(floor(1.9));
+print(floor(-1.1));
+print(ceil(1.1));
+print(ceil(-1.9));
+print(sqrt(9));
+print(sqrt(2 * 8));

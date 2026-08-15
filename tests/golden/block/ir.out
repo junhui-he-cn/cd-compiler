@@ -4,6 +4,6 @@ IR
 0002  v1 = constant #1 "inner"
 0003  store_var @1 x#1, v1
 0004  v2 = load_var @2 x#1
-0005  print v2
-0006  v3 = load_var @3 x#0
-0007  print v3
+0005  v3 = native_call @3 print(v2)
+0006  v4 = load_var @4 x#0
+0007  v5 = native_call @5 print(v4)

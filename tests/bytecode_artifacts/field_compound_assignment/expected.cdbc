@@ -18,6 +18,7 @@ names:
   n10 = "c#0"
   n11 = "value"
   n12 = "Counter"
+  n13 = "print"
 
 globals:
   g0 = n2
@@ -46,7 +47,7 @@ block b0:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/field_compound_assignment/input.cd" text="struct Counter { value: number }\nlet c: Counter = Counter { value: 1 };\nc.value += 2;\nprint c.value;\n"
+  s0 path="tests/bytecode_artifacts/field_compound_assignment/input.cd" text="struct Counter { value: number }\nlet c: Counter = Counter { value: 1 };\nc.value += 2;\nprint(c.value);\n"
 
 debug_locations:
   main 0 = s0:2:35
@@ -79,5 +80,5 @@ debug_ranges:
   main 10 = s0:72:84
   main 11 = s0:92:93
   main 12 = s0:92:99
-  main 13 = s0:92:99
-  main 14 = s0:92:99
+  main 13 = s0:86:100
+  main 14 = s0:86:100

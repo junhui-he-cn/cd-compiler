@@ -1,1 +1,1 @@
-print true || false && false;
+print(true || false && false);

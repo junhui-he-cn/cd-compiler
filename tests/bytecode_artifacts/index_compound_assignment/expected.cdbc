@@ -12,6 +12,7 @@ names:
   n2 = "`+=` expects number target"
   n3 = "`+=` expects number value"
   n4 = "xs#0"
+  n5 = "print"
 
 globals:
   g0 = n0
@@ -39,7 +40,7 @@ block b0:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/index_compound_assignment/input.cd" text="let xs: [number] = [1];\nxs[0] += 2;\nprint xs[0];\n"
+  s0 path="tests/bytecode_artifacts/index_compound_assignment/input.cd" text="let xs: [number] = [1];\nxs[0] += 2;\nprint(xs[0]);\n"
 
 debug_locations:
   main 0 = s0:1:21
@@ -76,5 +77,5 @@ debug_ranges:
   main 12 = s0:42:44
   main 13 = s0:45:46
   main 14 = s0:42:46
-  main 15 = s0:42:46
-  main 16 = s0:42:46
+  main 15 = s0:36:48
+  main 16 = s0:36:48

@@ -10,13 +10,13 @@ IR
 0008  v6 = load_var @3 values#0
 0009  v7 = constant #4 "a"
 0010  v8 = native_call @4 remove(v6, v7)
-0011  print v8
-0012  v9 = load_var @5 alias#1
-0013  print v9
-0014  v10 = load_var @6 alias#1
-0015  v11 = constant #5 "b"
-0016  v12 = native_call @7 remove(v10, v11)
-0017  print v12
-0018  v13 = load_var @8 values#0
-0019  v14 = len_map v13
-0020  print v14
+0011  v9 = native_call @5 print(v8)
+0012  v10 = load_var @6 alias#1
+0013  v11 = native_call @7 print(v10)
+0014  v12 = load_var @8 alias#1
+0015  v13 = constant #5 "b"
+0016  v14 = native_call @9 remove(v12, v13)
+0017  v15 = native_call @10 print(v14)
+0018  v16 = load_var @11 values#0
+0019  v17 = len_map v16
+0020  v18 = native_call @12 print(v17)

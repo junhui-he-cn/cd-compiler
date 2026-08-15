@@ -1,6 +1,6 @@
 native_import i0 = print abi=1
 native_import i1 = str abi=1
-main registers=34
+main registers=42
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -21,37 +21,37 @@ main registers=34
 0017  b8 = constant #23 7
 0018  b9 = make_variant t0, v0 (b8)
 0019  b10 = call_direct $0 [b9]
-0020  b33 = call_native i0 [b10]
-0021  b11 = constant #24 "bad"
-0022  b12 = make_variant t0, v1 (b11)
-0023  b13 = call_direct $0 [b12]
-0024  b33 = call_native i0 [b13]
-0025  b14 = constant #25 4
-0026  b15 = make_variant t0, v0 (b14)
-0027  b16 = call_direct $1 [b15]
-0028  b33 = call_native i0 [b16]
-0029  b17 = constant #26 "x"
-0030  b18 = make_variant t0, v1 (b17)
-0031  b19 = call_direct $1 [b18]
-0032  b33 = call_native i0 [b19]
-0033  b20 = constant #27 3
-0034  b21 = make_variant t0, v0 (b20)
-0035  b22 = call_direct $2 [b21]
-0036  b33 = call_native i0 [b22]
-0037  b23 = constant #28 "x"
-0038  b24 = make_variant t0, v1 (b23)
-0039  b25 = call_direct $2 [b24]
-0040  b33 = call_native i0 [b25]
-0041  b26 = constant #29 5
-0042  b27 = call_direct $3 [b26]
-0043  b33 = call_native i0 [b27]
-0044  b28 = constant #30 2
-0045  b29 = neg_num b28
-0046  b30 = call_direct $3 [b29]
-0047  b33 = call_native i0 [b30]
-0048  b31 = constant #31 0
-0049  b32 = call_direct $3 [b31]
-0050  b33 = call_native i0 [b32]
+0020  b11 = call_native i0 [b10]
+0021  b12 = constant #24 "bad"
+0022  b13 = make_variant t0, v1 (b12)
+0023  b14 = call_direct $0 [b13]
+0024  b15 = call_native i0 [b14]
+0025  b16 = constant #25 4
+0026  b17 = make_variant t0, v0 (b16)
+0027  b18 = call_direct $1 [b17]
+0028  b19 = call_native i0 [b18]
+0029  b20 = constant #26 "x"
+0030  b21 = make_variant t0, v1 (b20)
+0031  b22 = call_direct $1 [b21]
+0032  b23 = call_native i0 [b22]
+0033  b24 = constant #27 3
+0034  b25 = make_variant t0, v0 (b24)
+0035  b26 = call_direct $2 [b25]
+0036  b27 = call_native i0 [b26]
+0037  b28 = constant #28 "x"
+0038  b29 = make_variant t0, v1 (b28)
+0039  b30 = call_direct $2 [b29]
+0040  b31 = call_native i0 [b30]
+0041  b32 = constant #29 5
+0042  b33 = call_direct $3 [b32]
+0043  b34 = call_native i0 [b33]
+0044  b35 = constant #30 2
+0045  b36 = neg_num b35
+0046  b37 = call_direct $3 [b36]
+0047  b38 = call_native i0 [b37]
+0048  b39 = constant #31 0
+0049  b40 = call_direct $3 [b39]
+0050  b41 = call_native i0 [b40]
 0051  return_nil
 
 function $0 describe/1 registers=14

@@ -2,28 +2,28 @@ native_import i0 = floor abi=1
 native_import i1 = print abi=1
 native_import i2 = ceil abi=1
 native_import i3 = sqrt abi=1
-main registers=17
+main registers=22
 0000  block
 0001  b0 = constant #0 1.8999999999999999
 0002  b1 = call_native i0 [b0]
-0003  b16 = call_native i1 [b1]
-0004  b2 = constant #1 1.1000000000000001
-0005  b3 = neg_num b2
-0006  b4 = call_native i0 [b3]
-0007  b16 = call_native i1 [b4]
-0008  b5 = constant #2 1.1000000000000001
-0009  b6 = call_native i2 [b5]
-0010  b16 = call_native i1 [b6]
-0011  b7 = constant #3 1.8999999999999999
-0012  b8 = neg_num b7
-0013  b9 = call_native i2 [b8]
-0014  b16 = call_native i1 [b9]
-0015  b10 = constant #4 9
-0016  b11 = call_native i3 [b10]
-0017  b16 = call_native i1 [b11]
-0018  b12 = constant #5 2
-0019  b13 = constant #6 8
-0020  b14 = mul_num b12, b13
-0021  b15 = call_native i3 [b14]
-0022  b16 = call_native i1 [b15]
+0003  b2 = call_native i1 [b1]
+0004  b3 = constant #1 1.1000000000000001
+0005  b4 = neg_num b3
+0006  b5 = call_native i0 [b4]
+0007  b6 = call_native i1 [b5]
+0008  b7 = constant #2 1.1000000000000001
+0009  b8 = call_native i2 [b7]
+0010  b9 = call_native i1 [b8]
+0011  b10 = constant #3 1.8999999999999999
+0012  b11 = neg_num b10
+0013  b12 = call_native i2 [b11]
+0014  b13 = call_native i1 [b12]
+0015  b14 = constant #4 9
+0016  b15 = call_native i3 [b14]
+0017  b16 = call_native i1 [b15]
+0018  b17 = constant #5 2
+0019  b18 = constant #6 8
+0020  b19 = mul_num b17, b18
+0021  b20 = call_native i3 [b19]
+0022  b21 = call_native i1 [b20]
 0023  return_nil

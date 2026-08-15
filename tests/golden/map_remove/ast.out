@@ -1,7 +1,7 @@
 Program
   Let values = (map (entry "a" 1) (entry "b" 2))
   Let alias = values
-  Print (call remove values "a")
-  Print alias
-  Print (member-call alias remove "b")
-  Print (member-call values len)
+  Expr (call print (call remove values "a"))
+  Expr (call print alias)
+  Expr (call print (member-call alias remove "b"))
+  Expr (call print (member-call values len))

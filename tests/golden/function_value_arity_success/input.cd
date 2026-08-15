@@ -1,15 +1,15 @@
 let mut inc = fun (x) {
   return x + 1;
 };
-print inc(41);
+print(inc(41));
 
 fun add(a, b) {
   return a + b;
 }
 let op = add;
-print op(2, 3);
+print(op(2, 3));
 
 inc = fun (y) {
   return y + 2;
 };
-print inc(40);
+print(inc(40));

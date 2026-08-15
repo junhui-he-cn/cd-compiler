@@ -3,23 +3,23 @@ Program
   If ok
     Then
       Block
-        Print "then"
+        Expr (call print "then")
     Else
       Block
-        Print "else"
+        Expr (call print "else")
   If false
     Then
       Block
-        Print "bad"
+        Expr (call print "bad")
     Else
       Block
-        Print "fallback"
+        Expr (call print "fallback")
   If true
     Then
       Block
-        Print "no else"
+        Expr (call print "no else")
   If false
     Then
       Block
-        Print "bad no else"
-  Print "after no else"
+        Expr (call print "bad no else")
+  Expr (call print "after no else")

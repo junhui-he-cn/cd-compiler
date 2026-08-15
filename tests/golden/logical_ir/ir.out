@@ -4,10 +4,10 @@ IR
 0002  jump_if_true v1, 0005
 0003  v2 = constant #1 false
 0004  v1 = copy v2
-0005  print v1
-0006  v3 = constant #2 true
-0007  v4 = copy v3
-0008  jump_if_false v4, 0011
-0009  v5 = constant #3 false
-0010  v4 = copy v5
-0011  print v4
+0005  v3 = native_call @0 print(v1)
+0006  v4 = constant #2 true
+0007  v5 = copy v4
+0008  jump_if_false v5, 0011
+0009  v6 = constant #3 false
+0010  v5 = copy v6
+0011  v7 = native_call @1 print(v5)

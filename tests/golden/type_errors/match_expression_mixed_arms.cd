@@ -6,8 +6,8 @@ enum Result {
 fun describe(result: Result): string {
   return match result {
     Result.Ok(value) => "ok:" + str(value),
-    Result.Err(message) => { print message; },
+    Result.Err(message) => { print(message); },
   };
 }
 
-print describe(Result.Ok(1));
+print(describe(Result.Ok(1)));

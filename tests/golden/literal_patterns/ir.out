@@ -15,91 +15,91 @@ IR
 0013  store_var @32 maybe#8, v6
 0014  v7 = constant #28 0
 0015  v8 = call_direct $0 describeNumber/1(v7)
-0016  print v8
-0017  v9 = constant #29 8
-0018  v10 = call_direct $0 describeNumber/1(v9)
-0019  print v10
-0020  v11 = constant #30 false
-0021  v12 = call_direct $1 describeBool/1(v11)
-0022  print v12
-0023  v13 = constant #31 7
-0024  v14 = variant Result.Number (v13)
-0025  v15 = call_direct $2 describeResult/1(v14)
-0026  print v15
-0027  v16 = constant #32 ""
-0028  v17 = variant Result.Text (v16)
-0029  v18 = call_direct $2 describeResult/1(v17)
-0030  print v18
-0031  v19 = constant #33 nil
-0032  v20 = call_direct $2 describeResult/1(v19)
-0033  print v20
-0034  v21 = constant #34 1
-0035  v22 = constant #35 nil
-0036  v23 = constant #36 0
-0037  v24 = equal v21, v23
-0038  jump_if_false v24, 0042
-0039  v25 = constant #37 "zero"
-0040  print v25
+0016  v9 = native_call @33 print(v8)
+0017  v10 = constant #29 8
+0018  v11 = call_direct $0 describeNumber/1(v10)
+0019  v12 = native_call @34 print(v11)
+0020  v13 = constant #30 false
+0021  v14 = call_direct $1 describeBool/1(v13)
+0022  v15 = native_call @35 print(v14)
+0023  v16 = constant #31 7
+0024  v17 = variant Result.Number (v16)
+0025  v18 = call_direct $2 describeResult/1(v17)
+0026  v19 = native_call @38 print(v18)
+0027  v20 = constant #32 ""
+0028  v21 = variant Result.Text (v20)
+0029  v22 = call_direct $2 describeResult/1(v21)
+0030  v23 = native_call @41 print(v22)
+0031  v24 = constant #33 nil
+0032  v25 = call_direct $2 describeResult/1(v24)
+0033  v26 = native_call @42 print(v25)
+0034  v27 = constant #34 1
+0035  v28 = constant #35 nil
+0036  v29 = constant #36 0
+0037  v30 = equal v27, v29
+0038  jump_if_false v30, 0042
+0039  v31 = constant #37 "zero"
+0040  v32 = native_call @43 print(v31)
 0041  jump 0051
-0042  v26 = constant #38 1
-0043  v27 = equal v21, v26
-0044  jump_if_false v27, 0048
-0045  v28 = constant #39 "one"
-0046  print v28
+0042  v33 = constant #38 1
+0043  v34 = equal v27, v33
+0044  jump_if_false v34, 0048
+0045  v35 = constant #39 "one"
+0046  v36 = native_call @44 print(v35)
 0047  jump 0051
-0048  v29 = constant #40 "many"
-0049  print v29
+0048  v37 = constant #40 "many"
+0049  v38 = native_call @45 print(v37)
 0050  jump 0051
-0051  v30 = constant #41 true
-0052  v31 = constant #42 nil
-0053  v32 = constant #43 false
-0054  v33 = equal v30, v32
-0055  jump_if_false v33, 0059
-0056  v34 = constant #44 "no"
-0057  print v34
+0051  v39 = constant #41 true
+0052  v40 = constant #42 nil
+0053  v41 = constant #43 false
+0054  v42 = equal v39, v41
+0055  jump_if_false v42, 0059
+0056  v43 = constant #44 "no"
+0057  v44 = native_call @46 print(v43)
 0058  jump 0065
-0059  v35 = constant #45 true
-0060  v36 = equal v30, v35
-0061  jump_if_false v36, 0065
-0062  v37 = constant #46 "yes"
-0063  print v37
+0059  v45 = constant #45 true
+0060  v46 = equal v39, v45
+0061  jump_if_false v46, 0065
+0062  v47 = constant #46 "yes"
+0063  v48 = native_call @47 print(v47)
 0064  jump 0065
-0065  v38 = constant #47 "ok"
-0066  v39 = constant #48 nil
-0067  v40 = constant #49 ""
-0068  v41 = equal v38, v40
-0069  jump_if_false v41, 0073
-0070  v42 = constant #50 "empty"
-0071  print v42
+0065  v49 = constant #47 "ok"
+0066  v50 = constant #48 nil
+0067  v51 = constant #49 ""
+0068  v52 = equal v49, v51
+0069  jump_if_false v52, 0073
+0070  v53 = constant #50 "empty"
+0071  v54 = native_call @48 print(v53)
 0072  jump 0082
-0073  v43 = constant #51 "ok"
-0074  v44 = equal v38, v43
-0075  jump_if_false v44, 0079
-0076  v45 = constant #52 "ok"
-0077  print v45
+0073  v55 = constant #51 "ok"
+0074  v56 = equal v49, v55
+0075  jump_if_false v56, 0079
+0076  v57 = constant #52 "ok"
+0077  v58 = native_call @49 print(v57)
 0078  jump 0082
-0079  v46 = constant #53 "other"
-0080  print v46
+0079  v59 = constant #53 "other"
+0080  v60 = native_call @50 print(v59)
 0081  jump 0082
-0082  v47 = load_var @37 maybe#8
-0083  v48 = constant #54 nil
-0084  v49 = constant #55 nil
-0085  v50 = equal v47, v49
-0086  jump_if_false v50, 0090
-0087  v51 = constant #56 "nil"
-0088  print v51
+0082  v61 = load_var @51 maybe#8
+0083  v62 = constant #54 nil
+0084  v63 = constant #55 nil
+0085  v64 = equal v61, v63
+0086  jump_if_false v64, 0090
+0087  v65 = constant #56 "nil"
+0088  v66 = native_call @52 print(v65)
 0089  jump 0102
-0090  v52 = constant #57 true
-0091  v53 = equal v47, v52
-0092  jump_if_false v53, 0096
-0093  v54 = constant #58 "true"
-0094  print v54
+0090  v67 = constant #57 true
+0091  v68 = equal v61, v67
+0092  jump_if_false v68, 0096
+0093  v69 = constant #58 "true"
+0094  v70 = native_call @53 print(v69)
 0095  jump 0102
-0096  v55 = constant #59 false
-0097  v56 = equal v47, v55
-0098  jump_if_false v56, 0102
-0099  v57 = constant #60 "false"
-0100  print v57
+0096  v71 = constant #59 false
+0097  v72 = equal v61, v71
+0098  jump_if_false v72, 0102
+0099  v73 = constant #60 "false"
+0100  v74 = native_call @54 print(v73)
 0101  jump 0102
 
 function $0 describeNumber(value#1)

@@ -1,2 +1,2 @@
 struct Person { name: number }
-print Person { name 1 };
+print(Person { name 1 });

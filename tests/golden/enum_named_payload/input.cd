@@ -22,7 +22,7 @@ fun norm(point: Point2): number {
   };
 }
 
-print describe(NamedResult.Ok(7));
-print describe(NamedResult.Err("bad"));
-print norm(Point2.Origin());
-print norm(Point2.Coord(3, 4));
+print(describe(NamedResult.Ok(7)));
+print(describe(NamedResult.Err("bad")));
+print(norm(Point2.Origin()));
+print(norm(Point2.Coord(3, 4)));

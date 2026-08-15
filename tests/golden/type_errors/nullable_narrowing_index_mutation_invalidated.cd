@@ -8,4 +8,4 @@ fun read(values: [optional<number>]): number {
   return 0;
 }
 
-print read([41]);
+print(read([41]));

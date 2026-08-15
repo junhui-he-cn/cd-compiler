@@ -2,15 +2,15 @@ import "../../data_structures.cd" as ds;
 
 let left = [1, 3, 5, 7];
 let right = [2, 3, 6, 8];
-print ds.mergeSortedNumbers(left, right);
-print left;
-print right;
+print(ds.mergeSortedNumbers(left, right));
+print(left);
+print(right);
 
 let values = [1, 2, 4, 7, 11];
-print ds.twoSumSorted(values, 9);
-print ds.twoSumSorted(values, 10);
-print ds.twoSumSorted([1, 1, 2, 3], 2);
-print ds.twoSumSorted([], 0);
+print(ds.twoSumSorted(values, 9));
+print(ds.twoSumSorted(values, 10));
+print(ds.twoSumSorted([1, 1, 2, 3], 2));
+print(ds.twoSumSorted([], 0));
 
 let empty: [number] = [];
-print ds.mergeSortedNumbers(empty, [1, 2]);
+print(ds.mergeSortedNumbers(empty, [1, 2]));

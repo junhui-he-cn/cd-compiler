@@ -14,7 +14,7 @@ fun makeCounter() {
   return next;
 }
 
-print fib(6);
+print(fib(6));
 let counter = makeCounter();
-print counter();
-print counter();
+print(counter());
+print(counter());

@@ -1,15 +1,15 @@
 let xs = [1, 2];
-print push(xs, 3);
-print xs;
-print pop(xs);
-print xs;
+print(push(xs, 3));
+print(xs);
+print(pop(xs));
+print(xs);
 
 let alias = xs;
 push(alias, 4);
-print xs;
+print(xs);
 
 let mixed = [];
 push(mixed, "hi");
 push(mixed, true);
-print pop(mixed);
-print pop(mixed);
+print(pop(mixed));
+print(pop(mixed));

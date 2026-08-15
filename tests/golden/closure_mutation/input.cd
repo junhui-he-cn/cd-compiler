@@ -1,5 +1,5 @@
 let mut x = 1;
 let f = fun () { return x; };
 x = 2;
-print f();
-print x;
+print(f());
+print(x);

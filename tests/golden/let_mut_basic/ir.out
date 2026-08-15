@@ -6,45 +6,45 @@ IR
 0004  v3 = add_num v1, v2
 0005  assign_var @2 x#0, v3
 0006  v4 = load_var @3 x#0
-0007  print v4
-0008  v5 = constant #2 0
-0009  store_var @4 counter#1, v5
-0010  v6 = make_function $0 <lambda>/0
-0011  store_var @10 bump#2, v6
-0012  v7 = load_var @11 bump#2
-0013  v8 = call v7()
-0014  print v8
-0015  v9 = load_var @12 bump#2
-0016  v10 = call v9()
-0017  print v10
-0018  v11 = constant #5 1
-0019  v12 = constant #6 2
-0020  v13 = array [v11, v12]
-0021  store_var @13 items#3, v13
-0022  v14 = load_var @14 items#3
-0023  v15 = constant #7 0
-0024  v16 = constant #8 9
-0025  v17 = array_set v14, v15, v16
-0026  v18 = load_var @15 items#3
-0027  print v18
-0028  v19 = constant #9 1
-0029  v20 = struct Box {value: v19}
-0030  store_var @18 boxed#4, v20
-0031  v21 = load_var @19 boxed#4
-0032  v22 = constant #10 5
-0033  v23 = assign_field v21.value, v22
-0034  v24 = load_var @22 boxed#4
-0035  v25 = field v24.value
-0036  print v25
+0007  v5 = native_call @4 print(v4)
+0008  v6 = constant #2 0
+0009  store_var @5 counter#1, v6
+0010  v7 = make_function $0 <lambda>/0
+0011  store_var @11 bump#2, v7
+0012  v8 = load_var @12 bump#2
+0013  v9 = call v8()
+0014  v10 = native_call @13 print(v9)
+0015  v11 = load_var @14 bump#2
+0016  v12 = call v11()
+0017  v13 = native_call @15 print(v12)
+0018  v14 = constant #5 1
+0019  v15 = constant #6 2
+0020  v16 = array [v14, v15]
+0021  store_var @16 items#3, v16
+0022  v17 = load_var @17 items#3
+0023  v18 = constant #7 0
+0024  v19 = constant #8 9
+0025  v20 = array_set v17, v18, v19
+0026  v21 = load_var @18 items#3
+0027  v22 = native_call @19 print(v21)
+0028  v23 = constant #9 1
+0029  v24 = struct Box {value: v23}
+0030  store_var @22 boxed#4, v24
+0031  v25 = load_var @23 boxed#4
+0032  v26 = constant #10 5
+0033  v27 = assign_field v25.value, v26
+0034  v28 = load_var @26 boxed#4
+0035  v29 = field v28.value
+0036  v30 = native_call @29 print(v29)
 
 function $0 <lambda>()
-0000  v0 = load_var @5 counter#1
-0001  v1 = assert_number v0 @6 `+=` expects number variable
+0000  v0 = load_var @6 counter#1
+0001  v1 = assert_number v0 @7 `+=` expects number variable
 0002  v2 = constant #3 1
-0003  v3 = assert_number v2 @7 `+=` expects number value
+0003  v3 = assert_number v2 @8 `+=` expects number value
 0004  v4 = add_num v1, v3
-0005  assign_var @8 counter#1, v4
-0006  v5 = load_var @9 counter#1
+0005  assign_var @9 counter#1, v4
+0006  v5 = load_var @10 counter#1
 0007  return v5
 0008  v6 = constant #4 nil
 0009  return v6

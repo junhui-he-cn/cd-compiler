@@ -8,12 +8,12 @@ let head = Node<number> { value: 1, next: tail };
 let alias = tail;
 head.next = nil;
 alias.value = 20;
-print head.next;
-print tail.value;
+print(head.next);
+print(tail.value);
 
 let first = Node<number> { value: 3, next: nil };
 let second = Node<number> { value: 4, next: first };
 first.next = second;
-print first;
-print first == first;
-print first == second;
+print(first);
+print(first == first);
+print(first == second);

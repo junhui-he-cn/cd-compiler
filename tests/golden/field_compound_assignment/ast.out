@@ -2,8 +2,8 @@ Program
   Struct Counter {value: number, other: number}
   Let c: Counter = (construct Counter value: 10 other: 2)
   Expr (+= (field c value) 5)
-  Print (field c value)
-  Print (-= (field c value) 3)
-  Print (*= (field c value) 2)
-  Print (/= (field c value) 4)
-  Print (field c other)
+  Expr (call print (field c value))
+  Expr (call print (-= (field c value) 3))
+  Expr (call print (*= (field c value) 2))
+  Expr (call print (/= (field c value) 4))
+  Expr (call print (field c other))

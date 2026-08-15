@@ -12,33 +12,33 @@ IR
 0010  v8 = native_call @5 values(v7)
 0011  store_var @6 valueList#2, v8
 0012  v9 = load_var @7 keyList#1
-0013  print v9
-0014  v10 = load_var @8 valueList#2
-0015  print v10
-0016  v11 = load_var @9 prices#0
-0017  v12 = constant #4 "water"
-0018  v13 = constant #5 2
-0019  v14 = map_set v11, v12, v13
-0020  v15 = load_var @10 prices#0
-0021  v16 = constant #6 "tea"
-0022  v17 = native_call @11 remove(v15, v16)
-0023  v18 = load_var @12 keyList#1
-0024  print v18
-0025  v19 = load_var @13 valueList#2
-0026  print v19
-0027  v20 = constant #7 1
-0028  v21 = constant #8 "one"
-0029  v22 = constant #9 2
-0030  v23 = constant #10 "two"
-0031  v24 = map [v20: v21, v22: v23]
-0032  store_var @14 typed#3, v24
-0033  v25 = load_var @15 typed#3
-0034  v26 = native_call @16 keys(v25)
-0035  store_var @17 typedKeys#4, v26
-0036  v27 = load_var @18 typed#3
-0037  v28 = native_call @19 values(v27)
-0038  store_var @20 typedValues#5, v28
-0039  v29 = load_var @21 typedKeys#4
-0040  print v29
-0041  v30 = load_var @22 typedValues#5
-0042  print v30
+0013  v10 = native_call @8 print(v9)
+0014  v11 = load_var @9 valueList#2
+0015  v12 = native_call @10 print(v11)
+0016  v13 = load_var @11 prices#0
+0017  v14 = constant #4 "water"
+0018  v15 = constant #5 2
+0019  v16 = map_set v13, v14, v15
+0020  v17 = load_var @12 prices#0
+0021  v18 = constant #6 "tea"
+0022  v19 = native_call @13 remove(v17, v18)
+0023  v20 = load_var @14 keyList#1
+0024  v21 = native_call @15 print(v20)
+0025  v22 = load_var @16 valueList#2
+0026  v23 = native_call @17 print(v22)
+0027  v24 = constant #7 1
+0028  v25 = constant #8 "one"
+0029  v26 = constant #9 2
+0030  v27 = constant #10 "two"
+0031  v28 = map [v24: v25, v26: v27]
+0032  store_var @18 typed#3, v28
+0033  v29 = load_var @19 typed#3
+0034  v30 = native_call @20 keys(v29)
+0035  store_var @21 typedKeys#4, v30
+0036  v31 = load_var @22 typed#3
+0037  v32 = native_call @23 values(v31)
+0038  store_var @24 typedValues#5, v32
+0039  v33 = load_var @25 typedKeys#4
+0040  v34 = native_call @26 print(v33)
+0041  v35 = load_var @27 typedValues#5
+0042  v36 = native_call @28 print(v35)

@@ -1,5 +1,5 @@
-print nil;
-print true;
-print false;
-print 123;
-print "hello";
+print(nil);
+print(true);
+print(false);
+print(123);
+print("hello");

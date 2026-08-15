@@ -1,20 +1,20 @@
 let left: map<string, number> = {"a": 1, "b": 2};
 let right: map<string, number> = {"b": 20, "c": 3};
 let combined: map<string, number> = merge(left, right);
-print combined;
-print left;
+print(combined);
+print(left);
 right["d"] = 4;
-print combined;
-print left.merge(right);
+print(combined);
+print(left.merge(right));
 
 let shared = [7];
 let shallowLeft = {"left": shared};
 let shallowRight = {"right": shared};
 let shallow = shallowLeft.merge(shallowRight);
 push(shared, 8);
-print shallow;
+print(shallow);
 
 let optional: map<string, optional<number>> = {"empty": nil};
 let required: map<string, number> = {"value": 9};
 let typed: map<string, optional<number>> = merge(optional, required);
-print typed;
+print(typed);

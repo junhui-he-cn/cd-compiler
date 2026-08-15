@@ -5,4 +5,4 @@ fun invalid(value: optional<number>): number {
   return 0;
 }
 
-print invalid(nil);
+print(invalid(nil));

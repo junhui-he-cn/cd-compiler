@@ -1,5 +1,5 @@
 Program
   Fun f()
     Return nil
-    Print "no"
-  Print (call f)
+    Expr (call print "no")
+  Expr (call print (call f))

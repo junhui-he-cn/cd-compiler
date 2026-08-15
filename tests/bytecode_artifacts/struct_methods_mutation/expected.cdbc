@@ -24,6 +24,7 @@ names:
   n13 = "c#2"
   n14 = "value"
   n15 = "Counter"
+  n16 = "print"
 
 globals:
   g0 = n0
@@ -70,7 +71,7 @@ block b2:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/struct_methods_mutation/input.cd" text="struct Counter { value: number }\nimpl Counter { fun inc() { this.value = this.value + 1; return nil; } }\nlet c: Counter = Counter { value: 1 };\nc.inc();\nprint c.value;\n"
+  s0 path="tests/bytecode_artifacts/struct_methods_mutation/input.cd" text="struct Counter { value: number }\nimpl Counter { fun inc() { this.value = this.value + 1; return nil; } }\nlet c: Counter = Counter { value: 1 };\nc.inc();\nprint(c.value);\n"
 
 debug_locations:
   main 0 = s0:2:1
@@ -117,8 +118,8 @@ debug_ranges:
   main 10 = s0:144:151
   main 11 = s0:159:160
   main 12 = s0:159:166
-  main 13 = s0:159:166
-  main 14 = s0:159:166
+  main 13 = s0:153:167
+  main 14 = s0:153:167
   function f0 0 = s0:60:64
   function f0 1 = s0:60:64
   function f0 2 = s0:73:77

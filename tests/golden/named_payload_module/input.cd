@@ -7,4 +7,4 @@ fun render(value: lib.Outcome): string {
   }
 }
 
-print render(lib.make());
+print(render(lib.make()));

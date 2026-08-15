@@ -90,7 +90,8 @@
 16:60 RightBrace `}`
 17:3 RightBrace `}`
 18:1 RightBrace `}`
-20:1 Print `print`
+20:1 Identifier `print`
+20:6 LeftParen `(`
 20:7 Identifier `render`
 20:13 LeftParen `(`
 20:14 Identifier `lib`
@@ -99,7 +100,8 @@
 20:22 LeftParen `(`
 20:23 RightParen `)`
 20:24 RightParen `)`
-20:25 Semicolon `;`
+20:25 RightParen `)`
+20:26 Semicolon `;`
 21:1 EndOfFile
 
 Program
@@ -118,4 +120,4 @@ Program
         Arm lib.Outcome.Bad(message)
           Block
             Return (+ "bad:" message)
-    Print (call render (member-call lib make))
+    Expr (call print (call render (member-call lib make)))

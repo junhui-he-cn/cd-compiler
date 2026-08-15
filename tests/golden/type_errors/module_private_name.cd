@@ -1,2 +1,2 @@
 import "./module_private_name_deps/lib.cd";
-print secret;
+print(secret);

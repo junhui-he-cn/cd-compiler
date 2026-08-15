@@ -13,7 +13,8 @@
 1:31 Number `9`
 1:32 RightBracket `]`
 1:33 Semicolon `;`
-2:1 Print `print`
+2:1 Identifier `print`
+2:6 LeftParen `(`
 2:7 Identifier `findIndex`
 2:16 LeftParen `(`
 2:17 Identifier `values`
@@ -34,8 +35,10 @@
 2:69 Semicolon `;`
 2:71 RightBrace `}`
 2:72 RightParen `)`
-2:73 Semicolon `;`
-3:1 Print `print`
+2:73 RightParen `)`
+2:74 Semicolon `;`
+3:1 Identifier `print`
+3:6 LeftParen `(`
 3:7 Identifier `values`
 3:13 Dot `.`
 3:14 Identifier `findIndex`
@@ -56,7 +59,8 @@
 3:69 Semicolon `;`
 3:71 RightBrace `}`
 3:72 RightParen `)`
-3:73 Semicolon `;`
+3:73 RightParen `)`
+3:74 Semicolon `;`
 4:1 Let `let`
 4:5 Identifier `snapshot`
 4:13 Colon `:`
@@ -70,7 +74,8 @@
 4:30 Number `2`
 4:31 RightBracket `]`
 4:32 Semicolon `;`
-5:1 Print `print`
+5:1 Identifier `print`
+5:6 LeftParen `(`
 5:7 Identifier `snapshot`
 5:15 Dot `.`
 5:16 Identifier `findIndex`
@@ -98,11 +103,15 @@
 7:20 Semicolon `;`
 8:1 RightBrace `}`
 8:2 RightParen `)`
-8:3 Semicolon `;`
-9:1 Print `print`
+8:3 RightParen `)`
+8:4 Semicolon `;`
+9:1 Identifier `print`
+9:6 LeftParen `(`
 9:7 Identifier `snapshot`
-9:15 Semicolon `;`
-10:1 Print `print`
+9:15 RightParen `)`
+9:16 Semicolon `;`
+10:1 Identifier `print`
+10:6 LeftParen `(`
 10:7 LeftBracket `[`
 10:8 RightBracket `]`
 10:9 Dot `.`
@@ -122,14 +131,15 @@
 10:59 Semicolon `;`
 10:61 RightBrace `}`
 10:62 RightParen `)`
-10:63 Semicolon `;`
+10:63 RightParen `)`
+10:64 Semicolon `;`
 11:1 EndOfFile
 
 Program
   Let values: [number] = (array 4 7 9)
-  Print (call findIndex values (fun (value: number): bool (return (> value 6))))
-  Print (member-call values findIndex (fun (value: number): bool (return (== value 2))))
+  Expr (call print (call findIndex values (fun (value: number): bool (return (> value 6)))))
+  Expr (call print (member-call values findIndex (fun (value: number): bool (return (== value 2)))))
   Let snapshot: [number] = (array 1 2)
-  Print (member-call snapshot findIndex (fun (value: number): bool (expr (call push snapshot 9)) (return (== value 2))))
-  Print snapshot
-  Print (member-call (array) findIndex (fun (value: number): bool (return true)))
+  Expr (call print (member-call snapshot findIndex (fun (value: number): bool (expr (call push snapshot 9)) (return (== value 2)))))
+  Expr (call print snapshot)
+  Expr (call print (member-call (array) findIndex (fun (value: number): bool (return true))))

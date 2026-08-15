@@ -7,9 +7,9 @@ IR
 0005  v4 = native_call @5 reduce(v1, v2, v3)
 0006  store_var @6 result#3, v4
 0007  v5 = load_var @7 result#3
-0008  print v5
-0009  v6 = load_var @8 calls#0
-0010  print v6
+0008  v6 = native_call @8 print(v5)
+0009  v7 = load_var @9 calls#0
+0010  v8 = native_call @10 print(v7)
 
 function $0 <lambda>(acc#1, value#2)
 0000  v0 = load_var @1 calls#0

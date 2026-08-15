@@ -10,16 +10,16 @@ let numbers: [[number]] = [
   [],
   [3, 5, 8]
 ];
-print ds.mergeSortedArrays(numbers, ascendingNumber);
-print numbers;
+print(ds.mergeSortedArrays(numbers, ascendingNumber));
+print(numbers);
 
 let words: [[string]] = [
   ["ant", "fox"],
   ["cat", "dog"],
   ["bird"]
 ];
-print ds.mergeSortedArrays(words, ds.stringLess);
-print words;
+print(ds.mergeSortedArrays(words, ds.stringLess));
+print(words);
 
 struct Entry {
   key: number,
@@ -49,8 +49,8 @@ let entries: [[Entry]] = [
   [Entry { key: 1, label: "b" }, Entry { key: 2, label: "d" }],
   [Entry { key: 3, label: "e" }]
 ];
-print renderEntries(ds.mergeSortedArrays(entries, entryLess));
+print(renderEntries(ds.mergeSortedArrays(entries, entryLess)));
 
 let empty: [[number]] = [];
-print ds.mergeSortedArrays<number>(empty, ascendingNumber);
-print ds.mergeSortedArrays<number>([[], []], ascendingNumber);
+print(ds.mergeSortedArrays<number>(empty, ascendingNumber));
+print(ds.mergeSortedArrays<number>([[], []], ascendingNumber));

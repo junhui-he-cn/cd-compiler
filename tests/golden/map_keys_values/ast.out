@@ -2,14 +2,14 @@ Program
   Let prices = (map (entry "tea" 3) (entry "coffee" 5))
   Let keyList = (call keys prices)
   Let valueList = (member-call prices values)
-  Print keyList
-  Print valueList
+  Expr (call print keyList)
+  Expr (call print valueList)
   Expr (= (index prices "water") 2)
   Expr (call remove prices "tea")
-  Print keyList
-  Print valueList
+  Expr (call print keyList)
+  Expr (call print valueList)
   Let typed: map<number, string> = (map (entry 1 "one") (entry 2 "two"))
   Let typedKeys: [number] = (member-call typed keys)
   Let typedValues: [string] = (call values typed)
-  Print typedKeys
-  Print typedValues
+  Expr (call print typedKeys)
+  Expr (call print typedValues)

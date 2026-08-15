@@ -3,5 +3,5 @@ let result: number = [].reduce(42, fun (acc: number, value: number): number {
   push(calls, value);
   return acc + 1;
 });
-print result;
-print calls;
+print(result);
+print(calls);

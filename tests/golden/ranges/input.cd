@@ -1,10 +1,10 @@
 let ascending = range(1, 6);
-print ascending;
-print len(ascending);
-print ascending[2];
-print ascending.contains(5);
-print contains(ascending, 4);
-print ascending.len();
-print typeOf(ascending);
-for item in range(5) { print item; }
-for item in range(5, 0, -2) { print item; }
+print(ascending);
+print(len(ascending));
+print(ascending[2]);
+print(ascending.contains(5));
+print(contains(ascending, 4));
+print(ascending.len());
+print(typeOf(ascending));
+for item in range(5) { print(item); }
+for item in range(5, 0, -2) { print(item); }

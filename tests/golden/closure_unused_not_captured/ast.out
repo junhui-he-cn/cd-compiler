@@ -6,4 +6,4 @@ Program
       Return used
     Return read
   Let f = (call make)
-  Print (call f)
+  Expr (call print (call f))

@@ -4,4 +4,4 @@ fun count(n) {
   }
   return count(n - 1) + 1;
 }
-print count(3);
+print(count(3));

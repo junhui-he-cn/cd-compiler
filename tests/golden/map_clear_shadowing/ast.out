@@ -2,7 +2,7 @@ Program
   Fun clear(map)
     Return "shadowed"
   Let values = (map (entry "a" 1))
-  Print (call clear values)
-  Print values
-  Print (member-call values clear)
-  Print values
+  Expr (call print (call clear values))
+  Expr (call print values)
+  Expr (call print (member-call values clear))
+  Expr (call print values)

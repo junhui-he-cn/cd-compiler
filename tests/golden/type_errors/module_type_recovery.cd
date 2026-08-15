@@ -2,4 +2,4 @@ import "./m2b_type_recovery_deps/a.cd";
 import "./m2b_type_recovery_deps/b.cd";
 import "./m2b_type_recovery_deps/blocked.cd";
 import "./m2b_type_recovery_deps/ok.cd";
-print missing_entry;
+print(missing_entry);

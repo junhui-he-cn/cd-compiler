@@ -1,5 +1,5 @@
 struct Person { name: string }
 fun fail(person) {
-  print person.age;
+  print(person.age);
 }
 fail(Person { name: "Ada" });

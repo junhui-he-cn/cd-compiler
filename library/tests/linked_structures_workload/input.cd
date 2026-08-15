@@ -18,6 +18,6 @@ while (value < 1500) {
   value += 1;
 }
 
-print list.size();
-print list.popFront();
-print list.size();
+print(list.size());
+print(list.popFront());
+print(list.size());

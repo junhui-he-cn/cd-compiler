@@ -21,10 +21,10 @@ let hongKong = Person {
   address: Address { city: "Hong Kong", zip: 2 }
 };
 let nilPerson: optional<Person> = nil;
-print describe(ada);
-print describe(hongKong);
-print describe(nilPerson);
+print(describe(ada));
+print(describe(hongKong));
+print(describe(nilPerson));
 match ada {
-  Person { name: "Ada" } | Person { age: 0 } => { print "or"; }
-  Person {} => { print "fallback"; }
+  Person { name: "Ada" } | Person { age: 0 } => { print("or"); }
+  Person {} => { print("fallback"); }
 }

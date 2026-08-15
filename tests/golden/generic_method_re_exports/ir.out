@@ -10,7 +10,7 @@ IR
 0008  v5 = load_var @7 box#3
 0009  v6 = constant #3 9
 0010  v7 = call v4(v5, v6)
-0011  print v7
+0011  v8 = native_call @8 print(v7)
 
 function $0 echo(this#1, value#2)
 0000  v0 = load_var @1 value#2

@@ -71,7 +71,6 @@ private:
     StmtPtr continueStatement();
     StmtPtr blockStatement();
     std::vector<StmtPtr> blockStatements();
-    StmtPtr printStatement();
     StmtPtr returnStatement();
     StmtPtr letDeclarationNoSemicolon(const std::string& terminatorMessage);
     StmtPtr expressionStatementNoSemicolon();

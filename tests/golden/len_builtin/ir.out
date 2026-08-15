@@ -1,23 +1,23 @@
 IR
 0000  v0 = array []
 0001  v1 = len_array v0
-0002  print v1
-0003  v2 = constant #0 1
-0004  v3 = constant #1 2
-0005  v4 = constant #2 3
-0006  v5 = array [v2, v3, v4]
-0007  v6 = len_array v5
-0008  print v6
-0009  v7 = constant #3 "hello"
-0010  v8 = len_str v7
-0011  print v8
-0012  v9 = constant #4 true
-0013  v10 = constant #5 "x"
-0014  v11 = constant #6 nil
-0015  v12 = array [v9, v10, v11]
-0016  v13 = len_array v12
-0017  store_var @0 n#0, v13
-0018  v14 = load_var @1 n#0
-0019  v15 = constant #7 1
-0020  v16 = add_num v14, v15
-0021  print v16
+0002  v2 = native_call @0 print(v1)
+0003  v3 = constant #0 1
+0004  v4 = constant #1 2
+0005  v5 = constant #2 3
+0006  v6 = array [v3, v4, v5]
+0007  v7 = len_array v6
+0008  v8 = native_call @1 print(v7)
+0009  v9 = constant #3 "hello"
+0010  v10 = len_str v9
+0011  v11 = native_call @2 print(v10)
+0012  v12 = constant #4 true
+0013  v13 = constant #5 "x"
+0014  v14 = constant #6 nil
+0015  v15 = array [v12, v13, v14]
+0016  v16 = len_array v15
+0017  store_var @3 n#0, v16
+0018  v17 = load_var @4 n#0
+0019  v18 = constant #7 1
+0020  v19 = add_num v17, v18
+0021  v20 = native_call @5 print(v19)

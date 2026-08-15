@@ -17,28 +17,37 @@ names:
   n0 = "range"
   n1 = "ascending#0"
   n2 = "ascending#0"
-  n3 = "ascending#0"
+  n3 = "print"
   n4 = "ascending#0"
-  n5 = "ascending#0"
-  n6 = "contains"
-  n7 = "ascending#0"
-  n8 = "contains"
-  n9 = "ascending#0"
-  n10 = "ascending#0"
-  n11 = "typeOf"
-  n12 = "range"
-  n13 = "item#1"
-  n14 = "item#1"
-  n15 = "item#1"
-  n16 = "range"
-  n17 = "item#2"
-  n18 = "item#2"
-  n19 = "item#2"
+  n5 = "print"
+  n6 = "ascending#0"
+  n7 = "print"
+  n8 = "ascending#0"
+  n9 = "contains"
+  n10 = "print"
+  n11 = "ascending#0"
+  n12 = "contains"
+  n13 = "print"
+  n14 = "ascending#0"
+  n15 = "print"
+  n16 = "ascending#0"
+  n17 = "typeOf"
+  n18 = "print"
+  n19 = "range"
+  n20 = "item#1"
+  n21 = "item#1"
+  n22 = "item#1"
+  n23 = "print"
+  n24 = "range"
+  n25 = "item#2"
+  n26 = "item#2"
+  n27 = "item#2"
+  n28 = "print"
 
 globals:
   g0 = n1
-  g1 = n13
-  g2 = n17
+  g1 = n20
+  g2 = n25
 
 native_imports:
   i0 = "range" abi=1
@@ -46,74 +55,74 @@ native_imports:
   i2 = "contains" abi=1
   i3 = "typeOf" abi=1
 
-main registers=37:
+main registers=45:
 block b0:
   r0 = constant c0
   r1 = constant c1
   r2 = call_native i0 [r0, r1]
   init_global g0, r2
   r3 = load_global g0
-  r36 = call_native i1 [r3]
-  r4 = load_global g0
-  r5 = len_range r4
-  r36 = call_native i1 [r5]
-  r6 = load_global g0
-  r7 = constant c2
-  r8 = range_get r6, r7
-  r36 = call_native i1 [r8]
-  r9 = load_global g0
-  r10 = constant c3
-  r11 = call_native i2 [r9, r10]
-  r36 = call_native i1 [r11]
+  r4 = call_native i1 [r3]
+  r5 = load_global g0
+  r6 = len_range r5
+  r7 = call_native i1 [r6]
+  r8 = load_global g0
+  r9 = constant c2
+  r10 = range_get r8, r9
+  r11 = call_native i1 [r10]
   r12 = load_global g0
-  r13 = constant c4
+  r13 = constant c3
   r14 = call_native i2 [r12, r13]
-  r36 = call_native i1 [r14]
-  r15 = load_global g0
-  r16 = len_range r15
-  r36 = call_native i1 [r16]
-  r17 = load_global g0
-  r18 = call_native i3 [r17]
-  r36 = call_native i1 [r18]
-  r19 = constant c5
-  r20 = call_native i0 [r19]
-  r21 = iter_init r20
-  r22 = constant c6
-  init_global g1, r22
+  r15 = call_native i1 [r14]
+  r16 = load_global g0
+  r17 = constant c4
+  r18 = call_native i2 [r16, r17]
+  r19 = call_native i1 [r18]
+  r20 = load_global g0
+  r21 = len_range r20
+  r22 = call_native i1 [r21]
+  r23 = load_global g0
+  r24 = call_native i3 [r23]
+  r25 = call_native i1 [r24]
+  r26 = constant c5
+  r27 = call_native i0 [r26]
+  r28 = iter_init r27
+  r29 = constant c6
+  init_global g1, r29
   br b1
 block b1:
-  r23 = iter_has r21
-  br_if r23, b2, b3
+  r30 = iter_has r28
+  br_if r30, b2, b3
 block b2:
-  r24 = iter_next r21
-  set_global g1, r24
-  r25 = load_global g1
-  r36 = call_native i1 [r25]
+  r31 = iter_next r28
+  set_global g1, r31
+  r32 = load_global g1
+  r33 = call_native i1 [r32]
   br b1
 block b3:
-  r26 = constant c7
-  r27 = constant c8
-  r28 = constant c9
-  r29 = neg_num r28
-  r30 = call_native i0 [r26, r27, r29]
-  r31 = iter_init r30
-  r32 = constant c10
-  init_global g2, r32
+  r34 = constant c7
+  r35 = constant c8
+  r36 = constant c9
+  r37 = neg_num r36
+  r38 = call_native i0 [r34, r35, r37]
+  r39 = iter_init r38
+  r40 = constant c10
+  init_global g2, r40
   br b4
 block b4:
-  r33 = iter_has r31
-  br_if r33, b5, b6
+  r41 = iter_has r39
+  br_if r41, b5, b6
 block b5:
-  r34 = iter_next r31
-  set_global g2, r34
-  r35 = load_global g2
-  r36 = call_native i1 [r35]
+  r42 = iter_next r39
+  set_global g2, r42
+  r43 = load_global g2
+  r44 = call_native i1 [r43]
   br b4
 block b6:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/ranges/input.cd" text="let ascending = range(1, 6);\nprint ascending;\nprint len(ascending);\nprint ascending[2];\nprint ascending.contains(5);\nprint contains(ascending, 4);\nprint ascending.len();\nprint typeOf(ascending);\nfor item in range(5) { print item; }\nfor item in range(5, 0, -2) { print item; }\n"
+  s0 path="tests/bytecode_artifacts/ranges/input.cd" text="let ascending = range(1, 6);\nprint(ascending);\nprint(len(ascending));\nprint(ascending[2]);\nprint(ascending.contains(5));\nprint(contains(ascending, 4));\nprint(ascending.len());\nprint(typeOf(ascending));\nfor item in range(5) { print(item); }\nfor item in range(5, 0, -2) { print(item); }\n"
 
 debug_locations:
   main 0 = s0:1:23
@@ -188,61 +197,61 @@ debug_ranges:
   main 3 = s0:16:27
   main 4 = s0:4:27
   main 5 = s0:35:44
-  main 6 = s0:35:44
-  main 7 = s0:56:65
-  main 8 = s0:52:66
-  main 9 = s0:52:66
-  main 10 = s0:74:83
-  main 11 = s0:84:85
-  main 12 = s0:74:85
-  main 13 = s0:74:85
-  main 14 = s0:94:103
-  main 15 = s0:113:114
-  main 16 = s0:94:115
-  main 17 = s0:94:115
-  main 18 = s0:132:141
-  main 19 = s0:143:144
-  main 20 = s0:123:145
-  main 21 = s0:123:145
-  main 22 = s0:153:162
-  main 23 = s0:153:168
-  main 24 = s0:153:168
-  main 25 = s0:183:192
-  main 26 = s0:176:193
-  main 27 = s0:176:193
-  main 28 = s0:213:214
-  main 29 = s0:207:215
-  main 30 = s0:195:228
-  main 31 = s0:195:228
-  main 32 = s0:195:228
-  main 33 = s0:195:228
-  main 34 = s0:195:228
-  main 35 = s0:195:228
-  main 36 = s0:195:228
-  main 37 = s0:195:228
-  main 38 = s0:195:228
-  main 39 = s0:195:228
-  main 40 = s0:224:228
-  main 41 = s0:224:228
-  main 42 = s0:195:228
-  main 43 = s0:250:251
-  main 44 = s0:250:251
-  main 45 = s0:253:254
-  main 46 = s0:257:258
-  main 47 = s0:256:258
-  main 48 = s0:244:259
-  main 49 = s0:232:272
-  main 50 = s0:232:272
-  main 51 = s0:232:272
-  main 52 = s0:232:272
-  main 53 = s0:232:272
-  main 54 = s0:232:272
-  main 55 = s0:232:272
-  main 56 = s0:232:272
-  main 57 = s0:232:272
-  main 58 = s0:232:272
-  main 59 = s0:268:272
-  main 60 = s0:268:272
-  main 61 = s0:232:272
-  main 62 = s0:232:272
-  main 63 = s0:232:272
+  main 6 = s0:29:45
+  main 7 = s0:57:66
+  main 8 = s0:53:67
+  main 9 = s0:47:68
+  main 10 = s0:76:85
+  main 11 = s0:86:87
+  main 12 = s0:76:87
+  main 13 = s0:70:89
+  main 14 = s0:97:106
+  main 15 = s0:116:117
+  main 16 = s0:97:118
+  main 17 = s0:91:119
+  main 18 = s0:136:145
+  main 19 = s0:147:148
+  main 20 = s0:127:149
+  main 21 = s0:121:150
+  main 22 = s0:158:167
+  main 23 = s0:158:173
+  main 24 = s0:152:174
+  main 25 = s0:189:198
+  main 26 = s0:182:199
+  main 27 = s0:176:200
+  main 28 = s0:220:221
+  main 29 = s0:214:222
+  main 30 = s0:202:236
+  main 31 = s0:202:236
+  main 32 = s0:202:236
+  main 33 = s0:202:236
+  main 34 = s0:202:236
+  main 35 = s0:202:236
+  main 36 = s0:202:236
+  main 37 = s0:202:236
+  main 38 = s0:202:236
+  main 39 = s0:202:236
+  main 40 = s0:231:235
+  main 41 = s0:225:236
+  main 42 = s0:202:236
+  main 43 = s0:258:259
+  main 44 = s0:258:259
+  main 45 = s0:261:262
+  main 46 = s0:265:266
+  main 47 = s0:264:266
+  main 48 = s0:252:267
+  main 49 = s0:240:281
+  main 50 = s0:240:281
+  main 51 = s0:240:281
+  main 52 = s0:240:281
+  main 53 = s0:240:281
+  main 54 = s0:240:281
+  main 55 = s0:240:281
+  main 56 = s0:240:281
+  main 57 = s0:240:281
+  main 58 = s0:240:281
+  main 59 = s0:276:280
+  main 60 = s0:270:281
+  main 61 = s0:240:281
+  main 62 = s0:240:281
+  main 63 = s0:240:281

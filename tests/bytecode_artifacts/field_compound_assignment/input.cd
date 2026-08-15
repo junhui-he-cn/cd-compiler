@@ -1,4 +1,4 @@
 struct Counter { value: number }
 let c: Counter = Counter { value: 1 };
 c.value += 2;
-print c.value;
+print(c.value);

@@ -2,16 +2,16 @@ fun greet() {
   return "hi";
 }
 let message = greet();
-print message + "!";
+print(message + "!");
 
 let makeNumber = fun () {
   return 41;
 };
 let n = makeNumber();
-print n + 1;
+print(n + 1);
 
 fun noReturn() {
 }
 let mut z = noReturn();
 z = nil;
-print z;
+print(z);

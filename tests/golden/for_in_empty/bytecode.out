@@ -1,5 +1,5 @@
 native_import i0 = print abi=1
-main registers=8
+main registers=9
 0000  block
 0001  b0 = array []
 0002  b1 = iter_init b0
@@ -13,9 +13,9 @@ main registers=8
 0010  b4 = iter_next b1
 0011  set_global g0, b4
 0012  b5 = load_global g0
-0013  b7 = call_native i0 [b5]
+0013  b6 = call_native i0 [b5]
 0014  br b1
 0015  block
-0016  b6 = constant #1 "done"
-0017  b7 = call_native i0 [b6]
+0016  b7 = constant #1 "done"
+0017  b8 = call_native i0 [b7]
 0018  return_nil

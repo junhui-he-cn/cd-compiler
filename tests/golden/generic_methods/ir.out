@@ -18,23 +18,23 @@ IR
 0016  v9 = load_var @14 box#9
 0017  v10 = constant #9 42
 0018  v11 = call v8(v9, v10)
-0019  print v11
-0020  v12 = load_var @15 __method_Box_echo#0
-0021  v13 = load_var @16 box#9
-0022  v14 = constant #10 "hello"
-0023  v15 = call v12(v13, v14)
-0024  print v15
-0025  v16 = load_var @17 __method_Box_head#1
-0026  v17 = load_var @18 box#9
-0027  v18 = constant #11 3
-0028  v19 = constant #12 4
-0029  v20 = array [v18, v19]
-0030  v21 = call v16(v17, v20)
-0031  print v21
-0032  v22 = load_var @19 __method_Box_make#2
-0033  v23 = load_var @20 box#9
-0034  v24 = call v22(v23)
-0035  print v24
+0019  v12 = native_call @15 print(v11)
+0020  v13 = load_var @16 __method_Box_echo#0
+0021  v14 = load_var @17 box#9
+0022  v15 = constant #10 "hello"
+0023  v16 = call v13(v14, v15)
+0024  v17 = native_call @18 print(v16)
+0025  v18 = load_var @19 __method_Box_head#1
+0026  v19 = load_var @20 box#9
+0027  v20 = constant #11 3
+0028  v21 = constant #12 4
+0029  v22 = array [v20, v21]
+0030  v23 = call v18(v19, v22)
+0031  v24 = native_call @21 print(v23)
+0032  v25 = load_var @22 __method_Box_make#2
+0033  v26 = load_var @23 box#9
+0034  v27 = call v25(v26)
+0035  v28 = native_call @24 print(v27)
 
 function $0 echo(this#3, value#4)
 0000  v0 = load_var @1 value#4

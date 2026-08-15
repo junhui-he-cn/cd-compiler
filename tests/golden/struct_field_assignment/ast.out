@@ -5,12 +5,12 @@ Program
   Struct Box {x: number}
   Let person = (construct Person name: "Ada" age: 36)
   Expr (= (field person age) 37)
-  Print (field person age)
-  Print (= (field person age) 38)
+  Expr (call print (field person age))
+  Expr (call print (= (field person age) 38))
   Let outer = (construct Outer inner: (construct Inner x: 1))
   Expr (= (field (field outer inner) x) 2)
-  Print (field (field outer inner) x)
+  Expr (call print (field (field outer inner) x))
   Let a = (construct Box x: 1)
   Let b = a
   Expr (= (field b x) 3)
-  Print (field a x)
+  Expr (call print (field a x))

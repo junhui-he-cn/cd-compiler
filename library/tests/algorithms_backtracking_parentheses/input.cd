@@ -1,7 +1,7 @@
 import "../../data_structures.cd" as ds;
 
-print ds.generateParentheses(0);
-print ds.generateParentheses(1);
-print ds.generateParentheses(3);
-print ds.generateParentheses(-1);
-print ds.generateParentheses(1.5);
+print(ds.generateParentheses(0));
+print(ds.generateParentheses(1));
+print(ds.generateParentheses(3));
+print(ds.generateParentheses(-1));
+print(ds.generateParentheses(1.5));

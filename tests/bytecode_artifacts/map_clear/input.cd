@@ -1,7 +1,7 @@
 let values = {"a": 1, "b": 2};
 let alias = values;
 clear(values);
-print alias;
+print(alias);
 values["c"] = 3;
-print values.clear();
-print values.len();
+print(values.clear());
+print(values.len());

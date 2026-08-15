@@ -39,35 +39,35 @@ fun renderNumbers(entries: [ds.OrderedMapEntry<number, string>]): string {
 }
 
 let words = ds.newOrderedMap<string, number>(ascending);
-print words.isEmpty();
-print words.get("missing");
-print words.has("missing");
-print words.discard("missing");
-print words.put("delta", 4);
-print words.put("alpha", 1);
-print words.put("gamma", 3);
-print words.put("beta", 2);
-print renderStrings(words.snapshot());
-print words.size();
-print words.get("gamma");
-print words.put("beta", 20);
-print renderStrings(words.snapshot());
-print words.has("beta");
-print words.discard("gamma");
-print words.discard("gamma");
-print renderStrings(words.snapshot());
+print(words.isEmpty());
+print(words.get("missing"));
+print(words.has("missing"));
+print(words.discard("missing"));
+print(words.put("delta", 4));
+print(words.put("alpha", 1));
+print(words.put("gamma", 3));
+print(words.put("beta", 2));
+print(renderStrings(words.snapshot()));
+print(words.size());
+print(words.get("gamma"));
+print(words.put("beta", 20));
+print(renderStrings(words.snapshot()));
+print(words.has("beta"));
+print(words.discard("gamma"));
+print(words.discard("gamma"));
+print(renderStrings(words.snapshot()));
 
 let snapshot = words.snapshot();
 snapshot[0].value = 99;
-print renderStrings(words.snapshot());
+print(renderStrings(words.snapshot()));
 
 let numbers = ds.newOrderedMap<number, string>(descending);
 numbers.put(2, "two");
 numbers.put(9, "nine");
 numbers.put(5, "five");
-print renderNumbers(numbers.snapshot());
+print(renderNumbers(numbers.snapshot()));
 
 let buckets = ds.newOrderedMap<number, string>(byTens);
-print buckets.put(19, "first");
-print buckets.put(11, "updated");
-print renderNumbers(buckets.snapshot());
+print(buckets.put(19, "first"));
+print(buckets.put(11, "updated"));
+print(renderNumbers(buckets.snapshot()));

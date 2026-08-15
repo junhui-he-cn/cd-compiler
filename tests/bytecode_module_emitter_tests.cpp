@@ -64,7 +64,7 @@ void testDebugSourceModuleIdentity()
     BytecodeProgram program;
     SourceFile source;
     source.path = "lib.cd";
-    source.text = "print 1;\n";
+    source.text = "print(1);\n";
     source.id = SourceFileId{0};
     source.moduleIdentity = "/workspace/lib.cd";
     program.setSources({source});
@@ -80,7 +80,7 @@ void testDebugSourceModuleIdentity()
         "main registers=0:\n"
         "\n"
         "debug_sources:\n"
-        "  s0 module=\"/workspace/lib.cd\" path=\"lib.cd\" text=\"print 1;\\n\"\n");
+        "  s0 module=\"/workspace/lib.cd\" path=\"lib.cd\" text=\"print(1);\\n\"\n");
 }
 
 void testDebugSourceRange()
@@ -88,7 +88,7 @@ void testDebugSourceRange()
     BytecodeProgram program;
     SourceFile source;
     source.path = "lib.cd";
-    source.text = "print 1;\n";
+    source.text = "print(1);\n";
     source.id = SourceFileId{0};
     program.setSources({source});
     program.setNativeImports({BytecodeNativeImport{"print", 1}});
@@ -117,7 +117,7 @@ void testDebugSourceRange()
         "  r1 = call_native i0 [r0]\n"
         "\n"
         "debug_sources:\n"
-        "  s0 path=\"lib.cd\" text=\"print 1;\\n\"\n"
+        "  s0 path=\"lib.cd\" text=\"print(1);\\n\"\n"
         "\n"
         "debug_locations:\n"
         "  main 0 = s0:1:1\n"

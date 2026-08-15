@@ -5,7 +5,7 @@ Program
   Let evens: [number] = (member-call values filter (fun (value: number): bool (return (|| (== value 2) (== value 4)))))
   Let snapshot: [number] = (array 1 2)
   Let kept: [number] = (member-call snapshot filter (fun (value) (expr (call push snapshot 9)) (return true)))
-  Print selected
-  Print evens
-  Print kept
-  Print snapshot
+  Expr (call print selected)
+  Expr (call print evens)
+  Expr (call print kept)
+  Expr (call print snapshot)

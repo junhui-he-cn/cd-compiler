@@ -8,7 +8,7 @@ native_import i6 = find abi=1
 native_import i7 = findIndex abi=1
 native_import i8 = flatMap abi=1
 native_import i9 = reduce abi=1
-main registers=65
+main registers=77
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -35,74 +35,74 @@ main registers=65
 0023  b13 = call_native i0 [b11, b12]
 0024  init_global g5, b13
 0025  b14 = load_global g5
-0026  b64 = call_native i1 [b14]
-0027  b15 = load_global g4
-0028  b16 = load_global g0
-0029  b17 = call_native i0 [b15, b16]
-0030  b64 = call_native i1 [b17]
-0031  b18 = load_global g4
-0032  b19 = load_global g1
-0033  b20 = call_native i2 [b18, b19]
-0034  b64 = call_native i1 [b20]
-0035  b21 = load_global g4
-0036  b22 = load_global g1
-0037  b23 = call_native i3 [b21, b22]
-0038  b64 = call_native i1 [b23]
-0039  b24 = load_global g4
-0040  b25 = load_global g1
-0041  b26 = call_native i4 [b24, b25]
-0042  b64 = call_native i1 [b26]
-0043  b27 = load_global g4
-0044  b28 = load_global g1
-0045  b29 = call_native i5 [b27, b28]
-0046  b64 = call_native i1 [b29]
-0047  b30 = load_global g4
-0048  b31 = load_global g1
-0049  b32 = call_native i6 [b30, b31]
-0050  b64 = call_native i1 [b32]
-0051  b33 = load_global g4
-0052  b34 = load_global g1
-0053  b35 = call_native i7 [b33, b34]
-0054  b64 = call_native i1 [b35]
-0055  b36 = load_global g4
-0056  b37 = load_global g2
-0057  b38 = call_native i8 [b36, b37]
-0058  b64 = call_native i1 [b38]
-0059  b39 = load_global g4
-0060  b40 = constant #11 0
-0061  b41 = load_global g3
-0062  b42 = call_native i9 [b39, b40, b41]
-0063  b64 = call_native i1 [b42]
-0064  b43 = load_global g4
-0065  b44 = make_function $4 <lambda>/1
-0066  b45 = call_native i0 [b43, b44]
-0067  b64 = call_native i1 [b45]
-0068  b46 = constant #13 nil
-0069  init_global g6, b46
-0070  b47 = make_function $5 acceptsNullable/1
-0071  set_global g6, b47
-0072  b48 = constant #16 1
-0073  b49 = constant #17 nil
-0074  b50 = array [b48, b49]
-0075  init_global g7, b50
-0076  b51 = load_global g7
-0077  b52 = load_global g6
-0078  b53 = call_native i4 [b51, b52]
-0079  b64 = call_native i1 [b53]
-0080  b54 = constant #18 nil
-0081  init_global g8, b54
-0082  b55 = make_function $6 identityArray/1
-0083  set_global g8, b55
-0084  b56 = constant #20 1
-0085  b57 = array [b56]
-0086  b58 = constant #21 2
-0087  b59 = array [b58]
-0088  b60 = array [b57, b59]
-0089  init_global g9, b60
-0090  b61 = load_global g9
-0091  b62 = load_global g8
-0092  b63 = call_native i0 [b61, b62]
-0093  b64 = call_native i1 [b63]
+0026  b15 = call_native i1 [b14]
+0027  b16 = load_global g4
+0028  b17 = load_global g0
+0029  b18 = call_native i0 [b16, b17]
+0030  b19 = call_native i1 [b18]
+0031  b20 = load_global g4
+0032  b21 = load_global g1
+0033  b22 = call_native i2 [b20, b21]
+0034  b23 = call_native i1 [b22]
+0035  b24 = load_global g4
+0036  b25 = load_global g1
+0037  b26 = call_native i3 [b24, b25]
+0038  b27 = call_native i1 [b26]
+0039  b28 = load_global g4
+0040  b29 = load_global g1
+0041  b30 = call_native i4 [b28, b29]
+0042  b31 = call_native i1 [b30]
+0043  b32 = load_global g4
+0044  b33 = load_global g1
+0045  b34 = call_native i5 [b32, b33]
+0046  b35 = call_native i1 [b34]
+0047  b36 = load_global g4
+0048  b37 = load_global g1
+0049  b38 = call_native i6 [b36, b37]
+0050  b39 = call_native i1 [b38]
+0051  b40 = load_global g4
+0052  b41 = load_global g1
+0053  b42 = call_native i7 [b40, b41]
+0054  b43 = call_native i1 [b42]
+0055  b44 = load_global g4
+0056  b45 = load_global g2
+0057  b46 = call_native i8 [b44, b45]
+0058  b47 = call_native i1 [b46]
+0059  b48 = load_global g4
+0060  b49 = constant #11 0
+0061  b50 = load_global g3
+0062  b51 = call_native i9 [b48, b49, b50]
+0063  b52 = call_native i1 [b51]
+0064  b53 = load_global g4
+0065  b54 = make_function $4 <lambda>/1
+0066  b55 = call_native i0 [b53, b54]
+0067  b56 = call_native i1 [b55]
+0068  b57 = constant #13 nil
+0069  init_global g6, b57
+0070  b58 = make_function $5 acceptsNullable/1
+0071  set_global g6, b58
+0072  b59 = constant #16 1
+0073  b60 = constant #17 nil
+0074  b61 = array [b59, b60]
+0075  init_global g7, b61
+0076  b62 = load_global g7
+0077  b63 = load_global g6
+0078  b64 = call_native i4 [b62, b63]
+0079  b65 = call_native i1 [b64]
+0080  b66 = constant #18 nil
+0081  init_global g8, b66
+0082  b67 = make_function $6 identityArray/1
+0083  set_global g8, b67
+0084  b68 = constant #20 1
+0085  b69 = array [b68]
+0086  b70 = constant #21 2
+0087  b71 = array [b70]
+0088  b72 = array [b69, b71]
+0089  init_global g9, b72
+0090  b73 = load_global g9
+0091  b74 = load_global g8
+0092  b75 = call_native i0 [b73, b74]
+0093  b76 = call_native i1 [b75]
 0094  return_nil
 
 function $0 identity/1 registers=2

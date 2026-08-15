@@ -9,25 +9,25 @@ IR
 0007  v6 = native_call @3 find(v4, v5)
 0008  store_var @4 first#2, v6
 0009  v7 = load_var @5 first#2
-0010  print v7
-0011  v8 = load_var @6 values#0
-0012  v9 = make_function $1 <lambda>/1
-0013  v10 = native_call @8 find(v8, v9)
-0014  print v10
-0015  v11 = constant #7 1
-0016  v12 = constant #8 2
-0017  v13 = array [v11, v12]
-0018  store_var @9 snapshot#4, v13
-0019  v14 = load_var @10 snapshot#4
-0020  v15 = make_function $2 <lambda>/1
-0021  v16 = native_call @14 find(v14, v15)
-0022  print v16
-0023  v17 = load_var @15 snapshot#4
-0024  print v17
-0025  v18 = array []
-0026  v19 = make_function $3 <lambda>/1
-0027  v20 = native_call @16 find(v18, v19)
-0028  print v20
+0010  v8 = native_call @6 print(v7)
+0011  v9 = load_var @7 values#0
+0012  v10 = make_function $1 <lambda>/1
+0013  v11 = native_call @9 find(v9, v10)
+0014  v12 = native_call @10 print(v11)
+0015  v13 = constant #7 1
+0016  v14 = constant #8 2
+0017  v15 = array [v13, v14]
+0018  store_var @11 snapshot#4, v15
+0019  v16 = load_var @12 snapshot#4
+0020  v17 = make_function $2 <lambda>/1
+0021  v18 = native_call @16 find(v16, v17)
+0022  v19 = native_call @17 print(v18)
+0023  v20 = load_var @18 snapshot#4
+0024  v21 = native_call @19 print(v20)
+0025  v22 = array []
+0026  v23 = make_function $3 <lambda>/1
+0027  v24 = native_call @20 find(v22, v23)
+0028  v25 = native_call @21 print(v24)
 
 function $0 <lambda>(value#1)
 0000  v0 = load_var @2 value#1
@@ -38,7 +38,7 @@ function $0 <lambda>(value#1)
 0005  return v3
 
 function $1 <lambda>(value#3)
-0000  v0 = load_var @7 value#3
+0000  v0 = load_var @8 value#3
 0001  v1 = constant #5 9
 0002  v2 = equal v0, v1
 0003  return v2
@@ -46,10 +46,10 @@ function $1 <lambda>(value#3)
 0005  return v3
 
 function $2 <lambda>(value#5)
-0000  v0 = load_var @11 snapshot#4
+0000  v0 = load_var @13 snapshot#4
 0001  v1 = constant #9 9
-0002  v2 = native_call @12 push(v0, v1)
-0003  v3 = load_var @13 value#5
+0002  v2 = native_call @14 push(v0, v1)
+0003  v3 = load_var @15 value#5
 0004  v4 = constant #10 2
 0005  v5 = equal v3, v4
 0006  return v5

@@ -1,42 +1,42 @@
 native_import i0 = print abi=1
 native_import i1 = substr abi=1
 native_import i2 = charAt abi=1
-main registers=27
+main registers=34
 0000  block
 0001  b0 = constant #0 "你🙂"
 0002  init_global g0, b0
 0003  b1 = load_global g0
 0004  b2 = len_str b1
-0005  b26 = call_native i0 [b2]
-0006  b3 = load_global g0
-0007  b4 = len_str b3
-0008  b26 = call_native i0 [b4]
-0009  b5 = load_global g0
-0010  b6 = constant #1 0
-0011  b7 = constant #2 1
-0012  b8 = call_native i1 [b5, b6, b7]
-0013  b26 = call_native i0 [b8]
-0014  b9 = load_global g0
-0015  b10 = constant #3 1
-0016  b11 = constant #4 1
-0017  b12 = call_native i1 [b9, b10, b11]
-0018  b26 = call_native i0 [b12]
-0019  b13 = load_global g0
-0020  b14 = constant #5 0
-0021  b15 = call_native i2 [b13, b14]
-0022  b26 = call_native i0 [b15]
-0023  b16 = load_global g0
-0024  b17 = constant #6 1
-0025  b18 = call_native i2 [b16, b17]
-0026  b26 = call_native i0 [b18]
-0027  b19 = constant #7 "é"
-0028  init_global g1, b19
-0029  b20 = load_global g1
-0030  b21 = len_str b20
-0031  b26 = call_native i0 [b21]
-0032  b22 = load_global g1
-0033  b23 = constant #8 0
-0034  b24 = constant #9 2
-0035  b25 = call_native i1 [b22, b23, b24]
-0036  b26 = call_native i0 [b25]
+0005  b3 = call_native i0 [b2]
+0006  b4 = load_global g0
+0007  b5 = len_str b4
+0008  b6 = call_native i0 [b5]
+0009  b7 = load_global g0
+0010  b8 = constant #1 0
+0011  b9 = constant #2 1
+0012  b10 = call_native i1 [b7, b8, b9]
+0013  b11 = call_native i0 [b10]
+0014  b12 = load_global g0
+0015  b13 = constant #3 1
+0016  b14 = constant #4 1
+0017  b15 = call_native i1 [b12, b13, b14]
+0018  b16 = call_native i0 [b15]
+0019  b17 = load_global g0
+0020  b18 = constant #5 0
+0021  b19 = call_native i2 [b17, b18]
+0022  b20 = call_native i0 [b19]
+0023  b21 = load_global g0
+0024  b22 = constant #6 1
+0025  b23 = call_native i2 [b21, b22]
+0026  b24 = call_native i0 [b23]
+0027  b25 = constant #7 "é"
+0028  init_global g1, b25
+0029  b26 = load_global g1
+0030  b27 = len_str b26
+0031  b28 = call_native i0 [b27]
+0032  b29 = load_global g1
+0033  b30 = constant #8 0
+0034  b31 = constant #9 2
+0035  b32 = call_native i1 [b29, b30, b31]
+0036  b33 = call_native i0 [b32]
 0037  return_nil

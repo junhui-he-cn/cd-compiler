@@ -6,5 +6,5 @@ let value: optional<number> = 42;
 if (value != nil) {
   let alias = noop;
   alias();
-  print value + 1;
+  print(value + 1);
 }

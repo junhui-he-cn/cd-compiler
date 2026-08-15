@@ -5,32 +5,32 @@ fun ascending(left: number, right: number): bool {
 }
 
 let heap = ds.newBinaryHeap<number>(ascending);
-print heap.peek();
+print(heap.peek());
 heap.add(5);
 heap.add(1);
 heap.add(3);
 heap.add(1);
-print heap.snapshot();
-print heap.peek();
-print heap.size();
-print heap.take();
-print heap.take();
-print heap.peek();
+print(heap.snapshot());
+print(heap.peek());
+print(heap.size());
+print(heap.take());
+print(heap.take());
+print(heap.peek());
 
 let alias = heap;
 alias.add(2);
-print heap.snapshot();
+print(heap.snapshot());
 
 let snapshot = heap.snapshot();
 snapshot.push(99);
-print heap.snapshot();
-print snapshot;
+print(heap.snapshot());
+print(snapshot);
 
-print heap.take();
-print heap.take();
-print heap.take();
-print heap.take();
-print heap.isEmpty();
+print(heap.take());
+print(heap.take());
+print(heap.take());
+print(heap.take());
+print(heap.isEmpty());
 
 fun descending(left: number, right: number): bool {
   return left > right;
@@ -40,9 +40,9 @@ let maxHeap = ds.newBinaryHeap<number>(descending);
 maxHeap.add(4);
 maxHeap.add(9);
 maxHeap.add(7);
-print maxHeap.snapshot();
-print maxHeap.take();
-print maxHeap.peek();
-print maxHeap.take();
-print maxHeap.take();
-print maxHeap.isEmpty();
+print(maxHeap.snapshot());
+print(maxHeap.take());
+print(maxHeap.peek());
+print(maxHeap.take());
+print(maxHeap.take());
+print(maxHeap.isEmpty());

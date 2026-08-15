@@ -7,4 +7,4 @@ fun after(values: [number], value: optional<number>): number {
   return value + 1;
 }
 
-print after([], nil);
+print(after([], nil));

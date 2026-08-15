@@ -21,23 +21,23 @@ Program
   Let none: Option<number> = (member-call Option None<number>)
   Let maybe: optional<Option<number>> = nil
   Let inferred = (member-call Option Some "hello")
-  Print (call describe some)
-  Print (call describe none)
-  Print (call sum (member-call List Cons 1 (member-call List Cons 2 (member-call List Nil<number>))))
+  Expr (call print (call describe some))
+  Expr (call print (call describe none))
+  Expr (call print (call sum (member-call List Cons 1 (member-call List Cons 2 (member-call List Nil<number>)))))
   Match maybe
     Arm nil
       Block
-        Print "nil"
+        Expr (call print "nil")
     Arm Option.Some(value)
       Block
-        Print "some"
+        Expr (call print "some")
     Arm Option.None
       Block
-        Print "none"
+        Expr (call print "none")
   Match inferred
     Arm Option.Some(value)
       Block
-        Print value
+        Expr (call print value)
     Arm Option.None
       Block
-        Print "none"
+        Expr (call print "none")

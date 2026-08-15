@@ -119,7 +119,7 @@ void test_canonical_duplicate_import_spellings_are_deduplicated(const fs::path& 
         root / "input.cd",
         "import \"./shared.cd\";\n"
         "import \"./nested/../shared.cd\";\n"
-        "print value;\n");
+        "print(value);\n");
 
     FrontendSession session;
     Program program = session.loadFiles({(root / "input.cd").string()});
@@ -145,7 +145,7 @@ void test_search_path_resolves_extensionless_import_and_reexport(const fs::path&
         app / "input.cd",
         "import \"api\";\n"
         "import \"lib\";\n"
-        "print value;\n");
+        "print(value);\n");
 
     FrontendSession session;
     session.setImportSearchPaths({search.string()});
@@ -253,7 +253,7 @@ void test_search_path_resolves_extensionless_import_and_reexport(const fs::path&
         assert(actual.requestedPath == expected.requestedPath);
     }
 
-    std::istringstream stdinSource("print 0;\n");
+    std::istringstream stdinSource("print(0);\n");
     session.loadStdin(stdinSource);
     assert(session.moduleGraph().nodes.size() == 1);
     assert(session.moduleGraph().edges.empty());
@@ -270,7 +270,7 @@ void test_importing_file_directory_precedes_search_path(const fs::path& root)
 
     writeFile(app / "math.cd", "let value = \"local\";\nexport value;\n");
     writeFile(search / "math.cd", "let value = \"search\";\nexport value;\n");
-    writeFile(app / "input.cd", "import \"math\";\nprint value;\n");
+    writeFile(app / "input.cd", "import \"math\";\nprint(value);\n");
 
     FrontendSession session;
     session.setImportSearchPaths({search.string()});
@@ -291,7 +291,7 @@ void test_explicit_relative_import_does_not_use_search_path(const fs::path& root
     const fs::path search = root / "modules";
 
     writeFile(search / "missing.cd", "let value = \"search\";\nexport value;\n");
-    writeFile(app / "input.cd", "import \"./missing\";\nprint value;\n");
+    writeFile(app / "input.cd", "import \"./missing\";\nprint(value);\n");
 
     FrontendSession session;
     session.setImportSearchPaths({search.string()});
@@ -319,7 +319,7 @@ void test_module_interface_cache_hit_reuses_dependency_interfaces(const fs::path
         "export value;\n";
     writeFile(base, baseSource);
     writeFile(library, librarySource);
-    writeFile(entry, "import \"./lib.cd\";\nprint value;\n");
+    writeFile(entry, "import \"./lib.cd\";\nprint(value);\n");
 
     ModuleInterface baseInterface;
     baseInterface.values.push_back(ModuleInterfaceValue{
@@ -469,7 +469,7 @@ void writeSingleModuleCacheCase(
     writeFile(
         caseRoot / "entry.cd",
         "import \"./lib.cd\";\n"
-        "print value;\n");
+        "print(value);\n");
 }
 
 std::string writeSingleModuleSidecar(
@@ -551,7 +551,7 @@ void test_module_interface_cache_dependency_hash_fallback(const fs::path& root)
         "export value;\n";
     writeFile(base, baseSource);
     writeFile(library, librarySource);
-    writeFile(entry, "import \"./lib.cd\";\nprint value;\n");
+    writeFile(entry, "import \"./lib.cd\";\nprint(value);\n");
 
     ModuleInterface baseInterface;
     baseInterface.values.push_back(ModuleInterfaceValue{
@@ -708,7 +708,7 @@ void test_module_interface_cache_strict(const fs::path& root)
         "let value = 7;\n"
         "export value;\n";
     writeFile(library, librarySource);
-    writeFile(dependencyMismatch / "entry.cd", "import \"./lib.cd\";\nprint value;\n");
+    writeFile(dependencyMismatch / "entry.cd", "import \"./lib.cd\";\nprint(value);\n");
 
     ModuleInterface baseInterface;
     baseInterface.values.push_back(ModuleInterfaceValue{
@@ -778,8 +778,8 @@ void test_direct_inputs_preserve_source_spans(const fs::path& root)
     fs::remove_all(root);
     const fs::path first = root / "first.cd";
     const fs::path second = root / "second.cd";
-    writeFile(first, "print 1;\n");
-    writeFile(second, "print 2;\n");
+    writeFile(first, "print(1);\n");
+    writeFile(second, "print(2);\n");
 
     FrontendSession session;
     Program program = session.loadFiles({first.string(), second.string()});
@@ -795,7 +795,7 @@ void test_direct_inputs_preserve_source_spans(const fs::path& root)
     const auto* firstModule = dynamic_cast<const ModuleStmt*>(program.statements.front().get());
     assert(firstModule != nullptr);
     assert(firstModule->isEntry);
-    const auto* firstPrint = dynamic_cast<const PrintStmt*>(firstModule->statements.front().get());
+    const auto* firstPrint = dynamic_cast<const ExpressionStmt*>(firstModule->statements.front().get());
     assert(firstPrint != nullptr);
     assert(firstPrint->span.has_value());
     assert(firstPrint->span->source == 0);
@@ -807,8 +807,8 @@ void test_direct_diagnostics_keep_source_ranges(const fs::path& root)
     fs::remove_all(root);
     const fs::path first = root / "first.cd";
     const fs::path second = root / "second.cd";
-    writeFile(first, "print 1;\n");
-    writeFile(second, "print ;\n");
+    writeFile(first, "print(1);\n");
+    writeFile(second, "let ;\n");
 
     FrontendSession session;
     try {
@@ -836,13 +836,13 @@ void test_module_type_error_recovery(const fs::path& root)
     const fs::path entry = root / "entry.cd";
     writeFile(
         firstFailure,
-        "print missing_a_first;\n"
-        "print missing_a_second;\n");
-    writeFile(secondFailure, "print missing_b;\n");
+        "print(missing_a_first);\n"
+        "print(missing_a_second);\n");
+    writeFile(secondFailure, "print(missing_b);\n");
     writeFile(
         blocked,
         "import \"./a.cd\";\n"
-        "print missing_blocked;\n");
+        "print(missing_blocked);\n");
     writeFile(
         independent,
         "let good = 1;\n"
@@ -853,7 +853,7 @@ void test_module_type_error_recovery(const fs::path& root)
         "import \"./b.cd\";\n"
         "import \"./blocked.cd\";\n"
         "import \"./ok.cd\";\n"
-        "print missing_entry;\n");
+        "print(missing_entry);\n");
 
     FrontendSession frontend;
     Program program = frontend.loadFiles({entry.string()});
@@ -921,9 +921,9 @@ void test_lossless_source_view_round_trips_comments(const fs::path& root)
         "// header\n"
         "let value = 1; // trailing\n"
         "\n"
-        "print value;\n";
+        "print(value);\n";
     const std::string secondSource =
-        "print \"// not a comment\"; // second file\n";
+        "print(\"// not a comment\"); // second file\n";
     writeFile(first, firstSource);
     writeFile(second, secondSource);
 

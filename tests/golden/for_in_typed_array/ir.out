@@ -14,5 +14,5 @@ IR
 0012  v8 = load_var @4 x#1
 0013  store_var @5 y#2, v8
 0014  v9 = load_var @6 y#2
-0015  print v9
+0015  v10 = native_call @7 print(v9)
 0016  jump 0008

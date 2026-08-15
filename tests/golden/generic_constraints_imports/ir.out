@@ -27,13 +27,13 @@ IR
 0025  v17 = variant Box.Value (v16)
 0026  store_var @18 namespaceEnum#9, v17
 0027  v18 = load_var @19 direct#5
-0028  print v18
-0029  v19 = load_var @20 namespaced#6
-0030  print v19
-0031  v20 = load_var @21 directMethod#8
-0032  print v20
-0033  v21 = load_var @22 namespaceEnum#9
-0034  print v21
+0028  v19 = native_call @20 print(v18)
+0029  v20 = load_var @21 namespaced#6
+0030  v21 = native_call @22 print(v20)
+0031  v22 = load_var @23 directMethod#8
+0032  v23 = native_call @24 print(v22)
+0033  v24 = load_var @25 namespaceEnum#9
+0034  v25 = native_call @26 print(v24)
 
 function $0 echo(this#1, value#2)
 0000  v0 = load_var @1 value#2

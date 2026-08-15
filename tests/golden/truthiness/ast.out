@@ -1,6 +1,6 @@
 Program
-  Print (! nil)
-  Print (! false)
-  Print (! true)
-  Print (! 0)
-  Print (! "")
+  Expr (call print (! nil))
+  Expr (call print (! false))
+  Expr (call print (! true))
+  Expr (call print (! 0))
+  Expr (call print (! ""))

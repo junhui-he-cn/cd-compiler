@@ -3,5 +3,5 @@ Program
   While (< i 3)
     Body
       Block
-        Print i
+        Expr (call print i)
         Expr (= i (+ i 1))

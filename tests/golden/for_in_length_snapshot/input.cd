@@ -1,6 +1,6 @@
 let xs = [1, 2];
 for x in xs {
-  print x;
+  print(x);
   push(xs, x + 10);
 }
-print xs;
+print(xs);

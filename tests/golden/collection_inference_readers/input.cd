@@ -1,20 +1,20 @@
 let numbers = [];
 numbers.push(1);
 let popped: number = numbers.pop();
-print popped;
+print(popped);
 
 let strings = [];
 push(strings, "a");
 let first: string = strings[0];
-print first;
+print(first);
 
 let maybe = [1];
 maybe.push(nil);
 let item: optional<number> = maybe[1];
-print item;
+print(item);
 
 let mut total = 0;
 for value in numbers {
   total = total + value;
 }
-print total;
+print(total);

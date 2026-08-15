@@ -15,23 +15,23 @@ IR
 0013  v7 = constant #16 4
 0014  v8 = variant Pair.Values (v6, v7)
 0015  v9 = call_direct $0 pairScore/1(v8)
-0016  print v9
-0017  v10 = constant #17 7
-0018  v11 = variant Result.Ok (v10)
-0019  v12 = call_direct $1 describe/1(v11)
-0020  print v12
-0021  v13 = constant #18 "bad"
-0022  v14 = variant Result.Err (v13)
-0023  v15 = call_direct $1 describe/1(v14)
-0024  print v15
-0025  v16 = variant Result.Empty ()
-0026  v17 = call_direct $1 describe/1(v16)
-0027  print v17
-0028  v18 = constant #19 9
-0029  v19 = variant Result.Ok (v18)
-0030  v20 = variant Box.Wrap (v19)
-0031  v21 = call_direct $2 unwrap/1(v20)
-0032  print v21
+0016  v10 = native_call @65 print(v9)
+0017  v11 = constant #17 7
+0018  v12 = variant Result.Ok (v11)
+0019  v13 = call_direct $1 describe/1(v12)
+0020  v14 = native_call @68 print(v13)
+0021  v15 = constant #18 "bad"
+0022  v16 = variant Result.Err (v15)
+0023  v17 = call_direct $1 describe/1(v16)
+0024  v18 = native_call @71 print(v17)
+0025  v19 = variant Result.Empty ()
+0026  v20 = call_direct $1 describe/1(v19)
+0027  v21 = native_call @74 print(v20)
+0028  v22 = constant #19 9
+0029  v23 = variant Result.Ok (v22)
+0030  v24 = variant Box.Wrap (v23)
+0031  v25 = call_direct $2 unwrap/1(v24)
+0032  v26 = native_call @79 print(v25)
 
 function $0 pairScore(pair#1)
 0000  v0 = load_var @1 pair#1

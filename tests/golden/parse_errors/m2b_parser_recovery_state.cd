@@ -1,6 +1,6 @@
 struct Box { value: number }
 if (1 + ) {
-  print 1;
+  print(1);
 }
 let x = Box { value: 1 };
-print x.value;
+print(x.value);

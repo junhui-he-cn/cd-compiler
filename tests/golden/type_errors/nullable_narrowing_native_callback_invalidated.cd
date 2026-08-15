@@ -5,5 +5,5 @@ if (maybe != nil) {
   values.map(fun (item: number): number {
     return item;
   });
-  print maybe + 1;
+  print(maybe + 1);
 }

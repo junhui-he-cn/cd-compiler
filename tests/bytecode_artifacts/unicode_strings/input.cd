@@ -1,10 +1,10 @@
 let text = "你🙂";
-print len(text);
-print text.len();
-print substr(text, 0, 1);
-print text.substr(1, 1);
-print charAt(text, 0);
-print text.charAt(1);
+print(len(text));
+print(text.len());
+print(substr(text, 0, 1));
+print(text.substr(1, 1));
+print(charAt(text, 0));
+print(text.charAt(1));
 let combined = "é";
-print len(combined);
-print combined.substr(0, 2);
+print(len(combined));
+print(combined.substr(0, 2));

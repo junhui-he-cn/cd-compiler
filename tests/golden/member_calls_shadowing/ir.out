@@ -1,68 +1,68 @@
 IR
 0000  v0 = make_function $0 <lambda>/2
-0001  store_var @0 push#2, v0
+0001  store_var @1 push#2, v0
 0002  v1 = make_function $1 <lambda>/1
-0003  store_var @1 pop#4, v1
+0003  store_var @3 pop#4, v1
 0004  v2 = make_function $2 <lambda>/1
-0005  store_var @2 len#6, v2
+0005  store_var @4 len#6, v2
 0006  v3 = make_function $3 <lambda>/3
-0007  store_var @3 substr#10, v3
+0007  store_var @5 substr#10, v3
 0008  v4 = make_function $4 <lambda>/2
-0009  store_var @4 charAt#13, v4
+0009  store_var @6 charAt#13, v4
 0010  v5 = array []
-0011  store_var @5 xs#14, v5
-0012  v6 = load_var @6 xs#14
+0011  store_var @7 xs#14, v5
+0012  v6 = load_var @8 xs#14
 0013  v7 = constant #11 10
-0014  v8 = native_call @7 push(v6, v7)
-0015  v9 = load_var @8 xs#14
+0014  v8 = native_call @9 push(v6, v7)
+0015  v9 = load_var @10 xs#14
 0016  v10 = len_array v9
-0017  print v10
-0018  v11 = load_var @9 xs#14
-0019  v12 = native_call @10 pop(v11)
-0020  print v12
-0021  v13 = constant #12 "hello"
-0022  store_var @11 text#15, v13
-0023  v14 = load_var @12 text#15
-0024  v15 = len_str v14
-0025  print v15
-0026  v16 = load_var @13 text#15
-0027  v17 = constant #13 1
-0028  v18 = constant #14 2
-0029  v19 = native_call @14 substr(v16, v17, v18)
-0030  print v19
-0031  v20 = load_var @15 text#15
-0032  v21 = constant #15 1
-0033  v22 = native_call @16 charAt(v20, v21)
-0034  print v22
-0035  v23 = load_var @17 len#6
-0036  v24 = load_var @18 text#15
-0037  v25 = call v23(v24)
-0038  print v25
-0039  v26 = load_var @19 substr#10
-0040  v27 = load_var @20 text#15
-0041  v28 = constant #16 1
-0042  v29 = constant #17 2
-0043  v30 = call v26(v27, v28, v29)
-0044  print v30
-0045  v31 = load_var @21 charAt#13
-0046  v32 = load_var @22 text#15
-0047  v33 = constant #18 1
-0048  v34 = call v31(v32, v33)
-0049  print v34
+0017  v11 = native_call @11 print(v10)
+0018  v12 = load_var @12 xs#14
+0019  v13 = native_call @13 pop(v12)
+0020  v14 = native_call @14 print(v13)
+0021  v15 = constant #12 "hello"
+0022  store_var @15 text#15, v15
+0023  v16 = load_var @16 text#15
+0024  v17 = len_str v16
+0025  v18 = native_call @17 print(v17)
+0026  v19 = load_var @18 text#15
+0027  v20 = constant #13 1
+0028  v21 = constant #14 2
+0029  v22 = native_call @19 substr(v19, v20, v21)
+0030  v23 = native_call @20 print(v22)
+0031  v24 = load_var @21 text#15
+0032  v25 = constant #15 1
+0033  v26 = native_call @22 charAt(v24, v25)
+0034  v27 = native_call @23 print(v26)
+0035  v28 = load_var @24 len#6
+0036  v29 = load_var @25 text#15
+0037  v30 = call v28(v29)
+0038  v31 = native_call @26 print(v30)
+0039  v32 = load_var @27 substr#10
+0040  v33 = load_var @28 text#15
+0041  v34 = constant #16 1
+0042  v35 = constant #17 2
+0043  v36 = call v32(v33, v34, v35)
+0044  v37 = native_call @29 print(v36)
+0045  v38 = load_var @30 charAt#13
+0046  v39 = load_var @31 text#15
+0047  v40 = constant #18 1
+0048  v41 = call v38(v39, v40)
+0049  v42 = native_call @32 print(v41)
 
 function $0 <lambda>(array#0, value#1)
 0000  v0 = constant #0 "custom push"
-0001  print v0
-0002  v1 = constant #1 nil
-0003  return v1
+0001  v1 = native_call @0 print(v0)
+0002  v2 = constant #1 nil
+0003  return v2
 
 function $1 <lambda>(array#3)
 0000  v0 = constant #2 "custom pop"
-0001  print v0
-0002  v1 = constant #3 99
-0003  return v1
-0004  v2 = constant #4 nil
-0005  return v2
+0001  v1 = native_call @2 print(v0)
+0002  v2 = constant #3 99
+0003  return v2
+0004  v3 = constant #4 nil
+0005  return v3
 
 function $2 <lambda>(value#5)
 0000  v0 = constant #5 123

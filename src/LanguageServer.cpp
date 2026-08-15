@@ -625,10 +625,6 @@ private:
             visitExpression(let->initializer.get());
             return;
         }
-        if (const auto* print = dynamic_cast<const PrintStmt*>(statement)) {
-            visitExpression(print->expression.get());
-            return;
-        }
         if (const auto* expression = dynamic_cast<const ExpressionStmt*>(statement)) {
             visitExpression(expression->expression.get());
             return;
@@ -1033,10 +1029,6 @@ private:
                 addTypeAnnotation(*let->typeName);
             }
             visitExpression(let->initializer.get());
-            return;
-        }
-        if (const auto* print = dynamic_cast<const PrintStmt*>(statement)) {
-            visitExpression(print->expression.get());
             return;
         }
         if (const auto* expression = dynamic_cast<const ExpressionStmt*>(statement)) {

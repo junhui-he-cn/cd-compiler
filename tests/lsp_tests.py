@@ -262,7 +262,7 @@ def main() -> int:
         valid_source = (
             "fun add(value: number): number { return value; }\n"
             "let result = add(1);\n"
-            "print result;\n"
+            "print(result);\n"
         )
         send(
             process,
@@ -629,7 +629,7 @@ def main() -> int:
 
         imported_source = (
             'import "./compiler-design-lsp-module.cd";\n'
-            "print value;\n"
+            "print(value);\n"
         )
         send(
             process,
@@ -670,8 +670,8 @@ def main() -> int:
 
         closed_source = (
             f'import "./{closed_module_path.name}";\n'
-            "print closedHelper(1);\n"
-            "print closedHelper(2);\n"
+            "print(closedHelper(1));\n"
+            "print(closedHelper(2));\n"
         )
         send(
             process,
@@ -819,7 +819,7 @@ def main() -> int:
                         {
                             "text": (
                                 f'import "{outside_import}";\n'
-                                "print outsideHelper(1);\n"
+                                "print(outsideHelper(1));\n"
                             )
                         }
                     ],
@@ -838,7 +838,7 @@ def main() -> int:
                 "params": {
                     "textDocument": {"uri": uri, "version": 6},
                     "contentChanges": [
-                        {"text": 'import "./missing-lsp-module.cd";\nprint missingHelper(1);\n'}
+                        {"text": 'import "./missing-lsp-module.cd";\nprint(missingHelper(1));\n'}
                     ],
                 },
             },
@@ -878,12 +878,12 @@ def main() -> int:
 
         namespace_source = (
             'import "./compiler-design-lsp-module.cd" as lib;\n'
-            "print lib.value;\n"
+            "print(lib.value);\n"
             'import "./compiler-design-lsp-api.cd" as api;\n'
             "let box: api.Box = api.Box { value: 1 };\n"
             "let result: api.Result = api.Result.Ok(2);\n"
-            "print box.value;\n"
-            "print box.get();\n"
+            "print(box.value);\n"
+            "print(box.get());\n"
             "let hel = 1;\n"
         )
         send(
@@ -1320,7 +1320,7 @@ def main() -> int:
                 "method": "textDocument/didChange",
                 "params": {
                     "textDocument": {"uri": uri, "version": 10},
-                    "contentChanges": [{"text": "print missing;\n"}],
+                    "contentChanges": [{"text": "print(missing);\n"}],
                 },
             },
         )

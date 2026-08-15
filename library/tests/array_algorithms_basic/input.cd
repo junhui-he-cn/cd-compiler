@@ -1,18 +1,18 @@
 import "../../data_structures.cd" as ds;
 
 let numbers = [4, 1, 4, 2];
-print ds.reverseArray(numbers);
-print numbers;
-print ds.linearSearch(numbers, 4);
-print ds.linearSearch(numbers, 9);
-print ds.countValue(numbers, 4);
+print(ds.reverseArray(numbers));
+print(numbers);
+print(ds.linearSearch(numbers, 4));
+print(ds.linearSearch(numbers, 9));
+print(ds.countValue(numbers, 4));
 
 let reversed = ds.reverseArray(numbers);
 reversed.push(99);
-print numbers;
-print reversed;
+print(numbers);
+print(reversed);
 
 let words = ["alpha", "beta", "alpha"];
-print ds.linearSearch(words, "beta");
-print ds.countValue(words, "alpha");
-print ds.reverseArray<number>([]);
+print(ds.linearSearch(words, "beta"));
+print(ds.countValue(words, "alpha"));
+print(ds.reverseArray<number>([]));

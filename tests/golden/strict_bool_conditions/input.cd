@@ -1,21 +1,21 @@
 let ready = true;
 if ready {
-  print "yes";
+  print("yes");
 } else {
-  print "no";
+  print("no");
 }
 
 let mut i = 0;
 while i < 3 {
   i += 1;
 }
-print i;
+print(i);
 
 let maybe: optional<number> = 4;
 if let value = maybe {
-  print value;
+  print(value);
 }
-print maybe ?? 0;
+print(maybe ?? 0);
 
-print false || true;
-print true && false;
+print(false || true);
+print(true && false);

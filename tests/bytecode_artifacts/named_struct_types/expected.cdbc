@@ -16,9 +16,11 @@ names:
   n7 = "p#0"
   n8 = "name"
   n9 = "Person"
-  n10 = "p#0"
-  n11 = "age"
-  n12 = "Person"
+  n10 = "print"
+  n11 = "p#0"
+  n12 = "age"
+  n13 = "Person"
+  n14 = "print"
 
 globals:
   g0 = n3
@@ -29,7 +31,7 @@ types:
 native_imports:
   i0 = "print" abi=1
 
-main registers=11:
+main registers=12:
 block b0:
   r0 = constant c0
   r1 = constant c1
@@ -40,14 +42,14 @@ block b0:
   r5 = struct_set r3, t0, 1, r4
   r6 = load_global g0
   r7 = struct_get r6, t0, 0
-  r10 = call_native i0 [r7]
-  r8 = load_global g0
-  r9 = struct_get r8, t0, 1
-  r10 = call_native i0 [r9]
+  r8 = call_native i0 [r7]
+  r9 = load_global g0
+  r10 = struct_get r9, t0, 1
+  r11 = call_native i0 [r10]
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/named_struct_types/input.cd" text="struct Person { name: string, age: number }\nlet p: Person = Person { name: \"Ada\", age: 36 };\np.age = 37;\nprint p.name;\nprint p.age;\n"
+  s0 path="tests/bytecode_artifacts/named_struct_types/input.cd" text="struct Person { name: string, age: number }\nlet p: Person = Person { name: \"Ada\", age: 36 };\np.age = 37;\nprint(p.name);\nprint(p.age);\n"
 
 debug_locations:
   main 0 = s0:2:32
@@ -77,8 +79,8 @@ debug_ranges:
   main 7 = s0:93:103
   main 8 = s0:111:112
   main 9 = s0:111:117
-  main 10 = s0:111:117
-  main 11 = s0:125:126
-  main 12 = s0:125:130
-  main 13 = s0:125:130
-  main 14 = s0:125:130
+  main 10 = s0:105:118
+  main 11 = s0:126:127
+  main 12 = s0:126:131
+  main 13 = s0:120:132
+  main 14 = s0:120:132

@@ -5,6 +5,6 @@ Program
   Let offset: number = 5
   Let shifted = (member-call values map (fun (value: number): number (return (+ value offset))))
   Let text = (call map values (fun (value: number): string (return (call str value))))
-  Print doubled
-  Print shifted
-  Print text
+  Expr (call print doubled)
+  Expr (call print shifted)
+  Expr (call print text)

@@ -1,13 +1,13 @@
 import "../../data_structures.cd" as ds;
 
-print ds.canSegmentString("leetcode", ["leet", "code"]);
-print ds.canSegmentString("applepenapple", ["apple", "pen"]);
-print ds.canSegmentString("catsandog", ["cats", "dog", "sand", "and", "cat"]);
-print ds.canSegmentString("", []);
-print ds.canSegmentString("a", ["", "a"]);
-print ds.canSegmentString("b", ["", "a"]);
-print ds.canSegmentString("你好吗", ["你好", "吗"]);
-print ds.canSegmentString("aaaaab", ["a", "aa", "aaa"]);
+print(ds.canSegmentString("leetcode", ["leet", "code"]));
+print(ds.canSegmentString("applepenapple", ["apple", "pen"]));
+print(ds.canSegmentString("catsandog", ["cats", "dog", "sand", "and", "cat"]));
+print(ds.canSegmentString("", []));
+print(ds.canSegmentString("a", ["", "a"]));
+print(ds.canSegmentString("b", ["", "a"]));
+print(ds.canSegmentString("你好吗", ["你好", "吗"]));
+print(ds.canSegmentString("aaaaab", ["a", "aa", "aaa"]));
 
 let dictionaryStress: [string] = [];
 let dictionaryIndex = 0;
@@ -22,5 +22,5 @@ while (repeatedIndex < 1024) {
   repeatedText = repeatedText + "a";
   repeatedIndex += 1;
 }
-print ds.canSegmentString(repeatedText, dictionaryStress);
-print ds.canSegmentString("word999", dictionaryStress);
+print(ds.canSegmentString(repeatedText, dictionaryStress));
+print(ds.canSegmentString("word999", dictionaryStress));

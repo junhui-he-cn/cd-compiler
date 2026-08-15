@@ -38,17 +38,17 @@ IR
 0036  v28 = native_call @31 reduce(v25, v26, v27)
 0037  store_var @32 collected#18, v28
 0038  v29 = load_var @33 total#4
-0039  print v29
-0040  v30 = load_var @34 product#7
-0041  print v30
-0042  v31 = load_var @35 snapshotTotal#11
-0043  print v31
-0044  v32 = load_var @36 snapshot#8
-0045  print v32
-0046  v33 = load_var @37 empty#14
-0047  print v33
-0048  v34 = load_var @38 collected#18
-0049  print v34
+0039  v30 = native_call @34 print(v29)
+0040  v31 = load_var @35 product#7
+0041  v32 = native_call @36 print(v31)
+0042  v33 = load_var @37 snapshotTotal#11
+0043  v34 = native_call @38 print(v33)
+0044  v35 = load_var @39 snapshot#8
+0045  v36 = native_call @40 print(v35)
+0046  v37 = load_var @41 empty#14
+0047  v38 = native_call @42 print(v37)
+0048  v39 = load_var @43 collected#18
+0049  v40 = native_call @44 print(v39)
 
 function $0 <lambda>(acc#2, value#3)
 0000  v0 = load_var @3 acc#2

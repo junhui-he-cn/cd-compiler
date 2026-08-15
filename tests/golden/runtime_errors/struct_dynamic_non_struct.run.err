@@ -1,5 +1,5 @@
 Runtime error at tests/golden/runtime_errors/struct_dynamic_non_struct.cd:4:7: can only access fields on structs
-  print id(123).name;
+  print(id(123).name);
         ^
 Call stack:
   at main (tests/golden/runtime_errors/struct_dynamic_non_struct.cd:4:7)

@@ -1,1 +1,3 @@
 Parse error at <repo>/tests/golden/parse_errors/struct_decl_missing_right_brace.cd:2:1: expected `}` after struct fields, found EndOfFile
+  
+  ^

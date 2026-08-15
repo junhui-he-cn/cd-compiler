@@ -1,4 +1,4 @@
 Program
   Let factory: fun(): fun(number): number = (fun (): fun(number): number (return (fun (x: number): number (return (+ x 2)))))
   Let f: fun(number): number = (call factory)
-  Print (call f 5)
+  Expr (call print (call f 5))

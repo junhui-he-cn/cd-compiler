@@ -5,4 +5,4 @@ Program
     Export add
   Module 1 entry
     Import "./lib.cd"
-    Print (call add 1 2)
+    Expr (call print (call add 1 2))

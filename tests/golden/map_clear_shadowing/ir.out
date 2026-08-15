@@ -9,14 +9,14 @@ IR
 0007  store_var @2 values#2, v4
 0008  v5 = load_var @3 values#2
 0009  v6 = call_direct $0 clear/1(v5)
-0010  print v6
-0011  v7 = load_var @4 values#2
-0012  print v7
-0013  v8 = load_var @5 values#2
-0014  v9 = native_call @6 clear(v8)
-0015  print v9
-0016  v10 = load_var @7 values#2
-0017  print v10
+0010  v7 = native_call @4 print(v6)
+0011  v8 = load_var @5 values#2
+0012  v9 = native_call @6 print(v8)
+0013  v10 = load_var @7 values#2
+0014  v11 = native_call @8 clear(v10)
+0015  v12 = native_call @9 print(v11)
+0016  v13 = load_var @10 values#2
+0017  v14 = native_call @11 print(v13)
 
 function $0 clear(map#1)
 0000  v0 = constant #1 "shadowed"

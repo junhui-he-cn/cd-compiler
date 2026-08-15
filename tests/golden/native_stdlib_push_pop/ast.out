@@ -1,14 +1,14 @@
 Program
   Let xs = (array 1 2)
-  Print (call push xs 3)
-  Print xs
-  Print (call pop xs)
-  Print xs
+  Expr (call print (call push xs 3))
+  Expr (call print xs)
+  Expr (call print (call pop xs))
+  Expr (call print xs)
   Let alias = xs
   Expr (call push alias 4)
-  Print xs
+  Expr (call print xs)
   Let mixed = (array)
   Expr (call push mixed "hi")
   Expr (call push mixed true)
-  Print (call pop mixed)
-  Print (call pop mixed)
+  Expr (call print (call pop mixed))
+  Expr (call print (call pop mixed))

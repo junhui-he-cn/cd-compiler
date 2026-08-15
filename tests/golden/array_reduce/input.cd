@@ -20,9 +20,9 @@ let collected: [number] = reduce(values, initial, fun (acc, value) {
   return acc;
 });
 
-print total;
-print product;
-print snapshotTotal;
-print snapshot;
-print empty;
-print collected;
+print(total);
+print(product);
+print(snapshotTotal);
+print(snapshot);
+print(empty);
+print(collected);

@@ -17,28 +17,28 @@ IR
 0015  v8 = load_var @9 __method_Stack_pop#0
 0016  v9 = load_var @10 stack#7
 0017  v10 = call v8(v9)
-0018  print v10
-0019  v11 = load_var @11 __method_Stack_push#1
-0020  v12 = load_var @12 stack#7
-0021  v13 = constant #9 7
-0022  v14 = call v11(v12, v13)
-0023  print v14
-0024  v15 = load_var @13 __method_Stack_len#2
-0025  v16 = load_var @14 stack#7
-0026  v17 = call v15(v16)
-0027  print v17
-0028  v18 = constant #10 1
-0029  v19 = array [v18]
-0030  store_var @15 values#8, v19
-0031  v20 = load_var @16 values#8
-0032  v21 = constant #11 2
-0033  v22 = native_call @17 push(v20, v21)
-0034  v23 = load_var @18 values#8
-0035  v24 = native_call @19 pop(v23)
-0036  print v24
-0037  v25 = load_var @20 values#8
-0038  v26 = len_array v25
-0039  print v26
+0018  v11 = native_call @11 print(v10)
+0019  v12 = load_var @12 __method_Stack_push#1
+0020  v13 = load_var @13 stack#7
+0021  v14 = constant #9 7
+0022  v15 = call v12(v13, v14)
+0023  v16 = native_call @14 print(v15)
+0024  v17 = load_var @15 __method_Stack_len#2
+0025  v18 = load_var @16 stack#7
+0026  v19 = call v17(v18)
+0027  v20 = native_call @17 print(v19)
+0028  v21 = constant #10 1
+0029  v22 = array [v21]
+0030  store_var @18 values#8, v22
+0031  v23 = load_var @19 values#8
+0032  v24 = constant #11 2
+0033  v25 = native_call @20 push(v23, v24)
+0034  v26 = load_var @21 values#8
+0035  v27 = native_call @22 pop(v26)
+0036  v28 = native_call @23 print(v27)
+0037  v29 = load_var @24 values#8
+0038  v30 = len_array v29
+0039  v31 = native_call @25 print(v30)
 
 function $0 pop(this#3)
 0000  v0 = constant #1 nil

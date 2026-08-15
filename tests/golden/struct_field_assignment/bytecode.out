@@ -1,5 +1,5 @@
 native_import i0 = print abi=1
-main registers=30
+main registers=33
 0000  block
 0001  b0 = constant #0 "Ada"
 0002  b1 = constant #1 36
@@ -10,32 +10,32 @@ main registers=30
 0007  b5 = struct_set b3, t0, 1, b4
 0008  b6 = load_global g0
 0009  b7 = struct_get b6, t0, 1
-0010  b29 = call_native i0 [b7]
-0011  b8 = load_global g0
-0012  b9 = constant #3 38
-0013  b10 = struct_set b8, t0, 1, b9
-0014  b29 = call_native i0 [b10]
-0015  b11 = constant #4 1
-0016  b12 = make_struct t1 [b11]
-0017  b13 = make_struct t2 [b12]
-0018  init_global g1, b13
-0019  b14 = load_global g1
-0020  b15 = struct_get b14, t2, 0
-0021  b16 = constant #5 2
-0022  b17 = struct_set b15, t1, 0, b16
-0023  b18 = load_global g1
-0024  b19 = struct_get b18, t2, 0
-0025  b20 = struct_get b19, t1, 0
-0026  b29 = call_native i0 [b20]
-0027  b21 = constant #6 1
-0028  b22 = make_struct t3 [b21]
-0029  init_global g2, b22
-0030  b23 = load_global g2
-0031  init_global g3, b23
-0032  b24 = load_global g3
-0033  b25 = constant #7 3
-0034  b26 = struct_set b24, t3, 0, b25
-0035  b27 = load_global g2
-0036  b28 = struct_get b27, t3, 0
-0037  b29 = call_native i0 [b28]
+0010  b8 = call_native i0 [b7]
+0011  b9 = load_global g0
+0012  b10 = constant #3 38
+0013  b11 = struct_set b9, t0, 1, b10
+0014  b12 = call_native i0 [b11]
+0015  b13 = constant #4 1
+0016  b14 = make_struct t1 [b13]
+0017  b15 = make_struct t2 [b14]
+0018  init_global g1, b15
+0019  b16 = load_global g1
+0020  b17 = struct_get b16, t2, 0
+0021  b18 = constant #5 2
+0022  b19 = struct_set b17, t1, 0, b18
+0023  b20 = load_global g1
+0024  b21 = struct_get b20, t2, 0
+0025  b22 = struct_get b21, t1, 0
+0026  b23 = call_native i0 [b22]
+0027  b24 = constant #6 1
+0028  b25 = make_struct t3 [b24]
+0029  init_global g2, b25
+0030  b26 = load_global g2
+0031  init_global g3, b26
+0032  b27 = load_global g3
+0033  b28 = constant #7 3
+0034  b29 = struct_set b27, t3, 0, b28
+0035  b30 = load_global g2
+0036  b31 = struct_get b30, t3, 0
+0037  b32 = call_native i0 [b31]
 0038  return_nil

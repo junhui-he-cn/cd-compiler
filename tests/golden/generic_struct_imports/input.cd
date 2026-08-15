@@ -3,6 +3,6 @@ import "lib.cd" as lib;
 
 let direct: Box<number> = Box<number> { value: 1 };
 let namespaced: lib.Box<number> = lib.Box<number> { value: 2 };
-print direct.value;
-print namespaced.value;
-print typeOf(namespaced);
+print(direct.value);
+print(namespaced.value);
+print(typeOf(namespaced));

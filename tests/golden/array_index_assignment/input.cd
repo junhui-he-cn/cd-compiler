@@ -1,14 +1,14 @@
 let xs = [1, "two", 3];
 xs[1] = 42;
-print xs[1];
+print(xs[1]);
 
 let ys = xs;
 ys[0] = 9;
-print xs[0];
+print(xs[0]);
 
-print xs[2] = 7;
+print(xs[2] = 7);
 xs[0] = xs[1] = 5;
-print xs[0];
-print xs[1];
+print(xs[0]);
+print(xs[1]);
 xs[1] = "changed";
-print xs[1];
+print(xs[1]);

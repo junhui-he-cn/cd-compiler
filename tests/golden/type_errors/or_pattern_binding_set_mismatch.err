@@ -1,3 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/or_pattern_binding_set_mismatch.cd:4:22: OR pattern alternatives must bind the same names
-    Option.Some(value) | Option.None => { print "some"; }
+    Option.Some(value) | Option.None => { print("some"); }
                        ^

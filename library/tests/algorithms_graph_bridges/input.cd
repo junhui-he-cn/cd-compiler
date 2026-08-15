@@ -9,21 +9,21 @@ graph.addEdge(3, 4);
 graph.addEdge(4, 5);
 graph.addEdge(5, 3);
 graph.addEdge(4, 6);
-print ds.articulationPoints(graph);
-print ds.bridges(graph);
+print(ds.articulationPoints(graph));
+print(ds.bridges(graph));
 
 let tree = ds.newGraph(4, false);
 tree.addEdge(0, 1);
 tree.addEdge(1, 2);
 tree.addEdge(1, 3);
-print ds.articulationPoints(tree);
-print ds.bridges(tree);
+print(ds.articulationPoints(tree));
+print(ds.bridges(tree));
 
 let directed = ds.newGraph(2, true);
 directed.addEdge(0, 1);
-print ds.articulationPoints(directed);
-print ds.bridges(directed);
+print(ds.articulationPoints(directed));
+print(ds.bridges(directed));
 
 let empty = ds.newGraph(0, false);
-print ds.articulationPoints(empty);
-print ds.bridges(empty);
+print(ds.articulationPoints(empty));
+print(ds.bridges(empty));

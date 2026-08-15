@@ -34,13 +34,13 @@ def main() -> int:
         return 2
 
     compiler = sys.argv[1]
-    source = "let data={\"a\":1,\"b\":[2,3]}; // data\nprint data[\"a\"];\n"
+    source = "let data={\"a\":1,\"b\":[2,3]}; // data\nprint(data[\"a\"]);\n"
     expected = (
         "let data = {\n"
         "  \"a\": 1,\n"
         "  \"b\": [2, 3]\n"
         "}; // data\n"
-        "print data[\"a\"];\n"
+        "print(data[\"a\"]);\n"
     )
 
     source_result = run(compiler, "--format", source=source)
@@ -93,7 +93,7 @@ def main() -> int:
     trailing_commas = run(
         compiler,
         "--format",
-        source="enum Choice{First,Second,}\nlet value=1;\nmatch value{1=>{print value;}_=>{print 0;}}\n",
+        source="enum Choice{First,Second,}\nlet value=1;\nmatch value{1=>{print(value);}_=>{print(0);}}\n",
     )
     trailing_expected = (
         "enum Choice {\n"
@@ -103,10 +103,10 @@ def main() -> int:
         "let value = 1;\n"
         "match value {\n"
         "  1 => {\n"
-        "    print value;\n"
+        "    print(value);\n"
         "  }\n"
         "  _ => {\n"
-        "    print 0;\n"
+        "    print(0);\n"
         "  }\n"
         "}\n"
     )
@@ -149,10 +149,10 @@ def main() -> int:
         entry = root / "entry.cd"
         dependency = root / "lib.cd"
         dependency.write_text("let value=1; export value;\n", encoding="utf-8")
-        entry.write_text('import "./lib.cd";\nprint value;\n', encoding="utf-8")
+        entry.write_text('import "./lib.cd";\nprint(value);\n', encoding="utf-8")
 
         file_result = run(compiler, "--format", str(entry))
-        expected_entry = 'import "./lib.cd";\nprint value;\n'
+        expected_entry = 'import "./lib.cd";\nprint(value);\n'
         if file_result.returncode != 0 or file_result.stdout != expected_entry or file_result.stderr:
             print("import entry formatter result mismatch", file=sys.stderr)
             print(file_result.stdout, file=sys.stderr)
@@ -168,9 +168,9 @@ def main() -> int:
         first = root / "first.cd"
         second = root / "second.cd"
         first.write_text("let first = 1;\n", encoding="utf-8")
-        second.write_text("print first;\n", encoding="utf-8")
+        second.write_text("print(first);\n", encoding="utf-8")
         multi_result = run(compiler, "--format", str(first), str(second))
-        if multi_result.returncode != 0 or multi_result.stdout != "let first = 1;\n\nprint first;\n" or multi_result.stderr:
+        if multi_result.returncode != 0 or multi_result.stdout != "let first = 1;\n\nprint(first);\n" or multi_result.stderr:
             print("direct multi-file formatter result mismatch", file=sys.stderr)
             print(multi_result.stdout, file=sys.stderr)
             print(multi_result.stderr, file=sys.stderr)

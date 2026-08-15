@@ -1,2 +1,2 @@
 import "./lib.cd";
-print add(1, 2);
+print(add(1, 2));

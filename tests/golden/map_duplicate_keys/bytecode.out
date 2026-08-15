@@ -2,7 +2,7 @@ native_import i0 = print abi=1
 native_import i1 = keys abi=1
 native_import i2 = values abi=1
 native_import i3 = merge abi=1
-main registers=43
+main registers=52
 0000  block
 0001  b0 = constant #0 "a"
 0002  b1 = constant #1 1
@@ -14,55 +14,55 @@ main registers=43
 0008  init_global g0, b6
 0009  b7 = load_global g0
 0010  b8 = len_map b7
-0011  b42 = call_native i0 [b8]
-0012  b9 = load_global g0
-0013  b10 = constant #6 "a"
-0014  b11 = map_get b9, b10
-0015  b42 = call_native i0 [b11]
-0016  b12 = load_global g0
-0017  b13 = constant #7 "b"
-0018  b14 = map_get b12, b13
-0019  b42 = call_native i0 [b14]
-0020  b15 = load_global g0
-0021  b16 = iter_init b15
-0022  b17 = constant #8 nil
-0023  init_global g1, b17
+0011  b9 = call_native i0 [b8]
+0012  b10 = load_global g0
+0013  b11 = constant #6 "a"
+0014  b12 = map_get b10, b11
+0015  b13 = call_native i0 [b12]
+0016  b14 = load_global g0
+0017  b15 = constant #7 "b"
+0018  b16 = map_get b14, b15
+0019  b17 = call_native i0 [b16]
+0020  b18 = load_global g0
+0021  b19 = iter_init b18
+0022  b20 = constant #8 nil
+0023  init_global g1, b20
 0024  br b1
 0025  block
-0026  b18 = iter_has b16
-0027  br_if b18, b2, b3
+0026  b21 = iter_has b19
+0027  br_if b21, b2, b3
 0028  block
-0029  b19 = iter_next b16
-0030  set_global g1, b19
-0031  b20 = load_global g1
-0032  b42 = call_native i0 [b20]
-0033  b21 = load_global g0
-0034  b22 = load_global g1
-0035  b23 = map_get b21, b22
-0036  b42 = call_native i0 [b23]
+0029  b22 = iter_next b19
+0030  set_global g1, b22
+0031  b23 = load_global g1
+0032  b24 = call_native i0 [b23]
+0033  b25 = load_global g0
+0034  b26 = load_global g1
+0035  b27 = map_get b25, b26
+0036  b28 = call_native i0 [b27]
 0037  br b1
 0038  block
-0039  b24 = load_global g0
-0040  b25 = call_native i1 [b24]
-0041  b42 = call_native i0 [b25]
-0042  b26 = load_global g0
-0043  b27 = call_native i2 [b26]
-0044  b42 = call_native i0 [b27]
-0045  b28 = load_global g0
-0046  b29 = constant #9 "a"
-0047  b30 = constant #10 30
-0048  b31 = map_set b28, b29, b30
-0049  b32 = load_global g0
-0050  b42 = call_native i0 [b32]
-0051  b33 = load_global g0
-0052  b34 = call_native i1 [b33]
-0053  b42 = call_native i0 [b34]
-0054  b35 = load_global g0
-0055  b36 = constant #11 "b"
-0056  b37 = constant #12 20
-0057  b38 = constant #13 "c"
-0058  b39 = constant #14 4
-0059  b40 = map [b36: b37, b38: b39]
-0060  b41 = call_native i3 [b35, b40]
-0061  b42 = call_native i0 [b41]
+0039  b29 = load_global g0
+0040  b30 = call_native i1 [b29]
+0041  b31 = call_native i0 [b30]
+0042  b32 = load_global g0
+0043  b33 = call_native i2 [b32]
+0044  b34 = call_native i0 [b33]
+0045  b35 = load_global g0
+0046  b36 = constant #9 "a"
+0047  b37 = constant #10 30
+0048  b38 = map_set b35, b36, b37
+0049  b39 = load_global g0
+0050  b40 = call_native i0 [b39]
+0051  b41 = load_global g0
+0052  b42 = call_native i1 [b41]
+0053  b43 = call_native i0 [b42]
+0054  b44 = load_global g0
+0055  b45 = constant #11 "b"
+0056  b46 = constant #12 20
+0057  b47 = constant #13 "c"
+0058  b48 = constant #14 4
+0059  b49 = map [b45: b46, b47: b48]
+0060  b50 = call_native i3 [b44, b49]
+0061  b51 = call_native i0 [b50]
 0062  return_nil

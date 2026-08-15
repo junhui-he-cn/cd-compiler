@@ -10,5 +10,5 @@ fun makePerson(): Person {
 }
 
 let p = birthday(makePerson());
-print p.name;
-print p.age;
+print(p.name);
+print(p.age);

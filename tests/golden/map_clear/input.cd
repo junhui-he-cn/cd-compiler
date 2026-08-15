@@ -1,10 +1,10 @@
 let values = {"a": 1, "b": 2};
 let alias = values;
-print clear(values);
-print alias;
+print(clear(values));
+print(alias);
 values["c"] = 3;
-print alias;
-print alias.clear();
-print values.len();
+print(alias);
+print(alias.clear());
+print(values.len());
 values["d"] = 4;
-print values;
+print(values);

@@ -1,5 +1,5 @@
 enum Result { Ok(number), Empty }
 let result = Result.Ok(1);
 match result {
-  Result.Ok(value) => { print value; }
+  Result.Ok(value) => { print(value); }
 }

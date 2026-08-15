@@ -1,6 +1,6 @@
 Program
   Let xs: [number] = (array 1 2 3)
-  Print (index xs 1)
+  Expr (call print (index xs 1))
   Let empty: [string] = (array)
   Expr (call push empty "ok")
-  Print (call pop empty)
+  Expr (call print (call pop empty))

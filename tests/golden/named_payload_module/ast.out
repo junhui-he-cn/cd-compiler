@@ -14,4 +14,4 @@ Program
         Arm lib.Outcome.Bad(numberValue)
           Block
             Return (call str numberValue)
-    Print (call render (member-call lib make))
+    Expr (call print (call render (member-call lib make)))

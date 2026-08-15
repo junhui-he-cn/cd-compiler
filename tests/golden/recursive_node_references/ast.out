@@ -5,11 +5,11 @@ Program
   Let alias = tail
   Expr (= (field head next) nil)
   Expr (= (field alias value) 20)
-  Print (field head next)
-  Print (field tail value)
+  Expr (call print (field head next))
+  Expr (call print (field tail value))
   Let first = (construct Node value: 3 next: nil)
   Let second = (construct Node value: 4 next: first)
   Expr (= (field first next) second)
-  Print first
-  Print (== first first)
-  Print (== first second)
+  Expr (call print first)
+  Expr (call print (== first first))
+  Expr (call print (== first second))

@@ -1,4 +1,4 @@
 struct Box { value: number }
 impl Box { fun add(amount: number): number { return this.value + amount; } }
 let b: Box = Box { value: 1 };
-print b.add();
+print(b.add());

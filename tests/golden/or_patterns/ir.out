@@ -11,51 +11,51 @@ IR
 0009  store_var @32 maybe#5, v4
 0010  v5 = constant #15 1
 0011  v6 = call_direct $0 numberLabel/1(v5)
-0012  print v6
-0013  v7 = constant #16 8
-0014  v8 = call_direct $0 numberLabel/1(v7)
-0015  print v8
-0016  v9 = constant #17 3
-0017  v10 = variant Shape.Point (v9)
-0018  v11 = call_direct $1 shapeLabel/1(v10)
-0019  print v11
-0020  v12 = constant #18 4
-0021  v13 = constant #19 10
-0022  v14 = variant Shape.Line (v12, v13)
-0023  v15 = call_direct $1 shapeLabel/1(v14)
-0024  print v15
-0025  v16 = variant Shape.Empty ()
-0026  v17 = call_direct $1 shapeLabel/1(v16)
-0027  print v17
-0028  v18 = load_var @39 maybe#5
-0029  v19 = constant #20 nil
-0030  v20 = constant #21 nil
-0031  v21 = equal v18, v20
-0032  jump_if_false v21, 0034
+0012  v7 = native_call @33 print(v6)
+0013  v8 = constant #16 8
+0014  v9 = call_direct $0 numberLabel/1(v8)
+0015  v10 = native_call @34 print(v9)
+0016  v11 = constant #17 3
+0017  v12 = variant Shape.Point (v11)
+0018  v13 = call_direct $1 shapeLabel/1(v12)
+0019  v14 = native_call @37 print(v13)
+0020  v15 = constant #18 4
+0021  v16 = constant #19 10
+0022  v17 = variant Shape.Line (v15, v16)
+0023  v18 = call_direct $1 shapeLabel/1(v17)
+0024  v19 = native_call @40 print(v18)
+0025  v20 = variant Shape.Empty ()
+0026  v21 = call_direct $1 shapeLabel/1(v20)
+0027  v22 = native_call @43 print(v21)
+0028  v23 = load_var @44 maybe#5
+0029  v24 = constant #20 nil
+0030  v25 = constant #21 nil
+0031  v26 = equal v23, v25
+0032  jump_if_false v26, 0034
 0033  jump 0037
-0034  v22 = constant #22 false
-0035  v23 = equal v18, v22
-0036  jump_if_false v23, 0040
-0037  v24 = constant #23 "off"
-0038  print v24
+0034  v27 = constant #22 false
+0035  v28 = equal v23, v27
+0036  jump_if_false v28, 0040
+0037  v29 = constant #23 "off"
+0038  v30 = native_call @45 print(v29)
 0039  jump 0046
-0040  v25 = constant #24 true
-0041  v26 = equal v18, v25
-0042  jump_if_false v26, 0046
-0043  v27 = constant #25 "on"
-0044  print v27
+0040  v31 = constant #24 true
+0041  v32 = equal v23, v31
+0042  jump_if_false v32, 0046
+0043  v33 = constant #25 "on"
+0044  v34 = native_call @46 print(v33)
 0045  jump 0046
-0046  v28 = constant #26 true
-0047  v29 = constant #27 nil
-0048  v30 = constant #28 true
-0049  v31 = equal v28, v30
-0050  jump_if_false v31, 0052
+0046  v35 = constant #26 true
+0047  v36 = constant #27 nil
+0048  v37 = constant #28 true
+0049  v38 = equal v35, v37
+0050  jump_if_false v38, 0052
 0051  jump 0055
-0052  v32 = constant #29 false
-0053  v33 = equal v28, v32
-0054  jump_if_false v33, 0058
-0055  v34 = constant #30 "bool"
-0056  print v34
+0052  v39 = constant #29 false
+0053  v40 = equal v35, v39
+0054  jump_if_false v40, 0058
+0055  v41 = constant #30 "bool"
+0056  v42 = native_call @47 print(v41)
 0057  jump 0058
 
 function $0 numberLabel(value#1)

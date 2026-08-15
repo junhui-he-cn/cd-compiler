@@ -3,5 +3,5 @@ Program
   Block
     Let mut x = 10
     Expr (= x 20)
-    Print x
-  Print x
+    Expr (call print x)
+  Expr (call print x)

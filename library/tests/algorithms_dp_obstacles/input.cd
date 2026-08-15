@@ -1,15 +1,15 @@
 import "../../data_structures.cd" as ds;
 
-print ds.uniqueGridPathsWithObstacles([
+print(ds.uniqueGridPathsWithObstacles([
   [false, false, false],
   [false, true, false],
   [false, false, false]
-]);
-print ds.uniqueGridPathsWithObstacles([[true, false], [false, false]]);
-print ds.uniqueGridPathsWithObstacles([[false, true], [false, false]]);
-print ds.uniqueGridPathsWithObstacles([[false]]);
-print ds.uniqueGridPathsWithObstacles([[true]]);
+]));
+print(ds.uniqueGridPathsWithObstacles([[true, false], [false, false]]));
+print(ds.uniqueGridPathsWithObstacles([[false, true], [false, false]]));
+print(ds.uniqueGridPathsWithObstacles([[false]]));
+print(ds.uniqueGridPathsWithObstacles([[true]]));
 let empty: [[bool]] = [];
-print ds.uniqueGridPathsWithObstacles(empty);
+print(ds.uniqueGridPathsWithObstacles(empty));
 let ragged: [[bool]] = [[false], [false, true]];
-print ds.uniqueGridPathsWithObstacles(ragged);
+print(ds.uniqueGridPathsWithObstacles(ragged));

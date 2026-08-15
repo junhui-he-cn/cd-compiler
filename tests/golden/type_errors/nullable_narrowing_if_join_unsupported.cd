@@ -4,7 +4,7 @@ fun unsupported(value: optional<number>, flag: bool): number {
       return 0;
     }
   } else {
-    print "unchecked";
+    print("unchecked");
   }
   return value + 1;
 }

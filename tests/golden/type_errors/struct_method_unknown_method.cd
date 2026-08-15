@@ -1,4 +1,4 @@
 struct Person { name: string }
 impl Person { fun greet(): string { return this.name; } }
 let p: Person = Person { name: "Ada" };
-print p.missing();
+print(p.missing());

@@ -1,6 +1,6 @@
 Parse error at <repo>/tests/golden/parse_errors/struct_missing_field_name.cd:2:16: expected struct field name, found Colon `:`
-  print Person { : 1 };
+  print(Person { : 1 });
                  ^
 Parse error at <repo>/tests/golden/parse_errors/struct_missing_field_name.cd:2:21: expected expression
-  print Person { : 1 };
+  print(Person { : 1 });
                       ^

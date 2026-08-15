@@ -31,12 +31,16 @@ names:
   n12 = "box#9"
   n13 = "__method_Box_echo#0"
   n14 = "box#9"
-  n15 = "__method_Box_echo#0"
-  n16 = "box#9"
-  n17 = "__method_Box_head#1"
-  n18 = "box#9"
-  n19 = "__method_Box_make#2"
+  n15 = "print"
+  n16 = "__method_Box_echo#0"
+  n17 = "box#9"
+  n18 = "print"
+  n19 = "__method_Box_head#1"
   n20 = "box#9"
+  n21 = "print"
+  n22 = "__method_Box_make#2"
+  n23 = "box#9"
+  n24 = "print"
 
 globals:
   g0 = n0
@@ -50,7 +54,7 @@ types:
 native_imports:
   i0 = "print" abi=1
 
-main registers=26:
+main registers=29:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -71,23 +75,23 @@ block b0:
   r9 = load_global g3
   r10 = constant c9
   r11 = call r8 [r9, r10]
-  r25 = call_native i0 [r11]
-  r12 = load_global g0
-  r13 = load_global g3
-  r14 = constant c10
-  r15 = call r12 [r13, r14]
-  r25 = call_native i0 [r15]
-  r16 = load_global g1
-  r17 = load_global g3
-  r18 = constant c11
-  r19 = constant c12
-  r20 = array [r18, r19]
-  r21 = call r16 [r17, r20]
-  r25 = call_native i0 [r21]
-  r22 = load_global g2
-  r23 = load_global g3
-  r24 = call r22 [r23]
-  r25 = call_native i0 [r24]
+  r12 = call_native i0 [r11]
+  r13 = load_global g0
+  r14 = load_global g3
+  r15 = constant c10
+  r16 = call r13 [r14, r15]
+  r17 = call_native i0 [r16]
+  r18 = load_global g1
+  r19 = load_global g3
+  r20 = constant c11
+  r21 = constant c12
+  r22 = array [r20, r21]
+  r23 = call r18 [r19, r22]
+  r24 = call_native i0 [r23]
+  r25 = load_global g2
+  r26 = load_global g3
+  r27 = call r25 [r26]
+  r28 = call_native i0 [r27]
   return_nil
 
 function f0 name="echo" arity=2 registers=3:
@@ -130,7 +134,7 @@ block b2:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/generic_methods/input.cd" text="struct Box { value: number }\n\nimpl Box {\n  fun echo<T>(value: T): T {\n    let copy: T = value;\n    return copy;\n  }\n\n  fun head<T>(values: [T]): T {\n    return values[0];\n  }\n\n  fun make<T>(): optional<T> {\n    return nil;\n  }\n}\n\nlet box: Box = Box { value: 0 };\nprint box.echo<number>(42);\nprint box.echo(\"hello\");\nprint box.head<number>([3, 4]);\nprint box.make<string>();\n"
+  s0 path="tests/bytecode_artifacts/generic_methods/input.cd" text="struct Box { value: number }\n\nimpl Box {\n  fun echo<T>(value: T): T {\n    let copy: T = value;\n    return copy;\n  }\n\n  fun head<T>(values: [T]): T {\n    return values[0];\n  }\n\n  fun make<T>(): optional<T> {\n    return nil;\n  }\n}\n\nlet box: Box = Box { value: 0 };\nprint(box.echo<number>(42));\nprint(box.echo(\"hello\"));\nprint(box.head<number>([3, 4]));\nprint(box.make<string>());\n"
 
 debug_locations:
   main 0 = s0:3:1
@@ -221,24 +225,24 @@ debug_ranges:
   main 17 = s0:269:272
   main 18 = s0:286:288
   main 19 = s0:269:289
-  main 20 = s0:269:289
-  main 21 = s0:297:314
-  main 22 = s0:297:300
-  main 23 = s0:306:313
-  main 24 = s0:297:314
-  main 25 = s0:297:314
-  main 26 = s0:322:346
-  main 27 = s0:322:325
-  main 28 = s0:340:341
-  main 29 = s0:343:344
-  main 30 = s0:339:344
-  main 31 = s0:322:346
-  main 32 = s0:322:346
-  main 33 = s0:354:372
-  main 34 = s0:354:357
-  main 35 = s0:354:372
-  main 36 = s0:354:372
-  main 37 = s0:354:372
+  main 20 = s0:263:290
+  main 21 = s0:298:315
+  main 22 = s0:298:301
+  main 23 = s0:307:314
+  main 24 = s0:298:315
+  main 25 = s0:292:316
+  main 26 = s0:324:348
+  main 27 = s0:324:327
+  main 28 = s0:342:343
+  main 29 = s0:345:346
+  main 30 = s0:341:346
+  main 31 = s0:324:348
+  main 32 = s0:318:349
+  main 33 = s0:357:375
+  main 34 = s0:357:360
+  main 35 = s0:357:375
+  main 36 = s0:351:376
+  main 37 = s0:351:376
   function f0 0 = s0:88:93
   function f0 1 = s0:88:93
   function f0 2 = s0:78:93

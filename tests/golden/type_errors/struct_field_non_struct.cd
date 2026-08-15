@@ -1,1 +1,1 @@
-print 123.name;
+print(123.name);

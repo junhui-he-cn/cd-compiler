@@ -1,1 +1,1 @@
-print missing.value;
+print(missing.value);

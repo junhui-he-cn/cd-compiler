@@ -3,5 +3,5 @@ fun identity(value) {
 }
 
 for key in identity({"a": 1, "b": 2}) {
-  print key;
+  print(key);
 }

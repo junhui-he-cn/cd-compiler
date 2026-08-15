@@ -2,9 +2,9 @@ fun make() {
   let x = "outer";
   fun f() {
     let x = "inner";
-    print x;
+    print(x);
   }
   f();
-  print x;
+  print(x);
 }
 make();

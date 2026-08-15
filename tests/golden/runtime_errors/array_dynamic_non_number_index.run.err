@@ -1,5 +1,5 @@
 Runtime error at tests/golden/runtime_errors/array_dynamic_non_number_index.cd:5:7: array index must be number
-  print xs[id("0")];
+  print(xs[id("0")]);
         ^
 Call stack:
   at main (tests/golden/runtime_errors/array_dynamic_non_number_index.cd:5:7)

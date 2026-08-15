@@ -5,34 +5,34 @@ fun ascending(left: number, right: number): bool {
 }
 
 let values = [5, 1, 3, 1, 4];
-print ds.topKSmallest(values, 3, ascending);
-print ds.topKLargest(values, 3, ascending);
-print ds.kthSmallest(values, 0, ascending);
-print ds.kthSmallest(values, 3, ascending);
-print ds.kthLargest(values, 0, ascending);
-print ds.kthLargest(values, 4, ascending);
-print ds.topKSmallest(values, 0, ascending);
-print ds.topKSmallest<number>([], 2, ascending);
-print ds.topKLargest(values, -1, ascending);
-print ds.topKLargest(values, 1.5, ascending);
-print ds.kthSmallest<number>([], 0, ascending);
-print ds.topKLargest(values, 20, ascending);
-print ds.kthSmallest(values, -1, ascending);
-print ds.kthLargest(values, 1.5, ascending);
-print values;
+print(ds.topKSmallest(values, 3, ascending));
+print(ds.topKLargest(values, 3, ascending));
+print(ds.kthSmallest(values, 0, ascending));
+print(ds.kthSmallest(values, 3, ascending));
+print(ds.kthLargest(values, 0, ascending));
+print(ds.kthLargest(values, 4, ascending));
+print(ds.topKSmallest(values, 0, ascending));
+print(ds.topKSmallest<number>([], 2, ascending));
+print(ds.topKLargest(values, -1, ascending));
+print(ds.topKLargest(values, 1.5, ascending));
+print(ds.kthSmallest<number>([], 0, ascending));
+print(ds.topKLargest(values, 20, ascending));
+print(ds.kthSmallest(values, -1, ascending));
+print(ds.kthLargest(values, 1.5, ascending));
+print(values);
 
 fun stringAscending(left: string, right: string): bool {
   return ds.stringLess(left, right);
 }
 
 let words = ["pear", "apple", "banana", "apple"];
-print ds.topKSmallest(words, 2, stringAscending);
-print ds.topKLargest(words, 2, stringAscending);
-print ds.kthSmallest(words, 2, stringAscending);
+print(ds.topKSmallest(words, 2, stringAscending));
+print(ds.topKLargest(words, 2, stringAscending));
+print(ds.kthSmallest(words, 2, stringAscending));
 
 let repeated = [7, 7, 7, 7, 7, 7, 7];
-print ds.topKSmallest(repeated, 5, ascending);
-print ds.topKLargest(repeated, 5, ascending);
-print ds.kthSmallest(repeated, 6, ascending);
-print ds.kthLargest(repeated, 6, ascending);
-print repeated;
+print(ds.topKSmallest(repeated, 5, ascending));
+print(ds.topKLargest(repeated, 5, ascending));
+print(ds.kthSmallest(repeated, 6, ascending));
+print(ds.kthLargest(repeated, 6, ascending));
+print(repeated);

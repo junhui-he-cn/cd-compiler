@@ -2,5 +2,5 @@ Program
   Let x = 99
   ForIn x in (array 1 2)
     Block
-      Print x
-  Print x
+      Expr (call print x)
+  Expr (call print x)

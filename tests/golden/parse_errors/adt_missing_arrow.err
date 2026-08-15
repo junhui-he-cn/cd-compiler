@@ -1,8 +1,8 @@
 Parse error at <repo>/tests/golden/parse_errors/adt_missing_arrow.cd:3:20: expected `=>` after match pattern, found LeftBrace `{`
-    Result.Ok(value) { print value; }
+    Result.Ok(value) { print(value); }
                      ^
 Parse error at <repo>/tests/golden/parse_errors/adt_missing_arrow.cd:4:16: expected `;` after expression, found FatArrow `=>`
-    Result.Empty => { print 0; }
+    Result.Empty => { print(0); }
                  ^
 Parse error at <repo>/tests/golden/parse_errors/adt_missing_arrow.cd:5:1: expected expression
   }

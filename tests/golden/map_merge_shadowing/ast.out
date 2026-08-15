@@ -2,5 +2,5 @@ Program
   Fun merge(left, right)
     Return "shadowed merge"
   Let values = (map (entry "a" 1))
-  Print (call merge values values)
-  Print (member-call values merge (map (entry "b" 2)))
+  Expr (call print (call merge values values))
+  Expr (call print (member-call values merge (map (entry "b" 2))))

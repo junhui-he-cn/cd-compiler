@@ -3,4 +3,4 @@
     return 1;
   };
 }
-print "done";
+print("done");

@@ -17,5 +17,5 @@ Program
         Arm lib.Outcome.Bad(message)
           Block
             Return (+ "bad:" message)
-    Print (call render nil)
-    Print (call render (member-call lib make))
+    Expr (call print (call render nil))
+    Expr (call print (call render (member-call lib make)))

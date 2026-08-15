@@ -5,7 +5,7 @@ Program
     Return (match result (arm NamedResult.Ok(value) (+ "ok:" (call str value))) (arm NamedResult.Err(message) (+ "err:" message)))
   Fun norm(point: Point2): number
     Return (match point (arm Point2.Origin 0) (arm Point2.Coord(x, y) (+ x y)))
-  Print (call describe (member-call NamedResult Ok 7))
-  Print (call describe (member-call NamedResult Err "bad"))
-  Print (call norm (member-call Point2 Origin))
-  Print (call norm (member-call Point2 Coord 3 4))
+  Expr (call print (call describe (member-call NamedResult Ok 7)))
+  Expr (call print (call describe (member-call NamedResult Err "bad")))
+  Expr (call print (call norm (member-call Point2 Origin)))
+  Expr (call print (call norm (member-call Point2 Coord 3 4)))

@@ -1,6 +1,6 @@
 enum Pair { Values(number, number), Empty }
 let pair = Pair.Values(2, 4);
 match pair {
-  Pair.Values(leftValue, rightValue) => { print rightValue * 10 + leftValue; }
-  Pair.Empty => { print 0; }
+  Pair.Values(leftValue, rightValue) => { print(rightValue * 10 + leftValue); }
+  Pair.Empty => { print(0); }
 }

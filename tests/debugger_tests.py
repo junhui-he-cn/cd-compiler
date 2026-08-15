@@ -142,11 +142,11 @@ def main() -> int:
         source.write_text(
             "fun add(value: number): number {\n"
             "  let result: number = value + 1;\n"
-            "  print result;\n"
+            "  print(result);\n"
             "  return result;\n"
             "}\n"
             "let answer: number = add(4);\n"
-            "print answer;\n",
+            "print(answer);\n",
             encoding="utf-8",
         )
         artifact = root / "trace.cdbc"
@@ -322,8 +322,8 @@ def main() -> int:
                 f"{missing_optimized_debug}\n{optimized_debugged.stdout}"
             )
 
-        range_start = source.read_text(encoding="utf-8").index("print result")
-        range_end = range_start + len("print result")
+        range_start = source.read_text(encoding="utf-8").index("print(result")
+        range_end = range_start + len("print(result")
         ranged = debug_command(
             manifest,
             artifact,
@@ -371,7 +371,7 @@ def main() -> int:
         module_root.mkdir()
         module_source = module_root / "entry.cd"
         module_library = module_root / "lib.cd"
-        module_source.write_text('import "./lib.cd";\nprint add(1, 2);\n', encoding="utf-8")
+        module_source.write_text('import "./lib.cd";\nprint(add(1, 2));\n', encoding="utf-8")
         module_library.write_text(
             "fun add(left, right) { return left + right; }\n"
             "export add;\n",
@@ -493,7 +493,7 @@ def main() -> int:
             "  return fun (value: number) { return base + value; };\n"
             "}\n"
             "let add = makeAdder(4);\n"
-            "print add(3);\n",
+            "print(add(3));\n",
             encoding="utf-8",
         )
         closure_artifact = root / "closure.cdbc"

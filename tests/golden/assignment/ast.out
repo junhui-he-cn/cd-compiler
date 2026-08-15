@@ -1,6 +1,6 @@
 Program
   Let mut x = 1
   Expr (= x (+ x 2))
-  Print x
-  Print (= x 5)
-  Print x
+  Expr (call print x)
+  Expr (call print (= x 5))
+  Expr (call print x)

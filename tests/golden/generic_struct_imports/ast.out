@@ -7,6 +7,6 @@ Program
     Import "lib.cd" as lib
     Let direct: Box<number> = (construct Box<number> value: 1)
     Let namespaced: lib.Box<number> = (construct lib.Box<number> value: 2)
-    Print (field direct value)
-    Print (field namespaced value)
-    Print (call typeOf namespaced)
+    Expr (call print (field direct value))
+    Expr (call print (field namespaced value))
+    Expr (call print (call typeOf namespaced))

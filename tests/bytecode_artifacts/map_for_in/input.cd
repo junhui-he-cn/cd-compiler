@@ -1,6 +1,6 @@
 let values = {"a": 1, "b": 2, "c": 3};
 for key in values {
-  print key;
+  print(key);
   remove(values, key);
 }
-print values;
+print(values);

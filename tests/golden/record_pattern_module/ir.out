@@ -10,8 +10,8 @@ IR
 0008  v7 = equal v5, v6
 0009  jump_if_false v7, 0013
 0010  v8 = constant #4 "one"
-0011  print v8
+0011  v9 = native_call @7 print(v8)
 0012  jump 0016
-0013  v9 = constant #5 "other"
-0014  print v9
+0013  v10 = constant #5 "other"
+0014  v11 = native_call @8 print(v10)
 0015  jump 0016

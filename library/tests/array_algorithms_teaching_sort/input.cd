@@ -9,18 +9,18 @@ fun descending(left: number, right: number): bool {
 }
 
 let numbers = [5, 1, 4, 2, 8, 2];
-print ds.selectionSort(numbers, ascending);
-print numbers;
+print(ds.selectionSort(numbers, ascending));
+print(numbers);
 ds.selectionSortInPlace(numbers, descending);
-print numbers;
+print(numbers);
 
 let words = ["pear", "apple", "orange", "apple"];
-print ds.bubbleSort(words, ds.stringLess);
-print words;
+print(ds.bubbleSort(words, ds.stringLess));
+print(words);
 ds.bubbleSortInPlace(words, ds.stringLess);
-print words;
+print(words);
 
 let empty: [number] = [];
-print ds.selectionSort<number>(empty, ascending);
+print(ds.selectionSort<number>(empty, ascending));
 ds.bubbleSortInPlace(empty, descending);
-print empty;
+print(empty);

@@ -1,6 +1,6 @@
 struct Box { value: number }
 impl Box {
-  fun bad( { if true { print 1; } }
-  fun good() { print 2; }
+  fun bad( { if true { print(1); } }
+  fun good() { print(2); }
 }
-print 3;
+print(3);

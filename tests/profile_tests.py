@@ -59,11 +59,11 @@ def main() -> int:
         source.write_text(
             "fun add(value: number): number {\n"
             "  let result: number = value + 1;\n"
-            "  print result;\n"
+            "  print(result);\n"
             "  return result;\n"
             "}\n"
             "let answer: number = add(4);\n"
-            "print answer;\n",
+            "print(answer);\n",
             encoding="utf-8",
         )
         artifact = root / "profile.cdbc"
@@ -104,7 +104,7 @@ def main() -> int:
             return fail(f"profile mixed program stdout into the report:\n{first.stdout}")
 
         native_source = root / "native.cd"
-        native_source.write_text("print str(7);\n", encoding="utf-8")
+        native_source.write_text("print(str(7));\n", encoding="utf-8")
         native_artifact = root / "native.cdbc"
         emitted = compile_source(compiler, native_source, native_artifact)
         if emitted is not None:
@@ -124,7 +124,7 @@ def main() -> int:
 
         failing_source = root / "failure.cd"
         failing_source.write_text(
-            'fun fail() { print "ok"; return 1 / 0; }\nfail();\n',
+            'fun fail() { print("ok"); return 1 / 0; }\nfail();\n',
             encoding="utf-8",
         )
         failing_artifact = root / "failure.cdbc"

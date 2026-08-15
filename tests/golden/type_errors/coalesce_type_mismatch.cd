@@ -1,2 +1,2 @@
 let x: optional<number> = nil;
-print x ?? "fallback";
+print(x ?? "fallback");

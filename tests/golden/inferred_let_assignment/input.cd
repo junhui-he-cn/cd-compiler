@@ -1,18 +1,18 @@
 let mut n = 1;
 n = 2;
-print n;
+print(n);
 
 let mut s = "hi";
 s = "bye";
-print s;
+print(s);
 
 let mut b = true;
 b = false;
-print b;
+print(b);
 
 let mut xs = [1, "two"];
 xs = [];
-print xs;
+print(xs);
 
 let mut f = fun () {
   return 1;
@@ -20,4 +20,4 @@ let mut f = fun () {
 f = fun () {
   return 2;
 };
-print f();
+print(f());

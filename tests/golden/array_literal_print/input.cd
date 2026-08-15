@@ -1,1 +1,1 @@
-print [1, "two", true, nil];
+print([1, "two", true, nil]);

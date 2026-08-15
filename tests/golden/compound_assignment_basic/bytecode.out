@@ -1,5 +1,5 @@
 native_import i0 = print abi=1
-main registers=23
+main registers=27
 0000  block
 0001  b0 = constant #0 1
 0002  init_global g0, b0
@@ -9,28 +9,28 @@ main registers=23
 0006  b4 = assert_number b3 @3 `+=` expects number value
 0007  b5 = add_num b2, b4
 0008  set_global g0, b5
-0009  b22 = call_native i0 [b5]
-0010  b6 = load_global g0
-0011  b7 = assert_number b6 @6 `-=` expects number variable
-0012  b8 = constant #2 1
-0013  b9 = assert_number b8 @7 `-=` expects number value
-0014  b10 = sub_num b7, b9
-0015  set_global g0, b10
-0016  b22 = call_native i0 [b10]
-0017  b11 = load_global g0
-0018  b12 = assert_number b11 @10 `*=` expects number variable
-0019  b13 = constant #3 5
-0020  b14 = assert_number b13 @11 `*=` expects number value
-0021  b15 = mul_num b12, b14
-0022  set_global g0, b15
-0023  b22 = call_native i0 [b15]
-0024  b16 = load_global g0
-0025  b17 = assert_number b16 @14 `/=` expects number variable
-0026  b18 = constant #4 2
-0027  b19 = assert_number b18 @15 `/=` expects number value
-0028  b20 = div_num b17, b19
-0029  set_global g0, b20
-0030  b22 = call_native i0 [b20]
-0031  b21 = load_global g0
-0032  b22 = call_native i0 [b21]
+0009  b6 = call_native i0 [b5]
+0010  b7 = load_global g0
+0011  b8 = assert_number b7 @7 `-=` expects number variable
+0012  b9 = constant #2 1
+0013  b10 = assert_number b9 @8 `-=` expects number value
+0014  b11 = sub_num b8, b10
+0015  set_global g0, b11
+0016  b12 = call_native i0 [b11]
+0017  b13 = load_global g0
+0018  b14 = assert_number b13 @12 `*=` expects number variable
+0019  b15 = constant #3 5
+0020  b16 = assert_number b15 @13 `*=` expects number value
+0021  b17 = mul_num b14, b16
+0022  set_global g0, b17
+0023  b18 = call_native i0 [b17]
+0024  b19 = load_global g0
+0025  b20 = assert_number b19 @17 `/=` expects number variable
+0026  b21 = constant #4 2
+0027  b22 = assert_number b21 @18 `/=` expects number value
+0028  b23 = div_num b20, b22
+0029  set_global g0, b23
+0030  b24 = call_native i0 [b23]
+0031  b25 = load_global g0
+0032  b26 = call_native i0 [b25]
 0033  return_nil

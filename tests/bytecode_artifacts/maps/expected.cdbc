@@ -17,10 +17,14 @@ names:
   n2 = "alias#1"
   n3 = "alias#1"
   n4 = "prices#0"
-  n5 = "prices#0"
+  n5 = "print"
   n6 = "prices#0"
-  n7 = "prices#0"
-  n8 = "contains"
+  n7 = "print"
+  n8 = "prices#0"
+  n9 = "print"
+  n10 = "prices#0"
+  n11 = "contains"
+  n12 = "print"
 
 globals:
   g0 = n0
@@ -30,7 +34,7 @@ native_imports:
   i0 = "print" abi=1
   i1 = "contains" abi=1
 
-main registers=22:
+main registers=25:
 block b0:
   r0 = constant c0
   r1 = constant c1
@@ -47,22 +51,22 @@ block b0:
   r10 = load_global g0
   r11 = constant c6
   r12 = map_get r10, r11
-  r21 = call_native i0 [r12]
-  r13 = load_global g0
-  r14 = constant c7
-  r15 = map_get r13, r14
-  r21 = call_native i0 [r15]
-  r16 = load_global g0
-  r17 = len_map r16
-  r21 = call_native i0 [r17]
+  r13 = call_native i0 [r12]
+  r14 = load_global g0
+  r15 = constant c7
+  r16 = map_get r14, r15
+  r17 = call_native i0 [r16]
   r18 = load_global g0
-  r19 = constant c8
-  r20 = call_native i1 [r18, r19]
-  r21 = call_native i0 [r20]
+  r19 = len_map r18
+  r20 = call_native i0 [r19]
+  r21 = load_global g0
+  r22 = constant c8
+  r23 = call_native i1 [r21, r22]
+  r24 = call_native i0 [r23]
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/maps/input.cd" text="let prices: map<string, number> = {\"tea\": 3, \"coffee\": 5};\nlet alias = prices;\nalias[\"water\"] = 2;\nprint prices[\"tea\"];\nprint prices[\"water\"];\nprint len(prices);\nprint contains(prices, \"coffee\");\n"
+  s0 path="tests/bytecode_artifacts/maps/input.cd" text="let prices: map<string, number> = {\"tea\": 3, \"coffee\": 5};\nlet alias = prices;\nalias[\"water\"] = 2;\nprint(prices[\"tea\"]);\nprint(prices[\"water\"]);\nprint(len(prices));\nprint(contains(prices, \"coffee\"));\n"
 
 debug_locations:
   main 0 = s0:1:36
@@ -112,16 +116,16 @@ debug_ranges:
   main 13 = s0:105:111
   main 14 = s0:112:117
   main 15 = s0:105:117
-  main 16 = s0:105:117
-  main 17 = s0:126:132
-  main 18 = s0:133:140
-  main 19 = s0:126:140
-  main 20 = s0:126:140
-  main 21 = s0:153:159
-  main 22 = s0:149:160
-  main 23 = s0:149:160
-  main 24 = s0:177:183
-  main 25 = s0:185:193
-  main 26 = s0:168:194
-  main 27 = s0:168:194
-  main 28 = s0:168:194
+  main 16 = s0:99:119
+  main 17 = s0:127:133
+  main 18 = s0:134:141
+  main 19 = s0:127:141
+  main 20 = s0:121:143
+  main 21 = s0:155:161
+  main 22 = s0:151:162
+  main 23 = s0:145:163
+  main 24 = s0:180:186
+  main 25 = s0:188:196
+  main 26 = s0:171:197
+  main 27 = s0:165:198
+  main 28 = s0:165:198

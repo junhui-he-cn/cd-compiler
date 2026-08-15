@@ -4,7 +4,7 @@ Program
     Return (call f x)
   Fun makeAdder(): fun(number): number
     Return (fun (x: number): number (return (+ x 1)))
-  Print (call pred 1)
-  Print (call apply (fun (n: number): number (return (+ n 1))) 41)
+  Expr (call print (call pred 1))
+  Expr (call print (call apply (fun (n: number): number (return (+ n 1))) 41))
   Let addOne: fun(number): number = (call makeAdder)
-  Print (call addOne 5)
+  Expr (call print (call addOne 5))

@@ -12,31 +12,31 @@ IR
 0010  v9 = assign_field v3.value, v8
 0011  v10 = load_var @11 c#0
 0012  v11 = field v10.value
-0013  print v11
-0014  v12 = load_var @14 c#0
-0015  v13 = field v12.value
-0016  v14 = assert_number v13 @17 `-=` expects number target
-0017  v15 = constant #3 3
-0018  v16 = assert_number v15 @18 `-=` expects number value
-0019  v17 = sub_num v14, v16
-0020  v18 = assign_field v12.value, v17
-0021  print v17
-0022  v19 = load_var @21 c#0
-0023  v20 = field v19.value
-0024  v21 = assert_number v20 @24 `*=` expects number target
-0025  v22 = constant #4 2
-0026  v23 = assert_number v22 @25 `*=` expects number value
-0027  v24 = mul_num v21, v23
-0028  v25 = assign_field v19.value, v24
-0029  print v24
-0030  v26 = load_var @28 c#0
-0031  v27 = field v26.value
-0032  v28 = assert_number v27 @31 `/=` expects number target
-0033  v29 = constant #5 4
-0034  v30 = assert_number v29 @32 `/=` expects number value
-0035  v31 = div_num v28, v30
-0036  v32 = assign_field v26.value, v31
-0037  print v31
-0038  v33 = load_var @35 c#0
-0039  v34 = field v33.other
-0040  print v34
+0013  v12 = native_call @14 print(v11)
+0014  v13 = load_var @15 c#0
+0015  v14 = field v13.value
+0016  v15 = assert_number v14 @18 `-=` expects number target
+0017  v16 = constant #3 3
+0018  v17 = assert_number v16 @19 `-=` expects number value
+0019  v18 = sub_num v15, v17
+0020  v19 = assign_field v13.value, v18
+0021  v20 = native_call @22 print(v18)
+0022  v21 = load_var @23 c#0
+0023  v22 = field v21.value
+0024  v23 = assert_number v22 @26 `*=` expects number target
+0025  v24 = constant #4 2
+0026  v25 = assert_number v24 @27 `*=` expects number value
+0027  v26 = mul_num v23, v25
+0028  v27 = assign_field v21.value, v26
+0029  v28 = native_call @30 print(v26)
+0030  v29 = load_var @31 c#0
+0031  v30 = field v29.value
+0032  v31 = assert_number v30 @34 `/=` expects number target
+0033  v32 = constant #5 4
+0034  v33 = assert_number v32 @35 `/=` expects number value
+0035  v34 = div_num v31, v33
+0036  v35 = assign_field v29.value, v34
+0037  v36 = native_call @38 print(v34)
+0038  v37 = load_var @39 c#0
+0039  v38 = field v37.other
+0040  v39 = native_call @42 print(v38)

@@ -4,4 +4,4 @@ fun value(): number {
 
 let mut x = value();
 x = x + 1;
-print x;
+print(x);

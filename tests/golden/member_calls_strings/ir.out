@@ -3,26 +3,26 @@ IR
 0001  store_var @0 text#0, v0
 0002  v1 = load_var @1 text#0
 0003  v2 = len_str v1
-0004  print v2
-0005  v3 = load_var @2 text#0
-0006  v4 = constant #1 1
-0007  v5 = constant #2 3
-0008  v6 = native_call @3 substr(v3, v4, v5)
-0009  print v6
-0010  v7 = load_var @4 text#0
-0011  v8 = constant #3 4
-0012  v9 = native_call @5 charAt(v7, v8)
-0013  print v9
-0014  v10 = constant #4 "abc"
-0015  v11 = constant #5 "def"
-0016  v12 = concat_str v10, v11
-0017  v13 = constant #6 2
-0018  v14 = constant #7 3
-0019  v15 = native_call @6 substr(v12, v13, v14)
-0020  print v15
-0021  v16 = constant #8 "xy"
-0022  v17 = constant #9 "z"
-0023  v18 = concat_str v16, v17
-0024  v19 = constant #10 1
-0025  v20 = native_call @7 charAt(v18, v19)
-0026  print v20
+0004  v3 = native_call @2 print(v2)
+0005  v4 = load_var @3 text#0
+0006  v5 = constant #1 1
+0007  v6 = constant #2 3
+0008  v7 = native_call @4 substr(v4, v5, v6)
+0009  v8 = native_call @5 print(v7)
+0010  v9 = load_var @6 text#0
+0011  v10 = constant #3 4
+0012  v11 = native_call @7 charAt(v9, v10)
+0013  v12 = native_call @8 print(v11)
+0014  v13 = constant #4 "abc"
+0015  v14 = constant #5 "def"
+0016  v15 = concat_str v13, v14
+0017  v16 = constant #6 2
+0018  v17 = constant #7 3
+0019  v18 = native_call @9 substr(v15, v16, v17)
+0020  v19 = native_call @10 print(v18)
+0021  v20 = constant #8 "xy"
+0022  v21 = constant #9 "z"
+0023  v22 = concat_str v20, v21
+0024  v23 = constant #10 1
+0025  v24 = native_call @11 charAt(v22, v23)
+0026  v25 = native_call @12 print(v24)

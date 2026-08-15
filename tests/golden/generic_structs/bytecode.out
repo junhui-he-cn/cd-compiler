@@ -1,6 +1,6 @@
 native_import i0 = print abi=1
 native_import i1 = typeOf abi=1
-main registers=34
+main registers=41
 0000  block
 0001  b0 = constant #0 1
 0002  b1 = make_struct t0 [b0]
@@ -22,36 +22,36 @@ main registers=34
 0018  b12 = struct_set b10, t0, 0, b11
 0019  b13 = load_global g0
 0020  b14 = struct_get b13, t0, 0
-0021  b33 = call_native i0 [b14]
-0022  b15 = load_global g1
-0023  b16 = struct_get b15, t0, 0
-0024  b33 = call_native i0 [b16]
-0025  b17 = load_global g2
-0026  b18 = struct_get b17, t0, 0
-0027  b33 = call_native i0 [b18]
-0028  b19 = load_global g3
-0029  b20 = struct_get b19, t0, 0
-0030  b33 = call_native i0 [b20]
-0031  b21 = load_global g4
-0032  b22 = struct_get b21, t1, 0
-0033  b33 = call_native i0 [b22]
-0034  b23 = load_global g1
-0035  b24 = call_native i1 [b23]
-0036  b33 = call_native i0 [b24]
-0037  b25 = load_global g1
-0038  b26 = constant #6 nil
-0039  b27 = struct_get b25, t0, 0
-0040  b28 = constant #7 2
-0041  b29 = equal b27, b28
-0042  br_if b29, b1, b2
+0021  b15 = call_native i0 [b14]
+0022  b16 = load_global g1
+0023  b17 = struct_get b16, t0, 0
+0024  b18 = call_native i0 [b17]
+0025  b19 = load_global g2
+0026  b20 = struct_get b19, t0, 0
+0027  b21 = call_native i0 [b20]
+0028  b22 = load_global g3
+0029  b23 = struct_get b22, t0, 0
+0030  b24 = call_native i0 [b23]
+0031  b25 = load_global g4
+0032  b26 = struct_get b25, t1, 0
+0033  b27 = call_native i0 [b26]
+0034  b28 = load_global g1
+0035  b29 = call_native i1 [b28]
+0036  b30 = call_native i0 [b29]
+0037  b31 = load_global g1
+0038  b32 = constant #6 nil
+0039  b33 = struct_get b31, t0, 0
+0040  b34 = constant #7 2
+0041  b35 = equal b33, b34
+0042  br_if b35, b1, b2
 0043  block
-0044  b30 = constant #8 "two"
-0045  b33 = call_native i0 [b30]
+0044  b36 = constant #8 "two"
+0045  b37 = call_native i0 [b36]
 0046  return_nil
 0047  block
-0048  b31 = struct_get b25, t0, 0
-0049  b32 = constant #9 "other"
-0050  b33 = call_native i0 [b32]
+0048  b38 = struct_get b31, t0, 0
+0049  b39 = constant #9 "other"
+0050  b40 = call_native i0 [b39]
 0051  return_nil
 0052  block
 0053  return_nil

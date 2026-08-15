@@ -5,14 +5,14 @@ struct Box { x: number }
 
 let person = Person { name: "Ada", age: 36 };
 person.age = 37;
-print person.age;
-print person.age = 38;
+print(person.age);
+print(person.age = 38);
 
 let outer = Outer { inner: Inner { x: 1 } };
 outer.inner.x = 2;
-print outer.inner.x;
+print(outer.inner.x);
 
 let a = Box { x: 1 };
 let b = a;
 b.x = 3;
-print a.x;
+print(a.x);

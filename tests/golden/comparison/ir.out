@@ -2,32 +2,32 @@ IR
 0000  v0 = constant #0 1
 0001  v1 = constant #1 2
 0002  v2 = lt_num v0, v1
-0003  print v2
-0004  v3 = constant #2 2
-0005  v4 = constant #3 2
-0006  v5 = le_num v3, v4
-0007  print v5
-0008  v6 = constant #4 3
-0009  v7 = constant #5 4
-0010  v8 = gt_num v6, v7
-0011  print v8
-0012  v9 = constant #6 4
-0013  v10 = constant #7 4
-0014  v11 = ge_num v9, v10
-0015  print v11
-0016  v12 = constant #8 1
-0017  v13 = constant #9 1
-0018  v14 = equal v12, v13
-0019  print v14
-0020  v15 = constant #10 1
-0021  v16 = constant #11 2
-0022  v17 = not_equal v15, v16
-0023  print v17
-0024  v18 = constant #12 "a"
-0025  v19 = constant #13 "a"
-0026  v20 = equal v18, v19
-0027  print v20
-0028  v21 = constant #14 nil
-0029  v22 = constant #15 nil
-0030  v23 = equal v21, v22
-0031  print v23
+0003  v3 = native_call @0 print(v2)
+0004  v4 = constant #2 2
+0005  v5 = constant #3 2
+0006  v6 = le_num v4, v5
+0007  v7 = native_call @1 print(v6)
+0008  v8 = constant #4 3
+0009  v9 = constant #5 4
+0010  v10 = gt_num v8, v9
+0011  v11 = native_call @2 print(v10)
+0012  v12 = constant #6 4
+0013  v13 = constant #7 4
+0014  v14 = ge_num v12, v13
+0015  v15 = native_call @3 print(v14)
+0016  v16 = constant #8 1
+0017  v17 = constant #9 1
+0018  v18 = equal v16, v17
+0019  v19 = native_call @4 print(v18)
+0020  v20 = constant #10 1
+0021  v21 = constant #11 2
+0022  v22 = not_equal v20, v21
+0023  v23 = native_call @5 print(v22)
+0024  v24 = constant #12 "a"
+0025  v25 = constant #13 "a"
+0026  v26 = equal v24, v25
+0027  v27 = native_call @6 print(v26)
+0028  v28 = constant #14 nil
+0029  v29 = constant #15 nil
+0030  v30 = equal v28, v29
+0031  v31 = native_call @7 print(v30)

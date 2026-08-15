@@ -1,4 +1,4 @@
 let empty: [number] = [].filter(fun (value: number): bool {
   return false;
 });
-print empty;
+print(empty);

@@ -25833,6 +25833,34 @@
       "fixture": "tests/golden/type_errors"
     },
     {
+      "case_id": "golden.type_errors.print_wrong_arity",
+      "runner": "golden",
+      "result_name": "type_errors/print_wrong_arity default(ast)",
+      "stage": "type-error",
+      "capability_tags": [
+        "golden",
+        "type_errors",
+        "fixture:print_wrong_arity"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "diagnostic-and-exit",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic_diagnostic"
+      ],
+      "terminal_boundary": "semantic_diagnostic",
+      "sources": [
+        "tests/golden/type_errors/print_wrong_arity.cd"
+      ],
+      "expected_files": [
+        "tests/golden/type_errors/print_wrong_arity.cd",
+        "tests/golden/type_errors/print_wrong_arity.err",
+        "tests/golden/type_errors/print_wrong_arity.exit"
+      ],
+      "fixture": "tests/golden/type_errors"
+    },
+    {
       "case_id": "golden.type_errors.private_struct_constructor",
       "runner": "golden",
       "result_name": "type_errors/private_struct_constructor default(ast)",

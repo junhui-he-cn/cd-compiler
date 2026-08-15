@@ -11,15 +11,15 @@ graph.addEdge(4, 5);
 graph.addEdge(5, 6);
 graph.addEdge(6, 5);
 graph.addEdge(6, 7);
-print ds.stronglyConnectedComponentsTarjan(graph);
+print(ds.stronglyConnectedComponentsTarjan(graph));
 
 let undirected = ds.newGraph(2, false);
 undirected.addEdge(0, 1);
-print ds.stronglyConnectedComponentsTarjan(undirected);
+print(ds.stronglyConnectedComponentsTarjan(undirected));
 
 let empty = ds.newGraph(0, true);
-print ds.stronglyConnectedComponentsTarjan(empty);
+print(ds.stronglyConnectedComponentsTarjan(empty));
 
 let selfLoop = ds.newGraph(1, true);
 selfLoop.addEdge(0, 0);
-print ds.stronglyConnectedComponentsTarjan(selfLoop);
+print(ds.stronglyConnectedComponentsTarjan(selfLoop));

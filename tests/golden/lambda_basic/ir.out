@@ -4,7 +4,7 @@ IR
 0002  v1 = load_var @2 inc#1
 0003  v2 = constant #2 41
 0004  v3 = call v1(v2)
-0005  print v3
+0005  v4 = native_call @3 print(v3)
 
 function $0 <lambda>(x#0)
 0000  v0 = load_var @0 x#0

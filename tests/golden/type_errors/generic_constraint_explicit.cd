@@ -2,4 +2,4 @@ fun numeric<T: number>(value: T): T {
   return value;
 }
 
-print numeric<string>("text");
+print(numeric<string>("text"));

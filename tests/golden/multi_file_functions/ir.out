@@ -6,12 +6,12 @@ IR
 0004  v2 = constant #2 "sum"
 0005  store_var @4 banner#3, v2
 0006  v3 = load_var @5 banner#3
-0007  print v3
-0008  v4 = load_var @6 add#0
-0009  v5 = constant #3 1
-0010  v6 = constant #4 2
-0011  v7 = call v4(v5, v6)
-0012  print v7
+0007  v4 = native_call @6 print(v3)
+0008  v5 = load_var @7 add#0
+0009  v6 = constant #3 1
+0010  v7 = constant #4 2
+0011  v8 = call v5(v6, v7)
+0012  v9 = native_call @8 print(v8)
 
 function $0 add(a#1, b#2)
 0000  v0 = load_var @1 a#1

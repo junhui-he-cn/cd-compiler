@@ -6,18 +6,18 @@ graph.addEdge(0, 2);
 graph.addEdge(1, 3);
 graph.addEdge(2, 4);
 
-print ds.breadthFirstOrder(graph, 0);
-print ds.depthFirstOrder(graph, 0);
-print ds.breadthFirstOrder(graph, 3);
-print ds.depthFirstOrder(graph, 3);
-print ds.breadthFirstOrder(graph, 5);
-print ds.breadthFirstOrder(graph, 9);
+print(ds.breadthFirstOrder(graph, 0));
+print(ds.depthFirstOrder(graph, 0));
+print(ds.breadthFirstOrder(graph, 3));
+print(ds.depthFirstOrder(graph, 3));
+print(ds.breadthFirstOrder(graph, 5));
+print(ds.breadthFirstOrder(graph, 9));
 
 let directed = ds.newGraph(4, true);
 directed.addEdge(0, 1);
 directed.addEdge(0, 2);
 directed.addEdge(1, 3);
 directed.addEdge(2, 3);
-print ds.breadthFirstOrder(directed, 0);
-print ds.depthFirstOrder(directed, 0);
-print ds.breadthFirstOrder(directed, 3);
+print(ds.breadthFirstOrder(directed, 0));
+print(ds.depthFirstOrder(directed, 0));
+print(ds.breadthFirstOrder(directed, 3));

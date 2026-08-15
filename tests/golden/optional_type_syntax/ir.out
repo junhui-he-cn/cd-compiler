@@ -16,32 +16,32 @@ IR
 0014  store_var @9 box#5, v8
 0015  v9 = load_var @10 age#2
 0016  v10 = call_direct $0 unwrap/1(v9)
-0017  print v10
-0018  v11 = load_var @11 values#3
-0019  v12 = constant #9 0
-0020  v13 = array_get v11, v12
-0021  print v13
-0022  v14 = load_var @12 maybeValues#4
-0023  print v14
-0024  v15 = load_var @13 box#5
-0025  v16 = field v15.value
-0026  print v16
-0027  v17 = constant #10 7
-0028  store_var @16 optional#6, v17
-0029  v18 = constant #11 nil
-0030  store_var @17 maybe#7, v18
-0031  v19 = constant #12 nil
-0032  store_var @18 nested#8, v19
-0033  v20 = constant #13 nil
-0034  store_var @19 callback#9, v20
-0035  v21 = load_var @20 optional#6
-0036  print v21
-0037  v22 = load_var @21 maybe#7
-0038  print v22
-0039  v23 = load_var @22 nested#8
-0040  print v23
-0041  v24 = load_var @23 callback#9
-0042  print v24
+0017  v11 = native_call @11 print(v10)
+0018  v12 = load_var @12 values#3
+0019  v13 = constant #9 0
+0020  v14 = array_get v12, v13
+0021  v15 = native_call @13 print(v14)
+0022  v16 = load_var @14 maybeValues#4
+0023  v17 = native_call @15 print(v16)
+0024  v18 = load_var @16 box#5
+0025  v19 = field v18.value
+0026  v20 = native_call @19 print(v19)
+0027  v21 = constant #10 7
+0028  store_var @20 optional#6, v21
+0029  v22 = constant #11 nil
+0030  store_var @21 maybe#7, v22
+0031  v23 = constant #12 nil
+0032  store_var @22 nested#8, v23
+0033  v24 = constant #13 nil
+0034  store_var @23 callback#9, v24
+0035  v25 = load_var @24 optional#6
+0036  v26 = native_call @25 print(v25)
+0037  v27 = load_var @26 maybe#7
+0038  v28 = native_call @27 print(v27)
+0039  v29 = load_var @28 nested#8
+0040  v30 = native_call @29 print(v29)
+0041  v31 = load_var @30 callback#9
+0042  v32 = native_call @31 print(v31)
 
 function $0 unwrap(value#1)
 0000  v0 = load_var @1 value#1

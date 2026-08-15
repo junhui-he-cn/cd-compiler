@@ -9,4 +9,4 @@ Program
       Return inner
     Return (call middle)
   Let f = (call outer)
-  Print (call f)
+  Expr (call print (call f))

@@ -1,11 +1,11 @@
 import "../../data_structures.cd" as ds;
 
 let empty = ds.emptyTree<number>();
-print ds.serializeNumericTree(empty);
+print(ds.serializeNumericTree(empty));
 let restoredEmpty = ds.deserializeNumericTree("#");
 match restoredEmpty {
-  nil => { print "empty-invalid"; }
-  value => { print ds.treeSize(value); }
+  nil => { print("empty-invalid"); }
+  value => { print(ds.treeSize(value)); }
 }
 
 let tree = ds.treeNode(
@@ -14,31 +14,31 @@ let tree = ds.treeNode(
   ds.treeNode(3.25, ds.emptyTree<number>(), ds.emptyTree<number>())
 );
 let encoded = ds.serializeNumericTree(tree);
-print encoded;
+print(encoded);
 let decoded = ds.deserializeNumericTree(encoded);
 match decoded {
-  nil => { print "round-trip-invalid"; }
+  nil => { print("round-trip-invalid"); }
   value => {
-    print ds.treePreorder(value);
-    print ds.treeInorder(value);
+    print(ds.treePreorder(value));
+    print(ds.treeInorder(value));
   }
 }
 
-print ds.deserializeNumericTree("") == nil;
-print ds.deserializeNumericTree("1,#") == nil;
-print ds.deserializeNumericTree("1,#,#,") == nil;
-print ds.deserializeNumericTree("1, #,#") == nil;
-print ds.deserializeNumericTree("word,#,#") == nil;
+print(ds.deserializeNumericTree("") == nil);
+print(ds.deserializeNumericTree("1,#") == nil);
+print(ds.deserializeNumericTree("1,#,#,") == nil);
+print(ds.deserializeNumericTree("1, #,#") == nil);
+print(ds.deserializeNumericTree("word,#,#") == nil);
 let scientific = ds.deserializeNumericTree("+1.25e2,#,#");
 match scientific {
-  nil => { print "scientific-invalid"; }
-  value => { print ds.treePreorder(value); }
+  nil => { print("scientific-invalid"); }
+  value => { print(ds.treePreorder(value)); }
 }
 let negativeScientific = ds.deserializeNumericTree("-1.25e-2,#,#");
 match negativeScientific {
-  nil => { print "negative-scientific-invalid"; }
-  value => { print ds.treePreorder(value); }
+  nil => { print("negative-scientific-invalid"); }
+  value => { print(ds.treePreorder(value)); }
 }
 let subnormal = ds.deserializeNumericTree("1e-309,#,#");
-print subnormal == nil;
-print ds.deserializeNumericTree("1e,#,#") == nil;
+print(subnormal == nil);
+print(ds.deserializeNumericTree("1e,#,#") == nil);

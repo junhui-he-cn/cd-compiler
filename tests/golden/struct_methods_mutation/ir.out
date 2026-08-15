@@ -19,10 +19,10 @@ IR
 0017  v11 = load_var @21 __method_Counter_valueNow#1
 0018  v12 = load_var @22 c#5
 0019  v13 = call v11(v12)
-0020  print v13
-0021  v14 = load_var @23 alias#6
-0022  v15 = field v14.value
-0023  print v15
+0020  v14 = native_call @23 print(v13)
+0021  v15 = load_var @24 alias#6
+0022  v16 = field v15.value
+0023  v17 = native_call @27 print(v16)
 
 function $0 incBy(this#2, delta#3)
 0000  v0 = load_var @1 this#2

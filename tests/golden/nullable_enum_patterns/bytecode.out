@@ -1,6 +1,6 @@
 native_import i0 = print abi=1
 native_import i1 = str abi=1
-main registers=33
+main registers=40
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -13,64 +13,64 @@ main registers=33
 0009  init_global g2, b4
 0010  b5 = load_global g1
 0011  b6 = call_direct $0 [b5]
-0012  b32 = call_native i0 [b6]
-0013  b7 = load_global g2
-0014  b8 = call_direct $0 [b7]
-0015  b32 = call_native i0 [b8]
-0016  b9 = load_global g1
-0017  b10 = constant #11 nil
-0018  b11 = constant #12 nil
-0019  b12 = equal b9, b11
-0020  br_if b12, b1, b2
+0012  b7 = call_native i0 [b6]
+0013  b8 = load_global g2
+0014  b9 = call_direct $0 [b8]
+0015  b10 = call_native i0 [b9]
+0016  b11 = load_global g1
+0017  b12 = constant #11 nil
+0018  b13 = constant #12 nil
+0019  b14 = equal b11, b13
+0020  br_if b14, b1, b2
 0021  block
-0022  b13 = constant #13 "nil"
-0023  b32 = call_native i0 [b13]
+0022  b15 = constant #13 "nil"
+0023  b16 = call_native i0 [b15]
 0024  br b9
 0025  block
-0026  b14 = is_variant b9, t0, v0
-0027  br_if b14, b3, b5
+0026  b17 = is_variant b11, t0, v0
+0027  br_if b17, b3, b5
 0028  block
-0029  b15 = variant_get b9, t0, v0, 0
-0030  init_global g3, b15
-0031  b16 = load_global g3
-0032  b17 = constant #14 10
-0033  b18 = gt_num b16, b17
-0034  br_if b18, b4, b5
+0029  b18 = variant_get b11, t0, v0, 0
+0030  init_global g3, b18
+0031  b19 = load_global g3
+0032  b20 = constant #14 10
+0033  b21 = gt_num b19, b20
+0034  br_if b21, b4, b5
 0035  block
-0036  b19 = constant #15 "large"
-0037  b32 = call_native i0 [b19]
+0036  b22 = constant #15 "large"
+0037  b23 = call_native i0 [b22]
 0038  br b9
 0039  block
-0040  b20 = is_variant b9, t0, v0
-0041  br_if b20, b6, b7
+0040  b24 = is_variant b11, t0, v0
+0041  br_if b24, b6, b7
 0042  block
-0043  b21 = variant_get b9, t0, v0, 0
-0044  b22 = constant #16 "some"
-0045  b32 = call_native i0 [b22]
+0043  b25 = variant_get b11, t0, v0, 0
+0044  b26 = constant #16 "some"
+0045  b27 = call_native i0 [b26]
 0046  br b9
 0047  block
-0048  b23 = is_variant b9, t0, v1
-0049  br_if b23, b8, b9
+0048  b28 = is_variant b11, t0, v1
+0049  br_if b28, b8, b9
 0050  block
-0051  b24 = constant #17 "none"
-0052  b32 = call_native i0 [b24]
+0051  b29 = constant #17 "none"
+0052  b30 = call_native i0 [b29]
 0053  br b9
 0054  block
-0055  b25 = load_global g2
-0056  b26 = constant #18 nil
-0057  b27 = constant #19 nil
-0058  b28 = equal b25, b27
-0059  br_if b28, b10, b12
+0055  b31 = load_global g2
+0056  b32 = constant #18 nil
+0057  b33 = constant #19 nil
+0058  b34 = equal b31, b33
+0059  br_if b34, b10, b12
 0060  block
-0061  b29 = constant #20 true
-0062  br_if b29, b11, b12
+0061  b35 = constant #20 true
+0062  br_if b35, b11, b12
 0063  block
-0064  b30 = constant #21 "guarded nil"
-0065  b32 = call_native i0 [b30]
+0064  b36 = constant #21 "guarded nil"
+0065  b37 = call_native i0 [b36]
 0066  return_nil
 0067  block
-0068  b31 = constant #22 "fallback"
-0069  b32 = call_native i0 [b31]
+0068  b38 = constant #22 "fallback"
+0069  b39 = call_native i0 [b38]
 0070  return_nil
 0071  block
 0072  return_nil

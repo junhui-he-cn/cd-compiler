@@ -10,5 +10,5 @@ Program
     Import "lib.cd" as lib
     Let direct: Box = (construct Box value: 0)
     Let namespaced: lib.Box = (construct lib.Box value: 0)
-    Print (member-call direct echo<number> 7)
-    Print (member-call namespaced echo<string> "module")
+    Expr (call print (member-call direct echo<number> 7))
+    Expr (call print (member-call namespaced echo<string> "module"))

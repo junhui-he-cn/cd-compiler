@@ -1,9 +1,9 @@
 Program
   Let values: [number] = (array 1 2 3)
   Let first: optional<number> = (call find values (fun (value) (return (> value 1))))
-  Print first
-  Print (member-call values find (fun (value: number): bool (return (== value 9))))
+  Expr (call print first)
+  Expr (call print (member-call values find (fun (value: number): bool (return (== value 9)))))
   Let snapshot: [number] = (array 1 2)
-  Print (member-call snapshot find (fun (value) (expr (call push snapshot 9)) (return (== value 2))))
-  Print snapshot
-  Print (member-call (array) find (fun (value: number): bool (return true)))
+  Expr (call print (member-call snapshot find (fun (value) (expr (call push snapshot 9)) (return (== value 2)))))
+  Expr (call print snapshot)
+  Expr (call print (member-call (array) find (fun (value: number): bool (return true))))

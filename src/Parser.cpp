@@ -279,7 +279,6 @@ void Parser::synchronize(bool stopAtRightBrace)
         case TokenType::Impl:
         case TokenType::Import:
         case TokenType::Export:
-        case TokenType::Print:
         case TokenType::If:
         case TokenType::Match:
         case TokenType::While:
@@ -734,9 +733,6 @@ std::vector<TypeAnnotation> Parser::typeArguments()
 
 StmtPtr Parser::statement()
 {
-    if (match(TokenType::Print)) {
-        return printStatement();
-    }
     if (match(TokenType::If)) {
         return ifStatement();
     }
@@ -970,15 +966,6 @@ std::vector<StmtPtr> Parser::blockStatements()
     }
     consume(TokenType::RightBrace, "expected `}` after block");
     return statements;
-}
-
-StmtPtr Parser::printStatement()
-{
-    Token keyword = previous();
-    ExprPtr value = expression();
-    consume(TokenType::Semicolon, "expected `;` after print value");
-    const std::optional<SourceSpan> span = spanForToken(keyword);
-    return withSpan(std::make_unique<PrintStmt>(std::move(value)), span);
 }
 
 StmtPtr Parser::returnStatement()

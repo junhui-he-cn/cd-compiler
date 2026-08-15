@@ -11,6 +11,6 @@ IR
 0009  v7 = mul_num v5, v6
 0010  store_var @5 y#1, v7
 0011  v8 = load_var @6 x#0
-0012  print v8
-0013  v9 = load_var @7 y#1
-0014  print v9
+0012  v9 = native_call @7 print(v8)
+0013  v10 = load_var @8 y#1
+0014  v11 = native_call @9 print(v10)

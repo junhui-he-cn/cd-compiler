@@ -9,4 +9,4 @@ fun invalid(user: User): number {
   return user.profile.score + 1;
 }
 
-print invalid(User { profile: Profile { score: 4 } });
+print(invalid(User { profile: Profile { score: 4 } }));

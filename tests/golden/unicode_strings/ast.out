@@ -1,11 +1,11 @@
 Program
   Let text = "你🙂"
-  Print (call len text)
-  Print (member-call text len)
-  Print (call substr text 0 1)
-  Print (member-call text substr 1 1)
-  Print (call charAt text 0)
-  Print (member-call text charAt 1)
+  Expr (call print (call len text))
+  Expr (call print (member-call text len))
+  Expr (call print (call substr text 0 1))
+  Expr (call print (member-call text substr 1 1))
+  Expr (call print (call charAt text 0))
+  Expr (call print (member-call text charAt 1))
   Let combined = "é"
-  Print (call len combined)
-  Print (member-call combined substr 0 2)
+  Expr (call print (call len combined))
+  Expr (call print (member-call combined substr 0 2))

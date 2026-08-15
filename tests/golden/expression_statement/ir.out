@@ -5,4 +5,4 @@ IR
 0003  v2 = constant #1 1
 0004  v3 = add_num v1, v2
 0005  v4 = load_var @2 x#0
-0006  print v4
+0006  v5 = native_call @3 print(v4)

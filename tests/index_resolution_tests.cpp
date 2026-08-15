@@ -12,6 +12,15 @@ namespace fs = std::filesystem;
 
 namespace {
 
+const Expr* printedArgument(const ExpressionStmt& statement)
+{
+    const auto* call = dynamic_cast<const CallExpr*>(statement.expression.get());
+    if (!call || call->arguments.size() != 1) {
+        return nullptr;
+    }
+    return call->arguments[0].get();
+}
+
 Program loadProgram(const std::string& source)
 {
     std::istringstream input(source);
@@ -78,27 +87,27 @@ void test_shadowed_scope_resolution()
         "let x = 1;\n"
         "{\n"
         "  let mut x = 2;\n"
-        "  print x;\n"
+        "  print(x);\n"
         "  x = 3;\n"
         "  x += 1;\n"
         "}\n"
-        "print x;\n";
+        "print(x);\n";
     const Program program = loadProgram(source);
     const ModuleStmt& module = entryModule(program);
     const auto* outer = dynamic_cast<const LetStmt*>(module.statements[0].get());
     const auto* block = dynamic_cast<const BlockStmt*>(module.statements[1].get());
-    const auto* trailingPrint = dynamic_cast<const PrintStmt*>(module.statements[2].get());
+    const auto* trailingPrint = dynamic_cast<const ExpressionStmt*>(module.statements[2].get());
     assert(outer && block && trailingPrint);
 
     const auto* inner = dynamic_cast<const LetStmt*>(block->statements[0].get());
-    const auto* innerPrint = dynamic_cast<const PrintStmt*>(block->statements[1].get());
+    const auto* innerPrint = dynamic_cast<const ExpressionStmt*>(block->statements[1].get());
     const auto* assignStmt = dynamic_cast<const ExpressionStmt*>(block->statements[2].get());
     const auto* compoundStmt = dynamic_cast<const ExpressionStmt*>(block->statements[3].get());
     assert(inner && innerPrint && assignStmt && compoundStmt);
     const auto* assign = dynamic_cast<const AssignExpr*>(assignStmt->expression.get());
     const auto* compound = dynamic_cast<const CompoundAssignExpr*>(compoundStmt->expression.get());
-    const VariableExpr& innerRead = asVariable(*innerPrint->expression);
-    const VariableExpr& trailingRead = asVariable(*trailingPrint->expression);
+    const VariableExpr& innerRead = asVariable(*printedArgument(*innerPrint));
+    const VariableExpr& trailingRead = asVariable(*printedArgument(*trailingPrint));
     assert(assign && compound);
 
     TypeChecker checker;
@@ -147,7 +156,7 @@ void test_parameter_capture_and_this_resolution()
         "  }\n"
         "}\n"
         "let box = Box { value: 1 };\n"
-        "print add(box.total(2));\n";
+        "print(add(box.total(2)));\n";
     const Program program = loadProgram(source);
     const ModuleStmt& module = entryModule(program);
     const auto* outer = dynamic_cast<const LetStmt*>(module.statements[0].get());
@@ -206,7 +215,7 @@ void test_nested_function_capture_resolution()
         "  }\n"
         "  return inner(1);\n"
         "}\n"
-        "print outer(1);\n";
+        "print(outer(1));\n";
     const Program program = loadProgram(source);
     const ModuleStmt& module = entryModule(program);
     const auto* outer = dynamic_cast<const FunctionStmt*>(module.statements[0].get());
@@ -251,10 +260,10 @@ void test_match_pattern_binding_resolution()
         "enum Option { Some(number), None }\n"
         "let value = Option.Some(5);\n"
         "match value {\n"
-        "  Option.Some(x) => { print x; }\n"
-        "  Option.None => { print 0; }\n"
+        "  Option.Some(x) => { print(x); }\n"
+        "  Option.None => { print(0); }\n"
         "}\n"
-        "print value;\n";
+        "print(value);\n";
     const Program program = loadProgram(source);
     const ModuleStmt& module = entryModule(program);
     const auto* value = dynamic_cast<const LetStmt*>(module.statements[1].get());
@@ -262,21 +271,21 @@ void test_match_pattern_binding_resolution()
     const auto* match = matchStatement
         ? dynamic_cast<const MatchExpr*>(matchStatement->expression.get())
         : nullptr;
-    const auto* trailingPrint = dynamic_cast<const PrintStmt*>(module.statements[3].get());
+    const auto* trailingPrint = dynamic_cast<const ExpressionStmt*>(module.statements[3].get());
     assert(value && match && trailingPrint && match->arms.size() == 2);
 
     const auto* variantPattern
         = dynamic_cast<const VariantPattern*>(match->arms[0].pattern.get());
     const auto* armBlock = dynamic_cast<const BlockStmt*>(match->arms[0].body.get());
     const auto* armPrint = armBlock
-        ? dynamic_cast<const PrintStmt*>(armBlock->statements[0].get())
+        ? dynamic_cast<const ExpressionStmt*>(armBlock->statements[0].get())
         : nullptr;
     assert(variantPattern && armPrint && variantPattern->arguments.size() == 1);
     const auto* bindingPattern
         = dynamic_cast<const VariablePattern*>(variantPattern->arguments[0].get());
     assert(bindingPattern);
-    const VariableExpr& bindingRead = asVariable(*armPrint->expression);
-    const VariableExpr& trailingRead = asVariable(*trailingPrint->expression);
+    const VariableExpr& bindingRead = asVariable(*printedArgument(*armPrint));
+    const VariableExpr& trailingRead = asVariable(*printedArgument(*trailingPrint));
 
     TypeChecker checker;
     checker.check(program);
@@ -305,7 +314,7 @@ void test_or_pattern_shared_binding_resolution()
         "enum E { A(number), B(number) }\n"
         "let e = E.A(1);\n"
         "match e {\n"
-        "  E.A(v) | E.B(v) => { print v; }\n"
+        "  E.A(v) | E.B(v) => { print(v); }\n"
         "}\n";
     const Program program = loadProgram(source);
     const ModuleStmt& module = entryModule(program);
@@ -317,7 +326,7 @@ void test_or_pattern_shared_binding_resolution()
     const auto* orPattern = dynamic_cast<const OrPattern*>(match->arms[0].pattern.get());
     const auto* armBlock = dynamic_cast<const BlockStmt*>(match->arms[0].body.get());
     const auto* armPrint = armBlock
-        ? dynamic_cast<const PrintStmt*>(armBlock->statements[0].get())
+        ? dynamic_cast<const ExpressionStmt*>(armBlock->statements[0].get())
         : nullptr;
     assert(orPattern && armPrint && orPattern->alternatives.size() == 2);
     const auto* firstVariant
@@ -331,7 +340,7 @@ void test_or_pattern_shared_binding_resolution()
     const auto* secondBinding
         = dynamic_cast<const VariablePattern*>(secondVariant->arguments[0].get());
     assert(firstBinding && secondBinding);
-    const VariableExpr& bindingRead = asVariable(*armPrint->expression);
+    const VariableExpr& bindingRead = asVariable(*printedArgument(*armPrint));
 
     TypeChecker checker;
     checker.check(program);
@@ -357,17 +366,17 @@ void test_for_in_binding_resolution()
     const std::string source =
         "let items = [1, 2, 3];\n"
         "for item in items {\n"
-        "  print item;\n"
+        "  print(item);\n"
         "}\n";
     const Program program = loadProgram(source);
     const ModuleStmt& module = entryModule(program);
     const auto* forIn = dynamic_cast<const ForInStmt*>(module.statements[1].get());
     const auto* bodyBlock = dynamic_cast<const BlockStmt*>(forIn->body.get());
     const auto* bodyPrint = bodyBlock
-        ? dynamic_cast<const PrintStmt*>(bodyBlock->statements[0].get())
+        ? dynamic_cast<const ExpressionStmt*>(bodyBlock->statements[0].get())
         : nullptr;
     assert(forIn && bodyPrint);
-    const VariableExpr& itemRead = asVariable(*bodyPrint->expression);
+    const VariableExpr& itemRead = asVariable(*printedArgument(*bodyPrint));
 
     TypeChecker checker;
     checker.check(program);
@@ -392,14 +401,14 @@ void test_import_reference_falls_back_to_name_resolution(const fs::path& root)
     const fs::path library = root / "lib.cd";
     const fs::path entry = root / "input.cd";
     writeModuleSource(library, "let zeta = 2;\nexport zeta;\n");
-    writeModuleSource(entry, "import \"./lib.cd\";\nprint zeta;\n");
+    writeModuleSource(entry, "import \"./lib.cd\";\nprint(zeta);\n");
 
     FrontendSession frontend;
     const Program program = frontend.loadFiles({entry.string()});
     const ModuleStmt& module = entryModuleOf(program);
-    const auto* printStmt = dynamic_cast<const PrintStmt*>(module.statements[1].get());
+    const auto* printStmt = dynamic_cast<const ExpressionStmt*>(module.statements[1].get());
     assert(printStmt);
-    const VariableExpr& zetaRead = asVariable(*printStmt->expression);
+    const VariableExpr& zetaRead = asVariable(*printedArgument(*printStmt));
 
     TypeChecker checker;
     checker.check(program);
@@ -415,7 +424,7 @@ void test_import_reference_falls_back_to_name_resolution(const fs::path& root)
 void test_undefined_variable_diagnostics()
 {
     {
-        const Program program = loadProgram("print missing;\n");
+        const Program program = loadProgram("print(missing);\n");
         TypeChecker checker;
         const std::string message = typeErrorMessage([&]() { checker.check(program); });
         assert(message.find("undefined variable `missing`") != std::string::npos);

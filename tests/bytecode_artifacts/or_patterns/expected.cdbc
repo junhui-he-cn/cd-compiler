@@ -67,13 +67,21 @@ names:
   n30 = "Empty"
   n31 = "shapeLabel#2"
   n32 = "maybe#5"
-  n33 = "Shape"
-  n34 = "Point"
+  n33 = "print"
+  n34 = "print"
   n35 = "Shape"
-  n36 = "Line"
-  n37 = "Shape"
-  n38 = "Empty"
-  n39 = "maybe#5"
+  n36 = "Point"
+  n37 = "print"
+  n38 = "Shape"
+  n39 = "Line"
+  n40 = "print"
+  n41 = "Shape"
+  n42 = "Empty"
+  n43 = "print"
+  n44 = "maybe#5"
+  n45 = "print"
+  n46 = "print"
+  n47 = "print"
 
 globals:
   g0 = n0
@@ -87,7 +95,7 @@ native_imports:
   i0 = "print" abi=1
   i1 = "str" abi=1
 
-main registers=36:
+main registers=43:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -101,60 +109,60 @@ block b0:
   init_global g2, r4
   r5 = constant c15
   r6 = call_direct f0 [r5]
-  r35 = call_native i0 [r6]
-  r7 = constant c16
-  r8 = call_direct f0 [r7]
-  r35 = call_native i0 [r8]
-  r9 = constant c17
-  r10 = make_variant t0, v0 [r9]
-  r11 = call_direct f1 [r10]
-  r35 = call_native i0 [r11]
-  r12 = constant c18
-  r13 = constant c19
-  r14 = make_variant t0, v1 [r12, r13]
-  r15 = call_direct f1 [r14]
-  r35 = call_native i0 [r15]
-  r16 = make_variant t0, v2 []
-  r17 = call_direct f1 [r16]
-  r35 = call_native i0 [r17]
-  r18 = load_global g2
-  r19 = constant c20
-  r20 = constant c21
-  r21 = equal r18, r20
-  br_if r21, b1, b2
+  r7 = call_native i0 [r6]
+  r8 = constant c16
+  r9 = call_direct f0 [r8]
+  r10 = call_native i0 [r9]
+  r11 = constant c17
+  r12 = make_variant t0, v0 [r11]
+  r13 = call_direct f1 [r12]
+  r14 = call_native i0 [r13]
+  r15 = constant c18
+  r16 = constant c19
+  r17 = make_variant t0, v1 [r15, r16]
+  r18 = call_direct f1 [r17]
+  r19 = call_native i0 [r18]
+  r20 = make_variant t0, v2 []
+  r21 = call_direct f1 [r20]
+  r22 = call_native i0 [r21]
+  r23 = load_global g2
+  r24 = constant c20
+  r25 = constant c21
+  r26 = equal r23, r25
+  br_if r26, b1, b2
 block b1:
   br b3
 block b2:
-  r22 = constant c22
-  r23 = equal r18, r22
-  br_if r23, b3, b4
+  r27 = constant c22
+  r28 = equal r23, r27
+  br_if r28, b3, b4
 block b3:
-  r24 = constant c23
-  r35 = call_native i0 [r24]
+  r29 = constant c23
+  r30 = call_native i0 [r29]
   br b6
 block b4:
-  r25 = constant c24
-  r26 = equal r18, r25
-  br_if r26, b5, b6
+  r31 = constant c24
+  r32 = equal r23, r31
+  br_if r32, b5, b6
 block b5:
-  r27 = constant c25
-  r35 = call_native i0 [r27]
+  r33 = constant c25
+  r34 = call_native i0 [r33]
   br b6
 block b6:
-  r28 = constant c26
-  r29 = constant c27
-  r30 = constant c28
-  r31 = equal r28, r30
-  br_if r31, b7, b8
+  r35 = constant c26
+  r36 = constant c27
+  r37 = constant c28
+  r38 = equal r35, r37
+  br_if r38, b7, b8
 block b7:
   br b9
 block b8:
-  r32 = constant c29
-  r33 = equal r28, r32
-  br_if r33, b9, b10
+  r39 = constant c29
+  r40 = equal r35, r39
+  br_if r40, b9, b10
 block b9:
-  r34 = constant c30
-  r35 = call_native i0 [r34]
+  r41 = constant c30
+  r42 = call_native i0 [r41]
   return_nil
 block b10:
   return_nil
@@ -255,7 +263,7 @@ block b17:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/or_patterns/input.cd" text="enum Shape {\n  Point(number),\n  Line(number, number),\n  Empty,\n}\n\nfun numberLabel(value: number): string {\n  match value {\n    0 | 1 => { return \"small\"; }\n    _ => { return \"other\"; }\n  }\n}\n\nfun shapeLabel(value: Shape): string {\n  match value {\n    Shape.Point(x) | Shape.Line(x, _) if x > 3 => { return \"large:\" + str(x); }\n    Shape.Point(_) | Shape.Line(_, _) => { return \"small\"; }\n    Shape.Empty => { return \"empty\"; }\n  }\n}\n\nlet maybe: optional<bool> = false;\nprint numberLabel(1);\nprint numberLabel(8);\nprint shapeLabel(Shape.Point(3));\nprint shapeLabel(Shape.Line(4, 10));\nprint shapeLabel(Shape.Empty());\nmatch maybe {\n  nil | false => { print \"off\"; }\n  true => { print \"on\"; }\n}\nmatch true {\n  true | false => { print \"bool\"; }\n}\n"
+  s0 path="tests/bytecode_artifacts/or_patterns/input.cd" text="enum Shape {\n  Point(number),\n  Line(number, number),\n  Empty,\n}\n\nfun numberLabel(value: number): string {\n  match value {\n    0 | 1 => { return \"small\"; }\n    _ => { return \"other\"; }\n  }\n}\n\nfun shapeLabel(value: Shape): string {\n  match value {\n    Shape.Point(x) | Shape.Line(x, _) if x > 3 => { return \"large:\" + str(x); }\n    Shape.Point(_) | Shape.Line(_, _) => { return \"small\"; }\n    Shape.Empty => { return \"empty\"; }\n  }\n}\n\nlet maybe: optional<bool> = false;\nprint(numberLabel(1));\nprint(numberLabel(8));\nprint(shapeLabel(Shape.Point(3)));\nprint(shapeLabel(Shape.Line(4, 10)));\nprint(shapeLabel(Shape.Empty()));\nmatch maybe {\n  nil | false => { print(\"off\"); }\n  true => { print(\"on\"); }\n}\nmatch true {\n  true | false => { print(\"bool\"); }\n}\n"
 
 debug_locations:
   main 0 = s0:7:1
@@ -432,63 +440,63 @@ debug_ranges:
   main 10 = s0:438:467
   main 11 = s0:487:488
   main 12 = s0:475:489
-  main 13 = s0:475:489
-  main 14 = s0:509:510
-  main 15 = s0:497:511
-  main 16 = s0:497:511
-  main 17 = s0:542:543
-  main 18 = s0:530:544
-  main 19 = s0:519:545
-  main 20 = s0:519:545
-  main 21 = s0:575:576
-  main 22 = s0:578:580
-  main 23 = s0:564:581
-  main 24 = s0:553:582
-  main 25 = s0:553:582
-  main 26 = s0:601:614
-  main 27 = s0:590:615
-  main 28 = s0:590:615
-  main 29 = s0:623:628
-  main 30 = s0:617:687
-  main 31 = s0:617:687
-  main 32 = s0:617:687
-  main 33 = s0:617:687
-  main 34 = s0:617:687
-  main 35 = s0:617:687
-  main 36 = s0:617:687
-  main 37 = s0:617:687
-  main 38 = s0:617:687
-  main 39 = s0:617:687
-  main 40 = s0:656:661
-  main 41 = s0:656:661
-  main 42 = s0:656:661
-  main 43 = s0:617:687
-  main 44 = s0:617:687
-  main 45 = s0:617:687
-  main 46 = s0:617:687
-  main 47 = s0:617:687
-  main 48 = s0:683:687
-  main 49 = s0:683:687
-  main 50 = s0:683:687
-  main 51 = s0:617:687
-  main 52 = s0:699:703
-  main 53 = s0:699:703
-  main 54 = s0:693:738
-  main 55 = s0:693:738
-  main 56 = s0:693:738
-  main 57 = s0:693:738
-  main 58 = s0:693:738
-  main 59 = s0:693:738
-  main 60 = s0:693:738
-  main 61 = s0:693:738
-  main 62 = s0:693:738
-  main 63 = s0:693:738
-  main 64 = s0:732:738
-  main 65 = s0:732:738
-  main 66 = s0:732:738
-  main 67 = s0:693:738
-  main 68 = s0:693:738
-  main 69 = s0:693:738
+  main 13 = s0:469:490
+  main 14 = s0:510:511
+  main 15 = s0:498:512
+  main 16 = s0:492:513
+  main 17 = s0:544:545
+  main 18 = s0:532:546
+  main 19 = s0:521:547
+  main 20 = s0:515:548
+  main 21 = s0:578:579
+  main 22 = s0:581:583
+  main 23 = s0:567:584
+  main 24 = s0:556:585
+  main 25 = s0:550:586
+  main 26 = s0:605:618
+  main 27 = s0:594:619
+  main 28 = s0:588:620
+  main 29 = s0:628:633
+  main 30 = s0:622:694
+  main 31 = s0:622:694
+  main 32 = s0:622:694
+  main 33 = s0:622:694
+  main 34 = s0:622:694
+  main 35 = s0:622:694
+  main 36 = s0:622:694
+  main 37 = s0:622:694
+  main 38 = s0:622:694
+  main 39 = s0:622:694
+  main 40 = s0:661:666
+  main 41 = s0:661:666
+  main 42 = s0:655:667
+  main 43 = s0:622:694
+  main 44 = s0:622:694
+  main 45 = s0:622:694
+  main 46 = s0:622:694
+  main 47 = s0:622:694
+  main 48 = s0:689:693
+  main 49 = s0:689:693
+  main 50 = s0:683:694
+  main 51 = s0:622:694
+  main 52 = s0:706:710
+  main 53 = s0:706:710
+  main 54 = s0:700:746
+  main 55 = s0:700:746
+  main 56 = s0:700:746
+  main 57 = s0:700:746
+  main 58 = s0:700:746
+  main 59 = s0:700:746
+  main 60 = s0:700:746
+  main 61 = s0:700:746
+  main 62 = s0:700:746
+  main 63 = s0:700:746
+  main 64 = s0:739:745
+  main 65 = s0:739:745
+  main 66 = s0:733:746
+  main 67 = s0:700:746
+  main 68 = s0:700:746
+  main 69 = s0:700:746
   function f0 0 = s0:115:120
   function f0 1 = s0:115:120
   function f0 2 = s0:109:181

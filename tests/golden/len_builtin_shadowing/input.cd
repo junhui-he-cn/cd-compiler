@@ -1,2 +1,2 @@
 let len = 123;
-print len;
+print(len);

@@ -1,3 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/generic_constraint_argument.cd:5:21: function call: type parameter T must satisfy number, got string
-  print numeric("text");
+  print(numeric("text"));
                       ^

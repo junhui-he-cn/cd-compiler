@@ -1,6 +1,6 @@
 native_import i0 = print abi=1
 native_import i1 = push abi=1
-main registers=16
+main registers=17
 0000  block
 0001  b0 = constant #0 1
 0002  b1 = constant #1 2
@@ -18,14 +18,14 @@ main registers=16
 0014  b7 = iter_next b4
 0015  set_global g1, b7
 0016  b8 = load_global g1
-0017  b15 = call_native i0 [b8]
-0018  b9 = load_global g0
-0019  b10 = load_global g1
-0020  b11 = constant #3 10
-0021  b12 = add_num b10, b11
-0022  b13 = call_native i1 [b9, b12]
+0017  b9 = call_native i0 [b8]
+0018  b10 = load_global g0
+0019  b11 = load_global g1
+0020  b12 = constant #3 10
+0021  b13 = add_num b11, b12
+0022  b14 = call_native i1 [b10, b13]
 0023  br b1
 0024  block
-0025  b14 = load_global g0
-0026  b15 = call_native i0 [b14]
+0025  b15 = load_global g0
+0026  b16 = call_native i0 [b15]
 0027  return_nil

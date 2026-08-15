@@ -1,2 +1,2 @@
 import "./lib.cd" as lib;
-print lib.answer();
+print(lib.answer());

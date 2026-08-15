@@ -1,4 +1,4 @@
 import "./a.cd" as a;
 import "./b.cd" as b;
-print a.value;
-print b.value;
+print(a.value);
+print(b.value);

@@ -387,10 +387,6 @@ private:
             endScope();
             return;
         }
-        if (const auto* print = dynamic_cast<const PrintStmt*>(&statement)) {
-            collectExpression(print->expression.get());
-            return;
-        }
         if (const auto* expression = dynamic_cast<const ExpressionStmt*>(&statement)) {
             collectExpression(expression->expression.get());
             return;

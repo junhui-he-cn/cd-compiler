@@ -1,20 +1,20 @@
 import "../../data_structures.cd" as ds;
 
 let values = ds.prepend(1, ds.prepend(2, ds.prepend(3, ds.prepend(2, ds.prepend(1, ds.emptyList<number>())))));
-print ds.listMiddle(values);
-print ds.listIsPalindrome(values);
-print ds.toArray(ds.listRemoveFromEnd(values, 2));
+print(ds.listMiddle(values));
+print(ds.listIsPalindrome(values));
+print(ds.toArray(ds.listRemoveFromEnd(values, 2)));
 
 let even = ds.prepend(1, ds.prepend(2, ds.prepend(3, ds.prepend(4, ds.emptyList<number>()))));
-print ds.listMiddle(even);
-print ds.listIsPalindrome(even);
-print ds.toArray(ds.listRemoveFromEnd(even, 1));
+print(ds.listMiddle(even));
+print(ds.listIsPalindrome(even));
+print(ds.toArray(ds.listRemoveFromEnd(even, 1)));
 
 let empty = ds.emptyList<number>();
-print ds.listMiddle(empty);
-print ds.listIsPalindrome(empty);
-print ds.toArray(ds.listRemoveFromEnd(values, 0));
-print ds.toArray(ds.listRemoveFromEnd(values, 9));
+print(ds.listMiddle(empty));
+print(ds.listIsPalindrome(empty));
+print(ds.toArray(ds.listRemoveFromEnd(values, 0)));
+print(ds.toArray(ds.listRemoveFromEnd(values, 9)));
 
 let longList = ds.emptyList<number>();
 let listIndex = 0;
@@ -22,4 +22,4 @@ while (listIndex < 4096) {
   longList = ds.prepend(listIndex, longList);
   listIndex += 1;
 }
-print ds.listMiddle(longList);
+print(ds.listMiddle(longList));

@@ -1,6 +1,6 @@
 native_import i0 = str abi=1
 native_import i1 = print abi=1
-main registers=53
+main registers=59
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -23,95 +23,95 @@ main registers=53
 0019  b10 = load_global g3
 0020  b11 = call_native i0 [b10]
 0021  b12 = concat_str b9, b11
-0022  b52 = call_native i1 [b12]
+0022  b13 = call_native i1 [b12]
 0023  br b3
 0024  block
-0025  b13 = constant #12 "if-let:none"
-0026  b52 = call_native i1 [b13]
+0025  b14 = constant #12 "if-let:none"
+0026  b15 = call_native i1 [b14]
 0027  br b3
 0028  block
-0029  b14 = load_global g2
-0030  b16 = constant #13 nil
-0031  b17 = not_equal b14, b16
-0032  br_if b17, b4, b5
+0029  b16 = load_global g2
+0030  b18 = constant #13 nil
+0031  b19 = not_equal b16, b18
+0032  br_if b19, b4, b5
 0033  block
-0034  b15 = move b14
+0034  b17 = move b16
 0035  br b6
 0036  block
-0037  b18 = constant #14 0
-0038  b15 = move b18
+0037  b20 = constant #14 0
+0038  b17 = move b20
 0039  br b6
 0040  block
-0041  b52 = call_native i1 [b15]
-0042  b19 = constant #15 1
-0043  b20 = neg_num b19
-0044  b21 = call_direct $0 [b20]
-0045  b23 = constant #16 nil
-0046  b24 = not_equal b21, b23
-0047  br_if b24, b7, b8
+0041  b21 = call_native i1 [b17]
+0042  b22 = constant #15 1
+0043  b23 = neg_num b22
+0044  b24 = call_direct $0 [b23]
+0045  b26 = constant #16 nil
+0046  b27 = not_equal b24, b26
+0047  br_if b27, b7, b8
 0048  block
-0049  b22 = move b21
+0049  b25 = move b24
 0050  br b9
 0051  block
-0052  b25 = constant #17 99
-0053  b22 = move b25
+0052  b28 = constant #17 99
+0053  b25 = move b28
 0054  br b9
 0055  block
-0056  b52 = call_native i1 [b22]
-0057  b26 = constant #18 3
-0058  b27 = call_direct $1 [b26]
-0059  b29 = constant #19 nil
-0060  b30 = not_equal b27, b29
-0061  br_if b30, b10, b11
+0056  b29 = call_native i1 [b25]
+0057  b30 = constant #18 3
+0058  b31 = call_direct $1 [b30]
+0059  b33 = constant #19 nil
+0060  b34 = not_equal b31, b33
+0061  br_if b34, b10, b11
 0062  block
-0063  b28 = move b27
+0063  b32 = move b31
 0064  br b12
 0065  block
-0066  b31 = constant #20 "missing"
-0067  b28 = move b31
+0066  b35 = constant #20 "missing"
+0067  b32 = move b35
 0068  br b12
 0069  block
-0070  b52 = call_native i1 [b28]
-0071  b32 = constant #21 1
-0072  b33 = neg_num b32
-0073  b34 = call_direct $1 [b33]
-0074  b36 = constant #22 nil
-0075  b37 = not_equal b34, b36
-0076  br_if b37, b13, b14
+0070  b36 = call_native i1 [b32]
+0071  b37 = constant #21 1
+0072  b38 = neg_num b37
+0073  b39 = call_direct $1 [b38]
+0074  b41 = constant #22 nil
+0075  b42 = not_equal b39, b41
+0076  br_if b42, b13, b14
 0077  block
-0078  b35 = move b34
+0078  b40 = move b39
 0079  br b15
 0080  block
-0081  b38 = constant #23 "missing"
-0082  b35 = move b38
+0081  b43 = constant #23 "missing"
+0082  b40 = move b43
 0083  br b15
 0084  block
-0085  b52 = call_native i1 [b35]
-0086  b39 = constant #24 1
-0087  b40 = call_direct $0 [b39]
-0088  init_global g4, b40
-0089  b41 = constant #25 0
-0090  init_global g5, b41
+0085  b44 = call_native i1 [b40]
+0086  b45 = constant #24 1
+0087  b46 = call_direct $0 [b45]
+0088  init_global g4, b46
+0089  b47 = constant #25 0
+0090  init_global g5, b47
 0091  br b16
 0092  block
-0093  b42 = load_global g4
-0094  b43 = constant #26 nil
-0095  b44 = not_equal b42, b43
-0096  br_if b44, b17, b18
+0093  b48 = load_global g4
+0094  b49 = constant #26 nil
+0095  b50 = not_equal b48, b49
+0096  br_if b50, b17, b18
 0097  block
-0098  init_global g6, b42
-0099  b45 = load_global g5
-0100  b46 = assert_number b45 @21 `+=` expects number variable
-0101  b47 = constant #27 1
-0102  b48 = assert_number b47 @22 `+=` expects number value
-0103  b49 = add_num b46, b48
-0104  set_global g5, b49
-0105  b50 = constant #28 nil
-0106  set_global g4, b50
+0098  init_global g6, b48
+0099  b51 = load_global g5
+0100  b52 = assert_number b51 @27 `+=` expects number variable
+0101  b53 = constant #27 1
+0102  b54 = assert_number b53 @28 `+=` expects number value
+0103  b55 = add_num b52, b54
+0104  set_global g5, b55
+0105  b56 = constant #28 nil
+0106  set_global g4, b56
 0107  br b16
 0108  block
-0109  b51 = load_global g5
-0110  b52 = call_native i1 [b51]
+0109  b57 = load_global g5
+0110  b58 = call_native i1 [b57]
 0111  return_nil
 
 function $0 find/1 registers=8

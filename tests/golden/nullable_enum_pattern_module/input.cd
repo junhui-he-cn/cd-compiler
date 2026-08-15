@@ -8,5 +8,5 @@ fun render(value: optional<lib.Outcome>): string {
   }
 }
 
-print render(nil);
-print render(lib.make());
+print(render(nil));
+print(render(lib.make()));

@@ -8,7 +8,7 @@ Program
     Match point
       Arm geo.Point {x: 1}
         Block
-          Print "one"
+          Expr (call print "one")
       Arm geo.Point {}
         Block
-          Print "other"
+          Expr (call print "other")

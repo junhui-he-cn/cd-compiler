@@ -5,7 +5,7 @@ fun values(value) {
   return ["shadowed-values"];
 }
 let prices = {"tea": 3};
-print keys(prices);
-print prices.keys();
-print values(prices);
-print prices.values();
+print(keys(prices));
+print(prices.keys());
+print(values(prices));
+print(prices.values());

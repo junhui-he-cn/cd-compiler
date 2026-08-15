@@ -5,5 +5,5 @@ let head: Node<number> = Node<number> { value: 1, next: tail };
 let alias = tail;
 head.next = nil;
 alias.value = 20;
-print head.next;
-print tail.value;
+print(head.next);
+print(tail.value);

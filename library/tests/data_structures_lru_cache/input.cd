@@ -14,34 +14,34 @@ fun render(entries: [ds.LruCacheEntry<string, number>]): string {
 }
 
 let zero = ds.newLruCache<string, number>(0);
-print zero.put("ignored", 1);
-print zero.get("ignored");
-print zero.snapshot();
+print(zero.put("ignored", 1));
+print(zero.get("ignored"));
+print(zero.snapshot());
 
 let cache = ds.newLruCache<string, number>(2.9);
-print cache.capacity();
-print cache.put("a", 1);
-print cache.put("b", 2);
-print render(cache.snapshot());
-print cache.get("a");
-print render(cache.snapshot());
-print cache.put("c", 3);
-print render(cache.snapshot());
-print cache.get("b");
-print cache.put("a", 10);
-print render(cache.snapshot());
-print cache.discard("c");
-print cache.discard("c");
-print cache.isEmpty();
+print(cache.capacity());
+print(cache.put("a", 1));
+print(cache.put("b", 2));
+print(render(cache.snapshot()));
+print(cache.get("a"));
+print(render(cache.snapshot()));
+print(cache.put("c", 3));
+print(render(cache.snapshot()));
+print(cache.get("b"));
+print(cache.put("a", 10));
+print(render(cache.snapshot()));
+print(cache.discard("c"));
+print(cache.discard("c"));
+print(cache.isEmpty());
 
 let snapshot = cache.snapshot();
 snapshot[0].value = 99;
-print render(cache.snapshot());
+print(render(cache.snapshot()));
 
 let nullable = ds.newLruCache<string, optional<number>>(2);
-print nullable.put("nil", nil);
-print nullable.has("nil");
-print nullable.get("nil");
-print nullable.has("missing");
-print nullable.size();
-print nullable.snapshot();
+print(nullable.put("nil", nil));
+print(nullable.has("nil"));
+print(nullable.get("nil"));
+print(nullable.has("missing"));
+print(nullable.size());
+print(nullable.snapshot());

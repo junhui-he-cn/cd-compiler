@@ -27,20 +27,25 @@ names:
   n6 = "same#4"
   n7 = "left#5"
   n8 = "same#4"
-  n9 = "identity#0"
-  n10 = "alias#7"
-  n11 = "alias#7"
+  n9 = "print"
+  n10 = "print"
+  n11 = "print"
+  n12 = "print"
+  n13 = "identity#0"
+  n14 = "alias#7"
+  n15 = "alias#7"
+  n16 = "print"
 
 globals:
   g0 = n0
   g1 = n3
   g2 = n6
-  g3 = n10
+  g3 = n14
 
 native_imports:
   i0 = "print" abi=1
 
-main registers=23:
+main registers=27:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -56,26 +61,26 @@ block b0:
   set_global g2, r5
   r6 = constant c7
   r7 = call_direct f0 [r6]
-  r22 = call_native i0 [r7]
-  r8 = constant c8
-  r9 = call_direct f0 [r8]
-  r22 = call_native i0 [r9]
-  r10 = constant c9
-  r11 = constant c10
-  r12 = constant c11
-  r13 = array [r10, r11, r12]
-  r14 = call_direct f1 [r13]
-  r22 = call_native i0 [r14]
-  r15 = constant c12
-  r16 = constant c13
-  r17 = call_direct f2 [r15, r16]
-  r22 = call_native i0 [r17]
-  r18 = load_global g0
-  init_global g3, r18
-  r19 = load_global g3
-  r20 = constant c14
-  r21 = call r19 [r20]
-  r22 = call_native i0 [r21]
+  r8 = call_native i0 [r7]
+  r9 = constant c8
+  r10 = call_direct f0 [r9]
+  r11 = call_native i0 [r10]
+  r12 = constant c9
+  r13 = constant c10
+  r14 = constant c11
+  r15 = array [r12, r13, r14]
+  r16 = call_direct f1 [r15]
+  r17 = call_native i0 [r16]
+  r18 = constant c12
+  r19 = constant c13
+  r20 = call_direct f2 [r18, r19]
+  r21 = call_native i0 [r20]
+  r22 = load_global g0
+  init_global g3, r22
+  r23 = load_global g3
+  r24 = constant c14
+  r25 = call r23 [r24]
+  r26 = call_native i0 [r25]
   return_nil
 
 function f0 name="identity" arity=1 registers=2:
@@ -115,7 +120,7 @@ block b2:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/generic_functions/input.cd" text="fun identity<T>(value: T): T {\n  return value;\n}\nfun head<T>(values: [T]): T {\n  return values[0];\n}\nfun same<T>(left: T, right: T): T {\n  return left;\n}\nprint identity(42);\nprint identity(\"hello\");\nprint head([1, 2, 3]);\nprint same(true, true);\nlet alias = identity;\nprint alias(\"alias\");\n"
+  s0 path="tests/bytecode_artifacts/generic_functions/input.cd" text="fun identity<T>(value: T): T {\n  return value;\n}\nfun head<T>(values: [T]): T {\n  return values[0];\n}\nfun same<T>(left: T, right: T): T {\n  return left;\n}\nprint(identity(42));\nprint(identity(\"hello\"));\nprint(head([1, 2, 3]));\nprint(same(true, true));\nlet alias = identity;\nprint(alias(\"alias\"));\n"
 
 debug_locations:
   main 0 = s0:1:1
@@ -197,27 +202,27 @@ debug_ranges:
   main 12 = s0:105:150
   main 13 = s0:169:171
   main 14 = s0:160:172
-  main 15 = s0:160:172
-  main 16 = s0:189:196
-  main 17 = s0:180:197
-  main 18 = s0:180:197
-  main 19 = s0:211:212
-  main 20 = s0:214:215
-  main 21 = s0:217:218
-  main 22 = s0:210:218
-  main 23 = s0:205:220
-  main 24 = s0:205:220
-  main 25 = s0:233:237
-  main 26 = s0:239:243
-  main 27 = s0:228:244
-  main 28 = s0:228:244
-  main 29 = s0:258:266
-  main 30 = s0:250:266
-  main 31 = s0:274:279
-  main 32 = s0:280:287
-  main 33 = s0:274:288
-  main 34 = s0:274:288
-  main 35 = s0:274:288
+  main 15 = s0:154:173
+  main 16 = s0:190:197
+  main 17 = s0:181:198
+  main 18 = s0:175:199
+  main 19 = s0:213:214
+  main 20 = s0:216:217
+  main 21 = s0:219:220
+  main 22 = s0:212:220
+  main 23 = s0:207:222
+  main 24 = s0:201:223
+  main 25 = s0:236:240
+  main 26 = s0:242:246
+  main 27 = s0:231:247
+  main 28 = s0:225:248
+  main 29 = s0:262:270
+  main 30 = s0:254:270
+  main 31 = s0:278:283
+  main 32 = s0:284:291
+  main 33 = s0:278:292
+  main 34 = s0:272:293
+  main 35 = s0:272:293
   function f0 0 = s0:40:45
   function f0 1 = s0:40:45
   function f0 2 = s0:33:45

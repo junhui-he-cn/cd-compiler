@@ -2,7 +2,7 @@ native_import i0 = any abi=1
 native_import i1 = all abi=1
 native_import i2 = print abi=1
 native_import i3 = push abi=1
-main registers=35
+main registers=40
 0000  block
 0001  b0 = constant #0 1
 0002  b1 = constant #1 2
@@ -25,30 +25,30 @@ main registers=35
 0019  b14 = load_global g3
 0020  b15 = make_function $2 <lambda>/1
 0021  b16 = call_native i0 [b14, b15]
-0022  b34 = call_native i2 [b16]
-0023  b17 = load_global g3
-0024  b34 = call_native i2 [b17]
-0025  b18 = constant #13 1
-0026  b19 = constant #14 2
-0027  b20 = constant #15 3
-0028  b21 = array [b18, b19, b20]
-0029  init_global g4, b21
-0030  b22 = load_global g4
-0031  b23 = make_function $3 <lambda>/1
-0032  b24 = call_native i1 [b22, b23]
-0033  b34 = call_native i2 [b24]
-0034  b25 = load_global g4
-0035  b34 = call_native i2 [b25]
-0036  b26 = array []
-0037  b27 = make_function $4 <lambda>/1
-0038  b28 = call_native i0 [b26, b27]
-0039  b34 = call_native i2 [b28]
-0040  b29 = constant #21 1
-0041  b30 = constant #22 2
-0042  b31 = array [b29, b30]
-0043  b32 = make_function $5 <lambda>/1
-0044  b33 = call_native i1 [b31, b32]
-0045  b34 = call_native i2 [b33]
+0022  b17 = call_native i2 [b16]
+0023  b18 = load_global g3
+0024  b19 = call_native i2 [b18]
+0025  b20 = constant #13 1
+0026  b21 = constant #14 2
+0027  b22 = constant #15 3
+0028  b23 = array [b20, b21, b22]
+0029  init_global g4, b23
+0030  b24 = load_global g4
+0031  b25 = make_function $3 <lambda>/1
+0032  b26 = call_native i1 [b24, b25]
+0033  b27 = call_native i2 [b26]
+0034  b28 = load_global g4
+0035  b29 = call_native i2 [b28]
+0036  b30 = array []
+0037  b31 = make_function $4 <lambda>/1
+0038  b32 = call_native i0 [b30, b31]
+0039  b33 = call_native i2 [b32]
+0040  b34 = constant #21 1
+0041  b35 = constant #22 2
+0042  b36 = array [b34, b35]
+0043  b37 = make_function $5 <lambda>/1
+0044  b38 = call_native i1 [b36, b37]
+0045  b39 = call_native i2 [b38]
 0046  return_nil
 
 function $0 <lambda>/1 registers=4

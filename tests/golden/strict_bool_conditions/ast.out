@@ -3,23 +3,23 @@ Program
   If ready
     Then
       Block
-        Print "yes"
+        Expr (call print "yes")
     Else
       Block
-        Print "no"
+        Expr (call print "no")
   Let mut i = 0
   While (< i 3)
     Body
       Block
         Expr (+= i 1)
-  Print i
+  Expr (call print i)
   Let maybe: optional<number> = 4
   IfLet value
     Value
 maybe
     Then
       Block
-        Print value
-  Print (?? maybe 0)
-  Print (|| false true)
-  Print (&& true false)
+        Expr (call print value)
+  Expr (call print (?? maybe 0))
+  Expr (call print (|| false true))
+  Expr (call print (&& true false))

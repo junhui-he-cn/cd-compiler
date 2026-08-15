@@ -1,18 +1,18 @@
-let push = fun (array, value) { print "custom push"; };
-let pop = fun (array) { print "custom pop"; return 99; };
+let push = fun (array, value) { print("custom push"); };
+let pop = fun (array) { print("custom pop"); return 99; };
 let len = fun (value) { return 123; };
 let substr = fun (value, start, length) { return "custom substr"; };
 let charAt = fun (value, index) { return "custom charAt"; };
 
 let xs = [];
 xs.push(10);
-print xs.len();
-print xs.pop();
+print(xs.len());
+print(xs.pop());
 
 let text = "hello";
-print text.len();
-print text.substr(1, 2);
-print text.charAt(1);
-print len(text);
-print substr(text, 1, 2);
-print charAt(text, 1);
+print(text.len());
+print(text.substr(1, 2));
+print(text.charAt(1));
+print(len(text));
+print(substr(text, 1, 2));
+print(charAt(text, 1));

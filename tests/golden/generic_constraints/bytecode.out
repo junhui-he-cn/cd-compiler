@@ -1,7 +1,7 @@
 native_import i0 = map abi=1
 native_import i1 = filter abi=1
 native_import i2 = print abi=1
-main registers=42
+main registers=49
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -44,30 +44,30 @@ main registers=42
 0039  b23 = make_variant t1, v0 (b22)
 0040  init_global g10, b23
 0041  b24 = load_global g6
-0042  b41 = call_native i2 [b24]
-0043  b25 = load_global g7
-0044  b41 = call_native i2 [b25]
-0045  b26 = load_global g8
-0046  b27 = constant #18 3
-0047  b28 = call b26(b27)
-0048  b41 = call_native i2 [b28]
-0049  b29 = constant #19 4
-0050  b30 = call_direct $1 [b29]
-0051  b41 = call_native i2 [b30]
-0052  b31 = constant #20 "key"
-0053  b32 = constant #21 7
-0054  b33 = call_direct $2 [b31, b32]
-0055  b41 = call_native i2 [b33]
-0056  b34 = load_global g0
-0057  b35 = load_global g9
-0058  b36 = constant #22 5
-0059  b37 = call b34(b35, b36)
-0060  b41 = call_native i2 [b37]
-0061  b38 = constant #23 6
-0062  b39 = call_direct $5 [b38]
-0063  b41 = call_native i2 [b39]
-0064  b40 = load_global g10
-0065  b41 = call_native i2 [b40]
+0042  b25 = call_native i2 [b24]
+0043  b26 = load_global g7
+0044  b27 = call_native i2 [b26]
+0045  b28 = load_global g8
+0046  b29 = constant #18 3
+0047  b30 = call b28(b29)
+0048  b31 = call_native i2 [b30]
+0049  b32 = constant #19 4
+0050  b33 = call_direct $1 [b32]
+0051  b34 = call_native i2 [b33]
+0052  b35 = constant #20 "key"
+0053  b36 = constant #21 7
+0054  b37 = call_direct $2 [b35, b36]
+0055  b38 = call_native i2 [b37]
+0056  b39 = load_global g0
+0057  b40 = load_global g9
+0058  b41 = constant #22 5
+0059  b42 = call b39(b40, b41)
+0060  b43 = call_native i2 [b42]
+0061  b44 = constant #23 6
+0062  b45 = call_direct $5 [b44]
+0063  b46 = call_native i2 [b45]
+0064  b47 = load_global g10
+0065  b48 = call_native i2 [b47]
 0066  return_nil
 
 function $0 echo/2 registers=2

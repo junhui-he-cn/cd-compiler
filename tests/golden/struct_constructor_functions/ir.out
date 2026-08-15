@@ -12,10 +12,10 @@ IR
 0010  store_var @14 p#3, v5
 0011  v6 = load_var @15 p#3
 0012  v7 = field v6.name
-0013  print v7
-0014  v8 = load_var @18 p#3
-0015  v9 = field v8.age
-0016  print v9
+0013  v8 = native_call @18 print(v7)
+0014  v9 = load_var @19 p#3
+0015  v10 = field v9.age
+0016  v11 = native_call @22 print(v10)
 
 function $0 birthday(person#1)
 0000  v0 = load_var @1 person#1

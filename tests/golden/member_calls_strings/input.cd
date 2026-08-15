@@ -1,6 +1,6 @@
 let text = "hello";
-print text.len();
-print text.substr(1, 3);
-print text.charAt(4);
-print ("abc" + "def").substr(2, 3);
-print ("xy" + "z").charAt(1);
+print(text.len());
+print(text.substr(1, 3));
+print(text.charAt(4));
+print(("abc" + "def").substr(2, 3));
+print(("xy" + "z").charAt(1));

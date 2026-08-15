@@ -1,36 +1,36 @@
 native_import i0 = typeOf abi=1
 native_import i1 = print abi=1
-main registers=21
+main registers=28
 0000  block
 0001  b0 = constant #0 nil
 0002  b1 = call_native i0 [b0]
-0003  b20 = call_native i1 [b1]
-0004  b2 = constant #1 1
-0005  b3 = call_native i0 [b2]
-0006  b20 = call_native i1 [b3]
-0007  b4 = constant #2 true
-0008  b5 = call_native i0 [b4]
-0009  b20 = call_native i1 [b5]
-0010  b6 = constant #3 "x"
-0011  b7 = call_native i0 [b6]
-0012  b20 = call_native i1 [b7]
-0013  b8 = make_function $0 <lambda>/0
-0014  b9 = call_native i0 [b8]
-0015  b20 = call_native i1 [b9]
-0016  b10 = constant #6 1
-0017  b11 = array [b10]
-0018  b12 = call_native i0 [b11]
-0019  b20 = call_native i1 [b12]
-0020  b13 = constant #7 1
-0021  b14 = make_struct t0 [b13]
-0022  b15 = call_native i0 [b14]
-0023  b20 = call_native i1 [b15]
-0024  b16 = make_function $1 <lambda>/1
-0025  init_global g0, b16
-0026  b17 = load_global g0
-0027  b18 = constant #10 123
-0028  b19 = call b17(b18)
-0029  b20 = call_native i1 [b19]
+0003  b2 = call_native i1 [b1]
+0004  b3 = constant #1 1
+0005  b4 = call_native i0 [b3]
+0006  b5 = call_native i1 [b4]
+0007  b6 = constant #2 true
+0008  b7 = call_native i0 [b6]
+0009  b8 = call_native i1 [b7]
+0010  b9 = constant #3 "x"
+0011  b10 = call_native i0 [b9]
+0012  b11 = call_native i1 [b10]
+0013  b12 = make_function $0 <lambda>/0
+0014  b13 = call_native i0 [b12]
+0015  b14 = call_native i1 [b13]
+0016  b15 = constant #6 1
+0017  b16 = array [b15]
+0018  b17 = call_native i0 [b16]
+0019  b18 = call_native i1 [b17]
+0020  b19 = constant #7 1
+0021  b20 = make_struct t0 [b19]
+0022  b21 = call_native i0 [b20]
+0023  b22 = call_native i1 [b21]
+0024  b23 = make_function $1 <lambda>/1
+0025  init_global g0, b23
+0026  b24 = load_global g0
+0027  b25 = constant #10 123
+0028  b26 = call b24(b25)
+0029  b27 = call_native i1 [b26]
 0030  return_nil
 
 function $0 <lambda>/0 registers=2

@@ -1,5 +1,5 @@
 Runtime error at tests/golden/runtime_errors/map_dynamic_bad_key.cd:5:7: map key must be nil, number, bool, or string
-  print values[id([1])];
+  print(values[id([1])]);
         ^
 Call stack:
   at main (tests/golden/runtime_errors/map_dynamic_bad_key.cd:5:7)

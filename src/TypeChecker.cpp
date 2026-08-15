@@ -713,11 +713,6 @@ void TypeChecker::checkStatement(const Stmt& statement)
         return;
     }
 
-    if (const auto* print = dynamic_cast<const PrintStmt*>(&statement)) {
-        checkExpression(*print->expression);
-        return;
-    }
-
     if (const auto* expression = dynamic_cast<const ExpressionStmt*>(&statement)) {
         checkExpression(*expression->expression);
         return;

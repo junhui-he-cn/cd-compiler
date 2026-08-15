@@ -9,9 +9,9 @@ fun descending(left: number, right: number): bool {
 }
 
 let values = [5, 1, 4, 2, 8, 2];
-print ds.shellSort(values, ascending);
-print ds.shellSort(values, descending);
-print values;
-print ds.shellSort(["pear", "apple", "orange", "apple"], ds.stringLess);
+print(ds.shellSort(values, ascending));
+print(ds.shellSort(values, descending));
+print(values);
+print(ds.shellSort(["pear", "apple", "orange", "apple"], ds.stringLess));
 let empty: [number] = [];
-print ds.shellSort(empty, ascending);
+print(ds.shellSort(empty, ascending));

@@ -15,11 +15,11 @@ impl Stack<T> {
 }
 
 let stack: Stack<number> = Stack<number> { items: [] };
-print stack.pop();
-print stack.push(7);
-print stack.len();
+print(stack.pop());
+print(stack.push(7));
+print(stack.len());
 
 let values = [1];
 values.push(2);
-print values.pop();
-print values.len();
+print(values.pop());
+print(values.len());

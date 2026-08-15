@@ -16,6 +16,7 @@ names:
   n6 = "i#0"
   n7 = "i#0"
   n8 = "total#1"
+  n9 = "print"
 
 globals:
   g0 = n0
@@ -52,7 +53,7 @@ block b3:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/benchmark_execution_loop/input.cd" text="let mut i = 0;\nlet mut total = 0;\nwhile i < 200000 {\n  total = total + i;\n  i = i + 1;\n}\nprint total;\n"
+  s0 path="tests/bytecode_artifacts/benchmark_execution_loop/input.cd" text="let mut i = 0;\nlet mut total = 0;\nwhile i < 200000 {\n  total = total + i;\n  i = i + 1;\n}\nprint(total);\n"
 
 debug_locations:
   main 0 = s0:1:13
@@ -105,5 +106,5 @@ debug_ranges:
   main 20 = s0:40:85
   main 21 = s0:95:100
   main 22 = s0:95:100
-  main 23 = s0:95:100
-  main 24 = s0:95:100
+  main 23 = s0:89:101
+  main 24 = s0:89:101

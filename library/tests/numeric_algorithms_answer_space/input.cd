@@ -1,14 +1,14 @@
 import "../../data_structures.cd" as ds;
 
-print ds.minimumLargestPartitionSum([7, 2, 5, 10, 8], 2);
-print ds.minimumLargestPartitionSum([1, 2, 3, 4, 5], 2);
-print ds.minimumLargestPartitionSum([1, 4, 4], 3);
-print ds.minimumLargestPartitionSum([1, 2], 5);
-print ds.minimumLargestPartitionSum([0, 0, 0], 1);
+print(ds.minimumLargestPartitionSum([7, 2, 5, 10, 8], 2));
+print(ds.minimumLargestPartitionSum([1, 2, 3, 4, 5], 2));
+print(ds.minimumLargestPartitionSum([1, 4, 4], 3));
+print(ds.minimumLargestPartitionSum([1, 2], 5));
+print(ds.minimumLargestPartitionSum([0, 0, 0], 1));
 
 let empty: [number] = [];
-print ds.minimumLargestPartitionSum(empty, 3);
-print ds.minimumLargestPartitionSum(empty, 0);
-print ds.minimumLargestPartitionSum([1, 2], 1.5);
-print ds.minimumLargestPartitionSum([1, -2], 2);
-print ds.minimumLargestPartitionSum([1.5, 2], 2);
+print(ds.minimumLargestPartitionSum(empty, 3));
+print(ds.minimumLargestPartitionSum(empty, 0));
+print(ds.minimumLargestPartitionSum([1, 2], 1.5));
+print(ds.minimumLargestPartitionSum([1, -2], 2));
+print(ds.minimumLargestPartitionSum([1.5, 2], 2));

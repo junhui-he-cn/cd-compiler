@@ -1,10 +1,10 @@
-print typeOf(nil);
-print typeOf(1);
-print typeOf(true);
-print typeOf("x");
-print typeOf(fun () { return nil; });
-print typeOf([1]);
+print(typeOf(nil));
+print(typeOf(1));
+print(typeOf(true));
+print(typeOf("x"));
+print(typeOf(fun () { return nil; }));
+print(typeOf([1]));
 struct Box { value: number }
-print typeOf(Box { value: 1 });
+print(typeOf(Box { value: 1 }));
 let typeOf = fun (value) { return "shadowed"; };
-print typeOf(123);
+print(typeOf(123));

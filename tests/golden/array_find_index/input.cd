@@ -1,10 +1,10 @@
 let values: [number] = [4, 7, 9];
-print findIndex(values, fun (value: number): bool { return value > 6; });
-print values.findIndex(fun (value: number): bool { return value == 2; });
+print(findIndex(values, fun (value: number): bool { return value > 6; }));
+print(values.findIndex(fun (value: number): bool { return value == 2; }));
 let snapshot: [number] = [1, 2];
-print snapshot.findIndex(fun (value: number): bool {
+print(snapshot.findIndex(fun (value: number): bool {
   push(snapshot, 9);
   return value == 2;
-});
-print snapshot;
-print [].findIndex(fun (value: number): bool { return true; });
+}));
+print(snapshot);
+print([].findIndex(fun (value: number): bool { return true; }));

@@ -1,5 +1,5 @@
 let xs = [1, 2];
-print contains(xs, 2);
-print slice(xs, 0, 1);
-print copy(xs);
-print concat(xs, [3]);
+print(contains(xs, 2));
+print(slice(xs, 0, 1));
+print(copy(xs));
+print(concat(xs, [3]));

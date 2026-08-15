@@ -1,11 +1,11 @@
 IR
 0000  v0 = constant #0 nil
-0001  print v0
-0002  v1 = constant #1 true
-0003  print v1
-0004  v2 = constant #2 false
-0005  print v2
-0006  v3 = constant #3 123
-0007  print v3
-0008  v4 = constant #4 "hello"
-0009  print v4
+0001  v1 = native_call @0 print(v0)
+0002  v2 = constant #1 true
+0003  v3 = native_call @1 print(v2)
+0004  v4 = constant #2 false
+0005  v5 = native_call @2 print(v4)
+0006  v6 = constant #3 123
+0007  v7 = native_call @3 print(v6)
+0008  v8 = constant #4 "hello"
+0009  v9 = native_call @4 print(v8)

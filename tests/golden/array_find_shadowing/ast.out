@@ -1,4 +1,4 @@
 Program
   Let find = (fun (array, predicate) (return "shadowed find"))
-  Print (call find (array 1) (fun (value) (return true)))
-  Print (member-call (array 1 2) find (fun (value) (return (== value 2))))
+  Expr (call print (call find (array 1) (fun (value) (return true))))
+  Expr (call print (member-call (array 1 2) find (fun (value) (return (== value 2)))))

@@ -1,6 +1,6 @@
 native_import i0 = print abi=1
 native_import i1 = remove abi=1
-main registers=29
+main registers=31
 0000  block
 0001  b0 = constant #0 "a"
 0002  b1 = constant #1 1
@@ -22,33 +22,33 @@ main registers=29
 0018  b11 = iter_next b8
 0019  set_global g1, b11
 0020  b12 = load_global g1
-0021  b28 = call_native i0 [b12]
-0022  b13 = load_global g0
-0023  b14 = load_global g1
-0024  b15 = call_native i1 [b13, b14]
+0021  b13 = call_native i0 [b12]
+0022  b14 = load_global g0
+0023  b15 = load_global g1
+0024  b16 = call_native i1 [b14, b15]
 0025  br b1
 0026  block
-0027  b16 = load_global g0
-0028  b28 = call_native i0 [b16]
-0029  b17 = constant #7 1
-0030  b18 = constant #8 "one"
-0031  b19 = constant #9 2
-0032  b20 = constant #10 "two"
-0033  b21 = map [b17: b18, b19: b20]
-0034  init_global g2, b21
-0035  b22 = load_global g2
-0036  b23 = iter_init b22
-0037  b24 = constant #11 nil
-0038  init_global g3, b24
+0027  b17 = load_global g0
+0028  b18 = call_native i0 [b17]
+0029  b19 = constant #7 1
+0030  b20 = constant #8 "one"
+0031  b21 = constant #9 2
+0032  b22 = constant #10 "two"
+0033  b23 = map [b19: b20, b21: b22]
+0034  init_global g2, b23
+0035  b24 = load_global g2
+0036  b25 = iter_init b24
+0037  b26 = constant #11 nil
+0038  init_global g3, b26
 0039  br b4
 0040  block
-0041  b25 = iter_has b23
-0042  br_if b25, b5, b6
+0041  b27 = iter_has b25
+0042  br_if b27, b5, b6
 0043  block
-0044  b26 = iter_next b23
-0045  set_global g3, b26
-0046  b27 = load_global g3
-0047  b28 = call_native i0 [b27]
+0044  b28 = iter_next b25
+0045  set_global g3, b28
+0046  b29 = load_global g3
+0047  b30 = call_native i0 [b29]
 0048  br b4
 0049  block
 0050  return_nil

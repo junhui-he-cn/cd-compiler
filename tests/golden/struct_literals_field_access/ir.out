@@ -5,19 +5,19 @@ IR
 0003  store_var @3 person#0, v2
 0004  v3 = load_var @4 person#0
 0005  v4 = field v3.name
-0006  print v4
-0007  v5 = load_var @7 person#0
-0008  v6 = field v5.age
-0009  print v6
-0010  v7 = constant #2 1
-0011  v8 = constant #3 2
-0012  v9 = struct Point {x: v7, y: v8}
-0013  v10 = constant #4 "p"
-0014  v11 = struct Nested {point: v9, label: v10}
-0015  store_var @16 nested#1, v11
-0016  v12 = load_var @17 nested#1
-0017  v13 = field v12.point
-0018  v14 = field v13.x
-0019  print v14
-0020  v15 = struct Empty {}
-0021  print v15
+0006  v5 = native_call @7 print(v4)
+0007  v6 = load_var @8 person#0
+0008  v7 = field v6.age
+0009  v8 = native_call @11 print(v7)
+0010  v9 = constant #2 1
+0011  v10 = constant #3 2
+0012  v11 = struct Point {x: v9, y: v10}
+0013  v12 = constant #4 "p"
+0014  v13 = struct Nested {point: v11, label: v12}
+0015  store_var @18 nested#1, v13
+0016  v14 = load_var @19 nested#1
+0017  v15 = field v14.point
+0018  v16 = field v15.x
+0019  v17 = native_call @24 print(v16)
+0020  v18 = struct Empty {}
+0021  v19 = native_call @26 print(v18)

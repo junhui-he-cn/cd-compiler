@@ -4,28 +4,28 @@ let tree = ds.newGraph(4, false);
 tree.addEdge(0, 1);
 tree.addEdge(1, 2);
 tree.addEdge(1, 3);
-print ds.isBipartite(tree);
+print(ds.isBipartite(tree));
 
 let triangle = ds.newGraph(3, false);
 triangle.addEdge(0, 1);
 triangle.addEdge(1, 2);
 triangle.addEdge(2, 0);
-print ds.isBipartite(triangle);
+print(ds.isBipartite(triangle));
 
 let disconnected = ds.newGraph(6, false);
 disconnected.addEdge(0, 1);
 disconnected.addEdge(2, 3);
 disconnected.addEdge(3, 4);
 disconnected.addEdge(4, 5);
-print ds.isBipartite(disconnected);
+print(ds.isBipartite(disconnected));
 
 let selfLoop = ds.newGraph(1, false);
 selfLoop.addEdge(0, 0);
-print ds.isBipartite(selfLoop);
+print(ds.isBipartite(selfLoop));
 
 let directed = ds.newGraph(2, true);
 directed.addEdge(0, 1);
-print ds.isBipartite(directed);
+print(ds.isBipartite(directed));
 
 let empty = ds.newGraph(0, false);
-print ds.isBipartite(empty);
+print(ds.isBipartite(empty));

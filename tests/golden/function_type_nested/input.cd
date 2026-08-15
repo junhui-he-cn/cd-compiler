@@ -5,4 +5,4 @@ let factory: fun(): fun(number): number = fun (): fun(number): number {
 };
 
 let f: fun(number): number = factory();
-print f(5);
+print(f(5));

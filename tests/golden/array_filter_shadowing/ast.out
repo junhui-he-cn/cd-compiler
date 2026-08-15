@@ -1,4 +1,4 @@
 Program
   Let filter = (fun (array, predicate) (return "shadowed"))
-  Print (call filter (array 1) (fun (value) (return true)))
-  Print (member-call (array 1) filter (fun (value) (return true)))
+  Expr (call print (call filter (array 1) (fun (value) (return true))))
+  Expr (call print (member-call (array 1) filter (fun (value) (return true))))

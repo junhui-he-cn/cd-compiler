@@ -1,4 +1,4 @@
 struct Box { value: Value }
 struct Value { n: number }
 let box = Box { value: Value { n: 1 } };
-print box.value.n;
+print(box.value.n);

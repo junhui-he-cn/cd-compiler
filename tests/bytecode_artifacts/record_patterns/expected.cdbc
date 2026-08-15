@@ -67,13 +67,18 @@ names:
   n37 = "hongKong#6"
   n38 = "nilPerson#7"
   n39 = "ada#5"
-  n40 = "hongKong#6"
-  n41 = "nilPerson#7"
-  n42 = "ada#5"
-  n43 = "name"
-  n44 = "Person"
-  n45 = "age"
-  n46 = "Person"
+  n40 = "print"
+  n41 = "hongKong#6"
+  n42 = "print"
+  n43 = "nilPerson#7"
+  n44 = "print"
+  n45 = "ada#5"
+  n46 = "name"
+  n47 = "Person"
+  n48 = "age"
+  n49 = "Person"
+  n50 = "print"
+  n51 = "print"
 
 globals:
   g0 = n0
@@ -89,7 +94,7 @@ native_imports:
   i0 = "print" abi=1
   i1 = "str" abi=1
 
-main registers=32:
+main registers=36:
 block b0:
   r0 = constant c0
   init_global g0, r0
@@ -113,33 +118,33 @@ block b0:
   init_global g3, r14
   r15 = load_global g1
   r16 = call_direct f0 [r15]
-  r31 = call_native i0 [r16]
-  r17 = load_global g2
-  r18 = call_direct f0 [r17]
-  r31 = call_native i0 [r18]
-  r19 = load_global g3
-  r20 = call_direct f0 [r19]
-  r31 = call_native i0 [r20]
-  r21 = load_global g1
-  r22 = constant c19
-  r23 = struct_get r21, t1, 0
-  r24 = constant c20
-  r25 = equal r23, r24
-  br_if r25, b1, b2
+  r17 = call_native i0 [r16]
+  r18 = load_global g2
+  r19 = call_direct f0 [r18]
+  r20 = call_native i0 [r19]
+  r21 = load_global g3
+  r22 = call_direct f0 [r21]
+  r23 = call_native i0 [r22]
+  r24 = load_global g1
+  r25 = constant c19
+  r26 = struct_get r24, t1, 0
+  r27 = constant c20
+  r28 = equal r26, r27
+  br_if r28, b1, b2
 block b1:
   br b3
 block b2:
-  r26 = struct_get r21, t1, 1
-  r27 = constant c21
-  r28 = equal r26, r27
-  br_if r28, b3, b4
+  r29 = struct_get r24, t1, 1
+  r30 = constant c21
+  r31 = equal r29, r30
+  br_if r31, b3, b4
 block b3:
-  r29 = constant c22
-  r31 = call_native i0 [r29]
+  r32 = constant c22
+  r33 = call_native i0 [r32]
   return_nil
 block b4:
-  r30 = constant c23
-  r31 = call_native i0 [r30]
+  r34 = constant c23
+  r35 = call_native i0 [r34]
   return_nil
 block b5:
   return_nil
@@ -203,7 +208,7 @@ block b12:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/record_patterns/input.cd" text="struct Address { city: string, zip: number }\nstruct Person { name: string, age: number, address: Address }\n\nfun describe(value: optional<Person>): string {\n  match value {\n    nil => { return \"nil\"; }\n    Person { name: \"Ada\" } => { return \"ada\"; }\n    Person { address: Address { city: \"Hong Kong\" }, name: name } => { return \"city:\" + name; }\n    Person { age: age, name: name } => { return name + \":\" + str(age); }\n  }\n}\n\nlet ada = Person {\n  name: \"Ada\",\n  age: 36,\n  address: Address { city: \"Cambridge\", zip: 1 }\n};\nlet hongKong = Person {\n  name: \"Grace\",\n  age: 40,\n  address: Address { city: \"Hong Kong\", zip: 2 }\n};\nlet nilPerson: optional<Person> = nil;\nprint describe(ada);\nprint describe(hongKong);\nprint describe(nilPerson);\nmatch ada {\n  Person { name: \"Ada\" } | Person { age: 0 } => { print \"or\"; }\n  Person {} => { print \"fallback\"; }\n}\n"
+  s0 path="tests/bytecode_artifacts/record_patterns/input.cd" text="struct Address { city: string, zip: number }\nstruct Person { name: string, age: number, address: Address }\n\nfun describe(value: optional<Person>): string {\n  match value {\n    nil => { return \"nil\"; }\n    Person { name: \"Ada\" } => { return \"ada\"; }\n    Person { address: Address { city: \"Hong Kong\" }, name: name } => { return \"city:\" + name; }\n    Person { age: age, name: name } => { return name + \":\" + str(age); }\n  }\n}\n\nlet ada = Person {\n  name: \"Ada\",\n  age: 36,\n  address: Address { city: \"Cambridge\", zip: 1 }\n};\nlet hongKong = Person {\n  name: \"Grace\",\n  age: 40,\n  address: Address { city: \"Hong Kong\", zip: 2 }\n};\nlet nilPerson: optional<Person> = nil;\nprint(describe(ada));\nprint(describe(hongKong));\nprint(describe(nilPerson));\nmatch ada {\n  Person { name: \"Ada\" } | Person { age: 0 } => { print(\"or\"); }\n  Person {} => { print(\"fallback\"); }\n}\n"
 
 debug_locations:
   main 0 = s0:4:1
@@ -339,36 +344,36 @@ debug_ranges:
   main 20 = s0:630:663
   main 21 = s0:680:683
   main 22 = s0:671:684
-  main 23 = s0:671:684
-  main 24 = s0:701:709
-  main 25 = s0:692:710
-  main 26 = s0:692:710
-  main 27 = s0:727:736
-  main 28 = s0:718:737
-  main 29 = s0:718:737
-  main 30 = s0:745:748
-  main 31 = s0:739:848
-  main 32 = s0:739:848
-  main 33 = s0:739:848
-  main 34 = s0:739:848
-  main 35 = s0:739:848
-  main 36 = s0:739:848
-  main 37 = s0:739:848
-  main 38 = s0:739:848
-  main 39 = s0:739:848
-  main 40 = s0:739:848
-  main 41 = s0:739:848
-  main 42 = s0:739:848
-  main 43 = s0:807:811
-  main 44 = s0:807:811
-  main 45 = s0:807:811
-  main 46 = s0:739:848
-  main 47 = s0:838:848
-  main 48 = s0:838:848
-  main 49 = s0:838:848
-  main 50 = s0:739:848
-  main 51 = s0:739:848
-  main 52 = s0:739:848
+  main 23 = s0:665:685
+  main 24 = s0:702:710
+  main 25 = s0:693:711
+  main 26 = s0:687:712
+  main 27 = s0:729:738
+  main 28 = s0:720:739
+  main 29 = s0:714:740
+  main 30 = s0:748:751
+  main 31 = s0:742:853
+  main 32 = s0:742:853
+  main 33 = s0:742:853
+  main 34 = s0:742:853
+  main 35 = s0:742:853
+  main 36 = s0:742:853
+  main 37 = s0:742:853
+  main 38 = s0:742:853
+  main 39 = s0:742:853
+  main 40 = s0:742:853
+  main 41 = s0:742:853
+  main 42 = s0:742:853
+  main 43 = s0:810:814
+  main 44 = s0:810:814
+  main 45 = s0:804:815
+  main 46 = s0:742:853
+  main 47 = s0:842:852
+  main 48 = s0:842:852
+  main 49 = s0:836:853
+  main 50 = s0:742:853
+  main 51 = s0:742:853
+  main 52 = s0:742:853
   function f0 0 = s0:164:169
   function f0 1 = s0:164:169
   function f0 2 = s0:158:414

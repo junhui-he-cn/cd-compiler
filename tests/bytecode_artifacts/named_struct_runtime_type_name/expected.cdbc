@@ -7,6 +7,7 @@ names:
   n0 = "Box"
   n1 = "value"
   n2 = "typeOf"
+  n3 = "print"
 
 types:
   t0 = struct "Box" field0="value"
@@ -24,7 +25,7 @@ block b0:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/named_struct_runtime_type_name/input.cd" text="struct Box { value: number }\nprint typeOf(Box { value: 1 });\n"
+  s0 path="tests/bytecode_artifacts/named_struct_runtime_type_name/input.cd" text="struct Box { value: number }\nprint(typeOf(Box { value: 1 }));\n"
 
 debug_locations:
   main 0 = s0:2:27
@@ -39,5 +40,5 @@ debug_ranges:
   main 1 = s0:55:56
   main 2 = s0:42:56
   main 3 = s0:35:59
-  main 4 = s0:35:59
-  main 5 = s0:35:59
+  main 4 = s0:29:60
+  main 5 = s0:29:60

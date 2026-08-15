@@ -9,4 +9,4 @@ Program
         Then
           Block
             Break
-      Print x
+      Expr (call print x)

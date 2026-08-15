@@ -9,11 +9,11 @@ fun head<T>(values: [T]): T {
 fun make<T>(): optional<T> {
   return nil;
 }
-print identity<number>(42);
-print identity<string>("hello");
-print head<number>([1, 2]);
-print identity<[number]>([3, 4]);
-print make<number>();
+print(identity<number>(42));
+print(identity<string>("hello"));
+print(head<number>([1, 2]));
+print(identity<[number]>([3, 4]));
+print(make<number>());
 let alias = identity;
-print alias<bool>(true);
-print lib.identity<number>(7);
+print(alias<bool>(true));
+print(lib.identity<number>(7));

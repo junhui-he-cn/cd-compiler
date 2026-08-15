@@ -1,11 +1,11 @@
 import "../../data_structures.cd" as ds;
 
-print ds.gcd(84, 30);
-print ds.gcd(-84, 30);
-print ds.gcd(0, 18);
-print ds.gcd(42, 0);
-print ds.gcd(0, 0);
-print ds.lcm(21, 6);
-print ds.lcm(-4, 6);
-print ds.lcm(0, 12);
-print ds.lcm(0, 0);
+print(ds.gcd(84, 30));
+print(ds.gcd(-84, 30));
+print(ds.gcd(0, 18));
+print(ds.gcd(42, 0));
+print(ds.gcd(0, 0));
+print(ds.lcm(21, 6));
+print(ds.lcm(-4, 6));
+print(ds.lcm(0, 12));
+print(ds.lcm(0, 0));

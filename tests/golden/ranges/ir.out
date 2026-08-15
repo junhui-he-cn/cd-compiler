@@ -4,52 +4,52 @@ IR
 0002  v2 = native_call @0 range(v0, v1)
 0003  store_var @1 ascending#0, v2
 0004  v3 = load_var @2 ascending#0
-0005  print v3
-0006  v4 = load_var @3 ascending#0
-0007  v5 = len_range v4
-0008  print v5
-0009  v6 = load_var @4 ascending#0
-0010  v7 = constant #2 2
-0011  v8 = range_get v6, v7
-0012  print v8
-0013  v9 = load_var @5 ascending#0
-0014  v10 = constant #3 5
-0015  v11 = native_call @6 contains(v9, v10)
-0016  print v11
-0017  v12 = load_var @7 ascending#0
-0018  v13 = constant #4 4
-0019  v14 = native_call @8 contains(v12, v13)
-0020  print v14
-0021  v15 = load_var @9 ascending#0
-0022  v16 = len_range v15
-0023  print v16
-0024  v17 = load_var @10 ascending#0
-0025  v18 = native_call @11 typeOf(v17)
-0026  print v18
-0027  v19 = constant #5 5
-0028  v20 = native_call @12 range(v19)
-0029  v21 = iter_init v20
-0030  v22 = constant #6 nil
-0031  store_var @13 item#1, v22
-0032  v23 = iter_has v21
-0033  jump_if_false v23, 0039
-0034  v24 = iter_next v21
-0035  assign_var @14 item#1, v24
-0036  v25 = load_var @15 item#1
-0037  print v25
+0005  v4 = native_call @3 print(v3)
+0006  v5 = load_var @4 ascending#0
+0007  v6 = len_range v5
+0008  v7 = native_call @5 print(v6)
+0009  v8 = load_var @6 ascending#0
+0010  v9 = constant #2 2
+0011  v10 = range_get v8, v9
+0012  v11 = native_call @7 print(v10)
+0013  v12 = load_var @8 ascending#0
+0014  v13 = constant #3 5
+0015  v14 = native_call @9 contains(v12, v13)
+0016  v15 = native_call @10 print(v14)
+0017  v16 = load_var @11 ascending#0
+0018  v17 = constant #4 4
+0019  v18 = native_call @12 contains(v16, v17)
+0020  v19 = native_call @13 print(v18)
+0021  v20 = load_var @14 ascending#0
+0022  v21 = len_range v20
+0023  v22 = native_call @15 print(v21)
+0024  v23 = load_var @16 ascending#0
+0025  v24 = native_call @17 typeOf(v23)
+0026  v25 = native_call @18 print(v24)
+0027  v26 = constant #5 5
+0028  v27 = native_call @19 range(v26)
+0029  v28 = iter_init v27
+0030  v29 = constant #6 nil
+0031  store_var @20 item#1, v29
+0032  v30 = iter_has v28
+0033  jump_if_false v30, 0039
+0034  v31 = iter_next v28
+0035  assign_var @21 item#1, v31
+0036  v32 = load_var @22 item#1
+0037  v33 = native_call @23 print(v32)
 0038  jump 0032
-0039  v26 = constant #7 5
-0040  v27 = constant #8 0
-0041  v28 = constant #9 2
-0042  v29 = neg_num v28
-0043  v30 = native_call @16 range(v26, v27, v29)
-0044  v31 = iter_init v30
-0045  v32 = constant #10 nil
-0046  store_var @17 item#2, v32
-0047  v33 = iter_has v31
-0048  jump_if_false v33, 0054
-0049  v34 = iter_next v31
-0050  assign_var @18 item#2, v34
-0051  v35 = load_var @19 item#2
-0052  print v35
+0039  v34 = constant #7 5
+0040  v35 = constant #8 0
+0041  v36 = constant #9 2
+0042  v37 = neg_num v36
+0043  v38 = native_call @24 range(v34, v35, v37)
+0044  v39 = iter_init v38
+0045  v40 = constant #10 nil
+0046  store_var @25 item#2, v40
+0047  v41 = iter_has v39
+0048  jump_if_false v41, 0054
+0049  v42 = iter_next v39
+0050  assign_var @26 item#2, v42
+0051  v43 = load_var @27 item#2
+0052  v44 = native_call @28 print(v43)
 0053  jump 0047

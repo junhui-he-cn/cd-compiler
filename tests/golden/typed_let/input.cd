@@ -1,4 +1,4 @@
 let answer: number = 42;
 let label: string = "answer";
-print label;
-print answer;
+print(label);
+print(answer);

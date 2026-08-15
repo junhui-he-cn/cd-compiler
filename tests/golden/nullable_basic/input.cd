@@ -1,8 +1,8 @@
 let mut age: optional<number> = nil;
-print age;
+print(age);
 age = 42;
-print age;
+print(age);
 age = nil;
-print age;
+print(age);
 let label: optional<string> = "ok";
-print label;
+print(label);

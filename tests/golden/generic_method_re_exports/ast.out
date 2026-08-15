@@ -10,4 +10,4 @@ Program
   Module 2 entry
     Import "./api.cd" as lib
     Let box: lib.Box = (construct lib.Box value: 0)
-    Print (member-call box echo<number> 9)
+    Expr (call print (member-call box echo<number> 9))

@@ -1,4 +1,4 @@
 fun id(value) {
   return value;
 }
-print len(id(1));
+print(len(id(1)));

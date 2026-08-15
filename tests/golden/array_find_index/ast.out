@@ -1,8 +1,8 @@
 Program
   Let values: [number] = (array 4 7 9)
-  Print (call findIndex values (fun (value: number): bool (return (> value 6))))
-  Print (member-call values findIndex (fun (value: number): bool (return (== value 2))))
+  Expr (call print (call findIndex values (fun (value: number): bool (return (> value 6)))))
+  Expr (call print (member-call values findIndex (fun (value: number): bool (return (== value 2)))))
   Let snapshot: [number] = (array 1 2)
-  Print (member-call snapshot findIndex (fun (value: number): bool (expr (call push snapshot 9)) (return (== value 2))))
-  Print snapshot
-  Print (member-call (array) findIndex (fun (value: number): bool (return true)))
+  Expr (call print (member-call snapshot findIndex (fun (value: number): bool (expr (call push snapshot 9)) (return (== value 2)))))
+  Expr (call print snapshot)
+  Expr (call print (member-call (array) findIndex (fun (value: number): bool (return true))))

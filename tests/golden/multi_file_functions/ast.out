@@ -6,5 +6,5 @@ Program
     Export add banner
   Module 1 entry
     Import "./lib.cd"
-    Print banner
-    Print (call add 1 2)
+    Expr (call print banner)
+    Expr (call print (call add 1 2))

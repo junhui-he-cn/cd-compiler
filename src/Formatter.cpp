@@ -47,7 +47,6 @@ bool isKeyword(TokenType type)
     case TokenType::Let:
     case TokenType::Mut:
     case TokenType::Match:
-    case TokenType::Print:
     case TokenType::Private:
     case TokenType::Return:
     case TokenType::Struct:
@@ -548,8 +547,7 @@ bool shouldSpaceBeforeLeftParen(TokenType previous)
         || previous == TokenType::While
         || previous == TokenType::For
         || previous == TokenType::Match
-        || previous == TokenType::Return
-        || previous == TokenType::Print;
+        || previous == TokenType::Return;
 }
 
 bool shouldSpaceBefore(const FormatterState& state, const Token& token, bool genericAngle)
@@ -571,7 +569,6 @@ bool shouldSpaceBefore(const FormatterState& state, const Token& token, bool gen
     if (token.type == TokenType::LeftBracket) {
         if (isWordLike(previous)) {
             return previous == TokenType::Return
-                || previous == TokenType::Print
                 || previous == TokenType::If
                 || previous == TokenType::While
                 || previous == TokenType::For

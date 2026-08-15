@@ -1,10 +1,10 @@
 let values: [number] = [1, 2];
-print flatMap(values, fun (value: number): [number] { return [value, value * 10]; });
-print values.flatMap(fun (value: number): [number] { return [value + 1]; });
+print(flatMap(values, fun (value: number): [number] { return [value, value * 10]; }));
+print(values.flatMap(fun (value: number): [number] { return [value + 1]; }));
 let snapshot: [number] = [3, 4];
-print snapshot.flatMap(fun (value: number): [number] {
+print(snapshot.flatMap(fun (value: number): [number] {
   push(snapshot, 9);
   return [value];
-});
-print snapshot;
-print [].flatMap(fun (value: number): [number] { return [value]; });
+}));
+print(snapshot);
+print([].flatMap(fun (value: number): [number] { return [value]; }));

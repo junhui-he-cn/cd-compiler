@@ -1,5 +1,5 @@
 native_import i0 = print abi=1
-main registers=29
+main registers=35
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -19,32 +19,32 @@ main registers=29
 0016  set_global g3, b7
 0017  b8 = constant #10 42
 0018  b9 = call_direct $1 [b8]
-0019  b28 = call_native i0 [b9]
-0020  b10 = constant #11 "hello"
-0021  b11 = call_direct $1 [b10]
-0022  b28 = call_native i0 [b11]
-0023  b12 = constant #12 1
-0024  b13 = constant #13 2
-0025  b14 = array [b12, b13]
-0026  b15 = call_direct $2 [b14]
-0027  b28 = call_native i0 [b15]
-0028  b16 = constant #14 3
-0029  b17 = constant #15 4
-0030  b18 = array [b16, b17]
-0031  b19 = call_direct $1 [b18]
-0032  b28 = call_native i0 [b19]
-0033  b20 = call_direct $3 []
-0034  b28 = call_native i0 [b20]
-0035  b21 = load_global g1
-0036  init_global g4, b21
-0037  b22 = load_global g4
-0038  b23 = constant #16 true
-0039  b24 = call b22(b23)
-0040  b28 = call_native i0 [b24]
-0041  b25 = load_global g0
-0042  b26 = constant #17 7
-0043  b27 = call b25(b26)
-0044  b28 = call_native i0 [b27]
+0019  b10 = call_native i0 [b9]
+0020  b11 = constant #11 "hello"
+0021  b12 = call_direct $1 [b11]
+0022  b13 = call_native i0 [b12]
+0023  b14 = constant #12 1
+0024  b15 = constant #13 2
+0025  b16 = array [b14, b15]
+0026  b17 = call_direct $2 [b16]
+0027  b18 = call_native i0 [b17]
+0028  b19 = constant #14 3
+0029  b20 = constant #15 4
+0030  b21 = array [b19, b20]
+0031  b22 = call_direct $1 [b21]
+0032  b23 = call_native i0 [b22]
+0033  b24 = call_direct $3 []
+0034  b25 = call_native i0 [b24]
+0035  b26 = load_global g1
+0036  init_global g4, b26
+0037  b27 = load_global g4
+0038  b28 = constant #16 true
+0039  b29 = call b27(b28)
+0040  b30 = call_native i0 [b29]
+0041  b31 = load_global g0
+0042  b32 = constant #17 7
+0043  b33 = call b31(b32)
+0044  b34 = call_native i0 [b33]
 0045  return_nil
 
 function $0 identity/1 registers=2

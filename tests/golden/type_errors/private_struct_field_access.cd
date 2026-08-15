@@ -1,4 +1,4 @@
 import "./private_struct_field_access_deps/lib.cd" as lib;
 
 let box = lib.newBox();
-print box.value;
+print(box.value);

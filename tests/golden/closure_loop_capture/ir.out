@@ -28,7 +28,7 @@ IR
 0026  assign_var @11 f#3, v17
 0027  v18 = load_var @12 f#3
 0028  v19 = call v18()
-0029  print v19
+0029  v20 = native_call @13 print(v19)
 0030  jump 0023
 
 function $0 <lambda>()

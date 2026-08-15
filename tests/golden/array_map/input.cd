@@ -5,6 +5,6 @@ let offset: number = 5;
 let shifted = values.map(fun (value: number): number { return value + offset; });
 let text = map(values, fun (value: number): string { return str(value); });
 
-print doubled;
-print shifted;
-print text;
+print(doubled);
+print(shifted);
+print(text);

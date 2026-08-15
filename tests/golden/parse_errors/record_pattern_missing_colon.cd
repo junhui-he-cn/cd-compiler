@@ -1,6 +1,6 @@
 struct Person { name: string }
 let person = Person { name: "Ada" };
 match person {
-  _ => { print "fallback"; }
-  Person { name } => { print "bad"; }
+  _ => { print("fallback"); }
+  Person { name } => { print("bad"); }
 }

@@ -24,9 +24,9 @@ while (iteration < 1000) {
   iteration += 1;
 }
 
-print cache.size();
-print checksum;
-print cache.frequencyOf("key0");
-print cache.frequencyOf("key1");
-print cache.has("key63");
-print cache.has("key127");
+print(cache.size());
+print(checksum);
+print(cache.frequencyOf("key0"));
+print(cache.frequencyOf("key1"));
+print(cache.has("key63"));
+print(cache.has("key127"));

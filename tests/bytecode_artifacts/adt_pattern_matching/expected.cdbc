@@ -16,8 +16,10 @@ names:
   n7 = "Some"
   n8 = "number#1"
   n9 = "number#1"
-  n10 = "Option"
-  n11 = "None"
+  n10 = "print"
+  n11 = "Option"
+  n12 = "None"
+  n13 = "print"
 
 globals:
   g0 = n2
@@ -29,7 +31,7 @@ types:
 native_imports:
   i0 = "print" abi=1
 
-main registers=10:
+main registers=11:
 block b0:
   r0 = constant c0
   r1 = make_variant t0, v0 [r0]
@@ -42,20 +44,20 @@ block b1:
   r5 = variant_get r2, t0, v0, 0
   init_global g1, r5
   r6 = load_global g1
-  r9 = call_native i0 [r6]
+  r7 = call_native i0 [r6]
   return_nil
 block b2:
-  r7 = is_variant r2, t0, v1
-  br_if r7, b3, b4
+  r8 = is_variant r2, t0, v1
+  br_if r8, b3, b4
 block b3:
-  r8 = constant c2
-  r9 = call_native i0 [r8]
+  r9 = constant c2
+  r10 = call_native i0 [r9]
   return_nil
 block b4:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/adt_pattern_matching/input.cd" text="enum Option { Some(number), None }\nlet value = Option.Some(4);\nmatch value {\n  Option.Some(number) => { print number; }\n  Option.None => { print 0; }\n}\n"
+  s0 path="tests/bytecode_artifacts/adt_pattern_matching/input.cd" text="enum Option { Some(number), None }\nlet value = Option.Some(4);\nmatch value {\n  Option.Some(number) => { print(number); }\n  Option.None => { print(0); }\n}\n"
 
 debug_locations:
   main 0 = s0:2:25
@@ -88,21 +90,21 @@ debug_ranges:
   main 2 = s0:47:61
   main 3 = s0:39:61
   main 4 = s0:69:74
-  main 5 = s0:63:146
-  main 6 = s0:63:146
-  main 7 = s0:63:146
-  main 8 = s0:63:146
-  main 9 = s0:63:146
-  main 10 = s0:63:146
+  main 5 = s0:63:148
+  main 6 = s0:63:148
+  main 7 = s0:63:148
+  main 8 = s0:63:148
+  main 9 = s0:63:148
+  main 10 = s0:63:148
   main 11 = s0:110:116
-  main 12 = s0:110:116
-  main 13 = s0:63:146
-  main 14 = s0:63:146
-  main 15 = s0:63:146
-  main 16 = s0:63:146
-  main 17 = s0:145:146
-  main 18 = s0:145:146
-  main 19 = s0:145:146
-  main 20 = s0:63:146
-  main 21 = s0:63:146
-  main 22 = s0:63:146
+  main 12 = s0:104:117
+  main 13 = s0:63:148
+  main 14 = s0:63:148
+  main 15 = s0:63:148
+  main 16 = s0:63:148
+  main 17 = s0:146:147
+  main 18 = s0:146:147
+  main 19 = s0:140:148
+  main 20 = s0:63:148
+  main 21 = s0:63:148
+  main 22 = s0:63:148

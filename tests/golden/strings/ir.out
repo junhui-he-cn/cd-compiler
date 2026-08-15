@@ -2,14 +2,14 @@ IR
 0000  v0 = constant #0 "a"
 0001  v1 = constant #1 "b"
 0002  v2 = concat_str v0, v1
-0003  print v2
-0004  v3 = constant #2 "hello"
-0005  print v3
-0006  v4 = constant #3 "hello"
-0007  v5 = constant #4 "hello"
-0008  v6 = equal v4, v5
-0009  print v6
-0010  v7 = constant #5 "hello"
-0011  v8 = constant #6 "world"
-0012  v9 = not_equal v7, v8
-0013  print v9
+0003  v3 = native_call @0 print(v2)
+0004  v4 = constant #2 "hello"
+0005  v5 = native_call @1 print(v4)
+0006  v6 = constant #3 "hello"
+0007  v7 = constant #4 "hello"
+0008  v8 = equal v6, v7
+0009  v9 = native_call @2 print(v8)
+0010  v10 = constant #5 "hello"
+0011  v11 = constant #6 "world"
+0012  v12 = not_equal v10, v11
+0013  v13 = native_call @3 print(v12)

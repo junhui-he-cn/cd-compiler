@@ -1,3 +1,3 @@
 Type error at <repo>/tests/golden/type_errors/nullable_narrowing_native_callback_invalidated.cd:8:15: binary `+` expects two numbers or two strings, got optional<number> and number
-    print maybe + 1;
+    print(maybe + 1);
                 ^

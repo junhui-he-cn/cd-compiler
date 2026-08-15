@@ -12,6 +12,6 @@ Program
     Import "forward.cd" as forwarded
     Fun localHash<T: Hash>(value: T): number
       Return (call hash value)
-    Print (call localHash true)
-    Print (member-call lib hashValue "hello")
-    Print (member-call forwarded sameHash "same" "same")
+    Expr (call print (call localHash true))
+    Expr (call print (member-call lib hashValue "hello"))
+    Expr (call print (member-call forwarded sameHash "same" "same"))

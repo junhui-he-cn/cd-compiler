@@ -12,12 +12,12 @@ IR
 0010  v7 = iter_next v4
 0011  assign_var @3 x#1, v7
 0012  v8 = load_var @4 x#1
-0013  print v8
-0014  v9 = load_var @5 xs#0
-0015  v10 = load_var @6 x#1
-0016  v11 = constant #3 10
-0017  v12 = add_num v10, v11
-0018  v13 = native_call @7 push(v9, v12)
+0013  v9 = native_call @5 print(v8)
+0014  v10 = load_var @6 xs#0
+0015  v11 = load_var @7 x#1
+0016  v12 = constant #3 10
+0017  v13 = add_num v11, v12
+0018  v14 = native_call @8 push(v10, v13)
 0019  jump 0008
-0020  v14 = load_var @8 xs#0
-0021  print v14
+0020  v15 = load_var @9 xs#0
+0021  v16 = native_call @10 print(v15)

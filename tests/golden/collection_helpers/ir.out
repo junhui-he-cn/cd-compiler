@@ -7,107 +7,107 @@ IR
 0005  v4 = load_var @1 xs#0
 0006  v5 = constant #3 2
 0007  v6 = native_call @2 contains(v4, v5)
-0008  print v6
-0009  v7 = load_var @3 xs#0
-0010  v8 = constant #4 4
-0011  v9 = native_call @4 contains(v7, v8)
-0012  print v9
-0013  v10 = constant #5 9
-0014  v11 = array [v10]
-0015  store_var @5 shared#1, v11
-0016  v12 = load_var @6 shared#1
-0017  v13 = array [v12]
-0018  store_var @7 nested#2, v13
-0019  v14 = load_var @8 nested#2
-0020  v15 = load_var @9 shared#1
-0021  v16 = native_call @10 contains(v14, v15)
-0022  print v16
-0023  v17 = load_var @11 nested#2
-0024  v18 = constant #6 9
-0025  v19 = array [v18]
-0026  v20 = native_call @12 contains(v17, v19)
-0027  print v20
-0028  v21 = constant #7 1
-0029  v22 = struct Box {value: v21}
-0030  store_var @15 box#3, v22
-0031  v23 = load_var @16 box#3
-0032  v24 = array [v23]
-0033  v25 = load_var @17 box#3
-0034  v26 = native_call @18 contains(v24, v25)
-0035  print v26
-0036  v27 = load_var @19 box#3
-0037  v28 = array [v27]
-0038  v29 = constant #8 1
-0039  v30 = struct Box {value: v29}
-0040  v31 = native_call @22 contains(v28, v30)
-0041  print v31
-0042  v32 = load_var @23 xs#0
-0043  v33 = constant #9 1
-0044  v34 = constant #10 2
-0045  v35 = native_call @24 slice(v32, v33, v34)
-0046  store_var @25 part#4, v35
-0047  v36 = load_var @26 part#4
-0048  print v36
-0049  v37 = load_var @27 part#4
-0050  v38 = constant #11 0
-0051  v39 = constant #12 20
-0052  v40 = array_set v37, v38, v39
-0053  v41 = load_var @28 xs#0
-0054  print v41
-0055  v42 = load_var @29 xs#0
-0056  v43 = constant #13 3
-0057  v44 = constant #14 0
-0058  v45 = native_call @30 slice(v42, v43, v44)
-0059  print v45
-0060  v46 = load_var @31 xs#0
-0061  v47 = native_call @32 copy(v46)
-0062  store_var @33 cloned#5, v47
-0063  v48 = load_var @34 cloned#5
-0064  v49 = constant #15 0
-0065  v50 = constant #16 10
-0066  v51 = array_set v48, v49, v50
-0067  v52 = load_var @35 xs#0
-0068  print v52
-0069  v53 = load_var @36 cloned#5
-0070  print v53
-0071  v54 = constant #17 1
-0072  v55 = array [v54]
-0073  store_var @37 inner#6, v55
-0074  v56 = load_var @38 inner#6
-0075  v57 = array [v56]
-0076  store_var @39 outer#7, v57
-0077  v58 = load_var @40 outer#7
-0078  v59 = native_call @41 copy(v58)
-0079  store_var @42 outerCopy#8, v59
-0080  v60 = load_var @43 outerCopy#8
-0081  v61 = constant #18 0
-0082  v62 = array_get v60, v61
-0083  v63 = constant #19 2
-0084  v64 = native_call @44 push(v62, v63)
-0085  v65 = load_var @45 outer#7
-0086  print v65
-0087  v66 = load_var @46 xs#0
-0088  v67 = constant #20 4
-0089  v68 = constant #21 5
-0090  v69 = array [v67, v68]
-0091  v70 = native_call @47 concat(v66, v69)
-0092  print v70
-0093  v71 = load_var @48 xs#0
-0094  v72 = array []
-0095  v73 = native_call @49 concat(v71, v72)
-0096  print v73
-0097  v74 = make_function $0 <lambda>/1
-0098  store_var @51 copy#10, v74
-0099  v75 = load_var @52 copy#10
-0100  v76 = constant #23 7
-0101  v77 = call v75(v76)
-0102  print v77
-0103  v78 = load_var @53 xs#0
-0104  v79 = native_call @54 copy(v78)
-0105  print v79
+0008  v7 = native_call @3 print(v6)
+0009  v8 = load_var @4 xs#0
+0010  v9 = constant #4 4
+0011  v10 = native_call @5 contains(v8, v9)
+0012  v11 = native_call @6 print(v10)
+0013  v12 = constant #5 9
+0014  v13 = array [v12]
+0015  store_var @7 shared#1, v13
+0016  v14 = load_var @8 shared#1
+0017  v15 = array [v14]
+0018  store_var @9 nested#2, v15
+0019  v16 = load_var @10 nested#2
+0020  v17 = load_var @11 shared#1
+0021  v18 = native_call @12 contains(v16, v17)
+0022  v19 = native_call @13 print(v18)
+0023  v20 = load_var @14 nested#2
+0024  v21 = constant #6 9
+0025  v22 = array [v21]
+0026  v23 = native_call @15 contains(v20, v22)
+0027  v24 = native_call @16 print(v23)
+0028  v25 = constant #7 1
+0029  v26 = struct Box {value: v25}
+0030  store_var @19 box#3, v26
+0031  v27 = load_var @20 box#3
+0032  v28 = array [v27]
+0033  v29 = load_var @21 box#3
+0034  v30 = native_call @22 contains(v28, v29)
+0035  v31 = native_call @23 print(v30)
+0036  v32 = load_var @24 box#3
+0037  v33 = array [v32]
+0038  v34 = constant #8 1
+0039  v35 = struct Box {value: v34}
+0040  v36 = native_call @27 contains(v33, v35)
+0041  v37 = native_call @28 print(v36)
+0042  v38 = load_var @29 xs#0
+0043  v39 = constant #9 1
+0044  v40 = constant #10 2
+0045  v41 = native_call @30 slice(v38, v39, v40)
+0046  store_var @31 part#4, v41
+0047  v42 = load_var @32 part#4
+0048  v43 = native_call @33 print(v42)
+0049  v44 = load_var @34 part#4
+0050  v45 = constant #11 0
+0051  v46 = constant #12 20
+0052  v47 = array_set v44, v45, v46
+0053  v48 = load_var @35 xs#0
+0054  v49 = native_call @36 print(v48)
+0055  v50 = load_var @37 xs#0
+0056  v51 = constant #13 3
+0057  v52 = constant #14 0
+0058  v53 = native_call @38 slice(v50, v51, v52)
+0059  v54 = native_call @39 print(v53)
+0060  v55 = load_var @40 xs#0
+0061  v56 = native_call @41 copy(v55)
+0062  store_var @42 cloned#5, v56
+0063  v57 = load_var @43 cloned#5
+0064  v58 = constant #15 0
+0065  v59 = constant #16 10
+0066  v60 = array_set v57, v58, v59
+0067  v61 = load_var @44 xs#0
+0068  v62 = native_call @45 print(v61)
+0069  v63 = load_var @46 cloned#5
+0070  v64 = native_call @47 print(v63)
+0071  v65 = constant #17 1
+0072  v66 = array [v65]
+0073  store_var @48 inner#6, v66
+0074  v67 = load_var @49 inner#6
+0075  v68 = array [v67]
+0076  store_var @50 outer#7, v68
+0077  v69 = load_var @51 outer#7
+0078  v70 = native_call @52 copy(v69)
+0079  store_var @53 outerCopy#8, v70
+0080  v71 = load_var @54 outerCopy#8
+0081  v72 = constant #18 0
+0082  v73 = array_get v71, v72
+0083  v74 = constant #19 2
+0084  v75 = native_call @55 push(v73, v74)
+0085  v76 = load_var @56 outer#7
+0086  v77 = native_call @57 print(v76)
+0087  v78 = load_var @58 xs#0
+0088  v79 = constant #20 4
+0089  v80 = constant #21 5
+0090  v81 = array [v79, v80]
+0091  v82 = native_call @59 concat(v78, v81)
+0092  v83 = native_call @60 print(v82)
+0093  v84 = load_var @61 xs#0
+0094  v85 = array []
+0095  v86 = native_call @62 concat(v84, v85)
+0096  v87 = native_call @63 print(v86)
+0097  v88 = make_function $0 <lambda>/1
+0098  store_var @65 copy#10, v88
+0099  v89 = load_var @66 copy#10
+0100  v90 = constant #23 7
+0101  v91 = call v89(v90)
+0102  v92 = native_call @67 print(v91)
+0103  v93 = load_var @68 xs#0
+0104  v94 = native_call @69 copy(v93)
+0105  v95 = native_call @70 print(v94)
 
 function $0 <lambda>(value#9)
-0000  v0 = load_var @50 value#9
+0000  v0 = load_var @64 value#9
 0001  return v0
 0002  v1 = constant #22 nil
 0003  return v1

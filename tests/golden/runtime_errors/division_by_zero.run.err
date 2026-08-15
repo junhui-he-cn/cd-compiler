@@ -1,5 +1,5 @@
 Runtime error at tests/golden/runtime_errors/division_by_zero.cd:1:7: division by zero
-  print 1 / 0;
+  print(1 / 0);
         ^
 Call stack:
   at main (tests/golden/runtime_errors/division_by_zero.cd:1:7)

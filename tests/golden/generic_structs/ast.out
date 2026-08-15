@@ -7,16 +7,16 @@ Program
   Let textBox = (construct Box value: "text")
   Let bounded = (construct NumberBox value: 4)
   Expr (= (field inferred value) 5)
-  Print (field inferred value)
-  Print (field explicit value)
-  Print (field annotated value)
-  Print (field textBox value)
-  Print (field bounded value)
-  Print (call typeOf explicit)
+  Expr (call print (field inferred value))
+  Expr (call print (field explicit value))
+  Expr (call print (field annotated value))
+  Expr (call print (field textBox value))
+  Expr (call print (field bounded value))
+  Expr (call print (call typeOf explicit))
   Match explicit
     Arm Box {value: 2}
       Block
-        Print "two"
+        Expr (call print "two")
     Arm Box {value: _}
       Block
-        Print "other"
+        Expr (call print "other")

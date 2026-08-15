@@ -7,27 +7,27 @@ IR
 0005  v4 = assert_number v3 @3 `+=` expects number value
 0006  v5 = add_num v2, v4
 0007  assign_var @4 x#0, v5
-0008  print v5
-0009  v6 = load_var @5 x#0
-0010  v7 = assert_number v6 @6 `-=` expects number variable
-0011  v8 = constant #2 1
-0012  v9 = assert_number v8 @7 `-=` expects number value
-0013  v10 = sub_num v7, v9
-0014  assign_var @8 x#0, v10
-0015  print v10
-0016  v11 = load_var @9 x#0
-0017  v12 = assert_number v11 @10 `*=` expects number variable
-0018  v13 = constant #3 5
-0019  v14 = assert_number v13 @11 `*=` expects number value
-0020  v15 = mul_num v12, v14
-0021  assign_var @12 x#0, v15
-0022  print v15
-0023  v16 = load_var @13 x#0
-0024  v17 = assert_number v16 @14 `/=` expects number variable
-0025  v18 = constant #4 2
-0026  v19 = assert_number v18 @15 `/=` expects number value
-0027  v20 = div_num v17, v19
-0028  assign_var @16 x#0, v20
-0029  print v20
-0030  v21 = load_var @17 x#0
-0031  print v21
+0008  v6 = native_call @5 print(v5)
+0009  v7 = load_var @6 x#0
+0010  v8 = assert_number v7 @7 `-=` expects number variable
+0011  v9 = constant #2 1
+0012  v10 = assert_number v9 @8 `-=` expects number value
+0013  v11 = sub_num v8, v10
+0014  assign_var @9 x#0, v11
+0015  v12 = native_call @10 print(v11)
+0016  v13 = load_var @11 x#0
+0017  v14 = assert_number v13 @12 `*=` expects number variable
+0018  v15 = constant #3 5
+0019  v16 = assert_number v15 @13 `*=` expects number value
+0020  v17 = mul_num v14, v16
+0021  assign_var @14 x#0, v17
+0022  v18 = native_call @15 print(v17)
+0023  v19 = load_var @16 x#0
+0024  v20 = assert_number v19 @17 `/=` expects number variable
+0025  v21 = constant #4 2
+0026  v22 = assert_number v21 @18 `/=` expects number value
+0027  v23 = div_num v20, v22
+0028  assign_var @19 x#0, v23
+0029  v24 = native_call @20 print(v23)
+0030  v25 = load_var @21 x#0
+0031  v26 = native_call @22 print(v25)

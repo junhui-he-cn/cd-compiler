@@ -8,4 +8,4 @@ fun maybe(flag) {
 
 let mut v = maybe(true);
 v = false;
-print v;
+print(v);

@@ -15,10 +15,12 @@ names:
   n2 = "key#1"
   n3 = "key#1"
   n4 = "key#1"
-  n5 = "values#0"
-  n6 = "key#1"
-  n7 = "remove"
-  n8 = "values#0"
+  n5 = "print"
+  n6 = "values#0"
+  n7 = "key#1"
+  n8 = "remove"
+  n9 = "values#0"
+  n10 = "print"
 
 globals:
   g0 = n0
@@ -28,7 +30,7 @@ native_imports:
   i0 = "print" abi=1
   i1 = "remove" abi=1
 
-main registers=18:
+main registers=19:
 block b0:
   r0 = constant c0
   r1 = constant c1
@@ -50,18 +52,18 @@ block b2:
   r11 = iter_next r8
   set_global g1, r11
   r12 = load_global g1
-  r17 = call_native i0 [r12]
-  r13 = load_global g0
-  r14 = load_global g1
-  r15 = call_native i1 [r13, r14]
+  r13 = call_native i0 [r12]
+  r14 = load_global g0
+  r15 = load_global g1
+  r16 = call_native i1 [r14, r15]
   br b1
 block b3:
-  r16 = load_global g0
-  r17 = call_native i0 [r16]
+  r17 = load_global g0
+  r18 = call_native i0 [r17]
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/map_for_in/input.cd" text="let values = {\"a\": 1, \"b\": 2, \"c\": 3};\nfor key in values {\n  print key;\n  remove(values, key);\n}\nprint values;\n"
+  s0 path="tests/bytecode_artifacts/map_for_in/input.cd" text="let values = {\"a\": 1, \"b\": 2, \"c\": 3};\nfor key in values {\n  print(key);\n  remove(values, key);\n}\nprint(values);\n"
 
 debug_locations:
   main 0 = s0:1:15
@@ -106,23 +108,23 @@ debug_ranges:
   main 7 = s0:13:36
   main 8 = s0:4:36
   main 9 = s0:50:56
-  main 10 = s0:39:93
-  main 11 = s0:39:93
-  main 12 = s0:39:93
-  main 13 = s0:39:93
-  main 14 = s0:39:93
-  main 15 = s0:39:93
-  main 16 = s0:39:93
-  main 17 = s0:39:93
-  main 18 = s0:39:93
-  main 19 = s0:39:93
+  main 10 = s0:39:94
+  main 11 = s0:39:94
+  main 12 = s0:39:94
+  main 13 = s0:39:94
+  main 14 = s0:39:94
+  main 15 = s0:39:94
+  main 16 = s0:39:94
+  main 17 = s0:39:94
+  main 18 = s0:39:94
+  main 19 = s0:39:94
   main 20 = s0:67:70
-  main 21 = s0:67:70
-  main 22 = s0:81:87
-  main 23 = s0:89:92
-  main 24 = s0:74:93
-  main 25 = s0:39:93
-  main 26 = s0:103:109
-  main 27 = s0:103:109
-  main 28 = s0:103:109
-  main 29 = s0:103:109
+  main 21 = s0:61:71
+  main 22 = s0:82:88
+  main 23 = s0:90:93
+  main 24 = s0:75:94
+  main 25 = s0:39:94
+  main 26 = s0:104:110
+  main 27 = s0:104:110
+  main 28 = s0:98:111
+  main 29 = s0:98:111

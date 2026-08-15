@@ -2,26 +2,26 @@ import "../../data_structures.cd" as ds;
 
 let source = [[1, 2, 3], [4, 5, 6]];
 let matrix: optional<ds.Matrix> = ds.newMatrix(source);
-print matrix == nil;
+print(matrix == nil);
 source[0][0] = 99;
 if let concrete = matrix {
-  print concrete.snapshot();
+  print(concrete.snapshot());
 }
 
 if let concrete = matrix {
-  print concrete.snapshot();
+  print(concrete.snapshot());
   let copied = concrete.snapshot();
   copied[0][0] = -1;
-  print concrete.snapshot();
+  print(concrete.snapshot());
 }
 
 if let concrete = matrix {
-  print concrete.rowCount();
-  print concrete.columnCount();
-  print concrete.valueAt(0, 2);
-  print concrete.valueAt(2, 0);
-  print concrete.valueAt(0.5, 0);
-  print concrete.transpose().snapshot();
+  print(concrete.rowCount());
+  print(concrete.columnCount());
+  print(concrete.valueAt(0, 2));
+  print(concrete.valueAt(2, 0));
+  print(concrete.valueAt(0.5, 0));
+  print(concrete.transpose().snapshot());
 }
 
 let right: optional<ds.Matrix> = ds.newMatrix([[7, 8], [9, 10], [11, 12]]);
@@ -29,14 +29,14 @@ if let concrete = matrix {
   if let other = right {
     let product = concrete.multiply(other);
     match product {
-      nil => { print "none"; }
-      value => { print value.snapshot(); }
+      nil => { print("none"); }
+      value => { print(value.snapshot()); }
     }
 
     let reverseProduct = other.multiply(concrete);
     match reverseProduct {
-      nil => { print "none"; }
-      value => { print value.snapshot(); }
+      nil => { print("none"); }
+      value => { print(value.snapshot()); }
     }
   }
 }
@@ -46,12 +46,12 @@ if let concrete = matrix {
   if let other = incompatible {
     let product = concrete.multiply(other);
     match product {
-      nil => { print "none"; }
-      value => { print value.snapshot(); }
+      nil => { print("none"); }
+      value => { print(value.snapshot()); }
     }
   }
 }
 
-print ds.newMatrix([]) == nil;
-print ds.newMatrix([[]]) == nil;
-print ds.newMatrix([[1, 2], [3]]) == nil;
+print(ds.newMatrix([]) == nil);
+print(ds.newMatrix([[]]) == nil);
+print(ds.newMatrix([[1, 2], [3]]) == nil);

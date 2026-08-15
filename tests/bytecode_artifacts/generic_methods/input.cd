@@ -16,7 +16,7 @@ impl Box {
 }
 
 let box: Box = Box { value: 0 };
-print box.echo<number>(42);
-print box.echo("hello");
-print box.head<number>([3, 4]);
-print box.make<string>();
+print(box.echo<number>(42));
+print(box.echo("hello"));
+print(box.head<number>([3, 4]));
+print(box.make<string>());

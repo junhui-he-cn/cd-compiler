@@ -8,4 +8,4 @@ impl Box {
 
 let b: Box = Box { value: 10 };
 let result: number = b.add(5) + 1;
-print result;
+print(result);

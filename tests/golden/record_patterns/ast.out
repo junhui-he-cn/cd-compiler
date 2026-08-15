@@ -18,13 +18,13 @@ Program
   Let ada = (construct Person name: "Ada" age: 36 address: (construct Address city: "Cambridge" zip: 1))
   Let hongKong = (construct Person name: "Grace" age: 40 address: (construct Address city: "Hong Kong" zip: 2))
   Let nilPerson: optional<Person> = nil
-  Print (call describe ada)
-  Print (call describe hongKong)
-  Print (call describe nilPerson)
+  Expr (call print (call describe ada))
+  Expr (call print (call describe hongKong))
+  Expr (call print (call describe nilPerson))
   Match ada
     Arm (or Person {name: "Ada"} Person {age: 0})
       Block
-        Print "or"
+        Expr (call print "or")
     Arm Person {}
       Block
-        Print "fallback"
+        Expr (call print "fallback")

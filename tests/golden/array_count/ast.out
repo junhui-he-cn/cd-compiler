@@ -1,8 +1,8 @@
 Program
   Let values: [number] = (array 1 2 3 4)
-  Print (call count values (fun (value) (return (> value 2))))
-  Print (member-call values count (fun (value: number): bool (return (|| (== value 2) (== value 4)))))
+  Expr (call print (call count values (fun (value) (return (> value 2)))))
+  Expr (call print (member-call values count (fun (value: number): bool (return (|| (== value 2) (== value 4))))))
   Let snapshot: [number] = (array 1 2)
-  Print (member-call snapshot count (fun (value) (expr (call push snapshot 9)) (return true)))
-  Print snapshot
-  Print (member-call (array) count (fun (value: number): bool (return true)))
+  Expr (call print (member-call snapshot count (fun (value) (expr (call push snapshot 9)) (return true))))
+  Expr (call print snapshot)
+  Expr (call print (member-call (array) count (fun (value: number): bool (return true))))

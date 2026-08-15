@@ -1,6 +1,6 @@
 enum Option { Some(number), None }
 let value: optional<Option> = nil;
 match value {
-  Option.Some(_) => { print "some"; }
-  Option.None => { print "none"; }
+  Option.Some(_) => { print("some"); }
+  Option.None => { print("none"); }
 }

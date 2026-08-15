@@ -2,5 +2,5 @@ Program
   Let mut x = 1
   Let f = (fun () (return x))
   Expr (= x 2)
-  Print (call f)
-  Print x
+  Expr (call print (call f))
+  Expr (call print x)

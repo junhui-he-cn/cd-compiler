@@ -2,7 +2,7 @@ let mut x = 1;
 {
   let mut x = 10;
   x = x + 5;
-  print x;
+  print(x);
 }
 x = x + 2;
-print x;
+print(x);

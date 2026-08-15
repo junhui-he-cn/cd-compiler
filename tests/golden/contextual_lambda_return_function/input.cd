@@ -13,4 +13,4 @@ fun makeScorer(): fun(Point): number {
 }
 
 let score = makeScorer();
-print score(Point { x: 6, y: 1 });
+print(score(Point { x: 6, y: 1 }));

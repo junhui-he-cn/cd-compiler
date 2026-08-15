@@ -1,2 +1,2 @@
 Program
-  Print (array)
+  Expr (call print (array))

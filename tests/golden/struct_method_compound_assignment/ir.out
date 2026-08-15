@@ -10,10 +10,10 @@ IR
 0008  v5 = load_var @17 c#3
 0009  v6 = constant #3 4
 0010  v7 = call v4(v5, v6)
-0011  print v7
-0012  v8 = load_var @18 c#3
-0013  v9 = field v8.value
-0014  print v9
+0011  v8 = native_call @18 print(v7)
+0012  v9 = load_var @19 c#3
+0013  v10 = field v9.value
+0014  v11 = native_call @22 print(v10)
 
 function $0 inc(this#1, delta#2)
 0000  v0 = load_var @1 this#1

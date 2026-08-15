@@ -1,8 +1,8 @@
 fun increment(value: optional<number>): number {
   if (value == nil) {
-    print "nil";
+    print("nil");
   } else {
-    print "non-nil";
+    print("non-nil");
   }
   return value + 1;
 }

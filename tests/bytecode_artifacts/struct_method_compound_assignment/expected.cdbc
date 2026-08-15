@@ -25,6 +25,7 @@ names:
   n15 = "c#3"
   n16 = "__method_Counter_inc#0"
   n17 = "c#3"
+  n18 = "print"
 
 globals:
   g0 = n0
@@ -73,7 +74,7 @@ block b2:
   return_nil
 
 debug_sources:
-  s0 path="tests/bytecode_artifacts/struct_method_compound_assignment/input.cd" text="struct Counter { value: number }\nimpl Counter { fun inc(delta: number): number { this.value += delta; return this.value; } }\nlet c: Counter = Counter { value: 1 };\nprint c.inc(2);\n"
+  s0 path="tests/bytecode_artifacts/struct_method_compound_assignment/input.cd" text="struct Counter { value: number }\nimpl Counter { fun inc(delta: number): number { this.value += delta; return this.value; } }\nlet c: Counter = Counter { value: 1 };\nprint(c.inc(2));\n"
 
 debug_locations:
   main 0 = s0:2:1
@@ -120,8 +121,8 @@ debug_ranges:
   main 9 = s0:170:171
   main 10 = s0:176:177
   main 11 = s0:170:178
-  main 12 = s0:170:178
-  main 13 = s0:170:178
+  main 12 = s0:164:179
+  main 13 = s0:164:179
   function f0 0 = s0:81:85
   function f0 1 = s0:81:85
   function f0 2 = s0:81:100

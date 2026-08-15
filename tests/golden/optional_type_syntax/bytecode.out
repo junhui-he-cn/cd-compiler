@@ -1,5 +1,5 @@
 native_import i0 = print abi=1
-main registers=26
+main registers=33
 0000  block
 0001  b0 = constant #0 nil
 0002  init_global g0, b0
@@ -18,32 +18,32 @@ main registers=26
 0015  init_global g4, b8
 0016  b9 = load_global g1
 0017  b10 = call_direct $0 [b9]
-0018  b25 = call_native i0 [b10]
-0019  b11 = load_global g2
-0020  b12 = constant #9 0
-0021  b13 = array_get b11, b12
-0022  b25 = call_native i0 [b13]
-0023  b14 = load_global g3
-0024  b25 = call_native i0 [b14]
-0025  b15 = load_global g4
-0026  b16 = struct_get b15, t0, 0
-0027  b25 = call_native i0 [b16]
-0028  b17 = constant #10 7
-0029  init_global g5, b17
-0030  b18 = constant #11 nil
-0031  init_global g6, b18
-0032  b19 = constant #12 nil
-0033  init_global g7, b19
-0034  b20 = constant #13 nil
-0035  init_global g8, b20
-0036  b21 = load_global g5
-0037  b25 = call_native i0 [b21]
-0038  b22 = load_global g6
-0039  b25 = call_native i0 [b22]
-0040  b23 = load_global g7
-0041  b25 = call_native i0 [b23]
-0042  b24 = load_global g8
-0043  b25 = call_native i0 [b24]
+0018  b11 = call_native i0 [b10]
+0019  b12 = load_global g2
+0020  b13 = constant #9 0
+0021  b14 = array_get b12, b13
+0022  b15 = call_native i0 [b14]
+0023  b16 = load_global g3
+0024  b17 = call_native i0 [b16]
+0025  b18 = load_global g4
+0026  b19 = struct_get b18, t0, 0
+0027  b20 = call_native i0 [b19]
+0028  b21 = constant #10 7
+0029  init_global g5, b21
+0030  b22 = constant #11 nil
+0031  init_global g6, b22
+0032  b23 = constant #12 nil
+0033  init_global g7, b23
+0034  b24 = constant #13 nil
+0035  init_global g8, b24
+0036  b25 = load_global g5
+0037  b26 = call_native i0 [b25]
+0038  b27 = load_global g6
+0039  b28 = call_native i0 [b27]
+0040  b29 = load_global g7
+0041  b30 = call_native i0 [b29]
+0042  b31 = load_global g8
+0043  b32 = call_native i0 [b31]
 0044  return_nil
 
 function $0 unwrap/1 registers=6
