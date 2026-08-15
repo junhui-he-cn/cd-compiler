@@ -1,24 +1,12 @@
 # Compiler Design VM Roadmap
 
-This is the active plan for the Rust VM in `vm-rs/`. The compiler, language,
-IR, module-cache producer, and compiler tools are planned in
-[`docs/roadmap.md`](roadmap.md). Changes to `.cdbc`, native calls, module
-products, debug metadata, or compatibility policy are joint slices.
+Current-state record for the Rust VM in `vm-rs/`. All previously planned VM
+slices are void as of 2026-08-15: completed work lives in decision records and
+Git history, and future work starts from a fresh explicit decision. The
+compiler, language, and compiler tools have a separate current-state record in
+[`docs/roadmap.md`](roadmap.md).
 
-The baseline was audited on 2026-08-02 at `master` commit `a78cce37`. Detailed
-history lives in tests and Git; completed micro-slices are not repeated here.
-
-## 0. Current phase: consolidation only
-
-As of 2026-08-10, the default queue accepts consolidation work on existing
-VM functionality only: correctness repairs, interpreter/runtime refactors,
-performance optimization, and evidence or documentation audits. New runtime
-capabilities, host/embedding surfaces, artifact formats, concurrency
-expansion, and new JIT execution modes are not in the default queue until an
-explicit phase decision reopens them. The interpreter remains the default and
-fallback execution path.
-
-## 1. VM product boundary
+## VM product boundary
 
 The VM is a deterministic, validated, observable `.cdbc` execution engine. It
 must:
@@ -35,311 +23,25 @@ must:
 The VM does not independently invent language syntax, type semantics, module
 cache invalidation, async semantics, or compiler optimization policy.
 
-## 2. Current baseline
+## Compatibility constraints
 
-| Area | Shipped baseline | Open boundary |
-| --- | --- | --- |
-| Artifact safety | Shared `cdbc 0.1` parser/formatter/verifier, malformed corpus, resource limits, cancellation | Successor format and integrity envelope are not justified |
-| Execution | Register VM for the complete emitted instruction set and native surface | Further optimization must be workload-driven |
-| Runtime values | Stable identity-bearing storage, non-moving tracing collection at VM safepoints, recursive values, cycle-safe formatting | Incremental/concurrent scheduling remains open; frequency evidence does not justify a threshold |
-| Modules | Deterministic module validation/linking, debug rebasing, typed errors, optional link report | Versioned report serialization is not defined |
-| Embedding | Rust library parse/verify/link/run/trace/debug/profile API plus CLI adapters | Host outcome/sink/session work is explicitly deferred; API remains pre-1.0 and single-threaded |
-| Observability | Interactive debugger, deterministic counters, tracked heap counts, estimated retained bytes, structured error kinds | No stable host schema, wall-clock field, allocator bytes, or RSS contract |
-| Performance/capacity | Reproducible phase benchmark, scaled workloads, capacity and budget corpus, artifact-load and format-capacity evidence | Broader host-cost capacity policy remains deferred |
-| Native boundary | Private registry with arity, callback, resource-touchpoint, and signature-shape metadata | Metadata is not a public ABI or serialized contract |
+`cdbc 0.2` emission with `cdbc 0.1` read compatibility, CLI text/exit
+behavior, deterministic execution, current resource accounting, and C++/Rust
+parity remain compatibility constraints.
 
-`cdbc 0.1`, CLI text/exit behavior, deterministic execution, current resource
-accounting, and C++/Rust parity remain compatibility constraints.
+## Current shipped baseline
 
-## 3. Active VM queue
+| Area | Shipped baseline |
+| --- | --- |
+| Artifact safety | Shared `cdbc 0.2` parser/formatter/verifier with `cdbc 0.1` read compatibility, malformed corpus, resource limits, cancellation |
+| Execution | Register VM for the complete emitted instruction set and native surface |
+| Runtime values | Stable identity-bearing storage, non-moving tracing collection at VM safepoints, recursive values, cycle-safe formatting |
+| Modules | Deterministic module validation/linking, debug rebasing, typed errors, optional link report |
+| Embedding | Rust library parse/verify/link/run/trace/debug/profile API plus CLI adapters |
+| Observability | Interactive debugger, deterministic counters, tracked heap counts, estimated retained bytes, structured error kinds |
+| Performance/capacity | Reproducible phase benchmark, scaled workloads, capacity and budget corpus, artifact-load and format-capacity evidence |
+| Native boundary | Private registry with arity, callback, resource-touchpoint, and signature-shape metadata |
 
-The X1 compatibility matrix, V1 recursive-object lifetime policy, and V3
-profile-driven performance slices are complete and intentionally omitted from
-this active queue. Their verification evidence remains in tests and Git
-history.
-
-The next execution plan is deterministic concurrency first, followed by the
-evidence-driven JIT. V5 establishes task, frame, root, safepoint, cancellation,
-and observable-ordering semantics; V6 consumes that contract. V2 host
-integration and V4 native/release compatibility remain trigger-based deferred
-tracks and do not block this sequence.
-
-### V2: Define a real host integration boundary
-
-**Priority:** trigger-based. **Status:** explicitly deferred on 2026-08-03. The consumer
-gate was audited and a concrete in-repository host consumer is still required
-before API commitment. See
-`v2-host-consumer-gate-001.md` and
-`vm-future-work-deferred-001.md`.
-
-1. **V2A - host outcome:** define one structured execution outcome containing
-   output, typed runtime/resource failure, frames/source ranges, and partial
-   profile data without parsing CLI text.
-2. **V2B - controlled I/O:** add output and diagnostic sinks only with explicit
-   reentrancy, cancellation, resource charging, failure, and determinism rules.
-3. **V2C - schema decision:** version a JSON or other external schema only when
-   a consumer needs a process boundary; keep Rust typed APIs authoritative
-   otherwise.
-
-No filesystem, network, clock, randomness, dynamic plugin, persistent-session,
-or `Send`/`Sync` promise belongs in V2A.
-
-### V4: Stabilize native and release compatibility
-
-**Priority:** trigger-based. **Status:** explicitly deferred on 2026-08-03, pending a real
-ABI or release need. See
-`vm-future-work-deferred-001.md`.
-
-- Publish native registry metadata only after deciding whether names remain the
-  artifact ABI or a successor format introduces versioned native IDs.
-- Centralize runtime type validation only when it preserves existing
-  native-specific diagnostics and callback/resource ordering.
-- Define a release matrix for compiler version, VM library version, CLI
-  version, `cdbc`, module products, and debug metadata before any public crate
-  or successor artifact release.
-
-Private metadata is useful implementation structure, but it is not permission
-to expose a plugin ABI.
-
-### V5: Define deterministic task scheduling before parallel execution
-
-**Priority:** P1. **Status:** V5A contract recorded on 2026-08-03; the V5B
-scheduler control-plane, explicit frame-state foundation, private adapter, and
-typed host task result/join-wake and task-aware output surfaces were implemented
-on 2026-08-04; task-aware trace, profile, debugger, and repeatable workload
-evidence were implemented on 2026-08-06. See
-`v5a-vm-concurrency-contract-001.md`.
-
-Concurrency is a runtime and language contract that a later JIT must preserve.
-It determines task-local frames and roots, GC safepoints, cancellation, output
-and failure ordering, resource charging, native callback behavior, and
-debugger/profile events. Resume it before JIT work, in these slices:
-
-1. **V5A - concurrency contract:** recorded in
-   `v5a-vm-concurrency-contract-001.md`.
-   The named consumer is an in-process Rust library host; the contract fixes
-   one-thread cooperative scheduling, task lifecycle, join/wake, cancellation,
-   resource scopes, output/event ordering, and task-root ownership. It does not
-   promise OS threads, language-level async syntax, or `Send`/`Sync`.
-2. **V5B - cooperative scheduler:** the control-plane foundation, private
-   one-task execution adapter, and additive typed host session are recorded in
-   `v5b-vm-scheduler-control-plane-001.md`,
-   `v5b-vm-task-host-result-001.md`,
-   `v5b-vm-task-output-001.md`,
-   `v5b-vm-task-trace-001.md`,
-   `v5b-vm-task-profile-001.md`, and
-   `v5b-vm-task-debugger-001.md`,
-   plus `v5b-vm-task-workload-001.md`.
-   It provides FIFO task states, quantum requeue, explicit wake,
-   cancellation transitions, a resumable frame stack with validated return
-   transfer, dispatch-boundary GC, and parity checks for output, budgets,
-   callbacks, roots, and runtime-error stacks. The frame adapter remains an
-   internal implementation detail; source syntax, `.cdbc 0.1`, and existing
-   single-task CLI/library behavior are unchanged. The additive host session
-   exposes typed task outcomes, join/wake, explicit stepping, and deterministic
-   fail-fast cancellation. Task output has stable session sequences and task
-   identity while retaining the dispatch-ordered string buffer and cumulative
-   output budget. Opt-in task trace uses per-task stacks and shares the same
-   session event order with output. Opt-in task profile exposes aggregate and
-   per-task execution counters while keeping shared-heap metrics session-wide.
-   Opt-in task debugger hooks expose the selected task, task-local stack and
-   locals, FIFO ready queue, and stable task states while all dispatch is
-   stopped. The deterministic workload harness validates these surfaces across
-   repeated runs and multiple quantum sizes without making timing claims.
-3. **V5C - concurrency expansion decision:** only after V5B workloads exist,
-   decide whether async syntax, channels/actors, shared-memory concurrency,
-   multiple OS threads, or `Send`/`Sync` provides enough product value to
-   justify its nondeterminism and synchronization costs.
-
-   Under the current consolidation phase, V5C is not in the default queue:
-   concurrency expansion is new functionality and resumes only after an
-   explicit phase decision.
-
-**Gate:** repeated-run determinism, task lifecycle and cancellation, per-task
-root tracing and cycle collection, native callbacks, debugger pauses,
-trace/profile event order, resource limits, runtime failures, and CLI/library
-parity.
-
-### V6: Add an evidence-driven JIT after the scheduling contract
-
-**Priority:** P2. **Status:** V6A hot-workload evidence and the V6B runtime
-contract were recorded on 2026-08-06; V6C x86-64 code generation and the
-private VM entry transition were implemented on 2026-08-08; the ordinary
-`VM::run` parity gate was added as a test-only slice on 2026-08-09; the
-ignored JIT efficiency benchmark was committed on 2026-08-10 (`cb0e04be`).**
-See
-`v6a-hot-workload-evidence-001.md`
-and `v6b-jit-runtime-contract-001.md`,
-plus `v6c-jit-x86-64-backend-001.md`
-and `v6c-jit-entry-transition-001.md`.
-
-The 2026-08-10 release-mode benchmark shows the admitted scalar JIT path is
-currently slower than the interpreter: about 1.9x slower on the
-`execution_closure` workload and about 11.5x slower on a wider scalar body,
-because every bytecode instruction is still lowered to FFI helper calls plus a
-per-instruction frame materialization. V6C is therefore a correctness and
-safety baseline, not a performance result. Any optimizing JIT slice (for
-example inlining scalar operations and removing per-instruction frame
-cloning) is consolidation work, but it still requires a profile-backed
-decision before implementation and remains outside the production default.
-
-JIT compilation is an optional execution optimization, not a new language
-semantic. Starting it after V5B prevents a single-thread-only code generator
-from fixing assumptions about frames, roots, safepoints, cancellation, and
-thread state that concurrency would later invalidate.
-
-1. **V6A - hot-workload evidence:** recorded in
-   `v6a-hot-workload-evidence-001.md`.
-   The current evidence identifies `execution_loop` as the primary
-   end-to-end candidate and the two function bodies in `execution_closure` as
-   the primary function-level candidate. It establishes stable bytecode,
-   artifact, and output/error/exit observations, but deliberately does not
-   claim a portable speedup or set a wall-clock threshold.
-2. **V6B - JIT runtime contract:** recorded in
-   `v6b-jit-runtime-contract-001.md`.
-   The contract keeps the interpreter as the default and fallback, requires
-   frame materialization at scheduler/native/GC/error boundaries, preserves
-   source/debug/profile/resource/cancellation behavior, bounds a per-VM code
-   cache, and keeps `.cdbc` independent from generated machine code. The
-   initial V6C tier is limited to an explicit verified function whitelist and
-   may fall back for cooperative or observable sessions.
-3. **V6C - optional baseline JIT:** the first admission/cache preflight is
-   implemented in `v6c-jit-eligibility-cache-001.md`.
-   It uses Cranelift `0.134.3` (`cranelift-frontend` plus
-   `cranelift-codegen`) to build and verify IR for an explicit verified-function
-   whitelist, while keeping JIT disabled by default and rejecting
-   observable/cooperative and unsupported units with structured interpreter
-   fallback reasons. Eligible CD values remain opaque handles and cross the
-   future VM helper bridge through Cranelift calls. The bounded per-VM cache
-   retains verified IR and VM-local finalized x86-64 code; generated code is
-   never serialized into an artifact. The helper ABI and VM-owned frame
-   materialization and safepoint bridge are implemented in
-   `v6c-jit-helper-safepoint-001.md`;
-   the pre-executable entry lifetime and rollback guard is implemented in
-   `v6c-jit-code-lifetime-rollback-001.md`;
-   the x86-64 backend is recorded in
-   `v6c-jit-x86-64-backend-001.md`.
-   The private ordinary-call entry transition is recorded in
-   `v6c-jit-entry-transition-001.md`:
-   it is enabled only by internal tests, charges the shared instruction
-   checkpoint, materializes registers at the helper boundary, transports
-   typed errors, and restores an entry snapshot for protocol fallback. The
-   production VM constructor, observable modes, and cooperative sessions stay
-   interpreter-controlled; full parity for native/GC/debug/profile and a
-   default execution decision remain later gates.
-   The ordinary `VM::run` parity gate is recorded in
-   `v6c-jit-run-parity-001.md`: it covers
-   an eligible main-to-function call, repeated VM-local cache reuse, and
-   runtime-error parity while keeping activation test-only.
-   Tiering or optimizing JIT work requires a later profile-backed decision.
-
-**Decision gate:** do not place JIT implementation in the default VM queue
-before V5B establishes the task, frame, root, and safepoint model. A later JIT
-slice must preserve the interpreter as the compatibility and rollback path.
-
-## 4. Deferred VM work
-
-These tracks stay outside the default queue until their trigger is met:
-
-- binary or successor artifacts: require measured load/size/integrity pressure
-  and the existing compatibility matrix;
-- persistent sessions, snapshot, or rollback: require a host/REPL consumer and
-  the established lifetime policy;
-- `Send`/`Sync`, async scheduling, or concurrency expansion beyond V5: follow
-  V5C and require a concrete consumer plus language and deterministic
-  scheduling decisions;
-- optimizing JIT tiers or native code generation beyond V6: follow the V6
-  contract and require stable profiles, a fallback interpreter, debug/error
-  mapping, GC safepoints, code-cache limits, and demonstrated hot workloads;
-- exact allocator/RSS reporting: require a platform/tooling policy distinct
-  from VM-owned retained-byte estimates;
-- filesystem, network, time, randomness, and dynamic native plugins: require
-  explicit capabilities, test doubles, resource budgets, and deterministic
-  fallback behavior.
-
-## 5. Dependency order
-
-```text
-V5A concurrency contract (recorded)
-  -> V5B scheduler control plane (implemented)
-  -> V5B resumable frame foundation (implemented)
-  -> V5B task execution adapter (implemented)
-  -> V5B typed host result and join/wake (implemented)
-  -> V5B task-aware output (implemented)
-  -> V5B task-aware trace (implemented)
-  -> V5B task-aware profile (implemented)
-  -> V5B task-aware debugger (implemented)
-  -> repeatable multi-task workloads (implemented)
-  -> optional V5C concurrency expansion decision
-
-completed V5B + stable profile + demonstrated hot workload
-  -> V6A hot-workload evidence (recorded)
-  -> V6B JIT runtime contract (recorded)
-  -> V6C Cranelift IR admission/finite-cache preflight (implemented)
-  -> V6C VM helper ABI/frame materialization/safepoint bridge (implemented)
-  -> V6C compiled-entry lifetime/rollback guard (implemented)
-  -> V6C x86-64 machine-code backend (implemented)
-  -> V6C private ordinary-call entry transition (implemented, test-only)
-  -> V6C ordinary VM::run parity gate (implemented, test-only)
-  -> optional V6C baseline JIT execution
-
-real host consumer
-  -> V2A structured host outcome
-  -> V2B controlled I/O
-  -> optional V2C external schema
-
-demonstrated ABI/release need
-  -> V4 native/release compatibility decision
-  -> optional successor artifact work
-```
-
-V5B's deterministic host concurrency observability and workload evidence are
-complete. A concrete consumer must justify optional V5C expansion. V6A
-characterization is recorded with stable profile surfaces, bytecode shape, and
-repeated correctness observations; the mixed, startup-sensitive timing data
-does not establish a speedup threshold. The V6B runtime contract is recorded;
-the V6C x86-64 backend now generates and directly exercises finalized host code
-behind the internal helper ABI. A private ordinary-call transition now proves
-callee-frame construction, helper-error transport, checkpoint charging, and
-interpreter snapshot fallback for the admitted scalar subset. Full/default VM
-execution remains deferred: native/callback, GC, debugger/profile, and
-cooperative parity still require their own boundaries and an explicit opt-in
-decision. The ordinary `VM::run` path now has test-only output, cache-reuse,
-runtime-error, and instruction-count parity coverage for the admitted scalar
-call. The bounded cache, typed helper dispatcher, frame materialization,
-safepoint bridge, compiled-entry lifetime guard, executable mapping reset, and
-interpreter fallback gates remain outside the production default.
-V2 host integration and V4 release compatibility resume only when their named
-consumer or ABI/release trigger appears.
-
-## 6. Verification contract
-
-For a Rust VM-only slice, run at least:
-
-```sh
-cargo test --manifest-path vm-rs/Cargo.toml
-python3 tests/bytecode_artifact_tests.py ./build/compiler_design vm-rs
-python3 tests/bytecode_module_artifact_tests.py ./build/compiler_design vm-rs
-python3 tests/run_rust_vm_tests.py ./build/compiler_design vm-rs --goldens
-python3 tests/debugger_tests.py ./build/compiler_design vm-rs
-python3 tests/profile_tests.py ./build/compiler_design vm-rs
-python3 tests/vm_capacity_tests.py ./build/compiler_design vm-rs
-git diff --check
-```
-
-Changes to the parser, verifier, linker, native names, resource accounting,
-module products, debug metadata, or compiler emitter also require the affected
-module-cache, malformed, boundary, golden, CTest, and canonical verification
-commands from `AGENTS.md` and `docs/roadmap.md`.
-
-Performance work must record baseline and candidate commit, host/toolchain,
-workload digest, repetition count, same-sequence measurements, and exact
-output/error/exit parity. Generated reports are evidence artifacts, not source
-files to commit unless a decision explicitly defines a checked-in baseline.
-
-## 7. Completion rule
-
-VM progress is measured by closed runtime contracts and reproducible evidence,
-not by the count of interpreter micro-optimizations. A storage, host, native,
-or artifact change is complete only when its lifecycle, compatibility,
-diagnostics, observability, and rollback boundary are all explicit.
+The authoritative behavior contracts live in the tests, decision records,
+`docs/bytecode-text-format.md`, and `vm-rs/README.md`; the verification
+command set lives in `AGENTS.md`.
