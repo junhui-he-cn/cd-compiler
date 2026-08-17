@@ -300,7 +300,8 @@ File-backed lexer, parser, and type diagnostics always include the file path: `<
   pattern arguments were removed. Named struct values may use partial,
   reordered, nested, and namespace-qualified record patterns such as
   `Person { name: "Ada" }`, `Point { x, y }`, and `geo.Point { x: 1 }`;
-  a field without `:` is shorthand for a same-name binding. `match` is statement-only:
+  a field without `:` is shorthand for a same-name binding, and a final `..`
+  explicitly ignores remaining fields. `match` is statement-only:
   each arm is `pattern [if condition] => block`, and the match requires
   exhaustive coverage from unguarded arms or a wildcard/binding arm. Matches
   support `nil`, `true`, `false`, number, and string literal patterns, nullable

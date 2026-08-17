@@ -1600,8 +1600,24 @@ PatternPtr Parser::recordPattern(std::optional<Token> qualifier, Token name)
     consume(TokenType::LeftBrace, "expected `{` after record pattern name");
 
     std::vector<RecordPatternField> fields;
+    std::optional<Token> rest;
     if (!check(TokenType::RightBrace)) {
-        do {
+        while (true) {
+            const bool hasAdjacentRestDots = check(TokenType::Dot)
+                && checkNext(TokenType::Dot)
+                && peek().endOffset == tokens_[current_ + 1].startOffset;
+            if (hasAdjacentRestDots) {
+                Token restToken = advance();
+                const Token restEnd = consume(TokenType::Dot, "expected second `.` in record pattern rest");
+                restToken.lexeme = "..";
+                restToken.endOffset = restEnd.endOffset;
+                if (restToken.range && restEnd.range) {
+                    restToken.range->end = restEnd.range->end;
+                }
+                rest = std::move(restToken);
+                break;
+            }
+
             Token fieldName = consume(TokenType::Identifier, "expected record pattern field name");
             PatternPtr fieldPattern;
             if (match(TokenType::Colon)) {
@@ -1612,11 +1628,15 @@ PatternPtr Parser::recordPattern(std::optional<Token> qualifier, Token name)
                     fieldName);
             }
             fields.push_back(RecordPatternField{std::move(fieldName), std::move(fieldPattern)});
-        } while (match(TokenType::Comma));
+            if (!match(TokenType::Comma)) {
+                break;
+            }
+        }
     }
     consume(TokenType::RightBrace, "expected `}` after record pattern fields");
     return withSpan(
-        std::make_unique<RecordPattern>(std::move(qualifier), std::move(name), std::move(fields)),
+        std::make_unique<RecordPattern>(
+            std::move(qualifier), std::move(name), std::move(fields), std::move(rest)),
         span);
 }
 

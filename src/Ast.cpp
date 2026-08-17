@@ -880,10 +880,12 @@ void OrPattern::print(std::ostream& out) const
 RecordPattern::RecordPattern(
     std::optional<Token> qualifier,
     Token name,
-    std::vector<RecordPatternField> fields)
+    std::vector<RecordPatternField> fields,
+    std::optional<Token> rest)
     : qualifier(std::move(qualifier))
     , name(std::move(name))
     , fields(std::move(fields))
+    , rest(std::move(rest))
 {
 }
 
@@ -899,6 +901,12 @@ void RecordPattern::print(std::ostream& out) const
         }
         out << fields[i].name.lexeme << ": ";
         writePattern(out, *fields[i].pattern);
+    }
+    if (rest) {
+        if (!fields.empty()) {
+            out << ", ";
+        }
+        out << "..";
     }
     out << '}';
 }
@@ -1766,6 +1774,9 @@ void populatePattern(Pattern& pattern)
                 populatePattern(*field.pattern);
                 mergeRange(result, field.pattern->range);
             }
+        }
+        if (record->rest) {
+            mergeRange(result, tokenRange(*record->rest));
         }
     } else if (auto* variant = dynamic_cast<VariantPattern*>(&pattern)) {
         if (variant->qualifier) {

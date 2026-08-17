@@ -138,13 +138,16 @@ patternArgument = pattern ;
 recordPattern = identifier, "{", [ recordPatternFields ], "}"
               | identifier, ".", identifier, "{", [ recordPatternFields ], "}" ;
 
-recordPatternFields = recordPatternField,
-                      { ",", recordPatternField } ;
+recordPatternFields = ".."
+                    | recordPatternField,
+                      { ",", recordPatternField },
+                      [ ",", ".." ] ;
 
 recordPatternField = identifier, [ ":", pattern ] ;
 
 (* A record field without `:` is shorthand for a binding with the same name:
-   `Point { x, y }` means `Point { x: x, y: y }`. *)
+   `Point { x, y }` means `Point { x: x, y: y }`. A final `..` explicitly
+   ignores the remaining fields, so `Point { x, .. }` is a partial pattern. *)
 
 whileStmt   = "while", expression, block ;
 

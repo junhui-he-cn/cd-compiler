@@ -1,0 +1,9 @@
+Program
+  Struct Point {x: number, y: number}
+  Fun describe(point: Point): string
+    Match point
+      Arm Point {x: x, ..}
+        Block
+          Return (call str x)
+  Let point = (construct Point x: 7 y: 9)
+  Expr (call print (call describe point))

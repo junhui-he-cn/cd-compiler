@@ -380,12 +380,14 @@ struct RecordPattern final : Pattern {
     RecordPattern(
         std::optional<Token> qualifier,
         Token name,
-        std::vector<RecordPatternField> fields);
+        std::vector<RecordPatternField> fields,
+        std::optional<Token> rest);
     void print(std::ostream& out) const override;
 
     std::optional<Token> qualifier;
     Token name;
     std::vector<RecordPatternField> fields;
+    std::optional<Token> rest;
 };
 
 struct VariantPattern final : Pattern {

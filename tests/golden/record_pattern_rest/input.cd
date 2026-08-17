@@ -1,0 +1,10 @@
+struct Point { x: number, y: number }
+
+fun describe(point: Point): string {
+  match point {
+    Point { x, .. } => { return str(x); }
+  }
+}
+
+let point = Point { x: 7, y: 9 };
+print(describe(point));

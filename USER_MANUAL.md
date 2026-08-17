@@ -635,7 +635,7 @@ match point {
 }
 ```
 
-`Point { x, y }` 等价于 `Point { x: x, y: y }`。record 模式可以省略字段或调整顺序，例如 `Point { y: 2 }`。OR 模式的所有分支必须绑定相同的名字并具有兼容类型。guard 写在模式和 `=>` 之间，但 guard 不参与穷尽性覆盖：
+`Point { x, y }` 等价于 `Point { x: x, y: y }`。如果需要明确忽略未列出的字段，可以在末尾使用 `..`，例如 `Point { x, .. }`。record 模式可以省略字段或调整顺序，例如 `Point { y: 2 }`。OR 模式的所有分支必须绑定相同的名字并具有兼容类型。guard 写在模式和 `=>` 之间，但 guard 不参与穷尽性覆盖：
 
 ```cd
 enum NamedResult {
