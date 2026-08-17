@@ -1,0 +1,7 @@
+module 0 "<repo>/tests/golden/selective_imports/lib.cd"
+  export value answer: number
+  export value greet: fun(User): string
+  export struct User
+    field name: string
+
+module 1 entry "<repo>/tests/golden/selective_imports/input.cd"

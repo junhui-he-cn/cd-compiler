@@ -1,0 +1,14 @@
+Program
+  Module 0
+    Let hidden = "private"
+    Struct User {name: string}
+    Fun greet(user: User): string
+      Return (field user name)
+    Let answer = 42
+    Export answer User greet
+  Module 1 entry
+    Import { answer greet as say } from "./lib.cd"
+    Import { User } from "./lib.cd"
+    Let user: User = (construct User name: "Ada")
+    Expr (call print (call say user))
+    Expr (call print answer)

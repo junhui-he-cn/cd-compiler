@@ -610,15 +610,36 @@ StmtPtr Parser::letDeclaration()
 StmtPtr Parser::importDeclaration()
 {
     Token keyword = previous();
+
+    std::vector<ImportSpecifier> specifiers;
+    if (match(TokenType::LeftBrace)) {
+        if (check(TokenType::RightBrace)) {
+            throw ParseError(peek(), "expected at least one imported name");
+        }
+        do {
+            Token name = consume(TokenType::Identifier, "expected identifier in import list");
+            std::optional<Token> alias;
+            if (match(TokenType::As)) {
+                alias = consume(TokenType::Identifier, "expected local name after `as` in import list");
+            }
+            specifiers.push_back(ImportSpecifier{std::move(name), std::move(alias)});
+        } while (match(TokenType::Comma));
+        consume(TokenType::RightBrace, "expected `}` after import list");
+        if (!matchContextualIdentifier("from")) {
+            throw ParseError(peek(), "expected `from` after import list");
+        }
+    }
+
     Token path = consume(TokenType::String, "expected import path string");
     std::optional<Token> alias;
-    if (match(TokenType::As)) {
+    if (specifiers.empty() && match(TokenType::As)) {
         alias = consume(TokenType::Identifier, "expected namespace alias after `as`");
     }
     consume(TokenType::Semicolon, alias ? "expected `;` after import alias" : "expected `;` after import path");
     const std::optional<SourceSpan> span = spanForToken(keyword);
     return withSpan(
-        std::make_unique<ImportStmt>(std::move(keyword), std::move(path), std::move(alias)),
+        std::make_unique<ImportStmt>(
+            std::move(keyword), std::move(path), std::move(alias), std::move(specifiers)),
         span);
 }
 

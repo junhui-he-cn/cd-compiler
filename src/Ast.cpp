@@ -163,9 +163,21 @@ void writeInlineStmt(std::ostream& out, const Stmt& stmt)
     }
 
     if (const auto* import = dynamic_cast<const ImportStmt*>(&stmt)) {
-        out << "(import " << import->path.lexeme;
-        if (import->alias) {
-            out << " as " << import->alias->lexeme;
+        out << "(import";
+        if (!import->specifiers.empty()) {
+            out << " {";
+            for (const ImportSpecifier& specifier : import->specifiers) {
+                out << ' ' << specifier.name.lexeme;
+                if (specifier.alias) {
+                    out << " as " << specifier.alias->lexeme;
+                }
+            }
+            out << " } from " << import->path.lexeme;
+        } else {
+            out << ' ' << import->path.lexeme;
+            if (import->alias) {
+                out << " as " << import->alias->lexeme;
+            }
         }
         out << ')';
         return;
@@ -1060,19 +1072,36 @@ void ImplStmt::print(std::ostream& out, int indent) const
     }
 }
 
-ImportStmt::ImportStmt(Token keyword, Token path, std::optional<Token> alias)
+ImportStmt::ImportStmt(
+    Token keyword,
+    Token path,
+    std::optional<Token> alias,
+    std::vector<ImportSpecifier> specifiers)
     : keyword(std::move(keyword))
     , path(std::move(path))
     , alias(std::move(alias))
+    , specifiers(std::move(specifiers))
 {
 }
 
 void ImportStmt::print(std::ostream& out, int indent) const
 {
     writeIndent(out, indent);
-    out << "Import " << path.lexeme;
-    if (alias) {
-        out << " as " << alias->lexeme;
+    out << "Import";
+    if (!specifiers.empty()) {
+        out << " {";
+        for (const ImportSpecifier& specifier : specifiers) {
+            out << ' ' << specifier.name.lexeme;
+            if (specifier.alias) {
+                out << " as " << specifier.alias->lexeme;
+            }
+        }
+        out << " } from " << path.lexeme;
+    } else {
+        out << ' ' << path.lexeme;
+        if (alias) {
+            out << " as " << alias->lexeme;
+        }
     }
     out << "\n";
 }
@@ -1869,6 +1898,12 @@ void populateStmt(Stmt& statement)
         }
     } else if (auto* import = dynamic_cast<ImportStmt*>(&statement)) {
         mergeRange(result, tokenRange(import->keyword));
+        for (const ImportSpecifier& specifier : import->specifiers) {
+            mergeRange(result, tokenRange(specifier.name));
+            if (specifier.alias) {
+                mergeRange(result, tokenRange(*specifier.alias));
+            }
+        }
         mergeRange(result, tokenRange(import->path));
         if (import->alias) {
             mergeRange(result, tokenRange(*import->alias));

@@ -691,6 +691,17 @@ import "./lib.cd" as lib;
 print(lib.answer());
 ```
 
+也可以只导入指定的公开名称：
+
+```cd
+import { answer, User } from "./lib.cd";
+import { answer as getAnswer } from "./lib.cd";
+print(getAnswer());
+```
+
+选择性导入中的 `as` 当前用于值导入的本地重命名；结构体和枚举支持同名选择性导入，
+类型重命名保留给后续模块语法切片。
+
 导出多个名称可以写成 `export answer, User;`。转导出可以写成 `export answer from "./lib.cd";`，但转导出的名字不会自动成为当前模块的本地名字；如果转导出模块也需要使用该名称，应另外写 `import`。相同规范路径的重复导入会被去重；不能从 stdin 导入。
 
 显式路径（以 `./`、`../` 或绝对路径开头）只相对导入文件所在目录解析，并尝试原路径和补上 `.cd` 的路径。非显式路径先在导入文件所在目录尝试，再按命令行中 `-I`/`--import-path` 的顺序尝试各搜索目录；每个目录同样尝试原路径和 `.cd`。搜索路径不会覆盖显式相对路径。当前不支持包清单、import map、通配符导出或导出重命名。

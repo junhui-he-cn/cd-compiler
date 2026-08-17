@@ -1,0 +1,10 @@
+let hidden = "private";
+
+struct User { name: string }
+
+fun greet(user: User): string {
+  return user.name;
+}
+
+let answer = 42;
+export answer, User, greet;

@@ -128,7 +128,8 @@ Phase 10 已移除 `Parser::conditionExpression()` 对 struct constructor 的全
 ### 9. import / export
 
 手册第 9 章、EBNF `importDecl`/`exportDecl`、AST `ImportStmt`/`ExportStmt`、
-FrontendSession 模块图语义一致（直接导入暴露导出名、别名限定访问、转导出）。
+FrontendSession 模块图语义一致（直接导入暴露导出名、选择性导入支持值别名、
+命名空间别名限定访问、转导出）。
 但用户手册第 126 行的 CLI 描述仍是旧的「多个文件拼接为一个组合程序」，与当前
 「每文件一个模块」实现矛盾，见漂移 #3。
 
@@ -189,5 +190,7 @@ native 函数调用 `print(value)`，AST 不再有 `PrintStmt`。两条以实现
 支持字段简写，例如 `Point { x, y }` 等价于 `Point { x: x, y: y }`，并支持末尾的
 rest pattern（`Point { x, .. }`）显式忽略其余字段。Phase 10 已完成：struct literal
 可以通过显式分组进入条件表达式，同时裸条件仍保留清晰的 block 边界。下一阶段是
-Phase 11 已完成：显式泛型调用使用 `f::<T>(x)`，不再依赖空白或 token column；下一阶段是
-Phase 12：模块语法增强。
+Phase 11 已完成：显式泛型调用使用 `f::<T>(x)`，不再依赖空白或 token column。Phase 12
+的第一片已完成：支持 `import { name, value as local } from "...";`，值可本地重命名，
+结构体和枚举支持同名选择性导入；下一片是声明式 `export fun/struct` 或类型重命名的
+独立决策。

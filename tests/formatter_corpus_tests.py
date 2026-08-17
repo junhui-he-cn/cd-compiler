@@ -12,7 +12,7 @@ from pathlib import Path
 
 
 ERROR_CASES = {"runtime_errors", "parse_errors", "type_errors", "import_errors"}
-EXPECTED_CASE_COUNT = 237
+EXPECTED_CASE_COUNT = 238
 
 
 def compiler_inputs(case_dir: Path) -> list[Path]:
@@ -74,7 +74,7 @@ def comments(source: str) -> list[str]:
 
 
 def has_import(source: str) -> bool:
-    return bool(re.search(r"(?:^|\s)import\s+\"|export\s+.*?from\s+\"", source))
+    return bool(re.search(r"(?:^|\s)import\s+(?:\"|\{)|export\s+.*?from\s+\"", source))
 
 
 def fail(case_dir: Path, message: str, completed: subprocess.CompletedProcess[str] | None = None) -> None:

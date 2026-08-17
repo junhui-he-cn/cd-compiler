@@ -825,7 +825,8 @@ void TypeChecker::checkImport(const ImportStmt& statement)
     }
 
     const std::size_t currentModuleId = moduleStack_.back();
-    if (!statement.alias && !moduleSymbols_.markDirectImport(currentModuleId, statement.resolvedModuleId)) {
+    if (!statement.alias && statement.specifiers.empty()
+        && !moduleSymbols_.markDirectImport(currentModuleId, statement.resolvedModuleId)) {
         return;
     }
 
@@ -845,12 +846,64 @@ void TypeChecker::checkImport(const ImportStmt& statement)
     }
 
     const ModuleValueExports values = valueExportsFromInterface(*importedInterface);
+    const ModuleStructExports structs = structExportsFromInterface(*importedInterface, statement.keyword);
+    const ModuleEnumExports enums = enumExportsFromInterface(*importedInterface, statement.keyword);
+    const ModuleMethodExports methods = methodExportsFromInterface(*importedInterface);
+
+    if (!statement.specifiers.empty()) {
+        for (const ImportSpecifier& specifier : statement.specifiers) {
+            const std::string& sourceName = specifier.name.lexeme;
+            const Token& localName = specifier.alias ? *specifier.alias : specifier.name;
+
+            if (const auto value = values.find(sourceName); value != values.end()) {
+                declareImportedVariable(localName, value->second);
+                continue;
+            }
+
+            if (const auto structure = structs.find(sourceName); structure != structs.end()) {
+                if (specifier.alias) {
+                    throw TypeError(
+                        *specifier.alias,
+                        "selective import aliases are currently supported for values only");
+                }
+                if (structTypes_.find(sourceName) != structTypes_.end()) {
+                    throw TypeError(localName, "duplicate struct `" + sourceName + "`");
+                }
+                structTypes_.emplace(sourceName, structure->second);
+                const auto methodTable = methods.find(sourceName);
+                if (methodTable != methods.end()) {
+                    importMethodExports(localName, ModuleMethodExports{{sourceName, methodTable->second}});
+                }
+                continue;
+            }
+
+            if (const auto enumeration = enums.find(sourceName); enumeration != enums.end()) {
+                if (specifier.alias) {
+                    throw TypeError(
+                        *specifier.alias,
+                        "selective import aliases are currently supported for values only");
+                }
+                if (enumTypes_.find(sourceName) != enumTypes_.end()
+                    || structTypes_.find(sourceName) != structTypes_.end()) {
+                    throw TypeError(localName, "duplicate type " + sourceName);
+                }
+                enumTypes_.emplace(sourceName, enumeration->second);
+                continue;
+            }
+
+            throw TypeError(
+                specifier.name,
+                "module `" + sourcePathLabel(statement.path) + "` has no exported name `"
+                    + sourceName + "`");
+        }
+        return;
+    }
+
     for (const auto& entry : values) {
         Token name{TokenType::Identifier, entry.first, statement.keyword.line, statement.keyword.column};
         declareImportedVariable(name, entry.second);
     }
 
-    const ModuleStructExports structs = structExportsFromInterface(*importedInterface, statement.keyword);
     for (const auto& entry : structs) {
         if (structTypes_.find(entry.first) != structTypes_.end()) {
             Token name{TokenType::Identifier, entry.first, statement.keyword.line, statement.keyword.column};
@@ -859,7 +912,6 @@ void TypeChecker::checkImport(const ImportStmt& statement)
         structTypes_.emplace(entry.first, entry.second);
     }
 
-    const ModuleEnumExports enums = enumExportsFromInterface(*importedInterface, statement.keyword);
     for (const auto& entry : enums) {
         if (enumTypes_.find(entry.first) != enumTypes_.end()
             || structTypes_.find(entry.first) != structTypes_.end()) {
@@ -869,7 +921,6 @@ void TypeChecker::checkImport(const ImportStmt& statement)
         enumTypes_.emplace(entry.first, entry.second);
     }
 
-    const ModuleMethodExports methods = methodExportsFromInterface(*importedInterface);
     importMethodExports(statement.keyword, methods);
 }
 

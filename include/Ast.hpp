@@ -444,13 +444,23 @@ struct ImplStmt final : Stmt {
     std::vector<MethodDecl> methods;
 };
 
+struct ImportSpecifier {
+    Token name;
+    std::optional<Token> alias;
+};
+
 struct ImportStmt final : Stmt {
-    ImportStmt(Token keyword, Token path, std::optional<Token> alias);
+    ImportStmt(
+        Token keyword,
+        Token path,
+        std::optional<Token> alias,
+        std::vector<ImportSpecifier> specifiers = {});
     void print(std::ostream& out, int indent) const override;
 
     Token keyword;
     Token path;
     std::optional<Token> alias;
+    std::vector<ImportSpecifier> specifiers;
     std::size_t resolvedModuleId = static_cast<std::size_t>(-1);
 };
 

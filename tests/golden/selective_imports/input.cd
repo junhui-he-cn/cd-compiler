@@ -1,0 +1,6 @@
+import { answer, greet as say } from "./lib.cd";
+import { User } from "./lib.cd";
+
+let user: User = User { name: "Ada" };
+print(say(user));
+print(answer);

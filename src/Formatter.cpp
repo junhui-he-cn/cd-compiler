@@ -23,6 +23,7 @@ struct Delimiter {
     bool empty = false;
     std::size_t baseIndent = 0;
     bool wrapped = false;
+    bool listLike = false;
 };
 
 // Line width is measured in emitted source bytes. Strings and comments are
@@ -771,6 +772,8 @@ void emitToken(
         break;
     }
     case TokenType::LeftBrace: {
+        const bool importList = tokenIndex > 0
+            && tokens[tokenIndex - 1]->type == TokenType::Import;
         bool hasComment = false;
         for (std::size_t pieceIndex = currentPieceIndex + 1;
              pieceIndex < nextTokenPieceIndex;
@@ -789,10 +792,17 @@ void emitToken(
                 && pieces[nextTokenPieceIndex].token
                 && pieces[nextTokenPieceIndex].token->type == TokenType::RightBrace);
         state.writeRaw(token.lexeme);
-        state.delimiters.push_back(Delimiter{DelimiterKind::Brace, empty});
-        if (!empty) {
+        state.delimiters.push_back(Delimiter{
+            DelimiterKind::Brace,
+            empty,
+            state.indent,
+            false,
+            importList});
+        if (!empty && !importList) {
             ++state.indent;
             state.pendingLineBreak = true;
+        } else if (!empty && importList) {
+            state.space();
         }
         if (token.type == TokenType::LeftBrace && state.inForHeader) {
             state.inForHeader = false;
@@ -801,10 +811,12 @@ void emitToken(
     }
     case TokenType::RightBrace: {
         bool empty = false;
+        bool listLike = false;
         if (!state.delimiters.empty() && state.delimiters.back().kind == DelimiterKind::Brace) {
             empty = state.delimiters.back().empty;
+            listLike = state.delimiters.back().listLike;
         }
-        if (!empty) {
+        if (!empty && !listLike) {
             state.flushLineBreak();
             if (!state.lineStart) {
                 state.newline();
@@ -813,15 +825,27 @@ void emitToken(
                 --state.indent;
             }
         }
+        if (listLike && !empty) {
+            state.trimTrailingSpaces();
+            state.space();
+        }
         state.writeRaw(token.lexeme);
         popDelimiter(state, DelimiterKind::Brace);
-        state.pendingClose = true;
+        if (listLike) {
+            state.space();
+        } else {
+            state.pendingClose = true;
+        }
         break;
     }
     case TokenType::Comma:
         state.writeRaw(token.lexeme);
         if (state.hasTopDelimiter(DelimiterKind::Brace)) {
-            state.pendingLineBreak = true;
+            if (state.delimiters.back().listLike) {
+                state.space();
+            } else {
+                state.pendingLineBreak = true;
+            }
         } else if (shouldWrapAfterComma(state)) {
             state.wrapTopList();
         } else {

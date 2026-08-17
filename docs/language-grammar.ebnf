@@ -78,8 +78,13 @@ letDecl     = "let", [ "mut" ], identifier,
               [ ":", typeExpr ],
               "=", expression, ";" ;
 
-importDecl  = "import", string,
-              [ "as", identifier ], ";" ;
+importDecl  = "import", ( string,
+              [ "as", identifier ]
+            | "{", importSpecifier,
+              { ",", importSpecifier }, "}",
+              "from", string ), ";" ;
+
+importSpecifier = identifier, [ "as", identifier ] ;
 
 exportDecl  = "export", identifier,
               { ",", identifier },

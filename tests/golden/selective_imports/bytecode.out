@@ -1,0 +1,32 @@
+native_import i0 = print abi=1
+main registers=12
+0000  block
+0001  b0 = constant #0 "private"
+0002  init_global g0, b0
+0003  b1 = constant #1 nil
+0004  init_global g1, b1
+0005  b2 = make_function $0 greet/1
+0006  set_global g1, b2
+0007  b3 = constant #3 42
+0008  init_global g2, b3
+0009  b4 = constant #4 "Ada"
+0010  b5 = make_struct t0 [b4]
+0011  init_global g3, b5
+0012  b6 = load_global g1
+0013  b7 = load_global g3
+0014  b8 = call b6(b7)
+0015  b9 = call_native i0 [b8]
+0016  b10 = load_global g2
+0017  b11 = call_native i0 [b10]
+0018  return_nil
+
+function $0 greet/1 registers=3
+0000  block
+0001  b0 = load_local l0
+0002  b1 = struct_get b0, t0, 0
+0003  return b1
+0004  block
+0005  b2 = constant #2 nil
+0006  return b2
+0007  block
+0008  return_nil

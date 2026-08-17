@@ -1,0 +1,3 @@
+Type error at <repo>/tests/golden/type_errors/selective_import_unexported.cd:1:10: module `./selective_import_unexported_deps/lib.cd` has no exported name `hidden`
+  import { hidden } from "./selective_import_unexported_deps/lib.cd";
+           ^

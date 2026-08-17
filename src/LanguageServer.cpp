@@ -2222,6 +2222,36 @@ bool exportNamesContain(const ExportStmt& exportStatement, std::string_view name
         [name](const Token& token) { return token.lexeme == name; });
 }
 
+std::optional<std::string> importedSourceName(const ImportStmt& import, std::string_view localName)
+{
+    if (import.specifiers.empty()) {
+        return std::string(localName);
+    }
+    for (const ImportSpecifier& specifier : import.specifiers) {
+        const std::string_view importedName = specifier.alias
+            ? std::string_view(specifier.alias->lexeme)
+            : std::string_view(specifier.name.lexeme);
+        if (importedName == localName) {
+            return specifier.name.lexeme;
+        }
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> importedLocalName(const ImportStmt& import, std::string_view sourceName)
+{
+    if (import.specifiers.empty()) {
+        return std::string(sourceName);
+    }
+    for (const ImportSpecifier& specifier : import.specifiers) {
+        if (specifier.name.lexeme != sourceName) {
+            continue;
+        }
+        return specifier.alias ? specifier.alias->lexeme : specifier.name.lexeme;
+    }
+    return std::nullopt;
+}
+
 std::optional<DefinitionTarget> exportedDefinition(
     const AnalysisSnapshot& snapshot,
     std::size_t moduleId,
@@ -2331,11 +2361,15 @@ std::optional<DefinitionTarget> importedDefinitionAt(
         if (!import || import->alias || import->resolvedModuleId == static_cast<std::size_t>(-1)) {
             continue;
         }
+        const std::optional<std::string> sourceName = importedSourceName(*import, name);
+        if (!sourceName) {
+            continue;
+        }
         std::unordered_set<std::size_t> visiting;
         if (const std::optional<DefinitionTarget> target = exportedDefinition(
                 snapshot,
                 import->resolvedModuleId,
-                name,
+                *sourceName,
                 visiting)) {
             return target;
         }
@@ -2457,11 +2491,15 @@ std::optional<DefinitionTarget> typeDefinitionForName(
         if (!import || import->alias || import->resolvedModuleId == static_cast<std::size_t>(-1)) {
             continue;
         }
+        const std::optional<std::string> sourceName = importedSourceName(*import, name);
+        if (!sourceName) {
+            continue;
+        }
         std::unordered_set<std::size_t> visiting;
         if (const std::optional<DefinitionTarget> target = exportedDefinition(
                 snapshot,
                 import->resolvedModuleId,
-                name,
+                *sourceName,
                 visiting);
             target && isTypeDeclaration(target->declaration)) {
             return target;
@@ -3503,6 +3541,7 @@ private:
             const StructFieldDecl* field = nullptr;
             const char* keyword = nullptr;
             SourceRange keywordRange{};
+            std::string displayName;
         };
         std::vector<Candidate> candidates;
         const auto matchesPrefix = [&prefix](const std::string& name) {
@@ -3515,6 +3554,9 @@ private:
                     return true;
                 }
                 if (candidate.field && candidate.field->name.lexeme == name) {
+                    return true;
+                }
+                if (!candidate.displayName.empty() && candidate.displayName == name) {
                     return true;
                 }
                 if (candidate.declaration && candidate.declaration->name == name) {
@@ -3650,12 +3692,21 @@ private:
                     for (const auto& exported : exportedDefinitionsForModule(
                             snapshot,
                             import->resolvedModuleId)) {
-                        if (!isOpenSource(exported.second.sourceId)
-                            || !matchesPrefix(exported.first)
-                            || !importedNames.insert(exported.first).second) {
+                        const std::optional<std::string> localName
+                            = importedLocalName(*import, exported.first);
+                        if (!localName
+                            || !isOpenSource(exported.second.sourceId)
+                            || !matchesPrefix(*localName)
+                            || !importedNames.insert(*localName).second) {
                             continue;
                         }
-                        candidates.push_back(Candidate{exported.second.declaration, nullptr, nullptr});
+                        candidates.push_back(Candidate{
+                            exported.second.declaration,
+                            nullptr,
+                            nullptr,
+                            nullptr,
+                            {},
+                            *localName});
                     }
                 }
             }
@@ -3698,6 +3749,9 @@ private:
             }
             if (candidate.keyword) {
                 return std::string_view(candidate.keyword);
+            }
+            if (!candidate.displayName.empty()) {
+                return candidate.displayName;
             }
             return candidate.declaration->name;
         };

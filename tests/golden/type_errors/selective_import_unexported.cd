@@ -1,0 +1,2 @@
+import { hidden } from "./selective_import_unexported_deps/lib.cd";
+print(hidden);

@@ -1,0 +1,25 @@
+IR
+0000  v0 = constant #0 "private"
+0001  store_var @0 hidden#0, v0
+0002  v1 = constant #1 nil
+0003  store_var @1 greet#1, v1
+0004  v2 = make_function $0 greet/1
+0005  assign_var @5 greet#1, v2
+0006  v3 = constant #3 42
+0007  store_var @6 answer#3, v3
+0008  v4 = constant #4 "Ada"
+0009  v5 = struct User {name: v4}
+0010  store_var @9 user#4, v5
+0011  v6 = load_var @10 greet#1
+0012  v7 = load_var @11 user#4
+0013  v8 = call v6(v7)
+0014  v9 = native_call @12 print(v8)
+0015  v10 = load_var @13 answer#3
+0016  v11 = native_call @14 print(v10)
+
+function $0 greet(user#2)
+0000  v0 = load_var @2 user#2
+0001  v1 = field v0.name
+0002  return v1
+0003  v2 = constant #2 nil
+0004  return v2
