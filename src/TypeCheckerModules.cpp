@@ -861,33 +861,26 @@ void TypeChecker::checkImport(const ImportStmt& statement)
             }
 
             if (const auto structure = structs.find(sourceName); structure != structs.end()) {
-                if (specifier.alias) {
-                    throw TypeError(
-                        *specifier.alias,
-                        "selective import aliases are currently supported for values only");
+                if (structTypes_.find(localName.lexeme) != structTypes_.end()
+                    || enumTypes_.find(localName.lexeme) != enumTypes_.end()) {
+                    throw TypeError(localName, "duplicate type " + localName.lexeme);
                 }
-                if (structTypes_.find(sourceName) != structTypes_.end()) {
-                    throw TypeError(localName, "duplicate struct `" + sourceName + "`");
-                }
-                structTypes_.emplace(sourceName, structure->second);
+                structTypes_.emplace(localName.lexeme, structure->second);
                 const auto methodTable = methods.find(sourceName);
                 if (methodTable != methods.end()) {
-                    importMethodExports(localName, ModuleMethodExports{{sourceName, methodTable->second}});
+                    importMethodExports(
+                        localName,
+                        ModuleMethodExports{{sourceName, methodTable->second}});
                 }
                 continue;
             }
 
             if (const auto enumeration = enums.find(sourceName); enumeration != enums.end()) {
-                if (specifier.alias) {
-                    throw TypeError(
-                        *specifier.alias,
-                        "selective import aliases are currently supported for values only");
+                if (enumTypes_.find(localName.lexeme) != enumTypes_.end()
+                    || structTypes_.find(localName.lexeme) != structTypes_.end()) {
+                    throw TypeError(localName, "duplicate type " + localName.lexeme);
                 }
-                if (enumTypes_.find(sourceName) != enumTypes_.end()
-                    || structTypes_.find(sourceName) != structTypes_.end()) {
-                    throw TypeError(localName, "duplicate type " + sourceName);
-                }
-                enumTypes_.emplace(sourceName, enumeration->second);
+                enumTypes_.emplace(localName.lexeme, enumeration->second);
                 continue;
             }
 

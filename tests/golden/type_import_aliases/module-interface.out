@@ -1,0 +1,10 @@
+module 0 "<repo>/tests/golden/type_import_aliases/lib.cd"
+  export value makeBox: fun(): Box<number>
+  export struct Box<T>
+    field value: T
+    method get(): T
+  export enum Option<T>
+    variant Some(T)
+    variant None
+
+module 1 entry "<repo>/tests/golden/type_import_aliases/input.cd"

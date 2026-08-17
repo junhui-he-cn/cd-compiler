@@ -1,0 +1,17 @@
+import { Box as AliasBox, Option as Maybe, makeBox } from "./lib.cd";
+
+let box: AliasBox<number> = AliasBox<number> { value: 7 };
+print(box.get());
+
+let fromFunction: AliasBox<number> = makeBox();
+print(fromFunction.get());
+
+let maybe: Maybe<number> = Maybe.Some(9);
+match maybe {
+  Maybe.Some(value) => { print(value); }
+  Maybe.None => { print(0); }
+}
+
+match box {
+  AliasBox { value, .. } => { print(value); }
+}

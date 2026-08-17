@@ -160,7 +160,8 @@ TypeChecker::CheckedExpression TypeChecker::checkNamedStructFields(
     const TypeInfo& declared,
     const std::vector<StructField>& fields)
 {
-    const StructTypeDecl* structType = declared.structName ? findStructType(*declared.structName) : nullptr;
+    const StructTypeDecl* structType
+        = declared.structName ? findStructTypeByIdentity(*declared.structName) : nullptr;
     if (!structType) {
         throw TypeError(diagnosticToken, "unknown struct type `" + typeInfoName(declared) + "`");
     }
@@ -226,6 +227,7 @@ TypeChecker::CheckedExpression TypeChecker::checkStructConstructor(
     if (!structType) {
         throw TypeError(expression.name, "unknown struct type `" + typeName + "`");
     }
+    const std::string identityName = structType->name.lexeme;
 
     const bool generic = !structType->genericParameters.empty();
     if (!generic && !expression.typeArguments.empty()) {
@@ -239,7 +241,7 @@ TypeChecker::CheckedExpression TypeChecker::checkStructConstructor(
     const bool expectedMatches = expectedStructType
         && expectedStructType->kind == StaticType::Struct
         && expectedStructType->structName
-        && *expectedStructType->structName == typeName;
+        && *expectedStructType->structName == identityName;
 
     TypeSubstitutions substitutions;
     if (generic && !expression.typeArguments.empty()) {
@@ -320,7 +322,7 @@ TypeChecker::CheckedExpression TypeChecker::checkStructConstructor(
         }
     }
 
-    const TypeInfo declared = namedStructType(typeName, std::move(typeArguments));
+    const TypeInfo declared = namedStructType(identityName, std::move(typeArguments));
     if (expectedMatches && !SemanticTypes::compatible(*expectedStructType, declared)) {
         throw TypeError(expression.name,
             "struct constructor produces " + typeInfoName(declared)
@@ -333,11 +335,12 @@ TypeChecker::CheckedExpression TypeChecker::checkVariantConstructor(
     const MemberCallExpr& expression,
     const TypeInfo* expectedType)
 {
-    const std::string enumName = enumConstructorTypeName(expression);
-    const EnumTypeDecl* enumType = findEnumType(enumName);
+    const std::string lookupName = enumConstructorTypeName(expression);
+    const EnumTypeDecl* enumType = findEnumType(lookupName);
     if (!enumType) {
-        throw TypeError(expression.name, "unknown enum type " + enumName);
+        throw TypeError(expression.name, "unknown enum type " + lookupName);
     }
+    const std::string enumName = enumType->name.lexeme;
 
     const EnumVariantType* variant = findEnumVariant(*enumType, expression.name.lexeme);
     if (!variant) {
@@ -526,15 +529,14 @@ bool TypeChecker::checkPattern(
         }
 
         const std::string patternTypeName = recordPatternTypeName(*recordPattern);
-        if (patternTypeName != *structExpectedType->structName) {
-            throw TypeError(recordPattern->name,
-                "record pattern belongs to struct " + patternTypeName
-                    + ", expected " + *structExpectedType->structName);
-        }
-
         const StructTypeDecl* structType = findStructType(patternTypeName);
         if (!structType) {
             throw TypeError(recordPattern->name, "unknown struct type " + patternTypeName);
+        }
+        if (structType->name.lexeme != *structExpectedType->structName) {
+            throw TypeError(recordPattern->name,
+                "record pattern belongs to struct " + patternTypeName
+                    + ", expected " + *structExpectedType->structName);
         }
 
         std::unordered_set<std::string> usedFields;
@@ -759,15 +761,17 @@ bool TypeChecker::checkPattern(
         || !enumExpectedType->enumName) {
         throw TypeError(variantPattern->name, "variant pattern expects enum value");
     }
-    if (!variantPattern->qualifier
-        || variantPattern->qualifier->lexeme != *enumExpectedType->enumName) {
+    const EnumTypeDecl* patternEnumType = variantPattern->qualifier
+        ? findEnumType(variantPattern->qualifier->lexeme)
+        : nullptr;
+    if (!patternEnumType || patternEnumType->name.lexeme != *enumExpectedType->enumName) {
         throw TypeError(variantPattern->name,
             "variant pattern belongs to enum "
                 + (variantPattern->qualifier ? variantPattern->qualifier->lexeme : std::string("<unknown>"))
                 + ", expected " + *enumExpectedType->enumName);
     }
 
-    const EnumTypeDecl* enumType = findEnumType(*enumExpectedType->enumName);
+    const EnumTypeDecl* enumType = findEnumTypeByIdentity(*enumExpectedType->enumName);
     const EnumVariantType* variant = enumType
         ? findEnumVariant(*enumType, variantPattern->name.lexeme)
         : nullptr;
@@ -867,7 +871,7 @@ TypeInfo TypeChecker::checkMatch(const MatchExpr& statement)
         enumName = nullableEnum
             ? *scrutineeType.nullableOf->enumName
             : *scrutineeType.enumName;
-        enumType = findEnumType(enumName);
+        enumType = findEnumTypeByIdentity(enumName);
         if (!enumType) {
             throw TypeError("unknown enum type " + enumName);
         }
@@ -878,7 +882,7 @@ TypeInfo TypeChecker::checkMatch(const MatchExpr& statement)
         structName = nullableStruct
             ? *scrutineeType.nullableOf->structName
             : *scrutineeType.structName;
-        structType = findStructType(structName);
+        structType = findStructTypeByIdentity(structName);
         if (!structType) {
             throw TypeError("unknown struct type " + structName);
         }
@@ -1491,7 +1495,7 @@ TypeChecker::CheckedExpression TypeChecker::checkExpressionInfo(const Expr& expr
             throw TypeError(field->name, "can only access fields on structs");
         }
         if (object.kind == StaticType::Struct && object.structName) {
-            const StructTypeDecl* structType = findStructType(*object.structName);
+            const StructTypeDecl* structType = findStructTypeByIdentity(*object.structName);
             const StructFieldType* structField = structType ? findStructField(*structType, field->name.lexeme) : nullptr;
             if (!structField) {
                 throw TypeError(field->name,
@@ -2188,7 +2192,7 @@ TypeChecker::CheckedExpression TypeChecker::checkStructMethodCall(const MemberCa
                 receiverSubstitutions,
                 expression.paren);
         }
-        const StructTypeDecl* structType = findStructType(*receiverType.structName);
+        const StructTypeDecl* structType = findStructTypeByIdentity(*receiverType.structName);
         if (structType) {
             for (const std::string& parameter : structType->genericParameters) {
                 if (receiverSubstitutions.find(parameter) == receiverSubstitutions.end()) {
@@ -2736,7 +2740,7 @@ std::optional<TypeInfo> TypeChecker::checkStructFieldTarget(
     }
 
     if (object.kind == StaticType::Struct && object.structName) {
-        const StructTypeDecl* structType = findStructType(*object.structName);
+        const StructTypeDecl* structType = findStructTypeByIdentity(*object.structName);
         const StructFieldType* structField = structType ? findStructField(*structType, name.lexeme) : nullptr;
         if (!structField) {
             throw TypeError(name,
@@ -2938,10 +2942,10 @@ TypeInfo TypeChecker::resolveAnnotation(const TypeAnnotation& typeName) const
     }
     if (const StructTypeDecl* structType = findStructType(typeName.token.lexeme)) {
         return resolveNamedStructAnnotation(
-            typeName, typeName.token.lexeme, *structType);
+            typeName, structType->name.lexeme, *structType);
     }
     if (const EnumTypeDecl* enumType = findEnumType(typeName.token.lexeme)) {
-        return resolveNamedEnumAnnotation(typeName, typeName.token.lexeme, *enumType);
+        return resolveNamedEnumAnnotation(typeName, enumType->name.lexeme, *enumType);
     }
    throw TypeError(typeName.token, "unknown type `" + typeName.token.lexeme + "`");
 }

@@ -100,11 +100,11 @@ void test_formats_selective_imports()
 {
     const std::string source =
         "import{answer,greet as say}from\"./lib.cd\";\n"
-        "import{User}from\"./lib.cd\";\n";
+        "import{User as Person}from\"./lib.cd\";\n";
     const std::string formatted = formatLosslessSource(losslessViewFor(source));
     const std::string expected =
         "import { answer, greet as say } from \"./lib.cd\";\n"
-        "import { User } from \"./lib.cd\";\n";
+        "import { User as Person } from \"./lib.cd\";\n";
     assert(formatted == expected);
     assert(formatLosslessSource(losslessViewFor(formatted)) == formatted);
     assert(astFor(source) == astFor(formatted));

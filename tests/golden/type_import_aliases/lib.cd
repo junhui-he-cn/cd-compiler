@@ -1,0 +1,18 @@
+struct Box<T> { value: T }
+
+impl Box<T> {
+  fun get(): T {
+    return this.value;
+  }
+}
+
+fun makeBox(): Box<number> {
+  return Box { value: 11 };
+}
+
+enum Option<T> {
+  Some(T),
+  None,
+}
+
+export Box, Option, makeBox;

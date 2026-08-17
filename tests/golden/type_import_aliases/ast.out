@@ -1,0 +1,28 @@
+Program
+  Module 0
+    Struct Box<T> {value: T}
+    Impl Box<T>
+      Method get(): T
+        Return (field this value)
+    Fun makeBox(): Box<number>
+      Return (construct Box value: 11)
+    Enum Option<T> {Some(T), None}
+    Export Box Option makeBox
+  Module 1 entry
+    Import { Box as AliasBox Option as Maybe makeBox } from "./lib.cd"
+    Let box: AliasBox<number> = (construct AliasBox<number> value: 7)
+    Expr (call print (member-call box get))
+    Let fromFunction: AliasBox<number> = (call makeBox)
+    Expr (call print (member-call fromFunction get))
+    Let maybe: Maybe<number> = (member-call Maybe Some 9)
+    Match maybe
+      Arm Maybe.Some(value)
+        Block
+          Expr (call print value)
+      Arm Maybe.None
+        Block
+          Expr (call print 0)
+    Match box
+      Arm AliasBox {value: value, ..}
+        Block
+          Expr (call print value)

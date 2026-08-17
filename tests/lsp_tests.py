@@ -88,6 +88,7 @@ def main() -> int:
     other_uri = (workspace_path / "other.cd").as_uri()
     module_uri = (workspace_path / "compiler-design-lsp-module.cd").as_uri()
     api_uri = (workspace_path / "compiler-design-lsp-api.cd").as_uri()
+    type_alias_uri = (workspace_path / "compiler-design-lsp-type-alias.cd").as_uri()
     incomplete_uri = (workspace_path / "incomplete.cd").as_uri()
     process = subprocess.Popen(
         [sys.argv[1], "--lsp"],
@@ -693,6 +694,89 @@ def main() -> int:
             raise AssertionError(
                 f"declarative export definition response mismatch: {declarative_definition!r}"
             )
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didOpen",
+                "params": {
+                    "textDocument": {
+                        "uri": type_alias_uri,
+                        "languageId": "compiler-design",
+                        "version": 1,
+                        "text": (
+                            'import { Box as LocalBox, Result as Outcome } '
+                            'from "./compiler-design-lsp-module.cd";\n'
+                            "let box: LocalBox = LocalBox { value: 1 };\n"
+                            "let result: Outcome = Outcome.Ok(2);\n"
+                            "print(box.get());\n"
+                        ),
+                    }
+                },
+            },
+        )
+        assert_publish(receive(process), type_alias_uri, 0)
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 32,
+                "method": "textDocument/definition",
+                "params": {
+                    "textDocument": {"uri": type_alias_uri},
+                    "position": {"line": 1, "character": 10},
+                },
+            },
+        )
+        type_alias_struct_definition = receive(process)
+        if type_alias_struct_definition.get("result") != {
+            "uri": module_uri,
+            "range": {
+                "start": {"line": 3, "character": 7},
+                "end": {"line": 3, "character": 10},
+            },
+        }:
+            raise AssertionError(
+                "type alias struct definition response mismatch: "
+                f"{type_alias_struct_definition!r}"
+            )
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "id": 33,
+                "method": "textDocument/definition",
+                "params": {
+                    "textDocument": {"uri": type_alias_uri},
+                    "position": {"line": 2, "character": 15},
+                },
+            },
+        )
+        type_alias_enum_definition = receive(process)
+        if type_alias_enum_definition.get("result") != {
+            "uri": module_uri,
+            "range": {
+                "start": {"line": 5, "character": 5},
+                "end": {"line": 5, "character": 11},
+            },
+        }:
+            raise AssertionError(
+                "type alias enum definition response mismatch: "
+                f"{type_alias_enum_definition!r}"
+            )
+
+        send(
+            process,
+            {
+                "jsonrpc": "2.0",
+                "method": "textDocument/didClose",
+                "params": {"textDocument": {"uri": type_alias_uri}},
+            },
+        )
+        assert_publish(receive(process), type_alias_uri, 0)
 
         closed_source = (
             f'import "./{closed_module_path.name}";\n'

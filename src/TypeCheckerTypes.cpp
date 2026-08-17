@@ -16,6 +16,19 @@ const TypeChecker::StructTypeDecl* TypeChecker::findStructType(const std::string
     return &found->second;
 }
 
+const TypeChecker::StructTypeDecl* TypeChecker::findStructTypeByIdentity(const std::string& name) const
+{
+    if (const StructTypeDecl* exact = findStructType(name)) {
+        return exact;
+    }
+    for (const auto& entry : structTypes_) {
+        if (entry.second.name.lexeme == name) {
+            return &entry.second;
+        }
+    }
+    return nullptr;
+}
+
 const TypeChecker::EnumTypeDecl* TypeChecker::findEnumType(const std::string& name) const
 {
     const auto found = enumTypes_.find(name);
@@ -23,6 +36,19 @@ const TypeChecker::EnumTypeDecl* TypeChecker::findEnumType(const std::string& na
         return nullptr;
     }
     return &found->second;
+}
+
+const TypeChecker::EnumTypeDecl* TypeChecker::findEnumTypeByIdentity(const std::string& name) const
+{
+    if (const EnumTypeDecl* exact = findEnumType(name)) {
+        return exact;
+    }
+    for (const auto& entry : enumTypes_) {
+        if (entry.second.name.lexeme == name) {
+            return &entry.second;
+        }
+    }
+    return nullptr;
 }
 
 const TypeChecker::EnumVariantType* TypeChecker::findEnumVariant(
@@ -241,15 +267,15 @@ TypeInfo TypeChecker::resolveSimpleStructFieldAnnotation(const TypeAnnotation& t
             throw TypeError(typeName.token, "unknown type `" + typeName.token.lexeme + "`");
         }
         return resolveNamedStructAnnotation(
-            typeName, typeName.token.lexeme, *structType);
+            typeName, structType->name.lexeme, *structType);
     }
 
     if (const StructTypeDecl* structType = findStructType(typeName.token.lexeme)) {
         return resolveNamedStructAnnotation(
-            typeName, typeName.token.lexeme, *structType);
+            typeName, structType->name.lexeme, *structType);
     }
     if (const EnumTypeDecl* enumType = findEnumType(typeName.token.lexeme)) {
-        return resolveNamedEnumAnnotation(typeName, typeName.token.lexeme, *enumType);
+        return resolveNamedEnumAnnotation(typeName, enumType->name.lexeme, *enumType);
     }
 
     throw TypeError(typeName.token, "unknown type `" + typeName.token.lexeme + "`");
@@ -577,7 +603,12 @@ void TypeChecker::importMethodExports(
                     signature, *namespaceAlias, *namespaceStructs, *namespaceEnums);
             }
             if (table.find(methodEntry.first) != table.end()) {
-                throw TypeError(diagnosticToken,
+                const MethodInfo& existing = table.at(methodEntry.first);
+                if (existing.resolvedName == signature.resolvedName) {
+                    continue;
+                }
+                throw TypeError(
+                    diagnosticToken,
                     "duplicate method `" + methodEntry.first + "` for struct `" + structName + "`");
             }
             table.emplace(methodEntry.first, methodInfoFromSignature(signature));

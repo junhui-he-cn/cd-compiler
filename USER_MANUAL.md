@@ -699,8 +699,15 @@ import { answer as getAnswer } from "./lib.cd";
 print(getAnswer());
 ```
 
-选择性导入中的 `as` 当前用于值导入的本地重命名；结构体和枚举支持同名选择性导入，
-类型重命名保留给后续模块语法切片。
+选择性导入中的 `as` 可为值、结构体和枚举指定本地名字，例如：
+
+```cd
+import { User as Person, Result as Outcome } from "./model.cd";
+let user: Person = Person { name: "Ada" };
+let result: Outcome = Outcome.Ok();
+```
+
+结构体和枚举的本地别名仍指向导出方的同一个名义类型，不会创建新的运行时类型。
 
 声明可以在定义处直接导出：`export fun answer(): number { return 42; }` 和
 `export struct User { name: string }` 分别等价于定义后再写对应的

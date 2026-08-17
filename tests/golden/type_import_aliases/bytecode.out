@@ -1,0 +1,77 @@
+native_import i0 = print abi=1
+main registers=32
+0000  block
+0001  b0 = constant #0 nil
+0002  init_global g0, b0
+0003  b1 = make_function $0 get/1
+0004  set_global g0, b1
+0005  b2 = constant #2 nil
+0006  init_global g1, b2
+0007  b3 = make_function $1 makeBox/0
+0008  set_global g1, b3
+0009  b4 = constant #5 7
+0010  b5 = make_struct t0 [b4]
+0011  init_global g2, b5
+0012  b6 = load_global g0
+0013  b7 = load_global g2
+0014  b8 = call b6(b7)
+0015  b9 = call_native i0 [b8]
+0016  b10 = load_global g1
+0017  b11 = call b10()
+0018  init_global g3, b11
+0019  b12 = load_global g0
+0020  b13 = load_global g3
+0021  b14 = call b12(b13)
+0022  b15 = call_native i0 [b14]
+0023  b16 = constant #6 9
+0024  b17 = make_variant t1, v0 (b16)
+0025  init_global g4, b17
+0026  b18 = load_global g4
+0027  b19 = constant #7 nil
+0028  b20 = is_variant b18, t1, v0
+0029  br_if b20, b1, b2
+0030  block
+0031  b21 = variant_get b18, t1, v0, 0
+0032  init_global g5, b21
+0033  b22 = load_global g5
+0034  b23 = call_native i0 [b22]
+0035  br b4
+0036  block
+0037  b24 = is_variant b18, t1, v1
+0038  br_if b24, b3, b4
+0039  block
+0040  b25 = constant #8 0
+0041  b26 = call_native i0 [b25]
+0042  br b4
+0043  block
+0044  b27 = load_global g2
+0045  b28 = constant #9 nil
+0046  b29 = struct_get b27, t0, 0
+0047  init_global g6, b29
+0048  b30 = load_global g6
+0049  b31 = call_native i0 [b30]
+0050  return_nil
+0051  block
+0052  return_nil
+
+function $0 get/1 registers=3
+0000  block
+0001  b0 = load_local l0
+0002  b1 = struct_get b0, t0, 0
+0003  return b1
+0004  block
+0005  b2 = constant #1 nil
+0006  return b2
+0007  block
+0008  return_nil
+
+function $1 makeBox/0 registers=3
+0000  block
+0001  b0 = constant #3 11
+0002  b1 = make_struct t0 [b0]
+0003  return b1
+0004  block
+0005  b2 = constant #4 nil
+0006  return b2
+0007  block
+0008  return_nil

@@ -188,6 +188,8 @@ private:
     void recordStructMethodExports(std::size_t moduleId, const std::string& structName);
     bool isBuiltinMemberName(const std::string& name) const;
     const StructTypeDecl* findStructType(const std::string& name) const;
+    const StructTypeDecl* findStructTypeByIdentity(const std::string& name) const;
+    const EnumTypeDecl* findEnumTypeByIdentity(const std::string& name) const;
     void predeclareStructDeclaration(const StructDeclStmt& statement);
     TypeInfo resolveStructFieldAnnotation(const StructFieldDecl& field);
     TypeInfo resolveStructFieldAnnotation(const TypeAnnotation& typeName, const Token& fieldName);

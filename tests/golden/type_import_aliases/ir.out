@@ -1,0 +1,61 @@
+IR
+0000  v0 = constant #0 nil
+0001  store_var @0 __method_Box_get#0, v0
+0002  v1 = make_function $0 get/1
+0003  assign_var @4 __method_Box_get#0, v1
+0004  v2 = constant #2 nil
+0005  store_var @5 makeBox#2, v2
+0006  v3 = make_function $1 makeBox/0
+0007  assign_var @8 makeBox#2, v3
+0008  v4 = constant #5 7
+0009  v5 = struct Box {value: v4}
+0010  store_var @11 box#3, v5
+0011  v6 = load_var @12 __method_Box_get#0
+0012  v7 = load_var @13 box#3
+0013  v8 = call v6(v7)
+0014  v9 = native_call @14 print(v8)
+0015  v10 = load_var @15 makeBox#2
+0016  v11 = call v10()
+0017  store_var @16 fromFunction#4, v11
+0018  v12 = load_var @17 __method_Box_get#0
+0019  v13 = load_var @18 fromFunction#4
+0020  v14 = call v12(v13)
+0021  v15 = native_call @19 print(v14)
+0022  v16 = constant #6 9
+0023  v17 = variant Option.Some (v16)
+0024  store_var @22 maybe#5, v17
+0025  v18 = load_var @23 maybe#5
+0026  v19 = constant #7 nil
+0027  v20 = variant_tag v18 Option.Some
+0028  jump_if_false v20, 0034
+0029  v21 = variant_field v18[0]
+0030  store_var @28 value#6, v21
+0031  v22 = load_var @29 value#6
+0032  v23 = native_call @30 print(v22)
+0033  jump 0039
+0034  v24 = variant_tag v18 Option.None
+0035  jump_if_false v24, 0039
+0036  v25 = constant #8 0
+0037  v26 = native_call @33 print(v25)
+0038  jump 0039
+0039  v27 = load_var @34 box#3
+0040  v28 = constant #9 nil
+0041  v29 = field v27.value
+0042  store_var @37 value#7, v29
+0043  v30 = load_var @38 value#7
+0044  v31 = native_call @39 print(v30)
+0045  jump 0046
+
+function $0 get(this#1)
+0000  v0 = load_var @1 this#1
+0001  v1 = field v0.value
+0002  return v1
+0003  v2 = constant #1 nil
+0004  return v2
+
+function $1 makeBox()
+0000  v0 = constant #3 11
+0001  v1 = struct Box {value: v0}
+0002  return v1
+0003  v2 = constant #4 nil
+0004  return v2
