@@ -1,0 +1,49 @@
+IR
+0000  v0 = constant #0 1
+0001  v1 = constant #1 2
+0002  v2 = struct Point {x: v0, y: v1}
+0003  store_var @3 target#0, v2
+0004  v3 = constant #2 true
+0005  store_var @4 ready#1, v3
+0006  v4 = load_var @5 ready#1
+0007  jump_if_false v4, 0010
+0008  v5 = constant #3 "ready"
+0009  v6 = native_call @6 print(v5)
+0010  v7 = constant #4 1
+0011  v8 = constant #5 2
+0012  v9 = struct Point {x: v7, y: v8}
+0013  v10 = load_var @10 target#0
+0014  v11 = not_equal v9, v10
+0015  jump_if_false v11, 0018
+0016  v12 = constant #6 "point"
+0017  v13 = native_call @11 print(v12)
+0018  v14 = constant #7 false
+0019  v15 = copy v14
+0020  jump_if_false v15, 0027
+0021  v16 = constant #8 1
+0022  v17 = constant #9 2
+0023  v18 = struct Point {x: v16, y: v17}
+0024  v19 = load_var @15 target#0
+0025  v20 = equal v18, v19
+0026  v15 = copy v20
+0027  jump_if_false v15, 0031
+0028  v21 = constant #10 "never"
+0029  v22 = native_call @16 print(v21)
+0030  jump 0018
+0031  v23 = constant #11 3
+0032  v24 = constant #12 4
+0033  v25 = struct Point {x: v23, y: v24}
+0034  v26 = array [v25]
+0035  store_var @20 items#2, v26
+0036  v27 = load_var @21 items#2
+0037  v28 = iter_init v27
+0038  v29 = constant #13 nil
+0039  store_var @22 item#3, v29
+0040  v30 = iter_has v28
+0041  jump_if_false v30, 0048
+0042  v31 = iter_next v28
+0043  assign_var @23 item#3, v31
+0044  v32 = load_var @24 item#3
+0045  v33 = field v32.x
+0046  v34 = native_call @27 print(v33)
+0047  jump 0040

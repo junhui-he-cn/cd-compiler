@@ -1,0 +1,20 @@
+Program
+  Struct Point {x: number, y: number}
+  Let target = (construct Point x: 1 y: 2)
+  Let ready = true
+  If ready
+    Then
+      Block
+        Expr (call print "ready")
+  If (group (!= (construct Point x: 1 y: 2) target))
+    Then
+      Block
+        Expr (call print "point")
+  While (group (&& false (group (== (construct Point x: 1 y: 2) target))))
+    Body
+      Block
+        Expr (call print "never")
+  Let items = (array (construct Point x: 3 y: 4))
+  ForIn item in items
+    Block
+      Expr (call print (field item x))

@@ -1,0 +1,67 @@
+native_import i0 = print abi=1
+main registers=35
+0000  block
+0001  b0 = constant #0 1
+0002  b1 = constant #1 2
+0003  b2 = make_struct t0 [b0, b1]
+0004  init_global g0, b2
+0005  b3 = constant #2 true
+0006  init_global g1, b3
+0007  b4 = load_global g1
+0008  br_if b4, b1, b2
+0009  block
+0010  b5 = constant #3 "ready"
+0011  b6 = call_native i0 [b5]
+0012  br b2
+0013  block
+0014  b7 = constant #4 1
+0015  b8 = constant #5 2
+0016  b9 = make_struct t0 [b7, b8]
+0017  b10 = load_global g0
+0018  b11 = not_equal b9, b10
+0019  br_if b11, b3, b4
+0020  block
+0021  b12 = constant #6 "point"
+0022  b13 = call_native i0 [b12]
+0023  br b4
+0024  block
+0025  b14 = constant #7 false
+0026  b15 = move b14
+0027  br_if b15, b5, b6
+0028  block
+0029  b16 = constant #8 1
+0030  b17 = constant #9 2
+0031  b18 = make_struct t0 [b16, b17]
+0032  b19 = load_global g0
+0033  b20 = equal b18, b19
+0034  b15 = move b20
+0035  br b6
+0036  block
+0037  br_if b15, b7, b8
+0038  block
+0039  b21 = constant #10 "never"
+0040  b22 = call_native i0 [b21]
+0041  br b4
+0042  block
+0043  b23 = constant #11 3
+0044  b24 = constant #12 4
+0045  b25 = make_struct t0 [b23, b24]
+0046  b26 = array [b25]
+0047  init_global g2, b26
+0048  b27 = load_global g2
+0049  b28 = iter_init b27
+0050  b29 = constant #13 nil
+0051  init_global g3, b29
+0052  br b9
+0053  block
+0054  b30 = iter_has b28
+0055  br_if b30, b10, b11
+0056  block
+0057  b31 = iter_next b28
+0058  set_global g3, b31
+0059  b32 = load_global g3
+0060  b33 = struct_get b32, t0, 0
+0061  b34 = call_native i0 [b33]
+0062  br b9
+0063  block
+0064  return_nil

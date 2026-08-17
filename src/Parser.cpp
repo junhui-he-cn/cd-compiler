@@ -78,11 +78,9 @@ ExprPtr buildAssignmentTarget(
 
 class ParserStateGuard final {
 public:
-    ParserStateGuard(int& blockDepth, bool& allowStructConstructors)
+    explicit ParserStateGuard(int& blockDepth)
         : blockDepth_(blockDepth)
-        , allowStructConstructors_(allowStructConstructors)
         , initialBlockDepth_(blockDepth)
-        , initialAllowStructConstructors_(allowStructConstructors)
     {
     }
 
@@ -97,14 +95,11 @@ public:
     void restore() noexcept
     {
         blockDepth_ = initialBlockDepth_;
-        allowStructConstructors_ = initialAllowStructConstructors_;
     }
 
 private:
     int& blockDepth_;
-    bool& allowStructConstructors_;
     int initialBlockDepth_;
-    bool initialAllowStructConstructors_;
 };
 
 } // namespace
@@ -164,7 +159,7 @@ void Parser::recordParseError(ParseError error)
 
 std::optional<StmtPtr> Parser::parseDeclarationRecovering(bool stopAtRightBrace)
 {
-    ParserStateGuard stateGuard(blockDepth_, allowStructConstructors_);
+    ParserStateGuard stateGuard(blockDepth_);
     try {
         return declaration();
     } catch (const ParseError& error) {
@@ -177,7 +172,7 @@ std::optional<StmtPtr> Parser::parseDeclarationRecovering(bool stopAtRightBrace)
 
 std::optional<MethodDecl> Parser::parseMethodDeclarationRecovering()
 {
-    ParserStateGuard stateGuard(blockDepth_, allowStructConstructors_);
+    ParserStateGuard stateGuard(blockDepth_);
     try {
         return methodDeclaration();
     } catch (const ParseError& error) {
@@ -999,32 +994,26 @@ StmtPtr Parser::expressionStatement()
     return statement;
 }
 
-ExprPtr Parser::expression()
+ExprPtr Parser::expression(bool allowStructConstructors)
 {
-    return assignment();
+    return assignment(allowStructConstructors);
 }
 
 ExprPtr Parser::conditionExpression()
 {
-    const bool previousAllowStructConstructors = allowStructConstructors_;
-    allowStructConstructors_ = false;
-    try {
-        ExprPtr result = expression();
-        allowStructConstructors_ = previousAllowStructConstructors;
-        return result;
-    } catch (...) {
-        allowStructConstructors_ = previousAllowStructConstructors;
-        throw;
-    }
+    // A bare condition shares its opening brace with the following block.
+    // Parentheses make a constructor expression unambiguous and restore the
+    // ordinary expression grammar inside the grouping.
+    return check(TokenType::LeftParen) ? expression() : expression(false);
 }
 
-ExprPtr Parser::assignment()
+ExprPtr Parser::assignment(bool allowStructConstructors)
 {
-    ExprPtr expr = coalesce();
+    ExprPtr expr = coalesce(allowStructConstructors);
 
     if (match(TokenType::Equal)) {
         Token equals = previous();
-        ExprPtr value = assignment();
+        ExprPtr value = assignment(allowStructConstructors);
 
         const std::optional<SourceSpan> span = expr ? expr->span : std::nullopt;
         ExprPtr assignment = buildAssignmentTarget(
@@ -1049,7 +1038,7 @@ ExprPtr Parser::assignment()
 
     if (matchCompoundAssignment()) {
         Token op = previous();
-        ExprPtr value = assignment();
+        ExprPtr value = assignment(allowStructConstructors);
 
         const std::optional<SourceSpan> span = expr ? expr->span : std::nullopt;
         ExprPtr assignment = buildAssignmentTarget(
@@ -1075,12 +1064,12 @@ ExprPtr Parser::assignment()
     return expr;
 }
 
-ExprPtr Parser::coalesce()
+ExprPtr Parser::coalesce(bool allowStructConstructors)
 {
-    ExprPtr expr = logicalOr();
+    ExprPtr expr = logicalOr(allowStructConstructors);
     if (match(TokenType::QuestionQuestion)) {
         Token op = previous();
-        ExprPtr right = coalesce();
+        ExprPtr right = coalesce(allowStructConstructors);
         const std::optional<SourceSpan> span = expr ? expr->span : std::nullopt;
         expr = withSpan(
             std::make_unique<CoalesceExpr>(std::move(expr), std::move(op), std::move(right)),
@@ -1097,12 +1086,12 @@ bool Parser::matchCompoundAssignment()
         || match(TokenType::SlashEqual);
 }
 
-ExprPtr Parser::logicalOr()
+ExprPtr Parser::logicalOr(bool allowStructConstructors)
 {
-    ExprPtr expr = logicalAnd();
+    ExprPtr expr = logicalAnd(allowStructConstructors);
     while (match(TokenType::PipePipe)) {
         Token op = previous();
-        ExprPtr right = logicalAnd();
+        ExprPtr right = logicalAnd(allowStructConstructors);
         const std::optional<SourceSpan> span = expr ? expr->span : std::nullopt;
         expr = withSpan(
             std::make_unique<LogicalExpr>(std::move(expr), std::move(op), std::move(right)),
@@ -1111,12 +1100,12 @@ ExprPtr Parser::logicalOr()
     return expr;
 }
 
-ExprPtr Parser::logicalAnd()
+ExprPtr Parser::logicalAnd(bool allowStructConstructors)
 {
-    ExprPtr expr = equality();
+    ExprPtr expr = equality(allowStructConstructors);
     while (match(TokenType::AmpersandAmpersand)) {
         Token op = previous();
-        ExprPtr right = equality();
+        ExprPtr right = equality(allowStructConstructors);
         const std::optional<SourceSpan> span = expr ? expr->span : std::nullopt;
         expr = withSpan(
             std::make_unique<LogicalExpr>(std::move(expr), std::move(op), std::move(right)),
@@ -1125,14 +1114,14 @@ ExprPtr Parser::logicalAnd()
     return expr;
 }
 
-ExprPtr Parser::equality()
+ExprPtr Parser::equality(bool allowStructConstructors)
 {
-    ExprPtr expr = comparison();
+    ExprPtr expr = comparison(allowStructConstructors);
     // Left-associative binary operators are folded as they are encountered:
     // `a == b != c` becomes `(!= (== a b) c)`.
     while (match(TokenType::BangEqual) || match(TokenType::EqualEqual)) {
         Token op = previous();
-        ExprPtr right = comparison();
+        ExprPtr right = comparison(allowStructConstructors);
         const std::optional<SourceSpan> span = expr ? expr->span : std::nullopt;
         expr = withSpan(
             std::make_unique<BinaryExpr>(std::move(expr), std::move(op), std::move(right)),
@@ -1141,13 +1130,13 @@ ExprPtr Parser::equality()
     return expr;
 }
 
-ExprPtr Parser::comparison()
+ExprPtr Parser::comparison(bool allowStructConstructors)
 {
-    ExprPtr expr = term();
+    ExprPtr expr = term(allowStructConstructors);
     while (match(TokenType::Greater) || match(TokenType::GreaterEqual)
         || match(TokenType::Less) || match(TokenType::LessEqual)) {
         Token op = previous();
-        ExprPtr right = term();
+        ExprPtr right = term(allowStructConstructors);
         const std::optional<SourceSpan> span = expr ? expr->span : std::nullopt;
         expr = withSpan(
             std::make_unique<BinaryExpr>(std::move(expr), std::move(op), std::move(right)),
@@ -1156,12 +1145,12 @@ ExprPtr Parser::comparison()
     return expr;
 }
 
-ExprPtr Parser::term()
+ExprPtr Parser::term(bool allowStructConstructors)
 {
-    ExprPtr expr = factor();
+    ExprPtr expr = factor(allowStructConstructors);
     while (match(TokenType::Minus) || match(TokenType::Plus)) {
         Token op = previous();
-        ExprPtr right = factor();
+        ExprPtr right = factor(allowStructConstructors);
         const std::optional<SourceSpan> span = expr ? expr->span : std::nullopt;
         expr = withSpan(
             std::make_unique<BinaryExpr>(std::move(expr), std::move(op), std::move(right)),
@@ -1170,12 +1159,12 @@ ExprPtr Parser::term()
     return expr;
 }
 
-ExprPtr Parser::factor()
+ExprPtr Parser::factor(bool allowStructConstructors)
 {
-    ExprPtr expr = unary();
+    ExprPtr expr = unary(allowStructConstructors);
     while (match(TokenType::Slash) || match(TokenType::Star)) {
         Token op = previous();
-        ExprPtr right = unary();
+        ExprPtr right = unary(allowStructConstructors);
         const std::optional<SourceSpan> span = expr ? expr->span : std::nullopt;
         expr = withSpan(
             std::make_unique<BinaryExpr>(std::move(expr), std::move(op), std::move(right)),
@@ -1184,21 +1173,21 @@ ExprPtr Parser::factor()
     return expr;
 }
 
-ExprPtr Parser::unary()
+ExprPtr Parser::unary(bool allowStructConstructors)
 {
     if (match(TokenType::Bang) || match(TokenType::Minus)) {
         Token op = previous();
-        ExprPtr right = unary();
+        ExprPtr right = unary(allowStructConstructors);
         const std::optional<SourceSpan> span = spanForToken(op);
         return withSpan(std::make_unique<UnaryExpr>(std::move(op), std::move(right)), span);
     }
 
-    return call();
+    return call(allowStructConstructors);
 }
 
-ExprPtr Parser::call()
+ExprPtr Parser::call(bool allowStructConstructors)
 {
-    ExprPtr expr = primary();
+    ExprPtr expr = primary(allowStructConstructors);
     while (true) {
         if (isExplicitTypeArgumentCall(*expr)) {
             std::vector<TypeAnnotation> typeArguments = explicitTypeArguments();
@@ -1488,7 +1477,7 @@ ExprPtr Parser::functionExpression()
         span);
 }
 
-ExprPtr Parser::primary()
+ExprPtr Parser::primary(bool allowStructConstructors)
 {
     if (match(TokenType::Fun)) {
         return functionExpression();
@@ -1517,10 +1506,10 @@ ExprPtr Parser::primary()
         Token brace = previous();
         return mapLiteral(std::move(brace));
     }
-    if (allowStructConstructors_ && isQualifiedStructConstructorStart()) {
+    if (allowStructConstructors && isQualifiedStructConstructorStart()) {
         return qualifiedStructConstructor();
     }
-    if (allowStructConstructors_ && isStructConstructorStart()) {
+    if (allowStructConstructors && isStructConstructorStart()) {
         return structConstructor();
     }
     if (match(TokenType::Identifier)) {

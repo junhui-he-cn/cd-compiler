@@ -17847,6 +17847,117 @@
       "fixture": "tests/golden/struct_field_assignment"
     },
     {
+      "case_id": "golden.success.struct_literal_condition_grouping.ast",
+      "runner": "golden",
+      "result_name": "struct_literal_condition_grouping default(ast)",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ast-output",
+        "fixture:struct_literal_condition_grouping"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast"
+      ],
+      "terminal_boundary": "ast",
+      "sources": [
+        "tests/golden/struct_literal_condition_grouping/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/struct_literal_condition_grouping/ast.out"
+      ],
+      "fixture": "tests/golden/struct_literal_condition_grouping"
+    },
+    {
+      "case_id": "golden.success.struct_literal_condition_grouping.bytecode",
+      "runner": "golden",
+      "result_name": "struct_literal_condition_grouping --bytecode",
+      "stage": "bytecode",
+      "capability_tags": [
+        "golden",
+        "success",
+        "bytecode-output",
+        "fixture:struct_literal_condition_grouping"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode"
+      ],
+      "terminal_boundary": "bytecode",
+      "sources": [
+        "tests/golden/struct_literal_condition_grouping/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/struct_literal_condition_grouping/bytecode.out"
+      ],
+      "fixture": "tests/golden/struct_literal_condition_grouping"
+    },
+    {
+      "case_id": "golden.success.struct_literal_condition_grouping.ir",
+      "runner": "golden",
+      "result_name": "struct_literal_condition_grouping --ir",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "ir-output",
+        "fixture:struct_literal_condition_grouping"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir"
+      ],
+      "terminal_boundary": "ir",
+      "sources": [
+        "tests/golden/struct_literal_condition_grouping/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/struct_literal_condition_grouping/ir.out"
+      ],
+      "fixture": "tests/golden/struct_literal_condition_grouping"
+    },
+    {
+      "case_id": "golden.success.struct_literal_condition_grouping.module_interface",
+      "runner": "golden",
+      "result_name": "struct_literal_condition_grouping --module-interface",
+      "stage": "semantic",
+      "capability_tags": [
+        "golden",
+        "success",
+        "module-interface-output",
+        "fixture:struct_literal_condition_grouping"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "stdout-golden",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "module_interface"
+      ],
+      "terminal_boundary": "module_interface",
+      "sources": [
+        "tests/golden/struct_literal_condition_grouping/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/struct_literal_condition_grouping/module-interface.out"
+      ],
+      "fixture": "tests/golden/struct_literal_condition_grouping"
+    },
+    {
       "case_id": "golden.success.struct_literals_field_access.ast",
       "runner": "golden",
       "result_name": "struct_literals_field_access default(ast)",
@@ -47371,6 +47482,68 @@
         "tests/golden/struct_identity_equality/run.out"
       ],
       "fixture": "tests/golden/struct_identity_equality"
+    },
+    {
+      "case_id": "rust_vm.golden.struct_literal_condition_grouping.emit",
+      "runner": "rust_vm_golden",
+      "result_name": "struct_literal_condition_grouping emit",
+      "stage": "artifact-emission",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "emit",
+        "fixture:struct_literal_condition_grouping"
+      ],
+      "backend": "cpp",
+      "expected_result_kind": "artifact-exists",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc"
+      ],
+      "terminal_boundary": "cdbc",
+      "sources": [
+        "tests/golden/struct_literal_condition_grouping/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/struct_literal_condition_grouping/run.out"
+      ],
+      "fixture": "tests/golden/struct_literal_condition_grouping"
+    },
+    {
+      "case_id": "rust_vm.golden.struct_literal_condition_grouping.run",
+      "runner": "rust_vm_golden",
+      "result_name": "struct_literal_condition_grouping rust-run",
+      "stage": "runtime",
+      "capability_tags": [
+        "rust-vm",
+        "golden",
+        "runtime",
+        "fixture:struct_literal_condition_grouping"
+      ],
+      "backend": "rust-vm",
+      "expected_result_kind": "runtime-stdout",
+      "boundary_sequence": [
+        "tokens",
+        "ast",
+        "semantic",
+        "ir",
+        "bytecode",
+        "cdbc",
+        "rust_decode",
+        "vm_output"
+      ],
+      "terminal_boundary": "vm_output",
+      "sources": [
+        "tests/golden/struct_literal_condition_grouping/input.cd"
+      ],
+      "expected_files": [
+        "tests/golden/struct_literal_condition_grouping/run.out"
+      ],
+      "fixture": "tests/golden/struct_literal_condition_grouping"
     },
     {
       "case_id": "rust_vm.golden.struct_literals_field_access.emit",

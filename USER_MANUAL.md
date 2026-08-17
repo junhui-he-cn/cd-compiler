@@ -160,10 +160,17 @@ code --install-extension *.vsix
 
 表达式位置的大括号表示 map 字面量，例如 `{ "name": "Ada" }`；语句位置的大括号表示 block。匿名 struct 字面量不是独立语法，命名结构体必须使用 `Name { field: value }` 构造。
 
-当前实现有一个已知限制：`if`/`while`/`if let`/`while let` 的条件、`match` arm 的
-guard 以及 `for-in` 的迭代对象内不能直接书写 struct 字面量构造 `Name { ... }`
-（即使加了括号也不行），需要先在条件外绑定变量。该限制记录在 Language 0.2
-执行计划的 Phase 10，后续会移除。
+结构体构造器可以出现在条件、`match` guard 和 `for-in` 迭代对象中。若构造器的
+大括号会和后面的 block 边界产生歧义，请使用分组表达式：
+
+```cd
+struct Point { x: number, y: number }
+let target = Point { x: 1, y: 2 };
+
+if (Point { x: 1, y: 2 } != target) {
+  print("different");
+}
+```
 
 ```cd
 // 变量声明、类型注解和条件语句

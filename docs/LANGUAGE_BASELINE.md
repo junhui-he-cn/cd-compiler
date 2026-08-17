@@ -41,7 +41,7 @@
 | `match` 表达式 | 仅文档 | — | — | — | 仅实现为语句 | — | — | 漂移 #1 |
 | pattern guard | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 一致 |
 | `struct` 声明 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 一致 |
-| struct 字面量构造 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 一致，但见「已知技术债」#2 |
+| struct 字面量构造 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 一致 |
 | struct record pattern | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 一致 |
 | `enum` 声明 | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | 一致（位置化 payload） |
 | enum 命名 payload `Ok(value: number)` | 仅文档 | — | — | — | — | — | — | 漂移 #2 |
@@ -102,11 +102,12 @@ EBNF 注释明确记录了这条限制。手册没有说明该限制。
 
 ### 5. struct literal in condition
 
-`Parser::conditionExpression()` 在解析 `if`/`while` 条件时把
-`allowStructConstructors_` 置为 false（`src/Parser.cpp:951-958`），因此条件中不能
-直接写 `Point { x: 1 }`。EBNF 和手册都没有记录这条限制。
+Phase 10 已移除 `Parser::conditionExpression()` 对 struct constructor 的全局状态开关。
+裸条件使用不带构造器前缀的表达式解析，以保留 `if ready { ... }` 的 block 边界；显式
+分组则使用普通表达式解析，因此 `if (Point { x: 1 } == target) { ... }` 可以直接构造
+并比较结构体值。构造器也可通过数组、调用参数等明确的表达式边界进入条件或迭代对象。
 
-结论：**实现独有限制**，未在 EBNF/手册文档化，是 Phase 10 要移除的 parser hack。
+结论：**已完成**，Parser、EBNF、手册和正向/负向 fixture 一致。
 
 ### 6. print statement
 
@@ -137,16 +138,15 @@ FrontendSession 模块图语义一致（直接导入暴露导出名、别名限�
 | 1 | 手册承诺 `match` 表达式，实现只有语句 | `USER_MANUAL.md:586`；AST 只有 `MatchStmt`；EBNF 只有 `matchStmt` | 以文档承诺为准；已在 Phase 2 实现（`MatchExpr` 统一，语句位置为表达式语句） |
 | 2 | 手册承诺 enum 命名 payload，实现位置化 | `USER_MANUAL.md:523-555`；`EnumVariantDecl` 无字段名；EBNF `enumPayload = typeExpr` | 以文档承诺为准；已在 Phase 3 实现（命名/位置化二选一，构造与 pattern 仍按位置） |
 | 3 | 手册 CLI 仍是组合程序模型 | `USER_MANUAL.md:126,640` vs 每文件一模块（`FrontendSession`/AGENTS） | 以现有实现为准；已修正手册两处 |
-| 4 | 条件中禁用 struct 字面量未文档化 | `src/Parser.cpp:951-958`；EBNF/手册无说明 | 以现有实现为准；已补充手册/EBNF 说明并新增 negative test，Phase 10 再移除 hack |
+| 4 | 条件中禁用 struct 字面量未文档化 | Phase 0 的 `allowStructConstructors_`；EBNF/手册当时无说明 | Phase 10 已移除开关；分组条件和裸条件均有 fixture 覆盖 |
 
 ## 已知技术债（Phase 0 记录，不修复）
 
 1. 显式泛型调用依赖 `<` 与名字紧邻的空白敏感规则（Phase 11 改为 `f::<T>(x)` 或等价方案）。
-2. `if`/`while` 条件通过 `allowStructConstructors_` 上下文开关禁用 struct 构造（Phase 10）。
-3. truthiness 允许非 bool 条件，`&&`/`||` 返回 operand 值（Phase 5 收紧）。
-4. 字符串无转义、无块注释、无 `else if`、无尾逗号统一（Phase 6/8/14/16）。
-5. 数字字面量仅整数/小数（Phase 15）。
-6. capability 只是内置约束，非完整 trait/capability 系统（Phase 19 决策）。
+2. truthiness 允许非 bool 条件，`&&`/`||` 返回 operand 值（Phase 5 收紧）。
+3. 字符串无转义、无块注释、无 `else if`、无尾逗号统一（Phase 6/8/14/16）。
+4. 数字字面量仅整数/小数（Phase 15）。
+5. capability 只是内置约束，非完整 trait/capability 系统（Phase 19 决策）。
 
 ## 验证
 
@@ -187,5 +187,6 @@ Phase 0/1/2/3/4 完成：match 表达式已统一为 `MatchExpr`；enum 命名 p
 native 函数调用 `print(value)`，AST 不再有 `PrintStmt`。两条以实现为准的漂移已修正。
 `else if` 链已支持，`else` 绑定最近的未配对 `if`。Phase 9 已完成：record pattern
 支持字段简写，例如 `Point { x, y }` 等价于 `Point { x: x, y: y }`，并支持末尾的
-rest pattern（`Point { x, .. }`）显式忽略其余字段。下一阶段是 Phase 10：移除
-struct literal / condition parser hack。
+rest pattern（`Point { x, .. }`）显式忽略其余字段。Phase 10 已完成：struct literal
+可以通过显式分组进入条件表达式，同时裸条件仍保留清晰的 block 边界。下一阶段是
+Phase 11：移除显式泛型调用的空白敏感限制。

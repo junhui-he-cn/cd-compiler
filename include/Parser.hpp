@@ -77,19 +77,19 @@ private:
     StmtPtr expressionStatement();
 
     // Recursive descent expression grammar, ordered from lowest to highest precedence.
-    ExprPtr expression();
+    ExprPtr expression(bool allowStructConstructors = true);
     ExprPtr conditionExpression();
-    ExprPtr assignment();
-    ExprPtr coalesce();
+    ExprPtr assignment(bool allowStructConstructors = true);
+    ExprPtr coalesce(bool allowStructConstructors = true);
     bool matchCompoundAssignment();
-    ExprPtr logicalOr();
-    ExprPtr logicalAnd();
-    ExprPtr equality();
-    ExprPtr comparison();
-    ExprPtr term();
-    ExprPtr factor();
-    ExprPtr unary();
-    ExprPtr call();
+    ExprPtr logicalOr(bool allowStructConstructors = true);
+    ExprPtr logicalAnd(bool allowStructConstructors = true);
+    ExprPtr equality(bool allowStructConstructors = true);
+    ExprPtr comparison(bool allowStructConstructors = true);
+    ExprPtr term(bool allowStructConstructors = true);
+    ExprPtr factor(bool allowStructConstructors = true);
+    ExprPtr unary(bool allowStructConstructors = true);
+    ExprPtr call(bool allowStructConstructors = true);
     bool isExplicitTypeArgumentCall(const Expr& callee) const;
     std::vector<TypeAnnotation> explicitTypeArguments();
     ExprPtr finishCall(ExprPtr callee, std::vector<TypeAnnotation> typeArguments);
@@ -103,7 +103,7 @@ private:
     ExprPtr qualifiedStructConstructor();
     bool isQualifiedStructConstructorStart() const;
     ExprPtr functionExpression();
-    ExprPtr primary();
+    ExprPtr primary(bool allowStructConstructors = true);
     PatternPtr pattern();
     PatternPtr patternAtom();
     PatternPtr recordPattern(std::optional<Token> qualifier, Token name);
@@ -124,6 +124,5 @@ private:
     std::vector<Token> tokens_;
     std::size_t current_ = 0;
     std::vector<ParseError> errors_;
-    bool allowStructConstructors_ = true;
     int blockDepth_ = 0;
 };
